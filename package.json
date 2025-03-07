@@ -1,0 +1,21 @@
+{
+  "name": "air-guard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev --dotenv .env.development",
+    "generate": "nuxt generate",
+    "local": "nuxt dev --dotenv .env.local",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "air-firebase-v2": "file:../../AirFirebase/v2",
+    "firebase": "11.3.1",
+    "nuxt": "^3.15.4",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "vuetify": "3.7.15"
+  }
+}
