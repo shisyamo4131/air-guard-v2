@@ -8,14 +8,9 @@ export default defineNuxtConfig({
     strict: false,
     shim: false,
   },
+
   compatibilityDate: "2024-11-01",
   devtools: { enabled: true },
-
-  /** vuetify */
-  css: ["vuetify/styles"],
-  build: {
-    transpile: ["vuetify"],
-  },
 
   runtimeConfig: {
     public: {
@@ -30,4 +25,6 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
     },
   },
+
+  modules: ["vuetify-nuxt-module"],
 });
