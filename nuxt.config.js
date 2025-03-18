@@ -1,5 +1,10 @@
+import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
+  compatibilityDate: "2024-11-01",
+  devtools: { enabled: true },
+
   /** firebase hosting を使用するので CSR モードに設定 */
   ssr: false,
 
@@ -9,8 +14,28 @@ export default defineNuxtConfig({
     shim: false,
   },
 
-  compatibilityDate: "2024-11-01",
-  devtools: { enabled: true },
+  build: {
+    transpile: ["vuetify"], // vuetify 設定
+  },
+
+  modules: [
+    // vuetify 設定
+    (_options, nuxt) => {
+      nuxt.hooks.hook("vite:extendConfig", (config) => {
+        // @ts-expect-error
+        config.plugins.push(vuetify({ autoImport: true }));
+      });
+    },
+    //...
+  ],
+
+  vite: {
+    vue: {
+      template: {
+        transformAssetUrls, // vuetify 設定
+      },
+    },
+  },
 
   runtimeConfig: {
     public: {
@@ -25,6 +50,4 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
     },
   },
-
-  modules: ["vuetify-nuxt-module"],
 });

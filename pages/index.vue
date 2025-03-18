@@ -44,7 +44,13 @@ const Customer = ref({
                 @update:modelValue="quitEditing"
               >
                 <template #activator="{ props: attrs }">
-                  <v-btn v-bind="attrs" @click="toUpdate">open</v-btn>
+                  <v-btn
+                    v-bind="attrs"
+                    color="primary"
+                    variant="elevated"
+                    @click="toUpdate"
+                    >open</v-btn
+                  >
                 </template>
                 <v-card>
                   <v-card-title>edit</v-card-title>
