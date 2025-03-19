@@ -15,6 +15,8 @@ export default defineNuxtPlugin(() => {
     throw new Error(message);
   }
 
+  const auth = useAuthStore();
+
   // Start monitoring by `onAuthStateChanged`.
   // `onAuthStateChanged` による監視を開始する。
   onAuthStateChanged(getAuth(), async (user) => {
@@ -23,39 +25,13 @@ export default defineNuxtPlugin(() => {
         `[firebase.auth.js] Auth state is changed. You have signed in.`
       );
       // add process after logged in.
-      await afterSignedIn(user);
+      await auth.setUser(user);
     } else {
       console.info(
         "[firebase.auth.js] Auth state is changed. You have signed out."
       );
       // add process after logged out.
-      afterSignedOut();
+      auth.clearUser();
     }
   });
 });
-
-/**
- * Processes executed after sign-in.
- * - Stores information about signed-in users in `pinia.useAuthStore`.
- *
- * サインインした後に実行される処理です。
- * - サインインしたユーザーの情報を `pinia.useAuthStore` に保存します。
- * @param {Record} user - Object returned by the `onAuthChanged` observer.
- *                      - `onAuthChanged` オブザーバーによって返されるオブジェクト。
- */
-async function afterSignedIn(user) {
-  const auth = useAuthStore();
-  await auth.setUser(user);
-}
-
-/**
- * Processes executed after sign-out.
- * - Initialize user information stored in `pinia.useAuthStore`.
- *
- * サインアウトした後に実行される処理です。
- * - `pinia.useAuthStore` に保存されているユーザー情報を初期化します。
- */
-function afterSignedOut() {
-  const auth = useAuthStore();
-  auth.clearUser();
-}
