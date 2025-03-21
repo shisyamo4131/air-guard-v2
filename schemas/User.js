@@ -1,14 +1,7 @@
-import { FireModel } from "air-firebase-v2";
+import FireModel from "../air-firebase-v2/fire-model/src/FireModel";
 
-/**
- * User class
- * - Class that defines user information to use the application
- * - アプリを使用するユーザー情報を定義したクラス
- */
 export default class User extends FireModel {
   static collectionPath = "Users";
-  static logicalDelete = true;
-  static useAutonumber = false;
   static classProps = {
     /** document-id */
     docId: { type: String, default: false, required: false },

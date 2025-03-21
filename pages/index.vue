@@ -1,7 +1,13 @@
 <script setup>
-import User from "../models/User";
+import FireModel from "../air-firebase-v2/fire-model/src/FireModel";
+import User from "../schemas/User";
 const dialog = ref(false);
-const Model = new User();
+console.log("adapter used in:", FireModel);
+console.log("current adapter is:", FireModel.getAdapter());
+async function test() {
+  const Model = new User();
+  await Model.create();
+}
 </script>
 
 <template>
@@ -21,6 +27,7 @@ const Model = new User();
           <v-card-title>User</v-card-title>
           <v-card-text>
             {{ Model }}
+            <v-btn @click="test">test</v-btn>
           </v-card-text>
           <v-card-actions>
             <v-dialog :model-value="isEditing" @update:modelValue="quitEditing">
