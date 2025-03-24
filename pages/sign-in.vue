@@ -1,11 +1,8 @@
 <script setup>
-import Base from "../schemas/Base";
 const auth = useAuthStore();
 const errors = useErrorsStore();
 const email = ref("");
 const password = ref("");
-
-const BaseClass = new Base();
 
 async function signIn() {
   await auth.signIn({
