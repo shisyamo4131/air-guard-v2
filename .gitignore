@@ -24,4 +24,4 @@ logs
 !.env.example
 
 # npm package
-air-firebase-v2
+air-firebase-v2*

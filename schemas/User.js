@@ -1,4 +1,4 @@
-import FireModel from "../air-firebase-v2/fire-model/src/FireModel";
+import FireModel from "air-firebase-v2";
 
 export default class User extends FireModel {
   static collectionPath = "Users";

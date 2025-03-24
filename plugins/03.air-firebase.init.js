@@ -1,5 +1,5 @@
-import FireModel from "../air-firebase-v2/fire-model/src/FireModel";
-import ClientAdapter from "../air-firebase-v2/client-adapter/src/ClientAdapter";
+import FireModel from "air-firebase-v2";
+import ClientAdapter from "air-firebase-v2-client-adapter";
 
 export default defineNuxtPlugin((app) => {
   FireModel.setAdapter(new ClientAdapter());
