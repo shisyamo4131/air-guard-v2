@@ -1,17 +1,15 @@
 <script setup>
-import FireModel from "../air-firebase-v2/fire-model/src/FireModel";
 import User from "../schemas/User";
+const UserModel = new User();
 const dialog = ref(false);
-console.log("adapter used in:", FireModel);
-console.log("current adapter is:", FireModel.getAdapter());
 async function test() {
-  const Model = new User();
+  const Model = new User({ email: "maruyama@yuisin.net" });
   await Model.create();
 }
 </script>
 
 <template>
-  <RenderlessItemManager v-model="Model" :is-editing="dialog">
+  <RenderlessItemManager v-model="UserModel" :is-editing="dialog">
     <template
       #default="{
         isEditing,
@@ -26,7 +24,7 @@ async function test() {
         <v-card>
           <v-card-title>User</v-card-title>
           <v-card-text>
-            {{ Model }}
+            {{ UserModel }}
             <v-btn @click="test">test</v-btn>
           </v-card-text>
           <v-card-actions>
@@ -61,7 +59,7 @@ async function test() {
           </v-card-actions>
         </v-card>
       </v-container>
-      <div>{{ Model }}</div>
+      <div>{{ UserModel }}</div>
       <div>{{ item }}</div>
     </template>
   </RenderlessItemManager>
