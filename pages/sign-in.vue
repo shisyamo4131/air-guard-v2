@@ -23,7 +23,7 @@ async function createUser() {
 <template>
   <v-container height="100%" class="bg-surface-variant">
     <v-row style="height: 100%" no-gutters justify="center">
-      <v-col cols="6" align-self="center">
+      <v-col cols="6" lg="3" align-self="center">
         <v-card>
           <v-card-title>Sign-In</v-card-title>
           <v-card-text>
