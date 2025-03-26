@@ -4,6 +4,8 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 
+const sender = "useAuthStore.js";
+
 /**
  * Provides Authentication capabilities and user information who is signed in.
  * - Running `signIn` will attempt to sign in with Firebase Authentication.
@@ -25,45 +27,26 @@ export const useAuthStore = defineStore("auth", () => {
   const roles = ref([]);
 
   /**
-   * Creates a new user with an email and password using the authentication provider.
-   * - Uses Firebase authentication (`createUserWithEmailAndPassword`) to register a new user.
+   * Clears all stored user information.
+   * - Resets `uid`, `email`, and `displayName` to `null`.
+   * - Sets `isEmailVerified` to `false`.
+   * - Clears the `roles` array.
    *
-   * ユーザーを新規に作成します。
-   * - Firebase の認証機能 (`createUserWithEmailAndPassword`) を使用して、新しいユーザーを登録します。
+   * ユーザー情報をすべてクリアします。
+   * - `uid`、`email`、`displayName` を `null` にリセットします。
+   * - `isEmailVerified` を `false` に設定します。
+   * - `roles` 配列を空にします。
    *
-   * @param {string} email - The email address of the new user (must be a valid email format).
-   *                         新規ユーザーのメールアドレス（有効なメール形式である必要があります）。
-   * @param {string} password - The password for the new user (must be a non-empty string).
-   *                            新規ユーザーのパスワード（空でない文字列である必要があります）。
-   * @returns {Promise<UserCredential>} Resolves with the user credentials upon successful registration.
-   *                                    登録が成功すると `UserCredential` を含むプロミスが解決されます。
-   * @throws {Error} Throws an error if `email` or `password` is missing.
-   *                 `email` または `password` が不足している場合にエラーをスローします。
-   * @throws {TypeError} Throws a TypeError if `email` or `password` is not a string.
-   *                     `email` または `password` が文字列でない場合に `TypeError` をスローします。
+   * @returns {void} No return value.
+   *                 戻り値はありません。
    */
-  async function signUp(email, password) {
-    const { $auth } = useNuxtApp();
-    try {
-      if (!email || !password) {
-        throw new Error("email and password are required.");
-      }
-      if (typeof email !== "string" || typeof password !== "string") {
-        throw new TypeError("email and password must be strings.");
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error("Invalid email format.");
-      }
-
-      return await createUserWithEmailAndPassword($auth, email, password);
-    } catch (error) {
-      logger.error({
-        sender: "useAuthStore.js",
-        message: error.message,
-        error,
-      });
-      throw error;
-    }
+  function clearUser() {
+    uid.value = null;
+    email.value = null;
+    displayName.value = null;
+    isEmailVerified.value = false;
+    roles.value = [];
+    logger.info({ sender, message: "User information is cleared." });
   }
 
   /**
@@ -98,38 +81,12 @@ export const useAuthStore = defineStore("auth", () => {
       roles.value = idTokenResult?.claims?.roles || [];
     } catch (error) {
       logger.error({
-        sender: "useAuthStore.js",
+        sender,
         message: error.message,
         error,
       });
       throw error;
     }
-  }
-
-  /**
-   * Clears all stored user information.
-   * - Resets `uid`, `email`, and `displayName` to `null`.
-   * - Sets `isEmailVerified` to `false`.
-   * - Clears the `roles` array.
-   *
-   * ユーザー情報をすべてクリアします。
-   * - `uid`、`email`、`displayName` を `null` にリセットします。
-   * - `isEmailVerified` を `false` に設定します。
-   * - `roles` 配列を空にします。
-   *
-   * @returns {void} No return value.
-   *                 戻り値はありません。
-   */
-  function clearUser() {
-    uid.value = null;
-    email.value = null;
-    displayName.value = null;
-    isEmailVerified.value = false;
-    roles.value = [];
-    logger.info({
-      sender: "useAuthStore.js",
-      message: "User information is cleared.",
-    });
   }
 
   /**
@@ -167,13 +124,10 @@ export const useAuthStore = defineStore("auth", () => {
       errors.clear();
       const { $auth } = useNuxtApp();
       await signInWithEmailAndPassword($auth, payload.email, payload.password);
-      logger.info({
-        sender: "useAuthStore.js",
-        message: "Signed in successfully.",
-      });
+      logger.info({ sender, message: "Signed in successfully." });
     } catch (error) {
       logger.error({
-        sender: "useAuthStore.js",
+        sender,
         message: error.message,
         error,
       });
@@ -197,14 +151,53 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       const { $auth } = useNuxtApp();
       await authSignOut($auth);
-      logger.info({
-        sender: "useAuthStore.js",
-        message: "Signed out successfully.",
-      });
+      logger.info({ sender, message: "Signed out successfully." });
     } catch (error) {
       logger.error({
-        sender: "useAuthStore.js",
+        sender,
         message: "Failed to sign out.",
+        error,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Creates a new user with an email and password using the authentication provider.
+   * - Uses Firebase authentication (`createUserWithEmailAndPassword`) to register a new user.
+   *
+   * ユーザーを新規に作成します。
+   * - Firebase の認証機能 (`createUserWithEmailAndPassword`) を使用して、新しいユーザーを登録します。
+   *
+   * @param {string} email - The email address of the new user (must be a valid email format).
+   *                         新規ユーザーのメールアドレス（有効なメール形式である必要があります）。
+   * @param {string} password - The password for the new user (must be a non-empty string).
+   *                            新規ユーザーのパスワード（空でない文字列である必要があります）。
+   * @returns {Promise<UserCredential>} Resolves with the user credentials upon successful registration.
+   *                                    登録が成功すると `UserCredential` を含むプロミスが解決されます。
+   * @throws {Error} Throws an error if `email` or `password` is missing.
+   *                 `email` または `password` が不足している場合にエラーをスローします。
+   * @throws {TypeError} Throws a TypeError if `email` or `password` is not a string.
+   *                     `email` または `password` が文字列でない場合に `TypeError` をスローします。
+   */
+  async function signUp(email, password) {
+    const { $auth } = useNuxtApp();
+    try {
+      if (!email || !password) {
+        throw new Error("email and password are required.");
+      }
+      if (typeof email !== "string" || typeof password !== "string") {
+        throw new TypeError("email and password must be strings.");
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        throw new Error("Invalid email format.");
+      }
+
+      return await createUserWithEmailAndPassword($auth, email, password);
+    } catch (error) {
+      logger.error({
+        sender,
+        message: error.message,
         error,
       });
       throw error;
