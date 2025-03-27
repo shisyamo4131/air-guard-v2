@@ -1,6 +1,8 @@
 <script setup>
-import Company from "../schemas/Company";
-import User from "../schemas/User";
+// import Company from "../schemas/Company";
+// import User from "../schemas/User";
+import { Company } from "air-guard-v2-schemas";
+import { User } from "air-guard-v2-schemas";
 
 // const company = ref(new Company());
 const company = ref(new Company({ name: "唯心", nameKana: "ユイシン" }));

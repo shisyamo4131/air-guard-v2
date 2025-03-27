@@ -1,5 +1,5 @@
 <script setup>
-import User from "../schemas/User";
+import { User } from "air-guard-v2-schemas";
 const UserModel = new User();
 const dialog = ref(false);
 async function test() {

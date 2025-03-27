@@ -1,23 +1,5 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * const {onCall} = require("firebase-functions/v2/https");
- * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+/** Firebase, FireModel の初期化 */
+import "./modules/firebase.init.js";
+import { geocoding } from "./modules/geocoding.js";
 
-const { onRequest } = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
-
-// Create and deploy your first functions
-// https://firebase.google.com/docs/functions/get-started
-
-// exports.helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
-
-const { geocoding } = require("./modules/geocoding");
-
-exports.geocoding = geocoding;
+export { geocoding };
