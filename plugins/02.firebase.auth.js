@@ -38,5 +38,7 @@ export default defineNuxtPlugin(() => {
       // FireModel のコレクションパスの prefix を unknown に変更
       FireModel.setConfig({ prefix: `Companies/unknown/` });
     }
+
+    auth.isReady = true;
   });
 });

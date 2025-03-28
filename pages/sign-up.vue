@@ -2,6 +2,7 @@
 const { createUserWithCompany } = useCreateUser();
 const logger = useLogger();
 const errors = useErrorsStore();
+const loading = ref(false);
 
 const name = ref("唯心");
 const nameKana = ref("ユイシン");
@@ -12,6 +13,7 @@ const confirmPassword = ref("");
 
 async function createUser() {
   errors.clear();
+  loading.value = true;
   try {
     const res = await createUserWithCompany({
       email: email.value,
@@ -22,6 +24,8 @@ async function createUser() {
     });
   } catch (error) {
     logger.error({ sender: "sign-up.vue", message: error.message, error });
+  } finally {
+    loading.value = false;
   }
 }
 </script>
@@ -62,5 +66,9 @@ async function createUser() {
         </v-card>
       </v-col>
     </v-row>
+    <MoleculesDialogsLoader
+      v-model="loading"
+      message="管理者ユーザーアカウントを作成しています"
+    ></MoleculesDialogsLoader>
   </v-container>
 </template>

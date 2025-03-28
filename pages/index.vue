@@ -1,66 +1,40 @@
+<template>
+  <v-container
+    class="fill-height d-flex align-center justify-center bg-grey-lighten-4"
+  >
+    <v-row>
+      <v-col cols="12" md="6" class="text-center text-md-left">
+        <h1 class="text-h3 font-weight-bold mb-4">
+          警備データの一元管理で、<br />
+          現場をもっとスマートに。
+        </h1>
+        <p class="mb-6">
+          AirGuard は、警備業務に特化した<br />
+          データ管理・スタッフ運用プラットフォームです。<br />
+          配備・勤怠・報告書まで、すべてをクラウドで。
+        </p>
+        <v-btn color="primary" class="mr-4" large>ログイン</v-btn>
+        <v-btn outlined color="primary" large>機能を見る</v-btn>
+      </v-col>
+
+      <v-col cols="12" md="6">
+        <v-img
+          src="https://cdn-icons-png.flaticon.com/512/3144/3144456.png"
+          alt="Security Illustration"
+          height="300"
+          contain
+        />
+      </v-col>
+    </v-row>
+  </v-container>
+</template>
+
 <script setup>
-import { User } from "air-guard-v2-schemas";
-const UserModel = new User();
-const dialog = ref(false);
-async function test() {
-  const Model = new User({ email: "maruyama@yuisin.net" });
-  await Model.create();
-}
+// 特にロジックは無し
 </script>
 
-<template>
-  <RenderlessItemManager v-model="UserModel" :is-editing="dialog">
-    <template
-      #default="{
-        isEditing,
-        item,
-        quitEditing,
-        submit,
-        updateProperties,
-        toUpdate,
-      }"
-    >
-      <v-container>
-        <v-card>
-          <v-card-title>User</v-card-title>
-          <v-card-text>
-            {{ UserModel }}
-            <v-btn @click="test">test</v-btn>
-          </v-card-text>
-          <v-card-actions>
-            <v-dialog :model-value="isEditing" @update:modelValue="quitEditing">
-              <template #activator="{ props: attrs }">
-                <v-btn
-                  v-bind="attrs"
-                  color="primary"
-                  variant="elevated"
-                  @click="toUpdate"
-                  >open</v-btn
-                >
-              </template>
-              <v-card>
-                <v-card-title>edit</v-card-title>
-                <v-card-text>
-                  <v-text-field
-                    :model-value="item.email"
-                    variant="outlined"
-                    @update:model-value="updateProperties({ email: $event })"
-                  />
-                  <v-checkbox
-                    :model-value="item.isAdmin"
-                    @update:model-value="updateProperties({ isAdmin: $event })"
-                  />
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn @click="submit">submit</v-btn>
-                </v-card-actions>
-              </v-card>
-            </v-dialog>
-          </v-card-actions>
-        </v-card>
-      </v-container>
-      <div>{{ UserModel }}</div>
-      <div>{{ item }}</div>
-    </template>
-  </RenderlessItemManager>
-</template>
+<style scoped>
+h1 {
+  line-height: 1.3;
+}
+</style>
