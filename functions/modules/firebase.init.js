@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions";
+import FireModel from "air-firebase-v2";
 import ServerAdapter from "air-firebase-v2-server-adapter";
 import { getFirestore } from "firebase-admin/firestore";
 

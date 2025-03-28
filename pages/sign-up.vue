@@ -1,25 +1,28 @@
 <script setup>
-// import Company from "../schemas/Company";
-// import User from "../schemas/User";
-import { Company } from "air-guard-v2-schemas";
-import { User } from "air-guard-v2-schemas";
-
-// const company = ref(new Company());
-const company = ref(new Company({ name: "唯心", nameKana: "ユイシン" }));
-
-const auth = useAuthStore();
-// const email = ref("");
-const email = ref("maruyama@yuisin.net");
-// const password = ref("");
-const password = ref("sevenstar");
-const confirmPassword = ref("");
+const { createUserWithCompany } = useCreateUser();
+const logger = useLogger();
 const errors = useErrorsStore();
 
+const name = ref("唯心");
+const nameKana = ref("ユイシン");
+const displayName = ref("丸山");
+const email = ref("maruyama@yuisin.net");
+const password = ref("sevenstar");
+const confirmPassword = ref("");
+
 async function createUser() {
-  const userCredential = await auth.signUp(email.value, password.value);
-  const companyDocRef = await company.value.create();
-  const user = new User({ email: email.value, companyId: companyDocRef.id });
-  await user.create();
+  errors.clear();
+  try {
+    const res = await createUserWithCompany({
+      email: email.value,
+      password: password.value,
+      companyName: name.value,
+      companyNameKana: nameKana.value,
+      displayName: displayName.value,
+    });
+  } catch (error) {
+    logger.error({ sender: "sign-up.vue", message: error.message, error });
+  }
 }
 </script>
 
@@ -30,8 +33,9 @@ async function createUser() {
         <v-card>
           <v-card-title>アカウント作成</v-card-title>
           <v-card-text>
-            <v-text-field v-model="company.name" label="会社名" />
-            <v-text-field v-model="company.nameKana" label="会社名カナ" />
+            <v-text-field v-model="name" label="会社名" />
+            <v-text-field v-model="nameKana" label="会社名カナ" />
+            <v-text-field v-model="displayName" label="管理者名" />
             <v-text-field v-model="email" label="メールアドレス" />
             <v-text-field v-model="password" label="パスワード" />
             <v-text-field
@@ -40,11 +44,15 @@ async function createUser() {
             />
           </v-card-text>
           <v-expand-transition>
-            <v-card v-show="errors.hasError">
-              <v-alert v-for="(error, index) in errors.list">{{
-                error.message
-              }}</v-alert>
-            </v-card>
+            <v-container v-show="errors.hasError">
+              <v-alert
+                type="error"
+                v-for="error in errors.list"
+                density="comfortable"
+              >
+                {{ error.message }}
+              </v-alert>
+            </v-container>
           </v-expand-transition>
           <v-card-actions>
             <v-btn block color="primary" variant="elevated" @click="createUser"

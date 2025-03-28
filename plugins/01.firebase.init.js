@@ -57,7 +57,7 @@ export default defineNuxtPlugin(() => {
     app,
     config.public.firebaseRegion || "us-central1"
   );
-
+  console.log(config.public.firebaseRegion);
   // Connect to an emulator if you are in a local environment.
   // ローカル環境ならエミュレーターに接続
   if (useEmulator) {

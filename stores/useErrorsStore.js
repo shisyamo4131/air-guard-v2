@@ -12,11 +12,20 @@ export const useErrorsStore = defineStore("errors", () => {
   });
 
   /**
-   * Stores error object to list.
-   * @param {Error} error - An Error object.
+   * Stores error object to list, avoiding duplicates.
+   * 重複したエラーは追加しません。
+   * @param {Error} error
    */
   function add(error) {
-    list.value.push(error);
+    const lastError = list.value[list.value.length - 1];
+    const isDuplicate =
+      lastError &&
+      lastError.message === error.message &&
+      lastError.stack === error.stack;
+
+    if (!isDuplicate) {
+      list.value.push(error);
+    }
   }
 
   /**
