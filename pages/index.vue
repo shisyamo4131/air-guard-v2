@@ -1,3 +1,10 @@
+<script setup>
+const router = useRouter();
+
+const navigateToSignIn = () => router.push("/sign-in");
+const navigateToSignUp = () => router.push("/sign-up");
+</script>
+
 <template>
   <v-container
     class="fill-height d-flex align-center justify-center bg-grey-lighten-4"
@@ -13,8 +20,12 @@
           データ管理・スタッフ運用プラットフォームです。<br />
           配備・勤怠・報告書まで、すべてをクラウドで。
         </p>
-        <v-btn color="primary" class="mr-4" large>ログイン</v-btn>
-        <v-btn outlined color="primary" large>機能を見る</v-btn>
+        <v-btn color="primary" class="mr-4" large @click="navigateToSignIn">
+          サインイン
+        </v-btn>
+        <v-btn outlined color="primary" large @click="navigateToSignUp">
+          サインアップ
+        </v-btn>
       </v-col>
 
       <v-col cols="12" md="6">
@@ -28,10 +39,6 @@
     </v-row>
   </v-container>
 </template>
-
-<script setup>
-// 特にロジックは無し
-</script>
 
 <style scoped>
 h1 {

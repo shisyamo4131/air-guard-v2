@@ -3,6 +3,8 @@ const { createUserWithCompany } = useCreateUser();
 const logger = useLogger();
 const errors = useErrorsStore();
 const loading = ref(false);
+const router = useRouter();
+const auth = useAuthStore();
 
 const name = ref("唯心");
 const nameKana = ref("ユイシン");
@@ -15,13 +17,15 @@ async function createUser() {
   errors.clear();
   loading.value = true;
   try {
-    const res = await createUserWithCompany({
+    await createUserWithCompany({
       email: email.value,
       password: password.value,
       companyName: name.value,
       companyNameKana: nameKana.value,
       displayName: displayName.value,
     });
+    await auth.signIn({ email: email.value, password: password.value });
+    await router.push("/dashboard");
   } catch (error) {
     logger.error({ sender: "sign-up.vue", message: error.message, error });
   } finally {
