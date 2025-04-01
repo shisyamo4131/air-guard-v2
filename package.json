@@ -16,6 +16,7 @@
     "air-firebase-v2": "file:air-firebase-v2",
     "air-firebase-v2-client-adapter": "file:air-firebase-v2-client-adapter",
     "air-guard-v2-schemas": "file:air-guard-v2-schemas",
+    "air-vuetify-v3": "file:air-vuetify-v3",
     "firebase": "^11.4.0",
     "nuxt": "^3.15.4",
     "pinia": "^3.0.1",

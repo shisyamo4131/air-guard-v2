@@ -1,6 +1,5 @@
 <script setup>
 import { ref } from "vue";
-import AirTextField from "../air-vuetify-v3/src/AirTextField.vue";
 
 const email = ref("");
 const hiragana = ref("");
