@@ -41,14 +41,16 @@ async function createUser() {
         <v-card>
           <v-card-title>アカウント作成</v-card-title>
           <v-card-text>
-            <v-text-field v-model="name" label="会社名" />
-            <v-text-field v-model="nameKana" label="会社名カナ" />
-            <v-text-field v-model="displayName" label="管理者名" />
-            <v-text-field v-model="email" label="メールアドレス" />
-            <v-text-field v-model="password" label="パスワード" />
-            <v-text-field
+            <air-text-field v-model="name" label="会社名" required />
+            <air-text-field v-model="nameKana" label="会社名カナ" required />
+            <air-text-field v-model="displayName" label="管理者名" required />
+            <air-text-field v-model="email" label="メールアドレス" required />
+            <air-password v-model="password" label="パスワード" required />
+            <air-password
               v-model="confirmPassword"
               label="パスワード（再入力）"
+              required
+              :password="password"
             />
           </v-card-text>
           <v-expand-transition>
