@@ -52,4 +52,10 @@ export default defineNuxtConfig({
       firebaseRegion: process.env.NUXT_PUBLIC_FIREBASE_REGION,
     },
   },
+
+  app: {
+    /** トランジション設定 */
+    pageTransition: { name: "page", mode: "out-in" },
+    layoutTransition: { name: "layout", mode: "out-in" },
+  },
 });
