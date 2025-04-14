@@ -1,66 +1,44 @@
 <script setup>
 import { ref } from "vue";
-import AirTextField from "../air-vuetify-v3/src/AirTextField.vue";
-import AirSelect from "../air-vuetify-v3/src/AirSelect.vue";
 
-const name = ref("");
-const email = ref("");
-const fruits = ref([]);
-const selectedFruit = ref(null);
-const submitted = ref(false);
-
-const fruitOptions = ["リンゴ", "バナナ", "オレンジ", "メロン", "ぶどう"];
+const single = ref();
+const multiple = ref([]);
 </script>
 
 <template>
-  <v-container>
-    <h2 class="text-h6 mb-4">AirTextField & AirSelect バリデーションテスト</h2>
-
-    <air-text-field
-      v-model="name"
-      label="名前"
-      :min-length="3"
-      :max-length="10"
-      :min-length-message="'3文字以上で入力してください'"
-      :max-length-message="'10文字以内で入力してください'"
-      required
-    />
-
-    <air-text-field
-      v-model="email"
-      label="メールアドレス"
-      input-type="email"
-      :email-message="'有効なメールアドレスを入力してください'"
-    />
-
+  <v-container class="pa-4" style="max-width: 600px">
+    <!-- 単一選択：必須 -->
     <air-select
-      v-model="selectedFruit"
-      :items="fruitOptions"
-      label="好きな果物（単一選択）"
+      v-model="single"
+      label="必須（単一選択）"
+      :items="[
+        { title: '選択肢A', value: 'A' },
+        { title: '選択肢B', value: 'B' },
+        { title: '選択肢C', value: 'C' },
+      ]"
       required
-    />
+    >
+      <template #append>
+        <v-icon>mdi-magnify</v-icon>
+      </template>
+    </air-select>
+    <p class="text-caption mb-6">選択中: {{ single }}</p>
 
+    <!-- 複数選択：最小2・最大3件選択 -->
     <air-select
-      v-model="fruits"
-      :items="fruitOptions"
-      label="果物を2〜3個選択してください"
+      v-model="multiple"
+      label="複数選択（2〜3件）"
       multiple
+      :items="[
+        { title: 'オプション1', value: '1' },
+        { title: 'オプション2', value: '2' },
+        { title: 'オプション3', value: '3' },
+        { title: 'オプション4', value: '4' },
+      ]"
       :min-items="2"
       :max-items="3"
-      :min-items-message="'2つ以上選んでください'"
-      :max-items-message="'3つまで選んでください'"
+      required
     />
-
-    <v-btn class="mt-4" @click="submitted = true">Submit</v-btn>
-
-    <div v-if="submitted" class="mt-4">
-      <p><strong>名前:</strong> {{ name || "[未入力]" }}</p>
-      <p><strong>メール:</strong> {{ email || "[未入力]" }}</p>
-      <p><strong>果物（単一）:</strong> {{ selectedFruit || "[未選択]" }}</p>
-      <p>
-        <strong>果物（複数）:</strong>
-        {{ fruits.length ? fruits.join(", ") : "[未選択]" }}
-      </p>
-    </div>
+    <p class="text-caption">選択中: {{ multiple }}</p>
   </v-container>
 </template>
