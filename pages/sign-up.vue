@@ -43,46 +43,58 @@ async function createUser() {
         <v-card>
           <v-card-title>アカウント作成</v-card-title>
           <v-form v-model="formValid">
-            <v-card-text>
-              <air-text-field
-                v-model="name"
-                label="会社名"
-                required
-                :maxLength="40"
-              />
-              <air-text-field
-                v-model="nameKana"
-                label="会社名カナ"
-                required
-                :maxLength="40"
-                inputType="katakana"
-              />
-              <air-text-field
-                v-model="displayName"
-                label="管理者名"
-                required
-                :maxLength="40"
-              />
-              <air-text-field
-                v-model="email"
-                label="メールアドレス"
-                required
-                inputType="email"
-              />
-              <air-password
-                v-model="password"
-                label="パスワード"
-                required
-                inputType="alphanumeric"
-              />
-              <air-password
-                v-model="confirmPassword"
-                label="パスワード（再入力）"
-                required
-                :password="password"
-                inputType="alphanumeric"
-              />
-            </v-card-text>
+            <v-container>
+              <v-row dense>
+                <v-col cols="12">
+                  <air-text-field
+                    v-model="name"
+                    label="会社名"
+                    required
+                    :maxLength="40"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-text-field
+                    v-model="nameKana"
+                    label="会社名カナ"
+                    required
+                    :maxLength="40"
+                    inputType="katakana"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-text-field
+                    v-model="displayName"
+                    label="管理者名"
+                    required
+                    :maxLength="40"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-text-field
+                    v-model="email"
+                    label="メールアドレス"
+                    required
+                    inputType="email"
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-password
+                    v-model="password"
+                    label="パスワード"
+                    required
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-password
+                    v-model="confirmPassword"
+                    label="パスワード（再入力）"
+                    required
+                    :password="password"
+                  />
+                </v-col>
+              </v-row>
+            </v-container>
             <v-expand-transition>
               <v-container v-show="errors.hasError">
                 <v-alert
