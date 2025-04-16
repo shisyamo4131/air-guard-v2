@@ -1,14 +1,15 @@
 // composables/useCreateUser.js
 import { httpsCallable } from "firebase/functions";
-import { useLogger } from "./useLogger.js";
 
 export const useCreateUser = () => {
   const { $functions } = useNuxtApp();
+  const errors = useErrorsStore();
   const logger = useLogger();
   const sender = "useCreateUser";
 
   /**
-   * Firebase Functions: createUserWithCompany を呼び出す
+   * Cloud Functions の createUserWithCompany を呼び出し、
+   * 管理者ユーザーアカウントを作成します。
    * @param {Object} payload
    * @param {string} payload.email
    * @param {string} payload.password
@@ -24,8 +25,10 @@ export const useCreateUser = () => {
     companyNameKana,
     displayName,
   }) => {
+    /** errors ストアを初期化 */
+    errors.clear();
     try {
-      const callable = httpsCallable($functions, "createUserWithCompany");
+      const callable = httpsCallable($functions, "createUserWithCompan");
       const { data } = await callable({
         email,
         password,

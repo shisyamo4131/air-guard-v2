@@ -6,27 +6,26 @@ const loading = ref(false);
 const router = useRouter();
 const auth = useAuthStore();
 
-const name = ref("");
-const nameKana = ref("");
-const displayName = ref("");
-const email = ref("");
-const password = ref("");
-const confirmPassword = ref("");
+/** 管理者ユーザーアカウントオブジェクト */
+const model = reactive({
+  companyName: "株式会社唯心",
+  companyNameKana: "ユイシン",
+  displayName: "丸山大三",
+  email: "maruyama@yuisin.net",
+  password: "sevenstar",
+  confirmPassword: "sevenstar",
+});
 
 const formValid = ref(false);
 
+/**
+ * 新規に管理者ユーザーアカウントを作成します。
+ */
 async function createUser() {
-  errors.clear();
   loading.value = true;
   try {
-    await createUserWithCompany({
-      email: email.value,
-      password: password.value,
-      companyName: name.value,
-      companyNameKana: nameKana.value,
-      displayName: displayName.value,
-    });
-    await auth.signIn({ email: email.value, password: password.value });
+    await createUserWithCompany(model);
+    await auth.signIn(model);
     await router.push("/dashboard");
   } catch (error) {
     logger.error({ sender: "sign-up.vue", message: error.message, error });
@@ -47,7 +46,7 @@ async function createUser() {
               <v-row dense>
                 <v-col cols="12">
                   <air-text-field
-                    v-model="name"
+                    v-model="model.companyName"
                     label="会社名"
                     required
                     :maxLength="40"
@@ -55,7 +54,7 @@ async function createUser() {
                 </v-col>
                 <v-col cols="12">
                   <air-text-field
-                    v-model="nameKana"
+                    v-model="model.companyNameKana"
                     label="会社名カナ"
                     required
                     :maxLength="40"
@@ -64,7 +63,7 @@ async function createUser() {
                 </v-col>
                 <v-col cols="12">
                   <air-text-field
-                    v-model="displayName"
+                    v-model="model.displayName"
                     label="管理者名"
                     required
                     :maxLength="40"
@@ -72,7 +71,7 @@ async function createUser() {
                 </v-col>
                 <v-col cols="12">
                   <air-text-field
-                    v-model="email"
+                    v-model="model.email"
                     label="メールアドレス"
                     required
                     inputType="email"
@@ -80,17 +79,17 @@ async function createUser() {
                 </v-col>
                 <v-col cols="12">
                   <air-password
-                    v-model="password"
+                    v-model="model.password"
                     label="パスワード"
                     required
                   />
                 </v-col>
                 <v-col cols="12">
                   <air-password
-                    v-model="confirmPassword"
+                    v-model="model.confirmPassword"
                     label="パスワード（再入力）"
                     required
-                    :password="password"
+                    :password="model.password"
                   />
                 </v-col>
               </v-row>
