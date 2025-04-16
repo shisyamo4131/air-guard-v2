@@ -24,6 +24,8 @@ function isPublicRoute(path) {
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const auth = useAuthStore();
+
+  /** 認証状態の確認が終わるまで待機 */
   await auth.waitUntilReady();
 
   const isAuthenticated = !!auth.uid;
