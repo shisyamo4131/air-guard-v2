@@ -31,10 +31,22 @@ const handleSignIn = async () => {
     <v-row style="height: 100%" no-gutters justify="center">
       <v-col align-self="center" class="d-flex justify-center">
         <v-card width="320">
-          <v-card-text>
-            <v-text-field v-model="email" label="email" />
-            <v-text-field v-model="password" label="password" />
-          </v-card-text>
+          <v-card-title>サインイン</v-card-title>
+          <v-container>
+            <v-row dense>
+              <v-col cols="12">
+                <air-text-field
+                  v-model="email"
+                  label="email"
+                  required
+                  input-type="email"
+                />
+              </v-col>
+              <v-col cols="12">
+                <air-password v-model="password" label="password" required />
+              </v-col>
+            </v-row>
+          </v-container>
           <v-expand-transition>
             <v-container v-show="errors.hasError">
               <v-alert
