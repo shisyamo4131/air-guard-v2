@@ -33,7 +33,6 @@ const handleSignOut = async () => {
 </script>
 
 <template>
-  <!-- Vuetify アプリケーションのルート要素 -->
   <v-app>
     <!-- グローバルローディング状態を表示するダイアログ -->
     <AppLoadingDialog />
