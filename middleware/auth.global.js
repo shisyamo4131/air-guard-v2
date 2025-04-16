@@ -15,7 +15,7 @@
  */
 
 // List of routes that do not require authentication
-const PUBLIC_ROUTES = ["/sign-in", "/sign-up", "/", "/air-vuetify"];
+const PUBLIC_ROUTES = ["/sign-in", "/sign-up", "/", "/test"];
 
 // Checks whether the given path is a public route
 function isPublicRoute(path) {
