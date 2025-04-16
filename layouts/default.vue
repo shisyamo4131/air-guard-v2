@@ -8,6 +8,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
 // グローバルローディングダイアログ（処理中表示）
 import AppLoadingDialog from "@/components/molecules/AppLoadingDialog.vue";
 
+const messages = useMessagesStore();
+
 // ナビゲーションドロワーの開閉状態
 const drawer = ref(false);
 
@@ -36,6 +38,8 @@ const handleSignOut = async () => {
   <v-app>
     <!-- グローバルローディング状態を表示するダイアログ -->
     <AppLoadingDialog />
+
+    <v-snackbar-queue v-model="messages.queue"></v-snackbar-queue>
 
     <!-- アプリケーション上部のツールバー -->
     <v-app-bar app color="primary" dark>
