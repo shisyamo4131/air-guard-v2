@@ -1,14 +1,14 @@
 <script setup>
-import { useGlobalLoading } from "@/composables/useGlobalLoading";
-
+// アカウント作成用のCloud Function呼び出し
 const { createUserWithCompany } = useCreateUser();
+
+// ログ・エラー・ルーティング・認証状態の各ストア
 const logger = useLogger();
 const errors = useErrorsStore();
 const router = useRouter();
 const auth = useAuthStore();
-const { startLoading, stopLoading, getLoadingKeys } = useGlobalLoading();
 
-/** 管理者ユーザーアカウントオブジェクト */
+// フォーム入力モデル
 const model = reactive({
   companyName: "株式会社唯心",
   companyNameKana: "ユイシン",
@@ -22,18 +22,16 @@ const formValid = ref(false);
 
 /**
  * 新規に管理者ユーザーアカウントを作成します。
+ * Create a new admin account and sign in.
  */
 async function createUser() {
   errors.clear();
-  startLoading("signUp", "管理者ユーザーアカウントを作成しています");
   try {
-    await createUserWithCompany(model);
+    await createUserWithCompany(model); // 処理中ローダーは内部で自動表示
     await auth.signIn(model);
     await router.push("/dashboard");
   } catch (error) {
     logger.error({ sender: "sign-up.vue", message: error.message, error });
-  } finally {
-    stopLoading("signUp");
   }
 }
 </script>
@@ -114,7 +112,6 @@ async function createUser() {
                 block
                 color="primary"
                 @click="createUser"
-                :loading="getLoadingKeys().includes('signUp')"
                 :disabled="!formValid"
               >
                 sign up

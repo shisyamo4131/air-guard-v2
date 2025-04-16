@@ -5,6 +5,7 @@ export const useCreateUser = () => {
   const { $functions } = useNuxtApp();
   const errors = useErrorsStore();
   const logger = useLogger();
+  const { startLoading, stopLoading } = useGlobalLoading();
   const sender = "useCreateUser";
 
   /**
@@ -27,6 +28,10 @@ export const useCreateUser = () => {
   }) => {
     /** errors ストアを初期化 */
     errors.clear();
+    startLoading(
+      "createUserWithCompany",
+      "管理者ユーザーアカウントを作成しています"
+    );
     try {
       const callable = httpsCallable($functions, "createUserWithCompany");
       const { data } = await callable({
@@ -52,8 +57,9 @@ export const useCreateUser = () => {
         message: error.message || "ユーザー作成中にエラーが発生しました",
         error,
       });
-
-      throw error; // ← 元のエラーオブジェクトをそのまま投げる（エラー管理ストア対応）
+      throw error;
+    } finally {
+      stopLoading("createUserWithCompany");
     }
   };
 
