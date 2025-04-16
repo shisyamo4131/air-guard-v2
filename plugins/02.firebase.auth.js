@@ -39,6 +39,7 @@ export default defineNuxtPlugin(() => {
       FireModel.setConfig({ prefix: `Companies/unknown/` });
     }
 
+    /** useAuthStore の isReady を true に更新 */
     auth.isReady = true;
   });
 });
