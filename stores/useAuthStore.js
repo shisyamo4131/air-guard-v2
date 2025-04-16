@@ -157,8 +157,26 @@ export const useAuthStore = defineStore("auth", () => {
 
   /**
    * Firebase の認証状態が確定するまで待機します。
+   * ミドルウェアによるページ遷移制御の開始を制御するために使用します。
+   * ユーザーのログイン状態は plugins/firebase.auth の onAuthStateChanged で監視していますが、
+   * このオブザーバーの処理を待たずにミドルウェアがページ遷移の制御を開始してしまうため、
+   * ログイン済みユーザーがアプリ（サイト）に再訪問した際、パブリックなページに遷移されてしまう現象が発生します。
+   * onAuthStateChanged で isReady を true に更新するようにし、
+   * ミドルウェアはこの関数を利用してページ遷移制御を待機できるようにしてください。
    *
    * Waits until Firebase authentication state is confirmed.
+   *
+   * This function is used to delay middleware-based navigation control
+   * until the user's auth state has been resolved by onAuthStateChanged.
+   *
+   * The plugin (plugins/firebase.auth) should update `isReady` to true
+   * within the onAuthStateChanged handler once the auth state is confirmed.
+   *
+   * Without this, the app may prematurely redirect to a public page
+   * before Firebase authentication status is known,
+   * especially on revisits by already-signed-in users.
+   *
+   * Call this from middleware to safely await auth readiness.
    *
    * @returns {Promise<void>}
    */
