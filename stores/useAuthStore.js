@@ -22,6 +22,7 @@ const sender = "useAuthStore.js";
 export const useAuthStore = defineStore("auth", () => {
   const logger = useLogger();
   const errors = useErrorsStore();
+  const { startLoading, stopLoading } = useGlobalLoading();
 
   const isReady = ref(false);
 
@@ -56,6 +57,7 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {Promise<void>}
    */
   async function setUser(user) {
+    startLoading("setUser", "アカウント情報を確認しています");
     try {
       if (!user?.uid || !user.email) {
         throw new Error(
@@ -72,9 +74,10 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       logger.error({ sender, message: error.message, error });
       throw error;
+    } finally {
+      stopLoading("setUser");
     }
   }
-
   /**
    * メールアドレスとパスワードでサインインします。
    *
@@ -97,6 +100,7 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       errors.clear();
+      startLoading("signIn", "サインインしています...");
 
       const { $auth } = useNuxtApp();
       await signInWithEmailAndPassword($auth, payload.email, payload.password);
@@ -105,6 +109,8 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       logger.error({ sender, message: error.message, error });
       throw error;
+    } finally {
+      stopLoading("signIn");
     }
   }
 
@@ -117,12 +123,15 @@ export const useAuthStore = defineStore("auth", () => {
    */
   async function signOut() {
     try {
+      startLoading("signOut", "サインアウトしています...");
       const { $auth } = useNuxtApp();
       await authSignOut($auth);
       logger.info({ sender, message: "Signed out successfully." });
     } catch (error) {
       logger.error({ sender, message: "Failed to sign out.", error });
       throw error;
+    } finally {
+      stopLoading("signOut");
     }
   }
 
@@ -148,10 +157,13 @@ export const useAuthStore = defineStore("auth", () => {
         throw new Error("Invalid email format.");
       }
 
+      startLoading("signUp", "アカウントを作成しています...");
       return await createUserWithEmailAndPassword($auth, email, password);
     } catch (error) {
       logger.error({ sender, message: error.message, error });
       throw error;
+    } finally {
+      stopLoading("signUp");
     }
   }
 
