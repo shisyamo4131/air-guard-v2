@@ -1,10 +1,12 @@
 <script setup>
+import { useGlobalLoading } from "@/composables/useGlobalLoading";
+
 const { createUserWithCompany } = useCreateUser();
 const logger = useLogger();
 const errors = useErrorsStore();
-const loading = ref(false);
 const router = useRouter();
 const auth = useAuthStore();
+const { startLoading, stopLoading, getLoadingKeys } = useGlobalLoading();
 
 /** 管理者ユーザーアカウントオブジェクト */
 const model = reactive({
@@ -22,7 +24,8 @@ const formValid = ref(false);
  * 新規に管理者ユーザーアカウントを作成します。
  */
 async function createUser() {
-  loading.value = true;
+  errors.clear();
+  startLoading("signUp", "管理者ユーザーアカウントを作成しています");
   try {
     await createUserWithCompany(model);
     await auth.signIn(model);
@@ -30,7 +33,7 @@ async function createUser() {
   } catch (error) {
     logger.error({ sender: "sign-up.vue", message: error.message, error });
   } finally {
-    loading.value = false;
+    stopLoading("signUp");
   }
 }
 </script>
@@ -111,7 +114,7 @@ async function createUser() {
                 block
                 color="primary"
                 @click="createUser"
-                :loading="loading"
+                :loading="getLoadingKeys().includes('signUp')"
                 :disabled="!formValid"
               >
                 sign up
@@ -121,9 +124,5 @@ async function createUser() {
         </v-card>
       </v-col>
     </v-row>
-    <MoleculesDialogsLoader
-      v-model="loading"
-      message="管理者ユーザーアカウントを作成しています"
-    ></MoleculesDialogsLoader>
   </v-container>
 </template>
