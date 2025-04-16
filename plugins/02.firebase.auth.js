@@ -6,8 +6,8 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
  * Monitor user login status using Firebase Authentication's `onAuthStateChanged`.
  * - Automatically reacts to login/logout events and updates the auth store accordingly.
  *
- * Firebase Authentication の `onAuthStateChanged` を利用してユーザーのログイン状態を監視します。
- * - ログイン・ログアウトのイベントに応じて、認証ストアを自動的に更新します。
+ * Firebase Authentication の `onAuthStateChanged` を利用してユーザーのサインイン状態を監視します。
+ * - サインイン・サインアウトのイベントに応じて、認証ストアを自動的に更新します。
  */
 export default defineNuxtPlugin(() => {
   // Ensure that Firebase has been initialized.

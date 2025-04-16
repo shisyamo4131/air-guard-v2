@@ -17,7 +17,7 @@ const handleSignIn = async () => {
   } catch (error) {
     logger.error({
       sender: "sign-in.vue",
-      message: "ログインに失敗しました。",
+      message: "サインインに失敗しました。",
       error,
     });
   }

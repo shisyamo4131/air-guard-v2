@@ -3,12 +3,13 @@ import {
   signOut as authSignOut,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
+import { httpsCallable } from "firebase/functions";
 
 const sender = "useAuthStore.js";
 
 /**
  * 認証機能とサインイン中のユーザー情報を提供するストア。
- * - `signIn`: Firebase Authentication によるログインを行う
+ * - `signIn`: Firebase Authentication によるサインインを行う
  * - `signOut`: サインアウト処理を行う
  * - `setUser`: ユーザー情報をストアに保存する
  * - `clearUser`: 保存されたユーザー情報を初期化する
@@ -84,7 +85,7 @@ export const useAuthStore = defineStore("auth", () => {
       errors.clear();
       startLoading("signIn", "サインインしています...");
       await signInWithEmailAndPassword($auth, payload.email, payload.password);
-      messages.add({ text: "ログインしました", color: "success" });
+      messages.add({ text: "サインインしました", color: "success" });
       logger.info({ sender, message: "Signed in successfully." });
     } catch (error) {
       logger.error({ sender, message: error.message, error });
@@ -100,7 +101,7 @@ export const useAuthStore = defineStore("auth", () => {
     try {
       startLoading("signOut", "サインアウトしています...");
       await authSignOut($auth);
-      messages.add({ text: "ログアウトしました", color: "success" });
+      messages.add({ text: "サインアウトしました", color: "success" });
       logger.info({ sender, message: "Signed out successfully." });
     } catch (error) {
       logger.error({ sender, message: "Failed to sign out.", error });
@@ -168,6 +169,62 @@ export const useAuthStore = defineStore("auth", () => {
     return roles.value.includes(role);
   }
 
+  /**
+   * Cloud Functions の createUserWithCompany を呼び出し、
+   * 管理者ユーザーアカウントを作成します。
+   * @param {Object} payload
+   * @param {string} payload.email
+   * @param {string} payload.password
+   * @param {string} payload.companyName
+   * @param {string} payload.companyNameKana
+   * @param {string} payload.displayName
+   * @returns {Promise<{ uid: string, companyId: string }>}
+   */
+  async function createUserWithCompany({
+    email,
+    password,
+    companyName,
+    companyNameKana,
+    displayName,
+  }) {
+    const { $functions } = useNuxtApp();
+    /** errors ストアを初期化 */
+    errors.clear();
+    startLoading(
+      "createUserWithCompany",
+      "管理者ユーザーアカウントを作成しています"
+    );
+    try {
+      const callable = httpsCallable($functions, "createUserWithCompany");
+      const { data } = await callable({
+        email,
+        password,
+        companyName,
+        companyNameKana,
+        displayName,
+      });
+
+      logger.info({
+        sender,
+        message: `管理者ユーザー「${displayName}」が正常に作成されました（uid: ${data.uid}）。`,
+      });
+
+      return {
+        uid: data.uid,
+        companyId: data.companyId,
+      };
+    } catch (error) {
+      logger.error({
+        sender,
+        message: error.message || "ユーザー作成中にエラーが発生しました",
+        error,
+      });
+      throw error;
+    } finally {
+      stopLoading("createUserWithCompany");
+    }
+  }
+
   return {
     uid,
     email,
@@ -182,5 +239,6 @@ export const useAuthStore = defineStore("auth", () => {
     setUser,
     waitUntilReady,
     hasRole,
+    createUserWithCompany,
   };
 });

@@ -1,6 +1,6 @@
 <script setup>
 // アカウント作成用のCloud Function呼び出し
-const { createUserWithCompany } = useCreateUser();
+// const { createUserWithCompany } = useCreateUser();
 
 // ログ・エラー・ルーティング・認証状態の各ストア
 const logger = useLogger();
@@ -27,7 +27,7 @@ const formValid = ref(false);
 async function createUser() {
   errors.clear();
   try {
-    await createUserWithCompany(model); // 処理中ローダーは内部で自動表示
+    await auth.createUserWithCompany(model); // 処理中ローダーは内部で自動表示
     await auth.signIn(model);
     await router.push("/dashboard");
   } catch (error) {
