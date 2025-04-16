@@ -13,7 +13,7 @@ const password = ref("");
 const handleSignIn = async () => {
   try {
     await auth.signIn({ email: email.value, password: password.value });
-    router.push("/home");
+    router.push("/dashboard");
   } catch (error) {
     logger.error({
       sender: "sign-in.vue",
