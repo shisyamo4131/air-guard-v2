@@ -2,6 +2,8 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 
+definePageMeta({ layout: "guest" });
+
 const router = useRouter();
 const errors = useErrorsStore();
 const auth = useAuthStore();

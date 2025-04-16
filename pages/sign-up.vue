@@ -1,6 +1,5 @@
 <script setup>
-// アカウント作成用のCloud Function呼び出し
-// const { createUserWithCompany } = useCreateUser();
+definePageMeta({ layout: "guest" });
 
 // ログ・エラー・ルーティング・認証状態の各ストア
 const logger = useLogger();

@@ -1,4 +1,5 @@
 <script setup>
+definePageMeta({ layout: "guest" });
 const router = useRouter();
 
 const navigateToSignIn = () => router.push("/sign-in");
