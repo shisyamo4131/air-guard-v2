@@ -57,6 +57,7 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {Promise<void>}
    */
   async function setUser(user) {
+    errors.clear();
     startLoading("setUser", "アカウント情報を確認しています");
     try {
       if (!user?.uid || !user.email) {
@@ -89,6 +90,8 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {Promise<void>}
    */
   async function signIn(payload) {
+    const { $auth } = useNuxtApp();
+    errors.clear();
     try {
       if (
         !payload?.email ||
@@ -102,7 +105,6 @@ export const useAuthStore = defineStore("auth", () => {
       errors.clear();
       startLoading("signIn", "サインインしています...");
 
-      const { $auth } = useNuxtApp();
       await signInWithEmailAndPassword($auth, payload.email, payload.password);
 
       logger.info({ sender, message: "Signed in successfully." });
@@ -122,9 +124,10 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {Promise<void>}
    */
   async function signOut() {
+    const { $auth } = useNuxtApp();
+    errors.clear();
     try {
       startLoading("signOut", "サインアウトしています...");
-      const { $auth } = useNuxtApp();
       await authSignOut($auth);
       logger.info({ sender, message: "Signed out successfully." });
     } catch (error) {
@@ -146,6 +149,7 @@ export const useAuthStore = defineStore("auth", () => {
    */
   async function signUp(email, password) {
     const { $auth } = useNuxtApp();
+    errors.clear();
     try {
       if (!email || !password) {
         throw new Error("email and password are required.");
