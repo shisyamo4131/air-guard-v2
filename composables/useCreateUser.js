@@ -28,7 +28,7 @@ export const useCreateUser = () => {
     /** errors ストアを初期化 */
     errors.clear();
     try {
-      const callable = httpsCallable($functions, "createUserWithCompan");
+      const callable = httpsCallable($functions, "createUserWithCompany");
       const { data } = await callable({
         email,
         password,
