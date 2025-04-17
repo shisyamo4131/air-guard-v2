@@ -34,6 +34,9 @@ export const useAuthStore = defineStore("auth", () => {
   const displayName = ref(null);
   const isEmailVerified = ref(false);
   const roles = ref([]);
+  const companyId = ref(null);
+  const isAdmin = ref(false);
+  const isSuperUser = ref(false);
 
   function clearUser() {
     uid.value = null;
@@ -41,6 +44,9 @@ export const useAuthStore = defineStore("auth", () => {
     displayName.value = null;
     isEmailVerified.value = false;
     roles.value = [];
+    companyId.value = null;
+    isAdmin.value = false;
+    isSuperUser.value = false;
 
     logger.info({ sender, message: "User information is cleared." });
   }
@@ -61,6 +67,9 @@ export const useAuthStore = defineStore("auth", () => {
       displayName.value = user.displayName || "";
       isEmailVerified.value = user.emailVerified || false;
       roles.value = idTokenResult?.claims?.roles || [];
+      companyId.value = idTokenResult?.claims?.companyId || null;
+      isAdmin.value = !!idTokenResult?.claims?.isAdmin;
+      isSuperUser.value = !!idTokenResult?.claims?.isSuperUser;
     } catch (error) {
       logger.error({ sender, message: error.message, error });
       throw error;
@@ -232,6 +241,9 @@ export const useAuthStore = defineStore("auth", () => {
     isEmailVerified,
     isReady,
     roles,
+    isAdmin,
+    companyId,
+    isSuperUser,
     clearUser,
     signIn,
     signOut,
