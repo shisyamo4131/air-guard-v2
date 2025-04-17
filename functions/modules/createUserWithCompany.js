@@ -44,7 +44,7 @@ export const createUserWithCompany = onCall(async (request) => {
     await auth.setCustomUserClaims(uid, {
       companyId,
       isAdmin: true,
-      superUser: false,
+      isSuperUser: false,
     });
 
     return { success: true, uid, companyId };
