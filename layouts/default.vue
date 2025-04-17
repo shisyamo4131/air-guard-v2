@@ -86,3 +86,9 @@ const handleSignOut = async () => {
     </v-footer>
   </v-app>
 </template>
+
+<style>
+.firebase-emulator-warning {
+  display: none;
+}
+</style>
