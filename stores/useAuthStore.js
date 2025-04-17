@@ -23,7 +23,7 @@ const sender = "useAuthStore.js";
 export const useAuthStore = defineStore("auth", () => {
   const logger = useLogger();
   const errors = useErrorsStore();
-  const { startLoading, stopLoading } = useGlobalLoading();
+  const { add, remove, queue } = useLoadingQueue();
   const messages = useMessagesStore();
 
   const isReady = ref(false);
@@ -47,7 +47,7 @@ export const useAuthStore = defineStore("auth", () => {
 
   async function setUser(user) {
     errors.clear();
-    startLoading("setUser", "アカウント情報を確認しています");
+    add({ key: "setUser", text: "アカウント情報を確認しています" });
     try {
       if (!user?.uid || !user.email) {
         throw new Error(
@@ -65,7 +65,7 @@ export const useAuthStore = defineStore("auth", () => {
       logger.error({ sender, message: error.message, error });
       throw error;
     } finally {
-      stopLoading("setUser");
+      remove("setUser");
     }
   }
 
@@ -83,7 +83,7 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       errors.clear();
-      startLoading("signIn", "サインインしています...");
+      add({ key: "signIn", text: "サインインしています..." });
       await signInWithEmailAndPassword($auth, payload.email, payload.password);
       messages.add({ text: "サインインしました", color: "success" });
       logger.info({ sender, message: "Signed in successfully." });
@@ -91,7 +91,7 @@ export const useAuthStore = defineStore("auth", () => {
       logger.error({ sender, message: error.message, error });
       throw error;
     } finally {
-      stopLoading("signIn");
+      remove("signIn");
     }
   }
 
@@ -99,7 +99,7 @@ export const useAuthStore = defineStore("auth", () => {
     const { $auth } = useNuxtApp();
     errors.clear();
     try {
-      startLoading("signOut", "サインアウトしています...");
+      add({ key: "signOut", text: "サインアウトしています..." });
       await authSignOut($auth);
       messages.add({ text: "サインアウトしました", color: "success" });
       logger.info({ sender, message: "Signed out successfully." });
@@ -107,7 +107,7 @@ export const useAuthStore = defineStore("auth", () => {
       logger.error({ sender, message: "Failed to sign out.", error });
       throw error;
     } finally {
-      stopLoading("signOut");
+      remove("signOut");
     }
   }
 
@@ -125,7 +125,7 @@ export const useAuthStore = defineStore("auth", () => {
         throw new Error("Invalid email format.");
       }
 
-      startLoading("signUp", "アカウントを作成しています...");
+      add({ key: "signUp", text: "アカウントを作成しています..." });
       const result = await createUserWithEmailAndPassword(
         $auth,
         email,
@@ -137,7 +137,7 @@ export const useAuthStore = defineStore("auth", () => {
       logger.error({ sender, message: error.message, error });
       throw error;
     } finally {
-      stopLoading("signUp");
+      remove("signUp");
     }
   }
 
@@ -190,10 +190,10 @@ export const useAuthStore = defineStore("auth", () => {
     const { $functions } = useNuxtApp();
     /** errors ストアを初期化 */
     errors.clear();
-    startLoading(
-      "createUserWithCompany",
-      "管理者ユーザーアカウントを作成しています"
-    );
+    add({
+      key: "createUserWithCompany",
+      text: "管理者ユーザーアカウントを作成しています",
+    });
     try {
       const callable = httpsCallable($functions, "createUserWithCompany");
       const { data } = await callable({
@@ -221,7 +221,7 @@ export const useAuthStore = defineStore("auth", () => {
       });
       throw error;
     } finally {
-      stopLoading("createUserWithCompany");
+      remove("createUserWithCompany");
     }
   }
 
