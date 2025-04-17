@@ -5,10 +5,9 @@ import { useDisplay } from "vuetify";
 // サインアウト処理に使用する認証ストア
 import { useAuthStore } from "@/stores/useAuthStore";
 
-// グローバルローディングダイアログ（処理中表示）
-import AppLoadingDialog from "@/components/molecules/AppLoadingDialog.vue";
-
+// メッセージストアとローディングキュー
 const messages = useMessagesStore();
+const { queue } = useLoadingQueue();
 
 // ナビゲーションドロワーの開閉状態
 const drawer = ref(false);
@@ -37,7 +36,7 @@ const handleSignOut = async () => {
 <template>
   <v-app>
     <!-- グローバルローディング状態を表示するダイアログ -->
-    <AppLoadingDialog />
+    <air-loading-dialog :model-value="queue" />
 
     <v-snackbar-queue v-model="messages.queue"></v-snackbar-queue>
 

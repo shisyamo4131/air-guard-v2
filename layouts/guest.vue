@@ -1,7 +1,13 @@
-<script setup></script>
+<script setup>
+// ローディングキュー
+const { queue } = useLoadingQueue();
+</script>
 
 <template>
   <v-app>
+    <!-- グローバルローディング状態を表示するダイアログ -->
+    <air-loading-dialog :model-value="queue" />
+
     <!-- メインコンテンツ表示領域 -->
     <v-main>
       <NuxtPage />
