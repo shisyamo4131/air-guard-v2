@@ -23,7 +23,7 @@ const sender = "useAuthStore.js";
 export const useAuthStore = defineStore("auth", () => {
   const logger = useLogger();
   const errors = useErrorsStore();
-  const { add, remove, queue } = useLoadingQueue();
+  const { add, remove } = useLoadingsStore();
   const messages = useMessagesStore();
 
   const isReady = ref(false);

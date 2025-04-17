@@ -1,6 +1,6 @@
 <script setup>
 // ローディングキュー
-const { queue } = useLoadingQueue();
+const { queue } = useLoadingsStore();
 </script>
 
 <template>

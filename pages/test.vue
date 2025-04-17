@@ -1,66 +1,47 @@
 <script setup>
-import { useGlobalLoading } from "@/composables/useGlobalLoading";
+function generateKey(label) {
+  return `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+}
 
-const {
-  isLoading,
-  primaryMessage,
-  startLoading,
-  stopLoading,
-  setLoadingMessage,
-  getLoadingKeys,
-} = useGlobalLoading();
+// useLoadingsStore から add/remove を取得
+const { add, remove } = useLoadingsStore();
 
-const simulateTask = async (
-  key,
-  message,
-  duration = 2000,
-  updateMessage = null
-) => {
-  startLoading(key, message);
-  if (updateMessage) {
-    setTimeout(() => setLoadingMessage(key, updateMessage), duration / 2);
-  }
-  await new Promise((resolve) => setTimeout(resolve, duration));
-  stopLoading(key);
-};
+// 処理Aを開始（5秒で終了）
+function startProcessA() {
+  const key = generateKey("A");
+  const text = "処理Aを実行中…";
+  add({ key, text });
+
+  setTimeout(() => {
+    remove(key);
+  }, 5000);
+}
+
+// 処理Bを開始（7秒で終了）
+function startProcessB() {
+  const key = generateKey("B");
+  const text = "処理Bを実行中…";
+  add({ key, text });
+
+  setTimeout(() => {
+    remove(key);
+  }, 7000);
+}
+
+// A → 少し遅れて B
+function startScenario() {
+  startProcessA();
+
+  setTimeout(() => {
+    startProcessB();
+  }, 1000);
+}
 </script>
 
 <template>
-  <v-container class="pa-4" style="max-width: 600px">
-    <div>{{ isLoading }}</div>
-    <v-btn
-      color="primary"
-      class="mb-2"
-      @click="simulateTask('task1', 'データを読み込んでいます...', 4000)"
-    >
-      タスク1開始
+  <v-container class="pa-4">
+    <v-btn color="primary" @click="startScenario">
+      テスト開始（処理A → 処理B → A終了 → B終了）
     </v-btn>
-
-    <v-btn
-      color="secondary"
-      class="mb-2"
-      @click="
-        simulateTask(
-          'task2',
-          'ファイルをアップロード中...',
-          5000,
-          'アップロード中（残り半分）...'
-        )
-      "
-    >
-      タスク2開始（途中でメッセージ変更）
-    </v-btn>
-
-    <v-card class="pa-4 mt-4" outlined>
-      <div class="text-subtitle-1 mb-2">ローディング状態:</div>
-      <v-alert type="info" v-if="isLoading">
-        現在ローディング中です（{{ getLoadingKeys().join(", ") }}）
-        <br />
-        表示メッセージ：{{ primaryMessage }}
-      </v-alert>
-      <v-alert type="success" v-else>
-        現在ローディングされていません。
-      </v-alert>
-    </v-card>
   </v-container>
 </template>

@@ -7,7 +7,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 
 // メッセージストアとローディングキュー
 const messages = useMessagesStore();
-const { queue } = useLoadingQueue();
+const { queue } = useLoadingsStore();
 
 // ナビゲーションドロワーの開閉状態
 const drawer = ref(false);
