@@ -46,32 +46,21 @@ const handleSignOut = async () => {
       <v-app-bar-title>AirGuard</v-app-bar-title>
     </v-app-bar>
 
-    <!-- サイドナビゲーション（ドロワー） -->
-    <v-navigation-drawer
+    <AppNavigationDrawer
       v-model="drawer"
       :permanent="lgAndUp"
       :temporary="!lgAndUp"
       app
-      width="240"
     >
-      <!-- ナビゲーションリンク一覧 -->
-      <v-list dense>
-        <v-list-item title="Dashboard" to="/dashboard" />
-        <v-list-item title="Users" to="/users" />
-        <v-list-item title="Settings" to="/settings" />
-      </v-list>
-
-      <!-- セクション区切り -->
-      <v-divider class="my-2" />
-
-      <!-- サインアウト操作 -->
-      <v-list-item
-        title="Sign Out"
-        @click="handleSignOut"
-        prepend-icon="mdi-logout"
-        class="text-error"
-      />
-    </v-navigation-drawer>
+      <template #append>
+        <v-list-item
+          title="Sign Out"
+          @click="handleSignOut"
+          prepend-icon="mdi-logout"
+          class="text-error"
+        />
+      </template>
+    </AppNavigationDrawer>
 
     <!-- メインコンテンツ表示領域 -->
     <v-main>
