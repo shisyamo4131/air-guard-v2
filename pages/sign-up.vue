@@ -1,8 +1,5 @@
 <script setup>
-definePageMeta({ layout: "guest" });
-
 // ログ・エラー・ルーティング・認証状態の各ストア
-const logger = useLogger();
 const errors = useErrorsStore();
 const router = useRouter();
 const auth = useAuthStore();
@@ -23,14 +20,14 @@ const formValid = ref(false);
  * 新規に管理者ユーザーアカウントを作成します。
  * Create a new admin account and sign in.
  */
-async function createUser() {
+async function handleCreateUser() {
   errors.clear();
   try {
     await auth.createUserWithCompany(model); // 処理中ローダーは内部で自動表示
     await auth.signIn(model);
     await router.push("/dashboard");
   } catch (error) {
-    logger.error({ sender: "sign-up.vue", message: error.message, error });
+    // エラーロギングは try ブロック内の関数で行われるため不要
   }
 }
 </script>
@@ -110,7 +107,7 @@ async function createUser() {
               <v-btn
                 block
                 color="primary"
-                @click="createUser"
+                @click="handleCreateUser"
                 :disabled="!formValid"
               >
                 sign up
