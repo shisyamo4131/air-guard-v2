@@ -13,8 +13,14 @@
 // getPageConfig と isPageAllowed をインポート
 import { getPageConfig, isPageAllowed } from "~/utils/pageSettings";
 import { useAuthStore } from "~/stores/useAuthStore";
+import { useErrorsStore } from "~/stores/useErrorsStore";
 
+// グローバル認証ミドルウェア
 export default defineNuxtRouteMiddleware(async (to) => {
+  // 画面遷移時にはエラーをクリア
+  const errors = useErrorsStore();
+  errors.clear();
+
   const auth = useAuthStore();
   await auth.waitUntilReady();
 
