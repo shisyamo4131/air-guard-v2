@@ -2,9 +2,6 @@
 // Vuetify のレスポンシブ情報取得用ユーティリティ
 import { useDisplay } from "vuetify";
 
-// サインアウト処理に使用する認証ストア
-import { useAuthStore } from "@/stores/useAuthStore";
-
 // メッセージストアとローディングキュー
 const messages = useMessagesStore();
 const { queue } = useLoadingsStore();
@@ -42,7 +39,7 @@ const handleSignOut = async () => {
 
     <!-- アプリケーション上部のツールバー -->
     <v-app-bar app color="primary" dark>
-      <v-app-bar-nav-icon @click="drawer = !drawer" />
+      <v-app-bar-nav-icon v-if="auth.uid" @click="drawer = !drawer" />
       <v-app-bar-title>AirGuard</v-app-bar-title>
     </v-app-bar>
 
