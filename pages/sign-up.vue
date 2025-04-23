@@ -56,6 +56,10 @@ function prevStep() {
     currentStep.value--;
   }
 }
+
+const goToSignIn = () => {
+  router.push("/sign-in");
+};
 </script>
 
 <template>
@@ -197,6 +201,17 @@ function prevStep() {
               </v-btn>
             </v-card-actions>
           </v-form>
+          <v-card-text class="text-center">
+            アカウントをお持ちの場合
+            <v-btn
+              variant="text"
+              color="primary"
+              size="small"
+              @click="goToSignIn"
+            >
+              サインイン
+            </v-btn>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>
