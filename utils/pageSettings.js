@@ -86,7 +86,7 @@ export const pageStructure = [
     id: "settings",
     label: "設定",
     icon: "mdi-cog",
-    roles: [], // 特定ロールが必要"
+    roles: ["admin"], // 特定ロールが必要"
     navigation: true,
     children: [
       {
@@ -94,7 +94,7 @@ export const pageStructure = [
         path: "/settings/company",
         label: "会社設定",
         icon: "mdi-office-building",
-        roles: [],
+        roles: ["admin"],
         navigation: true,
       },
     ],
