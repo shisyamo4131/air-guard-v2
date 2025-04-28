@@ -43,8 +43,8 @@ export const createUserWithCompany = onCall(async (request) => {
     // 4. カスタムクレーム設定
     await auth.setCustomUserClaims(uid, {
       companyId,
-      isAdmin: true,
       isSuperUser: false,
+      roles: ["admin"],
     });
 
     return { success: true, uid, companyId };
