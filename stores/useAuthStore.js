@@ -33,19 +33,27 @@ export const useAuthStore = defineStore("auth", () => {
   const email = ref(null);
   const displayName = ref(null);
   const isEmailVerified = ref(false);
-  const roles = ref([]);
+  // const roles = ref([]);
+  const _rawRoles = ref([]);
   const companyId = ref(null);
-  const isAdmin = ref(false);
   const isSuperUser = ref(false);
+
+  // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
+  const roles = computed(() => {
+    if (isSuperUser.value) {
+      return ["admin"];
+    }
+    return _rawRoles.value;
+  });
 
   function clearUser() {
     uid.value = null;
     email.value = null;
     displayName.value = null;
     isEmailVerified.value = false;
-    roles.value = [];
+    // roles.value = [];
+    _rawRoles.value = [];
     companyId.value = null;
-    isAdmin.value = false;
     isSuperUser.value = false;
 
     logger.info({ sender, message: "User information is cleared." });
@@ -106,10 +114,10 @@ export const useAuthStore = defineStore("auth", () => {
       email.value = user.email;
       displayName.value = user.displayName || "";
       isEmailVerified.value = user.emailVerified || false;
-      roles.value = idTokenResult?.claims?.roles || [];
-      companyId.value = idTokenResult?.claims?.companyId || null;
-      isAdmin.value = !!idTokenResult?.claims?.isAdmin;
       isSuperUser.value = !!idTokenResult?.claims?.isSuperUser;
+      // roles.value = idTokenResult?.claims?.roles || [];
+      _rawRoles.value = idTokenResult?.claims?.roles || [];
+      companyId.value = idTokenResult?.claims?.companyId || null;
 
       logger.info({
         sender,
@@ -497,7 +505,6 @@ export const useAuthStore = defineStore("auth", () => {
     isEmailVerified,
     isReady,
     roles,
-    isAdmin,
     companyId,
     isSuperUser,
     clearUser,
