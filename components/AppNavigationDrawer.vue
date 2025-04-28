@@ -28,7 +28,6 @@ const navigationItems = computed(() => {
               :title="item.title"
               :value="item.value"
               :to="item.to"
-              :disabled="!auth.companyId"
             ></v-list-item>
           </template>
           <v-list-item
@@ -38,7 +37,6 @@ const navigationItems = computed(() => {
             :title="child.title"
             :value="child.value"
             :to="child.to"
-            :disabled="!auth.companyId"
           ></v-list-item>
         </v-list-group>
         <v-list-item
@@ -47,7 +45,6 @@ const navigationItems = computed(() => {
           :value="item.value"
           :to="item.to"
           :prepend-icon="item.prependIcon"
-          :disabled="!auth.companyId"
         ></v-list-item>
       </template>
     </v-list>
