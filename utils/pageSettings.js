@@ -68,7 +68,7 @@ export const pageStructure = [
         // public: false,
         label: "雇用契約",
         icon: "mdi-file-document-outline", // アイコンを追加
-        roles: ["admin", "developer"], // 特定ロールが必要
+        roles: [], // 特定ロールが必要
         navigation: true,
       },
       {
@@ -77,7 +77,24 @@ export const pageStructure = [
         // public: false,
         label: "健康診断",
         icon: "mdi-medical-bag", // アイコンを追加
-        roles: ["admin", "developer"], // 特定ロールが必要
+        roles: [], // 特定ロールが必要
+        navigation: true,
+      },
+    ],
+  },
+  {
+    id: "settings",
+    label: "設定",
+    icon: "mdi-cog",
+    roles: [], // 特定ロールが必要"
+    navigation: true,
+    children: [
+      {
+        id: "company-setting",
+        path: "/settings/company",
+        label: "会社設定",
+        icon: "mdi-office-building",
+        roles: [],
         navigation: true,
       },
     ],
