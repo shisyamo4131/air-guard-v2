@@ -600,16 +600,6 @@ export default {
       { immediate: true }
     );
 
-    /** sync modelValue to internalItem and editItem */
-    watch(
-      () => props.modelValue,
-      (v) => {
-        internalItem.value = _cloneObject(v);
-        editItem.value = _cloneObject(v);
-      },
-      { immediate: true, deep: true }
-    );
-
     return () =>
       context.slots.default({
         hasError: hasError.value,
