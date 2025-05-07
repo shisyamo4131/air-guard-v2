@@ -83,6 +83,13 @@ export default {
     itemConverter: Function,
 
     /**
+     * Indicates that the component is processing.
+     *
+     * コンポーネントが処理中であることを表します。
+     */
+    loading: Boolean,
+
+    /**
      * Managed object, the value of the component's v-model.
      *
      * 管理対象のオブジェクトで、コンポーネントの v-model の値です。
@@ -116,7 +123,7 @@ export default {
     const errors = ref([]);
 
     /**
-     * Indicate that the component is editing mode.
+     * Indicates that the component is editing mode.
      *
      * コンポーネントの状態が編集中であることを表すフラグ
      */
@@ -130,11 +137,45 @@ export default {
     const internalItem = ref(null);
 
     /**
-     * Indicate that the component is processing.
+     * A property that indicates that the component is processing.
      *
-     * コンポーネントが処理中であることを表すフラグ
+     * コンポーネントが処理中であることを表すプロパティ
      */
-    const loading = ref(false);
+    const internalLoading = ref(false);
+
+    /**
+     * Loading property used internally by the component.
+     * emit `update:loading` event in setter.
+     *
+     * コンポーネントが内部で使用する `loading` プロパティ
+     * セッターで `update:loading` イベントを emit
+     */
+    const computedLoading = computed({
+      get() {
+        return internalLoading.value;
+      },
+      set(v) {
+        if (internalLoading.value !== v) {
+          internalLoading.value = v;
+          context.emit("update:loading", v);
+        }
+      },
+    });
+
+    /**
+     * Sync `props.loading` to `internalLoading`.
+     * Immediate synchronization, default is false.
+     *
+     * `props.loading` と `internalLoading` を同期するウォッチャー
+     * 即時同期を行い、既定値は false とする。
+     */
+    watch(
+      () => props.loading,
+      (v) => {
+        computedLoading.value = v || false;
+      },
+      { immediate: true }
+    );
 
     /**
      * The `isEditing` property used internally by the component.
@@ -253,7 +294,7 @@ export default {
       }
 
       // 処理中に更新
-      loading.value = true;
+      computedLoading.value = true;
 
       try {
         // 編集モードに合わせて処理
@@ -273,7 +314,7 @@ export default {
         console.error(message, err);
         setError(message, err);
       } finally {
-        loading.value = false;
+        computedLoading.value = false;
       }
     }
 
@@ -594,7 +635,7 @@ export default {
      *                 `beforeEdit` の実行や初期化処理中にエラーが発生した場合、エラーをスローします。
      */
     async function _toEdit(mode) {
-      loading.value = true;
+      computedLoading.value = true;
       try {
         // props.beforeEdit が指定されている場合は実行
         if (typeof props.beforeEdit === "function") {
@@ -625,7 +666,7 @@ export default {
         setError(message, err);
         throw err;
       } finally {
-        loading.value = false;
+        computedLoading.value = false;
       }
     }
 
@@ -662,6 +703,7 @@ export default {
         hasError: hasError.value,
         isEditing: computedIsEditing.value,
         item: editItem.value,
+        loading: computedLoading.value,
         quitEditing,
         setError,
         submit,
