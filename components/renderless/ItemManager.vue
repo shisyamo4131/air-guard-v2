@@ -127,7 +127,7 @@ export default {
      *
      * コンポーネントが管理するアイテム
      */
-    const internalItem = ref(props.item);
+    const internalItem = ref(null);
 
     /**
      * Indicate that the component is processing.
@@ -380,30 +380,87 @@ export default {
      * @returns {Record<string, any>} A cloned object.
      *                                複製されたオブジェクト。
      */
-    function _cloneObject(obj = null) {
-      try {
-        if (obj === null || typeof obj !== "object") {
-          throw new TypeError(
-            `Invalid argument: Expected an object, but received ${
-              obj === null ? "null" : typeof obj
-            }.`
-          );
-        }
+    // function _cloneObject(obj = null) {
+    //   try {
+    //     if (obj === null || typeof obj !== "object") {
+    //       throw new TypeError(
+    //         `Invalid argument: Expected an object, but received ${
+    //           obj === null ? "null" : typeof obj
+    //         }.`
+    //       );
+    //     }
 
+    //     const proto = Object.getPrototypeOf(obj);
+    //     const newObj = proto?.constructor
+    //       ? new proto.constructor()
+    //       : Object.create(proto);
+
+    //     for (const key of Object.keys(obj)) {
+    //       const value = obj[key];
+    //       newObj[key] =
+    //         value && typeof value === "object" ? _cloneObject(value) : value;
+    //     }
+
+    //     return newObj;
+    //   } catch (err) {
+    //     console.error(`[RenderlessItemManager.vue] An error has occured.`, err);
+    //   }
+    // }
+
+    function _cloneObject(obj = null) {
+      // null や undefined、プリミティブ型はそのまま返す
+      if (obj === null || typeof obj !== "object") {
+        return obj;
+      }
+
+      // FireModel インスタンスなどで clone メソッドが定義されていればそれを使う
+      if (typeof obj.clone === "function") {
+        try {
+          // FireModel 自身の clone() を呼び出す
+          return obj.clone();
+        } catch (err) {
+          console.error(
+            `[ItemManager.vue] Failed to clone object using its clone method.`,
+            err,
+            obj
+          );
+          // エラー時は null や例外を投げるなど、適切なエラー処理を行う
+          // ここでは null を返す例
+          return null;
+        }
+      }
+
+      // --- clone メソッドがないプレーンオブジェクトなどの場合のフォールバック ---
+      // (この部分は FireModel 以外も扱う場合に必要)
+      console.warn(
+        "[ItemManager.vue] Cloning object without a dedicated 'clone' method. Using generic deep clone (may lose methods/prototype).",
+        obj
+      );
+      try {
+        // structuredClone はメソッドやプロトタイプを失うが、循環参照に強く安全
+        return structuredClone(obj);
+
+        /*
+        // または、以前の簡易的な実装 (循環参照に弱い)
         const proto = Object.getPrototypeOf(obj);
         const newObj = proto?.constructor
-          ? new proto.constructor()
+          ? new proto.constructor() // コンストラクタ引数問題は残る
           : Object.create(proto);
 
         for (const key of Object.keys(obj)) {
           const value = obj[key];
-          newObj[key] =
-            value && typeof value === "object" ? _cloneObject(value) : value;
+          // 再帰呼び出しにも clone メソッドチェックを入れるのがより安全
+          newObj[key] = (value && typeof value === 'object') ? _cloneObject(value) : value;
         }
-
         return newObj;
+        */
       } catch (err) {
-        console.error(`[RenderlessItemManager.vue] An error has occured.`, err);
+        console.error(
+          `[ItemManager.vue] Failed to clone plain object.`,
+          err,
+          obj
+        );
+        return null; // エラー時は null を返す例
       }
     }
 
