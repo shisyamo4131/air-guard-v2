@@ -193,7 +193,7 @@ onMounted(() => {
     </div>
 
     <!-- ItemManager を使用 -->
-    <ItemManager
+    <AirItemManager
       v-else
       v-model="companyInstance"
       v-model:isEditing="isManagerEditing"
@@ -296,7 +296,7 @@ onMounted(() => {
           </v-card-actions>
         </v-card>
       </template>
-    </ItemManager>
+    </AirItemManager>
 
     <v-divider class="my-4"></v-divider>
 
