@@ -29,6 +29,13 @@ export const pageStructure = [
     navigation: false,
   },
   {
+    id: "test", // ルートパスを追加 (公開ページとする例)
+    path: "/test",
+    label: "テスト",
+    roles: [],
+    navigation: true,
+  },
+  {
     id: "home", // ルートパスを追加 (公開ページとする例)
     path: "/",
     public: true, // 公開ページ
