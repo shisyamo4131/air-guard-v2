@@ -18,7 +18,7 @@
     "air-guard-v2-schemas": "file:air-guard-v2-schemas",
     "air-vuetify-v3": "file:air-vuetify-v3",
     "firebase": "^11.4.0",
-    "nuxt": "^3.15.4",
+    "nuxt": "^3.17.2",
     "pinia": "^3.0.1",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0",

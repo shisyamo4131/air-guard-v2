@@ -5,8 +5,7 @@ const logger = useLogger();
 const errors = useErrorsStore();
 const auth = useAuthStore();
 const companyId = auth.companyId;
-// const companyModelRef = new Company();
-//test
+
 // --- データ取得処理 ---
 const { data: companyModelRef } = await useAsyncData(
   `company-${companyId}`,
