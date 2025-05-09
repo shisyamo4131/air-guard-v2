@@ -3,17 +3,47 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2025, 5, 31);
+    // --- Helper Functions (Optional, but good for clarity) ---
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userCompanyId() {
+      // request.auth.token.companyId がカスタムクレームに設定されていることを前提とします
+      return request.auth.token.companyId;
+    }
+
+    function isSuperUser() {
+      // request.auth.token.isSuperUser が true の場合にスーパーユーザーと判断
+      return request.auth != null && request.auth.token.isSuperUser == true;
+    }
+
+    // --- Rules for 'Companies' collection ---
+    // CompaniesコレクションのドキュメントID (companyDocId) と
+    // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyDocId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyDocId)
+                              || isSuperUser();
+    }
+
+    // --- Rules for 'Users' subcollection under 'Companies' ---
+    // UsersコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // Users ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/Users/{userId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
+    // --- General SuperUser Access & Default Deny for Others ---
+    // スーパーユーザーはすべてのドキュメントに対して Read/Write アクセスを持つ。
+    // このルールは、上記のより具体的なルールでアクセスが許可されなかった場合に評価される。
+    // 非スーパーユーザーの場合、上記の具体的なルールにマッチしないパスへのアクセスは、
+    // 他に明示的な許可ルールがなければデフォルトで拒否される。
+    match /{path=**} {
+      allow read, write: if isSuperUser();
     }
   }
 }
