@@ -28,12 +28,13 @@ const { data: companyModelRef, error: companyFetchError } = await useAsyncData(
     // FireModel.fetch で会社情報をインスタンスに読み込んで返す
     // 読み込みでエラーが発生した場合は logger.error でログ出力（同時にグローバルエラーが蓄積）
     try {
-      await companyInstance.fetch({ docId: currentCompanyId });
-      if (!companyInstance.docId) {
-        throw new Error(
-          `No company document found for ID ${currentCompanyId}.`
-        );
-      }
+      // await companyInstance.fetch({ docId: currentCompanyId });
+      companyInstance.subscribe({ docId: currentCompanyId });
+      // if (!companyInstance.docId) {
+      //   throw new Error(
+      //     `No company document found for ID ${currentCompanyId}.`
+      //   );
+      // }
       return companyInstance;
     } catch (error) {
       const message = `Failed to fetch company data for ID ${currentCompanyId}.`;
