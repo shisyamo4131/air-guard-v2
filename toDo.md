@@ -1,2 +1,1 @@
-- Firestore のルール設定
-  - 会社情報には companyId 限定でアクセス制御
+
