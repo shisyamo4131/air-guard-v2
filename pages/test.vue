@@ -1,6 +1,5 @@
 <script setup>
 import { ref, onMounted, computed } from "vue";
-import ItemManager from "@/components/renderless/ItemManager.vue"; // ItemManager のパスを確認
 // パッケージ名から Company をインポート
 import { Company } from "air-guard-v2-schemas";
 
@@ -15,6 +14,7 @@ const loadingData = ref(false);
 const dataError = ref(null);
 const lastEvent = ref(null); // ItemManager からのイベント表示用
 const isManagerEditing = ref(false); // ItemManager の isEditing 状態を同期
+const managerLoading = ref(false); // ItemManager の loading 状態を同期
 
 // --- データ準備 ---
 // テスト用の会社データを取得または作成
@@ -143,6 +143,13 @@ function handleDeleteEvent(itemToDelete) {
   // submit 完了前に emit される
 }
 
+// ItemManager の update:loading イベント
+function handleLoadingUpdate(newLoadingState) {
+  lastEvent.value = { type: "update:loading", loading: newLoadingState };
+  console.log("update:loading イベント:", newLoadingState);
+  // v-model:loading を使っているので managerLoading.value は自動的に更新される
+}
+
 // --- 表示用ラベル ---
 const fieldLabels = {
   name: "会社名",
@@ -197,12 +204,14 @@ onMounted(() => {
       v-else
       v-model="companyInstance"
       v-model:isEditing="isManagerEditing"
+      v-model:loading="managerLoading"
       :handle-update="handleCompanyUpdate"
       :handle-delete="handleCompanyDelete"
       @submit:complete="handleSubmitComplete"
       @update:modelValue="handleModelUpdate"
       @update="handleUpdateEvent"
       @delete="handleDeleteEvent"
+      @update:loading="handleLoadingUpdate"
     >
       <template
         #default="{
@@ -214,12 +223,14 @@ onMounted(() => {
           quitEditing,
           isEditing,
           hasError,
+          loading,
         }"
       >
         <v-card>
           <v-card-title>会社情報 (ItemManager 管理)</v-card-title>
           <v-card-subtitle>
-            編集中: {{ isEditing }} / エラー: {{ hasError }}
+            編集中: {{ isEditing }} / ローディング中: {{ loading }} / エラー:
+            {{ hasError }}
           </v-card-subtitle>
 
           <v-card-text>
@@ -297,6 +308,18 @@ onMounted(() => {
         </v-card>
       </template>
     </AirItemManager>
+
+    <v-card class="mt-4">
+      <v-card-title>親コンポーネントからの Loading 制御</v-card-title>
+      <v-card-text>
+        <v-switch
+          v-model="managerLoading"
+          label="AirItemManager のローディング状態を外部から切り替える"
+          color="orange"
+        ></v-switch>
+        <p>現在の managerLoading (親側) の値: {{ managerLoading }}</p>
+      </v-card-text>
+    </v-card>
 
     <v-divider class="my-4"></v-divider>
 
