@@ -31,19 +31,6 @@ const { data: companyModelRef } = await useAsyncData(
   }
 );
 
-// --- 表示用のラベル定義 ---
-const fieldLabels = {
-  name: "会社名",
-  nameKana: "会社名カナ",
-  zipcode: "郵便番号",
-  prefecture: "都道府県",
-  city: "市区町村",
-  address: "番地",
-  building: "建物名",
-  tel: "電話番号",
-  fax: "FAX番号",
-};
-
 // --- 表示フィールドの定義 ---
 const companyFields = Object.keys(Company.classProps);
 </script>
@@ -58,7 +45,7 @@ const companyFields = Object.keys(Company.classProps);
           <template v-for="field in companyFields" :key="field">
             <v-list-item>
               <v-list-item-subtitle>
-                {{ fieldLabels[field] || field }}
+                {{ Company.classProps[field]?.label || field }}
               </v-list-item-subtitle>
               <v-list-item-title>
                 {{ companyModelRef[field] || "-" }}
