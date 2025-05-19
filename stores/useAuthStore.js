@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
+import { Company } from "air-guard-v2-schemas";
 
 const sender = "useAuthStore.js";
 
@@ -33,10 +34,12 @@ export const useAuthStore = defineStore("auth", () => {
   const email = ref(null);
   const displayName = ref(null);
   const isEmailVerified = ref(false);
-  // const roles = ref([]);
   const _rawRoles = ref([]);
   const companyId = ref(null);
   const isSuperUser = ref(false);
+
+  // Company state fetched by companyId
+  const company = ref(new Company());
 
   // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
   const roles = computed(() => {
@@ -46,17 +49,50 @@ export const useAuthStore = defineStore("auth", () => {
     return _rawRoles.value;
   });
 
-  function clearUser() {
+  /** Unsubscribe to company data and initialize company instance. */
+  function _initCompany() {
+    company.value.unsubscribe();
+    company.value.initialize();
+  }
+
+  /** Clear user state. */
+  function _clearUserState() {
     uid.value = null;
     email.value = null;
     displayName.value = null;
     isEmailVerified.value = false;
-    // roles.value = [];
     _rawRoles.value = [];
     companyId.value = null;
     isSuperUser.value = false;
+  }
 
+  /** Set user state. */
+  function _setUserState(user, idTokenResult) {
+    uid.value = user.uid;
+    email.value = user.email;
+    displayName.value = user.displayName || "";
+    isEmailVerified.value = user.emailVerified || false;
+    isSuperUser.value = !!idTokenResult?.claims?.isSuperUser;
+    _rawRoles.value = idTokenResult?.claims?.roles || [];
+    companyId.value = idTokenResult?.claims?.companyId || null;
+  }
+
+  /**
+   * Clear User information and unsubscribe to company data.
+   * This method is called by AuthStateChanged.
+   */
+  function clearUser() {
+    // Clear uset state.
+    _clearUserState();
     logger.info({ sender, message: "User information is cleared." });
+
+    // Unsubscribe to company data.
+    _initCompany();
+    logger.info({
+      sender,
+      message:
+        "Unsubscribed from company data and initialized company instance.",
+    });
   }
 
   /**
@@ -76,6 +112,9 @@ export const useAuthStore = defineStore("auth", () => {
     // 認証状態の変更に関わる処理であるため、エラー状態は初期化すべきと判断
     // Clear errors as the authentication state is changing.
     errors.clear();
+
+    // Clear user state.
+    _clearUserState();
 
     // ローディング状態を開始
     // Start loading indicator
@@ -110,19 +149,22 @@ export const useAuthStore = defineStore("auth", () => {
 
       // ストアの状態をユーザー情報とクレームで更新
       // Update store state with user information and claims.
-      uid.value = user.uid;
-      email.value = user.email;
-      displayName.value = user.displayName || "";
-      isEmailVerified.value = user.emailVerified || false;
-      isSuperUser.value = !!idTokenResult?.claims?.isSuperUser;
-      // roles.value = idTokenResult?.claims?.roles || [];
-      _rawRoles.value = idTokenResult?.claims?.roles || [];
-      companyId.value = idTokenResult?.claims?.companyId || null;
+      _setUserState(user, idTokenResult);
 
       logger.info({
         sender,
         message: `User state updated for UID: ${user.uid}`,
       });
+
+      // Subscribe company data
+      _initCompany();
+      if (companyId.value) {
+        company.value.subscribe({ docId: companyId.value });
+        logger.info({
+          sender,
+          message: `Subscribing for company data: ${companyId.value}`,
+        });
+      }
     } catch (error) {
       // エラー発生時の処理
       // Error handling process.
@@ -507,6 +549,7 @@ export const useAuthStore = defineStore("auth", () => {
     roles,
     companyId,
     isSuperUser,
+    company,
     clearUser,
     signIn,
     signOut,
