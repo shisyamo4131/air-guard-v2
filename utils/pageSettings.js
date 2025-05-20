@@ -104,6 +104,14 @@ export const pageStructure = [
         roles: ["admin"],
         navigation: true,
       },
+      {
+        id: "users-setting",
+        path: "/settings/users",
+        label: "ユーザー設定",
+        icon: "mdi-account",
+        roles: ["admin"],
+        navigation: true,
+      },
     ],
   },
   // 他のページやグループを追加
