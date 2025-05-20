@@ -1,43 +1,46 @@
 <script setup>
 import { Company } from "air-guard-v2-schemas";
+const errors = useErrorsStore();
 const auth = useAuthStore();
 const { company } = storeToRefs(auth);
 
 // --- 表示フィールドの定義 ---
 const companyFields = Object.keys(Company.classProps);
+
+const isValid = ref(null);
 </script>
 
 <template>
   <v-container>
     <air-item-manager
       v-model="company"
-      v-slot="{
-        dialogProps,
-        item,
-        submit,
-        toUpdate,
-        updateProperties,
-        quitEditing,
-      }"
+      v-slot="slotProps"
+      @error="errors.add($event)"
+      @error:clear="errors.clear"
     >
-      <v-dialog v-bind="dialogProps" max-width="480" scrollable>
+      <v-dialog v-bind="slotProps.dialogProps" max-width="480" scrollable>
         <v-card>
           <v-toolbar>
             <v-toolbar-title>会社情報編集</v-toolbar-title>
             <v-spacer />
-            <v-btn icon @click="quitEditing">
+            <v-btn icon @click="slotProps.quitEditing">
               <v-icon>mdi-close</v-icon>
             </v-btn>
           </v-toolbar>
           <v-card-text>
             <MoleculesFormsCompany
-              :item="item"
-              :update-properties="updateProperties"
+              v-model="isValid"
+              :item="slotProps.item"
+              :update-properties="slotProps.updateProperties"
             />
           </v-card-text>
           <v-card-actions>
             <v-spacer />
-            <v-btn color="primary" variant="elevated" @click="submit()"
+            <v-btn
+              color="primary"
+              :disabled="!isValid"
+              variant="elevated"
+              @click="slotProps.submit()"
               >確定</v-btn
             >
           </v-card-actions>
@@ -62,10 +65,13 @@ const companyFields = Object.keys(Company.classProps);
             </template>
           </v-list>
         </v-container>
-
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="primary" variant="elevated" @click="toUpdate()">
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="slotProps.toUpdate()"
+          >
             編集する
           </v-btn>
         </v-card-actions>
