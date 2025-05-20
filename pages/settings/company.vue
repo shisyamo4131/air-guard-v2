@@ -30,53 +30,10 @@ const companyFields = Object.keys(Company.classProps);
             </v-btn>
           </v-toolbar>
           <v-card-text>
-            <v-form>
-              <air-text-field
-                :model-value="item.name"
-                label="会社名"
-                @update:model-value="updateProperties({ name: $event })"
-              />
-              <air-text-field
-                :model-value="item.nameKana"
-                label="会社名（カナ）"
-                @update:model-value="updateProperties({ nameKana: $event })"
-              />
-              <air-text-field
-                :model-value="item.zipcode"
-                label="郵便番号"
-                @update:model-value="updateProperties({ zipcode: $event })"
-              />
-              <air-text-field
-                :model-value="item.prefecture"
-                label="都道府県"
-                @update:model-value="updateProperties({ prefecture: $event })"
-              />
-              <air-text-field
-                :model-value="item.city"
-                label="市区町村"
-                @update:model-value="updateProperties({ city: $event })"
-              />
-              <air-text-field
-                :model-value="item.address"
-                label="町域名・番地"
-                @update:model-value="updateProperties({ address: $event })"
-              />
-              <air-text-field
-                :model-value="item.building"
-                label="建物名・階数"
-                @update:model-value="updateProperties({ building: $event })"
-              />
-              <air-text-field
-                :model-value="item.tel"
-                label="電話番号"
-                @update:model-value="updateProperties({ tel: $event })"
-              />
-              <air-text-field
-                :model-value="item.fax"
-                label="FAX番号"
-                @update:model-value="updateProperties({ fax: $event })"
-              />
-            </v-form>
+            <MoleculesFormsCompany
+              :item="item"
+              :update-properties="updateProperties"
+            />
           </v-card-text>
           <v-card-actions>
             <v-spacer />
