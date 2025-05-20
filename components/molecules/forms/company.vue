@@ -23,6 +23,7 @@ const formFieldKeys = [
 const formFields = formFieldKeys.map((key) => ({
   key: key,
   label: Company.classProps[key]?.label || key, // Companyスキーマからラベルを取得
+  required: Company.classProps[key]?.required || false, // Companyスキーマからrequiredを取得
 }));
 </script>
 
@@ -33,6 +34,7 @@ const formFields = formFieldKeys.map((key) => ({
       :key="field.key"
       :model-value="props.item[field.key]"
       :label="field.label"
+      :required="field.required"
       @update:model-value="props.updateProperties({ [field.key]: $event })"
     />
   </v-form>
