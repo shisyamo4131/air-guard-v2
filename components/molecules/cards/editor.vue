@@ -1,5 +1,23 @@
 <script setup>
-defineOptions({ inheritAttrs: false });
+/**
+ * @file editor.vue
+ * @description
+ * コンテンツ編集用の再利用可能なカードコンポーネントです。
+ * タイトルと閉じるボタンを持つツールバー、スロットによるコンテンツ領域、
+ * そして確定ボタンを持つカードアクションを備えています。
+ *
+ * @component MoleculesCardsEditor
+ *
+ * @props {String} label - カードのツールバーに表示されるタイトル。デフォルトは undefined (タイトルなし) です。
+ * @props {Boolean} disableSubmit - 確定ボタンを無効にするかどうか。デフォルトは false です。
+ *
+ * @emits click:close - ツールバーの閉じるボタンがクリックされたときに発行されます。
+ * @emits click:submit - カードアクションの確定ボタンがクリックされたときに発行されます。
+ *
+ * @slots
+ *   default - エディタカードの主要なコンテンツ領域。
+ */
+defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 const props = defineProps({
   label: { type: String, default: undefined },
   disableSubmit: { type: Boolean, default: false },
