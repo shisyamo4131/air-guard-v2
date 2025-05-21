@@ -18,13 +18,14 @@ const schema = Object.entries(User.classProps).map(([key, value]) => {
     :update-properties="props.updateProperties"
     :schema="schema"
   >
-    <!-- <template #roles="{ modelValue, updateModelValue }">
+    <template #roles="{ modelValue, updateModelValue }">
       <v-checkbox
         :model-value="modelValue"
         label="管理者"
+        disabled
         value="admin"
         @update:model-value="updateModelValue"
       />
-    </template> -->
+    </template>
   </air-form>
 </template>

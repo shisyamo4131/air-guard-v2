@@ -12,7 +12,7 @@ const headers = [
   { title: "email", value: "email" },
   { title: "表示名", value: "displayName" },
   { title: "権限", value: "roles" },
-  { title: "操作", value: "actions" },
+  { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
 onMounted(() => {
