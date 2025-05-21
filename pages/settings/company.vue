@@ -23,9 +23,7 @@ const isValid = ref(null);
           <v-toolbar>
             <v-toolbar-title>会社情報編集</v-toolbar-title>
             <v-spacer />
-            <v-btn icon @click="slotProps.quitEditing">
-              <v-icon>mdi-close</v-icon>
-            </v-btn>
+            <AtomsBtnsClose icon @click="slotProps.quitEditing" />
           </v-toolbar>
           <v-card-text>
             <MoleculesFormsCompany
