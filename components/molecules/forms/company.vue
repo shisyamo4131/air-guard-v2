@@ -1,7 +1,7 @@
 <script setup>
 import AtomsSelectPrefecture from "~/components/atoms/SelectPrefecture.vue"; // 都道府県選択コンポーネントをインポート
 import { Company } from "air-guard-v2-schemas";
-
+defineOptions({ name: "MoleculesFormsCompany" });
 const props = defineProps({
   item: { type: Object, required: true },
   updateProperties: { type: Function, required: true },

@@ -19,30 +19,18 @@ const isValid = ref(null);
       @error:clear="errors.clear"
     >
       <v-dialog v-bind="slotProps.dialogProps" max-width="480" scrollable>
-        <v-card>
-          <v-toolbar>
-            <v-toolbar-title>会社情報編集</v-toolbar-title>
-            <v-spacer />
-            <AtomsBtnsClose icon @click="slotProps.quitEditing" />
-          </v-toolbar>
-          <v-card-text>
-            <MoleculesFormsCompany
-              v-model="isValid"
-              :item="slotProps.item"
-              :update-properties="slotProps.updateProperties"
-            />
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              color="primary"
-              :disabled="!isValid"
-              variant="elevated"
-              @click="slotProps.submit()"
-              >確定</v-btn
-            >
-          </v-card-actions>
-        </v-card>
+        <MoleculesCardsEditor
+          label="会社情報編集"
+          :disable-submit="!isValid"
+          @click:close="slotProps.quitEditing"
+          @click:submit="slotProps.submit"
+        >
+          <MoleculesFormsCompany
+            v-model="isValid"
+            :item="slotProps.item"
+            :update-properties="slotProps.updateProperties"
+          />
+        </MoleculesCardsEditor>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">
         <v-card-title> 会社情報 </v-card-title>

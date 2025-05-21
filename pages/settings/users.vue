@@ -5,6 +5,7 @@ import { reactive, onMounted, onUnmounted } from "vue";
 const user = reactive(new User());
 const docs = computed(() => user.docs);
 const isEditing = ref(false);
+const isValid = ref(null);
 const manager = ref(null);
 
 const headers = [
@@ -37,18 +38,18 @@ function edit(item) {
       v-slot="slotProps"
     >
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
-        <v-card>
-          <v-card-title>test</v-card-title>
-          <v-card-text>
-            <MoleculesFormsUser
-              :item="slotProps.item"
-              :update-properties="slotProps.updateProperties"
-            />
-          </v-card-text>
-          <v-card-actions>
-            <v-btn @click="slotProps.quitEditing">close</v-btn>
-          </v-card-actions>
-        </v-card>
+        <MoleculesCardsEditor
+          label="ユーザー情報編集"
+          :disable-submit="!isValid"
+          @click:close="slotProps.quitEditing"
+          @click:submit="slotProps.submit"
+        >
+          <MoleculesFormsUser
+            v-model="isValid"
+            :item="slotProps.item"
+            :update-properties="slotProps.updateProperties"
+          />
+        </MoleculesCardsEditor>
       </v-dialog>
       <v-data-table :items="docs" :headers="headers">
         <template v-slot:item.actions="{ item }">

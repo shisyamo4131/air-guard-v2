@@ -1,6 +1,6 @@
 <script setup>
 import { User } from "air-guard-v2-schemas";
-
+defineOptions({ name: "MoleculesFormsUser" });
 const props = defineProps({
   item: { type: Object, required: true },
   updateProperties: { type: Function, required: true },
@@ -18,13 +18,13 @@ const schema = Object.entries(User.classProps).map(([key, value]) => {
     :update-properties="props.updateProperties"
     :schema="schema"
   >
-    <template #roles="{ modelValue, updateModelValue }">
+    <!-- <template #roles="{ modelValue, updateModelValue }">
       <v-checkbox
         :model-value="modelValue"
         label="管理者"
         value="admin"
         @update:model-value="updateModelValue"
       />
-    </template>
+    </template> -->
   </air-form>
 </template>
