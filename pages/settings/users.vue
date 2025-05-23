@@ -22,20 +22,16 @@ onMounted(() => {
 onUnmounted(() => {
   user.unsubscribe();
 });
-
-function edit(item) {
-  user.initialize(item);
-  manager.value.toUpdate();
-}
 </script>
 
 <template>
   <v-container>
     <air-item-manager
       ref="manager"
-      v-model="user"
+      :schema="user"
       v-model:isEditing="isEditing"
       v-slot="slotProps"
+      :handle-update="async (item) => await item.update()"
     >
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
         <MoleculesCardsEditor
@@ -52,19 +48,26 @@ function edit(item) {
         </MoleculesCardsEditor>
       </v-dialog>
       <v-data-table :items="docs" :headers="headers">
+        <template #top>
+          <v-toolbar density="compact" flat>
+            <v-toolbar-title>ユーザー一覧</v-toolbar-title>
+            <v-btn icon="mdi-plus" @click="slotProps.toCreate()"></v-btn>
+          </v-toolbar>
+        </template>
         <template v-slot:item.actions="{ item }">
           <div class="d-flex ga-2 justify-end">
             <v-icon
               color="medium-emphasis"
               icon="mdi-pencil"
               size="small"
-              @click="edit(item)"
+              @click="slotProps.toUpdate(item)"
             ></v-icon>
 
             <v-icon
               color="medium-emphasis"
               icon="mdi-delete"
               size="small"
+              @click="slotProps.toDelete(item)"
             ></v-icon>
           </div>
         </template>

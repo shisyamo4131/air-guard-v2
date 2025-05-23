@@ -13,7 +13,7 @@ const isValid = ref(null);
 <template>
   <v-container>
     <air-item-manager
-      v-model="company"
+      :schema="company"
       v-slot="slotProps"
       @error="errors.add($event)"
       @error:clear="errors.clear"
