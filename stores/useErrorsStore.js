@@ -1,8 +1,10 @@
 /**
- * Store for management errors.
- * エラー管理用ストア
+ * アプリ内で発生したエラー情報を管理するためのストア
+ * - ストアに新しいエラーオブジェクトが与えられると、メッセージストアにメッセージキューを追加します。
  */
 export const useErrorsStore = defineStore("errors", () => {
+  const messages = useMessagesStore();
+
   /** List of errors. */
   const list = ref([]);
 
@@ -25,6 +27,7 @@ export const useErrorsStore = defineStore("errors", () => {
 
     if (!isDuplicate) {
       list.value.push(error);
+      messages.add({ text: error.message, color: "error" });
     }
   }
 
