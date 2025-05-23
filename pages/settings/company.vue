@@ -1,6 +1,5 @@
 <script setup>
 import { Company } from "air-guard-v2-schemas";
-const errors = useErrorsStore();
 const auth = useAuthStore();
 const { company } = storeToRefs(auth);
 
@@ -12,12 +11,7 @@ const isValid = ref(null);
 
 <template>
   <v-container>
-    <air-item-manager
-      :schema="company"
-      v-slot="slotProps"
-      @error="errors.add($event)"
-      @error:clear="errors.clear"
-    >
+    <ItemManager :schema="company" v-slot="slotProps">
       <v-dialog v-bind="slotProps.dialogProps" max-width="480" scrollable>
         <MoleculesCardsEditor
           label="会社情報編集"
@@ -62,7 +56,7 @@ const isValid = ref(null);
           </v-btn>
         </v-card-actions>
       </v-card>
-    </air-item-manager>
+    </ItemManager>
   </v-container>
 </template>
 
