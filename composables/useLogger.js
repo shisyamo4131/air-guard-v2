@@ -1,17 +1,13 @@
 /**
- * Composable to output logs from the application.
- * - If the output type is `error`, store error objects in `errorsStore`.
- *
  * アプリケーションからログを出力するためのコンポーザブル。
- * - 出力タイプが `error` の場合、`errorsStore` にエラーオブジェクトを格納します。
+ * - `log`, `info`, `warn`, `error` メソッドを使用することで各種対応するログをコンソールに出力します。
+ * - `error` の場合、`errorsStore` にエラーオブジェクトを格納します。
+ * - `clearError` メソッドによって `errorsStore` のエラーを初期化することが可能です。
  */
 export function useLogger() {
   const errors = useErrorsStore();
 
   /**
-   * Logs a message to the console with an optional sender label.
-   * - If `type` is `"error"` and `error` is provided, the error is added to the `errors` collection.
-   *
    * メッセージをコンソールに出力し、`type` が `"error"` の場合は `errors` にエラーを追加します。
    *
    * @param {Object} params - The log details.
@@ -38,11 +34,19 @@ export function useLogger() {
     }
   }
 
+  /**
+   * エラー管理ストアのエラーを初期化します。
+   */
+  function clearError() {
+    errors.clear();
+  }
+
   return {
     log: ({ sender, message }) => send({ type: "log", sender, message }),
     info: ({ sender, message }) => send({ type: "info", sender, message }),
     warn: ({ sender, message }) => send({ type: "warn", sender, message }),
     error: ({ sender, message, error }) =>
       send({ type: "error", sender, message, error }),
+    clearError,
   };
 }
