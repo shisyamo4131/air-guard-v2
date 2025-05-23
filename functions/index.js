@@ -1,6 +1,9 @@
 /** Firebase, FireModel の初期化 */
 import "./modules/firebase.init.js";
 import { geocoding } from "./modules/geocoding.js";
-import { createUserWithCompany } from "./modules/createUserWithCompany.js";
+import {
+  createUserWithCompany,
+  createUserInCompany,
+} from "./modules/createUser.js";
 
-export { geocoding, createUserWithCompany };
+export { geocoding, createUserWithCompany, createUserInCompany };

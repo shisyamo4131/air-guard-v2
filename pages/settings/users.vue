@@ -1,12 +1,26 @@
 <script setup>
+/**
+ * @file users.vue
+ * @description ユーザー管理画面
+ */
 import { User } from "air-guard-v2-schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
+
+const logger = useLogger();
+const errors = useErrorsStore();
+
+/** auth との連携の為に useAuthStore を使用 */
+const auth = useAuthStore();
 
 const user = reactive(new User());
 const docs = computed(() => user.docs);
 const isEditing = ref(false);
 const isValid = ref(null);
 const manager = ref(null);
+
+/** ユーザー追加時の為のパスワード用変数 */
+const password = ref("");
+const confirmPassword = ref("");
 
 const headers = [
   { title: "email", value: "email" },
@@ -22,6 +36,18 @@ onMounted(() => {
 onUnmounted(() => {
   user.unsubscribe();
 });
+
+async function handleCreate(item) {
+  await auth.createUserInCompany({
+    ...item,
+    password: password.value,
+  });
+}
+
+function initialized() {
+  password.value = "";
+  confirmPassword.value = "";
+}
 </script>
 
 <template>
@@ -31,7 +57,17 @@ onUnmounted(() => {
       :schema="user"
       v-model:isEditing="isEditing"
       v-slot="slotProps"
+      :handle-create="handleCreate"
       :handle-update="async (item) => await item.update()"
+      @initialized="initialized"
+      @error="
+        logger.error({
+          sender: 'users.vue',
+          message: $event.message,
+          error: $event,
+        })
+      "
+      @error:clear="errors.clear"
     >
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
         <MoleculesCardsEditor
@@ -44,6 +80,19 @@ onUnmounted(() => {
             v-model="isValid"
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
+            :edit-mode="slotProps.editMode"
+          />
+          <air-password
+            v-if="slotProps.isCreate"
+            label="パスワード"
+            required
+            v-model="password"
+          />
+          <air-password
+            v-if="slotProps.isCreate"
+            label="確認用パスワード"
+            required
+            v-model="confirmPassword"
           />
         </MoleculesCardsEditor>
       </v-dialog>
