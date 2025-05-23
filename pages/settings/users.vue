@@ -6,9 +6,6 @@
 import { User } from "air-guard-v2-schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 
-const logger = useLogger();
-const errors = useErrorsStore();
-
 /** auth との連携の為に useAuthStore を使用 */
 const auth = useAuthStore();
 
@@ -52,22 +49,13 @@ function initialized() {
 
 <template>
   <v-container>
-    <air-item-manager
+    <ItemManager
       ref="manager"
       :schema="user"
       v-model:isEditing="isEditing"
       v-slot="slotProps"
       :handle-create="handleCreate"
-      :handle-update="async (item) => await item.update()"
       @initialized="initialized"
-      @error="
-        logger.error({
-          sender: 'users.vue',
-          message: $event.message,
-          error: $event,
-        })
-      "
-      @error:clear="errors.clear"
     >
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
         <MoleculesCardsEditor
@@ -121,6 +109,6 @@ function initialized() {
           </div>
         </template>
       </v-data-table>
-    </air-item-manager>
+    </ItemManager>
   </v-container>
 </template>
