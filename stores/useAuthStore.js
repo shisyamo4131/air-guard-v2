@@ -4,7 +4,7 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { Company } from "air-guard-v2-schemas";
+import { Company } from "@/schemas/Company";
 
 const sender = "useAuthStore.js";
 

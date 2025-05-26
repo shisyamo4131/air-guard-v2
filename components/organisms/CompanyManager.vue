@@ -3,7 +3,7 @@
  * @file organisms/CompanyManager.vue
  * @description 会社情報管理
  */
-import { Company } from "air-guard-v2-schemas";
+import { Company } from "@/schemas/Company";
 
 /** ストア連携 */
 const auth = useAuthStore();
