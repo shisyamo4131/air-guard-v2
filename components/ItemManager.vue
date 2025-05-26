@@ -17,6 +17,7 @@ const logger = useLogger();
 defineOptions({ inheritAttrs: false, name: "ItemManager" });
 
 const props = defineProps({
+  dialogProps: { type: Object, default: () => ({}) },
   handleCreate: {
     type: Function,
     default: async (item) => await item.create(),
@@ -32,6 +33,12 @@ const props = defineProps({
 });
 
 const sender = "ItemManager.vue";
+
+const defaultDialogProps = {
+  maxWidth: "480",
+  scrollable: true,
+  transition: "dialog-bottom-transition",
+};
 
 /** useLogger を使用してエラーログを出力する関数 */
 function pushError(error) {
@@ -51,6 +58,7 @@ function clearError() {
 <template>
   <air-item-manager
     v-bind="$attrs"
+    :dialog-props="{ ...defaultDialogProps, ...props.dialogProps }"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
