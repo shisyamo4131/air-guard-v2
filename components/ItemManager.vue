@@ -58,7 +58,6 @@ function clearError() {
 <template>
   <air-item-manager
     v-bind="$attrs"
-    :dialog-props="{ ...defaultDialogProps, ...props.dialogProps }"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
@@ -67,7 +66,18 @@ function clearError() {
   >
     <!-- AirItemManager のデフォルトスロットを転送します -->
     <template #default="slotProps">
-      <slot name="default" v-bind="slotProps"></slot>
+      <slot
+        name="default"
+        v-bind="{
+          ...slotProps,
+          dialogProps: {
+            ...defaultDialogProps,
+            ...props.dialogProps,
+            modelValue: slotProps.isEditing,
+            'onUpdate:modelValue': slotProps.quitEditing,
+          },
+        }"
+      ></slot>
     </template>
   </air-item-manager>
 </template>
