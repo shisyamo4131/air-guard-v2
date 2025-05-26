@@ -15,9 +15,6 @@ const isEditing = ref(false);
 const isValid = ref(null);
 const manager = ref(null);
 
-// --- 入力コンポーネントの定義 ---
-const schema = User.schema;
-
 /** ユーザー追加時の為のパスワード用変数 */
 const password = ref("");
 const confirmPassword = ref("");
