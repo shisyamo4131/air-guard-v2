@@ -11,8 +11,6 @@ const auth = useAuthStore();
 
 const user = reactive(new User());
 const docs = computed(() => user.docs);
-const isEditing = ref(false);
-const isValid = ref(null);
 const manager = ref(null);
 
 /** ユーザー追加時の為のパスワード用変数 */
@@ -52,7 +50,6 @@ function initialized() {
     <ItemManager
       ref="manager"
       :schema="user"
-      v-model:isEditing="isEditing"
       v-slot="slotProps"
       :handle-create="handleCreate"
       @initialized="initialized"
@@ -60,14 +57,11 @@ function initialized() {
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="ユーザー情報編集"
+          :is-loading="slotProps.isLoading"
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <air-item-input
-            :item="slotProps.item"
-            :update-properties="slotProps.updateProperties"
-            :schema="User.schema"
-          >
+          <air-item-input v-bind="slotProps" :schema="User.schema">
             <template #roles="{ modelValue, updateModelValue }">
               <v-checkbox
                 :model-value="modelValue"

@@ -5,8 +5,6 @@ const { company } = storeToRefs(auth);
 
 // --- 表示フィールドの定義 ---
 const companyFields = Object.keys(Company.classProps);
-
-const isValid = ref(null);
 </script>
 
 <template>
@@ -15,14 +13,11 @@ const isValid = ref(null);
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="会社情報編集"
+          :is-loading="slotProps.isLoading"
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <air-item-input
-            :item="slotProps.item"
-            :update-properties="slotProps.updateProperties"
-            :schema="Company.schema"
-          >
+          <air-item-input v-bind="slotProps" :schema="Company.schema">
             <template #prefecture="{ field, modelValue, updateModelValue }">
               <AtomsSelectPrefecture
                 :model-value="modelValue"

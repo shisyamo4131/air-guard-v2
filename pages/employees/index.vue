@@ -4,8 +4,6 @@ import { reactive, onMounted, onUnmounted } from "vue";
 
 const employee = reactive(new Employee());
 const docs = computed(() => employee.docs);
-const isEditing = ref(false);
-const isValid = ref(null);
 const manager = ref(null);
 
 const headers = [
@@ -29,24 +27,15 @@ function edit(item) {
 
 <template>
   <v-container>
-    <air-item-manager
-      ref="manager"
-      v-model="employee"
-      v-model:isEditing="isEditing"
-      v-slot="slotProps"
-    >
+    <air-item-manager ref="manager" v-model="employee" v-slot="slotProps">
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
         <MoleculesCardsEditor
           label="従業員情報編集"
-          :disable-submit="!isValid"
+          :is-loading="slotProps.isLoading"
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <air-item-input
-            :item="slotProps.item"
-            :update-properties="slotProps.updateProperties"
-            :schema="Employee.schema"
-          >
+          <air-item-input v-bind="slotProps" :schema="Employee.schema">
           </air-item-input>
         </MoleculesCardsEditor>
       </v-dialog>

@@ -10,6 +10,7 @@
  * @component MoleculesCardsEditor
  *
  * @props {Boolean} disableSubmit - 確定ボタンを無効にするかどうか。デフォルトは false です。
+ * @props {Boolean} isLoading - ローディングアニメーションを表示するかどうか。デフォルトは false です。
  * @props {Boolean} isValid - フォームのバリデーション結果。デフォルトは false（または null） です。
  * @props {String} label - カードのツールバーに表示されるタイトル。デフォルトは undefined (タイトルなし) です。
  *
@@ -23,14 +24,18 @@ import { useLogger } from "~/composables/useLogger";
 
 defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 
+// --- プロパティ定義 ---
 const props = defineProps({
   disableSubmit: { type: Boolean, default: false },
+  isLoading: { type: Boolean, default: false },
   isValid: { type: Boolean, default: false },
   label: { type: String, default: undefined },
 });
 
+// --- イベント定義 ---
 const emit = defineEmits(["click:close", "click:submit", "update:isValid"]);
 
+// --- ストア / コンポーザブル
 const logger = useLogger();
 
 // --- VForm のバリデーション ---
@@ -76,6 +81,7 @@ function onClickSubmit() {
       <AtomsBtnsSubmit
         color="primary"
         :disabled="disableSubmit"
+        :loading="isLoading"
         variant="elevated"
         @click="onClickSubmit"
       />
