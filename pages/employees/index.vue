@@ -4,7 +4,6 @@ import { reactive, onMounted, onUnmounted } from "vue";
 
 const employee = reactive(new Employee());
 const docs = computed(() => employee.docs);
-const manager = ref(null);
 
 const headers = [
   { title: "姓", value: "lastName" },
@@ -18,23 +17,13 @@ onMounted(() => {
 onUnmounted(() => {
   employee.unsubscribe();
 });
-
-function edit(item) {
-  employee.initialize(item);
-  manager.value.toUpdate();
-}
 </script>
 
 <template>
   <v-container>
-    <air-item-manager ref="manager" v-model="employee" v-slot="slotProps">
+    <ItemManager v-model="employee" v-slot="slotProps" label="従業員情報">
       <v-dialog v-bind="slotProps.dialogProps" max-width="480">
-        <MoleculesCardsEditor
-          label="従業員情報編集"
-          :is-loading="slotProps.isLoading"
-          @click:close="slotProps.quitEditing"
-          @click:submit="slotProps.submit"
-        >
+        <MoleculesCardsEditor v-bind="slotProps.editorProps">
           <air-item-input v-bind="slotProps" :schema="Employee.schema">
           </air-item-input>
         </MoleculesCardsEditor>
@@ -46,17 +35,18 @@ function edit(item) {
               color="medium-emphasis"
               icon="mdi-pencil"
               size="small"
-              @click="edit(item)"
+              @click="slotProps.toUpdate(item)"
             ></v-icon>
 
             <v-icon
               color="medium-emphasis"
               icon="mdi-delete"
               size="small"
+              @click="slotProps.toDelete(item)"
             ></v-icon>
           </div>
         </template>
       </v-data-table>
-    </air-item-manager>
+    </ItemManager>
   </v-container>
 </template>

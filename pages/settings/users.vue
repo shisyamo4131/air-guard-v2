@@ -11,7 +11,6 @@ const auth = useAuthStore();
 
 const user = reactive(new User());
 const docs = computed(() => user.docs);
-const manager = ref(null);
 
 /** ユーザー追加時の為のパスワード用変数 */
 const password = ref("");
@@ -48,30 +47,15 @@ function initialized() {
 <template>
   <v-container>
     <ItemManager
-      ref="manager"
       :schema="user"
       v-slot="slotProps"
       :handle-create="handleCreate"
+      label="ユーザー情報"
       @initialized="initialized"
     >
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesCardsEditor
-          label="ユーザー情報編集"
-          :is-loading="slotProps.isLoading"
-          @click:close="slotProps.quitEditing"
-          @click:submit="slotProps.submit"
-        >
-          <air-item-input v-bind="slotProps" :schema="User.schema">
-            <template #roles="{ modelValue, updateModelValue }">
-              <v-checkbox
-                :model-value="modelValue"
-                label="管理者"
-                disabled
-                value="admin"
-                @update:model-value="updateModelValue"
-              />
-            </template>
-          </air-item-input>
+        <MoleculesCardsEditor v-bind="slotProps.editorProps">
+          <air-item-input v-bind="slotProps" :schema="User.schema" />
           <air-password
             v-if="slotProps.isCreate"
             label="パスワード"
@@ -82,6 +66,7 @@ function initialized() {
             v-if="slotProps.isCreate"
             label="確認用パスワード"
             required
+            :rules="[(v) => v === password || 'パスワードが一致しません。']"
             v-model="confirmPassword"
           />
         </MoleculesCardsEditor>

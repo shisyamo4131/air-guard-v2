@@ -9,14 +9,9 @@ const companyFields = Object.keys(Company.classProps);
 
 <template>
   <v-container>
-    <ItemManager :schema="company" v-slot="slotProps">
+    <ItemManager :schema="company" v-slot="slotProps" label="会社情報">
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesCardsEditor
-          label="会社情報編集"
-          :is-loading="slotProps.isLoading"
-          @click:close="slotProps.quitEditing"
-          @click:submit="slotProps.submit"
-        >
+        <MoleculesCardsEditor v-bind="slotProps.editorProps">
           <air-item-input v-bind="slotProps" :schema="Company.schema">
             <template #prefecture="{ field, modelValue, updateModelValue }">
               <AtomsSelectPrefecture

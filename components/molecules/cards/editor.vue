@@ -26,6 +26,7 @@ defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 
 // --- プロパティ定義 ---
 const props = defineProps({
+  disabled: { type: Boolean, default: false },
   disableSubmit: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false },
   isValid: { type: Boolean, default: false },
@@ -52,6 +53,7 @@ watch(isValid, (newVal) => {
  */
 function onClickSubmit() {
   if (!isValid.value) {
+    logger.clearError;
     const error = new Error("入力に不備があります。");
     logger.error({
       sender: "MoleculesCardsEditor.vue",
@@ -72,7 +74,7 @@ function onClickSubmit() {
       <AtomsBtnsCloseIcon @click="emit('click:close')" />
     </v-toolbar>
     <v-card-text>
-      <v-form v-model="isValid">
+      <v-form v-model="isValid" :disabled="disabled">
         <slot name="default" v-bind="{ isValid }" />
       </v-form>
     </v-card-text>
