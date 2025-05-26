@@ -15,6 +15,11 @@ const isEditing = ref(false);
 const isValid = ref(null);
 const manager = ref(null);
 
+// --- 入力コンポーネントの定義 ---
+const schema = Object.entries(User.classProps).map(([key, value]) => {
+  return { key, ...value };
+});
+
 /** ユーザー追加時の為のパスワード用変数 */
 const password = ref("");
 const confirmPassword = ref("");
@@ -63,12 +68,21 @@ function initialized() {
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <MoleculesFormsUser
-            v-model="isValid"
+          <air-item-input
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
-            :edit-mode="slotProps.editMode"
-          />
+            :schema="schema"
+          >
+            <template #roles="{ modelValue, updateModelValue }">
+              <v-checkbox
+                :model-value="modelValue"
+                label="管理者"
+                disabled
+                value="admin"
+                @update:model-value="updateModelValue"
+              />
+            </template>
+          </air-item-input>
           <air-password
             v-if="slotProps.isCreate"
             label="パスワード"

@@ -6,6 +6,11 @@ const { company } = storeToRefs(auth);
 // --- 表示フィールドの定義 ---
 const companyFields = Object.keys(Company.classProps);
 
+// --- 入力コンポーネントの定義 ---
+const schema = Object.entries(Company.classProps).map(([key, value]) => {
+  return { key, ...value };
+});
+
 const isValid = ref(null);
 </script>
 
@@ -18,11 +23,20 @@ const isValid = ref(null);
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <MoleculesFormsCompany
-            v-model="isValid"
+          <air-item-input
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
-          />
+            :schema="schema"
+          >
+            <template #prefecture="{ field, modelValue, updateModelValue }">
+              <AtomsSelectPrefecture
+                :model-value="modelValue"
+                :label="field.label"
+                :required="field.required"
+                @update:model-value="updateModelValue"
+              />
+            </template>
+          </air-item-input>
         </MoleculesCardsEditor>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">

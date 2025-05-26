@@ -13,6 +13,11 @@ const headers = [
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
+// --- 入力コンポーネントの定義 ---
+const schema = Object.entries(Employee.classProps).map(([key, value]) => {
+  return { key, ...value };
+});
+
 onMounted(() => {
   employee.subscribeDocs();
 });
@@ -42,11 +47,12 @@ function edit(item) {
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
-          <MoleculesFormsEmployee
-            v-model="isValid"
+          <air-item-input
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
-          />
+            :schema="schema"
+          >
+          </air-item-input>
         </MoleculesCardsEditor>
       </v-dialog>
       <v-data-table :items="docs" :headers="headers">
