@@ -2,10 +2,6 @@
  * Cloud Functions が提供する Geocoding API エントリーポイントを利用して
  * 住所文字列から緯度・経度・正規化された住所表記を取得するためのユーティリティです。
  */
-const config = useRuntimeConfig();
-const GEOCODING_API_URL = config.public.firebaseUseEmulator
-  ? `http://localhost:5001/${config.public.firebaseProjectId}/asia-northeast1/geocoding`
-  : `https://asia-northeast1-${config.public.firebaseProjectId}.cloudfunctions.net/geocoding`;
 
 /**
  * 住所から整形された住所表記、緯度・経度を取得して返します。
@@ -13,6 +9,11 @@ const GEOCODING_API_URL = config.public.firebaseUseEmulator
  * @returns {Promise<{ formattedAddress: string, lat: number, lng: number } | null>} - 整形された住所表記、緯度・経度のオブジェクト（取得できなかった場合は null）
  */
 export async function fetchCoordinates(address) {
+  const config = useRuntimeConfig();
+  const GEOCODING_API_URL = config.public.firebaseUseEmulator
+    ? `http://localhost:5001/${config.public.firebaseProjectId}/asia-northeast1/geocoding`
+    : `https://asia-northeast1-${config.public.firebaseProjectId}.cloudfunctions.net/geocoding`;
+
   if (!address || typeof address !== "string") {
     console.warn("[fetchCoordinates] 無効な住所が渡されました:", address);
     return null;
