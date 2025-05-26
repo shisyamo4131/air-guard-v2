@@ -57,7 +57,7 @@ function initialized() {
       :handle-create="handleCreate"
       @initialized="initialized"
     >
-      <v-dialog v-bind="slotProps.dialogProps" max-width="480">
+      <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="ユーザー情報編集"
           :disable-submit="!isValid"

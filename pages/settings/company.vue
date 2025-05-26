@@ -12,7 +12,7 @@ const isValid = ref(null);
 <template>
   <v-container>
     <ItemManager :schema="company" v-slot="slotProps">
-      <v-dialog v-bind="slotProps.dialogProps" max-width="480" scrollable>
+      <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="会社情報編集"
           :disable-submit="!isValid"
