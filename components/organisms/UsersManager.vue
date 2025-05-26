@@ -60,19 +60,35 @@ function initPassword() {
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="User.schema" />
-        <air-password
-          v-if="slotProps.isCreate"
-          label="パスワード"
-          required
-          v-model="password"
-        />
-        <air-password
-          v-if="slotProps.isCreate"
-          label="確認用パスワード"
-          required
-          :rules="[(v) => v === password || 'パスワードが一致しません。']"
-          v-model="confirmPassword"
-        />
+        <v-row>
+          <v-col>
+            <air-password
+              v-if="slotProps.isCreate"
+              label="パスワード"
+              required
+              :rules="[
+                (v) =>
+                  !v ||
+                  v.length >= 8 ||
+                  'パスワードは8文字以上で入力してください。',
+                (v) => v === password || 'パスワードが一致しません。',
+              ]"
+              counter
+              v-model="password"
+            />
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <air-password
+              v-if="slotProps.isCreate"
+              label="確認用パスワード"
+              required
+              :rules="[(v) => v === password || 'パスワードが一致しません。']"
+              v-model="confirmPassword"
+            />
+          </v-col>
+        </v-row>
       </MoleculesCardsEditor>
     </v-dialog>
     <v-data-table :items="docs" :headers="headers">
