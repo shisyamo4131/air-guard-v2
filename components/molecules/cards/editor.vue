@@ -5,11 +5,13 @@
  * コンテンツ編集用の再利用可能なカードコンポーネントです。
  * タイトルと閉じるボタンを持つツールバー、スロットによるコンテンツ領域、
  * そして確定ボタンを持つカードアクションを備えています。
+ * default スロットは VForm にラップされており、isValid プロパティで検証結果を確認することができます。
  *
  * @component MoleculesCardsEditor
  *
- * @props {String} label - カードのツールバーに表示されるタイトル。デフォルトは undefined (タイトルなし) です。
  * @props {Boolean} disableSubmit - 確定ボタンを無効にするかどうか。デフォルトは false です。
+ * @props {Boolean} isValid - フォームのバリデーション結果。デフォルトは false（または null） です。
+ * @props {String} label - カードのツールバーに表示されるタイトル。デフォルトは undefined (タイトルなし) です。
  *
  * @emits click:close - ツールバーの閉じるボタンがクリックされたときに発行されます。
  * @emits click:submit - カードアクションの確定ボタンがクリックされたときに発行されます。
@@ -17,12 +19,44 @@
  * @slots
  *   default - エディタカードの主要なコンテンツ領域。
  */
+import { useLogger } from "~/composables/useLogger";
+
 defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
+
 const props = defineProps({
-  label: { type: String, default: undefined },
   disableSubmit: { type: Boolean, default: false },
+  isValid: { type: Boolean, default: false },
+  label: { type: String, default: undefined },
 });
-const emit = defineEmits(["click:close", "click:submit"]);
+
+const emit = defineEmits(["click:close", "click:submit", "update:isValid"]);
+
+const logger = useLogger();
+
+// --- VForm のバリデーション ---
+// 更新されたら `update:isValid` イベントを emit
+const isValid = ref(false);
+watch(isValid, (newVal) => {
+  emit("update:isValid", newVal);
+});
+
+/**
+ * submit ボタンがクリックされた時の処理
+ * - isValid が falsy の場合、エラーメッセージを出力して終了
+ * - isValid が truthy の場合、`click:submit` イベントを emit
+ */
+function onClickSubmit() {
+  if (!isValid.value) {
+    const error = new Error("入力に不備があります。");
+    logger.error({
+      sender: "MoleculesCardsEditor.vue",
+      message: error.message,
+      error,
+    });
+    return;
+  }
+  emit("click:submit");
+}
 </script>
 
 <template>
@@ -33,7 +67,9 @@ const emit = defineEmits(["click:close", "click:submit"]);
       <AtomsBtnsCloseIcon @click="emit('click:close')" />
     </v-toolbar>
     <v-card-text>
-      <slot name="default" />
+      <v-form v-model="isValid">
+        <slot name="default" v-bind="{ isValid }" />
+      </v-form>
     </v-card-text>
     <v-card-actions>
       <v-spacer />
@@ -41,7 +77,7 @@ const emit = defineEmits(["click:close", "click:submit"]);
         color="primary"
         :disabled="disableSubmit"
         variant="elevated"
-        @click="emit('click:submit')"
+        @click="onClickSubmit"
       />
     </v-card-actions>
   </v-card>
