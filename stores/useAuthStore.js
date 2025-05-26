@@ -629,6 +629,96 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  async function disableUser({ uid }) {
+    const { $functions } = useNuxtApp();
+
+    add({
+      key: "disableUser",
+      text: "ユーザーアカウントを無効化しています",
+    });
+
+    try {
+      if (!uid) {
+        throw new Error("UID is required.");
+      }
+
+      const callable = httpsCallable($functions, "disableUser");
+      const { data } = await callable({ uid });
+
+      if (!data?.success) {
+        throw new Error("Cloud function response indicates failure.");
+      }
+
+      logger.info({
+        sender,
+        message: `ユーザーアカウント ${uid} を無効化しました。`,
+      });
+
+      messages.add({
+        text: "ユーザーアカウントを無効化しました",
+        color: "success",
+      });
+
+      return { success: true };
+    } catch (error) {
+      logger.error({
+        sender,
+        message: `Failed to disable user ${uid}: ${
+          error.message || "An unknown error occurred."
+        }`,
+        error,
+      });
+      throw error;
+    } finally {
+      remove("disableUser");
+    }
+  }
+
+  async function enableUser({ uid }) {
+    const { $functions } = useNuxtApp();
+
+    add({
+      key: "enableUser",
+      text: "ユーザーアカウントを有効化しています",
+    });
+
+    try {
+      if (!uid) {
+        throw new Error("UID is required.");
+      }
+
+      const callable = httpsCallable($functions, "enableUser");
+      const { data } = await callable({ uid });
+
+      if (!data?.success) {
+        throw new Error("Cloud function response indicates failure.");
+      }
+
+      logger.info({
+        sender,
+        message: `ユーザーアカウント ${uid} を有効化しました。`,
+      });
+
+      messages.add({
+        text: "ユーザーアカウントを有効化しました",
+        color: "success",
+      });
+
+      return { success: true };
+    } catch (error) {
+      logger.error({
+        sender,
+        message: `Failed to enable user ${uid}: ${
+          error.message || "An unknown error occurred."
+        }`,
+        error,
+      });
+      throw error;
+    } finally {
+      remove("enableUser");
+    }
+  }
+
   return {
     uid,
     email,
@@ -648,5 +738,7 @@ export const useAuthStore = defineStore("auth", () => {
     hasRole,
     createUserWithCompany,
     createUserInCompany,
+    disableUser,
+    enableUser,
   };
 });

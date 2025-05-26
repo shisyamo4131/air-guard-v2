@@ -186,3 +186,69 @@ export const createUserInCompany = onCall(async (request) => {
     await handleUserOperationError(error, uid, auth, "createUserInCompany");
   }
 });
+
+/**
+ * ユーザーアカウントを無効化します。
+ */
+export const disableUser = onCall(async (request) => {
+  const { uid } = request.data;
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "UIDが指定されていません。");
+  }
+
+  const auth = getAuth();
+
+  try {
+    await auth.updateUser(uid, { disabled: true });
+    console.log(`ユーザー ${uid} を無効化しました。`);
+    return { success: true, uid };
+  } catch (error) {
+    console.error(`ユーザー ${uid} の無効化に失敗しました:`, error);
+    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
+    if (mappedAuthError) {
+      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
+    }
+    throw new HttpsError(
+      "internal",
+      `ユーザー ${uid} の無効化中に予期しないエラーが発生しました。`
+    );
+  }
+});
+
+/**
+ * ユーザーアカウントを有効化します。
+ */
+export const enableUser = onCall(async (request) => {
+  const { uid } = request.data;
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "UIDが指定されていません。");
+  }
+
+  const auth = getAuth();
+
+  try {
+    await auth.updateUser(uid, { disabled: false });
+    console.log(`ユーザー ${uid} を有効化しました。`);
+    return { success: true, uid };
+  } catch (error) {
+    console.error(`ユーザー ${uid} の有効化に失敗しました:`, error);
+    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
+    if (mappedAuthError) {
+      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
+    }
+    throw new HttpsError(
+      "internal",
+      `ユーザー ${uid} の有効化中に予期しないエラーが発生しました。`
+    );
+  }
+});
+
+export const deleteUser = onCall(async (request) => {
+  const { uid } = request.data;
+
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "UIDが指定されていません。");
+  }
+});

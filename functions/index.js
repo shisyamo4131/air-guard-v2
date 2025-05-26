@@ -4,6 +4,14 @@ import { geocoding } from "./modules/geocoding.js";
 import {
   createUserWithCompany,
   createUserInCompany,
-} from "./modules/createUser.js";
+  disableUser,
+  enableUser,
+} from "./modules/auth.js";
 
-export { geocoding, createUserWithCompany, createUserInCompany };
+export {
+  geocoding,
+  createUserWithCompany,
+  createUserInCompany,
+  disableUser,
+  enableUser,
+};

@@ -40,6 +40,14 @@ async function handleCreate(item) {
   });
 }
 
+async function handleDisableUser(item) {
+  await auth.disableUser({ uid: item.docId });
+}
+
+async function handleEnableUser(item) {
+  await auth.enableUser({ uid: item.docId });
+}
+
 /**
  * パスワードの初期化処理
  */
@@ -113,6 +121,8 @@ function initPassword() {
             size="small"
             @click="slotProps.toDelete(item)"
           ></v-icon>
+          <v-btn size="x-small" @click="handleEnableUser(item)">有効化</v-btn>
+          <v-btn size="x-small" @click="handleDisableUser(item)">無効化</v-btn>
         </div>
       </template>
     </v-data-table>
