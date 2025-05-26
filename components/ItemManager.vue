@@ -30,6 +30,7 @@ const props = defineProps({
     type: Function,
     default: async (item) => await item.delete(),
   },
+  label: { type: String, default: undefined },
 });
 
 const sender = "ItemManager.vue";
@@ -75,6 +76,13 @@ function clearError() {
             ...props.dialogProps,
             modelValue: slotProps.isEditing,
             'onUpdate:modelValue': slotProps.quitEditing,
+          },
+          editorProps: {
+            disabled: slotProps.isDelete,
+            label: props.label,
+            'onClick:cancel': slotProps.quitEditing,
+            'onClick:close': slotProps.quitEditing,
+            'onClick:submit': slotProps.submit,
           },
         }"
       ></slot>
