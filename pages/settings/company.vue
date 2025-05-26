@@ -15,7 +15,6 @@ const isValid = ref(null);
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="会社情報編集"
-          :disable-submit="!isValid"
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >

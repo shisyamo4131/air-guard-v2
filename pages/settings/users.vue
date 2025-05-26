@@ -60,7 +60,6 @@ function initialized() {
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesCardsEditor
           label="ユーザー情報編集"
-          :disable-submit="!isValid"
           @click:close="slotProps.quitEditing"
           @click:submit="slotProps.submit"
         >
