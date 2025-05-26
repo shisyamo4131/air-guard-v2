@@ -13,11 +13,6 @@ const headers = [
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
-// --- 入力コンポーネントの定義 ---
-const schema = Object.entries(Employee.classProps).map(([key, value]) => {
-  return { key, ...value };
-});
-
 onMounted(() => {
   employee.subscribeDocs();
 });
@@ -50,7 +45,7 @@ function edit(item) {
           <air-item-input
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
-            :schema="schema"
+            :schema="Employee.schema"
           >
           </air-item-input>
         </MoleculesCardsEditor>

@@ -16,9 +16,7 @@ const isValid = ref(null);
 const manager = ref(null);
 
 // --- 入力コンポーネントの定義 ---
-const schema = Object.entries(User.classProps).map(([key, value]) => {
-  return { key, ...value };
-});
+const schema = User.schema;
 
 /** ユーザー追加時の為のパスワード用変数 */
 const password = ref("");
@@ -71,7 +69,7 @@ function initialized() {
           <air-item-input
             :item="slotProps.item"
             :update-properties="slotProps.updateProperties"
-            :schema="schema"
+            :schema="User.schema"
           >
             <template #roles="{ modelValue, updateModelValue }">
               <v-checkbox
