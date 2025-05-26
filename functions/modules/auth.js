@@ -201,6 +201,11 @@ export const disableUser = onCall(async (request) => {
 
   try {
     await auth.updateUser(uid, { disabled: true });
+    const companyId = (await auth.getUser(uid)).customClaims?.companyId;
+    const user = new User();
+    await user.fetch({ docId: uid, prefix: `Companies/${companyId}` });
+    user.disabled = true;
+    await user.update({ prefix: `Companies/${companyId}` });
     console.log(`ユーザー ${uid} を無効化しました。`);
     return { success: true, uid };
   } catch (error) {
@@ -230,6 +235,11 @@ export const enableUser = onCall(async (request) => {
 
   try {
     await auth.updateUser(uid, { disabled: false });
+    const companyId = (await auth.getUser(uid)).customClaims?.companyId;
+    const user = new User();
+    await user.fetch({ docId: uid, prefix: `Companies/${companyId}` });
+    user.disabled = false;
+    await user.update({ prefix: `Companies/${companyId}` });
     console.log(`ユーザー ${uid} を有効化しました。`);
     return { success: true, uid };
   } catch (error) {
@@ -245,6 +255,12 @@ export const enableUser = onCall(async (request) => {
   }
 });
 
+/**
+ * ユーザーアカウントを削除します。
+ * - Firestore の各種ドキュメントから更新履歴を参照する可能性があるため
+ *   Companies/{companyId}/Users ドキュメントは削除しません。
+ * - 再度同じメールアドレスでアカウントが作成された場合、削除前のアカウントとは別アカウントとして扱うことになります。
+ */
 export const deleteUser = onCall(async (request) => {
   const { uid } = request.data;
 

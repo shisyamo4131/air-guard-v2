@@ -17,7 +17,7 @@ const confirmPassword = ref("");
 const headers = [
   { title: "email", value: "email" },
   { title: "表示名", value: "displayName" },
-  { title: "権限", value: "roles" },
+  { title: "管理者", value: "roles" },
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
@@ -106,23 +106,27 @@ function initPassword() {
           <v-btn icon="mdi-plus" @click="slotProps.toCreate()"></v-btn>
         </v-toolbar>
       </template>
+      <template v-slot:item.roles="{ item }">
+        <v-icon v-if="item.roles.includes('admin')" color="primary"
+          >mdi-check</v-icon
+        >
+      </template>
       <template v-slot:item.actions="{ item }">
         <div class="d-flex ga-2 justify-end">
-          <v-icon
+          <v-btn
+            color="primary"
+            :disabled="!item.disabled"
+            size="x-small"
+            @click="handleEnableUser(item)"
+            >有効化</v-btn
+          >
+          <v-btn
             color="medium-emphasis"
-            icon="mdi-pencil"
-            size="small"
-            @click="slotProps.toUpdate(item)"
-          ></v-icon>
-
-          <v-icon
-            color="medium-emphasis"
-            icon="mdi-delete"
-            size="small"
-            @click="slotProps.toDelete(item)"
-          ></v-icon>
-          <v-btn size="x-small" @click="handleEnableUser(item)">有効化</v-btn>
-          <v-btn size="x-small" @click="handleDisableUser(item)">無効化</v-btn>
+            :disabled="item.disabled || item.docId === auth.uid"
+            size="x-small"
+            @click="handleDisableUser(item)"
+            >無効化</v-btn
+          >
         </div>
       </template>
     </v-data-table>
