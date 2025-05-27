@@ -78,7 +78,8 @@ function clearError() {
             'onUpdate:modelValue': slotProps.quitEditing,
           },
           editorProps: {
-            disabled: slotProps.isDelete,
+            disabled: slotProps.isDelete || slotProps.isLoading,
+            isLoading: slotProps.isLoading,
             label: props.label,
             'onClick:cancel': slotProps.quitEditing,
             'onClick:close': slotProps.quitEditing,
