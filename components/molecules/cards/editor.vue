@@ -84,7 +84,6 @@ function onClickSubmit() {
         color="primary"
         :disabled="disableSubmit"
         :loading="isLoading"
-        variant="elevated"
         @click="onClickSubmit"
       />
     </v-card-actions>
