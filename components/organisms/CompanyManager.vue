@@ -20,14 +20,14 @@ const companyFields = Object.keys(Company.classProps);
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Company.schema">
           <template #zipcode="{ field, modelValue, updateModelValue }">
-            <AtomsInputsTextFieldZipcode
+            <air-postal-code
               :model-value="modelValue"
               :label="field.label"
               :required="field.required"
               @update:model-value="updateModelValue"
               @update:address="
                 slotProps.updateProperties({
-                  prefecture: $event.address1,
+                  prefCode: $event.prefcode,
                   city: $event.address2,
                   address: $event.address3,
                 })
