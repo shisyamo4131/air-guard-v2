@@ -19,12 +19,9 @@ const companyFields = Object.keys(Company.classProps);
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Company.schema">
-          <template #zipcode="{ field, modelValue, updateModelValue }">
+          <template #zipcode="{ attrs }">
             <air-postal-code
-              :model-value="modelValue"
-              :label="field.label"
-              :required="field.required"
-              @update:model-value="updateModelValue"
+              v-bind="attrs"
               @update:address="
                 slotProps.updateProperties({
                   prefCode: $event.prefcode,
