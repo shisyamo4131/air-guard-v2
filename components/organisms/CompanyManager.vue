@@ -66,9 +66,7 @@ const companyFields = Object.keys(Company.classProps);
       </v-container>
       <v-card-actions>
         <v-spacer></v-spacer>
-        <v-btn color="primary" variant="elevated" @click="slotProps.toUpdate()">
-          編集する
-        </v-btn>
+        <AtomsBtnsEdit color="primary" @click="slotProps.toUpdate()" />
       </v-card-actions>
     </v-card>
   </ItemManager>
