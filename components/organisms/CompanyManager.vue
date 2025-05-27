@@ -34,14 +34,6 @@ const companyFields = Object.keys(Company.classProps);
               "
             />
           </template>
-          <template #prefecture="{ field, modelValue, updateModelValue }">
-            <AtomsSelectPrefecture
-              :model-value="modelValue"
-              :label="field.label"
-              :required="field.required"
-              @update:model-value="updateModelValue"
-            />
-          </template>
         </air-item-input>
       </MoleculesCardsEditor>
     </v-dialog>
