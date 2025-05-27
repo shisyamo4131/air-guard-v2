@@ -3,7 +3,7 @@
  * @file UsersManager.vue
  * @description ユーザー管理コンポーネント
  */
-import { User } from "air-guard-v2-schemas";
+import { User } from "@/schemas/User.js";
 import { reactive, onMounted, onUnmounted } from "vue";
 
 /** ストア連携 */
