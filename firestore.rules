@@ -27,6 +27,26 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'Autonumbers' subcollection under 'Companies' ---
+    // AutonumbersコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // Autonumbers ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/Autonumbers/{id} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
+    // --- Rules for 'Employees' subcollection under 'Companies' ---
+    // EmployeesコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // Employees ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/Employees/{employeeId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'Users' subcollection under 'Companies' ---
     // UsersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
