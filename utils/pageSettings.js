@@ -64,7 +64,7 @@ export const pageStructure = [
         id: "employees-list",
         path: "/employees",
         // public: false,
-        label: "社員一覧",
+        label: "従業員一覧",
         icon: "mdi-account-details", // アイコンを追加
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
