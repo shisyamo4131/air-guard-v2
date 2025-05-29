@@ -27,7 +27,20 @@ onUnmounted(() => {
   <ItemManager :schema="employee" v-slot="slotProps" label="従業員情報">
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
-        <air-item-input v-bind="slotProps" :schema="Employee.schema" />
+        <air-item-input v-bind="slotProps" :schema="Employee.schema">
+          <template #zipcode="{ attrs }">
+            <air-postal-code
+              v-bind="attrs"
+              @update:address="
+                slotProps.updateProperties({
+                  prefCode: $event.prefcode,
+                  city: $event.address2,
+                  address: $event.address3,
+                })
+              "
+            />
+          </template>
+        </air-item-input>
       </MoleculesCardsEditor>
     </v-dialog>
     <v-data-table :items="docs" :headers="headers">
