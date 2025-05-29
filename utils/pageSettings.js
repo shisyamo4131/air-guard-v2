@@ -53,6 +53,25 @@ export const pageStructure = [
     navigation: true,
   },
   {
+    id: "customers-group",
+    // public: false,
+    label: "取引先管理",
+    icon: "mdi-account-multiple",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+    children: [
+      {
+        id: "customers-list",
+        path: "/customers",
+        // public: false,
+        label: "取引先一覧",
+        icon: "mdi-account-details", // アイコンを追加
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
+  },
+  {
     id: "employees-group",
     // public: false,
     label: "従業員管理",
