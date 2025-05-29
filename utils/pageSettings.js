@@ -107,24 +107,6 @@ export const pageStructure = [
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
-      {
-        id: "employee-contracts",
-        path: "/employees/contracts",
-        // public: false,
-        label: "雇用契約",
-        icon: "mdi-file-document-outline", // アイコンを追加
-        roles: [], // 特定ロールが必要
-        navigation: true,
-      },
-      {
-        id: "medical-checkups",
-        path: "/employees/medical-checkups",
-        // public: false,
-        label: "健康診断",
-        icon: "mdi-medical-bag", // アイコンを追加
-        roles: [], // 特定ロールが必要
-        navigation: true,
-      },
     ],
   },
   {
