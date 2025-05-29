@@ -56,7 +56,7 @@ export const pageStructure = [
     id: "customers-group",
     // public: false,
     label: "取引先管理",
-    icon: "mdi-account-multiple",
+    icon: "mdi-domain",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
     children: [
@@ -65,7 +65,7 @@ export const pageStructure = [
         path: "/customers",
         // public: false,
         label: "取引先一覧",
-        icon: "mdi-account-details", // アイコンを追加
+        icon: "mdi-domain",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
@@ -75,16 +75,16 @@ export const pageStructure = [
     id: "sites-group",
     // public: false,
     label: "現場管理",
-    icon: "mdi-account-multiple",
+    icon: "mdi-pickaxe",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
     children: [
       {
         id: "sites-list",
         path: "/sites",
-        // public: false,
+        // public: false, // デフォルトなので省略可
         label: "現場一覧",
-        icon: "mdi-account-details", // アイコンを追加
+        icon: "mdi-pickaxe",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
