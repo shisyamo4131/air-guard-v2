@@ -3,8 +3,8 @@
  * @description 会社情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
-import { Company as BaseClass } from "air-guard-v2-schemas";
-import { fetchCoordinates } from "../utils/geocoding.js";
+import { Company as BaseClass } from "air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
+import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
 export class Company extends BaseClass {
   /**
@@ -26,49 +26,7 @@ export class Company extends BaseClass {
       return;
     }
 
-    // 住所情報が設定されていなければ `location` は null に設定
-    if (!currentFullAddress || currentFullAddress.trim() === "") {
-      // console.warn(
-      //   "[Company.beforeUpdate] 住所情報が空です。ジオコーディングできません。"
-      // );
-      this.location = null; // 住所が実質的に空の場合は location をクリア
-      return;
-    }
-    // console.log(
-    //   `[Company.beforeUpdate] ジオコーディング対象の住所: ${currentFullAddress}`
-    // );
-
-    try {
-      // 住所から座標を取得
-      const coordinates = await fetchCoordinates(currentFullAddress);
-
-      // 正常なデータが取得できたら `location` をセット
-      if (
-        coordinates &&
-        typeof coordinates.lat === "number" &&
-        typeof coordinates.lng === "number"
-      ) {
-        this.location = {
-          lat: coordinates.lat,
-          lng: coordinates.lng,
-          formattedAddress: coordinates.formattedAddress,
-        };
-        // console.log(
-        //   `[Company.beforeUpdate] ジオコーディング成功。緯度: ${this.location.lat}, 経度: ${this.location.lng}`
-        // );
-      } else {
-        console.warn(
-          `[Company.beforeUpdate] 住所から座標を取得できませんでした: ${currentFullAddress}`
-        );
-        this.location = null; // 取得失敗または無効なデータの場合は location を null に設定
-      }
-    } catch (error) {
-      console.error(
-        `[Company.beforeUpdate] 住所のジオコーディング中にエラーが発生しました: ${currentFullAddress}`,
-        error
-      );
-      this.location = null; // 例外発生時も location を null に設定
-      throw error;
-    }
+    // 住所に基づいてジオコーディングを実行
+    await geocodeAndSetLocation(this, "Company", "beforeUpdate");
   }
 }
