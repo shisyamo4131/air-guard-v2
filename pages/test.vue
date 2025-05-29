@@ -1,12 +1,5 @@
-<script setup>
-const model = defineModel();
-</script>
+<script setup></script>
 
 <template>
-  <v-container>
-    <v-locale-provider locale="ja">
-      <v-date-input v-model="model" placeholder="日付を選択" />
-    </v-locale-provider>
-    {{ model }}
-  </v-container>
+  <v-container> </v-container>
 </template>
