@@ -90,8 +90,8 @@ export const createUserWithCompany = onCall(async (request) => {
 
     // 2. Company を FireModel 経由で作成
     const company = new Company({
-      name: companyName,
-      nameKana: companyNameKana,
+      companyName,
+      companyNameKana,
     });
 
     const companyRef = await company.create();
