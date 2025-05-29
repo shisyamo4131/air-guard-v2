@@ -11,12 +11,14 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@date-io/dayjs": "^3.2.0",
     "@mdi/font": "^7.4.47",
     "@pinia/nuxt": "^0.10.1",
     "air-firebase-v2": "file:air-firebase-v2",
     "air-firebase-v2-client-adapter": "file:air-firebase-v2-client-adapter",
     "air-guard-v2-schemas": "file:air-guard-v2-schemas",
     "air-vuetify-v3": "file:air-vuetify-v3",
+    "dayjs": "^1.11.13",
     "firebase": "^11.4.0",
     "nuxt": "^3.17.2",
     "pinia": "^3.0.1",
