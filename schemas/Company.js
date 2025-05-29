@@ -12,6 +12,7 @@ export class Company extends BaseClass {
    * @returns {Promise<void>}
    */
   async beforeUpdate() {
+    await super.beforeUpdate();
     const currentFullAddress = this.fullAddress;
     // FireModelの_beforeDataには、fetch時またはinitialize時のプロパティ値が格納されている
     // fullAddressがenumerable: trueであれば、_beforeDataにも含まれる
