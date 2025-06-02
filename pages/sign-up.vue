@@ -7,12 +7,12 @@ const auth = useAuthStore();
 
 // フォーム入力モデル (テスト用の初期値を設定)
 const model = reactive({
-  companyName: "株式会社唯心",
-  companyNameKana: "ユイシン",
-  displayName: "丸山大三",
-  email: "maruyama@yuisin.net",
-  password: "sevenstar",
-  confirmPassword: "sevenstar",
+  companyName: "",
+  companyNameKana: "",
+  displayName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
 });
 
 const currentStep = ref(1); // 現在のステップを管理 (1-based)
