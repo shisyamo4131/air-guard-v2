@@ -41,6 +41,11 @@ onUnmounted(() => {
               "
             />
           </template>
+          <template #customerId="{ attrs }">
+            <air-api-loader v-bind="attrs" v-slot="{ autocomplete }">
+              <air-autocomplete v-bind="{ ...attrs, ...autocomplete }" />
+            </air-api-loader>
+          </template>
         </air-item-input>
       </MoleculesCardsEditor>
     </v-dialog>
