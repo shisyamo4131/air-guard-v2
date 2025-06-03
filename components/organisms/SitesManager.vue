@@ -43,12 +43,15 @@ onUnmounted(() => {
               "
             />
           </template>
-          <template #customerId="{ attrs }">
+          <template #customer="{ attrs }">
             <air-autocomplete-api
               v-bind="attrs"
               :api="
-                async (search) =>
-                  await customer.fetchDocs({ constraints: search })
+                async (search) => {
+                  return await customer.fetchDocs({
+                    constraints: search,
+                  });
+                }
               "
             />
           </template>
