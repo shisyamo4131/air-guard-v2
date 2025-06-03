@@ -5,9 +5,11 @@
  */
 import { Site } from "@/schemas/Site.js";
 import { reactive, onMounted, onUnmounted } from "vue";
+import { Customer } from "@/schemas/Customer.js";
 
 const site = reactive(new Site());
 const docs = computed(() => site.docs);
+const customer = new Customer();
 
 const headers = [
   { title: "code", value: "code" },
@@ -42,9 +44,13 @@ onUnmounted(() => {
             />
           </template>
           <template #customerId="{ attrs }">
-            <air-api-loader v-bind="attrs" v-slot="{ autocomplete }">
-              <air-autocomplete v-bind="{ ...attrs, ...autocomplete }" />
-            </air-api-loader>
+            <air-autocomplete-api
+              v-bind="attrs"
+              :api="
+                async (search) =>
+                  await customer.fetchDocs({ constraints: search })
+              "
+            />
           </template>
         </air-item-input>
       </MoleculesCardsEditor>
