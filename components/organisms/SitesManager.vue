@@ -5,11 +5,9 @@
  */
 import { Site } from "@/schemas/Site.js";
 import { reactive, onMounted, onUnmounted } from "vue";
-import { Customer } from "@/schemas/Customer.js";
 
 const site = reactive(new Site());
 const docs = computed(() => site.docs);
-const customer = new Customer();
 
 const headers = [
   { title: "code", value: "code" },
@@ -40,18 +38,6 @@ onUnmounted(() => {
                   city: $event.address2,
                   address: $event.address3,
                 })
-              "
-            />
-          </template>
-          <template #customer="{ attrs }">
-            <air-autocomplete-api
-              v-bind="attrs"
-              :api="
-                async (search) => {
-                  return await customer.fetchDocs({
-                    constraints: search,
-                  });
-                }
               "
             />
           </template>
