@@ -53,20 +53,16 @@ onUnmounted(() => {
       </template>
       <template v-slot:item.actions="{ item }">
         <div class="d-flex ga-2 justify-end">
-          <v-icon
+          <AtomsIconsEdit
             color="medium-emphasis"
             size="small"
             @click="slotProps.toUpdate(item)"
-          >
-            mdi-pencil
-          </v-icon>
-          <v-icon
+          />
+          <AtomsIconsDelete
             color="medium-emphasis"
             size="small"
             @click="slotProps.toDelete(item)"
-          >
-            mdi-trash-can
-          </v-icon>
+          />
         </div>
       </template>
     </v-data-table>

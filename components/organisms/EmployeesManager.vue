@@ -10,9 +10,9 @@ const employee = reactive(new Employee());
 const docs = computed(() => employee.docs);
 
 const headers = [
-  { title: "code", value: "code" },
-  { title: "名前", value: "displayName" },
-  { title: "操作", value: "actions", align: "end", sortable: false },
+  { title: "code", key: "code" },
+  { title: "名前", key: "displayName" },
+  { title: "操作", key: "actions", align: "end", sortable: false },
 ];
 
 onMounted(() => {
@@ -44,7 +44,11 @@ onUnmounted(() => {
         </air-item-input>
       </MoleculesCardsEditor>
     </v-dialog>
-    <v-data-table :items="docs" :headers="headers">
+    <v-data-table
+      :items="docs"
+      :headers="headers"
+      :sort-by="[{ key: 'code', order: 'asc' }]"
+    >
       <template #top>
         <v-toolbar density="compact" flat>
           <v-toolbar-title>従業員一覧</v-toolbar-title>
@@ -53,20 +57,16 @@ onUnmounted(() => {
       </template>
       <template v-slot:item.actions="{ item }">
         <div class="d-flex ga-2 justify-end">
-          <v-icon
+          <AtomsIconsEdit
             color="medium-emphasis"
             size="small"
             @click="slotProps.toUpdate(item)"
-          >
-            mdi-pencil
-          </v-icon>
-          <v-icon
+          />
+          <AtomsIconsDelete
             color="medium-emphasis"
             size="small"
             @click="slotProps.toDelete(item)"
-          >
-            mdi-trash-can
-          </v-icon>
+          />
         </div>
       </template>
     </v-data-table>
