@@ -11,7 +11,7 @@ const docs = computed(() => customer.docs);
 
 const headers = [
   { title: "code", value: "code" },
-  { title: "取引先名", value: "customerName" },
+  { title: "取引先名", value: "name" },
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
