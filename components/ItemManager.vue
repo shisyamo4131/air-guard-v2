@@ -37,6 +37,7 @@ const sender = "ItemManager.vue";
 
 const defaultDialogProps = {
   maxWidth: "480",
+  persistent: true,
   scrollable: true,
   transition: "dialog-bottom-transition",
 };
