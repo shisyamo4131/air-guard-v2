@@ -1,2 +1,0 @@
-- Customer クラスで Site に対する hasMany を設定
-- AirAutonumberApi のクラスごとのコンポーネントを作成
