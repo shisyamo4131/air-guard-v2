@@ -21,6 +21,7 @@
  *   default - エディタカードの主要なコンテンツ領域。
  */
 import { useLogger } from "~/composables/useLogger";
+import { ref, watch } from "vue";
 
 defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 
@@ -39,20 +40,29 @@ const emit = defineEmits(["click:close", "click:submit", "update:isValid"]);
 // --- ストア / コンポーザブル
 const logger = useLogger();
 
+// --- テンプレート参照 ---
+const form = ref(null); // v-form への参照
+
 // --- VForm のバリデーション ---
 // 更新されたら `update:isValid` イベントを emit
-const isValid = ref(false);
-watch(isValid, (newVal) => {
+const formIsValid = ref(false); // v-form の v-model 用
+watch(formIsValid, (newVal) => {
   emit("update:isValid", newVal);
 });
 
 /**
  * submit ボタンがクリックされた時の処理
- * - isValid が falsy の場合、エラーメッセージを出力して終了
- * - isValid が truthy の場合、`click:submit` イベントを emit
+ * - v-form の validate() を実行
+ * - バリデーション結果が無効な場合、エラーメッセージを出力して終了
+ * - バリデーション結果が有効な場合、`click:submit` イベントを emit
  */
-function onClickSubmit() {
-  if (!isValid.value) {
+async function onClickSubmit() {
+  if (!form.value) {
+    // 通常は発生しませんが、フォーム参照がない場合のガード
+    return;
+  }
+  const { valid } = await form.value.validate();
+  if (!valid) {
     logger.clearError;
     const error = new Error("入力に不備があります。");
     logger.error({
@@ -74,8 +84,8 @@ function onClickSubmit() {
       <AtomsBtnsCloseIcon @click="emit('click:close')" />
     </v-toolbar>
     <v-card-text>
-      <v-form v-model="isValid" :disabled="disabled">
-        <slot name="default" v-bind="{ isValid }" />
+      <v-form ref="form" v-model="formIsValid" :disabled="disabled">
+        <slot name="default" v-bind="{ isValid: formIsValid }" />
       </v-form>
     </v-card-text>
     <v-card-actions>
