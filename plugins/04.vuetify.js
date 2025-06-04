@@ -24,10 +24,19 @@ export default defineNuxtPlugin((app) => {
     components: {
       VDateInput,
     },
+    /** ロケールを ja 優先に設定 */
     locale: {
       locale: "ja",
       fallback: "en",
       messages: { ja, en },
+    },
+    defaults: {
+      VDataTable: {
+        VIcon: {
+          color: "medium-emphasis",
+          size: "small",
+        },
+      },
     },
   });
   app.vueApp.use(vuetify);

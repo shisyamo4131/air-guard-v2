@@ -57,16 +57,8 @@ onUnmounted(() => {
       </template>
       <template v-slot:item.actions="{ item }">
         <div class="d-flex ga-2 justify-end">
-          <AtomsIconsEdit
-            color="medium-emphasis"
-            size="small"
-            @click="slotProps.toUpdate(item)"
-          />
-          <AtomsIconsDelete
-            color="medium-emphasis"
-            size="small"
-            @click="slotProps.toDelete(item)"
-          />
+          <AtomsIconsEdit @click="slotProps.toUpdate(item)" />
+          <AtomsIconsDelete @click="slotProps.toDelete(item)" />
         </div>
       </template>
     </v-data-table>
