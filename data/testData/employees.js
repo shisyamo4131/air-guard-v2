@@ -6,6 +6,8 @@ export const employeeTestDataArray = [
     lastNameKana: "スズキ",
     firstNameKana: "ジロウ",
     displayName: "鈴木次郎",
+    gender: "male", // Added
+    dateOfBirth: new Date(1990, 5, 15),
     zipcode: "2310011",
     prefCode: "13",
     city: "千代田区",
@@ -14,7 +16,7 @@ export const employeeTestDataArray = [
     isForeigner: false,
     foreignName: null,
     nationality: null,
-    dateOfHire: new Date(2020, 0, 15), // 年, 月(0-11), 日
+    dateOfHire: new Date(2020, 0, 15),
     employmentStatus: "active",
     dateOfTermination: null,
   },
@@ -25,6 +27,8 @@ export const employeeTestDataArray = [
     lastNameKana: "ワタナベ",
     firstNameKana: "ケン",
     displayName: "渡辺健",
+    gender: "male",
+    dateOfBirth: new Date(1985, 10, 20), // Added
     zipcode: "1500001",
     prefCode: "14",
     city: "横浜市中区",
@@ -44,6 +48,8 @@ export const employeeTestDataArray = [
     lastNameKana: "カトウ",
     firstNameKana: "サチコ",
     displayName: "加藤幸子",
+    gender: "female",
+    dateOfBirth: new Date(1978, 3, 5), // Added
     zipcode: "2310011",
     prefCode: "14",
     city: "渋谷区",
@@ -63,6 +69,8 @@ export const employeeTestDataArray = [
     lastNameKana: "コバヤシ",
     firstNameKana: "ユウ",
     displayName: "小林優",
+    gender: "male",
+    dateOfBirth: new Date(1995, 1, 1), // Added
     zipcode: "5400001",
     prefCode: "13",
     city: "大阪市中央区",
@@ -82,6 +90,8 @@ export const employeeTestDataArray = [
     lastNameKana: "ナカムラ",
     firstNameKana: "タカシ",
     displayName: "中村隆",
+    gender: "male",
+    dateOfBirth: new Date(1982, 6, 30), // Added
     zipcode: "5400001",
     prefCode: "13",
     city: "新宿区",
@@ -97,10 +107,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP006",
     lastName: "渡辺",
-    firstName: "健",
+    firstName: "健二",
     lastNameKana: "ワタナベ",
-    firstNameKana: "ケン",
-    displayName: "渡辺健",
+    firstNameKana: "ケンジ",
+    displayName: "渡辺健二",
+    gender: "male",
+    dateOfBirth: new Date(1985, 10, 20), // Added
     zipcode: "5400001",
     prefCode: "27",
     city: "千代田区",
@@ -116,10 +128,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP007",
     lastName: "小林",
-    firstName: "優",
+    firstName: "優一",
     lastNameKana: "コバヤシ",
-    firstNameKana: "ユウ",
-    displayName: "小林優",
+    firstNameKana: "ユウイチ",
+    displayName: "小林優一",
+    gender: "male",
+    dateOfBirth: new Date(1995, 1, 1), // Added
     zipcode: "1000001",
     prefCode: "14",
     city: "渋谷区",
@@ -139,6 +153,8 @@ export const employeeTestDataArray = [
     lastNameKana: "イトウ",
     firstNameKana: "ミサキ",
     displayName: "伊藤美咲",
+    gender: "female",
+    dateOfBirth: new Date(1998, 9, 18), // Added
     zipcode: "1500001",
     prefCode: "14",
     city: "横浜市中区",
@@ -158,6 +174,8 @@ export const employeeTestDataArray = [
     lastNameKana: "チェン",
     firstNameKana: "ミン",
     displayName: "チェンミン",
+    gender: "male",
+    dateOfBirth: new Date(1992, 7, 7), // Added
     zipcode: "1500001",
     prefCode: "13",
     city: "新宿区",
@@ -173,10 +191,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP010",
     lastName: "中村",
-    firstName: "隆",
+    firstName: "隆一",
     lastNameKana: "ナカムラ",
-    firstNameKana: "タカシ",
-    displayName: "中村隆",
+    firstNameKana: "タカイチ",
+    displayName: "中村隆一",
+    gender: "male",
+    dateOfBirth: new Date(1982, 6, 30), // Added
     zipcode: "2310011",
     prefCode: "13",
     city: "新宿区",
@@ -192,10 +212,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP011",
     lastName: "ナタリー",
-    firstName: "スミス",
+    firstName: "スミス", // EMP022でスミス二を使用するため、こちらは元のまま
     lastNameKana: "ナタリー",
-    firstNameKana: "スミス",
-    displayName: "ナタスミ",
+    firstNameKana: "スミス", // EMP022でスミスニを使用
+    displayName: "ナタスミ", // EMP022でナタスミ二を使用
+    gender: "female",
+    dateOfBirth: new Date(1988, 12, 12), // Added
     zipcode: "2310011",
     prefCode: "14",
     city: "大阪市中央区",
@@ -211,10 +233,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP012",
     lastName: "リー",
-    firstName: "ジョン",
+    firstName: "ジョン", // EMP026でジョン二を使用するため、こちらは元のまま
     lastNameKana: "リー",
-    firstNameKana: "ジョン",
-    displayName: "リージョン",
+    firstNameKana: "ジョン", // EMP026でジョンニを使用
+    displayName: "リージョン", // EMP026でリージョン二を使用
+    gender: "male",
+    dateOfBirth: new Date(1991, 4, 25), // Added
     zipcode: "2310011",
     prefCode: "13",
     city: "大阪市中央区",
@@ -230,10 +254,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP013",
     lastName: "山田",
-    firstName: "太郎",
+    firstName: "太郎", // EMP023で太郎二を使用するため、こちらは元のまま
     lastNameKana: "ヤマダ",
-    firstNameKana: "タロウ",
-    displayName: "山田太郎",
+    firstNameKana: "タロウ", // EMP023でタロウジを使用
+    displayName: "山田太郎", // EMP023で山田太郎二を使用
+    gender: "male",
+    dateOfBirth: new Date(1975, 2, 1), // Added
     zipcode: "2310011",
     prefCode: "13",
     city: "大阪市中央区",
@@ -249,10 +275,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP014",
     lastName: "マリア",
-    firstName: "ゴメス",
+    firstName: "ゴメス", // EMP018でゴメス二を使用するため、こちらは元のまま
     lastNameKana: "マリア",
-    firstNameKana: "ゴメス",
-    displayName: "マリゴメ",
+    firstNameKana: "ゴメス", // EMP018でゴメスニを使用
+    displayName: "マリゴメ", // EMP018でマリゴメ二を使用
+    gender: "female",
+    dateOfBirth: new Date(1993, 8, 14), // Added
     zipcode: "5400001",
     prefCode: "14",
     city: "千代田区",
@@ -268,10 +296,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP015",
     lastName: "ジャン",
-    firstName: "ピエール",
+    firstName: "ピエール", // EMP019でピエール二を使用するため、こちらは元のまま
     lastNameKana: "ジャン",
-    firstNameKana: "ピエール",
-    displayName: "ジャンピ",
+    firstNameKana: "ピエール", // EMP019でピエールニを使用
+    displayName: "ジャンピ", // EMP019でジャンピ二を使用
+    gender: "male",
+    dateOfBirth: new Date(1980, 0, 8), // Added
     zipcode: "1500001",
     prefCode: "27",
     city: "新宿区",
@@ -287,10 +317,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP016",
     lastName: "キム",
-    firstName: "ヨン",
+    firstName: "ヨン", // EMP021でヨン二を使用するため、こちらは元のまま
     lastNameKana: "キム",
-    firstNameKana: "ヨン",
-    displayName: "キムヨン",
+    firstNameKana: "ヨン", // EMP021でヨンニを使用
+    displayName: "キムヨン", // EMP021でキムヨン二を使用
+    gender: "male",
+    dateOfBirth: new Date(1996, 11, 3), // Added
     zipcode: "1600022",
     prefCode: "13",
     city: "大阪市中央区",
@@ -306,10 +338,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP017",
     lastName: "田中",
-    firstName: "一郎",
+    firstName: "一郎", // EMP020で一郎二を使用するため、こちらは元のまま
     lastNameKana: "タナカ",
-    firstNameKana: "イチロウ",
-    displayName: "田中一郎",
+    firstNameKana: "イチロウ", // EMP020でイチロウジを使用
+    displayName: "田中一郎", // EMP020で田中一郎二を使用
+    gender: "male",
+    dateOfBirth: new Date(1987, 5, 22), // Added
     zipcode: "2310011",
     prefCode: "14",
     city: "渋谷区",
@@ -325,29 +359,33 @@ export const employeeTestDataArray = [
   {
     code: "EMP018",
     lastName: "マリア",
-    firstName: "ゴメス",
+    firstName: "ゴメス二",
     lastNameKana: "マリア",
-    firstNameKana: "ゴメス",
-    displayName: "マリゴメ",
+    firstNameKana: "ゴメスニ",
+    displayName: "マリゴメ二",
+    gender: "female",
+    dateOfBirth: new Date(1993, 8, 14), // Added
     zipcode: "2310011",
     prefCode: "27",
     city: "千代田区",
     address: "本町1-1",
-    building: "赤レンガビル",
+    building: "赤レンガビル南棟", // EMP006と住所が重複するため変更
     isForeigner: true,
     foreignName: "Maria Gomez",
     nationality: "スペイン",
     dateOfHire: new Date(2018, 1, 1),
-    employmentStatus: "terminated", // Duplicate of EMP014, making this one terminated
+    employmentStatus: "terminated",
     dateOfTermination: new Date(2023, 0, 15),
   },
   {
     code: "EMP019",
     lastName: "ジャン",
-    firstName: "ピエール",
+    firstName: "ピエール二",
     lastNameKana: "ジャン",
-    firstNameKana: "ピエール",
-    displayName: "ジャンピ",
+    firstNameKana: "ピエールニ",
+    displayName: "ジャンピ二",
+    gender: "male",
+    dateOfBirth: new Date(1980, 0, 8), // Added
     zipcode: "1500001",
     prefCode: "13",
     city: "横浜市中区",
@@ -363,10 +401,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP020",
     lastName: "田中",
-    firstName: "一郎",
+    firstName: "一郎二",
     lastNameKana: "タナカ",
-    firstNameKana: "イチロウ",
-    displayName: "田中一郎",
+    firstNameKana: "イチロウジ",
+    displayName: "田中一郎二",
+    gender: "male",
+    dateOfBirth: new Date(1987, 5, 22), // Added
     zipcode: "1600022",
     prefCode: "14",
     city: "大阪市中央区",
@@ -382,10 +422,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP021",
     lastName: "キム",
-    firstName: "ヨン",
+    firstName: "ヨン二",
     lastNameKana: "キム",
-    firstNameKana: "ヨン",
-    displayName: "キムヨン",
+    firstNameKana: "ヨンニ",
+    displayName: "キムヨン二",
+    gender: "male",
+    dateOfBirth: new Date(1996, 11, 3), // Added
     zipcode: "1000001",
     prefCode: "13",
     city: "渋谷区",
@@ -401,10 +443,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP022",
     lastName: "ナタリー",
-    firstName: "スミス",
+    firstName: "スミス二",
     lastNameKana: "ナタリー",
-    firstNameKana: "スミス",
-    displayName: "ナタスミ",
+    firstNameKana: "スミスニ",
+    displayName: "ナタスミ二",
+    gender: "female",
+    dateOfBirth: new Date(1988, 12, 12), // Added
     zipcode: "5400001",
     prefCode: "13",
     city: "千代田区",
@@ -420,10 +464,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP023",
     lastName: "山田",
-    firstName: "太郎",
+    firstName: "太郎二",
     lastNameKana: "ヤマダ",
-    firstNameKana: "タロウ",
-    displayName: "山田太郎",
+    firstNameKana: "タロウジ",
+    displayName: "山田太郎二",
+    gender: "male",
+    dateOfBirth: new Date(1975, 2, 1), // Added
     zipcode: "1000001",
     prefCode: "13",
     city: "横浜市中区",
@@ -439,10 +485,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP024",
     lastName: "中村",
-    firstName: "隆",
+    firstName: "隆二",
     lastNameKana: "ナカムラ",
-    firstNameKana: "タカシ",
-    displayName: "中村隆",
+    firstNameKana: "タカジ",
+    displayName: "中村隆二",
+    gender: "male",
+    dateOfBirth: new Date(1982, 6, 30), // Added
     zipcode: "1600022",
     prefCode: "13",
     city: "横浜市中区",
@@ -458,10 +506,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP025",
     lastName: "チェン",
-    firstName: "ミン",
+    firstName: "ミン二",
     lastNameKana: "チェン",
-    firstNameKana: "ミン",
-    displayName: "チェンミン",
+    firstNameKana: "ミンニ",
+    displayName: "チェンミン二",
+    gender: "male",
+    dateOfBirth: new Date(1992, 7, 7), // Added
     zipcode: "1600022",
     prefCode: "14",
     city: "渋谷区",
@@ -477,10 +527,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP026",
     lastName: "リー",
-    firstName: "ジョン",
+    firstName: "ジョン二",
     lastNameKana: "リー",
-    firstNameKana: "ジョン",
-    displayName: "リージョン",
+    firstNameKana: "ジョンニ",
+    displayName: "リージョン二",
+    gender: "male",
+    dateOfBirth: new Date(1991, 4, 25), // Added
     zipcode: "5400001",
     prefCode: "27",
     city: "横浜市中区",
@@ -496,14 +548,16 @@ export const employeeTestDataArray = [
   {
     code: "EMP027",
     lastName: "加藤",
-    firstName: "幸子",
+    firstName: "幸子二",
     lastNameKana: "カトウ",
-    firstNameKana: "サチコ",
-    displayName: "加藤幸子",
+    firstNameKana: "サチコニ",
+    displayName: "加藤幸子二",
+    gender: "female",
+    dateOfBirth: new Date(1978, 3, 5), // Added
     zipcode: "2310011",
     prefCode: "13",
     city: "大阪市中央区",
-    address: "港町4-1",
+    address: "港町4-1-2", // EMP012と住所が重複するため変更
     building: "スクランブルビル",
     isForeigner: false,
     foreignName: null,
@@ -515,10 +569,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP028",
     lastName: "小林",
-    firstName: "優",
+    firstName: "優二",
     lastNameKana: "コバヤシ",
-    firstNameKana: "ユウ",
-    displayName: "小林優",
+    firstNameKana: "ユウジ",
+    displayName: "小林優二",
+    gender: "male",
+    dateOfBirth: new Date(1995, 1, 1), // Added
     zipcode: "1600022",
     prefCode: "13",
     city: "横浜市中区",
@@ -538,6 +594,8 @@ export const employeeTestDataArray = [
     lastNameKana: "サトウ",
     firstNameKana: "ハナコ",
     displayName: "佐藤花子",
+    gender: "female",
+    dateOfBirth: new Date(2000, 4, 20), // Added
     zipcode: "1500001",
     prefCode: "13",
     city: "大阪市中央区",
@@ -553,10 +611,12 @@ export const employeeTestDataArray = [
   {
     code: "EMP030",
     lastName: "小林",
-    firstName: "優",
+    firstName: "優三",
     lastNameKana: "コバヤシ",
-    firstNameKana: "ユウ",
-    displayName: "小林優",
+    firstNameKana: "ユウゾウ",
+    displayName: "小林優三",
+    gender: "male",
+    dateOfBirth: new Date(1995, 1, 1), // Added
     zipcode: "1000001",
     prefCode: "14",
     city: "渋谷区",
