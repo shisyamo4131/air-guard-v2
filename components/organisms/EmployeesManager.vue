@@ -25,7 +25,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ItemManager :schema="employee" v-slot="slotProps" label="従業員情報">
+  <ItemManager
+    :schema="employee"
+    v-slot="slotProps"
+    label="従業員情報"
+    :dialog-props="{ maxWidth: 640 }"
+  >
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Employee.schema">
@@ -39,6 +44,12 @@ onUnmounted(() => {
                   address: $event.address3,
                 })
               "
+            />
+          </template>
+          <template #dateOfTermination="{ attrs }">
+            <air-date-input
+              v-bind="attrs"
+              :required="slotProps.item.employmentStatus === 'terminated'"
             />
           </template>
         </air-item-input>
