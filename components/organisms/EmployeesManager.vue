@@ -46,12 +46,6 @@ onUnmounted(() => {
               "
             />
           </template>
-          <template #dateOfTermination="{ attrs }">
-            <air-date-input
-              v-bind="attrs"
-              :required="slotProps.item.employmentStatus === 'terminated'"
-            />
-          </template>
         </air-item-input>
       </MoleculesCardsEditor>
     </v-dialog>
