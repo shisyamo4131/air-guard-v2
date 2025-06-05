@@ -34,8 +34,7 @@ onUnmounted(() => {
   >
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
-        <air-item-input v-bind="slotProps" :schema="Employee.schema">
-        </air-item-input>
+        <air-item-input v-bind="slotProps" :schema="Employee.schema" />
       </MoleculesCardsEditor>
     </v-dialog>
     <v-data-table
