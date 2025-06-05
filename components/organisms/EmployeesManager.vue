@@ -12,6 +12,7 @@ const docs = computed(() => employee.docs);
 const headers = [
   { title: "code", key: "code" },
   { title: "名前", key: "displayName" },
+  { title: "状態", key: "employmentStatus" },
   { title: "操作", key: "actions", align: "end", sortable: false },
 ];
 
