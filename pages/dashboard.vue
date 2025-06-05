@@ -31,7 +31,7 @@
           block
           color="primary"
           size="large"
-          @click="$router.push('/staff')"
+          @click="$router.push('/employees')"
           >スタッフ管理</v-btn
         >
       </v-col>
