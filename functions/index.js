@@ -1,5 +1,7 @@
 /** Firebase, FireModel の初期化 */
 import "./modules/firebase.init.js";
+
+/** モジュールからのインポート */
 import { geocoding } from "./modules/geocoding.js";
 import {
   createUserWithCompany,
@@ -8,10 +10,12 @@ import {
   enableUser,
 } from "./modules/auth.js";
 
-/** Cloud Functions のテスト用モジュール */
-import { testFunction } from "./modules/testFunction.js";
-export { testFunction };
+/** テスト用 */
+import { testApi } from "./modules/testFunction.js";
+export { testApi };
 
+/** エクスポート */
+export * from "./modules/dependentSync.js"; // dependentSync.js からすべてエクスポート
 export {
   geocoding,
   createUserWithCompany,
