@@ -44,61 +44,51 @@ async function syncDependentDocuments({
   );
   const snapshot = await queryRef.get();
 
-  let dataToUpdateInTarget;
   const targetModelStaticProps = config.targetModelClass.classProps;
-
   if (!targetModelStaticProps) {
     logger.error(
       `[syncDependentDocuments] classProps not found on targetModelClass '${config.targetModelClass.name}'. Cannot determine field schema for ${config.targetCollection} from ${config.sourceCollection} (${sourceDocId}).`
     );
-    return; // スキーマなしでは処理できない
+    return;
   }
 
   const targetFieldSchema = targetModelStaticProps[config.updateFieldInTarget];
-
   if (!targetFieldSchema) {
     logger.error(
       `[syncDependentDocuments] Field schema for '${config.updateFieldInTarget}' not found in targetModelClass '${config.targetModelClass.name}'. Cannot sync for ${config.targetCollection} from ${config.sourceCollection} (${sourceDocId}).`
     );
-    return; // フィールドスキーマなしでは処理できない
+    return;
   }
 
-  if (targetFieldSchema.customClass) {
-    const TargetCustomClass = targetFieldSchema.customClass;
-    try {
-      const instance = new TargetCustomClass(sourceDocData);
-      if (typeof instance.toObject === "function") {
-        dataToUpdateInTarget = instance.toObject();
-      } else {
-        logger.error(
-          `[syncDependentDocuments] customClass '${TargetCustomClass.name}' for field '${config.updateFieldInTarget}' in ${config.targetCollection} does not have a toObject() method. Cannot prepare data from ${config.sourceCollection} (${sourceDocId}).`
-        );
-        return; // toObjectがないと汎用的な処理が難しい
-      }
-    } catch (e) {
-      logger.error(
-        `[syncDependentDocuments] Error instantiating or processing customClass '${TargetCustomClass.name}' for field '${config.updateFieldInTarget}' in ${config.targetCollection}. Source: ${config.sourceCollection} (${sourceDocId}). Error: ${e.message}`,
-        e
-      );
-      return; // インスタンス化または処理エラー
-    }
-  } else {
+  if (!targetFieldSchema.customClass) {
     logger.error(
       `[syncDependentDocuments] No customClass defined for target field '${config.updateFieldInTarget}' in '${config.targetModelClass.name}'. Current configuration cannot automatically transform data for ${config.targetCollection} from ${config.sourceCollection} (${sourceDocId}).`
     );
-    return; // customClassがない場合、現在のconfigでは処理方法が不明確
+    return;
+  }
+
+  let dataToUpdateInTarget;
+  const TargetCustomClass = targetFieldSchema.customClass;
+  try {
+    const instance = new TargetCustomClass(sourceDocData);
+    if (typeof instance.toObject !== "function") {
+      logger.error(
+        `[syncDependentDocuments] customClass '${TargetCustomClass.name}' for field '${config.updateFieldInTarget}' in ${config.targetCollection} does not have a toObject() method. Cannot prepare data from ${config.sourceCollection} (${sourceDocId}).`
+      );
+      return;
+    }
+    dataToUpdateInTarget = instance.toObject();
+  } catch (e) {
+    logger.error(
+      `[syncDependentDocuments] Error instantiating or processing customClass '${TargetCustomClass.name}' for field '${config.updateFieldInTarget}' in ${config.targetCollection}. Source: ${config.sourceCollection} (${sourceDocId}). Error: ${e.message}`,
+      e
+    );
+    return;
   }
 
   if (snapshot.empty) {
     logger.info(
       `[syncDependentDocuments] Update for ${config.sourceCollection} (${sourceDocId}): No dependent documents found in ${config.targetCollection}.`
-    );
-    return;
-  }
-  if (dataToUpdateInTarget === undefined) {
-    // 上記のロジックで dataToUpdateInTarget が設定されなかった場合
-    logger.error(
-      `[syncDependentDocuments] Failed to prepare data for target field '${config.updateFieldInTarget}' in '${config.targetCollection}'. Source: ${config.sourceCollection} (${sourceDocId}). Aborting update for this document.`
     );
     return;
   }
