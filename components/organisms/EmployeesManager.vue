@@ -27,7 +27,7 @@ onUnmounted(() => {
 
 <template>
   <ItemManager
-    :schema="employee"
+    :model="employee"
     v-slot="slotProps"
     label="従業員情報"
     :dialog-props="{ maxWidth: 640 }"

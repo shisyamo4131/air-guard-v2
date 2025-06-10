@@ -15,7 +15,7 @@ const companyFields = Object.keys(Company.classProps);
 </script>
 
 <template>
-  <ItemManager :schema="company" v-slot="slotProps" label="会社情報">
+  <ItemManager :model="company" v-slot="slotProps" label="会社情報">
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Company.schema">

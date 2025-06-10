@@ -25,7 +25,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ItemManager :schema="customer" v-slot="slotProps" label="取引先情報">
+  <ItemManager :model="customer" v-slot="slotProps" label="取引先情報">
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Customer.schema">

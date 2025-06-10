@@ -59,7 +59,7 @@ function initPassword() {
 
 <template>
   <ItemManager
-    :schema="user"
+    :model="user"
     v-slot="slotProps"
     :handle-create="handleCreate"
     label="ユーザー情報"
