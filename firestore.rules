@@ -97,6 +97,16 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'SiteOperationSchedules' subcollection under 'Companies' ---
+    // SiteOperationSchedulesコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // SiteOperationSchedules ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/SiteOperationSchedules/{employeeId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'Users' subcollection under 'Companies' ---
     // UsersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
