@@ -3,6 +3,9 @@ import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
 
+// --- for using `VCalendar` ---
+import { VCalendar } from "vuetify/labs/VCalendar";
+
 // --- for using `VDateInput` ---
 import { VDateInput } from "vuetify/labs/VDateInput";
 
@@ -22,6 +25,7 @@ import { ja, en } from "vuetify/locale";
 export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
     components: {
+      VCalendar,
       VDateInput,
     },
     /** ロケールを ja 優先に設定 */
