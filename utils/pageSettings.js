@@ -193,8 +193,29 @@ const pagesByPath = createPathMap(pageStructure);
  * @returns {object | undefined} ページ設定オブジェクト、見つからなければ undefined
  */
 export function getPageConfig(path) {
-  const normalizedPath = path.replace(/\/$/, "") || "/";
-  return pagesByPath[normalizedPath];
+  let normalizedPath = path.replace(/\/$/, "") || "/"; // 入力パスを正規化
+
+  // 1. 完全一致を試みる
+  if (pagesByPath[normalizedPath]) {
+    return pagesByPath[normalizedPath];
+  }
+
+  // 2. 動的ルートの親を探す
+  // 例: /sites/abc の場合、/sites の設定を探す
+  // 例: /settings/company/edit の場合、/settings/company の設定を探す
+  let tempPath = normalizedPath;
+  while (tempPath.includes("/")) {
+    const lastSlashIndex = tempPath.lastIndexOf("/");
+    // ルート直下 (/foo) の場合、親は "/"
+    // それ以外 (/foo/bar) の場合、親は /foo
+    tempPath =
+      lastSlashIndex === 0 ? "/" : tempPath.substring(0, lastSlashIndex);
+    if (pagesByPath[tempPath]) {
+      return pagesByPath[tempPath]; // 親の設定が見つかった場合、それを返す
+    }
+    if (tempPath === "/") break; // ルートまで遡ったら終了
+  }
+  return undefined; // どの設定も見つからなければ undefined
 }
 
 // --- 公開関数 ---
