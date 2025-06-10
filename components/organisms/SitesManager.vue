@@ -11,7 +11,7 @@ const docs = computed(() => site.docs);
 
 const headers = [
   { title: "code", value: "code" },
-  { title: "現場名", value: "siteName" },
+  { title: "現場名", value: "name" },
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
