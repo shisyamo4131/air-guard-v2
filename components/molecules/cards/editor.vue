@@ -29,13 +29,20 @@ defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 const props = defineProps({
   disabled: { type: Boolean, default: false },
   disableSubmit: { type: Boolean, default: false },
+  editMode: { type: String, default: undefined },
   isLoading: { type: Boolean, default: false },
   isValid: { type: Boolean, default: false },
   label: { type: String, default: undefined },
+  isDelete: { type: Boolean, default: false },
 });
 
 // --- イベント定義 ---
-const emit = defineEmits(["click:close", "click:submit", "update:isValid"]);
+const emit = defineEmits([
+  "click:close",
+  "click:submit",
+  "update:isValid",
+  "update:isDelete",
+]);
 
 // --- ストア / コンポーザブル
 const logger = useLogger();
@@ -87,6 +94,12 @@ async function onClickSubmit() {
       <v-form ref="form" v-model="formIsValid" :disabled="disabled">
         <slot name="default" v-bind="{ isValid: formIsValid }" />
       </v-form>
+      <v-checkbox
+        v-if="props.editMode !== 'CREATE'"
+        :model-value="props.isDelete"
+        label="このデータを削除する"
+        @update:modelValue="emit('update:isDelete', $event)"
+      />
     </v-card-text>
     <v-card-actions>
       <v-spacer />
