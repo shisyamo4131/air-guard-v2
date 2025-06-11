@@ -80,11 +80,15 @@ function clearError() {
           },
           editorProps: {
             disabled: slotProps.isDelete || slotProps.isLoading,
+            editMode: slotProps.editMode,
             isLoading: slotProps.isLoading,
             label: props.label,
+            isDelete: slotProps.isDelete,
             'onClick:cancel': slotProps.quitEditing,
             'onClick:close': slotProps.quitEditing,
             'onClick:submit': slotProps.submit,
+            'onUpdate:isDelete': ($event) =>
+              slotProps.toggleEditMode($event ? 'DELETE' : 'UPDATE'),
           },
         }"
       ></slot>
