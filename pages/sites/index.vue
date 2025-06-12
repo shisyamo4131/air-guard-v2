@@ -1,7 +1,7 @@
 <script setup>
 /**
  * @file pages/settings/sites.vue
- * @description 現場管理画面
+ * @description 排出場所管理画面
  */
 </script>
 

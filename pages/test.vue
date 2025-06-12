@@ -1,62 +1,37 @@
 <script setup>
-import { Employee } from "@/schemas/Employee.js";
-import { employeeTestDataArray } from "@/data/testData/employees.js"; // データファイルをインポート
-import { useTestDataRegistrar } from "@/composables/useTestDataRegistrar.js"; // コンポーザブルをインポート
+import { ref, watch } from "vue";
 
-const { registrationLog, isLoading, registerItems } = useTestDataRegistrar();
+// VCalendar の modelValue (v-model) は配列を期待するため、
+// 初期表示したい月の日付を要素とする配列で初期化します。
+const currentDate = ref([new Date(2025, 0, 1)]);
 
-async function registerAllEmployees() {
-  await registerItems({
-    items: employeeTestDataArray,
-    itemConstructor: Employee,
-    itemName: "従業員",
-  });
+function handleNext(event) {
+  console.log("VCalendar click:next event:", event);
 }
+
+function handleDayClick(event) {
+  console.log("VCalendar click:day event:", event);
+}
+
+watch(currentDate, (newDateArray) => {
+  console.log("VCalendar v-model (currentDate) changed:", newDateArray);
+  // VCalendar が v-model を配列として更新するため、
+  // 配列の最初の要素を使って表示されている月を判断できます。
+  if (newDateArray && newDateArray.length > 0) {
+    const currentDisplayMonthIndicator = newDateArray[0];
+    // currentDisplayMonthIndicator (Date オブジェクト) に基づいて Firestore からデータを取得できます。
+  }
+});
 </script>
 
 <template>
   <v-container>
-    <v-card>
-      <v-card-title>従業員データ登録テスト</v-card-title>
-      <v-card-text>
-        <p>
-          以下のボタンをクリックすると、テスト従業員データがFirestoreに登録されます。
-        </p>
-        <p>（Employeeクラスのcreateメソッドを利用）</p>
-      </v-card-text>
-      <v-card-actions>
-        <v-btn
-          color="primary"
-          @click="registerAllEmployees"
-          :loading="isLoading"
-          :disabled="isLoading"
-        >
-          全従業員データを登録
-        </v-btn>
-      </v-card-actions>
-
-      <v-divider v-if="registrationLog.length > 0 || isLoading"></v-divider>
-
-      <v-card-text v-if="registrationLog.length > 0 || isLoading">
-        <p><strong>登録ログ:</strong></p>
-        <div
-          style="
-            max-height: 300px;
-            overflow-y: auto;
-            background-color: #f5f5f5;
-            padding: 10px;
-            border-radius: 4px;
-          "
-        >
-          <div
-            v-for="(logEntry, index) in registrationLog"
-            :key="index"
-            style="font-family: monospace; white-space: pre-wrap"
-          >
-            {{ logEntry }}
-          </div>
-        </div>
-      </v-card-text>
-    </v-card>
+    <p>VCalendar イベントテスト中。ブラウザのコンソールを確認してください。</p>
+    <v-calendar
+      v-model="currentDate"
+      type="month"
+      @click:next="handleNext"
+      @click:day="handleDayClick"
+    ></v-calendar>
   </v-container>
 </template>

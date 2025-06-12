@@ -74,7 +74,7 @@ export const pageStructure = [
   {
     id: "sites-group",
     // public: false,
-    label: "現場管理",
+    label: "排出場所管理",
     icon: "mdi-pickaxe",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
@@ -83,7 +83,7 @@ export const pageStructure = [
         id: "sites-list",
         path: "/sites",
         // public: false, // デフォルトなので省略可
-        label: "現場一覧",
+        label: "排出場所一覧",
         icon: "mdi-pickaxe",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,

@@ -1,7 +1,7 @@
 <script setup>
 /**
  * @file SitesManager.vue
- * @description 現場管理コンポーネント
+ * @description 排出場所管理コンポーネント
  */
 import { Site } from "@/schemas/Site.js";
 import { reactive, onMounted, onUnmounted } from "vue";
@@ -11,7 +11,7 @@ const docs = computed(() => site.docs);
 
 const headers = [
   { title: "code", value: "code" },
-  { title: "現場名", value: "name" },
+  { title: "排出場所名", value: "name" },
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
 
@@ -28,7 +28,7 @@ onUnmounted(() => {
   <ItemManager
     :model="site"
     v-slot="slotProps"
-    label="現場情報"
+    label="排出場所情報"
     :before-edit="
       (editMode, item) => {
         if (editMode === 'CREATE') return true;
@@ -58,7 +58,7 @@ onUnmounted(() => {
     <v-data-table :items="docs" :headers="headers">
       <template #top>
         <v-toolbar density="compact" flat>
-          <v-toolbar-title>現場一覧</v-toolbar-title>
+          <v-toolbar-title>排出場所一覧</v-toolbar-title>
           <v-btn icon="mdi-plus" @click="slotProps.toCreate()"></v-btn>
         </v-toolbar>
       </template>

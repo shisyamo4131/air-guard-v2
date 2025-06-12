@@ -41,7 +41,7 @@
           color="primary"
           size="large"
           @click="$router.push('/sites')"
-          >現場一覧</v-btn
+          >排出場所一覧</v-btn
         >
       </v-col>
       <v-col cols="12" sm="4">

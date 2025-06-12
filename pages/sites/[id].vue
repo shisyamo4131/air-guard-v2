@@ -1,7 +1,7 @@
 <script setup>
 /**
  * @file ./pages/sites/[id].vue
- * @description 現場情報詳細ページ
+ * @description 排出場所情報詳細ページ
  * - ルートパラメータ [id] は Sites コレクションのドキュメント id
  * - ドキュメント id をもとに Site クラスからドキュメント情報を取得して表示
  */

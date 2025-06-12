@@ -1,0 +1,2 @@
+- 現場の稼働予定に対するサブスクリプションを期間限定に。
+- SiteOperationSchedule クラスに event プロパティを用意。

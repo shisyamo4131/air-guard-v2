@@ -1,6 +1,6 @@
 /**
  * @file ./schemas/Site.js
- * @description 現場情報クラス
+ * @description 排出場所情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
 import { Site as BaseClass } from "air-guard-v2-schemas";
