@@ -91,6 +91,25 @@ export const pageStructure = [
     ],
   },
   {
+    id: "collection-routes-group",
+    // public: false,
+    label: "ルート管理",
+    icon: "mdi-pickaxe",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+    children: [
+      {
+        id: "collection-routes-list",
+        path: "/collection-routes",
+        // public: false, // デフォルトなので省略可
+        label: "ルート一覧",
+        icon: "mdi-pickaxe",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
+  },
+  {
     id: "employees-group",
     // public: false,
     label: "従業員管理",
