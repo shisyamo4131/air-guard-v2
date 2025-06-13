@@ -25,18 +25,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ItemManager
-    :model="site"
-    v-slot="slotProps"
-    label="排出場所情報"
-    :before-edit="
-      (editMode, item) => {
-        if (editMode === 'CREATE') return true;
-        $router.push(`sites/${item.docId}`);
-        return false;
-      }
-    "
-  >
+  <ItemManager :model="site" v-slot="slotProps" label="排出場所情報">
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Site.schema">

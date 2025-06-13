@@ -15,6 +15,13 @@
           return false;
         }
       "
+      @submit:complete="
+        ({ editMode, item }) => {
+          if (editMode === 'CREATE') {
+            $router.push(`collection-routes/${item.docId}`);
+          }
+        }
+      "
     />
   </v-container>
 </template>

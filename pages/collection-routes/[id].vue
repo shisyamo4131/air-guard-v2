@@ -2,21 +2,51 @@
 /**
  * @file ./pages/collection-routes/[id].vue
  * @description ルート詳細ページ
- * - ルートパラメータ [id] は CollectionRoutes コレクションのドキュメント id
+ * - ルートパラメータ [id] は CollectionRoutes コレクションのドキュメントID
  * - ドキュメント id をもとに CollectionRoute クラスからドキュメント情報を取得して表示
  */
-import { reactive, onMounted, computed, onUnmounted } from "vue";
+import { reactive, ref, onMounted, computed, watch, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useLogger } from "~/composables/useLogger";
 import { CollectionRoute } from "~/schemas/CollectionRoute";
+import { Site } from "~/schemas/Site";
+import { useLocalizedConstants } from "~/composables/useLocalizedConstants";
+import { useFetchSite } from "~/composables/useFetchSite";
+
+const logger = useLogger();
+const { fetchSite, cachedSites } = useFetchSite();
+const { dayOfWeeksForSelect } = useLocalizedConstants();
 
 const route = useRoute();
 const model = reactive(new CollectionRoute());
+const editingModel = ref(null); // 編集用のCollectionRouteインスタンス
+
+const selectedDayOfWeek = ref(0);
+const selectedSite = ref(null);
+
+/**
+ * isEditingStops
+ * 現在、回収順序が編集中であるかどうかを表すフラグです。
+ * - watcher によって監視し、true に更新された場合は model のクローンを editingModel に作成します。
+ * - false に更新されたら editingModel と selectedSite をクリアします。
+ */
+const isEditingStops = ref(false);
+watch(isEditingStops, (newVal) => {
+  if (newVal) {
+    // 編集開始: modelのクローンを編集用インスタンスに
+    editingModel.value = model.clone();
+  } else {
+    // 編集終了: 編集用インスタンスをクリア
+    editingModel.value = null;
+    selectedSite.value = null;
+  }
+});
 
 const items = computed(() => {
   return [
     {
       title: "ルートコード",
-      props: { subtitle: model.code, prependIcon: "mdi-magnify" },
+      props: { subtitle: model.code, prependIcon: "mdi-identifier" },
     },
     {
       title: "ルート名",
@@ -25,12 +55,118 @@ const items = computed(() => {
   ];
 });
 
-onMounted(async () => {
-  const docId = route.params.id;
-  if (docId) await model.fetch({ docId });
+// 表示用のstopsリスト
+const displayedStops = computed(() => {
+  // 編集モード時はeditingModelから、そうでなければmodelからstopsを取得
+  const sourceModel =
+    isEditingStops.value && editingModel.value ? editingModel.value : model;
+  if (!sourceModel.stops) return [];
+  // 配列の順序がそのままsequenceを表すため、ソートは不要
+  return sourceModel.stops.filter(
+    (stop) => stop.dayOfWeek === selectedDayOfWeek.value
+  );
 });
 
-onUnmounted(() => {});
+// displayedStops が変更されたときに、関連するサイト情報をフェッチします。
+watch(
+  displayedStops,
+  async (currentStops) => {
+    if (currentStops && currentStops.length > 0) {
+      await fetchSite(currentStops);
+    }
+  },
+  { deep: true, immediate: true } // 初期表示時およびstopsの内容変更時に実行
+);
+
+onMounted(async () => {
+  const docId = route.params.id;
+  if (docId) await model.subscribe({ docId });
+});
+
+onUnmounted(() => {
+  model.unsubscribe();
+});
+
+/**
+ * 選択された排出場所を現在の曜日の回収順序に追加します。
+ */
+function _addSelectedSiteToStops() {
+  if (selectedSite.value && editingModel.value) {
+    const newStopData = {
+      dayOfWeek: selectedDayOfWeek.value,
+      siteId: selectedSite.value,
+      remarks: "", // remarksの初期値
+    };
+    try {
+      if (typeof editingModel.value.addStop === "function") {
+        editingModel.value.addStop(newStopData);
+        selectedSite.value = null; // 追加後、選択をクリア
+      } else {
+        logger.error({
+          sender: "addSelectedSiteToStops",
+          message: "editingModel.addStop is not a function.",
+          context: editingModel.value,
+        });
+      }
+    } catch (error) {
+      logger.error({
+        sender: "addSelectedSiteToStops",
+        message: error.message,
+        error,
+      });
+    }
+  }
+}
+
+/**
+ * 指定された排出場所を現在の曜日の回収順序から削除します。
+ * @param {object} stopToRemove - 削除するStopオブジェクト。
+ * @param {string} stopToRemove.siteId - 削除するStopのsiteId。
+ * @param {number} stopToRemove.dayOfWeek - 削除するStopのdayOfWeek。
+ */
+function _removeSiteFromStops(stopToRemove) {
+  if (editingModel.value && stopToRemove) {
+    try {
+      if (typeof editingModel.value.removeStop === "function") {
+        editingModel.value.removeStop(stopToRemove); // removeStopには stopObject を渡す想定
+      } else {
+        logger.error({
+          sender: "_removeSiteFromStops",
+          message: "editingModel.removeStop is not a function.",
+          context: editingModel.value,
+        });
+      }
+    } catch (error) {
+      logger.error({
+        sender: "_removeSiteFromStops",
+        message: error.message,
+        error,
+      });
+    }
+  }
+}
+/**
+ * 回収順序の編集をキャンセルします。
+ */
+function _cancelEditStops() {
+  isEditingStops.value = false;
+  // editingModel は watch によって null に設定される
+}
+
+/**
+ * 編集された回収順序を保存します。
+ */
+async function _saveStops() {
+  if (!editingModel.value) return;
+  try {
+    // editingModelのstopsでmodelのstopsを更新
+    model.stops = JSON.parse(JSON.stringify(editingModel.value.stops)); // リアクティビティのためディープコピー
+    await model.update();
+    isEditingStops.value = false;
+  } catch (error) {
+    logger.error({ sender: "_saveStops", message: error.message, error });
+  }
+}
 </script>
 
 <template>
@@ -47,11 +183,82 @@ onUnmounted(() => {});
       <v-col cols="12">
         <v-card>
           <v-toolbar density="comfortable">
-            <v-toolbar-title>稼働予定</v-toolbar-title>
+            <v-toolbar-title>排出場所リスト</v-toolbar-title>
             <v-spacer />
+            <v-btn
+              v-if="!isEditingStops"
+              v-on:click="isEditingStops = true"
+              icon="mdi-pencil"
+            />
+            <template v-else>
+              <v-btn
+                v-if="editingModel"
+                v-on:click="_cancelEditStops"
+                icon="mdi-close"
+                color="error"
+              />
+              <v-btn
+                v-on:click="_saveStops"
+                icon="mdi-check"
+                color="primary"
+                :disabled="!(editingModel && editingModel.isStopsChanged)"
+              />
+            </template>
           </v-toolbar>
+          <v-container>
+            <!-- 曜日選択 -->
+            <air-select
+              v-model="selectedDayOfWeek"
+              :items="dayOfWeeksForSelect"
+              label="曜日"
+              :disabled="isEditingStops"
+            />
+
+            <!-- 排出場所選択 -->
+            <v-expand-transition>
+              <div v-show="isEditingStops">
+                <air-autocomplete-api
+                  v-model="selectedSite"
+                  :disabled="!isEditingStops"
+                  label="排出場所"
+                  append-icon="mdi-plus"
+                  autocomplete="off"
+                  :api="
+                    async (search) =>
+                      await new Site().fetchDocs({ constraints: search })
+                  "
+                  item-title="name"
+                  item-value="docId"
+                  @click:append="_addSelectedSiteToStops"
+                />
+              </div>
+            </v-expand-transition>
+          </v-container>
           <v-container class="pt-0">
-            <air-calendar hide-week-number />
+            <v-list>
+              <v-list-item
+                v-for="(stop, index) in displayedStops"
+                :key="stop.siteId"
+              >
+                <template v-slot:prepend>
+                  <span class="mr-3">{{ index + 1 }}.</span>
+                </template>
+                <v-list-item-title>{{
+                  cachedSites[stop.siteId]?.name || "読み込み中..."
+                }}</v-list-item-title>
+                <v-list-item-subtitle>{{
+                  cachedSites[stop.siteId]?.fullAddress || "読み込み中..."
+                }}</v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-btn
+                    v-if="isEditingStops"
+                    icon="mdi-delete"
+                    variant="text"
+                    @click="() => _removeSiteFromStops(stop)"
+                  ></v-btn>
+                </template>
+              </v-list-item>
+            </v-list>
           </v-container>
         </v-card>
       </v-col>
