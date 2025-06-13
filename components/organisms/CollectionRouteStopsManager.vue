@@ -1,9 +1,11 @@
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, watchEffect } from "vue";
+import draggable from "vuedraggable";
 import { useLogger } from "~/composables/useLogger";
 import { Site } from "~/schemas/Site"; // air-autocomplete-api のため
 import { useFetchSite } from "~/composables/useFetchSite";
 import { useLocalizedConstants } from "~/composables/useLocalizedConstants";
+import { useLoadingsStore } from "~/stores/useLoadingsStore";
 
 const props = defineProps({
   /** 管理対象の回収順序（stops）プロパティを保有する CollectionRoute インスタンス */
@@ -13,10 +15,12 @@ const props = defineProps({
 const logger = useLogger();
 const { fetchSite, cachedSites } = useFetchSite();
 const { dayOfWeeksForSelect } = useLocalizedConstants();
+const loadingsStore = useLoadingsStore();
 
 const editingModel = ref(null); // 編集用のCollectionRouteインスタンス
 const selectedDayOfWeek = ref(0);
 const selectedSite = ref(null);
+const isLoading = ref(false); // ローカルのローディング状態
 
 /**
  * isEditingStops
@@ -61,6 +65,49 @@ watch(
   { deep: true, immediate: true } // 初期表示時およびstopsの内容変更時に実行
 );
 
+// ドラッグ可能なリストのアイテムを保持するref
+const draggableList = ref([]);
+
+// isEditingStops, selectedDayOfWeek, または editingModel.value.stops が変更されたときに draggableList を更新
+watch(
+  () => [
+    isEditingStops.value,
+    selectedDayOfWeek.value,
+    editingModel.value, // editingModel の変更（特に stops）を監視
+  ],
+  ([editing, day, currentModel]) => {
+    if (editing && currentModel && Array.isArray(currentModel.stops)) {
+      draggableList.value = currentModel.stops
+        .filter((stop) => stop.dayOfWeek === day)
+        .map((s) => ({ ...s })); // draggableが安全に操作できるようアイテムをクローン
+    } else {
+      draggableList.value = []; // 編集中でない場合やデータがない場合はクリア
+    }
+  },
+  { deep: true, immediate: true } // currentModelの深い変更（stops配列の変更など）を検知
+);
+
+/**
+ * ドラッグ操作終了時に呼び出され、editingModel.value.stops を更新します。
+ */
+function updateModelStopsFromDraggableList() {
+  if (
+    !editingModel.value ||
+    !isEditingStops.value ||
+    !Array.isArray(editingModel.value.stops)
+  )
+    return;
+
+  const currentDay = selectedDayOfWeek.value;
+  const reorderedStopsForCurrentDay = draggableList.value;
+  const otherDaysStops = editingModel.value.stops.filter(
+    (stop) => stop.dayOfWeek !== currentDay
+  );
+  editingModel.value.stops = [
+    ...otherDaysStops,
+    ...reorderedStopsForCurrentDay,
+  ];
+}
 /**
  * 選択された排出場所を現在の曜日の回収順序に追加します。
  */
@@ -132,13 +179,22 @@ function _cancelEditStops() {
  */
 async function _saveStops() {
   if (!editingModel.value) return;
+  const loadingKey = "saveCollectionRouteStops";
   try {
+    isLoading.value = true;
+    loadingsStore.add({ key: loadingKey, text: "回収順序を保存中..." });
+
     // editingModelのstopsでprops.modelのstopsを更新
     props.model.stops = JSON.parse(JSON.stringify(editingModel.value.stops)); // リアクティビティのためディープコピー
     await props.model.update();
     isEditingStops.value = false;
   } catch (error) {
     logger.error({ sender: "_saveStops", message: error.message, error });
+    // エラー発生時もローディング解除が必要な場合がある
+    // ここでは isEditingStops が false にならないため、明示的に解除
+  } finally {
+    loadingsStore.remove(loadingKey);
+    isLoading.value = false;
   }
 }
 </script>
@@ -157,14 +213,18 @@ async function _saveStops() {
         <v-btn
           v-if="editingModel"
           v-on:click="_cancelEditStops"
+          :disabled="isLoading"
           icon="mdi-close"
           color="error"
         />
         <v-btn
           v-on:click="_saveStops"
           icon="mdi-check"
+          :loading="isLoading"
           color="primary"
-          :disabled="!(editingModel && editingModel.isStopsChanged)"
+          :disabled="
+            isLoading || !(editingModel && editingModel.isStopsChanged)
+          "
         />
       </template>
     </v-toolbar>
@@ -198,27 +258,88 @@ async function _saveStops() {
       </v-expand-transition>
     </v-container>
     <v-container class="pt-0">
-      <v-list>
-        <v-list-item v-for="(stop, index) in displayedStops" :key="stop.siteId">
-          <template v-slot:prepend>
-            <span class="mr-3">{{ index + 1 }}.</span>
+      <template v-if="isEditingStops">
+        <draggable
+          v-model="draggableList"
+          item-key="siteId"
+          tag="div"
+          class="v-list v-theme--light v-list--density-default v-list--one-line"
+          handle=".drag-handle"
+          @end="updateModelStopsFromDraggableList"
+        >
+          <template #item="{ element: stop, index }">
+            <div :key="stop.siteId">
+              <v-list-item>
+                <template v-slot:prepend>
+                  <v-icon
+                    icon="mdi-drag-vertical"
+                    class="drag-handle mr-1"
+                  ></v-icon>
+                  <span class="mr-3">{{ index + 1 }}.</span>
+                </template>
+                <v-list-item-title>{{
+                  cachedSites[stop.siteId]?.name || "読み込み中..."
+                }}</v-list-item-title>
+                <v-list-item-subtitle>{{
+                  cachedSites[stop.siteId]?.fullAddress || "読み込み中..."
+                }}</v-list-item-subtitle>
+                <template v-slot:append>
+                  <v-btn
+                    icon="mdi-delete"
+                    variant="text"
+                    @click="() => _removeSiteFromStops(stop)"
+                  ></v-btn>
+                </template>
+              </v-list-item>
+              <v-divider></v-divider>
+            </div>
           </template>
-          <v-list-item-title>{{
-            cachedSites[stop.siteId]?.name || "読み込み中..."
-          }}</v-list-item-title>
-          <v-list-item-subtitle>{{
-            cachedSites[stop.siteId]?.fullAddress || "読み込み中..."
-          }}</v-list-item-subtitle>
-          <template v-slot:append>
-            <v-btn
-              v-if="isEditingStops"
-              icon="mdi-delete"
-              variant="text"
-              @click="() => _removeSiteFromStops(stop)"
-            ></v-btn>
+        </draggable>
+        <v-alert
+          v-if="draggableList.length === 0"
+          type="info"
+          variant="tonal"
+          class="mt-4"
+          icon="mdi-information-outline"
+        >
+          この曜日に回収場所は登録されていません。
+        </v-alert>
+      </template>
+      <template v-else>
+        <v-list>
+          <template v-for="(stop, index) in displayedStops" :key="stop.siteId">
+            <v-list-item>
+              <template v-slot:prepend>
+                <span class="mr-3">{{ index + 1 }}.</span>
+              </template>
+              <v-list-item-title>{{
+                cachedSites[stop.siteId]?.name || "読み込み中..."
+              }}</v-list-item-title>
+              <v-list-item-subtitle>{{
+                cachedSites[stop.siteId]?.fullAddress || "読み込み中..."
+              }}</v-list-item-subtitle>
+            </v-list-item>
+            <v-divider></v-divider>
           </template>
-        </v-list-item>
-      </v-list>
+        </v-list>
+        <v-alert
+          v-if="displayedStops.length === 0"
+          type="info"
+          variant="tonal"
+          class="mt-4"
+          icon="mdi-information-outline"
+        >
+          この曜日に回収場所は登録されていません。
+        </v-alert>
+      </template>
     </v-container>
   </v-card>
 </template>
+<style scoped>
+.drag-handle {
+  cursor: grab;
+}
+.drag-handle:active {
+  cursor: grabbing;
+}
+</style>
