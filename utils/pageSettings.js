@@ -53,6 +53,15 @@ export const pageStructure = [
     navigation: true,
   },
   {
+    id: "collection-results-group",
+    path: "/collection-results",
+    // public: false, (デフォルトなので省略可)
+    label: "回収実績",
+    icon: "mdi-view-dashboard",
+    roles: [], // 認証済みなら誰でもOK
+    navigation: true,
+  },
+  {
     id: "customers-group",
     // public: false,
     label: "取引先管理",

@@ -246,7 +246,6 @@ async function _saveStops() {
             :disabled="!isEditingStops"
             label="排出場所"
             append-icon="mdi-plus"
-            autocomplete="off"
             :api="
               async (search) =>
                 await new Site().fetchDocs({ constraints: search })
