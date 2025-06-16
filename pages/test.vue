@@ -1,37 +1,40 @@
 <script setup>
-import { ref, watch } from "vue";
+import { generateDrivingLogPdf } from "../utils/generateCollectingReport.js";
+import { CollectionRoute } from "../schemas/CollectionRoute.js";
 
-// VCalendar の modelValue (v-model) は配列を期待するため、
-// 初期表示したい月の日付を要素とする配列で初期化します。
-const currentDate = ref([new Date(2025, 0, 1)]);
+async function downloadPdf() {
+  const routeDocId = "PlpBaQDixTbLaFk0VQdO";
+  const dayOfWeek = 0; // 日曜日
 
-function handleNext(event) {
-  console.log("VCalendar click:next event:", event);
-}
+  try {
+    const route = new CollectionRoute();
+    await route.fetch({ docId: routeDocId });
 
-function handleDayClick(event) {
-  console.log("VCalendar click:day event:", event);
-}
+    if (!route.docId) {
+      console.error("指定されたルートが見つかりません。docId:", routeDocId);
+      alert("指定されたルートが見つかりません。");
+      return;
+    }
 
-watch(currentDate, (newDateArray) => {
-  console.log("VCalendar v-model (currentDate) changed:", newDateArray);
-  // VCalendar が v-model を配列として更新するため、
-  // 配列の最初の要素を使って表示されている月を判断できます。
-  if (newDateArray && newDateArray.length > 0) {
-    const currentDisplayMonthIndicator = newDateArray[0];
-    // currentDisplayMonthIndicator (Date オブジェクト) に基づいて Firestore からデータを取得できます。
+    // 指定された曜日のstopsをフィルタリング
+    const filteredStops = route.stops
+      ? route.stops.filter((stop) => stop.dayOfWeek === dayOfWeek)
+      : [];
+
+    // generateDrivingLogPdf にフィルタリング済みのstopsと必要な情報を渡す
+    generateDrivingLogPdf(filteredStops, dayOfWeek, route.name, route.code);
+  } catch (error) {
+    // CollectionRoute.fetch やその他の予期せぬエラーをキャッチ
+    console.error("PDF出力処理中にエラーが発生しました (test.vue):", error);
+    alert(
+      "PDF出力処理中にエラーが発生しました。コンソールを確認してください。"
+    );
   }
-});
+}
 </script>
 
 <template>
   <v-container>
-    <p>VCalendar イベントテスト中。ブラウザのコンソールを確認してください。</p>
-    <v-calendar
-      v-model="currentDate"
-      type="month"
-      @click:next="handleNext"
-      @click:day="handleDayClick"
-    ></v-calendar>
+    <v-btn color="primary" @click="downloadPdf"> 運転日報PDF出力 (日曜) </v-btn>
   </v-container>
 </template>
