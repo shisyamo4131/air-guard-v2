@@ -75,7 +75,7 @@ export const pageStructure = [
     id: "sites-group",
     // public: false,
     label: "排出場所管理",
-    icon: "mdi-pickaxe",
+    icon: "mdi-recycle",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
     children: [
@@ -84,7 +84,7 @@ export const pageStructure = [
         path: "/sites",
         // public: false, // デフォルトなので省略可
         label: "排出場所一覧",
-        icon: "mdi-pickaxe",
+        icon: "mdi-recycle",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
@@ -94,7 +94,7 @@ export const pageStructure = [
     id: "collection-routes-group",
     // public: false,
     label: "ルート管理",
-    icon: "mdi-pickaxe",
+    icon: "mdi-routes",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
     children: [
@@ -103,7 +103,7 @@ export const pageStructure = [
         path: "/collection-routes",
         // public: false, // デフォルトなので省略可
         label: "ルート一覧",
-        icon: "mdi-pickaxe",
+        icon: "mdi-routes",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
