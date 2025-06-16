@@ -242,6 +242,7 @@ async function _saveStops() {
         <div v-show="isEditingStops">
           <air-autocomplete-api
             v-model="selectedSite"
+            clearable
             :disabled="!isEditingStops"
             label="排出場所"
             append-icon="mdi-plus"
@@ -252,6 +253,7 @@ async function _saveStops() {
             "
             item-title="name"
             item-value="docId"
+            no-filter
             @click:append="_addSelectedSiteToStops"
           />
         </div>
