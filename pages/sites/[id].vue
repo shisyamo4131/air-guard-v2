@@ -1,16 +1,27 @@
 <script setup>
 /**
  * @file ./pages/sites/[id].vue
- * @description 排出場所情報詳細ページ
+ * @description 現場情報詳細ページ
  * - ルートパラメータ [id] は Sites コレクションのドキュメント id
  * - ドキュメント id をもとに Site クラスからドキュメント情報を取得して表示
  */
-import { reactive, onMounted, computed, onUnmounted } from "vue";
+import dayjs from "dayjs";
+import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { Site } from "~/schemas/Site";
+import { Site, SiteOperationSchedule } from "~/schemas";
 
 const route = useRoute();
+const siteId = route.params.id;
 const model = reactive(new Site());
+const scheduleInstance = reactive(new SiteOperationSchedule({ siteId }));
+const schedules = ref([]);
+
+const currentDate = ref([new Date()]);
+const period = computed(() => {
+  const start = dayjs(currentDate.value[0]).startOf("month").toDate();
+  const end = dayjs(currentDate.value[0]).endOf("month").toDate();
+  return { start, end };
+});
 
 const items = computed(() => {
   return [
@@ -33,34 +44,83 @@ const items = computed(() => {
 });
 
 onMounted(async () => {
-  const docId = route.params.id;
-  if (docId) await model.fetch({ docId });
+  await model.subscribe({ docId: siteId });
 });
 
-onUnmounted(() => {});
-</script>
+watch(
+  period,
+  async (newVal) => {
+    const docId = route.params.id;
+    if (docId && newVal && newVal.start && newVal.end) {
+      schedules.value = await scheduleInstance.subscribeDocs({
+        constraints: [
+          ["where", "siteId", "==", docId],
+          ["where", "date", ">=", newVal.start],
+          ["where", "date", "<=", newVal.end],
+        ],
+      });
+    }
+  },
+  { immediate: true, deep: true }
+);
 
+onUnmounted(() => {
+  model.unsubscribe();
+  scheduleInstance.unsubscribe();
+});
+</script>
 <template>
   <v-container>
     <v-row>
       <v-col>
         <v-card>
-          <v-card-item>
-            <v-card-title>{{ model.name }}</v-card-title>
-          </v-card-item>
+          <v-toolbar density="comfortable">
+            <v-toolbar-title>{{ model.name }}</v-toolbar-title>
+            <v-spacer />
+            <ItemManager :model="model" v-slot="slotProps" label="現場情報">
+              <v-dialog v-bind="slotProps.dialogProps">
+                <template #activator>
+                  <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
+                </template>
+                <MoleculesCardsEditor v-bind="slotProps.editorProps">
+                  <air-item-input v-bind="slotProps" :schema="Site.schema" />
+                </MoleculesCardsEditor>
+              </v-dialog>
+            </ItemManager>
+          </v-toolbar>
           <v-list :items="items"> </v-list>
         </v-card>
       </v-col>
       <v-col cols="12">
-        <v-card>
-          <v-toolbar density="comfortable">
-            <v-toolbar-title>稼働予定</v-toolbar-title>
-            <v-spacer />
-          </v-toolbar>
-          <v-container class="pt-0">
-            <air-calendar hide-week-number />
-          </v-container>
-        </v-card>
+        <ItemManager
+          :model="scheduleInstance"
+          v-slot="slotProps"
+          label="稼働予定"
+        >
+          <v-dialog v-bind="slotProps.dialogProps">
+            <MoleculesCardsEditor v-bind="slotProps.editorProps">
+              <air-item-input
+                v-bind="slotProps"
+                :schema="SiteOperationSchedule.schema"
+              />
+            </MoleculesCardsEditor>
+          </v-dialog>
+          <v-card>
+            <v-toolbar density="comfortable">
+              <v-toolbar-title>稼働予定</v-toolbar-title>
+              <v-spacer />
+              <v-btn icon="mdi-plus" @click="slotProps.toCreate()" />
+            </v-toolbar>
+            <v-container class="pt-0">
+              <air-calendar
+                v-model="currentDate"
+                :events="schedules.map((schedule) => schedule.toEvent())"
+                hide-week-number
+                @click:event="slotProps.toUpdate($event.item)"
+              />
+            </v-container>
+          </v-card>
+        </ItemManager>
       </v-col>
     </v-row>
   </v-container>

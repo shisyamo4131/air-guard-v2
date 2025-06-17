@@ -1,13 +1,13 @@
 <script setup>
 /**
  * @file pages/settings/sites.vue
- * @description 排出場所管理画面
+ * @description 現場管理画面
  */
 </script>
 
 <template>
   <v-container>
-    <!-- <OrganismsSitesManager
+    <OrganismsSitesManager
       :before-edit="
         (editMode, item) => {
           if (editMode === 'CREATE') return true;
@@ -15,7 +15,6 @@
           return false;
         }
       "
-    /> -->
-    <OrganismsSitesManager />
+    />
   </v-container>
 </template>

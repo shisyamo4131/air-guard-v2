@@ -4,7 +4,7 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { Company } from "@/schemas/Company";
+import { Company } from "@/schemas";
 
 const sender = "useAuthStore.js";
 

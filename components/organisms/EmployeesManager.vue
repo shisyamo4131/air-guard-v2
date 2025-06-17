@@ -3,7 +3,7 @@
  * @file EmployeesManager.vue
  * @description 従業員管理コンポーネント
  */
-import { Employee } from "@/schemas/Employee.js";
+import { Employee } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 
 const employee = reactive(new Employee());

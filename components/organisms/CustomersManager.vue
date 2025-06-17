@@ -3,7 +3,7 @@
  * @file CustomersManager.vue
  * @description 取引先管理コンポーネント
  */
-import { Customer } from "@/schemas/Customer.js";
+import { Customer } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 
 const customer = reactive(new Customer());

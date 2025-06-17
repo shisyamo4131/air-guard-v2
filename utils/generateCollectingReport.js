@@ -115,7 +115,7 @@ export function generateDrivingLogPdf(stops) {
   const detailHeader = [
     { text: "番号", style: "cellHeader" },
     { text: "時刻", style: "cellHeader" },
-    { text: "排出場所名", style: "cellHeader" },
+    { text: "現場名", style: "cellHeader" },
     { text: "所在地", style: "cellHeader" },
     { text: "備考", style: "cellHeader" },
   ];

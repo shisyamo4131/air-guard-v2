@@ -1,9 +1,9 @@
 <script setup>
 /**
  * @file SitesManager.vue
- * @description 排出場所管理コンポーネント
+ * @description 現場管理コンポーネント
  */
-import { Site } from "@/schemas/Site.js";
+import { Site } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 
 const site = reactive(new Site());
@@ -11,7 +11,7 @@ const docs = computed(() => site.docs);
 
 const headers = [
   { title: "code", value: "code" },
-  { title: "排出場所名", value: "name" },
+  { title: "現場名", value: "name" },
   { title: "取引先名", value: "customer.name" },
   { title: "操作", value: "actions", align: "end", sortable: false },
 ];
@@ -26,7 +26,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <ItemManager :model="site" v-slot="slotProps" label="排出場所情報">
+  <ItemManager :model="site" v-slot="slotProps" label="現場情報">
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesCardsEditor v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps" :schema="Site.schema" />
@@ -35,7 +35,7 @@ onUnmounted(() => {
     <v-data-table :items="docs" :headers="headers">
       <template #top>
         <v-toolbar density="compact" flat>
-          <v-toolbar-title>排出場所一覧</v-toolbar-title>
+          <v-toolbar-title>現場一覧</v-toolbar-title>
           <v-btn icon="mdi-plus" @click="slotProps.toCreate()"></v-btn>
         </v-toolbar>
       </template>

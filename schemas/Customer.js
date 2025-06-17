@@ -6,7 +6,7 @@
 import { Customer as BaseClass } from "air-guard-v2-schemas";
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
-export class Customer extends BaseClass {
+export default class Customer extends BaseClass {
   /**
    * ドキュメントが更新される前に `location` を取得してセットします。
    * 住所に変更がない場合はジオコーディングをスキップします。

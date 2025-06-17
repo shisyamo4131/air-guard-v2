@@ -6,7 +6,7 @@
 import { Company as BaseClass } from "air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
-export class Company extends BaseClass {
+export default class Company extends BaseClass {
   /**
    * `prefecture`, `city`, `address` にセットされている値をもとに `location` を取得してセットします
    * @returns {Promise<void>}

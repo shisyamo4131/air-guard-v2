@@ -53,15 +53,6 @@ export const pageStructure = [
     navigation: true,
   },
   {
-    id: "collection-results-group",
-    path: "/collection-results",
-    // public: false, (デフォルトなので省略可)
-    label: "回収実績",
-    icon: "mdi-view-dashboard",
-    roles: [], // 認証済みなら誰でもOK
-    navigation: true,
-  },
-  {
     id: "customers-group",
     // public: false,
     label: "取引先管理",
@@ -83,7 +74,7 @@ export const pageStructure = [
   {
     id: "sites-group",
     // public: false,
-    label: "排出場所管理",
+    label: "現場管理",
     icon: "mdi-recycle",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
@@ -92,46 +83,8 @@ export const pageStructure = [
         id: "sites-list",
         path: "/sites",
         // public: false, // デフォルトなので省略可
-        label: "排出場所一覧",
+        label: "現場一覧",
         icon: "mdi-recycle",
-        roles: [], // 認証済みなら誰でもOK
-        navigation: true,
-      },
-    ],
-  },
-  {
-    id: "collection-routes-group",
-    // public: false,
-    label: "ルート管理",
-    icon: "mdi-routes",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
-    navigation: true,
-    children: [
-      {
-        id: "collection-routes-list",
-        path: "/collection-routes",
-        // public: false, // デフォルトなので省略可
-        label: "ルート一覧",
-        icon: "mdi-routes",
-        roles: [], // 認証済みなら誰でもOK
-        navigation: true,
-      },
-    ],
-  },
-  {
-    id: "collection-item-group",
-    // public: false,
-    label: "回収品目管理",
-    icon: "mdi-domain",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
-    navigation: true,
-    children: [
-      {
-        id: "collection-items-list",
-        path: "/collection-items",
-        // public: false,
-        label: "回収品目一覧",
-        icon: "mdi-domain",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },

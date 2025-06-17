@@ -1,12 +1,12 @@
 /**
  * @file ./schemas/Site.js
- * @description 排出場所情報クラス
+ * @description 現場情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
 import { Site as BaseClass } from "air-guard-v2-schemas";
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
-export class Site extends BaseClass {
+export default class Site extends BaseClass {
   /**
    * ドキュメントが更新される前に `location` を取得してセットします。
    * 住所に変更がない場合はジオコーディングをスキップします。
