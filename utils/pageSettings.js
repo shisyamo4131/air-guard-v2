@@ -119,6 +119,25 @@ export const pageStructure = [
     ],
   },
   {
+    id: "collection-item-group",
+    // public: false,
+    label: "回収品目管理",
+    icon: "mdi-domain",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+    children: [
+      {
+        id: "collection-items-list",
+        path: "/collection-items",
+        // public: false,
+        label: "回収品目一覧",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
+  },
+  {
     id: "employees-group",
     // public: false,
     label: "従業員管理",

@@ -37,6 +37,16 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'CollectionItems' subcollection under 'Companies' ---
+    // CollectionItemsコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // CollectionItems ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/CollectionItems/{employeeId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'CollectionResults' subcollection under 'Companies' ---
     // CollectionResultsコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
