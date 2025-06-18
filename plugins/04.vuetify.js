@@ -9,6 +9,9 @@ import { VCalendar } from "vuetify/labs/VCalendar";
 // --- for using `VDateInput` ---
 import { VDateInput } from "vuetify/labs/VDateInput";
 
+// --- for using `VTimePicker` ---
+import { VTimePicker } from "vuetify/labs/VTimePicker";
+
 // --- for setup Internationalization ---
 import { ja, en } from "vuetify/locale";
 
@@ -27,6 +30,7 @@ export default defineNuxtPlugin((app) => {
     components: {
       VCalendar,
       VDateInput,
+      VTimePicker,
     },
     /** ロケールを ja 優先に設定 */
     locale: {
