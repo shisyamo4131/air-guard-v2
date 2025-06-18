@@ -102,7 +102,8 @@ onUnmounted(() => {
               <air-item-input
                 v-bind="slotProps"
                 :schema="SiteOperationSchedule.schema"
-              />
+              >
+              </air-item-input>
             </MoleculesCardsEditor>
           </v-dialog>
           <v-card>
