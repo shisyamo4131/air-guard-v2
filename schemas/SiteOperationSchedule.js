@@ -13,7 +13,7 @@ export default class SiteOperationSchedule extends BaseClass {
     return {
       title: this.requiredPersonnel,
       start: this.startAt,
-      end: this.endAt,
+      end: this.startAt, // endAt を使うと日をまたがった場合にカレンダー上で複数のイベントが描画されてしまう。
       color: this.shiftType === "day" ? "orange" : "navy",
       item: this,
     };
