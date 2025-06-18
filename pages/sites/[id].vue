@@ -55,8 +55,8 @@ watch(
       schedules.value = await scheduleInstance.subscribeDocs({
         constraints: [
           ["where", "siteId", "==", docId],
-          ["where", "date", ">=", newVal.start],
-          ["where", "date", "<=", newVal.end],
+          ["where", "startDate", ">=", newVal.start],
+          ["where", "startDate", "<=", newVal.end],
         ],
       });
     }

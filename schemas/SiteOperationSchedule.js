@@ -12,8 +12,8 @@ export default class SiteOperationSchedule extends BaseClass {
   toEvent() {
     return {
       title: this.requiredPersonnel,
-      start: this.date,
-      end: this.date,
+      start: this.startAt,
+      end: this.endAt,
       color: this.shiftType === "day" ? "orange" : "navy",
       item: this,
     };
