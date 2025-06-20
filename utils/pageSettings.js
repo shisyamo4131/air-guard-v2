@@ -53,6 +53,25 @@ export const pageStructure = [
     navigation: true,
   },
   {
+    id: "operation-results-group",
+    // public: false,
+    label: "稼働実績管理",
+    icon: "mdi-domain",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+    children: [
+      {
+        id: "operation-results-list",
+        path: "/operation-results",
+        // public: false,
+        label: "稼働実績一覧",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
+  },
+  {
     id: "customers-group",
     // public: false,
     label: "取引先管理",
