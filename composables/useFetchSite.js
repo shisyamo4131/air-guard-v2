@@ -22,6 +22,8 @@ export function useFetchSite() {
   const logger = useLogger();
   /** @type {import('vue').Ref<Site[]>} */
   const sitesCache = ref([]);
+  /** @type {import('vue').Ref<boolean>} */
+  const isLoading = ref(false);
 
   /**
    * 指定されたソースからドキュメントIDを抽出し、該当するSiteデータをFirestoreから取得し、
@@ -33,13 +35,15 @@ export function useFetchSite() {
    * @returns {Promise<void>}
    */
   async function fetchSite(source) {
+    isLoading.value = true; // フェッチ開始時にローディング状態をtrueに設定
     const getDocIdFromItem = (item) => {
       if (typeof item === "string" && item) return item;
-      if (item && typeof item.docId === "string" && item.docId)
-        return item.docId;
-      // pages/collection-routes/[id].vue の displayedStops の形式 (stop.siteId) を考慮
+      // オブジェクトに siteId があればこれを優先
       if (item && typeof item.siteId === "string" && item.siteId)
         return item.siteId;
+      // オブジェクトに siteId がなければ docId の使用を試みる
+      if (item && typeof item.docId === "string" && item.docId)
+        return item.docId;
       return null;
     };
 
@@ -93,7 +97,11 @@ export function useFetchSite() {
       }
     });
 
-    await Promise.all(fetchPromises);
+    try {
+      await Promise.all(fetchPromises);
+    } finally {
+      isLoading.value = false; // フェッチ完了時にローディング状態をfalseに設定
+    }
   }
 
   /**
@@ -110,5 +118,6 @@ export function useFetchSite() {
   return {
     fetchSite,
     cachedSites,
+    isLoading, // ローディング状態を公開
   };
 }
