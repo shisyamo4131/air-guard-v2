@@ -14,7 +14,7 @@
  * Firestoreからのデータ取得は `Site.fetchDoc({ docId })` を使用し、
  * エラー発生時には `useLogger` を介してログが出力されます。
  */
-import { Site } from "~/schemas/Site";
+import { Site } from "~/schemas";
 import { useLogger } from "./useLogger";
 import { ref, computed } from "vue";
 
