@@ -9,13 +9,20 @@
  *
  * @component MoleculesCardsEditor
  *
+ * @props {Boolean} disabled - フォームを無効にするかどうか。デフォルトは false です。
+ * @props {Boolean} disableDelete - 削除ボタンを無効にするかどうか。デフォルトは false です。
  * @props {Boolean} disableSubmit - 確定ボタンを無効にするかどうか。デフォルトは false です。
+ * @props {Boolean} editMode - 編集モード。デフォルトは undefined です。
+ * @props {Boolean} hideDeleteBtn - 削除ボタンを表示しないかどうか。デフォルトは false です。
  * @props {Boolean} isLoading - ローディングアニメーションを表示するかどうか。デフォルトは false です。
  * @props {Boolean} isValid - フォームのバリデーション結果。デフォルトは false（または null） です。
  * @props {String} label - カードのツールバーに表示されるタイトル。デフォルトは undefined (タイトルなし) です。
+ * @props {String} isDelete - 削除フラグ。デフォルトは false です。
  *
  * @emits click:close - ツールバーの閉じるボタンがクリックされたときに発行されます。
  * @emits click:submit - カードアクションの確定ボタンがクリックされたときに発行されます。
+ * @emits update:isValid - フォームのバリデーション結果が更新されたときに発行されます。
+ * @emits update:isDelete - 削除フラグが更新されたときに発行されます。
  *
  * @slots
  *   default - エディタカードの主要なコンテンツ領域。
@@ -28,8 +35,10 @@ defineOptions({ inheritAttrs: false, name: "MoleculesCardsEditor" });
 // --- プロパティ定義 ---
 const props = defineProps({
   disabled: { type: Boolean, default: false },
+  disableDelete: { type: Boolean, default: false },
   disableSubmit: { type: Boolean, default: false },
   editMode: { type: String, default: undefined },
+  hideDeleteBtn: { type: Boolean, default: false },
   isLoading: { type: Boolean, default: false },
   isValid: { type: Boolean, default: false },
   label: { type: String, default: undefined },
@@ -95,9 +104,10 @@ async function onClickSubmit() {
         <slot name="default" v-bind="{ isValid: formIsValid }" />
       </v-form>
       <v-checkbox
-        v-if="props.editMode !== 'CREATE'"
+        v-if="props.editMode !== 'CREATE' && !hideDeleteBtn"
         :model-value="props.isDelete"
         label="このデータを削除する"
+        :disabled="disableDelete"
         @update:modelValue="emit('update:isDelete', $event)"
       />
     </v-card-text>
