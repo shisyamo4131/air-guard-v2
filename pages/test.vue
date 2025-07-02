@@ -1,40 +1,54 @@
 <script setup>
-import { generateDrivingLogPdf } from "../utils/generateCollectingReport.js";
-import { CollectionRoute } from "../schemas/CollectionRoute.js";
+import { ref } from "vue";
 
-async function downloadPdf() {
-  const routeDocId = "PlpBaQDixTbLaFk0VQdO";
-  const dayOfWeek = 0; // 日曜日
+// テーブルのヘッダー定義
+const headers = [
+  { title: "ID", key: "id" },
+  { title: "名前", key: "name" },
+  { title: "アクティブ", key: "isActive", align: "center" },
+];
 
-  try {
-    const route = new CollectionRoute();
-    await route.fetch({ docId: routeDocId });
+// テーブルのデータ定義
+const items = ref([
+  { id: 1, name: "Alice", isActive: true },
+  { id: 2, name: "Bob", isActive: false },
+  { id: 3, name: "Charlie", isActive: true },
+  { id: 4, name: "David", isActive: false },
+]);
 
-    if (!route.docId) {
-      console.error("指定されたルートが見つかりません。docId:", routeDocId);
-      alert("指定されたルートが見つかりません。");
-      return;
-    }
+// 編集モードを常にtrueに設定し、v-checkbox-btnがreadonlyにならないようにする
+const isEdit = ref(true);
 
-    // 指定された曜日のstopsをフィルタリング
-    const filteredStops = route.stops
-      ? route.stops.filter((stop) => stop.dayOfWeek === dayOfWeek)
-      : [];
-
-    // generateDrivingLogPdf にフィルタリング済みのstopsと必要な情報を渡す
-    generateDrivingLogPdf(filteredStops, dayOfWeek, route.name, route.code);
-  } catch (error) {
-    // CollectionRoute.fetch やその他の予期せぬエラーをキャッチ
-    console.error("PDF出力処理中にエラーが発生しました (test.vue):", error);
-    alert(
-      "PDF出力処理中にエラーが発生しました。コンソールを確認してください。"
-    );
-  }
+// v-checkbox-btn の modelValue が更新されたときのハンドラ
+function updateIsActive(newValue, item) {
+  item.isActive = newValue;
+  console.log(`Item ${item.id} isActive updated to: ${newValue}`);
 }
 </script>
 
 <template>
   <v-container>
-    <v-btn color="primary" @click="downloadPdf"> 運転日報PDF出力 (日曜) </v-btn>
+    <v-card>
+      <v-card-title>VCheckbox Color Test</v-card-title>
+      <v-card-text>
+        <v-data-table
+          :headers="headers"
+          :items="items"
+          hide-default-footer
+          items-per-page="-1"
+        >
+          <!-- 'isActive' カラムのカスタムテンプレート -->
+          <template #item.isActive="{ item }">
+            <v-checkbox-btn
+              inline
+              :model-value="item.isActive"
+              color="red"
+              :readonly="!isEdit"
+              @update:modelValue="updateIsActive($event, item)"
+            />
+          </template>
+        </v-data-table>
+      </v-card-text>
+    </v-card>
   </v-container>
 </template>
