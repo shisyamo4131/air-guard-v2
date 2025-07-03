@@ -3,8 +3,10 @@
  * @description 現場情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
-import { Site as BaseClass } from "air-guard-v2-schemas";
+import { Site as BaseClass, Agreement } from "air-guard-v2-schemas";
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
+
+export { Agreement };
 
 export default class Site extends BaseClass {
   /**
