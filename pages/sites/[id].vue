@@ -9,7 +9,6 @@ import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Site, Agreement, SiteOperationSchedule } from "~/schemas";
-import { DAY_TYPE } from "air-guard-v2-schemas/constants";
 
 const route = useRoute();
 const siteId = route.params.id;
@@ -78,16 +77,19 @@ onUnmounted(() => {
           <v-toolbar density="comfortable">
             <v-toolbar-title>{{ model.name }}</v-toolbar-title>
             <v-spacer />
-            <ItemManager :model="model" v-slot="slotProps">
+            <ItemManager
+              :model="model"
+              v-slot="slotProps"
+              :input-props="{
+                excludedKeys: ['agreements'],
+              }"
+            >
               <v-dialog v-bind="slotProps.dialogProps">
                 <template #activator>
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
                 </template>
                 <MoleculesCardsEditor v-bind="slotProps.editorProps">
-                  <air-item-input
-                    v-bind="slotProps.inputProps"
-                    :excluded-keys="['agreements']"
-                  />
+                  <air-item-input v-bind="slotProps.inputProps" />
                 </MoleculesCardsEditor>
               </v-dialog>
             </ItemManager>
@@ -128,7 +130,7 @@ onUnmounted(() => {
         </ItemManager>
       </v-col>
       <v-col>
-        <air-array-manager
+        <array-manager
           v-model="model.agreements"
           :schema="Agreement"
           v-slot="slotProps"
@@ -137,8 +139,9 @@ onUnmounted(() => {
           <v-card>
             <air-data-table
               v-bind="slotProps.tableProps"
-              items-per-page="-1"
               hide-default-footer
+              items-per-page="-1"
+              :sort-by="[{ key: 'from', order: 'desc' }]"
             />
             <v-dialog v-bind="slotProps.dialogProps">
               <MoleculesCardsEditor v-bind="slotProps.editorProps">
@@ -146,7 +149,7 @@ onUnmounted(() => {
               </MoleculesCardsEditor>
             </v-dialog>
           </v-card>
-        </air-array-manager>
+        </array-manager>
       </v-col>
     </v-row>
   </v-container>

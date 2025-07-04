@@ -39,6 +39,12 @@ export default defineNuxtPlugin((app) => {
       messages: { ja, en },
     },
     defaults: {
+      VToolbar: {
+        VIcon: {
+          color: "medium-emphasis",
+          size: "small",
+        },
+      },
       VDataTable: {
         VIcon: {
           color: "medium-emphasis",
