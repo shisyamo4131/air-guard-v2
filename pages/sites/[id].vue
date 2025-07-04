@@ -8,7 +8,8 @@
 import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { Site, SiteOperationSchedule } from "~/schemas";
+import { Site, Agreement, SiteOperationSchedule } from "~/schemas";
+import { DAY_TYPE } from "air-guard-v2-schemas/constants";
 
 const route = useRoute();
 const siteId = route.params.id;
@@ -83,7 +84,11 @@ onUnmounted(() => {
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
                 </template>
                 <MoleculesCardsEditor v-bind="slotProps.editorProps">
-                  <air-item-input v-bind="slotProps" :schema="Site.schema" />
+                  <air-item-input
+                    v-bind="slotProps"
+                    :schema="Site.schema"
+                    :excluded-keys="['agreements']"
+                  />
                 </MoleculesCardsEditor>
               </v-dialog>
             </ItemManager>
@@ -122,6 +127,27 @@ onUnmounted(() => {
             </v-container>
           </v-card>
         </ItemManager>
+      </v-col>
+      <v-col>
+        <air-array-manager
+          v-model="model.agreements"
+          :schema="Agreement"
+          v-slot="slotProps"
+          @submit:complete="model.update()"
+        >
+          <v-card>
+            <air-data-table
+              v-bind="slotProps.tableProps"
+              items-per-page="-1"
+              hide-default-footer
+            />
+            <v-dialog v-bind="slotProps.dialogProps">
+              <MoleculesCardsEditor v-bind="slotProps.editorProps">
+                <air-item-input v-bind="slotProps.inputProps" />
+              </MoleculesCardsEditor>
+            </v-dialog>
+          </v-card>
+        </air-array-manager>
       </v-col>
     </v-row>
   </v-container>
