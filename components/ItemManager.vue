@@ -58,12 +58,7 @@ function clearError() {
   >
     <!-- AirItemManager のデフォルトスロットを転送します -->
     <template #default="slotProps">
-      <slot
-        name="default"
-        v-bind="{
-          ...slotProps,
-        }"
-      ></slot>
+      <slot name="default" v-bind="{ ...slotProps }" />
     </template>
   </air-item-manager>
 </template>
