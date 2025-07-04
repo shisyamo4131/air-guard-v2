@@ -14,7 +14,7 @@
 import { useLogger } from "../composables/useLogger";
 const logger = useLogger();
 
-defineOptions({ inheritAttrs: false, name: "ItemManager" });
+defineOptions({ name: "ItemManager" });
 
 const props = defineProps({
   handleCreate: {
@@ -29,7 +29,6 @@ const props = defineProps({
     type: Function,
     default: async (item) => await item.delete(),
   },
-  label: { type: String, default: undefined },
 });
 
 const sender = "ItemManager.vue";
@@ -51,7 +50,6 @@ function clearError() {
 
 <template>
   <air-item-manager
-    v-bind="$attrs"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
