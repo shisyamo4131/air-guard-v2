@@ -78,7 +78,7 @@ onUnmounted(() => {
           <v-toolbar density="comfortable">
             <v-toolbar-title>{{ model.name }}</v-toolbar-title>
             <v-spacer />
-            <ItemManager :model="model" v-slot="slotProps" label="現場情報">
+            <ItemManager :model="model" v-slot="slotProps">
               <v-dialog v-bind="slotProps.dialogProps">
                 <template #activator>
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
