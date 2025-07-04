@@ -17,7 +17,6 @@ const logger = useLogger();
 defineOptions({ inheritAttrs: false, name: "ItemManager" });
 
 const props = defineProps({
-  dialogProps: { type: Object, default: () => ({}) },
   handleCreate: {
     type: Function,
     default: async (item) => await item.create(),
@@ -34,13 +33,6 @@ const props = defineProps({
 });
 
 const sender = "ItemManager.vue";
-
-const defaultDialogProps = {
-  maxWidth: "480",
-  persistent: true,
-  scrollable: true,
-  transition: "dialog-bottom-transition",
-};
 
 /** useLogger を使用してエラーログを出力する関数 */
 function pushError(error) {
@@ -72,24 +64,6 @@ function clearError() {
         name="default"
         v-bind="{
           ...slotProps,
-          dialogProps: {
-            ...defaultDialogProps,
-            ...props.dialogProps,
-            modelValue: slotProps.isEditing,
-            'onUpdate:modelValue': slotProps.quitEditing,
-          },
-          editorProps: {
-            disabled: slotProps.isDelete || slotProps.isLoading,
-            editMode: slotProps.editMode,
-            isLoading: slotProps.isLoading,
-            label: props.label,
-            isDelete: slotProps.isDelete,
-            'onClick:cancel': slotProps.quitEditing,
-            'onClick:close': slotProps.quitEditing,
-            'onClick:submit': slotProps.submit,
-            'onUpdate:isDelete': ($event) =>
-              slotProps.toggleEditMode($event ? 'DELETE' : 'UPDATE'),
-          },
         }"
       ></slot>
     </template>
