@@ -85,8 +85,7 @@ onUnmounted(() => {
                 </template>
                 <MoleculesCardsEditor v-bind="slotProps.editorProps">
                   <air-item-input
-                    v-bind="slotProps"
-                    :schema="Site.schema"
+                    v-bind="slotProps.inputProps"
                     :excluded-keys="['agreements']"
                   />
                 </MoleculesCardsEditor>
