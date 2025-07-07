@@ -1,5 +1,0 @@
-- logger を ArrayManager, ItemManager に実装。
-- Atoms に実装されているコンポーネントの要・不要を確認。
-- Class に定義されている AutocompleteApi の在り方を再検討。（例: AutocompleteEmployee）
-  - ドキュメントの編集以外でも AutocompleteApi を使用する必要があり、コレクションごとの AutocompleteApi をコンポーネントとして実装する必要がある。
-  - DRY 原則に反する。
