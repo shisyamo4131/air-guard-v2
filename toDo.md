@@ -1,1 +1,8 @@
-- 現場に状態を追加
+- 従業員管理機能の再実装（EmployeesManager を廃止）
+- 会社管理機能の再実装（CompanyManager を廃止）
+- ユーザー管理機能の再実装（UsersManager を廃止）
+- MoleculesCardsEditor を廃止（AirVuetify に実装）
+- Atoms に実装されているコンポーネントの要・不要を確認。
+- Class に定義されている AutocompleteApi の在り方を再検討。（例: AutocompleteEmployee）
+  - ドキュメントの編集以外でも AutocompleteApi を使用する必要があり、コレクションごとの AutocompleteApi をコンポーネントとして実装する必要がある。
+  - DRY 原則に反する。
