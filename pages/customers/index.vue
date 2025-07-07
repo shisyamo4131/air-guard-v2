@@ -23,17 +23,10 @@ onUnmounted(() => {
     <array-manager
       v-model="docs"
       :schema="Customer"
-      v-slot="slotProps"
       :handle-create="(item) => item.create()"
       :handle-update="(item) => item.update()"
       :handle-delete="(item) => item.delete()"
     >
-      <air-data-table v-bind="slotProps.tableProps" />
-      <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesEditCard v-bind="slotProps.editorProps">
-          <air-item-input v-bind="slotProps.inputProps" />
-        </MoleculesEditCard>
-      </v-dialog>
     </array-manager>
   </v-container>
 </template>

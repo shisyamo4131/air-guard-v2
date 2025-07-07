@@ -20,18 +20,19 @@ function pushError(error) {
     error,
   });
 }
-
-/** useLogger を通して useErrorsStore のエラーを初期化する関数 */
-function clearError() {
-  logger.clearError();
-}
 </script>
 
 <template>
-  <air-array-manager @error="pushError" @error:clear="clearError">
-    <!-- AirArrayManager のデフォルトスロットを転送します -->
+  <air-array-manager @error="pushError" @error:clear="logger.clearError">
     <template #default="slotProps">
-      <slot name="default" v-bind="{ ...slotProps }" />
+      <slot name="default" v-bind="{ ...slotProps }">
+        <air-data-table v-bind="slotProps.tableProps" />
+        <v-dialog v-bind="slotProps.dialogProps">
+          <MoleculesEditCard v-bind="slotProps.editorProps">
+            <air-item-input v-bind="slotProps.inputProps" />
+          </MoleculesEditCard>
+        </v-dialog>
+      </slot>
     </template>
   </air-array-manager>
 </template>

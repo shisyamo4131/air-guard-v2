@@ -130,26 +130,19 @@ onUnmounted(() => {
         </ItemManager>
       </v-col>
       <v-col>
-        <array-manager
-          v-model="model.agreements"
-          :schema="Agreement"
-          v-slot="slotProps"
-          @submit:complete="model.update()"
-        >
-          <v-card>
-            <air-data-table
-              v-bind="slotProps.tableProps"
-              hide-default-footer
-              items-per-page="-1"
-              :sort-by="[{ key: 'from', order: 'desc' }]"
-            />
-            <v-dialog v-bind="slotProps.dialogProps">
-              <MoleculesEditCard v-bind="slotProps.editorProps">
-                <air-item-input v-bind="slotProps.inputProps" />
-              </MoleculesEditCard>
-            </v-dialog>
-          </v-card>
-        </array-manager>
+        <v-card>
+          <array-manager
+            v-model="model.agreements"
+            :schema="Agreement"
+            :table-props="{
+              hideDefaultFooter: true,
+              itemsPerPage: -1,
+              sortBy: [{ key: 'from', order: 'desc' }],
+            }"
+            @submit:complete="model.update()"
+          >
+          </array-manager>
+        </v-card>
       </v-col>
     </v-row>
   </v-container>

@@ -23,7 +23,6 @@ onUnmounted(() => {
     <array-manager
       v-model="docs"
       :schema="Site"
-      v-slot="slotProps"
       :input-props="{
         excludedKeys: ['agreements'],
       }"
@@ -37,12 +36,6 @@ onUnmounted(() => {
       :handle-create="(item) => item.create()"
       @create="($event) => $router.push(`sites/${$event.docId}`)"
     >
-      <air-data-table v-bind="slotProps.tableProps" />
-      <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesEditCard v-bind="slotProps.editorProps">
-          <air-item-input v-bind="slotProps.inputProps" />
-        </MoleculesEditCard>
-      </v-dialog>
     </array-manager>
   </v-container>
 </template>
