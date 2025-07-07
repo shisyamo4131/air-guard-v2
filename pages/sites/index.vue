@@ -5,10 +5,6 @@
  */
 import { Site } from "@/schemas";
 import { reactive } from "vue";
-import { useLogger } from "~/composables/useLogger";
-
-// --- ストア / コンポーザブル
-const logger = useLogger();
 
 const model = reactive(new Site());
 const docs = ref([]);
@@ -43,9 +39,9 @@ onUnmounted(() => {
     >
       <air-data-table v-bind="slotProps.tableProps" />
       <v-dialog v-bind="slotProps.dialogProps">
-        <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+        <MoleculesEditCard v-bind="slotProps.editorProps">
           <air-item-input v-bind="slotProps.inputProps" />
-        </air-edit-card>
+        </MoleculesEditCard>
       </v-dialog>
     </array-manager>
   </v-container>

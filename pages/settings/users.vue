@@ -5,13 +5,9 @@
  */
 import { User } from "@/schemas/User.js";
 import { reactive, onMounted, onUnmounted } from "vue";
-import { useLogger } from "~/composables/useLogger";
 
 /** ストア連携 */
 const auth = useAuthStore();
-
-// --- ストア / コンポーザブル
-const logger = useLogger();
 
 const user = reactive(new User());
 const docs = ref([]);
@@ -96,7 +92,7 @@ function initPassword() {
         </template>
       </air-data-table>
       <v-dialog v-bind="slotProps.dialogProps">
-        <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+        <MoleculesEditCard v-bind="slotProps.editorProps">
           <air-item-input v-bind="slotProps.inputProps" />
           <v-row>
             <v-col>
@@ -127,7 +123,7 @@ function initPassword() {
               />
             </v-col>
           </v-row>
-        </air-edit-card>
+        </MoleculesEditCard>
       </v-dialog>
     </array-manager>
   </v-container>

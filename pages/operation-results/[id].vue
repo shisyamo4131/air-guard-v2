@@ -6,16 +6,12 @@
  * - ドキュメント id をもとに OperationResult クラスからドキュメント情報を取得して表示
  */
 import dayjs from "dayjs";
-import { useLogger } from "~/composables/useLogger";
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { OperationResult, OperationResultEmployee } from "~/schemas";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 import OperationResultStartTimeEditor from "@/components/operation-results/StartTimeEditor.vue";
 import OperationResultEndTimeEditor from "@/components/operation-results/EndTimeEditor.vue";
-
-// --- ストア / コンポーザブル
-const logger = useLogger();
 
 const route = useRoute();
 const operationResultId = route.params.id;
@@ -85,13 +81,13 @@ onUnmounted(() => {
                 <template #activator>
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
                 </template>
-                <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+                <MoleculesEditCard v-bind="slotProps.editorProps">
                   <air-item-input
                     v-bind="slotProps"
                     :schema="OperationResult.schema"
                     :excluded-keys="['employees', 'outsourcers']"
                   />
-                </air-edit-card>
+                </MoleculesEditCard>
               </v-dialog>
             </ItemManager>
           </v-toolbar>

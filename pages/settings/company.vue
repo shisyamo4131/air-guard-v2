@@ -4,13 +4,9 @@
  * @description 会社情報管理
  */
 import { Company } from "@/schemas";
-import { useLogger } from "~/composables/useLogger";
 
 /** ストア連携 */
 const auth = useAuthStore();
-
-// --- ストア / コンポーザブル
-const logger = useLogger();
 
 const { company } = storeToRefs(auth);
 
@@ -22,13 +18,9 @@ const companyFields = Object.keys(Company.classProps);
   <v-container>
     <ItemManager :model="company" v-slot="slotProps" label="会社情報">
       <v-dialog v-bind="slotProps.dialogProps">
-        <air-edit-card
-          v-bind="slotProps.editorProps"
-          hide-delete-btn
-          :logger="logger"
-        >
+        <MoleculesEditCard v-bind="slotProps.editorProps" hide-delete-btn>
           <air-item-input v-bind="slotProps" :schema="Company.schema" />
-        </air-edit-card>
+        </MoleculesEditCard>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">
         <v-card-title> 会社情報 </v-card-title>

@@ -9,10 +9,6 @@ import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Site, Agreement, SiteOperationSchedule } from "~/schemas";
-import { useLogger } from "~/composables/useLogger";
-
-// --- ストア / コンポーザブル
-const logger = useLogger();
 
 const route = useRoute();
 const siteId = route.params.id;
@@ -92,9 +88,9 @@ onUnmounted(() => {
                 <template #activator>
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
                 </template>
-                <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+                <MoleculesEditCard v-bind="slotProps.editorProps">
                   <air-item-input v-bind="slotProps.inputProps" />
-                </air-edit-card>
+                </MoleculesEditCard>
               </v-dialog>
             </ItemManager>
           </v-toolbar>
@@ -108,13 +104,13 @@ onUnmounted(() => {
           label="稼働予定"
         >
           <v-dialog v-bind="slotProps.dialogProps">
-            <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+            <MoleculesEditCard v-bind="slotProps.editorProps">
               <air-item-input
                 v-bind="slotProps"
                 :schema="SiteOperationSchedule.schema"
               >
               </air-item-input>
-            </air-edit-card>
+            </MoleculesEditCard>
           </v-dialog>
           <v-card>
             <v-toolbar density="comfortable">
@@ -148,9 +144,9 @@ onUnmounted(() => {
               :sort-by="[{ key: 'from', order: 'desc' }]"
             />
             <v-dialog v-bind="slotProps.dialogProps">
-              <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
+              <MoleculesEditCard v-bind="slotProps.editorProps">
                 <air-item-input v-bind="slotProps.inputProps" />
-              </air-edit-card>
+              </MoleculesEditCard>
             </v-dialog>
           </v-card>
         </array-manager>
