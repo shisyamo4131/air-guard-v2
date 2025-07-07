@@ -24,15 +24,9 @@ onUnmounted(() => {
       v-model="docs"
       :schema="Customer"
       v-slot="slotProps"
-      :before-edit="
-        (editMode, item) => {
-          if (editMode === 'CREATE') return true;
-          $router.push(`customers/${item.docId}`);
-          return false;
-        }
-      "
       :handle-create="(item) => item.create()"
-      @create="($event) => $router.push(`customers/${$event.docId}`)"
+      :handle-update="(item) => item.update()"
+      :handle-delete="(item) => item.delete()"
     >
       <air-data-table v-bind="slotProps.tableProps" />
       <v-dialog v-bind="slotProps.dialogProps">
