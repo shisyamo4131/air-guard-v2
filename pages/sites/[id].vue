@@ -79,25 +79,17 @@ onUnmounted(() => {
             <v-spacer />
             <ItemManager
               :model="model"
-              v-slot="slotProps"
               :input-props="{
                 excludedKeys: ['agreements'],
               }"
             >
-              <v-dialog v-bind="slotProps.dialogProps">
-                <template #activator>
-                  <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
-                </template>
-                <MoleculesEditCard v-bind="slotProps.editorProps">
-                  <air-item-input v-bind="slotProps.inputProps" />
-                </MoleculesEditCard>
-              </v-dialog>
             </ItemManager>
           </v-toolbar>
           <v-list :items="items"> </v-list>
         </v-card>
       </v-col>
       <v-col cols="12">
+        <!-- ここはArrayManagerじゃないか？-->
         <ItemManager
           :model="scheduleInstance"
           v-slot="slotProps"
@@ -105,11 +97,7 @@ onUnmounted(() => {
         >
           <v-dialog v-bind="slotProps.dialogProps">
             <MoleculesEditCard v-bind="slotProps.editorProps">
-              <air-item-input
-                v-bind="slotProps"
-                :schema="SiteOperationSchedule.schema"
-              >
-              </air-item-input>
+              <air-item-input v-bind="slotProps.inputProps" />
             </MoleculesEditCard>
           </v-dialog>
           <v-card>

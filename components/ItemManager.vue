@@ -41,11 +41,6 @@ function pushError(error) {
     error,
   });
 }
-
-/** useLogger を通して useErrorsStore のエラーを初期化する関数 */
-function clearError() {
-  logger.clearError();
-}
 </script>
 
 <template>
@@ -54,11 +49,19 @@ function clearError() {
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
     @error="pushError"
-    @error:clear="clearError"
+    @error:clear="logger.clearError"
   >
-    <!-- AirItemManager のデフォルトスロットを転送します -->
     <template #default="slotProps">
-      <slot name="default" v-bind="{ ...slotProps }" />
+      <slot name="default" v-bind="slotProps">
+        <v-dialog v-bind="slotProps.dialogProps">
+          <template #activator>
+            <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
+          </template>
+          <MoleculesEditCard v-bind="slotProps.editorProps">
+            <air-item-input v-bind="slotProps.inputProps" />
+          </MoleculesEditCard>
+        </v-dialog>
+      </slot>
     </template>
   </air-item-manager>
 </template>

@@ -19,7 +19,7 @@ const companyFields = Object.keys(Company.classProps);
     <ItemManager :model="company" v-slot="slotProps" label="会社情報">
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesEditCard v-bind="slotProps.editorProps" hide-delete-btn>
-          <air-item-input v-bind="slotProps" :schema="Company.schema" />
+          <air-item-input v-bind="slotProps.inputProps" />
         </MoleculesEditCard>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">
