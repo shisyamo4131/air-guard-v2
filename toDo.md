@@ -1,4 +1,3 @@
-- 従業員管理機能の再実装（EmployeesManager を廃止）
 - 会社管理機能の再実装（CompanyManager を廃止）
 - ユーザー管理機能の再実装（UsersManager を廃止）
 - MoleculesCardsEditor を廃止（AirVuetify に実装）
