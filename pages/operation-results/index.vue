@@ -3,10 +3,14 @@
  * @file pages/settings/operation-results.vue
  * @description 稼働実績管理画面
  */
+import { useLogger } from "~/composables/useLogger";
 import { OperationResult } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 import { useFetchSite } from "@/composables/useFetchSite";
 import dayjs from "dayjs";
+
+// --- ストア / コンポーザブル
+const logger = useLogger();
 
 const { fetchSite, cachedSites, isLoading: isSitesLoading } = useFetchSite();
 
@@ -48,13 +52,13 @@ onUnmounted(() => {
       "
     >
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesCardsEditor v-bind="slotProps.editorProps">
+        <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
           <air-item-input
             v-bind="slotProps"
             :schema="OperationResult.schema"
             :excluded-keys="['workers']"
           />
-        </MoleculesCardsEditor>
+        </air-edit-card>
       </v-dialog>
       <v-data-table :items="docs" :headers="headers" :loading="isSitesLoading">
         <template #top>

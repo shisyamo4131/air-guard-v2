@@ -9,6 +9,10 @@ import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Site, Agreement, SiteOperationSchedule } from "~/schemas";
+import { useLogger } from "~/composables/useLogger";
+
+// --- ストア / コンポーザブル
+const logger = useLogger();
 
 const route = useRoute();
 const siteId = route.params.id;
@@ -88,9 +92,9 @@ onUnmounted(() => {
                 <template #activator>
                   <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
                 </template>
-                <MoleculesCardsEditor v-bind="slotProps.editorProps">
+                <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
                   <air-item-input v-bind="slotProps.inputProps" />
-                </MoleculesCardsEditor>
+                </air-edit-card>
               </v-dialog>
             </ItemManager>
           </v-toolbar>
@@ -104,13 +108,13 @@ onUnmounted(() => {
           label="稼働予定"
         >
           <v-dialog v-bind="slotProps.dialogProps">
-            <MoleculesCardsEditor v-bind="slotProps.editorProps">
+            <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
               <air-item-input
                 v-bind="slotProps"
                 :schema="SiteOperationSchedule.schema"
               >
               </air-item-input>
-            </MoleculesCardsEditor>
+            </air-edit-card>
           </v-dialog>
           <v-card>
             <v-toolbar density="comfortable">
@@ -144,9 +148,9 @@ onUnmounted(() => {
               :sort-by="[{ key: 'from', order: 'desc' }]"
             />
             <v-dialog v-bind="slotProps.dialogProps">
-              <MoleculesCardsEditor v-bind="slotProps.editorProps">
+              <air-edit-card v-bind="slotProps.editorProps" :logger="logger">
                 <air-item-input v-bind="slotProps.inputProps" />
-              </MoleculesCardsEditor>
+              </air-edit-card>
             </v-dialog>
           </v-card>
         </array-manager>
