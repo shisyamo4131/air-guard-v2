@@ -43,7 +43,12 @@ const companyFields = Object.keys(Company.classProps);
         </v-container>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <AtomsBtnsEdit color="primary" @click="slotProps.toUpdate()" />
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-pencil"
+            @click="slotProps.toUpdate()"
+            >編集</v-btn
+          >
         </v-card-actions>
       </v-card>
     </ItemManager>
