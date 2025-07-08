@@ -14,14 +14,8 @@ const route = useRoute();
 const siteId = route.params.id;
 const model = reactive(new Site());
 const scheduleInstance = reactive(new SiteOperationSchedule({ siteId }));
-const schedules = ref([]);
 
 const currentDate = ref([new Date()]);
-const period = computed(() => {
-  const start = dayjs(currentDate.value[0]).startOf("month").toDate();
-  const end = dayjs(currentDate.value[0]).endOf("month").toDate();
-  return { start, end };
-});
 
 const items = computed(() => {
   return [
@@ -43,26 +37,31 @@ const items = computed(() => {
   ];
 });
 
-onMounted(async () => {
-  await model.subscribe({ docId: siteId });
+const period = computed(() => {
+  const start = dayjs(currentDate.value[0]).startOf("month").toDate();
+  const end = dayjs(currentDate.value[0]).endOf("month").toDate();
+  return { start, end };
 });
-
 watch(
   period,
   async (newVal) => {
     const docId = route.params.id;
     if (docId && newVal && newVal.start && newVal.end) {
-      schedules.value = await scheduleInstance.subscribeDocs({
+      scheduleInstance.subscribeDocs({
         constraints: [
           ["where", "siteId", "==", docId],
-          ["where", "startDate", ">=", newVal.start],
-          ["where", "startDate", "<=", newVal.end],
+          ["where", "startAt", ">=", newVal.start],
+          ["where", "startAt", "<=", newVal.end],
         ],
       });
     }
   },
   { immediate: true, deep: true }
 );
+
+onMounted(async () => {
+  await model.subscribe({ docId: siteId });
+});
 
 onUnmounted(() => {
   model.unsubscribe();
@@ -89,11 +88,18 @@ onUnmounted(() => {
         </v-card>
       </v-col>
       <v-col cols="12">
-        <!-- ここはArrayManagerじゃないか？-->
-        <ItemManager
-          :model="scheduleInstance"
+        <ArrayManager
           v-slot="slotProps"
-          label="稼働予定"
+          :model-value="scheduleInstance.docs"
+          :schema="SiteOperationSchedule"
+          :handle-create="
+            async (item) => {
+              item.siteId = siteId;
+              await item.create();
+            }
+          "
+          :handle-update="async (item) => await item.update()"
+          :handle-delete="async (item) => await item.delete()"
         >
           <v-dialog v-bind="slotProps.dialogProps">
             <MoleculesEditCard v-bind="slotProps.editorProps">
@@ -109,13 +115,13 @@ onUnmounted(() => {
             <v-container class="pt-0">
               <air-calendar
                 v-model="currentDate"
-                :events="schedules.map((schedule) => schedule.toEvent())"
+                :events="slotProps.items.map((schedule) => schedule.toEvent())"
                 hide-week-number
                 @click:event="slotProps.toUpdate($event.item)"
               />
             </v-container>
           </v-card>
-        </ItemManager>
+        </ArrayManager>
       </v-col>
       <v-col>
         <v-card>
