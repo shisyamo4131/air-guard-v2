@@ -32,7 +32,7 @@ export default class SiteOperationSchedule extends BaseClass {
    *     アクセスするために利用できます。
    */
   toEvent() {
-    const title = `${this.requiredPersonnel} 名: ${this.workDescription}`;
+    const title = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
     return {
       title,
       start: this.startAt,
