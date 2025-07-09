@@ -95,7 +95,7 @@ function submit() {
   >
     <v-card>
       <v-toolbar density="comfortable">
-        <v-toolbar-title>稼働実績明細</v-toolbar-title>
+        <v-toolbar-title>稼働実績明細（従業員）</v-toolbar-title>
         <v-spacer />
         <v-btn v-if="!isEditing" icon="mdi-pencil" @click="isEditing = true" />
         <div v-else>
