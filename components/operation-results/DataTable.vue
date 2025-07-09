@@ -4,34 +4,37 @@
  * @description 稼働実績明細用のデータテーブルコンポーネント
  * - `props.isEditing` が true を受け取ると編集用の表示に切り替わります。
  * - 氏名の表示には `props.employees` を与えられる必要があります。
- *
- * @events
- * - `add(employeeId: string)`: 従業員が追加されたときに発生します。
- * - `click:startAt(item: OperationResultEmployee)`: 開始時刻がクリックされたときに発生します。
- * - `click:endAt(item: OperationResultEmployee)`: 終了時刻がクリックされたときに発生します。
  */
 import dayjs from "dayjs";
+import { OperationResultEmployee } from "@/schemas";
 
 /** define props */
 const props = defineProps({
   employees: { type: Object, default: () => ({}) },
   isEditing: { type: Boolean, default: false },
+  items: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits([
-  "add",
-  "click:startAt",
-  "click:endAt",
-  "click:isQualificated",
-  "click:isOjt",
-]);
+/** define emits */
+const emit = defineEmits(["update:items"]);
+
+/** An array to manage internal items */
+const internalItems = ref([]);
+watch(
+  () => props.items,
+  (newVal) => {
+    internalItems.value = newVal.map((item) => {
+      return new OperationResultEmployee(item);
+    });
+  },
+  { immediate: true, deep: true }
+);
 
 /** テーブルのカラム設定 */
 const headers = [
   {
     title: "氏名",
     key: "employeeId",
-    // value: (item) => props.employees?.[item.employeeId]?.fullName || "N/A",
     sortable: false,
   },
   { title: "開始時刻", key: "startAt", align: "center", sortable: false },
@@ -68,7 +71,13 @@ watch(
 /** 従業員追加ボタンがクリックされた時の処理 */
 function handleEmployeeIdAdded() {
   if (!selectedEmployeeId.value) return;
-  emit("add", selectedEmployeeId.value);
+  const newEmployee = new OperationResultEmployee({
+    employeeId: selectedEmployeeId.value,
+    startAt: new Date(),
+    endAt: new Date(),
+  });
+  internalItems.value.push(newEmployee);
+  emit("update:items", internalItems.value);
   selectedEmployeeId.value = null;
 }
 
@@ -78,12 +87,17 @@ function handleEmployeeIdAdded() {
  * @returns {string}
  */
 function formatTime(date) {
-  return dayjs(date).format("HH:mm");
+  return dayjs(date).format("YYYY-MM-DD HH:mm");
 }
 </script>
 
 <template>
-  <v-data-table :headers="headers" hide-default-footer items-per-page="-1">
+  <v-data-table
+    :headers="headers"
+    hide-default-footer
+    :items="internalItems"
+    items-per-page="-1"
+  >
     <template #top>
       <!-- 従業員選択 Autocomplete コンポーネント -->
       <v-expand-transition>
@@ -117,9 +131,20 @@ function formatTime(date) {
       <div v-if="!props.isEditing">
         {{ formatTime(item[key]) }}
       </div>
-      <v-chip v-else density="compact" @click="emit(`click:${key}`, item)">
-        {{ formatTime(item[key]) }}
-      </v-chip>
+      <air-date-time-picker-input
+        v-else
+        :model-value="item[key]"
+        @update:modelValue="
+          item[key] = $event;
+          emit('update:items', internalItems);
+        "
+      >
+        <template #activator="{ props: activatorProps }">
+          <v-chip v-bind="activatorProps" density="compact">
+            {{ activatorProps.text }}
+          </v-chip>
+        </template>
+      </air-date-time-picker-input>
     </template>
 
     <!-- 資格者/OJT (boolean) -->
@@ -137,7 +162,10 @@ function formatTime(date) {
         v-else
         :icon="item[key] ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'"
         color="primary"
-        @click="emit('click:' + key, { item, value: !item[key] })"
+        @click="
+          item[key] = !item[key];
+          emit('update:items', internalItems);
+        "
       />
     </template>
   </v-data-table>

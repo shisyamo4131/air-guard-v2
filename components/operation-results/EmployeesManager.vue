@@ -1,7 +1,5 @@
 <script setup>
 import { OperationResultEmployee } from "@/schemas";
-import OperationResultStartTimeEditor from "@/components/operation-results/StartTimeEditor.vue";
-import OperationResultEndTimeEditor from "@/components/operation-results/EndTimeEditor.vue";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 
 /** define-props */
@@ -21,22 +19,6 @@ const clonedModelValue = ref([]);
 
 /** component's editing condition */
 const isEditing = ref(false);
-
-/** define editors to manage `startAt` and `endAt` */
-const editors = {
-  startAt: OperationResultStartTimeEditor,
-  endAt: OperationResultEndTimeEditor,
-};
-
-/** for component tag */
-const editTarget = ref(null);
-
-/*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-const editComponent = computed(() => {
-  return editors[editTarget.value];
-});
 
 /*****************************************************************************
  * WATCHERS
@@ -107,56 +89,8 @@ function submit() {
         :items="slotProps.items"
         :is-editing="isEditing"
         :employees="cachedEmployees"
-        @add="
-          slotProps.toCreate();
-          $nextTick(() => {
-            slotProps.updateProperties({ employeeId: $event });
-            slotProps.submit();
-          });
-        "
-        @click:startAt="
-          editTarget = 'startAt';
-          slotProps.toUpdate($event);
-        "
-        @click:endAt="
-          editTarget = 'endAt';
-          slotProps.toUpdate($event);
-        "
-        @click:isQualificated="
-          editTarget = null;
-          slotProps.toUpdate($event.item);
-          $nextTick(() => {
-            slotProps.updateProperties({
-              isQualificated: $event.value,
-            });
-            slotProps.submit();
-          });
-        "
-        @click:isOjt="
-          editTarget = null;
-          slotProps.toUpdate($event.item);
-          $nextTick(() => {
-            slotProps.updateProperties({
-              isOjt: $event.value,
-            });
-            slotProps.submit();
-          });
-        "
+        @update:items="clonedModelValue = $event"
       />
-      <v-dialog
-        :model-value="slotProps.isEditing && !!editTarget"
-        @update:modelValue="slotProps.quitEditing"
-        width="auto"
-        :fullscreen="$vuetify.display.xs"
-      >
-        <component
-          :is="editComponent"
-          :item="slotProps.item"
-          :submit="slotProps.submit"
-          :update-properties="slotProps.updateProperties"
-          @click:close="slotProps.quitEditing"
-        />
-      </v-dialog>
     </v-card>
   </ArrayManager>
 </template>
