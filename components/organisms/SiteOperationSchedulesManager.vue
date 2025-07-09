@@ -78,7 +78,7 @@ onUnmounted(() => {
       <MoleculesEditCard v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps.inputProps">
           <template #startAt="{ attrs }">
-            <air-date-time-picker
+            <air-date-time-picker-text-field
               v-bind="attrs"
               @update:modelValue="
                 ($event) => {
