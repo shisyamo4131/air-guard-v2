@@ -8,18 +8,12 @@
 import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { OperationResult, OperationResultEmployee } from "~/schemas";
-import { useFetchEmployee } from "@/composables/useFetchEmployee";
-import OperationResultStartTimeEditor from "@/components/operation-results/StartTimeEditor.vue";
-import OperationResultEndTimeEditor from "@/components/operation-results/EndTimeEditor.vue";
+import { OperationResult } from "~/schemas";
 
 const route = useRoute();
 const operationResultId = route.params.id;
 
-const { fetchEmployee, cachedEmployees } = useFetchEmployee();
-
 const model = reactive(new OperationResult());
-watch(model, (newVal) => fetchEmployee(newVal.employees), { deep: true });
 
 const items = computed(() => {
   return [
@@ -49,15 +43,6 @@ const items = computed(() => {
       props: { subtitle: model.siteId, prependIcon: "mdi-map-marker" },
     },
   ];
-});
-
-const editors = {
-  startAt: OperationResultStartTimeEditor,
-  endAt: OperationResultEndTimeEditor,
-};
-const editTarget = ref(null);
-const editComponent = computed(() => {
-  return editors[editTarget.value];
 });
 
 onMounted(async () => {
@@ -95,80 +80,17 @@ onUnmounted(() => {
         </v-card>
       </v-col>
       <v-col cols="12">
-        <ItemManager :model="model" v-slot="slotProps" label="稼働実績">
-          <air-array-manager
-            :model-value="
-              slotProps.isEditing ? slotProps.item.employees : model.employees
-            "
-            :schema="OperationResultEmployee"
-            v-slot="arrayManagerProps"
+        <ItemManager :model="model" v-slot="slotProps">
+          <OperationResultsEmployeesManager
+            :model-value="model.employees"
             @update:modelValue="
-              slotProps.updateProperties({ employees: $event })
+              slotProps.toUpdate();
+              $nextTick(() => {
+                slotProps.updateProperties({ employees: $event });
+                slotProps.submit();
+              });
             "
-          >
-            <v-card>
-              <v-toolbar density="comfortable">
-                <v-toolbar-title>稼働実績明細</v-toolbar-title>
-                <v-spacer />
-                <v-btn
-                  v-if="!slotProps.isEditing"
-                  icon="mdi-pencil"
-                  @click="slotProps.toUpdate()"
-                />
-                <div v-else>
-                  <v-btn icon="mdi-close" @click="slotProps.quitEditing" />
-                  <v-btn icon="mdi-check" @click="slotProps.submit" />
-                </div>
-              </v-toolbar>
-              <OperationResultsDataTable
-                :items="arrayManagerProps.items"
-                :employees="cachedEmployees"
-                :is-edit="slotProps.isEditing"
-                @click:startAt="
-                  editTarget = 'startAt';
-                  arrayManagerProps.toUpdate($event);
-                "
-                @click:endAt="
-                  editTarget = 'endAt';
-                  arrayManagerProps.toUpdate($event);
-                "
-                @click:isQualificated="
-                  editTarget = null;
-                  arrayManagerProps.toUpdate($event.item);
-                  $nextTick(() => {
-                    arrayManagerProps.updateProperties({
-                      isQualificated: $event.value,
-                    });
-                    arrayManagerProps.submit();
-                  });
-                "
-                @click:isOjt="
-                  editTarget = null;
-                  arrayManagerProps.toUpdate($event.item);
-                  $nextTick(() => {
-                    arrayManagerProps.updateProperties({
-                      isOjt: $event.value,
-                    });
-                    arrayManagerProps.submit();
-                  });
-                "
-              />
-              <v-dialog
-                :model-value="arrayManagerProps.isEditing && !!editTarget"
-                @update:modelValue="arrayManagerProps.quitEditing"
-                width="auto"
-                :fullscreen="$vuetify.display.mobile"
-              >
-                <component
-                  :is="editComponent"
-                  :item="arrayManagerProps.item"
-                  :submit="arrayManagerProps.submit"
-                  :update-properties="arrayManagerProps.updateProperties"
-                  @click:close="arrayManagerProps.quitEditing"
-                />
-              </v-dialog>
-            </v-card>
-          </air-array-manager>
+          />
         </ItemManager>
       </v-col>
     </v-row>

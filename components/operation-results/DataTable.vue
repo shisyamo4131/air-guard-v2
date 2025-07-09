@@ -2,7 +2,7 @@
 /**
  * @file @/components/operation-results/DataTable.vue
  * @description 稼働実績明細用のデータテーブルコンポーネント
- * - `props.isEdit` が true を受け取ると編集用の表示に切り替わります。
+ * - `props.isEditing` が true を受け取ると編集用の表示に切り替わります。
  * - 氏名の表示には `props.employees` を与えられる必要があります。
  *
  * @events
@@ -15,7 +15,7 @@ import dayjs from "dayjs";
 /** define props */
 const props = defineProps({
   employees: { type: Object, default: () => ({}) },
-  isEdit: { type: Boolean, default: false },
+  isEditing: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -57,11 +57,11 @@ const headers = [
 /** AirAutocompleteApi によって選択された従業員ID */
 const selectedEmployeeId = ref(null);
 
-/** props.isEdit を監視 -> false に更新された selectedEmployeeId を初期化 */
+/** props.isEditing を監視 -> false に更新された selectedEmployeeId を初期化 */
 watch(
-  () => props.isEdit,
-  (isEditing) => {
-    if (!isEditing) selectedEmployeeId.value = null;
+  () => props.isEditing,
+  (newVal) => {
+    if (!newVal) selectedEmployeeId.value = null;
   }
 );
 
@@ -87,7 +87,7 @@ function formatTime(date) {
     <template #top>
       <!-- 従業員選択 Autocomplete コンポーネント -->
       <v-expand-transition>
-        <div v-show="props.isEdit">
+        <div v-show="props.isEditing">
           <v-container>
             <MoleculesAutocompleteEmployee
               v-model="selectedEmployeeId"
@@ -106,7 +106,7 @@ function formatTime(date) {
       #[`item.${key}`]="{ item }"
       :key="key"
     >
-      <div v-if="!props.isEdit">
+      <div v-if="!props.isEditing">
         {{ formatTime(item[key]) }}
       </div>
       <v-chip v-else density="compact" @click="emit(`click:${key}`, item)">
@@ -121,7 +121,7 @@ function formatTime(date) {
       :key="key"
     >
       <v-icon
-        v-if="!props.isEdit"
+        v-if="!props.isEditing"
         :icon="item[key] ? 'mdi-check' : ''"
         color="primary"
       />
