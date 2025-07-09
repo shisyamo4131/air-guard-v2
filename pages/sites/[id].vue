@@ -92,12 +92,8 @@ onUnmounted(() => {
           v-slot="slotProps"
           :model-value="scheduleInstance.docs"
           :schema="SiteOperationSchedule"
-          :handle-create="
-            async (item) => {
-              item.siteId = siteId;
-              await item.create();
-            }
-          "
+          :before-edit="(editMode, item) => (item.siteId = siteId)"
+          :handle-create="async (item) => await item.create()"
           :handle-update="async (item) => await item.update()"
           :handle-delete="async (item) => await item.delete()"
         >
@@ -133,6 +129,11 @@ onUnmounted(() => {
               itemsPerPage: -1,
               sortBy: [{ key: 'from', order: 'desc' }],
             }"
+            :before-edit="
+              (editMode, item) => {
+                if (editMode === 'CREATE') item.startTime = '09:00';
+              }
+            "
             @submit:complete="model.update()"
           >
           </array-manager>
