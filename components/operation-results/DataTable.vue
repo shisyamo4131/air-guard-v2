@@ -31,7 +31,7 @@ const headers = [
   {
     title: "氏名",
     key: "employeeId",
-    value: (item) => props.employees?.[item.employeeId]?.fullName || "N/A",
+    // value: (item) => props.employees?.[item.employeeId]?.fullName || "N/A",
     sortable: false,
   },
   { title: "開始時刻", key: "startAt", align: "center", sortable: false },
@@ -98,6 +98,14 @@ function formatTime(date) {
           </v-container>
         </div>
       </v-expand-transition>
+    </template>
+
+    <!-- 従業員ID -->
+    <template #item.employeeId="{ item }">
+      <div v-if="props.employees?.[item.employeeId]">
+        {{ props.employees[item.employeeId]?.fullName || "ERROR" }}
+      </div>
+      <v-progress-circular v-else indeterminate size="small" />
     </template>
 
     <!-- 開始/終了時刻 -->
