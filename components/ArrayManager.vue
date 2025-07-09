@@ -25,7 +25,7 @@ function pushError(error) {
 <template>
   <air-array-manager @error="pushError" @error:clear="logger.clearError">
     <template #default="slotProps">
-      <slot name="default" v-bind="{ ...slotProps }">
+      <slot name="default" v-bind="slotProps">
         <air-data-table v-bind="slotProps.tableProps" />
         <v-dialog v-bind="slotProps.dialogProps">
           <MoleculesEditCard v-bind="slotProps.editorProps">
