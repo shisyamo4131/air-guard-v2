@@ -55,22 +55,18 @@ const items = computed(() => {
  *****************************************************************************/
 const defaultDateTimeAt = computed(() => {
   if (!model.docId) return { startAt: null, endAt: null };
-  const timeMap = {
-    day: {
-      start: auth.company.defaultStartTimeDayShift,
-      end: auth.company.defaultEndTimeDayShift,
-    },
-    night: {
-      start: auth.company.defaultStartTimeNightShift,
-      end: auth.company.defaultEndTimeNightShift,
-    },
-  };
-  const [startH, startM] = timeMap[model.shiftType].start
-    .split(":")
-    .map(Number);
-  const [endH, endM] = timeMap[model.shiftType].end.split(":").map(Number);
+
+  const shiftType = model.shiftType;
+  const timeMap = auth.company.defaultTimeMap;
+
+  const { start, end } = timeMap[shiftType] || { start: "00:00", end: "00:00" };
+
+  const [startH, startM] = start.split(":").map(Number);
+  const [endH, endM] = end.split(":").map(Number);
+
   const startAt = dayjs(model.date).hour(startH).minute(startM).second(0);
   const endAt = dayjs(model.date).hour(endH).minute(endM).second(0);
+
   return { startAt, endAt };
 });
 
@@ -87,7 +83,6 @@ onUnmounted(() => {
 </script>
 <template>
   <v-container>
-    {{ defaultDateTimeAt }}
     <v-row>
       <v-col cols="12">
         <v-card>
