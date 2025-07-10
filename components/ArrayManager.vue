@@ -26,11 +26,23 @@ function pushError(error) {
   <air-array-manager @error="pushError" @error:clear="logger.clearError">
     <template #default="slotProps">
       <slot name="default" v-bind="slotProps">
-        <air-data-table v-bind="slotProps.tableProps" />
+        <slot name="table" v-bind="slotProps.tableProps">
+          <air-data-table v-bind="slotProps.tableProps" />
+        </slot>
         <v-dialog v-bind="slotProps.dialogProps">
-          <MoleculesEditCard v-bind="slotProps.editorProps">
-            <air-item-input v-bind="slotProps.inputProps" />
-          </MoleculesEditCard>
+          <slot
+            name="editor"
+            v-bind="{
+              editorProps: slotProps.editorProps,
+              inputProps: slotProps.inputProps,
+            }"
+          >
+            <MoleculesEditCard v-bind="slotProps.editorProps">
+              <slot name="input" v-bind="slotProps.inputProps">
+                <air-item-input v-bind="slotProps.inputProps" />
+              </slot>
+            </MoleculesEditCard>
+          </slot>
         </v-dialog>
       </slot>
     </template>

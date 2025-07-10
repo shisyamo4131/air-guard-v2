@@ -49,8 +49,8 @@ onUnmounted(() => {
       :handle-create="(item) => item.create()"
       @create="($event) => $router.push(`operation-results/${$event.docId}`)"
     >
-      <template #default="slotProps">
-        <air-data-table v-bind="slotProps.tableProps">
+      <template #table="tableProps">
+        <air-data-table v-bind="tableProps">
           <template #item.date="{ item }">
             <div>{{ dayjs(item.date).format("MM月DD日(ddd)") }}</div>
           </template>
@@ -61,11 +61,6 @@ onUnmounted(() => {
             <v-progress-circular v-else indeterminate size="small" />
           </template>
         </air-data-table>
-        <v-dialog v-bind="slotProps.dialogProps">
-          <MoleculesEditCard v-bind="slotProps.editorProps">
-            <air-item-input v-bind="slotProps.inputProps" />
-          </MoleculesEditCard>
-        </v-dialog>
       </template>
     </array-manager>
   </v-container>
