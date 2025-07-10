@@ -11,13 +11,12 @@ import dayjs from "dayjs";
 const { fetchSite, cachedSites } = useFetchSite();
 
 const operationResult = reactive(new OperationResult());
-const docs = computed(() => operationResult.docs);
 
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
 /** Call `fetchSite` when `docs` changes */
-watch(docs, (newVal) => fetchSite(newVal), { deep: true });
+watch(operationResult.docs, (newVal) => fetchSite(newVal), { deep: true });
 
 /*****************************************************************************
  * LIFECYCLE HOOKS
@@ -34,7 +33,7 @@ onUnmounted(() => {
 <template>
   <v-container>
     <array-manager
-      v-model="docs"
+      v-model="operationResult.docs"
       :schema="OperationResult"
       :input-props="{
         excludedKeys: ['employees', 'outsourcers'],

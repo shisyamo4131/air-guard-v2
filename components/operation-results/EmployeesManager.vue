@@ -4,6 +4,8 @@ import { useFetchEmployee } from "@/composables/useFetchEmployee";
 
 /** define-props */
 const props = defineProps({
+  defaultStartAt: { type: Object, default: null },
+  defaultEndAt: { type: Object, default: null },
   isEditing: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
 });
@@ -86,6 +88,8 @@ function submit() {
         </div>
       </v-toolbar>
       <OperationResultsDataTable
+        :default-start-at="props.defaultStartAt"
+        :default-end-at="props.defaultEndAt"
         :items="slotProps.items"
         :is-editing="isEditing"
         :employees="cachedEmployees"

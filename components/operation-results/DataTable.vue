@@ -10,6 +10,8 @@ import { OperationResultEmployee } from "@/schemas";
 
 /** define props */
 const props = defineProps({
+  defaultStartAt: { type: Object, default: null },
+  defaultEndAt: { type: Object, default: null },
   employees: { type: Object, default: () => ({}) },
   isEditing: { type: Boolean, default: false },
   items: { type: Array, default: () => [] },
@@ -101,8 +103,8 @@ function handleAddDetail() {
   if (!selectedEmployeeId.value) return;
   const newEmployee = new OperationResultEmployee({
     employeeId: selectedEmployeeId.value,
-    startAt: new Date(),
-    endAt: new Date(),
+    startAt: props.defaultStartAt || new Date(),
+    endAt: props.defaultEndAt || new Date(),
   });
   internalItems.value.push(newEmployee);
   emit("update:items", internalItems.value);

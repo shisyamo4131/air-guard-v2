@@ -8,10 +8,15 @@
 import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { OperationResult } from "~/schemas";
 
+/** Get operation-result-id from route parameters */
 const route = useRoute();
 const operationResultId = route.params.id;
+
+/** define stores */
+const auth = useAuthStore();
 
 const model = reactive(new OperationResult());
 
@@ -45,6 +50,33 @@ const items = computed(() => {
   ];
 });
 
+/*****************************************************************************
+ * COMPUTED PROPERTIES
+ *****************************************************************************/
+const defaultDateTimeAt = computed(() => {
+  if (!model.docId) return { startAt: null, endAt: null };
+  const timeMap = {
+    day: {
+      start: auth.company.defaultStartTimeDayShift,
+      end: auth.company.defaultEndTimeDayShift,
+    },
+    night: {
+      start: auth.company.defaultStartTimeNightShift,
+      end: auth.company.defaultEndTimeNightShift,
+    },
+  };
+  const [startH, startM] = timeMap[model.shiftType].start
+    .split(":")
+    .map(Number);
+  const [endH, endM] = timeMap[model.shiftType].end.split(":").map(Number);
+  const startAt = dayjs(model.date).hour(startH).minute(startM).second(0);
+  const endAt = dayjs(model.date).hour(endH).minute(endM).second(0);
+  return { startAt, endAt };
+});
+
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
 onMounted(async () => {
   await model.subscribe({ docId: operationResultId });
 });
@@ -55,6 +87,7 @@ onUnmounted(() => {
 </script>
 <template>
   <v-container>
+    {{ defaultDateTimeAt }}
     <v-row>
       <v-col cols="12">
         <v-card>
@@ -82,6 +115,8 @@ onUnmounted(() => {
       <v-col cols="12">
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
+            :default-start-at="defaultDateTimeAt.startAt"
+            :default-end-at="defaultDateTimeAt.endAt"
             :model-value="model.employees"
             @update:modelValue="
               slotProps.toUpdate();
