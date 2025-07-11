@@ -10,8 +10,13 @@ import { OperationResultEmployee } from "@/schemas";
 
 /** define props */
 const props = defineProps({
-  defaultStartAt: { type: Object, default: null },
-  defaultEndAt: { type: Object, default: null },
+  defaultAttendance: {
+    type: Object,
+    default: () => ({
+      startAt: new Date(),
+      endAt: new Date(),
+    }),
+  },
   employees: { type: Object, default: () => ({}) },
   isEditing: { type: Boolean, default: false },
   items: { type: Array, default: () => [] },
@@ -29,6 +34,13 @@ const internalItems = ref([]);
 /** define table's header */
 const headers = ref([
   { title: "氏名", key: "employeeId", sortable: false },
+  {
+    title: "勤務日",
+    key: "date",
+    value: (item) => dayjs(item.startAt).format("YYYY-MM-DD"),
+    align: "center",
+    sortable: false,
+  },
   { title: "開始時刻", key: "startAt", align: "center", sortable: false },
   { title: "終了時刻", key: "endAt", align: "center", sortable: false },
   {
@@ -103,8 +115,8 @@ function handleAddDetail() {
   if (!selectedEmployeeId.value) return;
   const newEmployee = new OperationResultEmployee({
     employeeId: selectedEmployeeId.value,
-    startAt: props.defaultStartAt || new Date(),
-    endAt: props.defaultEndAt || new Date(),
+    startAt: props.defaultAttendance?.startAt || new Date(),
+    endAt: props.defaultAttendance?.endAt || new Date(),
   });
   internalItems.value.push(newEmployee);
   emit("update:items", internalItems.value);
@@ -128,13 +140,13 @@ function handleRemoveDetail(item) {
 }
 
 /**
- * Format a date to a string in "YYYY-MM-DD HH:mm" format.
+ * Format a date to a string in "HH:mm" format.
  * This function uses the `dayjs` library to format the date.
  * @param {Date | string} date
  * @returns {string}
  */
 function formatTime(date) {
-  return dayjs(date).format("YYYY-MM-DD HH:mm");
+  return dayjs(date).format("HH:mm");
 }
 </script>
 
@@ -188,7 +200,7 @@ function formatTime(date) {
       >
         <template #activator="{ props: activatorProps }">
           <v-chip v-bind="activatorProps" density="compact">
-            {{ activatorProps.text }}
+            {{ formatTime(activatorProps.text) }}
           </v-chip>
         </template>
       </air-date-time-picker-input>

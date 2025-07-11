@@ -110,8 +110,7 @@ onUnmounted(() => {
       <v-col cols="12">
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
-            :default-start-at="defaultDateTimeAt.startAt"
-            :default-end-at="defaultDateTimeAt.endAt"
+            :default-attendance="defaultDateTimeAt"
             :model-value="model.employees"
             @update:modelValue="
               slotProps.toUpdate();
