@@ -50,8 +50,8 @@ onUnmounted(() => {
     >
       <template #table="tableProps">
         <air-data-table v-bind="tableProps">
-          <template #item.date="{ item }">
-            <div>{{ dayjs(item.date).format("MM月DD日(ddd)") }}</div>
+          <template #item.dateAt="{ item }">
+            <div>{{ dayjs(item.dateAt).format("MM月DD日(ddd)") }}</div>
           </template>
           <template #item.siteId="{ item }">
             <div v-if="cachedSites[item.siteId]">

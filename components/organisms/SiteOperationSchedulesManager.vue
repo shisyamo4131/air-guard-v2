@@ -5,6 +5,7 @@
  */
 import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -13,6 +14,9 @@ defineOptions({ name: "SiteOperationScheduleManager" });
 const props = defineProps({
   siteId: { type: String, required: true },
 });
+
+/** define-stores */
+const auth = useAuthStore();
 
 /** SiteOperationSchedule instance */
 const instance = reactive(new SiteOperationSchedule());
@@ -77,6 +81,35 @@ onUnmounted(() => {
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesEditCard v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps.inputProps">
+          <template #dateAt="{ attrs }">
+            <air-date-input
+              v-bind="attrs"
+              autocomplete="off"
+              @update:modelValue="
+                ($event) => {
+                  const { startAt, endAt, shiftType } = slotProps.item;
+                  const defaultTime = auth.company.getDefaultTime(
+                    $event,
+                    shiftType
+                  );
+
+                  const setTime = (date, refDate) => {
+                    if (!date || !refDate) return;
+                    const d = dayjs(refDate);
+                    date.setHours(d.hour(), d.minute(), 0, 0);
+                  };
+
+                  setTime(defaultTime.startAt, startAt);
+                  setTime(defaultTime.endAt, endAt);
+
+                  slotProps.updateProperties({
+                    startAt: defaultTime.startAt,
+                    endAt: defaultTime.endAt,
+                  });
+                }
+              "
+            />
+          </template>
           <template #startAt="{ attrs }">
             <air-date-time-picker-input
               v-bind="attrs"
