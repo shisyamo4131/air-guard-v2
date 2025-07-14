@@ -8,6 +8,10 @@
 import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Site, Agreement } from "~/schemas";
+import { useAuthStore } from "@/stores/useAuthStore";
+
+/** define-stores */
+const auth = useAuthStore();
 
 const route = useRoute();
 const siteId = route.params.id;
@@ -80,6 +84,31 @@ onUnmounted(() => {
             "
             @submit:complete="model.update()"
           >
+            <template #input="slotProps">
+              <air-item-input v-bind="slotProps">
+                <template #after-from>
+                  <OrganismsAgreementSelector
+                    label="取極めから選択"
+                    :date="slotProps.item.dateAt"
+                    :items="auth.company.agreements"
+                    @select="
+                      slotProps.updateProperties({
+                        dayType: $event.dayType,
+                        shiftType: $event.shiftType,
+                        startTime: $event.startTime,
+                        endTime: $event.endTime,
+                        breakMinutes: $event.breakMinutes,
+                        unitPrice: $event.unitPrice,
+                        overTimeUnitPrice: $event.overTimeUnitPrice,
+                        unitPriceQualified: $event.unitPriceQualified,
+                        overTimeUnitPriceQualified:
+                          $event.overTimeUnitPriceQualified,
+                      })
+                    "
+                  />
+                </template>
+              </air-item-input>
+            </template>
           </array-manager>
         </v-card>
       </v-col>

@@ -1,9 +1,13 @@
 <script setup>
-const dateTime = ref(new Date("2025-07-01T11:00:00"));
+import { useAuthStore } from "@/stores/useAuthStore";
+const auth = useAuthStore();
 </script>
 
 <template>
   <v-container>
-    <air-date-time-picker v-model="dateTime" />
+    <OrganismsAgreementSelector
+      :items="auth.company.agreements"
+      @select="console.log($event)"
+    />
   </v-container>
 </template>

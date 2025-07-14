@@ -3,12 +3,27 @@
  * @file organisms/CompanyManager.vue
  * @description 会社情報管理
  */
-import { Company } from "@/schemas";
+import { Company, Agreement } from "@/schemas";
 
-/** ストア連携 */
+/** define stores */
 const auth = useAuthStore();
 
-const { company } = storeToRefs(auth);
+/** define company-id */
+const companyId = auth.companyId;
+
+/** define model */
+const model = reactive(new Company());
+
+/*****************************************************************************
+ * LIFE CYCLE HOOKS
+ *****************************************************************************/
+onMounted(async () => {
+  await model.subscribe({ docId: companyId });
+});
+
+onUnmounted(() => {
+  model.unsubscribe();
+});
 
 // --- 表示フィールドの定義 ---
 const companyFields = Object.keys(Company.classProps);
@@ -16,10 +31,16 @@ const companyFields = Object.keys(Company.classProps);
 
 <template>
   <v-container>
-    <ItemManager :model="company" v-slot="slotProps" label="会社情報">
+    <ItemManager
+      :model="model"
+      v-slot="slotProps"
+      :input-props="{
+        excludedKeys: ['agreements'],
+      }"
+    >
       <v-dialog v-bind="slotProps.dialogProps">
         <MoleculesEditCard v-bind="slotProps.editorProps" hide-delete-btn>
-          <air-item-input v-bind="slotProps.inputProps" />
+          <air-item-input v-bind="slotProps.inputProps"> </air-item-input>
         </MoleculesEditCard>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">
@@ -32,7 +53,7 @@ const companyFields = Object.keys(Company.classProps);
                   {{ Company.classProps[field]?.label || field }}
                 </v-list-item-subtitle>
                 <v-list-item-title>
-                  {{ company[field] || "-" }}
+                  {{ model[field] || "-" }}
                 </v-list-item-title>
               </v-list-item>
               <v-divider
@@ -52,6 +73,24 @@ const companyFields = Object.keys(Company.classProps);
         </v-card-actions>
       </v-card>
     </ItemManager>
+    <v-card>
+      <array-manager
+        v-model="model.agreements"
+        :schema="Agreement"
+        :table-props="{
+          hideDefaultFooter: true,
+          itemsPerPage: -1,
+          sortBy: [{ key: 'from', order: 'desc' }],
+        }"
+        :before-edit="
+          (editMode, item) => {
+            if (editMode === 'CREATE') item.startTime = '09:00';
+          }
+        "
+        @submit:complete="model.update()"
+      >
+      </array-manager>
+    </v-card>
   </v-container>
 </template>
 

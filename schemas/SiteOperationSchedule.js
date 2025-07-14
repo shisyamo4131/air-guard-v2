@@ -35,8 +35,8 @@ export default class SiteOperationSchedule extends BaseClass {
     const title = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
     return {
       title,
-      start: this.startAt,
-      end: this.startAt, // 上記コメントで説明されている理由により endAt ではなく startAt を使用
+      start: this.dateAt,
+      end: this.dateAt,
       color: this.shiftType === "day" ? "orange" : "indigo",
       item: this,
     };

@@ -103,9 +103,13 @@ watch(isEditing, (newVal) => {
   if (!newVal) _initClonedModelValue();
 });
 
-watch(clonedModelValue, (newVal) => {
-  fetchEmployee(newVal);
-});
+watch(
+  clonedModelValue,
+  (newVal) => {
+    fetchEmployee(newVal);
+  },
+  { immediate: true, deep: true }
+);
 
 /*****************************************************************************
  * FUNCTIONS

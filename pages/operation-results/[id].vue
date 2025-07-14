@@ -53,21 +53,12 @@ const items = computed(() => {
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const defaultDateTimeAt = computed(() => {
-  if (!model.docId) return { startAt: null, endAt: null };
-
-  const shiftType = model.shiftType;
-  const timeMap = auth.company.defaultTimeMap;
-
-  const { start, end } = timeMap[shiftType] || { start: "00:00", end: "00:00" };
-
-  const [startH, startM] = start.split(":").map(Number);
-  const [endH, endM] = end.split(":").map(Number);
-
-  const startAt = dayjs(model.date).hour(startH).minute(startM).second(0);
-  const endAt = dayjs(model.date).hour(endH).minute(endM).second(0);
-
-  return { startAt, endAt };
+const defaultAttendance = computed(() => {
+  return {
+    startAt: model.startAt,
+    endAt: model.endAt,
+    breakMinutes: model.breakMinutes,
+  };
 });
 
 /*****************************************************************************
@@ -110,7 +101,7 @@ onUnmounted(() => {
       <v-col cols="12">
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
-            :default-attendance="defaultDateTimeAt"
+            :default-attendance="defaultAttendance"
             :model-value="model.employees"
             @update:modelValue="
               slotProps.toUpdate();

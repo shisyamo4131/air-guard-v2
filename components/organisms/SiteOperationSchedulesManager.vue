@@ -82,37 +82,49 @@ onUnmounted(() => {
       <MoleculesEditCard v-bind="slotProps.editorProps">
         <air-item-input v-bind="slotProps.inputProps">
           <template #dateAt="{ attrs }">
-            <air-date-input
-              v-bind="attrs"
-              autocomplete="off"
-              @update:modelValue="
-                ($event) => {
-                  const { startAt, endAt, shiftType } = slotProps.item;
-                  const defaultTime = auth.company.getDefaultTime(
-                    $event,
-                    shiftType
-                  );
-
-                  const setTime = (date, refDate) => {
-                    if (!date || !refDate) return;
-                    const d = dayjs(refDate);
-                    date.setHours(d.hour(), d.minute(), 0, 0);
-                  };
-
-                  setTime(defaultTime.startAt, startAt);
-                  setTime(defaultTime.endAt, endAt);
-
+            <air-date-input v-bind="attrs" autocomplete="off" />
+          </template>
+          <template #after-dateAt>
+            <v-col cols="12">
+              <OrganismsAgreementSelector
+                label="取極めから選択"
+                :date="slotProps.item.dateAt"
+                :items="auth.company.agreements"
+                @select="
                   slotProps.updateProperties({
-                    startAt: defaultTime.startAt,
-                    endAt: defaultTime.endAt,
-                  });
-                }
-              "
-            />
+                    dayType: $event.dayType,
+                    shiftType: $event.shiftType,
+                    startAt: $event.startAt,
+                    endAt: $event.endAt,
+                    breakMinutes: $event.breakMinutes,
+                  })
+                "
+              />
+            </v-col>
           </template>
           <template #startAt="{ attrs }">
             <air-date-time-picker-input
               v-bind="attrs"
+              :rules="[
+                (v) => {
+                  const { dateAt, startAt } = slotProps.item;
+                  if (!startAt || !dateAt) return true;
+                  if (slotProps.item.shiftType === 'day') {
+                    const date = dayjs(dateAt).format('YYYY-MM-DD');
+                    const startDate = dayjs(startAt).format('YYYY-MM-DD');
+                    return date === startDate || '開始時刻が日付と一致しません';
+                  } else {
+                    const date = dayjs(dateAt).format('YYYY-MM-DD');
+                    const startDate = dayjs(startAt).format('YYYY-MM-DD');
+                    const allowedDate = dayjs(dateAt)
+                      .add(1, 'day')
+                      .format('YYYY-MM-DD');
+                    if (startDate === date || startDate === allowedDate)
+                      return true;
+                    return '開始日時の日付が不正です';
+                  }
+                },
+              ]"
               @update:modelValue="
                 ($event) => {
                   // $event (= startAt) の 9時間後 を取得して endAt を更新
