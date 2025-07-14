@@ -65,7 +65,7 @@ const selectedEmployeeId = ref(null);
  *****************************************************************************/
 const computedHeaders = computed(() => {
   const defaultHeaders = headers.value.map((header) => header);
-  if (isEditing) {
+  if (isEditing.value) {
     defaultHeaders.push({
       title: "削除",
       key: "deletion",
@@ -140,17 +140,10 @@ function submit() {
  */
 function handleAddDetail() {
   if (!selectedEmployeeId.value) return;
-  // const newEmployee = new OperationResultEmployee({
-  //   employeeId: selectedEmployeeId.value,
-  //   startAt: props.defaultAgreement?.startAt || new Date(),
-  //   endAt: props.defaultAgreement?.endAt || new Date(),
-  // });
-  console.log("handleAddDetail", props.defaultAgreement);
   const newEmployee = new OperationResultEmployee({
     ...props.defaultAgreement,
     employeeId: selectedEmployeeId.value,
   });
-  console.log("handleAddDetail", newEmployee);
   clonedModelValue.value.push(newEmployee);
   selectedEmployeeId.value = null;
 }

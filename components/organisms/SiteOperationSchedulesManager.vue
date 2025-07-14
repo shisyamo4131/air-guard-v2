@@ -91,13 +91,7 @@ onUnmounted(() => {
                 :items="auth.company.agreements"
                 @select="
                   $event.dateAt = slotProps.item.dateAt;
-                  slotProps.updateProperties({
-                    dayType: $event.dayType,
-                    shiftType: $event.shiftType,
-                    startAt: $event.startAt,
-                    endAt: $event.endAt,
-                    breakMinutes: $event.breakMinutes,
-                  });
+                  slotProps.updateProperties($event);
                 "
               />
             </v-col>
