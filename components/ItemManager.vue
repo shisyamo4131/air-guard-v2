@@ -41,10 +41,55 @@ function pushError(error) {
     error,
   });
 }
+
+const component = useTemplateRef("component");
+
+defineExpose({
+  get errors() {
+    return component.value?.errors || [];
+  },
+  get hasError() {
+    return component.value?.hasError || false;
+  },
+  get isEditing() {
+    return component.value?.isEditing || false;
+  },
+  get isLoading() {
+    return component.value?.isLoading || false;
+  },
+  get isCreate() {
+    return component.value?.isCreate || false;
+  },
+  get isUpdate() {
+    return component.value?.isUpdate || false;
+  },
+  get isDelete() {
+    return component.value?.isDelete || false;
+  },
+  get editMode() {
+    return component.value?.editMode || "CREATE";
+  },
+  get item() {
+    return component.value?.item || null;
+  },
+  toCreate: (args) => component.value?.toCreate(args),
+  toUpdate: (args) => component.value?.toUpdate(args),
+  toDelete: (args) => component.value?.toDelete(args),
+  submit: () => component.value?.submit(),
+  quitEditing: () => component.value?.quitEditing(),
+  setError: (error) => component.value?.setError(error),
+  clearErrors: () => component.value?.clearErrors(),
+  toggleEditMode: (mode) => component.value?.toggleEditMode(mode),
+  updateProperties: (properties) =>
+    component.value?.updateProperties(properties),
+  pushError,
+  logger,
+});
 </script>
 
 <template>
   <air-item-manager
+    ref="component"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
