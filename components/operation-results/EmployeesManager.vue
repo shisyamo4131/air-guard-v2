@@ -16,16 +16,13 @@ const props = defineProps({
 });
 
 /** define-emits */
-const emits = defineEmits(["update:isEditing", "update:modelValue"]);
+const emit = defineEmits(["click:cancel", "click:edit", "update:modelValue"]);
 
 /** define-composables */
 const { fetchEmployee, cachedEmployees } = useFetchEmployee();
 
 /** cloned modelValue */
 const clonedModelValue = ref([]);
-
-/** component's editing condition */
-const isEditing = ref(false);
 
 /** define table's header */
 const headers = ref([
@@ -65,7 +62,7 @@ const selectedEmployeeId = ref(null);
  *****************************************************************************/
 const computedHeaders = computed(() => {
   const defaultHeaders = headers.value.map((header) => header);
-  if (isEditing.value) {
+  if (props.isEditing) {
     defaultHeaders.push({
       title: "削除",
       key: "deletion",
@@ -86,24 +83,13 @@ watch(() => props.modelValue, _initClonedModelValue, {
 
 watch(
   () => props.isEditing,
-  (newVal) => {
-    isEditing.value = newVal;
-    emits("update:isEditing", newVal);
-  },
-  { immediate: true }
+  (newVal) => newVal || _initClonedModelValue()
 );
 
-watch(isEditing, (newVal) => {
-  if (!newVal) _initClonedModelValue();
+watch(clonedModelValue, (newVal) => fetchEmployee(newVal), {
+  immediate: true,
+  deep: true,
 });
-
-watch(
-  clonedModelValue,
-  (newVal) => {
-    fetchEmployee(newVal);
-  },
-  { immediate: true, deep: true }
-);
 
 /*****************************************************************************
  * FUNCTIONS
@@ -114,21 +100,6 @@ watch(
  */
 function _initClonedModelValue() {
   clonedModelValue.value = props.modelValue.map((item) => item.clone());
-}
-
-/**
- * Cancel the editing and reset the cloned model value.
- */
-function cancel() {
-  isEditing.value = false;
-}
-
-/**
- * Submit the changes and emit the updated model value.
- */
-function submit() {
-  emits("update:modelValue", clonedModelValue.value);
-  isEditing.value = false;
 }
 
 /**
@@ -179,10 +150,14 @@ function formatTime(date) {
     <v-toolbar density="comfortable">
       <v-toolbar-title>稼働実績明細（従業員）</v-toolbar-title>
       <v-spacer />
-      <v-btn v-if="!isEditing" icon="mdi-pencil" @click="isEditing = true" />
+      <v-btn
+        v-if="!props.isEditing"
+        icon="mdi-pencil"
+        @click="emit('click:edit')"
+      />
       <div v-else>
-        <v-btn icon="mdi-close" @click="cancel" />
-        <v-btn icon="mdi-check" @click="submit" />
+        <v-btn icon="mdi-close" @click="emit('click:cancel')" />
+        <v-btn icon="mdi-check" @click="emit('click:submit')" />
       </div>
     </v-toolbar>
     <v-data-table
@@ -194,7 +169,7 @@ function formatTime(date) {
       <template #top>
         <!-- 従業員選択 Autocomplete コンポーネント -->
         <v-expand-transition>
-          <div v-show="isEditing">
+          <div v-show="props.isEditing">
             <v-container>
               <MoleculesAutocompleteEmployee
                 v-model="selectedEmployeeId"
@@ -221,13 +196,16 @@ function formatTime(date) {
         #[`item.${key}`]="{ item }"
         :key="key"
       >
-        <div v-if="!isEditing">
+        <div v-if="!props.isEditing">
           {{ formatTime(item[key]) }}
         </div>
         <air-date-time-picker-input
           v-else
           :model-value="item[key]"
-          @update:modelValue="item[key] = $event"
+          @update:modelValue="
+            item[key] = $event;
+            emit('update:modelValue', clonedModelValue);
+          "
         >
           <template #activator="{ props: activatorProps }">
             <v-chip v-bind="activatorProps" density="compact">
@@ -244,7 +222,7 @@ function formatTime(date) {
         :key="key"
       >
         <v-icon
-          v-if="!isEditing"
+          v-if="!props.isEditing"
           :icon="item[key] ? 'mdi-check' : ''"
           color="primary"
         />
@@ -254,7 +232,10 @@ function formatTime(date) {
             item[key] ? 'mdi-checkbox-marked' : 'mdi-checkbox-blank-outline'
           "
           color="primary"
-          @click="item[key] = !item[key]"
+          @click="
+            item[key] = !item[key];
+            emit('update:modelValue', clonedModelValue);
+          "
         />
       </template>
 

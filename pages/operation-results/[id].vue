@@ -98,13 +98,15 @@ onUnmounted(() => {
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
             :default-attendance="defaultAgreement"
-            :model-value="model.employees"
+            :is-editing="slotProps.isEditing"
+            :model-value="
+              slotProps.isEditing ? slotProps.item.employees : model.employees
+            "
+            @click:cancel="slotProps.quitEditing()"
+            @click:edit="slotProps.toUpdate()"
+            @click:submit="slotProps.submit()"
             @update:modelValue="
-              slotProps.toUpdate();
-              $nextTick(() => {
-                slotProps.updateProperties({ employees: $event });
-                slotProps.submit();
-              });
+              slotProps.updateProperties({ employees: $event })
             "
           />
         </ItemManager>
