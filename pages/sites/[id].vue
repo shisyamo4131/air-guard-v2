@@ -86,24 +86,13 @@ onUnmounted(() => {
           >
             <template #input="slotProps">
               <air-item-input v-bind="slotProps">
-                <template #after-from>
+                <template #after-dateAt>
                   <OrganismsAgreementSelector
                     label="取極めから選択"
-                    :date="slotProps.item.dateAt"
                     :items="auth.company.agreements"
                     @select="
-                      slotProps.updateProperties({
-                        dayType: $event.dayType,
-                        shiftType: $event.shiftType,
-                        startTime: $event.startTime,
-                        endTime: $event.endTime,
-                        breakMinutes: $event.breakMinutes,
-                        unitPrice: $event.unitPrice,
-                        overTimeUnitPrice: $event.overTimeUnitPrice,
-                        unitPriceQualified: $event.unitPriceQualified,
-                        overTimeUnitPriceQualified:
-                          $event.overTimeUnitPriceQualified,
-                      })
+                      $event.dateAt = slotProps.item.dateAt;
+                      slotProps.updateProperties({ ...$event });
                     "
                   />
                 </template>

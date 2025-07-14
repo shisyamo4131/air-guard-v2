@@ -88,16 +88,16 @@ onUnmounted(() => {
             <v-col cols="12">
               <OrganismsAgreementSelector
                 label="取極めから選択"
-                :date="slotProps.item.dateAt"
                 :items="auth.company.agreements"
                 @select="
+                  $event.dateAt = slotProps.item.dateAt;
                   slotProps.updateProperties({
                     dayType: $event.dayType,
                     shiftType: $event.shiftType,
                     startAt: $event.startAt,
                     endAt: $event.endAt,
                     breakMinutes: $event.breakMinutes,
-                  })
+                  });
                 "
               />
             </v-col>

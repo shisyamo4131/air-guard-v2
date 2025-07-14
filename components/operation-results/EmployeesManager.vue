@@ -5,18 +5,12 @@
  * Due to the specifications of the feature, the `ArrayManager` is not used to edit multiple elements.
  */
 import dayjs from "dayjs";
-import { OperationResultEmployee } from "@/schemas";
+import { OperationResultEmployee, Agreement } from "@/schemas";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 
 /** define-props */
 const props = defineProps({
-  defaultAttendance: {
-    type: Object,
-    default: () => ({
-      startAt: new Date(),
-      endAt: new Date(),
-    }),
-  },
+  defaultAgreement: { type: Object, default: () => new Agreement() },
   isEditing: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
 });
@@ -146,11 +140,17 @@ function submit() {
  */
 function handleAddDetail() {
   if (!selectedEmployeeId.value) return;
+  // const newEmployee = new OperationResultEmployee({
+  //   employeeId: selectedEmployeeId.value,
+  //   startAt: props.defaultAgreement?.startAt || new Date(),
+  //   endAt: props.defaultAgreement?.endAt || new Date(),
+  // });
+  console.log("handleAddDetail", props.defaultAgreement);
   const newEmployee = new OperationResultEmployee({
+    ...props.defaultAgreement,
     employeeId: selectedEmployeeId.value,
-    startAt: props.defaultAttendance?.startAt || new Date(),
-    endAt: props.defaultAttendance?.endAt || new Date(),
   });
+  console.log("handleAddDetail", newEmployee);
   clonedModelValue.value.push(newEmployee);
   selectedEmployeeId.value = null;
 }

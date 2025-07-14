@@ -9,7 +9,7 @@ import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { OperationResult } from "~/schemas";
+import { OperationResult, Agreement } from "~/schemas";
 
 /** Get operation-result-id from route parameters */
 const route = useRoute();
@@ -53,12 +53,8 @@ const items = computed(() => {
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const defaultAttendance = computed(() => {
-  return {
-    startAt: model.startAt,
-    endAt: model.endAt,
-    breakMinutes: model.breakMinutes,
-  };
+const defaultAgreement = computed(() => {
+  return new Agreement(model).getDateAgreement(model.dateAt);
 });
 
 /*****************************************************************************
@@ -101,7 +97,7 @@ onUnmounted(() => {
       <v-col cols="12">
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
-            :default-attendance="defaultAttendance"
+            :default-attendance="defaultAgreement"
             :model-value="model.employees"
             @update:modelValue="
               slotProps.toUpdate();

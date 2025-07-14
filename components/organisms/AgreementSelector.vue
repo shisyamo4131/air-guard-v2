@@ -10,11 +10,6 @@ import { DAY_TYPE, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 /** define props */
 const props = defineProps({
   /**
-   * `select` イベントで emit されるオブジェクトの `startAt` と `endAt` の基準となる日付
-   * Date オブジェクトまたは日付形式の文字列を受け取ります。
-   */
-  date: { type: Object, default: undefined },
-  /**
    * 取極め（Agreement）の配列
    */
   items: { type: Array, default: () => [] },
@@ -40,7 +35,7 @@ const items = computed(() => {
       } ${agreement.startTime} - ${agreement.endTime}`,
       value: agreement,
       props: {
-        subtitle: dayjs(agreement.from).format("YYYY-MM-DD"),
+        subtitle: dayjs(agreement.dateAt).format("YYYY-MM-DD"),
       },
     };
   });
@@ -50,14 +45,7 @@ const items = computed(() => {
  * METHODS
  *****************************************************************************/
 function handleSelect(agreement) {
-  const startAt = agreement.getStartAt(props.date);
-  const endAt = agreement.getEndAt(props.date);
-  emit("select", {
-    agreement,
-    startAt,
-    endAt,
-    ...agreement,
-  });
+  emit("select", agreement.clone());
   dialog.value = false;
 }
 </script>
