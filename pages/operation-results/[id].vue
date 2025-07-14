@@ -8,15 +8,11 @@
 import dayjs from "dayjs";
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { OperationResult, Agreement } from "~/schemas";
+import { OperationResult } from "~/schemas";
 
 /** Get operation-result-id from route parameters */
 const route = useRoute();
 const operationResultId = route.params.id;
-
-/** define stores */
-const auth = useAuthStore();
 
 const model = reactive(new OperationResult());
 
@@ -48,13 +44,6 @@ const items = computed(() => {
       props: { subtitle: model.siteId, prependIcon: "mdi-map-marker" },
     },
   ];
-});
-
-/*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-const defaultAgreement = computed(() => {
-  return new Agreement(model);
 });
 
 /*****************************************************************************
@@ -97,14 +86,15 @@ onUnmounted(() => {
       <v-col cols="12">
         <ItemManager :model="model" v-slot="slotProps">
           <OperationResultsEmployeesManager
-            :default-attendance="defaultAgreement"
             :is-editing="slotProps.isEditing"
             :model-value="
               slotProps.isEditing ? slotProps.item.employees : model.employees
             "
+            @add="slotProps.item.addEmployee($event)"
             @click:cancel="slotProps.quitEditing()"
             @click:edit="slotProps.toUpdate()"
             @click:submit="slotProps.submit()"
+            @remove="slotProps.item.removeEmployee($event)"
             @update:modelValue="
               slotProps.updateProperties({ employees: $event })
             "

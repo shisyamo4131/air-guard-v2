@@ -5,18 +5,22 @@
  * Due to the specifications of the feature, the `ArrayManager` is not used to edit multiple elements.
  */
 import dayjs from "dayjs";
-import { OperationResultEmployee, Agreement } from "@/schemas";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 
 /** define-props */
 const props = defineProps({
-  defaultAgreement: { type: Object, default: () => new Agreement() },
   isEditing: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
 });
 
 /** define-emits */
-const emit = defineEmits(["click:cancel", "click:edit", "update:modelValue"]);
+const emit = defineEmits([
+  "add",
+  "click:cancel",
+  "click:edit",
+  "remove",
+  "update:modelValue",
+]);
 
 /** define-composables */
 const { fetchEmployee, cachedEmployees } = useFetchEmployee();
@@ -102,46 +106,10 @@ function _initClonedModelValue() {
   clonedModelValue.value = props.modelValue.map((item) => item.clone());
 }
 
-/**
- * Processing when an employee ID is selected.
- * This function creates a new `OperationResultEmployee` instance
- * and adds it to the `clonedModelValue` array.
- * It also emits an update to the parent component
- * to reflect the changes in the items.
- */
 function handleAddDetail() {
   if (!selectedEmployeeId.value) return;
-  const newEmployee = new OperationResultEmployee({
-    ...props.defaultAgreement,
-    employeeId: selectedEmployeeId.value,
-  });
-  clonedModelValue.value.push(newEmployee);
+  emit("add", selectedEmployeeId.value);
   selectedEmployeeId.value = null;
-}
-
-/**
- * Remove a detail item from the internal items array.
- * This function finds the index of the item to be deleted,
- * removes it from the `clonedModelValue` array,
- * and emits an update to the parent component
- * to reflect the changes in the items.
- * @param item
- */
-function handleRemoveDetail(item) {
-  const index = clonedModelValue.value.indexOf(item);
-  if (index !== -1) {
-    clonedModelValue.value.splice(index, 1);
-  }
-}
-
-/**
- * Format a date to a string in "HH:mm" format.
- * This function uses the `dayjs` library to format the date.
- * @param {Date | string} date
- * @returns {string}
- */
-function formatTime(date) {
-  return dayjs(date).format("HH:mm");
 }
 </script>
 
@@ -197,7 +165,7 @@ function formatTime(date) {
         :key="key"
       >
         <div v-if="!props.isEditing">
-          {{ formatTime(item[key]) }}
+          {{ dayjs(item[key]).format("HH:mm") }}
         </div>
         <air-date-time-picker-input
           v-else
@@ -209,7 +177,7 @@ function formatTime(date) {
         >
           <template #activator="{ props: activatorProps }">
             <v-chip v-bind="activatorProps" density="compact">
-              {{ formatTime(activatorProps.text) }}
+              {{ dayjs(activatorProps.text).format("HH:mm") }}
             </v-chip>
           </template>
         </air-date-time-picker-input>
@@ -241,7 +209,7 @@ function formatTime(date) {
 
       <!-- 削除ボタン -->
       <template #item.deletion="{ item }">
-        <v-icon icon="mdi-trash-can" @click="handleRemoveDetail(item)" />
+        <v-icon icon="mdi-trash-can" @click="emit('remove', item.employeeId)" />
       </template>
     </v-data-table>
   </v-card>
