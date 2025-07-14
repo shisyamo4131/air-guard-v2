@@ -54,7 +54,7 @@ const items = computed(() => {
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const defaultAgreement = computed(() => {
-  return new Agreement(model).getDateAgreement(model.dateAt);
+  return new Agreement(model);
 });
 
 /*****************************************************************************
