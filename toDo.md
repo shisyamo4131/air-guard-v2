@@ -1,2 +1,10 @@
-- setting に現場稼働予定の開始時刻・終了時刻の既定値が欲しい。
-- setting に現場稼働予定の色設定が欲しい？
+- Agreement に実働時間が必要
+  - 残業時間の算出に必要
+- SiteOperationSchedule とリンクしている OperationResult ドキュメントを削除しようとした時の挙動について
+  - 同期削除
+- OperationResult の同期作成については Cloud Functions で実装すべきか？
+  - クライアント側のネットワーク状況によっては作成されないケースあり？
+  - 冪等にする必要があるため、OperationResultId = SiteOperationScheduleId になる。
+  - 結果、削除処理の同期が楽？
+- OperationResultEmployees に同じ employeeId を追加しようとした時のエラー処理を追加。
+- 稼働実績のヘッダー部分を整理 -> 見た目にはあまりこだわるタイミングではないが、管理する情報が増えたため。

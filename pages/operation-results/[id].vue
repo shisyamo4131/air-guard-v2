@@ -21,7 +21,7 @@ const items = computed(() => {
     {
       title: "日付",
       props: {
-        subtitle: dayjs(model.date).format("YYYY-MM-DD"),
+        subtitle: dayjs(model.dateAt).format("YYYY-MM-DD"),
         prependIcon: "mdi-calendar",
       },
     },
@@ -60,6 +60,47 @@ onUnmounted(() => {
 <template>
   <v-container>
     <v-row>
+      <v-col cols="12" lg="3">
+        <v-row>
+          <v-col cols="12">
+            <v-card>
+              <v-list>
+                <v-list-item>
+                  <v-list-item-subtitle>現場</v-list-item-subtitle>
+                  <v-list-item-title>大手町</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>日付</v-list-item-subtitle>
+                  <v-list-item-title>2025年7月8日（火）</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>区分</v-list-item-subtitle>
+                  <v-list-item-title>平日 日勤</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </v-col>
+          <v-col cols="12">
+            <v-card>
+              <v-list>
+                <v-list-item>
+                  <v-list-item-subtitle>基本単価</v-list-item-subtitle>
+                  <v-list-item-title>16,000円/2,500円</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>資格者単価</v-list-item-subtitle>
+                  <v-list-item-title>18,000円/2,820円</v-list-item-title>
+                </v-list-item>
+              </v-list>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-col>
+      <v-col cols="12" lg="9">
+        <OperationResultsEmployeesManager :model="model" />
+      </v-col>
+    </v-row>
+    <v-row>
       <v-col cols="12">
         <v-card>
           <v-toolbar density="comfortable">
@@ -82,24 +123,6 @@ onUnmounted(() => {
           </v-toolbar>
           <v-list :items="items"> </v-list>
         </v-card>
-      </v-col>
-      <v-col cols="12">
-        <ItemManager :model="model" v-slot="slotProps">
-          <OperationResultsEmployeesManager
-            :is-editing="slotProps.isEditing"
-            :model-value="
-              slotProps.isEditing ? slotProps.item.employees : model.employees
-            "
-            @add="slotProps.item.addEmployee($event)"
-            @click:cancel="slotProps.quitEditing()"
-            @click:edit="slotProps.toUpdate()"
-            @click:submit="slotProps.submit()"
-            @remove="slotProps.item.removeEmployee($event)"
-            @update:modelValue="
-              slotProps.updateProperties({ employees: $event })
-            "
-          />
-        </ItemManager>
       </v-col>
     </v-row>
   </v-container>

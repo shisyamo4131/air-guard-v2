@@ -77,18 +77,28 @@ const companyFields = Object.keys(Company.classProps);
       <array-manager
         v-model="model.agreements"
         :schema="Agreement"
+        label="会社既定取極め"
         :table-props="{
           hideDefaultFooter: true,
           itemsPerPage: -1,
           sortBy: [{ key: 'from', order: 'desc' }],
         }"
-        :before-edit="
-          (editMode, item) => {
-            if (editMode === 'CREATE') item.startTime = '09:00';
-          }
-        "
         @submit:complete="model.update()"
       >
+        <template #input="slotProps">
+          <air-item-input v-bind="slotProps">
+            <template #workingMinutes="{ attrs }">
+              <air-number-input
+                v-bind="attrs"
+                :rules="[
+                  () =>
+                    !slotProps.item.isWorkingMinutesInvalid ||
+                    '実働時間が不正です。',
+                ]"
+              />
+            </template>
+          </air-item-input>
+        </template>
       </array-manager>
     </v-card>
   </v-container>

@@ -65,7 +65,10 @@ onUnmounted(() => {
         </v-card>
       </v-col>
       <v-col cols="12">
-        <OrganismsSiteOperationSchedulesManager :site-id="siteId" />
+        <OrganismsSiteOperationSchedulesManager
+          :site-id="siteId"
+          :agreements="model.agreements"
+        />
       </v-col>
       <v-col>
         <v-card>
@@ -88,8 +91,12 @@ onUnmounted(() => {
               <air-item-input v-bind="slotProps">
                 <template #after-dateAt>
                   <OrganismsAgreementSelector
-                    label="取極めから選択"
-                    :items="auth.company.agreements"
+                    label="取極めから複製"
+                    :items="
+                      model.agreements.length
+                        ? model.agreements
+                        : auth.company.agreements
+                    "
                     @select="
                       $event.dateAt = slotProps.item.dateAt;
                       slotProps.updateProperties({ ...$event });

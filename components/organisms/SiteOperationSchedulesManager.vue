@@ -13,6 +13,7 @@ defineOptions({ name: "SiteOperationScheduleManager" });
 /** define-props */
 const props = defineProps({
   siteId: { type: String, required: true },
+  agreements: { type: Array, default: () => [] },
 });
 
 /** define-stores */
@@ -88,7 +89,11 @@ onUnmounted(() => {
             <v-col cols="12">
               <OrganismsAgreementSelector
                 label="取極めから選択"
-                :items="auth.company.agreements"
+                :items="
+                  props.agreements.length
+                    ? props.agreements
+                    : auth.company.agreements
+                "
                 @select="
                   $event.dateAt = slotProps.item.dateAt;
                   slotProps.updateProperties($event);
