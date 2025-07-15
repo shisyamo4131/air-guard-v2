@@ -100,7 +100,9 @@ defineExpose({
       <slot name="default" v-bind="slotProps">
         <v-dialog v-bind="slotProps.dialogProps">
           <template #activator>
-            <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
+            <slot name="activator" v-bind="{ toUpdate: slotProps.toUpdate }">
+              <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
+            </slot>
           </template>
           <MoleculesEditCard v-bind="slotProps.editorProps">
             <air-item-input v-bind="slotProps.inputProps" />

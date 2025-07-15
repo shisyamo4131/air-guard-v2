@@ -99,7 +99,7 @@ function submit() {
   <ItemManager ref="manager" :model="model" v-slot="slotProps">
     <v-card>
       <v-toolbar density="comfortable">
-        <v-toolbar-title>稼働実績明細（従業員）</v-toolbar-title>
+        <v-toolbar-title>稼働従業員</v-toolbar-title>
         <v-spacer />
         <v-btn
           v-if="!slotProps.isEditing"
