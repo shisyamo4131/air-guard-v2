@@ -46,9 +46,7 @@ onUnmounted(() => {
                 <ItemManager
                   :model="model"
                   label="稼働概要修正"
-                  :editor-props="{
-                    hideDeleteBtn: !!model.siteOperationScheduleId,
-                  }"
+                  :disable-delete="!!model.siteOperationScheduleId"
                   :input-props="{
                     includedKeys: ['siteId', 'dateAt', 'dayType', 'shiftType'],
                   }"
