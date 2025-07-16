@@ -75,6 +75,9 @@ onUnmounted(() => {
     :model-value="instance.docs"
     :schema="SiteOperationSchedule"
     :before-edit="(editMode, item) => (item.siteId = siteId)"
+    :dialog-props="{
+      maxWidth: 600,
+    }"
     :handle-create="async (item) => await item.create()"
     :handle-update="async (item) => await item.update()"
     :handle-delete="async (item) => await item.delete()"
@@ -88,17 +91,18 @@ onUnmounted(() => {
           <template #after-dateAt>
             <v-col cols="12">
               <OrganismsAgreementSelector
-                label="取極めから選択"
-                :items="
-                  props.agreements.length
-                    ? props.agreements
-                    : auth.company.agreements
-                "
+                :items="props.agreements"
                 @select="
                   $event.dateAt = slotProps.item.dateAt;
                   slotProps.updateProperties($event);
                 "
-              />
+              >
+                <template #activator="{ props: activatorProps }">
+                  <v-btn v-bind="activatorProps" block color="primary"
+                    >取極めから複製</v-btn
+                  >
+                </template>
+              </OrganismsAgreementSelector>
             </v-col>
           </template>
           <template #startAt="{ attrs }">

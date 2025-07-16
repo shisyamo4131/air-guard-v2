@@ -78,6 +78,9 @@ onUnmounted(() => {
           <array-manager
             v-model="model.agreements"
             :schema="Agreement"
+            :dialog-props="{
+              maxWidth: 600,
+            }"
             :table-props="{
               hideDefaultFooter: true,
               itemsPerPage: -1,
@@ -92,15 +95,22 @@ onUnmounted(() => {
           >
             <template #input="slotProps">
               <air-item-input v-bind="slotProps">
-                <template #after-dateAt>
-                  <OrganismsAgreementSelector
-                    label="取極めから複製"
-                    :items="[...model.agreements, ...auth.company.agreements]"
-                    @select="
-                      $event.dateAt = slotProps.item.dateAt;
-                      slotProps.updateProperties({ ...$event });
-                    "
-                  />
+                <template #after-dateAt="{ field }">
+                  <v-col v-bind="field.colsDefinition">
+                    <OrganismsAgreementSelector
+                      :items="[...model.agreements, ...auth.company.agreements]"
+                      @select="
+                        $event.dateAt = slotProps.item.dateAt;
+                        slotProps.updateProperties({ ...$event });
+                      "
+                    >
+                      <template #activator="{ props: activatorProps }">
+                        <v-btn v-bind="activatorProps" block color="primary"
+                          >取極めから複製</v-btn
+                        >
+                      </template>
+                    </OrganismsAgreementSelector>
+                  </v-col>
                 </template>
               </air-item-input>
             </template>

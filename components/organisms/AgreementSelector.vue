@@ -52,8 +52,10 @@ function handleSelect(agreement) {
 
 <template>
   <v-dialog v-model="dialog" max-width="480" scrollable>
-    <template #activator="{ props: activatorProps }">
-      <v-btn v-bind="activatorProps">{{ label }}</v-btn>
+    <template #activator="slotProps">
+      <slot name="activator" v-bind="slotProps">
+        <v-btn v-bind="slotProps.props">{{ label }}</v-btn>
+      </slot>
     </template>
     <template #default="{ isActive }">
       <v-card>
