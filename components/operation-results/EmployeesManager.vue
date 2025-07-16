@@ -4,7 +4,6 @@
  * @description This component manages the operation results for employees.
  * Due to the specifications of the feature, the `ArrayManager` is not used to edit multiple elements.
  */
-import dayjs from "dayjs";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 
 /** define-props */
@@ -18,26 +17,17 @@ const { fetchEmployee, cachedEmployees } = useFetchEmployee();
 /** define table's header */
 const headers = ref([
   { title: "氏名", key: "employeeId", sortable: false },
-  {
-    title: "勤務日",
-    key: "date",
-    value: (item) => dayjs(item.startAt).format("YYYY-MM-DD"),
-    align: "center",
-    sortable: false,
-  },
-  { title: "開始時刻", key: "startAt", align: "center", sortable: false },
-  { title: "終了時刻", key: "endAt", align: "center", sortable: false },
+  { title: "開始時刻", key: "startTime", align: "center", sortable: false },
+  { title: "終了時刻", key: "endTime", align: "center", sortable: false },
   {
     title: "休憩時間",
-    key: "breakTime",
-    value: (item) => (item.breakMinutes / 60).toFixed(2),
+    key: "breakMinutes",
     align: "center",
     sortable: false,
   },
   {
     title: "残業時間",
-    key: "overTime",
-    value: (item) => (item.overTimeMinutes / 60).toFixed(2),
+    key: "overTimeWorkMinutes",
     align: "center",
     sortable: false,
   },
@@ -145,24 +135,27 @@ function submit() {
 
         <!-- 開始/終了時刻 -->
         <template
-          v-for="key in ['startAt', 'endAt']"
+          v-for="key in ['startTime', 'endTime']"
           #[`item.${key}`]="{ item }"
           :key="key"
         >
           <div v-if="!slotProps.isEditing">
-            {{ dayjs(item[key]).format("HH:mm") }}
+            {{ item[key] }}
           </div>
-          <air-date-time-picker-input
+          <air-time-picker-input
             v-else
             :model-value="item[key]"
+            :pickerProps="{
+              format: '24hr',
+            }"
             @update:modelValue="item[key] = $event"
           >
             <template #activator="{ props: activatorProps }">
               <v-chip v-bind="activatorProps" density="compact">
-                {{ dayjs(activatorProps.text).format("HH:mm") }}
+                {{ item[key] }}
               </v-chip>
             </template>
-          </air-date-time-picker-input>
+          </air-time-picker-input>
         </template>
 
         <!-- 資格者/OJT (boolean) -->

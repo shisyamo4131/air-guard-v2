@@ -1,13 +1,24 @@
 <script setup>
-import { useAuthStore } from "@/stores/useAuthStore";
-const auth = useAuthStore();
+// import { collection, getDocs, updateDoc } from "firebase/firestore";
+// import { useAuthStore } from "@/stores/useAuthStore";
+
+// const { $firestore } = useNuxtApp();
+// const auth = useAuthStore();
+// const companyId = auth.companyId;
+
+// onMounted(async () => {
+//   const colRef = collection($firestore, `Companies/${companyId}/Employees`);
+//   const snapshot = await getDocs(colRef);
+//   snapshot.forEach((doc) => {
+//     if (doc.data().gender === "male") {
+//       updateDoc(doc.ref, { gender: "MALE" });
+//     } else if (doc.data().gender === "female") {
+//       updateDoc(doc.ref, { gender: "FEMALE" });
+//     }
+//   });
+// });
 </script>
 
 <template>
-  <v-container>
-    <OrganismsAgreementSelector
-      :items="auth.company.agreements"
-      @select="console.log($event)"
-    />
-  </v-container>
+  <v-container> </v-container>
 </template>

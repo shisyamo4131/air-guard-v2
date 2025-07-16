@@ -115,6 +115,28 @@ onUnmounted(() => {
       <v-col cols="12" lg="8">
         <OperationResultsEmployeesManager :model="model" />
       </v-col>
+      <v-col cols="12">
+        <v-card>
+          <v-toolbar density="comfortable">
+            <v-toolbar-title>売上</v-toolbar-title>
+          </v-toolbar>
+          <v-data-table
+            :headers="[
+              { title: '項目' },
+              { title: '数量' },
+              { title: '単価' },
+              { title: '金額' },
+            ]"
+            hide-default-footer
+            items-per-page="-1"
+          />
+        </v-card>
+      </v-col>
+      <v-col cols="12">
+        <v-alert v-if="!!model.siteOperationScheduleId"
+          >稼働予定から作成された稼働実績のため削除することはできません。</v-alert
+        >
+      </v-col>
     </v-row>
   </v-container>
 </template>

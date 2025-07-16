@@ -37,7 +37,7 @@ export default class SiteOperationSchedule extends BaseClass {
       title,
       start: this.dateAt,
       end: this.dateAt,
-      color: this.shiftType === "day" ? "orange" : "indigo",
+      color: this.shiftType === "DAY" ? "orange" : "indigo",
       item: this,
     };
   }

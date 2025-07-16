@@ -37,6 +37,9 @@ const items = computed(() => {
   ];
 });
 
+/*****************************************************************************
+ * LIFE CYCLE HOOKS
+ *****************************************************************************/
 onMounted(async () => {
   await model.subscribe({ docId: siteId });
 });
@@ -67,7 +70,7 @@ onUnmounted(() => {
       <v-col cols="12">
         <OrganismsSiteOperationSchedulesManager
           :site-id="siteId"
-          :agreements="model.agreements"
+          :agreements="[...model.agreements, ...auth.company.agreements]"
         />
       </v-col>
       <v-col>
@@ -92,11 +95,7 @@ onUnmounted(() => {
                 <template #after-dateAt>
                   <OrganismsAgreementSelector
                     label="取極めから複製"
-                    :items="
-                      model.agreements.length
-                        ? model.agreements
-                        : auth.company.agreements
-                    "
+                    :items="[...model.agreements, ...auth.company.agreements]"
                     @select="
                       $event.dateAt = slotProps.item.dateAt;
                       slotProps.updateProperties({ ...$event });
