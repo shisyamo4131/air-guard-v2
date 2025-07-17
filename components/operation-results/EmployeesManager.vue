@@ -151,11 +151,41 @@ function submit() {
             @update:modelValue="item[key] = $event"
           >
             <template #activator="{ props: activatorProps }">
-              <v-chip v-bind="activatorProps" density="compact">
+              <v-chip v-bind="activatorProps">
                 {{ item[key] }}
               </v-chip>
             </template>
           </air-time-picker-input>
+        </template>
+
+        <!-- 休憩時間/残業時間 -->
+        <template
+          v-for="key in ['breakMinutes', 'overTimeWorkMinutes']"
+          #[`item.${key}`]="{ item }"
+          :key="key"
+        >
+          <div v-if="!slotProps.isEditing">
+            {{ item[key] }}
+          </div>
+          <v-number-input
+            v-else
+            v-model="item[key]"
+            :step="30"
+            hide-details
+            inset
+            variant="solo-filled"
+            flat
+            single-line
+            control-variant="split"
+          >
+            <template #decrement="{ props }">
+              <v-btn v-bind="props" icon="mdi-minus" size="x-small" />
+            </template>
+
+            <template #increment="{ props }">
+              <v-btn v-bind="props" icon="mdi-plus" size="x-small" />
+            </template>
+          </v-number-input>
         </template>
 
         <!-- 資格者/OJT (boolean) -->
@@ -190,3 +220,13 @@ function submit() {
     </v-card>
   </ItemManager>
 </template>
+
+<style scoped>
+.v-number-input * {
+  --v-input-control-height: 32px;
+  --v-input-padding-top: 0px;
+  --v-field-input-padding-bottom: 0px;
+  --v-field-padding-bottom: 0px;
+  font-size: 0.875rem; /* 14px */
+}
+</style>

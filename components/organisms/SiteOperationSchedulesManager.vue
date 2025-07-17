@@ -5,7 +5,6 @@
  */
 import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -15,9 +14,6 @@ const props = defineProps({
   siteId: { type: String, required: true },
   agreements: { type: Array, default: () => [] },
 });
-
-/** define-stores */
-const auth = useAuthStore();
 
 /** SiteOperationSchedule instance */
 const instance = reactive(new SiteOperationSchedule());
@@ -75,19 +71,20 @@ onUnmounted(() => {
     :model-value="instance.docs"
     :schema="SiteOperationSchedule"
     :before-edit="(editMode, item) => (item.siteId = siteId)"
-    :dialog-props="{
-      maxWidth: 600,
+    :dialog-props="{ maxWidth: 600 }"
+    :input-props="{
+      excludedKeys: ['status', 'employees', 'outsourcers'],
     }"
     :handle-create="async (item) => await item.create()"
     :handle-update="async (item) => await item.update()"
     :handle-delete="async (item) => await item.delete()"
   >
     <v-dialog v-bind="slotProps.dialogProps">
-      <MoleculesEditCard v-bind="slotProps.editorProps">
+      <MoleculesEditCard
+        v-bind="slotProps.editorProps"
+        :disable-delete="slotProps.item.status !== 'DRAFT'"
+      >
         <air-item-input v-bind="slotProps.inputProps">
-          <template #dateAt="{ attrs }">
-            <air-date-input v-bind="attrs" autocomplete="off" />
-          </template>
           <template #after-dateAt>
             <v-col cols="12">
               <OrganismsAgreementSelector
@@ -104,39 +101,6 @@ onUnmounted(() => {
                 </template>
               </OrganismsAgreementSelector>
             </v-col>
-          </template>
-          <template #startAt="{ attrs }">
-            <air-date-time-picker-input
-              v-bind="attrs"
-              :rules="[
-                (v) => {
-                  const { dateAt, startAt } = slotProps.item;
-                  if (!startAt || !dateAt) return true;
-                  if (slotProps.item.shiftType === 'day') {
-                    const date = dayjs(dateAt).format('YYYY-MM-DD');
-                    const startDate = dayjs(startAt).format('YYYY-MM-DD');
-                    return date === startDate || '開始時刻が日付と一致しません';
-                  } else {
-                    const date = dayjs(dateAt).format('YYYY-MM-DD');
-                    const startDate = dayjs(startAt).format('YYYY-MM-DD');
-                    const allowedDate = dayjs(dateAt)
-                      .add(1, 'day')
-                      .format('YYYY-MM-DD');
-                    if (startDate === date || startDate === allowedDate)
-                      return true;
-                    return '開始日時の日付が不正です';
-                  }
-                },
-              ]"
-              @update:modelValue="
-                ($event) => {
-                  // $event (= startAt) の 9時間後 を取得して endAt を更新
-                  const endAt = new Date($event);
-                  endAt.setHours(endAt.getHours() + 9);
-                  slotProps.updateProperties({ endAt });
-                }
-              "
-            />
           </template>
         </air-item-input>
       </MoleculesEditCard>

@@ -3,10 +3,10 @@
  * @file pages/settings/operation-results.vue
  * @description 稼働実績管理画面
  */
+import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 import { useFetchSite } from "@/composables/useFetchSite";
-import dayjs from "dayjs";
 
 const { fetchSite, cachedSites } = useFetchSite();
 
@@ -36,7 +36,7 @@ onUnmounted(() => {
       v-model="operationResult.docs"
       :schema="OperationResult"
       :input-props="{
-        excludedKeys: ['employees', 'outsourcers'],
+        excludedKeys: ['status', 'employees', 'outsourcers'],
       }"
       :before-edit="
         (editMode, item) => {
