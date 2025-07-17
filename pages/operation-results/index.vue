@@ -7,6 +7,7 @@ import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 import { useFetchSite } from "@/composables/useFetchSite";
+import { getDayType } from "air-guard-v2-schemas/constants";
 
 const { fetchSite, cachedSites } = useFetchSite();
 
@@ -48,6 +49,18 @@ onUnmounted(() => {
       :handle-create="(item) => item.create()"
       @create="($event) => $router.push(`operation-results/${$event.docId}`)"
     >
+      <template #input="inputProps">
+        <air-item-input v-bind="inputProps">
+          <template #dateAt="{ attrs }">
+            <air-date-input
+              v-bind="attrs"
+              @update:modelValue="
+                inputProps.updateProperties({ dayType: getDayType($event) })
+              "
+            />
+          </template>
+        </air-item-input>
+      </template>
       <template #table="tableProps">
         <air-data-table v-bind="tableProps">
           <template #item.dateAt="{ item }">

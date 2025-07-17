@@ -4,6 +4,7 @@
  * @description A component that manages the site operation schedule.
  */
 import dayjs from "dayjs";
+import { getDayType } from "air-guard-v2-schemas/constants";
 import { SiteOperationSchedule } from "@/schemas";
 
 /** define-options */
@@ -43,6 +44,16 @@ watch(
   { immediate: true, deep: true }
 );
 
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onUnmounted(() => {
+  instance.unsubscribe();
+});
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 /**
  * Start subscribing to the SiteOperationSchedule documents
  * when the period changes or the component is mounted.
@@ -59,10 +70,6 @@ function subscribe(siteId, startAt, endAt) {
     ],
   });
 }
-
-onUnmounted(() => {
-  instance.unsubscribe();
-});
 </script>
 
 <template>
@@ -85,6 +92,14 @@ onUnmounted(() => {
         :disable-delete="slotProps.item.status !== 'DRAFT'"
       >
         <air-item-input v-bind="slotProps.inputProps">
+          <template #dateAt="{ attrs }">
+            <air-date-input
+              v-bind="attrs"
+              @update:modelValue="
+                slotProps.updateProperties({ dayType: getDayType($event) })
+              "
+            />
+          </template>
           <template #after-dateAt>
             <v-col cols="12">
               <OrganismsAgreementSelector

@@ -104,9 +104,19 @@ defineExpose({
               <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
             </slot>
           </template>
-          <MoleculesEditCard v-bind="slotProps.editorProps">
-            <air-item-input v-bind="slotProps.inputProps" />
-          </MoleculesEditCard>
+          <slot
+            name="editor"
+            v-bind="{
+              editorProps: slotProps.editorProps,
+              inputProps: slotProps.inputProps,
+            }"
+          >
+            <MoleculesEditCard v-bind="slotProps.editorProps">
+              <slot name="input" v-bind="slotProps.inputProps">
+                <air-item-input v-bind="slotProps.inputProps" />
+              </slot>
+            </MoleculesEditCard>
+          </slot>
         </v-dialog>
       </slot>
     </template>

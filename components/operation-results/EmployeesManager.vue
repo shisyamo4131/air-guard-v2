@@ -18,6 +18,12 @@ const { fetchEmployee, cachedEmployees } = useFetchEmployee();
 const headers = ref([
   { title: "氏名", key: "employeeId", sortable: false },
   { title: "開始時刻", key: "startTime", align: "center", sortable: false },
+  {
+    title: "翌日開始",
+    key: "isStartNextDay",
+    align: "center",
+    sortable: false,
+  },
   { title: "終了時刻", key: "endTime", align: "center", sortable: false },
   {
     title: "休憩時間",
@@ -156,6 +162,25 @@ function submit() {
               </v-chip>
             </template>
           </air-time-picker-input>
+        </template>
+
+        <!-- 翌日開始フラグ (boolean) -->
+        <template #item.isStartNextDay="{ item }">
+          <v-icon
+            v-if="!slotProps.isEditing"
+            :icon="item.isStartNextDay ? 'mdi-check' : ''"
+            color="primary"
+          />
+          <v-icon
+            v-else
+            :icon="
+              item.isStartNextDay
+                ? 'mdi-checkbox-marked'
+                : 'mdi-checkbox-blank-outline'
+            "
+            color="primary"
+            @click="item.isStartNextDay = !item.isStartNextDay"
+          />
         </template>
 
         <!-- 休憩時間/残業時間 -->

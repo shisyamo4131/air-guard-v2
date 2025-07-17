@@ -7,7 +7,12 @@
  */
 import dayjs from "dayjs";
 import { OperationResult } from "~/schemas";
-import { DAY_TYPE, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
+import {
+  DAY_TYPE,
+  SHIFT_TYPE,
+  SITE_OPERATION_SCHEDULE,
+  getDayType,
+} from "air-guard-v2-schemas/constants";
 import { useFetchSite } from "~/composables/useFetchSite";
 
 /** Get operation-result-id from route parameters */
@@ -46,14 +51,41 @@ onUnmounted(() => {
                 <ItemManager
                   :model="model"
                   label="稼働概要修正"
+                  :dialog-props="{ maxWidth: 600 }"
                   :disable-delete="!!model.siteOperationScheduleId"
                   :input-props="{
-                    includedKeys: ['siteId', 'dateAt', 'dayType', 'shiftType'],
+                    excludedKeys: [
+                      'status',
+                      'workDescription',
+                      'remarks',
+                      'employees',
+                      'outsourcers',
+                    ],
                   }"
                 >
+                  <template #input="inputProps">
+                    <air-item-input v-bind="inputProps">
+                      <template #dateAt="{ attrs }">
+                        <air-date-input
+                          v-bind="attrs"
+                          @update:modelValue="
+                            inputProps.updateProperties({
+                              dayType: getDayType($event),
+                            })
+                          "
+                        />
+                      </template>
+                    </air-item-input>
+                  </template>
                 </ItemManager>
               </v-toolbar>
               <v-list>
+                <v-list-item>
+                  <v-list-item-subtitle>ステータス</v-list-item-subtitle>
+                  <v-list-item-title>{{
+                    SITE_OPERATION_SCHEDULE[model.status] || "不明"
+                  }}</v-list-item-title>
+                </v-list-item>
                 <v-list-item>
                   <v-list-item-subtitle>現場</v-list-item-subtitle>
                   <v-list-item-title>{{
@@ -76,10 +108,29 @@ onUnmounted(() => {
                 <v-list-item>
                   <v-list-item-subtitle>時間</v-list-item-subtitle>
                   <v-list-item-title>
+                    {{ `${model.startTime} - ${model.endTime}` }}
+                  </v-list-item-title>
+                  <v-list-item-title class="text-subtitle-2">
                     {{
-                      `${model.startTime} - ${model.endTime}(休憩: ${model.breakMinutes}分)`
+                      `(実働: ${model.regulationWorkMinutes}分 休憩: ${model.breakMinutes}分)`
                     }}
                   </v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>基本単価</v-list-item-subtitle>
+                  <v-list-item-title>{{
+                    `${(model.unitPrice || 0).toLocaleString()}円/${(
+                      model.overTimeUnitPrice || 0
+                    ).toLocaleString()}円`
+                  }}</v-list-item-title>
+                </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>資格者単価</v-list-item-subtitle>
+                  <v-list-item-title>{{
+                    `${(model.unitPriceQualified || 0).toLocaleString()}円/${(
+                      model.overTimeUnitPriceQualified || 0
+                    ).toLocaleString()}円`
+                  }}</v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-card>
@@ -87,33 +138,31 @@ onUnmounted(() => {
           <v-col cols="12">
             <v-card>
               <v-toolbar density="comfortable">
-                <v-toolbar-title>請求単価</v-toolbar-title>
+                <v-toolbar-title>説明</v-toolbar-title>
                 <v-spacer />
                 <ItemManager
                   :model="model"
-                  :editor-props="{
-                    hideDeleteBtn: true,
-                  }"
-                  label="請求単価修正"
+                  label="稼働概要修正"
+                  :dialog-props="{ maxWidth: 600 }"
+                  :editor-props="{ hideDeleteBtn: true }"
                   :input-props="{
-                    includedKeys: [
-                      'unitPrice',
-                      'overTimeUnitPrice',
-                      'unitPriceQualified',
-                      'overTimeUnitPriceQualified',
-                    ],
+                    includedKeys: ['workDescription', 'remarks'],
                   }"
                 >
                 </ItemManager>
               </v-toolbar>
               <v-list>
                 <v-list-item>
-                  <v-list-item-subtitle>基本単価</v-list-item-subtitle>
-                  <v-list-item-title>16,000円/2,500円</v-list-item-title>
+                  <v-list-item-subtitle>作業内容</v-list-item-subtitle>
+                  <v-list-item-title>
+                    {{ model.workDescription }}
+                  </v-list-item-title>
                 </v-list-item>
                 <v-list-item>
-                  <v-list-item-subtitle>資格者単価</v-list-item-subtitle>
-                  <v-list-item-title>18,000円/2,820円</v-list-item-title>
+                  <v-list-item-subtitle>備考</v-list-item-subtitle>
+                  <v-list-item-title>
+                    {{ model.remarks }}
+                  </v-list-item-title>
                 </v-list-item>
               </v-list>
             </v-card>
