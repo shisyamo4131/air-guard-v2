@@ -73,6 +73,14 @@ onUnmounted(() => {
                     {{ SHIFT_TYPE[model.shiftType] }}</v-list-item-title
                   >
                 </v-list-item>
+                <v-list-item>
+                  <v-list-item-subtitle>時間</v-list-item-subtitle>
+                  <v-list-item-title>
+                    {{
+                      `${model.startTime} - ${model.endTime}(休憩: ${model.breakMinutes}分)`
+                    }}
+                  </v-list-item-title>
+                </v-list-item>
               </v-list>
             </v-card>
           </v-col>
