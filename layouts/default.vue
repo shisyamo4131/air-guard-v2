@@ -60,7 +60,7 @@ const handleSignOut = async () => {
     </AppNavigationDrawer>
 
     <!-- メインコンテンツ表示領域 -->
-    <v-main>
+    <v-main scrollable>
       <NuxtPage />
     </v-main>
 
