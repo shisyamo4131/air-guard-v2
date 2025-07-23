@@ -44,6 +44,9 @@ export function useFetchEmployee() {
       // オブジェクトに employeeId がなければ docId の使用を試みる
       if (item && typeof item.docId === "string" && item.docId)
         return item.docId;
+      // さらに workerId の使用を試みる
+      if (item && typeof item.workerId === "string" && item.workerId)
+        return item.workerId;
       return null;
     };
 
