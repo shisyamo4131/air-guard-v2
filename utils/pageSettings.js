@@ -129,6 +129,25 @@ export const pageStructure = [
     ],
   },
   {
+    id: "outsourcers-group",
+    // public: false,
+    label: "外注先管理",
+    icon: "mdi-account-multiple",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+    children: [
+      {
+        id: "outsourcers-list",
+        path: "/outsourcers",
+        // public: false,
+        label: "外注先一覧",
+        icon: "mdi-account-details", // アイコンを追加
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
+  },
+  {
     id: "settings",
     label: "設定",
     icon: "mdi-cog",
