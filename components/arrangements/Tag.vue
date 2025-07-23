@@ -2,7 +2,7 @@
 /**
  * @file ArrangementsTag.vue
  * @description Component for displaying an tag in arrangements.
- * The tag size is set to a height of 48px and a maximum width of 240px.
+ * The tag size is set to a height of 48px.
  * @props {String} endTime - The end time of the shift.
  * @props {Boolean} highlight - Whether to highlight the employee tag.
  * @props {Boolean} isNew - Indicates 'new' icon.
@@ -19,8 +19,11 @@ import {
 
 /** define props */
 const props = defineProps({
+  amount: { type: Number, default: 0 },
   endTime: { type: String, default: undefined },
   highlight: { type: Boolean, default: false },
+  isArranged: { type: Boolean, default: false },
+  isEmployee: { type: Boolean, default: true },
   isNew: { type: Boolean, default: false },
   label: { type: String, default: undefined },
   startTime: { type: String, default: undefined },
@@ -45,7 +48,7 @@ function updateStatus(newVal) {
 <template>
   <v-list-item
     class="mb-2"
-    style="max-width: 240px; height: 48px"
+    style="height: 48px"
     rounded
     variant="outlined"
     :class="{ 'highlighted-employee': props.highlight }"
@@ -54,14 +57,19 @@ function updateStatus(newVal) {
       <!-- 'new' icon -->
       <v-icon v-if="props.isNew" color="red">mdi-new-box</v-icon>
       <!-- label (shown if props.label is defined) -->
-      <span v-if="props.label">{{ props.label }}</span>
+      <span v-if="props.label">
+        {{ props.label }}
+        <span v-if="!props.isEmployee && props.isArranged">
+          {{ `(${props.amount})` }}
+        </span>
+      </span>
       <!-- progress circular (shown if props.label is not defined) -->
       <v-progress-circular v-else indeterminate size="x-small" />
     </v-list-item-title>
-    <v-list-item-subtitle class="text-caption text-no-wrap">
+    <v-list-item-subtitle v-if="isArranged" class="text-caption text-no-wrap">
       {{ `${props.startTime} - ${props.endTime}` }}
     </v-list-item-subtitle>
-    <template #append>
+    <template v-if="isArranged" #append>
       <v-menu>
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->

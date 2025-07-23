@@ -58,9 +58,10 @@ onMounted(async () => {
           :sort="false"
         >
           <template #item="{ element }">
-            <v-list-item>{{
-              cachedEmployees[element.workerId]?.fullName || "N/A"
-            }}</v-list-item>
+            <ArrangementsTag
+              v-bind="element"
+              :label="cachedEmployees[element.workerId]?.fullName"
+            />
           </template>
         </draggable>
       </v-col>
@@ -70,7 +71,7 @@ onMounted(async () => {
             {{ schedule.docId }}
           </v-card-title>
           <v-container>
-            <ArrangementsDraggableEmployees
+            <ArrangementsDraggableCell
               :schedule="schedule"
               :cached-employees="cachedEmployees"
               :cached-outsourcers="cachedOutsourcers"
@@ -88,9 +89,10 @@ onMounted(async () => {
           :sort="false"
         >
           <template #item="{ element }">
-            <v-list-item>{{
-              cachedOutsourcers[element.workerId]?.name || "N/A"
-            }}</v-list-item>
+            <ArrangementsTag
+              v-bind="element"
+              :label="cachedOutsourcers[element.workerId]?.abbr"
+            />
           </template>
         </draggable>
       </v-col>

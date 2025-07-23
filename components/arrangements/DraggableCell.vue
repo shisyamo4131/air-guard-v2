@@ -19,13 +19,13 @@ const highlightedEmployees = ref(new Set());
  * METHODS
  *****************************************************************************/
 async function handleWorkerAdded(addedEvent, schedule) {
-  const { workerId, isEmployee } = addedEvent.element;
-  schedule.addWorker(workerId, isEmployee, addedEvent.newIndex);
+  const { workerId, isEmployee, amount } = addedEvent.element;
+  schedule.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
 }
 
 async function handleWorkerRemoved(removedEvent, schedule) {
-  const { workerId, isEmployee } = removedEvent.element;
-  schedule.removeWorker(workerId, isEmployee);
+  const { workerId, isEmployee, amount } = removedEvent.element;
+  schedule.removeWorker(workerId, amount, isEmployee);
 }
 
 async function handleWorkerMoved(movedEvent, schedule) {
@@ -123,6 +123,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
     <template #item="{ element }">
       <ArrangementsTag
         v-bind="element"
+        is-arranged
         :highlight="
           highlightedEmployees.has(
             `${props.schedule.docId}-${element.workerId}`
@@ -144,6 +145,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
             {
               element: {
                 workerId: element.workerId,
+                amount: 1,
                 isEmployee: element.isEmployee,
               },
             },
