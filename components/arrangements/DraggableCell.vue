@@ -152,7 +152,10 @@ function highlightExistingEmployee(scheduleId, employeeId) {
             props.schedule.update();
           }
         "
-        @remove="handleWorkerRemoved({ element: $event }, schedule)"
+        @remove="
+          handleWorkerRemoved({ element: $event }, schedule);
+          schedule.update();
+        "
       />
     </template>
   </draggable>

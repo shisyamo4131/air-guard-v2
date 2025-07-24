@@ -24,16 +24,10 @@ const schedules = ref([]);
 const employees = ref([]);
 const outsourcers = ref([]);
 
-/** define constants */
-const onlyActive = ref(true);
-
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
-watch(employees, fetchEmployee, { deep: true });
-watch(outsourcers, fetchOutsourcer, { deep: true });
 watch(schedules, handleSchedulesChange, { deep: true });
-watch(onlyActive, fetchEmployees);
 
 /*****************************************************************************
  * LIFE CYCLE HOOKS
@@ -48,9 +42,7 @@ onMounted(async () => {
  * METHODS
  *****************************************************************************/
 /**
- * Handle changes in schedules and fetch related employee data
- * useFetchEmployeeコンポーザブルが効率的なキャッシュとバッチ処理を行うため、
- * 単純にemployeesの配列をそのまま渡すことで最適化される
+ * Handle changes in schedules and fetch related employee and outsourcer data.
  * @param {Array} newSchedules - Updated schedules array
  */
 function handleSchedulesChange(newSchedules) {
@@ -58,16 +50,16 @@ function handleSchedulesChange(newSchedules) {
     return;
   }
 
-  // schedulesからemployeesを直接抽出してfetchEmployeeに渡す
-  // useFetchEmployeeが重複排除とキャッシュチェックを自動で行う
   const allEmployees = newSchedules.flatMap((schedule) =>
     Array.isArray(schedule.employees) ? schedule.employees : []
   );
 
-  // fetchEmployeeは内部でworkerIdを自動抽出し、キャッシュ済みは除外する
-  if (allEmployees.length > 0) {
-    fetchEmployee(allEmployees);
-  }
+  const allOutsourcers = newSchedules.flatMap((schedule) =>
+    Array.isArray(schedule.outsourcers) ? schedule.outsourcers : []
+  );
+
+  if (allEmployees.length > 0) fetchEmployee(allEmployees);
+  if (allOutsourcers.length > 0) fetchOutsourcer(allOutsourcers);
 }
 
 /**
@@ -76,11 +68,9 @@ function handleSchedulesChange(newSchedules) {
  * @returns {Promise<void>}
  */
 async function fetchEmployees() {
-  let fetchResult = onlyActive.value
-    ? await employeeInstance.fetchDocs({
-        constraints: [["where", "employmentStatus", "==", "ACTIVE"]],
-      })
-    : await employeeInstance.fetchDocs();
+  let fetchResult = await employeeInstance.fetchDocs({
+    constraints: [["where", "employmentStatus", "==", "ACTIVE"]],
+  });
   pushEmployees(fetchResult); // コンポーザブルにキャッシュさせる
   employees.value = fetchResult.map(
     (doc) =>
@@ -108,11 +98,6 @@ async function fetchOutsourcers() {
       <v-col cols="4" class="fill-height">
         <v-card class="fill-height">
           <v-card-text class="d-flex flex-column fill-height">
-            <air-checkbox
-              v-model="onlyActive"
-              label="在職中のみ"
-              density="compact"
-            />
             <draggable
               :model-value="employees"
               tag="div"
