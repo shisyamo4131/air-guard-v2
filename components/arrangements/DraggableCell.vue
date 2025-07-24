@@ -125,38 +125,43 @@ function highlightExistingEmployee(scheduleId, employeeId) {
 </script>
 
 <template>
-  <draggable
-    class="px-2 pt-2"
-    :model-value="props.schedule.employees.concat(props.schedule.outsourcers)"
-    key="workerId"
-    tag="div"
-    item-key="workerId"
-    style="border: 1px solid grey; min-height: 24px"
-    :group="{ name: 'workers', put: handlePut }"
-    @change="handleChange($event, props.schedule)"
-  >
-    <template #item="{ element }">
-      <ArrangementsTag
-        v-bind="element"
-        is-arranged
-        :cached-employees="props.cachedEmployees"
-        :cached-outsourcers="props.cachedOutsourcers"
-        :highlight="
-          highlightedEmployees.has(
-            `${props.schedule.docId}-${element.workerId}`
-          )
-        "
-        @update:status="
-          (newVal) => {
-            element.status = newVal;
-            props.schedule.update();
-          }
-        "
-        @remove="
-          handleWorkerRemoved({ element: $event }, schedule);
-          schedule.update();
-        "
-      />
-    </template>
-  </draggable>
+  <v-card flat style="border: 1px solid grey">
+    <draggable
+      class="px-2 pt-2"
+      :model-value="props.schedule.employees.concat(props.schedule.outsourcers)"
+      key="workerId"
+      tag="div"
+      item-key="workerId"
+      style="min-height: 24px"
+      :group="{ name: 'workers', put: handlePut }"
+      @change="handleChange($event, props.schedule)"
+    >
+      <template #item="{ element }">
+        <ArrangementsTag
+          v-bind="element"
+          is-arranged
+          :cached-employees="props.cachedEmployees"
+          :cached-outsourcers="props.cachedOutsourcers"
+          :highlight="
+            highlightedEmployees.has(
+              `${props.schedule.docId}-${element.workerId}`
+            )
+          "
+          @update:status="
+            (newVal) => {
+              element.status = newVal;
+              props.schedule.update();
+            }
+          "
+          @remove="
+            handleWorkerRemoved({ element: $event }, schedule);
+            schedule.update();
+          "
+        />
+      </template>
+    </draggable>
+    <v-card-actions class="justify-end">
+      <ArrangementsSpeedDial @click:add-employee="console.log('OK')" />
+    </v-card-actions>
+  </v-card>
 </template>

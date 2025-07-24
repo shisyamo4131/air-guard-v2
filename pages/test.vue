@@ -24,6 +24,15 @@ const schedules = ref([]);
 const employees = ref([]);
 const outsourcers = ref([]);
 
+/** define refs for floating window */
+const showEmployeeWindow = ref(false);
+const employeeWindowPosition = ref({ x: 200, y: 100 });
+const workerTabs = ref([
+  { label: "従業員", key: "employees" },
+  { label: "外注先", key: "outsourcers" },
+]);
+const activeWorkerTab = ref(0);
+
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
@@ -90,63 +99,136 @@ async function fetchOutsourcers() {
       new OperationResultDetail({ workerId: doc.docId, isEmployee: false })
   );
 }
+
+/**
+ * Toggle employee selection window
+ */
+function toggleEmployeeWindow(event) {
+  if (!showEmployeeWindow.value) {
+    // ウィンドウを開く時は、クリック位置を初期位置として設定
+    const rect = event.target.getBoundingClientRect();
+    const windowWidth = 280; // FloatingWindowのwidth
+    const windowHeight = 400; // FloatingWindowのheight
+
+    let x = event.clientX || rect.left;
+    let y = (event.clientY || rect.bottom) + 10;
+
+    // 画面の境界チェック
+    if (x + windowWidth > window.innerWidth) {
+      x = window.innerWidth - windowWidth - 20;
+    }
+    if (y + windowHeight > window.innerHeight) {
+      y = window.innerHeight - windowHeight - 20;
+    }
+    if (x < 0) x = 20;
+    if (y < 0) y = 20;
+
+    employeeWindowPosition.value = { x, y };
+  }
+  showEmployeeWindow.value = !showEmployeeWindow.value;
+}
+
+/**
+ * Handle window position change
+ */
+function onWindowMove(newPosition) {
+  employeeWindowPosition.value = newPosition;
+}
 </script>
 
 <template>
-  <v-container class="fill-height">
-    <v-row class="fill-height">
-      <v-col cols="4" class="fill-height">
-        <v-card class="fill-height">
-          <v-card-text class="d-flex flex-column fill-height">
-            <draggable
-              :model-value="employees"
-              tag="div"
-              class="flex-grow-1 overflow-y-auto"
-              item-key="workerId"
-              :group="{ name: 'workers', pull: 'clone', put: false }"
-              :sort="false"
+  <div>
+    <v-toolbar density="comfortable">
+      <v-toolbar-title>配置管理</v-toolbar-title>
+      <v-spacer />
+      <v-btn
+        icon
+        @click="toggleEmployeeWindow($event)"
+        :color="showEmployeeWindow ? 'primary' : 'default'"
+      >
+        <v-icon>mdi-account-group</v-icon>
+      </v-btn>
+    </v-toolbar>
+    <v-container class="fill-height" fluid>
+      <v-row class="fill-height justify-center">
+        <v-col cols="8">
+          <ArrangementsDraggableCell
+            v-for="schedule in schedules"
+            :key="schedule.docId"
+            :schedule="schedule"
+            :cached-employees="cachedEmployees"
+            :cached-outsourcers="cachedOutsourcers"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- フローティング作業員選択ウィンドウ -->
+      <MoleculesFloatingWindow
+        :is-visible="showEmployeeWindow"
+        title="作業員選択"
+        :initial-x="employeeWindowPosition.x"
+        :initial-y="employeeWindowPosition.y"
+        @close="showEmployeeWindow = false"
+        @move="onWindowMove"
+      >
+        <div class="fill-height d-flex flex-column">
+          <!-- タブナビゲーション -->
+          <v-tabs v-model="activeWorkerTab" class="flex-shrink-0" grow>
+            <v-tab
+              v-for="(tab, index) in workerTabs"
+              :key="index"
+              :value="index"
             >
-              <template #item="{ element }">
-                <ArrangementsTag
-                  v-bind="element"
-                  :cached-employees="cachedEmployees"
-                />
-              </template>
-            </draggable>
-          </v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="4">
-        <v-card v-for="schedule in schedules" :key="schedule.docId">
-          <v-card-title>
-            {{ schedule.docId }}
-          </v-card-title>
-          <v-container>
-            <ArrangementsDraggableCell
-              :schedule="schedule"
-              :cached-employees="cachedEmployees"
-              :cached-outsourcers="cachedOutsourcers"
-            />
-          </v-container>
-        </v-card>
-      </v-col>
-      <v-col cols="4" class="d-flex flex-column fill-height">
-        <draggable
-          :model-value="outsourcers"
-          tag="div"
-          class="flex-grow-1 overflow-y-auto"
-          item-key="workerId"
-          :group="{ name: 'workers', pull: 'clone', put: false }"
-          :sort="false"
-        >
-          <template #item="{ element }">
-            <ArrangementsTag
-              v-bind="element"
-              :cached-outsourcers="cachedOutsourcers"
-            />
-          </template>
-        </draggable>
-      </v-col>
-    </v-row>
-  </v-container>
+              {{ tab.label }}
+            </v-tab>
+          </v-tabs>
+
+          <!-- タブコンテンツ -->
+          <v-window v-model="activeWorkerTab" class="fill-height">
+            <!-- 従業員タブ -->
+            <v-window-item :value="0" class="fill-height">
+              <div class="pa-2 fill-height">
+                <draggable
+                  :model-value="employees"
+                  tag="div"
+                  class="fill-height overflow-y-auto"
+                  item-key="workerId"
+                  :group="{ name: 'workers', pull: 'clone', put: false }"
+                  :sort="false"
+                >
+                  <template #item="{ element }">
+                    <ArrangementsTag
+                      v-bind="element"
+                      :cached-employees="cachedEmployees"
+                    />
+                  </template>
+                </draggable>
+              </div>
+            </v-window-item>
+
+            <!-- 外注先タブ -->
+            <v-window-item :value="1" class="fill-height">
+              <div class="pa-2 fill-height">
+                <draggable
+                  :model-value="outsourcers"
+                  tag="div"
+                  class="fill-height overflow-y-auto"
+                  item-key="workerId"
+                  :group="{ name: 'workers', pull: 'clone', put: false }"
+                  :sort="false"
+                >
+                  <template #item="{ element }">
+                    <ArrangementsTag
+                      v-bind="element"
+                      :cached-outsourcers="cachedOutsourcers"
+                    />
+                  </template>
+                </draggable>
+              </div>
+            </v-window-item>
+          </v-window>
+        </div>
+      </MoleculesFloatingWindow>
+    </v-container>
+  </div>
 </template>
