@@ -1,11 +1,26 @@
 <script setup>
+/**
+ * @file DraggableCell.vue
+ * @description 単一の現場稼働予定に対して従事者（従業員または外注先）の配置を行うためのコンポーネント。
+ */
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
 
 /** define props */
 const props = defineProps({
+  /**
+   * 従業員情報
+   * - Tag コンポーネントに引き渡されます。
+   */
   cachedEmployees: { type: Object, required: true },
+  /**
+   * 外注先情報
+   * - Tag コンポーネントに引き渡されます。
+   */
   cachedOutsourcers: { type: Object, required: true },
+  /**
+   * 現場稼働予定のドキュメント
+   */
   schedule: { type: Object, required: true },
 });
 
@@ -124,15 +139,12 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       <ArrangementsTag
         v-bind="element"
         is-arranged
+        :cached-employees="props.cachedEmployees"
+        :cached-outsourcers="props.cachedOutsourcers"
         :highlight="
           highlightedEmployees.has(
             `${props.schedule.docId}-${element.workerId}`
           )
-        "
-        :label="
-          element.isEmployee
-            ? props.cachedEmployees[element.workerId]?.fullName || undefined
-            : props.cachedOutsourcers[element.workerId]?.abbr || undefined
         "
         @update:status="
           (newVal) => {
@@ -140,18 +152,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
             props.schedule.update();
           }
         "
-        @remove="
-          handleWorkerRemoved(
-            {
-              element: {
-                workerId: element.workerId,
-                amount: 1,
-                isEmployee: element.isEmployee,
-              },
-            },
-            schedule
-          )
-        "
+        @remove="handleWorkerRemoved({ element: $event }, schedule)"
       />
     </template>
   </draggable>
