@@ -15,109 +15,19 @@
  * エラー発生時には `useLogger` を介してログが出力されます。
  */
 import { Site } from "~/schemas";
-import { useLogger } from "./useLogger";
-import { ref, computed } from "vue";
+import { useFetchBase } from "./useFetchBase";
 
 export function useFetchSite() {
-  const logger = useLogger();
-  /** @type {import('vue').Ref<Site[]>} */
-  const sitesCache = ref([]);
-  /** @type {import('vue').Ref<boolean>} */
-  const isLoading = ref(false);
-
-  /**
-   * 指定されたソースからドキュメントIDを抽出し、該当するSiteデータをFirestoreから取得し、
-   * 内部キャッシュに格納します。
-   * キャッシュに既に存在する場合は何もしません。
-   *
-   * @param {string | {docId?: string, siteId?: string} | Array<string | {docId?: string, siteId?: string}>} source -
-   *   取得するSiteドキュメントのID、IDを含むオブジェクト（docIdまたはsiteIdプロパティ）、またはそれらの配列。
-   * @returns {Promise<void>}
-   */
-  async function fetchSite(source) {
-    isLoading.value = true; // フェッチ開始時にローディング状態をtrueに設定
-    const getDocIdFromItem = (item) => {
-      if (typeof item === "string" && item) return item;
-      // オブジェクトに siteId があればこれを優先
-      if (item && typeof item.siteId === "string" && item.siteId)
-        return item.siteId;
-      // オブジェクトに siteId がなければ docId の使用を試みる
-      if (item && typeof item.docId === "string" && item.docId)
-        return item.docId;
-      return null;
-    };
-
-    let potentialDocIds = [];
-    if (Array.isArray(source)) {
-      potentialDocIds = source
-        .map(getDocIdFromItem)
-        .filter((id) => id !== null);
-    } else {
-      const singleId = getDocIdFromItem(source);
-      if (singleId) {
-        potentialDocIds.push(singleId);
-      }
-    }
-
-    if (potentialDocIds.length === 0) return;
-
-    // 有効かつ未キャッシュのIDのみを抽出（重複排除も行う）
-    const idsToActuallyFetch = [
-      ...new Set(
-        potentialDocIds.filter((id) => {
-          return (
-            id &&
-            !sitesCache.value.some((cachedSite) => cachedSite.docId === id)
-          );
-        })
-      ),
-    ];
-
-    if (idsToActuallyFetch.length === 0) {
-      return;
-    }
-
-    const fetchPromises = idsToActuallyFetch.map(async (docId) => {
-      try {
-        const siteInstance = await new Site().fetchDoc({ docId });
-        if (siteInstance) {
-          sitesCache.value.push(siteInstance);
-        } else {
-          logger.warn({
-            sender: "useFetchSite",
-            message: `Site (ID: ${docId}) not found in Firestore.`,
-          });
-        }
-      } catch (error) {
-        logger.error({
-          sender: "useFetchSite",
-          message: `Failed to fetch Site (ID: ${docId}) from Firestore. Error: ${error.message}`,
-          error,
-        });
-      }
-    });
-
-    try {
-      await Promise.all(fetchPromises);
-    } finally {
-      isLoading.value = false; // フェッチ完了時にローディング状態をfalseに設定
-    }
-  }
-
-  /**
-   * キャッシュされた Site インスタンスを docId をキーとしたオブジェクトとして提供します。
-   * @type {import('vue').ComputedRef<Readonly<Record<string, Site>>>}
-   */
-  const cachedSites = computed(() => {
-    return sitesCache.value.reduce((acc, site) => {
-      acc[site.docId] = site;
-      return acc;
-    }, {});
+  const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
+    SchemaClass: Site,
+    entityName: "Site",
+    idProperties: ["siteId", "docId"], // 優先順位順
   });
 
   return {
-    fetchSite,
-    cachedSites,
-    isLoading, // ローディング状態を公開
+    fetchSite: fetchItems,
+    cachedSites: cachedItems,
+    pushSites: pushItems,
+    isLoading,
   };
 }
