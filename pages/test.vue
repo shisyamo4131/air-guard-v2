@@ -111,19 +111,6 @@ async function fetchOutsourcers() {
       >
         <v-icon>mdi-account-group</v-icon>
       </v-btn>
-    </v-toolbar>
-    <v-container class="fill-height" fluid>
-      <v-row class="fill-height justify-center">
-        <v-col cols="8">
-          <ArrangementsDraggableCell
-            v-for="schedule in schedules"
-            :key="schedule.docId"
-            :schedule="schedule"
-            :cached-employees="cachedEmployees"
-            :cached-outsourcers="cachedOutsourcers"
-          />
-        </v-col>
-      </v-row>
 
       <!-- フローティング作業員選択ウィンドウ -->
       <ArrangementsWorkerSelector
@@ -137,6 +124,19 @@ async function fetchOutsourcers() {
         @close="closeEmployeeWindow"
         @move="onWindowMove"
       />
+    </v-toolbar>
+    <v-container class="fill-height" fluid>
+      <v-row class="fill-height justify-center">
+        <v-col cols="8">
+          <ArrangementsDraggableCell
+            v-for="schedule in schedules"
+            :key="schedule.docId"
+            :schedule="schedule"
+            :cached-employees="cachedEmployees"
+            :cached-outsourcers="cachedOutsourcers"
+          />
+        </v-col>
+      </v-row>
     </v-container>
   </div>
 </template>

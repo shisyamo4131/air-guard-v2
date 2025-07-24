@@ -160,8 +160,5 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         />
       </template>
     </draggable>
-    <v-card-actions class="justify-end">
-      <ArrangementsSpeedDial @click:add-employee="console.log('OK')" />
-    </v-card-actions>
   </v-card>
 </template>
