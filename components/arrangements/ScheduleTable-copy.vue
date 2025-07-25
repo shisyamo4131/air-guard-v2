@@ -1,17 +1,11 @@
 <script setup>
-/**
- * @file ScheduleTable.vue
- * @description 現場稼働予定のスケジュール管理テーブルコンポーネント。
- * vuedraggable を使用しており、以下の仕様になっています。
- * - 現場稼働予定自体を要素として、同じ現場・シフトの別の日に移動することができます。
- *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
- */
-import draggable from "vuedraggable";
 import dayjs from "dayjs";
 import { getDayType } from "air-guard-v2-schemas/constants";
-import { useLogger } from "@/composables/useLogger";
 
-/** define props */
+/**
+ * ArrangementsScheduleTable - スケジュール管理テーブルコンポーネント
+ */
+
 const props = defineProps({
   schedules: { type: Array, required: true },
   cachedEmployees: { type: Object, default: () => ({}) },
@@ -19,25 +13,7 @@ const props = defineProps({
   dayCount: { type: Number, default: 7 },
 });
 
-/** define composables */
-const logger = useLogger();
-
-/** define refs for optimistic updates */
-const localSchedules = ref([]);
-
 const today = new Date();
-
-/*****************************************************************************
- * WATCHERS
- *****************************************************************************/
-// props.schedulesの変更をlocalSchedulesに反映
-watch(
-  () => props.schedules,
-  (newSchedules) => {
-    localSchedules.value = [...newSchedules];
-  },
-  { immediate: true, deep: true }
-);
 
 /**
  * Generate columns based on dayCount
@@ -79,7 +55,7 @@ const scheduleMatrix = computed(() => {
     const cells = [];
 
     for (const column of columns.value) {
-      const matchingSchedules = localSchedules.value.filter(
+      const matchingSchedules = props.schedules.filter(
         (s) =>
           s.siteId === order.siteId &&
           s.shiftType === order.shiftType &&
@@ -123,45 +99,6 @@ const getCellClasses = (column) => ({
   "g-col-previous": column.isPreviousDay,
   "g-col-today": column.isToday,
 });
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
-/**
- * セルのスケジュール配列が更新された時の処理
- */
-function updateCellSchedules(newSchedules, siteId, shiftType, date) {
-  // 現在のセルに該当しないスケジュールを保持
-  const otherSchedules = localSchedules.value.filter(
-    (s) =>
-      !(s.siteId === siteId && s.shiftType === shiftType && s.date === date)
-  );
-
-  // 新しいスケジュールと結合
-  localSchedules.value = [...otherSchedules, ...newSchedules];
-}
-
-async function handleChangeSchedule(event, dateAt) {
-  logger.clearError();
-  try {
-    if (event.added) {
-      const schedule = event.added.element;
-      // バックグラウンドでFirestoreを更新（ローカルは既にdraggableで更新済み）
-      await schedule.reschedule(dateAt);
-    } else if (event.removed) {
-      // 別の日に移動されたことによる削除イベントの場合
-      // -> 別の日で added イベントが発生するため処理不要
-      // その日のスケジュールとして削除された場合
-      // -> 機能として未実装
-    }
-  } catch (error) {
-    logger.error({
-      sender: "handleChangeSchedule",
-      message: error.message,
-      error,
-    });
-  }
-}
 </script>
 
 <template>
@@ -203,33 +140,23 @@ async function handleChangeSchedule(event, dateAt) {
             :key="cell.key"
             :class="getCellClasses(cell.column)"
           >
-            <draggable
-              :model-value="cell.schedules"
-              item-key="docId"
-              tag="div"
-              class="d-flex flex-column fill-height pa-2"
-              :group="{
-                name: `schedules-${orderData.siteId}-${orderData.shiftType}`,
-              }"
-              @update:modelValue="
-                updateCellSchedules(
-                  $event,
-                  orderData.siteId,
-                  orderData.shiftType,
-                  cell.column.date
-                )
-              "
-              @change="handleChangeSchedule($event, cell.column.dateAt)"
-            >
-              <template #item="{ element }">
+            <div class="d-flex flex-column fill-height pa-2">
+              <!-- スケジュールが存在する場合 -->
+              <template v-if="cell.hasSchedules">
                 <ArrangementsDraggableCell
-                  :schedule="element"
+                  v-for="(schedule, scheduleIndex) in cell.schedules"
+                  :key="`${cell.key}-${scheduleIndex}`"
+                  :schedule="schedule"
                   :cached-employees="cachedEmployees"
                   :cached-outsourcers="cachedOutsourcers"
                   class="mb-2"
                 />
               </template>
-            </draggable>
+              <!-- スケジュールが存在しない場合 -->
+              <v-card v-else class="flex-grow-1 pa-2" variant="outlined">
+                <!-- 空のカード -->
+              </v-card>
+            </div>
           </td>
         </tr>
       </template>
