@@ -132,6 +132,9 @@ function highlightExistingEmployee(scheduleId, employeeId) {
           props.schedule.requiredPersonnel
         })`
       }}
+      <span v-if="props.schedule.isPersonnelShortage">
+        <v-icon color="error" size="small">mdi-information</v-icon>
+      </span>
     </v-card-title>
     <draggable
       class="px-2 pt-2"
