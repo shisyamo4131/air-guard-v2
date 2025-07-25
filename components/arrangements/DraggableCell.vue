@@ -139,7 +139,6 @@ function highlightExistingEmployee(scheduleId, employeeId) {
     <draggable
       class="px-2 pt-2"
       :model-value="props.schedule.employees.concat(props.schedule.outsourcers)"
-      key="workerId"
       tag="div"
       item-key="workerId"
       style="min-height: 24px"
