@@ -4,14 +4,15 @@
  * @description Component for displaying an tag in arrangements.
  * The tag size is set to a height of 48px.
  *
+ * @props {Number} amount - The number of workers.
+ * @props {Object} cachedEmployees - Cached employee data for label display.
+ * @props {Object} cachedOutsourcers - Cached outsourcer data for label display.
  * @props {String} endTime - The end time of the shift.
  * @props {Boolean} highlight - Whether to highlight the employee tag.
  * @props {Boolean} isNew - Indicates 'new' icon.
  * @props {String} label - The label to display on the tag.
  * @props {String} startTime - The start time of the shift.
  * @props {String} status - The status of the arrangement.
- * @props {Object} cachedEmployees - Cached employee data for label display.
- * @props {Object} cachedOutsourcers - Cached outsourcer data for label display.
  * @props {String} workerId - The ID of the worker.
  * @emits update:status - Event to update the status.
  * @emits remove - Event to remove from the arrangement.
@@ -25,24 +26,55 @@ import {
 
 /** define props */
 const props = defineProps({
-  amount: { type: Number, default: 0 },
-  endTime: { type: String, default: undefined },
-  highlight: { type: Boolean, default: false },
-  isArranged: { type: Boolean, default: false },
-  isEmployee: { type: Boolean, default: true },
-  isNew: { type: Boolean, default: false },
-  startTime: { type: String, default: undefined },
-  status: { type: String, default: OPERATION_RESULT_DETAIL_STATUS.DEFAULT },
   /**
-   * 従業員情報
-   * - label の表示などに使用されます。
+   * 人数
+   * - Tag に表示される人数。`isEmployee` が false の場合のみ有効。
+   */
+  amount: { type: Number, default: 0 },
+  /**
+   * 従業員IDを key とした従業員インスタンスのオブジェクト
+   * - 従業員のマスタ情報を参照するために使用します。
+   * - useFetchEmployee が提供する cachedEmployees を想定しています。
    */
   cachedEmployees: { type: Object, default: () => ({}) },
   /**
-   * 外注先情報
-   * - label の表示などに使用されます。
+   * 外注先IDを key とした外注先インスタンスのオブジェクト
+   * - 外注先のマスタ情報を参照するために使用します。
+   * - useFetchOutsourcer が提供する cachedOutsourcers を想定しています。
    */
   cachedOutsourcers: { type: Object, default: () => ({}) },
+  /**
+   * Tag に表示される終了時刻（例: "18:00"）
+   * - `isArranged` が true の場合に表示されます。
+   */
+  endTime: { type: String, default: undefined },
+  /**
+   * true の場合、Tag がハイライト表示されます。
+   */
+  highlight: { type: Boolean, default: false },
+  /**
+   * true の場合、Tag が配置モードとして表示されます。
+   */
+  isArranged: { type: Boolean, default: false },
+  /**
+   * Tag が従業員のものとして扱われます。
+   */
+  isEmployee: { type: Boolean, default: true },
+  /**
+   * true の場合、Tag に 'new' アイコンが表示されます。
+   */
+  isNew: { type: Boolean, default: false },
+  /**
+   * Tag に表示される開始時刻（例: "09:00"）
+   * - `isArranged` が true の場合に表示されます。
+   */
+  startTime: { type: String, default: undefined },
+  /**
+   * Tag に表示されるステータス
+   * - `OPERATION_RESULT_DETAIL_STATUS` の値を使用します。
+   * - `isArranged` が true の場合に表示されます。
+   */
+  status: { type: String, default: OPERATION_RESULT_DETAIL_STATUS.DEFAULT },
   /** 従事者ID */
   workerId: { type: String, required: true },
 });
@@ -50,7 +82,7 @@ const props = defineProps({
 /** define emits */
 const emit = defineEmits(["update:status", "remove"]);
 
-/** define consts */
+/** define refs */
 const menu = ref(false);
 
 /*****************************************************************************

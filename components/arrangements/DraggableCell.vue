@@ -125,7 +125,14 @@ function highlightExistingEmployee(scheduleId, employeeId) {
 </script>
 
 <template>
-  <v-card flat style="border: 1px solid grey">
+  <v-card flat style="border: 1px dashed grey">
+    <v-card-title class="text-subtitle-2">
+      {{
+        `${props.schedule.workDescription || "通常警備"}(${
+          props.schedule.requiredPersonnel
+        })`
+      }}
+    </v-card-title>
     <draggable
       class="px-2 pt-2"
       :model-value="props.schedule.employees.concat(props.schedule.outsourcers)"
