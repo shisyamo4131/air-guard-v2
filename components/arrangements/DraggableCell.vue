@@ -12,6 +12,7 @@
  */
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
+import { SITE_OPERATION_SCHEDULE_STATUS } from "air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({
@@ -36,6 +37,13 @@ const logger = useLogger();
 
 /** define refs for highlighting existing employees */
 const highlightedEmployees = ref(new Set());
+
+/*****************************************************************************
+ * COMPUTED PROPERTIES
+ *****************************************************************************/
+const label = computed(() => {
+  return props.schedule.workDescription || "通常警備";
+});
 
 /*****************************************************************************
  * METHODS
@@ -149,16 +157,54 @@ function highlightExistingEmployee(scheduleId, employeeId) {
 
 <template>
   <v-card flat style="border: 1px dashed grey">
-    <v-card-title class="text-subtitle-2">
-      {{
-        `${props.schedule.workDescription || "通常警備"}(${
-          props.schedule.requiredPersonnel
-        })`
-      }}
-      <span v-if="props.schedule.isPersonnelShortage">
-        <v-icon color="error" size="small">mdi-information</v-icon>
-      </span>
+    <v-card-title class="text-subtitle-2 font-weight-regular pb-0">
+      <v-icon
+        v-if="props.schedule.isPersonnelShortage"
+        color="error"
+        size="small"
+      >
+        mdi-information
+      </v-icon>
+      {{ `${label}(${props.schedule.requiredPersonnel})` }}
+      <!-- 状態遷移を確認するためのコンポーネント（後で削除）-->
+      <v-chip label size="x-small">
+        {{ SITE_OPERATION_SCHEDULE_STATUS[props.schedule.status] }}
+      </v-chip>
     </v-card-title>
+    <v-container class="py-0 d-flex justify-center" style="column-gap: 32px">
+      <v-checkbox
+        :model-value="!props.schedule.isDraft"
+        color="primary"
+        :readonly="!props.schedule.isDraft && !props.schedule.isScheduled"
+        hide-details
+        density="compact"
+        style="height: 32px"
+        @update:modelValue="
+          ($event) =>
+            $event ? props.schedule.toScheduled() : props.schedule.toDraft()
+        "
+      >
+        <template #label>
+          <span class="text-caption">予定</span>
+        </template>
+      </v-checkbox>
+      <v-checkbox
+        :model-value="props.schedule.isArranged"
+        color="primary"
+        density="compact"
+        :disabled="!props.schedule.isScheduled && !props.schedule.isArranged"
+        hide-details
+        style="height: 32px"
+        @update:modelValue="
+          ($event) =>
+            $event ? props.schedule.toArranged() : props.schedule.toScheduled()
+        "
+      >
+        <template #label>
+          <span class="text-caption">配置</span>
+        </template>
+      </v-checkbox>
+    </v-container>
     <draggable
       class="px-2 pt-2"
       :model-value="props.schedule.employees.concat(props.schedule.outsourcers)"
@@ -179,6 +225,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
               `${props.schedule.docId}-${element.workerId}`
             )
           "
+          :schedule-status="props.schedule.status"
           @update:status="
             (newVal) => {
               element.status = newVal;

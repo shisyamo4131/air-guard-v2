@@ -92,6 +92,7 @@ const scheduleMatrix = computed(() => {
         scheduleCount: matchingSchedules.length,
         column,
         key: `${order.siteId}-${order.shiftType}-${column.date}`,
+        draggableName: `schedules-${order.siteId}-${order.shiftType}`,
       });
     }
 
@@ -209,7 +210,11 @@ async function handleChangeSchedule(event, dateAt) {
               tag="div"
               class="d-flex flex-column fill-height pa-2"
               :group="{
-                name: `schedules-${orderData.siteId}-${orderData.shiftType}`,
+                name: cell.draggableName,
+                pull: (to, from, dragEl) => {
+                  const element = dragEl.__draggable_context.element;
+                  return element.isDraft;
+                },
               }"
               @update:modelValue="
                 updateCellSchedules(

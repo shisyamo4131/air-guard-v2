@@ -22,6 +22,9 @@ import {
   EMPLOYMENT_STATUS_ACTIVE,
   OPERATION_RESULT_DETAIL_STATUS,
   OPERATION_RESULT_DETAIL_STATUS_ARRAY,
+  OPERATION_RESULT_DETAIL_STATUS_DRAFT,
+  SITE_OPERATION_SCHEDULE_STATUS_DRAFT,
+  SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED,
 } from "air-guard-v2-schemas/constants";
 
 /** define props */
@@ -64,6 +67,8 @@ const props = defineProps({
    * true の場合、Tag に 'new' アイコンが表示されます。
    */
   isNew: { type: Boolean, default: false },
+  /** 現場稼働予定のスケジュール */
+  scheduleStatus: { type: String, required: true },
   /**
    * Tag に表示される開始時刻（例: "09:00"）
    * - `isArranged` が true の場合に表示されます。
@@ -158,7 +163,12 @@ function handleClickRemove() {
       {{ `${props.startTime} - ${props.endTime}` }}
     </v-list-item-subtitle>
     <template v-if="isArranged" #append>
-      <v-menu>
+      <v-menu
+        :disabled="
+          props.scheduleStatus === SITE_OPERATION_SCHEDULE_STATUS_DRAFT ||
+          props.scheduleStatus === SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED
+        "
+      >
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
@@ -169,9 +179,12 @@ function handleClickRemove() {
           <v-container>
             <v-chip-group>
               <v-chip
-                v-for="status in OPERATION_RESULT_DETAIL_STATUS_ARRAY"
+                v-for="status in OPERATION_RESULT_DETAIL_STATUS_ARRAY.filter(
+                  (s) => s.value !== OPERATION_RESULT_DETAIL_STATUS_DRAFT
+                )"
                 :key="status.value"
                 :value="status.value"
+                :disabled="status.value === props.status"
                 label
                 @click="updateStatus(status.value)"
               >
