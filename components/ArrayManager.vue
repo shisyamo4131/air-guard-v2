@@ -10,6 +10,21 @@ const logger = useLogger();
 
 defineOptions({ name: "ArrayManager" });
 
+const props = defineProps({
+  handleCreate: {
+    type: Function,
+    default: async (item) => await item.create(),
+  },
+  handleUpdate: {
+    type: Function,
+    default: async (item) => await item.update(),
+  },
+  handleDelete: {
+    type: Function,
+    default: async (item) => await item.delete(),
+  },
+});
+
 const sender = "ArrayManager.vue";
 
 /** useLogger を使用してエラーログを出力する関数 */
@@ -72,6 +87,9 @@ defineExpose({
 <template>
   <air-array-manager
     ref="component"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
     @error="pushError"
     @error:clear="logger.clearError"
   >

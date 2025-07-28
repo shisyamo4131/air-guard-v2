@@ -85,9 +85,6 @@ function subscribe(siteId, startAt, endAt) {
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],
     }"
-    :handle-create="async (item) => await item.create()"
-    :handle-update="async (item) => await item.update()"
-    :handle-delete="async (item) => await item.delete()"
   >
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesEditCard
