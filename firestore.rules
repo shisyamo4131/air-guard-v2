@@ -97,6 +97,16 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'Outsourcers_archive' subcollection under 'Companies' ---
+    // Outsourcers_archiveコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // Outsourcers ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/Outsourcers_archive/{docId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'Sites' subcollection under 'Companies' ---
     // SitesコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
