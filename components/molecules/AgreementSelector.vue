@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file @/components/organisms/AgreementSelector.vue
+ * @file @/components/molecules/AgreementSelector.vue
  * @description A component that allows users to select an agreement (取極め).
  * It displays a dialog with a list of agreements and emits the selected agreement details.
  */
@@ -9,6 +9,7 @@ import { DAY_TYPE, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({
+  btnProps: { type: Object, default: () => ({}) },
   /**
    * 取極め（Agreement）の配列
    */
@@ -54,7 +55,9 @@ function handleSelect(agreement) {
   <v-dialog v-model="dialog" max-width="480" scrollable>
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps">
-        <v-btn v-bind="slotProps.props">{{ label }}</v-btn>
+        <v-btn v-bind="{ ...slotProps.props, ...props.btnProps }">{{
+          label
+        }}</v-btn>
       </slot>
     </template>
     <template #default="{ isActive }">

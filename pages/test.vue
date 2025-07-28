@@ -196,7 +196,7 @@ async function fetchOutsourcers() {
               </template>
               <template #after-dateAt>
                 <v-col cols="12">
-                  <OrganismsAgreementSelector
+                  <MoleculesAgreementSelector
                     :items="
                       cachedSites[slotProps.item.siteId]?.agreements || []
                     "
@@ -210,7 +210,7 @@ async function fetchOutsourcers() {
                         >取極めから複製</v-btn
                       >
                     </template>
-                  </OrganismsAgreementSelector>
+                  </MoleculesAgreementSelector>
                 </v-col>
               </template>
             </air-item-input>

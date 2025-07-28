@@ -97,7 +97,7 @@ onUnmounted(() => {
               <air-item-input v-bind="slotProps">
                 <template #after-dateAt="{ field }">
                   <v-col v-bind="field.colsDefinition">
-                    <OrganismsAgreementSelector
+                    <MoleculesAgreementSelector
                       :items="[...model.agreements, ...auth.company.agreements]"
                       @select="
                         $event.dateAt = slotProps.item.dateAt;
@@ -109,7 +109,7 @@ onUnmounted(() => {
                           >取極めから複製</v-btn
                         >
                       </template>
-                    </OrganismsAgreementSelector>
+                    </MoleculesAgreementSelector>
                   </v-col>
                 </template>
               </air-item-input>
