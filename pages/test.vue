@@ -11,7 +11,7 @@ import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 
 /** define use composables */
-const { fetchSite, cachedSites, pushSites } = useFetchSite();
+const { fetchSite, cachedSites } = useFetchSite();
 const { fetchEmployee, cachedEmployees, pushEmployees } = useFetchEmployee();
 const { fetchOutsourcer, cachedOutsourcers, pushOutsourcers } =
   useFetchOutsourcer();
@@ -33,7 +33,7 @@ const schedules = ref([]);
 const employees = ref([]);
 const outsourcers = ref([]);
 
-const editSchedule = ref(new SiteOperationSchedule());
+const editingSchedule = ref(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 
 const DAYS_COUNT = 7;
@@ -47,18 +47,21 @@ watch(schedules, handleSchedulesChange, { deep: true });
  * LIFE CYCLE HOOKS
  *****************************************************************************/
 onMounted(async () => {
-  /** fetch all active employees for selector */
-  await fetchEmployees();
-  /** fetch all outsourcers for selector */
-  await fetchOutsourcers();
-  schedules.value = scheduleInstance.subscribeDocs();
+  try {
+    /** fetch all active employees and outsourcers for selector */
+    await Promise.all([fetchEmployees(), fetchOutsourcers()]);
+    schedules.value = scheduleInstance.subscribeDocs();
+  } catch (error) {
+    console.error("Failed to initialize data:", error);
+    // エラー表示やユーザー通知の処理
+  }
 });
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function onClickEdit(schedule) {
-  editSchedule.value = schedule.clone();
+function onClickEditSchedule(schedule) {
+  editingSchedule.value = schedule.clone();
   scheduleManager.value.toUpdate();
 }
 
@@ -148,7 +151,7 @@ async function fetchOutsourcers() {
       :cached-outsourcers="cachedOutsourcers"
       :cached-sites="cachedSites"
       :day-count="DAYS_COUNT"
-      @click:edit="onClickEdit"
+      @click:edit="onClickEditSchedule"
     />
 
     <!-- スケジュール編集ダイアログ -->
@@ -157,7 +160,7 @@ async function fetchOutsourcers() {
       :input-props="{
         excludedKeys: ['status', 'employees', 'outsourcers'],
       }"
-      :model-value="editSchedule"
+      :model-value="editingSchedule"
       :dialog-props="{ maxWidth: 600 }"
       v-slot="slotProps"
     >
