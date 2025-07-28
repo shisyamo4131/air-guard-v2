@@ -54,9 +54,9 @@ const tabs = ref([
               :sort="false"
             >
               <template #item="{ element }">
-                <ArrangementsTag
+                <ArrangementsTagBase
                   v-bind="element"
-                  :cached-employees="cachedEmployees"
+                  :label="cachedEmployees[element.workerId]?.displayName"
                 />
               </template>
             </draggable>
@@ -75,9 +75,9 @@ const tabs = ref([
               :sort="false"
             >
               <template #item="{ element }">
-                <ArrangementsTag
+                <ArrangementsTagBase
                   v-bind="element"
-                  :cached-outsourcers="cachedOutsourcers"
+                  :label="cachedOutsourcers[element.workerId]?.displayName"
                 />
               </template>
             </draggable>

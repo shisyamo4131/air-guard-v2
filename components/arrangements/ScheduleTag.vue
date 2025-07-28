@@ -12,7 +12,11 @@
  */
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
-import { SITE_OPERATION_SCHEDULE_STATUS } from "air-guard-v2-schemas/constants";
+import {
+  SITE_OPERATION_SCHEDULE_STATUS,
+  SITE_OPERATION_SCHEDULE_STATUS_DRAFT,
+  SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED,
+} from "air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({
@@ -45,17 +49,41 @@ const label = computed(() => {
   return props.schedule.workDescription || "通常警備";
 });
 
+// Returns a function to get the display name of a worker.
+const getWorkerDisplayName = computed(() => {
+  return (element) => {
+    const cache = element.isEmployee
+      ? props.cachedEmployees
+      : props.cachedOutsourcers;
+    return cache[element.workerId]?.displayName;
+  };
+});
+
+/**
+ * Check if the detail status can be changed based on the current schedule status.
+ * - Detail status can be changed if the schedule is not in `DRAFT` or `SCHEDULED` state.
+ */
+const isDetailStatusChangeable = computed(() => {
+  const status = props.schedule.status;
+  return (
+    status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT &&
+    status !== SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED
+  );
+});
+
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
 async function handleWorkerAdded(addedEvent) {
   const { workerId, isEmployee, amount } = addedEvent.element;
   props.schedule.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
+  await props.schedule.update();
 }
 
 async function handleWorkerRemoved(removedEvent) {
   const { workerId, isEmployee, amount } = removedEvent.element;
   props.schedule.removeWorker(workerId, amount, isEmployee);
+  await props.schedule.update();
 }
 
 async function handleWorkerMoved(movedEvent) {
@@ -65,6 +93,7 @@ async function handleWorkerMoved(movedEvent) {
     movedEvent.newIndex,
     isEmployee
   );
+  await props.schedule.update();
 }
 
 /**
@@ -81,7 +110,6 @@ async function handleChange(event) {
     } else if (event.moved) {
       await handleWorkerMoved(event.moved);
     }
-    await props.schedule.update();
   } catch (error) {
     logger.error({ sender: "handleChange", message: error.message, error });
   }
@@ -138,6 +166,16 @@ function handlePut(to, from, dragEl) {
 }
 
 /**
+ * Update the detail status of the worker in the schedule.
+ * @param {Object} workerInstance - The worker instance to update.
+ * @param {String} newStatus - The new status to set.
+ */
+async function handleUpdateDetailStatus(workerInstance, newStatus) {
+  workerInstance.status = newStatus;
+  await props.schedule.update();
+}
+
+/**
  * 既に配置されている従業員を強調表示する
  * - 強調表示は2秒間持続し、その後自動的に解除
  * @param scheduleId
@@ -171,7 +209,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         {{ SITE_OPERATION_SCHEDULE_STATUS[props.schedule.status] }}
       </v-chip>
     </v-card-title>
-    <v-container class="py-0 d-flex justify-center" style="column-gap: 32px">
+    <v-container class="py-0 d-flex justify-center" style="column-gap: 20px">
       <v-checkbox
         :model-value="!props.schedule.isDraft"
         color="primary"
@@ -185,7 +223,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         "
       >
         <template #label>
-          <span class="text-caption">予定</span>
+          <span class="text-caption">予定確定</span>
         </template>
       </v-checkbox>
       <v-checkbox
@@ -201,7 +239,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         "
       >
         <template #label>
-          <span class="text-caption">配置</span>
+          <span class="text-caption">配置確定</span>
         </template>
       </v-checkbox>
     </v-container>
@@ -215,27 +253,18 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       @change="handleChange($event)"
     >
       <template #item="{ element }">
-        <ArrangementsTag
+        <ArrangementsWorkerTag
           v-bind="element"
           is-arranged
-          :cached-employees="props.cachedEmployees"
-          :cached-outsourcers="props.cachedOutsourcers"
+          :label="getWorkerDisplayName(element)"
           :highlight="
             highlightedEmployees.has(
               `${props.schedule.docId}-${element.workerId}`
             )
           "
-          :schedule-status="props.schedule.status"
-          @update:status="
-            (newVal) => {
-              element.status = newVal;
-              props.schedule.update();
-            }
-          "
-          @remove="
-            handleWorkerRemoved({ element: $event });
-            props.schedule.update();
-          "
+          :is-status-changeable="isDetailStatusChangeable"
+          @update:status="handleUpdateDetailStatus(element, $event)"
+          @remove="handleWorkerRemoved({ element: $event })"
         />
       </template>
     </draggable>

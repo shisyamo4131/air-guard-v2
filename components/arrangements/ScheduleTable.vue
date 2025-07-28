@@ -227,7 +227,7 @@ async function handleChangeSchedule(event, dateAt) {
               @change="handleChangeSchedule($event, cell.column.dateAt)"
             >
               <template #item="{ element }">
-                <ArrangementsDraggableCell
+                <ArrangementsScheduleTag
                   :schedule="element"
                   :cached-employees="cachedEmployees"
                   :cached-outsourcers="cachedOutsourcers"
