@@ -9,7 +9,6 @@ import { useFetchSite } from "@/composables/useFetchSite";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
 /** define use composables */
 const { fetchSite, cachedSites, pushSites } = useFetchSite();
@@ -158,64 +157,15 @@ async function fetchOutsourcers() {
       :input-props="{
         excludedKeys: ['status', 'employees', 'outsourcers'],
       }"
-      :model="editSchedule"
+      :model-value="editSchedule"
       :dialog-props="{ maxWidth: 600 }"
       v-slot="slotProps"
     >
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesEditCard
+        <MoleculesSiteOperationScheduleEditor
           v-bind="slotProps.editorProps"
-          :disable-delete="
-            slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
-          "
-          :disable-submit="
-            slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
-          "
-        >
-          <template #header>
-            <v-alert
-              v-if="
-                slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
-              "
-              color="info"
-              variant="outlined"
-              class="mb-4"
-              density="compact"
-              >確定された現場稼働予定であるため編集・削除できません。</v-alert
-            >
-          </template>
-          <template #default>
-            <air-item-input v-bind="slotProps.inputProps">
-              <template #dateAt="{ attrs }">
-                <air-date-input
-                  v-bind="attrs"
-                  @update:modelValue="
-                    slotProps.updateProperties({ dayType: getDayType($event) })
-                  "
-                />
-              </template>
-              <template #after-dateAt>
-                <v-col cols="12">
-                  <MoleculesAgreementSelector
-                    :items="
-                      cachedSites[slotProps.item.siteId]?.agreements || []
-                    "
-                    @select="
-                      $event.dateAt = slotProps.item.dateAt;
-                      slotProps.updateProperties($event);
-                    "
-                  >
-                    <template #activator="{ props: activatorProps }">
-                      <v-btn v-bind="activatorProps" block color="primary"
-                        >取極めから複製</v-btn
-                      >
-                    </template>
-                  </MoleculesAgreementSelector>
-                </v-col>
-              </template>
-            </air-item-input>
-          </template>
-        </MoleculesEditCard>
+          :agreements="cachedSites[slotProps.item.siteId]?.agreements || []"
+        />
       </v-dialog>
     </ItemManager>
   </div>
