@@ -5,6 +5,7 @@
  * Base component for displaying a tag in arrangements.
  * The tag has a fixed height of 48px.
  *
+ * @props {Boolean} clearable - Displays clear button and emits `remove` event when clicked.
  * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {String} label - The label to display on the tag.
  *
@@ -64,7 +65,7 @@ function onClickRemove() {
     <slot name="footer" />
     <template #append>
       <slot name="append">
-        <v-list-item-action>
+        <v-list-item-action v-if="props.clearable">
           <v-icon size="small" @click="onClickRemove">mdi-close</v-icon>
         </v-list-item-action>
       </slot>
