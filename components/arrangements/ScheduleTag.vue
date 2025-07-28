@@ -13,7 +13,6 @@
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
 import {
-  SITE_OPERATION_SCHEDULE_STATUS,
   SITE_OPERATION_SCHEDULE_STATUS_DRAFT,
   SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED,
 } from "air-guard-v2-schemas/constants";
@@ -35,6 +34,9 @@ const props = defineProps({
    */
   schedule: { type: Object, required: true },
 });
+
+/** define emits */
+const emit = defineEmits(["click:edit"]);
 
 /** define composables */
 const logger = useLogger();
@@ -204,10 +206,6 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         mdi-information
       </v-icon>
       {{ `${label}(${props.schedule.requiredPersonnel})` }}
-      <!-- 状態遷移を確認するためのコンポーネント（後で削除）-->
-      <v-chip label size="x-small">
-        {{ SITE_OPERATION_SCHEDULE_STATUS[props.schedule.status] }}
-      </v-chip>
     </v-card-title>
     <v-container class="py-0 d-flex justify-center" style="column-gap: 20px">
       <v-checkbox
@@ -268,5 +266,17 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         />
       </template>
     </draggable>
+    <v-container class="d-flex justify-end pt-0 pb-2 px-2">
+      <v-btn
+        :disabled="
+          props.schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
+        "
+        variant="tonal"
+        size="small"
+        @click="emit('click:edit', props.schedule)"
+      >
+        <v-icon>mdi-pencil</v-icon>
+      </v-btn>
+    </v-container>
   </v-card>
 </template>

@@ -8,7 +8,7 @@
  */
 import draggable from "vuedraggable";
 import dayjs from "dayjs";
-import { getDayType } from "air-guard-v2-schemas/constants";
+import { getDayType, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 import { useLogger } from "@/composables/useLogger";
 
 /** define props */
@@ -16,8 +16,12 @@ const props = defineProps({
   schedules: { type: Array, required: true },
   cachedEmployees: { type: Object, default: () => ({}) },
   cachedOutsourcers: { type: Object, default: () => ({}) },
+  cachedSites: { type: Object, default: () => ({}) },
   dayCount: { type: Number, default: 7 },
 });
+
+/** define emits */
+const emit = defineEmits(["click:edit"]);
 
 /** define composables */
 const logger = useLogger();
@@ -128,6 +132,10 @@ const getCellClasses = (column) => ({
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
+function onClickEdit(schedule) {
+  editSchedule.value = schedule.clone();
+}
+
 /**
  * セルのスケジュール配列が更新された時の処理
  */
@@ -193,9 +201,21 @@ async function handleChangeSchedule(event, dateAt) {
           class="g-row g-row-no-hover"
         >
           <td class="site-row" :colspan="columns.length + 1">
-            <div>
-              {{ orderData.siteId }}
+            <div
+              v-if="props.cachedSites[orderData.siteId]"
+              class="text-subtitle-1"
+            >
+              <div class="d-flex align-center">
+                <v-chip class="mr-2" label size="small">
+                  {{ SHIFT_TYPE[orderData.shiftType] }}
+                </v-chip>
+                <span>
+                  {{ props.cachedSites[orderData.siteId].name }}
+                </span>
+              </div>
             </div>
+            <!-- progress circular (shown if site is loading) -->
+            <v-progress-circular v-else indeterminate size="small" />
           </td>
         </tr>
         <tr class="g-row g-row-no-hover">
@@ -232,6 +252,7 @@ async function handleChangeSchedule(event, dateAt) {
                   :cached-employees="cachedEmployees"
                   :cached-outsourcers="cachedOutsourcers"
                   class="mb-2"
+                  @click:edit="emit('click:edit', $event)"
                 />
               </template>
             </draggable>
@@ -266,6 +287,13 @@ async function handleChangeSchedule(event, dateAt) {
 #arrangement-table > div > table > thead > tr > th {
   text-align: center;
   min-width: 280px;
+  border: 1px solid grey;
+}
+
+/* テーブルヘッダーのスタイル */
+#arrangement-table > div > table > tbody > tr > td {
+  padding: 0px;
+  border: 1px solid grey;
 }
 
 /* 奇数行のサイト行の背景色 */
@@ -291,6 +319,7 @@ async function handleChangeSchedule(event, dateAt) {
 #arrangement-table tfoot th {
   background: #fff;
   text-align: center;
+  border: 1px solid grey;
 }
 
 /* 行のホバー時協調表示解除 */

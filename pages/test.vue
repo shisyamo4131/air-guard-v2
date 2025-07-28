@@ -5,11 +5,14 @@ import {
   Outsourcer,
   SiteOperationSchedule,
 } from "@/schemas";
+import { useFetchSite } from "@/composables/useFetchSite";
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
+import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
 /** define use composables */
+const { fetchSite, cachedSites, pushSites } = useFetchSite();
 const { fetchEmployee, cachedEmployees, pushEmployees } = useFetchEmployee();
 const { fetchOutsourcer, cachedOutsourcers, pushOutsourcers } =
   useFetchOutsourcer();
@@ -31,6 +34,9 @@ const schedules = ref([]);
 const employees = ref([]);
 const outsourcers = ref([]);
 
+const editSchedule = ref(new SiteOperationSchedule());
+const scheduleManager = useTemplateRef("scheduleManager");
+
 const DAYS_COUNT = 7;
 
 /*****************************************************************************
@@ -42,7 +48,9 @@ watch(schedules, handleSchedulesChange, { deep: true });
  * LIFE CYCLE HOOKS
  *****************************************************************************/
 onMounted(async () => {
+  /** fetch all active employees for selector */
   await fetchEmployees();
+  /** fetch all outsourcers for selector */
   await fetchOutsourcers();
   schedules.value = scheduleInstance.subscribeDocs();
 });
@@ -50,6 +58,11 @@ onMounted(async () => {
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
+function onClickEdit(schedule) {
+  editSchedule.value = schedule.clone();
+  scheduleManager.value.toUpdate();
+}
+
 /**
  * Handle changes in schedules and fetch related employee and outsourcer data.
  * @param {Array} newSchedules - Updated schedules array
@@ -59,14 +72,15 @@ function handleSchedulesChange(newSchedules) {
     return;
   }
 
+  const allSites = newSchedules.map((schedule) => schedule.siteId);
   const allEmployees = newSchedules.flatMap((schedule) =>
     Array.isArray(schedule.employees) ? schedule.employees : []
   );
-
   const allOutsourcers = newSchedules.flatMap((schedule) =>
     Array.isArray(schedule.outsourcers) ? schedule.outsourcers : []
   );
 
+  if (allSites.length > 0) fetchSite(allSites);
   if (allEmployees.length > 0) fetchEmployee(allEmployees);
   if (allOutsourcers.length > 0) fetchOutsourcer(allOutsourcers);
 }
@@ -133,8 +147,77 @@ async function fetchOutsourcers() {
       :schedules="schedules"
       :cached-employees="cachedEmployees"
       :cached-outsourcers="cachedOutsourcers"
+      :cached-sites="cachedSites"
       :day-count="DAYS_COUNT"
+      @click:edit="onClickEdit"
     />
+
+    <!-- スケジュール編集ダイアログ -->
+    <ItemManager
+      ref="scheduleManager"
+      :input-props="{
+        excludedKeys: ['status', 'employees', 'outsourcers'],
+      }"
+      :model="editSchedule"
+      :dialog-props="{ maxWidth: 600 }"
+      v-slot="slotProps"
+    >
+      <v-dialog v-bind="slotProps.dialogProps">
+        <MoleculesEditCard
+          v-bind="slotProps.editorProps"
+          :disable-delete="
+            slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
+          "
+          :disable-submit="
+            slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
+          "
+        >
+          <template #header>
+            <v-alert
+              v-if="
+                slotProps.item.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
+              "
+              color="info"
+              variant="outlined"
+              class="mb-4"
+              density="compact"
+              >確定された現場稼働予定であるため編集・削除できません。</v-alert
+            >
+          </template>
+          <template #default>
+            <air-item-input v-bind="slotProps.inputProps">
+              <template #dateAt="{ attrs }">
+                <air-date-input
+                  v-bind="attrs"
+                  @update:modelValue="
+                    slotProps.updateProperties({ dayType: getDayType($event) })
+                  "
+                />
+              </template>
+              <template #after-dateAt>
+                <v-col cols="12">
+                  <OrganismsAgreementSelector
+                    :items="
+                      cachedSites[slotProps.item.siteId]?.agreements || []
+                    "
+                    @select="
+                      $event.dateAt = slotProps.item.dateAt;
+                      slotProps.updateProperties($event);
+                    "
+                  >
+                    <template #activator="{ props: activatorProps }">
+                      <v-btn v-bind="activatorProps" block color="primary"
+                        >取極めから複製</v-btn
+                      >
+                    </template>
+                  </OrganismsAgreementSelector>
+                </v-col>
+              </template>
+            </air-item-input>
+          </template>
+        </MoleculesEditCard>
+      </v-dialog>
+    </ItemManager>
   </div>
 </template>
 

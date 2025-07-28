@@ -6,7 +6,15 @@ const logger = useLogger();
 </script>
 
 <template>
-  <air-edit-card :logger="logger" v-slot="slotProps">
-    <slot name="default" v-bind="slotProps" />
+  <air-edit-card :logger="logger">
+    <template #header>
+      <slot name="header" />
+    </template>
+    <template #default="slotProps">
+      <slot name="default" v-bind="slotProps" />
+    </template>
+    <template #footer>
+      <slot name="footer" />
+    </template>
   </air-edit-card>
 </template>
