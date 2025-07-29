@@ -3,44 +3,54 @@
  * @description Composable for managing site operation schedules.
  */
 import * as Vue from "vue";
-import {
-  Employee,
-  OperationResultDetail,
-  Outsourcer,
-  SiteOperationSchedule,
-} from "@/schemas";
-import {
-  EMPLOYMENT_STATUS_ACTIVE,
-  CONTRACT_STATUS_ACTIVE,
-} from "air-guard-v2-schemas/constants";
-import { useFetchEmployee } from "@/composables/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
-import { useFetchSite } from "@/composables/useFetchSite";
+import { SiteOperationSchedule } from "@/schemas";
+import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/useFetchEmployee";
+import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/useFetchOutsourcer";
+import { useFetchSite as internalUseFetchSite } from "@/composables/useFetchSite";
 
-export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
-  if (!manager) {
-    console.warn(
-      "Manager should be provided to useSiteOperationScheduleManager."
-    );
-  }
+const MANAGER_NOT_PROVIDED_WARNING =
+  "Manager should be provided to useSiteOperationScheduleManager.";
+
+/**
+ * @param {Object} options
+ * @param {Object} [options.manager] - Optional manager for handling operations.
+ * @param {string} [options.siteId] - Optional site ID to filter schedules.
+ * @param {Function} [options.useFetchEmployee] - Custom useFetchEmployee composable
+ * @param {Function} [options.useFetchOutsourcer] - Custom useFetchOutsourcer composable
+ * @param {Function} [options.useFetchSite] - Custom useFetchSite composable
+ */
+export function useSiteOperationScheduleManager({
+  manager,
+  siteId,
+  useFetchEmployee,
+  useFetchOutsourcer,
+  useFetchSite,
+} = {}) {
+  // Warn if manager is not provided
+  if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
+
+  /** define composables */
+  // Use provided composables if it specified, otherwise use internal ones.
+  const { fetchEmployee, cachedEmployees } = useFetchEmployee
+    ? useFetchEmployee()
+    : internalUseFetchEmployee();
+  const { fetchOutsourcer, cachedOutsourcers } = useFetchOutsourcer
+    ? useFetchOutsourcer()
+    : internalUseFetchOutsourcer();
+  const { fetchSite, cachedSites } = useFetchSite
+    ? useFetchSite()
+    : internalUseFetchSite();
 
   /** define instance */
   const instance = Vue.reactive(new SiteOperationSchedule());
 
-  /** define composables */
-  const { fetchEmployee, cachedEmployees, pushEmployees } = useFetchEmployee();
-  const { fetchOutsourcer, cachedOutsourcers, pushOutsourcers } =
-    useFetchOutsourcer();
-  const { fetchSite, cachedSites } = useFetchSite();
-
   /** define refs */
   const docs = Vue.ref([]); // subscribed documents
-  const selectableEmployees = Vue.ref([]);
-  const selectableOutsourcers = Vue.ref([]);
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
+  // Watch for changes in docs and fetch related data. (employees, outsourcers, sites)
   Vue.watch(docs, (newDocs) => fetchRelatedData(Vue.toRaw(newDocs)), {
     deep: true,
   });
@@ -48,13 +58,6 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onMounted(async () => {
-    await Promise.all([
-      _initializeSelectableEmployees(),
-      _initializeSelectableOutsourcers(),
-    ]);
-  });
-
   Vue.onUnmounted(() => {
     instance.unsubscribe();
   });
@@ -86,42 +89,6 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
     docs.value = instance.subscribeDocs({ constraints });
   };
 
-  const _initializeSelectableEmployees = async () => {
-    const instance = new Employee();
-    const constraints = [
-      ["where", "employmentStatus", "==", EMPLOYMENT_STATUS_ACTIVE],
-    ];
-    const fetchedData = await instance.fetchDocs({ constraints });
-
-    // Cache the fetched employees.
-    pushEmployees(fetchedData);
-
-    selectableEmployees.value = fetchedData.map((emp) => {
-      return new OperationResultDetail({
-        workerId: emp.docId,
-        isEmployee: true,
-      });
-    });
-  };
-
-  const _initializeSelectableOutsourcers = async () => {
-    const instance = new Outsourcer();
-    const constraints = [
-      ["where", "contractStatus", "==", CONTRACT_STATUS_ACTIVE],
-    ];
-    const fetchedData = await instance.fetchDocs({ constraints });
-
-    // Cache the fetched outsourcers.
-    pushOutsourcers(fetchedData);
-
-    selectableOutsourcers.value = fetchedData.map((out) => {
-      return new OperationResultDetail({
-        workerId: out.docId,
-        isEmployee: false,
-      });
-    });
-  };
-
   /**
    * Fetch related data from the provided documents.
    * - employees, outsourcers, and sites.
@@ -149,26 +116,24 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
   }
 
   /** ArrayManager configuration object */
-  const arrayManager = Vue.computed(() => ({
+  const arrayManagerAttrs = Vue.computed(() => ({
     modelValue: docs.value,
     schema: SiteOperationSchedule,
     beforeEdit: (editMode, item) => {
-      if (siteId) item.siteId = siteId.value;
+      if (siteId) item.siteId = siteId;
     },
     handleCreate: async (item) => await item.create(),
     handleUpdate: async (item) => await item.update(),
     handleDelete: async (item) => await item.delete(),
   }));
 
-  const itemManager = Vue.computed(() => {
+  const itemManagerAttrs = Vue.computed(() => {
     return {
       modelValue: instance,
     };
   });
 
   return {
-    selectableEmployees,
-    selectableOutsourcers,
     cachedEmployees,
     cachedOutsourcers,
     cachedSites,
@@ -176,8 +141,8 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
     schema: SiteOperationSchedule,
     instance,
     initialize,
-    arrayManager,
-    itemManager,
+    arrayManagerAttrs,
+    itemManagerAttrs,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),

@@ -16,7 +16,7 @@ const props = defineProps({
 });
 
 const manager = useTemplateRef("manager");
-const { initialize, arrayManager } = useSiteOperationScheduleManager({
+const { initialize, arrayManagerAttrs } = useSiteOperationScheduleManager({
   manager,
   siteId: props.siteId,
 });
@@ -51,7 +51,7 @@ watch(
   <ArrayManager
     ref="manager"
     v-slot="slotProps"
-    v-bind="arrayManager"
+    v-bind="arrayManagerAttrs"
     :dialog-props="{ maxWidth: 600 }"
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],

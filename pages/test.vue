@@ -1,11 +1,19 @@
 <script setup>
+import dayjs from "dayjs";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import dayjs from "dayjs";
+import { useOperationResultDetailManager } from "@/composables/useOperationResultDetailManager";
+import { useFetchEmployee } from "@/composables/useFetchEmployee";
+import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 
 const DAYS_COUNT = 7;
 
+/** define template refs */
+const scheduleManager = useTemplateRef("scheduleManager");
+
 /** define use composables */
+const { employees, outsourcers } = useOperationResultDetailManager();
+
 const {
   isVisible: showEmployeeWindow,
   position: employeeWindowPosition,
@@ -14,19 +22,23 @@ const {
   updatePosition: onWindowMove,
 } = useFloatingWindow();
 
-const scheduleManager = useTemplateRef("scheduleManager");
 const {
-  selectableEmployees: employees,
-  selectableOutsourcers: outsourcers,
   cachedEmployees,
   cachedOutsourcers,
   cachedSites,
   docs: schedules,
   initialize: initializeSchedules,
   toUpdate: toUpdateSchedule,
-  itemManager,
-} = useSiteOperationScheduleManager({ manager: scheduleManager });
+  itemManagerAttrs,
+} = useSiteOperationScheduleManager({
+  manager: scheduleManager,
+  useFetchEmployee,
+  useFetchOutsourcer,
+});
 
+/***************************************************************************
+ * WATCHERS
+ ***************************************************************************/
 watch(
   () => DAYS_COUNT,
   () => {
@@ -78,19 +90,18 @@ watch(
     <!-- スケジュール編集ダイアログ -->
     <ItemManager
       ref="scheduleManager"
+      v-bind="itemManagerAttrs"
+      :dialog-props="{ maxWidth: 600 }"
       :input-props="{
         excludedKeys: ['status', 'employees', 'outsourcers'],
       }"
-      v-bind="itemManager"
-      :dialog-props="{ maxWidth: 600 }"
-      v-slot="slotProps"
     >
-      <v-dialog v-bind="slotProps.dialogProps">
+      <template #editor="{ editorProps, inputProps }">
         <MoleculesSiteOperationScheduleEditor
-          v-bind="slotProps.editorProps"
-          :agreements="cachedSites[slotProps.item.siteId]?.agreements || []"
+          v-bind="editorProps"
+          :agreements="cachedSites[inputProps.item.siteId]?.agreements || []"
         />
-      </v-dialog>
+      </template>
     </ItemManager>
   </div>
 </template>
