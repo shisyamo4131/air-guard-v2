@@ -2,15 +2,7 @@
  * @file useSiteOperationScheduleManager.js
  * @description Composable for managing site operation schedules.
  */
-import {
-  reactive,
-  ref,
-  watch,
-  toRaw,
-  onUnmounted,
-  onMounted,
-  computed,
-} from "vue";
+import * as Vue from "vue";
 import {
   Employee,
   OperationResultDetail,
@@ -33,7 +25,7 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
   }
 
   /** define instance */
-  const instance = reactive(new SiteOperationSchedule());
+  const instance = Vue.reactive(new SiteOperationSchedule());
 
   /** define composables */
   const { fetchEmployee, cachedEmployees, pushEmployees } = useFetchEmployee();
@@ -42,26 +34,28 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
   const { fetchSite, cachedSites } = useFetchSite();
 
   /** define refs */
-  const docs = ref([]); // subscribed documents
-  const selectableEmployees = ref([]);
-  const selectableOutsourcers = ref([]);
+  const docs = Vue.ref([]); // subscribed documents
+  const selectableEmployees = Vue.ref([]);
+  const selectableOutsourcers = Vue.ref([]);
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  watch(docs, (newDocs) => fetchRelatedData(toRaw(newDocs)), { deep: true });
+  Vue.watch(docs, (newDocs) => fetchRelatedData(Vue.toRaw(newDocs)), {
+    deep: true,
+  });
 
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  onMounted(async () => {
+  Vue.onMounted(async () => {
     await Promise.all([
       _initializeSelectableEmployees(),
       _initializeSelectableOutsourcers(),
     ]);
   });
 
-  onUnmounted(() => {
+  Vue.onUnmounted(() => {
     instance.unsubscribe();
   });
 
@@ -140,13 +134,13 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
     if (allSites.length > 0) fetchSite(allSites);
 
     const allEmployees = newDocs.flatMap((schedule) => {
-      const rawSchedule = toRaw(schedule);
+      const rawSchedule = Vue.toRaw(schedule);
       return Array.isArray(rawSchedule.employees) ? rawSchedule.employees : [];
     });
     if (allEmployees.length > 0) fetchEmployee(allEmployees);
 
     const allOutsourcers = newDocs.flatMap((schedule) => {
-      const rawSchedule = toRaw(schedule);
+      const rawSchedule = Vue.toRaw(schedule);
       return Array.isArray(rawSchedule.outsourcers)
         ? rawSchedule.outsourcers
         : [];
@@ -155,7 +149,7 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
   }
 
   /** ArrayManager configuration object */
-  const arrayManager = computed(() => ({
+  const arrayManager = Vue.computed(() => ({
     modelValue: docs.value,
     schema: SiteOperationSchedule,
     beforeEdit: (editMode, item) => {
@@ -166,7 +160,7 @@ export function useSiteOperationScheduleManager({ manager, siteId } = {}) {
     handleDelete: async (item) => await item.delete(),
   }));
 
-  const itemManager = computed(() => {
+  const itemManager = Vue.computed(() => {
     return {
       modelValue: instance,
     };
