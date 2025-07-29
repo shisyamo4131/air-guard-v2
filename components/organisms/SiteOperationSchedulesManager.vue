@@ -4,7 +4,7 @@
  * @description A component that manages the site operation schedule.
  */
 import dayjs from "dayjs";
-import { SiteOperationSchedule } from "@/schemas";
+import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -15,8 +15,11 @@ const props = defineProps({
   agreements: { type: Array, default: () => [] },
 });
 
-/** SiteOperationSchedule instance */
-const instance = reactive(new SiteOperationSchedule());
+const manager = useTemplateRef("manager");
+const { initialize, arrayManager } = useSiteOperationScheduleManager({
+  manager,
+  siteId: props.siteId,
+});
 
 /** A date for the current month */
 const currentDate = ref([new Date()]);
@@ -38,45 +41,17 @@ watch(
     const siteId = props.siteId;
     const [startAt, endAt] = [newVal.start, newVal.end];
     if (!siteId || !startAt || !endAt) return;
-    subscribe(siteId, startAt, endAt);
+    initialize({ from: startAt, to: endAt, siteId });
   },
   { immediate: true, deep: true }
 );
-
-/*****************************************************************************
- * LIFECYCLE HOOKS
- *****************************************************************************/
-onUnmounted(() => {
-  instance.unsubscribe();
-});
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
-/**
- * Start subscribing to the SiteOperationSchedule documents
- * when the period changes or the component is mounted.
- * @param siteId
- * @param startAt
- * @param endAt
- */
-function subscribe(siteId, startAt, endAt) {
-  instance.subscribeDocs({
-    constraints: [
-      ["where", "siteId", "==", siteId],
-      ["where", "startAt", ">=", startAt],
-      ["where", "startAt", "<=", endAt],
-    ],
-  });
-}
 </script>
 
 <template>
   <ArrayManager
+    ref="manager"
     v-slot="slotProps"
-    :model-value="instance.docs"
-    :schema="SiteOperationSchedule"
-    :before-edit="(editMode, item) => (item.siteId = siteId)"
+    v-bind="arrayManager"
     :dialog-props="{ maxWidth: 600 }"
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],
