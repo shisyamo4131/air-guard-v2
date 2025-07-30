@@ -11,6 +11,9 @@ const DAYS_COUNT = 7;
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
 
+/** define refs */
+const currentDate = ref(new Date());
+
 /** define use composables */
 const { employees, outsourcers } = useOperationResultDetailManager();
 
@@ -34,6 +37,7 @@ const {
   manager: scheduleManager,
   useFetchEmployee,
   useFetchOutsourcer,
+  from: currentDate.value,
 });
 
 /***************************************************************************
@@ -45,8 +49,8 @@ watch(
     const from = dayjs();
     const to = dayjs().add(DAYS_COUNT - 1, "day");
     initializeSchedules({ from: from.toDate(), to: to.toDate() });
-  },
-  { immediate: true }
+  }
+  // { immediate: true }
 );
 </script>
 

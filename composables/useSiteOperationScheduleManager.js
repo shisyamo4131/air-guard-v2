@@ -7,7 +7,9 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/useFetchSite";
+import { useDateUtil } from "@/composables/useDateUtil";
 
+/** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
   "Manager should be provided to useSiteOperationScheduleManager.";
 
@@ -15,6 +17,8 @@ const MANAGER_NOT_PROVIDED_WARNING =
  * @param {Object} options
  * @param {Object} [options.manager] - Optional manager for handling operations.
  * @param {string} [options.siteId] - Optional site ID to filter schedules.
+ * @param {Date} [options.from] - Initial start date for the schedule range.
+ * @param {number} [options.days=7] - Number of days from start date for the initial range.
  * @param {Function} [options.useFetchEmployee] - Custom useFetchEmployee composable
  * @param {Function} [options.useFetchOutsourcer] - Custom useFetchOutsourcer composable
  * @param {Function} [options.useFetchSite] - Custom useFetchSite composable
@@ -22,6 +26,8 @@ const MANAGER_NOT_PROVIDED_WARNING =
 export function useSiteOperationScheduleManager({
   manager,
   siteId,
+  from,
+  days = 7,
   useFetchEmployee,
   useFetchOutsourcer,
   useFetchSite,
@@ -41,6 +47,9 @@ export function useSiteOperationScheduleManager({
     ? useFetchSite()
     : internalUseFetchSite();
 
+  // Date utility composable
+  const { validateAndProcessDateRange } = useDateUtil();
+
   /** define instance */
   const instance = Vue.reactive(new SiteOperationSchedule());
 
@@ -58,33 +67,66 @@ export function useSiteOperationScheduleManager({
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
+  Vue.onMounted(() => {
+    if (!from || !days) return;
+    initialize({ from, to: days });
   });
+
+  Vue.onUnmounted(() => instance.unsubscribe());
 
   /***************************************************************************
    * METHODS
    ***************************************************************************/
   /**
+   * Build query constraints for fetching site operation schedules.
+   * @param {Object} params - Parameters for building constraints.
+   * @param {Date} params.fromDate - Start date (Date object).
+   * @param {Date} params.toDate - End date (Date object).
+   * @param {string} [params.siteId] - Optional site ID to filter schedules.
+   * @returns {Array} Array of constraint arrays for Firestore query.
+   */
+  const _buildConstraints = ({
+    fromDate,
+    toDate,
+    siteId: constraintSiteId,
+  }) => {
+    const constraints = [
+      ["where", "dateAt", ">=", fromDate],
+      ["where", "dateAt", "<=", toDate],
+    ];
+
+    // Use the provided siteId parameter or fall back to the composable's siteId
+    const targetSiteId = constraintSiteId || siteId;
+    if (targetSiteId) {
+      constraints.push(["where", "siteId", "==", targetSiteId]);
+    }
+
+    return constraints;
+  };
+
+  /**
    * Initializes the schedule manager with the specified date range.
    * @param {Object} params - Initialization parameters.
    * @param {Date} params.from - Start date of the range.
-   * @param {Date} params.to - End date of the range.
+   * @param {Date|number} params.to - End date of the range or number of days from 'from' date.
    * @param {string} [params.siteId] - Optional site ID to filter schedules.
    * @returns {void}
    */
-  const initialize = ({ from, to }) => {
-    if (!from || !to) {
-      console.error("Invalid date range provided for initialization.");
-      return;
-    }
+  const initialize = ({
+    from: internalFrom,
+    to: internalTo,
+    siteId: paramSiteId,
+  }) => {
+    const dateRange = validateAndProcessDateRange(internalFrom, internalTo);
+    if (!dateRange) return;
 
-    const constraints = [
-      ["where", "dateAt", ">=", from],
-      ["where", "dateAt", "<=", to],
-    ];
+    const { fromDate, toDate } = dateRange;
 
-    if (siteId) constraints.push(["where", "siteId", "==", siteId]);
+    const constraints = _buildConstraints({
+      fromDate: fromDate.toDate(),
+      toDate: toDate.toDate(),
+      siteId: paramSiteId,
+    });
 
     docs.value = instance.subscribeDocs({ constraints });
   };

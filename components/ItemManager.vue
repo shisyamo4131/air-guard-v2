@@ -100,9 +100,7 @@ defineExpose({
       <slot name="default" v-bind="slotProps">
         <v-dialog v-bind="slotProps.dialogProps">
           <template #activator>
-            <slot name="activator" v-bind="{ toUpdate: slotProps.toUpdate }">
-              <v-btn icon="mdi-pencil" @click="slotProps.toUpdate()" />
-            </slot>
+            <slot name="activator" v-bind="{ toUpdate: slotProps.toUpdate }" />
           </template>
           <slot
             name="editor"
