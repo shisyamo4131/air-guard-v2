@@ -1,6 +1,39 @@
 /**
  * @file useSiteOperationScheduleManager.js
  * @description Composable for managing site operation schedules.
+ * This composable internally uses the `useFetchEmployee`, `useFetchOutsourcer`, and `useFetchSite` composables to fetch and manage employee, outsourcer, and site data.
+ * You can provide your own instances of these composables via the options, or let this compos
+ * create its own.
+ *
+ * Example usage:
+ *
+ * ```js
+ * import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
+ * // Optionally, create your own composable instances
+ * import { useFetchEmployee } from "@/composables/useFetchEmployee";
+ * import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
+ * import { useFetchSite } from "@/composables/useFetchSite";
+ * const { cachedEmployees, cachedOutsourcers, cachedSites, docs, initialize } = useSiteOperationScheduleManager({
+ *   manager: scheduleManager,
+ *   siteId: selectedSiteId,
+ *   from: startDate,
+ *   to: 14,
+ *   fetchEmployeeComposable: customFetchEmployeeComposable,
+ *   fetchOutsourcerComposable: customFetchOutsourcerComposable,
+ *   fetchSiteComposable: customFetchSiteComposable,
+ * });
+ * // Or simply:
+ * // const { cachedEmployees, cachedOutsourcers, cachedSites, docs, initialize } = useSiteOperationScheduleManager();
+ * ```
+ *
+ * @param {Object} options
+ * @param {Object} [options.manager] - Optional manager for handling operations.
+ * @param {string} [options.siteId] - Optional site ID to filter schedules.
+ * @param {Date} [options.from] - Initial start date for the schedule range.
+ * @param {Date|number} [options.to] - Initial end date or number of days from start date for the schedule range.
+ * @param {Object} [options.fetchEmployeeComposable] - Already created useFetchEmployee composable instance
+ * @param {Object} [options.fetchOutsourcerComposable] - Already created useFetchOutsourcer composable instance
+ * @param {Object} [options.fetchSiteComposable] - Already created useFetchSite composable instance
  */
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
@@ -13,38 +46,28 @@ import { useDateUtil } from "@/composables/useDateUtil";
 const MANAGER_NOT_PROVIDED_WARNING =
   "Manager should be provided to useSiteOperationScheduleManager.";
 
-/**
- * @param {Object} options
- * @param {Object} [options.manager] - Optional manager for handling operations.
- * @param {string} [options.siteId] - Optional site ID to filter schedules.
- * @param {Date} [options.from] - Initial start date for the schedule range.
- * @param {number} [options.days=7] - Number of days from start date for the initial range.
- * @param {Function} [options.useFetchEmployee] - Custom useFetchEmployee composable
- * @param {Function} [options.useFetchOutsourcer] - Custom useFetchOutsourcer composable
- * @param {Function} [options.useFetchSite] - Custom useFetchSite composable
- */
 export function useSiteOperationScheduleManager({
   manager,
   siteId,
   from,
-  days = 7,
-  useFetchEmployee,
-  useFetchOutsourcer,
-  useFetchSite,
+  to = 7,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
 } = {}) {
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
 
   /** define composables */
-  // Use provided composables if it specified, otherwise use internal ones.
-  const { fetchEmployee, cachedEmployees } = useFetchEmployee
-    ? useFetchEmployee()
+  // Use provided composable instances if specified, otherwise create internal ones.
+  const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable
+    ? fetchEmployeeComposable
     : internalUseFetchEmployee();
-  const { fetchOutsourcer, cachedOutsourcers } = useFetchOutsourcer
-    ? useFetchOutsourcer()
+  const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable
+    ? fetchOutsourcerComposable
     : internalUseFetchOutsourcer();
-  const { fetchSite, cachedSites } = useFetchSite
-    ? useFetchSite()
+  const { fetchSite, cachedSites } = fetchSiteComposable
+    ? fetchSiteComposable
     : internalUseFetchSite();
 
   // Date utility composable
@@ -68,8 +91,8 @@ export function useSiteOperationScheduleManager({
    * LIFECYCLE HOOKS
    ***************************************************************************/
   Vue.onMounted(() => {
-    if (!from || !days) return;
-    initialize({ from, to: days });
+    if (!from || !to) return;
+    initialize({ from, to });
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());

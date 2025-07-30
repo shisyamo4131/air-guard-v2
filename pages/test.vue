@@ -6,16 +6,23 @@ import { useOperationResultDetailManager } from "@/composables/useOperationResul
 import { useFetchEmployee } from "@/composables/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
 
-const DAYS_COUNT = 7;
+const DAYS_COUNT = 14;
 
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
 
 /** define refs */
-const currentDate = ref(new Date());
+const CURRENT_DATE = readonly(ref(new Date()));
 
 /** define use composables */
-const { employees, outsourcers } = useOperationResultDetailManager();
+const fetchEmployeeComposable = useFetchEmployee();
+const fetchOutsourcerComposable = useFetchOutsourcer();
+const { cachedEmployees } = fetchEmployeeComposable;
+const { cachedOutsourcers } = fetchOutsourcerComposable;
+const { employees, outsourcers } = useOperationResultDetailManager({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+});
 
 const {
   isVisible: showEmployeeWindow,
@@ -26,8 +33,6 @@ const {
 } = useFloatingWindow();
 
 const {
-  cachedEmployees,
-  cachedOutsourcers,
   cachedSites,
   docs: schedules,
   initialize: initializeSchedules,
@@ -35,9 +40,10 @@ const {
   itemManagerAttrs,
 } = useSiteOperationScheduleManager({
   manager: scheduleManager,
-  useFetchEmployee,
-  useFetchOutsourcer,
-  from: currentDate.value,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  from: CURRENT_DATE.value,
+  to: DAYS_COUNT,
 });
 
 /***************************************************************************
