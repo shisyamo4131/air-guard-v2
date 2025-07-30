@@ -8,7 +8,6 @@
  * @props {String} endTime - End time to display on the tag.
  * @props {Boolean} isEmployee - Indicates whether the tag represents an employee.
  * @props {Boolean} isNew - Indicates 'new' icon.
- * @props {Boolean} isStatusChangeable - Whether the status can be changed.
  * @props {String} startTime - Start time to display on the tag.
  * @props {String} status - Detail status of the arrangement.
  * @props {String} workerId - Worker ID.
@@ -37,8 +36,6 @@ const props = defineProps({
   isEmployee: { type: Boolean, default: false },
   /** Indicates `new` icon. */
   isNew: { type: Boolean, default: false },
-  /** Indicates whether the status can be changed */
-  isStatusChangeable: { type: Boolean, default: true },
   /** Start time to display on the tag (e.g., "09:00"). */
   startTime: { type: String, default: undefined },
   /** Indicates detail status */
@@ -103,7 +100,10 @@ function updateStatus(newVal) {
       </v-list-item-subtitle>
     </template>
     <template #append>
-      <v-menu :disabled="!props.isStatusChangeable" v-model="menu">
+      <v-menu
+        v-if="props.status !== OPERATION_RESULT_DETAIL_STATUS_DRAFT"
+        v-model="menu"
+      >
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
@@ -128,7 +128,9 @@ function updateStatus(newVal) {
         </v-card>
       </v-menu>
       <v-list-item-action class="mr-2"> </v-list-item-action>
-      <v-list-item-action>
+      <v-list-item-action
+        v-if="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
+      >
         <v-icon size="small" @click="onClickRemove">mdi-close</v-icon>
       </v-list-item-action>
     </template>

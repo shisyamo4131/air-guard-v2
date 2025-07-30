@@ -61,18 +61,6 @@ const getWorkerDisplayName = computed(() => {
   };
 });
 
-/**
- * Check if the detail status can be changed based on the current schedule status.
- * - Detail status can be changed if the schedule is not in `DRAFT` or `SCHEDULED` state.
- */
-const isDetailStatusChangeable = computed(() => {
-  const status = props.schedule.status;
-  return (
-    status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT &&
-    status !== SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED
-  );
-});
-
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
@@ -214,6 +202,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         :readonly="!props.schedule.isDraft && !props.schedule.isScheduled"
         hide-details
         density="compact"
+        :disabled="props.schedule.isPersonnelShortage"
         style="height: 32px"
         @update:modelValue="
           ($event) =>
@@ -260,7 +249,6 @@ function highlightExistingEmployee(scheduleId, employeeId) {
               `${props.schedule.docId}-${element.workerId}`
             )
           "
-          :is-status-changeable="isDetailStatusChangeable"
           @update:status="handleUpdateDetailStatus(element, $event)"
           @remove="handleWorkerRemoved({ element: $event })"
         />
