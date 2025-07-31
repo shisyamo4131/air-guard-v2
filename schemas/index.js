@@ -1,3 +1,4 @@
+export { SiteOrder } from "air-guard-v2-schemas";
 export { default as Company } from "./Company.js";
 export { default as Customer } from "./Customer.js";
 export { default as Employee } from "./Employee.js";

@@ -10,6 +10,7 @@ import draggable from "vuedraggable";
 import dayjs from "dayjs";
 import { getDayType, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 import { useLogger } from "@/composables/useLogger";
+import { useSiteOrder } from "@/composables/useSiteOrder";
 
 /** define props */
 const props = defineProps({
@@ -25,6 +26,7 @@ const emit = defineEmits(["click:edit"]);
 
 /** define composables */
 const logger = useLogger();
+const siteOrder = useSiteOrder();
 
 /** define refs for optimistic updates */
 const localSchedules = ref([]);
@@ -70,16 +72,9 @@ const columns = computed(() => {
  * Generate schedule matrix based on schedules and columns
  */
 const scheduleMatrix = computed(() => {
-  // orders は後でFirestoreから取得することになる。
-  // 現時点ではハードコードで対応。
-  const orders = [
-    { siteId: "59nZ6ilZy4WxKon5Yd0B", shiftType: "NIGHT" },
-    { siteId: "59nZ6ilZy4WxKon5Yd0B", shiftType: "DAY" },
-  ];
-
   const result = [];
 
-  for (const order of orders) {
+  for (const order of siteOrder.order.value) {
     const cells = [];
 
     for (const column of columns.value) {
