@@ -32,7 +32,7 @@ const companyFields = Object.keys(Company.classProps);
 <template>
   <v-container>
     <ItemManager
-      :model="model"
+      :modelValue="model"
       v-slot="slotProps"
       :input-props="{
         excludedKeys: ['agreements'],
