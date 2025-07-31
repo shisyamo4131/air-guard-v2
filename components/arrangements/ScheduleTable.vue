@@ -182,7 +182,7 @@ async function handleChangeSchedule(event, dateAt) {
         </th>
       </tr>
     </thead>
-    <transition-group tag="tbody" name="fade">
+    <tbody>
       <template
         v-for="(orderData, rowIndex) of scheduleMatrix"
         :key="`site-row-${rowIndex}`"
@@ -250,7 +250,7 @@ async function handleChangeSchedule(event, dateAt) {
           </td>
         </tr>
       </template>
-    </transition-group>
+    </tbody>
     <tfoot>
       <tr>
         <th
