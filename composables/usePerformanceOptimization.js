@@ -2,7 +2,7 @@
  * パフォーマンス最適化機能を提供するコンポーザブル
  * - computed のメモ化機能の強化
  * - 重い計算処理のキャッシュ機能
- * - 仮想化やデバウンス機能
+ * - デバウンス機能やバッチ処理機能
  */
 import { ref, computed, shallowRef, triggerRef, watch } from "vue";
 
@@ -60,60 +60,6 @@ export function useMemoizedComputed(computeFn, dependencies, options = {}) {
 
     return result;
   });
-}
-
-/**
- * 大きな配列の仮想化機能
- * @param {Ref} itemsRef - アイテム配列のref
- * @param {Object} options - オプション
- * @returns {Object} 仮想化機能
- */
-export function useVirtualization(itemsRef, options = {}) {
-  const { itemHeight = 50, containerHeight = 400, buffer = 5 } = options;
-
-  const scrollTop = ref(0);
-  const visibleRange = computed(() => {
-    const start = Math.floor(scrollTop.value / itemHeight);
-    const visibleCount = Math.ceil(containerHeight / itemHeight);
-    const end = start + visibleCount;
-
-    return {
-      start: Math.max(0, start - buffer),
-      end: Math.min(itemsRef.value?.length || 0, end + buffer),
-    };
-  });
-
-  const visibleItems = useMemoizedComputed(
-    () => {
-      if (!itemsRef.value) return [];
-      const { start, end } = visibleRange.value;
-      return itemsRef.value.slice(start, end).map((item, index) => ({
-        ...item,
-        virtualIndex: start + index,
-        style: {
-          transform: `translateY(${(start + index) * itemHeight}px)`,
-          height: `${itemHeight}px`,
-        },
-      }));
-    },
-    [itemsRef, () => visibleRange.value],
-    { deep: true }
-  );
-
-  const totalHeight = computed(() => {
-    return (itemsRef.value?.length || 0) * itemHeight;
-  });
-
-  const handleScroll = (event) => {
-    scrollTop.value = event.target.scrollTop;
-  };
-
-  return {
-    visibleItems,
-    totalHeight,
-    handleScroll,
-    visibleRange,
-  };
 }
 
 /**

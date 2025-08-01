@@ -13,7 +13,6 @@ Step 6 では、アプリケーションのパフォーマンスを大幅に改�
 **主な機能:**
 
 - **useMemoizedComputed**: 重い計算処理のメモ化
-- **useVirtualization**: 大量データの仮想化表示
 - **useDebouncedRef**: デバウンス機能付き ref
 - **useShallowComputed**: 浅い比較の computed
 - **useBatchProcessor**: バッチ処理機能
@@ -136,19 +135,6 @@ const expensiveCalculation = useMemoizedComputed(
     deep: true,
   }
 );
-```
-
-### 仮想化リスト
-
-```javascript
-const virtualization = useVirtualization(largeDataArray, {
-  itemHeight: 50,
-  containerHeight: 400,
-  buffer: 10,
-});
-
-// テンプレートで使用
-// <div v-for="item in virtualization.visibleItems.value">
 ```
 
 ### メモリ監視
