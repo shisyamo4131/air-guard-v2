@@ -34,9 +34,9 @@ Step 6 では、アプリケーションのパフォーマンスを大幅に改�
 
 ## 改善されたファイル
 
-### `useScheduleState.js`
+### `useSiteOperationScheduleState.js`
 
-スケジュール状態管理の計算処理を最適化:
+現場稼働予定の状態管理の計算処理を最適化:
 
 **改善点:**
 

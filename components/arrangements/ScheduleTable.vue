@@ -11,7 +11,7 @@ import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useScheduleTableColumns } from "@/composables/useScheduleTableColumns";
-import { useScheduleState } from "@/composables/useScheduleState";
+import { useSiteOperationScheduleState } from "@/composables/useSiteOperationScheduleState";
 import { useScheduleTableVirtualization } from "@/composables/useScheduleTableVirtualization";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
@@ -39,7 +39,7 @@ const { columns } = useScheduleTableColumns({
   startDate: computed(() => dayjs().subtract(1, "day").toDate()),
   schedules: toRef(props, "schedules"),
 });
-const scheduleState = useScheduleState({
+const scheduleState = useSiteOperationScheduleState({
   schedules: toRef(props, "schedules"),
 });
 

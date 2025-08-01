@@ -31,9 +31,9 @@ Step 5 では、統一されたエラーハンドリングシステムを導入�
 - 一括取得時の自動リトライ機能
 - エラー発生時のフォールバック処理
 
-### `useScheduleState.js`
+### `useSiteOperationScheduleState.js`
 
-スケジュール状態管理の全機能にエラーハンドリングを追加:
+現場稼働予定の状態管理の全機能にエラーハンドリングを追加:
 
 **改善点:**
 
@@ -63,8 +63,8 @@ if (!result.success) {
 const searchResults = workerManager.searchWorkers("田中");
 // 内部でエラーが発生しても例外は投げられない
 
-// useScheduleStateでのエラーハンドリング
-const scheduleState = useScheduleState({ schedules });
+// useSiteOperationScheduleStateでのエラーハンドリング
+const scheduleState = useSiteOperationScheduleState({ schedules });
 
 // 安全なスケジュール更新
 const updated = scheduleState.optimisticUpdate("schedule123", (schedule) => {

@@ -3,17 +3,17 @@ import { useErrorHandler } from "./useErrorHandler";
 import { useMemoizedComputed } from "./usePerformanceOptimization";
 
 /**
- * スケジュールの状態管理を行うコンポーザブル
+ * 現場稼働予定の状態管理を行うコンポーザブル
  * - 楽観的更新のサポート
- * - スケジュールのフィルタリング・グループ化
+ * - 現場稼働予定のフィルタリング・グループ化
  * - 更新の追跡
  * @param {Object} options - オプション設定
- * @param {Array|Ref} options.schedules - 元のスケジュールデータ
- * @returns {Object} スケジュール状態管理の機能
+ * @param {Array|Ref} options.schedules - 元の現場稼働予定データ
+ * @returns {Object} 現場稼働予定の状態管理機能
  */
-export function useScheduleState({ schedules } = {}) {
+export function useSiteOperationScheduleState({ schedules } = {}) {
   /** エラーハンドラーの初期化 */
-  const errorHandler = useErrorHandler("useScheduleState");
+  const errorHandler = useErrorHandler("useSiteOperationScheduleState");
 
   /** ローカル状態（楽観的更新用） */
   const localSchedules = ref([]);
@@ -21,7 +21,7 @@ export function useScheduleState({ schedules } = {}) {
   const optimisticUpdates = ref(new Map()); // 楽観的更新の履歴
 
   /**
-   * 元のスケジュールデータをローカル状態に同期
+   * 元の現場稼働予定データをローカル状態に同期
    */
   watch(
     schedules,
@@ -53,7 +53,7 @@ export function useScheduleState({ schedules } = {}) {
   }
 
   /**
-   * 特定の条件でスケジュールをフィルタリング（メモ化とエラーハンドリング付き）
+   * 特定の条件で現場稼働予定をフィルタリング（メモ化とエラーハンドリング付き）
    */
   const getSchedulesByCondition = useMemoizedComputed(
     () => {
@@ -65,7 +65,7 @@ export function useScheduleState({ schedules } = {}) {
           return localSchedules.value.filter(condition);
         } catch (error) {
           const errorResult = errorHandler.handleError(error, {
-            operation: "スケジュールのフィルタリング",
+            operation: "現場稼働予定のフィルタリング",
             silent: true,
           });
           return [];
@@ -77,7 +77,7 @@ export function useScheduleState({ schedules } = {}) {
   );
 
   /**
-   * 現場ID・勤務区分・日付でスケジュールを取得（エラーハンドリング付き）
+   * 現場ID・勤務区分・日付で現場稼働予定を取得（エラーハンドリング付き）
    */
   const getSchedulesByKey = computed(() => {
     return (siteId, shiftType, date) => {
@@ -94,7 +94,7 @@ export function useScheduleState({ schedules } = {}) {
         );
       } catch (error) {
         const errorResult = errorHandler.handleError(error, {
-          operation: "スケジュールのキー検索",
+          operation: "現場稼働予定のキー検索",
           details: `siteId: ${siteId}, shiftType: ${shiftType}, date: ${date}`,
           silent: true,
         });
@@ -104,7 +104,7 @@ export function useScheduleState({ schedules } = {}) {
   });
 
   /**
-   * スケジュールをマトリックス形式でグループ化（エラーハンドリング付き）
+   * 現場稼働予定をマトリックス形式でグループ化（エラーハンドリング付き）
    */
   const createScheduleMatrix = computed(() => {
     return (rows, columns) => {
@@ -147,7 +147,7 @@ export function useScheduleState({ schedules } = {}) {
         return result;
       } catch (error) {
         const errorResult = errorHandler.handleError(error, {
-          operation: "スケジュールマトリックスの作成",
+          operation: "現場稼働予定マトリックスの作成",
           details: `rows: ${rows?.length}, columns: ${columns?.length}`,
           silent: true,
         });
@@ -157,7 +157,7 @@ export function useScheduleState({ schedules } = {}) {
   });
 
   /**
-   * 楽観的更新：スケジュールを即座にローカル状態に反映（エラーハンドリング付き）
+   * 楽観的更新：現場稼働予定を即座にローカル状態に反映（エラーハンドリング付き）
    */
   const optimisticUpdate = (scheduleId, updateFn) => {
     try {
@@ -194,7 +194,7 @@ export function useScheduleState({ schedules } = {}) {
       return null;
     } catch (error) {
       const errorResult = errorHandler.handleError(error, {
-        operation: "スケジュールの楽観的更新",
+        operation: "現場稼働予定の楽観的更新",
         details: `scheduleId: ${scheduleId}`,
       });
       return null;
@@ -202,7 +202,7 @@ export function useScheduleState({ schedules } = {}) {
   };
 
   /**
-   * スケジュールを追加（楽観的更新・エラーハンドリング付き）
+   * 現場稼働予定を追加（楽観的更新・エラーハンドリング付き）
    */
   const addScheduleOptimistically = (newSchedule) => {
     try {
@@ -219,14 +219,14 @@ export function useScheduleState({ schedules } = {}) {
       return scheduleWithTempId;
     } catch (error) {
       const errorResult = errorHandler.handleError(error, {
-        operation: "スケジュールの楽観的追加",
+        operation: "現場稼働予定の楽観的追加",
       });
       return null;
     }
   };
 
   /**
-   * スケジュールを削除（楽観的更新・エラーハンドリング付き）
+   * 現場稼働予定を削除（楽観的更新・エラーハンドリング付き）
    */
   const removeScheduleOptimistically = (scheduleId) => {
     try {
@@ -249,7 +249,7 @@ export function useScheduleState({ schedules } = {}) {
       return null;
     } catch (error) {
       const errorResult = errorHandler.handleError(error, {
-        operation: "スケジュールの楽観的削除",
+        operation: "現場稼働予定の楽観的削除",
         details: `scheduleId: ${scheduleId}`,
       });
       return null;
@@ -257,7 +257,7 @@ export function useScheduleState({ schedules } = {}) {
   };
 
   /**
-   * セルのスケジュール配列を更新（エラーハンドリング付き）
+   * セルの現場稼働予定配列を更新（エラーハンドリング付き）
    */
   const updateCellSchedules = (newSchedules, siteId, shiftType, date) => {
     try {
@@ -269,7 +269,7 @@ export function useScheduleState({ schedules } = {}) {
         throw new Error("SiteId, shiftType, and date are required");
       }
 
-      // 現在のセルに該当しないスケジュールを保持
+      // 現在のセルに該当しない現場稼働予定を保持
       const otherSchedules = localSchedules.value.filter(
         (s) =>
           !(
@@ -279,13 +279,13 @@ export function useScheduleState({ schedules } = {}) {
           )
       );
 
-      // 新しいスケジュールと結合
+      // 新しい現場稼働予定と結合
       localSchedules.value = [...otherSchedules, ...newSchedules];
 
       return true;
     } catch (error) {
       const errorResult = errorHandler.handleError(error, {
-        operation: "セルスケジュールの更新",
+        operation: "セル現場稼働予定の更新",
         details: `siteId: ${siteId}, shiftType: ${shiftType}, date: ${date}, schedules: ${newSchedules?.length}`,
       });
       return false;
@@ -360,7 +360,7 @@ export function useScheduleState({ schedules } = {}) {
   );
 
   /**
-   * フィルタリングされたスケジュール（エイリアス）
+   * フィルタリングされた現場稼働予定（エイリアス）
    */
   const filteredSchedules = computed(() => localSchedules.value);
 
