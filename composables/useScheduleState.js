@@ -1,9 +1,6 @@
 import { ref, computed, watch, toRaw, unref } from "vue";
 import { useErrorHandler } from "./useErrorHandler";
-import {
-  useMemoizedComputed,
-  useShallowComputed,
-} from "./usePerformanceOptimization";
+import { useMemoizedComputed } from "./usePerformanceOptimization";
 
 /**
  * スケジュールの状態管理を行うコンポーザブル
@@ -362,9 +359,15 @@ export function useScheduleState({ schedules } = {}) {
     { deep: true, maxCacheSize: 10 }
   );
 
+  /**
+   * フィルタリングされたスケジュール（エイリアス）
+   */
+  const filteredSchedules = computed(() => localSchedules.value);
+
   return {
     // 状態
     localSchedules,
+    filteredSchedules,
     pendingUpdates,
     optimisticUpdates,
     statistics,

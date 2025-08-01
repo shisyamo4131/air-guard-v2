@@ -37,6 +37,7 @@ const siteOrder = useSiteOrder();
 const { columns } = useScheduleTableColumns({
   dayCount: toRef(props, "dayCount"),
   startDate: computed(() => dayjs().subtract(1, "day").toDate()),
+  schedules: toRef(props, "schedules"),
 });
 const scheduleState = useScheduleState({
   schedules: toRef(props, "schedules"),
@@ -169,6 +170,7 @@ async function handleChangeSchedule(event, dateAt) {
           v-for="column of columns"
           :key="column.date"
           :date-at="column.dateAt"
+          :required-personnel-total="column.requiredPersonnelTotal"
         />
       </tr>
     </tfoot>

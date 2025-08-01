@@ -12,6 +12,10 @@ const props = defineProps({
     required: true,
     validator: validateDateProp,
   },
+  requiredPersonnelTotal: {
+    type: Number,
+    default: 0,
+  },
 });
 
 /** use composable */
@@ -20,6 +24,8 @@ const { cssClasses } = useColumnStyles(toRef(props, "dateAt"));
 
 <template>
   <th :class="cssClasses">
-    <span class="grey--text text--darken-2 text-subtitle-2"> 稼働数: </span>
+    <span class="grey--text text--darken-2 text-subtitle-2">
+      稼働数: {{ requiredPersonnelTotal }}
+    </span>
   </th>
 </template>
