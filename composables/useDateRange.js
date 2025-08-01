@@ -1,23 +1,31 @@
 import { ref, computed, watch } from "vue";
 import dayjs from "dayjs";
+import { useDateUtil } from "./useDateUtil";
 
 /**
- * スケジュール表示の日付範囲を管理するコンポーザブル
+ * 日付範囲を管理するコンポーザブル
  * @param {Object} options - オプション設定
  * @param {Date} options.baseDate - 基準日（デフォルト: 今日）
  * @param {number} options.dayCount - 表示する日数（デフォルト: 14）
  * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: -1 = 昨日から）
  * @returns {Object} 日付範囲関連の状態と操作
  */
-export function useScheduleDateRange({
+export function useDateRange({
   baseDate = new Date(),
   dayCount = 14,
   offsetDays = -1,
 } = {}) {
-  /** リアクティブな状態 */
-  const currentBaseDate = ref(baseDate);
-  const currentDayCount = ref(dayCount);
-  const currentOffsetDays = ref(offsetDays);
+  /** 日付ユーティリティの取得 */
+  const { isValidDate, formatDate, validateDateRange } = useDateUtil();
+
+  /** リアクティブな状態（初期値の検証を追加） */
+  const currentBaseDate = ref(isValidDate(baseDate) ? baseDate : new Date());
+  const currentDayCount = ref(
+    typeof dayCount === "number" && dayCount > 0 ? dayCount : 14
+  );
+  const currentOffsetDays = ref(
+    typeof offsetDays === "number" ? offsetDays : -1
+  );
 
   /**
    * 開始日を計算（基準日 + オフセット）
@@ -49,12 +57,25 @@ export function useScheduleDateRange({
   }));
 
   /**
-   * 日付範囲の文字列表現
+   * 日付範囲の文字列表現（useDateUtilを活用）
    */
   const dateRangeLabel = computed(() => {
-    const start = dayjs(startDate.value);
-    const end = dayjs(endDate.value);
-    return `${start.format("YYYY/MM/DD")} - ${end.format("YYYY/MM/DD")}`;
+    const startFormatted = formatDate(startDate.value, "YYYY/MM/DD");
+    const endFormatted = formatDate(endDate.value, "YYYY/MM/DD");
+
+    if (!startFormatted || !endFormatted) {
+      console.warn("Invalid dates in date range");
+      return "Invalid Date Range";
+    }
+
+    return `${startFormatted} - ${endFormatted}`;
+  });
+
+  /**
+   * 日付範囲の有効性をチェック
+   */
+  const isValidRange = computed(() => {
+    return validateDateRange(startDate.value, endDate.value);
   });
 
   /**
@@ -69,24 +90,38 @@ export function useScheduleDateRange({
   });
 
   /**
-   * 基準日を変更
+   * 基準日を変更（検証付き）
    */
   const setBaseDate = (newDate) => {
-    currentBaseDate.value = newDate;
+    if (isValidDate(newDate)) {
+      currentBaseDate.value = newDate;
+    } else {
+      console.warn(
+        "Invalid date provided to setBaseDate, keeping current value"
+      );
+    }
   };
 
   /**
-   * 表示日数を変更
+   * 表示日数を変更（検証付き）
    */
   const setDayCount = (newCount) => {
-    currentDayCount.value = newCount;
+    if (typeof newCount === "number" && newCount > 0) {
+      currentDayCount.value = newCount;
+    } else {
+      console.warn("Invalid day count provided, keeping current value");
+    }
   };
 
   /**
-   * オフセット日数を変更
+   * オフセット日数を変更（検証付き）
    */
   const setOffsetDays = (newOffset) => {
-    currentOffsetDays.value = newOffset;
+    if (typeof newOffset === "number") {
+      currentOffsetDays.value = newOffset;
+    } else {
+      console.warn("Invalid offset provided, keeping current value");
+    }
   };
 
   /**
@@ -135,6 +170,7 @@ export function useScheduleDateRange({
     dateRange,
     dateRangeLabel,
     includesToday,
+    isValidRange,
 
     // 操作
     setBaseDate,

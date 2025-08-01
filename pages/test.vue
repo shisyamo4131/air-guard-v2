@@ -3,7 +3,7 @@ import { provide, computed, useTemplateRef, watch } from "vue";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useWorkerManager } from "@/composables/useWorkerManager";
-import { useScheduleDateRange } from "@/composables/useScheduleDateRange";
+import { useDateRange } from "@/composables/useDateRange";
 import {
   useDebouncedRef,
   useMemoryMonitor,
@@ -18,7 +18,7 @@ const isDev = process.env.NODE_ENV === "development";
 const scheduleManager = useTemplateRef("scheduleManager");
 
 /** define date range management */
-const dateRange = useScheduleDateRange({
+const dateRange = useDateRange({
   baseDate: new Date(),
   dayCount: DAYS_COUNT,
   offsetDays: -1,
