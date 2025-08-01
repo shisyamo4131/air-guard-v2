@@ -211,7 +211,7 @@ async function handleChangeSchedule(event, dateAt) {
 /* テーブルヘッダーのスタイル */
 #arrangement-table > div > table > thead > tr > th {
   text-align: center;
-  min-width: 280px;
+  min-width: 264px;
   border: 1px solid grey;
 }
 
