@@ -21,17 +21,6 @@ Step 6 では、アプリケーションのパフォーマンスを大幅に改�
 - **useMemoryMonitor**: メモリ使用量監視
 - **useLazyLoader**: 遅延ローディング機能
 
-### `useScheduleTableVirtualization.js`
-
-スケジュールテーブル専用の仮想化機能。
-
-**主な機能:**
-
-- 可視範囲の動的計算
-- 仮想スクロール実装
-- 大量行データの効率的レンダリング
-- メモリ使用量の最適化
-
 ## 改善されたファイル
 
 ### `useSiteOperationScheduleState.js`

@@ -12,7 +12,6 @@ import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useScheduleTableColumns } from "@/composables/useScheduleTableColumns";
 import { useSiteOperationScheduleState } from "@/composables/useSiteOperationScheduleState";
-import { useScheduleTableVirtualization } from "@/composables/useScheduleTableVirtualization";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
 import FooterCell from "@/components/Arrangements/FooterCell";
@@ -43,14 +42,6 @@ const scheduleState = useSiteOperationScheduleState({
   schedules: toRef(props, "schedules"),
 });
 
-/** 仮想化機能の追加 */
-const virtualization = useScheduleTableVirtualization({
-  rowHeight: 64,
-  headerHeight: 48,
-  containerHeight: 600,
-  buffer: 5,
-});
-
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
@@ -58,22 +49,10 @@ const virtualization = useScheduleTableVirtualization({
  * Generate schedule matrix based on schedules and columns
  */
 const scheduleMatrix = computed(() => {
-  const matrix = scheduleState.createScheduleMatrix.value(
+  return scheduleState.createScheduleMatrix.value(
     siteOrder.order.value,
     columns.value
   );
-
-  // 仮想化用にデータを更新
-  virtualization.updateRows(matrix);
-
-  return matrix;
-});
-
-/**
- * 仮想化された行のみを表示
- */
-const visibleRows = computed(() => {
-  return virtualization.visibleRows.value;
 });
 
 /*****************************************************************************
