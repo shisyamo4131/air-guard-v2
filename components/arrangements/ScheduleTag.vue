@@ -10,30 +10,22 @@
  * - vuedraggable の `change` イベントを使用して、要素の追加、削除、移動をハンドリングします。
  *   -> 変更が生じた場合は props.schedule.update() を呼び出して、直接 Firestore ドキュメントを更新します。
  */
+import { inject, ref, computed } from "vue";
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
-import {
-  SITE_OPERATION_SCHEDULE_STATUS_DRAFT,
-  SITE_OPERATION_SCHEDULE_STATUS_SCHEDULED,
-} from "air-guard-v2-schemas/constants";
+import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({
-  /**
-   * 従業員情報
-   * - Tag コンポーネントに引き渡されます。
-   */
-  cachedEmployees: { type: Object, required: true },
-  /**
-   * 外注先情報
-   * - Tag コンポーネントに引き渡されます。
-   */
-  cachedOutsourcers: { type: Object, required: true },
   /**
    * 現場稼働予定のドキュメント
    */
   schedule: { type: Object, required: true },
 });
+
+/** inject from ancestor */
+const workerManager = inject("workerManagerComposable");
+const { getWorkerDisplayName } = workerManager;
 
 /** define emits */
 const emit = defineEmits(["click:edit"]);
@@ -51,15 +43,10 @@ const label = computed(() => {
   return props.schedule.workDescription || "通常警備";
 });
 
-// Returns a function to get the display name of a worker.
-const getWorkerDisplayName = computed(() => {
-  return (element) => {
-    const cache = element.isEmployee
-      ? props.cachedEmployees
-      : props.cachedOutsourcers;
-    return cache[element.workerId]?.displayName;
-  };
-});
+// 新しい作業員管理システムのdisplayName取得関数を使用
+const getDisplayName = (element) => {
+  return getWorkerDisplayName.value(element.workerId, element.isEmployee);
+};
 
 /*****************************************************************************
  * METHODS
@@ -243,7 +230,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         <ArrangementsWorkerTag
           v-bind="element"
           is-arranged
-          :label="getWorkerDisplayName(element)"
+          :label="getDisplayName(element)"
           :highlight="
             highlightedEmployees.has(
               `${props.schedule.docId}-${element.workerId}`

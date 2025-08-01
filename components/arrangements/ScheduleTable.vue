@@ -6,122 +6,73 @@
  * - 現場稼働予定自体を要素として、同じ現場・シフトの別の日に移動することができます。
  *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
  */
-import draggable from "vuedraggable";
+import { inject, toRef, computed } from "vue";
 import dayjs from "dayjs";
-import { getDayType, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
+import { useScheduleTableColumns } from "@/composables/useScheduleTableColumns";
+import { useScheduleState } from "@/composables/useScheduleState";
+import { useScheduleTableVirtualization } from "@/composables/useScheduleTableVirtualization";
+import DayCell from "@/components/Arrangements/DayCell";
+import BodyCell from "@/components/Arrangements/BodyCell";
+import FooterCell from "@/components/Arrangements/FooterCell";
 
 /** define props */
 const props = defineProps({
   schedules: { type: Array, required: true },
-  cachedEmployees: { type: Object, default: () => ({}) },
-  cachedOutsourcers: { type: Object, default: () => ({}) },
-  cachedSites: { type: Object, default: () => ({}) },
   dayCount: { type: Number, default: 7 },
+  showDebugInfo: { type: Boolean, default: false },
 });
 
 /** define emits */
 const emit = defineEmits(["click:edit"]);
 
+/** inject from parent */
+const managerComposable = inject("scheduleManagerComposable");
+const { cachedSites } = managerComposable;
+
 /** define composables */
 const logger = useLogger();
 const siteOrder = useSiteOrder();
-
-/** define refs for optimistic updates */
-const localSchedules = ref([]);
-
-const today = new Date();
-
-/*****************************************************************************
- * WATCHERS
- *****************************************************************************/
-// props.schedulesの変更をlocalSchedulesに反映
-watch(
-  () => props.schedules,
-  (newSchedules) => {
-    localSchedules.value = [...newSchedules];
-  },
-  { immediate: true, deep: true }
-);
-
-/**
- * Generate columns based on dayCount
- */
-const columns = computed(() => {
-  const startDate = dayjs().locale("en");
-  const result = [];
-
-  for (let i = 0; i < props.dayCount; i++) {
-    const date = startDate.add(i, "day");
-    result.push({
-      date: date.format("YYYY-MM-DD"),
-      dateAt: date.toDate(),
-      col: date.format("MM/DD"),
-      dayOfWeek: date.format("ddd").toLowerCase(),
-      isHoliday: getDayType(date.toDate()) === "holiday",
-      isPreviousDay: date.isBefore(today, "day"),
-      isToday: date.isSame(today, "day"),
-    });
-  }
-
-  return result;
+const { columns } = useScheduleTableColumns({
+  dayCount: toRef(props, "dayCount"),
+  startDate: computed(() => dayjs().subtract(1, "day").toDate()),
+});
+const scheduleState = useScheduleState({
+  schedules: toRef(props, "schedules"),
 });
 
+/** 仮想化機能の追加 */
+const virtualization = useScheduleTableVirtualization({
+  rowHeight: 64,
+  headerHeight: 48,
+  containerHeight: 600,
+  buffer: 5,
+});
+
+/*****************************************************************************
+ * COMPUTED PROPERTIES
+ *****************************************************************************/
 /**
  * Generate schedule matrix based on schedules and columns
  */
 const scheduleMatrix = computed(() => {
-  const result = [];
+  const matrix = scheduleState.createScheduleMatrix.value(
+    siteOrder.order.value,
+    columns.value
+  );
 
-  for (const order of siteOrder.order.value) {
-    const cells = [];
+  // 仮想化用にデータを更新
+  virtualization.updateRows(matrix);
 
-    for (const column of columns.value) {
-      const matchingSchedules = localSchedules.value.filter(
-        (s) =>
-          s.siteId === order.siteId &&
-          s.shiftType === order.shiftType &&
-          s.date === column.date
-      );
-
-      cells.push({
-        schedules: matchingSchedules,
-        hasSchedules: matchingSchedules.length > 0,
-        scheduleCount: matchingSchedules.length,
-        column,
-        key: `${order.siteId}-${order.shiftType}-${column.date}`,
-        draggableName: `schedules-${order.siteId}-${order.shiftType}`,
-      });
-    }
-
-    result.push({
-      ...order,
-      cells,
-    });
-  }
-
-  return result;
+  return matrix;
 });
 
 /**
- * Get CSS classes for column header
+ * 仮想化された行のみを表示
  */
-const getColumnHeaderClasses = (column) => ({
-  "g-col": true,
-  [`g-col-${column.dayOfWeek}`]: true,
-  "g-col-previous": column.isPreviousDay,
-  "g-col-today": column.isToday,
-});
-
-/**
- * Get CSS classes for table cell
- */
-const getCellClasses = (column) => ({
-  "g-col": true,
-  [`g-col-${column.dayOfWeek}`]: true,
-  "g-col-previous": column.isPreviousDay,
-  "g-col-today": column.isToday,
+const visibleRows = computed(() => {
+  return virtualization.visibleRows.value;
 });
 
 /*****************************************************************************
@@ -130,15 +81,8 @@ const getCellClasses = (column) => ({
 /**
  * セルのスケジュール配列が更新された時の処理
  */
-function updateCellSchedules(newSchedules, siteId, shiftType, date) {
-  // 現在のセルに該当しないスケジュールを保持
-  const otherSchedules = localSchedules.value.filter(
-    (s) =>
-      !(s.siteId === siteId && s.shiftType === shiftType && s.date === date)
-  );
-
-  // 新しいスケジュールと結合
-  localSchedules.value = [...otherSchedules, ...newSchedules];
+function updateSiteSchedules(newSchedules, siteId, shiftType, date) {
+  scheduleState.updateCellSchedules(newSchedules, siteId, shiftType, date);
 }
 
 async function handleChangeSchedule(event, dateAt) {
@@ -146,8 +90,16 @@ async function handleChangeSchedule(event, dateAt) {
   try {
     if (event.added) {
       const schedule = event.added.element;
-      // バックグラウンドでFirestoreを更新（ローカルは既にdraggableで更新済み）
-      await schedule.reschedule(dateAt);
+      // 楽観的更新で即座にローカル状態を更新済み
+      // バックグラウンドでFirestoreを更新
+      try {
+        await schedule.reschedule(dateAt);
+        scheduleState.markUpdateComplete(schedule.docId);
+      } catch (error) {
+        // 失敗時は楽観的更新をロールバック
+        scheduleState.rollbackOptimisticUpdate(schedule.docId);
+        throw error;
+      }
     } else if (event.removed) {
       // 別の日に移動されたことによる削除イベントの場合
       // -> 別の日で added イベントが発生するため処理不要
@@ -172,14 +124,11 @@ async function handleChangeSchedule(event, dateAt) {
   >
     <thead>
       <tr>
-        <th
+        <DayCell
           v-for="column of columns"
           :key="column.date"
-          :class="getColumnHeaderClasses(column)"
-        >
-          <v-icon v-if="column.isHoliday" color="red">mdi-flag-variant</v-icon>
-          {{ column.col }}
-        </th>
+          :dateAt="column.dateAt"
+        />
       </tr>
     </thead>
     <tbody>
@@ -187,85 +136,68 @@ async function handleChangeSchedule(event, dateAt) {
         v-for="(orderData, rowIndex) of scheduleMatrix"
         :key="`site-row-${rowIndex}`"
       >
-        <tr
-          :ref="`${orderData.siteId}-${orderData.shiftType}`"
-          class="g-row g-row-no-hover"
-        >
-          <td class="site-row" :colspan="columns.length + 1">
-            <div
-              v-if="props.cachedSites[orderData.siteId]"
-              class="text-subtitle-1"
-            >
-              <div class="d-flex align-center">
-                <v-chip class="mr-2" label size="small">
-                  {{ SHIFT_TYPE[orderData.shiftType] }}
-                </v-chip>
-                <span>
-                  {{ props.cachedSites[orderData.siteId].name }}
-                </span>
-              </div>
-            </div>
-            <!-- progress circular (shown if site is loading) -->
-            <v-progress-circular v-else indeterminate size="small" />
-          </td>
-        </tr>
+        <ArrangementsSiteRow
+          :colspan="columns.length + 1"
+          :shift-type="orderData.shiftType"
+          :site="cachedSites[orderData.siteId]"
+        />
         <tr class="g-row g-row-no-hover">
-          <td
+          <BodyCell
             v-for="cell of orderData.cells"
             :key="cell.key"
-            :class="getCellClasses(cell.column)"
-          >
-            <draggable
-              :model-value="cell.schedules"
-              item-key="docId"
-              tag="div"
-              class="d-flex flex-column fill-height pa-2"
-              :group="{
-                name: cell.draggableName,
-                pull: (to, from, dragEl) => {
-                  const element = dragEl.__draggable_context.element;
-                  return element.isDraft;
-                },
-              }"
-              @update:modelValue="
-                updateCellSchedules(
-                  $event,
-                  orderData.siteId,
-                  orderData.shiftType,
-                  cell.column.date
-                )
-              "
-              @change="handleChangeSchedule($event, cell.column.dateAt)"
-            >
-              <template #item="{ element }">
-                <ArrangementsScheduleTag
-                  :schedule="element"
-                  :cached-employees="cachedEmployees"
-                  :cached-outsourcers="cachedOutsourcers"
-                  class="mb-2"
-                  @click:edit="emit('click:edit', $event)"
-                />
-              </template>
-            </draggable>
-          </td>
+            :dateAt="cell.column.dateAt"
+            :model-value="cell.schedules"
+            :site-id="orderData.siteId"
+            :shift-type="orderData.shiftType"
+            @update:model-value="
+              updateSiteSchedules(
+                $event,
+                orderData.siteId,
+                orderData.shiftType,
+                cell.column.date
+              )
+            "
+            @change="handleChangeSchedule($event, cell.column.dateAt)"
+            @click:edit="emit('click:edit', $event)"
+          />
         </tr>
       </template>
     </tbody>
     <tfoot>
       <tr>
-        <th
+        <FooterCell
           v-for="column of columns"
           :key="column.date"
-          :class="getColumnHeaderClasses(column)"
-        >
-          <v-icon v-if="column.isHoliday" color="red">mdi-flag-variant</v-icon>
-          <span class="grey--text text--darken-2 text-subtitle-2">
-            稼働数:
-          </span>
-        </th>
+          :date-at="column.dateAt"
+        />
       </tr>
     </tfoot>
   </v-table>
+
+  <!-- デバッグ情報 -->
+  <v-card v-if="props.showDebugInfo" class="ma-2" outlined>
+    <v-card-title class="text-subtitle-2"
+      >スケジュール状態管理デバッグ</v-card-title
+    >
+    <v-card-text class="py-2">
+      <div class="text-caption">
+        <div>
+          総スケジュール数: {{ scheduleState.statistics.value.totalSchedules }}
+        </div>
+        <div>
+          更新中: {{ scheduleState.statistics.value.pendingUpdatesCount }}
+        </div>
+        <div>
+          楽観的更新:
+          {{ scheduleState.statistics.value.optimisticUpdatesCount }}
+        </div>
+        <div>
+          ステータス別:
+          {{ JSON.stringify(scheduleState.statistics.value.schedulesByStatus) }}
+        </div>
+      </div>
+    </v-card-text>
+  </v-card>
 </template>
 
 <style scoped>
@@ -285,19 +217,6 @@ async function handleChangeSchedule(event, dateAt) {
 #arrangement-table > div > table > tbody > tr > td {
   padding: 0px;
   border: 1px solid grey;
-}
-
-/* 奇数行のサイト行の背景色 */
-#arrangement-table > div > table > tbody > tr:nth-child(odd) .site-row {
-  background-color: beige;
-}
-
-/* 奇数行のサイト行の左側を固定する */
-#arrangement-table > div > table > tbody > tr:nth-child(odd) .site-row div {
-  display: inline-block;
-  position: sticky;
-  left: 16px;
-  z-index: 1 !important; /* 他の要素より前面に表示 */
 }
 
 /* テーブルフッターのスタイル */
