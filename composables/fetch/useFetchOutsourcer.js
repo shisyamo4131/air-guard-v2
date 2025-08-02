@@ -1,5 +1,5 @@
 /**
- * @file ./composables/useFetchOutsourcer.js
+ * @file ./composables/fetch/useFetchOutsourcer.js
  * @description
  * Outsourcers コレクションのドキュメントを効率的に取得し、キャッシュするためのコンポーザブルです。
  *

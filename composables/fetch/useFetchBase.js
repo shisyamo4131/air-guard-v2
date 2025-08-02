@@ -6,7 +6,7 @@
  * このコンポーザブルは、Employee, Outsourcer, Site などの異なるコレクションに対して
  * 共通のフェッチ・キャッシュ機能を提供します。
  */
-import { useLogger } from "./useLogger";
+import { useLogger } from "../useLogger";
 import { ref, computed } from "vue";
 
 /**

@@ -6,7 +6,7 @@
 import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
-import { useFetchSite } from "@/composables/useFetchSite";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { getDayType } from "air-guard-v2-schemas/constants";
 
 const { fetchSite, cachedSites } = useFetchSite();

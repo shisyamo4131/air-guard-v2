@@ -4,7 +4,7 @@
  * @description This component manages the operation results for employees.
  * Due to the specifications of the feature, the `ArrayManager` is not used to edit multiple elements.
  */
-import { useFetchEmployee } from "@/composables/useFetchEmployee";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
 /** define-props */
 const props = defineProps({

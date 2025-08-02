@@ -13,7 +13,7 @@ import {
   SITE_OPERATION_SCHEDULE_STATUS,
   getDayType,
 } from "air-guard-v2-schemas/constants";
-import { useFetchSite } from "~/composables/useFetchSite";
+import { useFetchSite } from "~/composables/fetch/useFetchSite";
 
 /** Get operation-result-id from route parameters */
 const route = useRoute();

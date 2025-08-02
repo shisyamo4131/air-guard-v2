@@ -1,6 +1,6 @@
 import { computed, ref, reactive, onMounted } from "vue";
-import { useFetchEmployee } from "./useFetchEmployee";
-import { useFetchOutsourcer } from "./useFetchOutsourcer";
+import { useFetchEmployee } from "./fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
 import { useMemoizedComputed } from "./usePerformanceOptimization";

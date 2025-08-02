@@ -1,5 +1,5 @@
 /**
- * @file ./composables/useFetchSite.js
+ * @file ./composables/fetch/useFetchSite.js
  * @description
  * Sites コレクションのドキュメントを効率的に取得し、キャッシュするためのコンポーザブルです。
  *

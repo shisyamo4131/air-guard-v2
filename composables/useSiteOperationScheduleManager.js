@@ -10,9 +10,9 @@
  * ```js
  * import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
  * // Optionally, create your own composable instances
- * import { useFetchEmployee } from "@/composables/useFetchEmployee";
- * import { useFetchOutsourcer } from "@/composables/useFetchOutsourcer";
- * import { useFetchSite } from "@/composables/useFetchSite";
+ * import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+ * import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+ * import { useFetchSite } from "@/composables/fetch/useFetchSite";
  * const { cachedEmployees, cachedOutsourcers, cachedSites, docs, initialize } = useSiteOperationScheduleManager({
  *   manager: scheduleManager,
  *   siteId: selectedSiteId,
@@ -37,9 +37,9 @@
  */
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
-import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/useFetchEmployee";
-import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/useFetchOutsourcer";
-import { useFetchSite as internalUseFetchSite } from "@/composables/useFetchSite";
+import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateUtil } from "@/composables/useDateUtil";
 
 /** Messages */
