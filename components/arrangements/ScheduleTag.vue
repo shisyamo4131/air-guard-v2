@@ -25,7 +25,7 @@ const props = defineProps({
 
 /** inject from ancestor */
 const workerManager = inject("workerManagerComposable");
-const { getWorkerDisplayName } = workerManager;
+const { getWorkerName } = workerManager;
 
 /** define emits */
 const emit = defineEmits(["click:edit"]);
@@ -42,11 +42,6 @@ const highlightedEmployees = ref(new Set());
 const label = computed(() => {
   return props.schedule.workDescription || "通常警備";
 });
-
-// 新しい作業員管理システムのdisplayName取得関数を使用
-const getDisplayName = (element) => {
-  return getWorkerDisplayName.value(element.workerId, element.isEmployee);
-};
 
 /*****************************************************************************
  * METHODS
@@ -230,7 +225,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         <ArrangementsWorkerTag
           v-bind="element"
           is-arranged
-          :label="getDisplayName(element)"
+          :label="getWorkerName(element)"
           :highlight="
             highlightedEmployees.has(
               `${props.schedule.docId}-${element.workerId}`

@@ -118,49 +118,15 @@ export function useWorkerManager({
   };
 
   /**
-   * 全作業員（従業員+外注先）のリスト（メモ化付き）
-   */
-  const allWorkers = useMemoizedComputed(
-    () => {
-      try {
-        const employeeList = (availableEmployees.value || []).map((emp) => ({
-          ...emp,
-          isEmployee: true,
-          type: "employee",
-          displayName: emp?.displayName || emp?.name || "Unknown Employee",
-        }));
-
-        const outsourcerList = (availableOutsourcers.value || []).map(
-          (out) => ({
-            ...out,
-            isEmployee: false,
-            type: "outsourcer",
-            displayName: out?.displayName || out?.name || "Unknown Outsourcer",
-          })
-        );
-
-        return [...employeeList, ...outsourcerList];
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "全作業員リストの生成",
-          silent: true,
-        });
-        return [];
-      }
-    },
-    [() => availableEmployees.value, () => availableOutsourcers.value],
-    { deep: false, maxCacheSize: 20 }
-  );
-
-  /**
    * 作業員をIDで取得（エラーハンドリング付き）
+   * @param {string} workerId - 作業員のID
+   * @param {boolean} isEmployee - 従業員かどうか
+   * @returns {Object|null} - 作業員データまたはnull
    */
   const getWorkerById = computed(() => {
-    return (workerId, isEmployee = true) => {
+    return ({ workerId, isEmployee = true }) => {
       try {
-        if (!workerId) {
-          return null;
-        }
+        if (!workerId) return null;
 
         const cache = isEmployee
           ? cachedEmployees.value
@@ -179,187 +145,49 @@ export function useWorkerManager({
 
   /**
    * 作業員の表示名を取得（エラーハンドリング付き）
+   * @param {string} workerId - 作業員のID
+   * @param {boolean} isEmployee - 従業員かどうか
+   * @returns {string|null} - 表示名またはnull
    */
-  const getWorkerDisplayName = computed(() => {
-    return (workerId, isEmployee = true) => {
+  const getWorkerName = computed(() => {
+    return ({ workerId, isEmployee = true }) => {
       try {
-        if (!workerId) {
-          return "Unknown Worker (No ID)";
-        }
+        // workerId が未指定の場合は null を返す
+        if (!workerId) return null;
 
-        const worker = getWorkerById.value(workerId, isEmployee);
-        if (!worker) {
-          return `Unknown Worker (${workerId})`;
-        }
+        // worker データを取得 -> 存在しなければ null を返す
+        const worker = getWorkerById.value({ workerId, isEmployee });
+        if (!worker) return null;
 
-        const displayName =
-          worker.displayName && worker.displayName.trim() !== ""
-            ? worker.displayName
-            : null;
-        const name =
-          worker.name && worker.name.trim() !== "" ? worker.name : null;
-        const fullName =
-          worker.fullName && worker.fullName.trim() !== ""
-            ? worker.fullName
-            : null;
-
-        return (
-          displayName || name || fullName || `Unknown Worker (${workerId})`
+        // 表示名として有効なフィールド名を優先順位で取得
+        const validName = ["displayName", "name", "fullName"].find((field) =>
+          worker?.[field]?.trim()
         );
+
+        // 表示名として有効なフィールド名が取得できた場合のみ文字列を返す
+        return validName ? worker[validName] : `Unknown Worker (${workerId})`;
       } catch (error) {
         const errorResult = errorHandler.handleError(error, {
           operation: "作業員表示名の取得",
           details: `ID: ${workerId}, isEmployee: ${isEmployee}`,
           silent: true,
         });
-        return `Error: ${workerId}`;
+        return null;
       }
     };
   });
 
   /**
-   * 作業員が存在するかチェック（エラーハンドリング付き）
+   * 全作業員（従業員+外注先）のリスト（メモ化付き）
    */
-  const workerExists = computed(() => {
-    return (workerId, isEmployee = true) => {
-      try {
-        if (!workerId) return false;
-        return getWorkerById.value(workerId, isEmployee) !== null;
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "作業員存在チェック",
-          details: `ID: ${workerId}, isEmployee: ${isEmployee}`,
-          silent: true,
-        });
-        return false;
-      }
-    };
-  });
-
-  /**
-   * 複数の作業員を一括取得（エラーハンドリング付き）
-   */
-  const fetchWorkers = async (workerList) => {
-    return errorHandler.safeAsyncExecution(
-      async () => {
-        if (!Array.isArray(workerList)) {
-          throw new Error("workerList must be an array");
-        }
-
-        const employees = workerList
-          .filter((w) => w?.isEmployee)
-          .map((w) => w.workerId)
-          .filter(Boolean);
-        const outsourcers = workerList
-          .filter((w) => !w?.isEmployee)
-          .map((w) => w.workerId)
-          .filter(Boolean);
-
-        const promises = [];
-        if (employees.length > 0) {
-          promises.push(fetchEmployee(employees));
-        }
-        if (outsourcers.length > 0) {
-          promises.push(fetchOutsourcer(outsourcers));
-        }
-
-        await Promise.all(promises);
-        return { employees: employees.length, outsourcers: outsourcers.length };
-      },
-      {
-        operation: "作業員データの一括取得",
-        retryOptions: { maxRetries: 2 },
-      }
-    );
-  };
-
-  /**
-   * 検索機能（エラーハンドリング付き）
-   */
-  const searchWorkers = computed(() => {
-    return (query, options = {}) => {
-      try {
-        const {
-          includeEmployees = true,
-          includeOutsourcers = true,
-          limit = 50,
-        } = options;
-
-        if (!query || typeof query !== "string" || query.trim() === "") {
-          return [];
-        }
-
-        const normalizedQuery = query.toLowerCase().trim();
-
-        let results = [];
-
-        if (includeEmployees) {
-          const employeeMatches = availableEmployees.value
-            .filter((emp) => {
-              if (!emp) return false;
-
-              const displayName = (emp.displayName || "").toLowerCase();
-              const name = (emp.name || "").toLowerCase();
-              const code = (emp.code || "").toLowerCase();
-
-              return (
-                displayName.includes(normalizedQuery) ||
-                name.includes(normalizedQuery) ||
-                code.includes(normalizedQuery)
-              );
-            })
-            .map((emp) => ({ ...emp, isEmployee: true, type: "employee" }));
-
-          results.push(...employeeMatches);
-        }
-
-        if (includeOutsourcers) {
-          const outsourcerMatches = availableOutsourcers.value
-            .filter((out) => {
-              if (!out) return false;
-
-              const displayName = (out.displayName || "").toLowerCase();
-              const name = (out.name || "").toLowerCase();
-              const code = (out.code || "").toLowerCase();
-
-              return (
-                displayName.includes(normalizedQuery) ||
-                name.includes(normalizedQuery) ||
-                code.includes(normalizedQuery)
-              );
-            })
-            .map((out) => ({ ...out, isEmployee: false, type: "outsourcer" }));
-
-          results.push(...outsourcerMatches);
-        }
-
-        // 関連度でソート（完全一致を優先）
-        results.sort((a, b) => {
-          const aDisplay = (a.displayName || a.name || "").toLowerCase();
-          const bDisplay = (b.displayName || b.name || "").toLowerCase();
-
-          const aExact = aDisplay === normalizedQuery ? 1 : 0;
-          const bExact = bDisplay === normalizedQuery ? 1 : 0;
-
-          if (aExact !== bExact) return bExact - aExact;
-
-          const aStarts = aDisplay.startsWith(normalizedQuery) ? 1 : 0;
-          const bStarts = bDisplay.startsWith(normalizedQuery) ? 1 : 0;
-
-          return bStarts - aStarts;
-        });
-
-        return results.slice(0, Math.max(1, parseInt(limit) || 50));
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "作業員検索",
-          details: `検索クエリ: ${query}`,
-          silent: true,
-        });
-        return [];
-      }
-    };
-  });
+  const allWorkers = useMemoizedComputed(
+    () => [
+      ...(availableEmployees.value || []),
+      ...(availableOutsourcers.value || []),
+    ],
+    [() => availableEmployees.value, () => availableOutsourcers.value],
+    { deep: false, maxCacheSize: 20 }
+  );
 
   /**
    * 統計情報（メモ化とエラーハンドリング付き）
@@ -418,10 +246,7 @@ export function useWorkerManager({
 
     // 取得・検索機能
     getWorkerById,
-    getWorkerDisplayName,
-    workerExists,
-    fetchWorkers,
-    searchWorkers,
+    getWorkerName,
 
     // 統計情報
     statistics,
