@@ -57,7 +57,7 @@ export function useWorkers({
   const initialize = async () => {
     return errorHandler.safeAsyncExecution(
       async () => {
-        await Promise.all([initializeEmployees(), initializeOutsourcers()]);
+        await Promise.all([_initEmployees(), _initOutsourcers()]);
       },
       {
         operation: "作業員データの初期化",
@@ -67,53 +67,69 @@ export function useWorkers({
   };
 
   /**
-   * アクティブな従業員を初期化
+   * 作業員データを初期化する内部関数
+   * @param {Object} config - 初期化設定
+   * @param {Object} config.instance - スキーマインスタンス
+   * @param {Array} config.constraints - 取得条件
+   * @param {Function} config.pushToCache - キャッシュ追加関数
+   * @param {Object} config.targetRef - 格納先のref
+   * @param {boolean} config.isEmployee - 従業員フラグ
+   * @param {string} config.type - エラーメッセージ用の種別名
    */
-  const initializeEmployees = async () => {
+  const _initWorker = async ({
+    instance,
+    constraints,
+    pushToCache,
+    targetRef,
+    isEmployee,
+    type,
+  }) => {
     try {
-      const constraints = [
-        ["where", "employmentStatus", "==", EMPLOYMENT_STATUS_ACTIVE],
-      ];
-      const fetchedDocs = await employeeInstance.fetchDocs({ constraints });
+      const fetchedDocs = await instance.fetchDocs({ constraints });
 
       // キャッシュに追加
-      pushEmployees(fetchedDocs);
+      pushToCache(fetchedDocs);
 
-      // 選択用データとして設定
-      availableEmployees.value = fetchedDocs.map((doc) => {
+      // OperationResultDetail形式で選択用データを設定
+      targetRef.value = fetchedDocs.map((doc) => {
         return new OperationResultDetail({
           workerId: doc.docId,
-          isEmployee: true,
+          isEmployee,
         });
       });
     } catch (error) {
-      throw new Error(`従業員データの初期化に失敗: ${error.message}`);
+      throw new Error(`${type}データの初期化に失敗: ${error.message}`);
     }
   };
 
   /**
-   * アクティブな外注先を初期化
+   * アクティブな従業員を初期化（内部関数）
    */
-  const initializeOutsourcers = async () => {
-    try {
-      const constraints = [
-        ["where", "contractStatus", "==", CONTRACT_STATUS_ACTIVE],
-      ];
-      const fetchedDocs = await outsourcerInstance.fetchDocs({ constraints });
+  const _initEmployees = async () => {
+    return _initWorker({
+      instance: employeeInstance,
+      constraints: [
+        ["where", "employmentStatus", "==", EMPLOYMENT_STATUS_ACTIVE],
+      ],
+      pushToCache: pushEmployees,
+      targetRef: availableEmployees,
+      isEmployee: true,
+      type: "従業員",
+    });
+  };
 
-      // キャッシュに追加
-      pushOutsourcers(fetchedDocs);
-
-      // 選択用データとして設定
-      availableOutsourcers.value = fetchedDocs.map((doc) => {
-        return new OperationResultDetail({
-          workerId: doc.docId,
-          isEmployee: false,
-        });
-      });
-    } catch (error) {
-      throw new Error(`外注先データの初期化に失敗: ${error.message}`);
-    }
+  /**
+   * アクティブな外注先を初期化（内部関数）
+   */
+  const _initOutsourcers = async () => {
+    return _initWorker({
+      instance: outsourcerInstance,
+      constraints: [["where", "contractStatus", "==", CONTRACT_STATUS_ACTIVE]],
+      pushToCache: pushOutsourcers,
+      targetRef: availableOutsourcers,
+      isEmployee: false,
+      type: "外注先",
+    });
   };
 
   /**
@@ -240,8 +256,6 @@ export function useWorkers({
 
     // 初期化
     initialize,
-    initializeEmployees,
-    initializeOutsourcers,
 
     // 取得・検索機能
     getWorkerById,
