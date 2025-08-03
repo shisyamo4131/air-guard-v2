@@ -32,7 +32,7 @@ Step 6 では、アプリケーションのパフォーマンスを大幅に改�
 - `statistics`: 統計情報計算のメモ化
 - キャッシュサイズ制限と TTL（有効期限）の実装
 
-### `useWorkerManager.js`
+### `useWorkers.js`
 
 作業員管理の重い処理を最適化:
 

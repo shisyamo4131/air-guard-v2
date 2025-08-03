@@ -11,22 +11,21 @@ import {
 } from "air-guard-v2-schemas/constants";
 
 /**
- * 作業員（従業員・外注先）の統一管理コンポーザブル
- * - 従業員・外注先データの取得とキャッシュ
- * - 作業員選択用データの提供
- * - アクティブな作業員データの管理
- * - 重複チェック機能
+ * 作業員（従業員・外注先）リスト提供コンポーザブル
+ * - アクティブな作業員の選択用リスト提供
+ * - 作業員情報の取得とキャッシュ
+ * - 現場稼働予定の配置管理との連携
  * @param {Object} options - オプション設定
  * @param {Object} options.fetchEmployeeComposable - 既存の従業員取得コンポーザブル
  * @param {Object} options.fetchOutsourcerComposable - 既存の外注先取得コンポーザブル
- * @returns {Object} 作業員管理の機能
+ * @returns {Object} 作業員リスト提供の機能
  */
-export function useWorkerManager({
+export function useWorkers({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 } = {}) {
   /** エラーハンドラーとロガーの初期化 */
-  const errorHandler = useErrorHandler("useWorkerManager");
+  const errorHandler = useErrorHandler("useWorkers");
   const logger = useLogger();
 
   /** 既存のコンポーザブルを使用または新規作成 */

@@ -2,7 +2,7 @@
 import { provide, computed, useTemplateRef, watch } from "vue";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useWorkerManager } from "@/composables/useWorkerManager";
+import { useWorkers } from "@/composables/useWorkers";
 import { useDateRange } from "@/composables/useDateRange";
 import {
   useDebouncedRef,
@@ -42,7 +42,7 @@ const performanceStats = computed(() => {
 });
 
 /** define worker management */
-const workerManager = useWorkerManager();
+const workerManager = useWorkers();
 const {
   employeeComposable,
   outsourcerComposable,
