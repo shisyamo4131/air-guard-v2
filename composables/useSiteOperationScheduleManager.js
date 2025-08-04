@@ -1,14 +1,14 @@
 /**
  * @file useSiteOperationScheduleManager.js
  * @description Composable for managing site operation schedules.
- * @param {Object} options
- * @param {Object} [options.manager] - Optional manager for handling operations.
- * @param {string} [options.siteId] - Optional site ID to filter schedules.
- * @param {Date} [options.from] - Initial start date for the schedule range.
- * @param {Date|number} [options.to] - Initial end date or number of days from start date for the schedule range.
- * @param {Object} [options.fetchEmployeeComposable] - Already created useFetchEmployee composable instance
- * @param {Object} [options.fetchOutsourcerComposable] - Already created useFetchOutsourcer composable instance
- * @param {Object} [options.fetchSiteComposable] - Already created useFetchSite composable instance
+ * @param {Object} options - Configuration options.
+ * @param {Object} [options.manager] - Manager instance for schedule operations.
+ * @param {string} [options.siteId] - Site ID to filter schedules.
+ * @param {Date} [options.from] - Start date for the schedule range.
+ * @param {Date|number} [options.to] - End date or number of days from the start date.
+ * @param {Object} [options.fetchEmployeeComposable] - Custom useFetchEmployee composable instance.
+ * @param {Object} [options.fetchOutsourcerComposable] - Custom useFetchOutsourcer composable instance.
+ * @param {Object} [options.fetchSiteComposable] - Custom useFetchSite composable instance.
  */
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
