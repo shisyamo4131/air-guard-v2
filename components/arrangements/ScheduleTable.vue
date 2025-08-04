@@ -28,7 +28,7 @@ const emit = defineEmits(["click:edit"]);
 
 /** inject from parent */
 const managerComposable = inject("scheduleManagerComposable");
-const { cachedSites } = managerComposable;
+const { cached } = managerComposable;
 
 /** define composables */
 const logger = useLogger();
@@ -119,7 +119,7 @@ async function handleChangeSchedule(event, dateAt) {
         <ArrangementsSiteRow
           :colspan="columns.length + 1"
           :shift-type="orderData.shiftType"
-          :site="cachedSites[orderData.siteId]"
+          :site="cached.sites[orderData.siteId]"
         />
         <tr class="g-row g-row-no-hover">
           <BodyCell

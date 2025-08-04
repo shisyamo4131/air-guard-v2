@@ -45,14 +45,11 @@ const managerComposable = useSiteOperationScheduleManager({
 });
 
 const {
-  availableEmployees: employees,
-  availableOutsourcers: outsourcers,
-  cachedEmployees,
-  cachedOutsourcers,
-  cachedSites,
+  cached,
   docs: schedules,
+  workers,
   statistics,
-  initialize: initializeSchedules,
+  initialize,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
 } = managerComposable;
@@ -77,7 +74,7 @@ watch(
   () => debouncedDateRange.debouncedValue,
   (newRange) => {
     if (newRange) {
-      initializeSchedules({
+      initialize({
         from: newRange.from,
         to: newRange.dayCount,
       });
@@ -139,10 +136,10 @@ watch(
         :is-visible="showEmployeeWindow"
         :initial-x="employeeWindowPosition.x"
         :initial-y="employeeWindowPosition.y"
-        :employees="employees"
-        :outsourcers="outsourcers"
-        :cached-employees="cachedEmployees"
-        :cached-outsourcers="cachedOutsourcers"
+        :employees="workers.employees"
+        :outsourcers="workers.outsourcers"
+        :cached-employees="cached.employees"
+        :cached-outsourcers="cached.outsourcers"
         @close="closeEmployeeWindow"
         @move="onWindowMove"
       />
@@ -167,7 +164,7 @@ watch(
       <template #editor="{ editorProps, inputProps }">
         <MoleculesSiteOperationScheduleEditor
           v-bind="editorProps"
-          :agreements="cachedSites[inputProps.item.siteId]?.agreements || []"
+          :agreements="cached.sites[inputProps.item.siteId]?.agreements || []"
         />
       </template>
     </ItemManager>

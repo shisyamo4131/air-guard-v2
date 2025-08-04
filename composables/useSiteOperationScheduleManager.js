@@ -179,19 +179,31 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  const cached = Vue.computed(() => {
+    return {
+      employees: cachedEmployees.value,
+      outsourcers: cachedOutsourcers.value,
+      sites: cachedSites.value,
+    };
+  });
+
+  const workers = Vue.computed(() => {
+    return {
+      employees: availableEmployees.value,
+      outsourcers: availableOutsourcers.value,
+    };
+  });
+
   return {
     // 念のため、使用しているコンポーザブル自体も返す
     workersComposable,
 
     // DATA
-    availableEmployees,
-    availableOutsourcers,
-    cachedEmployees,
-    cachedOutsourcers,
-    cachedSites,
+    cached,
     docs,
     schema: SiteOperationSchedule,
     instance,
+    workers,
 
     // Attributes for manager component.
     arrayManagerAttrs,
