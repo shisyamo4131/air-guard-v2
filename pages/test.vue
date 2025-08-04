@@ -30,13 +30,9 @@ const debouncedDateRange = useDebouncedRef(dateRange.dateRange.value, 500);
 const memoryMonitor = useMemoryMonitor();
 const memoryMonitorId = memoryMonitor.startMonitoring(10000); // 10秒間隔
 
-const {
-  isVisible: showEmployeeWindow,
-  position: employeeWindowPosition,
-  toggle: toggleEmployeeWindow,
-  close: closeEmployeeWindow,
-  updatePosition: onWindowMove,
-} = useFloatingWindow();
+/** フローティング作業員選択ウィンドウ用のコンポーザブル */
+const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
+  useFloatingWindow();
 
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
@@ -125,23 +121,19 @@ watch(
 
       <v-btn
         icon
-        @click="toggleEmployeeWindow($event)"
-        :color="showEmployeeWindow ? 'primary' : 'default'"
+        @click="toggleFloatingWindow"
+        :color="floatingWindowAttrs.isVisible ? 'primary' : 'default'"
       >
         <v-icon>mdi-account-group</v-icon>
       </v-btn>
 
       <!-- フローティング作業員選択ウィンドウ -->
       <ArrangementsWorkerSelector
-        :is-visible="showEmployeeWindow"
-        :initial-x="employeeWindowPosition.x"
-        :initial-y="employeeWindowPosition.y"
+        v-bind="floatingWindowAttrs"
         :employees="workers.employees"
         :outsourcers="workers.outsourcers"
         :cached-employees="cached.employees"
         :cached-outsourcers="cached.outsourcers"
-        @close="closeEmployeeWindow"
-        @move="onWindowMove"
       />
     </v-toolbar>
 

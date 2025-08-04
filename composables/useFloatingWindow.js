@@ -50,11 +50,22 @@ export function useFloatingWindow() {
     position.value = newPosition;
   }
 
+  const attrs = computed(() => {
+    return {
+      isVisible: isVisible.value,
+      initialX: position.value.x,
+      initialY: position.value.y,
+      onClose: close,
+      onMove: updatePosition,
+    };
+  });
   return {
     isVisible: readonly(isVisible),
     position: readonly(position),
     toggle,
     close,
     updatePosition,
+
+    attrs,
   };
 }
