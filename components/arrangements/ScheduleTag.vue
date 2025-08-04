@@ -24,8 +24,8 @@ const props = defineProps({
 });
 
 /** inject from ancestor */
-const workerManager = inject("workerManagerComposable");
-const { getWorkerName } = workerManager;
+const scheduleManager = inject("scheduleManagerComposable");
+const { getWorkerName } = scheduleManager;
 
 /** define emits */
 const emit = defineEmits(["click:edit"]);

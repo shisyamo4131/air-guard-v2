@@ -46,11 +46,6 @@ export function useWorkers({
   const availableEmployees = ref([]);
   const availableOutsourcers = ref([]);
 
-  /** ライフサイクルフック - マウント時に初期化 */
-  onMounted(async () => {
-    await initialize();
-  });
-
   /**
    * アクティブな作業員データを初期化
    */

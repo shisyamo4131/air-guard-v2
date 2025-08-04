@@ -2,7 +2,6 @@
 import { provide, computed, useTemplateRef, watch } from "vue";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useWorkers } from "@/composables/useWorkers";
 import { useDateRange } from "@/composables/useDateRange";
 import {
   useDebouncedRef,
@@ -31,27 +30,6 @@ const debouncedDateRange = useDebouncedRef(dateRange.dateRange.value, 500);
 const memoryMonitor = useMemoryMonitor();
 const memoryMonitorId = memoryMonitor.startMonitoring(10000); // 10秒間隔
 
-/** パフォーマンス統計 */
-const performanceStats = computed(() => {
-  return {
-    memoryUsage: memoryMonitor.getMemoryUsagePercentage.value,
-    memoryInfo: memoryMonitor.memoryInfo.value,
-    workerStats: workerManager.statistics.value,
-    scheduleCount: schedules.value?.length || 0,
-  };
-});
-
-/** define worker management */
-const workerManager = useWorkers();
-const {
-  employeeComposable,
-  outsourcerComposable,
-  cachedEmployees,
-  cachedOutsourcers,
-  availableEmployees: employees,
-  availableOutsourcers: outsourcers,
-} = workerManager;
-
 const {
   isVisible: showEmployeeWindow,
   position: employeeWindowPosition,
@@ -62,14 +40,18 @@ const {
 
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
-  fetchEmployeeComposable: employeeComposable,
-  fetchOutsourcerComposable: outsourcerComposable,
   from: dateRange.startDate.value,
   to: dateRange.currentDayCount.value,
 });
+
 const {
+  availableEmployees: employees,
+  availableOutsourcers: outsourcers,
+  cachedEmployees,
+  cachedOutsourcers,
   cachedSites,
   docs: schedules,
+  statistics,
   initialize: initializeSchedules,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
@@ -77,7 +59,16 @@ const {
 
 /** provide composable to child components */
 provide("scheduleManagerComposable", managerComposable);
-provide("workerManagerComposable", workerManager);
+
+/** パフォーマンス統計 */
+const performanceStats = computed(() => {
+  return {
+    memoryUsage: memoryMonitor.getMemoryUsagePercentage.value,
+    memoryInfo: memoryMonitor.memoryInfo.value,
+    workerStats: statistics.value,
+    scheduleCount: schedules.value?.length || 0,
+  };
+});
 
 /***************************************************************************
  * WATCHERS

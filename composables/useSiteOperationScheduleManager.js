@@ -1,31 +1,6 @@
 /**
  * @file useSiteOperationScheduleManager.js
  * @description Composable for managing site operation schedules.
- * This composable internally uses the `useFetchEmployee`, `useFetchOutsourcer`, and `useFetchSite` composables to fetch and manage employee, outsourcer, and site data.
- * You can provide your own instances of these composables via the options, or let this compos
- * create its own.
- *
- * Example usage:
- *
- * ```js
- * import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
- * // Optionally, create your own composable instances
- * import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
- * import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
- * import { useFetchSite } from "@/composables/fetch/useFetchSite";
- * const { cachedEmployees, cachedOutsourcers, cachedSites, docs, initialize } = useSiteOperationScheduleManager({
- *   manager: scheduleManager,
- *   siteId: selectedSiteId,
- *   from: startDate,
- *   to: 14,
- *   fetchEmployeeComposable: customFetchEmployeeComposable,
- *   fetchOutsourcerComposable: customFetchOutsourcerComposable,
- *   fetchSiteComposable: customFetchSiteComposable,
- * });
- * // Or simply:
- * // const { cachedEmployees, cachedOutsourcers, cachedSites, docs, initialize } = useSiteOperationScheduleManager();
- * ```
- *
  * @param {Object} options
  * @param {Object} [options.manager] - Optional manager for handling operations.
  * @param {string} [options.siteId] - Optional site ID to filter schedules.
@@ -41,6 +16,7 @@ import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetc
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateUtil } from "@/composables/useDateUtil";
+import { useWorkers } from "@/composables/useWorkers";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -59,13 +35,18 @@ export function useSiteOperationScheduleManager({
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
 
   /** define composables */
-  // Use provided composable instances if specified, otherwise create internal ones.
-  const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable
-    ? fetchEmployeeComposable
-    : internalUseFetchEmployee();
-  const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable
-    ? fetchOutsourcerComposable
-    : internalUseFetchOutsourcer();
+  const employeeComposable =
+    fetchEmployeeComposable || internalUseFetchEmployee();
+  const outsourcerComposable =
+    fetchOutsourcerComposable || internalUseFetchOutsourcer();
+  const workersComposable = useWorkers({
+    fetchEmployeeComposable: employeeComposable,
+    fetchOutsourcerComposable: outsourcerComposable,
+  });
+  const { availableEmployees, availableOutsourcers, getWorkerName } =
+    workersComposable;
+  const { fetchEmployee, cachedEmployees } = employeeComposable;
+  const { fetchOutsourcer, cachedOutsourcers } = outsourcerComposable;
   const { fetchSite, cachedSites } = fetchSiteComposable
     ? fetchSiteComposable
     : internalUseFetchSite();
@@ -90,9 +71,9 @@ export function useSiteOperationScheduleManager({
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onMounted(() => {
-    if (!from || !to) return;
-    initialize({ from, to });
+  Vue.onMounted(async () => {
+    await workersComposable.initialize();
+    if (from && to) initialize({ from, to });
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());
@@ -199,15 +180,29 @@ export function useSiteOperationScheduleManager({
   });
 
   return {
+    // 念のため、使用しているコンポーザブル自体も返す
+    workersComposable,
+
+    // DATA
+    availableEmployees,
+    availableOutsourcers,
     cachedEmployees,
     cachedOutsourcers,
     cachedSites,
     docs,
     schema: SiteOperationSchedule,
     instance,
-    initialize,
+
+    // Attributes for manager component.
     arrayManagerAttrs,
     itemManagerAttrs,
+
+    // statistics
+    statistics: workersComposable.statistics,
+
+    // METHODS
+    initialize,
+    getWorkerName,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
