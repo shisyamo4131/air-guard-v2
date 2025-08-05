@@ -303,6 +303,22 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  /** Configuration object for calendar component. */
+  const calendarAttrs = Vue.computed(() => {
+    const onUpdateModelValue = (date) => {
+      const from = dayjs(date).startOf("month").toDate();
+      const to = dayjs(date).endOf("month").toDate();
+      setDateRange({ from, to });
+    };
+    const events = docs.value.map((schedule) => schedule.toEvent());
+    return {
+      modelValue: [dateRangeComposable.currentBaseDate.value],
+      "onUpdate:modelValue": onUpdateModelValue,
+      events,
+      "onClick:event": ($event) => manager?.value?.toUpdate?.($event.item),
+    };
+  });
+
   /** Cached data for employees, outsourcers, and sites. */
   const cached = Vue.computed(() => {
     return {
@@ -352,6 +368,7 @@ export function useSiteOperationScheduleManager({
     return result;
   });
 
+  /** date range */
   const dateRange = Vue.computed(() => {
     return dateRangeComposable.dateRange.value;
   });
@@ -382,6 +399,7 @@ export function useSiteOperationScheduleManager({
     // Attributes for manager component.
     arrayManagerAttrs,
     itemManagerAttrs,
+    calendarAttrs,
 
     // statistics
     statistics: workersComposable.statistics,
