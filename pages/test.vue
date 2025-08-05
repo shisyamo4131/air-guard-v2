@@ -37,7 +37,6 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
-  initOnMounted: true,
 });
 
 const {

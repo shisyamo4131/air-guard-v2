@@ -36,7 +36,6 @@ export function useSiteOperationScheduleManager({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
   fetchSiteComposable,
-  initOnMounted = false,
 } = {}) {
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
@@ -118,7 +117,7 @@ export function useSiteOperationScheduleManager({
     await workersComposable.initialize();
 
     // Initialize this composable.
-    if (initOnMounted) initialize();
+    initialize();
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());
