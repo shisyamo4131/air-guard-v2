@@ -9,7 +9,6 @@
  * @param {Object} [options.fetchEmployeeComposable] - Custom composable for fetching employees.
  * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
  * @param {Object} [options.fetchSiteComposable] - Custom composable for fetching sites.
- * @param {boolean} [options.initOnMounted] - If true, initialize on component mount.
  */
 import * as Vue from "vue";
 import dayjs from "dayjs";
@@ -19,6 +18,7 @@ import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useWorkers } from "@/composables/useWorkers";
 import { useDateRange } from "@/composables/useDateRange";
+import { useDebouncedRef } from "@/composables/usePerformanceOptimization";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -57,6 +57,11 @@ export function useSiteOperationScheduleManager({
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
+  /**
+   * useDateRange
+   * - Initialize with providedFrom and providedTo.
+   * - If providedTo is a number, it will be treated as the number of days
+   */
   const initFrom = providedFrom || dayjs().startOf("day").toDate();
   const initTo =
     typeof providedTo === "number"
@@ -66,6 +71,12 @@ export function useSiteOperationScheduleManager({
     baseDate: providedFrom || dayjs().startOf("day").toDate(),
     dayCount: dayjs(initTo).diff(dayjs(initFrom), "day") + 1,
   });
+
+  /** デバウンス機能付きの日付範囲 */
+  const debouncedDateRangeComposable = useDebouncedRef(
+    dateRangeComposable.dateRange.value,
+    500
+  );
 
   /**
    * useFetchEmployee & useFetchOutsourcer
@@ -109,6 +120,24 @@ export function useSiteOperationScheduleManager({
     deep: true,
   });
 
+  /**
+   * Watches the date range and updates the debounced date range.
+   * - This ensures that the debounced date range is updated whenever the
+   *   original date range changes.
+   */
+  Vue.watch(
+    () => dateRangeComposable.dateRange.value,
+    (newRange) => {
+      console.log("Date range updated:", newRange);
+      debouncedDateRangeComposable.value.value = newRange;
+    }
+  );
+
+  Vue.watch(
+    () => debouncedDateRangeComposable.debouncedValue.value,
+    (newRange) => !newRange || _initialize()
+  );
+
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
@@ -117,7 +146,7 @@ export function useSiteOperationScheduleManager({
     await workersComposable.initialize();
 
     // Initialize this composable.
-    initialize();
+    _initialize();
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());
@@ -125,51 +154,17 @@ export function useSiteOperationScheduleManager({
   /***************************************************************************
    * METHODS
    ***************************************************************************/
+
+  /***************************************************************************
+   * PRIVATE METHODS
+   ***************************************************************************/
   /**
    * Initializes the schedule manager with the specified date range.
    * @param {Object} params - Initialization parameters.
-   * @param {Date} [params.from] - Start date of the range. (optional)
-   * @param {Date|number} [params.to] - End date of the range or number of days from 'from' date. (optional)
    * @param {string} [params.siteId] - site ID to filter schedules. (optional)
    * @returns {void}
    */
-  const initialize = ({
-    from: internalFrom,
-    to: internalTo,
-    siteId: paramSiteId,
-  } = {}) => {
-    // Throw an error if internalFrom is provided and not a Date object.
-    if (internalFrom && !(internalFrom instanceof Date)) {
-      throw new Error("Provided 'from' must be a Date object.");
-    }
-
-    // Throw an error if internalTo is provided and not a Date object or a number.
-    if (
-      internalTo &&
-      !(internalTo instanceof Date || typeof internalTo === "number")
-    ) {
-      throw new Error(
-        "Provided 'to' must be a Date object or a number of days."
-      );
-    }
-
-    // Set the date range based on provided parameters if available.
-    if (internalFrom) {
-      dateRangeComposable.setBaseDate(internalFrom);
-    }
-    if (internalTo) {
-      if (typeof internalTo === "number") {
-        dateRangeComposable.setDayCount(internalTo);
-      } else {
-        dateRangeComposable.setDayCount(
-          dayjs(internalTo).diff(
-            dayjs(dateRangeComposable.startDate.value),
-            "day"
-          ) + 1
-        );
-      }
-    }
-
+  const _initialize = ({ siteId: paramSiteId } = {}) => {
     // Build constraints for fetching schedules.
     const constraints = _buildConstraints({
       fromDate: dateRangeComposable.startDate.value,
@@ -179,10 +174,6 @@ export function useSiteOperationScheduleManager({
 
     docs.value = instance.subscribeDocs({ constraints });
   };
-
-  /***************************************************************************
-   * PRIVATE METHODS
-   ***************************************************************************/
   /**
    * Build query constraints for fetching site operation schedules.
    * @param {Object} params - Parameters for building constraints.
@@ -267,6 +258,10 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  const dateRange = Vue.computed(() => {
+    return dateRangeComposable.dateRange.value;
+  });
+
   /** Computed property for workers, combining employees and outsourcers. */
   const workers = Vue.computed(() => {
     return {
@@ -287,7 +282,7 @@ export function useSiteOperationScheduleManager({
     workers,
 
     // STATE
-    dateRange: Vue.readonly(ref(dateRangeComposable.dateRange.value)),
+    dateRange: Vue.readonly(dateRange),
 
     // Attributes for manager component.
     arrayManagerAttrs,
@@ -297,8 +292,8 @@ export function useSiteOperationScheduleManager({
     statistics: workersComposable.statistics,
 
     // METHODS
-    initialize,
     getWorkerName,
+    setFrom: dateRangeComposable.setBaseDate,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),

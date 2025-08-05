@@ -3,29 +3,13 @@ import { provide, computed, useTemplateRef, watch } from "vue";
 import dayjs from "dayjs";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useDateRange } from "@/composables/useDateRange";
-import {
-  useDebouncedRef,
-  useMemoryMonitor,
-} from "@/composables/usePerformanceOptimization";
-
-const DAYS_COUNT = 14;
+import { useMemoryMonitor } from "@/composables/usePerformanceOptimization";
 
 /** 開発環境の判定 */
 const isDev = process.env.NODE_ENV === "development";
 
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
-
-/** define date range management */
-// const dateRange = useDateRange({
-//   baseDate: new Date(),
-//   dayCount: DAYS_COUNT,
-//   offsetDays: -1,
-// });
-
-/** デバウンス機能付きの日付範囲 */
-// const debouncedDateRange = useDebouncedRef(dateRange.dateRange.value, 500);
 
 /** メモリ監視機能 */
 const memoryMonitor = useMemoryMonitor();
@@ -45,7 +29,7 @@ const {
   docs: schedules,
   workers,
   statistics,
-  initialize,
+  setFrom,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
 } = managerComposable;
@@ -62,29 +46,6 @@ const performanceStats = computed(() => {
     scheduleCount: schedules.value?.length || 0,
   };
 });
-
-/***************************************************************************
- * WATCHERS
- ***************************************************************************/
-// watch(
-//   () => debouncedDateRange.debouncedValue,
-//   (newRange) => {
-//     if (newRange) {
-//       initialize({
-//         from: newRange.from,
-//         to: newRange.daysCount,
-//       });
-//     }
-//   }
-// );
-
-// // 通常の日付範囲変更の監視
-// watch(
-//   () => dateRange.dateRange.value,
-//   (newRange) => {
-//     debouncedDateRange.value.value = newRange;
-//   }
-// );
 
 const dateRangeLabel = computed(() => {
   const from = dayjs(dateRange.value.from).format("YYYY/MM/DD");
@@ -126,6 +87,9 @@ const dateRangeLabel = computed(() => {
         :color="floatingWindowAttrs.isVisible ? 'primary' : 'default'"
       >
         <v-icon>mdi-account-group</v-icon>
+      </v-btn>
+      <v-btn icon @click="setFrom('2025-08-21')">
+        <v-icon>mdi-calendar</v-icon>
       </v-btn>
 
       <!-- フローティング作業員選択ウィンドウ -->
