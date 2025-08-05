@@ -68,10 +68,7 @@ onUnmounted(() => {
         </v-card>
       </v-col>
       <v-col cols="12">
-        <OrganismsSiteOperationSchedulesManager
-          :site-id="siteId"
-          :agreements="[...model.agreements, ...auth.company.agreements]"
-        />
+        <OrganismsSiteOperationSchedulesManager :site-id="siteId" />
       </v-col>
       <v-col>
         <v-card>
