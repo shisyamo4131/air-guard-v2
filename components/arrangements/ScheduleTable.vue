@@ -16,9 +16,7 @@ import FooterCell from "@/components/Arrangements/FooterCell";
 
 /** define props */
 const props = defineProps({
-  schedules: { type: Array, required: true },
-  dayCount: { type: Number, default: 7 },
-  showDebugInfo: { type: Boolean, default: false },
+  showDebugInfo: { type: Boolean, default: true },
 });
 
 /** define emits */
@@ -26,13 +24,13 @@ const emit = defineEmits(["click:edit"]);
 
 /** inject from parent */
 const managerComposable = inject("scheduleManagerComposable");
-const { cachedData, columns } = managerComposable;
+const { cachedData, columns, docs } = managerComposable;
 
 /** define composables */
 const logger = useLogger();
 const siteOrder = useSiteOrder();
 const scheduleState = useSiteOperationScheduleState({
-  schedules: toRef(props, "schedules"),
+  schedules: toRef(docs, "value"),
 });
 
 /*****************************************************************************
@@ -66,6 +64,12 @@ async function handleChangeSchedule(event, dateAt) {
       // 楽観的更新で即座にローカル状態を更新済み
       // バックグラウンドでFirestoreを更新
       try {
+        // 楽観的更新を実行（即座にローカル状態更新）
+        scheduleState.optimisticUpdate(schedule.docId, (currentSchedule) => ({
+          ...currentSchedule,
+          date: dateAt.toISOString().split("T")[0], // 新しい日付に更新
+        }));
+
         await schedule.reschedule(dateAt);
         scheduleState.markUpdateComplete(schedule.docId);
       } catch (error) {
@@ -112,7 +116,7 @@ async function handleChangeSchedule(event, dateAt) {
         :key="`site-row-${rowIndex}`"
       >
         <ArrangementsSiteRow
-          :colspan="columns.length + 1"
+          :colspan="columns.length"
           :shift-type="orderData.shiftType"
           :site="cachedData.sites[orderData.siteId]"
         />
@@ -134,6 +138,7 @@ async function handleChangeSchedule(event, dateAt) {
             "
             @change="handleChangeSchedule($event, cell.column.dateAt)"
             @click:edit="emit('click:edit', $event)"
+            :is-pending="scheduleState.isPending(cell.key)"
           />
         </tr>
       </template>

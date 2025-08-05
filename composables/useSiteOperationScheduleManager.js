@@ -129,7 +129,6 @@ export function useSiteOperationScheduleManager({
   Vue.watch(
     () => dateRangeComposable.dateRange.value,
     (newRange) => {
-      console.log("Date range updated:", newRange);
       debouncedDateRangeComposable.value.value = newRange;
     }
   );

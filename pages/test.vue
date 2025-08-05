@@ -103,11 +103,7 @@ const dateRangeLabel = computed(() => {
     </v-toolbar>
 
     <!-- スケジュール管理テーブル -->
-    <ArrangementsScheduleTable
-      :schedules="schedules"
-      :day-count="dateRange.dayCount"
-      @click:edit="toUpdateSchedule"
-    />
+    <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
 
     <!-- スケジュール編集ダイアログ -->
     <ItemManager
