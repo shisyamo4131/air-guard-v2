@@ -42,7 +42,7 @@ const managerComposable = useSiteOperationScheduleManager({
 const {
   currentFrom,
   currentTo,
-  cached,
+  cachedData,
   docs: schedules,
   workers,
   statistics,
@@ -134,8 +134,8 @@ const dateRangeLabel = computed(() => {
         v-bind="floatingWindowAttrs"
         :employees="workers.employees"
         :outsourcers="workers.outsourcers"
-        :cached-employees="cached.employees"
-        :cached-outsourcers="cached.outsourcers"
+        :cached-employees="cachedData.employees"
+        :cached-outsourcers="cachedData.outsourcers"
       />
     </v-toolbar>
 
@@ -158,7 +158,9 @@ const dateRangeLabel = computed(() => {
       <template #editor="{ editorProps, inputProps }">
         <MoleculesSiteOperationScheduleEditor
           v-bind="editorProps"
-          :agreements="cached.sites[inputProps.item.siteId]?.agreements || []"
+          :agreements="
+            cachedData.sites[inputProps.item.siteId]?.agreements || []
+          "
         />
       </template>
     </ItemManager>

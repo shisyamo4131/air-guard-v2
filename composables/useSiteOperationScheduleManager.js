@@ -277,7 +277,7 @@ export function useSiteOperationScheduleManager({
     workersComposable,
 
     // DATA
-    cached,
+    cachedData: Vue.readonly(cached),
     docs,
     schema: SiteOperationSchedule,
     instance,
