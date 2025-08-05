@@ -7,10 +7,8 @@
  *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
  */
 import { inject, toRef, computed } from "vue";
-import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
-import { useScheduleTableColumns } from "@/composables/useScheduleTableColumns";
 import { useSiteOperationScheduleState } from "@/composables/useSiteOperationScheduleState";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
@@ -28,16 +26,11 @@ const emit = defineEmits(["click:edit"]);
 
 /** inject from parent */
 const managerComposable = inject("scheduleManagerComposable");
-const { cachedData } = managerComposable;
+const { cachedData, columns } = managerComposable;
 
 /** define composables */
 const logger = useLogger();
 const siteOrder = useSiteOrder();
-const { columns } = useScheduleTableColumns({
-  dayCount: toRef(props, "dayCount"),
-  startDate: computed(() => dayjs().subtract(1, "day").toDate()),
-  schedules: toRef(props, "schedules"),
-});
 const scheduleState = useSiteOperationScheduleState({
   schedules: toRef(props, "schedules"),
 });
@@ -107,7 +100,9 @@ async function handleChangeSchedule(event, dateAt) {
         <DayCell
           v-for="column of columns"
           :key="column.date"
-          :dateAt="column.dateAt"
+          :isHoliday="column.isHoliday"
+          :label="column.dateLabel"
+          :cssClasses="column.cssClasses"
         />
       </tr>
     </thead>
@@ -125,7 +120,7 @@ async function handleChangeSchedule(event, dateAt) {
           <BodyCell
             v-for="cell of orderData.cells"
             :key="cell.key"
-            :dateAt="cell.column.dateAt"
+            :css-classes="cell.column.cssClasses"
             :model-value="cell.schedules"
             :site-id="orderData.siteId"
             :shift-type="orderData.shiftType"
@@ -148,7 +143,7 @@ async function handleChangeSchedule(event, dateAt) {
         <FooterCell
           v-for="column of columns"
           :key="column.date"
-          :date-at="column.dateAt"
+          :cssClasses="column.cssClasses"
           :required-personnel-total="column.requiredPersonnelTotal"
         />
       </tr>

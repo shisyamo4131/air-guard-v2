@@ -19,6 +19,7 @@ import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFet
 import { useWorkers } from "@/composables/useWorkers";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDebouncedRef } from "@/composables/usePerformanceOptimization";
+import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -227,6 +228,38 @@ export function useSiteOperationScheduleManager({
     if (allOutsourcers.length > 0) fetchOutsourcer(allOutsourcers);
   }
 
+  /**
+   * Returns the styles for a specific date column.
+   * @param {Date} dateAt
+   * @returns {Object} Computed styles for the date column.
+   */
+  function _getColumnStyles(dateAt) {
+    const today = dayjs().startOf("day");
+    const targetDay = dayjs(dateAt).locale("en");
+    const dayOfWeek = targetDay.format("ddd").toLowerCase();
+    const isPreviousDay = targetDay.isBefore(today);
+    const isToday = targetDay.isSame(today);
+    const isFutureDay = targetDay.isAfter(today);
+    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
+    const dateLabel = targetDay.format("MM/DD");
+    const cssClasses = {
+      "g-col": true,
+      [`g-col-${dayOfWeek}`]: true,
+      "g-col-previous": isPreviousDay,
+      "g-col-today": isToday,
+      "g-col-future": isFutureDay,
+      "g-col-holiday": isHoliday,
+    };
+    return {
+      targetDay,
+      dayOfWeek,
+      dateComparison: { isPreviousDay, isToday, isFutureDay },
+      isHoliday,
+      dateLabel,
+      cssClasses,
+    };
+  }
+
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE
    ***************************************************************************/
@@ -258,6 +291,46 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  /**
+   * Columns for the schedule table.
+   */
+  const columns = Vue.computed(() => {
+    const baseDate = dayjs(dateRangeComposable.startDate.value);
+    const resolvedDayCount = dateRangeComposable.dateRange.value.dayCount;
+    const resolvedSchedules = docs.value;
+
+    // Initialize result array
+    const result = [];
+
+    for (let i = 0; i < resolvedDayCount; i++) {
+      const date = baseDate.add(i, "day");
+      const dateAt = date.toDate();
+
+      // Get styles for the column
+      const columnStyles = _getColumnStyles(dateAt);
+
+      // Calculate total required personnel for the day
+      const requiredPersonnelTotal = resolvedSchedules
+        .filter((schedule) => {
+          if (!schedule?.date) return false;
+          return dayjs(schedule.date).isSame(date, "day");
+        })
+        .reduce((total, schedule) => {
+          const required = schedule?.requiredPersonnel || 0;
+          return total + (typeof required === "number" ? required : 0);
+        }, 0);
+
+      result.push({
+        date: date.format("YYYY-MM-DD"),
+        dateAt,
+        requiredPersonnelTotal, // Add total personnel count
+        ...columnStyles, // Add style-related information
+      });
+    }
+
+    return result;
+  });
+
   const dateRange = Vue.computed(() => {
     return dateRangeComposable.dateRange.value;
   });
@@ -283,6 +356,7 @@ export function useSiteOperationScheduleManager({
 
     // STATE
     dateRange: Vue.readonly(dateRange),
+    columns,
 
     // Attributes for manager component.
     arrayManagerAttrs,

@@ -24,6 +24,7 @@ const managerComposable = useSiteOperationScheduleManager({
 });
 
 const {
+  columns,
   cachedData,
   dateRange,
   docs: schedules,
