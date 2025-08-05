@@ -105,7 +105,7 @@ async function handleChangeSchedule(event, dateAt) {
           v-for="column of columns"
           :key="column.date"
           :isHoliday="column.isHoliday"
-          :label="column.dateLabel"
+          :label="`${column.dateLabel}(${column.dayOfWeekJp})`"
           :cssClasses="column.cssClasses"
         />
       </tr>

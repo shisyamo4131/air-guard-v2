@@ -70,7 +70,7 @@ export function useSiteOperationScheduleManager({
       : providedTo;
   const dateRangeComposable = useDateRange({
     baseDate: providedFrom || dayjs().startOf("day").toDate(),
-    dayCount: dayjs(initTo).diff(dayjs(initFrom), "day") + 1,
+    dayCount: dayjs(initTo).diff(dayjs(initFrom), "day"),
   });
 
   /** デバウンス機能付きの日付範囲 */
@@ -241,6 +241,7 @@ export function useSiteOperationScheduleManager({
     const isFutureDay = targetDay.isAfter(today);
     const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
     const dateLabel = targetDay.format("MM/DD");
+    const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
     const cssClasses = {
       "g-col": true,
       [`g-col-${dayOfWeek}`]: true,
@@ -255,6 +256,7 @@ export function useSiteOperationScheduleManager({
       dateComparison: { isPreviousDay, isToday, isFutureDay },
       isHoliday,
       dateLabel,
+      dayOfWeekJp,
       cssClasses,
     };
   }
@@ -367,6 +369,7 @@ export function useSiteOperationScheduleManager({
     // METHODS
     getWorkerName,
     setFrom: dateRangeComposable.setBaseDate,
+    setDayCount: dateRangeComposable.setDayCount,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),

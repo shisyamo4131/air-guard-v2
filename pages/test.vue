@@ -1,5 +1,5 @@
 <script setup>
-import { provide, computed, useTemplateRef, watch } from "vue";
+import { provide, computed, useTemplateRef } from "vue";
 import dayjs from "dayjs";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
@@ -19,8 +19,10 @@ const memoryMonitorId = memoryMonitor.startMonitoring(10000); // 10秒間隔
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
+/** define manager composable */
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
+  from: dayjs().subtract(1, "day").toDate(),
 });
 
 const {
@@ -29,7 +31,7 @@ const {
   docs: schedules,
   workers,
   statistics,
-  setFrom,
+  setDayCount,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
 } = managerComposable;
@@ -46,18 +48,12 @@ const performanceStats = computed(() => {
     scheduleCount: schedules.value?.length || 0,
   };
 });
-
-const dateRangeLabel = computed(() => {
-  const from = dayjs(dateRange.value.from).format("YYYY/MM/DD");
-  const to = dayjs(dateRange.value.to).format("YYYY/MM/DD");
-  return `${from} - ${to} - ${dateRange.value.dayCount}日間`;
-});
 </script>
 
 <template>
   <div class="d-flex flex-column fill-height">
     <!-- パフォーマンス情報 (開発モード時のみ) -->
-    <v-toolbar v-if="isDev" density="compact">
+    <!-- <v-toolbar v-if="isDev" density="compact">
       <v-chip
         size="small"
         variant="outlined"
@@ -77,30 +73,40 @@ const dateRangeLabel = computed(() => {
       <v-chip size="small" variant="outlined">
         Schedules: {{ performanceStats.scheduleCount }}
       </v-chip>
+    </v-toolbar> -->
+    <v-toolbar density="comfortable" :title="`配置管理`">
+      <template #append>
+        <v-spacer />
+        <v-btn
+          prepend-icon="mdi-account-group"
+          @click="toggleFloatingWindow"
+          :color="floatingWindowAttrs.isVisible ? 'primary' : 'default'"
+        >
+          作業員
+        </v-btn>
+        <air-select
+          width="120"
+          :model-value="dateRange.dayCount"
+          label="表示日数"
+          hide-details
+          density="compact"
+          :items="[
+            { title: '7日間', value: 7 },
+            { title: '14日間', value: 14 },
+          ]"
+          @update:model-value="setDayCount"
+        />
+      </template>
     </v-toolbar>
-    <v-toolbar density="comfortable">
-      <v-toolbar-title>配置管理（{{ dateRangeLabel }}）</v-toolbar-title>
-      <v-spacer />
-      <v-btn
-        icon
-        @click="toggleFloatingWindow"
-        :color="floatingWindowAttrs.isVisible ? 'primary' : 'default'"
-      >
-        <v-icon>mdi-account-group</v-icon>
-      </v-btn>
-      <v-btn icon @click="setFrom('2025-08-21')">
-        <v-icon>mdi-calendar</v-icon>
-      </v-btn>
 
-      <!-- フローティング作業員選択ウィンドウ -->
-      <ArrangementsWorkerSelector
-        v-bind="floatingWindowAttrs"
-        :employees="workers.employees"
-        :outsourcers="workers.outsourcers"
-        :cached-employees="cachedData.employees"
-        :cached-outsourcers="cachedData.outsourcers"
-      />
-    </v-toolbar>
+    <!-- フローティング作業員選択ウィンドウ -->
+    <ArrangementsWorkerSelector
+      v-bind="floatingWindowAttrs"
+      :employees="workers.employees"
+      :outsourcers="workers.outsourcers"
+      :cached-employees="cachedData.employees"
+      :cached-outsourcers="cachedData.outsourcers"
+    />
 
     <!-- スケジュール管理テーブル -->
     <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
