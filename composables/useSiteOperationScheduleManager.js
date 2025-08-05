@@ -17,16 +17,21 @@ import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateUtil } from "@/composables/useDateUtil";
 import { useWorkers } from "@/composables/useWorkers";
+import dayjs from "dayjs";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
   "Manager should be provided to useSiteOperationScheduleManager.";
 
+// Default number of days for the schedule range if 'to' is not provided.
+const DEFAULT_FROM = dayjs().startOf("day").toDate();
+const DEFAULT_DAYS_COUNT = 7;
+
 export function useSiteOperationScheduleManager({
   manager,
   siteId,
-  from,
-  to = 7,
+  from: providedFrom = DEFAULT_FROM,
+  to: providedTo = DEFAULT_DAYS_COUNT,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
   fetchSiteComposable,
@@ -34,37 +39,74 @@ export function useSiteOperationScheduleManager({
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
 
-  /** define composables */
+  // Throw an error if providedFrom is provided and not a Date object.
+  if (!(providedFrom instanceof Date)) {
+    throw new Error("Provided 'from' must be a Date object.");
+  }
+
+  // Throw an error if providedTo is provided and not a Date object or a number.
+  if (!(providedTo instanceof Date || typeof providedTo === "number")) {
+    throw new Error("Provided 'to' must be a Date object or a number of days.");
+  }
+
+  /** define instance & refs */
+  const instance = Vue.reactive(new SiteOperationSchedule());
+  const docs = Vue.ref([]); // subscribed documents.
+  const currentFrom = Vue.ref(providedFrom || dayjs().startOf("day").toDate()); // Start date for the schedule range.
+  // const currentTo = Vue.ref(providedTo || DEFAULT_DAYS_COUNT); // End date or number of days from the start date.
+  const currentTo = Vue.ref(
+    typeof providedTo === "number"
+      ? dayjs(currentFrom.value).add(providedTo, "day").toDate()
+      : providedTo
+  );
+
+  /***************************************************************************
+   * DEFINE COMPOSABLES
+   ***************************************************************************/
+  /**
+   * useFetchEmployee & useFetchOutsourcer
+   * - If provided, use it; otherwise, use the internal fetchEmployee composable.
+   */
   const employeeComposable =
     fetchEmployeeComposable || internalUseFetchEmployee();
+  const { fetchEmployee, cachedEmployees } = employeeComposable;
+
   const outsourcerComposable =
     fetchOutsourcerComposable || internalUseFetchOutsourcer();
+  const { fetchOutsourcer, cachedOutsourcers } = outsourcerComposable;
+
+  /**
+   * useWorkers
+   * - Provides fetchEmployee and fetchOutsourcer composables.
+   */
   const workersComposable = useWorkers({
     fetchEmployeeComposable: employeeComposable,
     fetchOutsourcerComposable: outsourcerComposable,
   });
   const { availableEmployees, availableOutsourcers, getWorkerName } =
     workersComposable;
-  const { fetchEmployee, cachedEmployees } = employeeComposable;
-  const { fetchOutsourcer, cachedOutsourcers } = outsourcerComposable;
-  const { fetchSite, cachedSites } = fetchSiteComposable
-    ? fetchSiteComposable
-    : internalUseFetchSite();
 
-  // Date utility composable
+  /**
+   * useFetchSite
+   * - If provided, use it; otherwise, use the internal fetchSite composable.
+   */
+  const siteComposable = fetchSiteComposable || internalUseFetchSite();
+  const { fetchSite, cachedSites } = siteComposable;
+
+  /**
+   * useDateUtil
+   */
   const { validateAndProcessDateRange } = useDateUtil();
-
-  /** define instance */
-  const instance = Vue.reactive(new SiteOperationSchedule());
-
-  /** define refs */
-  const docs = Vue.ref([]); // subscribed documents
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  // Watch for changes in docs and fetch related data. (employees, outsourcers, sites)
-  Vue.watch(docs, (newDocs) => fetchRelatedData(Vue.toRaw(newDocs)), {
+  /**
+   * Watches the `docs` array for changes and fetches related data.
+   * - When `docs` changes, it triggers `_fetchRelatedData` to update employees,
+   *   outsourcers, and sites based on the new documents.
+   */
+  Vue.watch(docs, (newDocs) => _fetchRelatedData(Vue.toRaw(newDocs)), {
     deep: true,
   });
 
@@ -72,14 +114,71 @@ export function useSiteOperationScheduleManager({
    * LIFECYCLE HOOKS
    ***************************************************************************/
   Vue.onMounted(async () => {
+    // Initialize the workers to ensure employees and outsourcers are ready.
     await workersComposable.initialize();
-    if (from && to) initialize({ from, to });
+
+    // Initialize this composable.
+    initialize();
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());
 
   /***************************************************************************
    * METHODS
+   ***************************************************************************/
+  /**
+   * Initializes the schedule manager with the specified date range.
+   * @param {Object} params - Initialization parameters.
+   * @param {Date} [params.from] - Start date of the range. (optional)
+   * @param {Date|number} [params.to] - End date of the range or number of days from 'from' date. (optional)
+   * @param {string} [params.siteId] - site ID to filter schedules. (optional)
+   * @returns {void}
+   */
+  const initialize = ({
+    from: internalFrom,
+    to: internalTo,
+    siteId: paramSiteId,
+  } = {}) => {
+    // Throw an error if internalFrom is provided and not a Date object.
+    if (internalFrom && !(internalFrom instanceof Date)) {
+      throw new Error("Provided 'from' must be a Date object.");
+    }
+
+    // Throw an error if internalTo is provided and not a Date object or a number.
+    if (
+      internalTo &&
+      !(internalTo instanceof Date || typeof internalTo === "number")
+    ) {
+      throw new Error(
+        "Provided 'to' must be a Date object or a number of days."
+      );
+    }
+
+    // Set the currentFrom and currentTo values based on provided parameters.
+    if (internalFrom) currentFrom.value = internalFrom;
+    if (internalTo) currentTo.value = internalTo;
+
+    // Get the date range based on currentFrom and currentTo.
+    const newDateRange = validateAndProcessDateRange(
+      currentFrom.value,
+      currentTo.value
+    );
+    if (!newDateRange) return;
+
+    const { fromDate, toDate } = newDateRange;
+
+    // Build constraints for fetching schedules.
+    const constraints = _buildConstraints({
+      fromDate: fromDate.toDate(),
+      toDate: toDate.toDate(),
+      siteId: paramSiteId,
+    });
+
+    docs.value = instance.subscribeDocs({ constraints });
+  };
+
+  /***************************************************************************
+   * PRIVATE METHODS
    ***************************************************************************/
   /**
    * Build query constraints for fetching site operation schedules.
@@ -109,38 +208,11 @@ export function useSiteOperationScheduleManager({
   };
 
   /**
-   * Initializes the schedule manager with the specified date range.
-   * @param {Object} params - Initialization parameters.
-   * @param {Date} params.from - Start date of the range.
-   * @param {Date|number} params.to - End date of the range or number of days from 'from' date.
-   * @param {string} [params.siteId] - Optional site ID to filter schedules.
-   * @returns {void}
-   */
-  const initialize = ({
-    from: internalFrom,
-    to: internalTo,
-    siteId: paramSiteId,
-  }) => {
-    const dateRange = validateAndProcessDateRange(internalFrom, internalTo);
-    if (!dateRange) return;
-
-    const { fromDate, toDate } = dateRange;
-
-    const constraints = _buildConstraints({
-      fromDate: fromDate.toDate(),
-      toDate: toDate.toDate(),
-      siteId: paramSiteId,
-    });
-
-    docs.value = instance.subscribeDocs({ constraints });
-  };
-
-  /**
    * Fetch related data from the provided documents.
    * - employees, outsourcers, and sites.
    * @param {Array} newDocs
    */
-  function fetchRelatedData(newDocs) {
+  function _fetchRelatedData(newDocs) {
     if (!Array.isArray(newDocs) || newDocs.length === 0) return;
 
     const allSites = newDocs.map((schedule) => schedule.siteId);
@@ -161,7 +233,10 @@ export function useSiteOperationScheduleManager({
     if (allOutsourcers.length > 0) fetchOutsourcer(allOutsourcers);
   }
 
-  /** ArrayManager configuration object */
+  /***************************************************************************
+   * COMPUTED PROPERTIES FOR PROVIDE
+   ***************************************************************************/
+  /** Configuration object for ArrayManager. */
   const arrayManagerAttrs = Vue.computed(() => ({
     modelValue: docs.value,
     schema: SiteOperationSchedule,
@@ -173,12 +248,14 @@ export function useSiteOperationScheduleManager({
     handleDelete: async (item) => await item.delete(),
   }));
 
+  /** Configuration object for ItemManager. */
   const itemManagerAttrs = Vue.computed(() => {
     return {
       modelValue: instance,
     };
   });
 
+  /** Cached data for employees, outsourcers, and sites. */
   const cached = Vue.computed(() => {
     return {
       employees: cachedEmployees.value,
@@ -187,6 +264,7 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  /** Computed property for workers, combining employees and outsourcers. */
   const workers = Vue.computed(() => {
     return {
       employees: availableEmployees.value,
@@ -204,6 +282,10 @@ export function useSiteOperationScheduleManager({
     schema: SiteOperationSchedule,
     instance,
     workers,
+
+    // STATE
+    currentFrom: Vue.readonly(currentFrom),
+    currentTo: Vue.readonly(currentTo),
 
     // Attributes for manager component.
     arrayManagerAttrs,

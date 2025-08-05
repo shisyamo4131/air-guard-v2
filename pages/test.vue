@@ -1,5 +1,6 @@
 <script setup>
 import { provide, computed, useTemplateRef, watch } from "vue";
+import dayjs from "dayjs";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useDateRange } from "@/composables/useDateRange";
@@ -36,11 +37,11 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
-  from: dateRange.startDate.value,
-  to: dateRange.currentDayCount.value,
 });
 
 const {
+  currentFrom,
+  currentTo,
   cached,
   docs: schedules,
   workers,
@@ -85,40 +86,41 @@ watch(
     debouncedDateRange.value.value = newRange;
   }
 );
+
+const dateRangeLabel = computed(() => {
+  const from = dayjs(currentFrom.value).format("YYYY/MM/DD");
+  const to = dayjs(currentTo.value).format("YYYY/MM/DD");
+  return `${from} - ${to}`;
+});
 </script>
 
 <template>
   <div class="d-flex flex-column fill-height">
+    <!-- パフォーマンス情報 (開発モード時のみ) -->
+    <v-toolbar v-if="isDev" density="compact">
+      <v-chip
+        size="small"
+        variant="outlined"
+        :color="
+          performanceStats.memoryUsage > 80
+            ? 'error'
+            : performanceStats.memoryUsage > 60
+            ? 'warning'
+            : 'success'
+        "
+      >
+        Memory: {{ performanceStats.memoryUsage.toFixed(1) }}%
+      </v-chip>
+      <v-chip size="small" variant="outlined">
+        Workers: {{ performanceStats.workerStats.totalWorkers }}
+      </v-chip>
+      <v-chip size="small" variant="outlined">
+        Schedules: {{ performanceStats.scheduleCount }}
+      </v-chip>
+    </v-toolbar>
     <v-toolbar density="comfortable">
-      <v-toolbar-title>配置管理</v-toolbar-title>
+      <v-toolbar-title>配置管理（{{ dateRangeLabel }}）</v-toolbar-title>
       <v-spacer />
-
-      <!-- パフォーマンス情報 (開発モード時のみ) -->
-      <template v-if="isDev">
-        <v-chip
-          size="small"
-          variant="outlined"
-          :color="
-            performanceStats.memoryUsage > 80
-              ? 'error'
-              : performanceStats.memoryUsage > 60
-              ? 'warning'
-              : 'success'
-          "
-        >
-          Memory: {{ performanceStats.memoryUsage.toFixed(1) }}%
-        </v-chip>
-        <v-spacer class="mx-2" />
-        <v-chip size="small" variant="outlined">
-          Workers: {{ performanceStats.workerStats.totalWorkers }}
-        </v-chip>
-        <v-spacer class="mx-2" />
-        <v-chip size="small" variant="outlined">
-          Schedules: {{ performanceStats.scheduleCount }}
-        </v-chip>
-        <v-spacer class="mx-2" />
-      </template>
-
       <v-btn
         icon
         @click="toggleFloatingWindow"
