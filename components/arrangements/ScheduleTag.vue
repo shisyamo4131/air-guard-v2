@@ -236,13 +236,16 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         />
       </template>
     </draggable>
-    <v-container class="d-flex justify-end pt-0 pb-2 px-2">
+    <v-container
+      class="d-flex justify-end pt-0 pb-2 px-2"
+      style="column-gap: 4px"
+    >
       <v-btn
         :disabled="
           props.schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
         "
         variant="tonal"
-        size="small"
+        size="x-small"
         @click="emit('click:edit', props.schedule)"
       >
         <v-icon>mdi-pencil</v-icon>
