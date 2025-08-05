@@ -53,7 +53,6 @@ export function useSiteOperationScheduleManager({
   const instance = Vue.reactive(new SiteOperationSchedule());
   const docs = Vue.ref([]); // subscribed documents.
   const currentFrom = Vue.ref(providedFrom || dayjs().startOf("day").toDate()); // Start date for the schedule range.
-  // const currentTo = Vue.ref(providedTo || DEFAULT_DAYS_COUNT); // End date or number of days from the start date.
   const currentTo = Vue.ref(
     typeof providedTo === "number"
       ? dayjs(currentFrom.value).add(providedTo, "day").toDate()
@@ -156,7 +155,11 @@ export function useSiteOperationScheduleManager({
 
     // Set the currentFrom and currentTo values based on provided parameters.
     if (internalFrom) currentFrom.value = internalFrom;
-    if (internalTo) currentTo.value = internalTo;
+    if (internalTo)
+      currentTo.value =
+        typeof internalTo === "number"
+          ? dayjs(currentFrom.value).add(internalTo, "day").toDate()
+          : internalTo;
 
     // Get the date range based on currentFrom and currentTo.
     const newDateRange = validateAndProcessDateRange(
