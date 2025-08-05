@@ -51,6 +51,9 @@ export default defineNuxtPlugin((app) => {
           size: "small",
         },
       },
+      VCalendar: {
+        hideWeekNumber: true,
+      },
     },
   });
   app.vueApp.use(vuetify);
