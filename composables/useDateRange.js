@@ -13,7 +13,7 @@ import { useDateUtil } from "./useDateUtil";
 export function useDateRange({
   baseDate = new Date(),
   dayCount = 14,
-  offsetDays = -1,
+  offsetDays = 0,
 } = {}) {
   /** 日付ユーティリティの取得 */
   const { isValidDate, formatDate, validateDateRange } = useDateUtil();

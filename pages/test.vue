@@ -18,14 +18,14 @@ const isDev = process.env.NODE_ENV === "development";
 const scheduleManager = useTemplateRef("scheduleManager");
 
 /** define date range management */
-const dateRange = useDateRange({
-  baseDate: new Date(),
-  dayCount: DAYS_COUNT,
-  offsetDays: -1,
-});
+// const dateRange = useDateRange({
+//   baseDate: new Date(),
+//   dayCount: DAYS_COUNT,
+//   offsetDays: -1,
+// });
 
 /** デバウンス機能付きの日付範囲 */
-const debouncedDateRange = useDebouncedRef(dateRange.dateRange.value, 500);
+// const debouncedDateRange = useDebouncedRef(dateRange.dateRange.value, 500);
 
 /** メモリ監視機能 */
 const memoryMonitor = useMemoryMonitor();
@@ -37,12 +37,12 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
 const managerComposable = useSiteOperationScheduleManager({
   manager: scheduleManager,
+  initOnMounted: true,
 });
 
 const {
-  currentFrom,
-  currentTo,
   cachedData,
+  dateRange,
   docs: schedules,
   workers,
   statistics,
@@ -67,30 +67,30 @@ const performanceStats = computed(() => {
 /***************************************************************************
  * WATCHERS
  ***************************************************************************/
-watch(
-  () => debouncedDateRange.debouncedValue,
-  (newRange) => {
-    if (newRange) {
-      initialize({
-        from: newRange.from,
-        to: newRange.dayCount,
-      });
-    }
-  }
-);
+// watch(
+//   () => debouncedDateRange.debouncedValue,
+//   (newRange) => {
+//     if (newRange) {
+//       initialize({
+//         from: newRange.from,
+//         to: newRange.daysCount,
+//       });
+//     }
+//   }
+// );
 
-// 通常の日付範囲変更の監視
-watch(
-  () => dateRange.dateRange.value,
-  (newRange) => {
-    debouncedDateRange.value.value = newRange;
-  }
-);
+// // 通常の日付範囲変更の監視
+// watch(
+//   () => dateRange.dateRange.value,
+//   (newRange) => {
+//     debouncedDateRange.value.value = newRange;
+//   }
+// );
 
 const dateRangeLabel = computed(() => {
-  const from = dayjs(currentFrom.value).format("YYYY/MM/DD");
-  const to = dayjs(currentTo.value).format("YYYY/MM/DD");
-  return `${from} - ${to}`;
+  const from = dayjs(dateRange.value.from).format("YYYY/MM/DD");
+  const to = dayjs(dateRange.value.to).format("YYYY/MM/DD");
+  return `${from} - ${to} - ${dateRange.value.dayCount}日間`;
 });
 </script>
 
@@ -142,7 +142,7 @@ const dateRangeLabel = computed(() => {
     <!-- スケジュール管理テーブル -->
     <ArrangementsScheduleTable
       :schedules="schedules"
-      :day-count="dateRange.currentDayCount.value"
+      :day-count="dateRange.dayCount"
       @click:edit="toUpdateSchedule"
     />
 

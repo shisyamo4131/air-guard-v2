@@ -11,13 +11,14 @@
  * @param {Object} [options.fetchSiteComposable] - Custom useFetchSite composable instance.
  */
 import * as Vue from "vue";
+import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateUtil } from "@/composables/useDateUtil";
 import { useWorkers } from "@/composables/useWorkers";
-import dayjs from "dayjs";
+import { useDateRange } from "@/composables/useDateRange";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -35,6 +36,7 @@ export function useSiteOperationScheduleManager({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
   fetchSiteComposable,
+  initOnMounted = false,
 } = {}) {
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
@@ -52,16 +54,20 @@ export function useSiteOperationScheduleManager({
   /** define instance & refs */
   const instance = Vue.reactive(new SiteOperationSchedule());
   const docs = Vue.ref([]); // subscribed documents.
-  const currentFrom = Vue.ref(providedFrom || dayjs().startOf("day").toDate()); // Start date for the schedule range.
-  const currentTo = Vue.ref(
-    typeof providedTo === "number"
-      ? dayjs(currentFrom.value).add(providedTo, "day").toDate()
-      : providedTo
-  );
 
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
+  const initFrom = providedFrom || dayjs().startOf("day").toDate();
+  const initTo =
+    typeof providedTo === "number"
+      ? dayjs(initFrom).add(providedTo, "day").toDate()
+      : providedTo;
+  const dateRangeComposable = useDateRange({
+    baseDate: providedFrom || dayjs().startOf("day").toDate(),
+    dayCount: dayjs(initTo).diff(dayjs(initFrom), "day") + 1,
+  });
+
   /**
    * useFetchEmployee & useFetchOutsourcer
    * - If provided, use it; otherwise, use the internal fetchEmployee composable.
@@ -117,7 +123,7 @@ export function useSiteOperationScheduleManager({
     await workersComposable.initialize();
 
     // Initialize this composable.
-    initialize();
+    if (initOnMounted) initialize();
   });
 
   Vue.onUnmounted(() => instance.unsubscribe());
@@ -153,27 +159,27 @@ export function useSiteOperationScheduleManager({
       );
     }
 
-    // Set the currentFrom and currentTo values based on provided parameters.
-    if (internalFrom) currentFrom.value = internalFrom;
-    if (internalTo)
-      currentTo.value =
-        typeof internalTo === "number"
-          ? dayjs(currentFrom.value).add(internalTo, "day").toDate()
-          : internalTo;
-
-    // Get the date range based on currentFrom and currentTo.
-    const newDateRange = validateAndProcessDateRange(
-      currentFrom.value,
-      currentTo.value
-    );
-    if (!newDateRange) return;
-
-    const { fromDate, toDate } = newDateRange;
+    // Set the date range based on provided parameters if available.
+    if (internalFrom) {
+      dateRangeComposable.setBaseDate(internalFrom);
+    }
+    if (internalTo) {
+      if (typeof internalTo === "number") {
+        dateRangeComposable.setDayCount(internalTo);
+      } else {
+        dateRangeComposable.setDayCount(
+          dayjs(internalTo).diff(
+            dayjs(dateRangeComposable.startDate.value),
+            "day"
+          ) + 1
+        );
+      }
+    }
 
     // Build constraints for fetching schedules.
     const constraints = _buildConstraints({
-      fromDate: fromDate.toDate(),
-      toDate: toDate.toDate(),
+      fromDate: dateRangeComposable.startDate.value,
+      toDate: dateRangeComposable.endDate.value,
       siteId: paramSiteId,
     });
 
@@ -287,8 +293,7 @@ export function useSiteOperationScheduleManager({
     workers,
 
     // STATE
-    currentFrom: Vue.readonly(currentFrom),
-    currentTo: Vue.readonly(currentTo),
+    dateRange: Vue.readonly(ref(dateRangeComposable.dateRange.value)),
 
     // Attributes for manager component.
     arrayManagerAttrs,
