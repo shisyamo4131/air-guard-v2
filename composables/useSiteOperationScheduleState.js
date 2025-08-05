@@ -53,30 +53,6 @@ export function useSiteOperationScheduleState({ schedules } = {}) {
   }
 
   /**
-   * 特定の条件で現場稼働予定をフィルタリング（メモ化とエラーハンドリング付き）
-   */
-  const getSchedulesByCondition = useMemoizedComputed(
-    () => {
-      return (condition) => {
-        try {
-          if (typeof condition !== "function") {
-            throw new Error("Condition must be a function");
-          }
-          return localSchedules.value.filter(condition);
-        } catch (error) {
-          const errorResult = errorHandler.handleError(error, {
-            operation: "現場稼働予定のフィルタリング",
-            silent: true,
-          });
-          return [];
-        }
-      };
-    },
-    [() => localSchedules.value],
-    { deep: false, maxCacheSize: 50 }
-  );
-
-  /**
    * 現場ID・勤務区分・日付で現場稼働予定を取得（エラーハンドリング付き）
    */
   const getSchedulesByKey = computed(() => {
@@ -373,8 +349,6 @@ export function useSiteOperationScheduleState({ schedules } = {}) {
     statistics,
 
     // 取得・フィルタリング
-    getSchedulesByCondition,
-    getSchedulesByKey,
     createScheduleMatrix,
 
     // 楽観的更新
