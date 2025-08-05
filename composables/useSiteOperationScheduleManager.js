@@ -154,6 +154,26 @@ export function useSiteOperationScheduleManager({
   /***************************************************************************
    * METHODS
    ***************************************************************************/
+  /**
+   * Sets the date range for the schedule.
+   * @param {Object} param0 - The date range parameters.
+   * @param {Date} param0.from - The start date.
+   * @param {Date|number} param0.to - The end date or number of days from the start date.
+   */
+  const setDateRange = ({ from, to }) => {
+    if (from) dateRangeComposable.setBaseDate(from);
+    if (to) {
+      if (typeof to === "number") {
+        dateRangeComposable.setDayCount(to);
+      } else if (to instanceof Date) {
+        const dayCount = dayjs(to).diff(
+          dayjs(dateRangeComposable.startDate.value),
+          "day"
+        );
+        dateRangeComposable.setDayCount(dayCount + 1);
+      }
+    }
+  };
 
   /***************************************************************************
    * PRIVATE METHODS
@@ -370,6 +390,7 @@ export function useSiteOperationScheduleManager({
     getWorkerName,
     setFrom: dateRangeComposable.setBaseDate,
     setDayCount: dateRangeComposable.setDayCount,
+    setDateRange,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
