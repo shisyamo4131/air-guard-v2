@@ -16,7 +16,7 @@ import FooterCell from "@/components/Arrangements/FooterCell";
 
 /** define props */
 const props = defineProps({
-  showDebugInfo: { type: Boolean, default: true },
+  showDebugInfo: { type: Boolean, default: false },
 });
 
 /** define emits */
