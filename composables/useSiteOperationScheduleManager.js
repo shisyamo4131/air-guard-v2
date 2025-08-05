@@ -5,10 +5,11 @@
  * @param {Object} [options.manager] - Manager instance for schedule operations.
  * @param {string} [options.siteId] - Site ID to filter schedules.
  * @param {Date} [options.from] - Start date for the schedule range.
- * @param {Date|number} [options.to] - End date or number of days from the start date.
- * @param {Object} [options.fetchEmployeeComposable] - Custom useFetchEmployee composable instance.
- * @param {Object} [options.fetchOutsourcerComposable] - Custom useFetchOutsourcer composable instance.
- * @param {Object} [options.fetchSiteComposable] - Custom useFetchSite composable instance.
+ * @param {Date|number} [options.to] - End date (Date) or number of days from start date (number).
+ * @param {Object} [options.fetchEmployeeComposable] - Custom composable for fetching employees.
+ * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
+ * @param {Object} [options.fetchSiteComposable] - Custom composable for fetching sites.
+ * @param {boolean} [options.initOnMounted] - If true, initialize on component mount.
  */
 import * as Vue from "vue";
 import dayjs from "dayjs";
@@ -16,7 +17,6 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
-import { useDateUtil } from "@/composables/useDateUtil";
 import { useWorkers } from "@/composables/useWorkers";
 import { useDateRange } from "@/composables/useDateRange";
 
@@ -97,11 +97,6 @@ export function useSiteOperationScheduleManager({
    */
   const siteComposable = fetchSiteComposable || internalUseFetchSite();
   const { fetchSite, cachedSites } = siteComposable;
-
-  /**
-   * useDateUtil
-   */
-  const { validateAndProcessDateRange } = useDateUtil();
 
   /***************************************************************************
    * WATCHERS
