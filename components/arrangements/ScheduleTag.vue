@@ -218,6 +218,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       tag="div"
       item-key="workerId"
       style="min-height: 24px"
+      :disabled="!props.schedule.isWorkerChangeable"
       :group="{ name: 'workers', put: handlePut }"
       @change="handleChange($event)"
     >
