@@ -1,5 +1,5 @@
 /**
- * @file useSiteOperationScheduleManager.js
+ * @file useSiteOperationSchedulesManager.js
  * @description Composable for managing site operation schedules.
  * @param {Object} options - Configuration options.
  * @param {Object} [options.manager] - Manager instance for schedule operations.
@@ -23,13 +23,13 @@ import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
-  "Manager should be provided to useSiteOperationScheduleManager.";
+  "Manager should be provided to useSiteOperationSchedulesManager.";
 
 // Default number of days for the schedule range if 'to' is not provided.
 const DEFAULT_FROM = dayjs().startOf("day").toDate();
 const DEFAULT_DAYS_COUNT = 7;
 
-export function useSiteOperationScheduleManager({
+export function useSiteOperationSchedulesManager({
   manager,
   siteId,
   from: providedFrom = DEFAULT_FROM,

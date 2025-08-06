@@ -2,7 +2,7 @@
 import { provide, useTemplateRef } from "vue";
 import dayjs from "dayjs";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
+import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
@@ -12,7 +12,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
 /** define manager composable */
-const managerComposable = useSiteOperationScheduleManager({
+const managerComposable = useSiteOperationSchedulesManager({
   manager: scheduleManager,
   from: dayjs().subtract(1, "day").toDate(),
 });

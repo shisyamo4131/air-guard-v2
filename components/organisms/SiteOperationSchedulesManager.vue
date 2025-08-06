@@ -4,7 +4,7 @@
  * @description A component that manages the site operation schedule.
  */
 import dayjs from "dayjs";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
+import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 /** define-options */
@@ -18,7 +18,7 @@ const props = defineProps({
 const { company } = useAuthStore();
 
 const { cachedData, arrayManagerAttrs, calendarAttrs } =
-  useSiteOperationScheduleManager({
+  useSiteOperationSchedulesManager({
     manager: useTemplateRef("manager"),
     siteId: props.siteId,
     from: dayjs().startOf("month").toDate(),
