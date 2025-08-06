@@ -5,8 +5,7 @@ import draggable from "vuedraggable";
 const props = defineProps({
   employees: { type: Array, default: () => [] },
   outsourcers: { type: Array, default: () => [] },
-  cachedEmployees: { type: Object, default: () => ({}) },
-  cachedOutsourcers: { type: Object, default: () => ({}) },
+  getWorkerName: { type: Function, required: true },
 });
 
 /** define refs */
@@ -15,6 +14,15 @@ const tabs = ref([
   { label: "従業員", key: "employees" },
   { label: "外注先", key: "outsourcers" },
 ]);
+
+/** define constants */
+const DRAGGABLE_CONFIG = {
+  tag: "div",
+  class: "fill-height overflow-y-auto",
+  itemKey: "workerId",
+  group: { name: "workers", pull: "clone", put: false },
+  sort: false,
+};
 </script>
 
 <template>
@@ -31,18 +39,11 @@ const tabs = ref([
       <!-- 従業員タブ -->
       <v-window-item :value="0" class="fill-height">
         <div class="pa-2 fill-height">
-          <draggable
-            :model-value="employees"
-            tag="div"
-            class="fill-height overflow-y-auto"
-            item-key="workerId"
-            :group="{ name: 'workers', pull: 'clone', put: false }"
-            :sort="false"
-          >
+          <draggable :model-value="employees" v-bind="DRAGGABLE_CONFIG">
             <template #item="{ element }">
               <MoleculesTagBase
                 v-bind="element"
-                :label="cachedEmployees[element.workerId]?.displayName"
+                :label="props.getWorkerName(element)"
               />
             </template>
           </draggable>
@@ -52,18 +53,11 @@ const tabs = ref([
       <!-- 外注先タブ -->
       <v-window-item :value="1" class="fill-height">
         <div class="pa-2 fill-height">
-          <draggable
-            :model-value="outsourcers"
-            tag="div"
-            class="fill-height overflow-y-auto"
-            item-key="workerId"
-            :group="{ name: 'workers', pull: 'clone', put: false }"
-            :sort="false"
-          >
+          <draggable :model-value="outsourcers" v-bind="DRAGGABLE_CONFIG">
             <template #item="{ element }">
               <MoleculesTagBase
                 v-bind="element"
-                :label="cachedOutsourcers[element.workerId]?.displayName"
+                :label="props.getWorkerName(element)"
               />
             </template>
           </draggable>

@@ -19,10 +19,10 @@ const managerComposable = useSiteOperationScheduleManager({
 
 const {
   cachedData,
-  workers,
   dayCount,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
+  workerSelectorAttrs,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -37,13 +37,9 @@ provide("scheduleManagerComposable", managerComposable);
     />
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
-      <ArrangementsWorkerSelector
-        :employees="workers.employees"
-        :outsourcers="workers.outsourcers"
-        :cached-employees="cachedData.employees"
-        :cached-outsourcers="cachedData.outsourcers"
-      />
+      <ArrangementsWorkerSelector v-bind="workerSelectorAttrs" />
     </MoleculesFloatingWindow>
+
     <!-- スケジュール管理テーブル -->
     <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
 

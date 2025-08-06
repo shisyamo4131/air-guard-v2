@@ -386,6 +386,14 @@ export function useSiteOperationScheduleManager({
     set: (value) => dateRangeComposable.setDayCount(value),
   });
 
+  const workerSelectorAttrs = Vue.computed(() => {
+    return {
+      employees: workers.value.employees,
+      outsourcers: workers.value.outsourcers,
+      getWorkerName: getWorkerName.value,
+    };
+  });
+
   return {
     // 念のため、使用しているコンポーザブル自体も返す
     workersComposable,
@@ -406,6 +414,7 @@ export function useSiteOperationScheduleManager({
     arrayManagerAttrs,
     itemManagerAttrs,
     calendarAttrs,
+    workerSelectorAttrs,
 
     // statistics
     statistics: workersComposable.statistics,
