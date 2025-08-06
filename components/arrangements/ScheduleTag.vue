@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file DraggableCell.vue
+ * @file ScheduleTag.vue
  * @description 単一の現場稼働予定に対して従事者（従業員または外注先）の配置を行うためのコンポーネント。
  * vuedraggable を使用しており、以下の仕様になっています。
  * - `workers` グループからのみ要素を受け入れます。
