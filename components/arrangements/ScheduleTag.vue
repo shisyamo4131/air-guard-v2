@@ -222,16 +222,16 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       :group="{ name: 'workers', put: handlePut }"
       @change="handleChange($event)"
     >
-      <template #item="{ element }">
+      <template #item="{ element: worker }">
         <ArrangementsWorkerTag
-          v-bind="element"
-          :label="getWorkerName(element)"
+          :label="getWorkerName(worker)"
           :highlight="
             highlightedEmployees.has(
-              `${props.schedule.docId}-${element.workerId}`
+              `${props.schedule.docId}-${worker.workerId}`
             )
           "
-          @update:status="handleUpdateDetailStatus(element, $event)"
+          :model-value="worker"
+          @update:status="handleUpdateDetailStatus(worker, $event)"
           @remove="handleWorkerRemoved({ element: $event })"
         />
       </template>

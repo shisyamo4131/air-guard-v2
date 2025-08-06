@@ -20,6 +20,7 @@
  * データも多くなり、レスポンスが悪くなる可能性があるため、必要な情報のみの受け渡しを
  * 行うものとする。
  */
+import { OperationResultDetail } from "@/schemas";
 import {
   OPERATION_RESULT_DETAIL_STATUS,
   OPERATION_RESULT_DETAIL_STATUS_ARRAY,
@@ -28,20 +29,9 @@ import {
 
 /** define props */
 const props = defineProps({
-  /** Number of arranged personnel, shown after the label if not an employee. */
-  amount: { type: Number, default: 0 },
-  /** End time to display on the tag (e.g., "18:00"). */
-  endTime: { type: String, default: undefined },
-  /** Indicates whether the tag represents an employee */
-  isEmployee: { type: Boolean, default: false },
   /** Indicates `new` icon. */
   isNew: { type: Boolean, default: false },
-  /** Start time to display on the tag (e.g., "09:00"). */
-  startTime: { type: String, default: undefined },
-  /** Indicates detail status */
-  status: { type: String, default: OPERATION_RESULT_DETAIL_STATUS.DEFAULT },
-  /** worker-id */
-  workerId: { type: String, required: true },
+  modelValue: { type: Object, required: true },
 });
 
 /** define emits */
@@ -49,6 +39,13 @@ const emit = defineEmits(["update:status", "remove"]);
 
 /** define refs */
 const menu = ref(false);
+
+const worker = ref(new OperationResultDetail());
+watch(
+  () => props.modelValue,
+  (newVal) => worker.value.initialize(newVal),
+  { immediate: true, deep: true }
+);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -69,7 +66,7 @@ const selectableStatus = computed(() => {
  * `amount` is set to 1 cause the outsourcer's tag should be removed one by one.
  */
 function onClickRemove() {
-  const { workerId, isEmployee } = props;
+  const { workerId, isEmployee } = worker.value;
   emit("remove", { workerId, amount: 1, isEmployee });
 }
 
@@ -85,8 +82,7 @@ function updateStatus(newVal) {
 
 <template>
   <MoleculesTagBase
-    v-bind="{ ...$props, ...$attrs }"
-    :removable="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
+    :removable="worker.isRemovable"
     @click:remove="onClickRemove"
   >
     <template #prepend-label>
@@ -94,24 +90,19 @@ function updateStatus(newVal) {
       <v-icon v-if="props.isNew" color="red">mdi-new-box</v-icon>
     </template>
     <template #append-label>
-      <span v-if="!props.isEmployee">
-        {{ `(${props.amount})` }}
-      </span>
+      <span v-if="!worker.isEmployee">{{ `(${worker.amount})` }}</span>
     </template>
     <template #footer>
       <v-list-item-subtitle class="text-caption text-no-wrap">
-        {{ `${props.startTime} - ${props.endTime}` }}
+        {{ `${worker.startTime} - ${worker.endTime}` }}
       </v-list-item-subtitle>
     </template>
     <template #prepend-action>
-      <v-menu
-        v-if="props.status !== OPERATION_RESULT_DETAIL_STATUS_DRAFT"
-        v-model="menu"
-      >
+      <v-menu v-if="!worker.isDraft" v-model="menu">
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
-            {{ OPERATION_RESULT_DETAIL_STATUS[props.status] }}
+            {{ OPERATION_RESULT_DETAIL_STATUS[worker.status] }}
           </v-chip>
         </template>
         <v-card>
@@ -121,7 +112,7 @@ function updateStatus(newVal) {
                 v-for="status of selectableStatus"
                 :key="status.value"
                 :value="status.value"
-                :disabled="status.value === props.status"
+                :disabled="status.value === worker.status"
                 label
                 @click="updateStatus(status.value)"
               >
