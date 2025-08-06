@@ -28,7 +28,7 @@ const scheduleManager = inject("scheduleManagerComposable");
 const { getWorkerName } = scheduleManager;
 
 /** define emits */
-const emit = defineEmits(["click:edit"]);
+const emit = defineEmits(["click:edit", "click:duplicate"]);
 
 /** define composables */
 const logger = useLogger();
@@ -240,6 +240,15 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
     >
+      <!-- 複製ボタンはとりあえず用意 -->
+      <v-btn
+        disabled
+        variant="tonal"
+        size="x-small"
+        @click="emit('click:duplicate', props.schedule)"
+      >
+        <v-icon>mdi-content-copy</v-icon>
+      </v-btn>
       <v-btn
         :disabled="
           props.schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
