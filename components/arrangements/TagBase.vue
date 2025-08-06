@@ -116,6 +116,32 @@ const removeButtonAttrs = computed(() => {
   };
 });
 
+/**
+ * Computed property for title classes based on size
+ */
+const titleClasses = computed(() => {
+  const sizeClasses = {
+    small: "text-caption",
+    medium: "text-subtitle-2",
+    large: "text-body-1",
+  };
+
+  return ["tag-base__title", sizeClasses[props.size] || sizeClasses.medium];
+});
+
+/**
+ * Computed property for progress circular size based on tag size
+ */
+const progressSize = computed(() => {
+  const sizeMap = {
+    small: "x-small",
+    medium: "x-small",
+    large: "small",
+  };
+
+  return sizeMap[props.size] || "x-small";
+});
+
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
@@ -145,16 +171,7 @@ function handleTagClick(event) {
     variant="outlined"
     @click="handleTagClick"
   >
-    <v-list-item-title
-      class="tag-base__title"
-      :class="[
-        size === 'small'
-          ? 'text-caption'
-          : size === 'large'
-          ? 'text-body-1'
-          : 'text-subtitle-2',
-      ]"
-    >
+    <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->
       <div v-if="showLabelContent" class="tag-base__label-content">
         <slot name="prepend-label" v-bind="{ label: props.label }" />
@@ -168,13 +185,7 @@ function handleTagClick(event) {
       <div v-else-if="isLoading" class="tag-base__loading">
         <v-progress-circular
           indeterminate
-          :size="
-            size === 'small'
-              ? 'x-small'
-              : size === 'large'
-              ? 'small'
-              : 'x-small'
-          "
+          :size="progressSize"
           aria-label="読み込み中"
         />
         <span v-if="size !== 'small'" class="tag-base__loading-text ml-2">
