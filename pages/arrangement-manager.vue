@@ -44,14 +44,7 @@ provide("scheduleManagerComposable", managerComposable);
     <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
 
     <!-- スケジュール編集ダイアログ -->
-    <ItemManager
-      ref="scheduleManager"
-      v-bind="itemManagerAttrs"
-      :dialog-props="{ maxWidth: 600 }"
-      :input-props="{
-        excludedKeys: ['status', 'employees', 'outsourcers'],
-      }"
-    >
+    <ItemManager ref="scheduleManager" v-bind="itemManagerAttrs">
       <template #editor="{ editorProps, inputProps }">
         <MoleculesSiteOperationScheduleEditor
           v-bind="editorProps"

@@ -300,6 +300,12 @@ export function useSiteOperationScheduleManager({
   const itemManagerAttrs = Vue.computed(() => {
     return {
       modelValue: instance,
+      dialogProps: {
+        maxWidth: 600,
+      },
+      inputProps: {
+        excludedKeys: ["status", "employees", "outsourcers"],
+      },
     };
   });
 
