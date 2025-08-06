@@ -369,8 +369,9 @@ export function useSiteOperationScheduleManager({
   });
 
   /** date range */
-  const dateRange = Vue.computed(() => {
-    return dateRangeComposable.dateRange.value;
+  const dateRange = Vue.computed({
+    get: () => dateRangeComposable.dateRange.value,
+    set: (value) => dateRangeComposable.setDateRange(value),
   });
 
   /** Computed property for workers, combining employees and outsourcers. */
@@ -405,9 +406,9 @@ export function useSiteOperationScheduleManager({
     instance,
     workers,
     dayCount,
+    dateRange,
 
     // STATE
-    dateRange: Vue.readonly(dateRange),
     columns,
 
     // Attributes for manager component.
@@ -422,8 +423,6 @@ export function useSiteOperationScheduleManager({
     // METHODS
     getWorkerName,
     setFrom: dateRangeComposable.setBaseDate,
-    setDayCount: dateRangeComposable.setDayCount,
-    setDateRange,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
