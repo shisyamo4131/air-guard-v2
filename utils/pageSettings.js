@@ -36,6 +36,13 @@ export const pageStructure = [
     navigation: true,
   },
   {
+    id: "arrangements", // ルートパスを追加 (公開ページとする例)
+    path: "/arrangement-manager",
+    label: "配置管理",
+    roles: [],
+    navigation: true,
+  },
+  {
     id: "home", // ルートパスを追加 (公開ページとする例)
     path: "/",
     public: true, // 公開ページ
