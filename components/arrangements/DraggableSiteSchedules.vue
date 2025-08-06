@@ -49,7 +49,7 @@ const draggableName = computed(
  */
 function pull(to, from, dragEl) {
   const schedule = dragEl.__draggable_context.element;
-  return schedule.isDraft;
+  return schedule.isScheduleChangeable;
 }
 </script>
 
