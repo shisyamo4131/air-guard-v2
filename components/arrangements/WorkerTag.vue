@@ -84,7 +84,7 @@ function updateStatus(newVal) {
 </script>
 
 <template>
-  <ArrangementsTagBase
+  <MoleculesTagBase
     v-bind="{ ...$props, ...$attrs }"
     :removable="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
     @click:remove="onClickRemove"
@@ -132,7 +132,7 @@ function updateStatus(newVal) {
         </v-card>
       </v-menu>
     </template>
-  </ArrangementsTagBase>
+  </MoleculesTagBase>
 </template>
 
 <style scoped></style>

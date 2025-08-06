@@ -54,7 +54,7 @@ const tabs = ref([
               :sort="false"
             >
               <template #item="{ element }">
-                <ArrangementsTagBase
+                <MoleculesTagBase
                   v-bind="element"
                   :label="cachedEmployees[element.workerId]?.displayName"
                 />
@@ -75,7 +75,7 @@ const tabs = ref([
               :sort="false"
             >
               <template #item="{ element }">
-                <ArrangementsTagBase
+                <MoleculesTagBase
                   v-bind="element"
                   :label="cachedOutsourcers[element.workerId]?.displayName"
                 />
