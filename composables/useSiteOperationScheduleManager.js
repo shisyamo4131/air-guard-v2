@@ -381,6 +381,11 @@ export function useSiteOperationScheduleManager({
     };
   });
 
+  const dayCount = Vue.computed({
+    get: () => dateRangeComposable.dateRange.value.dayCount,
+    set: (value) => dateRangeComposable.setDayCount(value),
+  });
+
   return {
     // 念のため、使用しているコンポーザブル自体も返す
     workersComposable,
@@ -391,6 +396,7 @@ export function useSiteOperationScheduleManager({
     schema: SiteOperationSchedule,
     instance,
     workers,
+    dayCount,
 
     // STATE
     dateRange: Vue.readonly(dateRange),
