@@ -395,9 +395,7 @@ export function useSiteOperationSchedulesManager({
 
   const workerSelectorAttrs = Vue.computed(() => {
     return {
-      employees: workers.value.employees,
-      outsourcers: workers.value.outsourcers,
-      getWorkerName: getWorkerName.value,
+      items: [...availableEmployees.value, ...availableOutsourcers.value],
     };
   });
 

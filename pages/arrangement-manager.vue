@@ -23,6 +23,7 @@ const {
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
   workerSelectorAttrs,
+  getWorkerName,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -37,7 +38,11 @@ provide("scheduleManagerComposable", managerComposable);
     />
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
-      <ArrangementsWorkerSelector v-bind="workerSelectorAttrs" />
+      <ArrangementsWorkerSelector v-bind="workerSelectorAttrs">
+        <template #default="{ worker }">
+          <MoleculesTagBase :label="getWorkerName(worker)" />
+        </template>
+      </ArrangementsWorkerSelector>
     </MoleculesFloatingWindow>
 
     <!-- スケジュール管理テーブル -->

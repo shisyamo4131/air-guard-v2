@@ -3,25 +3,21 @@ import draggable from "vuedraggable";
 
 /** define props */
 const props = defineProps({
-  employees: { type: Array, default: () => [] },
-  outsourcers: { type: Array, default: () => [] },
-  getWorkerName: { type: Function, required: true },
+  items: { type: Array, default: () => [] },
 });
 
 /** define refs */
 const activeTab = ref(0);
 const tabs = ref([
-  {
-    label: "従業員",
-    key: "employees",
-    windowItem: { value: 0, modelValue: props.employees },
-  },
-  {
-    label: "外注先",
-    key: "outsourcers",
-    windowItem: { value: 1, modelValue: props.outsourcers },
-  },
+  { label: "従業員", key: "employees" },
+  { label: "外注先", key: "outsourcers" },
 ]);
+
+const workers = computed(() => {
+  const employees = props.items.filter((item) => item.isEmployee);
+  const outsourcers = props.items.filter((item) => !item.isEmployee);
+  return { employees, outsourcers };
+});
 
 /** define constants */
 const DRAGGABLE_CONFIG = {
@@ -41,24 +37,17 @@ const DRAGGABLE_CONFIG = {
         {{ tab.label }}
       </v-tab>
     </v-tabs>
-
     <v-window v-model="activeTab" class="fill-height">
       <v-window-item
-        v-for="tab in tabs"
+        v-for="(tab, index) in tabs"
         :key="tab.key"
-        :value="tab.windowItem.value"
+        :value="index"
         class="fill-height"
       >
         <div class="pa-2 fill-height">
-          <draggable
-            :model-value="tab.windowItem.modelValue"
-            v-bind="DRAGGABLE_CONFIG"
-          >
+          <draggable :model-value="workers[tab.key]" v-bind="DRAGGABLE_CONFIG">
             <template #item="{ element }">
-              <MoleculesTagBase
-                v-bind="element"
-                :label="props.getWorkerName(element)"
-              />
+              <slot name="default" :worker="element" />
             </template>
           </draggable>
         </div>
