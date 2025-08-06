@@ -1,137 +1,257 @@
 <script setup>
-import { provide, computed, useTemplateRef } from "vue";
-import dayjs from "dayjs";
-import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useMemoryMonitor } from "@/composables/usePerformanceOptimization";
+import { ref } from "vue";
+import TagBase from "~/components/arrangements/TagBase.vue";
 
-/** 開発環境の判定 */
-const isDev = process.env.NODE_ENV === "development";
+// テスト用のリアクティブな状態
+const loading = ref(false);
+const removable = ref(true);
+const highlight = ref(false);
+const label = ref("サンプルタグ");
+const size = ref("medium");
+const variant = ref("default");
 
-/** define template refs */
-const scheduleManager = useTemplateRef("scheduleManager");
+// テスト用のメソッド
+const toggleLoading = () => {
+  loading.value = !loading.value;
+};
 
-/** メモリ監視機能 */
-const memoryMonitor = useMemoryMonitor();
-const memoryMonitorId = memoryMonitor.startMonitoring(10000); // 10秒間隔
+const toggleRemovable = () => {
+  removable.value = !removable.value;
+};
 
-/** フローティング作業員選択ウィンドウ用のコンポーザブル */
-const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
-  useFloatingWindow();
+const toggleHighlight = () => {
+  highlight.value = !highlight.value;
+};
 
-/** define manager composable */
-const managerComposable = useSiteOperationScheduleManager({
-  manager: scheduleManager,
-  from: dayjs().subtract(1, "day").toDate(),
-});
+const clearLabel = () => {
+  label.value = label.value ? "" : "サンプルタグ";
+};
 
-const {
-  cachedData,
-  dateRange,
-  docs: schedules,
-  workers,
-  statistics,
-  setDayCount,
-  toUpdate: toUpdateSchedule,
-  itemManagerAttrs,
-} = managerComposable;
+const onRemove = () => {
+  console.log("削除ボタンがクリックされました");
+  alert("削除ボタンがクリックされました");
+};
 
-/** provide composable to child components */
-provide("scheduleManagerComposable", managerComposable);
-
-/** パフォーマンス統計 */
-const performanceStats = computed(() => {
-  return {
-    memoryUsage: memoryMonitor.getMemoryUsagePercentage.value,
-    memoryInfo: memoryMonitor.memoryInfo.value,
-    workerStats: statistics.value,
-    scheduleCount: schedules.value?.length || 0,
-  };
-});
+const sizes = ["small", "medium", "large"];
+const variants = ["default", "success", "warning", "error"];
 </script>
 
 <template>
-  <div class="d-flex flex-column fill-height">
-    <!-- パフォーマンス情報 (開発モード時のみ) -->
-    <!-- <v-toolbar v-if="isDev" density="compact">
-      <v-chip
-        size="small"
-        variant="outlined"
-        :color="
-          performanceStats.memoryUsage > 80
-            ? 'error'
-            : performanceStats.memoryUsage > 60
-            ? 'warning'
-            : 'success'
-        "
-      >
-        Memory: {{ performanceStats.memoryUsage.toFixed(1) }}%
-      </v-chip>
-      <v-chip size="small" variant="outlined">
-        Workers: {{ performanceStats.workerStats.totalWorkers }}
-      </v-chip>
-      <v-chip size="small" variant="outlined">
-        Schedules: {{ performanceStats.scheduleCount }}
-      </v-chip>
-    </v-toolbar> -->
-    <v-toolbar density="comfortable" :title="`配置管理`">
-      <template #append>
-        <v-spacer />
-        <v-btn
-          prepend-icon="mdi-account-group"
-          @click="toggleFloatingWindow"
-          :color="floatingWindowAttrs.isVisible ? 'primary' : 'default'"
-        >
-          作業員
-        </v-btn>
-        <air-select
-          width="120"
-          :model-value="dateRange.dayCount"
-          label="表示日数"
-          hide-details
-          density="compact"
-          :items="[
-            { title: '7日間', value: 7 },
-            { title: '14日間', value: 14 },
-          ]"
-          @update:model-value="setDayCount"
+  <v-container class="pa-4">
+    <h1 class="mb-4">TagBase Component テスト</h1>
+
+    <!-- コントロールパネル -->
+    <v-card class="mb-6">
+      <v-card-title>コントロールパネル</v-card-title>
+      <v-card-text>
+        <v-row>
+          <v-col cols="12" md="6">
+            <v-text-field v-model="label" label="ラベル" clearable />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-select v-model="size" :items="sizes" label="サイズ" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-select v-model="variant" :items="variants" label="バリアント" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-switch
+              v-model="loading"
+              label="ローディング状態"
+              color="primary"
+            />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-switch
+              v-model="removable"
+              label="削除ボタン表示"
+              color="primary"
+            />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-switch v-model="highlight" label="ハイライト" color="primary" />
+          </v-col>
+        </v-row>
+
+        <v-row>
+          <v-col>
+            <v-btn @click="toggleLoading" class="mr-2">
+              ローディング切り替え
+            </v-btn>
+            <v-btn @click="clearLabel" class="mr-2"> ラベル切り替え </v-btn>
+            <v-btn @click="toggleHighlight" class="mr-2">
+              ハイライト切り替え
+            </v-btn>
+            <v-btn @click="toggleRemovable"> 削除ボタン切り替え </v-btn>
+          </v-col>
+        </v-row>
+      </v-card-text>
+    </v-card>
+
+    <!-- メインテスト -->
+    <v-card class="mb-6">
+      <v-card-title>メインテスト</v-card-title>
+      <v-card-text>
+        <TagBase
+          :label="label"
+          :loading="loading"
+          :removable="removable"
+          :highlight="highlight"
+          :size="size"
+          :variant="variant"
+          @click:remove="onRemove"
         />
-      </template>
-    </v-toolbar>
+      </v-card-text>
+    </v-card>
 
-    <!-- フローティング作業員選択ウィンドウ -->
-    <ArrangementsWorkerSelector
-      v-bind="floatingWindowAttrs"
-      :employees="workers.employees"
-      :outsourcers="workers.outsourcers"
-      :cached-employees="cachedData.employees"
-      :cached-outsourcers="cachedData.outsourcers"
-    />
+    <!-- 各サイズのテスト -->
+    <v-card class="mb-6">
+      <v-card-title>サイズ比較</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase
+            label="Small"
+            size="small"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Medium"
+            size="medium"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Large"
+            size="large"
+            removable
+            @click:remove="onRemove"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
 
-    <!-- スケジュール管理テーブル -->
-    <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
+    <!-- 各バリアントのテスト -->
+    <v-card class="mb-6">
+      <v-card-title>バリアント比較</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase
+            label="Default"
+            variant="default"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Success"
+            variant="success"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Warning"
+            variant="warning"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Error"
+            variant="error"
+            removable
+            @click:remove="onRemove"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
 
-    <!-- スケジュール編集ダイアログ -->
-    <ItemManager
-      ref="scheduleManager"
-      v-bind="itemManagerAttrs"
-      :dialog-props="{ maxWidth: 600 }"
-      :input-props="{
-        excludedKeys: ['status', 'employees', 'outsourcers'],
-      }"
-    >
-      <template #editor="{ editorProps, inputProps }">
-        <MoleculesSiteOperationScheduleEditor
-          v-bind="editorProps"
-          :agreements="
-            cachedData.sites[inputProps.item.siteId]?.agreements || []
-          "
-        />
-      </template>
-    </ItemManager>
-  </div>
+    <!-- ローディング状態のテスト -->
+    <v-card class="mb-6">
+      <v-card-title>ローディング状態</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase
+            label="ローディング中"
+            :loading="true"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            :loading="true"
+            size="small"
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            :loading="true"
+            size="large"
+            removable
+            @click:remove="onRemove"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- ラベルなし状態のテスト -->
+    <v-card class="mb-6">
+      <v-card-title>ラベルなし状態（自動ローディング）</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase size="small" removable @click:remove="onRemove" />
+          <TagBase size="medium" removable @click:remove="onRemove" />
+          <TagBase size="large" removable @click:remove="onRemove" />
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- ハイライト状態のテスト -->
+    <v-card class="mb-6">
+      <v-card-title>ハイライト状態</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase
+            label="ハイライト"
+            highlight
+            removable
+            @click:remove="onRemove"
+          />
+          <TagBase
+            label="Success + ハイライト"
+            variant="success"
+            highlight
+            removable
+            @click:remove="onRemove"
+          />
+        </div>
+      </v-card-text>
+    </v-card>
+
+    <!-- スロットテスト -->
+    <v-card class="mb-6">
+      <v-card-title>スロットテスト</v-card-title>
+      <v-card-text>
+        <div class="d-flex flex-wrap gap-4">
+          <TagBase label="カスタムラベル" removable @click:remove="onRemove">
+            <template #prepend-label>
+              <v-icon size="small" class="mr-1">mdi-star</v-icon>
+            </template>
+            <template #append-label>
+              <v-icon size="small" class="ml-1">mdi-check</v-icon>
+            </template>
+          </TagBase>
+
+          <TagBase removable @click:remove="onRemove">
+            <template #label>
+              <strong>カスタム内容</strong>
+            </template>
+          </TagBase>
+        </div>
+      </v-card-text>
+    </v-card>
+  </v-container>
 </template>
 
 <style scoped>
-/* 必要に応じて追加のスタイルをここに記述 */
+.gap-4 {
+  gap: 1rem;
+}
 </style>

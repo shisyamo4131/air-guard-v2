@@ -84,7 +84,11 @@ function updateStatus(newVal) {
 </script>
 
 <template>
-  <ArrangementsTagBase v-bind="{ ...$props, ...$attrs }">
+  <ArrangementsTagBase
+    v-bind="{ ...$props, ...$attrs }"
+    :removable="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
+    @click:remove="onClickRemove"
+  >
     <template #prepend-label>
       <!-- 'new' icon -->
       <v-icon v-if="props.isNew" color="red">mdi-new-box</v-icon>
@@ -99,7 +103,7 @@ function updateStatus(newVal) {
         {{ `${props.startTime} - ${props.endTime}` }}
       </v-list-item-subtitle>
     </template>
-    <template #append>
+    <template #prepend-action>
       <v-menu
         v-if="props.status !== OPERATION_RESULT_DETAIL_STATUS_DRAFT"
         v-model="menu"
@@ -127,11 +131,6 @@ function updateStatus(newVal) {
           </v-container>
         </v-card>
       </v-menu>
-      <v-list-item-action
-        v-if="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
-      >
-        <v-icon size="small" @click="onClickRemove">mdi-close</v-icon>
-      </v-list-item-action>
     </template>
   </ArrangementsTagBase>
 </template>
