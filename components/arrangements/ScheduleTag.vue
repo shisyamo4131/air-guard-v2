@@ -225,7 +225,6 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       <template #item="{ element }">
         <ArrangementsWorkerTag
           v-bind="element"
-          is-arranged
           :label="getWorkerName(element)"
           :highlight="
             highlightedEmployees.has(
