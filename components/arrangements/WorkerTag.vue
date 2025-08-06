@@ -127,7 +127,6 @@ function updateStatus(newVal) {
           </v-container>
         </v-card>
       </v-menu>
-      <v-list-item-action class="mr-2"> </v-list-item-action>
       <v-list-item-action
         v-if="props.status === OPERATION_RESULT_DETAIL_STATUS_DRAFT"
       >
