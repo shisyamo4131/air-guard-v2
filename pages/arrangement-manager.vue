@@ -36,14 +36,14 @@ provide("scheduleManagerComposable", managerComposable);
       @click:workers="toggleFloatingWindow"
     />
     <!-- フローティング作業員選択ウィンドウ -->
-    <ArrangementsWorkerSelector
-      v-bind="floatingWindowAttrs"
-      :employees="workers.employees"
-      :outsourcers="workers.outsourcers"
-      :cached-employees="cachedData.employees"
-      :cached-outsourcers="cachedData.outsourcers"
-    />
-
+    <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
+      <ArrangementsWorkerSelector
+        :employees="workers.employees"
+        :outsourcers="workers.outsourcers"
+        :cached-employees="cachedData.employees"
+        :cached-outsourcers="cachedData.outsourcers"
+      />
+    </MoleculesFloatingWindow>
     <!-- スケジュール管理テーブル -->
     <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
 
