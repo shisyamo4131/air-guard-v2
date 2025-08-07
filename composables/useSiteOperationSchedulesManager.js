@@ -16,7 +16,6 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
-import { useWorkersList } from "@/composables/useWorkersList";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDebouncedRef } from "@/composables/usePerformanceOptimization";
 import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
@@ -85,29 +84,19 @@ export function useSiteOperationSchedulesManager({
    */
   const employeeComposable =
     fetchEmployeeComposable || internalUseFetchEmployee();
-  const { fetchEmployee, cachedEmployees } = employeeComposable;
+  const { fetchEmployee, cachedEmployees, employeesMap } = employeeComposable;
 
   const outsourcerComposable =
     fetchOutsourcerComposable || internalUseFetchOutsourcer();
-  const { fetchOutsourcer, cachedOutsourcers } = outsourcerComposable;
-
-  /**
-   * useWorkersList
-   * - Provides fetchEmployee and fetchOutsourcer composables.
-   */
-  const workersComposable = useWorkersList({
-    fetchEmployeeComposable: employeeComposable,
-    fetchOutsourcerComposable: outsourcerComposable,
-  });
-  const { availableEmployees, availableOutsourcers, getWorkerName } =
-    workersComposable;
+  const { fetchOutsourcer, cachedOutsourcers, outsourcersMap } =
+    outsourcerComposable;
 
   /**
    * useFetchSite
    * - If provided, use it; otherwise, use the internal fetchSite composable.
    */
   const siteComposable = fetchSiteComposable || internalUseFetchSite();
-  const { fetchSite, cachedSites } = siteComposable;
+  const { fetchSite, cachedSites, sitesMap } = siteComposable;
 
   /***************************************************************************
    * WATCHERS
@@ -142,9 +131,6 @@ export function useSiteOperationSchedulesManager({
    * LIFECYCLE HOOKS
    ***************************************************************************/
   Vue.onMounted(async () => {
-    // Initialize the workers to ensure employees and outsourcers are ready.
-    await workersComposable.initialize();
-
     // Initialize this composable.
     _initialize();
   });
@@ -155,23 +141,17 @@ export function useSiteOperationSchedulesManager({
    * METHODS
    ***************************************************************************/
   /**
-   * Sets the date range for the schedule.
-   * @param {Object} param0 - The date range parameters.
-   * @param {Date} param0.from - The start date.
-   * @param {Date|number} param0.to - The end date or number of days from the start date.
+   * Gets the display name of a worker by their ID.
+   * @param {Object} param0 - The parameters.
+   * @param {string} param0.workerId - The ID of the worker.
+   * @param {boolean} param0.isEmployee - Whether the worker is an employee.
+   * @returns {string|null} The display name of the worker or null if not found.
    */
-  const setDateRange = ({ from, to }) => {
-    if (from) dateRangeComposable.setBaseDate(from);
-    if (to) {
-      if (typeof to === "number") {
-        dateRangeComposable.setDayCount(to);
-      } else if (to instanceof Date) {
-        const dayCount = dayjs(to).diff(
-          dayjs(dateRangeComposable.startDate.value),
-          "day"
-        );
-        dateRangeComposable.setDayCount(dayCount + 1);
-      }
+  const getWorkerName = ({ workerId, isEmployee }) => {
+    if (isEmployee) {
+      return employeesMap.value[workerId]?.displayName || null;
+    } else {
+      return outsourcersMap.value[workerId]?.displayName || null;
     }
   };
 
@@ -314,7 +294,7 @@ export function useSiteOperationSchedulesManager({
     const onUpdateModelValue = (date) => {
       const from = dayjs(date).startOf("month").toDate();
       const to = dayjs(date).endOf("month").toDate();
-      setDateRange({ from, to });
+      dateRangeComposable.dateRange.value = { from, to };
     };
     const events = docs.value.map((schedule) => schedule.toEvent());
     return {
@@ -377,7 +357,7 @@ export function useSiteOperationSchedulesManager({
   /** date range */
   const dateRange = Vue.computed({
     get: () => dateRangeComposable.dateRange.value,
-    set: (value) => dateRangeComposable.setDateRange(value),
+    set: (value) => (dateRangeComposable.dateRange.value = value),
   });
 
   const dayCount = Vue.computed({
@@ -385,17 +365,7 @@ export function useSiteOperationSchedulesManager({
     set: (value) => dateRangeComposable.setDayCount(value),
   });
 
-  const workerSelectorAttrs = Vue.computed(() => {
-    return {
-      employees: availableEmployees.value,
-      outsourcers: availableOutsourcers.value,
-    };
-  });
-
   return {
-    // 念のため、使用しているコンポーザブル自体も返す
-    workersComposable,
-
     // DATA
     cachedData: Vue.readonly(cached),
     docs,
@@ -411,10 +381,6 @@ export function useSiteOperationSchedulesManager({
     arrayManagerAttrs,
     itemManagerAttrs,
     calendarAttrs,
-    workerSelectorAttrs,
-
-    // statistics
-    statistics: workersComposable.statistics,
 
     // METHODS
     getWorkerName,

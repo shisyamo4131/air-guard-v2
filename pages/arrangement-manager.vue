@@ -1,6 +1,10 @@
 <script setup>
-import { provide, useTemplateRef } from "vue";
+import { onMounted, provide, useTemplateRef } from "vue";
 import dayjs from "dayjs";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useWorkersList } from "@/composables/useWorkersList";
+
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 
@@ -11,10 +15,26 @@ const scheduleManager = useTemplateRef("scheduleManager");
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
-/** define manager composable */
+/** define composables */
+// for fetching and caching employees.
+const fetchEmployeeComposable = useFetchEmployee();
+// for fetching and caching outsourcers.
+const fetchOutsourcerComposable = useFetchOutsourcer();
+// for providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable`.
+const {
+  availableEmployees,
+  availableOutsourcers,
+  initialize: initWorkers,
+} = useWorkersList({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+});
+
 const managerComposable = useSiteOperationSchedulesManager({
   manager: scheduleManager,
   from: dayjs().subtract(1, "day").toDate(),
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
 });
 
 const {
@@ -22,11 +42,15 @@ const {
   dayCount,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
-  workerSelectorAttrs,
 } = managerComposable;
 
 /** provide composable to child components */
 provide("scheduleManagerComposable", managerComposable);
+
+onMounted(() => {
+  // Initialize the workers list when the component is mounted.
+  initWorkers();
+});
 </script>
 
 <template>
@@ -38,7 +62,10 @@ provide("scheduleManagerComposable", managerComposable);
 
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
-      <MoleculesWorkerSelector v-bind="workerSelectorAttrs">
+      <MoleculesWorkerSelector
+        :employees="availableEmployees"
+        :outsourcers="availableOutsourcers"
+      >
         <template #employee="{ rawElement }">
           <MoleculesTagBase :label="rawElement.displayName" />
         </template>

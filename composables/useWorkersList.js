@@ -115,66 +115,6 @@ export function useWorkersList({
   };
 
   /**
-   * 作業員をIDで取得（エラーハンドリング付き）
-   * @param {string} workerId - 作業員のID
-   * @param {boolean} isEmployee - 従業員かどうか
-   * @returns {Object|null} - 作業員データまたはnull
-   */
-  const getWorkerById = computed(() => {
-    return ({ workerId, isEmployee = true }) => {
-      try {
-        if (!workerId) return null;
-
-        const cache = isEmployee
-          ? cachedEmployees.value
-          : cachedOutsourcers.value;
-        return cache[workerId] || null;
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "作業員データの取得",
-          details: `ID: ${workerId}, isEmployee: ${isEmployee}`,
-          silent: true,
-        });
-        return null;
-      }
-    };
-  });
-
-  /**
-   * 作業員の表示名を取得（エラーハンドリング付き）
-   * @param {string} workerId - 作業員のID
-   * @param {boolean} isEmployee - 従業員かどうか
-   * @returns {string|null} - 表示名またはnull
-   */
-  const getWorkerName = computed(() => {
-    return ({ workerId, isEmployee = true }) => {
-      try {
-        // workerId が未指定の場合は null を返す
-        if (!workerId) return null;
-
-        // worker データを取得 -> 存在しなければ null を返す
-        const worker = getWorkerById.value({ workerId, isEmployee });
-        if (!worker) return null;
-
-        // 表示名として有効なフィールド名を優先順位で取得
-        const validName = ["displayName", "name", "fullName"].find((field) =>
-          worker?.[field]?.trim()
-        );
-
-        // 表示名として有効なフィールド名が取得できた場合のみ文字列を返す
-        return validName ? worker[validName] : `Unknown Worker (${workerId})`;
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "作業員表示名の取得",
-          details: `ID: ${workerId}, isEmployee: ${isEmployee}`,
-          silent: true,
-        });
-        return null;
-      }
-    };
-  });
-
-  /**
    * 全作業員（従業員+外注先）のリスト（メモ化付き）
    */
   const allWorkers = useMemoizedComputed(
@@ -238,10 +178,6 @@ export function useWorkersList({
 
     // 初期化
     initialize,
-
-    // 取得・検索機能
-    getWorkerById,
-    getWorkerName,
 
     // 統計情報
     statistics,
