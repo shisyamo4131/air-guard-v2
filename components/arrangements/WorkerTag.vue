@@ -2,8 +2,15 @@
 /**
  * @file WorkerTag.vue
  * @description Component for displaying an tag in arrangements.
+ * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {Boolean} isNew - Indicates 'new' icon.
- * @props {Object} modelValue - The worker instance to display.
+ * @props {String} label - The label to display on the tag.
+ * @props {Boolean} loading - Whether the tag is in loading state.
+ * @props {Object} modelValue - The worker (OperationResultDetail) instance to display.
+ * @props {Boolean} removable - Displays clear button and emits `remove` event when clicked.
+ * @props {String} removeIcon - Icon for the remove button.
+ * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
+ * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
  * @emits update:status - Event to update the status.
  * @emits click:remove - Event to remove from the arrangement.
  *
@@ -22,9 +29,36 @@ import {
 
 /** define props */
 const props = defineProps({
+  /** Whether the tag is highlighted. */
+  highlight: { type: Boolean, default: false },
   /** Indicates `new` icon. */
   isNew: { type: Boolean, default: false },
+  /** The label to display on the tag. */
+  label: {
+    type: String,
+    default: undefined,
+    validator: (value) =>
+      value === undefined ||
+      (typeof value === "string" && value.trim().length > 0),
+  },
+  /** Whether the tag is in loading state. */
+  loading: { type: Boolean, default: false },
   modelValue: { type: Object, required: true },
+  /** Icon for the remove button */
+  removeIcon: { type: String, default: "mdi-close" },
+  /** Size variant of the tag */
+  size: {
+    type: String,
+    default: "medium",
+    validator: (value) => ["small", "medium", "large"].includes(value),
+  },
+  /** Visual variant of the tag */
+  variant: {
+    type: String,
+    default: "default",
+    validator: (value) =>
+      ["default", "success", "warning", "error"].includes(value),
+  },
 });
 
 /** define emits */
@@ -75,12 +109,18 @@ function updateStatus(newVal) {
 
 <template>
   <MoleculesTagBase
+    :highlight="highlight"
+    :label="label"
+    :loading="loading"
     :removable="worker.isRemovable"
+    :remove-icon="removeIcon"
+    :size="size"
+    :variant="variant"
     @click:remove="onClickRemove"
   >
     <template #prepend-label>
       <!-- 'new' icon -->
-      <v-icon v-if="props.isNew" color="red">mdi-new-box</v-icon>
+      <v-icon v-if="isNew" color="red">mdi-new-box</v-icon>
     </template>
     <template #append-label>
       <span v-if="!worker.isEmployee">{{ `(${worker.amount})` }}</span>
