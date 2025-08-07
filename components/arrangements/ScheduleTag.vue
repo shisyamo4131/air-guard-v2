@@ -218,7 +218,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
       @change="handleChange($event)"
     >
       <template #default="{ element: worker, highlighted }">
-        <ArrangementsWorkerTag
+        <MoleculesWorkerTag
           :label="getWorkerName(worker)"
           :highlight="highlighted"
           :model-value="worker"
