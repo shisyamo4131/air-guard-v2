@@ -2,17 +2,10 @@
 /**
  * @file WorkerTag.vue
  * @description Component for displaying an tag in arrangements.
- * The tag size is set to a height of 48px.
- *
- * @props {Number} amount - Number of arranged personnel.
- * @props {String} endTime - End time to display on the tag.
- * @props {Boolean} isEmployee - Indicates whether the tag represents an employee.
  * @props {Boolean} isNew - Indicates 'new' icon.
- * @props {String} startTime - Start time to display on the tag.
- * @props {String} status - Detail status of the arrangement.
- * @props {String} workerId - Worker ID.
+ * @props {Object} modelValue - The worker instance to display.
  * @emits update:status - Event to update the status.
- * @emits remove - Event to remove from the arrangement.
+ * @emits click:remove - Event to remove from the arrangement.
  *
  * [NOTE]
  * `schedule` オブジェクトをプロパティで受け取ることで親コンポーネントも含めてコードの
@@ -35,7 +28,7 @@ const props = defineProps({
 });
 
 /** define emits */
-const emit = defineEmits(["update:status", "remove"]);
+const emit = defineEmits(["update:status", "click:remove"]);
 
 /** define refs */
 const menu = ref(false);
@@ -67,7 +60,7 @@ const selectableStatus = computed(() => {
  */
 function onClickRemove() {
   const { workerId, isEmployee } = worker.value;
-  emit("remove", { workerId, amount: 1, isEmployee });
+  emit("click:remove", { workerId, amount: 1, isEmployee });
 }
 
 /**
