@@ -390,9 +390,25 @@ export function useSiteOperationSchedulesManager({
     set: (value) => (dateRangeComposable.dateRange.value = value),
   });
 
+  /** day count */
   const dayCount = Vue.computed({
     get: () => dateRangeComposable.dateRange.value.dayCount,
     set: (value) => dateRangeComposable.setDayCount(value),
+  });
+
+  /**
+   * Returns a map of schedules grouped by siteId, shiftType, and date.
+   * This is useful for quickly accessing schedules for a specific cell in the calendar or table.
+   */
+  const keyMappedDocs = Vue.computed(() => {
+    const result = localDocs.value.reduce((acc, schedule) => {
+      const key = `${schedule.siteId}-${schedule.shiftType}-${schedule.date}`;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(schedule);
+      return acc;
+    }, {});
+
+    return result;
   });
 
   return {
@@ -404,6 +420,7 @@ export function useSiteOperationSchedulesManager({
     instance,
     dayCount,
     dateRange,
+    keyMappedDocs,
 
     // STATE
     columns,

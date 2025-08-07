@@ -23,8 +23,14 @@ const emit = defineEmits(["click:edit"]);
 
 /** inject composable from parent */
 const managerComposable = inject("scheduleManagerComposable");
-const { cachedData, columns, localDocs, updateLocalDocs, updateLocalDoc } =
-  managerComposable;
+const {
+  cachedData,
+  columns,
+  localDocs,
+  updateLocalDocs,
+  updateLocalDoc,
+  keyMappedDocs,
+} = managerComposable;
 
 /** define composables */
 const logger = useLogger();
@@ -44,19 +50,9 @@ const scheduleMatrix = computed(() => {
 
   sites.forEach(({ siteId, shiftType }) => {
     const cells = columns.value.map((column) => {
-      // ローカルdocsから該当するスケジュールを抽出
-      const schedules = localDocs.value.filter((schedule) => {
-        return (
-          schedule.siteId === siteId &&
-          schedule.shiftType === shiftType &&
-          schedule.date === column.date
-        );
-      });
-
       return {
         key: `${siteId}-${shiftType}-${column.date}`,
         column,
-        schedules,
       };
     });
 
@@ -140,7 +136,7 @@ async function handleChangeSchedule(event, dateAt) {
             v-for="cell of orderData.cells"
             :key="cell.key"
             :css-classes="cell.column.cssClasses"
-            :model-value="cell.schedules"
+            :model-value="keyMappedDocs[cell.key] || []"
             :site-id="orderData.siteId"
             :shift-type="orderData.shiftType"
             @update:model-value="
