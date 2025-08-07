@@ -6,7 +6,7 @@
  * - 現場稼働予定自体を要素として、同じ現場・シフトの別の日に移動することができます。
  *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
  */
-import { inject, computed, ref, watch } from "vue";
+import { inject, computed } from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import DayCell from "@/components/Arrangements/DayCell";
@@ -23,28 +23,12 @@ const emit = defineEmits(["click:edit"]);
 
 /** inject composable from parent */
 const managerComposable = inject("scheduleManagerComposable");
-const { cachedData, columns, docs } = managerComposable;
+const { cachedData, columns, localDocs, updateLocalDocs, updateLocalDoc } =
+  managerComposable;
 
 /** define composables */
 const logger = useLogger();
 const siteOrder = useSiteOrder();
-
-/*****************************************************************************
- * 簡素化されたローカル状態管理
- *****************************************************************************/
-// ローカルでdocsの複製を保持（楽観的更新用）
-const localDocs = ref([]);
-
-// 元データの変更を監視してローカル状態に同期
-watch(
-  docs,
-  (newDocs) => {
-    if (newDocs && Array.isArray(newDocs)) {
-      localDocs.value = [...newDocs];
-    }
-  },
-  { immediate: true, deep: true }
-);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -90,22 +74,6 @@ const scheduleMatrix = computed(() => {
  * METHODS
  *****************************************************************************/
 /**
- * セルのスケジュール配列が更新された時の処理
- */
-function updateSiteSchedules(newSchedules, siteId, shiftType, date) {
-  // 該当するセルのスケジュールを置き換え
-  const filteredSchedules = localDocs.value.filter((schedule) => {
-    return !(
-      schedule.siteId === siteId &&
-      schedule.shiftType === shiftType &&
-      schedule.date === date
-    );
-  });
-
-  localDocs.value = [...filteredSchedules, ...newSchedules];
-}
-
-/**
  * スケジュール日付変更処理（楽観的更新）
  */
 async function handleChangeSchedule(event, dateAt) {
@@ -113,18 +81,9 @@ async function handleChangeSchedule(event, dateAt) {
   try {
     if (event.added) {
       const schedule = event.added.element;
-      const newDate = dateAt.toISOString().split("T")[0];
 
       // 楽観的更新：即座にローカル状態を更新
-      const index = localDocs.value.findIndex(
-        (doc) => doc.docId === schedule.docId
-      );
-      if (index !== -1) {
-        localDocs.value[index] = {
-          ...localDocs.value[index],
-          date: newDate,
-        };
-      }
+      updateLocalDoc(schedule.docId, { dateAt });
 
       // バックグラウンドでFirestoreを更新（エラーは無視）
       try {
@@ -185,7 +144,7 @@ async function handleChangeSchedule(event, dateAt) {
             :site-id="orderData.siteId"
             :shift-type="orderData.shiftType"
             @update:model-value="
-              updateSiteSchedules(
+              updateLocalDocs(
                 $event,
                 orderData.siteId,
                 orderData.shiftType,

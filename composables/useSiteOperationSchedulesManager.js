@@ -53,6 +53,9 @@ export function useSiteOperationSchedulesManager({
   const instance = Vue.reactive(new SiteOperationSchedule());
   const docs = Vue.ref([]); // subscribed documents.
 
+  // Local documents for optimistic updates.
+  const localDocs = Vue.ref([]);
+
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
@@ -96,12 +99,21 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
   /**
    * Watches the `docs` array for changes and fetches related data.
-   * - When `docs` changes, it triggers `_fetchRelatedData` to update employees,
-   *   outsourcers, and sites based on the new documents.
    */
-  Vue.watch(docs, (newDocs) => _fetchRelatedData(Vue.toRaw(newDocs)), {
-    deep: true,
-  });
+  Vue.watch(
+    docs,
+    (newDocs) => {
+      _fetchRelatedData(Vue.toRaw(newDocs));
+      // docsの変更をlocalDocsに同期
+      if (newDocs && Array.isArray(newDocs)) {
+        localDocs.value = [...newDocs];
+      }
+    },
+    {
+      deep: true,
+      immediate: true,
+    }
+  );
 
   Vue.watch(
     () => dateRangeComposable.debouncedDateRange.value,
@@ -121,6 +133,43 @@ export function useSiteOperationSchedulesManager({
   /***************************************************************************
    * METHODS
    ***************************************************************************/
+
+  /**
+   * Update schedules for a specific cell (site, shift type, date combination)
+   * @param {Array} newSchedules - New schedules array for the cell
+   * @param {string} siteId - Site ID
+   * @param {string} shiftType - Shift type
+   * @param {string} date - Date (YYYY-MM-DD format)
+   */
+  const updateLocalDocs = (newSchedules, siteId, shiftType, date) => {
+    // 該当するセル以外のスケジュールを保持
+    const filteredSchedules = localDocs.value.filter((schedule) => {
+      return !(
+        schedule.siteId === siteId &&
+        schedule.shiftType === shiftType &&
+        schedule.date === date
+      );
+    });
+
+    // 新しいスケジュール配列で置き換え
+    localDocs.value = [...filteredSchedules, ...newSchedules];
+  };
+
+  /**
+   * Update a specific document locally.
+   * @param {string} docId - Document ID
+   * @param {Object} updates - Update content
+   */
+  const updateLocalDoc = (docId, updates) => {
+    const index = localDocs.value.findIndex((doc) => doc.docId === docId);
+    if (index !== -1) {
+      localDocs.value[index].initialize({
+        ...localDocs.value[index].toObject(),
+        ...updates,
+      });
+    }
+  };
+
   /**
    * Gets the display name of a worker by their ID.
    * @param {Object} param0 - The parameters.
@@ -350,6 +399,7 @@ export function useSiteOperationSchedulesManager({
     // DATA
     cachedData: Vue.readonly(cached),
     docs,
+    localDocs: Vue.readonly(localDocs), // readonly documents for optimistic updates
     schema: SiteOperationSchedule,
     instance,
     dayCount,
@@ -365,6 +415,8 @@ export function useSiteOperationSchedulesManager({
 
     // METHODS
     getWorkerName,
+    updateLocalDocs,
+    updateLocalDoc,
     setFrom: dateRangeComposable.setBaseDate,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
