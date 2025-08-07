@@ -22,7 +22,7 @@ const props = defineProps({
 /** define emits */
 const emit = defineEmits(["click:edit"]);
 
-/** inject from parent */
+/** inject composable from parent */
 const managerComposable = inject("scheduleManagerComposable");
 const { cachedData, columns, docs } = managerComposable;
 
