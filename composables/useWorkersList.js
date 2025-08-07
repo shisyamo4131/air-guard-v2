@@ -3,7 +3,6 @@ import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
-import { useMemoizedComputed } from "./usePerformanceOptimization";
 import { Employee, Outsourcer } from "@/schemas";
 import {
   CONTRACT_STATUS_ACTIVE,
@@ -115,52 +114,39 @@ export function useWorkersList({
   };
 
   /**
-   * 全作業員（従業員+外注先）のリスト（メモ化付き）
+   * 全作業員（従業員+外注先）のリスト
    */
-  const allWorkers = useMemoizedComputed(
-    () => [
-      ...(availableEmployees.value || []),
-      ...(availableOutsourcers.value || []),
-    ],
-    [() => availableEmployees.value, () => availableOutsourcers.value],
-    { deep: false, maxCacheSize: 20 }
-  );
+  const allWorkers = computed(() => [
+    ...(availableEmployees.value || []),
+    ...(availableOutsourcers.value || []),
+  ]);
 
   /**
-   * 統計情報（メモ化とエラーハンドリング付き）
+   * 統計情報
    */
-  const statistics = useMemoizedComputed(
-    () => {
-      try {
-        return {
-          totalEmployees: availableEmployees.value?.length || 0,
-          totalOutsourcers: availableOutsourcers.value?.length || 0,
-          totalWorkers: allWorkers.value?.length || 0,
-          cachedEmployees: Object.keys(cachedEmployees.value || {}).length,
-          cachedOutsourcers: Object.keys(cachedOutsourcers.value || {}).length,
-        };
-      } catch (error) {
-        const errorResult = errorHandler.handleError(error, {
-          operation: "統計情報の取得",
-          silent: true,
-        });
-        return {
-          totalEmployees: 0,
-          totalOutsourcers: 0,
-          totalWorkers: 0,
-          cachedEmployees: 0,
-          cachedOutsourcers: 0,
-        };
-      }
-    },
-    [
-      () => availableEmployees.value,
-      () => availableOutsourcers.value,
-      () => cachedEmployees.value,
-      () => cachedOutsourcers.value,
-    ],
-    { deep: false, maxCacheSize: 10 }
-  );
+  const statistics = computed(() => {
+    try {
+      return {
+        totalEmployees: availableEmployees.value?.length || 0,
+        totalOutsourcers: availableOutsourcers.value?.length || 0,
+        totalWorkers: allWorkers.value?.length || 0,
+        cachedEmployees: Object.keys(cachedEmployees.value || {}).length,
+        cachedOutsourcers: Object.keys(cachedOutsourcers.value || {}).length,
+      };
+    } catch (error) {
+      const errorResult = errorHandler.handleError(error, {
+        operation: "統計情報の取得",
+        silent: true,
+      });
+      return {
+        totalEmployees: 0,
+        totalOutsourcers: 0,
+        totalWorkers: 0,
+        cachedEmployees: 0,
+        cachedOutsourcers: 0,
+      };
+    }
+  });
 
   return {
     // 元のコンポーザブル
