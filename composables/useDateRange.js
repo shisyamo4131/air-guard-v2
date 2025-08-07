@@ -47,15 +47,6 @@ export function useDateRange({
       .toDate();
   });
 
-  /**
-   * 日付範囲オブジェクト
-   */
-  // const dateRange = computed(() => ({
-  //   from: startDate.value,
-  //   to: endDate.value,
-  //   dayCount: currentDayCount.value,
-  // }));
-
   const dateRange = computed({
     get: () => {
       return {
