@@ -17,7 +17,6 @@ import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetc
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateRange } from "@/composables/useDateRange";
-import { useDebouncedRef } from "@/composables/usePerformanceOptimization";
 import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 
 /** Messages */
@@ -72,12 +71,6 @@ export function useSiteOperationSchedulesManager({
     dayCount: dayjs(initTo).diff(dayjs(initFrom), "day"),
   });
 
-  /** デバウンス機能付きの日付範囲 */
-  const debouncedDateRangeComposable = useDebouncedRef(
-    dateRangeComposable.dateRange.value,
-    500
-  );
-
   /**
    * useFetchEmployee & useFetchOutsourcer
    * - If provided, use it; otherwise, use the internal fetchEmployee composable.
@@ -110,20 +103,8 @@ export function useSiteOperationSchedulesManager({
     deep: true,
   });
 
-  /**
-   * Watches the date range and updates the debounced date range.
-   * - This ensures that the debounced date range is updated whenever the
-   *   original date range changes.
-   */
   Vue.watch(
-    () => dateRangeComposable.dateRange.value,
-    (newRange) => {
-      debouncedDateRangeComposable.value.value = newRange;
-    }
-  );
-
-  Vue.watch(
-    () => debouncedDateRangeComposable.debouncedValue.value,
+    () => dateRangeComposable.debouncedDateRange.value,
     (newRange) => !newRange || _initialize()
   );
 

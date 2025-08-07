@@ -1,19 +1,22 @@
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import dayjs from "dayjs";
 import { useDateUtil } from "./useDateUtil";
+import { useDebouncedRef } from "./usePerformanceOptimization";
 
 /**
  * 日付範囲を管理するコンポーザブル
  * @param {Object} options - オプション設定
  * @param {Date} options.baseDate - 基準日（デフォルト: 今日）
  * @param {number} options.dayCount - 表示する日数（デフォルト: 14）
- * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: -1 = 昨日から）
+ * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: 0）
+ * @param {number} options.debounceDelay - デバウンス遅延時間（ミリ秒、デフォルト: 500）
  * @returns {Object} 日付範囲関連の状態と操作
  */
 export function useDateRange({
   baseDate = new Date(),
   dayCount = 14,
   offsetDays = 0,
+  debounceDelay = 500,
 } = {}) {
   /** 日付ユーティリティの取得 */
   const { isValidDate, formatDate, validateDateRange } = useDateUtil();
@@ -24,7 +27,32 @@ export function useDateRange({
     typeof dayCount === "number" && dayCount > 0 ? dayCount : 14
   );
   const currentOffsetDays = ref(
-    typeof offsetDays === "number" ? offsetDays : -1
+    typeof offsetDays === "number" ? offsetDays : 0
+  );
+
+  /**
+   * 単一のデバウンス設定オブジェクト
+   * - 複数の値変更を1回のデバウンスにまとめる
+   */
+  const debouncedConfig = useDebouncedRef(
+    {
+      baseDate: currentBaseDate.value,
+      dayCount: currentDayCount.value,
+      offsetDays: currentOffsetDays.value,
+    },
+    debounceDelay
+  );
+
+  // 個別の値変更を監視して統合オブジェクトを更新
+  watch(
+    [currentBaseDate, currentDayCount, currentOffsetDays],
+    ([newBaseDate, newDayCount, newOffsetDays]) => {
+      debouncedConfig.value.value = {
+        baseDate: newBaseDate,
+        dayCount: newDayCount,
+        offsetDays: newOffsetDays,
+      };
+    }
   );
 
   /**
@@ -43,6 +71,28 @@ export function useDateRange({
   const endDate = computed(() => {
     return dayjs(startDate.value)
       .add(currentDayCount.value - 1, "day")
+      .endOf("day")
+      .toDate();
+  });
+
+  /**
+   * デバウンスされた開始日
+   */
+  const debouncedStartDate = computed(() => {
+    const config = debouncedConfig.debouncedValue.value;
+    return dayjs(config.baseDate)
+      .add(config.offsetDays, "day")
+      .startOf("day")
+      .toDate();
+  });
+
+  /**
+   * デバウンスされた終了日
+   */
+  const debouncedEndDate = computed(() => {
+    const config = debouncedConfig.debouncedValue.value;
+    return dayjs(debouncedStartDate.value)
+      .add(config.dayCount - 1, "day")
       .endOf("day")
       .toDate();
   });
@@ -69,7 +119,18 @@ export function useDateRange({
   });
 
   /**
-   * 日付範囲の文字列表現（useDateUtilを活用）
+   * デバウンスされた日付範囲
+   */
+  const debouncedDateRange = computed(() => {
+    return {
+      from: debouncedStartDate.value,
+      to: debouncedEndDate.value,
+      dayCount: debouncedConfig.debouncedValue.value.dayCount,
+    };
+  });
+
+  /**
+   * 日付範囲の文字列表現
    */
   const dateRangeLabel = computed(() => {
     const startFormatted = formatDate(startDate.value, "YYYY/MM/DD");
@@ -100,6 +161,17 @@ export function useDateRange({
 
     return today.isSameOrAfter(start) && today.isSameOrBefore(end);
   });
+
+  /**
+   * デバウンスを即座に実行（強制実行）
+   */
+  const flushDebounce = () => {
+    debouncedConfig.immediate({
+      baseDate: currentBaseDate.value,
+      dayCount: currentDayCount.value,
+      offsetDays: currentOffsetDays.value,
+    });
+  };
 
   /**
    * 基準日を変更（検証付き）
@@ -173,7 +245,7 @@ export function useDateRange({
   };
 
   return {
-    // 状態
+    // 状態（即座更新）
     currentBaseDate,
     currentDayCount,
     currentOffsetDays,
@@ -184,6 +256,11 @@ export function useDateRange({
     includesToday,
     isValidRange,
 
+    // デバウンス状態
+    debouncedStartDate,
+    debouncedEndDate,
+    debouncedDateRange,
+
     // 操作
     setBaseDate,
     setDayCount,
@@ -192,5 +269,6 @@ export function useDateRange({
     moveNext,
     moveToToday,
     moveToDate,
+    flushDebounce,
   };
 }
