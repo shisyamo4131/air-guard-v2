@@ -47,7 +47,9 @@ const DRAGGABLE_CONFIG = {
         <div class="pa-2 fill-height">
           <draggable :model-value="workers[tab.key]" v-bind="DRAGGABLE_CONFIG">
             <template #item="{ element }">
-              <slot name="default" :worker="element" />
+              <div>
+                <slot name="default" :worker="element" />
+              </div>
             </template>
           </draggable>
         </div>
