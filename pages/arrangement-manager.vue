@@ -47,7 +47,7 @@ provide("scheduleManagerComposable", managerComposable);
     </MoleculesFloatingWindow>
 
     <!-- スケジュール管理テーブル -->
-    <ArrangementsScheduleTable @click:edit="toUpdateSchedule" />
+    <ArrangementsTable @click:edit="toUpdateSchedule" />
 
     <!-- スケジュール編集ダイアログ -->
     <ItemManager ref="scheduleManager" v-bind="itemManagerAttrs">
