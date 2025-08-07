@@ -50,11 +50,32 @@ export function useDateRange({
   /**
    * 日付範囲オブジェクト
    */
-  const dateRange = computed(() => ({
-    from: startDate.value,
-    to: endDate.value,
-    dayCount: currentDayCount.value,
-  }));
+  // const dateRange = computed(() => ({
+  //   from: startDate.value,
+  //   to: endDate.value,
+  //   dayCount: currentDayCount.value,
+  // }));
+
+  const dateRange = computed({
+    get: () => {
+      return {
+        from: startDate.value,
+        to: endDate.value,
+        dayCount: currentDayCount.value,
+      };
+    },
+    set: ({ from, to }) => {
+      if (from) setBaseDate(from);
+      if (to) {
+        if (typeof to === "number") {
+          setDayCount(to);
+        } else if (to instanceof Date) {
+          const dayCount = dayjs(to).diff(dayjs(startDate.value), "day");
+          setDayCount(dayCount + 1);
+        }
+      }
+    },
+  });
 
   /**
    * 日付範囲の文字列表現（useDateUtilを活用）
