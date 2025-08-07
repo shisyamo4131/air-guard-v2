@@ -16,7 +16,7 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
-import { useWorkers } from "@/composables/useWorkers";
+import { useWorkersList } from "@/composables/useWorkersList";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDebouncedRef } from "@/composables/usePerformanceOptimization";
 import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
@@ -92,10 +92,10 @@ export function useSiteOperationSchedulesManager({
   const { fetchOutsourcer, cachedOutsourcers } = outsourcerComposable;
 
   /**
-   * useWorkers
+   * useWorkersList
    * - Provides fetchEmployee and fetchOutsourcer composables.
    */
-  const workersComposable = useWorkers({
+  const workersComposable = useWorkersList({
     fetchEmployeeComposable: employeeComposable,
     fetchOutsourcerComposable: outsourcerComposable,
   });

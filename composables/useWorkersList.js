@@ -1,4 +1,4 @@
-import { computed, ref, reactive, onMounted } from "vue";
+import { computed, ref, reactive } from "vue";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
@@ -20,7 +20,7 @@ import {
  * @param {Object} options.fetchOutsourcerComposable - 既存の外注先取得コンポーザブル
  * @returns {Object} 作業員リスト提供の機能
  */
-export function useWorkers({
+export function useWorkersList({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 } = {}) {
