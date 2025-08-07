@@ -380,14 +380,6 @@ export function useSiteOperationSchedulesManager({
     set: (value) => dateRangeComposable.setDateRange(value),
   });
 
-  /** Computed property for workers, combining employees and outsourcers. */
-  const workers = Vue.computed(() => {
-    return {
-      employees: availableEmployees.value,
-      outsourcers: availableOutsourcers.value,
-    };
-  });
-
   const dayCount = Vue.computed({
     get: () => dateRangeComposable.dateRange.value.dayCount,
     set: (value) => dateRangeComposable.setDayCount(value),
@@ -395,7 +387,8 @@ export function useSiteOperationSchedulesManager({
 
   const workerSelectorAttrs = Vue.computed(() => {
     return {
-      items: [...availableEmployees.value, ...availableOutsourcers.value],
+      employees: availableEmployees.value,
+      outsourcers: availableOutsourcers.value,
     };
   });
 
@@ -408,7 +401,6 @@ export function useSiteOperationSchedulesManager({
     docs,
     schema: SiteOperationSchedule,
     instance,
-    workers,
     dayCount,
     dateRange,
 

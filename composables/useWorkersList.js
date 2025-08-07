@@ -4,7 +4,7 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
 import { useMemoizedComputed } from "./usePerformanceOptimization";
-import { Employee, Outsourcer, OperationResultDetail } from "@/schemas";
+import { Employee, Outsourcer } from "@/schemas";
 import {
   CONTRACT_STATUS_ACTIVE,
   EMPLOYMENT_STATUS_ACTIVE,
@@ -76,22 +76,11 @@ export function useWorkersList({
     constraints,
     pushToCache,
     targetRef,
-    isEmployee,
     type,
   }) => {
     try {
-      const fetchedDocs = await instance.fetchDocs({ constraints });
-
-      // キャッシュに追加
-      pushToCache(fetchedDocs);
-
-      // OperationResultDetail形式で選択用データを設定
-      targetRef.value = fetchedDocs.map((doc) => {
-        return new OperationResultDetail({
-          workerId: doc.docId,
-          isEmployee,
-        });
-      });
+      targetRef.value = await instance.fetchDocs({ constraints });
+      pushToCache(targetRef.value);
     } catch (error) {
       throw new Error(`${type}データの初期化に失敗: ${error.message}`);
     }
@@ -108,7 +97,6 @@ export function useWorkersList({
       ],
       pushToCache: pushEmployees,
       targetRef: availableEmployees,
-      isEmployee: true,
       type: "従業員",
     });
   };
@@ -122,7 +110,6 @@ export function useWorkersList({
       constraints: [["where", "contractStatus", "==", CONTRACT_STATUS_ACTIVE]],
       pushToCache: pushOutsourcers,
       targetRef: availableOutsourcers,
-      isEmployee: false,
       type: "外注先",
     });
   };
