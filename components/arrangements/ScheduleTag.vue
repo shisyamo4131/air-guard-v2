@@ -212,30 +212,21 @@ function highlightExistingEmployee(scheduleId, employeeId) {
         </template>
       </v-checkbox>
     </v-container>
-    <draggable
-      class="px-2 pt-2"
+    <MoleculesDraggableWorkers
       :model-value="props.schedule.workers"
-      tag="div"
-      item-key="workerId"
-      style="min-height: 24px"
       :disabled="!props.schedule.isWorkerChangeable"
-      :group="{ name: 'workers', put: handlePut }"
       @change="handleChange($event)"
     >
-      <template #item="{ element: worker }">
+      <template #default="{ element: worker, highlighted }">
         <ArrangementsWorkerTag
           :label="getWorkerName(worker)"
-          :highlight="
-            highlightedEmployees.has(
-              `${props.schedule.docId}-${worker.workerId}`
-            )
-          "
+          :highlight="highlighted"
           :model-value="worker"
           @update:status="handleUpdateDetailStatus(worker, $event)"
           @click:remove="handleWorkerRemoved({ element: $event })"
         />
       </template>
-    </draggable>
+    </MoleculesDraggableWorkers>
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
