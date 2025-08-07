@@ -18,16 +18,18 @@ import { Site } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
 export function useFetchSite() {
-  const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
-    SchemaClass: Site,
-    entityName: "Site",
-    idProperties: ["siteId", "docId"], // 優先順位順
-  });
+  const { fetchItems, cachedItems, pushItems, isLoading, mappedItems } =
+    useFetchBase({
+      SchemaClass: Site,
+      entityName: "Site",
+      idProperties: ["siteId", "docId"], // 優先順位順
+    });
 
   return {
     fetchSite: fetchItems,
     cachedSites: cachedItems,
     pushSites: pushItems,
     isLoading,
+    sitesMap: mappedItems,
   };
 }

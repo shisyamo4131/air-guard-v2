@@ -18,16 +18,18 @@ import { Employee } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
 export function useFetchEmployee() {
-  const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
-    SchemaClass: Employee,
-    entityName: "Employee",
-    idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
-  });
+  const { fetchItems, cachedItems, pushItems, isLoading, mappedItems } =
+    useFetchBase({
+      SchemaClass: Employee,
+      entityName: "Employee",
+      idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
+    });
 
   return {
     fetchEmployee: fetchItems,
     cachedEmployees: cachedItems,
     pushEmployees: pushItems,
     isLoading,
+    employeesMap: mappedItems,
   };
 }
