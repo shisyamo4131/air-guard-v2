@@ -1,15 +1,14 @@
 <script setup>
 /**
- * @file ScheduleTable.vue
+ * @file components/arrangements/Table.vue
  * @description 現場稼働予定のスケジュール管理テーブルコンポーネント。
  * vuedraggable を使用しており、以下の仕様になっています。
  * - 現場稼働予定自体を要素として、同じ現場・シフトの別の日に移動することができます。
  *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
  */
-import { inject, toRef, computed } from "vue";
+import { inject, computed, ref, watch } from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
-import { useSiteOperationScheduleState } from "@/composables/useSiteOperationScheduleState";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
 import FooterCell from "@/components/Arrangements/FooterCell";
@@ -29,21 +28,62 @@ const { cachedData, columns, docs } = managerComposable;
 /** define composables */
 const logger = useLogger();
 const siteOrder = useSiteOrder();
-const scheduleState = useSiteOperationScheduleState({
-  schedules: toRef(docs, "value"),
-});
+
+/*****************************************************************************
+ * 簡素化されたローカル状態管理
+ *****************************************************************************/
+// ローカルでdocsの複製を保持（楽観的更新用）
+const localDocs = ref([]);
+
+// 元データの変更を監視してローカル状態に同期
+watch(
+  docs,
+  (newDocs) => {
+    if (newDocs && Array.isArray(newDocs)) {
+      localDocs.value = [...newDocs];
+    }
+  },
+  { immediate: true, deep: true }
+);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
 /**
- * Generate schedule matrix based on schedules and columns
+ * ローカルデータからスケジュールマトリックスを生成
  */
 const scheduleMatrix = computed(() => {
-  return scheduleState.createScheduleMatrix.value(
-    siteOrder.order.value,
-    columns.value
-  );
+  if (!localDocs.value || !localDocs.value.length) return [];
+
+  const matrix = [];
+  const sites = siteOrder.order.value || [];
+
+  sites.forEach(({ siteId, shiftType }) => {
+    const cells = columns.value.map((column) => {
+      // ローカルdocsから該当するスケジュールを抽出
+      const schedules = localDocs.value.filter((schedule) => {
+        return (
+          schedule.siteId === siteId &&
+          schedule.shiftType === shiftType &&
+          schedule.date === column.date
+        );
+      });
+
+      return {
+        key: `${siteId}-${shiftType}-${column.date}`,
+        column,
+        schedules,
+      };
+    });
+
+    matrix.push({
+      siteId,
+      shiftType,
+      cells,
+    });
+  });
+
+  return matrix;
 });
 
 /*****************************************************************************
@@ -53,35 +93,51 @@ const scheduleMatrix = computed(() => {
  * セルのスケジュール配列が更新された時の処理
  */
 function updateSiteSchedules(newSchedules, siteId, shiftType, date) {
-  scheduleState.updateCellSchedules(newSchedules, siteId, shiftType, date);
+  // 該当するセルのスケジュールを置き換え
+  const filteredSchedules = localDocs.value.filter((schedule) => {
+    return !(
+      schedule.siteId === siteId &&
+      schedule.shiftType === shiftType &&
+      schedule.date === date
+    );
+  });
+
+  localDocs.value = [...filteredSchedules, ...newSchedules];
 }
 
+/**
+ * スケジュール日付変更処理（楽観的更新）
+ */
 async function handleChangeSchedule(event, dateAt) {
   logger.clearError();
   try {
     if (event.added) {
       const schedule = event.added.element;
-      // 楽観的更新で即座にローカル状態を更新済み
-      // バックグラウンドでFirestoreを更新
-      try {
-        // 楽観的更新を実行（即座にローカル状態更新）
-        scheduleState.optimisticUpdate(schedule.docId, (currentSchedule) => ({
-          ...currentSchedule,
-          date: dateAt.toISOString().split("T")[0], // 新しい日付に更新
-        }));
+      const newDate = dateAt.toISOString().split("T")[0];
 
-        await schedule.reschedule(dateAt);
-        scheduleState.markUpdateComplete(schedule.docId);
-      } catch (error) {
-        // 失敗時は楽観的更新をロールバック
-        scheduleState.rollbackOptimisticUpdate(schedule.docId);
-        throw error;
+      // 楽観的更新：即座にローカル状態を更新
+      const index = localDocs.value.findIndex(
+        (doc) => doc.docId === schedule.docId
+      );
+      if (index !== -1) {
+        localDocs.value[index] = {
+          ...localDocs.value[index],
+          date: newDate,
+        };
       }
-    } else if (event.removed) {
-      // 別の日に移動されたことによる削除イベントの場合
-      // -> 別の日で added イベントが発生するため処理不要
-      // その日のスケジュールとして削除された場合
-      // -> 機能として未実装
+
+      // バックグラウンドでFirestoreを更新（エラーは無視）
+      try {
+        await schedule.reschedule(dateAt);
+      } catch (error) {
+        // Firestoreの更新に失敗してもローカル状態はそのまま
+        logger.error({
+          sender: "handleChangeSchedule",
+          message:
+            "Firestore更新に失敗しましたが、ローカル状態は更新されています",
+          error,
+        });
+      }
     }
   } catch (error) {
     logger.error({
@@ -138,7 +194,6 @@ async function handleChangeSchedule(event, dateAt) {
             "
             @change="handleChangeSchedule($event, cell.column.dateAt)"
             @click:edit="emit('click:edit', $event)"
-            :is-pending="scheduleState.isPending(cell.key)"
           />
         </tr>
       </template>
@@ -157,25 +212,12 @@ async function handleChangeSchedule(event, dateAt) {
 
   <!-- デバッグ情報 -->
   <v-card v-if="props.showDebugInfo" class="ma-2" outlined>
-    <v-card-title class="text-subtitle-2"
-      >スケジュール状態管理デバッグ</v-card-title
-    >
+    <v-card-title class="text-subtitle-2">
+      スケジュール状態管理デバッグ（簡素化版）
+    </v-card-title>
     <v-card-text class="py-2">
       <div class="text-caption">
-        <div>
-          総スケジュール数: {{ scheduleState.statistics.value.totalSchedules }}
-        </div>
-        <div>
-          更新中: {{ scheduleState.statistics.value.pendingUpdatesCount }}
-        </div>
-        <div>
-          楽観的更新:
-          {{ scheduleState.statistics.value.optimisticUpdatesCount }}
-        </div>
-        <div>
-          ステータス別:
-          {{ JSON.stringify(scheduleState.statistics.value.schedulesByStatus) }}
-        </div>
+        <div>総スケジュール数: {{ localDocs.length }}</div>
       </div>
     </v-card-text>
   </v-card>
