@@ -3,6 +3,8 @@
  * @file @/components/molecules/draggable/Workers.vue
  * @description A component for draggable worker items.
  * An element in `model-value` must be an instance of `OperationResultDetail`.
+ * Since workers cannot be duplicated, if the same worker already exists,
+ * the drop process is prevented and the corresponding worker is highlighted.
  */
 import { computed } from "vue";
 import draggable from "vuedraggable";
