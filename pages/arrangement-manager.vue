@@ -36,6 +36,7 @@ provide("scheduleManagerComposable", managerComposable);
       v-model="dayCount"
       @click:workers="toggleFloatingWindow"
     />
+
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
       <ArrangementsWorkerSelector v-bind="workerSelectorAttrs">
