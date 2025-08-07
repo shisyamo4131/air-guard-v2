@@ -17,6 +17,7 @@ import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetc
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateRange } from "@/composables/useDateRange";
+import { useSiteOrder } from "@/composables/useSiteOrder";
 import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 
 /** Messages */
@@ -93,6 +94,11 @@ export function useSiteOperationSchedulesManager({
    */
   const siteComposable = fetchSiteComposable || internalUseFetchSite();
   const { fetchSite, cachedSites, sitesMap } = siteComposable;
+
+  /**
+   * useSiteOrder
+   */
+  const siteOrderComposable = useSiteOrder();
 
   /***************************************************************************
    * WATCHERS
@@ -421,6 +427,7 @@ export function useSiteOperationSchedulesManager({
     dayCount,
     dateRange,
     keyMappedDocs,
+    siteOrder: Vue.readonly(siteOrderComposable.order),
 
     // STATE
     columns,

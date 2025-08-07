@@ -8,7 +8,6 @@
  */
 import { inject, computed } from "vue";
 import { useLogger } from "@/composables/useLogger";
-import { useSiteOrder } from "@/composables/useSiteOrder";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
 import FooterCell from "@/components/Arrangements/FooterCell";
@@ -30,11 +29,11 @@ const {
   updateLocalDocs,
   updateLocalDoc,
   keyMappedDocs,
+  siteOrder,
 } = managerComposable;
 
 /** define composables */
 const logger = useLogger();
-const siteOrder = useSiteOrder();
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -46,7 +45,7 @@ const scheduleMatrix = computed(() => {
   if (!localDocs.value || !localDocs.value.length) return [];
 
   const matrix = [];
-  const sites = siteOrder.order.value || [];
+  const sites = siteOrder.value || [];
 
   sites.forEach(({ siteId, shiftType }) => {
     const cells = columns.value.map((column) => {
