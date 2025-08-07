@@ -232,7 +232,7 @@ function highlightExistingEmployee(scheduleId, employeeId) {
           "
           :model-value="worker"
           @update:status="handleUpdateDetailStatus(worker, $event)"
-          @remove="handleWorkerRemoved({ element: $event })"
+          @click:remove="handleWorkerRemoved({ element: $event })"
         />
       </template>
     </draggable>
