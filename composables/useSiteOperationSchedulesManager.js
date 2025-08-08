@@ -17,8 +17,6 @@ import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetc
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateRange } from "@/composables/useDateRange";
-import { useSiteOrder } from "@/composables/useSiteOrder";
-import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -94,11 +92,6 @@ export function useSiteOperationSchedulesManager({
    */
   const siteComposable = fetchSiteComposable || internalUseFetchSite();
   const { fetchSite, cachedSites, sitesMap } = siteComposable;
-
-  /**
-   * useSiteOrder
-   */
-  const siteOrderComposable = useSiteOrder();
 
   /***************************************************************************
    * WATCHERS
@@ -248,40 +241,6 @@ export function useSiteOperationSchedulesManager({
     if (allOutsourcers.length > 0) fetchOutsourcer(allOutsourcers);
   }
 
-  /**
-   * Returns the styles for a specific date column.
-   * @param {Date} dateAt
-   * @returns {Object} Computed styles for the date column.
-   */
-  function _getColumnStyles(dateAt) {
-    const today = dayjs().startOf("day");
-    const targetDay = dayjs(dateAt).locale("en");
-    const dayOfWeek = targetDay.format("ddd").toLowerCase();
-    const isPreviousDay = targetDay.isBefore(today);
-    const isToday = targetDay.isSame(today);
-    const isFutureDay = targetDay.isAfter(today);
-    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
-    const dateLabel = targetDay.format("MM/DD");
-    const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
-    const cssClasses = {
-      "g-col": true,
-      [`g-col-${dayOfWeek}`]: true,
-      "g-col-previous": isPreviousDay,
-      "g-col-today": isToday,
-      "g-col-future": isFutureDay,
-      "g-col-holiday": isHoliday,
-    };
-    return {
-      targetDay,
-      dayOfWeek,
-      dateComparison: { isPreviousDay, isToday, isFutureDay },
-      isHoliday,
-      dateLabel,
-      dayOfWeekJp,
-      cssClasses,
-    };
-  }
-
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE
    ***************************************************************************/
@@ -335,46 +294,6 @@ export function useSiteOperationSchedulesManager({
     };
   });
 
-  /**
-   * Columns for the schedule table.
-   */
-  const columns = Vue.computed(() => {
-    const baseDate = dayjs(dateRangeComposable.startDate.value);
-    const resolvedDayCount = dateRangeComposable.dateRange.value.dayCount;
-    const resolvedSchedules = docs.value;
-
-    // Initialize result array
-    const result = [];
-
-    for (let i = 0; i < resolvedDayCount; i++) {
-      const date = baseDate.add(i, "day");
-      const dateAt = date.toDate();
-
-      // Get styles for the column
-      const columnStyles = _getColumnStyles(dateAt);
-
-      // Calculate total required personnel for the day
-      const requiredPersonnelTotal = resolvedSchedules
-        .filter((schedule) => {
-          if (!schedule?.date) return false;
-          return dayjs(schedule.date).isSame(date, "day");
-        })
-        .reduce((total, schedule) => {
-          const required = schedule?.requiredPersonnel || 0;
-          return total + (typeof required === "number" ? required : 0);
-        }, 0);
-
-      result.push({
-        date: date.format("YYYY-MM-DD"),
-        dateAt,
-        requiredPersonnelTotal, // Add total personnel count
-        ...columnStyles, // Add style-related information
-      });
-    }
-
-    return result;
-  });
-
   /** date range */
   const dateRange = Vue.computed({
     get: () => dateRangeComposable.dateRange.value,
@@ -402,39 +321,15 @@ export function useSiteOperationSchedulesManager({
     return result;
   });
 
-  const cellMatrix = Vue.computed(() => {
-    if (!localDocs.value || !localDocs.value.length) return [];
-
-    const matrix = [];
-    const sites = siteOrderComposable.order.value || [];
-
-    sites.forEach(({ siteId, shiftType }) => {
-      const cells = columns.value.map((column) => {
-        return {
-          key: `${siteId}-${shiftType}-${column.date}`,
-          siteId,
-          shiftType,
-          date: column.date,
-          column,
-        };
-      });
-      matrix.push({ siteId, shiftType, cells });
-    });
-
-    return matrix;
-  });
   return {
     // DATA
     cachedData: Vue.readonly(cached),
-    docs,
-    localDocs: Vue.readonly(localDocs), // readonly documents for optimistic updates
+    docs: Vue.readonly(localDocs),
     dayCount,
     dateRange,
-    keyMappedDocs,
-    cellMatrix,
 
-    // STATE
-    columns,
+    // Mapped schedules grouped by key (siteId-shiftType-date).
+    keyMappedDocs: Vue.readonly(keyMappedDocs),
 
     // Attributes for manager component.
     arrayManagerAttrs,
@@ -445,6 +340,8 @@ export function useSiteOperationSchedulesManager({
     getWorkerName,
     updateLocalDocs,
     setFrom: dateRangeComposable.setBaseDate,
+
+    // Methods for managing schedules provided by the manager.
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
