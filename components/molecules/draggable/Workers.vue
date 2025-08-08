@@ -1,25 +1,50 @@
 <script setup>
 /**
- * @file @/components/molecules/draggable/Workers.vue
+ * @file components/molecules/draggable/Workers.vue
  * @description A component for draggable worker items.
  * An element in `model-value` must be an instance of `OperationResultDetail`.
  * Since workers cannot be duplicated, if the same worker already exists,
  * the drop process is prevented and the corresponding worker is highlighted.
+ *
+ * @props {Array} modelValue - The array of workers to be displayed.
+ * @props {String} date - The date for which workers are arranged.
+ * @props {Boolean} disabled - Whether the draggable area is disabled.
+ * @props {String} itemKey - Unique key for each item, defaults to 'workerId'.
+ * @props {String} name - Group name for vuedraggable, defaults to 'workers'.
+ * @props {String} shiftType - The shiftType of these workers.
+ * @props {String} siteId - The siteId of these workers.
+ *
+ * note: 'date', 'siteId', and 'shiftType' are not used in this component.
+ *       These properties may be needed in the future as the component's functionality is expanded.
+ *
+ * @emits click:remove - Event to remove a worker from the arrangement.
+ * @emits update:status - Event to update the status of a worker.
  */
 import { computed } from "vue";
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
 
+/** define model-value and emit `update:model-value`. */
+const workers = defineModel({ type: Array, default: () => [] });
+
 /** define props */
 const props = defineProps({
+  /** The date the workers are arranged */
+  date: { type: String, required: true },
+  /** Whether the draggable area is disabled */
+  disabled: { type: Boolean, default: false },
   /** unique key for each item */
   itemKey: { type: String, default: "workerId" },
   /** group name for vuedraggable */
   name: { type: String, default: "workers" },
+  /** The shiftType of this workers */
+  shiftType: { type: String, required: true },
+  /** The siteId of this workers */
+  siteId: { type: String, required: true },
 });
 
-/** define model-value and emit `update:model-value`. */
-const model = defineModel({ type: Array, default: () => [] });
+/** define emits */
+const emit = defineEmits(["click:remove", "update:status"]);
 
 /** define composables */
 const { add: highlightEmployee, has: isHighlighted } = useTimedSet({
@@ -57,7 +82,9 @@ function handlePut(to, from, dragEl) {
   if (!workerId) return false;
 
   // 既に配置されている従業員かどうかをチェック
-  const isExisting = model.value.some((emp) => emp[props.itemKey] === workerId);
+  const isExisting = workers.value.some(
+    (emp) => emp[props.itemKey] === workerId
+  );
 
   if (isExisting) {
     highlightEmployee(workerId);
@@ -66,22 +93,43 @@ function handlePut(to, from, dragEl) {
 
   return true;
 }
+
+/**
+ * Handles the click event to remove a worker.
+ * @param worker The worker instance to remove.
+ */
+function handleOnClickRemove(worker) {
+  emit("click:remove", { element: worker });
+}
+
+function handleUpdateStatus(worker, newVal) {
+  emit("update:status", { worker, status: newVal });
+}
 </script>
 
 <template>
   <draggable
-    v-model="model"
+    v-model="workers"
     class="pa-2"
     style="min-height: 24px"
+    :disabled="disabled"
     :group="group"
     :item-key="itemKey"
   >
-    <template #item="{ element }">
+    <template #item="{ element: worker }">
       <div>
+        <!-- default slot for `WorkerTag` -->
         <slot
           name="default"
-          :element="element"
-          :highlighted="isHighlighted(element[itemKey])"
+          v-bind="{
+            modelValue: worker,
+            date,
+            shiftType,
+            siteId,
+            highlight: isHighlighted(worker[itemKey]),
+            'onClick:remove': handleOnClickRemove,
+            'onUpdate:status': ($event) => handleUpdateStatus(worker, $event),
+          }"
         />
       </div>
     </template>

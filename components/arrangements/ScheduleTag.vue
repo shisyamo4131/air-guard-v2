@@ -1,30 +1,34 @@
 <script setup>
 /**
- * @file ScheduleTag.vue
- * @description 単一の現場稼働予定に対して従事者（従業員または外注先）の配置を行うためのコンポーネント。
- * vuedraggable を使用しており、以下の仕様になっています。
- * - `workers` グループからのみ要素を受け入れます。
- * - props.schedule.employees と props.schedule.outsourcers を結合して表示します。
- * - 外注先の要素は強制的に従業員要素の後ろに配置されます。
- * - 要素が従業員なのか、外注先なのかは `isEmployee` プロパティで判定します。
- * - vuedraggable の `change` イベントを使用して、要素の追加、削除、移動をハンドリングします。
- *   -> 変更が生じた場合は props.schedule.update() を呼び出して、直接 Firestore ドキュメントを更新します。
+ * @file components/molecules/draggable/SiteOperationSchedule.vue
+ * @description A component for draggable site-operation-schedule.
+ *
+ * @props {String} date - The date for which schedules are being managed.
+ * @props {String} shiftType - The type of shift for which schedules are being managed.
+ * @props {String} siteId - The ID of the site for which schedules are being managed.
+ *
+ * @emits click:edit - Event to edit the schedule.
+ * @emits click:duplicate - Event to duplicate the schedule.
+ *
+ * @slots
+ * - default: Slot for rendering the schedule item.
  */
-import { inject, computed } from "vue";
+import { computed } from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
+/** define model-value and emit `update:model-value` */
+const schedule = defineModel({ type: Object, required: true });
+
 /** define props */
 const props = defineProps({
-  /**
-   * 現場稼働予定のドキュメント
-   */
-  schedule: { type: Object, required: true },
+  /** The date of the schedule */
+  date: { type: String, required: true },
+  /** The shiftType of the schedule */
+  shiftType: { type: String, required: true },
+  /** The siteId of the schedule */
+  siteId: { type: String, required: true },
 });
-
-/** inject from ancestor */
-const scheduleManager = inject("scheduleManagerComposable");
-const { getWorkerName } = scheduleManager;
 
 /** define emits */
 const emit = defineEmits(["click:edit", "click:duplicate"]);
@@ -36,7 +40,7 @@ const logger = useLogger();
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const label = computed(() => {
-  return props.schedule.workDescription || "通常警備";
+  return schedule.workDescription || "通常警備";
 });
 
 /*****************************************************************************
@@ -44,24 +48,20 @@ const label = computed(() => {
  *****************************************************************************/
 async function handleWorkerAdded(addedEvent) {
   const { workerId, isEmployee, amount } = addedEvent.element;
-  props.schedule.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
-  await props.schedule.update();
+  schedule.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
+  await schedule.update();
 }
 
 async function handleWorkerRemoved(removedEvent) {
   const { workerId, isEmployee, amount } = removedEvent.element;
-  props.schedule.removeWorker(workerId, amount, isEmployee);
-  await props.schedule.update();
+  schedule.removeWorker(workerId, amount, isEmployee);
+  await schedule.update();
 }
 
 async function handleWorkerMoved(movedEvent) {
   const { isEmployee } = movedEvent.element;
-  props.schedule.changeWorker(
-    movedEvent.oldIndex,
-    movedEvent.newIndex,
-    isEmployee
-  );
-  await props.schedule.update();
+  schedule.changeWorker(movedEvent.oldIndex, movedEvent.newIndex, isEmployee);
+  await schedule.update();
 }
 
 /**
@@ -86,38 +86,33 @@ async function handleChangeWorkers(event) {
 /**
  * Update the detail status of the worker in the schedule.
  * @param {Object} workerInstance - The worker instance to update.
- * @param {String} newStatus - The new status to set.
+ * @param {String} status - The new status to set.
  */
-async function handleUpdateDetailStatus(workerInstance, newStatus) {
-  workerInstance.status = newStatus;
-  await props.schedule.update();
+async function handleUpdateDetailStatus({ worker, status }) {
+  worker.status = status;
+  await schedule.update();
 }
 </script>
 
 <template>
   <v-card flat style="border: 1px dashed grey">
     <v-card-title class="text-subtitle-2 font-weight-regular pb-0">
-      <v-icon
-        v-if="props.schedule.isPersonnelShortage"
-        color="error"
-        size="small"
-      >
+      <v-icon v-if="schedule.isPersonnelShortage" color="error" size="small">
         mdi-information
       </v-icon>
-      {{ `${label}(${props.schedule.requiredPersonnel})` }}
+      {{ `${label}(${schedule.requiredPersonnel})` }}
     </v-card-title>
     <v-container class="py-0 d-flex justify-center" style="column-gap: 20px">
       <v-checkbox
-        :model-value="!props.schedule.isDraft"
+        :model-value="!schedule.isDraft"
         color="primary"
-        :readonly="!props.schedule.isDraft && !props.schedule.isScheduled"
+        :readonly="!schedule.isDraft && !schedule.isScheduled"
         hide-details
         density="compact"
-        :disabled="props.schedule.isPersonnelShortage"
+        :disabled="schedule.isPersonnelShortage"
         style="height: 32px"
         @update:modelValue="
-          ($event) =>
-            $event ? props.schedule.toScheduled() : props.schedule.toDraft()
+          ($event) => ($event ? schedule.toScheduled() : schedule.toDraft())
         "
       >
         <template #label>
@@ -125,15 +120,14 @@ async function handleUpdateDetailStatus(workerInstance, newStatus) {
         </template>
       </v-checkbox>
       <v-checkbox
-        :model-value="props.schedule.isArranged"
+        :model-value="schedule.isArranged"
         color="primary"
         density="compact"
-        :disabled="!props.schedule.isScheduled && !props.schedule.isArranged"
+        :disabled="!schedule.isScheduled && !schedule.isArranged"
         hide-details
         style="height: 32px"
         @update:modelValue="
-          ($event) =>
-            $event ? props.schedule.toArranged() : props.schedule.toScheduled()
+          ($event) => ($event ? schedule.toArranged() : schedule.toScheduled())
         "
       >
         <template #label>
@@ -141,12 +135,20 @@ async function handleUpdateDetailStatus(workerInstance, newStatus) {
         </template>
       </v-checkbox>
     </v-container>
+    <!--
+      default slot for `MoleculesDraggableWorkers`.
+    -->
     <slot
       name="default"
       v-bind="{
-        handleChangeWorkers,
-        handleUpdateDetailStatus,
-        handleWorkerRemoved,
+        modelValue: schedule.workers,
+        date,
+        shiftType,
+        siteId,
+        disabled: !schedule.isWorkerChangeable,
+        onChange: handleChangeWorkers,
+        'onUpdate:status': handleUpdateDetailStatus,
+        'onClick:remove': handleWorkerRemoved,
       }"
     />
     <v-container
@@ -158,20 +160,20 @@ async function handleUpdateDetailStatus(workerInstance, newStatus) {
         disabled
         variant="tonal"
         size="x-small"
-        @click="emit('click:duplicate', props.schedule)"
+        @click="emit('click:duplicate', schedule)"
       >
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
       <v-btn
-        :disabled="
-          props.schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT
-        "
+        :disabled="schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT"
         variant="tonal"
         size="x-small"
-        @click="emit('click:edit', props.schedule)"
+        @click="emit('click:edit', schedule)"
       >
         <v-icon>mdi-pencil</v-icon>
       </v-btn>
     </v-container>
   </v-card>
 </template>
+
+<style scoped></style>

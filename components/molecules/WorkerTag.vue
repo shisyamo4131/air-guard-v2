@@ -2,23 +2,24 @@
 /**
  * @file WorkerTag.vue
  * @description Component for displaying an tag in arrangements.
+ *
+ * @props {String} date - The date the worker is arranged.
  * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {Boolean} isNew - Indicates 'new' icon.
  * @props {String} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
  * @props {Object} modelValue - The worker (OperationResultDetail) instance to display.
- * @props {Boolean} removable - Displays clear button and emits `remove` event when clicked.
  * @props {String} removeIcon - Icon for the remove button.
+ * @props {String} siteId - The siteId of this worker.
  * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
+ * @props {String} shiftType - The shiftType of this worker.
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
+ *
+ * note: 'date', 'siteId', and 'shiftType' are not used in this component.
+ *       These properties may be needed in the future as the component's functionality is expanded.
+ *
  * @emits update:status - Event to update the status.
  * @emits click:remove - Event to remove from the arrangement.
- *
- * [NOTE]
- * `schedule` オブジェクトをプロパティで受け取ることで親コンポーネントも含めてコードの
- * 見通しが良くなるが、情報量の多いデータの受け渡しを行うと HTML タグ内に梱包される
- * データも多くなり、レスポンスが悪くなる可能性があるため、必要な情報のみの受け渡しを
- * 行うものとする。
  */
 import { OperationResultDetail } from "@/schemas";
 import {
@@ -29,6 +30,8 @@ import {
 
 /** define props */
 const props = defineProps({
+  /** The date the worker is arranged */
+  date: { type: String, required: true },
   /** Whether the tag is highlighted. */
   highlight: { type: Boolean, default: false },
   /** Indicates `new` icon. */
@@ -43,15 +46,20 @@ const props = defineProps({
   },
   /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
+  /** The worker (OperationResultDetail) instance */
   modelValue: { type: Object, required: true },
   /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
+  /** The siteId of this worker */
+  siteId: { type: String, required: true },
   /** Size variant of the tag */
   size: {
     type: String,
     default: "medium",
     validator: (value) => ["small", "medium", "large"].includes(value),
   },
+  /** The shiftType of this worker */
+  shiftType: { type: String, required: true },
   /** Visual variant of the tag */
   variant: {
     type: String,
@@ -65,9 +73,12 @@ const props = defineProps({
 const emit = defineEmits(["update:status", "click:remove"]);
 
 /** define refs */
-const menu = ref(false);
-
+const menu = ref(false); // for v-menu
 const worker = ref(new OperationResultDetail());
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
 watch(
   () => props.modelValue,
   (newVal) => worker.value.initialize(newVal),

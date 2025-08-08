@@ -6,7 +6,6 @@ import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
-
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
@@ -115,7 +114,7 @@ async function handleChangeSchedule(event, date) {
     >
       <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">
-        <div v-if="cachedData.sites[siteId]" class="text-subtitle-1 fixed-left">
+        <div v-if="cachedData.sites[siteId]" class="text-subtitle-1">
           <div class="d-flex align-center">
             <v-chip class="mr-2" label size="small">
               {{ SHIFT_TYPE[shiftType] }}
@@ -134,35 +133,19 @@ async function handleChangeSchedule(event, date) {
           :shift-type="shiftType"
           :date="date"
           @change="handleChangeSchedule($event, date)"
-          @click:edit="$emit('click:edit', $event)"
         >
-          <template #default="{ element: schedule }">
+          <template #default="draggableSiteOperationScheduleProps">
             <ArrangementsScheduleTag
-              :schedule="schedule"
-              :cached-employees="cachedData.employees"
-              :cached-outsourcers="cachedData.outsourcers"
+              v-bind="draggableSiteOperationScheduleProps"
               class="mb-2"
               @click:edit="toUpdateSchedule"
             >
-              <template
-                #default="{
-                  handleChangeWorkers,
-                  handleUpdateDetailStatus,
-                  handleWorkerRemoved,
-                }"
-              >
-                <MoleculesDraggableWorkers
-                  :model-value="schedule.workers"
-                  :disabled="!schedule.isWorkerChangeable"
-                  @change="handleChangeWorkers($event, schedule)"
-                >
-                  <template #default="{ element: worker, highlighted }">
+              <template #default="scheduleTagProps">
+                <MoleculesDraggableWorkers v-bind="scheduleTagProps">
+                  <template #default="draggableWorkersProps">
                     <MoleculesWorkerTag
-                      :label="getWorkerName(worker)"
-                      :highlight="highlighted"
-                      :model-value="worker"
-                      @update:status="handleUpdateDetailStatus(worker, $event)"
-                      @click:remove="handleWorkerRemoved({ element: $event })"
+                      v-bind="draggableWorkersProps"
+                      :label="getWorkerName(draggableWorkersProps.modelValue)"
                     />
                   </template>
                 </MoleculesDraggableWorkers>
