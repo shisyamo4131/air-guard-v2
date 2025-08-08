@@ -162,21 +162,6 @@ export function useSiteOperationSchedulesManager({
   };
 
   /**
-   * Update a specific document locally.
-   * @param {string} docId - Document ID
-   * @param {Object} updates - Update content
-   */
-  const updateLocalDoc = (docId, updates) => {
-    const index = localDocs.value.findIndex((doc) => doc.docId === docId);
-    if (index !== -1) {
-      localDocs.value[index].initialize({
-        ...localDocs.value[index].toObject(),
-        ...updates,
-      });
-    }
-  };
-
-  /**
    * Gets the display name of a worker by their ID.
    * @param {Object} param0 - The parameters.
    * @param {string} param0.workerId - The ID of the worker.
@@ -417,17 +402,33 @@ export function useSiteOperationSchedulesManager({
     return result;
   });
 
+  const cellMatrix = Vue.computed(() => {
+    if (!localDocs.value || !localDocs.value.length) return [];
+
+    const matrix = [];
+    const sites = siteOrderComposable.order.value || [];
+
+    sites.forEach(({ siteId, shiftType }) => {
+      const cells = columns.value.map((column) => {
+        return {
+          key: `${siteId}-${shiftType}-${column.date}`,
+          column,
+        };
+      });
+      matrix.push({ siteId, shiftType, cells });
+    });
+
+    return matrix;
+  });
   return {
     // DATA
     cachedData: Vue.readonly(cached),
     docs,
     localDocs: Vue.readonly(localDocs), // readonly documents for optimistic updates
-    schema: SiteOperationSchedule,
-    instance,
     dayCount,
     dateRange,
     keyMappedDocs,
-    siteOrder: Vue.readonly(siteOrderComposable.order),
+    cellMatrix,
 
     // STATE
     columns,
@@ -440,7 +441,6 @@ export function useSiteOperationSchedulesManager({
     // METHODS
     getWorkerName,
     updateLocalDocs,
-    updateLocalDoc,
     setFrom: dateRangeComposable.setBaseDate,
     toCreate: () => manager?.value?.toCreate?.(),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),

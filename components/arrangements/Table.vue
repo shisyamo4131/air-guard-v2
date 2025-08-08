@@ -6,7 +6,7 @@
  * - 現場稼働予定自体を要素として、同じ現場・シフトの別の日に移動することができます。
  *   -> 別の日へ移すための更新処理には `reschedule` メソッドを使用します。
  */
-import { inject, computed } from "vue";
+import { inject } from "vue";
 import { useLogger } from "@/composables/useLogger";
 import DayCell from "@/components/Arrangements/DayCell";
 import BodyCell from "@/components/Arrangements/BodyCell";
@@ -27,43 +27,12 @@ const {
   columns,
   localDocs,
   updateLocalDocs,
-  updateLocalDoc,
   keyMappedDocs,
-  siteOrder,
+  cellMatrix, // 現場、勤務区分、日付のマトリックス
 } = managerComposable;
 
 /** define composables */
 const logger = useLogger();
-
-/*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-/**
- * ローカルデータからスケジュールマトリックスを生成
- */
-const scheduleMatrix = computed(() => {
-  if (!localDocs.value || !localDocs.value.length) return [];
-
-  const matrix = [];
-  const sites = siteOrder.value || [];
-
-  sites.forEach(({ siteId, shiftType }) => {
-    const cells = columns.value.map((column) => {
-      return {
-        key: `${siteId}-${shiftType}-${column.date}`,
-        column,
-      };
-    });
-
-    matrix.push({
-      siteId,
-      shiftType,
-      cells,
-    });
-  });
-
-  return matrix;
-});
 
 /*****************************************************************************
  * METHODS
@@ -76,22 +45,7 @@ async function handleChangeSchedule(event, dateAt) {
   try {
     if (event.added) {
       const schedule = event.added.element;
-
-      // 楽観的更新：即座にローカル状態を更新
-      updateLocalDoc(schedule.docId, { dateAt });
-
-      // バックグラウンドでFirestoreを更新（エラーは無視）
-      try {
-        await schedule.reschedule(dateAt);
-      } catch (error) {
-        // Firestoreの更新に失敗してもローカル状態はそのまま
-        logger.error({
-          sender: "handleChangeSchedule",
-          message:
-            "Firestore更新に失敗しましたが、ローカル状態は更新されています",
-          error,
-        });
-      }
+      await schedule.reschedule(dateAt);
     }
   } catch (error) {
     logger.error({
@@ -122,7 +76,7 @@ async function handleChangeSchedule(event, dateAt) {
     </thead>
     <tbody>
       <template
-        v-for="(orderData, rowIndex) of scheduleMatrix"
+        v-for="(orderData, rowIndex) of cellMatrix"
         :key="`site-row-${rowIndex}`"
       >
         <ArrangementsSiteRow
