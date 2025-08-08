@@ -2,6 +2,7 @@
  * @file useDateUtil.js
  * @description Composable for date utility functions.
  */
+import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
 import dayjs from "dayjs";
 
 /**
@@ -106,10 +107,46 @@ export function useDateUtil() {
     return dayjs(date).isValid();
   };
 
+  /**
+   * Returns detailed information about a given date.
+   * Includes day of week (en/jp), holiday status, formatted label, and comparison to today.
+   * @param {Date|string} date - The date to analyze.
+   * @param {string} [cssPrefix="g-col"] - Optional CSS class prefix.
+   * @returns {Object} Object containing day info and CSS classes.
+   */
+  const getDayInfo = (date, cssPrefix = "g-col") => {
+    const today = dayjs().startOf("day");
+    const targetDay = dayjs(date).locale("en");
+    const dayOfWeek = targetDay.format("ddd").toLowerCase();
+    const isPreviousDay = targetDay.isBefore(today);
+    const isToday = targetDay.isSame(today);
+    const isFutureDay = targetDay.isAfter(today);
+    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
+    const dateLabel = targetDay.format("MM/DD");
+    const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
+    const cssClasses = {
+      [cssPrefix]: true,
+      [`${cssPrefix}-${dayOfWeek}`]: true,
+      [`${cssPrefix}-previous`]: isPreviousDay,
+      [`${cssPrefix}-today`]: isToday,
+      [`${cssPrefix}-future`]: isFutureDay,
+      [`${cssPrefix}-holiday`]: isHoliday,
+    };
+    return {
+      dayOfWeek,
+      dateComparison: { isPreviousDay, isToday, isFutureDay },
+      isHoliday,
+      dateLabel,
+      dayOfWeekJp,
+      cssClasses,
+    };
+  };
+
   return {
     validateAndProcessDateRange,
     validateDateRange,
     formatDate,
     isValidDate,
+    getDayInfo,
   };
 }

@@ -11,7 +11,6 @@
  *   -> 変更が生じた場合は props.schedule.update() を呼び出して、直接 Firestore ドキュメントを更新します。
  */
 import { inject, ref, computed } from "vue";
-import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
 import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 

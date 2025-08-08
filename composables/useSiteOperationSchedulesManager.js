@@ -412,6 +412,9 @@ export function useSiteOperationSchedulesManager({
       const cells = columns.value.map((column) => {
         return {
           key: `${siteId}-${shiftType}-${column.date}`,
+          siteId,
+          shiftType,
+          date: column.date,
           column,
         };
       });

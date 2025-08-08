@@ -4,9 +4,12 @@ import dayjs from "dayjs";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useWorkersList } from "@/composables/useWorkersList";
+import { useLogger } from "@/composables/useLogger";
+import { useSiteOrder } from "@/composables/useSiteOrder";
 
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
@@ -16,6 +19,9 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
 /** define composables */
+const logger = useLogger();
+const { order } = useSiteOrder();
+
 // for fetching and caching employees.
 const fetchEmployeeComposable = useFetchEmployee();
 // for fetching and caching outsourcers.
@@ -39,9 +45,12 @@ const managerComposable = useSiteOperationSchedulesManager({
 
 const {
   cachedData,
+  dateRange,
   dayCount,
+  keyMappedDocs,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
+  updateLocalDocs,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -51,6 +60,29 @@ onMounted(() => {
   // Initialize the workers list when the component is mounted.
   initWorkers();
 });
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * スケジュール日付変更処理（楽観的更新）
+ */
+async function handleChangeSchedule(event, date) {
+  logger.clearError();
+  const dateAt = new Date(date);
+  try {
+    if (event.added) {
+      const schedule = event.added.element;
+      await schedule.reschedule(dateAt);
+    }
+  } catch (error) {
+    logger.error({
+      sender: "handleChangeSchedule",
+      message: error.message,
+      error,
+    });
+  }
+}
 </script>
 
 <template>
@@ -76,7 +108,36 @@ onMounted(() => {
     </MoleculesFloatingWindow>
 
     <!-- スケジュール管理テーブル -->
-    <ArrangementsTable @click:edit="toUpdateSchedule" />
+    <ArrangementsTable
+      :site-order="order"
+      :from="dateRange.from"
+      :day-count="dayCount"
+    >
+      <template #site-row="{ siteId, shiftType }">
+        <div v-if="cachedData.sites[siteId]" class="text-subtitle-1 fixed-left">
+          <div class="d-flex align-center">
+            <v-chip class="mr-2" label size="small">
+              {{ SHIFT_TYPE[shiftType] }}
+            </v-chip>
+            <span>{{ cachedData.sites[siteId].name }}</span>
+          </div>
+        </div>
+        <v-progress-circular v-else indeterminate size="small" />
+      </template>
+      <template #body-cell="{ key, siteId, shiftType, date }">
+        <ArrangementsBodyCell
+          :model-value="keyMappedDocs[key] || []"
+          :site-id="siteId"
+          :shift-type="shiftType"
+          @update:model-value="updateLocalDocs($event, siteId, shiftType, date)"
+          @change="handleChangeSchedule($event, date)"
+          @click:edit="toUpdateSchedule"
+        />
+      </template>
+      <template #footer-cell>
+        <span class="grey--text text--darken-2 text-subtitle-2"> 稼働数: </span>
+      </template>
+    </ArrangementsTable>
 
     <!-- スケジュール編集ダイアログ -->
     <ItemManager ref="scheduleManager" v-bind="itemManagerAttrs">
