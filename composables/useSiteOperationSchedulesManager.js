@@ -134,13 +134,16 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
 
   /**
-   * Update schedules for a specific cell (site, shift type, date combination)
+   * Replaces the schedules specified by siteId, shiftType, and date to the new schedules.
+   * This is used for optimistic updates at the component level.
+   * It means that the new schedules won't be modified. It will be just replaced.
+   * The new schedules must be updated by the manager later.
    * @param {Array} newSchedules - New schedules array for the cell
    * @param {string} siteId - Site ID
    * @param {string} shiftType - Shift type
    * @param {string} date - Date (YYYY-MM-DD format)
    */
-  const updateLocalDocs = (newSchedules, siteId, shiftType, date) => {
+  const replaceDocs = (newSchedules, siteId, shiftType, date) => {
     // 該当するセル以外のスケジュールを保持
     const filteredSchedules = localDocs.value.filter((schedule) => {
       return !(
@@ -324,12 +327,12 @@ export function useSiteOperationSchedulesManager({
   return {
     // DATA
     cachedData: Vue.readonly(cached),
-    docs: Vue.readonly(localDocs),
+    docs: localDocs,
     dayCount,
     dateRange,
 
     // Mapped schedules grouped by key (siteId-shiftType-date).
-    keyMappedDocs: Vue.readonly(keyMappedDocs),
+    keyMappedDocs: keyMappedDocs,
 
     // Attributes for manager component.
     arrayManagerAttrs,
@@ -338,7 +341,7 @@ export function useSiteOperationSchedulesManager({
 
     // METHODS
     getWorkerName,
-    updateLocalDocs,
+    replaceDocs,
     setFrom: dateRangeComposable.setBaseDate,
 
     // Methods for managing schedules provided by the manager.

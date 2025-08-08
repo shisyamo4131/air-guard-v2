@@ -50,7 +50,7 @@ const {
   keyMappedDocs,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
-  updateLocalDocs,
+  replaceDocs,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -129,7 +129,7 @@ async function handleChangeSchedule(event, date) {
           :model-value="keyMappedDocs[key] || []"
           :site-id="siteId"
           :shift-type="shiftType"
-          @update:model-value="updateLocalDocs($event, siteId, shiftType, date)"
+          @update:model-value="replaceDocs($event, siteId, shiftType, date)"
           @change="handleChangeSchedule($event, date)"
           @click:edit="toUpdateSchedule"
         />
