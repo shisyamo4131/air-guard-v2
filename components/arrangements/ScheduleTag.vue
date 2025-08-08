@@ -10,7 +10,7 @@
  * - vuedraggable の `change` イベントを使用して、要素の追加、削除、移動をハンドリングします。
  *   -> 変更が生じた場合は props.schedule.update() を呼び出して、直接 Firestore ドキュメントを更新します。
  */
-import { inject, ref, computed } from "vue";
+import { inject, computed } from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
@@ -31,9 +31,6 @@ const emit = defineEmits(["click:edit", "click:duplicate"]);
 
 /** define composables */
 const logger = useLogger();
-
-/** define refs for highlighting existing employees */
-const highlightedEmployees = ref(new Set());
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -87,56 +84,6 @@ async function handleChange(event) {
 }
 
 /**
- * vuedraggable の put ハンドラ
- * - 作業員（OperationResultDetail）のみを受け入れる
- * - ドロップされようとしている要素が従業員であれば、当該従業員が既に配置されているかどうかをチェック
- * - 既に配置されている従業員であれば強調表示し、put を拒否
- * - そうでなければ put を許可
- * @param to
- * @param from
- * @param dragEl
- */
-function handlePut(to, from, dragEl) {
-  // ドラッグされた要素の元のgroup nameで判定
-  const fromGroupName =
-    from.el.getAttribute("data-group") || from.options?.group?.name;
-
-  // workersグループからの要素のみ受け入れ
-  if (fromGroupName !== "workers") {
-    return false;
-  }
-
-  // ドラッグされた要素を取得
-  const element = dragEl.__draggable_context.element;
-
-  // 要素が存在しない場合は拒否
-  if (!element) return false;
-
-  // 外注先の場合は許可（重複チェック不要）
-  if (!element.isEmployee) return true;
-
-  // 従事者IDを取得
-  const workerId = element.workerId;
-
-  // 従事者IDが取得できなければ false を返す -> put を拒否
-  if (!workerId) return false;
-
-  // 既に配置されている従業員かどうかをチェック
-  const isExisting = props.schedule.employees.some(
-    (emp) => emp.workerId === workerId
-  );
-
-  // 既に配置されている従業員であれば強調表示
-  if (isExisting) {
-    // 既存従業員を強調表示
-    highlightExistingEmployee(props.schedule.docId, workerId);
-    return false;
-  } else {
-    return true;
-  }
-}
-
-/**
  * Update the detail status of the worker in the schedule.
  * @param {Object} workerInstance - The worker instance to update.
  * @param {String} newStatus - The new status to set.
@@ -144,23 +91,6 @@ function handlePut(to, from, dragEl) {
 async function handleUpdateDetailStatus(workerInstance, newStatus) {
   workerInstance.status = newStatus;
   await props.schedule.update();
-}
-
-/**
- * 既に配置されている従業員を強調表示する
- * - 強調表示は2秒間持続し、その後自動的に解除
- * @param scheduleId
- * @param employeeId
- */
-function highlightExistingEmployee(scheduleId, employeeId) {
-  const key = `${scheduleId}-${employeeId}`;
-  if (highlightedEmployees.value.has(key)) return; // 既に強調表示されている場合は何もしない
-  highlightedEmployees.value.add(key);
-
-  // 2秒後に強調表示を解除
-  setTimeout(() => {
-    highlightedEmployees.value.delete(key);
-  }, 2000);
 }
 </script>
 
