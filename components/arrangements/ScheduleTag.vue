@@ -68,7 +68,7 @@ async function handleWorkerMoved(movedEvent) {
  * vuedraggable の change ハンドラ
  * @param event
  */
-async function handleChange(event) {
+async function handleChangeWorkers(event) {
   logger.clearError();
   try {
     if (event.added) {
@@ -141,21 +141,14 @@ async function handleUpdateDetailStatus(workerInstance, newStatus) {
         </template>
       </v-checkbox>
     </v-container>
-    <MoleculesDraggableWorkers
-      :model-value="props.schedule.workers"
-      :disabled="!props.schedule.isWorkerChangeable"
-      @change="handleChange($event)"
-    >
-      <template #default="{ element: worker, highlighted }">
-        <MoleculesWorkerTag
-          :label="getWorkerName(worker)"
-          :highlight="highlighted"
-          :model-value="worker"
-          @update:status="handleUpdateDetailStatus(worker, $event)"
-          @click:remove="handleWorkerRemoved({ element: $event })"
-        />
-      </template>
-    </MoleculesDraggableWorkers>
+    <slot
+      name="default"
+      v-bind="{
+        handleChangeWorkers,
+        handleUpdateDetailStatus,
+        handleWorkerRemoved,
+      }"
+    />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"

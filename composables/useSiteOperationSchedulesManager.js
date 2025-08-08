@@ -134,6 +134,9 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
 
   /**
+   *
+   * *** Use this method if optimistic updates are needed. ***
+   *
    * Replaces the schedules specified by siteId, shiftType, and date to the new schedules.
    * This is used for optimistic updates at the component level.
    * It means that the new schedules won't be modified. It will be just replaced.

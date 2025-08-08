@@ -48,9 +48,9 @@ const {
   dateRange,
   dayCount,
   keyMappedDocs,
+  getWorkerName,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
-  replaceDocs,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -113,6 +113,7 @@ async function handleChangeSchedule(event, date) {
       :from="dateRange.from"
       :day-count="dayCount"
     >
+      <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">
         <div v-if="cachedData.sites[siteId]" class="text-subtitle-1 fixed-left">
           <div class="d-flex align-center">
@@ -124,16 +125,54 @@ async function handleChangeSchedule(event, date) {
         </div>
         <v-progress-circular v-else indeterminate size="small" />
       </template>
+
+      <!-- cell -->
       <template #body-cell="{ key, siteId, shiftType, date }">
-        <ArrangementsBodyCell
+        <MoleculesDraggableSiteOperationSchedule
           :model-value="keyMappedDocs[key] || []"
           :site-id="siteId"
           :shift-type="shiftType"
-          @update:model-value="replaceDocs($event, siteId, shiftType, date)"
+          :date="date"
           @change="handleChangeSchedule($event, date)"
-          @click:edit="toUpdateSchedule"
-        />
+          @click:edit="$emit('click:edit', $event)"
+        >
+          <template #default="{ element: schedule }">
+            <ArrangementsScheduleTag
+              :schedule="schedule"
+              :cached-employees="cachedData.employees"
+              :cached-outsourcers="cachedData.outsourcers"
+              class="mb-2"
+              @click:edit="toUpdateSchedule"
+            >
+              <template
+                #default="{
+                  handleChangeWorkers,
+                  handleUpdateDetailStatus,
+                  handleWorkerRemoved,
+                }"
+              >
+                <MoleculesDraggableWorkers
+                  :model-value="schedule.workers"
+                  :disabled="!schedule.isWorkerChangeable"
+                  @change="handleChangeWorkers($event, schedule)"
+                >
+                  <template #default="{ element: worker, highlighted }">
+                    <MoleculesWorkerTag
+                      :label="getWorkerName(worker)"
+                      :highlight="highlighted"
+                      :model-value="worker"
+                      @update:status="handleUpdateDetailStatus(worker, $event)"
+                      @click:remove="handleWorkerRemoved({ element: $event })"
+                    />
+                  </template>
+                </MoleculesDraggableWorkers>
+              </template>
+            </ArrangementsScheduleTag>
+          </template>
+        </MoleculesDraggableSiteOperationSchedule>
       </template>
+
+      <!-- footer -->
       <template #footer-cell>
         <span class="grey--text text--darken-2 text-subtitle-2"> 稼働数: </span>
       </template>
