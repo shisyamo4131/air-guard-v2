@@ -168,7 +168,7 @@ function handleTagClick(event) {
     :class="tagClasses"
     :style="{ height: tagHeight }"
     rounded
-    variant="outlined"
+    variant="elevated"
     @click="handleTagClick"
   >
     <v-list-item-title :class="titleClasses">
