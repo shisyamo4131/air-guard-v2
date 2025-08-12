@@ -16,7 +16,8 @@
  *
  * note: 'date', 'siteId', and 'shiftType' are not used in this component.
  *       These properties may be needed in the future as the component's functionality is expanded.
- *
+ * note: Do not use `v-model` at vuedraggable.
+ *       Optimistic update should not be used due to employee-outsourcer order limitation.
  * @emits click:remove - Event to remove a worker from the arrangement.
  * @emits update:status - Event to update the status of a worker.
  */
@@ -109,12 +110,13 @@ function handleUpdateStatus(worker, newVal) {
 
 <template>
   <draggable
-    v-model="workers"
+    :model-value="workers"
     class="pa-2"
     style="min-height: 24px"
     :disabled="disabled"
     :group="group"
     :item-key="itemKey"
+    handle=".drag-handle"
   >
     <template #item="{ element: worker }">
       <div>
