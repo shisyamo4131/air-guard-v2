@@ -22,6 +22,7 @@
 import { ref, watch } from "vue";
 import draggable from "vuedraggable";
 import { useLogger } from "@/composables/useLogger";
+import { useKatakanaFilter } from "../../composables/useKatakanaFilter";
 import { OperationResultDetail } from "@/schemas";
 
 /** define constants */
@@ -47,6 +48,8 @@ const emit = defineEmits(["tab-changed"]);
 
 /** define composables */
 const logger = useLogger();
+const { selectedCharNumber, selectableChars, filterByKatakana } =
+  useKatakanaFilter();
 
 /** define refs */
 const activeTab = ref(0);
@@ -82,6 +85,23 @@ watch(activeTab, (newTab) => emit("tab-changed", newTab));
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
+const filteredEmployees = computed(() => {
+  const filtered = filterByKatakana(props.employees, "lastNameKana");
+  return convertedEmployees.value.filter((operationResultDetail) => {
+    return filtered.some(
+      ({ docId }) => docId === operationResultDetail.workerId
+    );
+  });
+});
+
+const filteredOutsourcers = computed(() => {
+  const filtered = filterByKatakana(props.outsourcers, "nameKana");
+  return convertedOutsourcers.value.filter((operationResultDetail) => {
+    return filtered.some(
+      ({ docId }) => docId === operationResultDetail.workerId
+    );
+  });
+});
 
 /*****************************************************************************
  * METHODS
@@ -127,61 +147,69 @@ function updateConvertedOutsourcers() {
 </script>
 
 <template>
-  <div class="fill-height d-flex flex-column">
-    <!-- タブナビゲーション -->
-    <v-tabs v-model="activeTab" class="flex-shrink-0" grow>
-      <v-tab v-for="(tab, index) in TABS_CONFIG" :key="index" :value="index">
-        {{ tab.label }}
-      </v-tab>
-    </v-tabs>
+  <div class="fill-height d-flex">
+    <div class="fill-height d-flex flex-column flex-grow-1">
+      <!-- タブナビゲーション -->
+      <v-tabs v-model="activeTab" class="flex-shrink-0" grow>
+        <v-tab v-for="(tab, index) in TABS_CONFIG" :key="index" :value="index">
+          {{ tab.label }}
+        </v-tab>
+      </v-tabs>
 
-    <!-- タブコンテンツ -->
-    <v-window v-model="activeTab" class="fill-height">
-      <!-- 従業員 -->
-      <v-window-item :value="0" class="fill-height">
-        <div class="pa-2 fill-height">
-          <draggable
-            class="fill-height overflow-y-auto"
-            :model-value="convertedEmployees"
-            :item-key="convertedItemKey"
-            :group="{ name: 'workers', pull: 'clone', put: false }"
-            :sort="false"
-          >
-            <template #item="{ element }">
-              <div>
-                <slot
-                  name="employee"
-                  :element="element"
-                  :rawElement="employeeMap[element[convertedItemKey]] || null"
-                />
-              </div>
-            </template>
-          </draggable>
-        </div>
-      </v-window-item>
+      <!-- タブコンテンツ -->
+      <v-window v-model="activeTab" class="fill-height">
+        <!-- 従業員 -->
+        <v-window-item :value="0" class="fill-height">
+          <div class="pa-2 fill-height">
+            <draggable
+              class="fill-height overflow-y-auto"
+              :model-value="filteredEmployees"
+              :item-key="convertedItemKey"
+              :group="{ name: 'workers', pull: 'clone', put: false }"
+              :sort="false"
+            >
+              <template #item="{ element }">
+                <div>
+                  <slot
+                    name="employee"
+                    :element="element"
+                    :rawElement="employeeMap[element[convertedItemKey]] || null"
+                  />
+                </div>
+              </template>
+            </draggable>
+          </div>
+        </v-window-item>
 
-      <!-- 外注先 -->
-      <v-window-item :value="1" class="fill-height">
-        <div class="pa-2 fill-height">
-          <draggable
-            class="fill-height overflow-y-auto"
-            :model-value="convertedOutsourcers"
-            :item-key="convertedItemKey"
-            :group="{ name: 'workers', pull: 'clone', put: false }"
-            :sort="false"
-          >
-            <template #item="{ element }">
-              <div>
-                <slot
-                  name="outsourcer"
-                  :element="element"
-                  :rawElement="outsourcerMap[element[convertedItemKey]] || null"
-                />
-              </div>
-            </template>
-          </draggable>
-        </div>
-      </v-window-item>
-    </v-window>
+        <!-- 外注先 -->
+        <v-window-item :value="1" class="fill-height">
+          <div class="pa-2 fill-height">
+            <draggable
+              class="fill-height overflow-y-auto"
+              :model-value="filteredOutsourcers"
+              :item-key="convertedItemKey"
+              :group="{ name: 'workers', pull: 'clone', put: false }"
+              :sort="false"
+            >
+              <template #item="{ element }">
+                <div>
+                  <slot
+                    name="outsourcer"
+                    :element="element"
+                    :rawElement="
+                      outsourcerMap[element[convertedItemKey]] || null
+                    "
+                  />
+                </div>
+              </template>
+            </draggable>
+          </div>
+        </v-window-item>
+      </v-window>
+    </div>
+    <MoleculesBtnKatakanaFilter
+      v-model="selectedCharNumber"
+      :items="selectableChars"
+    />
   </div>
 </template>
