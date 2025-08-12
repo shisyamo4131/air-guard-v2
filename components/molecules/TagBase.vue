@@ -153,23 +153,15 @@ function handleClickRemove(event) {
   event.stopPropagation();
   emit("click:remove");
 }
-
-/**
- * Handler for the tag click event.
- */
-function handleTagClick(event) {
-  // タグ自体のクリックイベントを処理する場合はここに実装
-  // 現在は何もしない
-}
 </script>
 
 <template>
   <v-list-item
     :class="tagClasses"
     :style="{ height: tagHeight }"
+    elevation="2"
     rounded
     variant="elevated"
-    @click="handleTagClick"
   >
     <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->
