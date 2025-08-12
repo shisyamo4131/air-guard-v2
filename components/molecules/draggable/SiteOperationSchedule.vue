@@ -59,6 +59,7 @@ function pull(to, from, dragEl) {
     class="d-flex flex-column fill-height pa-2"
     :item-key="itemKey"
     :group="{ name, pull }"
+    handle=".drag-handle"
   >
     <template #item="{ element: schedule }">
       <div>
