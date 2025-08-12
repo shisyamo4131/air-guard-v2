@@ -50,6 +50,7 @@ const {
   getWorkerName,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
+  replaceDocs,
 } = managerComposable;
 
 /** provide composable to child components */
@@ -63,25 +64,6 @@ onMounted(() => {
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-/**
- * スケジュール日付変更処理（楽観的更新）
- */
-async function handleChangeSchedule(event, date) {
-  logger.clearError();
-  const dateAt = new Date(date);
-  try {
-    if (event.added) {
-      const schedule = event.added.element;
-      await schedule.reschedule(dateAt);
-    }
-  } catch (error) {
-    logger.error({
-      sender: "handleChangeSchedule",
-      message: error.message,
-      error,
-    });
-  }
-}
 </script>
 
 <template>
@@ -132,7 +114,7 @@ async function handleChangeSchedule(event, date) {
           :site-id="siteId"
           :shift-type="shiftType"
           :date="date"
-          @change="handleChangeSchedule($event, date)"
+          @update:model-value="replaceDocs($event, siteId, shiftType, date)"
         >
           <template #default="draggableSiteOperationScheduleProps">
             <ArrangementsScheduleTag
