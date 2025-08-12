@@ -99,13 +99,23 @@ async function handleUpdateDetailStatus({ worker, status }) {
 </script>
 
 <template>
-  <v-card flat style="border: 1px dashed grey">
-    <v-card-title class="text-subtitle-2 font-weight-regular pb-0">
-      <v-icon v-if="schedule.isPersonnelShortage" color="error" size="small">
-        mdi-information
-      </v-icon>
-      {{ `${label}(${schedule.requiredPersonnel})` }}
-    </v-card-title>
+  <v-card flat style="border: 1px dashed grey; max-width: 100%" s>
+    <div
+      class="d-flex text-subtitle-2 font-weight-regular px-3 pt-2 pb-0 align-center"
+      style="max-width: 100%"
+    >
+      <v-icon
+        v-if="schedule.isPersonnelShortage"
+        class="mr-1"
+        color="error"
+        size="small"
+        icon="mdi-information"
+      />
+      <span class="flex-grow-1 text-truncate" style="min-width: 0">
+        {{ `${label}(${schedule.requiredPersonnel})` }}
+      </span>
+      <v-icon v-if="schedule.isDraft" icon="mdi-menu" class="drag-handle" />
+    </div>
     <v-container class="py-0 d-flex justify-center" style="column-gap: 20px">
       <v-checkbox
         :model-value="!schedule.isDraft"
@@ -180,4 +190,8 @@ async function handleUpdateDetailStatus({ worker, status }) {
   </v-card>
 </template>
 
-<style scoped></style>
+<style scoped>
+.drag-handle {
+  cursor: grab;
+}
+</style>
