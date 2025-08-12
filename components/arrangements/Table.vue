@@ -225,10 +225,17 @@ const matrix = computed(() => {
   table-layout: fixed;
 }
 
+/* セル幅を固定 */
+#arrangement-table th,
+#arrangement-table td {
+  width: 264px;
+  min-width: 264px;
+  max-width: 264px;
+}
+
 /* テーブルヘッダーのスタイル */
 #arrangement-table > div > table > thead > tr > th {
   text-align: center;
-  min-width: 264px;
   border: 1px solid grey;
 }
 
