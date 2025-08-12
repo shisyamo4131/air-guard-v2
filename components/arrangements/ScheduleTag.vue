@@ -104,15 +104,14 @@ async function handleUpdateDetailStatus({ worker, status }) {
       class="d-flex text-subtitle-2 font-weight-regular px-3 pt-2 pb-0 align-center"
       style="max-width: 100%"
     >
-      <v-icon
-        v-if="schedule.isPersonnelShortage"
-        class="mr-1"
-        color="error"
-        size="small"
-        icon="mdi-information"
+      <v-badge
+        :color="schedule.isPersonnelShortage ? 'error' : 'primary'"
+        :content="schedule.requiredPersonnel"
+        inline
+        size="x-small"
       />
       <span class="flex-grow-1 text-truncate" style="min-width: 0">
-        {{ `${label}(${schedule.requiredPersonnel})` }}
+        {{ `${label}` }}
       </span>
       <v-icon v-if="schedule.isDraft" icon="mdi-menu" class="drag-handle" />
     </div>
