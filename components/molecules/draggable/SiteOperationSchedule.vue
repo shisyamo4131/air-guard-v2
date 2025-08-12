@@ -55,7 +55,7 @@ function pull(to, from, dragEl) {
 
 <template>
   <draggable
-    :model-value="schedules"
+    v-model="schedules"
     class="d-flex flex-column fill-height pa-2"
     :item-key="itemKey"
     :group="{ name, pull }"
