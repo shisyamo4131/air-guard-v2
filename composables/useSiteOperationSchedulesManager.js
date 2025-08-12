@@ -11,12 +11,14 @@
  * @param {Object} [options.fetchSiteComposable] - Custom composable for fetching sites.
  */
 import * as Vue from "vue";
+import { useNuxtApp } from "#app";
 import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee as internalUseFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateRange } from "@/composables/useDateRange";
+import { runTransaction } from "firebase/firestore";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -105,7 +107,14 @@ export function useSiteOperationSchedulesManager({
       _fetchRelatedData(Vue.toRaw(newDocs));
       // docsの変更をlocalDocsに同期
       if (newDocs && Array.isArray(newDocs)) {
-        localDocs.value = [...newDocs];
+        localDocs.value = [...newDocs].sort((a, b) => {
+          // displayOrderが未定義の場合は0として扱う
+          const orderA = a.displayOrder ?? 0;
+          const orderB = b.displayOrder ?? 0;
+
+          // 数値として比較
+          return orderA - orderB;
+        });
       }
     },
     {
@@ -134,20 +143,15 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
 
   /**
-   *
-   * *** Use this method if optimistic updates are needed. ***
-   *
    * Replaces the schedules specified by siteId, shiftType, and date to the new schedules.
-   * This is used for optimistic updates at the component level.
-   * It means that the new schedules won't be modified. It will be just replaced.
-   * The new schedules must be updated by the manager later.
+   * For optimistic update, `localDocs` will be updated immediately.
    * @param {Array} newSchedules - New schedules array for the cell
    * @param {string} siteId - Site ID
    * @param {string} shiftType - Shift type
    * @param {string} date - Date (YYYY-MM-DD format)
    */
-  const replaceDocs = (newSchedules, siteId, shiftType, date) => {
-    // 該当するセル以外のスケジュールを保持
+  const replaceDocs = async (newSchedules, siteId, shiftType, date) => {
+    // Filter out schedules that match the specified siteId, shiftType, and date
     const filteredSchedules = localDocs.value.filter((schedule) => {
       return !(
         schedule.siteId === siteId &&
@@ -156,8 +160,23 @@ export function useSiteOperationSchedulesManager({
       );
     });
 
-    // 新しいスケジュール配列で置き換え
+    const newDateAt = new Date(date);
+    newDateAt.setUTCHours(0, 0, 0, 0);
+    newSchedules.forEach((schedule, index) => {
+      schedule.dateAt = newDateAt;
+      schedule.displayOrder = index;
+    });
+
+    // Replace localDocs with the new schedules
     localDocs.value = [...filteredSchedules, ...newSchedules];
+
+    // Update Firestore documents.
+    const { $firestore } = useNuxtApp();
+    await runTransaction($firestore, async (transaction) => {
+      await Promise.all(
+        newSchedules.map((schedule) => schedule.update({ transaction }))
+      );
+    });
   };
 
   /**
