@@ -40,7 +40,7 @@ const logger = useLogger();
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const label = computed(() => {
-  return schedule.workDescription || "通常警備";
+  return schedule.value.workDescription || "通常警備";
 });
 
 /*****************************************************************************
@@ -48,20 +48,24 @@ const label = computed(() => {
  *****************************************************************************/
 async function handleWorkerAdded(addedEvent) {
   const { workerId, isEmployee, amount } = addedEvent.element;
-  schedule.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
-  await schedule.update();
+  schedule.value.addWorker(workerId, isEmployee, amount, addedEvent.newIndex);
+  await schedule.value.update();
 }
 
 async function handleWorkerRemoved(removedEvent) {
   const { workerId, isEmployee, amount } = removedEvent.element;
-  schedule.removeWorker(workerId, amount, isEmployee);
-  await schedule.update();
+  schedule.value.removeWorker(workerId, amount, isEmployee);
+  await schedule.value.update();
 }
 
 async function handleWorkerMoved(movedEvent) {
   const { isEmployee } = movedEvent.element;
-  schedule.changeWorker(movedEvent.oldIndex, movedEvent.newIndex, isEmployee);
-  await schedule.update();
+  schedule.value.changeWorker(
+    movedEvent.oldIndex,
+    movedEvent.newIndex,
+    isEmployee
+  );
+  await schedule.value.update();
 }
 
 /**
@@ -90,7 +94,7 @@ async function handleChangeWorkers(event) {
  */
 async function handleUpdateDetailStatus({ worker, status }) {
   worker.status = status;
-  await schedule.update();
+  await schedule.value.update();
 }
 </script>
 
