@@ -157,9 +157,10 @@ function handleClickRemove(event) {
 
 <template>
   <v-list-item
+    class="drag-handle"
     :class="tagClasses"
     :style="{ height: tagHeight }"
-    elevation="2"
+    elevation="3"
     rounded
     variant="elevated"
   >
@@ -309,5 +310,9 @@ function handleClickRemove(event) {
   .tag-base--error {
     background-color: rgba(244, 67, 54, 0.2) !important;
   }
+}
+
+.drag-handle {
+  cursor: grab;
 }
 </style>

@@ -21,7 +21,6 @@
  */
 import { ref, watch } from "vue";
 import draggable from "vuedraggable";
-import { useLogger } from "@/composables/useLogger";
 import { useKatakanaFilter } from "../../composables/useKatakanaFilter";
 import { OperationResultDetail } from "@/schemas";
 
@@ -47,103 +46,69 @@ const props = defineProps({
 const emit = defineEmits(["tab-changed"]);
 
 /** define composables */
-const logger = useLogger();
 const { selectedCharNumber, selectableChars, filterByKatakana } =
   useKatakanaFilter();
 
 /** define refs */
 const activeTab = ref(0);
-const convertedEmployees = ref([]);
-const convertedOutsourcers = ref([]);
-const employeeMap = ref({}); // Map for quick access to employee objects by their docId
-const outsourcerMap = ref({}); // Map for quick access to outsourcer objects by their docId
+const employeesMap = ref({});
+const outsourcersMap = ref({});
+const convertedEmployeesMap = ref({});
+const convertedOutsourcersMap = ref({});
 
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
-/**
- * Updates `convertedEmployees` and `employeeMap` whenever `props.employees` changes.
- */
-watch(() => props.employees, updateConvertedEmployees, {
-  immediate: true,
-  deep: true,
-});
+watch(
+  () => props.employees,
+  (newEmployees) => {
+    newEmployees.forEach((emp) => {
+      convertedEmployeesMap.value[emp.docId] = props.converter(emp, true);
+      employeesMap.value[emp.docId] = emp;
+    });
+  },
+  { immediate: true }
+);
 
-/**
- * Updates `convertedOutsourcers` and `outsourcerMap` whenever `props.outsourcers` changes.
- */
-watch(() => props.outsourcers, updateConvertedOutsourcers, {
-  immediate: true,
-  deep: true,
-});
-
-/**
- * Emits an `tab-changed` event whenever the active tab changes.
- */
-watch(activeTab, (newTab) => emit("tab-changed", newTab));
+watch(
+  () => props.outsourcers,
+  (newOutsourcers) => {
+    newOutsourcers.forEach((out) => {
+      convertedOutsourcersMap.value[out.docId] = props.converter(out, false);
+      outsourcersMap.value[out.docId] = out;
+    });
+  },
+  { immediate: true }
+);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const filteredEmployees = computed(() => {
-  const filtered = filterByKatakana(props.employees, "lastNameKana");
-  return convertedEmployees.value.filter((operationResultDetail) => {
-    return filtered.some(
-      ({ docId }) => docId === operationResultDetail.workerId
-    );
+  const filtered = filterByKatakana(props.employees, "lastNameKana").sort(
+    (a, b) => a.lastNameKana.localeCompare(b.lastNameKana)
+  );
+  let result = [];
+  filtered.forEach((emp) => {
+    result.push(convertedEmployeesMap.value[emp.docId]);
   });
+  return result;
 });
 
 const filteredOutsourcers = computed(() => {
-  const filtered = filterByKatakana(props.outsourcers, "nameKana");
-  return convertedOutsourcers.value.filter((operationResultDetail) => {
-    return filtered.some(
-      ({ docId }) => docId === operationResultDetail.workerId
-    );
+  const filtered = filterByKatakana(props.outsourcers, "nameKana").sort(
+    (a, b) => a.nameKana.localeCompare(b.nameKana)
+  );
+  let result = [];
+  filtered.forEach((out) => {
+    result.push(convertedOutsourcersMap.value[out.docId]);
   });
+  return result;
 });
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-/**
- * Updates the converted items and their maps based on the provided items and whether they are employees.
- * @param items
- * @param isEmployee
- */
-function convertAndMap(items, isEmployee) {
-  logger.clearError();
-  try {
-    const converted = items.map((item) => props.converter(item, isEmployee));
-    const map = Object.fromEntries(items.map((item) => [item.docId, item]));
-    return { converted, map };
-  } catch (error) {
-    logger.error({
-      sender: "WorkerSelector",
-      message: "Conversion failed",
-      error,
-    });
-    return { converted: [], map: {} };
-  }
-}
-
-/**
- * Updates the converted employees and their map.
- */
-function updateConvertedEmployees() {
-  const { converted, map } = convertAndMap(props.employees, true);
-  convertedEmployees.value = converted;
-  employeeMap.value = map;
-}
-
-/**
- * Updates the converted outsourcers and their map.
- */
-function updateConvertedOutsourcers() {
-  const { converted, map } = convertAndMap(props.outsourcers, false);
-  convertedOutsourcers.value = converted;
-  outsourcerMap.value = map;
-}
 </script>
 
 <template>
@@ -160,50 +125,46 @@ function updateConvertedOutsourcers() {
       <v-window v-model="activeTab" class="fill-height">
         <!-- 従業員 -->
         <v-window-item :value="0" class="fill-height">
-          <div class="pa-2 fill-height">
-            <draggable
-              class="fill-height overflow-y-auto"
-              :model-value="filteredEmployees"
-              :item-key="convertedItemKey"
-              :group="{ name: 'workers', pull: 'clone', put: false }"
-              :sort="false"
-            >
-              <template #item="{ element }">
-                <div>
-                  <slot
-                    name="employee"
-                    :element="element"
-                    :rawElement="employeeMap[element[convertedItemKey]] || null"
-                  />
-                </div>
-              </template>
-            </draggable>
-          </div>
+          <draggable
+            class="fill-height overflow-y-auto pa-2"
+            :model-value="filteredEmployees"
+            :item-key="convertedItemKey"
+            :group="{ name: 'workers', pull: 'clone', put: false }"
+            :sort="false"
+          >
+            <template #item="{ element }">
+              <div>
+                <slot
+                  name="employee"
+                  :element="element"
+                  :rawElement="employeesMap[element[convertedItemKey]] || null"
+                />
+              </div>
+            </template>
+          </draggable>
         </v-window-item>
 
         <!-- 外注先 -->
         <v-window-item :value="1" class="fill-height">
-          <div class="pa-2 fill-height">
-            <draggable
-              class="fill-height overflow-y-auto"
-              :model-value="filteredOutsourcers"
-              :item-key="convertedItemKey"
-              :group="{ name: 'workers', pull: 'clone', put: false }"
-              :sort="false"
-            >
-              <template #item="{ element }">
-                <div>
-                  <slot
-                    name="outsourcer"
-                    :element="element"
-                    :rawElement="
-                      outsourcerMap[element[convertedItemKey]] || null
-                    "
-                  />
-                </div>
-              </template>
-            </draggable>
-          </div>
+          <draggable
+            class="fill-height overflow-y-auto pa-2"
+            :model-value="filteredOutsourcers"
+            :item-key="convertedItemKey"
+            :group="{ name: 'workers', pull: 'clone', put: false }"
+            :sort="false"
+          >
+            <template #item="{ element }">
+              <div>
+                <slot
+                  name="outsourcer"
+                  :element="element"
+                  :rawElement="
+                    outsourcersMap[element[convertedItemKey]] || null
+                  "
+                />
+              </div>
+            </template>
+          </draggable>
         </v-window-item>
       </v-window>
     </div>

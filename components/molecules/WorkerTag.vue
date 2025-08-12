@@ -136,9 +136,6 @@ function updateStatus(newVal) {
     <template #append-label>
       <span v-if="!worker.isEmployee">{{ `(${worker.amount})` }}</span>
     </template>
-    <template #label="{ label }">
-      <span class="drag-handle">{{ label }}</span>
-    </template>
     <template #footer>
       <v-list-item-subtitle class="text-caption text-no-wrap">
         {{ `${worker.startTime} - ${worker.endTime}` }}
@@ -173,8 +170,4 @@ function updateStatus(newVal) {
   </MoleculesTagBase>
 </template>
 
-<style scoped>
-.drag-handle {
-  cursor: grab;
-}
-</style>
+<style scoped></style>
