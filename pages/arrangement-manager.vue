@@ -50,6 +50,7 @@ const {
   statistics,
   keyMappedDocs,
   getWorkerName,
+  toCreate,
   toUpdate: toUpdateSchedule,
   itemManagerAttrs,
   replaceDocs,
@@ -106,6 +107,10 @@ onMounted(() => {
               {{ SHIFT_TYPE[shiftType] }}
             </v-chip>
             <span>{{ cachedData.sites[siteId].name }}</span>
+            <v-icon
+              icon="mdi-file-document-plus-outline"
+              @click="toCreate({ siteId, shiftType })"
+            />
           </div>
         </div>
         <v-progress-circular v-else indeterminate size="small" />

@@ -285,9 +285,7 @@ export function useSiteOperationSchedulesManager({
   const itemManagerAttrs = Vue.computed(() => {
     return {
       modelValue: instance,
-      dialogProps: {
-        maxWidth: 600,
-      },
+      dialogProps: { maxWidth: 600 },
       inputProps: {
         excludedKeys: ["status", "employees", "outsourcers"],
       },
@@ -384,7 +382,7 @@ export function useSiteOperationSchedulesManager({
     setFrom: dateRangeComposable.setBaseDate,
 
     // Methods for managing schedules provided by the manager.
-    toCreate: () => manager?.value?.toCreate?.(),
+    toCreate: (schedule) => manager?.value?.toCreate?.(schedule),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
   };
