@@ -122,7 +122,6 @@ async function handleUpdateDetailStatus({ worker, status }) {
         :readonly="!schedule.isDraft && !schedule.isScheduled"
         hide-details
         density="compact"
-        :disabled="schedule.isPersonnelShortage"
         style="height: 32px"
         @update:modelValue="
           ($event) => ($event ? schedule.toScheduled() : schedule.toDraft())
@@ -136,7 +135,10 @@ async function handleUpdateDetailStatus({ worker, status }) {
         :model-value="schedule.isArranged"
         color="primary"
         density="compact"
-        :disabled="!schedule.isScheduled && !schedule.isArranged"
+        :disabled="
+          (!schedule.isScheduled && !schedule.isArranged) ||
+          schedule.isPersonnelShortage
+        "
         hide-details
         style="height: 32px"
         @update:modelValue="
