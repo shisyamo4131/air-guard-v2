@@ -47,6 +47,7 @@ const {
   cachedData,
   dateRange,
   dayCount,
+  statistics,
   keyMappedDocs,
   getWorkerName,
   toUpdate: toUpdateSchedule,
@@ -69,9 +70,7 @@ onMounted(() => {
 
 <template>
   <div class="d-flex flex-column fill-height">
-    <!--
-      TOOLBAR
-    -->
+    <!-- TOOLBAR -->
     <ArrangementsToolbar
       v-model="dayCount"
       @click:workers="toggleFloatingWindow"
@@ -144,8 +143,10 @@ onMounted(() => {
       </template>
 
       <!-- footer -->
-      <template #footer-cell>
-        <span class="grey--text text--darken-2 text-subtitle-2"> 稼働数: </span>
+      <template #footer-cell="{ date }">
+        <span class="grey--text text--darken-2 text-subtitle-2">{{
+          `稼働数: ${statistics.requiredPersonnel[date] || 0}`
+        }}</span>
       </template>
     </ArrangementsTable>
 

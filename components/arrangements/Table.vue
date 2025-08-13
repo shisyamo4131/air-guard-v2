@@ -263,19 +263,9 @@ tr.g-row.g-row-no-hover:hover {
   background-color: transparent !important;
 }
 
-/* セルホバー時のデフォルト背景色 */
-.g-col:hover {
-  background-color: #e0e0e0;
-}
-
 /* 土曜セルの背景色 */
 .g-col.g-col-sat {
   background-color: #e3f2fd !important;
-}
-
-/* 土曜セルのホバー時背景色 */
-.g-col.g-col-sat:hover {
-  background-color: #bbdefb !important;
 }
 
 /* 日曜・祝日セルの背景色 */
@@ -284,20 +274,9 @@ tr.g-row.g-row-no-hover:hover {
   background-color: #ffebee !important;
 }
 
-/* 日曜・祝日セルのホバー時背景色 */
-.g-col.g-col-sun:hover,
-.g-col.g-col-holiday:hover {
-  background-color: #ffcdd2 !important;
-}
-
 /* 当日セルの背景色 */
 .g-col.g-col-today {
   background-color: #fffde7 !important;
-}
-
-/* 当日セルのホバー時背景色 */
-.g-col.g-col-today:hover {
-  background-color: #fff9c4 !important;
 }
 
 /* 過去日付セルの背景色 */

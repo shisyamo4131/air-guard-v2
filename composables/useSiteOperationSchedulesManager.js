@@ -346,12 +346,29 @@ export function useSiteOperationSchedulesManager({
     return result;
   });
 
+  const statistics = Vue.computed(() => {
+    const from = dateRangeComposable.startDate.value;
+    const to = dateRangeComposable.endDate.value;
+    const dayCount = dateRangeComposable.currentDayCount.value;
+    const requiredPersonnel = {};
+
+    for (let i = 0; i < dayCount; i++) {
+      const dateStr = dayjs(from).add(i, "day").format("YYYY-MM-DD");
+      requiredPersonnel[dateStr] = localDocs.value
+        .filter((schedule) => schedule.date === dateStr)
+        .reduce((sum, schedule) => sum + (schedule.requiredPersonnel || 0), 0);
+    }
+
+    return { from, to, dayCount, requiredPersonnel };
+  });
+
   return {
     // DATA
     cachedData: Vue.readonly(cached),
     docs: localDocs,
     dayCount,
     dateRange,
+    statistics,
 
     // Mapped schedules grouped by key (siteId-shiftType-date).
     keyMappedDocs: keyMappedDocs,
