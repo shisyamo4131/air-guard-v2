@@ -6,15 +6,28 @@
  * @emit click:workers - Emits when the workers button is clicked.
  * @emit update:modelValue - Emits when the number of days to display is updated.
  */
+import {
+  useTagSize,
+  props as tagSizeProps,
+  emits as tagSizeEmits,
+} from "@/composables/useTagSize";
 
 /*****************************************************************************
- * PROPS & EMITS
+ * PROPS / EMITS / REFS
  *****************************************************************************/
 /** define modelValue */
 const model = defineModel();
 
+/** define props */
+const props = defineProps({ ...tagSizeProps });
+
 /** define emits */
-const emit = defineEmits(["click:workers"]);
+const emit = defineEmits(["click:workers", ...tagSizeEmits]);
+
+/*****************************************************************************
+ * COMPOSABLES
+ *****************************************************************************/
+const { internalValue: tagSize } = useTagSize(props, emit);
 
 /*****************************************************************************
  * CONSTANTS
@@ -46,6 +59,10 @@ const SELECTOR_CONFIG = {
 };
 
 /*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+
+/*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
 /** items for display-days-selector */
@@ -69,12 +86,23 @@ const handleWorkersClick = (event) => {
     <template #append>
       <v-spacer />
 
+      <v-btn-toggle
+        v-model="tagSize"
+        class="mr-3"
+        density="compact"
+        variant="text"
+      >
+        <v-btn value="small">小</v-btn>
+        <v-btn value="medium">中</v-btn>
+        <v-btn value="large">大</v-btn>
+      </v-btn-toggle>
+
       <!-- Workers Button -->
       <v-btn
         :prepend-icon="WORKERS_BUTTON_CONFIG.icon"
         :text="WORKERS_BUTTON_CONFIG.text"
         @click="handleWorkersClick"
-        class="workers-btn"
+        class="mr-3"
       />
 
       <!-- Display Days Selector -->
@@ -85,22 +113,10 @@ const handleWorkersClick = (event) => {
         :density="SELECTOR_CONFIG.density"
         :items="selectableDays"
         hide-details
-        class="days-selector"
+        style="min-width: 120px"
       />
     </template>
   </v-toolbar>
 </template>
 
-<style scoped>
-.arrangements-toolbar {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-}
-
-.workers-btn {
-  margin-right: 12px;
-}
-
-.days-selector {
-  min-width: 120px;
-}
-</style>
+<style scoped></style>

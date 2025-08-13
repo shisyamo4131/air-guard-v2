@@ -1,31 +1,33 @@
 <script setup>
-import { onMounted, provide, useTemplateRef } from "vue";
+import { onMounted, useTemplateRef } from "vue";
 import dayjs from "dayjs";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useWorkersList } from "@/composables/useWorkersList";
-import { useLogger } from "@/composables/useLogger";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 
+/*****************************************************************************
+ * PROPS / EMITS / REFS
+ *****************************************************************************/
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
+const tagSize = ref("medium");
 
-/** フローティング作業員選択ウィンドウ用のコンポーザブル */
+/*****************************************************************************
+ * COMPOSABLES
+ *****************************************************************************/
+const { order } = useSiteOrder();
+/** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
-
-/** define composables */
-const logger = useLogger();
-const { order } = useSiteOrder();
-
-// for fetching and caching employees.
+/** For fetching and caching employees */
 const fetchEmployeeComposable = useFetchEmployee();
-// for fetching and caching outsourcers.
+/** For fetching and caching outsourcers */
 const fetchOutsourcerComposable = useFetchOutsourcer();
-// for providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable`.
+/** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
 const {
   availableEmployees,
   availableOutsourcers,
@@ -34,14 +36,13 @@ const {
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 });
-
+/** Manager composable */
 const managerComposable = useSiteOperationSchedulesManager({
   manager: scheduleManager,
   from: dayjs().subtract(1, "day").toDate(),
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 });
-
 const {
   cachedData,
   dateRange,
@@ -53,9 +54,9 @@ const {
   replaceDocs,
 } = managerComposable;
 
-/** provide composable to child components */
-provide("scheduleManagerComposable", managerComposable);
-
+/*****************************************************************************
+ * LIFE CYCLE HOOKS
+ *****************************************************************************/
 onMounted(() => {
   // Initialize the workers list when the component is mounted.
   initWorkers();
@@ -68,9 +69,13 @@ onMounted(() => {
 
 <template>
   <div class="d-flex flex-column fill-height">
+    <!--
+      TOOLBAR
+    -->
     <ArrangementsToolbar
       v-model="dayCount"
       @click:workers="toggleFloatingWindow"
+      @update:tag-size="tagSize = $event"
     />
 
     <!-- フローティング作業員選択ウィンドウ -->
@@ -80,7 +85,7 @@ onMounted(() => {
         :outsourcers="availableOutsourcers"
       >
         <template #employee="{ rawElement }">
-          <MoleculesTagBase :label="rawElement.displayName" />
+          <MoleculesTagBase :label="rawElement.displayName" :size="tagSize" />
         </template>
         <template #outsourcer="{ rawElement }">
           <MoleculesTagBase :label="rawElement.displayName" />
@@ -128,6 +133,7 @@ onMounted(() => {
                     <MoleculesWorkerTag
                       v-bind="draggableWorkersProps"
                       :label="getWorkerName(draggableWorkersProps.modelValue)"
+                      :size="tagSize"
                     />
                   </template>
                 </MoleculesDraggableWorkers>
