@@ -16,6 +16,8 @@ import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 const scheduleManager = useTemplateRef("scheduleManager");
 const tagSize = ref("medium");
 
+const selectedDate = ref(null);
+
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
@@ -85,7 +87,18 @@ onMounted(() => {
         :outsourcers="availableOutsourcers"
       >
         <template #employee="{ rawElement }">
-          <MoleculesTagBase :label="rawElement.displayName" :size="tagSize" />
+          <MoleculesTagBase
+            :label="rawElement.displayName"
+            :size="tagSize"
+            :variant="
+              selectedDate &&
+              statistics.arrangedEmployeesMap[selectedDate].allDay.includes(
+                rawElement.docId
+              )
+                ? 'disabled'
+                : 'default'
+            "
+          />
         </template>
         <template #outsourcer="{ rawElement }">
           <MoleculesTagBase :label="rawElement.displayName" />
@@ -98,6 +111,7 @@ onMounted(() => {
       :site-order="order"
       :from="dateRange.from"
       :day-count="dayCount"
+      v-model:selected-date="selectedDate"
     >
       <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">

@@ -114,7 +114,11 @@ export function useDateUtil() {
    * @param {string} [cssPrefix="g-col"] - Optional CSS class prefix.
    * @returns {Object} Object containing day info and CSS classes.
    */
-  const getDayInfo = (date, cssPrefix = "g-col") => {
+  const getDayInfo = ({
+    date,
+    selectedDates = [],
+    cssPrefix = "g-col",
+  } = {}) => {
     const today = dayjs().startOf("day");
     const targetDay = dayjs(date).locale("en");
     const dayOfWeek = targetDay.format("ddd").toLowerCase();
@@ -124,6 +128,7 @@ export function useDateUtil() {
     const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
     const dateLabel = targetDay.format("MM/DD");
     const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
+    const isSelected = selectedDates.includes(targetDay.format("YYYY-MM-DD"));
     const cssClasses = {
       [cssPrefix]: true,
       [`${cssPrefix}-${dayOfWeek}`]: true,
@@ -131,6 +136,7 @@ export function useDateUtil() {
       [`${cssPrefix}-today`]: isToday,
       [`${cssPrefix}-future`]: isFutureDay,
       [`${cssPrefix}-holiday`]: isHoliday,
+      [`${cssPrefix}-selected`]: isSelected,
     };
     return {
       dayOfWeek,

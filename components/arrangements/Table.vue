@@ -8,6 +8,7 @@
  * `siteId` and `shiftType` are expected in each object.
  * @props {Date|String} from - Start date for the table, used to generate date columns.
  * @props {Number} dayCount - Number of days to display in the table.
+ * @props {String} selectedDate - Currently selected date, used for highlighting.
  *
  * @slots
  * header-cell - Slot for customizing the header cell content.
@@ -24,10 +25,36 @@ const props = defineProps({
   siteOrder: { type: Array, default: () => [] },
   from: { type: [Date, String], default: () => new Date() },
   dayCount: { type: Number, default: 1 },
+  selectedDate: { type: String, default: null },
 });
+
+/** define emits */
+const emit = defineEmits(["update:selected-date"]);
 
 /** define composables */
 const { getDayInfo } = useDateUtil();
+
+/** define refs */
+const selectedDates = ref([]); // 選択された日付の配列（v-btn-toggle のバインドに型を合わせる）
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
+  () => props.selectedDate,
+  (newVal) => {
+    selectedDates.value = newVal ? [newVal] : [];
+  },
+  { immediate: true }
+);
+
+watch(
+  selectedDates,
+  (newVal) => {
+    emit("update:selected-date", newVal[0] || null);
+  },
+  { deep: true }
+);
 
 /**
  * Generate column data structure for table header
@@ -40,6 +67,7 @@ const { getDayInfo } = useDateUtil();
  *     date: "2025-08-08",
  *     dayOfWeek: "fri",
  *     isHoliday: false,
+ *     isSelected: false,
  *     dateLabel: "8/8",
  *     dayOfWeekJp: "金",
  *     cssClasses: { "g-col": true, "g-col-fri": true, "g-col-today": true }
@@ -48,14 +76,16 @@ const { getDayInfo } = useDateUtil();
  *     date: "2025-08-09",
  *     dayOfWeek: "sat",
  *     isHoliday: false,
+ *     isSelected: true,
  *     dateLabel: "8/9",
  *     dayOfWeekJp: "土",
- *     cssClasses: { "g-col": true, "g-col-sat": true, "g-col-future": true }
+ *     cssClasses: { "g-col": true, "g-col-sat": true, "g-col-future": true, "g-col-selected": true }
  *   },
  *   {
  *     date: "2025-08-10",
  *     dayOfWeek: "sun",
  *     isHoliday: false,
+ *     isSelected: false,
  *     dateLabel: "8/10",
  *     dayOfWeekJp: "日",
  *     cssClasses: { "g-col": true, "g-col-sun": true, "g-col-future": true }
@@ -70,7 +100,7 @@ const columns = computed(() => {
     const date = dateAt.format("YYYY-MM-DD");
     result.push({
       date,
-      ...getDayInfo(dateAt),
+      ...getDayInfo({ date: dateAt, selectedDates: selectedDates.value }),
     });
   }
   return result;
@@ -97,6 +127,7 @@ const columns = computed(() => {
  *           date: "2025-08-08",
  *           dayOfWeek: "fri",
  *           isHoliday: false,
+ *           isSelected: false,
  *           dateLabel: "8/8",
  *           dayOfWeekJp: "金",
  *           cssClasses: { "g-col": true, "g-col-fri": true, "g-col-today": true }
@@ -111,9 +142,10 @@ const columns = computed(() => {
  *           date: "2025-08-09",
  *           dayOfWeek: "sat",
  *           isHoliday: false,
+ *           isSelected: true,
  *           dateLabel: "8/9",
  *           dayOfWeekJp: "土",
- *           cssClasses: { "g-col": true, "g-col-sat": true, "g-col-future": true }
+ *           cssClasses: { "g-col": true, "g-col-sat": true, "g-col-future": true, "g-col-selected": true }
  *         }
  *       }
  *     ]
@@ -129,7 +161,7 @@ const matrix = computed(() => {
         siteId,
         shiftType,
         date: column.date,
-        dayInfo: column, // Date information (day of week, holiday check, CSS classes, etc.)
+        dayInfo: column, // Date information (day of week, holiday check, CSS classes, selection state, etc.)
       };
     });
     return {
@@ -150,11 +182,21 @@ const matrix = computed(() => {
           <!--
             header-cell slot
             For displaying date information in the header cell.
-            { date, dayOfWeekJp, isHoliday, dateLabel, dayOfWeekJp, cssClasses }
+            { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
           -->
           <slot name="header-cell" v-bind="col">
-            <AtomsIconsHolidayFlag v-if="col.isHoliday" class="mr-1" />
-            <span>{{ `${col.dateLabel}(${col.dayOfWeekJp})` }}</span>
+            <v-btn-toggle
+              v-model="selectedDates"
+              color="info"
+              multiple
+              density="compact"
+              variant="text"
+            >
+              <v-btn :value="col.date">
+                <AtomsIconsHolidayFlag v-if="col.isHoliday" class="mr-1" />
+                {{ `${col.dateLabel}(${col.dayOfWeekJp})` }}
+              </v-btn>
+            </v-btn-toggle>
           </slot>
         </th>
       </tr>
@@ -172,10 +214,10 @@ const matrix = computed(() => {
             <td class="site-row" :colspan="columns.length">
               <div class="fixed-left">
                 <!--
-                site-row slot
-                For displaying site information in the row header.
-                { key, siteId, shiftType, cells }
-              -->
+                  site-row slot
+                  For displaying site information in the row header.
+                  { key, siteId, shiftType, cells }
+                -->
                 <slot name="site-row" v-bind="order" />
               </div>
             </td>
@@ -187,10 +229,11 @@ const matrix = computed(() => {
               :class="cell.dayInfo.cssClasses"
             >
               <!--
-              body-cell slot
-              For displaying the body cell content.
-              { key, siteId, shiftType, date, dayInfo }
-            -->
+                body-cell slot
+                For displaying the body cell content.
+                { key, siteId, shiftType, date, dayInfo }
+                dayInfo contains: { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
+              -->
               <slot name="body-cell" v-bind="cell" />
             </td>
           </tr>
@@ -203,7 +246,7 @@ const matrix = computed(() => {
           <!--
             footer-cell slot
             For displaying footer cell content.
-            { date, dayOfWeekJp, isHoliday, dateLabel, dayOfWeekJp, cssClasses }
+            { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
           -->
           <slot name="footer-cell" v-bind="col" />
         </th>
@@ -293,5 +336,10 @@ tr.g-row.g-row-no-hover:hover {
   position: sticky;
   left: 16px;
   z-index: 1 !important;
+}
+
+/* 選択中の列を強調 */
+.g-col-selected {
+  box-shadow: inset 0 0 0 4px #1976d2 !important;
 }
 </style>

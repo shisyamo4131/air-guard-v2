@@ -19,6 +19,10 @@ import { useFetchOutsourcer as internalUseFetchOutsourcer } from "@/composables/
 import { useFetchSite as internalUseFetchSite } from "@/composables/fetch/useFetchSite";
 import { useDateRange } from "@/composables/useDateRange";
 import { runTransaction } from "firebase/firestore";
+import {
+  SHIFT_TYPE_DAY,
+  SHIFT_TYPE_NIGHT,
+} from "air-guard-v2-schemas/constants";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED_WARNING =
@@ -344,6 +348,38 @@ export function useSiteOperationSchedulesManager({
     return result;
   });
 
+  /**
+   * A map of employees who are scheduled on each date.
+   */
+  const arrangedEmployeesMap = Vue.computed(() => {
+    const from = dateRangeComposable.startDate.value;
+    const dayCount = dateRangeComposable.currentDayCount.value;
+    const result = {};
+
+    const getEmployeeIds = (dateStr, shiftType = null) => {
+      const targetSchedules = localDocs.value.filter(
+        (schedule) =>
+          schedule.date === dateStr &&
+          (shiftType ? schedule.shiftType === shiftType : true)
+      );
+      return Array.from(
+        new Set(
+          targetSchedules.flatMap((schedule) => schedule.employeeIds || [])
+        )
+      );
+    };
+
+    for (let i = 0; i < dayCount; i++) {
+      const dateStr = dayjs(from).add(i, "day").format("YYYY-MM-DD");
+      result[dateStr] = {
+        allDay: getEmployeeIds(dateStr),
+        day: getEmployeeIds(dateStr, SHIFT_TYPE_DAY),
+        night: getEmployeeIds(dateStr, SHIFT_TYPE_NIGHT),
+      };
+    }
+    return result;
+  });
+
   const statistics = Vue.computed(() => {
     const from = dateRangeComposable.startDate.value;
     const to = dateRangeComposable.endDate.value;
@@ -357,7 +393,13 @@ export function useSiteOperationSchedulesManager({
         .reduce((sum, schedule) => sum + (schedule.requiredPersonnel || 0), 0);
     }
 
-    return { from, to, dayCount, requiredPersonnel };
+    return {
+      from,
+      to,
+      dayCount,
+      requiredPersonnel,
+      arrangedEmployeesMap: arrangedEmployeesMap.value,
+    };
   });
 
   return {

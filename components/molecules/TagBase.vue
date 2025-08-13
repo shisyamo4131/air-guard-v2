@@ -11,7 +11,7 @@
  * @props {Boolean} removable - Displays clear button and emits `remove` event when clicked.
  * @props {String} removeIcon - Icon for the remove button.
  * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
- * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
+ * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error', 'disabled').
  *
  * @slots
  * - prepend-label: Content before the label.
@@ -63,7 +63,7 @@ const props = defineProps({
     type: String,
     default: "default",
     validator: (value) =>
-      ["default", "success", "warning", "error"].includes(value),
+      ["default", "success", "warning", "error", "disabled"].includes(value),
   },
 });
 
@@ -268,6 +268,22 @@ function handleClickRemove(event) {
   border-color: #f44336 !important;
 }
 
+/* 追加: disabled variant */
+.tag-base--disabled {
+  background-color: rgba(158, 158, 158, 0.1) !important;
+  border-color: #9e9e9e !important;
+  opacity: 0.6 !important;
+  color: #9e9e9e !important;
+}
+
+.tag-base--disabled .tag-base__title {
+  color: #9e9e9e !important;
+}
+
+.tag-base--disabled .v-icon {
+  color: #9e9e9e !important;
+}
+
 /* Highlighted state */
 .tag-base--highlighted {
   background-color: rgba(255, 193, 7, 0.3) !important;
@@ -309,6 +325,21 @@ function handleClickRemove(event) {
 
   .tag-base--error {
     background-color: rgba(244, 67, 54, 0.2) !important;
+  }
+
+  /* 追加: disabled variant for dark theme */
+  .tag-base--disabled {
+    background-color: rgba(97, 97, 97, 0.2) !important;
+    border-color: #616161 !important;
+    color: #616161 !important;
+  }
+
+  .tag-base--disabled .tag-base__title {
+    color: #616161 !important;
+  }
+
+  .tag-base--disabled .v-icon {
+    color: #616161 !important;
   }
 }
 
