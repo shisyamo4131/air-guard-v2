@@ -1,3 +1,11 @@
-<script setup></script>
+<script setup>
+import { SiteOperationSchedule } from "@/schemas";
 
-<template></template>
+const model = reactive(new SiteOperationSchedule());
+</script>
+
+<template>
+  <v-container>
+    {{ model }}
+  </v-container>
+</template>

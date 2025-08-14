@@ -7,6 +7,7 @@ import { useWorkersList } from "@/composables/useWorkersList";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 
 /*****************************************************************************
@@ -57,6 +58,8 @@ const {
   itemManagerAttrs,
   replaceDocs,
 } = managerComposable;
+
+const duplicator = useSiteOperationScheduleDuplicator();
 
 /*****************************************************************************
  * LIFE CYCLE HOOKS
@@ -144,6 +147,7 @@ onMounted(() => {
               v-bind="draggableSiteOperationScheduleProps"
               class="mb-2"
               @click:edit="toUpdateSchedule"
+              @click:duplicate="duplicator.set($event)"
             >
               <template #default="scheduleTagProps">
                 <MoleculesDraggableWorkers v-bind="scheduleTagProps">
@@ -180,6 +184,9 @@ onMounted(() => {
         />
       </template>
     </ItemManager>
+
+    <!-- スケジュール複製ダイアログ -->
+    <OrganismsSiteOperationScheduleDuplicator v-bind="duplicator" />
   </div>
 </template>
 

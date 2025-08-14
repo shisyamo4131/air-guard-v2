@@ -172,7 +172,6 @@ async function handleUpdateDetailStatus({ worker, status }) {
     >
       <!-- 複製ボタンはとりあえず用意 -->
       <v-btn
-        disabled
         variant="tonal"
         size="x-small"
         @click="emit('click:duplicate', schedule)"
