@@ -90,6 +90,7 @@ const handleWorkersClick = (event) => {
         v-model="tagSize"
         class="mr-3"
         density="compact"
+        mandatory
         variant="text"
       >
         <v-btn value="small">小</v-btn>
