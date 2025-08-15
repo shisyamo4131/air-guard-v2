@@ -7,7 +7,6 @@ import { useWorkersList } from "@/composables/useWorkersList";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
-import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 
 /*****************************************************************************
@@ -15,6 +14,8 @@ import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
  *****************************************************************************/
 /** define template refs */
 const scheduleManager = useTemplateRef("scheduleManager");
+const duplicator = useTemplateRef("duplicator");
+
 const tagSize = ref("medium");
 
 const selectedDate = ref(null);
@@ -58,8 +59,6 @@ const {
   itemManagerAttrs,
   replaceDocs,
 } = managerComposable;
-
-const duplicator = useSiteOperationScheduleDuplicator();
 
 /*****************************************************************************
  * LIFE CYCLE HOOKS
@@ -186,7 +185,7 @@ onMounted(() => {
     </ItemManager>
 
     <!-- スケジュール複製ダイアログ -->
-    <OrganismsSiteOperationScheduleDuplicator v-bind="duplicator" />
+    <OrganismsSiteOperationScheduleDuplicator ref="duplicator" />
   </div>
 </template>
 

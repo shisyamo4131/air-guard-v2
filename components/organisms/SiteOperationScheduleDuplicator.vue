@@ -2,45 +2,111 @@
 /**
  * @file components/organisms/SiteOperationScheduleDuplicator.vue
  * @description A component for duplicating site operation schedules.
- * - Use this component with `useSiteOperationScheduleDuplicator` composable.
+ * - Use `set` method with the schedule to duplicate.
  */
+import dayjs from "dayjs";
+import { useLogger } from "@/composables/useLogger";
+import { useLoadingsStore } from "../stores/useLoadingsStore";
+import { SiteOperationSchedule } from "@/schemas";
 
-/** define props */
-const props = defineProps({
-  dates: { type: Array, default: () => [] },
-  loading: { type: Boolean, default: false },
-  pickerProps: { type: Object, default: () => ({}) },
-});
+/** define refs */
+const schedule = ref(null);
+const dates = ref([]);
+const isLoading = ref(false);
 
-/** define emits */
-const emit = defineEmits(["update:dates", "click:cancel", "click:submit"]);
+/***************************************************************************
+ * DEFINE COMPOSABLES / STORES
+ ***************************************************************************/
+const logger = useLogger();
+const loadingsStore = useLoadingsStore();
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const computedDates = computed({
-  get: () => props.dates,
-  set: (v) => emit("update:dates", v),
-});
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * Returns whether the given date is allowed for duplication.
+ * @param date
+ */
+function allowedDates(date) {
+  if (!schedule.value) return true;
+  return dayjs(date).format("YYYY-MM-DD") !== schedule.value.date;
+}
+
+/**
+ * Duplicate the schedule for the selected dates.
+ */
+async function duplicate() {
+  logger.clearError();
+  const loadingKey = loadingsStore.add({ text: "Duplicating schedule..." });
+  isLoading.value = true;
+
+  try {
+    await schedule.value.duplicate(dates.value);
+    schedule.value = null;
+  } catch (error) {
+    logger.error({
+      sender,
+      message: error.message,
+      error,
+      args: { schedule: schedule.value },
+    });
+  } finally {
+    isLoading.value = false;
+    loadingsStore.remove(loadingKey);
+  }
+}
+
+/**
+ * Initialize states of this component.
+ */
+function initialize() {
+  schedule.value = null;
+  dates.value = [];
+}
+
+/**
+ * Set the schedule object which will be duplicated.
+ * @param {SiteOperationSchedule} obj
+ */
+function set(obj) {
+  try {
+    const instance = isProxy(obj) ? toRaw(obj) : obj;
+    if (!(instance instanceof SiteOperationSchedule)) {
+      throw new Error("Invalid schedule object");
+    }
+    schedule.value = obj;
+  } catch (error) {
+    logger.error({ sender, message: error.message, error, args: obj });
+  }
+}
+
+defineExpose({ set });
 </script>
 
 <template>
-  <v-dialog width="auto">
+  <v-dialog
+    :model-value="!!schedule"
+    width="auto"
+    persistent
+    @update:model-value="initialize"
+  >
     <v-card>
       <v-date-picker
-        v-model="computedDates"
-        v-bind="pickerProps"
+        v-model="dates"
+        :allowed-dates="allowedDates"
         hide-header
         multiple
       />
       <v-card-actions>
-        <v-btn :disabled="loading" @click="emit('click:cancel')"
-          >キャンセル</v-btn
-        >
+        <v-btn :disabled="isLoading" @click="initialize">キャンセル</v-btn>
         <v-btn
-          :disabled="computedDates.length === 0 || loading"
-          :loading="loading"
-          @click="emit('click:submit')"
+          :disabled="dates.length === 0 || isLoading"
+          :loading="isLoading"
+          @click="duplicate"
           >複製</v-btn
         >
       </v-card-actions>
