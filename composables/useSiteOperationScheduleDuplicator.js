@@ -70,7 +70,7 @@ export function useSiteOperationScheduleDuplicator() {
    */
   const duplicate = async () => {
     logger.clearError();
-    loadingStore.add({ key: "duplicate", text: "Duplicating schedule..." });
+    const loadingKey = loadingStore.add({ text: "Duplicating schedule..." });
     isLoading.value = true;
 
     try {
@@ -98,7 +98,7 @@ export function useSiteOperationScheduleDuplicator() {
       logger.error({ sender, message: error.message, error });
     } finally {
       isLoading.value = false;
-      loadingStore.remove("duplicate");
+      loadingStore.remove(loadingKey);
     }
   };
 
