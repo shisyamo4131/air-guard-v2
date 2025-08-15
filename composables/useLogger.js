@@ -20,16 +20,19 @@ export function useLogger() {
    * @param {Error | any} [param0.error] - An optional error object, recorded if `type` is `"error"`.
    *                                       省略可能なエラーオブジェクト。`type` が `"error"` の場合に記録されます。
    */
-  function send({ type, sender, message, error }) {
+  function send({ type = "log", sender = "", message = "", error, args }) {
     const validTypes = ["log", "info", "warn", "error"];
-    if (!validTypes.includes(type)) {
-      console.warn(`Invalid log type: ${type}. Defaulting to "log".`);
-      type = "log";
+    const logType = validTypes.includes(type) ? type : "log";
+    const prefix = sender ? `[${sender}] ` : "";
+    const output = `${prefix}${message}`;
+
+    if (args) {
+      console[logType](output, args);
+    } else {
+      console[logType](output);
     }
 
-    console[type](`${sender ? "[" + sender + "]" : ""} ${message}`);
-
-    if (type === "error" && error) {
+    if (logType === "error" && error) {
       errors.add(error);
     }
   }
@@ -45,8 +48,8 @@ export function useLogger() {
     log: ({ sender, message }) => send({ type: "log", sender, message }),
     info: ({ sender, message }) => send({ type: "info", sender, message }),
     warn: ({ sender, message }) => send({ type: "warn", sender, message }),
-    error: ({ sender, message, error }) =>
-      send({ type: "error", sender, message, error }),
+    error: ({ sender, message, error, args }) =>
+      send({ type: "error", sender, message, error, args }),
     clearError,
   };
 }
