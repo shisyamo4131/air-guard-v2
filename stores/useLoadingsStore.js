@@ -16,13 +16,21 @@ export const useLoadingsStore = defineStore("loadings", () => {
   /**
    * メッセージをキューに追加します。
    * Add a message to the queue.
-   * @param {{ key: string, text: string }} message - 表示するメッセージオブジェクト / Message object to be displayed
+   * @param {{ key?: string, text: string }} message - 表示するメッセージオブジェクト / Message object to be displayed
+   * @returns {string} - 追加されたメッセージのキー / Key of the added message
    */
   function add(message) {
-    if (!message?.key || !message?.text) return;
-    if (!queue.value.find((q) => q.key === message.key)) {
-      queue.value.push(message);
+    if (!message?.text) return null;
+
+    // keyが指定されていない場合は乱数で生成
+    // Generate random key if not specified
+    const key = message.key || Math.random().toString(36).substr(2, 9);
+
+    if (!queue.value.find((q) => q.key === key)) {
+      queue.value.push({ key, text: message.text });
     }
+
+    return key;
   }
 
   /**
