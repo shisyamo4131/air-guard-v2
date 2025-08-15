@@ -24,7 +24,7 @@ export const useLoadingsStore = defineStore("loadings", () => {
 
     // keyが指定されていない場合は乱数で生成
     // Generate random key if not specified
-    const key = message.key || Math.random().toString(36).substr(2, 9);
+    const key = message.key || Math.random().toString(36).slice(2, 11);
 
     if (!queue.value.find((q) => q.key === key)) {
       queue.value.push({ key, text: message.text });
