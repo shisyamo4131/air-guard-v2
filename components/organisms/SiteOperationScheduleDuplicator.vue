@@ -94,22 +94,20 @@ defineExpose({ set });
     persistent
     @update:model-value="initialize"
   >
-    <v-card>
+    <MoleculesCardSubmitCancel
+      :disableCancel="isLoading"
+      :disableSubmit="dates.length === 0 || isLoading"
+      :loading="isLoading"
+      submit-text="複製"
+      @click:cancel="initialize"
+      @click:submit="duplicate"
+    >
       <v-date-picker
         v-model="dates"
         :allowed-dates="allowedDates"
         hide-header
         multiple
       />
-      <v-card-actions>
-        <v-btn :disabled="isLoading" @click="initialize">キャンセル</v-btn>
-        <v-btn
-          :disabled="dates.length === 0 || isLoading"
-          :loading="isLoading"
-          @click="duplicate"
-          >複製</v-btn
-        >
-      </v-card-actions>
-    </v-card>
+    </MoleculesCardSubmitCancel>
   </v-dialog>
 </template>
