@@ -74,25 +74,7 @@ export function useSiteOperationScheduleDuplicator() {
     isLoading.value = true;
 
     try {
-      if (!schedule.value || typeof schedule.value !== "object") {
-        throw new Error("Invalid schedule object");
-      }
-
-      if (!Array.isArray(dates.value) || dates.value.length === 0) {
-        throw new Error("Invalid dates array");
-      }
-
-      if (dates.value.length > 20) {
-        throw new Error(
-          "Too many dates selected. Please select up to 20 dates."
-        );
-      }
-
-      // Skip the original date when duplicating
-      dates.value = dates.value.filter((date) => date !== schedule.value.date);
-
       await schedule.value.duplicate(dates.value);
-
       schedule.value = null;
     } catch (error) {
       logger.error({ sender, message: error.message, error });
