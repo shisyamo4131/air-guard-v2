@@ -91,7 +91,7 @@ export function useSiteOperationSchedulesManager({
    * @param {string} shiftType - Shift type
    * @param {string} date - Date (YYYY-MM-DD format)
    */
-  const replaceDocs = async (newSchedules, siteId, shiftType, date) => {
+  const optimisticUpdates = async (newSchedules, siteId, shiftType, date) => {
     // Filter out schedules that match the specified siteId, shiftType, and date
     const filteredSchedules = localDocs.value.filter((schedule) => {
       return !(
@@ -190,7 +190,7 @@ export function useSiteOperationSchedulesManager({
     keyMappedDocs: keyMappedDocs,
 
     // METHODS
-    replaceDocs,
+    optimisticUpdates,
 
     // Methods for managing schedules provided by the manager.
     toCreate: (schedule) => manager?.value?.toCreate?.(schedule),

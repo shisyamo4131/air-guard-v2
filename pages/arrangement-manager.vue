@@ -67,7 +67,7 @@ const managerComposable = useSiteOperationSchedulesManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, keyMappedDocs, toCreate, toUpdate, replaceDocs } =
+const { statistics, keyMappedDocs, toCreate, toUpdate, optimisticUpdates } =
   managerComposable;
 
 /*****************************************************************************
@@ -165,7 +165,9 @@ onMounted(() => {
           :site-id="siteId"
           :shift-type="shiftType"
           :date="date"
-          @update:model-value="replaceDocs($event, siteId, shiftType, date)"
+          @update:model-value="
+            optimisticUpdates($event, siteId, shiftType, date)
+          "
         >
           <template #default="draggableSiteOperationScheduleProps">
             <ArrangementsScheduleTag
