@@ -163,10 +163,6 @@ export function useArrangementManager({
     return result;
   });
 
-  const events = Vue.computed(() => {
-    return localDocs.value.map((doc) => doc.toEvent());
-  });
-
   const statistics = Vue.computed(() => {
     const requiredPersonnel = localDocs.value.reduce((acc, schedule) => {
       if (!acc[schedule.date]) acc[schedule.date] = 0;
@@ -182,12 +178,8 @@ export function useArrangementManager({
 
   return {
     // data
-    docs: localDocs,
-    events: events,
+    docs: keyMappedDocs, // Mapped schedules grouped by key (siteId-shiftType-date).
     statistics,
-
-    // Mapped schedules grouped by key (siteId-shiftType-date).
-    keyMappedDocs: keyMappedDocs,
 
     // METHODS
     optimisticUpdates,

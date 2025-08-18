@@ -67,7 +67,7 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, keyMappedDocs, toCreate, toUpdate, optimisticUpdates } =
+const { statistics, docs, toCreate, toUpdate, optimisticUpdates } =
   managerComposable;
 
 /*****************************************************************************
@@ -161,7 +161,7 @@ onMounted(() => {
       <!-- cell -->
       <template #body-cell="{ key, siteId, shiftType, date }">
         <MoleculesDraggableSiteOperationSchedule
-          :model-value="keyMappedDocs[key] || []"
+          :model-value="docs[key] || []"
           :site-id="siteId"
           :shift-type="shiftType"
           :date="date"
