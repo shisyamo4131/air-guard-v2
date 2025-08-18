@@ -17,7 +17,7 @@ const isLoading = ref(false);
 /***************************************************************************
  * DEFINE COMPOSABLES / STORES
  ***************************************************************************/
-const logger = useLogger();
+const logger = useLogger("SiteOperationScheduleDuplicator");
 const loadingsStore = useLoadingsStore();
 
 /*****************************************************************************
@@ -49,10 +49,9 @@ async function duplicate() {
     schedule.value = null;
   } catch (error) {
     logger.error({
-      sender,
       message: error.message,
       error,
-      args: { schedule: schedule.value },
+      data: { schedule: schedule.value },
     });
   } finally {
     isLoading.value = false;
@@ -80,7 +79,7 @@ function set(obj) {
     }
     schedule.value = obj;
   } catch (error) {
-    logger.error({ sender, message: error.message, error, args: obj });
+    logger.error({ message: error.message, error, data: obj });
   }
 }
 

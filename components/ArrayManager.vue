@@ -6,7 +6,7 @@
  *              - AirArrayManager で発生したエラーに関する処理を定義しています。
  */
 import { useLogger } from "../composables/useLogger";
-const logger = useLogger();
+const logger = useLogger("ArrayManager");
 
 defineOptions({ name: "ArrayManager" });
 
@@ -25,12 +25,9 @@ const props = defineProps({
   },
 });
 
-const sender = "ArrayManager.vue";
-
 /** useLogger を使用してエラーログを出力する関数 */
 function pushError(error) {
   logger.error({
-    sender,
     message: error.message,
     error,
   });

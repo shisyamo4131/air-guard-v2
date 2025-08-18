@@ -32,7 +32,7 @@ export const ErrorSeverity = {
  * 統一エラーハンドリングコンポーザブル
  */
 export function useErrorHandler(context = "Unknown") {
-  const logger = useLogger();
+  const logger = useLogger(context);
 
   /**
    * エラーを分類する
@@ -232,17 +232,14 @@ export function useErrorHandler(context = "Unknown") {
 
     if (severity === ErrorSeverity.LOW) {
       logger.info({
-        sender: context,
         message: logMessage,
       });
     } else if (severity === ErrorSeverity.MEDIUM) {
       logger.warn({
-        sender: context,
         message: logMessage,
       });
     } else {
       logger.error({
-        sender: context,
         message: logMessage,
         error,
       });
@@ -309,7 +306,6 @@ export function useErrorHandler(context = "Unknown") {
         // リトライ可能かチェック
         if (attemptCount < maxAttempts && errorResult.recovery.canRetry) {
           logger.warn({
-            sender: context,
             message: `${operation}が失敗。${errorResult.recovery.retryDelay}ms後に再試行します（${attemptCount}/${maxAttempts}）`,
           });
 

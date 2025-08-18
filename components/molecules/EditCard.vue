@@ -1,8 +1,12 @@
 <script setup>
+/**
+ * @file components/molecules/EditCard.vue
+ * @description A wrapper component for AirEditCard with custom slots.
+ */
 import { useLogger } from "~/composables/useLogger";
 
 // --- ストア / コンポーザブル
-const logger = useLogger();
+const logger = useLogger("MoleculesEditCard");
 </script>
 
 <template>

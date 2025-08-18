@@ -6,8 +6,6 @@ import {
 import { httpsCallable } from "firebase/functions";
 import { Company } from "@/schemas";
 
-const sender = "useAuthStore.js";
-
 /**
  * 認証機能とサインイン中のユーザー情報を提供するストア。
  * - `signIn`: Firebase Authentication によるサインインを行う
@@ -22,7 +20,7 @@ const sender = "useAuthStore.js";
  * - `clearUser`: Clears stored user data.
  */
 export const useAuthStore = defineStore("auth", () => {
-  const logger = useLogger();
+  const logger = useLogger("useAuthStore");
   const errors = useErrorsStore();
   const { add, remove } = useLoadingsStore();
   const messages = useMessagesStore();
@@ -84,12 +82,11 @@ export const useAuthStore = defineStore("auth", () => {
   function clearUser() {
     // Clear uset state.
     _clearUserState();
-    logger.info({ sender, message: "User information is cleared." });
+    logger.info({ message: "User information is cleared." });
 
     // Unsubscribe to company data.
     _initCompany();
     logger.info({
-      sender,
       message:
         "Unsubscribed from company data and initialized company instance.",
     });
@@ -127,7 +124,6 @@ export const useAuthStore = defineStore("auth", () => {
       // Note: In this case, clearUser is expected to be handled by the caller in onAuthStateChanged
       if (!user) {
         logger.info({
-          sender,
           message: "setUser called with null user. Skipping state update.",
         });
         // null ユーザーの場合、状態はクリアされているはずなので、ここでは何もしない
@@ -152,7 +148,6 @@ export const useAuthStore = defineStore("auth", () => {
       _setUserState(user, idTokenResult);
 
       logger.info({
-        sender,
         message: `User state updated for UID: ${user.uid}`,
       });
 
@@ -161,7 +156,6 @@ export const useAuthStore = defineStore("auth", () => {
       if (companyId.value) {
         company.value.subscribe({ docId: companyId.value });
         logger.info({
-          sender,
           message: `Subscribing for company data: ${companyId.value}`,
         });
       }
@@ -169,7 +163,6 @@ export const useAuthStore = defineStore("auth", () => {
       // エラー発生時の処理
       // Error handling process.
       logger.error({
-        sender,
         message: `Failed to set user: ${error.message}`,
         error,
       });
@@ -232,12 +225,11 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 成功ログを記録
       // Log success
-      logger.info({ sender, message: "Signed in successfully." });
+      logger.info({ message: "Signed in successfully." });
     } catch (error) {
       // エラーログを記録
       // Log the error
       logger.error({
-        sender,
         message: `Sign-in failed: ${error.message}`,
         error,
       });
@@ -279,11 +271,10 @@ export const useAuthStore = defineStore("auth", () => {
       messages.add({ text: "サインアウトしました", color: "success" }); // Signed out successfully
 
       // 成功ログを記録 / Log success
-      logger.info({ sender, message: "Signed out successfully." });
+      logger.info({ message: "Signed out successfully." });
     } catch (error) {
       // エラーログを記録 / Log the error
       logger.error({
-        sender,
         message: `Sign-out failed: ${error.message}`,
         error,
       });
@@ -342,7 +333,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 成功ログを記録 / Log success
       logger.info({
-        sender,
         message: `Account created successfully for ${email}`,
       });
 
@@ -351,7 +341,6 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       // エラーログを記録 / Log the error
       logger.error({
-        sender,
         message: `Sign-up failed: ${error.message}`,
         error,
       });
@@ -402,7 +391,7 @@ export const useAuthStore = defineStore("auth", () => {
         // タイムアウト処理を設定 / Set up the timeout
         timeoutId = setTimeout(() => {
           const message = `waitUntilReady timed out after ${timeoutMs}ms.`;
-          logger.warn({ sender, message }); // タイムアウトを警告ログに記録 / Log timeout as a warning
+          logger.warn({ message }); // タイムアウトを警告ログに記録 / Log timeout as a warning
           reject(new Error(message)); // タイムアウトしたら Promise を reject / Reject the promise on timeout
         }, timeoutMs);
       });
@@ -506,7 +495,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 成功ログを記録 / Log success
       logger.info({
-        sender,
         message: `管理者ユーザー「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
       });
 
@@ -524,7 +512,6 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       // エラーログを記録 / Log the error
       logger.error({
-        sender,
         // Cloud Functions からのエラーメッセージがあればそれを使用、なければフォールバック / Use error message from Cloud Functions if available, otherwise fallback
         message: `Failed to create user with company: ${
           error.message || "An unknown error occurred during user creation."
@@ -598,7 +585,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 成功ログを記録 / Log success
       logger.info({
-        sender,
         message: `ユーザーアカウント「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
       });
 
@@ -613,7 +599,6 @@ export const useAuthStore = defineStore("auth", () => {
     } catch (error) {
       // エラーログを記録 / Log the error
       logger.error({
-        sender,
         // Cloud Functions からのエラーメッセージがあればそれを使用、なければフォールバック / Use error message from Cloud Functions if available, otherwise fallback
         message: `Failed to create user in company: ${
           error.message || "An unknown error occurred during user creation."
@@ -650,7 +635,6 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       logger.info({
-        sender,
         message: `ユーザーアカウント ${uid} を無効化しました。`,
       });
 
@@ -662,7 +646,6 @@ export const useAuthStore = defineStore("auth", () => {
       return { success: true };
     } catch (error) {
       logger.error({
-        sender,
         message: `Failed to disable user ${uid}: ${
           error.message || "An unknown error occurred."
         }`,
@@ -695,7 +678,6 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       logger.info({
-        sender,
         message: `ユーザーアカウント ${uid} を有効化しました。`,
       });
 
@@ -707,7 +689,6 @@ export const useAuthStore = defineStore("auth", () => {
       return { success: true };
     } catch (error) {
       logger.error({
-        sender,
         message: `Failed to enable user ${uid}: ${
           error.message || "An unknown error occurred."
         }`,

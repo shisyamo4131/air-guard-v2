@@ -6,8 +6,7 @@ import { useLogger } from "@/composables/useLogger";
 export function useSiteOrder({ fetchSiteComposable }) {
   /** define composable */
   const { company } = useAuthStore();
-  const logger = useLogger();
-  const sender = "useSiteOrder";
+  const logger = useLogger("useSiteOrder");
 
   /** define refs */
   const order = Vue.ref([]);
@@ -33,7 +32,7 @@ export function useSiteOrder({ fetchSiteComposable }) {
       const newOrderInstance = new SiteOrder({ siteId, shiftType });
       company.addSiteOrder(newOrderInstance, index);
     } catch (error) {
-      logger.error({ sender, message: error.message, error });
+      logger.error({ message: error.message, error });
     }
   }
 
@@ -42,7 +41,7 @@ export function useSiteOrder({ fetchSiteComposable }) {
     try {
       company.changeSiteOrder(oldIndex, newIndex);
     } catch (error) {
-      logger.error({ sender, message: error.message, error });
+      logger.error({ message: error.message, error });
     }
   }
 
@@ -51,7 +50,7 @@ export function useSiteOrder({ fetchSiteComposable }) {
     try {
       company.removeSiteOrder(key);
     } catch (error) {
-      logger.error({ sender, message: error.message, error });
+      logger.error({ message: error.message, error });
     }
   }
 

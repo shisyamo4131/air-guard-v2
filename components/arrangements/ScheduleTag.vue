@@ -34,7 +34,7 @@ const props = defineProps({
 const emit = defineEmits(["click:edit", "click:duplicate"]);
 
 /** define composables */
-const logger = useLogger();
+const logger = useLogger("ScheduleTag");
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -83,7 +83,7 @@ async function handleChangeWorkers(event) {
       await handleWorkerMoved(event.moved);
     }
   } catch (error) {
-    logger.error({ sender: "handleChange", message: error.message, error });
+    logger.error({ message: error.message, error });
   }
 }
 

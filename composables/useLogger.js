@@ -1,36 +1,25 @@
 /**
- * アプリケーションからログを出力するためのコンポーザブル。
- * - `log`, `info`, `warn`, `error` メソッドを使用することで各種対応するログをコンソールに出力します。
- * - `error` の場合、`errorsStore` にエラーオブジェクトを格納します。
- * - `clearError` メソッドによって `errorsStore` のエラーを初期化することが可能です。
+ * @file composables/useLogger.js
+ * @description A composable for logging messages in the application.
  */
-export function useLogger() {
+export function useLogger(sender) {
   const errors = useErrorsStore();
 
   /**
-   * メッセージをコンソールに出力し、`type` が `"error"` の場合は `errors` にエラーを追加します。
-   *
+   * Send a log message to the console.
    * @param {Object} params - The log details.
    * @param {("log" | "info" | "warn" | "error")} params.type - The type of console output.
-   *                                                           出力するログの種類（"log" | "info" | "warn" | "error"）。
-   * @param {?string} params.sender - Optional sender identifier.
-   *                                   省略可能な送信者の識別名。
    * @param {string} params.message - The message to be logged.
-   *                                  出力するメッセージ。
    * @param {Error | any} [param0.error] - An optional error object, recorded if `type` is `"error"`.
-   *                                       省略可能なエラーオブジェクト。`type` が `"error"` の場合に記録されます。
+   * @param {any} [params.data] - Additional data to log.
    */
-  function send({ type = "log", sender = "", message = "", error, args }) {
+  function send({ type = "log", message = "", error, data }) {
     const validTypes = ["log", "info", "warn", "error"];
     const logType = validTypes.includes(type) ? type : "log";
     const prefix = sender ? `[${sender}] ` : "";
     const output = `${prefix}${message}`;
 
-    if (args) {
-      console[logType](output, args);
-    } else {
-      console[logType](output);
-    }
+    console[logType](output, ...(data ? [data] : []));
 
     if (logType === "error" && error) {
       errors.add(error);
@@ -38,18 +27,18 @@ export function useLogger() {
   }
 
   /**
-   * エラー管理ストアのエラーを初期化します。
+   * Clear all errors from the error management store.
    */
   function clearError() {
     errors.clear();
   }
 
   return {
-    log: ({ sender, message }) => send({ type: "log", sender, message }),
-    info: ({ sender, message }) => send({ type: "info", sender, message }),
-    warn: ({ sender, message }) => send({ type: "warn", sender, message }),
-    error: ({ sender, message, error, args }) =>
-      send({ type: "error", sender, message, error, args }),
+    log: ({ message, data }) => send({ type: "log", message, data }),
+    info: ({ message, data }) => send({ type: "info", message, data }),
+    warn: ({ message, data }) => send({ type: "warn", message, data }),
+    error: ({ message, error, data }) =>
+      send({ type: "error", message, error, data }),
     clearError,
   };
 }

@@ -29,8 +29,7 @@ export function useSiteOperationSchedulesManager({
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
-  const logger = useLogger();
-  const sender = "useSiteOperationSchedulesManager";
+  const logger = useLogger("useSiteOperationSchedulesManager");
   const { isValidDate } = useDateUtil();
 
   /***************************************************************************
@@ -39,7 +38,7 @@ export function useSiteOperationSchedulesManager({
   const validatedManager = Vue.computed(() => {
     const val = Vue.toValue(manager);
     if (!val) {
-      logger.warn({ sender, message: MANAGER_NOT_PROVIDED });
+      logger.warn({ message: MANAGER_NOT_PROVIDED });
       return null;
     }
     return val;
@@ -48,7 +47,7 @@ export function useSiteOperationSchedulesManager({
   const validatedSiteId = Vue.computed(() => {
     const val = Vue.toValue(siteId);
     if (!val || !(typeof val === "string")) {
-      logger.warn({ sender, message: INVALID_SITE_ID });
+      logger.warn({ message: INVALID_SITE_ID });
       return null;
     }
     return val;
@@ -57,12 +56,12 @@ export function useSiteOperationSchedulesManager({
   const validatedDateRange = Vue.computed(() => {
     const val = Vue.toValue(dateRange);
     if (!val || typeof val !== "object") {
-      logger.warn({ sender, message: INVALID_DATE_RANGE });
+      logger.warn({ message: INVALID_DATE_RANGE });
       return null;
     }
     const { from, to } = val;
     if (!from || !isValidDate(from) || !to || !isValidDate(to)) {
-      logger.warn({ sender, message: INVALID_DATE_RANGE, data: val });
+      logger.warn({ message: INVALID_DATE_RANGE, data: val });
       return null;
     }
     return val;
@@ -94,9 +93,8 @@ export function useSiteOperationSchedulesManager({
       if (!validatedSiteId.value || !validatedDateRange.value) {
         docs.value = [];
         logger.warn({
-          sender,
           message: "Invalid siteId or dateRange",
-          args: {
+          data: {
             siteId: validatedSiteId.value,
             dateRange: validatedDateRange.value,
           },
@@ -113,7 +111,6 @@ export function useSiteOperationSchedulesManager({
       });
     } catch (error) {
       logger.error({
-        sender,
         message: "Failed to subscribe to documents",
         error,
       });

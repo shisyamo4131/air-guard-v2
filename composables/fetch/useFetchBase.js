@@ -23,7 +23,7 @@ export function useFetchBase({
   entityName,
   idProperties = ["docId"],
 }) {
-  const logger = useLogger();
+  const logger = useLogger(`useFetch${entityName}`);
   /** @type {import('vue').Ref<T[]>} */
   const cache = ref([]);
   /** @type {import('vue').Ref<boolean>} */
@@ -95,13 +95,11 @@ export function useFetchBase({
             cache.value.push(instance);
           } else {
             logger.warn({
-              sender: `useFetch${entityName}`,
               message: `${entityName} (ID: ${docId}) not found in Firestore.`,
             });
           }
         } catch (error) {
           logger.error({
-            sender: `useFetch${entityName}`,
             message: `Failed to fetch ${entityName} (ID: ${docId}) from Firestore. Error: ${error.message}`,
             error,
           });
@@ -134,7 +132,6 @@ export function useFetchBase({
   function pushItems(newItems) {
     if (!Array.isArray(newItems)) {
       logger.warn({
-        sender: `useFetch${entityName}`,
         message: `pushItems expects an array of ${entityName}s.`,
       });
       return;
@@ -142,7 +139,6 @@ export function useFetchBase({
 
     if (!newItems.every((item) => item instanceof SchemaClass)) {
       logger.warn({
-        sender: `useFetch${entityName}`,
         message: `All items should be instances of ${entityName}.`,
       });
       return;

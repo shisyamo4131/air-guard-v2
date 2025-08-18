@@ -12,7 +12,7 @@
  *                これらの定義はそれぞれ対応するプロパティで変更することが可能です。
  */
 import { useLogger } from "../composables/useLogger";
-const logger = useLogger();
+const logger = useLogger("ItemManager");
 
 defineOptions({ name: "ItemManager" });
 
@@ -36,7 +36,6 @@ const sender = "ItemManager.vue";
 /** useLogger を使用してエラーログを出力する関数 */
 function pushError(error) {
   logger.error({
-    sender,
     message: error.message,
     error,
   });

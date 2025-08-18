@@ -25,7 +25,7 @@ export function useWorkersList({
 } = {}) {
   /** エラーハンドラーとロガーの初期化 */
   const errorHandler = useErrorHandler("useWorkers");
-  const logger = useLogger();
+  const logger = useLogger("useWorkersList");
 
   /** 既存のコンポーザブルを使用または新規作成 */
   const employeeComposable = fetchEmployeeComposable || useFetchEmployee();
