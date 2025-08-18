@@ -7,7 +7,7 @@ import { useWorkersList } from "@/composables/useWorkersList";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { useArrangementManager } from "@/composables/useArrangementManager";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 import { SiteOperationSchedule } from "@/schemas";
 
@@ -60,7 +60,7 @@ const {
 });
 
 /** Manager composable */
-const managerComposable = useSiteOperationSchedulesManager({
+const managerComposable = useArrangementManager({
   docs: instance.docs,
   manager: scheduleManager,
   fetchEmployeeComposable,

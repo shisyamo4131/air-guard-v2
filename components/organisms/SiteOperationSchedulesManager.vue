@@ -8,6 +8,7 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { useDateRange } from "../../composables/useDateRange";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -17,41 +18,23 @@ const props = defineProps({
   siteId: { type: String, required: true },
 });
 
-/** define refs */
-const instance = reactive(new SiteOperationSchedule());
-const currentDate = ref([dayjs().startOf("month").toDate()]);
-
 /** define composables */
 const { company } = useAuthStore();
+const { currentBaseDate, dateRange, debouncedDateRange } = useDateRange({
+  baseDate: new Date(),
+  dayCount: dayjs(new Date()).daysInMonth(),
+});
 const fetchSiteComposable = useFetchSite();
 const { cachedSites } = fetchSiteComposable;
 const { docs, events } = useSiteOperationSchedulesManager({
   manager: useTemplateRef("manager"),
-  docs: instance.docs,
-  fetchSiteComposable,
+  siteId: props.siteId,
+  dateRange: debouncedDateRange,
 });
 
 /***************************************************************************
  * COMPUTED PROPERTIES
  ***************************************************************************/
-const to = computed(() => {
-  return dayjs(currentDate.value[0]).endOf("month").toDate();
-});
-
-watch(
-  currentDate,
-  (newVal) => {
-    const from = newVal[0];
-    instance.subscribeDocs({
-      constraints: [
-        ["where", "siteId", "==", props.siteId],
-        ["where", "dateAt", ">=", from],
-        ["where", "dateAt", "<=", to.value],
-      ],
-    });
-  },
-  { immediate: true }
-);
 </script>
 
 <template>
@@ -87,9 +70,15 @@ watch(
         </v-toolbar>
         <v-container class="pt-0">
           <air-calendar
-            v-model="currentDate"
+            :model-value="[currentBaseDate]"
             :events="events"
             @click:event="slotProps.toUpdate($event.item)"
+            @update:model-value="
+              dateRange = {
+                from: dayjs($event).toDate(),
+                to: dayjs($event).endOf('month').toDate(),
+              }
+            "
           />
         </v-container>
       </v-card>
