@@ -4,8 +4,10 @@
  * @description A component that manages the site operation schedule.
  */
 import dayjs from "dayjs";
-import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -15,22 +17,54 @@ const props = defineProps({
   siteId: { type: String, required: true },
 });
 
-const { company } = useAuthStore();
+/** define refs */
+const instance = reactive(new SiteOperationSchedule());
+const currentDate = ref([dayjs().startOf("month").toDate()]);
 
-const { cachedData, arrayManagerAttrs, calendarAttrs } =
-  useSiteOperationSchedulesManager({
-    manager: useTemplateRef("manager"),
-    siteId: props.siteId,
-    from: dayjs().startOf("month").toDate(),
-    to: dayjs().endOf("month").toDate(),
-  });
+/** define composables */
+const { company } = useAuthStore();
+const fetchSiteComposable = useFetchSite();
+const { cachedSites } = fetchSiteComposable;
+const { docs, events } = useSiteOperationSchedulesManager({
+  manager: useTemplateRef("manager"),
+  docs: instance.docs,
+  fetchSiteComposable,
+});
+
+/***************************************************************************
+ * COMPUTED PROPERTIES
+ ***************************************************************************/
+const to = computed(() => {
+  return dayjs(currentDate.value[0]).endOf("month").toDate();
+});
+
+watch(
+  currentDate,
+  (newVal) => {
+    const from = newVal[0];
+    instance.subscribeDocs({
+      constraints: [
+        ["where", "siteId", "==", props.siteId],
+        ["where", "dateAt", ">=", from],
+        ["where", "dateAt", "<=", to.value],
+      ],
+    });
+  },
+  { immediate: true }
+);
 </script>
 
 <template>
   <ArrayManager
     ref="manager"
     v-slot="slotProps"
-    v-bind="arrayManagerAttrs"
+    :model-value="docs"
+    :schema="SiteOperationSchedule"
+    :before-edit="
+      (editMode, item) => {
+        item.siteId = siteId;
+      }
+    "
     :dialog-props="{ maxWidth: 600 }"
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],
@@ -40,7 +74,7 @@ const { cachedData, arrayManagerAttrs, calendarAttrs } =
       <MoleculesSiteOperationScheduleEditor
         v-bind="slotProps.editorProps"
         :agreements="
-          cachedData.sites[props.siteId]?.agreements || company.agreements
+          cachedSites[props.siteId]?.agreements || company.agreements
         "
       />
     </v-dialog>
@@ -52,7 +86,11 @@ const { cachedData, arrayManagerAttrs, calendarAttrs } =
           <v-btn icon="mdi-plus" @click="slotProps.toCreate()" />
         </v-toolbar>
         <v-container class="pt-0">
-          <air-calendar v-bind="calendarAttrs" />
+          <air-calendar
+            v-model="currentDate"
+            :events="events"
+            @click:event="slotProps.toUpdate($event.item)"
+          />
         </v-container>
       </v-card>
     </slot>

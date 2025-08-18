@@ -1,36 +1,54 @@
 <script setup>
 import { onMounted, useTemplateRef } from "vue";
-import dayjs from "dayjs";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useWorkersList } from "@/composables/useWorkersList";
+import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOrder } from "@/composables/useSiteOrder";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
+import { SiteOperationSchedule } from "@/schemas";
 
 /*****************************************************************************
- * PROPS / EMITS / REFS
+ * DEFINE REFS
  *****************************************************************************/
-/** define template refs */
+const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const duplicator = useTemplateRef("duplicator");
-
 const tagSize = ref("medium");
-
 const selectedDate = ref(null);
 
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
-const { order } = useSiteOrder();
+/** For date range management */
+const { dateRange, currentDayCount: dayCount } = useDateRange({
+  baseDate: new Date(),
+  dayCount: 7,
+  offsetDays: -1,
+});
+
 /** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
+
 /** For fetching and caching employees */
 const fetchEmployeeComposable = useFetchEmployee();
+const { cachedEmployees } = fetchEmployeeComposable;
+
 /** For fetching and caching outsourcers */
 const fetchOutsourcerComposable = useFetchOutsourcer();
+const { cachedOutsourcers } = fetchOutsourcerComposable;
+
+/** For fetching and caching sites */
+const fetchSiteComposable = useFetchSite();
+const { cachedSites } = fetchSiteComposable;
+
+/** For site-shiftType order */
+const { order } = useSiteOrder({ fetchSiteComposable });
+
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
 const {
   availableEmployees,
@@ -40,25 +58,33 @@ const {
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 });
+
 /** Manager composable */
 const managerComposable = useSiteOperationSchedulesManager({
+  docs: instance.docs,
   manager: scheduleManager,
-  from: dayjs().subtract(1, "day").toDate(),
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
+  fetchSiteComposable,
 });
-const {
-  cachedData,
+const { statistics, keyMappedDocs, toCreate, toUpdate, replaceDocs } =
+  managerComposable;
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
   dateRange,
-  dayCount,
-  statistics,
-  keyMappedDocs,
-  getWorkerName,
-  toCreate,
-  toUpdate: toUpdateSchedule,
-  itemManagerAttrs,
-  replaceDocs,
-} = managerComposable;
+  (newRange) => {
+    instance.subscribeDocs({
+      constraints: [
+        ["where", "dateAt", ">=", newRange.from],
+        ["where", "dateAt", "<=", newRange.to],
+      ],
+    });
+  },
+  { immediate: true }
+);
 
 /*****************************************************************************
  * LIFE CYCLE HOOKS
@@ -117,12 +143,12 @@ onMounted(() => {
     >
       <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">
-        <div v-if="cachedData.sites[siteId]" class="text-subtitle-1">
+        <div v-if="cachedSites[siteId]" class="text-subtitle-1">
           <div class="d-flex align-center">
             <v-chip class="mr-2" label size="small">
               {{ SHIFT_TYPE[shiftType] }}
             </v-chip>
-            <span>{{ cachedData.sites[siteId].name }}</span>
+            <span>{{ cachedSites[siteId].name }}</span>
             <v-icon
               icon="mdi-file-document-plus-outline"
               @click="toCreate({ siteId, shiftType })"
@@ -145,7 +171,7 @@ onMounted(() => {
             <ArrangementsScheduleTag
               v-bind="draggableSiteOperationScheduleProps"
               class="mb-2"
-              @click:edit="toUpdateSchedule"
+              @click:edit="toUpdate"
               @click:duplicate="duplicator.set($event)"
             >
               <template #default="scheduleTagProps">
@@ -153,7 +179,15 @@ onMounted(() => {
                   <template #default="draggableWorkersProps">
                     <MoleculesWorkerTag
                       v-bind="draggableWorkersProps"
-                      :label="getWorkerName(draggableWorkersProps.modelValue)"
+                      :label="
+                        draggableWorkersProps.modelValue.isEmployee
+                          ? cachedEmployees[
+                              draggableWorkersProps.modelValue.workerId
+                            ]?.displayName
+                          : cachedOutsourcers[
+                              draggableWorkersProps.modelValue.workerId
+                            ]?.displayName
+                      "
                       :size="tagSize"
                     />
                   </template>
@@ -173,13 +207,18 @@ onMounted(() => {
     </ArrangementsTable>
 
     <!-- スケジュール編集ダイアログ -->
-    <ItemManager ref="scheduleManager" v-bind="itemManagerAttrs">
+    <ItemManager
+      ref="scheduleManager"
+      :model-value="instance"
+      :dialog-props="{ maxWidth: 600 }"
+      :input-props="{
+        excludedKeys: ['status', 'employees', 'outsourcers'],
+      }"
+    >
       <template #editor="{ editorProps, inputProps }">
         <MoleculesSiteOperationScheduleEditor
           v-bind="editorProps"
-          :agreements="
-            cachedData.sites[inputProps.item.siteId]?.agreements || []
-          "
+          :agreements="cachedSites[inputProps.item.siteId]?.agreements || []"
         />
       </template>
     </ItemManager>
