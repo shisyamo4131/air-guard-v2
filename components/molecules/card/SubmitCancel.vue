@@ -48,6 +48,7 @@ const submitAttrs = computed(() => {
   return {
     color: "primary",
     disabled: props.loading || props.disableSubmit,
+    loading: props.loading,
     text: props.submitText,
     onClick: () => emit("click:submit"),
   };

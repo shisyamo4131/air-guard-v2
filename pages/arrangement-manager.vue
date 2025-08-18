@@ -16,6 +16,7 @@ import { SiteOperationSchedule } from "@/schemas";
  *****************************************************************************/
 const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
+const siteOrderManager = useTemplateRef("siteOrderManager");
 const duplicator = useTemplateRef("duplicator");
 const tagSize = ref("medium");
 const selectedDate = ref(null);
@@ -47,7 +48,8 @@ const fetchSiteComposable = useFetchSite();
 const { cachedSites } = fetchSiteComposable;
 
 /** For site-shiftType order */
-const { order } = useSiteOrder({ fetchSiteComposable });
+const siteOrderManagerComposable = useSiteOrder({ fetchSiteComposable });
+const { siteOrder, attrs } = siteOrderManagerComposable;
 
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
 const {
@@ -106,6 +108,7 @@ onMounted(() => {
       v-model="dayCount"
       @click:workers="toggleFloatingWindow"
       @update:tag-size="tagSize = $event"
+      @click:site-order="siteOrderManagerComposable.open()"
     />
 
     <!-- フローティング作業員選択ウィンドウ -->
@@ -136,7 +139,7 @@ onMounted(() => {
 
     <!-- スケジュール管理テーブル -->
     <ArrangementsTable
-      :site-order="order"
+      :site-order="siteOrder"
       :from="dateRange.from"
       :day-count="dayCount"
       v-model:selected-date="selectedDate"
@@ -227,6 +230,20 @@ onMounted(() => {
 
     <!-- スケジュール複製ダイアログ -->
     <OrganismsSiteOperationScheduleDuplicator ref="duplicator" />
+
+    <!-- 現場並び替えダイアログ -->
+    <ArrangementsSiteOrderManager ref="siteOrderManager" v-bind="attrs">
+      <template #item="{ element }">
+        <v-list-item>
+          <v-list-item-title>
+            <v-chip class="mr-2" label size="small">
+              {{ SHIFT_TYPE[element.shiftType] }}
+            </v-chip>
+            <span>{{ cachedSites[element.siteId].name }}</span>
+          </v-list-item-title>
+        </v-list-item>
+      </template>
+    </ArrangementsSiteOrderManager>
   </div>
 </template>
 

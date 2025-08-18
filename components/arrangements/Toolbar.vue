@@ -19,10 +19,16 @@ import {
 const model = defineModel();
 
 /** define props */
-const props = defineProps({ ...tagSizeProps });
+const props = defineProps({
+  ...tagSizeProps,
+});
 
 /** define emits */
-const emit = defineEmits(["click:workers", ...tagSizeEmits]);
+const emit = defineEmits([
+  "click:workers",
+  ...tagSizeEmits,
+  "click:site-order",
+]);
 
 /*****************************************************************************
  * COMPOSABLES
@@ -85,6 +91,13 @@ const handleWorkersClick = (event) => {
   >
     <template #append>
       <v-spacer />
+
+      <v-btn
+        prepend-icon="mdi-magnify"
+        text="順序"
+        class="mr-3"
+        @click="emit('click:site-order')"
+      />
 
       <v-btn-toggle
         v-model="tagSize"
