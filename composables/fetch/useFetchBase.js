@@ -162,18 +162,10 @@ export function useFetchBase({
     }
   }
 
-  /**
-   * Returns the mapped items for quick access by docId.
-   */
-  const mappedItems = computed(() => {
-    return Object.fromEntries(cache.value.map((item) => [item.docId, item]));
-  });
-
   return {
     fetchItems,
     cachedItems,
     pushItems,
     isLoading,
-    mappedItems,
   };
 }

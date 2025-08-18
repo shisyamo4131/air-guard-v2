@@ -18,18 +18,16 @@ import { Outsourcer } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
 export function useFetchOutsourcer() {
-  const { fetchItems, cachedItems, pushItems, isLoading, mappedItems } =
-    useFetchBase({
-      SchemaClass: Outsourcer,
-      entityName: "Outsourcer",
-      idProperties: ["outsourcerId", "docId", "workerId"], // 優先順位順
-    });
+  const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
+    SchemaClass: Outsourcer,
+    entityName: "Outsourcer",
+    idProperties: ["outsourcerId", "docId", "workerId"], // 優先順位順
+  });
 
   return {
     fetchOutsourcer: fetchItems,
     cachedOutsourcers: cachedItems,
     pushOutsourcers: pushItems,
     isLoading,
-    outsourcersMap: mappedItems,
   };
 }

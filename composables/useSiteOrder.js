@@ -3,7 +3,7 @@ import { SiteOrder } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLogger } from "@/composables/useLogger";
 
-export function useSiteOrder() {
+export function useSiteOrder({ fetchSiteComposable }) {
   /** define composable */
   const { company } = useAuthStore();
   const logger = useLogger();
@@ -16,13 +16,13 @@ export function useSiteOrder() {
    * WATCHERS
    ***************************************************************************/
   // Watch for changes in company.siteOrder and sync to local order
-  Vue.watch(
-    () => company?.siteOrder,
-    (newSiteOrder) => {
-      order.value = newSiteOrder || [];
-    },
-    { immediate: true }
-  );
+  Vue.watchEffect(() => {
+    const newSiteOrder = company?.siteOrder || [];
+    order.value = newSiteOrder;
+    if (newSiteOrder.length > 0) {
+      fetchSiteComposable.fetchSite(newSiteOrder);
+    }
+  });
 
   /***************************************************************************
    * METHODS
