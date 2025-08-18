@@ -148,12 +148,11 @@ onMounted(() => {
       <template #site-row="{ siteId, shiftType }">
         <div v-if="cachedSites[siteId]" class="text-subtitle-1">
           <div class="d-flex align-center">
-            <v-chip class="mr-2" label size="small">
-              {{ SHIFT_TYPE[shiftType] }}
-            </v-chip>
+            <AtomsChipsShiftType class="mr-2" :shift-type="shiftType" />
             <span>{{ cachedSites[siteId].name }}</span>
-            <v-icon
+            <v-btn
               icon="mdi-file-document-plus-outline"
+              size="small"
               @click="toCreate({ siteId, shiftType })"
             />
           </div>
@@ -236,9 +235,7 @@ onMounted(() => {
       <template #item="{ element }">
         <v-list-item>
           <v-list-item-title>
-            <v-chip class="mr-2" label size="small">
-              {{ SHIFT_TYPE[element.shiftType] }}
-            </v-chip>
+            <AtomsChipsShiftType class="mr-2" :shift-type="element.shiftType" />
             <span>{{ cachedSites[element.siteId].name }}</span>
           </v-list-item-title>
         </v-list-item>
