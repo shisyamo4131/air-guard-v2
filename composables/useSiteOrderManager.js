@@ -1,5 +1,5 @@
 /**
- * @file composables/useSiteOrder.js
+ * @file composables/useSiteOrderManager.js
  * @description A Composable for management site-order.
  */
 import * as Vue from "vue";
@@ -7,12 +7,12 @@ import { SiteOrder } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLogger } from "@/composables/useLogger";
 
-export function useSiteOrder({ manager, fetchSiteComposable }) {
+export function useSiteOrderManager({ manager, fetchSiteComposable }) {
   /***************************************************************************
    * DEFINE COMPOSABLE
    ***************************************************************************/
   const { company } = useAuthStore();
-  const logger = useLogger("useSiteOrder");
+  const logger = useLogger("useSiteOrderManager");
   const { fetchSite } = fetchSiteComposable || {};
 
   /***************************************************************************
