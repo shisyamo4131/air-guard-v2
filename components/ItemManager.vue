@@ -108,11 +108,11 @@ defineExpose({
               inputProps: slotProps.inputProps,
             }"
           >
-            <MoleculesEditCard v-bind="slotProps.editorProps">
+            <MoleculesCardsEdit v-bind="slotProps.editorProps">
               <slot name="input" v-bind="slotProps.inputProps">
                 <air-item-input v-bind="slotProps.inputProps" />
               </slot>
-            </MoleculesEditCard>
+            </MoleculesCardsEdit>
           </slot>
         </v-dialog>
       </slot>

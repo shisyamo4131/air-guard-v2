@@ -39,9 +39,9 @@ const companyFields = Object.keys(Company.classProps);
       }"
     >
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesEditCard v-bind="slotProps.editorProps" hide-delete-btn>
+        <MoleculesCardsEdit v-bind="slotProps.editorProps" hide-delete-btn>
           <air-item-input v-bind="slotProps.inputProps"> </air-item-input>
-        </MoleculesEditCard>
+        </MoleculesCardsEdit>
       </v-dialog>
       <v-card class="mx-auto" elevation="2">
         <v-card-title> 会社情報 </v-card-title>

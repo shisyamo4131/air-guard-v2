@@ -37,7 +37,7 @@ function submit() {
     <template #activator="props">
       <slot name="activator" v-bind="props" />
     </template>
-    <MoleculesCardSubmitCancel
+    <MoleculesCardsSubmitCancel
       :loading="loading"
       @click:cancel="cancel"
       @click:submit="submit"
@@ -57,6 +57,6 @@ function submit() {
           </template>
         </draggable>
       </v-container>
-    </MoleculesCardSubmitCancel>
+    </MoleculesCardsSubmitCancel>
   </v-dialog>
 </template>

@@ -18,7 +18,7 @@ function onAgreementSelected(agreement) {
 </script>
 
 <template>
-  <MoleculesEditCard
+  <MoleculesCardsEdit
     v-bind="$attrs"
     :disable-delete="!props.inputProps.item.isDraft"
     :disable-submit="!props.inputProps.item.isDraft"
@@ -47,5 +47,5 @@ function onAgreementSelected(agreement) {
         </template>
       </air-item-input>
     </template>
-  </MoleculesEditCard>
+  </MoleculesCardsEdit>
 </template>

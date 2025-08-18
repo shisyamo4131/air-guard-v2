@@ -6,7 +6,7 @@
 import { useLogger } from "~/composables/useLogger";
 
 // --- ストア / コンポーザブル
-const logger = useLogger("MoleculesEditCard");
+const logger = useLogger("MoleculesCardsEdit");
 </script>
 
 <template>

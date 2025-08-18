@@ -92,7 +92,7 @@ function initPassword() {
         </template>
       </air-data-table>
       <v-dialog v-bind="slotProps.dialogProps">
-        <MoleculesEditCard v-bind="slotProps.editorProps">
+        <MoleculesCardsEdit v-bind="slotProps.editorProps">
           <air-item-input v-bind="slotProps.inputProps" />
           <v-row>
             <v-col>
@@ -123,7 +123,7 @@ function initPassword() {
               />
             </v-col>
           </v-row>
-        </MoleculesEditCard>
+        </MoleculesCardsEdit>
       </v-dialog>
     </array-manager>
   </v-container>

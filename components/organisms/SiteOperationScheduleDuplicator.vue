@@ -93,7 +93,7 @@ defineExpose({ set });
     persistent
     @update:model-value="initialize"
   >
-    <MoleculesCardSubmitCancel
+    <MoleculesCardsSubmitCancel
       :disableCancel="isLoading"
       :disableSubmit="dates.length === 0 || isLoading"
       :loading="isLoading"
@@ -107,6 +107,6 @@ defineExpose({ set });
         hide-header
         multiple
       />
-    </MoleculesCardSubmitCancel>
+    </MoleculesCardsSubmitCancel>
   </v-dialog>
 </template>
