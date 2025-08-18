@@ -6,9 +6,7 @@
 import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
-import { useDateRange } from "../../composables/useDateRange";
 
 /** define-options */
 defineOptions({ name: "SiteOperationScheduleManager" });
@@ -20,16 +18,9 @@ const props = defineProps({
 
 /** define composables */
 const { company } = useAuthStore();
-const { currentBaseDate, dateRange, debouncedDateRange } = useDateRange({
-  baseDate: new Date(),
-  dayCount: dayjs(new Date()).daysInMonth(),
-});
-const fetchSiteComposable = useFetchSite();
-const { cachedSites } = fetchSiteComposable;
-const { docs, events } = useSiteOperationSchedulesManager({
+const { docs, events, dateRange, site } = useSiteOperationSchedulesManager({
   manager: useTemplateRef("manager"),
   siteId: props.siteId,
-  dateRange: debouncedDateRange,
 });
 
 /***************************************************************************
@@ -56,9 +47,7 @@ const { docs, events } = useSiteOperationSchedulesManager({
     <v-dialog v-bind="slotProps.dialogProps">
       <MoleculesSiteOperationScheduleEditor
         v-bind="slotProps.editorProps"
-        :agreements="
-          cachedSites[props.siteId]?.agreements || company.agreements
-        "
+        :agreements="site.agreements || company.agreements"
       />
     </v-dialog>
     <slot name="default" v-bind="slotProps">
@@ -70,7 +59,7 @@ const { docs, events } = useSiteOperationSchedulesManager({
         </v-toolbar>
         <v-container class="pt-0">
           <air-calendar
-            :model-value="[currentBaseDate]"
+            :model-value="[dateRange.from]"
             :events="events"
             @click:event="slotProps.toUpdate($event.item)"
             @update:model-value="

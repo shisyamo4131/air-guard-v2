@@ -10,27 +10,25 @@
  * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
  */
 import * as Vue from "vue";
+import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
-import { useDateUtil } from "@/composables/useDateUtil";
-import { SiteOperationSchedule } from "@/schemas";
+import { useDateRange } from "@/composables/useDateRange";
+import { Site, SiteOperationSchedule } from "@/schemas";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED =
   "Manager should be provided to useSiteOperationSchedulesManager.";
 const INVALID_SITE_ID =
   "Invalid `siteId` provided for useSiteOperationSchedulesManager.";
-const INVALID_DATE_RANGE =
-  "Invalid `dateRange` provided for useSiteOperationSchedulesManager.";
-export function useSiteOperationSchedulesManager({
-  manager,
-  siteId,
-  dateRange,
-} = {}) {
+export function useSiteOperationSchedulesManager({ manager, siteId } = {}) {
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("useSiteOperationSchedulesManager");
-  const { isValidDate } = useDateUtil();
+  const { dateRange, debouncedDateRange } = useDateRange({
+    baseDate: new Date(),
+    dayCount: dayjs(new Date()).daysInMonth(),
+  });
 
   /***************************************************************************
    * VALIDATION
@@ -53,30 +51,25 @@ export function useSiteOperationSchedulesManager({
     return val;
   });
 
-  const validatedDateRange = Vue.computed(() => {
-    const val = Vue.toValue(dateRange);
-    if (!val || typeof val !== "object") {
-      logger.warn({ message: INVALID_DATE_RANGE });
-      return null;
-    }
-    const { from, to } = val;
-    if (!from || !isValidDate(from) || !to || !isValidDate(to)) {
-      logger.warn({ message: INVALID_DATE_RANGE, data: val });
-      return null;
-    }
-    return val;
-  });
-
   /***************************************************************************
    * DEFINE REFS
    ***************************************************************************/
   const instance = Vue.reactive(new SiteOperationSchedule());
   const docs = Vue.ref([]); // Subscribed documents.
+  const site = Vue.reactive(new Site());
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
   Vue.watchEffect(_subscribe);
+
+  Vue.watch(
+    validatedSiteId,
+    (newVal) => {
+      newVal ? site.fetch({ docId: newVal }) : site.initialize();
+    },
+    { immediate: true }
+  );
 
   /***************************************************************************
    * LIFECYCLE HOOKS
@@ -90,18 +83,17 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
   function _subscribe() {
     try {
-      if (!validatedSiteId.value || !validatedDateRange.value) {
+      if (!validatedSiteId.value) {
         docs.value = [];
         logger.warn({
-          message: "Invalid siteId or dateRange",
+          message: "Invalid siteId",
           data: {
             siteId: validatedSiteId.value,
-            dateRange: validatedDateRange.value,
           },
         });
         return;
       }
-      const { from, to } = validatedDateRange.value;
+      const { from, to } = debouncedDateRange.value;
       docs.value = instance.subscribeDocs({
         constraints: [
           ["where", "siteId", "==", validatedSiteId.value],
@@ -117,8 +109,40 @@ export function useSiteOperationSchedulesManager({
     }
   }
   /***************************************************************************
-   * METHODS
+   * METHODS FOR PROVIDE
    ***************************************************************************/
+  const toCreate = (schedule) => {
+    try {
+      return validatedManager.value?.toCreate?.(schedule);
+    } catch (error) {
+      logger.error({
+        message: "Failed to create schedule",
+        error,
+      });
+    }
+  };
+
+  const toUpdate = (schedule) => {
+    try {
+      return validatedManager.value?.toUpdate?.(schedule);
+    } catch (error) {
+      logger.error({
+        message: "Failed to update schedule",
+        error,
+      });
+    }
+  };
+
+  const toDelete = (schedule) => {
+    try {
+      return validatedManager.value?.toDelete?.(schedule);
+    } catch (error) {
+      logger.error({
+        message: "Failed to delete schedule",
+        error,
+      });
+    }
+  };
 
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE
@@ -143,11 +167,13 @@ export function useSiteOperationSchedulesManager({
     // data
     docs,
     events,
+    dateRange,
+    site,
     statistics,
 
     // Methods for managing schedules provided by the manager.
-    toCreate: (schedule) => manager?.value?.toCreate?.(schedule),
-    toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
-    toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
+    toCreate,
+    toUpdate,
+    toDelete,
   };
 }
