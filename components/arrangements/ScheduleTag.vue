@@ -15,7 +15,6 @@
  */
 import { computed } from "vue";
 import { useLogger } from "@/composables/useLogger";
-import { SITE_OPERATION_SCHEDULE_STATUS_DRAFT } from "air-guard-v2-schemas/constants";
 
 /** define model-value and emit `update:model-value` */
 const schedule = defineModel({ type: Object, required: true });
@@ -113,43 +112,8 @@ async function handleUpdateDetailStatus({ worker, status }) {
       <span class="flex-grow-1 text-truncate" style="min-width: 0">
         {{ `${label}` }}
       </span>
-      <v-icon v-if="schedule.isDraft" icon="mdi-menu" class="drag-handle" />
+      <v-icon icon="mdi-menu" class="drag-handle" />
     </div>
-    <v-container class="py-0 d-flex justify-center" style="column-gap: 20px">
-      <v-checkbox
-        :model-value="!schedule.isDraft"
-        color="primary"
-        :readonly="!schedule.isDraft && !schedule.isScheduled"
-        hide-details
-        density="compact"
-        style="height: 32px"
-        @update:modelValue="
-          ($event) => ($event ? schedule.toScheduled() : schedule.toDraft())
-        "
-      >
-        <template #label>
-          <span class="text-caption">予定確定</span>
-        </template>
-      </v-checkbox>
-      <v-checkbox
-        :model-value="schedule.isArranged"
-        color="primary"
-        density="compact"
-        :disabled="
-          (!schedule.isScheduled && !schedule.isArranged) ||
-          schedule.isPersonnelShortage
-        "
-        hide-details
-        style="height: 32px"
-        @update:modelValue="
-          ($event) => ($event ? schedule.toArranged() : schedule.toScheduled())
-        "
-      >
-        <template #label>
-          <span class="text-caption">配置確定</span>
-        </template>
-      </v-checkbox>
-    </v-container>
     <!--
       default slot for `MoleculesDraggableWorkers`.
     -->
@@ -160,7 +124,6 @@ async function handleUpdateDetailStatus({ worker, status }) {
         date,
         shiftType,
         siteId,
-        disabled: !schedule.isWorkerChangeable,
         onChange: handleChangeWorkers,
         'onUpdate:status': handleUpdateDetailStatus,
         'onClick:remove': handleWorkerRemoved,
@@ -179,7 +142,6 @@ async function handleUpdateDetailStatus({ worker, status }) {
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
       <v-btn
-        :disabled="schedule.status !== SITE_OPERATION_SCHEDULE_STATUS_DRAFT"
         variant="tonal"
         size="x-small"
         @click="emit('click:edit', schedule)"

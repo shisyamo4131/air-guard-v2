@@ -10,7 +10,6 @@ import { OperationResult } from "~/schemas";
 import {
   DAY_TYPE,
   SHIFT_TYPE,
-  SITE_OPERATION_SCHEDULE_STATUS,
   getDayType,
 } from "air-guard-v2-schemas/constants";
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
@@ -80,12 +79,6 @@ onUnmounted(() => {
                 </ItemManager>
               </v-toolbar>
               <v-list>
-                <v-list-item>
-                  <v-list-item-subtitle>ステータス</v-list-item-subtitle>
-                  <v-list-item-title>{{
-                    SITE_OPERATION_SCHEDULE_STATUS[model.status] || "不明"
-                  }}</v-list-item-title>
-                </v-list-item>
                 <v-list-item>
                   <v-list-item-subtitle>現場</v-list-item-subtitle>
                   <v-list-item-title>{{

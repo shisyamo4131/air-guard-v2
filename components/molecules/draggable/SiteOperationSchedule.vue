@@ -38,19 +38,6 @@ const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-/**
- * Determines whether an item can be dragged from one list to another.
- * Only allows dragging if the schedule status is a draft.
- *
- * @param {HTMLElement} to - The target container element.
- * @param {HTMLElement} from - The source container element.
- * @param {HTMLElement} dragEl - The element being dragged.
- * @returns {boolean} True if the schedule is a draft, otherwise false.
- */
-function pull(to, from, dragEl) {
-  const schedule = dragEl.__draggable_context.element;
-  return schedule.isScheduleChangeable;
-}
 </script>
 
 <template>
@@ -58,7 +45,7 @@ function pull(to, from, dragEl) {
     v-model="schedules"
     class="d-flex flex-column fill-height pa-2"
     :item-key="itemKey"
-    :group="{ name, pull }"
+    :group="{ name }"
     handle=".drag-handle"
   >
     <template #item="{ element: schedule }">

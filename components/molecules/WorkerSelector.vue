@@ -22,7 +22,7 @@
 import { ref, watch } from "vue";
 import draggable from "vuedraggable";
 import { useKatakanaFilter } from "../../composables/useKatakanaFilter";
-import { OperationResultDetail } from "@/schemas";
+import { SiteOperationScheduleDetail } from "@/schemas";
 
 /** define constants */
 const TABS_CONFIG = [
@@ -35,7 +35,7 @@ const props = defineProps({
   converter: {
     type: Function,
     default: (item, isEmployee) =>
-      new OperationResultDetail({ workerId: item.docId, isEmployee }),
+      new SiteOperationScheduleDetail({ workerId: item.docId, isEmployee }),
   },
   convertedItemKey: { type: String, default: "workerId" },
   employees: { type: Array, default: () => [] },

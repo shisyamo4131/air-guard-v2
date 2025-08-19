@@ -8,7 +8,7 @@
  * @props {Boolean} isNew - Indicates 'new' icon.
  * @props {String} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {Object} modelValue - The worker (OperationResultDetail) instance to display.
+ * @props {Object} modelValue - The worker (SiteOperationScheduleDetail) instance to display.
  * @props {String} removeIcon - Icon for the remove button.
  * @props {String} siteId - The siteId of this worker.
  * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
@@ -21,11 +21,11 @@
  * @emits update:status - Event to update the status.
  * @emits click:remove - Event to remove from the arrangement.
  */
-import { OperationResultDetail } from "@/schemas";
+import { SiteOperationScheduleDetail } from "@/schemas";
 import {
-  OPERATION_RESULT_DETAIL_STATUS,
-  OPERATION_RESULT_DETAIL_STATUS_ARRAY,
-  OPERATION_RESULT_DETAIL_STATUS_DRAFT,
+  SITE_OPERATION_SCHEDULE_DETAIL_STATUS,
+  SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY,
+  SITE_OPERATION_SCHEDULE_DETAIL_STATUS_DRAFT,
 } from "air-guard-v2-schemas/constants";
 
 /** define props */
@@ -46,7 +46,7 @@ const props = defineProps({
   },
   /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
-  /** The worker (OperationResultDetail) instance */
+  /** The worker (SiteOperationScheduleDetail) instance */
   modelValue: { type: Object, required: true },
   /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
@@ -74,7 +74,7 @@ const emit = defineEmits(["update:status", "click:remove"]);
 
 /** define refs */
 const menu = ref(false); // for v-menu
-const worker = ref(new OperationResultDetail());
+const worker = ref(new SiteOperationScheduleDetail());
 
 /*****************************************************************************
  * WATCHERS
@@ -89,8 +89,8 @@ watch(
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const selectableStatus = computed(() => {
-  return OPERATION_RESULT_DETAIL_STATUS_ARRAY.filter(
-    (s) => s.value !== OPERATION_RESULT_DETAIL_STATUS_DRAFT
+  return SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY.filter(
+    (s) => s.value !== SITE_OPERATION_SCHEDULE_DETAIL_STATUS_DRAFT
   );
 });
 
@@ -146,7 +146,7 @@ function updateStatus(newVal) {
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
-            {{ OPERATION_RESULT_DETAIL_STATUS[worker.status] }}
+            {{ SITE_OPERATION_SCHEDULE_DETAIL_STATUS[worker.status] }}
           </v-chip>
         </template>
         <v-card>

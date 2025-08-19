@@ -7,3 +7,4 @@ export { default as OperationResultDetail } from "./OperationResultDetail.js";
 export { default as Outsourcer } from "./Outsourcer.js";
 export { default as Site, Agreement } from "./Site.js";
 export { default as SiteOperationSchedule } from "./SiteOperationSchedule.js";
+export { default as SiteOperationScheduleDetail } from "./SiteOperationScheduleDetail.js";
