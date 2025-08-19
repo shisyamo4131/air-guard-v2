@@ -95,6 +95,8 @@ defineExpose({
         <slot name="table" v-bind="slotProps.tableProps">
           <air-data-table v-bind="slotProps.tableProps" />
         </slot>
+      </slot>
+      <slot name="dialog" v-bind="slotProps">
         <v-dialog v-bind="slotProps.dialogProps">
           <slot
             name="editor"

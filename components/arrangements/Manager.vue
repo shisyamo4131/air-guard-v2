@@ -236,18 +236,11 @@ onMounted(() => {
     <ItemManager
       ref="scheduleManager"
       :model-value="instance"
-      :dialog-props="{ maxWidth: 600 }"
+      :dialog-props="{ maxWidth: 480 }"
       :input-props="{
         excludedKeys: ['dayType', 'shiftType', 'employees', 'outsourcers'],
       }"
-    >
-      <template #editor="{ editorProps, inputProps }">
-        <MoleculesSiteOperationScheduleEditor
-          v-bind="editorProps"
-          :agreements="cachedSites[inputProps.item.siteId]?.agreements || []"
-        />
-      </template>
-    </ItemManager>
+    />
 
     <!-- スケジュール複製ダイアログ -->
     <OrganismsSiteOperationScheduleDuplicator ref="duplicator" />

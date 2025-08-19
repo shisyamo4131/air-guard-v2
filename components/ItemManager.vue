@@ -96,7 +96,8 @@ defineExpose({
     @error:clear="logger.clearError"
   >
     <template #default="slotProps">
-      <slot name="default" v-bind="slotProps">
+      <slot name="default" v-bind="slotProps"> </slot>
+      <slot name="dialog" v-bind="slotProps">
         <v-dialog v-bind="slotProps.dialogProps">
           <template #activator>
             <slot name="activator" v-bind="{ toUpdate: slotProps.toUpdate }" />

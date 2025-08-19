@@ -39,17 +39,11 @@ const { docs, events, dateRange, site } = useSiteOperationSchedulesManager({
         item.siteId = siteId;
       }
     "
-    :dialog-props="{ maxWidth: 600 }"
+    :dialog-props="{ maxWidth: 480 }"
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],
     }"
   >
-    <v-dialog v-bind="slotProps.dialogProps">
-      <MoleculesSiteOperationScheduleEditor
-        v-bind="slotProps.editorProps"
-        :agreements="site.agreements || company.agreements"
-      />
-    </v-dialog>
     <slot name="default" v-bind="slotProps">
       <v-card>
         <v-toolbar density="comfortable">
