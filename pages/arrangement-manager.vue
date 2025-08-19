@@ -8,7 +8,6 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementManager } from "@/composables/useArrangementManager";
-import { SHIFT_TYPE } from "air-guard-v2-schemas/constants";
 import { SiteOperationSchedule } from "@/schemas";
 
 /*****************************************************************************
@@ -48,7 +47,10 @@ const fetchSiteComposable = useFetchSite();
 const { cachedSites } = fetchSiteComposable;
 
 /** For site-shiftType order */
-const siteOrderManagerComposable = useSiteOrderManager({ fetchSiteComposable });
+const siteOrderManagerComposable = useSiteOrderManager({
+  manager: siteOrderManager,
+  fetchSiteComposable,
+});
 const { siteOrder, attrs } = siteOrderManagerComposable;
 
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
