@@ -2,6 +2,10 @@
 /**
  * @file components/arrangements/SiteOrderManager.vue
  * @description A component for managing the order of site elements.
+ *
+ * @slots
+ * item - Slot for each site element.
+ * title - Slot for the title of each site element.
  */
 import draggable from "vuedraggable";
 
@@ -33,7 +37,7 @@ function submit() {
 </script>
 
 <template>
-  <v-dialog v-model="dialog" max-width="600" scrollable persistent>
+  <v-dialog v-model="dialog" max-width="480" scrollable persistent>
     <template #activator="props">
       <slot name="activator" v-bind="props" />
     </template>
@@ -50,9 +54,21 @@ function submit() {
           :disabled="loading"
           @update:model-value="emit('update:site-order', $event)"
         >
-          <template #item="{ element }">
+          <template #item="props">
             <div>
-              <slot name="item" :element="element" />
+              <slot name="item" v-bind="props">
+                <v-list-item border class="pa-2 mb-2" rounded>
+                  <v-list-item-title>
+                    <AtomsChipsShiftType
+                      class="mr-2"
+                      :shift-type="props.element.shiftType"
+                    />
+                    <slot name="title" v-bind="props">
+                      <span>{{ props.element.docId }}</span>
+                    </slot>
+                  </v-list-item-title>
+                </v-list-item>
+              </slot>
             </div>
           </template>
         </draggable>

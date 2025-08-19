@@ -253,19 +253,12 @@ onMounted(() => {
     <OrganismsSiteOperationScheduleDuplicator ref="duplicator" />
 
     <!-- 現場並び替えダイアログ -->
-    <ArrangementsSiteOrderManager ref="siteOrderManager" v-bind="attrs">
-      <template #item="{ element }">
-        <v-list-item>
-          <v-list-item-title>
-            <AtomsChipsShiftType class="mr-2" :shift-type="element.shiftType" />
-            <span>{{ cachedSites[element.siteId].name }}</span>
-          </v-list-item-title>
-        </v-list-item>
+    <OrganismsSiteOrderManager ref="siteOrderManager" v-bind="attrs">
+      <template #title="{ element }">
+        {{ cachedSites[element.siteId].name }}
       </template>
-    </ArrangementsSiteOrderManager>
+    </OrganismsSiteOrderManager>
   </div>
 </template>
 
-<style scoped>
-/* 必要に応じて追加のスタイルをここに記述 */
-</style>
+<style scoped></style>
