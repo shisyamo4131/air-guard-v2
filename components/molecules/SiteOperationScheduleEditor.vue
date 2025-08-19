@@ -5,16 +5,16 @@ defineOptions({ inheritAttrs: false });
 /** define props */
 const props = defineProps({
   inputProps: { type: Object, required: true },
-  agreements: { type: Array, default: () => [] },
+  // agreements: { type: Array, default: () => [] },
 });
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function onAgreementSelected(agreement) {
-  agreement.dateAt = props.inputProps.item.dateAt;
-  props.inputProps.updateProperties(agreement);
-}
+// function onAgreementSelected(agreement) {
+//   agreement.dateAt = props.inputProps.item.dateAt;
+//   props.inputProps.updateProperties(agreement);
+// }
 </script>
 
 <template>
@@ -35,7 +35,7 @@ function onAgreementSelected(agreement) {
     </template>
     <template #default>
       <air-item-input v-bind="props.inputProps">
-        <template #after-dateAt>
+        <!-- <template #after-dateAt>
           <v-col cols="12">
             <MoleculesAgreementSelector
               :items="props.agreements"
@@ -44,7 +44,7 @@ function onAgreementSelected(agreement) {
               @select="onAgreementSelected"
             />
           </v-col>
-        </template>
+        </template> -->
       </air-item-input>
     </template>
   </MoleculesCardsEdit>

@@ -238,7 +238,13 @@ onMounted(() => {
       :model-value="instance"
       :dialog-props="{ maxWidth: 600 }"
       :input-props="{
-        excludedKeys: ['status', 'employees', 'outsourcers'],
+        excludedKeys: [
+          'status',
+          'dayType',
+          'shiftType',
+          'employees',
+          'outsourcers',
+        ],
       }"
     >
       <template #editor="{ editorProps, inputProps }">
