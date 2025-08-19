@@ -102,7 +102,7 @@ onUnmounted(() => {
                   <v-list-item-subtitle>区分</v-list-item-subtitle>
                   <v-list-item-title
                     >{{ DAY_TYPE[model.dayType] }}
-                    {{ SHIFT_TYPE[model.shiftType] }}</v-list-item-title
+                    {{ SHIFT_TYPE[model.shiftType].title }}</v-list-item-title
                   >
                 </v-list-item>
                 <v-list-item>

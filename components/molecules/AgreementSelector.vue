@@ -32,7 +32,7 @@ const items = computed(() => {
   return props.items.map((agreement) => {
     return {
       title: `${DAY_TYPE[agreement.dayType]}${
-        SHIFT_TYPE[agreement.shiftType]
+        SHIFT_TYPE[agreement.shiftType].title
       } ${agreement.startTime} - ${agreement.endTime}`,
       value: agreement,
       props: {
