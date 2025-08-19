@@ -334,7 +334,7 @@ tr.g-row.g-row-no-hover:hover {
 .fixed-left {
   display: inline-block;
   position: sticky;
-  left: 16px;
+  left: 4px;
   z-index: 1 !important;
 }
 

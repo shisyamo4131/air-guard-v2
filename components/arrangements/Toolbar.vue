@@ -93,7 +93,7 @@ const handleWorkersClick = (event) => {
       <v-spacer />
 
       <v-btn
-        prepend-icon="mdi-magnify"
+        prepend-icon="mdi-sort"
         text="順序"
         class="mr-3"
         @click="emit('click:site-order')"
