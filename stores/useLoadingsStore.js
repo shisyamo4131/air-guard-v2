@@ -20,14 +20,17 @@ export const useLoadingsStore = defineStore("loadings", () => {
    * @returns {string} - 追加されたメッセージのキー / Key of the added message
    */
   function add(message) {
-    if (!message?.text) return null;
+    const text = message?.text || message || undefined;
+    // if (!message?.text) return null;
+    if (!text) return null;
 
     // keyが指定されていない場合は乱数で生成
     // Generate random key if not specified
     const key = message.key || Math.random().toString(36).slice(2, 11);
 
     if (!queue.value.find((q) => q.key === key)) {
-      queue.value.push({ key, text: message.text });
+      // queue.value.push({ key, text: message.text });
+      queue.value.push({ key, text });
     }
 
     return key;

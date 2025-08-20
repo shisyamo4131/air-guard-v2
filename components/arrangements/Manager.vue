@@ -8,6 +8,7 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementManager } from "@/composables/useArrangementManager";
+import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { SiteOperationSchedule } from "@/schemas";
 
 /*****************************************************************************
@@ -17,7 +18,7 @@ const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
 const duplicator = useTemplateRef("duplicator");
-const tagSize = ref("medium");
+const tagSize = ref("default");
 const selectedDate = ref(null);
 
 /*****************************************************************************
@@ -30,17 +31,20 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
   offsetDays: -1,
 });
 
+const { create: createNotifications, hasNotification } =
+  useArrangementNotificationManager({
+    dateRange,
+  });
+
 /** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
 /** For fetching and caching employees */
 const fetchEmployeeComposable = useFetchEmployee();
-const { cachedEmployees } = fetchEmployeeComposable;
 
 /** For fetching and caching outsourcers */
 const fetchOutsourcerComposable = useFetchOutsourcer();
-const { cachedOutsourcers } = fetchOutsourcerComposable;
 
 /** For fetching and caching sites */
 const fetchSiteComposable = useFetchSite();
@@ -58,6 +62,7 @@ const {
   availableEmployees,
   availableOutsourcers,
   initialize: initWorkers,
+  getWorker,
 } = useWorkersList({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
@@ -199,6 +204,7 @@ onMounted(() => {
               class="mb-2"
               @click:edit="toUpdate"
               @click:duplicate="duplicator.set($event)"
+              @click:notify="createNotifications"
             >
               <template #default="scheduleTagProps">
                 <MoleculesDraggableWorkers v-bind="scheduleTagProps">
@@ -206,13 +212,10 @@ onMounted(() => {
                     <MoleculesWorkerTag
                       v-bind="draggableWorkersProps"
                       :label="
-                        draggableWorkersProps.modelValue.isEmployee
-                          ? cachedEmployees[
-                              draggableWorkersProps.modelValue.workerId
-                            ]?.displayName
-                          : cachedOutsourcers[
-                              draggableWorkersProps.modelValue.workerId
-                            ]?.displayName
+                        getWorker(draggableWorkersProps.modelValue)?.displayName
+                      "
+                      :is-notificated="
+                        hasNotification(draggableWorkersProps.key)
                       "
                       :size="tagSize"
                     />

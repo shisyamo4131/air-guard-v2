@@ -125,9 +125,12 @@ function handleUpdateStatus(worker, newVal) {
           name="default"
           v-bind="{
             modelValue: worker,
+            key: `${date}-${siteId}-${shiftType}-${worker[itemKey]}`,
             date,
-            shiftType,
             siteId,
+            shiftType,
+            isEmployee: worker.isEmployee,
+            workerId: worker[props.itemKey],
             highlight: isHighlighted(worker[itemKey]),
             'onClick:remove': handleOnClickRemove,
             'onUpdate:status': ($event) => handleUpdateStatus(worker, $event),

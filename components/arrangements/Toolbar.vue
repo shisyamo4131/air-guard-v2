@@ -107,7 +107,7 @@ const handleWorkersClick = (event) => {
         variant="text"
       >
         <v-btn value="small">小</v-btn>
-        <v-btn value="medium">中</v-btn>
+        <v-btn value="default">中</v-btn>
         <v-btn value="large">大</v-btn>
       </v-btn-toggle>
 

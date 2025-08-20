@@ -5,13 +5,13 @@
 import { ref } from "vue";
 
 /** constants */
-export const SELECTABLE_VALUES = ["small", "medium", "large"];
+export const SELECTABLE_VALUES = ["small", "default", "large"];
 
 /** props */
 export const props = {
   tagSize: {
     type: String,
-    default: "medium",
+    default: "default",
     validator: (value) => SELECTABLE_VALUES.includes(value),
   },
 };
@@ -22,7 +22,7 @@ export const emits = ["update:tag-size"];
 /** main function */
 export const useTagSize = (props, emit) => {
   // define refs
-  const internalValue = ref(props.tagSize || "medium");
+  const internalValue = ref(props.tagSize || "default");
 
   /***************************************************************************
    * WATCHERS

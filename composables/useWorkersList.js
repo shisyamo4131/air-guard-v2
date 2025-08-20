@@ -1,4 +1,4 @@
-import { computed, ref, reactive } from "vue";
+import { computed, ref, reactive, toRaw } from "vue";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
@@ -148,6 +148,14 @@ export function useWorkersList({
     }
   });
 
+  const getWorker = (worker) => {
+    const { workerId, isEmployee } = toRaw(worker);
+    if (isEmployee) {
+      return cachedEmployees.value[workerId];
+    }
+    return cachedOutsourcers.value[workerId];
+  };
+
   return {
     // 元のコンポーザブル
     employeeComposable,
@@ -164,6 +172,9 @@ export function useWorkersList({
 
     // 初期化
     initialize,
+
+    // ワーカー取得
+    getWorker,
 
     // 統計情報
     statistics,

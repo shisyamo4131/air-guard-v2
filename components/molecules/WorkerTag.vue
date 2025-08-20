@@ -11,7 +11,7 @@
  * @props {Object} modelValue - The worker (SiteOperationScheduleDetail) instance to display.
  * @props {String} removeIcon - Icon for the remove button.
  * @props {String} siteId - The siteId of this worker.
- * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
+ * @props {String} size - Size variant of the tag ('small', 'default', 'large').
  * @props {String} shiftType - The shiftType of this worker.
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
  *
@@ -25,7 +25,6 @@ import { SiteOperationScheduleDetail } from "@/schemas";
 import {
   SITE_OPERATION_SCHEDULE_DETAIL_STATUS,
   SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY,
-  SITE_OPERATION_SCHEDULE_DETAIL_STATUS_DRAFT,
 } from "air-guard-v2-schemas/constants";
 
 /** define props */
@@ -34,6 +33,7 @@ const props = defineProps({
   date: { type: String, required: true },
   /** Whether the tag is highlighted. */
   highlight: { type: Boolean, default: false },
+  isNotificated: { type: Boolean, default: false },
   /** Indicates `new` icon. */
   isNew: { type: Boolean, default: false },
   /** The label to display on the tag. */
@@ -55,8 +55,8 @@ const props = defineProps({
   /** Size variant of the tag */
   size: {
     type: String,
-    default: "medium",
-    validator: (value) => ["small", "medium", "large"].includes(value),
+    default: "default",
+    validator: (value) => ["small", "default", "large"].includes(value),
   },
   /** The shiftType of this worker */
   shiftType: { type: String, required: true },
@@ -88,11 +88,6 @@ watch(
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const selectableStatus = computed(() => {
-  return SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY.filter(
-    (s) => s.value !== SITE_OPERATION_SCHEDULE_DETAIL_STATUS_DRAFT
-  );
-});
 
 /*****************************************************************************
  * METHODS
@@ -131,7 +126,10 @@ function updateStatus(newVal) {
   >
     <template #prepend-label>
       <!-- 'new' icon -->
-      <v-icon v-if="isNew" color="red">mdi-new-box</v-icon>
+      <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon>
+      <v-icon v-if="isNotificated" color="info" :size="size"
+        >mdi-bullhorn</v-icon
+      >
     </template>
     <template #append-label>
       <span v-if="!worker.isEmployee">{{ `(${worker.amount})` }}</span>
@@ -142,7 +140,7 @@ function updateStatus(newVal) {
       </v-list-item-subtitle>
     </template>
     <template #prepend-action>
-      <v-menu v-if="!worker.isDraft" v-model="menu">
+      <v-menu v-if="isNotificated" v-model="menu">
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
@@ -153,7 +151,7 @@ function updateStatus(newVal) {
           <v-container>
             <v-chip-group>
               <v-chip
-                v-for="status of selectableStatus"
+                v-for="status of SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY"
                 :key="status.value"
                 :value="status.value"
                 :disabled="status.value === worker.status"

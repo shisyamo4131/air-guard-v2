@@ -10,7 +10,7 @@
  * @props {Boolean} loading - Whether the tag is in loading state.
  * @props {Boolean} removable - Displays clear button and emits `remove` event when clicked.
  * @props {String} removeIcon - Icon for the remove button.
- * @props {String} size - Size variant of the tag ('small', 'medium', 'large').
+ * @props {String} size - Size variant of the tag ('small', 'default', 'large').
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error', 'disabled').
  *
  * @slots
@@ -54,8 +54,8 @@ const props = defineProps({
   /** Size variant of the tag */
   size: {
     type: String,
-    default: "medium",
-    validator: (value) => ["small", "medium", "large"].includes(value),
+    default: "default",
+    validator: (value) => ["small", "default", "large"].includes(value),
   },
 
   /** Visual variant of the tag */
@@ -100,10 +100,10 @@ const showLabelContent = computed(() => props.label && !isLoading.value);
 const tagHeight = computed(() => {
   const heights = {
     small: "40px",
-    medium: "48px",
+    default: "48px",
     large: "56px",
   };
-  return heights[props.size] || heights.medium;
+  return heights[props.size] || heights.default;
 });
 
 const removeButtonAttrs = computed(() => {
@@ -122,11 +122,11 @@ const removeButtonAttrs = computed(() => {
 const titleClasses = computed(() => {
   const sizeClasses = {
     small: "text-caption",
-    medium: "text-subtitle-2",
+    default: "text-subtitle-2",
     large: "text-body-1",
   };
 
-  return ["tag-base__title", sizeClasses[props.size] || sizeClasses.medium];
+  return ["tag-base__title", sizeClasses[props.size] || sizeClasses.default];
 });
 
 /**
@@ -135,7 +135,7 @@ const titleClasses = computed(() => {
 const progressSize = computed(() => {
   const sizeMap = {
     small: "x-small",
-    medium: "x-small",
+    default: "x-small",
     large: "small",
   };
 
@@ -196,7 +196,7 @@ function handleClickRemove(event) {
         <v-list-item-action v-if="$slots[`prepend-action`]">
           <slot name="prepend-action" />
         </v-list-item-action>
-        <v-list-item-action v-if="props.removable">
+        <v-list-item-action v-if="props.removable" class="pl-2">
           <slot name="action" v-bind="removeButtonAttrs">
             <v-icon v-bind="removeButtonAttrs" />
           </slot>
@@ -244,7 +244,7 @@ function handleClickRemove(event) {
   padding: 4px 8px;
 }
 
-.tag-base--medium {
+.tag-base--default {
   padding: 8px 12px;
 }
 

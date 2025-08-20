@@ -27,6 +27,16 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'ArrangementNotifications' subcollection under 'Companies' ---
+    // ArrangementNotificationsコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // ArrangementNotifications ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/ArrangementNotifications/{id} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'Autonumbers' subcollection under 'Companies' ---
     // AutonumbersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の

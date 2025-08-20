@@ -9,6 +9,7 @@
  *
  * @emits click:edit - Event to edit the schedule.
  * @emits click:duplicate - Event to duplicate the schedule.
+ * @emits click:notify - Event to notify about the schedule.
  *
  * @slots
  * - default: Slot for rendering the schedule item.
@@ -30,7 +31,7 @@ const props = defineProps({
 });
 
 /** define emits */
-const emit = defineEmits(["click:edit", "click:duplicate"]);
+const emit = defineEmits(["click:edit", "click:duplicate", "click:notify"]);
 
 /** define composables */
 const logger = useLogger("ScheduleTag");
@@ -133,6 +134,14 @@ async function handleUpdateDetailStatus({ worker, status }) {
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
     >
+      <!-- 通知ボタン -->
+      <v-btn
+        variant="tonal"
+        size="x-small"
+        @click="emit('click:notify', schedule)"
+      >
+        <v-icon>mdi-bullhorn</v-icon>
+      </v-btn>
       <!-- 複製ボタンはとりあえず用意 -->
       <v-btn
         variant="tonal"
