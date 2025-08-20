@@ -5,6 +5,7 @@
  * It allows users to drag and drop schedules within the same site and shift type.
  * Only draft schedules can be dragged based on isScheduleChangeable property.
  *
+ * @props {Array} modelValue - An array of `SiteOperationSchedule` instances.
  * @props {String} date - The date for schedule management.
  * @props {String} itemKey - Unique identifier key (default: 'docId').
  * @props {String} shiftType - The shift type for schedule grouping.
@@ -14,9 +15,21 @@
  * - default: Renders individual schedule items with provided props.
  */
 import draggable from "vuedraggable";
-
-/** define model-value and emit `update:model-value` */
-const schedules = defineModel({ type: Array, required: true });
+import { SiteOperationSchedule } from "@/schemas";
+/**
+ * define model-value and `update:model-value` event.
+ * - `update:model-value` event is required for optimistic updates.
+ */
+const schedules = defineModel({
+  type: Array,
+  required: true,
+  validator: (value) => {
+    return (
+      value.length === 0 ||
+      value.every((item) => item instanceof SiteOperationSchedule)
+    );
+  },
+});
 
 /** define props */
 const props = defineProps({
@@ -48,13 +61,14 @@ const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
     :group="{ name }"
     handle=".drag-handle"
   >
-    <template #item="{ element: schedule }">
+    <template #item="{ element }">
       <div>
         <slot
           name="default"
           v-bind="{
-            modelValue: schedule,
-            schedule,
+            modelValue: element,
+            schedule: element,
+            siteOperationScheduleId: element[props.itemKey],
             siteId,
             shiftType,
             date,
