@@ -81,7 +81,7 @@ function handlePut(to, from, dragEl) {
   if (!workerId) return false;
 
   // 既に配置されている従業員かどうかをチェック
-  const isExisting = workers.value.some(
+  const isExisting = props.workers.some(
     (emp) => emp[props.itemKey] === workerId
   );
 
@@ -91,10 +91,6 @@ function handlePut(to, from, dragEl) {
   }
 
   return true;
-}
-
-function handleUpdateStatus(worker, newVal) {
-  emit("update:status", { worker, status: newVal });
 }
 
 function handleWorkerAdded(addedEvent) {
@@ -150,7 +146,13 @@ function handleChange(event) {
     <template #item="props">
       <div>
         <!-- item slot for `WorkerTag` -->
-        <slot name="item" v-bind="props" />
+        <slot
+          name="item"
+          v-bind="{
+            ...props,
+            highlight: isHighlighted(props.element.workerId),
+          }"
+        />
       </div>
     </template>
   </draggable>

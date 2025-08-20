@@ -222,9 +222,10 @@ onMounted(() => {
                   @remove-worker="removeWorker({ schedule, ...$event })"
                   @change-worker="changeWorker({ schedule, ...$event })"
                 >
-                  <template #item="{ element: worker }">
+                  <template #item="{ element: worker, highlight }">
                     <MoleculesWorkerTag
                       v-bind="worker"
+                      :highlight="highlight"
                       :label="getWorker(worker)?.displayName"
                       :is-notificated="
                         hasNotification(`${schedule.docId}-${worker.workerId}`)

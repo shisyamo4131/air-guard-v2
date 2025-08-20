@@ -11,7 +11,6 @@
  * @props {Boolean} isNew - Indicates 'new' icon.
  * @props {String|undefined} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {String} removeIcon - Icon for the remove button.
  * @props {String} size - Size variant of the tag ('small', 'default', 'large').
  * @props {String} startTime - The start time to display.
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
@@ -49,8 +48,6 @@ const props = defineProps({
   },
   /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
-  /** Icon for the remove button */
-  removeIcon: { type: String, default: "mdi-close" },
   /** Size variant of the tag */
   size: {
     type: String,
@@ -122,7 +119,6 @@ function updateStatus(newVal) {
     :label="label"
     :loading="loading"
     removable
-    :remove-icon="removeIcon"
     :size="size"
     :variant="variant"
     @click:remove="onClickRemove"
