@@ -27,6 +27,8 @@ export const useAuthStore = defineStore("auth", () => {
 
   const isReady = ref(false);
 
+  const isDev = ref(process.env.NODE_ENV === "development");
+
   // User state
   const uid = ref(null);
   const email = ref(null);
@@ -710,6 +712,7 @@ export const useAuthStore = defineStore("auth", () => {
     companyId,
     isSuperUser,
     company,
+    isDev,
     clearUser,
     signIn,
     signOut,
