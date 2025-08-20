@@ -3,25 +3,24 @@
  * @file WorkerTag.vue
  * @description Component for displaying an tag in arrangements.
  *
- * @props {String} date - The date the worker is arranged.
+ * @props {Number} amount - The amount associated with the tag.
+ * @props {String} endTime - The end time to display.
  * @props {Boolean} highlight - Whether the tag is highlighted.
+ * @props {Boolean} isEmployee - Whether the worker is an employee.
+ * @props {Boolean} isNotificated - Whether the tag is in notification state.
  * @props {Boolean} isNew - Indicates 'new' icon.
- * @props {String} label - The label to display on the tag.
+ * @props {String|undefined} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {Object} modelValue - The worker (SiteOperationScheduleDetail) instance to display.
  * @props {String} removeIcon - Icon for the remove button.
- * @props {String} siteId - The siteId of this worker.
  * @props {String} size - Size variant of the tag ('small', 'default', 'large').
- * @props {String} shiftType - The shiftType of this worker.
+ * @props {String} startTime - The start time to display.
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error').
- *
- * note: 'date', 'siteId', and 'shiftType' are not used in this component.
- *       These properties may be needed in the future as the component's functionality is expanded.
+ * @props {String} status - Status of the arrangement notification.
+ * @props {String} workerId - The worker's unique identifier.
  *
  * @emits update:status - Event to update the status.
  * @emits click:remove - Event to remove from the arrangement.
  */
-import { SiteOperationScheduleDetail } from "@/schemas";
 import {
   ARRANGEMENT_NOTIFICATION_STATUS,
   ARRANGEMENT_NOTIFICATION_STATUS_ARRAY,
@@ -30,10 +29,13 @@ import {
 
 /** define props */
 const props = defineProps({
-  /** The date the worker is arranged */
-  date: { type: String, required: true },
+  amount: { type: Number, required: true },
+  endTime: { type: String, required: true },
   /** Whether the tag is highlighted. */
   highlight: { type: Boolean, default: false },
+  /** Whether the worker is an employee. */
+  isEmployee: { type: Boolean, required: true },
+  /** Whether the tag is in notification state. */
   isNotificated: { type: Boolean, default: false },
   /** Indicates `new` icon. */
   isNew: { type: Boolean, default: false },
@@ -47,20 +49,15 @@ const props = defineProps({
   },
   /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
-  /** The worker (SiteOperationScheduleDetail) instance */
-  modelValue: { type: Object, required: true },
   /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
-  /** The siteId of this worker */
-  siteId: { type: String, required: true },
   /** Size variant of the tag */
   size: {
     type: String,
     default: "default",
     validator: (value) => ["small", "default", "large"].includes(value),
   },
-  /** The shiftType of this worker */
-  shiftType: { type: String, required: true },
+  startTime: { type: String, required: true },
   /** Visual variant of the tag */
   variant: {
     type: String,
@@ -75,6 +72,7 @@ const props = defineProps({
       return Object.keys(ARRANGEMENT_NOTIFICATION_STATUS).includes(value);
     },
   },
+  workerId: { type: String, required: true },
 });
 
 /** define emits */
@@ -82,16 +80,10 @@ const emit = defineEmits(["update:status", "click:remove"]);
 
 /** define refs */
 const menu = ref(false); // for v-menu
-const worker = ref(new SiteOperationScheduleDetail());
 
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
-watch(
-  () => props.modelValue,
-  (newVal) => worker.value.initialize(newVal),
-  { immediate: true, deep: true }
-);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -107,8 +99,11 @@ watch(
  * `amount` is set to 1 cause the outsourcer's tag should be removed one by one.
  */
 function onClickRemove() {
-  const { workerId, isEmployee } = worker.value;
-  emit("click:remove", { workerId, amount: 1, isEmployee });
+  emit("click:remove", {
+    workerId: props.workerId,
+    amount: 1,
+    isEmployee: props.isEmployee,
+  });
 }
 
 /**
@@ -140,11 +135,11 @@ function updateStatus(newVal) {
       >
     </template>
     <template #append-label>
-      <span v-if="!worker.isEmployee">{{ `(${worker.amount})` }}</span>
+      <span v-if="!isEmployee">{{ `(${amount})` }}</span>
     </template>
     <template #footer>
       <v-list-item-subtitle class="text-caption text-no-wrap">
-        {{ `${worker.startTime} - ${worker.endTime}` }}
+        {{ `${startTime} - ${endTime}` }}
       </v-list-item-subtitle>
     </template>
     <template #prepend-action>

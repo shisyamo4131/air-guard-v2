@@ -35,6 +35,7 @@ const {
   create: createNotifications,
   update: updateNotification,
   hasNotification,
+  getStatus,
 } = useArrangementNotificationManager({
   dateRange,
 });
@@ -79,8 +80,16 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, docs, toCreate, toUpdate, optimisticUpdates } =
-  managerComposable;
+const {
+  statistics,
+  docs,
+  toCreate,
+  toUpdate,
+  optimisticUpdates,
+  addWorker,
+  removeWorker,
+  changeWorker,
+} = managerComposable;
 
 /*****************************************************************************
  * WATCHERS
@@ -194,34 +203,46 @@ onMounted(() => {
       <template #body-cell="{ key, siteId, shiftType, date }">
         <MoleculesDraggableSiteOperationSchedule
           :model-value="docs[key] || []"
-          :site-id="siteId"
-          :shift-type="shiftType"
-          :date="date"
           @update:model-value="
             optimisticUpdates($event, siteId, shiftType, date)
           "
         >
-          <template #default="draggableSiteOperationScheduleProps">
+          <template #item="{ element: schedule }">
             <ArrangementsScheduleTag
-              v-bind="draggableSiteOperationScheduleProps"
+              v-bind="schedule"
               class="mb-2"
-              @click:edit="toUpdate"
-              @click:duplicate="duplicator.set($event)"
-              @click:notify="createNotifications"
+              @click:edit="toUpdate(schedule)"
+              @click:duplicate="duplicator.set(schedule)"
+              @click:notify="createNotifications(schedule)"
             >
-              <template #default="scheduleTagProps">
-                <MoleculesDraggableWorkers v-bind="scheduleTagProps">
-                  <template #default="draggableWorkersProps">
+              <template #default>
+                <MoleculesDraggableWorkers
+                  :workers="schedule.workers"
+                  @add-worker="addWorker({ schedule, ...$event })"
+                  @remove-worker="removeWorker({ schedule, ...$event })"
+                  @change-worker="changeWorker({ schedule, ...$event })"
+                >
+                  <template #item="{ element: worker }">
                     <MoleculesWorkerTag
-                      v-bind="draggableWorkersProps"
-                      :label="
-                        getWorker(draggableWorkersProps.modelValue)?.displayName
-                      "
+                      v-bind="worker"
+                      :label="getWorker(worker)?.displayName"
                       :is-notificated="
-                        hasNotification(draggableWorkersProps.key)
+                        hasNotification(`${schedule.docId}-${worker.workerId}`)
                       "
                       :size="tagSize"
-                    />
+                      :status="
+                        getStatus(`${schedule.docId}-${worker.workerId}`)
+                      "
+                      @click:remove="removeWorker({ schedule, ...$event })"
+                      @update:status="
+                        updateNotification({
+                          siteOperationScheduleId: schedule.docId,
+                          employeeId: worker.workerId,
+                          status: $event,
+                        })
+                      "
+                    >
+                    </MoleculesWorkerTag>
                   </template>
                 </MoleculesDraggableWorkers>
               </template>

@@ -79,8 +79,8 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
    */
   const update = async (args) => {
     try {
-      const { date, siteId, shiftType, employeeId, status } = args;
-      const key = `${date}-${siteId}-${shiftType}-${employeeId}`;
+      const { siteOperationScheduleId, employeeId, status } = args;
+      const key = `${siteOperationScheduleId}-${employeeId}`;
       const notification = mappedDocs.value[key];
       if (!notification) throw new Error("Notification not found");
       const handler = {
@@ -104,10 +104,15 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     return !!mappedDocs.value[key];
   };
 
+  const getStatus = (key) => {
+    const notification = mappedDocs.value[key];
+    return notification ? notification.status : null;
+  };
+
   return {
     docs,
     mappedDocs,
-
+    getStatus,
     create,
     update,
     hasNotification,

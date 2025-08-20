@@ -120,6 +120,24 @@ export function useArrangementManager({
     });
   };
 
+  const addWorker = async ({
+    schedule,
+    workerId,
+    isEmployee,
+    amount,
+    newIndex,
+  }) => {
+    schedule.addWorker(workerId, isEmployee, amount, newIndex);
+    await schedule.update();
+  };
+  const removeWorker = async ({ schedule, workerId, isEmployee, amount }) => {
+    schedule.removeWorker(workerId, amount, isEmployee);
+    await schedule.update();
+  };
+  const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
+    schedule.changeWorker(oldIndex, newIndex, isEmployee);
+    await schedule.update();
+  };
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE
    ***************************************************************************/
@@ -188,5 +206,8 @@ export function useArrangementManager({
     toCreate: (schedule) => manager?.value?.toCreate?.(schedule),
     toUpdate: (schedule) => manager?.value?.toUpdate?.(schedule),
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
+    addWorker,
+    removeWorker,
+    changeWorker,
   };
 }

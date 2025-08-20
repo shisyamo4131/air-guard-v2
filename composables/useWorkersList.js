@@ -148,8 +148,7 @@ export function useWorkersList({
     }
   });
 
-  const getWorker = (worker) => {
-    const { workerId, isEmployee } = toRaw(worker);
+  const getWorker = ({ workerId, isEmployee }) => {
     if (isEmployee) {
       return cachedEmployees.value[workerId];
     }

@@ -11,11 +11,7 @@
  * @props {Boolean} disabled - Whether the draggable area is disabled.
  * @props {String} itemKey - Unique key for each item, defaults to 'workerId'.
  * @props {String} name - Group name for vuedraggable, defaults to 'workers'.
- * @props {String} shiftType - The shiftType of these workers.
- * @props {String} siteId - The siteId of these workers.
  *
- * note: 'date', 'siteId', and 'shiftType' are not used in this component.
- *       These properties may be needed in the future as the component's functionality is expanded.
  * note: Do not use `v-model` at vuedraggable.
  *       Optimistic update should not be used due to employee-outsourcer order limitation.
  * @emits click:remove - Event to remove a worker from the arrangement.
@@ -25,27 +21,29 @@ import { computed } from "vue";
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
 
-/** define model-value and emit `update:model-value`. */
-const workers = defineModel({ type: Array, default: () => [] });
+// /** define model-value and emit `update:model-value`. */
+// const workers = defineModel({ type: Array, default: () => [] });
 
 /** define props */
 const props = defineProps({
-  /** The date the workers are arranged */
-  date: { type: String, required: true },
   /** Whether the draggable area is disabled */
   disabled: { type: Boolean, default: false },
   /** unique key for each item */
   itemKey: { type: String, default: "workerId" },
   /** group name for vuedraggable */
   name: { type: String, default: "workers" },
-  /** The shiftType of this workers */
-  shiftType: { type: String, required: true },
-  /** The siteId of this workers */
-  siteId: { type: String, required: true },
+  /** An array of worker instances for vuedraggable */
+  workers: { type: Array, required: true },
 });
 
 /** define emits */
-const emit = defineEmits(["click:remove", "update:status"]);
+const emit = defineEmits([
+  "click:remove",
+  "update:status",
+  "add-worker",
+  "remove-worker",
+  "change-worker",
+]);
 
 /** define composables */
 const { add: highlightEmployee, has: isHighlighted } = useTimedSet({
@@ -95,16 +93,46 @@ function handlePut(to, from, dragEl) {
   return true;
 }
 
-/**
- * Handles the click event to remove a worker.
- * @param worker The worker instance to remove.
- */
-function handleOnClickRemove(worker) {
-  emit("click:remove", { element: worker });
-}
-
 function handleUpdateStatus(worker, newVal) {
   emit("update:status", { worker, status: newVal });
+}
+
+function handleWorkerAdded(addedEvent) {
+  const { workerId, isEmployee, amount } = addedEvent.element;
+  emit("add-worker", {
+    workerId,
+    isEmployee,
+    amount,
+    newIndex: addedEvent.newIndex,
+  });
+}
+
+function handleWorkerRemoved(removedEvent) {
+  const { workerId, isEmployee, amount } = removedEvent.element;
+  emit("remove-worker", { workerId, isEmployee, amount });
+}
+
+function handleWorkerMoved(movedEvent) {
+  const { isEmployee } = movedEvent.element;
+  emit("change-worker", {
+    oldIndex: movedEvent.oldIndex,
+    newIndex: movedEvent.newIndex,
+    isEmployee,
+  });
+}
+
+/**
+ * vuedraggable の change ハンドラ
+ * @param event
+ */
+function handleChange(event) {
+  if (event.added) {
+    handleWorkerAdded(event.added);
+  } else if (event.removed) {
+    handleWorkerRemoved(event.removed);
+  } else if (event.moved) {
+    handleWorkerMoved(event.moved);
+  }
 }
 </script>
 
@@ -117,25 +145,12 @@ function handleUpdateStatus(worker, newVal) {
     :group="group"
     :item-key="itemKey"
     handle=".drag-handle"
+    @change="handleChange"
   >
-    <template #item="{ element: worker }">
+    <template #item="props">
       <div>
-        <!-- default slot for `WorkerTag` -->
-        <slot
-          name="default"
-          v-bind="{
-            modelValue: worker,
-            key: `${date}-${siteId}-${shiftType}-${worker[itemKey]}`,
-            date,
-            siteId,
-            shiftType,
-            isEmployee: worker.isEmployee,
-            workerId: worker[props.itemKey],
-            highlight: isHighlighted(worker[itemKey]),
-            'onClick:remove': handleOnClickRemove,
-            'onUpdate:status': ($event) => handleUpdateStatus(worker, $event),
-          }"
-        />
+        <!-- item slot for `WorkerTag` -->
+        <slot name="item" v-bind="props" />
       </div>
     </template>
   </draggable>
