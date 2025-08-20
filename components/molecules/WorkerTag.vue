@@ -23,8 +23,9 @@
  */
 import { SiteOperationScheduleDetail } from "@/schemas";
 import {
-  SITE_OPERATION_SCHEDULE_DETAIL_STATUS,
-  SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY,
+  ARRANGEMENT_NOTIFICATION_STATUS,
+  ARRANGEMENT_NOTIFICATION_STATUS_ARRAY,
+  ARRANGEMENT_NOTIFICATION_STATUS_DEFAULT,
 } from "air-guard-v2-schemas/constants";
 
 /** define props */
@@ -66,6 +67,13 @@ const props = defineProps({
     default: "default",
     validator: (value) =>
       ["default", "success", "warning", "error"].includes(value),
+  },
+  status: {
+    type: String,
+    default: ARRANGEMENT_NOTIFICATION_STATUS_DEFAULT,
+    validator: (value) => {
+      return Object.keys(ARRANGEMENT_NOTIFICATION_STATUS).includes(value);
+    },
   },
 });
 
@@ -118,7 +126,7 @@ function updateStatus(newVal) {
     :highlight="highlight"
     :label="label"
     :loading="loading"
-    :removable="worker.isRemovable"
+    removable
     :remove-icon="removeIcon"
     :size="size"
     :variant="variant"
@@ -144,17 +152,17 @@ function updateStatus(newVal) {
         <template #activator="{ props: activatorProps }">
           <!-- status chip -->
           <v-chip v-bind="activatorProps" size="x-small" label>
-            {{ SITE_OPERATION_SCHEDULE_DETAIL_STATUS[worker.status] }}
+            {{ ARRANGEMENT_NOTIFICATION_STATUS[status] }}
           </v-chip>
         </template>
         <v-card>
           <v-container>
             <v-chip-group>
               <v-chip
-                v-for="status of SITE_OPERATION_SCHEDULE_DETAIL_STATUS_ARRAY"
+                v-for="status of ARRANGEMENT_NOTIFICATION_STATUS_ARRAY"
                 :key="status.value"
                 :value="status.value"
-                :disabled="status.value === worker.status"
+                :disabled="status.value === props.status"
                 label
                 @click="updateStatus(status.value)"
               >

@@ -31,10 +31,13 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
   offsetDays: -1,
 });
 
-const { create: createNotifications, hasNotification } =
-  useArrangementNotificationManager({
-    dateRange,
-  });
+const {
+  create: createNotifications,
+  update: updateNotification,
+  hasNotification,
+} = useArrangementNotificationManager({
+  dateRange,
+});
 
 /** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
