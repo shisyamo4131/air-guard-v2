@@ -18,6 +18,7 @@ const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
 const duplicator = useTemplateRef("duplicator");
+const statusUpdater = useTemplateRef("arrangementNotificationStatusUpdater");
 const tagSize = ref("default");
 const selectedDate = ref(null);
 
@@ -32,10 +33,9 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 });
 
 const {
+  get: getNotification,
   create: createNotifications,
-  update: updateNotification,
-  hasNotification,
-  getStatus,
+  has: hasNotification,
 } = useArrangementNotificationManager({
   dateRange,
 });
@@ -227,22 +227,29 @@ onMounted(() => {
                       v-bind="worker"
                       :highlight="highlight"
                       :label="getWorker(worker)?.displayName"
-                      :is-notificated="
-                        hasNotification(`${schedule.docId}-${worker.workerId}`)
-                      "
                       :size="tagSize"
-                      :status="
-                        getStatus(`${schedule.docId}-${worker.workerId}`)
-                      "
                       @click:remove="removeWorker({ schedule, ...$event })"
-                      @update:status="
-                        updateNotification({
-                          siteOperationScheduleId: schedule.docId,
-                          employeeId: worker.workerId,
-                          status: $event,
-                        })
-                      "
                     >
+                      <template #prepend-label>
+                        <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
+                        <v-icon
+                          v-if="
+                            hasNotification(schedule.docId, worker.workerId)
+                          "
+                          color="info"
+                          :size="tagSize"
+                          >mdi-bullhorn</v-icon
+                        >
+                      </template>
+                      <template #prepend-action>
+                        <ArrangementsNotificationChip
+                          :notification="
+                            getNotification(schedule.docId, worker.workerId)
+                          "
+                          size="x-small"
+                          @click="statusUpdater.set($event)"
+                        />
+                      </template>
                     </MoleculesWorkerTag>
                   </template>
                 </MoleculesDraggableWorkers>
@@ -279,6 +286,11 @@ onMounted(() => {
         {{ cachedSites[element.siteId].name }}
       </template>
     </OrganismsSiteOrderManager>
+
+    <!-- 通知ステータス更新コンポーネント -->
+    <OrganismsArrangementNotificationStatusUpdater
+      ref="arrangementNotificationStatusUpdater"
+    />
   </div>
 </template>
 

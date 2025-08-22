@@ -24,6 +24,8 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
 
   const docs = Vue.ref([]);
 
+  const selectedInstance = Vue.ref(null);
+
   Vue.watchEffect(() => _initialize());
 
   function _initialize() {
@@ -42,6 +44,10 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     }, {});
   });
 
+  function _getKey(scheduleId, workerId) {
+    return `${scheduleId}-${workerId}`;
+  }
+
   const create = async (schedule) => {
     const key = loadingsStore.add(`Creating notifications`);
     try {
@@ -54,67 +60,28 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
   };
 
   /**
-   * Updates an existing notification's status.
-   * @param {Object} args - The arguments for updating the notification.
-   * @param {string} args.date - The date of the notification in YYYY-MM-DD format
-   * @param {string} args.siteId - The site identifier where the notification applies
-   * @param {string} args.shiftType - The type of shift (e.g., "morning", "afternoon", "night")
-   * @param {string} args.employeeId - The unique identifier of the employee
-   * @param {string} args.status - The new status to set. Must be one of:
-   *   - ARRANGEMENT_NOTIFICATION_STATUS_ARRANGED: Mark as arranged
-   *   - ARRANGEMENT_NOTIFICATION_STATUS_CONFIRMED: Mark as confirmed
-   *   - ARRANGEMENT_NOTIFICATION_STATUS_ARRIVED: Mark as arrived
-   *   - ARRANGEMENT_NOTIFICATION_STATUS_LEAVED: Mark as left/departed
-   * @throws {Error} When notification is not found for the given parameters
-   * @throws {Error} When an invalid status is provided
-   * @returns {Promise<void>} Promise that resolves when the status update is complete
-   * @example
-   * await update({
-   *   date: "2025-08-20",
-   *   siteId: "site123",
-   *   shiftType: "morning",
-   *   employeeId: "emp456",
-   *   status: ARRANGEMENT_NOTIFICATION_STATUS_CONFIRMED
-   * });
+   * Retrieves a notification by its schedule ID and worker ID.
+   * - Returns null if the notification is not found.
+   * @param {string} scheduleId
+   * @param {string} workerId
+   * @returns {Object|null}
    */
-  const update = async (args) => {
-    try {
-      const { siteOperationScheduleId, employeeId, status } = args;
-      const key = `${siteOperationScheduleId}-${employeeId}`;
-      const notification = mappedDocs.value[key];
-      if (!notification) throw new Error("Notification not found");
-      const handler = {
-        [ARRANGEMENT_NOTIFICATION_STATUS_ARRANGED]: notification.toArranged,
-        [ARRANGEMENT_NOTIFICATION_STATUS_CONFIRMED]: notification.toConfirmed,
-        [ARRANGEMENT_NOTIFICATION_STATUS_ARRIVED]: notification.toArrived,
-        [ARRANGEMENT_NOTIFICATION_STATUS_LEAVED]: notification.toLeaved,
-      };
-      const fn = handler[status];
-      if (!fn) {
-        throw new Error(`Invalid status: ${status}`);
-      }
-      await fn.call(notification);
-    } catch (error) {
-      logger.error({ message: "Failed to update notification", error });
-      throw error;
-    }
+  const get = (scheduleId, workerId) => {
+    const key = _getKey(scheduleId, workerId);
+    const notification = mappedDocs.value[key] || null;
+    return notification;
   };
 
-  const hasNotification = (key) => {
+  const has = (scheduleId, workerId) => {
+    const key = _getKey(scheduleId, workerId);
     return !!mappedDocs.value[key];
-  };
-
-  const getStatus = (key) => {
-    const notification = mappedDocs.value[key];
-    return notification ? notification.status : null;
   };
 
   return {
     docs,
     mappedDocs,
-    getStatus,
+    get,
     create,
-    update,
-    hasNotification,
+    has,
   };
 }
