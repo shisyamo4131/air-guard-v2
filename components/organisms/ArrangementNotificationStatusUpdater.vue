@@ -15,22 +15,21 @@ const emit = defineEmits(["click"]);
 </script>
 
 <template>
-  <v-menu>
+  <v-dialog width="auto">
     <v-card>
-      <v-container>
-        <v-chip-group>
-          <v-chip
-            v-for="item of items"
-            :key="item.value"
-            :value="item.value"
-            :disabled="item.disabled"
-            label
-            @click="emit('click', item.value)"
-          >
-            {{ item.title }}
-          </v-chip>
-        </v-chip-group>
+      <v-container class="d-flex" style="gap: 8px">
+        <v-chip
+          v-for="item of items"
+          :key="item.value"
+          :value="item.value"
+          :color="item.color"
+          :disabled="item.disabled"
+          label
+          @click="emit('click', item.value)"
+        >
+          {{ item.title }}
+        </v-chip>
       </v-container>
     </v-card>
-  </v-menu>
+  </v-dialog>
 </template>

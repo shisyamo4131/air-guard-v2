@@ -18,7 +18,6 @@ const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
 const duplicator = useTemplateRef("duplicator");
-const statusUpdater = useTemplateRef("arrangementNotificationStatusUpdater");
 const tagSize = ref("default");
 const selectedDate = ref(null);
 
@@ -33,7 +32,7 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 });
 
 const {
-  isSelected: notificationIsSelected,
+  activator: notificationActivator,
   selectableStatus,
   create: createNotifications,
   get: getNotification,
@@ -293,10 +292,14 @@ onMounted(() => {
 
     <!-- 通知ステータス更新コンポーネント -->
     <OrganismsArrangementNotificationStatusUpdater
-      ref="arrangementNotificationStatusUpdater"
-      :model-value="notificationIsSelected"
+      v-model="notificationActivator"
       :items="selectableStatus"
       @click="updateNotification($event)"
+      @update:model-value="
+        ($event) => {
+          $event || setNotification();
+        }
+      "
     />
   </div>
 </template>

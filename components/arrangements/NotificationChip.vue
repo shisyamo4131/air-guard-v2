@@ -31,10 +31,10 @@ const status = computed(() => {
   <div>
     <v-chip
       v-if="notification"
-      v-bind="{ ...$attrs, label: true }"
+      v-bind="{ ...$attrs, ...status, label: true }"
       @click="emit('click', props.notification)"
     >
-      {{ status }}
+      {{ status.label }}
     </v-chip>
   </div>
 </template>
