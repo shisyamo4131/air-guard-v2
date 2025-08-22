@@ -32,6 +32,7 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 });
 
 const {
+  attrs: notificationAttrs,
   activator: notificationActivator,
   selectableStatus,
   create: createNotifications,
@@ -291,16 +292,7 @@ onMounted(() => {
     </OrganismsSiteOrderManager>
 
     <!-- 通知ステータス更新コンポーネント -->
-    <OrganismsArrangementNotificationStatusUpdater
-      v-model="notificationActivator"
-      :items="selectableStatus"
-      @click="updateNotification($event)"
-      @update:model-value="
-        ($event) => {
-          $event || setNotification();
-        }
-      "
-    />
+    <OrganismsArrangementNotificationStatusUpdater v-bind="notificationAttrs" />
   </div>
 </template>
 

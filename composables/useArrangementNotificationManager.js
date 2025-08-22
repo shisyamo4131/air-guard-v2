@@ -83,6 +83,19 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     },
   });
 
+  const attrs = Vue.computed(() => {
+    return {
+      modelValue: !!selectedDoc.value,
+      actualStartTime: selectedDoc.value?.actualStartTime,
+      actualEndTime: selectedDoc.value?.actualEndTime,
+      actualBreakMinutes: selectedDoc.value?.actualBreakMinutes,
+      status: selectedDoc.value?.status,
+      "onUpdate:model-value": set,
+      "onClick:submit": update,
+      "onClick:cancel": set,
+    };
+  });
+
   /*****************************************************************************
    * PRIVATE METHODS
    *****************************************************************************/
@@ -152,15 +165,20 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
 
   /**
    * Updates the status of the selected notification.
-   * @param {string} newStatus
+   * @param {Object} options - The options for updating the notification.
+   * @param {string} options.actualStartTime - The actual start time.
+   * @param {string} options.actualEndTime - The actual end time.
+   * @param {number} options.actualBreakMinutes - The actual break minutes.
+   * @param {string} options.status - The new status.
    */
-  const update = async (newStatus) => {
+  const update = async (options) => {
+    const { status } = options;
     try {
-      if (!STATUS.KEYS.includes(newStatus)) {
-        throw new Error(`Invalid status: ${newStatus}`);
-      }
       if (!selectedDoc.value) {
-        throw new Error("Notification is required");
+        throw new Error("Invalid action. Notification is not selected.");
+      }
+      if (!STATUS.KEYS.includes(status)) {
+        throw new Error(`Invalid status: ${status}`);
       }
       const handler = {
         [STATUS.ARRANGED]: selectedDoc.value.toArranged,
@@ -168,14 +186,17 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
         [STATUS.ARRIVED]: selectedDoc.value.toArrived,
         [STATUS.LEAVED]: selectedDoc.value.toLeaved,
       };
-      const fn = handler[newStatus];
+      const fn = handler[status];
       if (!fn) {
-        throw new Error(`No handler found for status: ${newStatus}`);
+        throw new Error(`No handler found for status: ${status}`);
+      } else if (status === STATUS.LEAVED) {
+        await fn.call(selectedDoc.value, options);
+      } else {
+        await fn.call(selectedDoc.value);
       }
-      await fn.call(selectedDoc.value);
       selectedDoc.value = null;
     } catch (error) {
-      logger.error({ message: error.message, error });
+      logger.error({ message: error.message, error, data: options });
     }
   };
 
@@ -185,6 +206,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     isSelected,
     selectableStatus,
     activator,
+    attrs,
     create,
     get,
     set,
