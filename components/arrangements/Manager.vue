@@ -33,9 +33,13 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 });
 
 const {
-  get: getNotification,
+  isSelected: notificationIsSelected,
+  selectableStatus,
   create: createNotifications,
+  get: getNotification,
+  set: setNotification,
   has: hasNotification,
+  update: updateNotification,
 } = useArrangementNotificationManager({
   dateRange,
 });
@@ -247,7 +251,7 @@ onMounted(() => {
                             getNotification(schedule.docId, worker.workerId)
                           "
                           size="x-small"
-                          @click="statusUpdater.set($event)"
+                          @click="setNotification($event)"
                         />
                       </template>
                     </MoleculesWorkerTag>
@@ -290,6 +294,9 @@ onMounted(() => {
     <!-- 通知ステータス更新コンポーネント -->
     <OrganismsArrangementNotificationStatusUpdater
       ref="arrangementNotificationStatusUpdater"
+      :model-value="notificationIsSelected"
+      :items="selectableStatus"
+      @click="updateNotification($event)"
     />
   </div>
 </template>
