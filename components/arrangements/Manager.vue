@@ -18,7 +18,7 @@ const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
 const duplicator = useTemplateRef("duplicator");
-const tagSize = ref("default");
+const tagSize = ref("medium");
 const selectedDate = ref(null);
 
 /*****************************************************************************

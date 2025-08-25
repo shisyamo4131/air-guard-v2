@@ -54,8 +54,8 @@ const props = defineProps({
   /** Size variant of the tag */
   size: {
     type: String,
-    default: "default",
-    validator: (value) => ["small", "default", "large"].includes(value),
+    default: "medium",
+    validator: (value) => ["small", "medium", "large"].includes(value),
   },
 
   /** Visual variant of the tag */
@@ -243,12 +243,12 @@ function handleClickRemove(event) {
   padding: 4px 8px;
 }
 
-.tag-base--default {
-  padding: 8px 12px;
+.tag-base--medium {
+  padding: 8px 8px;
 }
 
 .tag-base--large {
-  padding: 12px 16px;
+  padding: 12px 8px;
 }
 
 /* Color variants */
