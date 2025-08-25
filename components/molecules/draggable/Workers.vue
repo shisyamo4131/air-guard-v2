@@ -103,9 +103,16 @@ function handleWorkerAdded(addedEvent) {
   });
 }
 
+/**
+ * Emits remove-worker event
+ * - For outsourced workers, amount should not be emitted because it should be decremented.
+ * @param removedEvent
+ */
 function handleWorkerRemoved(removedEvent) {
-  const { workerId, isEmployee, amount } = removedEvent.element;
-  emit("remove-worker", { workerId, isEmployee, amount });
+  // const { workerId, isEmployee, amount } = removedEvent.element;
+  // emit("remove-worker", { workerId, isEmployee, amount });
+  const { workerId, isEmployee } = removedEvent.element;
+  emit("remove-worker", { workerId, isEmployee });
 }
 
 function handleWorkerMoved(movedEvent) {
