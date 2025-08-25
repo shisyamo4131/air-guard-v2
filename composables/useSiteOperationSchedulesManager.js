@@ -26,7 +26,7 @@ export function useSiteOperationSchedulesManager({ manager, siteId } = {}) {
    ***************************************************************************/
   const logger = useLogger("useSiteOperationSchedulesManager");
   const { dateRange, debouncedDateRange } = useDateRange({
-    baseDate: new Date(),
+    baseDate: dayjs(new Date()).startOf("month").toDate(),
     dayCount: dayjs(new Date()).daysInMonth(),
   });
 
