@@ -146,8 +146,16 @@ export function useArrangementManager({
     }
   };
   const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
-    schedule.changeWorker(oldIndex, newIndex, isEmployee);
-    await schedule.update();
+    try {
+      schedule.changeWorker(oldIndex, newIndex, isEmployee);
+      await schedule.update();
+    } catch (error) {
+      logger.error({
+        message: error.message,
+        error,
+        data: { schedule, oldIndex, newIndex, isEmployee },
+      });
+    }
   };
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE

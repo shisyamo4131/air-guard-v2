@@ -157,7 +157,6 @@ function handleClickRemove(event) {
 
 <template>
   <v-list-item
-    class="drag-handle"
     :class="tagClasses"
     :style="{ height: tagHeight }"
     elevation="3"
@@ -341,9 +340,5 @@ function handleClickRemove(event) {
   .tag-base--disabled .v-icon {
     color: #616161 !important;
   }
-}
-
-.drag-handle {
-  cursor: grab;
 }
 </style>

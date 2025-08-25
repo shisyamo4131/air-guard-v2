@@ -232,6 +232,7 @@ onMounted(() => {
                     >
                       <template #prepend-label>
                         <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
+                        <v-icon icon="mdi-menu" class="drag-handle" />
                       </template>
                       <template #prepend-action>
                         <ArrangementsNotificationChip
@@ -285,4 +286,8 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped></style>
+<style scoped>
+.drag-handle {
+  cursor: grab;
+}
+</style>
