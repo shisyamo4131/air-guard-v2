@@ -12,6 +12,7 @@
 import * as Vue from "vue";
 import { useNuxtApp } from "#app";
 import { runTransaction } from "firebase/firestore";
+import { useLogger } from "@/composables/useLogger";
 import {
   SHIFT_TYPE_DAY,
   SHIFT_TYPE_NIGHT,
@@ -29,6 +30,8 @@ export function useArrangementManager({
 } = {}) {
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
+
+  const logger = useLogger();
 
   /** define instance & refs */
   const localDocs = Vue.ref([]); // Local documents for optimistic updates.
@@ -131,8 +134,16 @@ export function useArrangementManager({
     await schedule.update();
   };
   const removeWorker = async ({ schedule, workerId, isEmployee, amount }) => {
-    schedule.removeWorker(workerId, amount, isEmployee);
-    await schedule.update();
+    try {
+      schedule.removeWorker(workerId, amount, isEmployee);
+      await schedule.update();
+    } catch (error) {
+      logger.error({
+        message: error.message,
+        error,
+        data: { schedule, workerId, amount, isEmployee },
+      });
+    }
   };
   const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
     schedule.changeWorker(oldIndex, newIndex, isEmployee);

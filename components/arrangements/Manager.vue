@@ -33,13 +33,9 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 
 const {
   attrs: notificationAttrs,
-  activator: notificationActivator,
-  selectableStatus,
   create: createNotifications,
   get: getNotification,
   set: setNotification,
-  has: hasNotification,
-  update: updateNotification,
 } = useArrangementNotificationManager({
   dateRange,
 });
@@ -226,27 +222,20 @@ onMounted(() => {
                   @remove-worker="removeWorker({ schedule, ...$event })"
                   @change-worker="changeWorker({ schedule, ...$event })"
                 >
-                  <template #item="{ element: worker, highlight }">
+                  <template #item="{ element: worker, highlight, remove }">
                     <MoleculesWorkerTag
                       v-bind="worker"
                       :highlight="highlight"
                       :label="getWorker(worker)?.displayName"
                       :size="tagSize"
-                      @click:remove="removeWorker({ schedule, ...$event })"
+                      @click:remove="remove"
                     >
                       <template #prepend-label>
                         <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
-                        <v-icon
-                          v-if="
-                            hasNotification(schedule.docId, worker.workerId)
-                          "
-                          color="info"
-                          :size="tagSize"
-                          >mdi-bullhorn</v-icon
-                        >
                       </template>
                       <template #prepend-action>
                         <ArrangementsNotificationChip
+                          v-if="worker.isEmployee"
                           :notification="
                             getNotification(schedule.docId, worker.workerId)
                           "

@@ -66,23 +66,6 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     return !!selectedDoc.value;
   });
 
-  const selectableStatus = Vue.computed(() => {
-    return STATUS.ARRAY.map((item) => {
-      return {
-        ...item,
-        disabled: selectedDoc.value && item.value === selectedDoc.value?.status,
-      };
-    });
-  });
-
-  const activator = Vue.computed({
-    get: () => !!selectedDoc.value,
-    set: (v) => {
-      if (v) return;
-      selectedDoc.value = null;
-    },
-  });
-
   const attrs = Vue.computed(() => {
     return {
       modelValue: !!selectedDoc.value,
@@ -204,8 +187,6 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     docs,
     mappedDocs,
     isSelected,
-    selectableStatus,
-    activator,
     attrs,
     create,
     get,

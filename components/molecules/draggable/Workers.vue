@@ -151,6 +151,15 @@ function handleChange(event) {
           v-bind="{
             ...props,
             highlight: isHighlighted(props.element.workerId),
+            remove: () => {
+              handleWorkerRemoved({
+                element: {
+                  workerId: props.element.workerId,
+                  isEmployee: props.element.isEmployee,
+                  amount: props.element.amount,
+                },
+              });
+            },
           }"
         />
       </div>
