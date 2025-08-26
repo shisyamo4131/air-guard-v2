@@ -1,8 +1,9 @@
 <script setup>
 /**
- * @file WorkerTag.vue
- * @description Component for displaying an tag in arrangements based on TagBase.
- *
+ * @file components/molecules/WorkerTag.vue
+ * @description A component for displaying a worker tag based on TagBase.
+ * - Displays the worker's `startTime` and `endTime`.
+ * - Displays the amount at the end of label if `isEmployee` is false.
  * @props {Number} amount - The amount associated with the tag.
  * @props {String} endTime - The end time to display.
  * @props {Boolean} isEmployee - Whether the worker is an employee.
@@ -11,10 +12,13 @@
 
 /** define props */
 const props = defineProps({
+  /** Amount of workers (used outsourcer only) */
   amount: { type: Number, required: true },
+  /** End time of the worker's shift */
   endTime: { type: String, required: true },
   /** Whether the worker is an employee. */
   isEmployee: { type: Boolean, required: true },
+  /** Start time of the worker's shift */
   startTime: { type: String, required: true },
 });
 </script>
