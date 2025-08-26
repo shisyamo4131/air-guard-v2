@@ -28,6 +28,8 @@
 
 import { computed } from "vue";
 
+defineOptions({ inheritAttrs: false });
+
 /** Define props */
 const props = defineProps({
   /** Whether the tag is highlighted. */

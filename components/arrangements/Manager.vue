@@ -211,13 +211,15 @@ onMounted(() => {
             <ArrangementsScheduleTag
               v-bind="schedule"
               class="mb-2"
+              :disabled="!schedule.isEditable"
               :disable-notify="schedule.notificatedAllEmployees"
               @click:edit="toUpdate(schedule)"
               @click:duplicate="duplicator.set(schedule)"
               @click:notify="createNotifications(schedule)"
             >
-              <template #default>
+              <template #default="{ disabled }">
                 <MoleculesDraggableWorkers
+                  :disabled="disabled"
                   :workers="schedule.workers"
                   @add-worker="addWorker({ schedule, ...$event })"
                   @remove-worker="removeWorker({ schedule, ...$event })"
@@ -226,18 +228,24 @@ onMounted(() => {
                   <template #item="{ element: worker, highlight, remove }">
                     <MoleculesWorkerTag
                       v-bind="worker"
+                      :disabled="disabled"
                       :highlight="highlight"
                       :label="getWorker(worker)?.displayName"
+                      :removable="!disabled"
                       :size="tagSize"
                       @click:remove="remove"
                     >
                       <template #prepend-label>
                         <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
-                        <v-icon icon="mdi-menu" class="drag-handle" />
+                        <v-icon
+                          v-if="!disabled"
+                          icon="mdi-menu"
+                          class="drag-handle"
+                        />
                       </template>
                       <template #prepend-action>
                         <ArrangementsNotificationChip
-                          v-if="worker.isEmployee"
+                          v-if="worker.isEmployee && !disabled"
                           :notification="
                             getNotification(schedule.docId, worker.workerId)
                           "

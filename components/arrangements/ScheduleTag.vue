@@ -72,7 +72,7 @@ async function handleUpdateDetailStatus({ worker, status }) {
     <!--
       default slot for `MoleculesDraggableWorkers`.
     -->
-    <slot name="default" />
+    <slot name="default" :disabled="disabled" />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
