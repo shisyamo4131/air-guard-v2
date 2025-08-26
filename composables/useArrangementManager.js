@@ -130,12 +130,12 @@ export function useArrangementManager({
     amount,
     newIndex,
   }) => {
-    schedule.addWorker(workerId, isEmployee, amount, newIndex);
+    schedule.addWorker({ workerId, isEmployee, amount, index: newIndex });
     await schedule.update();
   };
   const removeWorker = async ({ schedule, workerId, isEmployee, amount }) => {
     try {
-      schedule.removeWorker(workerId, amount, isEmployee);
+      schedule.removeWorker({ workerId, amount, isEmployee });
       await schedule.update();
     } catch (error) {
       logger.error({
@@ -146,8 +146,14 @@ export function useArrangementManager({
     }
   };
   const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
+    logger.clearError();
     try {
-      schedule.changeWorker(oldIndex, newIndex, isEmployee);
+      if (isEmployee && newIndex > schedule.employees.length - 1) {
+        throw new Error("従業員は外注先の前に配置する必要があります。");
+      } else if (!isEmployee && newIndex <= schedule.employees.length - 1) {
+        throw new Error("外注先は従業員の後ろに配置する必要があります。");
+      }
+      schedule.changeWorker({ oldIndex, newIndex, isEmployee });
       await schedule.update();
     } catch (error) {
       logger.error({
