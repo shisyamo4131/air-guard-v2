@@ -19,6 +19,7 @@ import { computed } from "vue";
 
 /** define props */
 const props = defineProps({
+  disableNotify: { type: Boolean, default: false },
   isPersonnelShortage: { type: Boolean, required: true },
   requiredPersonnel: { type: Number, required: true },
   workDescription: { type: [String, null], required: true },
@@ -76,7 +77,12 @@ async function handleUpdateDetailStatus({ worker, status }) {
       style="column-gap: 4px"
     >
       <!-- 通知ボタン -->
-      <v-btn variant="tonal" size="x-small" @click="emit('click:notify')">
+      <v-btn
+        :disabled="disableNotify"
+        variant="tonal"
+        size="x-small"
+        @click="emit('click:notify')"
+      >
         <v-icon>mdi-bullhorn</v-icon>
       </v-btn>
       <!-- 複製ボタン -->

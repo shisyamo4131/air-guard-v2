@@ -211,6 +211,7 @@ onMounted(() => {
             <ArrangementsScheduleTag
               v-bind="schedule"
               class="mb-2"
+              :disable-notify="schedule.notificatedAllEmployees"
               @click:edit="toUpdate(schedule)"
               @click:duplicate="duplicator.set(schedule)"
               @click:notify="createNotifications(schedule)"
