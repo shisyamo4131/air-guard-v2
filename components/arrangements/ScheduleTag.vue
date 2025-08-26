@@ -19,6 +19,7 @@ import { computed } from "vue";
 
 /** define props */
 const props = defineProps({
+  disabled: { type: Boolean, default: false },
   disableNotify: { type: Boolean, default: false },
   isPersonnelShortage: { type: Boolean, required: true },
   requiredPersonnel: { type: Number, required: true },
@@ -66,7 +67,7 @@ async function handleUpdateDetailStatus({ worker, status }) {
       <span class="flex-grow-1 text-truncate" style="min-width: 0">
         {{ `${label}` }}
       </span>
-      <v-icon icon="mdi-menu" class="drag-handle" />
+      <v-icon v-if="!disabled" icon="mdi-menu" class="drag-handle" />
     </div>
     <!--
       default slot for `MoleculesDraggableWorkers`.
@@ -78,7 +79,7 @@ async function handleUpdateDetailStatus({ worker, status }) {
     >
       <!-- 通知ボタン -->
       <v-btn
-        :disabled="disableNotify"
+        :disabled="disabled || disableNotify"
         variant="tonal"
         size="x-small"
         @click="emit('click:notify')"
@@ -89,7 +90,12 @@ async function handleUpdateDetailStatus({ worker, status }) {
       <v-btn variant="tonal" size="x-small" @click="emit('click:duplicate')">
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
-      <v-btn variant="tonal" size="x-small" @click="emit('click:edit')">
+      <v-btn
+        :disabled="disabled"
+        variant="tonal"
+        size="x-small"
+        @click="emit('click:edit')"
+      >
         <v-icon>mdi-pencil</v-icon>
       </v-btn>
     </v-container>
