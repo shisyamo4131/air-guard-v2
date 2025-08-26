@@ -291,7 +291,7 @@ onMounted(() => {
     </OrganismsSiteOrderManager>
 
     <!-- 通知ステータス更新コンポーネント -->
-    <OrganismsArrangementNotificationStatusUpdater v-bind="notificationAttrs" />
+    <ArrangementsNotificationStatusUpdater v-bind="notificationAttrs" />
   </div>
 </template>
 

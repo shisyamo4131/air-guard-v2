@@ -37,6 +37,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
   const to = Vue.computed(() => dateRange.value.to);
   const docs = Vue.ref([]);
   const selectedDoc = Vue.ref(null); // Whether a notification instance is selected.
+  const isLoading = Vue.ref(false);
 
   /*****************************************************************************
    * WATCHERS
@@ -72,6 +73,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
       actualStartTime: selectedDoc.value?.actualStartTime,
       actualEndTime: selectedDoc.value?.actualEndTime,
       actualBreakMinutes: selectedDoc.value?.actualBreakMinutes,
+      loading: isLoading.value,
       status: selectedDoc.value?.status,
       "onUpdate:model-value": set,
       "onClick:submit": update,
@@ -90,13 +92,15 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
    * METHODS
    *****************************************************************************/
   const create = async (schedule) => {
-    const key = loadingsStore.add(`Creating notifications`);
     try {
+      isLoading.value = true;
+      const key = loadingsStore.add(`Creating notifications`);
       await schedule.notify();
     } catch (error) {
       logger.error({ message: "Failed to create notification", error });
     } finally {
       loadingsStore.remove(key);
+      isLoading.value = false;
     }
   };
 
@@ -155,8 +159,9 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
    * @param {string} options.status - The new status.
    */
   const update = async (options) => {
-    const { status } = options;
     try {
+      isLoading.value = true;
+      const { status } = options;
       if (!selectedDoc.value) {
         throw new Error("Invalid action. Notification is not selected.");
       }
@@ -180,6 +185,8 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
       selectedDoc.value = null;
     } catch (error) {
       logger.error({ message: error.message, error, data: options });
+    } finally {
+      isLoading.value = false;
     }
   };
 
@@ -188,6 +195,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     mappedDocs,
     isSelected,
     attrs,
+    loading: isLoading,
     create,
     get,
     set,
