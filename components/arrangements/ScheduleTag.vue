@@ -16,6 +16,7 @@
  * - default: Slot for rendering the schedule item.
  */
 import { computed } from "vue";
+import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
 
 /** define props */
 const props = defineProps({
@@ -40,16 +41,6 @@ const label = computed(() => {
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-
-/**
- * Update the detail status of the worker in the schedule.
- * @param {Object} workerInstance - The worker instance to update.
- * @param {String} status - The new status to set.
- */
-async function handleUpdateDetailStatus({ worker, status }) {
-  // worker.status = status;
-  // await props.schedule.update();
-}
 </script>
 
 <template>
@@ -67,7 +58,7 @@ async function handleUpdateDetailStatus({ worker, status }) {
       <span class="flex-grow-1 text-truncate" style="min-width: 0">
         {{ `${label}` }}
       </span>
-      <v-icon v-if="!disabled" icon="mdi-menu" class="drag-handle" />
+      <DraggableIcon v-if="!disabled" />
     </div>
     <!--
       default slot for `MoleculesDraggableWorkers`.

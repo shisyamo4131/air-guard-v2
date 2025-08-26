@@ -237,11 +237,7 @@ onMounted(() => {
                     >
                       <template #prepend-label>
                         <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
-                        <v-icon
-                          v-if="!disabled"
-                          icon="mdi-menu"
-                          class="drag-handle"
-                        />
+                        <AtomsIconsDraggable v-if="!disabled" />
                       </template>
                       <template #prepend-action>
                         <ArrangementsNotificationChip
