@@ -89,13 +89,13 @@ defineExpose({ set });
 <template>
   <v-dialog
     :model-value="!!schedule"
-    width="auto"
+    width="328"
     persistent
     @update:model-value="initialize"
   >
     <MoleculesCardsSubmitCancel
       :disableCancel="isLoading"
-      :disableSubmit="dates.length === 0 || isLoading"
+      :disableSubmit="dates.length === 0 || dates.length > 20 || isLoading"
       :loading="isLoading"
       submit-text="複製"
       @click:cancel="initialize"
