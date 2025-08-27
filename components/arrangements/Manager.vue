@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, useTemplateRef } from "vue";
+import { onMounted, useTemplateRef, provide } from "vue";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -31,14 +31,16 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
   offsetDays: -1,
 });
 
-const {
-  attrs: notificationAttrs,
-  create: createNotifications,
-  get: getNotification,
-  set: setNotification,
-} = useArrangementNotificationManager({
-  dateRange,
-});
+const arrangementNotificationManagerComposable =
+  useArrangementNotificationManager({ dateRange });
+
+const { attrs: notificationAttrs, create: createNotifications } =
+  arrangementNotificationManagerComposable;
+
+provide(
+  "arrangementNotificationManagerComposable",
+  arrangementNotificationManagerComposable
+);
 
 /** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
@@ -236,17 +238,13 @@ onMounted(() => {
                       @click:remove="remove"
                     >
                       <template #prepend-label>
-                        <!-- <v-icon v-if="isNew" color="red" :size="size">mdi-new-box</v-icon> -->
                         <AtomsIconsDraggable v-if="!disabled" />
                       </template>
                       <template #prepend-action>
                         <ArrangementsNotificationChip
                           v-if="worker.isEmployee && !disabled"
-                          :notification="
-                            getNotification(schedule.docId, worker.workerId)
-                          "
-                          size="x-small"
-                          @click="setNotification($event)"
+                          :schedule-id="schedule.docId"
+                          :worker-id="worker.workerId"
                         />
                       </template>
                     </MoleculesWorkerTag>
