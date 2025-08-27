@@ -92,9 +92,9 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
    * METHODS
    *****************************************************************************/
   const create = async (schedule) => {
+    const key = loadingsStore.add(`Creating notifications`);
     try {
       isLoading.value = true;
-      const key = loadingsStore.add(`Creating notifications`);
       await schedule.notify();
     } catch (error) {
       logger.error({ message: "Failed to create notification", error });
