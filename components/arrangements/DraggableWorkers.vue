@@ -40,9 +40,9 @@ const props = defineProps({
 /*****************************************************************************
  * DEFINE COMPOSABLES
  *****************************************************************************/
-const { add: highlightEmployee, has: isHighlighted } = useTimedSet({
-  timeout: 2000,
-});
+const timedSetComposable = useTimedSet({ timeout: 2000 });
+const { add: highlightEmployee } = timedSetComposable;
+provide("timedSetComposable", timedSetComposable);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -57,7 +57,7 @@ const { add: highlightEmployee, has: isHighlighted } = useTimedSet({
  * - Returns false if could not obtain a element from dragging element context.
  * - Returns false if the element does not have a property defined as DRAGGABLE_ITEM_KEY.
  * - Returns true if the element's `isEmployee` property is false. (It means the element is outsourcer)
- * - Set `workerId` to `useSetTimer` composable and returns false
+ * - Set `workerId` to `useTimedSet` composable and returns false
  *   if the worker (employee) already exists in `workers`.
  * - Returns true for all other cases.
  */
@@ -165,7 +165,6 @@ function handleChange(event) {
           name="item"
           v-bind="{
             disabled,
-            highlight: isHighlighted(element.workerId),
             schedule,
             size: tagSize,
             worker: element,

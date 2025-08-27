@@ -4,7 +4,6 @@
  * @description A component for displaying a arrangemented worker tag.
  *
  * @props {Boolean} disabled - Whether the tag is disabled.
- * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {Boolean} loading - Whether the tag is in loading state.
  * @props {Object} schedule - The schedule object associated with the worker.
  * @props {String} size - The size variant of the tag.
@@ -19,16 +18,17 @@ defineOptions({ inheritAttrs: false });
  * INJECT COMPOSABLES
  *****************************************************************************/
 const { getWorker } = inject("workersListComposable");
+const { has } = inject("timedSetComposable");
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
+  /** Whether the tag is disabled. */
   disabled: { type: Boolean, default: false },
-  /** Whether the tag is highlighted. */
-  highlight: { type: Boolean, default: false },
   /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
+  /** The schedule object associated with the worker. */
   schedule: { type: Object, default: false },
   /** Size variant of the tag */
   size: {
@@ -36,6 +36,7 @@ const props = defineProps({
     default: "medium",
     validator: (value) => ["small", "medium", "large"].includes(value),
   },
+  /** The worker object. */
   worker: { type: Object, required: true },
   /** Visual variant of the tag */
   variant: {
@@ -60,7 +61,7 @@ const label = computed(() => {
   <MoleculesWorkerTag
     :amount="worker.amount"
     :end-time="worker.endTime"
-    :highlight="highlight"
+    :highlight="has(worker.workerId)"
     :label="label"
     :loading="loading"
     :removable="!disabled"
