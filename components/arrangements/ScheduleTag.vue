@@ -78,6 +78,8 @@ const label = computed(() => {
       <v-btn variant="tonal" size="x-small" @click="emit('click:duplicate')">
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
+
+      <!-- 編集ボタン -->
       <v-btn
         :disabled="!schedule.isEditable"
         variant="tonal"
