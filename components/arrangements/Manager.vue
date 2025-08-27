@@ -35,8 +35,7 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 const arrangementNotificationManagerComposable =
   useArrangementNotificationManager({ dateRange });
 
-const { attrs: notificationAttrs, create: createNotifications } =
-  arrangementNotificationManagerComposable;
+const { attrs: notificationAttrs } = arrangementNotificationManagerComposable;
 
 provide(
   "arrangementNotificationManagerComposable",
@@ -85,8 +84,7 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, docs, toCreate, toUpdate, optimisticUpdates } =
-  managerComposable;
+const { statistics, docs, toCreate, optimisticUpdates } = managerComposable;
 
 provide("managerComposable", managerComposable);
 
@@ -208,21 +206,13 @@ onMounted(() => {
         >
           <template #item="{ element: schedule }">
             <ArrangementsScheduleTag
-              v-bind="schedule"
               class="mb-2"
-              :disabled="!schedule.isEditable"
-              :disable-notify="schedule.notificatedAllEmployees"
-              @click:edit="toUpdate(schedule)"
+              :schedule="schedule"
+              :tag-size="tagSize"
               @click:duplicate="duplicator.set(schedule)"
-              @click:notify="createNotifications(schedule)"
             >
-              <template #default="{ disabled }">
-                <ArrangementsDraggableWorkers
-                  :disabled="disabled"
-                  :schedule="schedule"
-                  :workers="schedule.workers"
-                  :tag-size="tagSize"
-                >
+              <template #default="scheduleTagSlotProps">
+                <ArrangementsDraggableWorkers v-bind="scheduleTagSlotProps">
                   <template #item="draggableWorkersSlotProps">
                     <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
                   </template>

@@ -3,77 +3,77 @@
  * @file components/molecules/draggable/SiteOperationSchedule.vue
  * @description A component for draggable site-operation-schedule.
  *
- * @props {Boolean} isPersonnelShortage - Flag indicating personnel shortage.
- * @props {Number} requiredPersonnel - The number of required personnel.
- * @props {String|null} workDescription - Description of the work.
- * @props {Array} workers - List of workers assigned to the schedule.
+ * @props {Object} schedule - A `SiteOperationSchedule` instance.
+ * @props {String} tagSize - Tag size for worker elements.
  *
- * @emits click:edit - Event to edit the schedule.
  * @emits click:duplicate - Event to duplicate the schedule.
- * @emits click:notify - Event to notify about the schedule.
  *
  * @slots
  * - default: Slot for rendering the schedule item.
  */
-import { computed } from "vue";
 import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
 
-/** define props */
+/*****************************************************************************
+ * INJECT COMPOSABLES
+ *****************************************************************************/
+const { toUpdate } = inject("managerComposable");
+const { create } = inject("arrangementNotificationManagerComposable");
+
+/*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
 const props = defineProps({
-  disabled: { type: Boolean, default: false },
-  disableNotify: { type: Boolean, default: false },
-  isPersonnelShortage: { type: Boolean, required: true },
-  requiredPersonnel: { type: Number, required: true },
-  workDescription: { type: [String, null], required: true },
-  workers: { type: Array, default: () => [] },
+  schedule: { type: Object, required: true },
+  tagSize: { type: String, default: "medium" },
 });
 
-/** define emits */
-const emit = defineEmits(["click:edit", "click:duplicate", "click:notify"]);
+const emit = defineEmits(["click:duplicate"]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const label = computed(() => {
-  return props.workDescription || "通常警備";
+  return props.schedule?.workDescription || "通常警備";
 });
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
 </script>
 
 <template>
-  <v-card flat style="border: 1px dashed grey; max-width: 100%" s>
+  <v-card flat style="border: 1px dashed grey; max-width: 100%">
     <div
       class="d-flex text-subtitle-2 font-weight-regular px-3 pt-2 pb-0 align-center"
       style="max-width: 100%"
     >
       <v-badge
-        :color="isPersonnelShortage ? 'error' : 'primary'"
-        :content="requiredPersonnel"
+        :color="schedule?.isPersonnelShortage ? 'error' : 'primary'"
+        :content="schedule?.requiredPersonnel"
         inline
         size="x-small"
       />
       <span class="flex-grow-1 text-truncate" style="min-width: 0">
         {{ `${label}` }}
       </span>
-      <DraggableIcon v-if="!disabled" />
+      <DraggableIcon v-if="schedule.isEditable" />
     </div>
     <!--
-      default slot for `MoleculesDraggableWorkers`.
+      default slot for `ArrangementsDraggableWorkers`.
     -->
-    <slot name="default" :disabled="disabled" />
+    <slot
+      name="default"
+      :disabled="!schedule.isEditable"
+      :schedule="schedule"
+      :tag-size="tagSize"
+      :workers="schedule.workers"
+    />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
     >
       <!-- 通知ボタン -->
       <v-btn
-        :disabled="disabled || disableNotify"
+        :disabled="!schedule.isEditable || schedule.notificatedAllEmployees"
         variant="tonal"
         size="x-small"
-        @click="emit('click:notify')"
+        @click="create(schedule)"
       >
         <v-icon>mdi-bullhorn</v-icon>
       </v-btn>
@@ -82,10 +82,10 @@ const label = computed(() => {
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
       <v-btn
-        :disabled="disabled"
+        :disabled="!schedule.isEditable"
         variant="tonal"
         size="x-small"
-        @click="emit('click:edit')"
+        @click="toUpdate(schedule)"
       >
         <v-icon>mdi-pencil</v-icon>
       </v-btn>
