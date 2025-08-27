@@ -27,6 +27,9 @@ import { ja, en } from "vuetify/locale";
  */
 export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
+    display: {
+      mobileBreakpoint: "sm",
+    },
     components: {
       VCalendar,
       VDateInput,
