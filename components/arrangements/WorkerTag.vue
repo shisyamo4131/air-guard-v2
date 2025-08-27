@@ -83,8 +83,4 @@ const label = computed(() => {
   </MoleculesWorkerTag>
 </template>
 
-<style scoped>
-.drag-handle {
-  cursor: grab;
-}
-</style>
+<style scoped></style>

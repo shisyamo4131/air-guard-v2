@@ -8,3 +8,9 @@
 <template>
   <v-icon icon="mdi-menu" class="drag-handle" />
 </template>
+
+<style scoped>
+.drag-handle {
+  cursor: grab;
+}
+</style>
