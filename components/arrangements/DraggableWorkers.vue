@@ -7,8 +7,6 @@
  *
  * @props {Boolean} disabled - Whether the draggable area is disabled.
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
- * @props {String} tagSize - Tag size for worker elements.
- * @props {Array} workers - An array of worker objects for vuedraggable.
  */
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
@@ -31,10 +29,6 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   /** A `SiteOperationSchedule` instance */
   schedule: { type: Object, required: true },
-  /** Tag size for worker elements */
-  tagSize: { type: String, default: "medium" },
-  /** An array of worker objects for vuedraggable */
-  workers: { type: Array, required: true },
 });
 
 /*****************************************************************************
@@ -81,7 +75,7 @@ function handlePut(to, from, dragEl) {
   if (!workerId) return false;
 
   // Check if the worker (employee) already exists in `workers`.
-  const isExisting = props.workers.some(
+  const isExisting = props.schedule.workers.some(
     (emp) => emp[DRAGGABLE_ITEM_KEY] === workerId
   );
 
@@ -146,14 +140,11 @@ function handleChange(event) {
 
 <template>
   <draggable
-    :model-value="workers"
+    :model-value="schedule.workers"
     class="pa-2"
     style="min-height: 24px"
     :disabled="disabled"
-    :group="{
-      name: DRAGGABLE_GROUP_NAME,
-      put: handlePut,
-    }"
+    :group="{ name: DRAGGABLE_GROUP_NAME, put: handlePut }"
     :item-key="DRAGGABLE_ITEM_KEY"
     handle=".drag-handle"
     @change="handleChange"
@@ -166,7 +157,6 @@ function handleChange(event) {
           v-bind="{
             disabled,
             schedule,
-            size: tagSize,
             worker: element,
             'onClick:remove': () => {
               handleWorkerRemoved({

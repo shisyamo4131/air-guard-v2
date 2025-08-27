@@ -208,13 +208,15 @@ onMounted(() => {
             <ArrangementsScheduleTag
               class="mb-2"
               :schedule="schedule"
-              :tag-size="tagSize"
               @click:duplicate="duplicator.set(schedule)"
             >
               <template #default="scheduleTagSlotProps">
                 <ArrangementsDraggableWorkers v-bind="scheduleTagSlotProps">
                   <template #item="draggableWorkersSlotProps">
-                    <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
+                    <ArrangementsWorkerTag
+                      v-bind="draggableWorkersSlotProps"
+                      :size="tagSize"
+                    />
                   </template>
                 </ArrangementsDraggableWorkers>
               </template>

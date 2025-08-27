@@ -24,7 +24,6 @@ const { create } = inject("arrangementNotificationManagerComposable");
  *****************************************************************************/
 const props = defineProps({
   schedule: { type: Object, required: true },
-  tagSize: { type: String, default: "medium" },
 });
 
 const emit = defineEmits(["click:duplicate"]);
@@ -61,8 +60,6 @@ const label = computed(() => {
       name="default"
       :disabled="!schedule.isEditable"
       :schedule="schedule"
-      :tag-size="tagSize"
-      :workers="schedule.workers"
     />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
