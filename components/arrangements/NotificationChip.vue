@@ -12,6 +12,8 @@ import {
 const STATUS_DEF = ARRANGEMENT_NOTIFICATION_STATUS;
 const STATUS_TEMPORARY = ARRANGEMENT_NOTIFICATION_STATUS_TEMPORARY;
 
+defineOptions({ inheritAttrs: false });
+
 /*****************************************************************************
  * DEFINE VUE UTILITIES
  *****************************************************************************/

@@ -30,7 +30,9 @@ import { computed } from "vue";
 
 defineOptions({ inheritAttrs: false });
 
-/** Define props */
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
 const props = defineProps({
   /** Whether the tag is highlighted. */
   highlight: { type: Boolean, default: false },
@@ -69,7 +71,6 @@ const props = defineProps({
   },
 });
 
-/** Define emits */
 const emit = defineEmits(["click:remove"]);
 
 /*****************************************************************************

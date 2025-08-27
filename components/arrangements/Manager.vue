@@ -31,6 +31,7 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
   offsetDays: -1,
 });
 
+/** For arrangement notifications management */
 const arrangementNotificationManagerComposable =
   useArrangementNotificationManager({ dateRange });
 
@@ -64,15 +65,17 @@ const siteOrderManagerComposable = useSiteOrderManager({
 const { siteOrder, attrs } = siteOrderManagerComposable;
 
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
+const workersListComposable = useWorkersList({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+});
 const {
   availableEmployees,
   availableOutsourcers,
   initialize: initWorkers,
-  getWorker,
-} = useWorkersList({
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
-});
+} = workersListComposable;
+
+provide("workersListComposable", workersListComposable);
 
 /** Manager composable */
 const managerComposable = useArrangementManager({
@@ -228,26 +231,15 @@ onMounted(() => {
                   @change-worker="changeWorker({ schedule, ...$event })"
                 >
                   <template #item="{ element: worker, highlight, remove }">
-                    <MoleculesWorkerTag
-                      v-bind="worker"
+                    <ArrangementsWorkerTag
+                      :worker="worker"
+                      :schedule="schedule"
                       :disabled="disabled"
                       :highlight="highlight"
-                      :label="getWorker(worker)?.displayName"
-                      :removable="!disabled"
                       :size="tagSize"
                       @click:remove="remove"
                     >
-                      <template #prepend-label>
-                        <AtomsIconsDraggable v-if="!disabled" />
-                      </template>
-                      <template #prepend-action>
-                        <ArrangementsNotificationChip
-                          v-if="worker.isEmployee && !disabled"
-                          :schedule-id="schedule.docId"
-                          :worker-id="worker.workerId"
-                        />
-                      </template>
-                    </MoleculesWorkerTag>
+                    </ArrangementsWorkerTag>
                   </template>
                 </MoleculesDraggableWorkers>
               </template>
@@ -289,8 +281,4 @@ onMounted(() => {
   </div>
 </template>
 
-<style scoped>
-.drag-handle {
-  cursor: grab;
-}
-</style>
+<style scoped></style>
