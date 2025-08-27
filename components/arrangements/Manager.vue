@@ -85,16 +85,10 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const {
-  statistics,
-  docs,
-  toCreate,
-  toUpdate,
-  optimisticUpdates,
-  addWorker,
-  removeWorker,
-  changeWorker,
-} = managerComposable;
+const { statistics, docs, toCreate, toUpdate, optimisticUpdates } =
+  managerComposable;
+
+provide("managerComposable", managerComposable);
 
 /*****************************************************************************
  * WATCHERS
@@ -223,25 +217,16 @@ onMounted(() => {
               @click:notify="createNotifications(schedule)"
             >
               <template #default="{ disabled }">
-                <MoleculesDraggableWorkers
+                <ArrangementsDraggableWorkers
                   :disabled="disabled"
+                  :schedule="schedule"
                   :workers="schedule.workers"
-                  @add-worker="addWorker({ schedule, ...$event })"
-                  @remove-worker="removeWorker({ schedule, ...$event })"
-                  @change-worker="changeWorker({ schedule, ...$event })"
+                  :tag-size="tagSize"
                 >
-                  <template #item="{ element: worker, highlight, remove }">
-                    <ArrangementsWorkerTag
-                      :worker="worker"
-                      :schedule="schedule"
-                      :disabled="disabled"
-                      :highlight="highlight"
-                      :size="tagSize"
-                      @click:remove="remove"
-                    >
-                    </ArrangementsWorkerTag>
+                  <template #item="draggableWorkersSlotProps">
+                    <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
                   </template>
-                </MoleculesDraggableWorkers>
+                </ArrangementsDraggableWorkers>
               </template>
             </ArrangementsScheduleTag>
           </template>
