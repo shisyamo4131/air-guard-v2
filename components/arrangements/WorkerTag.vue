@@ -6,7 +6,6 @@
  * @props {Boolean} disabled - Whether the tag is disabled.
  * @props {Boolean} loading - Whether the tag is in loading state.
  * @props {Object} schedule - The schedule object associated with the worker.
- * @props {String} size - The size variant of the tag.
  * @props {Object} worker - The worker object containing relevant information.
  * @props {String} variant - The visual variant of the tag.
  */
@@ -19,6 +18,7 @@ defineOptions({ inheritAttrs: false });
  *****************************************************************************/
 const { getWorker } = inject("workersListComposable");
 const { has } = inject("timedSetComposable");
+const { current } = inject("tagSizeComposable");
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -30,12 +30,6 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   /** The schedule object associated with the worker. */
   schedule: { type: Object, default: false },
-  /** Size variant of the tag */
-  size: {
-    type: String,
-    default: "medium",
-    validator: (value) => ["small", "medium", "large"].includes(value),
-  },
   /** The worker object. */
   worker: { type: Object, required: true },
   /** Visual variant of the tag */
@@ -66,7 +60,7 @@ const label = computed(() => {
     :loading="loading"
     :removable="!disabled"
     :show-amount="!worker.isEmployee"
-    :size="size"
+    :size="current"
     :start-time="worker.startTime"
     :variant="variant"
     @click:remove="emit('click:remove')"

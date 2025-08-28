@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, useTemplateRef, provide } from "vue";
 import { SiteOperationSchedule } from "@/schemas";
+import { useTagSize } from "@/composables/useTagSize";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -18,12 +19,15 @@ import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperati
 const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
-const tagSize = ref("medium");
 const selectedDate = ref(null);
 
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
+/** For tag size management */
+const tagSizeComposable = useTagSize();
+provide("tagSizeComposable", tagSizeComposable);
+
 /** For date range management */
 const { dateRange, currentDayCount: dayCount } = useDateRange({
   baseDate: new Date(),
@@ -127,7 +131,6 @@ onMounted(() => {
     <ArrangementsToolbar
       v-model="dayCount"
       @click:workers="toggleFloatingWindow"
-      @update:tag-size="tagSize = $event"
       @click:site-order="siteOrderManagerComposable.open()"
     />
 
@@ -140,7 +143,7 @@ onMounted(() => {
         <template #employee="{ rawElement }">
           <MoleculesTagBase
             :label="rawElement.displayName"
-            :size="tagSize"
+            :size="tagSizeComposable.current.value"
             :variant="
               selectedDate &&
               statistics.arrangedEmployeesMap[selectedDate].allDay.includes(
@@ -213,10 +216,7 @@ onMounted(() => {
               <template #default="scheduleTagSlotProps">
                 <ArrangementsDraggableWorkers v-bind="scheduleTagSlotProps">
                   <template #item="draggableWorkersSlotProps">
-                    <ArrangementsWorkerTag
-                      v-bind="draggableWorkersSlotProps"
-                      :size="tagSize"
-                    />
+                    <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
                   </template>
                 </ArrangementsDraggableWorkers>
               </template>

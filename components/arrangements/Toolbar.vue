@@ -6,11 +6,6 @@
  * @emit click:workers - Emits when the workers button is clicked.
  * @emit update:modelValue - Emits when the number of days to display is updated.
  */
-import {
-  useTagSize,
-  props as tagSizeProps,
-  emits as tagSizeEmits,
-} from "@/composables/useTagSize";
 
 /*****************************************************************************
  * PROPS / EMITS / REFS
@@ -18,22 +13,17 @@ import {
 /** define modelValue */
 const model = defineModel();
 
-/** define props */
-const props = defineProps({
-  ...tagSizeProps,
-});
-
 /** define emits */
-const emit = defineEmits([
-  "click:workers",
-  ...tagSizeEmits,
-  "click:site-order",
-]);
+const emit = defineEmits(["click:workers", "click:site-order"]);
 
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
-const { internalValue: tagSize } = useTagSize(props, emit);
+const {
+  current: tagSize,
+  update: updateTagSize,
+  items: tagSizeItems,
+} = inject("tagSizeComposable");
 
 /*****************************************************************************
  * CONSTANTS
@@ -100,15 +90,20 @@ const handleWorkersClick = (event) => {
       />
 
       <v-btn-toggle
-        v-model="tagSize"
+        :model-value="tagSize"
         class="mr-3"
         density="compact"
         mandatory
         variant="text"
+        @update:model-value="updateTagSize"
       >
-        <v-btn value="small">小</v-btn>
-        <v-btn value="medium">中</v-btn>
-        <v-btn value="large">大</v-btn>
+        <v-btn
+          v-for="item of tagSizeItems"
+          :key="item.value"
+          :value="item.value"
+        >
+          {{ item.title }}
+        </v-btn>
       </v-btn-toggle>
 
       <!-- Workers Button -->

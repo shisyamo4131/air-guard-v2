@@ -1,52 +1,56 @@
-/**
- * @file composables/useTagSize.js
- * @description A composable for managing tag size.
- */
-import { ref } from "vue";
+import { computed } from "vue";
+import { useLogger } from "@/composables/useLogger";
 
-/** constants */
-export const SELECTABLE_VALUES = ["small", "medium", "large"];
-
-/** props */
-export const props = {
-  tagSize: {
-    type: String,
-    default: "medium",
-    validator: (value) => SELECTABLE_VALUES.includes(value),
-  },
+const DEFINITION = {
+  small: { title: "小", value: "small" },
+  medium: { title: "中", value: "medium" },
+  large: { title: "大", value: "large" },
 };
 
-/** emits */
-export const emits = ["update:tag-size"];
+export const SMALL = DEFINITION.small.value;
+export const MEDIUM = DEFINITION.medium.value;
+export const LARGE = DEFINITION.large.value;
 
-/** main function */
-export const useTagSize = (props, emit) => {
-  // define refs
-  const internalValue = ref(props.tagSize || "medium");
+export function useTagSize({ initialSize = MEDIUM } = {}) {
+  /***************************************************************************
+   * DEFINE COMPOSABLES / STORES
+   ***************************************************************************/
+  const logger = useLogger("useTagSize");
 
   /***************************************************************************
-   * WATCHERS
+   * DEFINE REFS
    ***************************************************************************/
-  /** Sync internalValue with props.tagSize */
-  watch(
-    () => props.tagSize,
-    (newVal) => {
-      if (SELECTABLE_VALUES.includes(newVal)) {
-        internalValue.value = newVal;
-      } else {
-        console.error("Invalid tag size:", newVal);
-      }
-    },
-    { immediate: true }
-  );
+  // Current size of the tag. Output warning if invalid initialSize is provided.
+  const current = ref(MEDIUM);
+  if (!Object.keys(DEFINITION).includes(initialSize)) {
+    logger.warn({ message: "Invalid initialSize", data: { initialSize } });
+  } else {
+    current.value = initialSize;
+  }
 
-  /** Emit 'update:tag-size' event if internalValue changes */
-  watch(internalValue, (newVal) => emit("update:tag-size", newVal));
-
-  /***************************************************************************
-   * PROVIDES
-   ***************************************************************************/
-  return {
-    internalValue,
+  /*****************************************************************************
+   * METHODS
+   *****************************************************************************/
+  const update = (newSize) => {
+    try {
+      current.value = newSize;
+    } catch (error) {
+      logger.error({ error, data: { newSize } });
+    }
   };
-};
+
+  return {
+    /** state */
+    isSmall: computed(() => current.value === SMALL),
+    isMedium: computed(() => current.value === MEDIUM),
+    isLarge: computed(() => current.value === LARGE),
+
+    /** values */
+    current,
+    items: computed(() => Object.values(DEFINITION)),
+    values: computed(() => Object.keys(DEFINITION)),
+
+    /** methods */
+    update,
+  };
+}
