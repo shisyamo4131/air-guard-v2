@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, useTemplateRef, provide } from "vue";
+import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -9,7 +10,7 @@ import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementManager } from "@/composables/useArrangementManager";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
-import { SiteOperationSchedule } from "@/schemas";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -17,7 +18,6 @@ import { SiteOperationSchedule } from "@/schemas";
 const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
-const duplicator = useTemplateRef("duplicator");
 const tagSize = ref("medium");
 const selectedDate = ref(null);
 
@@ -87,6 +87,9 @@ const managerComposable = useArrangementManager({
 const { statistics, docs, toCreate, optimisticUpdates } = managerComposable;
 
 provide("managerComposable", managerComposable);
+
+/** For site operation schedule duplication */
+const duplicator = useSiteOperationScheduleDuplicator();
 
 /*****************************************************************************
  * WATCHERS
@@ -244,7 +247,9 @@ onMounted(() => {
     />
 
     <!-- スケジュール複製ダイアログ -->
-    <OrganismsSiteOperationScheduleDuplicator ref="duplicator" />
+    <OrganismsSiteOperationScheduleDuplicator
+      v-bind="duplicator.bindOptions.value"
+    />
 
     <!-- 現場並び替えダイアログ -->
     <OrganismsSiteOrderManager ref="siteOrderManager" v-bind="attrs">
