@@ -17,7 +17,8 @@ export function useLogger(sender) {
     const validTypes = ["log", "info", "warn", "error"];
     const logType = validTypes.includes(type) ? type : "log";
     const prefix = sender ? `[${sender}] ` : "";
-    const output = `${prefix}${message}`;
+    const text = message ? message : error ? error.message : "No message";
+    const output = `${prefix}${text}`;
 
     console[logType](output, ...(data ? [data] : []));
 
