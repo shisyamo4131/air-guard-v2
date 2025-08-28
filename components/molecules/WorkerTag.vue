@@ -16,6 +16,10 @@
  * @props {String} variant - Visual variant of the tag. One of "default", "success", "warning", "error", "disabled".
  *
  * @emits {Event} click:remove - Emitted when the remove button is clicked.
+ *
+ * @slots
+ *   - startTime: Slot for customizing the start time display.
+ *   - endTime: Slot for customizing the end time display.
  */
 
 defineOptions({ inheritAttrs: false });
@@ -77,17 +81,33 @@ const emit = defineEmits(["click:remove"]);
     :variant="variant"
     @click:remove="emit('click:remove')"
   >
+    <!-- through slot: prepend-label -->
     <template #prepend-label>
       <slot name="prepend-label" />
     </template>
+
+    <!-- through slot: append-label -->
     <template #append-label>
       <span v-if="showAmount">{{ `(${amount})` }}</span>
     </template>
+
+    <!-- through slot: footer -->
     <template #footer>
       <v-list-item-subtitle class="text-caption text-no-wrap">
-        {{ `${startTime} - ${endTime}` }}
+        <!-- slot: startTime -->
+        <slot name="startTime" :start-time="startTime">
+          <span>{{ startTime }}</span>
+        </slot>
+        <span> {{ ` - ` }}</span>
+
+        <!-- slot: endTime -->
+        <slot name="endTime" :end-time="endTime">
+          <span>{{ endTime }}</span>
+        </slot>
       </v-list-item-subtitle>
     </template>
+
+    <!-- through slot: prepend-action -->
     <template #prepend-action>
       <slot name="prepend-action" />
     </template>
