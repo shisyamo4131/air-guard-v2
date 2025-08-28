@@ -5,7 +5,6 @@
  * Since workers cannot be duplicated, if the same worker already exists,
  * the drop process is prevented and the corresponding worker is highlighted.
  *
- * @props {Boolean} disabled - Whether the draggable area is disabled.
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
  */
 import draggable from "vuedraggable";
@@ -25,8 +24,6 @@ const { addWorker, changeWorker, removeWorker } = inject("managerComposable");
  * DEFINE PROPS
  *****************************************************************************/
 const props = defineProps({
-  /** Whether the draggable area is disabled */
-  disabled: { type: Boolean, default: false },
   /** A `SiteOperationSchedule` instance */
   schedule: { type: Object, required: true },
 });
@@ -143,7 +140,7 @@ function handleChange(event) {
     :model-value="schedule.workers"
     class="pa-2"
     style="min-height: 24px"
-    :disabled="disabled"
+    :disabled="!schedule.isEditable"
     :group="{ name: DRAGGABLE_GROUP_NAME, put: handlePut }"
     :item-key="DRAGGABLE_ITEM_KEY"
     handle=".drag-handle"
@@ -155,7 +152,6 @@ function handleChange(event) {
         <slot
           name="item"
           v-bind="{
-            disabled,
             schedule,
             worker: element,
             'onClick:remove': () => {

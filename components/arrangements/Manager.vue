@@ -213,8 +213,8 @@ onMounted(() => {
         >
           <template #item="{ element: schedule }">
             <ArrangementsScheduleTag class="mb-2" :schedule="schedule">
-              <template #default="scheduleTagSlotProps">
-                <ArrangementsDraggableWorkers v-bind="scheduleTagSlotProps">
+              <template #default>
+                <ArrangementsDraggableWorkers :schedule="schedule">
                   <template #item="draggableWorkersSlotProps">
                     <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
                   </template>

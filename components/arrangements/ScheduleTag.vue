@@ -53,11 +53,7 @@ const label = computed(() => {
     <!--
       default slot for `ArrangementsDraggableWorkers`.
     -->
-    <slot
-      name="default"
-      :disabled="!schedule.isEditable"
-      :schedule="schedule"
-    />
+    <slot name="default" :schedule="schedule" />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
