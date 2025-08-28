@@ -90,6 +90,7 @@ provide("managerComposable", managerComposable);
 
 /** For site operation schedule duplication */
 const duplicator = useSiteOperationScheduleDuplicator();
+provide("duplicatorComposable", duplicator);
 
 /*****************************************************************************
  * WATCHERS
@@ -208,11 +209,7 @@ onMounted(() => {
           "
         >
           <template #item="{ element: schedule }">
-            <ArrangementsScheduleTag
-              class="mb-2"
-              :schedule="schedule"
-              @click:duplicate="duplicator.set(schedule)"
-            >
+            <ArrangementsScheduleTag class="mb-2" :schedule="schedule">
               <template #default="scheduleTagSlotProps">
                 <ArrangementsDraggableWorkers v-bind="scheduleTagSlotProps">
                   <template #item="draggableWorkersSlotProps">

@@ -6,8 +6,6 @@
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
  * @props {String} tagSize - Tag size for worker elements.
  *
- * @emits click:duplicate - Event to duplicate the schedule.
- *
  * @slots
  * - default: Slot for rendering the schedule item.
  */
@@ -18,6 +16,7 @@ import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
  *****************************************************************************/
 const { toUpdate } = inject("managerComposable");
 const { create } = inject("arrangementNotificationManagerComposable");
+const { set } = inject("duplicatorComposable");
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -25,8 +24,6 @@ const { create } = inject("arrangementNotificationManagerComposable");
 const props = defineProps({
   schedule: { type: Object, required: true },
 });
-
-const emit = defineEmits(["click:duplicate"]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -75,7 +72,7 @@ const label = computed(() => {
         <v-icon>mdi-bullhorn</v-icon>
       </v-btn>
       <!-- 複製ボタン -->
-      <v-btn variant="tonal" size="x-small" @click="emit('click:duplicate')">
+      <v-btn variant="tonal" size="x-small" @click="set(schedule)">
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
 
