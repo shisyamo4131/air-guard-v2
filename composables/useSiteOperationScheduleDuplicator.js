@@ -10,7 +10,7 @@ export function useSiteOperationScheduleDuplicator({
   /***************************************************************************
    * DEFINE COMPOSABLES / STORES
    ***************************************************************************/
-  const logger = useLogger();
+  const logger = useLogger("useSiteOperationScheduleDuplicator");
   const loadingsStore = useLoadingsStore();
 
   /***************************************************************************

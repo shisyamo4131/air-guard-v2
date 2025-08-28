@@ -31,7 +31,7 @@ export function useArrangementManager({
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
 
-  const logger = useLogger();
+  const logger = useLogger("useArrangementManager");
 
   /** define instance & refs */
   const localDocs = Vue.ref([]); // Local documents for optimistic updates.
@@ -139,7 +139,6 @@ export function useArrangementManager({
       await schedule.update();
     } catch (error) {
       logger.error({
-        message: error.message,
         error,
         data: { schedule, workerId, amount, isEmployee },
       });
@@ -157,7 +156,6 @@ export function useArrangementManager({
       await schedule.update();
     } catch (error) {
       logger.error({
-        message: error.message,
         error,
         data: { schedule, oldIndex, newIndex, isEmployee },
       });
