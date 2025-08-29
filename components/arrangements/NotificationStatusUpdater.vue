@@ -58,63 +58,59 @@ function handleClickSubmit() {
 <template>
   <v-dialog :model-value="true" max-width="368" :fullscreen="mobile">
     <MoleculesCardsSubmitCancel
-      :disableSubmit="status === internalStatus || !isFormValid"
+      :disableSubmit="status === internalStatus"
       :loading="loading"
       @click:submit="handleClickSubmit"
       @click:cancel="emit('click:cancel')"
     >
-      <v-card-text>
-        <v-label class="text-caption mb-2" text="状態" />
-        <v-input>
-          <v-chip-group
-            v-model="internalStatus"
-            mandatory
-            column
-            :disabled="loading"
+      <v-label class="text-caption mb-2" text="状態" />
+      <v-input>
+        <v-chip-group
+          v-model="internalStatus"
+          mandatory
+          column
+          :disabled="loading"
+        >
+          <v-chip
+            v-for="item of items"
+            :key="item.value"
+            :value="item.value"
+            :style="{ color: item.color }"
+            :disabled="item.disabled"
+            filter
+            label
           >
-            <v-chip
-              v-for="item of items"
-              :key="item.value"
-              :value="item.value"
-              :style="{ color: item.color }"
-              :disabled="item.disabled"
-              filter
-              label
-            >
-              {{ item.title }}
-            </v-chip>
-          </v-chip-group>
-        </v-input>
-        <v-expand-transition>
-          <v-form v-show="internalStatus === 'LEAVED'" v-model="isFormValid">
-            <v-row>
-              <v-col cols="12" sm="6">
-                <air-time-picker-input
-                  v-model="internalActualStartTime"
-                  label="上番時刻"
-                  required
-                />
-              </v-col>
-              <v-col cols="12" sm="6">
-                <air-time-picker-input
-                  v-model="internalActualEndTime"
-                  label="下番時刻"
-                  required
-                />
-              </v-col>
-              <v-col cols="12">
-                <air-number-input
-                  v-model="internalActualBreakMinutes"
-                  label="休憩時間"
-                  control-variant="split"
-                  suffix="分"
-                  required
-                />
-              </v-col>
-            </v-row>
-          </v-form>
-        </v-expand-transition>
-      </v-card-text>
+            {{ item.title }}
+          </v-chip>
+        </v-chip-group>
+      </v-input>
+      <v-expand-transition>
+        <v-row v-show="internalStatus === 'LEAVED'">
+          <v-col cols="12" sm="6">
+            <air-time-picker-input
+              v-model="internalActualStartTime"
+              label="上番時刻"
+              required
+            />
+          </v-col>
+          <v-col cols="12" sm="6">
+            <air-time-picker-input
+              v-model="internalActualEndTime"
+              label="下番時刻"
+              required
+            />
+          </v-col>
+          <v-col cols="12">
+            <air-number-input
+              v-model="internalActualBreakMinutes"
+              label="休憩時間"
+              control-variant="split"
+              suffix="分"
+              required
+            />
+          </v-col>
+        </v-row>
+      </v-expand-transition>
     </MoleculesCardsSubmitCancel>
   </v-dialog>
 </template>

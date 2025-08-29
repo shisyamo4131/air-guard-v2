@@ -27,7 +27,7 @@ const emit = defineEmits([
 </script>
 
 <template>
-  <v-dialog v-model="dialog" width="328" persistent>
+  <v-dialog v-model="dialog" width="376" persistent>
     <MoleculesCardsSubmitCancel
       :disableCancel="loading"
       :disableSubmit="disableSubmit"

@@ -43,36 +43,34 @@ function submit() {
     </template>
     <MoleculesCardsSubmitCancel
       :loading="loading"
+      title="現場並び替え"
       @click:cancel="cancel"
       @click:submit="submit"
     >
-      <v-card-title>現場並び替え</v-card-title>
-      <v-container>
-        <draggable
-          :model-value="siteOrder"
-          item-key="key"
-          :disabled="loading"
-          @update:model-value="emit('update:site-order', $event)"
-        >
-          <template #item="props">
-            <div>
-              <slot name="item" v-bind="props">
-                <v-list-item border class="pa-2 mb-2" rounded>
-                  <v-list-item-title>
-                    <AtomsChipsShiftType
-                      class="mr-2"
-                      :shift-type="props.element.shiftType"
-                    />
-                    <slot name="title" v-bind="props">
-                      <span>{{ props.element.docId }}</span>
-                    </slot>
-                  </v-list-item-title>
-                </v-list-item>
-              </slot>
-            </div>
-          </template>
-        </draggable>
-      </v-container>
+      <draggable
+        :model-value="siteOrder"
+        item-key="key"
+        :disabled="loading"
+        @update:model-value="emit('update:site-order', $event)"
+      >
+        <template #item="props">
+          <div>
+            <slot name="item" v-bind="props">
+              <v-list-item border class="pa-2 mb-2" rounded>
+                <v-list-item-title>
+                  <AtomsChipsShiftType
+                    class="mr-2"
+                    :shift-type="props.element.shiftType"
+                  />
+                  <slot name="title" v-bind="props">
+                    <span>{{ props.element.docId }}</span>
+                  </slot>
+                </v-list-item-title>
+              </v-list-item>
+            </slot>
+          </div>
+        </template>
+      </draggable>
     </MoleculesCardsSubmitCancel>
   </v-dialog>
 </template>
