@@ -36,6 +36,8 @@ const props = defineProps({
   handle: { type: String, default: ".drag-handle" },
   /** Unique key for each item */
   itemKey: { type: String, default: "docId" },
+  siteId: { type: String, required: true },
+  shiftType: { type: String, required: true },
 });
 
 /*****************************************************************************

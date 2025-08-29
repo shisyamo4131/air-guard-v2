@@ -12,6 +12,7 @@ import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementManager } from "@/composables/useArrangementManager";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
+import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -95,6 +96,9 @@ provide("managerComposable", managerComposable);
 /** For site operation schedule duplication */
 const duplicator = useSiteOperationScheduleDuplicator();
 provide("duplicatorComposable", duplicator);
+
+const detailEditor = useSiteOperationScheduleDetailEditor();
+provide("detailEditorComposable", detailEditor);
 
 /*****************************************************************************
  * WATCHERS
@@ -207,6 +211,8 @@ onMounted(() => {
       <template #body-cell="{ key, siteId, shiftType, date }">
         <MoleculesDraggableSiteOperationSchedule
           :model-value="docs[key] || []"
+          :site-id="siteId"
+          :shift-type="shiftType"
           @update:model-value="
             optimisticUpdates($event, siteId, shiftType, date)
           "
@@ -216,7 +222,10 @@ onMounted(() => {
               <template #default>
                 <ArrangementsDraggableWorkers :schedule="schedule">
                   <template #item="draggableWorkersSlotProps">
-                    <ArrangementsWorkerTag v-bind="draggableWorkersSlotProps" />
+                    <ArrangementsWorkerTag
+                      v-bind="draggableWorkersSlotProps"
+                      @click:edit="detailEditor.set"
+                    />
                   </template>
                 </ArrangementsDraggableWorkers>
               </template>
@@ -257,6 +266,9 @@ onMounted(() => {
 
     <!-- 通知ステータス更新コンポーネント -->
     <ArrangementsNotificationStatusUpdater v-bind="notificationAttrs" />
+
+    <!-- 作業員配置詳細情報編集コンポーネント -->
+    <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" />
   </div>
 </template>
 

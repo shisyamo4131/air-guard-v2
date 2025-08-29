@@ -20,6 +20,7 @@
  * @slots
  *   - startTime: Slot for customizing the start time display.
  *   - endTime: Slot for customizing the end time display.
+ *   - append-footer: Slot for customizing the footer display.
  */
 
 defineOptions({ inheritAttrs: false });
@@ -104,6 +105,9 @@ const emit = defineEmits(["click:remove"]);
         <slot name="endTime" :end-time="endTime">
           <span>{{ endTime }}</span>
         </slot>
+
+        <!-- slot: append-footer -->
+        <slot name="append-footer" />
       </v-list-item-subtitle>
     </template>
 

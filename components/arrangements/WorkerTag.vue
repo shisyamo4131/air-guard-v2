@@ -7,6 +7,9 @@
  * @props {Object} schedule - The schedule object associated with the worker.
  * @props {Object} worker - The worker object containing relevant information.
  * @props {String} variant - The visual variant of the tag.
+ *
+ * @emit {Event} click:remove - Emitted when the remove button is clicked.
+ * @emit {Event} click:edit - Emitted when the edit button is clicked.
  */
 import { inject } from "vue";
 
@@ -38,7 +41,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["click:remove"]);
+const emit = defineEmits(["click:remove", "click:edit"]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -92,6 +95,15 @@ const hasEndTimeDifference = computed(() => {
     <!-- custom endTime if worker's endTime is different from schedule -->
     <template v-if="hasEndTimeDifference" #endTime="{ endTime }">
       <span class="text-red">{{ endTime }}</span>
+    </template>
+
+    <template #append-footer>
+      <v-icon
+        class="ml-2"
+        icon="mdi-pencil"
+        size="x-small"
+        @click="emit('click:edit', { schedule, worker })"
+      />
     </template>
   </MoleculesWorkerTag>
 </template>
