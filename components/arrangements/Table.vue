@@ -29,7 +29,7 @@ const props = defineProps({
 });
 
 /** define emits */
-const emit = defineEmits(["update:selected-date"]);
+const emit = defineEmits(["update:selected-date", "click:output-sheet"]);
 
 /** define composables */
 const { getDayInfo } = useDateUtil();
@@ -197,6 +197,11 @@ const matrix = computed(() => {
                 {{ `${col.dateLabel}(${col.dayOfWeekJp})` }}
               </v-btn>
             </v-btn-toggle>
+            <v-btn
+              icon="mdi-table-large"
+              size="x-small"
+              @click="emit('click:output-sheet', col.date)"
+            />
           </slot>
         </th>
       </tr>

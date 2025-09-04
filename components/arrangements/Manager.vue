@@ -13,6 +13,7 @@ import { useArrangementManager } from "@/composables/useArrangementManager";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
+import { useArrangementSheetPdf } from "../../composables/pdf/useArrangementSheetPdf";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -100,6 +101,12 @@ provide("duplicatorComposable", duplicator);
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
 
+const { open } = useArrangementSheetPdf({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
+});
+
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
@@ -170,6 +177,7 @@ onMounted(() => {
       :from="dateRange.from"
       :day-count="dayCount"
       v-model:selected-date="selectedDate"
+      @click:output-sheet="open"
     >
       <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">
