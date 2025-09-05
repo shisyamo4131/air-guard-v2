@@ -148,11 +148,11 @@ export function useWorkersList({
     }
   });
 
-  const getWorker = ({ workerId, isEmployee }) => {
+  const getWorker = ({ id, isEmployee }) => {
     if (isEmployee) {
-      return cachedEmployees.value[workerId];
+      return cachedEmployees.value[id];
     }
-    return cachedOutsourcers.value[workerId];
+    return cachedOutsourcers.value[id];
   };
 
   return {

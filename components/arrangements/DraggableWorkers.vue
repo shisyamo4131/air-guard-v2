@@ -92,9 +92,9 @@ function handlePut(to, from, dragEl) {
  */
 function handleWorkerAdded(event) {
   const { element, newIndex } = event;
-  const { workerId, isEmployee, amount } = element;
+  const { id, isEmployee } = element;
   const schedule = props.schedule;
-  addWorker({ schedule, workerId, isEmployee, amount, newIndex });
+  addWorker({ schedule, id, isEmployee, newIndex });
 }
 
 /**

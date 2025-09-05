@@ -35,7 +35,7 @@ const props = defineProps({
   converter: {
     type: Function,
     default: (item, isEmployee) =>
-      new SiteOperationScheduleDetail({ workerId: item.docId, isEmployee }),
+      new SiteOperationScheduleDetail({ id: item.docId, isEmployee }),
   },
   convertedItemKey: { type: String, default: "workerId" },
   employees: { type: Array, default: () => [] },
@@ -137,7 +137,7 @@ const filteredOutsourcers = computed(() => {
                 <slot
                   name="employee"
                   :element="element"
-                  :rawElement="employeesMap[element[convertedItemKey]] || null"
+                  :rawElement="employeesMap[element['id']] || null"
                 />
               </div>
             </template>
@@ -158,9 +158,7 @@ const filteredOutsourcers = computed(() => {
                 <slot
                   name="outsourcer"
                   :element="element"
-                  :rawElement="
-                    outsourcersMap[element[convertedItemKey]] || null
-                  "
+                  :rawElement="outsourcersMap[element['id']] || null"
                 />
               </div>
             </template>

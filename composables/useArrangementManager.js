@@ -137,27 +137,23 @@ export function useArrangementManager({
     });
   };
 
-  const addWorker = async ({
-    schedule,
-    workerId,
-    isEmployee,
-    amount,
-    newIndex,
-  }) => {
-    schedule.addWorker({ workerId, isEmployee, amount, index: newIndex });
+  const addWorker = async ({ schedule, id, isEmployee, newIndex }) => {
+    schedule.addWorker({ id, isEmployee, index: newIndex });
     await schedule.update();
   };
-  const removeWorker = async ({ schedule, workerId, isEmployee, amount }) => {
+
+  const removeWorker = async ({ schedule, workerId, isEmployee }) => {
     try {
-      schedule.removeWorker({ workerId, amount, isEmployee });
+      schedule.removeWorker({ workerId, isEmployee });
       await schedule.update();
     } catch (error) {
       logger.error({
         error,
-        data: { schedule, workerId, amount, isEmployee },
+        data: { schedule, workerId, isEmployee },
       });
     }
   };
+
   const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
     logger.clearError();
     try {

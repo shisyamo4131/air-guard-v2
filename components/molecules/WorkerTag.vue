@@ -50,7 +50,7 @@ const props = defineProps({
   /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
   /** Whether to show the amount at the end of label */
-  showAmount: { type: Boolean, required: true },
+  showAmount: { type: Boolean, default: false },
   /** Size variant of the tag */
   size: {
     type: String,

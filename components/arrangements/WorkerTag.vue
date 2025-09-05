@@ -67,7 +67,6 @@ const hasEndTimeDifference = computed(() => {
     :label="label"
     :loading="loading"
     :removable="schedule.isEditable"
-    :show-amount="!worker.isEmployee"
     :size="current"
     :start-time="worker.startTime"
     :variant="variant"
@@ -81,7 +80,7 @@ const hasEndTimeDifference = computed(() => {
     <!-- add notification chip to prepend-action slot -->
     <template #prepend-action>
       <ArrangementsNotificationChip
-        v-if="worker.isEmployee && schedule.isEditable"
+        v-if="schedule.isEditable"
         :schedule-id="schedule.docId"
         :worker-id="worker.workerId"
       />

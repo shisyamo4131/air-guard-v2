@@ -60,7 +60,7 @@ const label = computed(() => {
     >
       <!-- 通知ボタン -->
       <v-btn
-        :disabled="!schedule.isEditable || schedule.isNotificatedAllEmployees"
+        :disabled="!schedule.isEditable || schedule.isNotificatedAllWorkers"
         variant="tonal"
         size="x-small"
         @click="create(schedule)"
