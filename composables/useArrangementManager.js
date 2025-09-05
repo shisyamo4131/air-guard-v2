@@ -321,9 +321,8 @@ export function useArrangementManager({
       }
     );
     missingSiteOrders.forEach((order) => {
-      console.log(fetchSiteComposable.cachedSites.value);
       order.name =
-        fetchSiteComposable.cachedSites.value[order.siteId]?.name || "N/A";
+        fetchSiteComposable?.cachedSites?.value[order.siteId]?.name || "N/A";
     });
 
     // Total required personnel per date

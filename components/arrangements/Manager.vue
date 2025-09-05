@@ -68,7 +68,12 @@ const siteOrderManagerComposable = useSiteOrderManager({
   manager: siteOrderManager,
   fetchSiteComposable,
 });
-const { siteOrder, attrs, add: addSiteOrder } = siteOrderManagerComposable;
+const {
+  siteOrder,
+  attrs,
+  add: addSiteOrder,
+  remove: removeSiteOrder,
+} = siteOrderManagerComposable;
 
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
 const workersListComposable = useWorkersList({
@@ -201,11 +206,16 @@ onMounted(() => {
                   v-for="(item, index) in [
                     {
                       title: '予定登録',
+                      click: () => toCreate({ siteId, shiftType }),
+                    },
+                    {
+                      title: '非表示化',
+                      click: () => removeSiteOrder({ siteId, shiftType }),
                     },
                   ]"
                   :key="index"
                   :value="index"
-                  @click="toCreate({ siteId, shiftType })"
+                  @click="item.click"
                 >
                   <v-list-item-title>{{ item.title }}</v-list-item-title>
                 </v-list-item>
@@ -310,7 +320,7 @@ onMounted(() => {
       <div>・{{ statistics.missingSiteOrders[0].name }}</div>
       <template v-slot:actions>
         <v-btn @click="addSiteOrder(statistics.missingSiteOrders[0])"
-          >表示する</v-btn
+          >追加表示する</v-btn
         >
       </template>
     </v-snackbar>
