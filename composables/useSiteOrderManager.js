@@ -56,11 +56,12 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    * @param {string} param0.shiftType - The shift type of the site.
    * @param {number} index - The index to add the site order at.
    */
-  function add({ siteId, shiftType }, index = -1) {
+  async function add({ siteId, shiftType }, index = -1) {
     logger.clearError();
     try {
       const newOrderInstance = new SiteOrder({ siteId, shiftType });
       company.addSiteOrder(newOrderInstance, index);
+      await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
     }
@@ -71,10 +72,11 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    * @param {number} oldIndex - The old index of the site.
    * @param {number} newIndex - The new index of the site.
    */
-  function change(oldIndex, newIndex) {
+  async function change(oldIndex, newIndex) {
     logger.clearError();
     try {
       company.changeSiteOrder(oldIndex, newIndex);
+      await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
     }
@@ -84,10 +86,11 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    * Remove a site order.
    * @param {string} key - The ID of the site order to remove.
    */
-  function remove(key) {
+  async function remove(key) {
     logger.clearError();
     try {
       company.removeSiteOrder(key);
+      await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
     }

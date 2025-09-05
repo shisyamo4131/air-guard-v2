@@ -68,7 +68,7 @@ const siteOrderManagerComposable = useSiteOrderManager({
   manager: siteOrderManager,
   fetchSiteComposable,
 });
-const { siteOrder, attrs } = siteOrderManagerComposable;
+const { siteOrder, attrs, add: addSiteOrder } = siteOrderManagerComposable;
 
 /** For providing a list of workers using `fetchEmployeeComposable` and `fetchOutsourcerComposable` */
 const workersListComposable = useWorkersList({
@@ -298,6 +298,22 @@ onMounted(() => {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 不足現場勤務区分アラート -->
+    <v-snackbar
+      v-if="statistics.missingSiteOrders.length > 0"
+      :model-value="!!statistics.missingSiteOrders.length"
+      color="error"
+      :timeout="-1"
+    >
+      <div>表示されていない現場稼働予定があります。</div>
+      <div>・{{ statistics.missingSiteOrders[0].name }}</div>
+      <template v-slot:actions>
+        <v-btn @click="addSiteOrder(statistics.missingSiteOrders[0])"
+          >表示する</v-btn
+        >
+      </template>
+    </v-snackbar>
   </div>
 </template>
 

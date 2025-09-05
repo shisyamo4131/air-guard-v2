@@ -91,6 +91,10 @@ export function useArrangementManager({
     if (allOutsourcers.length > 0 && fetchOutsourcerComposable) {
       fetchOutsourcerComposable.fetchOutsourcer(allOutsourcers);
     }
+
+    if (newDocs.length > 0 && fetchSiteComposable) {
+      fetchSiteComposable.fetchSite(newDocs); // Fetch sites related to the schedules
+    }
   }
 
   /***************************************************************************
@@ -292,7 +296,37 @@ export function useArrangementManager({
     return result;
   });
 
+  /**
+   * Statistics
+   */
   const statistics = Vue.computed(() => {
+    // Unique siteId-shiftType combination map
+    //  -> Used to determine the number of unique site-shift combinations.
+    //  -> This is useful for determininig whether any combinations that should be displayed are missing.
+    const requiredSiteOrders = localDocs.value.reduce((acc, schedule) => {
+      const key = `${schedule.siteId}-${schedule.shiftType}`;
+      if (!acc[key])
+        acc[key] = { siteId: schedule.siteId, shiftType: schedule.shiftType };
+      return acc;
+    }, {});
+
+    // Missing site-shiftType combinations in company.siteOrder
+    //  -> This is useful for identifying site-shift combinations that are scheduled but not included in the company's site order.
+    //  -> This can help ensure that all necessary site-shift combinations are accounted for in the company's configuration.
+    const missingSiteOrders = Object.values(requiredSiteOrders).filter(
+      (req) => {
+        return !company.siteOrder.some(
+          (co) => co.siteId === req.siteId && co.shiftType === req.shiftType
+        );
+      }
+    );
+    missingSiteOrders.forEach((order) => {
+      console.log(fetchSiteComposable.cachedSites.value);
+      order.name =
+        fetchSiteComposable.cachedSites.value[order.siteId]?.name || "N/A";
+    });
+
+    // Total required personnel per date
     const requiredPersonnel = localDocs.value.reduce((acc, schedule) => {
       if (!acc[schedule.date]) acc[schedule.date] = 0;
       acc[schedule.date] += schedule.requiredPersonnel || 0;
@@ -301,7 +335,9 @@ export function useArrangementManager({
 
     return {
       arrangedEmployeesMap: arrangedEmployeesMap.value,
+      missingSiteOrders,
       requiredPersonnel,
+      requiredSiteOrders,
     };
   });
 
