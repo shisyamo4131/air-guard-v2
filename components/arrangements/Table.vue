@@ -29,7 +29,11 @@ const props = defineProps({
 });
 
 /** define emits */
-const emit = defineEmits(["update:selected-date", "click:output-sheet"]);
+const emit = defineEmits([
+  "update:selected-date",
+  "click:output-sheet",
+  "click:command",
+]);
 
 /** define composables */
 const { getDayInfo } = useDateUtil();
@@ -185,23 +189,30 @@ const matrix = computed(() => {
             { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
           -->
           <slot name="header-cell" v-bind="col">
-            <v-btn-toggle
-              v-model="selectedDates"
-              color="info"
-              multiple
-              density="compact"
-              variant="text"
-            >
-              <v-btn :value="col.date">
-                <AtomsIconsHolidayFlag v-if="col.isHoliday" class="mr-1" />
-                {{ `${col.dateLabel}(${col.dayOfWeekJp})` }}
-              </v-btn>
-            </v-btn-toggle>
-            <v-btn
-              icon="mdi-table-large"
-              size="x-small"
-              @click="emit('click:output-sheet', col.date)"
-            />
+            <div class="d-flex align-center justify-center" style="gap: 8px">
+              <v-btn-toggle
+                v-model="selectedDates"
+                color="info"
+                multiple
+                density="compact"
+                variant="text"
+              >
+                <v-btn :value="col.date">
+                  <AtomsIconsHolidayFlag v-if="col.isHoliday" class="mr-1" />
+                  {{ `${col.dateLabel}(${col.dayOfWeekJp})` }}
+                </v-btn>
+              </v-btn-toggle>
+              <v-btn
+                icon="mdi-table-large"
+                size="x-small"
+                @click="emit('click:output-sheet', col.date)"
+              />
+              <v-btn
+                icon="mdi-comment-processing-outline"
+                size="x-small"
+                @click="emit('click:command', col.date)"
+              />
+            </div>
           </slot>
         </th>
       </tr>

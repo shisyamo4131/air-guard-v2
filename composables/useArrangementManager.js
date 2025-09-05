@@ -10,8 +10,11 @@
  * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
  */
 import * as Vue from "vue";
-import { useNuxtApp } from "#app";
+import dayjs from "dayjs";
+import ja from "dayjs/locale/ja";
 import { runTransaction } from "firebase/firestore";
+import { useNuxtApp } from "#app";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useLogger } from "@/composables/useLogger";
 import {
   SHIFT_TYPE_DAY,
@@ -27,13 +30,20 @@ export function useArrangementManager({
   manager,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
+  fetchSiteComposable,
 } = {}) {
   // Warn if manager is not provided
   if (!manager) console.warn(MANAGER_NOT_PROVIDED_WARNING);
 
+  /***************************************************************************
+   * DEFINE STORES & COMPOSABLES
+   ***************************************************************************/
+  const { company } = useAuthStore(); // For using 'siteOrder' at getCommandText.
   const logger = useLogger("useArrangementManager");
 
-  /** define instance & refs */
+  /***************************************************************************
+   * DEFINE REFS
+   ***************************************************************************/
   const localDocs = Vue.ref([]); // Local documents for optimistic updates.
 
   /***************************************************************************
@@ -161,6 +171,84 @@ export function useArrangementManager({
       });
     }
   };
+
+  /**
+   * Generates command text for a specific date.
+   * @param {string} date - Date in 'YYYY-MM-DD' format
+   * @returns {string} - Command text for the specified date
+   */
+  const getCommandText = (date) => {
+    const formattedDate = dayjs(date).locale(ja).format("YYYY年MM月DD日(ddd)");
+
+    // Get schedules for the specified date
+    const schedules = localDocs.value.filter(
+      (schedule) => schedule.date === date
+    );
+    if (schedules.length === 0) {
+      return `${formattedDate} 配置\n\n配置はありません。`;
+    }
+
+    const siteOrder = company?.siteOrder || [];
+
+    // siteOrder順に並べ替え
+    if (siteOrder.length > 0) {
+      schedules.sort((a, b) => {
+        const aIdx = siteOrder.findIndex(
+          (order) =>
+            order.siteId === a.siteId && order.shiftType === a.shiftType
+        );
+        const bIdx = siteOrder.findIndex(
+          (order) =>
+            order.siteId === b.siteId && order.shiftType === b.shiftType
+        );
+        // siteOrderに含まれていない場合は後ろに
+        if (aIdx === -1 && bIdx === -1) return 0;
+        if (aIdx === -1) return 1;
+        if (bIdx === -1) return -1;
+        return aIdx - bIdx;
+      });
+    }
+
+    const { cachedSites } = fetchSiteComposable;
+    const { cachedEmployees } = fetchEmployeeComposable;
+    const { cachedOutsourcers } = fetchOutsourcerComposable;
+    const lines = schedules.reduce((acc, schedule, index, arr) => {
+      const site = cachedSites.value[schedule.siteId] || "N/A";
+      const siteName = site ? site.name : "不明な現場";
+      const siteAddress = site ? site.address : "";
+      const shiftType = schedule.shiftType === SHIFT_TYPE_DAY ? "日勤" : "夜勤";
+      const mark = schedule.shiftType === SHIFT_TYPE_DAY ? "○" : "●";
+      const basicTimeRange = `${schedule.startTime}〜${schedule.endTime}`;
+      const employees =
+        schedule.employees
+          .map((emp) => {
+            const employee = cachedEmployees.value[emp.workerId];
+            if (!employee) return `${mark}unknown`;
+            return `${mark}${employee.displayName}${employee?.title || ""}`;
+          })
+          .join("\n") || "";
+      const outsourcers =
+        schedule.outsourcers
+          .map((out) => {
+            const outsourcer = cachedOutsourcers.value[out.workerId];
+            if (!outsourcer) return `${mark}unknown(${out.amount}名)`;
+            return `${mark}${outsourcer.displayName}(${out.amount}名)`;
+          })
+          .join("\n") || "";
+      acc.push(`【${siteName} - ${shiftType}】`);
+      acc.push(siteAddress);
+      acc.push(basicTimeRange);
+      if (employees) acc.push(employees);
+      if (outsourcers) acc.push(outsourcers);
+      if (index !== arr.length - 1) {
+        acc.push("\n");
+      }
+      return acc;
+    }, []);
+
+    return `${formattedDate} 配置\n\n` + lines.join("\n");
+  };
+
   /***************************************************************************
    * COMPUTED PROPERTIES FOR PROVIDE
    ***************************************************************************/
@@ -223,6 +311,7 @@ export function useArrangementManager({
     statistics,
 
     // METHODS
+    getCommandText,
     optimisticUpdates,
 
     // Methods for managing schedules provided by the manager.

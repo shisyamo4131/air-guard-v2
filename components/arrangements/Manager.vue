@@ -22,6 +22,7 @@ const instance = reactive(new SiteOperationSchedule());
 const scheduleManager = useTemplateRef("scheduleManager");
 const siteOrderManager = useTemplateRef("siteOrderManager");
 const selectedDate = ref(null);
+const commandText = ref(null);
 
 /*****************************************************************************
  * COMPOSABLES
@@ -90,7 +91,8 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, docs, toCreate, optimisticUpdates } = managerComposable;
+const { statistics, docs, toCreate, optimisticUpdates, getCommandText } =
+  managerComposable;
 
 provide("managerComposable", managerComposable);
 
@@ -178,6 +180,7 @@ onMounted(() => {
       :day-count="dayCount"
       v-model:selected-date="selectedDate"
       @click:output-sheet="open"
+      @click:command="($event) => (commandText = getCommandText($event))"
     >
       <!-- site - shiftType row -->
       <template #site-row="{ siteId, shiftType }">
@@ -277,6 +280,24 @@ onMounted(() => {
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
     <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" />
+
+    <!-- 配置テキスト表示ダイアログ -->
+    <v-dialog
+      :model-value="!!commandText"
+      max-width="600"
+      @update:model-value="commandText = null"
+    >
+      <v-card>
+        <v-card-title class="text-h6">配置テキスト</v-card-title>
+        <v-card-text>
+          <v-textarea :value="commandText" rows="10" readonly outlined />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn text @click="commandText = null">閉じる</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 
