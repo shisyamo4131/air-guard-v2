@@ -208,7 +208,7 @@ const matrix = computed(() => {
                 @click="emit('click:output-sheet', col.date)"
               />
               <v-btn
-                icon="mdi-comment-processing-outline"
+                icon="mdi-text-box-outline"
                 size="x-small"
                 @click="emit('click:command', col.date)"
               />
