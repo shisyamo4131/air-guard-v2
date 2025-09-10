@@ -9,6 +9,10 @@ import { reactive, onMounted, computed, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { Site, Agreement } from "~/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useLogger } from "../composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
+
+const { error, clearError } = useLogger("SiteManager", useErrorsStore());
 
 /** define-stores */
 const auth = useAuthStore();
@@ -56,13 +60,18 @@ onUnmounted(() => {
           <v-toolbar density="comfortable">
             <v-toolbar-title>{{ model.name }}</v-toolbar-title>
             <v-spacer />
-            <ItemManager
+            <air-item-manager
               :model="model"
               :input-props="{
                 excludedKeys: ['agreements'],
               }"
+              :handle-create="(item) => item.create()"
+              :handle-update="(item) => item.update()"
+              :handle-delete="(item) => item.delete()"
+              @error="error"
+              @error:clear="clearError"
             >
-            </ItemManager>
+            </air-item-manager>
           </v-toolbar>
           <v-list :items="items"> </v-list>
         </v-card>

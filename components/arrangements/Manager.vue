@@ -264,13 +264,9 @@ onMounted(() => {
     </ArrangementsTable>
 
     <!-- スケジュール編集ダイアログ -->
-    <ItemManager
+    <OrganismsSiteOperationScheduleManager
       ref="scheduleManager"
       :model-value="instance"
-      :dialog-props="{ maxWidth: 480 }"
-      :input-props="{
-        excludedKeys: ['dayType', 'shiftType', 'employees', 'outsourcers'],
-      }"
     />
 
     <!-- スケジュール複製ダイアログ -->

@@ -5,20 +5,27 @@
  */
 import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useLogger } from "../composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 
-/** define-options */
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "SiteOperationScheduleManager" });
 
-/** define-props */
+/*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
 const props = defineProps({
   siteId: { type: String, required: true },
 });
 
-/** define composables */
-const { company } = useAuthStore();
-const { docs, events, dateRange, site } = useSiteOperationSchedulesManager({
+/*****************************************************************************
+ * DEFINE COMPOSABLES
+ *****************************************************************************/
+const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
+const { docs, events, dateRange } = useSiteOperationSchedulesManager({
   manager: useTemplateRef("manager"),
   siteId: props.siteId,
 });
@@ -29,33 +36,32 @@ const { docs, events, dateRange, site } = useSiteOperationSchedulesManager({
 </script>
 
 <template>
-  <ArrayManager
+  <air-array-manager
     ref="manager"
-    v-slot="slotProps"
     :model-value="docs"
     :schema="SiteOperationSchedule"
-    :before-edit="
-      (editMode, item) => {
-        item.siteId = siteId;
-      }
-    "
-    :dialog-props="{ maxWidth: 480 }"
+    :before-edit="(editMode, item) => (item.siteId = siteId)"
     :input-props="{
       excludedKeys: ['status', 'employees', 'outsourcers'],
     }"
+    :handle-create="(item) => item.create()"
+    :handle-update="(item) => item.update()"
+    :handle-delete="(item) => item.delete()"
+    @error="error"
+    @error:clear="clearError"
   >
-    <slot name="default" v-bind="slotProps">
+    <template #table="slotProps">
       <v-card>
         <v-toolbar density="comfortable">
           <v-toolbar-title>稼働予定</v-toolbar-title>
           <v-spacer />
-          <v-btn icon="mdi-plus" @click="slotProps.toCreate()" />
+          <v-btn icon="mdi-plus" @click="slotProps['onClick:create']()" />
         </v-toolbar>
         <v-container class="pt-0">
           <air-calendar
             :model-value="[dateRange.from]"
             :events="events"
-            @click:event="slotProps.toUpdate($event.item)"
+            @click:event="slotProps['onClick:update']($event.item)"
             @update:model-value="
               dateRange = {
                 from: dayjs($event).toDate(),
@@ -65,6 +71,6 @@ const { docs, events, dateRange, site } = useSiteOperationSchedulesManager({
           />
         </v-container>
       </v-card>
-    </slot>
-  </ArrayManager>
+    </template>
+  </air-array-manager>
 </template>

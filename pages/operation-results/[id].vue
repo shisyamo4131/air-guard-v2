@@ -47,7 +47,7 @@ onUnmounted(() => {
               <v-toolbar density="comfortable">
                 <v-toolbar-title>稼働概要</v-toolbar-title>
                 <v-spacer />
-                <ItemManager
+                <air-item-manager
                   :model="model"
                   label="稼働概要修正"
                   :dialog-props="{ maxWidth: 600 }"
@@ -76,7 +76,7 @@ onUnmounted(() => {
                       </template>
                     </air-item-input>
                   </template>
-                </ItemManager>
+                </air-item-manager>
               </v-toolbar>
               <v-list>
                 <v-list-item>
@@ -133,7 +133,7 @@ onUnmounted(() => {
               <v-toolbar density="comfortable">
                 <v-toolbar-title>説明</v-toolbar-title>
                 <v-spacer />
-                <ItemManager
+                <air-item-manager
                   :model="model"
                   label="稼働概要修正"
                   :dialog-props="{ maxWidth: 600 }"
@@ -142,7 +142,7 @@ onUnmounted(() => {
                     includedKeys: ['workDescription', 'remarks'],
                   }"
                 >
-                </ItemManager>
+                </air-item-manager>
               </v-toolbar>
               <v-list>
                 <v-list-item>

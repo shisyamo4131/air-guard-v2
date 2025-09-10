@@ -4,16 +4,26 @@
  * @description This component manages the operation results for employees.
  * Due to the specifications of the feature, the `ArrayManager` is not used to edit multiple elements.
  */
+import { useLogger } from "../composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
-/** define-props */
+/*****************************************************************************
+ * DEFINE COMPOSABLES
+ *****************************************************************************/
+const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
+const { fetchEmployee, cachedEmployees } = useFetchEmployee();
+
+/*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
 const props = defineProps({
   model: { type: Object, required: true },
 });
 
-/** define-composables */
-const { fetchEmployee, cachedEmployees } = useFetchEmployee();
-
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
 /** define table's header */
 const headers = ref([
   { title: "氏名", key: "employeeId", sortable: false },
@@ -55,10 +65,6 @@ const deletionColumn = {
 };
 
 /*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-
-/*****************************************************************************
  * WATCHERS
  *****************************************************************************/
 watch(
@@ -92,7 +98,16 @@ function submit() {
 </script>
 
 <template>
-  <ItemManager ref="manager" :model="model" v-slot="slotProps">
+  <air-item-manager
+    ref="manager"
+    :model="model"
+    v-slot="slotProps"
+    :handle-create="(item) => item.create()"
+    :handle-update="(item) => item.update()"
+    :handle-delete="(item) => item.delete()"
+    @error="error"
+    @error:clear="clearError"
+  >
     <v-card>
       <v-toolbar density="comfortable">
         <v-toolbar-title>稼働従業員</v-toolbar-title>
@@ -243,7 +258,7 @@ function submit() {
         </template>
       </v-data-table>
     </v-card>
-  </ItemManager>
+  </air-item-manager>
 </template>
 
 <style scoped>
