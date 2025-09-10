@@ -20,7 +20,7 @@ onUnmounted(() => {
 
 <template>
   <v-container>
-    <array-manager
+    <air-array-manager
       v-model="docs"
       :schema="Site"
       :input-props="{
@@ -36,6 +36,6 @@ onUnmounted(() => {
       :handle-create="(item) => item.create()"
       @create="($event) => $router.push(`sites/${$event.docId}`)"
     >
-    </array-manager>
+    </air-array-manager>
   </v-container>
 </template>

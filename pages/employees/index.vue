@@ -20,13 +20,13 @@ onUnmounted(() => {
 
 <template>
   <v-container>
-    <array-manager
+    <air-array-manager
       v-model="docs"
       :schema="Employee"
       :handle-create="(item) => item.create()"
       :handle-update="(item) => item.update()"
       :handle-delete="(item) => item.delete()"
     >
-    </array-manager>
+    </air-array-manager>
   </v-container>
 </template>

@@ -74,7 +74,7 @@ const companyFields = Object.keys(Company.classProps);
       </v-card>
     </ItemManager>
     <v-card>
-      <array-manager
+      <air-array-manager
         v-model="model.agreements"
         :schema="Agreement"
         label="会社規定取極め"

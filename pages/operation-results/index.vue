@@ -33,7 +33,7 @@ onUnmounted(() => {
 
 <template>
   <v-container>
-    <array-manager
+    <air-array-manager
       v-model="operationResult.docs"
       :schema="OperationResult"
       :input-props="{
@@ -74,6 +74,6 @@ onUnmounted(() => {
           </template>
         </air-data-table>
       </template>
-    </array-manager>
+    </air-array-manager>
   </v-container>
 </template>

@@ -72,7 +72,7 @@ onUnmounted(() => {
       </v-col>
       <v-col>
         <v-card>
-          <array-manager
+          <air-array-manager
             v-model="model.agreements"
             :schema="Agreement"
             :dialog-props="{
@@ -111,7 +111,7 @@ onUnmounted(() => {
                 </template>
               </air-item-input>
             </template>
-          </array-manager>
+          </air-array-manager>
         </v-card>
       </v-col>
     </v-row>

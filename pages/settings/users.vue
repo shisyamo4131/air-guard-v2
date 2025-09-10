@@ -59,7 +59,7 @@ function initPassword() {
 
 <template>
   <v-container>
-    <array-manager
+    <air-array-manager
       v-model="docs"
       :schema="User"
       v-slot="slotProps"
@@ -125,6 +125,6 @@ function initPassword() {
           </v-row>
         </MoleculesCardsEdit>
       </v-dialog>
-    </array-manager>
+    </air-array-manager>
   </v-container>
 </template>
