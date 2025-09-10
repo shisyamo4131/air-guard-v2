@@ -12,7 +12,8 @@
  *                これらの定義はそれぞれ対応するプロパティで変更することが可能です。
  */
 import { useLogger } from "../composables/useLogger";
-const logger = useLogger("ItemManager");
+import { useErrorsStore } from "@/stores/useErrorsStore";
+const logger = useLogger("ItemManager", useErrorsStore());
 
 defineOptions({ name: "ItemManager" });
 

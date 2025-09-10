@@ -15,6 +15,7 @@ import ja from "dayjs/locale/ja";
 import { runTransaction } from "firebase/firestore";
 import { useNuxtApp } from "#app";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import {
   SHIFT_TYPE_DAY,
@@ -39,7 +40,7 @@ export function useArrangementManager({
    * DEFINE STORES & COMPOSABLES
    ***************************************************************************/
   const { company } = useAuthStore(); // For using 'siteOrder' at getCommandText.
-  const logger = useLogger("useArrangementManager");
+  const logger = useLogger("useArrangementManager", useErrorsStore());
 
   /***************************************************************************
    * DEFINE REFS

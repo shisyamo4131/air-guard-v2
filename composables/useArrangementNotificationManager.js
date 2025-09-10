@@ -1,6 +1,7 @@
 import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { ArrangementNotification } from "@/schemas";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import {
   ARRANGEMENT_NOTIFICATION_STATUS,
@@ -21,7 +22,10 @@ const STATUS = {
 };
 
 export function useArrangementNotificationManager({ dateRange } = {}) {
-  const logger = useLogger("useArrangementNotificationManager");
+  const logger = useLogger(
+    "useArrangementNotificationManager",
+    useErrorsStore()
+  );
   const loadingsStore = useLoadingsStore();
 
   if (!dateRange) {

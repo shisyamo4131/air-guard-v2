@@ -11,6 +11,7 @@
  */
 import * as Vue from "vue";
 import dayjs from "dayjs";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useDateRange } from "@/composables/useDateRange";
 import { Site, SiteOperationSchedule } from "@/schemas";
@@ -24,7 +25,10 @@ export function useSiteOperationSchedulesManager({ manager, siteId } = {}) {
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
-  const logger = useLogger("useSiteOperationSchedulesManager");
+  const logger = useLogger(
+    "useSiteOperationSchedulesManager",
+    useErrorsStore()
+  );
   const { dateRange, debouncedDateRange } = useDateRange({
     baseDate: dayjs(new Date()).startOf("month").toDate(),
     dayCount: dayjs(new Date()).daysInMonth(),

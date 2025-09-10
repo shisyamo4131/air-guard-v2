@@ -5,6 +5,7 @@
  * - ユーザーフレンドリーなエラーメッセージの生成
  */
 import { useLogger } from "./useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 /**
  * エラーの種類を定義
@@ -32,7 +33,7 @@ export const ErrorSeverity = {
  * 統一エラーハンドリングコンポーザブル
  */
 export function useErrorHandler(context = "Unknown") {
-  const logger = useLogger(context);
+  const logger = useLogger(context, useErrorsStore());
 
   /**
    * エラーを分類する

@@ -2,8 +2,9 @@
  * @file composables/useLogger.js
  * @description A composable for logging messages in the application.
  */
-export function useLogger(sender) {
-  const errors = useErrorsStore();
+export function useLogger(sender, errorsStore) {
+  // const errors = useErrorsStore();
+  const errors = errorsStore;
 
   /**
    * Send a log message to the console.
@@ -22,8 +23,13 @@ export function useLogger(sender) {
 
     console[logType](output, ...(data ? [data] : []));
 
+    // if (logType === "error" && error) {
+    //   errors.add(error);
+    // }
     if (logType === "error" && error) {
-      errors.add(error);
+      if (typeof errorsStore?.add === "function") {
+        errorsStore.add(error);
+      }
     }
   }
 
@@ -31,7 +37,10 @@ export function useLogger(sender) {
    * Clear all errors from the error management store.
    */
   function clearError() {
-    errors.clear();
+    // errors.clear();
+    if (typeof errorsStore?.clear === "function") {
+      errorsStore.clear();
+    }
   }
 
   return {

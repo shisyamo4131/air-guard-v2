@@ -1,4 +1,5 @@
 import { computed, ref, reactive, toRaw } from "vue";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
@@ -25,7 +26,7 @@ export function useWorkersList({
 } = {}) {
   /** エラーハンドラーとロガーの初期化 */
   const errorHandler = useErrorHandler("useWorkers");
-  const logger = useLogger("useWorkersList");
+  const logger = useLogger("useWorkersList", useErrorsStore());
 
   /** 既存のコンポーザブルを使用または新規作成 */
   const employeeComposable = fetchEmployeeComposable || useFetchEmployee();

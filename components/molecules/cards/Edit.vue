@@ -4,9 +4,10 @@
  * @description A wrapper component for AirEditCard with custom slots.
  */
 import { useLogger } from "~/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 // --- ストア / コンポーザブル
-const logger = useLogger("MoleculesCardsEdit");
+const logger = useLogger("MoleculesCardsEdit", useErrorsStore());
 </script>
 
 <template>

@@ -7,6 +7,7 @@
  * 共通のフェッチ・キャッシュ機能を提供します。
  */
 import { useLogger } from "../useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { ref, computed } from "vue";
 
 /**
@@ -23,7 +24,7 @@ export function useFetchBase({
   entityName,
   idProperties = ["docId"],
 }) {
-  const logger = useLogger(`useFetch${entityName}`);
+  const logger = useLogger(`useFetch${entityName}`, useErrorsStore());
   /** @type {import('vue').Ref<T[]>} */
   const cache = ref([]);
   /** @type {import('vue').Ref<boolean>} */

@@ -1,6 +1,7 @@
 import { isProxy, toRaw, ref, computed } from "vue";
 import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { SiteOperationSchedule } from "@/schemas";
 
@@ -10,7 +11,10 @@ export function useSiteOperationScheduleDuplicator({
   /***************************************************************************
    * DEFINE COMPOSABLES / STORES
    ***************************************************************************/
-  const logger = useLogger("useSiteOperationScheduleDuplicator");
+  const logger = useLogger(
+    "useSiteOperationScheduleDuplicator",
+    useErrorsStore()
+  );
   const loadingsStore = useLoadingsStore();
 
   /***************************************************************************

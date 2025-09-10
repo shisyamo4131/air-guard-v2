@@ -1,4 +1,5 @@
 import { computed } from "vue";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 
 const DEFINITION = {
@@ -15,7 +16,7 @@ export function useTagSize({ initialSize = MEDIUM } = {}) {
   /***************************************************************************
    * DEFINE COMPOSABLES / STORES
    ***************************************************************************/
-  const logger = useLogger("useTagSize");
+  const logger = useLogger("useTagSize", useErrorsStore());
 
   /***************************************************************************
    * DEFINE REFS

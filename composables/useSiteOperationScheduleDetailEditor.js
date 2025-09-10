@@ -1,4 +1,5 @@
 import { computed, ref } from "vue";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { SiteOperationSchedule, SiteOperationScheduleDetail } from "@/schemas";
@@ -7,7 +8,10 @@ export function useSiteOperationScheduleDetailEditor() {
   /***************************************************************************
    * DEFINE COMPOSABLES / STORES
    ***************************************************************************/
-  const logger = useLogger("useSiteOperationScheduleDetailEditor");
+  const logger = useLogger(
+    "useSiteOperationScheduleDetailEditor",
+    useErrorsStore()
+  );
   const loadingsStore = useLoadingsStore();
 
   /***************************************************************************

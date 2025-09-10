@@ -5,6 +5,8 @@ import {
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
 import { Company } from "@/schemas";
+import { useLogger } from "../composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 /**
  * 認証機能とサインイン中のユーザー情報を提供するストア。
@@ -20,7 +22,7 @@ import { Company } from "@/schemas";
  * - `clearUser`: Clears stored user data.
  */
 export const useAuthStore = defineStore("auth", () => {
-  const logger = useLogger("useAuthStore");
+  const logger = useLogger("useAuthStore", useErrorsStore());
   const errors = useErrorsStore();
   const { add, remove } = useLoadingsStore();
   const messages = useMessagesStore();

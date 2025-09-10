@@ -6,7 +6,9 @@
  *              - AirArrayManager で発生したエラーに関する処理を定義しています。
  */
 import { useLogger } from "../composables/useLogger";
-const logger = useLogger("ArrayManager");
+import { useErrorsStore } from "@/stores/useErrorsStore";
+
+const logger = useLogger("ArrayManager", useErrorsStore());
 
 defineOptions({ name: "ArrayManager" });
 
