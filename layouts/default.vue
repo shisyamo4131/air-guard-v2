@@ -77,4 +77,10 @@ const handleSignOut = async () => {
 .firebase-emulator-warning {
   display: none;
 }
+
+/* CSS カスタムプロパティの定義 */
+:root {
+  --app-bar-height: 64px; /* VAppBar の高さ */
+  --footer-height: 40px; /* VFooter の高さ */
+}
 </style>
