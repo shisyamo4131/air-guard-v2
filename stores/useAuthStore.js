@@ -7,6 +7,7 @@ import { httpsCallable } from "firebase/functions";
 import { Company } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { doc, onSnapshot } from "firebase/firestore";
 
 /**
  * 認証機能とサインイン中のユーザー情報を提供するストア。
@@ -43,6 +44,12 @@ export const useAuthStore = defineStore("auth", () => {
   // Company state fetched by companyId
   const company = ref(new Company());
 
+  // Listener for unsubscribing.
+  const listeners = { docCounter: null };
+
+  // Document counter
+  const docCounter = ref({});
+
   // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
   const roles = computed(() => {
     if (isSuperUser.value) {
@@ -55,6 +62,20 @@ export const useAuthStore = defineStore("auth", () => {
   function _initCompany() {
     company.value.unsubscribe();
     company.value.initialize();
+  }
+
+  function _loadDocCounter() {
+    const { $firestore } = useNuxtApp();
+    const docPath = `Companies/${companyId.value}/meta/docCounter`;
+    const docRef = doc($firestore, docPath);
+    listeners.docCounter = onSnapshot(docRef, (docSnap) => {
+      docCounter.value = docSnap.exists() ? docSnap.data() : {};
+    });
+  }
+
+  function _unloadDocCounter() {
+    if (listeners.docCounter) listeners.docCounter();
+    listeners.docCounter = null;
   }
 
   /** Clear user state. */
@@ -94,6 +115,9 @@ export const useAuthStore = defineStore("auth", () => {
       message:
         "Unsubscribed from company data and initialized company instance.",
     });
+
+    // Unload document counter.
+    _unloadDocCounter();
   }
 
   /**
@@ -161,6 +185,14 @@ export const useAuthStore = defineStore("auth", () => {
         company.value.subscribe({ docId: companyId.value });
         logger.info({
           message: `Subscribing for company data: ${companyId.value}`,
+        });
+      }
+
+      // Load document counter.
+      if (companyId.value) {
+        _loadDocCounter();
+        logger.info({
+          message: `Loading document counter for company: ${companyId.value}`,
         });
       }
     } catch (error) {
@@ -714,6 +746,7 @@ export const useAuthStore = defineStore("auth", () => {
     companyId,
     isSuperUser,
     company,
+    docCounter,
     isDev,
     clearUser,
     signIn,
