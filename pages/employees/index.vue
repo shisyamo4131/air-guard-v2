@@ -6,7 +6,7 @@
 </script>
 
 <template>
-  <v-container>
+  <TemplatesFixedHeightContainer>
     <OrganismsEmployeesManager />
-  </v-container>
+  </TemplatesFixedHeightContainer>
 </template>

@@ -1,69 +1,72 @@
 <script setup>
 /**
- * @file compoenents/organisms/EmployeesManager.vue
+ * @file components/organisms/EmployeesManager.vue
  * @description A component to manage employees.
+ * - This component is for managing employees whom employment status is active.
  */
 import { Employee } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLoadingsStore } from "@/stores/useLoadingsStore";
 
 /*****************************************************************************
  * DEFINE COMPOSABLES
  *****************************************************************************/
 const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
-const { add, remove } = useLoadingsStore();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 const model = reactive(new Employee());
-const docs = ref([]);
 const search = ref("");
-const onlyActive = ref(true); // Whether to show only active employees.
+const loading = ref(false);
 
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
-watch(search, fetchDocs, { immediate: true });
+watch(search, subscribeDocs, { immediate: true });
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-async function fetchDocs() {
-  const key = add("Fetching employees...");
+function subscribeDocs() {
   try {
-    const constraints = search.value
-      ? search.value
-      : [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
-
-    docs.value = await model.fetchDocs({ constraints });
+    loading.value = true;
+    const statusOption = [
+      "where",
+      "employmentStatus",
+      "==",
+      Employee.STATUS_ACTIVE,
+    ];
+    const constraints = search.value ? search.value : [statusOption];
+    const options = search.value ? [statusOption] : [];
+    model.subscribeDocs({ constraints, options });
   } catch (error) {
     error({ error, message: "Failed to fetch employees." });
   } finally {
-    remove(key);
+    loading.value = false;
   }
 }
 
-function customFilter(value, query, item) {
-  return (
-    !onlyActive.value ||
-    item.columns.employmentStatus === Employee.STATUS_ACTIVE
-  );
-}
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onUnmounted(() => {
+  model.unsubscribe();
+});
 </script>
 
 <template>
   <air-array-manager
-    v-model="docs"
+    v-model="model.docs"
     :schema="Employee"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
     v-model:search="search"
     :delay="300"
+    :loading="loading"
     :table-props="{
-      customFilter,
+      customFilter: () => true,
       sortBy: [{ key: 'code', order: 'desc' }],
     }"
     @error="error"

@@ -11,7 +11,7 @@
  *****************************************************************************/
 const props = defineProps({
   height: {
-    type: String,
+    type: [String, Number],
     default: "calc(100vh - var(--app-bar-height) - var(--footer-height))",
   },
 });
@@ -19,13 +19,17 @@ const props = defineProps({
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const containerStyle = computed(() => ({
-  height: props.height,
-}));
+const containerStyle = computed(() => {
+  const effectiveHeight =
+    typeof props.height === "number" ? `${props.height}px` : props.height;
+  return {
+    height: effectiveHeight,
+  };
+});
 </script>
 
 <template>
-  <div :style="containerStyle">
+  <v-container :style="containerStyle">
     <slot />
-  </div>
+  </v-container>
 </template>
