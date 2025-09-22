@@ -68,6 +68,15 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
+        id: "operation-results-register",
+        path: "/operation-results/register",
+        // public: false,
+        label: "稼働実績登録",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+      {
         id: "operation-results-list",
         path: "/operation-results",
         // public: false,

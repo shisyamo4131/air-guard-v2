@@ -98,6 +98,7 @@ const hasEndTimeDifference = computed(() => {
 
     <template #append-footer>
       <v-icon
+        v-if="schedule.isEditable"
         class="ml-2"
         icon="mdi-pencil"
         size="x-small"

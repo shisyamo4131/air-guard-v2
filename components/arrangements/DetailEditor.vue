@@ -27,12 +27,23 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
             v-model="worker.startTime"
             label="開始時刻"
             required
+            :picker-props="{ format: '24hr' }"
           />
         </v-col>
         <v-col cols="12" sm="6">
           <air-time-picker-input
             v-model="worker.endTime"
             label="終了時刻"
+            required
+            :picker-props="{ format: '24hr' }"
+          />
+        </v-col>
+        <v-col cols="12">
+          <air-number-input
+            v-model="worker.breakMinutes"
+            label="休憩時間(分)"
+            control-variant="split"
+            suffix="分"
             required
           />
         </v-col>

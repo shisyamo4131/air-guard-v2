@@ -19,15 +19,22 @@ const props = defineProps({
 
 const emit = defineEmits(["click:submit", "click:cancel"]);
 
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
 const internalActualStartTime = ref(null);
 const internalActualEndTime = ref(null);
 const internalActualBreakMinutes = ref(null);
 const internalStatus = ref(null);
 
-const isFormValid = ref(false);
-
+/*****************************************************************************
+ * DEFINE COMPOSABLES
+ *****************************************************************************/
 const { mobile } = useDisplay();
 
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
 watchEffect(() => {
   internalActualStartTime.value = props.actualStartTime;
   internalActualEndTime.value = props.actualEndTime;
@@ -45,6 +52,9 @@ const items = computed(() => {
   return ARRANGEMENT_NOTIFICATION_STATUS_FOR_SELECT;
 });
 
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 function handleClickSubmit() {
   emit("click:submit", {
     actualStartTime: internalActualStartTime.value,
@@ -58,7 +68,6 @@ function handleClickSubmit() {
 <template>
   <v-dialog :model-value="true" max-width="368" :fullscreen="mobile">
     <MoleculesCardsSubmitCancel
-      :disableSubmit="status === internalStatus"
       :loading="loading"
       @click:submit="handleClickSubmit"
       @click:cancel="emit('click:cancel')"
@@ -91,6 +100,7 @@ function handleClickSubmit() {
               v-model="internalActualStartTime"
               label="上番時刻"
               required
+              :picker-props="{ format: '24hr' }"
             />
           </v-col>
           <v-col cols="12" sm="6">
@@ -98,6 +108,7 @@ function handleClickSubmit() {
               v-model="internalActualEndTime"
               label="下番時刻"
               required
+              :picker-props="{ format: '24hr' }"
             />
           </v-col>
           <v-col cols="12">
