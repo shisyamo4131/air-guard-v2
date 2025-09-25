@@ -54,8 +54,8 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
   function _initialize() {
     docs.value = instance.subscribeDocs({
       constraints: [
-        ["where", "dateAt", ">", from.value],
-        ["where", "dateAt", "<", to.value],
+        ["where", "dateAt", ">=", from.value],
+        ["where", "dateAt", "<=", to.value],
       ],
     });
   }

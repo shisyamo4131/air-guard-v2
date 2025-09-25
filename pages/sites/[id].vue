@@ -83,6 +83,7 @@ onUnmounted(() => {
         <v-card>
           <air-array-manager
             v-model="model.agreements"
+            item-key="key"
             :schema="Agreement"
             :dialog-props="{
               maxWidth: 600,
