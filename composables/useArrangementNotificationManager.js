@@ -109,16 +109,34 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
   };
 
   /**
-   * Retrieves a notification by its schedule ID and worker ID.
-   * - Returns null if the notification is not found.
-   * @param {string} scheduleId
-   * @param {string} workerId
-   * @returns {Object|null}
+   * Retrieves a notification(s).
+   * @param {Object|String} args - The arguments object or key string.
+   * @param {string} [scheduleId] - The schedule ID (optional).
+   * @param {string} [workerId] - The worker ID (optional).
+   * @returns {Object|Array|null}
    */
-  const get = (scheduleId, workerId) => {
+  const get = (args = {}) => {
+    if (args && typeof args === "string") {
+      return mappedDocs.value[args] || null;
+    }
+    const { scheduleId, workerId } = args;
+
+    if (!scheduleId) {
+      logger.error({
+        message: "Invalid arguments",
+        data: args,
+      });
+      return null;
+    }
+
+    if (!workerId) {
+      return docs.value.filter((doc) => {
+        return doc.siteOperationScheduleId === scheduleId;
+      });
+    }
+
     const key = _getKey(scheduleId, workerId);
-    const notification = mappedDocs.value[key] || null;
-    return notification;
+    return mappedDocs.value[key] || null;
   };
 
   /**
@@ -165,7 +183,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     if (!scheduleId) {
       logger.error({
         message: "Invalid arguments",
-        data: { scheduleId },
+        data: args,
       });
       return false;
     }

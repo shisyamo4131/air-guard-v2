@@ -30,6 +30,8 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   /** The schedule object associated with the worker. */
   schedule: { type: Object, default: false },
+  /** The notification object */
+  notification: { type: Object, default: null },
   /** The worker object. */
   worker: { type: Object, required: true },
   /** Visual variant of the tag */
@@ -41,7 +43,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["click:remove", "click:edit"]);
+const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -79,10 +81,10 @@ const hasEndTimeDifference = computed(() => {
 
     <!-- add notification chip to prepend-action slot -->
     <template #prepend-action>
-      <ArrangementsNotificationChip
+      <AtomsChipsArrangementNotification
         v-if="schedule.isEditable"
-        :schedule-id="schedule.docId"
-        :worker-id="worker.workerId"
+        :notification="notification"
+        @click="emit('click:notification', $event)"
       />
     </template>
 

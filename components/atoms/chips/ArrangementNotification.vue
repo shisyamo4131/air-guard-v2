@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file components/arrangements/NotificationChip.vue
+ * @file components/atoms/chips/ArrangementNotification.vue
  * @description A chip component that displays a notification status.
  */
 import { useAttrs } from "vue";
@@ -14,16 +14,10 @@ defineOptions({ inheritAttrs: false });
 const attrs = useAttrs();
 
 /*****************************************************************************
- * INJECT COMPOSABLES
- *****************************************************************************/
-const { get, set } = inject("arrangementNotificationManagerComposable");
-
-/*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
-  scheduleId: { type: String, required: true },
-  workerId: { type: String, required: true },
+  notification: { type: Object, default: undefined },
 });
 
 const emit = defineEmits(["click"]);
@@ -32,23 +26,15 @@ const emit = defineEmits(["click"]);
  * COMPUTED PROPERTIES
  *****************************************************************************/
 /**
- * Returns the notification object for the given schedule and worker IDs.
- * @returns {Object|null} - The notification object or null if not found.
- */
-const notification = computed(() => {
-  return get(props.scheduleId, props.workerId);
-});
-
-/**
  * Returns the status definition of the notification.
  * - If the notification is not found, returns the `TEMPORARY` status definition.
  * @returns {Object} - The status definition object.
  */
 const status = computed(() => {
-  if (!notification.value) {
+  if (!props.notification) {
     return ArrangementNotification.STATUS.TEMPORARY;
   }
-  return ArrangementNotification.STATUS[notification.value.status];
+  return ArrangementNotification.STATUS[props.notification.status];
 });
 
 /**
@@ -65,8 +51,8 @@ const bindOptions = computed(() => {
     label: true,
     size: "x-small",
   };
-  if (notification.value) {
-    defaultOptions["onClick"] = () => set(notification.value);
+  if (props.notification) {
+    defaultOptions["onClick"] = () => emit("click", props.notification);
   }
   return defaultOptions;
 });

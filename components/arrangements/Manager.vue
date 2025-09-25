@@ -41,7 +41,11 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 /** For arrangement notifications management */
 const arrangementNotificationManagerComposable =
   useArrangementNotificationManager({ dateRange });
-const { attrs: notificationAttrs } = arrangementNotificationManagerComposable;
+const {
+  get: getNotification,
+  set: setNotification,
+  attrs: notificationAttrs,
+} = arrangementNotificationManagerComposable;
 
 provide(
   "arrangementNotificationManagerComposable",
@@ -244,7 +248,13 @@ onMounted(() => {
                   <template #item="draggableWorkersSlotProps">
                     <ArrangementsWorkerTag
                       v-bind="draggableWorkersSlotProps"
+                      :notification="
+                        getNotification(
+                          draggableWorkersSlotProps.worker.notificationKey
+                        )
+                      "
                       @click:edit="detailEditor.set"
+                      @click:notification="setNotification"
                     />
                   </template>
                 </ArrangementsDraggableWorkers>

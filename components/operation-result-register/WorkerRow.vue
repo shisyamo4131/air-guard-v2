@@ -46,13 +46,10 @@ const displayName = computed(() => {
         >
       </span>
       <span v-else>
-        <v-chip
-          density="compact"
-          size="small"
+        <AtomsChipsArrangementNotification
+          :notification="notification"
           @click="emit('click', notification)"
-        >
-          {{ notification.status }}
-        </v-chip>
+        />
       </span>
     </td>
   </tr>
