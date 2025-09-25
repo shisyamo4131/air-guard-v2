@@ -1,6 +1,6 @@
 <script setup>
 /**
- * @file components/organisms/ArrangementNotificationStatusUpdater.vue
+ * @file components/notifications/StatusUpdater.vue
  * @description A menu component for updating arrangement notification statuses.
  */
 import { useDisplay } from "vuetify";

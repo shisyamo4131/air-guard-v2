@@ -145,11 +145,41 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
 
   /**
    * Returns true if the notification exists.
-   * @param {string} scheduleId
-   * @param {string} workerId
+   * - If key is provided, checks if the notification with that key exists.
+   * - If workerId is not provided, checks if any notification exists for the scheduleId.
+   * - If scheduleId and workerId are provided, checks if the specific notification exists.
+   * @param {Object|String} args - The arguments object or key string.
+   * @param {string} [scheduleId] - The schedule ID (optional).
+   * @param {string} [workerId] - The worker ID (optional).
    * @returns {boolean}
    */
-  const has = (scheduleId, workerId) => {
+  const has = (args = {}) => {
+    // If args is a string, treat it as key
+    if (args && typeof args === "string") {
+      return !!mappedDocs.value[key];
+    }
+
+    const { scheduleId, workerId } = args;
+
+    // Return false if scheduleId is not provided.
+    if (!scheduleId) {
+      logger.error({
+        message: "Invalid arguments",
+        data: { scheduleId },
+      });
+      return false;
+    }
+
+    // If workerId is not provided, check if any notification exists for the scheduleId.
+    if (!workerId) {
+      return (
+        docs.value.filter((doc) => {
+          return doc.siteOperationScheduleId === scheduleId;
+        }).length > 0
+      );
+    }
+
+    // If both scheduleId and workerId are provided, check for the specific notification.
     const key = _getKey(scheduleId, workerId);
     return !!mappedDocs.value[key];
   };
@@ -194,6 +224,14 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     }
   };
 
+  const isAllLeaved = (scheduleId) => {
+    const notifications = docs.value.filter((doc) => {
+      return doc.siteOperationScheduleId === scheduleId;
+    });
+    if (notifications.length === 0) return false;
+    return notifications.every((doc) => doc.status === STATUS.LEAVED);
+  };
+
   return {
     docs,
     mappedDocs,
@@ -205,5 +243,6 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
     set,
     has,
     update,
+    isAllLeaved,
   };
 }

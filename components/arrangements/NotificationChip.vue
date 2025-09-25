@@ -4,13 +4,7 @@
  * @description A chip component that displays a notification status.
  */
 import { useAttrs } from "vue";
-import {
-  ARRANGEMENT_NOTIFICATION_STATUS,
-  ARRANGEMENT_NOTIFICATION_STATUS_TEMPORARY,
-} from "air-guard-v2-schemas/constants";
-
-const STATUS_DEF = ARRANGEMENT_NOTIFICATION_STATUS;
-const STATUS_TEMPORARY = ARRANGEMENT_NOTIFICATION_STATUS_TEMPORARY;
+import { ArrangementNotification } from "@/schemas";
 
 defineOptions({ inheritAttrs: false });
 
@@ -51,8 +45,10 @@ const notification = computed(() => {
  * @returns {Object} - The status definition object.
  */
 const status = computed(() => {
-  if (!notification.value) return STATUS_DEF[STATUS_TEMPORARY];
-  return STATUS_DEF[notification.value.status];
+  if (!notification.value) {
+    return ArrangementNotification.STATUS.TEMPORARY;
+  }
+  return ArrangementNotification.STATUS[notification.value.status];
 });
 
 /**

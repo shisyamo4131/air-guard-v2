@@ -41,7 +41,6 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 /** For arrangement notifications management */
 const arrangementNotificationManagerComposable =
   useArrangementNotificationManager({ dateRange });
-
 const { attrs: notificationAttrs } = arrangementNotificationManagerComposable;
 
 provide(
@@ -282,7 +281,7 @@ onMounted(() => {
     </OrganismsSiteOrderManager>
 
     <!-- 通知ステータス更新コンポーネント -->
-    <ArrangementsNotificationStatusUpdater v-bind="notificationAttrs" />
+    <ArrangementNotificationsStatusUpdater v-bind="notificationAttrs" />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
     <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" />
