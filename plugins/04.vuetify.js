@@ -3,14 +3,19 @@ import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
 
-// --- for using `VCalendar` ---
+/**
+ * Vuetify ^3.10.0 で必要なインポート
+ * - v-resize ディレクティブが VCalendar が更新されたタイミングで必要になったようだ。
+ *   - 'Failed to resolve directive: resize' の警告が出た。
+ * - Nuxt 向けの Vuetify モジュール/設定ではデフォルトで Vuetify のディレクティブを登録しない設定になっている。
+ *   自身で必要なディレクティブをインポートして登録する必要がある。
+ * 参考: https://vuetifyjs.com/en/getting-started/installation/?utm_source=chatgpt.com#existing-projects
+ */
+import * as directives from "vuetify/directives";
+
+// --- for using `VCalendar` and `VDateInput` ---
 import { VCalendar } from "vuetify/labs/VCalendar";
-
-// --- for using `VDateInput` ---
 import { VDateInput } from "vuetify/labs/VDateInput";
-
-// --- for using `VTimePicker` ---
-// import { VTimePicker } from "vuetify/labs/VTimePicker";
 
 // --- for setup Internationalization ---
 import { ja, en } from "vuetify/locale";
@@ -35,6 +40,7 @@ export default defineNuxtPlugin((app) => {
       VDateInput,
       // VTimePicker,
     },
+    directives,
     /** ロケールを ja 優先に設定 */
     locale: {
       locale: "ja",
