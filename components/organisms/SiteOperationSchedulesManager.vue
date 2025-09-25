@@ -25,7 +25,7 @@ const props = defineProps({
  * DEFINE COMPOSABLES
  *****************************************************************************/
 const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
-const { docs, events, dateRange } = useSiteOperationSchedulesManager({
+const { docs, events, dateRange, toUpdate } = useSiteOperationSchedulesManager({
   manager: useTemplateRef("manager"),
   siteId: props.siteId,
 });
@@ -57,11 +57,15 @@ const { docs, events, dateRange } = useSiteOperationSchedulesManager({
           <v-spacer />
           <v-btn icon="mdi-plus" @click="slotProps['onClick:create']()" />
         </v-toolbar>
-        <v-container class="pt-0">
+        <v-card-text>
           <air-calendar
-            :model-value="[dateRange.from]"
+            style="min-height: 480px"
+            :model-value="dateRange.from"
             :events="events"
-            @click:event="slotProps['onClick:update']($event.item)"
+            @click:event="
+              (nativeEvent, { event }) =>
+                slotProps['onClick:update'](event.item)
+            "
             @update:model-value="
               dateRange = {
                 from: dayjs($event).toDate(),
@@ -69,7 +73,7 @@ const { docs, events, dateRange } = useSiteOperationSchedulesManager({
               }
             "
           />
-        </v-container>
+        </v-card-text>
       </v-card>
     </template>
   </air-array-manager>

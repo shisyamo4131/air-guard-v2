@@ -13,7 +13,7 @@ export default class SiteOperationSchedule extends BaseClass {
    * 終了日時、色など）を設定します。
    *
    * @returns {object} VCalendar イベントオブジェクト。以下のプロパティを含みます:
-   *   @property {string} title - イベントのタイトル。`requiredPersonnel`（必要人数）と `workDescription`（作業内容）から生成されます。
+   *   @property {string} name - イベントのタイトル。`requiredPersonnel`（必要人数）と `workDescription`（作業内容）から生成されます。
    *   @property {Date} start - イベントの開始日時。インスタンスの `startAt` プロパティ（Dateオブジェクト）がそのまま使用されます。
    *   @property {Date} end - イベントの終了日時。
    *     **注意点:** 本来はインスタンスの `endAt` プロパティを使用すべきですが、
@@ -32,9 +32,9 @@ export default class SiteOperationSchedule extends BaseClass {
    *     アクセスするために利用できます。
    */
   toEvent() {
-    const title = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
+    const name = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
     return {
-      title,
+      name,
       start: this.dateAt,
       end: this.dateAt,
       color: this.shiftType === "DAY" ? "orange" : "indigo",
