@@ -17,11 +17,12 @@
 import { Employee } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
-export function useFetchEmployee() {
+export function useFetchEmployee({ warnIfNotFound = true } = {}) {
   const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
     SchemaClass: Employee,
     entityName: "Employee",
     idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
+    warnIfNotFound,
   });
 
   return {

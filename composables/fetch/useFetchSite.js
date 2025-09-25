@@ -17,11 +17,12 @@
 import { Site } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
-export function useFetchSite() {
+export function useFetchSite({ warnIfNotFound = true } = {}) {
   const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
     SchemaClass: Site,
     entityName: "Site",
     idProperties: ["siteId", "docId"], // 優先順位順
+    warnIfNotFound,
   });
 
   return {

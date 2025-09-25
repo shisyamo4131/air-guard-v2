@@ -17,11 +17,14 @@
 import { ArrangementNotification } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
-export function useFetchArrangementNotification() {
+export function useFetchArrangementNotification({
+  warnIfNotFound = true,
+} = {}) {
   const { fetchItems, cachedItems, pushItems, isLoading } = useFetchBase({
     SchemaClass: ArrangementNotification,
     entityName: "ArrangementNotification",
     idProperties: ["docId"], // 優先順位順
+    warnIfNotFound,
   });
 
   return {

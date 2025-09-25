@@ -17,12 +17,14 @@ import { ref, computed } from "vue";
  * @param {new () => T} config.SchemaClass - スキーマクラスのコンストラクタ
  * @param {string} config.entityName - エンティティ名（ログ用）
  * @param {string[]} config.idProperties - ID抽出に使用するプロパティ名の配列（優先順位順）
+ * @param {boolean} [config.warnIfNotFound=true] - ドキュメントが見つからなかった場合に警告ログを出すかどうか
  * @returns {Object} フェッチ機能を含むオブジェクト
  */
 export function useFetchBase({
   SchemaClass,
   entityName,
   idProperties = ["docId"],
+  warnIfNotFound = true,
 }) {
   const logger = useLogger(`useFetch${entityName}`, useErrorsStore());
   /** @type {import('vue').Ref<T[]>} */
@@ -95,9 +97,11 @@ export function useFetchBase({
           if (instance) {
             cache.value.push(instance);
           } else {
-            logger.warn({
-              message: `${entityName} (ID: ${docId}) not found in Firestore.`,
-            });
+            if (warnIfNotFound) {
+              logger.warn({
+                message: `${entityName} (ID: ${docId}) not found in Firestore.`,
+              });
+            }
           }
         } catch (error) {
           logger.error({
