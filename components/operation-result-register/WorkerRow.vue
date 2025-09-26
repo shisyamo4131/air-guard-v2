@@ -5,6 +5,7 @@ import { inject } from "vue";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
+  agreement: { type: Object, default: null },
   notification: { type: Object, default: undefined },
   worker: { type: Object, default: undefined },
 });
@@ -27,6 +28,20 @@ const displayName = computed(() => {
     "loading..."
   );
 });
+
+const overtimeMinutes = computed(() => {
+  if (!props.agreement) return "-";
+  if (props.notification) {
+    return (
+      props.notification.totalWorkMinutes -
+      props.agreement.regulationWorkMinutes
+    );
+  } else {
+    return (
+      props.worker.totalWorkMinutes - props.agreement.regulationWorkMinutes
+    );
+  }
+});
 </script>
 
 <template>
@@ -38,11 +53,16 @@ const displayName = computed(() => {
       {{ notification?.actualStartTime || worker?.startTime || "" }}
       -
       {{ notification?.actualEndTime || worker?.endTime || "" }}
+      {{
+        `(休憩: ${
+          notification?.actualBreakMinutes || worker?.breakMinutes || 0
+        }分 / 残業: ${overtimeMinutes}分)`
+      }}
     </td>
     <td>
       <span v-if="!notification">
-        <v-chip color="error" prepend-icon="mdi-alert" size="x-small"
-          >上下番実績がありません</v-chip
+        <v-chip color="error" prepend-icon="mdi-alert" size="small"
+          >配置通知がありません</v-chip
         >
       </span>
       <span v-else>

@@ -71,7 +71,7 @@ export const pageStructure = [
         id: "operation-results-register",
         path: "/operation-results/register",
         // public: false,
-        label: "稼働実績登録",
+        label: "上下番確定処理",
         icon: "mdi-domain",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,

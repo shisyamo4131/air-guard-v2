@@ -20,7 +20,7 @@ const shiftTypeTitle = computed(() => {
 
 <template>
   <tr>
-    <td>時間</td>
+    <td>当日時間</td>
     <td>
       {{ shiftTypeTitle }}
       {{ `${schedule?.startTime || ""} - ${schedule?.endTime || ""}` }}

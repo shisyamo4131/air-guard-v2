@@ -3,6 +3,7 @@
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
+  agreement: { type: Object, default: null },
   workers: { type: Array, default: () => [] },
 });
 
@@ -23,6 +24,7 @@ const notifications = inject("notificationsMap");
           <OperationResultRegisterWorkerRow
             v-for="worker in workers"
             :key="worker.id"
+            :agreement="agreement"
             :worker="worker"
             :notification="notifications[worker.notificationKey]"
             @click="emit('click:notification', $event)"
