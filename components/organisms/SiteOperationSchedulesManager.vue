@@ -33,6 +33,14 @@ const { docs, events, dateRange, toUpdate } = useSiteOperationSchedulesManager({
 /***************************************************************************
  * COMPUTED PROPERTIES
  ***************************************************************************/
+
+/***************************************************************************
+ * METHODS
+ ***************************************************************************/
+function onClickEvent(nativeEvent, { event }) {
+  if (!event.item.isEditable) return;
+  toUpdate(event.item);
+}
 </script>
 
 <template>
@@ -62,12 +70,7 @@ const { docs, events, dateRange, toUpdate } = useSiteOperationSchedulesManager({
             style="min-height: 480px"
             :model-value="dateRange.from"
             :events="events"
-            @click:event="
-              (nativeEvent, { event }) => {
-                if (!event.item.isEditable) return;
-                slotProps['onClick:update'](event.item);
-              }
-            "
+            @click:event="onClickEvent"
             @update:model-value="
               dateRange = {
                 from: dayjs($event).toDate(),

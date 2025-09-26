@@ -213,7 +213,9 @@ export default class SiteOperationSchedule extends BaseClass {
    *     アクセスするために利用できます。
    */
   toEvent() {
-    const name = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
+    const name = `${this.requiredPersonnel} 名: ${
+      this.workDescription || "通常警備"
+    }`;
     const color = !this.isEditable
       ? "grey"
       : this.shiftType === "DAY"
