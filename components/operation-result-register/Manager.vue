@@ -170,6 +170,7 @@ onUnmounted(() => {
           value: (item) => cachedSites[item.siteId]?.name || 'loading...',
         },
       ]"
+      hide-search
       :items="model.docs"
       label="上下番確定処理"
       @click:update="(item) => (selectedDoc = item)"
@@ -230,10 +231,12 @@ onUnmounted(() => {
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn
+            color="primary"
             :disabled="!agreement || !isImportable || loading"
             :loading="loading"
+            prepend-icon="mdi-check"
             @click="submit"
-            >取込</v-btn
+            >上下番を確定する</v-btn
           >
         </v-card-actions>
       </v-card>
