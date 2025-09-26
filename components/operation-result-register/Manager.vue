@@ -1,20 +1,27 @@
 <script setup>
 import dayjs from "dayjs";
-import { onMounted, onUnmounted } from "vue";
-import { SiteOperationSchedule } from "@/schemas";
+import { onMounted, onUnmounted, reactive } from "vue";
+import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
-import { useDateRange } from "@/composables/useDateRange";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
+
+/*****************************************************************************
+ * DEFINE STORES
+ *****************************************************************************/
+const loadingsStore = useLoadingsStore();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 const model = reactive(new SiteOperationSchedule());
 const selectedDoc = ref(null);
+const notificationInstance = reactive(new ArrangementNotification());
+const notifications = ref([]);
 const loading = ref(false);
 const dialog = ref(false);
 
@@ -22,14 +29,6 @@ const dialog = ref(false);
  * DEFINE COMPOSABLES
  *****************************************************************************/
 const logger = useLogger("register", useErrorsStore());
-
-// Date range for fetching arrangement notifications and site-operation-schedules.
-// Defaults to the previous day's month.
-const { dateRange } = useDateRange({
-  baseDate: dayjs().subtract(1, "day").startOf("month"),
-  dayCount: dayjs().subtract(1, "day").daysInMonth(),
-});
-
 const { fetchSite, cachedSites } = useFetchSite();
 const { fetchEmployee, cachedEmployees } = useFetchEmployee();
 const { fetchOutsourcer, cachedOutsourcers } = useFetchOutsourcer();
@@ -40,7 +39,7 @@ const {
   set: setNotification,
   isAllLeaved,
 } = useArrangementNotificationManager({
-  dateRange,
+  docs: notifications,
 });
 
 provide("cachedSites", cachedSites);
@@ -68,8 +67,21 @@ const isImportable = computed(() => {
  * WATCHERS
  *****************************************************************************/
 watch(selectedDoc, (newVal) => {
-  if (!newVal) return;
-  dialog.value = true;
+  if (!newVal) {
+    notificationInstance.unsubscribe();
+    return;
+  }
+
+  // 配置通知のリアルタイムリスナーを設定
+  // 取得に若干の時間がかかるため、ダイアログ表示を遅延させる
+  // 少しトリッキーな処理だが、将来的に警備日報の写真をロードして表示するなど
+  // 時間のかかる処理を追加することになるため、一旦このままにしておく。
+  subscribeNotifications();
+  const loadingsKey = loadingsStore.add("配置通知を取得中...");
+  setTimeout(() => {
+    loadingsStore.remove(loadingsKey);
+    dialog.value = true;
+  }, 500);
 });
 
 /*****************************************************************************
@@ -79,9 +91,8 @@ function subscribe() {
   // Subscribe to operation results that are not yet linked to an operationResultId and are dated up to yesterday
   const constraints = [
     ["where", "operationResultId", "==", ""],
-    ["where", "dateAt", ">=", dateRange.value.from],
-    ["where", "dateAt", "<=", dateRange.value.to],
-    ["orderBy", "dateAt"],
+    ["where", "date", "<", dayjs().format("YYYY-MM-DD")],
+    ["orderBy", "date"],
   ];
 
   // Define callback to fetch related data
@@ -92,6 +103,15 @@ function subscribe() {
   };
 
   model.subscribeDocs({ constraints, callback });
+}
+
+function subscribeNotifications() {
+  const siteOperationScheduleId = selectedDoc.value.docId;
+  notifications.value = notificationInstance.subscribeDocs({
+    constraints: [
+      ["where", "siteOperationScheduleId", "==", siteOperationScheduleId],
+    ],
+  });
 }
 
 async function submit() {
@@ -128,13 +148,15 @@ async function notify() {
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
-watch(dateRange, subscribe);
 
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
 onMounted(subscribe);
-onUnmounted(() => model.unsubscribe());
+onUnmounted(() => {
+  model.unsubscribe();
+  notificationInstance.unsubscribe();
+});
 </script>
 
 <template>

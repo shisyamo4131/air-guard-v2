@@ -21,15 +21,24 @@ const STATUS = {
   LEAVED: ARRANGEMENT_NOTIFICATION_STATUS_LEAVED,
 };
 
-export function useArrangementNotificationManager({ dateRange } = {}) {
+export function useArrangementNotificationManager({
+  dateRange = null,
+  docs: providedDocs = null,
+} = {}) {
   const logger = useLogger(
     "useArrangementNotificationManager",
     useErrorsStore()
   );
   const loadingsStore = useLoadingsStore();
 
-  if (!dateRange) {
-    logger.error({ message: "Date range composable is required" });
+  // if (!dateRange) {
+  //   logger.error({ message: "Date range composable is required" });
+  // }
+
+  if (!dateRange && !providedDocs) {
+    logger.error({
+      message: "Either dateRange or providedDocs must be supplied.",
+    });
   }
 
   const instance = Vue.reactive(new ArrangementNotification());
@@ -37,9 +46,12 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
   /*****************************************************************************
    * DEFINE REFS
    *****************************************************************************/
-  const from = Vue.computed(() => dateRange.value.from);
-  const to = Vue.computed(() => dateRange.value.to);
-  const docs = Vue.ref([]);
+  // const from = Vue.computed(() => dateRange.value.from);
+  // const to = Vue.computed(() => dateRange.value.to);
+  // const docs = Vue.ref([]);
+  const from = Vue.computed(() => (dateRange ? dateRange.value.from : null));
+  const to = Vue.computed(() => (dateRange ? dateRange.value.to : null));
+  const docs = Vue.ref(!dateRange && providedDocs ? providedDocs : []);
   const selectedDoc = Vue.ref(null); // Whether a notification instance is selected.
   const isLoading = Vue.ref(false);
 
@@ -52,6 +64,7 @@ export function useArrangementNotificationManager({ dateRange } = {}) {
    * COMPUTED PROPERTIES
    *****************************************************************************/
   function _initialize() {
+    if (!dateRange) return;
     docs.value = instance.subscribeDocs({
       constraints: [
         ["where", "dateAt", ">=", from.value],
