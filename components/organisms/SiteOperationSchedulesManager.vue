@@ -63,8 +63,10 @@ const { docs, events, dateRange, toUpdate } = useSiteOperationSchedulesManager({
             :model-value="dateRange.from"
             :events="events"
             @click:event="
-              (nativeEvent, { event }) =>
-                slotProps['onClick:update'](event.item)
+              (nativeEvent, { event }) => {
+                if (!event.item.isEditable) return;
+                slotProps['onClick:update'](event.item);
+              }
             "
             @update:model-value="
               dateRange = {

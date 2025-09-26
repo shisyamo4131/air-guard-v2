@@ -214,11 +214,16 @@ export default class SiteOperationSchedule extends BaseClass {
    */
   toEvent() {
     const name = `${this.requiredPersonnel} 名: ${this.workDescription || ""}`;
+    const color = !this.isEditable
+      ? "grey"
+      : this.shiftType === "DAY"
+      ? "orange"
+      : "indigo";
     return {
       name,
       start: this.dateAt,
       end: this.dateAt,
-      color: this.shiftType === "DAY" ? "orange" : "indigo",
+      color,
       item: this,
     };
   }
