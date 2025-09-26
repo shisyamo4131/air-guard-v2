@@ -1,10 +1,191 @@
+import {
+  ArrangementNotification,
+  OperationResult,
+  SiteOperationSchedule as BaseClass,
+} from "air-guard-v2-schemas";
+import { ContextualError } from "air-guard-v2-schemas/utils";
+import dayjs from "dayjs";
+import { runTransaction } from "firebase/firestore";
+
 /**
  * @file ./schemas/SiteOperationSchedule.js
  * @description 現場稼働予定情報クラス
+ *
+ * @states isEditable 当該インスタンスが編集可能かどうかを示す真偽値。
+ * @states isNotificatedAllWorkers 全作業員に通知済みかどうかを示す真偽値。
+ *
+ * @methods duplicate 現場稼働予定ドキュメントを指定された日付分複製します。
+ * @methods notify 配置通知を作成します。
+ * @methods syncToOperationResult 現在のインスタンスから稼働実績ドキュメントを作成します。
+ * @methods toEvent Vuetify の VCalendar コンポーネントで表示可能なイベントオブジェクト形式に変換して返します。
  */
-import { SiteOperationSchedule as BaseClass } from "air-guard-v2-schemas";
-
 export default class SiteOperationSchedule extends BaseClass {
+  /***************************************************************************
+   * METHODS
+   ***************************************************************************/
+
+  /**
+   * 現場稼働予定ドキュメントを指定された日付分複製します。
+   * - 複製された各ドキュメントは新規作成され、元のドキュメントとは別のIDを持ちます。
+   * - 複製先の日付が元のドキュメントの日付と同じ場合、その日付分の複製は行われません。
+   * @param {Array<Date|string>} dates - 複製先の日付の配列。Dateオブジェクトまたは日付文字列で指定します。
+   * @returns {Promise<Array<SiteOperationSchedule>>}
+   */
+  async duplicate(dates = []) {
+    if (!this.docId) {
+      throw new Error("不正な処理です。作成前のスケジュールは複製できません。");
+    }
+    if (!Array.isArray(dates) || dates.length === 0) {
+      throw new Error("複製する日付を配列で指定してください。");
+    }
+    if (dates.some((d) => !(d instanceof Date) && typeof d !== "string")) {
+      throw new TypeError(
+        "日付の指定が無効です。Dateオブジェクトか文字列で指定してください。"
+      );
+    }
+    if (dates.length > 20) {
+      throw new Error("一度に複製できるスケジュールは最大20件です。");
+    }
+    try {
+      // 日付が Date オブジェクトであれば日付文字列に変換しつつ、元のスケジュールと同じ日付は除外し、
+      // 加えて重複も除外する。
+      const targetDates = dates
+        .map((date) => {
+          if (date instanceof Date) return dayjs(date).format("YYYY-MM-DD");
+          return date;
+        })
+        .filter((date) => date !== this.date)
+        .reduce((unique, date) => {
+          if (!unique.includes(date)) unique.push(date);
+          return unique;
+        }, []);
+
+      // 複製するための現場稼働予定インスタンスを生成
+      const newSchedules = targetDates.map((date) => {
+        const instance = this.clone();
+        instance.docId = "";
+        instance.dateAt = new Date(date);
+        instance.operationResultId = "";
+        return instance;
+      });
+
+      // トランザクションで一括作成
+      const firestore = this.constructor.getAdapter().firestore;
+      await runTransaction(firestore, async (transaction) => {
+        await Promise.all(
+          newSchedules.map((schedule) => schedule.create({ transaction }))
+        );
+      });
+
+      return newSchedules;
+    } catch (error) {
+      throw new ContextualError("現場稼働予定の複製処理に失敗しました。", {
+        method: "duplicate",
+        className: "SiteOperationSchedule",
+        arguments: { dates },
+        state: this.toObject(),
+        error,
+      });
+    }
+  }
+
+  /**
+   * 配置通知を作成します。
+   * - 現在配置通知がなされてない作業員に対してのみ配置通知ドキュメントを作成します。
+   * - 全作業員の配置通知フラグが true に更新されます。
+   * @returns {Promise<void>}
+   */
+  async notify() {
+    try {
+      // 未通知である作業員を抽出
+      const targetWorkers = this.workers.filter((w) => !w.hasNotification);
+
+      // 配置通知ドキュメントを作成するためのインスタンス配列を生成
+      const notifications = targetWorkers.map((worker) => {
+        return new ArrangementNotification({
+          ...worker,
+          actualStartTime: worker.startTime,
+          actualEndTime: worker.endTime,
+          actualBreakMinutes: worker.breakMinutes,
+        });
+      });
+
+      // 配置通知インスタンスがなければ処理終了
+      if (notifications.length === 0) {
+        return;
+      }
+
+      // 従業員、外注先の通知済みフラグを更新
+      this.employees.forEach((emp) => (emp.hasNotification = true));
+      this.outsourcers.forEach((out) => (out.hasNotification = true));
+
+      // トランザクションで配置通知ドキュメントを一括作成し、作成済みフラグを更新
+      const firestore = this.constructor.getAdapter().firestore;
+      await runTransaction(firestore, async (transaction) => {
+        await Promise.all([
+          ...notifications.map((n) => n.create({ transaction })),
+          this.update({ transaction }),
+        ]);
+      });
+    } catch (error) {
+      this.undo();
+      throw new ContextualError(
+        `配置通知作成処理に失敗しました。: ${error.message}`,
+        {
+          method: "notify",
+          className: "SiteOperationSchedule",
+          arguments: {},
+          state: this.toObject(),
+        }
+      );
+    }
+  }
+
+  /**
+   * 現在のインスタンスから稼働実績ドキュメントを作成します。
+   * - 稼働実績ドキュメントの生成時には取極めが必要です。
+   * - 稼働実績ドキュメントの ID は現場稼働予定ドキュメントの ID と同一になります。
+   *   既に存在する場合は上書きされます。
+   * - 現場稼働予定ドキュメントの `operationResultId` プロパティに
+   *   作成された稼働実績ドキュメントの ID が設定されます。（当該ドキュメント ID と同一）
+   * @param {Object} agreement - 取極め情報オブジェクト。稼働実績ドキュメントの生成に必要なプロパティを含みます。
+   */
+  async syncToOperationResult(agreement) {
+    if (!this.docId) {
+      throw new Error(
+        "不正な処理です。作成前の現場稼働予定を稼働実績に同期することはできません。"
+      );
+    }
+    if (!agreement) {
+      throw new Error("取極めの指定が必要です。");
+    }
+    try {
+      // 現場稼働予定の内容をもとに稼働実績インスタンスを生成
+      const operationResult = new OperationResult({
+        ...agreement,
+        ...this.toObject(),
+        siteOperationScheduleId: this.docId,
+      });
+
+      const firestore = this.constructor.getAdapter().firestore;
+      await runTransaction(firestore, async (transaction) => {
+        const docRef = await operationResult.create({
+          docId: this.docId,
+          transaction,
+        });
+        this.operationResultId = docRef.id;
+        await this.update({ transaction });
+      });
+    } catch (error) {
+      throw new ContextualError(error.message, {
+        method: "syncToOperationResult()",
+        className: "SiteOperationSchedule",
+        arguments: { agreement },
+        state: this.toObject(),
+      });
+    }
+  }
+
   /**
    * この現場稼働予定インスタンスを、Vuetify の VCalendar コンポーネントで
    * 表示可能なイベントオブジェクト形式に変換して返します。
