@@ -5,6 +5,7 @@
 .nitro
 .cache
 dist
+.firebase/hosting.*.cache
 
 # Node dependencies
 node_modules
