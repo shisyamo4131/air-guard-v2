@@ -10,10 +10,6 @@ import {
   enableUser,
 } from "./modules/auth.js";
 
-/** テスト用 */
-import { testApi } from "./modules/testFunction.js";
-export { testApi };
-
 /** エクスポート */
 export * from "./modules/dependentSync.js"; // dependentSync.js からすべてエクスポート
 export {

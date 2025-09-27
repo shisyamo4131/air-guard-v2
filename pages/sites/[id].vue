@@ -55,28 +55,29 @@ onUnmounted(() => {
 <template>
   <v-container>
     <v-row>
-      <v-col>
+      <v-col cols="12">
+        <v-toolbar density="compact">
+          <v-toolbar-title>{{ model.name }}</v-toolbar-title>
+        </v-toolbar>
+      </v-col>
+      <v-col cols="12" md="4">
         <v-card>
-          <v-toolbar density="comfortable">
-            <v-toolbar-title>{{ model.name }}</v-toolbar-title>
-            <v-spacer />
-            <air-item-manager
-              :model="model"
-              :input-props="{
-                excludedKeys: ['agreements'],
-              }"
-              :handle-create="(item) => item.create()"
-              :handle-update="(item) => item.update()"
-              :handle-delete="(item) => item.delete()"
-              @error="error"
-              @error:clear="clearError"
-            >
-            </air-item-manager>
-          </v-toolbar>
+          <air-item-manager
+            :model="model"
+            :input-props="{
+              excludedKeys: ['agreements'],
+            }"
+            :handle-create="(item) => item.create()"
+            :handle-update="(item) => item.update()"
+            :handle-delete="(item) => item.delete()"
+            @error="error"
+            @error:clear="clearError"
+          >
+          </air-item-manager>
           <v-list :items="items"> </v-list>
         </v-card>
       </v-col>
-      <v-col cols="12">
+      <v-col cols="12" md="8">
         <OrganismsSiteOperationSchedulesManager :site-id="siteId" />
       </v-col>
       <v-col>

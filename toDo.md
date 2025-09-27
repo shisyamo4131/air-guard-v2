@@ -1,6 +1,23 @@
-- VCalendar が不明内警告を出力
-  - resize ディレクティブを解決できないとのこと。（Vuetify 3.10.2 にアップデートしてから）
-  - 警告は出力されるものの、機能としてはとりあえず動作するようになったため、AirCalendar が不要になる。
+## Firebase の環境変数
+
+- 環境変数は .env ファイルに設定する。
+- .env ファイルは .env.local（ローカル開発環境）, .env.development（テスト環境） も用意している。
+- .env ファイルには process.env オブジェクトからアクセス可能で、Nuxt3 に読み込まれる .env ファイルは package.json の script 実行時に --dotenv オプションで指定したものになる。
+- Nuxt3 からは nuxt.config.js の runtimeConfig からアクセスする。
+- 本番環境では --dotenv オプションを指定せず、.env ファイルを読み込ませる？
+
+## コンパイルとデプロイ
+
+Firebase の hosting にデプロイする手順は以下のとおり。
+
+1. `npm run generate:'environment'` でコンパイル
+
+- 'environment' は `prod`, `dev` のどちらかを指定。
+- Firebase Hosting にデプロイする場合、コンパイルしたファイルは dist ディレクトリに作成されなければならない。
+
+2. `firebase deploy` でデプロイ
+
+- `firebase deploy` でのデプロイ先 Firebase プロジェクトは .firebaserc に定義されている。デプロイ先を変更する場合は当該ファイルに定義を追加し、 `firebase use` コマンドで変更する。
 
 ## 動的な高さを持つコンポーネントにスクロールバーを適用する方法
 

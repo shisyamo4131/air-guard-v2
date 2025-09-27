@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "air-guard-v2-dev"
+    "default": "air-guard-v2-dev",
+    "dev": "air-guard-v2-dev",
+    "prod": "air-guard-v2"
   }
 }
