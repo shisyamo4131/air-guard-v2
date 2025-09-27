@@ -107,14 +107,14 @@ export const useAuthStore = defineStore("auth", () => {
   function clearUser() {
     // Clear uset state.
     _clearUserState();
-    logger.info({ message: "User information is cleared." });
+    // logger.info({ message: "User information is cleared." });
 
     // Unsubscribe to company data.
     _initCompany();
-    logger.info({
-      message:
-        "Unsubscribed from company data and initialized company instance.",
-    });
+    // logger.info({
+    //   message:
+    //     "Unsubscribed from company data and initialized company instance.",
+    // });
 
     // Unload document counter.
     _unloadDocCounter();
@@ -151,9 +151,9 @@ export const useAuthStore = defineStore("auth", () => {
       // 注意: この場合、clearUser は onAuthStateChanged の呼び出し元で処理される想定
       // Note: In this case, clearUser is expected to be handled by the caller in onAuthStateChanged
       if (!user) {
-        logger.info({
-          message: "setUser called with null user. Skipping state update.",
-        });
+        // logger.info({
+        //   message: "setUser called with null user. Skipping state update.",
+        // });
         // null ユーザーの場合、状態はクリアされているはずなので、ここでは何もしない
         // If the user is null, the state should already be cleared, so do nothing here.
         return;
@@ -175,25 +175,25 @@ export const useAuthStore = defineStore("auth", () => {
       // Update store state with user information and claims.
       _setUserState(user, idTokenResult);
 
-      logger.info({
-        message: `User state updated for UID: ${user.uid}`,
-      });
+      // logger.info({
+      //   message: `User state updated for UID: ${user.uid}`,
+      // });
 
       // Subscribe company data
       _initCompany();
       if (companyId.value) {
         company.value.subscribe({ docId: companyId.value });
-        logger.info({
-          message: `Subscribing for company data: ${companyId.value}`,
-        });
+        // logger.info({
+        //   message: `Subscribing for company data: ${companyId.value}`,
+        // });
       }
 
       // Load document counter.
       if (companyId.value) {
         _loadDocCounter();
-        logger.info({
-          message: `Loading document counter for company: ${companyId.value}`,
-        });
+        // logger.info({
+        //   message: `Loading document counter for company: ${companyId.value}`,
+        // });
       }
     } catch (error) {
       // エラー発生時の処理
@@ -261,7 +261,7 @@ export const useAuthStore = defineStore("auth", () => {
 
       // 成功ログを記録
       // Log success
-      logger.info({ message: "Signed in successfully." });
+      // logger.info({ message: "Signed in successfully." });
     } catch (error) {
       // エラーログを記録
       // Log the error
@@ -307,7 +307,7 @@ export const useAuthStore = defineStore("auth", () => {
       messages.add({ text: "サインアウトしました", color: "success" }); // Signed out successfully
 
       // 成功ログを記録 / Log success
-      logger.info({ message: "Signed out successfully." });
+      // logger.info({ message: "Signed out successfully." });
     } catch (error) {
       // エラーログを記録 / Log the error
       logger.error({
@@ -368,9 +368,9 @@ export const useAuthStore = defineStore("auth", () => {
       messages.add({ text: "アカウントを作成しました", color: "success" }); // Account created successfully (Japanese OK for UI)
 
       // 成功ログを記録 / Log success
-      logger.info({
-        message: `Account created successfully for ${email}`,
-      });
+      // logger.info({
+      //   message: `Account created successfully for ${email}`,
+      // });
 
       // Firebase から返された UserCredential を返す / Return the UserCredential from Firebase
       return result;
@@ -530,9 +530,9 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       // 成功ログを記録 / Log success
-      logger.info({
-        message: `管理者ユーザー「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
-      });
+      // logger.info({
+      //   message: `管理者ユーザー「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
+      // });
 
       // 成功メッセージを追加 / Add success message
       messages.add({
@@ -620,9 +620,9 @@ export const useAuthStore = defineStore("auth", () => {
       }
 
       // 成功ログを記録 / Log success
-      logger.info({
-        message: `ユーザーアカウント「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
-      });
+      // logger.info({
+      //   message: `ユーザーアカウント「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
+      // });
 
       // 成功メッセージを追加 / Add success message
       messages.add({
@@ -670,9 +670,9 @@ export const useAuthStore = defineStore("auth", () => {
         throw new Error("Cloud function response indicates failure.");
       }
 
-      logger.info({
-        message: `ユーザーアカウント ${uid} を無効化しました。`,
-      });
+      // logger.info({
+      //   message: `ユーザーアカウント ${uid} を無効化しました。`,
+      // });
 
       messages.add({
         text: "ユーザーアカウントを無効化しました",
@@ -713,9 +713,9 @@ export const useAuthStore = defineStore("auth", () => {
         throw new Error("Cloud function response indicates failure.");
       }
 
-      logger.info({
-        message: `ユーザーアカウント ${uid} を有効化しました。`,
-      });
+      // logger.info({
+      //   message: `ユーザーアカウント ${uid} を有効化しました。`,
+      // });
 
       messages.add({
         text: "ユーザーアカウントを有効化しました",
