@@ -1,3 +1,9 @@
+## createUserWithCompany
+
+- Cloud Run のセキュリティを"公開"にしないと CORS エラーが発生。
+- authentication の signUp メソッドを使えばアカウントをシンプルに作成することが可能だが、Company と User の作成をアプリから行わなければならない。
+  - Cloud Run サービスを公開するよりはセキュリティ上好ましいとは思う。
+
 ## Firebase の環境変数
 
 - 環境変数は .env ファイルに設定する。

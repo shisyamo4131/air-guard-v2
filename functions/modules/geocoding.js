@@ -7,7 +7,7 @@ import { fetchCoordinates } from "./utils/geocoding.js";
 
 /** CORS 設定 */
 const allowedOrigins = [
-  "https://air-guard-v1-dev.web.app", // 本番環境
+  "https://air-guard-v2-dev.web.app", // 本番環境
   "http://localhost:3000", // ローカル環境（ポートは必要に応じて変更）
 ];
 
