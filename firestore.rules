@@ -14,8 +14,16 @@ service cloud.firestore {
     }
 
     function isSuperUser() {
-      // request.auth.token.isSuperUser が true の場合にスーパーユーザーと判断
-      return request.auth != null && request.auth.token.isSuperUser == true;
+      // isSuperUserがtrueの場合のみスーパーユーザーと判定
+      return request.auth != null
+        && "isSuperUser" in request.auth.token
+        && request.auth.token.isSuperUser == true;
+    }
+
+    // --- Rules for 'admin_users' collection ---
+    // admin_users コレクション は認証ユーザーであれば許可
+    match /admin_users/{uid} {
+      allow read, write: if isAuthenticated();
     }
 
     // --- Rules for 'Companies' collection ---
