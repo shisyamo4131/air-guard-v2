@@ -4,7 +4,7 @@
  */
 import { User as BaseClass } from "air-guard-v2-schemas";
 
-export class User extends BaseClass {
+export default class User extends BaseClass {
   // User ドキュメントはクラスから作成してはいけない
   create() {
     console.error("[User.js] Could not use create().");
