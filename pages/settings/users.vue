@@ -3,7 +3,7 @@
  * @file UsersManager.vue
  * @description ユーザー管理コンポーネント
  */
-import { User } from "@/schemas/User.js";
+import { User } from "@/schemas";
 import { reactive, onMounted, onUnmounted } from "vue";
 
 /** ストア連携 */
@@ -13,13 +13,6 @@ const user = reactive(new User());
 const docs = ref([]);
 const password = ref("");
 const confirmPassword = ref("");
-
-const headers = [
-  { title: "email", value: "email" },
-  { title: "表示名", value: "displayName" },
-  { title: "管理者", value: "roles" },
-  { title: "操作", value: "actions", align: "end", sortable: false },
-];
 
 onMounted(() => {
   docs.value = user.subscribeDocs();
@@ -60,7 +53,7 @@ function initPassword() {
 <template>
   <v-container>
     <air-array-manager
-      v-model="docs"
+      :model-value="docs"
       :schema="User"
       v-slot="slotProps"
       :handle-create="handleCreate"

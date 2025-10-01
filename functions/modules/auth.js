@@ -2,6 +2,8 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { ContextualError } from "./utils/ContextualError.js";
+import { onDocumentCreated } from "firebase-functions/firestore";
+import { logger } from "firebase-functions";
 
 const USER_ROLES = {
   ADMIN: "admin",
@@ -25,6 +27,66 @@ const AUTH_ERROR_CODE_MAP = {
     message: "パスワードが簡単すぎます（最低6文字以上にしてください）。",
   },
 };
+
+/**
+ * A function that triggers when a new document is created in the 'admin_users' collection.
+ * It creates a new company and user in Firestore, sets custom claims for the user,
+ * and then deletes the original document to signal completion.
+ */
+export const onAdminUserCreated = onDocumentCreated(
+  `admin_users/{uid}`,
+  async (event) => {
+    const { uid } = event.params;
+    const data = event.data.data();
+    const companyData = {
+      companyName: data.companyName,
+      companyNameKana: data.companyNameKana,
+    };
+    const userData = {
+      uid,
+      email: data.email,
+      displayName: data.displayName,
+      roles: [USER_ROLES.ADMIN],
+    };
+
+    // Inform the start of the function execution.
+    logger.info(`onAdminUserCreated function started for UID: ${uid}`);
+
+    try {
+      const companyId = await getFirestore().runTransaction(
+        async (transaction) => {
+          const companyId = await createCompany(companyData, transaction);
+
+          // Inform about the created company.
+          logger.info(
+            `Company created with ID: ${companyId} for admin user UID: ${uid}`
+          );
+
+          await createUser(userData, companyId, transaction);
+
+          // Inform about the created user document.
+          logger.info(
+            `Admin user document created for UID: ${uid} under company ID: ${companyId}`
+          );
+
+          return companyId;
+        }
+      );
+
+      // Set custom claims for the new user.
+      const auth = getAuth();
+      await auth.setCustomUserClaims(uid, {
+        companyId,
+        isSuperUser: false,
+        roles: [USER_ROLES.ADMIN],
+      });
+    } catch (error) {
+      logger.error("onAdminUserCreated でエラーが発生しました:", error);
+    } finally {
+      await event.data.ref.delete();
+    }
+  }
+);
 
 /**
  * ユーザー操作時の共通エラーハンドリングとロールバック処理
@@ -69,55 +131,6 @@ async function handleUserOperationError(
     `${operationName} 中に予期しないエラーが発生しました。`
   );
 }
-
-/**
- * Create a new administrator account with a new company and user.
- * @returns {Promise<{success: boolean, uid: string, companyId: string}>} Result object containing success status, user ID, and company ID
- * @throws {HttpsError} if required arguments are missing or if any operation fails
- */
-export const createUserWithCompany = onCall(async (request) => {
-  const { email, password, companyName, companyNameKana, displayName } =
-    request.data;
-
-  if (!email || !password || !displayName || !companyName || !companyNameKana) {
-    throw new HttpsError("invalid-argument", "必要な情報が不足しています");
-  }
-
-  const auth = getAuth();
-  let uid;
-
-  try {
-    // 1. Create a new Auth user account as the administrator of the new company.
-    const userRecord = await auth.createUser({ email, password, displayName });
-    uid = userRecord.uid;
-
-    // 2. Create a new company and the corresponding user document within a Firestore transaction.
-    const db = getFirestore();
-    const companyId = await db.runTransaction(async (transaction) => {
-      const companyId = await createCompany(
-        { companyName, companyNameKana },
-        transaction
-      );
-      await createUser(
-        { uid, email, displayName, roles: [USER_ROLES.ADMIN] },
-        companyId,
-        transaction
-      );
-      return companyId;
-    });
-
-    // 3. Set custom claims for the new user.
-    await auth.setCustomUserClaims(uid, {
-      companyId,
-      isSuperUser: false,
-      roles: [USER_ROLES.ADMIN],
-    });
-
-    return { success: true, uid, companyId };
-  } catch (error) {
-    await handleUserOperationError(error, uid, auth, "createUserWithCompany");
-  }
-});
 
 /**
  * 指定された会社に所属するユーザーアカウントを作成します。

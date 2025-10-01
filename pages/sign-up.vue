@@ -1,11 +1,21 @@
 <script setup>
-import { ref, reactive } from "vue";
+import { doc, setDoc, onSnapshot } from "firebase/firestore";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import { useMessagesStore } from "@/stores/useMessagesStore";
 
+/*****************************************************************************
+ * DEFINE STORE AND COMPOSABLES
+ *****************************************************************************/
 const errors = useErrorsStore();
+const loadings = useLoadingsStore();
+const messages = useMessagesStore();
 const router = useRouter();
 const auth = useAuthStore();
+const { $auth, $firestore } = useNuxtApp();
 
-// フォーム入力モデル (テスト用の初期値を設定)
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
 const model = reactive({
   companyName: "",
   companyNameKana: "",
@@ -17,28 +27,92 @@ const model = reactive({
 
 const currentStep = ref(1); // 現在のステップを管理 (1-based)
 const totalSteps = 3; // 合計ステップ数
-
-// フォーム全体のバリデーション状態 (v-formから自動で更新される)
 const formValid = ref(false);
+const loading = ref(false);
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * Wait for custom claims to be set on the user.
+ * - This function is for waiting until the `companyId` is set in the custom claims and reflected in the ID token.
+ * - It repeatedly refreshes the ID token and checks for the presence of the specified custom claim.
+ * - If the claim is found within the timeout period, it resolves successfully.
+ * - If the timeout is reached without finding the claim, it throws an error.
+ * @param user {import("firebase/auth").User} The user to check.
+ * @param timeout {number} The maximum time to wait in milliseconds.
+ * @returns {Promise<boolean>} Resolves to true if the claim is found, otherwise throws an error.
+ * @throws {Error} If the timeout is reached without the claim being set.
+ */
+async function waitForCompanyIdIsSet(user, timeout = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    const idTokenResult = await user.getIdTokenResult(true);
+    if (idTokenResult.claims["companyId"]) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error("カスタムクレームの反映にタイムアウトしました");
+}
 
 /**
- * 新規に管理者ユーザーアカウントを作成します。
+ * Create a new admin user account of the company.
+ * This function creates a user with email and password,
+ * then creates a `admin_users` document to trigger a Cloud Function
+ * that sets up the user's custom claims and create the company and user document.
+ * Note: Require to wait for the custom claims to be set and reflected in the ID token.
+ * @returns {Promise<void>} Resolves when the user is created and custom claims are set.
+ * @throws {Error} If there is an error during the process.
+ */
+function createAdminUser() {
+  let unsubscribe = null;
+  return new Promise(async (resolve, reject) => {
+    try {
+      const userCredential = await auth.signUp(model);
+      const uid = userCredential.user.uid;
+      const docRef = doc($firestore, `admin_users/${uid}`);
+      await setDoc(docRef, {
+        companyName: model.companyName,
+        companyNameKana: model.companyNameKana,
+        displayName: model.displayName,
+        email: model.email,
+        createdAt: new Date(),
+      });
+      unsubscribe = onSnapshot(docRef, async (snapshot) => {
+        if (!snapshot.exists()) {
+          await waitForCompanyIdIsSet(userCredential.user);
+          await auth.setUser($auth.currentUser);
+          unsubscribe();
+          resolve();
+        }
+      });
+    } catch (error) {
+      if (unsubscribe) unsubscribe();
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Handle the creation of a new admin user account.
  */
 async function handleCreateUser() {
-  if (!formValid.value) {
-    console.warn("フォームが無効なため送信できません。");
-    return;
-  }
   errors.clear();
+  loading.value = true;
+  const key = loadings.add({ text: "管理者アカウントを作成しています" });
   try {
-    const payload = { ...model };
-    delete payload.confirmPassword;
-
-    await auth.createUserWithCompany(payload);
-    await auth.signIn({ email: model.email, password: model.password });
-    await router.push("/dashboard");
+    await createAdminUser();
+    messages.add({
+      text: "管理者アカウントの作成が完了しました。",
+      color: "success",
+    });
+    router.push("/dashboard");
   } catch (error) {
-    console.error("アカウント作成またはサインインエラー:", error);
+    errors.add(error);
+  } finally {
+    loadings.remove(key);
+    loading.value = false;
   }
 }
 
@@ -71,7 +145,7 @@ const goToSignIn = () => {
             >アカウント作成</v-card-title
           >
 
-          <v-form v-model="formValid" @submit.prevent="handleCreateUser">
+          <v-form v-model="formValid">
             <v-stepper
               v-model="currentStep"
               :items="['会社情報', '管理者情報', '認証情報']"
@@ -175,9 +249,9 @@ const goToSignIn = () => {
             <!-- ナビゲーションボタン -->
             <v-card-actions>
               <v-btn
-                :disabled="currentStep === 1"
-                @click="prevStep"
+                :disabled="currentStep === 1 || loading"
                 variant="text"
+                @click="prevStep"
               >
                 戻る
               </v-btn>
@@ -194,8 +268,10 @@ const goToSignIn = () => {
                 v-else
                 color="primary"
                 type="submit"
-                :disabled="!formValid"
+                :disabled="!formValid || loading"
+                :loading="loading"
                 variant="elevated"
+                @click="handleCreateUser"
               >
                 アカウント作成
               </v-btn>
