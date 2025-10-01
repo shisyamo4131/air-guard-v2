@@ -3,6 +3,7 @@ import { sendEmailVerification } from "firebase/auth";
 import { useRouter } from "vue-router";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 definePageMeta({ layout: "auth" });
 
@@ -13,11 +14,13 @@ const errors = useErrorsStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
+const auth = useAuthStore();
 const { $auth } = useNuxtApp();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
+let intervalId = null;
 
 /*****************************************************************************
  * METHODS
@@ -39,6 +42,25 @@ const handleSendEmailVerification = async () => {
     loadings.remove(key);
   }
 };
+
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onMounted(() => {
+  intervalId = setInterval(async () => {
+    if ($auth.currentUser) {
+      await $auth.currentUser.reload();
+      if ($auth.currentUser.emailVerified) {
+        await auth.setUser($auth.currentUser);
+        router.replace("/dashboard"); // 認証後のリダイレクト先
+      }
+    }
+  }, 3000); // 3秒ごとにチェック
+});
+
+onBeforeUnmount(() => {
+  if (intervalId) clearInterval(intervalId);
+});
 </script>
 
 <template>
@@ -70,5 +92,16 @@ const handleSendEmailVerification = async () => {
         >メール再送信</v-btn
       >
     </v-card-actions>
+    <v-card-text class="text-center">
+      メール認証済みの場合
+      <v-btn
+        variant="text"
+        color="primary"
+        size="small"
+        @click="router.push('/sign-in')"
+      >
+        サインイン
+      </v-btn>
+    </v-card-text>
   </v-card>
 </template>
