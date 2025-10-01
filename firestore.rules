@@ -20,6 +20,14 @@ service cloud.firestore {
         && request.auth.token.isSuperUser == true;
     }
 
+    // --- Rules for 'System' collection ---
+    // System コレクション は未認証で読み取り可能。
+    // 書き込みは SDK からのみ可能とする。
+    match /System/system {
+      allow read: if true;
+      allow write: if false;
+    }
+
     // --- Rules for 'admin_users' collection ---
     // admin_users コレクション は認証ユーザーであれば許可
     match /admin_users/{uid} {

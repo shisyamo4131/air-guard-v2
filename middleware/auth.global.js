@@ -17,11 +17,37 @@ import { useErrorsStore } from "~/stores/useErrorsStore";
 
 // グローバル認証ミドルウェア
 export default defineNuxtRouteMiddleware(async (to) => {
+  const auth = useAuthStore();
+
+  // メンテナンスモードの処理
+  // auth.isMaintenance は Firestore の "System/system" ドキュメントの isMaintenance フィールドに同期される
+  // メンテナンスモード中は /maintenance 以外のページへのアクセスを /maintenance にリダイレクト
+  // メンテナンスモードが解除されていれば /maintenance からルート('/')にリダイレクト
+  if (auth.isMaintenance) {
+    console.warn(
+      "[Auth Middleware] Air Guard is currently in maintenance mode."
+    );
+    if (to.path !== "/maintenance") {
+      console.log(
+        `[Auth Middleware] Redirecting to /maintenance from ${to.path}.`
+      );
+      return navigateTo("/maintenance", { replace: true });
+    } else {
+      return; // 既に /maintenance にいる場合は何もしない
+    }
+  } else {
+    if (to.path === "/maintenance") {
+      console.log(
+        "[Auth Middleware] Maintenance mode ended. Redirecting to home."
+      );
+      return navigateTo("/", { replace: true });
+    }
+  }
+
   // 画面遷移時にはエラーをクリア
   const errors = useErrorsStore();
   errors.clear();
 
-  const auth = useAuthStore();
   await auth.waitUntilReady();
 
   const isAuthenticated = !!auth.uid;

@@ -51,6 +51,9 @@ export const useAuthStore = defineStore("auth", () => {
   // Document counter
   const docCounter = ref({});
 
+  // Whether the app is in maintenance mode
+  const isMaintenance = ref(false);
+
   /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
@@ -546,6 +549,7 @@ export const useAuthStore = defineStore("auth", () => {
     isSuperUser,
     company,
     docCounter,
+    isMaintenance,
     isDev,
     clearUser,
     signIn,

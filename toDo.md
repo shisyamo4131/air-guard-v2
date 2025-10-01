@@ -7,6 +7,17 @@
 - 表示名を変更されたら Authentication と同期？
 - 管理者権限の委譲
 
+## メンテナンス状態の切り替え
+
+- SDK からメンテナンス状態を切り替えられるようにコマンドを作成すること！
+
+- Nuxt プラグイン（07.system.js）が System/system ドキュメントの isMaintenance フラグを監視。
+  - isMaintenance が true に更新されると /maintenance へのリダイレクトを強制。
+  - isMaintenance が false に更新されると / へのリダイレクトを強制。
+  - プラグインだけでは isMaintenance が更新された時のリダイレクトしか制御できないため
+    さらにナビゲーションガードで制御。
+- ナビゲーションガード（auth.global.js）がメンテナンス中かどうかによってページ遷移を制御。
+
 ## バックアップとキルスイッチ
 
 ## Firebase の環境変数
