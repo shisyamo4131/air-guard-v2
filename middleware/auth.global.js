@@ -56,6 +56,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // B. 認証済みユーザーの処理
   if (isAuthenticated) {
+    // メール未認証ユーザーの処理
+    if (auth.isEmailVerified === false) {
+      if (targetPath === "/unconfirmedEmail") {
+        return; // 既に unconfirmedEmail ページにいる場合は何もしない
+      }
+      console.log(
+        `[Auth Middleware] Authenticated but unverified user accessing public route ${targetPath}. Redirecting to /unconfirmedEmail.`
+      );
+      return navigateTo("/unconfirmedEmail");
+    }
+
     // ページ設定が存在し、かつ public: true の場合、ダッシュボードへ
     if (pageConfig?.public) {
       console.log(

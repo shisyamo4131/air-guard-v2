@@ -13,19 +13,19 @@
  */
 export const pageStructure = [
   {
-    id: "sign-in",
-    path: "/sign-in",
-    public: true, // 公開ページ
-    label: "サインイン",
-    roles: [], // 認証済みユーザーはアクセスしない想定だが定義はしておく
-    navigation: false,
-  },
-  {
     id: "sign-up",
     path: "/sign-up",
     public: true, // 公開ページ
     label: "サインアップ",
     roles: [],
+    navigation: false,
+  },
+  {
+    id: "sign-in",
+    path: "/sign-in",
+    public: true, // 公開ページ
+    label: "サインイン",
+    roles: [], // 認証済みユーザーはアクセスしない想定だが定義はしておく
     navigation: false,
   },
   {
