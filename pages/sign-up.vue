@@ -1,7 +1,10 @@
 <script setup>
+import { useRouter } from "vue-router";
 import { doc, setDoc, onSnapshot } from "firebase/firestore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
+
+definePageMeta({ layout: "auth" });
 
 /*****************************************************************************
  * DEFINE STORE AND COMPOSABLES
@@ -29,6 +32,24 @@ const currentStep = ref(1); // 現在のステップを管理 (1-based)
 const totalSteps = 3; // 合計ステップ数
 const formValid = ref(false);
 const loading = ref(false);
+
+/*****************************************************************************
+ * COMPUTED PROPERTIES
+ *****************************************************************************/
+const isStepValid = computed(() => {
+  switch (currentStep.value) {
+    case 1:
+      return (
+        model.companyName.trim() !== "" && model.companyNameKana.trim() !== ""
+      );
+    case 2:
+      return model.displayName.trim() !== "" && model.email.trim() !== "";
+    case 3:
+      return model.password === model.confirmPassword;
+    default:
+      return false;
+  }
+});
 
 /*****************************************************************************
  * METHODS
@@ -116,180 +137,158 @@ async function handleCreateUser() {
   }
 }
 
-// 次のステップへ
+/** Go to the next step */
 function nextStep() {
-  // TODO: ステップ移動時のバリデーションが必要な場合は実装
   if (currentStep.value < totalSteps) {
     currentStep.value++;
   }
 }
 
-// 前のステップへ
+/** Go to the previous step */
 function prevStep() {
   if (currentStep.value > 1) {
     currentStep.value--;
   }
 }
-
-const goToSignIn = () => {
-  router.push("/sign-in");
-};
 </script>
 
 <template>
-  <v-container fluid class="fill-height bg-surface-variant">
-    <v-row align="center" justify="center" style="height: 100%">
-      <v-col cols="11" sm="10" md="8" lg="6">
-        <v-card class="pa-2 pa-md-4">
-          <v-card-title class="text-center text-h5 mb-4"
-            >アカウント作成</v-card-title
+  <v-card flat max-width="480">
+    <v-card-title class="text-center text-h5 mb-4">アカウント作成</v-card-title>
+
+    <v-form v-model="formValid">
+      <v-stepper
+        v-model="currentStep"
+        hide-actions
+        :items="['会社情報', '管理者情報', '認証情報']"
+        flat
+      >
+        <template v-slot:item.1>
+          <v-card flat>
+            <v-row>
+              <v-col cols="12">
+                <air-text-field
+                  v-model="model.companyName"
+                  label="会社名"
+                  required
+                  :maxLength="40"
+                />
+              </v-col>
+              <v-col cols="12">
+                <air-text-field
+                  v-model="model.companyNameKana"
+                  label="会社名カナ"
+                  required
+                  :maxLength="40"
+                  inputType="katakana"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </template>
+
+        <template v-slot:item.2>
+          <v-card flat>
+            <v-row>
+              <v-col cols="12">
+                <air-text-field
+                  v-model="model.displayName"
+                  label="管理者名"
+                  required
+                  :maxLength="40"
+                />
+              </v-col>
+              <v-col cols="12">
+                <air-text-field
+                  v-model="model.email"
+                  label="メールアドレス"
+                  required
+                  inputType="email"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </template>
+
+        <template v-slot:item.3>
+          <v-card flat>
+            <v-row>
+              <v-col cols="12">
+                <air-password
+                  v-model="model.password"
+                  label="パスワード"
+                  required
+                />
+              </v-col>
+              <v-col cols="12">
+                <air-password
+                  v-model="model.confirmPassword"
+                  label="パスワード（再入力）"
+                  required
+                  :password="model.password"
+                />
+              </v-col>
+            </v-row>
+          </v-card>
+        </template>
+      </v-stepper>
+
+      <v-expand-transition>
+        <v-container v-if="errors.hasError" class="pt-0">
+          <v-alert
+            type="error"
+            v-for="(error, index) in errors.list"
+            :key="error.code || index"
+            density="compact"
+            class="mb-2"
+            variant="tonal"
           >
+            {{ error.message }}
+          </v-alert>
+        </v-container>
+      </v-expand-transition>
 
-          <v-form v-model="formValid">
-            <v-stepper
-              v-model="currentStep"
-              :items="['会社情報', '管理者情報', '認証情報']"
-              hide-actions
-              flat
-              bg-color="transparent"
-              class="mb-4"
-            >
-              <!-- ステップコンテンツ -->
-              <v-window v-model="currentStep">
-                <v-window-item :value="1">
-                  <v-container fluid>
-                    <!-- 会社情報 -->
-                    <v-row dense>
-                      <v-col cols="12">
-                        <air-text-field
-                          v-model="model.companyName"
-                          label="会社名"
-                          required
-                          :maxLength="40"
-                        />
-                      </v-col>
-                      <v-col cols="12">
-                        <air-text-field
-                          v-model="model.companyNameKana"
-                          label="会社名カナ"
-                          required
-                          :maxLength="40"
-                          inputType="katakana"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-window-item>
-
-                <v-window-item :value="2">
-                  <v-container fluid>
-                    <!-- 管理者情報 -->
-                    <v-row dense>
-                      <v-col cols="12">
-                        <air-text-field
-                          v-model="model.displayName"
-                          label="管理者名"
-                          required
-                          :maxLength="40"
-                        />
-                      </v-col>
-                      <v-col cols="12">
-                        <air-text-field
-                          v-model="model.email"
-                          label="メールアドレス"
-                          required
-                          inputType="email"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-window-item>
-
-                <v-window-item :value="3">
-                  <v-container fluid>
-                    <!-- 認証情報 -->
-                    <v-row dense>
-                      <v-col cols="12">
-                        <air-password
-                          v-model="model.password"
-                          label="パスワード"
-                          required
-                        />
-                      </v-col>
-                      <v-col cols="12">
-                        <air-password
-                          v-model="model.confirmPassword"
-                          label="パスワード（再入力）"
-                          required
-                          :password="model.password"
-                        />
-                      </v-col>
-                    </v-row>
-                  </v-container>
-                </v-window-item>
-              </v-window>
-            </v-stepper>
-
-            <!-- エラー表示 -->
-            <v-expand-transition>
-              <v-container v-if="errors.hasError" class="pt-0">
-                <v-alert
-                  type="error"
-                  v-for="(error, index) in errors.list"
-                  :key="error.code || index"
-                  density="compact"
-                  class="mb-2"
-                  variant="tonal"
-                >
-                  {{ error.message }}
-                </v-alert>
-              </v-container>
-            </v-expand-transition>
-
-            <!-- ナビゲーションボタン -->
-            <v-card-actions>
-              <v-btn
-                :disabled="currentStep === 1 || loading"
-                variant="text"
-                @click="prevStep"
-              >
-                戻る
-              </v-btn>
-              <v-spacer></v-spacer>
-              <v-btn
-                v-if="currentStep < totalSteps"
-                color="primary"
-                @click="nextStep"
-                variant="elevated"
-              >
-                次へ
-              </v-btn>
-              <v-btn
-                v-else
-                color="primary"
-                type="submit"
-                :disabled="!formValid || loading"
-                :loading="loading"
-                variant="elevated"
-                @click="handleCreateUser"
-              >
-                アカウント作成
-              </v-btn>
-            </v-card-actions>
-          </v-form>
-          <v-card-text class="text-center">
-            アカウントをお持ちの場合
-            <v-btn
-              variant="text"
-              color="primary"
-              size="small"
-              @click="goToSignIn"
-            >
-              サインイン
-            </v-btn>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
-  </v-container>
+      <v-card-actions>
+        <v-btn
+          :disabled="currentStep === 1 || loading"
+          variant="text"
+          @click="prevStep"
+        >
+          戻る
+        </v-btn>
+        <v-spacer></v-spacer>
+        <v-btn
+          v-if="currentStep < totalSteps"
+          color="primary"
+          :disabled="!isStepValid || loading"
+          variant="elevated"
+          @click="nextStep"
+        >
+          次へ
+        </v-btn>
+        <v-btn
+          v-else
+          color="primary"
+          type="submit"
+          :disabled="!formValid || loading"
+          :loading="loading"
+          variant="elevated"
+          @click="handleCreateUser"
+        >
+          アカウント作成
+        </v-btn>
+      </v-card-actions>
+    </v-form>
+    <v-card-text class="text-center">
+      アカウントをお持ちの場合
+      <v-btn
+        variant="text"
+        color="primary"
+        size="small"
+        @click="router.push('/sign-in')"
+      >
+        サインイン
+      </v-btn>
+    </v-card-text>
+  </v-card>
 </template>

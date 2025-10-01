@@ -237,66 +237,24 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   /**
-   * メールアドレスとパスワードを使用してサインインを行います。
    * Signs in using email and password.
-   *
-   * @param {object} credentials - サインイン情報。(Sign-in information.)
-   * @param {string} credentials.email - ユーザーのメールアドレス。(User's email address.)
-   * @param {string} credentials.password - ユーザーのパスワード。(User's password.)
+   * @param {object} credentials - Sign-in credentials.
+   * @param {string} credentials.email - User's email address.
+   * @param {string} credentials.password - User's password.
    */
-  async function signIn({ email, password }) {
-    // Nuxt アプリケーションインスタンスから $auth を取得
-    // Get $auth from the Nuxt application instance
+  async function signIn(credentials = {}) {
+    const { email, password } = credentials;
     const { $auth } = useNuxtApp();
-    try {
-      // バリデーション: email と password が文字列として存在するか確認
-      // Validate credentials: check if email and password exist as strings
-      if (
-        !email ||
-        !password ||
-        typeof email !== "string" ||
-        typeof password !== "string"
-      ) {
-        // 不正な場合はエラーをスロー
-        // Throw an error if invalid
-        throw new Error("メールアドレスとパスワードは必須入力です。");
-        // English: "Invalid credentials: email and password are required and must be strings."
-      }
-
-      // ローディング状態を開始
-      // Start loading state
-      loadings.add({ key: "signIn", text: "サインインしています..." }); // Signing in...
-
-      // 認証状態変更処理を行う為 isReady を false に更新しておく
-      isReady.value = false;
-
-      // Firebase Authentication でサインインを実行
-      // Execute sign-in with Firebase Authentication
-      await signInWithEmailAndPassword($auth, email, password);
-
-      // 成功メッセージを追加
-      // Add success message
-      messages.add({ text: "サインインしました", color: "success" }); // Signed in successfully
-
-      // 成功ログを記録
-      // Log success
-      // logger.info({ message: "Signed in successfully." });
-    } catch (error) {
-      // エラーログを記録
-      // Log the error
-      logger.error({
-        message: `Sign-in failed: ${error.message}`,
-        error,
-      });
-
-      // エラーを再スローして呼び出し元に伝える
-      // Re-throw the error to notify the caller
-      throw error;
-    } finally {
-      // ローディング状態を必ず終了させる
-      // Always end the loading state
-      loadings.remove("signIn");
+    if (!email || !password) {
+      throw new Error("Email and password are required.");
     }
+    if (typeof email !== "string" || typeof password !== "string") {
+      throw new TypeError("Email and password must be strings.");
+    }
+
+    isReady.value = false;
+
+    await signInWithEmailAndPassword($auth, email, password);
   }
 
   /**

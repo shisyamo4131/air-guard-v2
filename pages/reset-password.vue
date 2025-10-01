@@ -1,7 +1,7 @@
 <script setup>
+import { sendPasswordResetEmail } from "firebase/auth";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 
@@ -10,28 +10,31 @@ definePageMeta({ layout: "auth" });
 /*****************************************************************************
  * DEFINE STORES AND COMPOSABLES
  *****************************************************************************/
-const auth = useAuthStore();
 const errors = useErrorsStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
+const { $auth } = useNuxtApp();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 const email = ref("");
-const password = ref("");
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-const handleSignIn = async () => {
+const handleSendResetPasswordEmail = async () => {
   errors.clear();
-  const key = loadings.add({ message: "サインインしています..." });
+  const key = loadings.add({
+    message: "パスワードリセット用のメールを送信しています...",
+  });
   try {
-    await auth.signIn({ email: email.value, password: password.value });
-    router.push("/dashboard");
-    messages.add({ text: "サインインに成功しました！", color: "success" });
+    await sendPasswordResetEmail($auth, email.value);
+    messages.add({
+      text: "パスワードリセット用のメールを送信しました！",
+      color: "success",
+    });
   } catch (error) {
     errors.add(error);
   } finally {
@@ -42,6 +45,10 @@ const handleSignIn = async () => {
 
 <template>
   <v-card flat max-width="480">
+    <v-card-title>パスワードをお忘れですか？</v-card-title>
+    <v-card-subtitle class="text-wrap">
+      登録済みのメールアドレスを入力してください。パスワードリセット用のリンクをお送りします。
+    </v-card-subtitle>
     <v-form>
       <v-container>
         <v-row dense>
@@ -52,9 +59,6 @@ const handleSignIn = async () => {
               required
               input-type="email"
             />
-          </v-col>
-          <v-col cols="12">
-            <air-password v-model="password" label="password" required />
           </v-col>
         </v-row>
       </v-container>
@@ -78,31 +82,20 @@ const handleSignIn = async () => {
         color="primary"
         variant="elevated"
         type="submit"
-        @click="handleSignIn"
-        >sign in</v-btn
+        @click="handleSendResetPasswordEmail"
+        >メール送信</v-btn
       >
     </v-card-actions>
     <v-card-text class="text-center">
       <div>
-        アカウントをお持ちでないですか？
+        パスワードが分かる場合はこちら
         <v-btn
           variant="text"
           color="primary"
           size="small"
-          @click="router.push('/sign-up')"
+          @click="router.push('/sign-in')"
         >
-          サインアップ
-        </v-btn>
-      </div>
-      <div>
-        パスワードをお忘れですか？
-        <v-btn
-          variant="text"
-          color="primary"
-          size="small"
-          @click="router.push('/reset-password')"
-        >
-          パスワードリセット
+          サインイン
         </v-btn>
       </div>
     </v-card-text>
