@@ -6,24 +6,23 @@
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
  * @props {String} tagSize - Tag size for worker elements.
  *
+ * @emits {void} click:duplicate - Emitted when the duplicate button is clicked.
+ * @emits {void} click:edit - Emitted when the edit button is clicked
+ * @emits {void} click:notify - Emitted when the notify button is clicked
+ *
  * @slots
  * - default: Slot for rendering the schedule item.
  */
 import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
 
 /*****************************************************************************
- * INJECT COMPOSABLES
- *****************************************************************************/
-const { toUpdate } = inject("managerComposable");
-const { create } = inject("arrangementNotificationManagerComposable");
-const { set } = inject("duplicatorComposable");
-
-/*****************************************************************************
- * DEFINE PROPS
+ * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
   schedule: { type: Object, required: true },
 });
+
+const emit = defineEmits(["click:duplicate", "click:edit", "click:notify"]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -63,12 +62,12 @@ const label = computed(() => {
         :disabled="!schedule.isEditable || schedule.isNotificatedAllWorkers"
         variant="tonal"
         size="x-small"
-        @click="create(schedule)"
+        @click="emit('click:notify')"
       >
         <v-icon>mdi-bullhorn</v-icon>
       </v-btn>
       <!-- 複製ボタン -->
-      <v-btn variant="tonal" size="x-small" @click="set(schedule)">
+      <v-btn variant="tonal" size="x-small" @click="emit('click:duplicate')">
         <v-icon>mdi-content-copy</v-icon>
       </v-btn>
 
@@ -77,7 +76,7 @@ const label = computed(() => {
         :disabled="!schedule.isEditable"
         variant="tonal"
         size="x-small"
-        @click="toUpdate(schedule)"
+        @click="emit('click:edit')"
       >
         <v-icon>mdi-pencil</v-icon>
       </v-btn>

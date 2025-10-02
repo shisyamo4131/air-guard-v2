@@ -42,6 +42,7 @@ const { dateRange, currentDayCount: dayCount } = useDateRange({
 const arrangementNotificationManagerComposable =
   useArrangementNotificationManager({ dateRange });
 const {
+  create: createNotification,
   get: getNotification,
   set: setNotification,
   attrs: notificationAttrs,
@@ -99,14 +100,19 @@ const managerComposable = useArrangementManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-const { statistics, docs, toCreate, optimisticUpdates, getCommandText } =
-  managerComposable;
+const {
+  statistics,
+  docs,
+  toCreate,
+  toUpdate,
+  optimisticUpdates,
+  getCommandText,
+} = managerComposable;
 
 provide("managerComposable", managerComposable);
 
 /** For site operation schedule duplication */
 const duplicator = useSiteOperationScheduleDuplicator();
-provide("duplicatorComposable", duplicator);
 
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
@@ -242,7 +248,13 @@ onMounted(() => {
           "
         >
           <template #item="{ element: schedule }">
-            <ArrangementsScheduleTag class="mb-2" :schedule="schedule">
+            <ArrangementsScheduleTag
+              class="mb-2"
+              :schedule="schedule"
+              @click:duplicate="duplicator.set(schedule)"
+              @click:edit="toUpdate(schedule)"
+              @click:notify="createNotification(schedule)"
+            >
               <template #default>
                 <ArrangementsDraggableWorkers :schedule="schedule">
                   <template #item="draggableWorkersSlotProps">
