@@ -10,18 +10,23 @@
  * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
  */
 import * as Vue from "vue";
-import dayjs from "dayjs";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useDateRange } from "@/composables/useDateRange";
 import { Site, SiteOperationSchedule } from "@/schemas";
+import dayjs from "dayjs";
 
 /** Messages */
 const MANAGER_NOT_PROVIDED =
   "Manager should be provided to useSiteOperationSchedulesManager.";
 const INVALID_SITE_ID =
   "Invalid `siteId` provided for useSiteOperationSchedulesManager.";
-export function useSiteOperationSchedulesManager({ manager, siteId } = {}) {
+export function useSiteOperationSchedulesManager({
+  manager,
+  siteId,
+  from = dayjs(new Date()).startOf("month").toDate(),
+  to = dayjs(new Date()).endOf("month").toDate(),
+} = {}) {
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
@@ -30,8 +35,8 @@ export function useSiteOperationSchedulesManager({ manager, siteId } = {}) {
     useErrorsStore()
   );
   const { dateRange, debouncedDateRange } = useDateRange({
-    baseDate: dayjs(new Date()).startOf("month").toDate(),
-    dayCount: dayjs(new Date()).daysInMonth(),
+    baseDate: from,
+    endDate: to,
   });
 
   /***************************************************************************

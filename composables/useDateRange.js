@@ -258,24 +258,6 @@ export function useDateRange({
   };
 
   /**
-   * 基準日と終了日を同時に設定（新規追加）
-   */
-  const setDateRange = (startDate, endDate) => {
-    if (isValidDate(startDate) && isValidDate(endDate)) {
-      const calculatedDayCount =
-        dayjs(endDate).diff(dayjs(startDate), "day") + 1;
-      if (calculatedDayCount > 0) {
-        currentBaseDate.value = startDate;
-        currentDayCount.value = calculatedDayCount;
-      } else {
-        console.warn("End date must be after start date");
-      }
-    } else {
-      console.warn("Invalid dates provided to setDateRange");
-    }
-  };
-
-  /**
    * オフセット日数を変更（検証付き）
    */
   const setOffsetDays = (newOffset) => {
@@ -344,7 +326,6 @@ export function useDateRange({
     setDayCount,
     setOffsetDays,
     setEndDate, // 新規追加
-    setDateRange, // 新規追加
     movePrevious,
     moveNext,
     moveToToday,

@@ -66,17 +66,17 @@ function onClickEvent(nativeEvent, { event }) {
           <v-btn icon="mdi-plus" @click="slotProps['onClick:create']()" />
         </v-toolbar>
         <v-card-text>
+          <v-container class="pt-0">
+            <MoleculesMonthSelector
+              :model-value="dateRange.from"
+              @date-range="dateRange = $event"
+            />
+          </v-container>
           <air-calendar
-            style="min-height: 480px"
+            style="min-height: 520px"
             :model-value="dateRange.from"
             :events="events"
             @click:event="onClickEvent"
-            @update:model-value="
-              dateRange = {
-                from: dayjs($event).toDate(),
-                to: dayjs($event).endOf('month').toDate(),
-              }
-            "
           />
         </v-card-text>
       </v-card>
