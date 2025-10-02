@@ -7,7 +7,8 @@ import { useDebouncedRef } from "./usePerformanceOptimization";
  * 日付範囲を管理するコンポーザブル
  * @param {Object} options - オプション設定
  * @param {Date} options.baseDate - 基準日（デフォルト: 今日）
- * @param {number} options.dayCount - 表示する日数（デフォルト: 14）
+ * @param {number} options.dayCount - 表示する日数（デフォルト: 14）※endDate指定時は無視
+ * @param {Date} options.endDate - 終了日（指定時はdayCountより優先）
  * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: 0）
  * @param {number} options.debounceDelay - デバウンス遅延時間（ミリ秒、デフォルト: 500）
  * @returns {Object} 日付範囲関連の状態と操作
@@ -15,17 +16,59 @@ import { useDebouncedRef } from "./usePerformanceOptimization";
 export function useDateRange({
   baseDate = new Date(),
   dayCount = 14,
+  endDate: endDateInput = null, // 引数名を変更
   offsetDays = 0,
   debounceDelay = 500,
 } = {}) {
   /** 日付ユーティリティの取得 */
   const { isValidDate, formatDate, validateDateRange } = useDateUtil();
 
+  /**
+   * 初期日数を計算
+   * 優先順位: endDate > dayCount > デフォルト(14)
+   */
+  const calculateInitialDayCount = () => {
+    const validBaseDate = isValidDate(baseDate) ? baseDate : new Date();
+
+    // 1. endDateが指定されていれば最優先
+    if (endDateInput && isValidDate(endDateInput)) {
+      const calculatedDays =
+        dayjs(endDateInput).diff(dayjs(validBaseDate), "day") + 1;
+      if (calculatedDays > 0) {
+        if (
+          typeof dayCount === "number" &&
+          dayCount > 0 &&
+          dayCount !== calculatedDays
+        ) {
+          console.info(
+            `endDate specified: calculated ${calculatedDays} days (dayCount: ${dayCount} ignored)`
+          );
+        }
+        return calculatedDays;
+      } else {
+        console.warn(
+          `endDate (${
+            endDateInput.toISOString().split("T")[0]
+          }) is before baseDate (${
+            validBaseDate.toISOString().split("T")[0]
+          }), falling back to dayCount`
+        );
+      }
+    }
+
+    // 2. dayCountが有効な数値であればそれを使用
+    if (typeof dayCount === "number" && dayCount > 0) {
+      return dayCount;
+    }
+
+    // 3. デフォルト値
+    console.warn("Invalid dayCount provided, using default value (14)");
+    return 14;
+  };
+
   /** リアクティブな状態（初期値の検証を追加） */
   const currentBaseDate = ref(isValidDate(baseDate) ? baseDate : new Date());
-  const currentDayCount = ref(
-    typeof dayCount === "number" && dayCount > 0 ? dayCount : 14
-  );
+  const currentDayCount = ref(calculateInitialDayCount());
   const currentOffsetDays = ref(
     typeof offsetDays === "number" ? offsetDays : 0
   );
@@ -198,6 +241,41 @@ export function useDateRange({
   };
 
   /**
+   * 終了日を設定して日数を自動計算（新規追加）
+   */
+  const setEndDate = (newEndDate) => {
+    if (isValidDate(newEndDate)) {
+      const calculatedDayCount =
+        dayjs(newEndDate).diff(dayjs(currentBaseDate.value), "day") + 1;
+      if (calculatedDayCount > 0) {
+        currentDayCount.value = calculatedDayCount;
+      } else {
+        console.warn("End date must be after base date");
+      }
+    } else {
+      console.warn("Invalid end date provided to setEndDate");
+    }
+  };
+
+  /**
+   * 基準日と終了日を同時に設定（新規追加）
+   */
+  const setDateRange = (startDate, endDate) => {
+    if (isValidDate(startDate) && isValidDate(endDate)) {
+      const calculatedDayCount =
+        dayjs(endDate).diff(dayjs(startDate), "day") + 1;
+      if (calculatedDayCount > 0) {
+        currentBaseDate.value = startDate;
+        currentDayCount.value = calculatedDayCount;
+      } else {
+        console.warn("End date must be after start date");
+      }
+    } else {
+      console.warn("Invalid dates provided to setDateRange");
+    }
+  };
+
+  /**
    * オフセット日数を変更（検証付き）
    */
   const setOffsetDays = (newOffset) => {
@@ -265,6 +343,8 @@ export function useDateRange({
     setBaseDate,
     setDayCount,
     setOffsetDays,
+    setEndDate, // 新規追加
+    setDateRange, // 新規追加
     movePrevious,
     moveNext,
     moveToToday,
