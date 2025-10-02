@@ -27,9 +27,7 @@ let intervalId = null;
  *****************************************************************************/
 const handleSendEmailVerification = async () => {
   errors.clear();
-  const key = loadings.add({
-    message: "メールを送信しています...",
-  });
+  const key = loadings.add("メールを送信しています...");
   try {
     await sendEmailVerification($auth.currentUser);
     messages.add({
