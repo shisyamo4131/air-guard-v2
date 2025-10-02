@@ -1,4 +1,14 @@
 <script setup>
+/**
+ * @file components/arrangements/Manager.vue
+ * @description A component for managing site operation schedules, including viewing, creating, updating, and duplicating schedules.
+ * It also provides functionalities for managing workers, site orders, and notifications.
+ *
+ * Note: コンポーザブルの読み込みに時間がかかっている模様（2025-10-02）
+ * 改善の余地あり。
+ * - Fetch 系は独立させて、それ以外のコンポーザブルは引数で Fetch 系のコンポーザブルを受け取るように統一する？
+ * - provide - inject による遅延の可能性も無視できない？
+ */
 import { onMounted, useTemplateRef, provide } from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { useTagSize } from "@/composables/useTagSize";
