@@ -35,7 +35,7 @@ const items = computed(() => {
     {
       title: "建物名",
       props: {
-        subtitle: model.value.building,
+        subtitle: model.value.building || "-",
         prependIcon: "mdi-office-building-marker",
       },
     },
@@ -44,6 +44,14 @@ const items = computed(() => {
       props: {
         subtitle: model.value.customer?.name || "loading",
         prependIcon: "mdi-domain",
+      },
+    },
+    {
+      title: "備考",
+      props: {
+        subtitle: model.value.remarks || "-",
+        prependIcon: "mdi-comment-text",
+        lines: "two",
       },
     },
   ];

@@ -5,7 +5,7 @@
  * - ルートパラメータ [id] は Sites コレクションのドキュメント id
  * - ドキュメント id をもとに Site クラスからドキュメント情報を取得して表示
  */
-import { reactive, onMounted, computed, onUnmounted } from "vue";
+import { reactive, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
 import { Site } from "~/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -30,12 +30,11 @@ onUnmounted(() => {
 </script>
 <template>
   <v-container>
+    <v-toolbar class="mb-4" density="compact">
+      <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
+      <v-toolbar-title>{{ model.name }}</v-toolbar-title>
+    </v-toolbar>
     <v-row>
-      <v-col cols="12">
-        <v-toolbar density="compact">
-          <v-toolbar-title>{{ model.name }}</v-toolbar-title>
-        </v-toolbar>
-      </v-col>
       <v-col cols="12" md="4">
         <MoleculesSiteManager
           :model-value="model"
