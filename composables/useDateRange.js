@@ -35,15 +35,15 @@ export function useDateRange({
       const calculatedDays =
         dayjs(endDateInput).diff(dayjs(validBaseDate), "day") + 1;
       if (calculatedDays > 0) {
-        if (
-          typeof dayCount === "number" &&
-          dayCount > 0 &&
-          dayCount !== calculatedDays
-        ) {
-          console.info(
-            `endDate specified: calculated ${calculatedDays} days (dayCount: ${dayCount} ignored)`
-          );
-        }
+        // if (
+        //   typeof dayCount === "number" &&
+        //   dayCount > 0 &&
+        //   dayCount !== calculatedDays
+        // ) {
+        //   console.info(
+        //     `endDate specified: calculated ${calculatedDays} days (dayCount: ${dayCount} ignored)`
+        //   );
+        // }
         return calculatedDays;
       } else {
         console.warn(
