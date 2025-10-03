@@ -84,7 +84,7 @@ const companyFields = Object.keys(Company.classProps);
       </v-card>
     </ItemManager>
     <v-card>
-      <OrganismsAgreementsManager
+      <MoleculesAgreementsManager
         v-model="model.agreements"
         @submit:complete="model.update()"
       />

@@ -7,7 +7,7 @@
  */
 import { reactive, onMounted, computed, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { Site, Agreement } from "~/schemas";
+import { Site } from "~/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -96,47 +96,11 @@ onUnmounted(() => {
       </v-col>
       <v-col>
         <v-card>
-          <air-array-manager
+          <MoleculesAgreementsManager
             v-model="model.agreements"
-            item-key="key"
-            :schema="Agreement"
-            :dialog-props="{
-              maxWidth: 600,
-            }"
-            :table-props="{
-              hideDefaultFooter: true,
-              itemsPerPage: -1,
-              sortBy: [{ key: 'from', order: 'desc' }],
-            }"
-            :before-edit="
-              (editMode, item) => {
-                if (editMode === 'CREATE') item.startTime = '09:00';
-              }
-            "
+            :default-agreements="auth.company.agreements"
             @submit:complete="model.update()"
-          >
-            <template #input="slotProps">
-              <air-item-input v-bind="slotProps">
-                <template #after-dateAt="{ field }">
-                  <v-col v-bind="field.colsDefinition">
-                    <MoleculesAgreementSelector
-                      :items="[...model.agreements, ...auth.company.agreements]"
-                      @select="
-                        $event.dateAt = slotProps.item.dateAt;
-                        slotProps.updateProperties({ ...$event });
-                      "
-                    >
-                      <template #activator="{ props: activatorProps }">
-                        <v-btn v-bind="activatorProps" block color="primary"
-                          >取極めから複製</v-btn
-                        >
-                      </template>
-                    </MoleculesAgreementSelector>
-                  </v-col>
-                </template>
-              </air-item-input>
-            </template>
-          </air-array-manager>
+          />
         </v-card>
       </v-col>
     </v-row>
