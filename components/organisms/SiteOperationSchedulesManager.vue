@@ -3,7 +3,6 @@
  * @file @/components/organisms/SiteOperationScheduleManager.vue
  * @description A component that manages the site operation schedule.
  */
-import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -80,6 +79,12 @@ function onClickEvent(nativeEvent, { event }) {
           />
         </v-card-text>
       </v-card>
+    </template>
+    <template #shiftType="{ attrs }">
+      <v-radio-group v-bind="attrs" inline>
+        <v-radio label="日勤" value="DAY" />
+        <v-radio label="夜勤" value="NIGHT" />
+      </v-radio-group>
     </template>
   </air-array-manager>
 </template>
