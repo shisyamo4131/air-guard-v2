@@ -60,7 +60,7 @@ const items = computed(() => {
 
 <template>
   <air-item-manager
-    v-model="model"
+    :model-value="model"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
