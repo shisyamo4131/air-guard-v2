@@ -1,3 +1,23 @@
+/*****************************************************************************
+ * # Firebase Initialization Plugin for Nuxt3 ver 1.0.0
+ *
+ * Nuxt3 plugin to initialize Firebase and provide various service instances.
+ * - Reads environment variables from `runtimeConfig(public)` in `nuxt.config.js`.
+ * - For using emulator, set `firebaseUseEmulator` to true in runtimeConfig.
+ * - Region for Cloud Functions can be set via `firebaseRegion` in runtimeConfig.
+ *   Default is 'us-central1'.
+ *
+ * ## How to use:
+ * In your component, you can access the services via `$firestore`, `$auth`, etc.
+ * from useNuxtApp(). For example:
+ *
+ * ```javascript
+ * import { useNuxtApp } from '#app';
+ * const { $firestore, $auth } = useNuxtApp();
+ * ```
+ *
+ * @author shisyamo4131
+ *****************************************************************************/
 import { getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
 import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
@@ -5,22 +25,19 @@ import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { connectDatabaseEmulator, getDatabase } from "firebase/database";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
 
-/**
- * Plugin to initialize Firebase
- * - Environment variables are read from `runtimeConfig(public)` in `nuxt.config.js`.
- * - Provides various service instances of Firebase to the application.
- *
- * Firebase を初期化するプラグイン
- * - 環境変数は `nuxt.config.js` の `runtimeConfig(public)` から読み込みます。
- * - Firebase の各種サービスインスタンスをアプリケーションに提供します。
- *
- * { $firestore, $auth, $storage, $database, $functions }
- */
-export default defineNuxtPlugin(() => {
-  // Read environment variables from `runtimeConfig`.
-  // `runtimeConfig` から環境変数を読み込む
-  const config = useRuntimeConfig();
+// Messages for logging
+const FIREBASE_INITIALIZED = "Firebase has been successfully initialized.";
+const FIREBASE_ALREADY_INITIALIZED = "Firebase is already initialized.";
+const FIREBASE_USE_EMULATORS = "Using Firebase Emulators.";
 
+// Utility function for logging messages
+const sendMessage = (message) => {
+  console.info(`[firebase.init.js] ${message}`);
+};
+
+export default defineNuxtPlugin(() => {
+  // Get Firebase configuration from `runtimeConfig`.
+  const config = useRuntimeConfig();
   const firebaseConfig = {
     apiKey: config.public.firebaseApiKey,
     authDomain: config.public.firebaseAuthDomain,
@@ -31,40 +48,31 @@ export default defineNuxtPlugin(() => {
     databaseURL: config.public.firebaseDatabaseURL || "",
   };
 
+  // Default region for Cloud Functions
+  const firebaseRegion = config.public.firebaseRegion || "us-central1";
+
+  // Flag to determine whether to use emulators
   const useEmulator = config.public.firebaseUseEmulator || false;
 
   // Firebase initialization
-  // Firebase の初期化
   const apps = getApps();
-  let app = null;
-  if (apps.length === 0) {
-    app = initializeApp(firebaseConfig);
-    console.info(
-      `[firebase.init.js] Firebase has been successfully initialized.`
-    );
-  } else {
-    console.info(`[firebase.init.js] Firebase is already initialized.`);
-    app = apps[0];
+  const app = apps.length === 0 ? initializeApp(firebaseConfig) : apps[0];
+  if (useEmulator) {
+    apps.length === 0
+      ? sendMessage(FIREBASE_INITIALIZED)
+      : sendMessage(FIREBASE_ALREADY_INITIALIZED);
   }
 
   // Obtain various Firebase service instances
-  // Firebase の各種サービスインスタンスを取得
   const firestore = getFirestore(app);
   const auth = getAuth(app);
   const storage = getStorage(app);
   const database = getDatabase(app);
-  const functions = getFunctions(
-    app,
-    config.public.firebaseRegion || "us-central1"
-  );
+  const functions = getFunctions(app, firebaseRegion);
 
   // Connect to an emulator if you are in a local environment.
-  // ローカル環境ならエミュレーターに接続
   if (useEmulator) {
-    console.info(
-      "[firebase.init.js] Using Firebase Emulators because the environment is local."
-    );
-
+    sendMessage(FIREBASE_USE_EMULATORS);
     connectFirestoreEmulator(firestore, "localhost", 8080);
     connectAuthEmulator(auth, "http://127.0.0.1:9099");
     connectStorageEmulator(storage, "localhost", 9199);
@@ -73,12 +81,6 @@ export default defineNuxtPlugin(() => {
   }
 
   return {
-    provide: {
-      firestore,
-      auth,
-      storage,
-      database,
-      functions,
-    },
+    provide: { firestore, auth, storage, database, functions },
   };
 });
