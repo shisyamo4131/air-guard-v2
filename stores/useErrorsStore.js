@@ -20,14 +20,15 @@ export const useErrorsStore = defineStore("errors", () => {
    */
   function add(error) {
     const lastError = list.value[list.value.length - 1];
+    const message = error.userMessage || error.message || String(error);
     const isDuplicate =
       lastError &&
-      lastError.message === error.message &&
+      lastError.message === message &&
       lastError.stack === error.stack;
 
     if (!isDuplicate) {
       list.value.push(error);
-      messages.add({ text: error.message, color: "error" });
+      messages.add({ text: message, color: "error" });
     }
   }
 
