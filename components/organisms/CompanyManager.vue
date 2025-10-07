@@ -1,7 +1,6 @@
 <script setup>
 /**
- * @file organisms/CompanyManager.vue
- * @description A component to manage company information
+ * @description A component to manage company information.
  */
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -36,7 +35,7 @@ const companyFields = Object.keys(Company.classProps);
 
 <template>
   <div>
-    <ItemManager
+    <air-item-manager
       :modelValue="model"
       v-slot="slotProps"
       :input-props="{
@@ -82,7 +81,7 @@ const companyFields = Object.keys(Company.classProps);
           >
         </v-card-actions>
       </v-card>
-    </ItemManager>
+    </air-item-manager>
     <v-card>
       <MoleculesAgreementsManager
         v-model="model.agreements"
