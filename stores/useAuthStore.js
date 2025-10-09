@@ -26,6 +26,7 @@ export const useAuthStore = defineStore("auth", () => {
   const errors = useErrorsStore();
   const loadings = useLoadingsStore();
   const messages = useMessagesStore();
+  const { $vuetify } = useNuxtApp();
 
   /***************************************************************************
    * DEFINE STATES
@@ -53,6 +54,17 @@ export const useAuthStore = defineStore("auth", () => {
 
   // Whether the app is in maintenance mode
   const isMaintenance = ref(false);
+
+  /***************************************************************************
+   * WATCHERS
+   ***************************************************************************/
+  watchEffect(() => {
+    // Set allowed minutes for VTimePicker based on company settings
+    $vuetify.defaults.value.VTimePicker.allowedMinutes = (val) => {
+      if (!company.value?.minuteInterval) return true;
+      return val % company.value.minuteInterval === 0;
+    };
+  });
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -119,11 +131,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   /**
-   * Firebase から受け取ったユーザーオブジェクトを基に、ストア内の認証状態を更新します。
-   * ユーザーの基本情報と ID トークンからカスタムクレーム（ロール、会社 ID など）を取得し、
-   * ストアのリアクティブな状態（uid, email, roles など）にセットします。
-   * この関数は通常、Firebase の onAuthStateChanged リスナーから呼び出されます。
-   *
    * Updates the authentication state in the store based on the user object received from Firebase.
    * Retrieves basic user information and custom claims (roles, company ID, etc.) from the ID token,
    * and sets them to the store's reactive state (uid, email, roles, etc.).
@@ -132,29 +139,23 @@ export const useAuthStore = defineStore("auth", () => {
    * @param {import("firebase/auth").User | null} user - Firebase Authentication から提供されるユーザーオブジェクト、または null (サインアウト時など)。 The user object provided by Firebase Authentication, or null (e.g., on sign-out).
    */
   async function setUser(user) {
-    // 認証状態の変更に関わる処理であるため、エラー状態は初期化すべきと判断
     // Clear errors as the authentication state is changing.
     errors.clear();
 
     // Clear user state.
     _clearUserState();
 
-    // ローディング状態を開始
     // Start loading indicator
     loadings.add({ key: "setUser", text: "アカウント情報を確認しています" }); // Checking account information
 
     try {
-      // ユーザーオブジェクトが存在しない場合（初期読み込み時やサインアウト時など）は処理を中断
       // If the user object does not exist (e.g., on initial load or sign-out), interrupt the process.
-      // 注意: この場合、clearUser は onAuthStateChanged の呼び出し元で処理される想定
       // Note: In this case, clearUser is expected to be handled by the caller in onAuthStateChanged
       if (!user) {
-        // null ユーザーの場合、状態はクリアされているはずなので、ここでは何もしない
         // If the user is null, the state should already be cleared, so do nothing here.
         return;
       }
 
-      // 必須プロパティ（uid, email）の存在チェック
       // Check for the existence of required properties (uid, email).
       if (!user.uid || !user.email) {
         throw new Error(
@@ -162,11 +163,9 @@ export const useAuthStore = defineStore("auth", () => {
         );
       }
 
-      // ID トークンを強制的にリフレッシュして最新のカスタムクレームを取得
       // Force refresh the ID token to get the latest custom claims.
       const idTokenResult = await user.getIdTokenResult(true); // Pass true to force refresh
 
-      // ストアの状態をユーザー情報とクレームで更新
       // Update store state with user information and claims.
       _setUserState(user, idTokenResult);
 
@@ -181,22 +180,18 @@ export const useAuthStore = defineStore("auth", () => {
         _loadDocCounter();
       }
     } catch (error) {
-      // エラー発生時の処理
       // Error handling process.
       logger.error({
         message: `Failed to set user: ${error.message}`,
         error,
       });
 
-      // エラー発生時はストアの状態をクリアして、中途半端な状態を防ぐ
       // Clear the store state on error to prevent an inconsistent state.
       clearUser();
 
-      // エラーを再スローして呼び出し元（onAuthStateChanged など）に失敗を伝える
       // Re-throw the error to notify the caller (e.g., onAuthStateChanged) of the failure.
       throw error;
     } finally {
-      // ローディング状態を必ず終了させる
       // Always end the loading state.
       loadings.remove("setUser");
     }
