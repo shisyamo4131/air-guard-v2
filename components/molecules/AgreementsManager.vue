@@ -62,31 +62,23 @@ const tableProps = computed(() => {
     @error="error"
     @error:clear="clearError"
   >
-    <template #input="slotProps">
-      <air-item-input
-        v-if="selectableAgreements.length !== 0"
-        v-bind="slotProps"
-      >
-        <template #after-dateAt="{ field }">
-          <v-col v-bind="field.colsDefinition">
-            <MoleculesAgreementSelector
-              :items="selectableAgreements"
-              @select="
-                $event.dateAt = slotProps.item.dateAt;
-                slotProps.updateProperties({ ...$event });
-              "
+    <template #after-dateAt="{ field }">
+      <v-col v-bind="field.colsDefinition">
+        <MoleculesAgreementSelector
+          :items="selectableAgreements"
+          @select="
+            $event.dateAt = slotProps.item.dateAt;
+            slotProps.updateProperties({ ...$event });
+          "
+        >
+          <template #activator="{ props: activatorProps }">
+            <v-btn v-bind="activatorProps" block color="primary"
+              >取極めから複製</v-btn
             >
-              <template #activator="{ props: activatorProps }">
-                <v-btn v-bind="activatorProps" block color="primary"
-                  >取極めから複製</v-btn
-                >
-              </template>
-            </MoleculesAgreementSelector>
-          </v-col>
-        </template>
-      </air-item-input>
+          </template>
+        </MoleculesAgreementSelector>
+      </v-col>
     </template>
-
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}" />
     </template>
