@@ -38,7 +38,6 @@ export default defineNuxtPlugin((app) => {
     components: {
       VCalendar,
       VDateInput,
-      // VTimePicker,
     },
     directives,
     /** ロケールを ja 優先に設定 */
@@ -47,12 +46,13 @@ export default defineNuxtPlugin((app) => {
       fallback: "en",
       messages: { ja, en },
     },
+    /**
+     * Set default props for Vuetify components
+     * https://vuetifyjs.com/en/features/global-configuration/#global-configuration
+     */
     defaults: {
-      VToolbar: {
-        VIcon: {
-          color: "medium-emphasis",
-          size: "small",
-        },
+      VCalendar: {
+        hideWeekNumber: true,
       },
       VDataTable: {
         VIcon: {
@@ -60,10 +60,20 @@ export default defineNuxtPlugin((app) => {
           size: "small",
         },
       },
-      VCalendar: {
-        hideWeekNumber: true,
+      VTimePicker: {
+        allowedMinutes: (val) => val % 10 === 0,
+      },
+      VToolbar: {
+        VIcon: {
+          color: "medium-emphasis",
+          size: "small",
+        },
       },
     },
   });
   app.vueApp.use(vuetify);
+
+  return {
+    provide: { vuetify },
+  };
 });
