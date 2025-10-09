@@ -3,11 +3,55 @@
  * @file pages/settings/company.vue
  * @description 会社情報管理
  */
+import { useAuthStore } from "@/stores/useAuthStore";
+
+/*****************************************************************************
+ * DEFINE COMPOSABLES / STORES
+ *****************************************************************************/
+const auth = useAuthStore();
 </script>
 
 <template>
   <v-container>
-    <OrganismsCompanyManager />
+    <v-toolbar class="mb-4" density="compact">
+      <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
+      <v-toolbar-title>設定-会社情報-</v-toolbar-title>
+    </v-toolbar>
+    <v-row>
+      <v-col cols="12" md="4">
+        <MoleculesCompanyManager
+          :model-value="auth.company"
+          :input-props="{
+            excludedKeys: ['agreements', 'minuteInterval'],
+          }"
+        />
+      </v-col>
+      <v-col cols="12" md="8">
+        <MoleculesCompanyManager
+          :model-value="auth.company"
+          :input-props="{
+            includedKeys: ['minuteInterval'],
+          }"
+          :items="[
+            {
+              title: '時刻選択間隔（分）',
+              props: {
+                subtitle: `${auth.company.minuteInterval} 分`,
+                prependIcon: 'mdi-timer-sand',
+              },
+            },
+          ]"
+        />
+      </v-col>
+      <v-col cols="12">
+        <v-card>
+          <MoleculesAgreementsManager
+            v-model="auth.company.agreements"
+            @submit:complete="auth.company.update()"
+          />
+        </v-card>
+      </v-col>
+    </v-row>
   </v-container>
 </template>
 
