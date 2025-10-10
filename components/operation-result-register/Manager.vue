@@ -88,9 +88,9 @@ watch(selectedDoc, (newVal) => {
  * METHODS
  *****************************************************************************/
 function subscribe() {
-  // Subscribe to operation results that are not yet linked to an operationResultId and are dated up to yesterday
+  // Subscribe to SiteOperationSchedule that are not yet linked to an operationResultId and are dated up to yesterday
   const constraints = [
-    ["where", "operationResultId", "==", ""],
+    ["where", "operationResultId", "==", null],
     ["where", "date", "<", dayjs().format("YYYY-MM-DD")],
     ["orderBy", "date"],
   ];
@@ -173,6 +173,7 @@ onUnmounted(() => {
       hide-search
       :items="model.docs"
       label="上下番確定処理"
+      :sortBy="[{ key: 'date' }]"
       @click:update="(item) => (selectedDoc = item)"
     >
     </air-data-table>
