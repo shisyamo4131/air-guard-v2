@@ -55,7 +55,8 @@ export const onAdminUserCreated = onDocumentCreated(
     try {
       const companyId = await getFirestore().runTransaction(
         async (transaction) => {
-          const companyId = await createCompany(companyData, transaction);
+          const companyRef = await createCompany(companyData, transaction);
+          const companyId = companyRef.id;
 
           // Inform about the created company.
           logger.info(
@@ -93,12 +94,14 @@ export const onAdminUserCreated = onDocumentCreated(
  * @param {Error} originalError - 発生した元のエラー
  * @param {string|undefined} uidIfCreated - 作成されたAuthユーザーのUID（存在する場合）
  * @param {import("firebase-admin/auth").Auth} authInstance - Firebase Authのインスタンス
+ * @param {import("firebase-admin/firestore").DocumentReference|undefined} userRef - 作成されたFirestoreユーザードキュメントの参照（存在する場合）
  * @param {string} operationName - 操作名（ログ用）
  */
 async function handleUserOperationError(
   originalError,
   uidIfCreated,
   authInstance,
+  userRef,
   operationName
 ) {
   console.error(`${operationName} でエラーが発生しました:`, originalError);
@@ -117,6 +120,20 @@ async function handleUserOperationError(
     } catch (rollbackError) {
       console.error(
         `Authユーザー ${uidIfCreated} のロールバック削除失敗 (処理: ${operationName}):`,
+        rollbackError
+      );
+    }
+  }
+
+  if (userRef) {
+    try {
+      await userRef.delete();
+      console.log(
+        `Firestoreユーザードキュメント ${userRef.path} のロールバック削除に成功しました。(処理: ${operationName})`
+      );
+    } catch (rollbackError) {
+      console.error(
+        `Firestoreユーザードキュメント ${userRef.path} のロールバック削除失敗 (処理: ${operationName}):`,
         rollbackError
       );
     }
@@ -153,7 +170,7 @@ export const createUserInCompany = onCall(async (request) => {
 
   const auth = getAuth();
   let uid; // uid は auth.createUser が成功した場合に設定される
-
+  let userRef = null;
   try {
     if (!(await isCompanyExists(companyId))) {
       throw new HttpsError(
@@ -163,16 +180,24 @@ export const createUserInCompany = onCall(async (request) => {
     }
     const userRecord = await auth.createUser({ email, password, displayName });
     uid = userRecord.uid;
-    await createUser({ uid, email, displayName, roles: [] }, companyId);
+    userRef = await createUser(
+      { uid, email, displayName, roles: [] },
+      companyId
+    );
     await auth.setCustomUserClaims(uid, {
       companyId,
       isSuperUser: false,
       roles: [],
     });
-
     return { success: true, uid };
   } catch (error) {
-    await handleUserOperationError(error, uid, auth, "createUserInCompany");
+    await handleUserOperationError(
+      error,
+      uid,
+      auth,
+      userRef,
+      "createUserInCompany"
+    );
   }
 });
 
@@ -220,7 +245,7 @@ export const enableUser = onCall(async (request) => {
  * @param {string} args.companyName
  * @param {string} args.companyNameKana
  * @param {import("firebase-admin/firestore").Transaction} [transaction] - Firestore transaction
- * @returns {Promise<string>} companyId
+ * @returns {Promise<import("firebase-admin/firestore").DocumentReference>} company document reference
  * @throws {ContextualError} if required arguments are missing
  * @throws {ContextualError} if transaction is missing
  * @throws {ContextualError} if Firestore operation fails
@@ -241,7 +266,7 @@ async function createCompany(args = {}, transaction) {
     } else {
       await docRef.set(fields);
     }
-    return docRef.id;
+    return docRef;
   } catch (error) {
     throw new ContextualError(error.message, {
       method: "createCompany",
@@ -259,7 +284,7 @@ async function createCompany(args = {}, transaction) {
  * @param {string[]} args.roles - user roles
  * @param {string} companyId - company ID
  * @param {import("firebase-admin/firestore").Transaction} [transaction] - Firestore transaction
- * @returns {Promise<string>} userId
+ * @returns {Promise<import("firebase-admin/firestore").DocumentReference>} user document reference
  * @throws {ContextualError} if required arguments are missing
  * @throws {ContextualError} if companyId or transaction is missing
  * @throws {ContextualError} if Firestore operation fails
@@ -288,7 +313,7 @@ async function createUser(args = {}, companyId, transaction) {
     } else {
       await docRef.set(fields);
     }
-    return docRef.id;
+    return docRef;
   } catch (error) {
     throw new ContextualError(error.message, {
       method: "createUser",

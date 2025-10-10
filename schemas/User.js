@@ -5,21 +5,21 @@
 import { User as BaseClass } from "air-guard-v2-schemas";
 
 export default class User extends BaseClass {
-  // User ドキュメントはクラスから作成してはいけない
+  /**
+   * Override create method to prevent creating user documents from the class.
+   * - User document should be created via Cloud Function.
+   * @returns {Promise<never>}
+   */
   create() {
-    console.error("[User.js] Could not use create().");
-    return Promise.reject(new Error("Could not use create()."));
+    return Promise.reject(new Error("ユーザーの作成方法が不正です。"));
   }
 
-  // User ドキュメントはクラスから変更してはいけない
-  update() {
-    console.error("[User.js] Could not use update().");
-    return Promise.reject(new Error("Could not use update()."));
-  }
-
-  // User ドキュメントはクラスから削除してはいけない
+  /**
+   * Override delete method to prevent deleting user documents from the class.
+   * - User document could not be deleted.
+   * @returns {Promise<never>}
+   */
   delete() {
-    console.error("[User.js] Could not use delete().");
-    return Promise.reject(new Error("Could not use delete()."));
+    return Promise.reject(new Error("ユーザーを削除することはできません。"));
   }
 }

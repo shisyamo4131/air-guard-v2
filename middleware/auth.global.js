@@ -24,22 +24,22 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // メンテナンスモード中は /maintenance 以外のページへのアクセスを /maintenance にリダイレクト
   // メンテナンスモードが解除されていれば /maintenance からルート('/')にリダイレクト
   if (auth.isMaintenance) {
-    console.warn(
-      "[Auth Middleware] Air Guard is currently in maintenance mode."
-    );
+    // console.warn(
+    //   "[Auth Middleware] Air Guard is currently in maintenance mode."
+    // );
     if (to.path !== "/maintenance") {
-      console.log(
-        `[Auth Middleware] Redirecting to /maintenance from ${to.path}.`
-      );
+      // console.log(
+      //   `[Auth Middleware] Redirecting to /maintenance from ${to.path}.`
+      // );
       return navigateTo("/maintenance", { replace: true });
     } else {
       return; // 既に /maintenance にいる場合は何もしない
     }
   } else {
     if (to.path === "/maintenance") {
-      console.log(
-        "[Auth Middleware] Maintenance mode ended. Redirecting to home."
-      );
+      // console.log(
+      //   "[Auth Middleware] Maintenance mode ended. Redirecting to home."
+      // );
       return navigateTo("/", { replace: true });
     }
   }
@@ -64,16 +64,16 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // ページ設定が存在し、かつ public: true でない場合
     if (!pageConfig?.public) {
       const redirectTo = getPageConfig("/")?.public ? "/" : "/sign-in"; // ルートが公開かチェック
-      console.log(
-        `[Auth Middleware] Unauthenticated access to protected route ${targetPath}. Redirecting to ${redirectTo}.`
-      );
+      // console.log(
+      //   `[Auth Middleware] Unauthenticated access to protected route ${targetPath}. Redirecting to ${redirectTo}.`
+      // );
       // 無限ループ防止 (リダイレクト先が現在のパスと同じ場合は何もしない)
       if (targetPath !== redirectTo) {
         return navigateTo(redirectTo);
       }
-      console.warn(
-        `[Auth Middleware] Avoided redirect loop for unauthenticated user at ${targetPath}.`
-      );
+      // console.warn(
+      //   `[Auth Middleware] Avoided redirect loop for unauthenticated user at ${targetPath}.`
+      // );
       return; // or handle appropriately, e.g., show 404 if pageConfig is undefined
     }
     // public: true のページ、または設定がないページ(404想定)へのアクセスは許可
@@ -87,17 +87,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
       if (targetPath === "/unconfirmedEmail") {
         return; // 既に unconfirmedEmail ページにいる場合は何もしない
       }
-      console.log(
-        `[Auth Middleware] Authenticated but unverified user accessing public route ${targetPath}. Redirecting to /unconfirmedEmail.`
-      );
+      // console.log(
+      //   `[Auth Middleware] Authenticated but unverified user accessing public route ${targetPath}. Redirecting to /unconfirmedEmail.`
+      // );
       return navigateTo("/unconfirmedEmail");
     }
 
     // ページ設定が存在し、かつ public: true の場合、ダッシュボードへ
     if (pageConfig?.public) {
-      console.log(
-        `[Auth Middleware] Authenticated user accessing public route ${targetPath}. Redirecting to /dashboard.`
-      );
+      // console.log(
+      //   `[Auth Middleware] Authenticated user accessing public route ${targetPath}. Redirecting to /dashboard.`
+      // );
       // 無限ループ防止 (既に /dashboard にいる場合はリダイレクトしない)
       if (targetPath !== "/dashboard") {
         return navigateTo("/dashboard");
@@ -108,11 +108,11 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // 非公開ページへのアクセスの場合、権限を確認 (isPageAllowed を使用)
     if (!isPageAllowed(targetPath, userRoles)) {
       // 権限がない場合、ダッシュボードへリダイレクト
-      console.warn(
-        `[Auth Middleware] User (Roles: ${userRoles.join(
-          ", "
-        )}) denied access to ${targetPath}. Redirecting to /dashboard.`
-      );
+      // console.warn(
+      //   `[Auth Middleware] User (Roles: ${userRoles.join(
+      //     ", "
+      //   )}) denied access to ${targetPath}. Redirecting to /dashboard.`
+      // );
       // 無限ループ防止
       if (targetPath !== "/dashboard") {
         return navigateTo("/dashboard");
