@@ -138,8 +138,8 @@ export function useArrangementManager({
     });
   };
 
-  const addWorker = async ({ schedule, id, isEmployee, newIndex }) => {
-    schedule.addWorker({ id, isEmployee, index: newIndex });
+  const addWorker = async ({ schedule, id, isEmployee } = {}, newIndex = 0) => {
+    schedule.addWorker({ id, isEmployee }, newIndex);
     await schedule.update();
   };
 

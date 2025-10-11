@@ -94,7 +94,7 @@ function handleWorkerAdded(event) {
   const { element, newIndex } = event;
   const { id, isEmployee } = element;
   const schedule = props.schedule;
-  addWorker({ schedule, id, isEmployee, newIndex });
+  addWorker({ schedule, id, isEmployee }, newIndex);
 }
 
 /**

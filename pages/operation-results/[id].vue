@@ -6,7 +6,7 @@
  * - ドキュメント id をもとに OperationResult クラスからドキュメント情報を取得して表示
  */
 import dayjs from "dayjs";
-import { OperationResult } from "~/schemas";
+import { OperationResult } from "@/schemas";
 import {
   DAY_TYPE,
   SHIFT_TYPE,
@@ -29,8 +29,8 @@ watch(() => model.siteId, fetchSite);
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
-onMounted(async () => {
-  await model.subscribe({ docId: operationResultId });
+onMounted(() => {
+  model.subscribe({ docId: operationResultId });
 });
 
 onUnmounted(() => {
@@ -162,8 +162,11 @@ onUnmounted(() => {
           </v-col>
         </v-row>
       </v-col>
-      <v-col cols="12" lg="9">
+      <!-- <v-col cols="12" lg="9">
         <OperationResultsEmployeesManager :model="model" />
+      </v-col> -->
+      <v-col cols="12" lg="9">
+        <OperationResultsWorkersManager :model-value="model.workers" />
       </v-col>
       <v-col cols="12">
         <v-card>
