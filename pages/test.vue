@@ -1,12 +1,53 @@
 <script setup>
-const events = ref([{ name: "test", start: new Date("2025-09-10") }]);
+import { doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore";
+import { OperationResult } from "@/schemas";
+import { onMounted, onUnmounted } from "vue";
+
+const operationResult = reactive(new OperationResult());
+
+async function rollback() {
+  const { $firestore } = useNuxtApp();
+  const companyPath = "Companies/Qa1JpI7dLMjIXeW3lB2m";
+  const docId = "ZiZGd2PmaUUe36T8jF5k";
+  const operationResultDocRef = doc(
+    $firestore,
+    `${companyPath}/OperationResults`,
+    docId
+  );
+  await deleteDoc(operationResultDocRef);
+  const siteOperationScheduleDocRef = doc(
+    $firestore,
+    `${companyPath}/SiteOperationSchedules`,
+    docId
+  );
+  await updateDoc(siteOperationScheduleDocRef, {
+    operationResultId: null,
+  });
+}
+
+function setNewTime() {
+  operationResult.regulationWorkMinutes = 500;
+}
+
+onMounted(() => {
+  operationResult.subscribe({ docId: "ZiZGd2PmaUUe36T8jF5k" });
+});
+
+onUnmounted(() => {
+  operationResult.unsubscribe();
+});
 </script>
 
 <template>
-  <v-calendar
-    :day-format="({ day }) => day"
-    :month-format="({ month }) => `${month}/`"
-    :events="events"
-  >
-  </v-calendar>
+  <v-container>
+    <v-card>
+      <v-card-text>
+        {{ operationResult.employees }}
+      </v-card-text>
+      <v-card-actions>
+        <v-btn @click="rollback">ロールバック</v-btn>
+        <v-btn @click="setNewTime">Set</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-container>
 </template>

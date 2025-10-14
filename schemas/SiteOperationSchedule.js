@@ -1,3 +1,73 @@
+/***************************************************************************
+ * SiteOperationSchedule Model (client) ver 1.0.0
+ * @author shisyamo4131
+ * ---------------------------------------------------------------------------
+ * - Extends Operation class to represent a site operation schedule.
+ * - Prevents updates or deletions if an associated OperationResult exists.
+ * - Automatically assigns a display order based on existing documents during creation.
+ * - Clears all notifications if related data have been changed during updates.
+ * - Deletes all related notifications before deleting the schedule.
+ * ---------------------------------------------------------------------------
+ * @props {string} siteId - Site document ID
+ * @props {Date} dateAt - Date of operation (placement date)
+ * @props {string} shiftType - `DAY` or `NIGHT`
+ * @props {string} startTime - Start time (HH:MM format)
+ * @props {string} endTime - End time (HH:MM format)
+ * @props {number} breakMinutes - Break time (minutes)
+ * @props {boolean} isStartNextDay - Next day start flag
+ * - `true` if the actual work starts the day after the placement date `dateAt`
+ * @props {number} requiredPersonnel - Required number of personnel
+ * @props {boolean} qualificationRequired - Qualification required flag
+ * @props {string} workDescription - Work description
+ * @props {string} remarks - Remarks
+ * @props {Array<SiteOperationScheduleDetail>} employees - Assigned employees
+ * - Array of `SiteOperationScheduleDetail` instances representing assigned employees
+ * @props {Array<SiteOperationScheduleDetail>} outsourcers - Assigned outsourcers
+ * - Array of `SiteOperationScheduleDetail` instances representing assigned outsourcers
+ * @props {string|null} operationResultId - Associated OperationResult document ID
+ * - If an OperationResult has been created based on this schedule, this property
+ *   holds the ID of that OperationResult document.
+ * - If this property is set, the schedule cannot be updated or deleted.
+ *   Conversely, if the associated OperationResult is deleted, this property can be set to null.
+ * @props {number} displayOrder - Display order
+ * - Property to control the display order of schedules on the same date and shift type.
+ * - Automatically assigned during creation based on existing documents.
+ * ---------------------------------------------------------------------------
+ * @computed {string} date - Date string in YYYY-MM-DD format based on `dateAt`
+ * @computed {string} dayType - Day type based on `dateAt`
+ * @computed {Date} startAt - Start date and time (Date object)
+ * - Returns a Date object with `startTime` set based on `dateAt`.
+ * - If `isStartNextDay` is true, add 1 day.
+ * @computed {Date} endAt - End date and time (Date object)
+ * - Returns a Date object with `endTime` set based on `dateAt`.
+ * - If `isSpansNextDay` is true, add 1 day.
+ * @computed {boolean} isSpansNextDay - Flag indicating whether the date spans from start date to end date
+ * - `true` if `startTime` is later than `endTime`
+ * @computed {Array<string>} employeeIds - Array of employee IDs from `employees`
+ * @computed {Array<string>} outsourcerIds - Array of outsourcer IDs from `outsourcers`
+ * @computed {number} employeesCount - Count of assigned employees
+ * @computed {number} outsourcersCount - Count of assigned outsourcers (sum of amounts)
+ * @computed {boolean} isPersonnelShortage - Indicates if there is a shortage of personnel
+ * - `true` if the sum of `employeesCount` and `outsourcersCount` is less than `requiredPersonnel`
+ * @computed {Array<OperationDetail>} workers - Combined array of `employees` and `outsourcers`
+ * ---------------------------------------------------------------------------
+ * @states isEmployeesChanged Indicates whether the employees have changed.
+ * @states isOutsourcersChanged Indicates whether the outsourcers have changed.
+ * @states addedWorkers An array of workers that have been added.
+ * @states removedWorkers An array of workers that have been removed.
+ * @states updatedWorkers An array of workers that have been updated.
+ * @states isEditable Indicates whether the instance is editable.
+ * @states isNotificatedAllWorkers Indicates whether all workers have been notified.
+ * ---------------------------------------------------------------------------
+ * @methods addWorker Adds a new worker (employee or outsourcer).
+ * @methods changeWorker Changes the position of a worker (employee or outsourcer).
+ * @methods removeWorker Removes a worker (employee or outsourcer).
+ * [Added methods]
+ * @methods duplicate Duplicates the schedule for specified dates.
+ * @methods notify Creates arrangement notifications for workers who have not been notified yet.
+ * @methods syncToOperationResult Creates an OperationResult document based on the current schedule.
+ * @methods toEvent Converts the schedule to an event object compatible with Vuetify's VCalendar component.
+ ***************************************************************************/
 import {
   ArrangementNotification,
   OperationResult,
@@ -7,23 +77,10 @@ import { ContextualError } from "air-guard-v2-schemas/utils";
 import dayjs from "dayjs";
 import { runTransaction } from "firebase/firestore";
 
-/**
- * @file ./schemas/SiteOperationSchedule.js
- * @description 現場稼働予定情報クラス
- *
- * @states isEditable 当該インスタンスが編集可能かどうかを示す真偽値。
- * @states isNotificatedAllWorkers 全作業員に通知済みかどうかを示す真偽値。
- *
- * @methods duplicate 現場稼働予定ドキュメントを指定された日付分複製します。
- * @methods notify 配置通知を作成します。
- * @methods syncToOperationResult 現在のインスタンスから稼働実績ドキュメントを作成します。
- * @methods toEvent Vuetify の VCalendar コンポーネントで表示可能なイベントオブジェクト形式に変換して返します。
- */
 export default class SiteOperationSchedule extends BaseClass {
   /***************************************************************************
    * METHODS
    ***************************************************************************/
-
   /**
    * 現場稼働予定ドキュメントを指定された日付分複製します。
    * - 複製された各ドキュメントは新規作成され、元のドキュメントとは別のIDを持ちます。

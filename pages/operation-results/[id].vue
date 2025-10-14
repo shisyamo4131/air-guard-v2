@@ -113,7 +113,7 @@ onUnmounted(() => {
                   <v-list-item-subtitle>基本単価</v-list-item-subtitle>
                   <v-list-item-title>{{
                     `${(model.unitPrice || 0).toLocaleString()}円/${(
-                      model.overTimeUnitPrice || 0
+                      model.overtimeUnitPrice || 0
                     ).toLocaleString()}円`
                   }}</v-list-item-title>
                 </v-list-item>
@@ -121,7 +121,7 @@ onUnmounted(() => {
                   <v-list-item-subtitle>資格者単価</v-list-item-subtitle>
                   <v-list-item-title>{{
                     `${(model.unitPriceQualified || 0).toLocaleString()}円/${(
-                      model.overTimeUnitPriceQualified || 0
+                      model.overtimeUnitPriceQualified || 0
                     ).toLocaleString()}円`
                   }}</v-list-item-title>
                 </v-list-item>

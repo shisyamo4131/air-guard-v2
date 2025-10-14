@@ -43,7 +43,7 @@ const headers = ref([
   },
   {
     title: "残業時間",
-    key: "overTimeWorkMinutes",
+    key: "overtimeWorkMinutes",
     align: "center",
     sortable: false,
   },
@@ -200,7 +200,7 @@ function submit() {
 
         <!-- 休憩時間/残業時間 -->
         <template
-          v-for="key in ['breakMinutes', 'overTimeWorkMinutes']"
+          v-for="key in ['breakMinutes', 'overtimeWorkMinutes']"
           #[`item.${key}`]="{ item }"
           :key="key"
         >
