@@ -57,6 +57,7 @@ const tableProps = computed(() => {
   <air-array-manager
     v-model="agreements"
     :schema="Agreement"
+    item-key="key"
     :label="label"
     :table-props="tableProps"
     @error="error"
