@@ -63,13 +63,13 @@ const tableProps = computed(() => {
     @error="error"
     @error:clear="clearError"
   >
-    <template #after-dateAt="{ field }">
+    <template #after-dateAt="{ field, item, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <MoleculesAgreementSelector
           :items="selectableAgreements"
           @select="
-            $event.dateAt = slotProps.item.dateAt;
-            slotProps.updateProperties({ ...$event });
+            $event.dateAt = item.dateAt;
+            updateProperties({ ...$event });
           "
         >
           <template #activator="{ props: activatorProps }">
