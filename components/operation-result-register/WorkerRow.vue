@@ -29,7 +29,7 @@ const displayName = computed(() => {
   );
 });
 
-const overtimeMinutes = computed(() => {
+const overtimeWorkMinutes = computed(() => {
   if (!props.agreement) return "-";
   if (props.notification) {
     return (
@@ -56,7 +56,7 @@ const overtimeMinutes = computed(() => {
       {{
         `(休憩: ${
           notification?.actualBreakMinutes || worker?.breakMinutes || 0
-        }分 / 残業: ${overtimeMinutes}分)`
+        }分 / 残業: ${overtimeWorkMinutes}分)`
       }}
     </td>
     <td>

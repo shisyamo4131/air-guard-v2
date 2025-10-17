@@ -1,6 +1,7 @@
 # 課題
 
-- Agreement クラスの通常単価、残業単価など、有資格者ではない項目のプロパティ名に Base を付与するべき。
+- 残業単価が時間単位であるのに対して、sales の計算が分単位でかけ算になっている。
+- afterInitialize, beforeInitialize の super を確認。
 
 ## 全体
 
@@ -10,7 +11,6 @@
 - 現場の取極め管理で、参照作成ができない。
 - 現場稼働予定から稼働実績を作るときに、明細にも regulationWorkMinutes が必要。
 - 稼働実績が更新される際、regulationWorkMinutes が変更されていれば明細と同期
-- 明細側に overtimeMinutes が必要（computed）
 
 ## ユーザー管理
 

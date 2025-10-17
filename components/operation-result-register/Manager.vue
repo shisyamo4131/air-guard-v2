@@ -118,7 +118,10 @@ async function submit() {
   try {
     loading.value = true;
     if (!agreement.value) throw new Error("取極めが未登録です。");
-    await selectedDoc.value.syncToOperationResult(agreement.value);
+    await selectedDoc.value.syncToOperationResult(
+      agreement.value,
+      notificationsMap.value
+    );
     dialog.value = false;
   } catch (error) {
     logger.error(error);

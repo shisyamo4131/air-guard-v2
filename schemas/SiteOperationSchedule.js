@@ -8,6 +8,7 @@
  * - Clears all notifications if related data have been changed during updates.
  * - Deletes all related notifications before deleting the schedule.
  * ---------------------------------------------------------------------------
+ * [INHERIT]
  * @props {string} siteId - Site document ID
  * @props {Date} dateAt - Date of operation (placement date)
  * @props {string} shiftType - `DAY` or `NIGHT`
@@ -16,6 +17,9 @@
  * @props {number} breakMinutes - Break time (minutes)
  * @props {boolean} isStartNextDay - Next day start flag
  * - `true` if the actual work starts the day after the placement date `dateAt`
+ * @props {number} regulationWorkMinutes - Regulation work minutes
+ * - Indicates the maximum working time treated as regular working hours.
+ * - A new value will be synchronized to all `employees` and `outsourcers`.
  * @props {number} requiredPersonnel - Required number of personnel
  * @props {boolean} qualificationRequired - Qualification required flag
  * @props {string} workDescription - Work description
@@ -33,6 +37,7 @@
  * - Property to control the display order of schedules on the same date and shift type.
  * - Automatically assigned during creation based on existing documents.
  * ---------------------------------------------------------------------------
+ * [INHERIT]
  * @computed {string} date - Date string in YYYY-MM-DD format based on `dateAt`
  * @computed {string} dayType - Day type based on `dateAt`
  * @computed {Date} startAt - Start date and time (Date object)
@@ -51,6 +56,7 @@
  * - `true` if the sum of `employeesCount` and `outsourcersCount` is less than `requiredPersonnel`
  * @computed {Array<OperationDetail>} workers - Combined array of `employees` and `outsourcers`
  * ---------------------------------------------------------------------------
+ * [INHERIT]
  * @states isEmployeesChanged Indicates whether the employees have changed.
  * @states isOutsourcersChanged Indicates whether the outsourcers have changed.
  * @states addedWorkers An array of workers that have been added.
@@ -59,10 +65,10 @@
  * @states isEditable Indicates whether the instance is editable.
  * @states isNotificatedAllWorkers Indicates whether all workers have been notified.
  * ---------------------------------------------------------------------------
+ * [INHERIT]
  * @methods addWorker Adds a new worker (employee or outsourcer).
  * @methods changeWorker Changes the position of a worker (employee or outsourcer).
  * @methods removeWorker Removes a worker (employee or outsourcer).
- * [Added methods]
  * @methods duplicate Duplicates the schedule for specified dates.
  * @methods notify Creates arrangement notifications for workers who have not been notified yet.
  * @methods syncToOperationResult Creates an OperationResult document based on the current schedule.
@@ -73,6 +79,7 @@ import {
   OperationResult,
   SiteOperationSchedule as BaseClass,
 } from "air-guard-v2-schemas";
+import { SiteOperationScheduleDetail } from "@/schemas";
 import { ContextualError } from "air-guard-v2-schemas/utils";
 import dayjs from "dayjs";
 import { runTransaction } from "firebase/firestore";
@@ -207,7 +214,7 @@ export default class SiteOperationSchedule extends BaseClass {
    *   作成された稼働実績ドキュメントの ID が設定されます。（当該ドキュメント ID と同一）
    * @param {Object} agreement - 取極め情報オブジェクト。稼働実績ドキュメントの生成に必要なプロパティを含みます。
    */
-  async syncToOperationResult(agreement) {
+  async syncToOperationResult(agreement, notifications = {}) {
     if (!this.docId) {
       throw new Error(
         "不正な処理です。作成前の現場稼働予定を稼働実績に同期することはできません。"
@@ -216,14 +223,44 @@ export default class SiteOperationSchedule extends BaseClass {
     if (!agreement) {
       throw new Error("取極めの指定が必要です。");
     }
+    if (!notifications) {
+      throw new Error("配置通知の指定が必要です。");
+    }
+    const employees = this.employees.map((e) => {
+      const notification = notifications[e.notificationKey];
+      if (notification) {
+        return new SiteOperationScheduleDetail({
+          ...e.toObject(),
+          startTime: notification.actualStartTime,
+          endTime: notification.actualEndTime,
+          breakMinutes: notification.actualBreakMinutes,
+        });
+      } else {
+        return e;
+      }
+    });
+    const outsourcers = this.outsourcers.map((o) => {
+      const notification = notifications[o.notificationKey];
+      if (notification) {
+        return new SiteOperationScheduleDetail({
+          ...o.toObject(),
+          startTime: notification.actualStartTime,
+          endTime: notification.actualEndTime,
+          breakMinutes: notification.actualBreakMinutes,
+        });
+      } else {
+        return o;
+      }
+    });
     try {
       // 現場稼働予定の内容をもとに稼働実績インスタンスを生成
       const operationResult = new OperationResult({
         ...agreement,
         ...this.toObject(),
+        employees,
+        outsourcers,
         siteOperationScheduleId: this.docId,
       });
-
       const firestore = this.constructor.getAdapter().firestore;
       await runTransaction(firestore, async (transaction) => {
         const docRef = await operationResult.create({
