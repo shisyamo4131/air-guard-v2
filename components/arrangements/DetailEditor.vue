@@ -27,7 +27,6 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
             v-model="worker.startTime"
             label="開始時刻"
             required
-            :picker-props="{ format: '24hr' }"
           />
         </v-col>
         <v-col cols="12" sm="6">
@@ -35,7 +34,6 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
             v-model="worker.endTime"
             label="終了時刻"
             required
-            :picker-props="{ format: '24hr' }"
           />
         </v-col>
         <v-col cols="12">

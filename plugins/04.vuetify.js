@@ -62,6 +62,8 @@ export default defineNuxtPlugin((app) => {
       },
       VTimePicker: {
         allowedMinutes: (val) => val % 10 === 0,
+        color: "primary",
+        format: "ampm",
       },
       VToolbar: {
         VIcon: {

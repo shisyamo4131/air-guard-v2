@@ -100,7 +100,6 @@ function handleClickSubmit() {
               v-model="internalActualStartTime"
               label="上番時刻"
               required
-              :picker-props="{ format: '24hr' }"
             />
           </v-col>
           <v-col cols="12" sm="6">
@@ -108,7 +107,6 @@ function handleClickSubmit() {
               v-model="internalActualEndTime"
               label="下番時刻"
               required
-              :picker-props="{ format: '24hr' }"
             />
           </v-col>
           <v-col cols="12">
