@@ -67,6 +67,7 @@ const displayItems = computed(() => {
 <template>
   <air-item-manager
     :model-value="model"
+    :editor-props="{ hideDeleteBtn: true }"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
