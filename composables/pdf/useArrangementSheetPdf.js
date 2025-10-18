@@ -1,4 +1,9 @@
 /**
+ * 2025-10-18
+ * 配置管理の初回画面ロードに時間がかかるため、useFetchEmployee と useFetchOutsourcer を
+ * 必ず外部から指定するように一旦変更。
+ */
+/**
  * 配置表PDF出力用 composable
  *  - 現場稼働予定ドキュメントを元にPDFを生成し、ブラウザで開きます。
  *  - 1ページに7件の現場データを表示します。
@@ -11,9 +16,9 @@ import pdfMake from "pdfmake/build/pdfmake";
 import vfs from "@/utils/fonts/vfs_fonts";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SiteOperationSchedule } from "@/schemas";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+// import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+// import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+// import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /*****************************************************************************
  * コンポーザブル内ユーティリティ
@@ -372,10 +377,13 @@ export function useArrangementSheetPdf({
 } = {}) {
   /** define composables */
   // オプションで渡されたコンポーザブル、または内部コンポーザブルを使用
-  const fetchEmployeeComposable = providedFetchEmpComp || useFetchEmployee();
-  const fetchOutsourcerComposable =
-    providedFetchOutComp || useFetchOutsourcer();
-  const fetchSiteComposable = providedFetchSiteComp || useFetchSite();
+  // const fetchEmployeeComposable = providedFetchEmpComp || useFetchEmployee();
+  // const fetchOutsourcerComposable =
+  //   providedFetchOutComp || useFetchOutsourcer();
+  // const fetchSiteComposable = providedFetchSiteComp || useFetchSite();
+  const fetchEmployeeComposable = providedFetchEmpComp;
+  const fetchOutsourcerComposable = providedFetchOutComp;
+  const fetchSiteComposable = providedFetchSiteComp;
   const { company } = useAuthStore();
 
   const open = async (date) => {

@@ -1,7 +1,12 @@
-import { computed, ref, reactive, toRaw } from "vue";
+/**
+ * 2025-10-18
+ * 配置管理の初回画面ロードに時間がかかるため、useFetchEmployee と useFetchOutsourcer を
+ * 必ず外部から指定するように一旦変更。
+ */
+import { computed, ref, reactive } from "vue";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useFetchEmployee } from "./fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
+// import { useFetchEmployee } from "./fetch/useFetchEmployee";
+// import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
 import { Employee, Outsourcer } from "@/schemas";
@@ -29,9 +34,11 @@ export function useWorkersList({
   const logger = useLogger("useWorkersList", useErrorsStore());
 
   /** 既存のコンポーザブルを使用または新規作成 */
-  const employeeComposable = fetchEmployeeComposable || useFetchEmployee();
-  const outsourcerComposable =
-    fetchOutsourcerComposable || useFetchOutsourcer();
+  // const employeeComposable = fetchEmployeeComposable || useFetchEmployee();
+  // const outsourcerComposable =
+  //   fetchOutsourcerComposable || useFetchOutsourcer();
+  const employeeComposable = fetchEmployeeComposable;
+  const outsourcerComposable = fetchOutsourcerComposable;
 
   /** 既存のコンポーザブルから必要なデータを取得 */
   const { cachedEmployees, fetchEmployee, pushEmployees } = employeeComposable;
