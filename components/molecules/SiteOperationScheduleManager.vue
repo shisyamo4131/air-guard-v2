@@ -37,5 +37,9 @@ defineExpose({
     :handle-delete="(item) => item.delete()"
     @error="error"
     @error:clear="clearError"
-  />
+  >
+    <template #isStartNextDay="{ attrs }">
+      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+    </template>
+  </air-item-manager>
 </template>

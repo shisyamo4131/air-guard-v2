@@ -33,22 +33,7 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
           />
         </v-col>
         <v-col cols="12">
-          <v-card border flat>
-            <v-card-text class="pt-0">
-              <v-checkbox
-                class="mr-4"
-                v-model="worker.isStartNextDay"
-                label="翌日開始"
-                hide-details
-              />
-              <div class="text-caption text-medium-emphasis">
-                <div>
-                  実際の勤務開始日時が勤務日の翌日になる場合はチェックを入れます。
-                </div>
-                例）勤務日が5月1日、実際の勤務開始日時が5月2日 02:00 の場合
-              </div>
-            </v-card-text>
-          </v-card>
+          <MoleculesInputsIsStartNextDay v-model="worker.isStartNextDay" />
         </v-col>
         <v-col cols="12">
           <air-time-picker-input

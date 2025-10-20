@@ -86,5 +86,8 @@ function onClickEvent(nativeEvent, { event }) {
         <v-radio label="夜勤" value="NIGHT" />
       </v-radio-group>
     </template>
+    <template #isStartNextDay="{ attrs }">
+      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+    </template>
   </air-array-manager>
 </template>

@@ -295,7 +295,7 @@ onMounted(() => {
     </ArrangementsTable>
 
     <!-- スケジュール編集ダイアログ -->
-    <OrganismsSiteOperationScheduleManager
+    <MoleculesSiteOperationScheduleManager
       ref="scheduleManager"
       :model-value="instance"
     />
