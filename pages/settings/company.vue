@@ -57,7 +57,8 @@ const auth = useAuthStore();
           <MoleculesAgreementsManager
             v-model="auth.company.agreements"
             @submit:complete="auth.company.update()"
-          />
+          >
+          </MoleculesAgreementsManager>
         </v-card>
       </v-col>
     </v-row>
