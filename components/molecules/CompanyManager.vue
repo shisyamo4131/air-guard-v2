@@ -82,6 +82,9 @@ const displayItems = computed(() => {
         </v-card-actions>
       </v-card>
     </template>
+    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
+      <slot :name="slotName" v-bind="scope ?? {}" />
+    </template>
   </air-item-manager>
 </template>
 
