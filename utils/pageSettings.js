@@ -29,11 +29,29 @@ export const pageStructure = [
     navigation: false,
   },
   {
-    id: "test", // ルートパスを追加 (公開ページとする例)
-    path: "/test",
+    id: "module-tests",
     label: "テスト",
+    icon: "mdi-domain",
     roles: [],
     navigation: true,
+    children: [
+      {
+        id: "test",
+        path: "/test",
+        label: "テスト",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+      {
+        id: "round-setting",
+        path: "/round-setting-test",
+        label: "端数処理設定クラス",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
   },
   {
     id: "arrangements", // ルートパスを追加 (公開ページとする例)

@@ -4,6 +4,7 @@
  * @description 会社情報管理
  */
 import { useAuthStore } from "@/stores/useAuthStore";
+import { RoundSetting } from "@/schemas";
 
 /*****************************************************************************
  * DEFINE COMPOSABLES / STORES
@@ -30,7 +31,7 @@ const auth = useAuthStore();
         <MoleculesCompanyManager
           :model-value="auth.company"
           :input-props="{
-            includedKeys: ['minuteInterval'],
+            includedKeys: ['minuteInterval', 'roundSetting'],
           }"
           :items="[
             {
@@ -38,6 +39,13 @@ const auth = useAuthStore();
               props: {
                 subtitle: `${auth.company.minuteInterval} 分`,
                 prependIcon: 'mdi-timer-sand',
+              },
+            },
+            {
+              title: '端数処理',
+              props: {
+                subtitle: RoundSetting.label(auth.company.roundSetting),
+                prependIcon: 'mdi-calculator-variant-outline',
               },
             },
           ]"

@@ -10,6 +10,7 @@ import { Company } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { doc, onSnapshot } from "firebase/firestore";
+import { RoundSetting } from "@/schemas";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -64,6 +65,9 @@ export const useAuthStore = defineStore("auth", () => {
       if (!company.value?.minuteInterval) return true;
       return val % company.value.minuteInterval === 0;
     };
+
+    // Update `RoundSetting` global setting based on company settings
+    RoundSetting.set(company.value?.roundSetting || RoundSetting.ROUND);
   });
 
   /***************************************************************************
