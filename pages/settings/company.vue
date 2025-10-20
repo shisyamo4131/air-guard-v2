@@ -23,7 +23,7 @@ const auth = useAuthStore();
         <MoleculesCompanyManager
           :model-value="auth.company"
           :input-props="{
-            excludedKeys: ['agreements', 'minuteInterval'],
+            excludedKeys: ['agreements', 'minuteInterval', 'roundSetting'],
           }"
         />
       </v-col>
@@ -49,7 +49,8 @@ const auth = useAuthStore();
               },
             },
           ]"
-        />
+        >
+        </MoleculesCompanyManager>
       </v-col>
       <v-col cols="12">
         <v-card>
