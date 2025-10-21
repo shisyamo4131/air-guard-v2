@@ -135,8 +135,9 @@ async function submit() {
  * @returns {Promise<void>}
  */
 async function notify() {
+  const loadingsKey = loadingsStore.add("配置通知を作成中...");
+  loading.value = true;
   try {
-    loading.value = true;
     if (!selectedDoc.value) {
       throw new Error("現場稼働予定が選択されていません。");
     }
@@ -145,6 +146,7 @@ async function notify() {
     logger.error(error);
   } finally {
     loading.value = false;
+    loadingsStore.remove(loadingsKey);
   }
 }
 
@@ -206,6 +208,7 @@ onUnmounted(() => {
                 :agreement="agreement"
                 :workers="selectedDoc?.workers || []"
                 @click:notification="setNotification"
+                @click:notify="notify"
               />
             </tbody>
           </v-table>

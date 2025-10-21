@@ -215,6 +215,34 @@ export function useArrangementNotificationManager({
     return !!mappedDocs.value[key];
   };
 
+  const hasAll = (args = {}) => {
+    // If args is a string, treat it as key
+    if (args && typeof args === "string") {
+      return !!mappedDocs.value[key];
+    }
+
+    const { scheduleId, workerId } = args;
+
+    // Return false if scheduleId is not provided.
+    if (!scheduleId) {
+      logger.error({
+        message: "Invalid arguments",
+        data: args,
+      });
+      return false;
+    }
+
+    // If workerId is not provided, check if any notification exists for the scheduleId.
+    if (!workerId) {
+      return (
+        docs.value.filter((doc) => {
+          return doc.siteOperationScheduleId === scheduleId;
+        }).length > 0
+      );
+    }
+    const key = _getKey(scheduleId, workerId);
+    return !!mappedDocs.value[key];
+  };
   /**
    * Updates the status of the selected notification.
    * @param {Object} options - The options for updating the notification.

@@ -7,7 +7,7 @@ const props = defineProps({
   workers: { type: Array, default: () => [] },
 });
 
-const emit = defineEmits(["click:notification"]);
+const emit = defineEmits(["click:notification", "click:notify"]);
 
 /*****************************************************************************
  * DEFINE(INJECT) COMPOSABLES
@@ -28,6 +28,7 @@ const notifications = inject("notificationsMap");
             :worker="worker"
             :notification="notifications[worker.notificationKey]"
             @click="emit('click:notification', $event)"
+            @click:notify="emit('click:notify')"
           />
         </tbody>
       </v-table>

@@ -10,7 +10,7 @@ const props = defineProps({
   worker: { type: Object, default: undefined },
 });
 
-const emit = defineEmits(["click"]);
+const emit = defineEmits(["click", "click:notify"]);
 
 /*****************************************************************************
  * DEFINE(INJECT) COMPOSABLES
@@ -50,18 +50,33 @@ const overtimeWorkMinutes = computed(() => {
       {{ displayName }}
     </td>
     <td>
-      {{ notification?.actualStartTime || worker?.startTime || "" }}
-      -
-      {{ notification?.actualEndTime || worker?.endTime || "" }}
-      {{
-        `(休憩: ${
-          notification?.actualBreakMinutes || worker?.breakMinutes || 0
-        }分 / 残業: ${overtimeWorkMinutes}分)`
-      }}
+      <div class="d-flex align-center" style="position: relative">
+        <v-chip
+          v-if="notification.actualIsStartNextDay"
+          style="position: absolute; top: -10px"
+          color="secondary"
+          density="compact"
+          label
+          size="x-small"
+          text="翌日"
+        />
+        {{ notification?.actualStartTime || worker?.startTime || "" }}
+        -
+        {{ notification?.actualEndTime || worker?.endTime || "" }}
+        {{
+          `(休憩: ${
+            notification?.actualBreakMinutes || worker?.breakMinutes || 0
+          }分 / 残業: ${overtimeWorkMinutes}分)`
+        }}
+      </div>
     </td>
     <td>
       <span v-if="!notification">
-        <v-chip color="error" prepend-icon="mdi-alert" size="small"
+        <v-chip
+          color="error"
+          prepend-icon="mdi-alert"
+          size="small"
+          @click="emit('click:notify', worker)"
           >配置通知がありません</v-chip
         >
       </span>

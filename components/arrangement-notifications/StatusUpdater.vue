@@ -13,6 +13,7 @@ const props = defineProps({
   actualStartTime: { type: String },
   actualEndTime: { type: String },
   actualBreakMinutes: { type: Number },
+  actualIsStartNextDay: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   status: { type: String },
 });
@@ -25,6 +26,7 @@ const emit = defineEmits(["click:submit", "click:cancel"]);
 const internalActualStartTime = ref(null);
 const internalActualEndTime = ref(null);
 const internalActualBreakMinutes = ref(null);
+const internalActualIsStartNextDay = ref(false);
 const internalStatus = ref(null);
 
 /*****************************************************************************
@@ -39,6 +41,7 @@ watchEffect(() => {
   internalActualStartTime.value = props.actualStartTime;
   internalActualEndTime.value = props.actualEndTime;
   internalActualBreakMinutes.value = props.actualBreakMinutes;
+  internalActualIsStartNextDay.value = props.actualIsStartNextDay;
   internalStatus.value = props.status;
 });
 
@@ -46,6 +49,7 @@ watch(internalStatus, () => {
   internalActualStartTime.value = props.actualStartTime;
   internalActualEndTime.value = props.actualEndTime;
   internalActualBreakMinutes.value = props.actualBreakMinutes;
+  internalActualIsStartNextDay.value = props.actualIsStartNextDay;
 });
 
 const items = computed(() => {
@@ -60,6 +64,7 @@ function handleClickSubmit() {
     actualStartTime: internalActualStartTime.value,
     actualEndTime: internalActualEndTime.value,
     actualBreakMinutes: internalActualBreakMinutes.value,
+    actualIsStartNextDay: internalActualIsStartNextDay.value,
     status: internalStatus.value,
   });
 }
@@ -95,14 +100,19 @@ function handleClickSubmit() {
       </v-input>
       <v-expand-transition>
         <v-row v-show="internalStatus === 'LEAVED'">
-          <v-col cols="12" sm="6">
+          <v-col cols="12">
             <air-time-picker-input
               v-model="internalActualStartTime"
               label="上番時刻"
               required
             />
           </v-col>
-          <v-col cols="12" sm="6">
+          <v-col cols="12">
+            <MoleculesInputsIsStartNextDay
+              v-model="internalActualIsStartNextDay"
+            />
+          </v-col>
+          <v-col cols="12">
             <air-time-picker-input
               v-model="internalActualEndTime"
               label="下番時刻"

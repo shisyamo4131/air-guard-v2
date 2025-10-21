@@ -234,6 +234,7 @@ export default class SiteOperationSchedule extends BaseClass {
           startTime: notification.actualStartTime,
           endTime: notification.actualEndTime,
           breakMinutes: notification.actualBreakMinutes,
+          isStartNextDay: notification.actualIsStartNextDay,
         });
       } else {
         return e;
@@ -247,6 +248,7 @@ export default class SiteOperationSchedule extends BaseClass {
           startTime: notification.actualStartTime,
           endTime: notification.actualEndTime,
           breakMinutes: notification.actualBreakMinutes,
+          isStartNextDay: notification.actualIsStartNextDay,
         });
       } else {
         return o;
