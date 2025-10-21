@@ -67,7 +67,7 @@
  * ---------------------------------------------------------------------------
  * [INHERIT]
  * @methods addWorker Adds a new worker (employee or outsourcer).
- * @methods changeWorker Changes the position of a worker (employee or outsourcer).
+ * @methods moveWorker Changes the position of a worker (employee or outsourcer).
  * @methods removeWorker Removes a worker (employee or outsourcer).
  * @methods duplicate Duplicates the schedule for specified dates.
  * @methods notify Creates arrangement notifications for workers who have not been notified yet.

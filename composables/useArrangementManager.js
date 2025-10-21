@@ -155,7 +155,7 @@ export function useArrangementManager({
     }
   };
 
-  const changeWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
+  const moveWorker = async ({ schedule, oldIndex, newIndex, isEmployee }) => {
     logger.clearError();
     try {
       if (isEmployee && newIndex > schedule.employees.length - 1) {
@@ -163,7 +163,7 @@ export function useArrangementManager({
       } else if (!isEmployee && newIndex <= schedule.employees.length - 1) {
         throw new Error("外注先は従業員の後ろに配置する必要があります。");
       }
-      schedule.changeWorker({ oldIndex, newIndex, isEmployee });
+      schedule.moveWorker({ oldIndex, newIndex, isEmployee });
       await schedule.update();
     } catch (error) {
       logger.error({
@@ -352,6 +352,6 @@ export function useArrangementManager({
     toDelete: (schedule) => manager?.value?.toDelete?.(schedule),
     addWorker,
     removeWorker,
-    changeWorker,
+    moveWorker,
   };
 }

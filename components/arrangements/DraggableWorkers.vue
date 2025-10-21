@@ -18,7 +18,7 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * INJECT COMPOSABLES
  *****************************************************************************/
-const { addWorker, changeWorker, removeWorker } = inject("managerComposable");
+const { addWorker, moveWorker, removeWorker } = inject("managerComposable");
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -110,14 +110,14 @@ function handleWorkerRemoved(event) {
 
 /**
  * Handles the movement of a worker.
- * - Call `changeWorker` method provided by the managerComposable.
+ * - Call `moveWorker` method provided by the managerComposable.
  * @param {Object} event - The event object containing information about the moved worker.
  */
 function handleWorkerMoved(event) {
   const { element, oldIndex, newIndex } = event;
   const { isEmployee } = element;
   const schedule = props.schedule;
-  changeWorker({ schedule, oldIndex, newIndex, isEmployee });
+  moveWorker({ schedule, oldIndex, newIndex, isEmployee });
 }
 
 /**
