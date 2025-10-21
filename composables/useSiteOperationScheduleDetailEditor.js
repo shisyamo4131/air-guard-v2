@@ -71,7 +71,8 @@ export function useSiteOperationScheduleDetailEditor() {
       if (!(instance instanceof SiteOperationSchedule)) {
         throw new Error("Invalid schedule object");
       }
-      if (!obj.employees.find((emp) => emp === target)) {
+      const targetProp = target.isEmployee ? "employees" : "outsourcers";
+      if (!obj[targetProp].find((w) => w === target)) {
         throw new Error("Invalid worker object");
       }
       schedule.value = obj;
@@ -86,13 +87,14 @@ export function useSiteOperationScheduleDetailEditor() {
     const loadingKey = loadingsStore.add({ text: "Update schedule..." });
     isLoading.value = true;
     try {
-      const index = schedule.value.employees.findIndex(
-        (emp) => emp.workerId === worker.value.workerId
+      const targetProp = worker.value.isEmployee ? "employees" : "outsourcers";
+      const index = schedule.value[targetProp].findIndex(
+        (w) => w.workerId === worker.value.workerId
       );
       if (index < 0) {
         throw new Error("Worker not found in schedule");
       }
-      schedule.value.employees.splice(index, 1, worker.value);
+      schedule.value[targetProp].splice(index, 1, worker.value);
       await schedule.value.update();
       _initialize();
     } catch (error) {
