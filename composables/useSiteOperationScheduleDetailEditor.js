@@ -60,9 +60,10 @@ export function useSiteOperationScheduleDetailEditor() {
   }
 
   /**
-   * Set the schedule and index.
-   * @param {SiteOperationSchedule} obj
-   * @param {number} newIndex
+   * Set the schedule and worker object.
+   * @param {Object} params - The parameters.
+   * @param {SiteOperationSchedule} params.schedule - The schedule object.
+   * @param {Object} params.worker - The worker object.
    * @returns {void}
    */
   const set = ({ schedule: obj, worker: target } = {}) => {
@@ -87,23 +88,13 @@ export function useSiteOperationScheduleDetailEditor() {
     const loadingKey = loadingsStore.add({ text: "Update schedule..." });
     isLoading.value = true;
     try {
-      const targetProp = worker.value.isEmployee ? "employees" : "outsourcers";
-      const index = schedule.value[targetProp].findIndex(
-        (w) => w.workerId === worker.value.workerId
-      );
-      if (index < 0) {
-        throw new Error("Worker not found in schedule");
-      }
-      schedule.value[targetProp].splice(index, 1, worker.value);
+      schedule.value.changeWorker(worker.value);
       await schedule.value.update();
       _initialize();
     } catch (error) {
       logger.error({
         error,
-        data: {
-          schedule: schedule.value,
-          worker: worker.value,
-        },
+        data: { schedule: schedule.value, worker: worker.value },
       });
     } finally {
       isLoading.value = false;
