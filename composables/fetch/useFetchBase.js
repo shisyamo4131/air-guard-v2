@@ -25,12 +25,17 @@ export function useFetchBase({
   entityName,
   idProperties = ["docId"],
   warnIfNotFound = true,
+  searchCacheExpireMs = 5 * 60 * 1000, // デフォルト5分
 }) {
   const logger = useLogger(`useFetch${entityName}`, useErrorsStore());
   /** @type {import('vue').Ref<T[]>} */
   const cache = ref([]);
   /** @type {import('vue').Ref<boolean>} */
   const isLoading = ref(false);
+
+  // 検索クエリキャッシュ：{ searchKey: { timestamp: number, options: Object } }
+  /** @type {import('vue').Ref<Record<string, { timestamp: number, options: Object }>>} */
+  const searchCache = ref({});
 
   /**
    * ソースからドキュメントIDを抽出する関数
@@ -182,21 +187,60 @@ export function useFetchBase({
   }
 
   /**
+   * 検索キャッシュから期限切れのエントリを削除します
+   */
+  function cleanupExpiredSearchCache() {
+    const now = Date.now();
+    Object.keys(searchCache.value).forEach((key) => {
+      if (now - searchCache.value[key].timestamp > searchCacheExpireMs) {
+        delete searchCache.value[key];
+      }
+    });
+  }
+
+  /**
+   * 検索キャッシュのキーを生成します
+   * @param {string} searchText - 検索文字列
+   * @param {Object} options - 検索オプション
+   * @returns {string} キャッシュキー
+   */
+  function generateSearchCacheKey(searchText, options) {
+    const { additionalConstraints = [], limit } = options;
+    const optionsStr = JSON.stringify({ additionalConstraints, limit });
+    return `${searchText}||${optionsStr}`;
+  }
+
+  /**
    * N-gram検索を実行し、結果をキャッシュに追加します
    * @param {string} searchText - 検索文字列
    * @param {Object} [options={}] - 追加のオプション
    * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
    * @param {number} [options.limit] - 取得件数の上限
+   * @param {boolean} [options.forceRefresh=false] - 強制的にキャッシュを無視してフェッチする
    * @returns {Promise<T[]>} 検索結果のインスタンス配列
    */
   async function searchItems(searchText, options = {}) {
-    const { additionalConstraints = [], limit } = options;
+    const { additionalConstraints = [], limit, forceRefresh = false } = options;
 
     if (!searchText || typeof searchText !== "string") {
       logger.warn({
         message: `Invalid search text provided to search${entityName}s.`,
       });
       return [];
+    }
+
+    // 期限切れの検索キャッシュを削除
+    cleanupExpiredSearchCache();
+
+    // 検索キャッシュのキーを生成
+    const searchKey = generateSearchCacheKey(searchText, {
+      additionalConstraints,
+      limit,
+    });
+
+    // 強制リフレッシュでない場合、検索キャッシュをチェック
+    if (!forceRefresh && searchCache.value[searchKey]) {
+      return cache.value;
     }
 
     isLoading.value = true;
@@ -225,9 +269,15 @@ export function useFetchBase({
           cache.value.push(...newUniqueItems);
         }
 
-        logger.info({
-          message: `Search completed for ${entityName}. Found ${searchResults.length} items.`,
-        });
+        // 検索クエリをキャッシュに追加
+        searchCache.value[searchKey] = {
+          timestamp: Date.now(),
+          options: { additionalConstraints, limit },
+        };
+
+        // logger.info({
+        //   message: `Search completed for ${entityName}. Found ${searchResults.length} items. Query cached.`,
+        // });
 
         return searchResults;
       } else {
@@ -247,12 +297,23 @@ export function useFetchBase({
     }
   }
 
+  /**
+   * 検索キャッシュをクリアします
+   */
+  function clearSearchCache() {
+    searchCache.value = {};
+    logger.info({
+      message: `Search cache cleared for ${entityName}.`,
+    });
+  }
+
   return {
     fetchItems,
     getItem,
-    searchItems, // 新しく追加
+    searchItems,
     cachedItems,
     pushItems,
     isLoading,
+    clearSearchCache, // 新しく追加
   };
 }
