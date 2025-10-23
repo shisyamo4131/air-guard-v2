@@ -118,6 +118,24 @@ export function useFetchBase({
   }
 
   /**
+   * 単一のアイテムを取得してインスタンスを返します
+   * @param {string | Object} source - 取得するドキュメントのID、またはIDを含むオブジェクト
+   * @returns {Promise<T | null>} 取得されたインスタンス、または null
+   */
+  async function getItem(source) {
+    const docId = getDocIdFromItem(source);
+    if (!docId) {
+      logger.warn({
+        message: `Invalid source provided to get${entityName}. Could not extract ID.`,
+      });
+      return null;
+    }
+
+    await fetchItems(source);
+    return cache.value.find((item) => item.docId === docId) || null;
+  }
+
+  /**
    * キャッシュされたインスタンスを docId をキーとしたオブジェクトとして提供します。
    * @type {import('vue').ComputedRef<Readonly<Record<string, T>>>}
    */
@@ -165,6 +183,7 @@ export function useFetchBase({
 
   return {
     fetchItems,
+    getItem,
     cachedItems,
     pushItems,
     isLoading,
