@@ -18,17 +18,41 @@ import { Outsourcer } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
 export function useFetchOutsourcer({ warnIfNotFound = true } = {}) {
-  const { fetchItems, getItem, cachedItems, pushItems, isLoading } =
-    useFetchBase({
-      SchemaClass: Outsourcer,
-      entityName: "Outsourcer",
-      idProperties: ["outsourcerId", "docId", "workerId"], // 優先順位順
-      warnIfNotFound,
+  const {
+    fetchItems,
+    getItem,
+    cachedItems,
+    pushItems,
+    isLoading,
+    searchItems,
+  } = useFetchBase({
+    SchemaClass: Outsourcer,
+    entityName: "Outsourcer",
+    idProperties: ["outsourcerId", "docId", "workerId"], // 優先順位順
+    warnIfNotFound,
+  });
+
+  /**
+   * 外注先をN-gram検索で取得します
+   * @param {string} searchText - 検索文字列
+   * @param {Object} [options={}] - 検索オプション
+   * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
+   * @param {number} [options.limit=50] - 取得件数の上限（デフォルト50件）
+   * @returns {Promise<Outsourcer[]>} 検索結果の外注先配列
+   */
+  async function searchOutsourcers(searchText, options = {}) {
+    const { limit = 50, ...otherOptions } = options;
+
+    return await searchItems(searchText, {
+      limit,
+      ...otherOptions,
     });
+  }
 
   return {
     fetchOutsourcer: fetchItems,
     getOutsourcer: getItem,
+    searchOutsourcers,
     cachedOutsourcers: cachedItems,
     pushOutsourcers: pushItems,
     isLoading,

@@ -18,17 +18,41 @@ import { Employee } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
 export function useFetchEmployee({ warnIfNotFound = true } = {}) {
-  const { fetchItems, getItem, cachedItems, pushItems, isLoading } =
-    useFetchBase({
-      SchemaClass: Employee,
-      entityName: "Employee",
-      idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
-      warnIfNotFound,
+  const {
+    fetchItems,
+    getItem,
+    cachedItems,
+    pushItems,
+    isLoading,
+    searchItems,
+  } = useFetchBase({
+    SchemaClass: Employee,
+    entityName: "Employee",
+    idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
+    warnIfNotFound,
+  });
+
+  /**
+   * 従業員をN-gram検索で取得します
+   * @param {string} searchText - 検索文字列
+   * @param {Object} [options={}] - 検索オプション
+   * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
+   * @param {number} [options.limit=50] - 取得件数の上限（デフォルト50件）
+   * @returns {Promise<Employee[]>} 検索結果の従業員配列
+   */
+  async function searchEmployees(searchText, options = {}) {
+    const { limit = 50, ...otherOptions } = options;
+
+    return await searchItems(searchText, {
+      limit,
+      ...otherOptions,
     });
+  }
 
   return {
     fetchEmployee: fetchItems,
     getEmployee: getItem,
+    searchEmployees,
     cachedEmployees: cachedItems,
     pushEmployees: pushItems,
     isLoading,

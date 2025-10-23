@@ -181,9 +181,76 @@ export function useFetchBase({
     }
   }
 
+  /**
+   * N-gram検索を実行し、結果をキャッシュに追加します
+   * @param {string} searchText - 検索文字列
+   * @param {Object} [options={}] - 追加のオプション
+   * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
+   * @param {number} [options.limit] - 取得件数の上限
+   * @returns {Promise<T[]>} 検索結果のインスタンス配列
+   */
+  async function searchItems(searchText, options = {}) {
+    const { additionalConstraints = [], limit } = options;
+
+    if (!searchText || typeof searchText !== "string") {
+      logger.warn({
+        message: `Invalid search text provided to search${entityName}s.`,
+      });
+      return [];
+    }
+
+    isLoading.value = true;
+
+    try {
+      // limitが指定されている場合は制約に追加
+      const queryOptions = [...additionalConstraints];
+      if (limit && typeof limit === "number" && limit > 0) {
+        queryOptions.push(["limit", limit]);
+      }
+
+      // FireModelのfetchDocsメソッドを使用してN-gram検索を実行
+      const instance = new SchemaClass();
+      const searchResults = await instance.fetchDocs({
+        constraints: searchText, // 検索文字列を渡す
+        options: queryOptions, // 追加制約を options として渡す
+      });
+
+      if (Array.isArray(searchResults)) {
+        // 検索結果をキャッシュに追加（重複チェック付き）
+        const newUniqueItems = searchResults.filter(
+          (item) => !cache.value.some((cached) => cached.docId === item.docId)
+        );
+
+        if (newUniqueItems.length > 0) {
+          cache.value.push(...newUniqueItems);
+        }
+
+        logger.info({
+          message: `Search completed for ${entityName}. Found ${searchResults.length} items.`,
+        });
+
+        return searchResults;
+      } else {
+        logger.warn({
+          message: `Unexpected search result format for ${entityName}.`,
+        });
+        return [];
+      }
+    } catch (error) {
+      logger.error({
+        message: `Failed to search ${entityName}s. Error: ${error.message}`,
+        error,
+      });
+      return [];
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     fetchItems,
     getItem,
+    searchItems, // 新しく追加
     cachedItems,
     pushItems,
     isLoading,
