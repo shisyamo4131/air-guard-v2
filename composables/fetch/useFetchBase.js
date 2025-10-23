@@ -33,8 +33,8 @@ export function useFetchBase({
   /** @type {import('vue').Ref<boolean>} */
   const isLoading = ref(false);
 
-  // 検索クエリキャッシュ：{ searchKey: { timestamp: number, options: Object } }
-  /** @type {import('vue').Ref<Record<string, { timestamp: number, options: Object }>>} */
+  // 検索クエリキャッシュ：{ searchKey: { timestamp: number, options: Object, results: T[] } }
+  /** @type {import('vue').Ref<Record<string, { timestamp: number, options: Object, results: T[] }>>} */
   const searchCache = ref({});
 
   /**
@@ -128,6 +128,7 @@ export function useFetchBase({
    * @returns {Promise<T | null>} 取得されたインスタンス、または null
    */
   async function getItem(source) {
+    if (!source) return;
     const docId = getDocIdFromItem(source);
     if (!docId) {
       logger.warn({
@@ -217,10 +218,16 @@ export function useFetchBase({
    * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
    * @param {number} [options.limit] - 取得件数の上限
    * @param {boolean} [options.forceRefresh=false] - 強制的にキャッシュを無視してフェッチする
+   * @param {boolean} [options.returnAllCached=true] - trueの場合は全キャッシュデータを返す、falseの場合は検索結果のみを返す
    * @returns {Promise<T[]>} 検索結果のインスタンス配列
    */
   async function searchItems(searchText, options = {}) {
-    const { additionalConstraints = [], limit, forceRefresh = false } = options;
+    const {
+      additionalConstraints = [],
+      limit,
+      forceRefresh = false,
+      returnAllCached = true, // 新しいオプション
+    } = options;
 
     if (!searchText || typeof searchText !== "string") {
       logger.warn({
@@ -240,7 +247,17 @@ export function useFetchBase({
 
     // 強制リフレッシュでない場合、検索キャッシュをチェック
     if (!forceRefresh && searchCache.value[searchKey]) {
-      return cache.value;
+      // logger.info({
+      //   message: `Using cached search query for ${entityName}. Query: "${searchText}"`,
+      // });
+
+      if (returnAllCached) {
+        // 全キャッシュデータを返す
+        return [...cache.value];
+      } else {
+        // キャッシュされた検索結果のみを返す
+        return [...searchCache.value[searchKey].results];
+      }
     }
 
     isLoading.value = true;
@@ -260,26 +277,27 @@ export function useFetchBase({
       });
 
       if (Array.isArray(searchResults)) {
-        // 検索結果をキャッシュに追加（重複チェック付き）
-        const newUniqueItems = searchResults.filter(
-          (item) => !cache.value.some((cached) => cached.docId === item.docId)
-        );
+        // 検索結果をアイテムキャッシュに追加
+        pushItems(searchResults);
 
-        if (newUniqueItems.length > 0) {
-          cache.value.push(...newUniqueItems);
-        }
-
-        // 検索クエリをキャッシュに追加
+        // 検索クエリを検索結果とともにキャッシュに追加
         searchCache.value[searchKey] = {
           timestamp: Date.now(),
           options: { additionalConstraints, limit },
+          results: searchResults, // 検索結果も保存
         };
 
         // logger.info({
-        //   message: `Search completed for ${entityName}. Found ${searchResults.length} items. Query cached.`,
+        //   message: `Search completed for ${entityName}. Found ${searchResults.length} items. Query and results cached.`,
         // });
 
-        return searchResults;
+        if (returnAllCached) {
+          // 全キャッシュデータを返す
+          return [...cache.value];
+        } else {
+          // 検索結果のみを返す
+          return searchResults;
+        }
       } else {
         logger.warn({
           message: `Unexpected search result format for ${entityName}.`,
