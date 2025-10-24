@@ -6,6 +6,13 @@
   特定するのが困難。（再表示のときはスムーズに開くため、コンポーネント自体の処理に時間がかかっているわけではなさそう）
   コンポーザブルのキャッシュが問題のはず。
 
+## AirGuardV2Schemas
+
+- Operation.js で siteId, date, shiftType, startTime, isStartNextDay, endTime, breakMinutes が変更されたときの employees, outsourcers への同期処理をトリガーに変更すべき。
+- Operation.js じゃない？？？
+- SiteOperationSchedule は同期して OK。
+- OperationResult は従業員の実績がある程度確定しているものなのでそもそも変更しちゃいけないのでは？
+
 ## 全体
 
 - 時間（分）のプラス・マイナスをクリックしたときの単位をどうするか。

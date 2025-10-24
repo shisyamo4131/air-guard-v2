@@ -135,12 +135,12 @@ function submit() {
           <v-expand-transition>
             <div v-show="slotProps.isEditing">
               <v-container>
-                <MoleculesAutocompleteEmployee
+                <!-- <MoleculesAutocompleteEmployee
                   v-model="selectedEmployeeId"
                   append-icon="mdi-plus"
                   icon-color="primary"
                   @click:append="addEmployee"
-                />
+                /> -->
               </v-container>
             </div>
           </v-expand-transition>
