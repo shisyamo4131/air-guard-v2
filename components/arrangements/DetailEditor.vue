@@ -55,7 +55,7 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
           <div class="d-flex">
             <v-checkbox
               class="mr-4"
-              v-model="worker.isQualificated"
+              v-model="worker.isQualified"
               label="資格者"
               hide-details
             />

@@ -47,7 +47,7 @@ const overtimeWorkMinutes = computed(() => {
 <template>
   <tr>
     <td>
-      <AtomsIconsHasLicense v-if="notification?.isQualificated" />
+      <AtomsIconsHasLicense v-if="notification?.isQualified" />
       <AtomsIconsIsOjt v-if="notification?.isOjt" />
       {{ displayName }}
     </td>

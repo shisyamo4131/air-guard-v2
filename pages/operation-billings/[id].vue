@@ -86,15 +86,15 @@ onUnmounted(() => {
               </tr>
               <tr>
                 <td>資格者人工</td>
-                <td>{{ model.sales.qualificated.quantity }}</td>
-                <td>{{ model.sales.qualificated.unitPrice }}</td>
-                <td>{{ model.sales.qualificated.regularAmount }}</td>
+                <td>{{ model.sales.qualified.quantity }}</td>
+                <td>{{ model.sales.qualified.unitPrice }}</td>
+                <td>{{ model.sales.qualified.regularAmount }}</td>
               </tr>
               <tr>
                 <td>資格者人工</td>
-                <td>{{ model.sales.qualificated.overtimeMinutes }}</td>
-                <td>{{ model.sales.qualificated.overtimeUnitPrice }}</td>
-                <td>{{ model.sales.qualificated.overtimeAmount }}</td>
+                <td>{{ model.sales.qualified.overtimeMinutes }}</td>
+                <td>{{ model.sales.qualified.overtimeUnitPrice }}</td>
+                <td>{{ model.sales.qualified.overtimeAmount }}</td>
               </tr>
             </tbody>
           </v-table>

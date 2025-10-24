@@ -134,7 +134,7 @@ async function handleCreate(item) {
         'isStartNextDay',
         'endTime',
         'breakMinutes',
-        'isQualificated',
+        'isQualified',
         'isOjt',
       ],
     }"
@@ -168,7 +168,7 @@ async function handleCreate(item) {
 
         <!-- DISPLAY NAME COLUMN -->
         <template #item.displayName="{ item }">
-          <AtomsIconsHasLicense v-if="item?.isQualificated" />
+          <AtomsIconsHasLicense v-if="item?.isQualified" />
           <AtomsIconsIsOjt v-if="item?.isOjt" />
           <span v-if="getDisplayName(item)">
             {{ getDisplayName(item) }}

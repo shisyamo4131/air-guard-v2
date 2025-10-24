@@ -77,7 +77,7 @@ const hasEndTimeDifference = computed(() => {
     <!-- add draggable icon to prepend-label slot -->
     <template #prepend-label>
       <AtomsIconsDraggable v-if="schedule.isEditable" />
-      <AtomsIconsHasLicense v-if="worker.isQualificated" />
+      <AtomsIconsHasLicense v-if="worker.isQualified" />
       <AtomsIconsIsOjt v-if="worker.isOjt" />
     </template>
 
