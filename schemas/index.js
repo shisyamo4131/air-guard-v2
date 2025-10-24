@@ -2,6 +2,7 @@ export { ArrangementNotification } from "air-guard-v2-schemas";
 export { default as Company } from "./Company.js";
 export { default as Customer } from "./Customer.js";
 export { default as Employee } from "./Employee.js";
+export { OperationBilling } from "air-guard-v2-schemas";
 export { OperationResult } from "air-guard-v2-schemas";
 export { OperationResultDetail } from "air-guard-v2-schemas";
 export { Outsourcer } from "air-guard-v2-schemas";

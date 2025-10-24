@@ -149,17 +149,21 @@ async function handleCreate(item) {
     <template #table="tableProps">
       <air-data-table v-bind="tableProps" :hide-action="hideAction">
         <!-- TOOLBAR BUTTONS -->
-        <template v-if="!hideCreateButton" #toolbar-buttons>
-          <v-btn
-            text="従業員"
-            prepend-icon="mdi-plus"
-            @click="handleOnClickAddEmployee(tableProps.toCreate)"
-          />
-          <v-btn
-            text="外注先"
-            prepend-icon="mdi-plus"
-            @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
-          />
+        <template #toolbar-buttons>
+          <div>
+            <v-btn
+              v-if="!hideCreateButton"
+              text="従業員"
+              prepend-icon="mdi-plus"
+              @click="handleOnClickAddEmployee(tableProps.toCreate)"
+            />
+            <v-btn
+              v-if="!hideCreateButton"
+              text="外注先"
+              prepend-icon="mdi-plus"
+              @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
+            />
+          </div>
         </template>
 
         <!-- DISPLAY NAME COLUMN -->

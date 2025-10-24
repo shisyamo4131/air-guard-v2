@@ -1,15 +1,15 @@
 <script setup>
 /*****************************************************************************
- * OperationResultManager ver 1.0.0
+ * OperationBillingManager ver 1.0.0
  * @author shisyamo4131
- * @description A component to manage operation result.
+ * @description A component to manage operation billing.
  * ---------------------------------------------------------------------------
- * @props {Object} modelValue - The operation result model. (Reactive)
- * @props {Function} handleCreate - Function to handle creation of operation result.
- * @props {Function} handleUpdate - Function to handle update of operation result.
- * @props {Function} handleDelete - Function to handle deletion of operation result.
+ * @props {Object} modelValue - The operation billing model. (Reactive)
+ * @props {Function} handleCreate - Function to handle creation of operation billing.
+ * @props {Function} handleUpdate - Function to handle update of operation billing.
+ * @props {Function} handleDelete - Function to handle deletion of operation billing.
  * @props {Array} includedKeys - Keys to include in the input form.
- * @props {String} label - Label for the operation result.
+ * @props {String} label - Label for the operation billing.
  *****************************************************************************/
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
@@ -17,7 +17,7 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
  * DEFINE COMPOSABLES
  *****************************************************************************/
 const { error, clearError } = useLogger(
-  "OperationResultManager",
+  "OperationBillingManager",
   useErrorsStore()
 );
 
@@ -32,19 +32,14 @@ const props = defineProps({
   includedKeys: {
     type: Array,
     default: () => [
-      "code",
-      "siteId",
-      "dateAt",
-      "dayType",
-      "shiftType",
-      "startTime",
-      "endTime",
-      "breakMinutes",
-      "workDescription",
-      "remarks",
+      "unitPriceBase",
+      "overtimeUnitPriceBase",
+      "unitPriceQualified",
+      "overtimeUnitPriceQualified",
+      "billingUnitType",
     ],
   },
-  label: { type: String, default: "稼働実績" },
+  label: { type: String, default: "稼働請求" },
 });
 </script>
 

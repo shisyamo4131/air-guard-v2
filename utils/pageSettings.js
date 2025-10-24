@@ -106,6 +106,15 @@ export const pageStructure = [
     ],
   },
   {
+    id: "operation-billings-group",
+    path: "/operation-billings",
+    // public: false,
+    label: "稼働請求管理",
+    icon: "mdi-domain",
+    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    navigation: true,
+  },
+  {
     id: "customers-group",
     // public: false,
     label: "取引先管理",
