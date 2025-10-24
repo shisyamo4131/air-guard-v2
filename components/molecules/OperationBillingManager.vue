@@ -29,16 +29,6 @@ const props = defineProps({
   handleCreate: { type: Function, default: (item) => item.create() },
   handleUpdate: { type: Function, default: (item) => item.update() },
   handleDelete: { type: Function, default: (item) => item.delete() },
-  includedKeys: {
-    type: Array,
-    default: () => [
-      "unitPriceBase",
-      "overtimeUnitPriceBase",
-      "unitPriceQualified",
-      "overtimeUnitPriceQualified",
-      "billingUnitType",
-    ],
-  },
   label: { type: String, default: "稼働請求" },
 });
 </script>
@@ -50,7 +40,6 @@ const props = defineProps({
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
-    :input-props="{ includedKeys: includedKeys }"
     :label="label"
     @error="error"
     @error:clear="clearError"

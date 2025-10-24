@@ -49,7 +49,21 @@ onUnmounted(() => {
       <v-col cols="12" lg="4">
         <v-row>
           <v-col cols="12">
-            <MoleculesOperationBillingManager :model-value="model">
+            <MoleculesOperationBillingManager
+              :model-value="model"
+              :editor-props="{
+                hideDeleteBtn: true,
+              }"
+              :input-props="{
+                includedKeys: [
+                  'unitPriceBase',
+                  'overtimeUnitPriceBase',
+                  'unitPriceQualified',
+                  'overtimeUnitPriceQualified',
+                  'billingUnitType',
+                ],
+              }"
+            >
               <template #information-card="slotProps">
                 <MoleculesInformationCardsOperationBilling
                   v-bind="slotProps"
@@ -61,46 +75,93 @@ onUnmounted(() => {
         </v-row>
       </v-col>
       <v-col cols="12" lg="8">
-        <MoleculesOperationResultManager :model-value="model">
-          <v-table>
-            <thead>
-              <tr>
-                <th>区分</th>
-                <th>数量</th>
-                <th>単価</th>
-                <th>金額</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>基本人工</td>
-                <td>{{ model.sales.base.quantity }}</td>
-                <td>{{ model.sales.base.unitPrice }}</td>
-                <td>{{ model.sales.base.regularAmount }}</td>
-              </tr>
-              <tr>
-                <td>基本残業</td>
-                <td>{{ model.sales.base.overtimeMinutes }}</td>
-                <td>{{ model.sales.base.overtimeUnitPrice }}</td>
-                <td>{{ model.sales.base.overtimeAmount }}</td>
-              </tr>
-              <tr>
-                <td>資格者人工</td>
-                <td>{{ model.sales.qualified.quantity }}</td>
-                <td>{{ model.sales.qualified.unitPrice }}</td>
-                <td>{{ model.sales.qualified.regularAmount }}</td>
-              </tr>
-              <tr>
-                <td>資格者人工</td>
-                <td>{{ model.sales.qualified.overtimeMinutes }}</td>
-                <td>{{ model.sales.qualified.overtimeUnitPrice }}</td>
-                <td>{{ model.sales.qualified.overtimeAmount }}</td>
-              </tr>
-            </tbody>
-          </v-table>
-        </MoleculesOperationResultManager>
+        <MoleculesOperationBillingManager
+          :model-value="model"
+          :editor-props="{
+            hideDeleteBtn: true,
+          }"
+          :input-props="{
+            includedKeys: [
+              'adjustedQuantityBase',
+              'adjustedOvertimeBase',
+              'adjustedQuantityQualified',
+              'adjustedOvertimeQualified',
+              'useAdjustedQuantity',
+            ],
+          }"
+          v-slot="{ toUpdate }"
+        >
+          <v-card border flat>
+            <v-toolbar density="compact">
+              <v-toolbar-title>
+                請求明細
+                <v-chip
+                  v-if="model.useAdjustedQuantity"
+                  color="warning"
+                  label
+                  density="compact"
+                  size="small"
+                  text="調整済"
+                />
+              </v-toolbar-title>
+              <v-spacer />
+              <v-btn icon="mdi-pencil" @click="toUpdate()" />
+            </v-toolbar>
+            <v-table>
+              <thead>
+                <tr>
+                  <th>区分</th>
+                  <th>数量</th>
+                  <th>単価</th>
+                  <th>金額</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>基本人工</td>
+                  <td>{{ model.sales.base.quantity }}</td>
+                  <td>{{ model.sales.base.unitPrice }}</td>
+                  <td>{{ model.sales.base.regularAmount }}</td>
+                </tr>
+                <tr>
+                  <td>基本残業</td>
+                  <td>{{ model.sales.base.overtimeMinutes }}</td>
+                  <td>{{ model.sales.base.overtimeUnitPrice }}</td>
+                  <td>{{ model.sales.base.overtimeAmount }}</td>
+                </tr>
+                <tr>
+                  <td>資格者人工</td>
+                  <td>{{ model.sales.qualified.quantity }}</td>
+                  <td>{{ model.sales.qualified.unitPrice }}</td>
+                  <td>{{ model.sales.qualified.regularAmount }}</td>
+                </tr>
+                <tr>
+                  <td>資格者残業</td>
+                  <td>{{ model.sales.qualified.overtimeMinutes }}</td>
+                  <td>{{ model.sales.qualified.overtimeUnitPrice }}</td>
+                  <td>{{ model.sales.qualified.overtimeAmount }}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th colspan="3">合計金額</th>
+                  <th>{{ model.salesAmount }}</th>
+                </tr>
+                <tr>
+                  <th colspan="3">消費税額</th>
+                  <th>{{ model.tax }}</th>
+                </tr>
+                <tr>
+                  <th colspan="3">請求金額</th>
+                  <th>{{ model.billingAmount }}</th>
+                </tr>
+              </tfoot>
+            </v-table>
+          </v-card>
+        </MoleculesOperationBillingManager>
       </v-col>
       <v-col cols="12">
+        <!-- 稼働実績明細は OperationResult のものでOK -->
         <MoleculesOperationResultWorkersManager
           hide-create-button
           hide-action
