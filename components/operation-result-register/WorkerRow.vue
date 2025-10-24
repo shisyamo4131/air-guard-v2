@@ -47,18 +47,15 @@ const overtimeWorkMinutes = computed(() => {
 <template>
   <tr>
     <td>
+      <AtomsIconsHasLicense v-if="notification?.isQualificated" />
+      <AtomsIconsIsOjt v-if="notification?.isOjt" />
       {{ displayName }}
     </td>
     <td>
       <div class="d-flex align-center" style="position: relative">
-        <v-chip
+        <AtomsChipsIsStartNextDay
           v-if="notification.actualIsStartNextDay"
           style="position: absolute; top: -10px"
-          color="secondary"
-          density="compact"
-          label
-          size="x-small"
-          text="翌日"
         />
         {{ notification?.actualStartTime || worker?.startTime || "" }}
         -

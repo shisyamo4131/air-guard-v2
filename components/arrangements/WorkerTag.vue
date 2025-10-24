@@ -77,10 +77,8 @@ const hasEndTimeDifference = computed(() => {
     <!-- add draggable icon to prepend-label slot -->
     <template #prepend-label>
       <AtomsIconsDraggable v-if="schedule.isEditable" />
-      <v-icon v-if="worker.isQualificated" size="small" color="orange"
-        >mdi-license</v-icon
-      >
-      <v-icon v-if="worker.isOjt" size="small" color="green">mdi-sprout</v-icon>
+      <AtomsIconsHasLicense v-if="worker.isQualificated" />
+      <AtomsIconsIsOjt v-if="worker.isOjt" />
     </template>
 
     <!-- add notification chip to prepend-action slot -->

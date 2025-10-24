@@ -31,7 +31,7 @@ watch(
  * METHODS
  *****************************************************************************/
 async function handleWorkerCreated(item) {
-  model.addWorker(item);
+  model.addWorker(item, -1);
   await model.update();
 }
 async function handleWorkerUpdated(item) {
@@ -80,8 +80,8 @@ onUnmounted(() => {
         />
       </v-col>
       <v-col cols="12">
-        <v-alert v-if="!!model.siteOperationScheduleId"
-          >稼働予定から作成された稼働実績のため削除することはできません。</v-alert
+        <AtomsAlertsWarn v-if="!!model.siteOperationScheduleId"
+          >稼働予定から作成された稼働実績です。</AtomsAlertsWarn
         >
       </v-col>
     </v-row>

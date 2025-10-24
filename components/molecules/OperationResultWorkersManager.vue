@@ -42,6 +42,8 @@ const props = defineProps({
   handleCreate: { type: Function, default: () => {} },
   handleUpdate: { type: Function, default: () => {} },
   handleDelete: { type: Function, default: () => {} },
+  hideCreateButton: { type: Boolean, default: false },
+  hideAction: { type: Boolean, default: false },
   workers: { type: Array, default: () => [] },
 });
 
@@ -103,9 +105,21 @@ function handleOnClickAddEmployee(handler) {
   isEmployee.value = true;
   handler();
 }
+
 function handleOnClickAddOutsourcer(handler) {
   isEmployee.value = false;
   handler();
+}
+
+async function handleCreate(item) {
+  if (isEmployee.value) {
+    if (props.workers.some((worker) => worker.employeeId === item.id)) {
+      throw new Error(
+        `従業員「${getDisplayName(item)}」は既に追加されています。`
+      );
+    }
+  }
+  await props.handleCreate(item);
 }
 </script>
 
@@ -133,8 +147,9 @@ function handleOnClickAddOutsourcer(handler) {
     @error:clear="clearError"
   >
     <template #table="tableProps">
-      <air-data-table v-bind="tableProps">
-        <template #toolbar-buttons>
+      <air-data-table v-bind="tableProps" :hide-action="hideAction">
+        <!-- TOOLBAR BUTTONS -->
+        <template v-if="!hideCreateButton" #toolbar-buttons>
           <v-btn
             text="従業員"
             prepend-icon="mdi-plus"
@@ -146,11 +161,26 @@ function handleOnClickAddOutsourcer(handler) {
             @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
           />
         </template>
+
+        <!-- DISPLAY NAME COLUMN -->
         <template #item.displayName="{ item }">
-          <div v-if="getDisplayName(item)">
+          <AtomsIconsHasLicense v-if="item?.isQualificated" />
+          <AtomsIconsIsOjt v-if="item?.isOjt" />
+          <span v-if="getDisplayName(item)">
             {{ getDisplayName(item) }}
-          </div>
+          </span>
           <v-progress-circular v-else indeterminate size="small" />
+        </template>
+
+        <!-- START TIME COLUMN -->
+        <template #item.startTime="{ item }">
+          <span style="position: relative">
+            <AtomsChipsIsStartNextDay
+              v-if="item.isStartNextDay"
+              style="position: absolute; top: -8px"
+            />
+            {{ item.startTime }}</span
+          >
         </template>
       </air-data-table>
     </template>
