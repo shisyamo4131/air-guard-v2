@@ -15,6 +15,8 @@
  * @props {Function} handleDelete - Function to handle the deletion of a worker.
  * @props {Array} workers - The list of workers to manage.
  *****************************************************************************/
+import { useLogger } from "../composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { OperationResultDetail } from "@/schemas";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
@@ -24,6 +26,10 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * DEFINE COMPOSABLES
  *****************************************************************************/
+const { error, clearError } = useLogger(
+  "OperationResultWorkersManager",
+  useErrorsStore()
+);
 const { cachedEmployees, fetchEmployee, getEmployee, searchEmployees } =
   useFetchEmployee();
 const { cachedOutsourcers, fetchOutsourcer, getOutsourcer, searchOutsourcers } =
@@ -79,15 +85,27 @@ function getDisplayName(worker) {
 
 /**
  * A handler executed before editing a worker.
- * - Sets the isEmployee state based on the item being edited.
+ * - For "CREATE" mode, sets the isEmployee state based on the current isEmployee value.
+ * - Sets the isEmployee state based on the item being edited when the edit mode is not "CREATE".
  * @param editMode
  * @param item
  */
 function beforeEdit(editMode, item) {
-  if (editMode !== "CREATE") {
+  if (editMode === "CREATE") {
+    item.isEmployee = isEmployee.value;
+  } else {
     isEmployee.value = item.isEmployee;
   }
   return true;
+}
+
+function handleOnClickAddEmployee(handler) {
+  isEmployee.value = true;
+  handler();
+}
+function handleOnClickAddOutsourcer(handler) {
+  isEmployee.value = false;
+  handler();
 }
 </script>
 
@@ -108,12 +126,26 @@ function beforeEdit(editMode, item) {
     }"
     :table-props="{ hideSearch: true }"
     :before-edit="beforeEdit"
-    @create="handleCreate"
-    @update="handleUpdate"
-    @delete="handleDelete"
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="handleDelete"
+    @error="error"
+    @error:clear="clearError"
   >
     <template #table="tableProps">
       <air-data-table v-bind="tableProps">
+        <template #toolbar-buttons>
+          <v-btn
+            text="従業員"
+            prepend-icon="mdi-plus"
+            @click="handleOnClickAddEmployee(tableProps.toCreate)"
+          />
+          <v-btn
+            text="外注先"
+            prepend-icon="mdi-plus"
+            @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
+          />
+        </template>
         <template #item.displayName="{ item }">
           <div v-if="getDisplayName(item)">
             {{ getDisplayName(item) }}
