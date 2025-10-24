@@ -1,4 +1,10 @@
 <script setup>
+/*****************************************************************************
+ * Molecules/InformationCards/OperationResult ver 1.0.0
+ * @author shisyamo4131
+ * @description A component for displaying operation result information in a card format.
+ * @props {Object} cachedSites - An object containing cached site information.
+ *****************************************************************************/
 import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
 
@@ -6,14 +12,14 @@ import { OperationResult } from "@/schemas";
  * DEFINE PROPS
  *****************************************************************************/
 const props = defineProps({
-  cachedSites: { type: Object, required: true },
+  site: { type: Object, default: undefined },
 });
 
 /*****************************************************************************
  * DEFINE ITEMS FUNCTION
  *****************************************************************************/
 const items = (item) => {
-  const name = props.cachedSites?.[item.siteId]?.name || "loading...";
+  const name = props.site?.name || "loading...";
   const date = dayjs(item.dateAt).format("YYYY年M月D日（ddd）");
   const dayType = OperationResult.DAY_TYPE[item.dayType] || "loading...";
   const shiftType = OperationResult.SHIFT_TYPE[item.shiftType]?.title || "";

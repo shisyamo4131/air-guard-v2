@@ -62,20 +62,17 @@ onUnmounted(() => {
           <v-col cols="12">
             <MoleculesOperationResultManager :model-value="model">
               <template #information-card="slotProps">
-                <OperationResultsInformationCard
+                <MoleculesInformationCardsOperationResult
                   v-bind="slotProps"
-                  :cached-sites="cachedSites"
+                  :site="cachedSites[model.siteId]"
                 />
               </template>
             </MoleculesOperationResultManager>
           </v-col>
         </v-row>
       </v-col>
-      <!-- <v-col cols="12" lg="9">
-        <OperationResultsEmployeesManager :model="model" />
-      </v-col> -->
       <v-col cols="12" lg="9">
-        <OperationResultsWorkersManager
+        <MoleculesOperationResultWorkersManager
           :workers="model.workers"
           :handle-create="handleWorkerCreated"
           :handle-update="handleWorkerUpdated"
