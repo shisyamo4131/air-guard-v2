@@ -3,7 +3,8 @@
  * @file ./pages/operation-billings/[id].vue
  * @description 稼働請求詳細ページ
  */
-import { OperationResult } from "@/schemas";
+import { OperationBilling } from "@/schemas";
+import dayjs from "dayjs";
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
 
 /*****************************************************************************
@@ -16,7 +17,7 @@ const route = useRoute();
  * DEFINE STATES
  *****************************************************************************/
 const operationResultId = route.params.id;
-const model = reactive(new OperationResult());
+const model = reactive(new OperationBilling());
 
 /*****************************************************************************
  * WATCHERS
@@ -49,6 +50,46 @@ onUnmounted(() => {
       <v-col cols="12" lg="4">
         <v-row>
           <v-col cols="12">
+            <air-information-card
+              class="v-list--info-display"
+              label="基本情報"
+              hide-edit
+              :items="[
+                {
+                  title: '現場名',
+                  props: {
+                    subtitle: cachedSites[model.siteId]?.name || 'loading...',
+                  },
+                },
+                {
+                  title: '日付',
+                  props: {
+                    subtitle: dayjs(model.dateAt).format('YYYY年M月D日（ddd）'),
+                  },
+                },
+                {
+                  title: '区分',
+                  props: {
+                    subtitle: `${OperationBilling.DAY_TYPE[model.dayType]} ${
+                      OperationBilling.SHIFT_TYPE[model.shiftType].title
+                    }`.trim(),
+                  },
+                },
+                {
+                  title: '時間',
+                  props: {
+                    subtitle: `${model.startTime} - ${model.endTime}`.trim(),
+                  },
+                },
+                {
+                  title: '作業内容',
+                  props: { subtitle: model.workDescription },
+                },
+                { title: '備考', props: { subtitle: model.remarks } },
+              ]"
+            />
+          </v-col>
+          <v-col cols="12">
             <MoleculesOperationBillingManager
               :model-value="model"
               :editor-props="{
@@ -64,12 +105,24 @@ onUnmounted(() => {
                 ],
               }"
             >
-              <template #information-card="slotProps">
-                <MoleculesInformationCardsOperationBilling
-                  v-bind="slotProps"
-                  :site="cachedSites[model.siteId]"
-                />
-              </template>
+              <air-information-card
+                class="v-list--info-display"
+                label="単価情報"
+                :items="[
+                  {
+                    title: '基本単価',
+                    props: {
+                      subtitle: `${model.unitPriceBase}円/${model.overtimeUnitPriceBase}円`,
+                    },
+                  },
+                  {
+                    title: '資格者単価',
+                    props: {
+                      subtitle: `${model.unitPriceQualified}円/${model.overtimeUnitPriceQualified}円`,
+                    },
+                  },
+                ]"
+              />
             </MoleculesOperationBillingManager>
           </v-col>
         </v-row>
