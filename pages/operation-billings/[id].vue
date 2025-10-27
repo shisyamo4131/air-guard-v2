@@ -51,7 +51,6 @@ onUnmounted(() => {
         <v-row>
           <v-col cols="12">
             <air-information-card
-              class="v-list--info-display"
               label="基本情報"
               hide-edit
               :items="[
@@ -108,7 +107,6 @@ onUnmounted(() => {
               <template #activator="{ attrs }">
                 <air-information-card
                   v-bind="attrs"
-                  class="v-list--info-display"
                   label="単価情報"
                   :items="[
                     {

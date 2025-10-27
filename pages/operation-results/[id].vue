@@ -65,7 +65,6 @@ onUnmounted(() => {
               <template #activator="{ attrs }">
                 <air-information-card
                   v-bind="attrs"
-                  class="v-list--info-display"
                   :items="[
                     { title: 'CODE', props: { subtitle: model.code } },
                     {

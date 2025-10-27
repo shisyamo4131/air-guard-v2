@@ -29,7 +29,6 @@ const auth = useAuthStore();
           <template #activator="{ attrs }">
             <air-information-card
               v-bind="attrs"
-              class="v-list--info-display"
               :items="[
                 {
                   title: '会社名',
@@ -82,7 +81,6 @@ const auth = useAuthStore();
           <template #activator="{ attrs }">
             <air-information-card
               v-bind="attrs"
-              class="v-list--info-display"
               :items="[
                 {
                   title: '時刻選択間隔（分）',
