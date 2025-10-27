@@ -114,6 +114,10 @@ function subscribeNotifications() {
   });
 }
 
+/**
+ * Submit the operation result with the selected agreement.
+ * @returns {Promise<void>}
+ */
 async function submit() {
   try {
     loading.value = true;
