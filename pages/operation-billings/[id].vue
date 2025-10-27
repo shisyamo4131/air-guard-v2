@@ -105,24 +105,27 @@ onUnmounted(() => {
                 ],
               }"
             >
-              <air-information-card
-                class="v-list--info-display"
-                label="単価情報"
-                :items="[
-                  {
-                    title: '基本単価',
-                    props: {
-                      subtitle: `${model.unitPriceBase}円/${model.overtimeUnitPriceBase}円`,
+              <template #activator="{ attrs }">
+                <air-information-card
+                  v-bind="attrs"
+                  class="v-list--info-display"
+                  label="単価情報"
+                  :items="[
+                    {
+                      title: '基本単価',
+                      props: {
+                        subtitle: `${model.unitPriceBase}円/${model.overtimeUnitPriceBase}円`,
+                      },
                     },
-                  },
-                  {
-                    title: '資格者単価',
-                    props: {
-                      subtitle: `${model.unitPriceQualified}円/${model.overtimeUnitPriceQualified}円`,
+                    {
+                      title: '資格者単価',
+                      props: {
+                        subtitle: `${model.unitPriceQualified}円/${model.overtimeUnitPriceQualified}円`,
+                      },
                     },
-                  },
-                ]"
-              />
+                  ]"
+                />
+              </template>
             </MoleculesOperationBillingManager>
           </v-col>
         </v-row>

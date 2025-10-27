@@ -4,6 +4,7 @@
  * @description 稼働実績詳細ページ
  */
 import { OperationResult } from "@/schemas";
+import dayjs from "dayjs";
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
 
 /*****************************************************************************
@@ -61,10 +62,53 @@ onUnmounted(() => {
         <v-row>
           <v-col cols="12">
             <MoleculesOperationResultManager :model-value="model">
-              <template #information-card="slotProps">
-                <MoleculesInformationCardsOperationResult
-                  v-bind="slotProps"
-                  :site="cachedSites[model.siteId]"
+              <template #activator="{ attrs }">
+                <air-information-card
+                  v-bind="attrs"
+                  class="v-list--info-display"
+                  :items="[
+                    { title: 'CODE', props: { subtitle: model.code } },
+                    {
+                      title: '現場名',
+                      props: {
+                        subtitle:
+                          cachedSites[model.siteId]?.name || 'loading...',
+                      },
+                    },
+                    {
+                      title: '日付',
+                      props: {
+                        subtitle: dayjs(model.dateAt).format(
+                          'YYYY年M月D日（ddd）'
+                        ),
+                      },
+                    },
+                    {
+                      title: '区分',
+                      props: {
+                        subtitle: `${
+                          OperationResult.DAY_TYPE[model.dayType] ||
+                          'loading...'
+                        } ${
+                          OperationResult.SHIFT_TYPE[model.shiftType]?.title ||
+                          'loading...'
+                        }`.trim(),
+                      },
+                    },
+                    {
+                      title: '時間',
+                      props: {
+                        subtitle: `${model.startTime || 'loading...'} - ${
+                          model.endTime || 'loading...'
+                        }`.trim(),
+                      },
+                    },
+                    {
+                      title: '作業内容',
+                      props: { subtitle: model.workDescription },
+                    },
+                    { title: '備考', props: { subtitle: model.remarks } },
+                  ]"
                 />
               </template>
             </MoleculesOperationResultManager>
