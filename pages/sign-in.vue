@@ -27,7 +27,7 @@ const password = ref("");
  *****************************************************************************/
 const handleSignIn = async () => {
   errors.clear();
-  const key = loadings.add({ message: "サインインしています..." });
+  const key = loadings.add("サインインしています...");
   try {
     await auth.signIn({ email: email.value, password: password.value });
     router.push("/dashboard");
