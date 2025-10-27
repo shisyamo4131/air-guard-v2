@@ -1,4 +1,16 @@
 <script setup>
+/*****************************************************************************
+ * MonthSelector
+ * @author shisyamo4131
+ * @description A component for selecting months.
+ * ---------------------------------------------------------------------------
+ * @props modelValue: Date - The currently selected date (default: new Date())
+ * ---------------------------------------------------------------------------
+ * @emits update:modelValue - Emitted when the selected date changes.
+ * @emits from - Emitted with the start date of the selected month.
+ * @emits to - Emitted with the end date of the selected month.
+ * @emits date-range - Emitted with the full date range of the selected month.
+ *****************************************************************************/
 import dayjs from "dayjs";
 
 /*****************************************************************************
