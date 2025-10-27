@@ -5,8 +5,10 @@
 import { onCall } from "firebase-functions/v2/https";
 import { fetchCoordinates } from "./utils/geocoding.js";
 
+// onCall は自動的に CORS が false に設定され、Cloud Run 側で適宜処理される？？？
 export const geocoding = onCall(
-  { region: "asia-northeast1" },
+  // { region: "asia-northeast1", cors: ["https://air-guard-v2-dev.web.app"] },
+  // { region: "asia-northeast1", cors: false },
   async (request) => {
     const { address } = request.data;
 
