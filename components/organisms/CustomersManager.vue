@@ -16,13 +16,12 @@ const { error, clearError } = useLogger("CustomersManager", useErrorsStore());
  * DEFINE STATES
  *****************************************************************************/
 const model = reactive(new Customer());
-const docs = ref([]);
 
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
 onMounted(() => {
-  docs.value = model.subscribeDocs();
+  model.subscribeDocs();
 });
 
 onUnmounted(() => {
@@ -32,7 +31,7 @@ onUnmounted(() => {
 
 <template>
   <air-array-manager
-    v-model="docs"
+    v-model="model.docs"
     :schema="Customer"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
