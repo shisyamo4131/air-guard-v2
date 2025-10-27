@@ -69,6 +69,8 @@
  * @methods addWorker Adds a new worker (employee or outsourcer).
  * @methods moveWorker Changes the position of a worker (employee or outsourcer).
  * @methods removeWorker Removes a worker (employee or outsourcer).
+ *
+ * [ADDED]
  * @methods duplicate Duplicates the schedule for specified dates.
  * @methods notify Creates arrangement notifications for workers who have not been notified yet.
  * @methods syncToOperationResult Creates an OperationResult document based on the current schedule.
@@ -78,8 +80,9 @@ import {
   ArrangementNotification,
   OperationResult,
   SiteOperationSchedule as BaseClass,
+  SiteOperationScheduleDetail,
+  Agreement,
 } from "air-guard-v2-schemas";
-import { SiteOperationScheduleDetail } from "@/schemas";
 import { ContextualError } from "air-guard-v2-schemas/utils";
 import dayjs from "dayjs";
 import { runTransaction } from "firebase/firestore";
@@ -217,50 +220,44 @@ export default class SiteOperationSchedule extends BaseClass {
   async syncToOperationResult(agreement, notifications = {}) {
     if (!this.docId) {
       throw new Error(
-        "不正な処理です。作成前の現場稼働予定を稼働実績に同期することはできません。"
+        "不正な処理です。作成前の現場稼働予定から稼働実績を作成することはできません。"
       );
     }
-    if (!agreement) {
+    if (!agreement || !(agreement instanceof Agreement)) {
       throw new Error("取極めの指定が必要です。");
     }
     if (!notifications) {
       throw new Error("配置通知の指定が必要です。");
     }
-    const employees = this.employees.map((e) => {
-      const notification = notifications[e.notificationKey];
-      if (notification) {
+    const converter = (props) => {
+      return this[props].map((w) => {
+        const notification = notifications[w.notificationKey];
+        if (!notification) return w;
+        const {
+          actualStartTime: startTime,
+          actualEndTime: endTime,
+          actualBreakMinutes: breakMinutes,
+          actualIsStartNextDay: isStartNextDay,
+        } = notification;
         return new SiteOperationScheduleDetail({
-          ...e.toObject(),
-          startTime: notification.actualStartTime,
-          endTime: notification.actualEndTime,
-          breakMinutes: notification.actualBreakMinutes,
-          isStartNextDay: notification.actualIsStartNextDay,
+          ...w.toObject(),
+          startTime,
+          endTime,
+          breakMinutes,
+          isStartNextDay,
         });
-      } else {
-        return e;
-      }
-    });
-    const outsourcers = this.outsourcers.map((o) => {
-      const notification = notifications[o.notificationKey];
-      if (notification) {
-        return new SiteOperationScheduleDetail({
-          ...o.toObject(),
-          startTime: notification.actualStartTime,
-          endTime: notification.actualEndTime,
-          breakMinutes: notification.actualBreakMinutes,
-          isStartNextDay: notification.actualIsStartNextDay,
-        });
-      } else {
-        return o;
-      }
-    });
+      });
+    };
+    const employees = converter("employees");
+    const outsourcers = converter("outsourcers");
     try {
-      // 現場稼働予定の内容をもとに稼働実績インスタンスを生成
+      // Create OperationResult instance based on the current SiteOperationSchedule
+      // using agreement prices for overriding related properties like `unitPrice` etc.
       const operationResult = new OperationResult({
-        ...agreement,
         ...this.toObject(),
         employees,
         outsourcers,
+        ...agreement.prices,
         siteOperationScheduleId: this.docId,
       });
       const firestore = this.constructor.getAdapter().firestore;
