@@ -54,7 +54,7 @@ const overtimeWorkMinutes = computed(() => {
     <td>
       <div class="d-flex align-center" style="position: relative">
         <AtomsChipsIsStartNextDay
-          v-if="notification.actualIsStartNextDay"
+          v-if="notification?.actualIsStartNextDay"
           style="position: absolute; top: -10px"
         />
         {{ notification?.actualStartTime || worker?.startTime || "" }}
