@@ -102,7 +102,7 @@ function subscribe() {
     fetchOutsourcer(item.outsourcerIds);
   };
 
-  model.subscribeDocs({ constraints, callback });
+  model.subscribeDocs({ constraints }, callback);
 }
 
 function subscribeNotifications() {
