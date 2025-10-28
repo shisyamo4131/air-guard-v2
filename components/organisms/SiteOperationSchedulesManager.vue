@@ -54,7 +54,7 @@ function onClickEvent(nativeEvent, { event }) {
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
-    @error="error"
+    @error="(e) => error({ error: e })"
     @error:clear="clearError"
   >
     <template #table="slotProps">
