@@ -49,7 +49,7 @@ function onClickEvent(nativeEvent, { event }) {
     :schema="SiteOperationSchedule"
     :before-edit="(editMode, item) => (item.siteId = siteId)"
     :input-props="{
-      excludedKeys: ['status', 'employees', 'outsourcers'],
+      excludedKeys: ['siteId', 'employees', 'outsourcers'],
     }"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"

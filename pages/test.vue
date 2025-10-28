@@ -8,7 +8,7 @@ const operationResult = reactive(new OperationResult());
 async function rollback() {
   const { $firestore } = useNuxtApp();
   const companyPath = "Companies/Qa1JpI7dLMjIXeW3lB2m";
-  const docId = "ZiZGd2PmaUUe36T8jF5k";
+  const docId = "HhnYRZgMowxXbQZMbNSk";
   const operationResultDocRef = doc(
     $firestore,
     `${companyPath}/OperationResults`,
@@ -30,7 +30,7 @@ function setNewTime() {
 }
 
 onMounted(() => {
-  operationResult.subscribe({ docId: "ZiZGd2PmaUUe36T8jF5k" });
+  operationResult.subscribe({ docId: "HhnYRZgMowxXbQZMbNSk" });
 });
 
 onUnmounted(() => {

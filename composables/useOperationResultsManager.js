@@ -26,7 +26,6 @@ export function useOperationResultsManager({
   baseDate = dayjs().startOf("month").toDate(),
   endDate = dayjs().endOf("month").toDate(),
   excludedKeys = [
-    "status",
     "employees",
     "outsourcers",
     "unitPriceBase",

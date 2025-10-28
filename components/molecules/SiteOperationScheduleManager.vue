@@ -30,7 +30,13 @@ defineExpose({
   <air-item-manager
     ref="component"
     :input-props="{
-      excludedKeys: ['dayType', 'shiftType', 'employees', 'outsourcers'],
+      excludedKeys: [
+        'siteId',
+        'dayType',
+        'shiftType',
+        'employees',
+        'outsourcers',
+      ],
     }"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
