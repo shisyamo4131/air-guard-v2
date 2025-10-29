@@ -15,22 +15,18 @@ const { attrs, dateRange, cachedSites } = useOperationResultsManager();
 
 <template>
   <air-array-manager v-bind="attrs">
-    <template #table="tableProps">
-      <air-data-table v-bind="tableProps">
-        <template #search>
-          <MoleculesMonthSelector @date-range="dateRange = $event" />
-        </template>
-        <template #item.dateAt="{ item }">
-          <div>{{ dayjs(item.dateAt).format("MM月DD日(ddd)") }}</div>
-        </template>
-        <template #item.siteId="{ item }">
-          <div v-if="cachedSites[item.siteId]">
-            <div>{{ cachedSites[item.siteId].name }}</div>
-            <div>{{ cachedSites[item.siteId].customer.name }}</div>
-          </div>
-          <v-progress-circular v-else indeterminate size="small" />
-        </template>
-      </air-data-table>
+    <template #search>
+      <MoleculesMonthSelector @date-range="dateRange = $event" />
+    </template>
+    <template #item.dateAt="{ item }">
+      <div>{{ dayjs(item.dateAt).format("MM月DD日(ddd)") }}</div>
+    </template>
+    <template #item.siteId="{ item }">
+      <div v-if="cachedSites[item.siteId]">
+        <div>{{ cachedSites[item.siteId].name }}</div>
+        <div>{{ cachedSites[item.siteId].customer.name }}</div>
+      </div>
+      <v-progress-circular v-else indeterminate size="small" />
     </template>
   </air-array-manager>
 </template>

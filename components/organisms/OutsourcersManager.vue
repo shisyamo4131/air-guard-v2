@@ -2,43 +2,15 @@
 /**
  * @file components/organisms/OutsourcersManager.vue
  * @description A component to manage outsourcers.
+ * @author shisyamo4131
  */
-import { Outsourcer } from "@/schemas";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-
+import { useOutsourcersManager } from "@/composables/useOutsourcersManager";
 /*****************************************************************************
- * DEFINE COMPOSABLES
+ * COMPOSABLES
  *****************************************************************************/
-const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
-
-/*****************************************************************************
- * DEFINE STATES
- *****************************************************************************/
-const model = reactive(new Outsourcer());
-const docs = ref([]);
-
-/*****************************************************************************
- * LIFECYCLE HOOKS
- *****************************************************************************/
-onMounted(() => {
-  docs.value = model.subscribeDocs();
-});
-
-onUnmounted(() => {
-  model.unsubscribe();
-});
+const { attrs } = useOutsourcersManager();
 </script>
 
 <template>
-  <air-array-manager
-    v-model="docs"
-    :schema="Outsourcer"
-    :handle-create="(item) => item.create()"
-    :handle-update="(item) => item.update()"
-    :handle-delete="(item) => item.delete()"
-    @error="error"
-    @error:clear="clearError"
-  >
-  </air-array-manager>
+  <air-array-manager v-bind="attrs"> </air-array-manager>
 </template>

@@ -1,45 +1,29 @@
 /*****************************************************************************
- * useOperationResultsManager ver 1.0.0
+ * useOperationBillingsManager ver 1.0.0
  * @author shisyamo4131
- * @description A composable to manage operation results.
+ * @description A composable to manage operation billings.
  * ---------------------------------------------------------------------------
  * @props {Date} baseDate - The base date for the date range.
  * @props {Date} endDate - The end date for the date range.
  * @props {Array} excludedKeys - The keys to exclude from the input props.
  * ---------------------------------------------------------------------------
- * @returns {Object} attrs - The attributes for the operation results manager.
+ * @returns {Object} attrs - The attributes for the operation billings manager.
  * @returns {Object} cachedSites - The cached sites from useFetchSite.
  * @returns {Object} dateRange - The reactive date range object.
- * @returns {Array} docs - The array of operation result documents.
+ * @returns {Array} docs - The array of operation billing documents.
  *****************************************************************************/
 import * as Vue from "vue";
 import dayjs from "dayjs";
-import { OperationResult } from "@/schemas";
+import { OperationBilling } from "@/schemas";
 import { useDateRange } from "@/composables/useDateRange";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useLogger } from "../composables/useLogger";
 import { useRouter } from "vue-router";
 
-export function useOperationResultsManager({
+export function useOperationBillingsManager({
   baseDate = dayjs().startOf("month").toDate(),
   endDate = dayjs().endOf("month").toDate(),
-  excludedKeys = [
-    "employees",
-    "outsourcers",
-    "unitPriceBase",
-    "overtimeUnitPriceBase",
-    "unitPriceQualified",
-    "overtimeUnitPriceQualified",
-    "billingUnitType",
-    "includeBreakInBilling",
-    "siteOperationScheduleId",
-    "useAdjustedQuantity",
-    "adjustedQuantityBase",
-    "adjustedOvertimeBase",
-    "adjustedQuantityQualified",
-    "adjustedOvertimeQualified",
-  ],
 } = {}) {
   /***************************************************************************
    * DEFINE COMPOSABLES
@@ -47,7 +31,7 @@ export function useOperationResultsManager({
   const router = useRouter();
 
   const { error, clearError } = useLogger(
-    "OperationResultsManager",
+    "OperationBillingsManager",
     useErrorsStore()
   );
 
@@ -61,7 +45,7 @@ export function useOperationResultsManager({
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
    ***************************************************************************/
-  const instance = Vue.reactive(new OperationResult());
+  const instance = Vue.reactive(new OperationBilling());
 
   /***************************************************************************
    * DEFINE WATCHERS
@@ -74,20 +58,16 @@ export function useOperationResultsManager({
   const attrs = Vue.computed(() => {
     return {
       beforeEdit: (editMode, item) => {
-        if (editMode === "CREATE") return true;
-        router.push(`operation-results/${item.docId}`);
+        if (editMode === "CREATE") return false; // Disable creation
+        router.push(`operation-billings/${item.docId}`);
         return false;
       },
-      handleCreate: (item) => item.create(),
-      inputProps: {
-        excludedKeys,
-      },
       modelValue: instance.docs,
-      schema: OperationResult,
+      schema: OperationBilling,
       tableProps: {
+        hideCreateButton: true,
         sortBy: [{ key: "dateAt", order: "desc" }],
       },
-      onCreate: ($event) => router.push(`operation-results/${$event.docId}`),
       onError: error,
       "onError:clear": clearError,
     };
