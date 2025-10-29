@@ -10,10 +10,6 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
 import { Employee, Outsourcer } from "@/schemas";
-import {
-  CONTRACT_STATUS_ACTIVE,
-  EMPLOYMENT_STATUS_ACTIVE,
-} from "air-guard-v2-schemas/constants";
 
 /**
  * 作業員（従業員・外注先）リスト提供コンポーザブル
@@ -100,7 +96,7 @@ export function useWorkersList({
     return _initWorker({
       instance: employeeInstance,
       constraints: [
-        ["where", "employmentStatus", "==", EMPLOYMENT_STATUS_ACTIVE],
+        ["where", "employmentStatus", "==", Employee.STATUS_ACTIVE],
       ],
       pushToCache: pushEmployees,
       targetRef: availableEmployees,
@@ -114,7 +110,9 @@ export function useWorkersList({
   const _initOutsourcers = async () => {
     return _initWorker({
       instance: outsourcerInstance,
-      constraints: [["where", "contractStatus", "==", CONTRACT_STATUS_ACTIVE]],
+      constraints: [
+        ["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE],
+      ],
       pushToCache: pushOutsourcers,
       targetRef: availableOutsourcers,
       type: "外注先",
