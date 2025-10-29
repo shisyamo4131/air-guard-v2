@@ -7,7 +7,6 @@ import { computed, ref, reactive } from "vue";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 // import { useFetchEmployee } from "./fetch/useFetchEmployee";
 // import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
-import { useErrorHandler } from "./useErrorHandler";
 import { useLogger } from "./useLogger";
 import { Employee, Outsourcer } from "@/schemas";
 
@@ -25,8 +24,7 @@ export function useWorkersList({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 } = {}) {
-  /** エラーハンドラーとロガーの初期化 */
-  const errorHandler = useErrorHandler("useWorkers");
+  /** ロガーの初期化 */
   const logger = useLogger("useWorkersList", useErrorsStore());
 
   /** 既存のコンポーザブルを使用または新規作成 */
@@ -53,15 +51,27 @@ export function useWorkersList({
    * アクティブな作業員データを初期化
    */
   const initialize = async () => {
-    return errorHandler.safeAsyncExecution(
-      async () => {
-        await Promise.all([_initEmployees(), _initOutsourcers()]);
-      },
-      {
-        operation: "作業員データの初期化",
-        retryOptions: { maxRetries: 2 },
-      }
-    );
+    try {
+      await Promise.all([_initEmployees(), _initOutsourcers()]);
+      logger.info({
+        message: "作業員データの初期化が完了しました",
+      });
+      return {
+        success: true,
+        data: null,
+        error: null,
+      };
+    } catch (error) {
+      logger.error({
+        message: "作業員データの初期化に失敗しました",
+        error,
+      });
+      return {
+        success: false,
+        data: null,
+        error: error.message,
+      };
+    }
   };
 
   /**
@@ -71,7 +81,6 @@ export function useWorkersList({
    * @param {Array} config.constraints - 取得条件
    * @param {Function} config.pushToCache - キャッシュ追加関数
    * @param {Object} config.targetRef - 格納先のref
-   * @param {boolean} config.isEmployee - 従業員フラグ
    * @param {string} config.type - エラーメッセージ用の種別名
    */
   const _initWorker = async ({
@@ -84,7 +93,14 @@ export function useWorkersList({
     try {
       targetRef.value = await instance.fetchDocs({ constraints });
       pushToCache(targetRef.value);
+      logger.info({
+        message: `${type}データの初期化が完了しました（${targetRef.value.length}件）`,
+      });
     } catch (error) {
+      logger.error({
+        message: `${type}データの初期化に失敗しました`,
+        error,
+      });
       throw new Error(`${type}データの初期化に失敗: ${error.message}`);
     }
   };
@@ -140,9 +156,9 @@ export function useWorkersList({
         cachedOutsourcers: Object.keys(cachedOutsourcers.value || {}).length,
       };
     } catch (error) {
-      const errorResult = errorHandler.handleError(error, {
-        operation: "統計情報の取得",
-        silent: true,
+      logger.error({
+        message: "統計情報の取得に失敗しました",
+        error,
       });
       return {
         totalEmployees: 0,
@@ -155,10 +171,18 @@ export function useWorkersList({
   });
 
   const getWorker = ({ id, isEmployee }) => {
-    if (isEmployee) {
-      return cachedEmployees.value[id];
+    try {
+      if (isEmployee) {
+        return cachedEmployees.value[id];
+      }
+      return cachedOutsourcers.value[id];
+    } catch (error) {
+      logger.error({
+        message: `作業員データの取得に失敗しました (ID: ${id}, isEmployee: ${isEmployee})`,
+        error,
+      });
+      return null;
     }
-    return cachedOutsourcers.value[id];
   };
 
   return {
@@ -183,9 +207,6 @@ export function useWorkersList({
 
     // 統計情報
     statistics,
-
-    // エラーハンドラー
-    errorHandler,
 
     // 元の関数（後方互換性）
     fetchEmployee,
