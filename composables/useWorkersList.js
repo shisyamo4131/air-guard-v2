@@ -53,19 +53,12 @@ export function useWorkersList({
   const initialize = async () => {
     try {
       await Promise.all([_initEmployees(), _initOutsourcers()]);
-      logger.info({
-        message: "作業員データの初期化が完了しました",
-      });
       return {
         success: true,
         data: null,
         error: null,
       };
     } catch (error) {
-      logger.error({
-        message: "作業員データの初期化に失敗しました",
-        error,
-      });
       return {
         success: false,
         data: null,
@@ -93,14 +86,7 @@ export function useWorkersList({
     try {
       targetRef.value = await instance.fetchDocs({ constraints });
       pushToCache(targetRef.value);
-      logger.info({
-        message: `${type}データの初期化が完了しました（${targetRef.value.length}件）`,
-      });
     } catch (error) {
-      logger.error({
-        message: `${type}データの初期化に失敗しました`,
-        error,
-      });
       throw new Error(`${type}データの初期化に失敗: ${error.message}`);
     }
   };
