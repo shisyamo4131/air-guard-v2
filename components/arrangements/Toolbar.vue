@@ -82,13 +82,22 @@ const handleWorkersClick = (event) => {
     <template #append>
       <v-spacer />
 
-      <v-btn
-        prepend-icon="mdi-sort"
-        text="順序"
-        class="mr-3"
-        @click="emit('click:site-order')"
-      />
-
+      <slot
+        name="btn-site-order"
+        v-bind="{
+          prependIcon: 'mdi-sort',
+          text: '順序',
+          class: ['mr-3'],
+          onClick: () => emit('click:site-order'),
+        }"
+      >
+        <v-btn
+          prepend-icon="mdi-sort"
+          text="順序"
+          class="mr-3"
+          @click="emit('click:site-order')"
+        />
+      </slot>
       <v-btn-toggle
         :model-value="tagSize"
         class="mr-3"

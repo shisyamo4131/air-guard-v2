@@ -3,17 +3,6 @@
  * @file components/organisms/SiteOperationScheduleManager.vue
  * @description A component for managing single site operation schedule.
  */
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-
-/*****************************************************************************
- * DEFINE COMPOSABLES
- *****************************************************************************/
-const { error, clearError } = useLogger(
-  "SiteOperationScheduleManager",
-  useErrorsStore()
-);
-
 const component = useTemplateRef("component");
 
 /*****************************************************************************
@@ -27,23 +16,7 @@ defineExpose({
 </script>
 
 <template>
-  <air-item-manager
-    ref="component"
-    :input-props="{
-      excludedKeys: [
-        'siteId',
-        'dayType',
-        'shiftType',
-        'employees',
-        'outsourcers',
-      ],
-    }"
-    :handle-create="(item) => item.create()"
-    :handle-update="(item) => item.update()"
-    :handle-delete="(item) => item.delete()"
-    @error="error"
-    @error:clear="clearError"
-  >
+  <air-item-manager ref="component">
     <template #isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>

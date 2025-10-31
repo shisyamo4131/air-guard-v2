@@ -6,6 +6,10 @@
  * the drop process is prevented and the corresponding worker is highlighted.
  *
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
+ *
+ * @emits {Event} click:edit - Emitted when the edit button is clicked on a worker tag.
+ * @emits {Event} click:remove - Emitted when the remove button is clicked on a worker tag.
+ * @emits {Event} change - Emitted when the order of workers changes.
  */
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
@@ -18,15 +22,21 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * INJECT COMPOSABLES
  *****************************************************************************/
-const { addWorker, moveWorker, removeWorker } = inject("managerComposable");
+const arrangementsManager = inject("arrangementsManagerComposable");
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const props = defineProps({
-  /** A `SiteOperationSchedule` instance */
   schedule: { type: Object, required: true },
 });
+
+const emit = defineEmits([
+  "click:edit",
+  "click:remove",
+  "change",
+  "click:notification",
+]);
 
 /*****************************************************************************
  * DEFINE COMPOSABLES
@@ -86,52 +96,42 @@ function handlePut(to, from, dragEl) {
 }
 
 /**
- * Handles the addition of a worker.
- * - Call `addWorker` method provided by the managerComposable.
- * @param {Object} event - The event object containing information about the added worker.
- */
-function handleWorkerAdded(event) {
-  const { element, newIndex } = event;
-  const { id, isEmployee } = element;
-  const schedule = props.schedule;
-  addWorker({ schedule, id, isEmployee }, newIndex);
-}
-
-/**
- * Handles the removal of a worker.
- * - Call `removeWorker` method provided by the managerComposable.
- * @param {Object} event - The event object containing information about the removed worker.
- */
-function handleWorkerRemoved(event) {
-  const { workerId, isEmployee } = event.element;
-  const schedule = props.schedule;
-  removeWorker({ schedule, workerId, isEmployee });
-}
-
-/**
- * Handles the movement of a worker.
- * - Call `moveWorker` method provided by the managerComposable.
- * @param {Object} event - The event object containing information about the moved worker.
- */
-function handleWorkerMoved(event) {
-  const { element, oldIndex, newIndex } = event;
-  const { isEmployee } = element;
-  const schedule = props.schedule;
-  moveWorker({ schedule, oldIndex, newIndex, isEmployee });
-}
-
-/**
  * An event handler for vuedraggable's change event.
  * @param {Object} event - The change event from vuedraggable.
  */
 function handleChange(event) {
-  if (event.added) {
-    handleWorkerAdded(event.added);
-  } else if (event.removed) {
-    handleWorkerRemoved(event.removed);
-  } else if (event.moved) {
-    handleWorkerMoved(event.moved);
-  }
+  emit("change", { event, schedule: props.schedule });
+}
+
+/**
+ * Handler for `click:edit` event from `ArrangementsWorkerTag` component.
+ * @param {Object} element - The worker element to edit.
+ */
+function handleClickEdit(element) {
+  emit("click:edit", {
+    schedule: props.schedule,
+    worker: element,
+  });
+}
+
+/**
+ * Handler for `click:notification` event from `ArrangementsWorkerTag` component.
+ * @param {Object} event - The notification event.
+ */
+function handleClickNotification(event) {
+  emit("click:notification", event);
+}
+
+/**
+ * Handler for `click:remove` event from `ArrangementsWorkerTag` component.
+ * @param {Object} element - The worker element to remove.
+ */
+function handleClickRemove(element) {
+  emit("click:remove", {
+    schedule: props.schedule,
+    workerId: element.workerId,
+    isEmployee: element.isEmployee,
+  });
 }
 </script>
 
@@ -148,22 +148,15 @@ function handleChange(event) {
   >
     <template #item="{ element }">
       <div>
-        <!-- item slot for `WorkerTag` -->
-        <slot
-          name="item"
-          v-bind="{
-            schedule,
-            worker: element,
-            'onClick:remove': () => {
-              handleWorkerRemoved({
-                element: {
-                  workerId: element.workerId,
-                  isEmployee: element.isEmployee,
-                  amount: element.amount,
-                },
-              });
-            },
-          }"
+        <ArrangementsWorkerTag
+          :schedule="schedule"
+          :worker="element"
+          :notification="
+            arrangementsManager.getNotification(element.notificationKey)
+          "
+          @click:edit="handleClickEdit(element)"
+          @click:notification="handleClickNotification"
+          @click:remove="handleClickRemove(element)"
         />
       </div>
     </template>

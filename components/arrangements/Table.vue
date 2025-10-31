@@ -10,22 +10,35 @@
  * @props {Number} dayCount - Number of days to display in the table.
  * @props {String} selectedDate - Currently selected date, used for highlighting.
  *
+ * @emits {Event} update:selected-date - Emitted when the selected date is updated.
+ * @emits {Event} click:output-sheet - Emitted when the output sheet button is clicked for a date.
+ * @emits {Event} click:command - Emitted when the command button is clicked for a date.
+ * @emits {Event} update:model-value - Emitted when the model value is updated.
+ * @emits {Event} change:workers - Emitted when the order of workers changes.
+ * @emits {Event} click:duplicate - Emitted when the duplicate button is clicked for a date.
+ * @emits {Event} click:edit - Emitted when the edit button is clicked for a date.
+ * @emits {Event} click:edit-worker - Emitted when the edit button is clicked on a worker tag.
+ * @emits {Event} click:notify - Emitted when the notify button is clicked for a date.
+ * @emits {Event} click:notification - Emitted when the notification chip is clicked for a date.
+ * @emits {Event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
+ * @emits {Event} click:add-schedule - Emitted when the add schedule button is clicked for a site and shift type.
+ * @emits {Event} click:hide - Emitted when the hide button is clicked for a site and shift type.
+ *
  * @slots
  * header-cell - Slot for customizing the header cell content.
  * body-row - Slot for replacing the entire row. Contains site information and all cells for the row.
- * site-row - Slot for customizing the site row content.
- * body-cell - Slot for customizing the body cell content.
- * footer-cell - Slot for customizing the footer cell content.
  */
 import dayjs from "dayjs";
 import { useDateUtil } from "@/composables/useDateUtil";
 
 /** define props */
 const props = defineProps({
-  siteOrder: { type: Array, default: () => [] },
-  from: { type: [Date, String], default: () => new Date() },
   dayCount: { type: Number, default: 1 },
+  from: { type: [Date, String], default: () => new Date() },
+  modelValue: { type: Object, default: () => ({}) },
   selectedDate: { type: String, default: null },
+  siteOrder: { type: Array, default: () => [] },
+  statistics: { type: Object, default: () => ({}) },
 });
 
 /** define emits */
@@ -33,6 +46,16 @@ const emit = defineEmits([
   "update:selected-date",
   "click:output-sheet",
   "click:command",
+  "update:model-value",
+  "change:workers",
+  "click:duplicate",
+  "click:edit",
+  "click:edit-worker",
+  "click:notify",
+  "click:notification",
+  "click:remove-worker",
+  "click:add-schedule",
+  "click:hide",
 ]);
 
 /** define composables */
@@ -157,12 +180,13 @@ const columns = computed(() => {
  * ]
  */
 const matrix = computed(() => {
-  return props.siteOrder.map(({ siteId, shiftType }) => {
+  return props.siteOrder.map(({ siteId, siteName, shiftType }) => {
     // Generate cell information corresponding to each date
     const cells = columns.value.map((column) => {
       return {
         key: `${siteId}-${shiftType}-${column.date}`, // Unique key
         siteId,
+        siteName,
         shiftType,
         date: column.date,
         dayInfo: column, // Date information (day of week, holiday check, CSS classes, selection state, etc.)
@@ -171,6 +195,7 @@ const matrix = computed(() => {
     return {
       key: `${siteId}-${shiftType}`, // Unique key for the row
       siteId,
+      siteName,
       shiftType,
       cells, // Array of all cells included in this row
     };
@@ -232,9 +257,40 @@ const matrix = computed(() => {
                 <!--
                   site-row slot
                   For displaying site information in the row header.
-                  { key, siteId, shiftType, cells }
+                  { key, siteId, siteName, shiftType, cells }
                 -->
-                <slot name="site-row" v-bind="order" />
+                <div v-if="order.siteName" class="text-subtitle-1">
+                  <div class="d-flex align-center">
+                    <v-btn
+                      icon="mdi-plus"
+                      @click="
+                        emit('click:add-schedule', {
+                          siteId: order.siteId,
+                          shiftType: order.shiftType,
+                        })
+                      "
+                      size="x-small"
+                      variant="tonal"
+                    />
+                    <v-btn
+                      icon="mdi-eye-off"
+                      @click="
+                        emit('click:hide', {
+                          siteId: order.siteId,
+                          shiftType: order.shiftType,
+                        })
+                      "
+                      size="x-small"
+                      variant="tonal"
+                    />
+                    <AtomsChipsShiftType
+                      class="mr-2"
+                      :shift-type="order.shiftType"
+                    />
+                    <span>{{ order.siteName }}</span>
+                  </div>
+                </div>
+                <v-progress-circular v-else indeterminate size="small" />
               </div>
             </td>
           </tr>
@@ -244,13 +300,25 @@ const matrix = computed(() => {
               :key="cell.key"
               :class="cell.dayInfo.cssClasses"
             >
-              <!--
-                body-cell slot
-                For displaying the body cell content.
-                { key, siteId, shiftType, date, dayInfo }
-                dayInfo contains: { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
-              -->
-              <slot name="body-cell" v-bind="cell" />
+              <ArrangementsDraggableSchedules
+                :model-value="modelValue[cell.key] || []"
+                :site-id="cell.siteId"
+                :shift-type="cell.shiftType"
+                @update:model-value="
+                  emit('update:model-value', {
+                    newSchedules: $event,
+                    groupKey: cell.key,
+                  })
+                "
+                @change:workers="emit('change:workers', $event)"
+                @click:duplicate="emit('click:duplicate', $event)"
+                @click:edit="emit('click:edit', $event)"
+                @click:edit-worker="emit('click:edit-worker', $event)"
+                @click:notify="emit('click:notify', $event)"
+                @click:notification="emit('click:notification', $event)"
+                @click:remove-worker="emit('click:remove-worker', $event)"
+              >
+              </ArrangementsDraggableSchedules>
             </td>
           </tr>
         </slot>
@@ -259,12 +327,9 @@ const matrix = computed(() => {
     <tfoot>
       <tr>
         <th v-for="col of columns" :key="col.date" :class="col.cssClasses">
-          <!--
-            footer-cell slot
-            For displaying footer cell content.
-            { date, dayOfWeek, isHoliday, isSelected, dateLabel, dayOfWeekJp, cssClasses }
-          -->
-          <slot name="footer-cell" v-bind="col" />
+          <span class="text-subtitle-2">
+            {{ `稼働数: ${statistics?.requiredPersonnel?.[col.date] || 0}` }}
+          </span>
         </th>
       </tr>
     </tfoot>

@@ -1,16 +1,18 @@
 <script setup>
-/**
+/*****************************************************************************
  * @file components/arrangements/WorkerTag.vue
  * @description A component for displaying a arrangemented worker tag.
  *
  * @props {Boolean} loading - Whether the tag is in loading state.
  * @props {Object} schedule - The schedule object associated with the worker.
+ * @props {Object} notification - The notification object.
  * @props {Object} worker - The worker object containing relevant information.
  * @props {String} variant - The visual variant of the tag.
  *
  * @emit {Event} click:remove - Emitted when the remove button is clicked.
  * @emit {Event} click:edit - Emitted when the edit button is clicked.
- */
+ * @emit {Event} click:notification - Emitted when the notification chip is clicked.
+ *****************************************************************************/
 import { inject } from "vue";
 
 defineOptions({ inheritAttrs: false });
@@ -18,7 +20,8 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * INJECT COMPOSABLES
  *****************************************************************************/
-const { getWorker } = inject("workersListComposable");
+// const { getWorker } = inject("workersListComposable");
+const { getWorker } = inject("arrangementsManagerComposable");
 const { has } = inject("timedSetComposable");
 const { current } = inject("tagSizeComposable");
 
@@ -26,15 +29,10 @@ const { current } = inject("tagSizeComposable");
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
-  /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
-  /** The schedule object associated with the worker. */
   schedule: { type: Object, default: false },
-  /** The notification object */
   notification: { type: Object, default: null },
-  /** The worker object. */
   worker: { type: Object, required: true },
-  /** Visual variant of the tag */
   variant: {
     type: String,
     default: "default",

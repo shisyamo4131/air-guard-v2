@@ -7,48 +7,63 @@ import { SiteOrder } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
-export function useSiteOrderManager({ manager, fetchSiteComposable }) {
+export function useSiteOrderManager({ fetchSiteComposable } = {}) {
+  /***************************************************************************
+   * DEFINE REACTIVE OBJECTS
+   ***************************************************************************/
+  const internalSiteOrder = ref([]);
+  const loading = ref(false);
+
   /***************************************************************************
    * DEFINE COMPOSABLE
    ***************************************************************************/
   const { company } = useAuthStore();
   const logger = useLogger("useSiteOrderManager", useErrorsStore());
-  const { fetchSite } = fetchSiteComposable || {};
-
-  /***************************************************************************
-   * DEFINE REFS
-   ***************************************************************************/
-  const siteOrder = Vue.ref([]);
-  const editingSiteOrder = Vue.ref([]);
-  const isOpen = Vue.ref(false); // Dialog visibility state
-  const isLoading = Vue.ref(false); // Loading state for async operations
+  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  // Watch for changes in company.siteOrder and sync to local order.
-  Vue.watchEffect(_initialize);
-
-  // Watch for changes in `isOpen` state and call manager's open/close methods if available.
-  Vue.watch(isOpen, (val) => {
-    manager?.[val ? "open" : "close"]?.();
-    if (!val) _initialize(); // Reinitialize when manager is closed
-  });
+  watch(
+    () => company.siteOrder,
+    (newValue) => {
+      fetchSite(newValue);
+      internalSiteOrder.value = [...newValue];
+    },
+    { immediate: true, deep: true }
+  );
 
   /***************************************************************************
-   * METHODS FOR PRIVATE
+   * DEFINE METHODS (PRIVATE)
    ***************************************************************************/
-  function _initialize() {
-    const newSiteOrder = company?.siteOrder || [];
-    siteOrder.value = newSiteOrder.slice();
-    editingSiteOrder.value = newSiteOrder.slice();
-    if (newSiteOrder.length <= 0) return;
-    if (fetchSite) fetchSite(newSiteOrder);
+  /**
+   * Submit the changes to the company siteOrder.
+   * @throws {Error} If the update fails.
+   */
+  async function _submit() {
+    logger.clearError();
+    loading.value = true;
+    try {
+      company.siteOrder = [...internalSiteOrder.value];
+      await company.update();
+    } catch (error) {
+      logger.error({ message: error.message, error });
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Cancel the changes and revert to the original company siteOrder.
+   */
+  function _cancel() {
+    internalSiteOrder.value = [...company.siteOrder];
   }
 
   /***************************************************************************
-   * METHODS FOR PROVIDE
+   * DEFINE METHODS (PUBLIC)
    ***************************************************************************/
   /**
    * Add new siteOrder.
@@ -59,11 +74,14 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    */
   async function add({ siteId, shiftType }, index = -1) {
     logger.clearError();
+    loading.value = true;
     try {
       company.siteOrder.add({ siteId, shiftType }, index);
       await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -74,11 +92,14 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    */
   async function change(oldIndex, newIndex) {
     logger.clearError();
+    loading.value = true;
     try {
       company.siteOrder.change(oldIndex, newIndex);
       await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
+    } finally {
+      loading.value = false;
     }
   }
 
@@ -88,64 +109,53 @@ export function useSiteOrderManager({ manager, fetchSiteComposable }) {
    */
   async function remove(key) {
     logger.clearError();
+    loading.value = true;
     try {
       company.siteOrder.remove(key);
       await company.update();
     } catch (error) {
       logger.error({ message: error.message, error });
+    } finally {
+      loading.value = false;
     }
   }
+
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
+  /**
+   * Computed site order with site names included.
+   */
+  const computedSiteOrder = Vue.computed({
+    get() {
+      return internalSiteOrder.value.map((item) => {
+        return {
+          ...item.toObject(),
+          siteName: cachedSites.value[item.siteId]?.name,
+        };
+      });
+    },
+    set(v) {
+      internalSiteOrder.value = v.map((item) => new SiteOrder(item));
+    },
+  });
 
   /**
-   * Update the site order.
-   * - All elements are converted to SiteOrder instances.
-   * - All elements must have `siteId` and `shiftType` property.
+   * Attributes for the component
    */
-  async function update() {
-    isLoading.value = true;
-    try {
-      if (!editingSiteOrder.value || !Array.isArray(editingSiteOrder.value)) {
-        throw new Error("Invalid site order");
-      }
-      // Convert all elements to `SiteOrder` instance.
-      const updatedOrder = editingSiteOrder.value.map(
-        (item) => new SiteOrder(item)
-      );
-
-      // Validate the new order and throw error if any element is invalid.
-      const isValid = updatedOrder.every((item) => {
-        const { siteId, shiftType } = item;
-        return siteId && shiftType;
-      });
-      if (!isValid) throw new Error("Invalid site order");
-
-      // Update the company site order.
-      company.siteOrder = updatedOrder;
-      await company.update();
-      isOpen.value = false; // Close the dialog after update
-    } catch (error) {
-      logger.error({ message: error.message, error, data: { newOrder } });
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
   const attrs = computed(() => {
     return {
-      modelValue: isOpen.value,
-      siteOrder: editingSiteOrder.value,
-      loading: isLoading.value,
-      "onUpdate:model-value": ($event) => (isOpen.value = $event),
-      "onUpdate:site-order": ($event) => (editingSiteOrder.value = $event),
-      "onClick:cancel": () => (isOpen.value = false),
-      "onClick:submit": update,
+      modelValue: computedSiteOrder.value,
+      loading: loading.value,
+      "onUpdate:model-value": (value) => (computedSiteOrder.value = value),
+      "onClick:submit": _submit,
+      "onClick:cancel": _cancel,
     };
   });
 
   return {
-    siteOrder,
+    siteOrder: computedSiteOrder,
     attrs,
-    open: () => (isOpen.value = true),
     add,
     change,
     remove,

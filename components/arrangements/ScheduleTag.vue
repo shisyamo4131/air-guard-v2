@@ -4,14 +4,14 @@
  * @description A component for draggable site-operation-schedule.
  *
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
- * @props {String} tagSize - Tag size for worker elements.
  *
+ * @emits {void} change:workers - Emitted when the order of workers changes.
  * @emits {void} click:duplicate - Emitted when the duplicate button is clicked.
  * @emits {void} click:edit - Emitted when the edit button is clicked
  * @emits {void} click:notify - Emitted when the notify button is clicked
- *
- * @slots
- * - default: Slot for rendering the schedule item.
+ * @emits {void} click:edit-worker - Emitted when the edit button is clicked on a worker tag.
+ * @emits {void} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
+ * @emits {void} click:notification - Emitted when the notification chip is clicked
  */
 import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
 
@@ -22,7 +22,15 @@ const props = defineProps({
   schedule: { type: Object, required: true },
 });
 
-const emit = defineEmits(["click:duplicate", "click:edit", "click:notify"]);
+const emit = defineEmits([
+  "click:duplicate",
+  "click:edit",
+  "click:edit-worker",
+  "click:notify",
+  "click:notification",
+  "click:remove-worker",
+  "change:workers",
+]);
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -49,10 +57,13 @@ const label = computed(() => {
       </span>
       <DraggableIcon v-if="schedule.isEditable" />
     </div>
-    <!--
-      default slot for `ArrangementsDraggableWorkers`.
-    -->
-    <slot name="default" :schedule="schedule" />
+    <ArrangementsDraggableWorkers
+      :schedule="schedule"
+      @change="emit('change:workers', $event)"
+      @click:remove="emit('click:remove-worker', $event)"
+      @click:edit="emit('click:edit-worker', $event)"
+      @click:notification="emit('click:notification', $event)"
+    />
     <v-container
       class="d-flex justify-end pt-0 pb-2 px-2"
       style="column-gap: 4px"
