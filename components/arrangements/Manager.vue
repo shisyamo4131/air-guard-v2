@@ -112,24 +112,15 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
     <!-- スケジュール管理テーブル -->
     <ArrangementsTable
-      :model-value="arrangementsManager.keyMappedDocs.value"
+      v-bind="arrangementsManager.attrs.value.table"
       :site-order="siteOrderManager.siteOrder.value"
-      :from="arrangementsManager.dateRange.value.from"
-      :day-count="arrangementsManager.dayCount.value"
-      :statistics="arrangementsManager.statistics.value"
       v-model:selected-date="selectedDate"
-      @click:output-sheet="arrangementsManager.generatePdf"
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
-      @update:model-value="arrangementsManager.optimisticUpdates($event)"
-      @change:workers="arrangementsManager.handleDraggableWorkerChangeEvent"
       @click:duplicate="duplicator.set($event)"
       @click:edit="siteOperationScheduleManager.toUpdate($event)"
       @click:edit-worker="detailEditor.set"
-      @click:notify="arrangementsManager.createNotification($event)"
-      @click:notification="arrangementsManager.setNotification"
-      @click:remove-worker="arrangementsManager.removeWorker"
       @click:add-schedule="siteOperationScheduleManager.toCreate($event)"
       @click:hide="siteOrderManager.remove($event)"
     >

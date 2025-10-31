@@ -412,6 +412,24 @@ export function useArrangementsManager({
     };
   });
 
+  const attrs = Vue.computed(() => {
+    const table = {
+      modelValue: keyMappedDocs.value,
+      from: dateRange.value.from,
+      dayCount: dayCount.value,
+      statistics: statistics.value,
+      "onClick:output-sheet": open,
+      "onUpdate:model-value": (event) => optimisticUpdates(event),
+      "onChange:workers": (event) => handleDraggableWorkerChangeEvent(event),
+      "onClick:notify": (event) => createNotification(event),
+      "onClick:notification": (event) => setNotification(event),
+      "onClick:remove-worker": (event) => removeWorker(event),
+    };
+    return {
+      table,
+    };
+  });
+
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
@@ -432,6 +450,8 @@ export function useArrangementsManager({
     availableEmployees: Vue.readonly(availableEmployees),
     availableOutsourcers: Vue.readonly(availableOutsourcers),
     notificationAttrs: Vue.readonly(notificationAttrs),
+
+    attrs,
 
     // methods
     addWorker,
