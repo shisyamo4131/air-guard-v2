@@ -12,6 +12,7 @@ import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
+import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 
 export function useArrangementsManager({
   dateRangeOption = {},
@@ -63,6 +64,7 @@ export function useArrangementsManager({
   } = useArrangementNotificationManager({ dateRange });
 
   const duplicator = useSiteOperationScheduleDuplicator(duplicatorOptions);
+  const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -421,6 +423,7 @@ export function useArrangementsManager({
       modelValue: keyMappedDocs.value,
       from: dateRange.value.from,
       dayCount: dayCount.value,
+      siteOrder: siteOrderManager.siteOrder.value,
       statistics: statistics.value,
       "onClick:output-sheet": open,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
@@ -428,6 +431,8 @@ export function useArrangementsManager({
       "onClick:notify": (event) => createNotification(event),
       "onClick:notification": (event) => setNotification(event),
       "onClick:remove-worker": (event) => removeWorker(event),
+      "onClick:hide": (event) => siteOrderManager.remove(event),
+      "onClick:duplicate": (event) => duplicator.set(event),
     };
     return {
       table,
@@ -472,5 +477,6 @@ export function useArrangementsManager({
 
     // composables
     duplicator,
+    siteOrderManager,
   };
 }

@@ -4,6 +4,7 @@
  * @description A toolbar component for arrangements manager.
  * @props modelValue - The number of days to display.
  * @emit click:workers - Emits when the workers button is clicked.
+ * @emit click:site-order - Emits when the site order button is clicked.
  * @emit update:modelValue - Emits when the number of days to display is updated.
  */
 
@@ -82,22 +83,12 @@ const handleWorkersClick = (event) => {
     <template #append>
       <v-spacer />
 
-      <slot
-        name="btn-site-order"
-        v-bind="{
-          prependIcon: 'mdi-sort',
-          text: '順序',
-          class: ['mr-3'],
-          onClick: () => emit('click:site-order'),
-        }"
-      >
-        <v-btn
-          prepend-icon="mdi-sort"
-          text="順序"
-          class="mr-3"
-          @click="emit('click:site-order')"
-        />
-      </slot>
+      <v-btn
+        prepend-icon="mdi-sort"
+        text="順序"
+        class="mr-3"
+        @click="emit('click:site-order')"
+      />
       <v-btn-toggle
         :model-value="tagSize"
         class="mr-3"

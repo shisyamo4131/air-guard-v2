@@ -1,4 +1,4 @@
-import { isProxy, toRaw, ref, computed } from "vue";
+import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -36,10 +36,10 @@ export function useSiteOperationScheduleDuplicator({
   /***************************************************************************
    * DEFINE REFS
    ***************************************************************************/
-  const schedule = ref(null);
-  const dates = ref([]);
-  const isLoading = ref(false);
-  const isActive = ref(false); // For dialog.
+  const schedule = Vue.ref(null);
+  const dates = Vue.ref([]);
+  const isLoading = Vue.ref(false);
+  const isActive = Vue.ref(false); // For dialog.
 
   /*****************************************************************************
    * METHODS (PRIVATE)
@@ -76,6 +76,13 @@ export function useSiteOperationScheduleDuplicator({
   };
 
   /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+  Vue.watchEffect(() => {
+    if (!isActive.value) _initialize();
+  });
+
+  /*****************************************************************************
    * METHODS
    *****************************************************************************/
   /**
@@ -96,7 +103,7 @@ export function useSiteOperationScheduleDuplicator({
    */
   const set = (obj) => {
     try {
-      const instance = isProxy(obj) ? toRaw(obj) : obj;
+      const instance = Vue.isProxy(obj) ? Vue.toRaw(obj) : obj;
       if (!(instance instanceof SiteOperationSchedule)) {
         throw new Error("Invalid schedule object");
       }
@@ -114,7 +121,7 @@ export function useSiteOperationScheduleDuplicator({
    * Returns whether the duplicator is in a submittable state.
    * @returns {boolean} - Whether the duplicator is submittable.
    */
-  const isSubmittable = computed(() => {
+  const isSubmittable = Vue.computed(() => {
     if (!schedule.value) return false;
     if (dates.value.length === 0) return false;
     if (dates.value.length > 20) return false;
@@ -126,7 +133,7 @@ export function useSiteOperationScheduleDuplicator({
    * Returns the binding options for the duplicator component.
    * @returns {Object} - The binding options for the duplicator component.
    */
-  const attrs = computed(() => {
+  const attrs = Vue.computed(() => {
     return {
       allowedDates: isDateAllowed,
       disableCancel: isLoading.value,
@@ -140,10 +147,10 @@ export function useSiteOperationScheduleDuplicator({
     };
   });
 
-  const dialogAttrs = computed(() => {
+  const dialogAttrs = Vue.computed(() => {
     return {
       modelValue: isActive.value,
-      "onUpdate:model-value": _initialize,
+      "onUpdate:model-value": (value) => (isActive.value = value),
       ...dialog,
     };
   });

@@ -9,12 +9,20 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
-export function useSiteOrderManager({ fetchSiteComposable } = {}) {
+export function useSiteOrderManager({
+  dialogOptions = {
+    maxWidth: "480",
+    scrollable: true,
+    persistent: true,
+  },
+  fetchSiteComposable,
+} = {}) {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
    ***************************************************************************/
   const internalSiteOrder = ref([]);
   const loading = ref(false);
+  const isActive = ref(false); // For dialog active state
 
   /***************************************************************************
    * DEFINE COMPOSABLE
@@ -48,6 +56,7 @@ export function useSiteOrderManager({ fetchSiteComposable } = {}) {
     try {
       company.siteOrder = [...internalSiteOrder.value];
       await company.update();
+      isActive.value = false;
     } catch (error) {
       logger.error({ message: error.message, error });
     } finally {
@@ -60,11 +69,19 @@ export function useSiteOrderManager({ fetchSiteComposable } = {}) {
    */
   function _cancel() {
     internalSiteOrder.value = [...company.siteOrder];
+    isActive.value = false;
   }
 
   /***************************************************************************
    * DEFINE METHODS (PUBLIC)
    ***************************************************************************/
+  /**
+   * Open the site order manager dialog.
+   */
+  function set() {
+    isActive.value = true;
+  }
+
   /**
    * Add new siteOrder.
    * @param {Object} params
@@ -153,9 +170,21 @@ export function useSiteOrderManager({ fetchSiteComposable } = {}) {
     };
   });
 
+  const dialogAttrs = computed(() => {
+    return {
+      ...dialogOptions,
+      modelValue: isActive.value,
+      "onUpdate:model-value": (value) => (isActive.value = value),
+    };
+  });
+
   return {
     siteOrder: computedSiteOrder,
     attrs,
+    dialogAttrs,
+
+    // methods
+    set,
     add,
     change,
     remove,

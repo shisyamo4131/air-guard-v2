@@ -17,7 +17,6 @@ import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOpera
 import dayjs from "dayjs";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -34,13 +33,11 @@ const commandText = ref(null);
 const arrangementsManager = useArrangementsManager({
   dateRangeOption: { endDate: dayjs().add(7, "day").toDate(), offsetDays: -1 },
 });
-const { duplicator } = arrangementsManager;
+const { duplicator, siteOrderManager } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
 
 const siteOperationScheduleManager =
   useSiteOperationScheduleManager(scheduleManager);
-
-const siteOrderManager = useSiteOrderManager();
 
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
@@ -65,20 +62,8 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <ArrangementsToolbar
       v-model="arrangementsManager.dayCount.value"
       @click:workers="toggleFloatingWindow"
+      @click:site-order="siteOrderManager.set"
     >
-      <template #btn-site-order="props">
-        <AtomsDialogsFullscreen max-width="480" scrollable persistent>
-          <template #activator="{ props: activatorProps }">
-            <v-btn v-bind="{ ...props, ...activatorProps }" />
-          </template>
-          <template #default="{ isActive }">
-            <MoleculesSiteOrderManager
-              v-bind="siteOrderManager.attrs.value"
-              @click:cancel="isActive.value = false"
-            />
-          </template>
-        </AtomsDialogsFullscreen>
-      </template>
     </ArrangementsToolbar>
 
     <!-- フローティング作業員選択ウィンドウ -->
@@ -110,18 +95,20 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <!-- スケジュール管理テーブル -->
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
-      :site-order="siteOrderManager.siteOrder.value"
       v-model:selected-date="selectedDate"
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
-      @click:duplicate="duplicator.set($event)"
       @click:edit="siteOperationScheduleManager.toUpdate($event)"
       @click:edit-worker="detailEditor.set"
       @click:add-schedule="siteOperationScheduleManager.toCreate($event)"
-      @click:hide="siteOrderManager.remove($event)"
     >
     </ArrangementsTable>
+
+    <!-- 現場並び替えダイアログ -->
+    <AtomsDialogsFullscreen v-bind="siteOrderManager.dialogAttrs.value">
+      <MoleculesSiteOrderManager v-bind="siteOrderManager.attrs.value" />
+    </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集ダイアログ -->
     <MoleculesSiteOperationScheduleManager
