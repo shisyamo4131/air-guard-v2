@@ -3,11 +3,13 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
-export function useSiteOperationScheduleManager(component = null) {
+// export function useSiteOperationScheduleManager(component = null) {
+export function useSiteOperationScheduleManager() {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
    ***************************************************************************/
   const instance = Vue.reactive(new SiteOperationSchedule());
+  const component = Vue.ref(null);
 
   /***************************************************************************
    * DEFINE COMPOSABLES
@@ -55,6 +57,7 @@ export function useSiteOperationScheduleManager(component = null) {
   /** Attributes for the component */
   const attrs = Vue.computed(() => {
     return {
+      ref: (el) => (component.value = el),
       modelValue: Vue.readonly(instance),
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),

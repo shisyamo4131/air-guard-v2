@@ -9,19 +9,17 @@
  * - Fetch 系は独立させて、それ以外のコンポーザブルは引数で Fetch 系のコンポーザブルを受け取るように統一する？
  * - provide - inject による遅延の可能性も無視できない？
  */
-import { useTemplateRef, provide } from "vue";
+import { provide } from "vue";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
 
 import dayjs from "dayjs";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 /*****************************************************************************
  * DEFINE REFS
  *****************************************************************************/
-const scheduleManager = useTemplateRef("scheduleManager");
 const selectedDate = ref(null);
 const commandText = ref(null);
 
@@ -33,11 +31,12 @@ const commandText = ref(null);
 const arrangementsManager = useArrangementsManager({
   dateRangeOption: { endDate: dayjs().add(7, "day").toDate(), offsetDays: -1 },
 });
-const { duplicator, siteOrderManager } = arrangementsManager;
+const {
+  duplicator,
+  siteOrderManager,
+  siteOperationScheduleManager: scheduleManager,
+} = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
-
-const siteOperationScheduleManager =
-  useSiteOperationScheduleManager(scheduleManager);
 
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
@@ -99,21 +98,18 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
-      @click:edit="siteOperationScheduleManager.toUpdate($event)"
       @click:edit-worker="detailEditor.set"
-      @click:add-schedule="siteOperationScheduleManager.toCreate($event)"
     >
     </ArrangementsTable>
 
     <!-- 現場並び替えダイアログ -->
     <AtomsDialogsFullscreen v-bind="siteOrderManager.dialogAttrs.value">
-      <MoleculesSiteOrderManager v-bind="siteOrderManager.attrs.value" />
+      <OrganismsSiteOrderManager v-bind="siteOrderManager.attrs.value" />
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集ダイアログ -->
-    <MoleculesSiteOperationScheduleManager
-      ref="scheduleManager"
-      v-bind="siteOperationScheduleManager.attrs.value"
+    <OrganismsSiteOperationScheduleManager
+      v-bind="scheduleManager.attrs.value"
     />
 
     <!-- スケジュール複製ダイアログ -->

@@ -13,6 +13,7 @@ import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
+import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 export function useArrangementsManager({
   dateRangeOption = {},
@@ -65,6 +66,7 @@ export function useArrangementsManager({
 
   const duplicator = useSiteOperationScheduleDuplicator(duplicatorOptions);
   const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
+  const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -433,6 +435,9 @@ export function useArrangementsManager({
       "onClick:remove-worker": (event) => removeWorker(event),
       "onClick:hide": (event) => siteOrderManager.remove(event),
       "onClick:duplicate": (event) => duplicator.set(event),
+      "onClick:edit": (event) => siteOperationScheduleManager.toUpdate(event),
+      "onClick:add-schedule": (event) =>
+        siteOperationScheduleManager.toCreate(event),
     };
     return {
       table,
@@ -478,5 +483,6 @@ export function useArrangementsManager({
     // composables
     duplicator,
     siteOrderManager,
+    siteOperationScheduleManager,
   };
 }
