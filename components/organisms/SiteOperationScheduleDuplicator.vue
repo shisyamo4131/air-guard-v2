@@ -9,7 +9,6 @@ defineOptions({ inheritAttrs: false });
 /***************************************************************************
  * DEFINE PROPS & EMITS
  ***************************************************************************/
-const dialog = defineModel({ type: Boolean, default: false });
 const props = defineProps({
   allowedDates: { type: Function, default: () => true },
   disableCancel: { type: Boolean, default: false },
@@ -27,22 +26,20 @@ const emit = defineEmits([
 </script>
 
 <template>
-  <v-dialog v-model="dialog" width="376" persistent>
-    <MoleculesCardsSubmitCancel
-      :disableCancel="loading"
-      :disableSubmit="disableSubmit"
-      :loading="loading"
-      :submit-text="submitText"
-      @click:cancel="emit('click:cancel')"
-      @click:submit="emit('click:submit')"
-    >
-      <v-date-picker
-        :model-value="selectedDates"
-        :allowed-dates="allowedDates"
-        hide-header
-        multiple
-        @update:model-value="emit('update:selected-dates', $event)"
-      />
-    </MoleculesCardsSubmitCancel>
-  </v-dialog>
+  <MoleculesCardsSubmitCancel
+    :disableCancel="loading"
+    :disableSubmit="disableSubmit"
+    :loading="loading"
+    :submit-text="submitText"
+    @click:cancel="emit('click:cancel')"
+    @click:submit="emit('click:submit')"
+  >
+    <v-date-picker
+      :model-value="selectedDates"
+      :allowed-dates="allowedDates"
+      hide-header
+      multiple
+      @update:model-value="emit('update:selected-dates', $event)"
+    />
+  </MoleculesCardsSubmitCancel>
 </template>

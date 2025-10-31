@@ -11,10 +11,12 @@ import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 
 export function useArrangementsManager({
   dateRangeOption = {},
   useDebounce = false,
+  duplicatorOptions = undefined,
 } = {}) {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
@@ -59,6 +61,8 @@ export function useArrangementsManager({
     set: setNotification,
     attrs: notificationAttrs,
   } = useArrangementNotificationManager({ dateRange });
+
+  const duplicator = useSiteOperationScheduleDuplicator(duplicatorOptions);
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -465,5 +469,8 @@ export function useArrangementsManager({
     createNotification,
     getNotification,
     setNotification,
+
+    // composables
+    duplicator,
   };
 }

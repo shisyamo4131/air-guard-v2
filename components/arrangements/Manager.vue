@@ -12,7 +12,6 @@
 import { useTemplateRef, provide } from "vue";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
 
 import dayjs from "dayjs";
@@ -35,15 +34,13 @@ const commandText = ref(null);
 const arrangementsManager = useArrangementsManager({
   dateRangeOption: { endDate: dayjs().add(7, "day").toDate(), offsetDays: -1 },
 });
+const { duplicator } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
 
 const siteOperationScheduleManager =
   useSiteOperationScheduleManager(scheduleManager);
 
 const siteOrderManager = useSiteOrderManager();
-
-/** For site operation schedule duplication */
-const duplicator = useSiteOperationScheduleDuplicator();
 
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
@@ -133,9 +130,11 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     />
 
     <!-- スケジュール複製ダイアログ -->
-    <OrganismsSiteOperationScheduleDuplicator
-      v-bind="duplicator.bindOptions.value"
-    />
+    <AtomsDialogsFullscreen v-bind="duplicator.dialogAttrs.value">
+      <OrganismsSiteOperationScheduleDuplicator
+        v-bind="duplicator.attrs.value"
+      />
+    </AtomsDialogsFullscreen>
 
     <!-- 通知ステータス更新コンポーネント -->
     <ArrangementNotificationsStatusUpdater

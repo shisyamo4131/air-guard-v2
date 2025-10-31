@@ -5,7 +5,23 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { SiteOperationSchedule } from "@/schemas";
 
+/**
+ * A Composable to manage duplicating `SiteOperationSchedule`.
+ * @param {Object} param
+ * @param {Object} param.dialog - The dialog options. Accept attributes to customize the dialog.
+ *                                Set to `falsy` to disable dialog.
+ * @param {string} param.submitText - The submit button text.
+ * @returns {Object} - The duplicator composable.
+ * @return {Object} attrs - The binding attributes for the duplicator component.
+ * @return {Object} dialogAttrs - The binding attributes for the dialog component.
+ * @return {Function} set - The method to set the schedule to duplicate.
+ */
 export function useSiteOperationScheduleDuplicator({
+  dialog = {
+    width: 376,
+    persistent: true,
+    scrollable: true,
+  },
   submitText = "複製",
 } = {}) {
   /***************************************************************************
@@ -23,6 +39,73 @@ export function useSiteOperationScheduleDuplicator({
   const schedule = ref(null);
   const dates = ref([]);
   const isLoading = ref(false);
+  const isActive = ref(false); // For dialog.
+
+  /*****************************************************************************
+   * METHODS (PRIVATE)
+   *****************************************************************************/
+  /**
+   * Initializes the state.
+   * @returns {void}
+   */
+  function _initialize() {
+    schedule.value = null;
+    dates.value = [];
+    isActive.value = false;
+  }
+
+  /**
+   * Duplicates the current schedule.
+   * - Throw error if no schedule is set.
+   * @returns {Promise<void>}
+   */
+  const _duplicate = async () => {
+    logger.clearError();
+    const loadingKey = loadingsStore.add({ text: "Duplicating schedule..." });
+    isLoading.value = true;
+    try {
+      if (!schedule.value) throw new Error("No schedule to duplicate.");
+      await schedule.value.duplicate(dates.value);
+      _initialize();
+    } catch (error) {
+      logger.error({ error });
+    } finally {
+      isLoading.value = false;
+      loadingsStore.remove(loadingKey);
+    }
+  };
+
+  /*****************************************************************************
+   * METHODS
+   *****************************************************************************/
+  /**
+   * Returns whether the given date is allowed for duplication.
+   * @param {Date} date - The date to check.
+   * @returns {boolean} - Whether the date is allowed for duplication.
+   */
+  const isDateAllowed = (date) => {
+    if (!schedule.value) return true;
+    return dayjs(date).format("YYYY-MM-DD") !== schedule.value.date;
+  };
+
+  /**
+   * Sets the schedule to duplicate.
+   * @param {Object} obj - The schedule object to duplicate.
+   * @returns {void}
+   * @throws {Error} - If the provided object is not a valid SiteOperationSchedule.
+   */
+  const set = (obj) => {
+    try {
+      const instance = isProxy(obj) ? toRaw(obj) : obj;
+      if (!(instance instanceof SiteOperationSchedule)) {
+        throw new Error("Invalid schedule object");
+      }
+      schedule.value = obj;
+      if (!!dialog) isActive.value = true;
+    } catch (error) {
+      logger.error({ error, data: obj });
+    }
+  };
 
   /*****************************************************************************
    * COMPUTED PROPERTIES
@@ -43,82 +126,31 @@ export function useSiteOperationScheduleDuplicator({
    * Returns the binding options for the duplicator component.
    * @returns {Object} - The binding options for the duplicator component.
    */
-  const bindOptions = computed(() => {
+  const attrs = computed(() => {
     return {
-      modelValue: !!schedule.value,
       allowedDates: isDateAllowed,
       disableCancel: isLoading.value,
       disableSubmit: !isSubmittable.value,
       loading: isLoading.value,
       selectedDates: dates.value,
       submitText,
-      "onUpdate:model-value": _initialize,
       "onUpdate:selected-dates": (value) => (dates.value = value),
       "onClick:cancel": _initialize,
-      // "onClick:cancel": () => {
-      //   console.log("canceled");
-      //   _initialize();
-      // },
-      "onClick:submit": duplicate,
+      "onClick:submit": _duplicate,
     };
   });
 
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
-  /**
-   * Initializes the state.
-   * @returns {void}
-   */
-  function _initialize() {
-    schedule.value = null;
-    dates.value = [];
-  }
-
-  /**
-   * Returns whether the given date is allowed for duplication.
-   * @param {Date} date - The date to check.
-   * @returns {boolean} - Whether the date is allowed for duplication.
-   */
-  const isDateAllowed = (date) => {
-    if (!schedule.value) return true;
-    return dayjs(date).format("YYYY-MM-DD") !== schedule.value.date;
-  };
-
-  const set = (obj) => {
-    try {
-      const instance = isProxy(obj) ? toRaw(obj) : obj;
-      if (!(instance instanceof SiteOperationSchedule)) {
-        throw new Error("Invalid schedule object");
-      }
-      schedule.value = obj;
-    } catch (error) {
-      logger.error({ error, data: obj });
-    }
-  };
-  /**
-   * Duplicates the current schedule.
-   * - Throw error if no schedule is set.
-   * @returns {Promise<void>}
-   */
-  const duplicate = async () => {
-    logger.clearError();
-    const loadingKey = loadingsStore.add({ text: "Duplicating schedule..." });
-    isLoading.value = true;
-    try {
-      if (!schedule.value) throw new Error("No schedule to duplicate.");
-      await schedule.value.duplicate(dates.value);
-      _initialize();
-    } catch (error) {
-      logger.error({ error });
-    } finally {
-      isLoading.value = false;
-      loadingsStore.remove(loadingKey);
-    }
-  };
+  const dialogAttrs = computed(() => {
+    return {
+      modelValue: isActive.value,
+      "onUpdate:model-value": _initialize,
+      ...dialog,
+    };
+  });
 
   return {
-    bindOptions,
+    attrs,
+    dialogAttrs,
     set,
   };
 }
