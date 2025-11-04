@@ -1,5 +1,11 @@
 # 課題
 
+- ArrangementNotification クラスのステートを整理
+- useArrangementNotifications コンポーザブルの機能を追加
+  - dateRange での取得のみでは不十分
+- useArrangementsManager を役割ごとに分割。（まとめすぎ）
+- AirItemInput のスロット名を「input.${field.key}`」にしたい。
+
 ## 原因特定困難な課題
 
 - 配置管理の初回画面ロードに時間がかかる。コンポーザブルを多用しているため、これのロードに時間がかかっているものと思われるが、

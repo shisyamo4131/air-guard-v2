@@ -9,12 +9,11 @@
  * - Fetch 系は独立させて、それ以外のコンポーザブルは引数で Fetch 系のコンポーザブルを受け取るように統一する？
  * - provide - inject による遅延の可能性も無視できない？
  */
-import { provide } from "vue";
+import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
 
-import dayjs from "dayjs";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 
 /*****************************************************************************
@@ -120,8 +119,9 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     </AtomsDialogsFullscreen>
 
     <!-- 通知ステータス更新コンポーネント -->
-    <ArrangementNotificationsStatusUpdater
-      v-bind="arrangementsManager.notificationAttrs.value"
+    <OrganismsArrangementNotificationsStatusUpdater
+      v-bind="arrangementsManager.notificationsAttrs.value"
+      hide-table
     />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->

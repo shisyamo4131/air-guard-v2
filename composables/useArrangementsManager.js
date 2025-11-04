@@ -10,14 +10,15 @@ import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useWorkersList } from "@/composables/useWorkersList";
-import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
+import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
+import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 export function useArrangementsManager({
-  dateRangeOption = {},
-  useDebounce = false,
+  dateRangeOptions = {},
+  useDebounced = false,
   duplicatorOptions = undefined,
 } = {}) {
   /***************************************************************************
@@ -36,7 +37,7 @@ export function useArrangementsManager({
     currentDayCount: dayCount,
     dateRange,
     debouncedDateRange,
-  } = useDateRange(dateRangeOption);
+  } = useDateRange(dateRangeOptions);
   const fetchSiteComposable = useFetchSite();
   const { fetchSite, cachedSites } = fetchSiteComposable;
   const fetchEmployeeComposable = useFetchEmployee();
@@ -57,12 +58,17 @@ export function useArrangementsManager({
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
   });
+
+  const arrangementNotifications = useArrangementNotifications({
+    dateRangeOptions,
+    useDebounced,
+  });
   const {
     create: createNotification,
     get: getNotification,
     set: setNotification,
-    attrs: notificationAttrs,
-  } = useArrangementNotificationManager({ dateRange });
+    attrs: notificationsAttrs,
+  } = useArrangementNotificationsManager(arrangementNotifications.docs);
 
   const duplicator = useSiteOperationScheduleDuplicator(duplicatorOptions);
   const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
@@ -86,7 +92,7 @@ export function useArrangementsManager({
    * Subscribe `SiteOperationSchedule` documents.
    */
   function _subscribe() {
-    const range = useDebounce ? dateRange.value : debouncedDateRange.value;
+    const range = useDebounced ? dateRange.value : debouncedDateRange.value;
     const { from, to } = range;
     const constraints = [
       ["where", "dateAt", ">=", from],
@@ -463,7 +469,7 @@ export function useArrangementsManager({
     statistics,
     availableEmployees: Vue.readonly(availableEmployees),
     availableOutsourcers: Vue.readonly(availableOutsourcers),
-    notificationAttrs: Vue.readonly(notificationAttrs),
+    notificationsAttrs: Vue.readonly(notificationsAttrs),
 
     attrs,
 

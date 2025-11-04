@@ -1,0 +1,106 @@
+<script setup>
+/**
+ * @file components/notifications/StatusUpdater.vue
+ * @description A component for updating arrangement notification statuses.
+ */
+import { ARRANGEMENT_NOTIFICATION_STATUS_FOR_SELECT } from "air-guard-v2-schemas/constants";
+
+/*****************************************************************************
+ * OPTIONS
+ *****************************************************************************/
+defineOptions({ inheritAttrs: false });
+
+/*****************************************************************************
+ * REACTIVE OBJECTS
+ *****************************************************************************/
+const component = useTemplateRef("component");
+
+/*****************************************************************************
+ * COMPUTED PROPERTIES
+ *****************************************************************************/
+const items = computed(() => {
+  return ARRANGEMENT_NOTIFICATION_STATUS_FOR_SELECT;
+});
+
+/*****************************************************************************
+ * EXPOSE
+ *****************************************************************************/
+defineExpose({
+  toUpdate: (args) => component.value?.toUpdate(args),
+});
+</script>
+
+<template>
+  <air-array-manager
+    v-bind="$attrs"
+    ref="component"
+    disable-delete
+    :input-props="{
+      includedKeys: ['status'],
+    }"
+  >
+    <template #input.status="{ attrs }">
+      <v-chip-group v-bind="attrs" mandatory column>
+        <v-chip
+          v-for="item of items"
+          :key="item.value"
+          :value="item.value"
+          :style="{ color: item.color }"
+          :disabled="item.disabled"
+          filter
+          label
+        >
+          {{ item.title }}
+        </v-chip>
+      </v-chip-group>
+    </template>
+    <template #after-status="{ item, updateProperties }">
+      <v-expand-transition>
+        <v-col v-if="item.isLeaved">
+          <v-row>
+            <v-col cols="12">
+              <air-time-picker-input
+                :model-value="item.actualStartTime"
+                label="上番時刻"
+                required
+                @update:model-value="
+                  updateProperties({ actualStartTime: $event })
+                "
+              />
+            </v-col>
+            <v-col cols="12">
+              <MoleculesInputsIsStartNextDay
+                :model-value="item.isStartNextDay"
+                @update:model-value="
+                  updateProperties({ isStartNextDay: $event })
+                "
+              />
+            </v-col>
+            <v-col cols="12">
+              <air-time-picker-input
+                :model-value="item.actualEndTime"
+                label="下番時刻"
+                required
+                @update:model-value="
+                  updateProperties({ actualEndTime: $event })
+                "
+              />
+            </v-col>
+            <v-col cols="12">
+              <air-number-input
+                :model-value="item.actualBreakMinutes"
+                label="休憩時間"
+                control-variant="split"
+                suffix="分"
+                required
+                @update:model-value="
+                  updateProperties({ actualBreakMinutes: $event })
+                "
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-expand-transition>
+    </template>
+  </air-array-manager>
+</template>

@@ -1,14 +1,15 @@
 <script setup>
 import dayjs from "dayjs";
 import { onMounted, onUnmounted, reactive } from "vue";
-import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
+import { SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
-import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import { useArrangementNotificationsForStatusUpdater } from "@/composables/useArrangementNotificationsForStatusUpdater";
+import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 
 /*****************************************************************************
  * DEFINE STORES
@@ -20,8 +21,6 @@ const loadingsStore = useLoadingsStore();
  *****************************************************************************/
 const model = reactive(new SiteOperationSchedule());
 const selectedDoc = ref(null);
-const notificationInstance = reactive(new ArrangementNotification());
-const notifications = ref([]);
 const loading = ref(false);
 const dialog = ref(false);
 
@@ -32,19 +31,21 @@ const logger = useLogger("register", useErrorsStore());
 const { fetchSite, cachedSites } = useFetchSite();
 const { fetchEmployee, cachedEmployees } = useFetchEmployee();
 const { fetchOutsourcer, cachedOutsourcers } = useFetchOutsourcer();
-const {
-  mappedDocs: notificationsMap,
-  attrs: notificationAttrs,
-  has: hasNotification,
-  set: setNotification,
-  isAllLeaved,
-} = useArrangementNotificationManager({
-  docs: notifications,
-});
 
 provide("cachedSites", cachedSites);
 provide("cachedEmployees", cachedEmployees);
 provide("cachedOutsourcers", cachedOutsourcers);
+
+const arrangementNotifications = useArrangementNotificationsForStatusUpdater();
+const arrangementNotificationsManager = useArrangementNotificationsManager(
+  arrangementNotifications.docs
+);
+const {
+  keyMappedDocs: notificationsMap,
+  has: hasNotification,
+  set: setNotification,
+  isAllLeaved,
+} = arrangementNotificationsManager;
 provide("notificationsMap", notificationsMap);
 
 /*****************************************************************************
@@ -68,7 +69,7 @@ const isImportable = computed(() => {
  *****************************************************************************/
 watch(selectedDoc, (newVal) => {
   if (!newVal) {
-    notificationInstance.unsubscribe();
+    arrangementNotifications.unsubscribe();
     return;
   }
 
@@ -76,7 +77,7 @@ watch(selectedDoc, (newVal) => {
   // 取得に若干の時間がかかるため、ダイアログ表示を遅延させる
   // 少しトリッキーな処理だが、将来的に警備日報の写真をロードして表示するなど
   // 時間のかかる処理を追加することになるため、一旦このままにしておく。
-  subscribeNotifications();
+  arrangementNotifications.subscribe(newVal.docId);
   const loadingsKey = loadingsStore.add("配置通知を取得中...");
   setTimeout(() => {
     loadingsStore.remove(loadingsKey);
@@ -91,7 +92,7 @@ function subscribe() {
   // Subscribe to SiteOperationSchedule that are not yet linked to an operationResultId and are dated up to yesterday
   const constraints = [
     ["where", "operationResultId", "==", null],
-    ["where", "date", "<", dayjs().format("YYYY-MM-DD")],
+    ["where", "date", "<=", dayjs().format("YYYY-MM-DD")],
     ["orderBy", "date"],
   ];
 
@@ -103,15 +104,6 @@ function subscribe() {
   };
 
   model.subscribeDocs({ constraints }, callback);
-}
-
-function subscribeNotifications() {
-  const siteOperationScheduleId = selectedDoc.value.docId;
-  notifications.value = notificationInstance.subscribeDocs({
-    constraints: [
-      ["where", "siteOperationScheduleId", "==", siteOperationScheduleId],
-    ],
-  });
 }
 
 /**
@@ -164,7 +156,6 @@ async function notify() {
 onMounted(subscribe);
 onUnmounted(() => {
   model.unsubscribe();
-  notificationInstance.unsubscribe();
 });
 </script>
 
@@ -217,8 +208,10 @@ onUnmounted(() => {
             </tbody>
           </v-table>
 
-          <!-- Arrangement Notifications Status Updater -->
-          <ArrangementNotificationsStatusUpdater v-bind="notificationAttrs" />
+          <OrganismsArrangementNotificationsStatusUpdater
+            v-bind="arrangementNotificationsManager.attrs.value"
+            hide-table
+          />
         </v-card-text>
         <v-container
           v-if="
