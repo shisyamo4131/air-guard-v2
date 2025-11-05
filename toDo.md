@@ -1,8 +1,5 @@
 # 課題
 
-- ArrangementNotification クラスのステートを整理
-- useArrangementNotifications コンポーザブルの機能を追加
-  - dateRange での取得のみでは不十分
 - useArrangementsManager を役割ごとに分割。（まとめすぎ）
 - AirItemInput のスロット名を「input.${field.key}`」にしたい。
 

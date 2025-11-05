@@ -3,7 +3,6 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
-// export function useSiteOperationScheduleManager(component = null) {
 export function useSiteOperationScheduleManager() {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS

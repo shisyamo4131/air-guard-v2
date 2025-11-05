@@ -15,6 +15,7 @@ import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
 
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
+import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -25,8 +26,6 @@ const commandText = ref(null);
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
-
-/** modify code */
 const arrangementsManager = useArrangementsManager({
   dateRangeOptions: {
     baseDate: dayjs().toDate(),
@@ -43,6 +42,9 @@ provide("arrangementsManagerComposable", arrangementsManager);
 
 const detailEditor = useSiteOperationScheduleDetailEditor();
 provide("detailEditorComposable", detailEditor);
+
+const siteOperationScheduleDetailManager =
+  useSiteOperationScheduleDetailManager();
 /************* */
 
 /** For tag size management */
@@ -101,9 +103,8 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
-      @click:edit-worker="detailEditor.set"
-    >
-    </ArrangementsTable>
+      @click:edit-worker="siteOperationScheduleDetailManager.set"
+    />
 
     <!-- 現場並び替えダイアログ -->
     <AtomsDialogsFullscreen v-bind="siteOrderManager.dialogAttrs.value">
@@ -129,7 +130,11 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
-    <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" />
+    <!-- <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" /> -->
+
+    <OrganismsSiteOperationScheduleDetailManager
+      v-bind="siteOperationScheduleDetailManager.attrs.value"
+    />
 
     <!-- 配置テキスト表示ダイアログ -->
     <v-dialog
