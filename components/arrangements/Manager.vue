@@ -12,8 +12,6 @@
 import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationScheduleDetailEditor } from "@/composables/useSiteOperationScheduleDetailEditor";
-
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
@@ -40,12 +38,8 @@ const {
 } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
 
-const detailEditor = useSiteOperationScheduleDetailEditor();
-provide("detailEditorComposable", detailEditor);
-
 const siteOperationScheduleDetailManager =
   useSiteOperationScheduleDetailManager();
-/************* */
 
 /** For tag size management */
 const tagSizeComposable = useTagSize();
@@ -106,17 +100,17 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:edit-worker="siteOperationScheduleDetailManager.set"
     />
 
-    <!-- 現場並び替えダイアログ -->
+    <!-- 現場並び替えコンポーネント -->
     <AtomsDialogsFullscreen v-bind="siteOrderManager.dialogAttrs.value">
       <OrganismsSiteOrderManager v-bind="siteOrderManager.attrs.value" />
     </AtomsDialogsFullscreen>
 
-    <!-- スケジュール編集ダイアログ -->
+    <!-- スケジュール編集コンポーネント -->
     <OrganismsSiteOperationScheduleManager
       v-bind="scheduleManager.attrs.value"
     />
 
-    <!-- スケジュール複製ダイアログ -->
+    <!-- スケジュール複製コンポーネント -->
     <AtomsDialogsFullscreen v-bind="duplicator.dialogAttrs.value">
       <OrganismsSiteOperationScheduleDuplicator
         v-bind="duplicator.attrs.value"
@@ -130,8 +124,6 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
-    <!-- <ArrangementsDetailEditor v-bind="detailEditor.bindOptions.value" /> -->
-
     <OrganismsSiteOperationScheduleDetailManager
       v-bind="siteOperationScheduleDetailManager.attrs.value"
     />
