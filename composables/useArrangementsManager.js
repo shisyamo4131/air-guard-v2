@@ -4,6 +4,8 @@ import ja from "dayjs/locale/ja";
 import { runTransaction } from "firebase/firestore";
 import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useLogger } from "../composables/useLogger";
 import { useDateRange } from "@/composables/useDateRange";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
@@ -27,6 +29,8 @@ export function useArrangementsManager({
   /***************************************************************************
    * DEFINE COMPOSABLES
    ***************************************************************************/
+  const logger = useLogger("ArrangementsManager", useErrorsStore());
+
   const { company } = useAuthStore();
   const {
     currentDayCount: dayCount,
@@ -102,9 +106,13 @@ export function useArrangementsManager({
    */
   async function moveWorker({ schedule, oldIndex, newIndex, isEmployee }) {
     if (isEmployee && newIndex > schedule.employees.length - 1) {
-      throw new Error("従業員は外注先の前に配置する必要があります。");
+      logger.error({ message: "従業員は外注先の前に配置する必要があります。" });
+      return;
     } else if (!isEmployee && newIndex <= schedule.employees.length - 1) {
-      throw new Error("外注先は従業員の後ろに配置する必要があります。");
+      logger.error({
+        message: "外注先は従業員の後ろに配置する必要があります。",
+      });
+      return;
     }
     schedule.moveWorker({ oldIndex, newIndex, isEmployee });
     await schedule.update();

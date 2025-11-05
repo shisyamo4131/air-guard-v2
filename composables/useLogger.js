@@ -29,9 +29,9 @@ export function useLogger(sender, errorsStore) {
 
     console[logType](output, ...(data ? [data] : []));
 
-    if (logType === "error" && error) {
+    if (logType === "error") {
       if (typeof errorsStore?.add === "function") {
-        errorsStore.add(error);
+        errorsStore.add(error || new Error(text));
       }
     }
   }
