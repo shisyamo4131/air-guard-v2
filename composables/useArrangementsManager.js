@@ -38,7 +38,6 @@ export function useArrangementsManager({
     dateRange,
     debouncedDateRange,
   } = useDateRange(dateRangeOptions);
-  console.log(dateRange);
   const fetchSiteComposable = useFetchSite();
   const { fetchSite, cachedSites } = fetchSiteComposable;
   const fetchEmployeeComposable = useFetchEmployee();
