@@ -12,14 +12,12 @@ import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
-import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 export function useArrangementsManager({
   dateRangeOptions = {},
   useDebounced = false,
-  duplicatorOptions = undefined,
 } = {}) {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
@@ -70,7 +68,6 @@ export function useArrangementsManager({
     attrs: notificationsAttrs,
   } = useArrangementNotificationsManager(arrangementNotifications.docs);
 
-  const duplicator = useSiteOperationScheduleDuplicator(duplicatorOptions);
   const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
   const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
@@ -440,7 +437,6 @@ export function useArrangementsManager({
       "onClick:notification": (event) => setNotification(event),
       "onClick:remove-worker": (event) => removeWorker(event),
       "onClick:hide": (event) => siteOrderManager.remove(event),
-      "onClick:duplicate": (event) => duplicator.set(event),
       "onClick:edit": (event) => siteOperationScheduleManager.toUpdate(event),
       "onClick:add-schedule": (event) =>
         siteOperationScheduleManager.toCreate(event),
@@ -487,7 +483,6 @@ export function useArrangementsManager({
     setNotification,
 
     // composables
-    duplicator,
     siteOrderManager,
     siteOperationScheduleManager,
   };

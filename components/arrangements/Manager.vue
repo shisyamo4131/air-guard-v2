@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 /*****************************************************************************
@@ -31,13 +32,14 @@ const arrangementsManager = useArrangementsManager({
     offsetDays: -1,
   },
 });
-const {
-  duplicator,
-  siteOrderManager,
-  siteOperationScheduleManager: scheduleManager,
-} = arrangementsManager;
+const { siteOrderManager, siteOperationScheduleManager: scheduleManager } =
+  arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
 
+/** For schedule duplication */
+const duplicator = useSiteOperationScheduleDuplicator();
+
+/** For schedule detail management */
 const siteOperationScheduleDetailManager =
   useSiteOperationScheduleDetailManager();
 
@@ -97,6 +99,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
+      @click:duplicate="duplicator.set"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
     />
 
