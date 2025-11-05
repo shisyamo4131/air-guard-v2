@@ -2,10 +2,17 @@
 /**
  * @file components/atoms/chips/ArrangementNotification.vue
  * @description A chip component that displays a notification status.
+ *
+ * @prop {Object} notification - The arrangement notification instance.
+ *
+ * @emits {click} - Emitted when the chip is clicked, passing the notification instance.
  */
 import { useAttrs } from "vue";
 import { ArrangementNotification } from "@/schemas";
 
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
@@ -32,9 +39,9 @@ const emit = defineEmits(["click"]);
  */
 const status = computed(() => {
   if (!props.notification) {
-    return ArrangementNotification.STATUS.TEMPORARY;
+    return ArrangementNotification.STATUSES.TEMPORARY;
   }
-  return ArrangementNotification.STATUS[props.notification.status];
+  return ArrangementNotification.STATUSES[props.notification.status];
 });
 
 /**

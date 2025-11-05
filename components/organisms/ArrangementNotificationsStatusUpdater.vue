@@ -3,12 +3,15 @@
  * @file components/notifications/StatusUpdater.vue
  * @description A component for updating arrangement notification statuses.
  */
-import { ARRANGEMENT_NOTIFICATION_STATUS_FOR_SELECT } from "air-guard-v2-schemas/constants";
+import { ArrangementNotification } from "@/schemas";
 
 /*****************************************************************************
- * OPTIONS
+ * OPTIONS & CONSTANTS
  *****************************************************************************/
 defineOptions({ inheritAttrs: false });
+const includedKeys = ["status"];
+const inputProps = { includedKeys };
+const dialogProps = { maxWidth: 368 };
 
 /*****************************************************************************
  * REACTIVE OBJECTS
@@ -19,7 +22,10 @@ const component = useTemplateRef("component");
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const items = computed(() => {
-  return ARRANGEMENT_NOTIFICATION_STATUS_FOR_SELECT;
+  const result = ArrangementNotification.STATUS_OPTIONS.filter((opt) => {
+    return opt.value !== ArrangementNotification.STATUS_TEMPORARY;
+  });
+  return result;
 });
 
 /*****************************************************************************
@@ -34,12 +40,10 @@ defineExpose({
   <air-array-manager
     v-bind="$attrs"
     ref="component"
-    disable-delete
-    :input-props="{
-      includedKeys: ['status'],
-    }"
+    :dialog-props="dialogProps"
+    :input-props="inputProps"
   >
-    <template #input.status="{ attrs }">
+    <template #status="{ attrs }">
       <v-chip-group v-bind="attrs" mandatory column>
         <v-chip
           v-for="item of items"

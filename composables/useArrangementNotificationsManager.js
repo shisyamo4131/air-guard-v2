@@ -107,6 +107,7 @@ export function useArrangementNotificationsManager(
       beforeEdit: (editMode, item) => {
         return editMode === "UPDATE";
       },
+      disableDelete: true,
       handleUpdate: (item) => _update(item),
       inputProps: {
         includedKeys,
