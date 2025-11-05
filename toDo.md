@@ -1,6 +1,7 @@
 # 課題
 
 - useArrangementsManager を役割ごとに分割。（まとめすぎ）
+- 外注先を従業員の上に持ってきたときのエラーメッセージ出力が想定外。
 - AirItemInput のスロット名を「input.${field.key}`」にしたい。
 
 ## 原因特定困難な課題
