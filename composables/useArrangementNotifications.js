@@ -25,7 +25,7 @@ export function useArrangementNotifications({
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
-  const instance = reactive(new ArrangementNotification());
+  const instance = Vue.reactive(new ArrangementNotification());
 
   /***************************************************************************
    * METHODS (PRIVATE)

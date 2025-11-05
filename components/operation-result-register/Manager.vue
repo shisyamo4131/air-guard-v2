@@ -8,7 +8,7 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
-import { useArrangementNotificationsForStatusUpdater } from "@/composables/useArrangementNotificationsForStatusUpdater";
+import { useArrangementNotificationsFilteredBySiteOperationScheduleId } from "@/composables/useArrangementNotificationsFilteredBySiteOperationScheduleId";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 
 /*****************************************************************************
@@ -36,10 +36,16 @@ provide("cachedSites", cachedSites);
 provide("cachedEmployees", cachedEmployees);
 provide("cachedOutsourcers", cachedOutsourcers);
 
-const arrangementNotifications = useArrangementNotificationsForStatusUpdater();
-const arrangementNotificationsManager = useArrangementNotificationsManager(
-  arrangementNotifications.docs
-);
+// const arrangementNotifications =
+//   useArrangementNotificationsFilteredBySiteOperationScheduleId();
+const {
+  docs: notifications,
+  subscribe: subscribeNotifications,
+  unsubscribe: unsubscribeNotifications,
+} = useArrangementNotificationsFilteredBySiteOperationScheduleId();
+
+const arrangementNotificationsManager =
+  useArrangementNotificationsManager(notifications);
 const {
   keyMappedDocs: notificationsMap,
   has: hasNotification,
@@ -61,6 +67,7 @@ const agreement = computed(() => {
 
 const isImportable = computed(() => {
   if (!selectedDoc?.value) return false;
+  if (selectedDoc.value.workers.length === 0) return true;
   return isAllLeaved(selectedDoc.value.docId);
 });
 
@@ -69,7 +76,7 @@ const isImportable = computed(() => {
  *****************************************************************************/
 watch(selectedDoc, (newVal) => {
   if (!newVal) {
-    arrangementNotifications.unsubscribe();
+    unsubscribeNotifications();
     return;
   }
 
@@ -77,7 +84,7 @@ watch(selectedDoc, (newVal) => {
   // 取得に若干の時間がかかるため、ダイアログ表示を遅延させる
   // 少しトリッキーな処理だが、将来的に警備日報の写真をロードして表示するなど
   // 時間のかかる処理を追加することになるため、一旦このままにしておく。
-  arrangementNotifications.subscribe(newVal.docId);
+  subscribeNotifications({ siteOperationScheduleId: newVal.docId });
   const loadingsKey = loadingsStore.add("配置通知を取得中...");
   setTimeout(() => {
     loadingsStore.remove(loadingsKey);
@@ -92,7 +99,7 @@ function subscribe() {
   // Subscribe to SiteOperationSchedule that are not yet linked to an operationResultId and are dated up to yesterday
   const constraints = [
     ["where", "operationResultId", "==", null],
-    ["where", "date", "<=", dayjs().format("YYYY-MM-DD")],
+    ["where", "date", "<", dayjs().format("YYYY-MM-DD")],
     ["orderBy", "date"],
   ];
 
@@ -215,7 +222,9 @@ onUnmounted(() => {
         </v-card-text>
         <v-container
           v-if="
-            selectedDoc && !hasNotification({ scheduleId: selectedDoc.docId })
+            selectedDoc &&
+            selectedDoc.workers.length > 0 &&
+            !hasNotification({ scheduleId: selectedDoc.docId })
           "
         >
           <v-banner color="error" icon="mdi-alert">

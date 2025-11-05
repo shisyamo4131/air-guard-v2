@@ -28,7 +28,11 @@ const commandText = ref(null);
 
 /** modify code */
 const arrangementsManager = useArrangementsManager({
-  dateRangeOption: { endDate: dayjs().add(7, "day").toDate(), offsetDays: -1 },
+  dateRangeOptions: {
+    baseDate: dayjs().toDate(),
+    dayCount: 7,
+    offsetDays: -1,
+  },
 });
 const {
   duplicator,
