@@ -16,6 +16,7 @@ import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
+import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -33,9 +34,10 @@ const arrangementsManager = useArrangementsManager({
     offsetDays: -1,
   },
 });
-const { siteOrderManager } = arrangementsManager;
+// const { siteOrderManager } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
 
+/** For site operation schedule management */
 const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
 /** For schedule duplication */
@@ -44,6 +46,9 @@ const duplicator = useSiteOperationScheduleDuplicator();
 /** For schedule detail management */
 const siteOperationScheduleDetailManager =
   useSiteOperationScheduleDetailManager();
+
+/** For site order management */
+const siteOrderManager = useSiteOrderManager();
 
 /** For tag size management */
 const tagSizeComposable = useTagSize();
@@ -98,6 +103,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
       v-model:selected-date="selectedDate"
+      :site-order="siteOrderManager.siteOrder.value"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
@@ -105,6 +111,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:duplicate="duplicator.set"
       @click:edit="siteOperationScheduleManager.toUpdate"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
+      @click:hide="siteOrderManager.remove"
     />
 
     <!-- 現場並び替えコンポーネント -->

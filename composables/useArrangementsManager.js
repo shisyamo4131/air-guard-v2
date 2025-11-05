@@ -12,7 +12,6 @@ import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
-import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 
 export function useArrangementsManager({
   dateRangeOptions = {},
@@ -66,8 +65,6 @@ export function useArrangementsManager({
     set: setNotification,
     attrs: notificationsAttrs,
   } = useArrangementNotificationsManager(arrangementNotifications.docs);
-
-  const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -426,7 +423,6 @@ export function useArrangementsManager({
       modelValue: keyMappedDocs.value,
       from: dateRange.value.from,
       dayCount: dayCount.value,
-      siteOrder: siteOrderManager.siteOrder.value,
       statistics: statistics.value,
       "onClick:output-sheet": open,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
@@ -434,11 +430,8 @@ export function useArrangementsManager({
       "onClick:notify": (event) => createNotification(event),
       "onClick:notification": (event) => setNotification(event),
       "onClick:remove-worker": (event) => removeWorker(event),
-      "onClick:hide": (event) => siteOrderManager.remove(event),
     };
-    return {
-      table,
-    };
+    return { table };
   });
 
   /***************************************************************************
@@ -476,8 +469,5 @@ export function useArrangementsManager({
     createNotification,
     getNotification,
     setNotification,
-
-    // composables
-    siteOrderManager,
   };
 }
