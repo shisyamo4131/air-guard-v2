@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
+import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
@@ -32,9 +33,10 @@ const arrangementsManager = useArrangementsManager({
     offsetDays: -1,
   },
 });
-const { siteOrderManager, siteOperationScheduleManager: scheduleManager } =
-  arrangementsManager;
+const { siteOrderManager } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
+
+const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
 /** For schedule duplication */
 const duplicator = useSiteOperationScheduleDuplicator();
@@ -96,10 +98,12 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
       v-model:selected-date="selectedDate"
+      @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:command="
         ($event) => (commandText = arrangementsManager.getCommandText($event))
       "
       @click:duplicate="duplicator.set"
+      @click:edit="siteOperationScheduleManager.toUpdate"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
     />
 
@@ -110,7 +114,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
     <!-- スケジュール編集コンポーネント -->
     <OrganismsSiteOperationScheduleManager
-      v-bind="scheduleManager.attrs.value"
+      v-bind="siteOperationScheduleManager.attrs.value"
     />
 
     <!-- スケジュール複製コンポーネント -->

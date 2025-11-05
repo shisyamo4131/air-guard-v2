@@ -13,7 +13,6 @@ import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 
 export function useArrangementsManager({
   dateRangeOptions = {},
@@ -69,7 +68,6 @@ export function useArrangementsManager({
   } = useArrangementNotificationsManager(arrangementNotifications.docs);
 
   const siteOrderManager = useSiteOrderManager({ fetchSiteComposable });
-  const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -437,9 +435,6 @@ export function useArrangementsManager({
       "onClick:notification": (event) => setNotification(event),
       "onClick:remove-worker": (event) => removeWorker(event),
       "onClick:hide": (event) => siteOrderManager.remove(event),
-      "onClick:edit": (event) => siteOperationScheduleManager.toUpdate(event),
-      "onClick:add-schedule": (event) =>
-        siteOperationScheduleManager.toCreate(event),
     };
     return {
       table,
@@ -484,6 +479,5 @@ export function useArrangementsManager({
 
     // composables
     siteOrderManager,
-    siteOperationScheduleManager,
   };
 }
