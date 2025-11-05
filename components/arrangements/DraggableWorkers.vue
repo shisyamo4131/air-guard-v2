@@ -8,8 +8,20 @@
  * @props {Object} schedule - A `SiteOperationSchedule` instance.
  *
  * @emits {Event} click:edit - Emitted when the edit button is clicked on a worker tag.
+ *                             Event payload: { schedule: Object, worker: Object }
+ *                             - schedule: The current SiteOperationSchedule instance
+ *                             - worker: The worker element being edited
  * @emits {Event} click:remove - Emitted when the remove button is clicked on a worker tag.
+ *                               Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
+ *                               - schedule: The current SiteOperationSchedule instance
+ *                               - workerId: The ID of the worker to remove
+ *                               - isEmployee: Whether the worker is an employee (true) or outsourcer (false)
  * @emits {Event} change - Emitted when the order of workers changes.
+ *                         Event payload: { event: Object, schedule: Object }
+ *                         - event: The vuedraggable change event
+ *                         - schedule: The current SiteOperationSchedule instance
+ * @emits {Event} click:notification - Emitted when the notification button is clicked.
+ *                                     Event payload: Forwarded from ArrangementsWorkerTag component
  */
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
