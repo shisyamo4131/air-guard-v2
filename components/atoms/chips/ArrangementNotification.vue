@@ -39,7 +39,12 @@ const emit = defineEmits(["click"]);
  */
 const status = computed(() => {
   if (!props.notification) {
-    return ArrangementNotification.STATUSES.TEMPORARY;
+    return {
+      value: "TEMPORARY",
+      label: "仮配置",
+      order: 0,
+      color: undefined,
+    };
   }
   return ArrangementNotification.STATUSES[props.notification.status];
 });

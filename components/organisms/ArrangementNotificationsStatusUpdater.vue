@@ -22,10 +22,7 @@ const component = useTemplateRef("component");
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const items = computed(() => {
-  const result = ArrangementNotification.STATUS_OPTIONS.filter((opt) => {
-    return opt.value !== ArrangementNotification.STATUS_TEMPORARY;
-  });
-  return result;
+  return ArrangementNotification.STATUS_OPTIONS;
 });
 
 /*****************************************************************************
