@@ -3,9 +3,12 @@
  * @file components/molecules/draggable/SiteOperationSchedule.vue
  * @description A component for draggable site-operation-schedules.
  *
- * @props {Array} modelValue - An array of `SiteOperationSchedule` instances.
- * @props {String} handle - Class name for vuedraggable's handle property.
- * @props {String} itemKey - Unique identifier key (default: 'docId').
+ * @prop {Array} modelValue - An array of `SiteOperationSchedule` instances.
+ * @prop {String} handle - Class name for vuedraggable's handle property.
+ * @prop {String} itemKey - Unique identifier key (default: 'docId').
+ * @prop {Object} notifications - An object containing arrangement notifications.
+ * @prop {String} siteId - The ID of the site.
+ * @prop {String} shiftType - The type of shift.
  *
  * @emits {void} update:model-value - Event to update the model value with new schedules.
  * @emits {void} change:workers - Emitted when the order of workers changes.
@@ -36,9 +39,7 @@ const schedules = defineModel({
 
 /** define props */
 const props = defineProps({
-  /** Class name for vuedraggable's handle property */
   handle: { type: String, default: ".drag-handle" },
-  /** Unique key for each item */
   itemKey: { type: String, default: "docId" },
   notifications: { type: Object, default: () => ({}) },
   siteId: { type: String, required: true },

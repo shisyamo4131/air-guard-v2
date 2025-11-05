@@ -3,7 +3,8 @@
  * @file components/molecules/draggable/SiteOperationSchedule.vue
  * @description A component for draggable site-operation-schedule.
  *
- * @props {Object} schedule - A `SiteOperationSchedule` instance.
+ * @prop {Object} notifications - An object containing arrangement notifications.
+ * @prop {Object} schedule - A `SiteOperationSchedule` instance.
  *
  * @emits {event} change:workers - Emitted when the order of workers changes.
  *                                 Event payload: { event: Object, schedule: Object }

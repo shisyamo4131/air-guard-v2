@@ -5,7 +5,8 @@
  * Since workers cannot be duplicated, if the same worker already exists,
  * the drop process is prevented and the corresponding worker is highlighted.
  *
- * @props {Object} schedule - A `SiteOperationSchedule` instance.
+ * @prop {Object} notifications - An object containing arrangement notifications.
+ * @prop {Object} schedule - A `SiteOperationSchedule` instance.
  *
  * @emits {Event} click:edit - Emitted when the edit button is clicked on a worker tag.
  *                             Event payload: { schedule: Object, worker: Object }

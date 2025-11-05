@@ -4,11 +4,14 @@
  * @description A table component for displaying arrangements.
  * It generates a table structure with headers, body, and footers based on the provided information.
  *
- * @props {Array} siteOrder - Array of site orders to display in the table.
+ * @prop {Number} dayCount - Number of days to display in the table.
+ * @prop {Date|String} from - Start date for the table, used to generate date columns.
+ * @prop {Object} modelValue - An object mapping site and shift type to arrays of `SiteOperationSchedule` instances.
+ * @prop {Object} notifications - An object containing arrangement notifications.
+ * @prop {String} selectedDate - Currently selected date, used for highlighting.
+ * @prop {Array} siteOrder - Array of site orders to display in the table.
  * `siteId` and `shiftType` are expected in each object.
- * @props {Date|String} from - Start date for the table, used to generate date columns.
- * @props {Number} dayCount - Number of days to display in the table.
- * @props {String} selectedDate - Currently selected date, used for highlighting.
+ * @prop {Object} statistics - An object containing statistics data, such as required personnel counts.
  *
  * @emits {Event} update:selected-date - Emitted when the selected date is updated.
  * @emits {Event} click:output-sheet - Emitted when the output sheet button is clicked for a date.
