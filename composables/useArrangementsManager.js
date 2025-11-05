@@ -10,8 +10,6 @@ import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useWorkersList } from "@/composables/useWorkersList";
-import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
-import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 
 export function useArrangementsManager({
   dateRangeOptions = {},
@@ -54,17 +52,6 @@ export function useArrangementsManager({
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
   });
-
-  const arrangementNotifications = useArrangementNotifications({
-    dateRangeOptions,
-    useDebounced,
-  });
-  const {
-    create: createNotification,
-    get: getNotification,
-    set: setNotification,
-    attrs: notificationsAttrs,
-  } = useArrangementNotificationsManager(arrangementNotifications.docs);
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -427,8 +414,6 @@ export function useArrangementsManager({
       "onClick:output-sheet": open,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
       "onChange:workers": (event) => handleDraggableWorkerChangeEvent(event),
-      "onClick:notify": (event) => createNotification(event),
-      "onClick:notification": (event) => setNotification(event),
       "onClick:remove-worker": (event) => removeWorker(event),
     };
     return { table };
@@ -453,7 +438,6 @@ export function useArrangementsManager({
     statistics,
     availableEmployees: Vue.readonly(availableEmployees),
     availableOutsourcers: Vue.readonly(availableOutsourcers),
-    notificationsAttrs: Vue.readonly(notificationsAttrs),
 
     attrs,
 
@@ -466,8 +450,5 @@ export function useArrangementsManager({
     optimisticUpdates,
     getCommandText,
     generatePdf: open,
-    createNotification,
-    getNotification,
-    setNotification,
   };
 }

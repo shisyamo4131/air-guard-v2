@@ -40,6 +40,7 @@ const props = defineProps({
   handle: { type: String, default: ".drag-handle" },
   /** Unique key for each item */
   itemKey: { type: String, default: "docId" },
+  notifications: { type: Object, default: () => ({}) },
   siteId: { type: String, required: true },
   shiftType: { type: String, required: true },
 });
@@ -76,6 +77,7 @@ const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
         <ArrangementsScheduleTag
           class="mb-2"
           :schedule="element"
+          :notifications="notifications"
           @change:workers="emit('change:workers', $event)"
           @click:duplicate="emit('click:duplicate', element)"
           @click:edit="emit('click:edit', element)"

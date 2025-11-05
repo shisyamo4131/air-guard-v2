@@ -30,6 +30,7 @@ import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
+  notifications: { type: Object, default: () => ({}) },
   schedule: { type: Object, required: true },
 });
 
@@ -70,6 +71,7 @@ const label = computed(() => {
     </div>
     <ArrangementsDraggableWorkers
       :schedule="schedule"
+      :notifications="notifications"
       @change="emit('change:workers', $event)"
       @click:remove="emit('click:remove-worker', $event)"
       @click:edit="emit('click:edit-worker', $event)"

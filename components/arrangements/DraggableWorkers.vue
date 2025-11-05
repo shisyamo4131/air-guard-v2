@@ -40,6 +40,7 @@ const arrangementsManager = inject("arrangementsManagerComposable");
  * DEFINE PROPS
  *****************************************************************************/
 const props = defineProps({
+  notifications: { type: Object, default: () => ({}) },
   schedule: { type: Object, required: true },
 });
 
@@ -162,10 +163,8 @@ function handleClickRemove(element) {
       <div>
         <ArrangementsWorkerTag
           :schedule="schedule"
+          :notification="notifications[element.notificationKey]"
           :worker="element"
-          :notification="
-            arrangementsManager.getNotification(element.notificationKey)
-          "
           @click:edit="handleClickEdit(element)"
           @click:notification="handleClickNotification"
           @click:remove="handleClickRemove(element)"

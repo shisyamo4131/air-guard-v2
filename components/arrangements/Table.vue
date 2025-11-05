@@ -36,6 +36,7 @@ const props = defineProps({
   dayCount: { type: Number, default: 1 },
   from: { type: [Date, String], default: () => new Date() },
   modelValue: { type: Object, default: () => ({}) },
+  notifications: { type: Object, default: () => ({}) },
   selectedDate: { type: String, default: null },
   siteOrder: { type: Array, default: () => [] },
   statistics: { type: Object, default: () => ({}) },
@@ -302,6 +303,7 @@ const matrix = computed(() => {
             >
               <ArrangementsDraggableSchedules
                 :model-value="modelValue[cell.key] || []"
+                :notifications="notifications"
                 :site-id="cell.siteId"
                 :shift-type="cell.shiftType"
                 @update:model-value="

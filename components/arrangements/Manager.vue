@@ -17,6 +17,8 @@ import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationS
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
+import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
+import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 
 /*****************************************************************************
  * DEFINE REFS
@@ -34,8 +36,19 @@ const arrangementsManager = useArrangementsManager({
     offsetDays: -1,
   },
 });
-// const { siteOrderManager } = arrangementsManager;
 provide("arrangementsManagerComposable", arrangementsManager);
+
+/** For arrangement notifications */
+const arrangementNotifications = useArrangementNotifications({
+  dateRangeOptions: {
+    baseDate: dayjs().toDate(),
+    dayCount: 7,
+    offsetDays: -1,
+  },
+});
+const arrangementNotificationsManager = useArrangementNotificationsManager(
+  arrangementNotifications.docs
+);
 
 /** For site operation schedule management */
 const siteOperationScheduleManager = useSiteOperationScheduleManager();
@@ -103,6 +116,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
       v-model:selected-date="selectedDate"
+      :notifications="arrangementNotificationsManager.keyMappedDocs.value"
       :site-order="siteOrderManager.siteOrder.value"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:command="
@@ -112,6 +126,8 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:edit="siteOperationScheduleManager.toUpdate"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
       @click:hide="siteOrderManager.remove"
+      @click:notify="arrangementNotificationsManager.create"
+      @click:notification="arrangementNotificationsManager.set"
     />
 
     <!-- 現場並び替えコンポーネント -->
@@ -133,7 +149,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 
     <!-- 通知ステータス更新コンポーネント -->
     <OrganismsArrangementNotificationsStatusUpdater
-      v-bind="arrangementsManager.notificationsAttrs.value"
+      v-bind="arrangementNotificationsManager.attrs.value"
       hide-table
     />
 
