@@ -32,11 +32,6 @@ const DRAGGABLE_ITEM_KEY = "workerId";
 defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
- * INJECT COMPOSABLES
- *****************************************************************************/
-const arrangementsManager = inject("arrangementsManagerComposable");
-
-/*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const props = defineProps({

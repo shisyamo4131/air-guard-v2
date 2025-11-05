@@ -20,7 +20,6 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * INJECT COMPOSABLES
  *****************************************************************************/
-// const { getWorker } = inject("workersListComposable");
 const { getWorker } = inject("arrangementsManagerComposable");
 const { has } = inject("timedSetComposable");
 const { current } = inject("tagSizeComposable");
