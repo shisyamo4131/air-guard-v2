@@ -53,14 +53,14 @@ export function useArrangementNotificationsManager(
     try {
       loading.value = true;
       const { status } = item;
-      if (!Object.keys(ArrangementNotification.STATUS).includes(status)) {
+      if (!Object.keys(ArrangementNotification.STATUSES).includes(status)) {
         throw new Error(`Invalid status: ${status}`);
       }
       const handler = {
-        [ArrangementNotification.STATUS.ARRANGED.key]: item.toArranged,
-        [ArrangementNotification.STATUS.CONFIRMED.key]: item.toConfirmed,
-        [ArrangementNotification.STATUS.ARRIVED.key]: item.toArrived,
-        [ArrangementNotification.STATUS.LEAVED.key]: item.toLeaved,
+        [ArrangementNotification.STATUSES.ARRANGED.value]: item.toArranged,
+        [ArrangementNotification.STATUSES.CONFIRMED.value]: item.toConfirmed,
+        [ArrangementNotification.STATUSES.ARRIVED.value]: item.toArrived,
+        [ArrangementNotification.STATUSES.LEAVED.value]: item.toLeaved,
       };
       const fn = handler[status];
       if (!fn) {
