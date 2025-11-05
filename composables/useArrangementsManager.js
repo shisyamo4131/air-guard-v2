@@ -8,12 +8,13 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
-import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
-import { useWorkersList } from "@/composables/useWorkersList";
 
 export function useArrangementsManager({
   dateRangeOptions = {},
   useDebounced = false,
+  fetchEmployeeComposable: providedFetchEmployeeComposable = null,
+  fetchOutsourcerComposable: providedFetchOutsourcerComposable = null,
+  fetchSiteComposable: providedFetchSiteComposable = null,
 } = {}) {
   /***************************************************************************
    * DEFINE REACTIVE OBJECTS
@@ -32,26 +33,14 @@ export function useArrangementsManager({
     dateRange,
     debouncedDateRange,
   } = useDateRange(dateRangeOptions);
-  const fetchSiteComposable = useFetchSite();
+  const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
   const { fetchSite, cachedSites } = fetchSiteComposable;
-  const fetchEmployeeComposable = useFetchEmployee();
+  const fetchEmployeeComposable =
+    providedFetchEmployeeComposable || useFetchEmployee();
   const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
-  const fetchOutsourcerComposable = useFetchOutsourcer();
+  const fetchOutsourcerComposable =
+    providedFetchOutsourcerComposable || useFetchOutsourcer();
   const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable;
-  const { open } = useArrangementSheetPdf({
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-    fetchSiteComposable,
-  });
-  const {
-    initialize: initializeWorkersList,
-    getWorker,
-    availableEmployees,
-    availableOutsourcers,
-  } = useWorkersList({
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  });
 
   /***************************************************************************
    * DEFINE METHODS (PRIVATE)
@@ -411,7 +400,6 @@ export function useArrangementsManager({
       from: dateRange.value.from,
       dayCount: dayCount.value,
       statistics: statistics.value,
-      "onClick:output-sheet": open,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
       "onChange:workers": (event) => handleDraggableWorkerChangeEvent(event),
       "onClick:remove-worker": (event) => removeWorker(event),
@@ -422,10 +410,6 @@ export function useArrangementsManager({
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onMounted(() => {
-    initializeWorkersList();
-  });
-
   Vue.onUnmounted(() => {
     instance.unsubscribe();
   });
@@ -436,8 +420,6 @@ export function useArrangementsManager({
     dayCount,
     keyMappedDocs,
     statistics,
-    availableEmployees: Vue.readonly(availableEmployees),
-    availableOutsourcers: Vue.readonly(availableOutsourcers),
 
     attrs,
 
@@ -445,10 +427,8 @@ export function useArrangementsManager({
     addWorker,
     moveWorker,
     removeWorker,
-    getWorker,
     handleDraggableWorkerChangeEvent,
     optimisticUpdates,
     getCommandText,
-    generatePdf: open,
   };
 }

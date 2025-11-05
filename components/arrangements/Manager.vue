@@ -12,6 +12,10 @@
 import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
@@ -19,22 +23,32 @@ import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOper
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
 import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
-
-/*****************************************************************************
- * DEFINE REFS
- *****************************************************************************/
-const selectedDate = ref(null);
-const commandText = ref(null);
+import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
+/** Fetch composables for caching. */
+const fetchEmployeeComposable = useFetchEmployee();
+const fetchOutsourcerComposable = useFetchOutsourcer();
+const fetchSiteComposable = useFetchSite();
+
+/** For workers list */
+const { getWorker, availableEmployees, availableOutsourcers } = useWorkersList({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+});
+provide("getWorker", getWorker); // Use in WorkerTag.vue
+
 const arrangementsManager = useArrangementsManager({
   dateRangeOptions: {
     baseDate: dayjs().toDate(),
     dayCount: 7,
     offsetDays: -1,
   },
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
 });
 provide("arrangementsManagerComposable", arrangementsManager);
 
@@ -71,6 +85,19 @@ provide("tagSizeComposable", tagSizeComposable);
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
+/** For arrangement sheet PDF generation */
+const { open } = useArrangementSheetPdf({
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
+});
+
+/*****************************************************************************
+ * DEFINE REACTIVE OBJECTS
+ *****************************************************************************/
+const selectedDate = ref(null);
+const commandText = ref(null);
+
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
@@ -89,8 +116,8 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
       <MoleculesWorkerSelector
-        :employees="arrangementsManager.availableEmployees.value"
-        :outsourcers="arrangementsManager.availableOutsourcers.value"
+        :employees="availableEmployees"
+        :outsourcers="availableOutsourcers"
       >
         <template #employee="{ rawElement }">
           <MoleculesTagBase
@@ -128,6 +155,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
       @click:hide="siteOrderManager.remove"
       @click:notify="arrangementNotificationsManager.create"
       @click:notification="arrangementNotificationsManager.set"
+      @click:output-sheet="open"
     />
 
     <!-- 現場並び替えコンポーネント -->
