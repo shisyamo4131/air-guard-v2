@@ -18,6 +18,8 @@ export default defineNuxtConfig({
     transpile: ["vuetify"], // vuetify 設定
   },
 
+  css: ["@/assets/css/utilities.css"],
+
   modules: [
     // vuetify 設定
     (_options, nuxt) => {

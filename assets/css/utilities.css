@@ -1,0 +1,27 @@
+/* VList情報表示用のCSS変数 */
+.v-list--info-display {
+  --v-list-item-title-color: rgba(var(--v-theme-on-surface), 0.6);
+  --v-list-item-title-size: 0.75rem;
+  --v-list-item-title-weight: 400;
+  --v-list-item-title-spacing: 0.0333333333em;
+
+  --v-list-item-subtitle-color: rgba(var(--v-theme-on-surface), 1);
+  --v-list-item-subtitle-size: 0.875rem;
+  --v-list-item-subtitle-weight: 400;
+  --v-list-item-subtitle-spacing: 0.0178571429em;
+}
+
+.v-list--info-display .v-list-item-title {
+  color: var(--v-list-item-title-color) !important;
+  font-size: var(--v-list-item-title-size);
+  font-weight: var(--v-list-item-title-weight);
+  letter-spacing: var(--v-list-item-title-spacing);
+}
+
+.v-list--info-display .v-list-item-subtitle {
+  color: var(--v-list-item-subtitle-color) !important;
+  opacity: 1;
+  font-size: var(--v-list-item-subtitle-size);
+  font-weight: var(--v-list-item-subtitle-weight);
+  letter-spacing: var(--v-list-item-subtitle-spacing);
+}
