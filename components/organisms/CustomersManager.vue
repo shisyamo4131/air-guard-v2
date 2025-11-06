@@ -12,5 +12,5 @@ const { attrs } = useCustomersManager();
 </script>
 
 <template>
-  <air-array-manager v-bind="attrs"> </air-array-manager>
+  <air-array-manager v-bind="attrs" />
 </template>

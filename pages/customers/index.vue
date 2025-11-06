@@ -6,7 +6,7 @@
 </script>
 
 <template>
-  <v-container>
-    <OrganismsCustomersManager />
-  </v-container>
+  <TemplatesFixedHeightContainer>
+    <OrganismsCustomersManager class="fill-height" />
+  </TemplatesFixedHeightContainer>
 </template>
