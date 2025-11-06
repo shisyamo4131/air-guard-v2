@@ -9,9 +9,13 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "./useLogger";
 import { Site } from "@/schemas";
 
+// Constraints to fetch only active sites.
+const statusOption = ["where", "status", "==", Site.STATUS_ACTIVE];
+
+// Default sorting by customer code in descending order.
+const sortBy = [{ key: "code", order: "desc" }];
+
 /***************************************************************************
- * A composable to manage sites.
- *
  * @function useSitesManager
  * @version 1.0.0
  * @returns {Object} attrs - The attributes for the sites manager.
@@ -28,21 +32,21 @@ export function useSitesManager() {
   /***************************************************************************
    * COMPOSABLES
    ***************************************************************************/
-  const { error, clearError } = useLogger("SitesManager", useErrorsStore());
+  const logger = useLogger("SitesManager", useErrorsStore());
   const router = useRouter();
 
   /***************************************************************************
    * METHODS
    ***************************************************************************/
-  function subscribe() {
+  function _subscribe() {
+    logger.clearError();
     try {
       loading.value = true;
-      const statusOption = ["where", "status", "==", Site.STATUS_ACTIVE];
       const constraints = search.value ? search.value : [statusOption];
       const options = search.value ? [statusOption] : [];
       instance.subscribeDocs({ constraints, options });
     } catch (error) {
-      error({ error, message: "Failed to fetch sites." });
+      logger.error({ error, message: "Failed to fetch sites." });
     } finally {
       loading.value = false;
     }
@@ -51,8 +55,11 @@ export function useSitesManager() {
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(subscribe);
+  Vue.watchEffect(_subscribe);
 
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
   const attrs = Vue.computed(() => {
     return {
       modelValue: instance.docs,
@@ -63,15 +70,10 @@ export function useSitesManager() {
         return false;
       },
       delay: 300,
-      inputProps: {
-        excludedKeys: ["agreements"],
-      },
+      inputProps: { excludedKeys: ["agreements"] },
       schema: Site,
       search: search.value,
-      tableProps: {
-        customFilter: () => true,
-        sortBy: [{ key: "code", order: "desc" }],
-      },
+      tableProps: { customFilter: () => true, sortBy },
       onCreate: ($event) => router.push(`sites/${$event.docId}`),
       "onUpdate:search": (val) => (search.value = val),
       onError: (e) => error({ error: e }),
@@ -84,8 +86,11 @@ export function useSitesManager() {
    ***************************************************************************/
   Vue.onUnmounted(() => instance.unsubscribe());
 
+  /***************************************************************************
+   * RETURN VALUES
+   ***************************************************************************/
   return {
     attrs,
-    docs: computed(() => instance.docs),
+    docs: Vue.readonly(instance.docs),
   };
 }

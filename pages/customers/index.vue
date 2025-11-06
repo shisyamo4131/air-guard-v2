@@ -1,7 +1,8 @@
 <script setup>
 /**
  * @file pages/settings/customers.vue
- * @description 取引先管理画面
+ * @description Customer management page
+ * @author shisyamo4131
  */
 </script>
 

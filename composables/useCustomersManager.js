@@ -1,5 +1,6 @@
 /**
  * @file composables/useCustomersManager.js
+ * @description A composable to manage customers.
  * @author shisyamo4131
  */
 import * as Vue from "vue";

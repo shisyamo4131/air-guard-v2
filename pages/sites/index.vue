@@ -1,12 +1,13 @@
 <script setup>
 /**
  * @file pages/settings/sites.vue
- * @description 現場管理画面
+ * @description Site management page
+ * @author shisyamo4131
  */
 </script>
 
 <template>
-  <v-container>
-    <OrganismsSitesManager />
-  </v-container>
+  <TemplatesFixedHeightContainer>
+    <OrganismsSitesManager class="fill-height" />
+  </TemplatesFixedHeightContainer>
 </template>

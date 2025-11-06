@@ -2,15 +2,15 @@
 /**
  * @file components/organisms/SitesManager.vue
  * @description A component to manage sites.
+ * @author shisyamo4131
  */
 import { useSitesManager } from "@/composables/useSitesManager";
-
 /*****************************************************************************
- * DEFINE COMPOSABLES
+ * COMPOSABLES
  *****************************************************************************/
 const { attrs } = useSitesManager();
 </script>
 
 <template>
-  <air-array-manager v-bind="attrs"> </air-array-manager>
+  <air-array-manager v-bind="attrs" />
 </template>
