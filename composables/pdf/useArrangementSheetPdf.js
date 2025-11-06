@@ -7,8 +7,6 @@
  */
 import dayjs from "dayjs";
 import ja from "dayjs/locale/ja";
-import pdfMake from "pdfmake/build/pdfmake";
-import vfs from "@/utils/fonts/vfs_fonts";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SiteOperationSchedule } from "@/schemas";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
@@ -144,19 +142,6 @@ const fetchData = async (date, options) => {
   });
 
   return result;
-};
-
-/*****************************************************************************
- * VFSとフォント定義の設定
- *****************************************************************************/
-pdfMake.vfs = vfs;
-pdfMake.fonts = {
-  NotoSansJP: {
-    normal: "NotoSansJP-Regular.ttf",
-    bold: "NotoSansJP-Bold.ttf",
-    italics: "NotoSansJP-Regular.ttf",
-    bolditalics: "NotoSansJP-Bold.ttf",
-  },
 };
 
 /*****************************************************************************
@@ -363,6 +348,34 @@ function splitWorkers(data, maxWorkers = WORKER_COLUMN_COUNT) {
 }
 
 /*****************************************************************************
+ * VFSフォントデータの読み込み（遅延読み込み用）
+ *****************************************************************************/
+let pdfInitialized = false;
+
+async function initializePdf() {
+  if (pdfInitialized) return;
+
+  // 動的インポートで遅延読み込み
+  const [pdfMake, vfs] = await Promise.all([
+    import("pdfmake/build/pdfmake"),
+    import("@/utils/fonts/vfs_fonts"),
+  ]);
+
+  pdfMake.default.vfs = vfs.default;
+  pdfMake.default.fonts = {
+    NotoSansJP: {
+      normal: "NotoSansJP-Regular.ttf",
+      bold: "NotoSansJP-Bold.ttf",
+      italics: "NotoSansJP-Regular.ttf",
+      bolditalics: "NotoSansJP-Bold.ttf",
+    },
+  };
+
+  pdfInitialized = true;
+  return pdfMake.default;
+}
+
+/*****************************************************************************
  * コンポーザブル定義
  *****************************************************************************/
 export function useArrangementSheetPdf({
@@ -379,6 +392,9 @@ export function useArrangementSheetPdf({
   const { company } = useAuthStore();
 
   const open = async (date) => {
+    // 実際に使用する時点で初期化
+    const pdfMake = await initializePdf();
+
     const fetchedData = await fetchData(date, {
       fetchEmployeeComposable,
       fetchOutsourcerComposable,
