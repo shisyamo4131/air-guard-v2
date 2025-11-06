@@ -80,7 +80,7 @@ const tableProps = computed(() => {
         </MoleculesAgreementSelector>
       </v-col>
     </template>
-    <template #isStartNextDay="{ attrs }">
+    <template #input.isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">

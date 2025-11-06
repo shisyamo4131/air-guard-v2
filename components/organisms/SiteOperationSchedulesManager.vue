@@ -80,13 +80,13 @@ function onClickEvent(nativeEvent, { event }) {
         </v-card-text>
       </v-card>
     </template>
-    <template #shiftType="{ attrs }">
+    <template #input.shiftType="{ attrs }">
       <v-radio-group v-bind="attrs" inline>
         <v-radio label="日勤" value="DAY" />
         <v-radio label="夜勤" value="NIGHT" />
       </v-radio-group>
     </template>
-    <template #isStartNextDay="{ attrs }">
+    <template #input.isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
   </air-array-manager>

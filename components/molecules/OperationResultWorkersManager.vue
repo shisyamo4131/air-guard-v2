@@ -188,7 +188,7 @@ async function handleCreate(item) {
         </template>
       </air-data-table>
     </template>
-    <template #id="{ attrs, editMode }">
+    <template #input.id="{ attrs, editMode }">
       <air-autocomplete-api
         v-bind="attrs"
         :api="isEmployee ? searchEmployees : searchOutsourcers"
@@ -201,7 +201,7 @@ async function handleCreate(item) {
         required
       />
     </template>
-    <template #isStartNextDay="{ attrs }">
+    <template #input.isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
   </air-array-manager>

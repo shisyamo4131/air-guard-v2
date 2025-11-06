@@ -17,7 +17,7 @@ defineExpose({
 
 <template>
   <air-item-manager ref="component">
-    <template #isStartNextDay="{ attrs }">
+    <template #input.isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
   </air-item-manager>
