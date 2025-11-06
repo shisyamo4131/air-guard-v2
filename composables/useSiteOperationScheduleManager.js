@@ -22,7 +22,7 @@ export function useSiteOperationScheduleManager() {
    * DEFINE METHODS (PRIVATE)
    ***************************************************************************/
   function _subscribe(docId) {
-    instance.subscribeToDoc({ docId });
+    instance.subscribeDoc({ docId });
   }
 
   /***************************************************************************
