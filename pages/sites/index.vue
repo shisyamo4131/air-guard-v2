@@ -4,10 +4,16 @@
  * @description Site management page
  * @author shisyamo4131
  */
+import { useSitesManager } from "@/composables/useSitesManager";
+
+/*****************************************************************************
+ * COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useSitesManager();
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <OrganismsSitesManager class="fill-height" />
+    <OrganismsSitesManager class="fill-height" v-bind="attrs" />
   </TemplatesFixedHeightContainer>
 </template>

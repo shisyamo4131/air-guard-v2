@@ -1,7 +1,7 @@
 <script setup>
 /**
- * @file components/organisms/SitesManager.vue
- * @description A component to manage sites.
+ * @file components/organisms/SiteManager.vue
+ * @description A component to manage site.
  * @author shisyamo4131
  */
 </script>
@@ -13,3 +13,5 @@
     </template>
   </air-item-manager>
 </template>
+
+<style scoped></style>

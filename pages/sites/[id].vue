@@ -1,47 +1,74 @@
 <script setup>
 /**
  * @file ./pages/sites/[id].vue
- * @description 現場情報詳細ページ
- * - ルートパラメータ [id] は Sites コレクションのドキュメント id
- * - ドキュメント id をもとに Site クラスからドキュメント情報を取得して表示
+ * @description Site detail page
+ * @author shisyamo4131
  */
-import { reactive, onMounted, onUnmounted } from "vue";
 import { useRoute } from "vue-router";
-import { Site } from "~/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useSiteManager } from "@/composables/useSiteManager";
 
-/** define-stores */
 const auth = useAuthStore();
-
 const route = useRoute();
 const siteId = route.params.id;
-const model = reactive(new Site());
 
-/*****************************************************************************
- * LIFE CYCLE HOOKS
- *****************************************************************************/
-onMounted(async () => {
-  await model.subscribe({ docId: siteId });
-});
-
-onUnmounted(() => {
-  model.unsubscribe();
+const { instance, attrs } = useSiteManager({ docId: siteId });
+const items = computed(() => {
+  return [
+    {
+      title: "CODE",
+      props: { subtitle: instance.code, prependIcon: "mdi-code-tags" },
+    },
+    {
+      title: "住所",
+      props: {
+        subtitle: `${instance.zipcode} ${instance.fullAddress}`,
+        prependIcon: "mdi-map-marker",
+      },
+    },
+    {
+      title: "建物名",
+      props: {
+        subtitle: instance.building || "-",
+        prependIcon: "mdi-office-building-marker",
+      },
+    },
+    {
+      title: "取引先",
+      props: {
+        subtitle: instance.customer?.name || "loading",
+        prependIcon: "mdi-domain",
+      },
+    },
+    {
+      title: "備考",
+      props: {
+        subtitle: instance.remarks || "-",
+        prependIcon: "mdi-comment-text",
+        lines: "two",
+      },
+    },
+  ];
 });
 </script>
 <template>
   <v-container>
     <v-toolbar class="mb-4" density="compact">
       <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
-      <v-toolbar-title>{{ model.name }}</v-toolbar-title>
+      <v-toolbar-title>{{ instance.name }}</v-toolbar-title>
     </v-toolbar>
     <v-row>
       <v-col cols="12" md="4">
-        <MoleculesSiteManager
-          :model-value="model"
-          :input-props="{
-            excludedKeys: ['agreements'],
-          }"
-        />
+        <OrganismsSiteManager v-bind="attrs">
+          <template #default="{ toUpdate }">
+            <v-card border flat>
+              <v-list class="v-list--info-display" slim :items="items" />
+              <v-card-actions>
+                <v-btn color="primary" block @click="toUpdate()">編集</v-btn>
+              </v-card-actions>
+            </v-card>
+          </template>
+        </OrganismsSiteManager>
       </v-col>
       <v-col cols="12" md="8">
         <OrganismsSiteOperationSchedulesManager :site-id="siteId" />
@@ -49,9 +76,9 @@ onUnmounted(() => {
       <v-col>
         <v-card>
           <MoleculesAgreementsManager
-            v-model="model.agreements"
+            v-model="instance.agreements"
             :default-agreements="auth.company.agreements"
-            @submit:complete="model.update()"
+            @submit:complete="instance.update()"
           />
         </v-card>
       </v-col>

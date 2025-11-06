@@ -1,5 +1,6 @@
 # 課題
 
+- useSiteOperationSchedulesManager を改修 ⇒ site/[id].vue に反映
 - useArrangementsManager を役割ごとに分割。（まとめすぎ）
 - 配置管理で表示されていない現場のスケジュールが登録できない。
 
