@@ -1,6 +1,5 @@
 /**
  * @file composables/useCustomersManager.js
- * @description A composable to manage customers.
  * @author shisyamo4131
  */
 import * as Vue from "vue";
@@ -8,14 +7,19 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "../composables/useLogger";
 import { Customer } from "@/schemas";
 
-/***************************************************************************
- * A composable to manage customers.
- *
+// Constraints to fetch only active customers.
+const statusOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
+
+// Default sorting by customer code in descending order.
+const sortBy = [{ key: "code", order: "desc" }];
+
+/*****************************************************************************
  * @function useCustomersManager
+ * @description A composable to manage customers.
  * @version 1.0.0
  * @returns {Object} attrs - The attributes for the customers manager.
  * @returns {Array} docs - The array of customer documents.
- ***************************************************************************/
+ *****************************************************************************/
 export function useCustomersManager() {
   /***************************************************************************
    * REACTIVE OBJECTS
@@ -27,25 +31,20 @@ export function useCustomersManager() {
   /***************************************************************************
    * COMPOSABLES
    ***************************************************************************/
-  const { error, clearError } = useLogger("CustomersManager", useErrorsStore());
+  const logger = useLogger("CustomersManager", useErrorsStore());
 
   /***************************************************************************
-   * METHODS
+   * METHODS (PRIVATE)
    ***************************************************************************/
-  function subscribe() {
+  function _subscribe() {
+    logger.clearError();
     try {
       loading.value = true;
-      const statusOption = [
-        "where",
-        "contractStatus",
-        "==",
-        Customer.STATUS_ACTIVE,
-      ];
       const constraints = search.value ? search.value : [statusOption];
       const options = search.value ? [statusOption] : [];
       instance.subscribeDocs({ constraints, options });
     } catch (error) {
-      error({ error, message: "Failed to fetch customers." });
+      logger.error({ error, message: "Failed to fetch customers." });
     } finally {
       loading.value = false;
     }
@@ -54,8 +53,12 @@ export function useCustomersManager() {
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(subscribe);
+  Vue.watchEffect(_subscribe);
 
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
+  /** Attributes for the customers manager. */
   const attrs = Vue.computed(() => {
     return {
       modelValue: instance.docs,
@@ -63,12 +66,10 @@ export function useCustomersManager() {
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
       delay: 300,
+      loading: loading.value,
       schema: Customer,
       search: search.value,
-      tableProps: {
-        customFilter: () => true,
-        sortBy: [{ key: "code", order: "desc" }],
-      },
+      tableProps: { customFilter: () => true, sortBy },
       "onUpdate:search": (val) => (search.value = val),
       onError: (e) => error({ error: e }),
       "onError:clear": clearError,
@@ -80,8 +81,11 @@ export function useCustomersManager() {
    ***************************************************************************/
   Vue.onUnmounted(() => instance.unsubscribe());
 
+  /***************************************************************************
+   * RETURN VALUES
+   ***************************************************************************/
   return {
     attrs,
-    docs: computed(() => instance.docs),
+    docs: Vue.readonly(instance.docs),
   };
 }
