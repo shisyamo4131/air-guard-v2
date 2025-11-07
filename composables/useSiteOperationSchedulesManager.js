@@ -1,188 +1,147 @@
-/**
- * @file useSiteOperationSchedulesManager.js
- * @description Composable for managing site operation schedules.
- * This composable provides `subscribe` method for listening to `SiteOperationSchedule` documents.
- * - If the `fetchEmployee` composable is provided, it will automatically fetch employee data related to the retrieved `SiteOperationSchedule` documents.
- * - If the `fetchOutsourcer` composable is provided, it will automatically fetch outsourcer data related to the retrieved `SiteOperationSchedule` documents.
- * @param {Object} options - Configuration options.
- * @param {Object} [options.manager] - Manager instance for schedule operations.
- * @param {Object} [options.fetchEmployeeComposable] - Custom composable for fetching employees.
- * @param {Object} [options.fetchOutsourcerComposable] - Custom composable for fetching outsourcers.
- */
+/***************************************************************************
+ * Site Operation Schedules Manager Composable ver 1.0.0
+ * @description A composable to manage SiteOperationSchedule instances
+ *              within a specified date range and optional siteId.
+ * @author shisyamo4131
+ ***************************************************************************/
 import * as Vue from "vue";
+import { SiteOperationSchedule } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
-import { useDateRange } from "@/composables/useDateRange";
-import { Site, SiteOperationSchedule } from "@/schemas";
-import dayjs from "dayjs";
 
-/** Messages */
-const MANAGER_NOT_PROVIDED =
-  "Manager should be provided to useSiteOperationSchedulesManager.";
-const INVALID_SITE_ID =
-  "Invalid `siteId` provided for useSiteOperationSchedulesManager.";
+/**
+ * @param {Object} options - Options for the composable
+ * @param {Object} options.dateRangeComposable - An instance of useDateRange composable
+ * @param {boolean} options.useDebounced - Whether to use debounced date range (default: false)
+ *
+ * @returns {Object} - The site operation schedules manager composable
+ * @returns {Array} docs - Array of SiteOperationSchedule documents
+ * @returns {Object} attrs - Computed attributes for the site operation schedules component
+ * @returns {Array} events - Array of event objects derived from the schedules
+ * @returns {Function} set - Method to set SiteOperationSchedule to update.
+ * @returns {Function} toCreate - Method to trigger create operation
+ * @returns {Function} toUpdate - Method to trigger update operation
+ * @returns {Function} toDelete - Method to trigger delete operation
+ */
 export function useSiteOperationSchedulesManager({
-  manager,
-  siteId,
-  from = dayjs(new Date()).startOf("month").toDate(),
-  to = dayjs(new Date()).endOf("month").toDate(),
+  dateRangeComposable,
+  useDebounced = false,
 } = {}) {
-  /***************************************************************************
-   * DEFINE COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger(
-    "useSiteOperationSchedulesManager",
-    useErrorsStore()
-  );
-  const { dateRange, debouncedDateRange } = useDateRange({
-    baseDate: from,
-    endDate: to,
-  });
-
   /***************************************************************************
    * VALIDATION
    ***************************************************************************/
-  const validatedManager = Vue.computed(() => {
-    const val = Vue.toValue(manager);
-    if (!val) {
-      logger.warn({ message: MANAGER_NOT_PROVIDED });
-      return null;
-    }
-    return val;
-  });
-
-  const validatedSiteId = Vue.computed(() => {
-    const val = Vue.toValue(siteId);
-    if (!val || !(typeof val === "string")) {
-      logger.warn({ message: INVALID_SITE_ID });
-      return null;
-    }
-    return val;
-  });
+  if (!dateRangeComposable) {
+    throw new Error("dateRangeComposable is required");
+  }
 
   /***************************************************************************
-   * DEFINE REFS
+   * REACTIVE OBJECTS
    ***************************************************************************/
+  const siteId = Vue.ref(null);
   const instance = Vue.reactive(new SiteOperationSchedule());
-  const docs = Vue.ref([]); // Subscribed documents.
-  const site = Vue.reactive(new Site());
+  const component = Vue.ref(null);
+
+  /***************************************************************************
+   * STORES & COMPOSABLES
+   ***************************************************************************/
+  const logger = useLogger("SiteOperationSchedulesManager", useErrorsStore());
+
+  /***************************************************************************
+   * METHODS (PRIVATE)
+   ***************************************************************************/
+  /**
+   * Subscribe to SiteOperationSchedule documents based on date range and siteId.
+   * - siteId is optional; if not provided, all sites are considered.
+   * @returns {void}
+   */
+  function _subscribe() {
+    const dateRange = useDebounced
+      ? dateRangeComposable.debouncedDateRange.value
+      : dateRangeComposable.dateRange.value;
+    const { from, to } = dateRange;
+    if (!from || !to) return;
+    const constraints = [
+      ["where", "dateAt", ">=", from],
+      ["where", "dateAt", "<=", to],
+    ];
+    if (siteId.value) {
+      constraints.push(["where", "siteId", "==", siteId.value]);
+    }
+    instance.subscribeDocs({ constraints });
+  }
+
+  /***************************************************************************
+   * METHODS (PUBLIC)
+   ***************************************************************************/
+  function set({ siteId: inputSiteId } = {}) {
+    if (inputSiteId !== undefined) {
+      siteId.value = Vue.unref(inputSiteId);
+    }
+    _subscribe();
+  }
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(_subscribe);
-
-  Vue.watch(
-    validatedSiteId,
-    (newVal) => {
-      newVal ? site.fetch({ docId: newVal }) : site.initialize();
-    },
-    { immediate: true }
-  );
+  const targetDateRange = useDebounced
+    ? dateRangeComposable.debouncedDateRange
+    : dateRangeComposable.dateRange;
+  Vue.watch(targetDateRange, _subscribe);
 
   /***************************************************************************
-   * LIFECYCLE HOOKS
+   * COMPUTED PROPERTIES
    ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
-  });
-
-  /***************************************************************************
-   * PRIVATE METHODS
-   ***************************************************************************/
-  function _subscribe() {
-    try {
-      if (!validatedSiteId.value) {
-        docs.value = [];
-        logger.warn({
-          message: "Invalid siteId",
-          data: {
-            siteId: validatedSiteId.value,
-          },
-        });
-        return;
+  /** Attributes for the component */
+  const attrs = Vue.computed(() => {
+    const beforeEdit = (_, item) => {
+      if (siteId.value) {
+        item.siteId = siteId.value;
       }
-      const { from, to } = debouncedDateRange.value;
-      docs.value = instance.subscribeDocs({
-        constraints: [
-          ["where", "siteId", "==", validatedSiteId.value],
-          ["where", "dateAt", ">=", from],
-          ["where", "dateAt", "<=", to],
-        ],
-      });
-    } catch (error) {
-      logger.error({
-        message: "Failed to subscribe to documents",
-        error,
-      });
-    }
-  }
-  /***************************************************************************
-   * METHODS FOR PROVIDE
-   ***************************************************************************/
-  const toCreate = (schedule) => {
-    try {
-      return validatedManager.value?.toCreate?.(schedule);
-    } catch (error) {
-      logger.error({
-        message: "Failed to create schedule",
-        error,
-      });
-    }
-  };
-
-  const toUpdate = (schedule) => {
-    try {
-      return validatedManager.value?.toUpdate?.(schedule);
-    } catch (error) {
-      logger.error({
-        message: "Failed to update schedule",
-        error,
-      });
-    }
-  };
-
-  const toDelete = (schedule) => {
-    try {
-      return validatedManager.value?.toDelete?.(schedule);
-    } catch (error) {
-      logger.error({
-        message: "Failed to delete schedule",
-        error,
-      });
-    }
-  };
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES FOR PROVIDE
-   ***************************************************************************/
-  const events = Vue.computed(() => {
-    return docs.value.map((doc) => doc.toEvent());
-  });
-
-  const statistics = Vue.computed(() => {
-    const requiredPersonnel = docs.value.reduce((acc, schedule) => {
-      if (!acc[schedule.date]) acc[schedule.date] = 0;
-      acc[schedule.date] += schedule.requiredPersonnel || 0;
-      return acc;
-    }, {});
-
+    };
     return {
-      requiredPersonnel,
+      ref: (el) => (component.value = el),
+      modelValue: instance.docs,
+      schema: SiteOperationSchedule,
+      beforeEdit,
+      inputProps: {
+        excludedKeys: ["siteId", "employees", "outsourcers"],
+      },
+      handleCreate: (item) => item.create(),
+      handleUpdate: (item) => item.update(),
+      handleDelete: (item) => item.delete(),
+      onError: (error) => logger.error({ error }),
+      "onError:clear": () => logger.clearError(),
     };
   });
 
-  return {
-    // data
-    docs,
-    events,
-    dateRange,
-    site,
-    statistics,
+  /**
+   * Mapped documents by their docId
+   */
+  const keyMappedDocs = Vue.computed(() => {
+    return instance.docs.reduce((acc, doc) => {
+      acc[doc.docId] = doc;
+      return acc;
+    }, {});
+  });
 
-    // Methods for managing schedules provided by the manager.
-    toCreate,
-    toUpdate,
-    toDelete,
+  /** Mapped events object */
+  const events = Vue.computed(() => {
+    return instance.docs.map((doc) => doc.toEvent());
+  });
+
+  /***************************************************************************
+   * RETURN OBJECT
+   ***************************************************************************/
+  return {
+    docs: Vue.readonly(instance.docs),
+    keyMappedDocs: Vue.readonly(keyMappedDocs),
+    events: Vue.readonly(events),
+
+    attrs: Vue.readonly(attrs),
+
+    set,
+    toCreate: (item) => component?.value?.toCreate?.(item),
+    toUpdate: (item) => component?.value?.toUpdate?.(item),
+    toDelete: (item) => component?.value?.toDelete?.(item),
   };
 }

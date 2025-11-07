@@ -1,62 +1,67 @@
+/*****************************************************************************
+ * Site Manager Composable ver 1.0.0
+ * @description A composable to manage Site instance.
+ * @author shisyamo4131
+ *****************************************************************************/
 import * as Vue from "vue";
 import { Site } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
-export function useSiteManager({ docId: providedDocId } = {}) {
+/**
+ * @returns {Object} - The site manager composable
+ * @returns {Object} doc - Reactive Site instance
+ * @returns {Object} attrs - Computed attributes for the site component
+ * @returns {Function} set - Method to set docId to subscribe.
+ * @returns {Function} toCreate - Method to trigger create operation
+ * @returns {Function} toUpdate - Method to trigger update operation
+ * @returns {Function} toDelete - Method to trigger delete operation
+ */
+export function useSiteManager() {
   /***************************************************************************
-   * DEFINE REACTIVE OBJECTS
+   * VALIDATION
    ***************************************************************************/
+
+  /***************************************************************************
+   * REACTIVE OBJECTS
+   ***************************************************************************/
+  const internalDocId = Vue.ref(null);
   const instance = Vue.reactive(new Site());
   const component = Vue.ref(null);
 
   /***************************************************************************
-   * DEFINE COMPOSABLES
+   * STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("SiteManager", useErrorsStore());
 
   /***************************************************************************
-   * DEFINE METHODS (PRIVATE)
+   * METHODS (PRIVATE)
    ***************************************************************************/
-  function _subscribe(docId) {
-    instance.subscribe({ docId });
-  }
 
   /***************************************************************************
-   * DEFINE METHODS (PUBLIC)
+   * METHODS (PUBLIC)
    ***************************************************************************/
   /**
-   * Set the Site instance to manage.
-   * - If a string is provided, it is treated as a document ID to subscribe to.
-   * - If a Site instance is provided, it subscribes to its document ID.
-   * @param {string|Site} param
-   * @throws Will throw an error if the parameter is invalid.
+   * Set docId to composable and subscribe to document.
+   * @param {import("vue").Ref|string} docId
+   * @returns {void}
    */
-  function set(param) {
-    if (!param) {
-      throw new Error(`No parameter provided to set. ${JSON.stringify(param)}`);
+  function set(docId) {
+    if (!docId || typeof Vue.unref(docId) !== "string") {
+      logger.error({
+        error: new Error("Invalid docId provided to set method"),
+      });
+      return;
     }
-    if (typeof param === "string") {
-      _subscribe(param);
-    } else if (param instanceof Site) {
-      _subscribe(param.docId);
-    } else {
-      throw new Error(
-        `Invalid parameter provided to set. ${JSON.stringify(param)}`
-      );
-    }
+    internalDocId.value = Vue.unref(docId);
   }
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watch(
-    () => providedDocId,
-    (newDocId) => {
-      if (newDocId) _subscribe(newDocId);
-    },
-    { immediate: true }
-  );
+  Vue.watchEffect(() => {
+    if (internalDocId.value) instance.subscribe({ docId: internalDocId.value });
+  });
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -88,7 +93,7 @@ export function useSiteManager({ docId: providedDocId } = {}) {
    * RETURN VALUES
    ***************************************************************************/
   return {
-    instance: Vue.readonly(instance),
+    doc: Vue.readonly(instance),
     attrs,
 
     set,
