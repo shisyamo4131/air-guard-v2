@@ -93,7 +93,7 @@ export function useSiteManager() {
    * RETURN VALUES
    ***************************************************************************/
   return {
-    doc: Vue.readonly(instance),
+    doc: instance,
     attrs,
 
     set,

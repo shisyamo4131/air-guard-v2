@@ -30,6 +30,7 @@ const DEFAULT_TABLE_PROPS = {
 const agreements = defineModel({ type: Array, default: () => [] });
 const props = defineProps({
   tableProps: { type: Object, default: () => ({}) },
+  useDefault: { type: Boolean, default: false },
 });
 
 /*****************************************************************************
@@ -43,7 +44,7 @@ const { company } = useAuthStore();
  *****************************************************************************/
 const selectableAgreements = computed(() => {
   const modelAgreements = agreements.value || [];
-  const defaultAgreements = company?.agreements || [];
+  const defaultAgreements = props.useDefault ? company?.agreements || [] : [];
   return [...modelAgreements, ...defaultAgreements];
 });
 

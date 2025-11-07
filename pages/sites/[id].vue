@@ -6,7 +6,6 @@
  */
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
@@ -36,9 +35,6 @@ const schedulesManager = useSiteOperationSchedulesManager({
   useDebounced: true,
 });
 schedulesManager.set({ siteId });
-
-// For agreements management
-const auth = useAuthStore();
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -92,7 +88,6 @@ const items = computed(() => {
         <OrganismsSiteManager v-bind="attrs">
           <template #default="{ toUpdate }">
             <v-card border flat>
-              {{ schedulesManager.docs.length }}
               <v-list class="v-list--info-display" slim :items="items" />
               <v-card-actions>
                 <v-btn color="primary" block @click="toUpdate()">編集</v-btn>
@@ -136,9 +131,9 @@ const items = computed(() => {
       </v-col>
       <v-col>
         <v-card>
-          <MoleculesAgreementsManager
+          <OrganismsAgreementsManager
             v-model="doc.agreements"
-            :default-agreements="auth.company.agreements"
+            use-default
             @submit:complete="doc.update()"
           />
         </v-card>
