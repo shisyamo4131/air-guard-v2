@@ -21,10 +21,10 @@ const props = defineProps({
 <template>
   <air-item-manager
     :model-value="model"
-    :editor-props="{ hideDeleteBtn: true }"
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
+    hide-delete-btn
     @error="error"
     @error:clear="clearError"
   >

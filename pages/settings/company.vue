@@ -103,11 +103,11 @@ const auth = useAuthStore();
       </v-col>
       <v-col cols="12">
         <v-card>
-          <MoleculesAgreementsManager
+          <OrganismsAgreementsManager
             v-model="auth.company.agreements"
             @submit:complete="auth.company.update()"
           >
-          </MoleculesAgreementsManager>
+          </OrganismsAgreementsManager>
         </v-card>
       </v-col>
     </v-row>
