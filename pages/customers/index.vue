@@ -5,6 +5,10 @@
  * @author shisyamo4131
  */
 import { useCustomersManager } from "@/composables/useCustomersManager";
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const { attrs } = useCustomersManager();
 </script>
 

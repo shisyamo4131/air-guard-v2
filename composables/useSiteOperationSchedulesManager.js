@@ -1,7 +1,9 @@
 /***************************************************************************
- * Site Operation Schedules Manager Composable ver 1.0.0
+ * useSiteOperationSchedulesManager
+ * @version 1.0.0
  * @description A composable to manage SiteOperationSchedule instances
  *              within a specified date range and optional siteId.
+ *              Requires a dateRange composable to function.
  * @author shisyamo4131
  ***************************************************************************/
 import * as Vue from "vue";

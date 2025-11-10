@@ -4,8 +4,9 @@
  * @description Employee management page
  */
 import { useEmployeesManager } from "@/composables/useEmployeesManager";
+
 /*****************************************************************************
- * COMPOSABLES
+ * SETUP COMPOSABLES
  *****************************************************************************/
 const { attrs } = useEmployeesManager();
 </script>

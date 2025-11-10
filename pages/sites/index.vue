@@ -7,7 +7,7 @@
 import { useSitesManager } from "@/composables/useSitesManager";
 
 /*****************************************************************************
- * COMPOSABLES
+ * SETUP COMPOSABLES
  *****************************************************************************/
 const { attrs } = useSitesManager();
 </script>

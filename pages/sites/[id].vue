@@ -1,14 +1,10 @@
 <script setup>
-/**
- * @file ./pages/sites/[id].vue
- * @description Site detail page
- * @author shisyamo4131
- */
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
+import { useAgreementsManager } from "@/composables/useAgreementsManager";
 
 /*****************************************************************************
  * ROUTER
@@ -17,10 +13,10 @@ const route = useRoute();
 const siteId = route.params.id;
 
 /*****************************************************************************
- * STORES & COMPOSABLES
+ * SETUP COMPOSABLES
  *****************************************************************************/
 /** Site Manager */
-const { doc, attrs, set } = useSiteManager();
+const { doc, attrs, info, set } = useSiteManager();
 set(siteId);
 
 /** Date Range */
@@ -36,47 +32,10 @@ const schedulesManager = useSiteOperationSchedulesManager({
 });
 schedulesManager.set({ siteId });
 
-/*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-const items = computed(() => {
-  return [
-    {
-      title: "CODE",
-      props: { subtitle: doc.code, prependIcon: "mdi-code-tags" },
-    },
-    {
-      title: "住所",
-      props: {
-        subtitle: `${doc.zipcode} ${doc.fullAddress}`,
-        prependIcon: "mdi-map-marker",
-      },
-    },
-    {
-      title: "建物名",
-      props: {
-        subtitle: doc.building || "-",
-        prependIcon: "mdi-office-building-marker",
-      },
-    },
-    {
-      title: "取引先",
-      props: {
-        subtitle: doc.customer?.name || "loading",
-        prependIcon: "mdi-domain",
-      },
-    },
-    {
-      title: "備考",
-      props: {
-        subtitle: doc.remarks || "-",
-        prependIcon: "mdi-comment-text",
-        lines: "two",
-      },
-    },
-  ];
-});
+/** Agreements Manager */
+const agreementsManager = useAgreementsManager(doc, { useDefault: true });
 </script>
+
 <template>
   <v-container>
     <v-toolbar class="mb-4" density="compact">
@@ -85,21 +44,14 @@ const items = computed(() => {
     </v-toolbar>
     <v-row>
       <v-col cols="12" md="4">
-        <OrganismsSiteManager v-bind="attrs">
-          <template #default="{ toUpdate }">
-            <v-card border flat>
-              <v-list class="v-list--info-display" slim :items="items" />
-              <v-card-actions>
-                <v-btn color="primary" block @click="toUpdate()">編集</v-btn>
-              </v-card-actions>
-            </v-card>
+        <air-item-manager v-bind="attrs">
+          <template #activator="activatorProps">
+            <air-information-card v-bind="activatorProps" :items="info.base" />
           </template>
-        </OrganismsSiteManager>
+        </air-item-manager>
       </v-col>
       <v-col cols="12" md="8">
-        <OrganismsSiteOperationSchedulesManager
-          v-bind="schedulesManager.attrs.value"
-        >
+        <air-array-manager v-bind="schedulesManager.attrs.value">
           <template #table="{ toCreate, toUpdate }">
             <v-card>
               <v-toolbar density="comfortable">
@@ -127,15 +79,20 @@ const items = computed(() => {
               </v-card-text>
             </v-card>
           </template>
-        </OrganismsSiteOperationSchedulesManager>
+          <template #input.shiftType="{ attrs }">
+            <v-radio-group v-bind="attrs" inline>
+              <v-radio label="日勤" value="DAY" />
+              <v-radio label="夜勤" value="NIGHT" />
+            </v-radio-group>
+          </template>
+          <template #input.isStartNextDay="{ attrs }">
+            <MoleculesInputsIsStartNextDay v-bind="attrs" />
+          </template>
+        </air-array-manager>
       </v-col>
       <v-col>
         <v-card>
-          <OrganismsAgreementsManager
-            v-model="doc.agreements"
-            use-default
-            @submit:complete="doc.update()"
-          />
+          <OrganismsAgreementsManager v-bind="agreementsManager.attrs.value" />
         </v-card>
       </v-col>
     </v-row>

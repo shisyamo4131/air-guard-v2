@@ -1,12 +1,18 @@
 <script setup>
 /**
  * @file pages/settings/outsourcers.vue
- * @description 外注先管理画面
+ * @description Outsourcer management page
  */
+import { useOutsourcersManager } from "@/composables/useOutsourcersManager";
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useOutsourcersManager();
 </script>
 
 <template>
-  <v-container>
-    <OrganismsOutsourcersManager />
-  </v-container>
+  <TemplatesFixedHeightContainer>
+    <air-array-manager class="fill-height" v-bind="attrs" />
+  </TemplatesFixedHeightContainer>
 </template>
