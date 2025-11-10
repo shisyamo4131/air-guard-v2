@@ -7,6 +7,6 @@
 
 <template>
   <TemplatesFixedHeightContainer>
-    <OrganismsUsersManager />
+    <OrganismsUsersManager class="fill-height" />
   </TemplatesFixedHeightContainer>
 </template>
