@@ -1,8 +1,9 @@
-/**
- * @file composables/useSitesManager.js
- * @description A composable to manage sites.
+/*****************************************************************************
+ * useSitesManager
+ * @version 1.0.0
+ * @description A composable to manage sites information.
  * @author shisyamo4131
- */
+ *****************************************************************************/
 import * as Vue from "vue";
 import { useRouter } from "vue-router";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -15,25 +16,24 @@ const statusOption = ["where", "status", "==", Site.STATUS_ACTIVE];
 // Default sorting by customer code in descending order.
 const sortBy = [{ key: "code", order: "desc" }];
 
-/***************************************************************************
- * @function useSitesManager
- * @version 1.0.0
+/**
+ * @returns {Object} - Sites manager attributes and information.
  * @returns {Object} attrs - The attributes for the sites manager.
  * @returns {Array} docs - The array of site documents.
- ***************************************************************************/
+ */
 export function useSitesManager() {
+  /***************************************************************************
+   * SETUP STORES & COMPOSABLES
+   ***************************************************************************/
+  const logger = useLogger("SitesManager", useErrorsStore());
+  const router = useRouter();
+
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
   const instance = Vue.reactive(new Site());
   const search = Vue.ref("");
   const loading = Vue.ref(false);
-
-  /***************************************************************************
-   * COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("SitesManager", useErrorsStore());
-  const router = useRouter();
 
   /***************************************************************************
    * METHODS
@@ -58,33 +58,33 @@ export function useSitesManager() {
   Vue.watchEffect(_subscribe);
 
   /***************************************************************************
+   * LIFECYCLE HOOKS
+   ***************************************************************************/
+  Vue.onUnmounted(() => instance.unsubscribe());
+
+  /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
   const attrs = Vue.computed(() => {
     return {
       modelValue: instance.docs,
-      handleCreate: (item) => item.create(),
+      schema: Site,
       beforeEdit: (editMode, item) => {
         if (editMode === "CREATE") return true;
         router.push(`sites/${item.docId}`);
         return false;
       },
+      handleCreate: (item) => item.create(),
       delay: 300,
-      inputProps: { excludedKeys: ["agreements"] },
-      schema: Site,
+      loading: loading.value,
       search: search.value,
       tableProps: { customFilter: () => true, sortBy },
       onCreate: ($event) => router.push(`sites/${$event.docId}`),
       "onUpdate:search": (val) => (search.value = val),
-      onError: (e) => error({ error: e }),
-      "onError:clear": clearError,
+      onError: (error) => logger.error({ error }),
+      "onError:clear": () => logger.clearError(),
     };
   });
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => instance.unsubscribe());
 
   /***************************************************************************
    * RETURN VALUES

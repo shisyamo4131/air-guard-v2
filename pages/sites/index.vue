@@ -14,6 +14,6 @@ const { attrs } = useSitesManager();
 
 <template>
   <TemplatesFixedHeightContainer>
-    <OrganismsSitesManager class="fill-height" v-bind="attrs" />
+    <air-array-manager class="fill-height" v-bind="attrs" />
   </TemplatesFixedHeightContainer>
 </template>
