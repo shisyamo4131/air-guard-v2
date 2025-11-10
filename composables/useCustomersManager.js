@@ -1,12 +1,13 @@
-/**
- * @file composables/useCustomersManager.js
- * @description A composable to manage customers.
+/*****************************************************************************
+ * useCustomersManager
+ * @version 1.0.0
+ * @description A composable to manage customers information.
  * @author shisyamo4131
- */
+ *****************************************************************************/
 import * as Vue from "vue";
+import { Customer } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "../composables/useLogger";
-import { Customer } from "@/schemas";
 
 // Constraints to fetch only active customers.
 const statusOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
@@ -14,25 +15,23 @@ const statusOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
 // Default sorting by customer code in descending order.
 const sortBy = [{ key: "code", order: "desc" }];
 
-/*****************************************************************************
- * @function useCustomersManager
- * @description A composable to manage customers.
- * @version 1.0.0
+/**
+ * @returns {Object} - Customers manager attributes and information.
  * @returns {Object} attrs - The attributes for the customers manager.
  * @returns {Array} docs - The array of customer documents.
- *****************************************************************************/
+ */
 export function useCustomersManager() {
+  /***************************************************************************
+   * SETUP STORES & COMPOSABLES
+   ***************************************************************************/
+  const logger = useLogger("CustomersManager", useErrorsStore());
+
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
   const instance = Vue.reactive(new Customer());
   const search = Vue.ref("");
   const loading = Vue.ref(false);
-
-  /***************************************************************************
-   * COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("CustomersManager", useErrorsStore());
 
   /***************************************************************************
    * METHODS (PRIVATE)
@@ -57,30 +56,30 @@ export function useCustomersManager() {
   Vue.watchEffect(_subscribe);
 
   /***************************************************************************
+   * LIFECYCLE HOOKS
+   ***************************************************************************/
+  Vue.onUnmounted(() => instance.unsubscribe());
+
+  /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
   /** Attributes for the customers manager. */
   const attrs = Vue.computed(() => {
     return {
       modelValue: instance.docs,
+      schema: Customer,
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
       delay: 300,
       loading: loading.value,
-      schema: Customer,
       search: search.value,
       tableProps: { customFilter: () => true, sortBy },
       "onUpdate:search": (val) => (search.value = val),
-      onError: (e) => error({ error: e }),
-      "onError:clear": clearError,
+      onError: (error) => logger.error({ error }),
+      "onError:clear": () => logger.clearError(),
     };
   });
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => instance.unsubscribe());
 
   /***************************************************************************
    * RETURN VALUES
