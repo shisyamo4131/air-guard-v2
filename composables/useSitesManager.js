@@ -46,7 +46,7 @@ export function useSitesManager() {
       const options = search.value ? [statusOption] : [];
       instance.subscribeDocs({ constraints, options });
     } catch (error) {
-      logger.error({ error, message: "Failed to fetch sites." });
+      logger.error({ error });
     } finally {
       loading.value = false;
     }

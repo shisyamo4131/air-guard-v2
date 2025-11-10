@@ -1,22 +1,36 @@
-/**
- * @file composables/useEmployeesManager.js
- * @description A composable to manage employees.
+/*****************************************************************************
+ * useEmployeesManager
+ * @version 1.0.0
+ * @description A composable to manage employees information.
  * @author shisyamo4131
- */
+ *****************************************************************************/
 import * as Vue from "vue";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "./useLogger";
 import { Employee } from "@/schemas";
 
-/***************************************************************************
- * A composable to manage employees.
- *
- * @function useEmployeesManager
- * @version 1.0.0
+// Constraints to fetch only active employees.
+const statusOption = [
+  "where",
+  "employmentStatus",
+  "==",
+  Employee.STATUS_ACTIVE,
+];
+
+// Default sorting by employee code in descending order.
+const sortBy = [{ key: "code", order: "desc" }];
+
+/**
+ * @returns {Object} - Employees manager attributes and information.
  * @returns {Object} attrs - The attributes for the employees manager.
  * @returns {Array} docs - The array of employee documents.
- ***************************************************************************/
+ */
 export function useEmployeesManager() {
+  /***************************************************************************
+   * SETUP STORES & COMPOSABLES
+   ***************************************************************************/
+  const logger = useLogger("EmployeesManager", useErrorsStore());
+
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
@@ -25,27 +39,17 @@ export function useEmployeesManager() {
   const loading = Vue.ref(false);
 
   /***************************************************************************
-   * COMPOSABLES
+   * METHODS (PRIVATE)
    ***************************************************************************/
-  const { error, clearError } = useLogger("EmployeesManager", useErrorsStore());
-
-  /***************************************************************************
-   * METHODS
-   ***************************************************************************/
-  function subscribe() {
+  function _subscribe() {
+    logger.clearError();
     try {
       loading.value = true;
-      const statusOption = [
-        "where",
-        "employmentStatus",
-        "==",
-        Employee.STATUS_ACTIVE,
-      ];
       const constraints = search.value ? search.value : [statusOption];
       const options = search.value ? [statusOption] : [];
       instance.subscribeDocs({ constraints, options });
     } catch (error) {
-      error({ error, message: "Failed to fetch employees." });
+      logger.error({ error });
     } finally {
       loading.value = false;
     }
@@ -54,34 +58,31 @@ export function useEmployeesManager() {
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(subscribe);
-
-  const attrs = Vue.computed(() => {
-    return {
-      modelValue: instance.docs,
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
-      delay: 300,
-      schema: Employee,
-      search: search.value,
-      tableProps: {
-        customFilter: () => true,
-        sortBy: [{ key: "code", order: "desc" }],
-      },
-      "onUpdate:search": (val) => (search.value = val),
-      onError: (e) => error({ error: e }),
-      "onError:clear": clearError,
-    };
-  });
+  Vue.watchEffect(_subscribe);
 
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
   Vue.onUnmounted(() => instance.unsubscribe());
 
+  const attrs = Vue.computed(() => {
+    return {
+      modelValue: instance.docs,
+      schema: Employee,
+      handleCreate: (item) => item.create(),
+      handleUpdate: (item) => item.update(),
+      handleDelete: (item) => item.delete(),
+      delay: 300,
+      search: search.value,
+      tableProps: { customFilter: () => true, sortBy },
+      "onUpdate:search": (val) => (search.value = val),
+      onError: (e) => logger.error({ error: e }),
+      "onError:clear": () => logger.clearError(),
+    };
+  });
+
   return {
     attrs,
-    docs: computed(() => instance.docs),
+    docs: Vue.readonly(instance.docs),
   };
 }

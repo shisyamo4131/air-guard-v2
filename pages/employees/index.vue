@@ -1,12 +1,17 @@
 <script setup>
 /**
  * @file pages/settings/employees.vue
- * @description 従業員管理画面
+ * @description Employee management page
  */
+import { useEmployeesManager } from "@/composables/useEmployeesManager";
+/*****************************************************************************
+ * COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useEmployeesManager();
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <OrganismsEmployeesManager />
+    <air-array-manager class="fill-height" v-bind="attrs" />
   </TemplatesFixedHeightContainer>
 </template>

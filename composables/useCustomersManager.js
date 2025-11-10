@@ -44,7 +44,7 @@ export function useCustomersManager() {
       const options = search.value ? [statusOption] : [];
       instance.subscribeDocs({ constraints, options });
     } catch (error) {
-      logger.error({ error, message: "Failed to fetch customers." });
+      logger.error({ error });
     } finally {
       loading.value = false;
     }
