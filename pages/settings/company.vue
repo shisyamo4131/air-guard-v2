@@ -1,15 +1,12 @@
 <script setup>
-/**
- * @file pages/settings/company.vue
- * @description 会社情報管理
- */
-import { useAuthStore } from "@/stores/useAuthStore";
-import { RoundSetting } from "@/schemas";
+import { useCompanyManager } from "@/composables/useCompanyManager";
+import { useAgreementsManager } from "../../composables/useAgreementsManager";
 
 /*****************************************************************************
- * DEFINE COMPOSABLES / STORES
+ * SETUP COMPOSABLES
  *****************************************************************************/
-const auth = useAuthStore();
+const { attrs, info } = useCompanyManager();
+const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
 <template>
@@ -19,95 +16,43 @@ const auth = useAuthStore();
       <v-toolbar-title>設定-会社情報-</v-toolbar-title>
     </v-toolbar>
     <v-row>
+      <!-- Base information column -->
       <v-col cols="12" md="4">
-        <MoleculesCompanyManager
-          :model-value="auth.company"
+        <air-item-manager
+          v-bind="attrs"
           :input-props="{
             excludedKeys: ['agreements', 'minuteInterval', 'roundSetting'],
           }"
         >
-          <template #activator="{ attrs }">
-            <air-information-card
-              v-bind="attrs"
-              :items="[
-                {
-                  title: '会社名',
-                  props: {
-                    subtitle: `${auth.company.companyName}`,
-                    prependIcon: 'mdi-tag',
-                  },
-                },
-                {
-                  title: '住所',
-                  props: {
-                    subtitle: `${auth.company.zipcode} ${auth.company.fullAddress}`,
-                    prependIcon: 'mdi-map-marker',
-                    lines: 'two',
-                  },
-                },
-                {
-                  title: '建物',
-                  props: {
-                    subtitle: auth.company.building || '-',
-                    prependIcon: 'mdi-office-building-marker',
-                  },
-                },
-                {
-                  title: '電話番号',
-                  props: {
-                    subtitle: auth.company.tel || '-',
-                    prependIcon: 'mdi-phone',
-                  },
-                },
-                {
-                  title: 'FAX番号',
-                  props: {
-                    subtitle: auth.company.fax || '-',
-                    prependIcon: 'mdi-fax',
-                  },
-                },
-              ]"
-            />
+          <template #activator="activatorProps">
+            <air-information-card v-bind="activatorProps" :items="info.base" />
           </template>
-        </MoleculesCompanyManager>
+        </air-item-manager>
       </v-col>
+
+      <!-- Settings information column -->
       <v-col cols="12" md="8">
-        <MoleculesCompanyManager
-          :model-value="auth.company"
+        <air-item-manager
+          v-bind="attrs"
           :input-props="{
             includedKeys: ['minuteInterval', 'roundSetting'],
           }"
         >
-          <template #activator="{ attrs }">
+          <template #activator="activatorProps">
             <air-information-card
-              v-bind="attrs"
-              :items="[
-                {
-                  title: '時刻選択間隔（分）',
-                  props: {
-                    subtitle: `${auth.company.minuteInterval} 分`,
-                    prependIcon: 'mdi-timer-sand',
-                  },
-                },
-                {
-                  title: '端数処理',
-                  props: {
-                    subtitle: RoundSetting.label(auth.company.roundSetting),
-                    prependIcon: 'mdi-calculator-variant-outline',
-                  },
-                },
-              ]"
+              v-bind="activatorProps"
+              :items="info.settings"
             />
           </template>
-        </MoleculesCompanyManager>
+        </air-item-manager>
       </v-col>
+    </v-row>
+
+    <!-- Agreements management row -->
+    <v-row>
       <v-col cols="12">
         <v-card>
-          <OrganismsAgreementsManager
-            v-model="auth.company.agreements"
-            @submit:complete="auth.company.update()"
-          >
-          </OrganismsAgreementsManager>
+          <OrganismsAgreementsManager v-bind="agreementsManager.attrs.value" />
         </v-card>
       </v-col>
     </v-row>

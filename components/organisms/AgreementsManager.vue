@@ -1,74 +1,29 @@
 <script setup>
 /**
- * @file components/molecules/AgreementsManager.vue
+ * @file components/organisms/AgreementsManager.vue
  * @description A component to manage agreements based on `AirArrayManager`.
  * - Provides a UI for selecting existing agreements.
- * - User can also select a agreement from AuthStore's company agreements.
  *
- * @prop {Object} tableProps - Custom properties for the table display.
+ * @prop {Array} selectableItems - List of agreements that can be selected.
  * Note: Any additional props are passed to air-array-manager.
- *
- * @emits update:model-value - Emitted when the agreements list is updated.
- * Note: All other events from air-array-manager are re-emitted.
- * Note: Use `submit:complete` event to handle after create/update/delete operations.
  */
-import { Agreement } from "@/schemas";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
 
-const DEFAULT_TABLE_PROPS = {
-  hideDefaultFooter: true,
-  hideSearch: true,
-  itemsPerPage: -1,
-  sortBy: [{ key: "dateAt", order: "desc" }],
-};
+defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
  *  PROPS
  *****************************************************************************/
-const agreements = defineModel({ type: Array, default: () => [] });
 const props = defineProps({
-  tableProps: { type: Object, default: () => ({}) },
-  useDefault: { type: Boolean, default: false },
-});
-
-/*****************************************************************************
- * STORES & COMPOSABLES
- *****************************************************************************/
-const logger = useLogger("AgreementsManager", useErrorsStore());
-const { company } = useAuthStore();
-
-/*****************************************************************************
- * COMPUTED PROPERTIES
- *****************************************************************************/
-const selectableAgreements = computed(() => {
-  const modelAgreements = agreements.value || [];
-  const defaultAgreements = props.useDefault ? company?.agreements || [] : [];
-  return [...modelAgreements, ...defaultAgreements];
-});
-
-const tableProps = computed(() => {
-  return { ...DEFAULT_TABLE_PROPS, ...props.tableProps };
+  selectableItems: { type: Array, default: () => [] },
 });
 </script>
 
 <template>
-  <air-array-manager
-    v-model="agreements"
-    :schema="Agreement"
-    item-key="key"
-    :table-props="tableProps"
-    :error-messages="{
-      duplicateKey: '既に登録されている取極めです。',
-    }"
-    @error="(error) => logger.error({ error })"
-    @error:clear="logger.clearError()"
-  >
+  <air-array-manager v-bind="$attrs">
     <template #after-dateAt="{ field, item, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <MoleculesAgreementSelector
-          :items="selectableAgreements"
+          :items="selectableItems"
           @select="
             $event.dateAt = item.dateAt;
             updateProperties({ ...$event });
