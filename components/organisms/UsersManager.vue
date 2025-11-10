@@ -1,21 +1,20 @@
 <script setup>
 /**
- * @file UsersManager.vue
- * @description A component for managing users.
+ * @file components/organisms/UsersManager.vue
+ * @description A component to manage users.
  */
-import { reactive, onMounted, onUnmounted } from "vue";
 import { User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
 /*****************************************************************************
- * DEFINE STORES & COMPOSABLES
+ * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 const auth = useAuthStore();
-const { error, clearError } = useLogger("UsersManager", useErrorsStore());
+const logger = useLogger("UsersManager", useErrorsStore());
 
 /*****************************************************************************
- * DEFINE STATES
+ * REACTIVE OBJECTS
  *****************************************************************************/
 const user = reactive(new User());
 const password = ref("");
@@ -41,15 +40,10 @@ onUnmounted(() => {
  * @param item
  */
 async function handleCreate(item) {
-  clearError();
-  try {
-    await auth.createUserInCompany({
-      ...item,
-      password: password.value,
-    });
-  } catch (err) {
-    error({ error: err, message: "Failed to create user." });
-  }
+  await auth.createUserInCompany({
+    ...item,
+    password: password.value,
+  });
 }
 
 /**
@@ -57,12 +51,7 @@ async function handleCreate(item) {
  * @param item - User item to be disabled
  */
 async function handleDisableUser(item) {
-  clearError();
-  try {
-    await auth.disableUser({ uid: item.docId });
-  } catch (err) {
-    error({ error: err, message: "Failed to disable user." });
-  }
+  await auth.disableUser({ uid: item.docId });
 }
 
 /**
@@ -70,12 +59,7 @@ async function handleDisableUser(item) {
  * @param item - User item to be enabled
  */
 async function handleEnableUser(item) {
-  clearError();
-  try {
-    await auth.enableUser({ uid: item.docId });
-  } catch (err) {
-    error({ error: err, message: "Failed to enable user." });
-  }
+  await auth.enableUser({ uid: item.docId });
 }
 
 /**
@@ -96,8 +80,8 @@ function initPassword() {
     :handle-update="(item) => item.update()"
     @initialized="initPassword"
     @submit:complete="initPassword"
-    @error="error"
-    @error:clear="clearError"
+    @error="(error) => logger.error({ error })"
+    @error:clear="() => logger.clearError()"
   >
     <template #table="tableProps">
       <air-data-table v-bind="tableProps">
