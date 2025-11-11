@@ -126,7 +126,7 @@ export function useArrangementNotificationsManager(
     });
     if (notifications.length === 0) return false;
     return notifications.every(
-      (doc) => doc.status === ArrangementNotification.STATUS.LEAVED.key
+      (doc) => doc.status === ArrangementNotification.STATUSES.LEAVED.value
     );
   };
 
