@@ -1,5 +1,7 @@
 <script setup>
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
+import { useFetchEmployee } from "~/composables/fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "~/composables/fetch/useFetchOutsourcer";
 import { useOperationResultManager } from "~/composables/useOperationResultManager";
 
 /*****************************************************************************
@@ -9,14 +11,20 @@ import { useOperationResultManager } from "~/composables/useOperationResultManag
 const route = useRoute();
 const operationResultId = route.params.id;
 
-// Fetch site composables
+// Fetch composables
 const fetchSiteComposable = useFetchSite();
+const fetchEmployeeComposable = useFetchEmployee();
+const fetchOutsourcerComposable = useFetchOutsourcer();
 const { searchSites, getSite } = fetchSiteComposable;
+provide("fetchEmployeeComposable", fetchEmployeeComposable);
+provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
 // Manager composable
 const { doc, attrs, info, addWorker, changeWorker, removeWorker } =
   useOperationResultManager({
     fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
     immediate: operationResultId,
   });
 </script>
@@ -43,8 +51,8 @@ const { doc, attrs, info, addWorker, changeWorker, removeWorker } =
         </v-row>
       </v-col>
       <v-col cols="12" lg="9">
-        <MoleculesOperationResultWorkersManager
-          :workers="doc.workers"
+        <OrganismsOperationResultWorkersManager
+          :model-value="doc.workers"
           :handle-create="addWorker"
           :handle-update="changeWorker"
           :handle-delete="removeWorker"
