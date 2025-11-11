@@ -132,7 +132,7 @@ export default class SiteOperationSchedule extends BaseClass {
         const instance = this.clone();
         instance.docId = "";
         instance.dateAt = new Date(date);
-        instance.operationResultId = "";
+        instance.operationResultId = null;
         return instance;
       });
 
