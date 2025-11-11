@@ -143,6 +143,7 @@ async function handleCreate(item) {
     :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
+    item-key="workerId"
     @error="error"
     @error:clear="clearError"
   >
