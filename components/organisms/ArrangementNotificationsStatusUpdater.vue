@@ -1,7 +1,8 @@
 <script setup>
 /**
- * @file components/notifications/StatusUpdater.vue
+ * @file components/organisms/ArrangementNotificationStatusUpdater.vue
  * @description A component for updating arrangement notification statuses.
+ * @author shisyamo4131
  */
 import { ArrangementNotification } from "@/schemas";
 
@@ -37,6 +38,7 @@ defineExpose({
   <air-array-manager
     v-bind="$attrs"
     ref="component"
+    hide-delete-btn
     :dialog-props="dialogProps"
     :input-props="inputProps"
   >
