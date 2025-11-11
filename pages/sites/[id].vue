@@ -45,7 +45,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
     <v-row>
       <v-col cols="12" md="4">
         <air-item-manager v-bind="attrs">
-          <template #activator="activatorProps">
+          <template #activator="{ attrs: activatorProps }">
             <air-information-card v-bind="activatorProps" :items="info.base" />
           </template>
         </air-item-manager>
