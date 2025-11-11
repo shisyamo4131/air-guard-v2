@@ -106,6 +106,8 @@ export function useSiteOperationSchedulesManager({
       modelValue: instance.docs,
       schema: SiteOperationSchedule,
       beforeEdit,
+      disableUpdate: (item) => !!item.operationResultId,
+      disableDelete: (item) => !!item.operationResultId,
       inputProps: {
         excludedKeys: ["siteId", "employees", "outsourcers"],
       },
