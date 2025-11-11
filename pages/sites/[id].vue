@@ -29,8 +29,8 @@ const { dateRange } = dateRangeComposable;
 const schedulesManager = useSiteOperationSchedulesManager({
   dateRangeComposable,
   useDebounced: true,
+  immediate: siteId,
 });
-schedulesManager.set({ siteId });
 
 /** Agreements Manager */
 const agreementsManager = useAgreementsManager(doc, { useDefault: true });

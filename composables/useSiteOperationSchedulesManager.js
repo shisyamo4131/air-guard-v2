@@ -15,7 +15,7 @@ import { useLogger } from "@/composables/useLogger";
  * @param {Object} options - Options for the composable
  * @param {Object} options.dateRangeComposable - An instance of useDateRange composable
  * @param {boolean} options.useDebounced - Whether to use debounced date range (default: false)
- *
+ * @param {boolean} options.immediate - Whether to immediately set up the subscription (default: false)
  * @returns {Object} - The site operation schedules manager composable
  * @returns {Array} docs - Array of SiteOperationSchedule documents
  * @returns {Object} attrs - Computed attributes for the site operation schedules component
@@ -28,6 +28,7 @@ import { useLogger } from "@/composables/useLogger";
 export function useSiteOperationSchedulesManager({
   dateRangeComposable,
   useDebounced = false,
+  immediate = false,
 } = {}) {
   /***************************************************************************
    * VALIDATION
@@ -130,6 +131,8 @@ export function useSiteOperationSchedulesManager({
   const events = Vue.computed(() => {
     return instance.docs.map((doc) => doc.toEvent());
   });
+
+  if (immediate) set(immediate);
 
   /***************************************************************************
    * RETURN OBJECT
