@@ -34,6 +34,7 @@ export function useSitesManager() {
   const instance = Vue.reactive(new Site());
   const search = Vue.ref("");
   const loading = Vue.ref(false);
+  const component = Vue.ref(null);
 
   /***************************************************************************
    * METHODS
@@ -67,6 +68,7 @@ export function useSitesManager() {
    ***************************************************************************/
   const attrs = Vue.computed(() => {
     return {
+      ref: (el) => (component.value = el),
       modelValue: instance.docs,
       schema: Site,
       beforeEdit: (editMode, item) => {

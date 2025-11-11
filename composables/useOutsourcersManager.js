@@ -37,6 +37,7 @@ export function useOutsourcersManager() {
   const instance = Vue.reactive(new Outsourcer());
   const search = Vue.ref("");
   const loading = Vue.ref(false);
+  const component = Vue.ref(null);
 
   /***************************************************************************
    * METHODS (PRIVATE)
@@ -62,6 +63,7 @@ export function useOutsourcersManager() {
 
   const attrs = Vue.computed(() => {
     return {
+      ref: (el) => (component.value = el),
       modelValue: instance.docs,
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),

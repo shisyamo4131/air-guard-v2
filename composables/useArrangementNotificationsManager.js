@@ -1,55 +1,128 @@
 /*****************************************************************************
- * useArrangementNotificationsManager ver 1.0.0
+ * useArrangementNotificationsManager
+ * @version 1.0.0
  * @author shisyamo4131
- * @description A manager layer composable of arrangement notifications.
- *
- * @prop {Array} docs - The array of arrangement notification documents.
- * @prop {Array} includedKeys - The keys to include from the input props.
- *
- * @returns {Object} attrs - The attributes for the operation results manager.
- * @returns {Function} create - Function to create a new arrangement notification.
- * @returns {Function} get - Function to retrieve arrangement notifications.
- * @returns {Function} set - Function to set/update an arrangement notification.
- * @returns {Function} has - Function to check existence of an arrangement notification.
- * @returns {Object} keyMappedDocs - Key-mapped arrangement notification documents.
- * @returns {Function} isAllLeaved - Function to check if all notifications for a schedule are leaved.
+ * @description A compsable to manage ArrangementNotification instances.
  *****************************************************************************/
 import * as Vue from "vue";
 import { ArrangementNotification } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "../composables/useLogger";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import { useFetchSite } from "./fetch/useFetchSite";
+import { useFetchEmployee } from "./fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 
-export function useArrangementNotificationsManager(
-  docs,
-  { includedKeys = [] } = {}
-) {
+/**
+ * @param {*} options
+ * @param {Object} options.dateRangeComposable - An instance of useDateRange composable
+ * @param {boolean} options.useDebounced - Whether to use debounced date range (default: false)
+ * @param {Object} options.fetchSiteComposable - An instance of useFetchSite composable (optional)
+ * @param {Object} options.fetchEmployeeComposable - An instance of useFetchEmployee composable (optional)
+ * @param {Object} options.fetchOutsourcerComposable - An instance of useFetchOutsourcer composable (optional)
+ * @param {boolean} options.immediate - Whether to immediately set up the subscription (default: false)
+ * @returns {Object} - The arrangement notifications manager composable
+ * @returns {Array} docs - Array of ArrangementNotification documents
+ * @returns {Object} keyMappedDocs - Key-mapped ArrangementNotification documents
+ * @returns {Object} attrs - Computed attributes for the arrangement notifications component
+ * @returns {Array} cachedSites - Array of cached site documents
+ * @returns {Array} cachedEmployees - Array of cached employee documents
+ * @returns {Array} cachedOutsourcers - Array of cached outsourcer documents
+ * @returns {Function} set - Method to set ArrangementNotification to update.
+ * @returns {Function} toCreate - Method to trigger create operation
+ * @returns {Function} toUpdate - Method to trigger update operation
+ * @returns {Function} toDelete - Method to trigger delete operation
+ * @returns {Function} create - Method to create a new arrangement notification
+ * @returns {Function} get - Method to retrieve notification(s)
+ * @returns {Function} has - Method to check existence of notification(s)
+ * @returns {Function} isAllLeaved - Method to check if all notifications for a schedule are in "LEAVED" status
+ */
+export function useArrangementNotificationsManager({
+  dateRangeComposable,
+  useDebounced = false,
+  fetchSiteComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  immediate = false,
+} = {}) {
   /***************************************************************************
    * VALIDATIONS
    ***************************************************************************/
-  if (!Vue.isRef(docs) || !Array.isArray(docs.value)) {
-    throw new Error("Invalid docs parameter: must be a ref to an array");
+  if (!dateRangeComposable) {
+    throw new Error("dateRangeComposable is required");
   }
-
-  /***************************************************************************
-   * COMPOSABLES
-   ***************************************************************************/
-  const { error, clearError } = useLogger(
-    "useArrangementNotificationsManager",
-    useErrorsStore()
-  );
-  const loadingsStore = useLoadingsStore();
 
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
+  const instance = Vue.reactive(new ArrangementNotification());
   const component = Vue.ref(null);
   const loading = Vue.ref(false);
+  const isReady = Vue.ref(false);
+
+  /***************************************************************************
+   * SETUP STORES & COMPOSABLES
+   ***************************************************************************/
+  const logger = useLogger("ArrangementNotificationsManager", useErrorsStore());
+  const loadingsStore = useLoadingsStore();
+
+  // Fetch composables
+  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
+  const { fetchEmployee, cachedEmployees } =
+    fetchEmployeeComposable || useFetchEmployee();
+  const { fetchOutsourcer, cachedOutsourcers } =
+    fetchOutsourcerComposable || useFetchOutsourcer();
+
+  if (
+    !fetchSiteComposable ||
+    !fetchEmployeeComposable ||
+    !fetchOutsourcerComposable
+  ) {
+    const missingComposables = [];
+    if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
+    if (!fetchEmployeeComposable)
+      missingComposables.push("fetchEmployeeComposable");
+    if (!fetchOutsourcerComposable)
+      missingComposables.push("fetchOutsourcerComposable");
+    logger.info({
+      message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
+        ", "
+      )}`,
+    });
+  }
 
   /***************************************************************************
    * METHODS (PRIVATE)
    ***************************************************************************/
+  /**
+   * Subscribe to ArrangementNotification documents based on date range.
+   * @returns {void}
+   */
+  function _subscribe() {
+    isReady.value = false;
+    const dateRange = useDebounced
+      ? dateRangeComposable.debouncedDateRange.value
+      : dateRangeComposable.dateRange.value;
+    const { from, to } = dateRange;
+    if (!from || !to) return;
+    const constraints = [
+      ["where", "dateAt", ">=", from],
+      ["where", "dateAt", "<=", to],
+    ];
+    instance.subscribeDocs({ constraints }, (doc) => {
+      isReady.value = true;
+      fetchSite(doc.siteId);
+      if (doc.isEmployee) {
+        fetchEmployee(doc.id);
+      } else {
+        fetchOutsourcer(doc.id);
+      }
+    });
+  }
+
+  /** Update an existing ArrangementNotification document. */
   async function _update(item) {
+    logger.clearError();
     try {
       loading.value = true;
       const { status } = item;
@@ -68,67 +141,12 @@ export function useArrangementNotificationsManager(
       } else {
         await fn.call(item, item);
       }
-    } catch (e) {
-      error({ message: e.message, error: e, data: item });
+    } catch (error) {
+      logger.error({ error, data: item });
     } finally {
       loading.value = false;
     }
   }
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /**
-   * Key-mapped arrangement notification documents.
-   * @returns {Object} keyMappedDocs - The arrangement notifications mapped by docId.
-   */
-  const keyMappedDocs = Vue.computed(() => {
-    return docs.value.reduce((acc, doc) => {
-      acc[doc.docId] = doc;
-      return acc;
-    }, {});
-  });
-
-  /**
-   * Attributes for the ArrangementNotificationsManager component.
-   * - beforeEdit: Returns true if the `editMode` is "UPDATE".
-   * @returns {Object} The attributes object.
-   */
-  const attrs = Vue.computed(() => {
-    return {
-      ref: (el) => (component.value = el),
-      beforeEdit: (editMode, item) => {
-        return editMode === "UPDATE";
-      },
-      disableDelete: true,
-      handleUpdate: (item) => _update(item),
-      inputProps: {
-        includedKeys,
-      },
-      modelValue: docs.value,
-      loading: loading.value,
-      schema: ArrangementNotification,
-      onError: error,
-      "onError:clear": clearError,
-    };
-  });
-
-  const isAllLeaved = (scheduleId) => {
-    const notifications = docs.value.filter((doc) => {
-      return doc.siteOperationScheduleId === scheduleId;
-    });
-    if (notifications.length === 0) return false;
-    return notifications.every(
-      (doc) => doc.status === ArrangementNotification.STATUSES.LEAVED.value
-    );
-  };
 
   /***************************************************************************
    * METHODS (PUBLIC)
@@ -182,17 +200,8 @@ export function useArrangementNotificationsManager(
     return keyMappedDocs.value[`${scheduleId}-${workerId}`] || null;
   }
 
-  function set(notification) {
-    if (!component.value) {
-      throw new Error("Component is not mounted");
-    }
-    if (typeof component.value.toUpdate !== "function") {
-      throw new Error("toUpdate method is not available on the component");
-    }
-    if (!notification) {
-      throw new Error("Invalid notification");
-    }
-    component.value.toUpdate(notification);
+  function set() {
+    _subscribe();
   }
 
   /**
@@ -233,8 +242,81 @@ export function useArrangementNotificationsManager(
     return !!keyMappedDocs.value[`${scheduleId}-${workerId}`];
   }
 
+  const isAllLeaved = (scheduleId) => {
+    const notifications = instance.docs.filter((doc) => {
+      return doc.siteOperationScheduleId === scheduleId;
+    });
+    if (notifications.length === 0) return false;
+    return notifications.every(
+      (doc) => doc.status === ArrangementNotification.STATUSES.LEAVED.value
+    );
+  };
+
+  /***************************************************************************
+   * WATCHERS
+   ***************************************************************************/
+  const targetDateRange = useDebounced
+    ? dateRangeComposable.debouncedDateRange
+    : dateRangeComposable.dateRange;
+  Vue.watch(targetDateRange, _subscribe);
+
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
+  /**
+   * Key-mapped arrangement notification documents.
+   * @returns {Object} keyMappedDocs - The arrangement notifications mapped by docId.
+   */
+  const keyMappedDocs = Vue.computed(() => {
+    return instance.docs.reduce((acc, doc) => {
+      acc[doc.docId] = doc;
+      return acc;
+    }, {});
+  });
+
+  /**
+   * Attributes for the ArrangementNotificationsManager component.
+   * - beforeEdit: Returns true if the `editMode` is "UPDATE".
+   * @returns {Object} The attributes object.
+   */
+  const attrs = Vue.computed(() => {
+    return {
+      ref: (el) => (component.value = el),
+      beforeEdit: (editMode, item) => {
+        return editMode === "UPDATE";
+      },
+      disableDelete: true,
+      handleUpdate: (item) => _update(item),
+      modelValue: instance.docs,
+      schema: ArrangementNotification,
+      loading: loading.value,
+      onError: (error) => logger.error({ error }),
+      "onError:clear": () => logger.clearError(),
+    };
+  });
+
+  if (immediate) set();
+
   /***************************************************************************
    * RETURN VALUES
    ***************************************************************************/
-  return { attrs, create, get, set, has, keyMappedDocs, isAllLeaved };
+  return {
+    docs: Vue.readonly(instance.docs),
+    keyMappedDocs: Vue.readonly(keyMappedDocs),
+    attrs,
+
+    cachedSites: Vue.readonly(cachedSites),
+    cachedEmployees: Vue.readonly(cachedEmployees),
+    cachedOutsourcers: Vue.readonly(cachedOutsourcers),
+
+    set,
+    toCreate: (item) => component?.value?.toCreate?.(item),
+    toUpdate: (item) => component?.value?.toUpdate?.(item),
+    toDelete: (item) => component?.value?.toDelete?.(item),
+
+    create,
+    get,
+    has,
+    isAllLeaved,
+  };
 }

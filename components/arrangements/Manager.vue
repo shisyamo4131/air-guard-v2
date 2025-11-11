@@ -3,11 +3,6 @@
  * @file components/arrangements/Manager.vue
  * @description A component for managing site operation schedules, including viewing, creating, updating, and duplicating schedules.
  * It also provides functionalities for managing workers, site orders, and notifications.
- *
- * Note: コンポーザブルの読み込みに時間がかかっている模様（2025-10-02）
- * 改善の余地あり。
- * - Fetch 系は独立させて、それ以外のコンポーザブルは引数で Fetch 系のコンポーザブルを受け取るように統一する？
- * - provide - inject による遅延の可能性も無視できない？
  */
 import dayjs from "dayjs";
 import { useTagSize } from "@/composables/useTagSize";
@@ -15,13 +10,13 @@ import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useDateRange } from "@/composables/useDateRange";
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
-import { useArrangementNotifications } from "@/composables/useArrangementNotifications";
 import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 
@@ -32,6 +27,13 @@ import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf
 const fetchEmployeeComposable = useFetchEmployee();
 const fetchOutsourcerComposable = useFetchOutsourcer();
 const fetchSiteComposable = useFetchSite();
+
+/** For date range */
+const dateRangeComposable = useDateRange({
+  baseDate: dayjs().toDate(),
+  dayCount: 7,
+  offsetDays: -1,
+});
 
 /** For workers list */
 const { getWorker, availableEmployees, availableOutsourcers } = useWorkersList({
@@ -53,16 +55,13 @@ const arrangementsManager = useArrangementsManager({
 provide("arrangementsManagerComposable", arrangementsManager);
 
 /** For arrangement notifications */
-const arrangementNotifications = useArrangementNotifications({
-  dateRangeOptions: {
-    baseDate: dayjs().toDate(),
-    dayCount: 7,
-    offsetDays: -1,
-  },
+const arrangementNotificationsManager = useArrangementNotificationsManager({
+  dateRangeComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
+  immediate: true,
 });
-const arrangementNotificationsManager = useArrangementNotificationsManager(
-  arrangementNotifications.docs
-);
 
 /** For site operation schedule management */
 const siteOperationScheduleManager = useSiteOperationScheduleManager();
@@ -154,7 +153,7 @@ const commandText = ref(null);
       @click:edit-worker="siteOperationScheduleDetailManager.set"
       @click:hide="siteOrderManager.remove"
       @click:notify="arrangementNotificationsManager.create"
-      @click:notification="arrangementNotificationsManager.set"
+      @click:notification="arrangementNotificationsManager.toUpdate"
       @click:output-sheet="open"
     />
 

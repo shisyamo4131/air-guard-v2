@@ -110,6 +110,7 @@ export function useOperationResultsManager({
    ***************************************************************************/
   const attrs = Vue.computed(() => {
     return {
+      ref: (el) => (component.value = el),
       beforeEdit: (editMode, item) => {
         if (editMode === "CREATE") return true;
         router.push(`operation-results/${item.docId}`);
