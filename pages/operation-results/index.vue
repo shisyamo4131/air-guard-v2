@@ -1,17 +1,19 @@
 <script setup>
-/*****************************************************************************
- * @file pages/settings/operation-results.vue
- * @description 稼働実績管理画面
- *****************************************************************************/
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
 import { useOperationResultsManager } from "@/composables/useOperationResultsManager";
 
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+// Date Range
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
-const { attrs, set, cachedSites } = useOperationResultsManager({
+
+// Manager
+const { attrs, cachedSites } = useOperationResultsManager({
   dateRangeComposable,
   useDebounced: true,
   immediate: true,
@@ -19,8 +21,8 @@ const { attrs, set, cachedSites } = useOperationResultsManager({
 </script>
 
 <template>
-  <v-container>
-    <air-array-manager v-bind="attrs">
+  <TemplatesFixedHeightContainer>
+    <air-array-manager class="fill-height" v-bind="attrs">
       <template #search>
         <MoleculesMonthSelector
           :model-value="dateRange.from"
@@ -38,5 +40,5 @@ const { attrs, set, cachedSites } = useOperationResultsManager({
         <v-progress-circular v-else indeterminate size="small" />
       </template>
     </air-array-manager>
-  </v-container>
+  </TemplatesFixedHeightContainer>
 </template>
