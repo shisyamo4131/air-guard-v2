@@ -24,6 +24,8 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  * @returns {Object} attrs - Computed attributes for the operation result component
  * @returns {Object} info - Information for the information-card component.
  * @returns {Object} info.base - Base information about the company.
+ * @returns {Object} includedKeys - Computed included keys for the manager component
+ * @returns {Object} includedKeys.base - Base included keys for the operation result
  * @returns {Object} isReady - Readonly ref indicating if the document is ready
  * @returns {Object} cachedSites - Readonly ref of cached sites from fetchSite composable
  * @returns {Object} cachedEmployees - Readonly ref of cached employees from fetchEmployee composable
@@ -187,20 +189,6 @@ export function useOperationResultManager({
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
-      inputProps: {
-        includedKeys: [
-          "code",
-          "siteId",
-          "dateAt",
-          "dayType",
-          "shiftType",
-          "startTime",
-          "endTime",
-          "breakMinutes",
-          "workDescription",
-          "remarks",
-        ],
-      },
       onError: (e) => logger.error({ error: e }),
       "onError:clear": logger.clearError,
     };
@@ -250,6 +238,21 @@ export function useOperationResultManager({
     return { base };
   });
 
+  /** Included keys for the manager component */
+  const includedKeys = computed(() => {
+    const base = [
+      "code",
+      "dateAt",
+      "dayType",
+      "shiftType",
+      "startTime",
+      "endTime",
+      "breakMinutes",
+      "workDescription",
+      "remarks",
+    ];
+    return { base };
+  });
   if (immediate) set(immediate);
 
   /***************************************************************************
@@ -259,6 +262,7 @@ export function useOperationResultManager({
     doc: instance,
     attrs,
     info,
+    includedKeys,
     isReady: Vue.readonly(isReady),
 
     cachedSites: Vue.readonly(cachedSites),

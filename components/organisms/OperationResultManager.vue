@@ -2,19 +2,21 @@
 /**
  * @file components/organisms/OperationResultManager.vue
  * @description Component to manage operation results with site selection.
+ * @author shisyamo4131
  *
- * @prop {Function} getSite - Function to fetch a site by its ID.
- * @prop {Function} searchSites - Function to search for sites.
+ * @note This component depends on the fetchSiteComposable.
  */
 defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { getSite, searchSites } = inject("fetchSiteComposable");
+
+/*****************************************************************************
  *  PROPS
  *****************************************************************************/
-const props = defineProps({
-  getSite: { type: Function, required: true },
-  searchSites: { type: Function, required: true },
-});
+const props = defineProps({});
 </script>
 
 <template>

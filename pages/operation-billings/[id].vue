@@ -19,7 +19,7 @@ provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
 // Manager composable
-const { doc, attrs, info } = useOperationBillingManager({
+const { doc, attrs, info, includedKeys } = useOperationBillingManager({
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
@@ -38,15 +38,8 @@ const { doc, attrs, info } = useOperationBillingManager({
           <v-col cols="12">
             <air-item-manager
               v-bind="attrs"
-              hide-delete-btn
               :input-props="{
-                includedKeys: [
-                  'unitPriceBase',
-                  'overtimeUnitPriceBase',
-                  'unitPriceQualified',
-                  'overtimeUnitPriceQualified',
-                  'billingUnitType',
-                ],
+                includedKeys: includedKeys.prices,
               }"
             >
               <template #activator="{ attrs: activatorProps }">
@@ -62,15 +55,8 @@ const { doc, attrs, info } = useOperationBillingManager({
       <v-col cols="12" lg="8">
         <air-item-manager
           v-bind="attrs"
-          hide-delete-btn
           :input-props="{
-            includedKeys: [
-              'adjustedQuantityBase',
-              'adjustedOvertimeBase',
-              'adjustedQuantityQualified',
-              'adjustedOvertimeQualified',
-              'useAdjustedQuantity',
-            ],
+            includedKeys: includedKeys.adjusted,
           }"
           v-slot="{ toUpdate }"
         >

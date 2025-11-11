@@ -24,6 +24,10 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  * @returns {Object} attrs - Computed attributes for the operation billing component
  * @returns {Object} info - Information for the information-card component.
  * @returns {Object} info.base - Base information about the company.
+ * @returns {Object} info.prices - Pricing information about the operation billing.
+ * @returns {Object} includedKeys - Computed included keys for the manager component
+ * @returns {Object} includedKeys.prices - Included keys for the prices section
+ * @returns {Object} includedKeys.adjusted - Included keys for the adjusted section
  * @returns {Object} isReady - Readonly ref indicating if the document is ready
  * @returns {Object} cachedSites - Readonly ref of cached sites from fetchSite composable
  * @returns {Object} cachedEmployees - Readonly ref of cached employees from fetchEmployee composable
@@ -142,6 +146,7 @@ export function useOperationBillingManager({
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
+      hideDeleteBtn: true,
       onError: (e) => logger.error({ error: e }),
       "onError:clear": logger.clearError,
     };
@@ -205,6 +210,25 @@ export function useOperationBillingManager({
     return { base, prices };
   });
 
+  /** Included keys for the manager component */
+  const includedKeys = Vue.computed(() => {
+    const prices = [
+      "unitPriceBase",
+      "overtimeUnitPriceBase",
+      "unitPriceQualified",
+      "overtimeUnitPriceQualified",
+      "billingUnitType",
+    ];
+    const adjusted = [
+      "adjustedQuantityBase",
+      "adjustedOvertimeBase",
+      "adjustedQuantityQualified",
+      "adjustedOvertimeQualified",
+      "useAdjustedQuantity",
+    ];
+    return { prices, adjusted };
+  });
+
   if (immediate) set(immediate);
 
   /***************************************************************************
@@ -214,6 +238,7 @@ export function useOperationBillingManager({
     doc: instance,
     attrs,
     info,
+    includedKeys,
     isReady: Vue.readonly(isReady),
 
     cachedSites: Vue.readonly(cachedSites),

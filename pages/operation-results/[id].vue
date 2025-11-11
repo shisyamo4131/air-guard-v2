@@ -15,18 +15,25 @@ const operationResultId = route.params.id;
 const fetchSiteComposable = useFetchSite();
 const fetchEmployeeComposable = useFetchEmployee();
 const fetchOutsourcerComposable = useFetchOutsourcer();
-const { searchSites, getSite } = fetchSiteComposable;
+provide("fetchSiteComposable", fetchSiteComposable);
 provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
 // Manager composable
-const { doc, attrs, info, addWorker, changeWorker, removeWorker } =
-  useOperationResultManager({
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-    immediate: operationResultId,
-  });
+const {
+  doc,
+  attrs,
+  info,
+  includedKeys,
+  addWorker,
+  changeWorker,
+  removeWorker,
+} = useOperationResultManager({
+  fetchSiteComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  immediate: operationResultId,
+});
 </script>
 
 <template>
@@ -37,8 +44,9 @@ const { doc, attrs, info, addWorker, changeWorker, removeWorker } =
           <v-col cols="12">
             <OrganismsOperationResultManager
               v-bind="attrs"
-              :get-site="getSite"
-              :search-sites="searchSites"
+              :input-props="{
+                includedKeys: includedKeys.base,
+              }"
             >
               <template #activator="{ attrs: activatorProps }">
                 <air-information-card
