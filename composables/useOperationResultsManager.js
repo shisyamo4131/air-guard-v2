@@ -106,6 +106,11 @@ export function useOperationResultsManager({
   Vue.watch(targetDateRange, _subscribe);
 
   /***************************************************************************
+   * LIFECYCLE HOOKS
+   ***************************************************************************/
+  Vue.onUnmounted(() => instance.unsubscribe());
+
+  /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
   const attrs = Vue.computed(() => {

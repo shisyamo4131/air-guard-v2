@@ -123,6 +123,11 @@ export function useSiteOperationSchedulesManager({
   Vue.watch(targetDateRange, _subscribe);
 
   /***************************************************************************
+   * LIFECYCLE HOOKS
+   ***************************************************************************/
+  Vue.onUnmounted(() => instance.unsubscribe());
+
+  /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
   /** Attributes for the component */
