@@ -36,9 +36,6 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  * @returns {Function} toCreate - Method to trigger create operation
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
- * @returns {Function} addWorker - Method to add a worker to the operation billing
- * @returns {Function} changeWorker - Method to change a worker in the operation billing
- * @returns {Function} removeWorker - Method to remove a worker from the operation billing
  */
 export function useOperationBillingManager({
   fetchSiteComposable,
