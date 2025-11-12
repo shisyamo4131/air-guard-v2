@@ -6,48 +6,52 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "../composables/useLogger";
-import { useDateRange } from "@/composables/useDateRange";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 export function useArrangementsManager({
-  dateRangeOptions = {},
-  useDebounced = false,
-  fetchEmployeeComposable: providedFetchEmployeeComposable = null,
-  fetchOutsourcerComposable: providedFetchOutsourcerComposable = null,
-  fetchSiteComposable: providedFetchSiteComposable = null,
+  siteOperationSchedulesManagerComposable: schedulesComposable,
+  dateRangeComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+  fetchSiteComposable,
 } = {}) {
   /***************************************************************************
-   * DEFINE REACTIVE OBJECTS
+   * VALIDATION
    ***************************************************************************/
-  const instance = Vue.reactive(new SiteOperationSchedule());
-
-  /** Documents array synchronized `instance.docs` for optimistic updates. */
-  const internalDocs = ref([]);
+  if (!schedulesComposable) {
+    throw new Error("siteOperationSchedulesManagerComposable is required");
+  }
+  if (!dateRangeComposable) {
+    throw new Error("dateRangeComposable is required");
+  }
+  if (!fetchSiteComposable) {
+    throw new Error("fetchSiteComposable is required");
+  }
+  if (!fetchEmployeeComposable) {
+    throw new Error("fetchEmployeeComposable is required");
+  }
+  if (!fetchOutsourcerComposable) {
+    throw new Error("fetchOutsourcerComposable is required");
+  }
 
   /***************************************************************************
-   * DEFINE COMPOSABLES
+   * SETUP STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("ArrangementsManager", useErrorsStore());
 
   const { company } = useAuthStore();
-  const {
-    currentDayCount: dayCount,
-    dateRange,
-    debouncedDateRange,
-  } = useDateRange(dateRangeOptions);
-  const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
-  const { fetchSite, cachedSites } = fetchSiteComposable;
-  const fetchEmployeeComposable =
-    providedFetchEmployeeComposable || useFetchEmployee();
-  const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
-  const fetchOutsourcerComposable =
-    providedFetchOutsourcerComposable || useFetchOutsourcer();
-  const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable;
+
+  const { cachedSites } = fetchSiteComposable;
+  const { cachedEmployees } = fetchEmployeeComposable;
+  const { cachedOutsourcers } = fetchOutsourcerComposable;
 
   /***************************************************************************
-   * DEFINE METHODS (PRIVATE)
+   * REACTIVE OBJECTS
+   ***************************************************************************/
+  /** Documents array synchronized `instance.docs` for optimistic updates. */
+  const internalDocs = ref([]);
+
+  /***************************************************************************
+   * METHODS (PRIVATE)
    ***************************************************************************/
   /**
    * Synchronize instance.docs to internalDocs.
@@ -60,26 +64,8 @@ export function useArrangementsManager({
     });
   }
 
-  /**
-   * Subscribe `SiteOperationSchedule` documents.
-   */
-  function _subscribe() {
-    const range = useDebounced ? dateRange.value : debouncedDateRange.value;
-    const { from, to } = range;
-    const constraints = [
-      ["where", "dateAt", ">=", from],
-      ["where", "dateAt", "<=", to],
-    ];
-
-    instance.subscribeDocs({ constraints }, (doc) => {
-      fetchSite(doc);
-      fetchEmployee(doc.employeeIds);
-      fetchOutsourcer(doc.outsourcerIds);
-    });
-  }
-
   /***************************************************************************
-   * DEFINE METHODS (PUBLIC)
+   * METHODS (PUBLIC)
    ***************************************************************************/
   /**
    * Add new worker to the specified schedule.
@@ -312,12 +298,9 @@ export function useArrangementsManager({
   }
 
   /***************************************************************************
-   * DEFINE WATCHERS
+   * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(_subscribe);
-
-  /** Watcher for synchronize instance.docs to localDocs. */
-  Vue.watch(() => instance.docs, _syncLocalDocs, {
+  Vue.watch(schedulesComposable.docs, _syncLocalDocs, {
     immediate: true,
     deep: true,
   });
@@ -327,6 +310,7 @@ export function useArrangementsManager({
    ***************************************************************************/
   /**
    * Key-mapped documents.
+   * @returns {Object} - Key-mapped documents.
    */
   const keyMappedDocs = Vue.computed(() => {
     const result = internalDocs.value.reduce((acc, schedule) => {
@@ -338,6 +322,7 @@ export function useArrangementsManager({
 
   /**
    * A map of employees who are scheduled on each date.
+   * @returns {Object} - Map of arranged employees by date.
    */
   const arrangedEmployeesMap = Vue.computed(() => {
     const result = internalDocs.value.reduce((acc, schedule) => {
@@ -363,6 +348,10 @@ export function useArrangementsManager({
     return result;
   });
 
+  /**
+   * Statistics about arrangements.
+   * @returns {Object} - Statistics object.
+   */
   const statistics = Vue.computed(() => {
     // Unique siteId-shiftType combination map
     //  -> Used to determine the number of unique site-shift combinations.
@@ -402,11 +391,12 @@ export function useArrangementsManager({
     };
   });
 
+  /** Attributes for the component */
   const attrs = Vue.computed(() => {
     const table = {
       modelValue: keyMappedDocs.value,
-      from: dateRange.value.from,
-      dayCount: dayCount.value,
+      from: dateRangeComposable.dateRange.value.from,
+      dayCount: dateRangeComposable.currentDayCount.value,
       statistics: statistics.value,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
       "onChange:workers": (event) => handleDraggableWorkerChangeEvent(event),
@@ -415,17 +405,8 @@ export function useArrangementsManager({
     return { table };
   });
 
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
-  });
-
   return {
     docs: Vue.readonly(internalDocs.value),
-    dateRange,
-    dayCount,
     keyMappedDocs,
     statistics,
 

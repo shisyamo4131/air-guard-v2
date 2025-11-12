@@ -14,6 +14,7 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
+import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
@@ -21,7 +22,7 @@ import { useArrangementNotificationsManager } from "@/composables/useArrangement
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 
 /*****************************************************************************
- * COMPOSABLES
+ * SETUP COMPOSABLES
  *****************************************************************************/
 /** Fetch composables for caching. */
 const fetchEmployeeComposable = useFetchEmployee();
@@ -42,17 +43,24 @@ const { getWorker, availableEmployees, availableOutsourcers } = useWorkersList({
 });
 provide("getWorker", getWorker); // Use in WorkerTag.vue
 
+/** For site operation schedules management */
+const siteOperationSchedulesManagerComposable =
+  useSiteOperationSchedulesManager({
+    dateRangeComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+    fetchSiteComposable,
+    immediate: true,
+  });
+
+/** For arrangements management */
 const arrangementsManager = useArrangementsManager({
-  dateRangeOptions: {
-    baseDate: dayjs().toDate(),
-    dayCount: 7,
-    offsetDays: -1,
-  },
+  siteOperationSchedulesManagerComposable,
+  dateRangeComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
-provide("arrangementsManagerComposable", arrangementsManager);
 
 /** For arrangement notifications */
 const arrangementNotificationsManager = useArrangementNotificationsManager({
@@ -106,7 +114,7 @@ const commandText = ref(null);
   <div class="d-flex flex-column fill-height">
     <!-- TOOLBAR -->
     <ArrangementsToolbar
-      v-model="arrangementsManager.dayCount.value"
+      v-model="dateRangeComposable.currentDayCount.value"
       @click:workers="toggleFloatingWindow"
       @click:site-order="siteOrderManager.set"
     >

@@ -1,6 +1,7 @@
 # 課題
 
 - useArrangementsManager の dateRange を分離
+- useArrangementNotifications は不要なのでは。
 
 ## 全体
 
