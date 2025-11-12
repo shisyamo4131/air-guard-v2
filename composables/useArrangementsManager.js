@@ -1,3 +1,12 @@
+/***************************************************************************
+ * useArrangementsManager
+ * @version 1.0.0
+ * @description A composable to manage Arrangements.
+ * @author shisyamo4131
+ *
+ * - Provides some methods for managing site operation schedule and its workers
+ *   to optimistically update.
+ ***************************************************************************/
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import ja from "dayjs/locale/ja";
@@ -64,6 +73,15 @@ export function useArrangementsManager({
     });
   }
 
+  /**
+   * Returns the internal schedule corresponding to the given schedule.
+   * @param {*} schedule
+   * @returns {SiteOperationSchedule|null}
+   */
+  function _getInternalSchedule(schedule) {
+    return internalDocs.value.find((doc) => doc.docId === schedule.docId);
+  }
+
   /***************************************************************************
    * METHODS (PUBLIC)
    ***************************************************************************/
@@ -76,8 +94,15 @@ export function useArrangementsManager({
    * @param {number} newIndex - Additional position.
    */
   async function addWorker({ schedule, id, isEmployee } = {}, newIndex = 0) {
-    schedule.addWorker({ id, isEmployee }, newIndex);
-    await schedule.update();
+    const internalSchedule = _getInternalSchedule(schedule);
+    if (!internalSchedule) {
+      logger.error({
+        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+      });
+      return;
+    }
+    internalSchedule.addWorker({ id, isEmployee }, newIndex);
+    await internalSchedule.update();
   }
 
   /**
@@ -91,17 +116,28 @@ export function useArrangementsManager({
    *         or outsourcers before employees.
    */
   async function moveWorker({ schedule, oldIndex, newIndex, isEmployee }) {
-    if (isEmployee && newIndex > schedule.employees.length - 1) {
+    const internalSchedule = _getInternalSchedule(schedule);
+    if (!internalSchedule) {
+      logger.error({
+        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+      });
+      return;
+    }
+
+    if (isEmployee && newIndex > internalSchedule.employees.length - 1) {
       logger.error({ message: "従業員は外注先の前に配置する必要があります。" });
       return;
-    } else if (!isEmployee && newIndex <= schedule.employees.length - 1) {
+    } else if (
+      !isEmployee &&
+      newIndex <= internalSchedule.employees.length - 1
+    ) {
       logger.error({
         message: "外注先は従業員の後ろに配置する必要があります。",
       });
       return;
     }
-    schedule.moveWorker({ oldIndex, newIndex, isEmployee });
-    await schedule.update();
+    internalSchedule.moveWorker({ oldIndex, newIndex, isEmployee });
+    await internalSchedule.update();
   }
 
   /**
@@ -112,8 +148,15 @@ export function useArrangementsManager({
    * @param {boolean} param.isEmployee - Whether worker is employee or not.
    */
   async function removeWorker({ schedule, workerId, isEmployee }) {
-    schedule.removeWorker({ workerId, isEmployee });
-    await schedule.update();
+    const internalSchedule = _getInternalSchedule(schedule);
+    if (!internalSchedule) {
+      logger.error({
+        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+      });
+      return;
+    }
+    internalSchedule.removeWorker({ workerId, isEmployee });
+    await internalSchedule.update();
   }
 
   /**
@@ -125,44 +168,66 @@ export function useArrangementsManager({
    * @throws Will throw an error if the event structure is invalid or unknown.
    */
   async function handleDraggableWorkerChangeEvent({ event, schedule }) {
-    if (event.added) {
-      const { element, newIndex } = event.added;
-      if (!element || typeof element !== "object") {
-        throw new Error(
-          `Invalid argument in added event: ${JSON.stringify(event)}`
-        );
+    try {
+      if (event.added) {
+        const { element, newIndex } = event.added;
+        if (!element || typeof element !== "object") {
+          logger.error({
+            message: `Invalid argument in added event: ${JSON.stringify(
+              event
+            )}`,
+          });
+          return;
+        }
+        const { id, isEmployee } = element;
+        if (!id || typeof isEmployee !== "boolean") {
+          logger.error({
+            message: `Invalid argument in added event: ${JSON.stringify(
+              event
+            )}`,
+          });
+          return;
+        }
+        await addWorker({ schedule, id, isEmployee }, newIndex);
+      } else if (event.moved) {
+        const { element, oldIndex, newIndex } = event.moved ?? {};
+        if (!element || typeof element !== "object") {
+          logger.error({
+            message: `Invalid argument in moved event: ${JSON.stringify(
+              event
+            )}`,
+          });
+          return;
+        }
+        const { isEmployee } = element;
+        if (typeof isEmployee !== "boolean") {
+          logger.error({
+            message: `Invalid argument in moved event: ${JSON.stringify(
+              event
+            )}`,
+          });
+          return;
+        }
+        await moveWorker({ schedule, oldIndex, newIndex, isEmployee });
+      } else if (event.removed) {
+        const { workerId, isEmployee } = event.removed?.element ?? {};
+        if (!workerId || typeof isEmployee !== "boolean") {
+          logger.error({
+            message: `Invalid argument in removed event: ${JSON.stringify(
+              event
+            )}`,
+          });
+          return;
+        }
+        await removeWorker({ schedule, workerId, isEmployee });
+      } else {
+        logger.error({
+          message: `Unknown draggable event: ${JSON.stringify(event)}`,
+        });
+        return;
       }
-      const { id, isEmployee } = element;
-      if (!id || typeof isEmployee !== "boolean") {
-        throw new Error(
-          `Invalid argument in added event: ${JSON.stringify(event)}`
-        );
-      }
-      await addWorker({ schedule, id, isEmployee }, newIndex);
-    } else if (event.moved) {
-      const { element, oldIndex, newIndex } = event.moved ?? {};
-      if (!element || typeof element !== "object") {
-        throw new Error(
-          `Invalid argument in moved event: ${JSON.stringify(event)}`
-        );
-      }
-      const { isEmployee } = element;
-      if (typeof isEmployee !== "boolean") {
-        throw new Error(
-          `Invalid argument in moved event: ${JSON.stringify(event)}`
-        );
-      }
-      await moveWorker({ schedule, oldIndex, newIndex, isEmployee });
-    } else if (event.removed) {
-      const { workerId, isEmployee } = event.removed?.element ?? {};
-      if (!workerId || typeof isEmployee !== "boolean") {
-        throw new Error(
-          `Invalid argument in removed event: ${JSON.stringify(event)}`
-        );
-      }
-      await removeWorker({ schedule, workerId, isEmployee });
-    } else {
-      throw new Error(`Unknown draggable event: ${JSON.stringify(event)}`);
+    } catch (error) {
+      logger.error({ error });
     }
   }
 
@@ -180,43 +245,51 @@ export function useArrangementsManager({
    *         or 'groupKey' is not provided.
    */
   async function optimisticUpdates({ newSchedules = [], groupKey } = {}) {
-    if (!Array.isArray(newSchedules)) {
-      throw new Error(`'newSchedules' must be an array. ${newSchedules}`);
-    }
+    try {
+      if (!Array.isArray(newSchedules)) {
+        logger.error({ message: `'newSchedules' must be an array.` });
+        return;
+      }
 
-    if (!groupKey || typeof groupKey !== "string") {
-      throw new Error(`'groupKey' is required and must be a string.`);
-    }
+      if (!groupKey || typeof groupKey !== "string") {
+        logger.error({
+          message: `'groupKey' is required and must be a string.`,
+        });
+        return;
+      }
 
-    // Evacuate unapplicable documents.
-    const unapplicableDocs = internalDocs.value.filter(
-      (doc) => !(doc.groupKey === groupKey)
-    );
-
-    const [siteId, shiftType, date] =
-      SiteOperationSchedule.groupKeyDivider(groupKey);
-
-    // Update siteId, shiftType and dateAt based on groupKey.
-    // NOTE: Do not create new SiteOperationSchedule instance.
-    // Arrangement notifications should be deleted automatically by
-    // SiteOperaitonSchedule instance.
-    newSchedules.forEach((schedule, index) => {
-      schedule.siteId = siteId;
-      schedule.shiftType = shiftType;
-      schedule.dateAt = new Date(date);
-      schedule.displayOrder = index;
-    });
-
-    // Replace internalDocs with the new schedules
-    internalDocs.value = [...unapplicableDocs, ...newSchedules];
-
-    // Update Firestore documents.
-    const { $firestore } = useNuxtApp();
-    await runTransaction($firestore, async (transaction) => {
-      await Promise.all(
-        newSchedules.map((schedule) => schedule.update({ transaction }))
+      // Evacuate unapplicable documents.
+      const unapplicableDocs = internalDocs.value.filter(
+        (doc) => !(doc.groupKey === groupKey)
       );
-    });
+
+      const [siteId, shiftType, date] =
+        SiteOperationSchedule.groupKeyDivider(groupKey);
+
+      // Update siteId, shiftType and dateAt based on groupKey.
+      // NOTE: Do not create new SiteOperationSchedule instance.
+      // Arrangement notifications should be deleted automatically by
+      // SiteOperaitonSchedule instance.
+      newSchedules.forEach((schedule, index) => {
+        schedule.siteId = siteId;
+        schedule.shiftType = shiftType;
+        schedule.dateAt = new Date(date);
+        schedule.displayOrder = index;
+      });
+
+      // Replace internalDocs with the new schedules
+      internalDocs.value = [...unapplicableDocs, ...newSchedules];
+
+      // Update Firestore documents.
+      const { $firestore } = useNuxtApp();
+      await runTransaction($firestore, async (transaction) => {
+        await Promise.all(
+          newSchedules.map((schedule) => schedule.update({ transaction }))
+        );
+      });
+    } catch (error) {
+      logger.error({ error });
+    }
   }
 
   /**
