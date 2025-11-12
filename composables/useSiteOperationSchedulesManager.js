@@ -11,6 +11,9 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.dateRangeComposable - An instance of useDateRange composable
@@ -32,6 +35,8 @@ export function useSiteOperationSchedulesManager({
   dateRangeComposable,
   useDebounced = false,
   fetchSiteComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
   immediate = false,
 } = {}) {
   /***************************************************************************
@@ -53,8 +58,16 @@ export function useSiteOperationSchedulesManager({
    ***************************************************************************/
   const logger = useLogger("SiteOperationSchedulesManager", useErrorsStore());
   const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
+  const { fetchEmployee, cachedEmployees } =
+    fetchEmployeeComposable || useFetchEmployee();
+  const { fetchOutsourcer, cachedOutsourcers } =
+    fetchOutsourcerComposable || useFetchOutsourcer();
   const missingComposables = [];
   if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
+  if (!fetchEmployeeComposable)
+    missingComposables.push("fetchEmployeeComposable");
+  if (!fetchOutsourcerComposable)
+    missingComposables.push("fetchOutsourcerComposable");
   if (missingComposables.length > 0) {
     logger.info({
       message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
@@ -84,7 +97,11 @@ export function useSiteOperationSchedulesManager({
     if (siteId.value) {
       constraints.push(["where", "siteId", "==", siteId.value]);
     }
-    instance.subscribeDocs({ constraints }, (item) => fetchSite(item.siteId));
+    instance.subscribeDocs({ constraints }, (item) => {
+      fetchSite(item.siteId);
+      fetchEmployee(item.employeeIds);
+      fetchOutsourcer(item.outsourcerIds);
+    });
   }
 
   /***************************************************************************
@@ -161,6 +178,8 @@ export function useSiteOperationSchedulesManager({
     attrs: Vue.readonly(attrs),
 
     cachedSites: Vue.readonly(cachedSites),
+    cachedEmployees: Vue.readonly(cachedEmployees),
+    cachedOutsourcers: Vue.readonly(cachedOutsourcers),
 
     set,
     toCreate: (item) => component?.value?.toCreate?.(item),
