@@ -10,16 +10,19 @@ import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
-
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.dateRangeComposable - An instance of useDateRange composable
  * @param {boolean} options.useDebounced - Whether to use debounced date range (default: false)
+ * @param {Object} options.fetchSiteComposable - An instance of useFetchSite composable (optional)
  * @param {boolean} options.immediate - Whether to immediately set up the subscription (default: false)
  * @returns {Object} - The site operation schedules manager composable
  * @returns {Array} docs - Array of SiteOperationSchedule documents
- * @returns {Object} attrs - Computed attributes for the site operation schedules component
+ * @returns {Object} keyMappedDocs - Object mapping docId to SiteOperationSchedule documents
  * @returns {Array} events - Array of event objects derived from the schedules
+ * @returns {Object} attrs - Computed attributes for the site operation schedules component
+ * @returns {Object} cachedSites - Object of cached site documents
  * @returns {Function} set - Method to set SiteOperationSchedule to update.
  * @returns {Function} toCreate - Method to trigger create operation
  * @returns {Function} toUpdate - Method to trigger update operation
@@ -28,6 +31,7 @@ import { useLogger } from "@/composables/useLogger";
 export function useSiteOperationSchedulesManager({
   dateRangeComposable,
   useDebounced = false,
+  fetchSiteComposable,
   immediate = false,
 } = {}) {
   /***************************************************************************
@@ -48,6 +52,16 @@ export function useSiteOperationSchedulesManager({
    * STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("SiteOperationSchedulesManager", useErrorsStore());
+  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
+  const missingComposables = [];
+  if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
+  if (missingComposables.length > 0) {
+    logger.info({
+      message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
+        ", "
+      )}`,
+    });
+  }
 
   /***************************************************************************
    * METHODS (PRIVATE)
@@ -70,7 +84,7 @@ export function useSiteOperationSchedulesManager({
     if (siteId.value) {
       constraints.push(["where", "siteId", "==", siteId.value]);
     }
-    instance.subscribeDocs({ constraints });
+    instance.subscribeDocs({ constraints }, (item) => fetchSite(item.siteId));
   }
 
   /***************************************************************************
@@ -145,6 +159,8 @@ export function useSiteOperationSchedulesManager({
     events: Vue.readonly(events),
 
     attrs: Vue.readonly(attrs),
+
+    cachedSites: Vue.readonly(cachedSites),
 
     set,
     toCreate: (item) => component?.value?.toCreate?.(item),
