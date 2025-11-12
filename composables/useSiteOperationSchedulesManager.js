@@ -47,13 +47,6 @@ export function useSiteOperationSchedulesManager({
   }
 
   /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const siteId = Vue.ref(null);
-  const instance = Vue.reactive(new SiteOperationSchedule());
-  const component = Vue.ref(null);
-
-  /***************************************************************************
    * STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("SiteOperationSchedulesManager", useErrorsStore());
@@ -75,6 +68,13 @@ export function useSiteOperationSchedulesManager({
       )}`,
     });
   }
+
+  /***************************************************************************
+   * REACTIVE OBJECTS
+   ***************************************************************************/
+  const siteId = Vue.ref(null);
+  const instance = Vue.reactive(new SiteOperationSchedule());
+  const component = Vue.ref(null);
 
   /***************************************************************************
    * METHODS (PRIVATE)
