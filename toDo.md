@@ -1,7 +1,7 @@
 # 課題
 
-- useArrangementsManager の dateRange を分離
-- useArrangementNotifications は不要なのでは。
+- useSiteOperationSchedulesManager からデータレイヤーを分離しないとマズイ。ドキュメントの抽出条件が機能によって変わってくる。
+- useArrangementNotificationsFilteredBySiteOperationScheduleId, OrganismsArrangementNotificationsStatusUpdater は不要なのでは。
 
 ## 全体
 

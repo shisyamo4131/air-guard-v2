@@ -4,6 +4,7 @@
  *****************************************************************************/
 const props = defineProps({
   agreement: { type: Object, default: null },
+  notifications: { type: Object, default: () => ({}) },
   workers: { type: Array, default: () => [] },
 });
 
@@ -12,7 +13,6 @@ const emit = defineEmits(["click:notification", "click:notify"]);
 /*****************************************************************************
  * DEFINE(INJECT) COMPOSABLES
  *****************************************************************************/
-const notifications = inject("notificationsMap");
 </script>
 
 <template>
