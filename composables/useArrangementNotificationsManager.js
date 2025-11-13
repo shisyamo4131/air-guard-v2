@@ -120,34 +120,6 @@ export function useArrangementNotificationsManager({
     });
   }
 
-  /** Update an existing ArrangementNotification document. */
-  async function _update(item) {
-    logger.clearError();
-    try {
-      loading.value = true;
-      const { status } = item;
-      if (!Object.keys(ArrangementNotification.STATUSES).includes(status)) {
-        throw new Error(`Invalid status: ${status}`);
-      }
-      const handler = {
-        [ArrangementNotification.STATUSES.ARRANGED.value]: item.toArranged,
-        [ArrangementNotification.STATUSES.CONFIRMED.value]: item.toConfirmed,
-        [ArrangementNotification.STATUSES.ARRIVED.value]: item.toArrived,
-        [ArrangementNotification.STATUSES.LEAVED.value]: item.toLeaved,
-      };
-      const fn = handler[status];
-      if (!fn) {
-        throw new Error(`No handler found for status: ${status}`);
-      } else {
-        await fn.call(item, item);
-      }
-    } catch (error) {
-      logger.error({ error, data: item });
-    } finally {
-      loading.value = false;
-    }
-  }
-
   /***************************************************************************
    * METHODS (PUBLIC)
    ***************************************************************************/
@@ -291,7 +263,7 @@ export function useArrangementNotificationsManager({
         return editMode === "UPDATE";
       },
       disableDelete: true,
-      handleUpdate: (item) => _update(item),
+      handleUpdate: (item) => item.update(),
       modelValue: instance.docs,
       schema: ArrangementNotification,
       loading: loading.value,
