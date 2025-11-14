@@ -2,6 +2,6 @@
 
 <template>
   <TemplatesFixedHeightContainer>
-    <OperationResultRegisterManager />
+    <OrganismsOperationResultRegisterManager class="fill-height" />
   </TemplatesFixedHeightContainer>
 </template>

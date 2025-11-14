@@ -1,7 +1,8 @@
 # 課題
 
-- useSiteOperationSchedulesManager からデータレイヤーを分離しないとマズイ。ドキュメントの抽出条件が機能によって変わってくる。
+- useArrangementNotificationsManager の create を notify として useSiteOperationSchedulesManager に移行 -> arrangementsManager を修正。
 - useArrangementNotificationsFilteredBySiteOperationScheduleId, OrganismsArrangementNotificationsStatusUpdater は不要なのでは。
+- useSiteOperationSchedulesManager からデータレイヤーを分離しないとマズイ。ドキュメントの抽出条件が機能によって変わってくる。
 
 ## 全体
 

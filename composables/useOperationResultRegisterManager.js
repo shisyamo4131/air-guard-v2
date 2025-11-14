@@ -1,5 +1,5 @@
 /***************************************************************************
- * useOperationResultRegistManager
+ * useOperationResultRegisterManager
  * @version 1.0.0
  * @description A composable to manage the registration of operation results
  *              for SiteOperationSchedule instances.
@@ -11,49 +11,31 @@ import { ArrangementNotification } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "@/composables/useLogger";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 /**
  * @param {*} options
  * @param {*} options.docs - Array of SiteOperationSchedule instances to manage
+ * @param {*} options.cachedSites - Object of cached site documents
  * @returns {Object} - The operation result registration manager composable
- * @returns {Array} docs - Array of SiteOperationSchedule documents
- * @returns {Object} attrs - Computed attributes for the operation result registration component
- * @returns {Object} cachedSites - Object of cached site documents
+ * @returns {Object} - keyMappedDocs: Key-mapped SiteOperationSchedule documents
+ * @returns {Array} - notifications: Array of ArrangementNotification documents
+ * @returns {Object} - keyMappedNotifications: Key-mapped ArrangementNotification documents
+ * @returns {Boolean} - hasNotifications: Whether all workers have notifications
+ * @returns {Function} - getNotification: Function to get a notification by its key
+ * @returns {Object} - site: The site instance associated with the selected schedule
+ * @returns {Object} - agreement: The agreement applicable to the selected schedule
+ * @returns {Boolean} - hasAgreement: Whether there is an applicable agreement
+ * @returns {Boolean} - isAllLeaved: Whether all workers have left
+ * @returns {Boolean} - isReady: Whether the selected schedule is ready to be registered as operation result
+ * @returns {Object} - attrs: Attributes for the component
+ * @returns {Function} - notify: Function to create notifications for the selected schedule
  */
-export function useOperationResultRegistManager({
-  docs,
-  fetchSiteComposable,
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
-} = {}) {
+export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
   /***************************************************************************
    * SETUP COMPOSABLES
    ***************************************************************************/
-  const logger = useLogger("OperationResultRegistManager", useErrorsStore());
+  const logger = useLogger("OperationResultRegisterManager", useErrorsStore());
   const loadingsStore = useLoadingsStore();
-
-  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
-  const { fetchEmployee, cachedEmployees } =
-    fetchEmployeeComposable || useFetchEmployee();
-  const { fetchOutsourcer, cachedOutsourcers } =
-    fetchOutsourcerComposable || useFetchOutsourcer();
-
-  const missingComposables = [];
-  if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
-  if (!fetchEmployeeComposable)
-    missingComposables.push("fetchEmployeeComposable");
-  if (!fetchOutsourcerComposable)
-    missingComposables.push("fetchOutsourcerComposable");
-  if (missingComposables.length > 0) {
-    console.info({
-      message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
-        ", "
-      )}`,
-    });
-  }
 
   /***************************************************************************
    * REACTIVE OBJECTS
@@ -65,18 +47,6 @@ export function useOperationResultRegistManager({
   /***************************************************************************
    * METHODS (PRIVATE)
    ***************************************************************************/
-  /**
-   * Fetch related data for the provided documents.
-   * @returns {void}
-   */
-  function _fetchRelatedData() {
-    docs.forEach((doc) => {
-      fetchSite(doc.siteId);
-      fetchEmployee(doc.employeeIds);
-      fetchOutsourcer(doc.outsourcerIds);
-    });
-  }
-
   /**
    * Subscribe notifications related to a specific schedule ID.
    * NOTE: 画像データなどを取得する可能性があるため、非同期処理で実装。
@@ -107,7 +77,7 @@ export function useOperationResultRegistManager({
       logger.error({ message });
       return;
     }
-    const agreement = applicableAgreement.value;
+    const agreement = agreement.value;
     if (!agreement) {
       const message = `No agreement found for schedule ID ${selectedSchedule.value.docId} on site ID ${site.docId}.`;
       logger.error({ message });
@@ -129,17 +99,6 @@ export function useOperationResultRegistManager({
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watch(docs, (newDocs) => {
-    if (!Array.isArray(newDocs)) {
-      throw new Error("The 'doc' parameter must be an array.");
-    }
-    if (!newDocs.every((doc) => doc instanceof SiteOperationSchedule)) {
-      throw new Error(
-        "All items in the 'doc' array must be instances of SiteOperationSchedule."
-      );
-    }
-    _fetchRelatedData();
-  });
 
   /***************************************************************************
    * METHODS (PUBLIC)
@@ -161,6 +120,15 @@ export function useOperationResultRegistManager({
     } finally {
       loadingsStore.remove(loadingsKey);
     }
+  }
+
+  /**
+   * Retrieve a notification by its key.
+   * @param {string} notificationKey
+   * @returns {Object|null} The notification object or null if not found.
+   */
+  function getNotification(notificationKey) {
+    return keyMappedNotifications.value[notificationKey] || null;
   }
 
   /***************************************************************************
@@ -222,40 +190,17 @@ export function useOperationResultRegistManager({
    */
   const site = Vue.computed(() => {
     if (!selectedSchedule.value) return null;
-    return cachedSites.value[selectedSchedule.value.siteId];
+    return cachedSites?.value?.[selectedSchedule.value.siteId];
   });
 
   /**
    * Returns the agreement applicable to the selected schedule.
    * @returns {Object|null} The applicable agreement or null if not found.
    */
-  const applicableAgreement = Vue.computed(() => {
+  const agreement = Vue.computed(() => {
     if (!selectedSchedule.value) return null;
     if (!site.value) return null;
     return site.value.getAgreement(selectedSchedule.value);
-  });
-
-  /**
-   * Whether there is an applicable agreement for the selected schedule.
-   * @returns {Boolean} True if there is an agreement, false otherwise.
-   */
-  const hasAgreement = Vue.computed(() => {
-    if (!selectedSchedule.value) return false;
-    if (!site.value) return false;
-    return !!applicableAgreement.value;
-  });
-
-  /**
-   * Whether the selected schedule is abled to regist as operation result.
-   * @returns {Boolean} True if able to regist, false otherwise.
-   */
-  const isReady = Vue.computed(() => {
-    if (!selectedSchedule.value) return false;
-    if (!site.value) return false;
-    if (!applicableAgreement.value) return false;
-    if (!hasNotifications.value) return false;
-    if (!isAllLeaved.value) return false;
-    return true;
   });
 
   /** Attributes for the component */
@@ -286,24 +231,18 @@ export function useOperationResultRegistManager({
    * RETURN OBJECT
    ***************************************************************************/
   return {
-    docs: Vue.readonly(docs),
     keyMappedDocs: Vue.readonly(keyMappedDocs),
 
+    // notifications
     notifications: Vue.readonly(notificationInstance.docs),
     keyMappedNotifications: Vue.readonly(keyMappedNotifications),
-
-    site,
-    applicableAgreement,
-    hasAgreement,
     hasNotifications,
+    getNotification,
+
+    agreement,
     isAllLeaved,
-    isReady,
 
     attrs,
-
-    cachedSites,
-    cachedEmployees,
-    cachedOutsourcers,
 
     notify,
   };
