@@ -52,6 +52,7 @@ const arrangementsManager = useArrangementsManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
+const { isEmployeeArranged } = arrangementsManager;
 
 /** For arrangement notification management */
 const arrangementNotificationManager = useArrangementNotificationManager();
@@ -87,7 +88,7 @@ const { open } = useArrangementSheetPdf({
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
-const selectedDate = ref(null);
+// const selectedDate = ref(null);
 const commandText = ref(null);
 
 /*****************************************************************************
@@ -123,18 +124,11 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         :employees="employees"
         :outsourcers="outsourcers"
       >
-        <template #employee="{ rawElement }">
+        <template #employee="{ rawElement, id }">
           <MoleculesTagBase
             :label="rawElement.displayName"
             :size="tagSizeComposable.current.value"
-            :variant="
-              selectedDate &&
-              arrangementsManager.statistics.value.arrangedEmployeesMap[
-                selectedDate
-              ].allDay.includes(rawElement.docId)
-                ? 'disabled'
-                : 'default'
-            "
+            :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
           />
         </template>
         <template #outsourcer="{ rawElement }">
@@ -146,7 +140,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     <!-- スケジュール管理テーブル -->
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
-      v-model:selected-date="selectedDate"
+      v-model:selected-date="arrangementsManager.selectedDate.value"
       :notifications="arrangementsManager.keyMappedNotifications.value"
       :site-order="siteOrderManager.siteOrder.value"
       @click:add-schedule="siteOperationScheduleManager.toCreate"

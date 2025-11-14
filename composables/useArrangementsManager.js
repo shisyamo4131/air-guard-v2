@@ -19,6 +19,28 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "../composables/useLogger";
 
+/**
+ * @param {Object} param
+ * @param {Array<SiteOperationSchedule>} param.schedules - Schedules array.
+ * @param {Array} param.notifications - Notifications array.
+ * @param {Object} param.dateRangeComposable - Date range composable.
+ * @param {Object} param.fetchEmployeeComposable - Employee fetch composable.
+ * @param {Object} param.fetchOutsourcerComposable - Outsourcer fetch composable.
+ * @param {Object} param.fetchSiteComposable - Site fetch composable.
+ * @returns {Object} - Arrangements manager composable.
+ * @returns {Object} return.attrs - Attributes for ArrangementsManager component.
+ * @returns {Object} return.keyMappedSchedules - Key-mapped schedules.
+ * @returns {Object} return.keyMappedNotifications - Key-mapped notifications.
+ * @returns {Object} return.selectedDate - Selected date ref.
+ * @returns {Object} return.statistics - Statistics about arrangements.
+ * @returns {Function} return.addWorker - Method to add a worker to a schedule.
+ * @returns {Function} return.moveWorker - Method to move a worker within a schedule.
+ * @returns {Function} return.removeWorker - Method to remove a worker from a schedule.
+ * @returns {Function} return.handleDraggableWorkerChangeEvent - Method to handle draggable change event.
+ * @returns {Function} return.optimisticUpdates - Method to perform optimistic updates on schedules.
+ * @returns {Function} return.getCommandText - Method to generate command text for a specific date.
+ * @returns {Function} return.notify - Method to create a new arrangement notification.
+ */
 export function useArrangementsManager({
   schedules = [],
   notifications = [],
@@ -27,6 +49,13 @@ export function useArrangementsManager({
   fetchOutsourcerComposable,
   fetchSiteComposable,
 } = {}) {
+  /***************************************************************************
+   * REACTIVE OBJECTS
+   ***************************************************************************/
+  /** Documents array synchronized `instance.docs` for optimistic updates. */
+  const internalSchedules = Vue.ref([]);
+  const selectedDate = Vue.ref(null);
+
   /***************************************************************************
    * VALIDATION
    ***************************************************************************/
@@ -58,12 +87,6 @@ export function useArrangementsManager({
   const { cachedSites } = fetchSiteComposable;
   const { cachedEmployees } = fetchEmployeeComposable;
   const { cachedOutsourcers } = fetchOutsourcerComposable;
-
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  /** Documents array synchronized `instance.docs` for optimistic updates. */
-  const internalSchedules = ref([]);
 
   /***************************************************************************
    * METHODS (PRIVATE)
@@ -391,6 +414,18 @@ export function useArrangementsManager({
     return `${formattedDate} 配置\n\n` + lines.join("\n");
   }
 
+  /**
+   * Returns whether the employee is arranged on the selected date.
+   * @param {string} id - Employee document ID.
+   * @returns {boolean} - True if the employee is arranged on the selected date, false otherwise.
+   */
+  function isEmployeeArranged(id) {
+    if (!selectedDate.value) return false;
+    const arrangedEmployeeIds =
+      arrangedEmployeesMap.value[selectedDate.value]?.allDay || [];
+    return arrangedEmployeeIds.includes(id);
+  }
+
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
@@ -515,6 +550,9 @@ export function useArrangementsManager({
         return acc;
       }, {});
     }),
+
+    isEmployeeArranged,
+    selectedDate,
 
     statistics,
 

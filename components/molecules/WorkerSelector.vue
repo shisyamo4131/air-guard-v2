@@ -137,6 +137,7 @@ const filteredOutsourcers = computed(() => {
                 <slot
                   name="employee"
                   :element="element"
+                  :id="element.id"
                   :rawElement="employeesMap[element['id']] || null"
                 />
               </div>
