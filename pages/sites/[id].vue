@@ -1,8 +1,9 @@
 <script setup>
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
-import { useSiteManager } from "@/composables/useSiteManager";
 import { useDateRange } from "@/composables/useDateRange";
+import { useSite } from "@/composables/dataLayers/useSite";
+import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAgreementsManager } from "@/composables/useAgreementsManager";
 
@@ -15,21 +16,25 @@ const siteId = route.params.id;
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-/** Site Manager */
-const { doc, attrs, info, set } = useSiteManager();
-set(siteId);
-
 /** Date Range */
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
 
-/** Site Operation Schedules Manager */
-const schedulesManager = useSiteOperationSchedulesManager({
+/** data layer composable */
+const { doc, schedules } = useSite({
+  docId: siteId,
   dateRangeComposable,
   useDebounced: true,
-  immediate: siteId,
+});
+
+/** Site Manager */
+const { attrs, info } = useSiteManager({ doc });
+
+/** Site Operation Schedules Manager */
+const schedulesManager = useSiteOperationSchedulesManager({
+  docs: schedules,
 });
 
 /** Agreements Manager */

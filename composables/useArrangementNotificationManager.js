@@ -3,7 +3,7 @@ import { ArrangementNotification } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 
-export function useArrangementNotificationManager(doc = {}, options = {}) {
+export function useArrangementNotificationManager() {
   const component = Vue.ref(null);
   const instance = Vue.reactive(new ArrangementNotification());
 
@@ -12,41 +12,31 @@ export function useArrangementNotificationManager(doc = {}, options = {}) {
    ***************************************************************************/
   const logger = useLogger("ArrangementNotificationManager", useErrorsStore());
 
-  Vue.watch(
-    () => doc,
-    (newDoc) => instance.initialize(newDoc),
-    {
-      immediate: true,
-      deep: true,
-    }
-  );
+  /***************************************************************************
+   * LIFECYCLE HOOKS
+   ***************************************************************************/
+  Vue.onUnmounted(() => {
+    instance.unsubscribe();
+  });
 
-  function set(notification) {
-    if (!notification) {
-      logger.error({ error: new Error("Invalid notification instance.") });
-      return;
+  /***************************************************************************
+   * METHODS (PUBLIC)
+   ***************************************************************************/
+  function set(param) {
+    if (!param) {
+      throw new Error("Invalid parameter provided to set method");
     }
-    if (notification instanceof ArrangementNotification === false) {
-      logger.error({
-        error: new Error(
-          "The notification is not an ArrangementNotification instance."
-        ),
-      });
-      return;
+    if (typeof param === "string") {
+      instance.subscribe({ docId: param });
     }
-    if (!component.value) {
-      logger.error({ error: new Error("Component is not mounted.") });
-      return;
+    if (typeof param === "object" && param.docId) {
+      instance.subscribe({ docId: param.docId });
     }
-    if (typeof component.value.toUpdate !== "function") {
-      logger.error({
-        error: new Error("Component does not have toUpdate method."),
-      });
-      return;
-    }
-    component.value.toUpdate(notification);
   }
 
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
   const attrs = Vue.computed(() => {
     return {
       ref: (el) => (component.value = el),
@@ -62,7 +52,10 @@ export function useArrangementNotificationManager(doc = {}, options = {}) {
 
   return {
     attrs,
-
     set,
+
+    toCreate: (item) => component?.value?.toCreate?.(item),
+    toUpdate: (item) => component?.value?.toUpdate?.(item),
+    toDelete: (item) => component?.value?.toDelete?.(item),
   };
 }

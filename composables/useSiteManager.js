@@ -5,7 +5,6 @@
  * @author shisyamo4131
  *****************************************************************************/
 import * as Vue from "vue";
-import { Site } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
@@ -20,7 +19,7 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
  */
-export function useSiteManager() {
+export function useSiteManager({ doc } = {}) {
   /***************************************************************************
    * VALIDATION
    ***************************************************************************/
@@ -33,8 +32,8 @@ export function useSiteManager() {
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
-  const internalDocId = Vue.ref(null);
-  const instance = Vue.reactive(new Site());
+  // const internalDocId = Vue.ref(null);
+  // const instance = Vue.reactive(new Site());
   const component = Vue.ref(null);
 
   /***************************************************************************
@@ -44,34 +43,34 @@ export function useSiteManager() {
   /***************************************************************************
    * METHODS (PUBLIC)
    ***************************************************************************/
-  /**
-   * Set docId to composable and subscribe to document.
-   * @param {import("vue").Ref|string} docId
-   * @returns {void}
-   */
-  function set(docId) {
-    if (!docId || typeof Vue.unref(docId) !== "string") {
-      logger.error({
-        error: new Error("Invalid docId provided to set method"),
-      });
-      return;
-    }
-    internalDocId.value = Vue.unref(docId);
-  }
+  // /**
+  //  * Set docId to composable and subscribe to document.
+  //  * @param {import("vue").Ref|string} docId
+  //  * @returns {void}
+  //  */
+  // function set(docId) {
+  //   if (!docId || typeof Vue.unref(docId) !== "string") {
+  //     logger.error({
+  //       error: new Error("Invalid docId provided to set method"),
+  //     });
+  //     return;
+  //   }
+  //   internalDocId.value = Vue.unref(docId);
+  // }
 
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watchEffect(() => {
-    if (internalDocId.value) instance.subscribe({ docId: internalDocId.value });
-  });
+  // Vue.watchEffect(() => {
+  //   if (internalDocId.value) instance.subscribe({ docId: internalDocId.value });
+  // });
 
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
-  });
+  // Vue.onUnmounted(() => {
+  //   instance.unsubscribe();
+  // });
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -80,7 +79,7 @@ export function useSiteManager() {
   const attrs = Vue.computed(() => {
     return {
       ref: (el) => (component.value = el),
-      modelValue: Vue.readonly(instance),
+      modelValue: doc,
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
@@ -97,33 +96,33 @@ export function useSiteManager() {
     const base = [
       {
         title: "CODE",
-        props: { subtitle: instance.code, prependIcon: "mdi-code-tags" },
+        props: { subtitle: doc.code, prependIcon: "mdi-code-tags" },
       },
       {
         title: "住所",
         props: {
-          subtitle: `${instance.zipcode} ${instance.fullAddress}`,
+          subtitle: `${doc.zipcode} ${doc.fullAddress}`,
           prependIcon: "mdi-map-marker",
         },
       },
       {
         title: "建物名",
         props: {
-          subtitle: instance.building || "-",
+          subtitle: doc.building || "-",
           prependIcon: "mdi-office-building-marker",
         },
       },
       {
         title: "取引先",
         props: {
-          subtitle: instance.customer?.name || "loading",
+          subtitle: doc.customer?.name || "loading",
           prependIcon: "mdi-domain",
         },
       },
       {
         title: "備考",
         props: {
-          subtitle: instance.remarks || "-",
+          subtitle: doc.remarks || "-",
           prependIcon: "mdi-comment-text",
           lines: "two",
         },
@@ -136,11 +135,9 @@ export function useSiteManager() {
    * RETURN VALUES
    ***************************************************************************/
   return {
-    doc: instance,
     attrs,
     info,
 
-    set,
     toCreate: (item) => component?.value?.toCreate?.(item),
     toUpdate: (item) => component?.value?.toUpdate?.(item),
     toDelete: (item) => component?.value?.toDelete?.(item),

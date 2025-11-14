@@ -2,10 +2,12 @@
  * useArrangementsManager
  * @version 1.0.0
  * @description A composable to manage Arrangements.
- * @author shisyamo4131
- *
  * - Provides some methods for managing site operation schedule and its workers
  *   to optimistically update.
+ * - Date range composable is required for providing date range to attributes.
+ * - Requires fetchSite, fetchEmployee, fetchOutsourcer composables to output
+ *   command text.
+ * @author shisyamo4131
  ***************************************************************************/
 import * as Vue from "vue";
 import dayjs from "dayjs";
@@ -14,10 +16,12 @@ import { runTransaction } from "firebase/firestore";
 import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "../composables/useLogger";
 
 export function useArrangementsManager({
-  siteOperationSchedulesManagerComposable: schedulesComposable,
+  schedules = [],
+  notifications = [],
   dateRangeComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
@@ -26,27 +30,29 @@ export function useArrangementsManager({
   /***************************************************************************
    * VALIDATION
    ***************************************************************************/
-  if (!schedulesComposable) {
-    throw new Error("siteOperationSchedulesManagerComposable is required");
+  if (schedules && !Array.isArray(schedules)) {
+    throw new Error(`'schedules' must be an array.`);
   }
-  if (!dateRangeComposable) {
-    throw new Error("dateRangeComposable is required");
+  if (notifications && !Array.isArray(notifications)) {
+    throw new Error(`'notifications' must be an array.`);
   }
-  if (!fetchSiteComposable) {
-    throw new Error("fetchSiteComposable is required");
-  }
-  if (!fetchEmployeeComposable) {
-    throw new Error("fetchEmployeeComposable is required");
-  }
-  if (!fetchOutsourcerComposable) {
-    throw new Error("fetchOutsourcerComposable is required");
+  const missingComps = [];
+  if (!dateRangeComposable) missingComps.push("dateRangeComposable");
+  if (!fetchSiteComposable) missingComps.push("fetchSiteComposable");
+  if (!fetchEmployeeComposable) missingComps.push("fetchEmployeeComposable");
+  if (!fetchOutsourcerComposable)
+    missingComps.push("fetchOutsourcerComposable");
+  if (missingComps.length > 0) {
+    throw new Error(
+      `Required composables are missing: ${missingComps.join(", ")}`
+    );
   }
 
   /***************************************************************************
    * SETUP STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger("ArrangementsManager", useErrorsStore());
-
+  const loadingsStore = useLoadingsStore();
   const { company } = useAuthStore();
 
   const { cachedSites } = fetchSiteComposable;
@@ -57,18 +63,18 @@ export function useArrangementsManager({
    * REACTIVE OBJECTS
    ***************************************************************************/
   /** Documents array synchronized `instance.docs` for optimistic updates. */
-  const internalDocs = ref([]);
+  const internalSchedules = ref([]);
 
   /***************************************************************************
    * METHODS (PRIVATE)
    ***************************************************************************/
   /**
-   * Synchronize instance.docs to internalDocs.
+   * Synchronize instance.docs to internalSchedules.
    * New documents are sorted by `displayOrder` property.
    * @param {Array} v
    */
-  function _syncLocalDocs(v) {
-    internalDocs.value = [...v].sort((a, b) => {
+  function _syncInternalSchedules(v) {
+    internalSchedules.value = [...v].sort((a, b) => {
       return (a.displayOrder ?? 0) - (b.displayOrder ?? 0);
     });
   }
@@ -79,12 +85,27 @@ export function useArrangementsManager({
    * @returns {SiteOperationSchedule|null}
    */
   function _getInternalSchedule(schedule) {
-    return internalDocs.value.find((doc) => doc.docId === schedule.docId);
+    return internalSchedules.value.find((doc) => doc.docId === schedule.docId);
   }
 
   /***************************************************************************
    * METHODS (PUBLIC)
    ***************************************************************************/
+  /**
+   * Create a new arrangement notification.
+   * @param {Object} schedule - The schedule object containing notification details.
+   */
+  async function notify(schedule) {
+    const key = loadingsStore.add(`Creating notifications`);
+    try {
+      await schedule.notify();
+    } catch (error) {
+      logger.error({ message: "Failed to create notification", error });
+    } finally {
+      loadingsStore.remove(key);
+    }
+  }
+
   /**
    * Add new worker to the specified schedule.
    * @param {Object} param
@@ -97,7 +118,7 @@ export function useArrangementsManager({
     const internalSchedule = _getInternalSchedule(schedule);
     if (!internalSchedule) {
       logger.error({
-        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+        message: `Schedule not found in internalSchedules: ${schedule.docId}`,
       });
       return;
     }
@@ -119,7 +140,7 @@ export function useArrangementsManager({
     const internalSchedule = _getInternalSchedule(schedule);
     if (!internalSchedule) {
       logger.error({
-        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+        message: `Schedule not found in internalSchedules: ${schedule.docId}`,
       });
       return;
     }
@@ -151,7 +172,7 @@ export function useArrangementsManager({
     const internalSchedule = _getInternalSchedule(schedule);
     if (!internalSchedule) {
       logger.error({
-        message: `Schedule not found in internalDocs: ${schedule.docId}`,
+        message: `Schedule not found in internalSchedules: ${schedule.docId}`,
       });
       return;
     }
@@ -235,7 +256,7 @@ export function useArrangementsManager({
    * Replaces the schedules specified by groupKey to the new schedules.
    * The siteId, shiftType, and date of the new schedule are updated to
    * the values specified in groupKey.
-   * For optimistic update, `internalDocs` is updated immediately before
+   * For optimistic update, `internalSchedules` is updated immediately before
    * transaction updates.
    * @param {Object} param
    * @param {Array<Object>} param.newSchedules
@@ -259,7 +280,7 @@ export function useArrangementsManager({
       }
 
       // Evacuate unapplicable documents.
-      const unapplicableDocs = internalDocs.value.filter(
+      const unapplicableDocs = internalSchedules.value.filter(
         (doc) => !(doc.groupKey === groupKey)
       );
 
@@ -277,8 +298,8 @@ export function useArrangementsManager({
         schedule.displayOrder = index;
       });
 
-      // Replace internalDocs with the new schedules
-      internalDocs.value = [...unapplicableDocs, ...newSchedules];
+      // Replace internalSchedules with the new schedules
+      internalSchedules.value = [...unapplicableDocs, ...newSchedules];
 
       // Update Firestore documents.
       const { $firestore } = useNuxtApp();
@@ -301,7 +322,7 @@ export function useArrangementsManager({
     const formattedDate = dayjs(date).locale(ja).format("YYYY年MM月DD日(ddd)");
 
     // Get schedules for the specified date
-    const schedules = internalDocs.value.filter(
+    const schedules = internalSchedules.value.filter(
       (schedule) => schedule.date === date
     );
     if (schedules.length === 0) {
@@ -373,7 +394,7 @@ export function useArrangementsManager({
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
-  Vue.watch(schedulesComposable.docs, _syncLocalDocs, {
+  Vue.watch(schedules, _syncInternalSchedules, {
     immediate: true,
     deep: true,
   });
@@ -385,8 +406,8 @@ export function useArrangementsManager({
    * Key-mapped documents.
    * @returns {Object} - Key-mapped documents.
    */
-  const keyMappedDocs = Vue.computed(() => {
-    const result = internalDocs.value.reduce((acc, schedule) => {
+  const keyMappedSchedules = Vue.computed(() => {
+    const result = internalSchedules.value.reduce((acc, schedule) => {
       (acc[schedule.groupKey] ??= []).push(schedule);
       return acc;
     }, {});
@@ -398,7 +419,7 @@ export function useArrangementsManager({
    * @returns {Object} - Map of arranged employees by date.
    */
   const arrangedEmployeesMap = Vue.computed(() => {
-    const result = internalDocs.value.reduce((acc, schedule) => {
+    const result = internalSchedules.value.reduce((acc, schedule) => {
       if (!acc[schedule.date])
         acc[schedule.date] = { allDay: [], day: [], night: [] };
       acc[schedule.date].allDay.push(...(schedule.employeeIds || []));
@@ -429,11 +450,14 @@ export function useArrangementsManager({
     // Unique siteId-shiftType combination map
     //  -> Used to determine the number of unique site-shift combinations.
     //  -> This is useful for determininig whether any combinations that should be displayed are missing.
-    const requiredSiteOrders = internalDocs.value.reduce((acc, schedule) => {
-      const key = `${schedule.siteId}-${schedule.shiftType}`;
-      acc[key] ??= { siteId: schedule.siteId, shiftType: schedule.shiftType };
-      return acc;
-    }, {});
+    const requiredSiteOrders = internalSchedules.value.reduce(
+      (acc, schedule) => {
+        const key = `${schedule.siteId}-${schedule.shiftType}`;
+        acc[key] ??= { siteId: schedule.siteId, shiftType: schedule.shiftType };
+        return acc;
+      },
+      {}
+    );
 
     // Missing site-shiftType combinations in company.siteOrder
     //  -> This is useful for identifying site-shift combinations that are scheduled but not included in the company's site order.
@@ -450,11 +474,14 @@ export function useArrangementsManager({
     });
 
     // Total required personnel per date
-    const requiredPersonnel = internalDocs.value.reduce((acc, schedule) => {
-      if (!acc[schedule.date]) acc[schedule.date] = 0;
-      acc[schedule.date] += schedule.requiredPersonnel || 0;
-      return acc;
-    }, {});
+    const requiredPersonnel = internalSchedules.value.reduce(
+      (acc, schedule) => {
+        if (!acc[schedule.date]) acc[schedule.date] = 0;
+        acc[schedule.date] += schedule.requiredPersonnel || 0;
+        return acc;
+      },
+      {}
+    );
 
     return {
       arrangedEmployeesMap: arrangedEmployeesMap.value,
@@ -467,7 +494,7 @@ export function useArrangementsManager({
   /** Attributes for the component */
   const attrs = Vue.computed(() => {
     const table = {
-      modelValue: keyMappedDocs.value,
+      modelValue: keyMappedSchedules.value,
       from: dateRangeComposable.dateRange.value.from,
       dayCount: dateRangeComposable.currentDayCount.value,
       statistics: statistics.value,
@@ -479,11 +506,17 @@ export function useArrangementsManager({
   });
 
   return {
-    docs: Vue.readonly(internalDocs.value),
-    keyMappedDocs,
-    statistics,
-
     attrs,
+
+    keyMappedSchedules,
+    keyMappedNotifications: Vue.computed(() => {
+      return notifications.reduce((acc, doc) => {
+        acc[doc.docId] = doc;
+        return acc;
+      }, {});
+    }),
+
+    statistics,
 
     // methods
     addWorker,
@@ -492,5 +525,6 @@ export function useArrangementsManager({
     handleDraggableWorkerChangeEvent,
     optimisticUpdates,
     getCommandText,
+    notify,
   };
 }

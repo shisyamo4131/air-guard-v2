@@ -11,15 +11,14 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useDateRange } from "@/composables/useDateRange";
-import { useWorkersList } from "@/composables/useWorkersList";
 import { useArrangementsManager } from "@/composables/useArrangementsManager";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
-import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useSiteOrderManager } from "@/composables/useSiteOrderManager";
-import { useArrangementNotificationsManager } from "@/composables/useArrangementNotificationsManager";
+import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
+import { useArrangements } from "@/composables/dataLayers/useArrangements";
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -36,40 +35,26 @@ const dateRangeComposable = useDateRange({
   offsetDays: -1,
 });
 
-/** For workers list */
-const { getWorker, availableEmployees, availableOutsourcers } = useWorkersList({
+/** data layer composable */
+const { schedules, notifications, employees, outsourcers } = useArrangements({
+  dateRangeComposable,
+  fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 });
-provide("getWorker", getWorker); // Use in WorkerTag.vue
-
-/** For site operation schedules management */
-const siteOperationSchedulesManagerComposable =
-  useSiteOperationSchedulesManager({
-    dateRangeComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-    fetchSiteComposable,
-    immediate: true,
-  });
 
 /** For arrangements management */
 const arrangementsManager = useArrangementsManager({
-  siteOperationSchedulesManagerComposable,
+  schedules,
+  notifications,
   dateRangeComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
   fetchSiteComposable,
 });
 
-/** For arrangement notifications */
-const arrangementNotificationsManager = useArrangementNotificationsManager({
-  dateRangeComposable,
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
-  fetchSiteComposable,
-  immediate: true,
-});
+/** For arrangement notification management */
+const arrangementNotificationManager = useArrangementNotificationManager();
 
 /** For site operation schedule management */
 const siteOperationScheduleManager = useSiteOperationScheduleManager();
@@ -108,6 +93,18 @@ const commandText = ref(null);
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
+
+/*****************************************************************************
+ * HELPER FUNCTIONS
+ *****************************************************************************/
+const getWorker = ({ id, isEmployee }) => {
+  if (isEmployee) {
+    return fetchEmployeeComposable.cachedEmployees.value[id] || null;
+  } else {
+    return fetchOutsourcerComposable.cachedOutsourcers.value[id] || null;
+  }
+};
+provide("getWorker", getWorker); // Use in WorkerTag.vue
 </script>
 
 <template>
@@ -123,8 +120,8 @@ const commandText = ref(null);
     <!-- フローティング作業員選択ウィンドウ -->
     <MoleculesFloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
       <MoleculesWorkerSelector
-        :employees="availableEmployees"
-        :outsourcers="availableOutsourcers"
+        :employees="employees"
+        :outsourcers="outsourcers"
       >
         <template #employee="{ rawElement }">
           <MoleculesTagBase
@@ -150,7 +147,7 @@ const commandText = ref(null);
     <ArrangementsTable
       v-bind="arrangementsManager.attrs.value.table"
       v-model:selected-date="selectedDate"
-      :notifications="arrangementNotificationsManager.keyMappedDocs.value"
+      :notifications="arrangementsManager.keyMappedNotifications.value"
       :site-order="siteOrderManager.siteOrder.value"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:command="
@@ -160,8 +157,8 @@ const commandText = ref(null);
       @click:edit="siteOperationScheduleManager.toUpdate"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
       @click:hide="siteOrderManager.remove"
-      @click:notify="arrangementNotificationsManager.create"
-      @click:notification="arrangementNotificationsManager.toUpdate"
+      @click:notify="arrangementsManager.notify"
+      @click:notification="arrangementNotificationManager.toUpdate"
       @click:output-sheet="open"
     />
 
@@ -183,9 +180,8 @@ const commandText = ref(null);
     </AtomsDialogsFullscreen>
 
     <!-- 通知ステータス更新コンポーネント -->
-    <OrganismsArrangementNotificationsStatusUpdater
-      v-bind="arrangementNotificationsManager.attrs.value"
-      hide-table
+    <OrganismsArrangementNotificationStatusUpdater
+      v-bind="arrangementNotificationManager.attrs.value"
     />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
