@@ -1,3 +1,9 @@
+/***************************************************************************
+ * useSiteOperationScheduleDuplicator
+ * @version 1.0.0
+ * @description A composable to duplicate site operation schedules.
+ * @author shisyamo4131
+ ***************************************************************************/
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useLogger } from "@/composables/useLogger";
@@ -6,26 +12,13 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { SiteOperationSchedule } from "@/schemas";
 
 /**
- * A Composable to manage duplicating `SiteOperationSchedule`.
- * @param {Object} param
- * @param {Object} param.dialog - The dialog options. Accept attributes to customize the dialog.
- *                                Set to `falsy` to disable dialog.
- * @param {string} param.submitText - The submit button text.
- * @returns {Object} - The duplicator composable.
- * @return {Object} attrs - The binding attributes for the duplicator component.
- * @return {Object} dialogAttrs - The binding attributes for the dialog component.
- * @return {Function} set - The method to set the schedule to duplicate.
+ * @returns {Object} - The site operation schedule duplicator composable.
+ * @returns {Object} attrs - The binding attributes for the duplicator component.
+ * @returns {Function} set - Function to set the schedule instance to duplicate.
  */
-export function useSiteOperationScheduleDuplicator({
-  dialog = {
-    width: 376,
-    persistent: true,
-    scrollable: true,
-  },
-  submitText = "複製",
-} = {}) {
+export function useSiteOperationScheduleDuplicator() {
   /***************************************************************************
-   * DEFINE COMPOSABLES / STORES
+   * SETUP STORES & COMPOSABLES
    ***************************************************************************/
   const logger = useLogger(
     "useSiteOperationScheduleDuplicator",
@@ -36,10 +29,10 @@ export function useSiteOperationScheduleDuplicator({
   /***************************************************************************
    * DEFINE REFS
    ***************************************************************************/
-  const schedule = Vue.ref(null);
-  const dates = Vue.ref([]);
+  const instance = Vue.reactive(new SiteOperationSchedule());
+  const component = Vue.ref(null);
   const isLoading = Vue.ref(false);
-  const isActive = Vue.ref(false); // For dialog.
+  const selectedDates = Vue.ref([]);
 
   /*****************************************************************************
    * METHODS (PRIVATE)
@@ -49,23 +42,16 @@ export function useSiteOperationScheduleDuplicator({
    * @returns {void}
    */
   function _initialize() {
-    schedule.value = null;
-    dates.value = [];
-    isActive.value = false;
+    instance.initialize();
+    selectedDates.value = [];
   }
 
-  /**
-   * Duplicates the current schedule.
-   * - Throw error if no schedule is set.
-   * @returns {Promise<void>}
-   */
-  const _duplicate = async () => {
+  async function _duplicate() {
     logger.clearError();
     const loadingKey = loadingsStore.add({ text: "Duplicating schedule..." });
     isLoading.value = true;
     try {
-      if (!schedule.value) throw new Error("No schedule to duplicate.");
-      await schedule.value.duplicate(dates.value);
+      await instance.duplicate(selectedDates.value);
       _initialize();
     } catch (error) {
       logger.error({ error });
@@ -73,46 +59,35 @@ export function useSiteOperationScheduleDuplicator({
       isLoading.value = false;
       loadingsStore.remove(loadingKey);
     }
-  };
+  }
 
-  /*****************************************************************************
-   * WATCHERS
-   *****************************************************************************/
-  Vue.watchEffect(() => {
-    if (!isActive.value) _initialize();
-  });
-
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
   /**
    * Returns whether the given date is allowed for duplication.
    * @param {Date} date - The date to check.
    * @returns {boolean} - Whether the date is allowed for duplication.
    */
-  const isDateAllowed = (date) => {
-    if (!schedule.value) return true;
-    return dayjs(date).format("YYYY-MM-DD") !== schedule.value.date;
-  };
+  function _isDateAllowed(date) {
+    return dayjs(date).format("YYYY-MM-DD") !== instance.date;
+  }
 
+  /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+
+  /*****************************************************************************
+   * METHODS (PUBLIC)
+   *****************************************************************************/
   /**
-   * Sets the schedule to duplicate.
-   * @param {Object} obj - The schedule object to duplicate.
-   * @returns {void}
-   * @throws {Error} - If the provided object is not a valid SiteOperationSchedule.
+   * Set the schedule instance to duplicate.
+   * @param {SiteOperationSchedule} schedule
    */
-  const set = (obj) => {
-    try {
-      const instance = Vue.isProxy(obj) ? Vue.toRaw(obj) : obj;
-      if (!(instance instanceof SiteOperationSchedule)) {
-        throw new Error("Invalid schedule object");
-      }
-      schedule.value = obj;
-      if (!!dialog) isActive.value = true;
-    } catch (error) {
-      logger.error({ error, data: obj });
+  function set(schedule) {
+    if (!schedule || !(schedule instanceof SiteOperationSchedule)) {
+      throw new Error("Invalid schedule instance");
     }
-  };
+    instance.initialize(schedule.toObject());
+    component.value.toUpdate();
+  }
 
   /*****************************************************************************
    * COMPUTED PROPERTIES
@@ -122,9 +97,8 @@ export function useSiteOperationScheduleDuplicator({
    * @returns {boolean} - Whether the duplicator is submittable.
    */
   const isSubmittable = Vue.computed(() => {
-    if (!schedule.value) return false;
-    if (dates.value.length === 0) return false;
-    if (dates.value.length > 20) return false;
+    if (selectedDates.value.length === 0) return false;
+    if (selectedDates.value.length > 20) return false;
     if (isLoading.value) return false;
     return true;
   });
@@ -135,29 +109,29 @@ export function useSiteOperationScheduleDuplicator({
    */
   const attrs = Vue.computed(() => {
     return {
-      allowedDates: isDateAllowed,
-      disableCancel: isLoading.value,
-      disableSubmit: !isSubmittable.value,
-      loading: isLoading.value,
-      selectedDates: dates.value,
-      submitText,
-      "onUpdate:selected-dates": (value) => (dates.value = value),
-      "onClick:cancel": _initialize,
-      "onClick:submit": _duplicate,
+      ref: (el) => (component.value = el),
+      modelValue: instance,
+      handleCreate: () => {
+        logger.error({ message: "作成処理はできません。" });
+      },
+      handleUpdate: () => _duplicate(),
+      handleDelete: () => {
+        logger.error({ message: "削除処理はできません。" });
+      },
+      dialogProps: { width: 376 },
+      editorProps: {
+        disableCancel: isLoading.value,
+        disableSubmit: !isSubmittable.value,
+      },
+      isLoading: isLoading.value,
+      hideDeleteBtn: true,
+      label: "予定複製",
+      selectedDates: selectedDates.value,
+      "onUpdate:selected-dates": (value) => (selectedDates.value = value),
+      onInitialized: _initialize,
+      allowedDates: _isDateAllowed,
     };
   });
 
-  const dialogAttrs = Vue.computed(() => {
-    return {
-      modelValue: isActive.value,
-      "onUpdate:model-value": (value) => (isActive.value = value),
-      ...dialog,
-    };
-  });
-
-  return {
-    attrs,
-    dialogAttrs,
-    set,
-  };
+  return { attrs, set };
 }

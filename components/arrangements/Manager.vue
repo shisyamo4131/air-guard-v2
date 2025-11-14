@@ -182,11 +182,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     />
 
     <!-- スケジュール複製コンポーネント -->
-    <AtomsDialogsFullscreen v-bind="duplicator.dialogAttrs.value">
-      <OrganismsSiteOperationScheduleDuplicator
-        v-bind="duplicator.attrs.value"
-      />
-    </AtomsDialogsFullscreen>
+    <OrganismsSiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 通知ステータス更新コンポーネント -->
     <OrganismsArrangementNotificationStatusUpdater

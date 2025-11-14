@@ -1,8 +1,10 @@
 <script setup>
-/**
- * @file components/organisms/SiteOperationScheduleDuplicator.vue
- * @description A component for duplicating site operation schedules.
- */
+/***************************************************************************
+ * SiteOperationScheduleDuplicator
+ * @version 1.0.0
+ * @description A component to duplicate site operation schedules.
+ * @author shisyamo4131
+ ***************************************************************************/
 
 /***************************************************************************
  * DEFINE OPTIONS
@@ -10,39 +12,36 @@
 defineOptions({ inheritAttrs: false });
 
 /***************************************************************************
- * DEFINE PROPS & EMITS
+ * SETUP PROPS & EMITS
  ***************************************************************************/
 const props = defineProps({
   allowedDates: { type: Function, default: () => true },
-  disableCancel: { type: Boolean, default: false },
-  disableSubmit: { type: Boolean, default: false },
-  loading: { type: Boolean, default: false },
   selectedDates: { type: Array, default: () => [] },
-  submitText: { type: String, default: "複製" },
 });
 
-const emit = defineEmits([
-  "click:cancel",
-  "click:submit",
-  "update:selected-dates",
-]);
+const emit = defineEmits(["update:selected-dates"]);
+
+/***************************************************************************
+ * SETUP EXPOSE
+ ***************************************************************************/
+const component = useTemplateRef("component");
+defineExpose({
+  toCreate: (args) => component.value?.toCreate(args),
+  toUpdate: (args) => component.value?.toUpdate(args),
+  toDelete: (args) => component.value?.toDelete(args),
+});
 </script>
 
 <template>
-  <MoleculesCardsSubmitCancel
-    :disableCancel="loading"
-    :disableSubmit="disableSubmit"
-    :loading="loading"
-    :submit-text="submitText"
-    @click:cancel="emit('click:cancel')"
-    @click:submit="emit('click:submit')"
-  >
-    <v-date-picker
-      :model-value="selectedDates"
-      :allowed-dates="allowedDates"
-      hide-header
-      multiple
-      @update:model-value="emit('update:selected-dates', $event)"
-    />
-  </MoleculesCardsSubmitCancel>
+  <air-item-manager ref="component" v-bind="$attrs">
+    <template #input>
+      <v-date-picker
+        :model-value="selectedDates"
+        :allowed-dates="allowedDates"
+        hide-header
+        multiple
+        @update:model-value="emit('update:selected-dates', $event)"
+      />
+    </template>
+  </air-item-manager>
 </template>
