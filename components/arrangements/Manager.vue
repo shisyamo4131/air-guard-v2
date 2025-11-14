@@ -170,6 +170,15 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     <!-- スケジュール編集コンポーネント -->
     <OrganismsSiteOperationScheduleManager
       v-bind="siteOperationScheduleManager.attrs.value"
+      :input-props="{
+        excludedKeys: [
+          'siteId',
+          'dayType',
+          'shiftType',
+          'employees',
+          'outsourcers',
+        ],
+      }"
     />
 
     <!-- スケジュール複製コンポーネント -->

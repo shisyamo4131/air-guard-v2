@@ -1,3 +1,9 @@
+/***************************************************************************
+ * useSiteOperationScheduleManager
+ * @version 1.0.0
+ * @description A composable to manage site operation schedule.
+ * @author shisyamo4131
+ ***************************************************************************/
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
@@ -29,7 +35,7 @@ export function useSiteOperationScheduleManager() {
    * DEFINE METHODS (PUBLIC)
    ***************************************************************************/
   /**
-   * Set the SiteOperationSchedule instance to manage.
+   * Subscribe to site operation schedule document.
    * - If a string is provided, it is treated as a document ID to subscribe to.
    * - If a SiteOperationSchedule instance is provided, it subscribes to its document ID.
    * @param {string|SiteOperationSchedule} param
@@ -61,15 +67,6 @@ export function useSiteOperationScheduleManager() {
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
-      inputProps: {
-        excludedKeys: [
-          "siteId",
-          "dayType",
-          "shiftType",
-          "employees",
-          "outsourcers",
-        ],
-      },
       onError: (e) => error({ error: e }),
       "onError:clear": clearError,
     };
