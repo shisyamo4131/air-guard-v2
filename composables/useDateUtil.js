@@ -2,7 +2,10 @@
  * @file useDateUtil.js
  * @description Composable for date utility functions.
  */
-import { DAY_TYPE_HOLIDAY, getDayType } from "air-guard-v2-schemas/constants";
+import {
+  DAY_TYPE_HOLIDAY,
+  getDayType,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 import dayjs from "dayjs";
 
 /**

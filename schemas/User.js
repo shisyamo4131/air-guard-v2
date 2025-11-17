@@ -2,7 +2,7 @@
  * @file ./schemas/User.js
  * @description ユーザー情報クラス
  */
-import { User as BaseClass } from "air-guard-v2-schemas";
+import { User as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
 
 export default class User extends BaseClass {
   /**

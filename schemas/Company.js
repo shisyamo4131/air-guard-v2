@@ -3,7 +3,7 @@
  * @description 会社情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
-import { Company as BaseClass } from "air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
+import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
 export default class Company extends BaseClass {

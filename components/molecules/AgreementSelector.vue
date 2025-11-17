@@ -5,7 +5,10 @@
  * It displays a dialog with a list of agreements and emits the selected agreement details.
  */
 import dayjs from "dayjs";
-import { DAY_TYPE, SHIFT_TYPE } from "air-guard-v2-schemas/constants";
+import {
+  DAY_TYPE,
+  SHIFT_TYPE,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({

@@ -12,7 +12,7 @@
  *
  * @author shisyamo4131
  *****************************************************************************/
-import FireModel from "air-firebase-v2";
+import FireModel from "@shisyamo4131/air-firebase-v2";
 import { getApps } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 

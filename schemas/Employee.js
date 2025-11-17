@@ -3,7 +3,7 @@
  * @description ユーザー情報クラス
  */
 // fetchCoordinates is no longer directly used here
-import { Employee as BaseClass } from "air-guard-v2-schemas";
+import { Employee as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
 export default class Employee extends BaseClass {

@@ -6,7 +6,7 @@
 import {
   SHIFT_TYPE,
   SHIFT_TYPE_VALIDATOR,
-} from "air-guard-v2-schemas/constants";
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /** define props */
 const props = defineProps({

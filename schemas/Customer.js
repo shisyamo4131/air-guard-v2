@@ -3,7 +3,7 @@
  * @description 取引先情報クラス
  *  - `beforeUpdate` で `location` を取得します。
  */
-import { Customer as BaseClass } from "air-guard-v2-schemas";
+import { Customer as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
 export default class Customer extends BaseClass {

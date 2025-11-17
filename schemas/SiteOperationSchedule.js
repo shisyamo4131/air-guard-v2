@@ -82,8 +82,8 @@ import {
   SiteOperationSchedule as BaseClass,
   SiteOperationScheduleDetail,
   Agreement,
-} from "air-guard-v2-schemas";
-import { ContextualError } from "air-guard-v2-schemas/utils";
+} from "@shisyamo4131/air-guard-v2-schemas";
+import { ContextualError } from "@shisyamo4131/air-guard-v2-schemas/utils";
 import dayjs from "dayjs";
 import { runTransaction } from "firebase/firestore";
 
