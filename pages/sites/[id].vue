@@ -35,6 +35,7 @@ const { attrs, info } = useSiteManager({ doc });
 /** Site Operation Schedules Manager */
 const schedulesManager = useSiteOperationSchedulesManager({
   docs: schedules,
+  siteId,
 });
 
 /** Agreements Manager */

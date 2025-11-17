@@ -67,6 +67,10 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
     }
   }
 
+  /**
+   * Regist site operation schedule as operation result.
+   * @returns {Promise<void>}
+   */
   async function _submit() {
     if (!selectedSchedule.value) {
       logger.error({ message: "No schedule selected for submission." });
@@ -77,8 +81,8 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
       logger.error({ message });
       return;
     }
-    const agreement = agreement.value;
-    if (!agreement) {
+    const applicableAgreement = agreement.value;
+    if (!applicableAgreement) {
       const message = `No agreement found for schedule ID ${selectedSchedule.value.docId} on site ID ${site.docId}.`;
       logger.error({ message });
       return;
@@ -86,7 +90,7 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
     const loadingsKey = loadingsStore.add("稼働実績として登録中...");
     try {
       await selectedSchedule.value.syncToOperationResult(
-        agreement,
+        applicableAgreement,
         keyMappedNotifications.value
       );
     } catch (error) {

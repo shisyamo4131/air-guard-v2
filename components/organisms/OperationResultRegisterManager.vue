@@ -185,7 +185,7 @@ function getWorkerTimeInfo(worker) {
                           manager.getNotification(worker.notificationKey)
                         "
                         @click="
-                          statusUpdater.set(
+                          statusUpdater.toUpdate(
                             manager.getNotification(worker.notificationKey)
                           )
                         "
