@@ -76,14 +76,14 @@
  * @methods syncToOperationResult Creates an OperationResult document based on the current schedule.
  * @methods toEvent Converts the schedule to an event object compatible with Vuetify's VCalendar component.
  ***************************************************************************/
+import { SiteOperationSchedule as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
+import { ContextualError } from "@shisyamo4131/air-guard-v2-schemas/utils";
 import {
   ArrangementNotification,
   OperationResult,
-  SiteOperationSchedule as BaseClass,
   SiteOperationScheduleDetail,
   Agreement,
-} from "@shisyamo4131/air-guard-v2-schemas";
-import { ContextualError } from "@shisyamo4131/air-guard-v2-schemas/utils";
+} from "@/schemas";
 import dayjs from "dayjs";
 import { runTransaction } from "firebase/firestore";
 
@@ -257,9 +257,10 @@ export default class SiteOperationSchedule extends BaseClass {
         ...this.toObject(),
         employees,
         outsourcers,
-        ...agreement.prices,
+        ...agreement.billingInfo,
         siteOperationScheduleId: this.docId,
       });
+      operationResult.refreshBillingDateAt();
       const firestore = this.constructor.getAdapter().firestore;
       await runTransaction(firestore, async (transaction) => {
         const docRef = await operationResult.create({
