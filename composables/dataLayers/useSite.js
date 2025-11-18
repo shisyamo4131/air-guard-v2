@@ -107,7 +107,7 @@ export function useSite({
    * RETURNED OBJECTS
    ***************************************************************************/
   return {
-    doc: Vue.readonly(site),
+    doc: site,
     schedules: Vue.readonly(siteOperationSchedule.docs),
   };
 }
