@@ -219,11 +219,12 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
         return true;
       },
       handleUpdate: _submit,
+      hideCreateBtn: true,
       dialogProps: { maxWidth: "840" },
       tableProps: { hideSearch: true },
       hideDeleteBtn: true,
       hideSearch: true,
-      label: "稼働実績登録",
+      label: "上下番実績確定処理",
       onError: (error) => logger.error({ error }),
       "onError:clear": () => logger.clearError(),
       "onSubmit:complete": () => (selectedSchedule.value = null),
