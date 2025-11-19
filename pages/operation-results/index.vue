@@ -2,6 +2,7 @@
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
 import { useOperationResultsManager } from "@/composables/useOperationResultsManager";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -12,17 +13,44 @@ const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
 
+const fetchSiteComposable = useFetchSite();
+const { getSite, searchSites } = fetchSiteComposable;
+
 // Manager
 const { attrs, cachedSites } = useOperationResultsManager({
   dateRangeComposable,
   useDebounced: true,
+  fetchSiteComposable,
   immediate: true,
 });
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs">
+    <air-array-manager
+      class="fill-height"
+      v-bind="attrs"
+      :input-props="{
+        excludedKeys: [
+          'employees',
+          'outsourcers',
+          'unitPriceBase',
+          'overtimeUnitPriceBase',
+          'unitPriceQualified',
+          'overtimeUnitPriceQualified',
+          'billingUnitType',
+          'includeBreakInBilling',
+          'cutoffDate',
+          'isLocked',
+          'billingDateAt',
+          'useAdjustedQuantity',
+          'adjustedQuantityBase',
+          'adjustedOvertimeBase',
+          'adjustedQuantityQualified',
+          'adjustedOvertimeQualified',
+        ],
+      }"
+    >
       <template #search>
         <MoleculesMonthSelector
           :model-value="dateRange.from"
@@ -38,6 +66,19 @@ const { attrs, cachedSites } = useOperationResultsManager({
           <div>{{ cachedSites[item.siteId].customer.name }}</div>
         </div>
         <v-progress-circular v-else indeterminate size="small" />
+      </template>
+      <template #input.siteId="{ attrs, editMode }">
+        <air-autocomplete-api
+          v-bind="attrs"
+          :api="searchSites"
+          clearable
+          :disabled="editMode !== 'CREATE'"
+          :fetchItemByKeyApi="getSite"
+          item-title="name"
+          item-value="docId"
+          label="現場"
+          required
+        />
       </template>
     </air-array-manager>
   </TemplatesFixedHeightContainer>
