@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "emulators:start": "firebase emulators:start --import=./emulator-data --export-on-exit",
+    "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd ..",
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.development",
     "generate:prod": "nuxt generate",
