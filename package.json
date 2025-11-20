@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd ..",
+    "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.development",
     "generate:prod": "nuxt generate",
