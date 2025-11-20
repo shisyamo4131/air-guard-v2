@@ -81,16 +81,11 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
       logger.error({ message });
       return;
     }
-    const applicableAgreement = agreement.value;
-    if (!applicableAgreement) {
-      const message = `No agreement found for schedule ID ${selectedSchedule.value.docId} on site ID ${site.docId}.`;
-      logger.error({ message });
-      return;
-    }
+
     const loadingsKey = loadingsStore.add("稼働実績として登録中...");
     try {
       await selectedSchedule.value.syncToOperationResult(
-        applicableAgreement,
+        agreement.value,
         keyMappedNotifications.value
       );
     } catch (error) {

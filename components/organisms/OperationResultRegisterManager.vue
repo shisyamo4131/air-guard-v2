@@ -108,7 +108,7 @@ function getWorkerTimeInfo(worker) {
                 mdi-alert-circle
               </v-icon>
               <span class="text-warning">
-                取極めが未登録です。先に取極めを登録する必要があります。
+                該当する取極めは登録されていません。
               </span>
             </td>
           </tr>

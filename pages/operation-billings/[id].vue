@@ -19,17 +19,48 @@ provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
 // Manager composable
-const { doc, attrs, info, includedKeys } = useOperationBillingManager({
-  fetchSiteComposable,
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
-  immediate: operationBillingId,
-});
+const { doc, attrs, info, includedKeys, site, toggleLock, isLoading } =
+  useOperationBillingManager({
+    fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+    immediate: operationBillingId,
+  });
 </script>
 
 <template>
   <v-container>
     <v-row>
+      <v-col cols="12">
+        <v-banner v-if="doc.isLocked" color="primary" icon="mdi-lock">
+          <v-banner-text>
+            この稼働実績は編集ロックされています。稼働実績管理での編集ができません。
+          </v-banner-text>
+          <template #actions>
+            <v-btn
+              color="primary"
+              flat
+              :loading="isLoading"
+              text="編集ロックを解除する"
+              @click="toggleLock(doc.docId, false)"
+            />
+          </template>
+        </v-banner>
+        <v-banner v-else color="warning" icon="mdi-lock-off">
+          <v-banner-text>
+            この稼働実績は編集ロックされていません。稼働実績管理での編集が可能です。
+          </v-banner-text>
+          <template #actions>
+            <v-btn
+              color="warning"
+              flat
+              :loading="isLoading"
+              text="編集をロックする"
+              @click="toggleLock(doc.docId, true)"
+            />
+          </template>
+        </v-banner>
+      </v-col>
       <v-col cols="12" lg="4">
         <v-row>
           <v-col cols="12">
@@ -38,15 +69,48 @@ const { doc, attrs, info, includedKeys } = useOperationBillingManager({
           <v-col cols="12">
             <air-item-manager
               v-bind="attrs"
-              :input-props="{
-                includedKeys: includedKeys.prices,
-              }"
+              label="取極め/請求情報編集"
+              :dialog-props="{ maxWidth: '720' }"
+              :input-props="{ includedKeys: ['agreement'] }"
             >
               <template #activator="{ attrs: activatorProps }">
                 <air-information-card
                   v-bind="activatorProps"
-                  :items="info.prices"
+                  label="取極め/請求情報"
+                  :items="info.billings"
                 />
+              </template>
+              <template #input.agreement="inputProps">
+                <MoleculesCardsAgreementSelector
+                  v-bind="inputProps.attrs"
+                  clearable
+                  :items="site?.agreements || []"
+                />
+              </template>
+              <template #after-agreement="inputProps">
+                <v-col cols="12">
+                  <air-checkbox
+                    :model-value="inputProps.item.allowEmptyAgreement"
+                    label="取極めなしを許容する"
+                    @update:modelValue="
+                      inputProps.updateProperties({
+                        allowEmptyAgreement: $event,
+                      })
+                    "
+                  />
+                </v-col>
+                <v-col cols="12">
+                  <air-date-input
+                    :model-value="inputProps.item.billingDateAt"
+                    label="請求締日"
+                    :required="
+                      inputProps.item.isInvalid === 'EMPTY_BILLING_DATE'
+                    "
+                    @update:modelValue="
+                      inputProps.updateProperties({ billingDateAt: $event })
+                    "
+                  />
+                </v-col>
               </template>
             </air-item-manager>
           </v-col>

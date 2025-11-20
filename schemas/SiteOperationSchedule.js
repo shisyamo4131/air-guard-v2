@@ -9,31 +9,31 @@
  * - Deletes all related notifications before deleting the schedule.
  * ---------------------------------------------------------------------------
  * [INHERIT]
- * @props {string} siteId - Site document ID
- * @props {Date} dateAt - Date of operation (placement date)
- * @props {string} shiftType - `DAY` or `NIGHT`
- * @props {string} startTime - Start time (HH:MM format)
- * @props {string} endTime - End time (HH:MM format)
- * @props {number} breakMinutes - Break time (minutes)
- * @props {boolean} isStartNextDay - Next day start flag
+ * @prop {string} siteId - Site document ID
+ * @prop {Date} dateAt - Date of operation (placement date)
+ * @prop {string} shiftType - `DAY` or `NIGHT`
+ * @prop {string} startTime - Start time (HH:MM format)
+ * @prop {string} endTime - End time (HH:MM format)
+ * @prop {number} breakMinutes - Break time (minutes)
+ * @prop {boolean} isStartNextDay - Next day start flag
  * - `true` if the actual work starts the day after the placement date `dateAt`
- * @props {number} regulationWorkMinutes - Regulation work minutes
+ * @prop {number} regulationWorkMinutes - Regulation work minutes
  * - Indicates the maximum working time treated as regular working hours.
  * - A new value will be synchronized to all `employees` and `outsourcers`.
- * @props {number} requiredPersonnel - Required number of personnel
- * @props {boolean} qualificationRequired - Qualification required flag
- * @props {string} workDescription - Work description
- * @props {string} remarks - Remarks
- * @props {Array<SiteOperationScheduleDetail>} employees - Assigned employees
+ * @prop {number} requiredPersonnel - Required number of personnel
+ * @prop {boolean} qualificationRequired - Qualification required flag
+ * @prop {string} workDescription - Work description
+ * @prop {string} remarks - Remarks
+ * @prop {Array<SiteOperationScheduleDetail>} employees - Assigned employees
  * - Array of `SiteOperationScheduleDetail` instances representing assigned employees
- * @props {Array<SiteOperationScheduleDetail>} outsourcers - Assigned outsourcers
+ * @prop {Array<SiteOperationScheduleDetail>} outsourcers - Assigned outsourcers
  * - Array of `SiteOperationScheduleDetail` instances representing assigned outsourcers
- * @props {string|null} operationResultId - Associated OperationResult document ID
+ * @prop {string|null} operationResultId - Associated OperationResult document ID
  * - If an OperationResult has been created based on this schedule, this property
  *   holds the ID of that OperationResult document.
  * - If this property is set, the schedule cannot be updated or deleted.
  *   Conversely, if the associated OperationResult is deleted, this property can be set to null.
- * @props {number} displayOrder - Display order
+ * @prop {number} displayOrder - Display order
  * - Property to control the display order of schedules on the same date and shift type.
  * - Automatically assigned during creation based on existing documents.
  * ---------------------------------------------------------------------------
@@ -210,7 +210,6 @@ export default class SiteOperationSchedule extends BaseClass {
 
   /**
    * 現在のインスタンスから稼働実績ドキュメントを作成します。
-   * - 稼働実績ドキュメントの生成時には取極めが必要です。
    * - 稼働実績ドキュメントの ID は現場稼働予定ドキュメントの ID と同一になります。
    *   既に存在する場合は上書きされます。
    * - 現場稼働予定ドキュメントの `operationResultId` プロパティに
@@ -223,14 +222,12 @@ export default class SiteOperationSchedule extends BaseClass {
         "不正な処理です。作成前の現場稼働予定から稼働実績を作成することはできません。"
       );
     }
-    if (!agreement || !(agreement instanceof Agreement)) {
-      throw new Error("取極めの指定が必要です。");
-    }
+
     if (!notifications) {
       throw new Error("配置通知の指定が必要です。");
     }
-    const converter = (props) => {
-      return this[props].map((w) => {
+    const converter = (prop) => {
+      return this[prop].map((w) => {
         const notification = notifications[w.notificationKey];
         if (!notification) return w;
         const {
@@ -252,12 +249,11 @@ export default class SiteOperationSchedule extends BaseClass {
     const outsourcers = converter("outsourcers");
     try {
       // Create OperationResult instance based on the current SiteOperationSchedule
-      // using agreement prices for overriding related properties like `unitPrice` etc.
       const operationResult = new OperationResult({
         ...this.toObject(),
         employees,
         outsourcers,
-        ...agreement.billingInfo,
+        agreement: agreement || null,
         siteOperationScheduleId: this.docId,
       });
       operationResult.refreshBillingDateAt();

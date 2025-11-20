@@ -39,6 +39,13 @@ const {
 <template>
   <v-container>
     <v-row>
+      <v-col v-if="doc.isLocked" cols="12">
+        <v-banner color="primary" icon="mdi-lock">
+          <v-banner-text>
+            この稼働実績は編集ロックされています。編集はできません。
+          </v-banner-text>
+        </v-banner>
+      </v-col>
       <v-col cols="12" lg="3">
         <v-row>
           <v-col cols="12">
@@ -51,6 +58,7 @@ const {
               <template #activator="{ attrs: activatorProps }">
                 <air-information-card
                   v-bind="activatorProps"
+                  :hide-edit="doc.isLocked"
                   :items="info.base"
                 />
               </template>
@@ -64,6 +72,8 @@ const {
           :handle-create="addWorker"
           :handle-update="changeWorker"
           :handle-delete="removeWorker"
+          :hide-action="doc.isLocked"
+          :hide-create-button="doc.isLocked"
         />
       </v-col>
       <v-col cols="12">

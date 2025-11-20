@@ -53,7 +53,7 @@ export function useOperationBillingManager({
   const internalDocId = Vue.ref(null);
   const instance = Vue.reactive(new OperationBilling());
   const component = Vue.ref(null);
-
+  const isLoading = Vue.ref(false);
   const isReady = Vue.ref(false);
 
   /***************************************************************************
@@ -115,6 +115,22 @@ export function useOperationBillingManager({
       return;
     }
     internalDocId.value = Vue.unref(docId);
+  }
+
+  /**
+   * Toggle the lock status of the operation billing document.
+   * @param {string} docId - The document ID of the operation billing.
+   * @param {boolean} value - The new lock status.
+   */
+  async function toggleLock(docId, value) {
+    isLoading.value = true;
+    try {
+      await OperationBilling.toggleLock(docId, value);
+    } catch (e) {
+      logger.error({ error: e });
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   /***************************************************************************
@@ -190,32 +206,44 @@ export function useOperationBillingManager({
       },
       { title: "備考", props: { subtitle: instance.remarks } },
     ];
-    const prices = [
+    const unitPriceBase = instance.agreement?.unitPriceBase || 0;
+    const overtimeUnitPriceBase =
+      instance.agreement?.overtimeUnitPriceBase || 0;
+    const unitPriceQualified = instance.agreement?.unitPriceQualified || 0;
+    const overtimeUnitPriceQualified =
+      instance.agreement?.overtimeUnitPriceQualified || 0;
+    const billingDate = instance.billingDateAt
+      ? dayjs(instance.billingDateAt).format("YYYY年M月D日")
+      : "未設定";
+    const billings = [
       {
         title: "基本単価",
         props: {
-          subtitle: `${instance.unitPriceBase}円/${instance.overtimeUnitPriceBase}円`,
+          subtitle: `${unitPriceBase}円/${overtimeUnitPriceBase}円`,
         },
       },
       {
         title: "資格者単価",
         props: {
-          subtitle: `${instance.unitPriceQualified}円/${instance.overtimeUnitPriceQualified}円`,
+          subtitle: `${unitPriceQualified}円/${overtimeUnitPriceQualified}円`,
+        },
+      },
+      {
+        title: "請求締日",
+        props: {
+          subtitle: billingDate,
+          appendIcon: instance.billingDateAt
+            ? undefined
+            : "mdi-alert-circle-outline",
         },
       },
     ];
-    return { base, prices };
+    return { base, billings };
   });
 
   /** Included keys for the manager component */
   const includedKeys = Vue.computed(() => {
-    const prices = [
-      "unitPriceBase",
-      "overtimeUnitPriceBase",
-      "unitPriceQualified",
-      "overtimeUnitPriceQualified",
-      "billingUnitType",
-    ];
+    const agreement = ["agreement"];
     const adjusted = [
       "adjustedQuantityBase",
       "adjustedOvertimeBase",
@@ -223,7 +251,13 @@ export function useOperationBillingManager({
       "adjustedOvertimeQualified",
       "useAdjustedQuantity",
     ];
-    return { prices, adjusted };
+    return { agreement, adjusted };
+  });
+
+  /** site instance */
+  const site = Vue.computed(() => {
+    if (!isReady.value) return null;
+    return cachedSites?.value?.[instance.siteId];
   });
 
   if (immediate) set(immediate);
@@ -237,6 +271,9 @@ export function useOperationBillingManager({
     info,
     includedKeys,
     isReady: Vue.readonly(isReady),
+    isLoading: Vue.readonly(isLoading),
+
+    site: Vue.readonly(site),
 
     cachedSites: Vue.readonly(cachedSites),
     cachedEmployees: Vue.readonly(cachedEmployees),
@@ -246,5 +283,7 @@ export function useOperationBillingManager({
     toCreate: (item) => component?.value?.toCreate?.(item),
     toUpdate: (item) => component?.value?.toUpdate?.(item),
     toDelete: (item) => component?.value?.toDelete?.(item),
+
+    toggleLock,
   };
 }
