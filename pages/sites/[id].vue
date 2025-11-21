@@ -6,6 +6,7 @@ import { useSite } from "@/composables/dataLayers/useSite";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAgreementsManager } from "@/composables/useAgreementsManager";
+import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 
 /*****************************************************************************
  * ROUTER
@@ -16,6 +17,8 @@ const siteId = route.params.id;
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+const { searchCustomers, getCustomer } = useFetchCustomer();
+
 /** Date Range */
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
@@ -53,6 +56,18 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
         <air-item-manager v-bind="attrs">
           <template #activator="{ attrs: activatorProps }">
             <air-information-card v-bind="activatorProps" :items="info.base" />
+          </template>
+          <template #input.customer="inputProps">
+            <air-autocomplete-api
+              v-bind="inputProps.attrs"
+              :api="searchCustomers"
+              clearable
+              :disabled="inputProps.editMode !== 'CREATE'"
+              :fetchItemByKeyApi="getCustomer"
+              item-title="name"
+              item-value="docId"
+              required
+            />
           </template>
         </air-item-manager>
       </v-col>

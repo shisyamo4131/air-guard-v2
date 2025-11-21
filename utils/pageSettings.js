@@ -106,13 +106,32 @@ export const pageStructure = [
     ],
   },
   {
-    id: "operation-billings-group",
-    path: "/operation-billings",
+    id: "billings-group",
     // public: false,
-    label: "稼働請求管理",
+    label: "請求管理",
     icon: "mdi-domain",
     roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
     navigation: true,
+    children: [
+      {
+        id: "operation-billings-list",
+        path: "/billings/operations",
+        // public: false,
+        label: "稼働請求一覧",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+      {
+        id: "customer-billings-list",
+        path: "/billings/customers",
+        // public: false,
+        label: "取引先請求一覧",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+    ],
   },
   {
     id: "customers-group",

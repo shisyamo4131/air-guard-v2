@@ -63,6 +63,16 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'Billings' subcollection under 'Companies' ---
+    // BillingsコレクションはCompaniesコレクションのサブコレクション。
+    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
+    // Billings ドキュメントのみ Read/Write を許可。
+    // または、ユーザーがスーパーユーザーの場合も許可。
+    match /Companies/{companyId}/Billings/{docId} {
+      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
+                              || isSuperUser();
+    }
+
     // --- Rules for 'Customers' subcollection under 'Companies' ---
     // CustomersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の

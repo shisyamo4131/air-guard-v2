@@ -73,7 +73,7 @@ export function useSitesManager() {
       schema: Site,
       beforeEdit: (editMode, item) => {
         if (editMode === "CREATE") return true;
-        router.push(`sites/${item.docId}`);
+        router.push(`/sites/${item.docId}`);
         return false;
       },
       handleCreate: (item) => item.create(),
@@ -81,7 +81,7 @@ export function useSitesManager() {
       loading: loading.value,
       search: search.value,
       tableProps: { customFilter: () => true, sortBy },
-      onCreate: ($event) => router.push(`sites/${$event.docId}`),
+      onCreate: ($event) => router.push(`/sites/${$event.docId}`),
       "onUpdate:search": (val) => (search.value = val),
       onError: (error) => logger.error({ error }),
       "onError:clear": () => logger.clearError(),

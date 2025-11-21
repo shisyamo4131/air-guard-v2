@@ -61,7 +61,12 @@ const handleSignOut = async () => {
 
     <!-- メインコンテンツ表示領域 -->
     <v-main scrollable>
-      <NuxtPage />
+      <NuxtPage
+        :keepalive="{
+          include: ['billings-customers'],
+          max: 10,
+        }"
+      />
     </v-main>
 
     <!-- フッター -->

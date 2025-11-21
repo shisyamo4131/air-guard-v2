@@ -118,7 +118,7 @@ export function useOperationBillingsManager({
       ref: (el) => (component.value = el),
       beforeEdit: (editMode, item) => {
         if (editMode === "CREATE") return true;
-        router.push(`operation-billings/${item.docId}`);
+        router.push(`/billings/operations/${item.docId}`);
         return false;
       },
       handleCreate: (item) => item.create(),

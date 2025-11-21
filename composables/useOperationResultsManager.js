@@ -118,7 +118,7 @@ export function useOperationResultsManager({
       ref: (el) => (component.value = el),
       beforeEdit: (editMode, item) => {
         if (editMode === "CREATE") return true;
-        router.push(`operation-results/${item.docId}`);
+        router.push(`/operation-results/${item.docId}`);
         return false;
       },
       handleCreate: (item) => item.create(),
