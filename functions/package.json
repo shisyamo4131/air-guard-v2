@@ -14,9 +14,9 @@
   },
   "main": "index.js",
   "dependencies": {
-    "@shisyamo4131/air-firebase-v2": "^1.0.1",
-    "@shisyamo4131/air-firebase-v2-server-adapter": "^1.0.0",
-    "@shisyamo4131/air-guard-v2-schemas": "dev",
+    "@shisyamo4131/air-firebase-v2": "^2.0.0",
+    "@shisyamo4131/air-firebase-v2-server-adapter": "^2.0.0",
+    "@shisyamo4131/air-guard-v2-schemas": "^2.1.1",
     "dayjs": "^1.11.18",
     "firebase-admin": "^12.6.0",
     "firebase-functions": "^6.6.0"
