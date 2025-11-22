@@ -1,7 +1,7 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { Customer, Billing } from "@shisyamo4131/air-guard-v2-schemas";
+import { Customer, Billing } from "../schemas/index.js";
 
 export const onOperationResultChange = onDocumentWritten(
   "Companies/{companyId}/OperationResults/{docId}",
