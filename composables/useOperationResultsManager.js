@@ -7,7 +7,8 @@
  * @author shisyamo4131
  ***************************************************************************/
 import * as Vue from "vue";
-import { OperationResult } from "@/schemas";
+import dayjs from "dayjs";
+import { OperationResult, Site } from "@/schemas";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useLogger } from "../composables/useLogger";
@@ -34,11 +35,29 @@ export function useOperationResultsManager({
   fetchSiteComposable,
   immediate = false,
 } = {}) {
+  /** SETUP LOGGER COMPOSABLE */
+  const logger = useLogger("OperationResultsManager", useErrorsStore());
+
+  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
+  const { isDev } = useAuthStore();
+
   /***************************************************************************
    * VALIDATION
    ***************************************************************************/
   if (!dateRangeComposable) {
     throw new Error("dateRangeComposable is required");
+  }
+
+  if (isDev && !fetchSiteComposable) {
+    const missingComposables = [];
+    if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
+    if (missingComposables.length > 0) {
+      logger.info({
+        message: `The following composables were not provided. Internal composables will be used, but if caching across multiple components is needed, specifying them will improve performance: ${missingComposables.join(
+          ", "
+        )}`,
+      });
+    }
   }
 
   /***************************************************************************
@@ -51,17 +70,8 @@ export function useOperationResultsManager({
   /***************************************************************************
    * SETUP STORES & COMPOSABLES
    ***************************************************************************/
-  const logger = useLogger("OperationResultsManager", useErrorsStore());
   const router = useRouter();
-
-  // If fetchSiteComposable is not provided, use internal useFetchSite
   const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
-  if (!fetchSiteComposable) {
-    logger.info({
-      message:
-        "fetchSiteComposable is not provided. Using internal useFetchSite. If you need to cache site information across multiple composables, specifying fetchSiteComposable will improve performance.",
-    });
-  }
 
   /***************************************************************************
    * METHODS (PRIVATE)
@@ -90,7 +100,7 @@ export function useOperationResultsManager({
   /***************************************************************************
    * METHODS (PUBLIC)
    ***************************************************************************/
-  function set({ siteId: inputSiteId } = {}) {
+  function subscribe({ siteId: inputSiteId } = {}) {
     if (inputSiteId && typeof inputSiteId === "string") {
       siteId.value = Vue.unref(inputSiteId);
     }
@@ -113,6 +123,16 @@ export function useOperationResultsManager({
   /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
+  const enrichedDocs = Vue.computed(() => {
+    return instance.docs.map((doc) => {
+      const site = cachedSites.value[doc.siteId] || new Site();
+      return {
+        ...doc.toObject(),
+        site,
+      };
+    });
+  });
+
   const attrs = Vue.computed(() => {
     return {
       ref: (el) => (component.value = el),
@@ -124,7 +144,38 @@ export function useOperationResultsManager({
       handleCreate: (item) => item.create(),
       modelValue: instance.docs,
       schema: OperationResult,
+      inputProps: {
+        excludedKeys: [
+          "employees",
+          "outsourcers",
+          "unitPriceBase",
+          "overtimeUnitPriceBase",
+          "unitPriceQualified",
+          "overtimeUnitPriceQualified",
+          "billingUnitType",
+          "includeBreakInBilling",
+          "cutoffDate",
+          "isLocked",
+          "billingDateAt",
+          "useAdjustedQuantity",
+          "adjustedQuantityBase",
+          "adjustedOvertimeBase",
+          "adjustedQuantityQualified",
+          "adjustedOvertimeQualified",
+          "agreement",
+          "allowEmptyAgreement",
+        ],
+      },
       tableProps: {
+        headers: [
+          {
+            title: "日付",
+            key: "dateAt",
+            value: (item) => dayjs(item.dateAt).format("MM月DD日(ddd)"),
+          },
+          { title: "現場", key: "siteId" },
+        ],
+        items: enrichedDocs.value,
         sortBy: [{ key: "dateAt", order: "desc" }],
       },
       onCreate: ($event) => router.push(`operation-results/${$event.docId}`),
@@ -143,7 +194,7 @@ export function useOperationResultsManager({
     }, {});
   });
 
-  if (immediate) set();
+  if (immediate) subscribe(immediate);
 
   /***************************************************************************
    * RETURN OBJECT
@@ -154,7 +205,8 @@ export function useOperationResultsManager({
     cachedSites: Vue.readonly(cachedSites),
     attrs: Vue.readonly(attrs),
 
-    set,
+    subscribe,
+
     toCreate: (item) => component?.value?.toCreate?.(item),
     toUpdate: (item) => component?.value?.toUpdate?.(item),
     toDelete: (item) => component?.value?.toDelete?.(item),

@@ -2,6 +2,7 @@
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "~/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "~/composables/fetch/useFetchOutsourcer";
+import { useOperationResult } from "@/composables/dataLayers/useOperationResult";
 import { useOperationResultManager } from "~/composables/useOperationResultManager";
 
 /*****************************************************************************
@@ -9,7 +10,7 @@ import { useOperationResultManager } from "~/composables/useOperationResultManag
  *****************************************************************************/
 // Router for getting route params
 const route = useRoute();
-const operationResultId = route.params.id;
+const docId = route.params.id;
 
 // Fetch composables
 const fetchSiteComposable = useFetchSite();
@@ -19,21 +20,16 @@ provide("fetchSiteComposable", fetchSiteComposable);
 provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
+const { doc } = useOperationResult({ docId });
+
 // Manager composable
-const {
-  doc,
-  attrs,
-  info,
-  includedKeys,
-  addWorker,
-  changeWorker,
-  removeWorker,
-} = useOperationResultManager({
-  fetchSiteComposable,
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
-  immediate: operationResultId,
-});
+const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
+  useOperationResultManager({
+    doc,
+    fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+  });
 </script>
 
 <template>
