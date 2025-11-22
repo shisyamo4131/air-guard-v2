@@ -33,7 +33,7 @@ const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
 </script>
 
 <template>
-  <v-container>
+  <TemplatesDetail label="稼働実績" fixed>
     <v-row>
       <v-col v-if="doc.isLocked" cols="12">
         <v-banner color="primary" icon="mdi-lock">
@@ -78,5 +78,5 @@ const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
         >
       </v-col>
     </v-row>
-  </v-container>
+  </TemplatesDetail>
 </template>

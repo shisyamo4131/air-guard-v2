@@ -10,11 +10,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
 <template>
-  <v-container>
-    <v-toolbar class="mb-4" density="compact">
-      <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
-      <v-toolbar-title>設定-会社情報-</v-toolbar-title>
-    </v-toolbar>
+  <TemplatesDetail :label="'設定-会社情報-'" fixed hide-prepend>
     <v-row>
       <!-- Base information column -->
       <v-col cols="12" md="4">
@@ -56,7 +52,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
+  </TemplatesDetail>
 </template>
 
 <style></style>

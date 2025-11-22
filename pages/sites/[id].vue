@@ -46,11 +46,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
 </script>
 
 <template>
-  <v-container>
-    <v-toolbar class="mb-4" density="compact">
-      <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
-      <v-toolbar-title>{{ doc.name }}</v-toolbar-title>
-    </v-toolbar>
+  <TemplatesDetail :label="doc.name" fixed>
     <v-row>
       <v-col cols="12" md="4">
         <air-item-manager v-bind="attrs">
@@ -117,5 +113,5 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
         </v-card>
       </v-col>
     </v-row>
-  </v-container>
+  </TemplatesDetail>
 </template>

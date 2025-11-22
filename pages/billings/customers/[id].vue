@@ -23,11 +23,7 @@ const { attrs, doc, cachedCustomers, cachedSites } = useCustomerBillingManager({
 </script>
 
 <template>
-  <v-container>
-    <v-toolbar class="mb-4" density="compact">
-      <v-btn icon="mdi-chevron-left" @click="$router.go(-1)" />
-      <v-toolbar-title>請求明細</v-toolbar-title>
-    </v-toolbar>
+  <TemplatesDetail :label="cachedSites[doc.siteId]?.name || 'loading...'" fixed>
     <v-table>
       <tbody>
         <tr>
@@ -122,5 +118,5 @@ const { attrs, doc, cachedCustomers, cachedSites } = useCustomerBillingManager({
         </tr>
       </tbody>
     </v-table>
-  </v-container>
+  </TemplatesDetail>
 </template>
