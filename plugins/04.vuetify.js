@@ -54,16 +54,15 @@ export default defineNuxtPlugin((app) => {
       VCalendar: {
         hideWeekNumber: true,
       },
-      VDataTable: {
-        VIcon: {
-          color: "medium-emphasis",
-          size: "small",
-        },
-      },
       VTimePicker: {
         allowedMinutes: (val) => val % 10 === 0,
         color: "primary",
         format: "ampm",
+      },
+      AirDataTable: {
+        VToolbar: {
+          color: "primary",
+        },
       },
     },
   });
