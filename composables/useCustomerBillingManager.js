@@ -7,6 +7,7 @@
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { Billing } from "@/schemas";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -20,6 +21,7 @@ export function useCustomerBillingManager({
   fetchCustomerComposable,
   fetchSiteComposable,
   immediate = false,
+  deleteRedirectPath = "/operation-results",
 } = {}) {
   /** SETUP LOGGER COMPOSABLE */
   const logger = useLogger("CustomerBillingManager", useErrorsStore());
@@ -43,6 +45,7 @@ export function useCustomerBillingManager({
   /***************************************************************************
    * SETUP STORES & COMPOSABLES
    ***************************************************************************/
+  const router = useRouter();
 
   // Fetch composables
   const { fetchCustomer, cachedCustomers } =
@@ -113,10 +116,16 @@ export function useCustomerBillingManager({
     return {
       ref: (el) => (component.value = el),
       modelValue: Vue.readonly(instance),
-      handleCreate: (item) => item.create(),
+      handleCreate: (item) => {
+        throw new Error("Creation of customer billings is not supported");
+      },
       handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
+      handleDelete: (item) => {
+        throw new Error("Deletion of customer billings is not supported");
+      },
       hideDeleteBtn: true,
+      // 閲覧中に削除された場合の対応
+      onDelete: () => router.replace(deleteRedirectPath),
       onError: (e) => logger.error({ error: e }),
       "onError:clear": logger.clearError,
     };

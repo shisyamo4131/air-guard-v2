@@ -6,14 +6,14 @@
  * @author shisyamo4131
  ***************************************************************************/
 import * as Vue from "vue";
+import dayjs from "dayjs";
 import { Billing, Customer, Site } from "@/schemas";
+import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useLogger } from "../composables/useLogger";
-import { useRouter } from "vue-router";
-import dayjs from "dayjs";
 
 /**
  * @param {*} options
@@ -157,6 +157,15 @@ export function useCustomerBillingsManager({
       beforeEdit: (editMode, item) => {
         router.push(`/billings/customers/${item.docId}`);
         return false;
+      },
+      handleCreate: (item) => {
+        throw new Error("Creation of customer billings is not supported");
+      },
+      handleUpdate: (item) => {
+        throw new Error("Update of customer billings is not supported");
+      },
+      handleDelete: (item) => {
+        throw new Error("Deletion of customer billings is not supported");
       },
       hideCreateBtn: true,
       tableProps: {
