@@ -11,8 +11,6 @@ import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Site, SiteOperationSchedule } from "@/schemas";
 
-const isDebug = false;
-
 /**
  * @param {*} options
  * @param {*} options.docId - The document ID of the Site to subscribe to
