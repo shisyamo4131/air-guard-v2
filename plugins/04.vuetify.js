@@ -65,12 +65,6 @@ export default defineNuxtPlugin((app) => {
         color: "primary",
         format: "ampm",
       },
-      VToolbar: {
-        VIcon: {
-          color: "medium-emphasis",
-          size: "small",
-        },
-      },
     },
   });
   app.vueApp.use(vuetify);
