@@ -5,10 +5,15 @@
  * @author shisyamo4131
  *****************************************************************************/
 import * as Vue from "vue";
+import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /**
+ * @param {Object} options - Options for the composable
+ * @param {Object} options.doc - Reactive Site instance to manage
+ * @param {string} options.deleteRedirectPath - Path to redirect after deletion
  * @returns {Object} - The site manager composable
  * @returns {Object} doc - Reactive Site instance
  * @returns {Object} attrs - Computed attributes for the site component
@@ -19,58 +24,22 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
  */
-export function useSiteManager({ doc } = {}) {
-  /***************************************************************************
-   * VALIDATION
-   ***************************************************************************/
+export function useSiteManager({ doc, deleteRedirectPath = "/sites" } = {}) {
+  /** SETUP LOGGER COMPOSABLE */
+  const logger = useLogger("SiteManager", useErrorsStore());
+
+  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
+  const { isDev } = useAuthStore();
 
   /***************************************************************************
    * SETUP STORES & COMPOSABLES
    ***************************************************************************/
-  const logger = useLogger("SiteManager", useErrorsStore());
+  const router = useRouter();
 
   /***************************************************************************
    * REACTIVE OBJECTS
    ***************************************************************************/
-  // const internalDocId = Vue.ref(null);
-  // const instance = Vue.reactive(new Site());
   const component = Vue.ref(null);
-
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-
-  /***************************************************************************
-   * METHODS (PUBLIC)
-   ***************************************************************************/
-  // /**
-  //  * Set docId to composable and subscribe to document.
-  //  * @param {import("vue").Ref|string} docId
-  //  * @returns {void}
-  //  */
-  // function set(docId) {
-  //   if (!docId || typeof Vue.unref(docId) !== "string") {
-  //     logger.error({
-  //       error: new Error("Invalid docId provided to set method"),
-  //     });
-  //     return;
-  //   }
-  //   internalDocId.value = Vue.unref(docId);
-  // }
-
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  // Vue.watchEffect(() => {
-  //   if (internalDocId.value) instance.subscribe({ docId: internalDocId.value });
-  // });
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  // Vue.onUnmounted(() => {
-  //   instance.unsubscribe();
-  // });
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -86,6 +55,7 @@ export function useSiteManager({ doc } = {}) {
       inputProps: {
         excludedKeys: ["agreements"],
       },
+      onDelete: () => router.replace(deleteRedirectPath),
       onError: (e) => logger.error({ error: e }),
       "onError:clear": logger.clearError,
     };

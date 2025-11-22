@@ -8,6 +8,7 @@
  * @create 2025-11-14
  *****************************************************************************/
 import * as Vue from "vue";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { Site, SiteOperationSchedule } from "@/schemas";
 
 const isDebug = false;
@@ -17,7 +18,9 @@ const isDebug = false;
  * @param {*} options.docId - The document ID of the Site to subscribe to
  * @param {*} options.dateRangeComposable
  * @param {*} options.useDebounced - Whether to use debounced date range (default: false)
- * @returns
+ * @returns {Object} - The site data layer composable
+ * @returns {Object} doc - Reactive Site instance
+ * @returns {Array} schedules - Reactive array of SiteOperationSchedule instances
  */
 export function useSite({
   docId,
@@ -27,11 +30,8 @@ export function useSite({
   const site = Vue.reactive(new Site());
   const siteOperationSchedule = Vue.reactive(new SiteOperationSchedule());
 
-  const sendDebugLog = (message) => {
-    if (isDebug) console.info(`[useSite.js] ${message}`);
-  };
-
-  sendDebugLog("Initializing useSite composable...");
+  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
+  const { isDev } = useAuthStore();
 
   /***************************************************************************
    * VALIDATION
@@ -66,12 +66,10 @@ export function useSite({
   });
 
   function _subscribeSite() {
-    sendDebugLog("Subscribing to Site document...");
     site.subscribe({ docId });
   }
 
   function _subscribeSiteOperationSchedules() {
-    sendDebugLog("Subscribing to SiteOperationSchedule documents...");
     // generate constraints
     const { from, to } = _dateRange.value;
     const constraints = [
@@ -93,12 +91,7 @@ export function useSite({
   /***************************************************************************
    * LIFECYCLE HOOKS
    ***************************************************************************/
-  Vue.onMounted(() => {
-    sendDebugLog("Mounted");
-  });
-
   Vue.onUnmounted(() => {
-    sendDebugLog("Unmounted");
     site.unsubscribe();
     siteOperationSchedule.unsubscribe();
   });

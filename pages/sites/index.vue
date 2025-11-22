@@ -9,6 +9,10 @@ const { attrs } = useSitesManager();
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <air-array-manager
+      class="fill-height"
+      v-bind="attrs"
+      :input-props="{ excludedKeys: ['agreements'] }"
+    />
   </TemplatesFixedHeightContainer>
 </template>
