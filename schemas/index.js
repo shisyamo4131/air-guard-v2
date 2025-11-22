@@ -9,7 +9,7 @@ export { OperationResultDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { Outsourcer } from "@shisyamo4131/air-guard-v2-schemas";
 export { RoundSetting } from "@shisyamo4131/air-guard-v2-schemas";
 export { default as Site, Agreement } from "./Site.js";
-export { default as SiteOperationSchedule } from "./SiteOperationSchedule.js";
+export { SiteOperationSchedule } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOperationScheduleDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOrder } from "@shisyamo4131/air-guard-v2-schemas";
 export { default as User } from "./User.js";
