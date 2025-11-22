@@ -28,6 +28,21 @@
       "queryScope": "COLLECTION",
       "fields": [
         {
+          "fieldPath": "operationResultId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "date",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
+      "collectionGroup": "SiteOperationSchedules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
           "fieldPath": "siteId",
           "order": "ASCENDING"
         },
