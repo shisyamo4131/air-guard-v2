@@ -4,6 +4,7 @@ const router = useRouter();
 
 const navigateToSignIn = () => router.push("/sign-in");
 const navigateToSignUp = () => router.push("/sign-up");
+const navigateToSignUpAdmin = () => router.push("/sign-up-admin");
 </script>
 
 <template>
@@ -24,8 +25,11 @@ const navigateToSignUp = () => router.push("/sign-up");
         <v-btn color="primary" class="mr-4" large @click="navigateToSignIn">
           サインイン
         </v-btn>
-        <v-btn outlined color="primary" large @click="navigateToSignUp">
+        <v-btn color="primary" class="mr-4" large @click="navigateToSignUp">
           サインアップ
+        </v-btn>
+        <v-btn color="primary" large @click="navigateToSignUpAdmin">
+          管理者サインアップ
         </v-btn>
       </v-col>
 

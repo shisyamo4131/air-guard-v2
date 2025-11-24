@@ -1,3 +1,5 @@
+<script setup></script>
+
 <template>
   <v-container class="py-8">
     <h1 class="text-h4 font-weight-bold mb-6">ようこそ、AirGuardへ</h1>
@@ -56,7 +58,3 @@
     </v-row>
   </v-container>
 </template>
-
-<script setup>
-// 今はダミー。将来的に supabase や firebase から統計を取得予定とかもOK。
-</script>

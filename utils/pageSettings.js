@@ -13,10 +13,18 @@
  */
 export const pageStructure = [
   {
+    id: "sign-up-admin",
+    path: "/sign-up-admin",
+    public: true, // 公開ページ
+    label: "管理者アカウントサインアップ",
+    roles: [],
+    navigation: false,
+  },
+  {
     id: "sign-up",
     path: "/sign-up",
     public: true, // 公開ページ
-    label: "サインアップ",
+    label: "利用者アカウントサインアップ",
     roles: [],
     navigation: false,
   },
@@ -32,7 +40,7 @@ export const pageStructure = [
     id: "module-tests",
     label: "テスト",
     icon: "mdi-domain",
-    roles: [],
+    roles: ["super-user"],
     navigation: true,
     children: [
       {

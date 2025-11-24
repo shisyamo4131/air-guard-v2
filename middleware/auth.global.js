@@ -1,53 +1,46 @@
 /**
- * グローバル認証ミドルウェア (Ver.3)
+ * グローバル認証ミドルウェア (Ver.5)
  * pageSettings の public プロパティと roles プロパティに基づいてアクセス制御を行う
  *
  * A. 未認証の場合:
  *    - public: true のページのみアクセス可能。
- *    - それ以外へのアクセスはルート('/')にリダイレクト。(ルートが非公開なら /sign-in へ)
+ *    - それ以外へのアクセスは /sign-in へリダイレクト。
  * B. 認証済みの場合:
- *    - public: true のページへのアクセスはダッシュボード('/dashboard')にリダイレクト。
- *    - それ以外の場合は isPageAllowed で権限を確認し、権限がなければダッシュボード('/dashboard')にリダイレクト。
+ *    - メール未認証の場合は /unconfirmedEmail へリダイレクト。
+ *    - public: true のページへのアクセスは /dashboard にリダイレクト。
+ *    - それ以外の場合は isPageAllowed で権限を確認し、権限がなければ /dashboard にリダイレクト。
  */
 
-// getPageConfig と isPageAllowed をインポート
 import { getPageConfig, isPageAllowed } from "~/utils/pageSettings";
 import { useAuthStore } from "~/stores/useAuthStore";
 import { useErrorsStore } from "~/stores/useErrorsStore";
 
-// グローバル認証ミドルウェア
-export default defineNuxtRouteMiddleware(async (to) => {
+export default defineNuxtRouteMiddleware(async (to, from) => {
   const auth = useAuthStore();
+  const errors = useErrorsStore();
+
+  // 画面遷移時にはエラーをクリア
+  errors.clear();
 
   // メンテナンスモードの処理
-  // auth.isMaintenance は Firestore の "System/system" ドキュメントの isMaintenance フィールドに同期される
-  // メンテナンスモード中は /maintenance 以外のページへのアクセスを /maintenance にリダイレクト
-  // メンテナンスモードが解除されていれば /maintenance からルート('/')にリダイレクト
   if (auth.isMaintenance) {
-    // console.warn(
-    //   "[Auth Middleware] Air Guard is currently in maintenance mode."
-    // );
     if (to.path !== "/maintenance") {
-      // console.log(
-      //   `[Auth Middleware] Redirecting to /maintenance from ${to.path}.`
-      // );
+      console.log(
+        "[auth.global] Maintenance mode: redirecting to /maintenance"
+      );
       return navigateTo("/maintenance", { replace: true });
-    } else {
-      return; // 既に /maintenance にいる場合は何もしない
     }
+    return;
   } else {
     if (to.path === "/maintenance") {
-      // console.log(
-      //   "[Auth Middleware] Maintenance mode ended. Redirecting to home."
-      // );
+      console.log(
+        "[auth.global] Not in maintenance mode: redirecting from /maintenance"
+      );
       return navigateTo("/", { replace: true });
     }
   }
 
-  // 画面遷移時にはエラーをクリア
-  const errors = useErrorsStore();
-  errors.clear();
-
+  // auth状態の準備ができるまで待機
   await auth.waitUntilReady();
 
   const isAuthenticated = !!auth.uid;
@@ -57,70 +50,58 @@ export default defineNuxtRouteMiddleware(async (to) => {
   // ターゲットパスのページ設定を取得
   const pageConfig = getPageConfig(targetPath);
 
-  // --- ルーティングロジック ---
-
-  // A. 未認証ユーザーの処理
+  // --- A. 未認証ユーザーの処理 ---
   if (!isAuthenticated) {
-    // ページ設定が存在し、かつ public: true でない場合
-    if (!pageConfig?.public) {
-      const redirectTo = getPageConfig("/")?.public ? "/" : "/sign-in"; // ルートが公開かチェック
-      // console.log(
-      //   `[Auth Middleware] Unauthenticated access to protected route ${targetPath}. Redirecting to ${redirectTo}.`
-      // );
-      // 無限ループ防止 (リダイレクト先が現在のパスと同じ場合は何もしない)
-      if (targetPath !== redirectTo) {
-        return navigateTo(redirectTo);
-      }
-      // console.warn(
-      //   `[Auth Middleware] Avoided redirect loop for unauthenticated user at ${targetPath}.`
-      // );
-      return; // or handle appropriately, e.g., show 404 if pageConfig is undefined
+    // public: true のページ、または設定がないページへのアクセスは許可
+    if (pageConfig?.public) return;
+
+    // 非公開ページへのアクセスは /sign-in へリダイレクト
+    if (targetPath !== "/sign-in") {
+      return navigateTo("/sign-in", { replace: true });
     }
-    // public: true のページ、または設定がないページ(404想定)へのアクセスは許可
+
     return;
   }
 
-  // B. 認証済みユーザーの処理
-  if (isAuthenticated) {
-    // メール未認証ユーザーの処理
-    if (auth.isEmailVerified === false) {
-      if (targetPath === "/unconfirmedEmail") {
-        return; // 既に unconfirmedEmail ページにいる場合は何もしない
-      }
-      // console.log(
-      //   `[Auth Middleware] Authenticated but unverified user accessing public route ${targetPath}. Redirecting to /unconfirmedEmail.`
-      // );
-      return navigateTo("/unconfirmedEmail");
-    }
+  // --- B. 認証済みユーザーの処理 ---
 
-    // ページ設定が存在し、かつ public: true の場合、ダッシュボードへ
-    if (pageConfig?.public) {
-      // console.log(
-      //   `[Auth Middleware] Authenticated user accessing public route ${targetPath}. Redirecting to /dashboard.`
-      // );
-      // 無限ループ防止 (既に /dashboard にいる場合はリダイレクトしない)
-      if (targetPath !== "/dashboard") {
-        return navigateTo("/dashboard");
-      }
-      return;
+  // 1. メール未認証の場合
+  if (!auth.isEmailVerified) {
+    if (targetPath !== "/unconfirmedEmail") {
+      return navigateTo("/unconfirmedEmail", { replace: true });
     }
-
-    // 非公開ページへのアクセスの場合、権限を確認 (isPageAllowed を使用)
-    if (!isPageAllowed(targetPath, userRoles)) {
-      // 権限がない場合、ダッシュボードへリダイレクト
-      // console.warn(
-      //   `[Auth Middleware] User (Roles: ${userRoles.join(
-      //     ", "
-      //   )}) denied access to ${targetPath}. Redirecting to /dashboard.`
-      // );
-      // 無限ループ防止
-      if (targetPath !== "/dashboard") {
-        return navigateTo("/dashboard");
-      }
-      return;
-    }
-
-    // 権限がある場合はアクセスを許可
     return;
   }
+
+  // 2. メール認証済みだが /unconfirmedEmail にいる場合はリダイレクト
+  if (targetPath === "/unconfirmedEmail") {
+    return navigateTo("/dashboard", { replace: true });
+  }
+
+  // 3. 公開ページ（sign-in, sign-up等）へのアクセスは /dashboard へリダイレクト
+  if (pageConfig?.public) {
+    if (targetPath !== "/dashboard") {
+      return navigateTo("/dashboard", { replace: true });
+    }
+    return;
+  }
+
+  // 4. 非公開ページの権限チェック
+  // ページ設定が存在しない場合（404想定）はアクセスを許可
+  if (!pageConfig) {
+    return;
+  }
+
+  const allowed = isPageAllowed(targetPath, userRoles);
+
+  // 権限がない場合は /dashboard へリダイレクト
+  if (!allowed) {
+    if (targetPath !== "/dashboard") {
+      return navigateTo("/dashboard", { replace: true });
+    }
+    return;
+  }
+
+  // 5. すべてのチェックをパスした場合はアクセスを許可
+  return;
 });

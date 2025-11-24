@@ -6,6 +6,7 @@
 import { User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -17,8 +18,6 @@ const logger = useLogger("UsersManager", useErrorsStore());
  * REACTIVE OBJECTS
  *****************************************************************************/
 const user = reactive(new User());
-const password = ref("");
-const confirmPassword = ref("");
 
 /*****************************************************************************
  * LIFECYCLE HOOKS
@@ -35,18 +34,6 @@ onUnmounted(() => {
  * METHODS
  *****************************************************************************/
 /**
- * Create a new user.
- * - Use the `createUserInCompany` method from the `auth` store to create a new user.
- * @param item
- */
-async function handleCreate(item) {
-  await auth.createUserInCompany({
-    ...item,
-    password: password.value,
-  });
-}
-
-/**
  * Disable a user account.
  * @param item - User item to be disabled
  */
@@ -61,25 +48,20 @@ async function handleDisableUser(item) {
 async function handleEnableUser(item) {
   await auth.enableUser({ uid: item.docId });
 }
-
-/**
- * Initialize password fields.
- */
-function initPassword() {
-  password.value = "";
-  confirmPassword.value = "";
-}
 </script>
 
 <template>
   <air-array-manager
     :model-value="user.docs"
     :schema="User"
+    :before-edit="
+      (editMode, item) => {
+        item.companyId = auth.companyId;
+      }
+    "
     disable-delete
-    :handle-create="handleCreate"
+    :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
-    @initialized="initPassword"
-    @submit:complete="initPassword"
     @error="(error) => logger.error({ error })"
     @error:clear="() => logger.clearError()"
   >
@@ -120,31 +102,6 @@ function initPassword() {
           </div>
         </template>
       </air-data-table>
-    </template>
-    <template #input-footer="inputProps">
-      <v-col v-if="inputProps.isCreate" cols="12">
-        <air-password
-          label="パスワード"
-          required
-          :rules="[
-            (v) =>
-              !v ||
-              v.length >= 8 ||
-              'パスワードは8文字以上で入力してください。',
-            (v) => v === password || 'パスワードが一致しません。',
-          ]"
-          counter
-          v-model="password"
-        />
-      </v-col>
-      <v-col v-if="inputProps.isCreate" cols="12">
-        <air-password
-          label="確認用パスワード"
-          required
-          :rules="[(v) => v === password || 'パスワードが一致しません。']"
-          v-model="confirmPassword"
-        />
-      </v-col>
     </template>
   </air-array-manager>
 </template>

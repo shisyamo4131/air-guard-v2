@@ -65,7 +65,7 @@ onBeforeUnmount(() => {
   <v-card flat max-width="480">
     <v-card-title>メールを確認してください</v-card-title>
     <v-card-subtitle class="text-wrap">
-      メールアドレスの認証が完了していません。登録したメールアドレスに認証メールを送信しましたので、メール内のリンクをクリックして認証を完了してください。
+      入力されたメールアドレスへ認証メールをお送りしました。メール内のリンクをクリックして認証を完了してください。
     </v-card-subtitle>
     <v-expand-transition>
       <v-container v-if="errors.hasError">

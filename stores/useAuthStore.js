@@ -6,11 +6,12 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { httpsCallable } from "firebase/functions";
-import { Company } from "@/schemas";
+import { Company, User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { doc, onSnapshot } from "firebase/firestore";
 import { RoundSetting } from "@/schemas";
+import { computed } from "vue";
+import FireModel from "@shisyamo4131/air-firebase-v2";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -37,24 +38,28 @@ export const useAuthStore = defineStore("auth", () => {
 
   // User state
   const uid = ref(null);
-  const email = ref(null);
-  const displayName = ref(null);
   const isEmailVerified = ref(false);
-  const _rawRoles = ref([]);
-  const companyId = ref(null);
   const isSuperUser = ref(false);
+  const companyId = ref(null);
 
   // Company state fetched by companyId
   const company = ref(new Company());
 
-  // Listener for unsubscribing.
-  const listeners = { docCounter: null };
-
-  // Document counter
-  const docCounter = ref({});
+  const userInstance = reactive(new User());
 
   // Whether the app is in maintenance mode
   const isMaintenance = ref(false);
+
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
+  // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
+  const roles = computed(() => {
+    const result = userInstance.roles || [];
+    if (isSuperUser.value) result.push("super-user");
+    if (userInstance.isAdmin) result.push("admin");
+    return result;
+  });
 
   /***************************************************************************
    * WATCHERS
@@ -71,117 +76,36 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
-  const roles = computed(() => {
-    if (isSuperUser.value) return ["admin"];
-    return _rawRoles.value;
-  });
-
-  /***************************************************************************
    * METHODS
    ***************************************************************************/
-  /** Unsubscribe to company data and initialize company instance. */
-  function _initCompany() {
-    company.value.unsubscribe();
-    company.value.initialize();
-  }
-
-  function _loadDocCounter() {
-    const { $firestore } = useNuxtApp();
-    const docPath = `Companies/${companyId.value}/meta/docCounter`;
-    const docRef = doc($firestore, docPath);
-    listeners.docCounter = onSnapshot(docRef, (docSnap) => {
-      docCounter.value = docSnap.exists() ? docSnap.data() : {};
-    });
-  }
-
-  function _unloadDocCounter() {
-    if (listeners.docCounter) listeners.docCounter();
-    listeners.docCounter = null;
-  }
-
-  /** Clear user state. */
-  function _clearUserState() {
-    uid.value = null;
-    email.value = null;
-    displayName.value = null;
-    isEmailVerified.value = false;
-    _rawRoles.value = [];
-    companyId.value = null;
-    isSuperUser.value = false;
-  }
-
-  /** Set user state. */
-  function _setUserState(user, idTokenResult) {
-    uid.value = user.uid;
-    email.value = user.email;
-    displayName.value = user.displayName || "";
-    isEmailVerified.value = user.emailVerified || false;
-    isSuperUser.value = !!idTokenResult?.claims?.isSuperUser;
-    _rawRoles.value = idTokenResult?.claims?.roles || [];
-    companyId.value = idTokenResult?.claims?.companyId || null;
-  }
-
-  /**
-   * Clear User information and unsubscribe to company data.
-   * This method is called by AuthStateChanged.
-   */
-  function clearUser() {
-    _clearUserState();
-    _initCompany();
-    _unloadDocCounter();
-  }
-
-  /**
-   * Updates the authentication state in the store based on the user object received from Firebase.
-   * Retrieves basic user information and custom claims (roles, company ID, etc.) from the ID token,
-   * and sets them to the store's reactive state (uid, email, roles, etc.).
-   * This function is typically called from the Firebase onAuthStateChanged listener.
-   *
-   * @param {import("firebase/auth").User | null} user - Firebase Authentication から提供されるユーザーオブジェクト、または null (サインアウト時など)。 The user object provided by Firebase Authentication, or null (e.g., on sign-out).
-   */
   async function setUser(user) {
-    // Clear errors as the authentication state is changing.
     errors.clear();
-
-    // Clear user state.
-    _clearUserState();
-
-    // Start loading indicator
-    loadings.add({ key: "setUser", text: "アカウント情報を確認しています" }); // Checking account information
-
     try {
-      // If the user object does not exist (e.g., on initial load or sign-out), interrupt the process.
-      // Note: In this case, clearUser is expected to be handled by the caller in onAuthStateChanged
-      if (!user) {
-        // If the user is null, the state should already be cleared, so do nothing here.
-        return;
-      }
-
-      // Check for the existence of required properties (uid, email).
-      if (!user.uid || !user.email) {
-        throw new Error(
-          "Invalid User object: Missing required user properties (uid or email)."
-        );
-      }
-
       // Force refresh the ID token to get the latest custom claims.
-      const idTokenResult = await user.getIdTokenResult(true); // Pass true to force refresh
+      const idTokenResult = user ? await user.getIdTokenResult(true) : null;
 
       // Update store state with user information and claims.
-      _setUserState(user, idTokenResult);
+      uid.value = user?.uid || null;
+      isEmailVerified.value = user?.emailVerified || false;
+      isSuperUser.value = !!idTokenResult?.claims?.isSuperUser || false;
+      companyId.value = idTokenResult?.claims?.companyId || null;
 
-      // Subscribe company data
-      _initCompany();
-      if (companyId.value) {
+      // uid と companyId が存在する場合に、FireModel の設定とドキュメントの取得を行う。
+      // subscribe だけだと、初回取得時にデータの取得をまたず isReady が true になってしまうため
+      // ナビゲーションガードが roles を正しく判断できない。
+      // 一旦 fetch でデータを取得してから subscribe を行う。
+      if (user && uid.value && companyId.value) {
+        FireModel.setConfig({ prefix: `Companies/${companyId.value}` });
+        await userInstance.fetch({ docId: uid.value });
+        await company.value.fetch({ docId: companyId.value });
+        userInstance.subscribe({ docId: uid.value });
         company.value.subscribe({ docId: companyId.value });
-      }
-
-      // Load document counter.
-      if (companyId.value) {
-        _loadDocCounter();
+      } else {
+        userInstance.unsubscribe();
+        userInstance.initialize();
+        company.value.unsubscribe();
+        company.value.initialize();
+        FireModel.setConfig({ prefix: `Companies/unknown` });
       }
     } catch (error) {
       // Error handling process.
@@ -189,15 +113,8 @@ export const useAuthStore = defineStore("auth", () => {
         message: `Failed to set user: ${error.message}`,
         error,
       });
-
-      // Clear the store state on error to prevent an inconsistent state.
-      clearUser();
-
-      // Re-throw the error to notify the caller (e.g., onAuthStateChanged) of the failure.
-      throw error;
     } finally {
-      // Always end the loading state.
-      loadings.remove("setUser");
+      isReady.value = true;
     }
   }
 
@@ -279,7 +196,7 @@ export const useAuthStore = defineStore("auth", () => {
       // 認証状態変更処理を行う為 isReady を false に更新しておく
       isReady.value = false;
 
-      clearUser();
+      // clearUser();
 
       // Firebase Authentication でサインアウトを実行 / Execute sign-out with Firebase Authentication
       await authSignOut($auth);
@@ -295,9 +212,6 @@ export const useAuthStore = defineStore("auth", () => {
         message: `Sign-out failed: ${error.message}`,
         error,
       });
-
-      // エラーを再スローして呼び出し元に伝える / Re-throw the error to notify the caller
-      throw error;
     } finally {
       // ローディング状態を必ず終了させる / Always end the loading state
       loadings.remove("signOut");
@@ -539,18 +453,17 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     uid,
-    email,
-    displayName,
+    email: computed(() => userInstance.email),
+    displayName: computed(() => userInstance.displayName),
     isEmailVerified,
+    isAdmin: computed(() => userInstance.isAdmin),
     isReady,
     roles,
     companyId,
     isSuperUser,
     company,
-    docCounter,
     isMaintenance,
     isDev,
-    clearUser,
     signIn,
     signOut,
     signUp,

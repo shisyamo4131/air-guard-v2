@@ -12,7 +12,7 @@
  *
  * @author shisyamo4131
  *****************************************************************************/
-import FireModel from "@shisyamo4131/air-firebase-v2";
+// import FireModel from "@shisyamo4131/air-firebase-v2";
 import { getApps } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
@@ -22,10 +22,11 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
  * @param {firebase.UserCredential} userCredential
  */
 const setUser = async (userCredential) => {
+  // const idToken = await userCredential.getIdTokenResult(true);
+  // const companyId = idToken?.claims?.companyId;
+  // FireModel.setConfig({ prefix: `Companies/${companyId || "unknown"}` });
   const auth = useAuthStore();
   await auth.setUser(userCredential);
-  FireModel.setConfig({ prefix: `Companies/${auth.companyId}/` });
-  auth.isReady = true; // Indicate that auth state is ready
 };
 
 /**
@@ -33,10 +34,10 @@ const setUser = async (userCredential) => {
  * A function called when the authentication state changes to signed out.
  */
 const clearUser = () => {
+  // FireModel.setConfig({ prefix: `Companies/unknown` });
   const auth = useAuthStore();
-  auth.clearUser();
-  FireModel.setConfig({ prefix: `Companies/unknown/` });
-  auth.isReady = true; // Indicate that auth state is ready
+  // auth.clearUser();
+  auth.setUser();
 };
 
 // Messages for logging or errors
