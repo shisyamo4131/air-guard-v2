@@ -4,8 +4,8 @@
  * @description A component that displays the shift type as a chip.
  */
 import {
-  SHIFT_TYPE,
-  SHIFT_TYPE_VALIDATOR,
+  SHIFT_TYPE_VALUES as VALUES,
+  SHIFT_TYPE_VALIDATOR as VALIDATOR,
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /** define props */
@@ -13,18 +13,18 @@ const props = defineProps({
   shiftType: {
     type: String,
     required: true,
-    validator: (value) => SHIFT_TYPE_VALIDATOR(value),
+    validator: (value) => VALIDATOR(value),
   },
   size: { type: String, default: "small" },
 });
 
 /** define computed properties */
 const color = computed(() => {
-  return SHIFT_TYPE[props.shiftType]?.color || "ERROR";
+  return VALUES[props.shiftType]?.color || "ERROR";
 });
 
 const label = computed(() => {
-  return SHIFT_TYPE[props.shiftType]?.title || "ERROR";
+  return VALUES[props.shiftType]?.title || "ERROR";
 });
 </script>
 

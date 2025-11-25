@@ -9,10 +9,11 @@
     "generate:prod": "nuxt generate",
     "generate:dev": "nuxt generate --dotenv .env.development",
     "install:firemodel": "npm install @shisyamo4131/air-firebase-v2@latest && cd functions && npm install @shisyamo4131/air-firebase-v2@latest && cd ..",
-    "install:schemas": "npm install @shisyamo4131/air-guard-v2-schemas@latest && cd functions && npm install @shisyamo4131/air-guard-v2-schemas@latest && cd ..",
+    "install:schemas": "npm install @shisyamo4131/air-guard-v2-schemas && cd functions && npm install @shisyamo4131/air-guard-v2-schemas && cd ..",
     "local": "nuxt dev --dotenv .env.local",
     "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd ..",
-    "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd .."
+    "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
+    "uninstall:schemas": "npm uninstall @shisyamo4131/air-guard-v2-schemas && cd functions && npm uninstall @shisyamo4131/air-guard-v2-schemas && cd .."
   },
   "dependencies": {
     "@date-io/dayjs": "^3.2.0",
@@ -21,7 +22,7 @@
     "@pinia/nuxt": "^0.10.1",
     "@shisyamo4131/air-firebase-v2": "^2.1.0",
     "@shisyamo4131/air-firebase-v2-client-adapter": "^2.0.0",
-    "@shisyamo4131/air-guard-v2-schemas": "^2.3.0",
+    "@shisyamo4131/air-guard-v2-schemas": "^2.3.2",
     "air-vuetify-v3": "file:air-vuetify-v3",
     "dayjs": "^1.11.13",
     "firebase": "^11.8.1",

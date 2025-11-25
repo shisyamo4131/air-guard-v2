@@ -41,12 +41,12 @@ const status = computed(() => {
   if (!props.notification) {
     return {
       value: "TEMPORARY",
-      label: "仮配置",
+      title: "仮配置",
       order: 0,
       color: undefined,
     };
   }
-  return ArrangementNotification.STATUSES[props.notification.status];
+  return ArrangementNotification.STATUS[props.notification.status];
 });
 
 /**
@@ -72,6 +72,6 @@ const bindOptions = computed(() => {
 
 <template>
   <v-chip v-bind="bindOptions">
-    {{ status.label }}
+    {{ status.title }}
   </v-chip>
 </template>

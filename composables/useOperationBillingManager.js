@@ -185,7 +185,7 @@ export function useOperationBillingManager({
         title: "区分",
         props: {
           subtitle: `${
-            OperationBilling.DAY_TYPE[instance.dayType] || "loading..."
+            OperationBilling.DAY_TYPE[instance.dayType]?.title || "loading..."
           } ${
             OperationBilling.SHIFT_TYPE[instance.shiftType]?.title ||
             "loading..."

@@ -3,7 +3,7 @@
  * @description Composable for date utility functions.
  */
 import {
-  DAY_TYPE_HOLIDAY,
+  DAY_TYPE_VALUES as DAY_TYPE,
   getDayType,
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import dayjs from "dayjs";
@@ -128,7 +128,7 @@ export function useDateUtil() {
     const isPreviousDay = targetDay.isBefore(today);
     const isToday = targetDay.isSame(today);
     const isFutureDay = targetDay.isAfter(today);
-    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE_HOLIDAY;
+    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE.HOLIDAY.value;
     const dateLabel = targetDay.format("MM/DD");
     const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
     const isSelected = selectedDates.includes(targetDay.format("YYYY-MM-DD"));

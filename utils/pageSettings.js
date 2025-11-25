@@ -44,16 +44,24 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "test",
-        path: "/test",
-        label: "テスト",
+        id: "component-test",
+        path: "/test/component-test",
+        label: "コンポーネント",
+        icon: "mdi-domain",
+        roles: [], // 認証済みなら誰でもOK
+        navigation: true,
+      },
+      {
+        id: "rollback-operation-result",
+        path: "/test/rollback-operation-result",
+        label: "稼働実績ロールバック",
         icon: "mdi-domain",
         roles: [], // 認証済みなら誰でもOK
         navigation: true,
       },
       {
         id: "round-setting",
-        path: "/round-setting-test",
+        path: "/test/round-setting-test",
         label: "端数処理設定クラス",
         icon: "mdi-domain",
         roles: [], // 認証済みなら誰でもOK

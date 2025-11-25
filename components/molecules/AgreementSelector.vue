@@ -6,8 +6,8 @@
  */
 import dayjs from "dayjs";
 import {
-  DAY_TYPE,
-  SHIFT_TYPE,
+  DAY_TYPE_VALUES as DAY_TYPE,
+  SHIFT_TYPE_VALUES as SHIFT_TYPE,
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /** define props */

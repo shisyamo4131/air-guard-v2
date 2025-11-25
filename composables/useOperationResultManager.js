@@ -169,7 +169,9 @@ export function useOperationResultManager({
       {
         title: "区分",
         props: {
-          subtitle: `${OperationResult.DAY_TYPE[doc.dayType] || "loading..."} ${
+          subtitle: `${
+            OperationResult.DAY_TYPE[doc.dayType]?.title || "loading..."
+          } ${
             OperationResult.SHIFT_TYPE[doc.shiftType]?.title || "loading..."
           }`.trim(),
         },
