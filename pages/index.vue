@@ -2,9 +2,9 @@
 definePageMeta({ layout: "guest" });
 const router = useRouter();
 
-const navigateToSignIn = () => router.push("/sign-in");
-const navigateToSignUp = () => router.push("/sign-up");
-const navigateToSignUpAdmin = () => router.push("/sign-up-admin");
+const navigateToSignIn = () => router.push("/auth/sign-in");
+const navigateToSignUp = () => router.push("/auth/sign-up");
+const navigateToSignUpAdmin = () => router.push("/auth/sign-up-admin");
 </script>
 
 <template>

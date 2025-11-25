@@ -112,7 +112,7 @@ const handleSignIn = async () => {
           variant="text"
           color="primary"
           size="small"
-          @click="router.push('/sign-up')"
+          @click="router.push('/auth/sign-up')"
         >
           サインアップ
         </v-btn>

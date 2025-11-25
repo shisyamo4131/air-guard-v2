@@ -4,7 +4,7 @@
  *
  * A. 未認証の場合:
  *    - public: true のページのみアクセス可能。
- *    - それ以外へのアクセスは /sign-in へリダイレクト。
+ *    - それ以外へのアクセスは /auth/sign-in へリダイレクト。
  * B. 認証済みの場合:
  *    - メール未認証の場合は /unconfirmedEmail へリダイレクト。
  *    - public: true のページへのアクセスは /dashboard にリダイレクト。
@@ -55,9 +55,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     // public: true のページ、または設定がないページへのアクセスは許可
     if (pageConfig?.public) return;
 
-    // 非公開ページへのアクセスは /sign-in へリダイレクト
-    if (targetPath !== "/sign-in") {
-      return navigateTo("/sign-in", { replace: true });
+    // 非公開ページへのアクセスは /auth/sign-in へリダイレクト
+    if (targetPath !== "/auth/sign-in") {
+      return navigateTo("/auth/sign-in", { replace: true });
     }
 
     return;

@@ -90,7 +90,7 @@ const handleSendResetPasswordEmail = async () => {
           variant="text"
           color="primary"
           size="small"
-          @click="router.push('/sign-in')"
+          @click="router.push('/auth/sign-in')"
         >
           サインイン
         </v-btn>

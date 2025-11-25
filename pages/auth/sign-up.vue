@@ -1,9 +1,9 @@
+<!-- filepath: pages/auth/sign-up.vue -->
 <script setup>
 import { useRouter } from "vue-router";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { useCreateAdminUser } from "@/composables/useCreateAdminUser";
+import { useCreateNormalUser } from "@/composables/useCreateNormalUser";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 
 definePageMeta({ layout: "auth" });
@@ -15,8 +15,8 @@ const errors = useErrorsStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
-const { signupAdmin } = useCreateAdminUser();
-const { checkEmailAvailability } = useAuthFunctions();
+const { signupUser } = useCreateNormalUser();
+const { checkUserPreRegistration, checkEmailAvailability } = useAuthFunctions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -25,15 +25,13 @@ const model = reactive({
   email: "",
   password: "",
   confirmPassword: "",
-  companyName: "",
-  companyNameKana: "",
-  displayName: "",
 });
 
 const currentStep = ref(1); // 現在のステップを管理 (1-based)
-const totalSteps = 3; // 合計ステップ数
+const totalSteps = 2; // 合計ステップ数
 const formValid = ref(false);
 const loading = ref(false);
+const preRegData = ref(null); // 事前登録データ
 const emailChecked = ref(false); // メールアドレスチェック済みフラグ
 
 /*****************************************************************************
@@ -42,20 +40,13 @@ const emailChecked = ref(false); // メールアドレスチェック済みフ�
 const isStepValid = computed(() => {
   switch (currentStep.value) {
     case 1:
-      // メールアドレスとパスワード
-      return (
-        model.email.trim() !== "" &&
-        model.password === model.confirmPassword &&
-        model.password.length >= 6
-      );
+      // メールアドレス入力
+      return model.email.trim() !== "";
     case 2:
-      // 会社情報
+      // パスワード入力
       return (
-        model.companyName.trim() !== "" && model.companyNameKana.trim() !== ""
+        model.password === model.confirmPassword && model.password.length >= 6
       );
-    case 3:
-      // 管理者情報
-      return model.displayName.trim() !== "";
     default:
       return false;
   }
@@ -65,35 +56,27 @@ const isStepValid = computed(() => {
  * METHODS
  *****************************************************************************/
 /**
- * Handle the creation of a new admin user account.
- * - Uses the new auth-v2.js Cloud Functions.
- * - Creates Authentication account and Firestore documents.
- * - Sets custom claims and waits for token refresh.
+ * 一般利用者アカウント作成処理
  */
 async function handleCreateUser() {
   errors.clear();
   loading.value = true;
-  const key = loadings.add({ text: "管理者アカウントを作成しています" });
+  const key = loadings.add({ text: "アカウントを作成しています" });
 
   try {
-    // 新しいComposableを使用してアカウント作成
-    // checkEmailAvailabilityは既にステップ1で実行済み
-    await signupAdmin({
+    // signupUserを実行（事前登録確認とメールアドレスチェックは既に完了）
+    await signupUser({
       email: model.email,
       password: model.password,
-      companyName: model.companyName,
-      companyNameKana: model.companyNameKana,
-      displayName: model.displayName,
-      skipEmailCheck: true, // メールアドレスチェックをスキップ
     });
 
     messages.add(
-      "管理者アカウントの作成が完了しました。メール認証を完了してください。"
+      "アカウントの作成が完了しました。メール認証を完了してください。"
     );
 
     router.replace("/unconfirmedEmail");
   } catch (error) {
-    console.error("Admin account creation error:", error);
+    console.error("User account creation error:", error);
     errors.add(error);
   } finally {
     loadings.remove(key);
@@ -103,23 +86,41 @@ async function handleCreateUser() {
 
 /**
  * 次のステップへ進む
- * ステップ1からステップ2への遷移時にメールアドレスをチェック
+ * ステップ1 → ステップ2への遷移時に事前登録確認とメールアドレスチェック
  */
 async function nextStep() {
   if (currentStep.value >= totalSteps) return;
 
-  // ステップ1 → ステップ2への遷移時にメールアドレスをチェック
+  // ステップ1 → ステップ2への遷移時
   if (currentStep.value === 1 && !emailChecked.value) {
     errors.clear();
     loading.value = true;
     const key = loadings.add({ text: "メールアドレスを確認しています" });
 
     try {
-      await checkEmailAvailability({ email: model.email, isAdmin: true });
+      // 1. 事前登録確認
+      const preReg = await checkUserPreRegistration({ email: model.email });
+
+      if (!preReg.isPreRegistered) {
+        throw new Error(
+          "事前登録が見つかりません。\n管理者にお問い合わせください。"
+        );
+      }
+
+      // 事前登録データを保存
+      preRegData.value = preReg;
+
+      // 2. メールアドレス重複チェック
+      await checkEmailAvailability({ email: model.email, isAdmin: false });
+
       emailChecked.value = true;
       currentStep.value++;
+
+      messages.add(
+        `${preReg.displayName || "利用者"}様の事前登録を確認しました。`
+      );
     } catch (error) {
-      console.error("Email availability check error:", error);
+      console.error("Email check error:", error);
       errors.add(error);
     } finally {
       loadings.remove(key);
@@ -131,14 +132,15 @@ async function nextStep() {
   }
 }
 
-/** Go to the previous step */
+/** 前のステップに戻る */
 function prevStep() {
   if (currentStep.value > 1) {
     currentStep.value--;
 
-    // ステップ1に戻る場合、メールアドレスチェックフラグをリセット
+    // ステップ1に戻る場合、フラグをリセット
     if (currentStep.value === 1) {
       emailChecked.value = false;
+      preRegData.value = null;
     }
   }
 }
@@ -146,18 +148,30 @@ function prevStep() {
 
 <template>
   <v-card flat max-width="480">
-    <v-card-title class="text-center text-h5 mb-4">アカウント作成</v-card-title>
+    <v-card-title class="text-center text-h5 mb-4">
+      アカウント登録
+    </v-card-title>
+
+    <v-card-subtitle v-if="preRegData" class="text-center mb-4">
+      <v-chip color="primary" variant="tonal">
+        {{ preRegData.displayName || "利用者" }}
+      </v-chip>
+      として登録します
+    </v-card-subtitle>
 
     <v-form v-model="formValid">
       <v-stepper
         v-model="currentStep"
         hide-actions
-        :items="['認証情報', '会社情報', '管理者情報']"
+        :items="['メールアドレス', 'パスワード']"
         flat
       >
-        <!-- ステップ1: 認証情報 -->
+        <!-- ステップ1: メールアドレス -->
         <template v-slot:item.1>
           <v-card flat>
+            <v-card-text class="text-body-2 mb-4">
+              管理者により事前登録されたメールアドレスを入力してください。
+            </v-card-text>
             <v-row>
               <v-col cols="12">
                 <air-text-field
@@ -165,8 +179,20 @@ function prevStep() {
                   label="メールアドレス"
                   required
                   inputType="email"
+                  :disabled="emailChecked"
                 />
               </v-col>
+            </v-row>
+          </v-card>
+        </template>
+
+        <!-- ステップ2: パスワード -->
+        <template v-slot:item.2>
+          <v-card flat>
+            <v-card-text class="text-body-2 mb-4">
+              使用するパスワードを設定してください（6文字以上）。
+            </v-card-text>
+            <v-row>
               <v-col cols="12">
                 <air-password
                   v-model="model.password"
@@ -180,47 +206,6 @@ function prevStep() {
                   label="パスワード（再入力）"
                   required
                   :password="model.password"
-                />
-              </v-col>
-            </v-row>
-          </v-card>
-        </template>
-
-        <!-- ステップ2: 会社情報 -->
-        <template v-slot:item.2>
-          <v-card flat>
-            <v-row>
-              <v-col cols="12">
-                <air-text-field
-                  v-model="model.companyName"
-                  label="会社名"
-                  required
-                  :maxLength="40"
-                />
-              </v-col>
-              <v-col cols="12">
-                <air-text-field
-                  v-model="model.companyNameKana"
-                  label="会社名カナ"
-                  required
-                  :maxLength="40"
-                  inputType="katakana"
-                />
-              </v-col>
-            </v-row>
-          </v-card>
-        </template>
-
-        <!-- ステップ3: 管理者情報 -->
-        <template v-slot:item.3>
-          <v-card flat>
-            <v-row>
-              <v-col cols="12">
-                <air-text-field
-                  v-model="model.displayName"
-                  label="管理者名"
-                  required
-                  :maxLength="40"
                 />
               </v-col>
             </v-row>
@@ -275,16 +260,30 @@ function prevStep() {
         </v-btn>
       </v-card-actions>
     </v-form>
+
     <v-card-text class="text-center">
-      アカウントをお持ちの場合
-      <v-btn
-        variant="text"
-        color="primary"
-        size="small"
-        @click="router.push('/sign-in')"
-      >
-        サインイン
-      </v-btn>
+      <div class="mb-2">
+        管理者としてアカウントを作成する場合は
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          @click="router.push('/auth/sign-up-admin')"
+        >
+          こちら
+        </v-btn>
+      </div>
+      <div>
+        アカウントをお持ちの場合
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          @click="router.push('/auth/sign-in')"
+        >
+          サインイン
+        </v-btn>
+      </div>
     </v-card-text>
   </v-card>
 </template>

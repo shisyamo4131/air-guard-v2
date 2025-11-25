@@ -14,7 +14,7 @@
 export const pageStructure = [
   {
     id: "sign-up-admin",
-    path: "/sign-up-admin",
+    path: "/auth/sign-up-admin",
     public: true, // 公開ページ
     label: "管理者アカウントサインアップ",
     roles: [],
@@ -22,7 +22,7 @@ export const pageStructure = [
   },
   {
     id: "sign-up",
-    path: "/sign-up",
+    path: "/auth/sign-up",
     public: true, // 公開ページ
     label: "利用者アカウントサインアップ",
     roles: [],
@@ -30,7 +30,7 @@ export const pageStructure = [
   },
   {
     id: "sign-in",
-    path: "/sign-in",
+    path: "/auth/sign-in",
     public: true, // 公開ページ
     label: "サインイン",
     roles: [], // 認証済みユーザーはアクセスしない想定だが定義はしておく
