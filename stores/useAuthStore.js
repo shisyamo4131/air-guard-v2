@@ -43,8 +43,7 @@ export const useAuthStore = defineStore("auth", () => {
   const companyId = ref(null);
 
   // Company state fetched by companyId
-  const company = ref(new Company());
-
+  const companyInstance = reactive(new Company());
   const userInstance = reactive(new User());
 
   // Whether the app is in maintenance mode
@@ -67,12 +66,12 @@ export const useAuthStore = defineStore("auth", () => {
   watchEffect(() => {
     // Set allowed minutes for VTimePicker based on company settings
     $vuetify.defaults.value.VTimePicker.allowedMinutes = (val) => {
-      if (!company.value?.minuteInterval) return true;
-      return val % company.value.minuteInterval === 0;
+      if (!companyInstance?.minuteInterval) return true;
+      return val % companyInstance.minuteInterval === 0;
     };
 
     // Update `RoundSetting` global setting based on company settings
-    RoundSetting.set(company.value?.roundSetting || RoundSetting.ROUND);
+    RoundSetting.set(companyInstance?.roundSetting || RoundSetting.ROUND);
   });
 
   /***************************************************************************
@@ -97,14 +96,14 @@ export const useAuthStore = defineStore("auth", () => {
       if (user && uid.value && companyId.value) {
         FireModel.setConfig({ prefix: `Companies/${companyId.value}` });
         await userInstance.fetch({ docId: uid.value });
-        await company.value.fetch({ docId: companyId.value });
+        await companyInstance.fetch({ docId: companyId.value });
         userInstance.subscribe({ docId: uid.value });
-        company.value.subscribe({ docId: companyId.value });
+        companyInstance.subscribe({ docId: companyId.value });
       } else {
         userInstance.unsubscribe();
         userInstance.initialize();
-        company.value.unsubscribe();
-        company.value.initialize();
+        companyInstance.unsubscribe();
+        companyInstance.initialize();
         FireModel.setConfig({ prefix: `Companies/unknown` });
       }
     } catch (error) {
@@ -451,6 +450,8 @@ export const useAuthStore = defineStore("auth", () => {
     }
   }
 
+  // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
+  // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   return {
     uid,
     email: computed(() => userInstance.email),
@@ -461,7 +462,7 @@ export const useAuthStore = defineStore("auth", () => {
     roles,
     companyId,
     isSuperUser,
-    company,
+    company: companyInstance, // companyInstance を company として返す
     isMaintenance,
     isDev,
     signIn,
