@@ -123,7 +123,7 @@ const handleSignIn = async () => {
           variant="text"
           color="primary"
           size="small"
-          @click="router.push('/reset-password')"
+          @click="router.push('/auth/reset-password')"
         >
           パスワードリセット
         </v-btn>
