@@ -31,10 +31,7 @@ const handleSendResetPasswordEmail = async () => {
   });
   try {
     await sendPasswordResetEmail($auth, email.value);
-    messages.add({
-      text: "パスワードリセット用のメールを送信しました！",
-      color: "success",
-    });
+    messages.add("パスワードリセット用のメールを送信しました！");
   } catch (error) {
     errors.add(error);
   } finally {

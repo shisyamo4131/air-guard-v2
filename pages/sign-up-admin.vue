@@ -87,10 +87,9 @@ async function handleCreateUser() {
       skipEmailCheck: true, // メールアドレスチェックをスキップ
     });
 
-    messages.add({
-      text: "管理者アカウントの作成が完了しました。メール認証を完了してください。",
-      color: "success",
-    });
+    messages.add(
+      "管理者アカウントの作成が完了しました。メール認証を完了してください。"
+    );
 
     router.replace("/unconfirmedEmail");
   } catch (error) {

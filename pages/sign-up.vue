@@ -70,10 +70,9 @@ async function handleCreateUser() {
       password: model.password,
     });
 
-    messages.add({
-      text: "アカウントの作成が完了しました。メール認証を完了してください。",
-      color: "success",
-    });
+    messages.add(
+      "アカウントの作成が完了しました。メール認証を完了してください。"
+    );
 
     router.replace("/unconfirmedEmail");
   } catch (error) {
@@ -117,10 +116,9 @@ async function nextStep() {
       emailChecked.value = true;
       currentStep.value++;
 
-      messages.add({
-        text: `${preReg.displayName || "利用者"}様の事前登録を確認しました。`,
-        color: "success",
-      });
+      messages.add(
+        `${preReg.displayName || "利用者"}様の事前登録を確認しました。`
+      );
     } catch (error) {
       console.error("Email check error:", error);
       errors.add(error);

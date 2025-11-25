@@ -153,7 +153,7 @@ export const useAuthStore = defineStore("auth", () => {
       await authSignOut($auth);
 
       // 成功メッセージを追加 / Add success message
-      messages.add({ text: "サインアウトしました", color: "success" }); // Signed out successfully
+      messages.add("サインアウトしました");
 
       // 成功ログを記録 / Log success
       // logger.info({ message: "Signed out successfully." });

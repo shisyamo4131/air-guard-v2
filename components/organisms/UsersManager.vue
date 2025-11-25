@@ -51,10 +51,7 @@ async function handleDisableUser(item) {
   try {
     isLoading.value = true;
     await disableUser({ uid: item.docId });
-    messages.add({
-      text: "ユーザーアカウントを無効化しました",
-      color: "success",
-    });
+    messages.add("ユーザーアカウントを無効化しました");
   } catch (error) {
     logger.error({ error });
   } finally {
@@ -72,10 +69,7 @@ async function handleEnableUser(item) {
   try {
     isLoading.value = true;
     await enableUser({ uid: item.docId });
-    messages.add({
-      text: "ユーザーアカウントを有効化しました",
-      color: "success",
-    });
+    messages.add("ユーザーアカウントを有効化しました");
   } catch (error) {
     logger.error({ error });
   } finally {
@@ -101,10 +95,7 @@ async function handleChangeAdminUser(item) {
   try {
     isLoading.value = true;
     await changeAdminUser({ from: auth.uid, to: item.docId });
-    messages.add({
-      text: "管理者権限の移譲に成功しました！",
-      color: "success",
-    });
+    messages.add("管理者権限の移譲に成功しました！");
     router.push("/dashboard");
   } catch (error) {
     logger.error({ error });

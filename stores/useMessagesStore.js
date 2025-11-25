@@ -1,28 +1,26 @@
 /**
  * useMessagesStore
- * アプリ全体で使用するスナックバーメッセージのキューを管理するストア。
- * v-snackbar-queue と組み合わせて、UI 上の通知表示を一元化します。
- *
- * A Pinia store for managing global snackbar messages in a queue.
- * Used in combination with v-snackbar-queue to centralize UI notifications.
+ * @version 1.1.0
+ * @author shisyamo4131
+ * @description A Pinia store for managing global messages in a queue.
  */
 export const useMessagesStore = defineStore("messages", () => {
   /**
-   * スナックバーに表示するメッセージキュー。
-   * 表示順に配列として格納され、先頭から順に表示されます。
-   *
-   * The queue of messages to be displayed in the snackbar.
+   * The queue of messages to be displayed in the application.
    * Messages are shown in order from the beginning of the array.
    */
   const queue = ref([]);
 
   /**
-   * メッセージをキューに追加します。
    * Add a message to the queue.
-   * @param {{ text: string, color?: string }} message - 表示メッセージと任意のカラー
+   * @param {string|object} message - The message to add. If a string is provided, it will be wrapped in an object with a default color of "success".
    */
   function add(message) {
-    queue.value.push(message);
+    if (typeof message === "string") {
+      queue.value.push({ text: message, color: "success" });
+    } else {
+      queue.value.push(message);
+    }
   }
 
   return { queue, add };

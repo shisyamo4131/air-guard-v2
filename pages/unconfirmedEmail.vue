@@ -30,10 +30,7 @@ const handleSendEmailVerification = async () => {
   const key = loadings.add("メールを送信しています...");
   try {
     await sendEmailVerification($auth.currentUser);
-    messages.add({
-      text: "認証メールを送信しました！",
-      color: "success",
-    });
+    messages.add("認証メールを送信しました！");
   } catch (error) {
     errors.add(error);
   } finally {

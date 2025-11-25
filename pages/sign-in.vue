@@ -61,7 +61,7 @@ const handleSignIn = async () => {
   const key = loadings.add("サインインしています...");
   try {
     await auth.signIn({ email: email.value, password: password.value });
-    messages.add({ text: "サインインに成功しました！", color: "success" });
+    messages.add("サインインに成功しました！");
     router.push("/dashboard");
   } catch (error) {
     const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
