@@ -1,11 +1,7 @@
 import {
   signInWithEmailAndPassword,
   signOut as authSignOut,
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-  updateProfile,
 } from "firebase/auth";
-import { httpsCallable } from "firebase/functions";
 import { Company, User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -79,6 +75,7 @@ export const useAuthStore = defineStore("auth", () => {
    ***************************************************************************/
   async function setUser(user) {
     errors.clear();
+    isReady.value = false;
     try {
       // Force refresh the ID token to get the latest custom claims.
       const idTokenResult = user ? await user.getIdTokenResult(true) : null;
@@ -118,43 +115,6 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   /**
-   * Creates a new user account using email and password.
-   * - If `displayName` is provided, it updates the user's profile with the display name.
-   * @param {object} args - Sign-up information.
-   * @param {string} args.email - User's email address.
-   * @param {string} args.password - User's password.
-   * @param {string} [args.displayName] - User's display name (optional).
-   * @returns {Promise<import("firebase/auth").UserCredential>} - A Promise containing the Firebase UserCredential object.
-   * @throws {Error} - Throws an error if validation fails or account creation fails.
-   * @throws {TypeError} - Throws a TypeError if email or password are not strings.
-   * @throws {FirebaseError} - Throws FirebaseError for errors from Firebase services.
-   */
-  async function signUp(args = {}) {
-    const { email, password, displayName } = args;
-    const { $auth } = useNuxtApp();
-    if (!email || !password) {
-      throw new Error("Email and password are required."); // English message
-    }
-    if (typeof email !== "string" || typeof password !== "string") {
-      throw new TypeError("Email and password must be strings."); // English message
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new Error("Invalid email format."); // English message
-    }
-
-    isReady.value = false;
-
-    const userCredential = await createUserWithEmailAndPassword(
-      $auth,
-      email,
-      password
-    );
-    await sendEmailVerification(userCredential.user);
-    if (displayName) await updateProfile(userCredential.user, { displayName });
-    return userCredential;
-  }
-
-  /**
    * Signs in using email and password.
    * @param {object} credentials - Sign-in credentials.
    * @param {string} credentials.email - User's email address.
@@ -169,9 +129,6 @@ export const useAuthStore = defineStore("auth", () => {
     if (typeof email !== "string" || typeof password !== "string") {
       throw new TypeError("Email and password must be strings.");
     }
-
-    isReady.value = false;
-
     await signInWithEmailAndPassword($auth, email, password);
   }
 
@@ -191,11 +148,6 @@ export const useAuthStore = defineStore("auth", () => {
 
       // ローディング状態を開始 / Start loading state
       loadings.add({ key: "signOut", text: "サインアウトしています..." }); // Signing out...
-
-      // 認証状態変更処理を行う為 isReady を false に更新しておく
-      isReady.value = false;
-
-      // clearUser();
 
       // Firebase Authentication でサインアウトを実行 / Execute sign-out with Firebase Authentication
       await authSignOut($auth);
@@ -285,171 +237,6 @@ export const useAuthStore = defineStore("auth", () => {
     return roles.value.includes(role);
   }
 
-  /**
-   * Cloud Functions の createUserInCompany を呼び出し、管理者ユーザーアカウントを作成します。
-   *
-   * @param {object} params - アカウント作成に必要な情報。 / Information required for account creation.
-   * @param {string} params.email - 管理者のメールアドレス。 / Administrator's email address.
-   * @param {string} params.password - 管理者のパスワード。 / Administrator's password.
-   * @param {string} params.displayName - 管理者の表示名。 / Administrator's display name.
-   * @returns {Promise<{ uid: string, companyId: string }>} - 作成されたユーザーの UID と会社 ID を含む Promise。 / A Promise containing the created user's UID and company ID.
-   * @throws {Error} - バリデーションエラーまたは Cloud Functions 呼び出しエラーが発生した場合。 / Throws an error if validation fails or the Cloud Function call fails.
-   */
-  async function createUserInCompany({ email, password, displayName }) {
-    // Nuxt アプリケーションインスタンスから $functions を取得 / Get $functions from the Nuxt application instance
-    const { $functions } = useNuxtApp();
-
-    // ローディング状態を開始 / Start loading state
-    loadings.add({
-      key: "createUserInCompany",
-      text: "ユーザーアカウントを作成しています", // Creating administrator user account...
-    });
-
-    try {
-      // errors.clear() は呼び出し元コンポーネントで行う想定 / errors.clear() is expected to be called by the calling component
-
-      // --- クライアントサイドバリデーション (例) / Client-side validation (Example) ---
-      if (!email || !password || !displayName) {
-        throw new Error("All fields are required.");
-      }
-      if (
-        typeof email !== "string" ||
-        typeof password !== "string" /* ... 他のフィールドも */
-      ) {
-        throw new TypeError("Input fields must be strings.");
-      }
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new Error("Invalid email format.");
-      }
-      // 必要に応じてパスワード強度や他のフィールドのバリデーションを追加 / Add password strength or other field validations if needed
-      // --- バリデーション終了 / End of validation ---
-
-      // Cloud Functions を呼び出し / Call the Cloud Function
-      const callable = httpsCallable($functions, "createUserInCompany");
-      const { data } = await callable({
-        email,
-        password,
-        displayName,
-        companyId: companyId.value,
-      });
-
-      // data オブジェクトに必要なプロパティが含まれているか確認 (任意だが推奨)
-      // Check if the data object contains the required properties (optional but recommended)
-      if (!data?.uid) {
-        throw new Error(
-          "Cloud function response is missing expected data (uid)."
-        );
-      }
-
-      // 成功ログを記録 / Log success
-      // logger.info({
-      //   message: `ユーザーアカウント「${displayName}」が正常に作成されました（uid: ${data.uid}）。`, // Administrator user "${displayName}" created successfully (uid: ${data.uid}).
-      // });
-
-      // 成功メッセージを追加 / Add success message
-      messages.add({
-        text: "ユーザーアカウントを作成しました",
-        color: "success",
-      }); // Administrator account created successfully.
-
-      // 結果を返す / Return the result
-      return { uid: data.uid };
-    } catch (error) {
-      // エラーログを記録 / Log the error
-      logger.error({
-        // Cloud Functions からのエラーメッセージがあればそれを使用、なければフォールバック / Use error message from Cloud Functions if available, otherwise fallback
-        message: `Failed to create user in company: ${
-          error.message || "An unknown error occurred during user creation."
-        }`,
-        error,
-      });
-
-      // エラーを再スローして呼び出し元に伝える / Re-throw the error to notify the caller
-      throw error;
-    } finally {
-      // ローディング状態を必ず終了させる / Always end the loading state
-      loadings.remove("createUserInCompany");
-    }
-  }
-
-  async function disableUser({ uid }) {
-    const { $functions } = useNuxtApp();
-
-    loadings.add({
-      key: "disableUser",
-      text: "ユーザーアカウントを無効化しています",
-    });
-
-    try {
-      if (!uid) {
-        throw new Error("UID is required.");
-      }
-
-      const callable = httpsCallable($functions, "disableUser");
-      const { data } = await callable({ uid });
-
-      if (!data?.success) {
-        throw new Error("Cloud function response indicates failure.");
-      }
-
-      messages.add({
-        text: "ユーザーアカウントを無効化しました",
-        color: "success",
-      });
-
-      return { success: true };
-    } catch (error) {
-      logger.error({
-        message: `Failed to disable user ${uid}: ${
-          error.message || "An unknown error occurred."
-        }`,
-        error,
-      });
-      throw error;
-    } finally {
-      loadings.remove("disableUser");
-    }
-  }
-
-  async function enableUser({ uid }) {
-    const { $functions } = useNuxtApp();
-
-    loadings.add({
-      key: "enableUser",
-      text: "ユーザーアカウントを有効化しています",
-    });
-
-    try {
-      if (!uid) {
-        throw new Error("UID is required.");
-      }
-
-      const callable = httpsCallable($functions, "enableUser");
-      const { data } = await callable({ uid });
-
-      if (!data?.success) {
-        throw new Error("Cloud function response indicates failure.");
-      }
-
-      messages.add({
-        text: "ユーザーアカウントを有効化しました",
-        color: "success",
-      });
-
-      return { success: true };
-    } catch (error) {
-      logger.error({
-        message: `Failed to enable user ${uid}: ${
-          error.message || "An unknown error occurred."
-        }`,
-        error,
-      });
-      throw error;
-    } finally {
-      loadings.remove("enableUser");
-    }
-  }
-
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   return {
@@ -467,12 +254,8 @@ export const useAuthStore = defineStore("auth", () => {
     isDev,
     signIn,
     signOut,
-    signUp,
     setUser,
     waitUntilReady,
     hasRole,
-    createUserInCompany,
-    disableUser,
-    enableUser,
   };
 });

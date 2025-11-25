@@ -56,10 +56,50 @@ export const useAuthFunctions = () => {
     return result.data;
   };
 
+  /**
+   * アカウント無効化
+   * @param {Object} data
+   * @param {string} data.uid - ユーザーID
+   * @returns {Promise<{success: boolean, uid: string}>}
+   */
+  const disableUser = async (data) => {
+    const callable = httpsCallable($functions, "disableUser");
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /**
+   * アカウント有効化
+   * @param {Object} data
+   * @param {string} data.uid - ユーザーID
+   * @returns {Promise<{success: boolean, uid: string}>}
+   */
+  const enableUser = async (data) => {
+    const callable = httpsCallable($functions, "enableUser");
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /**
+   * 管理者変更
+   * @param {Object} data
+   * @param {string} data.from - 現在の管理者ユーザーID
+   * @param {string} data.to - 新しい管理者ユーザーID
+   * @returns {Promise<{success: boolean, from: string, to: string}>}
+   */
+  const changeAdminUser = async (data) => {
+    const callable = httpsCallable($functions, "changeAdminUser");
+    const result = await callable(data);
+    return result.data;
+  };
+
   return {
     checkEmailAvailability,
     createAdminAccount,
     checkUserPreRegistration,
     setupUserAccount,
+    disableUser,
+    enableUser,
+    changeAdminUser,
   };
 };

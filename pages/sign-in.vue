@@ -4,14 +4,45 @@ import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
+import { useLogger } from "@/composables/useLogger";
 
 definePageMeta({ layout: "auth" });
+
+/**
+ * Authentication からスローされるエラーのリスト
+ */
+const AUTH_ERROR_CODE_MAP = {
+  "auth/user-disabled": {
+    status: "user-disabled",
+    message: "このアカウントは無効化されています。",
+  },
+  "auth/user-not-found": {
+    status: "user-not-found",
+    message: "メールアドレス、パスワードをご確認ください。",
+  },
+  "auth/email-already-exists": {
+    status: "already-exists",
+    message: "このメールアドレスは既に使用されています。",
+  },
+  "auth/invalid-email": {
+    status: "invalid-argument",
+    message: "メールアドレスの形式が正しくありません。",
+  },
+  "auth/invalid-password": {
+    status: "invalid-argument",
+    message: "パスワードの形式が正しくありません。",
+  },
+  "auth/weak-password": {
+    status: "invalid-argument",
+    message: "パスワードが簡単すぎます（最低6文字以上にしてください）。",
+  },
+};
 
 /*****************************************************************************
  * DEFINE STORES AND COMPOSABLES
  *****************************************************************************/
 const auth = useAuthStore();
-const errors = useErrorsStore();
+const logger = useLogger("sign-in", useErrorsStore());
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
@@ -26,14 +57,19 @@ const password = ref("");
  * METHODS
  *****************************************************************************/
 const handleSignIn = async () => {
-  errors.clear();
+  logger.clearError();
   const key = loadings.add("サインインしています...");
   try {
     await auth.signIn({ email: email.value, password: password.value });
-    router.push("/dashboard");
     messages.add({ text: "サインインに成功しました！", color: "success" });
+    router.push("/dashboard");
   } catch (error) {
-    errors.add(error);
+    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
+    if (mappedAuthError) {
+      logger.error({ message: mappedAuthError.message });
+    } else {
+      logger.error({ error });
+    }
   } finally {
     loadings.remove(key);
   }
@@ -59,19 +95,6 @@ const handleSignIn = async () => {
         </v-row>
       </v-container>
     </v-form>
-    <v-expand-transition>
-      <v-container v-if="errors.hasError">
-        <v-alert
-          class="mb-2"
-          type="error"
-          v-for="(error, index) in errors.list"
-          density="comfortable"
-          :key="index"
-        >
-          {{ error.message }}
-        </v-alert>
-      </v-container>
-    </v-expand-transition>
     <v-card-actions>
       <v-btn
         block

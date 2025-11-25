@@ -5,8 +5,52 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Company, User } from "@shisyamo4131/air-guard-v2-schemas";
 
 /**
+ * Authentication からスローされるエラーのリスト
+ */
+const AUTH_ERROR_CODE_MAP = {
+  "auth/user-disabled": {
+    status: "user-disabled",
+    message: "このアカウントは無効化されています。",
+  },
+  "auth/user-not-found": {
+    status: "user-not-found",
+    message: "メールアドレス、パスワードをご確認ください。",
+  },
+  "auth/email-already-exists": {
+    status: "already-exists",
+    message: "このメールアドレスは既に使用されています。",
+  },
+  "auth/invalid-email": {
+    status: "invalid-argument",
+    message: "メールアドレスの形式が正しくありません。",
+  },
+  "auth/invalid-password": {
+    status: "invalid-argument",
+    message: "パスワードの形式が正しくありません。",
+  },
+  "auth/weak-password": {
+    status: "invalid-argument",
+    message: "パスワードが簡単すぎます（最低6文字以上にしてください）。",
+  },
+};
+
+/**
  * メールアドレスの利用可能性をチェック
  * 管理者登録・利用者登録の両方で使用可能
+ * 未認証状態での実行も想定されるため、request.auth のチェックは行わない。
+ *
+ * 【チェックフロー】
+ * 1. Authentication でメールアドレスの存在チェック（全ケース共通）
+ *    → 存在する場合は無条件でエラー
+ *
+ * 2. Firestore でメールアドレスの存在チェック（isAdmin により分岐）
+ *
+ * 【管理者アカウント（isAdmin: true）】
+ * - Firestore の Users コレクショングループにメールアドレスが存在しないことを確認
+ * - isAdmin、isTemporary の状態に関わらず、メールアドレスの重複を防止
+ *
+ * 【利用者アカウント（isAdmin: false）】
+ * - isTemporary=true のドキュメントが存在することを確認（事前登録チェック）
  *
  * @param {boolean} isAdmin - true: 管理者登録用, false: 利用者登録用
  * @param {string} email - チェックするメールアドレス
@@ -56,11 +100,10 @@ export const checkEmailAvailability = onCall(async (request) => {
 
     // 2. Firestoreでチェック（管理者と利用者で処理が異なる）
     if (isAdmin) {
-      // 管理者登録時: isAdmin=trueのドキュメントが存在すればエラー
+      // 管理者登録時: 指定されたメールアドレスがUsersコレクショングループに登録されていたらエラー
       const adminSnapshot = await db
         .collectionGroup("Users")
         .where("email", "==", email)
-        .where("isAdmin", "==", true)
         .get();
 
       if (!adminSnapshot.empty) {
@@ -70,12 +113,10 @@ export const checkEmailAvailability = onCall(async (request) => {
         );
       }
     } else {
-      // 利用者登録時: isAdmin=false かつ isTemporary=true のドキュメントが
-      // 存在しない場合はエラー（事前登録が必要）
+      // 利用者登録時: isTemporary=true のドキュメントが存在しない場合はエラー（事前登録が必要）
       const tempUserSnapshot = await db
         .collectionGroup("Users")
         .where("email", "==", email)
-        .where("isAdmin", "==", false)
         .where("isTemporary", "==", true)
         .get();
 
@@ -83,21 +124,6 @@ export const checkEmailAvailability = onCall(async (request) => {
         throw new HttpsError(
           "not-found",
           "事前登録が見つかりません。管理者にお問い合わせください。"
-        );
-      }
-
-      // 本登録済み（isTemporary=false）のドキュメントが存在する場合もエラー
-      const registeredUserSnapshot = await db
-        .collectionGroup("Users")
-        .where("email", "==", email)
-        .where("isAdmin", "==", false)
-        .where("isTemporary", "==", false)
-        .get();
-
-      if (!registeredUserSnapshot.empty) {
-        throw new HttpsError(
-          "already-exists",
-          "このメールアドレスは既に利用者として登録されています。"
         );
       }
     }
@@ -124,6 +150,7 @@ export const checkEmailAvailability = onCall(async (request) => {
 /**
  * 管理者アカウント作成
  * クライアント側でAuthentication作成後に呼び出される
+ * 認証状態での実行を想定
  * @param {Object} request
  * @param {Object} request.auth - 認証情報
  * @param {Object} request.data
@@ -221,6 +248,7 @@ export const createAdminAccount = onCall(async (request) => {
 /**
  * ユーザー事前登録確認
  * 利用者自身が本登録を行う際に、管理者による仮登録が完了しているかどうかを確認
+ * 未認証状態での実行も想定されるため、request.auth のチェックは行わない。
  * @param {Object} request
  * @param {Object} request.data
  * @param {string} request.data.email - 確認するメールアドレス
@@ -287,6 +315,7 @@ export const checkUserPreRegistration = onCall(async (request) => {
 /**
  * 一般ユーザーアカウント作成
  * クライアント側でAuthentication作成後に呼び出される
+ * 認証状態での実行を想定
  * @param {Object} request
  * @param {Object} request.auth - 認証情報
  * @param {Object} request.data
@@ -376,6 +405,199 @@ export const setupUserAccount = onCall(async (request) => {
     throw new HttpsError(
       "internal",
       "ユーザーアカウント作成中に予期しないエラーが発生しました。"
+    );
+  }
+});
+
+/**
+ * Switch user enabled/disabled state
+ * - Disabled flag is updated in `onUserUpdated` trigger.
+ * @param {string} uid - user ID
+ * @param {boolean} [enabled] - enabled state (default: true)
+ * @returns {Promise<{ success: boolean, uid: string }>} - result
+ * @throws {HttpsError} if uid is not provided or if any operation fails
+ * @throws {ContextualError} if any operation fails
+ */
+async function switchUserEnabled(uid, enabled = true) {
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "UIDが指定されていません。");
+  }
+
+  const auth = getAuth();
+  const firestore = getFirestore();
+
+  // 1. Authentication でユーザー情報を取得
+  const user = await auth.getUser(uid);
+  if (!user) {
+    throw new HttpsError("not-found", `ユーザー ${uid} が見つかりません。`);
+  }
+
+  // 2. カスタムクレームから companyId を取得
+  const companyId = user.customClaims?.companyId;
+  if (!companyId) {
+    throw new HttpsError(
+      "failed-precondition",
+      "ユーザーの会社情報が見つかりません。"
+    );
+  }
+
+  // 3. Firestore ドキュメント参照を構築
+  const userDocRef = firestore.doc(`Companies/${companyId}/Users/${uid}`);
+  const userDoc = await userDocRef.get();
+
+  if (!userDoc.exists) {
+    throw new HttpsError(
+      "not-found",
+      `ユーザー ${uid} のFirestoreドキュメントが見つかりません。`
+    );
+  }
+
+  // 4. disabled フラグを更新
+  await userDocRef.update({ disabled: !enabled });
+
+  logger.info(`User ${uid} ${enabled ? "enabled" : "disabled"} successfully`);
+
+  return { success: true, uid };
+}
+
+/**
+ * ユーザーアカウントを無効化します。
+ * 認証状態での実行を想定
+ */
+export const disableUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "認証が必要です。");
+  }
+
+  const { uid } = request.data;
+  if (!uid) {
+    throw new HttpsError(
+      "invalid-argument",
+      "無効化するユーザーIDが指定されていません。"
+    );
+  }
+
+  try {
+    return await switchUserEnabled(uid, false);
+  } catch (error) {
+    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
+    if (mappedAuthError) {
+      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
+    }
+    throw new HttpsError(
+      "internal",
+      `ユーザー ${uid} の無効化中に予期しないエラーが発生しました。`
+    );
+  }
+});
+
+/**
+ * ユーザーアカウントを有効化します。
+ * 認証状態での実行を想定
+ */
+export const enableUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "認証が必要です。");
+  }
+
+  const { uid } = request.data;
+  if (!uid) {
+    throw new HttpsError(
+      "invalid-argument",
+      "有効化するユーザーIDが指定されていません。"
+    );
+  }
+
+  try {
+    return await switchUserEnabled(uid);
+  } catch (error) {
+    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
+    if (mappedAuthError) {
+      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
+    }
+    throw new HttpsError(
+      "internal",
+      `ユーザー ${uid} の有効化中に予期しないエラーが発生しました。`
+    );
+  }
+});
+
+/**
+ * 管理者ユーザー変更
+ * @param {Object} request
+ * @param {Object} request.auth - 認証情報
+ * @param {Object} request.data
+ * @param {string} request.data.from - 移行元ユーザーID
+ * @param {string} request.data.to - 移行先ユーザーID
+ * @return {Object} 処理結果
+ * @return {boolean} return.success - 成功フラグ
+ * @return {string} return.from - 移行元ユーザーID
+ * @return {string} return.to - 移行先ユーザーID
+ * @throws {HttpsError} if any validation or operation fails
+ */
+export const changeAdminUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "認証が必要です。");
+  }
+
+  const { companyId } = request.auth.token;
+  if (!companyId) {
+    throw new HttpsError("permission-denied", "会社情報が見つかりません。");
+  }
+
+  const { from, to } = request.data;
+  if (!from || !to) {
+    throw new HttpsError(
+      "invalid-argument",
+      "移行元・移行先のユーザーIDが指定されていません。"
+    );
+  }
+
+  const fromUser = new User();
+  const fromExists = await fromUser.fetch({
+    docId: from,
+    prefix: `Companies/${request.auth.token.companyId}`,
+  });
+  if (!fromExists) {
+    throw new HttpsError(
+      "not-found",
+      `移行元ユーザー ${from} が見つかりません。`
+    );
+  }
+
+  const toUser = new User();
+  const toExists = await toUser.fetch({
+    docId: to,
+    prefix: `Companies/${request.auth.token.companyId}`,
+  });
+  if (!toExists) {
+    throw new HttpsError(
+      "not-found",
+      `移行先ユーザー ${to} が見つかりません。`
+    );
+  }
+
+  try {
+    const db = getFirestore();
+
+    const result = await db.runTransaction(async (transaction) => {
+      fromUser.isAdmin = false;
+      toUser.isAdmin = true;
+      const promises = [
+        fromUser.update({ transaction, prefix: `Companies/${companyId}` }),
+        toUser.update({ transaction, prefix: `Companies/${companyId}` }),
+      ];
+      await Promise.all(promises);
+      return { from: fromUser.docId, to: toUser.docId };
+    });
+
+    logger.info(`Admin user changed from ${from} to ${to} successfully`);
+    return { success: true, ...result };
+  } catch (error) {
+    logger.error("changeAdminUser でエラーが発生しました:", error);
+    throw new HttpsError(
+      "internal",
+      `管理者ユーザーの変更中に予期しないエラーが発生しました。`
     );
   }
 });

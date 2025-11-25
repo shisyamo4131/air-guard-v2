@@ -22,9 +22,6 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
  * @param {firebase.UserCredential} userCredential
  */
 const setUser = async (userCredential) => {
-  // const idToken = await userCredential.getIdTokenResult(true);
-  // const companyId = idToken?.claims?.companyId;
-  // FireModel.setConfig({ prefix: `Companies/${companyId || "unknown"}` });
   const auth = useAuthStore();
   await auth.setUser(userCredential);
 };
@@ -33,11 +30,9 @@ const setUser = async (userCredential) => {
  * ***** EDIT THIS FUNCTION FOR YOUR PROJECT *****
  * A function called when the authentication state changes to signed out.
  */
-const clearUser = () => {
-  // FireModel.setConfig({ prefix: `Companies/unknown` });
+const clearUser = async () => {
   const auth = useAuthStore();
-  // auth.clearUser();
-  auth.setUser();
+  await auth.setUser();
 };
 
 // Messages for logging or errors
@@ -57,7 +52,7 @@ export default defineNuxtPlugin(() => {
       await setUser(user);
     } else {
       console.info(`[firebase.auth.js] ${AUTH_STATE_SIGNED_OUT}`);
-      clearUser();
+      await clearUser();
     }
   });
 });
