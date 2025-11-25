@@ -2,6 +2,7 @@
  * @file ./schemas/Company.js
  * @description 会社情報クラス
  *  - `beforeUpdate` で `location` を取得します。
+ *  - `delete` は許可されていません。
  */
 import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
@@ -28,5 +29,9 @@ export default class Company extends BaseClass {
 
     // 住所に基づいてジオコーディングを実行
     await geocodeAndSetLocation(this, "Company", "beforeUpdate");
+  }
+
+  async delete() {
+    throw new Error("Companyドキュメントの削除は許可されていません。");
   }
 }
