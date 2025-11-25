@@ -21,7 +21,7 @@
     "@pinia/nuxt": "^0.10.1",
     "@shisyamo4131/air-firebase-v2": "^2.1.0",
     "@shisyamo4131/air-firebase-v2-client-adapter": "^2.0.0",
-    "@shisyamo4131/air-guard-v2-schemas": "dev",
+    "@shisyamo4131/air-guard-v2-schemas": "^2.3.0",
     "air-vuetify-v3": "file:air-vuetify-v3",
     "dayjs": "^1.11.13",
     "firebase": "^11.8.1",
