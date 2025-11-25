@@ -5,7 +5,7 @@ import { useAgreementsManager } from "../../composables/useAgreementsManager";
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, info } = useCompanyManager();
+const { attrs, info, inputs } = useCompanyManager();
 const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
@@ -14,29 +14,22 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
     <v-row>
       <!-- Base information column -->
       <v-col cols="12" md="4">
-        <air-item-manager
-          v-bind="attrs"
-          :input-props="{
-            excludedKeys: ['agreements', 'minuteInterval', 'roundSetting'],
-          }"
-        >
+        <air-item-manager v-bind="attrs" :input-props="inputs.base">
           <template #activator="activatorProps">
-            <air-information-card v-bind="activatorProps" :items="info.base" />
+            <air-information-card
+              v-bind="activatorProps.attrs"
+              :items="info.base"
+            />
           </template>
         </air-item-manager>
       </v-col>
 
       <!-- Settings information column -->
       <v-col cols="12" md="8">
-        <air-item-manager
-          v-bind="attrs"
-          :input-props="{
-            includedKeys: ['minuteInterval', 'roundSetting'],
-          }"
-        >
+        <air-item-manager v-bind="attrs" :input-props="inputs.settings">
           <template #activator="activatorProps">
             <air-information-card
-              v-bind="activatorProps"
+              v-bind="activatorProps.attrs"
               :items="info.settings"
             />
           </template>

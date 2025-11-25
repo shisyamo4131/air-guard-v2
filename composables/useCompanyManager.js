@@ -27,16 +27,16 @@ export function useCompanyManager() {
   /***************************************************************************
    * METHODS (PRIVATE)
    ***************************************************************************/
-  function handleCreate() {
+  function _handleCreate() {
     const error = new Error("Creation is not implemented");
     logger.error({ error });
   }
 
-  async function handleUpdate(item) {
+  async function _handleUpdate(item) {
     await item.update(item);
   }
 
-  function handleDelete() {
+  function _handleDelete() {
     const error = new Error("Deletion is not implemented");
     logger.error({ error });
   }
@@ -48,14 +48,24 @@ export function useCompanyManager() {
   const attrs = Vue.computed(() => {
     return {
       modelValue: company,
-      handleCreate,
-      handleUpdate,
-      handleDelete,
+      handleCreate: _handleCreate,
+      handleUpdate: _handleUpdate,
+      handleDelete: _handleDelete,
       disableDelete: true,
       hideDeleteBtn: true,
       onError: (e) => logger.error({ error: e }),
       "onError:clear": () => logger.clearError(),
     };
+  });
+
+  const inputs = Vue.computed(() => {
+    const base = {
+      excludedKeys: ["agreements", "minuteInterval", "roundSetting"],
+    };
+    const settings = {
+      includedKeys: ["minuteInterval", "roundSetting"],
+    };
+    return { base, settings };
   });
 
   /** Information for the `information-card` */
@@ -123,5 +133,5 @@ export function useCompanyManager() {
   /***************************************************************************
    * RETURN OBJECTS
    ***************************************************************************/
-  return { attrs, info };
+  return { attrs, info, inputs };
 }
