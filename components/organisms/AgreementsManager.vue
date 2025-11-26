@@ -20,21 +20,30 @@ const props = defineProps({
 
 <template>
   <air-array-manager v-bind="$attrs">
-    <template #after-dateAt="{ field, item, updateProperties }">
+    <template #after-shiftType="{ field, item, updateProperties }">
       <v-col v-bind="field.colsDefinition">
-        <MoleculesAgreementSelector
-          :items="selectableItems"
-          @select="
-            $event.dateAt = item.dateAt;
-            updateProperties({ ...$event });
+        <MoleculesCardsSelectCancel
+          title="取極めから複製"
+          subtitle="既存の取極めから請求情報を複製します。"
+          max-width="720"
+          @update:modelValue="
+            ($event) => {
+              updateProperties({ ...$event.billingInfo });
+            }
           "
         >
           <template #activator="{ props: activatorProps }">
-            <v-btn v-bind="activatorProps" block color="primary"
-              >取極めから複製</v-btn
-            >
+            <v-btn v-bind="activatorProps" block color="primary">
+              取極めから複製
+            </v-btn>
           </template>
-        </MoleculesAgreementSelector>
+          <template #default="defaultProps">
+            <MoleculesAgreementGroup
+              v-bind="defaultProps"
+              :items="selectableItems"
+            />
+          </template>
+        </MoleculesCardsSelectCancel>
       </v-col>
     </template>
     <template #input.isStartNextDay="{ attrs }">

@@ -5,5 +5,7 @@ const { company } = useAuthStore();
 </script>
 
 <template>
-  <MoleculesCardsAgreementSelector :items="company.agreements" />
+  <v-container>
+    <MoleculesCardsAgreementSelector :items="company.agreements" clearable />
+  </v-container>
 </template>

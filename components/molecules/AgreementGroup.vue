@@ -1,6 +1,6 @@
 <script setup>
 /**
- * AgreementSelector
+ * AgreementGroup.vue
  * @version 1.0.0
  * @author shisyamo4131
  * @description A component for selecting an agreement.
@@ -51,24 +51,40 @@ defineExpose({
 
 <template>
   <v-item-group v-model="internalValue" mandatory selected-class="bg-primary">
-    <v-container>
-      <v-row>
-        <v-col v-for="(agreement, index) of agreements || []" :key="index">
-          <v-item v-slot="{ selectedClass, toggle }" :value="agreement.key">
-            <v-card :class="selectedClass" @click="toggle">
-              <v-card-text v-if="!agreement.key">
-                <div>未選択</div>
-              </v-card-text>
-              <v-card-text v-else>
-                <div>{{ `${agreement.date} ～` }}</div>
-                <div>{{ `${agreement.dayType} ${agreement.shiftType}` }}</div>
-                <div>{{ `基本単価: ${agreement.unitPriceBase}` }}</div>
-                <div>{{ `資格単価: ${agreement.unitPriceQualified}` }}</div>
-              </v-card-text>
-            </v-card>
-          </v-item>
-        </v-col>
-      </v-row>
-    </v-container>
+    <v-row>
+      <v-col
+        v-for="(agreement, index) of agreements || []"
+        :key="index"
+        cols="12"
+        sm="6"
+        md="4"
+      >
+        <v-item v-slot="{ selectedClass, toggle }" :value="agreement.key">
+          <MoleculesAgreementCard
+            v-if="agreement.key"
+            :agreement="agreement"
+            :class="selectedClass"
+            @click="toggle"
+            variant="flat"
+            border
+          />
+          <v-card
+            v-else
+            :class="selectedClass"
+            variant="flat"
+            border
+            height="100%"
+            @click="toggle"
+          >
+            <v-card-text
+              class="d-flex align-center justify-center"
+              style="height: 100%"
+            >
+              <div>未選択</div>
+            </v-card-text>
+          </v-card>
+        </v-item>
+      </v-col>
+    </v-row>
   </v-item-group>
 </template>

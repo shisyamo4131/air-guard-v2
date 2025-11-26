@@ -48,9 +48,30 @@ export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * COMPUTED PROPERTIES
    ***************************************************************************/
-  // ユーザー権限 -> isSuperUser である場合は強制的にアドミニストレーター権限を付与
+  /**
+   * ユーザーの権限（ロール）
+   *
+   * @returns {Array<string>} ユーザーが持つすべてのロール
+   *
+   * ## ロールの種類
+   *
+   * ### `super-user` (システム管理者)
+   * - カスタムクレーム `isSuperUser` により自動付与
+   * - すべての会社（Companies コレクション）のデータを閲覧・編集可能
+   * - システム全体の管理機能にアクセス可能
+   *
+   * ### `admin` (会社管理者)
+   * - User ドキュメントの `isAdmin` プロパティにより自動付与
+   * - 自社（所属する Company）のすべての機能を利用可能
+   * - 他社のデータにはアクセス不可
+   *
+   * ### その他のロール
+   * - User ドキュメントの `roles` 配列で管理
+   * - 会社内での役割・権限を細かく制御
+   * - 例: "operation-manager", "billing-staff", "viewer" など
+   */
   const roles = computed(() => {
-    const result = userInstance.roles || [];
+    const result = [...(userInstance.roles || [])]; // 配列をコピー
     if (isSuperUser.value) result.push("super-user");
     if (userInstance.isAdmin) result.push("admin");
     return result;

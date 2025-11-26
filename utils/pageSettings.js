@@ -48,7 +48,7 @@ export const pageStructure = [
         path: "/test/component-test",
         label: "コンポーネント",
         icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        roles: ["super-user"], // ← 統一
         navigation: true,
       },
       {
@@ -56,7 +56,7 @@ export const pageStructure = [
         path: "/test/rollback-operation-result",
         label: "稼働実績ロールバック",
         icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        roles: ["super-user"], // ← 統一
         navigation: true,
       },
       {
@@ -64,7 +64,7 @@ export const pageStructure = [
         path: "/test/round-setting-test",
         label: "端数処理設定クラス",
         icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        roles: ["super-user"], // ← 統一
         navigation: true,
       },
     ],
@@ -307,6 +307,12 @@ const pagesByPath = createPathMap(pageStructure);
  * 指定されたパスの設定オブジェクトを取得する
  * @param {string} path - ルートパス
  * @returns {object | undefined} ページ設定オブジェクト、見つからなければ undefined
+ *
+ * ## 動的ルートの扱い
+ * - `/operation-results/abc123` のような動的ルートは、
+ *   親 (`/operation-results`) の設定を継承します
+ * - 詳細ページで異なる権限が必要な場合は、
+ *   pageStructure に明示的に定義してください
  */
 export function getPageConfig(path) {
   let normalizedPath = path.replace(/\/$/, "") || "/"; // 入力パスを正規化
@@ -395,4 +401,54 @@ export function getNavigationItems(userRoles) {
     return result;
   }
   return filterAndMap(pageStructure);
+}
+
+// utils/pageSettings.js
+
+/**
+ * pageSettings の整合性をチェック
+ * - 親の roles より子の roles が緩い場合は警告
+ */
+export function validatePageSettings() {
+  function validate(items, parentRoles = []) {
+    for (const item of items) {
+      const config = { public: false, roles: [], ...item };
+
+      // 親に roles がある場合、子も同等以上の制限が必要
+      if (parentRoles.length > 0 && config.roles.length === 0) {
+        console.warn(
+          `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
+            `親は roles: [${parentRoles}] だが、子は roles: [] (制限なし)`
+        );
+      }
+
+      // 親の roles に含まれない role が子にある場合も警告
+      if (config.roles.length > 0 && parentRoles.length > 0) {
+        const missingRoles = config.roles.filter(
+          (role) => !parentRoles.includes(role)
+        );
+        if (missingRoles.length > 0) {
+          console.warn(
+            `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
+              `子の roles [${missingRoles}] は親の roles [${parentRoles}] に含まれていません`
+          );
+        }
+      }
+
+      // 再帰的にチェック
+      if (config.children) {
+        validate(
+          config.children,
+          config.roles.length > 0 ? config.roles : parentRoles
+        );
+      }
+    }
+  }
+
+  validate(pageStructure);
+}
+
+// 開発環境でのみバリデーション実行
+if (process.env.NODE_ENV === "development") {
+  validatePageSettings();
 }

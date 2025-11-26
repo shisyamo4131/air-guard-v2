@@ -81,7 +81,7 @@ const { doc, attrs, info, includedKeys, site, toggleLock, isLoading } =
                 />
               </template>
               <template #input.agreement="inputProps">
-                <MoleculesCardsAgreementSelector
+                <MoleculesAgreementGroup
                   v-bind="inputProps.attrs"
                   clearable
                   :items="site?.agreements || []"
@@ -89,15 +89,20 @@ const { doc, attrs, info, includedKeys, site, toggleLock, isLoading } =
               </template>
               <template #after-agreement="inputProps">
                 <v-col cols="12">
-                  <air-checkbox
-                    :model-value="inputProps.item.allowEmptyAgreement"
-                    label="取極めなしを許容する"
-                    @update:modelValue="
-                      inputProps.updateProperties({
-                        allowEmptyAgreement: $event,
-                      })
-                    "
-                  />
+                  <v-expand-transition>
+                    <air-checkbox
+                      v-if="!inputProps.item.hasAgreement"
+                      :model-value="inputProps.item.allowEmptyAgreement"
+                      label="取極めなしを許容する"
+                      hint="許容しない場合売上や請求として計上されません。"
+                      persistent-hint
+                      @update:modelValue="
+                        inputProps.updateProperties({
+                          allowEmptyAgreement: $event,
+                        })
+                      "
+                    />
+                  </v-expand-transition>
                 </v-col>
                 <v-col cols="12">
                   <air-date-input
