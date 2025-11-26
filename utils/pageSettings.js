@@ -52,6 +52,14 @@ export const pageStructure = [
         navigation: true,
       },
       {
+        id: "permissions-test",
+        path: "/test/permissions-test",
+        label: "権限システムテスト",
+        icon: "mdi-shield-check",
+        roles: ["super-user"],
+        navigation: true,
+      },
+      {
         id: "rollback-operation-result",
         path: "/test/rollback-operation-result",
         label: "稼働実績ロールバック",
@@ -69,11 +77,14 @@ export const pageStructure = [
       },
     ],
   },
+
+  // ===== 配置管理 =====
   {
-    id: "arrangements", // ルートパスを追加 (公開ページとする例)
+    id: "arrangements",
     path: "/arrangement-manager",
     label: "配置管理",
-    roles: [],
+    icon: "mdi-calendar-account",
+    roles: ["site-operation-schedules:write"],
     navigation: true,
   },
   {
@@ -87,149 +98,149 @@ export const pageStructure = [
   {
     id: "dashboard",
     path: "/dashboard",
-    // public: false, (デフォルトなので省略可)
     label: "ダッシュボード",
     icon: "mdi-view-dashboard",
-    roles: [], // 認証済みなら誰でもOK
+    roles: [],
     navigation: true,
   },
+
+  // ===== 稼働実績管理 =====
   {
     id: "operation-results-group",
     // public: false,
     label: "稼働実績管理",
-    icon: "mdi-domain",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    icon: "mdi-clipboard-check",
+    roles: ["operation-results:read"],
     navigation: true,
     children: [
       {
         id: "operation-results-register",
         path: "/operation-results/register",
-        // public: false,
         label: "上下番確定処理",
-        icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-checkbox-marked-circle",
+        roles: ["operation-results:read"],
         navigation: true,
       },
       {
         id: "operation-results-list",
         path: "/operation-results",
-        // public: false,
         label: "稼働実績一覧",
-        icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-format-list-bulleted",
+        roles: ["operation-results:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 請求管理 =====
   {
     id: "billings-group",
-    // public: false,
     label: "請求管理",
-    icon: "mdi-domain",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    icon: "mdi-file-document-multiple",
+    roles: ["operation-billings:read", "billings:read"],
     navigation: true,
     children: [
       {
         id: "operation-billings-list",
         path: "/billings/operations",
-        // public: false,
         label: "稼働請求一覧",
-        icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-file-document",
+        roles: ["operation-billings:read"],
         navigation: true,
       },
       {
         id: "customer-billings-list",
         path: "/billings/customers",
-        // public: false,
         label: "取引先請求一覧",
-        icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-file-document-outline",
+        roles: ["billings:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 取引先管理 =====
   {
     id: "customers-group",
-    // public: false,
     label: "取引先管理",
     icon: "mdi-domain",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    roles: ["customers:read"],
     navigation: true,
     children: [
       {
         id: "customers-list",
         path: "/customers",
-        // public: false,
         label: "取引先一覧",
-        icon: "mdi-domain",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-format-list-bulleted",
+        roles: ["customers:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 現場管理 =====
   {
     id: "sites-group",
-    // public: false,
     label: "現場管理",
-    icon: "mdi-recycle",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    icon: "mdi-pickaxe",
+    roles: ["sites:read"],
     navigation: true,
     children: [
       {
         id: "sites-list",
         path: "/sites",
-        // public: false, // デフォルトなので省略可
         label: "現場一覧",
-        icon: "mdi-recycle",
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-format-list-bulleted",
+        roles: ["sites:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 従業員管理 =====
   {
     id: "employees-group",
-    // public: false,
     label: "従業員管理",
     icon: "mdi-account-multiple",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    roles: ["employees:read"],
     navigation: true,
     children: [
       {
         id: "employees-list",
         path: "/employees",
-        // public: false,
         label: "従業員一覧",
-        icon: "mdi-account-details", // アイコンを追加
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-format-list-bulleted",
+        roles: ["employees:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 外注先管理 =====
   {
     id: "outsourcers-group",
-    // public: false,
     label: "外注先管理",
-    icon: "mdi-account-multiple",
-    roles: [], // グループ自体は認証済みなら誰でも見える (中のページは別)
+    icon: "mdi-handshake",
+    roles: ["outsourcers:read"],
     navigation: true,
     children: [
       {
         id: "outsourcers-list",
         path: "/outsourcers",
-        // public: false,
         label: "外注先一覧",
-        icon: "mdi-account-details", // アイコンを追加
-        roles: [], // 認証済みなら誰でもOK
+        icon: "mdi-format-list-bulleted",
+        roles: ["outsourcers:read"],
         navigation: true,
       },
     ],
   },
+
+  // ===== 設定（管理者のみ） =====
   {
     id: "settings",
     label: "設定",
     icon: "mdi-cog",
-    roles: ["admin"], // 特定ロールが必要"
+    roles: ["admin"],
     navigation: true,
     children: [
       {
@@ -244,7 +255,7 @@ export const pageStructure = [
         id: "users-setting",
         path: "/settings/users",
         label: "ユーザー設定",
-        icon: "mdi-account",
+        icon: "mdi-account-cog",
         roles: ["admin"],
         navigation: true,
       },
@@ -254,24 +265,82 @@ export const pageStructure = [
 ];
 
 // --- ヘルパー関数 ---
-
+import { useRolePresets } from "@/composables/useRolePresets";
 /**
- * ユーザーが特定の役割を持っているかチェック (認証済み前提)
- * @param {string[]} requiredRoles - ページ/項目に必要な役割 (空配列はロール不問)
- * @param {string[]} userRoles - ユーザーが持つ役割
- * @returns {boolean} アクセス可能か
+ * ユーザーが指定されたページにアクセス可能かどうかを判定する
+ * - 役割プリセット（manager, controller など）と機能単位の権限（sites:read など）の両方に対応
+ *
+ * @param {Array<string>} requiredRoles - ページに必要な役割・権限の配列
+ * @param {Array<string>} userRoles - ユーザーが持つ役割の配列
+ * @returns {boolean} アクセス可能な場合は true
+ *
+ * ## 動作例
+ *
+ * ### 役割指定がない場合
+ * ```javascript
+ * hasAccess([], ['controller']) // → true (認証済みなら誰でもOK)
+ * ```
+ *
+ * ### 役割プリセットでチェック
+ * ```javascript
+ * // controller ロールを持つユーザー
+ * hasAccess(['controller'], ['controller']) // → true (直接一致)
+ * hasAccess(['manager'], ['controller']) // → false (一致しない)
+ * ```
+ *
+ * ### 機能単位の権限でチェック
+ * ```javascript
+ * // controller ロールを持つユーザー
+ * hasAccess(['sites:write'], ['controller'])
+ * // → true (controller には sites:write が含まれる)
+ *
+ * hasAccess(['billings:write'], ['controller'])
+ * // → false (controller には billings:write が含まれない)
+ * ```
+ *
+ * ### admin/super-user は常にアクセス可能
+ * ```javascript
+ * hasAccess(['admin'], ['admin']) // → true (すべての権限)
+ * hasAccess(['sites:write'], ['admin']) // → true (すべての権限)
+ * hasAccess(['billings:write'], ['super-user']) // → true (すべての権限)
+ * ```
  */
 function hasAccess(requiredRoles, userRoles) {
-  // 役割指定がない場合は、認証済みならOK (ここでは true を返す)
+  // 役割指定がない場合は、認証済みならOK
   if (!requiredRoles || requiredRoles.length === 0) {
     return true;
   }
-  // ユーザーに役割がない場合はアクセス不可 (指定がある場合)
+
+  // ユーザーに役割がない場合はアクセス不可
   if (!userRoles || userRoles.length === 0) {
     return false;
   }
-  // ユーザーが要求される役割のいずれかを持っているか
-  return userRoles.some((role) => requiredRoles.includes(role));
+
+  // useRolePresets から権限チェック関数を取得
+  const { getPermissions } = useRolePresets();
+
+  // ユーザーが持つすべての権限を取得
+  const userPermissions = getPermissions(userRoles);
+
+  // すべての権限を持つ場合（admin または super-user）
+  if (userPermissions.includes("*")) {
+    return true;
+  }
+
+  // 要求される役割・権限のいずれかを持っているかチェック
+  return requiredRoles.some((required) => {
+    // 1. ユーザーの役割に直接含まれているか
+    if (userRoles.includes(required)) {
+      return true;
+    }
+
+    // 2. ユーザーの権限に含まれているか
+    if (userPermissions.includes(required)) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 /**
@@ -413,6 +482,26 @@ export function validatePageSettings() {
   function validate(items, parentRoles = []) {
     for (const item of items) {
       const config = { public: false, roles: [], ...item };
+
+      // 通常の役割（manager, controller など）が含まれている場合は警告
+      const normalRoles = [
+        "manager",
+        "controller",
+        "accountant",
+        "labor",
+        "legal",
+      ];
+      const foundNormalRoles = config.roles.filter((role) =>
+        normalRoles.includes(role)
+      );
+
+      if (foundNormalRoles.length > 0) {
+        console.warn(
+          `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
+            `通常の役割 [${foundNormalRoles}] が指定されています。` +
+            `権限ベース（例: "sites:read"）での指定を推奨します。`
+        );
+      }
 
       // 親に roles がある場合、子も同等以上の制限が必要
       if (parentRoles.length > 0 && config.roles.length === 0) {

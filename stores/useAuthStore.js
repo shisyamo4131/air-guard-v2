@@ -8,6 +8,7 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { RoundSetting } from "@/schemas";
 import { computed } from "vue";
 import FireModel from "@shisyamo4131/air-firebase-v2";
+import { useRolePresets } from "@/composables/useRolePresets";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -68,10 +69,11 @@ export const useAuthStore = defineStore("auth", () => {
    * ### その他のロール
    * - User ドキュメントの `roles` 配列で管理
    * - 会社内での役割・権限を細かく制御
-   * - 例: "operation-manager", "billing-staff", "viewer" など
+   * - プリセット役割: "manager", "controller", "accountant", "labor", "legal"
+   * - 機能単位の権限: "sites:read", "sites:write" など
    */
   const roles = computed(() => {
-    const result = [...(userInstance.roles || [])]; // 配列をコピー
+    const result = [...(userInstance.roles || [])];
     if (isSuperUser.value) result.push("super-user");
     if (userInstance.isAdmin) result.push("admin");
     return result;
@@ -248,14 +250,40 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   /**
-   * 指定されたロールを保持しているかどうかを判定します。
-   * Checks whether the user has the specified role.
-   *
-   * @param {string} role - チェック対象のロール名
-   * @returns {boolean} - 指定ロールを含む場合は true
+   * 指定されたロールを保持しているかどうかを判定します
+   * @param {string} role - チェック対象のロール（例: "controller"）
+   * @returns {boolean} - 指定ロールを持つ場合は true
    */
   function hasRole(role) {
     return roles.value.includes(role);
+  }
+
+  /**
+   * 指定された権限を保持しているかどうかを判定します
+   * - 役割プリセット（manager, controller など）から展開された権限もチェック
+   * - admin と super-user はすべての権限を持つ
+   *
+   * @param {string} permission - チェック対象の権限（例: "sites:write"）
+   * @returns {boolean} - 指定権限を持つ場合は true
+   *
+   * @example
+   * // controller ロールを持つユーザー
+   * hasPermission('sites:write') // → true (controller に含まれる)
+   * hasPermission('billings:write') // → false (controller には含まれない)
+   *
+   * // admin ロールを持つユーザー
+   * hasPermission('sites:write') // → true (すべての権限)
+   * hasPermission('billings:write') // → true (すべての権限)
+   */
+  function hasPermission(permission) {
+    const { getPermissions } = useRolePresets();
+    const permissions = getPermissions(roles.value);
+
+    // すべての権限を持つ場合
+    if (permissions.includes("*")) return true;
+
+    // 特定の権限を持つ場合
+    return permissions.includes(permission);
   }
 
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
@@ -278,5 +306,6 @@ export const useAuthStore = defineStore("auth", () => {
     setUser,
     waitUntilReady,
     hasRole,
+    hasPermission, // ← 追加
   };
 });
