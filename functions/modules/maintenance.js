@@ -1,11 +1,15 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
 import { onSchedule } from "firebase-functions/scheduler";
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 const BATCH_SIZE = 300;
 const SITE_OPERATION_SCHEDULES_KEEP_DAYS = 60;
-const JST_OFFSET = 9;
 
 /**
  * Creates batches of delete operations for Firestore documents.
@@ -32,17 +36,28 @@ const createDeleteBatches = (snapshot, db) => {
 const cleanUpSiteOperationSchedules = async () => {
   try {
     logger.info("Starting cleanup of site operation schedules...");
+    // const deadline = dayjs()
+    //   .subtract(SITE_OPERATION_SCHEDULES_KEEP_DAYS, "day")
+    //   .utcOffset(JST_OFFSET)
+    //   .format("YYYY-MM-DD");
+
+    // JST で現在日時を取得し、60日前の日付を計算
     const deadline = dayjs()
+      .tz("Asia/Tokyo")
       .subtract(SITE_OPERATION_SCHEDULES_KEEP_DAYS, "day")
-      .utcOffset(JST_OFFSET)
       .format("YYYY-MM-DD");
+
+    logger.info(`Cleaning up schedules before: ${deadline}`);
+
     const db = getFirestore();
     const colRef = db.collectionGroup("siteOperationSchedules");
     const snapshot = await colRef.where("date", "<", deadline).get();
+
     if (snapshot.empty) {
       logger.info("No site operation schedules to clean up.");
       return;
     }
+
     const batchArray = createDeleteBatches(snapshot, db);
     await Promise.all(batchArray.map((batch) => batch.commit()));
     logger.info(`Deleted ${snapshot.size} site operation schedules.`);
