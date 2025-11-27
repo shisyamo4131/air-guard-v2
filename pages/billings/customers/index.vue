@@ -2,6 +2,7 @@
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange.js";
 import { useCustomerBillingsManager } from "@/composables/useCustomerBillingsManager.js";
+import { useBillingPdf } from "@/composables/pdf/useBillingPdf";
 
 defineOptions({ name: "billings-customers" });
 
@@ -13,6 +14,12 @@ const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
+
+const { generateBillingPdf } = useBillingPdf();
+
+async function handlePdfClick(billing) {
+  await generateBillingPdf(billing);
+}
 
 // Manager
 const { attrs, cachedCustomers } = useCustomerBillingsManager({
@@ -51,6 +58,7 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
               ></v-btn>
 
               <span class="ms-4">{{ item.value }}</span>
+              {{ item }}
             </div>
           </td>
         </tr>
@@ -60,6 +68,11 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
           <div>{{ cachedCustomers[item.customerId].name }}</div>
         </div>
         <v-progress-circular v-else indeterminate size="small" />
+      </template>
+      <template #item.actions="{ item }">
+        <v-btn icon small @click="handlePdfClick(item)">
+          <v-icon>mdi-file-pdf-box</v-icon>
+        </v-btn>
       </template>
     </air-array-manager>
   </TemplatesFixedHeightContainer>

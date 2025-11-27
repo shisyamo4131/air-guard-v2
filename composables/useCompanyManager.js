@@ -70,6 +70,9 @@ export function useCompanyManager() {
 
   /** Information for the `information-card` */
   const info = Vue.computed(() => {
+    const bankInfo = company.hasBankInfo
+      ? `${company.bankName} ${company.branchName} f${company.accountType} ${company.accountNumber}`
+      : "未設定";
     // Base information
     const base = [
       {
@@ -105,6 +108,13 @@ export function useCompanyManager() {
         title: "FAX番号",
         props: {
           subtitle: company.fax || "-",
+          prependIcon: "mdi-fax",
+        },
+      },
+      {
+        title: "振込先情報",
+        props: {
+          subtitle: bankInfo,
           prependIcon: "mdi-fax",
         },
       },
