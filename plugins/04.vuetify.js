@@ -64,6 +64,23 @@ export default defineNuxtPlugin((app) => {
           color: "primary",
         },
       },
+      AtomsBillingUnitTypeChip: {
+        VChip: { density: "compact", size: "small" },
+      },
+      AtomsDayTypeChip: {
+        VChip: { density: "compact", size: "small" },
+      },
+      AtomsQualifiedTypeChip: {
+        VChip: {
+          density: "compact",
+          label: true,
+          size: "small",
+          variant: "flat",
+        },
+      },
+      AtomsShiftTypeChip: {
+        VChip: { density: "compact", size: "small" },
+      },
     },
   });
   app.vueApp.use(vuetify);

@@ -1,13 +1,14 @@
 <script setup>
 /**
  * BillingUnitTypeChip.vue
- * @description BillingUnitTypeChip component to display day type as a chip.
+ * @description BillingUnitTypeChip component to display billing unit type as a chip.
  * @version 1.0.0
  * @author shisyamo4131
  */
+import { computed } from "vue";
 import { useDefaults } from "vuetify";
 import { BILLING_UNIT_TYPE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useConstants } from "@/composables/useConstants";
 
 /** SETUP PROPS */
 const _props = defineProps({
@@ -16,31 +17,21 @@ const _props = defineProps({
     required: true,
     validator: (value) => Object.keys(BILLING_UNIT_TYPE_VALUES).includes(value),
   },
-  density: { type: String, default: "compact" },
-  size: { type: String, default: "small" },
 });
 const props = useDefaults(_props, "AtomsBillingUnitTypeChip");
 
-/** SETUP COMPOSABLES AND STORES */
-const { company } = useAuthStore();
+/** SETUP COMPOSABLES */
+const { BILLING_UNIT_TYPE } = useConstants();
 
 /** COMPUTED PROPERTIES */
 const text = computed(() => {
-  return BILLING_UNIT_TYPE_VALUES[props.billingUnitType]?.title || "ERROR";
+  return BILLING_UNIT_TYPE.value[props.billingUnitType]?.title || "ERROR";
 });
 const color = computed(() => {
-  const def =
-    company?.colorDefinitions?.billingUnitType?.[props.billingUnitType];
-  if (def && def.color) return def.color;
-  return undefined;
+  return BILLING_UNIT_TYPE.value[props.billingUnitType]?.color || undefined;
 });
 </script>
 
 <template>
-  <v-chip
-    :density="props.density"
-    :color="color"
-    :size="props.size"
-    :text="text"
-  />
+  <v-chip :color="color" :text="text" />
 </template>

@@ -8,6 +8,28 @@ import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas"; // fe
 import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
 
 export default class Company extends BaseClass {
+  // 後日実装予定のカスタムカラー用プロパティ
+  // static classProps = {
+  //   ...BaseClass.classProps,
+  //   colorDefinitions: {
+  //     type: Object,
+  //     default: () => {
+  //       return {
+  //         dayType: {
+  //           WEEKDAY: "green",
+  //           SATURDAY: "blue",
+  //           SUNDAY: "red",
+  //           HOLIDAY: "pink",
+  //         },
+  //         shiftType: {
+  //           DAY: "deep-orange",
+  //           NIGHT: "indigo",
+  //         },
+  //       };
+  //     },
+  //   },
+  // };
+
   /**
    * `prefecture`, `city`, `address` にセットされている値をもとに `location` を取得してセットします
    * @returns {Promise<void>}

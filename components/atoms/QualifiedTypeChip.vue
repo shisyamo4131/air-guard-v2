@@ -1,55 +1,38 @@
-<script>
-// そのうちschemas側に移動するかも
-const QUALIFIED_TYPE_VALUES = {
-  BASE: { value: "BASE", title: "基本" },
-  QUALIFIED: { value: "QUALIFIED", title: "資格" },
-};
-</script>
 <script setup>
 /**
  * QualifiedTypeChip.vue
- * @description QualifiedTypeChip component to display day type as a chip.
+ * @description QualifiedTypeChip component to display qualified type as a chip.
  * @version 1.0.0
  * @author shisyamo4131
  */
+import { computed } from "vue";
 import { useDefaults } from "vuetify";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useConstants } from "@/composables/useConstants";
 
 /** SETUP PROPS */
 const _props = defineProps({
   type: {
     type: String,
     required: true,
-    validator: (value) => Object.keys(QUALIFIED_TYPE_VALUES).includes(value),
+    validator: (value) => ["BASE", "QUALIFIED"].includes(value),
   },
-  density: { type: String, default: "compact" },
   label: { type: Boolean, default: true },
-  size: { type: String, default: "small" },
   variant: { type: String, default: "flat" },
 });
 const props = useDefaults(_props, "AtomsQualifiedTypeChip");
 
-/** SETUP COMPOSABLES AND STORES */
-const { company } = useAuthStore();
+/** SETUP COMPOSABLES */
+const { QUALIFIED_TYPE } = useConstants();
 
 /** COMPUTED PROPERTIES */
 const text = computed(() => {
-  return QUALIFIED_TYPE_VALUES[props.type]?.title || "ERROR";
+  return QUALIFIED_TYPE.value[props.type]?.title || "ERROR";
 });
 const color = computed(() => {
-  const def = company?.colorDefinitions?.qualifiedType?.[props.type];
-  if (def && def.color) return def.color;
-  return undefined;
+  return QUALIFIED_TYPE.value[props.type]?.color || undefined;
 });
 </script>
 
 <template>
-  <v-chip
-    :density="props.density"
-    :color="color"
-    :size="props.size"
-    :text="text"
-    :label="props.label"
-    :variant="props.variant"
-  />
+  <v-chip :color="color" :text="text" />
 </template>

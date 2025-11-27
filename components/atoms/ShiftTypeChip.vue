@@ -1,13 +1,14 @@
 <script setup>
 /**
  * ShiftTypeChip.vue
- * @description ShiftTypeChip component to display day type as a chip.
+ * @description ShiftTypeChip component to display shift type as a chip.
  * @version 1.0.0
  * @author shisyamo4131
  */
+import { computed } from "vue";
 import { useDefaults } from "vuetify";
 import { SHIFT_TYPE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useConstants } from "@/composables/useConstants";
 
 /** SETUP PROPS */
 const _props = defineProps({
@@ -16,30 +17,21 @@ const _props = defineProps({
     required: true,
     validator: (value) => Object.keys(SHIFT_TYPE_VALUES).includes(value),
   },
-  density: { type: String, default: "compact" },
-  size: { type: String, default: "small" },
 });
 const props = useDefaults(_props, "AtomsShiftTypeChip");
 
-/** SETUP COMPOSABLES AND STORES */
-const { company } = useAuthStore();
+/** SETUP COMPOSABLES */
+const { SHIFT_TYPE } = useConstants();
 
 /** COMPUTED PROPERTIES */
 const text = computed(() => {
-  return SHIFT_TYPE_VALUES[props.shiftType]?.title || "ERROR";
+  return SHIFT_TYPE.value[props.shiftType]?.title || "ERROR";
 });
 const color = computed(() => {
-  const def = company?.colorDefinitions?.shiftType?.[props.shiftType];
-  if (def && def.color) return def.color;
-  return undefined;
+  return SHIFT_TYPE.value[props.shiftType]?.color || undefined;
 });
 </script>
 
 <template>
-  <v-chip
-    :density="props.density"
-    :color="color"
-    :size="props.size"
-    :text="text"
-  />
+  <v-chip :color="color" :text="text" />
 </template>
