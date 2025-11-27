@@ -10,13 +10,21 @@ defineOptions({ name: "billings-customers" });
  * SETUP COMPOSABLES
  *****************************************************************************/
 // Date Range
-const baseDate = dayjs().startOf("month").toDate();
-const endDate = dayjs().endOf("month").toDate();
+const baseDate = dayjs().startOf("month").startOf("day").toDate();
+const endDate = dayjs().endOf("month").endOf("day").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
 
-const { generateBillingPdf } = useBillingPdf();
+const { generateBillingPdf, generateConsolidatedBillingPdf } = useBillingPdf();
 
+// グループ行のPDF出力ボタンのクリックハンドラ
+async function handleGroupPdfClick(item) {
+  // item.items には、そのグループに属する全てのBillingドキュメントが入っている
+  const billings = item.items.map((i) => i.raw);
+  await generateConsolidatedBillingPdf(billings);
+}
+
+// 現場ごとのPDF出力ボタンのクリックハンドラ（既存）
 async function handlePdfClick(billing) {
   await generateBillingPdf(billing);
 }
@@ -31,49 +39,40 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs">
-      <template #search>
-        <MoleculesMonthSelector
-          :model-value="dateRange.from"
-          @date-range="dateRange = $event"
-        />
-      </template>
-      <template
-        v-slot:group-header="{ item, columns, toggleGroup, isGroupOpen }"
-      >
+    <AirArrayManager v-bind="attrs" class="fill-height" ref="managerRef">
+      <!-- グループヘッダーのカスタマイズ -->
+      <template #group-header="{ item, toggleGroup, isGroupOpen }">
         <tr>
-          <td
-            :colspan="columns.length"
-            class="cursor-pointer"
-            v-ripple
-            @click="toggleGroup(item)"
-          >
-            <div class="d-flex align-center">
-              <v-btn
-                :icon="isGroupOpen(item) ? '$expand' : '$next'"
-                color="medium-emphasis"
-                density="comfortable"
-                size="small"
-                variant="outlined"
-              ></v-btn>
-
-              <span class="ms-4">{{ item.value }}</span>
-              {{ item }}
-            </div>
+          <td :colspan="8">
+            <v-btn
+              :icon="isGroupOpen(item) ? 'mdi-chevron-up' : 'mdi-chevron-down'"
+              variant="text"
+              size="small"
+              @click="toggleGroup(item)"
+            ></v-btn>
+            <strong>{{ item.value }}</strong>
+            <v-chip class="ml-2" size="small">
+              {{ item.items.length }}件
+            </v-chip>
+            <!-- PDF出力ボタン -->
+            <v-btn
+              icon
+              size="small"
+              class="ml-4"
+              @click.stop="handleGroupPdfClick(item)"
+            >
+              <v-icon>mdi-file-pdf-box</v-icon>
+            </v-btn>
           </td>
         </tr>
       </template>
-      <template #item.customerId="{ item }">
-        <div v-if="cachedCustomers[item.customerId]">
-          <div>{{ cachedCustomers[item.customerId].name }}</div>
-        </div>
-        <v-progress-circular v-else indeterminate size="small" />
-      </template>
+
+      <!-- 現場ごとのPDF出力ボタン -->
       <template #item.actions="{ item }">
-        <v-btn icon small @click="handlePdfClick(item)">
+        <v-btn icon size="small" @click="handlePdfClick(item)">
           <v-icon>mdi-file-pdf-box</v-icon>
         </v-btn>
       </template>
-    </air-array-manager>
+    </AirArrayManager>
   </TemplatesFixedHeightContainer>
 </template>

@@ -11,7 +11,11 @@ import "dayjs/locale/ja";
 let pdfInitialized = false;
 
 async function initializePdf() {
-  if (pdfInitialized) return;
+  if (pdfInitialized) {
+    // 既に初期化済みの場合、pdfMakeを返す
+    const pdfMake = await import("pdfmake/build/pdfmake");
+    return pdfMake.default;
+  }
 
   // 動的インポートで遅延読み込み
   const [pdfMake, vfs] = await Promise.all([
@@ -100,6 +104,107 @@ export function useBillingPdf() {
 
         // 稼働明細
         ...createOperationDetails(billing, cachedSites.value),
+      ],
+    };
+
+    // PDFを生成して開く
+    pdfMake.createPdf(docDefinition).open();
+  }
+
+  /**
+   * 複数のBillingドキュメントをまとめて1つのPDFを生成
+   * @param {Array<Object>} billings - Billing インスタンスの配列
+   */
+  async function generateConsolidatedBillingPdf(billings) {
+    if (!billings || billings.length === 0) {
+      throw new Error("Billing documents are required");
+    }
+
+    // 実際に使用する時点で初期化
+    const pdfMake = await initializePdf();
+
+    // 最初のBillingから取引先情報を取得（全て同じ取引先のはず）
+    const firstBilling = billings[0];
+    await fetchCustomer(firstBilling.customerId);
+    const customer = cachedCustomers.value[firstBilling.customerId];
+
+    // 全てのBillingから現場情報を取得
+    const allSiteIds = [
+      ...new Set(
+        billings.flatMap((billing) =>
+          billing.operationResults.map((or) => or.siteId)
+        )
+      ),
+    ];
+    await Promise.all(allSiteIds.map((siteId) => fetchSite(siteId)));
+
+    // 会社情報
+    const company = auth.company;
+
+    // 全Billingの合計を計算
+    const totalSubtotal = billings.reduce((sum, b) => sum + b.subtotal, 0);
+    const totalTaxAmount = billings.reduce((sum, b) => sum + b.taxAmount, 0);
+    const totalAmount = billings.reduce((sum, b) => sum + b.totalAmount, 0);
+
+    // PDF定義
+    const docDefinition = {
+      pageSize: "A4",
+      pageMargins: [40, 60, 40, 60],
+      defaultStyle: {
+        font: "NotoSansJP",
+        fontSize: 10,
+      },
+      styles: {
+        header: {
+          fontSize: 18,
+          bold: true,
+          alignment: "center",
+          margin: [0, 0, 0, 20],
+        },
+        sectionTitle: {
+          fontSize: 14,
+          bold: true,
+          alignment: "center",
+          margin: [0, 20, 0, 10],
+        },
+        tableHeader: {
+          bold: true,
+          fillColor: "#eeeeee",
+        },
+      },
+      content: [
+        // ヘッダー部分（取引先と会社情報）
+        ...createHeader(firstBilling, customer, company),
+
+        // 総請求額（全Billingの合計）
+        ...createConsolidatedSummary({
+          subtotal: totalSubtotal,
+          taxAmount: totalTaxAmount,
+          totalAmount: totalAmount,
+        }),
+
+        // 請求書ごとの明細
+        ...billings.flatMap((billing, index) => [
+          // 請求書の区切り
+          ...(index > 0 ? [{ text: "", pageBreak: "before" }] : []),
+
+          // 請求日と入金予定日
+          {
+            text: `請求日: ${dayjs(billing.billingDateAt).format(
+              "YYYY年MM月DD日"
+            )} / 入金予定日: ${dayjs(billing.paymentDueDateAt).format(
+              "YYYY年MM月DD日"
+            )}`,
+            fontSize: 10,
+            margin: [0, 0, 0, 10],
+          },
+
+          // 現場別請求明細
+          createSiteBillingsTable(billing, cachedSites.value),
+
+          // 稼働明細
+          ...createOperationDetails(billing, cachedSites.value),
+        ]),
       ],
     };
 
@@ -197,6 +302,43 @@ export function useBillingPdf() {
               },
               {
                 text: formatCurrency(billing.totalAmount),
+                alignment: "right",
+                bold: true,
+              },
+            ],
+          ],
+        },
+        layout: "lightHorizontalLines",
+        margin: [0, 0, 0, 20],
+      },
+    ];
+  }
+
+  /**
+   * 総請求額部分を生成（複数Billing対応）
+   */
+  function createConsolidatedSummary({ subtotal, taxAmount, totalAmount }) {
+    return [
+      {
+        table: {
+          widths: ["*", "*", "*"],
+          body: [
+            [
+              { text: "税抜請求額", style: "tableHeader", alignment: "center" },
+              { text: "消費税額", style: "tableHeader", alignment: "center" },
+              { text: "税込請求額", style: "tableHeader", alignment: "center" },
+            ],
+            [
+              {
+                text: formatCurrency(subtotal),
+                alignment: "right",
+              },
+              {
+                text: formatCurrency(taxAmount),
+                alignment: "right",
+              },
+              {
+                text: formatCurrency(totalAmount),
                 alignment: "right",
                 bold: true,
               },
@@ -391,5 +533,6 @@ export function useBillingPdf() {
 
   return {
     generateBillingPdf,
+    generateConsolidatedBillingPdf,
   };
 }
