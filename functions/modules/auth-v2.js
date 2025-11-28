@@ -583,6 +583,7 @@ export const changeAdminUser = onCall(async (request) => {
     const result = await db.runTransaction(async (transaction) => {
       fromUser.isAdmin = false;
       toUser.isAdmin = true;
+      toUser.roles = []; // 管理者は roles を持たない仕様とする
       const promises = [
         fromUser.update({ transaction, prefix: `Companies/${companyId}` }),
         toUser.update({ transaction, prefix: `Companies/${companyId}` }),
