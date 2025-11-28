@@ -50,7 +50,7 @@ const cleanUpSiteOperationSchedules = async () => {
     logger.info(`Cleaning up schedules before: ${deadline}`);
 
     const db = getFirestore();
-    const colRef = db.collectionGroup("siteOperationSchedules");
+    const colRef = db.collectionGroup("SiteOperationSchedules");
     const snapshot = await colRef.where("date", "<", deadline).get();
 
     if (snapshot.empty) {
