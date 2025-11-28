@@ -85,7 +85,6 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
     const loadingsKey = loadingsStore.add("稼働実績として登録中...");
     try {
       await selectedSchedule.value.syncToOperationResult(
-        agreement.value,
         keyMappedNotifications.value
       );
     } catch (error) {
