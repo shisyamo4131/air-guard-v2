@@ -131,16 +131,18 @@ async function handleChangeAdminUser(item) {
     :before-edit="
       (editMode, item) => {
         item.companyId = auth.companyId;
-        // roles が未設定の場合は空配列を設定
-        if (!item.roles) {
-          item.roles = [];
-        }
       }
     "
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="handleDelete"
+    :disable-delete="(item) => !!item.isAdmin"
     :is-loading="isLoading"
+    :input-props="{
+      excludedKeys: (item) => {
+        return item.isAdmin ? ['roles'] : [];
+      },
+    }"
     :table-props="{
       headers: [
         { title: 'email', key: 'email' },
@@ -167,17 +169,15 @@ async function handleChangeAdminUser(item) {
 
     <!-- 役割選択 UI -->
     <template #input.roles="inputProps">
-      <v-card variant="outlined" class="mb-4">
+      <v-card border variant="flat" class="mb-4">
         <v-card-title class="text-subtitle-1">
           <v-icon icon="mdi-shield-account" class="mr-2" />
           役割の設定
         </v-card-title>
-        <v-divider />
+        <v-card-subtitle class="text-caption text-wrap">
+          ユーザーに割り当てる役割を選択してください。複数選択可能です。
+        </v-card-subtitle>
         <v-card-text>
-          <div class="text-caption text-medium-emphasis mb-3">
-            ユーザーに割り当てる役割を選択してください。複数選択可能です。
-          </div>
-
           <!-- プリセット役割 -->
           <v-chip-group
             :model-value="inputProps.item.roles"
@@ -191,7 +191,7 @@ async function handleChangeAdminUser(item) {
               :value="option.value"
               :prepend-icon="option.icon"
               filter
-              variant="outlined"
+              variant="flat"
               color="primary"
             >
               {{ option.title }}
@@ -200,41 +200,6 @@ async function handleChangeAdminUser(item) {
               </v-tooltip>
             </v-chip>
           </v-chip-group>
-
-          <!-- 選択された役割の確認 -->
-          <v-alert
-            v-if="inputProps.item.roles?.length > 0"
-            type="info"
-            variant="tonal"
-            density="compact"
-            class="mt-4"
-          >
-            <v-alert-title>選択された役割</v-alert-title>
-            <div class="d-flex flex-wrap ga-2 mt-2">
-              <v-chip
-                v-for="role in inputProps.item.roles"
-                :key="role"
-                size="small"
-                color="primary"
-              >
-                {{
-                  roleOptions.find((opt) => opt.value === role)?.title || role
-                }}
-              </v-chip>
-            </div>
-          </v-alert>
-
-          <!-- 役割が未選択の警告 -->
-          <v-alert
-            v-else
-            type="warning"
-            variant="tonal"
-            density="compact"
-            class="mt-4"
-          >
-            <v-alert-title>役割が選択されていません</v-alert-title>
-            役割を選択してください。役割がないユーザーはダッシュボードのみアクセス可能です。
-          </v-alert>
         </v-card-text>
       </v-card>
     </template>
