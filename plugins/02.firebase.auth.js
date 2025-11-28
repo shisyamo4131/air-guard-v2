@@ -16,6 +16,11 @@
 import { getApps } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 
+// Messages for logging or errors
+const FIREBASE_NOT_INITIALIZED = `Firebase is not initialized. Please initialize Firebase before using this plugin.`;
+const AUTH_STATE_SIGNED_IN = "Auth state changed: user signed in.";
+const AUTH_STATE_SIGNED_OUT = "Auth state changed: user signed out.";
+
 /**
  * ***** EDIT THIS FUNCTION FOR YOUR PROJECT *****
  * A function called when the authentication state changes to signed in.
@@ -23,6 +28,9 @@ import { getAuth, onAuthStateChanged } from "firebase/auth";
  */
 const setUser = async (userCredential) => {
   const auth = useAuthStore();
+  if (auth.isDev) {
+    console.info(`[firebase.auth.js] ${AUTH_STATE_SIGNED_IN}`);
+  }
   await auth.setUser(userCredential);
 };
 
@@ -32,13 +40,11 @@ const setUser = async (userCredential) => {
  */
 const clearUser = async () => {
   const auth = useAuthStore();
+  if (auth.isDev) {
+    console.info(`[firebase.auth.js] ${AUTH_STATE_SIGNED_OUT}`);
+  }
   await auth.setUser();
 };
-
-// Messages for logging or errors
-const FIREBASE_NOT_INITIALIZED = `Firebase is not initialized. Please initialize Firebase before using this plugin.`;
-const AUTH_STATE_SIGNED_IN = "Auth state changed: user signed in.";
-const AUTH_STATE_SIGNED_OUT = "Auth state changed: user signed out.";
 
 export default defineNuxtPlugin(() => {
   const app = getApps()?.[0];
@@ -48,10 +54,8 @@ export default defineNuxtPlugin(() => {
 
   onAuthStateChanged(getAuth(), async (user) => {
     if (user) {
-      console.info(`[firebase.auth.js] ${AUTH_STATE_SIGNED_IN}`);
       await setUser(user);
     } else {
-      console.info(`[firebase.auth.js] ${AUTH_STATE_SIGNED_OUT}`);
       await clearUser();
     }
   });
