@@ -33,3 +33,7 @@ air-vuetify-v3
 saved-data
 DEFINITION.md
 HISTORY.md
+
+# Test data and emulator data
+data/
+emulator-data/
