@@ -26,9 +26,7 @@ const email = ref("");
  *****************************************************************************/
 const handleSendResetPasswordEmail = async () => {
   errors.clear();
-  const key = loadings.add({
-    message: "パスワードリセット用のメールを送信しています...",
-  });
+  const key = loadings.add("パスワードリセット用のメールを送信しています...");
   try {
     await sendPasswordResetEmail($auth, email.value);
     messages.add("パスワードリセット用のメールを送信しました！");
