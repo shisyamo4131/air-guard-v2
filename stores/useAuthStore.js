@@ -79,6 +79,59 @@ export const useAuthStore = defineStore("auth", () => {
     return result;
   });
 
+  /**
+   * 顧客タイプ（課金状態）
+   *
+   * @returns {'free' | 'paid' | 'expired'} 顧客の課金状態
+   *
+   * ## 顧客タイプの種類
+   *
+   * ### `free` (無料ユーザー)
+   * - サブスクリプション未契約
+   * - 従業員登録数が制限される（デフォルト: 5名まで）
+   * - 一部機能が制限される可能性
+   *
+   * ### `paid` (有料ユーザー)
+   * - 有効なサブスクリプション契約中
+   * - プランに応じた従業員数まで登録可能
+   * - すべての機能を利用可能
+   *
+   * ### `expired` (期限切れ)
+   * - サブスクリプションが期限切れまたはキャンセル済み
+   * - 新規データ作成不可
+   * - 閲覧のみ可能（または完全にアクセス不可）
+   */
+  const customerType = computed(() => {
+    const subscription = companyInstance?.subscription;
+
+    // サブスクリプション情報がない場合は free
+    if (!subscription || !subscription.id) {
+      return "free";
+    }
+
+    // 期限切れチェック
+    const status = subscription.status;
+    const currentPeriodEnd = subscription.currentPeriodEnd;
+
+    // キャンセル済み、支払い遅延、未払いの場合は expired
+    if (["canceled", "past_due", "unpaid"].includes(status)) {
+      return "expired";
+    }
+
+    // 期限が過去の場合は expired
+    if (currentPeriodEnd && currentPeriodEnd.toMillis() < Date.now()) {
+      return "expired";
+    }
+
+    // active または trialing の場合は paid
+    if (["active", "trialing"].includes(status)) {
+      return "paid";
+    }
+
+    // それ以外（incomplete など）は free 扱い
+    return "free";
+  });
+
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
@@ -301,11 +354,12 @@ export const useAuthStore = defineStore("auth", () => {
     company: companyInstance, // companyInstance を company として返す
     isMaintenance,
     isDev,
+    customerType, // ← 追加
     signIn,
     signOut,
     setUser,
     waitUntilReady,
     hasRole,
-    hasPermission, // ← 追加
+    hasPermission,
   };
 });

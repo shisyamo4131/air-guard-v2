@@ -183,6 +183,19 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // Companies/{companyId}/StripeData/{docId}
+    match /Companies/{companyId}/StripeData/{docId} {
+      // 同じ会社のユーザーのみ読み取り可能
+      allow read: if (isAuthenticated() && userCompanyId() == companyId) || isSuperUser();
+      
+      // 同じ会社のユーザーのみ作成可能（Checkout Session作成用）
+      allow create: if (isAuthenticated() && userCompanyId() == companyId) || isSuperUser();
+      
+      // Cloud Functionsからの書き込みのみ許可（sessionUrl, error更新用）
+      // クライアントからの更新・削除は不可
+      allow update, delete: if false;
+    }
+
     // --- Rules for 'Users' subcollection under 'Companies' ---
     // UsersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の

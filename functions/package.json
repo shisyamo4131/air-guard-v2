@@ -19,7 +19,8 @@
     "@shisyamo4131/air-guard-v2-schemas": "^2.3.7-dev.0",
     "dayjs": "^1.11.18",
     "firebase-admin": "^12.6.0",
-    "firebase-functions": "^7.0.0"
+    "firebase-functions": "^7.0.0",
+    "stripe": "^20.0.0"
   },
   "devDependencies": {
     "firebase-functions-test": "^3.1.0"
