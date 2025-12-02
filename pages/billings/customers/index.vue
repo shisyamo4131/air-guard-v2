@@ -40,6 +40,12 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
 <template>
   <TemplatesFixedHeightContainer>
     <AirArrayManager v-bind="attrs" class="fill-height" ref="managerRef">
+      <template #search>
+        <MoleculesMonthSelector
+          :model-value="dateRange.from"
+          @date-range="dateRange = $event"
+        />
+      </template>
       <!-- グループヘッダーのカスタマイズ -->
       <template #group-header="{ item, toggleGroup, isGroupOpen }">
         <tr>

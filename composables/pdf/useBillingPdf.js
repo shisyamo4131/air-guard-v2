@@ -107,8 +107,11 @@ export function useBillingPdf() {
       ],
     };
 
-    // PDFを生成して開く
-    pdfMake.createPdf(docDefinition).open();
+    // PDFを生成してダウンロード
+    const fileName = `請求書_${customer.name}_${dayjs(
+      billing.billingDateAt
+    ).format("YYYYMMDD")}.pdf`;
+    pdfMake.createPdf(docDefinition).download(fileName);
   }
 
   /**
@@ -145,6 +148,17 @@ export function useBillingPdf() {
     const totalSubtotal = billings.reduce((sum, b) => sum + b.subtotal, 0);
     const totalTaxAmount = billings.reduce((sum, b) => sum + b.taxAmount, 0);
     const totalAmount = billings.reduce((sum, b) => sum + b.totalAmount, 0);
+
+    // 全現場の合計を集計
+    const allSiteSummary = billings.reduce((acc, billing) => {
+      billing.operationResults.forEach((or) => {
+        if (!acc[or.siteId]) {
+          acc[or.siteId] = 0;
+        }
+        acc[or.siteId] += or.salesAmount || 0;
+      });
+      return acc;
+    }, {});
 
     // PDF定義
     const docDefinition = {
@@ -183,7 +197,10 @@ export function useBillingPdf() {
           totalAmount: totalAmount,
         }),
 
-        // 請求書ごとの明細
+        // 全現場の請求明細
+        createConsolidatedSiteBillingsTable(allSiteSummary, cachedSites.value),
+
+        // 請求書ごとの稼働明細
         ...billings.flatMap((billing, index) => [
           // 請求書の区切り
           ...(index > 0 ? [{ text: "", pageBreak: "before" }] : []),
@@ -196,11 +213,9 @@ export function useBillingPdf() {
               "YYYY年MM月DD日"
             )}`,
             fontSize: 10,
-            margin: [0, 0, 0, 10],
+            margin: [0, 10, 0, 10],
+            bold: true,
           },
-
-          // 現場別請求明細
-          createSiteBillingsTable(billing, cachedSites.value),
 
           // 稼働明細
           ...createOperationDetails(billing, cachedSites.value),
@@ -208,8 +223,11 @@ export function useBillingPdf() {
       ],
     };
 
-    // PDFを生成して開く
-    pdfMake.createPdf(docDefinition).open();
+    // PDFを生成してダウンロード
+    const fileName = `請求書_${customer.name}_${dayjs(
+      firstBilling.billingDateAt
+    ).format("YYYYMMDD")}_統合.pdf`;
+    pdfMake.createPdf(docDefinition).download(fileName);
   }
 
   /**
@@ -349,6 +367,32 @@ export function useBillingPdf() {
         margin: [0, 0, 0, 20],
       },
     ];
+  }
+
+  /**
+   * 統合された現場別請求明細テーブルを生成（全現場）
+   */
+  function createConsolidatedSiteBillingsTable(siteSummary, sites) {
+    // テーブルのボディを生成
+    const body = [
+      [
+        { text: "現場名", style: "tableHeader" },
+        { text: "ご請求額", style: "tableHeader", alignment: "right" },
+      ],
+      ...Object.entries(siteSummary).map(([siteId, amount]) => [
+        { text: sites[siteId]?.name || "不明な現場" },
+        { text: formatCurrency(amount), alignment: "right" },
+      ]),
+    ];
+
+    return {
+      table: {
+        widths: ["*", 100],
+        body,
+      },
+      layout: "lightHorizontalLines",
+      pageBreak: "after",
+    };
   }
 
   /**
