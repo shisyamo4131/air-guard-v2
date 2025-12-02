@@ -1,13 +1,13 @@
+import { computed, watch, watchEffect } from "vue";
+import { useRouter } from "vue-router";
 import {
   signInWithEmailAndPassword,
   signOut as authSignOut,
 } from "firebase/auth";
-import { Company, User } from "@/schemas";
+import FireModel from "@shisyamo4131/air-firebase-v2";
+import { Company, User, RoundSetting, System } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { RoundSetting } from "@/schemas";
-import { computed } from "vue";
-import FireModel from "@shisyamo4131/air-firebase-v2";
 import { useRolePresets } from "@/composables/useRolePresets";
 
 /**
@@ -21,6 +21,7 @@ export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * DEFINE STORES AND COMPOSABLES
    ***************************************************************************/
+  const router = useRouter();
   const logger = useLogger("useAuthStore", useErrorsStore());
   const errors = useErrorsStore();
   const loadings = useLoadingsStore();
@@ -40,11 +41,9 @@ export const useAuthStore = defineStore("auth", () => {
   const companyId = ref(null);
 
   // Company state fetched by companyId
+  const systemInstance = reactive(new System());
   const companyInstance = reactive(new Company());
   const userInstance = reactive(new User());
-
-  // Whether the app is in maintenance mode
-  const isMaintenance = ref(false);
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -132,6 +131,19 @@ export const useAuthStore = defineStore("auth", () => {
     return "free";
   });
 
+  /**
+   * Returns whether the application is currently in maintenance mode.
+   * - Combines system-wide and company-specific maintenance states.
+   * @returns {boolean} True if either system or company maintenance mode is active.
+   */
+  const isMaintenance = computed(() => {
+    const isCompanyMaintenance = companyInstance?.maintenanceMode || false;
+    // return isSystemMaintenance.value || isCompanyMaintenance;
+    return (
+      systemInstance?.isMaintenance || companyInstance?.maintenanceMode || false
+    );
+  });
+
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
@@ -144,6 +156,20 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Update `RoundSetting` global setting based on company settings
     RoundSetting.set(companyInstance?.roundSetting || RoundSetting.ROUND);
+  });
+
+  /**
+   * Watches `isMaintenance` and redirects to the maintenance page if changed to true.
+   */
+  watch(isMaintenance, (newVal) => {
+    const currentPath = router.currentRoute.value.path;
+    if (newVal) {
+      if (currentPath === "/maintenance") return;
+      router.replace("/maintenance");
+    } else {
+      if (currentPath !== "/maintenance") return;
+      router.replace("/");
+    }
   });
 
   /***************************************************************************
@@ -339,6 +365,22 @@ export const useAuthStore = defineStore("auth", () => {
     return permissions.includes(permission);
   }
 
+  /**
+   * Initializes system's condition states by fetching the System document.
+   * - Fetches the `System/system` document to set initial states.
+   * - Subscribes to changes in the `System/system` document to keep states updated.
+   */
+  async function initSystemStates() {
+    try {
+      await systemInstance.fetch({ docId: "system" });
+      systemInstance.subscribe({ docId: "system" });
+    } catch (error) {
+      console.error("Failed to fetch System document:", error);
+      // On fetch failure, force maintenance mode to be true
+      systemInstance.isMaintenance = true;
+    }
+  }
+
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   return {
@@ -361,5 +403,6 @@ export const useAuthStore = defineStore("auth", () => {
     waitUntilReady,
     hasRole,
     hasPermission,
+    initSystemStates,
   };
 });
