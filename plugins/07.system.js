@@ -1,6 +1,6 @@
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { System } from "@/schemas";
 
 /**
  * Monitor the "System" document in Firestore to handle maintenance mode.
@@ -11,32 +11,30 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * - Redirects users to the maintenance page when maintenance mode is enabled.
  */
 export default defineNuxtPlugin(async (nuxtApp) => {
-  const { $firestore } = nuxtApp;
-  const systemDocRef = doc($firestore, "System/system");
   const router = useRouter();
-  const authStore = useAuthStore();
+  const auth = useAuthStore();
 
-  // fetch `System/system` document
+  const systemInstance = new System();
+
+  // fetch `System/system` document and initialize `isMaintenance` state
   try {
-    const docSnapshot = await getDoc(systemDocRef);
-    authStore.isMaintenance = docSnapshot.exists()
-      ? docSnapshot.data()?.isMaintenance ?? false
+    const docExists = await systemInstance.fetch({ docId: "system" });
+    auth.isMaintenance = docExists
+      ? systemInstance.isMaintenance ?? false
       : false;
   } catch (error) {
     console.error("Failed to fetch System document:", error);
-    authStore.isMaintenance = false;
+    auth.isMaintenance = false;
   }
 
-  // subscribe `System/system` document
-  onSnapshot(systemDocRef, async (snapshot) => {
-    const data = snapshot.data();
-    authStore.isMaintenance = data?.isMaintenance ?? false;
+  systemInstance.subscribe({ docId: "system" }, (data) => {
+    auth.isMaintenance = data?.isMaintenance ?? false;
     if (data?.isMaintenance) {
       if (router.currentRoute.value.path !== "/maintenance") {
         router.replace("/maintenance");
       }
     } else {
-      // メンテナンス解除時、自動でトップページなどに戻したい場合
+      // メンテナンスが解除されたらトップページへリダイレクト
       if (router.currentRoute.value.path === "/maintenance") {
         router.replace("/");
       }

@@ -13,4 +13,5 @@ export { default as Site, Agreement } from "./Site.js";
 export { SiteOperationSchedule } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOperationScheduleDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOrder } from "@shisyamo4131/air-guard-v2-schemas";
+export { System } from "@shisyamo4131/air-guard-v2-schemas";
 export { User } from "@shisyamo4131/air-guard-v2-schemas";
