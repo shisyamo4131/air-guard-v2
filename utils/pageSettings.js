@@ -259,14 +259,14 @@ export const pageStructure = [
         roles: ["admin"],
         navigation: true,
       },
-      {
-        id: "checkout",
-        path: "/settings/checkout",
-        label: "サブスクリプション管理",
-        icon: "mdi-account-cog",
-        roles: ["admin"],
-        navigation: true,
-      },
+      // {
+      //   id: "checkout",
+      //   path: "/settings/checkout",
+      //   label: "サブスクリプション管理",
+      //   icon: "mdi-account-cog",
+      //   roles: ["admin"],
+      //   navigation: true,
+      // },
     ],
   },
   // 他のページやグループを追加
