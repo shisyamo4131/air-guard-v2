@@ -24,13 +24,12 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   // メンテナンスモードの処理
   if (auth.isMaintenance) {
-    if (to.path !== "/maintenance") {
-      console.log(
-        "[auth.global] Maintenance mode: redirecting to /maintenance"
-      );
-      return navigateTo("/maintenance", { replace: true });
-    }
-    return;
+    // メンテナンス画面への遷移の場合は何もしない
+    if (to.path === "/maintenance") return;
+
+    // それ以外の場合はメンテナンス画面へリダイレクト
+    console.log("[auth.global] Maintenance mode: redirecting to /maintenance");
+    return navigateTo("/maintenance", { replace: true });
   } else {
     if (to.path === "/maintenance") {
       console.log(
