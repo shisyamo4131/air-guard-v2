@@ -25,6 +25,7 @@ export function useFetchOutsourcer({ warnIfNotFound = true } = {}) {
     pushItems,
     isLoading,
     searchItems,
+    clearCache,
   } = useFetchBase({
     SchemaClass: Outsourcer,
     entityName: "Outsourcer",
@@ -56,5 +57,6 @@ export function useFetchOutsourcer({ warnIfNotFound = true } = {}) {
     cachedOutsourcers: cachedItems,
     pushOutsourcers: pushItems,
     isLoading,
+    clearCache,
   };
 }

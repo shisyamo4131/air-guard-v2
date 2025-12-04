@@ -2,14 +2,14 @@
 import dayjs from "dayjs";
 import { useRouter } from "vue-router";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useDataStore } from "@/stores/useDataStore";
+import { useStatisticsStore } from "@/stores/useStatisticsStore";
 
 /** SETUP ROUTER */
 const router = useRouter();
 
 /** SETUP STORES */
 const auth = useAuthStore();
-const dataStore = useDataStore();
+const statistics = useStatisticsStore();
 </script>
 
 <template>
@@ -22,7 +22,10 @@ const dataStore = useDataStore();
       <v-col cols="12">
         <!-- 妥当性エラー稼働請求 -->
         <v-card border variant="flat">
-          <v-card-title>修正が必要な稼働請求があります</v-card-title>
+          <v-card-title class="text-subtitle-1">
+            <v-icon size="small">mdi-alert</v-icon>
+            要修正稼働請求
+          </v-card-title>
           <v-data-table
             :headers="[
               {
@@ -35,7 +38,7 @@ const dataStore = useDataStore();
                 title: '現場名',
                 key: 'siteId',
                 value: (item) => {
-                  const site = dataStore.cachedSites?.[item.siteId] || null;
+                  const site = statistics.cachedSites?.[item.siteId] || null;
                   return site ? site.name : 'loading...';
                 },
               },
@@ -54,7 +57,7 @@ const dataStore = useDataStore();
                 },
               },
             ]"
-            :items="dataStore.invalidOperationBillings"
+            :items="statistics.invalidOperationBillings"
             :items-per-page="-1"
             hide-default-footer
             @click:row="
@@ -71,20 +74,26 @@ const dataStore = useDataStore();
     <v-row class="mb-6" dense>
       <v-col cols="12" sm="4">
         <v-card border variant="flat">
-          <v-card-title>本日のシフト</v-card-title>
-          <v-card-text class="text-h5">8 件</v-card-text>
+          <v-card-title class="text-subtitle-1">
+            <v-icon size="small">mdi-account-multiple</v-icon>
+            本日の稼働数
+          </v-card-title>
+          <v-card-text>
+            <span class="text-h5">{{ statistics.operationCount }}</span>
+            <span class="ml-2">稼働</span>
+          </v-card-text>
         </v-card>
       </v-col>
       <v-col cols="12" sm="4">
         <v-card border variant="flat">
-          <v-card-title>未確認の報告書</v-card-title>
-          <v-card-text class="text-h5">3 件</v-card-text>
-        </v-card>
-      </v-col>
-      <v-col cols="12" sm="4">
-        <v-card border variant="flat">
-          <v-card-title>稼働中の現場</v-card-title>
-          <v-card-text class="text-h5">5 拠点</v-card-text>
+          <v-card-title class="text-subtitle-1">
+            <v-icon size="small">mdi-pickaxe</v-icon>
+            稼働中の現場
+          </v-card-title>
+          <v-card-text>
+            <span class="text-h5">{{ statistics.siteCount }}</span>
+            <span class="ml-2">拠点</span>
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>

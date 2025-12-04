@@ -25,6 +25,7 @@ export function useFetchSite({ warnIfNotFound = true } = {}) {
     pushItems,
     isLoading,
     searchItems,
+    clearCache,
   } = useFetchBase({
     SchemaClass: Site,
     entityName: "Site",
@@ -56,5 +57,6 @@ export function useFetchSite({ warnIfNotFound = true } = {}) {
     cachedSites: cachedItems,
     pushSites: pushItems,
     isLoading,
+    clearCache,
   };
 }

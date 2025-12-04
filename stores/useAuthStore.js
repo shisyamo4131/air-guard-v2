@@ -9,6 +9,7 @@ import { Company, User, RoundSetting, System } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useRolePresets } from "@/composables/useRolePresets";
+import { useStatisticsStore } from "@/stores/useStatisticsStore";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -27,6 +28,7 @@ export const useAuthStore = defineStore("auth", () => {
   const loadings = useLoadingsStore();
   const messages = useMessagesStore();
   const { $vuetify } = useNuxtApp();
+  const statisticsStore = useStatisticsStore();
 
   /***************************************************************************
    * DEFINE STATES
@@ -199,12 +201,14 @@ export const useAuthStore = defineStore("auth", () => {
         await companyInstance.fetch({ docId: companyId.value });
         userInstance.subscribe({ docId: uid.value });
         companyInstance.subscribe({ docId: companyId.value });
+        statisticsStore.start();
       } else {
         userInstance.unsubscribe();
         userInstance.initialize();
         companyInstance.unsubscribe();
         companyInstance.initialize();
         FireModel.setConfig({ prefix: `Companies/unknown` });
+        statisticsStore.stop();
       }
     } catch (error) {
       // Error handling process.

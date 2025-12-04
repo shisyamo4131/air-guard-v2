@@ -25,6 +25,7 @@ export function useFetchEmployee({ warnIfNotFound = true } = {}) {
     pushItems,
     isLoading,
     searchItems,
+    clearCache,
   } = useFetchBase({
     SchemaClass: Employee,
     entityName: "Employee",
@@ -56,5 +57,6 @@ export function useFetchEmployee({ warnIfNotFound = true } = {}) {
     cachedEmployees: cachedItems,
     pushEmployees: pushItems,
     isLoading,
+    clearCache,
   };
 }

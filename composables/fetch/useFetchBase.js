@@ -438,6 +438,13 @@ export function useFetchBase({
     });
   }
 
+  function clearCache() {
+    cache.value = [];
+    logger.info({
+      message: `Cache cleared for ${entityName}.`,
+    });
+  }
+
   return {
     fetchItems,
     getItem,
@@ -445,6 +452,7 @@ export function useFetchBase({
     cachedItems,
     pushItems,
     isLoading,
+    clearCache,
     clearSearchCache,
   };
 }

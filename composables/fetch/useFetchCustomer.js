@@ -25,6 +25,7 @@ export function useFetchCustomer({ warnIfNotFound = true } = {}) {
     pushItems,
     isLoading,
     searchItems,
+    clearCache,
   } = useFetchBase({
     SchemaClass: Customer,
     entityName: "Customer",
@@ -56,5 +57,6 @@ export function useFetchCustomer({ warnIfNotFound = true } = {}) {
     cachedCustomers: cachedItems,
     pushCustomers: pushItems,
     isLoading,
+    clearCache,
   };
 }
