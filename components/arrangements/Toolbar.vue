@@ -5,6 +5,7 @@
  * @props modelValue - The number of days to display.
  * @emit click:workers - Emits when the workers button is clicked.
  * @emit click:site-order - Emits when the site order button is clicked.
+ * @emit click:add-schedule - Emits when the add-schedule button is clicked.
  * @emit update:modelValue - Emits when the number of days to display is updated.
  */
 
@@ -15,7 +16,11 @@
 const model = defineModel();
 
 /** define emits */
-const emit = defineEmits(["click:workers", "click:site-order"]);
+const emit = defineEmits([
+  "click:workers",
+  "click:site-order",
+  "click:add-schedule",
+]);
 
 /*****************************************************************************
  * COMPOSABLES
@@ -83,6 +88,12 @@ const handleWorkersClick = (event) => {
     <template #append>
       <v-spacer />
 
+      <v-btn
+        prepend-icon="mdi-plus"
+        text="予定追加"
+        class="mr-3"
+        @click="emit('click:add-schedule')"
+      />
       <v-btn
         prepend-icon="mdi-sort"
         text="順序"

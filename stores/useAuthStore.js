@@ -38,6 +38,7 @@ export const useAuthStore = defineStore("auth", () => {
   const uid = ref(null);
   const isEmailVerified = ref(false);
   const isSuperUser = ref(false);
+  const isDeveloper = ref(false);
   const companyId = ref(null);
 
   // Company state fetched by companyId
@@ -74,6 +75,7 @@ export const useAuthStore = defineStore("auth", () => {
   const roles = computed(() => {
     const result = [...(userInstance.roles || [])];
     if (isSuperUser.value) result.push("super-user");
+    if (isDeveloper.value) result.push("developer");
     if (userInstance.isAdmin) result.push("admin");
     return result;
   });
@@ -137,8 +139,6 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {boolean} True if either system or company maintenance mode is active.
    */
   const isMaintenance = computed(() => {
-    const isCompanyMaintenance = companyInstance?.maintenanceMode || false;
-    // return isSystemMaintenance.value || isCompanyMaintenance;
     return (
       systemInstance?.isMaintenance || companyInstance?.maintenanceMode || false
     );
@@ -186,6 +186,7 @@ export const useAuthStore = defineStore("auth", () => {
       uid.value = user?.uid || null;
       isEmailVerified.value = user?.emailVerified || false;
       isSuperUser.value = !!idTokenResult?.claims?.isSuperUser || false;
+      isDeveloper.value = !!idTokenResult?.claims?.isDeveloper || false;
       companyId.value = idTokenResult?.claims?.companyId || null;
 
       // uid と companyId が存在する場合に、FireModel の設定とドキュメントの取得を行う。

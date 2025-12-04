@@ -115,6 +115,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
       v-model="dateRangeComposable.currentDayCount.value"
       @click:workers="toggleFloatingWindow"
       @click:site-order="siteOrderManager.set"
+      @click:add-schedule="siteOperationScheduleManager.toCreate"
     >
     </ArrangementsToolbar>
 
@@ -165,13 +166,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     <OrganismsSiteOperationScheduleManager
       v-bind="siteOperationScheduleManager.attrs.value"
       :input-props="{
-        excludedKeys: [
-          'siteId',
-          'dayType',
-          'shiftType',
-          'employees',
-          'outsourcers',
-        ],
+        excludedKeys: ['employees', 'outsourcers'],
       }"
     />
 

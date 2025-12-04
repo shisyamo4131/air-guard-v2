@@ -40,7 +40,7 @@ export const pageStructure = [
     id: "module-tests",
     label: "テスト",
     icon: "mdi-domain",
-    roles: ["super-user"],
+    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -48,7 +48,7 @@ export const pageStructure = [
         path: "/test/component-test",
         label: "コンポーネント",
         icon: "mdi-domain",
-        roles: ["super-user"], // ← 統一
+        roles: ["developer"], // ← 統一
         navigation: true,
       },
       {
@@ -56,7 +56,7 @@ export const pageStructure = [
         path: "/test/permissions-test",
         label: "権限システムテスト",
         icon: "mdi-shield-check",
-        roles: ["super-user"],
+        roles: ["developer"], // ← 統一
         navigation: true,
       },
       {
@@ -64,7 +64,7 @@ export const pageStructure = [
         path: "/test/rollback-operation-result",
         label: "稼働実績ロールバック",
         icon: "mdi-domain",
-        roles: ["super-user"], // ← 統一
+        roles: ["developer"], // ← 統一
         navigation: true,
       },
       {
@@ -72,7 +72,7 @@ export const pageStructure = [
         path: "/test/round-setting-test",
         label: "端数処理設定クラス",
         icon: "mdi-domain",
-        roles: ["super-user"], // ← 統一
+        roles: ["developer"], // ← 統一
         navigation: true,
       },
     ],

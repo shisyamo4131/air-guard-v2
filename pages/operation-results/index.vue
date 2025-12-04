@@ -14,7 +14,6 @@ const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
 
 const fetchSiteComposable = useFetchSite();
-provide("fetchSiteComposable", fetchSiteComposable);
 
 // Manager
 const { attrs, cachedSites } = useOperationResultsManager({
@@ -41,11 +40,11 @@ const { attrs, cachedSites } = useOperationResultsManager({
         </div>
         <v-progress-circular v-else indeterminate size="small" />
       </template>
-      <template #input.siteId="{ attrs, editMode }">
-        <AtomsAutocompleteSite
+      <template #input.siteId="{ attrs }">
+        <MoleculesAutocompleteSite
           v-bind="attrs"
-          clearable
-          :disabled="editMode !== 'CREATE'"
+          creatable
+          :fetch-site-composable="fetchSiteComposable"
         />
       </template>
     </air-array-manager>
