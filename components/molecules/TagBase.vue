@@ -162,9 +162,8 @@ function handleClickRemove(event) {
   <v-list-item
     :class="tagClasses"
     :style="{ height: tagHeight }"
-    elevation="3"
+    border
     rounded
-    variant="elevated"
   >
     <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->

@@ -58,7 +58,8 @@ const emit = defineEmits([
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
+// const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
+const name = computed(() => `schedules`);
 
 /*****************************************************************************
  * METHODS

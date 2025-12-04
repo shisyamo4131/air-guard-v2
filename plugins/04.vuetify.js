@@ -54,6 +54,10 @@ export default defineNuxtPlugin((app) => {
       VCalendar: {
         hideWeekNumber: true,
       },
+      VCard: {
+        border: true,
+        flat: true,
+      },
       VTimePicker: {
         allowedMinutes: (val) => val % 10 === 0,
         color: "primary",
