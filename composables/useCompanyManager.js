@@ -5,10 +5,9 @@
  * @author shisyamo4131
  *****************************************************************************/
 import * as Vue from "vue";
-import { RoundSetting } from "@/schemas";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLogger } from "../composables/useLogger";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useDocManager } from "@/composables/useDocManager";
+import { RoundSetting } from "@/schemas";
 
 /**
  * @returns {Object} - Company manager attributes and information.
@@ -18,46 +17,33 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * @returns {Object} info.settings - Settings information about the company.
  */
 export function useCompanyManager() {
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("CompanyManager", useErrorsStore());
   const { company } = useAuthStore();
+  const docManager = useDocManager("useCompanyManager", {
+    doc: company,
+  });
 
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-  function _handleCreate() {
-    const error = new Error("Creation is not implemented");
-    logger.error({ error });
-  }
+  /** METHODS (PRIVATE) */
+  const _handleCreate = () => {
+    throw new Error("Creation is not implemented");
+  };
 
-  async function _handleUpdate(item) {
-    await item.update(item);
-  }
+  const _handleDelete = () => {
+    throw new Error("Deletion is not implemented");
+  };
 
-  function _handleDelete() {
-    const error = new Error("Deletion is not implemented");
-    logger.error({ error });
-  }
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the item manager */
+  /** COMPUTED PROPERTIES */
+  // Attributes for the item manager
   const attrs = Vue.computed(() => {
     return {
-      modelValue: company,
+      ...docManager.attrs.value,
       handleCreate: _handleCreate,
-      handleUpdate: _handleUpdate,
       handleDelete: _handleDelete,
       disableDelete: true,
       hideDeleteBtn: true,
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": () => logger.clearError(),
     };
   });
 
+  // An array of input configurations for the company manager form
   const inputs = Vue.computed(() => {
     const base = {
       excludedKeys: ["agreements", "minuteInterval", "roundSetting"],
@@ -68,7 +54,7 @@ export function useCompanyManager() {
     return { base, settings };
   });
 
-  /** Information for the `information-card` */
+  // An array of information for the information-card component
   const info = Vue.computed(() => {
     const bankInfo = company.hasBankInfo
       ? `${company.bankName} ${company.branchName} f${company.accountType} ${company.accountNumber}`
@@ -143,5 +129,5 @@ export function useCompanyManager() {
   /***************************************************************************
    * RETURN OBJECTS
    ***************************************************************************/
-  return { attrs, info, inputs };
+  return { ...docManager, attrs, info, inputs };
 }

@@ -7,8 +7,7 @@
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { OperationBilling } from "@/schemas";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useDocManager } from "@/composables/useDocManager";
 import { useFetchSite } from "./fetch/useFetchSite";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
@@ -28,50 +27,32 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  * @returns {Object} includedKeys - Computed included keys for the manager component
  * @returns {Object} includedKeys.prices - Included keys for the prices section
  * @returns {Object} includedKeys.adjusted - Included keys for the adjusted section
- * @returns {Object} isReady - Readonly ref indicating if the document is ready
  * @returns {Object} cachedSites - Readonly ref of cached sites from fetchSite composable
  * @returns {Object} cachedEmployees - Readonly ref of cached employees from fetchEmployee composable
  * @returns {Object} cachedOutsourcers - Readonly ref of cached outsourcers from fetchOutsourcer composable
- * @returns {Function} set - Method to set docId to subscribe.
  * @returns {Function} toCreate - Method to trigger create operation
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
  */
 export function useOperationBillingManager({
+  doc = Vue.reactive(new OperationBilling()),
+  deleteRedirectPath = null,
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
-  immediate = false,
 } = {}) {
-  /***************************************************************************
-   * VALIDATION
-   ***************************************************************************/
+  /** SETUP DOC MANAGER COMPOSABLE */
+  const docManager = useDocManager("useOperationBillingManager", {
+    doc,
+    deleteRedirectPath,
+  });
 
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const internalDocId = Vue.ref(null);
-  const instance = Vue.reactive(new OperationBilling());
-  const component = Vue.ref(null);
-  const isLoading = Vue.ref(false);
-  const isReady = Vue.ref(false);
-
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("OperationBillingManager", useErrorsStore());
-
-  // Fetch composables
-  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
-  const { fetchEmployee, cachedEmployees } =
-    fetchEmployeeComposable || useFetchEmployee();
-  const { fetchOutsourcer, cachedOutsourcers } =
-    fetchOutsourcerComposable || useFetchOutsourcer();
-
+  /** VALIDATION */
   if (
-    !fetchSiteComposable ||
-    !fetchEmployeeComposable ||
-    !fetchOutsourcerComposable
+    docManager.isDev &&
+    (!fetchSiteComposable ||
+      !fetchEmployeeComposable ||
+      !fetchOutsourcerComposable)
   ) {
     const missingComposables = [];
     if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
@@ -79,141 +60,100 @@ export function useOperationBillingManager({
       missingComposables.push("fetchEmployeeComposable");
     if (!fetchOutsourcerComposable)
       missingComposables.push("fetchOutsourcerComposable");
-    logger.info({
+    docManager.logger.info({
       message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
         ", "
       )}`,
     });
   }
 
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-  function _subscribe() {
-    isReady.value = false;
-    instance.subscribe({ docId: internalDocId.value }, (item) => {
-      fetchSite(item.siteId);
-      fetchEmployee(item.employeeIds);
-      fetchOutsourcer(item.outsourcerIds);
-      isReady.value = true;
-    });
-  }
+  /** SETUP FETCH COMPOSABLES */
+  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
+  const { fetchEmployee, cachedEmployees } =
+    fetchEmployeeComposable || useFetchEmployee();
+  const { fetchOutsourcer, cachedOutsourcers } =
+    fetchOutsourcerComposable || useFetchOutsourcer();
 
-  /***************************************************************************
-   * METHODS (PUBLIC)
-   ***************************************************************************/
-  /**
-   * Set docId to composable and subscribe to document.
-   * @param {import("vue").Ref|string} docId
-   * @returns {void}
-   */
-  function set(docId) {
-    if (!docId || typeof Vue.unref(docId) !== "string") {
-      logger.error({
-        error: new Error("Invalid docId provided to set method"),
-      });
-      return;
-    }
-    internalDocId.value = Vue.unref(docId);
-  }
+  /** WATCHERS */
+  Vue.watch(doc, (newDoc) => {
+    fetchSite(newDoc.siteId);
+    fetchEmployee(newDoc.employeeIds);
+    fetchOutsourcer(newDoc.outsourcerIds);
+  });
 
+  /** METHODS (PUBLIC) */
   /**
    * Toggle the lock status of the operation billing document.
    * @param {string} docId - The document ID of the operation billing.
    * @param {boolean} value - The new lock status.
    */
   async function toggleLock(docId, value) {
-    isLoading.value = true;
+    docManager.isLoading.value = true;
     try {
       await OperationBilling.toggleLock(docId, value);
     } catch (e) {
-      logger.error({ error: e });
+      docManager.logger.error({ error: e });
     } finally {
-      isLoading.value = false;
+      docManager.isLoading.value = false;
     }
   }
 
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  Vue.watchEffect(() => {
-    if (internalDocId.value) _subscribe();
-  });
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
-    isReady.value = false;
-  });
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the component */
+  /** COMPUTED PROPERTIES */
+  // Attributes for the component
   const attrs = Vue.computed(() => {
     return {
-      ref: (el) => (component.value = el),
-      modelValue: Vue.readonly(instance),
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
+      ...docManager.attrs.value,
       hideDeleteBtn: true,
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
     };
   });
 
-  /** Information for the `information-card` */
+  // An array of information for the information-card component
   const info = Vue.computed(() => {
     const base = [
-      { title: "CODE", props: { subtitle: instance.code } },
+      { title: "CODE", props: { subtitle: doc.code } },
       {
         title: "現場名",
         props: {
-          subtitle: cachedSites.value?.[instance.siteId]?.name || "loading...",
+          subtitle: cachedSites.value?.[doc.siteId]?.name || "loading...",
         },
       },
       {
         title: "日付",
         props: {
-          subtitle: dayjs(instance.dateAt).format("YYYY年M月D日（ddd）"),
+          subtitle: dayjs(doc.dateAt).format("YYYY年M月D日（ddd）"),
         },
       },
       {
         title: "区分",
         props: {
           subtitle: `${
-            OperationBilling.DAY_TYPE[instance.dayType]?.title || "loading..."
+            OperationBilling.DAY_TYPE[doc.dayType]?.title || "loading..."
           } ${
-            OperationBilling.SHIFT_TYPE[instance.shiftType]?.title ||
-            "loading..."
+            OperationBilling.SHIFT_TYPE[doc.shiftType]?.title || "loading..."
           }`.trim(),
         },
       },
       {
         title: "時間",
         props: {
-          subtitle: `${instance.startTime || "loading..."} - ${
-            instance.endTime || "loading..."
+          subtitle: `${doc.startTime || "loading..."} - ${
+            doc.endTime || "loading..."
           }`.trim(),
         },
       },
       {
         title: "作業内容",
-        props: { subtitle: instance.workDescription },
+        props: { subtitle: doc.workDescription },
       },
-      { title: "備考", props: { subtitle: instance.remarks } },
+      { title: "備考", props: { subtitle: doc.remarks } },
     ];
-    const unitPriceBase = instance.agreement?.unitPriceBase || 0;
-    const overtimeUnitPriceBase =
-      instance.agreement?.overtimeUnitPriceBase || 0;
-    const unitPriceQualified = instance.agreement?.unitPriceQualified || 0;
+    const unitPriceBase = doc.agreement?.unitPriceBase || 0;
+    const overtimeUnitPriceBase = doc.agreement?.overtimeUnitPriceBase || 0;
+    const unitPriceQualified = doc.agreement?.unitPriceQualified || 0;
     const overtimeUnitPriceQualified =
-      instance.agreement?.overtimeUnitPriceQualified || 0;
-    const billingDate = instance.billingDateAt
-      ? dayjs(instance.billingDateAt).format("YYYY年M月D日")
+      doc.agreement?.overtimeUnitPriceQualified || 0;
+    const billingDate = doc.billingDateAt
+      ? dayjs(doc.billingDateAt).format("YYYY年M月D日")
       : "未設定";
     const billings = [
       {
@@ -232,7 +172,7 @@ export function useOperationBillingManager({
         title: "請求締日",
         props: {
           subtitle: billingDate,
-          appendIcon: instance.billingDateAt
+          appendIcon: doc.billingDateAt
             ? undefined
             : "mdi-alert-circle-outline",
         },
@@ -241,7 +181,7 @@ export function useOperationBillingManager({
     return { base, billings };
   });
 
-  /** Included keys for the manager component */
+  // Included keys for the manager component
   const includedKeys = Vue.computed(() => {
     const agreement = ["agreement"];
     const adjusted = [
@@ -254,35 +194,23 @@ export function useOperationBillingManager({
     return { agreement, adjusted };
   });
 
-  /** site instance */
+  // Site instance
   const site = Vue.computed(() => {
-    if (!isReady.value) return null;
-    return cachedSites?.value?.[instance.siteId];
+    return cachedSites?.value?.[doc.siteId] || null;
   });
 
-  if (immediate) set(immediate);
-
-  /***************************************************************************
-   * RETURN VALUES
-   ***************************************************************************/
   return {
-    doc: instance,
+    ...docManager,
+
     attrs,
     info,
     includedKeys,
-    isReady: Vue.readonly(isReady),
-    isLoading: Vue.readonly(isLoading),
 
     site: Vue.readonly(site),
 
     cachedSites: Vue.readonly(cachedSites),
     cachedEmployees: Vue.readonly(cachedEmployees),
     cachedOutsourcers: Vue.readonly(cachedOutsourcers),
-
-    set,
-    toCreate: (item) => component?.value?.toCreate?.(item),
-    toUpdate: (item) => component?.value?.toUpdate?.(item),
-    toDelete: (item) => component?.value?.toDelete?.(item),
 
     toggleLock,
   };

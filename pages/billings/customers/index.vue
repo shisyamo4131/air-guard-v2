@@ -1,5 +1,6 @@
 <script setup>
 import dayjs from "dayjs";
+import { useRouter } from "vue-router";
 import { useDateRange } from "@/composables/useDateRange.js";
 import { useCustomerBillingsManager } from "@/composables/useCustomerBillingsManager.js";
 import { useBillingPdf } from "@/composables/pdf/useBillingPdf";
@@ -9,6 +10,8 @@ defineOptions({ name: "billings-customers" });
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+const router = useRouter();
+
 // Date Range
 const baseDate = dayjs().startOf("month").startOf("day").toDate();
 const endDate = dayjs().endOf("month").endOf("day").toDate();
@@ -75,6 +78,13 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
 
       <!-- 現場ごとのPDF出力ボタン -->
       <template #item.actions="{ item }">
+        <v-btn
+          icon
+          size="small"
+          @click="router.push(`/billings/customers/${item.docId}`)"
+        >
+          <v-icon>mdi-pencil</v-icon>
+        </v-btn>
         <v-btn icon size="small" @click="handlePdfClick(item)">
           <v-icon>mdi-file-pdf-box</v-icon>
         </v-btn>

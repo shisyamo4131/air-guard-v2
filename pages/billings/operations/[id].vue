@@ -2,6 +2,7 @@
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useOperationBilling } from "@/composables/dataLayers/useOperationBilling";
 import { useOperationBillingManager } from "@/composables/useOperationBillingManager";
 
 /*****************************************************************************
@@ -18,13 +19,16 @@ const fetchOutsourcerComposable = useFetchOutsourcer();
 provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 
+// data layer composable
+const { doc } = useOperationBilling({ docId: operationBillingId });
+
 // Manager composable
-const { doc, attrs, info, includedKeys, site, toggleLock, isLoading } =
+const { attrs, info, includedKeys, site, toggleLock, isLoading } =
   useOperationBillingManager({
+    doc,
     fetchSiteComposable,
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
-    immediate: operationBillingId,
   });
 </script>
 
@@ -54,7 +58,6 @@ const { doc, attrs, info, includedKeys, site, toggleLock, isLoading } =
             <v-btn
               color="warning"
               flat
-              :loading="isLoading"
               text="編集をロックする"
               @click="toggleLock(doc.docId, true)"
             />

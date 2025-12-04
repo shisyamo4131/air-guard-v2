@@ -2,6 +2,7 @@
 import dayjs from "dayjs";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useCustomerBilling } from "@/composables/dataLayers/useCustomerBilling";
 import { useCustomerBillingManager } from "@/composables/useCustomerBillingManager";
 
 /*****************************************************************************
@@ -15,10 +16,11 @@ const docId = route.params.id;
 const fetchCustomerComposable = useFetchCustomer();
 const fetchSiteComposable = useFetchSite();
 
-const { attrs, doc, cachedCustomers, cachedSites } = useCustomerBillingManager({
+const { doc } = useCustomerBilling({ docId });
+const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
+  doc,
   fetchCustomerComposable,
   fetchSiteComposable,
-  immediate: docId,
 });
 </script>
 

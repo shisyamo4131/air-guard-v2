@@ -5,63 +5,43 @@
  * @author shisyamo4131
  *****************************************************************************/
 import * as Vue from "vue";
-import { useRouter } from "vue-router";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { Site } from "@/schemas";
+import { useDocManager } from "@/composables/useDocManager";
 
 /**
  * @param {Object} options - Options for the composable
- * @param {Object} options.doc - Reactive Site instance to manage
+ * @param {Object} options.doc - Reactive site instance to manage
  * @param {string} options.deleteRedirectPath - Path to redirect after deletion
  * @returns {Object} - The site manager composable
- * @returns {Object} doc - Reactive Site instance
+ * @returns {Object} doc - Reactive site instance
  * @returns {Object} attrs - Computed attributes for the site component
  * @returns {Object} info - Information for the information-card component.
  * @returns {Object} info.base - Base information about the company.
- * @returns {Function} set - Method to set docId to subscribe.
+ * @returns {boolean} isDev - Flag indicating if the environment is development
+ * @returns {Object} logger - Logger instance for logging messages and errors
  * @returns {Function} toCreate - Method to trigger create operation
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
  */
-export function useSiteManager({ doc, deleteRedirectPath = "/sites" } = {}) {
-  /** SETUP LOGGER COMPOSABLE */
-  const logger = useLogger("SiteManager", useErrorsStore());
+export function useSiteManager({
+  doc = Vue.reactive(new Site()),
+  deleteRedirectPath = "/sites",
+} = {}) {
+  /** SETUP DOC MANAGER COMPOSABLE */
+  const docManager = useDocManager("useSiteManager", {
+    doc,
+    deleteRedirectPath,
+  });
 
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
-
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const router = useRouter();
-
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const component = Vue.ref(null);
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the component */
+  /** COMPUTED PROPERTIES */
+  // Attributes for the component
   const attrs = Vue.computed(() => {
     return {
-      ref: (el) => (component.value = el),
-      modelValue: doc,
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
-      inputProps: {
-        excludedKeys: ["agreements"],
-      },
-      onDelete: () => router.replace(deleteRedirectPath),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
+      ...docManager.attrs.value,
     };
   });
 
-  /** Information for the `information-card` */
+  // An array of information for the information-card component
   const info = Vue.computed(() => {
     const base = [
       {
@@ -105,11 +85,8 @@ export function useSiteManager({ doc, deleteRedirectPath = "/sites" } = {}) {
    * RETURN VALUES
    ***************************************************************************/
   return {
+    ...docManager,
     attrs,
     info,
-
-    toCreate: (item) => component?.value?.toCreate?.(item),
-    toUpdate: (item) => component?.value?.toUpdate?.(item),
-    toDelete: (item) => component?.value?.toDelete?.(item),
   };
 }

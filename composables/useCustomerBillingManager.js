@@ -18,168 +18,103 @@ import { useFetchSite } from "./fetch/useFetchSite";
  * @param {Object} options - Options for the composable
  */
 export function useCustomerBillingManager({
+  doc = Vue.reactive(new Billing()),
+  deleteRedirectPath = null,
   fetchCustomerComposable,
   fetchSiteComposable,
-  immediate = false,
-  deleteRedirectPath = "/operation-results",
 } = {}) {
-  /** SETUP LOGGER COMPOSABLE */
-  const logger = useLogger("CustomerBillingManager", useErrorsStore());
+  /** SETUP DOC MANAGER COMPOSABLE */
+  const docManager = useDocManager("useOperationBillingManager", {
+    doc,
+    deleteRedirectPath,
+  });
 
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
-
-  /***************************************************************************
-   * VALIDATION
-   ***************************************************************************/
-
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const internalDocId = Vue.ref(null);
-  const instance = Vue.reactive(new Billing());
-  const component = Vue.ref(null);
-  const isLoading = Vue.ref(false);
-  const isReady = Vue.ref(false);
-
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const router = useRouter();
-
-  // Fetch composables
-  const { fetchCustomer, cachedCustomers } =
-    fetchCustomerComposable || useFetchCustomer();
-  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
-
-  if (isDev && (!fetchCustomerComposable || !fetchSiteComposable)) {
+  /** VALIDATION */
+  if (docManager.isDev && (!fetchCustomerComposable || !fetchSiteComposable)) {
     const missingComposables = [];
     if (!fetchCustomerComposable)
       missingComposables.push("fetchCustomerComposable");
     if (!fetchSiteComposable) missingComposables.push("fetchSiteComposable");
-    if (missingComposables.length > 0) {
-      logger.info({
-        message: `The following composables were not provided. Internal composables will be used, but if caching across multiple components is needed, specifying them will improve performance: ${missingComposables.join(
-          ", "
-        )}`,
-      });
-    }
-  }
-
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-  function _subscribe() {
-    instance.subscribe({ docId: internalDocId.value }, (item) => {
-      fetchCustomer(item.customerId);
-      fetchSite(item.siteId);
+    docManager.logger.info({
+      message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
+        ", "
+      )}`,
     });
   }
 
-  /***************************************************************************
-   * METHODS (PUBLIC)
-   ***************************************************************************/
-  /**
-   * Set docId to composable and subscribe to document.
-   * @param {import("vue").Ref|string} docId
-   * @returns {void}
-   */
-  function subscribe(docId) {
-    if (!docId || typeof Vue.unref(docId) !== "string") {
-      logger.error({
-        error: new Error("Invalid docId provided to subscribe method"),
-      });
-      return;
-    }
-    internalDocId.value = Vue.unref(docId);
-  }
+  /** SETUP FETCH COMPOSABLES */
+  const { fetchCustomer, cachedCustomers } =
+    fetchCustomerComposable || useFetchCustomer();
+  const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
 
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  Vue.watchEffect(() => {
-    if (internalDocId.value) _subscribe();
+  /** WATCHERS */
+  Vue.watch(doc, (newDoc) => {
+    fetchCustomer(newDoc.customerId);
+    fetchSite(newDoc.siteId);
   });
 
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => {
-    instance.unsubscribe();
-  });
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the component */
+  /** COMPUTED PROPERTIES */
+  // Attributes for the component
   const attrs = Vue.computed(() => {
     return {
-      ref: (el) => (component.value = el),
-      modelValue: Vue.readonly(instance),
-      handleCreate: (item) => {
+      ...docManager.attrs.value,
+      handleCreate: () => {
         throw new Error("Creation of customer billings is not supported");
       },
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => {
+      handleDelete: () => {
         throw new Error("Deletion of customer billings is not supported");
       },
       hideDeleteBtn: true,
-      // 閲覧中に削除された場合の対応
-      onDelete: () => router.replace(deleteRedirectPath),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
     };
   });
 
-  /** Information for the `information-card` */
+  // An array of information for the information-card component
   const info = Vue.computed(() => {
     const base = [
-      { title: "CODE", props: { subtitle: instance.code } },
+      { title: "CODE", props: { subtitle: doc.code } },
       {
         title: "現場名",
         props: {
-          subtitle: cachedSites.value?.[instance.siteId]?.name || "loading...",
+          subtitle: cachedSites.value?.[doc.siteId]?.name || "loading...",
         },
       },
       {
         title: "日付",
         props: {
-          subtitle: dayjs(instance.dateAt).format("YYYY年M月D日（ddd）"),
+          subtitle: dayjs(doc.dateAt).format("YYYY年M月D日（ddd）"),
         },
       },
       {
         title: "区分",
         props: {
           subtitle: `${
-            OperationBilling.DAY_TYPE[instance.dayType] || "loading..."
+            OperationBilling.DAY_TYPE[doc.dayType] || "loading..."
           } ${
-            OperationBilling.SHIFT_TYPE[instance.shiftType]?.title ||
-            "loading..."
+            OperationBilling.SHIFT_TYPE[doc.shiftType]?.title || "loading..."
           }`.trim(),
         },
       },
       {
         title: "時間",
         props: {
-          subtitle: `${instance.startTime || "loading..."} - ${
-            instance.endTime || "loading..."
+          subtitle: `${doc.startTime || "loading..."} - ${
+            doc.endTime || "loading..."
           }`.trim(),
         },
       },
       {
         title: "作業内容",
-        props: { subtitle: instance.workDescription },
+        props: { subtitle: doc.workDescription },
       },
-      { title: "備考", props: { subtitle: instance.remarks } },
+      { title: "備考", props: { subtitle: doc.remarks } },
     ];
-    const unitPriceBase = instance.agreement?.unitPriceBase || 0;
-    const overtimeUnitPriceBase =
-      instance.agreement?.overtimeUnitPriceBase || 0;
-    const unitPriceQualified = instance.agreement?.unitPriceQualified || 0;
+    const unitPriceBase = doc.agreement?.unitPriceBase || 0;
+    const overtimeUnitPriceBase = doc.agreement?.overtimeUnitPriceBase || 0;
+    const unitPriceQualified = doc.agreement?.unitPriceQualified || 0;
     const overtimeUnitPriceQualified =
-      instance.agreement?.overtimeUnitPriceQualified || 0;
-    const billingDate = instance.billingDateAt
-      ? dayjs(instance.billingDateAt).format("YYYY年M月D日")
+      doc.agreement?.overtimeUnitPriceQualified || 0;
+    const billingDate = doc.billingDateAt
+      ? dayjs(doc.billingDateAt).format("YYYY年M月D日")
       : "未設定";
     const billings = [
       {
@@ -198,7 +133,7 @@ export function useCustomerBillingManager({
         title: "請求締日",
         props: {
           subtitle: billingDate,
-          appendIcon: instance.billingDateAt
+          appendIcon: doc.billingDateAt
             ? undefined
             : "mdi-alert-circle-outline",
         },
@@ -220,26 +155,17 @@ export function useCustomerBillingManager({
     return { agreement, adjusted };
   });
 
-  if (immediate) subscribe(immediate);
-
   /***************************************************************************
    * RETURN VALUES
    ***************************************************************************/
   return {
-    doc: instance,
+    ...docManager,
+
     attrs,
     info,
     includedKeys,
-    isReady: Vue.readonly(isReady),
-    isLoading: Vue.readonly(isLoading),
 
     cachedCustomers: Vue.readonly(cachedCustomers),
     cachedSites: Vue.readonly(cachedSites),
-
-    subscribe,
-
-    toCreate: (item) => component?.value?.toCreate?.(item),
-    toUpdate: (item) => component?.value?.toUpdate?.(item),
-    toDelete: (item) => component?.value?.toDelete?.(item),
   };
 }

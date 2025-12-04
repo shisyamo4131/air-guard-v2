@@ -7,10 +7,7 @@
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
-import { useRouter } from "vue-router";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useDocManager } from "@/composables/useDocManager";
 import { useFetchSite } from "./fetch/useFetchSite";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
@@ -18,10 +15,10 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive OperationResult instance to manage.
+ * @param {string} options.deleteRedirectPath - Path to redirect after deletion
  * @param {Object} options.fetchSiteComposable - Optional fetchSite composable to use for site data
  * @param {Object} options.fetchEmployeeComposable - Optional fetchEmployee composable to use for employee data
  * @param {Object} options.fetchOutsourcerComposable - Optional fetchOutsourcer composable to use for outsourcer data
- * @param {boolean|string} options.immediate - If truthy, sets the docId immediately
  * @returns {Object} - The operation result manager composable
  * @returns {Object} doc - Reactive OperationResult instance
  * @returns {Object} attrs - Computed attributes for the operation result component
@@ -40,23 +37,21 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  * @returns {Function} removeWorker - Method to remove a worker from the operation result
  */
 export function useOperationResultManager({
-  doc,
+  doc = Vue.reactive(new OperationResult()),
+  deleteRedirectPath = "/operation-results",
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
-  deleteRedirectPath = "/operation-results",
 } = {}) {
-  /** SETUP LOGGER COMPOSABLE */
-  const logger = useLogger("OperationResultManager", useErrorsStore());
+  /** SETUP DOC MANAGER COMPOSABLE */
+  const docManager = useDocManager("useOperationResultManager", {
+    doc,
+    deleteRedirectPath,
+  });
 
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
-
-  /***************************************************************************
-   * VALIDATION
-   ***************************************************************************/
+  /** VALIDATION */
   if (
-    isDev &&
+    docManager.isDev &&
     (!fetchSiteComposable ||
       !fetchEmployeeComposable ||
       !fetchOutsourcerComposable)
@@ -67,90 +62,60 @@ export function useOperationResultManager({
       missingComposables.push("fetchEmployeeComposable");
     if (!fetchOutsourcerComposable)
       missingComposables.push("fetchOutsourcerComposable");
-    logger.info({
+    docManager.logger.info({
       message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
         ", "
       )}`,
     });
   }
 
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const router = useRouter();
-
-  // Fetch composables
+  /** SETUP FETCH COMPOSABLES */
   const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
   const { fetchEmployee, cachedEmployees } =
     fetchEmployeeComposable || useFetchEmployee();
   const { fetchOutsourcer, cachedOutsourcers } =
     fetchOutsourcerComposable || useFetchOutsourcer();
 
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const component = Vue.ref(null);
-
-  /***************************************************************************
-   * WATHERS
-   ***************************************************************************/
+  /** WATCHERS */
   Vue.watch(doc, (newDoc) => {
     fetchSite(newDoc.siteId);
     fetchEmployee(newDoc.employeeIds);
     fetchOutsourcer(newDoc.outsourcerIds);
   });
 
-  /***************************************************************************
-   * METHODS (PUBLIC)
-   ***************************************************************************/
-  /** Add a worker to the operation result */
+  /** METHODS (PUBLIC) */
+  // Add a worker to the operation result
   async function addWorker(worker) {
     try {
       doc.addWorker(worker, -1);
       await doc.update();
     } catch (error) {
-      logger.error({ error });
+      docManager.logger.error({ error });
     }
   }
 
-  /** Change a worker in the operation result */
+  // Change a worker in the operation result
   async function changeWorker(worker) {
     try {
       doc.changeWorker(worker);
       await doc.update();
     } catch (error) {
-      logger.error({ error });
+      docManager.logger.error({ error });
     }
   }
 
-  /** Remove a worker from the operation result */
+  // Remove a worker from the operation result
   async function removeWorker(worker) {
     try {
       doc.removeWorker(worker);
       await doc.update();
     } catch (error) {
-      logger.error({ error });
+      docManager.logger.error({ error });
     }
   }
 
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the component */
-  const attrs = Vue.computed(() => {
-    return {
-      ref: (el) => (component.value = el),
-      modelValue: doc,
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
-      onDelete: () => router.replace(deleteRedirectPath),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
-    };
-  });
-
-  /** Information for the `information-card` */
+  /** COMPUTED PROPERTIES */
+  // An array of information for the information-card component
   const info = Vue.computed(() => {
     const base = [
       { title: "CODE", props: { subtitle: doc.code } },
@@ -193,8 +158,8 @@ export function useOperationResultManager({
     return { base };
   });
 
-  /** Included keys for the manager component */
-  const includedKeys = computed(() => {
+  // Included keys for the manager component
+  const includedKeys = Vue.computed(() => {
     const base = [
       "code",
       "dateAt",
@@ -213,18 +178,14 @@ export function useOperationResultManager({
    * RETURN VALUES
    ***************************************************************************/
   return {
-    doc,
-    attrs,
+    ...docManager,
+
     info,
     includedKeys,
 
     cachedSites: Vue.readonly(cachedSites),
     cachedEmployees: Vue.readonly(cachedEmployees),
     cachedOutsourcers: Vue.readonly(cachedOutsourcers),
-
-    toCreate: (item) => component?.value?.toCreate?.(item),
-    toUpdate: (item) => component?.value?.toUpdate?.(item),
-    toDelete: (item) => component?.value?.toDelete?.(item),
 
     addWorker,
     changeWorker,
