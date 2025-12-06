@@ -43,17 +43,6 @@ export function useCompanyManager() {
     };
   });
 
-  // An array of input configurations for the company manager form
-  const inputs = Vue.computed(() => {
-    const base = {
-      excludedKeys: ["agreements", "minuteInterval", "roundSetting"],
-    };
-    const settings = {
-      includedKeys: ["minuteInterval", "roundSetting"],
-    };
-    return { base, settings };
-  });
-
   // An array of information for the information-card component
   const info = Vue.computed(() => {
     const bankInfo = company.hasBankInfo
@@ -129,5 +118,5 @@ export function useCompanyManager() {
   /***************************************************************************
    * RETURN OBJECTS
    ***************************************************************************/
-  return { ...docManager, attrs, info, inputs };
+  return { ...docManager, attrs, info };
 }

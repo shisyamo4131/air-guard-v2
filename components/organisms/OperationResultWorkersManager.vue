@@ -72,17 +72,17 @@ function handleOnClickAddOutsourcer(handler) {
   <air-array-manager
     v-bind="$attrs"
     :schema="OperationResultDetail"
-    :input-props="{
-      includedKeys: [
-        'id',
-        'startTime',
-        'isStartNextDay',
-        'endTime',
-        'breakMinutes',
-        'isQualified',
-        'isOjt',
-      ],
-    }"
+    :included-keys="[
+      'id',
+      'workerId',
+      'isEmployee',
+      'startTime',
+      'isStartNextDay',
+      'endTime',
+      'breakMinutes',
+      'isQualified',
+      'isOjt',
+    ]"
     :table-props="{ hideSearch: true }"
     :before-edit="beforeEdit"
     item-key="workerId"

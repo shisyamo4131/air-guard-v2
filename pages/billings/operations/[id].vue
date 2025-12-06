@@ -74,7 +74,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
               v-bind="attrs"
               label="取極め/請求情報編集"
               :dialog-props="{ maxWidth: '720' }"
-              :input-props="{ includedKeys: ['agreement'] }"
+              :included-keys="['agreement']"
             >
               <template #activator="{ attrs: activatorProps }">
                 <air-information-card
@@ -127,9 +127,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
       <v-col cols="12" lg="8">
         <air-item-manager
           v-bind="attrs"
-          :input-props="{
-            includedKeys: includedKeys.adjusted,
-          }"
+          :included-keys="includedKeys.adjusted"
           v-slot="{ toUpdate }"
         >
           <v-card border flat>

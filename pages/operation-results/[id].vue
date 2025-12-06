@@ -47,9 +47,7 @@ const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
           <v-col cols="12">
             <OrganismsOperationResultManager
               v-bind="attrs"
-              :input-props="{
-                includedKeys: includedKeys.base,
-              }"
+              :included-keys="includedKeys.base"
             >
               <template #activator="{ attrs: activatorProps }">
                 <air-information-card

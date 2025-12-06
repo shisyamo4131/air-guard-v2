@@ -7,21 +7,6 @@ import * as CONSTANTS from "@shisyamo4131/air-guard-v2-schemas/constants";
  * - スキーマパッケージの定数に色設定を追加
  */
 const DEFAULT_DEFINITIONS = {
-  DAY_TYPE: {
-    WEEKDAY: { ...CONSTANTS.DAY_TYPE_VALUES.WEEKDAY, color: "blue" },
-    SATURDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SATURDAY, color: "light-blue" },
-    SUNDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SUNDAY, color: "red" },
-    HOLIDAY: { ...CONSTANTS.DAY_TYPE_VALUES.HOLIDAY, color: "pink" },
-  },
-  SHIFT_TYPE: {
-    DAY: { ...CONSTANTS.SHIFT_TYPE_VALUES.DAY, color: "deep-orange" },
-    NIGHT: { ...CONSTANTS.SHIFT_TYPE_VALUES.NIGHT, color: "indigo" },
-  },
-  QUALIFIED_TYPE: {
-    BASE: { value: "BASE", title: "基本", color: "grey" },
-    QUALIFIED: { value: "QUALIFIED", title: "資格", color: "primary" },
-  },
-  // ✨ BILLING_UNIT_TYPE を追加
   BILLING_UNIT_TYPE: {
     PER_DAY: {
       ...CONSTANTS.BILLING_UNIT_TYPE_VALUES.PER_DAY,
@@ -31,6 +16,32 @@ const DEFAULT_DEFINITIONS = {
       ...CONSTANTS.BILLING_UNIT_TYPE_VALUES.PER_HOUR,
       color: undefined,
     },
+  },
+  DAY_TYPE: {
+    WEEKDAY: { ...CONSTANTS.DAY_TYPE_VALUES.WEEKDAY, color: "blue" },
+    SATURDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SATURDAY, color: "light-blue" },
+    SUNDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SUNDAY, color: "red" },
+    HOLIDAY: { ...CONSTANTS.DAY_TYPE_VALUES.HOLIDAY, color: "pink" },
+  },
+  GENDER: {
+    MALE: {
+      ...CONSTANTS.GENDER_VALUES.MALE,
+      color: undefined,
+      icon: "mdi-gender-male",
+    },
+    FEMALE: {
+      ...CONSTANTS.GENDER_VALUES.FEMALE,
+      color: undefined,
+      icon: "mdi-gender-female",
+    },
+  },
+  SHIFT_TYPE: {
+    DAY: { ...CONSTANTS.SHIFT_TYPE_VALUES.DAY, color: "deep-orange" },
+    NIGHT: { ...CONSTANTS.SHIFT_TYPE_VALUES.NIGHT, color: "indigo" },
+  },
+  QUALIFIED_TYPE: {
+    BASE: { value: "BASE", title: "基本", color: "grey" },
+    QUALIFIED: { value: "QUALIFIED", title: "資格", color: "primary" },
   },
 };
 
@@ -67,6 +78,14 @@ function createConstantWithColors(defaultDef, categoryKey, company) {
 export function useConstants() {
   const auth = useAuthStore();
 
+  const BILLING_UNIT_TYPE = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
+      "billingUnitType",
+      auth.company
+    )
+  );
+
   const DAY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.DAY_TYPE,
@@ -75,6 +94,9 @@ export function useConstants() {
     )
   );
 
+  const GENDER = computed(() =>
+    createConstantWithColors(DEFAULT_DEFINITIONS.GENDER, "gender", auth.company)
+  );
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
@@ -87,15 +109,6 @@ export function useConstants() {
     createConstantWithColors(
       DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
       "qualifiedType",
-      auth.company
-    )
-  );
-
-  // ✨ BILLING_UNIT_TYPE を追加
-  const BILLING_UNIT_TYPE = computed(() =>
-    createConstantWithColors(
-      DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
-      "billingUnitType",
       auth.company
     )
   );
@@ -113,10 +126,11 @@ export function useConstants() {
   }
 
   return {
+    BILLING_UNIT_TYPE,
     DAY_TYPE,
+    GENDER,
     SHIFT_TYPE,
     QUALIFIED_TYPE,
-    BILLING_UNIT_TYPE, // ✨ エクスポート
     toArray,
     DEFAULT_DEFINITIONS,
   };

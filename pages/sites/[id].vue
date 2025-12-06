@@ -49,12 +49,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
   <TemplatesDetail :label="doc.name" fixed>
     <v-row>
       <v-col cols="12" md="4">
-        <air-item-manager
-          v-bind="attrs"
-          :input-props="{
-            excludedKeys: ['agreements'],
-          }"
-        >
+        <air-item-manager v-bind="attrs" :excluded-keys="['agreements']">
           <template #activator="{ attrs: activatorProps }">
             <air-information-card v-bind="activatorProps" :items="info.base" />
           </template>

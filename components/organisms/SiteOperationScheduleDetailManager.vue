@@ -22,15 +22,13 @@ defineExpose({
       maxWidth: 360,
     }"
     disable-delete
-    :input-props="{
-      includedKeys: [
-        'startTime',
-        'isStartNextDay',
-        'endTime',
-        'breakMinutes',
-        'isQualified',
-      ],
-    }"
+    :included-keys="[
+      'startTime',
+      'isStartNextDay',
+      'endTime',
+      'breakMinutes',
+      'isQualified',
+    ]"
   >
     <template #input.isStartNextDay="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />

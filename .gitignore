@@ -31,7 +31,5 @@ air-vuetify-v3
 
 # saved-data
 saved-data
-DEFINITION.md
-HISTORY.md
-DESIGN.md
-GUIDELINE.md
+*.md
+*.pdf

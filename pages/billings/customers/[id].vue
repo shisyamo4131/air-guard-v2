@@ -57,7 +57,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
           <td>
             <air-item-manager
               v-bind="attrs"
-              :input-props="{ includedKeys: ['paymentDueDateAt'] }"
+              :included-keys="['paymentDueDateAt']"
               label="入金予定日編集"
             >
               <template #activator="activatorProps">

@@ -46,7 +46,7 @@ export function useSiteManager({
     const base = [
       {
         title: "CODE",
-        props: { subtitle: doc.code, prependIcon: "mdi-code-tags" },
+        props: { subtitle: doc.code, prependIcon: "mdi-tag" },
       },
       {
         title: "住所",

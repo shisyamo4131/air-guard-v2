@@ -10,7 +10,7 @@ const { attrs } = useSitesManager();
     <air-array-manager
       class="fill-height"
       v-bind="attrs"
-      :input-props="{ excludedKeys: ['agreements'] }"
+      :excluded-keys="['agreements']"
     >
       <template #input.customer="{ attrs }">
         <MoleculesAutocompleteCustomer v-bind="attrs" />

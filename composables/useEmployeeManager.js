@@ -22,10 +22,11 @@ import { useDocManager } from "@/composables/useDocManager";
  * @returns {Function} toCreate - Method to trigger create operation
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
+ * @returns {Function} toTerminated - Method to update employee status to terminated
  */
 export function useEmployeeManager({
   doc = Vue.reactive(new Employee()),
-  deleteRedirectPath = null,
+  deleteRedirectPath = "/employees",
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useEmployeeManager", {
@@ -34,9 +35,43 @@ export function useEmployeeManager({
   });
 
   /***************************************************************************
+   * METHODS (PUBLIC)
+   ***************************************************************************/
+  /**
+   * Update the employee's status to terminated.
+   * - Redirects to the employee list page upon success.
+   * @param {Date} terminationDate - The date of termination
+   * @returns {Promise<void>}
+   * @throws {Error} if the termination date is invalid.
+   * @throws {Error} if the termination process fails.
+   */
+  async function toTerminated(terminationDate, callback) {
+    if (!terminationDate || !(terminationDate instanceof Date)) {
+      docManager.logger.error({
+        message: "退職日が不正です。",
+      });
+      return;
+    }
+    try {
+      await doc.toTerminated(terminationDate);
+      docManager.router.replace("/employees");
+      if (callback && typeof callback === "function") {
+        callback();
+      }
+    } catch (error) {
+      docManager.logger.error({
+        message: "退職処理で不明なエラーが発生しました。",
+        error,
+      });
+    }
+  }
+
+  /***************************************************************************
    * RETURN VALUES
    ***************************************************************************/
   return {
     ...docManager,
+
+    toTerminated,
   };
 }

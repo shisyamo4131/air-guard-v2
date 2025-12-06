@@ -208,7 +208,7 @@ export const pageStructure = [
       {
         id: "employees-list",
         path: "/employees",
-        label: "従業員一覧",
+        label: "在職者一覧",
         icon: "mdi-format-list-bulleted",
         roles: ["employees:read"],
         navigation: true,

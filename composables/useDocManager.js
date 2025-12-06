@@ -11,7 +11,8 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 /**
- * @param {Object} options - Options for the composable
+ * @param {string} composableName - Name of the composable for logging purposes
+ * @param {*} options - Options for the composable
  * @param {Object} options.doc - Reactive document instance to manage
  * @param {string} options.deleteRedirectPath - Path to redirect after deletion
  * @returns {Object} - The manager composable
@@ -85,6 +86,7 @@ export function useDocManager(
     isDev,
     isLoading,
 
+    router,
     logger,
 
     toCreate: (item) => component?.value?.toCreate?.(item),

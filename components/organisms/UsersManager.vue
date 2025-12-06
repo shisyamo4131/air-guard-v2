@@ -138,11 +138,11 @@ async function handleChangeAdminUser(item) {
     :handle-delete="handleDelete"
     :disable-delete="(item) => !!item.isAdmin"
     :is-loading="isLoading"
-    :input-props="{
-      excludedKeys: (item) => {
+    :excluded-keys="
+      (item) => {
         return item.isAdmin ? ['roles'] : [];
-      },
-    }"
+      }
+    "
     :table-props="{
       headers: [
         { title: 'email', key: 'email' },

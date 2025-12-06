@@ -51,6 +51,9 @@ export default defineNuxtPlugin((app) => {
      * https://vuetifyjs.com/en/features/global-configuration/#global-configuration
      */
     defaults: {
+      VBtn: {
+        variant: "flat",
+      },
       VCalendar: {
         hideWeekNumber: true,
       },

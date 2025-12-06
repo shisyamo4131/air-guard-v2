@@ -10,8 +10,6 @@ import { ArrangementNotification } from "@/schemas";
  * OPTIONS & CONSTANTS
  *****************************************************************************/
 defineOptions({ inheritAttrs: false });
-const includedKeys = ["status"];
-const inputProps = { includedKeys };
 const dialogProps = { maxWidth: 368 };
 
 /*****************************************************************************
@@ -41,7 +39,7 @@ defineExpose({
     ref="component"
     v-bind="$attrs"
     :dialog-props="dialogProps"
-    :input-props="inputProps"
+    :included-keys="['status']"
   >
     <template #input.status="{ attrs }">
       <v-chip-group v-bind="attrs" mandatory column>
