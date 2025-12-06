@@ -172,6 +172,71 @@ const includedKeys = computed(() => {
             </template>
           </air-item-manager>
         </v-col>
+        <v-col cols="12" md="8">
+          <air-item-manager
+            v-bind="attrs"
+            hide-delete-btn
+            :included-keys="[
+              { key: 'hasSecurityGuardRegistration', display: false },
+              {
+                key: 'dateOfSecurityGuardRegistration',
+                value: (item) =>
+                  dayjs(item.dateOfSecurityGuardRegistration).format(
+                    'YYYY年MM月DD日'
+                  ),
+              },
+              { key: 'priorSecurityExperienceYears', title: '入社前経験年数' },
+              { key: 'priorSecurityExperienceMonths', display: false },
+              'bloodType',
+              { key: 'emergencyContactName', title: '緊急連絡先' },
+              { key: 'emergencyContactRelation', display: false },
+              { key: 'emergencyContactRelationDetail', display: false },
+              { key: 'emergencyContactAddress', display: false },
+              { key: 'emergencyContactPhone', display: false },
+              'domicile',
+            ]"
+          >
+            <template
+              #activator="{ attrs: activatorProps, displayItems, item }"
+            >
+              <air-information-card
+                v-bind="activatorProps"
+                :items="displayItems"
+                :item="item"
+              >
+                <template
+                  #item.priorSecurityExperienceYears="{ item, internalItem }"
+                >
+                  <v-list-item v-bind="internalItem">
+                    <template #subtitle>
+                      {{
+                        `${internalItem.props.subtitle}年${item.priorSecurityExperienceMonths}ヶ月`
+                      }}
+                    </template>
+                  </v-list-item>
+                </template>
+                <template #item.emergencyContactName="{ item, internalItem }">
+                  <v-list-item v-bind="internalItem">
+                    <template #subtitle>
+                      <div class="d-flex flex-column ga-1">
+                        <span>
+                          {{ internalItem.props.subtitle }}
+                          {{ `(${item.emergencyContactRelationDetail})` }}
+                        </span>
+                        <span>
+                          {{ item.emergencyContactAddress }}
+                        </span>
+                        <span>
+                          {{ item.emergencyContactPhone }}
+                        </span>
+                      </div>
+                    </template>
+                  </v-list-item>
+                </template>
+              </air-information-card>
+            </template>
+          </air-item-manager>
+        </v-col>
         <v-col cols="12">
           <AtomsDialogsFullscreen v-model="dialogForTerminated" maxWidth="360">
             <template #activator="{ props: activatorProps }">
