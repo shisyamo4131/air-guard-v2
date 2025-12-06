@@ -36,7 +36,7 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  */
 export function useOperationBillingManager({
   doc = Vue.reactive(new OperationBilling()),
-  deleteRedirectPath = null,
+  redirectPath = null,
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
@@ -44,7 +44,7 @@ export function useOperationBillingManager({
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useOperationBillingManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /** VALIDATION */

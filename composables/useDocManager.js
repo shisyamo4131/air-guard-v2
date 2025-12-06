@@ -14,7 +14,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * @param {string} composableName - Name of the composable for logging purposes
  * @param {*} options - Options for the composable
  * @param {Object} options.doc - Reactive document instance to manage
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after the doc is out of scope like deletion.
  * @returns {Object} - The manager composable
  * @returns {Object} doc - Reactive document instance
  * @returns {Object} attrs - Computed attributes for the manager component
@@ -26,7 +26,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
  */
 export function useDocManager(
   composableName = "useDocManager",
-  { doc, deleteRedirectPath = null } = {}
+  { doc, redirectPath = null } = {}
 ) {
   /** SETUP LOGGER COMPOSABLE */
   const logger = useLogger(composableName, useErrorsStore());
@@ -45,10 +45,10 @@ export function useDocManager(
     return;
   }
 
-  if (isDev && !deleteRedirectPath) {
+  if (isDev && !redirectPath) {
     logger.warn({
       message:
-        "'deleteRedirectPath' is not provided. Make sure to handle redirection after deletion.",
+        "'redirectPath' is not provided. Make sure to handle redirection after deletion.",
     });
   }
 
@@ -58,8 +58,8 @@ export function useDocManager(
 
   /** METHODS (PRIVATE) */
   const _redirectAfterDelete = () => {
-    if (!deleteRedirectPath) return;
-    router.replace(deleteRedirectPath);
+    if (!redirectPath) return;
+    router.replace(redirectPath);
   };
 
   /** COMPUTED PROPERTIES */

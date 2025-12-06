@@ -11,7 +11,7 @@ import { useDocManager } from "@/composables/useDocManager";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive customer instance to manage
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after deletion
  * @returns {Object} - The customer manager composable
  * @returns {Object} doc - Reactive customer instance
  * @returns {Object} attrs - Computed attributes for the customer component
@@ -25,12 +25,12 @@ import { useDocManager } from "@/composables/useDocManager";
  */
 export function useCustomerManager({
   doc = Vue.reactive(new Customer()),
-  deleteRedirectPath = null,
+  redirectPath = null,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useCustomerManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /***************************************************************************

@@ -11,7 +11,7 @@ import { useDocManager } from "@/composables/useDocManager";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive outsourcer instance to manage
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after deletion
  * @returns {Object} - The outsourcer manager composable
  * @returns {Object} doc - Reactive outsourcer instance
  * @returns {Object} attrs - Computed attributes for the outsourcer component
@@ -23,12 +23,12 @@ import { useDocManager } from "@/composables/useDocManager";
  */
 export function useOutsourcerManager({
   doc = Vue.reactive(new Outsourcer()),
-  deleteRedirectPath = "/outsourcers",
+  redirectPath = "/outsourcers",
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useOutsourcerManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /***************************************************************************

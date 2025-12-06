@@ -11,7 +11,7 @@ import { useDocManager } from "@/composables/useDocManager";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive site operation schedule instance to manage
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after deletion
  * @returns {Object} - The site operation schedule manager composable
  * @returns {Object} doc - Reactive site operation schedule instance
  * @returns {Object} attrs - Computed attributes for the `AirItemManager` component
@@ -21,12 +21,12 @@ import { useDocManager } from "@/composables/useDocManager";
  */
 export function useSiteOperationScheduleManager({
   doc = Vue.reactive(new SiteOperationSchedule()),
-  deleteRedirectPath = null,
+  redirectPath = null,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useSiteOperationScheduleManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   return {

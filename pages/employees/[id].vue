@@ -14,9 +14,12 @@ const { GENDER } = useConstants();
 /** FOR TERMINATION PROCESS */
 const dialogForTerminated = ref(false);
 const dateOfTermination = ref(null);
+const reasonOfTermination = ref(null);
+const validTermination = ref(false);
 const onClickCancelTermination = () => {
   dialogForTerminated.value = false;
   dateOfTermination.value = null;
+  reasonOfTermination.value = null;
 };
 
 const includedKeys = computed(() => {
@@ -185,31 +188,37 @@ const includedKeys = computed(() => {
                 退職処理
               </template>
               <template #text>
-                <air-date-input
-                  v-model="dateOfTermination"
-                  :allowed-dates="
-                    (date) => !dayjs(date).isBefore(dayjs(doc.dateOfHire))
-                  "
-                  label="退職日"
-                  required
-                />
-                <div>
-                  <div>
-                    退職処理を行うと、この従業員は以降の配置や稼働実績への登録ができなくなります。
-                  </div>
-                </div>
+                <v-form v-model="validTermination">
+                  <air-date-input
+                    v-model="dateOfTermination"
+                    :allowed-dates="
+                      (date) => !dayjs(date).isBefore(dayjs(doc.dateOfHire))
+                    "
+                    label="退職日"
+                    required
+                  />
+                  <air-text-field
+                    v-model="reasonOfTermination"
+                    label="退職理由"
+                    required
+                  />
+                </v-form>
+                <v-alert type="warning">
+                  退職処理を行うと、この従業員は以降の配置や稼働実績への登録ができなくなります。
+                </v-alert>
               </template>
               <template #actions>
                 <MoleculesActionsSubmitCancel
                   class="flex-grow-1 d-flex justify-space-between"
                   submitText="実行"
                   color="error"
-                  :disabled="!dateOfTermination"
+                  :disabled="!validTermination"
                   @click:cancel="onClickCancelTermination"
                   @click:submit="
                     toTerminated(dateOfTermination, () => {
                       dialogForTerminated = false;
-                      dateOfTermination = null;
+                      dateOfTermination.value = null;
+                      reasonOfTermination.value = null;
                     })
                   "
                 />

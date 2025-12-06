@@ -11,7 +11,7 @@ import { useDocManager } from "@/composables/useDocManager";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive site instance to manage
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after deletion
  * @returns {Object} - The site manager composable
  * @returns {Object} doc - Reactive site instance
  * @returns {Object} attrs - Computed attributes for the site component
@@ -25,12 +25,12 @@ import { useDocManager } from "@/composables/useDocManager";
  */
 export function useSiteManager({
   doc = Vue.reactive(new Site()),
-  deleteRedirectPath = "/sites",
+  redirectPath = "/sites",
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useSiteManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /** COMPUTED PROPERTIES */

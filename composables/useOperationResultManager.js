@@ -15,7 +15,7 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
 /**
  * @param {Object} options - Options for the composable
  * @param {Object} options.doc - Reactive OperationResult instance to manage.
- * @param {string} options.deleteRedirectPath - Path to redirect after deletion
+ * @param {string} options.redirectPath - Path to redirect after deletion
  * @param {Object} options.fetchSiteComposable - Optional fetchSite composable to use for site data
  * @param {Object} options.fetchEmployeeComposable - Optional fetchEmployee composable to use for employee data
  * @param {Object} options.fetchOutsourcerComposable - Optional fetchOutsourcer composable to use for outsourcer data
@@ -38,7 +38,7 @@ import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
  */
 export function useOperationResultManager({
   doc = Vue.reactive(new OperationResult()),
-  deleteRedirectPath = "/operation-results",
+  redirectPath = "/operation-results",
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
@@ -46,7 +46,7 @@ export function useOperationResultManager({
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useOperationResultManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /** VALIDATION */

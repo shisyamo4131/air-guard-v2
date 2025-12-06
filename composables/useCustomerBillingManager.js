@@ -19,14 +19,14 @@ import { useFetchSite } from "./fetch/useFetchSite";
  */
 export function useCustomerBillingManager({
   doc = Vue.reactive(new Billing()),
-  deleteRedirectPath = null,
+  redirectPath = null,
   fetchCustomerComposable,
   fetchSiteComposable,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useOperationBillingManager", {
     doc,
-    deleteRedirectPath,
+    redirectPath,
   });
 
   /** VALIDATION */

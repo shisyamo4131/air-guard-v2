@@ -51,6 +51,12 @@ export default defineNuxtPlugin((app) => {
      * https://vuetifyjs.com/en/features/global-configuration/#global-configuration
      */
     defaults: {
+      VAlert: {
+        class: "pt-4 pb-3 px-3 text-body-2",
+        variant: "tonal",
+        border: "top",
+        prominent: true,
+      },
       VBtn: {
         variant: "flat",
       },
