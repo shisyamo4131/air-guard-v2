@@ -53,17 +53,8 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
           <template #activator="{ attrs: activatorProps }">
             <air-information-card v-bind="activatorProps" :items="info.base" />
           </template>
-          <template #input.customer="inputProps">
-            <air-autocomplete-api
-              v-bind="inputProps.attrs"
-              :api="searchCustomers"
-              clearable
-              :disabled="inputProps.editMode !== 'CREATE'"
-              :fetchItemByKeyApi="getCustomer"
-              item-title="name"
-              item-value="docId"
-              required
-            />
+          <template #input.customerId="inputProps">
+            <MoleculesAutocompleteCustomer v-bind="inputProps.attrs" />
           </template>
         </air-item-manager>
       </v-col>

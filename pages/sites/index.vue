@@ -12,7 +12,7 @@ const { attrs } = useSitesManager();
       v-bind="attrs"
       :excluded-keys="['agreements']"
     >
-      <template #input.customer="{ attrs }">
+      <template #input.customerId="{ attrs }">
         <MoleculesAutocompleteCustomer v-bind="attrs" />
       </template>
     </air-array-manager>
