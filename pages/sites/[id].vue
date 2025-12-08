@@ -6,7 +6,6 @@ import { useSite } from "@/composables/dataLayers/useSite";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAgreementsManager } from "@/composables/useAgreementsManager";
-import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 
 /*****************************************************************************
  * ROUTER
@@ -17,8 +16,6 @@ const siteId = route.params.id;
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { searchCustomers, getCustomer } = useFetchCustomer();
-
 /** Date Range */
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
