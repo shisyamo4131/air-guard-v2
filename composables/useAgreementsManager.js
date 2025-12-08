@@ -6,9 +6,8 @@
  *****************************************************************************/
 
 import * as Vue from "vue";
+import { useBaseManager } from "@/composables/useBaseManager";
 import { Agreement, CutoffDate } from "@/schemas";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLogger } from "../composables/useLogger";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 /**
@@ -21,15 +20,19 @@ import { useAuthStore } from "@/stores/useAuthStore";
 export function useAgreementsManager(instance, options = {}) {
   const { useDefault = false } = options;
 
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("AgreementsManager", useErrorsStore());
+  /** SETUP BASE MANAGER */
+  const {
+    attrs: baseAttrs,
+    isDev,
+    isLoading,
+    router,
+    logger,
+  } = useBaseManager("AgreementsManager");
+
+  /** SETUP `useAuthStore` to getting agreements from company */
   const { company } = useAuthStore();
 
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
+  /** Merge own agreements and company's agreements as selectable items */
   const selectableItems = Vue.computed(() => {
     const companyAgreements = company.agreements || [];
     if (useDefault) {
@@ -42,6 +45,7 @@ export function useAgreementsManager(instance, options = {}) {
   /** Attributes for the manager component */
   const attrs = Vue.computed(() => {
     return {
+      ...baseAttrs.value,
       modelValue: instance.agreements,
       schema: Agreement,
       errorMessages: {
@@ -160,10 +164,8 @@ export function useAgreementsManager(instance, options = {}) {
       },
       "onUpdate:modelValue": (value) => (instance.agreements = value),
       "onSubmit:complete": () => instance.update(),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": () => logger.clearError(),
     };
   });
 
-  return { attrs };
+  return { attrs, isDev, isLoading, router, logger };
 }
