@@ -76,7 +76,7 @@ export function useCollectionManager(
    */
   const attrs = Vue.computed(() => {
     return {
-      ...baseAttrs,
+      ...baseAttrs.value,
       modelValue: docs,
       schema,
       beforeEdit: _beforeEdit,

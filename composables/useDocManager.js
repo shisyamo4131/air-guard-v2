@@ -62,7 +62,7 @@ export function useDocManager(
   // Attributes for the component
   const attrs = Vue.computed(() => {
     return {
-      ...baseAttrs,
+      ...baseAttrs.value,
       ref: (el) => (component.value = el),
       modelValue: doc,
       handleCreate: (item) => item.create(),
