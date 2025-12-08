@@ -5,6 +5,7 @@
  * @author shisyamo4131
  */
 import * as Vue from "vue";
+import { useBaseManager } from "@/composables/useBaseManager";
 import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -24,18 +25,21 @@ import { useAuthStore } from "@/stores/useAuthStore";
  */
 export function useCollectionManager(
   composableName = "useCollectionManager",
-  {
-    docs = [],
-    schema,
-    createRedirectPath = null,
-    useDelay = false,
-    sortBy = [],
-  } = {}
+  { docs = [], schema, redirectPath = null, useDelay = false, sortBy = [] } = {}
 ) {
+  /** SETUP BASE MANAGER COMPOSABLE */
+  const {
+    attrs: baseAttrs,
+    isDev,
+    isLoading,
+    router,
+    logger,
+  } = useBaseManager();
+
   /** SETUP */
-  const { isDev } = useAuthStore();
-  const logger = useLogger(composableName, useErrorsStore());
-  const router = useRouter();
+  // const { isDev } = useAuthStore();
+  // const logger = useLogger(composableName, useErrorsStore());
+  // const router = useRouter();
   const search = Vue.ref(null);
 
   /** VALIDATION */
@@ -51,13 +55,13 @@ export function useCollectionManager(
    * @param {Object} item
    * @returns
    */
-  const beforeEdit = (editMode, item) => {
+  const _beforeEdit = (editMode, item) => {
     switch (editMode) {
       case "CREATE":
         return true;
       case "UPDATE":
-        if (createRedirectPath) {
-          router.push(`${createRedirectPath}/${item.docId}`);
+        if (redirectPath) {
+          router.push(`${redirectPath}/${item.docId}`);
           return false;
         }
         return true;
@@ -69,14 +73,20 @@ export function useCollectionManager(
     }
   };
 
+  const _redirectAfterDelete = () => {
+    if (!redirectPath) return;
+    router.replace(redirectPath);
+  };
+
   /**
    * Attributes for the `AirArrayManager` component.
    */
   const attrs = Vue.computed(() => {
     return {
+      ...baseAttrs,
       modelValue: docs,
       schema,
-      beforeEdit,
+      beforeEdit: _beforeEdit,
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
@@ -86,13 +96,21 @@ export function useCollectionManager(
         sortBy,
       },
       "onUpdate:search": (value) => (search.value = value),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": () => logger.clearError(),
-      onCreate: createRedirectPath
-        ? (item) => router.push(`${createRedirectPath}/${item.docId}`)
+      onDelete: () => _redirectAfterDelete(),
+      onCreate: redirectPath
+        ? (item) => router.push(`${redirectPath}/${item.docId}`)
         : undefined,
     };
   });
 
-  return { attrs, logger };
+  return {
+    attrs,
+    isDev,
+    isLoading,
+    router,
+    logger,
+    toCreate: (item) => component?.value?.toCreate?.(item),
+    toUpdate: (item) => component?.value?.toUpdate?.(item),
+    toDelete: (item) => component?.value?.toDelete?.(item),
+  };
 }

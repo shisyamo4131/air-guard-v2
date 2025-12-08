@@ -5,10 +5,7 @@
  * @author shisyamo4131
  */
 import * as Vue from "vue";
-import { useRouter } from "vue-router";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useBaseManager } from "@/composables/useBaseManager";
 
 /**
  * @param {string} composableName - Name of the composable for logging purposes
@@ -28,14 +25,14 @@ export function useDocManager(
   composableName = "useDocManager",
   { doc, redirectPath = null } = {}
 ) {
-  /** SETUP LOGGER COMPOSABLE */
-  const logger = useLogger(composableName, useErrorsStore());
-
-  /** SETUP ROUTER */
-  const router = useRouter();
-
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
+  /** SETUP BASE MANAGER COMPOSABLE */
+  const {
+    attrs: baseAttrs,
+    isDev,
+    isLoading,
+    router,
+    logger,
+  } = useBaseManager(composableName);
 
   /** VALIDATION */
   if (isDev && (!doc || typeof doc !== "object")) {
@@ -54,7 +51,6 @@ export function useDocManager(
 
   /** SETUP REACTIVE OBJECTS */
   const component = Vue.ref(null);
-  const isLoading = Vue.ref(false);
 
   /** METHODS (PRIVATE) */
   const _redirectAfterDelete = () => {
@@ -66,21 +62,17 @@ export function useDocManager(
   // Attributes for the component
   const attrs = Vue.computed(() => {
     return {
+      ...baseAttrs,
       ref: (el) => (component.value = el),
       modelValue: doc,
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
-      isLoading: isLoading.value,
       onDelete: () => _redirectAfterDelete(),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
-      "onUpdate:isLoading": (value) => (isLoading.value = value),
     };
   });
 
   return {
-    doc,
     attrs,
 
     isDev,
