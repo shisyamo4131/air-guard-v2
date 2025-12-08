@@ -6,10 +6,6 @@
  */
 import * as Vue from "vue";
 import { useBaseManager } from "@/composables/useBaseManager";
-import { useRouter } from "vue-router";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 /**
  * @param {string} composableName - Name of the composable for logging purposes
@@ -34,12 +30,9 @@ export function useCollectionManager(
     isLoading,
     router,
     logger,
-  } = useBaseManager();
+  } = useBaseManager(composableName);
 
   /** SETUP */
-  // const { isDev } = useAuthStore();
-  // const logger = useLogger(composableName, useErrorsStore());
-  // const router = useRouter();
   const search = Vue.ref(null);
 
   /** VALIDATION */
