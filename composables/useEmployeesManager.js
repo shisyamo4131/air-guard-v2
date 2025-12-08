@@ -21,7 +21,7 @@ export function useEmployeesManager({
   const collectionManager = useCollectionManager("useEmployeesManager", {
     docs,
     schema: Employee,
-    createRedirectPath: "/employees",
+    redirectPath: "/employees",
     useDelay: false,
     sortBy,
   });
