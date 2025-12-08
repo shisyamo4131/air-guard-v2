@@ -48,7 +48,7 @@ export function useDocManager(
   if (isDev && !redirectPath) {
     logger.warn({
       message:
-        "'redirectPath' is not provided. Make sure to handle redirection after deletion.",
+        "'redirectPath' is not provided. Make sure to handle redirection after deletion. Please ignore this warning if you use this composable without deletion.",
     });
   }
 
