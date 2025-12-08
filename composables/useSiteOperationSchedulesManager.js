@@ -69,9 +69,7 @@ export function useSiteOperationSchedulesManager({ docs, siteId } = {}) {
       handleDelete: (item) => item.delete(),
       disableUpdate: (item) => !!item.operationResultId,
       disableDelete: (item) => !!item.operationResultId,
-      inputProps: {
-        excludedKeys: ["siteId", "employees", "outsourcers"],
-      },
+      excludedKeys: ["siteId", "employees", "outsourcers"],
       onError: (error) => logger.error({ error }),
       "onError:clear": () => logger.clearError(),
     };
