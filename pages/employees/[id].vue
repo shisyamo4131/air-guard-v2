@@ -185,8 +185,6 @@ const includedKeys = computed(() => {
                     'YYYY年MM月DD日'
                   ),
               },
-              { key: 'priorSecurityExperienceYears', title: '入社前経験年数' },
-              { key: 'priorSecurityExperienceMonths', display: false },
               'bloodType',
               { key: 'emergencyContactName', title: '緊急連絡先' },
               { key: 'emergencyContactRelation', display: false },
@@ -200,21 +198,11 @@ const includedKeys = computed(() => {
               #activator="{ attrs: activatorProps, displayItems, item }"
             >
               <air-information-card
+                v-if="item.hasSecurityGuardRegistration"
                 v-bind="activatorProps"
                 :items="displayItems"
                 :item="item"
               >
-                <template
-                  #item.priorSecurityExperienceYears="{ item, internalItem }"
-                >
-                  <v-list-item v-bind="internalItem">
-                    <template #subtitle>
-                      {{
-                        `${internalItem.props.subtitle}年${item.priorSecurityExperienceMonths}ヶ月`
-                      }}
-                    </template>
-                  </v-list-item>
-                </template>
                 <template #item.emergencyContactName="{ item, internalItem }">
                   <v-list-item v-bind="internalItem">
                     <template #subtitle>
@@ -234,6 +222,28 @@ const includedKeys = computed(() => {
                   </v-list-item>
                 </template>
               </air-information-card>
+              <v-card v-else>
+                <v-card-text class="text-center">
+                  <v-icon
+                    icon="mdi-alert-circle-outline"
+                    size="48"
+                    color="warning"
+                  />
+                  <div class="text-h6 mt-2">警備員登録未完了</div>
+                  <div class="mt-1">
+                    この従業員は警備員登録が完了していません。<br />
+                    緊急連絡先や血液型などの情報を登録してください。
+                  </div>
+                </v-card-text>
+                <v-card-actions>
+                  <v-btn
+                    block
+                    color="primary"
+                    text="情報を登録する"
+                    @click="() => activatorProps['onClick:edit']()"
+                  />
+                </v-card-actions>
+              </v-card>
             </template>
           </air-item-manager>
         </v-col>
