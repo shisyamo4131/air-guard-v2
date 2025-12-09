@@ -1,5 +1,6 @@
 export { ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 export { Billing } from "@shisyamo4131/air-guard-v2-schemas";
+export { Certification } from "@shisyamo4131/air-guard-v2-schemas";
 export { default as Company } from "./Company.js";
 export { default as Customer } from "./Customer.js";
 export { CutoffDate } from "@shisyamo4131/air-guard-v2-schemas";
