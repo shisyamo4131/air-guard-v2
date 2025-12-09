@@ -4,11 +4,13 @@ import { useRoute } from "vue-router";
 import { useEmployee } from "@/composables/dataLayers/useEmployee";
 import { useEmployeeManager } from "@/composables/useEmployeeManager";
 import { useConstants } from "@/composables/useConstants";
+import { useCertificationsManager } from "@/composables/useCertificationsManager";
 
 /** SETUP */
 const docId = useRoute().params.id;
 const { doc } = useEmployee({ docId });
 const { attrs, toTerminated } = useEmployeeManager({ doc });
+const certificationsManager = useCertificationsManager(doc);
 const { GENDER } = useConstants();
 
 /** FOR TERMINATION PROCESS */
@@ -127,6 +129,7 @@ const includedKeys = computed(() => {
   <TemplatesDetail :label="doc.fullName" fixed>
     <v-container>
       <v-row>
+        <!-- 基本情報 -->
         <v-col cols="12" md="4">
           <air-item-manager v-bind="attrs" :included-keys="includedKeys">
             <template
@@ -172,6 +175,8 @@ const includedKeys = computed(() => {
             </template>
           </air-item-manager>
         </v-col>
+
+        <!-- 警備員登録情報 -->
         <v-col cols="12" md="8">
           <air-item-manager
             v-bind="attrs"
@@ -192,6 +197,7 @@ const includedKeys = computed(() => {
               { key: 'emergencyContactAddress', display: false },
               { key: 'emergencyContactPhone', display: false },
               'domicile',
+              { key: 'securityCertifications', editable: false },
             ]"
           >
             <template
@@ -221,6 +227,15 @@ const includedKeys = computed(() => {
                     </template>
                   </v-list-item>
                 </template>
+                <template #item.securityCertifications>
+                  <v-container>
+                    <v-card>
+                      <OrganismsCertificationsManager
+                        v-bind="certificationsManager.attrs.value"
+                      />
+                    </v-card>
+                  </v-container>
+                </template>
               </air-information-card>
               <v-card v-else>
                 <v-card-text class="text-center">
@@ -247,6 +262,8 @@ const includedKeys = computed(() => {
             </template>
           </air-item-manager>
         </v-col>
+
+        <!-- 退職処理ボタン -->
         <v-col cols="12">
           <AtomsDialogsFullscreen v-model="dialogForTerminated" maxWidth="360">
             <template #activator="{ props: activatorProps }">
