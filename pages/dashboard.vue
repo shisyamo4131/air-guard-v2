@@ -14,18 +14,14 @@ const statistics = useStatisticsStore();
 
 <template>
   <v-container class="py-8">
-    <v-row
-      v-if="auth.hasPermission('operation-billings:write')"
-      class="mb-6"
-      dense
-    >
+    <v-row v-if="auth.hasPermission('operation-billings:write')" dense>
       <v-col cols="12">
         <!-- 妥当性エラー稼働請求 -->
-        <v-card border variant="flat">
-          <v-card-title class="text-subtitle-1">
+        <MoleculesPopupCardWithTitle color="warning">
+          <template #title>
             <v-icon size="small">mdi-alert</v-icon>
             要修正稼働請求
-          </v-card-title>
+          </template>
           <v-data-table
             :headers="[
               {
@@ -66,35 +62,31 @@ const statistics = useStatisticsStore();
               }
             "
           />
-        </v-card>
+        </MoleculesPopupCardWithTitle>
       </v-col>
     </v-row>
 
     <!-- 概要カード -->
     <v-row class="mb-6" dense>
       <v-col cols="12" sm="4">
-        <v-card border variant="flat">
-          <v-card-title class="text-subtitle-1">
+        <MoleculesPopupCardWithTitle>
+          <template #title>
             <v-icon size="small">mdi-account-multiple</v-icon>
             本日の稼働数
-          </v-card-title>
-          <v-card-text>
-            <span class="text-h5">{{ statistics.operationCount }}</span>
-            <span class="ml-2">稼働</span>
-          </v-card-text>
-        </v-card>
+          </template>
+          <span class="text-h5">{{ statistics.operationCount }}</span>
+          <span class="ml-2">稼働</span>
+        </MoleculesPopupCardWithTitle>
       </v-col>
       <v-col cols="12" sm="4">
-        <v-card border variant="flat">
-          <v-card-title class="text-subtitle-1">
+        <MoleculesPopupCardWithTitle color="secondary">
+          <template #title>
             <v-icon size="small">mdi-pickaxe</v-icon>
             稼働中の現場
-          </v-card-title>
-          <v-card-text>
-            <span class="text-h5">{{ statistics.siteCount }}</span>
-            <span class="ml-2">拠点</span>
-          </v-card-text>
-        </v-card>
+          </template>
+          <span class="text-h5">{{ statistics.siteCount }}</span>
+          <span class="ml-2">拠点</span>
+        </MoleculesPopupCardWithTitle>
       </v-col>
     </v-row>
   </v-container>
