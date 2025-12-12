@@ -40,7 +40,11 @@ export default defineNuxtConfig({
     },
     // 開発時の依存関係最適化（本番ビルドには影響しない）
     optimizeDeps: {
-      include: ["@shisyamo4131/air-guard-v2-schemas/constants"],
+      include: [
+        "@shisyamo4131/air-guard-v2-schemas/constants",
+        "vuedraggable",
+        "pdfmake/build/pdfmake",
+      ],
     },
   },
 

@@ -1,4 +1,5 @@
 <script setup>
+import dayjs from "dayjs";
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "~/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "~/composables/fetch/useFetchOutsourcer";
@@ -23,7 +24,7 @@ provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
 const { doc } = useOperationResult({ docId });
 
 // Manager composable
-const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
+const { attrs, addWorker, changeWorker, removeWorker } =
   useOperationResultManager({
     doc,
     fetchSiteComposable,
@@ -47,14 +48,40 @@ const { attrs, info, includedKeys, addWorker, changeWorker, removeWorker } =
           <v-col cols="12">
             <OrganismsOperationResultManager
               v-bind="attrs"
-              :included-keys="includedKeys.base"
+              :included-keys="[
+                {
+                  key: 'siteId',
+                  title: '現場名',
+                  value: (item) =>
+                    fetchSiteComposable.cachedSites.value?.[item.siteId]
+                      ?.name || 'loading...',
+                  editable: false,
+                },
+                {
+                  key: 'dateAt',
+                  value: (item) =>
+                    dayjs(item.dateAt).format('YYYY年M月D日（ddd）'),
+                },
+                'dayType',
+                'shiftType',
+                'startTime',
+                'endTime',
+                'breakMinutes',
+                'workDescription',
+                'remarks',
+              ]"
             >
-              <template #activator="{ attrs: activatorProps }">
-                <air-information-card
-                  v-bind="activatorProps"
-                  :hide-edit="doc.isLocked"
-                  :items="info.base"
-                />
+              <template #activator="{ attrs: activatorProps, displayItems }">
+                <air-card popup color="primary">
+                  <template #title>基本情報</template>
+                  <template #text>
+                    <v-list :items="displayItems"> </v-list>
+                  </template>
+                  <MoleculesCardActionsEdit
+                    v-if="!doc.isLocked"
+                    v-bind="activatorProps"
+                  />
+                </air-card>
               </template>
             </OrganismsOperationResultManager>
           </v-col>

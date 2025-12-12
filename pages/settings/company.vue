@@ -5,7 +5,7 @@ import { useAgreementsManager } from "../../composables/useAgreementsManager";
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, info } = useCompanyManager();
+const { attrs } = useCompanyManager();
 const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
@@ -16,13 +16,32 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
       <v-col cols="12" md="4">
         <air-item-manager
           v-bind="attrs"
-          :excluded-keys="['agreements', 'minuteInterval', 'roundSetting']"
+          :included-keys="[
+            'companyName',
+            'companyNameKana',
+            { key: 'zipcode', display: false },
+            { key: 'prefCode', display: false },
+            { key: 'city', display: false },
+            { key: 'address', display: false },
+            { key: 'building', display: false },
+            { key: 'fullAddress', title: '住所', editable: false },
+            'tel',
+            'fax',
+            'bankName',
+            'branchName',
+            'accountType',
+            'accountNumber',
+            'accountHolder',
+          ]"
         >
-          <template #activator="activatorProps">
-            <air-information-card
-              v-bind="activatorProps.attrs"
-              :items="info.base"
-            />
+          <template #activator="{ attrs: activatorProps, displayItems }">
+            <air-card popup color="primary">
+              <template #title>基本情報</template>
+              <template #text>
+                <v-list :items="displayItems"> </v-list>
+              </template>
+              <MoleculesCardActionsEdit v-bind="activatorProps" />
+            </air-card>
           </template>
         </air-item-manager>
       </v-col>
@@ -33,11 +52,14 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
           v-bind="attrs"
           :included-keys="['minuteInterval', 'roundSetting']"
         >
-          <template #activator="activatorProps">
-            <air-information-card
-              v-bind="activatorProps.attrs"
-              :items="info.settings"
-            />
+          <template #activator="{ attrs: activatorProps, displayItems }">
+            <air-card popup color="primary">
+              <template #title>機能設定</template>
+              <template #text>
+                <v-list :items="displayItems"> </v-list>
+              </template>
+              <MoleculesCardActionsEdit v-bind="activatorProps" />
+            </air-card>
           </template>
         </air-item-manager>
       </v-col>

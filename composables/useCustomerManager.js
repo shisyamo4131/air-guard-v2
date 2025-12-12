@@ -25,7 +25,7 @@ import { useDocManager } from "@/composables/useDocManager";
  */
 export function useCustomerManager({
   doc = Vue.reactive(new Customer()),
-  redirectPath = null,
+  redirectPath = `/customers`,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
   const docManager = useDocManager("useCustomerManager", {

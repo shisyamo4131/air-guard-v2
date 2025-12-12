@@ -6,6 +6,7 @@ import { useSite } from "@/composables/dataLayers/useSite";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAgreementsManager } from "@/composables/useAgreementsManager";
+import { Site } from "@/schemas";
 
 /*****************************************************************************
  * ROUTER
@@ -30,7 +31,7 @@ const { doc, schedules } = useSite({
 });
 
 /** Site Manager */
-const { attrs, info } = useSiteManager({ doc });
+const { attrs } = useSiteManager({ doc });
 
 /** Site Operation Schedules Manager */
 const schedulesManager = useSiteOperationSchedulesManager({
@@ -46,9 +47,31 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
   <TemplatesDetail :label="doc.name" fixed>
     <v-row>
       <v-col cols="12" md="4">
-        <air-item-manager v-bind="attrs" :excluded-keys="['agreements']">
-          <template #activator="{ attrs: activatorProps }">
-            <air-information-card v-bind="activatorProps" :items="info.base" />
+        <air-item-manager
+          v-bind="attrs"
+          hide-delete-btn
+          :included-keys="[
+            'code',
+            'name',
+            { key: 'nameKana', display: false },
+            { key: 'zipcode', display: false },
+            { key: 'prefCode', display: false },
+            { key: 'city', display: false },
+            { key: 'address', display: false },
+            { key: 'building', display: false },
+            { key: 'fullAddress', title: '住所', editable: false },
+            'remarks',
+            { key: 'status', value: (item) => Site.STATUS[item.status].title },
+          ]"
+        >
+          <template #activator="{ attrs: activatorProps, displayItems }">
+            <air-card popup color="primary">
+              <template #title>基本情報</template>
+              <template #text>
+                <v-list :items="displayItems"> </v-list>
+              </template>
+              <MoleculesCardActionsEdit v-bind="activatorProps" />
+            </air-card>
           </template>
           <template #input.customerId="inputProps">
             <MoleculesAutocompleteCustomer v-bind="inputProps.attrs" />

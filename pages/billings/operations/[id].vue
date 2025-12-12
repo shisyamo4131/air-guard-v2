@@ -1,4 +1,5 @@
 <script setup>
+import dayjs from "dayjs";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
@@ -67,21 +68,96 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
       <v-col cols="12" lg="4">
         <v-row>
           <v-col cols="12">
-            <air-information-card :items="info.base" hide-edit />
+            <air-item-manager
+              v-bind="attrs"
+              :included-keys="[
+                {
+                  key: 'siteId',
+                  title: '現場名',
+                  value: (item) =>
+                    fetchSiteComposable.cachedSites.value?.[item.siteId]
+                      ?.name || 'loading...',
+                  editable: false,
+                },
+                {
+                  key: 'dateAt',
+                  value: (item) =>
+                    dayjs(item.dateAt).format('YYYY年M月D日（ddd）'),
+                },
+                'dayType',
+                'shiftType',
+                'startTime',
+                'endTime',
+                'breakMinutes',
+                'workDescription',
+                'remarks',
+              ]"
+            >
+              <template #activator="{ attrs: activatorProps, displayItems }">
+                <air-card popup color="primary">
+                  <template #title>基本情報</template>
+                  <template #text>
+                    <v-list :items="displayItems"> </v-list>
+                  </template>
+                </air-card>
+              </template>
+            </air-item-manager>
           </v-col>
           <v-col cols="12">
             <air-item-manager
               v-bind="attrs"
               label="取極め/請求情報編集"
               :dialog-props="{ maxWidth: '720' }"
-              :included-keys="['agreement']"
+              :included-keys="[
+                {
+                  key: 'unitPrice',
+                  title: '基本単価',
+                  value: (item) =>
+                    item.agreement ? item.agreement.unitPriceBase : '-',
+                  editable: false,
+                },
+                {
+                  key: 'overtimeUnitPriceBase',
+                  title: '基本時間外単価',
+                  value: (item) =>
+                    item.agreement ? item.agreement.overtimeUnitPriceBase : '-',
+                  editable: false,
+                },
+                {
+                  key: 'unitPriceQualified',
+                  title: '有資格者単価',
+                  value: (item) =>
+                    item.agreement ? item.agreement.unitPriceQualified : '-',
+                  editable: false,
+                },
+                {
+                  key: 'overtimeUnitPriceQualified',
+                  title: '有資格者時間外単価',
+                  value: (item) =>
+                    item.agreement
+                      ? item.agreement.overtimeUnitPriceQualified
+                      : '-',
+                  editable: false,
+                },
+                { key: 'agreement', display: false },
+                {
+                  key: 'billingDateAt',
+                  value: (item) =>
+                    item.billingDateAt
+                      ? dayjs(item.billingDateAt).format('YYYY年M月D日')
+                      : '',
+                  editable: false,
+                },
+              ]"
             >
-              <template #activator="{ attrs: activatorProps }">
-                <air-information-card
-                  v-bind="activatorProps"
-                  label="取極め/請求情報"
-                  :items="info.billings"
-                />
+              <template #activator="{ attrs: activatorProps, displayItems }">
+                <air-card popup color="primary">
+                  <template #title>取極め/請求情報</template>
+                  <template #text>
+                    <v-list :items="displayItems"></v-list>
+                  </template>
+                  <MoleculesCardActionsEdit v-bind="activatorProps" />
+                </air-card>
               </template>
               <template #input.agreement="inputProps">
                 <MoleculesAgreementGroup

@@ -6,86 +6,32 @@
  *****************************************************************************/
 import * as Vue from "vue";
 import { Customer } from "@/schemas";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLogger } from "../composables/useLogger";
-
-// Constraints to fetch only active customers.
-const statusOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
-
-// Default sorting by customer code in descending order.
-const sortBy = [{ key: "code", order: "desc" }];
+import { useCollectionManager } from "@/composables/useCollectionManager";
 
 /**
  * @returns {Object} - Customers manager attributes and information.
  * @returns {Object} attrs - The attributes for the customers manager.
  * @returns {Array} docs - The array of customer documents.
  */
-export function useCustomersManager() {
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("CustomersManager", useErrorsStore());
+export function useCustomersManager({
+  docs,
+  sortBy = [{ key: "code", order: "desc" }],
+} = {}) {
+  /** SETUP */
+  const collectionManager = useCollectionManager("useCustomersManager", {
+    docs,
+    schema: Customer,
+    redirectPath: "/customers",
+    useDelay: false,
+    sortBy,
+  });
 
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const instance = Vue.reactive(new Customer());
-  const search = Vue.ref("");
-  const loading = Vue.ref(false);
-
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-  function _subscribe() {
-    logger.clearError();
-    try {
-      loading.value = true;
-      const constraints = search.value ? search.value : [statusOption];
-      const options = search.value ? [statusOption] : [];
-      instance.subscribeDocs({ constraints, options });
-    } catch (error) {
-      logger.error({ error });
-    } finally {
-      loading.value = false;
-    }
-  }
-
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  Vue.watchEffect(_subscribe);
-
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => instance.unsubscribe());
-
-  /***************************************************************************
-   * COMPUTED PROPERTIES
-   ***************************************************************************/
-  /** Attributes for the customers manager. */
+  /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {
     return {
-      modelValue: instance.docs,
-      schema: Customer,
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
-      delay: 300,
-      loading: loading.value,
-      search: search.value,
-      tableProps: { customFilter: () => true, sortBy },
-      "onUpdate:search": (val) => (search.value = val),
-      onError: (error) => logger.error({ error }),
-      "onError:clear": () => logger.clearError(),
+      ...collectionManager.attrs.value,
     };
   });
 
-  /***************************************************************************
-   * RETURN VALUES
-   ***************************************************************************/
-  return {
-    attrs,
-    docs: Vue.readonly(instance.docs),
-  };
+  return { attrs };
 }

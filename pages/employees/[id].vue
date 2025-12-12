@@ -27,14 +27,8 @@ const onClickCancelTermination = () => {
 const includedKeys = computed(() => {
   return [
     "code",
-    {
-      key: "lastName",
-      display: false,
-    },
-    {
-      key: "firstName",
-      display: false,
-    },
+    { key: "lastName", display: false },
+    { key: "firstName", display: false },
     {
       key: "fullName",
       title: "氏名",
@@ -44,46 +38,25 @@ const includedKeys = computed(() => {
         }`,
       editable: false,
     },
-    {
-      key: "lastNameKana",
-      display: false,
-    },
-    {
-      key: "firstNameKana",
-      display: false,
-    },
-    {
-      key: "gender",
-      display: false,
-    },
+    { key: "lastNameKana", display: false },
+    { key: "firstNameKana", display: false },
+    { key: "gender", display: false },
     {
       key: "dateOfBirth",
+      prependIcon: "mdi-calendar",
       value: (item) => {
         return `${dayjs(item.dateOfBirth).format("YYYY年MM月DD日")} (${
           item.age.years
         }歳${item.age.months}ヶ月)`;
       },
     },
-    {
-      key: "zipcode",
-      display: false,
-    },
-    {
-      key: "prefCode",
-      display: false,
-    },
-    {
-      key: "city",
-      display: false,
-    },
-    {
-      key: "address",
-      display: false,
-    },
+    { key: "zipcode", display: false },
+    { key: "prefCode", display: false },
+    { key: "city", display: false },
+    { key: "address", display: false },
     {
       key: "fullAddress",
       title: "住所",
-      value: (item) => `${item.zipcode} ${item.fullAddress}`,
       editable: false,
     },
     { key: "building", display: false },
@@ -103,10 +76,7 @@ const includedKeys = computed(() => {
       title: "国籍",
       value: (item) => (item.isForeigner ? item.nationality : "日本"),
     },
-    {
-      key: "isForeigner",
-      display: false,
-    },
+    { key: "isForeigner", display: false },
     "foreignName",
     {
       key: "residenceStatus",
@@ -131,136 +101,150 @@ const includedKeys = computed(() => {
       <v-row>
         <!-- 基本情報 -->
         <v-col cols="12" md="4">
-          <air-item-manager v-bind="attrs" :included-keys="includedKeys">
-            <template
-              #activator="{ attrs: activatorProps, displayItems, item }"
-            >
-              <air-information-card
-                v-bind="activatorProps"
-                :items="displayItems"
-                :item="item"
-              >
-                <!-- 氏名に性別アイコンを追加 -->
-                <template #item.fullName="{ item, internalItem }">
-                  <v-list-item v-bind="internalItem">
-                    <template #subtitle>
-                      <div class="d-flex flex-column">
-                        <span class="text-caption">
-                          {{ item.fullNameKana }}
-                        </span>
-                        <span>
-                          {{ internalItem.props.subtitle }}
+          <air-item-manager
+            v-bind="attrs"
+            :included-keys="includedKeys"
+            hide-delete-btn
+          >
+            <template #activator="{ attrs: activatorProps, displayItems }">
+              <air-card popup color="primary">
+                <template #title>基本情報</template>
+                <template #text>
+                  <air-list :items="displayItems" reverse>
+                    <template #title="{ item }">
+                      <span v-if="item.key === 'fullName'">
+                        <div class="d-flex align-center">
+                          <span>{{ item.title }}</span>
                           <v-icon
-                            :icon="GENDER[item.gender].icon"
-                            :color="GENDER[item.gender].color"
-                            size="small"
+                            class="ml-2"
+                            :icon="GENDER[doc.gender].icon"
+                            :color="GENDER[doc.gender].color"
+                            size="x-small"
                           />
-                        </span>
-                      </div>
+                        </div>
+                        <div class="text-caption" style="line-height: 1">
+                          {{ doc["fullNameKana"] }}
+                        </div>
+                      </span>
+                      <span v-else-if="item.key === 'fullAddress'">
+                        <div>
+                          {{ `〒${doc["zipcode"]}` }}
+                        </div>
+                        <div>{{ item.title }}</div>
+                        <div v-if="doc['building']">
+                          {{ doc["building"] }}
+                        </div>
+                      </span>
+                      <span v-else-if="item.key === 'tel'">
+                        <div class="d-flex flex-wrap">
+                          <div>{{ item.title }}</div>
+                          <span class="px-1">/</span>
+                          <div>{{ doc["fax"] }}</div>
+                        </div>
+                      </span>
+                      <span v-else>
+                        {{ item.title }}
+                      </span>
                     </template>
-                  </v-list-item>
+                  </air-list>
                 </template>
-                <template #item.fullAddress="{ item, internalItem }">
-                  <v-list-item v-bind="internalItem">
-                    <template #subtitle>
-                      <div class="d-flex flex-column">
-                        <span>{{ `〒${item.zipcode}` }}</span>
-                        <span>{{ item.fullAddress }}</span>
-                        <span>{{ item.building }}</span>
-                      </div>
-                    </template>
-                  </v-list-item>
-                </template>
-              </air-information-card>
+                <MoleculesCardActionsEdit v-bind="activatorProps" />
+              </air-card>
             </template>
           </air-item-manager>
         </v-col>
 
         <!-- 警備員登録情報 -->
         <v-col cols="12" md="8">
-          <air-item-manager
-            v-bind="attrs"
-            hide-delete-btn
-            :included-keys="[
-              { key: 'hasSecurityGuardRegistration', display: false },
-              {
-                key: 'dateOfSecurityGuardRegistration',
-                value: (item) =>
-                  dayjs(item.dateOfSecurityGuardRegistration).format(
-                    'YYYY年MM月DD日'
-                  ),
-              },
-              'bloodType',
-              { key: 'emergencyContactName', title: '緊急連絡先' },
-              { key: 'emergencyContactRelation', display: false },
-              { key: 'emergencyContactRelationDetail', display: false },
-              { key: 'emergencyContactAddress', display: false },
-              { key: 'emergencyContactPhone', display: false },
-              'domicile',
-              { key: 'securityCertifications', editable: false },
-            ]"
-          >
-            <template
-              #activator="{ attrs: activatorProps, displayItems, item }"
-            >
-              <air-information-card
-                v-if="item.hasSecurityGuardRegistration"
-                v-bind="activatorProps"
-                :items="displayItems"
-                :item="item"
+          <v-row>
+            <v-col cols="12">
+              <air-item-manager
+                v-bind="attrs"
+                hide-delete-btn
+                :included-keys="[
+                  { key: 'hasSecurityGuardRegistration', display: false },
+                  {
+                    key: 'dateOfSecurityGuardRegistration',
+                    value: (item) =>
+                      dayjs(item.dateOfSecurityGuardRegistration).format(
+                        'YYYY年MM月DD日'
+                      ),
+                  },
+                  'bloodType',
+                  { key: 'emergencyContactName', title: '緊急連絡先' },
+                  { key: 'emergencyContactRelation', display: false },
+                  { key: 'emergencyContactRelationDetail', display: false },
+                  { key: 'emergencyContactAddress', display: false },
+                  { key: 'emergencyContactPhone', display: false },
+                  'domicile',
+                ]"
               >
-                <template #item.emergencyContactName="{ item, internalItem }">
-                  <v-list-item v-bind="internalItem">
-                    <template #subtitle>
-                      <div class="d-flex flex-column ga-1">
-                        <span>
-                          {{ internalItem.props.subtitle }}
-                          {{ `(${item.emergencyContactRelationDetail})` }}
-                        </span>
-                        <span>
-                          {{ item.emergencyContactAddress }}
-                        </span>
-                        <span>
-                          {{ item.emergencyContactPhone }}
-                        </span>
-                      </div>
+                <template #activator="{ attrs: activatorProps, displayItems }">
+                  <air-card
+                    v-if="doc.hasSecurityGuardRegistration"
+                    popup
+                    color="secondary"
+                  >
+                    <template #title>警備員登録情報</template>
+                    <template #text>
+                      <v-list :items="displayItems">
+                        <template #title="{ item }">
+                          <span v-if="item.key === 'emergencyContactName'">
+                            <div class="d-flex flex-column ga-1">
+                              <span>
+                                {{ item.title }}
+                                {{ `(${doc.emergencyContactRelationDetail})` }}
+                              </span>
+                              <span>
+                                {{ doc.emergencyContactAddress }}
+                              </span>
+                              <span>
+                                {{ doc.emergencyContactPhone }}
+                              </span>
+                            </div>
+                          </span>
+                          <span v-else>
+                            {{ item.title }}
+                          </span>
+                        </template>
+                      </v-list>
                     </template>
-                  </v-list-item>
-                </template>
-                <template #item.securityCertifications>
-                  <v-container>
-                    <v-card>
-                      <OrganismsCertificationsManager
-                        v-bind="certificationsManager.attrs.value"
+                    <MoleculesCardActionsEdit v-bind="activatorProps" />
+                  </air-card>
+                  <v-card v-else>
+                    <v-card-text class="text-center">
+                      <v-icon
+                        icon="mdi-alert-circle-outline"
+                        size="48"
+                        color="warning"
                       />
-                    </v-card>
-                  </v-container>
+                      <div class="text-h6 mt-2">警備員登録未完了</div>
+                      <div class="mt-1">
+                        この従業員は警備員登録が完了していません。<br />
+                        緊急連絡先や血液型などの情報を登録してください。
+                      </div>
+                    </v-card-text>
+                    <v-card-actions>
+                      <v-btn
+                        block
+                        color="primary"
+                        text="情報を登録する"
+                        @click="() => activatorProps['onClick:edit']()"
+                      />
+                    </v-card-actions>
+                  </v-card>
                 </template>
-              </air-information-card>
-              <v-card v-else>
-                <v-card-text class="text-center">
-                  <v-icon
-                    icon="mdi-alert-circle-outline"
-                    size="48"
-                    color="warning"
-                  />
-                  <div class="text-h6 mt-2">警備員登録未完了</div>
-                  <div class="mt-1">
-                    この従業員は警備員登録が完了していません。<br />
-                    緊急連絡先や血液型などの情報を登録してください。
-                  </div>
-                </v-card-text>
-                <v-card-actions>
-                  <v-btn
-                    block
-                    color="primary"
-                    text="情報を登録する"
-                    @click="() => activatorProps['onClick:edit']()"
-                  />
-                </v-card-actions>
+              </air-item-manager>
+            </v-col>
+            <v-col cols="12">
+              <!-- 保有資格 -->
+              <v-card>
+                <OrganismsCertificationsManager
+                  v-bind="certificationsManager.attrs.value"
+                />
               </v-card>
-            </template>
-          </air-item-manager>
+            </v-col>
+          </v-row>
         </v-col>
 
         <!-- 退職処理ボタン -->

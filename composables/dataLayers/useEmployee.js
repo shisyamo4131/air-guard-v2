@@ -2,8 +2,6 @@
  * useEmployee
  * @version 1.0.0
  * @description A data layer composable for employee details.
- * - Subscribes to employee and date ranged `EmployeeOperationSchedule` documents immediately.
- * - Requires dateRange composable.
  * @author shisyamo4131
  * @create 2025-12-05
  *****************************************************************************/

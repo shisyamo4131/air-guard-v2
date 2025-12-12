@@ -4,12 +4,16 @@
  * @description Customer management page
  * @author shisyamo4131
  */
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useCustomersManager } from "@/composables/useCustomersManager";
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs } = useCustomersManager();
+const { docs } = useDocuments("Customer", {
+  constraints: [["where", "contractStatus", "==", "ACTIVE"]],
+});
+const { attrs } = useCustomersManager({ docs });
 </script>
 
 <template>
