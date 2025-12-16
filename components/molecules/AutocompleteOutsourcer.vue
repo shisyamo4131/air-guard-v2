@@ -44,7 +44,7 @@ function onCreateHandler(event) {
         v-bind="outsourcerManager.attrs.value"
         @create="($event) => onCreateHandler($event)"
       >
-        <template #default="{ toCreate }">
+        <template #activator="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
       </air-item-manager>
