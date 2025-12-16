@@ -1,8 +1,8 @@
 import * as Vue from "vue";
 import { useDisplay } from "vuetify";
 import { useAuthStore } from "./useAuthStore";
-import { useRoute } from "vue-router";
-import { getPageConfig } from "@/utils/pageSettings";
+import { useRoute, useRouter } from "vue-router";
+import { getPageConfig, hasParentPage } from "@/utils/pageSettings";
 
 const APP_NAME = "AirGuard";
 
@@ -10,6 +10,7 @@ export const useAppStore = defineStore("app", () => {
   const display = useDisplay();
   const auth = useAuthStore();
   const route = useRoute();
+  const router = useRouter();
 
   /***************************************************************************
    * SETUP REACTIVE VARIABLES
@@ -64,9 +65,18 @@ export const useAppStore = defineStore("app", () => {
     };
   });
 
+  const previousButton = Vue.computed(() => {
+    return {
+      class: { "d-none": !hasParentPage(route.path) },
+      icon: "mdi-chevron-left",
+      onClick: () => router.go(-1),
+    };
+  });
+
   return {
     appBar,
     navBar,
     navIcon,
+    previousButton,
   };
 });

@@ -37,6 +37,7 @@ const handleSignOut = async () => {
     <v-app-bar v-bind="appStore.appBar">
       <template #prepend>
         <v-app-bar-nav-icon v-bind="appStore.navIcon" />
+        <v-btn v-bind="appStore.previousButton" />
       </template>
     </v-app-bar>
 

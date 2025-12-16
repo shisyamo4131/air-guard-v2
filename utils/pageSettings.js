@@ -404,42 +404,66 @@ function createPathMap(pages) {
 
 const pagesByPath = createPathMap(pageStructure);
 
-// /**
-//  * 指定されたパスの設定オブジェクトを取得する
-//  * @param {string} path - ルートパス
-//  * @returns {object | undefined} ページ設定オブジェクト、見つからなければ undefined
-//  *
-//  * ## 動的ルートの扱い
-//  * - `/operation-results/abc123` のような動的ルートは、
-//  *   親 (`/operation-results`) の設定を継承します
-//  * - 詳細ページで異なる権限が必要な場合は、
-//  *   pageStructure に明示的に定義してください
-//  */
-// export function getPageConfig(path) {
-//   let normalizedPath = path.replace(/\/$/, "") || "/"; // 入力パスを正規化
+/**
+ * 各パスの親パスを保持するマップを作成
+ * @returns {Object} { '/child/path': '/parent/path', ... }
+ */
+function createParentPathMap(pages) {
+  const map = {};
 
-//   // 1. 完全一致を試みる
-//   if (pagesByPath[normalizedPath]) {
-//     return pagesByPath[normalizedPath];
-//   }
+  function recurse(items, parentPath = null) {
+    for (const item of items) {
+      const config = { public: false, ...item };
 
-//   // 2. 動的ルートの親を探す
-//   // 例: /sites/abc の場合、/sites の設定を探す
-//   // 例: /settings/company/edit の場合、/settings/company の設定を探す
-//   let tempPath = normalizedPath;
-//   while (tempPath.includes("/")) {
-//     const lastSlashIndex = tempPath.lastIndexOf("/");
-//     // ルート直下 (/foo) の場合、親は "/"
-//     // それ以外 (/foo/bar) の場合、親は /foo
-//     tempPath =
-//       lastSlashIndex === 0 ? "/" : tempPath.substring(0, lastSlashIndex);
-//     if (pagesByPath[tempPath]) {
-//       return pagesByPath[tempPath]; // 親の設定が見つかった場合、それを返す
-//     }
-//     if (tempPath === "/") break; // ルートまで遡ったら終了
-//   }
-//   return undefined; // どの設定も見つからなければ undefined
-// }
+      if (config.path) {
+        const normalizedPath = config.path.replace(/\/$/, "") || "/";
+
+        // 親パスを記録
+        if (parentPath) {
+          map[normalizedPath] = parentPath;
+        }
+
+        // このアイテムが子を持つ場合、子の親はこのアイテム
+        if (config.children) {
+          recurse(config.children, normalizedPath);
+        }
+      } else if (config.children) {
+        // path がないグループの場合
+        // 子要素同士で親子関係を判定する必要がある
+
+        // まず子要素を収集
+        const childPaths = config.children
+          .filter((child) => child.path)
+          .map((child) => child.path.replace(/\/$/, "") || "/");
+
+        // 子要素の中で最も短いパス（親候補）を見つける
+        const sortedPaths = [...childPaths].sort((a, b) => a.length - b.length);
+
+        if (sortedPaths.length > 0) {
+          const potentialParent = sortedPaths[0];
+
+          // 他の子パスがこの親の配下にあるか判定
+          for (const childPath of childPaths) {
+            if (
+              childPath !== potentialParent &&
+              childPath.startsWith(potentialParent + "/")
+            ) {
+              map[childPath] = potentialParent;
+            }
+          }
+        }
+
+        // 再帰処理（親パスは引き継ぐ）
+        recurse(config.children, parentPath);
+      }
+    }
+  }
+
+  recurse(pages);
+  return map;
+}
+
+const parentPathMap = createParentPathMap(pageStructure);
 
 /**
  * 指定されたパスの設定オブジェクトを取得する
@@ -569,6 +593,75 @@ export function getNavigationItems(userRoles) {
     return result;
   }
   return filterAndMap(pageStructure);
+}
+
+/**
+ * 現在のパスに親ページが存在するかを判定
+ * @param {string} path - 現在のルートパス
+ * @returns {boolean} 親が存在する場合は true
+ */
+export function hasParentPage(path) {
+  const normalizedPath = path.replace(/\/$/, "") || "/";
+
+  // 1. ルートパス "/" は親を持たない
+  if (normalizedPath === "/") {
+    return false;
+  }
+
+  // 2. 直接的な親パスが登録されているか
+  if (parentPathMap[normalizedPath]) {
+    return true;
+  }
+
+  // 3. 動的ルート（/employees/abc123）の場合、
+  //    対応する設定（/employees/[id]）を探して親を確認
+  const pageConfig = getPageConfig(normalizedPath);
+
+  if (pageConfig && pageConfig.path && pageConfig.path !== normalizedPath) {
+    // 動的ルートの設定パスで親を確認
+    const configPath = pageConfig.path.replace(/\/$/, "") || "/";
+
+    if (parentPathMap[configPath]) {
+      return true;
+    }
+  }
+
+  // 4. どの条件にも当てはまらない場合は親なし
+  return false;
+}
+
+/**
+ * 現在のパスの親ページパスを取得
+ * @param {string} path - 現在のルートパス
+ * @returns {string | null} 親ページのパス、存在しない場合は null
+ */
+export function getParentPagePath(path) {
+  const normalizedPath = path.replace(/\/$/, "") || "/";
+
+  // 1. 直接的な親パスが登録されているか
+  if (parentPathMap[normalizedPath]) {
+    return parentPathMap[normalizedPath];
+  }
+
+  // 2. 動的ルート（/employees/abc123）の場合
+  const pageConfig = getPageConfig(normalizedPath);
+  if (pageConfig && pageConfig.path && pageConfig.path !== normalizedPath) {
+    const configPath = pageConfig.path.replace(/\/$/, "") || "/";
+    if (parentPathMap[configPath]) {
+      return parentPathMap[configPath];
+    }
+  }
+
+  // 3. ルートパスは親を持たない
+  if (normalizedPath === "/") {
+    return null;
+  }
+
+  // 4. フォールバック：URL構造から親を推測
+  const lastSlashIndex = normalizedPath.lastIndexOf("/");
+  return lastSlashIndex === 0
+    ? "/"
+    : normalizedPath.substring(0, lastSlashIndex);
 }
 
 // utils/pageSettings.js
