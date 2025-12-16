@@ -26,12 +26,12 @@ const DEFAULT_DEFINITIONS = {
   GENDER: {
     MALE: {
       ...CONSTANTS.GENDER_VALUES.MALE,
-      color: undefined,
+      color: "blue",
       icon: "mdi-gender-male",
     },
     FEMALE: {
       ...CONSTANTS.GENDER_VALUES.FEMALE,
-      color: undefined,
+      color: "pink",
       icon: "mdi-gender-female",
     },
   },
