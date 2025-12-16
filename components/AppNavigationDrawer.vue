@@ -1,8 +1,10 @@
 <script setup>
 import { computed } from "vue";
+import { useRoute } from "vue-router";
 import { getNavigationItems } from "@/utils/pageSettings";
 
 const auth = useAuthStore();
+const route = useRoute();
 
 /**
  * ナビゲーション項目を生成 (新しい pageSettings.js に対応)
@@ -26,8 +28,6 @@ const navigationItems = computed(() => {
               v-bind="props"
               :prepend-icon="item.prependIcon"
               :title="item.title"
-              :value="item.value"
-              :to="item.to"
             ></v-list-item>
           </template>
           <v-list-item
@@ -35,16 +35,16 @@ const navigationItems = computed(() => {
             :key="child.value"
             :prepend-icon="child.prependIcon"
             :title="child.title"
-            :value="child.value"
             :to="child.to"
+            :active="route.path.startsWith(child.to)"
           ></v-list-item>
         </v-list-group>
         <v-list-item
           v-else-if="!item.children"
           :title="item.title"
-          :value="item.value"
           :to="item.to"
           :prepend-icon="item.prependIcon"
+          :exact="false"
         ></v-list-item>
       </template>
     </v-list>
