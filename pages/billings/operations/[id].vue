@@ -34,7 +34,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
 </script>
 
 <template>
-  <TemplatesDetail label="稼働請求" fixed>
+  <TemplatesBase label="稼働請求" fixed>
     <v-row>
       <v-col cols="12">
         <v-banner v-if="doc.isLocked" color="primary" icon="mdi-lock">
@@ -289,5 +289,5 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
         >
       </v-col>
     </v-row>
-  </TemplatesDetail>
+  </TemplatesBase>
 </template>

@@ -39,7 +39,7 @@ const includedKeys2 = [
 </script>
 
 <template>
-  <TemplatesDetail fixed label="取引先詳細">
+  <TemplatesBase fixed label="取引先詳細">
     <v-container class="pa-0" fluid>
       <v-row>
         <v-col cols="12" md="4">
@@ -126,5 +126,5 @@ const includedKeys2 = [
         </v-col>
       </v-row>
     </v-container>
-  </TemplatesDetail>
+  </TemplatesBase>
 </template>

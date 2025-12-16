@@ -17,7 +17,6 @@ const props = defineProps({
     type: [String, Number],
     default: "calc(100vh - var(--app-bar-height) - var(--footer-height))",
   },
-  hideToolbar: { type: Boolean, default: false },
   label: { type: String, default: undefined },
 });
 
@@ -41,7 +40,7 @@ const toolbarDensity = computed(() => {
 <template>
   <v-container class="d-flex flex-column" :style="containerStyle" fluid>
     <v-toolbar
-      v-if="!hideToolbar"
+      v-if="props.label"
       class="mb-4"
       :color="color"
       :density="toolbarDensity"

@@ -44,7 +44,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
 </script>
 
 <template>
-  <TemplatesDetail :label="doc.name" fixed>
+  <TemplatesBase :label="doc.name" fixed>
     <v-row>
       <v-col cols="12" md="4">
         <air-item-manager
@@ -124,5 +124,5 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
         </v-card>
       </v-col>
     </v-row>
-  </TemplatesDetail>
+  </TemplatesBase>
 </template>
