@@ -175,6 +175,14 @@ export const pageStructure = [
         roles: ["customers:read"],
         navigation: true,
       },
+      {
+        id: "customer-detail",
+        path: "/customers/[id]",
+        label: "取引先詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["customers:read"],
+        navigation: false,
+      },
     ],
   },
 
@@ -194,6 +202,14 @@ export const pageStructure = [
         roles: ["sites:read"],
         navigation: true,
       },
+      {
+        id: "site-detail",
+        path: "/sites/[id]",
+        label: "現場詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["sites:read"],
+        navigation: false,
+      },
     ],
   },
 
@@ -212,6 +228,14 @@ export const pageStructure = [
         icon: "mdi-format-list-bulleted",
         roles: ["employees:read"],
         navigation: true,
+      },
+      {
+        id: "employee-detail",
+        path: "/employees/[id]",
+        label: "在職者詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["employees:read"],
+        navigation: false,
       },
     ],
   },
@@ -259,14 +283,14 @@ export const pageStructure = [
         roles: ["admin"],
         navigation: true,
       },
-      // {
-      //   id: "checkout",
-      //   path: "/settings/checkout",
-      //   label: "サブスクリプション管理",
-      //   icon: "mdi-account-cog",
-      //   roles: ["admin"],
-      //   navigation: true,
-      // },
+      {
+        id: "checkout",
+        path: "/settings/checkout",
+        label: "サブスクリプション管理",
+        icon: "mdi-account-cog",
+        roles: ["super-user"],
+        navigation: false,
+      },
     ],
   },
   // 他のページやグループを追加
@@ -380,16 +404,51 @@ function createPathMap(pages) {
 
 const pagesByPath = createPathMap(pageStructure);
 
+// /**
+//  * 指定されたパスの設定オブジェクトを取得する
+//  * @param {string} path - ルートパス
+//  * @returns {object | undefined} ページ設定オブジェクト、見つからなければ undefined
+//  *
+//  * ## 動的ルートの扱い
+//  * - `/operation-results/abc123` のような動的ルートは、
+//  *   親 (`/operation-results`) の設定を継承します
+//  * - 詳細ページで異なる権限が必要な場合は、
+//  *   pageStructure に明示的に定義してください
+//  */
+// export function getPageConfig(path) {
+//   let normalizedPath = path.replace(/\/$/, "") || "/"; // 入力パスを正規化
+
+//   // 1. 完全一致を試みる
+//   if (pagesByPath[normalizedPath]) {
+//     return pagesByPath[normalizedPath];
+//   }
+
+//   // 2. 動的ルートの親を探す
+//   // 例: /sites/abc の場合、/sites の設定を探す
+//   // 例: /settings/company/edit の場合、/settings/company の設定を探す
+//   let tempPath = normalizedPath;
+//   while (tempPath.includes("/")) {
+//     const lastSlashIndex = tempPath.lastIndexOf("/");
+//     // ルート直下 (/foo) の場合、親は "/"
+//     // それ以外 (/foo/bar) の場合、親は /foo
+//     tempPath =
+//       lastSlashIndex === 0 ? "/" : tempPath.substring(0, lastSlashIndex);
+//     if (pagesByPath[tempPath]) {
+//       return pagesByPath[tempPath]; // 親の設定が見つかった場合、それを返す
+//     }
+//     if (tempPath === "/") break; // ルートまで遡ったら終了
+//   }
+//   return undefined; // どの設定も見つからなければ undefined
+// }
+
 /**
  * 指定されたパスの設定オブジェクトを取得する
  * @param {string} path - ルートパス
  * @returns {object | undefined} ページ設定オブジェクト、見つからなければ undefined
  *
  * ## 動的ルートの扱い
- * - `/operation-results/abc123` のような動的ルートは、
- *   親 (`/operation-results`) の設定を継承します
- * - 詳細ページで異なる権限が必要な場合は、
- *   pageStructure に明示的に定義してください
+ * - `/employees/[id]` のような動的ルートは、パターンマッチングで対応
+ * - 例: `/employees/abc123` → `/employees/[id]` の設定を取得
  */
 export function getPageConfig(path) {
   let normalizedPath = path.replace(/\/$/, "") || "/"; // 入力パスを正規化
@@ -399,21 +458,53 @@ export function getPageConfig(path) {
     return pagesByPath[normalizedPath];
   }
 
-  // 2. 動的ルートの親を探す
-  // 例: /sites/abc の場合、/sites の設定を探す
-  // 例: /settings/company/edit の場合、/settings/company の設定を探す
+  // 2. 動的ルートパターンマッチング
+  // 例: /employees/abc123 → /employees/[id] を探す
+  const pathSegments = normalizedPath.split("/").filter(Boolean);
+
+  for (const [registeredPath, config] of Object.entries(pagesByPath)) {
+    const registeredSegments = registeredPath.split("/").filter(Boolean);
+
+    // セグメント数が同じかチェック
+    if (pathSegments.length !== registeredSegments.length) {
+      continue;
+    }
+
+    // 各セグメントを比較（[id] は任意の値にマッチ）
+    let isMatch = true;
+    for (let i = 0; i < pathSegments.length; i++) {
+      const registered = registeredSegments[i];
+      const actual = pathSegments[i];
+
+      // [id] や :id 形式の動的セグメント
+      const isDynamic =
+        (registered.startsWith("[") && registered.endsWith("]")) ||
+        registered.startsWith(":");
+
+      if (!isDynamic && registered !== actual) {
+        isMatch = false;
+        break;
+      }
+    }
+
+    if (isMatch) {
+      return config; // ✅ 動的ルートの設定を返す
+    }
+  }
+
+  // 3. 動的ルートの親を探す（従来の処理）
+  // 例: /employees/abc123/edit のような多階層の場合、/employees/[id] が見つからなければ /employees を探す
   let tempPath = normalizedPath;
   while (tempPath.includes("/")) {
     const lastSlashIndex = tempPath.lastIndexOf("/");
-    // ルート直下 (/foo) の場合、親は "/"
-    // それ以外 (/foo/bar) の場合、親は /foo
     tempPath =
       lastSlashIndex === 0 ? "/" : tempPath.substring(0, lastSlashIndex);
     if (pagesByPath[tempPath]) {
-      return pagesByPath[tempPath]; // 親の設定が見つかった場合、それを返す
+      return pagesByPath[tempPath];
     }
-    if (tempPath === "/") break; // ルートまで遡ったら終了
+    if (tempPath === "/") break;
   }
+
   return undefined; // どの設定も見つからなければ undefined
 }
 

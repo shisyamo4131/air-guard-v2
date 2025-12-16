@@ -18,6 +18,6 @@ const { attrs } = useCustomersManager({ docs });
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <air-array-manager class="fill-height" v-bind="attrs" no-title />
   </TemplatesFixedHeightContainer>
 </template>

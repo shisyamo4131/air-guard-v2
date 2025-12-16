@@ -1,16 +1,11 @@
 <script setup>
-// Vuetify のレスポンシブ情報取得用ユーティリティ
-import { useDisplay } from "vuetify";
+import { useRouter } from "vue-router";
+import { useAppStore } from "@/stores/useAppStore";
 
-// メッセージストアとローディングキュー
+/** SETUP STORES */
+const appStore = useAppStore();
 const messages = useMessagesStore();
 const { queue } = useLoadingsStore();
-
-// ナビゲーションドロワーの開閉状態
-const drawer = ref(false);
-
-// 画面幅が lg 以上かどうかを判定（ドロワーの常時表示に使用）
-const { lgAndUp } = useDisplay();
 
 // ルーターと認証ストアの取得
 const router = useRouter();
@@ -35,20 +30,17 @@ const handleSignOut = async () => {
     <!-- グローバルローディング状態を表示するダイアログ -->
     <air-loading-dialog :model-value="queue" />
 
-    <v-snackbar-queue v-model="messages.queue"></v-snackbar-queue>
+    <!-- SNACKBAR FOR GLOBAL MESSAGE -->
+    <v-snackbar-queue v-model="messages.queue" />
 
     <!-- アプリケーション上部のツールバー -->
-    <v-app-bar app color="primary" dark>
-      <v-app-bar-nav-icon v-if="auth.uid" @click="drawer = !drawer" />
-      <v-app-bar-title>AirGuard</v-app-bar-title>
+    <v-app-bar v-bind="appStore.appBar">
+      <template #prepend>
+        <v-app-bar-nav-icon v-bind="appStore.navIcon" />
+      </template>
     </v-app-bar>
 
-    <AppNavigationDrawer
-      v-model="drawer"
-      :permanent="lgAndUp"
-      :temporary="!lgAndUp"
-      app
-    >
+    <AppNavigationDrawer v-bind="appStore.navBar">
       <template #append>
         <v-list-item
           title="Sign Out"
