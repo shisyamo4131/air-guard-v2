@@ -15,6 +15,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * @returns {Object} - The manager composable
  * @returns {Object} attrs - Computed attributes for the manager component
  * @returns {boolean} isDev - Flag indicating if the environment is development
+ * @returns {Object} isLoading - Reactive loading state
+ * @returns {Object} router - Vue Router instance for navigation
  * @returns {Object} logger - Logger instance for logging messages and errors
  */
 export function useBaseManager(composableName = "useBaseManager") {
