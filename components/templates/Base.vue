@@ -39,7 +39,7 @@ const toolbarDensity = computed(() => {
 </script>
 
 <template>
-  <v-container class="d-flex flex-column" :style="containerStyle">
+  <v-container class="d-flex flex-column" :style="containerStyle" fluid>
     <v-toolbar
       v-if="!hideToolbar"
       class="mb-4"
@@ -50,8 +50,8 @@ const toolbarDensity = computed(() => {
       <v-toolbar-title>{{ label }}</v-toolbar-title>
       <slot name="append-toolbar" />
     </v-toolbar>
-    <div class="flex-grow-1 overflow-y-auto">
+    <v-container class="flex-grow-1 overflow-y-auto pa-0" fluid>
       <slot name="default" />
-    </div>
+    </v-container>
   </v-container>
 </template>
