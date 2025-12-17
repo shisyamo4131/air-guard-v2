@@ -70,7 +70,9 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
               <template #text>
                 <v-list :items="displayItems"> </v-list>
               </template>
-              <MoleculesCardActionsEdit v-bind="activatorProps" />
+              <template #actions>
+                <MoleculesActionsEdit v-bind="activatorProps" />
+              </template>
             </air-card>
           </template>
           <template #input.customerId="inputProps">

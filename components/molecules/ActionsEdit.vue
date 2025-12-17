@@ -18,13 +18,7 @@ const emit = defineEmits(["click:edit"]);
 </script>
 
 <template>
-  <v-card-actions class="justify-end">
-    <slot name="btn">
-      <v-btn
-        text="編集"
-        prepend-icon="mdi-pencil"
-        @click="emit('click:edit')"
-      />
-    </slot>
-  </v-card-actions>
+  <div class="d-flex flex-grow-1 justify-end">
+    <v-btn text="編集" prepend-icon="mdi-pencil" @click="emit('click:edit')" />
+  </div>
 </template>

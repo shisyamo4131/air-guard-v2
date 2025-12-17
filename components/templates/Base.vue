@@ -49,7 +49,7 @@ const toolbarDensity = computed(() => {
       <v-toolbar-title>{{ label }}</v-toolbar-title>
       <slot name="append-toolbar" />
     </v-toolbar>
-    <v-container class="flex-grow-1 overflow-y-auto pa-0" fluid>
+    <v-container class="flex-grow-1 overflow-y-auto" fluid>
       <slot name="default" />
     </v-container>
   </v-container>

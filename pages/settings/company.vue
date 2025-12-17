@@ -40,7 +40,9 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
               <template #text>
                 <v-list :items="displayItems"> </v-list>
               </template>
-              <MoleculesCardActionsEdit v-bind="activatorProps" />
+              <template #actions>
+                <MoleculesActionsEdit v-bind="activatorProps" />
+              </template>
             </air-card>
           </template>
         </air-item-manager>
@@ -58,7 +60,9 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
               <template #text>
                 <v-list :items="displayItems"> </v-list>
               </template>
-              <MoleculesCardActionsEdit v-bind="activatorProps" />
+              <template #actions>
+                <MoleculesActionsEdit v-bind="activatorProps" />
+              </template>
             </air-card>
           </template>
         </air-item-manager>

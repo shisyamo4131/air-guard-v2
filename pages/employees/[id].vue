@@ -14,15 +14,15 @@ const certificationsManager = useCertificationsManager(doc);
 const { GENDER } = useConstants();
 
 /** FOR TERMINATION PROCESS */
-const dialogForTerminated = ref(false);
-const dateOfTermination = ref(null);
-const reasonOfTermination = ref(null);
-const validTermination = ref(false);
-const onClickCancelTermination = () => {
-  dialogForTerminated.value = false;
+const dateOfTermination = ref(null); // 退職日
+const reasonOfTermination = ref(null); // 退職理由
+const validTermination = ref(false); // 退職処理フォームのバリデーション状態
+const terminateDialog = ref(false); // 退職処理ダイアログ表示フラグ
+watch(terminateDialog, (newVal) => {
+  if (newVal) return;
   dateOfTermination.value = null;
   reasonOfTermination.value = null;
-};
+});
 </script>
 
 <template>
@@ -55,6 +55,82 @@ const onClickCancelTermination = () => {
                       :color="GENDER[doc.gender].color"
                       icon="mdi-account"
                     />
+                  </template>
+                  <template #append>
+                    <v-menu>
+                      <template #activator="{ props: activatorProps }">
+                        <v-btn
+                          v-bind="activatorProps"
+                          icon="mdi-dots-horizontal"
+                        />
+                      </template>
+                      <v-list class="py-0" slim>
+                        <AtomsDialogsFullscreen
+                          v-model="terminateDialog"
+                          maxWidth="360"
+                        >
+                          <template #activator="{ props: activatorProps }">
+                            <v-list-item
+                              v-bind="activatorProps"
+                              density="compact"
+                            >
+                              <template #prepend>
+                                <v-icon
+                                  class="mr-n2"
+                                  color="error"
+                                  icon="mdi-minus-circle"
+                                  size="small"
+                                />
+                              </template>
+                              <template #title>退職処理</template>
+                            </v-list-item>
+                          </template>
+                          <v-card>
+                            <template #title>
+                              <v-icon icon="mdi-alert" color="error" />
+                              退職処理
+                            </template>
+                            <template #text>
+                              <v-form v-model="validTermination">
+                                <air-date-input
+                                  v-model="dateOfTermination"
+                                  :allowed-dates="
+                                    (date) =>
+                                      !dayjs(date).isBefore(
+                                        dayjs(doc.dateOfHire)
+                                      )
+                                  "
+                                  label="退職日"
+                                  required
+                                />
+                                <air-text-field
+                                  v-model="reasonOfTermination"
+                                  label="退職理由"
+                                  required
+                                />
+                              </v-form>
+                              <v-alert type="warning">
+                                退職処理を行うと、この従業員は以降の配置や稼働実績への登録ができなくなります。
+                              </v-alert>
+                            </template>
+                            <template #actions>
+                              <MoleculesActionsSubmitCancel
+                                class="flex-grow-1 d-flex justify-space-between"
+                                submitText="実行"
+                                color="error"
+                                :disabled="!validTermination"
+                                @click:cancel="terminateDialog = false"
+                                @click:submit="
+                                  toTerminated(dateOfTermination, () => {
+                                    terminateDialog = false;
+                                  })
+                                "
+                              />
+                            </template>
+                          </v-card>
+                        </AtomsDialogsFullscreen>
+                      </v-list>
+                    </v-menu>
                   </template>
                   <template #text>
                     <v-list slim>
@@ -91,7 +167,9 @@ const onClickCancelTermination = () => {
                       />
                     </v-list>
                   </template>
-                  <MoleculesCardActionsEdit v-bind="activatorProps" />
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
                 </v-card>
               </template>
             </air-item-manager>
@@ -119,7 +197,9 @@ const onClickCancelTermination = () => {
                   <template #text>
                     <v-skeleton-loader type="image" />
                   </template>
-                  <MoleculesCardActionsEdit v-bind="activatorProps" />
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
                 </v-card>
               </template>
             </air-item-manager>
@@ -160,7 +240,9 @@ const onClickCancelTermination = () => {
                       />
                     </v-list>
                   </template>
-                  <MoleculesCardActionsEdit v-bind="activatorProps" />
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
                 </v-card>
               </template>
             </air-item-manager>
@@ -216,7 +298,9 @@ const onClickCancelTermination = () => {
                       />
                     </v-list>
                   </template>
-                  <MoleculesCardActionsEdit v-bind="activatorProps" />
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
                 </v-card>
                 <v-card v-else>
                   <v-card-text class="text-center">
@@ -265,60 +349,36 @@ const onClickCancelTermination = () => {
         </v-row>
       </v-col>
 
-      <!-- 退職処理ボタン -->
+      <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <AtomsDialogsFullscreen v-model="dialogForTerminated" maxWidth="360">
-          <template #activator="{ props: activatorProps }">
+        <air-item-manager v-bind="attrs" hide-delete-btn>
+          <template #activator="{ toDelete }">
             <v-btn
-              v-bind="activatorProps"
               block
               color="error"
-              text="退職処理"
+              text="この従業員を削除する"
+              @click="() => toDelete()"
             />
           </template>
-          <v-card>
-            <template #title>
-              <v-icon icon="mdi-alert" color="error" />
-              退職処理
-            </template>
-            <template #text>
-              <v-form v-model="validTermination">
-                <air-date-input
-                  v-model="dateOfTermination"
-                  :allowed-dates="
-                    (date) => !dayjs(date).isBefore(dayjs(doc.dateOfHire))
-                  "
-                  label="退職日"
-                  required
+          <template #editor="{ actions: editorActions }">
+            <v-card>
+              <template #prepend>
+                <v-icon icon="mdi-alert" color="error" />
+              </template>
+              <template #title> 削除処理 </template>
+              <template #text>
+                削除すると復元することはできません。本当に削除しますか？
+              </template>
+              <template #actions>
+                <MoleculesActionsSubmitCancel
+                  v-bind="editorActions"
+                  submitText="実行"
+                  color="error"
                 />
-                <air-text-field
-                  v-model="reasonOfTermination"
-                  label="退職理由"
-                  required
-                />
-              </v-form>
-              <v-alert type="warning">
-                退職処理を行うと、この従業員は以降の配置や稼働実績への登録ができなくなります。
-              </v-alert>
-            </template>
-            <template #actions>
-              <MoleculesActionsSubmitCancel
-                class="flex-grow-1 d-flex justify-space-between"
-                submitText="実行"
-                color="error"
-                :disabled="!validTermination"
-                @click:cancel="onClickCancelTermination"
-                @click:submit="
-                  toTerminated(dateOfTermination, () => {
-                    dialogForTerminated = false;
-                    dateOfTermination.value = null;
-                    reasonOfTermination.value = null;
-                  })
-                "
-              />
-            </template>
-          </v-card>
-        </AtomsDialogsFullscreen>
+              </template>
+            </v-card>
+          </template>
+        </air-item-manager>
       </v-col>
     </v-row>
   </TemplatesBase>

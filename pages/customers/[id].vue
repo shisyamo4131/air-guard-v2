@@ -80,7 +80,9 @@ const includedKeys2 = [
                     </template>
                   </v-list>
                 </template>
-                <MoleculesCardActionsEdit v-bind="activatorProps" />
+                <template #actions>
+                  <MoleculesActionsEdit v-bind="activatorProps" />
+                </template>
               </air-card>
             </template>
           </air-item-manager>
@@ -119,7 +121,9 @@ const includedKeys2 = [
                     </template>
                   </v-list>
                 </template>
-                <MoleculesCardActionsEdit v-bind="activatorProps" />
+                <template #actions>
+                  <MoleculesActionsEdit v-bind="activatorProps" />
+                </template>
               </air-card>
             </template>
           </air-item-manager>

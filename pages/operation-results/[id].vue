@@ -77,10 +77,9 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                   <template #text>
                     <v-list :items="displayItems"> </v-list>
                   </template>
-                  <MoleculesCardActionsEdit
-                    v-if="!doc.isLocked"
-                    v-bind="activatorProps"
-                  />
+                  <template v-if="!doc.isLocked" #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
                 </air-card>
               </template>
             </OrganismsOperationResultManager>

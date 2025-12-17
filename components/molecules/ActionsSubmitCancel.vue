@@ -42,7 +42,7 @@ const submitAttrs = computed(() => {
 </script>
 
 <template>
-  <div>
+  <div class="flex-grow-1 d-flex justify-space-between">
     <v-btn v-bind="cancelAttrs" />
     <v-btn v-bind="submitAttrs" />
   </div>
