@@ -76,7 +76,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                 'remarks',
               ]"
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card>
                   <template #text>
                     <v-list slim>

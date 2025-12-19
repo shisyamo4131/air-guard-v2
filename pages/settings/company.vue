@@ -34,7 +34,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
             'accountHolder',
           ]"
         >
-          <template #activator="{ attrs: activatorProps, displayItems }">
+          <template #activator="{ props: activatorProps, displayItems }">
             <air-card popup color="primary">
               <template #title>基本情報</template>
               <template #text>
@@ -54,7 +54,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
           v-bind="attrs"
           :included-keys="['minuteInterval', 'roundSetting']"
         >
-          <template #activator="{ attrs: activatorProps, displayItems }">
+          <template #activator="{ props: activatorProps, displayItems }">
             <air-card popup color="primary">
               <template #title>機能設定</template>
               <template #text>

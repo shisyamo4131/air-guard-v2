@@ -64,7 +64,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
               hide-delete-btn
               :included-keys="['code', 'name', 'nameKana', 'remarks', 'status']"
             >
-              <template #activator="{ attrs: activatorProps, displayItems }">
+              <template #activator="{ props: activatorProps, displayItems }">
                 <v-card
                   :title="doc.name"
                   :subtitle="doc.nameKana"
@@ -109,7 +109,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   :title="`${doc.city}${doc.address}`"
                   :subtitle="`${doc.zipcode} ${doc.fullAddress} ${

@@ -169,7 +169,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 },
               ]"
             >
-              <template #activator="{ attrs: activatorProps, displayItems }">
+              <template #activator="{ props: activatorProps, displayItems }">
                 <v-card>
                   <template #title>取極め/請求情報</template>
                   <v-list slim>
@@ -249,7 +249,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
       </v-col>
       <v-col cols="12" lg="8">
         <air-item-manager v-bind="attrs" :included-keys="includedKeys.adjusted">
-          <template #activator="{ attrs: activatorProps }">
+          <template #activator="{ props: activatorProps }">
             <v-card border flat>
               <template #prepend>
                 <v-chip

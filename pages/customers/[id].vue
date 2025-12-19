@@ -60,7 +60,7 @@ const { attrs } = useCustomerManager({ doc });
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card title="基本情報">
                   <template #text>
                     <v-list slim>
@@ -108,7 +108,7 @@ const { attrs } = useCustomerManager({ doc });
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   :title="`${doc.city}${doc.address}`"
                   :subtitle="`${doc.zipcode} ${doc.fullAddress} ${
@@ -136,7 +136,7 @@ const { attrs } = useCustomerManager({ doc });
               :included-keys="['cutoffDate', 'paymentMonth', 'paymentDate']"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card title="請求・回収条件" prepend-icon="mdi-calendar">
                   <template #text>
                     <v-list slim>

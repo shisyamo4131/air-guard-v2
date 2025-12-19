@@ -49,7 +49,7 @@ watch(terminateDialog, (newVal) => {
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card :title="doc.fullName" :subtitle="doc.fullNameKana">
                   <template #prepend>
                     <v-icon
@@ -188,7 +188,7 @@ watch(terminateDialog, (newVal) => {
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   :title="`${doc.city}${doc.address}`"
                   :subtitle="`${doc.zipcode} ${doc.fullAddress} ${
@@ -220,7 +220,7 @@ watch(terminateDialog, (newVal) => {
               ]"
               hide-delete-btn
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   prepend-icon="mdi-earth"
                   :title="doc.isForeigner ? doc.nationality : '日本'"
@@ -273,7 +273,7 @@ watch(terminateDialog, (newVal) => {
                 'domicile',
               ]"
             >
-              <template #activator="{ attrs: activatorProps }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   v-if="doc.hasSecurityGuardRegistration"
                   prepend-icon="mdi-shield-check"
