@@ -115,7 +115,7 @@ export const pageStructure = [
     children: [
       {
         id: "operation-results-register",
-        path: "/operation-results/register",
+        path: "/operation-result-register",
         label: "上下番確定処理",
         icon: "mdi-checkbox-marked-circle",
         roles: ["operation-results:read"],

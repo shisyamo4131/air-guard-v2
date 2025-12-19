@@ -3,6 +3,7 @@
  * @version 1.0.0
  * @description A generic data layer composable for subscribing to Firestore documents.
  * - Automatically subscribes to documents of a specified schema class on component mount.
+ * - Automatically re-subscribes when `subscribeOptions` changes (if provided as a ref or computed).
  * - Automatically unsubscribes from documents on component unmount.
  * - Supports both query-based and N-gram token search.
  * @author shisyamo4131
@@ -13,7 +14,7 @@
  * const { docs: customers } = useDocuments('Customer')
  *
  * @example
- * // Query-based subscription
+ * // Static query-based subscription
  * const { docs: activeCustomers } = useDocuments('Customer', {
  *   constraints: [
  *     ['where', 'status', '==', 'active'],
@@ -21,6 +22,18 @@
  *     ['limit', 50]
  *   ]
  * })
+ *
+ * @example
+ * // Dynamic query with computed - automatically re-subscribes when dateRange changes
+ * const dateRange = ref({ from: new Date(), to: new Date() })
+ * const scheduleOptions = computed(() => ({
+ *   constraints: [
+ *     ['where', 'siteId', '==', siteId],
+ *     ['where', 'dateAt', '>=', dateRange.value.from],
+ *     ['where', 'dateAt', '<=', dateRange.value.to]
+ *   ]
+ * }))
+ * const { docs: schedules } = useDocuments('SiteOperationSchedule', scheduleOptions)
  *
  * @example
  * // N-gram token search with additional options
@@ -43,7 +56,7 @@ import * as Schemas from "@/schemas";
  * - When using string search, `options` can provide additional query conditions.
  *
  * @param {string} className - The name of the schema class (e.g., 'Customer', 'Site', 'Employee')
- * @param {Object} [subscribeOptions={}] - Options for subscribing to documents
+ * @param {Object|Ref<Object>|ComputedRef<Object>} [subscribeOptions={}] - Options for subscribing to documents (can be a plain object, ref, or computed)
  * @param {Array<Array>|string} [subscribeOptions.constraints=[]] - Query conditions or search string
  *   - **Array format**: Standard Firestore query conditions
  *     - `['where', field, operator, value]` - Filter documents
@@ -84,7 +97,7 @@ export function useDocuments(className, subscribeOptions = {}) {
    * @returns {void}
    */
   function subscribe() {
-    schemaInstance.subscribeDocs(subscribeOptions);
+    schemaInstance.subscribeDocs(subscribeOptions.value || subscribeOptions);
   }
 
   /**
@@ -105,6 +118,13 @@ export function useDocuments(className, subscribeOptions = {}) {
    * Unsubscribe from documents on component unmount.
    */
   Vue.onUnmounted(unsubscribe);
+
+  /**
+   * Re-subscribe to documents when `subscribeOptions` changes.
+   * - Works when `subscribeOptions` is a ref or computed object.
+   * - No-op if `subscribeOptions` is a plain object (static query).
+   */
+  Vue.watch(() => subscribeOptions, subscribe, { deep: true });
 
   return { docs: schemaInstance.docs };
 }

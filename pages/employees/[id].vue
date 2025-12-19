@@ -1,14 +1,14 @@
 <script setup>
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
-import { useEmployee } from "@/composables/dataLayers/useEmployee";
+import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useEmployeeManager } from "@/composables/useEmployeeManager";
 import { useConstants } from "@/composables/useConstants";
 import { useCertificationsManager } from "@/composables/useCertificationsManager";
 
 /** SETUP */
 const docId = useRoute().params.id;
-const { doc } = useEmployee({ docId });
+const { doc } = useDocument("Employee", { docId });
 const { attrs, toTerminated } = useEmployeeManager({ doc });
 const certificationsManager = useCertificationsManager(doc);
 const { GENDER } = useConstants();
@@ -45,6 +45,7 @@ watch(terminateDialog, (newVal) => {
                 'dateOfHire',
                 'mobile',
                 'email',
+                'remarks',
               ]"
               hide-delete-btn
             >
@@ -166,6 +167,7 @@ watch(terminateDialog, (newVal) => {
                         subtitle="メール"
                       />
                     </v-list>
+                    <v-card v-if="doc.remarks" :text="doc.remarks" />
                   </template>
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
@@ -189,7 +191,9 @@ watch(terminateDialog, (newVal) => {
               <template #activator="{ attrs: activatorProps }">
                 <v-card
                   :title="`${doc.city}${doc.address}`"
-                  :subtitle="`${doc.zipcode} ${doc.fullAddress} ${doc.building}`"
+                  :subtitle="`${doc.zipcode} ${doc.fullAddress} ${
+                    doc.building || ''
+                  }`"
                 >
                   <template #prepend>
                     <v-icon color="red" icon="mdi-map-marker" />
@@ -303,26 +307,19 @@ watch(terminateDialog, (newVal) => {
                   </template>
                 </v-card>
                 <v-card v-else>
-                  <v-card-text class="text-center">
-                    <v-icon
-                      icon="mdi-alert-circle-outline"
-                      size="48"
-                      color="warning"
-                    />
-                    <div class="text-h6 mt-2">警備員登録未完了</div>
-                    <div class="mt-1">
-                      この従業員は警備員登録が完了していません。<br />
-                      緊急連絡先や血液型などの情報を登録してください。
-                    </div>
-                  </v-card-text>
-                  <v-card-actions>
-                    <v-btn
-                      block
-                      color="primary"
-                      text="情報を登録する"
-                      @click="() => activatorProps['onClick:edit']()"
-                    />
-                  </v-card-actions>
+                  <v-empty-state
+                    title="警備員登録未完了"
+                    icon="mdi-alert-circle-outline"
+                    action-text="情報を登録する"
+                    @click:action="() => activatorProps['onClick:edit']()"
+                  >
+                    <template #text>
+                      <div>この従業員は警備員登録が完了していません。</div>
+                      <div>
+                        緊急連絡先や血液型などの情報を登録してください。
+                      </div>
+                    </template>
+                  </v-empty-state>
                 </v-card>
               </template>
             </air-item-manager>

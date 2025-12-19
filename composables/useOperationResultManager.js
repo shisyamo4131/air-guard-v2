@@ -7,6 +7,7 @@
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { OperationResult } from "@/schemas";
+import { DAY_TYPE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { useDocManager } from "@/composables/useDocManager";
 import { useFetchSite } from "./fetch/useFetchSite";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
@@ -39,13 +40,17 @@ export function useOperationResultManager({
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 } = {}) {
-  /** SETUP DOC MANAGER COMPOSABLE */
+  /***************************************************************************
+   * SETUP DOC MANAGER
+   ***************************************************************************/
   const docManager = useDocManager("useOperationResultManager", {
     doc,
     redirectPath,
   });
 
-  /** VALIDATION */
+  /***************************************************************************
+   * VALIDATION
+   ***************************************************************************/
   if (
     docManager.isDev &&
     (!fetchSiteComposable ||
@@ -65,22 +70,34 @@ export function useOperationResultManager({
     });
   }
 
-  /** SETUP FETCH COMPOSABLES */
+  /***************************************************************************
+   * SETUP
+   ***************************************************************************/
   const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
   const { fetchEmployee, cachedEmployees } =
     fetchEmployeeComposable || useFetchEmployee();
   const { fetchOutsourcer, cachedOutsourcers } =
     fetchOutsourcerComposable || useFetchOutsourcer();
 
-  /** WATCHERS */
+  /***************************************************************************
+   * WATCHERS
+   ***************************************************************************/
+  /**
+   * Watch for changes in the operation result document to fetch related data
+   */
   Vue.watch(doc, (newDoc) => {
     fetchSite(newDoc.siteId);
     fetchEmployee(newDoc.employeeIds);
     fetchOutsourcer(newDoc.outsourcerIds);
   });
 
-  /** METHODS (PUBLIC) */
-  // Add a worker to the operation result
+  /***************************************************************************
+   * METHODS (PUBLIC)
+   ***************************************************************************/
+  /**
+   * Add a worker to the operation result
+   * @param {Object} worker
+   */
   async function addWorker(worker) {
     try {
       doc.addWorker(worker, -1);
@@ -90,7 +107,10 @@ export function useOperationResultManager({
     }
   }
 
-  // Change a worker in the operation result
+  /**
+   * Change a worker in the operation result
+   * @param {Object} worker
+   */
   async function changeWorker(worker) {
     try {
       doc.changeWorker(worker);
@@ -100,7 +120,10 @@ export function useOperationResultManager({
     }
   }
 
-  // Remove a worker from the operation result
+  /**
+   * Remove a worker from the operation result
+   * @param {Object} worker
+   */
   async function removeWorker(worker) {
     try {
       doc.removeWorker(worker);
@@ -109,6 +132,19 @@ export function useOperationResultManager({
       docManager.logger.error({ error });
     }
   }
+
+  /***************************************************************************
+   * COMPUTED PROPERTIES
+   ***************************************************************************/
+  // Formatted date string
+  const dateString = Vue.computed(() => {
+    return dayjs(doc.dateAt).format("YYYY年M月D日(ddd)");
+  });
+
+  // Day type string
+  const dayTypeString = Vue.computed(() => {
+    return DAY_TYPE_VALUES?.[doc.dayType]?.title || "undefined";
+  });
 
   /***************************************************************************
    * RETURN VALUES

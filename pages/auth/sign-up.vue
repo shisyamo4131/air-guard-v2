@@ -147,7 +147,7 @@ function prevStep() {
 </script>
 
 <template>
-  <v-card flat max-width="480">
+  <v-card :border="false" max-width="480">
     <v-card-title class="text-center text-h5 mb-4">
       アカウント登録
     </v-card-title>
@@ -168,7 +168,7 @@ function prevStep() {
       >
         <!-- ステップ1: メールアドレス -->
         <template v-slot:item.1>
-          <v-card flat>
+          <v-card :border="false">
             <v-card-text class="text-body-2 mb-4">
               管理者により事前登録されたメールアドレスを入力してください。
             </v-card-text>
@@ -188,7 +188,7 @@ function prevStep() {
 
         <!-- ステップ2: パスワード -->
         <template v-slot:item.2>
-          <v-card flat>
+          <v-card :border="false">
             <v-card-text class="text-body-2 mb-4">
               使用するパスワードを設定してください（6文字以上）。
             </v-card-text>

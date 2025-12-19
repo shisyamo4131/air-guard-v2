@@ -145,7 +145,7 @@ function prevStep() {
 </script>
 
 <template>
-  <v-card flat max-width="480">
+  <v-card :border="false" max-width="480">
     <v-card-title class="text-center text-h5 mb-4">アカウント作成</v-card-title>
 
     <v-form v-model="formValid">
@@ -157,7 +157,7 @@ function prevStep() {
       >
         <!-- ステップ1: 認証情報 -->
         <template v-slot:item.1>
-          <v-card flat>
+          <v-card :border="false">
             <v-row>
               <v-col cols="12">
                 <air-text-field
@@ -188,7 +188,7 @@ function prevStep() {
 
         <!-- ステップ2: 会社情報 -->
         <template v-slot:item.2>
-          <v-card flat>
+          <v-card :border="false">
             <v-row>
               <v-col cols="12">
                 <air-text-field
@@ -213,7 +213,7 @@ function prevStep() {
 
         <!-- ステップ3: 管理者情報 -->
         <template v-slot:item.3>
-          <v-card flat>
+          <v-card :border="false">
             <v-row>
               <v-col cols="12">
                 <air-text-field

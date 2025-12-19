@@ -1,10 +1,14 @@
 <script setup>
 import dayjs from "dayjs";
+import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useFetchSite } from "~/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "~/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "~/composables/fetch/useFetchOutsourcer";
-import { useOperationResult } from "@/composables/dataLayers/useOperationResult";
 import { useOperationResultManager } from "~/composables/useOperationResultManager";
+import {
+  DAY_TYPE_VALUES,
+  SHIFT_TYPE_VALUES,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -13,6 +17,8 @@ import { useOperationResultManager } from "~/composables/useOperationResultManag
 const route = useRoute();
 const docId = route.params.id;
 
+const { doc } = useDocument("OperationResult", { docId });
+
 // Fetch composables
 const fetchSiteComposable = useFetchSite();
 const fetchEmployeeComposable = useFetchEmployee();
@@ -20,8 +26,6 @@ const fetchOutsourcerComposable = useFetchOutsourcer();
 provide("fetchSiteComposable", fetchSiteComposable);
 provide("fetchEmployeeComposable", fetchEmployeeComposable);
 provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
-
-const { doc } = useOperationResult({ docId });
 
 // Manager composable
 const { attrs, addWorker, changeWorker, removeWorker } =
@@ -34,7 +38,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
 </script>
 
 <template>
-  <TemplatesBase label="稼働実績" fixed>
+  <TemplatesBase fixed>
     <v-row>
       <v-col v-if="doc.isLocked" cols="12">
         <v-banner color="primary" icon="mdi-lock">
@@ -43,25 +47,26 @@ const { attrs, addWorker, changeWorker, removeWorker } =
           </v-banner-text>
         </v-banner>
       </v-col>
+      <v-col cols="12">
+        <v-card>
+          <template #title>
+            {{
+              `${
+                fetchSiteComposable.cachedSites.value?.[doc.siteId]?.name ||
+                "loading..."
+              }`
+            }}
+          </template>
+        </v-card>
+      </v-col>
       <v-col cols="12" lg="3">
         <v-row>
           <v-col cols="12">
-            <OrganismsOperationResultManager
+            <air-item-manager
               v-bind="attrs"
               :included-keys="[
-                {
-                  key: 'siteId',
-                  title: '現場名',
-                  value: (item) =>
-                    fetchSiteComposable.cachedSites.value?.[item.siteId]
-                      ?.name || 'loading...',
-                  editable: false,
-                },
-                {
-                  key: 'dateAt',
-                  value: (item) =>
-                    dayjs(item.dateAt).format('YYYY年M月D日（ddd）'),
-                },
+                'siteId',
+                'dateAt',
                 'dayType',
                 'shiftType',
                 'startTime',
@@ -71,18 +76,58 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                 'remarks',
               ]"
             >
-              <template #activator="{ attrs: activatorProps, displayItems }">
-                <air-card popup color="primary">
-                  <template #title>基本情報</template>
+              <template #activator="{ attrs: activatorProps }">
+                <v-card>
                   <template #text>
-                    <v-list :items="displayItems"> </v-list>
+                    <v-list slim>
+                      <v-list-item
+                        :title="`${dayjs(doc.dateAt).format(
+                          'YYYY年M月D日（ddd）'
+                        )}`"
+                        subtitle="日付"
+                      />
+                      <v-list-item
+                        :title="`${
+                          DAY_TYPE_VALUES?.[doc.dayType]?.title || 'undefined'
+                        }`"
+                        subtitle="曜日区分"
+                      />
+                      <v-list-item
+                        :title="`${
+                          SHIFT_TYPE_VALUES?.[doc.shiftType]?.title ||
+                          'undefined'
+                        }`"
+                        subtitle="勤務区分"
+                      />
+                      <v-list-item
+                        :title="`${doc.startTime} - ${doc.endTime}`"
+                        subtitle="定時勤務時間"
+                      />
+                      <v-list-item
+                        :title="`${doc.breakMinutes}`"
+                        subtitle="休憩時間（分）"
+                      />
+                      <v-list-item
+                        :title="`${doc.workDescription || '-'}`"
+                        subtitle="作業内容"
+                      />
+                    </v-list>
+                    <v-card v-if="doc.remarks" :text="doc.remarks" />
                   </template>
-                  <template v-if="!doc.isLocked" #actions>
+                  <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
-                </air-card>
+                </v-card>
               </template>
-            </OrganismsOperationResultManager>
+              <template #input.siteId="inputAttrs">
+                <MoleculesAutocompleteSite
+                  v-bind="inputAttrs.attrs"
+                  :fetch-site-composable="fetchSiteComposable"
+                  clearable
+                  :disabled="inputAttrs.editMode !== 'CREATE'"
+                />
+              </template>
+            </air-item-manager>
           </v-col>
         </v-row>
       </v-col>

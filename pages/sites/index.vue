@@ -1,8 +1,13 @@
 <script setup>
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useSitesManager } from "@/composables/useSitesManager";
+import { Site } from "@/schemas";
 
-/** SETUP COMPOSABLES */
-const { attrs } = useSitesManager();
+/** SETUP  */
+const { docs } = useDocuments("Site", {
+  constraints: [["where", "status", "==", Site.STATUS_ACTIVE]],
+});
+const { attrs } = useSitesManager({ docs });
 </script>
 
 <template>

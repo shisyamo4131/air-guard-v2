@@ -2,133 +2,206 @@
 import { useRoute } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useCustomerManager } from "@/composables/useCustomerManager.js";
-import { Customer, CutoffDate } from "@/schemas";
-import { PAYMENT_MONTH_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { CutoffDate } from "@/schemas";
+import {
+  CONTRACT_STATUS_VALUES,
+  PAYMENT_MONTH_VALUES,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /** SETUP */
 const route = useRoute();
 const docId = route.params.id;
 const { doc } = useDocument("Customer", { docId });
 const { attrs } = useCustomerManager({ doc });
-
-/** INCLUDED KEYS */
-const includedKeys = [
-  "code",
-  "name",
-  { key: "nameKana", display: false },
-  { key: "zipcode", display: false },
-  { key: "prefCode", display: false },
-  { key: "city", display: false },
-  { key: "address", display: false },
-  { key: "building", display: false },
-  { key: "fullAddress", title: "住所", editable: false },
-  { key: "tel", title: "電話/FAX" },
-  { key: "fax", display: false },
-  {
-    key: "contractStatus",
-    title: "状態",
-    editable: false,
-    value: (item) => Customer.STATUS[item.contractStatus].title,
-  },
-];
-const includedKeys2 = [
-  "cutoffDate",
-  { key: "paymentMonth", title: "支払い条件" },
-  { key: "paymentDate", display: false },
-];
 </script>
 
 <template>
-  <TemplatesBase fixed label="取引先詳細">
-    <v-container class="pa-0" fluid>
-      <v-row>
-        <v-col cols="12" md="4">
-          <air-item-manager
-            v-bind="attrs"
-            :included-keys="includedKeys"
-            hide-delete-btn
-          >
-            <template #activator="{ attrs: activatorProps, displayItems }">
-              <air-card popup color="primary" prepend-icon="mdi-magnify">
-                <template #title> 基本情報 </template>
-                <template #text>
-                  <v-list :items="displayItems">
-                    <template #title="{ item }">
-                      <span v-if="item.key === 'name'">
-                        <div class="text-caption">{{ doc["nameKana"] }}</div>
-                        <div>{{ item.title }}</div>
-                      </span>
-                      <span v-else-if="item.key === 'fullAddress'">
-                        <div class="text-caption">
-                          {{ `〒${doc["zipcode"]}` }}
-                        </div>
-                        <div>{{ item.title }}</div>
-                        <div class="text-subtitle-2" v-if="doc['building']">
-                          {{ doc["building"] }}
-                        </div>
-                      </span>
-                      <span v-else-if="item.key === 'tel'">
-                        <div class="d-flex flex-wrap">
-                          <div>{{ item.title }}</div>
-                          <span class="px-1">/</span>
-                          <div>{{ doc["fax"] }}</div>
-                        </div>
-                      </span>
-                      <span v-else>
-                        {{ item.title }}
-                      </span>
-                    </template>
-                  </v-list>
-                </template>
-                <template #actions>
-                  <MoleculesActionsEdit v-bind="activatorProps" />
-                </template>
-              </air-card>
-            </template>
-          </air-item-manager>
-        </v-col>
-        <v-col cols="12" md="4">
-          <air-item-manager
-            v-bind="attrs"
-            :included-keys="includedKeys2"
-            hide-delete-btn
-          >
-            <template #activator="{ attrs: activatorProps, displayItems }">
-              <air-card popup color="secondary" prepend-icon="mdi-magnify">
-                <template #title> 請求・回収条件 </template>
-                <template #text>
-                  <v-list :items="displayItems">
-                    <template #title="{ item }">
-                      <span v-if="item.key === 'cutoffDate'">
-                        <div>
-                          {{
-                            `毎月 ${CutoffDate.VALUES[item.title].title} 締め`
-                          }}
-                        </div>
-                      </span>
-                      <span v-else-if="item.key === 'paymentMonth'">
-                        <div>
-                          {{
-                            `${PAYMENT_MONTH_VALUES[doc.paymentMonth].title} ${
-                              CutoffDate.VALUES[doc.paymentDate].title
-                            } 入金`
-                          }}
-                        </div>
-                      </span>
-                      <span v-else>
-                        {{ item.title }}
-                      </span>
-                    </template>
-                  </v-list>
-                </template>
-                <template #actions>
-                  <MoleculesActionsEdit v-bind="activatorProps" />
-                </template>
-              </air-card>
-            </template>
-          </air-item-manager>
-        </v-col>
-      </v-row>
-    </v-container>
+  <TemplatesBase fixed>
+    <v-row>
+      <v-col cols="12">
+        <v-card
+          :title="doc.name"
+          :subtitle="doc.nameKana"
+          prepend-icon="mdi-domain"
+        >
+          <template #append>
+            <air-item-manager
+              v-bind="attrs"
+              :included-keys="['contractStatus']"
+              hide-delete-btn
+            >
+              <template #activator="{ toUpdate }">
+                <v-chip
+                  class="ml-2"
+                  :text="CONTRACT_STATUS_VALUES[doc.contractStatus].title"
+                  prepend-icon="mdi-pencil"
+                  density="compact"
+                  @click="() => toUpdate()"
+                />
+              </template>
+            </air-item-manager>
+          </template>
+        </v-card>
+      </v-col>
+      <!-- LEFT SIDE -->
+      <v-col cols="12" md="4">
+        <v-row>
+          <!-- 基本情報 -->
+          <v-col cols="12">
+            <air-item-manager
+              v-bind="attrs"
+              :included-keys="[
+                'code',
+                'name',
+                'nameKana',
+                'tel',
+                'fax',
+                'remarks',
+              ]"
+              hide-delete-btn
+            >
+              <template #activator="{ attrs: activatorProps }">
+                <v-card title="基本情報">
+                  <template #text>
+                    <v-list slim>
+                      <v-list-item
+                        :title="doc.name"
+                        subtitle="取引先名"
+                        prepend-icon="mdi-tag"
+                      />
+                      <v-list-item
+                        :title="doc.code"
+                        subtitle="取引先コード"
+                        prepend-icon="mdi-tag"
+                      />
+                      <v-list-item
+                        :title="doc.tel"
+                        subtitle="電話番号"
+                        prepend-icon="mdi-phone"
+                      />
+                      <v-list-item
+                        :title="doc.fax"
+                        subtitle="FAX番号"
+                        prepend-icon="mdi-fax"
+                      />
+                    </v-list>
+                    <v-card v-if="doc.remarks" :text="doc.remarks" />
+                  </template>
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
+                </v-card>
+              </template>
+            </air-item-manager>
+          </v-col>
+
+          <!-- 所在地 -->
+          <v-col cols="12">
+            <air-item-manager
+              v-bind="attrs"
+              :included-keys="[
+                'zipcode',
+                'prefCode',
+                'city',
+                'address',
+                'building',
+              ]"
+              hide-delete-btn
+            >
+              <template #activator="{ attrs: activatorProps }">
+                <v-card
+                  :title="`${doc.city}${doc.address}`"
+                  :subtitle="`${doc.zipcode} ${doc.fullAddress} ${
+                    doc.building || ''
+                  }`"
+                >
+                  <template #prepend>
+                    <v-icon color="red" icon="mdi-map-marker" />
+                  </template>
+                  <template #text>
+                    <v-skeleton-loader type="image" />
+                  </template>
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
+                </v-card>
+              </template>
+            </air-item-manager>
+          </v-col>
+
+          <!-- 請求・回収条件 -->
+          <v-col cols="12">
+            <air-item-manager
+              v-bind="attrs"
+              :included-keys="['cutoffDate', 'paymentMonth', 'paymentDate']"
+              hide-delete-btn
+            >
+              <template #activator="{ attrs: activatorProps }">
+                <v-card title="請求・回収条件" prepend-icon="mdi-calendar">
+                  <template #text>
+                    <v-list slim>
+                      <v-list-item
+                        :title="`毎月 ${
+                          CutoffDate.VALUES[doc.cutoffDate].title
+                        } 締め`"
+                        subtitle="締日"
+                      />
+                      <v-list-item
+                        :title="`${
+                          PAYMENT_MONTH_VALUES[doc.paymentMonth].title
+                        } ${CutoffDate.VALUES[doc.paymentDate].title} 入金`"
+                        subtitle="入金サイト"
+                      />
+                    </v-list>
+                  </template>
+                  <template #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
+                </v-card>
+              </template>
+            </air-item-manager>
+          </v-col>
+        </v-row>
+      </v-col>
+
+      <!-- RIGHT SIDE -->
+      <v-col cols="12" md="8">
+        <v-card title="稼働中現場" prepend-icon="mdi-pickaxe">
+          <v-skeleton-loader type="table" />
+        </v-card>
+      </v-col>
+
+      <!-- 削除処理ボタン -->
+      <v-col cols="12">
+        <air-item-manager v-bind="attrs" hide-delete-btn>
+          <template #activator="{ toDelete }">
+            <v-btn
+              block
+              color="error"
+              text="この取引先を削除する"
+              @click="() => toDelete()"
+            />
+          </template>
+          <template #editor="{ actions: editorActions }">
+            <v-card>
+              <template #prepend>
+                <v-icon icon="mdi-alert" color="error" />
+              </template>
+              <template #title> 削除処理 </template>
+              <template #text>
+                削除すると復元することはできません。本当に削除しますか？
+              </template>
+              <template #actions>
+                <MoleculesActionsSubmitCancel
+                  v-bind="editorActions"
+                  submitText="実行"
+                  color="error"
+                />
+              </template>
+            </v-card>
+          </template>
+        </air-item-manager>
+      </v-col>
+    </v-row>
   </TemplatesBase>
 </template>

@@ -77,7 +77,7 @@ const handleSignIn = async () => {
 </script>
 
 <template>
-  <v-card flat max-width="480">
+  <v-card :border="false" max-width="480">
     <v-form>
       <v-container>
         <v-row dense>

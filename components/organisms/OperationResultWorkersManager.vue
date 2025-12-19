@@ -75,7 +75,6 @@ function handleOnClickAddOutsourcer(handler) {
     :included-keys="[
       'id',
       'workerId',
-      'isEmployee',
       'startTime',
       'isStartNextDay',
       'endTime',
@@ -90,46 +89,45 @@ function handleOnClickAddOutsourcer(handler) {
     @error:clear="() => logger.clearError()"
   >
     <template #table="tableProps">
-      <air-data-table v-bind="tableProps" :hide-action="hideAction">
-        <!-- TOOLBAR BUTTONS -->
-        <template #toolbar-buttons>
-          <div>
-            <v-btn
-              v-if="!hideCreateButton"
-              text="従業員"
-              prepend-icon="mdi-plus"
-              @click="handleOnClickAddEmployee(tableProps.toCreate)"
-            />
-            <v-btn
-              v-if="!hideCreateButton"
-              text="外注先"
-              prepend-icon="mdi-plus"
-              @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
-            />
-          </div>
+      <v-card>
+        <template #title>稼働実績明細</template>
+        <template #append>
+          <v-btn
+            v-if="!hideCreateButton"
+            text="従業員"
+            prepend-icon="mdi-plus"
+            @click="handleOnClickAddEmployee(tableProps.toCreate)"
+          />
+          <v-btn
+            v-if="!hideCreateButton"
+            text="外注先"
+            prepend-icon="mdi-plus"
+            @click="handleOnClickAddOutsourcer(tableProps.toCreate)"
+          />
         </template>
+        <air-data-table v-bind="tableProps" :hide-action="hideAction">
+          <!-- DISPLAY NAME COLUMN -->
+          <template #item.displayName="{ item }">
+            <AtomsIconsHasLicense v-if="item?.isQualified" />
+            <AtomsIconsIsOjt v-if="item?.isOjt" />
+            <span v-if="getDisplayName(item)">
+              {{ getDisplayName(item) }}
+            </span>
+            <v-progress-circular v-else indeterminate size="small" />
+          </template>
 
-        <!-- DISPLAY NAME COLUMN -->
-        <template #item.displayName="{ item }">
-          <AtomsIconsHasLicense v-if="item?.isQualified" />
-          <AtomsIconsIsOjt v-if="item?.isOjt" />
-          <span v-if="getDisplayName(item)">
-            {{ getDisplayName(item) }}
-          </span>
-          <v-progress-circular v-else indeterminate size="small" />
-        </template>
-
-        <!-- START TIME COLUMN -->
-        <template #item.startTime="{ item }">
-          <span style="position: relative">
-            <AtomsChipsIsStartNextDay
-              v-if="item.isStartNextDay"
-              style="position: absolute; top: -8px"
-            />
-            {{ item.startTime }}</span
-          >
-        </template>
-      </air-data-table>
+          <!-- START TIME COLUMN -->
+          <template #item.startTime="{ item }">
+            <span style="position: relative">
+              <AtomsChipsIsStartNextDay
+                v-if="item.isStartNextDay"
+                style="position: absolute; top: -8px"
+              />
+              {{ item.startTime }}</span
+            >
+          </template>
+        </air-data-table>
+      </v-card>
     </template>
     <template #input.id="{ attrs, editMode }">
       <air-autocomplete-api

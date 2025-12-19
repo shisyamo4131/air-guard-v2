@@ -4,11 +4,11 @@
  * @description Employee management page
  */
 import { Employee } from "@/schemas";
-import { useEmployees } from "@/composables/dataLayers/useEmployees";
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useEmployeesManager } from "@/composables/useEmployeesManager";
 
 /** SETUP */
-const { docs } = useEmployees({
+const { docs } = useDocuments("Employee", {
   constraints: [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]],
 });
 const { attrs } = useEmployeesManager({ docs });

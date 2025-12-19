@@ -5,6 +5,10 @@ import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useOperationBilling } from "@/composables/dataLayers/useOperationBilling";
 import { useOperationBillingManager } from "@/composables/useOperationBillingManager";
+import {
+  DAY_TYPE_VALUES,
+  SHIFT_TYPE_VALUES,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -34,8 +38,20 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
 </script>
 
 <template>
-  <TemplatesBase label="稼働請求" fixed>
+  <TemplatesBase fixed>
     <v-row>
+      <v-col cols="12">
+        <v-card>
+          <template #title>
+            {{
+              `${
+                fetchSiteComposable.cachedSites.value?.[doc.siteId]?.name ||
+                "loading..."
+              }`
+            }}
+          </template>
+        </v-card>
+      </v-col>
       <v-col cols="12">
         <v-banner v-if="doc.isLocked" color="primary" icon="mdi-lock">
           <v-banner-text>
@@ -68,40 +84,43 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
       <v-col cols="12" lg="4">
         <v-row>
           <v-col cols="12">
-            <air-item-manager
-              v-bind="attrs"
-              :included-keys="[
-                {
-                  key: 'siteId',
-                  title: '現場名',
-                  value: (item) =>
-                    fetchSiteComposable.cachedSites.value?.[item.siteId]
-                      ?.name || 'loading...',
-                  editable: false,
-                },
-                {
-                  key: 'dateAt',
-                  value: (item) =>
-                    dayjs(item.dateAt).format('YYYY年M月D日（ddd）'),
-                },
-                'dayType',
-                'shiftType',
-                'startTime',
-                'endTime',
-                'breakMinutes',
-                'workDescription',
-                'remarks',
-              ]"
-            >
-              <template #activator="{ attrs: activatorProps, displayItems }">
-                <air-card popup color="primary">
-                  <template #title>基本情報</template>
-                  <template #text>
-                    <v-list :items="displayItems"> </v-list>
-                  </template>
-                </air-card>
+            <v-card>
+              <template #text>
+                <v-list slim>
+                  <v-list-item
+                    :title="`${dayjs(doc.dateAt).format(
+                      'YYYY年M月D日（ddd）'
+                    )}`"
+                    subtitle="日付"
+                  />
+                  <v-list-item
+                    :title="`${
+                      DAY_TYPE_VALUES?.[doc.dayType]?.title || 'undefined'
+                    }`"
+                    subtitle="曜日区分"
+                  />
+                  <v-list-item
+                    :title="`${
+                      SHIFT_TYPE_VALUES?.[doc.shiftType]?.title || 'undefined'
+                    }`"
+                    subtitle="勤務区分"
+                  />
+                  <v-list-item
+                    :title="`${doc.startTime} - ${doc.endTime}`"
+                    subtitle="定時勤務時間"
+                  />
+                  <v-list-item
+                    :title="`${doc.breakMinutes}`"
+                    subtitle="休憩時間（分）"
+                  />
+                  <v-list-item
+                    :title="`${doc.workDescription || '-'}`"
+                    subtitle="作業内容"
+                  />
+                </v-list>
+                <v-card v-if="doc.remarks" :text="doc.remarks" />
               </template>
-            </air-item-manager>
+            </v-card>
           </v-col>
           <v-col cols="12">
             <air-item-manager
@@ -151,15 +170,41 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
               ]"
             >
               <template #activator="{ attrs: activatorProps, displayItems }">
-                <air-card popup color="primary">
+                <v-card>
                   <template #title>取極め/請求情報</template>
-                  <template #text>
-                    <v-list :items="displayItems"></v-list>
-                  </template>
+                  <v-list slim>
+                    <v-list-item
+                      :title="`${
+                        doc.agreement?.unitPriceBase
+                          ? doc.agreement.unitPriceBase.toLocaleString() + '円'
+                          : '-'
+                      } / ${
+                        doc.agreement?.overtimeUnitPriceBase
+                          ? doc.agreement.overtimeUnitPriceBase.toLocaleString() +
+                            '円'
+                          : '-'
+                      }`"
+                      subtitle="基本単価 / 基本時間外単価"
+                    />
+                    <v-list-item
+                      :title="`${
+                        doc.agreement?.unitPriceQualified
+                          ? doc.agreement.unitPriceQualified.toLocaleString() +
+                            '円'
+                          : '-'
+                      } / ${
+                        doc.agreement?.overtimeUnitPriceQualified
+                          ? doc.agreement.overtimeUnitPriceQualified.toLocaleString() +
+                            '円'
+                          : '-'
+                      }`"
+                      subtitle="有資格者単価 / 有資格者時間外単価"
+                    />
+                  </v-list>
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
-                </air-card>
+                </v-card>
               </template>
               <template #input.agreement="inputProps">
                 <MoleculesAgreementGroup
@@ -203,15 +248,10 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
         </v-row>
       </v-col>
       <v-col cols="12" lg="8">
-        <air-item-manager
-          v-bind="attrs"
-          :included-keys="includedKeys.adjusted"
-          v-slot="{ toUpdate }"
-        >
-          <v-card border flat>
-            <v-toolbar density="compact">
-              <v-toolbar-title>
-                請求明細
+        <air-item-manager v-bind="attrs" :included-keys="includedKeys.adjusted">
+          <template #activator="{ attrs: activatorProps }">
+            <v-card border flat>
+              <template #prepend>
                 <v-chip
                   v-if="doc.useAdjustedQuantity"
                   color="warning"
@@ -220,61 +260,63 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                   size="small"
                   text="調整済"
                 />
-              </v-toolbar-title>
-              <v-spacer />
-              <v-btn icon="mdi-pencil" @click="toUpdate()" />
-            </v-toolbar>
-            <v-table>
-              <thead>
-                <tr>
-                  <th>区分</th>
-                  <th>数量</th>
-                  <th>単価</th>
-                  <th>金額</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>基本人工</td>
-                  <td>{{ doc.sales.base.quantity }}</td>
-                  <td>{{ doc.sales.base.unitPrice }}</td>
-                  <td>{{ doc.sales.base.regularAmount }}</td>
-                </tr>
-                <tr>
-                  <td>基本残業</td>
-                  <td>{{ doc.sales.base.overtimeMinutes }}</td>
-                  <td>{{ doc.sales.base.overtimeUnitPrice }}</td>
-                  <td>{{ doc.sales.base.overtimeAmount }}</td>
-                </tr>
-                <tr>
-                  <td>資格者人工</td>
-                  <td>{{ doc.sales.qualified.quantity }}</td>
-                  <td>{{ doc.sales.qualified.unitPrice }}</td>
-                  <td>{{ doc.sales.qualified.regularAmount }}</td>
-                </tr>
-                <tr>
-                  <td>資格者残業</td>
-                  <td>{{ doc.sales.qualified.overtimeMinutes }}</td>
-                  <td>{{ doc.sales.qualified.overtimeUnitPrice }}</td>
-                  <td>{{ doc.sales.qualified.overtimeAmount }}</td>
-                </tr>
-              </tbody>
-              <tfoot>
-                <tr>
-                  <th colspan="3">合計金額</th>
-                  <th>{{ doc.salesAmount }}</th>
-                </tr>
-                <tr>
-                  <th colspan="3">消費税額</th>
-                  <th>{{ doc.tax }}</th>
-                </tr>
-                <tr>
-                  <th colspan="3">請求金額</th>
-                  <th>{{ doc.billingAmount }}</th>
-                </tr>
-              </tfoot>
-            </v-table>
-          </v-card>
+              </template>
+              <template #title>請求明細</template>
+              <v-table>
+                <thead>
+                  <tr>
+                    <th>区分</th>
+                    <th>数量</th>
+                    <th>単価</th>
+                    <th>金額</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>基本人工</td>
+                    <td>{{ doc.sales.base.quantity }}</td>
+                    <td>{{ doc.sales.base.unitPrice }}</td>
+                    <td>{{ doc.sales.base.regularAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td>基本残業</td>
+                    <td>{{ doc.sales.base.overtimeMinutes }}</td>
+                    <td>{{ doc.sales.base.overtimeUnitPrice }}</td>
+                    <td>{{ doc.sales.base.overtimeAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td>資格者人工</td>
+                    <td>{{ doc.sales.qualified.quantity }}</td>
+                    <td>{{ doc.sales.qualified.unitPrice }}</td>
+                    <td>{{ doc.sales.qualified.regularAmount }}</td>
+                  </tr>
+                  <tr>
+                    <td>資格者残業</td>
+                    <td>{{ doc.sales.qualified.overtimeMinutes }}</td>
+                    <td>{{ doc.sales.qualified.overtimeUnitPrice }}</td>
+                    <td>{{ doc.sales.qualified.overtimeAmount }}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <th colspan="3">合計金額</th>
+                    <th>{{ doc.salesAmount }}</th>
+                  </tr>
+                  <tr>
+                    <th colspan="3">消費税額</th>
+                    <th>{{ doc.tax }}</th>
+                  </tr>
+                  <tr>
+                    <th colspan="3">請求金額</th>
+                    <th>{{ doc.billingAmount }}</th>
+                  </tr>
+                </tfoot>
+              </v-table>
+              <template #actions>
+                <MoleculesActionsEdit v-bind="activatorProps" />
+              </template>
+            </v-card>
+          </template>
         </air-item-manager>
       </v-col>
       <v-col cols="12">
@@ -284,11 +326,6 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
           hide-create-button
           hide-action
         />
-      </v-col>
-      <v-col cols="12">
-        <AtomsAlertsWarn v-if="!!doc.siteOperationScheduleId"
-          >稼働予定から作成された稼働実績です。</AtomsAlertsWarn
-        >
       </v-col>
     </v-row>
   </TemplatesBase>
