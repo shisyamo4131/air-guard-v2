@@ -8,14 +8,16 @@ import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useEmployeesManager } from "@/composables/useEmployeesManager";
 
 /** SETUP */
-const search = ref("");
-const subscribeOptions = computed(() => ({
-  constraints: search.value,
-  options: [["where", "employmentStatus", "==", Employee.STATUS_TERMINATED]],
-}));
+const search = ref(null);
+const options = [
+  ["where", "employmentStatus", "==", Employee.STATUS_TERMINATED],
+];
 
-const { docs } = useDocuments("Employee", subscribeOptions);
-const { attrs } = useEmployeesManager({ docs, useDelay: 300 });
+const { docs } = useDocuments("Employee", {
+  search,
+  options: toRef(options),
+});
+const { attrs } = useEmployeesManager({ docs, useDelay: 500 });
 </script>
 
 <template>
@@ -23,7 +25,6 @@ const { attrs } = useEmployeesManager({ docs, useDelay: 300 });
     <air-array-manager
       class="fill-height"
       v-bind="attrs"
-      :search="search"
       :table-props="{ hideAction: true }"
       @update:search="search = $event"
     >

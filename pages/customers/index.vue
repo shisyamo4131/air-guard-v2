@@ -10,8 +10,10 @@ import { useCustomersManager } from "@/composables/useCustomersManager";
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+const options = [["where", "contractStatus", "==", "ACTIVE"]];
 const { docs } = useDocuments("Customer", {
-  constraints: [["where", "contractStatus", "==", "ACTIVE"]],
+  options: toRef(options),
+  fetchAllOnEmpty: true,
 });
 const { attrs } = useCustomersManager({ docs });
 </script>

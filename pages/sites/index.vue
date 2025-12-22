@@ -4,8 +4,10 @@ import { useSitesManager } from "@/composables/useSitesManager";
 import { Site } from "@/schemas";
 
 /** SETUP  */
+const options = [["where", "status", "==", Site.STATUS_ACTIVE]];
 const { docs } = useDocuments("Site", {
-  constraints: [["where", "status", "==", Site.STATUS_ACTIVE]],
+  options: toRef(options),
+  fetchAllOnEmpty: true,
 });
 const { attrs } = useSitesManager({ docs });
 </script>

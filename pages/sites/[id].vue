@@ -27,19 +27,17 @@ const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
 /** Site Operation Schedules */
-const subscribeOptions = computed(() => {
-  return {
-    constraints: [
-      ["where", "siteId", "==", docId],
-      ["where", "dateAt", ">=", debouncedDateRange.value.from],
-      ["where", "dateAt", "<=", debouncedDateRange.value.to],
-    ],
-  };
+const options = computed(() => {
+  return [
+    ["where", "siteId", "==", docId],
+    ["where", "dateAt", ">=", debouncedDateRange.value.from],
+    ["where", "dateAt", "<=", debouncedDateRange.value.to],
+  ];
 });
-const { docs: schedules } = useDocuments(
-  "SiteOperationSchedule",
-  subscribeOptions
-);
+const { docs: schedules } = useDocuments("SiteOperationSchedule", {
+  options,
+  fetchAllOnEmpty: true,
+});
 
 /** Site Operation Schedules Manager */
 const schedulesManager = useSiteOperationSchedulesManager({

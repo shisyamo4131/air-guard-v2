@@ -8,8 +8,10 @@ import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useEmployeesManager } from "@/composables/useEmployeesManager";
 
 /** SETUP */
+const options = [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
 const { docs } = useDocuments("Employee", {
-  constraints: [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]],
+  options: toRef(options),
+  fetchAllOnEmpty: true,
 });
 const { attrs } = useEmployeesManager({ docs });
 </script>
