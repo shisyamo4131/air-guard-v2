@@ -24,7 +24,6 @@ const { attrs } = useEmployeesManager({ docs, useDelay: 300 });
       class="fill-height"
       v-bind="attrs"
       :search="search"
-      label="従業員登録"
       :table-props="{ hideAction: true }"
       @update:search="search = $event"
     >
