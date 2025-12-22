@@ -9,12 +9,24 @@ import { Employee } from "@/schemas";
 import { useCollectionManager } from "@/composables/useCollectionManager";
 
 /**
+ * @param {*} options - Options for the employees manager
+ * @param {Array} options.docs - Array of employee document instances to manage
+ * @param {boolean|number} options.useDelay - Whether to use delay for reflection of `search` string in ms
+ * @param {Array} options.sortBy - Array of sorting criteria
  * @returns {Object} - Employees manager attributes and information.
- * @returns {Object} attrs - The attributes for the employees manager.
- * @returns {Array} docs - The array of employee documents.
+ * @returns {Object} attrs - Computed attributes for the collection component
+ * @returns {string} search - Reactive search string
+ * @returns {boolean} isDev - Flag indicating if the environment is development
+ * @returns {Object} isLoading - Reactive loading state
+ * @returns {Object} router - Vue Router instance for navigation
+ * @returns {Object} logger - Logger instance for logging messages and errors
+ * @returns {Function} toCreate - Method to trigger create operation
+ * @returns {Function} toUpdate - Method to trigger update operation
+ * @returns {Function} toDelete - Method to trigger delete operation
  */
 export function useEmployeesManager({
   docs,
+  useDelay = false,
   sortBy = [{ key: "code", order: "desc" }],
 } = {}) {
   /** SETUP */
@@ -22,7 +34,7 @@ export function useEmployeesManager({
     docs,
     schema: Employee,
     redirectPath: "/employees",
-    useDelay: false,
+    useDelay,
     sortBy,
   });
 
@@ -33,5 +45,8 @@ export function useEmployeesManager({
     };
   });
 
-  return { attrs };
+  return {
+    ...collectionManager,
+    attrs,
+  };
 }

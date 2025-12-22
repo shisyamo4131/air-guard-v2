@@ -13,16 +13,17 @@ const route = useRoute();
 const navigationItems = computed(() => {
   return getNavigationItems(auth.roles);
 });
+
+const normalizeRouteName = computed(() =>
+  route.name.endsWith("-id") ? route.name.replace("-id", "") : route.name
+);
 </script>
 
 <template>
   <v-navigation-drawer app>
     <v-list nav>
       <template v-for="item in navigationItems" :key="item.value">
-        <v-list-group
-          v-if="item.children && item.children.length > 0"
-          :value="item.value"
-        >
+        <v-list-group v-if="item.children && item.children.length > 0">
           <template v-slot:activator="{ props }">
             <v-list-item
               v-bind="props"
@@ -36,7 +37,7 @@ const navigationItems = computed(() => {
             :prepend-icon="child.prependIcon"
             :title="child.title"
             :to="child.to"
-            :active="route.path.startsWith(child.to)"
+            :active="normalizeRouteName === child.value"
           ></v-list-item>
         </v-list-group>
         <v-list-item

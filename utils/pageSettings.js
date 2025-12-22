@@ -114,7 +114,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "operation-results-register",
+        id: "operation-result-register",
         path: "/operation-result-register",
         label: "上下番確定処理",
         icon: "mdi-checkbox-marked-circle",
@@ -122,7 +122,7 @@ export const pageStructure = [
         navigation: true,
       },
       {
-        id: "operation-results-list",
+        id: "operation-results",
         path: "/operation-results",
         label: "稼働実績一覧",
         icon: "mdi-format-list-bulleted",
@@ -141,7 +141,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "operation-billings-list",
+        id: "billings-operations",
         path: "/billings/operations",
         label: "稼働請求一覧",
         icon: "mdi-file-document",
@@ -149,7 +149,7 @@ export const pageStructure = [
         navigation: true,
       },
       {
-        id: "customer-billings-list",
+        id: "billings-customers",
         path: "/billings/customers",
         label: "取引先請求一覧",
         icon: "mdi-file-document-outline",
@@ -168,7 +168,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "customers-list",
+        id: "customers",
         path: "/customers",
         label: "取引先一覧",
         icon: "mdi-format-list-bulleted",
@@ -195,7 +195,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "sites-list",
+        id: "sites",
         path: "/sites",
         label: "現場一覧",
         icon: "mdi-format-list-bulleted",
@@ -222,7 +222,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "employees-list",
+        id: "employees",
         path: "/employees",
         label: "在職者一覧",
         icon: "mdi-format-list-bulleted",
@@ -237,6 +237,14 @@ export const pageStructure = [
         roles: ["employees:read"],
         navigation: false,
       },
+      {
+        id: "employees-terminated",
+        path: "/employees/terminated",
+        label: "退職者検索",
+        icon: "mdi-format-list-bulleted",
+        roles: ["employees:read"],
+        navigation: true,
+      },
     ],
   },
 
@@ -249,7 +257,7 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "outsourcers-list",
+        id: "outsourcers",
         path: "/outsourcers",
         label: "外注先一覧",
         icon: "mdi-format-list-bulleted",

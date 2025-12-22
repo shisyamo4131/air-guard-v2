@@ -122,9 +122,13 @@ watch(terminateDialog, (newVal) => {
                                 :disabled="!validTermination"
                                 @click:cancel="terminateDialog = false"
                                 @click:submit="
-                                  toTerminated(dateOfTermination, () => {
-                                    terminateDialog = false;
-                                  })
+                                  toTerminated(
+                                    dateOfTermination,
+                                    reasonOfTermination,
+                                    () => {
+                                      terminateDialog = false;
+                                    }
+                                  )
                                 "
                               />
                             </template>

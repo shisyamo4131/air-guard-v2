@@ -1,7 +1,7 @@
 <script setup>
 /**
- * @file pages/settings/employees.vue
- * @description Employee management page
+ * @file pages/employees/index.vue
+ * @description Active employee list page
  */
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
