@@ -2,13 +2,18 @@
 /**
  * @file pages/settings/outsourcers.vue
  * @description Outsourcer management page
+ *
+ * NOTE:
+ * - 現状、すべて外注先をサブスクライブしているが、将来的にフィルタリングする可能性あり。
  */
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useOutsourcersManager } from "@/composables/useOutsourcersManager";
 
-/*****************************************************************************
- * SETUP COMPOSABLES
- *****************************************************************************/
-const { attrs } = useOutsourcersManager();
+/** SETUP DATA LAYER */
+const { docs } = useDocuments("Outsourcer", {
+  fetchAllOnEmpty: true,
+});
+const { attrs } = useOutsourcersManager({ docs, redirectPath: null });
 </script>
 
 <template>

@@ -11,11 +11,12 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
 /**
  * @param {*} options - Options for the employees manager
  * @param {Array} options.docs - Array of employee document instances to manage
+ * @param {string} options.redirectPath - Path to redirect after creation
  * @param {boolean|number} options.useDelay - Whether to use delay for reflection of `search` string in ms
  * @param {Array} options.sortBy - Array of sorting criteria
+ * @param {Function} options.onUpdateSearch - Callback function when search is updated
  * @returns {Object} - Employees manager attributes and information.
  * @returns {Object} attrs - Computed attributes for the collection component
- * @returns {string} search - Reactive search string
  * @returns {boolean} isDev - Flag indicating if the environment is development
  * @returns {Object} isLoading - Reactive loading state
  * @returns {Object} router - Vue Router instance for navigation
@@ -24,18 +25,25 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Function} toUpdate - Method to trigger update operation
  * @returns {Function} toDelete - Method to trigger delete operation
  */
-export function useEmployeesManager({
-  docs,
-  useDelay = false,
-  sortBy = [{ key: "code", order: "desc" }],
-} = {}) {
+export function useEmployeesManager(
+  {
+    docs,
+    redirectPath = "/employees",
+    useDelay = false,
+    sortBy = [{ key: "code", order: "desc" }],
+    onUpdateSearch,
+  } = {},
+  additionalAttrs = {}
+) {
   /** SETUP */
   const collectionManager = useCollectionManager("useEmployeesManager", {
     docs,
     schema: Employee,
-    redirectPath: "/employees",
+    redirectPath,
     useDelay,
     sortBy,
+    onUpdateSearch,
+    additionalAttrs,
   });
 
   /** COMPUTED PROPERTIES */

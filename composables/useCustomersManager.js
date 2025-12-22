@@ -13,17 +13,25 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Object} attrs - The attributes for the customers manager.
  * @returns {Array} docs - The array of customer documents.
  */
-export function useCustomersManager({
-  docs,
-  sortBy = [{ key: "code", order: "desc" }],
-} = {}) {
+export function useCustomersManager(
+  {
+    docs,
+    redirectPath = "/customers",
+    useDelay = false,
+    sortBy = [{ key: "code", order: "desc" }],
+    onUpdateSearch,
+  } = {},
+  additionalAttrs = {}
+) {
   /** SETUP */
   const collectionManager = useCollectionManager("useCustomersManager", {
     docs,
     schema: Customer,
-    redirectPath: "/customers",
-    useDelay: false,
+    redirectPath,
+    useDelay,
     sortBy,
+    onUpdateSearch,
+    additionalAttrs,
   });
 
   /** COMPUTED PROPERTIES */

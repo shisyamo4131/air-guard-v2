@@ -3,12 +3,13 @@ const search = ref(null);
 </script>
 
 <template>
-  <v-container>
-    <v-card>
-      <template #text>
-        <air-data-table v-model:search="search" :delay="300" />
-        {{ search }}
-      </template>
-    </v-card>
+  <v-container class="d-flex align-center ga-2">
+    <air-text-field
+      hide-details
+      density="compact"
+      variant="solo-inverted"
+      single-line
+    />
+    <v-btn icon="mdi-plus" density="comfortable" />
   </v-container>
 </template>

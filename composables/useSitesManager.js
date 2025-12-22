@@ -13,17 +13,25 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Object} attrs - The attributes for the sites manager.
  * @returns {Array} docs - The array of site documents.
  */
-export function useSitesManager({
-  docs,
-  sortBy = [{ key: "code", order: "desc" }],
-} = {}) {
+export function useSitesManager(
+  {
+    docs,
+    redirectPath = "/sites",
+    useDelay = false,
+    sortBy = [{ key: "code", order: "desc" }],
+    onUpdateSearch,
+  } = {},
+  additionalAttrs = {}
+) {
   /** SETUP */
   const collectionManager = useCollectionManager("useSitesManager", {
     docs,
     schema: Site,
-    redirectPath: "/sites",
-    useDelay: false,
+    redirectPath,
+    useDelay,
     sortBy,
+    onUpdateSearch,
+    additionalAttrs,
   });
 
   /** COMPUTED PROPERTIES */

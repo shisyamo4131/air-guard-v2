@@ -17,7 +17,6 @@ import { useBaseManager } from "@/composables/useBaseManager";
  * @param {Array} options.sortBy - Array of sorting criteria
  * @returns {Object} - The collection manager composable
  * @returns {Object} attrs - Computed attributes for the collection component
- * @returns {string} search - Reactive search string
  * @returns {boolean} isDev - Flag indicating if the environment is development
  * @returns {Object} isLoading - Reactive loading state
  * @returns {Object} router - Vue Router instance for navigation
@@ -28,10 +27,21 @@ import { useBaseManager } from "@/composables/useBaseManager";
  */
 export function useCollectionManager(
   composableName = "useCollectionManager",
-  { docs = [], schema, redirectPath = null, useDelay = false, sortBy = [] } = {}
+  {
+    docs = [],
+    schema,
+    redirectPath = null,
+    useDelay = false,
+    sortBy = [],
+    onUpdateSearch,
+  } = {},
+  additionalAttrs = {}
 ) {
   /** SETUP BASE MANAGER COMPOSABLE */
   const baseManager = useBaseManager(composableName);
+
+  /** SETUP SEARCH */
+  const search = Vue.ref(null);
 
   /** VALIDATION */
   if (!schema) {
@@ -70,6 +80,7 @@ export function useCollectionManager(
   const attrs = Vue.computed(() => {
     return {
       ...baseManager.attrs.value,
+      ...additionalAttrs,
       modelValue: docs,
       schema,
       beforeEdit: _beforeEdit,
@@ -78,9 +89,14 @@ export function useCollectionManager(
       handleDelete: (item) => item.delete(),
       delay: useDelay ? useDelay : undefined,
       tableProps: { sortBy },
+      search: Vue.unref(search),
       onCreate: redirectPath
         ? (item) => baseManager.router.push(`${redirectPath}/${item.docId}`)
         : undefined,
+      "onUpdate:search": (val) => {
+        search.value = val;
+        if (onUpdateSearch) onUpdateSearch(val);
+      },
     };
   });
 

@@ -18,7 +18,7 @@ const { attrs } = useEmployeesManager({ docs });
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" label="従業員登録">
+    <air-array-manager class="fill-height" v-bind="attrs">
       <template #input-default="props">
         <MoleculesInputsEmployee v-bind="props" type="default" />
       </template>

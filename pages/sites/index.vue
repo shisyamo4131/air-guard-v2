@@ -9,16 +9,17 @@ const { docs } = useDocuments("Site", {
   options: toRef(options),
   fetchAllOnEmpty: true,
 });
-const { attrs } = useSitesManager({ docs });
+const { attrs } = useSitesManager(
+  { docs },
+  {
+    excludedKeys: ["agreements"],
+  }
+);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager
-      class="fill-height"
-      v-bind="attrs"
-      :excluded-keys="['agreements']"
-    >
+    <air-array-manager class="fill-height" v-bind="attrs">
       <template #input.customerId="{ attrs }">
         <MoleculesAutocompleteCustomer v-bind="attrs" />
       </template>

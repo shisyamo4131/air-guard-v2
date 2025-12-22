@@ -13,21 +13,25 @@ const options = [
   ["where", "employmentStatus", "==", Employee.STATUS_TERMINATED],
 ];
 
+/** SETUP DATA LAYER */
 const { docs } = useDocuments("Employee", {
   search,
   options: toRef(options),
 });
-const { attrs } = useEmployeesManager({ docs, useDelay: 500 });
+
+/** SETUP MANAGER */
+const { attrs } = useEmployeesManager(
+  {
+    docs,
+    useDelay: 300,
+    onUpdateSearch: (val) => (search.value = val),
+  },
+  { hideCreateBtn: true, tableProps: { hideAction: true } }
+);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager
-      class="fill-height"
-      v-bind="attrs"
-      :table-props="{ hideAction: true }"
-      @update:search="search = $event"
-    >
-    </air-array-manager>
+    <air-array-manager class="fill-height" v-bind="attrs" />
   </TemplatesFixedHeightContainer>
 </template>

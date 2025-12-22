@@ -5,86 +5,56 @@
  * @author shisyamo4131
  *****************************************************************************/
 import * as Vue from "vue";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLogger } from "../composables/useLogger";
 import { Outsourcer } from "@/schemas";
-
-// Constraints to fetch only active outsourcers.
-const statusOption = [
-  "where",
-  "contractStatus",
-  "==",
-  Outsourcer.STATUS_ACTIVE,
-];
-
-// Default sorting by employee code in descending order.
-const sortBy = [{ key: "code", order: "desc" }];
+import { useCollectionManager } from "@/composables/useCollectionManager";
 
 /**
+ * @param {*} options - Options for the outsourcers manager
+ * @param {Array} options.docs - Array of outsourcer document instances to manage
+ * @param {string} options.redirectPath - Path to redirect after creation
+ * @param {boolean|number} options.useDelay - Whether to use delay for reflection of `search` string in ms
+ * @param {Array} options.sortBy - Array of sorting criteria
+ * @param {Function} options.onUpdateSearch - Callback function when search is updated
  * @returns {Object} - Outsourcers manager attributes and information.
- * @returns {Object} attrs - The attributes for the outsourcers manager.
- * @returns {Array} docs - The array of outsourcer documents.
+ * @returns {Object} attrs - Computed attributes for the collection component
+ * @returns {boolean} isDev - Flag indicating if the environment is development
+ * @returns {Object} isLoading - Reactive loading state
+ * @returns {Object} router - Vue Router instance for navigation
+ * @returns {Object} logger - Logger instance for logging messages and errors
+ * @returns {Function} toCreate - Method to trigger create operation
+ * @returns {Function} toUpdate - Method to trigger update operation
+ * @returns {Function} toDelete - Method to trigger delete operation
  */
-export function useOutsourcersManager() {
-  /***************************************************************************
-   * SETUP STORES & COMPOSABLES
-   ***************************************************************************/
-  const logger = useLogger("OutsourcersManager", useErrorsStore());
+export function useOutsourcersManager(
+  {
+    docs,
+    redirectPath = "/outsourcers",
+    useDelay = false,
+    sortBy = [{ key: "code", order: "desc" }],
+    onUpdateSearch,
+  } = {},
+  additionalAttrs = {}
+) {
+  /** SETUP */
+  const collectionManager = useCollectionManager("useOutsourcersManager", {
+    docs,
+    schema: Outsourcer,
+    redirectPath,
+    useDelay,
+    sortBy,
+    onUpdateSearch,
+    additionalAttrs,
+  });
 
-  /***************************************************************************
-   * REACTIVE OBJECTS
-   ***************************************************************************/
-  const instance = Vue.reactive(new Outsourcer());
-  const search = Vue.ref("");
-  const loading = Vue.ref(false);
-  const component = Vue.ref(null);
-
-  /***************************************************************************
-   * METHODS (PRIVATE)
-   ***************************************************************************/
-  function _subscribe() {
-    logger.clearError();
-    try {
-      loading.value = true;
-      const constraints = search.value ? search.value : [statusOption];
-      const options = search.value ? [statusOption] : [];
-      instance.subscribeDocs({ constraints, options });
-    } catch (error) {
-      logger.error({ error, message: "Failed to fetch outsourcers." });
-    } finally {
-      loading.value = false;
-    }
-  }
-
-  /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  Vue.watchEffect(_subscribe);
-
+  /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {
     return {
-      ref: (el) => (component.value = el),
-      modelValue: instance.docs,
-      handleCreate: (item) => item.create(),
-      handleUpdate: (item) => item.update(),
-      handleDelete: (item) => item.delete(),
-      delay: 300,
-      schema: Outsourcer,
-      search: search.value,
-      tableProps: { customFilter: () => true, sortBy },
-      "onUpdate:search": (val) => (search.value = val),
-      onError: (e) => logger.error({ error: e }),
-      "onError:clear": logger.clearError,
+      ...collectionManager.attrs.value,
     };
   });
 
-  /***************************************************************************
-   * LIFECYCLE HOOKS
-   ***************************************************************************/
-  Vue.onUnmounted(() => instance.unsubscribe());
-
   return {
+    ...collectionManager,
     attrs,
-    docs: computed(() => instance.docs),
   };
 }
