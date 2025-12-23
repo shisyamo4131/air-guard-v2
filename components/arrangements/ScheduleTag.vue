@@ -18,7 +18,6 @@
  *                                    - schedule: The current SiteOperationSchedule instance
  *                                    - worker: The worker element being edited
  * @emits {event} click:edit-workers - Emitted when the `account-edit` button is clicked.
- *                                     Event payload: { schedule: Object }
  * @emits {event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
  *                                      Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
  *                                      - schedule: The current SiteOperationSchedule instance
@@ -57,6 +56,47 @@ const emit = defineEmits([
 const label = computed(() => {
   return props.schedule?.workDescription || "通常警備";
 });
+
+const btns = computed(() => {
+  const result = [
+    // 通知ボタン
+    {
+      attrs: {
+        disabled:
+          !props.schedule.isEditable || props.schedule.isNotificatedAllWorkers,
+        onClick: () => emit("click:notify"),
+      },
+      icon: { icon: "mdi-bullhorn" },
+    },
+    // 複製ボタン
+    {
+      attrs: {
+        onClick: () => emit("click:duplicate"),
+      },
+      icon: { icon: "mdi-content-copy" },
+    },
+    // 編集ボタン
+    {
+      attrs: {
+        disabled: !props.schedule.isEditable,
+        onClick: () => emit("click:edit"),
+      },
+      icon: { icon: "mdi-pencil" },
+    },
+  ];
+
+  // 作業員編集ボタン: 2025-12-23 add
+  if (auth.isSuperUser) {
+    result.unshift({
+      attrs: {
+        disabled: !props.schedule.isEditable,
+        onClick: () => emit("click:edit-workers"),
+      },
+      icon: { icon: "mdi-account-edit" },
+    });
+  }
+  return result;
+});
 </script>
 
 <template>
@@ -88,52 +128,17 @@ const label = computed(() => {
       class="d-flex pt-0 pb-2 px-2 ga-1"
       :class="[auth.isSuperUser ? 'justify-space-between' : 'justify-end']"
     >
-      <!-- 作業員編集ボタン: 2025-12-23 add -->
       <v-btn
-        v-if="auth.isSuperUser"
-        :disabled="!schedule.isEditable"
-        variant="tonal"
+        v-for="(btn, index) of btns"
+        :key="index"
+        v-bind="btn.attrs"
         :size="auth.isSuperUser ? 'small' : 'x-small'"
-        @click="emit('click:edit-workers', schedule)"
-      >
-        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
-          >mdi-account-edit</v-icon
-        >
-      </v-btn>
-
-      <!-- 通知ボタン -->
-      <v-btn
-        :disabled="!schedule.isEditable || schedule.isNotificatedAllWorkers"
         variant="tonal"
-        :size="auth.isSuperUser ? 'small' : 'x-small'"
-        @click="emit('click:notify')"
       >
-        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
-          >mdi-bullhorn</v-icon
-        >
-      </v-btn>
-
-      <!-- 複製ボタン -->
-      <v-btn
-        variant="tonal"
-        :size="auth.isSuperUser ? 'small' : 'x-small'"
-        @click="emit('click:duplicate')"
-      >
-        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
-          >mdi-content-copy</v-icon
-        >
-      </v-btn>
-
-      <!-- 編集ボタン -->
-      <v-btn
-        :disabled="!schedule.isEditable"
-        variant="tonal"
-        :size="auth.isSuperUser ? 'small' : 'x-small'"
-        @click="emit('click:edit')"
-      >
-        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
-          >mdi-pencil</v-icon
-        >
+        <v-icon
+          v-bind="btn.icon"
+          :size="auth.isSuperUser ? 'large' : 'default'"
+        />
       </v-btn>
     </v-container>
   </v-card>
