@@ -223,6 +223,14 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         >
       </template>
     </v-snackbar>
+
+    <!-- スピードダイアル -->
+    <!-- ツールバーを廃止し、こちらに変更する予定 -->
+    <ArrangementsSpeedDial
+      v-if="false"
+      @click:add-schedule="siteOperationScheduleManager.toCreate"
+      @click:site-order="siteOrderManager.set"
+    />
   </div>
 </template>
 
