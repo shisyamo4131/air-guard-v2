@@ -115,6 +115,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
   <div class="d-flex flex-column fill-height">
     <!-- TOOLBAR -->
     <ArrangementsToolbar
+      v-if="!auth.isSuperUser"
       v-model="dateRangeComposable.currentDayCount.value"
       @click:workers="toggleFloatingWindow"
       @click:site-order="siteOrderManager.set"
