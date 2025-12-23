@@ -14,8 +14,12 @@ import { useBaseManager } from "@/composables/useBaseManager";
  * @param {Object} options.schema - Schema class for the documents
  * @param {string} options.redirectPath - Path to redirect after creation
  * @param {boolean|number} options.useDelay - Whether to use delay for reflection of `search` string in ms
+ * @param {function} options.onUpdateSearch - Callback function when search is updated
+ * @param {string} options.itemKey - Key to identify each document (default: 'docId')
+ * @param {Object} additionalAttrs - Additional attributes to pass to the collection component
  * @returns {Object} - The collection manager composable
  * @returns {Object} attrs - Computed attributes for the collection component
+ * @returns {Object} keyMappedDocs - Computed object mapping itemKey to document instances
  * @returns {boolean} isDev - Flag indicating if the environment is development
  * @returns {Object} isLoading - Reactive loading state
  * @returns {Object} router - Vue Router instance for navigation
@@ -32,6 +36,7 @@ export function useCollectionManager(
     redirectPath = null,
     useDelay = false,
     onUpdateSearch,
+    itemKey = "docId",
   } = {},
   additionalAttrs = {}
 ) {
@@ -97,9 +102,21 @@ export function useCollectionManager(
     };
   });
 
+  const keyMappedDocs = Vue.computed(() => {
+    return docs.reduce((acc, doc) => {
+      {
+        acc[doc[itemKey]] = doc;
+        return acc;
+      }
+    }, {});
+  });
+
   return {
     ...baseManager,
     attrs,
+
+    keyMappedDocs,
+
     toCreate: (item) => component?.value?.toCreate?.(item),
     toUpdate: (item) => component?.value?.toUpdate?.(item),
     toDelete: (item) => component?.value?.toDelete?.(item),
