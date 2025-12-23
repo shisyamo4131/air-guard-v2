@@ -17,6 +17,8 @@
  *                                    Event payload: { schedule: Object, worker: Object }
  *                                    - schedule: The current SiteOperationSchedule instance
  *                                    - worker: The worker element being edited
+ * @emits {event} click:edit-workers - Emitted when the `account-edit` button is clicked.
+ *                                     Event payload: { schedule: Object }
  * @emits {event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
  *                                      Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
  *                                      - schedule: The current SiteOperationSchedule instance
@@ -26,6 +28,9 @@
  *                                     Event payload: Forwarded from ArrangementsWorkerTag component
  */
 import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
+import { useAuthStore } from "@/stores/useAuthStore";
+
+const auth = useAuthStore();
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -39,6 +44,7 @@ const emit = defineEmits([
   "click:duplicate",
   "click:edit",
   "click:edit-worker",
+  "click:edit-workers", // 2025-12-23 add
   "click:notify",
   "click:notification",
   "click:remove-worker",
@@ -79,31 +85,55 @@ const label = computed(() => {
       @click:notification="emit('click:notification', $event)"
     />
     <v-container
-      class="d-flex justify-end pt-0 pb-2 px-2"
-      style="column-gap: 4px"
+      class="d-flex pt-0 pb-2 px-2 ga-1"
+      :class="[auth.isSuperUser ? 'justify-space-between' : 'justify-end']"
     >
+      <!-- 作業員編集ボタン: 2025-12-23 add -->
+      <v-btn
+        v-if="auth.isSuperUser"
+        :disabled="!schedule.isEditable"
+        variant="tonal"
+        :size="auth.isSuperUser ? 'small' : 'x-small'"
+        @click="emit('click:edit-workers', schedule)"
+      >
+        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
+          >mdi-account-edit</v-icon
+        >
+      </v-btn>
+
       <!-- 通知ボタン -->
       <v-btn
         :disabled="!schedule.isEditable || schedule.isNotificatedAllWorkers"
         variant="tonal"
-        size="x-small"
+        :size="auth.isSuperUser ? 'small' : 'x-small'"
         @click="emit('click:notify')"
       >
-        <v-icon>mdi-bullhorn</v-icon>
+        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
+          >mdi-bullhorn</v-icon
+        >
       </v-btn>
+
       <!-- 複製ボタン -->
-      <v-btn variant="tonal" size="x-small" @click="emit('click:duplicate')">
-        <v-icon>mdi-content-copy</v-icon>
+      <v-btn
+        variant="tonal"
+        :size="auth.isSuperUser ? 'small' : 'x-small'"
+        @click="emit('click:duplicate')"
+      >
+        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
+          >mdi-content-copy</v-icon
+        >
       </v-btn>
 
       <!-- 編集ボタン -->
       <v-btn
         :disabled="!schedule.isEditable"
         variant="tonal"
-        size="x-small"
+        :size="auth.isSuperUser ? 'small' : 'x-small'"
         @click="emit('click:edit')"
       >
-        <v-icon>mdi-pencil</v-icon>
+        <v-icon :size="auth.isSuperUser ? 'large' : 'default'"
+          >mdi-pencil</v-icon
+        >
       </v-btn>
     </v-container>
   </v-card>
