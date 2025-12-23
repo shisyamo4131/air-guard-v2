@@ -24,15 +24,18 @@ export function useCustomersManager(
   additionalAttrs = {}
 ) {
   /** SETUP */
-  const collectionManager = useCollectionManager("useCustomersManager", {
-    docs,
-    schema: Customer,
-    redirectPath,
-    useDelay,
-    sortBy,
-    onUpdateSearch,
-    additionalAttrs,
-  });
+  const collectionManager = useCollectionManager(
+    "useCustomersManager",
+    {
+      docs,
+      schema: Customer,
+      redirectPath,
+      useDelay,
+      sortBy,
+      onUpdateSearch,
+    },
+    additionalAttrs
+  );
 
   /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {

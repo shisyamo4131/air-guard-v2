@@ -36,15 +36,18 @@ export function useOutsourcersManager(
   additionalAttrs = {}
 ) {
   /** SETUP */
-  const collectionManager = useCollectionManager("useOutsourcersManager", {
-    docs,
-    schema: Outsourcer,
-    redirectPath,
-    useDelay,
-    sortBy,
-    onUpdateSearch,
-    additionalAttrs,
-  });
+  const collectionManager = useCollectionManager(
+    "useOutsourcersManager",
+    {
+      docs,
+      schema: Outsourcer,
+      redirectPath,
+      useDelay,
+      sortBy,
+      onUpdateSearch,
+    },
+    additionalAttrs
+  );
 
   /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {

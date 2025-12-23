@@ -24,15 +24,18 @@ export function useSitesManager(
   additionalAttrs = {}
 ) {
   /** SETUP */
-  const collectionManager = useCollectionManager("useSitesManager", {
-    docs,
-    schema: Site,
-    redirectPath,
-    useDelay,
-    sortBy,
-    onUpdateSearch,
-    additionalAttrs,
-  });
+  const collectionManager = useCollectionManager(
+    "useSitesManager",
+    {
+      docs,
+      schema: Site,
+      redirectPath,
+      useDelay,
+      sortBy,
+      onUpdateSearch,
+    },
+    additionalAttrs
+  );
 
   /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {

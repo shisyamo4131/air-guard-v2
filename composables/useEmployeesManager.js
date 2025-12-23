@@ -36,15 +36,18 @@ export function useEmployeesManager(
   additionalAttrs = {}
 ) {
   /** SETUP */
-  const collectionManager = useCollectionManager("useEmployeesManager", {
-    docs,
-    schema: Employee,
-    redirectPath,
-    useDelay,
-    sortBy,
-    onUpdateSearch,
-    additionalAttrs,
-  });
+  const collectionManager = useCollectionManager(
+    "useEmployeesManager",
+    {
+      docs,
+      schema: Employee,
+      redirectPath,
+      useDelay,
+      sortBy,
+      onUpdateSearch,
+    },
+    additionalAttrs
+  );
 
   /** COMPUTED PROPERTIES */
   const attrs = Vue.computed(() => {
