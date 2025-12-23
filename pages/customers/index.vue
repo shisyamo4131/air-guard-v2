@@ -15,7 +15,14 @@ const { docs } = useDocuments("Customer", {
   options: toRef(options),
   fetchAllOnEmpty: true,
 });
-const { attrs } = useCustomersManager({ docs });
+const { attrs } = useCustomersManager(
+  { docs },
+  {
+    tableProps: {
+      sortBy: [{ key: "code", order: "desc" }],
+    },
+  }
+);
 </script>
 
 <template>

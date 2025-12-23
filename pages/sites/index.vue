@@ -13,6 +13,9 @@ const { attrs } = useSitesManager(
   { docs },
   {
     excludedKeys: ["agreements"],
+    tableProps: {
+      sortBy: [{ key: "code", order: "desc" }],
+    },
   }
 );
 </script>

@@ -14,7 +14,6 @@ import { useBaseManager } from "@/composables/useBaseManager";
  * @param {Object} options.schema - Schema class for the documents
  * @param {string} options.redirectPath - Path to redirect after creation
  * @param {boolean|number} options.useDelay - Whether to use delay for reflection of `search` string in ms
- * @param {Array} options.sortBy - Array of sorting criteria
  * @returns {Object} - The collection manager composable
  * @returns {Object} attrs - Computed attributes for the collection component
  * @returns {boolean} isDev - Flag indicating if the environment is development
@@ -32,7 +31,6 @@ export function useCollectionManager(
     schema,
     redirectPath = null,
     useDelay = false,
-    sortBy = [],
     onUpdateSearch,
   } = {},
   additionalAttrs = {}
@@ -88,7 +86,6 @@ export function useCollectionManager(
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),
       delay: useDelay ? useDelay : undefined,
-      tableProps: { sortBy },
       search: Vue.unref(search),
       onCreate: redirectPath
         ? (item) => baseManager.router.push(`${redirectPath}/${item.docId}`)

@@ -14,13 +14,7 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Array} docs - The array of site documents.
  */
 export function useSitesManager(
-  {
-    docs,
-    redirectPath = "/sites",
-    useDelay = false,
-    sortBy = [{ key: "code", order: "desc" }],
-    onUpdateSearch,
-  } = {},
+  { docs, redirectPath = "/sites", useDelay = false, onUpdateSearch } = {},
   additionalAttrs = {}
 ) {
   /** SETUP */
@@ -31,7 +25,6 @@ export function useSitesManager(
       schema: Site,
       redirectPath,
       useDelay,
-      sortBy,
       onUpdateSearch,
     },
     additionalAttrs

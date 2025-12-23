@@ -14,13 +14,7 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Array} docs - The array of customer documents.
  */
 export function useCustomersManager(
-  {
-    docs,
-    redirectPath = "/customers",
-    useDelay = false,
-    sortBy = [{ key: "code", order: "desc" }],
-    onUpdateSearch,
-  } = {},
+  { docs, redirectPath = "/customers", useDelay = false, onUpdateSearch } = {},
   additionalAttrs = {}
 ) {
   /** SETUP */
@@ -31,7 +25,6 @@ export function useCustomersManager(
       schema: Customer,
       redirectPath,
       useDelay,
-      sortBy,
       onUpdateSearch,
     },
     additionalAttrs

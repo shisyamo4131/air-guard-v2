@@ -26,7 +26,15 @@ const { attrs } = useEmployeesManager(
     useDelay: 300,
     onUpdateSearch: (val) => (search.value = val),
   },
-  { hideCreateBtn: true, tableProps: { hideAction: true } }
+  {
+    hideCreateBtn: true,
+
+    tableProps: {
+      hideAction: true,
+      searchProps: { hint: "2文字以上入力してください。" },
+      sortBy: [{ key: "code", order: "desc" }],
+    },
+  }
 );
 </script>
 

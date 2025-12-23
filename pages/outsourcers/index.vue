@@ -13,7 +13,14 @@ import { useOutsourcersManager } from "@/composables/useOutsourcersManager";
 const { docs } = useDocuments("Outsourcer", {
   fetchAllOnEmpty: true,
 });
-const { attrs } = useOutsourcersManager({ docs, redirectPath: null });
+const { attrs } = useOutsourcersManager(
+  { docs, redirectPath: null },
+  {
+    tableProps: {
+      sortBy: [{ key: "code", order: "desc" }],
+    },
+  }
+);
 </script>
 
 <template>

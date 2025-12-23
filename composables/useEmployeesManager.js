@@ -26,13 +26,7 @@ import { useCollectionManager } from "@/composables/useCollectionManager";
  * @returns {Function} toDelete - Method to trigger delete operation
  */
 export function useEmployeesManager(
-  {
-    docs,
-    redirectPath = "/employees",
-    useDelay = false,
-    sortBy = [{ key: "code", order: "desc" }],
-    onUpdateSearch,
-  } = {},
+  { docs, redirectPath = "/employees", useDelay = false, onUpdateSearch } = {},
   additionalAttrs = {}
 ) {
   /** SETUP */
@@ -43,7 +37,6 @@ export function useEmployeesManager(
       schema: Employee,
       redirectPath,
       useDelay,
-      sortBy,
       onUpdateSearch,
     },
     additionalAttrs

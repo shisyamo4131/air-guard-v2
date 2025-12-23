@@ -30,7 +30,6 @@ export function useOutsourcersManager(
     docs,
     redirectPath = "/outsourcers",
     useDelay = false,
-    sortBy = [{ key: "code", order: "desc" }],
     onUpdateSearch,
   } = {},
   additionalAttrs = {}
@@ -43,7 +42,6 @@ export function useOutsourcersManager(
       schema: Outsourcer,
       redirectPath,
       useDelay,
-      sortBy,
       onUpdateSearch,
     },
     additionalAttrs
