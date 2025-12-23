@@ -73,11 +73,23 @@ export default defineNuxtPlugin(() => {
   // Connect to an emulator if you are in a local environment.
   if (useEmulator) {
     sendMessage(FIREBASE_USE_EMULATORS);
-    connectFirestoreEmulator(firestore, "localhost", 8080);
-    connectAuthEmulator(auth, "http://127.0.0.1:9099");
-    connectStorageEmulator(storage, "localhost", 9199);
-    connectDatabaseEmulator(database, "localhost", 9000);
-    connectFunctionsEmulator(functions, "localhost", 5001);
+
+    // --- 実機確認のために修正 ---
+    // connectFirestoreEmulator(firestore, "localhost", 8080);
+    // connectAuthEmulator(auth, "http://127.0.0.1:9099");
+    // connectStorageEmulator(storage, "localhost", 9199);
+    // connectDatabaseEmulator(database, "localhost", 9000);
+    // connectFunctionsEmulator(functions, "localhost", 5001);
+
+    // PCのIPアドレスを取得（開発時は手動設定も可）
+    const hostIP = import.meta.client ? window.location.hostname : "localhost";
+
+    connectFirestoreEmulator(firestore, hostIP, 8080);
+    connectAuthEmulator(auth, `http://${hostIP}:9099`);
+    connectStorageEmulator(storage, hostIP, 9199);
+    connectDatabaseEmulator(database, hostIP, 9000);
+    connectFunctionsEmulator(functions, hostIP, 5001);
+    // --------------------------
   }
 
   return {
