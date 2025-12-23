@@ -5,6 +5,7 @@
  * It also provides functionalities for managing workers, site orders, and notifications.
  */
 import dayjs from "dayjs";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -23,6 +24,8 @@ import { useArrangements } from "@/composables/dataLayers/useArrangements";
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+const auth = useAuthStore();
+
 /** Fetch composables for caching. */
 const fetchEmployeeComposable = useFetchEmployee();
 const fetchOutsourcerComposable = useFetchOutsourcer();
@@ -224,10 +227,10 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
       </template>
     </v-snackbar>
 
-    <!-- スピードダイアル -->
+    <!-- スピードダイアル: スーパーユーザー限定表示 -->
     <!-- ツールバーを廃止し、こちらに変更する予定 -->
     <ArrangementsSpeedDial
-      v-if="false"
+      v-if="auth.isSuperUser"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:site-order="siteOrderManager.set"
     />
