@@ -65,7 +65,7 @@ export function useCollectionManager(
         return true;
       case "UPDATE":
         if (redirectPath) {
-          baseManager.router.push(`${redirectPath}/${item.docId}`);
+          baseManager.router.push(`${redirectPath}/${item[itemKey]}`);
           return false;
         }
         return true;
@@ -75,6 +75,15 @@ export function useCollectionManager(
         baseManager.logger.error({ message: `Unknown edit mode: ${editMode}` });
         return false;
     }
+  };
+
+  /**
+   * A handler for updating the search value.
+   * @param {string|null} val
+   */
+  const _handleUpdateSearch = (val) => {
+    search.value = val;
+    if (onUpdateSearch) onUpdateSearch(val);
   };
 
   /**
@@ -93,15 +102,16 @@ export function useCollectionManager(
       delay: useDelay ? useDelay : undefined,
       search: Vue.unref(search),
       onCreate: redirectPath
-        ? (item) => baseManager.router.push(`${redirectPath}/${item.docId}`)
+        ? (item) => baseManager.router.push(`${redirectPath}/${item[itemKey]}`)
         : undefined,
-      "onUpdate:search": (val) => {
-        search.value = val;
-        if (onUpdateSearch) onUpdateSearch(val);
-      },
+      "onUpdate:search": _handleUpdateSearch,
     };
   });
 
+  /**
+   * Computed object mapping itemKey to document instances.
+   * @returns {Object} - An object where keys are itemKey values and values are document instances.
+   */
   const keyMappedDocs = Vue.computed(() => {
     return docs.reduce((acc, doc) => {
       {
