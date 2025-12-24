@@ -8,6 +8,8 @@
  * @props {Object} notification - The notification object.
  * @props {Object} worker - The worker object containing relevant information.
  * @props {String} variant - The visual variant of the tag.
+ * @props {Boolean} hideEdit - Whether to hide the edit button. (2025-12-24 added)
+ * @props {Boolean} hideNotification - Whether to hide the notification chip. (2025-12-24 added)
  *
  * @emit {Event} click:remove - Emitted when the remove button is clicked.
  * @emit {Event} click:edit - Emitted when the edit button is clicked.
@@ -38,6 +40,10 @@ const props = defineProps({
     validator: (value) =>
       ["default", "success", "warning", "error", "disabled"].includes(value),
   },
+
+  // 2025-12-24 added
+  hideEdit: { type: Boolean, default: false },
+  hideNotification: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
@@ -79,7 +85,7 @@ const hasEndTimeDifference = computed(() => {
     </template>
 
     <!-- add notification chip to prepend-action slot -->
-    <template #prepend-action>
+    <template v-if="!hideNotification" #prepend-action>
       <AtomsChipsArrangementNotification
         v-if="schedule.isEditable"
         :notification="notification"
@@ -97,7 +103,7 @@ const hasEndTimeDifference = computed(() => {
       <span class="text-red">{{ endTime }}</span>
     </template>
 
-    <template #append-footer>
+    <template v-if="!hideEdit" #append-footer>
       <v-icon
         v-if="schedule.isEditable"
         class="ml-2"
