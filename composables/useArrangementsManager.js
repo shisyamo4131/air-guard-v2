@@ -136,6 +136,10 @@ export function useArrangementsManager({
    * @param {string} param.id - employee or outsourcer document id.
    * @param {boolean} param.isEmployee - Whether new worker is employee or not.
    * @param {number} newIndex - Additional position.
+   * @returns {SiteOperationSchedule|null} - The updated internal schedule or null if not found.
+   * @throws Will throw an error if the schedule is not found in internalSchedules.
+   *
+   * @update 2025-12-24 インスタンスの更新処理を行わず、呼び出し元でまとめて更新するように変更
    */
   async function addWorker({ schedule, id, isEmployee } = {}, newIndex = 0) {
     const internalSchedule = _getInternalSchedule(schedule);
@@ -146,7 +150,10 @@ export function useArrangementsManager({
       return;
     }
     internalSchedule.addWorker({ id, isEmployee }, newIndex);
-    await internalSchedule.update();
+
+    // 2025-12-24 コメントアウト
+    // await internalSchedule.update();
+    return internalSchedule;
   }
 
   /**
@@ -158,6 +165,8 @@ export function useArrangementsManager({
    * @param {boolean} param.isEmployee - Whether worker is employee or not.
    * @throws Will throw an error if trying to move employees after outsourcers
    *         or outsourcers before employees.
+   *
+   * @update 2025-12-24 インスタンスの更新処理を行わず、呼び出し元でまとめて更新するように変更
    */
   async function moveWorker({ schedule, oldIndex, newIndex, isEmployee }) {
     const internalSchedule = _getInternalSchedule(schedule);
@@ -181,7 +190,10 @@ export function useArrangementsManager({
       return;
     }
     internalSchedule.moveWorker({ oldIndex, newIndex, isEmployee });
-    await internalSchedule.update();
+
+    // 2025-12-24 コメントアウト
+    // await internalSchedule.update();
+    return internalSchedule;
   }
 
   /**
@@ -190,6 +202,10 @@ export function useArrangementsManager({
    * @param {SiteOperationSchedule} param.schedule - schedule instance.
    * @param {string} param.workerId - worker id.
    * @param {boolean} param.isEmployee - Whether worker is employee or not.
+   * @returns {SiteOperationSchedule|null} - The updated internal schedule or null if not found.
+   * @throws Will throw an error if the schedule is not found in internalSchedules.
+   *
+   * @update 2025-12-24 インスタンスの更新処理を行わず、呼び出し元でまとめて更新するように変更
    */
   async function removeWorker({ schedule, workerId, isEmployee }) {
     const internalSchedule = _getInternalSchedule(schedule);
@@ -200,7 +216,10 @@ export function useArrangementsManager({
       return;
     }
     internalSchedule.removeWorker({ workerId, isEmployee });
-    await internalSchedule.update();
+
+    // 2025-12-24 コメントアウト
+    // await internalSchedule.update();
+    return internalSchedule;
   }
 
   /**
@@ -210,9 +229,13 @@ export function useArrangementsManager({
    * @param {SiteOperationSchedule} param.schedule
    * @returns {Promise<void>}
    * @throws Will throw an error if the event structure is invalid or unknown.
+   *
+   * @update 2025-12-24 インスタンスの更新処理をここで行うように変更。
    */
   async function handleDraggableWorkerChangeEvent({ event, schedule }) {
     try {
+      let internalSchedule = null;
+
       if (event.added) {
         const { element, newIndex } = event.added;
         if (!element || typeof element !== "object") {
@@ -232,7 +255,13 @@ export function useArrangementsManager({
           });
           return;
         }
-        await addWorker({ schedule, id, isEmployee }, newIndex);
+
+        // 2025-12-24 コメントアウト
+        // await addWorker({ schedule, id, isEmployee }, newIndex);
+        internalSchedule = await addWorker(
+          { schedule, id, isEmployee },
+          newIndex
+        );
       } else if (event.moved) {
         const { element, oldIndex, newIndex } = event.moved ?? {};
         if (!element || typeof element !== "object") {
@@ -252,7 +281,15 @@ export function useArrangementsManager({
           });
           return;
         }
-        await moveWorker({ schedule, oldIndex, newIndex, isEmployee });
+
+        // 2025-12-24 コメントアウト
+        // await moveWorker({ schedule, oldIndex, newIndex, isEmployee });
+        internalSchedule = await moveWorker({
+          schedule,
+          oldIndex,
+          newIndex,
+          isEmployee,
+        });
       } else if (event.removed) {
         const { workerId, isEmployee } = event.removed?.element ?? {};
         if (!workerId || typeof isEmployee !== "boolean") {
@@ -263,13 +300,24 @@ export function useArrangementsManager({
           });
           return;
         }
-        await removeWorker({ schedule, workerId, isEmployee });
+
+        // 2025-12-24 コメントアウト
+        // await removeWorker({ schedule, workerId, isEmployee });
+        internalSchedule = await removeWorker({
+          schedule,
+          workerId,
+          isEmployee,
+        });
       } else {
         logger.error({
           message: `Unknown draggable event: ${JSON.stringify(event)}`,
         });
         return;
       }
+
+      // 2025-12-24 added
+      // まとめて更新
+      if (internalSchedule) await internalSchedule.update();
     } catch (error) {
       logger.error({ error });
     }
@@ -535,7 +583,7 @@ export function useArrangementsManager({
       statistics: statistics.value,
       "onUpdate:model-value": (event) => optimisticUpdates(event),
       "onChange:workers": (event) => handleDraggableWorkerChangeEvent(event),
-      "onClick:remove-worker": (event) => removeWorker(event),
+      // "onClick:remove-worker": (event) => removeWorker(event),  // Deprecated 2025-12-24
     };
     return { table };
   });
