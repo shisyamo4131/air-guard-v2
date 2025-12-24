@@ -24,6 +24,8 @@
  * - append-action: Content in the append action area.
  *
  * @emits remove - Emitted when the clear button is clicked.
+ *
+ * @update 2025-12-24 Add icon for draggable handle in prepend-label slot.
  */
 
 import { computed } from "vue";
@@ -168,7 +170,9 @@ function handleClickRemove(event) {
     <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->
       <div v-if="showLabelContent" class="tag-base__label-content">
-        <slot name="prepend-label" v-bind="{ label: props.label }" />
+        <slot name="prepend-label" v-bind="{ label: props.label }">
+          <AtomsIconsDraggable />
+        </slot>
         <slot name="label" v-bind="{ label: props.label }">
           {{ props.label }}
         </slot>
