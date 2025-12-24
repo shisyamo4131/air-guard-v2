@@ -7,6 +7,8 @@
  *
  * @prop {Object} notifications - An object containing arrangement notifications.
  * @prop {Object} schedule - A `SiteOperationSchedule` instance.
+ * @props {Boolean} hideEdit - Whether to hide the edit button. (2025-12-24 added)
+ * @props {Boolean} hideNotification - Whether to hide the notification chip. (2025-12-24 added)
  *
  * @emits {Event} click:edit - Emitted when the edit button is clicked on a worker tag.
  *                             Event payload: { schedule: Object, worker: Object }
@@ -40,6 +42,10 @@ defineOptions({ inheritAttrs: false });
 const props = defineProps({
   notifications: { type: Object, default: () => ({}) },
   schedule: { type: Object, required: true },
+
+  // 2025-12-24 added
+  hideEdit: { type: Boolean, default: false },
+  hideNotification: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -168,6 +174,8 @@ function handleClickNotification(event) {
           :schedule="schedule"
           :notification="notifications[element.notificationKey]"
           :worker="element"
+          :hideEdit="hideEdit"
+          :hideNotification="hideNotification"
           @click:edit="handleClickEdit(element)"
           @click:notification="handleClickNotification"
           @click:remove="() => handleChange({ removed: { element } })"
