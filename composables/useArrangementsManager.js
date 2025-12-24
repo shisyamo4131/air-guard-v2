@@ -104,6 +104,7 @@ export function useArrangementsManager({
 
   /**
    * Returns the internal schedule corresponding to the given schedule.
+   * - 当該コンポーザブルが関知していないスケジュールへの操作を防止するためのメソッド。
    * @param {*} schedule
    * @returns {SiteOperationSchedule|null}
    */
@@ -227,7 +228,7 @@ export function useArrangementsManager({
    * @param {Object} param
    * @param {Object} param.event - The change event from vuedraggable.
    * @param {SiteOperationSchedule} param.schedule
-   * @returns {Promise<void>}
+   * @returns {SiteOperationSchedule|null} - The updated internal schedule or null if not found.
    * @throws Will throw an error if the event structure is invalid or unknown.
    *
    * @update 2025-12-24 インスタンスの更新処理をここで行うように変更。
@@ -318,6 +319,7 @@ export function useArrangementsManager({
       // 2025-12-24 added
       // まとめて更新
       if (internalSchedule) await internalSchedule.update();
+      return internalSchedule;
     } catch (error) {
       logger.error({ error });
     }
