@@ -21,11 +21,14 @@
  * @emits {Event} click:duplicate - Emitted when the duplicate button is clicked for a date.
  * @emits {Event} click:edit - Emitted when the edit button is clicked for a date.
  * @emits {Event} click:edit-worker - Emitted when the edit button is clicked on a worker tag.
+ * @emits {Event} click:edit-workers - Emitted when the `account-edit` button is clicked.
  * @emits {Event} click:notify - Emitted when the notify button is clicked for a date.
  * @emits {Event} click:notification - Emitted when the notification chip is clicked for a date.
- * @emits {Event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
  * @emits {Event} click:add-schedule - Emitted when the add schedule button is clicked for a site and shift type.
  * @emits {Event} click:hide - Emitted when the hide button is clicked for a site and shift type.
+ *
+ * @deprecated
+ * @emits {Event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
  *
  * @slots
  * header-cell - Slot for customizing the header cell content.
@@ -55,9 +58,10 @@ const emit = defineEmits([
   "click:duplicate",
   "click:edit",
   "click:edit-worker",
+  "click:edit-workers",
   "click:notify",
   "click:notification",
-  "click:remove-worker",
+  // "click:remove-worker",  // Deprecated 2025-12-24
   "click:add-schedule",
   "click:hide",
 ]);
@@ -319,9 +323,9 @@ const matrix = computed(() => {
                 @click:duplicate="emit('click:duplicate', $event)"
                 @click:edit="emit('click:edit', $event)"
                 @click:edit-worker="emit('click:edit-worker', $event)"
+                @click:edit-workers="emit('click:edit-workers', $event)"
                 @click:notify="emit('click:notify', $event)"
                 @click:notification="emit('click:notification', $event)"
-                @click:remove-worker="emit('click:remove-worker', $event)"
               >
               </ArrangementsDraggableSchedules>
             </td>
