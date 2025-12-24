@@ -44,7 +44,7 @@ const props = defineProps({
 
 const emit = defineEmits([
   "click:edit",
-  "click:remove",
+  // "click:remove",  // Deprecated 2025-12-24
   "change",
   "click:notification",
 ]);
