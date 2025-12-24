@@ -18,13 +18,15 @@
  *                                    - schedule: The current SiteOperationSchedule instance
  *                                    - worker: The worker element being edited
  * @emits {event} click:edit-workers - Emitted when the `account-edit` button is clicked.
+ * @emits {event} click:notification - Emitted when the notification chip is clicked
+ *                                     Event payload: Forwarded from ArrangementsWorkerTag component
+ *
+ * @deprecated
  * @emits {event} click:remove-worker - Emitted when the remove button is clicked on a worker tag.
  *                                      Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
  *                                      - schedule: The current SiteOperationSchedule instance
  *                                      - workerId: The ID of the worker to remove
  *                                      - isEmployee: Whether the worker is an employee (true) or outsourcer (false)
- * @emits {event} click:notification - Emitted when the notification chip is clicked
- *                                     Event payload: Forwarded from ArrangementsWorkerTag component
  */
 import DraggableIcon from "@/components/atoms/icons/Draggable.vue";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -46,7 +48,7 @@ const emit = defineEmits([
   "click:edit-workers", // 2025-12-23 add
   "click:notify",
   "click:notification",
-  "click:remove-worker",
+  // "click:remove-worker",  // Deprecated 2025-12-24
   "change:workers",
 ]);
 
@@ -116,11 +118,19 @@ const btns = computed(() => {
       </span>
       <DraggableIcon v-if="schedule.isEditable" />
     </div>
-    <ArrangementsDraggableWorkers
+    <!-- 2025-12-24 click:remove イベント廃止 -->
+    <!-- <ArrangementsDraggableWorkers
       :schedule="schedule"
       :notifications="notifications"
       @change="emit('change:workers', $event)"
       @click:remove="emit('click:remove-worker', $event)"
+      @click:edit="emit('click:edit-worker', $event)"
+      @click:notification="emit('click:notification', $event)"
+    /> -->
+    <ArrangementsDraggableWorkers
+      :schedule="schedule"
+      :notifications="notifications"
+      @change="emit('change:workers', $event)"
       @click:edit="emit('click:edit-worker', $event)"
       @click:notification="emit('click:notification', $event)"
     />
