@@ -12,17 +12,19 @@
  *                             Event payload: { schedule: Object, worker: Object }
  *                             - schedule: The current SiteOperationSchedule instance
  *                             - worker: The worker element being edited
- * @emits {Event} click:remove - Emitted when the remove button is clicked on a worker tag.
- *                               Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
- *                               - schedule: The current SiteOperationSchedule instance
- *                               - workerId: The ID of the worker to remove
- *                               - isEmployee: Whether the worker is an employee (true) or outsourcer (false)
  * @emits {Event} change - Emitted when the order of workers changes.
  *                         Event payload: { event: Object, schedule: Object }
  *                         - event: The vuedraggable change event
  *                         - schedule: The current SiteOperationSchedule instance
  * @emits {Event} click:notification - Emitted when the notification button is clicked.
  *                                     Event payload: Forwarded from ArrangementsWorkerTag component
+ *
+ * @deprecated
+ * @emits {Event} click:remove - Emitted when the remove button is clicked on a worker tag.
+ *                               Event payload: { schedule: Object, workerId: string, isEmployee: boolean }
+ *                               - schedule: The current SiteOperationSchedule instance
+ *                               - workerId: The ID of the worker to remove
+ *                               - isEmployee: Whether the worker is an employee (true) or outsourcer (false)
  */
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
@@ -131,17 +133,22 @@ function handleClickNotification(event) {
   emit("click:notification", event);
 }
 
-/**
- * Handler for `click:remove` event from `ArrangementsWorkerTag` component.
- * @param {Object} element - The worker element to remove.
- */
-function handleClickRemove(element) {
-  emit("click:remove", {
-    schedule: props.schedule,
-    workerId: element.workerId,
-    isEmployee: element.isEmployee,
-  });
-}
+// 2025-12-24 deleted
+// タグの削除ボタンクリック時に useArrangementsManager の removeWorker を
+// 直接呼び出していたが、change イベント経由で処理させられるように修正。
+// 修正前) @click:remove="handleClickRemove(element)"
+// 修正後) @click:remove="() => handleChange({ removed: { element } })"
+// /**
+//  * Handler for `click:remove` event from `ArrangementsWorkerTag` component.
+//  * @param {Object} element - The worker element to remove.
+//  */
+// function handleClickRemove(element) {
+//   emit("click:remove", {
+//     schedule: props.schedule,
+//     workerId: element.workerId,
+//     isEmployee: element.isEmployee,
+//   });
+// }
 </script>
 
 <template>
@@ -163,7 +170,7 @@ function handleClickRemove(element) {
           :worker="element"
           @click:edit="handleClickEdit(element)"
           @click:notification="handleClickNotification"
-          @click:remove="handleClickRemove(element)"
+          @click:remove="() => handleChange({ removed: { element } })"
         />
       </div>
     </template>
