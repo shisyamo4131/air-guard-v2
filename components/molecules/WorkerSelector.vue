@@ -18,6 +18,8 @@
  * note: `rawElement` is the original object from the `employees` or `outsourcers` arrays.
  *
  * @emits tab-changed - Emitted when the active tab changes.
+ *
+ * @update 2025-12-24 Add drag handle support to draggable items.
  */
 import { ref, watch } from "vue";
 import draggable from "vuedraggable";
@@ -131,6 +133,7 @@ const filteredOutsourcers = computed(() => {
             :item-key="convertedItemKey"
             :group="{ name: 'workers', pull: 'clone', put: false }"
             :sort="false"
+            handle=".drag-handle"
           >
             <template #item="{ element }">
               <div>
@@ -153,6 +156,7 @@ const filteredOutsourcers = computed(() => {
             :item-key="convertedItemKey"
             :group="{ name: 'workers', pull: 'clone', put: false }"
             :sort="false"
+            handle=".drag-handle"
           >
             <template #item="{ element }">
               <div>
