@@ -112,6 +112,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
   <div class="d-flex flex-column fill-height">
     <!-- TOOLBAR -->
     <ArrangementsToolbar
+      v-if="false"
       v-model="dateRangeComposable.currentDayCount.value"
       @click:workers="toggleFloatingWindow"
       @click:site-order="siteOrderManager.set"
@@ -244,7 +245,10 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     <!-- ツールバーを廃止し、こちらに変更する予定 -->
     <ArrangementsSpeedDial
       v-if="auth.isSuperUser"
-      color="success"
+      app
+      location="bottom right"
+      color="primary"
+      @click:workers="toggleFloatingWindow"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:site-order="siteOrderManager.set"
     />
