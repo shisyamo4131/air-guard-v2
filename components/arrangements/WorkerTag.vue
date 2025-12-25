@@ -14,17 +14,21 @@
  * @emit {Event} click:remove - Emitted when the remove button is clicked.
  * @emit {Event} click:edit - Emitted when the edit button is clicked.
  * @emit {Event} click:notification - Emitted when the notification chip is clicked.
+ *
+ * @update 2025-12-25 Modified to use `useAuthStore.tagSize` for `WorkerTag.size`.
  *****************************************************************************/
 import { inject } from "vue";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 defineOptions({ inheritAttrs: false });
+
+const auth = useAuthStore();
 
 /*****************************************************************************
  * INJECT COMPOSABLES
  *****************************************************************************/
 const getWorker = inject("getWorker");
 const { has } = inject("timedSetComposable");
-const { current } = inject("tagSizeComposable");
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -72,7 +76,7 @@ const hasEndTimeDifference = computed(() => {
     :label="label"
     :loading="loading"
     :removable="schedule.isEditable"
-    :size="current"
+    :size="auth.tagSize"
     :start-time="worker.startTime"
     :variant="variant"
     @click:remove="emit('click:remove')"

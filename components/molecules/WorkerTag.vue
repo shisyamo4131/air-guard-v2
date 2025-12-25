@@ -21,7 +21,10 @@
  *   - startTime: Slot for customizing the start time display.
  *   - endTime: Slot for customizing the end time display.
  *   - append-footer: Slot for customizing the footer display.
+ *
+ * @update 2025-12-25 Modified `size` prop to be based on `TAG_SIZE_VALUES`.
  */
+import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 defineOptions({ inheritAttrs: false });
 
@@ -54,8 +57,8 @@ const props = defineProps({
   /** Size variant of the tag */
   size: {
     type: String,
-    default: "medium",
-    validator: (value) => ["small", "medium", "large"].includes(value),
+    default: TAG_SIZE_VALUES.MEDIUM.value,
+    validator: (value) => Object.keys(TAG_SIZE_VALUES).includes(value),
   },
   /** Start time of the worker's shift */
   startTime: { type: String, required: true },

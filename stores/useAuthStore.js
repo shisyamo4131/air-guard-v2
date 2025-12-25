@@ -10,6 +10,7 @@ import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useRolePresets } from "@/composables/useRolePresets";
 import { useStatisticsStore } from "@/stores/useStatisticsStore";
+import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -47,6 +48,51 @@ export const useAuthStore = defineStore("auth", () => {
   const systemInstance = reactive(new System());
   const companyInstance = reactive(new Company());
   const userInstance = reactive(new User());
+
+  /**
+   * タグサイズ設定
+   * - ユーザーのタグ表示サイズを管理
+   * - 変更時に Firestore の User ドキュメントを更新
+   *
+   * ```
+   * import { useAuthStore } from "@/stores/useAuthStore";
+   * const auth = useAuthStore();
+   *
+   * // タグサイズを取得
+   * const currentTagSize = auth.tagSize;
+   *
+   * // タグサイズを変更
+   * auth.tagSize = `LARGE`;
+   * ```
+   */
+  const internalTagSize = ref(TAG_SIZE_VALUES.MEDIUM.value);
+  const tagSize = computed({
+    get() {
+      return internalTagSize.value;
+    },
+    async set(value) {
+      if (!TAG_SIZE_VALUES[value]) {
+        logger.warn({ message: `Invalid tag size value`, data: value });
+        return;
+      }
+      internalTagSize.value = value;
+      if (isReady.value && !!uid.value) {
+        try {
+          await userInstance.updateProperties({ tagSize: value });
+        } catch (error) {
+          logger.error({ message: "Failed to update tag size", error });
+        }
+      }
+    },
+  });
+  watch(
+    () => userInstance.tagSize,
+    (newVal) => {
+      if (newVal && TAG_SIZE_VALUES[newVal]) {
+        internalTagSize.value = newVal;
+      }
+    }
+  );
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -388,16 +434,19 @@ export const useAuthStore = defineStore("auth", () => {
 
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
+  // ただし、分割代入を行うとリアクティブ性が失われることに注意。
   return {
     uid,
     email: computed(() => userInstance.email),
     displayName: computed(() => userInstance.displayName),
     isEmailVerified,
     isAdmin: computed(() => userInstance.isAdmin),
+    tagSize,
     isReady,
     roles,
     companyId,
     isSuperUser,
+    isDeveloper,
     company: companyInstance, // companyInstance を company として返す
     isMaintenance,
     isDev,

@@ -25,10 +25,12 @@
  *
  * @emits remove - Emitted when the clear button is clicked.
  *
+ * @update 2025-12-25 `size` プロパティを `TAG_SIZE_VALUES` に基づくよう修正。
  * @update 2025-12-24 Add icon for draggable handle in prepend-label slot.
  */
 
 import { computed } from "vue";
+import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 defineOptions({ inheritAttrs: false });
 
@@ -60,8 +62,8 @@ const props = defineProps({
   /** Size variant of the tag */
   size: {
     type: String,
-    default: "medium",
-    validator: (value) => ["small", "medium", "large"].includes(value),
+    default: TAG_SIZE_VALUES.MEDIUM.value,
+    validator: (value) => Object.keys(TAG_SIZE_VALUES).includes(value),
   },
 
   /** Visual variant of the tag */
@@ -84,7 +86,7 @@ const emit = defineEmits(["click:remove"]);
 const tagClasses = computed(() => ({
   "tag-base": true,
   "tag-base--highlighted": props.highlight,
-  [`tag-base--${props.size}`]: true,
+  [`tag-base--${props.size.toLowerCase()}`]: true,
   [`tag-base--${props.variant}`]: props.variant !== "default",
   "tag-base--loading": isLoading.value,
 }));
@@ -108,7 +110,7 @@ const tagHeight = computed(() => {
     default: "48px",
     large: "56px",
   };
-  return heights[props.size] || heights.default;
+  return heights[props.size.toLowerCase()] || heights.default;
 });
 
 const removeButtonAttrs = computed(() => {
@@ -116,7 +118,8 @@ const removeButtonAttrs = computed(() => {
     disabled: isLoading.value,
     icon: props.removeIcon,
     isLoading: isLoading.value,
-    size: props.size === "small" ? "x-small" : "small",
+    // size: props.size === "small" ? "x-small" : "small",
+    size: props.size === TAG_SIZE_VALUES.SMALL.value ? "x-small" : "small",
     onClick: handleClickRemove,
   };
 });
@@ -131,7 +134,11 @@ const titleClasses = computed(() => {
     large: "text-body-1",
   };
 
-  return ["tag-base__title", sizeClasses[props.size] || sizeClasses.default];
+  // return ["tag-base__title", sizeClasses[props.size] || sizeClasses.default];
+  return [
+    "tag-base__title",
+    sizeClasses[props.size.toLowerCase()] || sizeClasses.default,
+  ];
 });
 
 /**
@@ -144,7 +151,8 @@ const progressSize = computed(() => {
     large: "small",
   };
 
-  return sizeMap[props.size] || "x-small";
+  // return sizeMap[props.size] || "x-small";
+  return sizeMap[props.size.toLowerCase()] || "x-small";
 });
 
 /*****************************************************************************

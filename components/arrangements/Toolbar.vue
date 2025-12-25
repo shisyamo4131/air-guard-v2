@@ -7,7 +7,14 @@
  * @emit click:site-order - Emits when the site order button is clicked.
  * @emit click:add-schedule - Emits when the add-schedule button is clicked.
  * @emit update:modelValue - Emits when the number of days to display is updated.
+ *
+ * @update 2025-12-25 Modified to use `useAuthStore.tagSize` for tag size selection.
  */
+
+import { useAuthStore } from "@/stores/useAuthStore";
+import { TAG_SIZE_OPTIONS } from "@shisyamo4131/air-guard-v2-schemas/constants";
+
+const auth = useAuthStore();
 
 /*****************************************************************************
  * PROPS / EMITS / REFS
@@ -25,11 +32,6 @@ const emit = defineEmits([
 /*****************************************************************************
  * COMPOSABLES
  *****************************************************************************/
-const {
-  current: tagSize,
-  update: updateTagSize,
-  items: tagSizeItems,
-} = inject("tagSizeComposable");
 
 /*****************************************************************************
  * CONSTANTS
@@ -101,15 +103,15 @@ const handleWorkersClick = (event) => {
         @click="emit('click:site-order')"
       />
       <v-btn-toggle
-        :model-value="tagSize"
+        :model-value="auth.tagSize"
         class="mr-3"
         density="compact"
         mandatory
         variant="text"
-        @update:model-value="updateTagSize"
+        @update:model-value="auth.tagSize = $event"
       >
         <v-btn
-          v-for="item of tagSizeItems"
+          v-for="item of TAG_SIZE_OPTIONS"
           :key="item.value"
           :value="item.value"
         >
