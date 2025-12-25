@@ -81,4 +81,17 @@ const handleSignOut = async () => {
   --app-bar-height: 64px; /* VAppBar の高さ */
   --footer-height: 40px; /* VFooter の高さ */
 }
+
+/* 
+  Sortable.js drag-and-drop global styles
+  Applied to elements appended to body during drag operation.
+  Used by: DraggableWorkers.vue, WorkerSelector.vue
+*/
+.sortable-drag,
+.sortable-fallback {
+  z-index: 99999 !important;
+  opacity: 0.9 !important;
+  cursor: grabbing !important;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3) !important;
+}
 </style>

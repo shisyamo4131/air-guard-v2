@@ -87,16 +87,6 @@ const btns = computed(() => {
     },
   ];
 
-  // 作業員編集ボタン: 2025-12-23 add
-  if (auth.isSuperUser) {
-    result.unshift({
-      attrs: {
-        disabled: !props.schedule.isEditable,
-        onClick: () => emit("click:edit-workers"),
-      },
-      icon: { icon: "mdi-account-edit" },
-    });
-  }
   return result;
 });
 </script>
@@ -134,21 +124,15 @@ const btns = computed(() => {
       @click:edit="emit('click:edit-worker', $event)"
       @click:notification="emit('click:notification', $event)"
     />
-    <v-container
-      class="d-flex pt-0 pb-2 px-2 ga-1"
-      :class="[auth.isSuperUser ? 'justify-space-between' : 'justify-end']"
-    >
+    <v-container class="d-flex pt-0 pb-2 px-2 ga-1 justify-end">
       <v-btn
         v-for="(btn, index) of btns"
         :key="index"
         v-bind="btn.attrs"
-        :size="auth.isSuperUser ? 'small' : 'x-small'"
+        size="small"
         variant="tonal"
       >
-        <v-icon
-          v-bind="btn.icon"
-          :size="auth.isSuperUser ? 'large' : 'default'"
-        />
+        <v-icon v-bind="btn.icon" />
       </v-btn>
     </v-container>
   </v-card>

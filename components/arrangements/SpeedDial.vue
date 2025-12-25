@@ -13,7 +13,7 @@ const btns = ref([
     onClick: () => emit("click:site-order"),
   },
   {
-    icon: "mdi-plus",
+    icon: "mdi-file-document-plus",
     color: "secondary",
     onClick: () => emit("click:add-schedule"),
   },
@@ -27,7 +27,7 @@ const btns = ref([
 
 <template>
   <v-fab icon variant="elevated">
-    <v-icon>{{ open ? "mdi-close" : "mdi-plus" }}</v-icon>
+    <v-icon>{{ open ? "mdi-close" : "mdi-menu" }}</v-icon>
     <v-speed-dial v-model="open" activator="parent">
       <v-btn v-for="(btn, index) in btns" :key="index" v-bind="btn" />
     </v-speed-dial>

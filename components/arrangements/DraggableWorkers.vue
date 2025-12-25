@@ -27,6 +27,14 @@
  *                               - schedule: The current SiteOperationSchedule instance
  *                               - workerId: The ID of the worker to remove
  *                               - isEmployee: Whether the worker is an employee (true) or outsourcer (false)
+ * @history
+ * 2025-12-25: Fixed mobile drag-and-drop display issue
+ *   - Problem: Dragged elements were hidden behind other elements on mobile devices
+ *   - Root cause: Table structure (<td>) creates implicit overflow:hidden and stacking context
+ *   - Solution: Added :fallback-on-body="true" and :append-to="'body'" to move dragged
+ *     elements to body, escaping table layout constraints
+ *   - Added :force-fallback="true" to ensure consistent behavior across devices
+ *   - Added global styles for .sortable-drag and .sortable-fallback classes
  */
 import draggable from "vuedraggable";
 import { useTimedSet } from "@/composables/useTimedSet";
@@ -166,8 +174,19 @@ function handleClickNotification(event) {
     :group="{ name: DRAGGABLE_GROUP_NAME, put: handlePut }"
     :item-key="DRAGGABLE_ITEM_KEY"
     handle=".drag-handle"
+    ghost-class="sortable-ghost"
+    :force-fallback="true"
+    :fallback-on-body="true"
+    :append-to="'body'"
     @change="handleChange"
   >
+    <!-- 
+      2025-12-25: Mobile drag-and-drop fix
+      - :force-fallback="true": Forces Sortable.js fallback mode for consistent behavior
+      - :fallback-on-body="true": Appends dragged element to body during drag
+      - :append-to="'body'": Specifies body as the append target
+      These properties escape table layout constraints that caused z-index issues on mobile
+    -->
     <template #item="{ element }">
       <div>
         <ArrangementsWorkerTag
@@ -184,3 +203,14 @@ function handleClickNotification(event) {
     </template>
   </draggable>
 </template>
+
+<style scoped>
+.sortable-ghost {
+  opacity: 0.5;
+}
+
+/* 
+  Note: Global styles for .sortable-drag and .sortable-fallback
+  are defined in `layouts/default.vue`.
+*/
+</style>

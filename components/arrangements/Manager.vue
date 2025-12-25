@@ -166,14 +166,6 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
       @click:output-sheet="open"
     />
 
-    <!-- 作業員配置コンポーネント -->
-    <ArrangementsWorkerSelect
-      :ref="(el) => (tempComponent = el)"
-      :employees="employees"
-      :outsourcers="outsourcers"
-      :cached-sites="fetchSiteComposable.cachedSites.value"
-    />
-
     <!-- 現場並び替えコンポーネント -->
     <AtomsDialogsFullscreen v-bind="siteOrderManager.dialogAttrs.value">
       <OrganismsSiteOrderManager v-bind="siteOrderManager.attrs.value" />
@@ -242,9 +234,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     </v-snackbar>
 
     <!-- スピードダイアル: スーパーユーザー限定表示 -->
-    <!-- ツールバーを廃止し、こちらに変更する予定 -->
     <ArrangementsSpeedDial
-      v-if="auth.isSuperUser"
       app
       location="bottom right"
       color="primary"

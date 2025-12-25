@@ -19,7 +19,12 @@
  *
  * @emits tab-changed - Emitted when the active tab changes.
  *
- * @update 2025-12-24 Add drag handle support to draggable items.
+ * @history
+ * 2025-12-24: Add drag handle support to draggable items.
+ * 2025-12-25: Mobile drag-and-drop fix
+ *   - Added :force-fallback="true", :fallback-on-body="true", :append-to="'body'"
+ *   - Ensures dragged clone elements display correctly on mobile devices
+ *   - Consistent with DraggableWorkers.vue fix for table layout constraints
  */
 import { ref, watch } from "vue";
 import draggable from "vuedraggable";
@@ -134,7 +139,14 @@ const filteredOutsourcers = computed(() => {
             :group="{ name: 'workers', pull: 'clone', put: false }"
             :sort="false"
             handle=".drag-handle"
+            :force-fallback="true"
+            :fallback-on-body="true"
+            :append-to="'body'"
           >
+            <!-- 
+              2025-12-25: Mobile drag-and-drop fix
+              Same configuration as DraggableWorkers.vue to ensure consistent behavior
+            -->
             <template #item="{ element }">
               <div>
                 <slot
@@ -157,7 +169,14 @@ const filteredOutsourcers = computed(() => {
             :group="{ name: 'workers', pull: 'clone', put: false }"
             :sort="false"
             handle=".drag-handle"
+            :force-fallback="true"
+            :fallback-on-body="true"
+            :append-to="'body'"
           >
+            <!-- 
+              2025-12-25: Mobile drag-and-drop fix
+              Same configuration as DraggableWorkers.vue to ensure consistent behavior
+            -->
             <template #item="{ element }">
               <div>
                 <slot
