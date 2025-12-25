@@ -5,8 +5,8 @@ const props = defineProps({
   title: { type: String, default: "ウィンドウ" },
   initialX: { type: Number, default: 100 },
   initialY: { type: Number, default: 100 },
-  width: { type: [String, Number], default: 280 },
-  height: { type: [String, Number], default: 480 },
+  width: { type: [String, Number], default: 216 },
+  height: { type: [String, Number], default: 324 },
 });
 
 /** define emits */
@@ -37,7 +37,7 @@ const windowStyle = computed(() => ({
   top: `${position.value.y}px`,
   width: typeof props.width === "number" ? `${props.width}px` : props.width,
   height: typeof props.height === "number" ? `${props.height}px` : props.height,
-  zIndex: isDragging.value ? 1001 : 1000,
+  zIndex: isDragging.value ? 1020 : 1015,
 }));
 
 /*****************************************************************************
@@ -98,12 +98,68 @@ function stopDrag() {
   document.removeEventListener("mouseup", stopDrag);
 }
 
+function startDragTouch(event) {
+  if (
+    !event.target.closest(".window-header") &&
+    !event.target.closest(".v-toolbar") &&
+    !event.target.classList.contains("window-header") &&
+    !event.target.classList.contains("v-toolbar")
+  ) {
+    return;
+  }
+
+  if (event.target.closest(".v-btn")) {
+    return;
+  }
+
+  isDragging.value = true;
+  const touch = event.touches[0];
+  const element = floatingWindow.value?.$el || floatingWindow.value;
+  const rect = element.getBoundingClientRect();
+  dragOffset.value = {
+    x: touch.clientX - rect.left,
+    y: touch.clientY - rect.top,
+  };
+
+  document.addEventListener("touchmove", onDragTouch, { passive: false });
+  document.addEventListener("touchend", stopDragTouch);
+  event.preventDefault();
+}
+
+function onDragTouch(event) {
+  if (!isDragging.value) return;
+
+  const touch = event.touches[0];
+  const newX = touch.clientX - dragOffset.value.x;
+  const newY = touch.clientY - dragOffset.value.y;
+
+  const element = floatingWindow.value?.$el || floatingWindow.value;
+  const maxX = window.innerWidth - element.offsetWidth;
+  const maxY = window.innerHeight - element.offsetHeight;
+
+  position.value = {
+    x: Math.max(0, Math.min(newX, maxX)),
+    y: Math.max(0, Math.min(newY, maxY)),
+  };
+
+  emit("move", position.value);
+  event.preventDefault();
+}
+
+function stopDragTouch() {
+  isDragging.value = false;
+  document.removeEventListener("touchmove", onDragTouch);
+  document.removeEventListener("touchend", stopDragTouch);
+}
+
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
 onBeforeUnmount(() => {
   document.removeEventListener("mousemove", onDrag);
   document.removeEventListener("mouseup", stopDrag);
+  document.removeEventListener("touchmove", onDragTouch);
+  document.removeEventListener("touchend", stopDragTouch);
 });
 </script>
 
@@ -116,7 +172,12 @@ onBeforeUnmount(() => {
     :style="windowStyle"
     elevation="8"
   >
-    <v-toolbar class="window-header" density="compact" @mousedown="startDrag">
+    <v-toolbar
+      class="window-header"
+      density="compact"
+      @mousedown="startDrag"
+      @touchstart="startDragTouch"
+    >
       <v-toolbar-title class="window-title">{{ title }}</v-toolbar-title>
       <v-spacer />
       <v-btn
