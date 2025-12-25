@@ -117,7 +117,7 @@ const filteredOutsourcers = computed(() => {
   <div class="fill-height d-flex">
     <div class="fill-height d-flex flex-column flex-grow-1">
       <!-- タブナビゲーション -->
-      <v-tabs v-model="activeTab" class="flex-shrink-0" grow>
+      <v-tabs v-model="activeTab" class="flex-shrink-0" density="compact" grow>
         <v-tab v-for="(tab, index) in TABS_CONFIG" :key="index" :value="index">
           {{ tab.label }}
         </v-tab>
