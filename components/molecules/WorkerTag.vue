@@ -3,25 +3,28 @@
  * @file components/molecules/WorkerTag.vue
  * @description A component for displaying a worker tag based on TagBase.
  * - Displays the worker's `startTime` and `endTime`.
- * @props {Number} amount - The amount associated with the tag.
- * @props {String} endTime - The end time to display.
+ *
+ * @props {String} endTime - End time of the worker's shift.
  * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {String} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {Boolean} removable - Displays clear button and emit `remove` event when clicked.
+ * @props {Boolean} removable - Displays clear button and emits `click:remove` event when clicked.
  * @props {String} removeIcon - Icon for the remove button.
- * @props {Boolean} showAmount - Whether to show the amount at the end of label.
- * @props {String} size - Size variant of the tag. One of "small", "medium", "large".
- * @props {String} startTime - The start time to display.
- * @props {String} variant - Visual variant of the tag. One of "default", "success", "warning", "error", "disabled".
+ * @props {String} size - Size variant of the tag ('SMALL', 'MEDIUM', 'LARGE').
+ * @props {String} startTime - Start time of the worker's shift.
+ * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error', 'disabled').
  *
- * @emits {Event} click:remove - Emitted when the remove button is clicked.
+ * @emits click:remove - Emitted when the remove button is clicked.
  *
  * @slots
+ *   - prepend-label: Content before the label.
+ *   - append-label: Content after the label.
  *   - startTime: Slot for customizing the start time display.
  *   - endTime: Slot for customizing the end time display.
  *   - append-footer: Slot for customizing the footer display.
+ *   - prepend-action: Content in the prepend action area.
  *
+ * @update 2025-12-25 Removed deprecated `amount` and `showAmount` props.
  * @update 2025-12-25 Modified `size` prop to be based on `TAG_SIZE_VALUES`.
  */
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
@@ -32,13 +35,13 @@ defineOptions({ inheritAttrs: false });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
-  /** Amount of workers (used outsourcer only) */
-  amount: { type: Number, required: true },
   /** End time of the worker's shift */
   endTime: { type: String, required: true },
-  /** Whether the tag is highlighted. */
+
+  /** Whether the tag is highlighted */
   highlight: { type: Boolean, default: false },
-  /** The label to display on the tag. */
+
+  /** The label to display on the tag */
   label: {
     type: String,
     default: undefined,
@@ -46,22 +49,26 @@ const props = defineProps({
       value === undefined ||
       (typeof value === "string" && value.trim().length > 0),
   },
-  /** Whether the tag is in loading state. */
+
+  /** Whether the tag is in loading state */
   loading: { type: Boolean, default: false },
-  /** Displays clear button and emit `remove` event when clicked */
+
+  /** Displays clear button and emits `click:remove` event when clicked */
   removable: { type: Boolean, default: false },
+
   /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
-  /** Whether to show the amount at the end of label */
-  showAmount: { type: Boolean, default: false },
-  /** Size variant of the tag */
+
+  /** Size variant of the tag (SMALL, MEDIUM, LARGE) */
   size: {
     type: String,
     default: TAG_SIZE_VALUES.MEDIUM.value,
     validator: (value) => Object.keys(TAG_SIZE_VALUES).includes(value),
   },
+
   /** Start time of the worker's shift */
   startTime: { type: String, required: true },
+
   /** Visual variant of the tag */
   variant: {
     type: String,
@@ -85,36 +92,37 @@ const emit = defineEmits(["click:remove"]);
     :variant="variant"
     @click:remove="emit('click:remove')"
   >
-    <!-- through slot: prepend-label -->
-    <template #prepend-label>
-      <slot name="prepend-label" />
+    <!-- Pass through: prepend-label slot with slot props -->
+    <template #prepend-label="slotProps">
+      <slot name="prepend-label" v-bind="slotProps" />
     </template>
 
-    <!-- through slot: append-label -->
-    <template #append-label>
-      <span v-if="showAmount">{{ `(${amount})` }}</span>
+    <!-- Pass through: append-label slot with slot props -->
+    <template #append-label="slotProps">
+      <slot name="append-label" v-bind="slotProps" />
     </template>
 
-    <!-- through slot: footer -->
+    <!-- Footer: display start and end times -->
     <template #footer>
       <v-list-item-subtitle class="text-caption text-no-wrap">
-        <!-- slot: startTime -->
+        <!-- Slot: startTime -->
         <slot name="startTime" :start-time="startTime">
           <span>{{ startTime }}</span>
         </slot>
-        <span> {{ ` - ` }}</span>
 
-        <!-- slot: endTime -->
+        <span> - </span>
+
+        <!-- Slot: endTime -->
         <slot name="endTime" :end-time="endTime">
           <span>{{ endTime }}</span>
         </slot>
 
-        <!-- slot: append-footer -->
+        <!-- Slot: append-footer -->
         <slot name="append-footer" />
       </v-list-item-subtitle>
     </template>
 
-    <!-- through slot: prepend-action -->
+    <!-- Pass through: prepend-action slot -->
     <template #prepend-action>
       <slot name="prepend-action" />
     </template>

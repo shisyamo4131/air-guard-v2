@@ -1,16 +1,15 @@
 <script setup>
 /**
- * TagBase.vue
- *
- * Base component for displaying a tag in arrangements.
- * The tag has a fixed height of 48px.
+ * @file ./components/molecules/TagBase.vue
+ * @description Base component for displaying a tag in arrangements.
+ * - The height is changed based on `size`.
  *
  * @props {Boolean} highlight - Whether the tag is highlighted.
  * @props {String} label - The label to display on the tag.
  * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {Boolean} removable - Displays clear button and emits `remove` event when clicked.
+ * @props {Boolean} removable - Displays clear button and emits `click:remove` event when clicked.
  * @props {String} removeIcon - Icon for the remove button.
- * @props {String} size - Size variant of the tag ('small', 'default', 'large').
+ * @props {String} size - Size variant of the tag ('SMALL', 'MEDIUM', 'LARGE').
  * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error', 'disabled').
  *
  * @slots
@@ -23,9 +22,10 @@
  * - action: Custom clear button content.
  * - append-action: Content in the append action area.
  *
- * @emits remove - Emitted when the clear button is clicked.
+ * @emits click:remove - Emitted when the remove button is clicked.
  *
  * @update 2025-12-25 `size` プロパティを `TAG_SIZE_VALUES` に基づくよう修正。
+ * @update 2025-12-25 冗長な computed プロパティを削除し、コードを整理。
  * @update 2025-12-24 Add icon for draggable handle in prepend-label slot.
  */
 
@@ -38,10 +38,7 @@ defineOptions({ inheritAttrs: false });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
-  /** Whether the tag is highlighted. */
   highlight: { type: Boolean, default: false },
-
-  /** The label to display on the tag. */
   label: {
     type: String,
     default: undefined,
@@ -49,24 +46,15 @@ const props = defineProps({
       value === undefined ||
       (typeof value === "string" && value.trim().length > 0),
   },
-
-  /** Whether the tag is in loading state. */
   loading: { type: Boolean, default: false },
-
-  /** Displays clear button and emit `remove` event when clicked */
   removable: { type: Boolean, default: false },
-
-  /** Icon for the remove button */
   removeIcon: { type: String, default: "mdi-close" },
-
-  /** Size variant of the tag */
   size: {
     type: String,
     default: TAG_SIZE_VALUES.MEDIUM.value,
-    validator: (value) => Object.keys(TAG_SIZE_VALUES).includes(value),
+    validator: (value) =>
+      Object.values(TAG_SIZE_VALUES).some((v) => v.value === value),
   },
-
-  /** Visual variant of the tag */
   variant: {
     type: String,
     default: "default",
@@ -78,89 +66,98 @@ const props = defineProps({
 const emit = defineEmits(["click:remove"]);
 
 /*****************************************************************************
+ * SIZE CONFIGURATIONS
+ *****************************************************************************/
+const SIZE_CONFIG = {
+  small: {
+    height: "40px",
+    titleClass: "text-caption",
+    progressSize: "x-small",
+    removeButtonSize: "x-small",
+  },
+  medium: {
+    height: "48px",
+    titleClass: "text-subtitle-2",
+    progressSize: "x-small",
+    removeButtonSize: "small",
+  },
+  large: {
+    height: "56px",
+    titleClass: "text-body-1",
+    progressSize: "small",
+    removeButtonSize: "small",
+  },
+};
+
+/*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
 /**
- * Computed property for tag classes
+ * Normalized size value (lowercase)
+ */
+const normalizedSize = computed(() => props.size.toLowerCase());
+
+/**
+ * Size configuration based on normalized size
+ */
+const sizeConfig = computed(() => SIZE_CONFIG[normalizedSize.value]);
+
+/**
+ * Tag height based on size
+ */
+const tagHeight = computed(() => sizeConfig.value.height);
+
+/**
+ * Title classes based on size
+ */
+const titleClasses = computed(() => [
+  "tag-base__title",
+  sizeConfig.value.titleClass,
+]);
+
+/**
+ * Progress size based on size
+ */
+const progressSize = computed(() => sizeConfig.value.progressSize);
+
+/**
+ * Tag classes based on props
  */
 const tagClasses = computed(() => ({
   "tag-base": true,
   "tag-base--highlighted": props.highlight,
-  [`tag-base--${props.size.toLowerCase()}`]: true,
+  [`tag-base--${normalizedSize.value}`]: true,
   [`tag-base--${props.variant}`]: props.variant !== "default",
   "tag-base--loading": isLoading.value,
 }));
 
 /**
- * Computed property to determine if the tag is in loading state
+ * Whether the tag is in loading state
  */
 const isLoading = computed(() => props.loading || !props.label);
 
 /**
- * Computed property to determine if label content should be shown
+ * Whether to show loading text (hidden for small size)
  */
-const showLabelContent = computed(() => props.label && !isLoading.value);
+const showLoadingText = computed(() => normalizedSize.value !== "small");
 
 /**
- * Computed property for tag height based on size
+ * Attributes for the remove button
  */
-const tagHeight = computed(() => {
-  const heights = {
-    small: "40px",
-    default: "48px",
-    large: "56px",
-  };
-  return heights[props.size.toLowerCase()] || heights.default;
-});
-
-const removeButtonAttrs = computed(() => {
-  return {
-    disabled: isLoading.value,
-    icon: props.removeIcon,
-    isLoading: isLoading.value,
-    // size: props.size === "small" ? "x-small" : "small",
-    size: props.size === TAG_SIZE_VALUES.SMALL.value ? "x-small" : "small",
-    onClick: handleClickRemove,
-  };
-});
-
-/**
- * Computed property for title classes based on size
- */
-const titleClasses = computed(() => {
-  const sizeClasses = {
-    small: "text-caption",
-    default: "text-subtitle-2",
-    large: "text-body-1",
-  };
-
-  // return ["tag-base__title", sizeClasses[props.size] || sizeClasses.default];
-  return [
-    "tag-base__title",
-    sizeClasses[props.size.toLowerCase()] || sizeClasses.default,
-  ];
-});
-
-/**
- * Computed property for progress circular size based on tag size
- */
-const progressSize = computed(() => {
-  const sizeMap = {
-    small: "x-small",
-    default: "x-small",
-    large: "small",
-  };
-
-  // return sizeMap[props.size] || "x-small";
-  return sizeMap[props.size.toLowerCase()] || "x-small";
-});
+const removeButtonAttrs = computed(() => ({
+  disabled: isLoading.value,
+  icon: props.removeIcon,
+  isLoading: isLoading.value,
+  size: sizeConfig.value.removeButtonSize,
+  onClick: handleClickRemove,
+}));
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
 /**
  * Handler for the remove button click event.
- * Emits the 'remove' event.
+ * Prevents event propagation and emits the 'click:remove' event.
  */
 function handleClickRemove(event) {
   event.stopPropagation();
@@ -177,7 +174,7 @@ function handleClickRemove(event) {
   >
     <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->
-      <div v-if="showLabelContent" class="tag-base__label-content">
+      <div v-if="!isLoading" class="tag-base__label-content">
         <slot name="prepend-label" v-bind="{ label: props.label }">
           <AtomsIconsDraggable />
         </slot>
@@ -188,13 +185,13 @@ function handleClickRemove(event) {
       </div>
 
       <!-- Loading indicator (shown when loading or no label) -->
-      <div v-else-if="isLoading" class="tag-base__loading">
+      <div v-else class="tag-base__loading">
         <v-progress-circular
           indeterminate
           :size="progressSize"
           aria-label="読み込み中"
         />
-        <span v-if="size !== 'small'" class="tag-base__loading-text ml-2">
+        <span v-if="showLoadingText" class="tag-base__loading-text ml-2">
           読み込み中...
         </span>
       </div>
@@ -206,7 +203,7 @@ function handleClickRemove(event) {
     <!-- Append content -->
     <template #append>
       <slot name="append">
-        <v-list-item-action v-if="$slots[`prepend-action`]">
+        <v-list-item-action v-if="$slots['prepend-action']">
           <slot name="prepend-action" />
         </v-list-item-action>
         <v-list-item-action v-if="props.removable" class="pl-2">
@@ -214,7 +211,7 @@ function handleClickRemove(event) {
             <v-icon v-bind="removeButtonAttrs" />
           </slot>
         </v-list-item-action>
-        <v-list-item-action v-if="$slots[`append-action`]">
+        <v-list-item-action v-if="$slots['append-action']">
           <slot name="append-action" />
         </v-list-item-action>
       </slot>
@@ -307,12 +304,6 @@ function handleClickRemove(event) {
 /* Loading state */
 .tag-base--loading {
   opacity: 0.8;
-}
-
-/* Disabled state */
-.tag-base:disabled,
-.tag-base--loading {
-  pointer-events: auto; /* ローディング中でもクリック可能にする場合 */
 }
 
 /* Responsive adjustments */

@@ -6,7 +6,6 @@
  */
 import dayjs from "dayjs";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useTagSize } from "@/composables/useTagSize";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
@@ -73,10 +72,6 @@ const siteOperationScheduleDetailManager =
 /** For site order management */
 const siteOrderManager = useSiteOrderManager();
 
-/** For tag size management */
-const tagSizeComposable = useTagSize();
-provide("tagSizeComposable", tagSizeComposable);
-
 /** For floating window */
 const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
@@ -93,6 +88,8 @@ const { open } = useArrangementSheetPdf({
  *****************************************************************************/
 // const selectedDate = ref(null);
 const commandText = ref(null);
+
+const tempComponent = ref(null);
 
 /*****************************************************************************
  * METHODS
@@ -115,7 +112,6 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
   <div class="d-flex flex-column fill-height">
     <!-- TOOLBAR -->
     <ArrangementsToolbar
-      v-if="!auth.isSuperUser"
       v-model="dateRangeComposable.currentDayCount.value"
       @click:workers="toggleFloatingWindow"
       @click:site-order="siteOrderManager.set"
@@ -132,12 +128,15 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         <template #employee="{ rawElement, id }">
           <MoleculesTagBase
             :label="rawElement.displayName"
-            :size="tagSizeComposable.current.value"
+            :size="auth.tagSize"
             :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
           />
         </template>
         <template #outsourcer="{ rawElement }">
-          <MoleculesTagBase :label="rawElement.displayName" />
+          <MoleculesTagBase
+            :label="rawElement.displayName"
+            :size="auth.tagSize"
+          />
         </template>
       </MoleculesWorkerSelector>
     </MoleculesFloatingWindow>
@@ -155,10 +154,23 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
       @click:duplicate="duplicator.set"
       @click:edit="siteOperationScheduleManager.toUpdate"
       @click:edit-worker="siteOperationScheduleDetailManager.set"
+      @click:edit-workers="
+        ($event) => {
+          tempComponent.set($event);
+        }
+      "
       @click:hide="siteOrderManager.remove"
       @click:notify="arrangementsManager.notify"
       @click:notification="arrangementNotificationManager.toUpdate"
       @click:output-sheet="open"
+    />
+
+    <!-- 作業員配置コンポーネント -->
+    <ArrangementsWorkerSelect
+      :ref="(el) => (tempComponent = el)"
+      :employees="employees"
+      :outsourcers="outsourcers"
+      :cached-sites="fetchSiteComposable.cachedSites.value"
     />
 
     <!-- 現場並び替えコンポーネント -->
@@ -232,6 +244,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     <!-- ツールバーを廃止し、こちらに変更する予定 -->
     <ArrangementsSpeedDial
       v-if="auth.isSuperUser"
+      color="success"
       @click:add-schedule="siteOperationScheduleManager.toCreate"
       @click:site-order="siteOrderManager.set"
     />
