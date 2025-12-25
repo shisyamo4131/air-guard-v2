@@ -1,4 +1,5 @@
 import { computed, watch, watchEffect } from "vue";
+import { useDisplay } from "vuetify";
 import { useRouter } from "vue-router";
 import {
   signInWithEmailAndPassword,
@@ -53,6 +54,7 @@ export const useAuthStore = defineStore("auth", () => {
    * タグサイズ設定
    * - ユーザーのタグ表示サイズを管理
    * - 変更時に Firestore の User ドキュメントを更新
+   * - モバイル表示時は強制的に SMALL サイズを返す
    *
    * ```
    * import { useAuthStore } from "@/stores/useAuthStore";
@@ -68,6 +70,10 @@ export const useAuthStore = defineStore("auth", () => {
   const internalTagSize = ref(TAG_SIZE_VALUES.MEDIUM.value);
   const tagSize = computed({
     get() {
+      const display = useDisplay();
+      if (display.mobile.value) {
+        return TAG_SIZE_VALUES.SMALL.value;
+      }
       return internalTagSize.value;
     },
     async set(value) {
