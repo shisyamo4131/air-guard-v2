@@ -35,6 +35,7 @@ watch(terminateDialog, (newVal) => {
             <air-item-manager
               v-bind="attrs"
               :included-keys="[
+                'code',
                 'lastName',
                 'firstName',
                 'lastNameKana',
@@ -58,6 +59,7 @@ watch(terminateDialog, (newVal) => {
                     />
                   </template>
                   <template #append>
+                    <!-- 特殊処理用メニュー -->
                     <v-menu>
                       <template #activator="{ props: activatorProps }">
                         <v-btn
@@ -137,42 +139,53 @@ watch(terminateDialog, (newVal) => {
                       </v-list>
                     </v-menu>
                   </template>
-                  <template #text>
-                    <v-list slim>
-                      <v-list-item
-                        prepend-icon="mdi-tag"
-                        :title="doc.displayName"
-                        subtitle="表示名"
-                      />
-                      <v-list-item
-                        prepend-icon="mdi-cake"
-                        :title="`${dayjs(doc.dateOfBirth).format(
-                          'YYYY年MM月DD日'
-                        )}(${doc.age.years}歳${doc.age.months}ヶ月)`"
-                        subtitle="生年月日"
-                      />
-                      <v-list-item
-                        prepend-icon="mdi-calendar"
-                        :title="`${dayjs(doc.dateOfHire).format(
-                          'YYYY年MM月DD日'
-                        )}(${doc.yearsOfService.years}年${
-                          doc.yearsOfService.months
-                        }ヶ月)`"
-                        subtitle="入社日"
-                      />
-                      <v-list-item
-                        prepend-icon="mdi-cellphone"
-                        :title="doc.mobile"
-                        subtitle="携帯電話"
-                      />
-                      <v-list-item
-                        prepend-icon="mdi-email"
-                        :title="doc.email"
-                        subtitle="メール"
-                      />
-                    </v-list>
-                    <v-card v-if="doc.remarks" :text="doc.remarks" />
-                  </template>
+
+                  <!-- 明細 -->
+                  <v-list class="py-0" slim>
+                    <v-list-item
+                      prepend-icon="mdi-barcode"
+                      :title="doc.code"
+                      subtitle="従業員コード"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-tag"
+                      :title="doc.displayName"
+                      subtitle="表示名"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-cake"
+                      :title="`${dayjs(doc.dateOfBirth).format(
+                        'YYYY年MM月DD日'
+                      )}(${doc.age?.years || '-'}歳${
+                        doc.age?.months || '-'
+                      }ヶ月)`"
+                      subtitle="生年月日"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-calendar"
+                      :title="`${dayjs(doc.dateOfHire).format(
+                        'YYYY年MM月DD日'
+                      )}(${doc.yearsOfService?.years || '-'}年${
+                        doc.yearsOfService?.months || '-'
+                      }ヶ月)`"
+                      subtitle="入社日"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-cellphone"
+                      :title="doc.mobile"
+                      subtitle="携帯電話"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-email"
+                      :title="doc.email"
+                      subtitle="メール"
+                    />
+                  </v-list>
+
+                  <!-- 備考欄 -->
+                  <v-card v-if="doc.remarks" :text="doc.remarks" />
+
+                  <!-- アクションボタン -->
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
@@ -230,24 +243,22 @@ watch(terminateDialog, (newVal) => {
                   :title="doc.isForeigner ? doc.nationality : '日本'"
                   subtitle="国籍"
                 >
-                  <template v-if="doc.isForeigner" #text>
-                    <v-list slim>
-                      <v-list-item
-                        :title="doc.foreignName"
-                        subtitle="本名(外国人の場合)"
-                      />
-                      <v-list-item
-                        :title="doc.residenceStatus"
-                        subtitle="在留資格"
-                      />
-                      <v-list-item
-                        :title="`${dayjs(doc.periodOfStay).format(
-                          'YYYY年MM月DD日(ddd)'
-                        )}`"
-                        subtitle="在留期間満了日"
-                      />
-                    </v-list>
-                  </template>
+                  <v-list v-if="doc.isForeigner" class="py-0" slim>
+                    <v-list-item
+                      :title="doc.foreignName"
+                      subtitle="本名(外国人の場合)"
+                    />
+                    <v-list-item
+                      :title="doc.residenceStatus"
+                      subtitle="在留資格"
+                    />
+                    <v-list-item
+                      :title="`${dayjs(doc.periodOfStay).format(
+                        'YYYY年MM月DD日(ddd)'
+                      )}`"
+                      subtitle="在留期間満了日"
+                    />
+                  </v-list>
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
@@ -283,29 +294,27 @@ watch(terminateDialog, (newVal) => {
                   prepend-icon="mdi-shield-check"
                   title="警備員資格情報"
                 >
-                  <template #text>
-                    <v-list slim>
-                      <v-list-item
-                        :title="`${dayjs(
-                          doc.dateOfSecurityGuardRegistration
-                        ).format('YYYY年MM月DD日')}`"
-                        subtitle="警備員登録日"
-                      />
-                      <v-list-item :title="doc.bloodType" subtitle="血液型" />
-                      <v-list-item
-                        :title="`${doc.emergencyContactName}(${doc.emergencyContactRelationDetail})`"
-                        subtitle="緊急連絡先"
-                      />
-                      <v-list-item
-                        :title="doc.emergencyContactAddress"
-                        subtitle="緊急連絡先住所"
-                      />
-                      <v-list-item
-                        :title="doc.emergencyContactPhone"
-                        subtitle="緊急連絡先電話番号"
-                      />
-                    </v-list>
-                  </template>
+                  <v-list class="py-0" slim>
+                    <v-list-item
+                      :title="`${dayjs(
+                        doc.dateOfSecurityGuardRegistration
+                      ).format('YYYY年MM月DD日')}`"
+                      subtitle="警備員登録日"
+                    />
+                    <v-list-item :title="doc.bloodType" subtitle="血液型" />
+                    <v-list-item
+                      :title="`${doc.emergencyContactName}(${doc.emergencyContactRelationDetail})`"
+                      subtitle="緊急連絡先"
+                    />
+                    <v-list-item
+                      :title="doc.emergencyContactAddress"
+                      subtitle="緊急連絡先住所"
+                    />
+                    <v-list-item
+                      :title="doc.emergencyContactPhone"
+                      subtitle="緊急連絡先電話番号"
+                    />
+                  </v-list>
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>

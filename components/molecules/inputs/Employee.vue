@@ -9,6 +9,9 @@ const props = defineProps({
   <!-- COMMENT -->
   <div v-if="type === 'default'">
     <v-row>
+      <v-col cols="12">
+        <air-text-field v-bind="componentAttrs['code']" />
+      </v-col>
       <v-col cols="12" md="6">
         <air-text-field v-bind="componentAttrs['lastName']" />
       </v-col>
@@ -44,6 +47,9 @@ const props = defineProps({
       </v-col>
       <v-col cols="12">
         <air-text-field v-bind="componentAttrs['address']" />
+      </v-col>
+      <v-col cols="12">
+        <air-text-field v-bind="componentAttrs['building']" />
       </v-col>
       <v-col cols="12">
         <air-text-field v-bind="componentAttrs['mobile']" />
