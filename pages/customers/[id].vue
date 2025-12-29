@@ -16,7 +16,7 @@ const { attrs } = useCustomerManager({ doc });
 </script>
 
 <template>
-  <TemplatesBase fixed>
+  <TemplatesFixedHeightContainer>
     <v-row>
       <v-col cols="12">
         <v-card
@@ -203,5 +203,5 @@ const { attrs } = useCustomerManager({ doc });
         </air-item-manager>
       </v-col>
     </v-row>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>

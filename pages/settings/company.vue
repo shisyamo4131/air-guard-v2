@@ -10,7 +10,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
 <template>
-  <TemplatesBase :label="'設定-会社情報-'" fixed hide-prepend>
+  <TemplatesFixedHeightContainer>
     <v-row>
       <!-- Base information column -->
       <v-col cols="12" md="4">
@@ -77,7 +77,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
         </v-card>
       </v-col>
     </v-row>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>
 
 <style></style>

@@ -6,7 +6,7 @@ const auth = useAuthStore();
 </script>
 
 <template>
-  <TemplatesBase>
+  <TemplatesFixedHeightContainer>
     <v-card>
       <template #title>タグサイズ変更テスト</template>
       <template #text>
@@ -19,5 +19,5 @@ const auth = useAuthStore();
         {{ `auth.tagSize: ${auth.tagSize}` }}
       </template>
     </v-card>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>

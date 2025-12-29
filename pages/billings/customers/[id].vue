@@ -25,7 +25,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
 </script>
 
 <template>
-  <TemplatesBase :label="cachedSites[doc.siteId]?.name || 'loading...'" fixed>
+  <TemplatesFixedHeightContainer>
     <v-table>
       <tbody>
         <tr>
@@ -120,5 +120,5 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
         </tr>
       </tbody>
     </v-table>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>

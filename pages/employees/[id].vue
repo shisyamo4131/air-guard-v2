@@ -26,7 +26,7 @@ watch(terminateDialog, (newVal) => {
 </script>
 
 <template>
-  <TemplatesBase fixed>
+  <TemplatesFixedHeightContainer>
     <v-row>
       <!-- 基本情報 -->
       <v-col cols="12" md="4">
@@ -391,5 +391,5 @@ watch(terminateDialog, (newVal) => {
         </air-item-manager>
       </v-col>
     </v-row>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>

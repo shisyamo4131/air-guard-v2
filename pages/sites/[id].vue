@@ -50,7 +50,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
 </script>
 
 <template>
-  <TemplatesBase fixed>
+  <TemplatesFixedHeightContainer>
     <v-row>
       <!-- LEFT SIDE -->
       <v-col cols="12" md="4">
@@ -226,5 +226,5 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
         </air-item-manager>
       </v-col>
     </v-row>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>

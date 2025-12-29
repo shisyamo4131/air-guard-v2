@@ -38,7 +38,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
 </script>
 
 <template>
-  <TemplatesBase fixed>
+  <TemplatesFixedHeightContainer>
     <v-row>
       <v-col v-if="doc.isLocked" cols="12">
         <v-banner color="primary" icon="mdi-lock">
@@ -147,5 +147,5 @@ const { attrs, addWorker, changeWorker, removeWorker } =
         >
       </v-col>
     </v-row>
-  </TemplatesBase>
+  </TemplatesFixedHeightContainer>
 </template>
