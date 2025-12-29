@@ -1,23 +1,29 @@
 <script setup>
-import { TAG_SIZE_OPTIONS } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { Employee } from "@/schemas";
 
-const auth = useAuthStore();
+const instance = reactive(new Employee());
+const data = reactive(["a7"]);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <v-card>
-      <template #title>タグサイズ変更テスト</template>
-      <template #text>
-        <v-select
-          :model-value="auth.tagSize"
-          :items="TAG_SIZE_OPTIONS"
-          label="タグサイズ"
-          @update:model-value="auth.tagSize = $event"
-        />
-        {{ `auth.tagSize: ${auth.tagSize}` }}
-      </template>
-    </v-card>
+    <v-container>
+      <v-table>
+        <thead>
+          <tr>
+            <th v-for="field of instance.constructor.schema" :key="field.key">
+              {{ field.label }}
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(item, index) of data" :key="index">
+            <td v-for="field of instance.constructor.schema" :key="field.key">
+              <component :is="field.component.name" />
+            </td>
+          </tr>
+        </tbody>
+      </v-table>
+    </v-container>
   </TemplatesFixedHeightContainer>
 </template>

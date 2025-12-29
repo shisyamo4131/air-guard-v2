@@ -44,6 +44,7 @@ watch(terminateDialog, (newVal) => {
                 'gender',
                 'dateOfBirth',
                 'dateOfHire',
+                'title',
                 'mobile',
                 'email',
                 'remarks',
@@ -172,12 +173,17 @@ watch(terminateDialog, (newVal) => {
                     />
                     <v-list-item
                       prepend-icon="mdi-cellphone"
-                      :title="doc.mobile"
+                      :title="`${doc.title || '-'}`"
+                      subtitle="肩書"
+                    />
+                    <v-list-item
+                      prepend-icon="mdi-cellphone"
+                      :title="`${doc.mobile || '-'}`"
                       subtitle="携帯電話"
                     />
                     <v-list-item
                       prepend-icon="mdi-email"
-                      :title="doc.email"
+                      :title="`${doc.email || '-'}`"
                       subtitle="メール"
                     />
                   </v-list>
