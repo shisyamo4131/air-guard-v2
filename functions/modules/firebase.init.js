@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase-admin/app";
 import { setGlobalOptions } from "firebase-functions";
+import * as functions from "firebase-functions"; // 2025-12-29 added
 
 /**
  * 2025-09-27 FireModel の初期化をコメントアウト
@@ -14,4 +15,4 @@ import { getFirestore } from "firebase-admin/firestore";
 
 initializeApp();
 setGlobalOptions({ region: "asia-northeast1" });
-FireModel.setAdapter(new ServerAdapter(getFirestore()));
+FireModel.setAdapter(new ServerAdapter(getFirestore(), functions));
