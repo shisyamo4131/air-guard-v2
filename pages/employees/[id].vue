@@ -216,6 +216,7 @@ watch(terminateDialog, (newVal) => {
                     <v-icon color="red" icon="mdi-map-marker" />
                   </template>
                   <template #text>
+                    <!-- ここに Google Map を表示-->
                     <v-skeleton-loader type="image" />
                   </template>
                   <template #actions>
