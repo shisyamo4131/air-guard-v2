@@ -1,11 +1,10 @@
 /**
  * @file ./schemas/Company.js
  * @description 会社情報クラス
- *  - `beforeUpdate` で `location` を取得します。
+ *  - GeocodableMixin により自動的にジオコーディング機能を提供します。
  *  - `delete` は許可されていません。
  */
-import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas"; // fetchCoordinates is no longer directly used here
-import { geocodeAndSetLocation } from "./utils/addressGeocoding.js";
+import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
 
 export default class Company extends BaseClass {
   // 後日実装予定のカスタムカラー用プロパティ
@@ -29,29 +28,6 @@ export default class Company extends BaseClass {
   //     },
   //   },
   // };
-
-  /**
-   * `prefecture`, `city`, `address` にセットされている値をもとに `location` を取得してセットします
-   * @returns {Promise<void>}
-   */
-  async beforeUpdate() {
-    await super.beforeUpdate();
-    const currentFullAddress = this.fullAddress;
-    // FireModelの_beforeDataには、fetch時またはinitialize時のプロパティ値が格納されている
-    // fullAddressがenumerable: trueであれば、_beforeDataにも含まれる
-    const previousFullAddress = this._beforeData?.fullAddress;
-
-    // _beforeDataが存在し、かつfullAddressに変更がない場合はジオコーディングをスキップ
-    if (this._beforeData && currentFullAddress === previousFullAddress) {
-      // console.log(
-      //   `[Company.beforeUpdate] 住所 (fullAddress) に変更がないため、ジオコーディングをスキップします。Previous: "${previousFullAddress}", Current: "${currentFullAddress}"`
-      // );
-      return;
-    }
-
-    // 住所に基づいてジオコーディングを実行
-    await geocodeAndSetLocation(this, "Company", "beforeUpdate");
-  }
 
   async delete() {
     throw new Error("Companyドキュメントの削除は許可されていません。");
