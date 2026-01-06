@@ -1,6 +1,7 @@
 import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
+import { VDateInput } from "vuetify/labs/VDateInput";
 
 /**
  * Vuetify ^3.10.0 で必要なインポート
@@ -27,6 +28,9 @@ import { ja, en } from "vuetify/locale";
  */
 export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
+    components: {
+      VDateInput,
+    },
     display: {
       mobileBreakpoint: "sm",
     },
