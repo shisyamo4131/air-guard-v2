@@ -1,29 +1,17 @@
 <script setup>
-import { Employee } from "@/schemas";
-
-const instance = reactive(new Employee());
-const data = reactive(["a7"]);
+// const firstDayOfWeek = ref(0);
+// const firstDayOfWeeks = [0, 1, 2, 3, 4, 5, 6];
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
     <v-container>
-      <v-table>
-        <thead>
-          <tr>
-            <th v-for="field of instance.constructor.schema" :key="field.key">
-              {{ field.label }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(item, index) of data" :key="index">
-            <td v-for="field of instance.constructor.schema" :key="field.key">
-              <component :is="field.component.name" />
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
+      <air-calendar />
+      <!-- <v-select
+        v-model="firstDayOfWeek"
+        :items="firstDayOfWeeks"
+        label="First Day of Week"
+      ></v-select> -->
     </v-container>
   </TemplatesFixedHeightContainer>
 </template>

@@ -52,7 +52,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
       <v-col cols="12" md="8">
         <air-item-manager
           v-bind="attrs"
-          :included-keys="['minuteInterval', 'roundSetting']"
+          :included-keys="['minuteInterval', 'roundSetting', 'firstDayOfWeek']"
         >
           <template #activator="{ props: activatorProps, displayItems }">
             <air-card popup color="primary">

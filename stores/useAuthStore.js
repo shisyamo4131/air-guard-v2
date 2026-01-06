@@ -201,6 +201,10 @@ export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * WATCHERS
    ***************************************************************************/
+  /**
+   * Watches `companyInstance` and updates vuetify's global settings accordingly.
+   * @update 2026-01-07 - Added `firstDayOfWeek` setting for `VCalendar`.
+   */
   watchEffect(() => {
     // Set allowed minutes for VTimePicker based on company settings
     $vuetify.defaults.value.VTimePicker.allowedMinutes = (val) => {
@@ -210,6 +214,10 @@ export const useAuthStore = defineStore("auth", () => {
 
     // Update `RoundSetting` global setting based on company settings
     RoundSetting.set(companyInstance?.roundSetting || RoundSetting.ROUND);
+
+    // Update `firstDayOfWeek` for `VCalendar` based on company settings
+    $vuetify.defaults.value.VCalendar.firstDayOfWeek =
+      companyInstance?.firstDayOfWeek || 0;
   });
 
   /**
