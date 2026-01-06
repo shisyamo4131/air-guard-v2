@@ -19,11 +19,24 @@ const props = defineProps({
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
+/**
+ * 当該コンポーネント（テンプレート）を使用した場合に、タブレット・スマホでは
+ * 「跳ね返り」効果が発生しないように修正。
+ */
+// const containerStyle = computed(() => {
+//   const effectiveHeight =
+//     typeof props.height === "number" ? `${props.height}px` : props.height;
+//   return {
+//     height: effectiveHeight,
+//   };
+// });
 const containerStyle = computed(() => {
   const effectiveHeight =
     typeof props.height === "number" ? `${props.height}px` : props.height;
   return {
     height: effectiveHeight,
+    overflowY: "auto",
+    overscrollBehavior: "none",
   };
 });
 </script>
