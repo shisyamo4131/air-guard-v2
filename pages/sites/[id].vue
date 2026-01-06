@@ -62,7 +62,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
               hide-delete-btn
               :included-keys="['code', 'name', 'nameKana', 'remarks', 'status']"
             >
-              <template #activator="{ props: activatorProps, displayItems }">
+              <template #activator="{ props: activatorProps }">
                 <v-card
                   :title="doc.name"
                   :subtitle="doc.nameKana"
@@ -88,7 +88,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
                   </template>
                 </v-card>
               </template>
-              <template #input.customerId="inputProps">
+              <template #[`input.customerId`]="inputProps">
                 <MoleculesAutocompleteCustomer v-bind="inputProps.attrs" />
               </template>
             </air-item-manager>
@@ -165,13 +165,13 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
                   </template>
                 </v-card>
               </template>
-              <template #input.shiftType="{ attrs }">
+              <template #[`input.shiftType`]="{ attrs }">
                 <v-radio-group v-bind="attrs" inline>
                   <v-radio label="日勤" value="DAY" />
                   <v-radio label="夜勤" value="NIGHT" />
                 </v-radio-group>
               </template>
-              <template #input.isStartNextDay="{ attrs }">
+              <template #[`input.isStartNextDay`]="{ attrs }">
                 <MoleculesInputsIsStartNextDay v-bind="attrs" />
               </template>
             </air-array-manager>

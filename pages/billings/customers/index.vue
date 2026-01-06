@@ -77,7 +77,7 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
       </template>
 
       <!-- 現場ごとのPDF出力ボタン -->
-      <template #item.actions="{ item }">
+      <template #[`item.actions`]="{ item }">
         <v-btn
           icon
           size="small"

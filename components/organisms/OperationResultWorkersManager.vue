@@ -107,7 +107,7 @@ function handleOnClickAddOutsourcer(handler) {
         </template>
         <air-data-table v-bind="tableProps" :hide-action="hideAction">
           <!-- DISPLAY NAME COLUMN -->
-          <template #item.displayName="{ item }">
+          <template #[`item.displayName`]="{ item }">
             <AtomsIconsHasLicense v-if="item?.isQualified" />
             <AtomsIconsIsOjt v-if="item?.isOjt" />
             <span v-if="getDisplayName(item)">
@@ -117,7 +117,7 @@ function handleOnClickAddOutsourcer(handler) {
           </template>
 
           <!-- START TIME COLUMN -->
-          <template #item.startTime="{ item }">
+          <template #[`item.startTime`]="{ item }">
             <span style="position: relative">
               <AtomsChipsIsStartNextDay
                 v-if="item.isStartNextDay"
@@ -129,7 +129,7 @@ function handleOnClickAddOutsourcer(handler) {
         </air-data-table>
       </v-card>
     </template>
-    <template #input.id="{ attrs, editMode }">
+    <template #[`input.id`]="{ attrs, editMode }">
       <air-autocomplete-api
         v-bind="attrs"
         :api="isEmployee ? searchEmployees : searchOutsourcers"
@@ -142,7 +142,7 @@ function handleOnClickAddOutsourcer(handler) {
         required
       />
     </template>
-    <template #input.isStartNextDay="{ attrs }">
+    <template #[`input.isStartNextDay`]="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
   </air-array-manager>

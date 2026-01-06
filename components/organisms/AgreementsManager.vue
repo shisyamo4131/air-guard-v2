@@ -20,7 +20,7 @@ const props = defineProps({
 
 <template>
   <air-array-manager v-bind="$attrs">
-    <template #after-shiftType="{ field, item, updateProperties }">
+    <template #after-shiftType="{ field, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <MoleculesCardsSelectCancel
           title="取極めから複製"
@@ -46,7 +46,7 @@ const props = defineProps({
         </MoleculesCardsSelectCancel>
       </v-col>
     </template>
-    <template #input.isStartNextDay="{ attrs }">
+    <template #[`input.isStartNextDay`]="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
     <template v-for="(_, slotName) in $slots" #[slotName]="scope">

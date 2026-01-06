@@ -41,7 +41,7 @@ defineExpose({
     :dialog-props="dialogProps"
     :included-keys="['status']"
   >
-    <template #input.status="{ attrs }">
+    <template #[`input.status`]="{ attrs }">
       <v-chip-group v-bind="attrs" mandatory column>
         <v-chip
           v-for="item of items"

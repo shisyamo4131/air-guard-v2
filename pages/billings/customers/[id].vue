@@ -71,7 +71,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
                   text="変更"
                 />
               </template>
-              <template #input.paymentDueDateAt="inputProps">
+              <template #[`input.paymentDueDateAt`]="inputProps">
                 <air-date-input
                   v-bind="inputProps.attrs"
                   :allowed-dates="

@@ -33,14 +33,14 @@ const { attrs, cachedSites } = useOperationResultsManager({
           @date-range="dateRange = $event"
         />
       </template>
-      <template #item.siteId="{ item }">
+      <template #[`item.siteId`]="{ item }">
         <div v-if="cachedSites[item.siteId]">
           <div>{{ cachedSites[item.siteId].name }}</div>
           <div>{{ cachedSites[item.siteId].customer.name }}</div>
         </div>
         <v-progress-circular v-else indeterminate size="small" />
       </template>
-      <template #input.siteId="{ attrs }">
+      <template #[`input.siteId`]="{ attrs }">
         <MoleculesAutocompleteSite
           v-bind="attrs"
           creatable

@@ -155,7 +155,7 @@ async function handleChangeAdminUser(item) {
     @error="(error) => logger.error({ error })"
     @error:clear="() => logger.clearError()"
   >
-    <template #input.email="inputProps">
+    <template #[`input.email`]="inputProps">
       <air-text-field
         v-bind="inputProps.attrs"
         :disabled="
@@ -168,7 +168,7 @@ async function handleChangeAdminUser(item) {
     </template>
 
     <!-- 役割選択 UI -->
-    <template #input.roles="inputProps">
+    <template #[`input.roles`]="inputProps">
       <v-card border variant="flat" class="mb-4">
         <v-card-title class="text-subtitle-1">
           <v-icon icon="mdi-shield-account" class="mr-2" />
@@ -207,7 +207,7 @@ async function handleChangeAdminUser(item) {
     <template #table="tableProps">
       <air-data-table v-bind="tableProps">
         <!-- 役割列の表示 -->
-        <template #item.roles="{ item }">
+        <template #[`item.roles`]="{ item }">
           <div v-if="item.roles?.length > 0" class="d-flex flex-wrap ga-1">
             <v-chip
               v-for="role in item.roles"
@@ -223,7 +223,7 @@ async function handleChangeAdminUser(item) {
           </span>
         </template>
 
-        <template #item.isAdmin="{ item }">
+        <template #[`item.isAdmin`]="{ item }">
           <v-icon v-if="item.isAdmin" icon="mdi-check" color="primary" />
           <v-btn
             v-if="
@@ -241,13 +241,13 @@ async function handleChangeAdminUser(item) {
           >
         </template>
 
-        <template #item.disabled="{ item }">
+        <template #[`item.disabled`]="{ item }">
           <span v-if="item.isTemporary">仮登録</span>
           <span v-else-if="item.disabled">無効</span>
           <span v-else>有効</span>
         </template>
 
-        <template #item.actions="{ item }">
+        <template #[`item.actions`]="{ item }">
           <div class="d-flex ga-2 justify-end">
             <v-btn
               color="primary"

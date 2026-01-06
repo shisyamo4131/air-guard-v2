@@ -74,10 +74,10 @@ function getWorkerTimeInfo(worker) {
 
 <template>
   <air-array-manager v-bind="manager.attrs.value">
-    <template #item.dateAt="{ item }">
+    <template #[`item.dateAt`]="{ item }">
       <div>{{ dayjs(item.dateAt).format("MM月DD日(ddd)") }}</div>
     </template>
-    <template #item.siteId="{ item }">
+    <template #[`item.siteId`]="{ item }">
       <div v-if="cachedSites[item.siteId]">
         <div>{{ cachedSites[item.siteId].name }}</div>
         <div>{{ cachedSites[item.siteId].customer.name }}</div>

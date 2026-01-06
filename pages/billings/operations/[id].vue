@@ -169,7 +169,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 },
               ]"
             >
-              <template #activator="{ props: activatorProps, displayItems }">
+              <template #activator="{ props: activatorProps }">
                 <v-card>
                   <template #title>取極め/請求情報</template>
                   <v-list slim>
@@ -206,7 +206,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                   </template>
                 </v-card>
               </template>
-              <template #input.agreement="inputProps">
+              <template #[`input.agreement`]="inputProps">
                 <MoleculesAgreementGroup
                   v-bind="inputProps.attrs"
                   clearable

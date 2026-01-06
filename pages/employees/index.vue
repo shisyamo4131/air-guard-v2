@@ -13,7 +13,14 @@ const { docs } = useDocuments("Employee", {
   options: toRef(options),
   fetchAllOnEmpty: true,
 });
-const { attrs } = useEmployeesManager({ docs });
+const { attrs } = useEmployeesManager(
+  { docs },
+  {
+    tableProps: {
+      sortBy: [{ key: "code", order: "desc" }],
+    },
+  }
+);
 </script>
 
 <template>

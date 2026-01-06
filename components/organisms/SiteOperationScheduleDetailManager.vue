@@ -30,10 +30,10 @@ defineExpose({
       'isQualified',
     ]"
   >
-    <template #input.isStartNextDay="{ attrs }">
+    <template #[`input.isStartNextDay`]="{ attrs }">
       <MoleculesInputsIsStartNextDay v-bind="attrs" />
     </template>
-    <template #input.isQualified="{ attrs, item, updateProperties }">
+    <template #[`input.isQualified`]="{ attrs, item, updateProperties }">
       <div class="d-flex">
         <air-checkbox v-bind="attrs" class="mr-4" />
         <air-checkbox

@@ -42,5 +42,5 @@ export function useCompanyManager() {
   /***************************************************************************
    * RETURN OBJECTS
    ***************************************************************************/
-  return { ...docManager, attrs };
+  return { ...docManager, attrs, doc: company };
 }
