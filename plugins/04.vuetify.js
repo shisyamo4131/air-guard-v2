@@ -1,4 +1,3 @@
-// import this after install `@mdi/font` package
 import "@mdi/font/css/materialdesignicons.css";
 import "vuetify/styles";
 import { createVuetify } from "vuetify";
@@ -12,10 +11,6 @@ import { createVuetify } from "vuetify";
  * 参考: https://vuetifyjs.com/en/getting-started/installation/?utm_source=chatgpt.com#existing-projects
  */
 import * as directives from "vuetify/directives";
-
-// --- for using `VCalendar` and `VDateInput` ---
-import { VCalendar } from "vuetify/labs/VCalendar";
-import { VDateInput } from "vuetify/labs/VDateInput";
 
 // --- for setup Internationalization ---
 import { ja, en } from "vuetify/locale";
@@ -34,10 +29,6 @@ export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
     display: {
       mobileBreakpoint: "sm",
-    },
-    components: {
-      VCalendar,
-      VDateInput,
     },
     directives,
     /** ロケールを ja 優先に設定 */
@@ -60,7 +51,18 @@ export default defineNuxtPlugin((app) => {
       VBtn: {
         variant: "flat",
       },
+      /**
+       * VCalendar Defaults
+       * https://vuetifyjs.com/en/components/calendars/#calendars
+       * - dayFormat: customize the format of the day labels
+       * - first-day-of-week: 0 (Sunday) to 6 (Saturday)
+       * - hide-week-number: whether to hide the week number column
+       *
+       * NOTE: v.3.11.6 では `monthFormat` の既定値設定がうまく動作しない不具合があるようだ。
+       */
       VCalendar: {
+        dayFormat: ({ day }) => day,
+        firstDayOfWeek: 0, // 0: Sunday, 1: Monday, ...
         hideWeekNumber: true,
       },
       VCard: {
