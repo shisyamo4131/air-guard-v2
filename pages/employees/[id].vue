@@ -172,7 +172,7 @@ watch(terminateDialog, (newVal) => {
                       subtitle="入社日"
                     />
                     <v-list-item
-                      prepend-icon="mdi-cellphone"
+                      prepend-icon="mdi-account-tag"
                       :title="`${doc.title || '-'}`"
                       subtitle="肩書"
                     />
