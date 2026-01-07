@@ -36,6 +36,7 @@ export function useSiteManager({
   const attrs = Vue.computed(() => {
     return {
       ...docManager.attrs.value,
+      excludedKeys: ["agreements", "status"], // 2026-01-07 Added
     };
   });
 
