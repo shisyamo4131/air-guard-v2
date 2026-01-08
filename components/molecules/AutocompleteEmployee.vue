@@ -15,7 +15,8 @@ const props = defineProps({
 const emit = defineEmits(["update:model-value"]);
 
 /** SETUP COMPOSABLES */
-const { getEmployee, searchEmployees } = props.fetchEmployeeComposable;
+const { getEmployee, searchEmployees, cachedEmployeesArray } =
+  props.fetchEmployeeComposable;
 const employeeManager = useEmployeeManager();
 
 function onCreateHandler(event) {
@@ -28,6 +29,8 @@ function onCreateHandler(event) {
   <air-autocomplete-api
     :api="searchEmployees"
     :fetchItemByKeyApi="getEmployee"
+    :items="cachedEmployeesArray"
+    cache-items
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"

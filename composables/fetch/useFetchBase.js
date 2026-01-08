@@ -450,6 +450,7 @@ export function useFetchBase({
     getItem,
     searchItems,
     cachedItems,
+    cachedArray: computed(() => [...cache.value]),
     pushItems,
     isLoading,
     clearCache,

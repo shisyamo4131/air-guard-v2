@@ -15,7 +15,7 @@ const props = defineProps({
 const emit = defineEmits(["update:model-value"]);
 
 /** SETUP COMPOSABLES */
-const { getSite, searchSites } = props.fetchSiteComposable;
+const { getSite, searchSites, cachedSitesArray } = props.fetchSiteComposable;
 const siteManager = useSiteManager();
 
 function onCreateHandler(event) {
@@ -28,6 +28,8 @@ function onCreateHandler(event) {
   <air-autocomplete-api
     :api="searchSites"
     :fetchItemByKeyApi="getSite"
+    :items="cachedSitesArray"
+    cache-items
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"

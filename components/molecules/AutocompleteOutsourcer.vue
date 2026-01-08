@@ -18,7 +18,8 @@ const props = defineProps({
 const emit = defineEmits(["update:model-value"]);
 
 /** SETUP COMPOSABLES */
-const { getOutsourcer, searchOutsourcers } = props.fetchOutsourcerComposable;
+const { getOutsourcer, searchOutsourcers, cachedOutsourcersArray } =
+  props.fetchOutsourcerComposable;
 const outsourcerManager = useOutsourcerManager();
 
 function onCreateHandler(event) {
@@ -31,6 +32,8 @@ function onCreateHandler(event) {
   <air-autocomplete-api
     :api="searchOutsourcers"
     :fetchItemByKeyApi="getOutsourcer"
+    :items="cachedOutsourcersArray"
+    cache-items
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"

@@ -15,7 +15,8 @@ const props = defineProps({
 const emit = defineEmits(["update:model-value"]);
 
 /** SETUP COMPOSABLES */
-const { getCustomer, searchCustomers } = props.fetchCustomerComposable;
+const { getCustomer, searchCustomers, cachedCustomersArray } =
+  props.fetchCustomerComposable;
 const customerManager = useCustomerManager();
 
 function onCreateHandler(event) {
@@ -28,6 +29,8 @@ function onCreateHandler(event) {
   <air-autocomplete-api
     :api="searchCustomers"
     :fetchItemByKeyApi="getCustomer"
+    :items="cachedCustomersArray"
+    cache-items
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"
