@@ -11,6 +11,7 @@
     "install:firemodel": "npm install @shisyamo4131/air-firebase-v2@latest && cd functions && npm install @shisyamo4131/air-firebase-v2@latest && cd ..",
     "install:schemas": "npm install @shisyamo4131/air-guard-v2-schemas && cd functions && npm install @shisyamo4131/air-guard-v2-schemas && cd ..",
     "install:schemas@dev": "npm install @shisyamo4131/air-guard-v2-schemas@dev && cd functions && npm install @shisyamo4131/air-guard-v2-schemas@dev && cd ..",
+    "list:schemas": "npm list @shisyamo4131/air-guard-v2-schemas && cd functions && npm list @shisyamo4131/air-guard-v2-schemas && cd ..",
     "local": "nuxt dev --dotenv .env.local --host",
     "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
     "update:firemodel": "npm update @shisyamo4131/air-firebase-v2 && cd functions && npm update @shisyamo4131/air-firebase-v2 && cd ..",
