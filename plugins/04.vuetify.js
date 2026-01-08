@@ -47,10 +47,10 @@ export default defineNuxtPlugin((app) => {
      */
     defaults: {
       VAlert: {
-        class: "pt-4 pb-3 px-3 text-body-2",
+        // class: "pt-4 pb-3 px-3 text-body-2",
         variant: "tonal",
-        border: "top",
-        prominent: true,
+        border: "start",
+        // prominent: true,
       },
       VBtn: {
         variant: "flat",
