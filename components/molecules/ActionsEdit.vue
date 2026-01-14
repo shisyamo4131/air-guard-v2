@@ -11,7 +11,9 @@
 import { useDefaults } from "vuetify";
 
 /** SETUP PROPS & EMITS */
-const _props = defineProps({});
+const _props = defineProps({
+  text: { type: String, default: "編集" },
+});
 const props = useDefaults(_props, "MoleculesCardActionsEdit");
 
 const emit = defineEmits(["click:edit"]);
@@ -19,6 +21,10 @@ const emit = defineEmits(["click:edit"]);
 
 <template>
   <div class="d-flex flex-grow-1 justify-end">
-    <v-btn text="編集" prepend-icon="mdi-pencil" @click="emit('click:edit')" />
+    <v-btn
+      :text="props.text"
+      prepend-icon="mdi-pencil"
+      @click="emit('click:edit')"
+    />
   </div>
 </template>
