@@ -7,7 +7,7 @@
 import * as Vue from "vue";
 import { Site } from "@/schemas";
 import { useCollectionManager } from "@/composables/useCollectionManager";
-import MoleculesInputsSite from "@/components/molecules/inputs/site";
+import MoleculesInputsSiteForRegist from "@/components/molecules/inputs/siteForRegist";
 
 /**
  * @returns {Object} - Sites manager attributes and information.
@@ -36,7 +36,7 @@ export function useSitesManager(
     return {
       ...collectionManager.attrs.value,
       customInput: ({ editMode }) => {
-        if (editMode === "CREATE") return MoleculesInputsSite;
+        if (editMode === "CREATE") return MoleculesInputsSiteForRegist;
         return null;
       },
     };

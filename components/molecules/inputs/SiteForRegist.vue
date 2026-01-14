@@ -1,7 +1,7 @@
 <script setup>
 /**
  * MoleculesInputsSite
- * @file @/components/molecules/inputs/Site.vue
+ * @file @/components/molecules/inputs/SiteForRegist.vue
  * @author shisyamo4131
  * @description 現場情報登録用コンポーネント
  * - ステップ入力を行うコンポーネントで、AirItemInput.vue の `default` スロットで使用することを前提としています。

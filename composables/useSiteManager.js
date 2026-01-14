@@ -7,7 +7,7 @@
 import * as Vue from "vue";
 import { Site } from "@/schemas";
 import { useDocManager } from "@/composables/useDocManager";
-import MoleculesInputsSite from "@/components/molecules/inputs/site";
+import MoleculesInputsSiteForRegist from "@/components/molecules/inputs/siteForRegist";
 
 /**
  * @param {Object} options - Options for the composable
@@ -38,7 +38,7 @@ export function useSiteManager({
     return {
       ...docManager.attrs.value,
       customInput: ({ editMode }) => {
-        if (editMode === "CREATE") return MoleculesInputsSite;
+        if (editMode === "CREATE") return MoleculesInputsSiteForRegist;
         return null;
       },
       excludedKeys: ["agreements", "status"], // 2026-01-07 Added
