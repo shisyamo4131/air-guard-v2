@@ -2,6 +2,7 @@
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useSitesManager } from "@/composables/useSitesManager";
 import { Site } from "@/schemas";
+import MoleculesInputsSite from "@/components/molecules/inputs/site";
 
 /** SETUP  */
 const options = [["where", "status", "==", Site.STATUS_ACTIVE]];
@@ -22,10 +23,6 @@ const { attrs } = useSitesManager(
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs">
-      <template #input-default="props">
-        <MoleculesInputsSite v-bind="props" />
-      </template>
-    </air-array-manager>
+    <air-array-manager class="fill-height" v-bind="attrs" />
   </TemplatesFixedHeightContainer>
 </template>
