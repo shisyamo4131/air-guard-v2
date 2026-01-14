@@ -10,7 +10,12 @@ import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 export const useStatisticsStore = defineStore("statistics", () => {
   /** SETUP COMPOSABLES */
-  const { fetchSite, cachedSites, clearCache: clearSites } = useFetchSite();
+  const {
+    fetchSite,
+    cachedSites,
+    cachedSitesArray,
+    clearCache: clearSites,
+  } = useFetchSite();
   const {
     fetchEmployee,
     cachedEmployees,
@@ -79,7 +84,16 @@ export const useStatisticsStore = defineStore("statistics", () => {
   return {
     operationCount,
     siteCount,
+
+    /**
+     * 仮登録状態の現場数
+     */
+    temporarySiteCount: computed(
+      () =>
+        cachedSitesArray.value.filter(({ isTemporary }) => isTemporary).length
+    ),
     invalidOperationBillings,
+
     cachedSites,
     cachedEmployees,
     cachedOutsourcers,
