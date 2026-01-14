@@ -42,7 +42,7 @@ const step3 = ref(null);
  */
 async function handleGoToNext({ step, item }) {
   switch (step) {
-    case 1:
+    case 1: {
       // ステップ1の処理
 
       // 検索結果をクリア
@@ -58,12 +58,19 @@ async function handleGoToNext({ step, item }) {
       });
 
       return;
-    case 2:
+    }
+    case 2: {
       // ステップ2の処理
-      return { nextStep: 3 };
-    case 3:
+      return;
+    }
+    case 3: {
       // 最終ステップの処理
-      break;
+
+      // 入力内容の検証
+      const { valid } = await step3.value.validate();
+      if (!valid) return false;
+      return;
+    }
   }
 }
 
@@ -113,7 +120,7 @@ defineExpose({
 
     <!-- STEP:3 現場名入力 -->
     <v-window-item :value="3">
-      <v-container>
+      <v-form ref="step3">
         <v-row>
           <v-col cols="12">
             <air-text-field v-bind="componentAttrs['code']" />
@@ -140,7 +147,7 @@ defineExpose({
             <air-text-field v-bind="componentAttrs['building']" />
           </v-col>
         </v-row>
-      </v-container>
+      </v-form>
     </v-window-item>
   </v-window>
 </template>
