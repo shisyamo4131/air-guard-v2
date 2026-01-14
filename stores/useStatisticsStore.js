@@ -89,8 +89,7 @@ export const useStatisticsStore = defineStore("statistics", () => {
      * 仮登録状態の現場数
      */
     temporarySiteCount: computed(
-      () =>
-        cachedSitesArray.value.filter(({ isTemporary }) => isTemporary).length
+      () => siteInstance.docs.filter(({ isTemporary }) => isTemporary).length
     ),
     invalidOperationBillings,
 

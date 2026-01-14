@@ -2,7 +2,6 @@
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useSitesManager } from "@/composables/useSitesManager";
 import { Site } from "@/schemas";
-import MoleculesInputsSite from "@/components/molecules/inputs/site";
 
 /** SETUP  */
 const options = [["where", "status", "==", Site.STATUS_ACTIVE]];

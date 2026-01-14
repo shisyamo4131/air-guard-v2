@@ -7,6 +7,7 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
 import { useAgreementsManager } from "@/composables/useAgreementsManager";
+import MoleculesInputsSiteForSelectCustomer from "@/components/molecules/inputs/SiteForSelectCustomer.vue";
 
 /*****************************************************************************
  * ROUTER
@@ -60,14 +61,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
             <air-item-manager
               v-bind="attrs"
               hide-delete-btn
-              :included-keys="[
-                'customerId',
-                'code',
-                'name',
-                'nameKana',
-                'remarks',
-                'status',
-              ]"
+              :included-keys="['code', 'name', 'nameKana', 'remarks', 'status']"
             >
               <template #activator="{ props: activatorProps }">
                 <v-card
@@ -75,21 +69,22 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
                   :subtitle="doc.nameKana"
                   prepend-icon="mdi-pickaxe"
                 >
-                  <template #text>
-                    <v-list slim>
-                      <v-list-item
-                        :title="doc.code"
-                        subtitle="現場コード"
-                        prepend-icon="mdi-tag"
-                      />
-                      <v-list-item
-                        :title="doc.name"
-                        subtitle="現場名"
-                        prepend-icon="mdi-tag"
-                      />
-                    </v-list>
-                    <v-card v-if="doc.remarks" :text="doc.remarks" />
+                  <template v-if="doc.isTemporary" #append>
+                    <v-chip color="error" text="仮登録" size="small" />
                   </template>
+                  <v-list slim>
+                    <v-list-item
+                      :title="doc.code || '-'"
+                      subtitle="現場コード"
+                      prepend-icon="mdi-tag"
+                    />
+                    <v-list-item
+                      :title="doc.name"
+                      subtitle="現場名"
+                      prepend-icon="mdi-tag"
+                    />
+                  </v-list>
+                  <v-card v-if="doc.remarks" :text="doc.remarks" />
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
@@ -97,6 +92,49 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
               </template>
               <template #[`input.customerId`]="inputProps">
                 <MoleculesAutocompleteCustomer v-bind="inputProps.attrs" />
+              </template>
+            </air-item-manager>
+          </v-col>
+
+          <v-col cols="12">
+            <air-item-manager
+              v-bind="attrs"
+              :custom-input="MoleculesInputsSiteForSelectCustomer"
+              :included-keys="['customerId']"
+              hide-delete-btn
+            >
+              <template #activator="{ props: activatorProps }">
+                <v-card prepend-icon="mdi-domain">
+                  <template #title>取引先</template>
+                  <v-empty-state
+                    v-if="doc.isTemporary"
+                    :title="doc.customerName"
+                    text="取引先未設定の仮登録現場です。"
+                    action-text="取引先を設定する"
+                    @click:action="() => activatorProps['onClick:edit']()"
+                  />
+                  <v-list v-else slim>
+                    <v-list-item
+                      :title="doc.customer.code || '-'"
+                      subtitle="取引先コード"
+                      prepend-icon="mdi-tag"
+                    />
+                    <v-list-item
+                      :title="doc.customer.name"
+                      subtitle="取引先名"
+                      prepend-icon="mdi-tag"
+                    />
+                    <v-list-item
+                      :title="doc.customer.fullAddress"
+                      subtitle="所在地"
+                      prepend-icon="mdi-map-marker"
+                    >
+                    </v-list-item>
+                  </v-list>
+                  <template v-if="!doc.isTemporary" #actions>
+                    <MoleculesActionsEdit v-bind="activatorProps" />
+                  </template>
+                </v-card>
               </template>
             </air-item-manager>
           </v-col>

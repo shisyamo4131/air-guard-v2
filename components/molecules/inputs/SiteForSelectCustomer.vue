@@ -1,10 +1,11 @@
 <script setup>
 /**
- * MoleculesInputsSiteForRegist
- * @file @/components/molecules/inputs/SiteForRegist.vue
+ * MoleculesInputsSiteForSelectCustomer
+ * @file @/components/molecules/inputs/SiteForSelectCustomer.vue
  * @author shisyamo4131
- * @description 現場情報登録用コンポーネント
+ * @description 現場情報取引先選択用コンポーネント
  * - ステップ入力を行うコンポーネントで、AirItemInput.vue の `default` スロットで使用することを前提としています。
+ * - 仮登録状態現場の取引先選択に対応しています。
  */
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 
@@ -22,18 +23,9 @@ const { searchCustomers } = fetchCustomerComposable;
 // ステップ1で入力された取引先名での検索結果を格納する配列
 const searchResults = ref([]);
 
-// 検索結果に「取引先を設定しない」オプションを追加した計算済みプロパティ
-const computedSearchResults = computed(() => {
-  return [
-    { docId: null, name: "設定しない", fullAddress: "後で設定します" },
-    ...searchResults.value,
-  ];
-});
-
 // 各ステップの VForm の参照
 const step1 = ref(null);
-const step2 = ref(null); // 取引先選択なので現在未使用
-const step3 = ref(null);
+const step2 = ref(null); // 一旦未使用状態でOK
 
 /**
  * 次へ進むボタンのハンドラ
@@ -63,20 +55,12 @@ async function handleGoToNext({ step, item }) {
       // ステップ2の処理
       return;
     }
-    case 3: {
-      // 最終ステップの処理
-
-      // 入力内容の検証
-      const { valid } = await step3.value.validate();
-      if (!valid) return false;
-      return;
-    }
   }
 }
 
 defineExpose({
   mode: "step",
-  steps: 3,
+  steps: 2,
   handleGoToNext,
 });
 </script>
@@ -98,7 +82,7 @@ defineExpose({
           <v-row>
             <v-col
               cols="6"
-              v-for="customer of computedSearchResults"
+              v-for="customer of searchResults"
               :key="customer.docId"
             >
               <v-item
@@ -116,38 +100,6 @@ defineExpose({
           </v-row>
         </v-item-group>
       </v-card>
-    </v-window-item>
-
-    <!-- STEP:3 現場名入力 -->
-    <v-window-item :value="3">
-      <v-form ref="step3">
-        <v-row>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['code']" />
-          </v-col>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['name']" />
-          </v-col>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['nameKana']" />
-          </v-col>
-          <v-col cols="12">
-            <air-postal-code v-bind="componentAttrs['zipcode']" />
-          </v-col>
-          <v-col cols="12">
-            <air-select v-bind="componentAttrs['prefCode']" />
-          </v-col>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['city']" />
-          </v-col>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['address']" />
-          </v-col>
-          <v-col cols="12">
-            <air-text-field v-bind="componentAttrs['building']" />
-          </v-col>
-        </v-row>
-      </v-form>
     </v-window-item>
   </v-window>
 </template>

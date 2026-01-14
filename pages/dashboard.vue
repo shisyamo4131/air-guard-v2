@@ -83,7 +83,7 @@ const statistics = useStatisticsStore();
           <template #text>
             <span class="text-h5">{{ statistics.siteCount }}</span>
             <span class="ml-2">拠点</span>
-            <span>（仮登録 </span>
+            <span>（うち仮登録 </span>
             <nuxt-link to="/sites" class="text-decoration-none">
               <span class="text-primary cursor-pointer">
                 {{ statistics.temporarySiteCount }}
