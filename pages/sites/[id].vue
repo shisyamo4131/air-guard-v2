@@ -42,7 +42,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
 /** Site Operation Schedules Manager */
 const schedulesManager = useSiteOperationSchedulesManager({
   docs: schedules,
-  docId,
+  siteId: docId,
 });
 
 /** Agreements Manager */
@@ -60,7 +60,14 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
             <air-item-manager
               v-bind="attrs"
               hide-delete-btn
-              :included-keys="['code', 'name', 'nameKana', 'remarks', 'status']"
+              :included-keys="[
+                'customerId',
+                'code',
+                'name',
+                'nameKana',
+                'remarks',
+                'status',
+              ]"
             >
               <template #activator="{ props: activatorProps }">
                 <v-card

@@ -207,11 +207,17 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
       ref: (el) => (component.value = el),
       modelValue: docs,
       schema: SiteOperationSchedule,
+
+      // Edit前処理で、selectedScheduleを設定し、関連する配置通知を購読
       beforeEdit: async (editMode, item) => {
         selectedSchedule.value = item;
         await _subscribeNotifications(item.docId);
         return true;
       },
+
+      // 仮登録現場の場合は上下番実績確定処理を実行不可にする
+      // SiteOperationSchedule クラス側でも制御しているが、UI側でも制御を追加
+      disableSubmit: () => site.value?.isTemporary,
       handleUpdate: _submit,
       hideCreateBtn: true,
       dialogProps: { maxWidth: "840" },

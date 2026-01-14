@@ -149,6 +149,7 @@ export function useSiteOrderManager({
         return {
           ...item.toObject(),
           siteName: cachedSites.value[item.siteId]?.name,
+          key: item.key,
         };
       });
     },

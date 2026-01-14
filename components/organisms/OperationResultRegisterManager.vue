@@ -80,7 +80,9 @@ function getWorkerTimeInfo(worker) {
     <template #[`item.siteId`]="{ item }">
       <div v-if="cachedSites[item.siteId]">
         <div>{{ cachedSites[item.siteId].name }}</div>
-        <div>{{ cachedSites[item.siteId].customer.name }}</div>
+        <div>
+          {{ cachedSites[item.siteId]?.customer?.name || "取引先未設定" }}
+        </div>
       </div>
       <v-progress-circular v-else indeterminate size="small" />
     </template>
@@ -93,16 +95,39 @@ function getWorkerTimeInfo(worker) {
             <td>{{ dateFormat(item?.dateAt) }}</td>
           </tr>
 
+          <!-- TR: 取引先 -->
           <tr>
-            <td>現場</td>
+            <td>取引先</td>
+
+            <!-- 仮登録現場の場合はその旨を表示 -->
+            <!-- NOTE: 仮登録現場の場合は稼働実績（OperationResult）登録不可 -->
+            <!-- NOTE: 将来ここから直接取引先を設定できるようにしたいが、cachedSites にキャッシュされている現場情報はパッシブに更新されないので注意 -->
+            <td v-if="cachedSites[item.siteId]?.isTemporary">
+              <span class="text-warning">
+                取引先未設定の為、稼働実績として登録できません。
+              </span>
+            </td>
+
+            <!-- 本登録現場であれば取引先名を表示 -->
+            <td v-else>{{ cachedSites[item.siteId]?.customer?.name }}</td>
+          </tr>
+
+          <!-- TR: 現場名 -->
+          <tr>
+            <td>現場名</td>
             <td>{{ cachedSites[item.siteId]?.name || "loading..." }}</td>
           </tr>
 
           <tr>
             <td>取極め</td>
+
+            <!-- 取極めが存在すればフォーマットして出力 -->
             <td v-if="manager.agreement.value">
               {{ formatAgreementDetails(manager.agreement.value) }}
             </td>
+
+            <!-- 取極めが存在しない場合は警告表示 -->
+            <!-- NOTE: 取極めが存在しなくても稼働実績（OperationResult）の登録は可能 -->
             <td v-else>
               <v-icon class="mr-1" color="warning" size="small">
                 mdi-alert-circle
@@ -113,6 +138,7 @@ function getWorkerTimeInfo(worker) {
             </td>
           </tr>
 
+          <!-- TR: 当日時間 -->
           <tr>
             <td>当日時間</td>
             <td>
@@ -121,7 +147,7 @@ function getWorkerTimeInfo(worker) {
             </td>
           </tr>
 
-          <!-- 作業員リスト -->
+          <!-- TR: 作業員リスト -->
           <tr>
             <td>作業員</td>
             <td>
@@ -204,10 +230,11 @@ function getWorkerTimeInfo(worker) {
         v-bind="statusUpdater.attrs.value"
       />
 
+      <!-- 配置通知が作成されていない作業員がいる場合の警告 -->
       <v-container v-if="!manager.hasNotifications.value">
         <v-banner color="error" icon="mdi-alert">
           <v-banner-text>
-            配置通知が作成されていない作業員がいます。先に作成する必要があります。
+            配置通知が作成されていない作業員がいます。「作成」ボタンを押すと配置通知を作成します。
           </v-banner-text>
           <template #actions>
             <v-btn @click="manager.notify">作成</v-btn>
@@ -215,8 +242,12 @@ function getWorkerTimeInfo(worker) {
         </v-banner>
       </v-container>
 
+      <!-- 下番実績がない従業員がいる場合の警告 -->
+      <!-- NOTE: 稼働実績の作成自体は可能 -> 現場稼働予定の定時設定で稼働実績が作成される -->
       <v-container v-else-if="!manager.isAllLeaved.value">
-        <AtomsAlertsWarn>下番実績のない作業員がいます。</AtomsAlertsWarn>
+        <AtomsAlertsWarn
+          >下番実績のない作業員がいます。残業なしの定時で稼働実績が作成されます。</AtomsAlertsWarn
+        >
       </v-container>
     </template>
   </air-array-manager>

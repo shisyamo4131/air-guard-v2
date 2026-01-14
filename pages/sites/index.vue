@@ -23,8 +23,8 @@ const { attrs } = useSitesManager(
 <template>
   <TemplatesFixedHeightContainer>
     <air-array-manager class="fill-height" v-bind="attrs">
-      <template #[`input.customerId`]="{ attrs }">
-        <MoleculesAutocompleteCustomer v-bind="attrs" />
+      <template #input-default="props">
+        <MoleculesInputsSite v-bind="props" />
       </template>
     </air-array-manager>
   </TemplatesFixedHeightContainer>
