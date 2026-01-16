@@ -113,6 +113,9 @@ export function useDateUtil() {
   /**
    * Returns detailed information about a given date.
    * Includes day of week (en/jp), holiday status, formatted label, and comparison to today.
+   *
+   * NOTE: 不要になる可能性あり。
+   *
    * @param {Date|string} date - The date to analyze.
    * @param {string} [cssPrefix="g-col"] - Optional CSS class prefix.
    * @returns {Object} Object containing day info and CSS classes.

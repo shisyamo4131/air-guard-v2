@@ -11,7 +11,21 @@ import { useDebouncedRef } from "./usePerformanceOptimization";
  * @param {Date} options.endDate - 終了日（指定時はdayCountより優先）
  * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: 0）
  * @param {number} options.debounceDelay - デバウンス遅延時間（ミリ秒、デフォルト: 500）
- * @returns {Object} 日付範囲関連の状態と操作
+ * @return {Ref<Date>} startDate - 計算された開始日
+ * @return {Ref<Date>} endDate - 計算された終了日
+ * @return {Ref<Object>} dateRange - { from: Date, to: Date, dayCount: number }
+ * @return {Ref<string>} dateRangeLabel - 日付範囲の文字列表現
+ * @return {Ref<boolean>} includesToday - 今日が範囲に含まれるか
+ * @return {Ref<boolean>} isValidRange - 日付範囲の有効性
+ * @return {Function} setBaseDate - 基準日を設定する関数
+ * @return {Function} setDayCount - 表示日数を設定する関数
+ * @return {Function} setEndDate - 終了日を設定する関数
+ * @return {Function} setOffsetDays - オフセット日数を設定する関数
+ * @return {Function} movePrevious - 日付範囲を前に移動する関数
+ * @return {Function} moveNext - 日付範囲を後に移動する関数
+ * @return {Function} moveToToday - 今日を含む範囲に移動する関数
+ * @return {Function} moveToDate - 指定日を含む範囲に移動する関数
+ * @return {Function} flushDebounce - デバウンスを即座に実行する関数
  */
 export function useDateRange({
   baseDate = new Date(),
@@ -35,15 +49,6 @@ export function useDateRange({
       const calculatedDays =
         dayjs(endDateInput).diff(dayjs(validBaseDate), "day") + 1;
       if (calculatedDays > 0) {
-        // if (
-        //   typeof dayCount === "number" &&
-        //   dayCount > 0 &&
-        //   dayCount !== calculatedDays
-        // ) {
-        //   console.info(
-        //     `endDate specified: calculated ${calculatedDays} days (dayCount: ${dayCount} ignored)`
-        //   );
-        // }
         return calculatedDays;
       } else {
         console.warn(
@@ -66,12 +71,13 @@ export function useDateRange({
     return 14;
   };
 
-  /** リアクティブな状態（初期値の検証を追加） */
+  /** リアクティブステート */
   const currentBaseDate = ref(isValidDate(baseDate) ? baseDate : new Date());
   const currentDayCount = ref(calculateInitialDayCount());
   const currentOffsetDays = ref(
     typeof offsetDays === "number" ? offsetDays : 0
   );
+  const internalHolidays = ref([]); // 祝日として扱う日付文字列（YYYY-MM-DD）の配列
 
   /**
    * 単一のデバウンス設定オブジェクト
@@ -269,6 +275,36 @@ export function useDateRange({
   };
 
   /**
+   * 祝日配列を設定
+   * @param {Array} holidaysArray
+   * @returns {void}
+   */
+  const setHolidays = (holidaysArray) => {
+    if (!holidaysArray || !Array.isArray(holidaysArray)) {
+      console.warn("Invalid holidays array provided, ignoring");
+      return;
+    }
+    if (!holidaysArray.every((date) => isValidDate(date))) {
+      console.warn("One or more invalid dates in holidays array, ignoring");
+      return;
+    }
+    const resolvedHolidays = holidaysArray.map((date) => {
+      return formatDate(date, "YYYY-MM-DD");
+    });
+    internalHolidays.value = resolvedHolidays;
+  };
+
+  /**
+   * 指定された日付が祝日かどうかを判定
+   * @param {string|Date} date
+   * @returns {boolean} 祝日であればtrue、そうでなければfalse
+   */
+  const isHoliday = (date) => {
+    const dateStr = formatDate(date, "YYYY-MM-DD");
+    return internalHolidays.value.includes(dateStr);
+  };
+
+  /**
    * 日付範囲を前に移動
    */
   const movePrevious = (days = currentDayCount.value) => {
@@ -304,6 +340,35 @@ export function useDateRange({
       .toDate();
   };
 
+  /**
+   * 範囲内の日付について日付文字列（YYYY-MM-DD）をキーとし、
+   * その日付に関する詳細情報を含めたオブジェクトを値とするマップを返す。
+   */
+  const daysInRangeMap = computed(() => {
+    const map = new Map();
+    for (let i = 0; i < currentDayCount.value; i++) {
+      const dateAt = dayjs(startDate.value).add(i, "day").toDate();
+      const dateKey = formatDate(dateAt, "YYYY-MM-DD");
+      map.set(dateKey, {
+        date: formatDate(dateAt, "YYYY-MM-DD"),
+        dateAt,
+        weekday: formatDate(dateAt, "ddd"),
+        format: (format) => formatDate(dateAt, format),
+        isToday:
+          formatDate(dateAt, "YYYY-MM-DD") ===
+          formatDate(new Date(), "YYYY-MM-DD"),
+        isPreviousDay: dateAt < dayjs().startOf("day").toDate(),
+        isFuture: dateAt > dayjs().startOf("day").toDate(),
+        isHoliday: isHoliday(dateAt),
+      });
+    }
+    return map;
+  });
+
+  const daysInRangeArray = computed(() => {
+    return Array.from(daysInRangeMap.value.values());
+  });
+
   return {
     // 状態（即座更新）
     currentBaseDate,
@@ -315,6 +380,11 @@ export function useDateRange({
     dateRangeLabel,
     includesToday,
     isValidRange,
+    daysInRangeMap, // 2026-01-15 追加
+    daysInRangeArray, // 2026-01-15 追加
+
+    holidays: internalHolidays, // 2026-01-16 追加
+    isHoliday, // 2026-01-16 追加
 
     // デバウンス状態
     debouncedStartDate,
@@ -326,6 +396,7 @@ export function useDateRange({
     setDayCount,
     setOffsetDays,
     setEndDate, // 新規追加
+    setHolidays, // 2026-01-16 追加
     movePrevious,
     moveNext,
     moveToToday,
