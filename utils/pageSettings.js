@@ -10,6 +10,9 @@
  *          空配列は認証済みであればロールに関わらず許可。
  * - navigation: (boolean) ナビゲーションメニューに表示するか
  * - children: 子ページの配列（同じ構造を持つ）
+ *
+ * NOTE: "/" を除き、`id` と `path` を一致させると NavigationDrawer コンポーネントでの
+ *       アクティブ判定が有効になる。
  */
 export const pageStructure = [
   {
@@ -78,15 +81,7 @@ export const pageStructure = [
     ],
   },
 
-  // ===== 配置管理 =====
-  {
-    id: "arrangements",
-    path: "/arrangement-manager",
-    label: "配置管理",
-    icon: "mdi-calendar-account",
-    roles: ["site-operation-schedules:write"],
-    navigation: true,
-  },
+  // ===== HOME (navigation: false) =====
   {
     id: "home", // ルートパスを追加 (公開ページとする例)
     path: "/",
@@ -95,6 +90,8 @@ export const pageStructure = [
     roles: [],
     navigation: false,
   },
+
+  // ===== DASHBOARD =====
   {
     id: "dashboard",
     path: "/dashboard",
@@ -102,6 +99,33 @@ export const pageStructure = [
     icon: "mdi-view-dashboard",
     roles: [],
     navigation: true,
+  },
+
+  // ===== 管制業務 =====
+  {
+    id: "control-operation-group",
+    label: "管制業務",
+    icon: "mdi-camera-control",
+    roles: ["site-operation-schedules:write"],
+    navigation: true,
+    children: [
+      {
+        id: "site-operation-schedules",
+        path: "/site-operation-schedules",
+        label: "現場稼働予定管理",
+        icon: "mdi-calendar-multiselect",
+        roles: ["site-operation-schedules:write"],
+        navigation: true,
+      },
+      {
+        id: "arrangement-manager",
+        path: "/arrangement-manager",
+        label: "配置管理",
+        icon: "mdi-calendar-account",
+        roles: ["site-operation-schedules:write"],
+        navigation: true,
+      },
+    ],
   },
 
   // ===== 稼働実績管理 =====

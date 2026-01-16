@@ -21,7 +21,7 @@ const normalizeRouteName = computed(() =>
 
 <template>
   <v-navigation-drawer app>
-    <v-list nav>
+    <v-list nav slim>
       <template v-for="item in navigationItems" :key="item.value">
         <v-list-group v-if="item.children && item.children.length > 0">
           <template v-slot:activator="{ props }">
