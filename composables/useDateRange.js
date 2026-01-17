@@ -343,6 +343,16 @@ export function useDateRange({
   /**
    * 範囲内の日付について日付文字列（YYYY-MM-DD）をキーとし、
    * その日付に関する詳細情報を含めたオブジェクトを値とするマップを返す。
+   * NOTE: `isHoliday` は `setHolidays` で設定された祝日情報に基づく。
+   * @return {Map<string, Object>} daysInRangeMap - 日付情報マップ
+   * @return {string} return.date - 日付文字列（YYYY-MM-DD）
+   * @return {Date} return.dateAt - Dateオブジェクト
+   * @return {string} return.weekday - 曜日文字列（例: "Mon"）
+   * @return {Function} return.format - 指定フォーマットで日付を返す関数
+   * @return {boolean} return.isToday - 今日かどうか
+   * @return {boolean} return.isPreviousDay - 過去日かどうか
+   * @return {boolean} return.isFuture - 未来日かどうか
+   * @return {boolean} return.isHoliday - 祝日かどうか
    */
   const daysInRangeMap = computed(() => {
     const map = new Map();
