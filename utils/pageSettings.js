@@ -112,7 +112,7 @@ export const pageStructure = [
       {
         id: "site-operation-schedules",
         path: "/site-operation-schedules",
-        label: "現場稼働予定管理",
+        label: "(Beta) 現場稼働予定管理",
         icon: "mdi-calendar-multiselect",
         roles: ["site-operation-schedules:write"],
         navigation: true,
