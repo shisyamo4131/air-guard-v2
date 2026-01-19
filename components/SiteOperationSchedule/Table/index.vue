@@ -4,6 +4,32 @@
  * - 横長のテーブルになるため、親コンポーネント側をスクロールコンテナとする場合は
  *   `class="d-flex"` を指定すること。
  *
+ * @property {Object} cachedSites - キャッシュ済み現場データオブジェクトマップ
+ *
+ * @property {Array} columnColors - 各列の背景色クラス配列
+ *
+ * @property {String|Number} columnWidth - 各列の幅
+ *
+ * @property {String} dayFormat - 日付フォーマット（ヘッダーカラム表示用）
+ *
+ * @property {String|Number} dayHeight - 日付セルの高さ
+ *
+ * @property {String|Object} endDate - 終了日付
+ *
+ * @property {String} holidayIcon - 祝日アイコン
+ *
+ * @property {String} holidayIconColor - 祝日アイコンの色
+ *
+ * @property {Array} holidays - 祝日配列
+ *
+ * @property {Array} siteOrder - 現場オーダー配列
+ *
+ * @property {String|Object} startDate - 開始日付
+ *
+ * @property {String} weekdayFormat - 曜日フォーマット（ヘッダーカラム表示用）
+ *
+ * @property {String|Number} weekdayHeight - 曜日セルの高さ
+ *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *
@@ -54,6 +80,12 @@ import Foot from "./Foot.vue";
  * SETUP PROPS
  */
 const _props = defineProps({
+  /**
+   * キャッシュ済み現場データオブジェクトマップ
+   * - 現場IDをキー、現場データオブジェクトを値とするマップオブジェクトを指定します。
+   * - 現場オーダー行の表示に使用されます。
+   */
+  cachedSites: { type: Object, default: undefined },
   /**
    * 各列の背景色クラス配列
    * - 日付範囲内の曜日に対応する背景色クラスを配列で指定します。
@@ -200,7 +232,16 @@ const {
               <slot name="prepend-site-order" v-bind="{ ...order }" />
 
               <!-- SLOT: site-order -->
-              <slot name="site-order" v-bind="{ ...order }" />
+              <slot name="site-order" v-bind="{ ...order }">
+                <div class="py-1 d-flex align-center">
+                  <AtomsChipsShiftType
+                    :shift-type="order.shiftType"
+                    class="mr-2"
+                    density="compact"
+                  />
+                  {{ props.cachedSites?.[order.siteId]?.name || "...loading" }}
+                </div>
+              </slot>
 
               <!-- SLOT: append-site-order -->
               <slot name="append-site-order" v-bind="{ ...order }" />
