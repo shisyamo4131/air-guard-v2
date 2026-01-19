@@ -5,18 +5,50 @@
  *   `class="d-flex"` を指定すること。
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - day - 各日付ヘッダーのカスタム表示用スロット
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - append-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の後）
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - prepend-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の前）
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - weekday - 各曜日ヘッダーのカスタム表示用スロット
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *
  * @slot - prepend-site-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
+ *         @property {Object} order - 現場オーダー情報オブジェクト
+ *         @property {string} order.siteId - 現場ID
+ *         @property {string} order.shiftType - シフトタイプ
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - site-order - 各現場行のカスタム表示用スロット
+ *         @property {Object} order - 現場オーダー情報オブジェクト
+ *         @property {string} order.siteId - 現場ID
+ *         @property {string} order.shiftType - シフトタイプ
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - append-site-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
+ *         @property {Object} order - 現場オーダー情報オブジェクト
+ *         @property {string} order.siteId - 現場ID
+ *         @property {string} order.shiftType - シフトタイプ
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - cell - 各セルのカスタム表示用スロット
+ *
+ * @slot - footer - 各日付フッターのカスタム表示用スロット
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useDateRange } from "@/composables/useDateRange";
+import { useTable } from "./useTable.js";
+import Head from "./Head.vue";
+import Foot from "./Foot.vue";
 
 /**
  * SETUP PROPS
@@ -41,6 +73,10 @@ const _props = defineProps({
     validator: (v) => v.length === 7,
   },
   /**
+   * 各列の幅
+   */
+  columnWidth: { type: [String, Number], default: undefined },
+  /**
    * 日付フォーマット（ヘッダーカラム表示用）
    * - ヘッダーカラムでの日付表示に使用するフォーマット文字列です。
    * - `useDateRange` の `formatDate` を使用してフォーマットされます。
@@ -56,6 +92,16 @@ const _props = defineProps({
    * - テーブル表示の終了日付を指定します。
    */
   endDate: { type: [String, Object], required: true },
+  /**
+   * 祝日アイコン
+   * - 祝日を示すために使用するアイコン名を指定します。
+   */
+  holidayIcon: { type: String, default: "mdi-flag" },
+  /**
+   * 祝日アイコンの色
+   * - 祝日アイコンの色を指定します。
+   */
+  holidayIconColor: { type: String, default: "red" },
   /**
    * 祝日配列
    * - 祝日として扱う日付を日付文字列または日付オブジェクトの配列で指定します。
@@ -86,123 +132,58 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "SiteOperationScheduleTable");
 
-/**
- * SETUP DATE RANGE COMPOSABLE
- */
-const dateRangeComposable = useDateRange({
-  baseDate: new Date(props.startDate),
-  endDate: new Date(props.endDate),
-});
-const { daysInRangeArray, currentDayCount } = dateRangeComposable;
-
-watch(
-  () => props.holidays,
-  (newHolidays) => {
-    dateRangeComposable.setHolidays(newHolidays);
-  },
-  { immediate: true, deep: true }
-);
-
-/**
- * 日付セルの高さを解決して返します。
- */
-const resolvedDayHeight = computed(() => {
-  if (!props.dayHeight) return undefined;
-  return typeof props.dayHeight === "number"
-    ? `${props.dayHeight}px`
-    : props.dayHeight;
-});
-
-/**
- * 曜日セルの高さを解決して返します。
- */
-const resolvedWeekdayHeight = computed(() => {
-  if (!props.weekdayHeight) return undefined;
-  return typeof props.weekdayHeight === "number"
-    ? `${props.weekdayHeight}px`
-    : props.weekdayHeight;
-});
-
-/**
- * 曜日（0=日曜、1=月曜、...、6=土曜）に対応する背景色クラスを返します。
- */
-const cellColorClass = computed(() => {
-  return {
-    0: props.columnColors[0],
-    1: props.columnColors[1],
-    2: props.columnColors[2],
-    3: props.columnColors[3],
-    4: props.columnColors[4],
-    5: props.columnColors[5],
-    6: props.columnColors[6],
-  };
-});
-
-/**
- * 現場オーダーと日付オブジェクトからグループキーを生成する
- * @param order
- * @param dayObject
- * @returns {string} グループキー
- */
-function getGroupKey(order, dayObject) {
-  return `${order.key}-${dayObject.format("YYYY-MM-DD")}`;
-}
+/** SETUP COMPOSABLES */
+const {
+  daysInRangeArray,
+  currentDayCount,
+  cellColorClass,
+  resolvedColumnWidth,
+} = useTable(props);
 </script>
 
 <template>
   <v-table id="site-operation-schedule-table" fixed-header>
-    <!-- ヘッダー部 -->
-    <thead>
-      <!-- TR:日付 -->
-      <tr>
-        <th
-          v-for="(dayObject, colIndex) in daysInRangeArray"
-          :key="colIndex"
-          :style="{ height: resolvedDayHeight }"
-          :class="[
-            cellColorClass[dayObject.format('d')],
-            dayObject.isHoliday ? cellColorClass[0] : '',
-          ]"
-        >
-          <div class="d-flex justify-center">
-            <slot name="prepend-day" v-bind="{ dayObject }" />
-            <slot name="day" v-bind="{ dayObject }">
-              <span>{{ dayObject.format(props.dayFormat) }}</span>
-            </slot>
-            <slot name="append-day" v-bind="{ dayObject }" />
-          </div>
-        </th>
-      </tr>
+    <!-- 列幅定義 -->
+    <colgroup>
+      <col
+        v-for="(_, colIndex) in daysInRangeArray"
+        :key="colIndex"
+        :style="{ width: resolvedColumnWidth }"
+      />
+    </colgroup>
 
-      <!-- TR:曜日 -->
-      <tr>
-        <th
-          v-for="(dayObject, colIndex) in daysInRangeArray"
-          :key="colIndex"
-          :style="{ height: resolvedWeekdayHeight }"
-          :class="[
-            cellColorClass[dayObject.format('d')],
-            dayObject.isHoliday ? cellColorClass[0] : '',
-          ]"
-        >
-          <div class="d-flex justify-center">
-            <slot name="prepend-weekday" v-bind="{ dayObject }" />
-            <slot name="weekday" v-bind="{ dayObject }">
-              <div class="d-flex align-center">
-                <span>{{ dayObject.format(props.weekdayFormat) }}</span>
-                <v-icon
-                  v-if="dayObject.isHoliday"
-                  icon="mdi-flag"
-                  color="red"
-                  size="small"
-                />
-              </div>
-            </slot>
-            <slot name="append-weekday" v-bind="{ dayObject }" />
-          </div>
-        </th>
-      </tr>
-    </thead>
+    <!-- ヘッダー部 -->
+    <Head>
+      <!-- SLOT: prepend-day -->
+      <template #prepend-day="slotProps">
+        <slot name="prepend-day" v-bind="slotProps" />
+      </template>
+
+      <!-- SLOT: day -->
+      <template #day="slotProps">
+        <slot name="day" v-bind="slotProps" />
+      </template>
+
+      <!-- SLOT: append-day -->
+      <template #append-day="slotProps">
+        <slot name="append-day" v-bind="slotProps" />
+      </template>
+
+      <!-- SLOT: prepend-weekday -->
+      <template #prepend-weekday="slotProps">
+        <slot name="prepend-weekday" v-bind="slotProps" />
+      </template>
+
+      <!-- SLOT: weekday -->
+      <template #weekday="slotProps">
+        <slot name="weekday" v-bind="slotProps" />
+      </template>
+
+      <!-- SLOT: append-weekday -->
+      <template #append-weekday="slotProps">
+        <slot name="append-weekday" v-bind="slotProps" />
+      </template>
+    </Head>
 
     <!-- ボディ部 -->
     <tbody>
@@ -216,15 +197,12 @@ function getGroupKey(order, dayObject) {
           >
             <div class="fixed-left d-inline-flex align-center">
               <!-- SLOT: prepend-site-order -->
-              <!-- { siteId, shiftType, key } -->
               <slot name="prepend-site-order" v-bind="{ ...order }" />
 
               <!-- SLOT: site-order -->
-              <!-- { siteId, shiftType, key } -->
               <slot name="site-order" v-bind="{ ...order }" />
 
               <!-- SLOT: append-site-order -->
-              <!-- { siteId, shiftType, key } -->
               <slot name="append-site-order" v-bind="{ ...order }" />
             </div>
           </td>
@@ -236,7 +214,7 @@ function getGroupKey(order, dayObject) {
           <td
             v-for="(dayObject, colIndex) in daysInRangeArray"
             :key="colIndex"
-            style="height: unset"
+            :style="{ height: 'unset' }"
             :class="[
               cellColorClass[dayObject.format('d')],
               dayObject.isHoliday ? cellColorClass[0] : '',
@@ -251,7 +229,7 @@ function getGroupKey(order, dayObject) {
                 shiftType: order.shiftType,
                 date: dayObject.date,
                 dateAt: dayObject.dateAt,
-                groupKey: getGroupKey(order, dayObject),
+                groupKey: `${order.key}-${dayObject.date}`,
                 dayObject,
               }"
             />
@@ -261,31 +239,11 @@ function getGroupKey(order, dayObject) {
     </tbody>
 
     <!-- フッター部 -->
-    <tfoot v-if="$slots.footer">
-      <tr>
-        <th
-          v-for="(dayObject, colIndex) in daysInRangeArray"
-          :key="colIndex"
-          :class="[
-            cellColorClass[dayObject.format('d')],
-            dayObject.isHoliday ? cellColorClass[0] : '',
-          ]"
-        >
-          <!-- SLOT: footer -->
-          <!-- { dayObject } -->
-          <slot name="footer" v-bind="{ dayObject }" />
-        </th>
-      </tr>
-    </tfoot>
+    <Foot v-if="$slots.footer">
+      <!-- SLOT: footer -->
+      <template #footer="slotProps">
+        <slot name="footer" v-bind="slotProps" />
+      </template>
+    </Foot>
   </v-table>
 </template>
-
-<style scoped>
-/* 現場オーダー行の固定設定 */
-.fixed-left {
-  /* background-color: red !important; */
-  position: sticky;
-  left: 16px; /* td の padding に合わせる */
-  z-index: 1 !important;
-}
-</style>
