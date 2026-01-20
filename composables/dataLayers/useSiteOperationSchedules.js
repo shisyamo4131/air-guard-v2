@@ -28,7 +28,7 @@ export function useSiteOperationSchedules({
   });
 
   /** groupKey でグループ化したドキュメントのマップ */
-  const groupedDocs = Vue.computed(() => {
+  const groupKeyMappedDocs = Vue.computed(() => {
     const result = new Map();
     docs.forEach((schedule) => {
       if (!result.has(schedule.groupKey)) {
@@ -50,5 +50,28 @@ export function useSiteOperationSchedules({
     return result;
   });
 
-  return { docs, groupedDocs };
+  /**
+   * 日付ごとの統計情報マップ
+   * key: date (YYYY-MM-DD)
+   * value: { total: number, count: number }
+   */
+  const statistics = Vue.computed(() => {
+    const result = new Map();
+    docs.forEach((schedule) => {
+      if (!result.has(schedule.date)) {
+        result.set(schedule.date, {
+          total: schedule.requiredPersonnel,
+          count: 1,
+        });
+      } else {
+        const existing = result.get(schedule.date);
+        existing.total += schedule.requiredPersonnel;
+        existing.count += 1;
+        result.set(schedule.date, existing);
+      }
+    });
+    return result;
+  });
+
+  return { docs, groupKeyMappedDocs, statistics };
 }

@@ -9,10 +9,19 @@
 const props = inject("props"); // 未使用だが一応取得しておく
 const daysInRangeArray = inject("daysInRangeArray");
 const cellColorClass = inject("cellColorClass");
+
+const resolvedStyle = computed(() => {
+  return {
+    position: "sticky",
+    bottom: "0",
+    "z-index": "2",
+    background: `rgb(var(--v-theme-surface))`,
+  };
+});
 </script>
 
 <template>
-  <tfoot>
+  <tfoot :style="resolvedStyle">
     <tr>
       <th
         v-for="(dayObject, colIndex) in daysInRangeArray"

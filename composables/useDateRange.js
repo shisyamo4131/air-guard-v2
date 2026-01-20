@@ -56,7 +56,7 @@ export function useDateRange({
             endDateInput.toISOString().split("T")[0]
           }) is before baseDate (${
             validBaseDate.toISOString().split("T")[0]
-          }), falling back to dayCount`
+          }), falling back to dayCount`,
         );
       }
     }
@@ -75,7 +75,7 @@ export function useDateRange({
   const currentBaseDate = ref(isValidDate(baseDate) ? baseDate : new Date());
   const currentDayCount = ref(calculateInitialDayCount());
   const currentOffsetDays = ref(
-    typeof offsetDays === "number" ? offsetDays : 0
+    typeof offsetDays === "number" ? offsetDays : 0,
   );
   const internalHolidays = ref([]); // 祝日として扱う日付文字列（YYYY-MM-DD）の配列
 
@@ -89,7 +89,7 @@ export function useDateRange({
       dayCount: currentDayCount.value,
       offsetDays: currentOffsetDays.value,
     },
-    debounceDelay
+    debounceDelay,
   );
 
   // 個別の値変更を監視して統合オブジェクトを更新
@@ -101,7 +101,7 @@ export function useDateRange({
         dayCount: newDayCount,
         offsetDays: newOffsetDays,
       };
-    }
+    },
   );
 
   /**
@@ -230,7 +230,7 @@ export function useDateRange({
       currentBaseDate.value = newDate;
     } else {
       console.warn(
-        "Invalid date provided to setBaseDate, keeping current value"
+        "Invalid date provided to setBaseDate, keeping current value",
       );
     }
   };
@@ -302,6 +302,30 @@ export function useDateRange({
   const isHoliday = (date) => {
     const dateStr = formatDate(date, "YYYY-MM-DD");
     return internalHolidays.value.includes(dateStr);
+  };
+
+  /**
+   * 日付範囲を変更します。
+   * - `unit` が "range" の場合、`value` は日数として扱われ、基準日をその日数分だけ移動します。
+   * - `unit` が "month" の場合、`value` は月数として扱われ、基準日をその月数分だけ移動し、範囲をその月の初日から末日に設定します。
+   * @param {{value: number, unit?: string}} options - 移動オプション
+   * @param {number} options.value - 移動する日数または月数
+   * @param {string} [options.unit="range"] - "range" または "month"
+   */
+  const move = ({ value, unit = "range" }) => {
+    if (unit === "range") {
+      currentBaseDate.value = dayjs(currentBaseDate.value)
+        .add(value, "day")
+        .toDate();
+    } else if (unit === "month") {
+      setBaseDate(
+        dayjs(currentBaseDate.value)
+          .add(value, "month")
+          .startOf("month")
+          .toDate(),
+      );
+      setEndDate(dayjs(currentBaseDate.value).endOf("month").toDate());
+    }
   };
 
   /**
@@ -412,5 +436,6 @@ export function useDateRange({
     moveToToday,
     moveToDate,
     flushDebounce,
+    move, // 2026-01-20 追加
   };
 }
