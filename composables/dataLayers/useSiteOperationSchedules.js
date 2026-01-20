@@ -3,6 +3,7 @@
  *****************************************************************************/
 import * as Vue from "vue";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /**
  * @param {*} options
@@ -10,6 +11,7 @@ import { useDocuments } from "@/composables/dataLayers/useDocuments";
  * @param {Ref<Array>} [options.options=[]] - Additional query options (e.g., orderBy, limit) when performing search.
  * @param {number} [options.minSearchLength=2] - Minimum length of `search` string to trigger search.
  * @param {boolean} [options.fetchAllOnEmpty=false] - If true, fetch all documents when `search` is null or empty.
+ * @param {Object} [options.fetchSiteComposable] 現場データフェッチ用コンポーザブル
  * @returns {Object} - An object containing the reactive `docs` array and `groupedDocs` map.
  * @returns {Ref<Array>} returns.docs - 現場稼働予定ドキュメント配列
  * @returns {Ref<Map>} returns.groupedDocs - groupKey でグループ化したドキュメントのマップ
@@ -19,6 +21,7 @@ export function useSiteOperationSchedules({
   options = Vue.ref([]),
   minSearchLength = 2,
   fetchAllOnEmpty = false,
+  fetchSiteComposable: providedFetchSiteComposable = undefined,
 } = {}) {
   const { docs } = useDocuments("SiteOperationSchedule", {
     search,
@@ -26,6 +29,22 @@ export function useSiteOperationSchedules({
     minSearchLength,
     fetchAllOnEmpty,
   });
+
+  /** SETUP COMPOSABLES */
+  const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
+
+  /**
+   * docs を監視して現場データをフェッチ
+   */
+  Vue.watch(
+    docs,
+    (newDocs) => {
+      newDocs.forEach((schedule) => {
+        fetchSiteComposable.fetchSite(schedule.siteId); // 現場データをフェッチ
+      });
+    },
+    { immediate: true, deep: true },
+  );
 
   /** groupKey でグループ化したドキュメントのマップ */
   const groupKeyMappedDocs = Vue.computed(() => {
@@ -73,5 +92,5 @@ export function useSiteOperationSchedules({
     return result;
   });
 
-  return { docs, groupKeyMappedDocs, statistics };
+  return { docs, groupKeyMappedDocs, statistics, fetchSiteComposable };
 }

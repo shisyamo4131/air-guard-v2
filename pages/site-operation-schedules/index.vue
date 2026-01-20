@@ -9,7 +9,7 @@ import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationS
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useSiteOperationScheduleTable } from "@/composables/useSiteOperationScheduleTable";
-import { useSiteOrder } from "@/composables/useSiteOrder";
+import { useSiteShiftTypeOrder } from "@/composables/useSiteShiftTypeOrder";
 
 /** SETUP COMPOSABLES */
 const fetchSiteComposable = useFetchSite();
@@ -22,9 +22,6 @@ const dateRangeComposable = useDateRange({
 });
 const { debouncedDateRange } = dateRangeComposable;
 
-// 現場オーダーコンポーザブル
-const { siteOrder } = useSiteOrder({ fetchSiteComposable });
-
 // ドキュメント取得コンポーザブル
 const { docs, groupKeyMappedDocs, statistics } = useSiteOperationSchedules({
   options: computed(() => [
@@ -32,6 +29,14 @@ const { docs, groupKeyMappedDocs, statistics } = useSiteOperationSchedules({
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
   ]),
   fetchAllOnEmpty: true,
+  fetchSiteComposable,
+});
+
+// 現場オーダーコンポーザブル
+const { siteShiftTypeOrder } = useSiteShiftTypeOrder({
+  type: "schedule",
+  schedules: docs,
+  fetchSiteComposable,
 });
 
 // 現場稼働予定管理用コンポーザブル
@@ -39,11 +44,11 @@ const manager = useSiteOperationScheduleManager();
 
 // 現場稼働予定テーブルコンポーザブル
 const table = useSiteOperationScheduleTable({
-  docs,
+  schedules: docs,
   dayFormat: "DD",
   dateRangeComposable,
   fetchSiteComposable,
-  siteOrder,
+  siteShiftTypeOrder,
 });
 
 // 現場稼働予定選択用コンポーザブル

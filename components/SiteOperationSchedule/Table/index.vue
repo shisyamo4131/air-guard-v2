@@ -22,7 +22,7 @@
  *
  * @property {Array} holidays - 祝日配列
  *
- * @property {Array} siteOrder - 現場オーダー配列
+ * @property {Array} siteShiftTypeOrder - 現場オーダー配列
  *
  * @property {String|Object} startDate - 開始日付
  *
@@ -48,19 +48,19 @@
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *
- * @slot - prepend-site-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
+ * @slot - prepend-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
  *
- * @slot - site-order - 各現場行のカスタム表示用スロット
+ * @slot - site-shift-type-order - 各現場行のカスタム表示用スロット
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
  *
- * @slot - append-site-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
+ * @slot - append-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
@@ -144,7 +144,7 @@ const _props = defineProps({
    * 現場オーダー配列
    * - 各現場オーダーのデータオブジェクトを含む配列を指定します。
    */
-  siteOrder: { type: Array, default: () => [] },
+  siteShiftTypeOrder: { type: Array, default: () => [] },
   /**
    * 開始日付
    * - テーブル表示の開始日付を指定します。
@@ -219,8 +219,11 @@ const {
 
     <!-- ボディ部 -->
     <tbody>
-      <template v-for="(order, rowIndex) in props.siteOrder" :key="rowIndex">
-        <!-- TR: siteOrder -->
+      <template
+        v-for="(order, rowIndex) in props.siteShiftTypeOrder"
+        :key="rowIndex"
+      >
+        <!-- TR: siteShiftTypeOrder -->
         <tr>
           <td
             class="bg-grey-lighten-4"
@@ -228,11 +231,14 @@ const {
             :colspan="currentDayCount"
           >
             <div class="fixed-left d-inline-flex align-center">
-              <!-- SLOT: prepend-site-order -->
-              <slot name="prepend-site-order" v-bind="{ ...order }" />
+              <!-- SLOT: prepend-site-shift-type-order -->
+              <slot
+                name="prepend-site-shift-type-order"
+                v-bind="{ ...order }"
+              />
 
-              <!-- SLOT: site-order -->
-              <slot name="site-order" v-bind="{ ...order }">
+              <!-- SLOT: site-shift-type-order -->
+              <slot name="site-shift-type-order" v-bind="{ ...order }">
                 <div class="py-1 d-flex align-center">
                   <AtomsChipsShiftType
                     :shift-type="order.shiftType"
@@ -243,8 +249,8 @@ const {
                 </div>
               </slot>
 
-              <!-- SLOT: append-site-order -->
-              <slot name="append-site-order" v-bind="{ ...order }" />
+              <!-- SLOT: append-site-shift-type-order -->
+              <slot name="append-site-shift-type-order" v-bind="{ ...order }" />
             </div>
           </td>
         </tr>

@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "~/*": ["./*"],
+      "#app": ["./.nuxt/app"],
+      "#imports": ["./.nuxt/imports"]
+    },
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "preserve",
+    "jsxImportSource": "vue"
+  },
+  "exclude": [
+    "node_modules",
+    ".nuxt",
+    "dist",
+    ".output"
+  ],
+  "include": [
+    "**/*"
+  ]
+}
