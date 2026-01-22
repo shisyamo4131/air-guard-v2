@@ -9,7 +9,8 @@ import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationS
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useSiteOperationScheduleTable } from "@/composables/useSiteOperationScheduleTable";
-import { useSiteShiftTypeOrder } from "@/composables/useSiteShiftTypeOrder";
+import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
+import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 
 /** SETUP COMPOSABLES */
 const fetchSiteComposable = useFetchSite();
@@ -33,7 +34,7 @@ const { docs, groupKeyMappedDocs, statistics } = useSiteOperationSchedules({
 });
 
 // 現場オーダーコンポーザブル
-const { siteShiftTypeOrder } = useSiteShiftTypeOrder({
+const { siteShiftTypeOrder, update } = useSiteShiftTypeOrder({
   type: "schedule",
   schedules: docs,
   fetchSiteComposable,
@@ -49,6 +50,7 @@ const table = useSiteOperationScheduleTable({
   dateRangeComposable,
   fetchSiteComposable,
   siteShiftTypeOrder,
+  columnWidth: 60,
 });
 
 // 現場稼働予定選択用コンポーザブル
@@ -56,6 +58,12 @@ const selector = useSiteOperationScheduleSelector({
   docs,
   fetchSiteComposable,
   manager,
+});
+
+// 現場オーダー並び替え用コンポーザブル
+const reorder = useSiteShiftTypeReorder({
+  items: siteShiftTypeOrder,
+  onUpdate: update,
 });
 </script>
 
@@ -75,6 +83,9 @@ const selector = useSiteOperationScheduleSelector({
             @click="dateRangeComposable.move({ value: 1, unit: 'month' })"
           />
         </div>
+      </template>
+      <template #append>
+        <v-btn icon="mdi-sort" @click="reorder.open" />
       </template>
     </v-toolbar>
 
@@ -115,5 +126,15 @@ const selector = useSiteOperationScheduleSelector({
       v-bind="manager.attrs.value"
       :excluded-keys="['employees', 'outsourcers']"
     />
+
+    <!-- 現場オーダー並び替え用コンポーネント -->
+    <AtomsDialogsFullscreen v-model="reorder.dialog.value" max-width="480">
+      <template #default>
+        <SiteShiftTypeOrderReorder v-bind="reorder.attrs.value">
+          <template #title>並び替え</template>
+          <template #subtitle>現場の並び順を変更できます。</template>
+        </SiteShiftTypeOrderReorder>
+      </template>
+    </AtomsDialogsFullscreen>
   </div>
 </template>

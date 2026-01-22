@@ -1,5 +1,5 @@
 /*****************************************************************************
- * 現場稼働予定表示順序用コンポーザブル
+ * 現場稼働予定表示順序用データレイヤーコンポーザブル
  * - `useAuthStore` の `company` が持つ `siteOrder` または `scheduleOrder` を利用するためのコンポーザブルです。
  * - `type === 'arrangement'` で `company.siteOrder` を返します。
  * - `type === 'schedule'` で `company.scheduleOrder` を返します。
@@ -14,7 +14,7 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /**
  * @param {*} options
- * @param {String} [options.type="arrangement"] 現場オーダーの種類 ("arrangement" または "schedule")
+ * @param {String|import("vue").Ref<String>} [options.type="arrangement"] 現場オーダーの種類 ("arrangement" または "schedule")
  * @param {Array} [options.schedules=[]] 現場稼働予定ドキュメント配列
  * @param {Object} [options.fetchSiteComposable] 現場データフェッチ用コンポーザブル
  * @returns {Object} returns
@@ -33,7 +33,11 @@ export function useSiteShiftTypeOrder({
   const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
 
   /** SETUP STATES */
-  const uniqueOrderKeysInSchedules = Vue.ref(new Set()); // schedules内のユニークなorderKeyセット
+  // type を ref として正規化
+  const internalType = Vue.isRef(type) ? type : Vue.ref(type);
+
+  // schedules内のユニークなorderKeyセット
+  const uniqueOrderKeysInSchedules = Vue.ref(new Set());
   Vue.watch(
     schedules,
     (newSchedules) => {
@@ -51,10 +55,10 @@ export function useSiteShiftTypeOrder({
    * - type によって `company.siteOrder` または `company.scheduleOrder` を返す
    */
   const siteShiftTypeOrder = Vue.computed(() => {
-    if (type === "arrangement") {
+    if (internalType.value === "arrangement") {
       return auth.company.siteOrder;
     }
-    if (type === "schedule") {
+    if (internalType.value === "schedule") {
       return auth.company.scheduleOrder;
     }
     return [];
@@ -113,10 +117,22 @@ export function useSiteShiftTypeOrder({
     return [...siteShiftTypeOrder.value, ...missingOrders.value];
   });
 
+  const update = async (newOrder) => {
+    if (internalType.value === "arrangement") {
+      auth.company.siteOrder = newOrder;
+    }
+    if (internalType.value === "schedule") {
+      auth.company.scheduleOrder = newOrder;
+    }
+    await auth.company.update();
+  };
+
   return {
     hasMissingOrder,
     missingOrders,
     siteShiftTypeOrder: resolvedSiteShiftTypeOrder,
     fetchSiteComposable, // 後方互換性のためにエクスポート
+
+    update,
   };
 }

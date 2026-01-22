@@ -180,7 +180,7 @@ const {
       <col
         v-for="(_, colIndex) in daysInRangeArray"
         :key="colIndex"
-        :style="{ width: resolvedColumnWidth }"
+        :style="{ width: resolvedColumnWidth, minWidth: resolvedColumnWidth }"
       />
     </colgroup>
 
@@ -294,3 +294,11 @@ const {
     </Foot>
   </v-table>
 </template>
+
+<style scoped>
+.fixed-left {
+  position: sticky;
+  left: 16px;
+  z-index: 1;
+}
+</style>

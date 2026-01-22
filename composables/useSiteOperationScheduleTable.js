@@ -21,6 +21,7 @@ export function useSiteOperationScheduleTable({
   dayFormat = "MM/DD",
   dayHeight = 36,
   weekdayHeight = 36,
+  columnWidth = undefined,
   siteShiftTypeOrder = Vue.ref([]),
 }) {
   /** SETUP COMPOSABLES */
@@ -48,6 +49,7 @@ export function useSiteOperationScheduleTable({
       weekdayHeight,
       siteShiftTypeOrder: siteShiftTypeOrder.value,
       cachedSites: fetchSiteComposable.cachedSites.value,
+      columnWidth,
     };
   });
 
