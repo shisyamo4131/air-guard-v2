@@ -178,7 +178,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     />
 
     <!-- スケジュール複製コンポーネント -->
-    <OrganismsSiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
+    <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 通知ステータス更新コンポーネント -->
     <OrganismsArrangementNotificationStatusUpdater
