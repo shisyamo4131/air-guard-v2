@@ -44,6 +44,7 @@ export default defineNuxtConfig({
         "@shisyamo4131/air-guard-v2-schemas/constants",
         "vuedraggable",
         "pdfmake/build/pdfmake",
+        "@holiday-jp/holiday_jp",
       ],
     },
   },
