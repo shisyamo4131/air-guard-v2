@@ -15,7 +15,6 @@ const resolvedStyle = computed(() => {
     position: "sticky",
     bottom: "0",
     "z-index": "2",
-    background: `rgb(var(--v-theme-surface))`,
   };
 });
 </script>
@@ -26,6 +25,7 @@ const resolvedStyle = computed(() => {
       <th
         v-for="(dayObject, colIndex) in daysInRangeArray"
         :key="colIndex"
+        :style="{ background: `rgb(var(--v-theme-surface))` }"
         :class="[
           dayObject.isHoliday
             ? cellColorClass[0]
