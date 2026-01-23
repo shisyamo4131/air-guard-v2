@@ -71,7 +71,7 @@ const reorder = useSiteShiftTypeReorder({
   <div class="d-flex flex-column fill-height">
     <!-- ツールバー -->
     <v-toolbar class="flex-grow-0" color="secondary" density="compact">
-      <template #title>
+      <v-toolbar-title class="ml-0">
         <div class="d-flex align-center">
           <v-btn
             icon="mdi-chevron-left"
@@ -89,9 +89,10 @@ const reorder = useSiteShiftTypeReorder({
             @click="dateRangeComposable.move({ value: 1, unit: 'month' })"
           />
         </div>
-      </template>
+      </v-toolbar-title>
       <template #append>
         <v-btn icon="mdi-sort" @click="reorder.open" />
+        <v-btn icon="mdi-plus" @click="manager.toCreate()" />
       </template>
     </v-toolbar>
 
