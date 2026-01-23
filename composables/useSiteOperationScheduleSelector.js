@@ -8,7 +8,6 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
  * @param {Object} options
  * @param {Array} options.docs 現場稼働予定ドキュメントの配列
  * @param {Object} [options.fetchSiteComposable] 現場データ取得用の composable
- * @param {Object} [options.manager] 現場稼働予定管理用のマネージャーコンポーザブル
  * @returns {Object} returns
  * @returns {import('vue').ComputedRef<Object>} returns.attrs SiteOperationScheduleSelector に渡す属性オブジェクト
  * @returns {import('vue').ComputedRef<boolean>} returns.dialog ダイアログの表示制御用リアクティブ変数
@@ -17,7 +16,6 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 export function useSiteOperationScheduleSelector({
   docs = [],
   fetchSiteComposable: providedFetchSiteComposable = undefined,
-  manager = undefined,
 }) {
   /** SETUP REACTIVE OBJECTS */
   const selectedDateAt = Vue.ref(null);
@@ -38,19 +36,6 @@ export function useSiteOperationScheduleSelector({
     return docs.filter(({ groupKey }) => groupKey === selectedGroupKey.value);
   });
 
-  /** SiteOperationScheduleSelector 用関数 */
-  const handleClickCreate = (options) => {
-    if (manager && typeof manager.toCreate === "function") {
-      manager.toCreate(options);
-    }
-  };
-
-  const handleClickEdit = (schedule) => {
-    if (manager && typeof manager.toUpdate === "function") {
-      manager.toUpdate(schedule);
-    }
-  };
-
   /** SiteOperationScheduleSelector 用 attrs */
   const attrs = Vue.computed(() => {
     return {
@@ -60,8 +45,6 @@ export function useSiteOperationScheduleSelector({
       shiftType: selectedShiftType.value,
       schedules: filteredSchedules.value,
       "onClick:close": () => (dialog.value = false),
-      "onClick:edit": handleClickEdit,
-      "onClick:create": handleClickCreate,
     };
   });
 

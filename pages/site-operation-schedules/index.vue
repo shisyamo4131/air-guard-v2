@@ -130,6 +130,8 @@ const reorder = useSiteShiftTypeReorder({
       <template #default>
         <SiteOperationScheduleSelector
           v-bind="selector.attrs.value"
+          @click:create="manager.toCreate($event)"
+          @click:edit="manager.toUpdate($event)"
           @click:duplicate="duplicator.set($event)"
         />
       </template>

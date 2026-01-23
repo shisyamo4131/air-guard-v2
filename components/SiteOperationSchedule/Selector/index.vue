@@ -76,14 +76,32 @@ const {
       <v-list v-if="props.schedules.length > 0" class="py-0" border>
         <template v-for="(schedule, index) in props.schedules" :key="index">
           <SiteOperationScheduleListItem :model-value="schedule">
-            <template #append>
-              <v-list-item-action>
-                <v-btn icon="mdi-pencil" @click="handleClickEdit(schedule)" />
-                <v-btn
-                  icon="mdi-content-copy"
-                  @click="handleClickDuplicate(schedule)"
-                />
-              </v-list-item-action>
+            <!-- SLOT: prepend-list-item -->
+            <template v-if="$slots['prepend-list-item']" #prepend="slotProps">
+              <slot name="prepend-list-item" v-bind="slotProps || {}" />
+            </template>
+
+            <!-- SLOT: list-item-title -->
+            <template v-if="$slots['list-item-title']" #title="slotProps">
+              <slot name="list-item-title" v-bind="slotProps || {}" />
+            </template>
+
+            <!-- SLOT: list-item-subtitle -->
+            <template v-if="$slots['list-item-subtitle']" #subtitle="slotProps">
+              <slot name="list-item-subtitle" v-bind="slotProps || {}" />
+            </template>
+
+            <!-- SLOT: append-list-item -->
+            <template #append="slotProps">
+              <slot name="append-list-item" v-bind="slotProps || {}">
+                <v-list-item-action>
+                  <v-btn icon="mdi-pencil" @click="handleClickEdit(schedule)" />
+                  <v-btn
+                    icon="mdi-content-copy"
+                    @click="handleClickDuplicate(schedule)"
+                  />
+                </v-list-item-action>
+              </slot>
             </template>
           </SiteOperationScheduleListItem>
           <v-divider v-if="index < props.schedules.length - 1" />
@@ -98,14 +116,16 @@ const {
 
     <!-- actions -->
     <template #actions>
-      <div class="d-flex justify-end">
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-plus"
-          text="新規作成"
-          @click="handleClickCreate"
-        />
-      </div>
+      <slot name="actions">
+        <div class="d-flex justify-end">
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-plus"
+            text="新規作成"
+            @click="handleClickCreate"
+          />
+        </div>
+      </slot>
     </template>
   </v-card>
 </template>
