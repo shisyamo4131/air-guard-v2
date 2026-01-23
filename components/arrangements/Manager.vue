@@ -225,7 +225,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         <v-btn
           @click="
             siteOrderManager.add(
-              arrangementsManager.statistics.value.missingSiteOrders[0]
+              arrangementsManager.statistics.value.missingSiteOrders[0],
             )
           "
           >追加表示する</v-btn
