@@ -172,7 +172,7 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集コンポーネント -->
-    <OrganismsSiteOperationScheduleManager
+    <SiteOperationScheduleManager
       v-bind="siteOperationScheduleManager.attrs.value"
       :excludedKeys="['employees', 'outsourcers']"
     />

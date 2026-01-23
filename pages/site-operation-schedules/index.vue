@@ -138,7 +138,7 @@ const reorder = useSiteShiftTypeReorder({
     </AtomsDialogsFullscreen>
 
     <!-- 現場稼働予定編集用コンポーネント -->
-    <OrganismsSiteOperationScheduleManager
+    <SiteOperationScheduleManager
       v-bind="manager.attrs.value"
       :excluded-keys="['employees', 'outsourcers']"
     />
