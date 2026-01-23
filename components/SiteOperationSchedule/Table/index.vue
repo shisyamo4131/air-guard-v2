@@ -20,8 +20,6 @@
  *
  * @property {String} holidayIconColor - 祝日アイコンの色
  *
- * @property {Array} holidays - 祝日配列
- *
  * @property {Array} siteShiftTypeOrder - 現場オーダー配列
  *
  * @property {String|Object} startDate - 開始日付
@@ -134,12 +132,6 @@ const _props = defineProps({
    * - 祝日アイコンの色を指定します。
    */
   holidayIconColor: { type: String, default: "red" },
-  /**
-   * 祝日配列
-   * - 祝日として扱う日付を日付文字列または日付オブジェクトの配列で指定します。
-   * - 背景色は日曜日と同じ色が適用されます。
-   */
-  holidays: { type: Array, default: () => [] },
   /**
    * 現場オーダー配列
    * - 各現場オーダーのデータオブジェクトを含む配列を指定します。

@@ -81,7 +81,7 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
                 v-if="dayObject.isHoliday"
                 :icon="props.holidayIcon"
                 :color="props.holidayIconColor"
-                size="small"
+                size="x-small"
               />
             </div>
           </slot>

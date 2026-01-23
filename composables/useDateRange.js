@@ -1,4 +1,4 @@
-import { ref, computed, watch } from "vue";
+import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useDateUtil } from "./useDateUtil";
 import { useDebouncedRef } from "./usePerformanceOptimization";
@@ -11,12 +11,22 @@ import { useDebouncedRef } from "./usePerformanceOptimization";
  * @param {Date} options.endDate - 終了日（指定時はdayCountより優先）
  * @param {number} options.offsetDays - 基準日からのオフセット日数（デフォルト: 0）
  * @param {number} options.debounceDelay - デバウンス遅延時間（ミリ秒、デフォルト: 500）
+ * @return {Object} - 日付範囲コンポーザブルの公開API
+ * @return {Ref<Date>} currentBaseDate - 現在の基準日
+ * @return {Ref<number>} currentDayCount - 現在の表示日数
+ * @return {Ref<number>} currentOffsetDays - 現在のオフセット日数
  * @return {Ref<Date>} startDate - 計算された開始日
  * @return {Ref<Date>} endDate - 計算された終了日
  * @return {Ref<Object>} dateRange - { from: Date, to: Date, dayCount: number }
  * @return {Ref<string>} dateRangeLabel - 日付範囲の文字列表現
  * @return {Ref<boolean>} includesToday - 今日が範囲に含まれるか
  * @return {Ref<boolean>} isValidRange - 日付範囲の有効性
+ * @return {Ref<Map<string, Object>>} daysInRangeMap - 範囲内の日付情報マップ
+ * @return {Ref<Array>} daysInRangeArray - 範囲内の日付情報配列
+ * @return {Function} isHoliday - 指定日が祝日かどうかを判定する関数
+ * @return {Ref<Date>} debouncedStartDate - デバウンスされた開始日
+ * @return {Ref<Date>} debouncedEndDate - デバウンスされた終了日
+ * @return {Ref<Object>} debouncedDateRange - デバウンスされた日付範囲オブジェクト
  * @return {Function} setBaseDate - 基準日を設定する関数
  * @return {Function} setDayCount - 表示日数を設定する関数
  * @return {Function} setEndDate - 終了日を設定する関数
@@ -26,6 +36,7 @@ import { useDebouncedRef } from "./usePerformanceOptimization";
  * @return {Function} moveToToday - 今日を含む範囲に移動する関数
  * @return {Function} moveToDate - 指定日を含む範囲に移動する関数
  * @return {Function} flushDebounce - デバウンスを即座に実行する関数
+ * @return {Function} move - 日付範囲を指定単位で移動する関数
  */
 export function useDateRange({
   baseDate = new Date(),
@@ -35,7 +46,8 @@ export function useDateRange({
   debounceDelay = 500,
 } = {}) {
   /** 日付ユーティリティの取得 */
-  const { isValidDate, formatDate, validateDateRange } = useDateUtil();
+  const { isValidDate, formatDate, validateDateRange, isHoliday } =
+    useDateUtil();
 
   /**
    * 初期日数を計算
@@ -72,12 +84,13 @@ export function useDateRange({
   };
 
   /** リアクティブステート */
-  const currentBaseDate = ref(isValidDate(baseDate) ? baseDate : new Date());
-  const currentDayCount = ref(calculateInitialDayCount());
-  const currentOffsetDays = ref(
+  const currentBaseDate = Vue.ref(
+    isValidDate(baseDate) ? baseDate : new Date(),
+  );
+  const currentDayCount = Vue.ref(calculateInitialDayCount());
+  const currentOffsetDays = Vue.ref(
     typeof offsetDays === "number" ? offsetDays : 0,
   );
-  const internalHolidays = ref([]); // 祝日として扱う日付文字列（YYYY-MM-DD）の配列
 
   /**
    * 単一のデバウンス設定オブジェクト
@@ -93,7 +106,7 @@ export function useDateRange({
   );
 
   // 個別の値変更を監視して統合オブジェクトを更新
-  watch(
+  Vue.watch(
     [currentBaseDate, currentDayCount, currentOffsetDays],
     ([newBaseDate, newDayCount, newOffsetDays]) => {
       debouncedConfig.value.value = {
@@ -107,7 +120,7 @@ export function useDateRange({
   /**
    * 開始日を計算（基準日 + オフセット）
    */
-  const startDate = computed(() => {
+  const startDate = Vue.computed(() => {
     return dayjs(currentBaseDate.value)
       .add(currentOffsetDays.value, "day")
       .startOf("day")
@@ -117,7 +130,7 @@ export function useDateRange({
   /**
    * 終了日を計算（開始日 + 表示日数 - 1）
    */
-  const endDate = computed(() => {
+  const endDate = Vue.computed(() => {
     return dayjs(startDate.value)
       .add(currentDayCount.value - 1, "day")
       .endOf("day")
@@ -127,7 +140,7 @@ export function useDateRange({
   /**
    * デバウンスされた開始日
    */
-  const debouncedStartDate = computed(() => {
+  const debouncedStartDate = Vue.computed(() => {
     const config = debouncedConfig.debouncedValue.value;
     return dayjs(config.baseDate)
       .add(config.offsetDays, "day")
@@ -138,7 +151,7 @@ export function useDateRange({
   /**
    * デバウンスされた終了日
    */
-  const debouncedEndDate = computed(() => {
+  const debouncedEndDate = Vue.computed(() => {
     const config = debouncedConfig.debouncedValue.value;
     return dayjs(debouncedStartDate.value)
       .add(config.dayCount - 1, "day")
@@ -146,7 +159,7 @@ export function useDateRange({
       .toDate();
   });
 
-  const dateRange = computed({
+  const dateRange = Vue.computed({
     get: () => {
       return {
         from: startDate.value,
@@ -170,7 +183,7 @@ export function useDateRange({
   /**
    * デバウンスされた日付範囲
    */
-  const debouncedDateRange = computed(() => {
+  const debouncedDateRange = Vue.computed(() => {
     return {
       from: debouncedStartDate.value,
       to: debouncedEndDate.value,
@@ -181,7 +194,7 @@ export function useDateRange({
   /**
    * 日付範囲の文字列表現
    */
-  const dateRangeLabel = computed(() => {
+  const dateRangeLabel = Vue.computed(() => {
     const startFormatted = formatDate(startDate.value, "YYYY/MM/DD");
     const endFormatted = formatDate(endDate.value, "YYYY/MM/DD");
 
@@ -196,14 +209,14 @@ export function useDateRange({
   /**
    * 日付範囲の有効性をチェック
    */
-  const isValidRange = computed(() => {
+  const isValidRange = Vue.computed(() => {
     return validateDateRange(startDate.value, endDate.value);
   });
 
   /**
    * 今日が表示範囲に含まれているかどうか
    */
-  const includesToday = computed(() => {
+  const includesToday = Vue.computed(() => {
     const today = dayjs().startOf("day");
     const start = dayjs(startDate.value).startOf("day");
     const end = dayjs(endDate.value).startOf("day");
@@ -272,36 +285,6 @@ export function useDateRange({
     } else {
       console.warn("Invalid offset provided, keeping current value");
     }
-  };
-
-  /**
-   * 祝日配列を設定
-   * @param {Array} holidaysArray
-   * @returns {void}
-   */
-  const setHolidays = (holidaysArray) => {
-    if (!holidaysArray || !Array.isArray(holidaysArray)) {
-      console.warn("Invalid holidays array provided, ignoring");
-      return;
-    }
-    if (!holidaysArray.every((date) => isValidDate(date))) {
-      console.warn("One or more invalid dates in holidays array, ignoring");
-      return;
-    }
-    const resolvedHolidays = holidaysArray.map((date) => {
-      return formatDate(date, "YYYY-MM-DD");
-    });
-    internalHolidays.value = resolvedHolidays;
-  };
-
-  /**
-   * 指定された日付が祝日かどうかを判定
-   * @param {string|Date} date
-   * @returns {boolean} 祝日であればtrue、そうでなければfalse
-   */
-  const isHoliday = (date) => {
-    const dateStr = formatDate(date, "YYYY-MM-DD");
-    return internalHolidays.value.includes(dateStr);
   };
 
   /**
@@ -378,7 +361,7 @@ export function useDateRange({
    * @return {boolean} return.isFuture - 未来日かどうか
    * @return {boolean} return.isHoliday - 祝日かどうか
    */
-  const daysInRangeMap = computed(() => {
+  const daysInRangeMap = Vue.computed(() => {
     const map = new Map();
     for (let i = 0; i < currentDayCount.value; i++) {
       const dateAt = dayjs(startDate.value).add(i, "day").toDate();
@@ -399,7 +382,7 @@ export function useDateRange({
     return map;
   });
 
-  const daysInRangeArray = computed(() => {
+  const daysInRangeArray = Vue.computed(() => {
     return Array.from(daysInRangeMap.value.values());
   });
 
@@ -417,8 +400,7 @@ export function useDateRange({
     daysInRangeMap, // 2026-01-15 追加
     daysInRangeArray, // 2026-01-15 追加
 
-    holidays: internalHolidays, // 2026-01-16 追加
-    isHoliday, // 2026-01-16 追加
+    isHoliday, // 2026-01-23 追加（useDateUtilから取得）
 
     // デバウンス状態
     debouncedStartDate,
@@ -430,7 +412,6 @@ export function useDateRange({
     setDayCount,
     setOffsetDays,
     setEndDate, // 新規追加
-    setHolidays, // 2026-01-16 追加
     movePrevious,
     moveNext,
     moveToToday,

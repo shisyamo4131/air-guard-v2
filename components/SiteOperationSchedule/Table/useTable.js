@@ -11,14 +11,11 @@ export function useTable(props) {
   /**
    * `dateRange` コンポーザブルのセットアップ
    * - `props.startDate` と `props.endDate` を監視して日付範囲を更新します。
-   * - `props.holidays` を監視して祝日を設定します。
    */
   const dateRangeComposable = useDateRange();
-  const { daysInRangeArray, currentDayCount, dateRange, setHolidays } =
-    dateRangeComposable;
+  const { daysInRangeArray, currentDayCount, dateRange } = dateRangeComposable;
   Vue.watchEffect(() => {
     dateRange.value = { from: props.startDate, to: props.endDate };
-    setHolidays(props.holidays);
   });
 
   // セル背景色
