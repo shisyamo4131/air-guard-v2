@@ -37,8 +37,9 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
         :key="colIndex"
         :style="{ height: resolvedDayHeight }"
         :class="[
-          cellColorClass[dayObject.format('d')],
-          dayObject?.isHoliday ? cellColorClass[0] : '',
+          dayObject.isHoliday
+            ? cellColorClass[0]
+            : cellColorClass[dayObject.format('d')],
         ]"
       >
         <div class="d-flex justify-center">
@@ -63,8 +64,9 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
         :key="colIndex"
         :style="{ height: resolvedWeekdayHeight }"
         :class="[
-          cellColorClass[dayObject.format('d')],
-          dayObject?.isHoliday ? cellColorClass[0] : '',
+          dayObject.isHoliday
+            ? cellColorClass[0]
+            : cellColorClass[dayObject.format('d')],
         ]"
       >
         <div class="d-flex justify-center">

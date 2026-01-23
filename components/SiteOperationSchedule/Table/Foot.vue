@@ -27,8 +27,9 @@ const resolvedStyle = computed(() => {
         v-for="(dayObject, colIndex) in daysInRangeArray"
         :key="colIndex"
         :class="[
-          cellColorClass[dayObject.format('d')],
-          dayObject.isHoliday ? cellColorClass[0] : '',
+          dayObject.isHoliday
+            ? cellColorClass[0]
+            : cellColorClass[dayObject.format('d')],
         ]"
       >
         <!-- SLOT: footer -->
