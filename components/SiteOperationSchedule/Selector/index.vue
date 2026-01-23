@@ -28,15 +28,23 @@ const props = useDefaults(_props, "SiteOperationScheduleSelector");
 /**
  * SETUP EMITS
  */
-const emit = defineEmits(["click:close", "click:edit", "click:create"]);
+const emit = defineEmits([
+  "click:close",
+  "click:edit",
+  "click:create",
+  "click:duplicate",
+]);
 
 /**
  * SETUP COMPOSABLES
  */
-const { title, subtitle, handleClickCreate, handleClickEdit } = useIndex(
-  props,
-  emit,
-);
+const {
+  title,
+  subtitle,
+  handleClickCreate,
+  handleClickEdit,
+  handleClickDuplicate,
+} = useIndex(props, emit);
 </script>
 
 <template>
@@ -71,6 +79,10 @@ const { title, subtitle, handleClickCreate, handleClickEdit } = useIndex(
             <template #append>
               <v-list-item-action>
                 <v-btn icon="mdi-pencil" @click="handleClickEdit(schedule)" />
+                <v-btn
+                  icon="mdi-content-copy"
+                  @click="handleClickDuplicate(schedule)"
+                />
               </v-list-item-action>
             </template>
           </SiteOperationScheduleListItem>

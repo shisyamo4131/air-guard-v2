@@ -11,6 +11,7 @@ import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperation
 import { useSiteOperationScheduleTable } from "@/composables/useSiteOperationScheduleTable";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 
 /** SETUP COMPOSABLES */
 const fetchSiteComposable = useFetchSite();
@@ -42,6 +43,9 @@ const { siteShiftTypeOrder, update } = useSiteShiftTypeOrder({
 
 // 現場稼働予定管理用コンポーザブル
 const manager = useSiteOperationScheduleManager();
+
+// 現場稼働予定複製コンポーザブル
+const duplicator = useSiteOperationScheduleDuplicator();
 
 // 現場稼働予定テーブルコンポーザブル
 const table = useSiteOperationScheduleTable({
@@ -124,7 +128,10 @@ const reorder = useSiteShiftTypeReorder({
     <!-- 現場稼働予定選択コンポーネント -->
     <AtomsDialogsFullscreen v-model="selector.dialog.value" max-width="480">
       <template #default>
-        <SiteOperationScheduleSelector v-bind="selector.attrs.value" />
+        <SiteOperationScheduleSelector
+          v-bind="selector.attrs.value"
+          @click:duplicate="duplicator.set($event)"
+        />
       </template>
     </AtomsDialogsFullscreen>
 
@@ -133,6 +140,9 @@ const reorder = useSiteShiftTypeReorder({
       v-bind="manager.attrs.value"
       :excluded-keys="['employees', 'outsourcers']"
     />
+
+    <!-- 現場稼働予定複製コンポーネント -->
+    <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 現場オーダー並び替え用コンポーネント -->
     <AtomsDialogsFullscreen v-model="reorder.dialog.value" max-width="480">

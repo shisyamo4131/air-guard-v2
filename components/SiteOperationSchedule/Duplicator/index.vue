@@ -4,10 +4,6 @@
  * @version 1.0.0
  * @description A component to duplicate site operation schedules.
  * @author shisyamo4131
- *
- * NOTE: ./components/SiteOperationSchedule/Duplicator/index.vue が完成したら
- *       不要になるコンポーネント。
- *       配置管理で使用するコンポーネントを差し替えたら削除可能。
  ***************************************************************************/
 
 /***************************************************************************

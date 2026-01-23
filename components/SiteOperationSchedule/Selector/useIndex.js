@@ -44,5 +44,19 @@ export function useIndex(props, emit) {
     emit("click:edit", schedule);
   };
 
-  return { title, subtitle, handleClickCreate, handleClickEdit };
+  /**
+   * Emit `click:duplicate` event with schedule instance.
+   * @param {Object} schedule
+   */
+  const handleClickDuplicate = (schedule) => {
+    emit("click:duplicate", schedule);
+  };
+
+  return {
+    title,
+    subtitle,
+    handleClickCreate,
+    handleClickEdit,
+    handleClickDuplicate,
+  };
 }
