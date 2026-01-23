@@ -1,12 +1,10 @@
 /**
  * @file useDateUtil.js
  * @description Composable for date utility functions.
+ * @dependencies dayjs, @holiday-jp/holiday_jp
  */
-import {
-  DAY_TYPE_VALUES as DAY_TYPE,
-  getDayType,
-} from "@shisyamo4131/air-guard-v2-schemas/constants";
 import dayjs from "dayjs";
+import holiday_jp from "@holiday-jp/holiday_jp"; // 2026-01-23 祝日判定のために追加
 
 /**
  * Date utility composable
@@ -111,6 +109,16 @@ export function useDateUtil() {
   };
 
   /**
+   * 指定された日付が祝日かどうかを判定します。
+   * @param {Date|string} date
+   * @returns {boolean} 祝日であれば true、それ以外は false
+   */
+  const isHoliday = (date) => {
+    const dateObj = dayjs.tz(date, "Asia/Tokyo").toDate();
+    return holiday_jp.isHoliday(dateObj);
+  };
+
+  /**
    * Returns detailed information about a given date.
    * Includes day of week (en/jp), holiday status, formatted label, and comparison to today.
    *
@@ -131,7 +139,8 @@ export function useDateUtil() {
     const isPreviousDay = targetDay.isBefore(today);
     const isToday = targetDay.isSame(today);
     const isFutureDay = targetDay.isAfter(today);
-    const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE.HOLIDAY.value;
+    // const isHoliday = getDayType(targetDay.toDate()) === DAY_TYPE.HOLIDAY.value;
+    // const isHoliday = isHoliday(targetDay.toDate());
     const dateLabel = targetDay.format("MM/DD");
     const dayOfWeekJp = targetDay.locale("ja").format("ddd").toLowerCase();
     const isSelected = selectedDates.includes(targetDay.format("YYYY-MM-DD"));
@@ -141,13 +150,13 @@ export function useDateUtil() {
       [`${cssPrefix}-previous`]: isPreviousDay,
       [`${cssPrefix}-today`]: isToday,
       [`${cssPrefix}-future`]: isFutureDay,
-      [`${cssPrefix}-holiday`]: isHoliday,
+      [`${cssPrefix}-holiday`]: isHoliday(targetDay.toDate()),
       [`${cssPrefix}-selected`]: isSelected,
     };
     return {
       dayOfWeek,
       dateComparison: { isPreviousDay, isToday, isFutureDay },
-      isHoliday,
+      isHoliday: isHoliday(targetDay.toDate()),
       dateLabel,
       dayOfWeekJp,
       cssClasses,
@@ -160,5 +169,6 @@ export function useDateUtil() {
     formatDate,
     isValidDate,
     getDayInfo,
+    isHoliday,
   };
 }
