@@ -1,28 +1,28 @@
-import { computed, watch, provide } from "vue";
-import { useDateRange } from "@/composables/useDateRange";
-
 /**
  * Table コンポーネント専用のロジック
+ * - `SiteOperationScheduleTable` 専用のコンポーザブルです。
+ * - 独自に `useDateRange` を使用しています。親コンポーネントで `useDateRange` を使用している場合でも
+ *   別インスタンスとして動作することに注意してください。
  */
-export function useTable(props) {
-  // 日付範囲の管理
-  const dateRangeComposable = useDateRange({
-    baseDate: new Date(props.startDate),
-    endDate: new Date(props.endDate),
-  });
-  const { daysInRangeArray, currentDayCount } = dateRangeComposable;
+import * as Vue from "vue";
+import { useDateRange } from "@/composables/useDateRange";
 
-  // 祝日の監視
-  watch(
-    () => props.holidays,
-    (newHolidays) => {
-      dateRangeComposable.setHolidays(newHolidays);
-    },
-    { immediate: true, deep: true },
-  );
+export function useTable(props) {
+  /**
+   * `dateRange` コンポーザブルのセットアップ
+   * - `props.startDate` と `props.endDate` を監視して日付範囲を更新します。
+   * - `props.holidays` を監視して祝日を設定します。
+   */
+  const dateRangeComposable = useDateRange();
+  const { daysInRangeArray, currentDayCount, dateRange, setHolidays } =
+    dateRangeComposable;
+  Vue.watchEffect(() => {
+    dateRange.value = { from: props.startDate, to: props.endDate };
+    setHolidays(props.holidays);
+  });
 
   // セル背景色
-  const cellColorClass = computed(() => ({
+  const cellColorClass = Vue.computed(() => ({
     0: props.columnColors[0],
     1: props.columnColors[1],
     2: props.columnColors[2],
@@ -32,46 +32,46 @@ export function useTable(props) {
     6: props.columnColors[6],
   }));
 
-  // 列幅
-  const resolvedColumnWidth = computed(() => {
-    if (!props.columnWidth) return undefined;
-    return typeof props.columnWidth === "number"
-      ? `${props.columnWidth}px`
-      : props.columnWidth;
-  });
+  /**
+   * 引数で与えられたサイズ情報を style に適用できるよう解決して返します。
+   * @param {string|number|undefined} size
+   * @returns {String|undefined} - 解決されたサイズ文字列または undefined
+   */
+  const resolveSize = (size) => {
+    if (!size) return undefined;
+    return typeof size === "number" ? `${size}px` : size;
+  };
 
   /**
-   * 高さの値を解決して返します。
+   * カラム幅を解決して返します。
    */
-  const resolveHeight = (height) => {
-    if (!height) return undefined;
-    return typeof height === "number" ? `${height}px` : height;
-  };
+  const resolvedColumnWidth = Vue.computed(() => {
+    return resolveSize(props.columnWidth);
+  });
 
   /**
    * 日付セルの高さを解決して返します。
    */
-  const resolvedDayHeight = computed(() => {
-    if (!props.dayHeight) return undefined;
-    return resolveHeight(props.dayHeight);
+  const resolvedDayHeight = Vue.computed(() => {
+    return resolveSize(props.dayHeight);
   });
 
   /**
    * 曜日セルの高さを解決して返します。
    */
-  const resolvedWeekdayHeight = computed(() => {
-    if (!props.weekdayHeight) return undefined;
-    return resolveHeight(props.weekdayHeight);
+  const resolvedWeekdayHeight = Vue.computed(() => {
+    return resolveSize(props.weekdayHeight);
   });
 
   // 子コンポーネントへの提供
-  provide("props", props);
-  provide("daysInRangeArray", daysInRangeArray);
-  provide("currentDayCount", currentDayCount);
-  provide("cellColorClass", cellColorClass);
-  provide("resolvedColumnWidth", resolvedColumnWidth);
-  provide("resolvedDayHeight", resolvedDayHeight);
-  provide("resolvedWeekdayHeight", resolvedWeekdayHeight);
+  Vue.provide("props", props);
+  Vue.provide("dateRangeComposable", dateRangeComposable);
+  Vue.provide("daysInRangeArray", daysInRangeArray);
+  Vue.provide("currentDayCount", currentDayCount);
+  Vue.provide("cellColorClass", cellColorClass);
+  Vue.provide("resolvedColumnWidth", resolvedColumnWidth);
+  Vue.provide("resolvedDayHeight", resolvedDayHeight);
+  Vue.provide("resolvedWeekdayHeight", resolvedWeekdayHeight);
 
   return {
     daysInRangeArray,

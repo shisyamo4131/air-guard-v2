@@ -263,8 +263,9 @@ const {
             :key="colIndex"
             :style="{ height: 'unset' }"
             :class="[
-              cellColorClass[dayObject.format('d')],
-              dayObject.isHoliday ? cellColorClass[0] : '',
+              dayObject.isHoliday
+                ? cellColorClass[0]
+                : cellColorClass[dayObject.format('d')],
             ]"
           >
             <!-- SLOT: cell -->

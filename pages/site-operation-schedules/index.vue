@@ -77,7 +77,13 @@ const reorder = useSiteShiftTypeReorder({
             icon="mdi-chevron-left"
             @click="dateRangeComposable.move({ value: -1, unit: 'month' })"
           />
-          <span>{{ dateRangeComposable.dateRangeLabel }}</span>
+          <span>
+            {{
+              dayjs(dateRangeComposable.dateRange.value.from).format(
+                "YYYY年MM月",
+              )
+            }}
+          </span>
           <v-btn
             icon="mdi-chevron-right"
             @click="dateRangeComposable.move({ value: 1, unit: 'month' })"
