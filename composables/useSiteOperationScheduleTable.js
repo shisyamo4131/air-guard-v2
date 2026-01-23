@@ -10,6 +10,7 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
  * @param {String} [options.dayFormat="MM/DD"] 日付フォーマット文字列
  * @param {Number} [options.dayHeight=36] 日付セルの高さ
  * @param {Number} [options.weekdayHeight=36] 曜日セルの高さ
+ * @param {String|Number|undefined} [options.columnWidth] カラム幅
  * @param {Object} [options.siteShiftTypeOrder] 現場オーダー配列
  * @returns {Object} - An object containing the reactive `attrs` for SiteOperationScheduleTable.
  * @returns {Object} returns.attrs An attributes for SiteOperationScheduleTable
