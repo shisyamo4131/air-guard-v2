@@ -127,17 +127,14 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         :outsourcers="outsourcers"
       >
         <template #employee="{ rawElement, id }">
-          <MoleculesTagBase
+          <Tag
             :label="rawElement.displayName"
             :size="auth.tagSize"
             :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
           />
         </template>
         <template #outsourcer="{ rawElement }">
-          <MoleculesTagBase
-            :label="rawElement.displayName"
-            :size="auth.tagSize"
-          />
+          <Tag :label="rawElement.displayName" :size="auth.tagSize" />
         </template>
       </MoleculesWorkerSelector>
     </MoleculesFloatingWindow>

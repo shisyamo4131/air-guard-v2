@@ -19,7 +19,7 @@ const handleRemove = (label) => {
   <v-container fluid class="pa-4">
     <v-row>
       <v-col cols="12">
-        <h1 class="text-h4 mb-4">TagBase コンポーネント テスト</h1>
+        <h1 class="text-h4 mb-4">Tag</h1>
       </v-col>
     </v-row>
 
@@ -74,7 +74,7 @@ const handleRemove = (label) => {
           <v-row>
             <v-col v-for="size in sizes" :key="size" cols="12" md="4">
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <MoleculesTagBase
+              <Tag
                 :label="testLabel"
                 :size="size"
                 :highlight="highlight"
@@ -98,7 +98,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">
                 {{ variant.toUpperCase() }}
               </h3>
-              <MoleculesTagBase
+              <Tag
                 :label="`${variant} タグ`"
                 :variant="variant"
                 size="medium"
@@ -119,7 +119,7 @@ const handleRemove = (label) => {
           <v-row>
             <v-col v-for="size in sizes" :key="size" cols="12" md="4">
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <MoleculesTagBase :size="size" :loading="true" />
+              <Tag :size="size" :loading="true" />
             </v-col>
           </v-row>
         </v-card>
@@ -134,7 +134,7 @@ const handleRemove = (label) => {
           <v-row>
             <v-col v-for="size in sizes" :key="size" cols="12" md="4">
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <MoleculesTagBase :size="size" />
+              <Tag :size="size" />
             </v-col>
           </v-row>
         </v-card>
@@ -149,64 +149,52 @@ const handleRemove = (label) => {
           <v-row>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">カスタムラベルスロット</h3>
-              <MoleculesTagBase size="medium" :removable="true">
+              <Tag size="medium" :removable="true">
                 <template #label>
                   <v-icon size="small" class="mr-1">mdi-star</v-icon>
                   <span>カスタムラベル</span>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
-              <MoleculesTagBase label="ラベル" size="medium" :removable="true">
+              <Tag label="ラベル" size="medium" :removable="true">
                 <template #append-label>
                   <v-chip size="x-small" color="primary" class="ml-2">
                     New
                   </v-chip>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
-              <MoleculesTagBase
-                label="フッター付きタグ"
-                size="large"
-                :removable="true"
-              >
+              <Tag label="フッター付きタグ" size="large" :removable="true">
                 <template #footer>
                   <div class="text-caption text-grey mt-1">
                     補足情報がここに表示されます
                   </div>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Prepend Action スロット</h3>
-              <MoleculesTagBase
-                label="アクション付きタグ"
-                size="medium"
-                :removable="true"
-              >
+              <Tag label="アクション付きタグ" size="medium" :removable="true">
                 <template #prepend-action>
                   <v-icon size="small">mdi-information</v-icon>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Append Action スロット</h3>
-              <MoleculesTagBase
-                label="アクション付きタグ"
-                size="medium"
-                :removable="true"
-              >
+              <Tag label="アクション付きタグ" size="medium" :removable="true">
                 <template #append-action>
                   <v-icon size="small">mdi-pencil</v-icon>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">カスタム削除ボタン</h3>
-              <MoleculesTagBase
+              <Tag
                 label="カスタムアクション"
                 size="medium"
                 :removable="true"
@@ -223,7 +211,7 @@ const handleRemove = (label) => {
                     <v-icon>mdi-delete</v-icon>
                   </v-btn>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
           </v-row>
         </v-card>
@@ -240,7 +228,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">
                 {{ variant.toUpperCase() }} + Highlight
               </h3>
-              <MoleculesTagBase
+              <Tag
                 :label="`${variant} + ハイライト`"
                 :variant="variant"
                 size="medium"
@@ -261,7 +249,7 @@ const handleRemove = (label) => {
           <v-row>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">従業員タグ</h3>
-              <MoleculesTagBase
+              <Tag
                 label="山田 太郎"
                 size="medium"
                 variant="default"
@@ -272,11 +260,11 @@ const handleRemove = (label) => {
                     正社員
                   </v-chip>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">アラートタグ</h3>
-              <MoleculesTagBase
+              <Tag
                 label="確認が必要です"
                 size="medium"
                 variant="warning"
@@ -287,11 +275,11 @@ const handleRemove = (label) => {
                     mdi-alert-circle
                   </v-icon>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">完了タグ</h3>
-              <MoleculesTagBase
+              <Tag
                 label="作業完了"
                 size="medium"
                 variant="success"
@@ -300,11 +288,11 @@ const handleRemove = (label) => {
                 <template #prepend-label>
                   <v-icon size="small" color="success">mdi-check-circle</v-icon>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">エラータグ</h3>
-              <MoleculesTagBase
+              <Tag
                 label="エラーが発生しました"
                 size="medium"
                 variant="error"
@@ -315,7 +303,7 @@ const handleRemove = (label) => {
                     詳細: 接続がタイムアウトしました
                   </div>
                 </template>
-              </MoleculesTagBase>
+              </Tag>
             </v-col>
           </v-row>
         </v-card>
@@ -330,11 +318,7 @@ const handleRemove = (label) => {
           <v-row>
             <v-col v-for="size in sizes" :key="size" cols="12" md="4">
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <MoleculesTagBase
-                :label="`${size} タグ`"
-                :size="size"
-                :removable="false"
-              />
+              <Tag :label="`${size} タグ`" :size="size" :removable="false" />
             </v-col>
           </v-row>
         </v-card>

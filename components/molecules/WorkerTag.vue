@@ -1,7 +1,7 @@
 <script setup>
 /**
  * @file components/molecules/WorkerTag.vue
- * @description A component for displaying a worker tag based on TagBase.
+ * @description A component for displaying a worker tag based on Tag.
  * - Displays the worker's `startTime` and `endTime`.
  *
  * @props {String} endTime - End time of the worker's shift.
@@ -82,7 +82,7 @@ const emit = defineEmits(["click:remove"]);
 </script>
 
 <template>
-  <MoleculesTagBase
+  <Tag
     :highlight="highlight"
     :label="label"
     :loading="loading"
@@ -126,7 +126,7 @@ const emit = defineEmits(["click:remove"]);
     <template #prepend-action>
       <slot name="prepend-action" />
     </template>
-  </MoleculesTagBase>
+  </Tag>
 </template>
 
 <style scoped></style>

@@ -1,7 +1,7 @@
 <script setup>
 /**
- * TagBase.vue
- * @file ./components/molecules/TagBase.vue
+ * Tag
+ * @file ./components/Tag/index.vue
  * @description VListItem をベースにした、汎用的なタグコンポーネントです。
  * - Vuetify の v-list-item コンポーネントを拡張して、タグ表示に特化したスタイルと機能を提供します。
  * - タグのサイズ、バリアント、読み込み状態、削除ボタンなどのカスタマイズが可能です。
@@ -14,7 +14,7 @@
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
  * @property {String} removeIcon - 削除ボタンのアイコン。
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか。
- * @property {String} size - タグのサイズ。('SMALL', 'MEDIUM', 'LARGE')。
+ * @property {String} size - タグのサイズ。('small', 'medium', 'large')。
  * @property {String} variant - タグのバリアント。('default', 'success', 'warning', 'error', 'disabled')。
  *
  * @slots
@@ -29,12 +29,15 @@
  *
  * @emits click:remove - 削除ボタンがクリックされたときに発火します。
  */
+import { useDefaults } from "vuetify";
+import { useIndex } from "./useIndex.js";
+
 defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
-const props = defineProps({
+const _props = defineProps({
   /**
    * タグの枠線を表示するかどうか
    * @type {String | Number | Boolean}
@@ -123,32 +126,41 @@ const props = defineProps({
     },
   },
 });
-
+const props = useDefaults(_props, "Tag");
 const emit = defineEmits(["click:remove"]);
 
+const {
+  tagClasses,
+  tagHeight,
+  titleClasses,
+  progressSize,
+  isLoading,
+  showLoadingText,
+  removeButtonAttrs,
+} = useIndex(props, emit);
 /*****************************************************************************
  * SIZE CONFIGURATIONS
  *****************************************************************************/
-const SIZE_CONFIG = {
-  small: {
-    height: "40px",
-    titleClass: "text-caption",
-    progressSize: "x-small",
-    removeButtonSize: "x-small",
-  },
-  medium: {
-    height: "48px",
-    titleClass: "text-subtitle-2",
-    progressSize: "x-small",
-    removeButtonSize: "small",
-  },
-  large: {
-    height: "56px",
-    titleClass: "text-body-1",
-    progressSize: "small",
-    removeButtonSize: "small",
-  },
-};
+// const SIZE_CONFIG = {
+//   small: {
+//     height: "40px",
+//     titleClass: "text-caption",
+//     progressSize: "x-small",
+//     removeButtonSize: "x-small",
+//   },
+//   medium: {
+//     height: "48px",
+//     titleClass: "text-subtitle-2",
+//     progressSize: "x-small",
+//     removeButtonSize: "small",
+//   },
+//   large: {
+//     height: "56px",
+//     titleClass: "text-body-1",
+//     progressSize: "small",
+//     removeButtonSize: "small",
+//   },
+// };
 
 /*****************************************************************************
  * COMPUTED PROPERTIES
@@ -156,62 +168,62 @@ const SIZE_CONFIG = {
 /**
  * Normalized size value (lowercase)
  */
-const normalizedSize = computed(() => props.size.toLowerCase());
+// const normalizedSize = computed(() => props.size.toLowerCase());
 
 /**
  * Size configuration based on normalized size
  */
-const sizeConfig = computed(() => SIZE_CONFIG[normalizedSize.value]);
+// const sizeConfig = computed(() => SIZE_CONFIG[normalizedSize.value]);
 
 /**
  * Tag height based on size
  */
-const tagHeight = computed(() => sizeConfig.value.height);
+// const tagHeight = computed(() => sizeConfig.value.height);
 
 /**
  * Title classes based on size
  */
-const titleClasses = computed(() => [
-  "tag-base__title",
-  sizeConfig.value.titleClass,
-]);
+// const titleClasses = computed(() => [
+//   "tag-base__title",
+//   sizeConfig.value.titleClass,
+// ]);
 
 /**
  * Progress size based on size
  */
-const progressSize = computed(() => sizeConfig.value.progressSize);
+// const progressSize = computed(() => sizeConfig.value.progressSize);
 
 /**
  * Tag classes based on props
  */
-const tagClasses = computed(() => ({
-  "tag-base": true,
-  "tag-base--highlighted": props.highlight,
-  [`tag-base--${normalizedSize.value}`]: true,
-  [`tag-base--${props.variant}`]: props.variant !== "default",
-  "tag-base--loading": isLoading.value,
-}));
+// const tagClasses = computed(() => ({
+//   "tag-base": true,
+//   "tag-base--highlighted": props.highlight,
+//   [`tag-base--${normalizedSize.value}`]: true,
+//   [`tag-base--${props.variant}`]: props.variant !== "default",
+//   "tag-base--loading": isLoading.value,
+// }));
 
 /**
  * Whether the tag is in loading state
  */
-const isLoading = computed(() => props.loading || !props.label);
+// const isLoading = computed(() => props.loading || !props.label);
 
 /**
  * Whether to show loading text (hidden for small size)
  */
-const showLoadingText = computed(() => normalizedSize.value !== "small");
+// const showLoadingText = computed(() => normalizedSize.value !== "small");
 
 /**
  * Attributes for the remove button
  */
-const removeButtonAttrs = computed(() => ({
-  disabled: isLoading.value,
-  icon: props.removeIcon,
-  isLoading: isLoading.value,
-  size: sizeConfig.value.removeButtonSize,
-  onClick: handleClickRemove,
-}));
+// const removeButtonAttrs = computed(() => ({
+//   disabled: isLoading.value,
+//   icon: props.removeIcon,
+//   isLoading: isLoading.value,
+//   size: sizeConfig.value.removeButtonSize,
+//   onClick: handleClickRemove,
+// }));
 
 /*****************************************************************************
  * METHODS
@@ -220,10 +232,10 @@ const removeButtonAttrs = computed(() => ({
  * Handler for the remove button click event.
  * Prevents event propagation and emits the 'click:remove' event.
  */
-function handleClickRemove(event) {
-  event.stopPropagation();
-  emit("click:remove");
-}
+// function handleClickRemove(event) {
+//   event.stopPropagation();
+//   emit("click:remove");
+// }
 </script>
 
 <template>
