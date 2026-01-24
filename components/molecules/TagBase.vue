@@ -1,65 +1,126 @@
 <script setup>
 /**
+ * TagBase.vue
  * @file ./components/molecules/TagBase.vue
- * @description Base component for displaying a tag in arrangements.
- * - The height is changed based on `size`.
+ * @description VListItem をベースにした、汎用的なタグコンポーネントです。
+ * - Vuetify の v-list-item コンポーネントを拡張して、タグ表示に特化したスタイルと機能を提供します。
+ * - タグのサイズ、バリアント、読み込み状態、削除ボタンなどのカスタマイズが可能です。
+ * - `inheritAttrs: false` を指定して、不要な属性の継承を防止しています。
  *
- * @props {Boolean} highlight - Whether the tag is highlighted.
- * @props {String} label - The label to display on the tag.
- * @props {Boolean} loading - Whether the tag is in loading state.
- * @props {Boolean} removable - Displays clear button and emits `click:remove` event when clicked.
- * @props {String} removeIcon - Icon for the remove button.
- * @props {String} size - Size variant of the tag ('SMALL', 'MEDIUM', 'LARGE').
- * @props {String} variant - Visual variant of the tag ('default', 'success', 'warning', 'error', 'disabled').
+ * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
+ * @property {Boolean} highlight - タグを強調表示するかどうか。
+ * @property {String} label - タグに表示するラベル文字列。
+ * @property {Boolean} loading - タグが読み込み中状態かどうか。
+ * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
+ * @property {String} removeIcon - 削除ボタンのアイコン。
+ * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか。
+ * @property {String} size - タグのサイズ。('SMALL', 'MEDIUM', 'LARGE')。
+ * @property {String} variant - タグのバリアント。('default', 'success', 'warning', 'error', 'disabled')。
  *
  * @slots
- * - prepend-label: Content before the label.
- * - label: Custom label content.
- * - append-label: Content after the label.
- * - append: Content in the append area.
- * - footer: Content in the footer area.
- * - prepend-action: Content in the prepend action area.
- * - action: Custom clear button content.
- * - append-action: Content in the append action area.
+ * - prepend-label: ラベルの前に表示するコンテンツ。
+ * - label: カスタムラベルコンテンツ。
+ * - append-label: ラベルの後に表示するコンテンツ。
+ * - append: 追加エリアのコンテンツ。
+ * - footer: フッターエリアのコンテンツ。
+ * - prepend-action: 先頭アクションエリアのコンテンツ。
+ * - action: カスタムクリアボタンコンテンツ。
+ * - append-action: 追加アクションエリアのコンテンツ。
  *
- * @emits click:remove - Emitted when the remove button is clicked.
- *
- * @update 2025-12-25 `size` プロパティを `TAG_SIZE_VALUES` に基づくよう修正。
- * @update 2025-12-25 冗長な computed プロパティを削除し、コードを整理。
- * @update 2025-12-24 Add icon for draggable handle in prepend-label slot.
+ * @emits click:remove - 削除ボタンがクリックされたときに発火します。
  */
-
-import { computed } from "vue";
-import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-
 defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
+  /**
+   * タグの枠線を表示するかどうか
+   * @type {String | Number | Boolean}
+   * @default true
+   * @description Vuetify の v-list-item コンポーネントの border prop に対応します。
+   * @see https://vuetifyjs.com/en/api/v-list-item/#props-border
+   */
+  border: { type: [String, Number, Boolean], default: true },
+  /**
+   * タグを強調表示するかどうか
+   * @type {Boolean}
+   * @default false
+   */
   highlight: { type: Boolean, default: false },
-  label: {
-    type: String,
-    default: undefined,
-    validator: (value) =>
-      value === undefined ||
-      (typeof value === "string" && value.trim().length > 0),
-  },
+  /**
+   * タグに表示するラベル文字列
+   * @type {String | undefined}
+   */
+  label: { type: String, default: undefined },
+  /**
+   * タグが読み込み中状態かどうか
+   * @type {Boolean}
+   * @default false
+   */
   loading: { type: Boolean, default: false },
+  /**
+   * タグに削除ボタンを表示するかどうか
+   * @type {Boolean}
+   * @default false
+   */
   removable: { type: Boolean, default: false },
+  /**
+   * 削除ボタンのアイコン
+   * @type {String}
+   * @default 'mdi-close'
+   */
   removeIcon: { type: String, default: "mdi-close" },
+  /**
+   * タグの角を丸くするかどうか
+   * @type {String | Number | Boolean}
+   * @default true
+   * @description Vuetify の v-list-item コンポーネントの rounded prop に対応します。
+   * @see https://vuetifyjs.com/en/api/v-list-item/#props-rounded
+   */
+  rounded: { type: [String, Number, Boolean], default: true },
+  /**
+   * タグのサイズ
+   * @type {'small' | 'medium' | 'large'}
+   * @default 'medium'
+   * @description 'small', 'medium', 'large' のいずれかの値を取ります。
+   * - 'small': 高さ 40px、タイトルクラス 'text-caption'
+   * - 'medium': 高さ 48px、タイトルクラス 'text-subtitle-2'
+   * - 'large': 高さ 56px、タイトルクラス 'text-body-1'
+   * @validator 指定された値が 'small', 'medium', 'large' のいずれかであることを検証します。
+   * @note 大文字小文字は区別されません。
+   */
   size: {
     type: String,
-    default: TAG_SIZE_VALUES.MEDIUM.value,
-    validator: (value) =>
-      Object.values(TAG_SIZE_VALUES).some((v) => v.value === value),
+    default: "medium",
+    validator: (value) => {
+      const values = ["small", "medium", "large"];
+      const normalized = value.toLowerCase();
+      return values.includes(normalized);
+    },
   },
+  /**
+   * タグのバリアント
+   * @type {'default' | 'success' | 'warning' | 'error' | 'disabled'}
+   * @default 'default'
+   * @description 'default', 'success', 'warning', 'error', 'disabled' のいずれかの値を取ります。
+   * - 'default': 通常のタグ表示
+   * - 'success': 成功状態を示すタグ表示
+   * - 'warning': 警告状態を示すタグ表示
+   * - 'error': エラー状態を示すタグ表示
+   * - 'disabled': 無効状態を示すタグ表示
+   * @validator 指定された値が 'default', 'success', 'warning', 'error', 'disabled' のいずれかであることを検証します。
+   * @note 大文字小文字は区別されません。
+   */
   variant: {
     type: String,
     default: "default",
-    validator: (value) =>
-      ["default", "success", "warning", "error", "disabled"].includes(value),
+    validator: (value) => {
+      const values = ["default", "success", "warning", "error", "disabled"];
+      const normalized = value.toLowerCase();
+      return values.includes(normalized);
+    },
   },
 });
 
@@ -169,7 +230,7 @@ function handleClickRemove(event) {
   <v-list-item
     :class="tagClasses"
     :style="{ height: tagHeight }"
-    border
+    :border="props.border"
     rounded
   >
     <v-list-item-title :class="titleClasses">
@@ -198,7 +259,9 @@ function handleClickRemove(event) {
     </v-list-item-title>
 
     <!-- Footer slot -->
-    <slot name="footer" />
+    <div class="text-truncate">
+      <slot name="footer" />
+    </div>
 
     <!-- Append content -->
     <template #append>
@@ -211,7 +274,7 @@ function handleClickRemove(event) {
             <v-icon v-bind="removeButtonAttrs" />
           </slot>
         </v-list-item-action>
-        <v-list-item-action v-if="$slots['append-action']">
+        <v-list-item-action v-if="$slots['append-action']" class="pl-2">
           <slot name="append-action" />
         </v-list-item-action>
       </slot>
