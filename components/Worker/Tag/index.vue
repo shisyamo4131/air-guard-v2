@@ -4,7 +4,7 @@
  * @file components/Worker/Tag/index.vue
  * @description Tag コンポーネントをベースにした、作業員情報表示用タグコンポーネントです。
  * - フッタースロットを使用して開始時刻、終了時刻を表示できるようにしています。
- * - このコンポーネントは直接使用されることを想定していません。`ScheduleWorkerTag` へ拡張するために
+ * - このコンポーネントは直接使用されることを想定していません。`ScheduleWorkerTag` の継承元として
  *   描画すべき情報を整理・定義するために作成されています。
  *
  * [Added Properties]
