@@ -65,7 +65,7 @@ const btns = computed(() => {
     {
       attrs: {
         disabled:
-          !props.schedule.isEditable || props.schedule.isNotificatedAllWorkers,
+          !props.schedule.isEditable || props.schedule.isNotifiedAllWorkers,
         onClick: () => emit("click:notify"),
       },
       icon: { icon: "mdi-bullhorn" },
