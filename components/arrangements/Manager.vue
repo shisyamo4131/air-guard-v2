@@ -131,7 +131,11 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
             :label="rawElement.displayName"
             :size="auth.tagSize"
             :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
-          />
+          >
+            <template #prepend-label>
+              <AtomsIconsDraggable />
+            </template>
+          </Tag>
         </template>
         <template #outsourcer="{ rawElement }">
           <Tag :label="rawElement.displayName" :size="auth.tagSize" />
