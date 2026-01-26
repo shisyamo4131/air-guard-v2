@@ -35,7 +35,7 @@
  * @emits click:remove - Emitted when the remove button is clicked.
  */
 import { useDefaults } from "vuetify";
-import importedProps from "@/components/Tag/props";
+import importedProps from "@/components/Worker/Tag/props";
 import { useIndex } from "./useIndex";
 
 defineOptions({ inheritAttrs: false });
@@ -43,13 +43,7 @@ defineOptions({ inheritAttrs: false });
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
-const _props = defineProps({
-  ...importedProps,
-  /** End time of the worker's shift */
-  endTime: { type: String, default: undefined },
-  /** Start time of the worker's shift */
-  startTime: { type: String, default: undefined },
-});
+const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove"]);
 
@@ -57,7 +51,7 @@ const { attrs, startTime, endTime } = useIndex(props, emit);
 </script>
 
 <template>
-  <Tag v-bind="attrs" @click:remove="emit('click:remove')">
+  <Tag v-bind="attrs">
     <!-- Pass through: prepend-label slot with slot props -->
     <template #prepend-label="slotProps">
       <slot name="prepend-label" v-bind="slotProps" />
