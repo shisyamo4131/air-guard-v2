@@ -1,14 +1,17 @@
 <script setup>
+/*****************************************************************************
+ * Tag テストページ
+ *****************************************************************************/
 import { ref } from "vue";
-import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
-const sizes = Object.values(TAG_SIZE_VALUES).map((v) => v.value);
+const sizes = ["small", "medium", "large"];
 const variants = ["default", "success", "warning", "error", "disabled"];
 
 const testLabel = ref("テストラベル");
 const highlight = ref(false);
 const loading = ref(false);
 const removable = ref(true);
+const showDraggableIcon = ref(false);
 
 const handleRemove = (label) => {
   console.log(`削除ボタンがクリックされました: ${label}`);
@@ -47,16 +50,16 @@ const handleRemove = (label) => {
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="loading"
-                label="ローディング"
+                v-model="removable"
+                label="削除可能"
                 density="compact"
                 hide-details
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="removable"
-                label="削除可能"
+                v-model="showDraggableIcon"
+                label="ドラッグアイコン表示"
                 density="compact"
                 hide-details
               />
@@ -80,6 +83,7 @@ const handleRemove = (label) => {
                 :highlight="highlight"
                 :loading="loading"
                 :removable="removable"
+                :show-draggable-icon="showDraggableIcon"
                 @click:remove="handleRemove(testLabel)"
               />
             </v-col>
@@ -141,12 +145,42 @@ const handleRemove = (label) => {
       </v-col>
     </v-row>
 
+    <!-- ドラッグアイコン表示 -->
+    <v-row>
+      <v-col cols="12">
+        <v-card class="pa-4 mb-6">
+          <h2 class="text-h6 mb-4">ドラッグアイコン表示</h2>
+          <v-row>
+            <v-col v-for="size in sizes" :key="size" cols="12" md="4">
+              <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
+              <Tag
+                :label="`${size} タグ`"
+                :size="size"
+                :show-draggable-icon="true"
+                :removable="true"
+              />
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-col>
+    </v-row>
+
     <!-- スロットのテスト -->
     <v-row>
       <v-col cols="12">
         <v-card class="pa-4 mb-6">
           <h2 class="text-h6 mb-4">スロットのテスト</h2>
           <v-row>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
+              <Tag label="ラベル" size="medium" :removable="true">
+                <template #prepend-label>
+                  <v-icon size="small" color="primary" class="mr-1">
+                    mdi-star
+                  </v-icon>
+                </template>
+              </Tag>
+            </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">カスタムラベルスロット</h3>
               <Tag size="medium" :removable="true">

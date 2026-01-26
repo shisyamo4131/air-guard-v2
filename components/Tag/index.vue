@@ -14,6 +14,7 @@
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
  * @property {String} removeIcon - 削除ボタンのアイコン。
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか。
+ * @property {Boolean} showDraggableIcon - ドラッグ可能アイコンを表示するかどうか。
  * @property {String} size - タグのサイズ。('small', 'medium', 'large')。
  * @property {String} variant - タグのバリアント。('default', 'success', 'warning', 'error', 'disabled')。
  *
@@ -63,6 +64,9 @@ const {
     <v-list-item-title :class="titleClasses">
       <!-- Label content (shown when label is available and not loading) -->
       <div v-if="!isLoading" class="tag-base__label-content">
+        <!-- Draggable Icon -->
+        <AtomsIconsDraggable v-if="props.showDraggableIcon" />
+
         <!-- SLOT: prepend-label -->
         <slot name="prepend-label" v-bind="{ label: props.label }" />
 

@@ -1,16 +1,37 @@
 <script setup>
-import { ref } from "vue";
-import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { ref, computed } from "vue";
+import { mockEmployees } from "./test.mock.js";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
-const sizes = Object.values(TAG_SIZE_VALUES).map((v) => v.value);
+const sizes = ["small", "medium", "large"];
 const variants = ["default", "success", "warning", "error", "disabled"];
 
-const testLabel = ref("山田 太郎");
-const startTime = ref("09:00");
-const endTime = ref("18:00");
+// useFetchEmployeeのインスタンスを作成し、モックデータをキャッシュに追加
+const employeeComposable = useFetchEmployee();
+const { pushEmployees } = employeeComposable;
+
+// モックデータを事前にキャッシュに追加（Firestoreアクセスを回避）
+pushEmployees(mockEmployees);
+
+// 選択された従業員のインデックス
+const selectedEmployeeIndex = ref(0);
+
+// 選択された従業員
+const selectedEmployee = computed(
+  () => mockEmployees[selectedEmployeeIndex.value],
+);
+
+// 従業員選択用のオプション
+const employeeOptions = computed(() =>
+  mockEmployees.map((emp, index) => ({
+    value: index,
+    title: `${emp.displayName} (${emp.code})`,
+    subtitle: emp.remarks,
+  })),
+);
+
 const highlight = ref(false);
-const loading = ref(false);
-const removable = ref(true);
+const removable = ref(false);
 
 const handleRemove = (label) => {
   console.log(`削除ボタンがクリックされました: ${label}`);
@@ -31,42 +52,77 @@ const handleRemove = (label) => {
         <v-card class="pa-4 mb-6">
           <h2 class="text-h6 mb-4">コントロール</h2>
           <v-row>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="testLabel"
-                label="ラベル"
+            <v-col cols="12">
+              <v-select
+                v-model="selectedEmployeeIndex"
+                :items="employeeOptions"
+                label="表示する従業員を選択"
                 density="compact"
                 hide-details
-              />
+              >
+                <template #item="{ props, item }">
+                  <v-list-item v-bind="props">
+                    <v-list-item-subtitle class="text-caption">
+                      {{ item.raw.subtitle }}
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </template>
+              </v-select>
             </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="startTime"
-                label="開始時刻"
-                density="compact"
-                hide-details
-              />
-            </v-col>
-            <v-col cols="12" md="4">
-              <v-text-field
-                v-model="endTime"
-                label="終了時刻"
-                density="compact"
-                hide-details
-              />
+            <v-col cols="12">
+              <v-card variant="tonal" color="info" class="pa-3">
+                <div class="text-caption mb-2">
+                  <strong>選択中の従業員情報:</strong>
+                </div>
+                <div class="text-caption">
+                  <strong>コード:</strong> {{ selectedEmployee.code }}
+                </div>
+                <div class="text-caption">
+                  <strong>氏名:</strong> {{ selectedEmployee.displayName }}
+                </div>
+                <div class="text-caption">
+                  <strong>役職:</strong> {{ selectedEmployee.title || "なし" }}
+                </div>
+                <div class="text-caption">
+                  <strong>雇用状態:</strong>
+                  {{
+                    selectedEmployee.employmentStatus === "active"
+                      ? "在職中"
+                      : "退職"
+                  }}
+                </div>
+                <div class="text-caption">
+                  <strong>外国人:</strong>
+                  {{ selectedEmployee.isForeigner ? "はい" : "いいえ" }}
+                </div>
+                <div class="text-caption">
+                  <strong>警備員登録:</strong>
+                  {{
+                    selectedEmployee.hasSecurityGuardRegistration
+                      ? "あり"
+                      : "なし"
+                  }}
+                </div>
+                <div
+                  v-if="selectedEmployee.securityCertifications?.length > 0"
+                  class="text-caption"
+                >
+                  <strong>資格:</strong>
+                  {{
+                    selectedEmployee.securityCertifications
+                      .map((c) => c.abbreviation || c.name)
+                      .join(", ")
+                  }}
+                </div>
+                <div class="text-caption mt-2 text-grey-darken-1">
+                  {{ selectedEmployee.remarks }}
+                </div>
+              </v-card>
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
                 v-model="highlight"
-                label="ハイライト"
-                density="compact"
-                hide-details
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-switch
-                v-model="loading"
-                label="ローディング"
+                label="ハイライト表示"
                 density="compact"
                 hide-details
               />
@@ -77,6 +133,17 @@ const handleRemove = (label) => {
                 label="削除可能"
                 density="compact"
                 hide-details
+              />
+            </v-col>
+            <v-col cols="12">
+              <div class="text-subtitle-2 mb-2">プレビュー</div>
+              <WorkerTag
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
+                size="medium"
+                :highlight="highlight"
+                :removable="removable"
+                @click:remove="handleRemove(selectedEmployee.displayName)"
               />
             </v-col>
           </v-row>
@@ -93,14 +160,12 @@ const handleRemove = (label) => {
             <v-col v-for="size in sizes" :key="size" cols="12" md="4">
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 :size="size"
                 :highlight="highlight"
-                :loading="loading"
                 :removable="removable"
-                @click:remove="handleRemove(testLabel)"
+                @click:remove="handleRemove(selectedEmployee.displayName)"
               />
             </v-col>
           </v-row>
@@ -119,323 +184,13 @@ const handleRemove = (label) => {
                 {{ variant.toUpperCase() }}
               </h3>
               <WorkerTag
-                :label="`${testLabel} (${variant})`"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 :variant="variant"
                 size="medium"
                 :removable="removable"
                 @click:remove="handleRemove(variant)"
               />
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- ローディング状態 -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">ローディング状態</h2>
-          <v-row>
-            <v-col v-for="size in sizes" :key="size" cols="12" md="4">
-              <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <WorkerTag
-                :size="size"
-                :start-time="startTime"
-                :end-time="endTime"
-                :loading="true"
-              />
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- ラベルなし（自動ローディング） -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">ラベルなし（自動ローディング）</h2>
-          <v-row>
-            <v-col v-for="size in sizes" :key="size" cols="12" md="4">
-              <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <WorkerTag :size="size" />
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- 時刻未指定（デフォルト値テスト） -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">時刻未指定（デフォルト値: --:--）</h2>
-          <v-row>
-            <v-col v-for="size in sizes" :key="size" cols="12" md="4">
-              <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <WorkerTag :label="testLabel" :size="size" :removable="true" />
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- 時刻のカスタマイズ -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">時刻表示のバリエーション</h2>
-          <v-row>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">通常の時刻表示</h3>
-              <WorkerTag
-                :label="testLabel"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">深夜勤務</h3>
-              <WorkerTag
-                :label="testLabel"
-                start-time="22:00"
-                end-time="06:00"
-                size="medium"
-                variant="warning"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">早朝勤務</h3>
-              <WorkerTag
-                :label="testLabel"
-                start-time="05:00"
-                end-time="14:00"
-                size="medium"
-                variant="success"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">時刻未定（デフォルト値使用）</h3>
-              <WorkerTag
-                :label="testLabel"
-                size="medium"
-                variant="disabled"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">時刻未定（明示的に指定）</h3>
-              <WorkerTag
-                :label="testLabel"
-                start-time="--:--"
-                end-time="--:--"
-                size="medium"
-                variant="disabled"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">時刻非表示（hideTime）</h3>
-              <WorkerTag
-                :label="testLabel"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :hide-time="true"
-              />
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- showDraggableIcon プロパティのテスト -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">showDraggableIcon プロパティのテスト</h2>
-          <v-row>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                ドラッグアイコンなし（デフォルト）
-              </h3>
-              <WorkerTag
-                label="山田 太郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                ドラッグアイコンあり（showDraggableIcon=true）
-              </h3>
-              <WorkerTag
-                label="山田 太郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :show-draggable-icon="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                Small サイズ + ドラッグアイコン
-              </h3>
-              <WorkerTag
-                label="鈴木 一郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="small"
-                :removable="true"
-                :show-draggable-icon="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                Large サイズ + ドラッグアイコン
-              </h3>
-              <WorkerTag
-                label="佐藤 花子"
-                start-time="09:00"
-                end-time="18:00"
-                size="large"
-                :removable="true"
-                :show-draggable-icon="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                ドラッグアイコン + カスタムprepend-label
-              </h3>
-              <WorkerTag
-                label="田中 次郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :show-draggable-icon="true"
-              >
-                <template #prepend-label>
-                  <v-icon size="small" class="mr-1" color="primary">
-                    mdi-account-star
-                  </v-icon>
-                </template>
-              </WorkerTag>
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                ドラッグアイコン + 各種バリアント
-              </h3>
-              <WorkerTag
-                label="高橋 健太"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                variant="success"
-                :removable="true"
-                :show-draggable-icon="true"
-              >
-                <template #append-label>
-                  <v-chip size="x-small" color="success" class="ml-2">
-                    リーダー
-                  </v-chip>
-                </template>
-              </WorkerTag>
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- hideTime プロパティのテスト -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4 mb-6">
-          <h2 class="text-h6 mb-4">hideTime プロパティのテスト</h2>
-          <v-row>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
-              <WorkerTag
-                label="山田 太郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                時刻表示なし（hideTime=true）
-              </h3>
-              <WorkerTag
-                label="山田 太郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :hide-time="true"
-              />
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                時刻非表示 + フッタースロット使用
-              </h3>
-              <WorkerTag
-                label="鈴木 一郎"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :hide-time="true"
-              >
-                <template #prepend-footer>
-                  <div class="text-caption text-grey">
-                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
-                    現場A - 日勤
-                  </div>
-                </template>
-              </WorkerTag>
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                時刻非表示 + 複数フッタースロット
-              </h3>
-              <WorkerTag
-                label="佐藤 花子"
-                start-time="09:00"
-                end-time="18:00"
-                size="medium"
-                :removable="true"
-                :hide-time="true"
-              >
-                <template #prepend-footer>
-                  <div class="text-caption">
-                    <v-chip size="x-small" color="primary">責任者</v-chip>
-                  </div>
-                </template>
-                <template #footer>
-                  <div class="text-caption text-grey">配属: 東京本社</div>
-                </template>
-                <template #append-footer>
-                  <div class="text-caption text-success">
-                    <v-icon size="x-small" class="mr-1"
-                      >mdi-check-circle</v-icon
-                    >
-                    出勤確認済み
-                  </div>
-                </template>
-              </WorkerTag>
             </v-col>
           </v-row>
         </v-card>
@@ -451,9 +206,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -467,9 +221,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -481,47 +234,10 @@ const handleRemove = (label) => {
               </WorkerTag>
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                カスタム時刻表示（StartTime スロット）
-              </h3>
+              <h3 class="text-subtitle-2 mb-2">Prepend Footer スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
-                size="medium"
-                :removable="true"
-              >
-                <template #startTime="{ startTime }">
-                  <v-icon size="x-small" class="mr-1">mdi-clock-start</v-icon>
-                  <span class="font-weight-bold">{{ startTime }}</span>
-                </template>
-              </WorkerTag>
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                カスタム時刻表示（EndTime スロット）
-              </h3>
-              <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
-                size="medium"
-                :removable="true"
-              >
-                <template #endTime="{ endTime }">
-                  <span class="font-weight-bold">{{ endTime }}</span>
-                  <v-icon size="x-small" class="ml-1">mdi-clock-end</v-icon>
-                </template>
-              </WorkerTag>
-            </v-col>
-            <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                Prepend Footer スロット（時刻下・最上部）
-              </h3>
-              <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -534,13 +250,10 @@ const handleRemove = (label) => {
               </WorkerTag>
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                Footer スロット（中央エリア）
-              </h3>
+              <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -555,13 +268,10 @@ const handleRemove = (label) => {
               </WorkerTag>
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">
-                Append Footer スロット（最下部）
-              </h3>
+              <h3 class="text-subtitle-2 mb-2">Append Footer スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -578,9 +288,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Prepend Action スロット</h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -596,9 +305,8 @@ const handleRemove = (label) => {
                 3つのフッタースロット組み合わせ
               </h3>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -616,7 +324,7 @@ const handleRemove = (label) => {
                 <template #append-footer>
                   <div class="text-caption text-success">
                     <v-icon size="x-small" class="mr-1">mdi-check</v-icon>
-                    確定
+                    確認済
                   </div>
                 </template>
               </WorkerTag>
@@ -624,13 +332,11 @@ const handleRemove = (label) => {
             <v-col cols="12">
               <h3 class="text-subtitle-2 mb-2">全フッタースロットのテスト</h3>
               <p class="text-caption text-grey mb-2">
-                時刻表示 → prepend-footer → footer → append-footer
-                の順に表示されます
+                prepend-footer → footer → append-footer の順で表示されます
               </p>
               <WorkerTag
-                :label="testLabel"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="large"
                 :removable="true"
               >
@@ -674,9 +380,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">リーダー（特別表示）</h3>
               <WorkerTag
-                :label="testLabel"
-                start-time="08:00"
-                end-time="17:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="success"
                 :highlight="true"
@@ -695,7 +400,7 @@ const handleRemove = (label) => {
                 <template #footer>
                   <div class="text-caption">
                     <v-chip size="x-small" color="success" variant="outlined">
-                      経験5年
+                      経験10年
                     </v-chip>
                   </div>
                 </template>
@@ -704,9 +409,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">アラート付き作業員</h3>
               <WorkerTag
-                label="鈴木 一郎"
-                start-time="09:00"
-                end-time="18:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="warning"
                 :removable="true"
@@ -727,9 +431,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">新人作業員</h3>
               <WorkerTag
-                label="佐藤 花子"
-                start-time="09:00"
-                end-time="17:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               >
@@ -740,20 +443,6 @@ const handleRemove = (label) => {
                 </template>
                 <template #prepend-footer>
                   <div class="text-caption text-info">
-                    <v-icon size="x-small" class="mr-1">mdi-school</v-icon>
-                    研修: 安全教育
-                  </div>
-                </template>
-                <template #startTime="{ startTime }">
-                  <v-icon size="x-small" class="mr-1">mdi-clock-start</v-icon>
-                  <span>{{ startTime }}</span>
-                </template>
-                <template #endTime="{ endTime }">
-                  <span>{{ endTime }}</span>
-                  <v-icon size="x-small" class="ml-1">mdi-clock-end</v-icon>
-                </template>
-                <template #append-footer>
-                  <div class="text-caption text-grey">
                     <v-icon size="x-small" class="mr-1">mdi-information</v-icon>
                     研修期間中 (2026/01/15 - 2026/03/15)
                   </div>
@@ -763,9 +452,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">エラー状態</h3>
               <WorkerTag
-                label="田中 三郎"
-                start-time="22:00"
-                end-time="06:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="error"
                 :removable="true"
@@ -801,9 +489,8 @@ const handleRemove = (label) => {
                 {{ variant.toUpperCase() }} + Highlight
               </h3>
               <WorkerTag
-                :label="`${testLabel} (${variant})`"
-                :start-time="startTime"
-                :end-time="endTime"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 :variant="variant"
                 size="medium"
                 :highlight="true"
@@ -824,16 +511,20 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">通常の作業員</h3>
               <WorkerTag
-                label="山田 太郎"
-                start-time="09:00"
-                end-time="18:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 :removable="true"
               />
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">時刻未定の作業員</h3>
-              <WorkerTag label="高橋 健太" size="medium" :removable="true">
+              <WorkerTag
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
+                size="medium"
+                :removable="true"
+              >
                 <template #append-label>
                   <v-chip size="x-small" color="grey" class="ml-2">
                     調整中
@@ -844,9 +535,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">正社員（出勤済み）</h3>
               <WorkerTag
-                label="田中 次郎"
-                start-time="08:30"
-                end-time="17:30"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="success"
                 :removable="true"
@@ -861,9 +551,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">派遣社員（遅刻警告）</h3>
               <WorkerTag
-                label="佐藤 花子"
-                start-time="09:00"
-                end-time="18:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="warning"
                 :removable="true"
@@ -883,9 +572,8 @@ const handleRemove = (label) => {
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">欠勤者</h3>
               <WorkerTag
-                label="鈴木 一郎"
-                start-time="09:00"
-                end-time="18:00"
+                :worker-id="selectedEmployee.docId"
+                :fetch-employee-composable="employeeComposable"
                 size="medium"
                 variant="error"
                 :removable="true"
@@ -896,27 +584,6 @@ const handleRemove = (label) => {
                   </v-chip>
                 </template>
               </WorkerTag>
-            </v-col>
-          </v-row>
-        </v-card>
-      </v-col>
-    </v-row>
-
-    <!-- 削除不可のテスト -->
-    <v-row>
-      <v-col cols="12">
-        <v-card class="pa-4">
-          <h2 class="text-h6 mb-4">削除不可のタグ</h2>
-          <v-row>
-            <v-col v-for="size in sizes" :key="size" cols="12" md="4">
-              <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
-              <WorkerTag
-                :label="`${testLabel} (${size})`"
-                :start-time="startTime"
-                :end-time="endTime"
-                :size="size"
-                :removable="false"
-              />
             </v-col>
           </v-row>
         </v-card>

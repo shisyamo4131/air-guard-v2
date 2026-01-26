@@ -4,14 +4,27 @@
  *****************************************************************************/
 import importedProps from "@/components/Tag/props";
 
+// labelプロパティとloadingプロパティを除外
+// - label: WorkerTagでは従業員情報から自動取得
+// - loading: WorkerTagではuseFetchEmployeeのisLoadingから自動設定
+const { label, loading, ...restProps } = importedProps;
+
 export default {
-  ...importedProps,
-  /** End time of the worker's shift */
-  endTime: { type: String, default: undefined },
-  /** Whether to hide the time display */
-  hideTime: { type: Boolean, default: false },
-  /** Whether to show the draggable icon */
-  showDraggableIcon: { type: Boolean, default: false },
-  /** Start time of the worker's shift */
-  startTime: { type: String, default: undefined },
+  ...restProps,
+  /**
+   * 作業員ID
+   */
+  workerId: {
+    type: String,
+    required: true,
+  },
+  /**
+   * useFetchEmployee コンポーザブルのインスタンス
+   * 親コンポーネントから渡される場合は、キャッシュを共有できます。
+   * 指定されない場合は、コンポーネント内部で新規インスタンスを作成します。
+   */
+  fetchEmployeeComposable: {
+    type: Object,
+    default: undefined,
+  },
 };

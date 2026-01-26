@@ -128,13 +128,13 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
       >
         <template #employee="{ rawElement, id }">
           <WorkerTag
-            :label="rawElement.displayName"
             :size="auth.tagSize"
             show-draggable-icon
             hide-time
+            :worker-id="id"
+            :fetch-employee-composable="fetchEmployeeComposable"
             :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
-          >
-          </WorkerTag>
+          />
         </template>
         <template #outsourcer="{ rawElement }">
           <WorkerTag

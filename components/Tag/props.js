@@ -48,6 +48,12 @@ export default {
    */
   rounded: { type: [String, Number, Boolean], default: true },
   /**
+   * タグにドラッグ可能アイコンを表示するかどうか
+   * @type {Boolean}
+   * @default false
+   */
+  showDraggableIcon: { type: Boolean, default: false },
+  /**
    * タグのサイズ
    * @type {'small' | 'medium' | 'large'}
    * @default 'medium'
