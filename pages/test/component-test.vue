@@ -1,12 +1,12 @@
 <script setup>
-import { SiteOperationSchedule } from "@/schemas";
-const schedule = reactive(new SiteOperationSchedule());
+// import { SiteOperationSchedule } from "@/schemas";
+// const schedule = reactive(new SiteOperationSchedule());
 
-onMounted(async () => {
-  await schedule.fetch({ docId: "LxPBq2tsi0q6Uk9hVSrS" });
-});
+// onMounted(async () => {
+//   await schedule.fetch({ docId: "LxPBq2tsi0q6Uk9hVSrS" });
+// });
 </script>
 
 <template>
-  <SiteOperationScheduleWorkerTag :schedule="schedule" />
+  <WorkerTagTest />
 </template>

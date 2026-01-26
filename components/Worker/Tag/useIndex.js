@@ -38,7 +38,7 @@ export function useIndex(props, emit) {
    */
   const attrs = Vue.computed(() => {
     // props から startTime, endTime を除外して返す -> Tag コンポーネントに不要な属性を渡さないようにするため
-    const { startTime, endTime, ...rest } = props;
+    const { startTime, endTime, hideTime, ...rest } = props;
     return { ...rest, "onClick:remove": () => emit("click:remove") };
   });
 

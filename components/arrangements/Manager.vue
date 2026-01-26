@@ -127,18 +127,22 @@ provide("getWorker", getWorker); // Use in WorkerTag.vue
         :outsourcers="outsourcers"
       >
         <template #employee="{ rawElement, id }">
-          <Tag
+          <WorkerTag
             :label="rawElement.displayName"
             :size="auth.tagSize"
+            show-draggable-icon
+            hide-time
             :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
           >
-            <template #prepend-label>
-              <AtomsIconsDraggable />
-            </template>
-          </Tag>
+          </WorkerTag>
         </template>
         <template #outsourcer="{ rawElement }">
-          <Tag :label="rawElement.displayName" :size="auth.tagSize" />
+          <WorkerTag
+            :label="rawElement.displayName"
+            hide-time
+            :size="auth.tagSize"
+            show-draggable-icon
+          />
         </template>
       </MoleculesWorkerSelector>
     </MoleculesFloatingWindow>

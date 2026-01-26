@@ -241,6 +241,202 @@ const handleRemove = (label) => {
                 :removable="true"
               />
             </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">時刻非表示（hideTime）</h3>
+              <WorkerTag
+                :label="testLabel"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :hide-time="true"
+              />
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- showDraggableIcon プロパティのテスト -->
+    <v-row>
+      <v-col cols="12">
+        <v-card class="pa-4 mb-6">
+          <h2 class="text-h6 mb-4">showDraggableIcon プロパティのテスト</h2>
+          <v-row>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                ドラッグアイコンなし（デフォルト）
+              </h3>
+              <WorkerTag
+                label="山田 太郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                ドラッグアイコンあり（showDraggableIcon=true）
+              </h3>
+              <WorkerTag
+                label="山田 太郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :show-draggable-icon="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                Small サイズ + ドラッグアイコン
+              </h3>
+              <WorkerTag
+                label="鈴木 一郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="small"
+                :removable="true"
+                :show-draggable-icon="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                Large サイズ + ドラッグアイコン
+              </h3>
+              <WorkerTag
+                label="佐藤 花子"
+                start-time="09:00"
+                end-time="18:00"
+                size="large"
+                :removable="true"
+                :show-draggable-icon="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                ドラッグアイコン + カスタムprepend-label
+              </h3>
+              <WorkerTag
+                label="田中 次郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :show-draggable-icon="true"
+              >
+                <template #prepend-label>
+                  <v-icon size="small" class="mr-1" color="primary">
+                    mdi-account-star
+                  </v-icon>
+                </template>
+              </WorkerTag>
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                ドラッグアイコン + 各種バリアント
+              </h3>
+              <WorkerTag
+                label="高橋 健太"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                variant="success"
+                :removable="true"
+                :show-draggable-icon="true"
+              >
+                <template #append-label>
+                  <v-chip size="x-small" color="success" class="ml-2">
+                    リーダー
+                  </v-chip>
+                </template>
+              </WorkerTag>
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- hideTime プロパティのテスト -->
+    <v-row>
+      <v-col cols="12">
+        <v-card class="pa-4 mb-6">
+          <h2 class="text-h6 mb-4">hideTime プロパティのテスト</h2>
+          <v-row>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
+              <WorkerTag
+                label="山田 太郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                時刻表示なし（hideTime=true）
+              </h3>
+              <WorkerTag
+                label="山田 太郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :hide-time="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                時刻非表示 + フッタースロット使用
+              </h3>
+              <WorkerTag
+                label="鈴木 一郎"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :hide-time="true"
+              >
+                <template #prepend-footer>
+                  <div class="text-caption text-grey">
+                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                    現場A - 日勤
+                  </div>
+                </template>
+              </WorkerTag>
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                時刻非表示 + 複数フッタースロット
+              </h3>
+              <WorkerTag
+                label="佐藤 花子"
+                start-time="09:00"
+                end-time="18:00"
+                size="medium"
+                :removable="true"
+                :hide-time="true"
+              >
+                <template #prepend-footer>
+                  <div class="text-caption">
+                    <v-chip size="x-small" color="primary">責任者</v-chip>
+                  </div>
+                </template>
+                <template #footer>
+                  <div class="text-caption text-grey">配属: 東京本社</div>
+                </template>
+                <template #append-footer>
+                  <div class="text-caption text-success">
+                    <v-icon size="x-small" class="mr-1"
+                      >mdi-check-circle</v-icon
+                    >
+                    出勤確認済み
+                  </div>
+                </template>
+              </WorkerTag>
+            </v-col>
           </v-row>
         </v-card>
       </v-col>
@@ -319,7 +515,9 @@ const handleRemove = (label) => {
               </WorkerTag>
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">Prepend Footer スロット</h3>
+              <h3 class="text-subtitle-2 mb-2">
+                Prepend Footer スロット（時刻下・最上部）
+              </h3>
               <WorkerTag
                 :label="testLabel"
                 :start-time="startTime"
@@ -328,14 +526,38 @@ const handleRemove = (label) => {
                 :removable="true"
               >
                 <template #prepend-footer>
-                  <v-icon size="x-small" class="mr-1" color="info">
-                    mdi-clock-outline
-                  </v-icon>
+                  <div class="text-caption text-grey">
+                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                    現場A
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">Append Footer スロット</h3>
+              <h3 class="text-subtitle-2 mb-2">
+                Footer スロット（中央エリア）
+              </h3>
+              <WorkerTag
+                :label="testLabel"
+                :start-time="startTime"
+                :end-time="endTime"
+                size="medium"
+                :removable="true"
+              >
+                <template #footer>
+                  <div class="d-flex align-center text-caption">
+                    <v-chip size="x-small" color="primary" class="mr-1">
+                      シフトA
+                    </v-chip>
+                    <span class="text-grey">休憩: 12:00-13:00</span>
+                  </div>
+                </template>
+              </WorkerTag>
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                Append Footer スロット（最下部）
+              </h3>
               <WorkerTag
                 :label="testLabel"
                 :start-time="startTime"
@@ -344,9 +566,12 @@ const handleRemove = (label) => {
                 :removable="true"
               >
                 <template #append-footer>
-                  <v-chip size="x-small" color="info" class="ml-2">
-                    残業あり
-                  </v-chip>
+                  <div class="text-caption text-success">
+                    <v-icon size="x-small" class="mr-1"
+                      >mdi-check-circle</v-icon
+                    >
+                    出勤確認済み
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
@@ -368,7 +593,7 @@ const handleRemove = (label) => {
             </v-col>
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">
-                Prepend + Append Footer スロット
+                3つのフッタースロット組み合わせ
               </h3>
               <WorkerTag
                 :label="testLabel"
@@ -378,39 +603,59 @@ const handleRemove = (label) => {
                 :removable="true"
               >
                 <template #prepend-footer>
-                  <v-chip size="x-small" color="primary" class="mr-2">
-                    予定
-                  </v-chip>
+                  <div class="text-caption text-grey">
+                    <v-icon size="x-small" class="mr-1">mdi-map-marker</v-icon>
+                    東京支店
+                  </div>
+                </template>
+                <template #footer>
+                  <div class="d-flex align-center text-caption">
+                    <v-chip size="x-small" color="primary">日勤</v-chip>
+                  </div>
                 </template>
                 <template #append-footer>
-                  <v-chip size="x-small" color="success" class="ml-2">
+                  <div class="text-caption text-success">
+                    <v-icon size="x-small" class="mr-1">mdi-check</v-icon>
                     確定
-                  </v-chip>
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
             <v-col cols="12">
-              <h3 class="text-subtitle-2 mb-2">
-                Footer スロット（完全カスタマイズ）
-              </h3>
+              <h3 class="text-subtitle-2 mb-2">全フッタースロットのテスト</h3>
+              <p class="text-caption text-grey mb-2">
+                時刻表示 → prepend-footer → footer → append-footer
+                の順に表示されます
+              </p>
               <WorkerTag
                 :label="testLabel"
                 :start-time="startTime"
                 :end-time="endTime"
-                size="medium"
+                size="large"
                 :removable="true"
               >
+                <template #prepend-footer>
+                  <v-list-item-subtitle class="text-caption text-primary">
+                    <v-icon size="x-small" class="mr-1"
+                      >mdi-office-building</v-icon
+                    >
+                    配属: 本社ビル 3階
+                  </v-list-item-subtitle>
+                </template>
                 <template #footer>
-                  <v-list-item-subtitle>
-                    <div class="d-flex align-center text-caption">
-                      <v-chip size="x-small" color="primary" class="mr-2">
-                        シフトA
-                      </v-chip>
-                      <span class="font-weight-bold">08:00 - 17:00</span>
-                      <v-chip size="x-small" color="success" class="ml-2">
-                        休憩1時間
-                      </v-chip>
-                    </div>
+                  <v-list-item-subtitle
+                    class="d-flex align-center text-caption"
+                  >
+                    <v-chip size="x-small" color="success" class="mr-1"
+                      >正社員</v-chip
+                    >
+                    <v-chip size="x-small" color="info">リーダー</v-chip>
+                  </v-list-item-subtitle>
+                </template>
+                <template #append-footer>
+                  <v-list-item-subtitle class="text-caption text-warning">
+                    <v-icon size="x-small" class="mr-1">mdi-alert</v-icon>
+                    備考: 資格更新が近づいています (2026/02/15)
                   </v-list-item-subtitle>
                 </template>
               </WorkerTag>
@@ -447,15 +692,12 @@ const handleRemove = (label) => {
                     班長
                   </v-chip>
                 </template>
-                <template #append-footer>
-                  <v-chip
-                    size="x-small"
-                    color="success"
-                    variant="outlined"
-                    class="ml-2"
-                  >
-                    経験5年
-                  </v-chip>
+                <template #footer>
+                  <div class="text-caption">
+                    <v-chip size="x-small" color="success" variant="outlined">
+                      経験5年
+                    </v-chip>
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
@@ -475,9 +717,10 @@ const handleRemove = (label) => {
                   </v-icon>
                 </template>
                 <template #append-footer>
-                  <span class="text-warning text-caption ml-2">
-                    (資格更新必要)
-                  </span>
+                  <div class="text-warning text-caption">
+                    <v-icon size="x-small" class="mr-1">mdi-alert</v-icon>
+                    資格更新必要
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
@@ -496,7 +739,10 @@ const handleRemove = (label) => {
                   </v-chip>
                 </template>
                 <template #prepend-footer>
-                  <v-icon size="x-small" class="mr-1">mdi-school</v-icon>
+                  <div class="text-caption text-info">
+                    <v-icon size="x-small" class="mr-1">mdi-school</v-icon>
+                    研修: 安全教育
+                  </div>
                 </template>
                 <template #startTime="{ startTime }">
                   <v-icon size="x-small" class="mr-1">mdi-clock-start</v-icon>
@@ -507,9 +753,10 @@ const handleRemove = (label) => {
                   <v-icon size="x-small" class="ml-1">mdi-clock-end</v-icon>
                 </template>
                 <template #append-footer>
-                  <span class="text-caption text-grey ml-2">
-                    (研修期間中)
-                  </span>
+                  <div class="text-caption text-grey">
+                    <v-icon size="x-small" class="mr-1">mdi-information</v-icon>
+                    研修期間中 (2026/01/15 - 2026/03/15)
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
@@ -529,9 +776,12 @@ const handleRemove = (label) => {
                   </v-icon>
                 </template>
                 <template #append-footer>
-                  <span class="text-error text-caption ml-2">
-                    (資格期限切れ)
-                  </span>
+                  <div class="text-error text-caption">
+                    <v-icon size="x-small" class="mr-1"
+                      >mdi-close-circle</v-icon
+                    >
+                    資格期限切れ (2025/12/31)
+                  </div>
                 </template>
               </WorkerTag>
             </v-col>
