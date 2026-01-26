@@ -9,19 +9,19 @@ export function useIndex(props, emit) {
    *****************************************************************************/
   const SIZE_CONFIG = {
     small: {
-      height: "40px",
+      minHeight: "40px",
       titleClass: "text-caption",
       progressSize: "x-small",
       removeButtonSize: "x-small",
     },
     medium: {
-      height: "48px",
+      minHeight: "48px",
       titleClass: "text-subtitle-2",
       progressSize: "x-small",
       removeButtonSize: "small",
     },
     large: {
-      height: "56px",
+      minHeight: "56px",
       titleClass: "text-body-1",
       progressSize: "small",
       removeButtonSize: "small",
