@@ -74,7 +74,7 @@ watch(
       employeesMap.value[emp.docId] = emp;
     });
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -85,7 +85,7 @@ watch(
       outsourcersMap.value[out.docId] = out;
     });
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 /*****************************************************************************
@@ -93,7 +93,7 @@ watch(
  *****************************************************************************/
 const filteredEmployees = computed(() => {
   const filtered = filterByKatakana(props.employees, "lastNameKana").sort(
-    (a, b) => a.lastNameKana.localeCompare(b.lastNameKana)
+    (a, b) => a.lastNameKana.localeCompare(b.lastNameKana),
   );
   let result = [];
   filtered.forEach((emp) => {
@@ -104,7 +104,7 @@ const filteredEmployees = computed(() => {
 
 const filteredOutsourcers = computed(() => {
   const filtered = filterByKatakana(props.outsourcers, "nameKana").sort(
-    (a, b) => a.nameKana.localeCompare(b.nameKana)
+    (a, b) => a.nameKana.localeCompare(b.nameKana),
   );
   let result = [];
   filtered.forEach((out) => {
@@ -182,6 +182,7 @@ const filteredOutsourcers = computed(() => {
                 <slot
                   name="outsourcer"
                   :element="element"
+                  :id="element.id"
                   :rawElement="outsourcersMap[element['id']] || null"
                 />
               </div>
