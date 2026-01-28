@@ -8,5 +8,5 @@
 </script>
 
 <template>
-  <WorkerTagTest />
+  <OutsourcerTagTest />
 </template>
