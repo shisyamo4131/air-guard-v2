@@ -339,7 +339,9 @@ const handleRemove = (label) => {
               />
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">開始時刻強調（highlightStartTime）</h3>
+              <h3 class="text-subtitle-2 mb-2">
+                開始時刻強調（highlightStartTime）
+              </h3>
               <WorkerTag
                 :is-employee="isEmployee"
                 :id="currentWorker.docId"
@@ -352,7 +354,9 @@ const handleRemove = (label) => {
               />
             </v-col>
             <v-col cols="12" md="6">
-              <h3 class="text-subtitle-2 mb-2">終了時刻強調（highlightEndTime）</h3>
+              <h3 class="text-subtitle-2 mb-2">
+                終了時刻強調（highlightEndTime）
+              </h3>
               <WorkerTag
                 :is-employee="isEmployee"
                 :id="currentWorker.docId"
