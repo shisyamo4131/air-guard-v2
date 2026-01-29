@@ -5,14 +5,15 @@
  * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
  * - `SiteOperationScheduleDetail` インスタンスを受け取り、作業員の作業開始・終了時刻を表示します。
  *
- * [Added properties]
- * @property {Object} fetchComposable - 作業員情報を取得するためのコンポーザブル
  *
- * @property {Boolean} isEmployee - true: 従業員、false: 外注先
  * @property {String} startTime - 開始時刻
  * @property {String} endTime - 終了時刻
- * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
+ * @property {Boolean} isEmployee - true: 従業員、false: 外注先
+ * @property {Object} fetchEmployeeComposable - 従業員情報を取得するためのコンポーザブル
+ * @property {Object} fetchOutsourcerComposable - 外注先情報を取得するためのコンポーザブル
+ * @property {String} workerId - 作業員ID（必須）
+ * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} highlight - タグを強調表示するかどうか。
  * @property {String} label - タグに表示するラベル文字列。
  * @property {Boolean} loading - タグが読み込み中状態かどうか。
