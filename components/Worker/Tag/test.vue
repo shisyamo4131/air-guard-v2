@@ -222,7 +222,7 @@ const handleRemove = (label) => {
               <div class="text-subtitle-2 mb-2">プレビュー</div>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -252,7 +252,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">{{ size.toUpperCase() }}</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :size="size"
@@ -275,7 +275,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -287,7 +287,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">時刻表示なし（hideTime）</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -300,7 +300,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">時刻未設定（--:--表示）</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -310,7 +310,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">夜勤シフト</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -335,7 +335,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :variant="variant"
@@ -359,7 +359,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -378,7 +378,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -397,12 +397,13 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
+                start-time="09:00"
+                end-time="18:00"
                 size="medium"
                 :removable="true"
-                :hide-time="true"
               >
                 <template #footer>
                   <div class="d-flex align-center text-caption">
@@ -422,7 +423,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">全スロット組み合わせ</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -479,7 +480,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -500,7 +501,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">アラート付き</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -528,7 +529,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -547,7 +548,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">エラー状態</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -588,7 +589,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :variant="variant"
@@ -616,7 +617,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -629,7 +630,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">確定済み</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -649,7 +650,7 @@ const handleRemove = (label) => {
               <h3 class="text-subtitle-2 mb-2">警告</h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -671,7 +672,7 @@ const handleRemove = (label) => {
               </h3>
               <WorkerTag
                 :is-employee="isEmployee"
-                :worker-id="currentWorker.docId"
+                :id="currentWorker.docId"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"

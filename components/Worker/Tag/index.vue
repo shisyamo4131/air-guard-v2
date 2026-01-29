@@ -32,6 +32,12 @@
  *   - footer: prepend-footerとappend-footerの間に表示するコンテンツ
  *   - append-footer: フッター最下部に表示するコンテンツ
  *   - prepend-action: アクションエリアの先頭に表示するコンテンツ
+ *   - prepend-start-time: 開始時刻の前に表示するコンテンツ
+ *   - start-time: 開始時刻の表示をカスタマイズ（slotProps: { startTime }）
+ *   - append-start-time: 開始時刻の後に表示するコンテンツ
+ *   - prepend-end-time: 終了時刻の前に表示するコンテンツ
+ *   - end-time: 終了時刻の表示をカスタマイズ（slotProps: { endTime }）
+ *   - append-end-time: 終了時刻の後に表示するコンテンツ
  *
  * @emits click:remove - 削除ボタンがクリックされた際に発火
  */
@@ -65,31 +71,45 @@ const { componentTag, attrs, startTime, endTime } = useIndex(props, emit);
 
     <!-- Footer -->
     <template #footer="slotProps">
-      <!-- Slot: prepend-footer -->
-      <slot name="prepend-footer" v-bind="slotProps || {}" />
+      <!-- Display time -->
+      <v-list-item-subtitle v-if="!props.hideTime">
+        <div class="d-flex align-center text-caption text-no-wrap">
+          <!-- Slot: prepend-start-time -->
+          <slot name="prepend-start-time" :start-time="startTime" />
 
-      <!-- Slot: footer -->
-      <slot name="footer" v-bind="slotProps || {}">
-        <!-- Display time -->
-        <v-list-item-subtitle v-if="!props.hideTime">
-          <div class="d-flex align-center text-caption text-no-wrap">
-            <!-- Slot: startTime -->
-            <slot name="startTime" :start-time="startTime">
-              <span>{{ startTime }}</span>
-            </slot>
+          <!-- Slot: start-time -->
+          <slot name="start-time" :start-time="startTime">
+            <span>{{ startTime }}</span>
+          </slot>
 
-            <span> - </span>
+          <!-- Slot: append-start-time -->
+          <slot name="append-start-time" :start-time="startTime" />
 
-            <!-- Slot: endTime -->
-            <slot name="endTime" :end-time="endTime">
-              <span>{{ endTime }}</span>
-            </slot>
-          </div>
-        </v-list-item-subtitle>
-      </slot>
+          <span> - </span>
 
-      <!-- Slot: append-footer -->
-      <slot name="append-footer" v-bind="slotProps || {}" />
+          <!-- Slot: prepend-end-time -->
+          <slot name="prepend-end-time" :end-time="endTime" />
+
+          <!-- Slot: end-time -->
+          <slot name="end-time" :end-time="endTime">
+            <span>{{ endTime }}</span>
+          </slot>
+
+          <!-- Slot: append-end-time -->
+          <slot name="append-end-time" :end-time="endTime" />
+        </div>
+      </v-list-item-subtitle>
+
+      <div class="d-flex flex-column">
+        <!-- Slot: prepend-footer -->
+        <slot name="prepend-footer" v-bind="slotProps || {}" />
+
+        <!-- Slot: footer -->
+        <slot name="footer" v-bind="slotProps || {}" />
+
+        <!-- Slot: append-footer -->
+        <slot name="append-footer" v-bind="slotProps || {}" />
+      </div>
     </template>
 
     <!-- Pass through: prepend-action slot -->

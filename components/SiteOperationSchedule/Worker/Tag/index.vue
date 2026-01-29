@@ -4,15 +4,12 @@
  * @file components/SiteOperationSchedule/Worker/Tag/index.vue
  * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
  * - `SiteOperationScheduleDetail` インスタンスを受け取り、作業員の作業開始・終了時刻を表示します。
- *
-//  * @property {String} startTime - 開始時刻
-//  * @property {String} endTime - 終了時刻
-//  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
-//  * @property {String} id - 作業員ID（必須 / 'workerId' ではないことに注意）
+ * - WorkerTag コンポーネントが受け付ける `id`, `startTime`, `endTime`, `isEmployee` プロパティは
+ *   `worker` オブジェクトから自動的に取得されます。
  *
  * [Added properties]
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
- * 
+ *
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
  * @property {Object} fetchEmployeeComposable - 従業員情報を取得するためのコンポーザブル
  * @property {Object} fetchOutsourcerComposable - 外注先情報を取得するためのコンポーザブル
@@ -31,8 +28,12 @@
  * @slots
  *   - prepend-label: ラベルの前に表示するコンテンツ
  *   - append-label: ラベルの後に表示するコンテンツ
+ *   - prepend-start-time: 開始時刻の前に表示するコンテンツ
  *   - startTime: 開始時刻の表示をカスタマイズ（slotProps: { startTime }）
+ *   - append-start-time: 開始時刻の後に表示するコンテンツ
+ *   - prepend-end-time: 終了時刻の前に表示するコンテンツ
  *   - endTime: 終了時刻の表示をカスタマイズ（slotProps: { endTime }）
+ *   - append-end-time: 終了時刻の後に表示するコンテンツ
  *   - prepend-footer: 時刻表示の下（フッター最上部）に表示するコンテンツ
  *   - footer: prepend-footerとappend-footerの間に表示するコンテンツ
  *   - append-footer: フッター最下部に表示するコンテンツ
@@ -68,31 +69,49 @@ const { attrs } = useIndex(props, emit);
       <slot name="append-label" v-bind="slotProps" />
     </template>
 
-    <!-- Footer: display start and end times -->
+    <!-- Pass throuth: prepend-start-time slot with slot props -->
+    <template #prepend-start-time="slotProps">
+      <slot name="prepend-start-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: start-time slot with slot props -->
+    <template #start-time="slotProps">
+      <slot name="start-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: append-start-time slot with slot props -->
+    <template #append-start-time="slotProps">
+      <slot name="append-start-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: prepend-end-time slot with slot props -->
+    <template #prepend-end-time="slotProps">
+      <slot name="prepend-end-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: end-time slot with slot props -->
+    <template #end-time="slotProps">
+      <slot name="end-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: append-end-time slot with slot props -->
+    <template #append-end-time="slotProps">
+      <slot name="append-end-time" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: prepend-footer slot with slot props -->
+    <template #prepend-footer="slotProps">
+      <slot name="prepend-footer" v-bind="slotProps || {}" />
+    </template>
+
+    <!-- Pass through: footer slot with slot props -->
     <template #footer="slotProps">
-      <v-list-item-subtitle v-if="!props.hideTime">
-        <div class="d-flex align-center text-caption text-no-wrap">
-          <!-- Slot: startTime -->
-          <slot name="startTime" :start-time="props.worker.startTime">
-            <span>{{ props.worker.startTime }}</span>
-          </slot>
-
-          <span> - </span>
-
-          <!-- Slot: endTime -->
-          <slot name="endTime" :end-time="props.worker.endTime">
-            <span>{{ props.worker.endTime }}</span>
-          </slot>
-        </div>
-      </v-list-item-subtitle>
-      <!-- Slot: prepend-footer -->
-      <slot name="prepend-footer" />
-
-      <!-- Slot: footer -->
       <slot name="footer" v-bind="slotProps || {}" />
+    </template>
 
-      <!-- Slot: append-footer -->
-      <slot name="append-footer" />
+    <!-- Pass through: append-footer slot with slot props -->
+    <template #append-footer="slotProps">
+      <slot name="append-footer" v-bind="slotProps || {}" />
     </template>
 
     <!-- Pass through: prepend-action slot -->
