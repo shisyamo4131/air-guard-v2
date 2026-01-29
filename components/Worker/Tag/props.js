@@ -46,4 +46,8 @@ export default {
   hideTime: { type: Boolean, default: false },
   /** Start time of the site operation schedule worker's shift */
   startTime: { type: String, default: undefined },
+  /** Whether to highlight the start time (for indicating modification) */
+  highlightStartTime: { type: Boolean, default: false },
+  /** Whether to highlight the end time (for indicating modification) */
+  highlightEndTime: { type: Boolean, default: false },
 };

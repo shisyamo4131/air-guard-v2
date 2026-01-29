@@ -10,6 +10,8 @@
  * @property {String|Date} startTime - 開始時刻（オプション）
  * @property {String|Date} endTime - 終了時刻（オプション）
  * @property {Boolean} hideTime - 時間を表示するかどうか（既定値: false）
+ * @property {Boolean} highlightStartTime - 開始時刻を強調表示するかどうか（既定値: false）
+ * @property {Boolean} highlightEndTime - 終了時刻を強調表示するかどうか（既定値: false）
  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
  * @property {Object} fetchEmployeeComposable - useFetchEmployeeのインスタンス（任意）
  * @property {Object} fetchOutsourcerComposable - useFetchOutsourcerのインスタンス（任意）
@@ -79,7 +81,11 @@ const { componentTag, attrs, startTime, endTime } = useIndex(props, emit);
 
           <!-- Slot: start-time -->
           <slot name="start-time" :start-time="startTime">
-            <span>{{ startTime }}</span>
+            <span
+              :class="{ 'text-red font-weight-bold': props.highlightStartTime }"
+            >
+              {{ startTime }}
+            </span>
           </slot>
 
           <!-- Slot: append-start-time -->
@@ -92,7 +98,11 @@ const { componentTag, attrs, startTime, endTime } = useIndex(props, emit);
 
           <!-- Slot: end-time -->
           <slot name="end-time" :end-time="endTime">
-            <span>{{ endTime }}</span>
+            <span
+              :class="{ 'text-red font-weight-bold': props.highlightEndTime }"
+            >
+              {{ endTime }}
+            </span>
           </slot>
 
           <!-- Slot: append-end-time -->

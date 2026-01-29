@@ -61,6 +61,8 @@ const showDraggableIcon = ref(false);
 const hideTime = ref(false);
 const startTime = ref("09:00");
 const endTime = ref("18:00");
+const highlightStartTime = ref(false);
+const highlightEndTime = ref(false);
 
 const handleRemove = (label) => {
   console.log(`削除ボタンがクリックされました: ${label}`);
@@ -203,6 +205,22 @@ const handleRemove = (label) => {
               />
             </v-col>
             <v-col cols="12" md="4">
+              <v-switch
+                v-model="highlightStartTime"
+                label="開始時刻を強調"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="4">
+              <v-switch
+                v-model="highlightEndTime"
+                label="終了時刻を強調"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="4">
               <v-text-field
                 v-model="startTime"
                 label="開始時刻"
@@ -232,6 +250,8 @@ const handleRemove = (label) => {
                 :hide-time="hideTime"
                 :start-time="startTime"
                 :end-time="endTime"
+                :highlight-start-time="highlightStartTime"
+                :highlight-end-time="highlightEndTime"
                 @click:remove="
                   handleRemove(currentWorker.displayName || currentWorker.name)
                 "
@@ -316,6 +336,46 @@ const handleRemove = (label) => {
                 size="medium"
                 start-time="22:00"
                 end-time="06:00"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">開始時刻強調（highlightStartTime）</h3>
+              <WorkerTag
+                :is-employee="isEmployee"
+                :id="currentWorker.docId"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                start-time="09:00"
+                end-time="18:00"
+                :highlight-start-time="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">終了時刻強調（highlightEndTime）</h3>
+              <WorkerTag
+                :is-employee="isEmployee"
+                :id="currentWorker.docId"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                start-time="09:00"
+                end-time="18:00"
+                :highlight-end-time="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">両方強調（個別設定を表示）</h3>
+              <WorkerTag
+                :is-employee="isEmployee"
+                :id="currentWorker.docId"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                start-time="10:30"
+                end-time="17:30"
+                :highlight-start-time="true"
+                :highlight-end-time="true"
               />
             </v-col>
           </v-row>
