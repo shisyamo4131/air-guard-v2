@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import { mockEmployees } from "@/components/Employee/Tag/test.mock.js";
+import { mockEmployees } from "@/mocks/employees.js";
 import { mockOutsourcers } from "@/components/Outsourcer/Tag/test.mock.js";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";

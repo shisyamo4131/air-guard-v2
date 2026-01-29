@@ -1,6 +1,6 @@
 /**
- * @file components/Employee/Tag/test.mock.js
- * @description EmployeeTagコンポーネントのテスト用モックデータ
+ * @file mocks/employees.js
+ * @description 従業員モックデータ
  * - Employeeクラスのインスタンスとして様々なケースをカバー
  */
 import { Employee, Certification } from "@/schemas";

@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import { mockEmployees } from "./test.mock.js";
+import { mockEmployees } from "@/mocks/employees";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
 const sizes = ["small", "medium", "large"];
