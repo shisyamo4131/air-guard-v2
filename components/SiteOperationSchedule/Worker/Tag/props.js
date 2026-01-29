@@ -4,9 +4,12 @@
  *****************************************************************************/
 import importedProps from "@/components/Worker/Tag/props";
 
+// startTime, endTime, isEmployee, id プロパティを除外
+// - これらは worker オブジェクトから自動取得する。
 const { startTime, endTime, isEmployee, id, ...rest } = importedProps;
 
 export default {
   ...rest,
-  worker: { type: Object, required: true },
+  schedule: { type: Object, required: true }, // SiteOperationSchedule インスタンス
+  worker: { type: Object, required: true }, // SiteOperationScheduleDetail インスタンス
 };

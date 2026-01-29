@@ -87,6 +87,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <h3 class="text-subtitle-2 mb-2">プレビュー</h3>
             <SiteOperationScheduleWorkerTag
               :worker="selectedWorker"
+              :schedule="schedule"
               :fetch-employee-composable="employeeComposable"
               :fetch-outsourcer-composable="outsourcerComposable"
               :highlight="highlight"
@@ -167,6 +168,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :size="sizeItem"
@@ -194,6 +196,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :variant="variantItem"
@@ -222,6 +225,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="worker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -243,6 +247,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -252,6 +257,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">時刻表示なし（hideTime）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -273,6 +279,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -293,6 +300,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -309,6 +317,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
+                :schedule="schedule"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"

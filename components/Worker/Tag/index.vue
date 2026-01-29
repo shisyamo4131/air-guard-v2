@@ -85,7 +85,7 @@ const { componentTag, attrs, startTime, endTime } = useIndex(props, emit);
           <!-- Slot: append-start-time -->
           <slot name="append-start-time" :start-time="startTime" />
 
-          <span> - </span>
+          <span class="px-1">-</span>
 
           <!-- Slot: prepend-end-time -->
           <slot name="prepend-end-time" :end-time="endTime" />

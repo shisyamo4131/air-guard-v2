@@ -3,11 +3,15 @@
  * SiteOperationScheduleWorkerTag
  * @file components/SiteOperationSchedule/Worker/Tag/index.vue
  * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
- * - `SiteOperationScheduleDetail` インスタンスを受け取り、作業員の作業開始・終了時刻を表示します。
+ * - `worker` プロパティとして `SiteOperationScheduleDetail` インスタンスを受け取り、
+ *   作業員の作業開始・終了時刻を表示します。
  * - WorkerTag コンポーネントが受け付ける `id`, `startTime`, `endTime`, `isEmployee` プロパティは
  *   `worker` オブジェクトから自動的に取得されます。
+ * - `schedule` プロパティとして `SiteOperationSchedule` インスタンスを受け取ります。
+ *   `schedule` に設定されている作業時間などの情報が `worker` のそれと異なる場合の強調表示などに使用されます。
  *
  * [Added properties]
+ * @property {Object} schedule - SiteOperationSchedule インスタンス
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
@@ -54,7 +58,7 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove"]);
 
-const { attrs } = useIndex(props, emit);
+const { attrs, startTimeClass, endTimeClass } = useIndex(props, emit);
 </script>
 
 <template>
@@ -76,7 +80,9 @@ const { attrs } = useIndex(props, emit);
 
     <!-- Pass through: start-time slot with slot props -->
     <template #start-time="slotProps">
-      <slot name="start-time" v-bind="slotProps || {}" />
+      <slot name="start-time" v-bind="slotProps || {}">
+        <span :class="startTimeClass">{{ slotProps.startTime }}</span>
+      </slot>
     </template>
 
     <!-- Pass through: append-start-time slot with slot props -->
@@ -91,7 +97,9 @@ const { attrs } = useIndex(props, emit);
 
     <!-- Pass through: end-time slot with slot props -->
     <template #end-time="slotProps">
-      <slot name="end-time" v-bind="slotProps || {}" />
+      <slot name="end-time" v-bind="slotProps || {}">
+        <span :class="endTimeClass">{{ slotProps.endTime }}</span>
+      </slot>
     </template>
 
     <!-- Pass through: append-end-time slot with slot props -->
