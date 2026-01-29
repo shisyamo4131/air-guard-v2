@@ -6,7 +6,7 @@
  */
 import { ref, computed } from "vue";
 import SiteOperationScheduleWorkerTag from "./index.vue";
-import { schedules } from "@/components/SiteOperationSchedule/test.mock.js";
+import { schedules } from "@/mocks/siteOperationSchedules.js";
 import { mockEmployees } from "@/mocks/employees.js";
 import { mockOutsourcers } from "@/mocks/outsourcers.js";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";

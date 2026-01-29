@@ -8,5 +8,5 @@
 </script>
 
 <template>
-  <OutsourcerTagTest />
+  <SiteOperationScheduleWorkerTagTest />
 </template>

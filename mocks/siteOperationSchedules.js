@@ -1,6 +1,6 @@
 /**
- * @file components/SiteOperationSchedule/test.mock.js
- * @description SiteOperationScheduleコンポーネントのテスト用モックデータ
+ * @file mocks/siteOperationSchedules.js
+ * @description 現場稼働予定モックデータ
  * - SiteOperationScheduleクラスのインスタンスを作成
  * - employees 2件、outsourcers 1件を含む
  */
