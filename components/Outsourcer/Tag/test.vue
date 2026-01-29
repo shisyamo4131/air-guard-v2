@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from "vue";
-import { mockOutsourcers } from "./test.mock.js";
+import { mockOutsourcers } from "@/mocks/outsourcers.js";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 const sizes = ["small", "medium", "large"];

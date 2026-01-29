@@ -6,7 +6,7 @@
  */
 import { SiteOperationSchedule, SiteOperationScheduleDetail } from "@/schemas";
 import { mockEmployees } from "@/mocks/employees.js";
-import { mockOutsourcers } from "@/components/Outsourcer/Tag/test.mock.js";
+import { mockOutsourcers } from "@/mocks/outsourcers.js";
 
 /**
  * 現場稼働予定モックデータ

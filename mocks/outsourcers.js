@@ -1,6 +1,6 @@
 /**
- * @file components/Outsourcer/Tag/test.mock.js
- * @description OutsourcerTagコンポーネントのテスト用モックデータ
+ * @file mocks/outsourcers.js
+ * @description 外注先モックデータ
  * - Outsourcerクラスのインスタンスとして様々なケースをカバー
  */
 import { Outsourcer } from "@/schemas";
