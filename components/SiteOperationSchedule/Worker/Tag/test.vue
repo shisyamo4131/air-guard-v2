@@ -29,7 +29,6 @@ const { pushOutsourcers } = outsourcerComposable;
 pushEmployees(mockEmployees);
 pushOutsourcers(mockOutsourcers);
 
-console.log(employeeComposable.cachedEmployees.value);
 // 全作業員（employees + outsourcers）を結合
 const allWorkers = computed(() => {
   return [...schedule.employees, ...schedule.outsourcers];
@@ -87,10 +86,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
           <div class="mb-4 pa-4 bg-grey-lighten-4 rounded">
             <h3 class="text-subtitle-2 mb-2">プレビュー</h3>
             <SiteOperationScheduleWorkerTag
-              :is-employee="selectedWorker.isEmployee"
-              :worker-id="selectedWorker.id"
-              :start-time="selectedWorker.startTime"
-              :end-time="selectedWorker.endTime"
+              :worker="selectedWorker"
               :fetch-employee-composable="employeeComposable"
               :fetch-outsourcer-composable="outsourcerComposable"
               :highlight="highlight"
@@ -170,10 +166,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
                 {{ sizeItem.toUpperCase() }}
               </h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :size="sizeItem"
@@ -200,10 +193,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
                 {{ variantItem.toUpperCase() }}
               </h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :variant="variantItem"
@@ -231,10 +221,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
                 {{ worker.isEmployee ? "従業員" : "外注先" }} {{ index + 1 }}
               </h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="worker.isEmployee"
-                :worker-id="worker.id"
-                :start-time="worker.startTime"
-                :end-time="worker.endTime"
+                :worker="worker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -255,10 +242,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -267,10 +251,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">時刻表示なし（hideTime）</h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -291,10 +272,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -314,10 +292,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -333,10 +308,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <v-col cols="12" md="6">
               <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
               <SiteOperationScheduleWorkerTag
-                :is-employee="selectedWorker.isEmployee"
-                :worker-id="selectedWorker.id"
-                :start-time="selectedWorker.startTime"
-                :end-time="selectedWorker.endTime"
+                :worker="selectedWorker"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"

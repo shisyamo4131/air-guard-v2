@@ -21,10 +21,7 @@ export default {
   /**
    * 作業員ID (従業員IDまたは外注先ID)
    */
-  workerId: {
-    type: String,
-    required: true,
-  },
+  id: { type: String, required: true },
   /**
    * useFetchEmployee コンポーザブルのインスタンス
    * 親コンポーネントから渡される場合は、キャッシュを共有できます。

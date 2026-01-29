@@ -4,8 +4,9 @@
  *****************************************************************************/
 import importedProps from "@/components/Worker/Tag/props";
 
-// fetchEmployeeComposableとfetchOutsourcerComposableは親のimportedPropsに既に含まれているため、
-// 追加のprops定義は不要
+const { startTime, endTime, isEmployee, id, ...rest } = importedProps;
+
 export default {
-  ...importedProps,
+  ...rest,
+  worker: { type: Object, required: true },
 };

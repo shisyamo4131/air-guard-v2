@@ -13,7 +13,7 @@
  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
  * @property {Object} fetchEmployeeComposable - useFetchEmployeeのインスタンス（任意）
  * @property {Object} fetchOutsourcerComposable - useFetchOutsourcerのインスタンス（任意）
- * @property {String} workerId - 作業員ID（必須）
+ * @property {String} id - 作業員ID（必須 / 'workerId' ではないことに注意）
  *
  * [Properties imported from components/Tag]
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか
@@ -88,8 +88,8 @@ const { componentTag, attrs, startTime, endTime } = useIndex(props, emit);
         </v-list-item-subtitle>
       </slot>
 
-      <!-- Slot: prepend-footer -->
-      <slot name="prepend-footer" v-bind="slotProps || {}" />
+      <!-- Slot: append-footer -->
+      <slot name="append-footer" v-bind="slotProps || {}" />
     </template>
 
     <!-- Pass through: prepend-action slot -->

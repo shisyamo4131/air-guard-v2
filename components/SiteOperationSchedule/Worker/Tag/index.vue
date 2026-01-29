@@ -5,14 +5,17 @@
  * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
  * - `SiteOperationScheduleDetail` インスタンスを受け取り、作業員の作業開始・終了時刻を表示します。
  *
+//  * @property {String} startTime - 開始時刻
+//  * @property {String} endTime - 終了時刻
+//  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
+//  * @property {String} id - 作業員ID（必須 / 'workerId' ではないことに注意）
  *
- * @property {String} startTime - 開始時刻
- * @property {String} endTime - 終了時刻
+ * [Added properties]
+ * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
+ * 
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
- * @property {Boolean} isEmployee - true: 従業員、false: 外注先
  * @property {Object} fetchEmployeeComposable - 従業員情報を取得するためのコンポーザブル
  * @property {Object} fetchOutsourcerComposable - 外注先情報を取得するためのコンポーザブル
- * @property {String} workerId - 作業員ID（必須）
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} highlight - タグを強調表示するかどうか。
  * @property {String} label - タグに表示するラベル文字列。
@@ -38,7 +41,7 @@
  * @emits click:remove - 削除ボタンがクリックされた際に発火
  */
 import { useDefaults } from "vuetify";
-import importedProps from "@/components/Worker/Tag/props";
+import importedProps from "./props";
 import { useIndex } from "./useIndex";
 
 defineOptions({ inheritAttrs: false });
@@ -70,15 +73,15 @@ const { attrs } = useIndex(props, emit);
       <v-list-item-subtitle v-if="!props.hideTime">
         <div class="d-flex align-center text-caption text-no-wrap">
           <!-- Slot: startTime -->
-          <slot name="startTime" :start-time="startTime">
-            <span>{{ startTime }}</span>
+          <slot name="startTime" :start-time="props.worker.startTime">
+            <span>{{ props.worker.startTime }}</span>
           </slot>
 
           <span> - </span>
 
           <!-- Slot: endTime -->
-          <slot name="endTime" :end-time="endTime">
-            <span>{{ endTime }}</span>
+          <slot name="endTime" :end-time="props.worker.endTime">
+            <span>{{ props.worker.endTime }}</span>
           </slot>
         </div>
       </v-list-item-subtitle>

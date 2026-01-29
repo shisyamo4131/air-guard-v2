@@ -55,7 +55,7 @@ export function useIndex(props, emit) {
    */
   const attrs = Vue.computed(() => {
     const baseAttrs = {
-      docId: props.workerId,
+      docId: props.id,
       "onClick:remove": () => emit("click:remove"),
     };
 
