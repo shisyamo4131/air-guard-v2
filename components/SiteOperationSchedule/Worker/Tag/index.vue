@@ -2,13 +2,15 @@
 /**
  * SiteOperationScheduleWorkerTag
  * @file components/SiteOperationSchedule/Worker/Tag/index.vue
- * @description Tag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
- * - フッタースロットを拡張して開始時刻、終了時刻を表示できるようにしています。
+ * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
+ * - `SiteOperationScheduleDetail` インスタンスを受け取り、作業員の作業開始・終了時刻を表示します。
  *
- * [Added Properties]
- * @property {String} endTime - 終了時刻
+ * [Added properties]
+ * @property {Object} fetchComposable - 作業員情報を取得するためのコンポーザブル
+ *
+ * @property {Boolean} isEmployee - true: 従業員、false: 外注先
  * @property {String} startTime - 開始時刻
- *
+ * @property {String} endTime - 終了時刻
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
  * @property {Boolean} highlight - タグを強調表示するかどうか。
@@ -35,7 +37,7 @@
  * @emits click:remove - 削除ボタンがクリックされた際に発火
  */
 import { useDefaults } from "vuetify";
-import importedProps from "@/components/SiteOperationSchedule/Worker/Tag/props";
+import importedProps from "@/components/Worker/Tag/props";
 import { useIndex } from "./useIndex";
 
 defineOptions({ inheritAttrs: false });
@@ -47,11 +49,11 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove"]);
 
-const { attrs, startTime, endTime } = useIndex(props, emit);
+const { attrs } = useIndex(props, emit);
 </script>
 
 <template>
-  <Tag v-bind="attrs">
+  <WorkerTag v-bind="attrs">
     <!-- Pass through: prepend-label slot with slot props -->
     <template #prepend-label="slotProps">
       <slot name="prepend-label" v-bind="slotProps" />
@@ -93,7 +95,7 @@ const { attrs, startTime, endTime } = useIndex(props, emit);
     <template #prepend-action>
       <slot name="prepend-action" />
     </template>
-  </Tag>
+  </WorkerTag>
 </template>
 
 <style scoped></style>
