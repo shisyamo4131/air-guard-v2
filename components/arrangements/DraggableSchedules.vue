@@ -57,12 +57,10 @@ const emit = defineEmits([
   "click:edit-workers", // 2025-12-24 add
   "click:notify",
   "click:notification",
-  // "click:remove-worker",  // Deprecated 2025-12-24
 ]);
 /*****************************************************************************
  * COMPUTED PROPERTIES
  *****************************************************************************/
-// const name = computed(() => `schedules-${props.siteId}-${props.shiftType}`);
 const name = computed(() => `schedules`);
 
 /*****************************************************************************
@@ -80,19 +78,6 @@ const name = computed(() => `schedules`);
   >
     <template #item="{ element }">
       <div>
-        <!-- <ArrangementsScheduleTag
-          class="mb-2"
-          :schedule="element"
-          :notifications="notifications"
-          @change:workers="emit('change:workers', $event)"
-          @click:duplicate="emit('click:duplicate', element)"
-          @click:edit="emit('click:edit', element)"
-          @click:edit-worker="emit('click:edit-worker', $event)"
-          @click:edit-workers="emit('click:edit-workers', element)"
-          @click:notify="emit('click:notify', element)"
-          @click:notification="emit('click:notification', $event)"
-          @click:remove-worker="emit('click:remove-worker', $event)"
-        > -->
         <ArrangementsScheduleTag
           class="mb-2"
           :schedule="element"
