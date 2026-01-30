@@ -189,7 +189,7 @@ function getWorkerTimeInfo(worker) {
                           getOvertimeWorkMinutes(
                             worker,
                             manager.agreement.value,
-                            manager.getNotification(worker.notificationKey)
+                            manager.getNotification(worker.notificationKey),
                           )
                         }}分)
                       </div>
@@ -205,14 +205,14 @@ function getWorkerTimeInfo(worker) {
                       >
                         配置通知がありません
                       </v-chip>
-                      <AtomsChipsArrangementNotification
+                      <ArrangementNotificationChip
                         v-else
                         :notification="
                           manager.getNotification(worker.notificationKey)
                         "
                         @click="
                           statusUpdater.toUpdate(
-                            manager.getNotification(worker.notificationKey)
+                            manager.getNotification(worker.notificationKey),
                           )
                         "
                       />

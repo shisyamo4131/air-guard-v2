@@ -84,28 +84,28 @@ const isHighlighted = computed(() => has(props.worker.workerId));
  * Whether worker's start time differs from schedule
  */
 const hasStartTimeDifference = computed(
-  () => props.schedule.startTime !== props.worker.startTime
+  () => props.schedule.startTime !== props.worker.startTime,
 );
 
 /**
  * Whether worker's end time differs from schedule
  */
 const hasEndTimeDifference = computed(
-  () => props.schedule.endTime !== props.worker.endTime
+  () => props.schedule.endTime !== props.worker.endTime,
 );
 
 /**
  * Whether to show the edit button
  */
 const showEditButton = computed(
-  () => !props.hideEdit && props.schedule.isEditable
+  () => !props.hideEdit && props.schedule.isEditable,
 );
 
 /**
  * Whether to show the notification chip
  */
 const showNotification = computed(
-  () => !props.hideNotification && props.schedule.isEditable
+  () => !props.hideNotification && props.schedule.isEditable,
 );
 </script>
 
@@ -130,9 +130,9 @@ const showNotification = computed(
 
     <!-- Notification chip -->
     <template v-if="showNotification" #prepend-action>
-      <AtomsChipsArrangementNotification
+      <ArrangementNotificationChip
         :notification="notification"
-        @click="emit('click:notification', $event)"
+        @click="emit('click:notification', notification)"
       />
     </template>
 
