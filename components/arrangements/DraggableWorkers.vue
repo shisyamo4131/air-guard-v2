@@ -108,7 +108,7 @@ function handlePut(to, from, dragEl) {
 
   // Check if the worker (employee) already exists in `workers`.
   const isExisting = props.schedule.workers.some(
-    (emp) => emp[DRAGGABLE_ITEM_KEY] === workerId
+    (emp) => emp[DRAGGABLE_ITEM_KEY] === workerId,
   );
 
   // If the worker (employee) already exists in `workers`, highlight it and return false.
