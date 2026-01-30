@@ -11,6 +11,7 @@
  *   `worker` オブジェクトから自動的に取得されます。
  *
  * [Added properties]
+ * @property {Boolean} disableEdit - 編集ボタンを無効化するかどうか。
  * @property {Boolean} editable - 編集ボタンを表示するかどうか。
  * @property {String} editIcon - 編集ボタンのアイコン。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
@@ -109,6 +110,7 @@ const { attrs } = useIndex(props, emit);
       <v-icon
         v-if="props.editable"
         class="ml-2"
+        :disabled="props.disableEdit"
         :icon="props.editIcon"
         size="small"
         @click="emit('click:edit')"

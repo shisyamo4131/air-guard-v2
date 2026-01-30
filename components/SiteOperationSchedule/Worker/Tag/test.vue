@@ -46,6 +46,7 @@ const selectedWorker = computed(
 const highlight = ref(false);
 const removable = ref(true);
 const editable = ref(false);
+const disableEdit = ref(false);
 const showDraggableIcon = ref(false);
 const hideTime = ref(false);
 const size = ref("medium");
@@ -95,6 +96,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               :highlight="highlight"
               :removable="removable"
               :editable="editable"
+              :disable-edit="disableEdit"
               :show-draggable-icon="showDraggableIcon"
               :hide-time="hideTime"
               :size="size"
@@ -125,6 +127,14 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <v-switch
                 v-model="editable"
                 label="編集可能"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="disableEdit"
+                label="編集無効化"
                 density="compact"
                 hide-details
               />

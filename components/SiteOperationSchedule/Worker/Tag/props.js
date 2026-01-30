@@ -10,6 +10,7 @@ const { startTime, endTime, isEmployee, id, ...rest } = importedProps;
 
 export default {
   ...rest,
+  disableEdit: { type: Boolean, default: false },
   editable: { type: Boolean, default: false },
   editIcon: { type: String, default: "mdi-pencil" },
   schedule: { type: Object, required: true }, // SiteOperationSchedule インスタンス

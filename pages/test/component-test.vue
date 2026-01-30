@@ -8,5 +8,5 @@
 </script>
 
 <template>
-  <ArrangementNotificationChipTest />
+  <SiteOperationScheduleWorkerTagTest />
 </template>
