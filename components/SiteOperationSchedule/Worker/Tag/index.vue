@@ -11,8 +11,10 @@
  *   `worker` オブジェクトから自動的に取得されます。
  *
  * [Added properties]
- * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
+ * @property {Boolean} editable - 編集ボタンを表示するかどうか。
+ * @property {String} editIcon - 編集ボタンのアイコン。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
+ * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *
  * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
  * @property {Object} fetchEmployeeComposable - 従業員情報を取得するためのコンポーザブル
@@ -43,6 +45,7 @@
  *   - append-footer: フッター最下部に表示するコンテンツ
  *   - prepend-action: アクションエリアの先頭に表示するコンテンツ
  *
+ * @emits click:edit - 編集ボタンがクリックされた際に発火
  * @emits click:remove - 削除ボタンがクリックされた際に発火
  */
 import { useDefaults } from "vuetify";
@@ -56,7 +59,7 @@ defineOptions({ inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
-const emit = defineEmits(["click:remove"]);
+const emit = defineEmits(["click:remove", "click:edit"]);
 
 const { attrs } = useIndex(props, emit);
 </script>
@@ -101,6 +104,15 @@ const { attrs } = useIndex(props, emit);
     <!-- Pass through: append-end-time slot with slot props -->
     <template #append-end-time="slotProps">
       <slot name="append-end-time" v-bind="slotProps || {}" />
+
+      <!-- Edit icon -->
+      <v-icon
+        v-if="props.editable"
+        class="ml-2"
+        :icon="props.editIcon"
+        size="small"
+        @click="emit('click:edit')"
+      />
     </template>
 
     <!-- Pass through: prepend-footer slot with slot props -->

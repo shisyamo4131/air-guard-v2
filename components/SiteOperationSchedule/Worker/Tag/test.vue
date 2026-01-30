@@ -45,10 +45,12 @@ const selectedWorker = computed(
 // コントロール用の状態
 const highlight = ref(false);
 const removable = ref(true);
+const editable = ref(false);
 const showDraggableIcon = ref(false);
 const hideTime = ref(false);
 const size = ref("medium");
 const variant = ref("default");
+const editIcon = ref("mdi-pencil");
 
 const sizes = ["small", "medium", "large"];
 const variants = ["default", "success", "warning", "error", "disabled"];
@@ -92,10 +94,12 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               :fetch-outsourcer-composable="outsourcerComposable"
               :highlight="highlight"
               :removable="removable"
+              :editable="editable"
               :show-draggable-icon="showDraggableIcon"
               :hide-time="hideTime"
               :size="size"
               :variant="variant"
+              :edit-icon="editIcon"
             />
           </div>
 
@@ -113,6 +117,14 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <v-switch
                 v-model="removable"
                 label="削除可能"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="editable"
+                label="編集可能"
                 density="compact"
                 hide-details
               />
@@ -147,6 +159,14 @@ const variants = ["default", "success", "warning", "error", "disabled"];
                 v-model="variant"
                 :items="variants"
                 label="バリアント"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-text-field
+                v-model="editIcon"
+                label="編集アイコン"
                 density="compact"
                 hide-details
               />
@@ -332,12 +352,90 @@ const variants = ["default", "success", "warning", "error", "disabled"];
                 </template>
               </SiteOperationScheduleWorkerTag>
             </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">編集・削除ボタン組み合わせ</h3>
+              <SiteOperationScheduleWorkerTag
+                :worker="selectedWorker"
+                :schedule="schedule"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                :removable="true"
+                :editable="true"
+              />
+            </v-col>
+          </v-row>
+        </v-card>
+      </v-col>
+    </v-row>
+
+    <!-- アイコンカスタマイズのテスト -->
+    <v-row>
+      <v-col cols="12">
+        <v-card class="pa-4 mb-6">
+          <h2 class="text-h6 mb-4">アイコンカスタマイズ</h2>
+          <v-row>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">デフォルト編集アイコン</h3>
+              <SiteOperationScheduleWorkerTag
+                :worker="selectedWorker"
+                :schedule="schedule"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                :editable="true"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">
+                カスタム編集アイコン（mdi-cog）
+              </h3>
+              <SiteOperationScheduleWorkerTag
+                :worker="selectedWorker"
+                :schedule="schedule"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                :editable="true"
+                edit-icon="mdi-cog"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">編集のみ（削除なし）</h3>
+              <SiteOperationScheduleWorkerTag
+                :worker="selectedWorker"
+                :schedule="schedule"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                :editable="true"
+                :removable="false"
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <h3 class="text-subtitle-2 mb-2">削除のみ（編集なし）</h3>
+              <SiteOperationScheduleWorkerTag
+                :worker="selectedWorker"
+                :schedule="schedule"
+                :fetch-employee-composable="employeeComposable"
+                :fetch-outsourcer-composable="outsourcerComposable"
+                size="medium"
+                :editable="false"
+                :removable="true"
+              />
+            </v-col>
           </v-row>
         </v-card>
       </v-col>
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+.v-card {
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+</style>
 
 <style scoped>
 .v-card {
