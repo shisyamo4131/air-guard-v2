@@ -19,10 +19,17 @@ export function useIndex(props, emit) {
   });
 
   /**
+   * 配置通知オブジェクトから通知オブジェクトを取得して返す
+   */
+  const notification = Vue.computed(() => {
+    return props.notifications?.[props.worker.notificationKey] || null;
+  });
+
+  /**
    * Tag コンポーネントに渡す属性の算出
    */
   const attrs = Vue.computed(() => {
-    const { worker, schedule, ...rest } = props;
+    const { worker, schedule, notifications, ...rest } = props;
     return {
       ...rest,
       id: worker.id,
@@ -35,5 +42,18 @@ export function useIndex(props, emit) {
     };
   });
 
-  return { attrs };
+  /**
+   * `notification` スロットに渡すプロパティの算出
+   */
+  const notificationSlotProps = Vue.computed(() => {
+    const result = {
+      notification: notification.value,
+    };
+    if (notification.value) {
+      result.onClick = () => emit("click:notification");
+    }
+    return result;
+  });
+
+  return { attrs, notificationSlotProps };
 }

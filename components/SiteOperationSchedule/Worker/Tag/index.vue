@@ -9,11 +9,15 @@
  * - `worker` の時刻が `schedule` の時刻と異なる場合、時刻表示が強調表示されます。
  * - WorkerTag コンポーネントが受け付ける `id`, `startTime`, `endTime`, `isEmployee` プロパティは
  *   `worker` オブジェクトから自動的に取得されます。
+ * - `notificationKey` をキーとした、`notifications` オブジェクト（配置通知オブジェクトのマップ）を受け取ることができます。
+ *   `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを各スロットプロパティで
+ *   利用できます。
  *
  * [Added properties]
  * @property {Boolean} disableEdit - 編集ボタンを無効化するかどうか。
  * @property {Boolean} editable - 編集ボタンを表示するかどうか。
  * @property {String} editIcon - 編集ボタンのアイコン。
+ * @property {Object} notifications - 配置通知オブジェクトのマップ。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *
@@ -44,10 +48,11 @@
  *   - prepend-footer: 時刻表示の下（フッター最上部）に表示するコンテンツ
  *   - footer: prepend-footerとappend-footerの間に表示するコンテンツ
  *   - append-footer: フッター最下部に表示するコンテンツ
- *   - prepend-action: アクションエリアの先頭に表示するコンテンツ
+ *   - notification: 配置通知表示エリア用スロット
  *
  * @emits click:edit - 編集ボタンがクリックされた際に発火
  * @emits click:remove - 削除ボタンがクリックされた際に発火
+ * @emits click:notification - 通知ボタンがクリックされた際に発火
  */
 import { useDefaults } from "vuetify";
 import importedProps from "./props";
@@ -60,21 +65,23 @@ defineOptions({ inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
-const emit = defineEmits(["click:remove", "click:edit"]);
+const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
-const { attrs } = useIndex(props, emit);
+const { attrs, notificationSlotProps } = useIndex(props, emit);
 </script>
 
 <template>
   <WorkerTag v-bind="attrs">
     <!-- Pass through: prepend-label slot with slot props -->
     <template #prepend-label="slotProps">
-      <slot name="prepend-label" v-bind="slotProps" />
+      <slot name="prepend-label" v-bind="slotProps || {}">
+        <AtomsIconsHasLicense v-if="props.worker.isQualified" />
+      </slot>
     </template>
 
     <!-- Pass through: append-label slot with slot props -->
     <template #append-label="slotProps">
-      <slot name="append-label" v-bind="slotProps" />
+      <slot name="append-label" v-bind="slotProps || {}" />
     </template>
 
     <!-- Pass throuth: prepend-start-time slot with slot props -->
@@ -132,9 +139,9 @@ const { attrs } = useIndex(props, emit);
       <slot name="append-footer" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: prepend-action slot -->
+    <!-- Pass through: prepend-action slot as `notification` slot -->
     <template #prepend-action>
-      <slot name="prepend-action" />
+      <slot name="notification" v-bind="notificationSlotProps" />
     </template>
   </WorkerTag>
 </template>

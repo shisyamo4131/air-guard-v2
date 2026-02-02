@@ -15,4 +15,5 @@ export default {
   editIcon: { type: String, default: "mdi-pencil" },
   schedule: { type: Object, required: true }, // SiteOperationSchedule インスタンス
   worker: { type: Object, required: true }, // SiteOperationScheduleDetail インスタンス
+  notifications: { type: Object, default: null }, // 配置通知オブジェクトのマップ
 };
