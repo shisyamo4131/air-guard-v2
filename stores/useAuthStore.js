@@ -11,6 +11,7 @@ import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useRolePresets } from "@/composables/useRolePresets";
 import { useStatisticsStore } from "@/stores/useStatisticsStore";
+import { useComponentDefaults } from "@/composables/useComponentDefaults";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /**
@@ -29,8 +30,8 @@ export const useAuthStore = defineStore("auth", () => {
   const errors = useErrorsStore();
   const loadings = useLoadingsStore();
   const messages = useMessagesStore();
-  const { $vuetify } = useNuxtApp();
   const statisticsStore = useStatisticsStore();
+  const { set: setComponentDefault } = useComponentDefaults();
 
   /***************************************************************************
    * DEFINE STATES
@@ -91,13 +92,18 @@ export const useAuthStore = defineStore("auth", () => {
       }
     },
   });
+
+  /**
+   * ユーザーインスタンスの tagSize プロパティを監視し、変更があれば internalTagSize を更新する。
+   */
   watch(
     () => userInstance.tagSize,
     (newVal) => {
       if (newVal && TAG_SIZE_VALUES[newVal]) {
         internalTagSize.value = newVal;
+        setComponentDefault("Tag", newVal);
       }
-    }
+    },
   );
 
   /***************************************************************************
@@ -207,17 +213,13 @@ export const useAuthStore = defineStore("auth", () => {
    */
   watchEffect(() => {
     // Set allowed minutes for VTimePicker based on company settings
-    $vuetify.defaults.value.VTimePicker.allowedMinutes = (val) => {
-      if (!companyInstance?.minuteInterval) return true;
-      return val % companyInstance.minuteInterval === 0;
-    };
+    setComponentDefault("VTimePicker", companyInstance?.minuteInterval);
 
     // Update `RoundSetting` global setting based on company settings
     RoundSetting.set(companyInstance?.roundSetting || RoundSetting.ROUND);
 
     // Update `firstDayOfWeek` for `VCalendar` based on company settings
-    $vuetify.defaults.value.VCalendar.firstDayOfWeek =
-      companyInstance?.firstDayOfWeek || 0;
+    setComponentDefault("VCalendar", companyInstance?.firstDayOfWeek || 0);
   });
 
   /**
@@ -368,7 +370,7 @@ export const useAuthStore = defineStore("auth", () => {
             if (ready) {
               resolve(); // 準備完了なら Promise を解決 / Resolve the promise if ready
             }
-          }
+          },
         );
 
         // タイムアウト処理を設定 / Set up the timeout
