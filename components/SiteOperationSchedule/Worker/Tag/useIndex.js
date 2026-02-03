@@ -45,7 +45,7 @@ export function useIndex(props, emit) {
   /**
    * `notification` スロットに渡すプロパティの算出
    */
-  const notificationSlotProps = Vue.computed(() => {
+  const notificationProps = Vue.computed(() => {
     const result = {
       notification: notification.value,
     };
@@ -55,5 +55,5 @@ export function useIndex(props, emit) {
     return result;
   });
 
-  return { attrs, notificationSlotProps };
+  return { attrs, notificationProps };
 }

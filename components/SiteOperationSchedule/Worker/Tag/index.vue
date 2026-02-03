@@ -9,9 +9,8 @@
  * - `worker` の時刻が `schedule` の時刻と異なる場合、時刻表示が強調表示されます。
  * - WorkerTag コンポーネントが受け付ける `id`, `startTime`, `endTime`, `isEmployee` プロパティは
  *   `worker` オブジェクトから自動的に取得されます。
- * - `notificationKey` をキーとした、`notifications` オブジェクト（配置通知オブジェクトのマップ）を受け取ることができます。
- *   `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを各スロットプロパティで
- *   利用できます。
+ * - `notifications` プロパティとして、`notificationKey` をキーとした配置通知オブジェクトのマップを受け取ります。
+ * - `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを検索し、これを `ArrangementNotificationChip` コンポーネントに渡して表示します。
  *
  * [Added properties]
  * @property {Boolean} disableEdit - 編集ボタンを無効化するかどうか。
@@ -67,7 +66,7 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
-const { attrs, notificationSlotProps } = useIndex(props, emit);
+const { attrs, notificationProps } = useIndex(props, emit);
 </script>
 
 <template>
@@ -141,7 +140,9 @@ const { attrs, notificationSlotProps } = useIndex(props, emit);
 
     <!-- Pass through: prepend-action slot as `notification` slot -->
     <template #prepend-action>
-      <slot name="notification" v-bind="notificationSlotProps" />
+      <slot name="notification" v-bind="notificationProps">
+        <ArrangementNotificationChip v-bind="notificationProps" />
+      </slot>
     </template>
   </WorkerTag>
 </template>
