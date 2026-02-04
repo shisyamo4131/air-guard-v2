@@ -1,5 +1,5 @@
 /*****************************************************************************
- * WorkerTag 専用コンポーザブル
+ * SiteOperationScheduleWorkerTag 専用コンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
 
@@ -27,9 +27,12 @@ export function useIndex(props, emit) {
 
   /**
    * Tag コンポーネントに渡す属性の算出
+   * - `worker`、`schedule`、`notifications` プロパティは除外して渡す
+   * - `removable` 属性は `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化する
    */
   const attrs = Vue.computed(() => {
     const { worker, schedule, notifications, ...rest } = props;
+    const scheduleIsEditable = props.schedule?.isEditable || false;
     return {
       ...rest,
       id: worker.id,
@@ -38,15 +41,34 @@ export function useIndex(props, emit) {
       isEmployee: worker.isEmployee,
       highlightStartTime: isStartTimeModified.value,
       highlightEndTime: isEndTimeModified.value,
+      removable: props.removable && scheduleIsEditable,
+      showDraggableIcon: props.showDraggableIcon && scheduleIsEditable,
       "onClick:remove": () => emit("click:remove"),
     };
   });
 
   /**
+   * 編集アイコンに渡すプロパティの算出
+   * - `props.schedule.isEditable` が `false` の場合、自動的に無効化されます。
+   */
+  const editProps = Vue.computed(() => {
+    const scheduleIsEditable = props.schedule?.isEditable || false;
+    return {
+      disabled: !scheduleIsEditable || props.disableEdit,
+      icon: props.editIcon,
+      size: "small",
+      onClick: () => emit("click:edit"),
+    };
+  });
+
+  /**
    * `notification` スロットに渡すプロパティの算出
+   * - `props.schedule.isEditable` が `false` の場合、自動的に無効化されます。
    */
   const notificationProps = Vue.computed(() => {
+    const scheduleIsEditable = props.schedule?.isEditable || false;
     const result = {
+      disabled: !scheduleIsEditable || props.disableNotification,
       notification: notification.value,
     };
     if (notification.value) {
@@ -55,5 +77,5 @@ export function useIndex(props, emit) {
     return result;
   });
 
-  return { attrs, notificationProps };
+  return { attrs, editProps, notificationProps };
 }

@@ -9,6 +9,7 @@ import SiteOperationScheduleWorkerTag from "./index.vue";
 import { schedules } from "@/mocks/siteOperationSchedules.js";
 import { mockEmployees } from "@/mocks/employees.js";
 import { mockOutsourcers } from "@/mocks/outsourcers.js";
+import { mockArrangementNotifications } from "@/mocks/arrangementNotifications.js";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
@@ -34,6 +35,14 @@ const allWorkers = computed(() => {
   return [...schedule.employees, ...schedule.outsourcers];
 });
 
+// 配置通知のマップ（notificationKey -> ArrangementNotification）
+const notificationsByKey = computed(() => {
+  return mockArrangementNotifications.reduce((map, notification) => {
+    map[notification.notificationKey] = notification;
+    return map;
+  }, {});
+});
+
 /*****************************************************************************
  * CONTROL STATES
  *****************************************************************************/
@@ -45,13 +54,23 @@ const selectedWorker = computed(
 // コントロール用の状態
 const highlight = ref(false);
 const removable = ref(true);
-const editable = ref(false);
 const disableEdit = ref(false);
+const disableNotification = ref(false);
 const showDraggableIcon = ref(false);
 const hideTime = ref(false);
+const hideEdit = ref(false);
+const hideNotification = ref(false);
+const scheduleIsEditable = ref(true);
 const size = ref("medium");
 const variant = ref("default");
 const editIcon = ref("mdi-pencil");
+
+const scheduleForTest = computed(() => {
+  return {
+    ...schedule,
+    isEditable: scheduleIsEditable.value,
+  };
+});
 
 const sizes = ["small", "medium", "large"];
 const variants = ["default", "success", "warning", "error", "disabled"];
@@ -90,15 +109,18 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             <h3 class="text-subtitle-2 mb-2">プレビュー</h3>
             <SiteOperationScheduleWorkerTag
               :worker="selectedWorker"
-              :schedule="schedule"
+              :schedule="scheduleForTest"
+              :notifications="notificationsByKey"
               :fetch-employee-composable="employeeComposable"
               :fetch-outsourcer-composable="outsourcerComposable"
               :highlight="highlight"
               :removable="removable"
-              :editable="editable"
               :disable-edit="disableEdit"
+              :disable-notification="disableNotification"
               :show-draggable-icon="showDraggableIcon"
               :hide-time="hideTime"
+              :hide-edit="hideEdit"
+              :hide-notification="hideNotification"
               :size="size"
               :variant="variant"
               :edit-icon="editIcon"
@@ -107,6 +129,14 @@ const variants = ["default", "success", "warning", "error", "disabled"];
 
           <!-- コントロール -->
           <v-row dense>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="scheduleIsEditable"
+                label="スケジュール編集可能 (schedule.isEditable)"
+                density="compact"
+                hide-details
+              />
+            </v-col>
             <v-col cols="12" md="6">
               <v-switch
                 v-model="highlight"
@@ -125,16 +155,16 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="editable"
-                label="編集可能"
+                v-model="disableEdit"
+                label="編集無効化"
                 density="compact"
                 hide-details
               />
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="disableEdit"
-                label="編集無効化"
+                v-model="disableNotification"
+                label="通知無効化"
                 density="compact"
                 hide-details
               />
@@ -151,6 +181,22 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <v-switch
                 v-model="hideTime"
                 label="時刻非表示"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="hideEdit"
+                label="編集ボタン非表示"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-switch
+                v-model="hideNotification"
+                label="通知エリア非表示"
                 density="compact"
                 hide-details
               />
@@ -198,7 +244,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :size="sizeItem"
@@ -226,7 +273,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 :variant="variantItem"
@@ -255,7 +303,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="worker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -277,7 +326,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">時刻表示あり（デフォルト）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -287,7 +337,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">時刻表示なし（hideTime）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -309,7 +360,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Prepend Label スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -330,7 +382,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Append Label スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -347,7 +400,8 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">Footer スロット</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
@@ -366,12 +420,12 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">編集・削除ボタン組み合わせ</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
                 :removable="true"
-                :editable="true"
               />
             </v-col>
           </v-row>
@@ -389,11 +443,11 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">デフォルト編集アイコン</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
-                :editable="true"
               />
             </v-col>
             <v-col cols="12" md="6">
@@ -402,11 +456,11 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               </h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
-                :editable="true"
                 edit-icon="mdi-cog"
               />
             </v-col>
@@ -414,11 +468,11 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">編集のみ（削除なし）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
-                :editable="true"
                 :removable="false"
               />
             </v-col>
@@ -426,11 +480,11 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               <h3 class="text-subtitle-2 mb-2">削除のみ（編集なし）</h3>
               <SiteOperationScheduleWorkerTag
                 :worker="selectedWorker"
-                :schedule="schedule"
+                :schedule="scheduleForTest"
+                :notifications="notificationsByKey"
                 :fetch-employee-composable="employeeComposable"
                 :fetch-outsourcer-composable="outsourcerComposable"
                 size="medium"
-                :editable="false"
                 :removable="true"
               />
             </v-col>

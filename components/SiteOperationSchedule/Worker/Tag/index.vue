@@ -2,7 +2,8 @@
 /**
  * SiteOperationScheduleWorkerTag
  * @file components/SiteOperationSchedule/Worker/Tag/index.vue
- * @description WorkerTag コンポーネントをベースにした、現場作業員情報表示用タグコンポーネントです。
+ * @extends components/arrangements/Worker/Tag/index.vue
+ * @description 現場作業員情報表示用タグコンポーネントです。
  * - `worker` プロパティとして `SiteOperationScheduleDetail` インスタンスを受け取り、
  *   作業員の作業開始・終了時刻を表示します。
  * - `schedule` プロパティとして `SiteOperationSchedule` インスタンスを受け取ります。
@@ -11,11 +12,18 @@
  *   `worker` オブジェクトから自動的に取得されます。
  * - `notifications` プロパティとして、`notificationKey` をキーとした配置通知オブジェクトのマップを受け取ります。
  * - `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを検索し、これを `ArrangementNotificationChip` コンポーネントに渡して表示します。
+ * - 編集ボタンと通知表示エリアは `props.schedule` の `isEditable` プロパティが `false` の場合、自動的に無効化されます。
+ * - `removable` プロパティは `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
+ * - `showDraggableIcon` プロパティは `props.showDraggableIcon` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
  *
  * [Added properties]
  * @property {Boolean} disableEdit - 編集ボタンを無効化するかどうか。
- * @property {Boolean} editable - 編集ボタンを表示するかどうか。
+ *                                   `props.schedule.isEditable` が `false` の場合、自動的に無効化されます。
+ * @property {Boolean} disableNotification - 通知表示エリアを無効化するかどうか。
+ *                                   `props.schedule.isEditable` が `false` の場合、自動的に無効化されます。
  * @property {String} editIcon - 編集ボタンのアイコン。
+ * @property {Boolean} hideEdit - 編集ボタンを非表示にするかどうか。
+ * @property {Boolean} hideNotification - 通知表示エリアを非表示にするかどうか。
  * @property {Object} notifications - 配置通知オブジェクトのマップ。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
@@ -39,11 +47,12 @@
  *   - prepend-label: ラベルの前に表示するコンテンツ
  *   - append-label: ラベルの後に表示するコンテンツ
  *   - prepend-start-time: 開始時刻の前に表示するコンテンツ
- *   - startTime: 開始時刻の表示をカスタマイズ（slotProps: { startTime }）
+ *   - start-time: 開始時刻の表示をカスタマイズ（slotProps: { startTime }）
  *   - append-start-time: 開始時刻の後に表示するコンテンツ
  *   - prepend-end-time: 終了時刻の前に表示するコンテンツ
- *   - endTime: 終了時刻の表示をカスタマイズ（slotProps: { endTime }）
+ *   - end-time: 終了時刻の表示をカスタマイズ（slotProps: { endTime }）
  *   - append-end-time: 終了時刻の後に表示するコンテンツ
+ *   - edit: 編集ボタンの表示をカスタマイズ（slotProps: { disabled, icon, size, onClick }）
  *   - prepend-footer: 時刻表示の下（フッター最上部）に表示するコンテンツ
  *   - footer: prepend-footerとappend-footerの間に表示するコンテンツ
  *   - append-footer: フッター最下部に表示するコンテンツ
@@ -66,83 +75,84 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
-const { attrs, notificationProps } = useIndex(props, emit);
+const { attrs, editProps, notificationProps } = useIndex(props, emit);
 </script>
 
 <template>
   <WorkerTag v-bind="attrs">
-    <!-- Pass through: prepend-label slot with slot props -->
+    <!-- Provide `prepend-label` slot with slot props -->
     <template #prepend-label="slotProps">
       <slot name="prepend-label" v-bind="slotProps || {}">
         <AtomsIconsHasLicense v-if="props.worker.isQualified" />
       </slot>
     </template>
 
-    <!-- Pass through: append-label slot with slot props -->
+    <!-- Provide `append-label` slot with slot props -->
     <template #append-label="slotProps">
       <slot name="append-label" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass throuth: prepend-start-time slot with slot props -->
+    <!-- Provide `prepend-start-time` slot with slot props -->
     <template #prepend-start-time="slotProps">
       <slot name="prepend-start-time" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: start-time slot with slot props -->
+    <!-- Provide `start-time` slot with slot props -->
     <template #start-time="slotProps">
       <slot name="start-time" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: append-start-time slot with slot props -->
+    <!-- Provide `append-start-time` slot with slot props -->
     <template #append-start-time="slotProps">
       <slot name="append-start-time" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: prepend-end-time slot with slot props -->
+    <!-- Provide `prepend-end-time` slot with slot props -->
     <template #prepend-end-time="slotProps">
       <slot name="prepend-end-time" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: end-time slot with slot props -->
+    <!-- Provide `end-time` slot with slot props -->
     <template #end-time="slotProps">
       <slot name="end-time" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: append-end-time slot with slot props -->
+    <!-- Provide `append-end-time` and `edit` slots -->
     <template #append-end-time="slotProps">
-      <slot name="append-end-time" v-bind="slotProps || {}" />
+      <div class="d-flex align-center">
+        <slot name="append-end-time" v-bind="slotProps || {}" />
 
-      <!-- Edit icon -->
-      <v-icon
-        v-if="props.editable"
-        class="ml-2"
-        :disabled="props.disableEdit"
-        :icon="props.editIcon"
-        size="small"
-        @click="emit('click:edit')"
-      />
+        <!-- Edit icon -->
+        <div v-if="!props.hideEdit" class="pl-2 d-flex align-center">
+          <slot name="edit" v-bind="editProps">
+            <v-icon v-bind="editProps" />
+          </slot>
+        </div>
+      </div>
     </template>
 
-    <!-- Pass through: prepend-footer slot with slot props -->
+    <!-- Provide `prepend-footer` slot with slot props -->
     <template #prepend-footer="slotProps">
       <slot name="prepend-footer" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: footer slot with slot props -->
+    <!-- Provide `footer` slot with slot props -->
     <template #footer="slotProps">
       <slot name="footer" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: append-footer slot with slot props -->
+    <!-- Provide `append-footer` slot with slot props -->
     <template #append-footer="slotProps">
       <slot name="append-footer" v-bind="slotProps || {}" />
     </template>
 
-    <!-- Pass through: prepend-action slot as `notification` slot -->
+    <!-- Provide `prepend-action` slot as `notification` slot -->
     <template #prepend-action>
-      <slot name="notification" v-bind="notificationProps">
-        <ArrangementNotificationChip v-bind="notificationProps" />
-      </slot>
+      <div v-if="!props.hideNotification">
+        <slot name="notification" v-bind="notificationProps">
+          <ArrangementNotificationChip v-bind="notificationProps" />
+        </slot>
+      </div>
     </template>
   </WorkerTag>
 </template>
