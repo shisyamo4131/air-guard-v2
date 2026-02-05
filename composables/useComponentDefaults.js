@@ -46,6 +46,8 @@ export function useComponentDefaults() {
     // タグ系コンポーネントのデフォルトサイズを一括設定
     const tagComponents = [
       "Tag",
+      "EmployeeTag",
+      "OutsourcerTag",
       "WorkerTag",
       "SiteOperationScheduleWorkerTag",
       // 今後追加するタグ系コンポーネントはここに追加
