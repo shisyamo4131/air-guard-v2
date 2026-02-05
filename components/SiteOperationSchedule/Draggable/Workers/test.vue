@@ -270,14 +270,14 @@ function swapEmployees() {
                 <EmployeeTag
                   :doc-id="rawElement?.docId"
                   :fetch-employee-composable="employeeComposable"
-                  show-draggable-icon
+                  is-draggable
                 />
               </template>
               <template #outsourcer="{ rawElement }">
                 <OutsourcerTag
                   :doc-id="rawElement?.docId"
                   :fetch-outsourcer-composable="outsourcerComposable"
-                  show-draggable-icon
+                  is-draggable
                 />
               </template>
             </WorkerSelectorMolecules>

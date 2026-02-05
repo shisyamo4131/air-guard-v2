@@ -205,7 +205,7 @@ export function useIndex(props, emit) {
     return {
       highlight: true,
       schedule: internalSchedule.value,
-      showDraggableIcon: true,
+      isDraggable: true,
     };
   });
   return { attrs, defaultSlotProps };

@@ -32,7 +32,7 @@ const outsourcerOptions = computed(() =>
 
 const highlight = ref(false);
 const removable = ref(false);
-const showDraggableIcon = ref(false);
+const isDraggable = ref(false);
 
 const handleRemove = (label) => {
   console.log(`削除ボタンがクリックされました: ${label}`);
@@ -118,7 +118,7 @@ const handleRemove = (label) => {
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="showDraggableIcon"
+                v-model="isDraggable"
                 label="ドラッグアイコン表示"
                 density="compact"
                 hide-details
@@ -132,7 +132,7 @@ const handleRemove = (label) => {
                 size="medium"
                 :highlight="highlight"
                 :removable="removable"
-                :show-draggable-icon="showDraggableIcon"
+                :is-draggable="isDraggable"
                 @click:remove="handleRemove(selectedOutsourcer.displayName)"
               />
             </v-col>

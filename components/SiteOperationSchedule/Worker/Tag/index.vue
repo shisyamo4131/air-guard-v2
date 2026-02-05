@@ -14,7 +14,7 @@
  * - `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを検索し、これを `ArrangementNotificationChip` コンポーネントに渡して表示します。
  * - 編集ボタンと通知表示エリアは `props.schedule` の `isEditable` プロパティが `false` の場合、自動的に無効化されます。
  * - `removable` プロパティは `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
- * - `showDraggableIcon` プロパティは `props.showDraggableIcon` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
+ * - `isDraggable` プロパティは `props.isDraggable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
  *
  * [Added properties]
  * @property {Boolean} disableEdit - 編集ボタンを無効化するかどうか。
@@ -38,7 +38,7 @@
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
  * @property {String} removeIcon - 削除ボタンのアイコン。
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか。
- * @property {Boolean} showDraggableIcon - ドラッグ可能アイコンを表示するかどうか。
+ * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか。
  * @property {String} size - タグのサイズ。('small', 'medium', 'large')。
  * @property {String} variant - タグのバリアント。('default', 'success', 'warning', 'error', 'disabled')。
  *

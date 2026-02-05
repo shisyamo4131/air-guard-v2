@@ -23,7 +23,7 @@
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか
  * @property {String} removeIcon - 削除ボタンのアイコン
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか
- * @property {Boolean} showDraggableIcon - ドラッグ可能アイコンを表示するかどうか
+ * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか
  * @property {String} size - タグのサイズ ('small', 'medium', 'large')
  * @property {String} variant - タグのバリアント ('default', 'success', 'warning', 'error', 'disabled')
  *

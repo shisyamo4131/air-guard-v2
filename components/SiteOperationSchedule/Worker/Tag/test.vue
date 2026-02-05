@@ -56,7 +56,7 @@ const highlight = ref(false);
 const removable = ref(true);
 const disableEdit = ref(false);
 const disableNotification = ref(false);
-const showDraggableIcon = ref(false);
+const isDraggable = ref(false);
 const hideTime = ref(false);
 const hideEdit = ref(false);
 const hideNotification = ref(false);
@@ -117,7 +117,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
               :removable="removable"
               :disable-edit="disableEdit"
               :disable-notification="disableNotification"
-              :show-draggable-icon="showDraggableIcon"
+              :is-draggable="isDraggable"
               :hide-time="hideTime"
               :hide-edit="hideEdit"
               :hide-notification="hideNotification"
@@ -171,7 +171,7 @@ const variants = ["default", "success", "warning", "error", "disabled"];
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="showDraggableIcon"
+                v-model="isDraggable"
                 label="ドラッグアイコン表示"
                 density="compact"
                 hide-details

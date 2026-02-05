@@ -42,7 +42,7 @@ export function useIndex(props, emit) {
       highlightStartTime: isStartTimeModified.value,
       highlightEndTime: isEndTimeModified.value,
       removable: props.removable && scheduleIsEditable,
-      showDraggableIcon: props.showDraggableIcon && scheduleIsEditable,
+      isDraggable: props.isDraggable && scheduleIsEditable,
       "onClick:remove": () => emit("click:remove"),
     };
   });

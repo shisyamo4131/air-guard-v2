@@ -11,7 +11,7 @@ const testLabel = ref("テストラベル");
 const highlight = ref(false);
 const loading = ref(false);
 const removable = ref(true);
-const showDraggableIcon = ref(false);
+const isDraggable = ref(false);
 
 const handleRemove = (label) => {
   console.log(`削除ボタンがクリックされました: ${label}`);
@@ -58,7 +58,7 @@ const handleRemove = (label) => {
             </v-col>
             <v-col cols="12" md="6">
               <v-switch
-                v-model="showDraggableIcon"
+                v-model="isDraggable"
                 label="ドラッグアイコン表示"
                 density="compact"
                 hide-details
@@ -83,7 +83,7 @@ const handleRemove = (label) => {
                 :highlight="highlight"
                 :loading="loading"
                 :removable="removable"
-                :show-draggable-icon="showDraggableIcon"
+                :is-draggable="isDraggable"
                 @click:remove="handleRemove(testLabel)"
               />
             </v-col>
@@ -156,7 +156,7 @@ const handleRemove = (label) => {
               <Tag
                 :label="`${size} タグ`"
                 :size="size"
-                :show-draggable-icon="true"
+                :is-draggable="true"
                 :removable="true"
               />
             </v-col>

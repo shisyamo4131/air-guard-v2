@@ -6,7 +6,7 @@
  * @prop {Boolean} hideBadge - 必要人数バッジを非表示にするかどうか（デフォルト: false）
  * @prop {Object} schedule - 現場稼働予定データオブジェクト（デフォルト: 空の SiteOperationSchedule インスタンス）
  * @prop {Boolean} showActions - アクションボタンを表示するかどうか（デフォルト: false）
- * @prop {Boolean} showDraggableIcon - カードのドラッグ操作用アイコンを表示するかどうか（デフォルト: false）
+ * @prop {Boolean} isDraggable - カードのドラッグ操作用アイコンを表示するかどうか（デフォルト: false）
  *
  * @emits click:notify - 作業員への通知ボタンがクリックされたときに発火
  * @emits click:duplicate - 複製ボタンがクリックされたときに発火
@@ -24,7 +24,7 @@ const _props = defineProps({
   hideBadge: { type: Boolean, default: false },
   schedule: { type: Object, default: () => new SiteOperationSchedule() },
   showActions: { type: Boolean, default: false },
-  showDraggableIcon: { type: Boolean, default: false },
+  isDraggable: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "SiteOperationScheduleCard");
 
@@ -43,8 +43,8 @@ const titleClass = computed(() => {
 /**
  * ドラッグアイコンを表示するかどうかを返します。
  */
-const showDraggableIcon = computed(() => {
-  return props.schedule.isEditable && props.showDraggableIcon;
+const isDraggable = computed(() => {
+  return props.schedule.isEditable && props.isDraggable;
 });
 
 /**
@@ -86,7 +86,7 @@ provide("emit", emit);
         </v-card-title>
         <template #append>
           <!-- ドラッグアイコン -->
-          <AtomsIconsDraggable v-if="showDraggableIcon" />
+          <AtomsIconsDraggable v-if="isDraggable" />
         </template>
         <!-- 人数不足メッセージ -->
         <v-card-subtitle

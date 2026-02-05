@@ -57,7 +57,7 @@ const outsourcerOptions = computed(() =>
 
 const highlight = ref(false);
 const removable = ref(false);
-const showDraggableIcon = ref(false);
+const isDraggable = ref(false);
 const hideTime = ref(false);
 const startTime = ref("09:00");
 const endTime = ref("18:00");
@@ -190,7 +190,7 @@ const handleRemove = (label) => {
             </v-col>
             <v-col cols="12" md="4">
               <v-switch
-                v-model="showDraggableIcon"
+                v-model="isDraggable"
                 label="ドラッグアイコン表示"
                 density="compact"
                 hide-details
@@ -246,7 +246,7 @@ const handleRemove = (label) => {
                 size="medium"
                 :highlight="highlight"
                 :removable="removable"
-                :show-draggable-icon="showDraggableIcon"
+                :is-draggable="isDraggable"
                 :hide-time="hideTime"
                 :start-time="startTime"
                 :end-time="endTime"

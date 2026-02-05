@@ -52,7 +52,7 @@ export default {
    * @type {Boolean}
    * @default false
    */
-  showDraggableIcon: { type: Boolean, default: false },
+  isDraggable: { type: Boolean, default: false },
   /**
    * タグのサイズ
    * @type {'small' | 'medium' | 'large'}
