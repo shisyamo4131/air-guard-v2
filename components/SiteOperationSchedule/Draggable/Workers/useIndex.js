@@ -15,7 +15,9 @@ export function useIndex(props, emit) {
   );
 
   // 既配置作業員の強調表示用タイムドセット
-  const { add: highlightEmployee } = useTimedSet({ timeout: 2000 });
+  const { add: highlightEmployee, has: isEmployeeExist } = useTimedSet({
+    timeout: 2000,
+  });
 
   /*****************************************************************************
    * SETUP STATES
@@ -168,11 +170,13 @@ export function useIndex(props, emit) {
     // 要素が従業員でなければ無条件に許可
     if (element.isEmployee === false) return true;
 
+    // --- 以下、要素が従業員の場合の処理 ---
+
     // workerId が存在しなければ拒否
+    // 以下、従業員の場合の処理になるため `workerId` ではなく `id` でも結果は同じになるが、
+    // `props.itemKey` によるプロパティ取得を行えるようにするため、あえて `workerId` にしている。
     const workerId = element[props.itemKey];
     if (!workerId) return false;
-
-    // --- 以下、要素が従業員の場合の処理 ---
 
     // 既に配置されている作業員であれば拒否して強調表示
     const isExist = internalSchedule.value.workers.some(
@@ -203,7 +207,7 @@ export function useIndex(props, emit) {
   // デフォルトスロットに渡すプロパティ
   const defaultSlotProps = Vue.computed(() => {
     return {
-      highlight: true,
+      highlight: (id) => isEmployeeExist(id),
       schedule: internalSchedule.value,
       isDraggable: true,
     };

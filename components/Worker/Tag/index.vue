@@ -10,6 +10,7 @@
  * @property {String|Date} startTime - 開始時刻（オプション）
  * @property {String|Date} endTime - 終了時刻（オプション）
  * @property {Boolean} hideTime - 時間を表示するかどうか（既定値: false）
+ * @property {Boolean|Function} highlight - タグを強調表示するかどうか
  * @property {Boolean} highlightStartTime - 開始時刻を強調表示するかどうか（既定値: false）
  * @property {Boolean} highlightEndTime - 終了時刻を強調表示するかどうか（既定値: false）
  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
@@ -19,11 +20,10 @@
  *
  * [Properties imported from components/Tag]
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか
- * @property {Boolean} highlight - タグを強調表示するかどうか
+ * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか
  * @property {String} removeIcon - 削除ボタンのアイコン
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか
- * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか
  * @property {String} size - タグのサイズ ('small', 'medium', 'large')
  * @property {String} variant - タグのバリアント ('default', 'success', 'warning', 'error', 'disabled')
  *

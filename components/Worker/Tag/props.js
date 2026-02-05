@@ -12,6 +12,12 @@ const { label, loading, ...restProps } = importedProps;
 export default {
   ...restProps,
   /**
+   * 強調表示をするかどうか
+   * - `components/Tag` の `highlight` プロパティを拡張し、関数を受け付けるように。
+   * (id) => Boolean
+   */
+  highlight: { type: [Boolean, Function], default: false },
+  /**
    * 従業員かどうか (true: 従業員、false: 外注先)
    */
   isEmployee: {

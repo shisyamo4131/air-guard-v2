@@ -28,17 +28,17 @@
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *
- * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
  * @property {Object} fetchEmployeeComposable - 従業員情報を取得するためのコンポーザブル
  * @property {Object} fetchOutsourcerComposable - 外注先情報を取得するためのコンポーザブル
+ * @property {Boolean} hideTime - 時刻表示エリアを非表示にするかどうか。
+ * @property {Boolean|Function} highlight - タグを強調表示するかどうか。
+ * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか。
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
- * @property {Boolean} highlight - タグを強調表示するかどうか。
  * @property {String} label - タグに表示するラベル文字列。
  * @property {Boolean} loading - タグが読み込み中状態かどうか。
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
  * @property {String} removeIcon - 削除ボタンのアイコン。
  * @property {String | Number | Boolean} rounded - タグの角を丸くするかどうか。
- * @property {Boolean} isDraggable - ドラッグ可能アイコンを表示するかどうか。
  * @property {String} size - タグのサイズ。('small', 'medium', 'large')。
  * @property {String} variant - タグのバリアント。('default', 'success', 'warning', 'error', 'disabled')。
  *

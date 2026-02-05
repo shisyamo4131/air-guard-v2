@@ -59,18 +59,26 @@ export function useIndex(props, emit) {
       "onClick:remove": () => emit("click:remove"),
     };
 
+    // `props.highlight` が関数であればその結果を渡す
+    const highlight =
+      typeof props.highlight === "function"
+        ? props.highlight(props.id)
+        : props.highlight;
+
     // isEmployeeに応じて適切なpropsを渡す
     if (props.isEmployee) {
       return {
         ...props,
         ...baseAttrs,
         fetchEmployeeComposable: fetchEmployeeComposable,
+        highlight,
       };
     } else {
       return {
         ...props,
         ...baseAttrs,
         fetchOutsourcerComposable: fetchOutsourcerComposable,
+        highlight,
       };
     }
   });
