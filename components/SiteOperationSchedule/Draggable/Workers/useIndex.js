@@ -197,10 +197,19 @@ export function useIndex(props, emit) {
   // draggable コンポーネントに渡す属性
   const attrs = Vue.computed(() => {
     return {
-      modelValue: internalSchedule.value.workers,
+      modelValue: internalSchedule?.value?.workers || [],
+      disabled: !internalSchedule.value.isEditable,
       group: { name: props.groupName, put: handlePut },
+      handle: props.handle,
       itemKey: props.itemKey,
       onChange: handleChange,
+
+      // 以下、スマホやタブレット端末においてドラッグ中の要素をPCと同様に取り扱うための追加設定
+      // この設定を行わないと、ドラッグ中の要素が親コンテナの描画範囲からはみ出ないなどの問題が発生する
+      ghostClass: "sortable-ghost",
+      forceFallback: true,
+      fallbackOnBody: true,
+      appendTo: "body",
     };
   });
 
@@ -208,8 +217,9 @@ export function useIndex(props, emit) {
   const defaultSlotProps = Vue.computed(() => {
     return {
       highlight: (id) => isEmployeeExist(id),
+      isDraggable: internalSchedule.value.isEditable,
+      removable: internalSchedule.value.isEditable,
       schedule: internalSchedule.value,
-      isDraggable: true,
     };
   });
   return { attrs, defaultSlotProps };
