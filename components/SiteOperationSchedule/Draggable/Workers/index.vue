@@ -15,6 +15,8 @@
  * @property {String} itemKey - vue-draggable の item key 名
  * @property {Object} modelValue - SiteOperationSchedule インスタンス
  *
+ * @slot {default} - 各作業員要素のカスタムレンダリング用スロット。
+ *
  * @emits {event} update:modelValue - 作業員の追加・順序変更・削除が行われた際に発火します。
  *                                    イベントペイロード: 新しい SiteOperationSchedule インスタンス
  */
