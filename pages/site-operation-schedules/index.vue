@@ -49,7 +49,7 @@ const duplicator = useSiteOperationScheduleDuplicator();
 
 // 現場稼働予定テーブルコンポーザブル
 const table = useSiteOperationScheduleTable({
-  schedules: docs,
+  // schedules: docs,
   dayFormat: "DD",
   dateRangeComposable,
   fetchSiteComposable,

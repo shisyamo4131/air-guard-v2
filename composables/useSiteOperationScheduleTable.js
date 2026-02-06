@@ -1,10 +1,12 @@
+/*****************************************************************************
+ * SiteOperationScheduleTable 専用コンポーザブル
+ *****************************************************************************/
 import * as Vue from "vue";
 import { useDateRange } from "@/composables/useDateRange";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /**
  * @param {*} options
- * @param {Array} options.schedules 現場稼働予定ドキュメント配列
  * @param {Object} [options.dateRangeComposable] 日付範囲コンポーザブル
  * @param {Object} [options.fetchSiteComposable] 現場データフェッチ用コンポーザブル
  * @param {String} [options.dayFormat="MM/DD"] 日付フォーマット文字列
@@ -16,7 +18,6 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
  * @returns {Object} returns.attrs An attributes for SiteOperationScheduleTable
  */
 export function useSiteOperationScheduleTable({
-  schedules = [],
   dateRangeComposable: providedDateRangeComposable = undefined,
   fetchSiteComposable: providedFetchSiteComposable = undefined,
   dayFormat = "MM/DD",
@@ -28,17 +29,6 @@ export function useSiteOperationScheduleTable({
   /** SETUP COMPOSABLES */
   const dateRangeComposable = providedDateRangeComposable || useDateRange();
   const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
-
-  /** WATCHERS */
-  Vue.watch(
-    schedules,
-    (newSchedules) => {
-      newSchedules.forEach((schedule) => {
-        fetchSiteComposable.fetchSite(schedule.siteId); // 現場データをフェッチ
-      });
-    },
-    { immediate: true },
-  );
 
   /** SiteOperationScheduleTable 用 attrs */
   const attrs = Vue.computed(() => {
