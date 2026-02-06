@@ -1,6 +1,6 @@
 <script setup>
 import { useDateRange } from "@/composables/useDateRange";
-import { useSiteOperationScheduleTable } from "@/composables/useSiteOperationScheduleTable";
+import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
 import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOperationSchedules";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -18,7 +18,7 @@ const dateRangeComposable = useDateRange({
 const { debouncedDateRange } = dateRangeComposable;
 
 // ドキュメント取得コンポーザブル
-const { docs, groupKeyMappedDocs, statistics } = useSiteOperationSchedules({
+const { docs } = useSiteOperationSchedules({
   options: computed(() => [
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
@@ -32,7 +32,8 @@ const { siteShiftTypeOrder } = useSiteShiftTypeOrder({
   fetchSiteComposable,
 });
 
-const { attrs: tableAttrs } = useSiteOperationScheduleTable({
+const { attrs: tableAttrs } = useOperationScheduleTable({
+  schedules: docs,
   dateRangeComposable,
   fetchSiteComposable,
   siteShiftTypeOrder,
@@ -41,19 +42,32 @@ const { attrs: tableAttrs } = useSiteOperationScheduleTable({
 
 <template>
   <div class="d-flex flex-grow-1 overflow-auto fill-height">
-    <SiteOperationScheduleTable v-bind="tableAttrs">
-      <template #cell="cellProps">
+    <!-- TABLE -->
+    <OperationSchedulesTable v-bind="tableAttrs">
+      <template #cell="{ siteId, shiftType, date, schedules }">
+        <!-- DRAGGABLE SCHEDULES -->
         <SiteOperationScheduleDraggableSchedules
-          v-bind="cellProps"
-          :model-value="
-            groupKeyMappedDocs.get(cellProps.groupKey)?.schedules || []
-          "
+          v-bind="{ siteId, shiftType, date }"
+          :model-value="schedules"
         >
           <template #default="{ schedule }">
-            <SiteOperationScheduleCard :schedule="schedule" />
+            <!-- SCHEDULE CARD -->
+            <SiteOperationScheduleCard :schedule="schedule">
+              <template #default>
+                <!-- DRAGGABLE WORKERS -->
+                <!-- <SiteOperationScheduleDraggableWorkers>
+                  <template #default="{ worker, isDraggable }">
+                    <SiteOperationScheduleWorker
+                      :worker="worker"
+                      :is-draggable="isDraggable"
+                    />
+                  </template>
+                </SiteOperationScheduleDraggableWorkers> -->
+              </template>
+            </SiteOperationScheduleCard>
           </template>
         </SiteOperationScheduleDraggableSchedules>
       </template>
-    </SiteOperationScheduleTable>
+    </OperationSchedulesTable>
   </div>
 </template>

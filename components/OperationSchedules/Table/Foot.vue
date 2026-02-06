@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
- * 現場稼働予定管理用テーブルフッターコンポーネント
- * - `SiteOperationSchedule/Table.vue` で使用されるコンポーネント
+ * 稼働予定管理用テーブルフッターコンポーネント
+ * - `OperationSchedules/Table.vue` で使用されるコンポーネント
  *
  * @slot - footer - 各日付フッターのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap

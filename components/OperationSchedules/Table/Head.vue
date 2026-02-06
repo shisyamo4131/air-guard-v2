@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
- * 現場稼働予定管理用テーブルヘッダーコンポーネント
- * - `SiteOperationSchedule/Table.vue` で使用されるコンポーネント
+ * 稼働予定管理用テーブルヘッダーコンポーネント
+ * - `OperationSchedules/Table.vue` で使用されるコンポーネント
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap

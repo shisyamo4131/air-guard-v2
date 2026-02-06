@@ -1,5 +1,5 @@
 /*****************************************************************************
- * SiteOperationScheduleTable 専用コンポーザブル
+ * OperationScheduleTable 専用コンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
 import { useDateRange } from "@/composables/useDateRange";
@@ -7,6 +7,7 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 
 /**
  * @param {*} options
+ * @param {Array} [options.schedules=[]] 現場稼働予定ドキュメント配列
  * @param {Object} [options.dateRangeComposable] 日付範囲コンポーザブル
  * @param {Object} [options.fetchSiteComposable] 現場データフェッチ用コンポーザブル
  * @param {String} [options.dayFormat="MM/DD"] 日付フォーマット文字列
@@ -14,10 +15,11 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
  * @param {Number} [options.weekdayHeight=36] 曜日セルの高さ
  * @param {String|Number|undefined} [options.columnWidth] カラム幅
  * @param {Object} [options.siteShiftTypeOrder] 現場オーダー配列
- * @returns {Object} - An object containing the reactive `attrs` for SiteOperationScheduleTable.
- * @returns {Object} returns.attrs An attributes for SiteOperationScheduleTable
+ * @returns {Object} - An object containing the reactive `attrs` for OperationScheduleTable.
+ * @returns {Object} returns.attrs An attributes for OperationScheduleTable
  */
-export function useSiteOperationScheduleTable({
+export function useOperationScheduleTable({
+  schedules = [],
   dateRangeComposable: providedDateRangeComposable = undefined,
   fetchSiteComposable: providedFetchSiteComposable = undefined,
   dayFormat = "MM/DD",
@@ -30,9 +32,10 @@ export function useSiteOperationScheduleTable({
   const dateRangeComposable = providedDateRangeComposable || useDateRange();
   const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
 
-  /** SiteOperationScheduleTable 用 attrs */
+  /** OperationScheduleTable 用 attrs */
   const attrs = Vue.computed(() => {
     return {
+      schedules: schedules,
       startDate: dateRangeComposable.dateRange.value.from,
       endDate: dateRangeComposable.dateRange.value.to,
       dayFormat,

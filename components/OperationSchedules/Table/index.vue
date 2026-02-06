@@ -1,71 +1,64 @@
 <script setup>
 /*****************************************************************************
- * 現場稼働予定管理用テーブルコンポーネント
+ * 稼働予定管理用テーブルコンポーネント
  * - 横長のテーブルになるため、親コンポーネント側をスクロールコンテナとする場合は
  *   `class="d-flex"` を指定すること。
  *
  * @property {Object} cachedSites - キャッシュ済み現場データオブジェクトマップ
- *
  * @property {Array} columnColors - 各列の背景色クラス配列
- *
  * @property {String|Number} columnWidth - 各列の幅
- *
  * @property {String} dayFormat - 日付フォーマット（ヘッダーカラム表示用）
- *
  * @property {String|Number} dayHeight - 日付セルの高さ
- *
  * @property {String|Object} endDate - 終了日付
- *
  * @property {String} holidayIcon - 祝日アイコン
- *
  * @property {String} holidayIconColor - 祝日アイコンの色
- *
+ * @property {Array} schedules - 現場稼働予定ドキュメントの配列
  * @property {Array} siteShiftTypeOrder - 現場オーダー配列
- *
  * @property {String|Object} startDate - 開始日付
- *
  * @property {String} weekdayFormat - 曜日フォーマット（ヘッダーカラム表示用）
- *
  * @property {String|Number} weekdayHeight - 曜日セルの高さ
+ *
+ * @emits click:cell - 各セルクリック時に発火するイベント
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - day - 各日付ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - append-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - prepend-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - weekday - 各曜日ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
- *
  * @slot - prepend-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
- *
  * @slot - site-shift-type-order - 各現場行のカスタム表示用スロット
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
- *
  * @slot - append-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
- *
  * @slot - cell - 各セルのカスタム表示用スロット
- *
+ *         @property {String} siteId - 現場ID
+ *         @property {String} shiftType - シフトタイプ
+ *         @property {String} date - 日付（YYYY-MM-DD形式）
+ *         @property {Object} dateAt - 日付（dayjsオブジェクト）
+ *         @property {String} groupKey - グループキー（`${siteId}-${shiftType}-${date}`形式）
+ *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Number} count - 必要人員数
+ *         @property {Boolean} hasMultiple - 必要人員が複数かどうか
+ *         @property {Number} total - 総必要人員数
+ *         @property {Array} schedules - 現場稼働予定ドキュメント配列
+ *         @property {Function} onClick - クリック時のコールバック関数
  * @slot - footer - 各日付フッターのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *****************************************************************************/
@@ -133,6 +126,11 @@ const _props = defineProps({
    */
   holidayIconColor: { type: String, default: "red" },
   /**
+   * 現場稼働予定ドキュメントの配列
+   * - groupKey ごとに分類されて cell スロットプロパティで提供されます。
+   */
+  schedules: { type: Array, default: () => [] },
+  /**
    * 現場オーダー配列
    * - 各現場オーダーのデータオブジェクトを含む配列を指定します。
    */
@@ -155,12 +153,14 @@ const _props = defineProps({
   weekdayHeight: { type: [String, Number], default: undefined },
 });
 const props = useDefaults(_props, "SiteOperationScheduleTable");
+const emit = defineEmits(["click:cell"]);
 
 /** SETUP COMPOSABLES */
 const {
   daysInRangeArray,
   currentDayCount,
   cellColorClass,
+  groupKeyMappedData,
   resolvedColumnWidth,
 } = useTable(props);
 </script>
@@ -271,6 +271,16 @@ const {
                 dateAt: dayObject.dateAt,
                 groupKey: `${order.key}-${dayObject.date}`,
                 dayObject,
+                ...groupKeyMappedData.get(`${order.key}-${dayObject.date}`),
+                onClick: () => {
+                  emit('click:cell', {
+                    siteId: order.siteId,
+                    shiftType: order.shiftType,
+                    date: dayObject.date,
+                    dateAt: dayObject.dateAt,
+                    groupKey: `${order.key}-${dayObject.date}`,
+                  });
+                },
               }"
             />
           </td>

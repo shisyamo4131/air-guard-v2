@@ -9,7 +9,7 @@ import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOpera
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
-import { useSiteOperationScheduleTable } from "@/composables/useSiteOperationScheduleTable";
+import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
@@ -27,7 +27,7 @@ const { debouncedDateRange } = dateRangeComposable;
 provide("dateRangeComposable", dateRangeComposable);
 
 // ドキュメント取得コンポーザブル
-const { docs, groupKeyMappedDocs, statistics } = useSiteOperationSchedules({
+const { docs, statistics } = useSiteOperationSchedules({
   options: computed(() => [
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
@@ -50,8 +50,8 @@ const manager = useSiteOperationScheduleManager();
 const duplicator = useSiteOperationScheduleDuplicator();
 
 // 現場稼働予定テーブルコンポーザブル
-const table = useSiteOperationScheduleTable({
-  // schedules: docs,
+const table = useOperationScheduleTable({
+  schedules: docs,
   dayFormat: "DD",
   dateRangeComposable,
   fetchSiteComposable,
@@ -81,16 +81,14 @@ const reorder = useSiteShiftTypeReorder({
     <!-- スクロールコンテナ -->
     <div class="d-flex flex-grow-1 overflow-auto">
       <!-- メインコンテンツ: テーブル -->
-      <SiteOperationScheduleTable v-bind="table.attrs.value">
+      <OperationSchedulesTable
+        v-bind="table.attrs.value"
+        @click:cell="selector.set"
+      >
         <!-- セル -->
-        <template #cell="{ siteId, shiftType, dateAt, groupKey }">
+        <template #cell="cellProps">
           <div class="py-2 d-flex justify-center">
-            <SiteOperationScheduleRequiredPersonnelChip
-              v-bind="groupKeyMappedDocs.get(groupKey) || {}"
-              @click="
-                () => selector.set({ siteId, shiftType, dateAt, groupKey })
-              "
-            />
+            <SiteOperationScheduleRequiredPersonnelChip v-bind="cellProps" />
           </div>
         </template>
 
@@ -100,7 +98,7 @@ const reorder = useSiteShiftTypeReorder({
             {{ statistics.get(dayObject.date)?.total || 0 }}
           </div>
         </template>
-      </SiteOperationScheduleTable>
+      </OperationSchedulesTable>
     </div>
 
     <!-- 現場稼働予定選択コンポーネント -->

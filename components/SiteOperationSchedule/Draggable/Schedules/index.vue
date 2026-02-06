@@ -16,6 +16,8 @@
  * @property {String} handle - vue-draggable の drag handle セレクタ
  * @property {String} itemKey - vue-draggable の item key 名
  * @property {Array} modelValue - SiteOperationSchedule インスタンスの配列
+ * @property {String} siteId - 現場ID
+ * @property {String} shiftType - 勤務区分
  *
  * @slot {default} - 各スケジュール要素のカスタムレンダリング用スロット。
  *
@@ -54,7 +56,7 @@ const emit = defineEmits(["update:modelValue"]);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs } = useIndex(props, emit);
+const { attrs, defaultSlotProps } = useIndex(props, emit);
 </script>
 
 <template>
