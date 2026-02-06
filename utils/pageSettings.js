@@ -110,9 +110,9 @@ export const pageStructure = [
     navigation: true,
     children: [
       {
-        id: "site-operation-schedules",
-        path: "/site-operation-schedules",
-        label: "(Beta) 現場稼働予定管理",
+        id: "operation-schedules",
+        path: "/operation-schedules",
+        label: "(Beta) 稼働予定管理",
         icon: "mdi-calendar-multiselect",
         roles: ["site-operation-schedules:write"],
         navigation: true,
@@ -716,14 +716,14 @@ export function validatePageSettings() {
         "legal",
       ];
       const foundNormalRoles = config.roles.filter((role) =>
-        normalRoles.includes(role)
+        normalRoles.includes(role),
       );
 
       if (foundNormalRoles.length > 0) {
         console.warn(
           `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
             `通常の役割 [${foundNormalRoles}] が指定されています。` +
-            `権限ベース（例: "sites:read"）での指定を推奨します。`
+            `権限ベース（例: "sites:read"）での指定を推奨します。`,
         );
       }
 
@@ -731,19 +731,19 @@ export function validatePageSettings() {
       if (parentRoles.length > 0 && config.roles.length === 0) {
         console.warn(
           `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
-            `親は roles: [${parentRoles}] だが、子は roles: [] (制限なし)`
+            `親は roles: [${parentRoles}] だが、子は roles: [] (制限なし)`,
         );
       }
 
       // 親の roles に含まれない role が子にある場合も警告
       if (config.roles.length > 0 && parentRoles.length > 0) {
         const missingRoles = config.roles.filter(
-          (role) => !parentRoles.includes(role)
+          (role) => !parentRoles.includes(role),
         );
         if (missingRoles.length > 0) {
           console.warn(
             `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
-              `子の roles [${missingRoles}] は親の roles [${parentRoles}] に含まれていません`
+              `子の roles [${missingRoles}] は親の roles [${parentRoles}] に含まれていません`,
           );
         }
       }
@@ -752,7 +752,7 @@ export function validatePageSettings() {
       if (config.children) {
         validate(
           config.children,
-          config.roles.length > 0 ? config.roles : parentRoles
+          config.roles.length > 0 ? config.roles : parentRoles,
         );
       }
     }
