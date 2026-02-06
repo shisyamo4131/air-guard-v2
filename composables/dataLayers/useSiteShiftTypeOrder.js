@@ -25,7 +25,7 @@ export function useSiteShiftTypeOrder({
   type = "arrangement",
   schedules = Vue.reactive([]),
   fetchSiteComposable: providedFetchSiteComposable = undefined,
-}) {
+} = {}) {
   /** SETUP STORES */
   const auth = useAuthStore();
 
