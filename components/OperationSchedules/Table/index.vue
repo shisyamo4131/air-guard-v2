@@ -249,40 +249,41 @@ const {
 
         <!-- TR: schedule -->
         <tr>
-          <!-- スロットで配置されるコンポーネントの高さに従うよう、height は unset にする -->
           <td
             v-for="(dayObject, colIndex) in daysInRangeArray"
             :key="colIndex"
-            :style="{ height: 'unset' }"
+            :style="{ padding: '8px' }"
             :class="[
               dayObject.isHoliday
                 ? cellColorClass[0]
                 : cellColorClass[dayObject.format('d')],
             ]"
           >
-            <!-- SLOT: cell -->
-            <!-- { siteId, shiftType, date, dateAt, groupKey, dayObject } -->
-            <slot
-              name="cell"
-              v-bind="{
-                siteId: order.siteId,
-                shiftType: order.shiftType,
-                date: dayObject.date,
-                dateAt: dayObject.dateAt,
-                groupKey: `${order.key}-${dayObject.date}`,
-                dayObject,
-                ...groupKeyMappedData.get(`${order.key}-${dayObject.date}`),
-                onClick: () => {
-                  emit('click:cell', {
-                    siteId: order.siteId,
-                    shiftType: order.shiftType,
-                    date: dayObject.date,
-                    dateAt: dayObject.dateAt,
-                    groupKey: `${order.key}-${dayObject.date}`,
-                  });
-                },
-              }"
-            />
+            <div class="d-flex flex-column justify-start fill-height">
+              <!-- SLOT: cell -->
+              <!-- { siteId, shiftType, date, dateAt, groupKey, dayObject } -->
+              <slot
+                name="cell"
+                v-bind="{
+                  siteId: order.siteId,
+                  shiftType: order.shiftType,
+                  date: dayObject.date,
+                  dateAt: dayObject.dateAt,
+                  groupKey: `${order.key}-${dayObject.date}`,
+                  dayObject,
+                  ...groupKeyMappedData.get(`${order.key}-${dayObject.date}`),
+                  onClick: () => {
+                    emit('click:cell', {
+                      siteId: order.siteId,
+                      shiftType: order.shiftType,
+                      date: dayObject.date,
+                      dateAt: dayObject.dateAt,
+                      groupKey: `${order.key}-${dayObject.date}`,
+                    });
+                  },
+                }"
+              />
+            </div>
           </td>
         </tr>
       </template>
