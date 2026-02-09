@@ -51,11 +51,11 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
           <template #default="draggableSchedulesProps">
             <SiteOperationScheduleCard v-bind="draggableSchedulesProps">
               <template #default="{ schedule }">
-                <SiteOperationScheduleDraggableWorkers :model-value="schedule">
+                <DraggableWorkers :model-value="schedule">
                   <template #default="aaa">
                     <SiteOperationScheduleWorkerTag v-bind="aaa" />
                   </template>
-                </SiteOperationScheduleDraggableWorkers>
+                </DraggableWorkers>
               </template>
             </SiteOperationScheduleCard>
           </template>

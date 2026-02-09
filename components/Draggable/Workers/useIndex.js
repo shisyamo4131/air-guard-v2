@@ -1,5 +1,5 @@
 /*****************************************************************************
- * SiteOperationScheduleDraggableWorker 専用コンポーザブル
+ * DraggableWorkers 専用コンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
@@ -10,9 +10,7 @@ export function useIndex(props, emit) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
-  const { logger, isDev } = useBaseManager(
-    "SiteOperationScheduleDraggableWorkers",
-  );
+  const { logger, isDev } = useBaseManager("DraggableWorkers");
 
   // 既配置作業員の強調表示用タイムドセット
   const { add: highlightEmployee, has: isEmployeeExist } = useTimedSet({

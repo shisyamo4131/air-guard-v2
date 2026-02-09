@@ -1,13 +1,13 @@
 <script setup>
 /**
- * @file components/SiteOperationSchedule/Draggable/Workers/test.vue
- * @description SiteOperationScheduleDraggableWorkers コンポーネントのテストページ
+ * @file components/Draggable/Workers/test.vue
+ * @description DraggableWorkers コンポーネントのテストページ
  * - モックデータを使用してWorkers追加・並び替え・削除の動作を確認
  * - 親コンポーネントが emitted された schedule オブジェクトを受け取り、
  *   自身の状態を更新できることを確認
  */
 import { ref, computed } from "vue";
-import SiteOperationScheduleDraggableWorkers from "./index.vue";
+import DraggableWorkers from "./index.vue";
 import WorkerSelectorMolecules from "@/components/molecules/WorkerSelector.vue";
 import SiteOperationScheduleWorkerTag from "@/components/SiteOperationSchedule/Worker/Tag/index.vue";
 import EmployeeTag from "@/components/Employee/Tag/index.vue";
@@ -58,7 +58,7 @@ const availableOutsourcers = computed(() => mockOutsourcers);
  * METHODS
  *****************************************************************************/
 /**
- * SiteOperationScheduleDraggableWorkers から emitted された
+ * DraggableWorkers から emitted された
  * update:modelValue イベントを処理
  */
 function handleScheduleUpdate(newSchedule) {
@@ -122,9 +122,7 @@ function swapEmployees() {
     <div class="flex-grow-1 d-flex flex-column pa-4">
       <!-- タイトル -->
       <v-card class="mb-4">
-        <v-card-title
-          >SiteOperationScheduleDraggableWorkers テスト</v-card-title
-        >
+        <v-card-title>DraggableWorkers テスト</v-card-title>
         <v-card-text>
           <p class="mb-2">
             <strong>テスト概要：</strong>
@@ -234,7 +232,7 @@ function swapEmployees() {
               class="border-2 border-dashed rounded pa-4 bg-grey-lighten-4"
               style="min-height: 200px"
             >
-              <SiteOperationScheduleDraggableWorkers
+              <DraggableWorkers
                 :model-value="schedule"
                 @update:model-value="handleScheduleUpdate"
               >
@@ -245,7 +243,7 @@ function swapEmployees() {
                     :fetch-outsourcer-composable="outsourcerComposable"
                   />
                 </template>
-              </SiteOperationScheduleDraggableWorkers>
+              </DraggableWorkers>
             </div>
           </v-card-text>
         </v-card>

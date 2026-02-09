@@ -1,7 +1,7 @@
 <script setup>
 /**
- * SiteOperationScheduleDraggableWorkers
- * @file components/SiteOperationSchedule/Draggable/Workers/index.vue
+ * DraggableWorkers
+ * @file components/Draggable/Workers/index.vue
  * @description 現場作業員情報表示用のドラッグ可能なリストコンポーネントです。
  * - `modelValue` プロパティとして `SiteOperationSchedule` インスタンスを受け取り、
  *   その `workers` 配列をドラッグ可能なリストとして表示します
@@ -24,7 +24,7 @@ import draggable from "vuedraggable";
 import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
 
-defineOptions({ name: "SiteOperationScheduleDraggableWorkers" });
+defineOptions({ name: "DraggableWorkers" });
 
 /*****************************************************************************
  * SETUP PROPS & EMITS
@@ -39,7 +39,7 @@ const _props = defineProps({
   // 現場稼働予定オブジェクト
   modelValue: { type: Object, required: true },
 });
-const props = useDefaults(_props, "SiteOperationScheduleDraggableWorkers");
+const props = useDefaults(_props, "DraggableWorkers");
 
 const emit = defineEmits(["update:modelValue"]);
 
