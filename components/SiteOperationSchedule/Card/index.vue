@@ -59,54 +59,46 @@ provide("emit", emit);
 </script>
 
 <template>
-  <v-container>
-    <v-card class="schedule-card">
-      <v-card-item style="padding: 10px">
-        <template #prepend>
-          <!-- 必要人数 -->
-          <PersonnelAvatar v-if="!props.hideBadge" />
-        </template>
-        <!-- タイトル -->
-        <v-card-title :class="titleClass">
-          <!-- 作業内容 -->
-          <span
-            class="d-flex align-center flex-grow-1 text-truncate"
-            style="min-width: 0"
-          >
-            <!-- 要資格チップ -->
-            <v-chip
-              class="mr-1"
-              label
-              size="x-small"
-              text="要資格"
-              color="red"
-            />
-            {{ props.schedule.workDescription || "通常警備" }}
-          </span>
-        </v-card-title>
-        <template #append>
-          <!-- ドラッグアイコン -->
-          <AtomsIconsDraggable v-if="isDraggable" />
-        </template>
-        <!-- 人数不足メッセージ -->
-        <v-card-subtitle
-          v-if="props.schedule.isPersonnelShortage"
-          class="text-caption"
+  <v-card class="schedule-card">
+    <v-card-item style="padding: 10px">
+      <template #prepend>
+        <!-- 必要人数 -->
+        <PersonnelAvatar v-if="!props.hideBadge" />
+      </template>
+      <!-- タイトル -->
+      <v-card-title :class="titleClass">
+        <!-- 作業内容 -->
+        <span
+          class="d-flex align-center flex-grow-1 text-truncate"
+          style="min-width: 0"
         >
-          {{ timeLabel }}
-          <div class="text-error">必要人数を満たしていません。</div>
-        </v-card-subtitle>
-      </v-card-item>
+          <!-- 要資格チップ -->
+          <v-chip class="mr-1" label size="x-small" text="要資格" color="red" />
+          {{ props.schedule.workDescription || "通常警備" }}
+        </span>
+      </v-card-title>
+      <template #append>
+        <!-- ドラッグアイコン -->
+        <AtomsIconsDraggable v-if="isDraggable" />
+      </template>
+      <!-- 人数不足メッセージ -->
+      <v-card-subtitle
+        v-if="props.schedule.isPersonnelShortage"
+        class="text-caption"
+      >
+        {{ timeLabel }}
+        <div class="text-error">必要人数を満たしていません。</div>
+      </v-card-subtitle>
+    </v-card-item>
 
-      <v-card-text style="padding: 0px 10px">
-        <!-- SLOT: default -->
-        <slot name="default">
-          {{ props.schedule.remarks || "特記事項なし" }}
-        </slot>
-      </v-card-text>
+    <v-card-text style="padding: 0px 10px">
+      <!-- SLOT: default -->
+      <slot name="default" v-bind="{ schedule }">
+        {{ props.schedule.remarks || "特記事項なし" }}
+      </slot>
+    </v-card-text>
 
-      <!-- ACTIONS -->
-      <Actions v-if="props.showActions" />
-    </v-card>
-  </v-container>
+    <!-- ACTIONS -->
+    <Actions v-if="props.showActions" />
+  </v-card>
 </template>

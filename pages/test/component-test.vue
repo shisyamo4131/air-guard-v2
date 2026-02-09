@@ -37,6 +37,7 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
   dateRangeComposable,
   fetchSiteComposable,
   siteShiftTypeOrder,
+  columnWidth: 240,
 });
 </script>
 
@@ -44,29 +45,21 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
   <div class="d-flex flex-grow-1 overflow-auto fill-height">
     <!-- TABLE -->
     <OperationSchedulesTable v-bind="tableAttrs">
-      <template #cell="{ siteId, shiftType, date, schedules }">
+      <template #cell="cellProps">
         <!-- DRAGGABLE SCHEDULES -->
-        <SiteOperationScheduleDraggableSchedules
-          v-bind="{ siteId, shiftType, date }"
-          :model-value="schedules"
-        >
-          <template #default="{ schedule }">
-            <!-- SCHEDULE CARD -->
-            <SiteOperationScheduleCard :schedule="schedule">
-              <template #default>
-                <!-- DRAGGABLE WORKERS -->
-                <!-- <SiteOperationScheduleDraggableWorkers>
-                  <template #default="{ worker, isDraggable }">
-                    <SiteOperationScheduleWorker
-                      :worker="worker"
-                      :is-draggable="isDraggable"
-                    />
+        <DraggableOperationSchedules v-bind="cellProps">
+          <template #default="draggableSchedulesProps">
+            <SiteOperationScheduleCard v-bind="draggableSchedulesProps">
+              <template #default="{ schedule }">
+                <SiteOperationScheduleDraggableWorkers :model-value="schedule">
+                  <template #default="aaa">
+                    <SiteOperationScheduleWorkerTag v-bind="aaa" />
                   </template>
-                </SiteOperationScheduleDraggableWorkers> -->
+                </SiteOperationScheduleDraggableWorkers>
               </template>
             </SiteOperationScheduleCard>
           </template>
-        </SiteOperationScheduleDraggableSchedules>
+        </DraggableOperationSchedules>
       </template>
     </OperationSchedulesTable>
   </div>

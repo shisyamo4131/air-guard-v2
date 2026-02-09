@@ -7,17 +7,15 @@ export function useIndex(props, emit) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
-  const { logger, isDev } = useBaseManager(
-    "SiteOperationScheduleDraggableSchedules",
-  );
+  const { logger, isDev } = useBaseManager("DraggableOperationSchedules");
 
   /*****************************************************************************
    * SETUP STATES
    *****************************************************************************/
   // 内部管理用の schedule オブジェクト配列
-  const internalSchedules = Vue.ref(props.modelValue || []);
+  const internalSchedules = Vue.ref(props.schedules || []);
   Vue.watch(
-    () => props.modelValue,
+    () => props.schedules,
     (newSchedules) => {
       internalSchedules.value = newSchedules.map(
         (s) => new SiteOperationSchedule(s),
@@ -33,7 +31,7 @@ export function useIndex(props, emit) {
     // ログ出力（開発環境のみ）
     if (isDev) {
       logger.info({
-        message: "Updating modelValue with new schedules",
+        message: "Updating schedules with new schedules",
         newSchedules,
       });
     }
@@ -53,7 +51,7 @@ export function useIndex(props, emit) {
     internalSchedules.value = newSchedules;
 
     // 親コンポーネントに更新を通知
-    emit("update:modelValue", newSchedules);
+    emit("update:schedules", newSchedules);
   }
   /*****************************************************************************
    * COMPUTED PROPERTIES
