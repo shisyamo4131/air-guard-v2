@@ -27,7 +27,7 @@ export function useIndex(props, emit) {
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
-  function handleUpdateModelValue(newSchedules) {
+  async function handleUpdateModelValue(newSchedules) {
     // ログ出力（開発環境のみ）
     if (isDev) {
       logger.info({
@@ -52,6 +52,9 @@ export function useIndex(props, emit) {
 
     // 親コンポーネントに更新を通知
     emit("update:schedules", newSchedules);
+
+    // props.onUpdate を実行
+    await props.onUpdate(newSchedules);
   }
   /*****************************************************************************
    * COMPUTED PROPERTIES
