@@ -5,7 +5,7 @@
  * - このコンポーネント自身は現場稼働予定データを編集する機能は持ちませんが
  *   楽観的更新のために `props.schedule` で受け取った現場稼働予定データを複製して
  *   管理します。
- *   デフォルトスロットに差し込まれた編集用コンポーネントが onUpdate:schedule イベントを
+ * - デフォルトスロットに差し込まれた編集用コンポーネントの onUpdate:modelValue イベントを
  *   受け取ると、自身が管理する現場稼働予定データを更新し、さらに update:schedule イベントを
  *   発火して編集後の現場稼働予定データを親コンポーネントに伝達します。
  *
@@ -14,7 +14,9 @@
  * @prop {Object} schedule - 現場稼働予定データオブジェクト（デフォルト: 空の SiteOperationSchedule インスタンス）
  * @prop {Boolean} showActions - アクションボタンを表示するかどうか（デフォルト: false）
  *
- * @slot default - カード本文のスロット。スロットスコープで `schedule` を受け取ります。
+ * @slot default - カード本文のスロット。スロットスコープで `schedule` を提供します。
+ *                 また、`model` オブジェクトは `modelValue` と `onUpdate:modelValue` を含み、
+ *                 編集用コンポーネントにバインドして利用できます。
  *
  * @emits click:notify - 作業員への通知ボタンがクリックされたときに発火
  * @emits click:duplicate - 複製ボタンがクリックされたときに発火

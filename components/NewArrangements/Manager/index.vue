@@ -49,8 +49,8 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
         <DraggableOperationSchedules v-bind="cellProps">
           <template #default="draggableSchedulesProps">
             <SiteOperationScheduleCard v-bind="draggableSchedulesProps">
-              <template #default="{ modelValue }">
-                <DraggableWorkers :model-value="modelValue">
+              <template #default="{ model }">
+                <DraggableWorkers v-bind="model">
                   <template #default="DraggableWorkersProps">
                     <SiteOperationScheduleWorkerTag
                       v-bind="DraggableWorkersProps"

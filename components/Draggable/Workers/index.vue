@@ -4,7 +4,8 @@
  * @file components/Draggable/Workers/index.vue
  * @description 現場作業員情報表示用のドラッグ可能なリストコンポーネントです。
  * - `modelValue` プロパティとして `SiteOperationSchedule` インスタンスを受け取り、
- *   その `workers` 配列をドラッグ可能なリストとして表示します
+ *   その `workers` 配列をドラッグ可能なリストとして提供する Draggable コンポーネントです。
+ * - `default` スロットから `worker` を提供します。
  * - 作業員の追加・順序変更・削除が行われると、`update:modelValue` イベントが発火し、
  *   新しい `SiteOperationSchedule` インスタンスがペイロードとして渡されます。
  *

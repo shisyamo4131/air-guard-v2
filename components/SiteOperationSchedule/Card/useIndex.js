@@ -51,8 +51,11 @@ export function useIndex(props, emit) {
    */
   const defaultSlotProps = Vue.computed(() => {
     return {
-      modelValue: internalModelValue.value,
-      "onUpdate:modelValue": handleUpdateModelValue,
+      schedule: internalModelValue.value,
+      model: {
+        modelValue: internalModelValue.value,
+        "onUpdate:modelValue": handleUpdateModelValue,
+      },
     };
   });
 
