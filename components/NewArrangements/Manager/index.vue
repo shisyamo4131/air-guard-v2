@@ -1,4 +1,6 @@
 <script setup>
+import Table from "@/components/OperationSchedules/Table/index.vue";
+import { SiteOperationSchedule } from "@/schemas";
 import { useDateRange } from "@/composables/useDateRange";
 import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
@@ -39,18 +41,40 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
   siteShiftTypeOrder,
   columnWidth: 240,
 });
+
+async function updateSchedule(newSchedule) {
+  await newSchedule.update();
+}
+
+async function updateSchedules(newSchedules) {
+  await SiteOperationSchedule.runTransaction(async (transaction) => {
+    const promises = newSchedules.map((schedule) => {
+      return schedule.update({ transaction });
+    });
+    await Promise.all(promises);
+  });
+}
 </script>
 
 <template>
   <div class="d-flex flex-grow-1 overflow-auto fill-height">
     <!-- TABLE -->
-    <OperationSchedulesTable v-bind="tableAttrs">
+    <Table v-bind="tableAttrs">
       <template #cell="cellProps">
-        <DraggableOperationSchedules v-bind="cellProps">
+        <DraggableOperationSchedules
+          v-bind="cellProps"
+          @update:schedules="updateSchedules"
+        >
           <template #default="draggableSchedulesProps">
-            <SiteOperationScheduleCard v-bind="draggableSchedulesProps">
+            <SiteOperationScheduleCard
+              v-bind="draggableSchedulesProps"
+              @update:modelValue="updateSchedule"
+            >
               <template #default="{ model }">
-                <DraggableWorkers v-bind="model">
+                <DraggableWorkers
+                  v-bind="model"
+                  @update:modelValue="updateSchedule"
+                >
                   <template #default="DraggableWorkersProps">
                     <SiteOperationScheduleWorkerTag
                       v-bind="DraggableWorkersProps"
@@ -62,6 +86,6 @@ const { attrs: tableAttrs } = useOperationScheduleTable({
           </template>
         </DraggableOperationSchedules>
       </template>
-    </OperationSchedulesTable>
+    </Table>
   </div>
 </template>

@@ -32,7 +32,7 @@ export function useIndex(props, emit) {
     if (isDev) {
       logger.info({
         message: "Updating schedules with new schedules",
-        newSchedules,
+        data: newSchedules,
       });
     }
 
@@ -52,10 +52,8 @@ export function useIndex(props, emit) {
 
     // 親コンポーネントに更新を通知
     emit("update:schedules", newSchedules);
-
-    // props.onUpdate を実行
-    await props.onUpdate(newSchedules);
   }
+
   /*****************************************************************************
    * COMPUTED PROPERTIES
    *****************************************************************************/

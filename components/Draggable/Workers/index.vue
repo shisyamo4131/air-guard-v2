@@ -24,6 +24,7 @@
 import draggable from "vuedraggable";
 import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
+import { SiteOperationSchedule } from "@/schemas";
 
 defineOptions({ name: "DraggableWorkers" });
 
@@ -38,7 +39,11 @@ const _props = defineProps({
   // vue-draggable の item key 名
   itemKey: { type: String, default: "workerId" },
   // 現場稼働予定オブジェクト
-  modelValue: { type: Object, required: true },
+  modelValue: {
+    type: Object,
+    required: true,
+    validator: (val) => val instanceof SiteOperationSchedule,
+  },
 });
 const props = useDefaults(_props, "DraggableWorkers");
 
@@ -51,7 +56,7 @@ const { attrs, defaultSlotProps } = useIndex(props, emit);
 </script>
 
 <template>
-  <draggable v-bind="attrs">
+  <draggable v-bind="attrs" class="fill-height">
     <template #item="{ element: worker }">
       <div>
         <slot name="default" v-bind="{ worker, ...defaultSlotProps }" />
