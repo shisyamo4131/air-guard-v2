@@ -27,7 +27,7 @@ async function getSchemaClass(className) {
   // Check if the requested class exists in the cached package
   if (!schemaPackage[className]) {
     throw new Error(
-      `Schema class "${className}" not found in @shisyamo4131/air-guard-v2-schemas`
+      `Schema class "${className}" not found in @shisyamo4131/air-guard-v2-schemas`,
     );
   }
 
@@ -47,7 +47,7 @@ export const onUpdateCustomer = onDocumentUpdated(
     const data = event.data.after.data();
 
     logger.info(
-      `[onUpdateCustomer] Customer updated: ${customerId} in Company: ${companyId}`
+      `[onUpdateCustomer] Customer updated: ${customerId} in Company: ${companyId}`,
     );
 
     try {
@@ -58,18 +58,18 @@ export const onUpdateCustomer = onDocumentUpdated(
       });
 
       logger.info(
-        `[onUpdateCustomer] Successfully synced ${updatedCount} Sites for Customer ${customerId} in Company ${companyId}`
+        `[onUpdateCustomer] Successfully synced ${updatedCount} Sites for Customer ${customerId} in Company ${companyId}`,
       );
     } catch (error) {
       logger.error(
         `[onUpdateCustomer] Failed to sync Sites for Customer ${customerId} in Company ${companyId}:`,
-        error
+        error,
       );
       throw error;
     }
 
     return null;
-  }
+  },
 );
 
 /**
@@ -89,13 +89,13 @@ async function syncCustomersInSites({ companyId, customerId, customerData }) {
 
   if (snapshot.empty) {
     logger.info(
-      `[syncCustomersInSites] No Sites found for Customer ${customerId} in Company ${companyId}`
+      `[syncCustomersInSites] No Sites found for Customer ${customerId} in Company ${companyId}`,
     );
     return 0;
   }
 
   logger.info(
-    `[syncCustomersInSites] Found ${snapshot.size} Sites for Customer ${customerId} in Company ${companyId}`
+    `[syncCustomersInSites] Found ${snapshot.size} Sites for Customer ${customerId} in Company ${companyId}`,
   );
 
   try {
@@ -109,14 +109,14 @@ async function syncCustomersInSites({ companyId, customerId, customerData }) {
     });
 
     logger.info(
-      `[syncCustomersInSites] Updated ${docRefs.length} Sites for Customer ${customerId} in Company ${companyId}`
+      `[syncCustomersInSites] Updated ${docRefs.length} Sites for Customer ${customerId} in Company ${companyId}`,
     );
 
     return docRefs.length;
   } catch (error) {
     logger.error(
       `[syncCustomersInSites] Error syncing Customer ${customerId} in Company ${companyId} to Sites:`,
-      error
+      error,
     );
     throw error;
   }
@@ -147,12 +147,12 @@ async function batchUpdateDocuments({ docRefs, updateData, batchSize = 300 }) {
   try {
     await Promise.all(batchArray.map((batch) => batch.commit()));
     logger.info(
-      `[batchUpdateDocuments] Successfully updated ${docRefs.length} documents in ${batchArray.length} batches`
+      `[batchUpdateDocuments] Successfully updated ${docRefs.length} documents in ${batchArray.length} batches`,
     );
   } catch (error) {
     logger.error(
       `[batchUpdateDocuments] Failed to commit batches (${docRefs.length} documents):`,
-      error
+      error,
     );
     throw error;
   }
