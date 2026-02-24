@@ -19,7 +19,15 @@ export function useIndex(props, emit) {
    *****************************************************************************/
   function handleUpdateModelValue(newVal) {
     internalModelValue.value.initialize(newVal);
-    emit("update:schedule", internalModelValue.value);
+
+    // Optimistic update の為に internalModelValue を newVal で更新。
+    // emit では newVal を渡す。
+    // -> Optimistic Update の為に親への通知直前に `internalModelValue` を更新しているだけで、
+    //    本来は `newVal` がそのまま emit されるべき。
+    // -> また、`newVal` を emit しておけば親コンポーネント側でスケジュールインスタンスの
+    //    `beforeUpdate` プロパティを参照することもできる。
+    // emit("update:schedule", internalModelValue.value);
+    emit("update:schedule", newVal);
   }
 
   /*****************************************************************************
@@ -29,7 +37,7 @@ export function useIndex(props, emit) {
    * v-card-title のクラスを返します。
    */
   const titleClass = Vue.computed(() => {
-    return ["d-flex", "text-subtitle-1", "font-weight-regular", "align-center"];
+    return ["d-flex", "text-subtitle-2", "font-weight-regular", "align-center"];
   });
 
   /**
@@ -44,6 +52,13 @@ export function useIndex(props, emit) {
    */
   const timeLabel = Vue.computed(() => {
     return `${props.schedule.startTime} - ${props.schedule.endTime}`;
+  });
+
+  /**
+   * 資格チップを表示するかどうかを返します。
+   */
+  const showQualificationChip = Vue.computed(() => {
+    return props.schedule.qualificationRequired;
   });
 
   /**
@@ -63,6 +78,7 @@ export function useIndex(props, emit) {
     titleClass,
     isDraggable,
     timeLabel,
+    showQualificationChip,
     defaultSlotProps,
   };
 }

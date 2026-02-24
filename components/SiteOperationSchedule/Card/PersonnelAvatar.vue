@@ -10,12 +10,12 @@ const color = computed(() => {
 });
 
 const content = computed(() => {
-  return props.schedule?.requiredPersonnelCount || "10";
+  return props.schedule?.requiredPersonnel || "-";
 });
 </script>
 
 <template>
-  <v-avatar :color="color" :size="28">
-    <span class="text-subtitle-2 white--text">{{ content }}</span>
+  <v-avatar :color="color" :size="20">
+    <span class="text-caption white--text">{{ content }}</span>
   </v-avatar>
 </template>

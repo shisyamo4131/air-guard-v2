@@ -19,13 +19,6 @@ export function useIndex(props, emit) {
   });
 
   /**
-   * 配置通知オブジェクトから通知オブジェクトを取得して返す
-   */
-  const notification = Vue.computed(() => {
-    return props.notifications?.[props.worker.notificationKey] || null;
-  });
-
-  /**
    * Tag コンポーネントに渡す属性の算出
    * - `worker`、`schedule`、`notifications` プロパティは除外して渡す
    * - `removable` 属性は `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化する
@@ -43,7 +36,11 @@ export function useIndex(props, emit) {
       highlightEndTime: isEndTimeModified.value,
       removable: props.removable && scheduleIsEditable,
       isDraggable: props.isDraggable && scheduleIsEditable,
-      "onClick:remove": () => emit("click:remove"),
+      "onClick:remove": () =>
+        emit("click:remove", {
+          workerId: worker.workerId,
+          isEmployee: worker.isEmployee,
+        }),
     };
   });
 
@@ -67,12 +64,13 @@ export function useIndex(props, emit) {
    */
   const notificationProps = Vue.computed(() => {
     const scheduleIsEditable = props.schedule?.isEditable || false;
+    const notification = props.notification || null;
     const result = {
       disabled: !scheduleIsEditable || props.disableNotification,
-      notification: notification.value,
+      notification,
     };
-    if (notification.value) {
-      result.onClick = () => emit("click:notification");
+    if (notification) {
+      result.onClick = () => emit("click:notification", notification);
     }
     return result;
   });

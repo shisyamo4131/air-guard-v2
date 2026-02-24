@@ -1,6 +1,6 @@
 <script setup>
 const emit = defineEmits([
-  "click:site-order",
+  "click:site-shift-type-order",
   "click:add-schedule",
   "click:workers",
 ]);
@@ -10,7 +10,7 @@ const btns = ref([
   {
     icon: "mdi-sort",
     color: "info",
-    onClick: () => emit("click:site-order"),
+    onClick: () => emit("click:site-shift-type-order"),
   },
   {
     icon: "mdi-file-document-plus",

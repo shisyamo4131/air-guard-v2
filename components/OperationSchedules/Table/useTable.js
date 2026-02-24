@@ -63,6 +63,23 @@ export function useTable(props) {
   });
 
   /**
+   * テーブルの最小幅を計算して返します。
+   * - table-layout: fixed をモバイルで機能させるために必要です。
+   * NOTE: Copilot が生成したコード。table-layout: fixed を使用する場合に
+   *       テーブルの最小幅も指定する必要があるとのことだが、これがなくても
+   *       うまく動いている。一旦コードは残すが、後で不要なら削除するかもしれない。
+   */
+  const tableMinWidth = Vue.computed(() => {
+    if (!props.columnWidth) return undefined;
+    const columnWidthValue =
+      typeof props.columnWidth === "number"
+        ? props.columnWidth
+        : parseInt(props.columnWidth);
+    if (isNaN(columnWidthValue)) return undefined;
+    return `${columnWidthValue * currentDayCount.value}px`;
+  });
+
+  /**
    * groupKey でグループ化した稼働予定データのマップを返します。
    * - キー: groupKey (例: "morning-2023-01-01")
    * - 値: { total, count, schedules, hasMultiple }
@@ -105,6 +122,7 @@ export function useTable(props) {
   Vue.provide("resolvedColumnWidth", resolvedColumnWidth);
   Vue.provide("resolvedDayHeight", resolvedDayHeight);
   Vue.provide("resolvedWeekdayHeight", resolvedWeekdayHeight);
+  Vue.provide("tableMinWidth", tableMinWidth); // 不要かもしれない。コードを参照。
   Vue.provide("groupKeyMappedData", groupKeyMappedData);
 
   return {
@@ -115,5 +133,6 @@ export function useTable(props) {
     resolvedColumnWidth,
     resolvedDayHeight,
     resolvedWeekdayHeight,
+    tableMinWidth, // 不要かもしれない。コードを参照。
   };
 }

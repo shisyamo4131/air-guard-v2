@@ -22,31 +22,52 @@
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - day - 各日付ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - append-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - prepend-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - weekday - 各曜日ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
+ *
  * @slot - prepend-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - site-shift-type-order - 各現場行のカスタム表示用スロット
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - append-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
  *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *
  * @slot - cell - 各セルのカスタム表示用スロット
  *         @property {String} siteId - 現場ID
  *         @property {String} shiftType - シフトタイプ
@@ -59,6 +80,7 @@
  *         @property {Number} total - 総必要人員数
  *         @property {Array} schedules - 現場稼働予定ドキュメント配列
  *         @property {Function} onClick - クリック時のコールバック関数
+ *
  * @slot - footer - 各日付フッターのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *****************************************************************************/
@@ -131,6 +153,11 @@ const _props = defineProps({
    */
   schedules: { type: Array, default: () => [] },
   /**
+   * 選択された日付
+   * - 指定された日付に該当するセル以外をぼやけさせます。
+   */
+  selectedDate: { type: String, default: undefined },
+  /**
    * 現場オーダー配列
    * - 各現場オーダーのデータオブジェクトを含む配列を指定します。
    */
@@ -152,7 +179,7 @@ const _props = defineProps({
    */
   weekdayHeight: { type: [String, Number], default: undefined },
 });
-const props = useDefaults(_props, "SiteOperationScheduleTable");
+const props = useDefaults(_props, "OperationSchedulesTable");
 const emit = defineEmits(["click:cell"]);
 
 /** SETUP COMPOSABLES */
@@ -162,11 +189,12 @@ const {
   cellColorClass,
   groupKeyMappedData,
   resolvedColumnWidth,
+  tableMinWidth, // 不要かもしれない。コードを参照。
 } = useTable(props);
 </script>
 
 <template>
-  <v-table id="site-operation-schedule-table" fixed-header>
+  <v-table id="operation-schedules-table" fixed-header>
     <!-- 列幅定義 -->
     <colgroup>
       <col
@@ -259,7 +287,15 @@ const {
                 : cellColorClass[dayObject.format('d')],
             ]"
           >
-            <div class="d-flex flex-column justify-start fill-height">
+            <div
+              class="d-flex flex-column justify-start fill-height"
+              :style="{
+                filter:
+                  selectedDate && selectedDate !== dayObject.date
+                    ? 'blur(4px)'
+                    : 'none',
+              }"
+            >
               <!-- SLOT: cell -->
               <!-- { siteId, shiftType, date, dateAt, groupKey, dayObject } -->
               <slot
@@ -270,6 +306,7 @@ const {
                   date: dayObject.date,
                   dateAt: dayObject.dateAt,
                   groupKey: `${order.key}-${dayObject.date}`,
+                  isSelected: selectedDate && selectedDate === dayObject.date,
                   dayObject,
                   ...groupKeyMappedData.get(`${order.key}-${dayObject.date}`),
                   onClick: () => {
@@ -300,6 +337,20 @@ const {
 </template>
 
 <style scoped>
+/* v-tableのスタイル */
+#operation-schedules-table {
+  display: flex;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+/* fixed テーブルに */
+/* min-width を指定する必要があるとのことだが、これがなくても うまく動いている。一旦コードは残すが、後で不要なら削除するかもしれない。 */
+#operation-schedules-table :deep(table) {
+  table-layout: fixed !important;
+  /* min-width: v-bind(tableMinWidth) !important; */
+}
+
 .fixed-left {
   position: sticky;
   left: 16px;

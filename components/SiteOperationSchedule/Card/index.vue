@@ -57,10 +57,13 @@ const emit = defineEmits([
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { titleClass, isDraggable, timeLabel, defaultSlotProps } = useIndex(
-  props,
-  emit,
-);
+const {
+  titleClass,
+  isDraggable,
+  timeLabel,
+  showQualificationChip,
+  defaultSlotProps,
+} = useIndex(props, emit);
 
 provide("props", props);
 provide("emit", emit);
@@ -82,7 +85,14 @@ provide("emit", emit);
           style="min-width: 0"
         >
           <!-- 要資格チップ -->
-          <v-chip class="mr-1" label size="x-small" text="要資格" color="red" />
+          <v-chip
+            v-if="showQualificationChip"
+            class="mr-1"
+            label
+            size="x-small"
+            text="要資格"
+            color="red"
+          />
           {{ props.schedule.workDescription || "通常警備" }}
         </span>
       </v-card-title>
@@ -91,13 +101,8 @@ provide("emit", emit);
         <AtomsIconsDraggable v-if="isDraggable" />
       </template>
 
-      <!-- 人数不足メッセージ -->
-      <v-card-subtitle
-        v-if="props.schedule.isPersonnelShortage"
-        class="text-caption"
-      >
-        {{ timeLabel }}
-        <div class="text-error">必要人数を満たしていません。</div>
+      <v-card-subtitle class="text-caption">
+        <div>{{ timeLabel }}</div>
       </v-card-subtitle>
     </v-card-item>
 
@@ -105,6 +110,14 @@ provide("emit", emit);
       <!-- SLOT: default -->
       <slot name="default" v-bind="defaultSlotProps" />
     </v-card-text>
+
+    <!-- 人数不足メッセージ -->
+    <div
+      v-if="props.schedule.isPersonnelShortage"
+      class="text-center text-caption text-error"
+    >
+      必要人数を満たしていません。
+    </div>
 
     <!-- ACTIONS -->
     <Actions v-if="props.showActions" />

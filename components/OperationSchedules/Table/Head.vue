@@ -5,21 +5,33 @@
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - day - 各日付ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - append-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - prepend-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - weekday - 各曜日ヘッダーのカスタム表示用スロット
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {boolean} isSelected - 日付が選択されているかどうか
+ *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *****************************************************************************/
 const props = inject("props");
 const daysInRangeArray = inject("daysInRangeArray");
@@ -44,15 +56,51 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
       >
         <div class="d-flex justify-center">
           <!-- SLOT: prepend-day -->
-          <slot name="prepend-day" v-bind="{ dayObject }" />
+          <slot
+            name="prepend-day"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          />
 
           <!-- SLOT: day -->
-          <slot name="day" v-bind="{ dayObject }">
+          <slot
+            name="day"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          >
             <span>{{ dayObject.format(props.dayFormat) }}</span>
           </slot>
 
           <!-- SLOT: append-day -->
-          <slot name="append-day" v-bind="{ dayObject }" />
+          <slot
+            name="append-day"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          />
         </div>
       </th>
     </tr>
@@ -71,10 +119,34 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
       >
         <div class="d-flex justify-center">
           <!-- SLOT: prepend-weekday -->
-          <slot name="prepend-weekday" v-bind="{ dayObject }" />
+          <slot
+            name="prepend-weekday"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          />
 
           <!-- SLOT: weekday -->
-          <slot name="weekday" v-bind="{ dayObject }">
+          <slot
+            name="weekday"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          >
             <div class="d-flex align-center">
               <span>{{ dayObject.format(props.weekdayFormat) }}</span>
               <v-icon
@@ -87,7 +159,19 @@ const resolvedWeekdayHeight = inject("resolvedWeekdayHeight");
           </slot>
 
           <!-- SLOT: append-weekday -->
-          <slot name="append-weekday" v-bind="{ dayObject }" />
+          <slot
+            name="append-weekday"
+            v-bind="{
+              dayObject,
+              isSelected:
+                props.selectedDate && props.selectedDate === dayObject.date,
+              holidayIcon: {
+                icon: props.holidayIcon,
+                color: props.holidayIconColor,
+                size: 'x-small',
+              },
+            }"
+          />
         </div>
       </th>
     </tr>

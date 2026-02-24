@@ -20,6 +20,7 @@ export function useIndex(props, emit) {
       internalSchedules.value = newSchedules.map(
         (s) => new SiteOperationSchedule(s),
       );
+      internalSchedules.value.sort((a, b) => a.displayOrder - b.displayOrder);
     },
     { immediate: true, deep: true },
   );
@@ -27,6 +28,17 @@ export function useIndex(props, emit) {
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
+  /**
+   * 引数で受け取った新しいスケジュール配列を元に、siteId, shiftType, dateAt, displayOrder を更新し、
+   * 内部状態を更新した後、親コンポーネントに更新を通知します。
+   * - ドラッグアンドドロップによるスケジュールの順序変更や、他のグループからのスケジュールの移動など、
+   *   スケジュール配列が変更された際に呼び出されます。
+   * - 他のグループからのスケジュールの移動の場合、siteId, shiftType, dateAt が移動元の値のままであるため
+   *   これらを props から取得して更新します。
+   * - 順序変更の場合は displayOrder を新しい配列のインデックスに基づいて更新します。
+   * @param {Array} newSchedules - ドラッグアンドドロップ後の新しいスケジュール配列
+   * @returns {Promise<void>}
+   */
   async function handleUpdateModelValue(newSchedules) {
     // ログ出力（開発環境のみ）
     if (isDev) {

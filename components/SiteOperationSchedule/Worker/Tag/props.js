@@ -15,6 +15,7 @@ export default {
   editIcon: { type: String, default: "mdi-pencil" },
   hideEdit: { type: Boolean, default: false },
   hideNotification: { type: Boolean, default: false },
+  notification: { type: Object, default: null }, // 通知オブジェクト
   notifications: { type: Object, default: null }, // 配置通知オブジェクトのマップ
   schedule: { type: Object, required: true }, // SiteOperationSchedule インスタンス
   worker: { type: Object, required: true }, // SiteOperationScheduleDetail インスタンス

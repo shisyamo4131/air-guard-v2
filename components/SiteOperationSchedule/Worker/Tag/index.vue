@@ -10,8 +10,8 @@
  * - `worker` の時刻が `schedule` の時刻と異なる場合、時刻表示が強調表示されます。
  * - WorkerTag コンポーネントが受け付ける `id`, `startTime`, `endTime`, `isEmployee` プロパティは
  *   `worker` オブジェクトから自動的に取得されます。
- * - `notifications` プロパティとして、`notificationKey` をキーとした配置通知オブジェクトのマップを受け取ります。
- * - `worker` プロパティが持つ `notificationKey` に該当する配置通知オブジェクトを検索し、これを `ArrangementNotificationChip` コンポーネントに渡して表示します。
+ * - `notification` プロパティとして、配置通知オブジェクトを受け取ります。
+ * - `notification` プロパティが有効である場合、`ArrangementNotificationChip` コンポーネントが表示されます。
  * - 編集ボタンと通知表示エリアは `props.schedule` の `isEditable` プロパティが `false` の場合、自動的に無効化されます。
  * - `removable` プロパティは `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
  * - `isDraggable` プロパティは `props.isDraggable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
@@ -24,7 +24,7 @@
  * @property {String} editIcon - 編集ボタンのアイコン。
  * @property {Boolean} hideEdit - 編集ボタンを非表示にするかどうか。
  * @property {Boolean} hideNotification - 通知表示エリアを非表示にするかどうか。
- * @property {Object} notifications - 配置通知オブジェクトのマップ。
+ * @property {Object} notification - 配置通知オブジェクト。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *

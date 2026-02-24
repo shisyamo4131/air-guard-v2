@@ -51,7 +51,7 @@ const btns = computed(() => {
 </script>
 
 <template>
-  <v-card-actions>
+  <v-card-actions style="min-height: unset" class="py-0">
     <v-spacer />
     <v-btn
       v-for="(btn, index) of btns"

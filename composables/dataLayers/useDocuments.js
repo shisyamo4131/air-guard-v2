@@ -21,6 +21,7 @@ import * as Schemas from "@/schemas";
  * @param {Ref<Array>} [options.options=[]] - Additional query options (e.g., orderBy, limit) when performing search.
  * @param {number} [options.minSearchLength=2] - Minimum length of `search` string to trigger search.
  * @param {boolean} [options.fetchAllOnEmpty=false] - If true, fetch all documents when `search` is null or empty.
+ * @param {Function} [callback=()=>{}] - Optional callback function invoked after documents are fetched.
  * @returns {Object} - An object containing the reactive `docs` array.
  */
 export function useDocuments(
@@ -30,7 +31,8 @@ export function useDocuments(
     options = Vue.ref([]),
     minSearchLength = 2,
     fetchAllOnEmpty = false,
-  } = {}
+  } = {},
+  callback = () => {},
 ) {
   /** VALIDATION */
 
@@ -57,7 +59,7 @@ export function useDocuments(
     const availableClasses = Object.keys(Schemas).join(", ");
     throw new Error(
       `Schema class "${className}" not found in @/schemas. ` +
-        `Available classes: ${availableClasses}`
+        `Available classes: ${availableClasses}`,
     );
   }
 
@@ -72,10 +74,13 @@ export function useDocuments(
   function subscribe() {
     if (search.value && search.value.length >= minSearchLength) {
       const constraints = search.value;
-      schemaInstance.subscribeDocs({ constraints, options: options.value });
+      schemaInstance.subscribeDocs(
+        { constraints, options: options.value },
+        callback,
+      );
     } else if (!search.value && fetchAllOnEmpty) {
       const constraints = options.value;
-      schemaInstance.subscribeDocs({ constraints });
+      schemaInstance.subscribeDocs({ constraints }, callback);
     } else {
       schemaInstance.unsubscribe();
     }

@@ -28,8 +28,7 @@ export function useIndex(props, emit) {
     (newSchedule) => {
       internalSchedule.value.initialize(newSchedule);
     },
-    // { immediate: true, deep: true },
-    { immediate: true },
+    { immediate: true, deep: true },
   );
 
   /*****************************************************************************
@@ -118,7 +117,9 @@ export function useIndex(props, emit) {
   function handleChange(event) {
     // ログ出力（開発環境のみ）
     if (isDev) {
-      logger.info({ message: `Workers changed: ${JSON.stringify(event)}` });
+      logger.info({
+        message: `Workers changed: ${JSON.stringify(Object.keys(event))}`,
+      });
     }
 
     try {
@@ -218,6 +219,12 @@ export function useIndex(props, emit) {
       isDraggable: internalSchedule.value.isEditable,
       removable: internalSchedule.value.isEditable,
       schedule: internalSchedule.value,
+      remove: ({ workerId, isEmployee }) => {
+        handleChange({ removed: { element: { workerId, isEmployee } } });
+      },
+      "onClick:remove": ({ workerId, isEmployee }) => {
+        handleChange({ removed: { element: { workerId, isEmployee } } });
+      },
     };
   });
   return { attrs, defaultSlotProps };

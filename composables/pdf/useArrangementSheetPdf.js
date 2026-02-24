@@ -64,9 +64,11 @@ function emptyCells(length, value) {
  * - options で事前に取得済みのドキュメントマップオブジェクトを渡すこともできます。
  * @param {Date} date - 出力対象日
  * @param {Object} [options] - オプション
+ * @param {Array<Object>} [options.schedules] - 事前に取得済みの現場稼働予定ドキュメント配列
  * @param {Array<Object>} [options.fetchEmployeeComposable] - 事前に取得済みの従業員ドキュメントマップオブジェクト
  * @param {Array<Object>} [options.fetchOutsourcerComposable] - 事前に取得済みの外注先ドキュメントマップオブジェクト
  * @param {Array<Object>} [options.fetchSiteComposable] - 事前に取得済みの現場ドキュメントマップオブジェクト
+ * @param {Array<Object>} [options.siteShiftTypeOrder] - 現場勤務区分オーダー
  * @returns {Promise<Array<Object>>} - 出力データの配列
  */
 const fetchData = async (date, options) => {
@@ -75,26 +77,30 @@ const fetchData = async (date, options) => {
   const { fetchOutsourcer, cachedOutsourcers } =
     options.fetchOutsourcerComposable;
   const { fetchSite, cachedSites } = options.fetchSiteComposable;
-  const siteOrder = options.siteOrder || [];
+  const siteShiftTypeOrder = options.siteShiftTypeOrder || [];
 
   const scheduleInstance = new SiteOperationSchedule();
-  const scheduleDocs = await scheduleInstance.fetchDocs({
-    constraints: [["where", "date", "==", date]],
-  });
+
+  // 現場稼働予定ドキュメントを取得
+  const scheduleDocs =
+    options?.schedules ||
+    (await scheduleInstance.fetchDocs({
+      constraints: [["where", "date", "==", date]],
+    }));
 
   // 現場稼働予定ドキュメントが存在しない場合は空の配列を返す
   if (scheduleDocs.length === 0) return [];
 
-  // siteOrder順に並べ替え
-  if (siteOrder.length > 0) {
+  // siteShiftTypeOrder順に並べ替え
+  if (siteShiftTypeOrder.length > 0) {
     scheduleDocs.sort((a, b) => {
-      const aIdx = siteOrder.findIndex(
-        (order) => order.siteId === a.siteId && order.shiftType === a.shiftType
+      const aIdx = siteShiftTypeOrder.findIndex(
+        (order) => order.siteId === a.siteId && order.shiftType === a.shiftType,
       );
-      const bIdx = siteOrder.findIndex(
-        (order) => order.siteId === b.siteId && order.shiftType === b.shiftType
+      const bIdx = siteShiftTypeOrder.findIndex(
+        (order) => order.siteId === b.siteId && order.shiftType === b.shiftType,
       );
-      // siteOrderに含まれていない場合は後ろに
+      // siteShiftTypeOrderに含まれていない場合は後ろに
       if (aIdx === -1 && bIdx === -1) return 0;
       if (aIdx === -1) return 1;
       if (bIdx === -1) return -1;
@@ -350,10 +356,10 @@ function splitWorkers(data, maxWorkers = WORKER_COLUMN_COUNT) {
 /*****************************************************************************
  * VFSフォントデータの読み込み（遅延読み込み用）
  *****************************************************************************/
-let pdfInitialized = false;
+let pdfMakeInstance = null;
 
 async function initializePdf() {
-  if (pdfInitialized) return;
+  if (pdfMakeInstance) return pdfMakeInstance;
 
   // 動的インポートで遅延読み込み
   const [pdfMake, vfs] = await Promise.all([
@@ -371,8 +377,8 @@ async function initializePdf() {
     },
   };
 
-  pdfInitialized = true;
-  return pdfMake.default;
+  pdfMakeInstance = pdfMake.default;
+  return pdfMakeInstance;
 }
 
 /*****************************************************************************
@@ -391,27 +397,36 @@ export function useArrangementSheetPdf({
   const fetchSiteComposable = providedFetchSiteComp || useFetchSite();
   const { company } = useAuthStore();
 
-  const open = async (date) => {
+  /**
+   * 指定された日付の配置表PDFを生成してブラウザで開きます。
+   * - `schedules` が渡された場合はそれを使用し、渡されない場合は内部で現場稼働予定ドキュメントを取得します。
+   * @param {Object} options - オプション
+   * @param {string} options.date - PDFを生成する対象の日付（YYYY-MM-DD形式）
+   * @param {Array<Object>} options.schedules - 事前に取得済みの現場稼働予定ドキュメント配列（オプション）
+   * @param {Array<Object>} options.siteShiftTypeOrder - 現場勤務区分オーダー（オプション）
+   */
+  const open = async ({ date, schedules, siteShiftTypeOrder } = {}) => {
     // 実際に使用する時点で初期化
     const pdfMake = await initializePdf();
 
     const fetchedData = await fetchData(date, {
+      schedules: schedules || undefined,
       fetchEmployeeComposable,
       fetchOutsourcerComposable,
       fetchSiteComposable,
-      siteOrder: company?.siteOrder || [],
+      siteShiftTypeOrder: siteShiftTypeOrder || [],
     });
 
     // workers分割済みデータを生成
     const expandedData = fetchedData.flatMap((data) =>
-      splitWorkers(data, WORKER_COLUMN_COUNT)
+      splitWorkers(data, WORKER_COLUMN_COUNT),
     );
 
     // 7件ごとに分割
     const chunkSize = 7;
     const chunks = Array.from(
       { length: Math.ceil(expandedData.length / chunkSize) },
-      (_, i) => expandedData.slice(i * chunkSize, (i + 1) * chunkSize)
+      (_, i) => expandedData.slice(i * chunkSize, (i + 1) * chunkSize),
     );
 
     // 各ページごとにテーブルを作成
