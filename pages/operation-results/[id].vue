@@ -64,6 +64,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
           <v-col cols="12">
             <air-item-manager
               v-bind="attrs"
+              disable-update
               :included-keys="[
                 'siteId',
                 'dateAt',
@@ -82,7 +83,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                     <v-list slim>
                       <v-list-item
                         :title="`${dayjs(doc.dateAt).format(
-                          'YYYY年M月D日（ddd）'
+                          'YYYY年M月D日（ddd）',
                         )}`"
                         subtitle="日付"
                       />
@@ -114,7 +115,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                     </v-list>
                     <v-card v-if="doc.remarks" :text="doc.remarks" />
                   </template>
-                  <template #actions>
+                  <template v-if="!activatorProps.disableUpdate" #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />
                   </template>
                 </v-card>

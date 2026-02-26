@@ -65,7 +65,7 @@ export function useOperationResultManager({
       missingComposables.push("fetchOutsourcerComposable");
     docManager.logger.info({
       message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
-        ", "
+        ", ",
       )}`,
     });
   }
