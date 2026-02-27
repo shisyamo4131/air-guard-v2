@@ -180,10 +180,17 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
     <v-row>
       <!-- Agreements management row -->
       <v-col cols="12">
-        <v-card>
-          <template #title>既定の取極め</template>
-          <OrganismsAgreementsManager v-bind="agreementsManager.attrs.value" />
-        </v-card>
+        <OrganismsAgreementsManager v-bind="agreementsManager.attrs.value">
+          <template #table="tableProps">
+            <v-card prepend-icon="mdi-file-document-multiple-outline">
+              <template #append>
+                <v-icon icon="mdi-plus" @click="() => tableProps.toCreate()" />
+              </template>
+              <template #title>既定の取極め</template>
+              <air-data-table v-bind="tableProps" />
+            </v-card>
+          </template>
+        </OrganismsAgreementsManager>
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>
