@@ -1,5 +1,7 @@
 <script setup></script>
 
 <template>
-  <div></div>
+  <div>
+    <AtomsBtnsEdit color="primary" size="small" />
+  </div>
 </template>

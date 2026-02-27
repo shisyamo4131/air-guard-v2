@@ -28,7 +28,7 @@ watch(
   (newVal) => {
     internalValue.value = newVal;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(dialog, (newVal) => {
@@ -70,9 +70,10 @@ function onClickCancel() {
           />
         </v-card-text>
         <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="onClickCancel">キャンセル</v-btn>
-          <v-btn color="primary" @click="onClickSelect">選択</v-btn>
+          <MoleculesActionsSelectCancel
+            @click:cancel="onClickCancel"
+            @click:select="onClickSelect"
+          />
         </v-card-actions>
       </v-card>
     </template>
