@@ -86,9 +86,6 @@ export default defineNuxtPlugin((app) => {
       AtomsBillingUnitTypeChip: {
         VChip: { density: "compact", size: "small" },
       },
-      AtomsDayTypeChip: {
-        VChip: { density: "compact", size: "small" },
-      },
       AtomsQualifiedTypeChip: {
         VChip: {
           density: "compact",
@@ -96,9 +93,6 @@ export default defineNuxtPlugin((app) => {
           size: "small",
           variant: "flat",
         },
-      },
-      AtomsShiftTypeChip: {
-        VChip: { density: "compact", size: "small" },
       },
     },
   });

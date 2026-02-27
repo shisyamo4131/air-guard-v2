@@ -18,7 +18,7 @@ const DEFAULT_DEFINITIONS = {
     },
   },
   DAY_TYPE: {
-    WEEKDAY: { ...CONSTANTS.DAY_TYPE_VALUES.WEEKDAY, color: "blue" },
+    WEEKDAY: { ...CONSTANTS.DAY_TYPE_VALUES.WEEKDAY, color: "dark-grey" },
     SATURDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SATURDAY, color: "light-blue" },
     SUNDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SUNDAY, color: "red" },
     HOLIDAY: { ...CONSTANTS.DAY_TYPE_VALUES.HOLIDAY, color: "pink" },
@@ -82,35 +82,39 @@ export function useConstants() {
     createConstantWithColors(
       DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
       "billingUnitType",
-      auth.company
-    )
+      auth.company,
+    ),
   );
 
   const DAY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.DAY_TYPE,
       "dayType",
-      auth.company
-    )
+      auth.company,
+    ),
   );
 
   const GENDER = computed(() =>
-    createConstantWithColors(DEFAULT_DEFINITIONS.GENDER, "gender", auth.company)
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.GENDER,
+      "gender",
+      auth.company,
+    ),
   );
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
       "shiftType",
-      auth.company
-    )
+      auth.company,
+    ),
   );
 
   const QUALIFIED_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
       "qualifiedType",
-      auth.company
-    )
+      auth.company,
+    ),
   );
 
   /**

@@ -51,14 +51,16 @@ function onClickCancel() {
 </script>
 
 <template>
-  <AtomsDialogsFullscreen v-model="dialog">
+  <AtomsDialogsFullscreen v-model="dialog" scrollable>
     <template #activator="activatorProps">
       <slot name="activator" v-bind="activatorProps" />
     </template>
     <template #default>
       <v-card>
-        <v-card-title v-if="title">{{ title }}</v-card-title>
-        <v-card-subtitle v-if="subtitle">{{ subtitle }}</v-card-subtitle>
+        <v-card-item>
+          <v-card-title v-if="title">{{ title }}</v-card-title>
+          <v-card-subtitle v-if="subtitle">{{ subtitle }}</v-card-subtitle>
+        </v-card-item>
         <v-card-text>
           <slot
             name="default"

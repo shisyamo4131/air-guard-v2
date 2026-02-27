@@ -1,11 +1,10 @@
 <script setup>
-/**
- * ShiftTypeChip.vue
- * @description ShiftTypeChip component to display shift type as a chip.
- * @version 1.0.0
+/*****************************************************************************
+ * @file ./components/ShiftType/Chip.vue
+ * @description 勤務区分チップコンポーネント
  * @author shisyamo4131
- */
-import { computed } from "vue";
+ *****************************************************************************/
+import * as Vue from "vue";
 import { useDefaults } from "vuetify";
 import { SHIFT_TYPE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { useConstants } from "@/composables/useConstants";
@@ -18,16 +17,16 @@ const _props = defineProps({
     validator: (value) => Object.keys(SHIFT_TYPE_VALUES).includes(value),
   },
 });
-const props = useDefaults(_props, "AtomsShiftTypeChip");
+const props = useDefaults(_props, "ShiftTypeChip");
 
 /** SETUP COMPOSABLES */
 const { SHIFT_TYPE } = useConstants();
 
 /** COMPUTED PROPERTIES */
-const text = computed(() => {
+const text = Vue.computed(() => {
   return SHIFT_TYPE.value[props.shiftType]?.title || "ERROR";
 });
-const color = computed(() => {
+const color = Vue.computed(() => {
   return SHIFT_TYPE.value[props.shiftType]?.color || undefined;
 });
 </script>
