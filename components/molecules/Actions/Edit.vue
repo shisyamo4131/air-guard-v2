@@ -31,6 +31,6 @@ const attrs = Vue.computed(() => {
 
 <template>
   <div class="d-flex flex-grow-1 justify-end">
-    <AtomsBtnsEdit v-bind="attrs" />
+    <AtomsBtnsEdit v-bind="{ ...attrs, ...$attrs }" />
   </div>
 </template>

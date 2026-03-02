@@ -39,7 +39,7 @@ const attrsSubmit = Vue.computed(() => {
 
 <template>
   <div class="flex-grow-1 d-flex justify-space-between">
-    <AtomsBtnsCancel v-bind="attrsCancel" />
-    <AtomsBtnsSubmit v-bind="attrsSubmit" />
+    <AtomsBtnsCancel v-bind="{ ...attrsCancel, ...$attrs }" />
+    <AtomsBtnsSubmit v-bind="{ ...attrsSubmit, ...$attrs }" />
   </div>
 </template>

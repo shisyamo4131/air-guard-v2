@@ -39,7 +39,7 @@ const attrsSelect = Vue.computed(() => {
 
 <template>
   <div class="flex-grow-1 d-flex justify-space-between">
-    <AtomsBtnsCancel v-bind="attrsCancel" />
-    <AtomsBtnsSelect v-bind="attrsSelect" />
+    <AtomsBtnsCancel v-bind="{ ...attrsCancel, ...$attrs }" />
+    <AtomsBtnsSelect v-bind="{ ...attrsSelect, ...$attrs }" />
   </div>
 </template>
