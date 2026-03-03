@@ -36,8 +36,16 @@ const DEFAULT_DEFINITIONS = {
     },
   },
   SHIFT_TYPE: {
-    DAY: { ...CONSTANTS.SHIFT_TYPE_VALUES.DAY, color: "deep-orange" },
-    NIGHT: { ...CONSTANTS.SHIFT_TYPE_VALUES.NIGHT, color: "indigo" },
+    DAY: {
+      ...CONSTANTS.SHIFT_TYPE_VALUES.DAY,
+      color: "orange-darken-3",
+      icon: "mdi-weather-sunny",
+    },
+    NIGHT: {
+      ...CONSTANTS.SHIFT_TYPE_VALUES.NIGHT,
+      color: "indigo",
+      icon: "mdi-weather-night",
+    },
   },
   QUALIFIED_TYPE: {
     BASE: { value: "BASE", title: "基本", color: "grey" },
