@@ -108,20 +108,8 @@ defineExpose({
     <template #default="{ items, isSelected, select }">
       <!-- SLOT: default -->
       <slot name="default" v-bind="{ items: agreements, isSelected, select }">
-        <AgreementCard
-          v-if="items.length === 1"
-          v-bind="{
-            agreement: items[0].raw,
-            isSelected: isSelected([items[0]]),
-            showEdit: props.showEdit,
-            showExpand: props.showExpand,
-            showSelect: props.showSelect,
-            'onClick:edit': () => emit('click:edit', items[0].raw),
-            'onClick:select': () => select([items[0]], !isSelected([items[0]])),
-          }"
-        />
         <!-- grid container -->
-        <div v-else class="grid-container">
+        <div class="grid-container">
           <div v-for="item in items" :key="item.key">
             <!-- SLOT: item -->
             <slot
