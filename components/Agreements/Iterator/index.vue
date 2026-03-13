@@ -7,12 +7,15 @@
  * @property {Array} agreements - 表示する取極め情報の配列
  * @property {Number} itemsPerPage - 1ページあたりのアイテム数
  * @property {String} shiftType - 勤務区分のフィルタリング条件（"ALL" | Agreement.SHIFT_TYPE のいずれか）
+ * @property {Boolean} showCreate - 新規登録機能の表示有無
  * @property {Boolean} showEdit - 編集機能の表示有無
  * @property {Boolean} showExpand - 展開機能の表示有無
  * @property {Boolean} showSelect - 選択機能の表示有無
  * @property {Boolean} useAll - 勤務区分フィルタに "ALL" オプションを表示するかどうか
  *
+ * @emits click:create - 新規登録ボタンがクリックされたときに発火するイベント。
  * @emits click:edit - 編集ボタンがクリックされたときに発火するイベント。引数は編集対象の取極め情報オブジェクト。
+ * @emits update:shift-type - 勤務区分が変更されたときに発火するイベント。引数は新しい勤務区分の値。
  *
  * @slot header - ヘッダーコンテンツを挿入するためのスロット。
  *  @property {Array} agreements - 現在表示されている取極め情報の配列
@@ -54,13 +57,14 @@ const _props = defineProps({
     validator: (value) =>
       ["ALL", ...Object.keys(Agreement.SHIFT_TYPE)].includes(value),
   },
+  showCreate: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
   showExpand: { type: Boolean, default: false },
   showSelect: { type: Boolean, default: false },
   useAll: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AgreementsIterator");
-const emit = defineEmits(["click:edit", "update:shift-type"]);
+const emit = defineEmits(["click:create", "click:edit", "update:shift-type"]);
 
 /** SETUP COMPOSABLES */
 const { agreements, shiftType, length, setShiftType } = useIndex(props, emit);
@@ -110,6 +114,10 @@ defineExpose({
       <slot name="default" v-bind="{ items: agreements, isSelected, select }">
         <!-- grid container -->
         <div class="grid-container">
+          <v-card v-if="props.showCreate" @click="() => emit('click:create')">
+            <v-empty-state color="primary" text="新規登録" icon="mdi-plus" />
+          </v-card>
+
           <div v-for="item in items" :key="item.key">
             <!-- SLOT: item -->
             <slot
@@ -147,6 +155,9 @@ defineExpose({
         <v-empty-state
           title="取極め情報はありません"
           icon="mdi-alert-circle-outline"
+          :action-text="props.showCreate ? '新規登録' : undefined"
+          color="primary"
+          @click:action="() => emit('click:create')"
         >
           <template #text>
             <div>指定された条件に該当する取極め情報は登録されていません。</div>
@@ -193,6 +204,9 @@ defineExpose({
   gap: 16px;
   /* 1列あたりの最小幅を252px、最大幅を利用可能なスペース全体に設定 */
   /* 最小幅は AgreementCard の min-width に合わせている */
-  grid-template-columns: repeat(auto-fit, minmax(252px, 1fr));
+  /* minmax: 指定した最小値、最大値の範囲内で定義 */
+  /* repeat: 繰り返し定義。auto-fill は利用可能なスペースに収まるだけ列を作成する。 */
+  /* 結果、親要素の横幅に対して最小幅252pxの列ができるだけ多く配置される */
+  grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
 }
 </style>

@@ -14,6 +14,7 @@ defineOptions({ name: "AgreementsManager" });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  isCompany: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "AgreementsManager");
@@ -34,7 +35,7 @@ const auth = useAuthStore();
     <template #before-unitPriceBase="{ field, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <v-row>
-          <v-col>
+          <v-col v-if="!props.isCompany">
             <AgreementsSelector
               :agreements="props.modelValue"
               clear-on-select
@@ -46,7 +47,12 @@ const auth = useAuthStore();
               "
             >
               <template #activator="{ props: activatorProps }">
-                <v-btn v-bind="activatorProps" block color="primary">
+                <v-btn
+                  v-bind="activatorProps"
+                  :disabled="!props.modelValue.length"
+                  block
+                  color="primary"
+                >
                   現場取極め参照
                 </v-btn>
               </template>
@@ -64,7 +70,12 @@ const auth = useAuthStore();
               "
             >
               <template #activator="{ props: activatorProps }">
-                <v-btn v-bind="activatorProps" block color="secondary">
+                <v-btn
+                  v-bind="activatorProps"
+                  :disabled="!auth.company.agreements.length"
+                  block
+                  color="secondary"
+                >
                   会社取極め参照
                 </v-btn>
               </template>
@@ -80,21 +91,23 @@ const auth = useAuthStore();
     </template>
 
     <template #table="tableProps">
-      <v-card prepend-icon="mdi-file-document-multiple-outline">
+      <!-- <v-card prepend-icon="mdi-file-document-multiple-outline">
         <template #append>
           <v-icon icon="mdi-plus" @click="() => tableProps.toCreate()" />
         </template>
-        <template #title>既定の取極め</template>
-        <!-- <air-data-table v-bind="tableProps" /> -->
-        <v-card-text class="pb-0">
-          <AgreementsIterator
-            :agreements="tableProps.items"
-            show-edit
-            show-expand
-            @click:edit="tableProps.toUpdate($event)"
-          />
-        </v-card-text>
-      </v-card>
+        <template #title>既定の取極め</template> -->
+      <!-- <air-data-table v-bind="tableProps" /> -->
+      <!-- <v-card-text class="pb-0"> -->
+      <AgreementsIterator
+        :agreements="tableProps.items"
+        show-create
+        show-edit
+        show-expand
+        @click:create="tableProps.toCreate()"
+        @click:edit="tableProps.toUpdate($event)"
+      />
+      <!-- </v-card-text>
+      </v-card> -->
     </template>
 
     <!-- その他のスロットをパススルー -->
