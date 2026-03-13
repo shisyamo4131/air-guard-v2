@@ -89,7 +89,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 <v-list slim>
                   <v-list-item
                     :title="`${dayjs(doc.dateAt).format(
-                      'YYYY年M月D日（ddd）'
+                      'YYYY年M月D日（ddd）',
                     )}`"
                     subtitle="日付"
                   />

@@ -23,6 +23,9 @@ import { useConstants } from "@/composables/useConstants";
 export function useIndex(props, emit) {
   const { DAY_TYPE, SHIFT_TYPE } = useConstants();
 
+  /** 単価情報表示切替スイッチ用 */
+  const isExpanded = Vue.ref(false);
+
   /**
    * 契約の開始日をフォーマットして表示するためのcomputedプロパティ。
    * 契約の開始日を"YYYY年MM月DD日(ddd)"の形式で表示するために、dayjsライブラリを使用。
@@ -115,18 +118,18 @@ export function useIndex(props, emit) {
   });
 
   /**
-   * 編集アクションコンポーネントに引き渡すプロパティ
+   * 時間を表すラベルを返す計算プロパティ
    */
-  const actionProps = Vue.computed(() => {
-    return {
-      density: "comfortable",
-      disabled: props.disabled,
-      loading: props.loading,
-      icon: true,
-      size: "small",
-      "onClick:edit": () => emit("click:edit"),
-    };
+  const timeLabel = Vue.computed(() => {
+    const startTime = props.agreement.startTime;
+    const endTime = props.agreement.endTime;
+    return `${startTime} - ${endTime}`;
   });
+
+  Vue.provide("props", props);
+  Vue.provide("emit", emit);
+  Vue.provide("isExpanded", isExpanded);
+
   return {
     dateAtLabel,
     dayType: Vue.computed(() => props.agreement.dayType),
@@ -138,6 +141,7 @@ export function useIndex(props, emit) {
     formatted,
     selectIcon,
     selectIconProps,
-    actionProps,
+    timeLabel,
+    isExpanded,
   };
 }

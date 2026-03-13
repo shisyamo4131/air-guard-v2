@@ -226,17 +226,7 @@ const agreementsManager = useAgreementsManager(doc, { useDefault: true });
 
       <!-- 取極め情報 -->
       <v-col cols="12">
-        <OrganismsAgreementsManager v-bind="agreementsManager.attrs.value">
-          <template #table="tableProps">
-            <v-card prepend-icon="mdi-file-document-multiple-outline">
-              <template #append>
-                <v-icon icon="mdi-plus" @click="() => tableProps.toCreate()" />
-              </template>
-              <template #title>取極め</template>
-              <air-data-table v-bind="tableProps" />
-            </v-card>
-          </template>
-        </OrganismsAgreementsManager>
+        <AgreementsManager v-bind="agreementsManager.attrs.value" />
       </v-col>
 
       <!-- 削除処理ボタン -->

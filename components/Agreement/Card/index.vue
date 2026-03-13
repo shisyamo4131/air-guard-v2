@@ -9,6 +9,7 @@
  * @prop {Boolean} loading - ローディング状態フラグ
  * @prop {Boolean} isSelected - 選択状態フラグ
  * @prop {Boolean} showEdit - 編集アイコン表示フラグ
+ * @prop {Boolean} showExpand - 単価情報表示スイッチ表示フラグ
  * @prop {Boolean} showSelect - 選択アイコン表示フラグ
  *
  * @emit click:select - 選択アイコンクリックイベント
@@ -16,6 +17,8 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
+import EditBtn from "./EditBtn.vue";
+import ShowPricesSwitch from "./ShowPricesSwitch.vue";
 
 /** SETUP PROPS */
 const _props = defineProps({
@@ -24,6 +27,7 @@ const _props = defineProps({
   isSelected: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
+  showExpand: { type: Boolean, default: true },
   showSelect: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AgreementCard");
@@ -39,12 +43,13 @@ const {
   shiftTypeIcon,
   shiftTypeLabel,
   selectIconProps,
-  actionProps,
+  timeLabel,
+  isExpanded,
 } = useIndex(props, emit);
 </script>
 
 <template>
-  <v-card style="min-width: 234px">
+  <v-card style="min-width: 252px">
     <!-- ヘッダー（勤務区分表示部）-->
     <v-card-text :class="['pa-2', `bg-${shiftTypeColor}`]" style="height: 36px">
       <div class="d-flex align-center">
@@ -55,7 +60,6 @@ const {
       </div>
     </v-card-text>
 
-    <!-- 単価情報テーブル -->
     <v-table class="rounded-0 text-caption" density="compact">
       <tbody>
         <tr>
@@ -74,30 +78,50 @@ const {
           </td>
         </tr>
         <tr>
-          <td>基本単価</td>
-          <td>{{ formatted.unitPriceBase }}</td>
-        </tr>
-        <tr>
-          <td>残業単価</td>
-          <td>{{ formatted.overTimeUnitPriceBase }}</td>
-        </tr>
-        <tr>
-          <td>資格単価</td>
-          <td>{{ formatted.unitPriceQualified }}</td>
-        </tr>
-        <tr>
-          <td>資格残業</td>
-          <td>{{ formatted.overTimeUnitPriceQualified }}</td>
+          <td>時間</td>
+          <td>{{ timeLabel }}</td>
         </tr>
       </tbody>
     </v-table>
 
-    <v-divider />
+    <!-- 単価情報テーブル -->
+    <v-expand-transition>
+      <div v-if="isExpanded">
+        <v-divider />
+        <v-table class="rounded-0 text-caption" density="compact">
+          <tbody>
+            <tr>
+              <td>基本単価</td>
+              <td>{{ formatted.unitPriceBase }}</td>
+            </tr>
+            <tr>
+              <td>残業単価</td>
+              <td>{{ formatted.overTimeUnitPriceBase }}</td>
+            </tr>
+            <tr>
+              <td>資格単価</td>
+              <td>{{ formatted.unitPriceQualified }}</td>
+            </tr>
+            <tr>
+              <td>資格残業</td>
+              <td>{{ formatted.overTimeUnitPriceQualified }}</td>
+            </tr>
+          </tbody>
+        </v-table>
+      </div>
+    </v-expand-transition>
 
-    <!-- 編集アクション -->
-    <v-card-actions v-if="props.showEdit" class="py-0" style="min-height: 36px">
-      <MoleculesActionsEdit v-bind="actionProps" />
-    </v-card-actions>
+    <!-- アクション -->
+    <div v-if="props.showEdit || props.showExpand">
+      <v-divider />
+      <v-card-actions class="py-0" style="min-height: 36px">
+        <!-- 単価情報表示スイッチ -->
+        <ShowPricesSwitch v-if="props.showExpand" />
+        <v-spacer />
+        <!-- 編集ボタン -->
+        <EditBtn v-if="props.showEdit" />
+      </v-card-actions>
+    </div>
   </v-card>
 </template>
 

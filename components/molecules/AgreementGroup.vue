@@ -65,7 +65,8 @@ defineExpose({
             v-if="agreement.key"
             :agreement="agreement"
             :isSelected="isSelected"
-            @click="toggle"
+            show-select
+            @click:select="toggle"
             variant="flat"
           />
           <v-card
