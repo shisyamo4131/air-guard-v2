@@ -207,10 +207,33 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 </v-card>
               </template>
               <template #[`input.agreement`]="inputProps">
-                <MoleculesAgreementGroup
+                <!-- <MoleculesAgreementGroup
                   v-bind="inputProps.attrs"
                   clearable
                   :items="site?.agreements || []"
+                /> -->
+                {{
+                  inputProps.attrs.modelValue
+                    ? [inputProps.attrs.modelValue]
+                    : []
+                }}
+                <AgreementsIterator
+                  v-bind="inputProps.attrs"
+                  :model-value="
+                    inputProps.attrs.modelValue
+                      ? [inputProps.attrs.modelValue]
+                      : []
+                  "
+                  clearable
+                  show-select
+                  return-object
+                  :agreements="site?.agreements || []"
+                  @update:modelValue="
+                    ($event) => {
+                      console.log($event[0]);
+                      inputProps.attrs['onUpdate:modelValue']($event[0]);
+                    }
+                  "
                 />
               </template>
               <template #after-agreement="inputProps">

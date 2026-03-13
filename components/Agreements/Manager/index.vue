@@ -91,13 +91,6 @@ const auth = useAuthStore();
     </template>
 
     <template #table="tableProps">
-      <!-- <v-card prepend-icon="mdi-file-document-multiple-outline">
-        <template #append>
-          <v-icon icon="mdi-plus" @click="() => tableProps.toCreate()" />
-        </template>
-        <template #title>既定の取極め</template> -->
-      <!-- <air-data-table v-bind="tableProps" /> -->
-      <!-- <v-card-text class="pb-0"> -->
       <AgreementsIterator
         :agreements="tableProps.items"
         show-create

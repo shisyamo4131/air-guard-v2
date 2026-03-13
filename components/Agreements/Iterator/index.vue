@@ -5,7 +5,9 @@
  * @author shisyamo4131
  *
  * @property {Array} agreements - 表示する取極め情報の配列
+ * @property {Boolean} clearable - 取極め情報の選択を解除するオプションを表示するかどうか
  * @property {Number} itemsPerPage - 1ページあたりのアイテム数
+ * @property {String} selectStrategy - アイテムの選択戦略（"single" | "page" | "all" のいずれか）
  * @property {String} shiftType - 勤務区分のフィルタリング条件（"ALL" | Agreement.SHIFT_TYPE のいずれか）
  * @property {Boolean} showCreate - 新規登録機能の表示有無
  * @property {Boolean} showEdit - 編集機能の表示有無
@@ -50,7 +52,9 @@ defineOptions({ name: "AgreementsIterator" });
 /** SETUP PROPS & EMITS */
 const _props = defineProps({
   agreements: { type: Array, default: () => [] },
+  clearable: { type: Boolean, default: false },
   itemsPerPage: { type: Number, default: 5 },
+  selectStrategy: { type: String, default: "single" },
   shiftType: {
     type: String,
     default: "DAY",
@@ -109,15 +113,25 @@ defineExpose({
     </template>
 
     <!-- DEFAULT -->
-    <template #default="{ items, isSelected, select }">
+    <template #default="{ items, isSelected, select, selectAll }">
       <!-- SLOT: default -->
-      <slot name="default" v-bind="{ items: agreements, isSelected, select }">
+      <slot
+        name="default"
+        v-bind="{ items: agreements, isSelected, select, selectAll }"
+      >
         <!-- grid container -->
         <div class="grid-container">
+          <!-- 選択解除カード -->
+          <v-card v-if="props.clearable" @click="select(items, false)">
+            <v-empty-state text="選択しない" icon="mdi-cancel" />
+          </v-card>
+
+          <!-- 新規登録カード -->
           <v-card v-if="props.showCreate" @click="() => emit('click:create')">
             <v-empty-state color="primary" text="新規登録" icon="mdi-plus" />
           </v-card>
 
+          <!-- ELEMENTS -->
           <div v-for="item in items" :key="item.key">
             <!-- SLOT: item -->
             <slot
