@@ -47,7 +47,7 @@ const schedulesManager = useSiteOperationSchedulesManager({
 });
 
 /** Agreements Manager */
-const agreementsManager = useAgreementsManager(doc, { useDefault: true });
+const agreementsManager = useAgreementsManager(doc);
 </script>
 
 <template>

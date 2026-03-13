@@ -3,11 +3,10 @@
  * @file ./components/organisms/AgreementsManager.vue
  * @description `AirArrayManager` をベースにした、取極め管理用コンポーネント
  * - 既存の取極めを選択するための UI を提供します。
- *
- * @prop {Array} selectableAgreements - 選択可能な取極めのリスト
  * 注意: その他のプロパティはすべて air-array-manager に渡されます。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { useAuthStore } from "@/stores/useAuthStore.js";
 
 defineOptions({ name: "AgreementsManager" });
 
@@ -15,32 +14,63 @@ defineOptions({ name: "AgreementsManager" });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  selectableAgreements: { type: Array, default: () => [] },
+  modelValue: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "AgreementsManager");
+const emit = defineEmits(["update:modelValue"]);
+
+/*****************************************************************************
+ * SETUP STORES
+ *****************************************************************************/
+const auth = useAuthStore();
 </script>
 
 <template>
-  <air-array-manager>
+  <air-array-manager
+    :model-value="props.modelValue"
+    @update:modelValue="emit('update:modelValue', $event)"
+  >
     <!-- 基本単価の上に `AgreementsSelector` を配置する -->
     <template #before-unitPriceBase="{ field, updateProperties }">
       <v-col v-bind="field.colsDefinition">
-        <AgreementsSelector
-          :agreements="props.selectableAgreements"
-          clear-on-select
-          return-object
-          @update:modelValue="
-            ($event) => {
-              updateProperties({ ...$event[0].billingInfo });
-            }
-          "
-        >
-          <template #activator="{ props: activatorProps }">
-            <v-btn v-bind="activatorProps" block color="primary">
-              取極めから参照設定
-            </v-btn>
-          </template>
-        </AgreementsSelector>
+        <v-row>
+          <v-col>
+            <AgreementsSelector
+              :agreements="props.modelValue"
+              clear-on-select
+              return-object
+              @update:modelValue="
+                ($event) => {
+                  updateProperties({ ...$event[0].billingInfo });
+                }
+              "
+            >
+              <template #activator="{ props: activatorProps }">
+                <v-btn v-bind="activatorProps" block color="primary">
+                  現場取極め参照
+                </v-btn>
+              </template>
+            </AgreementsSelector>
+          </v-col>
+          <v-col>
+            <AgreementsSelector
+              :agreements="auth.company.agreements"
+              clear-on-select
+              return-object
+              @update:modelValue="
+                ($event) => {
+                  updateProperties({ ...$event[0].billingInfo });
+                }
+              "
+            >
+              <template #activator="{ props: activatorProps }">
+                <v-btn v-bind="activatorProps" block color="secondary">
+                  会社取極め参照
+                </v-btn>
+              </template>
+            </AgreementsSelector>
+          </v-col>
+        </v-row>
       </v-col>
     </template>
 
