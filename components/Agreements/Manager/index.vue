@@ -4,7 +4,7 @@
  * @description `AirArrayManager` をベースにした、取極め管理用コンポーネント
  * - 既存の取極めを選択するための UI を提供します。
  *
- * @prop {Array} selectableItems - 選択可能な取極めのリスト
+ * @prop {Array} selectableAgreements - 選択可能な取極めのリスト
  * 注意: その他のプロパティはすべて air-array-manager に渡されます。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
@@ -15,7 +15,7 @@ defineOptions({ name: "AgreementsManager" });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  selectableItems: { type: Array, default: () => [] },
+  selectableAgreements: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "AgreementsManager");
 </script>
@@ -26,7 +26,7 @@ const props = useDefaults(_props, "AgreementsManager");
     <template #before-unitPriceBase="{ field, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <AgreementsSelector
-          :agreements="props.selectableItems"
+          :agreements="props.selectableAgreements"
           clear-on-select
           return-object
           @update:modelValue="
