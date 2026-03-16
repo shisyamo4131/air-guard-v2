@@ -2,11 +2,15 @@
 /*****************************************************************************
  * @file ./components/Agreements/Iterator/index.vue
  * @description 取極め情報表示用データイテレーターコンポーネント
+ * - v-data-iterator を拡張し、あらゆる形式の `modelValue` を受け取ることを可能にしています。
+ * - `update:modelValue` イベントのペイロードは、`selectStrategy` に応じて、単一の値、配列、またはオブジェクトになります。
+ *
  * @author shisyamo4131
  *
  * @property {Array} agreements - 表示する取極め情報の配列
  * @property {Boolean} clearable - 取極め情報の選択を解除するオプションを表示するかどうか
  * @property {Number} itemsPerPage - 1ページあたりのアイテム数
+ * @property {Object|Array|String|Number} modelValue - 選択されたアイテムの値。selectStrategy に応じて、単一の値、配列、またはオブジェクトになる。
  * @property {String} selectStrategy - アイテムの選択戦略（"single" | "page" | "all" のいずれか）
  * @property {String} shiftType - 勤務区分のフィルタリング条件（"ALL" | Agreement.SHIFT_TYPE のいずれか）
  * @property {Boolean} showCreate - 新規登録機能の表示有無
@@ -17,6 +21,7 @@
  *
  * @emits click:create - 新規登録ボタンがクリックされたときに発火するイベント。
  * @emits click:edit - 編集ボタンがクリックされたときに発火するイベント。引数は編集対象の取極め情報オブジェクト。
+ * @emits update:modelValue - 選択されたアイテムが変更されたときに発火するイベント。引数は selectStrategy に応じた形式の選択された値。
  * @emits update:shift-type - 勤務区分が変更されたときに発火するイベント。引数は新しい勤務区分の値。
  *
  * @slot header - ヘッダーコンテンツを挿入するためのスロット。
@@ -47,13 +52,14 @@ import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex.js";
 import { Agreement } from "@/schemas";
 
-defineOptions({ name: "AgreementsIterator" });
+defineOptions({ name: "AgreementsIterator", inheritAttrs: false });
 
 /** SETUP PROPS & EMITS */
 const _props = defineProps({
   agreements: { type: Array, default: () => [] },
   clearable: { type: Boolean, default: false },
   itemsPerPage: { type: Number, default: 5 },
+  modelValue: { type: [Array, Object, String, Number], default: null },
   selectStrategy: { type: String, default: "single" },
   shiftType: {
     type: String,
@@ -68,10 +74,18 @@ const _props = defineProps({
   useAll: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AgreementsIterator");
-const emit = defineEmits(["click:create", "click:edit", "update:shift-type"]);
+const emit = defineEmits([
+  "click:create",
+  "click:edit",
+  "update:shift-type",
+  "update:modelValue",
+]);
 
 /** SETUP COMPOSABLES */
-const { agreements, shiftType, length, setShiftType } = useIndex(props, emit);
+const { agreements, shiftType, length, setShiftType, modelValue } = useIndex(
+  props,
+  emit,
+);
 
 /** EXPOSE */
 defineExpose({
@@ -84,6 +98,7 @@ defineExpose({
 
 <template>
   <v-data-iterator
+    v-model="modelValue"
     item-value="key"
     :items="agreements"
     :items-per-page="props.itemsPerPage"

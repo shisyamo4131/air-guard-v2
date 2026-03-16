@@ -207,40 +207,18 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 </v-card>
               </template>
               <template #[`input.agreement`]="inputProps">
-                <!-- <MoleculesAgreementGroup
-                  v-bind="inputProps.attrs"
-                  clearable
-                  :items="site?.agreements || []"
-                /> -->
-                {{
-                  inputProps.attrs.modelValue
-                    ? [inputProps.attrs.modelValue]
-                    : []
-                }}
                 <AgreementsIterator
                   v-bind="inputProps.attrs"
-                  :model-value="
-                    inputProps.attrs.modelValue
-                      ? [inputProps.attrs.modelValue]
-                      : []
-                  "
                   clearable
                   show-select
                   return-object
                   :agreements="site?.agreements || []"
-                  @update:modelValue="
-                    ($event) => {
-                      console.log($event[0]);
-                      inputProps.attrs['onUpdate:modelValue']($event[0]);
-                    }
-                  "
                 />
               </template>
               <template #after-agreement="inputProps">
-                <v-col cols="12">
-                  <v-expand-transition>
+                <v-expand-transition>
+                  <v-col cols="12" v-if="!inputProps.item.hasAgreement">
                     <air-checkbox
-                      v-if="!inputProps.item.hasAgreement"
                       :model-value="inputProps.item.allowEmptyAgreement"
                       label="取極めなしを許容する"
                       hint="許容しない場合売上や請求として計上されません。"
@@ -251,8 +229,8 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                         })
                       "
                     />
-                  </v-expand-transition>
-                </v-col>
+                  </v-col>
+                </v-expand-transition>
                 <v-col cols="12">
                   <air-date-input
                     :model-value="inputProps.item.billingDateAt"

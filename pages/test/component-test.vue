@@ -7,9 +7,12 @@ const returnObject = ref(true);
 </script>
 
 <template>
-  <div style="width: 100%; height: 360px; border: 1px solid gray">
-    <v-card>
-      <v-empty-state color="primary" text="新規登録" icon="mdi-plus" />
-    </v-card>
-  </div>
+  <v-container>
+    <AgreementsIterator
+      v-model="selectedAgreement"
+      :agreements="auth.company.agreements"
+      show-select
+    />
+    <pre>{{ selectedAgreement }}</pre>
+  </v-container>
 </template>
