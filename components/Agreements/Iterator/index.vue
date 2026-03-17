@@ -52,7 +52,7 @@ import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex.js";
 import { Agreement } from "@/schemas";
 
-defineOptions({ name: "AgreementsIterator", inheritAttrs: false });
+defineOptions({ name: "AgreementsIterator" });
 
 /** SETUP PROPS & EMITS */
 const _props = defineProps({

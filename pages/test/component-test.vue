@@ -12,6 +12,7 @@ const returnObject = ref(true);
       v-model="selectedAgreement"
       :agreements="auth.company.agreements"
       show-select
+      return-object
     />
     <pre>{{ selectedAgreement }}</pre>
   </v-container>
