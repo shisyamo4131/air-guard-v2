@@ -11,6 +11,7 @@ const returnObject = ref(true);
     <AgreementsIterator
       v-model="selectedAgreement"
       :agreements="auth.company.agreements"
+      select-strategy="single"
       show-select
       return-object
     />

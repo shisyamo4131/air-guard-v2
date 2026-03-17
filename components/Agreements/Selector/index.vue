@@ -25,6 +25,11 @@ defineOptions({ name: "AgreementsSelector" });
  *****************************************************************************/
 const _props = defineProps({
   agreements: { type: Array, default: () => [] },
+  selectStrategy: {
+    type: String,
+    default: "page",
+    validator: (value) => ["single", "page", "all"].includes(value),
+  },
   maxWidth: { type: [String, Number], default: "600" },
   useAll: { type: Boolean, default: false },
   ...composableProps,
@@ -61,6 +66,7 @@ const { mobile } = useDisplay();
         <AgreementsIterator
           v-bind="iteratorProps"
           :agreements="props.agreements"
+          :select-strategy="props.selectStrategy"
           show-expand
           :use-all="props.useAll"
         />

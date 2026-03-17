@@ -2,6 +2,11 @@
  * @file ./composables/useDialogSelector.js
  * @description アイテム選択ダイアログ専用コンポーザブル
  * - ダイアログを使用したアイテム選択用コンポーネントに共通して適用するプロパティとロジックを提供します。
+ * @author shisyamo4131
+ *
+ * @exports props - コンポーネントに共通して適用すべきプロパティ定義
+ * @exports emits - コンポーネントが emit するイベントの定義
+ * @exports useDialogSelector - アイテム選択ダイアログ専用コンポーザブル関数
  *****************************************************************************/
 import * as Vue from "vue";
 

@@ -80,35 +80,12 @@ export function useIndex(props, emit) {
     internalShiftType.value = value;
   };
 
-  /**
-   * v-data-iterator の modelValue として使用する computed プロパティ
-   * props.modelValue が配列であればそのまま使用し、そうでなければ配列に変換して使用する
-   * セレクト戦略が "single" の場合は、配列の最初の要素を modelValue として emit する
-   * @returns {Array} v-data-iterator に渡す modelValue
-   */
-  const modelValue = computed({
-    get() {
-      return Array.isArray(props.modelValue)
-        ? props.modelValue
-        : [props.modelValue];
-    },
-    set(v) {
-      const returnValue = props.selectStrategy === "single" ? v[0] || null : v;
-      emit("update:modelValue", returnValue);
-    },
-  });
-
   return {
-    modelValue,
-
     // フィルタリングとソートを行った取極め情報の配列
     agreements: internalItems,
 
     // 選択された勤務区分
     shiftType: internalShiftType,
-
-    // 表示されているアイテムの総数
-    length: Vue.computed(() => internalItems.value.length),
 
     // 勤務区分を設定する関数
     setShiftType,

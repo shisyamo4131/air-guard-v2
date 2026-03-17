@@ -210,6 +210,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 <AgreementsIterator
                   v-bind="inputProps.attrs"
                   clearable
+                  select-strategy="single"
                   show-select
                   return-object
                   :agreements="site?.agreements || []"

@@ -2,22 +2,22 @@
 /*****************************************************************************
  * @file ./components/Agreements/Iterator/index.vue
  * @description 取極め情報表示用データイテレーターコンポーネント
- * - v-data-iterator を拡張し、あらゆる形式の `modelValue` を受け取ることを可能にしています。
+ * - `useExtendDataIterator` を使用して v-data-iterator を拡張しています。
  * - `update:modelValue` イベントのペイロードは、`selectStrategy` に応じて、単一の値、配列、またはオブジェクトになります。
  *
  * @author shisyamo4131
  *
  * @property {Array} agreements - 表示する取極め情報の配列
  * @property {Boolean} clearable - 取極め情報の選択を解除するオプションを表示するかどうか
- * @property {Number} itemsPerPage - 1ページあたりのアイテム数
+ * @property {Boolean} hideDefaultFooter - デフォルトのフッターを非表示にするかどうかを指定するプロパティ
  * @property {Object|Array|String|Number} modelValue - 選択されたアイテムの値。selectStrategy に応じて、単一の値、配列、またはオブジェクトになる。
- * @property {String} selectStrategy - アイテムの選択戦略（"single" | "page" | "all" のいずれか）
  * @property {String} shiftType - 勤務区分のフィルタリング条件（"ALL" | Agreement.SHIFT_TYPE のいずれか）
  * @property {Boolean} showCreate - 新規登録機能の表示有無
  * @property {Boolean} showEdit - 編集機能の表示有無
- * @property {Boolean} showExpand - 展開機能の表示有無
- * @property {Boolean} showSelect - 選択機能の表示有無
  * @property {Boolean} useAll - 勤務区分フィルタに "ALL" オプションを表示するかどうか
+ *
+ * - その他、v-data-iterator に実装されているすべてのプロパティが使用可能です。
+ * @see https://v3.vuetifyjs.com/en/api/v-data-iterator/#props
  *
  * @emits click:create - 新規登録ボタンがクリックされたときに発火するイベント。
  * @emits click:edit - 編集ボタンがクリックされたときに発火するイベント。引数は編集対象の取極め情報オブジェクト。
@@ -28,13 +28,16 @@
  *  @property {Array} agreements - 現在表示されている取極め情報の配列
  *  @property {String} shiftType - 現在選択されている勤務区分
  *  @property {Function} setShiftType - 勤務区分を選択するための関数
- *  @property {Object} components - ヘッダーで使用するコンポーネントのプロパティオブジェクト
- *   @property {Object} shiftTypeGroup - 勤務区分選択コンポーネント用のプロパティオブジェクト
+ *  @property {Boolean} useAll - 勤務区分フィルタに "ALL" オプションを表示するかどうか
+ *  - その他、v-data-iterator の header スロットで提供されるプロパティも使用可能です。
+ *  @see https://v3.vuetifyjs.com/en/api/v-data-iterator/#slots-header
  *
  * @slot default - 取極めオブジェクト群を表示するためのスロット。
  *  @property {Array} agreements - 現在表示されている取極め情報の配列
- *  @property {Function} isSelected - アイテムが選択されているかどうかを判定する関数
- *  @property {Function} select - アイテムを選択・非選択するための関数
+ *  @property {String} shiftType - 現在選択されている勤務区分
+ *  @property {Function} setShiftType - 勤務区分を選択するための関数
+ *  @property {Boolean} useAll - 勤務区分フィルタに "ALL" オプションを表示するかどうか
+ *  @see https://v3.vuetifyjs.com/en/api/v-data-iterator/#slots-default
  *
  * @slot item - 各取極め情報アイテムの表示をカスタマイズするためのスロット。スロットプロパティには、取極め情報オブジェクト、選択状態、編集・展開・選択機能の表示有無などが含まれます。
  *  @property {Object} agreement - アイテムに対応する取極め情報オブジェクト
@@ -46,8 +49,21 @@
  *  @property {Function} onClick:select - アイテムが選択されたときのイベントハンドラー
  *
  * @slot footer - フッターコンテンツを挿入するためのスロット。
+ *  @property {Array} agreements - 現在表示されている取極め情報の配列
+ *  @property {String} shiftType - 現在選択されている勤務区分
+ *  @property {Function} setShiftType - 勤務区分を選択するための関数
+ *  @property {Boolean} useAll - 勤務区分フィルタに "ALL" オプションを表示するかどうか
  *  @see https://v3.vuetifyjs.com/ja/components/data-iterators/#slots-footer
+ *
+ * @expose agreements - 現在表示されている取極め情報の配列
+ * @expose shiftType - 現在選択されている勤務区分
+ * @expose setShiftType - 勤務区分を選択するための関数
  *****************************************************************************/
+import {
+  props as compProps,
+  emit as compEmit,
+  useExtendDataIterator,
+} from "@/composables/extends/useExtendDataIterator.js";
 import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex.js";
 import { Agreement } from "@/schemas";
@@ -56,11 +72,9 @@ defineOptions({ name: "AgreementsIterator" });
 
 /** SETUP PROPS & EMITS */
 const _props = defineProps({
+  ...compProps,
   agreements: { type: Array, default: () => [] },
   clearable: { type: Boolean, default: false },
-  itemsPerPage: { type: Number, default: 5 },
-  modelValue: { type: [Array, Object, String, Number], default: null },
-  selectStrategy: { type: String, default: "single" },
   shiftType: {
     type: String,
     default: "DAY",
@@ -75,34 +89,29 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "AgreementsIterator");
 const emit = defineEmits([
+  ...compEmit,
   "click:create",
   "click:edit",
   "update:shift-type",
-  "update:modelValue",
 ]);
 
 /** SETUP COMPOSABLES */
-const { agreements, shiftType, length, setShiftType, modelValue } = useIndex(
-  props,
-  emit,
-);
+const { attrs } = useExtendDataIterator(props, emit);
+const { agreements, shiftType, setShiftType } = useIndex(props, emit);
 
 /** EXPOSE */
 defineExpose({
   agreements,
   shiftType,
-  length,
   setShiftType,
 });
 </script>
 
 <template>
   <v-data-iterator
-    v-model="modelValue"
+    v-bind="attrs"
     item-value="key"
     :items="agreements"
-    :items-per-page="props.itemsPerPage"
-    :select-strategy="props.selectStrategy"
     :show-expand="props.showExpand"
     :show-select="props.showSelect"
   >
@@ -110,7 +119,16 @@ defineExpose({
     <template #header="slotProps">
       <!-- SLOT: header -->
       <!-- @see https://v3.vuetifyjs.com/ja/components/data-iterators/#slots-header -->
-      <slot name="header" v-bind="slotProps || {}">
+      <slot
+        name="header"
+        v-bind="{
+          ...slotProps,
+          agreements,
+          shiftType,
+          setShiftType,
+          useAll,
+        }"
+      >
         <v-toolbar class="bg-transparent" density="compact">
           <v-spacer />
           <div class="px-4">
@@ -128,16 +146,25 @@ defineExpose({
     </template>
 
     <!-- DEFAULT -->
-    <template #default="{ items, isSelected, select, selectAll }">
+    <template #default="defaultSlotProps">
       <!-- SLOT: default -->
       <slot
         name="default"
-        v-bind="{ items: agreements, isSelected, select, selectAll }"
+        v-bind="{
+          ...defaultSlotProps,
+          agreements,
+          shiftType,
+          setShiftType,
+          useAll,
+        }"
       >
         <!-- grid container -->
         <div class="grid-container">
           <!-- 選択解除カード -->
-          <v-card v-if="props.clearable" @click="select(items, false)">
+          <v-card
+            v-if="props.clearable"
+            @click="defaultSlotProps.select(defaultSlotProps.items, false)"
+          >
             <v-empty-state text="選択しない" icon="mdi-cancel" />
           </v-card>
 
@@ -147,29 +174,37 @@ defineExpose({
           </v-card>
 
           <!-- ELEMENTS -->
-          <div v-for="item in items" :key="item.key">
+          <div v-for="item in defaultSlotProps.items" :key="item.key">
             <!-- SLOT: item -->
             <slot
               name="item"
               v-bind="{
                 agreement: item.raw,
-                isSelected: isSelected([item]),
+                isSelected: defaultSlotProps.isSelected([item]),
                 showEdit: props.showEdit,
                 showExpand: props.showExpand,
                 showSelect: props.showSelect,
                 'onClick:edit': () => emit('click:edit', item.raw),
-                'onClick:select': () => select([item], !isSelected([item])),
+                'onClick:select': () =>
+                  defaultSlotProps.select(
+                    [item],
+                    !defaultSlotProps.isSelected([item]),
+                  ),
               }"
             >
               <AgreementCard
                 v-bind="{
                   agreement: item.raw,
-                  isSelected: isSelected([item]),
+                  isSelected: defaultSlotProps.isSelected([item]),
                   showEdit: props.showEdit,
                   showExpand: props.showExpand,
                   showSelect: props.showSelect,
                   'onClick:edit': () => emit('click:edit', item.raw),
-                  'onClick:select': () => select([item], !isSelected([item])),
+                  'onClick:select': () =>
+                    defaultSlotProps.select(
+                      [item],
+                      !defaultSlotProps.isSelected([item]),
+                    ),
                 }"
               />
             </slot>
@@ -196,13 +231,12 @@ defineExpose({
     </template>
 
     <!-- FOOTER -->
-    <template #footer="slotProps">
+    <template v-if="!props.hideDefaultFooter" #footer="slotProps">
       <!-- SLOT: footer -->
       <!-- @see https://v3.vuetifyjs.com/ja/components/data-iterators/#slots-footer -->
       <slot
         name="footer"
-        v-if="props.itemsPerPage > -1"
-        v-bind="slotProps || {}"
+        v-bind="{ ...slotProps, agreements, shiftType, setShiftType, useAll }"
       >
         <MoleculesPagination
           v-bind="{ page: slotProps.page, pageCount: slotProps.pageCount }"
