@@ -184,10 +184,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
         <v-card>
           <template #title>取極め</template>
           <v-card-text class="pb-0">
-            <AgreementsManager
-              v-bind="agreementsManager.attrs.value"
-              is-company
-            />
+            <AgreementsManager v-bind="agreementsManager.attrs.value" />
           </v-card-text>
         </v-card>
       </v-col>

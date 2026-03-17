@@ -4,6 +4,11 @@
  * @description `AirArrayManager` をベースにした、取極め管理用コンポーネント
  * - 既存の取極めを選択するための UI を提供します。
  * 注意: その他のプロパティはすべて air-array-manager に渡されます。
+ *
+ * @property {Array} modelValue - 取極めの配列。`AirArrayManager` の `modelValue` として機能します。
+ * @property {Boolean} referable - 自身の取極め参照機能を有効にするかどうか
+ *
+ * @emits update:modelValue - 取極めの配列が更新されたときに発火します。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useAuthStore } from "@/stores/useAuthStore.js";
@@ -16,6 +21,7 @@ defineOptions({ name: "AgreementsManager" });
 const _props = defineProps({
   isCompany: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
+  referable: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AgreementsManager");
 const emit = defineEmits(["update:modelValue"]);
@@ -35,14 +41,15 @@ const auth = useAuthStore();
     <template #before-unitPriceBase="{ field, updateProperties }">
       <v-col v-bind="field.colsDefinition">
         <v-row>
-          <v-col v-if="!props.isCompany">
+          <v-col v-if="props.referable">
             <AgreementsSelector
               :agreements="props.modelValue"
               clear-on-select
               return-object
+              select-strategy="single"
               @update:modelValue="
                 ($event) => {
-                  updateProperties({ ...$event[0].billingInfo });
+                  updateProperties({ ...$event.billingInfo });
                 }
               "
             >
@@ -63,9 +70,10 @@ const auth = useAuthStore();
               :agreements="auth.company.agreements"
               clear-on-select
               return-object
+              select-strategy="single"
               @update:modelValue="
                 ($event) => {
-                  updateProperties({ ...$event[0].billingInfo });
+                  updateProperties({ ...$event.billingInfo });
                 }
               "
             >

@@ -226,7 +226,7 @@ const agreementsManager = useAgreementsManager(doc);
 
       <!-- 取極め情報 -->
       <v-col cols="12">
-        <AgreementsManager v-bind="agreementsManager.attrs.value" />
+        <AgreementsManager v-bind="agreementsManager.attrs.value" referable />
       </v-col>
 
       <!-- 削除処理ボタン -->
