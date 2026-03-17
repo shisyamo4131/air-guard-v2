@@ -11,7 +11,8 @@
  * @emits update:modelValue - 取極めの配列が更新されたときに発火します。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useAuthStore } from "@/stores/useAuthStore.js";
+import CompanyAgreementsSelector from "./CompanyAgreementsSelector.vue";
+import SiteAgreementsSelector from "./SiteAgreementsSelector.vue";
 
 defineOptions({ name: "AgreementsManager" });
 
@@ -25,11 +26,6 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "AgreementsManager");
 const emit = defineEmits(["update:modelValue"]);
-
-/*****************************************************************************
- * SETUP STORES
- *****************************************************************************/
-const auth = useAuthStore();
 </script>
 
 <template>
@@ -42,52 +38,15 @@ const auth = useAuthStore();
       <v-col v-bind="field.colsDefinition">
         <v-row>
           <v-col v-if="props.referable">
-            <AgreementsSelector
-              :agreements="props.modelValue"
-              clear-on-select
-              return-object
-              select-strategy="single"
-              @update:modelValue="
-                ($event) => {
-                  updateProperties({ ...$event.billingInfo });
-                }
-              "
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-btn
-                  v-bind="activatorProps"
-                  :disabled="!props.modelValue.length"
-                  block
-                  color="primary"
-                >
-                  現場取極め参照
-                </v-btn>
-              </template>
-            </AgreementsSelector>
+            <!-- 現場取極め参照ボタン -->
+            <SiteAgreementsSelector
+              :model-value="props.modelValue"
+              :update-properties="updateProperties"
+            />
           </v-col>
           <v-col>
-            <AgreementsSelector
-              :agreements="auth.company.agreements"
-              clear-on-select
-              return-object
-              select-strategy="single"
-              @update:modelValue="
-                ($event) => {
-                  updateProperties({ ...$event.billingInfo });
-                }
-              "
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-btn
-                  v-bind="activatorProps"
-                  :disabled="!auth.company.agreements.length"
-                  block
-                  color="secondary"
-                >
-                  会社取極め参照
-                </v-btn>
-              </template>
-            </AgreementsSelector>
+            <!-- 会社取極め参照ボタン -->
+            <CompanyAgreementsSelector :update-properties="updateProperties" />
           </v-col>
         </v-row>
       </v-col>
@@ -107,8 +66,6 @@ const auth = useAuthStore();
         @click:create="tableProps.toCreate()"
         @click:edit="tableProps.toUpdate($event)"
       />
-      <!-- </v-card-text>
-      </v-card> -->
     </template>
 
     <!-- その他のスロットをパススルー -->

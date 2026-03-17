@@ -226,7 +226,15 @@ const agreementsManager = useAgreementsManager(doc);
 
       <!-- 取極め情報 -->
       <v-col cols="12">
-        <AgreementsManager v-bind="agreementsManager.attrs.value" referable />
+        <v-card>
+          <template #title>取極め</template>
+          <v-card-text class="pb-0">
+            <AgreementsManager
+              v-bind="agreementsManager.attrs.value"
+              referable
+            />
+          </v-card-text>
+        </v-card>
       </v-col>
 
       <!-- 削除処理ボタン -->
