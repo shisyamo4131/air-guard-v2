@@ -209,7 +209,6 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
               <template #[`input.agreement`]="inputProps">
                 <AgreementsIterator
                   v-bind="inputProps.attrs"
-                  clearable
                   select-strategy="single"
                   show-select
                   return-object
@@ -217,24 +216,27 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
                 />
               </template>
               <template #after-agreement="inputProps">
-                <v-expand-transition>
-                  <v-col cols="12" v-if="!inputProps.item.hasAgreement">
-                    <air-checkbox
-                      :model-value="inputProps.item.allowEmptyAgreement"
-                      label="取極めなしを許容する"
-                      hint="許容しない場合売上や請求として計上されません。"
-                      persistent-hint
-                      @update:modelValue="
-                        inputProps.updateProperties({
-                          allowEmptyAgreement: $event,
-                        })
-                      "
-                    />
-                  </v-col>
-                </v-expand-transition>
+                <v-col cols="12">
+                  <air-checkbox
+                    :model-value="inputProps.item.allowEmptyAgreement"
+                    :disabled="inputProps.item.hasAgreement"
+                    label="取極めなしを許容する"
+                    hint="チェックすると売上や請求として計上されません。"
+                    persistent-hint
+                    @update:modelValue="
+                      inputProps.updateProperties({
+                        allowEmptyAgreement: $event,
+                      })
+                    "
+                  />
+                </v-col>
                 <v-col cols="12">
                   <air-date-input
                     :model-value="inputProps.item.billingDateAt"
+                    :disabled="
+                      !inputProps.item.hasAgreement &&
+                      !inputProps.item.allowEmptyAgreement
+                    "
                     label="請求締日"
                     :required="
                       inputProps.item.isInvalid === 'EMPTY_BILLING_DATE'

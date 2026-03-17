@@ -67,6 +67,7 @@ export function useExtendDataIterator(props, emit) {
         ? [...newValue]
         : [newValue];
     },
+    { immediate: true },
   );
 
   /**

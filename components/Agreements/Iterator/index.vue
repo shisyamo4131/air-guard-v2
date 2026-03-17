@@ -8,7 +8,6 @@
  * @author shisyamo4131
  *
  * @property {Array} agreements - 表示する取極め情報の配列
- * @property {Boolean} clearable - 取極め情報の選択を解除するオプションを表示するかどうか
  * @property {Boolean} hideDefaultFooter - デフォルトのフッターを非表示にするかどうかを指定するプロパティ
  * @property {Object|Array|String|Number} modelValue - 選択されたアイテムの値。selectStrategy に応じて、単一の値、配列、またはオブジェクトになる。
  * @property {String} shiftType - 勤務区分のフィルタリング条件（"ALL" | Agreement.SHIFT_TYPE のいずれか）
@@ -74,7 +73,6 @@ defineOptions({ name: "AgreementsIterator" });
 const _props = defineProps({
   ...compProps,
   agreements: { type: Array, default: () => [] },
-  clearable: { type: Boolean, default: false },
   shiftType: {
     type: String,
     default: "DAY",
@@ -160,14 +158,6 @@ defineExpose({
       >
         <!-- grid container -->
         <div class="grid-container">
-          <!-- 選択解除カード -->
-          <v-card
-            v-if="props.clearable"
-            @click="defaultSlotProps.select(defaultSlotProps.items, false)"
-          >
-            <v-empty-state text="選択しない" icon="mdi-cancel" />
-          </v-card>
-
           <!-- 新規登録カード -->
           <v-card v-if="props.showCreate" @click="() => emit('click:create')">
             <v-empty-state color="primary" text="新規登録" icon="mdi-plus" />
