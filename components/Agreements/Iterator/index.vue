@@ -73,6 +73,7 @@ defineOptions({ name: "AgreementsIterator" });
 const _props = defineProps({
   ...compProps,
   agreements: { type: Array, default: () => [] },
+  hideDefaultFooter: { type: Boolean, default: false },
   shiftType: {
     type: String,
     default: "DAY",

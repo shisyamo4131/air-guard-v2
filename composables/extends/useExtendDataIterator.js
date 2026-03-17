@@ -18,7 +18,6 @@ import { useLogger } from "@/composables/useLogger";
  * @property {String|Number|Object|Array|Boolean} modelValue - 選択された値を受け取るプロパティ
  */
 export const props = {
-  hideDefaultFooter: { type: Boolean, default: false },
   modelValue: {
     type: [String, Number, Object, Array, Boolean],
     default: null,
