@@ -230,7 +230,12 @@ defineExpose({
         v-bind="{ ...slotProps, agreements, shiftType, setShiftType, useAll }"
       >
         <MoleculesPagination
-          v-bind="{ page: slotProps.page, pageCount: slotProps.pageCount }"
+          v-bind="{
+            page: slotProps.page,
+            pageCount: slotProps.pageCount,
+            'onClick:prev': slotProps.prevPage,
+            'onClick:next': slotProps.nextPage,
+          }"
         />
       </slot>
     </template>
