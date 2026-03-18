@@ -5,12 +5,12 @@
  * @author shisyamo4131
  *
  * @property {Employee} employee - 表示する従業員のデータ
- * @property {boolean} isSelected - カードの選択状態（双方向バインディング）
+ * @property {boolean} isSelected - カードの選択状態
  * @property {boolean} showDetail - 詳細表示アクションの表示有無
  * @property {boolean} showEdit - 編集アクションの表示有無
  * @property {boolean} showSelect - 選択チェックボックスの表示有無
  *
- * @emits update:isSelected - isSelected の更新イベント（双方向バインディング用）
+ * @emits click:select - 選択チェックボックスのクリックイベント
  * @emits click:edit - 編集アクションのクリックイベント
  * @emits click:detail - 詳細アクションのクリックイベント
  *****************************************************************************/
@@ -30,36 +30,14 @@ const _props = defineProps({
   isSelected: { type: Boolean, default: false },
   showDetail: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
-  showSelect: { type: Boolean, default: false },
+  showSelect: { type: Boolean, default: true },
 });
 const props = useDefaults(_props, "EmployeeCard");
-const emit = defineEmits(["update:isSelected", "click:edit", "click:detail"]);
+const emit = defineEmits(["click:select", "click:edit", "click:detail"]);
 
 /*****************************************************************************
  * SETUP STATES
  *****************************************************************************/
-const internalIsSelected = ref(false);
-Vue.watch(
-  () => props.isSelected,
-  (newVal) => (internalIsSelected.value = newVal),
-  { immediate: true },
-);
-
-/**
- * isSelected の双方向バインディング用の計算プロパティ
- * - get: internalIsSelected を返す
- * - set: internalIsSelected を更新し、update:isSelected イベントを発火する
- */
-const bindedIsSelected = Vue.computed({
-  get() {
-    return internalIsSelected.value;
-  },
-  set(newVal) {
-    internalIsSelected.value = newVal;
-    emit("update:isSelected", newVal);
-  },
-});
-
 /**
  * Actions（編集・詳細）を表示するかどうかの計算プロパティ
  */
@@ -78,11 +56,18 @@ const showActions = Vue.computed(() => {
 
       <!-- 選択チェックボックス -->
       <template #append>
-        <v-checkbox
+        <v-icon
           v-if="props.showSelect"
-          v-model="bindedIsSelected"
-          hide-details
-        />
+          :color="props.isSelected ? 'primary' : undefined"
+          size="small"
+          @click="emit('click:select')"
+        >
+          {{
+            props.isSelected
+              ? "mdi-checkbox-marked"
+              : "mdi-checkbox-blank-outline"
+          }}
+        </v-icon>
       </template>
 
       <!-- 社員コードと氏名 -->
