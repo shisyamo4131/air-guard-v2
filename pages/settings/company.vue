@@ -181,7 +181,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
     <!-- Agreements management row -->
     <v-row>
       <v-col cols="12">
-        <AgreementsManager v-bind="agreementsManager.attrs.value" />
+        <AgreementsManager v-bind="agreementsManager.attrs.value" show-create />
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>

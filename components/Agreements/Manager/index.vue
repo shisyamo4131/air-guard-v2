@@ -65,7 +65,7 @@ const emit = defineEmits(["update:modelValue"]);
             icon="mdi-plus"
             color="primary"
             variant="text"
-            @click="tableProps.toCreate"
+            @click="tableProps.toCreate()"
           />
         </template>
         <v-card-text class="overflow-hidden">
