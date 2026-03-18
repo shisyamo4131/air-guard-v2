@@ -28,6 +28,16 @@ import { ja, en } from "vuetify/locale";
  */
 export default defineNuxtPlugin((app) => {
   const vuetify = createVuetify({
+    /** アプリ全体の背景色を設定 */
+    theme: {
+      themes: {
+        light: {
+          colors: {
+            background: "#F5F5F5",
+          },
+        },
+      },
+    },
     components: {
       VDateInput,
     },
