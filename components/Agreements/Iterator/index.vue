@@ -254,6 +254,7 @@ defineExpose({
 /* v-data-iterator は default スロットのルート要素に div を描画する */
 /* これをスクロールコンテナとして使用する */
 .v-data-iterator > :deep(div) {
+  flex-grow: 1; /* フレックスアイテムが利用可能なスペースをすべて占めるようにする */
   overflow-y: auto;
 }
 
