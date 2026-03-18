@@ -48,6 +48,13 @@ const showActions = Vue.computed(() => {
 
 <template>
   <v-card>
+    <!-- 退職者の場合、カードの左上に「退職」チップを表示 -->
+    <EmploymentStatusChip
+      style="position: absolute; z-index: 3; left: 8px; top: 8px"
+      density="comfortable"
+      size="small"
+      :value="props.employee.employmentStatus"
+    />
     <v-card-item :class="{ 'pb-0': showActions }">
       <!-- 将来、アバター画像を表示する予定 -->
       <template #prepend>
