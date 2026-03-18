@@ -23,6 +23,13 @@ const DEFAULT_DEFINITIONS = {
     SUNDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SUNDAY, color: "red" },
     HOLIDAY: { ...CONSTANTS.DAY_TYPE_VALUES.HOLIDAY, color: "pink" },
   },
+  EMPLOYMENT_STATUS: {
+    ACTIVE: { ...CONSTANTS.EMPLOYMENT_STATUS_VALUES.ACTIVE, color: "primary" },
+    TERMINATED: {
+      ...CONSTANTS.EMPLOYMENT_STATUS_VALUES.TERMINATED,
+      color: "warning",
+    },
+  },
   GENDER: {
     MALE: {
       ...CONSTANTS.GENDER_VALUES.MALE,
@@ -102,6 +109,13 @@ export function useConstants() {
     ),
   );
 
+  const EMPLOYMENT_STATUS = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.EMPLOYMENT_STATUS,
+      "employmentStatus",
+      auth.company,
+    ),
+  );
   const GENDER = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.GENDER,
@@ -140,6 +154,7 @@ export function useConstants() {
   return {
     BILLING_UNIT_TYPE,
     DAY_TYPE,
+    EMPLOYMENT_STATUS,
     GENDER,
     SHIFT_TYPE,
     QUALIFIED_TYPE,

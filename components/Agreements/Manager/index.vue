@@ -23,6 +23,7 @@ const _props = defineProps({
   isCompany: { type: Boolean, default: false },
   modelValue: { type: Array, default: () => [] },
   referable: { type: Boolean, default: false },
+  showCreate: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AgreementsManager");
 const emit = defineEmits(["update:modelValue"]);
@@ -58,22 +59,19 @@ const emit = defineEmits(["update:modelValue"]);
     </template>
 
     <template #table="tableProps">
-      <v-card>
-        <v-card-item>
-          <template #append>
-            <v-btn
-              icon="mdi-plus"
-              color="primary"
-              variant="text"
-              @click="tableProps.toCreate()"
-            />
-          </template>
-          <v-card-title>取極め</v-card-title>
-        </v-card-item>
-        <v-card-text>
+      <v-card class="d-flex flex-column fill-height" title="取極め管理">
+        <template v-if="props.showCreate" #append>
+          <v-btn
+            icon="mdi-plus"
+            color="primary"
+            variant="text"
+            @click="tableProps.toCreate"
+          />
+        </template>
+        <v-card-text class="overflow-hidden">
           <AgreementsIterator
             :agreements="tableProps.items"
-            show-create
+            :show-create="props.showCreate"
             show-edit
             show-expand
             @click:create="tableProps.toCreate()"

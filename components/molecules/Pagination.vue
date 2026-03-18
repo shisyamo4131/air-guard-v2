@@ -15,7 +15,9 @@ const emit = defineEmits(["click:prev", "click:next"]);
 </script>
 
 <template>
-  <div class="d-flex flex-grow-0 align-center justify-center pa-4">
+  <div
+    class="d-flex flex-grow-0 flex-shrink-0 align-center justify-center px-4"
+  >
     <v-btn
       :disabled="props.page === 1"
       density="comfortable"
