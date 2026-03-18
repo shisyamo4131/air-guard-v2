@@ -181,12 +181,7 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
     <!-- Agreements management row -->
     <v-row>
       <v-col cols="12">
-        <v-card>
-          <template #title>取極め</template>
-          <v-card-text class="pb-0">
-            <AgreementsManager v-bind="agreementsManager.attrs.value" />
-          </v-card-text>
-        </v-card>
+        <AgreementsManager v-bind="agreementsManager.attrs.value" />
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>

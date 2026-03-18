@@ -58,14 +58,29 @@ const emit = defineEmits(["update:modelValue"]);
     </template>
 
     <template #table="tableProps">
-      <AgreementsIterator
-        :agreements="tableProps.items"
-        show-create
-        show-edit
-        show-expand
-        @click:create="tableProps.toCreate()"
-        @click:edit="tableProps.toUpdate($event)"
-      />
+      <v-card>
+        <v-card-item>
+          <template #append>
+            <v-btn
+              icon="mdi-plus"
+              color="primary"
+              variant="text"
+              @click="tableProps.toCreate()"
+            />
+          </template>
+          <v-card-title>取極め</v-card-title>
+        </v-card-item>
+        <v-card-text>
+          <AgreementsIterator
+            :agreements="tableProps.items"
+            show-create
+            show-edit
+            show-expand
+            @click:create="tableProps.toCreate()"
+            @click:edit="tableProps.toUpdate($event)"
+          />
+        </v-card-text>
+      </v-card>
     </template>
 
     <!-- その他のスロットをパススルー -->

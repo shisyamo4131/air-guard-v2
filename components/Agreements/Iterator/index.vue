@@ -159,11 +159,6 @@ defineExpose({
       >
         <!-- grid container -->
         <div class="grid-container">
-          <!-- 新規登録カード -->
-          <v-card v-if="props.showCreate" @click="() => emit('click:create')">
-            <v-empty-state color="primary" text="新規登録" icon="mdi-plus" />
-          </v-card>
-
           <!-- ELEMENTS -->
           <div v-for="item in defaultSlotProps.items" :key="item.key">
             <!-- SLOT: item -->
@@ -254,6 +249,7 @@ defineExpose({
 /* v-data-iterator は default スロットのルート要素に div を描画する */
 /* これをスクロールコンテナとして使用する */
 .v-data-iterator > :deep(div) {
+  padding: 8px; /* 内側の余白を追加 -> これを設定しないとモバイル表示の際にスクロールバーの表示が崩れる */
   flex-grow: 1; /* フレックスアイテムが利用可能なスペースをすべて占めるようにする */
   overflow-y: auto;
 }
