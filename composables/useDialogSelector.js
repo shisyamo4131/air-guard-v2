@@ -40,6 +40,8 @@ export const emits = ["update:modelValue"];
  * @param {*} emit - コンポーネントのイベントエミッター
  * @returns {Object} ダイアログの状態と操作関数を返すオブジェクト
  * @returns {Ref<Boolean>} dialog - ダイアログの表示状態を管理するリアクティブな参照
+ * @returns {ComputedRef<Object>} iteratorProps - アイテム選択コンポーネントに渡すプロパティを計算するためのリアクティブな参照
+ * @returns {ComputedRef<Boolean>} isSelected - アイテムが選択されているかどうかを判断するためのリアクティブな参照
  * @returns {Ref} selectedValue - 選択された値を管理するリアクティブな参照
  * @returns {Function} onSubmit - 確定処理関数。選択された値を emit し、ダイアログを閉じます。
  * @returns {Function} onCancel - キャンセル処理関数。選択を元に戻し、ダイアログを閉じます。
@@ -101,13 +103,26 @@ export function useDialogSelector(props, emit) {
       showSelect: true, // アイテムに選択UIを表示するためのフラグ
     };
   });
+
+  const isSelected = Vue.computed(() => {
+    if (props.selectStrategy === "single") {
+      return !!selectedValue.value;
+    } else {
+      return (
+        Array.isArray(selectedValue.value) && selectedValue.value.length > 0
+      );
+    }
+  });
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
   return {
     dialog,
-    selectedValue,
     iteratorProps,
+    isSelected,
+    selectedValue,
+
     onSubmit,
     onCancel,
   };

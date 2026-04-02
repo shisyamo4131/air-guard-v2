@@ -1,4 +1,5 @@
 export { Agreement } from "@shisyamo4131/air-guard-v2-schemas";
+export { AgreementV2 } from "@shisyamo4131/air-guard-v2-schemas";
 export { ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 export { Billing } from "@shisyamo4131/air-guard-v2-schemas";
 export { Certification } from "@shisyamo4131/air-guard-v2-schemas";
@@ -11,6 +12,7 @@ export { OperationBilling } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResultDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { Outsourcer } from "@shisyamo4131/air-guard-v2-schemas";
+export { RateSet, DayTypeRates } from "@shisyamo4131/air-guard-v2-schemas";
 export { RoundSetting } from "@shisyamo4131/air-guard-v2-schemas";
 export { Site } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOperationSchedule } from "@shisyamo4131/air-guard-v2-schemas";

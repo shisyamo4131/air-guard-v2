@@ -36,7 +36,9 @@ export function useSiteShiftTypeOrder({
   // type を ref として正規化
   const internalType = Vue.isRef(type) ? type : Vue.ref(type);
 
-  // schedules内のユニークなorderKeyセット
+  /**
+   * `schedules` ドキュメント群から `orderKey` を抽出し、ユニークな `orderKey` のセットを保持します。
+   */
   const uniqueOrderKeysInSchedules = Vue.ref(new Set());
   Vue.watch(
     schedules,
@@ -51,8 +53,10 @@ export function useSiteShiftTypeOrder({
   );
 
   /**
-   * 現場オーダー配列
-   * - type によって `company.siteOrder` または `company.scheduleOrder` を返す
+   * `company` ドキュメントに登録されている現場オーダー配列を返します。
+   * - コンポーザブルの引数 `type` によって返す値が変わります。
+   * - `type === 'arrangement'` の場合は `auth.company.siteOrder` を返します。
+   * - `type === 'schedule'` の場合は `auth.company.scheduleOrder` を返します。
    */
   const siteShiftTypeOrder = Vue.computed(() => {
     if (internalType.value === "arrangement") {
@@ -82,22 +86,20 @@ export function useSiteShiftTypeOrder({
     return new Set(siteShiftTypeOrder.value.map((order) => order.key));
   });
 
-  /** schedulesに含まれるがsiteShiftTypeOrderに含まれないorderKeyの配列 */
+  /**
+   * `schedules` ドキュメント群に含まれる `orderKey` のうち、`siteShiftTypeOrder` に存在しないものを抽出して返します。
+   */
   const missingOrders = Vue.computed(() => {
     const missing = [];
 
     uniqueOrderKeysInSchedules.value.forEach((orderKey) => {
       if (!siteShiftTypeOrderKeys.value.has(orderKey)) {
         // orderKey から siteId と shiftType を抽出
-        const lastHyphenIndex = orderKey.lastIndexOf("-");
-        const siteId = orderKey.substring(0, lastHyphenIndex);
-        const shiftType = orderKey.substring(lastHyphenIndex + 1);
+        const lastUnderScoreIndex = orderKey.lastIndexOf("_");
+        const siteId = orderKey.substring(0, lastUnderScoreIndex);
+        const shiftType = orderKey.substring(lastUnderScoreIndex + 1);
 
-        missing.push({
-          siteId,
-          shiftType,
-          key: orderKey,
-        });
+        missing.push({ siteId, shiftType, key: orderKey });
       }
     });
 

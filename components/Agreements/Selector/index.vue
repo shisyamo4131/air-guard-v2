@@ -40,10 +40,8 @@ const emit = defineEmits(composableEmits);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { dialog, iteratorProps, onSubmit, onCancel } = useDialogSelector(
-  props,
-  emit,
-);
+const { dialog, iteratorProps, isSelected, onSubmit, onCancel } =
+  useDialogSelector(props, emit);
 const { mobile } = useDisplay();
 </script>
 
@@ -62,9 +60,11 @@ const { mobile } = useDisplay();
     <!-- CONTENT -->
     <v-card>
       <template #title>取極め選択</template>
-      <v-card-text class="py-0">
+      <v-card-text class="py-0 d-flex flex-column">
         <AgreementsIterator
+          class="fill-height"
           v-bind="iteratorProps"
+          grid
           :agreements="props.agreements"
           :select-strategy="props.selectStrategy"
           show-expand
@@ -73,6 +73,7 @@ const { mobile } = useDisplay();
       </v-card-text>
       <template #actions>
         <MoleculesActionsSelectCancel
+          :disabled="!isSelected"
           @click:select="onSubmit"
           @click:cancel="onCancel"
         />

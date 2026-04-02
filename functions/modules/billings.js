@@ -31,7 +31,7 @@ export const onOperationResultChange = onDocumentWritten(
       });
       throw error;
     }
-  }
+  },
 );
 
 /**
@@ -43,7 +43,7 @@ export const onOperationResultChange = onDocumentWritten(
  * @returns {string} Billing ドキュメントID
  */
 function getBillingKey({ customerId, siteId, billingDate }) {
-  return `${customerId}-${siteId}-${billingDate}`;
+  return `${customerId}_${siteId}_${billingDate}`;
 }
 
 /**
@@ -60,7 +60,7 @@ function getBillingKey({ customerId, siteId, billingDate }) {
  */
 async function initBillingDoc(
   doc,
-  { companyId, customerId, siteId, billingDateAt }
+  { companyId, customerId, siteId, billingDateAt },
 ) {
   const prefix = `Companies/${companyId}/`;
   const customerInstance = new Customer();
@@ -72,7 +72,7 @@ async function initBillingDoc(
     throw new Error(`Customer not found: ${customerId}`);
   }
   const paymentDueDateAt = customerInstance.getPaymentDueDateAt(
-    billingDateAt.toDate()
+    billingDateAt.toDate(),
   );
 
   doc.initialize({
@@ -208,7 +208,7 @@ async function handleUpdated(companyId, before, after) {
 
     // 既存の OperationResult を更新
     const itemIndex = billingInstance.operationResults.findIndex(
-      (result) => result.docId === before.docId
+      (result) => result.docId === before.docId,
     );
 
     if (itemIndex >= 0) {
@@ -255,7 +255,7 @@ async function handleUpdated(companyId, before, after) {
     if (beforeDocExists) {
       beforeBillingDoc.operationResults =
         beforeBillingDoc.operationResults.filter(
-          (result) => result.docId !== before.docId
+          (result) => result.docId !== before.docId,
         );
 
       if (beforeBillingDoc.operationResults.length === 0) {
@@ -326,7 +326,7 @@ async function handleDeleted(companyId, doc) {
   }
 
   billingDoc.operationResults = billingDoc.operationResults.filter(
-    (result) => result.docId !== doc.docId
+    (result) => result.docId !== doc.docId,
   );
 
   if (billingDoc.operationResults.length === 0) {

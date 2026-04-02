@@ -25,7 +25,7 @@ export const mockArrangementNotifications = [
   // 1. ARRANGED - 従業員1（山田太郎）配置のみ
   new ArrangementNotification({
     ...schedule.employees[0].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[0].id}`,
+    docId: `${schedule.docId}_${schedule.employees[0].id}`,
     status: "ARRANGED",
     confirmedAt: null,
     arrivedAt: null,
@@ -39,7 +39,7 @@ export const mockArrangementNotifications = [
   // 2. CONFIRMED - 従業員1（山田太郎）承認済み
   new ArrangementNotification({
     ...schedule.employees[0].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[0].id}`,
+    docId: `${schedule.docId}_${schedule.employees[0].id}`,
     status: "CONFIRMED",
     confirmedAt: new Date("2026-02-04T20:30:00"),
     arrivedAt: null,
@@ -53,7 +53,7 @@ export const mockArrangementNotifications = [
   // 3. ARRIVED - 従業員1（山田太郎）現場到着済み
   new ArrangementNotification({
     ...schedule.employees[0].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[0].id}`,
+    docId: `${schedule.docId}_${schedule.employees[0].id}`,
     status: "ARRIVED",
     confirmedAt: new Date("2026-02-04T21:00:00"),
     arrivedAt: "07:55", // 早めに到着
@@ -67,7 +67,7 @@ export const mockArrangementNotifications = [
   // 4. LEAVED - 従業員1（山田太郎）退勤済み（予定通り）
   new ArrangementNotification({
     ...schedule.employees[0].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[0].id}`,
+    docId: `${schedule.docId}_${schedule.employees[0].id}`,
     status: "LEAVED",
     confirmedAt: new Date("2026-02-04T19:00:00"),
     arrivedAt: "07:50",
@@ -81,7 +81,7 @@ export const mockArrangementNotifications = [
   // 5. ARRANGED - 従業員2（佐藤花子）配置のみ
   new ArrangementNotification({
     ...schedule.employees[1].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[1].id}`,
+    docId: `${schedule.docId}_${schedule.employees[1].id}`,
     status: "ARRANGED",
     confirmedAt: null,
     arrivedAt: null,
@@ -95,7 +95,7 @@ export const mockArrangementNotifications = [
   // 6. CONFIRMED - 従業員2（佐藤花子）承認済み
   new ArrangementNotification({
     ...schedule.employees[1].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[1].id}`,
+    docId: `${schedule.docId}_${schedule.employees[1].id}`,
     status: "CONFIRMED",
     confirmedAt: new Date("2026-02-04T18:00:00"),
     arrivedAt: null,
@@ -109,7 +109,7 @@ export const mockArrangementNotifications = [
   // 7. LEAVED - 従業員2（佐藤花子）実際の勤務時間が異なる（08:30-19:00、予定は09:00-18:00）
   new ArrangementNotification({
     ...schedule.employees[1].toObject(),
-    docId: `${schedule.docId}-${schedule.employees[1].id}`,
+    docId: `${schedule.docId}_${schedule.employees[1].id}`,
     status: "LEAVED",
     confirmedAt: new Date("2026-02-04T22:00:00"),
     arrivedAt: "08:25",
@@ -123,7 +123,7 @@ export const mockArrangementNotifications = [
   // 8. ARRIVED - 外注先（セキュリティSV）現場到着済み
   new ArrangementNotification({
     ...schedule.outsourcers[0].toObject(),
-    docId: `${schedule.docId}-${schedule.outsourcers[0].id}`,
+    docId: `${schedule.docId}_${schedule.outsourcers[0].id}`,
     status: "ARRIVED",
     confirmedAt: new Date("2026-02-04T15:00:00"),
     arrivedAt: "08:55",

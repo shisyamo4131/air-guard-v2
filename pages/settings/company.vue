@@ -1,6 +1,5 @@
 <script setup>
 import { useCompanyManager } from "@/composables/useCompanyManager";
-import { useAgreementsManager } from "../../composables/useAgreementsManager";
 import { DAY_OF_WEEK_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { RoundSetting } from "@/schemas";
 
@@ -8,7 +7,6 @@ import { RoundSetting } from "@/schemas";
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { attrs, doc } = useCompanyManager();
-const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 </script>
 
 <template>
@@ -180,8 +178,11 @@ const agreementsManager = useAgreementsManager(attrs.value.modelValue);
 
     <!-- Agreements management row -->
     <v-row>
-      <v-col cols="12">
-        <AgreementsManager v-bind="agreementsManager.attrs.value" show-create />
+      <v-col cols="12" md="4">
+        <AgreementsManager
+          v-model="doc.agreementsV2"
+          @submit:complete="async () => await doc.update()"
+        />
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>

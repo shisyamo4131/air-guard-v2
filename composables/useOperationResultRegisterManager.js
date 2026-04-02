@@ -85,7 +85,7 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
     const loadingsKey = loadingsStore.add("稼働実績として登録中...");
     try {
       await selectedSchedule.value.syncToOperationResult(
-        keyMappedNotifications.value
+        keyMappedNotifications.value,
       );
     } catch (error) {
       logger.error({ error });
@@ -198,7 +198,7 @@ export function useOperationResultRegisterManager({ docs, cachedSites } = {}) {
   const agreement = Vue.computed(() => {
     if (!selectedSchedule.value) return null;
     if (!site.value) return null;
-    return site.value.getAgreement(selectedSchedule.value);
+    return site.value.getValidAgreement(selectedSchedule.value);
   });
 
   /** Attributes for the component */

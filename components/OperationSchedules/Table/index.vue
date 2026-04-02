@@ -54,26 +54,26 @@
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
  * @slot - site-shift-type-order - 各現場行のカスタム表示用スロット
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
  * @slot - append-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
  *         @property {Object} order - 現場オーダー情報オブジェクト
  *         @property {string} order.siteId - 現場ID
  *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}-${shiftType}`）
+ *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
  * @slot - cell - 各セルのカスタム表示用スロット
  *         @property {String} siteId - 現場ID
  *         @property {String} shiftType - シフトタイプ
  *         @property {String} date - 日付（YYYY-MM-DD形式）
  *         @property {Object} dateAt - 日付（dayjsオブジェクト）
- *         @property {String} groupKey - グループキー（`${siteId}-${shiftType}-${date}`形式）
+ *         @property {String} groupKey - グループキー（`${siteId}_${shiftType}_${date}`形式）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *         @property {Number} count - 必要人員数
  *         @property {Boolean} hasMultiple - 必要人員が複数かどうか
@@ -305,17 +305,17 @@ const {
                   shiftType: order.shiftType,
                   date: dayObject.date,
                   dateAt: dayObject.dateAt,
-                  groupKey: `${order.key}-${dayObject.date}`,
+                  groupKey: `${order.key}_${dayObject.date}`,
                   isSelected: selectedDate && selectedDate === dayObject.date,
                   dayObject,
-                  ...groupKeyMappedData.get(`${order.key}-${dayObject.date}`),
+                  ...groupKeyMappedData.get(`${order.key}_${dayObject.date}`),
                   onClick: () => {
                     emit('click:cell', {
                       siteId: order.siteId,
                       shiftType: order.shiftType,
                       date: dayObject.date,
                       dateAt: dayObject.dateAt,
-                      groupKey: `${order.key}-${dayObject.date}`,
+                      groupKey: `${order.key}_${dayObject.date}`,
                     });
                   },
                 }"

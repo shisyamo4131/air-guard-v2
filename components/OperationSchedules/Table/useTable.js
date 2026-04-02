@@ -88,7 +88,7 @@ export function useTable(props) {
     const result = new Map();
     props.siteShiftTypeOrder.forEach(({ key }) => {
       daysInRangeArray.value.forEach(({ date }) => {
-        const groupKey = `${key}-${date}`;
+        const groupKey = `${key}_${date}`;
         const schedules = props.schedules.filter(
           (schedule) => schedule.groupKey === groupKey,
         );

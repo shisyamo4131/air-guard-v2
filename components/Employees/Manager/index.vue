@@ -29,6 +29,8 @@ const props = useDefaults(_props, "EmployeesManager");
         </template>
         <v-card-text class="overflow-hidden">
           <EmployeesIterator
+            class="fill-height"
+            grid
             :employees="items"
             :hide-default-footer="props.hideDefaultFooter"
             :items-per-page="props.itemsPerPage"

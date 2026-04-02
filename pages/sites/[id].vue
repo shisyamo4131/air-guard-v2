@@ -6,7 +6,6 @@ import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteManager } from "@/composables/useSiteManager";
 import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
-import { useAgreementsManager } from "@/composables/useAgreementsManager";
 import MoleculesInputsSiteForSelectCustomer from "@/components/molecules/inputs/SiteForSelectCustomer.vue";
 
 /*****************************************************************************
@@ -45,9 +44,6 @@ const schedulesManager = useSiteOperationSchedulesManager({
   docs: schedules,
   siteId: docId,
 });
-
-/** Agreements Manager */
-const agreementsManager = useAgreementsManager(doc);
 </script>
 
 <template>
@@ -225,11 +221,10 @@ const agreementsManager = useAgreementsManager(doc);
       </v-col>
 
       <!-- 取極め情報 -->
-      <v-col cols="12">
+      <v-col cols="12" md="4">
         <AgreementsManager
-          v-bind="agreementsManager.attrs.value"
-          referable
-          show-create
+          v-model="doc.agreementsV2"
+          @submit:complete="async () => await doc.update()"
         />
       </v-col>
 
