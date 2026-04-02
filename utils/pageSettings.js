@@ -134,7 +134,8 @@ export const pageStructure = [
     // public: false,
     label: "稼働実績管理",
     icon: "mdi-clipboard-check",
-    roles: ["operation-results:read"],
+    // roles: ["operation-results:read"],
+    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -142,7 +143,8 @@ export const pageStructure = [
         path: "/operation-result-register",
         label: "上下番確定処理",
         icon: "mdi-checkbox-marked-circle",
-        roles: ["operation-results:read"],
+        // roles: ["operation-results:read"],
+        roles: ["developer"],
         navigation: true,
       },
       {
@@ -150,7 +152,8 @@ export const pageStructure = [
         path: "/operation-results",
         label: "稼働実績一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["operation-results:read"],
+        // roles: ["operation-results:read"],
+        roles: ["developer"],
         navigation: true,
       },
     ],
@@ -161,7 +164,8 @@ export const pageStructure = [
     id: "billings-group",
     label: "請求管理",
     icon: "mdi-file-document-multiple",
-    roles: ["operation-billings:read", "billings:read"],
+    // roles: ["operation-billings:read", "billings:read"],
+    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -169,7 +173,8 @@ export const pageStructure = [
         path: "/billings/operations",
         label: "稼働請求一覧",
         icon: "mdi-file-document",
-        roles: ["operation-billings:read"],
+        // roles: ["operation-billings:read"],
+        roles: ["developer"],
         navigation: true,
       },
       {
@@ -177,7 +182,8 @@ export const pageStructure = [
         path: "/billings/customers",
         label: "取引先請求一覧",
         icon: "mdi-file-document-outline",
-        roles: ["billings:read"],
+        // roles: ["billings:read"],
+        roles: ["developer"],
         navigation: true,
       },
     ],
