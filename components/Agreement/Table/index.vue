@@ -11,7 +11,6 @@ import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
 import { AgreementV2, CutoffDate } from "@/schemas";
-import ValidChip from "./ValidChip.vue";
 
 /*****************************************************************************
  * SETUP PROPS
@@ -57,10 +56,22 @@ const timeLabel = computed(() => {
 });
 
 /**
- * 請求単位ラベル
+ * 実働・休憩ラベル
  */
-const billingUnitTypeLabel = computed(() => {
-  return AgreementV2.BILLING_UNIT_TYPE[props.agreement.billingUnitType].title;
+const workAndBreakLabel = computed(() => {
+  const workMinutes = props.agreement.regulationWorkMinutes || 0;
+  const breakMinutes = props.agreement.breakMinutes || 0;
+  return `${workMinutes}分 / ${breakMinutes}分`;
+});
+
+/**
+ * 締日・請求単位ラベル
+ */
+const cutoffDateAndBillingUnitLabel = computed(() => {
+  const cutoffDateLabel = CutoffDate.getDisplayText(props.agreement.cutoffDate);
+  const billingUnitTypeLabel =
+    AgreementV2.BILLING_UNIT_TYPE[props.agreement.billingUnitType].title;
+  return `${cutoffDateLabel} / ${billingUnitTypeLabel}`;
 });
 
 /*****************************************************************************
@@ -89,43 +100,47 @@ function priceLabel(dayType, isQualified, isBase) {
 
 <template>
   <div>
-    <!-- 適用開始日、締日、請求単位 -->
+    <!-- 適用開始日、時間、実働・休憩、締日・請求単位 -->
     <v-table density="compact">
       <tbody>
         <tr>
           <th>適用開始</th>
           <td>
             <div class="d-flex flex-grow-1 align-center justify-end">
-              <ValidChip v-if="props.isValid" />
               {{ startDateLabel }}
+
+              <!-- 適用中 ツールチップ -->
+              <v-tooltip text="現在適用される取極めです。" location="top">
+                <template #activator="{ props }">
+                  <v-icon
+                    v-bind="props"
+                    class="ms-1"
+                    icon="mdi-information"
+                    color="info"
+                    size="small"
+                  />
+                </template>
+              </v-tooltip>
             </div>
           </td>
         </tr>
         <tr>
           <th>時間</th>
-          <td>
-            <div class="d-flex flex-grow-1 align-center justify-end">
-              {{ timeLabel }}
-            </div>
+          <td style="text-align: right">
+            {{ timeLabel }}
           </td>
         </tr>
         <tr>
           <th>実働・休憩</th>
-          <td>
-            <div class="d-flex flex-grow-1 align-center justify-end">
-              {{
-                `${props.agreement.regulationWorkMinutes}分 / ${props.agreement.breakMinutes}分`
-              }}
-            </div>
+          <td style="text-align: right">
+            {{ workAndBreakLabel }}
           </td>
         </tr>
         <tr>
           <th>締日・請求単位</th>
           <!-- Agreement.cutoffDate-->
           <td style="text-align: right">
-            {{
-              `${CutoffDate.getDisplayText(props.agreement.cutoffDate)} / ${billingUnitTypeLabel}`
-            }}
+            {{ cutoffDateAndBillingUnitLabel }}
           </td>
         </tr>
       </tbody>
