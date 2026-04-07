@@ -107,20 +107,23 @@ function priceLabel(dayType, isQualified, isBase) {
           <th>適用開始</th>
           <td>
             <div class="d-flex flex-grow-1 align-center justify-end">
-              {{ startDateLabel }}
-
               <!-- 適用中 ツールチップ -->
-              <v-tooltip text="現在適用される取極めです。" location="top">
+              <v-tooltip
+                v-if="props.isValid"
+                text="現在適用される取極めです。"
+                location="top"
+              >
                 <template #activator="{ props }">
                   <v-icon
                     v-bind="props"
-                    class="ms-1"
+                    class="me-1"
                     icon="mdi-information"
                     color="info"
                     size="small"
                   />
                 </template>
               </v-tooltip>
+              {{ startDateLabel }}
             </div>
           </td>
         </tr>

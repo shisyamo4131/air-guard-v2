@@ -3,6 +3,9 @@
  * @file ./components/Agreements/Manager/index.vue
  * @description 取極め管理コンポーネント
  * @extends AirArrayManager
+ *
+ * - `AgreementV2` インスタンスの配列を管理するためのコンポーネント。
+ * - FireStore への CRUD 操作は行わない、純粋な配列管理 UI コンポーネント。
  *****************************************************************************/
 import dayjs from "dayjs";
 import { AgreementV2 } from "@/schemas";
@@ -30,6 +33,8 @@ const { attrs: baseManagerAttrs } = useBaseManager("AgreementsManager");
  *****************************************************************************/
 const tab = ref(props.shiftType);
 const window = ref(0);
+
+const displayedAgreement = ref(null);
 
 /*****************************************************************************
  * DEFINE CONSTANTS
@@ -116,18 +121,27 @@ function refreshWindow() {
 <template>
   <AirArrayManager
     v-bind="baseManagerAttrs"
-    v-model="model"
+    :model-value="props.modelValue"
     :custom-input="AgreementInput"
     :dialog-props="{ maxWidth: 960 }"
     :schema="AgreementV2"
     item-key="key"
     :error-messages="{
-      duplicateKey: '同じ適用開始日が存在しています',
+      duplicateKey: '同じ適用開始日で登録された取極めが存在します',
     }"
+    @create="($event) => (displayedAgreement = $event)"
     @delete="refreshWindow"
+    @update:modelValue="($event) => emit('update:modelValue', $event)"
   >
     <template #table="{ items, toCreate, toUpdate }">
-      <v-card title="取極め">
+      <AgreementsCard
+        :agreements="items"
+        v-model:displayedAgreement="displayedAgreement"
+        @click:create="(shiftType) => toCreate({ shiftType })"
+        @click:update="(agreement) => toUpdate(agreement)"
+        @click:duplicate="(agreement) => toCreate(agreement)"
+      />
+      <v-card title="取極め" style="display: none">
         <!-- ACTIONS -->
         <template #append>
           <v-btn
