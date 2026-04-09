@@ -1,9 +1,9 @@
-/**
- * useBaseManager
- * @version 1.0.0
- * @description A base manager composable providing isLoading, logger, router, isDev (from useAuthStore) and basical `attrs` set errors behavor.
- * @author shisyamo4131
- */
+/*****************************************************************************
+ * @file ./composables/useBaseManager.js
+ * @description AirArrayManager, AirItemManager 専用 基本コンポーザブル
+ * - `logger` や `router`, `isDev`, `isLoading` などの基本的な状態を提供。
+ * - `attrs` を計算して、エラー処理やローディング状態の更新などの基本的なビヘイビアを提供。
+ *****************************************************************************/
 import * as Vue from "vue";
 import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";

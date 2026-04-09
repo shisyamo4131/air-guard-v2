@@ -271,7 +271,12 @@ agreements.value = [...data]
   <TemplatesFixedHeightContainer>
     <v-row>
       <v-col cols="12" md="6" lg="4">
-        <AgreementsManager v-model="agreements" />
+        <v-card>
+          <v-card-item>
+            <v-card-title> マネージャー </v-card-title>
+          </v-card-item>
+          <v-card-text> aaa </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>
