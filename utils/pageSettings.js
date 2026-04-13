@@ -262,7 +262,7 @@ export const pageStructure = [
       {
         id: "employee-detail",
         path: "/employees/[id]",
-        label: "在職者詳細",
+        label: "従業員詳細",
         icon: "mdi-format-list-bulleted",
         roles: ["employees:read"],
         navigation: false,

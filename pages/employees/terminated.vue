@@ -1,45 +1,45 @@
 <script setup>
-/**
+/*****************************************************************************
  * @file pages/employees/terminated.vue
- * @description Terminated employees management page
- */
+ * @description 退職従業員検索ページ
+ *****************************************************************************/
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
-import { useEmployeesManager } from "@/composables/useEmployeesManager";
 
-/** SETUP */
-const search = ref(null);
-const options = [
-  ["where", "employmentStatus", "==", Employee.STATUS_TERMINATED],
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const search = ref("");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const defaultOption = [
+  "where",
+  "employmentStatus",
+  "==",
+  Employee.STATUS_TERMINATED,
 ];
-
-/** SETUP DATA LAYER */
+const options = computed(() => {
+  if (!search.value) {
+    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
+  } else {
+    return [defaultOption, ["orderBy", "code", "desc"]];
+  }
+});
 const { docs } = useDocuments("Employee", {
   search,
-  options: toRef(options),
+  options,
+  fetchAllOnEmpty: true,
 });
-
-/** SETUP MANAGER */
-const { attrs } = useEmployeesManager(
-  {
-    docs,
-    useDelay: 300,
-    onUpdateSearch: (val) => (search.value = val),
-  },
-  {
-    hideCreateBtn: true,
-
-    tableProps: {
-      hideAction: true,
-      searchProps: { hint: "2文字以上入力してください。" },
-      sortBy: [{ key: "code", order: "desc" }],
-    },
-  }
-);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <EmployeesManager
+      :docs="docs"
+      v-model:search="search"
+      :items-per-page="20"
+    />
   </TemplatesFixedHeightContainer>
 </template>

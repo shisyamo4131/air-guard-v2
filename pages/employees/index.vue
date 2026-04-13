@@ -1,8 +1,8 @@
 <script setup>
-/**
+/*****************************************************************************
  * @file pages/employees/index.vue
- * @description Active employee list page
- */
+ * @description 在職従業員一覧ページ
+ *****************************************************************************/
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
@@ -14,10 +14,22 @@ const search = ref("");
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const options = [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
+const defaultOption = [
+  "where",
+  "employmentStatus",
+  "==",
+  Employee.STATUS_ACTIVE,
+];
+const options = computed(() => {
+  if (!search.value) {
+    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
+  } else {
+    return [defaultOption, ["orderBy", "code", "desc"]];
+  }
+});
 const { docs } = useDocuments("Employee", {
   search,
-  options: toRef(options),
+  options,
   fetchAllOnEmpty: true,
 });
 </script>

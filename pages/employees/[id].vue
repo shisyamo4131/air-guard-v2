@@ -28,6 +28,9 @@ watch(terminateDialog, (newVal) => {
 <template>
   <TemplatesFixedHeightContainer>
     <v-row>
+      <v-col cols="12" v-if="doc.employementStatus !== 'ACTIVE'">
+        <v-alert type="error"> この従業員は現在在職していません。 </v-alert>
+      </v-col>
       <!-- 基本情報 -->
       <v-col cols="12" md="4">
         <v-row>
@@ -51,7 +54,7 @@ watch(terminateDialog, (newVal) => {
               ]"
               hide-delete-btn
             >
-              <template #activator="{ props: activatorProps }">
+              <template #activator="{ props: activatorProps, item }">
                 <v-card :title="doc.fullName" :subtitle="doc.fullNameKana">
                   <template #prepend>
                     <v-icon
@@ -61,7 +64,7 @@ watch(terminateDialog, (newVal) => {
                   </template>
                   <template #append>
                     <!-- 特殊処理用メニュー -->
-                    <v-menu>
+                    <v-menu v-if="item.employementStatus === 'ACTIVE'">
                       <template #activator="{ props: activatorProps }">
                         <v-btn
                           v-bind="activatorProps"
@@ -101,7 +104,7 @@ watch(terminateDialog, (newVal) => {
                                   :allowed-dates="
                                     (date) =>
                                       !dayjs(date).isBefore(
-                                        dayjs(doc.dateOfHire)
+                                        dayjs(doc.dateOfHire),
                                       )
                                   "
                                   label="退職日"
@@ -130,7 +133,7 @@ watch(terminateDialog, (newVal) => {
                                     reasonOfTermination,
                                     () => {
                                       terminateDialog = false;
-                                    }
+                                    },
                                   )
                                 "
                               />
@@ -156,7 +159,7 @@ watch(terminateDialog, (newVal) => {
                     <v-list-item
                       prepend-icon="mdi-cake"
                       :title="`${dayjs(doc.dateOfBirth).format(
-                        'YYYY年MM月DD日'
+                        'YYYY年MM月DD日',
                       )}(${doc.age?.years || '-'}歳${
                         doc.age?.months || '-'
                       }ヶ月)`"
@@ -165,7 +168,7 @@ watch(terminateDialog, (newVal) => {
                     <v-list-item
                       prepend-icon="mdi-calendar"
                       :title="`${dayjs(doc.dateOfHire).format(
-                        'YYYY年MM月DD日'
+                        'YYYY年MM月DD日',
                       )}(${doc.yearsOfService?.years || '-'}年${
                         doc.yearsOfService?.months || '-'
                       }ヶ月)`"
@@ -261,7 +264,7 @@ watch(terminateDialog, (newVal) => {
                     />
                     <v-list-item
                       :title="`${dayjs(doc.periodOfStay).format(
-                        'YYYY年MM月DD日(ddd)'
+                        'YYYY年MM月DD日(ddd)',
                       )}`"
                       subtitle="在留期間満了日"
                     />
@@ -304,7 +307,7 @@ watch(terminateDialog, (newVal) => {
                   <v-list class="py-0" slim>
                     <v-list-item
                       :title="`${dayjs(
-                        doc.dateOfSecurityGuardRegistration
+                        doc.dateOfSecurityGuardRegistration,
                       ).format('YYYY年MM月DD日')}`"
                       subtitle="警備員登録日"
                     />

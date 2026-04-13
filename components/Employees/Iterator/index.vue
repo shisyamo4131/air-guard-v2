@@ -65,11 +65,7 @@ const emit = defineEmits(["click:create", "click:detail", "click:edit"]);
 </script>
 
 <template>
-  <air-data-iterator
-    item-value="docId"
-    :items="props.employees"
-    :sort-by="[{ key: 'fullNameKana' }]"
-  >
+  <air-data-iterator item-value="docId" :items="props.employees">
     <!-- HEADER -->
     <template v-if="$slots.header" #header="slotProps">
       <!-- SLOT: header -->
