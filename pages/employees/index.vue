@@ -6,14 +6,20 @@
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
-/** SETUP */
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const search = ref("");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const options = [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
 const { docs } = useDocuments("Employee", {
+  search,
   options: toRef(options),
   fetchAllOnEmpty: true,
 });
-
-const search = ref("");
 </script>
 
 <template>
