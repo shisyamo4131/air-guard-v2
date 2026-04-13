@@ -57,6 +57,7 @@ const _props = defineProps({
   employees: { type: Array, default: () => [] },
   hideDefaultFooter: { type: Boolean, default: false },
   showCreate: { type: Boolean, default: false },
+  showDetail: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "EmployeesIterator");

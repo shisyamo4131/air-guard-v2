@@ -6,40 +6,49 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Employee } from "@/schemas";
+import { useBaseManager } from "@/composables/useBaseManager";
 
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
 const _props = defineProps({
+  docs: { type: Array, default: () => [] },
   hideDefaultFooter: { type: Boolean, default: false },
   itemsPerPage: { type: Number, default: 5 },
+  search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "EmployeesManager");
+const emit = defineEmits(["update:search"]);
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const { router } = useBaseManager("EmployeeManager");
 </script>
 
 <template>
-  <air-array-manager :schema="Employee">
-    <template #table="{ items, toCreate }">
-      <v-card class="d-flex flex-column fill-height" title="従業員管理">
-        <template v-if="props.showCreate" #append>
-          <v-btn
-            icon="mdi-plus"
-            color="primary"
-            variant="text"
-            @click="toCreate"
-          />
-        </template>
-        <v-card-text class="overflow-hidden">
-          <EmployeesIterator
-            class="fill-height"
-            grid
-            :employees="items"
-            :hide-default-footer="props.hideDefaultFooter"
-            :items-per-page="props.itemsPerPage"
-            :show-create="props.showCreate"
-            showEdit
-            showDetail
-          />
-        </v-card-text>
-      </v-card>
+  <air-array-manager :model-value="docs" :schema="Employee">
+    <template #table="{ toCreate, items }">
+      <v-toolbar class="ps-3 mb-4">
+        <AtomsSearchTextField
+          :model-value="props.search"
+          :delay="300"
+          @update:model-value="emit('update:search', $event)"
+        />
+        <v-btn icon="mdi-plus" @click="() => toCreate()" />
+      </v-toolbar>
+      <EmployeesIterator
+        class="flex-grow-1"
+        grid
+        :employees="items"
+        :hide-default-footer="props.hideDefaultFooter"
+        :items-per-page="props.itemsPerPage"
+        :show-create="props.showCreate"
+        showDetail
+        @click:create="() => toCreate()"
+        @click:detail="(item) => router.push(`/employees/${item.docId}`)"
+      />
     </template>
     <template #input-default="props">
       <MoleculesInputsEmployee v-bind="props" type="default" />

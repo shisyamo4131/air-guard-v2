@@ -5,7 +5,6 @@
  */
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
-import { useEmployeesManager } from "@/composables/useEmployeesManager";
 
 /** SETUP */
 const options = [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
@@ -13,22 +12,16 @@ const { docs } = useDocuments("Employee", {
   options: toRef(options),
   fetchAllOnEmpty: true,
 });
-const { attrs } = useEmployeesManager(
-  { docs },
-  {
-    tableProps: {
-      sortBy: [{ key: "code", order: "desc" }],
-    },
-  }
-);
+
+const search = ref("");
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs">
-      <template #input-default="props">
-        <MoleculesInputsEmployee v-bind="props" type="default" />
-      </template>
-    </air-array-manager>
+    <EmployeesManager
+      :docs="docs"
+      v-model:search="search"
+      :items-per-page="20"
+    />
   </TemplatesFixedHeightContainer>
 </template>

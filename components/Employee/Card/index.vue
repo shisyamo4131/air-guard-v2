@@ -30,7 +30,7 @@ const _props = defineProps({
   isSelected: { type: Boolean, default: false },
   showDetail: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
-  showSelect: { type: Boolean, default: true },
+  showSelect: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "EmployeeCard");
 const emit = defineEmits(["click:select", "click:edit", "click:detail"]);

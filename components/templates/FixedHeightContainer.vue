@@ -23,13 +23,6 @@ const props = defineProps({
  * 当該コンポーネント（テンプレート）を使用した場合に、タブレット・スマホでは
  * 「跳ね返り」効果が発生しないように修正。
  */
-// const containerStyle = computed(() => {
-//   const effectiveHeight =
-//     typeof props.height === "number" ? `${props.height}px` : props.height;
-//   return {
-//     height: effectiveHeight,
-//   };
-// });
 const containerStyle = computed(() => {
   const effectiveHeight =
     typeof props.height === "number" ? `${props.height}px` : props.height;
@@ -42,7 +35,7 @@ const containerStyle = computed(() => {
 </script>
 
 <template>
-  <v-container :style="containerStyle">
+  <v-container class="d-flex flex-column" :style="containerStyle">
     <slot />
   </v-container>
 </template>
