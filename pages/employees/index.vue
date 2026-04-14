@@ -6,6 +6,8 @@
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
+defineOptions({ name: "employees-index" });
+
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/

@@ -56,7 +56,14 @@ const handleSignOut = async () => {
     <v-main scrollable>
       <NuxtPage
         :keepalive="{
-          include: ['billings-customers'],
+          include: [
+            'customers-index',
+            'sites-index',
+            'employees-index',
+            'employees-terminated-index',
+            'outsourcers-index',
+            'billings-customers',
+          ],
           max: 10,
         }"
       />

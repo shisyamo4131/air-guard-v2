@@ -1,11 +1,11 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employees/Manager/index.vue
- * @description 従業員情報管理コンポーネント
+ * @file ./components/Customers/Manager/index.vue
+ * @description 取引先情報管理コンポーネント
  * @author shisyamo4131
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { Employee } from "@/schemas";
+import { Customer } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 
 /*****************************************************************************
@@ -18,19 +18,19 @@ const _props = defineProps({
   search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
 });
-const props = useDefaults(_props, "EmployeesManager");
+const props = useDefaults(_props, "CustomersManager");
 const emit = defineEmits(["update:search"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { router } = useBaseManager("EmployeeManager");
+const { router } = useBaseManager("CustomersManager");
 </script>
 
 <template>
   <air-array-manager
     :model-value="docs"
-    :schema="Employee"
+    :schema="Customer"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
@@ -44,20 +44,20 @@ const { router } = useBaseManager("EmployeeManager");
         />
         <v-btn icon="mdi-plus" @click="() => toCreate()" />
       </v-toolbar>
-      <EmployeesIterator
+      <CustomersIterator
         class="flex-grow-1"
         grid
-        :employees="items"
+        :customers="items"
         :hide-default-footer="props.hideDefaultFooter"
         :items-per-page="props.itemsPerPage"
         :show-create="props.showCreate"
         showDetail
         @click:create="() => toCreate()"
-        @click:detail="(item) => router.push(`/employees/${item.docId}`)"
+        @click:detail="(item) => router.push(`/customers/${item.docId}`)"
       />
     </template>
-    <template #input-default="props">
-      <MoleculesInputsEmployee v-bind="props" type="default" />
-    </template>
+    <!-- <template #input-default="props">
+      <MoleculesInputsSite v-bind="props" type="default" />
+    </template> -->
   </air-array-manager>
 </template>

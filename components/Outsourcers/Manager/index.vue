@@ -1,11 +1,11 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employees/Manager/index.vue
- * @description 従業員情報管理コンポーネント
+ * @file ./components/Outsourcers/Manager/index.vue
+ * @description 外注先情報管理コンポーネント
  * @author shisyamo4131
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { Employee } from "@/schemas";
+import { Outsourcer } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 
 /*****************************************************************************
@@ -18,24 +18,24 @@ const _props = defineProps({
   search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
 });
-const props = useDefaults(_props, "EmployeesManager");
+const props = useDefaults(_props, "OutsourcersManager");
 const emit = defineEmits(["update:search"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { router } = useBaseManager("EmployeeManager");
+const { router } = useBaseManager("OutsourcersManager");
 </script>
 
 <template>
   <air-array-manager
     :model-value="docs"
-    :schema="Employee"
+    :schema="Outsourcer"
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
   >
-    <template #table="{ toCreate, items }">
+    <template #table="{ toCreate, toUpdate, items }">
       <v-toolbar class="ps-3 mb-4">
         <AtomsSearchTextField
           :model-value="props.search"
@@ -44,20 +44,20 @@ const { router } = useBaseManager("EmployeeManager");
         />
         <v-btn icon="mdi-plus" @click="() => toCreate()" />
       </v-toolbar>
-      <EmployeesIterator
+      <OutsourcersIterator
         class="flex-grow-1"
         grid
-        :employees="items"
+        :outsourcers="items"
         :hide-default-footer="props.hideDefaultFooter"
         :items-per-page="props.itemsPerPage"
         :show-create="props.showCreate"
-        showDetail
+        showEdit
         @click:create="() => toCreate()"
-        @click:detail="(item) => router.push(`/employees/${item.docId}`)"
+        @click:edit="(item) => toUpdate(item)"
       />
     </template>
-    <template #input-default="props">
-      <MoleculesInputsEmployee v-bind="props" type="default" />
-    </template>
+    <!-- <template #input-default="props">
+      <MoleculesInputsSite v-bind="props" type="default" />
+    </template> -->
   </air-array-manager>
 </template>

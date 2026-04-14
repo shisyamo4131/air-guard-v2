@@ -1,27 +1,39 @@
 <script setup>
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
-import { useSitesManager } from "@/composables/useSitesManager";
+/*****************************************************************************
+ * @file pages/sites/index.vue
+ * @description 現場情報一覧ページ
+ *****************************************************************************/
 import { Site } from "@/schemas";
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
-/** SETUP  */
-const options = [["where", "status", "==", Site.STATUS_ACTIVE]];
+defineOptions({ name: "sites-index" });
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const search = ref("");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const defaultOption = ["where", "status", "==", Site.STATUS_ACTIVE];
+const options = computed(() => {
+  if (!search.value) {
+    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
+  } else {
+    return [defaultOption, ["orderBy", "code", "desc"]];
+  }
+});
+
 const { docs } = useDocuments("Site", {
-  options: toRef(options),
+  search,
+  options,
   fetchAllOnEmpty: true,
 });
-const { attrs } = useSitesManager(
-  { docs },
-  {
-    excludedKeys: ["agreements"],
-    tableProps: {
-      sortBy: [{ key: "code", order: "desc" }],
-    },
-  }
-);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <SitesManager :docs="docs" v-model:search="search" :items-per-page="20" />
   </TemplatesFixedHeightContainer>
 </template>

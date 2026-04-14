@@ -1,30 +1,48 @@
 <script setup>
-/**
- * @file pages/settings/outsourcers.vue
- * @description Outsourcer management page
- *
- * NOTE:
- * - 現状、すべて外注先をサブスクライブしているが、将来的にフィルタリングする可能性あり。
- */
+/*****************************************************************************
+ * @file pages/outsourcers/index.vue
+ * @description 外注先情報一覧ページ
+ *****************************************************************************/
+import { Outsourcer } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
-import { useOutsourcersManager } from "@/composables/useOutsourcersManager";
 
-/** SETUP DATA LAYER */
+defineOptions({ name: "outsourcers-index" });
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const search = ref("");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const defaultOption = [
+  "where",
+  "contractStatus",
+  "==",
+  Outsourcer.STATUS_ACTIVE,
+];
+const options = computed(() => {
+  if (!search.value) {
+    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
+  } else {
+    return [defaultOption, ["orderBy", "code", "desc"]];
+  }
+});
+
 const { docs } = useDocuments("Outsourcer", {
+  search,
+  options,
   fetchAllOnEmpty: true,
 });
-const { attrs } = useOutsourcersManager(
-  { docs, redirectPath: null },
-  {
-    tableProps: {
-      sortBy: [{ key: "code", order: "desc" }],
-    },
-  }
-);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <OutsourcersManager
+      :docs="docs"
+      v-model:search="search"
+      :items-per-page="20"
+    />
   </TemplatesFixedHeightContainer>
 </template>

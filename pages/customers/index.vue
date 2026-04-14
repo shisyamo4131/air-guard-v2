@@ -1,32 +1,43 @@
 <script setup>
-/**
- * @file pages/settings/customers.vue
- * @description Customer management page
- * @author shisyamo4131
- */
+/*****************************************************************************
+ * @file pages/customers/index.vue
+ * @description 取引先情報一覧ページ
+ *****************************************************************************/
+import { Customer } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
-import { useCustomersManager } from "@/composables/useCustomersManager";
+
+defineOptions({ name: "customers-index" });
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const search = ref("");
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const options = [["where", "contractStatus", "==", "ACTIVE"]];
+const defaultOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
+const options = computed(() => {
+  if (!search.value) {
+    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
+  } else {
+    return [defaultOption, ["orderBy", "code", "desc"]];
+  }
+});
+
 const { docs } = useDocuments("Customer", {
-  options: toRef(options),
+  search,
+  options,
   fetchAllOnEmpty: true,
 });
-const { attrs } = useCustomersManager(
-  { docs },
-  {
-    tableProps: {
-      sortBy: [{ key: "code", order: "desc" }],
-    },
-  }
-);
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs" />
+    <CustomersManager
+      :docs="docs"
+      v-model:search="search"
+      :items-per-page="20"
+    />
   </TemplatesFixedHeightContainer>
 </template>
