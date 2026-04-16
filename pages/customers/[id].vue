@@ -53,6 +53,8 @@ const { attrs } = useCustomerManager({ doc });
               :included-keys="[
                 'code',
                 'name',
+                'branchName',
+                'abbreviation',
                 'nameKana',
                 'tel',
                 'fax',
@@ -67,6 +69,16 @@ const { attrs } = useCustomerManager({ doc });
                       <v-list-item
                         :title="doc.name"
                         subtitle="取引先名"
+                        prepend-icon="mdi-tag"
+                      />
+                      <v-list-item
+                        :title="doc.branchName"
+                        subtitle="支店名"
+                        prepend-icon="mdi-tag"
+                      />
+                      <v-list-item
+                        :title="doc.abbreviation"
+                        subtitle="略称"
                         prepend-icon="mdi-tag"
                       />
                       <v-list-item
