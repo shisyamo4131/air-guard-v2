@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { Employee } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useRouter } from "vue-router";
 
 defineOptions({ name: "employees-index" });
 
@@ -12,26 +13,21 @@ defineOptions({ name: "employees-index" });
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
+const defaultOption = ref([
+  ["where", "employmentStatus", "==", Employee.STATUS_ACTIVE],
+]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const defaultOption = [
-  "where",
-  "employmentStatus",
-  "==",
-  Employee.STATUS_ACTIVE,
-];
-const options = computed(() => {
-  if (!search.value) {
-    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
-  } else {
-    return [defaultOption, ["orderBy", "code", "desc"]];
-  }
-});
+const router = useRouter();
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
 const { docs } = useDocuments("Employee", {
   search,
-  options,
+  options: defaultOption,
   fetchAllOnEmpty: true,
 });
 </script>
@@ -41,7 +37,9 @@ const { docs } = useDocuments("Employee", {
     <EmployeesManager
       :docs="docs"
       v-model:search="search"
-      :items-per-page="20"
+      :items-per-page="-1"
+      :sort-by="[{ key: 'code', order: 'asc' }]"
+      @create="(item) => router.push(`/employees/${item.docId}`)"
     />
   </TemplatesFixedHeightContainer>
 </template>

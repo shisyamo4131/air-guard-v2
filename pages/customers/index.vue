@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useRouter } from "vue-router";
 
 defineOptions({ name: "customers-index" });
 
@@ -12,22 +13,21 @@ defineOptions({ name: "customers-index" });
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
+const defaultOption = ref([
+  ["where", "contractStatus", "==", Customer.STATUS_ACTIVE],
+]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const defaultOption = ["where", "contractStatus", "==", Customer.STATUS_ACTIVE];
-const options = computed(() => {
-  if (!search.value) {
-    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
-  } else {
-    return [defaultOption, ["orderBy", "code", "desc"]];
-  }
-});
+const router = useRouter();
 
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
 const { docs } = useDocuments("Customer", {
   search,
-  options,
+  options: defaultOption,
   fetchAllOnEmpty: true,
 });
 </script>
@@ -37,7 +37,8 @@ const { docs } = useDocuments("Customer", {
     <CustomersManager
       :docs="docs"
       v-model:search="search"
-      :items-per-page="20"
+      :items-per-page="-1"
+      :sort-by="[{ key: 'code', order: 'asc' }]"
     />
   </TemplatesFixedHeightContainer>
 </template>

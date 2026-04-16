@@ -324,6 +324,7 @@ watch(terminateDialog, (newVal) => {
                       :title="doc.emergencyContactPhone"
                       subtitle="緊急連絡先電話番号"
                     />
+                    <v-list-item :title="doc.domicile" subtitle="本籍地" />
                   </v-list>
                   <template #actions>
                     <MoleculesActionsEdit v-bind="activatorProps" />

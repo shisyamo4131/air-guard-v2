@@ -17,6 +17,7 @@ const _props = defineProps({
   itemsPerPage: { type: Number, default: 5 },
   search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
+  sortBy: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "CustomersManager");
 const emit = defineEmits(["update:search"]);
@@ -48,10 +49,12 @@ const { attrs, router } = useBaseManager("CustomersManager");
       <CustomersIterator
         class="flex-grow-1"
         grid
+        :min-column-width="300"
         :customers="items"
         :hide-default-footer="props.hideDefaultFooter"
         :items-per-page="props.itemsPerPage"
         :show-create="props.showCreate"
+        :sort-by="props.sortBy"
         showDetail
         @click:create="() => toCreate()"
         @click:detail="(item) => router.push(`/customers/${item.docId}`)"

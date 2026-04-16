@@ -17,6 +17,7 @@ const _props = defineProps({
   itemsPerPage: { type: Number, default: 5 },
   search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
+  sortBy: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "EmployeesManager");
 const emit = defineEmits(["update:search"]);
@@ -53,6 +54,7 @@ const { attrs, router } = useBaseManager("EmployeesManager");
         :items-per-page="props.itemsPerPage"
         :show-create="props.showCreate"
         showDetail
+        :sort-by="props.sortBy"
         @click:create="() => toCreate()"
         @click:detail="(item) => router.push(`/employees/${item.docId}`)"
       />

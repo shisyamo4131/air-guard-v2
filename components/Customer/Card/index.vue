@@ -76,7 +76,7 @@ const showActions = Vue.computed(() => {
           {{ `No. ${props.customer.code || "---"}` }}
         </div>
         <div class="text-subtitle-1 text-truncate" style="line-height: 1">
-          {{ props.customer.name }}
+          {{ props.customer.abbreviation }}
         </div>
       </v-card-title>
       <v-card-subtitle class="text-caption">{{
