@@ -24,11 +24,12 @@ const emit = defineEmits(["update:search"]);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { router } = useBaseManager("SitesManager");
+const { attrs, router } = useBaseManager("SitesManager");
 </script>
 
 <template>
   <air-array-manager
+    v-bind="attrs"
     :model-value="docs"
     :schema="Site"
     :handle-create="(item) => item.create()"

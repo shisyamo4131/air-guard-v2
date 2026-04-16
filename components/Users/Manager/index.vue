@@ -1,34 +1,52 @@
 <script setup>
-/**
- * @file components/organisms/UsersManager.vue
- * @description A component to manage users.
- */
-import { useRouter } from "vue-router";
+/*****************************************************************************
+ * @file ./components/Users/Manager/index.vue
+ * @description ユーザー情報管理コンポーネント
+ * @author shisyamo4131
+ *
+ *****************************************************************************/
 import { User } from "@/schemas";
-import { useLogger } from "../composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useRolePresets } from "@/composables/useRolePresets";
+import { useDefaults } from "vuetify";
+import UserCardMenu from "./CardMenu.vue";
+import { useBaseManager } from "@/composables/useBaseManager";
+
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
+  docs: { type: Array, default: () => [] },
+  hideDefaultFooter: { type: Boolean, default: false },
+  itemsPerPage: { type: Number, default: 5 },
+  search: { type: String, default: null },
+  showCreate: { type: Boolean, default: false },
+});
+const props = useDefaults(_props, "UsersManager");
+const emit = defineEmits(["update:search"]);
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const router = useRouter();
 const auth = useAuthStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
-const logger = useLogger("UsersManager", useErrorsStore());
-const { changeAdminUser, enableUser, disableUser } = useAuthFunctions();
+const { enableUser, disableUser } = useAuthFunctions();
 const { ROLE_PRESETS } = useRolePresets();
+const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
  * REACTIVE OBJECTS
  *****************************************************************************/
 const user = reactive(new User());
-const isLoading = ref(false);
+const search = ref("");
+const toolberMenu = ref(false);
+const userCardMenu = ref(false);
+const userCardMenuTarget = ref(null);
+const userCardMenuTargetUser = ref(null);
 
 /*****************************************************************************
  * COMPUTED
@@ -61,14 +79,15 @@ onUnmounted(() => {
  * METHODS
  *****************************************************************************/
 /**
- * Disable a user account.
- * @param item - User item to be disabled
+ * ユーザーアカウントを無効化します。
+ * @param user - 無効化するユーザーオブジェクト
+ * @return {Promise<void>} - 無効化処理が完了するまでの Promise
  */
-async function handleDisableUser(item) {
+async function handleDisableUser(user) {
   const key = loadings.add("ユーザーを無効化しています...");
   try {
     isLoading.value = true;
-    await disableUser({ uid: item.docId });
+    await disableUser({ uid: user.docId });
     messages.add("ユーザーアカウントを無効化しました");
   } catch (error) {
     logger.error({ error });
@@ -79,14 +98,15 @@ async function handleDisableUser(item) {
 }
 
 /**
- * Enable a user account.
- * @param item - User item to be enabled
+ * ユーザーアカウントを有効化します。
+ * @param user - 有効化するユーザーオブジェクト
+ * @return {Promise<void>} - 有効化処理が完了するまでの Promise
  */
-async function handleEnableUser(item) {
+async function handleEnableUser(user) {
   const key = loadings.add("ユーザーを有効化しています...");
   try {
     isLoading.value = true;
-    await enableUser({ uid: item.docId });
+    await enableUser({ uid: user.docId });
     messages.add("ユーザーアカウントを有効化しました");
   } catch (error) {
     logger.error({ error });
@@ -96,37 +116,28 @@ async function handleEnableUser(item) {
   }
 }
 
-async function handleDelete(item) {
-  try {
-    if (item.isAdmin) {
-      throw new Error("管理者ユーザーは削除できません。");
-    } else {
-      await item.delete();
-    }
-  } catch (error) {
-    logger.error({ error });
+/**
+ * ユーザーごとのメニューを開きます。
+ * @param param - メニューを開くためのイベントとユーザーオブジェクト
+ * @property {Event} param.event - メニューを開くためのイベントオブジェクト
+ * @property {Object} param.user - メニューの対象となるユーザーオブジェクト
+ * @return {Promise<void>} - メニューの表示が完了するまでの Promise
+ */
+async function showUserCardMenu({ event, user }) {
+  if (userCardMenu.value) {
+    userCardMenu.value = false;
+    await new Promise((resolve) => setTimeout(resolve, 100));
   }
-}
-
-async function handleChangeAdminUser(item) {
-  const key = loadings.add("管理者権限を移譲しています...");
-  try {
-    isLoading.value = true;
-    await changeAdminUser({ from: auth.uid, to: item.docId });
-    messages.add("管理者権限の移譲に成功しました！");
-    router.push("/dashboard");
-  } catch (error) {
-    logger.error({ error });
-  } finally {
-    isLoading.value = false;
-    loadings.remove(key);
-  }
+  userCardMenuTarget.value = event.target;
+  userCardMenuTargetUser.value = user;
+  userCardMenu.value = true;
 }
 </script>
 
 <template>
   <air-array-manager
-    :model-value="user.docs"
+    v-bind="attrs"
+    :model-value="props.docs"
     :schema="User"
     :before-edit="
       (editMode, item) => {
@@ -135,25 +146,13 @@ async function handleChangeAdminUser(item) {
     "
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
-    :handle-delete="handleDelete"
+    :handle-delete="(item) => item.delete()"
     :disable-delete="(item) => !!item.isAdmin"
-    :is-loading="isLoading"
     :excluded-keys="
       (item) => {
         return item.isAdmin ? ['roles'] : [];
       }
     "
-    :table-props="{
-      headers: [
-        { title: 'email', key: 'email' },
-        { title: '表示名', key: 'displayName' },
-        { title: '役割', key: 'roles', sortable: false },
-        { title: '管理者', key: 'isAdmin' },
-        { title: '状態', key: 'disabled' },
-      ],
-    }"
-    @error="(error) => logger.error({ error })"
-    @error:clear="() => logger.clearError()"
   >
     <template #[`input.email`]="inputProps">
       <air-text-field
@@ -205,86 +204,56 @@ async function handleChangeAdminUser(item) {
     </template>
 
     <template #table="tableProps">
-      <air-data-table v-bind="tableProps">
-        <!-- 役割列の表示 -->
-        <template #[`item.roles`]="{ item }">
-          <div v-if="item.roles?.length > 0" class="d-flex flex-wrap ga-1">
-            <v-chip
-              v-for="role in item.roles"
-              :key="role"
-              size="x-small"
-              color="primary"
+      <v-toolbar class="ps-3 mb-4">
+        <AtomsSearchTextField
+          :model-value="search"
+          @update:model-value="(value) => (search = value)"
+        />
+        <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
+        <v-menu v-model="toolberMenu">
+          <template #activator="{ props: activatorProps }">
+            <v-btn v-bind="activatorProps" icon="mdi-dots-vertical" />
+          </template>
+          <v-list density="compact" slim>
+            <OrganismsChangeAdminUserDialog
+              @complete="router.push('/dashboard')"
             >
-              {{ roleOptions.find((opt) => opt.value === role)?.title || role }}
-            </v-chip>
-          </div>
-          <span v-else class="text-medium-emphasis text-caption">
-            役割なし
-          </span>
-        </template>
-
-        <template #[`item.isAdmin`]="{ item }">
-          <v-icon v-if="item.isAdmin" icon="mdi-check" color="primary" />
-          <v-btn
-            v-if="
-              auth.isAdmin &&
-              !item.isAdmin &&
-              !item.isTemporary &&
-              !item.disabled
-            "
-            color="primary"
-            :disabled="isLoading"
-            :loading="isLoading"
-            size="x-small"
-            @click="handleChangeAdminUser(item)"
-            >移譲</v-btn
-          >
-        </template>
-
-        <template #[`item.disabled`]="{ item }">
-          <span v-if="item.isTemporary">仮登録</span>
-          <span v-else-if="item.disabled">無効</span>
-          <span v-else>有効</span>
-        </template>
-
-        <template #[`item.actions`]="{ item }">
-          <div class="d-flex ga-2 justify-end">
-            <v-btn
-              color="primary"
-              :disabled="!item.disabled || item.isTemporary || isLoading"
-              :loading="isLoading"
-              size="x-small"
-              @click="handleEnableUser(item)"
-              >有効化</v-btn
-            >
-            <v-btn
-              color="medium-emphasis"
-              :disabled="
-                item.disabled ||
-                item.isTemporary ||
-                item.docId === auth.uid ||
-                isLoading
-              "
-              :loading="isLoading"
-              size="x-small"
-              @click="handleDisableUser(item)"
-              >無効化</v-btn
-            >
-            <v-btn
-              prepend-icon="mdi-pencil"
-              color="secondary"
-              :disabled="item.disabled || isLoading"
-              :loading="isLoading"
-              size="x-small"
-              @click="tableProps.toUpdate(item)"
-              >編集
-              <template #prepend>
-                <v-icon color="white"></v-icon>
+              <template #activator="{ props: dialogProps }">
+                <v-list-item v-bind="dialogProps" title="管理者変更" />
               </template>
-            </v-btn>
-          </div>
+            </OrganismsChangeAdminUserDialog>
+          </v-list>
+        </v-menu>
+      </v-toolbar>
+      <UsersIterator
+        class="flex-grow-1 flex-shrink-0"
+        grid
+        :users="tableProps.items"
+        :hide-default-footer="props.hideDefaultFooter"
+        :items-per-page="props.itemsPerPage"
+        :show-create="props.showCreate"
+        show-edit
+        @click:create="() => toCreate()"
+        @click:edit="(item) => tableProps.toUpdate(item)"
+      >
+        <template #card-append="{ item }">
+          <v-btn
+            icon="mdi-dots-vertical"
+            size="small"
+            @click="(event) => showUserCardMenu({ event, user: item })"
+          />
         </template>
-      </air-data-table>
+      </UsersIterator>
+      <UserCardMenu
+        v-model="userCardMenu"
+        :target="userCardMenuTarget"
+        :user="userCardMenuTargetUser"
+        :offset="[-8, -12]"
+        location="bottom start"
+        scroll-strategy="close"
+        @click:enable="handleEnableUser"
+        @click:disable="handleDisableUser"
+      />
     </template>
   </air-array-manager>
 </template>

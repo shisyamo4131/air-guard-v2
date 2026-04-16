@@ -2,7 +2,7 @@
 
 export const ROLE_PRESETS = {
   manager: {
-    label: "部長・所長",
+    label: "統括",
     description: "統括管理",
     icon: "mdi-hammer-wrench",
     permissions: [

@@ -63,14 +63,14 @@ export const checkEmailAvailability = onCall(async (request) => {
   if (!email) {
     throw new HttpsError(
       "invalid-argument",
-      "メールアドレスが指定されていません。"
+      "メールアドレスが指定されていません。",
     );
   }
 
   if (typeof isAdmin !== "boolean") {
     throw new HttpsError(
       "invalid-argument",
-      "isAdminフラグが指定されていません。"
+      "isAdminフラグが指定されていません。",
     );
   }
 
@@ -94,7 +94,7 @@ export const checkEmailAvailability = onCall(async (request) => {
     if (authExists) {
       throw new HttpsError(
         "already-exists",
-        "このメールアドレスは既に使用されています。"
+        "このメールアドレスは既に使用されています。",
       );
     }
 
@@ -109,7 +109,7 @@ export const checkEmailAvailability = onCall(async (request) => {
       if (!adminSnapshot.empty) {
         throw new HttpsError(
           "already-exists",
-          "このメールアドレスは既に管理者として登録されています。"
+          "このメールアドレスは既に管理者として登録されています。",
         );
       }
     } else {
@@ -123,13 +123,13 @@ export const checkEmailAvailability = onCall(async (request) => {
       if (tempUserSnapshot.empty) {
         throw new HttpsError(
           "not-found",
-          "事前登録が見つかりません。管理者にお問い合わせください。"
+          "事前登録が見つかりません。管理者にお問い合わせください。",
         );
       }
     }
 
     logger.info(
-      `Email availability check passed for: ${email}, isAdmin: ${isAdmin}`
+      `Email availability check passed for: ${email}, isAdmin: ${isAdmin}`,
     );
 
     return { available: true };
@@ -142,7 +142,7 @@ export const checkEmailAvailability = onCall(async (request) => {
 
     throw new HttpsError(
       "internal",
-      "メールアドレスチェック中に予期しないエラーが発生しました。"
+      "メールアドレスチェック中に予期しないエラーが発生しました。",
     );
   }
 });
@@ -170,7 +170,7 @@ export const createAdminAccount = onCall(async (request) => {
   if (!companyName || !companyNameKana || !displayName) {
     throw new HttpsError(
       "invalid-argument",
-      "会社情報（会社名、会社名カナ、管理者表示名）が不足しています。"
+      "会社情報（会社名、会社名カナ、管理者表示名）が不足しています。",
     );
   }
 
@@ -191,7 +191,7 @@ export const createAdminAccount = onCall(async (request) => {
       const companyRef = await company.create({ transaction });
 
       logger.info(
-        `Company created with ID: ${companyRef.id} for admin UID: ${uid}`
+        `Company created with ID: ${companyRef.id} for admin UID: ${uid}`,
       );
 
       // User作成（Companiesのサブコレクション、uidをdocIdとして使用）
@@ -210,7 +210,7 @@ export const createAdminAccount = onCall(async (request) => {
       });
 
       logger.info(
-        `User document created with ID: ${uid} for UID: ${uid} under company ID: ${companyRef.id}`
+        `User document created with ID: ${uid} for UID: ${uid} under company ID: ${companyRef.id}`,
       );
 
       return { companyId: companyRef.id, userId: uid };
@@ -223,7 +223,7 @@ export const createAdminAccount = onCall(async (request) => {
     });
 
     logger.info(
-      `Custom claims set for UID: ${uid}, CompanyId: ${result.companyId}`
+      `Custom claims set for UID: ${uid}, CompanyId: ${result.companyId}`,
     );
 
     return {
@@ -240,7 +240,7 @@ export const createAdminAccount = onCall(async (request) => {
 
     throw new HttpsError(
       "internal",
-      "管理者アカウント作成中に予期しないエラーが発生しました。"
+      "管理者アカウント作成中に予期しないエラーが発生しました。",
     );
   }
 });
@@ -265,7 +265,7 @@ export const checkUserPreRegistration = onCall(async (request) => {
   if (!email) {
     throw new HttpsError(
       "invalid-argument",
-      "メールアドレスが指定されていません。"
+      "メールアドレスが指定されていません。",
     );
   }
 
@@ -288,7 +288,7 @@ export const checkUserPreRegistration = onCall(async (request) => {
     const preRegData = preRegDoc.data();
 
     logger.info(
-      `Pre-registration found for email: ${email}, CompanyId: ${preRegData.companyId}`
+      `Pre-registration found for email: ${email}, CompanyId: ${preRegData.companyId}`,
     );
 
     return {
@@ -307,7 +307,7 @@ export const checkUserPreRegistration = onCall(async (request) => {
 
     throw new HttpsError(
       "internal",
-      "ユーザー事前登録確認中に予期しないエラーが発生しました。"
+      "ユーザー事前登録確認中に予期しないエラーが発生しました。",
     );
   }
 });
@@ -335,12 +335,12 @@ export const setupUserAccount = onCall(async (request) => {
   if (!companyId || !tempUserId) {
     throw new HttpsError(
       "invalid-argument",
-      "必須パラメータが不足しています。"
+      "必須パラメータが不足しています。",
     );
   }
 
   logger.info(
-    `setupUserAccount started for UID: ${uid}, Email: ${email}, CompanyId: ${companyId}`
+    `setupUserAccount started for UID: ${uid}, Email: ${email}, CompanyId: ${companyId}`,
   );
 
   try {
@@ -359,13 +359,13 @@ export const setupUserAccount = onCall(async (request) => {
     if (tempUser.email !== email) {
       throw new HttpsError(
         "permission-denied",
-        "メールアドレスが一致しません。"
+        "メールアドレスが一致しません。",
       );
     }
     if (!tempUser.isTemporary) {
       throw new HttpsError(
         "failed-precondition",
-        "このユーザーは既に本登録されています。"
+        "このユーザーは既に本登録されています。",
       );
     }
 
@@ -382,7 +382,7 @@ export const setupUserAccount = onCall(async (request) => {
       });
 
       logger.info(
-        `User document created with ID: ${uid} for UID: ${uid}, temp doc deleted: ${tempUserId}`
+        `User document created with ID: ${uid} for UID: ${uid}, temp doc deleted: ${tempUserId}`,
       );
     });
 
@@ -404,7 +404,7 @@ export const setupUserAccount = onCall(async (request) => {
 
     throw new HttpsError(
       "internal",
-      "ユーザーアカウント作成中に予期しないエラーが発生しました。"
+      "ユーザーアカウント作成中に予期しないエラーが発生しました。",
     );
   }
 });
@@ -437,7 +437,7 @@ async function switchUserEnabled(uid, enabled = true) {
   if (!companyId) {
     throw new HttpsError(
       "failed-precondition",
-      "ユーザーの会社情報が見つかりません。"
+      "ユーザーの会社情報が見つかりません。",
     );
   }
 
@@ -448,7 +448,7 @@ async function switchUserEnabled(uid, enabled = true) {
   if (!userDoc.exists) {
     throw new HttpsError(
       "not-found",
-      `ユーザー ${uid} のFirestoreドキュメントが見つかりません。`
+      `ユーザー ${uid} のFirestoreドキュメントが見つかりません。`,
     );
   }
 
@@ -473,7 +473,7 @@ export const disableUser = onCall(async (request) => {
   if (!uid) {
     throw new HttpsError(
       "invalid-argument",
-      "無効化するユーザーIDが指定されていません。"
+      "無効化するユーザーIDが指定されていません。",
     );
   }
 
@@ -486,7 +486,7 @@ export const disableUser = onCall(async (request) => {
     }
     throw new HttpsError(
       "internal",
-      `ユーザー ${uid} の無効化中に予期しないエラーが発生しました。`
+      `ユーザー ${uid} の無効化中に予期しないエラーが発生しました。`,
     );
   }
 });
@@ -504,7 +504,7 @@ export const enableUser = onCall(async (request) => {
   if (!uid) {
     throw new HttpsError(
       "invalid-argument",
-      "有効化するユーザーIDが指定されていません。"
+      "有効化するユーザーIDが指定されていません。",
     );
   }
 
@@ -517,13 +517,14 @@ export const enableUser = onCall(async (request) => {
     }
     throw new HttpsError(
       "internal",
-      `ユーザー ${uid} の有効化中に予期しないエラーが発生しました。`
+      `ユーザー ${uid} の有効化中に予期しないエラーが発生しました。`,
     );
   }
 });
 
 /**
  * 管理者ユーザー変更
+ * - 現在の管理者ユーザーIDから新しい管理者ユーザーIDへ、管理者権限を移行します。
  * @param {Object} request
  * @param {Object} request.auth - 認証情報
  * @param {Object} request.data
@@ -536,23 +537,33 @@ export const enableUser = onCall(async (request) => {
  * @throws {HttpsError} if any validation or operation fails
  */
 export const changeAdminUser = onCall(async (request) => {
+  // 1. 認証チェック
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
+  // 2. companyId の取得と検証
   const { companyId } = request.auth.token;
   if (!companyId) {
     throw new HttpsError("permission-denied", "会社情報が見つかりません。");
   }
 
+  // 3. パラメータの検証
   const { from, to } = request.data;
   if (!from || !to) {
     throw new HttpsError(
       "invalid-argument",
-      "移行元・移行先のユーザーIDが指定されていません。"
+      "移行元・移行先のユーザーIDが指定されていません。",
+    );
+  }
+  if (from === to) {
+    throw new HttpsError(
+      "invalid-argument",
+      "移行元・移行先のユーザーIDが同一です。",
     );
   }
 
+  // 4. ユーザードキュメントの存在と状態の検証
   const fromUser = new User();
   const fromExists = await fromUser.fetch({
     docId: from,
@@ -561,10 +572,17 @@ export const changeAdminUser = onCall(async (request) => {
   if (!fromExists) {
     throw new HttpsError(
       "not-found",
-      `移行元ユーザー ${from} が見つかりません。`
+      `移行元ユーザー ${from} が見つかりません。`,
+    );
+  }
+  if (!fromUser.isAdmin) {
+    throw new HttpsError(
+      "failed-precondition",
+      `移行元ユーザー ${from} は管理者ではありません。`,
     );
   }
 
+  // 5. 移行先ユーザーの存在と状態の検証
   const toUser = new User();
   const toExists = await toUser.fetch({
     docId: to,
@@ -573,7 +591,13 @@ export const changeAdminUser = onCall(async (request) => {
   if (!toExists) {
     throw new HttpsError(
       "not-found",
-      `移行先ユーザー ${to} が見つかりません。`
+      `移行先ユーザー ${to} が見つかりません。`,
+    );
+  }
+  if (toUser.isAdmin) {
+    throw new HttpsError(
+      "failed-precondition",
+      `移行先ユーザー ${to} は既に管理者です。`,
     );
   }
 
@@ -598,7 +622,7 @@ export const changeAdminUser = onCall(async (request) => {
     logger.error("changeAdminUser でエラーが発生しました:", error);
     throw new HttpsError(
       "internal",
-      `管理者ユーザーの変更中に予期しないエラーが発生しました。`
+      `管理者ユーザーの変更中に予期しないエラーが発生しました。`,
     );
   }
 });

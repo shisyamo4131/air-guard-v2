@@ -14,7 +14,11 @@ const statistics = useStatisticsStore();
 
 <template>
   <v-container>
-    <v-row v-if="auth.hasPermission('operation-billings:write')" dense>
+    <v-row
+      style="display: none"
+      v-if="auth.hasPermission('operation-billings:write')"
+      dense
+    >
       <v-col cols="12">
         <!-- 妥当性エラー稼働請求 -->
         <air-card color="warning" prepend-icon="mdi-alert" popup>

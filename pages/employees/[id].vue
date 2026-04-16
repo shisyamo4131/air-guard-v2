@@ -28,7 +28,7 @@ watch(terminateDialog, (newVal) => {
 <template>
   <TemplatesFixedHeightContainer>
     <v-row>
-      <v-col cols="12" v-if="doc.employementStatus !== 'ACTIVE'">
+      <v-col cols="12" v-if="doc.employmentStatus !== 'ACTIVE'">
         <v-alert type="error"> この従業員は現在在職していません。 </v-alert>
       </v-col>
       <!-- 基本情報 -->
@@ -64,7 +64,7 @@ watch(terminateDialog, (newVal) => {
                   </template>
                   <template #append>
                     <!-- 特殊処理用メニュー -->
-                    <v-menu v-if="item.employementStatus === 'ACTIVE'">
+                    <v-menu v-if="item.employmentStatus === 'ACTIVE'">
                       <template #activator="{ props: activatorProps }">
                         <v-btn
                           v-bind="activatorProps"
