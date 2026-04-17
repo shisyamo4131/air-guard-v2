@@ -1,12 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./*"],
-      "~/*": ["./*"],
-      "#app": ["./.nuxt/app"],
-      "#imports": ["./.nuxt/imports"]
-    },
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
