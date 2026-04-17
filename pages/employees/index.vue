@@ -38,7 +38,7 @@ const { docs } = useDocuments("Employee", {
       :docs="docs"
       v-model:search="search"
       :items-per-page="-1"
-      :sort-by="[{ key: 'code', order: 'asc' }]"
+      :sort-by="[{ key: 'fullNameKana', order: 'asc' }]"
       @create="(item) => router.push(`/employees/${item.docId}`)"
     />
   </TemplatesFixedHeightContainer>
