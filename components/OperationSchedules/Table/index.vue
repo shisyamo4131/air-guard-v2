@@ -260,7 +260,7 @@ const {
               <!-- SLOT: site-shift-type-order -->
               <slot name="site-shift-type-order" v-bind="{ ...order }">
                 <div class="py-1 d-flex align-center">
-                  <AtomsChipsShiftType
+                  <ShiftTypeChip
                     :shift-type="order.shiftType"
                     class="mr-2"
                     density="compact"

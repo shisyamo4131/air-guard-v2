@@ -28,7 +28,7 @@ const { attrs } = useIndex(props);
   <v-list-item v-bind="attrs">
     <template #prepend="slotProps">
       <slot name="prepend" v-bind="slotProps || {}">
-        <AtomsChipsShiftType class="mr-2" :shift-type="props.shiftType" />
+        <ShiftTypeChip class="mr-2" :shift-type="props.shiftType" />
       </slot>
     </template>
     <template #title="{ title }">

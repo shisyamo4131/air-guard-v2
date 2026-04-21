@@ -25,7 +25,7 @@ const emit = defineEmits(["click:cancel", "click:submit"]);
             <slot name="item" v-bind="props">
               <v-list-item border class="pa-2 mb-2" rounded>
                 <v-list-item-title>
-                  <AtomsChipsShiftType
+                  <ShiftTypeChip
                     class="mr-2"
                     :shift-type="props.element.shiftType"
                   />

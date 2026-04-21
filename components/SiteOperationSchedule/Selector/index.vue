@@ -51,7 +51,7 @@ const {
   <v-card>
     <!-- prepend -->
     <template #prepend>
-      <AtomsChipsShiftType :shift-type="props.shiftType" />
+      <ShiftTypeChip :shift-type="props.shiftType" />
     </template>
 
     <!-- title -->

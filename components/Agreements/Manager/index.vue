@@ -7,7 +7,6 @@
  * - `AgreementV2` インスタンスの配列を管理するためのコンポーネント。
  * - FireStore への CRUD 操作は行わない、純粋な配列管理 UI コンポーネント。
  *****************************************************************************/
-import dayjs from "dayjs";
 import { AgreementV2 } from "@/schemas";
 import { useDefaults } from "vuetify";
 import { useBaseManager } from "@/composables/useBaseManager";
@@ -21,7 +20,7 @@ const _props = defineProps({
   shiftType: { type: String, default: "DAY" },
 });
 const props = useDefaults(_props, "AgreementsManager");
-const emit = defineEmits(["update:modelValue"]);
+const emit = defineEmits(["update:modelValue", "update:shiftType"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -32,14 +31,18 @@ const { attrs: baseManagerAttrs } = useBaseManager("AgreementsManager");
  * SETUP STATES
  *****************************************************************************/
 const currentAgreement = ref(null);
-
-/*****************************************************************************
- * DEFINE CONSTANTS
- *****************************************************************************/
+const internalShiftType = ref(props.shiftType); // 内部管理用 `shiftType`
 
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
+// `shiftType` の同期処理
+watch(
+  () => props.shiftType,
+  (newValue) => (internalShiftType.value = newValue),
+  { immediate: true },
+);
+watch(internalShiftType, (newValue) => emit("update:shiftType", newValue));
 
 /*****************************************************************************
  * FUNCTIONS
@@ -57,6 +60,7 @@ const currentAgreement = ref(null);
     :error-messages="{
       duplicateKey: '同じ適用開始日で登録された取極めが存在します',
     }"
+    :before-edit="(editMode, item) => (item.shiftType = internalShiftType)"
     @create="($event) => (currentAgreement = $event)"
     @delete="currentAgreement = null"
     @update:modelValue="($event) => emit('update:modelValue', $event)"
@@ -83,6 +87,7 @@ const currentAgreement = ref(null);
         <v-card-text class="py-0">
           <AgreementsViewer
             :agreements="items"
+            v-model:shiftType="internalShiftType"
             @update:currentAgreement="currentAgreement = $event"
           />
         </v-card-text>
