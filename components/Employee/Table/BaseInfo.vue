@@ -3,6 +3,7 @@
  * @file ./components/Company/Table/BaseInfo.vue
  * @description 会社の基本情報表示テーブル
  *****************************************************************************/
+import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
 
 /*****************************************************************************
@@ -22,14 +23,19 @@ const _props = defineProps({
   building: { type: String, default: "" }, // 建物名
   mobile: { type: String, default: "" }, // 携帯電話番号
   email: { type: String, default: "" }, // メールアドレス
-  nationality: { type: String, default: "" }, // 国籍
-  isForeigner: { type: Boolean, default: false }, // 外国人かどうか
-  foreignName: { type: String, default: "" }, // 外国人氏名
-  residenceStatus: { type: String, default: "" }, // 在留資格
-  periodOfStay: { type: Object, default: null }, // 在留期間満了日
   remarks: { type: String, default: "" }, // 備考
 });
 const props = useDefaults(_props, "EmployeeTableBaseInfo");
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const formattedDateOfBirth = computed(() => {
+  return props.dateOfBirth ? dayjs(props.dateOfBirth).format("YYYY/MM/DD") : "";
+});
+const formattedDateOfHire = computed(() => {
+  return props.dateOfHire ? dayjs(props.dateOfHire).format("YYYY/MM/DD") : "";
+});
 </script>
 
 <template>
@@ -46,6 +52,14 @@ const props = useDefaults(_props, "EmployeeTableBaseInfo");
       <tr>
         <td>従業員名（カナ）</td>
         <td>{{ props.fullNameKana }}</td>
+      </tr>
+      <tr>
+        <td>性別</td>
+        <td>{{ props.gender }}</td>
+      </tr>
+      <tr>
+        <td>生年月日</td>
+        <td>{{ formattedDateOfBirth }}</td>
       </tr>
       <tr>
         <td>郵便番号</td>
@@ -68,20 +82,12 @@ const props = useDefaults(_props, "EmployeeTableBaseInfo");
         <td>{{ props.email }}</td>
       </tr>
       <tr>
-        <td>国籍</td>
-        <td>{{ props.nationality }}</td>
+        <td>入社日</td>
+        <td>{{ formattedDateOfHire }}</td>
       </tr>
-      <tr v-if="props.isForeigner">
-        <td>外国人氏名</td>
-        <td>{{ props.foreignName }}</td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>在留資格</td>
-        <td>{{ props.residenceStatus }}</td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>在留期間</td>
-        <td>{{ props.periodOfStay }}</td>
+      <tr>
+        <td>肩書</td>
+        <td>{{ props.title }}</td>
       </tr>
       <tr>
         <td>備考</td>

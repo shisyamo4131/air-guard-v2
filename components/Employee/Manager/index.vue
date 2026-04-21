@@ -35,12 +35,8 @@ const DEFINITION = {
       "building", // 建物名
       "mobile", // 携帯電話番号
       "email", // メールアドレス
-      "nationality", // 国籍
-      "isForeigner", // 外国人かどうか
-      "foreignName", // 外国人氏名
-      "residenceStatus", // 在留資格
-      "periodOfStay", // 在留期間
       "remarks", // 備考
+      "employmentStatus",
     ],
   },
   securityGuard: {
@@ -55,6 +51,18 @@ const DEFINITION = {
       "emergencyContactAddress", // 緊急連絡先住所
       "emergencyContactPhone", // 緊急連絡先電話番号
       "domicile", // 本籍地
+    ],
+  },
+  nationality: {
+    title: "国籍情報",
+    includedKeys: [
+      "isForeigner", // 外国人かどうか
+      "nationality", // 国籍
+      "foreignName", // 外国人氏名
+      "residenceStatus", // 在留資格
+      "hasPeriodOfStayLimit", // 在留期間制限の有無
+      "periodOfStay", // 在留期間
+      "hasWorkRestrictions", // 就労制限の有無
     ],
   },
 };

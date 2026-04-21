@@ -26,21 +26,35 @@ watch(terminateDialog, (newVal) => {
 <template>
   <TemplatesFixedHeightContainer>
     <v-row>
+      <!-- 非在職アラート -->
       <v-col cols="12" v-if="doc.employmentStatus !== 'ACTIVE'">
         <v-alert type="error"> この従業員は現在在職していません。 </v-alert>
       </v-col>
-      <!-- 基本情報 -->
+
+      <!-- 左カラム -->
       <v-col cols="12" md="4">
-        <EmployeeManager type="base" :doc="doc">
-          <template #default="{ item }">
-            <EmployeeTableBaseInfo v-bind="item" />
-          </template>
-        </EmployeeManager>
+        <v-row>
+          <v-col cols="12">
+            <EmployeeManager type="base" :doc="doc">
+              <template #default="{ item }">
+                <EmployeeTableBaseInfo v-bind="item" />
+              </template>
+            </EmployeeManager>
+          </v-col>
+          <v-col cols="12">
+            <EmployeeManager type="nationality" :doc="doc">
+              <template #default="{ item }">
+                <EmployeeTableNationality v-bind="item" />
+              </template>
+            </EmployeeManager>
+          </v-col>
+        </v-row>
       </v-col>
 
-      <!-- 警備員登録情報 -->
+      <!-- 右カラム -->
       <v-col cols="12" md="8">
         <v-row>
+          <!-- 警備員資格情報 -->
           <v-col cols="12">
             <EmployeeManager type="securityGuard" :doc="doc">
               <template #default="{ item, toUpdate }">
@@ -63,8 +77,9 @@ watch(terminateDialog, (newVal) => {
               </template>
             </EmployeeManager>
           </v-col>
+
+          <!-- 保有資格 -->
           <v-col cols="12">
-            <!-- 保有資格 -->
             <EmployeeCertificationsManager
               v-model="doc.securityCertifications"
               @submit:complete="async () => await doc.update()"
@@ -72,6 +87,9 @@ watch(terminateDialog, (newVal) => {
           </v-col>
         </v-row>
       </v-col>
+
+      <!-- 警備員登録情報 -->
+      <v-col cols="12" md="8"> </v-col>
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">

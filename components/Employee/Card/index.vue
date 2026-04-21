@@ -17,6 +17,7 @@
 import * as Vue from "vue";
 import { Employee } from "@/schemas";
 import { useDefaults } from "vuetify";
+import { useConstants } from "@/composables/useConstants";
 
 /*****************************************************************************
  * SETUP PROPS & EMITS
@@ -36,8 +37,23 @@ const props = useDefaults(_props, "EmployeeCard");
 const emit = defineEmits(["click:select", "click:edit", "click:detail"]);
 
 /*****************************************************************************
- * SETUP STATES
+ * SETUP COMPOSABLES
  *****************************************************************************/
+const { GENDER } = useConstants();
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const avaterColor = computed(() => {
+  return GENDER.value[props.employee.gender].color;
+});
+
+const avaterText = computed(() => {
+  const { displayName } = props.employee;
+  if (!displayName) return "";
+  return displayName.charAt(0);
+});
+
 /**
  * Actions（編集・詳細）を表示するかどうかの計算プロパティ
  */
@@ -58,7 +74,7 @@ const showActions = Vue.computed(() => {
     <v-card-item :class="{ 'pb-0': showActions }">
       <!-- 将来、アバター画像を表示する予定 -->
       <template #prepend>
-        <v-avatar size="40" color="grey-lighten-3" />
+        <v-avatar size="40" :color="avaterColor" :text="avaterText" />
       </template>
 
       <!-- 選択チェックボックス -->
