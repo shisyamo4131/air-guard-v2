@@ -30,7 +30,7 @@ const latestStatus = computed(() => {
 
 const currentStatusInfo = computed(() => {
   const statusObj = Object.values(STATUS).find(
-    (s) => s.value === props.item.status
+    (s) => s.value === props.item.status,
   );
   return {
     label: statusObj?.title || "不明",
@@ -41,7 +41,7 @@ const currentStatusInfo = computed(() => {
 const restoredStatusInfo = computed(() => {
   if (!latestStatus.value) return null;
   const statusObj = Object.values(STATUS).find(
-    (s) => s.value === latestStatus.value.status
+    (s) => s.value === latestStatus.value.status,
   );
   return {
     label: statusObj?.title || "不明",
@@ -84,7 +84,9 @@ function formatDate(date) {
           <div>
             <div class="font-weight-bold">保険加入状態の復元処理</div>
             <div class="text-caption">
-              履歴から最新の状態（{{ props.item.history.length }}件目）を復元します
+              履歴から最新の状態（{{
+                props.item.history.length
+              }}件目）を復元します
             </div>
           </div>
         </div>
