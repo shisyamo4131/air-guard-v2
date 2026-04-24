@@ -11,7 +11,7 @@ import InputExempt from "./Input/Exempt.vue";
 import InputLoss from "./Input/Loss.vue";
 import InputCancel from "./Input/CancelEnrollment.vue";
 import InputEnrolled from "./Input/Enrolled.vue";
-import InputRollback from "./Input/RollbackT.vue";
+// import InputRollback from "./Input/Rollback.vue";
 
 /*****************************************************************************
  * DEFINE MODEL
@@ -29,7 +29,7 @@ const actionMap = computed(() => {
     exempt: { component: InputExempt, action: "exempt" },
     loss: { component: InputLoss, action: "loss" },
     cancel: { component: InputCancel, action: "cancelEnroll" },
-    rollback: { component: InputRollback, action: "rollback" },
+    // rollback: { component: InputRollback, action: "rollback" },
   };
 });
 
