@@ -8,6 +8,7 @@ export { Customer } from "@shisyamo4131/air-guard-v2-schemas";
 export { CutoffDate } from "@shisyamo4131/air-guard-v2-schemas";
 export { Employee } from "@shisyamo4131/air-guard-v2-schemas";
 export { GeocodableMixin } from "@shisyamo4131/air-guard-v2-schemas";
+export { Insurance } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationBilling } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResultDetail } from "@shisyamo4131/air-guard-v2-schemas";

@@ -55,6 +55,14 @@ export const pageStructure = [
         navigation: true,
       },
       {
+        id: "insurance-test",
+        path: "/test/insurance-test",
+        label: "保険クラステスト",
+        icon: "mdi-domain",
+        roles: ["developer"], // ← 統一
+        navigation: true,
+      },
+      {
         id: "permissions-test",
         path: "/test/permissions-test",
         label: "権限システムテスト",

@@ -1,4 +1,8 @@
 <script setup>
+/*****************************************************************************
+ * 未使用
+ * AirItemManager や AirArrayManager の customInput を作成する際の参考資料
+ *****************************************************************************/
 const props = defineProps({
   type: { type: String, default: "default" },
   componentAttrs: { type: Object, default: () => ({}) },
