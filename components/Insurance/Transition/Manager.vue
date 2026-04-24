@@ -11,7 +11,7 @@ import InputExempt from "./Input/Exempt.vue";
 import InputLoss from "./Input/Loss.vue";
 import InputCancel from "./Input/CancelEnrollment.vue";
 import InputEnrolled from "./Input/Enrolled.vue";
-import InputRollback from "./Input/Rollback.vue";
+import InputRollback from "./Input/RollbackT.vue";
 
 /*****************************************************************************
  * DEFINE MODEL
