@@ -4,6 +4,7 @@
  * @description 保険状態遷移コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
+import dayjs from "dayjs";
 import { useBaseManager } from "@/composables/useBaseManager";
 import InsuranceMenu from "./Menu/index.vue";
 import InputEnroll from "./Input/Enroll.vue";
@@ -12,11 +13,20 @@ import InputLoss from "./Input/Loss.vue";
 import InputCancel from "./Input/CancelEnrollment.vue";
 import InputEnrolled from "./Input/Enrolled.vue";
 import InputRollback from "./Input/Rollback.vue";
+import { useDefaults } from "vuetify";
 
 /*****************************************************************************
  * DEFINE MODEL
  *****************************************************************************/
 const model = defineModel({ type: Object, required: true });
+
+/*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
+const _props = defineProps({
+  title: { type: String, default: "保険情報" },
+});
+const props = useDefaults(_props, "EmployeeManager");
 
 /*****************************************************************************
  * DEFINE STATES
@@ -47,7 +57,10 @@ const customInput = computed(() => {
 const transitionAction = computed(() => {
   return actionMap.value[selectedAction.value]?.action || null;
 });
-
+const enrollmentDate = computed(() => {
+  const formattedDate = model.value.enrollmentDate;
+  return formattedDate ? dayjs(formattedDate).format("YYYY/MM/DD") : "-";
+});
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
@@ -80,27 +93,54 @@ function handleUpdate(item) {
     hide-delete-btn
     :custom-input="customInput"
     :handle-update="handleUpdate"
+    :label="props.title"
   >
     <template #activator="{ toUpdate }">
-      <InsuranceMenu
-        :insurance="model"
-        @click:exempt="() => handleMenuClick('exempt', toUpdate)"
-        @click:enroll="() => handleMenuClick('enroll', toUpdate)"
-        @click:loss="() => handleMenuClick('loss', toUpdate)"
-        @click:enrolled="() => handleMenuClick('enrolled', toUpdate)"
-        @click:cancel="() => handleMenuClick('cancel', toUpdate)"
-        @click:rollback="() => handleMenuClick('rollback', toUpdate)"
-      >
-        <template #activator="{ props: menuActivator }">
-          <slot name="activator" v-bind="{ props: menuActivator }">
-            <v-btn
-              v-bind="menuActivator"
-              icon="mdi-dots-vertical"
-              size="small"
-            />
-          </slot>
-        </template>
-      </InsuranceMenu>
+      <v-card>
+        <v-toolbar color="secondary" density="compact" :title="props.title">
+          <template #append>
+            <InsuranceMenu
+              :insurance="model"
+              @click:exempt="() => handleMenuClick('exempt', toUpdate)"
+              @click:enroll="() => handleMenuClick('enroll', toUpdate)"
+              @click:loss="() => handleMenuClick('loss', toUpdate)"
+              @click:enrolled="() => handleMenuClick('enrolled', toUpdate)"
+              @click:cancel="() => handleMenuClick('cancel', toUpdate)"
+              @click:rollback="() => handleMenuClick('rollback', toUpdate)"
+            >
+              <template #activator="{ props: menuActivator }">
+                <slot name="activator" v-bind="{ props: menuActivator }">
+                  <v-btn
+                    v-bind="menuActivator"
+                    icon="mdi-dots-vertical"
+                    size="small"
+                  />
+                </slot>
+              </template>
+            </InsuranceMenu>
+          </template>
+        </v-toolbar>
+        <v-card-text>
+          <div class="d-flex flex-column pb-2">
+            <small class="text-medium-emphasis">状態</small>
+            <div class="text-right text-body-2" style="height: 24px">
+              <InsuranceStatusChip v-bind="model" size="x-small" />
+            </div>
+          </div>
+          <div class="d-flex flex-column pb-2">
+            <small class="text-medium-emphasis">資格取得日</small>
+            <div class="text-right text-body-2" style="height: 24px">
+              {{ enrollmentDate }}
+            </div>
+          </div>
+          <div class="d-flex flex-column pb-2">
+            <small class="text-medium-emphasis">被保険者番号（整理記号）</small>
+            <div class="text-right text-body-2" style="height: 24px">
+              {{ model.number || "-" }}
+            </div>
+          </div>
+        </v-card-text>
+      </v-card>
     </template>
   </air-item-manager>
 </template>

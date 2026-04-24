@@ -42,6 +42,20 @@ const DEFAULT_DEFINITIONS = {
       icon: "mdi-gender-female",
     },
   },
+  INSURANCE_STATUS: {
+    NOT_ENROLLED: {
+      ...CONSTANTS.INSURANCE_STATUS_VALUES.NOT_ENROLLED,
+      color: "error",
+    },
+    EXEMPT: {
+      ...CONSTANTS.INSURANCE_STATUS_VALUES.EXEMPT,
+      color: "info",
+    },
+    ENROLLED: {
+      ...CONSTANTS.INSURANCE_STATUS_VALUES.ENROLLED,
+      color: "success",
+    },
+  },
   SHIFT_TYPE: {
     DAY: {
       ...CONSTANTS.SHIFT_TYPE_VALUES.DAY,
@@ -123,6 +137,13 @@ export function useConstants() {
       auth.company,
     ),
   );
+  const INSURANCE_STATUS = computed(() => {
+    return createConstantWithColors(
+      DEFAULT_DEFINITIONS.INSURANCE_STATUS,
+      "insuranceStatus",
+      auth.company,
+    );
+  });
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
@@ -156,6 +177,7 @@ export function useConstants() {
     DAY_TYPE,
     EMPLOYMENT_STATUS,
     GENDER,
+    INSURANCE_STATUS,
     SHIFT_TYPE,
     QUALIFIED_TYPE,
     toArray,

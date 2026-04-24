@@ -54,6 +54,27 @@ watch(terminateDialog, (newVal) => {
       <!-- 右カラム -->
       <v-col cols="12" md="8">
         <v-row>
+          <v-col cols="12" md="4">
+            <InsuranceTransitionManager
+              v-model="doc.employmentInsurance"
+              title="雇用保険"
+              @submit:complete="async () => await doc.update()"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <InsuranceTransitionManager
+              v-model="doc.healthInsurance"
+              title="健康保険"
+              @submit:complete="async () => await doc.update()"
+            />
+          </v-col>
+          <v-col cols="12" md="4">
+            <InsuranceTransitionManager
+              v-model="doc.pensionInsurance"
+              title="厚生年金"
+              @submit:complete="async () => await doc.update()"
+            />
+          </v-col>
           <!-- 警備員資格情報 -->
           <v-col cols="12">
             <EmployeeManager type="securityGuard" :doc="doc">
