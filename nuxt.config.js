@@ -30,7 +30,43 @@ export default defineNuxtConfig({
     },
     // pinia
     "@pinia/nuxt",
+    // pwa
+    "@vite-pwa/nuxt",
   ],
+
+  // PWA 設定を追加（modules の後）
+  pwa: {
+    registerType: "autoUpdate",
+    manifest: {
+      name: "AirGuard",
+      short_name: "AirGuard",
+      description: "警備業務管理アプリケーション",
+      theme_color: "#1976D2",
+      background_color: "#ffffff",
+      display: "standalone",
+      start_url: "/",
+      icons: [
+        {
+          src: "/icon-192.png",
+          sizes: "192x192",
+          type: "image/png",
+        },
+        {
+          src: "/icon-512.png",
+          sizes: "512x512",
+          type: "image/png",
+        },
+      ],
+    },
+    workbox: {
+      navigateFallback: "/",
+      cleanupOutdatedCaches: true,
+    },
+    devOptions: {
+      enabled: true,
+      type: "module",
+    },
+  },
 
   vite: {
     vue: {
