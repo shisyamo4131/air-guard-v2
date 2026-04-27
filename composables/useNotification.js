@@ -73,7 +73,9 @@ export function useNotification() {
   /**
    * FCM トークンを取得し、User ドキュメントの fcmTokens 配列に保存します。
    * - ブラウザがプッシュ通知に対応していない場合、または通知の許可が得られていない場合 ('granted' でない場合) は処理を中止します。
-   * - Service Worker を登録してから FCM トークンを取得します。
+   * - Service Worker は plugins/08.firebase-messaging.client.js で登録済み
+   * - フォアグラウンドメッセージのハンドリングも plugins/08.firebase-messaging.client.js で行われます
+   *
    * @param {*} userInstance - ユーザーインスタンス
    * @returns {Promise<void>}
    */
@@ -112,11 +114,8 @@ export function useNotification() {
         return;
       }
 
-      // Service Workerを登録
-      // 毎回再登録になるが、register() 自体は冪等なので問題なし。
-      const registration = await navigator.serviceWorker.register(
-        "/firebase-messaging-sw.js",
-      );
+      // Service Worker の登録を取得（Plugin で既に登録されている）
+      const registration = await navigator.serviceWorker.ready;
 
       // FCMトークンを取得
       const config = useRuntimeConfig();
