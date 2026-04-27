@@ -297,10 +297,28 @@ export const pageStructure = [
     ],
   },
 
-  // ===== 設定（管理者のみ） =====
+  // ===== 設定 =====
   {
     id: "settings",
-    label: "設定",
+    label: "管理者メニュー",
+    icon: "mdi-cog",
+    roles: ["admin"],
+    navigation: false,
+    children: [
+      {
+        id: "user",
+        path: "/settings/user",
+        label: "アプリ設定",
+        icon: "mdi-account-cog",
+        roles: ["admin"],
+        navigation: false,
+      },
+    ],
+  },
+  // ===== 管理者メニュー =====
+  {
+    id: "admin-settings",
+    label: "管理者メニュー",
     icon: "mdi-cog",
     roles: ["admin"],
     navigation: true,

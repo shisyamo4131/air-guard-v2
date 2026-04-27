@@ -13,6 +13,7 @@ import { useRolePresets } from "@/composables/useRolePresets";
 import { useStatisticsStore } from "@/stores/useStatisticsStore";
 import { useComponentDefaults } from "@/composables/useComponentDefaults";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { useNotification } from "@/composables/useNotification";
 
 /**
  * Provides authentication functionality and stores information about the signed-in user.
@@ -32,6 +33,7 @@ export const useAuthStore = defineStore("auth", () => {
   const messages = useMessagesStore();
   const statisticsStore = useStatisticsStore();
   const { set: setComponentDefault } = useComponentDefaults();
+  const { registFCMToken } = useNotification();
 
   /***************************************************************************
    * DEFINE STATES
@@ -264,6 +266,10 @@ export const useAuthStore = defineStore("auth", () => {
         userInstance.subscribe({ docId: uid.value });
         companyInstance.subscribe({ docId: companyId.value });
         statisticsStore.start();
+
+        // ========== FCMトークンの取得と保存 ==========
+        await registFCMToken(userInstance);
+        // ==========================================
       } else {
         userInstance.unsubscribe();
         userInstance.initialize();
@@ -452,6 +458,7 @@ export const useAuthStore = defineStore("auth", () => {
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   // ただし、分割代入を行うとリアクティブ性が失われることに注意。
   return {
+    user: userInstance,
     uid,
     email: computed(() => userInstance.email),
     displayName: computed(() => userInstance.displayName),

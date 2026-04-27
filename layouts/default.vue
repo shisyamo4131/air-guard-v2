@@ -39,6 +39,13 @@ const handleSignOut = async () => {
         <v-app-bar-nav-icon v-bind="appStore.navIcon" />
         <v-btn v-bind="appStore.previousButton" />
       </template>
+      <template v-slot:append>
+        <UserSetting>
+          <template #activator="{ props: activatorProps }">
+            <v-btn v-bind="activatorProps" icon="mdi-account-cog" />
+          </template>
+        </UserSetting>
+      </template>
     </v-app-bar>
 
     <AppNavigationDrawer v-bind="appStore.navBar">

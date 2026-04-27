@@ -123,19 +123,19 @@ function handleUpdate(item) {
         <v-card-text>
           <div class="d-flex flex-column pb-2">
             <small class="text-medium-emphasis">状態</small>
-            <div class="text-right text-body-2" style="height: 24px">
+            <div class="text-right text-body-2" style="min-height: 24px">
               <InsuranceStatusChip v-bind="model" size="x-small" />
             </div>
           </div>
           <div class="d-flex flex-column pb-2">
             <small class="text-medium-emphasis">資格取得日</small>
-            <div class="text-right text-body-2" style="height: 24px">
+            <div class="text-right text-body-2" style="min-height: 24px">
               {{ enrollmentDate }}
             </div>
           </div>
           <div class="d-flex flex-column pb-2">
             <small class="text-medium-emphasis">被保険者番号（整理記号）</small>
-            <div class="text-right text-body-2" style="height: 24px">
+            <div class="text-right text-body-2" style="min-height: 24px">
               {{ model.number || "-" }}
             </div>
           </div>

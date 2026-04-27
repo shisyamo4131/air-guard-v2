@@ -93,6 +93,6 @@ export default defineNuxtPlugin(() => {
   }
 
   return {
-    provide: { firestore, auth, storage, database, functions },
+    provide: { app, firestore, auth, storage, database, functions },
   };
 });
