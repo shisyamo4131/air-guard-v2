@@ -187,7 +187,15 @@ const testNotification = onRequest(
       }
 
       const userData = userDoc.data();
-      const tokens = userData.fcmTokens || [];
+
+      // FcmTokens コレクションから uid と companyId でトークンを取得
+      const fcmTokensSnapshot = await getFirestore()
+        .collection("FcmTokens")
+        .where("uid", "==", userData.uid)
+        .where("companyId", "==", companyId)
+        .get();
+
+      const tokens = fcmTokensSnapshot.docs.map((doc) => doc.id); // ドキュメントID = トークン
 
       if (tokens.length === 0) {
         res.status(400).json({ error: "No FCM tokens" });

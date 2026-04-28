@@ -34,6 +34,20 @@ service cloud.firestore {
       allow read, write: if isAuthenticated();
     }
 
+    // --- Rules for 'FcmTokens' collection (Global Collection) ---
+    // FcmTokens コレクションはグローバルコレクション（Companies配下ではない）
+    // - 作成・更新: 認証済みユーザーが自分のuidでのみ作成可能
+    //   同じトークン（デバイス）で別ユーザーがログインした場合は上書きされる（意図した動作）
+    // - 削除: 自分のuidのドキュメントのみ削除可能
+    // - 読み取り: Cloud Functionsが管理者SDKで実行するため、クライアント側は不可
+    match /FcmTokens/{token} {
+      allow create, update: if isAuthenticated() 
+                            && request.resource.data.uid == request.auth.uid;
+      allow delete: if isAuthenticated() 
+                    && resource.data.uid == request.auth.uid;
+      allow read: if false; // Cloud Functions only
+    }
+
     // --- Rules for 'Companies' collection ---
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。

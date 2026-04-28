@@ -15,22 +15,26 @@ const search = ref("");
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const options = computed(() => {
-  if (!search.value) {
-    return [["orderBy", "email"]];
-  } else {
-    return [["orderBy", "email"]];
-  }
-});
+// const options = computed(() => {
+//   if (!search.value) {
+//     return [["orderBy", "email"]];
+//   } else {
+//     return [["orderBy", "email"]];
+//   }
+// });
 const { docs } = useDocuments("User", {
   search,
-  options,
+  // options,
   fetchAllOnEmpty: true,
 });
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <UsersManager class="fill-height" :docs="docs" />
+    <UsersManager
+      class="fill-height"
+      :docs="docs"
+      :sort-by="[{ key: 'email', order: 'asc' }]"
+    />
   </TemplatesFixedHeightContainer>
 </template>

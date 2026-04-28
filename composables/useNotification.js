@@ -5,6 +5,7 @@
 import * as Vue from "vue";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { FcmToken } from "@/schemas";
 
 export const NOTIFICATION_STATUS = {
   DEFAULT: "default",
@@ -71,10 +72,11 @@ export function useNotification() {
   }
 
   /**
-   * FCM トークンを取得し、User ドキュメントの fcmTokens 配列に保存します。
+   * FCM トークンを取得し、FcmToken ドキュメントを作成します。
    * - ブラウザがプッシュ通知に対応していない場合、または通知の許可が得られていない場合 ('granted' でない場合) は処理を中止します。
    * - Service Worker は plugins/08.firebase-messaging.client.js で登録済み
    * - フォアグラウンドメッセージのハンドリングも plugins/08.firebase-messaging.client.js で行われます
+   * - ドキュメントID = トークンそのもの（同じデバイスで別ユーザーがログインしたら上書きされる）
    *
    * @param {*} userInstance - ユーザーインスタンス
    * @returns {Promise<void>}
@@ -139,9 +141,12 @@ export function useNotification() {
         return;
       }
 
-      // 取得したトークンをユーザードキュメントの fcmTokens 配列に保存
-      userInstance.fcmTokens.add(currentToken);
-      await userInstance.update();
+      // FcmToken ドキュメントを作成（ドキュメントID = トークンそのもの）
+      const fcmToken = new FcmToken();
+      fcmToken.token = currentToken;
+      fcmToken.uid = userInstance.uid;
+      fcmToken.companyId = userInstance.companyId;
+      await fcmToken.create({ docId: currentToken });
 
       // 開発環境であればログを出力
       if (isDev.value) {

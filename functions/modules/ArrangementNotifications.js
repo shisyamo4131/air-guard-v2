@@ -10,9 +10,10 @@ import { ArrangementNotification } from "../schemas/index.js";
 /**
  * ArrangementNotification 作成時のトリガー
  * - employeeId から User を検索
- * - 該当ユーザーの fcmTokens に対してプッシュ通知を送信
+ * - User の uid から FcmToken コレクションを検索
+ * - 該当する FcmTokens に対してプッシュ通知を送信
  * - 送信結果を ArrangementNotification ドキュメントに記録
- * - 無効なトークンをユーザードキュメントから削除
+ * - 無効なトークンを FcmTokens コレクションから削除
  */
 export const onArrangementNotificationCreated = onDocumentCreated(
   {
@@ -43,16 +44,25 @@ export const onArrangementNotificationCreated = onDocumentCreated(
         return;
       }
 
-      // 2. 複数ユーザーが見つかる可能性があるため、全ユーザーの fcmTokens を収集
+      // 2. User の uid から FcmToken コレクションを検索
       const allTokens = [];
-      usersSnapshot.docs.forEach((doc) => {
-        const userData = doc.data();
-        if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-          allTokens.push(...userData.fcmTokens);
-        }
-      });
+      for (const userDoc of usersSnapshot.docs) {
+        const userData = userDoc.data();
+        const fcmTokensSnapshot = await db
+          .collection("FcmTokens")
+          .where("uid", "==", userData.uid)
+          .where("companyId", "==", companyId)
+          .get();
 
-      if (allTokens.length === 0) {
+        fcmTokensSnapshot.docs.forEach((doc) => {
+          allTokens.push(doc.id); // ドキュメントID = トークン
+        });
+      }
+
+      // 重複トークンを排除（同じデバイスに複数回送信されるのを防ぐ）
+      const uniqueTokens = [...new Set(allTokens)];
+
+      if (uniqueTokens.length === 0) {
         console.log(
           `No FCM tokens found for employeeId: ${arrangementData.employeeId}`,
         );
@@ -62,6 +72,10 @@ export const onArrangementNotificationCreated = onDocumentCreated(
         });
         return;
       }
+
+      console.log(
+        `Found ${allTokens.length} tokens (${uniqueTokens.length} unique) for employeeId: ${arrangementData.employeeId}`,
+      );
 
       // 3. ArrangementNotification インスタンスを作成して日付を取得
       const arrangement = new ArrangementNotification(arrangementData);
@@ -83,7 +97,7 @@ export const onArrangementNotificationCreated = onDocumentCreated(
 
       // 4. sendMulticastNotification で送信
       const result = await sendMulticastNotification(
-        allTokens,
+        uniqueTokens,
         notification,
         data,
       );
@@ -101,26 +115,15 @@ export const onArrangementNotificationCreated = onDocumentCreated(
             : "",
       });
 
-      // 6. 無効トークンをユーザードキュメントから削除
+      // 6. 無効トークンを FcmTokens コレクションから削除
       if (result.invalidTokens && result.invalidTokens.length > 0) {
         console.log(
           `Removing ${result.invalidTokens.length} invalid tokens:`,
           result.invalidTokens,
         );
         const batch = db.batch();
-        usersSnapshot.docs.forEach((doc) => {
-          const userData = doc.data();
-          if (userData.fcmTokens && userData.fcmTokens.length > 0) {
-            const validTokens = userData.fcmTokens.filter(
-              (token) => !result.invalidTokens.includes(token),
-            );
-            if (validTokens.length !== userData.fcmTokens.length) {
-              console.log(
-                `Updating user ${doc.id}: ${userData.fcmTokens.length} → ${validTokens.length} tokens`,
-              );
-              batch.update(doc.ref, { fcmTokens: validTokens });
-            }
-          }
+        result.invalidTokens.forEach((token) => {
+          batch.delete(db.collection("FcmTokens").doc(token));
         });
         await batch.commit();
         console.log("Invalid tokens removed successfully");
