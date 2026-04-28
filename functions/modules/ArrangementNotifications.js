@@ -65,9 +65,9 @@ export const onArrangementNotificationCreated = onDocumentCreated(
 
       // 3. ArrangementNotification インスタンスを作成して日付を取得
       const arrangement = new ArrangementNotification(arrangementData);
-      
+
       // date プロパティから月日を取得 (formatJstDate で JST 変換済み)
-      const [year, month, day] = arrangement.date.split('-');
+      const [year, month, day] = arrangement.date.split("-");
 
       const notification = {
         title: "配置通知",
@@ -88,28 +88,42 @@ export const onArrangementNotificationCreated = onDocumentCreated(
         data,
       );
 
+      // デバッグ: 送信結果を詳細出力
+      console.log("Send result:", JSON.stringify(result, null, 2));
+
       // 5. 送信結果を ArrangementNotification に記録
+      // 1件でも成功していれば送信成功とする
       await event.data.ref.update({
         notificationSentAt: FieldValue.serverTimestamp(),
         notificationError:
-          result.failureCount > 0 ? `送信失敗: ${result.failureCount}件` : "",
+          result.successCount === 0
+            ? `全て送信失敗: ${result.failureCount}件`
+            : "",
       });
 
       // 6. 無効トークンをユーザードキュメントから削除
       if (result.invalidTokens && result.invalidTokens.length > 0) {
+        console.log(
+          `Removing ${result.invalidTokens.length} invalid tokens:`,
+          result.invalidTokens,
+        );
         const batch = db.batch();
         usersSnapshot.docs.forEach((doc) => {
           const userData = doc.data();
-          if (userData.fcmTokens) {
+          if (userData.fcmTokens && userData.fcmTokens.length > 0) {
             const validTokens = userData.fcmTokens.filter(
               (token) => !result.invalidTokens.includes(token),
             );
             if (validTokens.length !== userData.fcmTokens.length) {
+              console.log(
+                `Updating user ${doc.id}: ${userData.fcmTokens.length} → ${validTokens.length} tokens`,
+              );
               batch.update(doc.ref, { fcmTokens: validTokens });
             }
           }
         });
         await batch.commit();
+        console.log("Invalid tokens removed successfully");
       }
 
       console.log(

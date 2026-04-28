@@ -85,9 +85,12 @@ export async function sendMulticastNotification(
   response.responses.forEach((resp, idx) => {
     if (!resp.success) {
       const errorCode = resp.error?.code;
+      // デバッグ: 失敗したトークンのエラーコードを出力
+      console.log(`Token ${idx} failed: ${errorCode} - ${resp.error?.message}`);
       if (
         errorCode === "messaging/registration-token-not-registered" ||
-        errorCode === "messaging/invalid-registration-token"
+        errorCode === "messaging/invalid-registration-token" ||
+        errorCode === "messaging/invalid-argument"
       ) {
         invalidTokens.push(tokens[idx]);
       }
