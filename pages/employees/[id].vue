@@ -48,6 +48,11 @@ watch(terminateDialog, (newVal) => {
               </template>
             </EmployeeManager>
           </v-col>
+
+          <!-- ユーザー情報 -->
+          <v-col cols="12">
+            <UserManager :employee="doc" />
+          </v-col>
         </v-row>
       </v-col>
 
@@ -108,9 +113,6 @@ watch(terminateDialog, (newVal) => {
           </v-col>
         </v-row>
       </v-col>
-
-      <!-- 警備員登録情報 -->
-      <v-col cols="12" md="8"> </v-col>
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
