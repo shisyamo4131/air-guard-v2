@@ -95,6 +95,47 @@ export default defineNuxtConfig({
         "@holiday-jp/holiday_jp",
       ],
     },
+    // Service Worker に環境変数を注入する Vite プラグイン
+    plugins: [
+      {
+        name: "inject-firebase-config-to-sw",
+        transform(code, id) {
+          // Service Worker のビルド時のみ処理
+          if (
+            id.includes("service-worker/sw.js") ||
+            id.includes("service-worker\\sw.js")
+          ) {
+            // 環境変数をプレースホルダーに置換
+            return code
+              .replace(
+                "__FIREBASE_API_KEY__",
+                process.env.NUXT_PUBLIC_FIREBASE_API_KEY || "",
+              )
+              .replace(
+                "__FIREBASE_AUTH_DOMAIN__",
+                process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
+              )
+              .replace(
+                "__FIREBASE_PROJECT_ID__",
+                process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID || "",
+              )
+              .replace(
+                "__FIREBASE_STORAGE_BUCKET__",
+                process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
+              )
+              .replace(
+                "__FIREBASE_MESSAGING_SENDER_ID__",
+                process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
+              )
+              .replace(
+                "__FIREBASE_APP_ID__",
+                process.env.NUXT_PUBLIC_FIREBASE_APP_ID || "",
+              );
+          }
+          return code;
+        },
+      },
+    ],
   },
 
   runtimeConfig: {
