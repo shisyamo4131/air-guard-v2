@@ -8,6 +8,7 @@ export * from "./modules/geocoding.js";
 export * from "./modules/Users.js";
 export * from "./modules/billings.js";
 export * from "./modules/auth-v2.js";
-export * from "./modules/notifications.js"; // テスト用 HTTP トリガー
+export * from "./modules/ArrangementNotifications.js";
+export * from "./modules/utils/notifications.js"; // テスト用 HTTP トリガー
 // export * from "./modules/migration.js"; // マイグレーションが必要な時に有効化
 // export * from "./modules/stripe.js";

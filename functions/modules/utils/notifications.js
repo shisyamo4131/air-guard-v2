@@ -1,19 +1,31 @@
 /*****************************************************************************
- * @file ./modules/notifications.js
+ * @file ./modules/utils/notifications.js
  * @description 汎用通知送信モジュール
  *****************************************************************************/
 import { getMessaging } from "firebase-admin/messaging";
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore } from "firebase-admin/firestore";
+import { logger } from "firebase-functions/v2";
+
+// エミュレーター環境かどうかを判定
+const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
 
 /**
- * 単一ユーザーに通知を送信
+ * 単一トークンに通知を送信
  * @param {string} token - FCMトークン
  * @param {Object} notification - 通知内容 { title, body, imageUrl }
  * @param {Object} data - カスタムデータ（任意）
  * @returns {Promise<Object>} { success: boolean, messageId?: string, error?: string }
  */
 export async function sendNotification(token, notification, data = {}) {
+  // エミュレーター環境での警告
+  if (isEmulator) {
+    logger.warn(
+      "⚠️ [EMULATOR] Sending REAL push notification using Dev environment!",
+      { token, notification, data },
+    );
+  }
+
   try {
     const message = {
       token,
@@ -33,7 +45,7 @@ export async function sendNotification(token, notification, data = {}) {
 }
 
 /**
- * 複数ユーザーに同じ通知を送信（最大500トークン）
+ * 複数トークンに同じ通知を送信（最大500トークン）
  * @param {string[]} tokens - FCMトークンの配列
  * @param {Object} notification - 通知内容
  * @param {Object} data - カスタムデータ
@@ -46,6 +58,14 @@ export async function sendMulticastNotification(
 ) {
   if (!tokens || tokens.length === 0) {
     throw new Error("No tokens provided");
+  }
+
+  // エミュレーター環境での警告
+  if (isEmulator) {
+    logger.warn(
+      "⚠️ [EMULATOR] Sending REAL push notification using Dev environment!",
+      { tokenCount: tokens.length, notification, data },
+    );
   }
 
   const message = {
@@ -82,13 +102,21 @@ export async function sendMulticastNotification(
 }
 
 /**
- * 複数ユーザーに異なる通知を送信（最大500件）
+ * 複数トークンに異なる通知を送信（最大500件）
  * @param {Array} messages - { token, notification, data } の配列
  * @returns {Promise<Object>} { successCount, failureCount, invalidTokens }
  */
 export async function sendBatchNotifications(messages) {
   if (!messages || messages.length === 0) {
     throw new Error("No messages provided");
+  }
+
+  // エミュレーター環境での警告
+  if (isEmulator) {
+    logger.warn(
+      "⚠️ [EMULATOR] Sending REAL push notifications using Dev environment!",
+      { messageCount: messages.length },
+    );
   }
 
   const formattedMessages = messages.slice(0, 500).map((msg) => ({
@@ -131,8 +159,7 @@ export async function sendBatchNotifications(messages) {
  *
  * ⚠️ テスト時のみ export のコメントを外すこと
  */
-// export const testNotification = onRequest(
-const testNotification = onRequest(
+export const testNotification = onRequest(
   { region: "asia-northeast1" },
   async (req, res) => {
     try {
@@ -163,6 +190,8 @@ const testNotification = onRequest(
         return;
       }
 
+      console.log("FCM Tokens to send:", tokens);
+
       // 通知送信
       const result = await sendMulticastNotification(
         tokens,
@@ -178,6 +207,7 @@ const testNotification = onRequest(
 
       res.json({
         success: true,
+        tokens, // デバッグ用にトークンも返す
         ...result,
       });
     } catch (error) {

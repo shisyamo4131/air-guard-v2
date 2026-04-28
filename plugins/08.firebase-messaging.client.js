@@ -22,8 +22,13 @@ export default defineNuxtPlugin(async () => {
 
   // Service Worker を登録
   try {
-    const registration = await navigator.serviceWorker.register("/sw.js", {
+    // 開発環境では dev-sw.js、本番環境では sw.js
+    const swPath = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
+    const swType = import.meta.env.DEV ? "module" : "classic";
+
+    const registration = await navigator.serviceWorker.register(swPath, {
       scope: "/",
+      type: swType,
     });
     console.log("[SW] Service Worker registered:", registration.scope);
   } catch (error) {

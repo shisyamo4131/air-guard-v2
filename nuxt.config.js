@@ -65,9 +65,16 @@ export default defineNuxtConfig({
       globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
       globIgnores: ["404.html", "200.html"], // SPAフォールバックページを除外
       maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB に拡張
+      // Service Worker ビルド時の環境変数注入
+      rollupOptions: {
+        output: {
+          format: "es",
+        },
+      },
     },
     devOptions: {
-      enabled: false,
+      enabled: true,
+      type: "module",
     },
   },
 
@@ -77,6 +84,8 @@ export default defineNuxtConfig({
         transformAssetUrls, // vuetify 設定
       },
     },
+    // 環境変数を VITE_ プレフィックスで Service Worker でも使用可能にする
+    envPrefix: ["NUXT_", "VITE_"],
     // 開発時の依存関係最適化（本番ビルドには影響しない）
     optimizeDeps: {
       include: [
