@@ -162,7 +162,8 @@ export async function sendBatchNotifications(messages) {
  *
  * ⚠️ テスト時のみ export のコメントを外すこと
  */
-export const testNotification = onRequest(
+// export const testNotification = onRequest(
+const testNotification = onRequest(
   { region: "asia-northeast1" },
   async (req, res) => {
     try {

@@ -21,19 +21,14 @@ precacheAndRoute(self.__WB_MANIFEST);
 // 古いキャッシュをクリーンアップ
 cleanupOutdatedCaches();
 
-// SPA のルーティング設定（開発環境ではスキップ）
-if (self.__WB_MANIFEST && self.__WB_MANIFEST.length > 0) {
-  try {
-    const handler = createHandlerBoundToURL("/");
-    const navigationRoute = new NavigationRoute(handler);
-    registerRoute(navigationRoute);
-    console.log("[SW] SPA routing configured");
-  } catch (e) {
-    console.warn(
-      "[SW] SPA routing setup failed (development mode):",
-      e.message,
-    );
-  }
+// SPA のルーティング設定
+try {
+  const handler = createHandlerBoundToURL("/");
+  const navigationRoute = new NavigationRoute(handler);
+  registerRoute(navigationRoute);
+  console.log("[SW] SPA routing configured");
+} catch (e) {
+  console.warn("[SW] SPA routing setup failed:", e.message);
 }
 
 console.log("[SW] Workbox initialized");
