@@ -5,6 +5,7 @@
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { sendMulticastNotification } from "./utils/notifications.js";
+import { ArrangementNotification } from "../schemas/index.js";
 
 /**
  * ArrangementNotification 作成時のトリガー
@@ -62,20 +63,15 @@ export const onArrangementNotificationCreated = onDocumentCreated(
         return;
       }
 
-      // 3. 通知内容の構築
-      const date = arrangementData.dateAt.toDate
-        ? arrangementData.dateAt.toDate()
-        : new Date(arrangementData.dateAt);
-
-      // UTC → JST に変換（+9時間）
-      // dateAt は JST 日時を UTC フォーマットで保存しているため、9時間足して JST に戻す
-      const jstDate = new Date(date.getTime() + 9 * 60 * 60 * 1000);
-      const month = jstDate.getUTCMonth() + 1; // 0-11 なので +1
-      const day = jstDate.getUTCDate();
+      // 3. ArrangementNotification インスタンスを作成して日付を取得
+      const arrangement = new ArrangementNotification(arrangementData);
+      
+      // date プロパティから月日を取得 (formatJstDate で JST 変換済み)
+      const [year, month, day] = arrangement.date.split('-');
 
       const notification = {
         title: "配置通知",
-        body: `${month}月${day}日の配置が更新されました。`,
+        body: `${parseInt(month)}月${parseInt(day)}日の配置が更新されました。`,
       };
 
       const data = {
