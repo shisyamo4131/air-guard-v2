@@ -31,7 +31,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
  * AirItemManager の beforeEdit フック関数
  * - editMode が "UPDATE" 以外の場合は編集を許可しない
  * - すでに退職済みの従業員に対して退職処理を行うことを許可しない
- * - 上記の条件を満たす場合は、従業員の employmentStatus を "TERMINATED" に変更して編集を許可する
+ * - 上記の条件を満たす場合は、従業員の employmentStatus を "RESIGNED" に変更して編集を許可する
  * @param editMode
  * @param item
  */
@@ -48,7 +48,7 @@ function beforeEdit(editMode, item) {
   }
 
   // すでに退職済みの従業員に対して退職処理を行うことを許可しない
-  if (item.employmentStatus === EMPLOYMENT_STATUS.value.TERMINATED.value) {
+  if (item.employmentStatus === EMPLOYMENT_STATUS.value.RESIGNED.value) {
     if (isDev) {
       logger.warn({
         message: "Attempted to terminate an already terminated employee.",
@@ -57,7 +57,7 @@ function beforeEdit(editMode, item) {
     }
     return false;
   }
-  item.employmentStatus = EMPLOYMENT_STATUS.value.TERMINATED.value;
+  item.employmentStatus = EMPLOYMENT_STATUS.value.RESIGNED.value;
   return true;
 }
 

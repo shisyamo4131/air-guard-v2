@@ -102,7 +102,7 @@ export const mockEmployees = [
     mobile: "090-3456-7890",
     email: "sato.kenta@example.com",
     dateOfHire: new Date("2000-04-01"),
-    employmentStatus: Employee.STATUS_TERMINATED,
+    employmentStatus: Employee.STATUS_RESIGNED,
     title: "班長",
     dateOfTermination: new Date("2025-03-31"),
     reasonOfTermination: "定年退職",

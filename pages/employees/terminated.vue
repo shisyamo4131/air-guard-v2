@@ -20,7 +20,7 @@ const defaultOption = [
   "where",
   "employmentStatus",
   "==",
-  Employee.STATUS_TERMINATED,
+  Employee.STATUS_RESIGNED,
 ];
 const options = computed(() => {
   if (!search.value) {
