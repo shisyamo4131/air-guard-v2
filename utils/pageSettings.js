@@ -268,8 +268,8 @@ export const pageStructure = [
         navigation: false,
       },
       {
-        id: "employees-terminated",
-        path: "/employees/terminated",
+        id: "employees-resigned",
+        path: "/employees/resigned",
         label: "退職者検索",
         icon: "mdi-format-list-bulleted",
         roles: ["employees:read", "employees:write"],

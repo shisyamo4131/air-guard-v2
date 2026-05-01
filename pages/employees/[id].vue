@@ -1,30 +1,32 @@
 <script setup>
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
+import { useConstants } from "@/composables/useConstants";
+
 // import { useEmployeeManager } from "@/composables/useEmployeeManager";
 
-/** SETUP */
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const docId = useRoute().params.id;
+const router = useRouter();
 const { doc } = useDocument("Employee", { docId });
-const { attrs, toTerminated } = useEmployeeManager({ doc });
+const { EMPLOYMENT_STATUS } = useConstants();
 
-/** FOR TERMINATION PROCESS */
-const dateOfTermination = ref(null); // 退職日
-const reasonOfTermination = ref(null); // 退職理由
-const validTermination = ref(false); // 退職処理フォームのバリデーション状態
-const terminateDialog = ref(false); // 退職処理ダイアログ表示フラグ
-watch(terminateDialog, (newVal) => {
-  if (newVal) return;
-  dateOfTermination.value = null;
-  reasonOfTermination.value = null;
-});
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+// const { attrs, toTerminated } = useEmployeeManager({ doc });
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
     <v-row>
       <!-- 非在職アラート -->
-      <v-col cols="12" v-if="doc.employmentStatus !== 'ACTIVE'">
+      <v-col
+        cols="12"
+        v-if="doc.employmentStatus !== EMPLOYMENT_STATUS.ACTIVE.value"
+      >
         <v-alert type="error"> この従業員は現在在職していません。 </v-alert>
       </v-col>
 
@@ -36,9 +38,16 @@ watch(terminateDialog, (newVal) => {
               <template #default="{ item }">
                 <EmployeeTableBaseInfo v-bind="item" />
               </template>
-              <template #footer>
+              <template
+                v-if="doc.employmentStatus !== EMPLOYMENT_STATUS.RESIGNED.value"
+                #footer
+              >
                 <v-card-actions>
-                  <EmployeeResignation class="flex-grow-1" :doc="doc">
+                  <EmployeeResignation
+                    class="flex-grow-1"
+                    :doc="doc"
+                    @submit:complete="router.replace('/employees')"
+                  >
                     <template #activator="{ toUpdate }">
                       <v-btn
                         block
