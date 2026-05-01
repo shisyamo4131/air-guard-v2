@@ -1,10 +1,12 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Company/Table/BaseInfo.vue
- * @description 会社の基本情報表示テーブル
+ * @file ./components/Employee/List/Base.vue
+ * @description 従業員の基本情報表示コンポーネント
+ * @extends AirList
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
+import { useConstants } from "@/composables/useConstants";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -25,7 +27,12 @@ const _props = defineProps({
   email: { type: String, default: "" }, // メールアドレス
   remarks: { type: String, default: "" }, // 備考
 });
-const props = useDefaults(_props, "EmployeeTableBaseInfo");
+const props = useDefaults(_props, "EmployeeListBase");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const { GENDER } = useConstants();
 
 /*****************************************************************************
  * COMPUTED
@@ -36,63 +43,34 @@ const formattedDateOfBirth = computed(() => {
 const formattedDateOfHire = computed(() => {
   return props.dateOfHire ? dayjs(props.dateOfHire).format("YYYY/MM/DD") : "";
 });
+
+const items = computed(() => {
+  return [
+    { title: "従業員コード", props: { subtitle: props.code || "-" } },
+    { title: "従業員名", props: { subtitle: props.fullName || "-" } },
+    {
+      title: "従業員名（カナ）",
+      props: { subtitle: props.fullNameKana || "-" },
+    },
+    {
+      title: "性別",
+      props: { subtitle: GENDER.value[props.gender]?.title || "-" },
+    },
+    {
+      title: "生年月日",
+      props: { subtitle: formattedDateOfBirth.value || "-" },
+    },
+    { title: "入社日", props: { subtitle: formattedDateOfHire.value || "-" } },
+    { title: "肩書", props: { subtitle: props.title || "-" } },
+    { title: "郵便番号", props: { subtitle: props.zipcode || "-" } },
+    { title: "住所", props: { subtitle: props.fullAddress || "-" } },
+    { title: "建物名", props: { subtitle: props.building || "-" } },
+    { title: "携帯電話番号", props: { subtitle: props.mobile || "-" } },
+    { title: "メールアドレス", props: { subtitle: props.email || "-" } },
+  ];
+});
 </script>
 
 <template>
-  <v-table>
-    <tbody>
-      <tr>
-        <td>従業員コード</td>
-        <td>{{ props.code }}</td>
-      </tr>
-      <tr>
-        <td>従業員名</td>
-        <td>{{ props.fullName }}</td>
-      </tr>
-      <tr>
-        <td>従業員名（カナ）</td>
-        <td>{{ props.fullNameKana }}</td>
-      </tr>
-      <tr>
-        <td>性別</td>
-        <td>{{ props.gender }}</td>
-      </tr>
-      <tr>
-        <td>生年月日</td>
-        <td>{{ formattedDateOfBirth }}</td>
-      </tr>
-      <tr>
-        <td>郵便番号</td>
-        <td>{{ props.zipcode }}</td>
-      </tr>
-      <tr>
-        <td>住所</td>
-        <td>{{ props.fullAddress }}</td>
-      </tr>
-      <tr>
-        <td>建物名</td>
-        <td>{{ props.building }}</td>
-      </tr>
-      <tr>
-        <td>携帯番号</td>
-        <td>{{ props.mobile }}</td>
-      </tr>
-      <tr>
-        <td>メールアドレス</td>
-        <td>{{ props.email }}</td>
-      </tr>
-      <tr>
-        <td>入社日</td>
-        <td>{{ formattedDateOfHire }}</td>
-      </tr>
-      <tr>
-        <td>肩書</td>
-        <td>{{ props.title }}</td>
-      </tr>
-      <tr>
-        <td>備考</td>
-        <td>{{ props.remarks }}</td>
-      </tr>
-    </tbody>
-  </v-table>
+  <air-list :items="items" />
 </template>

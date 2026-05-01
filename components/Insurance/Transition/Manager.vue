@@ -121,24 +121,31 @@ function handleUpdate(item) {
           </template>
         </v-toolbar>
         <v-card-text>
-          <div class="d-flex flex-column pb-2">
-            <small class="text-medium-emphasis">状態</small>
-            <div class="text-right text-body-2" style="min-height: 24px">
-              <InsuranceStatusChip v-bind="model" size="x-small" />
-            </div>
-          </div>
-          <div class="d-flex flex-column pb-2">
-            <small class="text-medium-emphasis">資格取得日</small>
-            <div class="text-right text-body-2" style="min-height: 24px">
-              {{ enrollmentDate }}
-            </div>
-          </div>
-          <div class="d-flex flex-column pb-2">
-            <small class="text-medium-emphasis">被保険者番号（整理記号）</small>
-            <div class="text-right text-body-2" style="min-height: 24px">
-              {{ model.number || "-" }}
-            </div>
-          </div>
+          <air-list class="py-0">
+            <!-- 状態 -->
+            <v-list-item>
+              <v-list-item-title>状態</v-list-item-title>
+              <v-list-item-subtitle>
+                <InsuranceStatusChip v-bind="model" size="x-small" />
+              </v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- 資格取得日 -->
+            <v-list-item>
+              <v-list-item-title>資格取得日</v-list-item-title>
+              <v-list-item-subtitle>
+                {{ enrollmentDate }}
+              </v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- 被保険者番号（整理記号） -->
+            <v-list-item>
+              <v-list-item-title>被保険者番号（整理記号）</v-list-item-title>
+              <v-list-item-subtitle>
+                {{ model.number || "-" }}
+              </v-list-item-subtitle>
+            </v-list-item>
+          </air-list>
         </v-card-text>
       </v-card>
     </template>

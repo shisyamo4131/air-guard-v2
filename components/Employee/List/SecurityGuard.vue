@@ -1,7 +1,8 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employee/Table/SecurityGuardInfo.vue
- * @description 警備員資格情報表示テーブル
+ * @file ./components/Employee/List/Nationality.vue
+ * @description 従業員の国籍情報表示コンポーネント
+ * @extends AirList
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
@@ -36,35 +37,31 @@ const formattedEmergencyContactName = computed(() => {
   const relation = props.emergencyContactRelationDetail || "N/A";
   return `${name} (${relation})`;
 });
+
+const items = computed(() => {
+  return [
+    {
+      title: "警備員登録日",
+      props: { subtitle: formattedDateOfSecurityGuardRegistration.value },
+    },
+    { title: "血液型", props: { subtitle: props.bloodType || "N/A" } },
+    {
+      title: "緊急連絡先氏名",
+      props: { subtitle: formattedEmergencyContactName.value },
+    },
+    {
+      title: "緊急連絡先住所",
+      props: { subtitle: props.emergencyContactAddress || "N/A" },
+    },
+    {
+      title: "緊急連絡先電話番号",
+      props: { subtitle: props.emergencyContactPhone || "N/A" },
+    },
+    { title: "本籍地", props: { subtitle: props.domicile || "N/A" } },
+  ];
+});
 </script>
 
 <template>
-  <v-table>
-    <tbody>
-      <tr>
-        <td>警備員登録日</td>
-        <td>{{ formattedDateOfSecurityGuardRegistration }}</td>
-      </tr>
-      <tr>
-        <td>血液型</td>
-        <td>{{ props.bloodType }}</td>
-      </tr>
-      <tr>
-        <td>緊急連絡先氏名</td>
-        <td>{{ formattedEmergencyContactName }}</td>
-      </tr>
-      <tr>
-        <td>緊急連絡先住所</td>
-        <td>{{ props.emergencyContactAddress }}</td>
-      </tr>
-      <tr>
-        <td>緊急連絡先電話番号</td>
-        <td>{{ props.emergencyContactPhone }}</td>
-      </tr>
-      <tr>
-        <td>本籍地</td>
-        <td>{{ props.domicile }}</td>
-      </tr>
-    </tbody>
-  </v-table>
+  <air-list :items="items" />
 </template>

@@ -1,7 +1,8 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employee/Table/Nationality.vue
- * @description 従業員の国籍情報表示テーブル
+ * @file ./components/Employee/List/Nationality.vue
+ * @description 従業員の国籍情報表示コンポーネント
+ * @extends AirList
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
@@ -28,38 +29,34 @@ const formattedPeriodOfStay = computed(() => {
     ? dayjs(props.periodOfStay).format("YYYY/MM/DD")
     : "";
 });
+
+const items = computed(() => {
+  return [
+    { title: "国籍", props: { subtitle: props.nationality || "日本" } },
+    ...(props.isForeigner
+      ? [
+          { title: "本名", props: { subtitle: props.foreignName } },
+          { title: "在留資格", props: { subtitle: props.residenceStatus } },
+          {
+            title: "在留期間",
+            props: {
+              subtitle: props.hasPeriodOfStayLimit
+                ? formattedPeriodOfStay.value
+                : "無制限",
+            },
+          },
+          {
+            title: "就労制限",
+            props: {
+              subtitle: props.hasWorkRestrictions ? "あり" : "なし",
+            },
+          },
+        ]
+      : []),
+  ];
+});
 </script>
 
 <template>
-  <v-table>
-    <tbody>
-      <tr>
-        <td>国籍</td>
-        <td>{{ props.nationality || "日本" }}</td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>本名</td>
-        <td>{{ props.foreignName }}</td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>在留資格</td>
-        <td>{{ props.residenceStatus }}</td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>在留期間</td>
-        <td>
-          <div v-if="props.hasPeriodOfStayLimit">
-            {{ formattedPeriodOfStay }}
-          </div>
-          <div v-else>無制限</div>
-        </td>
-      </tr>
-      <tr v-if="props.isForeigner">
-        <td>就労制限</td>
-        <td>
-          {{ props.hasWorkRestrictions ? "あり" : "なし" }}
-        </td>
-      </tr>
-    </tbody>
-  </v-table>
+  <air-list :items="items" />
 </template>

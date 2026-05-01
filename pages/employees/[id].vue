@@ -36,7 +36,14 @@ const { EMPLOYMENT_STATUS } = useConstants();
           <v-col cols="12">
             <EmployeeManager type="base" :doc="doc">
               <template #default="{ item }">
-                <EmployeeTableBaseInfo v-bind="item" />
+                <!-- <EmployeeTableBaseInfo v-bind="item" /> -->
+                <EmployeeListBase v-bind="item" />
+                <air-textarea
+                  label="備考"
+                  :model-value="item.remarks"
+                  variant="outlined"
+                  readonly
+                />
               </template>
               <template
                 v-if="doc.employmentStatus !== EMPLOYMENT_STATUS.RESIGNED.value"
@@ -51,7 +58,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
                     <template #activator="{ toUpdate }">
                       <v-btn
                         block
-                        color="info"
+                        color="warning"
                         variant="flat"
                         text="退職処理"
                         @click="() => toUpdate()"
@@ -65,7 +72,8 @@ const { EMPLOYMENT_STATUS } = useConstants();
           <v-col cols="12">
             <EmployeeManager type="nationality" :doc="doc">
               <template #default="{ item }">
-                <EmployeeTableNationality v-bind="item" />
+                <!-- <EmployeeTableNationality v-bind="item" /> -->
+                <EmployeeListNationality v-bind="item" />
               </template>
             </EmployeeManager>
           </v-col>
@@ -102,10 +110,10 @@ const { EMPLOYMENT_STATUS } = useConstants();
             />
           </v-col>
           <!-- 警備員資格情報 -->
-          <v-col cols="12">
+          <v-col cols="12" md="8">
             <EmployeeManager type="securityGuard" :doc="doc">
               <template #default="{ item, toUpdate }">
-                <EmployeeTableSecurityGuardInfo
+                <EmployeeListSecurityGuard
                   v-if="item.hasSecurityGuardRegistration"
                   v-bind="item"
                 />
