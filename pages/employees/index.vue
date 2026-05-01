@@ -40,6 +40,7 @@ const { docs } = useDocuments("Employee", {
       :items-per-page="-1"
       :sort-by="[{ key: 'fullNameKana', order: 'asc' }]"
       @create="(item) => router.push(`/employees/${item.docId}`)"
+      @click:detail="(item) => router.push(`/employees/${item.docId}`)"
     />
   </TemplatesFixedHeightContainer>
 </template>

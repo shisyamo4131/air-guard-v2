@@ -36,7 +36,6 @@ const DEFINITION = {
       "mobile", // 携帯電話番号
       "email", // メールアドレス
       "remarks", // 備考
-      "employmentStatus",
     ],
   },
   securityGuard: {
@@ -63,6 +62,13 @@ const DEFINITION = {
       "hasPeriodOfStayLimit", // 在留期間制限の有無
       "periodOfStay", // 在留期間
       "hasWorkRestrictions", // 就労制限の有無
+    ],
+  },
+  terminate: {
+    title: "退職処理",
+    includedKeys: [
+      "dateOfTermination", // 退職日
+      "reasonOfTermination", // 退職理由
     ],
   },
 };
@@ -107,24 +113,27 @@ const pathThroughSlots = computed(() => {
     :included-keys="DEFINITION[props.type].includedKeys"
   >
     <template #activator="slotProps">
-      <v-card>
-        <v-toolbar
-          color="secondary"
-          density="compact"
-          :title="props.title || DEFINITION[props.type].title"
-        >
-          <template #append>
-            <v-btn
-              icon="mdi-pencil"
-              size="small"
-              @click="() => slotProps.toUpdate()"
-            />
-          </template>
-        </v-toolbar>
-        <v-card-text class="py-0">
-          <slot name="default" v-bind="slotProps" />
-        </v-card-text>
-      </v-card>
+      <slot name="activator" v-bind="slotProps">
+        <v-card>
+          <v-toolbar
+            color="secondary"
+            density="compact"
+            :title="props.title || DEFINITION[props.type].title"
+          >
+            <template #append>
+              <v-btn
+                icon="mdi-pencil"
+                size="small"
+                @click="() => slotProps.toUpdate()"
+              />
+            </template>
+          </v-toolbar>
+          <v-card-text class="py-0">
+            <slot name="default" v-bind="slotProps" />
+          </v-card-text>
+          <slot name="footer" v-bind="slotProps" />
+        </v-card>
+      </slot>
     </template>
 
     <!-- スロットをパススルー -->

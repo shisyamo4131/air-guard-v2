@@ -1,15 +1,12 @@
 <script setup>
-import dayjs from "dayjs";
 import { useRoute } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 // import { useEmployeeManager } from "@/composables/useEmployeeManager";
-import { useCertificationsManager } from "@/composables/useCertificationsManager";
 
 /** SETUP */
 const docId = useRoute().params.id;
 const { doc } = useDocument("Employee", { docId });
-// const { attrs, toTerminated } = useEmployeeManager({ doc });
-const certificationsManager = useCertificationsManager(doc);
+const { attrs, toTerminated } = useEmployeeManager({ doc });
 
 /** FOR TERMINATION PROCESS */
 const dateOfTermination = ref(null); // 退職日
@@ -38,6 +35,21 @@ watch(terminateDialog, (newVal) => {
             <EmployeeManager type="base" :doc="doc">
               <template #default="{ item }">
                 <EmployeeTableBaseInfo v-bind="item" />
+              </template>
+              <template #footer>
+                <v-card-actions>
+                  <EmployeeResignation class="flex-grow-1" :doc="doc">
+                    <template #activator="{ toUpdate }">
+                      <v-btn
+                        block
+                        color="info"
+                        variant="flat"
+                        text="退職処理"
+                        @click="() => toUpdate()"
+                      />
+                    </template>
+                  </EmployeeResignation>
+                </v-card-actions>
               </template>
             </EmployeeManager>
           </v-col>
@@ -116,7 +128,7 @@ watch(terminateDialog, (newVal) => {
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <!-- <air-item-manager v-bind="attrs" hide-delete-btn>
+        <EmployeeManager :doc="doc" hide-delete-btn>
           <template #activator="{ toDelete }">
             <v-btn
               block
@@ -132,18 +144,25 @@ watch(terminateDialog, (newVal) => {
               </template>
               <template #title> 削除処理 </template>
               <template #text>
-                削除すると復元することはできません。本当に削除しますか？
+                <div>在職中の従業員です。本当に削除しますか？</div>
+                <v-alert type="warning" density="compact" class="mt-4">
+                  <div>
+                    <div>一度削除すると復元することはできません。</div>
+                    <div>
+                      AirGuard のユーザーアカウントも同時に削除されます。
+                    </div>
+                  </div>
+                </v-alert>
               </template>
               <template #actions>
                 <MoleculesActionsSubmitCancel
                   v-bind="editorActions"
                   submitText="実行"
-                  color="error"
                 />
               </template>
             </v-card>
           </template>
-        </air-item-manager> -->
+        </EmployeeManager>
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>

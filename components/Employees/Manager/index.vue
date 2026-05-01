@@ -20,12 +20,12 @@ const _props = defineProps({
   sortBy: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "EmployeesManager");
-const emit = defineEmits(["update:search"]);
+const emit = defineEmits(["update:search", "click:detail"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, router } = useBaseManager("EmployeesManager");
+const { attrs } = useBaseManager("EmployeesManager");
 </script>
 
 <template>
@@ -56,7 +56,7 @@ const { attrs, router } = useBaseManager("EmployeesManager");
         showDetail
         :sort-by="props.sortBy"
         @click:create="() => toCreate()"
-        @click:detail="(item) => router.push(`/employees/${item.docId}`)"
+        @click:detail="(item) => emit('click:detail', item)"
       />
     </template>
     <template #input-default="props">

@@ -33,7 +33,6 @@ export function useDocManager(composableName = "useDocManager", options = {}) {
     baseManager.logger.error({
       message: "Invalid 'doc' parameter provided to useDocManager.",
     });
-    return;
   }
 
   if (baseManager.isDev && !redirectPath) {
@@ -58,7 +57,7 @@ export function useDocManager(composableName = "useDocManager", options = {}) {
     return {
       ...baseManager.attrs.value,
       ref: (el) => (component.value = el),
-      modelValue: doc,
+      modelValue: doc || {},
       handleCreate: (item) => item.create(),
       handleUpdate: (item) => item.update(),
       handleDelete: (item) => item.delete(),

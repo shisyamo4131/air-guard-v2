@@ -248,7 +248,7 @@ export const pageStructure = [
     id: "employees-group",
     label: "従業員管理",
     icon: "mdi-account-multiple",
-    roles: ["employees:read"],
+    roles: ["employees:read", "employees:write"],
     navigation: true,
     children: [
       {
@@ -256,7 +256,7 @@ export const pageStructure = [
         path: "/employees",
         label: "在職者一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read"],
+        roles: ["employees:read", "employees:write"],
         navigation: true,
       },
       {
@@ -264,7 +264,7 @@ export const pageStructure = [
         path: "/employees/[id]",
         label: "従業員詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read"],
+        roles: ["employees:read", "employees:write"],
         navigation: false,
       },
       {
@@ -272,7 +272,7 @@ export const pageStructure = [
         path: "/employees/terminated",
         label: "退職者検索",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read"],
+        roles: ["employees:read", "employees:write"],
         navigation: true,
       },
     ],
