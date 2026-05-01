@@ -8,6 +8,7 @@ import { useDefaults } from "vuetify";
 import { User } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -24,10 +25,11 @@ const userDocId = ref("");
 const user = reactive(new User());
 
 /*****************************************************************************
- * SETUP COMPOSABLES
+ * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 const { attrs } = useBaseManager("UserManager");
 const auth = useAuthStore();
+const { checkEmailAvailabilityGlobal } = useAuthFunctions();
 
 /*****************************************************************************
  * WATCHERS
@@ -84,13 +86,23 @@ async function handleAction(createFn) {
   });
   await createFn(newUser);
 }
+
+/**
+ * AirArrayManager の handle-create に渡す関数
+ * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
+ * @param item
+ */
+async function handleCreate(item) {
+  await checkEmailAvailabilityGlobal(item.email);
+  await item.create();
+}
 </script>
 
 <template>
   <air-item-manager
     v-bind="attrs"
     :model-value="user"
-    :handle-create="(item) => item.create()"
+    :handle-create="handleCreate"
     :handle-update="
       () => {
         throw new Error(

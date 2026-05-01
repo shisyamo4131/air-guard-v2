@@ -4,6 +4,17 @@ export const useAuthFunctions = () => {
   const { $functions } = useNuxtApp();
 
   /**
+   * グローバルにメールアドレスの利用可能性をチェックします。
+   * @param {string} email - チェックするメールアドレス
+   * @returns {Promise<{available: boolean}>} - 利用可能かどうかの結果
+   */
+  const checkEmailAvailabilityGlobal = async (email) => {
+    const callable = httpsCallable($functions, "checkEmailAvailabilityGlobal");
+    const result = await callable({ email });
+    return result.data;
+  };
+
+  /**
    * メールアドレスが利用可能かをチェックします。
    * - isAdminフラグに基づき、管理者登録または利用者登録用としてチェックします。
    * @param {Object} data
@@ -101,5 +112,6 @@ export const useAuthFunctions = () => {
     disableUser,
     enableUser,
     changeAdminUser,
+    checkEmailAvailabilityGlobal,
   };
 };

@@ -35,7 +35,57 @@ const AUTH_ERROR_CODE_MAP = {
 };
 
 /**
- * メールアドレスの利用可能性をチェック
+ * メールアドレスの利用可不可をチェック（グローバル）
+ * - Users コレクションについて、グローバルにメールアドレスの重複をチェックします。
+ * - authentication でアカウントが作成される前に、User ドキュメントが isTemporary === true で
+ *   作成されている可能性があるため、User ドキュメントの作成前には必ずこの関数で
+ *   メールアドレスの重複チェックを行う必要があります。
+ * @property {string} email - チェックするメールアドレス
+ * @returns {Object} 利用可不可結果 { available: true }
+ * @throws {HttpsError} メールアドレスが指定されていない場合、またはチェック中に予期しないエラーが発生した場合
+ * @throws {HttpsError} メールアドレスが他の User ドキュメントで既に使用されている場合
+ */
+export const checkEmailAvailabilityGlobal = onCall(async (request) => {
+  const { email } = request.data;
+
+  if (!email) {
+    throw new HttpsError(
+      "invalid-argument",
+      "メールアドレスが指定されていません。",
+    );
+  }
+
+  try {
+    const db = getFirestore();
+    const usersSnapshot = await db
+      .collectionGroup("Users")
+      .where("email", "==", email)
+      .get();
+
+    if (!usersSnapshot.empty) {
+      throw new HttpsError(
+        "already-exists",
+        "このメールアドレスは既に使用されています。",
+      );
+    }
+
+    return { available: true };
+  } catch (error) {
+    logger.error("checkEmailAvailabilityGlobal でエラーが発生しました:", error);
+
+    if (error instanceof HttpsError) {
+      throw error;
+    }
+
+    throw new HttpsError(
+      "internal",
+      "メールアドレスチェック中に予期しないエラーが発生しました。",
+    );
+  }
+});
+
+/**
+ * メールアドレスの利用可能性をチェック（サインアップ用）
  * 管理者登録・利用者登録の両方で使用可能
  * 未認証状態での実行も想定されるため、request.auth のチェックは行わない。
  *

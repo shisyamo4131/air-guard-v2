@@ -20,7 +20,7 @@ const SITE_OPERATION_SCHEDULES_KEEP_DAYS = 60;
 const createDeleteBatches = (snapshot, db) => {
   const batchArray = [];
   const batchSize = BATCH_SIZE;
-  snapshot.forEach((doc, index) => {
+  snapshot.docs.forEach((doc, index) => {
     if (index % batchSize === 0) batchArray.push(db.batch());
     const currentBatch = batchArray[batchArray.length - 1];
     currentBatch.delete(doc.ref);
@@ -82,5 +82,5 @@ export const runDailyTask = onSchedule(
     } catch (error) {
       logger.error("[runDailyTask] Error executing scheduled function:", error);
     }
-  }
+  },
 );

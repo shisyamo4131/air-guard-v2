@@ -3,7 +3,6 @@
  * @file ./components/Users/Manager/index.vue
  * @description ユーザー情報管理コンポーネント
  * @author shisyamo4131
- *
  *****************************************************************************/
 import { User } from "@/schemas";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
@@ -34,7 +33,8 @@ const emit = defineEmits(["update:search"]);
 const auth = useAuthStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
-const { enableUser, disableUser } = useAuthFunctions();
+const { enableUser, disableUser, checkEmailAvailabilityGlobal } =
+  useAuthFunctions();
 const { ROLE_PRESETS } = useRolePresets();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
@@ -132,6 +132,16 @@ async function showUserCardMenu({ event, user }) {
   userCardMenuTargetUser.value = user;
   userCardMenu.value = true;
 }
+
+/**
+ * AirArrayManager の handle-create に渡す関数
+ * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
+ * @param item
+ */
+async function handleCreate(item) {
+  await checkEmailAvailabilityGlobal(item.email);
+  await item.create();
+}
 </script>
 
 <template>
@@ -144,7 +154,7 @@ async function showUserCardMenu({ event, user }) {
         item.companyId = auth.companyId;
       }
     "
-    :handle-create="(item) => item.create()"
+    :handle-create="handleCreate"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
     :disable-delete="(item) => !!item.isAdmin"
@@ -154,18 +164,6 @@ async function showUserCardMenu({ event, user }) {
       }
     "
   >
-    <template #[`input.email`]="inputProps">
-      <air-text-field
-        v-bind="inputProps.attrs"
-        :disabled="
-          inputProps.editMode !== 'CREATE' && !inputProps.item.isTemporary
-        "
-        label="email"
-        required
-        input-type="email"
-      />
-    </template>
-
     <!-- 役割選択 UI -->
     <template #[`input.roles`]="inputProps">
       <v-card border variant="flat" class="mb-4">
