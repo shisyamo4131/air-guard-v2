@@ -29,7 +29,7 @@ const containerStyle = computed(() => {
   return {
     height: effectiveHeight,
     overflowY: "auto",
-    overscrollBehavior: "none",
+    // overscrollBehavior: "none",
   };
 });
 </script>

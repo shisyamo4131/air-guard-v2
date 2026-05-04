@@ -91,7 +91,7 @@ export function useDateUtil() {
    * @returns {string|null} Formatted date string or null if invalid
    */
   const formatDate = (date, format = "YYYY-MM-DD") => {
-    const dayjsDate = dayjs(date);
+    const dayjsDate = dayjs.tz(date, "Asia/Tokyo");
     if (!dayjsDate.isValid()) {
       console.error("Invalid date provided for formatting.");
       return null;

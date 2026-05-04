@@ -465,6 +465,7 @@ export const useAuthStore = defineStore("auth", () => {
     isEmailVerified,
     isAdmin: computed(() => userInstance.isAdmin),
     tagSize,
+    employeeId: computed(() => userInstance.employeeId),
     isReady,
     roles,
     companyId,

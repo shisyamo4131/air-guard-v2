@@ -7,6 +7,9 @@ import * as CONSTANTS from "@shisyamo4131/air-guard-v2-schemas/constants";
  * - スキーマパッケージの定数に色設定を追加
  */
 const DEFAULT_DEFINITIONS = {
+  ARRANGEMENT_NOTIFICATION_STATUS: {
+    ...CONSTANTS.ARRANGEMENT_NOTIFICATION_STATUS_VALUES,
+  },
   BILLING_UNIT_TYPE: {
     PER_DAY: {
       ...CONSTANTS.BILLING_UNIT_TYPE_VALUES.PER_DAY,
@@ -107,6 +110,13 @@ function createConstantWithColors(defaultDef, categoryKey, company) {
 export function useConstants() {
   const auth = useAuthStore();
 
+  const ARRANGEMENT_NOTIFICATION_STATUS = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.ARRANGEMENT_NOTIFICATION_STATUS,
+      "arrangementNotificationStatus",
+      auth.company,
+    ),
+  );
   const BILLING_UNIT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
@@ -173,6 +183,7 @@ export function useConstants() {
   }
 
   return {
+    ARRANGEMENT_NOTIFICATION_STATUS,
     BILLING_UNIT_TYPE,
     DAY_TYPE,
     EMPLOYMENT_STATUS,

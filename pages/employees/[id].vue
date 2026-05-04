@@ -37,7 +37,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
             <EmployeeManager type="base" :doc="doc">
               <template #default="{ item }">
                 <!-- <EmployeeTableBaseInfo v-bind="item" /> -->
-                <EmployeeListBase v-bind="item" />
+                <EmployeeListBase v-bind="item" fluid />
                 <air-textarea
                   label="備考"
                   :model-value="item.remarks"
@@ -73,7 +73,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
             <EmployeeManager type="nationality" :doc="doc">
               <template #default="{ item }">
                 <!-- <EmployeeTableNationality v-bind="item" /> -->
-                <EmployeeListNationality v-bind="item" />
+                <EmployeeListNationality v-bind="item" fluid />
               </template>
             </EmployeeManager>
           </v-col>
@@ -116,6 +116,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
                 <EmployeeListSecurityGuard
                   v-if="item.hasSecurityGuardRegistration"
                   v-bind="item"
+                  fluid
                 />
                 <v-empty-state
                   v-else
