@@ -131,7 +131,7 @@ const commandText = ref(null);
       </template>
 
       <!-- セルのカスタマイズ -->
-      <template #cell="{ date, siteId, shiftType, groupKey, schedules }">
+      <template #cell="{ date, siteId, shiftType, schedules }">
         <DraggableOperationSchedules
           :date="date"
           :shift-type="shiftType"

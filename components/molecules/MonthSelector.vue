@@ -17,7 +17,7 @@ import dayjs from "dayjs";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const props = defineProps({
-  modelValue: { type: Date, default: new Date() },
+  modelValue: { type: Object, default: () => new Date() },
 });
 
 const emit = defineEmits(["update:modelValue", "from", "to", "date-range"]);
@@ -49,7 +49,7 @@ watch(
   () => props.modelValue,
   (newVal) => {
     internalModel.value = newVal;
-  }
+  },
 );
 
 /*****************************************************************************

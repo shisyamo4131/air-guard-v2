@@ -1,27 +1,40 @@
 <script setup>
-/**
- * MoleculesInputsSiteForRegist
- * @file @/components/molecules/inputs/SiteForRegist.vue
- * @author shisyamo4131
- * @description 現場情報登録用コンポーネント
- * - ステップ入力を行うコンポーネントで、AirItemInput.vue の `default` スロットで使用することを前提としています。
- */
+/*****************************************************************************
+ * @file ./components/Site/Input/ToRegist.vue
+ * @description A input component to regist `Site`.
+ *****************************************************************************/
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
+import { useDefaults } from "vuetify";
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
-const props = defineProps({
+const _props = defineProps({
   componentAttrs: { type: Object, default: () => ({}) },
   step: { type: Number, default: 1 },
 });
+const props = useDefaults(_props, "SiteInputToRegist");
 
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const fetchCustomerComposable = useFetchCustomer();
 const { searchCustomers } = fetchCustomerComposable;
 
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
 // ステップ1で入力された取引先名での検索結果を格納する配列
 const searchResults = ref([]);
 
+// 各ステップの VForm の参照
+const step1 = ref(null);
+const step2 = ref(null); // 取引先選択なので現在未使用
+const step3 = ref(null);
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
 // 検索結果に「取引先を設定しない」オプションを追加した計算済みプロパティ
 const computedSearchResults = computed(() => {
   return [
@@ -30,11 +43,9 @@ const computedSearchResults = computed(() => {
   ];
 });
 
-// 各ステップの VForm の参照
-const step1 = ref(null);
-const step2 = ref(null); // 取引先選択なので現在未使用
-const step3 = ref(null);
-
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 /**
  * 次へ進むボタンのハンドラ
  * @param options.step 現在のステップ番号
@@ -74,6 +85,9 @@ async function handleGoToNext({ step, item }) {
   }
 }
 
+/*****************************************************************************
+ * EXPOSE
+ *****************************************************************************/
 defineExpose({
   mode: "step",
   steps: 3,

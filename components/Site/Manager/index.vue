@@ -1,12 +1,15 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employee/Manager/index.vue
- * @description 従業員管理コンポーネント
+ * @file ./components/Site/Manager/index.vue
+ * @description 現場管理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
 import { useSlots } from "vue";
 import { useDocManager } from "@/composables/useDocManager";
 import { useDefaults } from "vuetify";
+import CustomInput from "@/components/Site/Input/ToRegist.vue";
+import { Site } from "@/schemas";
+import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 
 /*****************************************************************************
  * コンポーネント設定定義
@@ -18,58 +21,20 @@ const DEFINITION = {
   base: {
     title: "基本情報",
     includedKeys: [
-      "code", // 従業員コード
-      "lastName", // 姓
-      "firstName", // 名
-      "lastNameKana", // 姓（カナ）
-      "firstNameKana", // 名（カナ）
-      "displayName", // 表示名
-      "gender", // 性別
-      "dateOfBirth", // 生年月日
-      "dateOfHire", // 入社日
-      "title", // 肩書
+      "code", // 現場コード
+      "name", // 現場名
+      "nameKana", // 現場名（カナ）
       "zipcode", // 郵便番号
       "prefCode", // 都道府県コード
       "city", // 市区町村
       "address", // 住所
       "building", // 建物名
-      "mobile", // 携帯電話番号
-      "email", // メールアドレス
       "remarks", // 備考
     ],
   },
-  securityGuard: {
-    title: "警備員資格情報",
-    includedKeys: [
-      "hasSecurityGuardRegistration", // 警備員資格登録の有無
-      "dateOfSecurityGuardRegistration", // 警備員資格登録日
-      "bloodType", // 血液型
-      "emergencyContactName", // 緊急連絡先氏名
-      "emergencyContactRelation", // 緊急連絡先との関係
-      "emergencyContactRelationDetail", // 緊急連絡先との関係詳細
-      "emergencyContactAddress", // 緊急連絡先住所
-      "emergencyContactPhone", // 緊急連絡先電話番号
-      "domicile", // 本籍地
-    ],
-  },
-  nationality: {
-    title: "国籍情報",
-    includedKeys: [
-      "isForeigner", // 外国人かどうか
-      "nationality", // 国籍
-      "foreignName", // 外国人氏名
-      "residenceStatus", // 在留資格
-      "hasPeriodOfStayLimit", // 在留期間制限の有無
-      "periodOfStay", // 在留期間
-      "hasWorkRestrictions", // 就労制限の有無
-    ],
-  },
-  terminate: {
-    title: "退職処理",
-    includedKeys: [
-      "dateOfTermination", // 退職日
-      "reasonOfTermination", // 退職理由
-    ],
+  customer: {
+    title: "取引先情報",
+    includedKeys: ["customerId"], // 取引先ID
   },
 };
 
@@ -77,40 +42,45 @@ const DEFINITION = {
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
-  doc: { type: Object, required: true },
+  doc: { type: Object, default: () => reactive(new Site()) },
   title: { type: String, default: undefined },
   type: { type: String, default: "base" },
 });
-const props = useDefaults(_props, "EmployeeManager");
+const props = useDefaults(_props, "SiteManager");
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 const slots = useSlots();
 /** AirItemManager への基本的な設定を useDocManager から取得 */
-const docManager = useDocManager("EmployeeManager", { doc: props.doc });
+const docManager = useDocManager("SiteManager", { doc: props.doc });
+const fetchCustomerComposable = useFetchCustomer();
 
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
 /**
  * スロットのうち、activator と default スロットを除いたものをパススルー用に抽出する計算プロパティ
- * - activator スロットは AirItemManager 内で使用されるため、パススルーしない
  * - default スロットは activator 内で明示的に使用されるため、パススルーしない
  * - その他のスロットは AirItemManager を通じて親コンポーネントから子コンポーネントへパススルーする
  */
 const pathThroughSlots = computed(() => {
-  const { activator, ...other } = slots;
+  const { default: _default, ...other } = slots;
   return other;
 });
 </script>
 
 <template>
   <air-item-manager
-    v-bind="docManager.attrs.value"
+    v-bind="{ ...docManager.attrs.value, ...DEFINITION[props.type] }"
     hide-delete-btn
+    :custom-input="
+      ({ editMode }) => {
+        if (editMode === 'CREATE') return CustomInput;
+        return null;
+      }
+    "
     :label="props.title || DEFINITION[props.type].title"
-    :included-keys="DEFINITION[props.type].includedKeys"
   >
     <template #activator="slotProps">
       <slot name="activator" v-bind="slotProps">
@@ -134,6 +104,14 @@ const pathThroughSlots = computed(() => {
           <slot name="contents-footer" v-bind="slotProps" />
         </v-card>
       </slot>
+    </template>
+
+    <template #[`input.customerId`]="{ attrs }">
+      <MoleculesAutocompleteCustomer
+        v-bind="attrs"
+        creatable
+        :fetch-customer-composable="fetchCustomerComposable"
+      />
     </template>
 
     <!-- スロットをパススルー -->

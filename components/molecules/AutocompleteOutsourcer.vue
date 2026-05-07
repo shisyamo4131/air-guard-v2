@@ -10,7 +10,7 @@ const props = defineProps({
   },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "外注先" },
-  itemTitle: { type: String, default: "name" },
+  itemTitle: { type: String, default: "displayName" },
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });

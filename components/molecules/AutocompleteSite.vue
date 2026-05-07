@@ -1,6 +1,5 @@
 <script setup>
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
-import { useSiteManager } from "@/composables/useSiteManager";
 
 /** DEFINE PROPS & EMITS */
 const props = defineProps({
@@ -16,7 +15,6 @@ const emit = defineEmits(["update:model-value"]);
 
 /** SETUP COMPOSABLES */
 const { getSite, searchSites, cachedSitesArray } = props.fetchSiteComposable;
-const siteManager = useSiteManager();
 
 function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
@@ -39,14 +37,11 @@ function onCreateHandler(event) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <air-item-manager
-        v-bind="siteManager.attrs.value"
-        @create="($event) => onCreateHandler($event)"
-      >
+      <site-manager @create="($event) => onCreateHandler($event)">
         <template #activator="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
-      </air-item-manager>
+      </site-manager>
     </template>
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in $slots" #[name]="scope">

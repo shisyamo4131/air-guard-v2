@@ -7,7 +7,7 @@ const props = defineProps({
   fetchCustomerComposable: { type: Object, default: () => useFetchCustomer() },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "取引先" },
-  itemTitle: { type: String, default: "name" },
+  itemTitle: { type: String, default: "abbreviation" },
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });

@@ -1,24 +1,21 @@
 <script setup>
 import dayjs from "dayjs";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
-import { useSiteManager } from "@/composables/useSiteManager";
-import { useSiteOperationSchedulesManager } from "@/composables/useSiteOperationSchedulesManager";
-import MoleculesInputsSiteForSelectCustomer from "@/components/molecules/inputs/SiteForSelectCustomer.vue";
 
 /*****************************************************************************
  * ROUTER
  *****************************************************************************/
 const route = useRoute();
+const router = useRouter();
 const docId = route.params.id;
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { doc } = useDocument("Site", { docId });
-const { attrs } = useSiteManager({ doc });
 
 /** Date Range */
 const baseDate = dayjs().startOf("month").toDate();
@@ -38,12 +35,6 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
   options,
   fetchAllOnEmpty: true,
 });
-
-/** Site Operation Schedules Manager */
-const schedulesManager = useSiteOperationSchedulesManager({
-  docs: schedules,
-  siteId: docId,
-});
 </script>
 
 <template>
@@ -54,119 +45,33 @@ const schedulesManager = useSiteOperationSchedulesManager({
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <air-item-manager
-              v-bind="attrs"
-              hide-delete-btn
-              :included-keys="['code', 'name', 'nameKana', 'remarks', 'status']"
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-card
-                  :title="doc.name"
-                  :subtitle="doc.nameKana"
-                  prepend-icon="mdi-pickaxe"
-                >
-                  <template v-if="doc.isTemporary" #append>
-                    <v-chip color="error" text="仮登録" size="small" />
-                  </template>
-                  <v-list slim>
-                    <v-list-item
-                      :title="doc.code || '-'"
-                      subtitle="現場コード"
-                      prepend-icon="mdi-tag"
-                    />
-                    <v-list-item
-                      :title="doc.name"
-                      subtitle="現場名"
-                      prepend-icon="mdi-tag"
-                    />
-                  </v-list>
-                  <v-card v-if="doc.remarks" :text="doc.remarks" />
-                  <template #actions>
-                    <MoleculesActionsEdit v-bind="activatorProps" />
-                  </template>
-                </v-card>
+            <SiteManager type="base" :doc="doc">
+              <template #contents="{ item }">
+                <SiteListBase v-bind="item" fluid />
+                <air-textarea
+                  label="備考"
+                  :model-value="item.remarks"
+                  variant="outlined"
+                  readonly
+                />
               </template>
-              <template #[`input.customerId`]="inputProps">
-                <MoleculesAutocompleteCustomer v-bind="inputProps.attrs" />
-              </template>
-            </air-item-manager>
+            </SiteManager>
           </v-col>
 
+          <!-- 取引先情報 -->
           <v-col cols="12">
-            <air-item-manager
-              v-bind="attrs"
-              :custom-input="MoleculesInputsSiteForSelectCustomer"
-              :included-keys="['customerId']"
-              hide-delete-btn
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-card prepend-icon="mdi-domain">
-                  <template #title>取引先</template>
-                  <v-empty-state
-                    v-if="doc.isTemporary"
-                    :title="doc.customerName"
-                    text="取引先未設定の仮登録現場です。"
-                    action-text="取引先を設定する"
-                    @click:action="() => activatorProps['onClick:edit']()"
-                  />
-                  <v-list v-else slim>
-                    <v-list-item
-                      :title="doc.customer.code || '-'"
-                      subtitle="取引先コード"
-                      prepend-icon="mdi-tag"
-                    />
-                    <v-list-item
-                      :title="doc.customer.name"
-                      subtitle="取引先名"
-                      prepend-icon="mdi-tag"
-                    />
-                    <v-list-item
-                      :title="doc.customer.fullAddress"
-                      subtitle="所在地"
-                      prepend-icon="mdi-map-marker"
-                    >
-                    </v-list-item>
-                  </v-list>
-                  <template v-if="!doc.isTemporary" #actions>
-                    <MoleculesActionsEdit v-bind="activatorProps" />
-                  </template>
-                </v-card>
+            <SiteManager type="customer" :doc="doc">
+              <template #contents="{ item, toUpdate }">
+                <SiteListCustomer v-if="!doc.isTemporary" v-bind="item" fluid />
+                <v-empty-state
+                  v-else
+                  :title="doc.customerName"
+                  text="取引先未設定の仮登録現場です。"
+                  action-text="取引先を設定する"
+                  @click:action="() => toUpdate()"
+                />
               </template>
-            </air-item-manager>
-          </v-col>
-
-          <!-- 所在地 -->
-          <v-col cols="12">
-            <air-item-manager
-              v-bind="attrs"
-              :included-keys="[
-                'zipcode',
-                'prefCode',
-                'city',
-                'address',
-                'building',
-              ]"
-              hide-delete-btn
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-card
-                  :title="`${doc.city}${doc.address}`"
-                  :subtitle="`${doc.zipcode} ${doc.fullAddress} ${
-                    doc.building || ''
-                  }`"
-                >
-                  <template #prepend>
-                    <v-icon color="red" icon="mdi-map-marker" />
-                  </template>
-                  <template #text>
-                    <v-skeleton-loader type="image" />
-                  </template>
-                  <template #actions>
-                    <MoleculesActionsEdit v-bind="activatorProps" />
-                  </template>
-                </v-card>
-              </template>
-            </air-item-manager>
+            </SiteManager>
           </v-col>
         </v-row>
       </v-col>
@@ -176,46 +81,12 @@ const schedulesManager = useSiteOperationSchedulesManager({
         <v-row>
           <!-- 稼働予定 -->
           <v-col cols="12">
-            <air-array-manager v-bind="schedulesManager.attrs.value">
-              <template #table="{ toCreate, toUpdate }">
-                <v-card>
-                  <template #prepend>
-                    <v-icon icon="mdi-calendar" />
-                  </template>
-                  <template #title>稼働予定</template>
-                  <template #append>
-                    <v-btn icon="mdi-plus" @click="toCreate()" />
-                  </template>
-                  <template #text>
-                    <v-container class="pt-0">
-                      <MoleculesMonthSelector
-                        :model-value="dateRange.from"
-                        @date-range="dateRange = $event"
-                      />
-                    </v-container>
-                    <air-calendar
-                      style="min-height: 520px"
-                      :model-value="dateRange.from"
-                      :events="schedulesManager.events.value"
-                      @click:event="
-                        (nativeEvent, { event }) => {
-                          toUpdate(event.item);
-                        }
-                      "
-                    />
-                  </template>
-                </v-card>
-              </template>
-              <template #[`input.shiftType`]="{ attrs }">
-                <v-radio-group v-bind="attrs" inline>
-                  <v-radio label="日勤" value="DAY" />
-                  <v-radio label="夜勤" value="NIGHT" />
-                </v-radio-group>
-              </template>
-              <template #[`input.isStartNextDay`]="{ attrs }">
-                <MoleculesInputsIsStartNextDay v-bind="attrs" />
-              </template>
-            </air-array-manager>
+            <SiteOperationSchedulesManager
+              :date-at="dateRange.from"
+              :docs="schedules"
+              :site-id="docId"
+              @update:date-range="dateRange = $event"
+            />
           </v-col>
         </v-row>
       </v-col>
@@ -230,7 +101,11 @@ const schedulesManager = useSiteOperationSchedulesManager({
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <air-item-manager v-bind="attrs" hide-delete-btn>
+        <site-manager
+          :doc="doc"
+          hide-delete-btn
+          @submit-complete="router.replace('/employees')"
+        >
           <template #activator="{ toDelete }">
             <v-btn
               block
@@ -257,7 +132,7 @@ const schedulesManager = useSiteOperationSchedulesManager({
               </template>
             </v-card>
           </template>
-        </air-item-manager>
+        </site-manager>
       </v-col>
     </v-row>
   </TemplatesFixedHeightContainer>

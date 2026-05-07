@@ -25,7 +25,6 @@ const _props = defineProps({
   building: { type: String, default: "" }, // 建物名
   mobile: { type: String, default: "" }, // 携帯電話番号
   email: { type: String, default: "" }, // メールアドレス
-  remarks: { type: String, default: "" }, // 備考
 });
 const props = useDefaults(_props, "EmployeeListBase");
 

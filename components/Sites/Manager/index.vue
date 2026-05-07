@@ -7,6 +7,7 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
+import CustomInput from "@/components/Site/Input/ToRegist.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -32,6 +33,12 @@ const { attrs, router } = useBaseManager("SitesManager");
     v-bind="attrs"
     :model-value="docs"
     :schema="Site"
+    :custom-input="
+      ({ editMode }) => {
+        if (editMode === 'CREATE') return CustomInput;
+        return null;
+      }
+    "
     :handle-create="(item) => item.create()"
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
@@ -57,8 +64,5 @@ const { attrs, router } = useBaseManager("SitesManager");
         @click:detail="(item) => router.push(`/sites/${item.docId}`)"
       />
     </template>
-    <!-- <template #input-default="props">
-      <MoleculesInputsSite v-bind="props" type="default" />
-    </template> -->
   </air-array-manager>
 </template>

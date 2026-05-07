@@ -3,8 +3,6 @@ import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useConstants } from "@/composables/useConstants";
 
-// import { useEmployeeManager } from "@/composables/useEmployeeManager";
-
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
@@ -12,11 +10,6 @@ const docId = useRoute().params.id;
 const router = useRouter();
 const { doc } = useDocument("Employee", { docId });
 const { EMPLOYMENT_STATUS } = useConstants();
-
-/*****************************************************************************
- * DEFINE STATES
- *****************************************************************************/
-// const { attrs, toTerminated } = useEmployeeManager({ doc });
 </script>
 
 <template>
@@ -35,8 +28,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
         <v-row>
           <v-col cols="12">
             <EmployeeManager type="base" :doc="doc">
-              <template #default="{ item }">
-                <!-- <EmployeeTableBaseInfo v-bind="item" /> -->
+              <template #contents="{ item }">
                 <EmployeeListBase v-bind="item" fluid />
                 <air-textarea
                   label="備考"
@@ -47,7 +39,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
               </template>
               <template
                 v-if="doc.employmentStatus !== EMPLOYMENT_STATUS.RESIGNED.value"
-                #footer
+                #contents-footer
               >
                 <v-card-actions>
                   <EmployeeResignation
@@ -71,8 +63,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
           </v-col>
           <v-col cols="12">
             <EmployeeManager type="nationality" :doc="doc">
-              <template #default="{ item }">
-                <!-- <EmployeeTableNationality v-bind="item" /> -->
+              <template #contents="{ item }">
                 <EmployeeListNationality v-bind="item" fluid />
               </template>
             </EmployeeManager>
@@ -112,7 +103,7 @@ const { EMPLOYMENT_STATUS } = useConstants();
           <!-- 警備員資格情報 -->
           <v-col cols="12" md="8">
             <EmployeeManager type="securityGuard" :doc="doc">
-              <template #default="{ item, toUpdate }">
+              <template #contents="{ item, toUpdate }">
                 <EmployeeListSecurityGuard
                   v-if="item.hasSecurityGuardRegistration"
                   v-bind="item"
@@ -146,7 +137,11 @@ const { EMPLOYMENT_STATUS } = useConstants();
 
       <!-- 削除処理ボタン -->
       <v-col cols="12">
-        <EmployeeManager :doc="doc" hide-delete-btn>
+        <EmployeeManager
+          :doc="doc"
+          hide-delete-btn
+          @submit-complete="router.replace('/employees')"
+        >
           <template #activator="{ toDelete }">
             <v-btn
               block
