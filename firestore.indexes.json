@@ -1,6 +1,25 @@
 {
   "indexes": [
     {
+      "collectionGroup": "ArrangementNotifications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "id",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "dateAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
       "collectionGroup": "Customers",
       "queryScope": "COLLECTION",
       "fields": [

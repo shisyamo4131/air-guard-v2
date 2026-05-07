@@ -6,7 +6,6 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useDateUtil } from "@/composables/useDateUtil";
-import { useConstants } from "@/composables/useConstants";
 import { useMessage } from "./useMessage";
 import { ArrangementNotification } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
@@ -27,7 +26,6 @@ const props = useDefaults(_props, "ArrangementNotificationListItem");
 const { fetchSiteComposable } = useFetch("ArrangementNotificationListItem");
 const { cachedSites } = fetchSiteComposable;
 const { formatDate } = useDateUtil();
-const { SHIFT_TYPE } = useConstants();
 const { message } = useMessage(props);
 
 /*****************************************************************************
@@ -57,45 +55,58 @@ const title = computed(() => {
   return `${dateString}`;
 });
 
+const site = computed(() => {
+  return cachedSites.value?.[internalNotification.siteId] || null;
+});
+
 const siteName = computed(() => {
-  // const site = props.cachedSites?.[internalNotification.siteId] || "...loading";
-  const site = cachedSites.value?.[internalNotification.siteId] || "...loading";
-  return `${site.name}`;
+  return site.value?.name || "...loading";
 });
 
 const address = computed(() => {
-  // const site = props.cachedSites?.[internalNotification.siteId];
-  const site = cachedSites.value?.[internalNotification.siteId];
-  return site ? `${site.fullAddress}` : "...loading";
+  return site.value?.fullAddress || "...loading";
 });
 
 const timeRange = computed(() => {
-  const shiftTypeString =
-    SHIFT_TYPE.value?.[internalNotification.shiftType]?.title || "N/A";
-  const startAt = formatDate(
-    internalNotification.startAt || new Date(),
-    "HH:mm",
-  );
-  const endAt = formatDate(internalNotification.endAt || new Date(), "HH:mm");
-  return `${shiftTypeString} ${startAt} - ${endAt}`;
+  const startAt = internalNotification.isLeaved
+    ? internalNotification.actualStartAt
+    : internalNotification.startAt;
+  const endAt = internalNotification.isLeaved
+    ? internalNotification.actualEndAt
+    : internalNotification.endAt;
+  const formattedStartAt = formatDate(startAt || new Date(), "HH:mm");
+  const formattedEndAt = formatDate(endAt || new Date(), "HH:mm");
+  return `${formattedStartAt} - ${formattedEndAt}`;
 });
 </script>
 
 <template>
   <v-list-item>
-    <template v-if="showStatus" #prepend>
+    <template #prepend>
       <v-list-item-action>
-        <ArrangementNotificationStatusChip
+        <ShiftTypeChip
           class="me-4"
-          :status="internalNotification.status"
-          size="x-small"
+          :shift-type="internalNotification.shiftType"
+          label
         />
       </v-list-item-action>
     </template>
-    <v-list-item-title>{{ title }}</v-list-item-title>
-    <v-list-item-title>{{ timeRange }}</v-list-item-title>
-    <v-list-item-subtitle>{{ siteName }}</v-list-item-subtitle>
-    <v-list-item-subtitle>{{ address }}</v-list-item-subtitle>
+    <v-list-item-title>
+      <div class="d-flex align-center">
+        <div class="d-flex flex-column">
+          <div>{{ title }}</div>
+          <div>{{ timeRange }}</div>
+        </div>
+        <div class="flex-grow-1 text-right">
+          <ArrangementNotificationStatusChip
+            class="ms-4"
+            :status="internalNotification.status"
+          />
+        </div>
+      </div>
+    </v-list-item-title>
+    <v-list-item-title class="pt-2">{{ siteName }}</v-list-item-title>
+    <v-list-item-title>{{ address }}</v-list-item-title>
     <v-list-item-title v-if="props.showMessage" class="py-2">
       <v-icon class="me-2" :color="message.color" :icon="message.icon" />
       <span :class="`text-${message.color}`">{{ message.text }}</span>
