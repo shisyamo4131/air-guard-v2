@@ -6,6 +6,7 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
+import { useConstants } from "@/composables/useConstants";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -22,8 +23,17 @@ const props = useDefaults(_props, "SiteActivatorBase");
 const emit = defineEmits(["click:edit"]);
 
 /*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { SECURITY_TYPE } = useConstants();
+
+/*****************************************************************************
  * COMPUTED
  *****************************************************************************/
+const securityTypeTitle = computed(() => {
+  return SECURITY_TYPE.value?.[props.item.securityType]?.title || "N/A";
+});
+
 const items = computed(() => {
   return [
     { title: "現場コード", props: { subtitle: props.item.code || "-" } },
@@ -35,6 +45,7 @@ const items = computed(() => {
     { title: "郵便番号", props: { subtitle: props.item.zipcode || "-" } },
     { title: "住所", props: { subtitle: props.item.fullAddress || "-" } },
     { title: "建物名", props: { subtitle: props.item.building || "-" } },
+    { title: "警備種別", props: { subtitle: securityTypeTitle.value } },
   ];
 });
 
@@ -56,6 +67,7 @@ defineExpose({
     "city",
     "address",
     "building",
+    "securityType",
     "remarks",
   ],
 });

@@ -65,6 +65,9 @@ const DEFAULT_DEFINITIONS = {
   PAYMENT_MONTH: {
     ...CONSTANTS.PAYMENT_MONTH_VALUES,
   },
+  SECURITY_TYPE: {
+    ...CONSTANTS.SECURITY_TYPE_VALUES,
+  },
   SHIFT_TYPE: {
     DAY: {
       ...CONSTANTS.SHIFT_TYPE_VALUES.DAY,
@@ -177,6 +180,13 @@ export function useConstants() {
       auth.company,
     ),
   );
+  const SECURITY_TYPE = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.SECURITY_TYPE,
+      "securityType",
+      auth.company,
+    ),
+  );
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
@@ -220,6 +230,7 @@ export function useConstants() {
     GENDER,
     INSURANCE_STATUS,
     PAYMENT_MONTH,
+    SECURITY_TYPE,
     SHIFT_TYPE,
     SITE_STATUS,
     QUALIFIED_TYPE,
