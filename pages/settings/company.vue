@@ -26,15 +26,27 @@ const { company: doc } = auth;
         <v-row>
           <v-col cols="12">
             <!-- 会社情報 -->
-            <CompanyManager :doc="doc" />
+            <CompanyManager :doc="doc" label="基本情報">
+              <template #activator="activatorProps">
+                <CompanyActivatorBase v-bind="activatorProps" />
+              </template>
+            </CompanyManager>
           </v-col>
           <v-col cols="12">
             <!-- 口座情報 -->
-            <CompanyManager :doc="doc" type="bank" />
+            <CompanyManager :doc="doc" label="口座情報">
+              <template #activator="activatorProps">
+                <CompanyActivatorBank v-bind="activatorProps" />
+              </template>
+            </CompanyManager>
           </v-col>
           <!-- 設定情報 -->
           <v-col cols="12">
-            <CompanyManager :doc="doc" type="setting" />
+            <CompanyManager :doc="doc" label="設定情報">
+              <template #activator="activatorProps">
+                <CompanyActivatorSetting v-bind="activatorProps" />
+              </template>
+            </CompanyManager>
           </v-col>
         </v-row>
       </v-col>

@@ -121,7 +121,7 @@ const { attrs, addWorker, changeWorker, removeWorker } =
                 </v-card>
               </template>
               <template #[`input.siteId`]="inputAttrs">
-                <MoleculesAutocompleteSite
+                <SiteAutocomplete
                   v-bind="inputAttrs.attrs"
                   :fetch-site-composable="fetchSiteComposable"
                   clearable

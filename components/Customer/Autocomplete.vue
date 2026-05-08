@@ -1,9 +1,15 @@
 <script setup>
+/*****************************************************************************
+ * @file ./components/Customer/Autocomplete.vue
+ * @description A autocomplete component of 'Customer'.
+ *****************************************************************************/
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
-import { useCustomerManager } from "@/composables/useCustomerManager";
+import { useDefaults } from "vuetify";
 
-/** DEFINE PROPS & EMITS */
-const props = defineProps({
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
   fetchCustomerComposable: { type: Object, default: () => useFetchCustomer() },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "取引先" },
@@ -11,14 +17,18 @@ const props = defineProps({
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });
-
+const props = useDefaults(_props, "AutocompleteCustomer");
 const emit = defineEmits(["update:model-value"]);
 
-/** SETUP COMPOSABLES */
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
 const { getCustomer, searchCustomers, cachedCustomersArray } =
   props.fetchCustomerComposable;
-const customerManager = useCustomerManager();
 
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
@@ -40,15 +50,13 @@ function onCreateHandler(event) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <air-item-manager
-        v-bind="customerManager.attrs.value"
-        @create="($event) => onCreateHandler($event)"
-      >
-        <template #activator="{ toCreate }">
+      <CustomersManager @create="($event) => onCreateHandler($event)">
+        <template #table="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
-      </air-item-manager>
+      </CustomersManager>
     </template>
+
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in $slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>

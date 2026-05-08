@@ -71,7 +71,7 @@ defineExpose({
               />
             </v-col>
             <v-col cols="12">
-              <MoleculesInputsIsStartNextDay
+              <IsStartNextDayCheckbox
                 :model-value="item.isStartNextDay"
                 @update:model-value="
                   updateProperties({ isStartNextDay: $event })

@@ -1,6 +1,6 @@
 <script setup>
 /*****************************************************************************
- * @file components/molecules/inputs/isStartNextDay.vue
+ * @file components/IsStartNextDay/Checkbox.vue
  * @description A component for inputting whether the start time is on the next day.
  *****************************************************************************/
 const model = defineModel({ type: Boolean, default: false });

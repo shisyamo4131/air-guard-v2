@@ -1,12 +1,12 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Employee/Manager/index.vue
- * @description 従業員管理コンポーネント
+ * @file ./components/Customer/Manager/index.vue
+ * @description 取引先管理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
-import { Employee } from "@/schemas";
+import { Customer } from "@/schemas";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -15,15 +15,15 @@ const _props = defineProps({
   doc: {
     type: Object,
     required: true,
-    validator: (value) => value instanceof Employee,
+    validator: (value) => value instanceof Customer,
   },
 });
-const props = useDefaults(_props, "EmployeeManager");
+const props = useDefaults(_props, "CustomerManager");
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { attrs } = useBaseManager("EmployeeManager");
+const { attrs } = useBaseManager("CustomerManager");
 </script>
 
 <template>

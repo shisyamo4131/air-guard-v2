@@ -53,7 +53,7 @@ const tab = ref("WEEKDAY");
         </v-col>
         <!-- IS START NEXT DAY -->
         <v-col cols="12">
-          <MoleculesInputsIsStartNextDay
+          <IsStartNextDayCheckbox
             v-bind="props.componentAttrs['isStartNextDay']"
           />
         </v-col>

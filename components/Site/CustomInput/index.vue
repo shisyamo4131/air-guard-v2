@@ -1,6 +1,6 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Site/Input/ToRegist.vue
+ * @file ./components/Site/CustomInput/index.vue
  * @description A input component to regist `Site`.
  *****************************************************************************/
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
@@ -13,7 +13,7 @@ const _props = defineProps({
   componentAttrs: { type: Object, default: () => ({}) },
   step: { type: Number, default: 1 },
 });
-const props = useDefaults(_props, "SiteInputToRegist");
+const props = useDefaults(_props, "SiteCustomInput");
 
 /*****************************************************************************
  * SETUP COMPOSABLES

@@ -24,14 +24,14 @@ defineExpose({
 <template>
   <air-item-manager ref="component">
     <template #[`input.siteId`]="{ attrs }">
-      <MoleculesAutocompleteSite
+      <SiteAutocomplete
         v-bind="attrs"
         creatable
         :fetch-site-composable="fetchSiteComposable"
       />
     </template>
     <template #[`input.isStartNextDay`]="{ attrs }">
-      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+      <IsStartNextDayCheckbox v-bind="attrs" />
     </template>
   </air-item-manager>
 </template>

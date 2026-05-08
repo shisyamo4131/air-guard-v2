@@ -1,8 +1,15 @@
 <script setup>
+/*****************************************************************************
+ * @file ./components/Site/Autocomplete.vue
+ * @description A autocomplete component of 'Site'.
+ *****************************************************************************/
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useDefaults } from "vuetify";
 
-/** DEFINE PROPS & EMITS */
-const props = defineProps({
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
   fetchSiteComposable: { type: Object, default: () => useFetchSite() },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "現場" },
@@ -10,12 +17,17 @@ const props = defineProps({
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });
-
+const props = useDefaults(_props, "AutocompleteSite");
 const emit = defineEmits(["update:model-value"]);
 
-/** SETUP COMPOSABLES */
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
 const { getSite, searchSites, cachedSitesArray } = props.fetchSiteComposable;
 
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
@@ -37,12 +49,13 @@ function onCreateHandler(event) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <site-manager @create="($event) => onCreateHandler($event)">
-        <template #activator="{ toCreate }">
+      <SitesManager @create="($event) => onCreateHandler($event)">
+        <template #table="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
-      </site-manager>
+      </SitesManager>
     </template>
+
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in $slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>

@@ -31,7 +31,7 @@ defineExpose({
     ]"
   >
     <template #[`input.isStartNextDay`]="{ attrs }">
-      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+      <IsStartNextDayCheckbox v-bind="attrs" />
     </template>
     <template #[`input.isQualified`]="{ attrs, item, updateProperties }">
       <div class="d-flex">

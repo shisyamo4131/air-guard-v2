@@ -20,6 +20,9 @@ const DEFAULT_DEFINITIONS = {
       color: undefined,
     },
   },
+  DAY_OF_WEEK: {
+    ...CONSTANTS.DAY_OF_WEEK_VALUES,
+  },
   DAY_TYPE: {
     WEEKDAY: { ...CONSTANTS.DAY_TYPE_VALUES.WEEKDAY, color: "dark-grey" },
     SATURDAY: { ...CONSTANTS.DAY_TYPE_VALUES.SATURDAY, color: "light-blue" },
@@ -59,6 +62,9 @@ const DEFAULT_DEFINITIONS = {
       color: "success",
     },
   },
+  PAYMENT_MONTH: {
+    ...CONSTANTS.PAYMENT_MONTH_VALUES,
+  },
   SHIFT_TYPE: {
     DAY: {
       ...CONSTANTS.SHIFT_TYPE_VALUES.DAY,
@@ -70,6 +76,9 @@ const DEFAULT_DEFINITIONS = {
       color: "indigo",
       icon: "mdi-weather-night",
     },
+  },
+  SITE_STATUS: {
+    ...CONSTANTS.SITE_STATUS_VALUES,
   },
   QUALIFIED_TYPE: {
     BASE: { value: "BASE", title: "基本", color: "grey" },
@@ -125,6 +134,13 @@ export function useConstants() {
     ),
   );
 
+  const DAY_OF_WEEK = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.DAY_OF_WEEK,
+      "dayOfWeek",
+      auth.company,
+    ),
+  );
   const DAY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.DAY_TYPE,
@@ -154,6 +170,13 @@ export function useConstants() {
       auth.company,
     );
   });
+  const PAYMENT_MONTH = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.PAYMENT_MONTH,
+      "paymentMonth",
+      auth.company,
+    ),
+  );
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
@@ -161,7 +184,13 @@ export function useConstants() {
       auth.company,
     ),
   );
-
+  const SITE_STATUS = computed(() => {
+    return createConstantWithColors(
+      DEFAULT_DEFINITIONS.SITE_STATUS,
+      "siteStatus",
+      auth.company,
+    );
+  });
   const QUALIFIED_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
@@ -185,11 +214,14 @@ export function useConstants() {
   return {
     ARRANGEMENT_NOTIFICATION_STATUS,
     BILLING_UNIT_TYPE,
+    DAY_OF_WEEK,
     DAY_TYPE,
     EMPLOYMENT_STATUS,
     GENDER,
     INSURANCE_STATUS,
+    PAYMENT_MONTH,
     SHIFT_TYPE,
+    SITE_STATUS,
     QUALIFIED_TYPE,
     toArray,
     DEFAULT_DEFINITIONS,

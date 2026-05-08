@@ -41,7 +41,7 @@ const { attrs, cachedSites } = useOperationResultsManager({
         <v-progress-circular v-else indeterminate size="small" />
       </template>
       <template #[`input.siteId`]="{ attrs }">
-        <MoleculesAutocompleteSite
+        <SiteAutocomplete
           v-bind="attrs"
           creatable
           :fetch-site-composable="fetchSiteComposable"

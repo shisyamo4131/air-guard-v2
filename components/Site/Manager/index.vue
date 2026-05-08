@@ -6,42 +6,14 @@
  *****************************************************************************/
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
-import CustomInput from "@/components/Site/Input/ToRegist.vue";
+import CustomInput from "@/components/Site/CustomInput/index.vue";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
-
-/*****************************************************************************
- * コンポーネント設定定義
- * title: カードタイトルおよび編集画面タイトル
- * includedKeys: 編集対象プロパティ名の配列
- *****************************************************************************/
-const DEFINITION = {
-  base: {
-    title: "基本情報",
-    includedKeys: [
-      "code", // 現場コード
-      "name", // 現場名
-      "nameKana", // 現場名（カナ）
-      "zipcode", // 郵便番号
-      "prefCode", // 都道府県コード
-      "city", // 市区町村
-      "address", // 住所
-      "building", // 建物名
-      "remarks", // 備考
-    ],
-  },
-  customer: {
-    title: "取引先情報",
-    includedKeys: ["customerId"], // 取引先ID
-  },
-};
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
   doc: { type: Object, required: true },
-  title: { type: String, default: undefined },
-  type: { type: String, default: "base" },
 });
 const props = useDefaults(_props, "SiteManager");
 
@@ -54,7 +26,8 @@ const fetchCustomerComposable = useFetchCustomer();
 
 <template>
   <air-item-manager
-    v-bind="{ ...attrs, ...DEFINITION[props.type] }"
+    v-bind="attrs"
+    :model-value="props.doc"
     :handle-create="(item) => item.create(item)"
     :handle-update="(item) => item.update(item)"
     :handle-delete="(item) => item.delete(item)"
@@ -64,34 +37,13 @@ const fetchCustomerComposable = useFetchCustomer();
         return null;
       }
     "
-    :label="props.title || DEFINITION[props.type].title"
   >
     <template #activator="slotProps">
-      <slot name="activator" v-bind="slotProps">
-        <v-card>
-          <v-toolbar
-            color="secondary"
-            density="compact"
-            :title="props.title || DEFINITION[props.type].title"
-          >
-            <template #append>
-              <v-btn
-                icon="mdi-pencil"
-                size="small"
-                @click="() => slotProps.toUpdate()"
-              />
-            </template>
-          </v-toolbar>
-          <v-card-text class="py-0">
-            <slot name="contents" v-bind="slotProps" />
-          </v-card-text>
-          <slot name="contents-footer" v-bind="slotProps" />
-        </v-card>
-      </slot>
+      <slot name="activator" v-bind="slotProps" />
     </template>
 
     <template #[`input.customerId`]="{ attrs }">
-      <MoleculesAutocompleteCustomer
+      <CustomerAutocomplete
         v-bind="attrs"
         creatable
         :fetch-customer-composable="fetchCustomerComposable"

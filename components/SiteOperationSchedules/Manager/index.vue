@@ -82,7 +82,7 @@ function beforeEdit(editMode, item) {
       </v-radio-group>
     </template>
     <template #[`input.isStartNextDay`]="{ attrs }">
-      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+      <IsStartNextDayCheckbox v-bind="attrs" />
     </template>
   </air-array-manager>
 </template>

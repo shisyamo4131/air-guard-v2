@@ -45,30 +45,27 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <SiteManager type="base" :doc="doc">
-              <template #contents="{ item }">
-                <SiteListBase v-bind="item" fluid />
-                <air-textarea
-                  label="備考"
-                  :model-value="item.remarks"
-                  variant="outlined"
-                  readonly
-                />
+            <SiteManager :doc="doc" label="基本情報" hide-delete-btn>
+              <template #activator="activatorProps">
+                <SiteActivatorBase v-bind="activatorProps" />
               </template>
             </SiteManager>
           </v-col>
 
           <!-- 取引先情報 -->
           <v-col cols="12">
-            <SiteManager type="customer" :doc="doc">
-              <template #contents="{ item, toUpdate }">
-                <SiteListCustomer v-if="!doc.isTemporary" v-bind="item" fluid />
+            <SiteManager :doc="doc" label="取引先情報" hide-delete-btn>
+              <template #activator="activatorProps">
+                <SiteActivatorCustomer
+                  v-if="!doc.isTemporary"
+                  v-bind="activatorProps"
+                />
                 <v-empty-state
                   v-else
                   :title="doc.customerName"
                   text="取引先未設定の仮登録現場です。"
                   action-text="取引先を設定する"
-                  @click:action="() => toUpdate()"
+                  @click:action="() => activatorProps.toUpdate()"
                 />
               </template>
             </SiteManager>

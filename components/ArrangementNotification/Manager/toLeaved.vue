@@ -25,7 +25,7 @@
 
         <!-- ACTUAL IS START NEXT DAY -->
         <v-col cols="12">
-          <MoleculesInputsIsStartNextDay
+          <IsStartNextDayCheckbox
             v-bind="componentAttrs[`actualIsStartNextDay`]"
           />
         </v-col>

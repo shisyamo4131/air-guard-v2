@@ -37,31 +37,30 @@ const { attrs, router } = useBaseManager("CustomersManager");
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
   >
-    <template #table="{ toCreate, items }">
-      <v-toolbar class="ps-3 mb-4">
-        <AtomsSearchTextField
-          :model-value="props.search"
-          :delay="300"
-          @update:model-value="emit('update:search', $event)"
+    <template #table="tableProps">
+      <slot name="table" v-bind="tableProps">
+        <v-toolbar class="ps-3 mb-4">
+          <AtomsSearchTextField
+            :model-value="props.search"
+            :delay="300"
+            @update:model-value="emit('update:search', $event)"
+          />
+          <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
+        </v-toolbar>
+        <CustomersIterator
+          class="flex-grow-1"
+          grid
+          :min-column-width="300"
+          :customers="tableProps.items"
+          :hide-default-footer="props.hideDefaultFooter"
+          :items-per-page="props.itemsPerPage"
+          :show-create="props.showCreate"
+          :sort-by="props.sortBy"
+          showDetail
+          @click:create="() => tableProps.toCreate()"
+          @click:detail="(item) => router.push(`/customers/${item.docId}`)"
         />
-        <v-btn icon="mdi-plus" @click="() => toCreate()" />
-      </v-toolbar>
-      <CustomersIterator
-        class="flex-grow-1"
-        grid
-        :min-column-width="300"
-        :customers="items"
-        :hide-default-footer="props.hideDefaultFooter"
-        :items-per-page="props.itemsPerPage"
-        :show-create="props.showCreate"
-        :sort-by="props.sortBy"
-        showDetail
-        @click:create="() => toCreate()"
-        @click:detail="(item) => router.push(`/customers/${item.docId}`)"
-      />
+      </slot>
     </template>
-    <!-- <template #input-default="props">
-      <MoleculesInputsSite v-bind="props" type="default" />
-    </template> -->
   </air-array-manager>
 </template>

@@ -1,8 +1,15 @@
 <script setup>
+/*****************************************************************************
+ * @file ./components/Employee/Autocomplete.vue
+ * @description A autocomplete component of 'Employee'.
+ *****************************************************************************/
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useDefaults } from "vuetify";
 
-/** DEFINE PROPS & EMITS */
-const props = defineProps({
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
   fetchEmployeeComposable: { type: Object, default: () => useFetchEmployee() },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "従業員" },
@@ -10,13 +17,18 @@ const props = defineProps({
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });
-
+const props = useDefaults(_props, "AutocompleteEmployee");
 const emit = defineEmits(["update:model-value"]);
 
-/** SETUP COMPOSABLES */
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
 const { getEmployee, searchEmployees, cachedEmployeesArray } =
   props.fetchEmployeeComposable;
 
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
@@ -39,11 +51,12 @@ function onCreateHandler(event) {
   >
     <template v-if="creatable" #append>
       <EmployeeManager @create="($event) => onCreateHandler($event)">
-        <template #activator="{ toCreate }">
+        <template #table="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
       </EmployeeManager>
     </template>
+
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in $slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>

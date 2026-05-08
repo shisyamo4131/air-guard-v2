@@ -2,65 +2,19 @@
 /*****************************************************************************
  * @file ./components/Company/Manager/index.vue
  * @description 会社管理コンポーネント
+ * - 会社情報はアプリ側から作成できないため、handle-create ハンドラーではエラーがスローされます。
+ * - 会社情報はアプリ側から削除できないため、hide-delete-btn が true に固定され、
+ *   handle-delete ハンドラーではエラーがスローされます。
  * @extends AirItemManager
  *****************************************************************************/
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
-import TableBaseInfo from "@/components/Company/Table/BaseInfo.vue";
-import TableBankInfo from "@/components/Company/Table/BankInfo.vue";
-import TableSettingInfo from "@/components/Company/Table/SettingInfo.vue";
-
-/*****************************************************************************
- * コンポーネント設定定義
- * title: カードタイトルおよび編集画面タイトル
- * includedKeys: 編集対象プロパティ名の配列
- * viewer: カード内に表示する viewer コンポーネント
- *****************************************************************************/
-const DEFINITION = {
-  base: {
-    title: "基本情報",
-    includedKeys: [
-      "companyName", // 会社名
-      "companyNameKana", // 会社名（カナ）
-      "tel", // 電話番号
-      "fax", // FAX番号
-      "zipcode", // 郵便番号
-      "prefCode", // 都道府県コード
-      "city", // 市区町村
-      "address", // 町域・番地
-      "building", // 建物名・部屋番号
-    ],
-    viewer: TableBaseInfo,
-  },
-  bank: {
-    title: "口座情報",
-    includedKeys: [
-      "bankName", // 銀行名
-      "branchName", // 支店名
-      "accountType", // 口座種別
-      "accountNumber", // 口座番号
-      "accountHolder", // 口座名義
-    ],
-    viewer: TableBankInfo,
-  },
-  setting: {
-    title: "設定情報",
-    includedKeys: [
-      "minuteInterval", // 時刻選択間隔（分）
-      "roundSetting", // 端数処理
-      "firstDayOfWeek", // 週の始まり
-    ],
-    viewer: TableSettingInfo,
-  },
-};
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
   doc: { type: Object, required: true },
-  title: { type: String, default: undefined },
-  type: { type: String, default: "base" },
 });
 const props = useDefaults(_props, "CompanyManager");
 
@@ -97,24 +51,9 @@ function handleDelete() {
     :handle-update="(item) => item.update(item)"
     :handle-delete="handleDelete"
     hide-delete-btn
-    :label="props.title || DEFINITION[props.type].title"
-    :included-keys="DEFINITION[props.type].includedKeys"
   >
-    <template #activator="{ toUpdate, item }">
-      <v-card>
-        <v-toolbar
-          color="secondary"
-          density="compact"
-          :title="props.title || DEFINITION[props.type].title"
-        >
-          <template #append>
-            <v-btn icon="mdi-pencil" size="small" @click="() => toUpdate()" />
-          </template>
-        </v-toolbar>
-        <v-card-text class="py-0">
-          <component :is="DEFINITION[props.type].viewer" v-bind="item" />
-        </v-card-text>
-      </v-card>
+    <template #activator="activatorProps">
+      <slot name="activator" v-bind="activatorProps" />
     </template>
 
     <!-- スロットをパススルー -->

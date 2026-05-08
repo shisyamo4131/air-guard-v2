@@ -7,7 +7,7 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
-import CustomInput from "@/components/Site/Input/ToRegist.vue";
+import CustomInput from "@/components/Site/CustomInput/index.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -43,26 +43,28 @@ const { attrs, router } = useBaseManager("SitesManager");
     :handle-update="(item) => item.update()"
     :handle-delete="(item) => item.delete()"
   >
-    <template #table="{ toCreate, items }">
-      <v-toolbar class="ps-3 mb-4">
-        <AtomsSearchTextField
-          :model-value="props.search"
-          :delay="300"
-          @update:model-value="emit('update:search', $event)"
+    <template #table="slotProps">
+      <slot name="table" v-bind="slotProps">
+        <v-toolbar class="ps-3 mb-4">
+          <AtomsSearchTextField
+            :model-value="props.search"
+            :delay="300"
+            @update:model-value="emit('update:search', $event)"
+          />
+          <v-btn icon="mdi-plus" @click="() => slotProps.toCreate()" />
+        </v-toolbar>
+        <SitesIterator
+          class="flex-grow-1"
+          grid
+          :sites="slotProps.items"
+          :hide-default-footer="props.hideDefaultFooter"
+          :items-per-page="props.itemsPerPage"
+          :show-create="props.showCreate"
+          showDetail
+          @click:create="() => slotProps.toCreate()"
+          @click:detail="(item) => router.push(`/sites/${item.docId}`)"
         />
-        <v-btn icon="mdi-plus" @click="() => toCreate()" />
-      </v-toolbar>
-      <SitesIterator
-        class="flex-grow-1"
-        grid
-        :sites="items"
-        :hide-default-footer="props.hideDefaultFooter"
-        :items-per-page="props.itemsPerPage"
-        :show-create="props.showCreate"
-        showDetail
-        @click:create="() => toCreate()"
-        @click:detail="(item) => router.push(`/sites/${item.docId}`)"
-      />
+      </slot>
     </template>
   </air-array-manager>
 </template>

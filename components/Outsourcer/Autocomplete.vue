@@ -1,9 +1,15 @@
 <script setup>
+/*****************************************************************************
+ * @file ./components/Outsourcer/Autocomplete.vue
+ * @description A autocomplete component of 'Outsourcer'.
+ *****************************************************************************/
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
-import { useOutsourcerManager } from "@/composables/useOutsourcerManager";
+import { useDefaults } from "vuetify";
 
-/** DEFINE PROPS & EMITS */
-const props = defineProps({
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
   fetchOutsourcerComposable: {
     type: Object,
     default: () => useFetchOutsourcer(),
@@ -14,14 +20,18 @@ const props = defineProps({
   itemValue: { type: String, default: "docId" },
   returnObject: { type: Boolean, default: false },
 });
-
+const props = useDefaults(_props, "AutocompleteOutsourcer");
 const emit = defineEmits(["update:model-value"]);
 
-/** SETUP COMPOSABLES */
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
 const { getOutsourcer, searchOutsourcers, cachedOutsourcersArray } =
   props.fetchOutsourcerComposable;
-const outsourcerManager = useOutsourcerManager();
 
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
@@ -43,15 +53,13 @@ function onCreateHandler(event) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <air-item-manager
-        v-bind="outsourcerManager.attrs.value"
-        @create="($event) => onCreateHandler($event)"
-      >
-        <template #activator="{ toCreate }">
+      <OutsourcersManager @create="($event) => onCreateHandler($event)">
+        <template #table="{ toCreate }">
           <v-icon @click="toCreate()">mdi-plus</v-icon>
         </template>
-      </air-item-manager>
+      </OutsourcersManager>
     </template>
+
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in $slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>

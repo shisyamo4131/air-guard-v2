@@ -11,10 +11,10 @@ defineOptions({ inheritAttrs: false });
 const logger = useLogger("OperationResultWorkersManager", useErrorsStore());
 
 const { cachedEmployees, getEmployee, searchEmployees } = inject(
-  "fetchEmployeeComposable"
+  "fetchEmployeeComposable",
 );
 const { cachedOutsourcers, getOutsourcer, searchOutsourcers } = inject(
-  "fetchOutsourcerComposable"
+  "fetchOutsourcerComposable",
 );
 
 /*****************************************************************************
@@ -143,7 +143,7 @@ function handleOnClickAddOutsourcer(handler) {
       />
     </template>
     <template #[`input.isStartNextDay`]="{ attrs }">
-      <MoleculesInputsIsStartNextDay v-bind="attrs" />
+      <IsStartNextDayCheckbox v-bind="attrs" />
     </template>
   </air-array-manager>
 </template>
