@@ -4,8 +4,7 @@
  * @description 会社管理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
-import { useSlots } from "vue";
-import { useDocManager } from "@/composables/useDocManager";
+import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
 import TableBaseInfo from "@/components/Company/Table/BaseInfo.vue";
 import TableBankInfo from "@/components/Company/Table/BankInfo.vue";
@@ -68,22 +67,7 @@ const props = useDefaults(_props, "CompanyManager");
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const slots = useSlots();
-/** AirItemManager への基本的な設定を useDocManager から取得 */
-const docManager = useDocManager("CompanyManager", { doc: props.doc });
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-/**
- * スロットのうち、activator スロットを除いたものをパススルー用に抽出する計算プロパティ
- * - activator スロットは AirItemManager 内で使用されるため、パススルーしない
- * - その他のスロットは AirItemManager を通じて親コンポーネントから子コンポーネントへパススルーする
- */
-const pathThroughSlots = computed(() => {
-  const { activator, ...other } = slots;
-  return other;
-});
+const { attrs } = useBaseManager("CompanyManager");
 
 /*****************************************************************************
  * FUNCTIONS
@@ -107,8 +91,10 @@ function handleDelete() {
 
 <template>
   <air-item-manager
-    v-bind="docManager.attrs.value"
+    v-bind="attrs"
+    :model-value="props.doc"
     :handle-create="handleCreate"
+    :handle-update="(item) => item.update(item)"
     :handle-delete="handleDelete"
     hide-delete-btn
     :label="props.title || DEFINITION[props.type].title"
@@ -132,10 +118,7 @@ function handleDelete() {
     </template>
 
     <!-- スロットをパススルー -->
-    <template
-      v-for="(slotFn, slotName) in pathThroughSlots"
-      #[slotName]="scope"
-    >
+    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}" />
     </template>
   </air-item-manager>

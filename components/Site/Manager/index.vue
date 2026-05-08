@@ -4,18 +4,15 @@
  * @description 現場管理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
-import { useSlots } from "vue";
-import { useDocManager } from "@/composables/useDocManager";
+import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
 import CustomInput from "@/components/Site/Input/ToRegist.vue";
-import { Site } from "@/schemas";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 
 /*****************************************************************************
  * コンポーネント設定定義
  * title: カードタイトルおよび編集画面タイトル
  * includedKeys: 編集対象プロパティ名の配列
- * viewer: カード内に表示する viewer コンポーネント
  *****************************************************************************/
 const DEFINITION = {
   base: {
@@ -42,7 +39,7 @@ const DEFINITION = {
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
-  doc: { type: Object, default: () => reactive(new Site()) },
+  doc: { type: Object, required: true },
   title: { type: String, default: undefined },
   type: { type: String, default: "base" },
 });
@@ -51,29 +48,16 @@ const props = useDefaults(_props, "SiteManager");
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const slots = useSlots();
-/** AirItemManager への基本的な設定を useDocManager から取得 */
-const docManager = useDocManager("SiteManager", { doc: props.doc });
+const { attrs } = useBaseManager("SiteManager");
 const fetchCustomerComposable = useFetchCustomer();
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-/**
- * スロットのうち、activator と default スロットを除いたものをパススルー用に抽出する計算プロパティ
- * - default スロットは activator 内で明示的に使用されるため、パススルーしない
- * - その他のスロットは AirItemManager を通じて親コンポーネントから子コンポーネントへパススルーする
- */
-const pathThroughSlots = computed(() => {
-  const { default: _default, ...other } = slots;
-  return other;
-});
 </script>
 
 <template>
   <air-item-manager
-    v-bind="{ ...docManager.attrs.value, ...DEFINITION[props.type] }"
-    hide-delete-btn
+    v-bind="{ ...attrs, ...DEFINITION[props.type] }"
+    :handle-create="(item) => item.create(item)"
+    :handle-update="(item) => item.update(item)"
+    :handle-delete="(item) => item.delete(item)"
     :custom-input="
       ({ editMode }) => {
         if (editMode === 'CREATE') return CustomInput;
@@ -115,10 +99,7 @@ const pathThroughSlots = computed(() => {
     </template>
 
     <!-- スロットをパススルー -->
-    <template
-      v-for="(slotFn, slotName) in pathThroughSlots"
-      #[slotName]="scope"
-    >
+    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}" />
     </template>
   </air-item-manager>

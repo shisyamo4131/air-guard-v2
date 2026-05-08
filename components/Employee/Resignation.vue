@@ -4,9 +4,9 @@
  * @description 従業員退職処理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
-import { useDocManager } from "@/composables/useDocManager";
 import { useDefaults } from "vuetify";
 import { useConstants } from "@/composables/useConstants";
+import { useBaseManager } from "@/composables/useBaseManager";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -19,9 +19,7 @@ const props = useDefaults(_props, "EmployeeResignation");
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, isDev, logger } = useDocManager("EmployeeResignation", {
-  doc: props.doc,
-});
+const { attrs, isDev, logger } = useBaseManager("EmployeeResignation");
 const { EMPLOYMENT_STATUS } = useConstants();
 
 /*****************************************************************************
@@ -62,6 +60,14 @@ function beforeEdit(editMode, item) {
 }
 
 /**
+ * 作成はできないため、エラーをスローするハンドラー
+ * @throws {Error} 作成はできないことを示す
+ */
+function handleCreate() {
+  throw new Error("作成はできません。");
+}
+
+/**
  * AirItemManager の handleUpdate フック関数
  * - `Employee` インスタンスの `toTermination` メソッドを呼び出して、退職処理を実行する
  * - `toTermination` メソッドには、退職日と退職理由を引数として渡す
@@ -72,15 +78,26 @@ function beforeEdit(editMode, item) {
 async function handleUpdate(item) {
   await item.toTerminated(item.dateOfTermination, item.reasonOfTermination);
 }
+
+/**
+ * 削除はできないため、エラーをスローするハンドラー
+ * @throws {Error} 削除はできないことを示す
+ */
+function handleDelete() {
+  throw new Error("削除はできません。");
+}
 </script>
 
 <template>
   <air-item-manager
     v-bind="attrs"
+    :model-value="props.doc"
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="handleDelete"
     hide-delete-btn
     title="退職処理"
     :before-edit="beforeEdit"
-    :handle-update="handleUpdate"
   >
     <template #activator="activatorProps">
       <slot name="activator" v-bind="activatorProps" />
