@@ -35,13 +35,6 @@ const step3 = ref(null);
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-// 検索結果に「取引先を設定しない」オプションを追加した計算済みプロパティ
-const computedSearchResults = computed(() => {
-  return [
-    { docId: null, name: "設定しない", fullAddress: "後で設定します" },
-    ...searchResults.value,
-  ];
-});
 
 /*****************************************************************************
  * METHODS
@@ -97,39 +90,43 @@ defineExpose({
 
 <template>
   <v-window :model-value="step">
+    <!-- STEP:1 取引先名入力 -->
     <v-window-item :value="1">
       <v-form ref="step1" @submit.prevent>
-        <air-text-field v-bind="componentAttrs['customerName']" clearable />
+        <air-text-field
+          v-bind="componentAttrs['customerName']"
+          clearable
+          hint="取引先名を入力（一部でも可）"
+          persistent-hint
+        />
       </v-form>
     </v-window-item>
+
+    <!-- STEP:2 取引先選択 -->
     <v-window-item :value="2">
-      <v-card variant="flat" :border="false">
-        <v-item-group
+      <div v-if="searchResults.length !== 0">
+        <v-alert
+          class="mb-2"
+          type="info"
+          density="compact"
+          :text="`${searchResults.length} 件の取引先が見つかりました`"
+        />
+        <CustomersIterator
           v-bind="componentAttrs['customerId']"
-          selected-class="bg-primary"
-        >
-          <!-- 検索結果のアイテム -->
-          <v-row>
-            <v-col
-              cols="6"
-              v-for="customer of computedSearchResults"
-              :key="customer.docId"
-            >
-              <v-item
-                :value="customer.docId"
-                v-slot="{ selectedClass, toggle }"
-              >
-                <v-card :class="selectedClass" @click="toggle">
-                  <v-list-item>
-                    <template #title>{{ customer.name }}</template>
-                    <template #subtitle>{{ customer.fullAddress }}</template>
-                  </v-list-item>
-                </v-card>
-              </v-item>
-            </v-col>
-          </v-row>
-        </v-item-group>
-      </v-card>
+          :customers="searchResults"
+          show-select
+          select-strategy="single"
+        />
+      </div>
+      <div v-else>
+        <v-banner
+          class="mb-2"
+          color="info"
+          icon="mdi-information-symbol"
+          density="compact"
+          text="指定された条件に該当する取引先は見つかりませんでした。このまま取引先未設定で現場を登録する場合は「次へ」をクリックしてください。"
+        />
+      </div>
     </v-window-item>
 
     <!-- STEP:3 現場名入力 -->
