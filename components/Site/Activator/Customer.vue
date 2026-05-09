@@ -64,7 +64,14 @@ defineExpose({
       </template>
     </v-toolbar>
     <v-card-text class="py-0">
-      <air-list :items="items" fluid />
+      <air-list v-if="!props.item.isTemporary" :items="items" fluid />
+      <v-empty-state
+        v-else
+        :title="item.customerName"
+        text="取引先未設定の仮登録現場です。"
+        action-text="取引先を設定する"
+        @click:action="() => emit('click:edit', props.item)"
+      />
     </v-card-text>
     <v-card-actions v-if="$slots.actions">
       <slot name="actions" />

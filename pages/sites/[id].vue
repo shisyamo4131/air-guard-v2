@@ -56,17 +56,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
           <v-col cols="12">
             <SiteManager :doc="doc" label="取引先情報" hide-delete-btn>
               <template #activator="activatorProps">
-                <SiteActivatorCustomer
-                  v-if="!doc.isTemporary"
-                  v-bind="activatorProps"
-                />
-                <v-empty-state
-                  v-else
-                  :title="doc.customerName"
-                  text="取引先未設定の仮登録現場です。"
-                  action-text="取引先を設定する"
-                  @click:action="() => activatorProps.toUpdate()"
-                />
+                <SiteActivatorCustomer v-bind="activatorProps" />
               </template>
             </SiteManager>
           </v-col>
