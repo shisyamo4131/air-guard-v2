@@ -156,6 +156,9 @@ defineExpose({
           <v-col cols="12">
             <air-text-field v-bind="componentAttrs['building']" />
           </v-col>
+          <v-col cols="12">
+            <air-select v-bind="componentAttrs['securityType']" />
+          </v-col>
         </v-row>
       </v-form>
     </v-window-item>
