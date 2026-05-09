@@ -15,7 +15,7 @@
     "local": "nuxt dev --dotenv .env.local --host",
     "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
     "update:firemodel": "npm update @shisyamo4131/air-firebase-v2 && cd functions && npm update @shisyamo4131/air-firebase-v2 && cd ..",
-    "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd ..",
+    "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd .. && npm run list:schemas",
     "uninstall:schemas": "npm uninstall @shisyamo4131/air-guard-v2-schemas && cd functions && npm uninstall @shisyamo4131/air-guard-v2-schemas && cd .."
   },
   "dependencies": {
