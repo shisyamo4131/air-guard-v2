@@ -42,7 +42,15 @@ const showResignedAlert = computed(() => {
                       :doc="doc"
                       label="退職処理"
                       hide-delete-btn
+                      :handle-update="
+                        (item) =>
+                          item.toTerminated(
+                            item.dateOfTermination,
+                            item.reasonOfTermination,
+                          )
+                      "
                       :custom-input="CustomInputResignation"
+                      @submit:complete="router.replace('/employees')"
                     >
                       <template #activator="{ toUpdate }">
                         <v-btn

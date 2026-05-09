@@ -115,7 +115,6 @@ defineExpose({
       <air-textarea
         label="備考"
         :model-value="props.item.remarks"
-        hide-details
         variant="outlined"
         readonly
       />
