@@ -47,7 +47,35 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
           <v-col cols="12">
             <SiteManager :doc="doc" label="基本情報" hide-delete-btn>
               <template #activator="activatorProps">
-                <SiteActivatorBase v-bind="activatorProps" />
+                <SiteActivatorBase v-bind="activatorProps">
+                  <template #actions>
+                    <SiteManager
+                      class="flex-grow-1"
+                      :doc="doc"
+                      :handle-update="(item) => item.terminate()"
+                      label="稼働終了"
+                      hide-delete-btn
+                      @submit:complete="router.replace('/sites')"
+                    >
+                      <template #activator="{ toUpdate }">
+                        <v-btn
+                          block
+                          color="warning"
+                          variant="flat"
+                          text="稼働終了"
+                          @click="() => toUpdate()"
+                        />
+                      </template>
+
+                      <template #input-default>
+                        <v-alert
+                          type="info"
+                          text="現場を稼働終了にします。よろしいですか？"
+                        />
+                      </template>
+                    </SiteManager>
+                  </template>
+                </SiteActivatorBase>
               </template>
             </SiteManager>
           </v-col>
