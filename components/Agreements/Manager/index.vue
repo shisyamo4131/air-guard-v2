@@ -6,6 +6,9 @@
  *
  * - `AgreementV2` インスタンスの配列を管理するためのコンポーネント。
  * - FireStore への CRUD 操作は行わない、純粋な配列管理 UI コンポーネント。
+ *
+ * @update 2026-05-09 - `useBaseManager` の `attrs` をシンプルにバインド。
+ *                    - `props.modelValue`, `update:modelValue` を削除（定義不要のため）。
  *****************************************************************************/
 import { AgreementV2 } from "@/schemas";
 import { useDefaults } from "vuetify";
@@ -16,16 +19,20 @@ import AgreementInput from "@/components/Agreement/Input/index.vue";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  modelValue: { type: Array, default: () => [] },
+  /**
+   * feature/bug-fix-2026-05-09
+   * 新規登録時に既定の締日を親コンポーネントから指定できるように機能追加。
+   */
+  cutoffDate: { type: Number, default: undefined },
   shiftType: { type: String, default: "DAY" },
 });
 const props = useDefaults(_props, "AgreementsManager");
-const emit = defineEmits(["update:modelValue", "update:shiftType"]);
+const emit = defineEmits(["update:shiftType"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs: baseManagerAttrs } = useBaseManager("AgreementsManager");
+const { attrs } = useBaseManager("AgreementsManager");
 
 /*****************************************************************************
  * SETUP STATES
@@ -47,12 +54,26 @@ watch(internalShiftType, (newValue) => emit("update:shiftType", newValue));
 /*****************************************************************************
  * FUNCTIONS
  *****************************************************************************/
+/**
+ * `AirArrayManager` の `beforeEdit` フック関数。（feature/bug-fix-2026-05-09 で機能追加）
+ * - 編集モードに関わらず、編集中のアイテムの `shiftType` を `internalShiftType` に設定する。
+ * - 編集モードが "CREATE" で、かつ `props.cutoffDate` が定義されている場合、編集中のアイテムの `cutoffDate` を `props.cutoffDate` に設定する。
+ * @param {string} editMode - "CREATE", "UPDATE", "DELETE" のいずれかの文字列で、現在の編集モードを表す。
+ * @param {AgreementV2} item - 編集対象の取極め情報インスタンス。`beforeEdit` フックが呼び出される際に、編集中のアイテムがこの引数として渡される。
+ * @returns {void}
+ */
+function beforeEdit(editMode, item) {
+  item.shiftType = internalShiftType.value;
+  if (editMode === "CREATE" && props.cutoffDate !== undefined) {
+    console.log(props.cutoffDate);
+    item.cutoffDate = props.cutoffDate;
+  }
+}
 </script>
 
 <template>
   <AirArrayManager
-    v-bind="baseManagerAttrs"
-    :model-value="props.modelValue"
+    v-bind="attrs"
     :custom-input="AgreementInput"
     :dialog-props="{ maxWidth: 960 }"
     :schema="AgreementV2"
@@ -60,10 +81,9 @@ watch(internalShiftType, (newValue) => emit("update:shiftType", newValue));
     :error-messages="{
       duplicateKey: '同じ適用開始日で登録された取極めが存在します',
     }"
-    :before-edit="(editMode, item) => (item.shiftType = internalShiftType)"
+    :before-edit="beforeEdit"
     @create="($event) => (currentAgreement = $event)"
     @delete="currentAgreement = null"
-    @update:modelValue="($event) => emit('update:modelValue', $event)"
   >
     <template #table="{ items, toCreate, toUpdate }">
       <v-card>
