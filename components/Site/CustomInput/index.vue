@@ -46,9 +46,8 @@ const step3 = ref(null);
  */
 async function handleGoToNext({ step, item }) {
   switch (step) {
+    // ステップ1の処理
     case 1: {
-      // ステップ1の処理
-
       // 検索結果をクリア
       searchResults.value = [];
 
@@ -63,13 +62,12 @@ async function handleGoToNext({ step, item }) {
 
       return;
     }
+    // ステップ2の処理
     case 2: {
-      // ステップ2の処理
       return;
     }
+    // 最終ステップの処理
     case 3: {
-      // 最終ステップの処理
-
       // 入力内容の検証
       const { valid } = await step3.value.validate();
       if (!valid) return false;
@@ -98,6 +96,7 @@ defineExpose({
           clearable
           hint="取引先名を入力（一部でも可）"
           persistent-hint
+          required
         />
       </v-form>
     </v-window-item>
