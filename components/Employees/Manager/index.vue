@@ -17,6 +17,9 @@ import CustomInput from "@/components/Employee/CustomInput/ToRegist.vue";
  *****************************************************************************/
 const _props = defineProps({
   docs: { type: Array, default: () => [] },
+  handleCreate: { type: Function, default: (item) => item.create(item) },
+  handleUpdate: { type: Function, default: (item) => item.update(item) },
+  handleDelete: { type: Function, default: (item) => item.delete(item) },
   hideDefaultFooter: { type: Boolean, default: false },
   itemsPerPage: { type: Number, default: 5 },
   search: { type: String, default: null },
@@ -43,9 +46,9 @@ const { attrs } = useBaseManager("EmployeesManager");
         return null;
       }
     "
-    :handle-create="(item) => item.create()"
-    :handle-update="(item) => item.update()"
-    :handle-delete="(item) => item.delete()"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
   >
     <template #table="slotProps">
       <slot name="table" v-bind="slotProps">

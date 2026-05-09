@@ -8,12 +8,20 @@ import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
 import CustomInput from "@/components/Site/CustomInput/index.vue";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
+import { Site } from "@/schemas";
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
-  doc: { type: Object, required: true },
+  doc: {
+    type: Object,
+    required: true,
+    validator: (value) => value instanceof Site,
+  },
+  handleCreate: { type: Function, default: (item) => item.create(item) },
+  handleUpdate: { type: Function, default: (item) => item.update(item) },
+  handleDelete: { type: Function, default: (item) => item.delete(item) },
 });
 const props = useDefaults(_props, "SiteManager");
 
@@ -28,9 +36,9 @@ const fetchCustomerComposable = useFetchCustomer();
   <air-item-manager
     v-bind="attrs"
     :model-value="props.doc"
-    :handle-create="(item) => item.create(item)"
-    :handle-update="(item) => item.update(item)"
-    :handle-delete="(item) => item.delete(item)"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
     :custom-input="
       ({ editMode }) => {
         if (editMode === 'CREATE') return CustomInput;

@@ -155,8 +155,8 @@ async function handleCreate(item) {
       }
     "
     :handle-create="handleCreate"
-    :handle-update="(item) => item.update()"
-    :handle-delete="(item) => item.delete()"
+    :handle-update="(item) => item.update(item)"
+    :handle-delete="(item) => item.delete(item)"
     :disable-delete="(item) => !!item.isAdmin"
     :excluded-keys="
       (item) => {

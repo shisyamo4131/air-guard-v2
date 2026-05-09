@@ -14,6 +14,9 @@ import { useDefaults } from "vuetify";
 const _props = defineProps({
   docs: { type: Array, default: () => [] },
   dateAt: { type: Object, default: () => new Date() },
+  handleCreate: { type: Function, default: (item) => item.create(item) },
+  handleUpdate: { type: Function, default: (item) => item.update(item) },
+  handleDelete: { type: Function, default: (item) => item.delete(item) },
   siteId: { type: [String, Object], default: null },
 });
 const props = useDefaults(_props, "SiteOperationSchedulesManager");
@@ -52,9 +55,9 @@ function beforeEdit(editMode, item) {
     :schema="SiteOperationSchedule"
     :before-edit="beforeEdit"
     :excluded-keys="excludedKeys"
-    :handle-create="(item) => item.create()"
-    :handle-update="(item) => item.update()"
-    :handle-delete="(item) => item.delete()"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
     :disable-update="(item) => !!item.operationResultId"
     :disable-delete="(item) => !!item.operationResultId"
   >

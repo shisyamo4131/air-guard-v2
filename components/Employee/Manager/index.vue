@@ -17,6 +17,9 @@ const _props = defineProps({
     required: true,
     validator: (value) => value instanceof Employee,
   },
+  handleCreate: { type: Function, default: (item) => item.create(item) },
+  handleUpdate: { type: Function, default: (item) => item.update(item) },
+  handleDelete: { type: Function, default: (item) => item.delete(item) },
 });
 const props = useDefaults(_props, "EmployeeManager");
 
@@ -30,9 +33,9 @@ const { attrs } = useBaseManager("EmployeeManager");
   <air-item-manager
     v-bind="attrs"
     :model-value="props.doc"
-    :handle-create="(item) => item.create(item)"
-    :handle-update="(item) => item.update(item)"
-    :handle-delete="(item) => item.delete(item)"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
   >
     <!-- スロットをパススルー -->
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
