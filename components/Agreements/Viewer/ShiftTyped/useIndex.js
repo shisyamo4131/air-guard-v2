@@ -1,6 +1,10 @@
 /*****************************************************************************
  * @file ./components/Agreements/Viewer/useIndex.js
  * @description AgreementsViewer 専用コンポーザブル
+ *
+ * @fix 2026-05-09 - `agreements` と `shiftType` をそれぞれ引数に受け取っていたため
+ *                   リアクティビティの担保がコンポーネント側に依存していた。
+ *                   `props` オブジェクトを引数に受け取るように修正。
  *****************************************************************************/
 import dayjs from "dayjs";
 import * as Vue from "vue";
@@ -12,14 +16,12 @@ import {
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /**
- * @param {import('vue').Ref<Array>} agreements - 取極め情報の配列を保持するリアクティブな参照。各要素は取極め情報オブジェクトであると想定される。
- * @param {import('vue').Ref<string>|string} shiftType - 勤務区分を保持するリアクティブな参照または文字列。有効な値は `SHIFT_TYPE_VALUES` のいずれかであると想定される。
+ * @param {Object} props - 親コンポーネントから受け取る props オブジェクト
+ * @param {Array} props.agreements - 取極め情報の配列。各要素は取極め情報オブジェクトであると想定される。
+ * @param {string} props.shiftType - 勤務区分。有効な値は `SHIFT_TYPE_VALUES` のいずれかであると想定される。
  * @return {Object} - AgreementsViewer コンポーネントで取極め情報の表示に使用される状態と関数を含むオブジェクト。
  */
-export function useIndex(
-  agreements = Vue.ref([]),
-  shiftType = SHIFT_TYPE_OPTIONS[0].value,
-) {
+export function useIndex(props) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
@@ -36,14 +38,14 @@ export function useIndex(
    * WATCHERS
    *****************************************************************************/
   /**
-   * `agreements`, `shiftType` を監視し、`internalAgreements` と `internalShiftType` に値を同期する。
+   * `props.agreements`, `props.shiftType` を監視し、`internalAgreements` と `internalShiftType` に値を同期する。
    * - 扱うデータを保証するため、`internalAgreements` にセットする取極め情報配列は
    *   `shiftType` で絞り込む。
    */
   Vue.watchEffect(() => {
     /** VALIDATION */
     // `shiftType` が有効な値でなければ警告を出力し、`DAY` (SHIFT_TYPE_OPTIONS の最初の要素) を受け取ったものとして以降の処理を行う。
-    let providedShiftType = Vue.unref(shiftType);
+    let providedShiftType = props.shiftType;
     if (!Object.keys(SHIFT_TYPE_VALUES).includes(providedShiftType)) {
       logger.warn({
         message: `Invalid 'shiftType' was provided. shiftType: ${providedShiftType}. Composable uses a value of ${SHIFT_TYPE_OPTIONS[0].value} as 'shiftType' instead.`,
@@ -51,7 +53,7 @@ export function useIndex(
       providedShiftType = SHIFT_TYPE_OPTIONS[0].value;
     }
     // `agreements` が配列でなければ警告を出力し、空配列を受け取ったものとして以降の処理を行う。
-    let providedAgreements = Vue.unref(agreements);
+    let providedAgreements = props.agreements;
     if (!Array.isArray(providedAgreements)) {
       logger.warn({
         message: `Invalid 'agreements' was provided. Expected an array but received: ${providedAgreements}. Composable uses an empty array instead.`,

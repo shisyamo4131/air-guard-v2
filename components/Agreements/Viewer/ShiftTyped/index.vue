@@ -3,6 +3,8 @@
  * @file ./components/Agreements/Viewer/ShiftTyped/index.vue
  * @description AgreementsViewer 専用 特定勤務区分取極め情報表示コンポーネント
  * - `props.shiftType` で指定された勤務区分の取極め情報を表示するコンポーネント。
+ *
+ * @update 2026-05-09 - `useIndex` コンポーザブルが `props` を引数として受け取るように修正されたため、`useIndex` の呼び出し方法を変更。
  *****************************************************************************/
 import { SHIFT_TYPE_OPTIONS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { useIndex } from "./useIndex";
@@ -27,7 +29,8 @@ const emit = defineEmits(["update:currentAgreement", "update:currentIndex"]);
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { agreements, validIndex, currentAgreement, currentIndex, next, prev } =
-  useIndex(props.agreements, props.shiftType);
+  // useIndex(props.agreements, props.shiftType);
+  useIndex(props);
 
 /*****************************************************************************
  * WATCHERS
