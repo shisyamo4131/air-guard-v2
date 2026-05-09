@@ -63,7 +63,7 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
         <CustomerManager
           :doc="doc"
           hide-delete-btn
-          @submit-complete="router.replace('/customers')"
+          @submit:complete="router.replace('/customers')"
         >
           <template #activator="{ toDelete }">
             <v-btn

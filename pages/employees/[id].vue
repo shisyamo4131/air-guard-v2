@@ -143,7 +143,7 @@ const showResignedAlert = computed(() => {
         <EmployeeManager
           :doc="doc"
           hide-delete-btn
-          @submit-complete="router.replace('/employees')"
+          @submit:complete="router.replace('/employees')"
         >
           <template #activator="{ toDelete }">
             <v-btn

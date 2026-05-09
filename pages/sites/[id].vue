@@ -92,6 +92,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
       <v-col cols="12" md="4">
         <AgreementsManager
           v-model="doc.agreementsV2"
+          :cutoff-date="doc.customer?.cutoffDate"
           @submit:complete="async () => await doc.update()"
         />
       </v-col>
@@ -101,7 +102,12 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
         <site-manager
           :doc="doc"
           hide-delete-btn
-          @submit-complete="router.replace('/employees')"
+          @submit:complete="
+            () => {
+              console.log('削除処理完了');
+              router.replace('/sites');
+            }
+          "
         >
           <template #activator="{ toDelete }">
             <v-btn
