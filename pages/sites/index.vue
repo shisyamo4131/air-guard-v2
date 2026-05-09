@@ -1,10 +1,11 @@
 <script setup>
 /*****************************************************************************
  * @file pages/sites/index.vue
- * @description 現場情報一覧ページ
+ * @description 稼働中現場情報一覧ページ
  *****************************************************************************/
 import { Site } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useRouter } from "vue-router";
 
 defineOptions({ name: "sites-index" });
 
@@ -12,28 +13,31 @@ defineOptions({ name: "sites-index" });
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
+const defaultOption = ref([["where", "status", "==", Site.STATUS_ACTIVE]]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const defaultOption = ["where", "status", "==", Site.STATUS_ACTIVE];
-const options = computed(() => {
-  if (!search.value) {
-    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
-  } else {
-    return [defaultOption, ["orderBy", "code", "desc"]];
-  }
-});
-
+const router = useRouter();
 const { docs } = useDocuments("Site", {
   search,
-  options,
+  options: defaultOption,
   fetchAllOnEmpty: true,
 });
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
 </script>
 
 <template>
   <TemplatesFixedHeightContainer>
-    <SitesManager :docs="docs" v-model:search="search" :items-per-page="20" />
+    <SitesManager
+      :docs="docs"
+      v-model:search="search"
+      :items-per-page="20"
+      @create="(item) => router.push(`/sites/${item.docId}`)"
+      @click:detail="(item) => router.push(`/sites/${item.docId}`)"
+    />
   </TemplatesFixedHeightContainer>
 </template>

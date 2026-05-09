@@ -3,6 +3,9 @@
  * @file ./components/Customers/Manager/index.vue
  * @description 取引先情報管理コンポーネント
  * @author shisyamo4131
+ *
+ * @emits update:search - 検索クエリの更新を親コンポーネントに通知
+ * @emits click:detail - 取引先アイテムがクリックされたことを親コンポーネントに通知
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Customer } from "@/schemas";
@@ -20,12 +23,12 @@ const _props = defineProps({
   sortBy: { type: Array, default: () => [] },
 });
 const props = useDefaults(_props, "CustomersManager");
-const emit = defineEmits(["update:search"]);
+const emit = defineEmits(["update:search", "click:detail"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, router } = useBaseManager("CustomersManager");
+const { attrs } = useBaseManager("CustomersManager");
 </script>
 
 <template>
@@ -58,7 +61,7 @@ const { attrs, router } = useBaseManager("CustomersManager");
           :sort-by="props.sortBy"
           showDetail
           @click:create="() => tableProps.toCreate()"
-          @click:detail="(item) => router.push(`/customers/${item.docId}`)"
+          @click:detail="(item) => emit('click:detail', item)"
         />
       </slot>
     </template>

@@ -3,6 +3,9 @@
  * @file ./components/Sites/Manager/index.vue
  * @description 現場情報管理コンポーネント
  * @author shisyamo4131
+ *
+ * @emits update:search - 検索クエリの更新を親コンポーネントに通知
+ * @emits click:detail - 現場アイテムがクリックされたことを親コンポーネントに通知
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
@@ -20,12 +23,12 @@ const _props = defineProps({
   showCreate: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "SitesManager");
-const emit = defineEmits(["update:search"]);
+const emit = defineEmits(["update:search", "click:detail"]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, router } = useBaseManager("SitesManager");
+const { attrs } = useBaseManager("SitesManager");
 </script>
 
 <template>
@@ -62,7 +65,7 @@ const { attrs, router } = useBaseManager("SitesManager");
           :show-create="props.showCreate"
           showDetail
           @click:create="() => slotProps.toCreate()"
-          @click:detail="(item) => router.push(`/sites/${item.docId}`)"
+          @click:detail="(item) => emit('click:detail', item)"
         />
       </slot>
     </template>

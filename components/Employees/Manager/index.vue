@@ -3,6 +3,9 @@
  * @file ./components/Employees/Manager/index.vue
  * @description 従業員情報管理コンポーネント
  * @author shisyamo4131
+ *
+ * @emits update:search - 検索クエリの更新を親コンポーネントに通知
+ * @emits click:detail - 従業員アイテムがクリックされたことを親コンポーネントに通知
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Employee } from "@/schemas";
