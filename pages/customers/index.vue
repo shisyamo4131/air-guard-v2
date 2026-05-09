@@ -39,6 +39,8 @@ const { docs } = useDocuments("Customer", {
       v-model:search="search"
       :items-per-page="-1"
       :sort-by="[{ key: 'code', order: 'asc' }]"
+      @create="(item) => router.push(`/customers/${item.docId}`)"
+      @click:detail="(item) => router.push(`/customers/${item.docId}`)"
     />
   </TemplatesFixedHeightContainer>
 </template>
