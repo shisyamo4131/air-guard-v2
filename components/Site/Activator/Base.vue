@@ -7,6 +7,7 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useConstants } from "@/composables/useConstants";
+import dayjs from "dayjs";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -34,6 +35,27 @@ const securityTypeTitle = computed(() => {
   return SECURITY_TYPE.value?.[props.item.securityType]?.title || "N/A";
 });
 
+/**
+ * 工事期間の表示用文字列を生成する算出プロパティ
+ * - 開始日と終了日の両方が存在する場合は "YYYY/MM/DD 〜 YYYY/MM/DD" の形式で表示
+ * - どちらか一方が存在しない場合は存在する方の日付を表示
+ * - 両方とも存在しない場合は "-" を表示
+ */
+const constructionPeriod = computed(() => {
+  const start = props.item.constructionPeriodStartAt
+    ? dayjs(props.item.constructionPeriodStartAt)
+        .tz("Asia/Tokyo")
+        .format("YYYY/MM/DD")
+    : null;
+  const end = props.item.constructionPeriodEndAt
+    ? dayjs(props.item.constructionPeriodEndAt)
+        .tz("Asia/Tokyo")
+        .format("YYYY/MM/DD")
+    : null;
+
+  if (!start && !end) return "-";
+  return `${start} 〜 ${end}`;
+});
 const items = computed(() => {
   return [
     { title: "現場コード", props: { subtitle: props.item.code || "-" } },
@@ -46,6 +68,7 @@ const items = computed(() => {
     { title: "住所", props: { subtitle: props.item.fullAddress || "-" } },
     { title: "建物名", props: { subtitle: props.item.building || "-" } },
     { title: "警備種別", props: { subtitle: securityTypeTitle.value } },
+    { title: "工事期間", props: { subtitle: constructionPeriod.value } },
   ];
 });
 
@@ -68,6 +91,8 @@ defineExpose({
     "address",
     "building",
     "securityType",
+    "constructionPeriodStartAt",
+    "constructionPeriodEndAt",
     "remarks",
   ],
 });

@@ -128,7 +128,7 @@ defineExpose({
       </div>
     </v-window-item>
 
-    <!-- STEP:3 現場名入力 -->
+    <!-- STEP:3 現場情報入力 -->
     <v-window-item :value="3">
       <v-form ref="step3">
         <v-row>
@@ -158,6 +158,16 @@ defineExpose({
           </v-col>
           <v-col cols="12">
             <air-select v-bind="componentAttrs['securityType']" />
+          </v-col>
+          <v-col cols="12">
+            <air-date-input
+              v-bind="componentAttrs['constructionPeriodStartAt']"
+            />
+          </v-col>
+          <v-col cols="12">
+            <air-date-input
+              v-bind="componentAttrs['constructionPeriodEndAt']"
+            />
           </v-col>
         </v-row>
       </v-form>
