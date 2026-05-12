@@ -6,6 +6,8 @@
  *
  * @update 2026-05-12 - ユーザードキュメントが作成された後、そのドキュメントIDをuserDocIdに設定するように変更
  *                      - この処理が漏れていたため、ユーザー情報を作成しても即座に画面に反映されなかった。
+ *                    - ユーザードキュメントとの紐づけを解消できるようにするため、ユーザードキュメントの削除処理を実装。
+ *                      - 管理者である場合は削除ボタンを無効化。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { User } from "@/schemas";
@@ -62,13 +64,25 @@ watch(
  * @description userDocIdの変更を監視し、対応するユーザードキュメントを購読する
  * - userDocIdが空文字の場合は、ユーザードキュメントの購読を解除する
  * - userDocIdが有効なドキュメントIDの場合は、そのドキュメントを購読する
+ *
+ * @update 2026-05-12 - 購読解除のタイミングで user.initialize() を呼び出すように変更
  */
 watch(userDocId, (newValue) => {
   if (!newValue) {
     user.unsubscribe();
+    user.initialize();
   } else {
     user.subscribe({ docId: newValue });
   }
+});
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const hasUserDoc = computed(() => !!userDocId.value);
+
+const isAdmin = computed(() => {
+  return user.isAdmin;
 });
 
 /*****************************************************************************
@@ -102,6 +116,16 @@ async function handleCreate(item) {
   const docRef = await item.create();
   userDocId.value = docRef.id;
 }
+
+/**
+ * AirArrayManager の handle-delete に渡す関数
+ * - ユーザードキュメントを削除した後、userDocIdを空文字に設定して、画面からユーザー情報が消えるようにします。
+ * @param item
+ */
+async function handleDelete(item) {
+  await item.delete();
+  userDocId.value = "";
+}
 </script>
 
 <template>
@@ -116,20 +140,15 @@ async function handleCreate(item) {
         );
       }
     "
-    :handle-delete="
-      () => {
-        throw new Error(
-          'このコンポーネントでユーザー情報を削除することはできません。',
-        );
-      }
-    "
+    :handle-delete="handleDelete"
     :excluded-keys="['roles', 'tagSize']"
+    hide-delete-btn
   >
-    <template #activator="{ toCreate }">
+    <template #activator="{ toCreate, toDelete }">
       <v-card>
         <v-toolbar title="ユーザー情報" color="secondary" density="compact" />
         <v-card-text>
-          <div v-if="userDocId">
+          <div v-if="hasUserDoc">
             <div class="d-flex flex-column pb-2">
               <small class="text-medium-emphasis">メールアドレス</small>
               <div class="text-right text-body-2" style="min-height: 24px">
@@ -165,6 +184,16 @@ async function handleCreate(item) {
             </template>
           </v-empty-state>
         </v-card-text>
+        <v-card-actions v-if="hasUserDoc">
+          <v-btn
+            block
+            color="warning"
+            :disabled="isAdmin"
+            variant="flat"
+            text="ユーザーアカウント削除"
+            @click="() => toDelete()"
+          />
+        </v-card-actions>
       </v-card>
     </template>
   </air-item-manager>
