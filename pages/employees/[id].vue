@@ -103,7 +103,7 @@ onUnmounted(() => {
           </v-col>
 
           <!-- ユーザー情報 -->
-          <v-col cols="12">
+          <v-col cols="12" v-if="!showResignedAlert">
             <!-- <UserManager :employee="doc" /> -->
             <EmployeeUserManager :employee="doc" :user="userDocs[0] || user" />
           </v-col>
