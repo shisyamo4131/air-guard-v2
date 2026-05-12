@@ -3,6 +3,9 @@
  * @file ./components/Users/Manager/index.vue
  * @description ユーザー情報管理コンポーネント
  * @author shisyamo4131
+ *
+ * @update 2026-05-12 - 従業員と紐づいている場合に削除チェックボックスが無効化されるように変更
+ *
  *****************************************************************************/
 import { User } from "@/schemas";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
@@ -157,7 +160,7 @@ async function handleCreate(item) {
     :handle-create="handleCreate"
     :handle-update="(item) => item.update(item)"
     :handle-delete="(item) => item.delete(item)"
-    :disable-delete="(item) => !!item.isAdmin"
+    :disable-delete="(item) => !!item.isAdmin || !!item.employeeId"
     :excluded-keys="
       (item) => {
         return item.isAdmin ? ['roles'] : [];
