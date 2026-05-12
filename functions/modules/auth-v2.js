@@ -1,8 +1,9 @@
 import { logger } from "firebase-functions";
+import * as functions from "firebase-functions/v1";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { Company, User } from "@shisyamo4131/air-guard-v2-schemas";
+import { Company, FcmToken, User } from "@shisyamo4131/air-guard-v2-schemas";
 
 /**
  * Authentication からスローされるエラーのリスト
@@ -676,3 +677,31 @@ export const changeAdminUser = onCall(async (request) => {
     );
   }
 });
+
+/**
+ * Triggered when a Firebase Authentication user is deleted.
+ * - This function is called when a user account is deleted from Firebase Authentication.
+ * - Cleans up user-related data (e.g., FCM tokens).
+ */
+export const onAuthUserDeleted = functions.auth
+  .user()
+  .onDelete(async (user) => {
+    logger.info(`Authentication user deleted: ${user.uid}`);
+    logger.info(`Email: ${user.email || "N/A"}`);
+
+    try {
+      // FcmTokensコレクションから該当ドキュメントを削除
+      const deletedCount = await FcmToken.deleteByUid(user.uid);
+
+      if (deletedCount === 0) {
+        logger.info(`No FCM token documents found for user: ${user.uid}`);
+      } else {
+        logger.info(
+          `Deleted ${deletedCount} FCM token document(s) for user: ${user.uid}`,
+        );
+      }
+    } catch (error) {
+      logger.error(`Error deleting FCM token for user ${user.uid}:`, error);
+      // エラーが発生してもトリガーは失敗させない（他のクリーンアップ処理を妨げないため）
+    }
+  });
