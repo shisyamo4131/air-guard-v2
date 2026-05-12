@@ -1,13 +1,8 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/User/Manager/index.vue
- * @description ユーザー情報管理コンポーネント
+ * @file ./components/Employee/UserManager/index.vue
+ * @description 従業員/ユーザー情報管理コンポーネント
  * - 従業員詳細画面で使用することを前提としたユーザー情報管理コンポーネント
- *
- * @update 2026-05-12 - ユーザードキュメントが作成された後、そのドキュメントIDをuserDocIdに設定するように変更
- *                      - この処理が漏れていたため、ユーザー情報を作成しても即座に画面に反映されなかった。
- *                    - ユーザードキュメントとの紐づけを解消できるようにするため、ユーザードキュメントの削除処理を実装。
- *                      - 管理者である場合は削除ボタンを無効化。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { User } from "@/schemas";
@@ -20,76 +15,35 @@ import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
  *****************************************************************************/
 const _props = defineProps({
   employee: { type: Object, required: true },
+  user: { type: Object, required: true },
 });
-const props = useDefaults(_props, "UserManager");
-
-/*****************************************************************************
- * DEFINE STATES
- *****************************************************************************/
-const userDocId = ref("");
-const user = reactive(new User());
+const props = useDefaults(_props, "EmployeeUserManager");
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { attrs } = useBaseManager("UserManager");
+const { attrs } = useBaseManager("EmployeeUserManager");
 const auth = useAuthStore();
 const { checkEmailAvailabilityGlobal } = useAuthFunctions();
 
 /*****************************************************************************
- * WATCHERS
+ * DEFINE STATES
  *****************************************************************************/
-/**
- * @description 従業員IDの変更を監視し、対応するユーザードキュメントIDを取得する
- * - 従業員IDに対応するユーザードキュメントが存在しない場合は、userDocIdを空文字に設定する
- * - 従業員IDに対応するユーザードキュメントが存在する場合は、そのドキュメントIDをuserDocIdに設定する
- */
+const isUser = ref(false);
+
 watch(
-  () => props.employee,
-  async (newValue) => {
-    const userInstance = new User();
-    const users = await userInstance.fetchDocs({
-      constraints: [["where", "employeeId", "==", newValue.docId]],
-    });
-    if (users.length === 0) {
-      userDocId.value = "";
-    } else {
-      userDocId.value = users[0].docId;
-    }
+  () => props.user,
+  (newValue) => {
+    isUser.value = !!newValue.docId;
   },
   { immediate: true, deep: true },
 );
 
-/**
- * @description userDocIdの変更を監視し、対応するユーザードキュメントを購読する
- * - userDocIdが空文字の場合は、ユーザードキュメントの購読を解除する
- * - userDocIdが有効なドキュメントIDの場合は、そのドキュメントを購読する
- *
- * @update 2026-05-12 - 購読解除のタイミングで user.initialize() を呼び出すように変更
- */
-watch(userDocId, (newValue) => {
-  if (!newValue) {
-    user.unsubscribe();
-    user.initialize();
-  } else {
-    user.subscribe({ docId: newValue });
-  }
-});
-
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const hasUserDoc = computed(() => !!userDocId.value);
-
 const isAdmin = computed(() => {
-  return user.isAdmin;
-});
-
-/*****************************************************************************
- * LIFECYCLE HOOKS
- *****************************************************************************/
-onUnmounted(() => {
-  user.unsubscribe();
+  return props.user.isAdmin;
 });
 
 /*****************************************************************************
@@ -108,23 +62,18 @@ async function handleAction(createFn) {
  * AirArrayManager の handle-create に渡す関数
  * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
  * @param item
- *
- * @update 2026-05-12 - ユーザードキュメントが作成された後、そのドキュメントIDをuserDocIdに設定するように変更
  */
 async function handleCreate(item) {
   await checkEmailAvailabilityGlobal(item.email);
-  const docRef = await item.create();
-  userDocId.value = docRef.id;
+  await item.create();
 }
 
 /**
  * AirArrayManager の handle-delete に渡す関数
- * - ユーザードキュメントを削除した後、userDocIdを空文字に設定して、画面からユーザー情報が消えるようにします。
  * @param item
  */
 async function handleDelete(item) {
   await item.delete();
-  userDocId.value = "";
 }
 </script>
 
@@ -148,23 +97,27 @@ async function handleDelete(item) {
       <v-card>
         <v-toolbar title="ユーザー情報" color="secondary" density="compact" />
         <v-card-text>
-          <div v-if="hasUserDoc">
+          <div v-if="isUser">
             <div class="d-flex flex-column pb-2">
               <small class="text-medium-emphasis">メールアドレス</small>
               <div class="text-right text-body-2" style="min-height: 24px">
-                {{ user.email }}
+                {{ props.user.email }}
               </div>
             </div>
             <div class="d-flex flex-column pb-2">
               <small class="text-medium-emphasis">状態</small>
               <div class="text-right text-body-2" style="min-height: 24px">
                 <v-chip
-                  v-if="user.isTemporary"
+                  v-if="props.user.isTemporary"
                   color="warning"
                   size="small"
                   text="仮登録"
                 />
-                <v-chip v-else-if="user.disabled" size="small" text="無効" />
+                <v-chip
+                  v-else-if="props.user.disabled"
+                  size="small"
+                  text="無効"
+                />
                 <v-chip v-else color="info" size="small" text="有効" />
               </div>
             </div>
@@ -184,7 +137,7 @@ async function handleDelete(item) {
             </template>
           </v-empty-state>
         </v-card-text>
-        <v-card-actions v-if="hasUserDoc">
+        <v-card-actions v-if="isUser">
           <v-btn
             block
             color="warning"

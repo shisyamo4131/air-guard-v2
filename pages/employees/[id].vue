@@ -3,6 +3,9 @@ import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useConstants } from "@/composables/useConstants";
 import CustomInputResignation from "@/components/Employee/CustomInput/Resignation.vue";
+import { User } from "@/schemas";
+
+defineOptions({ name: "employee-detail" });
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -13,10 +16,31 @@ const { doc } = useDocument("Employee", { docId });
 const { EMPLOYMENT_STATUS } = useConstants();
 
 /*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const user = reactive(new User());
+const userDocs = ref([]);
+
+/*****************************************************************************
  * COMPUTED
  *****************************************************************************/
 const showResignedAlert = computed(() => {
   return doc?.employmentStatus === EMPLOYMENT_STATUS.value.RESIGNED.value;
+});
+
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onMounted(() => {
+  if (!docId) return;
+  userDocs.value = user.subscribeDocs({
+    constraints: [["where", "employeeId", "==", docId]],
+  });
+});
+
+onUnmounted(() => {
+  user.unsubscribe();
+  user.initialize();
 });
 </script>
 
@@ -56,6 +80,7 @@ const showResignedAlert = computed(() => {
                         <v-btn
                           block
                           color="warning"
+                          :disabled="user.isAdmin"
                           variant="flat"
                           text="退職処理"
                           @click="() => toUpdate()"
@@ -79,7 +104,8 @@ const showResignedAlert = computed(() => {
 
           <!-- ユーザー情報 -->
           <v-col cols="12">
-            <UserManager :employee="doc" />
+            <!-- <UserManager :employee="doc" /> -->
+            <EmployeeUserManager :employee="doc" :user="userDocs[0] || user" />
           </v-col>
         </v-row>
       </v-col>
@@ -157,6 +183,7 @@ const showResignedAlert = computed(() => {
             <v-btn
               block
               color="error"
+              :disabled="user.isAdmin"
               text="この従業員を削除する"
               @click="() => toDelete()"
             />
