@@ -3,6 +3,9 @@
  * @file ./components/User/Manager/index.vue
  * @description ユーザー情報管理コンポーネント
  * - 従業員詳細画面で使用することを前提としたユーザー情報管理コンポーネント
+ *
+ * @update 2026-05-12 - ユーザードキュメントが作成された後、そのドキュメントIDをuserDocIdに設定するように変更
+ *                      - この処理が漏れていたため、ユーザー情報を作成しても即座に画面に反映されなかった。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { User } from "@/schemas";
@@ -84,17 +87,20 @@ async function handleAction(createFn) {
     employeeId: props.employee.docId,
     companyId: auth.companyId,
   });
-  await createFn(newUser);
+  return await createFn(newUser);
 }
 
 /**
  * AirArrayManager の handle-create に渡す関数
  * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
  * @param item
+ *
+ * @update 2026-05-12 - ユーザードキュメントが作成された後、そのドキュメントIDをuserDocIdに設定するように変更
  */
 async function handleCreate(item) {
   await checkEmailAvailabilityGlobal(item.email);
-  await item.create();
+  const docRef = await item.create();
+  userDocId.value = docRef.id;
 }
 </script>
 
