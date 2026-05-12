@@ -15,6 +15,9 @@
  * @emits click:select - 選択チェックボックスのクリックイベント（引数にユーザーオブジェクトを渡す）
  * @emits click:edit - 編集アクションのクリックイベント（引数にユーザーオブジェクトを渡す）
  * @emits click:detail - 詳細アクションのクリックイベント（引数にユーザーオブジェクトを渡す）
+ *
+ * @update 2026-05-12 - 管理者アイコンの表示位置を変更
+ *                    - 従業員アイコンを追加
  *****************************************************************************/
 import * as Vue from "vue";
 import { User } from "@/schemas";
@@ -105,14 +108,6 @@ const roleOptions = computed(() => {
         >
           <span>{{ props.user.displayName }}</span>
           <v-chip
-            v-if="props.user.isAdmin"
-            label
-            size="x-small"
-            color="info"
-            class="ml-1"
-            >管理者</v-chip
-          >
-          <v-chip
             v-if="props.user.disabled"
             label
             size="x-small"
@@ -127,26 +122,27 @@ const roleOptions = computed(() => {
       }}</v-card-subtitle>
     </v-card-item>
 
-    <!-- <v-card-text class="pt-4">
-      <div class="d-flex flex-wrap ga-1">
+    <v-card-text class="pt-2 pb-0">
+      <div class="d-flex flex-wrap ga-2">
         <v-chip
-          v-for="option in roleOptions"
-          :key="option.value"
-          :prepend-icon="option.icon"
-          variant="flat"
-          :color="
-            props.user.roles.includes(option.value) ? 'primary' : undefined
-          "
+          label
           size="x-small"
+          color="info"
+          class="ml-1"
+          :disabled="!props.user.isAdmin"
+          :prepend-icon="props.user.isAdmin ? 'mdi-check' : undefined"
+          >管理者</v-chip
         >
-          {{ option.title }}
-          <v-tooltip activator="parent" location="bottom">
-            {{ option.description }}
-          </v-tooltip>
-        </v-chip>
+        <v-chip
+          color="secondary"
+          label
+          size="x-small"
+          :disabled="!props.user.employeeId"
+          :prepend-icon="props.user.employeeId ? 'mdi-check' : undefined"
+          >従業員</v-chip
+        >
       </div>
-    </v-card-text> -->
-
+    </v-card-text>
     <!-- 編集・詳細アクション -->
     <v-card-actions
       :class="{ 'pt-0': showActions, 'justify-end': true }"
