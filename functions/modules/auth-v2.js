@@ -683,8 +683,9 @@ export const changeAdminUser = onCall(async (request) => {
  * - This function is called when a user account is deleted from Firebase Authentication.
  * - Cleans up user-related data (e.g., FCM tokens).
  */
-export const onAuthUserDeleted = functions.auth
-  .user()
+export const onAuthUserDeleted = functions
+  .region("asia-northeast1")
+  .auth.user()
   .onDelete(async (user) => {
     logger.info(`Authentication user deleted: ${user.uid}`);
     logger.info(`Email: ${user.email || "N/A"}`);
