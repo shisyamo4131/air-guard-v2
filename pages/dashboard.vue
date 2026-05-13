@@ -26,6 +26,13 @@ const statistics = useStatisticsStore();
       <v-col cols="12">
         <ArrangementNotificationsManager :model-value="recentArrangements" />
       </v-col>
+      <v-col cols="12">
+        <v-alert
+          v-if="auth.isAdmin"
+          type="info"
+          text="キャッシュ戦略の変更テスト"
+        />
+      </v-col>
     </v-row>
     <!-- 概要カード -->
     <!-- <v-row class="mb-6" dense>

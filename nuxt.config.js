@@ -34,12 +34,12 @@ export default defineNuxtConfig({
     "@vite-pwa/nuxt",
   ],
 
-  // PWA 設定（Workbox と FCM を統合）
+  // PWA 設定（FCM とインストール機能のみ）
   pwa: {
     strategies: "injectManifest",
     srcDir: "service-worker",
     filename: "sw.js",
-    registerType: "autoUpdate",
+    // registerType を削除（手動制御）
     manifest: {
       name: "AirGuard",
       short_name: "AirGuard",
@@ -62,9 +62,9 @@ export default defineNuxtConfig({
       ],
     },
     injectManifest: {
-      globPatterns: ["**/*.{js,css,html,png,svg,ico}"],
-      globIgnores: ["404.html", "200.html"], // SPAフォールバックページを除外
-      maximumFileSizeToCacheInBytes: 20 * 1024 * 1024, // 20MB に拡張
+      // プリキャッシュを無効化（Workbox不使用）
+      globPatterns: [],
+      globIgnores: [],
       // Service Worker ビルド時の環境変数注入
       rollupOptions: {
         output: {
