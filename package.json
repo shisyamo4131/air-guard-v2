@@ -11,9 +11,10 @@
     "install:firemodel": "npm install @shisyamo4131/air-firebase-v2@latest && cd functions && npm install @shisyamo4131/air-firebase-v2@latest && cd ..",
     "install:schemas": "npm install @shisyamo4131/air-guard-v2-schemas && cd functions && npm install @shisyamo4131/air-guard-v2-schemas && cd ..",
     "install:schemas@dev": "npm install @shisyamo4131/air-guard-v2-schemas@dev && cd functions && npm install @shisyamo4131/air-guard-v2-schemas@dev && cd ..",
+    "list:adapter": "npm list @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm list @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
     "list:schemas": "npm list @shisyamo4131/air-guard-v2-schemas && cd functions && npm list @shisyamo4131/air-guard-v2-schemas && cd ..",
     "local": "nuxt dev --dotenv .env.local --host",
-    "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
+    "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd .. && npm run list:adapter",
     "update:firemodel": "npm update @shisyamo4131/air-firebase-v2 && cd functions && npm update @shisyamo4131/air-firebase-v2 && cd ..",
     "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd .. && npm run list:schemas",
     "uninstall:schemas": "npm uninstall @shisyamo4131/air-guard-v2-schemas && cd functions && npm uninstall @shisyamo4131/air-guard-v2-schemas && cd .."
