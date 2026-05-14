@@ -93,6 +93,7 @@ export default defineNuxtConfig({
         "vuedraggable",
         "pdfmake/build/pdfmake",
         "@holiday-jp/holiday_jp",
+        "firebase/messaging/sw",
       ],
     },
     // Service Worker に環境変数を注入する Vite プラグイン

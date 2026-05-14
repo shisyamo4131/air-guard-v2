@@ -12,6 +12,14 @@ import { Employee } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import CustomInput from "@/components/Employee/CustomInput/ToRegist.vue";
 
+// feature/code-autonumber
+// Employee クラスの useAutonumber プロパティを直接変更
+Employee.useAutonumber = {
+  field: "code",
+  length: 4,
+  prefix: "EMP",
+};
+
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
