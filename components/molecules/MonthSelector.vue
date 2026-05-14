@@ -6,7 +6,7 @@
  * ---------------------------------------------------------------------------
  * @props modelValue: Date - The currently selected date (default: new Date())
  * ---------------------------------------------------------------------------
- * @emits update:modelValue - Emitted when the selected date changes.
+ * @emits update:modelValue - Emitted with the start date of the selected month when the selected month changes.
  * @emits from - Emitted with the start date of the selected month.
  * @emits to - Emitted with the end date of the selected month.
  * @emits date-range - Emitted with the full date range of the selected month.
@@ -63,6 +63,7 @@ function onClickPrev() {
   emit("from", from.value);
   emit("to", to.value);
   emit("date-range", { from: from.value, to: to.value });
+  emit("update:modelValue", from.value);
 }
 
 function onClickNext() {
@@ -73,6 +74,7 @@ function onClickNext() {
   emit("from", from.value);
   emit("to", to.value);
   emit("date-range", { from: from.value, to: to.value });
+  emit("update:modelValue", from.value);
 }
 </script>
 
