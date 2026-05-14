@@ -128,7 +128,11 @@ async function onUpdateHandler(item) {
   >
     <template #table="{ items, toUpdate }">
       <v-card>
-        <v-toolbar color="secondary" density="compact" title="直近の配置情報" />
+        <v-toolbar
+          color="secondary"
+          density="compact"
+          title="あなたの直近配置情報"
+        />
         <air-list v-if="items.length !== 0" class="py-0">
           <template v-for="(item, index) of items" :key="index">
             <ArrangementNotificationListItem

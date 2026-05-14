@@ -23,15 +23,8 @@ const statistics = useStatisticsStore();
   <TemplatesFixedHeightContainer>
     <!-- 従業員ユーザーであれば直近の配置通知情報を表示 -->
     <v-row v-if="auth.employeeId && auth.isAdmin">
-      <v-col cols="12">
+      <v-col cols="12" md="6">
         <ArrangementNotificationsManager :model-value="recentArrangements" />
-      </v-col>
-      <v-col cols="12">
-        <v-alert
-          v-if="auth.isAdmin"
-          type="info"
-          text="キャッシュ戦略の変更テスト"
-        />
       </v-col>
     </v-row>
     <!-- 概要カード -->
