@@ -45,8 +45,10 @@ const temporaryNotificationAttrs = {
 
 // コンポーネントに適用する属性
 const attrs = computed(() => {
+  const statusDefinition =
+    ArrangementNotification.STATUS[props.notification?.status];
   const resolvedAttrs = props.notification
-    ? ArrangementNotification.STATUS[props.notification.status]
+    ? statusDefinition
     : temporaryNotificationAttrs;
   return {
     ...resolvedAttrs,

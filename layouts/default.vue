@@ -31,7 +31,7 @@ const handleSignOut = async () => {
     <air-loading-dialog :model-value="queue" />
 
     <!-- SNACKBAR FOR GLOBAL MESSAGE -->
-    <v-snackbar-queue v-model="messages.queue" />
+    <v-snackbar-queue v-model="messages.queue" location="top" />
 
     <!-- アプリケーション上部のツールバー -->
     <v-app-bar v-bind="appStore.appBar">

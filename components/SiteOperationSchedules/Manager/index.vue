@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
  * @file ./components/SiteOperationSchedules/Manager/index.vue
- * @description A component to manage `SiteOperationScheduls`.
+ * @description A component to manage `SiteOperationSchedules`.
  * @extends AirArrayManager
  *****************************************************************************/
 import { useBaseManager } from "@/composables/useBaseManager";
@@ -13,7 +13,7 @@ import { useDefaults } from "vuetify";
  *****************************************************************************/
 const _props = defineProps({
   docs: { type: Array, default: () => [] },
-  dateAt: { type: Object, default: () => new Date() },
+  dateAt: { type: Object, default: () => new Date() }, // 初期表示させる日を設定
   handleCreate: { type: Function, default: (item) => item.create(item) },
   handleUpdate: { type: Function, default: (item) => item.update(item) },
   handleDelete: { type: Function, default: (item) => item.delete(item) },
@@ -61,22 +61,28 @@ function beforeEdit(editMode, item) {
     :disable-update="(item) => !!item.operationResultId"
     :disable-delete="(item) => !!item.operationResultId"
   >
-    <template #table="{ toUpdate, toCreate }">
-      <v-card>
-        <v-toolbar color="secondary" density="compact" title="稼働予定">
-          <template #append>
-            <v-btn icon="mdi-plus" size="small" @click="() => toCreate()" />
-          </template>
-        </v-toolbar>
-        <v-card-text>
-          <SiteOperationSchedulesCalendar
-            :date-at="props.dateAt"
-            :events="events"
-            @update:date-range="emit('update:date-range', $event)"
-            @click:event="toUpdate($event)"
-          />
-        </v-card-text>
-      </v-card>
+    <template #table="tableProps">
+      <slot name="table" v-bind="tableProps">
+        <v-card>
+          <v-toolbar color="secondary" density="compact" title="稼働予定">
+            <template #append>
+              <v-btn
+                icon="mdi-plus"
+                size="small"
+                @click="() => tableProps.toCreate()"
+              />
+            </template>
+          </v-toolbar>
+          <v-card-text>
+            <SiteOperationSchedulesCalendar
+              :model-value="props.dateAt"
+              :events="events"
+              @update:date-range="emit('update:date-range', $event)"
+              @click:event="tableProps.toUpdate($event)"
+            />
+          </v-card-text>
+        </v-card>
+      </slot>
     </template>
     <template #[`input.shiftType`]="{ attrs }">
       <v-radio-group v-bind="attrs" inline>

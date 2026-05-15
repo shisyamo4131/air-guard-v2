@@ -1,6 +1,10 @@
 /*****************************************************************************
  * @file ./composables/fetch/useFetch.js
  * @description Inject `fetchEmployee`, `fetchOutsourcer` and `fetchSite` composable to component.
+ *
+ * Behavior:
+ * - isOrigin = true: Always create new instances and provide them (ignore parent's provide)
+ * - isOrigin = false: Use parent's provided composables if available, otherwise create and provide new instances
  *****************************************************************************/
 import * as Vue from "vue";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
@@ -10,6 +14,15 @@ import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 
+/**
+ * Provides `fetchEmployee`, `fetchOutsourcer` and `fetchSite` composable to component.
+ * If `isOrigin` is true, it will provide the composables to the component.
+ * Otherwise, it will try to inject the composables from the parent component and
+ * if not provided, it will create a new instance of the composables using the factory functions.
+ * @param {*} componentName
+ * @param {*} isOrigin
+ * @returns
+ */
 export function useFetch(componentName, isOrigin = false) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
@@ -54,29 +67,65 @@ export function useFetch(componentName, isOrigin = false) {
   /*****************************************************************************
    * SETUP FETCH COMPOSABLES
    *****************************************************************************/
-  const fetchEmployeeComposable = isOrigin
-    ? useFetchEmployee()
-    : Vue.inject("fetchEmployeeComposable", employeeFactory, true);
-  const fetchOutsourcerComposable = isOrigin
-    ? useFetchOutsourcer()
-    : Vue.inject("fetchOutsourcerComposable", outsourcerFactory, true);
-  const fetchSiteComposable = isOrigin
-    ? useFetchSite()
-    : Vue.inject("fetchSiteComposable", siteFactory, true);
+  let fetchEmployeeComposable;
+  let isEmployeeComposableProvided = false;
+  if (isOrigin) {
+    fetchEmployeeComposable = useFetchEmployee();
+  } else {
+    const injected = Vue.inject("fetchEmployeeComposable", null);
+    isEmployeeComposableProvided = injected !== null;
+    fetchEmployeeComposable = isEmployeeComposableProvided
+      ? injected
+      : employeeFactory();
+  }
+
+  let fetchOutsourcerComposable;
+  let isOutsourcerComposableProvided = false;
+  if (isOrigin) {
+    fetchOutsourcerComposable = useFetchOutsourcer();
+  } else {
+    const injected = Vue.inject("fetchOutsourcerComposable", null);
+    isOutsourcerComposableProvided = injected !== null;
+    fetchOutsourcerComposable = isOutsourcerComposableProvided
+      ? injected
+      : outsourcerFactory();
+  }
+
+  let fetchSiteComposable;
+  let isSiteComposableProvided = false;
+  if (isOrigin) {
+    fetchSiteComposable = useFetchSite();
+  } else {
+    const injected = Vue.inject("fetchSiteComposable", null);
+    isSiteComposableProvided = injected !== null;
+    fetchSiteComposable = isSiteComposableProvided ? injected : siteFactory();
+  }
 
   /*****************************************************************************
    * PROVIDES
    *****************************************************************************/
   if (isOrigin) {
+    // isOrigin = true: Always provide (ignore parent's provide)
     if (isDev) {
       logger.info({
         message:
-          "Providing fetchEmployeeComposable, fetchOutsourcerComposable and fetchSiteComposable.",
+          "[isOrigin=true] Providing fetchEmployeeComposable, fetchOutsourcerComposable and fetchSiteComposable.",
       });
     }
     Vue.provide("fetchEmployeeComposable", fetchEmployeeComposable);
     Vue.provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
     Vue.provide("fetchSiteComposable", fetchSiteComposable);
+  } else {
+    // isOrigin = false: Provide only if not provided by parent
+    if (!isEmployeeComposableProvided) {
+      Vue.provide("fetchEmployeeComposable", fetchEmployeeComposable);
+    }
+    if (!isOutsourcerComposableProvided) {
+      Vue.provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
+    }
+    if (!isSiteComposableProvided) {
+      Vue.provide("fetchSiteComposable", fetchSiteComposable);
+    }
   }
 
   /*****************************************************************************
@@ -86,5 +135,8 @@ export function useFetch(componentName, isOrigin = false) {
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
     fetchSiteComposable,
+    isEmployeeComposableProvided,
+    isOutsourcerComposableProvided,
+    isSiteComposableProvided,
   };
 }

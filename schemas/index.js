@@ -11,6 +11,7 @@ export { FcmToken } from "@shisyamo4131/air-guard-v2-schemas";
 export { GeocodableMixin } from "@shisyamo4131/air-guard-v2-schemas";
 export { Insurance } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationBilling } from "@shisyamo4131/air-guard-v2-schemas";
+export { OperationDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
 export { OperationResultDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { Outsourcer } from "@shisyamo4131/air-guard-v2-schemas";
