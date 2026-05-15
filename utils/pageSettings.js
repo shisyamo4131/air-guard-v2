@@ -125,6 +125,15 @@ export const pageStructure = [
         roles: ["site-operation-schedules:write"],
         navigation: true,
       },
+      {
+        id: "operation-results-generator",
+        path: "/operation-results/generator",
+        label: "上下番確定処理",
+        icon: "mdi-calendar-check",
+        // roles: ["operation-results:read"],
+        roles: ["developer"],
+        navigation: true,
+      },
     ],
   },
 
@@ -138,15 +147,6 @@ export const pageStructure = [
     roles: ["developer"],
     navigation: true,
     children: [
-      {
-        id: "operation-result-register",
-        path: "/operation-result-register",
-        label: "上下番確定処理",
-        icon: "mdi-checkbox-marked-circle",
-        // roles: ["operation-results:read"],
-        roles: ["developer"],
-        navigation: true,
-      },
       {
         id: "operation-results",
         path: "/operation-results",
