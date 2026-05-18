@@ -29,6 +29,7 @@
     "@shisyamo4131/air-guard-v2-schemas": "^2.4.2-dev.102",
     "@vite-pwa/nuxt": "^1.1.1",
     "air-vuetify-v3": "file:air-vuetify-v3",
+    "browser-image-compression": "^2.0.2",
     "dayjs": "^1.11.13",
     "firebase": "^11.8.1",
     "nuxt": "^3.17.2",

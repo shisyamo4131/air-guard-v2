@@ -94,6 +94,7 @@ export default defineNuxtConfig({
         "pdfmake/build/pdfmake",
         "@holiday-jp/holiday_jp",
         "firebase/messaging/sw",
+        "browser-image-compression",
       ],
     },
     // Service Worker に環境変数を注入する Vite プラグイン
