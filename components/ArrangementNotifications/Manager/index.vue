@@ -192,6 +192,7 @@ async function onUpdateHandler(item) {
         :handle-update="(item) => item.toLeaved()"
         :model-value="item"
         class="flex-grow-1"
+        :site-operation-schedule-id="item.siteOperationScheduleId"
         @submit:complete="managerRef.quitEditing"
       >
         <template #activator="{ props: activatorProps, toUpdate }">

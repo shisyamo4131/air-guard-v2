@@ -6,7 +6,6 @@ import {
 } from "@/utils/storage";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-const { $storage } = useNuxtApp();
 const auth = useAuthStore();
 
 const scheduleId = ref("");
@@ -27,13 +26,7 @@ async function onFileChange(file) {
   uploadError.value = null;
   isUploading.value = true;
   try {
-    await uploadSecurityReport(
-      $storage,
-      auth.companyId,
-      scheduleId.value,
-      file,
-      auth.uid,
-    );
+    await uploadSecurityReport(scheduleId.value, file);
     await fetchReports();
   } catch (e) {
     uploadError.value = e.message;
@@ -51,11 +44,7 @@ async function fetchReports() {
   listError.value = null;
   isListing.value = true;
   try {
-    reports.value = await listSecurityReports(
-      $storage,
-      auth.companyId,
-      scheduleId.value,
-    );
+    reports.value = await listSecurityReports(scheduleId.value);
   } catch (e) {
     listError.value = e.message;
   } finally {
