@@ -7,6 +7,7 @@
  * - ファイル名は crypto.randomUUID() で生成した UUID を使用し、競合を回避します。
  * - customMetadata に uploadedBy（UID）を含めます。
  * - サムネイルは Cloud Functions が自動生成します（ファイル名: `${uuid}_thumb.jpg`）。
+ * - $storage・companyId・uid は内部で useNuxtApp() / useAuthStore() から取得します。
  */
 
 import imageCompression from "browser-image-compression";
@@ -18,6 +19,7 @@ import {
   deleteObject,
   getMetadata,
 } from "firebase/storage";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /** アップロード時の圧縮オプション */
 const COMPRESSION_OPTIONS = {
@@ -26,33 +28,65 @@ const COMPRESSION_OPTIONS = {
   useWebWorker: true,
 };
 
+const isDev = process.env.NODE_ENV === "development";
+const log = (...args) => isDev && console.log("[storage.js]", ...args);
+
+/**
+ * 内部で $storage・companyId・uid を取得する。
+ * いずれかが未初期化の場合は明示的なエラーを投げる。
+ */
+function getContext() {
+  const { $storage } = useNuxtApp();
+  if (!$storage)
+    throw new Error(
+      "[storage.js] $storage が初期化されていません。Firebase の初期化が完了しているか確認してください。",
+    );
+
+  const auth = useAuthStore();
+  if (!auth.companyId)
+    throw new Error(
+      "[storage.js] companyId が取得できません。認証が完了しているか確認してください。",
+    );
+  if (!auth.uid)
+    throw new Error(
+      "[storage.js] uid が取得できません。認証が完了しているか確認してください。",
+    );
+
+  return { storage: $storage, companyId: auth.companyId, uid: auth.uid };
+}
+
 /**
  * 警備日報の写真を Storage にアップロードします。
  *
- * @param {import('firebase/storage').FirebaseStorage} storage - Storage インスタンス
- * @param {string} companyId - テナントの会社 ID
  * @param {string} scheduleId - SiteOperationSchedule の docId
  * @param {File} file - アップロードするファイル
- * @param {string} userId - アップロードするユーザーの UID
  * @returns {Promise<import('firebase/storage').StorageReference>} アップロードされたファイルの StorageReference
  * @throws {Error} 圧縮またはアップロードに失敗した場合
  */
-export async function uploadSecurityReport(
-  storage,
-  companyId,
-  scheduleId,
-  file,
-  userId,
-) {
+export async function uploadSecurityReport(scheduleId, file) {
+  const { storage, companyId, uid } = getContext();
+  log(`uploadSecurityReport: start`, {
+    companyId,
+    scheduleId,
+    uid,
+    fileName: file.name,
+    fileSize: file.size,
+  });
   const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
+  log(`uploadSecurityReport: compressed`, {
+    originalSize: file.size,
+    compressedSize: compressed.size,
+  });
   const uuid = crypto.randomUUID();
   const fileRef = ref(
     storage,
     `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports/${uuid}.jpg`,
   );
+  log(`uploadSecurityReport: uploading to`, fileRef.fullPath);
   await uploadBytes(fileRef, compressed, {
-    customMetadata: { uploadedBy: userId },
+    customMetadata: { uploadedBy: uid },
   });
+  log(`uploadSecurityReport: done`, fileRef.fullPath);
   return fileRef;
 }
 
@@ -61,21 +95,23 @@ export async function uploadSecurityReport(
  * - サムネイル（`_thumb` を含むファイル）は除外します。
  * - 作成日時（timeCreated）の昇順で返します。
  *
- * @param {import('firebase/storage').FirebaseStorage} storage - Storage インスタンス
- * @param {string} companyId - テナントの会社 ID
  * @param {string} scheduleId - SiteOperationSchedule の docId
  * @returns {Promise<Array<{ref: import('firebase/storage').StorageReference, url: string, thumbUrl: string|null, timeCreated: string}>>}
  * @throws {Error} ファイル一覧の取得に失敗した場合
  */
-export async function listSecurityReports(storage, companyId, scheduleId) {
+export async function listSecurityReports(scheduleId) {
+  const { storage, companyId } = getContext();
+  log(`listSecurityReports: start`, { companyId, scheduleId });
   const folderRef = ref(
     storage,
     `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports`,
   );
   const { items } = await listAll(folderRef);
+  log(`listSecurityReports: total items in folder`, items.length);
 
   // サムネイルを除外して本体ファイルのみ抽出
   const reportRefs = items.filter((item) => !item.name.includes("_thumb"));
+  log(`listSecurityReports: report files (excl. thumbs)`, reportRefs.length);
 
   // 各ファイルのメタデータ・URL・サムネイルURLを並行取得
   const reports = await Promise.all(
@@ -94,8 +130,10 @@ export async function listSecurityReports(storage, companyId, scheduleId) {
       let thumbUrl = null;
       try {
         thumbUrl = await getDownloadURL(thumbRef);
+        log(`listSecurityReports: thumb found for`, fileRef.name);
       } catch {
         // サムネイルがまだ生成されていない場合は null のまま
+        log(`listSecurityReports: thumb not yet available for`, fileRef.name);
       }
 
       return {
@@ -108,20 +146,23 @@ export async function listSecurityReports(storage, companyId, scheduleId) {
   );
 
   // 作成日時の昇順でソート
-  return reports.sort(
+  const sorted = reports.sort(
     (a, b) => new Date(a.timeCreated) - new Date(b.timeCreated),
   );
+  log(`listSecurityReports: done`, sorted.length, "files");
+  return sorted;
 }
 
 /**
  * 警備日報ファイルを削除します（本体 + サムネイルを同時に削除）。
- * - companyId は fileRef のパスから自動的に解決されるため、引数として不要です。
  *
  * @param {import('firebase/storage').StorageReference} fileRef - 削除対象の本体ファイルの StorageReference
  * @returns {Promise<void>}
  * @throws {Error} 削除に失敗した場合
  */
 export async function deleteSecurityReport(fileRef) {
+  if (!fileRef) throw new Error("[storage.js] fileRef が指定されていません。");
+  log(`deleteSecurityReport: start`, fileRef.fullPath);
   const thumbName = fileRef.name.replace(/\.jpg$/, "_thumb.jpg");
   const thumbRef = ref(
     fileRef.storage,
@@ -131,6 +172,13 @@ export async function deleteSecurityReport(fileRef) {
   // 本体とサムネイルを並行削除（サムネイルが存在しない場合はエラーを無視）
   await Promise.all([
     deleteObject(fileRef),
-    deleteObject(thumbRef).catch(() => {}),
+    deleteObject(thumbRef).catch((e) => {
+      log(
+        `deleteSecurityReport: thumb not found, skipped`,
+        thumbRef.fullPath,
+        e.code,
+      );
+    }),
   ]);
+  log(`deleteSecurityReport: done`, fileRef.fullPath);
 }
