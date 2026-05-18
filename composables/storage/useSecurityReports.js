@@ -1,6 +1,10 @@
 /*****************************************************************************
  * @file ./composables/storage/useSecurityReports.js
  * @description 警備日報写真管理コンポーザブル
+ * - Storage に警備日報写真をアップロードし、一覧取得・削除を行う機能を提供します。
+ * - 原則として、コンポーネント側で fetch を呼び出すまではデータを取得しません。
+ * - `fetchOnMounted` オプションを true にすると、コンポーネントのマウント時に自動で fetch を呼び出します。
+ * - `fetchOnChanged` オプションを true にすると、scheduleId が変更された際に自動で fetch を呼び出します。
  *****************************************************************************/
 import * as Vue from "vue";
 import {
@@ -11,7 +15,10 @@ import {
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
-export function useSecurityReports(scheduleId) {
+export function useSecurityReports(
+  scheduleId,
+  { fetchOnMounted = false, fetchOnChanged = false } = {},
+) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
@@ -41,14 +48,6 @@ export function useSecurityReports(scheduleId) {
    * WATCHERS
    *****************************************************************************/
   /**
-   * scheduleId が変わったら日報一覧を取得する
-   */
-  Vue.watch(scheduleId, (newId) => {
-    if (!newId) return;
-    fetch();
-  });
-
-  /**
    * file が選択されたらアップロードを実行する
    */
   Vue.watch(file, async (newFile) => {
@@ -59,11 +58,24 @@ export function useSecurityReports(scheduleId) {
       await uploadSecurityReport(Vue.unref(scheduleId), newFile);
       await fetch();
     } catch (e) {
+      console.error("[useSecurityReports] アップロードエラー:", e);
       uploadError.value = e.message;
     } finally {
       isUploading.value = false;
       file.value = null;
     }
+  });
+
+  /**
+   * scheduleId が変更されたら一覧を再取得する
+   * - fetchOnChanged が true の場合のみ実行する
+   * - scheduleId が null/undefined から有効な値に変わった場合もトリガーされる
+   * - scheduleId が同じ値に変更された場合はトリガーされない
+   */
+  Vue.watch(scheduleId, async (newScheduleId, oldScheduleId) => {
+    if (!fetchOnChanged) return;
+    if (newScheduleId === oldScheduleId) return;
+    await fetch();
   });
 
   /*****************************************************************************
@@ -133,18 +145,26 @@ export function useSecurityReports(scheduleId) {
 
   const isEmpty = Vue.computed(() => reports.value.length === 0);
 
+  if (fetchOnMounted) {
+    Vue.onMounted(fetch);
+  }
+
   return {
     attrs, // VFileInput に渡す属性
+
+    /** STATES */
     file,
-    reports,
-    isUploading,
-    isListing,
-    isDeleting,
-    isEmpty,
-    uploadError,
-    listError,
-    deletingPaths,
-    fetch,
-    del,
+    reports, // 一覧取得した警備日報写真の配列
+    isUploading, // アップロード処理中かどうか
+    isListing, // 一覧取得処理中かどうか
+    isEmpty, // 警備日報写真の一覧が空かどうか
+    uploadError, // アップロードエラーのメッセージ
+    listError, // 一覧取得エラーのメッセージ
+    deletingPaths, // 現在削除処理中のファイルパスのセット
+
+    /** METHODS */
+    isDeleting, // 指定されたreportが現在削除処理中かどうかを判定する関数
+    fetch, // 警備日報写真の一覧を取得するメソッド
+    del, // 警備日報写真を削除するメソッド
   };
 }

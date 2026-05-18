@@ -72,20 +72,39 @@ export async function uploadSecurityReport(scheduleId, file) {
     fileName: file.name,
     fileSize: file.size,
   });
-  const compressed = await imageCompression(file, COMPRESSION_OPTIONS);
-  log(`uploadSecurityReport: compressed`, {
-    originalSize: file.size,
-    compressedSize: compressed.size,
-  });
-  const uuid = crypto.randomUUID();
+  let compressed;
+  try {
+    compressed = await imageCompression(file, COMPRESSION_OPTIONS);
+    log(`uploadSecurityReport: compressed`, {
+      originalSize: file.size,
+      compressedSize: compressed.size,
+    });
+  } catch (e) {
+    console.error(`[storage.js] uploadSecurityReport: 圧縮失敗`, e);
+    throw new Error(`画像圧縮に失敗しました: ${e.message}`);
+  }
+
+  // crypto.randomUUID() はセキュアコンテキスト(HTTPS/localhost)必須のため、
+  // HTTP接続（実機ローカル検証など）では crypto.getRandomValues() にフォールバックする
+  const uuid =
+    crypto.randomUUID?.() ??
+    "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = crypto.getRandomValues(new Uint8Array(1))[0] & 15;
+      return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
+    });
   const fileRef = ref(
     storage,
     `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports/${uuid}.jpg`,
   );
   log(`uploadSecurityReport: uploading to`, fileRef.fullPath);
-  await uploadBytes(fileRef, compressed, {
-    customMetadata: { uploadedBy: uid },
-  });
+  try {
+    await uploadBytes(fileRef, compressed, {
+      customMetadata: { uploadedBy: uid },
+    });
+  } catch (e) {
+    console.error(`[storage.js] uploadSecurityReport: アップロード失敗`, e);
+    throw new Error(`アップロードに失敗しました: ${e.message}`);
+  }
   log(`uploadSecurityReport: done`, fileRef.fullPath);
   return fileRef;
 }

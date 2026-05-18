@@ -61,7 +61,8 @@ const internalDocs = computed(() => {
  *****************************************************************************/
 /**
  * AirArrayManager の before-edit イベントハンドラー。
- * - 現場稼働予定ドキュメントを取得する。；
+ * - 現場稼働予定ドキュメントを取得する。
+ * - 警備日報写真の一覧を取得する。
  * @param editMode
  * @param notification
  */
@@ -72,6 +73,7 @@ async function beforeEditHandler(editMode, notification) {
     await siteOperationSchedule.fetch({
       docId: notification.siteOperationScheduleId,
     });
+    await securityReports.fetch();
     return true;
   } catch (error) {
     logger.error({ error });
