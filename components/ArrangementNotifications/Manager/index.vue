@@ -9,6 +9,7 @@ import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useConstants } from "@/composables/useConstants";
+import { useSecurityReports } from "@/composables/storage/useSecurityReports";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -31,6 +32,9 @@ const { ARRANGEMENT_NOTIFICATION_STATUS: DEFINITION } = useConstants();
  * DEFINE STATES
  *****************************************************************************/
 const siteOperationSchedule = reactive(new SiteOperationSchedule());
+const securityReports = useSecurityReports(
+  toRef(siteOperationSchedule, "docId"),
+);
 
 // ルートコンポーネントである AirArrayManager への参照。
 // 下番への状態遷移時、AirArrayManager の quitEditing メソッドを呼び出すために利用。
@@ -172,6 +176,57 @@ async function onUpdateHandler(item) {
           </div>
         </v-card-text>
       </v-card>
+
+      <!-- SECURITY REPORT FILE UPLOADER -->
+      <v-col cols="12">
+        <v-file-input v-bind="securityReports.attrs.value" class="mb-1" />
+      </v-col>
+
+      <!-- 取得した画像一覧 -->
+      <v-row v-if="!securityReports.isEmpty.value">
+        <v-col
+          v-for="report in securityReports.reports.value"
+          :key="report.ref.fullPath"
+          cols="12"
+          sm="6"
+          md="4"
+        >
+          <v-card>
+            <!-- サムネイルがあればサムネイル、なければ本体 URL を表示 -->
+            <v-img
+              :src="report.thumbUrl ?? report.url"
+              aspect-ratio="1.5"
+              cover
+            >
+              <template #placeholder>
+                <v-row class="fill-height ma-0" align="center" justify="center">
+                  <v-progress-circular indeterminate color="grey" />
+                </v-row>
+              </template>
+            </v-img>
+            <v-card-actions>
+              <v-btn
+                color="error"
+                size="small"
+                variant="text"
+                :loading="securityReports.isDeleting(report)"
+                @click="securityReports.del(report)"
+              >
+                削除
+              </v-btn>
+              <v-spacer />
+              <v-btn
+                :href="report.url"
+                target="_blank"
+                size="small"
+                variant="text"
+              >
+                フルサイズを開く
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-col>
+      </v-row>
     </template>
     <template #editor-actions="{ item, submit }">
       <!-- 状態遷移ボタン -->
