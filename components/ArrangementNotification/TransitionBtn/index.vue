@@ -58,23 +58,17 @@ const targetDefinition = computed(() => {
 /**
  * Returns the attributes to be applied to the transition button
  * based on the `currentDefinition` and `targetDefinition'.
- * If either definition is missing or invalid, the button will be
- * disabled with a default text `操作できません`.
- * Otherwise, it will use the color and disabled state from the
- * target definition, and the text from the current definition.
+ * Otherwise, it will use the color from the target definition,
+ * and the text from the current definition.
  * @returns {Object}
  */
 const attrs = computed(() => {
   const result = {
     color: undefined,
-    disabled: true,
     text: "操作できません",
   };
   if (currentDefinition.value && targetDefinition.value) {
     result.color = targetDefinition.value.color;
-    result.disabled = targetDefinition.value.disabled(
-      currentDefinition.value.value,
-    );
     result.text =
       currentDefinition.value?.[props.type]?.text || "操作できません";
   }
