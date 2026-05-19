@@ -32,24 +32,31 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
       title="現場稼働詳細"
     />
     <v-card-text v-if="selectedSchedule" class="flex-grow-1 overflow-y-auto">
-      <SiteOperationScheduleTable
-        v-if="selectedSchedule"
-        class="mb-4"
-        :arrangement-notifications="notifications"
-        :schedule="selectedSchedule"
-      >
-        <template #append-header>
-          <th>ステータス</th>
-        </template>
-        <template #append="{ worker }">
-          <td>
-            <ArrangementNotificationManager
-              :doc="notificationsMap[worker.notificationKey]"
-            />
-          </td>
-        </template>
-      </SiteOperationScheduleTable>
-      <SecurityReportsManager :schedule="selectedSchedule" />
+      <div class="d-flex flex-wrap fill-height ga-4">
+        <SiteOperationScheduleTable
+          v-if="selectedSchedule"
+          class="mb-4"
+          :arrangement-notifications="notifications"
+          :schedule="selectedSchedule"
+        >
+          <template #append-header>
+            <th>ステータス</th>
+          </template>
+          <template #append="{ worker }">
+            <td>
+              <ArrangementNotificationManager
+                :doc="notificationsMap[worker.notificationKey]"
+              />
+            </td>
+          </template>
+        </SiteOperationScheduleTable>
+        <v-card class="d-flex flex-column flex-grow-1" style="min-width: 360px">
+          <SecurityReportsManager
+            class="flex-grow-1"
+            :schedule="selectedSchedule"
+          />
+        </v-card>
+      </div>
     </v-card-text>
     <v-empty-state
       v-else

@@ -158,21 +158,20 @@ async function onUpdateHandler(item) {
       </air-list>
 
       <!-- MEMBERS -->
-      <v-card class="mb-4">
-        <v-toolbar color="accent" density="compact" title="メンバー" />
-        <v-card-text>
-          <div class="d-flex flex-wrap ga-2">
-            <WorkerChip
-              v-for="(worker, index) of siteOperationSchedule.workers"
-              :key="index"
-              :worker="worker"
-              density="compact"
-            />
-          </div>
-        </v-card-text>
-      </v-card>
+      <v-list-subheader>メンバー</v-list-subheader>
+      <v-divider class="mb-2" />
+      <div class="mb-4 d-flex flex-wrap ga-2">
+        <WorkerChip
+          v-for="(worker, index) of siteOperationSchedule.workers"
+          :key="index"
+          :worker="worker"
+          density="compact"
+        />
+      </div>
 
       <!-- SECURITY REPORT FILE UPLOADER -->
+      <v-list-subheader>警備日報</v-list-subheader>
+      <v-divider class="mb-2" />
       <SecurityReportsManager
         v-if="
           item.status === DEFINITION.ARRIVED.value ||

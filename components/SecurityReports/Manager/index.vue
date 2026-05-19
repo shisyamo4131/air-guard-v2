@@ -41,23 +41,19 @@ const currentReport = ref(null);
 </script>
 
 <template>
-  <v-card>
-    <v-toolbar color="accent" density="compact" title="警備日報" />
-    <v-card-text>
-      <SecurityReportsWindow
-        v-if="reports.length !== 0"
-        :reports="reports"
-        :img-props="props.imgProps"
-        :thumb="props.thumb"
-        @current-report="currentReport = $event"
-      />
-      <v-empty-state
-        v-else
-        title="警備日報は登録されていません"
-        icon="mdi-image-off"
-      />
-    </v-card-text>
-    <v-card-text>
+  <div class="d-flex flex-column">
+    <SecurityReportsWindow
+      v-if="reports.length !== 0"
+      class="flex-grow-1"
+      :reports="reports"
+      :img-props="props.imgProps"
+      :thumb="props.thumb"
+      @current-report="currentReport = $event"
+    />
+    <div v-else class="flex-grow-1">
+      <v-empty-state icon="mdi-image-off" />
+    </div>
+    <v-card-text class="flex-grow-0 pb-0">
       <v-file-input
         v-bind="attrs"
         density="compact"
@@ -86,5 +82,5 @@ const currentReport = ref(null);
         text="フルサイズ"
       />
     </v-card-actions>
-  </v-card>
+  </div>
 </template>
