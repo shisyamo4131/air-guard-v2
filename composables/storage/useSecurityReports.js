@@ -72,11 +72,15 @@ export function useSecurityReports(
    * - scheduleId が null/undefined から有効な値に変わった場合もトリガーされる
    * - scheduleId が同じ値に変更された場合はトリガーされない
    */
-  Vue.watch(scheduleId, async (newScheduleId, oldScheduleId) => {
-    if (!fetchOnChanged) return;
-    if (newScheduleId === oldScheduleId) return;
-    await fetch();
-  });
+  Vue.watch(
+    scheduleId,
+    async (newScheduleId, oldScheduleId) => {
+      if (!fetchOnChanged) return;
+      if (newScheduleId === oldScheduleId) return;
+      await fetch();
+    },
+    { immediate: true },
+  );
 
   /*****************************************************************************
    * METHODS
@@ -105,7 +109,7 @@ export function useSecurityReports(
    * @param report
    */
   async function del(report) {
-    const path = report.ref.fullPath;
+    const path = report?.ref?.fullPath || null;
     deletingPaths.value = new Set([...deletingPaths.value, path]);
     try {
       await deleteSecurityReport(report.ref);
@@ -125,7 +129,7 @@ export function useSecurityReports(
    * @returns {boolean} 削除処理中であればtrue、そうでなければfalse
    */
   function isDeleting(report) {
-    const path = report.ref.fullPath;
+    const path = report?.ref?.fullPath || null;
     return deletingPaths.value.has(path);
   }
 

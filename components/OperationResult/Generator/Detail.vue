@@ -34,6 +34,7 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
     <v-card-text v-if="selectedSchedule" class="flex-grow-1 overflow-y-auto">
       <SiteOperationScheduleTable
         v-if="selectedSchedule"
+        class="mb-4"
         :arrangement-notifications="notifications"
         :schedule="selectedSchedule"
       >
@@ -48,6 +49,7 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
           </td>
         </template>
       </SiteOperationScheduleTable>
+      <SecurityReportsManager :schedule="selectedSchedule" />
     </v-card-text>
     <v-empty-state
       v-else

@@ -65,7 +65,8 @@ const targetDefinition = computed(() => {
 const attrs = computed(() => {
   const result = {
     color: undefined,
-    text: "操作できません",
+    text: "下番済みです",
+    disabled: true,
   };
   if (currentDefinition.value && targetDefinition.value) {
     result.color = targetDefinition.value.color;
