@@ -19,14 +19,13 @@
  * なお、N-gram による検索結果は `fetchXxxComposable` 自体がキャッシュしてくれるので
  * 検索APIを呼び出すたびに N-gram による検索が走ることはない。
  *****************************************************************************/
-import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useDefaults } from "vuetify";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  fetchCustomerComposable: { type: Object, default: () => useFetchCustomer() },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "取引先" },
   itemTitle: { type: String, default: "abbreviation" },
@@ -39,7 +38,8 @@ const emit = defineEmits(["update:model-value"]);
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { getCustomer, searchCustomers } = props.fetchCustomerComposable;
+const { fetchCustomerComposable } = useFetch("CustomerAutocomplete");
+const { getCustomer, searchCustomers } = fetchCustomerComposable;
 
 /*****************************************************************************
  * METHODS

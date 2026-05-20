@@ -19,17 +19,13 @@
  * なお、N-gram による検索結果は `fetchXxxComposable` 自体がキャッシュしてくれるので
  * 検索APIを呼び出すたびに N-gram による検索が走ることはない。
  *****************************************************************************/
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useFetch } from "@/composables/fetch/useFetch";
 import { useDefaults } from "vuetify";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  fetchOutsourcerComposable: {
-    type: Object,
-    default: () => useFetchOutsourcer(),
-  },
   creatable: { type: Boolean, default: false },
   label: { type: String, default: "外注先" },
   itemTitle: { type: String, default: "displayName" },
@@ -42,7 +38,8 @@ const emit = defineEmits(["update:model-value"]);
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { getOutsourcer, searchOutsourcers } = props.fetchOutsourcerComposable;
+const { fetchOutsourcerComposable } = useFetch("OutsourcerAutocomplete");
+const { getOutsourcer, searchOutsourcers } = fetchOutsourcerComposable;
 
 /*****************************************************************************
  * METHODS
