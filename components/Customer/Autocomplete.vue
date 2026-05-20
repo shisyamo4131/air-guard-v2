@@ -2,6 +2,22 @@
 /*****************************************************************************
  * @file ./components/Customer/Autocomplete.vue
  * @description A autocomplete component of 'Customer'.
+ *
+ * @note
+ * `AutocompleteApi` に対する設定は以下のようにする。
+ * - `fetchXxxComposable` が提供する検索APIを `api` に渡す。
+ * - 検索と検索結果のキャッシュは `fetchXxxComposable` に任せる。
+ * - `custom-filter` は常に `true` を返すようにする。
+ *   -> `Autocomplete` 自体のフィルタリングによって実際に入力された文字列で検索結果が
+ *      絞り込まれてしまう為、内部で使用している N-gram 検索と競合してしまうため。
+ * - `cache-items` は使用しない。
+ *   -> `cache-items` は `AirApiLoader` が検索結果をキャッシュするためのもので
+ *      これを `true` にすると、検索結果とキャッシュされたアイテムがマージされ、
+ *      `Autocomplete` の `items` に引き渡されてしまい、`custom-filter` が常に `true` を
+ *      返す設定と競合してしまうため。
+ *      つまりは、検索結果のみが `Autocomplete` の `items` に引き渡されるようにしなければならない。
+ * なお、N-gram による検索結果は `fetchXxxComposable` 自体がキャッシュしてくれるので
+ * 検索APIを呼び出すたびに N-gram による検索が走ることはない。
  *****************************************************************************/
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useDefaults } from "vuetify";
@@ -23,8 +39,7 @@ const emit = defineEmits(["update:model-value"]);
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { getCustomer, searchCustomers, cachedCustomersArray } =
-  props.fetchCustomerComposable;
+const { getCustomer, searchCustomers } = props.fetchCustomerComposable;
 
 /*****************************************************************************
  * METHODS
@@ -39,8 +54,7 @@ function onCreateHandler(event) {
   <air-autocomplete-api
     :api="searchCustomers"
     :fetchItemByKeyApi="getCustomer"
-    :items="cachedCustomersArray"
-    cache-items
+    :custom-filter="() => true"
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"
