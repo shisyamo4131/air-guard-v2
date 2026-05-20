@@ -7,6 +7,7 @@
  * - isOrigin = false: Use parent's provided composables if available, otherwise create and provide new instances
  *****************************************************************************/
 import * as Vue from "vue";
+import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -34,6 +35,16 @@ export function useFetch(componentName, isOrigin = false) {
   /*****************************************************************************
    * FACTORY FUNCTIONS
    *****************************************************************************/
+  const customerFactory = () => {
+    if (isDev) {
+      logger.warn({
+        message:
+          "fetchCustomerComposable is not provided. Using default useFetchCustomer.",
+      });
+    }
+    return useFetchCustomer();
+  };
+
   const employeeFactory = () => {
     if (isDev) {
       logger.warn({
@@ -67,6 +78,18 @@ export function useFetch(componentName, isOrigin = false) {
   /*****************************************************************************
    * SETUP FETCH COMPOSABLES
    *****************************************************************************/
+  let fetchCustomerComposable;
+  let isCustomerComposableProvided = false;
+  if (isOrigin) {
+    fetchCustomerComposable = useFetchCustomer();
+  } else {
+    const injected = Vue.inject("fetchCustomerComposable", null);
+    isCustomerComposableProvided = injected !== null;
+    fetchCustomerComposable = isCustomerComposableProvided
+      ? injected
+      : customerFactory();
+  }
+
   let fetchEmployeeComposable;
   let isEmployeeComposableProvided = false;
   if (isOrigin) {
@@ -109,14 +132,18 @@ export function useFetch(componentName, isOrigin = false) {
     if (isDev) {
       logger.info({
         message:
-          "[isOrigin=true] Providing fetchEmployeeComposable, fetchOutsourcerComposable and fetchSiteComposable.",
+          "[isOrigin=true] Providing fetchCustomerComposable, fetchEmployeeComposable, fetchOutsourcerComposable and fetchSiteComposable.",
       });
     }
+    Vue.provide("fetchCustomerComposable", fetchCustomerComposable);
     Vue.provide("fetchEmployeeComposable", fetchEmployeeComposable);
     Vue.provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
     Vue.provide("fetchSiteComposable", fetchSiteComposable);
   } else {
     // isOrigin = false: Provide only if not provided by parent
+    if (!isCustomerComposableProvided) {
+      Vue.provide("fetchCustomerComposable", fetchCustomerComposable);
+    }
     if (!isEmployeeComposableProvided) {
       Vue.provide("fetchEmployeeComposable", fetchEmployeeComposable);
     }
@@ -132,9 +159,11 @@ export function useFetch(componentName, isOrigin = false) {
    * RETURN
    *****************************************************************************/
   return {
+    fetchCustomerComposable,
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
     fetchSiteComposable,
+    isCustomerComposableProvided,
     isEmployeeComposableProvided,
     isOutsourcerComposableProvided,
     isSiteComposableProvided,
