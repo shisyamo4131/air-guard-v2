@@ -66,12 +66,12 @@ const attrs = computed(() => {
   const result = {
     color: undefined,
     text: "下番済みです",
-    disabled: true,
   };
   if (currentDefinition.value && targetDefinition.value) {
     result.color = targetDefinition.value.color;
-    result.text =
-      currentDefinition.value?.[props.type]?.text || "操作できません";
+    result.text = currentDefinition.value?.[props.type]?.text || "N/A";
+  } else {
+    result.disabled = true;
   }
 
   return result;
