@@ -5,8 +5,6 @@
  *****************************************************************************/
 // COMPOSABLES
 import { useFetch } from "@/composables/fetch/useFetch";
-// COMPONENTS
-import Toolbar from "./Toolbar.vue";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -36,10 +34,6 @@ const headers = computed(() => {
 
 <template>
   <air-data-table v-bind="$attrs" :headers="headers">
-    <template #top>
-      <Toolbar v-bind="$attrs" />
-    </template>
-
     <!-- 作業員名 -->
     <template #[`item.displayName`]="{ item }">
       <AtomsIconsHasLicense v-if="item.isQualified" />

@@ -9,6 +9,7 @@ import { useDefaults } from "vuetify";
 import { OperationResultDetail } from "@/schemas";
 // COMPONENTS
 import CustomInput from "@/components/OperationResult/Worker/CustomInput.vue";
+import Toolbar from "./Toolbar.vue";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -33,6 +34,7 @@ const props = useDefaults(_props, "OperationResultWorkersManager");
     :custom-input="props.customInput"
   >
     <template #table="tableProps">
+      <Toolbar v-bind="tableProps" />
       <OperationResultWorkersDataTable v-bind="tableProps" />
     </template>
   </air-array-manager>

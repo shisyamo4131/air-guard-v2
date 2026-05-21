@@ -42,6 +42,12 @@ const site = computed(() => {
 const siteName = computed(() => {
   return site.value?.name || "読み込み中...";
 });
+const customer = computed(() => {
+  return site.value?.customer || null;
+});
+const customerName = computed(() => {
+  return customer.value?.abbreviation || "読み込み中...";
+});
 const dayTypeTitle = computed(() => {
   return DAY_TYPE.value?.[props.item.dayType]?.title || "N/A";
 });
@@ -62,12 +68,17 @@ const requiredPersonnel = computed(() => {
 });
 const items = computed(() => {
   return [
-    { title: "現場名", props: { subtitle: siteName.value } },
+    { title: "取引先", props: { subtitle: `${customerName.value}` } },
+    { title: "現場", props: { subtitle: `${siteName.value}` } },
     { title: "日付", props: { subtitle: props.item.date || "-" } },
-    { title: "曜日区分", props: { subtitle: dayTypeTitle.value } },
-    { title: "勤務区分", props: { subtitle: shiftTypeTitle.value } },
-    { title: "定時時間", props: { subtitle: time.value } },
-    { title: "休憩時間", props: { subtitle: breakMinutes.value } },
+    {
+      title: "曜日・勤務区分",
+      props: { subtitle: `${dayTypeTitle.value} / ${shiftTypeTitle.value}` },
+    },
+    {
+      title: "定時時間(休憩)",
+      props: { subtitle: `${time.value}(${breakMinutes.value})` },
+    },
     { title: "規定労働時間", props: { subtitle: regulationWorkMinutes.value } },
     { title: "必要人数", props: { subtitle: requiredPersonnel.value } },
     {
