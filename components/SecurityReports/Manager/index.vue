@@ -4,8 +4,6 @@
  * @description A component to manage `SecurityReports`.
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-/** SCHEMAS */
-import { SiteOperationSchedule } from "@/schemas";
 /** COMPOSABLES */
 import { useSecurityReports } from "@/composables/storage/useSecurityReports";
 
@@ -13,11 +11,7 @@ import { useSecurityReports } from "@/composables/storage/useSecurityReports";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  schedule: {
-    type: Object,
-    default: null,
-    validator: (obj) => obj === null || obj instanceof SiteOperationSchedule,
-  },
+  scheduleId: { type: String, default: null },
   imgProps: { type: Object, default: () => ({}) },
   thumb: { type: Boolean, default: false },
 });
@@ -28,7 +22,7 @@ const emit = defineEmits(["click:delete"]);
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { attrs, reports, isDeleting, del } = useSecurityReports(
-  toRef(() => props.schedule?.docId || null),
+  toRef(() => props.scheduleId),
   {
     fetchOnChanged: true,
   },
@@ -57,6 +51,7 @@ const currentReport = ref(null);
       <v-file-input
         v-bind="attrs"
         density="compact"
+        :disabled="!props.scheduleId"
         variant="outlined"
         hide-details
       />

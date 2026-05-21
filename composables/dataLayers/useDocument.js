@@ -41,6 +41,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * @param {string|Ref<string>} options.docId - The document ID to subscribe to
  *   - Can be a static string or a reactive ref
  *   - Required and must be a non-empty string
+ * @param {Function} [callback=(doc)=>{}] - Optional callback function invoked after documents are fetched.
  * @returns {Object} - The composable return object
  * @returns {Object} doc - Reactive document instance that updates in real-time
  *   - Contains all properties of the specified schema class
@@ -51,7 +52,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
  *
  * @see {@link https://firebase.google.com/docs/firestore/query-data/listen|Firestore Realtime Updates}
  */
-export function useDocument(className, { docId } = {}) {
+export function useDocument(className, { docId } = {}, callback = (doc) => {}) {
   /** SETUP */
   // 1. Retrieve the schema class
   const SchemaClass = Schemas?.[className];
@@ -59,7 +60,7 @@ export function useDocument(className, { docId } = {}) {
     const availableClasses = Object.keys(Schemas).join(", ");
     throw new Error(
       `Schema class "${className}" not found in @/schemas. ` +
-        `Available classes: ${availableClasses}`
+        `Available classes: ${availableClasses}`,
     );
   }
 
@@ -72,7 +73,7 @@ export function useDocument(className, { docId } = {}) {
   /** VALIDATION */
   if (!docId || typeof docId !== "string") {
     throw new Error(
-      `A valid docId string is required. Received: ${typeof docId}`
+      `A valid docId string is required. Received: ${typeof docId}`,
     );
   }
 
@@ -82,7 +83,7 @@ export function useDocument(className, { docId } = {}) {
    * @returns {void}
    */
   function subscribe() {
-    schemaInstance.subscribe({ docId });
+    schemaInstance.subscribe({ docId }, callback);
   }
 
   /**

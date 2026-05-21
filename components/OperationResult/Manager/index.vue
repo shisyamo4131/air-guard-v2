@@ -1,33 +1,37 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Site/Manager/index.vue
- * @description 現場管理コンポーネント
+ * @file ./components/OperationResult/Manager/index.vue
+ * @description 稼働実績管理コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
-import { useBaseManager } from "@/composables/useBaseManager";
 import { useDefaults } from "vuetify";
-import CustomInput from "@/components/Site/CustomInput/index.vue";
-import { Site } from "@/schemas";
+// SCHEMAS
+import { OperationResult } from "@/schemas";
+// COMPOSABLES
+import { useBaseManager } from "@/composables/useBaseManager";
+// COMPONENTS
+import CustomInput from "@/components/OperationResult/CustomInput/index.vue";
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  customInput: { type: Object, default: CustomInput },
   doc: {
     type: Object,
     required: true,
-    validator: (value) => value instanceof Site,
+    validator: (value) => value instanceof OperationResult,
   },
   handleCreate: { type: Function, default: (item) => item.create(item) },
   handleUpdate: { type: Function, default: (item) => item.update(item) },
   handleDelete: { type: Function, default: (item) => item.delete(item) },
 });
-const props = useDefaults(_props, "SiteManager");
+const props = useDefaults(_props, "OperationResultManager");
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { attrs } = useBaseManager("SiteManager");
+const { attrs } = useBaseManager("OperationResultManager");
 </script>
 
 <template>
@@ -37,22 +41,10 @@ const { attrs } = useBaseManager("SiteManager");
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
-    :custom-input="
-      ({ editMode }) => {
-        if (editMode === 'CREATE') return CustomInput;
-        return null;
-      }
-    "
+    :disable-delete="(item) => item.isLocked"
+    :disable-submit="(item) => item.isLocked"
+    :custom-input="props.customInput"
   >
-    <template #activator="slotProps">
-      <slot name="activator" v-bind="slotProps" />
-    </template>
-
-    <template #[`input.customerId`]="{ attrs }">
-      <CustomerAutocomplete v-bind="attrs" creatable />
-    </template>
-
-    <!-- スロットをパススルー -->
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}" />
     </template>

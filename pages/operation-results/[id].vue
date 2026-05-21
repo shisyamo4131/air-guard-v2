@@ -1,152 +1,74 @@
 <script setup>
-import dayjs from "dayjs";
 import { useDocument } from "@/composables/dataLayers/useDocument";
-import { useFetchSite } from "~/composables/fetch/useFetchSite";
-import { useFetchEmployee } from "~/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "~/composables/fetch/useFetchOutsourcer";
-import { useOperationResultManager } from "~/composables/useOperationResultManager";
-import {
-  DAY_TYPE_VALUES,
-  SHIFT_TYPE_VALUES,
-} from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-// Router for getting route params
 const route = useRoute();
 const docId = route.params.id;
-
-const { doc } = useDocument("OperationResult", { docId });
-
-// Fetch composables
-const fetchSiteComposable = useFetchSite();
-const fetchEmployeeComposable = useFetchEmployee();
-const fetchOutsourcerComposable = useFetchOutsourcer();
-provide("fetchSiteComposable", fetchSiteComposable);
-provide("fetchEmployeeComposable", fetchEmployeeComposable);
-provide("fetchOutsourcerComposable", fetchOutsourcerComposable);
-
-// Manager composable
-const { attrs, addWorker, changeWorker, removeWorker } =
-  useOperationResultManager({
-    doc,
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  });
+const {
+  fetchSiteComposable,
+  fetchEmployeeComposable,
+  fetchOutsourcerComposable,
+} = useFetch("OperationResult", true);
+const { fetchSite } = fetchSiteComposable;
+const { fetchEmployee } = fetchEmployeeComposable;
+const { fetchOutsourcer } = fetchOutsourcerComposable;
+const { doc } = useDocument("OperationResult", { docId }, (doc) => {
+  fetchSite(doc.siteId);
+  fetchEmployee(doc.employeeIds);
+  fetchOutsourcer(doc.outsourcerIds);
+});
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <v-row>
       <v-col v-if="doc.isLocked" cols="12">
-        <v-banner color="primary" icon="mdi-lock">
-          <v-banner-text>
-            この稼働実績は編集ロックされています。編集はできません。
-          </v-banner-text>
-        </v-banner>
+        <v-alert
+          color="warning"
+          icon="mdi-lock"
+          density="compact"
+          text="この稼働実績は編集ロックされています。編集はできません。"
+        >
+        </v-alert>
       </v-col>
-      <v-col cols="12">
-        <v-card>
-          <template #title>
-            {{
-              `${
-                fetchSiteComposable.cachedSites.value?.[doc.siteId]?.name ||
-                "loading..."
-              }`
-            }}
-          </template>
-        </v-card>
-      </v-col>
+      <!-- LEFT SIDE -->
       <v-col cols="12" lg="3">
         <v-row>
+          <!-- 基本情報 -->
           <v-col cols="12">
-            <air-item-manager
-              v-bind="attrs"
-              disable-update
-              :included-keys="[
-                'siteId',
-                'dateAt',
-                'dayType',
-                'shiftType',
-                'startTime',
-                'endTime',
-                'breakMinutes',
-                'workDescription',
-                'remarks',
-              ]"
-            >
-              <template #activator="{ props: activatorProps }">
-                <v-card>
-                  <template #text>
-                    <v-list slim>
-                      <v-list-item
-                        :title="`${dayjs(doc.dateAt).format(
-                          'YYYY年M月D日（ddd）',
-                        )}`"
-                        subtitle="日付"
-                      />
-                      <v-list-item
-                        :title="`${
-                          DAY_TYPE_VALUES?.[doc.dayType]?.title || 'undefined'
-                        }`"
-                        subtitle="曜日区分"
-                      />
-                      <v-list-item
-                        :title="`${
-                          SHIFT_TYPE_VALUES?.[doc.shiftType]?.title ||
-                          'undefined'
-                        }`"
-                        subtitle="勤務区分"
-                      />
-                      <v-list-item
-                        :title="`${doc.startTime} - ${doc.endTime}`"
-                        subtitle="定時勤務時間"
-                      />
-                      <v-list-item
-                        :title="`${doc.breakMinutes}`"
-                        subtitle="休憩時間（分）"
-                      />
-                      <v-list-item
-                        :title="`${doc.workDescription || '-'}`"
-                        subtitle="作業内容"
-                      />
-                    </v-list>
-                    <v-card v-if="doc.remarks" :text="doc.remarks" />
-                  </template>
-                  <template v-if="!activatorProps.disableUpdate" #actions>
-                    <MoleculesActionsEdit v-bind="activatorProps" />
-                  </template>
-                </v-card>
-              </template>
-              <template #[`input.siteId`]="inputAttrs">
-                <SiteAutocomplete
-                  v-bind="inputAttrs.attrs"
-                  :fetch-site-composable="fetchSiteComposable"
-                  clearable
-                  :disabled="inputAttrs.editMode !== 'CREATE'"
+            <OperationResultManager :doc="doc" label="基本情報" hide-delete-btn>
+              <template #activator="activatorProps">
+                <OperationResultActivatorBase
+                  v-bind="activatorProps"
+                  :disabled="doc.isLocked"
                 />
               </template>
-            </air-item-manager>
+            </OperationResultManager>
           </v-col>
         </v-row>
       </v-col>
+
+      <!-- RIGHT SIDE -->
       <v-col cols="12" lg="9">
-        <OrganismsOperationResultWorkersManager
-          :model-value="doc.workers"
-          :handle-create="addWorker"
-          :handle-update="changeWorker"
-          :handle-delete="removeWorker"
-          :hide-action="doc.isLocked"
-          :hide-create-button="doc.isLocked"
-        />
-      </v-col>
-      <v-col cols="12">
-        <AtomsAlertsWarn v-if="!!doc.siteOperationScheduleId"
-          >稼働予定から作成された稼働実績です。</AtomsAlertsWarn
-        >
+        <v-row>
+          <v-col cols="12">
+            <OperationResultWorkersManager
+              v-model="doc.workers"
+              :disabled="doc.isLocked"
+              @submit:complete="async () => await doc.update()"
+            />
+          </v-col>
+          <v-col cols="12">
+            <v-card>
+              <v-toolbar color="secondary" density="compact" title="警備日報" />
+              <SecurityReportsManager :schedule-id="doc?.docId" />
+            </v-card>
+          </v-col>
+        </v-row>
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

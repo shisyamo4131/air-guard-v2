@@ -79,11 +79,11 @@ function onClickNext() {
 </script>
 
 <template>
-  <div class="d-flex align-center justify-space-between">
+  <div class="d-flex align-center">
     <v-btn icon="mdi-chevron-left" size="small" @click="onClickPrev" />
-    <v-sheet flat class="text-h6">
+    <div flat class="text-h6">
       <span>{{ monthString }}</span>
-    </v-sheet>
+    </div>
     <v-btn icon="mdi-chevron-right" size="small" @click="onClickNext" />
   </div>
 </template>

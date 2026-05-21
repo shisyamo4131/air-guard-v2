@@ -1,52 +1,70 @@
 <script setup>
+import * as Vue from "vue";
+import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
-import { useOperationResultsManager } from "@/composables/useOperationResultsManager";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+// ROUTER
+const router = useRouter();
+
 // Date Range
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
-const { dateRange } = dateRangeComposable;
+const { dateRange, debouncedDateRange } = dateRangeComposable;
 
-const fetchSiteComposable = useFetchSite();
+// Fetch
+const { fetchSiteComposable } = useFetch("OperationResults", true);
+const { fetchSite } = fetchSiteComposable;
 
-// Manager
-const { attrs, cachedSites } = useOperationResultsManager({
-  dateRangeComposable,
-  useDebounced: true,
-  fetchSiteComposable,
-  immediate: true,
+// Data Layer
+const options = Vue.computed(() => {
+  return [
+    ["where", "dateAt", ">=", debouncedDateRange.value.from],
+    ["where", "dateAt", "<=", debouncedDateRange.value.to],
+  ];
 });
+const { docs } = useDocuments(
+  "OperationResult",
+  { options, fetchAllOnEmpty: true },
+  (doc) => fetchSite(doc.siteId),
+);
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * Handles the update action for an item.
+ * @param item The item to be updated.
+ */
+function handleClickUpdate(item) {
+  router.push(`/operation-results/${item.docId}`);
+}
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
-    <air-array-manager class="fill-height" v-bind="attrs">
-      <template #search>
-        <MoleculesMonthSelector
-          :model-value="dateRange.from"
-          @date-range="dateRange = $event"
-        />
+  <v-container class="fill-height align-start">
+    <OperationResultsManager
+      class="fill-height"
+      :docs="docs"
+      :handle-click-update="handleClickUpdate"
+    >
+      <!-- TABLE -->
+      <template #table="tableProps">
+        <OperationResultsDataTable v-bind="tableProps">
+          <template #search>
+            <MoleculesMonthSelector
+              :model-value="dateRange.from.value"
+              @date-range="dateRange = $event"
+            />
+          </template>
+        </OperationResultsDataTable>
       </template>
-      <template #[`item.siteId`]="{ item }">
-        <div v-if="cachedSites[item.siteId]">
-          <div>{{ cachedSites[item.siteId].name }}</div>
-          <div>{{ cachedSites[item.siteId].customer.name }}</div>
-        </div>
-        <v-progress-circular v-else indeterminate size="small" />
-      </template>
-      <template #[`input.siteId`]="{ attrs }">
-        <SiteAutocomplete
-          v-bind="attrs"
-          creatable
-          :fetch-site-composable="fetchSiteComposable"
-        />
-      </template>
-    </air-array-manager>
-  </TemplatesFixedHeightContainer>
+    </OperationResultsManager>
+  </v-container>
 </template>

@@ -177,7 +177,7 @@ async function onUpdateHandler(item) {
           item.status === DEFINITION.ARRIVED.value ||
           item.status === DEFINITION.LEAVED.value
         "
-        :schedule="siteOperationSchedule"
+        :schedule-id="siteOperationSchedule.docId"
       />
     </template>
     <template #editor-actions="{ item, submit }">

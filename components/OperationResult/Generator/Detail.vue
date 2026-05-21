@@ -53,7 +53,7 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
         <v-card class="d-flex flex-column flex-grow-1" style="min-width: 360px">
           <SecurityReportsManager
             class="flex-grow-1"
-            :schedule="selectedSchedule"
+            :schedule-id="selectedSchedule?.docId"
           />
         </v-card>
       </div>
