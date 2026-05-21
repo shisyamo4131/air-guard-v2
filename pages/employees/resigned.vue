@@ -39,12 +39,13 @@ const { docs } = useDocuments("Employee", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <EmployeesManager
+      class="fill-height"
       :docs="docs"
       v-model:search="search"
       :items-per-page="20"
       @click:detail="(item) => router.push(`/employees/${item.docId}`)"
     />
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

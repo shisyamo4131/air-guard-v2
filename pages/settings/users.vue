@@ -30,11 +30,11 @@ const { docs } = useDocuments("User", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <UsersManager
       class="fill-height"
       :docs="docs"
       :sort-by="[{ key: 'email', order: 'asc' }]"
     />
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

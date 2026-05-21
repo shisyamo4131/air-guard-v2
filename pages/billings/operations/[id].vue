@@ -38,7 +38,7 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <v-row>
       <v-col cols="12">
         <v-card>
@@ -332,5 +332,5 @@ const { attrs, info, includedKeys, site, toggleLock, isLoading } =
         />
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

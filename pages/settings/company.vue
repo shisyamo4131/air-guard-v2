@@ -9,7 +9,7 @@ const { company: doc } = auth;
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <!-------------------------------------------------------------------------
       ROW: DIVIDES 2 COLUMNS
       LEFT COLUMN: COLS=12 (MOBILE), COLS=6 (TABLET), COLS=4 (DESKTOP)
@@ -66,7 +66,7 @@ const { company: doc } = auth;
         </v-row>
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>
 
 <style></style>

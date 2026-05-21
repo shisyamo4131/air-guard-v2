@@ -16,7 +16,7 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <v-row>
       <!-- LEFT SIDE -->
       <v-col cols="12" md="4">
@@ -93,5 +93,5 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
         </CustomerManager>
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

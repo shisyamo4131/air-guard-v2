@@ -25,7 +25,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <v-table>
       <tbody>
         <tr>
@@ -120,5 +120,5 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
         </tr>
       </tbody>
     </v-table>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

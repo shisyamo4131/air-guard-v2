@@ -45,7 +45,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <v-row>
       <!-- 非在職アラート -->
       <v-col cols="12" v-if="showResignedAlert">
@@ -215,5 +215,5 @@ onUnmounted(() => {
         </EmployeeManager>
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

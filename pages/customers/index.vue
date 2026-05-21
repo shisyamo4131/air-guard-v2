@@ -33,8 +33,9 @@ const { docs } = useDocuments("Customer", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <CustomersManager
+      class="fill-height"
       :docs="docs"
       v-model:search="search"
       :items-per-page="-1"
@@ -42,5 +43,5 @@ const { docs } = useDocuments("Customer", {
       @create="(item) => router.push(`/customers/${item.docId}`)"
       @click:detail="(item) => router.push(`/customers/${item.docId}`)"
     />
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

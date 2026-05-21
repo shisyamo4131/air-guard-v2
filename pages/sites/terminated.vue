@@ -34,12 +34,13 @@ const { docs } = useDocuments("Site", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <SitesManager
+      class="fill-height"
       :docs="docs"
       v-model:search="search"
       :items-per-page="20"
       @click:detail="(item) => router.push(`/sites/${item.docId}`)"
     />
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

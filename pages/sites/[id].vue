@@ -38,7 +38,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <v-row>
       <!-- LEFT SIDE -->
       <v-col cols="12" md="4">
@@ -156,5 +156,5 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
         </site-manager>
       </v-col>
     </v-row>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

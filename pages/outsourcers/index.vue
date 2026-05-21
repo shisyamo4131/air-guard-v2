@@ -38,11 +38,12 @@ const { docs } = useDocuments("Outsourcer", {
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container class="fill-height align-start">
     <OutsourcersManager
+      class="fill-height"
       :docs="docs"
       v-model:search="search"
       :items-per-page="20"
     />
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

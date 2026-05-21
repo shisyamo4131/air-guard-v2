@@ -41,7 +41,7 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <AirArrayManager v-bind="attrs" class="fill-height" ref="managerRef">
       <template #search>
         <MoleculesMonthSelector
@@ -90,5 +90,5 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
         </v-btn>
       </template>
     </AirArrayManager>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>

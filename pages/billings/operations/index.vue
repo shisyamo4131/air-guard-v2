@@ -21,7 +21,7 @@ const { attrs, cachedSites } = useOperationBillingsManager({
 </script>
 
 <template>
-  <TemplatesFixedHeightContainer>
+  <v-container>
     <air-array-manager class="fill-height" v-bind="attrs">
       <template #search>
         <MoleculesMonthSelector
@@ -40,5 +40,5 @@ const { attrs, cachedSites } = useOperationBillingsManager({
         <v-progress-circular v-else indeterminate size="small" />
       </template>
     </air-array-manager>
-  </TemplatesFixedHeightContainer>
+  </v-container>
 </template>
