@@ -3,6 +3,10 @@ import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { Customer, Billing } from "../schemas/index.js";
 
+/**
+ * `OperationResult` ドキュメントの変更をトリガーにして、
+ * `OperationBilling` ドキュメントの作成・更新・削除を行う。
+ */
 export const onOperationResultChange = onDocumentWritten(
   "Companies/{companyId}/OperationResults/{docId}",
   async (event) => {
@@ -85,11 +89,22 @@ async function initBillingDoc(
 }
 
 async function handleCreated(companyId, doc) {
-  // isInvalid が設定されている場合は処理しない
-  if (doc.isInvalid) {
-    logger.info("Skipping invalid OperationResult", {
+  // // isInvalid が設定されている場合は処理しない
+  // if (doc.isInvalid) {
+  //   logger.info("Skipping invalid OperationResult", {
+  //     operationResultId: doc.docId,
+  //     reason: doc.isInvalid,
+  //   });
+  //   return;
+  // }
+
+  // `hasAgreement` が false の場合は処理しない
+  // 取極めがない場合も実績としては確定できるため、稼働実績ドキュメントは作成される。
+  // ただし、取極めがない場合は請求データを確定できないため、稼働請求ドキュメントは作成しない。
+  if (!doc.hasAgreement) {
+    logger.info("Skipping creation of OperationBilling due to no agreement", {
       operationResultId: doc.docId,
-      reason: doc.isInvalid,
+      reason: "No agreement for this OperationResult",
     });
     return;
   }
@@ -139,45 +154,71 @@ async function handleUpdated(companyId, before, after) {
   const beforeDocId = getBillingKey(before);
   const afterDocId = getBillingKey(after);
 
-  const beforeIsInvalid = !!before.isInvalid;
-  const afterIsInvalid = !!after.isInvalid;
+  // `isInvalid` ではなく `hasAgreement` を基準に処理する
+  // const beforeIsInvalid = !!before.isInvalid;
+  // const afterIsInvalid = !!after.isInvalid;
+  const beforeHasAgreement = before.hasAgreement;
+  const afterHasAgreement = after.hasAgreement;
 
   logger.info("Handling OperationResult update", {
     operationResultId: after.docId,
     beforeBillingDocId: beforeDocId,
     beforeBillingDate: before.billingDate,
-    beforeIsInvalid,
+    // beforeIsInvalid,
+    beforeHasAgreement,
     afterBillingDocId: afterDocId,
     afterBillingDate: after.billingDate,
-    afterIsInvalid,
+    // afterIsInvalid,
+    afterHasAgreement,
   });
 
   // Case 1: 無効 → 無効（処理不要）
-  if (beforeIsInvalid && afterIsInvalid) {
-    logger.info("Skipping invalid to invalid transition", {
+  // if (beforeIsInvalid && afterIsInvalid) {
+  //   logger.info("Skipping invalid to invalid transition", {
+  //     operationResultId: after.docId,
+  //   });
+  //   return;
+  // }
+  if (!beforeHasAgreement && !afterHasAgreement) {
+    logger.info("Skipping update due to no agreement", {
       operationResultId: after.docId,
     });
     return;
   }
 
   // Case 2: 有効 → 無効（Billing から削除）
-  if (!beforeIsInvalid && afterIsInvalid) {
-    logger.info("OperationResult became invalid, removing from Billing", {
+  // if (!beforeIsInvalid && afterIsInvalid) {
+  //   logger.info("OperationResult became invalid, removing from Billing", {
+  //     operationResultId: after.docId,
+  //     reason: after.isInvalid,
+  //   });
+  //   return await handleDeleted(companyId, before);
+  // }
+  if (beforeHasAgreement && !afterHasAgreement) {
+    logger.info("Agreement has been removed, removing from Billing", {
       operationResultId: after.docId,
-      reason: after.isInvalid,
+      reason: "Agreement removed from this OperationResult",
     });
     return await handleDeleted(companyId, before);
   }
 
   // Case 3: 無効 → 有効（Billing に追加）
-  if (beforeIsInvalid && !afterIsInvalid) {
-    logger.info("OperationResult became valid, adding to Billing", {
+  // if (beforeIsInvalid && !afterIsInvalid) {
+  //   logger.info("OperationResult became valid, adding to Billing", {
+  //     operationResultId: after.docId,
+  //   });
+  //   return await handleCreated(companyId, after);
+  // }
+  if (!beforeHasAgreement && afterHasAgreement) {
+    logger.info("Agreement has been obtained, adding to Billing", {
       operationResultId: after.docId,
     });
     return await handleCreated(companyId, after);
   }
 
   // Case 4: 有効 → 有効（通常の更新処理）
+  // `OperationBilling` ドキュメントの `docId` は `customerId_siteId_billingDate` 形式であるため、
+  // `billingDate` の変更に伴い `docId` が変わる可能性がある。
   const isSameBillingDoc = beforeDocId === afterDocId;
 
   // 同じ Billing 内での更新（トランザクション不要）
