@@ -1,44 +1,76 @@
 <script setup>
+/*****************************************************************************
+ * @file ./pages/billings/operations/index.vue
+ * @description A page component to display `OperationBillings`.
+ *****************************************************************************/
+import * as Vue from "vue";
+import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
-import { useOperationBillingsManager } from "@/composables/useOperationBillingsManager";
+import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+// ROUTER
+const router = useRouter();
+
 // Date Range
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
-const { dateRange } = dateRangeComposable;
+const { dateRange, debouncedDateRange } = dateRangeComposable;
 
-// Manager
-const { attrs, cachedSites } = useOperationBillingsManager({
-  dateRangeComposable,
-  useDebounced: true,
-  immediate: true,
+// Fetch
+const { fetchSiteComposable } = useFetch("OperationBillings", true);
+const { fetchSite } = fetchSiteComposable;
+
+// Data Layer
+const options = Vue.computed(() => {
+  return [
+    ["where", "dateAt", ">=", debouncedDateRange.value.from],
+    ["where", "dateAt", "<=", debouncedDateRange.value.to],
+  ];
 });
+const { docs } = useDocuments(
+  "OperationBilling",
+  { options, fetchAllOnEmpty: true },
+  (doc) => fetchSite(doc.siteId),
+);
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * Handles the update action for an item.
+ * @param item The item to be updated.
+ */
+function handleClickUpdate(item) {
+  router.push(`/billings/operations/${item.docId}`);
+}
 </script>
 
 <template>
-  <v-container>
-    <air-array-manager class="fill-height" v-bind="attrs">
-      <template #search>
-        <MoleculesMonthSelector
-          :model-value="dateRange.from"
-          @date-range="dateRange = $event"
-        />
+  <v-container class="fill-height align-start">
+    <OperationBillingsManager
+      class="fill-height"
+      :docs="docs"
+      :handle-click-update="handleClickUpdate"
+    >
+      <!-- TABLE -->
+      <template #table="tableProps">
+        <OperationBillingsDataTable v-bind="tableProps">
+          <template #top>
+            <v-toolbar color="secondary" density="compact">
+              <MoleculesMonthSelector
+                :model-value="dateRange.from.value"
+                @date-range="dateRange = $event"
+              />
+            </v-toolbar>
+          </template>
+        </OperationBillingsDataTable>
       </template>
-      <template #[`item.dateAt`]="{ item }">
-        <div>{{ dayjs(item.dateAt).format("MM月DD日(ddd)") }}</div>
-      </template>
-      <template #[`item.siteId`]="{ item }">
-        <div v-if="cachedSites[item.siteId]">
-          <div>{{ cachedSites[item.siteId].name }}</div>
-          <div>{{ cachedSites[item.siteId].customer.name }}</div>
-        </div>
-        <v-progress-circular v-else indeterminate size="small" />
-      </template>
-    </air-array-manager>
+    </OperationBillingsManager>
   </v-container>
 </template>

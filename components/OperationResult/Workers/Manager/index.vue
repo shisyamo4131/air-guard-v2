@@ -7,6 +7,8 @@
 import { useDefaults } from "vuetify";
 // SCHEMAS
 import { OperationResultDetail } from "@/schemas";
+// COMPOSABLES
+import { useBaseManager } from "@/composables/useBaseManager";
 // COMPONENTS
 import CustomInput from "@/components/OperationResult/Worker/CustomInput.vue";
 import Toolbar from "./Toolbar.vue";
@@ -21,16 +23,22 @@ defineOptions({ name: "OperationResultWorkersManager", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
+  tableProps: { type: Object, default: () => ({}) },
 });
 const props = useDefaults(_props, "OperationResultWorkersManager");
+
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useBaseManager("OperationResultWorkersManager");
 </script>
 
 <template>
   <air-array-manager
-    v-bind="$attrs"
+    v-bind="{ ...$attrs, ...attrs }"
     :schema="OperationResultDetail"
     item-key="workerId"
-    :table-props="{ hideSearch: true }"
+    :table-props="{ ...props.tableProps, hideSearch: true }"
     :custom-input="props.customInput"
   >
     <template #table="tableProps">

@@ -130,7 +130,7 @@ export const pageStructure = [
         path: "/operation-results/generator",
         label: "上下番確定処理",
         icon: "mdi-calendar-check",
-        // roles: ["operation-results:read"],
+        // roles: ["site-operation-schedules:write"],
         roles: ["developer"],
         navigation: true,
       },
