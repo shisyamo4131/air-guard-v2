@@ -122,7 +122,7 @@ const tab = ref("WEEKDAY");
                   v-bind="props.componentAttrs['rates']"
                   :day-type="dayType.value"
                   :disabled="props.disabled"
-                  :label="`${dayType.title}単価`"
+                  label="単価設定"
                 />
               </v-col>
             </v-row>

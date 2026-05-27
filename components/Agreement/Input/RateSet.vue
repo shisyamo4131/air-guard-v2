@@ -2,14 +2,16 @@
 /*****************************************************************************
  * @file ./components/Agreement/Input/RateSet.vue
  * @description 曜日区分限定単価情報入力コンポーネント
- * - DayTypeRates インスタンスを受け取り、指定された曜日区分の単価情報を表示・編集する。
+ * - DayTypeRates インスタンスを受け取り、単価情報を表示・編集するためのコンポーネントです。
+ * - `selectedDayTypes` で複数の曜日区分を選択し、同一の単価情報を一括で編集することができます。
  * @extends AirItemManager
  *
- * @property {string} dayType - 曜日区分
+ * @property {string} dayType - 曜日区分（各種単価の初期値として使用する曜日区分）
  * @property {boolean} disabled - 入力の有効/無効を切り替えるフラグ
  * @property {DayTypeRates} modelValue - 単価情報 (DayTypeRates インスタンス)
  *****************************************************************************/
 import { DayTypeRates } from "@/schemas";
+import { useConstants } from "@/composables/useConstants";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -27,7 +29,17 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 
 /*****************************************************************************
- * DEFINE CONSTANTS
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { DAY_TYPE, toArray } = useConstants();
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const selectedDayTypes = ref([props.dayType]);
+
+/*****************************************************************************
+ * COMPUTED
  *****************************************************************************/
 /**
  * AirItemManager の v-model として機能する computed プロパティ
@@ -40,9 +52,15 @@ const model = computed({
   },
   set(newValue) {
     const newModel = new DayTypeRates(props.modelValue);
-    newModel[props.dayType] = newValue;
+    selectedDayTypes.value.forEach((type) => {
+      newModel[type] = newValue;
+    });
     emit("update:modelValue", newModel);
   },
+});
+
+const selectableDayTypes = computed(() => {
+  return toArray(DAY_TYPE.value);
 });
 
 /*****************************************************************************
@@ -59,6 +77,14 @@ function priceLabel(isQualified, isBase) {
   }
   return price.toLocaleString();
 }
+
+/**
+ * AirItemManager の `initialized` フック関数
+ * - コンポーネントの初期化時に、`selectedDayTypes` を `props.dayType` のみを含む配列に設定することで、初期状態では `props.dayType` に対応する単価情報のみが編集対象となるようにする。
+ */
+function initialized() {
+  selectedDayTypes.value = [props.dayType];
+}
 </script>
 
 <template>
@@ -66,6 +92,7 @@ function priceLabel(isQualified, isBase) {
     v-model="model"
     hide-delete-btn
     :dialog-props="{ maxWidth: 360 }"
+    @initialized="initialized"
   >
     <template #activator="{ props: activatorProps }">
       <v-card>
@@ -104,20 +131,53 @@ function priceLabel(isQualified, isBase) {
       </v-card>
     </template>
     <template #input-default="{ componentAttrs }">
-      <v-col cols="12">
-        <air-number-input v-bind="componentAttrs['unitPriceBase']" />
-      </v-col>
-      <v-col cols="12">
-        <air-number-input v-bind="componentAttrs['overtimeUnitPriceBase']" />
-      </v-col>
-      <v-col cols="12">
-        <air-number-input v-bind="componentAttrs['unitPriceQualified']" />
-      </v-col>
-      <v-col cols="12">
+      <div class="mb-6">
+        <v-alert
+          class="text-caption mb-4"
+          color="info"
+          icon="mdi-information"
+          density="compact"
+          text="単価を設定する曜日を選択してください。"
+        />
+        <v-btn-toggle
+          v-model="selectedDayTypes"
+          class="w-100"
+          color="primary"
+          density="compact"
+          divided
+          mandatory
+          multiple
+          variant="outlined"
+        >
+          <v-btn
+            v-for="type of selectableDayTypes"
+            :key="type.value"
+            class="flex-grow-1"
+            :text="type.title"
+            :value="type.value"
+          />
+        </v-btn-toggle>
+      </div>
+      <div class="d-flex ga-4">
+        <air-number-input
+          v-bind="componentAttrs['unitPriceBase']"
+          control-variant="hidden"
+        />
+        <air-number-input
+          v-bind="componentAttrs['overtimeUnitPriceBase']"
+          control-variant="hidden"
+        />
+      </div>
+      <div class="d-flex ga-4">
+        <air-number-input
+          v-bind="componentAttrs['unitPriceQualified']"
+          control-variant="hidden"
+        />
         <air-number-input
           v-bind="componentAttrs['overtimeUnitPriceQualified']"
+          control-variant="hidden"
         />
-      </v-col>
+      </div>
     </template>
   </air-item-manager>
 </template>
