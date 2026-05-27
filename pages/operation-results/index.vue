@@ -53,6 +53,7 @@ function handleClickUpdate(item) {
       class="fill-height"
       :docs="docs"
       :handle-click-update="handleClickUpdate"
+      @create="(item) => router.push(`/operation-results/${item.docId}`)"
     >
       <!-- TABLE -->
       <template #table="tableProps">

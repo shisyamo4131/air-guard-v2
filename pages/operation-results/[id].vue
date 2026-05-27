@@ -1,12 +1,18 @@
 <script setup>
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useRoute, useRouter } from "vue-router";
+
+/*****************************************************************************
+ * ROUTER
+ *****************************************************************************/
+const route = useRoute();
+const router = useRouter();
+const docId = route.params.id;
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const route = useRoute();
-const docId = route.params.id;
 const {
   fetchSiteComposable,
   fetchEmployeeComposable,
@@ -68,6 +74,43 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
             </v-card>
           </v-col>
         </v-row>
+      </v-col>
+
+      <!-- 削除処理ボタン -->
+      <v-col cols="12">
+        <OperationResultManager
+          :doc="doc"
+          hide-delete-btn
+          @submit:complete="() => router.replace('/operation-results')"
+        >
+          <template #activator="{ toDelete }">
+            <v-btn
+              block
+              color="error"
+              :disabled="doc.isLocked"
+              text="この稼働実績を削除する"
+              @click="() => toDelete()"
+            />
+          </template>
+          <template #editor="{ actions: editorActions }">
+            <v-card>
+              <template #prepend>
+                <v-icon icon="mdi-alert" color="error" />
+              </template>
+              <template #title> 削除処理 </template>
+              <template #text>
+                削除すると復元することはできません。本当に削除しますか？
+              </template>
+              <template #actions>
+                <MoleculesActionsSubmitCancel
+                  v-bind="editorActions"
+                  submitText="実行"
+                  color="error"
+                />
+              </template>
+            </v-card>
+          </template>
+        </OperationResultManager>
       </v-col>
     </v-row>
   </v-container>

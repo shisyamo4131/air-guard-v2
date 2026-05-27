@@ -120,12 +120,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
         <site-manager
           :doc="doc"
           hide-delete-btn
-          @submit:complete="
-            () => {
-              console.log('削除処理完了');
-              router.replace('/sites');
-            }
-          "
+          @submit:complete="() => router.replace('/sites')"
         >
           <template #activator="{ toDelete }">
             <v-btn
