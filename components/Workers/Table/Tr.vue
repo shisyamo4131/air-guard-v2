@@ -71,18 +71,25 @@ const displayName = computed(() => {
 });
 
 /**
+ * 配置通知の状態が `LEAVED` であるかどうかを返します。
+ */
+const isLeaved = computed(() => {
+  return props.arrangementNotification?.isLeaved || false;
+});
+
+/**
  * 勤務時間を返します。
  * - `props.arrangementNotification` が存在し、その状態が `LEAVED` の場合は、配置通知の実際の勤務時間を表示します。
  * - それ以外の場合は、作業員の予定勤務時間を表示します。
  */
 const time = computed(() => {
-  if (
-    props.arrangementNotification?.status ===
-    ArrangementNotification.STATUS.LEAVED.value
-  ) {
-    return `${props.arrangementNotification.actualStartTime} - ${props.arrangementNotification.actualEndTime}`;
-  }
-  return `${props.worker.startTime} - ${props.worker.endTime}`;
+  const startTime = isLeaved.value
+    ? props.arrangementNotification?.actualStartTime || "N/A"
+    : props.worker.startTime || "N/A";
+  const endTime = isLeaved.value
+    ? props.arrangementNotification?.actualEndTime || "N/A"
+    : props.worker.endTime || "N/A";
+  return `${startTime} - ${endTime}`;
 });
 
 /**
@@ -90,14 +97,11 @@ const time = computed(() => {
  * - `props.arrangementNotification` が存在し、その状態が `LEAVED` の場合は、配置通知の実際の休憩時間を表示します。
  * - それ以外の場合は、作業員の予定休憩時間を表示します。
  */
-const breakMinutes = computed(() => {
-  if (
-    props.arrangementNotification?.status ===
-    ArrangementNotification.STATUS.LEAVED.value
-  ) {
-    return props.arrangementNotification.actualBreakMinutes;
-  }
-  return props.worker.breakMinutes;
+const breakHours = computed(() => {
+  const minutes = isLeaved.value
+    ? props.arrangementNotification?.actualBreakMinutes || 0
+    : props.worker.breakMinutes || 0;
+  return `${minutes / 60} 時間`;
 });
 
 /**
@@ -105,14 +109,11 @@ const breakMinutes = computed(() => {
  * - `props.arrangementNotification` が存在し、その状態が `LEAVED` の場合は、配置通知の実際の残業時間を表示します。
  * - それ以外の場合は、作業員の予定残業時間を表示します。
  */
-const overtimeWorkMinutes = computed(() => {
-  if (
-    props.arrangementNotification?.status ===
-    ArrangementNotification.STATUS.LEAVED.value
-  ) {
-    return props.arrangementNotification.overtimeWorkMinutes;
-  }
-  return props.worker.overtimeWorkMinutes;
+const overtimeWorkHours = computed(() => {
+  const minutes = isLeaved.value
+    ? props.arrangementNotification?.overtimeWorkMinutes || 0
+    : props.worker.overtimeWorkMinutes || 0;
+  return `${minutes / 60} 時間`;
 });
 
 const slotProps = computed(() => {
@@ -137,11 +138,11 @@ const slotProps = computed(() => {
       </slot>
     </td>
     <td>
-      <slot name="break" v-bind="slotProps"> {{ breakMinutes }}分 </slot>
+      <slot name="break" v-bind="slotProps"> {{ breakHours }} </slot>
     </td>
     <td>
       <slot name="overtimeWorkMinutes" v-bind="slotProps">
-        {{ overtimeWorkMinutes }}分
+        {{ overtimeWorkHours }}
       </slot>
     </td>
     <slot name="append" v-bind="slotProps" />

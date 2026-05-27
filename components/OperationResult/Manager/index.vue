@@ -9,14 +9,11 @@ import { useDefaults } from "vuetify";
 import { OperationResult } from "@/schemas";
 // COMPOSABLES
 import { useBaseManager } from "@/composables/useBaseManager";
-// COMPONENTS
-import CustomInput from "@/components/OperationResult/CustomInput/index.vue";
 
 /*****************************************************************************
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
-  customInput: { type: Object, default: CustomInput },
   doc: {
     type: Object,
     required: true,
@@ -43,7 +40,6 @@ const { attrs } = useBaseManager("OperationResultManager");
     :handle-delete="props.handleDelete"
     :disable-delete="(item) => item.isLocked"
     :disable-submit="(item) => item.isLocked"
-    :custom-input="props.customInput"
   >
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}" />

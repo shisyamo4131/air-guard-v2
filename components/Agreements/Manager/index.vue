@@ -65,7 +65,6 @@ watch(internalShiftType, (newValue) => emit("update:shiftType", newValue));
 function beforeEdit(editMode, item) {
   item.shiftType = internalShiftType.value;
   if (editMode === "CREATE" && props.cutoffDate !== undefined) {
-    console.log(props.cutoffDate);
     item.cutoffDate = props.cutoffDate;
   }
 }

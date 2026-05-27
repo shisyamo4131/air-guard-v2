@@ -111,8 +111,15 @@ const shiftType = computed(() => {
       <tr>
         <td>定時時間</td>
         <td>
-          {{ shiftType }}
-          {{ `${props.schedule.startTime} - ${props.schedule.endTime}` }}
+          <div class="d-flex align-center">
+            <ShiftTypeChip
+              class="me-2"
+              :shift-type="props.schedule.shiftType"
+              label
+              size="x-small"
+            />
+            {{ `${props.schedule.startTime} - ${props.schedule.endTime}` }}
+          </div>
         </td>
       </tr>
 

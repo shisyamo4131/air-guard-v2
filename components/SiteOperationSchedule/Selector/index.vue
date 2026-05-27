@@ -75,7 +75,7 @@ const {
     <template #text>
       <v-list v-if="props.schedules.length > 0" class="py-0" border>
         <template v-for="(schedule, index) in props.schedules" :key="index">
-          <SiteOperationScheduleListItem :model-value="schedule">
+          <SiteOperationScheduleListItem :schedule="schedule">
             <!-- SLOT: prepend-list-item -->
             <template v-if="$slots['prepend-list-item']" #prepend="slotProps">
               <slot name="prepend-list-item" v-bind="slotProps || {}" />

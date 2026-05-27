@@ -59,9 +59,9 @@ const timeLabel = computed(() => {
  * 実働・休憩ラベル
  */
 const workAndBreakLabel = computed(() => {
-  const workMinutes = props.agreement.regulationWorkMinutes || 0;
-  const breakMinutes = props.agreement.breakMinutes || 0;
-  return `${workMinutes}分 / ${breakMinutes}分`;
+  const workMinutes = (props.agreement.regulationWorkMinutes || 0) / 60;
+  const breakMinutes = (props.agreement.breakMinutes || 0) / 60;
+  return `${workMinutes}時間 / ${breakMinutes}時間`;
 });
 
 /**

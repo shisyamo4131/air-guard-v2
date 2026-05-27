@@ -4,6 +4,7 @@
  * @description A component for managing single site operation schedule.
  */
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
 
 const props = defineProps({
   fetchSiteComposable: { type: Object, default: () => useFetchSite() },
@@ -22,7 +23,7 @@ defineExpose({
 </script>
 
 <template>
-  <air-item-manager ref="component">
+  <air-item-manager ref="component" :custom-input="CustomInput">
     <template #[`input.siteId`]="{ attrs }">
       <SiteAutocomplete
         v-bind="attrs"

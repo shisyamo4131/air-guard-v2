@@ -78,5 +78,8 @@ const time = computed(() => {
         `必要人数: ${props.schedule.requiredPersonnel} / 配置人数: ${props.schedule.workers.length}`
       }}
     </v-list-item-subtitle>
+    <template #append="slotProps">
+      <slot name="append" v-bind="slotProps || {}" />
+    </template>
   </v-list-item>
 </template>
