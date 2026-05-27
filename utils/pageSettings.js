@@ -106,7 +106,7 @@ export const pageStructure = [
     id: "control-operation-group",
     label: "管制業務",
     icon: "mdi-camera-control",
-    roles: ["site-operation-schedules:write"],
+    roles: ["site-operation-schedules:read"],
     navigation: true,
     children: [
       {
@@ -114,7 +114,7 @@ export const pageStructure = [
         path: "/operation-schedules",
         label: "(Beta) 稼働予定管理",
         icon: "mdi-calendar-multiselect",
-        roles: ["site-operation-schedules:write"],
+        roles: ["site-operation-schedules:read"],
         navigation: true,
       },
       {
@@ -122,7 +122,7 @@ export const pageStructure = [
         path: "/arrangement-manager",
         label: "配置管理",
         icon: "mdi-calendar-account",
-        roles: ["site-operation-schedules:write"],
+        roles: ["site-operation-schedules:read"],
         navigation: true,
       },
       {
@@ -130,8 +130,7 @@ export const pageStructure = [
         path: "/operation-results/generator",
         label: "上下番確定処理",
         icon: "mdi-calendar-check",
-        // roles: ["site-operation-schedules:write"],
-        roles: ["developer"],
+        roles: ["site-operation-schedules:read"],
         navigation: true,
       },
     ],
@@ -143,8 +142,7 @@ export const pageStructure = [
     // public: false,
     label: "稼働実績管理",
     icon: "mdi-clipboard-check",
-    // roles: ["operation-results:read"],
-    roles: ["developer"],
+    roles: ["operation-results:read"],
     navigation: true,
     children: [
       {
@@ -152,9 +150,16 @@ export const pageStructure = [
         path: "/operation-results",
         label: "稼働実績一覧",
         icon: "mdi-format-list-bulleted",
-        // roles: ["operation-results:read"],
-        roles: ["developer"],
+        roles: ["operation-results:read"],
         navigation: true,
+      },
+      {
+        id: "operation-results-detail",
+        path: "/operation-results/[id]",
+        label: "稼働実績詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["operation-results:read"],
+        navigation: false,
       },
     ],
   },
@@ -164,8 +169,7 @@ export const pageStructure = [
     id: "billings-group",
     label: "請求管理",
     icon: "mdi-file-document-multiple",
-    // roles: ["operation-billings:read", "billings:read"],
-    roles: ["developer"],
+    roles: ["billings:read"],
     navigation: true,
     children: [
       {
@@ -173,17 +177,23 @@ export const pageStructure = [
         path: "/billings/operations",
         label: "稼働請求一覧",
         icon: "mdi-file-document",
-        // roles: ["operation-billings:read"],
-        roles: ["developer"],
+        roles: ["billings:read"],
         navigation: true,
+      },
+      {
+        id: "billings-operations-detail",
+        path: "/billings/operations/[id]",
+        label: "稼働請求詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["billings:read"],
+        navigation: false,
       },
       {
         id: "billings-customers",
         path: "/billings/customers",
         label: "取引先請求一覧",
         icon: "mdi-file-document-outline",
-        // roles: ["billings:read"],
-        roles: ["developer"],
+        roles: ["billings:read"],
         navigation: true,
       },
     ],
@@ -194,7 +204,7 @@ export const pageStructure = [
     id: "customers-group",
     label: "取引先管理",
     icon: "mdi-domain",
-    roles: ["customers:read", "customers:write"],
+    roles: ["customers:read"],
     navigation: true,
     children: [
       {
@@ -202,7 +212,7 @@ export const pageStructure = [
         path: "/customers",
         label: "取引先一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["customers:read", "customers:write"],
+        roles: ["customers:read"],
         navigation: true,
       },
       {
@@ -210,7 +220,7 @@ export const pageStructure = [
         path: "/customers/[id]",
         label: "取引先詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["customers:read", "customers:write"],
+        roles: ["customers:read"],
         navigation: false,
       },
     ],
@@ -221,7 +231,7 @@ export const pageStructure = [
     id: "sites-group",
     label: "現場管理",
     icon: "mdi-pickaxe",
-    roles: ["sites:read", "sites:write"],
+    roles: ["sites:read"],
     navigation: true,
     children: [
       {
@@ -229,7 +239,7 @@ export const pageStructure = [
         path: "/sites",
         label: "稼働中現場一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["sites:read", "sites:write"],
+        roles: ["sites:read"],
         navigation: true,
       },
       {
@@ -237,7 +247,7 @@ export const pageStructure = [
         path: "/sites/[id]",
         label: "現場詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["sites:read", "sites:write"],
+        roles: ["sites:read"],
         navigation: false,
       },
       {
@@ -245,7 +255,7 @@ export const pageStructure = [
         path: "/sites/terminated",
         label: "終了現場検索",
         icon: "mdi-magnify",
-        roles: ["sites:read", "sites:write"],
+        roles: ["sites:read"],
         navigation: true,
       },
     ],
@@ -256,7 +266,7 @@ export const pageStructure = [
     id: "employees-group",
     label: "従業員管理",
     icon: "mdi-account-multiple",
-    roles: ["employees:read", "employees:write"],
+    roles: ["employees:read"],
     navigation: true,
     children: [
       {
@@ -264,7 +274,7 @@ export const pageStructure = [
         path: "/employees",
         label: "在職者一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read", "employees:write"],
+        roles: ["employees:read"],
         navigation: true,
       },
       {
@@ -272,7 +282,7 @@ export const pageStructure = [
         path: "/employees/[id]",
         label: "従業員詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read", "employees:write"],
+        roles: ["employees:read"],
         navigation: false,
       },
       {
@@ -280,7 +290,7 @@ export const pageStructure = [
         path: "/employees/resigned",
         label: "退職者検索",
         icon: "mdi-magnify",
-        roles: ["employees:read", "employees:write"],
+        roles: ["employees:read"],
         navigation: true,
       },
     ],
