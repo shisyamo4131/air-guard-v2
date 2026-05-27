@@ -1,6 +1,6 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/ArrangementNotification/Manager/toLeaved.vue
+ * @file ./components/ArrangementNotification/Manager/index.vue
  * @description A component to manage `ArrangementNotification` document to be `LEAVED`.
  * @extends AirItemManager
  *
@@ -148,7 +148,11 @@ async function beforeEdit(editMode, item) {
 
         <!-- ACTUAL BREAK MINUTES -->
         <v-col cols="12">
-          <air-number-input v-bind="componentAttrs[`actualBreakMinutes`]" />
+          <AtomsHourInput
+            v-bind="componentAttrs[`actualBreakMinutes`]"
+            label="休憩時間"
+            :step="0.5"
+          />
         </v-col>
       </v-row>
     </template>

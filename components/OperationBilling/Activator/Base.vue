@@ -10,6 +10,8 @@ import { OperationBilling } from "@/schemas";
 // COMPOSABLES
 import { useConstants } from "@/composables/useConstants";
 import { useFetch } from "@/composables/fetch/useFetch";
+// COMPONENTS
+import CustomInput from "@/components/OperationBilling/CustomInput/index.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -88,19 +90,8 @@ const items = computed(() => {
 
 /*****************************************************************************
  * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
  *****************************************************************************/
-/**
- * OperationBillingManager は 原則として CustomInput を使用することになるため
- * Expose が不要。
- */
-// defineExpose({
-//   includedKeys: ["dateAt", "siteId", "workDescription", "remarks"],
-// });
+defineExpose({ customInput: CustomInput });
 </script>
 
 <template>

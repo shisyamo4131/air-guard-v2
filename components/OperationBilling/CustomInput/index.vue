@@ -50,11 +50,17 @@ const { fetchSiteComposable } = useFetch("OperationBillingCustomInput");
       />
     </v-col>
     <v-col cols="12" md="6">
-      <air-number-input v-bind="props.componentAttrs['breakMinutes']" />
+      <AtomsHourInput
+        v-bind="props.componentAttrs['breakMinutes']"
+        label="休憩時間"
+        :step="0.5"
+      />
     </v-col>
     <v-col cols="12" md="6">
-      <air-number-input
+      <AtomsHourInput
         v-bind="props.componentAttrs['regulationWorkMinutes']"
+        label="規定労働時間"
+        :step="0.5"
       />
     </v-col>
     <v-col cols="12">

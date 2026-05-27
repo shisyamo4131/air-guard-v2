@@ -39,7 +39,11 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
         <v-row>
           <!-- 稼働概要 -->
           <v-col cols="12">
-            <OperationBillingManager :doc="doc" label="稼働概要" hide-edit-btn>
+            <OperationBillingManager
+              :doc="doc"
+              label="稼働概要"
+              hide-delete-btn
+            >
               <template #activator="activatorProps">
                 <OperationBillingActivatorBase
                   v-bind="activatorProps"

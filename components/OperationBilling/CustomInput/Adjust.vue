@@ -81,24 +81,29 @@ const agreements = computed(() => {
         <div class="d-flex ga-4 pt-4">
           <air-number-input
             :model-value="props.item.sales.original.base.quantity"
-            label="基本人工数"
+            label="基本数量"
             control-variant="hidden"
+            readonly
+            :precision="1"
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input
             v-bind="props.componentAttrs['adjustedQuantityBase']"
             control-variant="hidden"
+            :precision="1"
           />
         </div>
         <div class="d-flex ga-4">
-          <air-number-input
+          <AtomsHourInput
             :model-value="props.item.sales.original.base.overtimeMinutes"
-            label="基本残業時間（分）"
+            label="基本残業時間"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
-          <air-number-input
+          <AtomsHourInput
             v-bind="props.componentAttrs['adjustedOvertimeMinutesBase']"
+            label="基本残業時間(調整後)"
             control-variant="hidden"
           />
         </div>
@@ -106,24 +111,29 @@ const agreements = computed(() => {
         <div class="d-flex ga-4">
           <air-number-input
             :model-value="props.item.sales.original.qualified.quantity"
-            label="資格人工数"
+            label="資格数量"
             control-variant="hidden"
+            readonly
+            :precision="1"
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input
             v-bind="props.componentAttrs['adjustedQuantityQualified']"
             control-variant="hidden"
+            :precision="1"
           />
         </div>
         <div class="d-flex ga-4">
-          <air-number-input
+          <AtomsHourInput
             :model-value="props.item.sales.original.qualified.overtimeMinutes"
-            label="資格残業時間（分）"
+            label="資格残業時間"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
-          <air-number-input
+          <AtomsHourInput
             v-bind="props.componentAttrs['adjustedOvertimeMinutesQualified']"
+            label="資格残業時間(調整後)"
             control-variant="hidden"
           />
         </div>
@@ -137,6 +147,7 @@ const agreements = computed(() => {
             :model-value="props.item.sales.original.base.unitPrice"
             label="基本単価"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input
@@ -149,6 +160,7 @@ const agreements = computed(() => {
             :model-value="props.item.sales.original.base.overtimeUnitPrice"
             label="基本残業単価"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input
@@ -162,6 +174,7 @@ const agreements = computed(() => {
             :model-value="props.item.sales.original.qualified.unitPrice"
             label="資格単価"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input
@@ -174,6 +187,7 @@ const agreements = computed(() => {
             :model-value="props.item.sales.original.qualified.overtimeUnitPrice"
             label="資格残業単価"
             control-variant="hidden"
+            readonly
           />
           <v-icon class="mt-2" icon="mdi-chevron-right" />
           <air-number-input

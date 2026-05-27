@@ -3,6 +3,9 @@
  * @file components/organisms/ArrangementNotificationStatusUpdater.vue
  * @description A component for updating arrangement notification statuses.
  * @author shisyamo4131
+ *
+ * NOTE: 従業員が自身の配置通知ステータスを更新するためのコンポーネントではない。
+ *       管制が従業員の配置通知ステータスを自由に更新するためのコンポーネント。
  */
 import { ArrangementNotification } from "@/schemas";
 
@@ -10,7 +13,7 @@ import { ArrangementNotification } from "@/schemas";
  * OPTIONS & CONSTANTS
  *****************************************************************************/
 defineOptions({ inheritAttrs: false });
-const dialogProps = { maxWidth: 368 };
+const dialogProps = { maxWidth: 372 };
 
 /*****************************************************************************
  * REACTIVE OBJECTS
@@ -89,11 +92,11 @@ defineExpose({
               />
             </v-col>
             <v-col cols="12">
-              <air-number-input
+              <AtomsHourInput
                 :model-value="item.actualBreakMinutes"
                 label="休憩時間"
                 control-variant="split"
-                suffix="分"
+                :step="0.5"
                 required
                 @update:model-value="
                   updateProperties({ actualBreakMinutes: $event })
