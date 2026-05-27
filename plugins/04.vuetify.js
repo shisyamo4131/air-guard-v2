@@ -94,12 +94,27 @@ export default defineNuxtPlugin((app) => {
         },
       },
       /** Vuetify Input components */
+      VAutocomplete: {
+        density: "compact",
+        variant: "outlined",
+      },
+      VDateInput: {
+        density: "compact",
+        variant: "outlined",
+      },
       VNumberInput: {
         density: "compact",
         variant: "outlined",
       },
       VSelect: {
         density: "compact",
+        variant: "outlined",
+      },
+      VTextField: {
+        density: "compact",
+        variant: "outlined",
+      },
+      VTextarea: {
         variant: "outlined",
       },
       AtomsBillingUnitTypeChip: {

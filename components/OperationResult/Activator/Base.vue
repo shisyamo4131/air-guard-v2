@@ -25,7 +25,6 @@ const _props = defineProps({
   },
 });
 const props = useDefaults(_props, "OperationResultActivatorBase");
-const emit = defineEmits(["click:edit"]);
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
