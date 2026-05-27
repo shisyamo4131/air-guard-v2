@@ -18,13 +18,11 @@ import CustomInput from "@/components/OperationResult/CustomInput/index.vue";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  disabled: { type: Boolean, default: false },
   item: {
     type: Object,
     required: true,
     validator: (value) => value instanceof OperationResult,
   },
-  title: { type: String, default: undefined },
 });
 const props = useDefaults(_props, "OperationResultActivatorBase");
 const emit = defineEmits(["click:edit"]);
@@ -112,17 +110,7 @@ defineExpose({
 </script>
 
 <template>
-  <v-card>
-    <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          :disabled="props.disabled"
-          @click="emit('click:edit', props.item)"
-        />
-      </template>
-    </v-toolbar>
+  <MoleculesActivatorCard>
     <v-card-text class="py-0">
       <air-list :items="items" fluid />
       <air-textarea
@@ -135,5 +123,5 @@ defineExpose({
     <v-card-actions v-if="$slots.actions">
       <slot name="actions" />
     </v-card-actions>
-  </v-card>
+  </MoleculesActivatorCard>
 </template>

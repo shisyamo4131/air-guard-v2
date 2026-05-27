@@ -4,6 +4,7 @@
  * @description 稼働請求の基本情報表示コンポーネント
  * - `OperationBillingManager` の activator スロット用コンポーネント
  *****************************************************************************/
+import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
 // SCHEMAS
 import { OperationBilling } from "@/schemas";
@@ -24,7 +25,6 @@ const _props = defineProps({
   },
 });
 const props = useDefaults(_props, "OperationBillingActivatorBase");
-// const emit = defineEmits(["click:edit"]);
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -48,6 +48,11 @@ const customer = computed(() => {
 const customerName = computed(() => {
   return customer.value?.abbreviation || "読み込み中...";
 });
+const dateString = computed(() => {
+  return dayjs(props.item.dateAt)
+    .tz("Asia/Tokyo")
+    .format("YYYY年MM月DD日 (ddd)");
+});
 const dayTypeTitle = computed(() => {
   return DAY_TYPE.value?.[props.item.dayType]?.title || "N/A";
 });
@@ -57,11 +62,13 @@ const shiftTypeTitle = computed(() => {
 const time = computed(() => {
   return `${props.item.startTime} 〜 ${props.item.endTime}`;
 });
-const breakMinutes = computed(() => {
-  return `${props.item.breakMinutes} 分`;
+const breakHours = computed(() => {
+  const result = (props.item.breakMinutes || 0) / 60;
+  return `${result} 時間`;
 });
-const regulationWorkMinutes = computed(() => {
-  return `${props.item.regulationWorkMinutes} 分`;
+const regulationWorkHours = computed(() => {
+  const result = (props.item.regulationWorkMinutes || 0) / 60;
+  return `${result} 時間`;
 });
 const requiredPersonnel = computed(() => {
   return `${props.item.requiredPersonnel} 人`;
@@ -70,16 +77,21 @@ const items = computed(() => {
   return [
     { title: "取引先", props: { subtitle: `${customerName.value}` } },
     { title: "現場", props: { subtitle: `${siteName.value}` } },
-    { title: "日付", props: { subtitle: props.item.date || "-" } },
+    { title: "日付", props: { subtitle: dateString.value } },
     {
       title: "曜日・勤務区分",
       props: { subtitle: `${dayTypeTitle.value} / ${shiftTypeTitle.value}` },
     },
     {
       title: "定時時間(休憩)",
-      props: { subtitle: `${time.value}(${breakMinutes.value})` },
+      props: { subtitle: `${time.value}` },
     },
-    { title: "規定労働時間", props: { subtitle: regulationWorkMinutes.value } },
+    {
+      title: "規定実働時間 / 休憩時間",
+      props: {
+        subtitle: `${regulationWorkHours.value} / ${breakHours.value}`,
+      },
+    },
     { title: "必要人数", props: { subtitle: requiredPersonnel.value } },
     {
       title: "作業内容",

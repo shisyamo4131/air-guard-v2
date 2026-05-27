@@ -25,8 +25,24 @@ const headers = computed(() => {
     { title: "名前", key: "displayName" },
     { title: "開始", key: "startTime" },
     { title: "終了", key: "endTime" },
-    { title: "休憩", key: "breakMinutes" },
-    { title: "残業", key: "overtimeWorkMinutes" },
+    {
+      title: "休憩",
+      key: "breakMinutes",
+      value: (item) => {
+        const minutes = item.breakMinutes ?? 0;
+        const hours = Math.floor(minutes / 60);
+        return `${hours} 時間`;
+      },
+    },
+    {
+      title: "残業",
+      key: "overtimeWorkMinutes",
+      value: (item) => {
+        const minutes = item.overtimeWorkMinutes ?? 0;
+        const hours = Math.floor(minutes / 60);
+        return `${hours} 時間`;
+      },
+    },
     { title: "OJT", key: "isOjt" },
   ];
 });
