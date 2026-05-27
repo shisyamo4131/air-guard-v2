@@ -4,20 +4,27 @@
  * @description A autocomplete component of 'Employee'.
  *
  * @note
- * `AutocompleteApi` に対する設定は以下のようにする。
- * - `fetchXxxComposable` が提供する検索APIを `api` に渡す。
- * - 検索と検索結果のキャッシュは `fetchXxxComposable` に任せる。
+ * `air-autocomplete-api` に対する設定は以下のようにする。
+ *
+ * - `api` には `fetchXxxComposable` が提供する検索APIをラップした関数を渡す。
+ *   -> `AirApiLoader` は `api` を呼び出す際に検索文字列のみを渡すため、
+ *      オプションを固定したラッパー関数を用意する必要がある。
+ *   -> オプション `returnAllCached: false` を指定すること。
+ *      指定しない場合（デフォルト `true`）、過去の検索結果がキャッシュから混入し、
+ *      後述の `custom-filter: () => true` と組み合わさって意図しないアイテムが
+ *      選択肢に表示されてしまう。
+ *
  * - `custom-filter` は常に `true` を返すようにする。
- *   -> `Autocomplete` 自体のフィルタリングによって実際に入力された文字列で検索結果が
- *      絞り込まれてしまう為、内部で使用している N-gram 検索と競合してしまうため。
- * - `cache-items` は使用しない。
- *   -> `cache-items` は `AirApiLoader` が検索結果をキャッシュするためのもので
- *      これを `true` にすると、検索結果とキャッシュされたアイテムがマージされ、
- *      `Autocomplete` の `items` に引き渡されてしまい、`custom-filter` が常に `true` を
- *      返す設定と競合してしまうため。
- *      つまりは、検索結果のみが `Autocomplete` の `items` に引き渡されるようにしなければならない。
- * なお、N-gram による検索結果は `fetchXxxComposable` 自体がキャッシュしてくれるので
- * 検索APIを呼び出すたびに N-gram による検索が走ることはない。
+ *   -> Vuetify の `v-autocomplete` がクライアント側でさらに絞り込みを行うため、
+ *      N-gram 検索の結果と競合してしまう。フィルタリングは N-gram 検索に完全に委ねる。
+ *
+ * - `cache-items` は使用しない（デフォルトのまま `false`）。
+ *   -> `true` にすると `AirApiLoader` が検索結果を累積キャッシュし、それが
+ *      `custom-filter: () => true` と競合して意図しないアイテムが表示される。
+ *      `items` には常に直近の検索結果のみが渡るようにすること。
+ *
+ * なお、同一クエリへの N-gram 再検索は `fetchXxxComposable` の検索キャッシュが
+ * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
  *****************************************************************************/
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useDefaults } from "vuetify";
@@ -48,11 +55,15 @@ function onCreateHandler(event) {
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
 }
+
+async function api(text) {
+  return await searchEmployees(text, { returnAllCached: false });
+}
 </script>
 
 <template>
   <air-autocomplete-api
-    :api="searchEmployees"
+    :api="api"
     :fetchItemByKeyApi="getEmployee"
     :custom-filter="() => true"
     hint="名称入力で検索"

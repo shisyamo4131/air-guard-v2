@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
- * @file ./pages/billings/operations/index.vue
- * @description A page component to display `OperationBillings`.
+ * @file pages/billings/operations/index.vue
+ * @description 稼働実績請求一覧ページ
  *****************************************************************************/
 import * as Vue from "vue";
 import { useRouter } from "vue-router";
@@ -9,6 +9,8 @@ import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useFetch } from "@/composables/fetch/useFetch";
+
+defineOptions({ name: "billings-operations-index" });
 
 /*****************************************************************************
  * SETUP COMPOSABLES

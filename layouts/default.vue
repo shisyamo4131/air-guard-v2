@@ -69,7 +69,9 @@ const handleSignOut = async () => {
             'employees-index',
             'employees-terminated-index',
             'outsourcers-index',
-            'billings-customers',
+            'operation-results-index',
+            'billings-operations-index',
+            'billings-customers-index',
           ],
           max: 10,
         }"

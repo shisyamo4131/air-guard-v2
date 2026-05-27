@@ -1,11 +1,15 @@
 <script setup>
+/*****************************************************************************
+ * @file pages/billings/customers/index.vue
+ * @description 取引先請求一覧ページ
+ *****************************************************************************/
 import dayjs from "dayjs";
 import { useRouter } from "vue-router";
 import { useDateRange } from "@/composables/useDateRange.js";
 import { useCustomerBillingsManager } from "@/composables/useCustomerBillingsManager.js";
 import { useBillingPdf } from "@/composables/pdf/useBillingPdf";
 
-defineOptions({ name: "billings-customers" });
+defineOptions({ name: "billings-customers-index" });
 
 /*****************************************************************************
  * SETUP COMPOSABLES

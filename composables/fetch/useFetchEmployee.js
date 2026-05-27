@@ -17,7 +17,10 @@
 import { Employee } from "~/schemas";
 import { useFetchBase } from "./useFetchBase";
 
-export function useFetchEmployee({ warnIfNotFound = true } = {}) {
+export function useFetchEmployee({
+  warnIfNotFound = true,
+  searchCacheExpireMs = 5 * 60 * 1000,
+} = {}) {
   const {
     fetchItems,
     getItem,
@@ -32,6 +35,7 @@ export function useFetchEmployee({ warnIfNotFound = true } = {}) {
     entityName: "Employee",
     idProperties: ["employeeId", "docId", "workerId"], // 優先順位順
     warnIfNotFound,
+    searchCacheExpireMs,
   });
 
   /**
@@ -40,6 +44,8 @@ export function useFetchEmployee({ warnIfNotFound = true } = {}) {
    * @param {Object} [options={}] - 検索オプション
    * @param {Array} [options.additionalConstraints=[]] - 追加の検索制約
    * @param {number} [options.limit=50] - 取得件数の上限（デフォルト50件）
+   * @param {boolean} [options.forceRefresh=false] - trueの場合、検索キャッシュを無視して強制的に再取得
+   * @param {boolean} [options.returnAllCached=true] - trueの場合は全アイテムキャッシュを返す、falseの場合は検索結果のみを返す
    * @returns {Promise<Employee[]>} 検索結果の従業員配列
    */
   async function searchEmployees(searchText, options = {}) {
