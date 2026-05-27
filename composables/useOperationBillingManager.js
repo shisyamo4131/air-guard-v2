@@ -62,7 +62,7 @@ export function useOperationBillingManager({
       missingComposables.push("fetchOutsourcerComposable");
     docManager.logger.info({
       message: `Consider providing the following composables to improve performance by caching data across multiple usages: ${missingComposables.join(
-        ", "
+        ", ",
       )}`,
     });
   }
@@ -186,9 +186,9 @@ export function useOperationBillingManager({
     const agreement = ["agreement"];
     const adjusted = [
       "adjustedQuantityBase",
-      "adjustedOvertimeBase",
+      "adjustedOvertimeMinutesBase",
       "adjustedQuantityQualified",
-      "adjustedOvertimeQualified",
+      "adjustedOvertimeMinutesQualified",
       "useAdjustedQuantity",
     ];
     return { agreement, adjusted };

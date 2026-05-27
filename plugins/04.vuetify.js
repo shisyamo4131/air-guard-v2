@@ -93,6 +93,15 @@ export default defineNuxtPlugin((app) => {
           color: "primary",
         },
       },
+      /** Vuetify Input components */
+      VNumberInput: {
+        density: "compact",
+        variant: "outlined",
+      },
+      VSelect: {
+        density: "compact",
+        variant: "outlined",
+      },
       AtomsBillingUnitTypeChip: {
         VChip: { density: "compact", size: "small" },
       },

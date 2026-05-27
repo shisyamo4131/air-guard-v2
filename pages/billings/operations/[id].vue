@@ -12,7 +12,7 @@ const {
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
 } = useFetch("OperationBilling", true);
-const { fetchSite, cachedSites } = fetchSiteComposable;
+const { fetchSite } = fetchSiteComposable;
 const { fetchEmployee } = fetchEmployeeComposable;
 const { fetchOutsourcer } = fetchOutsourcerComposable;
 const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
@@ -62,6 +62,7 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
         <v-row>
           <v-col cols="12">
             <OperationBillingManager
+              class="mb-4"
               :doc="doc"
               label="請求情報"
               hide-delete-btn
@@ -72,6 +73,12 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
                 />
               </template>
             </OperationBillingManager>
+            <v-alert
+              v-if="!doc.isBillable"
+              density="compact"
+              type="error"
+              text="取極め、または数量・単価調整が行われていないため、請求データが作成されません。"
+            />
           </v-col>
           <v-col cols="12">
             <OperationResultWorkersManager

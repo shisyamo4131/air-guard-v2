@@ -98,14 +98,17 @@ async function handleCreated(companyId, doc) {
   //   return;
   // }
 
-  // `hasAgreement` が false の場合は処理しない
+  // `isBillable` が false の場合は処理しない
   // 取極めがない場合も実績としては確定できるため、稼働実績ドキュメントは作成される。
-  // ただし、取極めがない場合は請求データを確定できないため、稼働請求ドキュメントは作成しない。
-  if (!doc.hasAgreement) {
-    logger.info("Skipping creation of OperationBilling due to no agreement", {
-      operationResultId: doc.docId,
-      reason: "No agreement for this OperationResult",
-    });
+  // ただし、isBillable が false（取極めなし かつ useAdjusted = false）の場合は請求データを確定できないため、稼働請求ドキュメントは作成しない。
+  if (!doc.isBillable) {
+    logger.info(
+      "Skipping creation of OperationBilling due to isBillable is false",
+      {
+        operationResultId: doc.docId,
+        reason: "isBillable is false for this OperationResult",
+      },
+    );
     return;
   }
 
@@ -154,11 +157,11 @@ async function handleUpdated(companyId, before, after) {
   const beforeDocId = getBillingKey(before);
   const afterDocId = getBillingKey(after);
 
-  // `isInvalid` ではなく `hasAgreement` を基準に処理する
+  // `isInvalid` ではなく `isBillable` を基準に処理する
   // const beforeIsInvalid = !!before.isInvalid;
   // const afterIsInvalid = !!after.isInvalid;
-  const beforeHasAgreement = before.hasAgreement;
-  const afterHasAgreement = after.hasAgreement;
+  const beforeHasAgreement = before.isBillable;
+  const afterHasAgreement = after.isBillable;
 
   logger.info("Handling OperationResult update", {
     operationResultId: after.docId,

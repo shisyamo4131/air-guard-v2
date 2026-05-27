@@ -42,7 +42,7 @@ const headers = computed(() => {
     {
       title: "現場",
       key: "siteId",
-      value: (item) => cachedSites.value?.[item.siteId]?.name || "...loading",
+      // value: (item) => cachedSites.value?.[item.siteId]?.name || "...loading",
     },
     { title: "売上（税抜）", key: "salesAmount" },
     { title: "消費税額", key: "tax" },
@@ -61,6 +61,21 @@ const headers = computed(() => {
   >
     <template #[`item.shiftType`]="{ item }">
       <ShiftTypeChip :shift-type="item.shiftType" label size="small" />
+    </template>
+
+    <template #[`item.siteId`]="{ item }">
+      <v-tooltip text="この稼働実績は請求不可能状態です。">
+        <template #activator="{ props }">
+          <v-icon
+            v-if="!item.isBillable"
+            v-bind="props"
+            icon="mdi-alert"
+            color="error"
+            size="small"
+          />
+        </template>
+      </v-tooltip>
+      {{ cachedSites?.[item.siteId]?.name || "...loading" }}
     </template>
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}"></slot>
