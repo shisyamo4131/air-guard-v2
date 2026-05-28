@@ -3,6 +3,7 @@
  * @file ./components/ArrangementNotifications/Manager/index.vue
  * @description A component for managing `ArrangementNotifications`.
  * @extends AirArrayManager
+ * - 従業員が自身への配置通知を確認し、状態遷移させるためのコンポーネント。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";

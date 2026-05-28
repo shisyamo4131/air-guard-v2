@@ -7,7 +7,6 @@
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
-import { useArrangementNotificationManager } from "@/composables/useArrangementNotificationManager";
 
 // Components
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
@@ -46,9 +45,6 @@ const {
   getCommandText,
 } = managerComposable;
 
-/** For arrangement notification management */
-const arrangementNotificationManager = useArrangementNotificationManager();
-
 /** For site operation schedule management */
 const siteOperationScheduleManager = useSiteOperationScheduleManager();
 
@@ -64,6 +60,10 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
 const commandText = ref(null);
+
+const arrangementNotificationManager = useTemplateRef(
+  "arrangementNotificationManager",
+);
 </script>
 
 <template>
@@ -215,9 +215,7 @@ const commandText = ref(null);
     />
 
     <!-- 通知ステータス更新コンポーネント -->
-    <OrganismsArrangementNotificationStatusUpdater
-      v-bind="arrangementNotificationManager.attrs.value"
-    />
+    <ArrangementNotificationManager ref="arrangementNotificationManager" />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
     <OrganismsSiteOperationScheduleDetailManager

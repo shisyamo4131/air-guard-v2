@@ -35,7 +35,7 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
       <div class="d-flex flex-wrap fill-height ga-4">
         <SiteOperationScheduleTable
           v-if="selectedSchedule"
-          class="mb-4"
+          class="mb-4 flex-grow-1"
           :arrangement-notifications="notifications"
           :schedule="selectedSchedule"
         >
@@ -46,7 +46,15 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
             <td>
               <ArrangementNotificationManager
                 :doc="notificationsMap[worker.notificationKey]"
-              />
+              >
+                <template #activator="activatorProps">
+                  <ArrangementNotificationChip
+                    :notification="activatorProps.item"
+                    :disabled="!activatorProps.item"
+                    @click="() => activatorProps.toUpdate()"
+                  />
+                </template>
+              </ArrangementNotificationManager>
             </td>
           </template>
         </SiteOperationScheduleTable>
