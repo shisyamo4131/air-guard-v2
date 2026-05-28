@@ -93,10 +93,12 @@ export default defineNuxtPlugin((app) => {
           color: "primary",
         },
       },
-      /** Vuetify Input components */
       VAutocomplete: {
         density: "compact",
         variant: "outlined",
+      },
+      VCheckbox: {
+        density: "compact",
       },
       VDateInput: {
         density: "compact",

@@ -14,9 +14,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "../composables/useLogger";
 import { useDateRange } from "@/composables/useDateRange.js";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
+import { useFetch } from "@/composables/fetch/useFetch";
 import { useDocuments } from "@/composables/dataLayers/useDocuments.js";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder.js";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
@@ -67,9 +65,11 @@ export function useIndex() {
    * Fetch Composables
    * @description キャッシュ用のフェッチコンポーザブル群
    */
-  const fetchSiteComposable = useFetchSite();
-  const fetchEmployeeComposable = useFetchEmployee();
-  const fetchOutsourcerComposable = useFetchOutsourcer();
+  const {
+    fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+  } = useFetch("ArrangementsManager", true);
 
   /**
    * Date Range Composable
