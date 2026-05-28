@@ -6,8 +6,6 @@ const selectedItem = ref(null);
 
 <template>
   <v-container>
-    <air-edit-card>
-      <v-toolbar density="compact" color="secondary" />
-    </air-edit-card>
+    <SiteAutocomplete v-model="selectedItem" />
   </v-container>
 </template>

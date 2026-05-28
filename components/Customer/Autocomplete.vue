@@ -45,8 +45,23 @@ const emit = defineEmits(["update:model-value"]);
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
+const allSlots = useSlots();
 const { fetchCustomerComposable } = useFetch("CustomerAutocomplete");
 const { getCustomer, searchCustomers } = fetchCustomerComposable;
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+/**
+ * Returns a slot object excluding the `item` and `append` slots, which are used internally for rendering items with `CustomerListItem` and the append slot for creating new customers.
+ */
+const slots = computed(() =>
+  Object.fromEntries(
+    Object.entries(allSlots).filter(
+      ([name]) => name !== "item" && name !== "append",
+    ),
+  ),
+);
 
 /*****************************************************************************
  * METHODS
@@ -82,8 +97,14 @@ async function api(text) {
       </CustomersManager>
     </template>
 
+    <template #item="slotProps">
+      <slot name="item" v-bind="slotProps">
+        <CustomerListItem v-bind="slotProps.props" :item="slotProps.item" />
+      </slot>
+    </template>
+
     <!-- スロットのパススルー -->
-    <template v-for="(slotFn, name) in $slots" #[name]="scope">
+    <template v-for="(slotFn, name) in slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>
     </template>
   </air-autocomplete-api>
