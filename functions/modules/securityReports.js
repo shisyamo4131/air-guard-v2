@@ -6,7 +6,7 @@
  * Storage に警備日報写真がアップロードされた際に、サムネイル画像を自動生成する。
  *
  * ## トリガー条件
- * - Storage パス: Companies/{companyId}/SiteOperationSchedules/{scheduleId}/SecurityReports/{uuid}.jpg
+ * - Storage パス: Companies/{companyId}/Operations/{operationId}/SecurityReports/{uuid}.jpg
  * - サムネイル自体（{uuid}_thumb.jpg）は処理しない（無限ループ防止）
  *
  * ## 生成されるサムネイル
@@ -20,7 +20,7 @@ import sharp from "sharp";
 
 /** セキュリティレポートのパスパターン */
 const SECURITY_REPORT_PATH_RE =
-  /^Companies\/[^/]+\/SiteOperationSchedules\/[^/]+\/SecurityReports\/([^/]+\.jpg)$/;
+  /^Companies\/[^/]+\/Operations\/[^/]+\/SecurityReports\/([^/]+\.jpg)$/;
 
 /** サムネイルのサイズ上限（px） */
 const THUMB_MAX_PX = 400;

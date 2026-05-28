@@ -4,7 +4,7 @@
  * - Storage に警備日報写真をアップロードし、一覧取得・削除を行う機能を提供します。
  * - 原則として、コンポーネント側で fetch を呼び出すまではデータを取得しません。
  * - `fetchOnMounted` オプションを true にすると、コンポーネントのマウント時に自動で fetch を呼び出します。
- * - `fetchOnChanged` オプションを true にすると、scheduleId が変更された際に自動で fetch を呼び出します。
+ * - `fetchOnChanged` オプションを true にすると、operationId が変更された際に自動で fetch を呼び出します。
  *****************************************************************************/
 import * as Vue from "vue";
 import {
@@ -16,7 +16,7 @@ import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
 export function useSecurityReports(
-  scheduleId,
+  operationId,
   { fetchOnMounted = false, fetchOnChanged = false } = {},
 ) {
   /*****************************************************************************
@@ -27,9 +27,9 @@ export function useSecurityReports(
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(scheduleId)) {
+  if (!Vue.isRef(operationId)) {
     logger.error(
-      "scheduleId は ref である必要があります。リアクティビティが失われる可能性があります。",
+      "operationId は ref である必要があります。リアクティビティが失われる可能性があります。",
     );
   }
 
@@ -55,7 +55,7 @@ export function useSecurityReports(
     uploadError.value = null;
     isUploading.value = true;
     try {
-      await uploadSecurityReport(Vue.unref(scheduleId), newFile);
+      await uploadSecurityReport(Vue.unref(operationId), newFile);
       await fetch();
     } catch (e) {
       console.error("[useSecurityReports] アップロードエラー:", e);
@@ -73,10 +73,10 @@ export function useSecurityReports(
    * - scheduleId が同じ値に変更された場合はトリガーされない
    */
   Vue.watch(
-    scheduleId,
-    async (newScheduleId, oldScheduleId) => {
+    operationId,
+    async (newOperationId, oldOperationId) => {
       if (!fetchOnChanged) return;
-      if (newScheduleId === oldScheduleId) return;
+      if (newOperationId === oldOperationId) return;
       await fetch();
     },
     { immediate: true },
@@ -89,14 +89,14 @@ export function useSecurityReports(
    * 警備日報写真の一覧を取得する
    */
   async function fetch() {
-    if (!Vue.unref(scheduleId)) {
-      listError.value = "scheduleId を入力してください。";
+    if (!Vue.unref(operationId)) {
+      listError.value = "operationId を入力してください。";
       return;
     }
     listError.value = null;
     isListing.value = true;
     try {
-      reports.value = await listSecurityReports(Vue.unref(scheduleId));
+      reports.value = await listSecurityReports(Vue.unref(operationId));
     } catch (e) {
       listError.value = e.message;
     } finally {

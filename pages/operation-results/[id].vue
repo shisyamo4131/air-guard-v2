@@ -22,6 +22,7 @@ const { fetchSite } = fetchSiteComposable;
 const { fetchEmployee } = fetchEmployeeComposable;
 const { fetchOutsourcer } = fetchOutsourcerComposable;
 const { doc } = useDocument("OperationResult", { docId }, (doc) => {
+  if (!doc?.docId) return;
   fetchSite(doc.siteId);
   fetchEmployee(doc.employeeIds);
   fetchOutsourcer(doc.outsourcerIds);

@@ -58,16 +58,16 @@ function getContext() {
 /**
  * 警備日報の写真を Storage にアップロードします。
  *
- * @param {string} scheduleId - SiteOperationSchedule の docId
+ * @param {string} operationId - SiteOperationSchedule または OperationResult の docId
  * @param {File} file - アップロードするファイル
  * @returns {Promise<import('firebase/storage').StorageReference>} アップロードされたファイルの StorageReference
  * @throws {Error} 圧縮またはアップロードに失敗した場合
  */
-export async function uploadSecurityReport(scheduleId, file) {
+export async function uploadSecurityReport(operationId, file) {
   const { storage, companyId, uid } = getContext();
   log(`uploadSecurityReport: start`, {
     companyId,
-    scheduleId,
+    operationId,
     uid,
     fileName: file.name,
     fileSize: file.size,
@@ -94,7 +94,7 @@ export async function uploadSecurityReport(scheduleId, file) {
     });
   const fileRef = ref(
     storage,
-    `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports/${uuid}.jpg`,
+    `Companies/${companyId}/Operations/${operationId}/SecurityReports/${uuid}.jpg`,
   );
   log(`uploadSecurityReport: uploading to`, fileRef.fullPath);
   try {
@@ -114,16 +114,16 @@ export async function uploadSecurityReport(scheduleId, file) {
  * - サムネイル（`_thumb` を含むファイル）は除外します。
  * - 作成日時（timeCreated）の昇順で返します。
  *
- * @param {string} scheduleId - SiteOperationSchedule の docId
+ * @param {string} operationId - SiteOperationSchedule または OperationResult の docId
  * @returns {Promise<Array<{ref: import('firebase/storage').StorageReference, url: string, thumbUrl: string|null, timeCreated: string}>>}
  * @throws {Error} ファイル一覧の取得に失敗した場合
  */
-export async function listSecurityReports(scheduleId) {
+export async function listSecurityReports(operationId) {
   const { storage, companyId } = getContext();
-  log(`listSecurityReports: start`, { companyId, scheduleId });
+  log(`listSecurityReports: start`, { companyId, operationId });
   const folderRef = ref(
     storage,
-    `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports`,
+    `Companies/${companyId}/Operations/${operationId}/SecurityReports`,
   );
   const { items } = await listAll(folderRef);
   log(`listSecurityReports: total items in folder`, items.length);
@@ -144,7 +144,7 @@ export async function listSecurityReports(scheduleId) {
       const thumbName = fileRef.name.replace(/\.jpg$/, "_thumb.jpg");
       const thumbRef = ref(
         storage,
-        `Companies/${companyId}/SiteOperationSchedules/${scheduleId}/SecurityReports/${thumbName}`,
+        `Companies/${companyId}/Operations/${operationId}/SecurityReports/${thumbName}`,
       );
       let thumbUrl = null;
       try {
