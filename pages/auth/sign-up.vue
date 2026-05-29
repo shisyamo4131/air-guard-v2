@@ -71,7 +71,7 @@ async function handleCreateUser() {
     });
 
     messages.add(
-      "アカウントの作成が完了しました。メール認証を完了してください。"
+      "アカウントの作成が完了しました。メール認証を完了してください。",
     );
 
     router.replace("/unconfirmedEmail");
@@ -103,7 +103,7 @@ async function nextStep() {
 
       if (!preReg.isPreRegistered) {
         throw new Error(
-          "事前登録が見つかりません。\n管理者にお問い合わせください。"
+          "事前登録が見つかりません。\n管理者にお問い合わせください。",
         );
       }
 
@@ -117,7 +117,7 @@ async function nextStep() {
       currentStep.value++;
 
       messages.add(
-        `${preReg.displayName || "利用者"}様の事前登録を確認しました。`
+        `${preReg.displayName || "利用者"}様の事前登録を確認しました。`,
       );
     } catch (error) {
       console.error("Email check error:", error);
@@ -167,7 +167,7 @@ function prevStep() {
         flat
       >
         <!-- ステップ1: メールアドレス -->
-        <template v-slot:item.1>
+        <template #[`item.1`]>
           <v-card :border="false">
             <v-card-text class="text-body-2 mb-4">
               管理者により事前登録されたメールアドレスを入力してください。
@@ -187,7 +187,7 @@ function prevStep() {
         </template>
 
         <!-- ステップ2: パスワード -->
-        <template v-slot:item.2>
+        <template #[`item.2`]>
           <v-card :border="false">
             <v-card-text class="text-body-2 mb-4">
               使用するパスワードを設定してください（6文字以上）。
