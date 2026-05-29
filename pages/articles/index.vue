@@ -1,23 +1,16 @@
 <script setup>
 /*****************************************************************************
- * @file pages/outsourcers/index.vue
- * @description 外注先情報一覧ページ
+ * @file pages/articles/index.vue
+ * @description 商品一覧ページ
  *****************************************************************************/
-import { Outsourcer } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
-defineOptions({ name: "outsourcers-index" });
+defineOptions({ name: "articles-index" });
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
-const defaultOption = ref([
-  "where",
-  "contractStatus",
-  "==",
-  Outsourcer.STATUS_ACTIVE,
-]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -25,16 +18,15 @@ const defaultOption = ref([
 const options = computed(() => {
   if (!search.value) {
     return [
-      defaultOption.value,
       ["orderBy", "updatedAt", "desc"],
       ["limit", 10],
     ];
   } else {
-    return [defaultOption.value, ["orderBy", "code", "desc"]];
+    return [["orderBy", "code", "asc"]];
   }
 });
 
-const { docs } = useDocuments("Outsourcer", {
+const { docs } = useDocuments("Article", {
   search,
   options,
   fetchAllOnEmpty: true,
@@ -43,7 +35,7 @@ const { docs } = useDocuments("Outsourcer", {
 
 <template>
   <v-container class="fill-height align-start">
-    <OutsourcersManager
+    <ArticlesManager
       class="fill-height"
       :docs="docs"
       v-model:search="search"

@@ -333,6 +333,24 @@ export const pageStructure = [
       },
     ],
   },
+  // ===== マスタメンテナンス =====
+  {
+    id: "master-maintenance",
+    label: "マスタメンテナンス",
+    icon: "mdi-cog",
+    roles: ["developer"],
+    navigation: true,
+    children: [
+      {
+        id: "articles",
+        path: "/articles",
+        label: "商品管理",
+        icon: "mdi-office-building",
+        roles: ["developer"],
+        navigation: true,
+      },
+    ],
+  },
   // ===== 管理者メニュー =====
   {
     id: "admin-settings",
