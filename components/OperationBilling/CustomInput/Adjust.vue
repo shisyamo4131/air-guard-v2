@@ -6,8 +6,6 @@
 import { useDefaults } from "vuetify";
 // SCHEMAS
 import { OperationBilling } from "@/schemas";
-// COMPOSABLES
-import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -23,50 +21,19 @@ const _props = defineProps({
 const props = useDefaults(_props, "OperationBillingCustomInputAdjust");
 
 /*****************************************************************************
- * SETUP STORES & COMPOSABLES
- *****************************************************************************/
-const { fetchSiteComposable } = useFetch("OperationBillingCustomInputAdjust");
-const { cachedSites, fetchSite } = fetchSiteComposable;
-
-/*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 const tab = ref("quantity");
-
-/*****************************************************************************
- * WATCHERS
- *****************************************************************************/
-watch(
-  () => props.item,
-  (newItem) => {
-    if (newItem?.siteId) fetchSite(newItem.siteId);
-  },
-  { immediate: true, deep: true },
-);
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-const agreements = computed(() => {
-  const site = cachedSites.value?.[props.item.siteId];
-  return site?.agreementsV2 || [];
-});
 </script>
 
 <template>
   <div class="pt-2">
-    <AgreementSelect
-      v-bind="props.componentAttrs['agreement']"
-      :items="agreements"
-      clearable
-      return-object
-    />
     <v-alert
       class="text-caption"
       color="info"
       icon="mdi-information"
       density="compact"
-      text="取極めや実際の稼働と異なる数量、単価、請求締日での請求が必要な場合、調整後の数量・単価・請求締日を入力してください。"
+      text="実際の稼働と異なる数量・単価での請求が必要な場合、調整後の数量・単価を入力してください。"
     />
     <air-checkbox v-bind="props.componentAttrs['useAdjusted']" hide-details />
     <v-tabs v-model="tab" color="primary" fixed-tabs>
@@ -197,10 +164,5 @@ const agreements = computed(() => {
         </div>
       </v-tabs-window-item>
     </v-tabs-window>
-    <air-date-input
-      v-bind="props.componentAttrs['billingDateAt']"
-      density="compact"
-      variant="outlined"
-    />
   </div>
 </template>

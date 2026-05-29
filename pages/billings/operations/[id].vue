@@ -68,9 +68,25 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
       <!-- RIGHT SIDE -->
       <v-col cols="12" lg="9">
         <v-row>
-          <v-col cols="12">
+          <!-- 取極め・請求締日 -->
+          <v-col cols="12" lg="4">
             <OperationBillingManager
-              class="mb-4"
+              class="fill-height"
+              :doc="doc"
+              label="取極め"
+              hide-delete-btn
+            >
+              <template #activator="activatorProps">
+                <OperationBillingActivatorAgreement
+                  v-bind="activatorProps"
+                  class="fill-height"
+                  :disabled="doc.isLocked"
+                />
+              </template>
+            </OperationBillingManager>
+          </v-col>
+          <v-col cols="12" lg="8">
+            <OperationBillingManager
               :doc="doc"
               label="請求情報"
               hide-delete-btn
@@ -81,14 +97,8 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
                 />
               </template>
             </OperationBillingManager>
-            <v-alert
-              v-if="!doc.isBillable"
-              density="compact"
-              type="error"
-              text="取極め、または数量・単価調整が行われていないため、請求データが作成されません。"
-            />
           </v-col>
-          <v-col cols="12">
+          <v-col v-if="doc.isBillable" cols="12">
             <ArticleDetailsManager
               v-model="doc.articles"
               @submit:complete="async () => await doc.update()"
