@@ -5,7 +5,7 @@ import { Customer, Billing } from "../schemas/index.js";
 
 /**
  * `OperationResult` ドキュメントの変更をトリガーにして、
- * `OperationBilling` ドキュメントの作成・更新・削除を行う。
+ * `Billing` ドキュメントの作成・更新・削除を行う。
  */
 export const onOperationResultChange = onDocumentWritten(
   "Companies/{companyId}/OperationResults/{docId}",

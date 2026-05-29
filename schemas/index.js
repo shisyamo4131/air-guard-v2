@@ -1,5 +1,6 @@
 export { Agreement } from "@shisyamo4131/air-guard-v2-schemas";
 export { Article } from "@shisyamo4131/air-guard-v2-schemas";
+export { ArticleDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { AgreementV2 } from "@shisyamo4131/air-guard-v2-schemas";
 export { ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 export { Billing } from "@shisyamo4131/air-guard-v2-schemas";

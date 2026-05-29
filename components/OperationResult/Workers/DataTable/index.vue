@@ -49,7 +49,7 @@ const headers = computed(() => {
 </script>
 
 <template>
-  <air-data-table v-bind="$attrs" :headers="headers">
+  <air-data-table v-bind="$attrs" :headers="headers" density="compact">
     <!-- 作業員名 -->
     <template #[`item.displayName`]="{ item }">
       <AtomsIconsHasLicense v-if="item.isQualified" />

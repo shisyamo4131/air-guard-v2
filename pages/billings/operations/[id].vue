@@ -11,15 +11,18 @@ const {
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
+  fetchArticleComposable,
 } = useFetch("OperationBilling", true);
 const { fetchSite } = fetchSiteComposable;
 const { fetchEmployee } = fetchEmployeeComposable;
 const { fetchOutsourcer } = fetchOutsourcerComposable;
+const { fetchArticle } = fetchArticleComposable;
 const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
   if (!doc?.docId) return;
   fetchSite(doc.siteId);
   fetchEmployee(doc.employeeIds);
   fetchOutsourcer(doc.outsourcerIds);
+  fetchArticle(doc.articles);
 });
 </script>
 
@@ -83,6 +86,12 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
               density="compact"
               type="error"
               text="取極め、または数量・単価調整が行われていないため、請求データが作成されません。"
+            />
+          </v-col>
+          <v-col cols="12">
+            <ArticleDetailsManager
+              v-model="doc.articles"
+              @submit:complete="async () => await doc.update()"
             />
           </v-col>
           <v-col cols="12">

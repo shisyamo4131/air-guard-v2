@@ -17,15 +17,18 @@ const {
   fetchSiteComposable,
   fetchEmployeeComposable,
   fetchOutsourcerComposable,
+  fetchArticleComposable,
 } = useFetch("OperationResult", true);
 const { fetchSite } = fetchSiteComposable;
 const { fetchEmployee } = fetchEmployeeComposable;
 const { fetchOutsourcer } = fetchOutsourcerComposable;
+const { fetchArticle } = fetchArticleComposable;
 const { doc } = useDocument("OperationResult", { docId }, (doc) => {
   if (!doc?.docId) return;
   fetchSite(doc.siteId);
   fetchEmployee(doc.employeeIds);
   fetchOutsourcer(doc.outsourcerIds);
+  fetchArticle(doc.articles);
 });
 </script>
 
@@ -64,6 +67,13 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
           <v-col cols="12">
             <OperationResultWorkersManager
               v-model="doc.workers"
+              :disabled="doc.isLocked"
+              @submit:complete="async () => await doc.update()"
+            />
+          </v-col>
+          <v-col cols="12">
+            <ArticleDetailsManager
+              v-model="doc.articles"
               :disabled="doc.isLocked"
               @submit:complete="async () => await doc.update()"
             />
