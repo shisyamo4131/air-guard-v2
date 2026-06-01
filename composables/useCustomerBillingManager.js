@@ -13,7 +13,7 @@ import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchCustomer } from "./fetch/useFetchCustomer";
 import { useFetchSite } from "./fetch/useFetchSite";
-
+import { useDocManager } from "./useDocManager";
 /**
  * @param {Object} options - Options for the composable
  */
@@ -24,7 +24,7 @@ export function useCustomerBillingManager({
   fetchSiteComposable,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
-  const docManager = useDocManager("useOperationBillingManager", {
+  const docManager = useDocManager("useCustomerBillingManager", {
     doc,
     redirectPath,
   });

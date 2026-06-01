@@ -84,13 +84,11 @@ export function useOperationBillingManager({
   /** METHODS (PUBLIC) */
   /**
    * Toggle the lock status of the operation billing document.
-   * @param {string} docId - The document ID of the operation billing.
-   * @param {boolean} value - The new lock status.
    */
-  async function toggleLock(docId, value) {
+  async function toggleLock() {
     docManager.isLoading.value = true;
     try {
-      await OperationBilling.toggleLock(docId, value);
+      await doc.toggleLock();
     } catch (e) {
       docManager.logger.error({ error: e });
     } finally {

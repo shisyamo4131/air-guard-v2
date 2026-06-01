@@ -13,6 +13,9 @@ import { useConstants } from "@/composables/useConstants";
 import { useFetch } from "@/composables/fetch/useFetch";
 // COMPONENTS
 import CustomInput from "@/components/OperationBilling/CustomInput/index.vue";
+import BtnToggleLock from "@/components/OperationBilling/Activator/Base/BtnToggleLock.vue";
+
+defineOptions({ name: "OperationBillingActivatorBase", inheritAttrs: false });
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -107,18 +110,21 @@ defineExpose({ customInput: CustomInput });
 </script>
 
 <template>
-  <MoleculesActivatorCard>
-    <v-card-text class="py-0">
+  <MoleculesActivatorCard v-bind="$attrs" :item="props.item">
+    <!-- DEFAULT -->
+    <template #default>
       <air-list :items="items" fluid />
+    </template>
+
+    <!-- FOOTER -->
+    <template #footer="{ item }">
+      <BtnToggleLock :item="item" />
       <air-textarea
         label="備考"
-        :model-value="props.item.remarks"
+        :model-value="item.remarks"
         variant="outlined"
         readonly
       />
-    </v-card-text>
-    <v-card-actions v-if="$slots.actions">
-      <slot name="actions" />
-    </v-card-actions>
+    </template>
   </MoleculesActivatorCard>
 </template>

@@ -109,7 +109,7 @@ export function useBillingPdf() {
 
     // PDFを生成してダウンロード
     const fileName = `請求書_${customer.name}_${dayjs(
-      billing.billingDateAt
+      billing.billingDateAt,
     ).format("YYYYMMDD")}.pdf`;
     pdfMake.createPdf(docDefinition).download(fileName);
   }
@@ -135,8 +135,8 @@ export function useBillingPdf() {
     const allSiteIds = [
       ...new Set(
         billings.flatMap((billing) =>
-          billing.operationResults.map((or) => or.siteId)
-        )
+          billing.operationResults.map((or) => or.siteId),
+        ),
       ),
     ];
     await Promise.all(allSiteIds.map((siteId) => fetchSite(siteId)));
@@ -208,9 +208,9 @@ export function useBillingPdf() {
           // 請求日と入金予定日
           {
             text: `請求日: ${dayjs(billing.billingDateAt).format(
-              "YYYY年MM月DD日"
+              "YYYY年MM月DD日",
             )} / 入金予定日: ${dayjs(billing.paymentDueDateAt).format(
-              "YYYY年MM月DD日"
+              "YYYY年MM月DD日",
             )}`,
             fontSize: 10,
             margin: [0, 10, 0, 10],
@@ -225,7 +225,7 @@ export function useBillingPdf() {
 
     // PDFを生成してダウンロード
     const fileName = `請求書_${customer.name}_${dayjs(
-      firstBilling.billingDateAt
+      firstBilling.billingDateAt,
     ).format("YYYYMMDD")}_統合.pdf`;
     pdfMake.createPdf(docDefinition).download(fileName);
   }
@@ -503,10 +503,15 @@ export function useBillingPdf() {
         // 勤務区分
         const shiftType = or.shiftType === "DAY" ? "日勤" : "夜勤";
 
+        // useAdjusted に応じて参照する sales を切り替える
+        const salesData = or.useAdjusted
+          ? or.sales?.adjusted
+          : or.sales?.original;
+
         // 基本の行を出力
         if (or.statistics?.base?.quantity > 0) {
           const overtimeHours = (
-            (or.statistics.base.overtimeMinutes || 0) / 60
+            (or.statistics.base.overtimeWorkMinutes || 0) / 60
           ).toFixed(2);
           body.push([
             { text: dateWithDay, alignment: "center" },
@@ -514,18 +519,18 @@ export function useBillingPdf() {
             { text: "基本", alignment: "center" },
             { text: or.statistics.base.quantity, alignment: "center" },
             {
-              text: formatCurrency(or.agreement?.unitPriceBase || 0),
+              text: formatCurrency(salesData?.base?.unitPrice || 0),
               alignment: "right",
             },
             { text: overtimeHours, alignment: "center" },
             {
-              text: formatCurrency(or.agreement?.overtimeUnitPriceBase || 0),
+              text: formatCurrency(salesData?.base?.overtimeUnitPrice || 0),
               alignment: "right",
             },
             {
               text: formatCurrency(
-                (or.sales?.base?.regularAmount || 0) +
-                  (or.sales?.base?.overtimeAmount || 0)
+                (salesData?.base?.regularAmount || 0) +
+                  (salesData?.base?.overtimeAmount || 0),
               ),
               alignment: "right",
             },
@@ -535,7 +540,7 @@ export function useBillingPdf() {
         // 資格の行を出力
         if (or.statistics?.qualified?.quantity > 0) {
           const overtimeHours = (
-            (or.statistics.qualified.overtimeMinutes || 0) / 60
+            (or.statistics.qualified.overtimeWorkMinutes || 0) / 60
           ).toFixed(2);
           body.push([
             { text: dateWithDay, alignment: "center" },
@@ -543,20 +548,20 @@ export function useBillingPdf() {
             { text: "資格", alignment: "center" },
             { text: or.statistics.qualified.quantity, alignment: "center" },
             {
-              text: formatCurrency(or.agreement?.unitPriceQualified || 0),
+              text: formatCurrency(salesData?.qualified?.unitPrice || 0),
               alignment: "right",
             },
             { text: overtimeHours, alignment: "center" },
             {
               text: formatCurrency(
-                or.agreement?.overtimeUnitPriceQualified || 0
+                salesData?.qualified?.overtimeUnitPrice || 0,
               ),
               alignment: "right",
             },
             {
               text: formatCurrency(
-                (or.sales?.qualified?.regularAmount || 0) +
-                  (or.sales?.qualified?.overtimeAmount || 0)
+                (salesData?.qualified?.regularAmount || 0) +
+                  (salesData?.qualified?.overtimeAmount || 0),
               ),
               alignment: "right",
             },

@@ -29,15 +29,6 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
 <template>
   <v-container class="fill-height align-start">
     <v-row>
-      <v-col v-if="doc.isLocked" cols="12">
-        <v-alert
-          color="warning"
-          icon="mdi-lock"
-          density="compact"
-          text="この稼働実績は編集ロックされています。編集はできません。"
-        >
-        </v-alert>
-      </v-col>
       <!-- LEFT SIDE -->
       <v-col cols="12" lg="3">
         <v-row>
@@ -49,10 +40,7 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
               hide-delete-btn
             >
               <template #activator="activatorProps">
-                <OperationBillingActivatorBase
-                  v-bind="activatorProps"
-                  :disabled="doc.isLocked"
-                />
+                <OperationBillingActivatorBase v-bind="activatorProps" />
               </template>
             </OperationBillingManager>
           </v-col>
@@ -80,7 +68,6 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
                 <OperationBillingActivatorAgreement
                   v-bind="activatorProps"
                   class="fill-height"
-                  :disabled="doc.isLocked"
                 />
               </template>
             </OperationBillingManager>
@@ -88,7 +75,7 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
           <v-col cols="12" lg="8">
             <OperationBillingManager
               :doc="doc"
-              label="請求情報"
+              label="請求明細"
               hide-delete-btn
             >
               <template #activator="activatorProps">

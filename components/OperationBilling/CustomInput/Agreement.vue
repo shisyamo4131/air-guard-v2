@@ -70,6 +70,7 @@ const agreements = computed(() => {
     />
     <air-date-input
       v-bind="props.componentAttrs['billingDateAt']"
+      clearable
       density="compact"
       variant="outlined"
     />

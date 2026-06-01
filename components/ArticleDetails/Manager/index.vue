@@ -39,10 +39,10 @@ const { attrs } = useBaseManager("ArticleDetailsManager");
     :table-props="{ ...props.tableProps, hideSearch: true }"
     :custom-input="props.customInput"
   >
-    <template #header="{ toCreate }">
+    <template #header="{ disabled, toCreate }">
       <v-toolbar color="secondary" density="compact" title="商品">
         <v-spacer />
-        <v-btn icon="mdi-plus" @click="toCreate()" />
+        <v-btn :disabled="disabled" icon="mdi-plus" @click="toCreate()" />
       </v-toolbar>
     </template>
     <template #table="tableProps">

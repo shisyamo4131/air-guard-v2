@@ -45,14 +45,9 @@ defineExpose({ customInput: CustomInput });
 
 <template>
   <MoleculesActivatorCard class="d-flex flex-column">
-    <!-- Toolbar Action を置換 -->
-    <template #toolbar-action="slotProps">
-      <v-btn v-bind="slotProps" icon="mdi-pencil" size="small" />
-    </template>
-
     <!-- DEFAULT SLOT にコンテンツを配置 -->
     <template #default>
-      <v-card-text class="py-0 d-flex flex-column">
+      <div class="d-flex flex-column">
         <air-list :items="items" fluid />
         <div class="flex-grow-1 d-flex align-end">
           <v-alert
@@ -63,10 +58,7 @@ defineExpose({ customInput: CustomInput });
             text="請求締日が未設定のため、請求データが作成されません。取極めの選択または手動入力で請求締日を設定してください。"
           />
         </div>
-      </v-card-text>
-      <v-card-actions v-if="$slots.actions">
-        <slot name="actions" />
-      </v-card-actions>
+      </div>
     </template>
   </MoleculesActivatorCard>
 </template>
