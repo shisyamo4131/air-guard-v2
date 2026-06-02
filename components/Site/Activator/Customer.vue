@@ -64,7 +64,7 @@ defineExpose({
       </template>
     </v-toolbar>
     <v-card-text class="py-0">
-      <air-list v-if="!props.item.isTemporary" :items="items" fluid />
+      <air-list v-if="!props.item.isTemporary" :items="items" no-padding />
       <v-empty-state
         v-else
         :title="item.customerName"

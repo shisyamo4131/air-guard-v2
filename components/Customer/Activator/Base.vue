@@ -87,7 +87,7 @@ defineExpose({
       </template>
     </v-toolbar>
     <v-card-text class="py-0">
-      <air-list :items="items" fluid />
+      <air-list :items="items" no-padding />
       <air-textarea
         label="備考"
         :model-value="props.item.remarks"

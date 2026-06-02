@@ -121,7 +121,7 @@ function handleUpdate(item) {
           </template>
         </v-toolbar>
         <v-card-text>
-          <air-list class="py-0" fluid>
+          <air-list class="py-0" no-padding>
             <!-- 状態 -->
             <v-list-item>
               <v-list-item-title>状態</v-list-item-title>

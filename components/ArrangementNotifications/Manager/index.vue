@@ -154,7 +154,7 @@ async function onUpdateHandler(item) {
     <!-- SLOT: INPUT DEFAULT -->
     <template #input-default="{ item }">
       <!-- NOTIFICATION DETAIL -->
-      <air-list fluid>
+      <air-list no-padding>
         <ArrangementNotificationListItem :notification="item" />
       </air-list>
 

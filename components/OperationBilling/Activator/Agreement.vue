@@ -48,7 +48,7 @@ defineExpose({ customInput: CustomInput });
     <!-- DEFAULT SLOT にコンテンツを配置 -->
     <template #default>
       <div class="d-flex flex-column">
-        <air-list :items="items" fluid />
+        <air-list :items="items" no-padding />
         <div class="flex-grow-1 d-flex align-end">
           <v-alert
             v-if="!props.item.isBillable"

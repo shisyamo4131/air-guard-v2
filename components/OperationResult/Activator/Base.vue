@@ -116,7 +116,7 @@ defineExpose({
   <MoleculesActivatorCard v-bind="$attrs" :item="props.item">
     <!-- DEFAULT -->
     <template #default>
-      <air-list :items="items" fluid />
+      <air-list :items="items" no-padding />
     </template>
 
     <!-- FOOTER -->

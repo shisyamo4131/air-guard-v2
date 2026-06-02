@@ -93,7 +93,7 @@ defineExpose({
       </template>
     </v-toolbar>
     <v-card-text class="py-0">
-      <air-list :items="items" fluid />
+      <air-list :items="items" no-padding />
     </v-card-text>
     <v-card-actions v-if="$slots.actions">
       <slot name="actions" />
