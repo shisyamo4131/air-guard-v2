@@ -23,6 +23,10 @@ defineOptions({ name: "OperationResultWorkersManager", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
+  defaultStartTime: { type: String, default: undefined },
+  defaultEndTime: { type: String, default: undefined },
+  defaultIsStartNextDay: { type: Boolean, default: false },
+  defaultBreakMinutes: { type: Number, default: undefined },
   tableProps: { type: Object, default: () => ({}) },
 });
 const props = useDefaults(_props, "OperationResultWorkersManager");
@@ -38,6 +42,16 @@ const { attrs } = useBaseManager("OperationResultWorkersManager");
     v-bind="{ ...$attrs, ...attrs }"
     :schema="OperationResultDetail"
     item-key="workerId"
+    :before-edit="
+      (editMode, item) => {
+        if (editMode !== 'CREATE') return true;
+        item.startTime = props.defaultStartTime || item.startTime;
+        item.endTime = props.defaultEndTime || item.endTime;
+        item.isStartNextDay = props.defaultIsStartNextDay;
+        item.breakMinutes = props.defaultBreakMinutes ?? item.breakMinutes;
+        return true;
+      }
+    "
     :table-props="{ ...props.tableProps, hideSearch: true }"
     :custom-input="props.customInput"
   >

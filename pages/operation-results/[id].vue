@@ -68,6 +68,10 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
             <OperationResultWorkersManager
               v-model="doc.workers"
               :disabled="doc.isLocked"
+              :default-start-time="doc.startTime"
+              :default-end-time="doc.endTime"
+              :default-is-start-next-day="doc.isStartNextDay"
+              :default-break-minutes="doc.breakMinutes"
               @submit:complete="async () => await doc.update()"
             />
           </v-col>
