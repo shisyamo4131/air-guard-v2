@@ -43,7 +43,7 @@ const { attrs } = useBaseManager("OperationResultWorkersManager");
   >
     <template #table="tableProps">
       <Toolbar v-bind="tableProps" />
-      <OperationResultWorkersDataTable v-bind="tableProps" />
+      <WorkersDataTable v-bind="tableProps" />
     </template>
   </air-array-manager>
 </template>

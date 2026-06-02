@@ -10,12 +10,12 @@ import { useFetch } from "@/composables/fetch/useFetch";
 /*****************************************************************************
  * DEFINE OPTIONS
  *****************************************************************************/
-defineOptions({ name: "ArticleDetailsTable", inheritAttrs: false });
+defineOptions({ name: "ArticleDetailsDataTable", inheritAttrs: false });
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { fetchArticleComposable } = useFetch("ArticleDetailsTable");
+const { fetchArticleComposable } = useFetch("ArticleDetailsDataTable");
 const { cachedArticles } = fetchArticleComposable;
 
 /*****************************************************************************
@@ -31,7 +31,12 @@ const headers = computed(() => [
 </script>
 
 <template>
-  <air-data-table v-bind="$attrs" :headers="headers" density="compact">
+  <air-data-table
+    v-bind="$attrs"
+    :headers="headers"
+    :items-per-page="-1"
+    hide-default-footer
+  >
     <template #[`item.code`]="{ item }">
       {{ cachedArticles[item.articleId]?.code ?? "-" }}
     </template>

@@ -39,14 +39,14 @@ const { attrs } = useBaseManager("ArticleDetailsManager");
     :table-props="{ ...props.tableProps, hideSearch: true }"
     :custom-input="props.customInput"
   >
-    <template #header="{ disabled, toCreate }">
-      <v-toolbar color="secondary" density="compact" title="商品">
+    <template #header="{ disabled, toCreate, label }">
+      <v-toolbar color="secondary" density="compact" :title="label">
         <v-spacer />
         <v-btn :disabled="disabled" icon="mdi-plus" @click="toCreate()" />
       </v-toolbar>
     </template>
     <template #table="tableProps">
-      <ArticleDetailsTable v-bind="tableProps" />
+      <ArticleDetailsDataTable v-bind="tableProps" />
     </template>
   </air-array-manager>
 </template>

@@ -88,6 +88,7 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
           <v-col v-if="doc.isBillable" cols="12">
             <ArticleDetailsManager
               v-model="doc.articles"
+              label="稼働外売上"
               @submit:complete="async () => await doc.update()"
             />
           </v-col>

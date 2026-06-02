@@ -75,6 +75,7 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
             <ArticleDetailsManager
               v-model="doc.articles"
               :disabled="doc.isLocked"
+              label="稼働外売上"
               @submit:complete="async () => await doc.update()"
             />
           </v-col>

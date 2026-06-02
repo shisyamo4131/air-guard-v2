@@ -77,6 +77,10 @@ const items = computed(() => {
   return [
     { title: "取引先", props: { subtitle: `${customerName.value}` } },
     { title: "現場", props: { subtitle: `${siteName.value}` } },
+    {
+      title: "現場コード",
+      props: { subtitle: `${site.value?.code || "-"}` },
+    },
     { title: "日付", props: { subtitle: dateString.value } },
     {
       title: "曜日・勤務区分",
@@ -109,18 +113,20 @@ defineExpose({
 </script>
 
 <template>
-  <MoleculesActivatorCard>
-    <v-card-text class="py-0">
+  <MoleculesActivatorCard v-bind="$attrs" :item="props.item">
+    <!-- DEFAULT -->
+    <template #default>
       <air-list :items="items" fluid />
+    </template>
+
+    <!-- FOOTER -->
+    <template #footer="{ item }">
       <air-textarea
         label="備考"
-        :model-value="props.item.remarks"
+        :model-value="item.remarks"
         variant="outlined"
         readonly
       />
-    </v-card-text>
-    <v-card-actions v-if="$slots.actions">
-      <slot name="actions" />
-    </v-card-actions>
+    </template>
   </MoleculesActivatorCard>
 </template>

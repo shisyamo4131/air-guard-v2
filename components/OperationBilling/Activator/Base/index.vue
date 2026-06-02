@@ -80,6 +80,7 @@ const items = computed(() => {
   return [
     { title: "取引先", props: { subtitle: `${customerName.value}` } },
     { title: "現場", props: { subtitle: `${siteName.value}` } },
+    { title: "現場コード", props: { subtitle: `${site.value?.code || "-"}` } },
     { title: "日付", props: { subtitle: dateString.value } },
     {
       title: "曜日・勤務区分",
