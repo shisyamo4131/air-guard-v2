@@ -1,11 +1,15 @@
 <script setup>
-/**
+/*****************************************************************************
  * @file components/organisms/SiteOperationScheduleManager.vue
  * @description A component for managing single site operation schedule.
- */
+ * @extends AirItemManager
+ *****************************************************************************/
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
 
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
 const props = defineProps({
   fetchSiteComposable: { type: Object, default: () => useFetchSite() },
 });
@@ -23,16 +27,10 @@ defineExpose({
 </script>
 
 <template>
-  <air-item-manager ref="component" :custom-input="CustomInput">
-    <template #[`input.siteId`]="{ attrs }">
-      <SiteAutocomplete
-        v-bind="attrs"
-        creatable
-        :fetch-site-composable="fetchSiteComposable"
-      />
-    </template>
-    <template #[`input.isStartNextDay`]="{ attrs }">
-      <IsStartNextDayCheckbox v-bind="attrs" />
-    </template>
-  </air-item-manager>
+  <air-item-manager
+    ref="component"
+    :custom-input="CustomInput"
+    :disable-update="(item) => !!item.operationResultId"
+    :disable-delete="(item) => !!item.operationResultId"
+  />
 </template>

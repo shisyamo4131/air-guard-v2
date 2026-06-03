@@ -23,7 +23,14 @@ const { attrs } = useIndex();
 
 <template>
   <air-data-table v-bind="{ ...$attrs, ...attrs }">
-    <!-- OJT -->
+    <!-- displayName -->
+    <!-- Adds `HasLicense` icon if the worker is qualified -->
+    <template #[`item.displayName`]="{ item, value }">
+      <AtomsIconsHasLicense v-if="item.isQualified" size="x-small" />
+      {{ value }}
+    </template>
+
+    <!-- isOjt -->
     <template #[`item.isOjt`]="{ item }">
       <OjtIcon :item="item" />
     </template>

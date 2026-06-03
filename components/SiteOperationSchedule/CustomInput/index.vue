@@ -4,30 +4,57 @@
  * @description 現場稼働予定編集用のカスタム入力コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useFetch } from "@/composables/fetch/useFetch";
+import { Operation } from "@/schemas";
+import { useSetRegularTime } from "@/composables/useSetRegularTime";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
   componentAttrs: { type: Object, default: () => ({}) },
+  disabled: { type: Boolean, default: false },
+  item: {
+    type: Object,
+    required: true,
+    validator: (value) => value instanceof Operation,
+  },
+  updateProperties: { type: Function, required: true },
 });
 const props = useDefaults(_props, "OperationResultCustomInput");
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { fetchSiteComposable } = useFetch("OperationResultCustomInput");
+const { set, addMessage } = useSetRegularTime(
+  {
+    siteId: () => props.item.siteId,
+    date: () => props.item.date,
+    shiftType: () => props.item.shiftType,
+  },
+  (agreement) => {
+    props.updateProperties({
+      startTime: agreement.startTime,
+      endTime: agreement.endTime,
+      isStartNextDay: agreement.isStartNextDay,
+      breakMinutes: agreement.breakMinutes,
+      regulationWorkMinutes: agreement.regulationWorkMinutes,
+    });
+    addMessage({ color: "success", text: "取極めから定時を設定しました。" });
+  },
+);
 </script>
 
 <template>
   <v-row>
-    <v-col cols="12">
-      <SiteAutocomplete
-        v-bind="props.componentAttrs['siteId']"
-        creatable
-        :fetch-site-composable="fetchSiteComposable"
+    <v-col v-if="props.item.operationResultId" cols="12">
+      <v-alert
+        type="info"
+        density="compact"
+        text="既に稼働実績が作成された現場稼働予定です。"
       />
+    </v-col>
+    <v-col cols="12">
+      <SiteAutocomplete v-bind="props.componentAttrs['siteId']" creatable />
     </v-col>
     <v-col cols="12">
       <air-date-input v-bind="props.componentAttrs['dateAt']" />
@@ -37,6 +64,16 @@ const { fetchSiteComposable } = useFetch("OperationResultCustomInput");
     </v-col>
     <v-col cols="12" md="6">
       <air-select v-bind="props.componentAttrs['shiftType']" />
+    </v-col>
+    <v-col cols="12">
+      <v-btn
+        text="取極めから定時を設定"
+        block
+        color="primary"
+        :disabled="props.disabled"
+        variant="flat"
+        @click="set"
+      />
     </v-col>
     <v-col cols="12" md="6">
       <air-time-picker-input v-bind="props.componentAttrs['startTime']" />

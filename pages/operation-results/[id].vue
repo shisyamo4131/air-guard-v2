@@ -58,6 +58,13 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
               </template>
             </OperationResultManager>
           </v-col>
+          <!-- 警備日報 -->
+          <v-col cols="12">
+            <v-card>
+              <v-toolbar color="secondary" density="compact" title="警備日報" />
+              <SecurityReportsManager :schedule-id="doc?.docId" />
+            </v-card>
+          </v-col>
         </v-row>
       </v-col>
 
@@ -82,12 +89,6 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
               label="稼働外売上"
               @submit:complete="async () => await doc.update()"
             />
-          </v-col>
-          <v-col cols="12">
-            <v-card>
-              <v-toolbar color="secondary" density="compact" title="警備日報" />
-              <SecurityReportsManager :schedule-id="doc?.docId" />
-            </v-card>
           </v-col>
         </v-row>
       </v-col>

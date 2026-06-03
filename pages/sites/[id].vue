@@ -1,9 +1,17 @@
 <script setup>
+/*****************************************************************************
+ * @file ./pages/sites/[id].vue
+ * @description 現場詳細ページ
+ * @use useFetch (origin)
+ *****************************************************************************/
 import dayjs from "dayjs";
 import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
+import { useFetch } from "@/composables/fetch/useFetch";
+
+defineOptions({ name: "site-detail" });
 
 /*****************************************************************************
  * ROUTER
@@ -23,7 +31,12 @@ const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
-/** Site Operation Schedules */
+/**
+ * Subscribe to `SiteOperationSchedule` documents that match the following conditions:
+ * - `siteId` equals the current `docId`
+ * - `dateAt` is between the `from` and `to` values of the debounced date range
+ * The resulting documents are stored in the `schedules` variable for use in the component.
+ */
 const options = computed(() => {
   return [
     ["where", "siteId", "==", docId],
@@ -35,6 +48,8 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
   options,
   fetchAllOnEmpty: true,
 });
+
+useFetch("site-detail", true);
 </script>
 
 <template>

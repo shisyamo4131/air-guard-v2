@@ -98,6 +98,10 @@ const items = computed(() => {
     },
     { title: "必要人数", props: { subtitle: requiredPersonnel.value } },
     {
+      title: "要資格者",
+      props: { subtitle: props.item.qualificationRequired ? "あり" : "なし" },
+    },
+    {
       title: "作業内容",
       props: { subtitle: props.item.workDescription || "-" },
     },

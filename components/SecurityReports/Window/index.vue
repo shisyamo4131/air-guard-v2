@@ -59,14 +59,18 @@ watchEffect(() => {
 
 <template>
   <v-window v-model="window" show-arrows>
-    <v-window-item v-for="(report, n) in props.reports" :key="n">
+    <v-window-item
+      v-for="(report, n) in props.reports"
+      :key="n"
+      class="fill-height"
+    >
       <!-- thumb: true - サムネイルがあればサムネイル、なければ本体 URL を表示 -->
       <!-- thumb: false - 本体 URL を表示 -->
       <v-img
         v-bind="props.imgProps"
+        class="fill-height"
         :src="props.thumb ? (report.thumbUrl ?? report.url) : report.url"
         :aspect-ratio="16 / 9"
-        cover
       >
         <template #placeholder>
           <v-row class="fill-height ma-0" align="center" justify="center">
@@ -77,3 +81,9 @@ watchEffect(() => {
     </v-window-item>
   </v-window>
 </template>
+
+<style scoped>
+:deep(.v-window__container) {
+  height: 100%;
+}
+</style>

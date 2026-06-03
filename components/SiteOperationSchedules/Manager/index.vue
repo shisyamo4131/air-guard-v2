@@ -3,15 +3,18 @@
  * @file ./components/SiteOperationSchedules/Manager/index.vue
  * @description A component to manage `SiteOperationSchedules`.
  * @extends AirArrayManager
+ * @emit update:date-range {Object} - Emits the selected date range when it changes.
  *****************************************************************************/
 import { useBaseManager } from "@/composables/useBaseManager";
 import { SiteOperationSchedule } from "@/schemas";
 import { useDefaults } from "vuetify";
+import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  customInput: { type: Object, default: () => CustomInput },
   docs: { type: Array, default: () => [] },
   dateAt: { type: Object, default: () => new Date() }, // 初期表示させる日を設定
   handleCreate: { type: Function, default: (item) => item.create(item) },
@@ -60,6 +63,7 @@ function beforeEdit(editMode, item) {
     :handle-delete="props.handleDelete"
     :disable-update="(item) => !!item.operationResultId"
     :disable-delete="(item) => !!item.operationResultId"
+    :custom-input="props.customInput"
   >
     <template #table="tableProps">
       <slot name="table" v-bind="tableProps">
@@ -83,15 +87,6 @@ function beforeEdit(editMode, item) {
           </v-card-text>
         </v-card>
       </slot>
-    </template>
-    <template #[`input.shiftType`]="{ attrs }">
-      <v-radio-group v-bind="attrs" inline>
-        <v-radio label="日勤" value="DAY" />
-        <v-radio label="夜勤" value="NIGHT" />
-      </v-radio-group>
-    </template>
-    <template #[`input.isStartNextDay`]="{ attrs }">
-      <IsStartNextDayCheckbox v-bind="attrs" />
     </template>
   </air-array-manager>
 </template>
