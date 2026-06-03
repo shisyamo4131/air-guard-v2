@@ -3,6 +3,7 @@
  * @file ./components/ArrangementNotification/CustomInput/index.vue
  * @description A custom-input component of `ArrangementNotification`.
  *****************************************************************************/
+import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
 import { ArrangementNotification } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
@@ -58,6 +59,15 @@ const worker = computed(() => {
 const displayName = computed(() => {
   return worker.value?.displayName || "N/A";
 });
+const dateTime = computed(() => {
+  if (!props.item) return "N/A";
+  const date = dayjs(props.item.dateAt)
+    .tz("Asia/Tokyo")
+    .format("YYYY年MM月DD日（ddd）");
+  const start = props.item.startTime || "N/A";
+  const end = props.item.endTime || "N/A";
+  return `${date}${start}～${end}`;
+});
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
@@ -89,9 +99,7 @@ watch(
           </v-list-item>
           <v-list-item>
             <v-list-item-title>日時</v-list-item-title>
-            <v-list-item-subtitle
-              >2026年05月27日（水）08:00～17:00</v-list-item-subtitle
-            >
+            <v-list-item-subtitle>{{ dateTime }}</v-list-item-subtitle>
           </v-list-item>
         </air-list>
       </v-card>
