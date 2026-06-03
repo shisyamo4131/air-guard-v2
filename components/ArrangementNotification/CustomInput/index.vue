@@ -18,6 +18,7 @@ defineOptions({
  *****************************************************************************/
 const _props = defineProps({
   componentAttrs: { type: Object, required: true },
+  excludedKeys: { type: Array, default: () => [] },
   item: {
     type: Object,
     default: null,
@@ -104,14 +105,16 @@ watch(
         </air-list>
       </v-card>
     </v-input>
-    <span class="text-overline text-medium-emphasis">状態</span>
-    <v-input>
-      <ArrangementNotificationStatusChipGroup
-        v-bind="componentAttrs['status']"
-        mandatory
-        column
-      />
-    </v-input>
+    <template v-if="!props.excludedKeys.includes('status')">
+      <span class="text-overline text-medium-emphasis">状態</span>
+      <v-input>
+        <ArrangementNotificationStatusChipGroup
+          v-bind="componentAttrs['status']"
+          mandatory
+          column
+        />
+      </v-input>
+    </template>
     <v-expand-transition>
       <v-row v-show="props.item.isLeaved" dense>
         <!-- ACTUAL START TIME -->

@@ -39,13 +39,20 @@ const headers = computed(() => {
   return [
     { title: "日付", key: "date", width: 120 },
     { title: "勤務区分", key: "shiftType", width: 120 },
-    {
-      title: "現場",
-      key: "siteId",
-      value: (item) => cachedSites.value?.[item.siteId]?.name || "...loading",
-    },
+    { title: "現場", key: "siteId" },
   ];
 });
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+function getSite(siteId) {
+  return cachedSites.value?.[siteId] || null;
+}
+
+function getCustomer(siteId) {
+  return cachedSites.value?.[siteId]?.customer || null;
+}
 </script>
 
 <template>
@@ -55,9 +62,19 @@ const headers = computed(() => {
     mobile-breakpoint="md"
     :sort-by="props.sortBy"
   >
+    <!-- SHIFT TYPE -->
     <template #[`item.shiftType`]="{ item }">
       <ShiftTypeChip :shift-type="item.shiftType" label size="small" />
     </template>
+
+    <!-- SITE ID -->
+    <template #[`item.siteId`]="{ item }">
+      <div>{{ getSite(item.siteId)?.name || "...loading" }}</div>
+      <div class="text-caption text-medium-emphasis">
+        {{ getCustomer(item.siteId)?.abbreviation || "...loading" }}
+      </div>
+    </template>
+
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}"></slot>
     </template>

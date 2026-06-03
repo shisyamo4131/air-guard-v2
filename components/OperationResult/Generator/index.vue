@@ -4,12 +4,19 @@
  * @description A component to generate `OperationResult` document based on
  *              `SiteOperationSchedule` and `ArrangementNotification` documents.
  * @extends SiteOperationScheduleManager
+ *
+ * @note
+ * 配置通知（ArrangementNotification）未作成状態の作業員を含む現場稼働予定（SiteOperationSchedule）が
+ * 選択された場合、`ArrangementNotificationManager` の `doc` プロパティに null が渡されるのを避けるため
+ * `selectedSchedule` を受け取るウォッチャー内で、選択された現場稼働予定に関連する配置通知を購読する前に、
+ * 配置通知が存在しない作業員がいるかどうかを確認し、存在する場合は先に配置通知を作成します。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 /** SCHEMAS */
 import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 /** STORES */
 import { useMessagesStore } from "@/stores/useMessagesStore";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
 /** COMPONENTS */
 import List from "./List.vue";
 import Detail from "./Detail.vue";
@@ -32,6 +39,8 @@ const props = useDefaults(_props, "OperationResultGenerator");
  *****************************************************************************/
 /** Messages store */
 const messages = useMessagesStore();
+/** Loadings store */
+const loadings = useLoadingsStore();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -78,11 +87,29 @@ const sortedSchedules = computed(() => {
  * Subscribe to `ArrangementNotification` documents when the selected schedule changes.
  * Unsubscribe from previous notifications if the selected schedule is cleared.
  */
-watch(selectedSchedule, (newSchedule) => {
+watch(selectedSchedule, async (newSchedule) => {
   if (!newSchedule) {
     notificationInstance.unsubscribe();
     notifications.value = [];
   } else {
+    /**
+     * 配置通知（ArrangementNotification）未作成の状態の作業員がいる場合、
+     * 作業員（Worker）のデータを編集することができないため、
+     * 先に配置通知を作成する。
+     * Cloud Functions 側で push 通知が送られないようにしなければならない。
+     */
+    if (newSchedule.workers.some((worker) => !worker.hasNotification)) {
+      const key = loadings.add(
+        "未通知の作業員がいます。通知を作成しています...",
+      );
+      try {
+        await newSchedule.notify();
+      } catch (error) {
+        messages.add({ text: error.message, color: "error" });
+      } finally {
+        loadings.remove(key);
+      }
+    }
     notifications.value = notificationInstance.subscribeDocs({
       constraints: [
         ["where", "siteOperationScheduleId", "==", newSchedule.docId],

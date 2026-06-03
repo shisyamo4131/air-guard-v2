@@ -40,18 +40,27 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
           :schedule="selectedSchedule"
         >
           <template #append-header>
-            <th>ステータス</th>
+            <th>action</th>
           </template>
           <template #append="{ worker }">
             <td>
+              <!-- 上下番確定処理では配置通知のステータスは `下番済み` に強制更新 -->
+              <!-- `excluded-keys` によりステータス編集コンポーネントを非表示化（CustomInput で対応） -->
               <ArrangementNotificationManager
                 :doc="notificationsMap[worker.notificationKey]"
+                :before-edit="(editMode, item) => (item.status = 'LEAVED')"
+                :excluded-keys="['status']"
               >
                 <template #activator="activatorProps">
-                  <ArrangementNotificationChip
+                  <!-- <ArrangementNotificationChip
                     :notification="activatorProps.item"
                     :disabled="!activatorProps.item"
                     @click="() => activatorProps.toUpdate()"
+                  /> -->
+                  <v-btn
+                    icon="mdi-pencil"
+                    @click="() => activatorProps.toUpdate()"
+                    size="small"
                   />
                 </template>
               </ArrangementNotificationManager>

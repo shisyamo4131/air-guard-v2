@@ -63,14 +63,15 @@ function handleClickUpdate(item) {
     >
       <!-- TABLE -->
       <template #table="tableProps">
-        <OperationResultsDataTable v-bind="tableProps">
-          <template #search>
-            <MoleculesMonthSelector
-              :model-value="dateRange.from.value"
-              @date-range="dateRange = $event"
-            />
-          </template>
-        </OperationResultsDataTable>
+        <v-toolbar color="secondary" flat density="compact">
+          <MoleculesMonthSelector
+            :model-value="dateRange.from.value"
+            @date-range="dateRange = $event"
+          />
+          <v-spacer />
+          <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
+        </v-toolbar>
+        <OperationResultsDataTable v-bind="tableProps" hide-search />
       </template>
     </OperationResultsManager>
   </v-container>
