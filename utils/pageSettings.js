@@ -196,6 +196,14 @@ export const pageStructure = [
         roles: ["billings:read"],
         navigation: true,
       },
+      {
+        id: "billings-customers-detail",
+        path: "/billings/customers/[id]",
+        label: "取引先請求詳細",
+        icon: "mdi-format-list-bulleted",
+        roles: ["billings:read"],
+        navigation: false,
+      },
     ],
   },
 
@@ -528,19 +536,15 @@ function createParentPathMap(pages) {
           .filter((child) => child.path)
           .map((child) => child.path.replace(/\/$/, "") || "/");
 
-        // 子要素の中で最も短いパス（親候補）を見つける
-        const sortedPaths = [...childPaths].sort((a, b) => a.length - b.length);
-
-        if (sortedPaths.length > 0) {
-          const potentialParent = sortedPaths[0];
-
-          // 他の子パスがこの親の配下にあるか判定
-          for (const childPath of childPaths) {
+        // 全ペアを比較して prefix 関係があれば親として登録する
+        for (const childPath of childPaths) {
+          for (const potentialParent of childPaths) {
             if (
               childPath !== potentialParent &&
               childPath.startsWith(potentialParent + "/")
             ) {
               map[childPath] = potentialParent;
+              break;
             }
           }
         }
