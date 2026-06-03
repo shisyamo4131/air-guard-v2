@@ -93,7 +93,9 @@ const salesData = computed(() =>
     <tfoot>
       <tr>
         <td colspan="3" class="text-right">合計金額</td>
-        <td class="text-right">{{ formatNumber(props.item.salesAmount) }}</td>
+        <td class="text-right">
+          {{ formatNumber(salesData.base.total + salesData.qualified.total) }}
+        </td>
       </tr>
     </tfoot>
   </v-table>
