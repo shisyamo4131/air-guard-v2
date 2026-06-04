@@ -12,6 +12,6 @@ export * from "./modules/auth-v2.js";
 export * from "./modules/ArrangementNotifications.js";
 export * from "./modules/securityReports.js";
 export * from "./modules/operationCleanup.js";
-export * from "./modules/utils/notifications.js"; // テスト用 HTTP トリガー
+export * from "./modules/utils/notifications.js";
 // export * from "./modules/migration.js"; // マイグレーションが必要な時に有効化
 // export * from "./modules/stripe.js";
