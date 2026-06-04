@@ -29,17 +29,39 @@ const createDeleteBatches = (snapshot, db) => {
 };
 
 /**
+ * Splits an array into chunks of the specified size.
+ * @param {Array} array - The array to split.
+ * @param {number} size - The chunk size.
+ * @returns {Array[]} - An array of chunks.
+ */
+const chunkArray = (array, size) => {
+  const result = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+};
+
+/**
  * Cleans up site operation schedules older than the defined retention period.
+ * Also deletes associated ArrangementNotification documents.
+ * - SiteOperationSchedule ドキュメントを collectionGroup で取得し、
+ *   ref.path から companyId を抽出して会社ごとにグループ化。
+ * - 各会社ごとに ArrangementNotifications を siteOperationScheduleId の in クエリで取得し削除。
+ * - その後、SiteOperationSchedule ドキュメントを削除。
+ *
+ * [SiteOperationSchedule ドキュメントの削除トリガーを利用しない理由]
+ * - Cloud Functions の遅延実行が UI 上の不都合を引き起こす可能性があるため。
+ *
+ * [SiteOperationSchedule クラスの delete メソッドを利用しない理由]
+ * - メソッド内部で使用している `fetchDocsBySiteOperationScheduleId` メソッドがクライアント側でしか
+ *   使用できない制約があるため。
  * @returns {Promise<void>}
  * @throws Will throw an error if the cleanup process fails.
  */
 const cleanUpSiteOperationSchedules = async () => {
   try {
     logger.info("Starting cleanup of site operation schedules...");
-    // const deadline = dayjs()
-    //   .subtract(SITE_OPERATION_SCHEDULES_KEEP_DAYS, "day")
-    //   .utcOffset(JST_OFFSET)
-    //   .format("YYYY-MM-DD");
 
     // JST で現在日時を取得し、60日前の日付を計算
     const deadline = dayjs()
@@ -58,6 +80,41 @@ const cleanUpSiteOperationSchedules = async () => {
       return;
     }
 
+    // ref.path: "Companies/{companyId}/SiteOperationSchedules/{docId}"
+    // companyId ごとに docId をグループ化
+    const companyScheduleMap = {};
+    snapshot.docs.forEach((doc) => {
+      const segments = doc.ref.path.split("/");
+      // segments[0] = "Companies", segments[1] = companyId
+      const companyId = segments[1];
+      if (!companyScheduleMap[companyId]) {
+        companyScheduleMap[companyId] = [];
+      }
+      companyScheduleMap[companyId].push(doc.id);
+    });
+
+    // 各会社ごとに ArrangementNotifications を削除
+    let totalArrangementDeleted = 0;
+    for (const [companyId, scheduleIds] of Object.entries(companyScheduleMap)) {
+      // Firestore の in クエリは最大 30 件のため分割して処理
+      const chunks = chunkArray(scheduleIds, 30);
+      for (const chunk of chunks) {
+        const anSnapshot = await db
+          .collection(`Companies/${companyId}/ArrangementNotifications`)
+          .where("siteOperationScheduleId", "in", chunk)
+          .get();
+        if (!anSnapshot.empty) {
+          const batchArray = createDeleteBatches(anSnapshot, db);
+          await Promise.all(batchArray.map((batch) => batch.commit()));
+          totalArrangementDeleted += anSnapshot.size;
+        }
+      }
+    }
+    logger.info(
+      `Deleted ${totalArrangementDeleted} arrangement notifications.`,
+    );
+
+    // SiteOperationSchedule ドキュメントを削除
     const batchArray = createDeleteBatches(snapshot, db);
     await Promise.all(batchArray.map((batch) => batch.commit()));
     logger.info(`Deleted ${snapshot.size} site operation schedules.`);
