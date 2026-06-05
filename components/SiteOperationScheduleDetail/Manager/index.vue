@@ -1,17 +1,17 @@
 <script setup>
 /*****************************************************************************
- * @file components/SiteOperationSchedule/Manager/index.vue
- * @description A component for managing single site operation schedule.
+ * @file components/SiteOperationScheduleDetail/Manager/index.vue
+ * @description A component for managing single site operation schedule detail.
  * @extends AirItemManager
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
+import CustomInput from "@/components/SiteOperationScheduleDetail/CustomInput";
 
 /*****************************************************************************
  * DEFINE OPTIONS
  *****************************************************************************/
 defineOptions({
-  name: "SiteOperationScheduleManager",
+  name: "SiteOperationScheduleDetailManager",
   inheritAttrs: false,
 });
 
@@ -21,7 +21,7 @@ defineOptions({
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
 });
-const props = useDefaults(_props, "SiteOperationScheduleManager");
+const props = useDefaults(_props, "SiteOperationScheduleDetailManager");
 
 /*****************************************************************************
  * TEMPLATE REF
@@ -43,7 +43,6 @@ defineExpose({
     v-bind="$attrs"
     ref="component"
     :custom-input="CustomInput"
-    :disable-update="(item) => !!item.operationResultId"
-    :disable-delete="(item) => !!item.operationResultId"
+    :dialog-props="{ maxWidth: 360 }"
   />
 </template>

@@ -14,6 +14,7 @@ import {
 } from "@/utils/storage";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
 
 export function useSecurityReports(
   operationId,
@@ -23,6 +24,7 @@ export function useSecurityReports(
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const logger = useLogger("useSecurityReports", useErrorsStore());
+  const loadings = useLoadingsStore();
 
   /*****************************************************************************
    * VALIDATION
@@ -54,6 +56,7 @@ export function useSecurityReports(
     if (!newFile) return;
     uploadError.value = null;
     isUploading.value = true;
+    const key = loadings.add("警備日報をアップロードしています...");
     try {
       await uploadSecurityReport(Vue.unref(operationId), newFile);
       await fetch();
@@ -62,6 +65,7 @@ export function useSecurityReports(
       uploadError.value = e.message;
     } finally {
       isUploading.value = false;
+      loadings.remove(key);
       file.value = null;
     }
   });

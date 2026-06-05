@@ -64,14 +64,24 @@ function getCustomer(siteId) {
   >
     <!-- SHIFT TYPE -->
     <template #[`item.shiftType`]="{ item }">
-      <ShiftTypeChip :shift-type="item.shiftType" label size="small" />
+      <ShiftTypeChip :shift-type="item.shiftType" label size="x-small" />
     </template>
 
     <!-- SITE ID -->
     <template #[`item.siteId`]="{ item }">
-      <div>{{ getSite(item.siteId)?.name || "...loading" }}</div>
-      <div class="text-caption text-medium-emphasis">
-        {{ getCustomer(item.siteId)?.abbreviation || "...loading" }}
+      <div class="d-flex">
+        <OperationResultLockIcon
+          v-if="item.isLocked"
+          :icon-class="'align-self-center me-2'"
+        />
+        <div>
+          <div>
+            {{ getSite(item.siteId)?.name || "...loading" }}
+          </div>
+          <div class="text-caption text-medium-emphasis">
+            {{ getCustomer(item.siteId)?.abbreviation || "...loading" }}
+          </div>
+        </div>
       </div>
     </template>
 

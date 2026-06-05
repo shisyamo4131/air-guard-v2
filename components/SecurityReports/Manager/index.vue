@@ -21,17 +21,15 @@ const emit = defineEmits(["click:delete"]);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { attrs, reports, isDeleting, del } = useSecurityReports(
+const { attrs, reports, isDeleting, del, isUploading } = useSecurityReports(
   toRef(() => props.scheduleId),
-  {
-    fetchOnChanged: true,
-  },
+  { fetchOnChanged: true },
 );
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
-const currentReport = ref(null);
+const currentReport = ref(null); // 現在表示中の警備日報
 </script>
 
 <template>
@@ -69,7 +67,7 @@ const currentReport = ref(null);
       />
       <v-btn
         :href="currentReport?.url"
-        :disabled="!currentReport?.url"
+        :disabled="!currentReport?.url || isUploading"
         target="_blank"
         size="small"
         variant="text"

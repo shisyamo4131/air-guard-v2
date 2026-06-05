@@ -218,8 +218,9 @@ const arrangementNotificationManager = useTemplateRef(
     <ArrangementNotificationManager ref="arrangementNotificationManager" />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
-    <OrganismsSiteOperationScheduleDetailManager
+    <SiteOperationScheduleDetailManager
       v-bind="siteOperationScheduleDetailManager.attrs.value"
+      hide-delete-btn
     />
 
     <!-- 配置テキスト表示ダイアログ -->

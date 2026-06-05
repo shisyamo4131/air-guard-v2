@@ -96,14 +96,14 @@ watch(selectedSchedule, async (newSchedule) => {
      * 配置通知（ArrangementNotification）未作成の状態の作業員がいる場合、
      * 作業員（Worker）のデータを編集することができないため、
      * 先に配置通知を作成する。
-     * Cloud Functions 側で push 通知が送られないようにしなければならない。
      */
     if (newSchedule.workers.some((worker) => !worker.hasNotification)) {
       const key = loadings.add(
         "未通知の作業員がいます。通知を作成しています...",
       );
       try {
-        await newSchedule.notify();
+        // 配置通知を作成（push 通知は送らない）
+        await newSchedule.notify(false);
       } catch (error) {
         messages.add({ text: error.message, color: "error" });
       } finally {
