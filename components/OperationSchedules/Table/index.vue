@@ -264,6 +264,8 @@ const {
                     :shift-type="order.shiftType"
                     class="mr-2"
                     density="compact"
+                    label
+                    size="small"
                   />
                   {{ props.cachedSites?.[order.siteId]?.name || "...loading" }}
                 </div>
