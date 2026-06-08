@@ -26,7 +26,7 @@ export function useDocManager(composableName = "useDocManager", options = {}) {
   const { doc, redirectPath = null } = options;
 
   console.warn(
-    "useDocManager is deprecated. Please use useBaseManager instead for better flexibility and features.",
+    `[${composableName}] useDocManager is deprecated. Please use useBaseManager instead for better flexibility and features.`,
   );
 
   /** SETUP BASE MANAGER COMPOSABLE */

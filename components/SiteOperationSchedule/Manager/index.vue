@@ -5,6 +5,8 @@
  * @extends AirItemManager
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { useBaseManager } from "@/composables/useBaseManager";
+import { SiteOperationSchedule } from "@/schemas";
 import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
 
 /*****************************************************************************
@@ -20,8 +22,31 @@ defineOptions({
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
+  doc: {
+    type: Object,
+    default: null,
+    validator: (value) => value instanceof SiteOperationSchedule,
+  },
+  handleCreate: { type: Function, default: (item) => item.create() },
+  handleUpdate: { type: Function, default: (item) => item.update() },
+  handleDelete: { type: Function, default: (item) => item.delete() },
 });
 const props = useDefaults(_props, "SiteOperationScheduleManager");
+
+/*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useBaseManager("SiteOperationScheduleManager");
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const internalDoc = reactive(new SiteOperationSchedule());
+watch(
+  () => props.doc,
+  (newDoc) => internalDoc.initialize(newDoc || null),
+  { immediate: true, deep: true },
+);
 
 /*****************************************************************************
  * TEMPLATE REF
@@ -40,10 +65,14 @@ defineExpose({
 
 <template>
   <air-item-manager
-    v-bind="$attrs"
+    v-bind="{ ...$attrs, ...attrs }"
     ref="component"
-    :custom-input="CustomInput"
-    :disable-update="(item) => !!item.operationResultId"
-    :disable-delete="(item) => !!item.operationResultId"
+    :model-value="internalDoc"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
+    :custom-input="props.customInput"
+    :disable-update="(item) => !!item?.operationResultId"
+    :disable-delete="(item) => !!item?.operationResultId"
   />
 </template>

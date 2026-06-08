@@ -6,7 +6,6 @@ import dayjs from "dayjs";
 import Toolbar from "./Toolbar";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOperationSchedules";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
@@ -44,7 +43,9 @@ const { siteShiftTypeOrder, update } = useSiteShiftTypeOrder({
 });
 
 // 現場稼働予定管理用コンポーザブル
-const manager = useSiteOperationScheduleManager();
+const siteOperationScheduleManager = useTemplateRef(
+  "siteOperationScheduleManager",
+);
 
 // 現場稼働予定複製コンポーザブル
 const duplicator = useSiteOperationScheduleDuplicator();
@@ -63,7 +64,6 @@ const table = useOperationScheduleTable({
 const selector = useSiteOperationScheduleSelector({
   docs,
   fetchSiteComposable,
-  manager,
 });
 
 // 現場オーダー並び替え用コンポーザブル
@@ -76,7 +76,10 @@ const reorder = useSiteShiftTypeReorder({
 <template>
   <div class="d-flex flex-column fill-height">
     <!-- ツールバー -->
-    <Toolbar @click:sort="reorder.open" @click:create="manager.toCreate()" />
+    <Toolbar
+      @click:sort="reorder.open"
+      @click:create="() => siteOperationScheduleManager.toCreate()"
+    />
 
     <!-- スクロールコンテナ -->
     <div class="d-flex flex-grow-1 overflow-auto">
@@ -106,15 +109,18 @@ const reorder = useSiteShiftTypeReorder({
       <template #default>
         <SiteOperationScheduleSelector
           v-bind="selector.attrs.value"
-          @click:create="manager.toCreate($event)"
-          @click:edit="manager.toUpdate($event)"
+          @click:create="() => siteOperationScheduleManager.toCreate($event)"
+          @click:edit="
+            ($event) => siteOperationScheduleManager.toUpdate($event)
+          "
           @click:duplicate="duplicator.set($event)"
         />
       </template>
     </AtomsDialogsFullscreen>
 
     <!-- 現場稼働予定編集用コンポーネント -->
-    <SiteOperationScheduleManager v-bind="manager.attrs.value" />
+    <!-- <SiteOperationScheduleManager v-bind="manager.attrs.value" /> -->
+    <SiteOperationScheduleManager ref="siteOperationScheduleManager" />
 
     <!-- 現場稼働予定複製コンポーネント -->
     <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />

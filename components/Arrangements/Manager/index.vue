@@ -5,7 +5,6 @@
  * It also provides functionalities for managing workers, site orders, and notifications.
  */
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useSiteOperationScheduleManager } from "@/composables/useSiteOperationScheduleManager";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 // Components
@@ -46,9 +45,6 @@ const {
   removeSiteShiftTypeOrder,
 } = managerComposable;
 
-/** For site operation schedule management */
-const siteOperationScheduleManager = useSiteOperationScheduleManager();
-
 /** For schedule detail management */
 const siteOperationScheduleDetailManager =
   useSiteOperationScheduleDetailManager();
@@ -62,6 +58,9 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  *****************************************************************************/
 const commandText = ref(null);
 
+const siteOperationScheduleManager = useTemplateRef(
+  "siteOperationScheduleManager",
+);
 const arrangementNotificationManager = useTemplateRef(
   "arrangementNotificationManager",
 );
@@ -210,10 +209,7 @@ const arrangementNotificationManager = useTemplateRef(
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集コンポーネント -->
-    <SiteOperationScheduleManager
-      v-bind="siteOperationScheduleManager.attrs.value"
-      :excludedKeys="['employees', 'outsourcers']"
-    />
+    <SiteOperationScheduleManager ref="siteOperationScheduleManager" />
 
     <!-- スケジュール複製コンポーネント -->
     <SiteOperationScheduleDuplicator
@@ -253,7 +249,7 @@ const arrangementNotificationManager = useTemplateRef(
       location="bottom right"
       color="primary"
       @click:workers="toggleFloatingWindow"
-      @click:add-schedule="siteOperationScheduleManager.toCreate"
+      @click:add-schedule="() => siteOperationScheduleManager.toCreate()"
       @click:site-shift-type-order="siteShiftTypeReorderComposable.open"
     />
   </div>
