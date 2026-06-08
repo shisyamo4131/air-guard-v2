@@ -530,5 +530,6 @@ export function useIndex() {
     updateSchedules,
     openPdf,
     getCommandText,
+    removeSiteShiftTypeOrder: siteShiftTypeOrderComposable.remove,
   };
 }

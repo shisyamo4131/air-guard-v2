@@ -43,6 +43,7 @@ const {
   updateSchedules,
   openPdf,
   getCommandText,
+  removeSiteShiftTypeOrder,
 } = managerComposable;
 
 /** For site operation schedule management */
@@ -103,6 +104,11 @@ const arrangementNotificationManager = useTemplateRef(
       :column-width="256"
       day-format="MM/DD(ddd)"
       :selectedDate="selectedDate"
+      @click:remove-site-order="
+        ($event) => {
+          removeSiteShiftTypeOrder($event);
+        }
+      "
     >
       <!-- 日付の表示形式をカスタマイズ -->
       <template #append-day="{ dayObject, holidayIcon }">

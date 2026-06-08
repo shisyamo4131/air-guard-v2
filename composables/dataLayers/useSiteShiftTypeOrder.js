@@ -7,6 +7,9 @@
  * - `schedules` が与えられると、その中に含まれる `orderKey` を確認し、現場オーダー配列に含まれないものを検出します。
  * - 検出された現場オーダーは `missingOrders` に格納され、`siteShiftTypeOrder` に追加されます。
  * - これにより、現場オーダー配列に存在しない現場オーダーもテーブルに表示できるようになります。
+ *
+ * [更新履歴]
+ * 2026-06-08 - `remove` 関数を追加。
  *****************************************************************************/
 import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -35,6 +38,7 @@ export function useSiteShiftTypeOrder({
   /** SETUP STATES */
   // type を ref として正規化
   const internalType = Vue.isRef(type) ? type : Vue.ref(type);
+  const recalcMissingOrders = Vue.ref(true); // missingOrdersの再計算をトリガーするためのフラグ
 
   /**
    * `schedules` ドキュメント群から `orderKey` を抽出し、ユニークな `orderKey` のセットを保持します。
@@ -92,16 +96,18 @@ export function useSiteShiftTypeOrder({
   const missingOrders = Vue.computed(() => {
     const missing = [];
 
-    uniqueOrderKeysInSchedules.value.forEach((orderKey) => {
-      if (!siteShiftTypeOrderKeys.value.has(orderKey)) {
-        // orderKey から siteId と shiftType を抽出
-        const lastUnderScoreIndex = orderKey.lastIndexOf("_");
-        const siteId = orderKey.substring(0, lastUnderScoreIndex);
-        const shiftType = orderKey.substring(lastUnderScoreIndex + 1);
+    if (recalcMissingOrders.value) {
+      uniqueOrderKeysInSchedules.value.forEach((orderKey) => {
+        if (!siteShiftTypeOrderKeys.value.has(orderKey)) {
+          // orderKey から siteId と shiftType を抽出
+          const lastUnderScoreIndex = orderKey.lastIndexOf("_");
+          const siteId = orderKey.substring(0, lastUnderScoreIndex);
+          const shiftType = orderKey.substring(lastUnderScoreIndex + 1);
 
-        missing.push({ siteId, shiftType, key: orderKey });
-      }
-    });
+          missing.push({ siteId, shiftType, key: orderKey });
+        }
+      });
+    }
 
     return missing;
   });
@@ -119,6 +125,14 @@ export function useSiteShiftTypeOrder({
     return [...siteShiftTypeOrder.value, ...missingOrders.value];
   });
 
+  /**
+   * 更新された現場オーダーを保存します。
+   * - `auth.company` の `siteOrder` または `scheduleOrder` を更新する直前、
+   *   `recalcMissingOrders` を `false` に設定して、`missingOrders` の再計算を一時的に停止します。
+   *   更新が完了したら `recalcMissingOrders` を `true` に設定して、`missingOrders` の再計算をトリガーします。
+   *   これにより、`siteShiftTypeOrder` 内でのキーの重複を防止します。
+   * @param {Array} newOrder 更新された現場オーダー配列
+   */
   const update = async (newOrder) => {
     if (internalType.value === "arrangement") {
       auth.company.siteOrder = newOrder;
@@ -126,7 +140,26 @@ export function useSiteShiftTypeOrder({
     if (internalType.value === "schedule") {
       auth.company.scheduleOrder = newOrder;
     }
-    await auth.company.update();
+
+    try {
+      recalcMissingOrders.value = false; // missingOrdersの再計算を一時的に停止
+      await auth.company.update();
+    } catch (error) {
+      console.error("Failed to update site shift type order:", error);
+    } finally {
+      recalcMissingOrders.value = true; // missingOrdersの再計算をトリガー
+    }
+  };
+
+  /**
+   * 指定された現場オーダーを削除します。
+   * @param {string} orderKey 削除する現場オーダーのキー
+   */
+  const remove = async (orderKey) => {
+    const newOrder = siteShiftTypeOrder.value.filter(
+      (order) => order.key !== orderKey,
+    );
+    await update(newOrder);
   };
 
   return {
@@ -136,5 +169,6 @@ export function useSiteShiftTypeOrder({
     fetchSiteComposable, // 後方互換性のためにエクスポート
 
     update,
+    remove,
   };
 }

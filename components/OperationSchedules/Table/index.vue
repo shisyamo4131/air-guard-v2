@@ -90,7 +90,7 @@ import Head from "./Head.vue";
 import Foot from "./Foot.vue";
 
 /**
- * SETUP PROPS
+ * DEFINE PROPS & EMITS
  */
 const _props = defineProps({
   /**
@@ -180,9 +180,11 @@ const _props = defineProps({
   weekdayHeight: { type: [String, Number], default: undefined },
 });
 const props = useDefaults(_props, "OperationSchedulesTable");
-const emit = defineEmits(["click:cell"]);
+const emit = defineEmits(["click:cell", "click:remove-site-order"]);
 
-/** SETUP COMPOSABLES */
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const {
   daysInRangeArray,
   currentDayCount,
@@ -191,6 +193,29 @@ const {
   resolvedColumnWidth,
   tableMinWidth, // 不要かもしれない。コードを参照。
 } = useTable(props);
+
+const orderKeySchedulesMap = computed(() => {
+  const map = new Map();
+  props.schedules.forEach((schedule) => {
+    const orderKey = schedule.orderKey; // `${siteId}_${shiftType}`
+    if (!map.has(orderKey)) {
+      map.set(orderKey, {
+        schedules: [],
+        count: 0,
+        hasMultiple: false,
+        total: 0,
+      });
+    }
+    const groupData = map.get(orderKey);
+    groupData.schedules.push(schedule);
+    groupData.count += schedule.requiredPersonnel || 0;
+    if (groupData.count > schedule.requiredPersonnel) {
+      groupData.hasMultiple = true;
+    }
+    groupData.total += schedule.requiredPersonnel || 0;
+  });
+  return map;
+});
 </script>
 
 <template>
@@ -252,10 +277,21 @@ const {
           >
             <div class="fixed-left d-inline-flex align-center">
               <!-- SLOT: prepend-site-shift-type-order -->
-              <slot
-                name="prepend-site-shift-type-order"
-                v-bind="{ ...order }"
-              />
+              <slot name="prepend-site-shift-type-order" v-bind="{ ...order }">
+                <!-- ICON FOR REMOVE `SITE-SHIFTYPE` -->
+                <!-- Emits `click:remove-site-order` event with the order key. -->
+                <!-- Disabled if there are schedules associated with the order key. -->
+                <v-icon
+                  class="me-2"
+                  v-tooltip:top="
+                    'この【現場－勤務区分】の組み合わせを表から削除します。現場稼働予定は削除されません。'
+                  "
+                  :disabled="!!orderKeySchedulesMap.get(order.key)"
+                  icon="mdi-close"
+                  size="x-small"
+                  @click="emit('click:remove-site-order', order.key)"
+                />
+              </slot>
 
               <!-- SLOT: site-shift-type-order -->
               <slot name="site-shift-type-order" v-bind="{ ...order }">
