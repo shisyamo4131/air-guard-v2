@@ -18,8 +18,8 @@ export function removeOperationResultFromDailyAttendances({
   operationResult,
 } = {}) {
   logger.info("'removeOperationResultFromDailyAttendances' is called", {
-    attendances,
-    operationResult,
+    attendances: attendances.length,
+    operationResultId: operationResult ? operationResult.docId : "not provided",
   });
 
   // attendances が配列でない場合はエラー

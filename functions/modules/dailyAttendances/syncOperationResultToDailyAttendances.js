@@ -24,8 +24,10 @@ export async function syncOperationResultToDailyAttendances({
 } = {}) {
   logger.info("'syncOperationResultToDailyAttendances' is called", {
     companyId,
-    beforeData,
-    afterData,
+    operationResultId: {
+      before: beforeData ? beforeData.docId : "not provided",
+      after: afterData ? afterData.docId : "not provided",
+    },
   });
 
   // companyId がない場合はエラー

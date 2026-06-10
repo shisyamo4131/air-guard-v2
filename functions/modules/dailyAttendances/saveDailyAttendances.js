@@ -17,7 +17,7 @@ export async function saveDailyAttendances({
   transaction = null,
 } = {}) {
   logger.info("'saveDailyAttendances' is called", {
-    attendances,
+    attendances: attendances.length,
     transaction: transaction ? "provided" : "not provided",
   });
 

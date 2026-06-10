@@ -25,7 +25,7 @@ export async function fetchDailyAttendancesRelatedOperationResult({
 } = {}) {
   logger.info("'fetchDailyAttendancesRelatedOperationResult' is called", {
     companyId,
-    operationResult,
+    operationResultId: operationResult ? operationResult.docId : "not provided",
     transaction: transaction ? "provided" : "not provided",
   });
 
