@@ -1,11 +1,11 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
-import { syncOperationResultToDailyAttendances } from "./dailyAttendances/index.js";
+import { syncOperationResultToDailyAttendances } from "../modules/dailyAttendances/index.js";
 import {
   removeOperationResultFromBilling,
   addOperationResultToBilling,
   syncOperationResultToBilling,
-} from "./billings/index.js";
+} from "../modules/billings/index.js";
 
 /*****************************************************************************
  * OperationResult ドキュメントの作成・更新・削除トリガー
