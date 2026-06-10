@@ -5,6 +5,7 @@
  * - `loading` はスロットプロパティのため inject 不可能。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -16,11 +17,29 @@ const props = useDefaults(_props, "OperationResultGeneratorDetail");
 const emit = defineEmits(["click:submit"]);
 
 /*****************************************************************************
+ * SETUP STORES & COMPOSABLES
+ *****************************************************************************/
+const { fetchSiteComposable } = useFetch("SiteOperationScheduleTable");
+const { cachedSites } = fetchSiteComposable;
+
+/*****************************************************************************
  * INJECT
  *****************************************************************************/
 const selectedSchedule = inject("selectedSchedule", null); // From index.vue
 const notifications = inject("notifications", []); // From index.vue
 const notificationsMap = inject("notificationsMap", {}); // From index.vue
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+
+/**
+ * 仮登録現場であるかどうかを返します。
+ * - `cachedSites` に現場情報が読み込めない場合、仮登録現場とみなします。
+ */
+const isTemporarySite = computed(() => {
+  return cachedSites.value[selectedSchedule.value?.siteId]?.isTemporary;
+});
 </script>
 
 <template>
@@ -52,11 +71,6 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
                 :excluded-keys="['status']"
               >
                 <template #activator="activatorProps">
-                  <!-- <ArrangementNotificationChip
-                    :notification="activatorProps.item"
-                    :disabled="!activatorProps.item"
-                    @click="() => activatorProps.toUpdate()"
-                  /> -->
                   <v-btn
                     icon="mdi-pencil"
                     @click="() => activatorProps.toUpdate()"
@@ -84,7 +98,7 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
       <v-btn
         text="上下番を確定する"
         :loading="props.loading"
-        :disabled="props.loading"
+        :disabled="props.loading || isTemporarySite"
         variant="flat"
         block
         color="primary"

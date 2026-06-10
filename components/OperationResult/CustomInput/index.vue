@@ -6,6 +6,7 @@
 import { useDefaults } from "vuetify";
 import { Operation } from "@/schemas";
 import { useSetRegularTime } from "@/composables/useSetRegularTime";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -41,6 +42,34 @@ const { set, addMessage } = useSetRegularTime(
     addMessage({ color: "success", text: "取極めから定時を設定しました。" });
   },
 );
+
+const { fetchSiteComposable } = useFetch("OperationResultCustomInput");
+const { cachedSites } = fetchSiteComposable;
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const autocompleteErrors = computed(() => {
+  if (!props.item.siteId) return {};
+  const site = cachedSites.value?.[props.item.siteId];
+  if (!site) {
+    return {
+      errorMessages: [
+        "現場情報が見つかりません。現場マスタに現場情報を登録してください。",
+      ],
+      error: true,
+    };
+  }
+  if (site.isTemporary) {
+    return {
+      errorMessages: [
+        "仮登録現場は選択できません。現場マスタに現場情報を登録してください。",
+      ],
+      error: true,
+    };
+  }
+  return {};
+});
 </script>
 
 <template>

@@ -25,7 +25,8 @@ const _props = defineProps({
   doc: {
     type: Object,
     default: null,
-    validator: (value) => value instanceof SiteOperationSchedule,
+    validator: (value) =>
+      value === null || value instanceof SiteOperationSchedule,
   },
   handleCreate: { type: Function, default: (item) => item.create() },
   handleUpdate: { type: Function, default: (item) => item.update() },
