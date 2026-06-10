@@ -28,13 +28,10 @@ export const onOperationResultChange = onDocumentWritten(
         // 1. Billing ドキュメントへの反映
         await removeOperationResultFromBilling(companyId, before);
         // 2. Attendance ドキュメントへの反映
-        await getFirestore().runTransaction(async (transaction) => {
-          await syncOperationResultToDailyAttendances({
-            companyId,
-            beforeData: before,
-            afterData: null,
-            transaction,
-          });
+        await syncOperationResultToDailyAttendances({
+          companyId,
+          beforeData: before,
+          afterData: null,
         });
       }
       // OperationResult ドキュメントが作成された時の処理
@@ -42,13 +39,10 @@ export const onOperationResultChange = onDocumentWritten(
         // 1. Billing ドキュメントへの反映
         await addOperationResultToBilling(companyId, after);
         // 2. Attendance ドキュメントへの反映
-        await getFirestore().runTransaction(async (transaction) => {
-          await syncOperationResultToDailyAttendances({
-            companyId,
-            beforeData: null,
-            afterData: after,
-            transaction,
-          });
+        await syncOperationResultToDailyAttendances({
+          companyId,
+          beforeData: null,
+          afterData: after,
         });
       }
       // OperationResult ドキュメントが更新された時の処理
@@ -56,13 +50,10 @@ export const onOperationResultChange = onDocumentWritten(
         // 1. Billing ドキュメントへの反映
         await syncOperationResultToBilling(companyId, before, after);
         // 2. Attendance ドキュメントへの反映
-        await getFirestore().runTransaction(async (transaction) => {
-          await syncOperationResultToDailyAttendances({
-            companyId,
-            beforeData: before,
-            afterData: after,
-            transaction,
-          });
+        await syncOperationResultToDailyAttendances({
+          companyId,
+          beforeData: before,
+          afterData: after,
         });
       }
     } catch (error) {

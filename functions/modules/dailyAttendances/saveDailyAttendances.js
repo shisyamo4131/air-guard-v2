@@ -1,3 +1,6 @@
+import { logger } from "firebase-functions";
+import { DailyAttendance } from "@shisyamo4131/air-guard-v2-schemas";
+
 /*****************************************************************************
  * attendance 配列内の DailyAttendance インスタンスを保存します。
  * - `exists` フラグに応じて、インスタンスの `create` または `update` メソッドを呼び出します。
@@ -13,11 +16,31 @@ export async function saveDailyAttendances({
   attendances = [],
   transaction = null,
 } = {}) {
+  logger.info("'saveDailyAttendances' is called", {
+    attendances,
+    transaction: transaction ? "provided" : "not provided",
+  });
+
   // prefix を生成（companyId がない場合はエラー）
-  if (!companyId) {
-    throw new Error("companyId is required");
-  }
+  if (!companyId) throw new Error("companyId is required");
   const prefix = `Companies/${companyId}/`;
+
+  // attendances が配列でない場合はエラー
+  if (!Array.isArray(attendances)) {
+    throw new Error("attendances must be an array");
+  }
+
+  // attendances 配列内の各要素が { instance: DailyAttendance, exists: boolean } でない場合はエラー
+  if (
+    !attendances.every(
+      ({ instance, exists }) =>
+        instance instanceof DailyAttendance && typeof exists === "boolean",
+    )
+  ) {
+    throw new Error(
+      "Each attendance must be an object with instance as DailyAttendance and exists as boolean",
+    );
+  }
 
   for (const { instance, exists } of attendances) {
     // DailyAttendance ドキュメントが存在している場合

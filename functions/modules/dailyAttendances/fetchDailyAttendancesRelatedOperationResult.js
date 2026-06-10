@@ -1,3 +1,4 @@
+import { logger } from "firebase-functions";
 import {
   DailyAttendance,
   OperationResult,
@@ -15,16 +16,21 @@ import {
  *  instance: DailyAttendance,
  *  exists: boolean,
  * }>>}
+ * @throws {Error} companyId が提供されていない場合、または operationResult が OperationResult インスタンスでない場合にエラーをスローします。
  *****************************************************************************/
-export async function fetchDailyAttendances({
+export async function fetchDailyAttendancesRelatedOperationResult({
   companyId,
   operationResult,
   transaction = null,
 } = {}) {
+  logger.info("'fetchDailyAttendancesRelatedOperationResult' is called", {
+    companyId,
+    operationResult,
+    transaction: transaction ? "provided" : "not provided",
+  });
+
   // prefix を生成（companyId がない場合はエラー）
-  if (!companyId) {
-    throw new Error("companyId is required");
-  }
+  if (!companyId) throw new Error("companyId is required");
   const prefix = `Companies/${companyId}/`;
 
   // operationResult が OperationResult インスタンスでない場合はエラー

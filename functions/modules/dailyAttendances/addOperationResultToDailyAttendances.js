@@ -1,4 +1,8 @@
-import { OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
+import { logger } from "firebase-functions";
+import {
+  DailyAttendance,
+  OperationResult,
+} from "@shisyamo4131/air-guard-v2-schemas";
 
 /*****************************************************************************
  * attendance 配列内の DailyAttendance インスタンスに対して、OperationResult ドキュメントを追加します。
@@ -8,12 +12,36 @@ import { OperationResult } from "@shisyamo4131/air-guard-v2-schemas";
  * @param {Array<{ instance: DailyAttendance, exists: boolean }>} options.attendances
  * @param {OperationResult} options.operationResult
  * @returns {void}
- * @throws {Error} operationResult が OperationResult インスタンスでない場合
+ * @throws {Error} attendances が配列でない場合
+ * @throws {Error} attendances 配列内の各要素が { instance: DailyAttendance, exists: boolean } でない場合
+ * @throws {Error} operationResult が OperationResult インスタンスでない場合にエラーをスローします。
  *****************************************************************************/
 export function addOperationResultToDailyAttendances({
   attendances = [],
   operationResult,
 } = {}) {
+  logger.info("'addOperationResultToDailyAttendances' is called", {
+    attendances,
+    operationResult,
+  });
+
+  // attendances が配列でない場合はエラー
+  if (!Array.isArray(attendances)) {
+    throw new Error("attendances must be an array");
+  }
+
+  // attendances 配列内の各要素が { instance: DailyAttendance, exists: boolean } でない場合はエラー
+  if (
+    !attendances.every(
+      ({ instance, exists }) =>
+        instance instanceof DailyAttendance && typeof exists === "boolean",
+    )
+  ) {
+    throw new Error(
+      "Each attendance must be an object with instance as DailyAttendance and exists as boolean",
+    );
+  }
+
   // operationResult が OperationResult インスタンスでない場合はエラー
   if (!operationResult || !(operationResult instanceof OperationResult)) {
     throw new Error("Invalid operationResult provided");
