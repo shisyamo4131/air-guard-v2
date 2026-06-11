@@ -1,9 +1,9 @@
 <script setup>
-/**
+/*****************************************************************************
  * @file components/arrangements/Manager/index.vue
  * @description A component for managing site operation schedules, including viewing, creating, updating, and duplicating schedules.
  * It also provides functionalities for managing workers, site orders, and notifications.
- */
+ *****************************************************************************/
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 

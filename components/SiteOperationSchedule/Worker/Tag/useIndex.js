@@ -1,21 +1,44 @@
-/*****************************************************************************
- * SiteOperationScheduleWorkerTag 専用コンポーザブル
- *****************************************************************************/
 import * as Vue from "vue";
 
+/*****************************************************************************
+ * @file ./components/SiteOperationSchedule/Worker/Tag/useIndex.js
+ * @description SiteOperationScheduleWorkerTag コンポーネントのロジックを管理する専用コンポーザブル。
+ *
+ * [更新履歴]
+ * 2026-06-10 - `props.notification` の開始時刻と終了時刻を優先使用するように修正。
+ *              伴って、開始時刻・終了時刻の強調表示判定ロジックも修正。
+ *****************************************************************************/
 export function useIndex(props, emit) {
+  /*****************************************************************************
+   * COMPUTED
+   *****************************************************************************/
   /**
-   * 開始時刻がスケジュールの開始時刻と異なるかどうかを判定
+   * times
+   * - タグに表示する開始時刻と終了時刻を返します。
+   * - `props.notification` が存在する場合は、`actualStartTime` と `actualEndTime` を優先使用します。
+   * - 存在しない場合は、`props.worker.startTime` と `props.worker.endTime` を使用します。
    */
-  const isStartTimeModified = Vue.computed(() => {
-    return props.schedule.startTime !== props.worker.startTime;
+  const times = Vue.computed(() => {
+    const startTime =
+      props.notification?.actualStartTime || props.worker.startTime;
+    const endTime = props.notification?.actualEndTime || props.worker.endTime;
+    return { startTime, endTime };
   });
 
   /**
-   * 終了時刻がスケジュールの終了時刻と異なるかどうかを判定
+   * 開始時刻と終了時刻がスケジュールの開始時刻と終了時刻と異なるかどうかを判定
+   * - `times` と `props.schedule` の開始時刻と終了時刻を比較して、どちらかが異なる場合に `true` を返します。
+   * - これにより、タグの表示を強調するかどうかを制御できます。
    */
-  const isEndTimeModified = Vue.computed(() => {
-    return props.schedule.endTime !== props.worker.endTime;
+  const isTimesHasDifference = Vue.computed(() => {
+    const scheduleStartTime = props.schedule.startTime;
+    const scheduleEndTime = props.schedule.endTime;
+    const startTime = times.value.startTime;
+    const endTime = times.value.endTime;
+    return {
+      startTime: scheduleStartTime !== startTime,
+      endTime: scheduleEndTime !== endTime,
+    };
   });
 
   /**
@@ -29,11 +52,11 @@ export function useIndex(props, emit) {
     return {
       ...rest,
       id: worker.id,
-      startTime: worker.startTime,
-      endTime: worker.endTime,
+      startTime: times.value.startTime,
+      endTime: times.value.endTime,
       isEmployee: worker.isEmployee,
-      highlightStartTime: isStartTimeModified.value,
-      highlightEndTime: isEndTimeModified.value,
+      highlightStartTime: isTimesHasDifference.value.startTime,
+      highlightEndTime: isTimesHasDifference.value.endTime,
       removable: props.removable && scheduleIsEditable,
       isDraggable: props.isDraggable && scheduleIsEditable,
       "onClick:remove": () =>

@@ -5,8 +5,13 @@
  * @dependsOn useFetchOutsourcer - 外注先情報フェッチ用コンポーザブル
  * @dependsOn useDateRange - 日付範囲管理用コンポーザブル
  * @dependsOn useDocuments - ドキュメント購読用コンポーザブル
+ *
+ * [更新履歴]
+ * 2026-06-10 - モバイル版で更新データへの DOM への反映に数十秒かかる現象の改善を期待して
+ *              管理対象期間を PC版: 7日間、モバイル版: 3日間 に変更。
  *****************************************************************************/
 import * as Vue from "vue";
+import { useDisplay } from "vuetify";
 import dayjs from "dayjs";
 import ja from "dayjs/locale/ja";
 import { Employee, Outsourcer, SiteOperationSchedule } from "@/schemas";
@@ -44,6 +49,20 @@ import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf
  * @return {Function} - openPdf
  */
 export function useIndex() {
+  /*****************************************************************************
+   * DATE RANGE COMPOSABLE
+   * - 現場稼働予定ドキュメントの取得範囲（期間）を制御
+   * - 期間は PC版: 7日間、モバイル版: 3日間 とし、開始日は前日とする。
+   * - PC版・モバイル版の判断は useDisplay を利用するが、リアクティブ対応不要。
+   *****************************************************************************/
+  const { mobile } = useDisplay();
+  const dayCount = mobile.value ? 3 : 7;
+  const dateRangeComposable = useDateRange({
+    baseDate: dayjs().tz("Asia/Tokyo").toDate(),
+    dayCount,
+    offsetDays: -1,
+  });
+
   /**
    * SETUP STORES
    */
@@ -70,17 +89,6 @@ export function useIndex() {
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
   } = useFetch("ArrangementsManager", true);
-
-  /**
-   * Date Range Composable
-   * @description 管理画面で使用する日付範囲を管理
-   * - 開始日は前日、終了日は6日後の7日間をデフォルトとする
-   */
-  const dateRangeComposable = useDateRange({
-    baseDate: dayjs().tz("Asia/Tokyo").toDate(),
-    dayCount: 7,
-    offsetDays: -1,
-  });
 
   /**
    * SiteOperationSchedule Documents
