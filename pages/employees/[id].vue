@@ -1,4 +1,10 @@
 <script setup>
+/*****************************************************************************
+ * @file ./pages/employees/[id].vue
+ *
+ * [更新履歴]
+ * 2026-06-11 - 警備員情報登録の VEmptyState を Activator に内包。
+ *****************************************************************************/
 import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useConstants } from "@/composables/useConstants";
@@ -138,25 +144,7 @@ onUnmounted(() => {
           <v-col cols="12">
             <EmployeeManager :doc="doc" hide-delete-btn label="警備員資格情報">
               <template #activator="activatorProps">
-                <EmployeeActivatorSecurityGuard
-                  v-if="activatorProps.item.hasSecurityGuardRegistration"
-                  v-bind="activatorProps"
-                />
-                <v-card v-else>
-                  <v-empty-state
-                    title="警備員登録未完了"
-                    icon="mdi-alert-circle-outline"
-                    action-text="情報を登録する"
-                    @click:action="() => activatorProps.toUpdate()"
-                  >
-                    <template #text>
-                      <div>この従業員は警備員登録が完了していません。</div>
-                      <div>
-                        緊急連絡先や血液型などの情報を登録してください。
-                      </div>
-                    </template>
-                  </v-empty-state>
-                </v-card>
+                <EmployeeActivatorSecurityGuard v-bind="activatorProps" />
               </template>
             </EmployeeManager>
           </v-col>

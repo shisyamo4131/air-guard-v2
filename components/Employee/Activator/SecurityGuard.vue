@@ -3,6 +3,9 @@
  * @file ./components/Employee/Activator/SecurityGuard.vue
  * @description 従業員の警備員資格情報表示コンポーネント
  * - `EmployeeManager` の activator スロット用コンポーネント
+ *
+ * [更新履歴]
+ * 2026-06-11 - `hasSecurityGuardRegistration` が false の場合の VEmptyState を追加。
  *****************************************************************************/
 import dayjs from "dayjs";
 import { Employee } from "@/schemas";
@@ -85,20 +88,34 @@ defineExpose({
 
 <template>
   <v-card>
-    <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
-        <v-btn
-          icon="mdi-pencil"
-          size="small"
-          @click="emit('click:edit', props.item)"
-        />
+    <div v-if="props.item.hasSecurityGuardRegistration">
+      <v-toolbar color="secondary" density="compact" :title="props.title">
+        <template #append>
+          <v-btn
+            icon="mdi-pencil"
+            size="small"
+            @click="emit('click:edit', props.item)"
+          />
+        </template>
+      </v-toolbar>
+      <v-card-text class="py-0">
+        <air-list :items="items" no-padding />
+      </v-card-text>
+      <v-card-actions v-if="$slots.actions">
+        <slot name="actions" />
+      </v-card-actions>
+    </div>
+    <v-empty-state
+      v-else
+      title="警備員登録未完了"
+      icon="mdi-alert-circle-outline"
+      action-text="情報を登録する"
+      @click:action="emit('click:edit', props.item)"
+    >
+      <template #text>
+        <div>この従業員は警備員登録が完了していません。</div>
+        <div>緊急連絡先や血液型などの情報を登録してください。</div>
       </template>
-    </v-toolbar>
-    <v-card-text class="py-0">
-      <air-list :items="items" no-padding />
-    </v-card-text>
-    <v-card-actions v-if="$slots.actions">
-      <slot name="actions" />
-    </v-card-actions>
+    </v-empty-state>
   </v-card>
 </template>
