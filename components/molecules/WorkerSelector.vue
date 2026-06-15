@@ -1,20 +1,25 @@
 <script setup>
 /**
  * @file components/molecules/WorkerSelector.vue
- *
  * @description A component for selecting workers (employees and outsourcers) with drag-and-drop functionality.
  * This component receives lists of employees and outsourcers, converts them to a specific format by a provided
  * converter function and displays them in a tabbed interface.
  * Use `employee` and `outsourcer` slots to display each worker's information.
  *
- * @props {Function} converter - Function to convert worker items to a specific format.
- * @props {String} convertedItemKey - Key used to access the worker ID in the converted items.
- * @props {Array} employees - List of employee objects (instances).
- * @props {Array} outsourcers - List of outsourcer objects (instances).
+ * [更新履歴]
+ * 2026-06-15 - `isDraggable` プロパティを追加。
+ *            - `employee-tag` と `outsourcer-tag` スロットを追加。
+ *
+ * @property {Function} converter - Function to convert worker items to a specific format.
+ * @property {String} convertedItemKey - Key used to access the worker ID in the converted items.
+ * @property {Array} employees - List of employee objects (instances).
+ * @property {Array} outsourcers - List of outsourcer objects (instances).
  *
  * @slots
  * @slot employee - Slot for rendering employee items. Receives `element` and `rawElement` as props.
+ * @slot employee-tag - 従業員タグ用のスロット。
  * @slot outsourcer - Slot for rendering outsourcer items. Receives `element` and `rawElement` as props.
+ * @slot outsourcer-tag - 外注先タグ用のスロット。
  * note: `rawElement` is the original object from the `employees` or `outsourcers` arrays.
  *
  * @emits tab-changed - Emitted when the active tab changes.
@@ -37,7 +42,9 @@ const TABS_CONFIG = [
   { label: "外注先", key: "outsourcers" },
 ];
 
-/** define props */
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
 const props = defineProps({
   converter: {
     type: Function,
@@ -47,12 +54,14 @@ const props = defineProps({
   convertedItemKey: { type: String, default: "workerId" },
   employees: { type: Array, default: () => [] },
   outsourcers: { type: Array, default: () => [] },
+  isDraggable: { type: Boolean, default: false },
 });
 
-/** define emits */
 const emit = defineEmits(["tab-changed"]);
 
-/** define composables */
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
 const { selectedCharNumber, selectableChars, filterByKatakana } =
   useKatakanaFilter();
 
@@ -153,7 +162,13 @@ const filteredOutsourcers = computed(() => {
                   name="employee"
                   :element="element"
                   :id="element.id"
+                  :is-draggable="props.isDraggable"
                   :rawElement="employeesMap[element['id']] || null"
+                />
+                <slot
+                  name="employee-tag"
+                  :doc-id="element.id"
+                  :is-draggable="props.isDraggable"
                 />
               </div>
             </template>
@@ -183,7 +198,13 @@ const filteredOutsourcers = computed(() => {
                   name="outsourcer"
                   :element="element"
                   :id="element.id"
+                  :is-draggable="props.isDraggable"
                   :rawElement="outsourcersMap[element['id']] || null"
+                />
+                <slot
+                  name="outsourcer-tag"
+                  :doc-id="element.id"
+                  :is-draggable="props.isDraggable"
                 />
               </div>
             </template>
