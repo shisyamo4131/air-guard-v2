@@ -3,6 +3,9 @@
  * @file pages/arrangements-manager.vue
  * @description 配置管理ページ
  *****************************************************************************/
+import dayjs from "dayjs";
+import { useDisplay } from "vuetify";
+import { useDateRange } from "@/composables/useDateRange";
 import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
@@ -14,8 +17,22 @@ defineOptions({ name: "arrangements-manager" });
  * SETUP COMPOSABLES
  *****************************************************************************/
 useFetch("arrangements-manager", true);
+
+/*****************************************************************************
+ * DATE RANGE COMPOSABLE
+ * - 現場稼働予定ドキュメントの取得範囲（期間）を制御
+ * - 期間は PC版: 7日間、モバイル版: 3日間 とし、開始日は前日とする。
+ * - PC版・モバイル版の判断は useDisplay を利用するが、リアクティブ対応不要。
+ *****************************************************************************/
+const { mobile } = useDisplay();
+const dayCount = mobile.value ? 3 : 7;
+const { startDate, endDate } = useDateRange({
+  baseDate: dayjs().tz("Asia/Tokyo").toDate(),
+  dayCount,
+  offsetDays: -1,
+});
 </script>
 
 <template>
-  <ArrangementsManager />
+  <ArrangementsManager :start-date="startDate" :end-date="endDate" />
 </template>

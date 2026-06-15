@@ -13,13 +13,12 @@
  *****************************************************************************/
 import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /**
  * @param {*} options
  * @param {String|import("vue").Ref<String>} [options.type="arrangement"] 現場オーダーの種類 ("arrangement" または "schedule")
  * @param {Array} [options.schedules=[]] 現場稼働予定ドキュメント配列
- * @param {Object} [options.fetchSiteComposable] 現場データフェッチ用コンポーザブル
  * @returns {Object} returns
  * @returns {Array} returns.siteShiftTypeOrder 現場オーダー配列
  * @returns {Object} returns.fetchSiteComposable 現場データフェッチ用コンポーザブル
@@ -27,13 +26,13 @@ import { useFetchSite } from "@/composables/fetch/useFetchSite";
 export function useSiteShiftTypeOrder({
   type = "arrangement",
   schedules = Vue.reactive([]),
-  fetchSiteComposable: providedFetchSiteComposable = undefined,
 } = {}) {
   /** SETUP STORES */
   const auth = useAuthStore();
 
   /** SETUP COMPOSABLES */
-  const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
+  const { fetchSiteComposable } = useFetch("useSiteShiftTypeOrder");
+  // const fetchSiteComposable = providedFetchSiteComposable || useFetchSite();
 
   /** SETUP STATES */
   // type を ref として正規化

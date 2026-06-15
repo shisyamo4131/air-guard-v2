@@ -1,163 +1,51 @@
 /*****************************************************************************
  * ArrangementsManager 専用コンポーザブル
- * @dependsOn useFetchSite - サイト情報フェッチ用コンポーザブル
- * @dependsOn useFetchEmployee - 従業員情報フェッチ用コンポーザブル
- * @dependsOn useFetchOutsourcer - 外注先情報フェッチ用コンポーザブル
- * @dependsOn useDateRange - 日付範囲管理用コンポーザブル
- * @dependsOn useDocuments - ドキュメント購読用コンポーザブル
- *
- * [更新履歴]
- * 2026-06-10 - モバイル版で更新データへの DOM への反映に数十秒かかる現象の改善を期待して
- *              管理対象期間を PC版: 7日間、モバイル版: 3日間 に変更。
  *****************************************************************************/
 import * as Vue from "vue";
-import { useDisplay } from "vuetify";
-import dayjs from "dayjs";
-import ja from "dayjs/locale/ja";
-import { Employee, Outsourcer, SiteOperationSchedule } from "@/schemas";
+import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "../composables/useLogger";
-import { useDateRange } from "@/composables/useDateRange.js";
 import { useFetch } from "@/composables/fetch/useFetch";
-import { useDocuments } from "@/composables/dataLayers/useDocuments.js";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder.js";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
+import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
 
 /**
- * @return {Object} - dateRangeComposable
- * @return {Object} - fetchSiteComposable
- * @return {Object} - fetchEmployeeComposable
- * @return {Object} - fetchOutsourcerComposable
  * @return {Object} - siteShiftTypeReorderComposable
  * @return {Object} - duplicatorComposable
- * @return {Object} - schedules
- * @return {Object} - notifications
- * @return {Object} - employees
- * @return {Object} - outsourcers
- * @return {Array}  - siteShiftTypeOrder
- * @return {Map}    - arrangedEmployeesMap
- * @return {Map}    - arrangedOutsourcersMap
- * @return {Map}    - keyMappedNotifications
- * @return {Object} - selectedDate
+ * @return {Array} - siteShiftTypeOrder
+ * @return {Map} - arrangedEmployeesMap
+ * @return {Map} - arrangedOutsourcersMap
+ * @return {Map} - schedulesMap
+ * @return {Map} - notificationsMap
+ * @return {Ref} - selectedDate
  * @return {Function} - isEmployeeArranged
  * @return {Function} - notify
  * @return {Function} - updateSchedule
  * @return {Function} - updateSchedules
  * @return {Function} - openPdf
+ * @return {Function} - getCommandText
  */
-export function useIndex() {
+export function useIndex(schedules, notifications) {
   /*****************************************************************************
-   * DATE RANGE COMPOSABLE
-   * - 現場稼働予定ドキュメントの取得範囲（期間）を制御
-   * - 期間は PC版: 7日間、モバイル版: 3日間 とし、開始日は前日とする。
-   * - PC版・モバイル版の判断は useDisplay を利用するが、リアクティブ対応不要。
-   *****************************************************************************/
-  const { mobile } = useDisplay();
-  const dayCount = mobile.value ? 3 : 7;
-  const dateRangeComposable = useDateRange({
-    baseDate: dayjs().tz("Asia/Tokyo").toDate(),
-    dayCount,
-    offsetDays: -1,
-  });
-
-  /**
    * SETUP STORES
-   */
+   *****************************************************************************/
   const auth = useAuthStore();
   const isDev = Vue.computed(() => auth.isDev);
   const loadings = useLoadingsStore();
 
-  /**
-   * SETUP LOGGER
-   */
+  /*****************************************************************************
+   * SETUP COMPOSABLES
+   *****************************************************************************/
   const logger = useLogger("ArrangementsManager");
-
-  /**
-   * SETUP STATES
-   */
-  const internalSelectedDate = Vue.ref(null); // コンポーネントで選択された日付文字列
-
-  /**
-   * Fetch Composables
-   * @description キャッシュ用のフェッチコンポーザブル群
-   */
   const {
     fetchSiteComposable,
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
-  } = useFetch("ArrangementsManager", true);
-
-  /**
-   * SiteOperationSchedule Documents
-   * @description 指定された日付範囲内の SiteOperationSchedule ドキュメントを購読
-   * - dateRangeComposable の日付範囲（デバウンス）に基づいて動的にクエリを更新
-   * - fetchSiteComposable、fetchEmployeeComposable、fetchOutsourcerComposable を使用して関連データを事前取得
-   * - useDocuments により Unmounted 時に自動で購読解除される
-   * @returns {Array} siteOperationSchedules - Array of SiteOperationSchedule documents
-   */
-  const { docs: schedules } = useDocuments(
-    "SiteOperationSchedule",
-    {
-      options: Vue.computed(() => {
-        const from = dateRangeComposable.debouncedDateRange.value.from;
-        const to = dateRangeComposable.debouncedDateRange.value.to;
-        return [
-          ["where", "dateAt", ">=", from],
-          ["where", "dateAt", "<=", to],
-        ];
-      }),
-      fetchAllOnEmpty: true, // `search` オプションが空の場合、全ドキュメントを取得
-    },
-    (doc) => {
-      fetchSiteComposable.fetchSite(doc.siteId);
-      fetchEmployeeComposable.fetchEmployee(doc.employeeIds);
-      fetchOutsourcerComposable.fetchOutsourcer(doc.outsourcerIds);
-    },
-  );
-
-  /**
-   * Arrangement Notification Documents
-   * @description 指定された日付範囲内の ArrangementNotification ドキュメントを購読
-   * - dateRangeComposable の日付範囲（デバウンス）に基づいて動的にクエリを更新
-   * - fetchSiteComposable、fetchEmployeeComposable、fetchOutsourcerComposable を使用して関連データを事前取得
-   * - useDocuments により Unmounted 時に自動で購読解除される
-   * @returns {Array} arrangementNotifications - Array of ArrangementNotification documents
-   */
-  const { docs: arrangementNotifications } = useDocuments(
-    "ArrangementNotification",
-    {
-      options: Vue.computed(() => {
-        const from = dateRangeComposable.debouncedDateRange.value.from;
-        const to = dateRangeComposable.debouncedDateRange.value.to;
-        return [
-          ["where", "dateAt", ">=", from],
-          ["where", "dateAt", "<=", to],
-        ];
-      }),
-      fetchAllOnEmpty: true,
-    },
-    (doc) => {
-      fetchSiteComposable.fetchSite(doc.siteId);
-      fetchEmployeeComposable.fetchEmployee(doc.employeeIds);
-      fetchOutsourcerComposable.fetchOutsourcer(doc.outsourcerIds);
-    },
-  );
-
-  /**
-   * Key Mapped Notifications
-   * @description docId をキーとした ArrangementNotification ドキュメントのマップ
-   * - キーは `{siteOperationScheduleId}-{workerId}` に該当します。
-   * @returns {Map} - Map<docId: string, ArrangementNotification>
-   */
-  const keyMappedNotifications = Vue.computed(() => {
-    return arrangementNotifications.reduce((acc, doc) => {
-      acc.set(doc.docId, doc);
-      return acc;
-    }, new Map());
-  });
+  } = useFetch("ArrangementsManager");
 
   /**
    * Site Shift Type Order Composable
@@ -165,7 +53,6 @@ export function useIndex() {
    */
   const siteShiftTypeOrderComposable = useSiteShiftTypeOrder({
     schedules,
-    fetchSiteComposable,
   });
 
   /**
@@ -178,55 +65,76 @@ export function useIndex() {
   });
 
   /**
-   * Employee Documents
-   * @description 在職中の従業員ドキュメントを購読
-   * - fetchEmployeeComposable を使用して関連データを事前取得
-   * - useDocuments により Unmounted 時に自動で購読解除される
-   * @returns {Array} employees - Array of Employee documents
-   *
-   * Note: 期間中に在職している従業員に限定するべきかもしれないが、
-   *       突然退職するなど、既に配置されている従業員が退職状態になった場合への対応が先か。
-   *       指定期間中に選択可能な従業員リストを取得できるコンポーザブルを別途用意するか。
+   * Duplicator Composable
+   * @description 現場運用スケジュール複製用コンポーザブル
    */
-  const { docs: employees } = useDocuments(
-    "Employee",
-    {
-      options: Vue.computed(() => {
-        return [["where", "employmentStatus", "==", Employee.STATUS_ACTIVE]];
-      }),
-      fetchAllOnEmpty: true,
-    },
-    (doc) => fetchEmployeeComposable.fetchEmployee(doc.docId),
-  );
+  const duplicatorComposable = useSiteOperationScheduleDuplicator();
 
   /**
-   * Outsourcer Documents
-   * @description 契約中の外注先ドキュメントを購読
-   * - fetchOutsourcerComposable を使用して関連データを事前取得
-   * - useDocuments により Unmounted 時に自動で購読解除される
-   * @returns {Array} outsourcers - Array of Outsourcer documents
+   * 配置表PDF作成コンポーザブル
    */
-  const { docs: outsourcers } = useDocuments(
-    "Outsourcer",
-    {
-      options: Vue.computed(() => {
-        return [["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE]];
-      }),
-      fetchAllOnEmpty: true,
-    },
-    (doc) => fetchOutsourcerComposable.fetchOutsourcer(doc.docId),
-  );
+  const pdfComposable = useArrangementSheetPdf({
+    fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+  });
+
+  const { getCommandText } = useArrangementNotificationsCommandText({
+    schedules,
+    siteShiftTypeOrder: siteShiftTypeOrderComposable.siteShiftTypeOrder,
+  });
+
+  /*****************************************************************************
+   * DEFINE STATES
+   *****************************************************************************/
+  const internalSelectedDate = Vue.ref(null); // コンポーネントで選択された日付文字列
+
+  /*****************************************************************************
+   * METHODS (INTERNAL)
+   *****************************************************************************/
+  /**
+   * `siteId`、`shiftType`、`date` を組み合わせて一意の `groupKey` を生成します。
+   * - これにより、特定の条件に対応する現場稼働予定ドキュメントへの高速なアクセスが可能になります。
+   * [groupKey]
+   * - `siteId`、`shiftType`、`dateAt` を組み合わせた文字列で構成される一意の識別子
+   * @param {Object} options
+   * @param {string} options.siteId - 現場 ID
+   * @param {string} options.shiftType - シフト種別
+   * @param {string} options.date - 日付文字列（YYYY-MM-DD）
+   * @returns {string} `siteId`、`shiftType`、`date` を組み合わせた一意の `groupKey`
+   */
+  function _createGroupKey({ siteId, shiftType, date }) {
+    return `${siteId}_${shiftType}_${date}`;
+  }
 
   /**
-   * Arranged Employees Map
-   * @description 日付ごとおよび勤務区分ごとの配置済み従業員IDのマップ
-   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<employeeId: string>>>
+   * `siteOperationScheduleId` と `workerId` を組み合わせて一意の `notificationKey` を生成します。
+   * - これにより、特定の条件に対応する配置通知ドキュメントへの高速なアクセスが可能になります。
+   * [notificationKey]
+   * - `siteOperationScheduleId` と `workerId` を組み合わせた文字列で構成される一意の識別子
+   * @param {Object} options
+   * @param {string} options.siteOperationScheduleId - 現場稼働予定ドキュメントの ID
+   * @param {string} options.workerId - 作業者の ID
+   * @returns {string} `siteOperationScheduleId` と `workerId` を組み合わせた一意の `notificationKey`
    */
-  const arrangedEmployeesMap = Vue.computed(() => {
-    const result = schedules.reduce((acc, schedule) => {
+  function _createNotificationKey({ siteOperationScheduleId, workerId }) {
+    return `${siteOperationScheduleId}_${workerId}`;
+  }
+
+  /**
+   * 日付・勤務区分ごとの配置済みIDマップを生成します。
+   * @param {Object[]} schedules
+   * @param {string} property - "employeeIds" または "outsourcerIds"
+   * @returns {Map<string, Map<string, string[]>>}
+   */
+  function _createArrangementMap(schedules, property) {
+    const result = new Map();
+
+    for (const schedule of schedules) {
       const dateKey = schedule.date;
-      if (!acc.has(dateKey)) {
-        acc.set(
+
+      if (!result.has(dateKey)) {
+        result.set(
           dateKey,
           new Map([
             ["allDay", []],
@@ -235,26 +143,89 @@ export function useIndex() {
           ]),
         );
       }
-      const entry = acc.get(dateKey);
-      entry.get("allDay").push(...(schedule.employeeIds || []));
-      const shiftEmployees = entry.get(schedule.shiftType);
-      if (shiftEmployees) {
-        shiftEmployees.push(...(schedule.employeeIds || []));
-      }
-      return acc;
-    }, new Map());
 
-    // Remove duplicates for each array
-    result.forEach((entry) => {
-      [
-        "allDay",
-        SiteOperationSchedule.SHIFT_TYPE.DAY.value,
-        SiteOperationSchedule.SHIFT_TYPE.NIGHT.value,
-      ].forEach((key) => {
-        entry.set(key, Array.from(new Set(entry.get(key))));
-      });
-    });
+      const entry = result.get(dateKey);
+      const ids = schedule[property] || [];
+
+      entry.get("allDay").push(...ids);
+
+      const shiftList = entry.get(schedule.shiftType);
+      if (shiftList) {
+        shiftList.push(...ids);
+      }
+    }
+
+    // 重複除去
+    for (const entry of result.values()) {
+      for (const [key, value] of entry.entries()) {
+        entry.set(key, [...new Set(value)]);
+      }
+    }
+
     return result;
+  }
+
+  /*****************************************************************************
+   * COMPUTED
+   *****************************************************************************/
+  /**
+   * 現場稼働予定ドキュメントの配列を、`groupKey` をキーとする Map に変換します。
+   * - これにより、特定の `groupKey` に対応するドキュメントへの高速なアクセスが可能になります。
+   * [groupKey]
+   * - `siteId`、`shiftType`、`dateAt` を組み合わせた文字列で構成される一意の識別子
+   * @returns {Map<string, Object>} `groupKey` をキーとする Map
+   */
+  const schedulesMap = Vue.computed(() => {
+    const result = new Map();
+    for (const schedule of schedules) {
+      const groupKey = _createGroupKey(schedule);
+      result.set(groupKey, schedule);
+    }
+    return result;
+  });
+
+  /**
+   * 配置通知ドキュメントの配列を、`notificationKey` をキーとする Map に変換します。
+   * - これにより、特定のドキュメント ID に対応するドキュメントへの高速なアクセスが可能になります。
+   * [notificationKey]
+   * - `siteOperationScheduleId` と `workerId` を組み合わせた文字列で構成される一意の識別子
+   * @returns {Map<string, Object>} `notificationKey` をキーとする Map
+   */
+  const notificationsMap = Vue.computed(() => {
+    const result = new Map();
+    for (const notification of notifications) {
+      const notificationKey = _createNotificationKey(notification);
+      result.set(notificationKey, notification);
+    }
+    return result;
+  });
+
+  /**
+   * 配置通知ドキュメントの配列を、`siteOperationScheduleId` をキーとする Map に変換します。
+   * - これにより、特定の `siteOperationScheduleId` に対応するドキュメントへの高速なアクセスが可能になります。
+   * [siteOperationScheduleId]
+   * - 現場稼働予定ドキュメントの ID を表す文字列
+   * @returns {Map<string, Object[]>} `siteOperationScheduleId` をキーとする Map
+   */
+  const notificationsByScheduleIdMap = Vue.computed(() => {
+    const result = new Map();
+    for (const notification of notifications) {
+      const scheduleId = notification.siteOperationScheduleId;
+      if (!result.has(scheduleId)) {
+        result.set(scheduleId, []);
+      }
+      result.get(scheduleId).push(notification);
+    }
+    return result;
+  });
+
+  /**
+   * Arranged Employees Map
+   * @description 日付ごとおよび勤務区分ごとの配置済み従業員IDのマップ
+   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<employeeId: string>>>
+   */
+  const arrangedEmployeesMap = Vue.computed(() => {
+    return _createArrangementMap(schedules, "employeeIds");
   });
 
   /**
@@ -263,45 +234,80 @@ export function useIndex() {
    * @returns {Map} - Map<date: string, Map<shiftType: string, Array<outsourcerId: string>>>
    */
   const arrangedOutsourcersMap = Vue.computed(() => {
-    const result = schedules.reduce((acc, schedule) => {
-      const dateKey = schedule.date;
-      if (!acc.has(dateKey)) {
-        acc.set(
-          dateKey,
-          new Map([
-            ["allDay", []],
-            [SiteOperationSchedule.SHIFT_TYPE.DAY.value, []],
-            [SiteOperationSchedule.SHIFT_TYPE.NIGHT.value, []],
-          ]),
-        );
-      }
-      const entry = acc.get(dateKey);
-      entry.get("allDay").push(...(schedule.outsourcerIds || []));
-      const shiftOutsourcers = entry.get(schedule.shiftType);
-      if (shiftOutsourcers) {
-        shiftOutsourcers.push(...(schedule.outsourcerIds || []));
-      }
-      return acc;
-    }, new Map());
-
-    // Remove duplicates for each array
-    result.forEach((entry) => {
-      [
-        "allDay",
-        SiteOperationSchedule.SHIFT_TYPE.DAY.value,
-        SiteOperationSchedule.SHIFT_TYPE.NIGHT.value,
-      ].forEach((key) => {
-        entry.set(key, Array.from(new Set(entry.get(key))));
-      });
-    });
-    return result;
+    return _createArrangementMap(schedules, "outsourcerIds");
   });
 
   /**
-   * Duplicator Composable
-   * @description 現場運用スケジュール複製用コンポーザブル
+   * 選択中の日付
+   * - `OperationSchedulesTable` の `selectedDate` と双方向バインディングされる予定の状態です。
+   * - `OperationSchedulesTable` 内で日付が選択されると、この状態が更新されます。
+   * - `isEmployeeArranged` 関数はこの状態を参照して、指定された従業員IDが選択された日付の勤務区分に配置されているかどうかを判定します。
+   * - 初期値は null で、日付が選択されていない状態を表します。
    */
-  const duplicatorComposable = useSiteOperationScheduleDuplicator();
+  const selectedDate = Vue.computed({
+    get() {
+      return internalSelectedDate.value;
+    },
+    set(v) {
+      if (v === internalSelectedDate.value) {
+        internalSelectedDate.value = null; // 同じ日付が選択された場合は選択を解除
+        return;
+      }
+      internalSelectedDate.value = v;
+    },
+  });
+
+  /*****************************************************************************
+   * METHODS
+   *****************************************************************************/
+
+  /**
+   * 指定された条件に一致する現場稼働予定ドキュメントを取得します。
+   * @param {Object} options
+   * @param {string} options.siteId - 現場 ID
+   * @param {string} options.shiftType - シフト種別
+   * @param {string} options.date - 日付文字列（YYYY-MM-DD）
+   * @returns {Object|null} 指定された条件に一致する現場稼働予定ドキュメント、または見つからない場合は null
+   */
+  function getSchedule({ siteId, shiftType, date }) {
+    const groupKey = _createGroupKey({ siteId, shiftType, date });
+    return schedulesMap.value.get(groupKey) || null;
+  }
+
+  /**
+   * 指定された条件に一致する配置通知ドキュメントを取得します。
+   * @param {Object} options
+   * @param {string} options.siteOperationScheduleId - 現場稼働予定ドキュメントの ID
+   * @param {string} options.workerId - 作業員 ID
+   * @returns {Object|null} 指定された条件に一致する配置通知ドキュメント、または見つからない場合は null
+   */
+  function getNotification({ siteOperationScheduleId, workerId }) {
+    const notificationKey = _createNotificationKey({
+      siteOperationScheduleId,
+      workerId,
+    });
+    return notificationsMap.value.get(notificationKey) || null;
+  }
+
+  /**
+   * 指定された現場稼働予定ドキュメント ID に対応する配置通知ドキュメントの配列を取得します。
+   * @param {string} siteOperationScheduleId - 現場稼働予定ドキュメントの ID
+   * @returns {Object[]} 指定された現場稼働予定ドキュメント ID に対応する配置通知ドキュメントの配列
+   */
+  function getNotificationsByScheduleId(siteOperationScheduleId) {
+    return (
+      notificationsByScheduleIdMap.value.get(siteOperationScheduleId) || []
+    );
+  }
+
+  /**
+   * 指定された現場稼働予定ドキュメント ID に対応する配置通知ドキュメントが存在するかどうかを判定します。
+   * @param {string} siteOperationScheduleId - 現場稼働予定ドキュメントの ID
+   * @returns {boolean} 指定された現場稼働予定ドキュメント ID に対応する配置通知ドキュメントが存在する場合は true、そうでない場合は false
+   */
+  function hasNotificationForSchedule(siteOperationScheduleId) {
+    return getNotificationsByScheduleId(siteOperationScheduleId).length > 0;
+  }
 
   /**
    * 引数で指定された従業員IDが、選択された日付の指定された勤務区分に配置されているかどうかを判定します。
@@ -380,35 +386,6 @@ export function useIndex() {
   };
 
   /**
-   * 選択中の日付
-   * - `OperationSchedulesTable` の `selectedDate` と双方向バインディングされる予定の状態です。
-   * - `OperationSchedulesTable` 内で日付が選択されると、この状態が更新されます。
-   * - `isEmployeeArranged` 関数はこの状態を参照して、指定された従業員IDが選択された日付の勤務区分に配置されているかどうかを判定します。
-   * - 初期値は null で、日付が選択されていない状態を表します。
-   */
-  const selectedDate = Vue.computed({
-    get() {
-      return internalSelectedDate.value;
-    },
-    set(v) {
-      if (v === internalSelectedDate.value) {
-        internalSelectedDate.value = null; // 同じ日付が選択された場合は選択を解除
-        return;
-      }
-      internalSelectedDate.value = v;
-    },
-  });
-
-  /**
-   * 配置表PDF作成コンポーザブル
-   */
-  const pdfComposable = useArrangementSheetPdf({
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  });
-
-  /**
    * 指定された日付の配置表PDFを生成して表示します。
    * - ローディング状態を管理し、PDF生成中はユーザーにフィードバックを提供します。
    * @param {string} date - PDFを生成する対象の日付（例: "2024-01-01"）
@@ -428,107 +405,100 @@ export function useIndex() {
     }
   };
 
-  /**
-   * 配置情報通知用のテキストを生成して返します。
-   * @param {string} date - Date in 'YYYY-MM-DD' format
-   * @returns {string} - Command text for the specified date
-   */
-  const getCommandText = (date) => {
-    const formattedDate = dayjs(date).locale(ja).format("YYYY年MM月DD日(ddd)");
+  // /**
+  //  * 配置情報通知用のテキストを生成して返します。
+  //  * @param {string} date - Date in 'YYYY-MM-DD' format
+  //  * @returns {string} - Command text for the specified date
+  //  */
+  // const getCommandText = (date) => {
+  //   const formattedDate = dayjs(date).locale(ja).format("YYYY年MM月DD日(ddd)");
 
-    // Get schedules for the specified date
-    const dayFilteredSchedules = schedules.filter(
-      (schedule) => schedule.date === date,
-    );
-    if (dayFilteredSchedules.length === 0) {
-      return `${formattedDate} 配置\n\n配置はありません。`;
-    }
+  //   // Get schedules for the specified date
+  //   const dayFilteredSchedules = schedules.filter(
+  //     (schedule) => schedule.date === date,
+  //   );
+  //   if (dayFilteredSchedules.length === 0) {
+  //     return `${formattedDate} 配置\n\n配置はありません。`;
+  //   }
 
-    const siteOrder = siteShiftTypeOrderComposable.siteShiftTypeOrder || [];
+  //   const siteOrder = siteShiftTypeOrderComposable.siteShiftTypeOrder || [];
 
-    // siteOrder順に並べ替え
-    if (siteOrder.length > 0) {
-      dayFilteredSchedules.sort((a, b) => {
-        const aIdx = siteOrder.findIndex(
-          (order) =>
-            order.siteId === a.siteId && order.shiftType === a.shiftType,
-        );
-        const bIdx = siteOrder.findIndex(
-          (order) =>
-            order.siteId === b.siteId && order.shiftType === b.shiftType,
-        );
-        // siteOrderに含まれていない場合は後ろに
-        if (aIdx === -1 && bIdx === -1) return 0;
-        if (aIdx === -1) return 1;
-        if (bIdx === -1) return -1;
-        return aIdx - bIdx;
-      });
-    }
+  //   // siteOrder順に並べ替え
+  //   if (siteOrder.length > 0) {
+  //     dayFilteredSchedules.sort((a, b) => {
+  //       const aIdx = siteOrder.findIndex(
+  //         (order) =>
+  //           order.siteId === a.siteId && order.shiftType === a.shiftType,
+  //       );
+  //       const bIdx = siteOrder.findIndex(
+  //         (order) =>
+  //           order.siteId === b.siteId && order.shiftType === b.shiftType,
+  //       );
+  //       // siteOrderに含まれていない場合は後ろに
+  //       if (aIdx === -1 && bIdx === -1) return 0;
+  //       if (aIdx === -1) return 1;
+  //       if (bIdx === -1) return -1;
+  //       return aIdx - bIdx;
+  //     });
+  //   }
 
-    const lines = dayFilteredSchedules.reduce((acc, schedule, index, arr) => {
-      const site =
-        fetchSiteComposable.cachedSites.value[schedule.siteId] || "N/A";
-      const siteName = site ? site.name : "不明な現場";
-      const siteAddress = site ? site.address : "";
-      const shiftType =
-        schedule.shiftType === SiteOperationSchedule.SHIFT_TYPE.DAY.value
-          ? "日勤"
-          : "夜勤";
-      const mark =
-        schedule.shiftType === SiteOperationSchedule.SHIFT_TYPE.DAY.value
-          ? "○"
-          : "●";
-      const basicTimeRange = `${schedule.startTime}〜${schedule.endTime}`;
-      const employees =
-        schedule.employees
-          .map((emp) => {
-            const employee =
-              fetchEmployeeComposable.cachedEmployees.value[emp.workerId];
-            if (!employee) return `${mark}unknown`;
-            return `${mark}${employee.displayName}${employee?.title || ""}`;
-          })
-          .join("\n") || "";
-      const outsourcers =
-        schedule.outsourcers
-          .map((out) => {
-            const outsourcer =
-              fetchOutsourcerComposable.cachedOutsourcers.value[out.workerId];
-            if (!outsourcer) return `${mark}unknown(${out.amount}名)`;
-            return `${mark}${outsourcer.displayName}(${out.amount}名)`;
-          })
-          .join("\n") || "";
-      acc.push(`【${siteName} - ${shiftType}】`);
-      acc.push(siteAddress);
-      acc.push(basicTimeRange);
-      if (employees) acc.push(employees);
-      if (outsourcers) acc.push(outsourcers);
-      if (index !== arr.length - 1) {
-        acc.push("\n");
-      }
-      return acc;
-    }, []);
+  //   const lines = dayFilteredSchedules.reduce((acc, schedule, index, arr) => {
+  //     const site =
+  //       fetchSiteComposable.cachedSites.value[schedule.siteId] || "N/A";
+  //     const siteName = site ? site.name : "不明な現場";
+  //     const siteAddress = site ? site.address : "";
+  //     const shiftType =
+  //       schedule.shiftType === SiteOperationSchedule.SHIFT_TYPE.DAY.value
+  //         ? "日勤"
+  //         : "夜勤";
+  //     const mark =
+  //       schedule.shiftType === SiteOperationSchedule.SHIFT_TYPE.DAY.value
+  //         ? "○"
+  //         : "●";
+  //     const basicTimeRange = `${schedule.startTime}〜${schedule.endTime}`;
+  //     const employees =
+  //       schedule.employees
+  //         .map((emp) => {
+  //           const employee =
+  //             fetchEmployeeComposable.cachedEmployees.value[emp.workerId];
+  //           if (!employee) return `${mark}unknown`;
+  //           return `${mark}${employee.displayName}${employee?.title || ""}`;
+  //         })
+  //         .join("\n") || "";
+  //     const outsourcers =
+  //       schedule.outsourcers
+  //         .map((out) => {
+  //           const outsourcer =
+  //             fetchOutsourcerComposable.cachedOutsourcers.value[out.workerId];
+  //           if (!outsourcer) return `${mark}unknown(${out.amount}名)`;
+  //           return `${mark}${outsourcer.displayName}(${out.amount}名)`;
+  //         })
+  //         .join("\n") || "";
+  //     acc.push(`【${siteName} - ${shiftType}】`);
+  //     acc.push(siteAddress);
+  //     acc.push(basicTimeRange);
+  //     if (employees) acc.push(employees);
+  //     if (outsourcers) acc.push(outsourcers);
+  //     if (index !== arr.length - 1) {
+  //       acc.push("\n");
+  //     }
+  //     return acc;
+  //   }, []);
 
-    return `${formattedDate} 配置\n\n` + lines.join("\n");
-  };
+  //   return `${formattedDate} 配置\n\n` + lines.join("\n");
+  // };
 
   return {
     /** COMPOSABLES: 後方互換 */
-    dateRangeComposable,
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
     siteShiftTypeReorderComposable,
     duplicatorComposable,
 
     /** DATA  */
-    schedules,
-    notifications: arrangementNotifications,
-    employees,
-    outsourcers,
     siteShiftTypeOrder: siteShiftTypeOrderComposable.siteShiftTypeOrder,
     arrangedEmployeesMap,
     arrangedOutsourcersMap,
-    keyMappedNotifications,
+    schedulesMap,
+    notificationsMap,
     selectedDate,
 
     /** METHODS */
@@ -539,5 +509,9 @@ export function useIndex() {
     openPdf,
     getCommandText,
     removeSiteShiftTypeOrder: siteShiftTypeOrderComposable.remove,
+    getSchedule,
+    getNotification,
+    getNotificationsByScheduleId,
+    hasNotificationForSchedule,
   };
 }

@@ -3,36 +3,65 @@
  * @file components/arrangements/Manager/index.vue
  * @description A component for managing site operation schedules, including viewing, creating, updating, and duplicating schedules.
  * It also provides functionalities for managing workers, site orders, and notifications.
+ *
+ * [改修]
+ * - `fetchXxxComposable` はルートコンポーネントで保持するように修正✅
+ * - `dateRangeComposable` を `useIndex` から分離✅
+ * - `schedules`, `notifications` をデータレイヤーから取得するように修正✅
+ *
+ * @property {Date} startDate - スケジュール表示の開始日
+ * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
+import { useDefaults } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
+import { useArrangements } from "@/composables/dataLayers/useArrangements";
 
 // Components
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
-import OperationSchedulesTable from "@/components/OperationSchedules/Table/index.vue";
 import SpeedDial from "./SpeedDial.vue";
 
 import { useIndex } from "./useIndex";
 
 /*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({ name: "ArrangementsManager", inheritAttrs: false });
+
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
+const _props = defineProps({
+  startDate: {
+    type: Object,
+    required: true,
+    validator: (v) => v instanceof Date,
+  },
+  endDate: {
+    type: Object,
+    required: true,
+    validator: (v) => v instanceof Date,
+  },
+});
+const props = useDefaults(_props, "ArrangementsManager");
+
+/*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const managerComposable = useIndex();
+/** DATA LAYER */
+const { schedules, notifications } = useArrangements({
+  from: toRef(() => props.startDate),
+  to: toRef(() => props.endDate),
+});
+
+const managerComposable = useIndex(schedules, notifications);
 const {
   // COMPOSABLES
-  dateRangeComposable,
-  fetchSiteComposable,
-  fetchEmployeeComposable,
-  fetchOutsourcerComposable,
   siteShiftTypeReorderComposable,
   duplicatorComposable,
 
   // DATA
-  schedules,
-  employees,
-  outsourcers,
   siteShiftTypeOrder,
-  keyMappedNotifications,
   selectedDate,
 
   // METHODS
@@ -43,6 +72,7 @@ const {
   openPdf,
   getCommandText,
   removeSiteShiftTypeOrder,
+  getNotification,
 } = managerComposable;
 
 /** For schedule detail management */
@@ -70,44 +100,24 @@ const arrangementNotificationManager = useTemplateRef(
   <div class="d-flex flex-column fill-height">
     <!-- フローティング作業員選択ウィンドウ -->
     <FloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
-      <MoleculesWorkerSelector
-        :employees="employees"
-        :outsourcers="outsourcers"
-      >
-        <template #employee="{ id }">
-          <EmployeeTag
-            is-draggable
-            :doc-id="id"
-            :fetch-employee-composable="fetchEmployeeComposable"
-            :variant="isEmployeeArranged(id) ? 'disabled' : 'default'"
-          />
-        </template>
-        <template #outsourcer="{ id }">
-          <OutsourcerTag
-            is-draggable
-            :doc-id="id"
-            :fetch-outsourcer-composable="fetchOutsourcerComposable"
-          />
-        </template>
-      </MoleculesWorkerSelector>
+      <ArrangementsWorkersSelector
+        :is-employee-arranged="isEmployeeArranged"
+        :start-date="props.startDate"
+        :end-date="props.endDate"
+      />
     </FloatingWindow>
 
     <!-- スケジュール管理テーブル -->
     <OperationSchedulesTable
       class="fill-height"
-      :start-date="dateRangeComposable.dateRange.value.from"
-      :end-date="dateRangeComposable.dateRange.value.to"
+      :start-date="props.startDate"
+      :end-date="props.endDate"
       :schedules="schedules"
       :site-shift-type-order="siteShiftTypeOrder"
-      :cached-sites="fetchSiteComposable.cachedSites.value"
       :column-width="256"
       day-format="MM/DD(ddd)"
       :selectedDate="selectedDate"
-      @click:remove-site-order="
-        ($event) => {
-          removeSiteShiftTypeOrder($event);
-        }
-      "
+      @click:remove-site-order="removeSiteShiftTypeOrder"
     >
       <!-- 日付の表示形式をカスタマイズ -->
       <template #append-day="{ dayObject, holidayIcon }">
@@ -170,9 +180,7 @@ const arrangementNotificationManager = useTemplateRef(
                     <SiteOperationScheduleWorkerTag
                       v-bind="draggableWorkersProps"
                       :notification="
-                        keyMappedNotifications.get(
-                          draggableWorkersProps.worker.notificationKey,
-                        )
+                        getNotification(draggableWorkersProps.worker)
                       "
                       @click:edit="
                         siteOperationScheduleDetailManager.set({
