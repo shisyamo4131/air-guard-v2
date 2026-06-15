@@ -4,7 +4,9 @@
  * - 横長のテーブルになるため、親コンポーネント側をスクロールコンテナとする場合は
  *   `class="d-flex"` を指定すること。
  *
- * @property {Object} cachedSites - キャッシュ済み現場データオブジェクトマップ
+ * [更新履歴]
+ * 2026-06-15 - `props.cachedSites` を廃止し、`useFetch` を使用するように変更
+ *
  * @property {Array} columnColors - 各列の背景色クラス配列
  * @property {String|Number} columnWidth - 各列の幅
  * @property {String} dayFormat - 日付フォーマット（ヘッダーカラム表示用）
@@ -85,20 +87,15 @@
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { useFetch } from "@/composables/fetch/useFetch";
 import { useTable } from "./useTable.js";
 import Head from "./Head.vue";
 import Foot from "./Foot.vue";
 
-/**
+/*****************************************************************************
  * DEFINE PROPS & EMITS
- */
+ *****************************************************************************/
 const _props = defineProps({
-  /**
-   * キャッシュ済み現場データオブジェクトマップ
-   * - 現場IDをキー、現場データオブジェクトを値とするマップオブジェクトを指定します。
-   * - 現場オーダー行の表示に使用されます。
-   */
-  cachedSites: { type: Object, default: undefined },
   /**
    * 各列の背景色クラス配列
    * - 日付範囲内の曜日に対応する背景色クラスを配列で指定します。
@@ -185,6 +182,10 @@ const emit = defineEmits(["click:cell", "click:remove-site-order"]);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+/** FETCH SITE COMPOSABLE */
+const { fetchSiteComposable } = useFetch("OperationSchedulesTable");
+const { cachedSites } = fetchSiteComposable;
+
 const {
   daysInRangeArray,
   currentDayCount,
@@ -303,7 +304,7 @@ const orderKeySchedulesMap = computed(() => {
                     label
                     size="small"
                   />
-                  {{ props.cachedSites?.[order.siteId]?.name || "...loading" }}
+                  {{ cachedSites?.[order.siteId]?.name || "...loading" }}
                 </div>
               </slot>
 
