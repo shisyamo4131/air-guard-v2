@@ -118,8 +118,8 @@ export const pageStructure = [
         navigation: true,
       },
       {
-        id: "arrangement-manager",
-        path: "/arrangement-manager",
+        id: "arrangements-manager",
+        path: "/arrangements-manager",
         label: "配置管理",
         icon: "mdi-calendar-account",
         roles: ["site-operation-schedules:read"],
