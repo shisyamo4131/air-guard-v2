@@ -27,6 +27,7 @@ export function useFetchSite({
     cachedItems,
     cachedArray,
     pushItems,
+    pushItem,
     isLoading,
     searchItems,
     clearCache,
@@ -64,6 +65,7 @@ export function useFetchSite({
     cachedSites: cachedItems,
     cachedSitesArray: cachedArray,
     pushSites: pushItems,
+    pushSite: pushItem,
     isLoading,
     clearCache,
   };

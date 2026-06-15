@@ -161,7 +161,7 @@ export function useFetchBase({
               !cache.value.some((cachedItem) => cachedItem.docId === id) &&
               !inFlightFetches.value.has(id) // ← フェッチ中でないことを確認
             );
-          })
+          }),
         ),
       ];
 
@@ -258,15 +258,25 @@ export function useFetchBase({
 
     // 重複チェック：既にキャッシュに存在しないもののみ追加
     const newUniqueItems = newItems.filter(
-      (item) => !cache.value.some((cached) => cached.docId === item.docId)
+      (item) => !cache.value.some((cached) => cached.docId === item.docId),
     );
 
     if (newUniqueItems.length > 0) {
       cache.value.push(...newUniqueItems);
-      // logger.info({
-      //   sender: `useFetch${entityName}`,
-      //   message: `Added ${newUniqueItems.length} new ${entityName}(s) to cache.`,
-      // });
+    }
+  }
+
+  function pushItem(newItem) {
+    if (!newItem || !(newItem instanceof SchemaClass)) {
+      logger.warn({
+        message: `pushItem expects an instance of ${entityName}.`,
+      });
+      return;
+    }
+
+    // 重複チェック：既にキャッシュに存在しない場合のみ追加
+    if (!cache.value.some((cached) => cached.docId === newItem.docId)) {
+      cache.value.push(newItem);
     }
   }
 
@@ -452,6 +462,7 @@ export function useFetchBase({
     cachedItems,
     cachedArray: computed(() => [...cache.value]),
     pushItems,
+    pushItem,
     isLoading,
     clearCache,
     clearSearchCache,

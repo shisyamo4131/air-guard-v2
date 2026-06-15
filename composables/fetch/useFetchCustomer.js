@@ -27,6 +27,7 @@ export function useFetchCustomer({
     cachedItems,
     cachedArray,
     pushItems,
+    pushItem,
     isLoading,
     searchItems,
     clearCache,
@@ -64,6 +65,7 @@ export function useFetchCustomer({
     cachedCustomers: cachedItems,
     cachedCustomersArray: cachedArray,
     pushCustomers: pushItems,
+    pushCustomer: pushItem,
     isLoading,
     clearCache,
   };

@@ -27,6 +27,7 @@ export function useFetchEmployee({
     cachedItems,
     cachedArray,
     pushItems,
+    pushItem,
     isLoading,
     searchItems,
     clearCache,
@@ -64,6 +65,7 @@ export function useFetchEmployee({
     cachedEmployees: cachedItems,
     cachedEmployeesArray: cachedArray,
     pushEmployees: pushItems,
+    pushEmployee: pushItem,
     isLoading,
     clearCache,
   };

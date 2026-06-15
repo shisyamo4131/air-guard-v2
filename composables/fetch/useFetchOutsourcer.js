@@ -27,6 +27,7 @@ export function useFetchOutsourcer({
     cachedItems,
     cachedArray,
     pushItems,
+    pushItem,
     isLoading,
     searchItems,
     clearCache,
@@ -64,6 +65,7 @@ export function useFetchOutsourcer({
     cachedOutsourcers: cachedItems,
     cachedOutsourcersArray: cachedArray,
     pushOutsourcers: pushItems,
+    pushOutsourcer: pushItem,
     isLoading,
     clearCache,
   };

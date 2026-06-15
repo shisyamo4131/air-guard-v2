@@ -24,6 +24,7 @@ export function useFetchArticle({
     cachedItems,
     cachedArray,
     pushItems,
+    pushItem,
     isLoading,
     searchItems,
     clearCache,
@@ -59,6 +60,7 @@ export function useFetchArticle({
     cachedArticles: cachedItems,
     cachedArticlesArray: cachedArray,
     pushArticles: pushItems,
+    pushArticle: pushItem,
     isLoading,
     clearCache,
   };
