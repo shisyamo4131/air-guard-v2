@@ -7,8 +7,8 @@
  *
  * [Added property]
  * @property {String} docId - 従業員ID（必須）。従業員情報を取得するために使用されます。
- * @property {Object} fetchEmployeeComposable - useFetchEmployeeのインスタンス（任意）。親から渡すとキャッシュを共有できます。
  *
+ * [Inherited properties from Tag component]
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} highlight - タグを強調表示するかどうか。
  * @property {Boolean} removable - タグに削除ボタンを表示するかどうか。
@@ -31,7 +31,6 @@
 import { useDefaults } from "vuetify";
 import importedProps from "@/components/Tag/props";
 import { useIndex } from "./useIndex";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
 defineOptions({ inheritAttrs: false });
 
@@ -40,7 +39,6 @@ defineOptions({ inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   ...importedProps,
-  fetchEmployeeComposable: { type: Object, default: () => useFetchEmployee() },
   docId: { type: String, required: true },
 });
 const props = useDefaults(_props, "EmployeeTag");

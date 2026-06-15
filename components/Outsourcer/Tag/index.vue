@@ -7,7 +7,6 @@
  *
  * [Added property]
  * @property {String} docId - 外注先ID（必須）。外注先情報を取得するために使用されます。
- * @property {Object} fetchOutsourcerComposable - useFetchOutsourcerのインスタンス（任意）。親から渡すとキャッシュを共有できます。
  *
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
  * @property {Boolean} highlight - タグを強調表示するかどうか。
@@ -31,7 +30,6 @@
 import { useDefaults } from "vuetify";
 import importedProps from "@/components/Tag/props";
 import { useIndex } from "./useIndex";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 defineOptions({ inheritAttrs: false });
 
@@ -40,10 +38,6 @@ defineOptions({ inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   ...importedProps,
-  fetchOutsourcerComposable: {
-    type: Object,
-    default: () => useFetchOutsourcer(),
-  },
   docId: { type: String, required: true },
 });
 const props = useDefaults(_props, "OutsourcerTag");

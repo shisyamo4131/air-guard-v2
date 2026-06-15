@@ -1,22 +1,22 @@
 /*****************************************************************************
- * OutsourcerTag 専用コンポーザブル
+ * @file ./components/Outsourcer/Tag/useIndex.js
+ * @description OutsourcerTag 専用コンポーザブル
+ *
+ * [更新履歴]
+ * 2026-06-15 - `fetchOutsourcerComposable` を `useFetch` から取得するように変更
+ *            - `docId` のウォッチャーをリファクタリング
  *****************************************************************************/
 import * as Vue from "vue";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 export function useIndex(props, emit) {
-  const { fetchOutsourcer, cachedOutsourcers } =
-    props.fetchOutsourcerComposable;
+  const { fetchOutsourcerComposable } = useFetch("OutsourcerTag");
+  const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable;
 
-  // docIdが変更されたら外注先情報を取得
-  Vue.watch(
-    () => props.docId,
-    (newOutsourcerId) => {
-      if (newOutsourcerId) {
-        fetchOutsourcer([newOutsourcerId]);
-      }
-    },
-    { immediate: true },
-  );
+  /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+  Vue.watch(() => props.docId, fetchOutsourcer, { immediate: true });
 
   // cachedOutsourcersから外注先情報のdisplayNameを取得
   const label = Vue.computed(() => {

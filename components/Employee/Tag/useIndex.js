@@ -1,21 +1,22 @@
 /*****************************************************************************
- * EmployeeTag 専用コンポーザブル
+ * @file ./components/Employee/Tag/useIndex.js
+ * @description EmployeeTag 専用コンポーザブル
+ *
+ * [更新履歴]
+ * 2026-06-15 - `fetchEmployeeComposable` を `useFetch` から取得するように変更
+ *            - `docId` のウォッチャーをリファクタリング
  *****************************************************************************/
 import * as Vue from "vue";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 export function useIndex(props, emit) {
-  const { fetchEmployee, cachedEmployees } = props.fetchEmployeeComposable;
+  const { fetchEmployeeComposable } = useFetch("EmployeeTag");
+  const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
 
-  // docIdが変更されたら従業員情報を取得
-  Vue.watch(
-    () => props.docId,
-    (newEmployeeId) => {
-      if (newEmployeeId) {
-        fetchEmployee([newEmployeeId]);
-      }
-    },
-    { immediate: true },
-  );
+  /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+  Vue.watch(() => props.docId, fetchEmployee, { immediate: true });
 
   // cachedEmployeesから従業員情報のdisplayNameを取得
   const label = Vue.computed(() => {
