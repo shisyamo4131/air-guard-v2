@@ -83,15 +83,33 @@ export function useTable(props) {
    * groupKey でグループ化した稼働予定データのマップを返します。
    * - キー: groupKey (例: "morning-2023-01-01")
    * - 値: { total, count, schedules, hasMultiple }
+   *
+   * [更新履歴]
+   * 2026-06-16 - スマホ環境での DOM 反映遅延を解消するため、groupKey ごとにスケジュールをまとめた Map を事前に作成するように変更。
    */
   const groupKeyMappedData = Vue.computed(() => {
+    /** 2026-06-16 groupKey ごとのスケジュールをまとめた Map を作成 */
+    const groupKeyMappedSchedules = props.schedules.reduce((map, schedule) => {
+      if (!map.has(schedule.groupKey)) {
+        map.set(schedule.groupKey, []);
+      }
+      map.get(schedule.groupKey).push(schedule);
+      return map;
+    }, new Map());
+
     const result = new Map();
     props.siteShiftTypeOrder.forEach(({ key }) => {
       daysInRangeArray.value.forEach(({ date }) => {
         const groupKey = `${key}_${date}`;
-        const schedules = props.schedules.filter(
-          (schedule) => schedule.groupKey === groupKey,
-        );
+
+        /** 2026-06-16 コメントアウト */
+        // const schedules = props.schedules.filter(
+        //   (schedule) => schedule.groupKey === groupKey,
+        // );
+
+        /** 2026-06-16 Map を利用するように修正 */
+        const schedules = groupKeyMappedSchedules.get(groupKey) || [];
+
         result.set(groupKey, {
           total: 0,
           count: 0,
