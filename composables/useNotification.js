@@ -93,7 +93,23 @@ export function useNotification() {
 
       // messaging モジュールを動的インポートして使用
       const { $app } = useNuxtApp();
-      const { getMessaging, getToken } = await import("firebase/messaging");
+
+      /**
+       * 2026-06-16 更新
+       * - `isSupported` を使用して Firebase Messaging がこの環境でサポートされているかを確認
+       * - サポートされていない場合はログを出力して処理を中止
+       * - これにより、サーバーサイドや通知非対応ブラウザでのエラーを防止
+       */
+      // const { getMessaging, getToken } = await import("firebase/messaging");
+      const { getMessaging, getToken, isSupported } =
+        await import("firebase/messaging");
+      const supported = await isSupported();
+      if (!supported) {
+        logger.warn({
+          message: "Firebase Messaging is not supported in this environment.",
+        });
+        return;
+      }
       const messaging = getMessaging($app);
 
       // messaging インスタンスがない場合は終了
