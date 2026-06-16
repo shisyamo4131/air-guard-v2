@@ -49,12 +49,16 @@ const props = useDefaults(_props, "ArrangementsManager");
  * SETUP COMPOSABLES
  *****************************************************************************/
 /** DATA LAYER */
-const { schedules, notifications } = useArrangements({
+const {
+  schedules,
+  getNotification,
+  isEmployeeArranged: isEmployeeArrangedInDataLayer,
+} = useArrangements({
   from: toRef(() => props.startDate),
   to: toRef(() => props.endDate),
 });
 
-const managerComposable = useIndex(schedules, notifications);
+const managerComposable = useIndex(schedules);
 const {
   // COMPOSABLES
   siteShiftTypeReorderComposable,
@@ -63,16 +67,12 @@ const {
   // DATA
   siteShiftTypeOrder,
   selectedDate,
-
-  // METHODS
-  isEmployeeArranged,
   notify,
   updateSchedule,
   updateSchedules,
   openPdf,
   getCommandText,
   removeSiteShiftTypeOrder,
-  getNotification,
 } = managerComposable;
 
 /** For schedule detail management */
@@ -101,7 +101,7 @@ const arrangementNotificationManager = useTemplateRef(
     <!-- フローティング作業員選択ウィンドウ -->
     <FloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
       <ArrangementsWorkersSelector
-        :is-employee-arranged="isEmployeeArranged"
+        :is-employee-arranged="isEmployeeArrangedInDataLayer"
         :start-date="props.startDate"
         :end-date="props.endDate"
       />
