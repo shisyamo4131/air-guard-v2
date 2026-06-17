@@ -16,11 +16,27 @@
  * const { $firestore, $auth } = useNuxtApp();
  * ```
  *
+ * [不具合対応]
+ * 2026-06-17 - DOM 遅延更新への対応として experimentalForceLongPolling を設定してみる。
+ *              WiFi: 現象再現せず
+ *              5G オート: 現象再現せず
+ *              5G オン: 現象再現せず
+ *              4G: 現象再現せず
+ *              結果、DOM 遅延更新の原因は通信環境が不安定な状況でストリーム方式による
+ *              Firestore との接続と考えられる。今後も引き続き様子見。
+ *
  * @author shisyamo4131
  *****************************************************************************/
 import { getApps, initializeApp } from "firebase/app";
 import { connectAuthEmulator, getAuth } from "firebase/auth";
-import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+
+/** 2026-06-17 - DOM 遅延更新対策 */
+// import { connectFirestoreEmulator, getFirestore } from "firebase/firestore";
+import {
+  connectFirestoreEmulator,
+  initializeFirestore,
+} from "firebase/firestore";
+
 import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { connectDatabaseEmulator, getDatabase } from "firebase/database";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
@@ -64,7 +80,13 @@ export default defineNuxtPlugin(() => {
   }
 
   // Obtain various Firebase service instances
-  const firestore = getFirestore(app);
+
+  /** 2026-06-17 - DOM 遅延更新対策 */
+  // const firestore = getFirestore(app);
+  const firestore = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+  });
+
   const auth = getAuth(app);
   const storage = getStorage(app);
   const database = getDatabase(app);
