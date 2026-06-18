@@ -278,6 +278,10 @@ export function useBillingPdf() {
             fontSize: 7,
             margin: [0, 5, 0, 0],
           },
+          {
+            text: `登録番号: ${company.invoiceNumber ? `T${company.invoiceNumber}` : ""}`,
+            fontSize: 8,
+          },
         ],
         absolutePosition: { x: 350, y: 100 },
         alignment: "right",

@@ -117,6 +117,10 @@ const arrangementNotificationManager = useTemplateRef(
       :column-width="256"
       day-format="MM/DD(ddd)"
       :selectedDate="selectedDate"
+      @click:add-schedule="
+        ({ siteId, shiftType }) =>
+          siteOperationScheduleManager.toCreate({ siteId, shiftType })
+      "
       @click:remove-site-order="removeSiteShiftTypeOrder"
     >
       <!-- 日付の表示形式をカスタマイズ -->

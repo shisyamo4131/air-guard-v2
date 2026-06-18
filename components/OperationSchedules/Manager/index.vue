@@ -6,7 +6,7 @@ import dayjs from "dayjs";
 import Toolbar from "./Toolbar";
 import { useDateRange } from "@/composables/useDateRange";
 import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOperationSchedules";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetch } from "@/composables/fetch/useFetch";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
@@ -14,7 +14,7 @@ import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 
 /** SETUP COMPOSABLES */
-const fetchSiteComposable = useFetchSite();
+const { fetchSiteComposable } = useFetch("OperationSchedulesManager");
 
 // dateRange コンポーザブル
 // 初期表示は当月

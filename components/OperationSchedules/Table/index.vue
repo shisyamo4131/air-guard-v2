@@ -6,6 +6,8 @@
  *
  * [更新履歴]
  * 2026-06-15 - `props.cachedSites` を廃止し、`useFetch` を使用するように変更
+ * 2026-06-18 - 現場オーダー行に現場稼働予定登録のためのアイコンを追加
+ *            - `click:add-schedule` イベントを追加
  *
  * @property {Array} columnColors - 各列の背景色クラス配列
  * @property {String|Number} columnWidth - 各列の幅
@@ -21,6 +23,12 @@
  * @property {String|Number} weekdayHeight - 曜日セルの高さ
  *
  * @emits click:cell - 各セルクリック時に発火するイベント
+ * @emits click:remove-site-order - 現場オーダーを削除する際に発火するイベント
+ * @emits click:add-schedule - 新規に現場稼働予定を登録する際に発火するイベント
+ *        @property {Object} order - 現場オーダー情報オブジェクト
+ *        @property {string} order.siteId - 現場ID
+ *        @property {string} order.shiftType - シフトタイプ
+ *        @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`形式）
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
  *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
@@ -91,6 +99,8 @@ import { useFetch } from "@/composables/fetch/useFetch";
 import { useTable } from "./useTable.js";
 import Head from "./Head.vue";
 import Foot from "./Foot.vue";
+import AddScheduleIcon from "./AddScheduleIcon.vue";
+import RemoveSiteOrderIcon from "./RemoveSiteOrderIcon.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -177,7 +187,11 @@ const _props = defineProps({
   weekdayHeight: { type: [String, Number], default: undefined },
 });
 const props = useDefaults(_props, "OperationSchedulesTable");
-const emit = defineEmits(["click:cell", "click:remove-site-order"]);
+const emit = defineEmits([
+  "click:cell",
+  "click:remove-site-order",
+  "click:add-schedule",
+]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -279,17 +293,16 @@ const orderKeySchedulesMap = computed(() => {
             <div class="fixed-left d-inline-flex align-center">
               <!-- SLOT: prepend-site-shift-type-order -->
               <slot name="prepend-site-shift-type-order" v-bind="{ ...order }">
+                <AddScheduleIcon
+                  v-bind="order"
+                  @click="emit('click:add-schedule', { ...order })"
+                />
                 <!-- ICON FOR REMOVE `SITE-SHIFTYPE` -->
                 <!-- Emits `click:remove-site-order` event with the order key. -->
                 <!-- Disabled if there are schedules associated with the order key. -->
-                <v-icon
-                  class="me-2"
-                  v-tooltip:top="
-                    'この【現場－勤務区分】の組み合わせを表から削除します。現場稼働予定は削除されません。'
-                  "
+                <RemoveSiteOrderIcon
+                  v-bind="order"
                   :disabled="!!orderKeySchedulesMap.get(order.key)"
-                  icon="mdi-close"
-                  size="x-small"
                   @click="emit('click:remove-site-order', order.key)"
                 />
               </slot>
@@ -324,6 +337,7 @@ const orderKeySchedulesMap = computed(() => {
               dayObject.isHoliday
                 ? cellColorClass[0]
                 : cellColorClass[dayObject.format('d')],
+              dayObject.isToday ? 'bg-yellow-lighten-4' : '',
             ]"
           >
             <div

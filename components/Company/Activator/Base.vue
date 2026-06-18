@@ -24,6 +24,10 @@ const emit = defineEmits(["click:edit"]);
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
+const formattedInvoiceNumber = computed(() => {
+  return props.item.invoiceNumber ? `T${props.item.invoiceNumber}` : "-";
+});
+
 const items = computed(() => {
   return [
     { title: "会社名", props: { subtitle: props.item.companyName || "-" } },
@@ -43,6 +47,10 @@ const items = computed(() => {
       title: "FAX番号",
       props: { subtitle: props.item.fax || "-" },
     },
+    {
+      title: "インボイス登録番号",
+      props: { subtitle: formattedInvoiceNumber.value },
+    },
   ];
 });
 
@@ -55,7 +63,14 @@ const items = computed(() => {
  * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
  *****************************************************************************/
 defineExpose({
-  includedKeys: ["companyName", "companyNameKana", "address", "tel", "fax"],
+  includedKeys: [
+    "companyName",
+    "companyNameKana",
+    "address",
+    "tel",
+    "fax",
+    "invoiceNumber",
+  ],
 });
 </script>
 
