@@ -10,25 +10,37 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useFetch } from "@/composables/fetch/useFetch";
 
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "billings-operations-index" });
 
 /*****************************************************************************
- * SETUP COMPOSABLES
+ * SETUP ROUTER
  *****************************************************************************/
-// ROUTER
 const router = useRouter();
 
-// Date Range
+/*****************************************************************************
+ * SETUP DATE RANGE COMPOSABLE
+ *****************************************************************************/
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
-// Fetch
-const { fetchSiteComposable } = useFetch("OperationBillings", true);
-const { fetchSite } = fetchSiteComposable;
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
+const { fetchCustomerComposable, fetchSiteComposable } = useFetch(
+  "OperationBillings",
+  true,
+);
+const { fetchCustomer, cachedCustomersArray } = fetchCustomerComposable;
+const { fetchSite, cachedSitesArray } = fetchSiteComposable;
 
-// Data Layer
+/*****************************************************************************
+ * SETUP DATA LAYER
+ *****************************************************************************/
 const options = Vue.computed(() => {
   return [
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
@@ -38,8 +50,30 @@ const options = Vue.computed(() => {
 const { docs } = useDocuments(
   "OperationBilling",
   { options, fetchAllOnEmpty: true },
-  (doc) => fetchSite(doc.siteId),
+  (doc) => {
+    fetchSite(doc.siteId);
+    fetchCustomer(doc.customerId);
+  },
 );
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const selectedCustomerId = ref(null);
+const selectedSiteId = ref(null);
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const filteredDocs = computed(() => {
+  return docs.filter((doc) => {
+    const matchesCustomer =
+      !selectedCustomerId.value || doc.customerId === selectedCustomerId.value;
+    const matchesSite =
+      !selectedSiteId.value || doc.siteId === selectedSiteId.value;
+    return matchesCustomer && matchesSite;
+  });
+});
 
 /*****************************************************************************
  * METHODS
@@ -62,16 +96,34 @@ function handleClickUpdate(item) {
     >
       <!-- TABLE -->
       <template #table="tableProps">
-        <OperationBillingsDataTable v-bind="tableProps">
-          <template #top>
-            <v-toolbar color="secondary" density="compact">
-              <MoleculesMonthSelector
-                :model-value="dateRange.from.value"
-                @date-range="dateRange = $event"
-              />
-            </v-toolbar>
-          </template>
-        </OperationBillingsDataTable>
+        <v-toolbar color="secondary" flat density="compact">
+          <MoleculesMonthSelector
+            :model-value="dateRange.from.value"
+            @date-range="dateRange = $event"
+          />
+          <v-spacer />
+          <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
+        </v-toolbar>
+        <v-toolbar>
+          <div class="px-4 flex-grow-1 d-flex ga-4">
+            <CustomerSelect
+              v-model="selectedCustomerId"
+              clearable
+              hide-details
+              :items="cachedCustomersArray"
+            />
+            <SiteSelect
+              v-model="selectedSiteId"
+              clearable
+              hide-details
+              :items="cachedSitesArray"
+            />
+          </div>
+        </v-toolbar>
+        <OperationBillingsDataTable
+          v-bind="{ ...tableProps, items: filteredDocs }"
+          hide-search
+        />
       </template>
     </OperationBillingsManager>
   </v-container>

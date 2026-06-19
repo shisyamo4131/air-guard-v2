@@ -10,25 +10,37 @@ import { useDateRange } from "@/composables/useDateRange";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useFetch } from "@/composables/fetch/useFetch";
 
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "operation-results-index" });
 
 /*****************************************************************************
- * SETUP COMPOSABLES
+ * SETUP ROUTER
  *****************************************************************************/
-// ROUTER
 const router = useRouter();
 
-// Date Range
+/*****************************************************************************
+ * SETUP DATE RANGE COMPOSABLE
+ *****************************************************************************/
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
-// Fetch
-const { fetchSiteComposable } = useFetch("OperationResults", true);
-const { fetchSite } = fetchSiteComposable;
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
+const { fetchCustomerComposable, fetchSiteComposable } = useFetch(
+  "OperationResults",
+  true,
+);
+const { fetchCustomer, cachedCustomersArray } = fetchCustomerComposable;
+const { fetchSite, cachedSitesArray } = fetchSiteComposable;
 
-// Data Layer
+/*****************************************************************************
+ * SETUP DATA LAYER
+ *****************************************************************************/
 const options = Vue.computed(() => {
   return [
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
@@ -38,8 +50,30 @@ const options = Vue.computed(() => {
 const { docs } = useDocuments(
   "OperationResult",
   { options, fetchAllOnEmpty: true },
-  (doc) => fetchSite(doc.siteId),
+  (doc) => {
+    fetchSite(doc.siteId);
+    fetchCustomer(doc.customerId);
+  },
 );
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const selectedCustomerId = ref(null);
+const selectedSiteId = ref(null);
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const filteredDocs = computed(() => {
+  return docs.filter((doc) => {
+    const matchesCustomer =
+      !selectedCustomerId.value || doc.customerId === selectedCustomerId.value;
+    const matchesSite =
+      !selectedSiteId.value || doc.siteId === selectedSiteId.value;
+    return matchesCustomer && matchesSite;
+  });
+});
 
 /*****************************************************************************
  * METHODS
@@ -51,6 +85,10 @@ const { docs } = useDocuments(
 function handleClickUpdate(item) {
   router.push(`/operation-results/${item.docId}`);
 }
+
+function handleCreated(item) {
+  router.push(`/operation-results/${item.docId}`);
+}
 </script>
 
 <template>
@@ -59,7 +97,7 @@ function handleClickUpdate(item) {
       class="fill-height"
       :docs="docs"
       :handle-click-update="handleClickUpdate"
-      @create="(item) => router.push(`/operation-results/${item.docId}`)"
+      @create="handleCreated"
     >
       <!-- TABLE -->
       <template #table="tableProps">
@@ -71,7 +109,26 @@ function handleClickUpdate(item) {
           <v-spacer />
           <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
         </v-toolbar>
-        <OperationResultsDataTable v-bind="tableProps" hide-search />
+        <v-toolbar>
+          <div class="px-4 flex-grow-1 d-flex ga-4">
+            <CustomerSelect
+              v-model="selectedCustomerId"
+              clearable
+              hide-details
+              :items="cachedCustomersArray"
+            />
+            <SiteSelect
+              v-model="selectedSiteId"
+              clearable
+              hide-details
+              :items="cachedSitesArray"
+            />
+          </div>
+        </v-toolbar>
+        <OperationResultsDataTable
+          v-bind="{ ...tableProps, items: filteredDocs }"
+          hide-search
+        />
       </template>
     </OperationResultsManager>
   </v-container>

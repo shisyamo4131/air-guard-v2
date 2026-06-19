@@ -39,7 +39,15 @@ const headers = computed(() => {
   return [
     { title: "日付", key: "date", width: 120 },
     { title: "勤務区分", key: "shiftType", width: 120 },
-    { title: "現場", key: "siteId" },
+    { title: "現場", key: "siteId", sortable: false },
+    {
+      title: "稼働数",
+      key: "operationCount",
+      value: (item) =>
+        item.statistics.base.quantity + item.statistics.qualified.quantity,
+      align: "center",
+      sortable: false,
+    },
   ];
 });
 
