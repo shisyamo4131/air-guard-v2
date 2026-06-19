@@ -116,6 +116,18 @@ const overtimeWorkHours = computed(() => {
   return `${minutes / 60} 時間`;
 });
 
+/**
+ * 作業員が資格者対象かどうかを返します。
+ * - `props.arrangementNotification` が存在する場合はその `isQualified` を優先。
+ * - それ以外の場合は `props.worker.isQualified` を参照します。
+ */
+const isQualified = computed(() => {
+  if (props.arrangementNotification) {
+    return props.arrangementNotification.isQualified;
+  }
+  return props.worker.isQualified;
+});
+
 const slotProps = computed(() => {
   return {
     worker: props.worker,
@@ -129,6 +141,7 @@ const slotProps = computed(() => {
     <slot name="prepend" v-bind="slotProps" />
     <td>
       <slot name="name" v-bind="slotProps">
+        <AtomsIconsHasLicense v-if="isQualified" size="small" />
         {{ displayName }}
       </slot>
     </td>

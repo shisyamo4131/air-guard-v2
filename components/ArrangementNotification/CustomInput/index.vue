@@ -18,7 +18,7 @@ defineOptions({
  *****************************************************************************/
 const _props = defineProps({
   componentAttrs: { type: Object, required: true },
-  excludedKeys: { type: Array, default: () => [] },
+  includesStatus: { type: Boolean, default: false },
   item: {
     type: Object,
     default: null,
@@ -105,11 +105,11 @@ watch(
         </air-list>
       </v-card>
     </v-input>
-    <template v-if="!props.excludedKeys.includes('status')">
+    <template v-if="props.includesStatus">
       <span class="text-overline text-medium-emphasis">状態</span>
       <v-input>
         <ArrangementNotificationStatusChipGroup
-          v-bind="componentAttrs['status']"
+          v-bind="props.componentAttrs['status']"
           mandatory
           column
         />
@@ -119,30 +119,42 @@ watch(
       <v-row v-show="props.item.isLeaved" dense>
         <!-- ACTUAL START TIME -->
         <v-col cols="12" md="6">
-          <air-time-picker-input v-bind="componentAttrs[`actualStartTime`]" />
+          <air-time-picker-input
+            v-bind="props.componentAttrs[`actualStartTime`]"
+          />
         </v-col>
 
         <!-- ACTUAL END TIME -->
         <v-col cols="12" md="6">
-          <air-time-picker-input v-bind="componentAttrs[`actualEndTime`]" />
+          <air-time-picker-input
+            v-bind="props.componentAttrs[`actualEndTime`]"
+          />
         </v-col>
 
         <!-- ACTUAL IS START NEXT DAY -->
         <v-col cols="12">
           <IsStartNextDayCheckbox
-            v-bind="componentAttrs[`actualIsStartNextDay`]"
+            v-bind="props.componentAttrs[`actualIsStartNextDay`]"
           />
         </v-col>
 
         <!-- ACTUAL BREAK MINUTES -->
         <v-col cols="12">
           <AtomsHourInput
-            v-bind="componentAttrs[`actualBreakMinutes`]"
+            v-bind="props.componentAttrs[`actualBreakMinutes`]"
             label="休憩時間"
             :step="0.5"
           />
         </v-col>
       </v-row>
     </v-expand-transition>
+    <v-row dense>
+      <v-col cols="12" md="6">
+        <air-checkbox v-bind="props.componentAttrs['isQualified']" />
+      </v-col>
+      <v-col cols="12" md="6">
+        <air-checkbox v-bind="props.componentAttrs['isOjt']" />
+      </v-col>
+    </v-row>
   </div>
 </template>

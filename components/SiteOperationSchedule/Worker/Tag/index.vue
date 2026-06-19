@@ -76,6 +76,13 @@ const props = useDefaults(_props, "WorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
 const { attrs, editProps, notificationProps } = useIndex(props, emit);
+
+const isQualified = computed(() => {
+  if (props.notification) {
+    return props.notification.isQualified;
+  }
+  return props.worker?.isQualified || false;
+});
 </script>
 
 <template>
@@ -83,7 +90,7 @@ const { attrs, editProps, notificationProps } = useIndex(props, emit);
     <!-- Provide `prepend-label` slot with slot props -->
     <template #prepend-label="slotProps">
       <slot name="prepend-label" v-bind="slotProps || {}">
-        <AtomsIconsHasLicense v-if="props.worker.isQualified" size="small" />
+        <AtomsIconsHasLicense v-if="isQualified" size="small" />
       </slot>
     </template>
 

@@ -16,6 +16,8 @@ import CustomInput from "@/components/ArrangementNotification/CustomInput/index.
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  customInput: { type: Object, default: () => CustomInput },
+  includesStatus: { type: Boolean, default: false },
   doc: {
     type: Object,
     default: null,
@@ -101,7 +103,10 @@ defineExpose({
     :handle-update="handleUpdate"
     :handle-delete="handleDelete"
     hide-delete-btn
-    :custom-input="CustomInput"
+    :custom-input="props.customInput"
+    :input-props="{
+      includesStatus: props.includesStatus,
+    }"
     :dialog-props="{ maxWidth: 372 }"
   >
     <!-- スロットをパススルー -->

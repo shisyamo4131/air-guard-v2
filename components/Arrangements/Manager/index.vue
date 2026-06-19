@@ -229,7 +229,10 @@ const arrangementNotificationManager = useTemplateRef(
     />
 
     <!-- 通知ステータス更新コンポーネント -->
-    <ArrangementNotificationManager ref="arrangementNotificationManager" />
+    <ArrangementNotificationManager
+      ref="arrangementNotificationManager"
+      includes-status
+    />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
     <SiteOperationScheduleDetailManager

@@ -68,7 +68,6 @@ const isTemporarySite = computed(() => {
               <ArrangementNotificationManager
                 :doc="notificationsMap[worker.notificationKey]"
                 :before-edit="(editMode, item) => (item.status = 'LEAVED')"
-                :excluded-keys="['status']"
               >
                 <template #activator="activatorProps">
                   <v-btn
