@@ -28,6 +28,7 @@ import { SiteOperationSchedule } from "@/schemas";
 import PersonnelAvatar from "./PersonnelAvatar.vue";
 import Actions from "./Actions.vue";
 import { useIndex } from "./useIndex";
+import OverAndShortIcon from "./OverAndShortIcon.vue";
 
 /*****************************************************************************
  * SETUP PROPS
@@ -70,7 +71,14 @@ provide("emit", emit);
 </script>
 
 <template>
-  <v-card class="schedule-card">
+  <v-card class="schedule-card overflow-visible">
+    <OverAndShortIcon
+      v-if="
+        props.schedule.isPersonnelShortage || props.schedule.isPersonnelSurplus
+      "
+      :schedule="props.schedule"
+      style="position: absolute; top: 4px; left: 24px"
+    />
     <v-card-item style="padding: 10px">
       <template #prepend>
         <!-- 必要人数 -->
@@ -110,14 +118,6 @@ provide("emit", emit);
       <!-- SLOT: default -->
       <slot name="default" v-bind="defaultSlotProps" />
     </v-card-text>
-
-    <!-- 人数不足メッセージ -->
-    <div
-      v-if="props.schedule.isPersonnelShortage"
-      class="text-center text-caption text-error"
-    >
-      必要人数を満たしていません。
-    </div>
 
     <!-- ACTIONS -->
     <Actions v-if="props.showActions" />

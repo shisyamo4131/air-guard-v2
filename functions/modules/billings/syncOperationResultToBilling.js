@@ -20,6 +20,13 @@ import { removeOperationResultFromBilling } from "./removeOperationResultFromBil
  *                 2. 変更後の Billing ドキュメントに該当の OperationResult を追加します。（`addOperationResultToBilling` を使用）
  * [データ不整合対応]
  * - 有効 → 有効 のケースで、既存の Billing ドキュメントが存在しなかった場合は `addOperationResultToBilling` を呼び出して新規作成します。
+ *
+ * [更新履歴]
+ * 2026-06-19 - beforeDocId, afterDocId を getBillingKey を使用して取得する際
+ *              どちらか、または両方の isBillable が false であると getBillingKey がエラーをスローしてしまう。
+ *              → billingDate が null だから。
+ *              isBillable が true の場合のみ getBillingKey を呼び出すように修正。
+ *
  * @param {Object} options
  * @param {string} options.companyId
  * @param {Object} options.before - 変更前の OperationResult ドキュメント
@@ -44,11 +51,18 @@ export async function syncOperationResultToBilling({
   if (!companyId) throw new Error("companyId is required");
   const prefix = `Companies/${companyId}/`;
 
-  const beforeDocId = getBillingKey(before);
-  const afterDocId = getBillingKey(after);
+  // 2026-06-19 コメントアウト
+  // → 先に isBillable をチェックしなければならない。
+  // const beforeDocId = getBillingKey(before);
+  // const afterDocId = getBillingKey(after);
 
   const beforeIsBillable = before.isBillable;
   const afterIsBillable = after.isBillable;
+
+  // 2026-06-19 追加
+  // → isBillable が true の場合のみ getBillingKey を呼び出す。
+  const beforeDocId = beforeIsBillable ? getBillingKey(before) : null;
+  const afterDocId = afterIsBillable ? getBillingKey(after) : null;
 
   logger.info("Handling OperationResult update", {
     operationResultId: after.docId,

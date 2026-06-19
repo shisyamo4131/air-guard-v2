@@ -6,7 +6,13 @@
 const props = inject("props");
 
 const color = computed(() => {
-  return props.schedule?.isPersonnelShortage ? "error" : "primary";
+  if (props.schedule?.isPersonnelShortage) {
+    return "error";
+  }
+  if (props.schedule?.isPersonnelSurplus) {
+    return "warning";
+  }
+  return "primary";
 });
 
 const content = computed(() => {

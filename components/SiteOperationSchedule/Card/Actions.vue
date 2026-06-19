@@ -37,12 +37,18 @@ const btns = computed(() => {
   return [
     {
       icon: "mdi-bullhorn",
+      tooltip: "作業員へ通知します",
       disabled: !notifiable.value,
       onClick: () => emit("click:notify"),
     },
-    { icon: "mdi-content-copy", onClick: () => emit("click:duplicate") },
+    {
+      icon: "mdi-content-copy",
+      tooltip: "現場稼働予定を複製します",
+      onClick: () => emit("click:duplicate"),
+    },
     {
       icon: "mdi-pencil",
+      tooltip: "現場稼働予定を編集します",
       disabled: !editable.value,
       onClick: () => emit("click:edit"),
     },
@@ -53,12 +59,16 @@ const btns = computed(() => {
 <template>
   <v-card-actions style="min-height: unset" class="py-0">
     <v-spacer />
-    <v-btn
-      v-for="(btn, index) of btns"
-      :key="index"
-      v-bind="btn"
-      :color="color"
-      :size="size"
-    />
+    <template v-for="(btn, index) of btns" :key="index">
+      <v-tooltip location="top" :text="btn.tooltip">
+        <template #activator="{ props: tooltipProps }">
+          <v-btn
+            v-bind="{ ...btn, ...tooltipProps }"
+            :color="color"
+            :size="size"
+          />
+        </template>
+      </v-tooltip>
+    </template>
   </v-card-actions>
 </template>

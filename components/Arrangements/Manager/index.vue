@@ -132,16 +132,19 @@ const arrangementNotificationManager = useTemplateRef(
       <template #weekday="{ dayObject, isSelected }">
         <div class="d-flex ga-6">
           <v-btn
+            v-tooltip:top="`集中モード切替`"
             :icon="isSelected ? 'mdi-eye-off' : 'mdi-eye'"
             size="x-small"
             @click="selectedDate = dayObject.date"
           />
           <v-btn
+            v-tooltip:top="`配置表をダウンロード`"
             icon="mdi-table-large"
             size="x-small"
             @click="() => openPdf(dayObject.date)"
           />
           <v-btn
+            v-tooltip:top="`配置指示テキストを表示`"
             icon="mdi-text-box-outline"
             size="x-small"
             @click="() => (commandText = getCommandText(dayObject.date))"

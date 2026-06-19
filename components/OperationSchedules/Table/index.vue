@@ -234,7 +234,7 @@ const orderKeySchedulesMap = computed(() => {
 </script>
 
 <template>
-  <v-table id="operation-schedules-table" fixed-header>
+  <v-table id="operation-schedules-table" fixed-header density="compact">
     <!-- 列幅定義 -->
     <colgroup>
       <col

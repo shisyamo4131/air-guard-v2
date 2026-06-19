@@ -19,6 +19,24 @@ export const onArrangementNotificationCreated = onDocumentCreated(
   },
   async (event) => {
     const arrangementData = event.data.data();
+
+    /*****************************************************************************
+     * 2026-06-19 不具合発生（Emulator 環境）
+     * 配置管理画面で現場稼働予定に対して作業員（従業員）を配置し、その後当該作業員を
+     * 削除すると、なぜか onArrangementNotificationCreated がトリガーされてしまう。
+     * → そもそも ArrangementNotification ドキュメントの作成処理は行われていない。
+     * 結果、arrangementData.shouldNotify が undefined となり、意図しないエラーが発生する。
+     * Dev 環境にデプロイし、同様のエラーが発生するかどうかを確認する必要あり。
+     * → Dev 環境では再現しなかったがめ、Emulator の不具合と断定。
+     * → エラーログが煩わしいので arrangementData が undefined の場合はスキップするように修正。
+     *****************************************************************************/
+    if (arrangementData === undefined) {
+      console.log(
+        `Skipping arrangementNotification because arrangementData is undefined: ${arrangementData ? arrangementData.id : "unknown"}`,
+      );
+      return;
+    }
+
     const shouldNotify = arrangementData.shouldNotify ?? true; // デフォルトは true
     if (shouldNotify) {
       await createNotificationForArrangement(
@@ -26,59 +44,6 @@ export const onArrangementNotificationCreated = onDocumentCreated(
         event.params.companyId,
       );
     }
-    //   const db = getFirestore();
-    //   const companyId = event.params.companyId;
-    //   const notificationId = event.params.notificationId;
-    //   const arrangementData = event.data.data();
-
-    //   try {
-    //     // 1. employeeId から該当する User を検索
-    //     const usersSnapshot = await db
-    //       .collection(`Companies/${companyId}/Users`)
-    //       .where("employeeId", "==", arrangementData.employeeId)
-    //       .get();
-
-    //     if (usersSnapshot.empty) {
-    //       console.log(
-    //         `No user found for employeeId: ${arrangementData.employeeId}`,
-    //       );
-    //       return;
-    //     }
-
-    //     // 2. recipientUserIds を収集（Firestore ドキュメント ID がユーザーID）
-    //     const recipientUserIds = usersSnapshot.docs.map((doc) => doc.id);
-
-    //     // 3. ArrangementNotification インスタンスから日付を取得
-    //     const arrangement = new ArrangementNotification(arrangementData);
-    //     const [, month, day] = arrangement.date.split("-");
-
-    //     // 4. Notification ドキュメントを作成（onNotificationCreated がプッシュ通知を送信）
-    //     await db.collection(`Companies/${companyId}/Notifications`).add({
-    //       title: "配置通知",
-    //       body: `${parseInt(month)}月${parseInt(day)}日の配置が更新されました。`,
-    //       data: {
-    //         type: "arrangement",
-    //         arrangementNotificationId: notificationId,
-    //         siteId: arrangementData.siteId,
-    //         shiftType: arrangementData.shiftType,
-    //       },
-    //       recipientUserIds,
-    //       totalCount: recipientUserIds.length,
-    //       successCount: 0,
-    //       failureCount: 0,
-    //       status: "pending",
-    //       sourceType: "arrangement",
-    //       sourceId: notificationId,
-    //       createdBy: "",
-    //       createdAt: FieldValue.serverTimestamp(),
-    //     });
-
-    //     console.log(
-    //       `Notification document created for arrangementNotification: ${notificationId}`,
-    //     );
-    //   } catch (error) {
-    //     console.error("Error creating notification:", error);
-    //   }
   },
 );
 
