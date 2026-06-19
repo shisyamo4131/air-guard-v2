@@ -136,6 +136,7 @@ export function useFetchBase({
    */
   async function fetchItems(source) {
     isLoading.value = true;
+    let addedInFlightIds = [];
 
     try {
       let potentialDocIds = [];
@@ -171,6 +172,7 @@ export function useFetchBase({
 
       // フェッチ中のIDを記録
       idsToActuallyFetch.forEach((id) => inFlightFetches.value.add(id));
+      addedInFlightIds = idsToActuallyFetch;
 
       const fetchPromises = idsToActuallyFetch.map(async (docId) => {
         try {
@@ -194,12 +196,8 @@ export function useFetchBase({
 
       await Promise.all(fetchPromises);
     } finally {
-      // フェッチ完了後、記録を削除
-      const potentialDocIds = Array.isArray(source)
-        ? source.map(getDocIdFromItem).filter((id) => id !== null)
-        : [getDocIdFromItem(source)].filter((id) => id !== null);
-
-      potentialDocIds.forEach((id) => inFlightFetches.value.delete(id));
+      // フェッチ完了後、この呼び出しで追加したIDのみ記録を削除
+      addedInFlightIds.forEach((id) => inFlightFetches.value.delete(id));
 
       isLoading.value = false;
     }
