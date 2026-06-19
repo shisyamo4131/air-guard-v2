@@ -5,7 +5,6 @@ import "./modules/firebase.init.js";
 export * from "./modules/maintenance.js";
 export * from "./modules/dependentSync.js";
 export * from "./modules/geocoding.js";
-// export * from "./modules/Users.js";
 export * from "./modules/Employees.js";
 
 export * from "./triggers/operationResult.js";
@@ -16,5 +15,5 @@ export * from "./modules/ArrangementNotifications.js";
 export * from "./modules/securityReports.js";
 export * from "./modules/operationCleanup.js";
 export * from "./modules/utils/notifications.js";
-// export * from "./modules/migration.js"; // マイグレーションが必要な時に有効化
+
 // export * from "./modules/stripe.js";
