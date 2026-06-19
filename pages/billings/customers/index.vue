@@ -9,6 +9,7 @@ import { useDateRange } from "@/composables/useDateRange.js";
 import { useCustomerBillingsManager } from "@/composables/useCustomerBillingsManager.js";
 import { useBillingPdf } from "@/composables/pdf/useBillingPdf";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import { exportOperationResultsCsv } from "@/utils/csv/exportOperationResultsCsv";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -34,6 +35,15 @@ const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange } = dateRangeComposable;
 
 /*****************************************************************************
+ * SETUP CUSTOMER BILLINGS MANAGER COMPOSABLE
+ *****************************************************************************/
+const { attrs, cachedCustomers, cachedSites } = useCustomerBillingsManager({
+  dateRangeComposable,
+  useDebounced: true,
+  immediate: true,
+});
+
+/*****************************************************************************
  * SETUP BILLING PDF COMPOSABLE
  *****************************************************************************/
 const { generateBillingPdf, generateConsolidatedBillingPdf } = useBillingPdf();
@@ -55,6 +65,22 @@ async function handleGroupPdfClick(item) {
   }
 }
 
+// グループ行のCSV出力ボタンのクリックハンドラ
+async function handleGroupCsvClick(item) {
+  const billings = item.items.map((i) => i.raw);
+
+  console.log(billings);
+  const operationResults = billings.flatMap(
+    (billing) => billing.operationResults ?? [],
+  );
+
+  exportOperationResultsCsv({
+    operationResults,
+    cachedSites: cachedSites.value,
+    fileName: "operation_results.csv",
+  });
+}
+
 // 現場ごとのPDF出力ボタンのクリックハンドラ（既存）
 async function handlePdfClick(billing) {
   const key = loadings.add(`Creating billing PDF`);
@@ -66,13 +92,6 @@ async function handlePdfClick(billing) {
     loadings.remove(key);
   }
 }
-
-// Manager
-const { attrs, cachedCustomers } = useCustomerBillingsManager({
-  dateRangeComposable,
-  useDebounced: true,
-  immediate: true,
-});
 </script>
 
 <template>
@@ -101,6 +120,13 @@ const { attrs, cachedCustomers } = useCustomerBillingsManager({
             </v-chip>
           </td>
           <td class="text-right">
+            <!-- CSV出力ボタン -->
+            <v-btn
+              icon="mdi-file-delimited-outline"
+              size="small"
+              class="ml-4"
+              @click.stop="handleGroupCsvClick(item)"
+            />
             <!-- PDF出力ボタン -->
             <v-btn
               icon="mdi-file-pdf-box"
