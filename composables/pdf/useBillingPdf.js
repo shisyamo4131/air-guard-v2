@@ -383,10 +383,15 @@ export function useBillingPdf() {
         { text: "現場名", style: "tableHeader" },
         { text: "ご請求額", style: "tableHeader", alignment: "right" },
       ],
-      ...Object.entries(siteSummary).map(([siteId, amount]) => [
-        { text: sites[siteId]?.name || "不明な現場" },
-        { text: formatCurrency(amount), alignment: "right" },
-      ]),
+      ...Object.entries(siteSummary).map(([siteId, amount]) => {
+        const site = sites[siteId];
+        const siteName = site ? site.name : "不明な現場";
+        const siteNumber = site?.siteNumber ? `[${site.siteNumber}]` : "";
+        return [
+          { text: `${siteName} ${siteNumber}` },
+          { text: formatCurrency(amount), alignment: "right" },
+        ];
+      }),
     ];
 
     return {
@@ -418,10 +423,15 @@ export function useBillingPdf() {
         { text: "現場名", style: "tableHeader" },
         { text: "ご請求額", style: "tableHeader", alignment: "right" },
       ],
-      ...Object.entries(siteSummary).map(([siteId, amount]) => [
-        { text: sites[siteId]?.name || "不明な現場" },
-        { text: formatCurrency(amount), alignment: "right" },
-      ]),
+      ...Object.entries(siteSummary).map(([siteId, amount]) => {
+        const site = sites[siteId];
+        const siteName = site ? site.name : "不明な現場";
+        const siteNumber = site?.siteNumber ? `[${site.siteNumber}]` : "";
+        return [
+          { text: `${siteName} ${siteNumber}` },
+          { text: formatCurrency(amount), alignment: "right" },
+        ];
+      }),
     ];
 
     return {
@@ -474,9 +484,12 @@ export function useBillingPdf() {
 
     Object.entries(bySite).forEach(([siteId, operationResults]) => {
       // 現場名
+      const site = sites[siteId];
+      const siteName = site ? site.name : "不明な現場";
+      const siteNumber = site?.siteNumber ? `[${site.siteNumber}]` : "";
       body.push([
         {
-          text: sites[siteId]?.name || "不明な現場",
+          text: `${siteName} ${siteNumber}`,
           colSpan: 8,
           bold: true,
           margin: [0, 5, 0, 5],

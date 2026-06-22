@@ -68,6 +68,7 @@ const items = computed(() => {
     { title: "住所", props: { subtitle: props.item.fullAddress || "-" } },
     { title: "建物名", props: { subtitle: props.item.building || "-" } },
     { title: "警備種別", props: { subtitle: securityTypeTitle.value } },
+    { title: "現場番号", props: { subtitle: props.item.siteNumber || "-" } },
     { title: "工事期間", props: { subtitle: constructionPeriod.value } },
   ];
 });
@@ -91,6 +92,7 @@ defineExpose({
     "address",
     "building",
     "securityType",
+    "siteNumber",
     "constructionPeriodStartAt",
     "constructionPeriodEndAt",
     "remarks",
