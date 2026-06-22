@@ -12,6 +12,7 @@
  * [更新履歴]
  * 2026-06-22 - 集中モード機能を開発者のみ利用可能に修正。
  *              → 集中モード on 時の機能について再検討。
+ *            - `selectableEmployees`, `selectableOutsourcers` をデータレイヤーから取得し、provide するように修正。
  *
  * @property {Date} startDate - スケジュール表示の開始日
  * @property {Date} endDate - スケジュール表示の終了日
@@ -19,8 +20,12 @@
 import { useDefaults } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
-import { useArrangements } from "@/composables/dataLayers/useArrangements";
 import { useAuthStore } from "@/stores/useAuthStore";
+
+// DATA LAYER COMPOSABLES
+import { useArrangements } from "@/composables/dataLayers/useArrangements";
+import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
+import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
 
 // Components
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
@@ -56,18 +61,41 @@ const props = useDefaults(_props, "ArrangementsManager");
 const { isDeveloper } = useAuthStore();
 
 /*****************************************************************************
- * SETUP COMPOSABLES
+ * SETUP DATA LAYER COMPOSABLE
+ * - `props.startDate`, `props.endDate` で指定された期間の配置管理に関わる
+ *   データを取得・提供します。
  *****************************************************************************/
-/** DATA LAYER */
-const {
-  schedules,
-  getNotification,
-  isEmployeeArranged: isEmployeeArrangedInDataLayer,
-} = useArrangements({
+const { schedules, getNotification, isEmployeeArranged } = useArrangements({
   from: toRef(() => props.startDate),
   to: toRef(() => props.endDate),
 });
+provide("isEmployeeArranged", isEmployeeArranged); // ArrangementsWorkerSelector で使用
 
+/*****************************************************************************
+ * SETUP EMPLOYEES IN RANGE COMPOSABLE
+ * - `props.startDate`, `props.endDate` で指定された期間に在職中である
+ *   Employee インスタンスの配列を取得・提供します。
+ *****************************************************************************/
+const { docs: selectableEmployees } = useEmployeesInRange({
+  from: toRef(() => props.startDate),
+  to: toRef(() => props.endDate),
+});
+provide("selectableEmployees", selectableEmployees); // 子コンポーネントに提供
+
+/*****************************************************************************
+ * SETUP OUTSOURCERS IN RANGE COMPOSABLE
+ * - `props.startDate`, `props.endDate` で指定された期間に契約中である
+ *   Outsourcer インスタンスの配列を取得・提供します。
+ *****************************************************************************/
+const { docs: selectableOutsourcers } = useOutsourcersInRange({
+  from: toRef(() => props.startDate),
+  to: toRef(() => props.endDate),
+});
+provide("selectableOutsourcers", selectableOutsourcers); // 子コンポーネントに提供
+
+/*****************************************************************************
+ * SETUP MANAGER COMPOSABLE
+ *****************************************************************************/
 const managerComposable = useIndex(schedules);
 const {
   // COMPOSABLES
@@ -98,23 +126,34 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  *****************************************************************************/
 const commandText = ref(null);
 
+/*****************************************************************************
+ * DEFINE TEMPLATE REFS
+ *****************************************************************************/
 const siteOperationScheduleManager = useTemplateRef(
   "siteOperationScheduleManager",
 );
 const arrangementNotificationManager = useTemplateRef(
   "arrangementNotificationManager",
 );
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+/**
+ * `siteOperationScheduleManager` の `toCreate` メソッドを実行します。
+ * @param {string} options.siteId - 現場ドキュメントID
+ * @param {string} options.shiftType - 勤務区分
+ */
+async function handleClickAddSchedule({ siteId, shiftType }) {
+  await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
+}
 </script>
 
 <template>
   <div class="d-flex flex-column fill-height">
     <!-- フローティング作業員選択ウィンドウ -->
     <FloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
-      <ArrangementsWorkersSelector
-        :is-employee-arranged="isEmployeeArrangedInDataLayer"
-        :start-date="props.startDate"
-        :end-date="props.endDate"
-      />
+      <ArrangementsWorkerSelector />
     </FloatingWindow>
 
     <!-- スケジュール管理テーブル -->
@@ -127,10 +166,7 @@ const arrangementNotificationManager = useTemplateRef(
       :column-width="256"
       day-format="MM/DD(ddd)"
       :selectedDate="selectedDate"
-      @click:add-schedule="
-        ({ siteId, shiftType }) =>
-          siteOperationScheduleManager.toCreate({ siteId, shiftType })
-      "
+      @click:add-schedule="handleClickAddSchedule"
       @click:remove-site-order="removeSiteShiftTypeOrder"
     >
       <!-- 日付の表示形式をカスタマイズ -->
