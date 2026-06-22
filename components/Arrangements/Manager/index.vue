@@ -9,6 +9,10 @@
  * - `dateRangeComposable` を `useIndex` から分離✅
  * - `schedules`, `notifications` をデータレイヤーから取得するように修正✅
  *
+ * [更新履歴]
+ * 2026-06-22 - 集中モード機能を開発者のみ利用可能に修正。
+ *              → 集中モード on 時の機能について再検討。
+ *
  * @property {Date} startDate - スケジュール表示の開始日
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
@@ -16,6 +20,7 @@ import { useDefaults } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useArrangements } from "@/composables/dataLayers/useArrangements";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // Components
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
@@ -44,6 +49,11 @@ const _props = defineProps({
   },
 });
 const props = useDefaults(_props, "ArrangementsManager");
+
+/*****************************************************************************
+ * SETUP AUTH STORE
+ *****************************************************************************/
+const { isDeveloper } = useAuthStore();
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -132,6 +142,7 @@ const arrangementNotificationManager = useTemplateRef(
       <template #weekday="{ dayObject, isSelected }">
         <div class="d-flex ga-6">
           <v-btn
+            v-if="isDeveloper"
             v-tooltip:top="`集中モード切替`"
             :icon="isSelected ? 'mdi-eye-off' : 'mdi-eye'"
             size="x-small"

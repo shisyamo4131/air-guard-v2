@@ -11,6 +11,7 @@
  *
  * @prop {Boolean} hideBadge - 必要人数バッジを非表示にするかどうか（デフォルト: false）
  * @prop {Boolean} isDraggable - カードのドラッグ操作用アイコンを表示するかどうか（デフォルト: false）
+ *                               `props.schedule.isEditable` が false の場合は常に false として扱われます。
  * @prop {Object} schedule - 現場稼働予定データオブジェクト（デフォルト: 空の SiteOperationSchedule インスタンス）
  * @prop {Boolean} showActions - アクションボタンを表示するかどうか（デフォルト: false）
  *
