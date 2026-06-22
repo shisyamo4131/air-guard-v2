@@ -14,6 +14,7 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useLogger } from "../composables/useLogger";
+import { formatCurrency } from "@/utils/formats/util";
 
 /**
  * @param {*} options
@@ -61,7 +62,7 @@ export function useCustomerBillingsManager({
     if (missingComposables.length > 0) {
       logger.info({
         message: `The following composables were not provided. Internal composables will be used, but if caching across multiple components is needed, specifying them will improve performance: ${missingComposables.join(
-          ", "
+          ", ",
         )}`,
       });
     }
@@ -181,21 +182,25 @@ export function useCustomerBillingsManager({
             title: "実績数",
             key: "operationCount",
             value: (item) => item.operationResults.length.toLocaleString(),
+            align: "center",
           },
           {
             title: "売上額",
             key: "subtotal",
-            value: (item) => item.subtotal.toLocaleString(),
+            value: (item) => formatCurrency(item.subtotal),
+            align: "end",
           },
           {
             title: "消費税額",
             key: "taxAmount",
-            value: (item) => item.taxAmount.toLocaleString(),
+            value: (item) => formatCurrency(item.taxAmount),
+            align: "end",
           },
           {
             title: "請求額",
             key: "totalAmount",
-            value: (item) => item.totalAmount.toLocaleString(),
+            value: (item) => formatCurrency(item.totalAmount),
+            align: "end",
           },
           {
             title: "入金予定日",

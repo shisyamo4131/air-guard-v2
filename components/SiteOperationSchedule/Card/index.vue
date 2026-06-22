@@ -67,18 +67,42 @@ const {
   defaultSlotProps,
 } = useIndex(props, emit);
 
+/*****************************************************************************
+ * PROVIDES
+ *****************************************************************************/
 provide("props", props);
 provide("emit", emit);
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const showOverAndShortIcon = computed(() => {
+  const isPersonnelShortage = props.schedule.isPersonnelShortage;
+  const isPersonnelSurplus = props.schedule.isPersonnelSurplus;
+  return isPersonnelShortage || isPersonnelSurplus;
+});
+
+const showRemarksIcon = computed(() => {
+  return !!props.schedule.remarks;
+});
 </script>
 
 <template>
   <v-card class="schedule-card overflow-visible">
+    <!-- Over and Short Icon -->
     <OverAndShortIcon
-      v-if="
-        props.schedule.isPersonnelShortage || props.schedule.isPersonnelSurplus
-      "
+      v-if="showOverAndShortIcon"
       :schedule="props.schedule"
       style="position: absolute; top: 4px; left: 24px"
+    />
+
+    <!-- Remarks Icon -->
+    <v-icon
+      v-if="showRemarksIcon"
+      color="secondary"
+      icon="mdi-message-processing"
+      style="position: absolute; top: -8px; right: -8px"
+      v-tooltip:top="props.schedule.remarks"
     />
     <v-card-item style="padding: 10px">
       <template #prepend>
