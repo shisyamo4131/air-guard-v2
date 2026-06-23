@@ -1,3 +1,4 @@
+import { logger } from "firebase-functions";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { ArrangementNotification } from "../../schemas/index.js";
 /**
@@ -19,9 +20,8 @@ export async function createNotificationForArrangement(
       .get();
 
     if (usersSnapshot.empty) {
-      console.log(
-        `No user found for employeeId: ${arrangementData.employeeId}`,
-      );
+      const message = `No user found for employeeId: ${arrangementData.employeeId}`;
+      logger.log(message);
       return;
     }
 
@@ -38,7 +38,7 @@ export async function createNotificationForArrangement(
       body: `${parseInt(month)}月${parseInt(day)}日の配置が更新されました。`,
       data: {
         type: "arrangement",
-        arrangementNotificationId: arrangementData.id,
+        arrangementNotificationId: arrangementData.docId,
         siteId: arrangementData.siteId,
         shiftType: arrangementData.shiftType,
       },
@@ -48,15 +48,17 @@ export async function createNotificationForArrangement(
       failureCount: 0,
       status: "pending",
       sourceType: "arrangement",
-      sourceId: arrangementData.id,
+      sourceId: arrangementData.docId,
       createdBy: "",
       createdAt: FieldValue.serverTimestamp(),
     });
 
-    console.log(
-      `Notification document created for arrangementNotification: ${arrangementData.id}`,
+    logger.log(
+      `Notification document created for arrangementNotification: ${arrangementData.docId}`,
     );
   } catch (error) {
-    console.error("Error creating notification:", error);
+    const message = `[createNotificationForArrangement] Error creating notification for arrangementNotification: ${arrangementData.docId}`;
+    logger.error(message, error);
+    throw error;
   }
 }
