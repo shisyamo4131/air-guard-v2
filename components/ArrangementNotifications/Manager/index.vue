@@ -148,6 +148,12 @@ async function onUpdateHandler(item) {
             <v-divider v-if="index < items.length - 1" />
           </template>
         </air-list>
+        <v-empty-state v-else icon="mdi-alert-circle-outline">
+          <template #title>直近の配置情報はありません</template>
+          <template #text>
+            現在、あなたの配置情報はありません。<br />配置情報が追加されると、ここに表示されます。
+          </template>
+        </v-empty-state>
       </v-card>
     </template>
 

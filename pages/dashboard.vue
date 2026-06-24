@@ -21,10 +21,31 @@ const statistics = useStatisticsStore();
 
 <template>
   <v-container>
-    <!-- 従業員ユーザーであれば直近の配置通知情報を表示 -->
-    <v-row v-if="auth.employeeId && auth.isAdmin">
-      <v-col cols="12" md="6">
+    <!-- 従業員ユーザーであれば以下を表示 -->
+    <!-- - 直近配置情報 -->
+    <!-- - カレンダー -->
+    <v-row v-if="auth.employeeId">
+      <v-col cols="12" md="4">
         <ArrangementNotificationsManager :model-value="recentArrangements" />
+      </v-col>
+      <v-col cols="12" md="8">
+        <air-calendar color="secondary" />
+      </v-col>
+    </v-row>
+
+    <v-row v-if="auth.isAdmin">
+      <v-col>
+        <v-card class="overflow-visible">
+          <v-chip
+            color="primary"
+            label
+            text="稼働数の推移"
+            variant="flat"
+            size="x-large"
+            style="position: absolute; top: -12px; left: 12px"
+          />
+          <v-card-text class="pt-10">現在未実装</v-card-text>
+        </v-card>
       </v-col>
     </v-row>
     <!-- 概要カード -->

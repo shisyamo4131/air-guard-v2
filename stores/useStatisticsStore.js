@@ -1,6 +1,6 @@
-/**
- * Data Store
- */
+/*****************************************************************************
+ * 統計情報ストア
+ *****************************************************************************/
 import dayjs from "dayjs";
 import * as Vue from "vue";
 import { OperationResult, Site, SiteOperationSchedule } from "@/schemas";
@@ -9,13 +9,11 @@ import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 
 export const useStatisticsStore = defineStore("statistics", () => {
-  /** SETUP COMPOSABLES */
-  const {
-    fetchSite,
-    cachedSites,
-    cachedSitesArray,
-    clearCache: clearSites,
-  } = useFetchSite();
+  /*****************************************************************************
+   * SETUP FETCH COMPOSABLES
+   * - provide してはいけないので、useFetch は使用しない。
+   *****************************************************************************/
+  const { fetchSite, cachedSites, clearCache: clearSites } = useFetchSite();
   const {
     fetchEmployee,
     cachedEmployees,
@@ -27,10 +25,16 @@ export const useStatisticsStore = defineStore("statistics", () => {
     clearCache: clearOutsourcers,
   } = useFetchOutsourcer();
 
-  /** SETUP REACTIVE OBJECTS */
+  /*****************************************************************************
+   * DEFINE REACTIVE OBJECTS
+   *****************************************************************************/
   const operationResultInstance = Vue.reactive(new OperationResult());
   const scheduleInstance = Vue.reactive(new SiteOperationSchedule());
   const siteInstance = Vue.reactive(new Site());
+
+  /*****************************************************************************
+   * METHODS
+   *****************************************************************************/
 
   /** COMPUTED PROPERTIES */
   const invalidOperationBillings = Vue.computed(() => {
@@ -40,7 +44,7 @@ export const useStatisticsStore = defineStore("statistics", () => {
   const operationCount = Vue.computed(() => {
     return scheduleInstance.docs.reduce(
       (acc, schedule) => acc + schedule.requiredPersonnel,
-      0
+      0,
     );
   });
 
@@ -62,7 +66,7 @@ export const useStatisticsStore = defineStore("statistics", () => {
         fetchSite(doc.siteId);
         fetchEmployee(doc.employeeIds);
         fetchOutsourcer(doc.outsourcerIds);
-      }
+      },
     );
     scheduleInstance.subscribeDocs({
       constraints: [["where", "date", "==", dayjs().format("YYYY-MM-DD")]],
@@ -89,7 +93,7 @@ export const useStatisticsStore = defineStore("statistics", () => {
      * 仮登録状態の現場数
      */
     temporarySiteCount: computed(
-      () => siteInstance.docs.filter(({ isTemporary }) => isTemporary).length
+      () => siteInstance.docs.filter(({ isTemporary }) => isTemporary).length,
     ),
     invalidOperationBillings,
 
