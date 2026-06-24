@@ -47,6 +47,12 @@ export async function sendNotification(token, notification, data = {}) {
 
 const FCM_MULTICAST_LIMIT = 500;
 
+function maskToken(token) {
+  if (!token) return "";
+  if (token.length <= 16) return token;
+  return `${token.slice(0, 8)}...${token.slice(-8)}`;
+}
+
 /**
  * 複数トークンに同じ通知を送信（500件超は内部でチャンク分割）
  * @param {string[]} tokens - FCMトークンの配列
@@ -272,26 +278,78 @@ export const onNotificationCreated = onDocumentCreated(
     } = notificationData;
 
     try {
+      logger.info("[onNotificationCreated] start", {
+        companyId,
+        notificationId,
+        recipientCount: recipientUserIds.length,
+        hasImage: Boolean(imageUrl),
+        hasCustomData: Boolean(customData),
+        customDataKeys: customData ? Object.keys(customData) : [],
+        title,
+        bodyLength: body ? body.length : 0,
+      });
+
       // ステータスを processing に更新
       await event.data.ref.update({ status: "processing" });
 
-      // recipientUserIds → uid → FcmToken を収集
+      // recipientUserIds から FcmToken を収集
+      // → recipientUserId = User ドキュメント ID = FcmToken.uid であることに注意
+      // → 該当する User ドキュメントが存在しない場合は userTokenMap[userId] を空配列にして userTokenDiagnostics に記録してスキップ
+      // → 該当する User ドキュメントが存在する場合は FcmTokens コレクションから uid と companyId でトークンを取得して userTokenMap[userId] に格納し、userTokenDiagnostics に記録
       const userTokenMap = {}; // userId → token[]
+      const userTokenDiagnostics = [];
       for (const userId of recipientUserIds) {
         const userDoc = await db
           .doc(`Companies/${companyId}/Users/${userId}`)
           .get();
         if (!userDoc.exists) {
           userTokenMap[userId] = [];
+          userTokenDiagnostics.push({
+            userId,
+            userDocExists: false,
+            uidPresent: false,
+            tokenCount: 0,
+            tokenSamples: [],
+          });
           continue;
         }
-        const { uid } = userDoc.data();
+
+        /*****************************************************************************
+         * 2026-06-24 修正
+         * - User ドキュメントの uid ベースで FcmToken ドキュメントを取得してしまっていた。
+         * - User ドキュメントの uid は `当該ドキュメントを作成または更新した Auth.uid` である。
+         *****************************************************************************/
+        // const { uid } = userDoc.data();
+        // if (!uid) {
+        //   userTokenMap[userId] = [];
+        //   userTokenDiagnostics.push({
+        //     userId,
+        //     userDocExists: true,
+        //     uidPresent: false,
+        //     tokenCount: 0,
+        //     tokenSamples: [],
+        //   });
+        //   continue;
+        // }
+        // const fcmTokensSnapshot = await db
+        //   .collection("FcmTokens")
+        //   .where("uid", "==", uid)
+        //   .where("companyId", "==", companyId)
+        //   .get();
+
         const fcmTokensSnapshot = await db
           .collection("FcmTokens")
-          .where("uid", "==", uid)
+          .where("uid", "==", userId)
           .where("companyId", "==", companyId)
           .get();
         userTokenMap[userId] = fcmTokensSnapshot.docs.map((doc) => doc.id);
+        userTokenDiagnostics.push({
+          userId,
+          userDocExists: true,
+          uidPresent: true,
+          tokenCount: userTokenMap[userId].length,
+          tokenSamples: userTokenMap[userId].slice(0, 3).map(maskToken),
+        });
       }
 
       // Recipients サブコレクションを作成（pending）
@@ -310,7 +368,22 @@ export const onNotificationCreated = onDocumentCreated(
       // 全トークンを収集（重複排除）
       const allTokens = [...new Set(Object.values(userTokenMap).flat())];
 
+      logger.info("[onNotificationCreated] token lookup summary", {
+        companyId,
+        notificationId,
+        recipientCount: recipientUserIds.length,
+        uniqueTokenCount: allTokens.length,
+        diagnostics: userTokenDiagnostics,
+      });
+
       if (allTokens.length === 0) {
+        logger.warn("[onNotificationCreated] no tokens found for recipients", {
+          companyId,
+          notificationId,
+          recipientUserIds,
+          diagnostics: userTokenDiagnostics,
+        });
+
         // トークンなし - 全員 failed
         const failedBatch = db.batch();
         for (const userId of recipientUserIds) {
@@ -351,26 +424,90 @@ export const onNotificationCreated = onDocumentCreated(
 
       // トークン → userId の逆引きマップ
       const tokenUserMap = {};
+      const tokenOwnersMap = {};
       for (const [userId, tokens] of Object.entries(userTokenMap)) {
         for (const token of tokens) {
           tokenUserMap[token] = userId;
+          if (!tokenOwnersMap[token]) {
+            tokenOwnersMap[token] = [];
+          }
+          tokenOwnersMap[token].push(userId);
         }
+      }
+
+      const duplicatedTokenDiagnostics = Object.entries(tokenOwnersMap)
+        .filter(([, owners]) => owners.length > 1)
+        .map(([token, owners]) => ({
+          token: maskToken(token),
+          ownerUserIds: owners,
+        }));
+
+      if (duplicatedTokenDiagnostics.length > 0) {
+        logger.warn("[onNotificationCreated] duplicated tokens detected", {
+          companyId,
+          notificationId,
+          duplicatedTokenCount: duplicatedTokenDiagnostics.length,
+          duplicatedTokens: duplicatedTokenDiagnostics,
+        });
       }
 
       // ユーザーごとの送信結果を集計（1つでも成功なら success）
       const userResults = {};
       for (const userId of recipientUserIds) {
-        userResults[userId] = { success: false, error: "" };
+        const hasToken = (userTokenMap[userId] || []).length > 0;
+        userResults[userId] = {
+          success: false,
+          error: hasToken
+            ? "FCMレスポンスがユーザーに割り当てられませんでした"
+            : "FCMトークンが見つかりません",
+        };
       }
+
+      const unmatchedResponses = [];
       for (const resp of result.responses) {
         const userId = tokenUserMap[resp.token];
-        if (!userId) continue;
+        if (!userId) {
+          unmatchedResponses.push({
+            token: maskToken(resp.token),
+            success: resp.success,
+            error: resp.error,
+            errorCode: resp.errorCode,
+          });
+          continue;
+        }
         if (resp.success) {
           userResults[userId].success = true;
           userResults[userId].error = "";
         } else if (!userResults[userId].success) {
           userResults[userId].error = resp.error || "送信失敗";
         }
+      }
+
+      if (unmatchedResponses.length > 0) {
+        logger.warn("[onNotificationCreated] unmatched FCM responses", {
+          companyId,
+          notificationId,
+          count: unmatchedResponses.length,
+          responses: unmatchedResponses,
+        });
+      }
+
+      const failedUserDiagnostics = Object.entries(userResults)
+        .filter(([, res]) => !res.success)
+        .map(([userId, res]) => ({
+          userId,
+          tokenCount: (userTokenMap[userId] || []).length,
+          tokenSamples: (userTokenMap[userId] || []).slice(0, 3).map(maskToken),
+          error: res.error,
+        }));
+
+      if (failedUserDiagnostics.length > 0) {
+        logger.warn("[onNotificationCreated] failed recipients summary", {
+          companyId,
+          notificationId,
+          failedUserCount: failedUserDiagnostics.length,
+          failedUsers: failedUserDiagnostics,
+        });
       }
 
       // Recipients を更新
@@ -412,7 +549,12 @@ export const onNotificationCreated = onDocumentCreated(
         `onNotificationCreated completed: success=${successUserCount}, failure=${failureUserCount}`,
       );
     } catch (error) {
-      console.error("Error in onNotificationCreated:", error);
+      logger.error("[onNotificationCreated] error", {
+        companyId,
+        notificationId,
+        errorMessage: error?.message,
+        errorStack: error?.stack,
+      });
       await event.data.ref.update({ status: "failed" });
     }
   },
