@@ -75,7 +75,8 @@ export function useCustomerBillingManager({
       {
         title: "現場名",
         props: {
-          subtitle: cachedSites.value?.[doc.siteId]?.name || "loading...",
+          subtitle:
+            cachedSites.value?.[doc.siteId]?.displayName || "loading...",
         },
       },
       {

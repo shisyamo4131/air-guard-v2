@@ -317,7 +317,7 @@ const orderKeySchedulesMap = computed(() => {
                     label
                     size="small"
                   />
-                  {{ cachedSites?.[order.siteId]?.name || "...loading" }}
+                  {{ cachedSites?.[order.siteId]?.displayName || "...loading" }}
                 </div>
               </slot>
 

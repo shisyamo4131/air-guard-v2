@@ -90,7 +90,7 @@ defineExpose({
   <v-window :model-value="step">
     <!-- STEP:1 取引先名入力 -->
     <v-window-item :value="1">
-      <v-form ref="step1" @submit.prevent>
+      <v-form ref="step1" @submit.prevent class="pt-2">
         <air-text-field
           v-bind="componentAttrs['customerName']"
           clearable
@@ -130,7 +130,7 @@ defineExpose({
 
     <!-- STEP:3 現場情報入力 -->
     <v-window-item :value="3">
-      <v-form ref="step3">
+      <v-form ref="step3" class="pt-2">
         <v-row>
           <v-col cols="12">
             <air-text-field v-bind="componentAttrs['code']" />

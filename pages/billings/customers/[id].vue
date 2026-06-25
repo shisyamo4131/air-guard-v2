@@ -34,7 +34,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
         </tr>
         <tr>
           <td>現場</td>
-          <td>{{ cachedSites[doc.siteId]?.name || "loading..." }}</td>
+          <td>{{ cachedSites[doc.siteId]?.displayName || "loading..." }}</td>
         </tr>
         <tr>
           <td>請求日</td>

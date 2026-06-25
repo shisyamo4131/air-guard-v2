@@ -104,7 +104,9 @@ const shiftType = computed(() => {
       <!-- TR: 現場名 -->
       <tr>
         <td>現場名</td>
-        <td>{{ cachedSites[props.schedule.siteId]?.name || "loading..." }}</td>
+        <td>
+          {{ cachedSites[props.schedule.siteId]?.displayName || "loading..." }}
+        </td>
       </tr>
 
       <!-- TR: 定時時間 -->

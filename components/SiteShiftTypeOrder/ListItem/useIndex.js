@@ -19,7 +19,7 @@ export function useIndex(props) {
 
   /** title */
   const title = Vue.computed(() => {
-    return cachedSites.value[props.siteId]?.name || "...loading";
+    return cachedSites.value[props.siteId]?.displayName || "...loading";
   });
 
   /** attrs */

@@ -8,6 +8,7 @@ import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useConstants } from "@/composables/useConstants";
 import dayjs from "dayjs";
+import CustomInput from "@/components/Site/CustomInput/Base.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -82,21 +83,22 @@ const items = computed(() => {
  * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
  *****************************************************************************/
 defineExpose({
-  includedKeys: [
-    "code",
-    "name",
-    "nameKana",
-    "zipcode",
-    "prefCode",
-    "city",
-    "address",
-    "building",
-    "securityType",
-    "siteNumber",
-    "constructionPeriodStartAt",
-    "constructionPeriodEndAt",
-    "remarks",
-  ],
+  // includedKeys: [
+  //   "code",
+  //   "name",
+  //   "nameKana",
+  //   "zipcode",
+  //   "prefCode",
+  //   "city",
+  //   "address",
+  //   "building",
+  //   "securityType",
+  //   "siteNumber",
+  //   "constructionPeriodStartAt",
+  //   "constructionPeriodEndAt",
+  //   "remarks",
+  // ],
+  customInput: CustomInput,
 });
 </script>
 

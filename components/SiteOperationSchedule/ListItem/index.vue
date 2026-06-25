@@ -71,7 +71,7 @@ const time = computed(() => {
       {{ `${date} ${time}` }}
     </v-list-item-title>
     <v-list-item-subtitle>
-      {{ cachedSites[props.schedule.siteId]?.name || "...loading" }}
+      {{ cachedSites[props.schedule.siteId]?.displayName || "...loading" }}
     </v-list-item-subtitle>
     <v-list-item-subtitle>
       {{

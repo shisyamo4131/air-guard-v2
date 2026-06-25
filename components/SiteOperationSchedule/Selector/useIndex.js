@@ -16,7 +16,7 @@ export function useIndex(props, emit) {
 
   /** title */
   const title = Vue.computed(() => {
-    return cachedSites.value[props.siteId]?.name || props.siteId;
+    return cachedSites.value[props.siteId]?.displayName || props.siteId;
   });
 
   /** subtitle */

@@ -40,7 +40,7 @@ export function useSiteOrderManager({
       fetchSite(newValue);
       internalSiteOrder.value = [...newValue];
     },
-    { immediate: true, deep: true }
+    { immediate: true, deep: true },
   );
 
   /***************************************************************************
@@ -148,7 +148,7 @@ export function useSiteOrderManager({
       return internalSiteOrder.value.map((item) => {
         return {
           ...item.toObject(),
-          siteName: cachedSites.value[item.siteId]?.name,
+          siteName: cachedSites.value[item.siteId]?.displayName || "...loading",
           key: item.key,
         };
       });
