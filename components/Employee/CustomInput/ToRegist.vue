@@ -35,6 +35,9 @@ const props = useDefaults(_props, "EmployeeCustomInputToRegist");
       <air-text-field v-bind="props.componentAttrs['displayName']" />
     </v-col>
     <v-col cols="12">
+      <air-text-field v-bind="props.componentAttrs['displayNameKana']" />
+    </v-col>
+    <v-col cols="12">
       <air-text-field v-bind="props.componentAttrs['title']" />
     </v-col>
     <v-col cols="12">

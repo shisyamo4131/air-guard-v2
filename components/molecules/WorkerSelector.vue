@@ -104,6 +104,12 @@ const filteredEmployees = computed(() => {
   const filtered = filterByKatakana(props.employees, "lastNameKana").sort(
     (a, b) => a.lastNameKana.localeCompare(b.lastNameKana),
   );
+  /*****************************************************************************
+   * `displayNameKana` 実装後のコード
+   *****************************************************************************/
+  // const filtered = filterByKatakana(props.employees, "displayNameKana").sort(
+  //   (a, b) => a.displayNameKana.localeCompare(b.displayNameKana),
+  // );
   let result = [];
   filtered.forEach((emp) => {
     result.push(convertedEmployeesMap.value[emp.docId]);

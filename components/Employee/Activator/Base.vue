@@ -84,6 +84,7 @@ defineExpose({
     "lastNameKana",
     "firstNameKana",
     "displayName",
+    "displayNameKana",
     "gender",
     "dateOfBirth",
     "dateOfHire",
