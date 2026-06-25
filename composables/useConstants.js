@@ -65,6 +65,10 @@ const DEFAULT_DEFINITIONS = {
   PAYMENT_MONTH: {
     ...CONSTANTS.PAYMENT_MONTH_VALUES,
   },
+  QUALIFIED_TYPE: {
+    BASE: { value: "BASE", title: "基本", color: "grey" },
+    QUALIFIED: { value: "QUALIFIED", title: "資格", color: "primary" },
+  },
   SECURITY_TYPE: {
     ...CONSTANTS.SECURITY_TYPE_VALUES,
   },
@@ -83,9 +87,25 @@ const DEFAULT_DEFINITIONS = {
   SITE_STATUS: {
     ...CONSTANTS.SITE_STATUS_VALUES,
   },
-  QUALIFIED_TYPE: {
-    BASE: { value: "BASE", title: "基本", color: "grey" },
-    QUALIFIED: { value: "QUALIFIED", title: "資格", color: "primary" },
+  WEEK_COLORS: {
+    background: [
+      "rgba(255, 99, 132, 0.2)", // 月
+      "rgba(76, 175, 80, 0.2)", // 火
+      "rgba(255, 152, 0, 0.2)", // 水
+      "rgba(244, 67, 54, 0.2)", // 木
+      "rgba(33, 150, 243, 0.2)", // 金
+      "rgba(156, 39, 176, 0.2)", // 土
+      "rgba(255, 193, 7, 0.2)", // 日
+    ],
+    border: [
+      "rgba(255, 99, 132, 1)",
+      "rgba(76, 175, 80, 1)",
+      "rgba(255, 152, 0, 1)",
+      "rgba(244, 67, 54, 1)",
+      "rgba(33, 150, 243, 1)",
+      "rgba(156, 39, 176, 1)",
+      "rgba(255, 193, 7, 1)",
+    ],
   },
 };
 
@@ -180,6 +200,13 @@ export function useConstants() {
       auth.company,
     ),
   );
+  const QUALIFIED_TYPE = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
+      "qualifiedType",
+      auth.company,
+    ),
+  );
   const SECURITY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SECURITY_TYPE,
@@ -201,13 +228,9 @@ export function useConstants() {
       auth.company,
     );
   });
-  const QUALIFIED_TYPE = computed(() =>
-    createConstantWithColors(
-      DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
-      "qualifiedType",
-      auth.company,
-    ),
-  );
+  const WEEK_COLORS = computed(() => {
+    return DEFAULT_DEFINITIONS.WEEK_COLORS;
+  });
 
   /**
    * 定数オブジェクトを配列に変換
@@ -230,10 +253,11 @@ export function useConstants() {
     GENDER,
     INSURANCE_STATUS,
     PAYMENT_MONTH,
+    QUALIFIED_TYPE,
     SECURITY_TYPE,
     SHIFT_TYPE,
     SITE_STATUS,
-    QUALIFIED_TYPE,
+    WEEK_COLORS,
     toArray,
     DEFAULT_DEFINITIONS,
   };

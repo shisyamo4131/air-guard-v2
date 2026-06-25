@@ -33,18 +33,21 @@ const statistics = useStatisticsStore();
       </v-col>
     </v-row>
 
-    <v-row v-if="auth.isAdmin">
+    <v-row v-if="auth.isAdmin && auth.isDeveloper">
       <v-col>
         <v-card class="overflow-visible">
           <v-chip
-            color="primary"
+            color="secondary"
             label
+            prepend-icon="mdi-chart-box-outline"
             text="稼働数の推移"
             variant="flat"
             size="x-large"
             style="position: absolute; top: -12px; left: 12px"
           />
-          <v-card-text class="pt-10">現在未実装</v-card-text>
+          <v-card-text class="pt-10">
+            <ChartsWeeklyOperationCountBar height="240" />
+          </v-card-text>
         </v-card>
       </v-col>
     </v-row>

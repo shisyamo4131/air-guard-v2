@@ -1,16 +1,9 @@
-<script setup>
-import { Employee } from "@/schemas";
-
-const employee = reactive(new Employee());
-
-employee.subscribe({ docId: "Kv6E41EX6TlZT8DkGXfW" });
-</script>
+<script setup></script>
 
 <template>
-  <v-container>
-    <v-card class="overflow-visible">
-      <v-icon icon="mdi-magnify" style="position: absolute; top: -10px" />
-      <v-card-title>社員情報</v-card-title>
-    </v-card>
-  </v-container>
+  <v-card title="稼働数推移">
+    <v-card-text>
+      <ChartsWeeklyOperationCountBar height="400" />
+    </v-card-text>
+  </v-card>
 </template>
