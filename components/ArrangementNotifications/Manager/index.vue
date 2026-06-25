@@ -41,12 +41,12 @@ const managerRef = useTemplateRef("manager");
  * COMPUTED
  *****************************************************************************/
 /**
- * 配置通知ドキュメントを、日付降順、勤務区分昇順でソートしたものを返す。
+ * 配置通知ドキュメントを、日付昇順、勤務区分昇順でソートしたものを返す。
  */
 const internalDocs = computed(() => {
   return props.modelValue.toSorted((a, b) => {
-    if (a.date > b.date) return -1;
-    if (a.date < b.date) return 1;
+    if (a.date > b.date) return 1;
+    if (a.date < b.date) return -1;
     if (a.shiftType > b.shiftType) return 1;
     if (a.shiftType < b.shiftType) return -1;
     return 0;
