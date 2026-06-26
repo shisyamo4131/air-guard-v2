@@ -4,7 +4,6 @@
  * @description 稼働請求ドキュメント 金額調整用カスタム入力コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-// SCHEMAS
 import { OperationBilling } from "@/schemas";
 
 /*****************************************************************************
@@ -17,6 +16,7 @@ const _props = defineProps({
     required: true,
     validator: (obj) => obj instanceof OperationBilling,
   },
+  updateProperties: { type: Function, required: true },
 });
 const props = useDefaults(_props, "OperationBillingCustomInputAdjust");
 
@@ -24,12 +24,34 @@ const props = useDefaults(_props, "OperationBillingCustomInputAdjust");
  * DEFINE STATES
  *****************************************************************************/
 const tab = ref("quantity");
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+function copyOriginalToAdjusted() {
+  const original = props.item.sales.original;
+  if (tab.value === "quantity") {
+    props.updateProperties({
+      adjustedQuantityBase: original.base.quantity,
+      adjustedOvertimeMinutesBase: original.base.overtimeMinutes,
+      adjustedQuantityQualified: original.qualified.quantity,
+      adjustedOvertimeMinutesQualified: original.qualified.overtimeMinutes,
+    });
+  } else if (tab.value === "unitPrice") {
+    props.updateProperties({
+      adjustedUnitPriceBase: original.base.unitPrice,
+      adjustedOvertimeUnitPriceBase: original.base.overtimeUnitPrice,
+      adjustedUnitPriceQualified: original.qualified.unitPrice,
+      adjustedOvertimeUnitPriceQualified: original.qualified.overtimeUnitPrice,
+    });
+  }
+}
 </script>
 
 <template>
   <div class="pt-2">
     <v-alert
-      class="text-caption"
+      class="text-caption mb-4"
       color="info"
       icon="mdi-information"
       density="compact"
@@ -104,6 +126,16 @@ const tab = ref("quantity");
             control-variant="hidden"
           />
         </div>
+        <div class="d-flex justify-end">
+          <v-btn
+            color="primary"
+            :disabled="props.componentAttrs['useAdjusted'].modelValue === false"
+            prepend-icon="mdi-content-copy"
+            text="調整前の値を調整後に複製"
+            variant="text"
+            @click="copyOriginalToAdjusted"
+          />
+        </div>
       </v-tabs-window-item>
 
       <!-- 単価 -->
@@ -160,6 +192,16 @@ const tab = ref("quantity");
           <air-number-input
             v-bind="props.componentAttrs['adjustedOvertimeUnitPriceQualified']"
             control-variant="hidden"
+          />
+        </div>
+        <div class="d-flex justify-end">
+          <v-btn
+            color="primary"
+            :disabled="props.componentAttrs['useAdjusted'].modelValue === false"
+            prepend-icon="mdi-content-copy"
+            text="調整前の値を調整後に複製"
+            variant="text"
+            @click="copyOriginalToAdjusted"
           />
         </div>
       </v-tabs-window-item>

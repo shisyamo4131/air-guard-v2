@@ -10,7 +10,6 @@ import { Company, User, RoundSetting, System } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useRolePresets } from "@/composables/useRolePresets";
-import { useStatisticsStore } from "@/stores/useStatisticsStore";
 import { useComponentDefaults } from "@/composables/useComponentDefaults";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { useNotification } from "@/composables/useNotification";
@@ -31,7 +30,6 @@ export const useAuthStore = defineStore("auth", () => {
   const errors = useErrorsStore();
   const loadings = useLoadingsStore();
   const messages = useMessagesStore();
-  const statisticsStore = useStatisticsStore();
   const { set: setComponentDefault } = useComponentDefaults();
   const { registFCMToken } = useNotification();
 
@@ -265,7 +263,6 @@ export const useAuthStore = defineStore("auth", () => {
         await companyInstance.fetch({ docId: companyId.value });
         userInstance.subscribe({ docId: uid.value });
         companyInstance.subscribe({ docId: companyId.value });
-        statisticsStore.start();
 
         // ========== FCMトークンの取得と保存 ==========
         await registFCMToken(userInstance);
@@ -276,7 +273,6 @@ export const useAuthStore = defineStore("auth", () => {
         companyInstance.unsubscribe();
         companyInstance.initialize();
         FireModel.setConfig({ prefix: `Companies/unknown` });
-        statisticsStore.stop();
       }
     } catch (error) {
       // Error handling process.

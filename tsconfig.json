@@ -1,0 +1,8 @@
+{
+  "extends": "./.nuxt/tsconfig.json"
+  // "compilerOptions": {
+  //   "checkJs": false
+  // },
+  // "include": ["**/*"],
+  // "exclude": ["node_modules", ".nuxt", "dist", ".output", "mocks"]
+}

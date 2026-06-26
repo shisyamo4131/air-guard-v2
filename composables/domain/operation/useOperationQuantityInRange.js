@@ -1,10 +1,10 @@
 /*****************************************************************************
- * @file ./composables/useOperationCountInRange.js
+ * @file ./composables/useOperationQuantityInRange.js
  *****************************************************************************/
 import * as Vue from "vue";
 
 /*****************************************************************************
- * @function useOperationCountInRange
+ * @function useOperationQuantityInRange
  * @description 日付ごとの稼働数を計算するためのコンポーザブル
  * - `daysInRangeMap` に含まれる日付の範囲に対して、`schedules` と `operations` の情報をもとに稼働数を計算して返します。
  * - `schedules` は SiteOperationSchedule の配列で、`requiredPersonnel` が使用されます。
@@ -17,10 +17,10 @@ import * as Vue from "vue";
  * @param {Vue.Ref<Map<string, any>>} options.daysInRangeMap - 日付の範囲を保持する Map の参照
  * @returns {Vue.ComputedRef<Map<string, number>>} 日付ごとの稼働数を返す計算済みの参照
  *****************************************************************************/
-export function useOperationCountInRange({
-  schedules = Vue.ref([]),
-  operations = Vue.ref([]),
-  daysInRangeMap = Vue.ref(new Map()),
+export function useOperationQuantityInRange({
+  schedules,
+  operations,
+  daysInRangeMap,
 } = {}) {
   return Vue.computed(() => {
     const result = new Map();
@@ -28,7 +28,7 @@ export function useOperationCountInRange({
 
     // {date: Map<docId, quantity>} を SiteOperationSchedule から作成
     // quantity には requiredPersonnel を使用する
-    for (const schedule of schedules.value) {
+    for (const schedule of Vue.unref(schedules)) {
       const map = operationMapByDate.get(schedule.date) ?? new Map();
       map.set(schedule.docId, schedule.requiredPersonnel ?? 0);
       operationMapByDate.set(schedule.date, map);
@@ -36,7 +36,7 @@ export function useOperationCountInRange({
 
     // {date: Map<docId, quantity>} を OperationResult から作成
     // quantity には statistics?.total?.quantity を使用する
-    for (const operation of operations.value) {
+    for (const operation of Vue.unref(operations)) {
       const map = operationMapByDate.get(operation.date) ?? new Map();
       map.set(operation.docId, operation.statistics?.total?.quantity ?? 0);
       // ↑ 同一 docId が存在すれば OperationResult で上書きになる

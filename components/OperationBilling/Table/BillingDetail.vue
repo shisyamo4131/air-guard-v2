@@ -56,7 +56,7 @@ const salesData = computed(() =>
       <tr>
         <td>基本残業</td>
         <td class="text-right">
-          {{ formatNumber(salesData.base.overtimeMinutes) }}
+          {{ formatNumber(salesData.base.overtimeMinutes / 60) }}
         </td>
         <td class="text-right">
           {{ formatNumber(salesData.base.overtimeUnitPrice) }}
@@ -80,7 +80,7 @@ const salesData = computed(() =>
       <tr>
         <td>資格残業</td>
         <td class="text-right">
-          {{ formatNumber(salesData.qualified.overtimeMinutes) }}
+          {{ formatNumber(salesData.qualified.overtimeMinutes / 60) }}
         </td>
         <td class="text-right">
           {{ formatNumber(salesData.qualified.overtimeUnitPrice) }}
