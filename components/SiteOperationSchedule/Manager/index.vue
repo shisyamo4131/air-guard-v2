@@ -8,6 +8,11 @@ import { useDefaults } from "vuetify";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { SiteOperationSchedule } from "@/schemas";
 import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
+import {
+  handleCreate,
+  handleUpdate,
+  handleDelete,
+} from "@/handlers/siteOperationScheduleHandlers";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -28,9 +33,9 @@ const _props = defineProps({
     validator: (value) =>
       value === null || value instanceof SiteOperationSchedule,
   },
-  handleCreate: { type: Function, default: (item) => item.create() },
-  handleUpdate: { type: Function, default: (item) => item.update() },
-  handleDelete: { type: Function, default: (item) => item.delete() },
+  handleCreate: { type: Function, default: handleCreate },
+  handleUpdate: { type: Function, default: handleUpdate },
+  handleDelete: { type: Function, default: handleDelete },
 });
 const props = useDefaults(_props, "SiteOperationScheduleManager");
 

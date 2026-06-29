@@ -12,12 +12,22 @@
  *   運用上の問題はなし。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-// SCHEMAS
 import { OperationResult } from "@/schemas";
-// COMPOSABLES
 import { useBaseManager } from "@/composables/useBaseManager";
-// COMPONENTS
 import CustomInput from "@/components/OperationResult/CustomInput";
+import {
+  handleCreate,
+  handleUpdate,
+  handleDelete,
+} from "@/handlers/operationResultHandlers";
+
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({
+  name: "OperationResultsManager",
+  inheritAttrs: false,
+});
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -30,9 +40,9 @@ const _props = defineProps({
     validator: (value) =>
       value.every((item) => item instanceof OperationResult),
   },
-  handleCreate: { type: Function, default: (item) => item.create(item) },
-  handleUpdate: { type: Function, default: (item) => item.update(item) },
-  handleDelete: { type: Function, default: (item) => item.delete(item) },
+  handleCreate: { type: Function, default: handleCreate },
+  handleUpdate: { type: Function, default: handleUpdate },
+  handleDelete: { type: Function, default: handleDelete },
 });
 const props = useDefaults(_props, "OperationResultsManager");
 
@@ -44,7 +54,7 @@ const { attrs } = useBaseManager("OperationResultsManager");
 
 <template>
   <air-array-manager
-    v-bind="attrs"
+    v-bind="{ ...$attrs, ...attrs }"
     :model-value="props.docs"
     :schema="OperationResult"
     :handle-create="props.handleCreate"

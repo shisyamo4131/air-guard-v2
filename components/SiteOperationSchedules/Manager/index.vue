@@ -9,6 +9,19 @@ import { useBaseManager } from "@/composables/useBaseManager";
 import { SiteOperationSchedule } from "@/schemas";
 import { useDefaults } from "vuetify";
 import CustomInput from "@/components/SiteOperationSchedule/CustomInput";
+import {
+  handleCreate,
+  handleUpdate,
+  handleDelete,
+} from "@/handlers/siteOperationScheduleHandlers";
+
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({
+  name: "SiteOperationSchedulesManager",
+  inheritAttrs: false,
+});
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -17,9 +30,9 @@ const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
   docs: { type: Array, default: () => [] },
   dateAt: { type: Object, default: () => new Date() }, // 初期表示させる日を設定
-  handleCreate: { type: Function, default: (item) => item.create(item) },
-  handleUpdate: { type: Function, default: (item) => item.update(item) },
-  handleDelete: { type: Function, default: (item) => item.delete(item) },
+  handleCreate: { type: Function, default: handleCreate },
+  handleUpdate: { type: Function, default: handleUpdate },
+  handleDelete: { type: Function, default: handleDelete },
   siteId: { type: [String, Object], default: null },
 });
 const props = useDefaults(_props, "SiteOperationSchedulesManager");
@@ -33,12 +46,6 @@ const { attrs } = useBaseManager("SiteOperationSchedulesManager");
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const excludedKeys = computed(() => {
-  const result = ["employees", "outsourcers"];
-  if (props.siteId) result.push("siteId");
-  return result;
-});
-
 const events = computed(() => {
   return props.docs.map((doc) => doc.toEvent());
 });
@@ -53,11 +60,10 @@ function beforeEdit(editMode, item) {
 
 <template>
   <air-array-manager
-    v-bind="attrs"
+    v-bind="{ ...$attrs, ...attrs }"
     :model-value="props.docs"
     :schema="SiteOperationSchedule"
     :before-edit="beforeEdit"
-    :excluded-keys="excludedKeys"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"

@@ -78,6 +78,9 @@ const autocompleteErrors = computed(() => {
       <SiteAutocomplete v-bind="props.componentAttrs['siteId']" creatable />
     </v-col>
     <v-col cols="12">
+      <air-select v-bind="props.componentAttrs['securityType']" />
+    </v-col>
+    <v-col cols="12">
       <air-date-input v-bind="props.componentAttrs['dateAt']" />
     </v-col>
     <v-col cols="12" md="6">
