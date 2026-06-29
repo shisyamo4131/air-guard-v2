@@ -95,6 +95,7 @@ export default defineNuxtConfig({
         "@holiday-jp/holiday_jp",
         "firebase/messaging/sw",
         "browser-image-compression",
+        "vue-chartjs",
       ],
     },
     // Service Worker に環境変数を注入する Vite プラグイン
