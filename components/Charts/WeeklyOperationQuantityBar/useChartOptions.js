@@ -12,6 +12,14 @@ export function useChartOptions(props) {
           display: !props.hideLabel,
         },
       },
+      scales: {
+        x: {
+          stacked: true,
+        },
+        y: {
+          stacked: true,
+        },
+      },
     },
   };
 }

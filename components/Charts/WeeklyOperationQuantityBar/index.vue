@@ -21,8 +21,6 @@ defineOptions({
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
-  backgroundColor: { type: String, default: "rgba(255, 99, 132, 0.2)" },
-  borderColor: { type: String, default: "rgba(255, 99, 132, 1)" },
   borderWidth: { type: Number, default: 1 },
   hideLabel: { type: Boolean, default: false },
   label: { type: String, default: "稼働数" },
