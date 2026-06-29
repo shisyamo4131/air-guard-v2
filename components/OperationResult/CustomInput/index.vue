@@ -43,12 +43,32 @@ const { set, addMessage } = useSetRegularTime(
   },
 );
 
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
 const { fetchSiteComposable } = useFetch("OperationResultCustomInput");
 const { cachedSites } = fetchSiteComposable;
 
 /*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
+  () => props.item.siteId,
+  (newSiteId, oldSiteId) => {
+    if (newSiteId && newSiteId !== oldSiteId) {
+      const securityType = cachedSites.value?.[newSiteId]?.securityType;
+      if (securityType) {
+        props.updateProperties({ securityType });
+      }
+    }
+  },
+  { immediate: true },
+);
+
+/*****************************************************************************
  * COMPUTED
  *****************************************************************************/
+/** ↓これなに？？？ */
 const autocompleteErrors = computed(() => {
   if (!props.item.siteId) return {};
   const site = cachedSites.value?.[props.item.siteId];

@@ -6,6 +6,7 @@
 import { useDefaults } from "vuetify";
 import { Operation } from "@/schemas";
 import { useSetRegularTime } from "@/composables/useSetRegularTime";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -42,6 +43,28 @@ const { set, addMessage } = useSetRegularTime(
     addMessage({ color: "success", text: "取極めから定時を設定しました。" });
   },
 );
+
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
+const { fetchSiteComposable } = useFetch("SiteOperationScheduleCustomInput");
+const { cachedSites } = fetchSiteComposable;
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
+  () => props.item.siteId,
+  (newSiteId, oldSiteId) => {
+    if (newSiteId && newSiteId !== oldSiteId) {
+      const securityType = cachedSites.value?.[newSiteId]?.securityType;
+      if (securityType) {
+        props.updateProperties({ securityType });
+      }
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -55,6 +78,9 @@ const { set, addMessage } = useSetRegularTime(
     </v-col>
     <v-col cols="12">
       <SiteAutocomplete v-bind="props.componentAttrs['siteId']" creatable />
+    </v-col>
+    <v-col cols="12">
+      <air-select v-bind="props.componentAttrs['securityType']" />
     </v-col>
     <v-col cols="12">
       <air-date-input v-bind="props.componentAttrs['dateAt']" />
