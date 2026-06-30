@@ -66,32 +66,6 @@ watch(
     }
   },
 );
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-/** ↓これなに？？？ */
-const autocompleteErrors = computed(() => {
-  if (!props.item.siteId) return {};
-  const site = cachedSites.value?.[props.item.siteId];
-  if (!site) {
-    return {
-      errorMessages: [
-        "現場情報が見つかりません。現場マスタに現場情報を登録してください。",
-      ],
-      error: true,
-    };
-  }
-  if (site.isTemporary) {
-    return {
-      errorMessages: [
-        "仮登録現場は選択できません。現場マスタに現場情報を登録してください。",
-      ],
-      error: true,
-    };
-  }
-  return {};
-});
 </script>
 
 <template>
