@@ -33,7 +33,6 @@ const _props = defineProps({
   handleCreate: { type: Function, default: handleCreate },
   handleUpdate: { type: Function, default: handleUpdate },
   handleDelete: { type: Function, default: handleDelete },
-  siteId: { type: [String, Object], default: null },
 });
 const props = useDefaults(_props, "SiteOperationSchedulesManager");
 const emit = defineEmits(["update:date-range"]);
@@ -49,13 +48,6 @@ const { attrs } = useBaseManager("SiteOperationSchedulesManager");
 const events = computed(() => {
   return props.docs.map((doc) => doc.toEvent());
 });
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
-function beforeEdit(editMode, item) {
-  if (props.siteId) item.siteId = props.siteId;
-}
 </script>
 
 <template>
@@ -63,7 +55,6 @@ function beforeEdit(editMode, item) {
     v-bind="{ ...$attrs, ...attrs }"
     :model-value="props.docs"
     :schema="SiteOperationSchedule"
-    :before-edit="beforeEdit"
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"

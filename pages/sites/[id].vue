@@ -112,6 +112,7 @@ useFetch("site-detail", true);
           <!-- 稼働予定 -->
           <v-col cols="12">
             <SiteOperationSchedulesManager
+              :before-edit="(editMode, item) => (item.siteId = docId)"
               :date-at="dateRange.from"
               :docs="schedules"
               :site-id="docId"
