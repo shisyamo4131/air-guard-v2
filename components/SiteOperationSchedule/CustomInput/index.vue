@@ -53,6 +53,9 @@ const { cachedSites } = fetchSiteComposable;
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
+/**
+ * @description 現場IDが変更された場合、現場の警備種別を取得して更新する
+ */
 watch(
   () => props.item.siteId,
   (newSiteId, oldSiteId) => {
@@ -63,7 +66,6 @@ watch(
       }
     }
   },
-  { immediate: true },
 );
 </script>
 
