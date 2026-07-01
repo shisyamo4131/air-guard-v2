@@ -91,7 +91,7 @@ onUnmounted(unsubscribe);
       @create="(item) => router.push(`/sites/${item.docId}`)"
     >
       <template #table="slotProps">
-        <v-toolbar class="mb-4 bg-transparent">
+        <v-toolbar class="mb-4 bg-transparent" density="compact">
           <AtomsSearchTextField v-model="search" />
           <v-btn icon="mdi-plus" @click="() => slotProps.toCreate()" />
 
