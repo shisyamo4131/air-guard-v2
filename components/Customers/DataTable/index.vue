@@ -38,11 +38,22 @@ const headers = computed(() => {
 
 <template>
   <air-data-table v-bind="{ ...props, ...$attrs }" :headers="headers">
+    <!-- 取引先名 & 支店名 -->
     <template #[`item.name`]="{ item }">
       <div>
         <div>{{ item.name }}</div>
         <div class="text-caption text-medium-emphasis">
           {{ item.branchName }}
+        </div>
+      </div>
+    </template>
+
+    <!-- 所在地 & 建物名 -->
+    <template #[`item.fullAddress`]="{ item }">
+      <div>
+        <div>{{ item.fullAddress }}</div>
+        <div class="text-caption text-medium-emphasis">
+          {{ item.building }}
         </div>
       </div>
     </template>
