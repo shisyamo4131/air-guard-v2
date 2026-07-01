@@ -95,7 +95,7 @@ async function handlePdfClick(billing) {
 </script>
 
 <template>
-  <v-container>
+  <v-container class="fill-height">
     <AirArrayManager v-bind="attrs" class="fill-height" ref="managerRef">
       <template #search>
         <MoleculesMonthSelector

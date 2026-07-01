@@ -121,6 +121,7 @@ function handleClickUpdate(item) {
           </div>
         </v-toolbar>
         <OperationBillingsDataTable
+          class="flex-grow-1"
           v-bind="{ ...tableProps, items: filteredDocs }"
           hide-search
         />

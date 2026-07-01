@@ -126,6 +126,7 @@ function handleCreated(item) {
           </div>
         </v-toolbar>
         <OperationResultsDataTable
+          class="flex-grow-1"
           v-bind="{ ...tableProps, items: filteredDocs }"
           hide-search
         />

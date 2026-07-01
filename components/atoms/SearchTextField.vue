@@ -9,7 +9,6 @@
   <air-text-field
     density="compact"
     clearable
-    placeholder="2文字以上入力で検索"
     prepend-inner-icon="mdi-magnify"
     variant="solo"
     flat
