@@ -4,7 +4,6 @@
  * @description 取引先情報一覧ページ
  *****************************************************************************/
 import { Customer } from "@/schemas";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useRouter } from "vue-router";
 
 /*****************************************************************************
@@ -15,10 +14,8 @@ defineOptions({ name: "customers-index" });
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
+const customerInstance = reactive(new Customer());
 const search = ref("");
-const defaultOption = ref([
-  ["where", "contractStatus", "==", Customer.STATUS_ACTIVE],
-]);
 
 /*****************************************************************************
  * SETUP ROUTER COMPOSABLES
@@ -26,18 +23,37 @@ const defaultOption = ref([
 const router = useRouter();
 
 /*****************************************************************************
- * COMPUTED
+ * METHODS
  *****************************************************************************/
-const { docs } = useDocuments("Customer", {
-  search,
-  options: defaultOption,
-  fetchAllOnEmpty: true,
-});
+function handleClickUpdate(item) {
+  router.push(`/customers/${item.docId}`);
+}
+
+function subscribe() {
+  const constraints = [
+    ["where", "contractStatus", "==", Customer.STATUS_ACTIVE],
+  ];
+  customerInstance.subscribeDocs(constraints);
+}
+
+function unsubscribe() {
+  customerInstance.unsubscribe();
+}
+
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onMounted(subscribe);
+onUnmounted(unsubscribe);
 </script>
 
 <template>
   <v-container class="fill-height align-start">
-    <CustomersManager class="fill-height" :docs="docs">
+    <CustomersManager
+      class="fill-height"
+      :docs="customerInstance.docs"
+      :handle-click-update="handleClickUpdate"
+    >
       <template #table="slotProps">
         <v-toolbar class="mb-4 bg-transparent" density="compact">
           <AtomsSearchTextField v-model="search" />

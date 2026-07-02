@@ -17,6 +17,7 @@ defineOptions({ name: "SitesDataTable", inheritAttrs: false });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  items: { type: Array, default: () => [] },
   mobileBreakpoint: { type: String, default: "md" },
   sortBy: {
     type: Array,
@@ -30,7 +31,7 @@ const emit = defineEmits([]);
  * SETUP FETCH COMPOSABLE
  *****************************************************************************/
 const { fetchCustomerComposable } = useFetch("SiteDataTable");
-const { cachedCustomers } = fetchCustomerComposable;
+const { cachedCustomers, fetchCustomer } = fetchCustomerComposable;
 
 /*****************************************************************************
  * SETUP CONSTANTS COMPOSABLE
@@ -64,6 +65,21 @@ const headers = computed(() => {
     },
   ];
 });
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(
+  () => props.items,
+  (newItems) => {
+    newItems.forEach((item) => {
+      if (!cachedCustomers[item.customerId]) {
+        fetchCustomer(item.customerId);
+      }
+    });
+  },
+  { immediate: true, deep: true },
+);
 </script>
 
 <template>

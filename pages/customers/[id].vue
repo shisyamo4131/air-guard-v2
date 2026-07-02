@@ -1,18 +1,62 @@
 <script setup>
+/*****************************************************************************
+ * @file pages/customers/[id].vue
+ * @description 取引先情報詳細ページ
+ *****************************************************************************/
 import { useRoute, useRouter } from "vue-router";
-import { useDocument } from "@/composables/dataLayers/useDocument";
-import { useActiveSites } from "@/composables/dataLayers/useActiveSites";
+import { Customer, Site } from "@/schemas";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
- * SETUP COMPOSABLES
+ * OBTAIN PARAMS
  *****************************************************************************/
 const route = useRoute();
-const router = useRouter();
 const docId = route.params.id;
-const { doc } = useDocument("Customer", { docId });
 
-/** 稼働中現場ドキュメントの取得 */
-const { docs: activeSites } = useActiveSites({ customerId: docId });
+/*****************************************************************************
+ * SETUP ROUTER COMPOSABLES
+ *****************************************************************************/
+const router = useRouter();
+
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
+const { fetchSiteComposable } = useFetch("CustomerManager", true);
+const { fetchSite } = fetchSiteComposable;
+
+/*****************************************************************************
+ * DEFINE STATES
+ *****************************************************************************/
+const customerInstance = reactive(new Customer());
+const siteInstance = reactive(new Site());
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
+function subscribe() {
+  customerInstance.subscribe({ docId });
+  const constraints = [
+    ["where", "customerId", "==", docId],
+    ["where", "status", "==", Site.STATUS_ACTIVE],
+  ];
+  const callback = fetchSite;
+  siteInstance.subscribeDocs({ constraints }, callback);
+}
+
+function unsubscribe() {
+  customerInstance.unsubscribe();
+  siteInstance.unsubscribe();
+}
+
+function handleClickUpdateSite(item) {
+  router.push(`/sites/${item.docId}`);
+}
+
+/*****************************************************************************
+ * LIFECYCLE HOOKS
+ *****************************************************************************/
+onMounted(subscribe);
+onUnmounted(unsubscribe);
 </script>
 
 <template>
@@ -23,7 +67,11 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <CustomerManager :doc="doc" label="基本情報" hide-delete-btn>
+            <CustomerManager
+              :doc="customerInstance"
+              label="基本情報"
+              hide-delete-btn
+            >
               <template #activator="activatorProps">
                 <CustomerActivatorBase v-bind="activatorProps" />
               </template>
@@ -32,7 +80,11 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
 
           <!-- 請求・回収条件 -->
           <v-col cols="12">
-            <CustomerManager :doc="doc" label="請求・回収条件" hide-delete-btn>
+            <CustomerManager
+              :doc="customerInstance"
+              label="請求・回収条件"
+              hide-delete-btn
+            >
               <template #activator="activatorProps">
                 <CustomerActivatorPayment v-bind="activatorProps" />
               </template>
@@ -52,7 +104,11 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
                 density="compact"
                 title="稼働中現場"
               />
-              <SitesDataTable :items="activeSites" />
+              <SitesDataTable
+                :items="siteInstance.docs"
+                hide-search
+                @click:update="handleClickUpdateSite"
+              />
             </v-card>
           </v-col>
         </v-row>
@@ -61,7 +117,7 @@ const { docs: activeSites } = useActiveSites({ customerId: docId });
       <!-- 削除処理ボタン -->
       <v-col cols="12">
         <CustomerManager
-          :doc="doc"
+          :doc="customerInstance"
           hide-delete-btn
           @submit:complete="router.replace('/customers')"
         >
