@@ -1,15 +1,25 @@
 <script setup>
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRecentArrangements } from "@/composables/dataLayers/useRecentArrangements";
+import { useSitesMustBeTerminated } from "@/composables/dataLayers/useSitesMustBeTerminated";
 
 /*****************************************************************************
- * SETUP STORES & COMPOSABLES
+ * SETUP AUTH STORE
+ *****************************************************************************/
+const auth = useAuthStore();
+
+/*****************************************************************************
+ * SETUP ROUTER
+ *****************************************************************************/
+const router = useRouter();
+
+/*****************************************************************************
+ * SETUP DATA LAYER COMPOSABLES
  *****************************************************************************/
 // RECENT ARRANGEMENT DOCUMENTS
 const { docs: recentArrangements } = useRecentArrangements();
-
-/** SETUP STORES */
-const auth = useAuthStore();
+// SITES MUST BE TERMINATED
+const { docs: sitesMustBeTerminated } = useSitesMustBeTerminated();
 </script>
 
 <template>
@@ -34,7 +44,28 @@ const auth = useAuthStore();
           prepend-icon="mdi-chart-box-outline"
           title="稼働数の推移"
         >
-          <ChartsWeeklyOperationQuantityBar height="240" />
+          <ChartsWeeklyOperationQuantityBar height="240" class="ma-4" />
+        </MoleculesFloatingTitleCard>
+      </v-col>
+    </v-row>
+
+    <v-row>
+      <v-col>
+        <MoleculesFloatingTitleCard
+          color="error"
+          prepend-icon="mdi-alert-circle-outline"
+          title="工期終了現場"
+        >
+          <v-card-item>
+            <v-card-subtitle class="text-wrap">
+              次の現場は工期が終了しているようです。一定期間が経過すると自動的に稼働終了になります。
+            </v-card-subtitle>
+          </v-card-item>
+          <SitesDataTable
+            :items="sitesMustBeTerminated"
+            hide-search
+            @click:update="(item) => router.push(`/sites/${item.docId}`)"
+          />
         </MoleculesFloatingTitleCard>
       </v-col>
     </v-row>
