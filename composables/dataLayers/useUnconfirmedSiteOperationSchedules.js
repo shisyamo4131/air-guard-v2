@@ -1,6 +1,6 @@
 /*****************************************************************************
  * @file ./composables/dataLayer/useUnconfirmedSiteOperationSchedules.js
- * @description A data layer composable to provide `Un-confirmed` SiteOperationSchedule documents.
+ * @description 現在日付より前で、かつ稼働実績が作成されていない現場稼働予定インスタンスの配列を提供します。
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";

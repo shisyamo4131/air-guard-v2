@@ -2,6 +2,7 @@
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useRecentArrangements } from "@/composables/dataLayers/useRecentArrangements";
 import { useSitesMustBeTerminated } from "@/composables/dataLayers/useSitesMustBeTerminated";
+import { useSitesEmptyConstructionPeriodEndAt } from "@/composables/dataLayers/useSitesEmptyConstructionPeriodEndAt";
 
 /*****************************************************************************
  * SETUP AUTH STORE
@@ -20,6 +21,9 @@ const router = useRouter();
 const { docs: recentArrangements } = useRecentArrangements();
 // SITES MUST BE TERMINATED
 const { docs: sitesMustBeTerminated } = useSitesMustBeTerminated();
+// SITES EMPTY CONSTRUCTION PERIOD END AT
+const { docs: sitesEmptyConstructionPeriodEndAt } =
+  useSitesEmptyConstructionPeriodEndAt();
 </script>
 
 <template>
@@ -37,7 +41,7 @@ const { docs: sitesMustBeTerminated } = useSitesMustBeTerminated();
     </v-row>
 
     <v-row v-if="auth.isAdmin && auth.isDeveloper">
-      <v-col>
+      <v-col cols="12">
         <!-- グラフ: 稼働数の推移 -->
         <MoleculesFloatingTitleCard
           color="secondary"
@@ -47,22 +51,29 @@ const { docs: sitesMustBeTerminated } = useSitesMustBeTerminated();
           <ChartsWeeklyOperationQuantityBar height="240" class="ma-4" />
         </MoleculesFloatingTitleCard>
       </v-col>
-    </v-row>
-
-    <v-row>
-      <v-col>
+      <v-col cols="12">
         <MoleculesFloatingTitleCard
           color="error"
           prepend-icon="mdi-alert-circle-outline"
           title="工期終了現場"
+          subtitle="工期終了日が過ぎている現場の一覧です。一定期間が経過すると自動的に稼働終了になります。"
         >
-          <v-card-item>
-            <v-card-subtitle class="text-wrap">
-              次の現場は工期が終了しているようです。一定期間が経過すると自動的に稼働終了になります。
-            </v-card-subtitle>
-          </v-card-item>
           <SitesDataTable
             :items="sitesMustBeTerminated"
+            hide-search
+            @click:update="(item) => router.push(`/sites/${item.docId}`)"
+          />
+        </MoleculesFloatingTitleCard>
+      </v-col>
+      <v-col cols="12">
+        <MoleculesFloatingTitleCard
+          color="warning"
+          prepend-icon="mdi-alert-circle-outline"
+          title="工期終了日未設定現場"
+          subtitle="工期終了日が設定されていない現場の一覧です。工期終了日を設定してください。"
+        >
+          <SitesDataTable
+            :items="sitesEmptyConstructionPeriodEndAt"
             hide-search
             @click:update="(item) => router.push(`/sites/${item.docId}`)"
           />
