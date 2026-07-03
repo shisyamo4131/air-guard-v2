@@ -2,6 +2,7 @@
 /*****************************************************************************
  * @file pages/arrangements-manager.vue
  * @description 配置管理ページ
+ * - スクロール制御を `ArrangementsManager` に移譲するため、ルート要素の高さを固定
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDisplay } from "vuetify";
@@ -35,5 +36,9 @@ const { startDate, endDate } = useDateRange({
 </script>
 
 <template>
-  <ArrangementsManager :start-date="startDate" :end-date="endDate" />
+  <div
+    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
+    <ArrangementsManager :start-date="startDate" :end-date="endDate" />
+  </div>
 </template>

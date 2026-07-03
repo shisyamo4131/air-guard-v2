@@ -150,7 +150,7 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
 </script>
 
 <template>
-  <div class="d-flex flex-column fill-height">
+  <div class="fill-height">
     <!-- フローティング作業員選択ウィンドウ -->
     <FloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
       <ArrangementsWorkerSelector />
