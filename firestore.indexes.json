@@ -222,6 +222,25 @@
       "density": "SPARSE_ALL"
     },
     {
+      "collectionGroup": "Sites",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "constructionPeriodEndAt",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "__name__",
+          "order": "ASCENDING"
+        }
+      ],
+      "density": "SPARSE_ALL"
+    },
+    {
       "collectionGroup": "Users",
       "queryScope": "COLLECTION_GROUP",
       "fields": [

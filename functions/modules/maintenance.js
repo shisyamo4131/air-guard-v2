@@ -1,12 +1,15 @@
 import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc.js";
-import timezone from "dayjs/plugin/timezone.js";
+// ↓↓↓↓ 2026-07-03 以降エラーがなければ削除してOK
+// import utc from "dayjs/plugin/utc.js";
+// import timezone from "dayjs/plugin/timezone.js";
 import { onSchedule } from "firebase-functions/scheduler";
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
+import { sitesAutoTermination } from "./sites/index.js";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
+// ↓↓↓↓ 2026-07-03 以降エラーがなければ削除してOK
+// dayjs.extend(utc);
+// dayjs.extend(timezone);
 
 const BATCH_SIZE = 300;
 const SITE_OPERATION_SCHEDULES_KEEP_DAYS = 60;
@@ -136,6 +139,7 @@ export const runDailyTask = onSchedule(
     logger.log("[runDailyTask] Starting daily maintenance tasks...");
     try {
       await cleanUpSiteOperationSchedules();
+      await sitesAutoTermination();
     } catch (error) {
       logger.error("[runDailyTask] Error executing scheduled function:", error);
     }

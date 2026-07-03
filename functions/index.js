@@ -1,3 +1,10 @@
+/** dayjs の初期化 */
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc.js";
+import timezone from "dayjs/plugin/timezone.js";
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 /** Firebase, FireModel の初期化 */
 import "./modules/firebase.init.js";
 
