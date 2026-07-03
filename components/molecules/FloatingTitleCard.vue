@@ -11,7 +11,7 @@ import { useDefaults } from "vuetify";
 defineOptions({ name: "MoleculesFloatingTitleCard", inheritAttrs: false });
 
 /*****************************************************************************
- * DEFINE PROPS & EMITS
+ * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
   color: { type: String, default: "primary" },
@@ -19,10 +19,27 @@ const _props = defineProps({
   title: { type: String, default: undefined },
 });
 const props = useDefaults(_props, "MoleculesFloatingTitleCard");
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const slots = useSlots();
+const filteredSlots = computed(() =>
+  Object.fromEntries(
+    Object.entries(slots).filter(
+      ([name]) => name !== "title" && name !== "prepend",
+    ),
+  ),
+);
 </script>
 
 <template>
-  <v-card v-bind="$attrs" class="overflow-visible">
+  <div style="position: relative">
+    <v-card v-bind="$attrs" class="pt-8">
+      <template v-for="(_, slotName) in filteredSlots" #[slotName]="scope">
+        <slot :name="slotName" v-bind="scope ?? {}"></slot>
+      </template>
+    </v-card>
     <v-chip
       :color="props.color"
       label
@@ -32,8 +49,5 @@ const props = useDefaults(_props, "MoleculesFloatingTitleCard");
       size="x-large"
       style="position: absolute; top: -12px; left: 12px"
     />
-    <v-card-text class="pt-10">
-      <slot />
-    </v-card-text>
-  </v-card>
+  </div>
 </template>
