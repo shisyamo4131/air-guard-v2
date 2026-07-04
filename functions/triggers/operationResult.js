@@ -6,6 +6,7 @@ import {
   addOperationResultToBilling,
   syncOperationResultToBilling,
 } from "../modules/billings/index.js";
+import { rebuildHistories } from "../modules/siteEmployeeHistories/rebuildHistories.js";
 
 /*****************************************************************************
  * OperationResult ドキュメントの作成・更新・削除トリガー
@@ -39,6 +40,8 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: before,
           afterData: null,
         });
+        // 3. SiteEmployeeHistories ドキュメントの再構築
+        await rebuildHistories(companyId, before.siteId, before.employeeIds);
       }
       // OperationResult ドキュメントが作成された時の処理
       else if (!before) {
@@ -50,6 +53,8 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: null,
           afterData: after,
         });
+        // 3. SiteEmployeeHistories ドキュメントの再構築
+        await rebuildHistories(companyId, after.siteId, after.employeeIds);
       }
       // OperationResult ドキュメントが更新された時の処理
       else {
@@ -61,6 +66,12 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: before,
           afterData: after,
         });
+        // 3. SiteEmployeeHistories ドキュメントの再構築
+        const employeeIds = [...before.employeeIds, ...after.employeeIds]; // before/after の和集合（重複は rebuildHistories() 内で除外）
+        if (before.siteId !== after.siteId || before.date !== after.date) {
+          await rebuildHistories(companyId, before.siteId, employeeIds);
+        }
+        await rebuildHistories(companyId, after.siteId, employeeIds);
       }
     } catch (error) {
       logger.error("Failed to process OperationResult change", {
