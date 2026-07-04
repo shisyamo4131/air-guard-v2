@@ -39,6 +39,18 @@ export const pageStructure = [
     roles: [], // 認証済みユーザーはアクセスしない想定だが定義はしておく
     navigation: false,
   },
+
+  /** SUPER USER */
+  {
+    id: "super-user",
+    path: "/super-user",
+    public: false,
+    label: "スーパーユーザー",
+    roles: ["super-user"],
+    navigation: true,
+  },
+
+  /** TEST */
   {
     id: "module-tests",
     label: "テスト",
@@ -430,10 +442,8 @@ import { useRolePresets } from "@/composables/useRolePresets";
  * // → false (controller には billings:write が含まれない)
  * ```
  *
- * ### admin/super-user は常にアクセス可能
+ * ### super-user は常にアクセス可能
  * ```javascript
- * hasAccess(['admin'], ['admin']) // → true (すべての権限)
- * hasAccess(['sites:write'], ['admin']) // → true (すべての権限)
  * hasAccess(['billings:write'], ['super-user']) // → true (すべての権限)
  * ```
  */
@@ -448,13 +458,31 @@ function hasAccess(requiredRoles, userRoles) {
     return false;
   }
 
+  // super-user 専用ページは super-user のみ許可
+  if (
+    requiredRoles.includes("super-user") &&
+    !userRoles.includes("super-user")
+  ) {
+    return false;
+  }
+
+  // developer 専用ページは developer のみ許可
+  if (requiredRoles.includes("developer") && !userRoles.includes("developer")) {
+    return false;
+  }
+
+  // admin は専用ページを除き許可
+  if (userRoles.includes("admin")) {
+    return true;
+  }
+
   // useRolePresets から権限チェック関数を取得
   const { getPermissions } = useRolePresets();
 
   // ユーザーが持つすべての権限を取得
   const userPermissions = getPermissions(userRoles);
 
-  // すべての権限を持つ場合（admin または super-user）
+  // すべての権限を持つ場合（super-user）
   if (userPermissions.includes("*")) {
     return true;
   }

@@ -91,8 +91,8 @@ export function useRolePresets() {
     const permissions = new Set();
 
     for (const role of roles) {
-      // admin と super-user は特別扱い
-      if (role === "admin" || role === "super-user") {
+      // super-user は特別扱い（すべての権限）
+      if (role === "super-user") {
         return ["*"]; // すべての権限
       }
 
