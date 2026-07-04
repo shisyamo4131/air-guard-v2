@@ -56,8 +56,12 @@ const { docs: sitesEmptyConstructionPeriodEndAt } =
           color="error"
           prepend-icon="mdi-alert-circle-outline"
           title="工期終了現場"
-          subtitle="工期終了日が過ぎている現場の一覧です。一定期間が経過すると自動的に稼働終了になります。"
         >
+          <v-card-item>
+            <v-card-subtitle class="text-wrap">
+              工期終了日が過ぎている現場の一覧です。一定期間が経過すると自動的に稼働終了になります。
+            </v-card-subtitle>
+          </v-card-item>
           <SitesDataTable
             :items="sitesMustBeTerminated"
             hide-search
@@ -70,8 +74,12 @@ const { docs: sitesEmptyConstructionPeriodEndAt } =
           color="warning"
           prepend-icon="mdi-alert-circle-outline"
           title="工期終了日未設定現場"
-          subtitle="工期終了日が設定されていない現場の一覧です。工期終了日を設定してください。"
         >
+          <v-card-item>
+            <v-card-subtitle class="text-wrap">
+              工期終了日が設定されていない現場の一覧です。工期終了日を設定してください。
+            </v-card-subtitle>
+          </v-card-item>
           <SitesDataTable
             :items="sitesEmptyConstructionPeriodEndAt"
             hide-search
