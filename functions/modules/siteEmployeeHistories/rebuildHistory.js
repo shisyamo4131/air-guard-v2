@@ -2,8 +2,9 @@
  * @file ./functions/modules/siteEmployeeHistories/rebuildHistory.js
  * @description 現場・従業員の従事履歴を再構築する
  *****************************************************************************/
-
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, Timestamp } from "firebase-admin/firestore";
+import dayjs from "dayjs";
+import { SiteEmployeeHistory } from "../../schemas/index.js";
 
 const db = getFirestore();
 
@@ -41,14 +42,20 @@ export async function rebuildHistory(companyId, siteId, employeeId) {
   const firstDoc = firstSnapshot.docs[0];
   const lastDoc = lastSnapshot.docs[0];
 
-  await historyRef.set({
+  // 履歴を作成（SiteEmployeeHistoryクラスを使用）
+  const firstDateAt = Timestamp.fromDate(
+    dayjs(firstDoc.get("date")).tz("Asia/Tokyo").startOf("day").toDate(),
+  );
+  const lastDateAt = Timestamp.fromDate(
+    dayjs(lastDoc.get("date")).tz("Asia/Tokyo").startOf("day").toDate(),
+  );
+  const instance = new SiteEmployeeHistory({
     siteId,
     employeeId,
-
-    firstDate: firstDoc.get("date"),
+    firstDateAt,
     firstOperationResultId: firstDoc.id,
-
-    lastDate: lastDoc.get("date"),
+    lastDateAt,
     lastOperationResultId: lastDoc.id,
   });
+  await instance.create({ prefix: `Companies/${companyId}` });
 }
