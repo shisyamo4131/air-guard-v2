@@ -5,12 +5,17 @@
  * @use useFetch (origin)
  *****************************************************************************/
 import dayjs from "dayjs";
+import { Employee } from "@/schemas";
 import { useRoute, useRouter } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useSiteEmployeeHistoriesBySiteId } from "@/composables/dataLayers/useSiteEmployeeHistoriesBySiteId";
 
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "site-detail" });
 
 /*****************************************************************************
@@ -25,12 +30,34 @@ const docId = route.params.id;
  *****************************************************************************/
 const { doc } = useDocument("Site", { docId });
 
-/** Date Range */
+/*****************************************************************************
+ * SETUP DATE RANGE COMPOSABLE
+ *****************************************************************************/
 const baseDate = dayjs().startOf("month").toDate();
 const endDate = dayjs().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE (ROOT)
+ *****************************************************************************/
+const { fetchEmployeeComposable } = useFetch("site-detail", true);
+const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
+
+/*****************************************************************************
+ * SETUP SITE EMPLOYEE HISTORIES DATA LAYER COMPOSABLE
+ *****************************************************************************/
+const { docs: siteEmployeeHistories } = useSiteEmployeeHistoriesBySiteId(
+  docId,
+  { callback: (doc) => fetchEmployee(doc.employeeId) },
+);
+const sortedHistories = computed(() => {
+  return [...siteEmployeeHistories].sort((a, b) => {
+    const kanaA = cachedEmployees[a.employeeId]?.displayNameKana ?? "";
+    const kanaB = cachedEmployees[b.employeeId]?.displayNameKana ?? "";
+    return kanaA.localeCompare(kanaB, "ja");
+  });
+});
 /**
  * Subscribe to `SiteOperationSchedule` documents that match the following conditions:
  * - `siteId` equals the current `docId`
@@ -48,8 +75,6 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
   options,
   fetchAllOnEmpty: true,
 });
-
-useFetch("site-detail", true);
 </script>
 
 <template>
@@ -118,6 +143,23 @@ useFetch("site-detail", true);
               :site-id="docId"
               @update:date-range="dateRange = $event"
             />
+          </v-col>
+          <v-col cols="12">
+            <MoleculesFloatingTitleCard
+              title="入場者"
+              color="secondary"
+              subtitle="クリックすると詳細表示"
+            >
+              <v-card-text class="d-flex ga-4 flex-wrap">
+                <SiteEmployeeHistoryEmployeeChip
+                  v-for="(history, index) of sortedHistories"
+                  :key="index"
+                  color="primary"
+                  :history="history"
+                  size="small"
+                />
+              </v-card-text>
+            </MoleculesFloatingTitleCard>
           </v-col>
         </v-row>
       </v-col>
