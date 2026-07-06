@@ -53,8 +53,8 @@ const { docs: siteEmployeeHistories } = useSiteEmployeeHistoriesBySiteId(
 );
 const sortedHistories = computed(() => {
   return [...siteEmployeeHistories].sort((a, b) => {
-    const kanaA = cachedEmployees[a.employeeId]?.displayNameKana ?? "";
-    const kanaB = cachedEmployees[b.employeeId]?.displayNameKana ?? "";
+    const kanaA = cachedEmployees.value[a.employeeId]?.displayNameKana ?? "";
+    const kanaB = cachedEmployees.value[b.employeeId]?.displayNameKana ?? "";
     return kanaA.localeCompare(kanaB, "ja");
   });
 });
