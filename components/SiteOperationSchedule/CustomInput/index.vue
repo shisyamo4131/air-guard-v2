@@ -55,6 +55,8 @@ const { cachedSites } = fetchSiteComposable;
  *****************************************************************************/
 /**
  * @description 現場IDが変更された場合、現場の警備種別を取得して更新する
+ * [更新履歴]
+ * 2026-07-07 - `immediate: true` を追加（配置管理上での新規現場予定作成時に警備種別が自動設定されなかったのを修正）
  */
 watch(
   () => props.item.siteId,
@@ -66,6 +68,7 @@ watch(
       }
     }
   },
+  { immediate: true },
 );
 </script>
 
