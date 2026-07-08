@@ -17,7 +17,7 @@
  * @property {Date} startDate - スケジュール表示の開始日
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
-import { useDefaults } from "vuetify";
+import { useDefaults, useGoTo } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -59,6 +59,7 @@ const props = useDefaults(_props, "ArrangementsManager");
  * SETUP AUTH STORE
  *****************************************************************************/
 const { isDeveloper } = useAuthStore();
+const goTo = useGoTo();
 
 /*****************************************************************************
  * SETUP DATA LAYER COMPOSABLE
@@ -125,6 +126,8 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
 const commandText = ref(null);
+const siteShiftTypeJumpListMenu = ref(false);
+const siteShiftTypeJumpListMenuTarget = ref(null);
 
 /*****************************************************************************
  * DEFINE TEMPLATE REFS
@@ -135,6 +138,7 @@ const siteOperationScheduleManager = useTemplateRef(
 const arrangementNotificationManager = useTemplateRef(
   "arrangementNotificationManager",
 );
+const operationTable = useTemplateRef("operationTable");
 
 /*****************************************************************************
  * METHODS
@@ -147,6 +151,25 @@ const arrangementNotificationManager = useTemplateRef(
 async function handleClickAddSchedule({ siteId, shiftType }) {
   await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
 }
+
+async function showSiteShiftTypeJumpListMenu(evt) {
+  if (siteShiftTypeJumpListMenu.value) {
+    siteShiftTypeJumpListMenu.value = false;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  siteShiftTypeJumpListMenuTarget.value = evt.target.closest(".v-btn");
+  siteShiftTypeJumpListMenu.value = true;
+}
+
+function test(evt) {
+  const siteOrder = evt.id;
+  const target = document.getElementById(siteOrder.key);
+  const container =
+    operationTable.value?.$el?.querySelector(".v-table__wrapper");
+  if (!target || !container) return;
+  const offset = -80; // ヘッダーの高さ分だけスクロール位置を調整
+  goTo(target, { container, duration: 250, offset });
+}
 </script>
 
 <template>
@@ -156,8 +179,20 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
       <ArrangementsWorkerSelector />
     </FloatingWindow>
 
+    <v-menu
+      v-model="siteShiftTypeJumpListMenu"
+      :target="siteShiftTypeJumpListMenuTarget"
+    >
+      <SiteShiftTypeOrderList
+        :site-shift-type-order="siteShiftTypeOrder"
+        density="compact"
+        @click:select="test"
+      />
+    </v-menu>
+
     <!-- スケジュール管理テーブル -->
     <OperationSchedulesTable
+      ref="operationTable"
       class="fill-height"
       :start-date="props.startDate"
       :end-date="props.endDate"
@@ -195,6 +230,12 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
             icon="mdi-text-box-outline"
             size="x-small"
             @click="() => (commandText = getCommandText(dayObject.date))"
+          />
+          <v-btn
+            v-tooltip:top="`現場へジャンプ`"
+            icon="mdi-format-list-checkbox"
+            size="x-small"
+            @click="showSiteShiftTypeJumpListMenu"
           />
         </div>
       </template>

@@ -1,18 +1,22 @@
 <script setup>
 /*****************************************************************************
- * SiteShiftTypeOrderListItem.vue
- *
+ * @file ./components/SiteShiftTypeOrder/ListItem/index.vue
+ * @description 現場オーダーのリストアイテムコンポーネント
  * @property {String} shiftType - The shift type identifier
  * @property {String} siteId - The site identifier
  * @property {Object} fetchSiteComposable - Optional composable for fetching site data
- *
- * @slots prepend - Slot for content to be placed before the title (default: Shift Type Chip)
- * @slots append - Slot for content to be placed after the title
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useIndex } from "./useIndex";
+import { useFetch } from "@/composables/fetch/useFetch";
 
-/** SETUP PROPS */
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({ name: "SiteShiftTypeOrderListItem", inheritAttrs: false });
+
+/*****************************************************************************
+ * SETUP PROPS
+ *****************************************************************************/
 const _props = defineProps({
   shiftType: { type: String, required: true },
   siteId: { type: String, required: true },
@@ -20,22 +24,36 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "SiteShiftTypeOrderListItem");
 
-/** SETUP COMPOSABLES */
-const { attrs } = useIndex(props);
+/*****************************************************************************
+ * SETUP FETCH COMPOSABLE
+ *****************************************************************************/
+const { fetchSiteComposable } = useFetch("SiteShiftTypeOrderListItem");
+const { fetchSite, cachedSites } = fetchSiteComposable;
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+watch(() => props.siteId, fetchSite, { immediate: true });
+
+/*****************************************************************************
+ * COMPUTED
+ *****************************************************************************/
+const title = computed(() => {
+  return cachedSites.value[props.siteId]?.displayName || "...loading";
+});
 </script>
 
 <template>
-  <v-list-item v-bind="attrs">
-    <template #prepend="slotProps">
-      <slot name="prepend" v-bind="slotProps || {}">
-        <ShiftTypeChip class="mr-2" :shift-type="props.shiftType" />
-      </slot>
-    </template>
-    <template #title="{ title }">
-      <span>{{ title }}</span>
-    </template>
-    <template v-if="$slots.append" #append="slotProps">
-      <slot name="append" v-bind="slotProps || {}" />
+  <v-list-item v-bind="$attrs" :title="title">
+    <!-- SLOT: PREPEND -->
+    <!-- 勤務区分Chip を表示 -->
+    <template #prepend>
+      <ShiftTypeChip
+        class="mr-2"
+        :shift-type="props.shiftType"
+        label
+        size="small"
+      />
     </template>
   </v-list-item>
 </template>

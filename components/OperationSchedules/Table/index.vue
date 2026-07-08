@@ -5,9 +5,9 @@
  *   `class="d-flex"` を指定すること。
  *
  * [更新履歴]
- * 2026-06-15 - `props.cachedSites` を廃止し、`useFetch` を使用するように変更
  * 2026-06-18 - 現場オーダー行に現場稼働予定登録のためのアイコンを追加
  *            - `click:add-schedule` イベントを追加
+ * 2026-06-15 - `props.cachedSites` を廃止し、`useFetch` を使用するように変更
  *
  * @property {Array} columnColors - 各列の背景色クラス配列
  * @property {String|Number} columnWidth - 各列の幅
@@ -96,6 +96,9 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useDateRange } from "@/composables/useDateRange.js";
+import { useSiteOperationSchedulesMapByOrderKey } from "@/composables/transforms/useSiteOperationSchedulesMapByOrderKey.js";
+import { useSiteOperationSchedulesMapByGroupKey } from "@/composables/transforms/useSiteOperationSchedulesMapByGroupKey.js";
 import { useTable } from "./useTable.js";
 import Head from "./Head.vue";
 import Foot from "./Foot.vue";
@@ -196,41 +199,55 @@ const emit = defineEmits([
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
+/** MAIN COMPOSABLE */
+const { cellColorClass, resolvedColumnWidth } = useTable(props);
+
 /** FETCH SITE COMPOSABLE */
 const { fetchSiteComposable } = useFetch("OperationSchedulesTable");
 const { cachedSites } = fetchSiteComposable;
 
-const {
-  daysInRangeArray,
-  currentDayCount,
-  cellColorClass,
-  groupKeyMappedData,
-  resolvedColumnWidth,
-  tableMinWidth, // 不要かもしれない。コードを参照。
-} = useTable(props);
-
-const orderKeySchedulesMap = computed(() => {
-  const map = new Map();
-  props.schedules.forEach((schedule) => {
-    const orderKey = schedule.orderKey; // `${siteId}_${shiftType}`
-    if (!map.has(orderKey)) {
-      map.set(orderKey, {
-        schedules: [],
-        count: 0,
-        hasMultiple: false,
-        total: 0,
-      });
-    }
-    const groupData = map.get(orderKey);
-    groupData.schedules.push(schedule);
-    groupData.count += schedule.requiredPersonnel || 0;
-    if (groupData.count > schedule.requiredPersonnel) {
-      groupData.hasMultiple = true;
-    }
-    groupData.total += schedule.requiredPersonnel || 0;
-  });
-  return map;
+/** DATE RANGE COMPOSABLE */
+const dateRangeComposable = useDateRange();
+const { daysInRangeArray, currentDayCount, dateRange } = dateRangeComposable;
+watchEffect(() => {
+  dateRange.value = { from: props.startDate, to: props.endDate };
 });
+provide("daysInRangeArray", daysInRangeArray); // Provides for `HEAD`
+
+/*****************************************************************************
+ * SETUP TRANSFORM COMPOSABLES
+ *****************************************************************************/
+/**
+ * 現場稼働予定を現場オーダーキーごとに分類したマップ
+ * {
+ *  orderKey: {
+ *    schedules: Array,
+ *    count: Number,
+ *    hasMultiple: Boolean,
+ *  }
+ */
+const schedulesMapByOrderKey = useSiteOperationSchedulesMapByOrderKey(
+  () => props.schedules,
+);
+
+/**
+ * 現場稼働予定をグループキーごとに分類したマップ（cell スロットで使用）
+ * {
+ *  groupKey: {
+ *   schedules: Array,
+ *   count: Number,
+ *   hasMultiple: Boolean,
+ *   requiredPersonnel: Number,
+ * }
+ */
+const schedulesMapByGroupKey = useSiteOperationSchedulesMapByGroupKey(
+  () => props.schedules,
+  true,
+);
+
+/*****************************************************************************
+ * METHODS
+ *****************************************************************************/
 </script>
 
 <template>
@@ -290,7 +307,7 @@ const orderKeySchedulesMap = computed(() => {
             style="height: unset"
             :colspan="currentDayCount"
           >
-            <div class="fixed-left d-inline-flex align-center">
+            <div :id="order.key" class="fixed-left d-inline-flex align-center">
               <!-- SLOT: prepend-site-shift-type-order -->
               <slot name="prepend-site-shift-type-order" v-bind="{ ...order }">
                 <AddScheduleIcon
@@ -302,7 +319,7 @@ const orderKeySchedulesMap = computed(() => {
                 <!-- Disabled if there are schedules associated with the order key. -->
                 <RemoveSiteOrderIcon
                   v-bind="order"
-                  :disabled="!!orderKeySchedulesMap.get(order.key)"
+                  :disabled="!!schedulesMapByOrderKey.get(order.key)"
                   @click="emit('click:remove-site-order', order.key)"
                 />
               </slot>
@@ -361,7 +378,9 @@ const orderKeySchedulesMap = computed(() => {
                   groupKey: `${order.key}_${dayObject.date}`,
                   isSelected: selectedDate && selectedDate === dayObject.date,
                   dayObject,
-                  ...groupKeyMappedData.get(`${order.key}_${dayObject.date}`),
+                  ...schedulesMapByGroupKey.get(
+                    `${order.key}_${dayObject.date}`,
+                  ),
                   onClick: () => {
                     emit('click:cell', {
                       siteId: order.siteId,
@@ -401,7 +420,6 @@ const orderKeySchedulesMap = computed(() => {
 /* min-width を指定する必要があるとのことだが、これがなくても うまく動いている。一旦コードは残すが、後で不要なら削除するかもしれない。 */
 #operation-schedules-table :deep(table) {
   table-layout: fixed !important;
-  /* min-width: v-bind(tableMinWidth) !important; */
 }
 
 .fixed-left {

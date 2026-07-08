@@ -25,7 +25,6 @@ import { useIndex } from "./useIndex";
 const _props = defineProps({
   items: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
-  fetchSiteComposable: { type: Object, default: undefined },
 });
 const props = useDefaults(_props, "SiteShiftTypeOrderReorder");
 
@@ -51,7 +50,6 @@ defineExpose({ init, submit, cancel });
         <template #item="{ element }">
           <SiteShiftTypeOrderListItem
             v-bind="element"
-            :fetch-site-composable="fetchSiteComposable"
             border
             class="pa-2 mb-2"
             rounded
