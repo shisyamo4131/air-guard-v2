@@ -20,7 +20,6 @@
 import { useDefaults, useGoTo } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 // DATA LAYER COMPOSABLES
 import { useArrangements } from "@/composables/dataLayers/useArrangements";
@@ -28,6 +27,9 @@ import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRang
 import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
 
 // Components
+import TableWeekdayActions from "./TableWeekdayActions.vue";
+import CommandTextDialog from "./CommandTextDialog.vue";
+import SiteShiftTypeJumpMenu from "./SiteShiftTypeJumpMenu.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
 
@@ -58,7 +60,6 @@ const props = useDefaults(_props, "ArrangementsManager");
 /*****************************************************************************
  * SETUP AUTH STORE
  *****************************************************************************/
-const { isDeveloper } = useAuthStore();
 const goTo = useGoTo();
 
 /*****************************************************************************
@@ -179,16 +180,13 @@ function scrollToSiteShiftTypeOrder(evt) {
       <ArrangementsWorkerSelector />
     </FloatingWindow>
 
-    <v-menu
+    <!-- 現場勤務区分ジャンプメニュー -->
+    <SiteShiftTypeJumpMenu
       v-model="siteShiftTypeJumpListMenu"
       :target="siteShiftTypeJumpListMenuTarget"
-    >
-      <SiteShiftTypeOrderList
-        :site-shift-type-order="siteShiftTypeOrder"
-        density="compact"
-        @click:select="scrollToSiteShiftTypeOrder"
-      />
-    </v-menu>
+      :site-shift-type-order="siteShiftTypeOrder"
+      @click:select="scrollToSiteShiftTypeOrder"
+    />
 
     <!-- スケジュール管理テーブル -->
     <OperationSchedulesTable
@@ -211,35 +209,14 @@ function scrollToSiteShiftTypeOrder(evt) {
 
       <!-- 曜日セルのカスタマイズ -->
       <template #weekday="{ column, isSelected }">
-        <div class="d-flex ga-6">
-          <v-btn
-            v-if="isDeveloper"
-            v-tooltip:top="`集中モード切替`"
-            :icon="isSelected ? 'mdi-eye-off' : 'mdi-eye'"
-            size="x-small"
-            @click="selectedDate = column.date"
-          />
-          <v-btn
-            v-tooltip:top="`配置表をダウンロード`"
-            icon="mdi-table-large"
-            size="x-small"
-            @click="() => openPdf(column.date)"
-          />
-          <v-btn
-            v-tooltip:top="`配置指示テキストを表示`"
-            icon="mdi-text-box-outline"
-            size="x-small"
-            @click="
-              () => (arrangementCommandText = getCommandText(column.date))
-            "
-          />
-          <v-btn
-            v-tooltip:top="`現場へジャンプ`"
-            icon="mdi-format-list-checkbox"
-            size="x-small"
-            @click="openSiteShiftTypeJumpListMenu"
-          />
-        </div>
+        <TableWeekdayActions
+          :column="column"
+          :is-selected="isSelected"
+          @click:focus="selectedDate = $event"
+          @click:pdf="openPdf($event)"
+          @click:command-text="arrangementCommandText = getCommandText($event)"
+          @click:jump-list="openSiteShiftTypeJumpListMenu($event)"
+        />
       </template>
 
       <!-- セルのカスタマイズ -->
@@ -334,27 +311,7 @@ function scrollToSiteShiftTypeOrder(evt) {
     />
 
     <!-- 配置テキスト表示ダイアログ -->
-    <v-dialog
-      :model-value="!!arrangementCommandText"
-      max-width="600"
-      @update:model-value="arrangementCommandText = null"
-    >
-      <v-card>
-        <v-card-title class="text-h6">配置テキスト</v-card-title>
-        <v-card-text>
-          <v-textarea
-            :value="arrangementCommandText"
-            rows="10"
-            readonly
-            outlined
-          />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn text @click="arrangementCommandText = null">閉じる</v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+    <CommandTextDialog v-model="arrangementCommandText" />
 
     <!-- スピードダイアル -->
     <SpeedDial
