@@ -96,9 +96,9 @@ const reorder = useSiteShiftTypeReorder({
         </template>
 
         <!-- フッター -->
-        <template #footer="{ dayObject }">
+        <template #footer="{ column }">
           <div class="d-flex justify-center">
-            {{ statistics.get(dayObject.date)?.total || 0 }}
+            {{ statistics.get(column.dateAt)?.total || 0 }}
           </div>
         </template>
       </OperationSchedulesTable>

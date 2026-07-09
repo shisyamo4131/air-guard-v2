@@ -125,7 +125,7 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
-const commandText = ref(null);
+const arrangementCommandText = ref(null);
 const siteShiftTypeJumpListMenu = ref(false);
 const siteShiftTypeJumpListMenuTarget = ref(null);
 
@@ -152,7 +152,7 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
   await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
 }
 
-async function showSiteShiftTypeJumpListMenu(evt) {
+async function openSiteShiftTypeJumpListMenu(evt) {
   if (siteShiftTypeJumpListMenu.value) {
     siteShiftTypeJumpListMenu.value = false;
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -161,7 +161,7 @@ async function showSiteShiftTypeJumpListMenu(evt) {
   siteShiftTypeJumpListMenu.value = true;
 }
 
-function test(evt) {
+function scrollToSiteShiftTypeOrder(evt) {
   const siteOrder = evt.id;
   const target = document.getElementById(siteOrder.key);
   const container =
@@ -186,7 +186,7 @@ function test(evt) {
       <SiteShiftTypeOrderList
         :site-shift-type-order="siteShiftTypeOrder"
         density="compact"
-        @click:select="test"
+        @click:select="scrollToSiteShiftTypeOrder"
       />
     </v-menu>
 
@@ -205,37 +205,39 @@ function test(evt) {
       @click:remove-site-order="removeSiteShiftTypeOrder"
     >
       <!-- 日付の表示形式をカスタマイズ -->
-      <template #append-day="{ dayObject, holidayIcon }">
-        <v-icon v-if="dayObject.isHoliday" v-bind="holidayIcon" />
+      <template #append-day="{ column, holidayIcon }">
+        <v-icon v-if="column.isHoliday" v-bind="holidayIcon" />
       </template>
 
       <!-- 曜日セルのカスタマイズ -->
-      <template #weekday="{ dayObject, isSelected }">
+      <template #weekday="{ column, isSelected }">
         <div class="d-flex ga-6">
           <v-btn
             v-if="isDeveloper"
             v-tooltip:top="`集中モード切替`"
             :icon="isSelected ? 'mdi-eye-off' : 'mdi-eye'"
             size="x-small"
-            @click="selectedDate = dayObject.date"
+            @click="selectedDate = column.date"
           />
           <v-btn
             v-tooltip:top="`配置表をダウンロード`"
             icon="mdi-table-large"
             size="x-small"
-            @click="() => openPdf(dayObject.date)"
+            @click="() => openPdf(column.date)"
           />
           <v-btn
             v-tooltip:top="`配置指示テキストを表示`"
             icon="mdi-text-box-outline"
             size="x-small"
-            @click="() => (commandText = getCommandText(dayObject.date))"
+            @click="
+              () => (arrangementCommandText = getCommandText(column.date))
+            "
           />
           <v-btn
             v-tooltip:top="`現場へジャンプ`"
             icon="mdi-format-list-checkbox"
             size="x-small"
-            @click="showSiteShiftTypeJumpListMenu"
+            @click="openSiteShiftTypeJumpListMenu"
           />
         </div>
       </template>
@@ -333,18 +335,23 @@ function test(evt) {
 
     <!-- 配置テキスト表示ダイアログ -->
     <v-dialog
-      :model-value="!!commandText"
+      :model-value="!!arrangementCommandText"
       max-width="600"
-      @update:model-value="commandText = null"
+      @update:model-value="arrangementCommandText = null"
     >
       <v-card>
         <v-card-title class="text-h6">配置テキスト</v-card-title>
         <v-card-text>
-          <v-textarea :value="commandText" rows="10" readonly outlined />
+          <v-textarea
+            :value="arrangementCommandText"
+            rows="10"
+            readonly
+            outlined
+          />
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn text @click="commandText = null">閉じる</v-btn>
+          <v-btn text @click="arrangementCommandText = null">閉じる</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>

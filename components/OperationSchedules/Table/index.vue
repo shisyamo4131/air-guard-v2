@@ -31,52 +31,52 @@
  *        @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`形式）
  *
  * @slot - prepend-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の前）
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - day - 各日付ヘッダーのカスタム表示用スロット
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - append-day - 各日付ヘッダーのカスタム表示用スロット（ヘッダー日付表示部の後）
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - prepend-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の前）
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - weekday - 各曜日ヘッダーのカスタム表示用スロット
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
  * @slot - append-weekday - 各曜日ヘッダーのカスタム表示用スロット（ヘッダー曜日表示部の後）
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {boolean} isSelected - 日付が選択されているかどうか
  *         @property {Object} holidayIcon - 祝日アイコン用オブジェクト
  *
- * @slot - prepend-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
- *         @property {Object} order - 現場オーダー情報オブジェクト
- *         @property {string} order.siteId - 現場ID
- *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
+ * @slot - row-prepend - 各現場行のカスタム表示用スロット（現場オーダー表示部の前）
+ *         @property {Object} row - 現場オーダー情報オブジェクト
+ *         @property {string} row.siteId - 現場ID
+ *         @property {string} row.shiftType - シフトタイプ
+ *         @property {string} row.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
- * @slot - site-shift-type-order - 各現場行のカスタム表示用スロット
- *         @property {Object} order - 現場オーダー情報オブジェクト
- *         @property {string} order.siteId - 現場ID
- *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
+ * @slot - row-header - 各現場行のカスタム表示用スロット
+ *         @property {Object} row - 現場オーダー情報オブジェクト
+ *         @property {string} row.siteId - 現場ID
+ *         @property {string} row.shiftType - シフトタイプ
+ *         @property {string} row.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
- * @slot - append-site-shift-type-order - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
- *         @property {Object} order - 現場オーダー情報オブジェクト
- *         @property {string} order.siteId - 現場ID
- *         @property {string} order.shiftType - シフトタイプ
- *         @property {string} order.key - 現場オーダーキー（`${siteId}_${shiftType}`）
+ * @slot - row-append - 各現場行のカスタム表示用スロット（現場オーダー表示部の後）
+ *         @property {Object} row - 現場オーダー情報オブジェクト
+ *         @property {string} row.siteId - 現場ID
+ *         @property {string} row.shiftType - シフトタイプ
+ *         @property {string} row.key - 現場オーダーキー（`${siteId}_${shiftType}`）
  *
  * @slot - cell - 各セルのカスタム表示用スロット
  *         @property {String} siteId - 現場ID
@@ -84,26 +84,22 @@
  *         @property {String} date - 日付（YYYY-MM-DD形式）
  *         @property {Object} dateAt - 日付（dayjsオブジェクト）
  *         @property {String} groupKey - グループキー（`${siteId}_${shiftType}_${date}`形式）
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *         @property {Number} count - 必要人員数
  *         @property {Boolean} hasMultiple - 必要人員が複数かどうか
  *         @property {Number} total - 総必要人員数
  *         @property {Array} schedules - 現場稼働予定ドキュメント配列
+ *         @property {Boolean} isSelected - 日付が選択されているかどうか
  *         @property {Function} onClick - クリック時のコールバック関数
  *
  * @slot - footer - 各日付フッターのカスタム表示用スロット
- *         @property {Object} dayObject - @see useDateRange.daysInRangeMap
+ *         @property {Object} column - @see useDateRange.daysInRangeMap
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useFetch } from "@/composables/fetch/useFetch";
-import { useDateRange } from "@/composables/useDateRange.js";
-import { useSiteOperationSchedulesMapByOrderKey } from "@/composables/transforms/useSiteOperationSchedulesMapByOrderKey.js";
-import { useSiteOperationSchedulesMapByGroupKey } from "@/composables/transforms/useSiteOperationSchedulesMapByGroupKey.js";
-import { useTable } from "./useTable.js";
+import { useOperationSchedulesTableModel } from "./useOperationSchedulesTableModel";
 import Head from "./Head.vue";
+import Body from "./Body/index.vue";
 import Foot from "./Foot.vue";
-import AddScheduleIcon from "./AddScheduleIcon.vue";
-import RemoveSiteOrderIcon from "./RemoveSiteOrderIcon.vue";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -199,51 +195,11 @@ const emit = defineEmits([
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-/** MAIN COMPOSABLE */
-const { cellColorClass, resolvedColumnWidth } = useTable(props);
+const { columns, rows, schedulesIndex } =
+  useOperationSchedulesTableModel(props);
 
-/** FETCH SITE COMPOSABLE */
-const { fetchSiteComposable } = useFetch("OperationSchedulesTable");
-const { cachedSites } = fetchSiteComposable;
-
-/** DATE RANGE COMPOSABLE */
-const dateRangeComposable = useDateRange();
-const { daysInRangeArray, currentDayCount, dateRange } = dateRangeComposable;
-watchEffect(() => {
-  dateRange.value = { from: props.startDate, to: props.endDate };
-});
-provide("daysInRangeArray", daysInRangeArray); // Provides for `HEAD`
-
-/*****************************************************************************
- * SETUP TRANSFORM COMPOSABLES
- *****************************************************************************/
-/**
- * 現場稼働予定を現場オーダーキーごとに分類したマップ
- * {
- *  orderKey: {
- *    schedules: Array,
- *    count: Number,
- *    hasMultiple: Boolean,
- *  }
- */
-const schedulesMapByOrderKey = useSiteOperationSchedulesMapByOrderKey(
-  () => props.schedules,
-);
-
-/**
- * 現場稼働予定をグループキーごとに分類したマップ（cell スロットで使用）
- * {
- *  groupKey: {
- *   schedules: Array,
- *   count: Number,
- *   hasMultiple: Boolean,
- *   requiredPersonnel: Number,
- * }
- */
-const schedulesMapByGroupKey = useSiteOperationSchedulesMapByGroupKey(
-  () => props.schedules,
-  true,
-);
+provide("props", props);
+provide("columns", columns);
 
 /*****************************************************************************
  * METHODS
@@ -255,151 +211,74 @@ const schedulesMapByGroupKey = useSiteOperationSchedulesMapByGroupKey(
     <!-- 列幅定義 -->
     <colgroup>
       <col
-        v-for="(_, colIndex) in daysInRangeArray"
-        :key="colIndex"
-        :style="{ width: resolvedColumnWidth, minWidth: resolvedColumnWidth }"
+        v-for="(column, index) in columns"
+        :key="index"
+        :style="column.style.col"
       />
     </colgroup>
 
     <!-- ヘッダー部 -->
     <Head>
       <!-- SLOT: prepend-day -->
-      <template #prepend-day="slotProps">
+      <template v-if="$slots['prepend-day']" #prepend-day="slotProps">
         <slot name="prepend-day" v-bind="slotProps" />
       </template>
 
       <!-- SLOT: day -->
-      <template #day="slotProps">
+      <template v-if="$slots['day']" #day="slotProps">
         <slot name="day" v-bind="slotProps" />
       </template>
 
       <!-- SLOT: append-day -->
-      <template #append-day="slotProps">
+      <template v-if="$slots['append-day']" #append-day="slotProps">
         <slot name="append-day" v-bind="slotProps" />
       </template>
 
       <!-- SLOT: prepend-weekday -->
-      <template #prepend-weekday="slotProps">
+      <template v-if="$slots['prepend-weekday']" #prepend-weekday="slotProps">
         <slot name="prepend-weekday" v-bind="slotProps" />
       </template>
 
       <!-- SLOT: weekday -->
-      <template #weekday="slotProps">
+      <template v-if="$slots['weekday']" #weekday="slotProps">
         <slot name="weekday" v-bind="slotProps" />
       </template>
 
       <!-- SLOT: append-weekday -->
-      <template #append-weekday="slotProps">
+      <template v-if="$slots['append-weekday']" #append-weekday="slotProps">
         <slot name="append-weekday" v-bind="slotProps" />
       </template>
     </Head>
 
     <!-- ボディ部 -->
-    <tbody>
-      <template
-        v-for="(order, rowIndex) in props.siteShiftTypeOrder"
-        :key="rowIndex"
-      >
-        <!-- TR: siteShiftTypeOrder -->
-        <tr>
-          <td
-            class="bg-grey-lighten-4"
-            style="height: unset"
-            :colspan="currentDayCount"
-          >
-            <div :id="order.key" class="fixed-left d-inline-flex align-center">
-              <!-- SLOT: prepend-site-shift-type-order -->
-              <slot name="prepend-site-shift-type-order" v-bind="{ ...order }">
-                <AddScheduleIcon
-                  v-bind="order"
-                  @click="emit('click:add-schedule', { ...order })"
-                />
-                <!-- ICON FOR REMOVE `SITE-SHIFTYPE` -->
-                <!-- Emits `click:remove-site-order` event with the order key. -->
-                <!-- Disabled if there are schedules associated with the order key. -->
-                <RemoveSiteOrderIcon
-                  v-bind="order"
-                  :disabled="!!schedulesMapByOrderKey.get(order.key)"
-                  @click="emit('click:remove-site-order', order.key)"
-                />
-              </slot>
-
-              <!-- SLOT: site-shift-type-order -->
-              <slot name="site-shift-type-order" v-bind="{ ...order }">
-                <div class="py-1 d-flex align-center">
-                  <ShiftTypeChip
-                    :shift-type="order.shiftType"
-                    class="mr-2"
-                    density="compact"
-                    label
-                    size="small"
-                  />
-                  {{ cachedSites?.[order.siteId]?.displayName || "...loading" }}
-                </div>
-              </slot>
-
-              <!-- SLOT: append-site-shift-type-order -->
-              <slot name="append-site-shift-type-order" v-bind="{ ...order }" />
-            </div>
-          </td>
-        </tr>
-
-        <!-- TR: schedule -->
-        <tr>
-          <td
-            v-for="(dayObject, colIndex) in daysInRangeArray"
-            :key="colIndex"
-            :style="{ padding: '8px' }"
-            :class="[
-              dayObject.isHoliday
-                ? cellColorClass[0]
-                : cellColorClass[dayObject.format('d')],
-              dayObject.isToday ? 'bg-yellow-lighten-4' : '',
-            ]"
-          >
-            <div
-              class="d-flex flex-column justify-start fill-height"
-              :style="{
-                filter:
-                  selectedDate && selectedDate !== dayObject.date
-                    ? 'blur(4px)'
-                    : 'none',
-              }"
-            >
-              <!-- SLOT: cell -->
-              <!-- { siteId, shiftType, date, dateAt, groupKey, dayObject } -->
-              <slot
-                name="cell"
-                v-bind="{
-                  siteId: order.siteId,
-                  shiftType: order.shiftType,
-                  date: dayObject.date,
-                  dateAt: dayObject.dateAt,
-                  groupKey: `${order.key}_${dayObject.date}`,
-                  isSelected: selectedDate && selectedDate === dayObject.date,
-                  dayObject,
-                  ...schedulesMapByGroupKey.get(
-                    `${order.key}_${dayObject.date}`,
-                  ),
-                  onClick: () => {
-                    emit('click:cell', {
-                      siteId: order.siteId,
-                      shiftType: order.shiftType,
-                      date: dayObject.date,
-                      dateAt: dayObject.dateAt,
-                      groupKey: `${order.key}_${dayObject.date}`,
-                    });
-                  },
-                }"
-              />
-            </div>
-          </td>
-        </tr>
+    <Body
+      :columns="columns"
+      :rows="rows"
+      :schedules-index="schedulesIndex"
+      :selected-date="selectedDate"
+      @click:cell="emit('click:cell', $event)"
+      @click:add-schedule="emit('click:add-schedule', $event)"
+      @click:remove-site-order="emit('click:remove-site-order', $event)"
+    >
+      <template v-if="$slots['row-prepend']" #row-prepend="slotProps">
+        <slot name="row-prepend" v-bind="slotProps" />
       </template>
-    </tbody>
+
+      <template v-if="$slots['row-header']" #row-header="slotProps">
+        <slot name="row-header" v-bind="slotProps" />
+      </template>
+
+      <template v-if="$slots['row-append']" #row-append="slotProps">
+        <slot name="row-append" v-bind="slotProps" />
+      </template>
+
+      <template v-if="$slots['cell']" #cell="slotProps">
+        <slot name="cell" v-bind="slotProps" />
+      </template>
+    </Body>
 
     <!-- フッター部 -->
-    <Foot v-if="$slots.footer">
+    <Foot v-if="$slots['footer']">
       <!-- SLOT: footer -->
       <template #footer="slotProps">
         <slot name="footer" v-bind="slotProps" />
