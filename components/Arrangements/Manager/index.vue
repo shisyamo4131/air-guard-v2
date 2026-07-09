@@ -17,7 +17,7 @@
  * @property {Date} startDate - スケジュール表示の開始日
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
-import { useDefaults, useGoTo } from "vuetify";
+import { useDefaults } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
@@ -29,7 +29,6 @@ import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersIn
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
-import SiteShiftTypeJumpMenu from "./SiteShiftTypeJumpMenu.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
 
@@ -56,11 +55,6 @@ const _props = defineProps({
   },
 });
 const props = useDefaults(_props, "ArrangementsManager");
-
-/*****************************************************************************
- * SETUP AUTH STORE
- *****************************************************************************/
-const goTo = useGoTo();
 
 /*****************************************************************************
  * SETUP DATA LAYER COMPOSABLE
@@ -130,6 +124,8 @@ const arrangementCommandText = ref(null);
 const siteShiftTypeJumpListMenu = ref(false);
 const siteShiftTypeJumpListMenuTarget = ref(null);
 
+const rowKeyToScroll = ref(null); // OperationSchedulesTable のスクロール用
+
 /*****************************************************************************
  * DEFINE TEMPLATE REFS
  *****************************************************************************/
@@ -139,7 +135,6 @@ const siteOperationScheduleManager = useTemplateRef(
 const arrangementNotificationManager = useTemplateRef(
   "arrangementNotificationManager",
 );
-const operationTable = useTemplateRef("operationTable");
 
 /*****************************************************************************
  * METHODS
@@ -161,16 +156,6 @@ async function openSiteShiftTypeJumpListMenu(evt) {
   siteShiftTypeJumpListMenuTarget.value = evt.target.closest(".v-btn");
   siteShiftTypeJumpListMenu.value = true;
 }
-
-function scrollToSiteShiftTypeOrder(evt) {
-  const siteOrder = evt.id;
-  const target = document.getElementById(siteOrder.key);
-  const container =
-    operationTable.value?.$el?.querySelector(".v-table__wrapper");
-  if (!target || !container) return;
-  const offset = -80; // ヘッダーの高さ分だけスクロール位置を調整
-  goTo(target, { container, duration: 250, offset });
-}
 </script>
 
 <template>
@@ -181,17 +166,22 @@ function scrollToSiteShiftTypeOrder(evt) {
     </FloatingWindow>
 
     <!-- 現場勤務区分ジャンプメニュー -->
-    <SiteShiftTypeJumpMenu
+    <v-menu
       v-model="siteShiftTypeJumpListMenu"
       :target="siteShiftTypeJumpListMenuTarget"
-      :site-shift-type-order="siteShiftTypeOrder"
-      @click:select="scrollToSiteShiftTypeOrder"
-    />
+    >
+      <!-- @click:select の $event.id は siteShiftType オブジェクト -->
+      <SiteShiftTypeOrderList
+        :site-shift-type-order="siteShiftTypeOrder"
+        density="compact"
+        @click:select="({ id }) => (rowKeyToScroll = id.key)"
+      />
+    </v-menu>
 
     <!-- スケジュール管理テーブル -->
     <OperationSchedulesTable
-      ref="operationTable"
       class="fill-height"
+      v-model:scroll-to-row-key="rowKeyToScroll"
       :start-date="props.startDate"
       :end-date="props.endDate"
       :schedules="schedules"

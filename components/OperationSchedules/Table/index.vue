@@ -17,6 +17,8 @@
  * @property {String} holidayIcon - 祝日アイコン
  * @property {String} holidayIconColor - 祝日アイコンの色
  * @property {Array} schedules - 現場稼働予定ドキュメントの配列
+ * @property {String|null} scrollToRowKey - スクロール対象の行キー
+ * @property {String} selectedDate - 選択された日付
  * @property {Array} siteShiftTypeOrder - 現場オーダー配列
  * @property {String|Object} startDate - 開始日付
  * @property {String} weekdayFormat - 曜日フォーマット（ヘッダーカラム表示用）
@@ -95,7 +97,7 @@
  * @slot - footer - 各日付フッターのカスタム表示用スロット
  *         @property {Object} column - @see useDateRange.daysInRangeMap
  *****************************************************************************/
-import { useDefaults } from "vuetify";
+import { useDefaults, useGoTo } from "vuetify";
 import { useOperationSchedulesTableModel } from "./useOperationSchedulesTableModel";
 import Head from "./Head.vue";
 import Body from "./Body/index.vue";
@@ -159,6 +161,18 @@ const _props = defineProps({
    */
   schedules: { type: Array, default: () => [] },
   /**
+   * スクロール対象の行キー
+   * - 指定された行キーに該当する行までスクロールします。
+   * - スクロール後に `update:scrollToRowKey` イベントが発火し、値は null にリセットされます。
+   * - これにより、スクロール → ユーザーによるスクロール → 同一行キーの再指定 というケースでも
+   *   正常にスクロールが行われるようになります。
+   * @type {String|null}
+   */
+  scrollToRowKey: {
+    default: null,
+    validator: (v) => v === null || typeof v === "string",
+  },
+  /**
    * 選択された日付
    * - 指定された日付に該当するセル以外をぼやけさせます。
    */
@@ -190,6 +204,7 @@ const emit = defineEmits([
   "click:cell",
   "click:remove-site-order",
   "click:add-schedule",
+  "update:scrollToRowKey",
 ]);
 
 /*****************************************************************************
@@ -198,12 +213,52 @@ const emit = defineEmits([
 const { columns, rows, schedulesIndex } =
   useOperationSchedulesTableModel(props);
 
-provide("props", props);
-provide("columns", columns);
+/** テーブル内スクロール用の関数 */
+const goTo = useGoTo();
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
+/**
+ * @description 指定された行キーに該当する行までスクロールします
+ * @param {string} rowKey - スクロール対象の行キー
+ */
+function scrollToRow(rowKey) {
+  if (typeof rowKey !== "string") return;
+  const target = document.getElementById(rowKey);
+  const table = document.getElementById("operation-schedules-table");
+  const container = table?.querySelector(".v-table__wrapper");
+  if (!target || !container) return;
+
+  // ヘッダーの高さ分だけスクロール位置を調整
+  const header = table?.querySelector("thead");
+  const offset = header ? -header.getBoundingClientRect().height : 0;
+
+  goTo(target, { container, duration: 250, offset });
+}
+
+/*****************************************************************************
+ * WATCHERS
+ *****************************************************************************/
+/**
+ * @description `props.scrollToRowKey` が変更された場合にスクロールを実行します
+ * - スクロール後に `update:scrollToRowKey` イベントが発火し、値は null にリセットされます。
+ * - これにより、スクロール → ユーザーによるスクロール → 同一行キーの再指定 というケースでも正常にスクロールが行われるようになります。
+ */
+watch(
+  () => props.scrollToRowKey,
+  (newKey) => {
+    if (!newKey) return;
+    scrollToRow(newKey);
+    emit("update:scrollToRowKey", null); // スクロール後にキーをリセット
+  },
+);
+
+/*****************************************************************************
+ * PROVIDES
+ *****************************************************************************/
+provide("props", props);
+provide("columns", columns);
 </script>
 
 <template>
