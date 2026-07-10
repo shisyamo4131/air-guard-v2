@@ -129,7 +129,12 @@ export function useIndex(schedules) {
       const dayFilteredSchedules = schedules.filter(
         (schedule) => schedule.date === date,
       );
-      await pdfComposable.open({ date, schedules: dayFilteredSchedules });
+      await pdfComposable.open({
+        date,
+        schedules: dayFilteredSchedules,
+        siteShiftTypeOrder:
+          siteShiftTypeOrderComposable.siteShiftTypeOrder.value,
+      });
     } catch (error) {
       logger.error({ message: "Failed to open arrangement sheet PDF", error });
     } finally {
