@@ -19,6 +19,7 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useFloatingWindow } from "@/composables/useFloatingWindow";
+import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 // DATA LAYER COMPOSABLES
@@ -121,8 +122,11 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
 const arrangementCommandText = ref(null);
-const siteShiftTypeJumpListMenu = ref(false);
-const siteShiftTypeJumpListMenuTarget = ref(null);
+const {
+  isOpen: siteShiftTypeJumpListMenu,
+  target: siteShiftTypeJumpListMenuTarget,
+  open: openSiteShiftTypeJumpListMenu,
+} = useTargetedMenu({ target: ".v-btn" });
 
 const rowKeyToScroll = ref(null); // OperationSchedulesTable のスクロール用
 
@@ -148,14 +152,6 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
   await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
 }
 
-async function openSiteShiftTypeJumpListMenu(evt) {
-  if (siteShiftTypeJumpListMenu.value) {
-    siteShiftTypeJumpListMenu.value = false;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  siteShiftTypeJumpListMenuTarget.value = evt.target.closest(".v-btn");
-  siteShiftTypeJumpListMenu.value = true;
-}
 </script>
 
 <template>

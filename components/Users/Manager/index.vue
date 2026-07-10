@@ -16,6 +16,7 @@ import { useRolePresets } from "@/composables/useRolePresets";
 import { useDefaults } from "vuetify";
 import UserCardMenu from "./CardMenu.vue";
 import { useBaseManager } from "@/composables/useBaseManager";
+import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -47,9 +48,12 @@ const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 const user = reactive(new User());
 const search = ref("");
 const toolberMenu = ref(false);
-const userCardMenu = ref(false);
-const userCardMenuTarget = ref(null);
-const userCardMenuTargetUser = ref(null);
+const {
+  isOpen: userCardMenu,
+  target: userCardMenuTarget,
+  context: userCardMenuTargetUser,
+  open: openUserCardMenu,
+} = useTargetedMenu();
 
 /*****************************************************************************
  * COMPUTED
@@ -117,23 +121,6 @@ async function handleEnableUser(user) {
     isLoading.value = false;
     loadings.remove(key);
   }
-}
-
-/**
- * ユーザーごとのメニューを開きます。
- * @param param - メニューを開くためのイベントとユーザーオブジェクト
- * @property {Event} param.event - メニューを開くためのイベントオブジェクト
- * @property {Object} param.user - メニューの対象となるユーザーオブジェクト
- * @return {Promise<void>} - メニューの表示が完了するまでの Promise
- */
-async function showUserCardMenu({ event, user }) {
-  if (userCardMenu.value) {
-    userCardMenu.value = false;
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  userCardMenuTarget.value = event.target;
-  userCardMenuTargetUser.value = user;
-  userCardMenu.value = true;
 }
 
 /**
@@ -241,7 +228,7 @@ async function handleCreate(item) {
           <v-btn
             icon="mdi-dots-vertical"
             size="small"
-            @click="(event) => showUserCardMenu({ event, user: item })"
+            @click="(event) => openUserCardMenu(event, item)"
           />
         </template>
       </UsersIterator>
