@@ -1,7 +1,7 @@
 <script setup>
 /*****************************************************************************
- * @file components/SiteOperationScheduleDetail/Manager/index.vue
- * @description A component for managing single site operation schedule detail.
+ * @file ./components/SiteOperationScheduleDetail/Manager/index.vue
+ * @description 現場稼働予定詳細管理用コンポーネント
  * @extends AirItemManager
  *****************************************************************************/
 import { useDefaults } from "vuetify";
