@@ -3,9 +3,11 @@ import { useFetch } from "@/composables/fetch/useFetch";
 import { useLogger } from "@/composables/useLogger";
 import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
+import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
 
 /*****************************************************************************
- * @file ./composables/dataLayer/useArrangements.js
+ * @file ./composables/dataLayers/useArrangementsInRange.js
  * @description 配置管理用データレイヤーコンポーザブル
  * @param {Object} options - コンポーザブルのオプション
  * @param {Ref<Date>} options.from - 配置管理の開始日時を表す Ref
@@ -15,6 +17,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
  *  notifications: Object[], // 配置通知ドキュメントの配列
  *  arrangedEmployeesMap: Ref<Map<string, Map<string, string[]>>>,
  *  arrangedOutsourcersMap: Ref<Map<string, Map<string, string[]>>>,
+ *  selectableEmployees: Ref<Object[]>, // 選択可能な従業員ドキュメントの配列
+ * selectableOutsourcers: Ref<Object[]>, // 選択可能な外注先ドキュメントの配列
  *  schedulesIndex: {
  *    byDocId: Ref<Map<string, Object>>,
  *    byDocId は主キーとして扱う現場稼働予定インデックスです。
@@ -37,7 +41,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
  *  isEmployeeArranged: Function, - `employeeId` と `date` から配置済みかどうかを確認するための関数
  * }}
  *****************************************************************************/
-export function useArrangements({ from, to } = {}) {
+export function useArrangementsInRange({ from, to } = {}) {
   const { isDev } = useAuthStore();
 
   /*****************************************************************************
@@ -52,15 +56,21 @@ export function useArrangements({ from, to } = {}) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useArrangements");
+  const logger = useLogger("useArrangementsInRange");
   const {
     fetchSiteComposable,
     fetchEmployeeComposable,
     fetchOutsourcerComposable,
-  } = useFetch("useArrangements");
+  } = useFetch("useArrangementsInRange");
   const { fetchSite } = fetchSiteComposable;
   const { fetchEmployee } = fetchEmployeeComposable;
   const { fetchOutsourcer } = fetchOutsourcerComposable;
+
+  /** selectableEmployees from useEmployeesInRange */
+  const { docs: selectableEmployees } = useEmployeesInRange({ from, to });
+
+  /** selectableOutsourcers from useOutsourcersInRange */
+  const { docs: selectableOutsourcers } = useOutsourcersInRange({ from, to });
 
   /*****************************************************************************
    * DEFINE STATES
@@ -497,7 +507,7 @@ export function useArrangements({ from, to } = {}) {
   /*****************************************************************************
    * CLEANUP
    *****************************************************************************/
-  // `useArrangements` のスコープが破棄されたときに購読も解放します。
+  // `useArrangementsInRange` のスコープが破棄されたときに購読も解放します。
   Vue.onScopeDispose(() => {
     scheduleInstance.unsubscribe();
     arrangementNotificationInstance.unsubscribe();
@@ -512,17 +522,22 @@ export function useArrangements({ from, to } = {}) {
     notifications: arrangementNotificationInstance.docs,
     arrangedEmployeesMap,
     arrangedOutsourcersMap,
+    selectableEmployees,
+    selectableOutsourcers,
+
     /** INDEXES */
     schedulesIndex: {
       byDocId: schedulesByDocId,
       byGroupKey: schedulesByGroupKey,
       groupKeyByScheduleId,
     },
+
     /** NOTIFICATION INDEXES */
     notificationIndexes: {
       byDocId: notificationsByDocId,
       byScheduleId: notificationsByScheduleId,
     },
+
     // LOOKUPS
     getSchedule,
     getScheduleByGroupKey,

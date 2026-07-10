@@ -23,9 +23,9 @@ import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 // DATA LAYER COMPOSABLES
-import { useArrangements } from "@/composables/dataLayers/useArrangements";
-import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
-import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
+import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
+// import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
+// import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
 
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
@@ -62,33 +62,25 @@ const props = useDefaults(_props, "ArrangementsManager");
  * - `props.startDate`, `props.endDate` で指定された期間の配置管理に関わる
  *   データを取得・提供します。
  *****************************************************************************/
-const { schedules, getNotification, isEmployeeArranged } = useArrangements({
+const {
+  schedules,
+  getNotification,
+  isEmployeeArranged,
+  selectableEmployees,
+  selectableOutsourcers,
+} = useArrangementsInRange({
   from: toRef(() => props.startDate),
   to: toRef(() => props.endDate),
 });
-provide("isEmployeeArranged", isEmployeeArranged); // ArrangementsWorkerSelector で使用
 
 /*****************************************************************************
- * SETUP EMPLOYEES IN RANGE COMPOSABLE
- * - `props.startDate`, `props.endDate` で指定された期間に在職中である
- *   Employee インスタンスの配列を取得・提供します。
+ * SETUP TARGETED MENU COMPOSABLE
  *****************************************************************************/
-const { docs: selectableEmployees } = useEmployeesInRange({
-  from: toRef(() => props.startDate),
-  to: toRef(() => props.endDate),
-});
-provide("selectableEmployees", selectableEmployees); // 子コンポーネントに提供
-
-/*****************************************************************************
- * SETUP OUTSOURCERS IN RANGE COMPOSABLE
- * - `props.startDate`, `props.endDate` で指定された期間に契約中である
- *   Outsourcer インスタンスの配列を取得・提供します。
- *****************************************************************************/
-const { docs: selectableOutsourcers } = useOutsourcersInRange({
-  from: toRef(() => props.startDate),
-  to: toRef(() => props.endDate),
-});
-provide("selectableOutsourcers", selectableOutsourcers); // 子コンポーネントに提供
+const {
+  isOpen: siteShiftTypeJumpListMenu,
+  target: siteShiftTypeJumpListMenuTarget,
+  open: openSiteShiftTypeJumpListMenu,
+} = useTargetedMenu({ target: ".v-btn" });
 
 /*****************************************************************************
  * SETUP MANAGER COMPOSABLE
@@ -122,12 +114,6 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
 const arrangementCommandText = ref(null);
-const {
-  isOpen: siteShiftTypeJumpListMenu,
-  target: siteShiftTypeJumpListMenuTarget,
-  open: openSiteShiftTypeJumpListMenu,
-} = useTargetedMenu({ target: ".v-btn" });
-
 const rowKeyToScroll = ref(null); // OperationSchedulesTable のスクロール用
 
 /*****************************************************************************
@@ -152,6 +138,13 @@ async function handleClickAddSchedule({ siteId, shiftType }) {
   await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
 }
 
+/*****************************************************************************
+ * PROVIDES
+ *****************************************************************************/
+/** ArrangementsWorkerSelector で使用 */
+provide("isEmployeeArranged", isEmployeeArranged);
+provide("selectableEmployees", selectableEmployees);
+provide("selectableOutsourcers", selectableOutsourcers);
 </script>
 
 <template>
