@@ -5,14 +5,14 @@
  * - この composable は配置表 UI の補助と、更新・PDF・通知操作の仲介を担当します。
  *****************************************************************************/
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
-import { useLogger } from "../composables/useLogger";
+import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useSelectableDate } from "./useSelectableDate";
 import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder.js";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
-import * as Vue from "vue";
 
 /**
  * ArrangementsManager の UI 補助 composable を返します。
@@ -85,33 +85,8 @@ export function useIndex(schedules) {
     siteShiftTypeOrder: siteShiftTypeOrderComposable.siteShiftTypeOrder,
   });
 
-  /*****************************************************************************
-   * DEFINE STATES
-   *****************************************************************************/
-  const internalSelectedDate = Vue.ref(null); // コンポーネントで選択された日付文字列
-
-  /*****************************************************************************
-   * COMPUTED
-   *****************************************************************************/
-  /**
-   * 選択中の日付
-   * - `OperationSchedulesTable` の `selectedDate` と双方向バインディングされる予定の状態です。
-   * - `OperationSchedulesTable` 内で日付が選択されると、この状態が更新されます。
-   * - 選択解除のため、同じ日付が再選択された場合は `null` に戻します。
-   * - 初期値は null で、日付が選択されていない状態を表します。
-   */
-  const selectedDate = Vue.computed({
-    get() {
-      return internalSelectedDate.value;
-    },
-    set(v) {
-      if (v === internalSelectedDate.value) {
-        internalSelectedDate.value = null; // 同じ日付が選択された場合は選択を解除
-        return;
-      }
-      internalSelectedDate.value = v;
-    },
-  });
+  /** 選択中日付管理コンポーザブル */
+  const { selectedDate } = useSelectableDate();
 
   /*****************************************************************************
    * METHODS
