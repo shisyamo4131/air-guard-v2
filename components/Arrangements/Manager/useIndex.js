@@ -4,7 +4,6 @@
  * - データ取得やインデックス管理は useArrangementsInRange.js 側に寄せています。
  * - この composable は配置表 UI の補助と、更新・PDF・通知操作の仲介を担当します。
  *****************************************************************************/
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "../composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
@@ -13,7 +12,6 @@ import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
-import { SiteOperationSchedule } from "@/schemas";
 import * as Vue from "vue";
 
 /**
@@ -22,15 +20,12 @@ import * as Vue from "vue";
  * - スケジュール複製
  * - 選択中の日付の管理
  * - 通知 / 更新 / PDF / コマンド文生成の仲介
- * @param {SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
+ * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
  * @returns {{
  *   siteShiftTypeReorderComposable: Object,
  *   duplicatorComposable: Object,
  *   siteShiftTypeOrder: Array,
  *   selectedDate: Ref<string|null>,
- *   notify: Function,
- *   updateSchedule: Function,
- *   updateSchedules: Function,
  *   openPdf: Function,
  *   getCommandText: Function,
  *   removeSiteShiftTypeOrder: Function,
@@ -41,8 +36,6 @@ export function useIndex(schedules) {
   /*****************************************************************************
    * SETUP STORES
    *****************************************************************************/
-  const auth = useAuthStore();
-  const isDev = Vue.computed(() => auth.isDev);
   const loadings = useLoadingsStore();
 
   /*****************************************************************************
@@ -123,69 +116,6 @@ export function useIndex(schedules) {
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
-
-  /**
-   * 引数で指定されたスケジュールの配置通知を作成します。
-   * - データ更新ではなく通知作成の UI 操作だけを担当します。
-   * @param {*} schedule - 配置通知を作成するスケジュールオブジェクト
-   * @returns {Promise<void>}
-   */
-  const notify = async (schedule) => {
-    const key = loadings.add(`Creating notifications`);
-    try {
-      await schedule.notify();
-    } catch (error) {
-      logger.error({ message: "Failed to create notification", error });
-    } finally {
-      loadings.remove(key);
-    }
-  };
-
-  /**
-   * 引数で受け取ったスケジュールを更新します。
-   * - `SiteOperationScheduleCard` の `update:schedule` イベントで使用される、
-   *   作業員の追加・削除や順序変更をデータベースに反映するためのものです。
-   * Note: 複数スケジュールの更新が必要な場合は、updateSchedules を使用します。
-   *       updateSchedules を個別に呼び出すよりも効率的です。
-   * - 変更前後の workers は開発時のみ確認用に出力します。
-   * @param {SiteOperationSchedule} schedule - 更新するスケジュールオブジェクト
-   */
-  const updateSchedule = async (schedule) => {
-    // 開発モードの場合、更新前後の作業員IDリストをコンソールに表示
-    if (isDev) {
-      const before = schedule._beforeData.workers.map((w) => w.workerId);
-      const after = schedule.workers.map((w) => w.workerId);
-      console.table({ before, after });
-    }
-    try {
-      await schedule.update();
-    } catch (error) {
-      logger.error({ message: "Failed to update schedule", error });
-    }
-  };
-
-  /**
-   * 引数で受け取った複数のスケジュールを一括で更新します。
-   * - `DraggableOperationSchedules` の `update:schedules` イベントで使用される、
-   *   複数スケジュールの更新をデータベースに反映するためのものです。
-   *   `displayOrder` の変更を反映することを目的としています。
-   * - トランザクションを使用して一括更新を行います。
-   * - 空配列なら呼び出されても実質的に処理は走りません。
-   * @param {Array<SiteOperationSchedule>} schedules
-   */
-  const updateSchedules = async (schedules) => {
-    try {
-      await SiteOperationSchedule.runTransaction(async (transaction) => {
-        const promises = schedules.map((schedule) =>
-          schedule.update({ transaction }),
-        );
-        await Promise.all(promises);
-      });
-    } catch (error) {
-      logger.error({ message: "Failed to update schedules", error });
-    }
-  };
-
   /**
    * 指定された日付の配置表PDFを生成して表示します。
    * - ローディング状態を管理し、PDF生成中はユーザーにフィードバックを提供します。
@@ -217,9 +147,6 @@ export function useIndex(schedules) {
     selectedDate,
 
     /** METHODS */
-    notify,
-    updateSchedule,
-    updateSchedules,
     openPdf,
     getCommandText,
     removeSiteShiftTypeOrder: siteShiftTypeOrderComposable.remove,

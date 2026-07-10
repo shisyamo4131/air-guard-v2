@@ -26,6 +26,9 @@ import { useArrangementsInRange } from "@/composables/dataLayers/useArrangements
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 
+// DOMAIN COMPOSABLES
+import { useSiteOperationScheduleActions } from "@/composables/domain/siteOperationSchedule/useSiteOperationScheduleActions";
+
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
@@ -87,6 +90,12 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
   useFloatingWindow();
 
 /*****************************************************************************
+ * SETUP DOMAIN COMPOSABLES
+ *****************************************************************************/
+const { notify, updateSchedule, updateSchedules } =
+  useSiteOperationScheduleActions();
+
+/*****************************************************************************
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
 const managerComposable = useIndex(schedules);
@@ -98,9 +107,6 @@ const {
   // DATA
   siteShiftTypeOrder,
   selectedDate,
-  notify,
-  updateSchedule,
-  updateSchedules,
   openPdf,
   getCommandText,
   removeSiteShiftTypeOrder,
