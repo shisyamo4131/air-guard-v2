@@ -18,14 +18,14 @@
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useFloatingWindow } from "@/composables/useFloatingWindow";
-import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 // DATA LAYER COMPOSABLES
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
-// import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
-// import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
+
+// OVERLAY COMPOSABLES
+import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
+import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
@@ -74,13 +74,18 @@ const {
 });
 
 /*****************************************************************************
- * SETUP TARGETED MENU COMPOSABLE
+ * SETUP OVERLAY COMPOSABLE
  *****************************************************************************/
+/** Targeted menu for SiteShiftTypeListJumpMenu */
 const {
   isOpen: siteShiftTypeJumpListMenu,
   target: siteShiftTypeJumpListMenuTarget,
   open: openSiteShiftTypeJumpListMenu,
 } = useTargetedMenu({ target: ".v-btn" });
+
+/** Floating window for ArrangementsWorkerSelector */
+const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
+  useFloatingWindow();
 
 /*****************************************************************************
  * SETUP MANAGER COMPOSABLE
@@ -105,10 +110,6 @@ const {
 /** For schedule detail management */
 const siteOperationScheduleDetailManager =
   useSiteOperationScheduleDetailManager();
-
-/** For floating window */
-const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
-  useFloatingWindow();
 
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
