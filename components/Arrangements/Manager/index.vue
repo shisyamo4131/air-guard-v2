@@ -18,7 +18,6 @@
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { useSiteOperationScheduleDetailManager } from "@/composables/useSiteOperationScheduleDetailManager";
 
 // DATA LAYER COMPOSABLES
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
@@ -107,10 +106,6 @@ const {
   removeSiteShiftTypeOrder,
 } = managerComposable;
 
-/** For schedule detail management */
-const siteOperationScheduleDetailManager =
-  useSiteOperationScheduleDetailManager();
-
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
  *****************************************************************************/
@@ -126,6 +121,7 @@ const siteOperationScheduleManager = useTemplateRef(
 const arrangementNotificationManager = useTemplateRef(
   "arrangementNotificationManager",
 );
+const workerManager = useTemplateRef("workerManager");
 
 /*****************************************************************************
  * METHODS
@@ -237,7 +233,7 @@ provide("selectableOutsourcers", selectableOutsourcers);
                         getNotification(draggableWorkersProps.worker)
                       "
                       @click:edit="
-                        siteOperationScheduleDetailManager.set({
+                        workerManager.toUpdate({
                           schedule: draggableWorkersProps.schedule,
                           worker: draggableWorkersProps.worker,
                         })
@@ -285,8 +281,8 @@ provide("selectableOutsourcers", selectableOutsourcers);
     />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
-    <SiteOperationScheduleDetailManager
-      v-bind="siteOperationScheduleDetailManager.attrs.value"
+    <SiteOperationScheduleWorkerDetailManager
+      ref="workerManager"
       hide-delete-btn
     />
 

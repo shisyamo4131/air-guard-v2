@@ -5,6 +5,7 @@
  * @extends AirItemManager
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { useBaseManager } from "@/composables/useBaseManager";
 import CustomInput from "@/components/SiteOperationScheduleDetail/CustomInput";
 
 /*****************************************************************************
@@ -16,12 +17,17 @@ defineOptions({
 });
 
 /*****************************************************************************
- * DEFINE PROPS & EMITS
+ * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
 });
 const props = useDefaults(_props, "SiteOperationScheduleDetailManager");
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const { attrs } = useBaseManager("SiteOperationScheduleDetailManager");
 
 /*****************************************************************************
  * TEMPLATE REF
@@ -40,9 +46,9 @@ defineExpose({
 
 <template>
   <air-item-manager
-    v-bind="$attrs"
+    v-bind="{ ...$attrs, ...attrs }"
     ref="component"
-    :custom-input="CustomInput"
+    :custom-input="props.customInput"
     :dialog-props="{ maxWidth: 360 }"
   />
 </template>
