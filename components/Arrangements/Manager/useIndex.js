@@ -17,6 +17,7 @@ import { useArrangementNotificationsCommandText } from "@/composables/useArrange
  * - 選択中の日付の管理
  * - 通知 / 更新 / PDF / コマンド文生成の仲介
  * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
+ * @param {Ref<Array<Object>>} siteShiftTypeOrder - 現場勤務区分オーダーの配列（補完済み）
  * @returns {{
  *   selectedDate: Ref<string|null>,
  *   openPdf: Function,

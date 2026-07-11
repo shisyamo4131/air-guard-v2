@@ -91,20 +91,6 @@ const {
 });
 
 /*****************************************************************************
- * SETUP OVERLAY COMPOSABLE
- *****************************************************************************/
-/** Targeted menu for SiteShiftTypeListJumpMenu */
-const {
-  isOpen: siteShiftTypeJumpListMenu,
-  target: siteShiftTypeJumpListMenuTarget,
-  open: openSiteShiftTypeJumpListMenu,
-} = useTargetedMenu({ target: ".v-btn" });
-
-/** Floating window for ArrangementsWorkerSelector */
-const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
-  useFloatingWindow();
-
-/*****************************************************************************
  * SETUP DOMAIN COMPOSABLES
  *****************************************************************************/
 /** 現場稼働予定更新アクション */
@@ -132,6 +118,20 @@ const siteShiftTypeReorderComposable = useSiteShiftTypeReorder({
   items: siteShiftTypeOrder,
   onUpdate: updateSiteShiftTypeOrder,
 });
+
+/*****************************************************************************
+ * SETUP OVERLAY COMPOSABLE
+ *****************************************************************************/
+/** Targeted menu for SiteShiftTypeListJumpMenu */
+const {
+  isOpen: siteShiftTypeJumpListMenu,
+  target: siteShiftTypeJumpListMenuTarget,
+  open: openSiteShiftTypeJumpListMenu,
+} = useTargetedMenu({ target: ".v-btn" });
+
+/** Floating window for ArrangementsWorkerSelector */
+const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
+  useFloatingWindow();
 
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS

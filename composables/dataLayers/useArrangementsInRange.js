@@ -20,6 +20,7 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
  *  arrangedOutsourcersMap: Ref<Map<string, Map<string, string[]>>>,
  *  selectableEmployees: Ref<Object[]>, // 選択可能な従業員ドキュメントの配列
  *  selectableOutsourcers: Ref<Object[]>, // 選択可能な外注先ドキュメントの配列
+ *  siteShiftTypeOrder: Ref<Array<Object>>, // 現場勤務区分オーダーの配列（補完済み）
  *  schedulesIndex: {
  *    byDocId: Ref<Map<string, Object>>,
  *    byDocId は主キーとして扱う現場稼働予定インデックスです。
@@ -70,6 +71,7 @@ export function useArrangementsInRange({ from, to } = {}) {
     to,
   });
 
+  /** siteShiftTypeOrder from useSiteShiftTypeOrderEnriched */
   const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
     type: ORDER_TYPE.ARRANGEMENT,
     enrichmentOrders: schedules,
@@ -77,7 +79,8 @@ export function useArrangementsInRange({ from, to } = {}) {
 
   /*****************************************************************************
    * DEFINE STATES
-   *****************************************************************************/
+   *****************************************************************************/
+
   /**
    * 現場稼働予定インデックス（docId）
    * - キー: SiteOperationSchedule の docId
@@ -321,7 +324,7 @@ export function useArrangementsInRange({ from, to } = {}) {
     );
     return !!notificationsMap && notificationsMap.size > 0;
   }
-
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
