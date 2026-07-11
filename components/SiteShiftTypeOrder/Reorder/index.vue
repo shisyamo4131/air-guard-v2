@@ -17,7 +17,6 @@
  * @slots subtitle - カードのサブタイトルスロット
  * @slots actions - カードのアクションスロット（デフォルトで送信・キャンセルボタンを提供）
  *****************************************************************************/
-import draggable from "vuedraggable";
 import { useDefaults } from "vuetify";
 import { useSiteShiftTypeOrderReorder } from "./useSiteShiftTypeOrderReorder";
 
