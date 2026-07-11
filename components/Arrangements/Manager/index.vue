@@ -109,6 +109,9 @@ const {
   selectedDate,
   openPdf,
   getCommandText,
+
+  // METHODS
+  updateSiteShiftTypeOrder,
   removeSiteShiftTypeOrder,
 } = managerComposable;
 

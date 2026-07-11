@@ -8,11 +8,13 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useSelectableDate } from "./useSelectableDate";
-import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder.js";
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
+import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
+import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /**
  * ArrangementsManager の UI 補助 composable を返します。
@@ -28,6 +30,8 @@ import { useArrangementNotificationsCommandText } from "@/composables/useArrange
  *   selectedDate: Ref<string|null>,
  *   openPdf: Function,
  *   getCommandText: Function,
+ *
+ *   updateSiteShiftTypeOrder: Function,
  *   removeSiteShiftTypeOrder: Function,
  * }}
  */
@@ -48,12 +52,19 @@ export function useIndex(schedules) {
     fetchOutsourcerComposable,
   } = useFetch("ArrangementsManager");
 
+  /** 現場勤務区分オーダー更新コンポーザブル */
+  const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
+    useSiteShiftTypeOrderActions({
+      type: ORDER_TYPE.ARRANGEMENT,
+    });
+
   /**
    * Site Shift Type Order Composable
    * @description 現場勤務区分オーダーを管理
    */
-  const siteShiftTypeOrderComposable = useSiteShiftTypeOrder({
-    schedules,
+  const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
+    type: ORDER_TYPE.ARRANGEMENT,
+    enrichmentOrders: schedules,
   });
 
   /**
@@ -61,8 +72,8 @@ export function useIndex(schedules) {
    * @description 現場勤務区分の並び替えを管理
    */
   const siteShiftTypeReorderComposable = useSiteShiftTypeReorder({
-    items: siteShiftTypeOrderComposable.siteShiftTypeOrder,
-    onUpdate: siteShiftTypeOrderComposable.update,
+    items: siteShiftTypeOrder,
+    onUpdate: updateSiteShiftTypeOrder,
   });
 
   /**
@@ -82,7 +93,7 @@ export function useIndex(schedules) {
 
   const { getCommandText } = useArrangementNotificationsCommandText({
     schedules,
-    siteShiftTypeOrder: siteShiftTypeOrderComposable.siteShiftTypeOrder,
+    siteShiftTypeOrder,
   });
 
   /** 選択中日付管理コンポーザブル */
@@ -107,8 +118,7 @@ export function useIndex(schedules) {
       await pdfComposable.open({
         date,
         schedules: dayFilteredSchedules,
-        siteShiftTypeOrder:
-          siteShiftTypeOrderComposable.siteShiftTypeOrder.value,
+        siteShiftTypeOrder: siteShiftTypeOrder.value,
       });
     } catch (error) {
       logger.error({ message: "Failed to open arrangement sheet PDF", error });
@@ -123,12 +133,14 @@ export function useIndex(schedules) {
     duplicatorComposable,
 
     /** DATA  */
-    siteShiftTypeOrder: siteShiftTypeOrderComposable.siteShiftTypeOrder,
+    siteShiftTypeOrder,
     selectedDate,
 
     /** METHODS */
     openPdf,
     getCommandText,
-    removeSiteShiftTypeOrder: siteShiftTypeOrderComposable.remove,
+
+    updateSiteShiftTypeOrder,
+    removeSiteShiftTypeOrder,
   };
 }

@@ -16,7 +16,7 @@ defineOptions({
 const _props = defineProps({
   count: { type: Number, default: 0 },
   hasMultiple: { type: Boolean, default: false },
-  total: { type: Number, default: 0 },
+  requiredPersonnel: { type: Number, default: 0 },
 });
 const props = useDefaults(_props, "SiteOperationScheduleRequiredPersonnelChip");
 const emit = defineEmits(["click"]);
@@ -34,7 +34,7 @@ const attrs = Vue.computed(() => {
 
 const chipAttrs = Vue.computed(() => {
   return {
-    text: props.total || "-",
+    text: props.requiredPersonnel || "-",
     size: "small",
     onClick: () => emit("click"),
   };

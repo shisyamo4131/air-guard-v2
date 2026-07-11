@@ -9,9 +9,13 @@ import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOpera
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
-import { useSiteShiftTypeOrder } from "@/composables/dataLayers/useSiteShiftTypeOrder";
+
+import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
+
 import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
+import { useSiteShiftTypeOrderActions } from "~/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
 
 /** SETUP COMPOSABLES */
 const { fetchSiteComposable } = useFetch("OperationSchedulesManager");
@@ -35,11 +39,21 @@ const { docs, statistics } = useSiteOperationSchedules({
   fetchSiteComposable,
 });
 
-// 現場オーダーコンポーザブル
-const { siteShiftTypeOrder, update } = useSiteShiftTypeOrder({
-  type: "schedule",
-  schedules: docs,
-  fetchSiteComposable,
+/*****************************************************************************
+ * SETUP DATA LAYER COMPOSABLES
+ *****************************************************************************/
+// 現場勤務区分オーダー
+const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
+  type: ORDER_TYPE.SCHEDULE,
+  enrichmentOrders: docs,
+});
+
+/*****************************************************************************
+ * SETUP DOMAIN COMPOSABLES
+ *****************************************************************************/
+// 現場勤務区分オーダー更新用アクション
+const { update } = useSiteShiftTypeOrderActions({
+  type: ORDER_TYPE.SCHEDULE,
 });
 
 // 現場稼働予定管理用コンポーザブル
