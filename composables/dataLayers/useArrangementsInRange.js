@@ -5,6 +5,8 @@ import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
 import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
+import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
  * @file ./composables/dataLayers/useArrangementsInRange.js
@@ -18,7 +20,7 @@ import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersIn
  *  arrangedEmployeesMap: Ref<Map<string, Map<string, string[]>>>,
  *  arrangedOutsourcersMap: Ref<Map<string, Map<string, string[]>>>,
  *  selectableEmployees: Ref<Object[]>, // 選択可能な従業員ドキュメントの配列
- * selectableOutsourcers: Ref<Object[]>, // 選択可能な外注先ドキュメントの配列
+ *  selectableOutsourcers: Ref<Object[]>, // 選択可能な外注先ドキュメントの配列
  *  schedulesIndex: {
  *    byDocId: Ref<Map<string, Object>>,
  *    byDocId は主キーとして扱う現場稼働予定インデックスです。
@@ -71,6 +73,11 @@ export function useArrangementsInRange({ from, to } = {}) {
 
   /** selectableOutsourcers from useOutsourcersInRange */
   const { docs: selectableOutsourcers } = useOutsourcersInRange({ from, to });
+
+  const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
+    type: ORDER_TYPE.ARRANGEMENT,
+    enrichmentOrders: [], // schedules はまだ購読していないため、空配列を渡す
+  });
 
   /*****************************************************************************
    * DEFINE STATES
@@ -524,6 +531,7 @@ export function useArrangementsInRange({ from, to } = {}) {
     arrangedOutsourcersMap,
     selectableEmployees,
     selectableOutsourcers,
+    siteShiftTypeOrder, // 補完された現場勤務区分オーダー
 
     /** INDEXES */
     schedulesIndex: {

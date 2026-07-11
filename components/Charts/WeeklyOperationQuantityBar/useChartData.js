@@ -6,7 +6,7 @@ import { computed } from "vue";
 import { useDateRange } from "@/composables/useDateRange";
 import { useConstants } from "@/composables/useConstants";
 import { useOperationResultsInRange } from "@/composables/dataLayers/useOperationResultsInRange";
-import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/useSiteOperationSchedulesInRange";
+import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange";
 import { useOperationQuantityBySecurityTypeInRange } from "@/composables/domain/operation/useOperationQuantityBySecurityTypeInRange";
 
 export function useChartData(props) {
@@ -22,9 +22,9 @@ export function useChartData(props) {
   });
 
   // 指定期間の SiteOperationSchedule を取得
-  const schedules = useSiteOperationSchedulesInRange({
-    startDate,
-    endDate,
+  const { docs: schedules } = useSiteOperationSchedulesInRange({
+    from: startDate,
+    to: endDate,
   });
 
   // 指定期間の OperationResult を取得

@@ -1,3 +1,5 @@
+import * as Vue from "vue";
+
 /*****************************************************************************
  * @file ./composables/domain/operation/useOperationQuantityBySecurityTypeInRange.js
  * @description 指定期間の日付・警備種別ごとの稼働数を返す
@@ -17,7 +19,7 @@ export function useOperationQuantityBySecurityTypeInRange({
   operations,
   daysInRangeMap,
 }) {
-  return computed(() => {
+  return Vue.computed(() => {
     const result = new Map();
 
     // date -> securityType -> docId -> quantity
@@ -26,7 +28,7 @@ export function useOperationQuantityBySecurityTypeInRange({
     /*************************************************************************
      * SiteOperationSchedule
      *************************************************************************/
-    for (const schedule of schedules) {
+    for (const schedule of Vue.unref(schedules)) {
       const securityTypeMap = quantityMapByDate.get(schedule.date) ?? new Map();
 
       const operationMap =
@@ -41,7 +43,7 @@ export function useOperationQuantityBySecurityTypeInRange({
     /*************************************************************************
      * OperationResult
      *************************************************************************/
-    for (const operation of operations) {
+    for (const operation of Vue.unref(operations)) {
       const securityTypeMap =
         quantityMapByDate.get(operation.date) ?? new Map();
 
