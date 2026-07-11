@@ -266,10 +266,10 @@ provide("selectableOutsourcers", selectableOutsourcers);
       max-width="480"
     >
       <template #default>
-        <SiteShiftTypeOrderReorderManager
+        <SiteShiftTypeOrderReorderForm
           v-bind="siteShiftTypeReorderComposable.attrs.value"
         >
-        </SiteShiftTypeOrderReorderManager>
+        </SiteShiftTypeOrderReorderForm>
       </template>
     </AtomsDialogsFullscreen>
 

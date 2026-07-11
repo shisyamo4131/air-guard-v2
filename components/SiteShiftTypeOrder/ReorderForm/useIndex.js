@@ -1,6 +1,6 @@
 /*****************************************************************************
- * @file ./components/SiteShiftTypeOrder/ReorderManager/useIndex.js
- * @description SiteShiftTypeOrderReorderManager 用コンポーザブル
+ * @file ./components/SiteShiftTypeOrder/ReorderForm/useIndex.js
+ * @description SiteShiftTypeOrderReorderForm 用コンポーザブル
  * - 現場勤務区分オーダーのビジネスロジックを提供
  * - 都度更新ではなく、`Draft State Pattern` を採用するため、ユーザーによる更新の
  *   反映は `submit` イベントで処理する。
@@ -24,7 +24,7 @@ export function useIndex(props, emit) {
    * SETUP COMPOSABLES
    *****************************************************************************/
   /** FETCH SITE */
-  const { fetchSiteComposable } = useFetch("SiteShiftTypeOrderReorderManager");
+  const { fetchSiteComposable } = useFetch("SiteShiftTypeOrderReorderForm");
   const { fetchSite } = fetchSiteComposable;
 
   /*****************************************************************************

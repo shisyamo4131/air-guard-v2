@@ -142,10 +142,10 @@ const reorder = useSiteShiftTypeReorder({
     <!-- 現場オーダー並び替え用コンポーネント -->
     <AtomsDialogsFullscreen v-model="reorder.dialog.value" max-width="480">
       <template #default>
-        <SiteShiftTypeOrderReorderManager v-bind="reorder.attrs.value">
+        <SiteShiftTypeOrderReorderForm v-bind="reorder.attrs.value">
           <template #title>並び替え</template>
           <template #subtitle>現場の並び順を変更できます。</template>
-        </SiteShiftTypeOrderReorderManager>
+        </SiteShiftTypeOrderReorderForm>
       </template>
     </AtomsDialogsFullscreen>
   </div>

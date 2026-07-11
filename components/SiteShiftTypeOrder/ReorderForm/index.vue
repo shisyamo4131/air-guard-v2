@@ -1,6 +1,6 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/SiteShiftTypeOrder/ReorderManager/index.vue
+ * @file ./components/SiteShiftTypeOrder/ReorderForm/index.vue
  * @description 現場勤務区分オーダーの並び替えを行うコンポーネント
  * - `Draft State Pattern` を使用して、内部モデル値を管理
  * - ユーザーの操作結果は `submit` イベントで通知
@@ -18,7 +18,7 @@ import { useIndex } from "./useIndex";
  * DEFINE OPTIONS
  *****************************************************************************/
 defineOptions({
-  name: "SiteShiftTypeOrderReorderManager",
+  name: "SiteShiftTypeOrderReorderForm",
   inheritAttrs: false,
 });
 
@@ -29,7 +29,7 @@ const _props = defineProps({
   siteShiftTypeOrder: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
 });
-const props = useDefaults(_props, "SiteShiftTypeOrderReorderManager");
+const props = useDefaults(_props, "SiteShiftTypeOrderReorderForm");
 const emit = defineEmits(["submit", "cancel"]);
 
 /*****************************************************************************
