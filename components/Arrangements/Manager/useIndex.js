@@ -4,10 +4,8 @@
  * - データ取得やインデックス管理は useArrangementsInRange.js 側に寄せています。
  * - この composable は配置表 UI の補助と、更新・PDF・通知操作の仲介を担当します。
  *****************************************************************************/
-import * as Vue from "vue";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "@/composables/useLogger";
-import { useFetch } from "@/composables/fetch/useFetch";
 import { useSelectableDate } from "./useSelectableDate";
 import { useArrangementSheetPdf } from "@/composables/pdf/useArrangementSheetPdf";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
@@ -35,20 +33,9 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
    * SETUP COMPOSABLES
    *****************************************************************************/
   const logger = useLogger("ArrangementsManager");
-  const {
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  } = useFetch("ArrangementsManager");
 
-  /**
-   * 配置表PDF作成コンポーザブル
-   */
-  const pdfComposable = useArrangementSheetPdf({
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  });
+  /** 配置表 PDF 生成コンポーザブル */
+  const { open: createPdf } = useArrangementSheetPdf();
 
   const { getCommandText } = useArrangementNotificationsCommandText({
     schedules,
@@ -64,19 +51,16 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
   /**
    * 指定された日付の配置表PDFを生成して表示します。
    * - ローディング状態を管理し、PDF生成中はユーザーにフィードバックを提供します。
-   * - 対象日付の schedule だけを抽出して PDF composable に渡します。
+   * - PDF composable 側で対象日付の schedule だけを抽出します。
    * @param {string} date - PDFを生成する対象の日付（例: "2024-01-01"）
    * @returns {Promise<void>}
    */
   const openPdf = async (date) => {
     const key = loadings.add(`Generating PDF for ${date}`);
     try {
-      const dayFilteredSchedules = Vue.unref(schedules).filter(
-        (schedule) => schedule.date === date,
-      );
-      await pdfComposable.open({
+      await createPdf({
         date,
-        schedules: dayFilteredSchedules,
+        schedules: schedules.value,
         siteShiftTypeOrder: siteShiftTypeOrder.value,
       });
     } catch (error) {

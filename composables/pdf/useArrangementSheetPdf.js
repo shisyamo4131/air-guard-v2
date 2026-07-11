@@ -9,9 +9,7 @@ import dayjs from "dayjs";
 import ja from "dayjs/locale/ja";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { SiteOperationSchedule } from "@/schemas";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
  * コンポーザブル内ユーティリティ
@@ -61,18 +59,25 @@ function emptyCells(length, value) {
  * 配置表に出力するデータを取得して返します。
  * - 現場稼働予定ドキュメントを取得し、関連する現場、従業員、外注先ドキュメントを取得します。
  * - 取得したデータを元に、配置表出力用のデータ配列を生成して返します。
- * - options で事前に取得済みのドキュメントマップオブジェクトを渡すこともできます。
+ * - useFetch 経由で取得済みのドキュメントマップオブジェクトを参照します。
  * @param {Date} date - 出力対象日
  * @param {Object} [options] - オプション
- * @param {Array<Object>} [options.schedules] - 事前に取得済みの現場稼働予定ドキュメント配列
- * @param {Array<Object>} [options.fetchEmployeeComposable] - 事前に取得済みの従業員ドキュメントマップオブジェクト
- * @param {Array<Object>} [options.fetchOutsourcerComposable] - 事前に取得済みの外注先ドキュメントマップオブジェクト
- * @param {Array<Object>} [options.fetchSiteComposable] - 事前に取得済みの現場ドキュメントマップオブジェクト
- * @param {Array<Object>} [options.siteShiftTypeOrder] - 現場勤務区分オーダー
+ * @param {Array<Object>} [options.schedules] - 事前に取得済みの現場稼働予定ドキュメント配列。
+ *   指定された場合でも `date` に一致する予定だけをこの composable 内で抽出します。
+ *   指定されない場合は `date` を条件に SiteOperationSchedule ドキュメントを内部取得します。
+ *   配置管理画面のように期間分の予定を既に保持している場合は、そのまま渡すことで
+ *   呼び出し側の日付フィルタ実装を不要にしつつ、余計な fetch を避けられます。
+ * @param {Array<Object>} [options.siteShiftTypeOrder] - 補完済みの現場勤務区分オーダー。
+ *   出力対象を増減させるためではなく、取得済みの現場稼働予定を並び替えるために使用します。
+ *   通常の siteShiftTypeOrder だけでは、オーダー未登録の siteId / shiftType を持つ予定が
+ *   存在する場合に安定した並び順を作れないため、useSiteShiftTypeOrderEnriched などで
+ *   現場稼働予定を元に補完された配列を渡してください。
+ * @param {Object} [options.fetchEmployeeComposable] - useFetch から取得した従業員取得コンポーザブル
+ * @param {Object} [options.fetchOutsourcerComposable] - useFetch から取得した外注先取得コンポーザブル
+ * @param {Object} [options.fetchSiteComposable] - useFetch から取得した現場取得コンポーザブル
  * @returns {Promise<Array<Object>>} - 出力データの配列
  */
 const fetchData = async (date, options) => {
-  // オプションで渡されたコンポーザブル、または内部コンポーザブルを使用
   const { fetchEmployee, cachedEmployees } = options.fetchEmployeeComposable;
   const { fetchOutsourcer, cachedOutsourcers } =
     options.fetchOutsourcerComposable;
@@ -82,11 +87,14 @@ const fetchData = async (date, options) => {
   const scheduleInstance = new SiteOperationSchedule();
 
   // 現場稼働予定ドキュメントを取得
-  const scheduleDocs =
-    options?.schedules ||
-    (await scheduleInstance.fetchDocs({
+  const sourceScheduleDocs = options?.schedules
+    ? options.schedules.filter((schedule) => schedule.date === date)
+    : await scheduleInstance.fetchDocs({
       constraints: [["where", "date", "==", date]],
-    }));
+    });
+
+  // 呼び出し側から渡された配列を sort で破壊しないよう、出力用の配列を別に作ります。
+  const scheduleDocs = [...sourceScheduleDocs];
 
   // 現場稼働予定ドキュメントが存在しない場合は空の配列を返す
   if (scheduleDocs.length === 0) return [];
@@ -384,26 +392,29 @@ async function initializePdf() {
 /*****************************************************************************
  * コンポーザブル定義
  *****************************************************************************/
-export function useArrangementSheetPdf({
-  fetchEmployeeComposable: providedFetchEmpComp,
-  fetchOutsourcerComposable: providedFetchOutComp,
-  fetchSiteComposable: providedFetchSiteComp,
-} = {}) {
+export function useArrangementSheetPdf() {
   /** define composables */
-  // オプションで渡されたコンポーザブル、または内部コンポーザブルを使用
-  const fetchEmployeeComposable = providedFetchEmpComp || useFetchEmployee();
-  const fetchOutsourcerComposable =
-    providedFetchOutComp || useFetchOutsourcer();
-  const fetchSiteComposable = providedFetchSiteComp || useFetchSite();
+  const {
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+    fetchSiteComposable,
+  } = useFetch("useArrangementSheetPdf");
   const { company } = useAuthStore();
 
   /**
    * 指定された日付の配置表PDFを生成してブラウザで開きます。
-   * - `schedules` が渡された場合はそれを使用し、渡されない場合は内部で現場稼働予定ドキュメントを取得します。
+   * - `date` は必須です。
+   * - `schedules` は任意です。渡された場合でも `date` に一致する予定だけを
+   *   この composable 内で抽出します。渡されない場合は `date` を条件に
+   *   SiteOperationSchedule を内部取得します。
+   * - `siteShiftTypeOrder` は任意ですが、指定する場合は補完済みの配列を想定しています。
+   *   これは通常のオーダーに存在しない siteId / shiftType の予定も含めて、
+   *   配置表の並び順を安定させるためです。
    * @param {Object} options - オプション
    * @param {string} options.date - PDFを生成する対象の日付（YYYY-MM-DD形式）
-   * @param {Array<Object>} options.schedules - 事前に取得済みの現場稼働予定ドキュメント配列（オプション）
-   * @param {Array<Object>} options.siteShiftTypeOrder - 現場勤務区分オーダー（オプション）
+   * @param {Array<Object>} [options.schedules] - 事前に取得済みの現場稼働予定ドキュメント配列。
+   *   期間分の配列を渡しても、`date` に一致する予定だけを出力対象にします。
+   * @param {Array<Object>} [options.siteShiftTypeOrder] - 補完済みの現場勤務区分オーダー
    */
   const open = async ({ date, schedules, siteShiftTypeOrder } = {}) => {
     // 実際に使用する時点で初期化
