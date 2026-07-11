@@ -6,7 +6,7 @@
  * - `Draft State Pattern` を使用して、内部モデル値を管理
  * - ユーザーの操作結果は `submit` イベントで通知
  *
- * @property {Array} items - 現場オーダーの配列
+ * @property {Array} siteShiftTypeOrder - 現場勤務区分オーダーの配列
  * @property {Boolean} loading - ローディング状態
  * @property {Object} fetchSiteComposable - 現場情報取得用コンポーザブル
  *
@@ -19,21 +19,29 @@
  *****************************************************************************/
 import draggable from "vuedraggable";
 import { useDefaults } from "vuetify";
-import { useIndex } from "./useIndex";
+import { useSiteShiftTypeOrderReorder } from "./useSiteShiftTypeOrderReorder";
 
-/** SETUP PROPS */
+/*****************************************************************************
+ * DEFINE PROPS & EMITS
+ *****************************************************************************/
 const _props = defineProps({
-  items: { type: Array, default: () => [] },
+  siteShiftTypeOrder: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "SiteShiftTypeOrderReorder");
-
-/** SETUP EMITS */
 const emit = defineEmits(["submit", "cancel"]);
 
-/** SETUP COMPOSABLES */
-const { items, init, cancel, submit, isChanged } = useIndex(props, emit);
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+const { items, init, cancel, submit, isChanged } = useSiteShiftTypeOrderReorder(
+  props,
+  emit,
+);
 
+/*****************************************************************************
+ * DEFINE EXPOSE
+ *****************************************************************************/
 defineExpose({ init, submit, cancel });
 </script>
 

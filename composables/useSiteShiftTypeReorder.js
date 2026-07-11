@@ -61,7 +61,7 @@ export function useSiteShiftTypeReorder({ items, onUpdate }) {
    */
   const attrs = Vue.computed(() => {
     return {
-      items: items.value,
+      siteShiftTypeOrder: items.value,
       loading: isLoading.value,
       onSubmit: handlerSubmit,
       onCancel: handlerCancel,
