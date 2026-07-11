@@ -5,9 +5,12 @@ import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
- * @file ./composables/domain/siteOperationSchedule/useSiteOperationScheduleActions.js
+ * @file ./composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js
  * @description
- * - 現場稼働予定の更新・通知作成・複数スケジュールの一括更新を担当する composable です。
+ * - 現場稼働予定の更新・通知作成・複数スケジュールの一括更新を、
+ *   画面操作から利用しやすい形で提供する application composable です。
+ * - Firestore への具体的な保存処理は SiteOperationSchedule インスタンスに委譲し、
+ *   この composable は loading / error handling / 開発時ログを含む操作手順を担当します。
  *****************************************************************************/
 export function useSiteOperationScheduleActions() {
   /*****************************************************************************

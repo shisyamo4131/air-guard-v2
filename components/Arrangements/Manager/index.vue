@@ -25,7 +25,6 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
 
 // DOMAIN COMPOSABLES
-import { useSiteOperationScheduleActions } from "@/composables/domain/siteOperationSchedule/useSiteOperationScheduleActions";
 import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
 
 // MANAGER COMPOSABLES
@@ -93,10 +92,6 @@ const {
 /*****************************************************************************
  * SETUP DOMAIN COMPOSABLES
  *****************************************************************************/
-/** 現場稼働予定更新アクション */
-const { notify, updateSchedule, updateSchedules } =
-  useSiteOperationScheduleActions();
-
 /** 現場勤務区分オーダー更新アクション */
 const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
   useSiteShiftTypeOrderActions({
@@ -107,12 +102,9 @@ const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
 const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
-const {
-  // DATA
-  selectedDate,
-  openPdf,
-  getCommandText,
-} = managerComposable;
+const { selectedDate } = managerComposable;
+const { openPdf, getCommandText, notify, updateSchedule, updateSchedules } =
+  managerComposable;
 
 const siteShiftTypeReorderComposable = useSiteShiftTypeReorder({
   items: siteShiftTypeOrder,

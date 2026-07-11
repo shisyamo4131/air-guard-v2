@@ -6,6 +6,7 @@
 import { useSelectableDate } from "./useSelectableDate";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
 import { useOpenArrangementSheetPdf } from "@/composables/application/arrangement/useOpenArrangementSheetPdf";
+import { useSiteOperationScheduleActions } from "@/composables/application/siteOperationSchedule/useSiteOperationScheduleActions";
 
 /*****************************************************************************
  * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
@@ -26,6 +27,10 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
     schedules,
     siteShiftTypeOrder,
   });
+
+  /** 現場稼働予定更新アクション */
+  const { notify, updateSchedule, updateSchedules } =
+    useSiteOperationScheduleActions();
 
   /** 選択中日付管理コンポーザブル */
   const { selectedDate } = useSelectableDate();
@@ -53,5 +58,8 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
     /** METHODS */
     openPdf,
     getCommandText,
+    notify,
+    updateSchedule,
+    updateSchedules,
   };
 }
