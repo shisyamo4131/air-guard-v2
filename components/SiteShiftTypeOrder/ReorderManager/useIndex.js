@@ -1,6 +1,6 @@
 /*****************************************************************************
- * @file ./components/SiteShiftTypeOrder/Reorder/useSiteShiftTypeOrderReorder.js
- * @description SiteShiftTypeOrderReorder 用コンポーザブル
+ * @file ./components/SiteShiftTypeOrder/ReorderManager/useIndex.js
+ * @description SiteShiftTypeOrderReorderManager 用コンポーザブル
  * - 現場勤務区分オーダーのビジネスロジックを提供
  * - 都度更新ではなく、`Draft State Pattern` を採用するため、ユーザーによる更新の
  *   反映は `submit` イベントで処理する。
@@ -19,12 +19,12 @@ import { SiteOrder } from "@/schemas";
  * @returns {Function} cancel - 操作をキャンセルし、'cancel' イベントを発火する関数
  * @returns {Function} init - internalItems を props.siteShiftTypeOrder と同期する関数
  *****************************************************************************/
-export function useSiteShiftTypeOrderReorder(props, emit) {
+export function useIndex(props, emit) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
   /** FETCH SITE */
-  const { fetchSiteComposable } = useFetch("useSiteShiftTypeOrderReorder");
+  const { fetchSiteComposable } = useFetch("SiteShiftTypeOrderReorderManager");
   const { fetchSite } = fetchSiteComposable;
 
   /*****************************************************************************

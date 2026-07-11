@@ -266,12 +266,12 @@ provide("selectableOutsourcers", selectableOutsourcers);
       max-width="480"
     >
       <template #default>
-        <SiteShiftTypeOrderReorder
+        <SiteShiftTypeOrderReorderManager
           v-bind="siteShiftTypeReorderComposable.attrs.value"
         >
           <template #title>並び替え</template>
           <template #subtitle>現場－勤務区分の並び順を変更できます。</template>
-        </SiteShiftTypeOrderReorder>
+        </SiteShiftTypeOrderReorderManager>
       </template>
     </AtomsDialogsFullscreen>
 
