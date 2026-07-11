@@ -71,6 +71,7 @@ const {
   isEmployeeArranged,
   selectableEmployees,
   selectableOutsourcers,
+  siteShiftTypeOrder,
 } = useArrangementsInRange({
   from: toRef(() => props.startDate),
   to: toRef(() => props.endDate),
@@ -106,7 +107,6 @@ const {
   duplicatorComposable,
 
   // DATA
-  siteShiftTypeOrder,
   selectedDate,
   openPdf,
   getCommandText,
