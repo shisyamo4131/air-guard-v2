@@ -1,20 +1,24 @@
 import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
-import { Employee } from "@/schemas";
+import { Outsourcer } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useFetch } from "@/composables/fetch/useFetch";
 
 /*****************************************************************************
- * @file ./composables/dataLayer/useEmployeesInRange.js
- * @description 従業員範囲用データレイヤーコンポーザブル
+ * @file ./composables/dataLayers/outsourcer/useOutsourcersInRange.js
+ * @description 外注先範囲用データレイヤーコンポーザブル
+ * [NOTE]
+ * - `useEmployeesInRange` と同様の構造で実装していますが、2026-06-15 現在、外注先には
+ *   契約の開始や終了といった日時データが存在しないため、期間に基づくフィルタリングは行っていません。
+ *   純粋な「契約中外注先の購読」コンポーザブルとして機能します。
  * @param {Object} options - コンポーザブルのオプション
- * @param {Ref<Date>} options.from - 従業員範囲の開始日時を表す Ref
- * @param {Ref<Date>} options.to - 従業員範囲の終了日時を表す Ref
+ * @param {Ref<Date>} options.from - 外注先範囲の開始日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
+ * @param {Ref<Date>} options.to - 外注先範囲の終了日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
  * @returns {{
- *   docs: ComputedRef<Employee[]>
+ *   docs: ComputedRef<Outsourcer[]>
  * }}
  *****************************************************************************/
-export function useEmployeesInRange({ from, to } = {}) {
+export function useOutsourcersInRange({ from, to } = {}) {
   const { isDev } = useAuthStore();
 
   /*****************************************************************************
@@ -54,51 +58,36 @@ export function useEmployeesInRange({ from, to } = {}) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useEmployeesInRange");
-  const { fetchEmployeeComposable } = useFetch("useEmployeesInRange");
-  const { pushEmployee } = fetchEmployeeComposable;
+  const logger = useLogger("useOutsourcersInRange");
+  const { fetchOutsourcerComposable } = useFetch("useOutsourcersInRange");
+  const { pushOutsourcer } = fetchOutsourcerComposable;
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const activeEmployeeInstance = Vue.reactive(new Employee()); // 在職者用 Employee インスタンス
-  const resignedEmployeeInstance = Vue.reactive(new Employee()); // 退職者用 Employee インスタンス
+  const outsourcerInstance = Vue.reactive(new Outsourcer()); // Outsourcer インスタンス
 
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
   /**
-   * 指定された期間の従業員ドキュメントについて購読を開始します。
+   * 指定された期間の外注先ドキュメントについて購読を開始します。
    * - 各インスタンスの `subscribe()` は直前に `unsubscribe()` を自動実行します。
-   * - `subscribeDocs` のコールバック内で、関連する従業員情報をフェッチします。
+   * - `subscribeDocs` のコールバック内で、関連する外注先情報をフェッチします。
    * @param {[Date, Date]} dateRange - `from` と `to` の配列
    * @returns {void}
    */
   function subscribe([fromDate, toDate]) {
     validateDateValues([fromDate, toDate]);
     const activeConstraints = [
-      ["where", "employmentStatus", "==", Employee.STATUS_ACTIVE],
-      ["where", "dateOfHire", "<=", toDate],
-    ];
-    const resignedConstraints = [
-      ["where", "employmentStatus", "==", Employee.STATUS_RESIGNED],
-      ["where", "dateOfHire", "<=", toDate],
-      ["where", "dateOfTermination", ">=", fromDate],
+      ["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE],
     ];
     try {
-      activeEmployeeInstance.subscribeDocs(
+      outsourcerInstance.subscribeDocs(
         { constraints: activeConstraints },
         (doc) => {
-          if (typeof pushEmployee === "function") {
-            pushEmployee(doc);
-          }
-        },
-      );
-      resignedEmployeeInstance.subscribeDocs(
-        { constraints: resignedConstraints },
-        (doc) => {
-          if (typeof pushEmployee === "function") {
-            pushEmployee(doc);
+          if (typeof pushOutsourcer === "function") {
+            pushOutsourcer(doc);
           }
         },
       );
@@ -108,8 +97,7 @@ export function useEmployeesInRange({ from, to } = {}) {
         error,
         data: { fromDate, toDate },
       });
-      activeEmployeeInstance.unsubscribe();
-      resignedEmployeeInstance.unsubscribe();
+      outsourcerInstance.unsubscribe();
     }
   }
 
@@ -137,10 +125,7 @@ export function useEmployeesInRange({ from, to } = {}) {
    *****************************************************************************/
   const docs = Vue.computed(() => {
     const map = new Map();
-    for (const doc of activeEmployeeInstance.docs) {
-      map.set(doc.docId, doc);
-    }
-    for (const doc of resignedEmployeeInstance.docs) {
+    for (const doc of outsourcerInstance.docs) {
       map.set(doc.docId, doc);
     }
     return [...map.values()];
@@ -150,8 +135,7 @@ export function useEmployeesInRange({ from, to } = {}) {
    * CLEANUP
    *****************************************************************************/
   Vue.onScopeDispose(() => {
-    activeEmployeeInstance.unsubscribe();
-    resignedEmployeeInstance.unsubscribe();
+    outsourcerInstance.unsubscribe();
   });
 
   /*****************************************************************************

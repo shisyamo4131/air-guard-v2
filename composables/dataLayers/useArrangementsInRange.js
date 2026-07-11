@@ -1,10 +1,9 @@
 import * as Vue from "vue";
-import { useFetch } from "@/composables/fetch/useFetch";
-import { useLogger } from "@/composables/useLogger";
-import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useEmployeesInRange } from "@/composables/dataLayers/useEmployeesInRange";
-import { useOutsourcersInRange } from "@/composables/dataLayers/useOutsourcersInRange";
+import { SiteOperationSchedule } from "@/schemas";
+import { useEmployeesInRange } from "@/composables/dataLayers/employee/useEmployeesInRange";
+import { useOutsourcersInRange } from "@/composables/dataLayers/outsourcer/useOutsourcersInRange";
+import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange";
+import { useArrangementNotificationsInRange } from "@/composables/dataLayers/arrangementNotification/useArrangementNotificationsInRange";
 import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
@@ -44,8 +43,6 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
  * }}
  *****************************************************************************/
 export function useArrangementsInRange({ from, to } = {}) {
-  const { isDev } = useAuthStore();
-
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
@@ -58,45 +55,42 @@ export function useArrangementsInRange({ from, to } = {}) {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useArrangementsInRange");
-  const {
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  } = useFetch("useArrangementsInRange");
-  const { fetchSite } = fetchSiteComposable;
-  const { fetchEmployee } = fetchEmployeeComposable;
-  const { fetchOutsourcer } = fetchOutsourcerComposable;
-
   /** selectableEmployees from useEmployeesInRange */
   const { docs: selectableEmployees } = useEmployeesInRange({ from, to });
 
   /** selectableOutsourcers from useOutsourcersInRange */
   const { docs: selectableOutsourcers } = useOutsourcersInRange({ from, to });
 
+  /** SiteOperationSchedules from useSiteOperationSchedulesInRange */
+  const { docs: schedules } = useSiteOperationSchedulesInRange({ from, to });
+
+  /** ArrangementNotifications from useArrangementNotificationsInRange */
+  const { docs: notifications } = useArrangementNotificationsInRange({
+    from,
+    to,
+  });
+
   const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
     type: ORDER_TYPE.ARRANGEMENT,
-    enrichmentOrders: [], // schedules はまだ購読していないため、空配列を渡す
+    enrichmentOrders: schedules,
   });
 
   /*****************************************************************************
    * DEFINE STATES
-   *****************************************************************************/
-  /** SiteOperationSchedule インスタンス */
-  const scheduleInstance = Vue.reactive(new SiteOperationSchedule());
-
-  /** ArrangementNotification インスタンス */
-  const arrangementNotificationInstance = Vue.reactive(
-    new ArrangementNotification(),
-  );
-
+   *****************************************************************************/
   /**
    * 現場稼働予定インデックス（docId）
    * - キー: SiteOperationSchedule の docId
    * - 値: SiteOperationSchedule ドキュメント
    * - 主キーとして扱うため、groupKey 変更の影響を受けません。
    */
-  const schedulesByDocId = Vue.shallowRef(new Map());
+  const schedulesByDocId = Vue.computed(() => {
+    const result = new Map();
+    for (const schedule of schedules.value) {
+      result.set(schedule.docId, schedule);
+    }
+    return result;
+  });
 
   /**
    * 現場稼働予定インデックス（groupKey）
@@ -104,14 +98,26 @@ export function useArrangementsInRange({ from, to } = {}) {
    * - 値: SiteOperationSchedule ドキュメント
    * - 表示や検索用の派生キーとして使います。
    */
-  const schedulesByGroupKey = Vue.shallowRef(new Map());
+  const schedulesByGroupKey = Vue.computed(() => {
+    const result = new Map();
+    for (const schedule of schedules.value) {
+      result.set(_createScheduleGroupKey(schedule), schedule);
+    }
+    return result;
+  });
 
   /**
    * 現場稼働予定インデックス（docId -> groupKey）
    * - docId をキーに、直近の groupKey を保持します。
    * - groupKey が変わった際に旧キーを掃除するために使います。
    */
-  const groupKeyByScheduleId = Vue.shallowRef(new Map());
+  const groupKeyByScheduleId = Vue.computed(() => {
+    const result = new Map();
+    for (const schedule of schedules.value) {
+      result.set(schedule.docId, _createScheduleGroupKey(schedule));
+    }
+    return result;
+  });
 
   /**
    * 配置通知インデックス（docId）
@@ -119,7 +125,13 @@ export function useArrangementsInRange({ from, to } = {}) {
    * - 値: ArrangementNotification ドキュメント
    * - docId は `${siteOperationScheduleId}_${workerId}` の composite key です。
    */
-  const notificationsByDocId = Vue.shallowRef(new Map());
+  const notificationsByDocId = Vue.computed(() => {
+    const result = new Map();
+    for (const notification of notifications.value) {
+      result.set(notification.docId, notification);
+    }
+    return result;
+  });
 
   /**
    * 配置通知インデックス（スケジュール）
@@ -127,7 +139,17 @@ export function useArrangementsInRange({ from, to } = {}) {
    * - 値: Map<notificationId, ArrangementNotification ドキュメント>
    * - 内部の Map のキーは ArrangementNotification ドキュメントの docId です。
    */
-  const notificationsByScheduleId = Vue.shallowRef(new Map());
+  const notificationsByScheduleId = Vue.computed(() => {
+    const result = new Map();
+    for (const notification of notifications.value) {
+      const scheduleId = notification.siteOperationScheduleId;
+      if (!result.has(scheduleId)) {
+        result.set(scheduleId, new Map());
+      }
+      result.get(scheduleId).set(notification.docId, notification);
+    }
+    return result;
+  });
 
   /*****************************************************************************
    * METHODS (INTERNAL)
@@ -205,7 +227,7 @@ export function useArrangementsInRange({ from, to } = {}) {
    * @returns {Map} - Map<date: string, Map<shiftType: string, Array<employeeId: string>>>
    */
   const arrangedEmployeesMap = Vue.computed(() => {
-    return _createArrangementMap(scheduleInstance.docs, "employeeIds");
+    return _createArrangementMap(schedules.value, "employeeIds");
   });
 
   /**
@@ -215,7 +237,7 @@ export function useArrangementsInRange({ from, to } = {}) {
    * @returns {Map} - Map<date: string, Map<shiftType: string, Array<outsourcerId: string>>>
    */
   const arrangedOutsourcersMap = Vue.computed(() => {
-    return _createArrangementMap(scheduleInstance.docs, "outsourcerIds");
+    return _createArrangementMap(schedules.value, "outsourcerIds");
   });
 
   /**
@@ -299,234 +321,14 @@ export function useArrangementsInRange({ from, to } = {}) {
     );
     return !!notificationsMap && notificationsMap.size > 0;
   }
-
-  /**
-   * 指定されたスケジュールIDと配置通知IDに基づいて、配置通知インデックス（スケジュール）から配置通知を削除します。
-   * - 配置通知を削除した結果、スケジュールIDに紐づく配置通知がなくなった場合は、スケジュールID自体もインデックスから削除します。
-   * @param {string} scheduleId - スケジュールID
-   * @param {string} notificationId - 配置通知ID
-   * @returns {void}
-   */
-  function removeFromScheduleIndex(scheduleId, notificationId) {
-    const notificationsMap = notificationsByScheduleId.value.get(scheduleId);
-    if (!notificationsMap) return;
-    notificationsMap.delete(notificationId);
-    if (notificationsMap.size === 0) {
-      notificationsByScheduleId.value.delete(scheduleId);
-    }
-  }
-
-  /**
-   * 指定された配置通知ドキュメントに対して、インデックスの変更を適用します。
-   * - `notificationsByDocId` と `notificationsByScheduleId` を同期させます。
-   * - `subscribeDocs` から受け取る changeType をそのまま反映します。
-   * @param {ArrangementNotification} item - 配置通知ドキュメント
-   * @param {"added" | "modified" | "removed"} changeType - 変更タイプ
-   * @returns {void}
-   */
-  function applyNotificationIndexChange(item, changeType) {
-    const notificationId = item.docId;
-    const scheduleId = item.siteOperationScheduleId;
-
-    switch (changeType) {
-      // 追加、変更時の処理
-      case "added":
-      case "modified": {
-        // 配置通知インデックス（docId）を更新（既存は上書きになる）
-        notificationsByDocId.value.set(notificationId, item);
-
-        // 配置通知インデックス（スケジュール）が存在しない場合は Map を値として追加
-        if (!notificationsByScheduleId.value.has(scheduleId)) {
-          notificationsByScheduleId.value.set(scheduleId, new Map());
-        }
-
-        // 配置通知インデックス（スケジュール）を更新（既存は上書きになる）
-        notificationsByScheduleId.value
-          .get(scheduleId)
-          .set(notificationId, item);
-        break;
-      }
-
-      // 削除時の処理
-      case "removed": {
-        // 配置通知インデックス（docId）から削除
-        notificationsByDocId.value.delete(notificationId);
-
-        // 配置通知インデックス（スケジュール）から削除
-        removeFromScheduleIndex(scheduleId, notificationId);
-        break;
-      }
-      default:
-        return;
-    }
-
-    Vue.triggerRef(notificationsByDocId);
-    Vue.triggerRef(notificationsByScheduleId);
-  }
-
-  /**
-   * 指定された現場稼働予定ドキュメントに対して、インデックスの変更を適用します。
-   * - `docId` を主キー、`groupKey` を派生キーとして同期します。
-   * - `groupKey` が変わった場合は旧キーを削除して整合性を保ちます。
-   * @param {SiteOperationSchedule} item - 現場稼働予定ドキュメント
-   * @param {"added" | "modified" | "removed"} changeType - 変更タイプ
-   * @returns {void}
-   */
-  function applyScheduleIndexChange(item, changeType) {
-    const scheduleId = item.docId;
-    const groupKey = _createScheduleGroupKey(item);
-    const previousGroupKey = groupKeyByScheduleId.value.get(scheduleId);
-
-    switch (changeType) {
-      case "removed": {
-        schedulesByDocId.value.delete(scheduleId);
-        if (previousGroupKey) {
-          schedulesByGroupKey.value.delete(previousGroupKey);
-        }
-        groupKeyByScheduleId.value.delete(scheduleId);
-        schedulesByGroupKey.value.delete(groupKey);
-        break;
-      }
-      case "added":
-      case "modified":
-      default: {
-        // changeType が未提供の実装でも破綻しないように set を既定動作にする
-        schedulesByDocId.value.set(scheduleId, item);
-        groupKeyByScheduleId.value.set(scheduleId, groupKey);
-        if (previousGroupKey && previousGroupKey !== groupKey) {
-          schedulesByGroupKey.value.delete(previousGroupKey);
-        }
-        schedulesByGroupKey.value.set(groupKey, item);
-        break;
-      }
-    }
-
-    Vue.triggerRef(schedulesByDocId);
-    Vue.triggerRef(schedulesByGroupKey);
-    Vue.triggerRef(groupKeyByScheduleId);
-  }
-
-  /*****************************************************************************
-   * VALIDATORS
-   *****************************************************************************/
-  /**
-   * `fromDate` と `toDate` の値が適切な Date インスタンスであることを検証します。
-   * - `fromDate` が `toDate` より前であることも検証します。
-   * @param {[Date, Date]} dateRange - `fromDate` と `toDate` の配列
-   * @returns {void}
-   * @throws {TypeError} `fromDate` または `toDate` が Date インスタンスでない場合にスローされます。
-   * @throws {RangeError} `fromDate` が `toDate` より後の場合にスローされます。
-   */
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date)) {
-      throw new TypeError("Invalid 'from' value. Must be a Date instance.");
-    }
-
-    if (!(toDate instanceof Date)) {
-      throw new TypeError("Invalid 'to' value. Must be a Date instance.");
-    }
-
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
-
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
-  /**
-   * 指定された期間の現場稼働予定ドキュメントについて購読を開始します。
-   * - 各インスタンスの `subscribe()` は直前に `unsubscribe()` を自動実行します。
-   * - `subscribeDocs` のコールバック内で、関連する現場、従業員、外注先の情報をフェッチします。
-   * - 既存の Map は再初期化してから再購読するため、期間切り替え時に古い値が残りません。
-   * @param {[Date, Date]} dateRange - `from` と `to` の配列
-   * @returns {void}
-   */
-  function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
-    schedulesByDocId.value = new Map();
-    schedulesByGroupKey.value = new Map();
-    groupKeyByScheduleId.value = new Map();
-    notificationsByDocId.value = new Map();
-    notificationsByScheduleId.value = new Map();
-    const constraints = [
-      ["where", "dateAt", ">=", fromDate],
-      ["where", "dateAt", "<=", toDate],
-    ];
-    try {
-      scheduleInstance.subscribeDocs({ constraints }, (doc, changeType) => {
-        applyScheduleIndexChange(doc, changeType);
-        if (typeof fetchSite === "function") {
-          fetchSite(doc.siteId);
-        }
-        if (typeof fetchEmployee === "function") {
-          fetchEmployee(doc.employeeIds);
-        }
-        if (typeof fetchOutsourcer === "function") {
-          fetchOutsourcer(doc.outsourcerIds);
-        }
-      });
-      arrangementNotificationInstance.subscribeDocs(
-        { constraints },
-        (doc, changeType) => {
-          applyNotificationIndexChange(doc, changeType);
-          if (typeof fetchSite === "function") {
-            fetchSite(doc.siteId);
-          }
-          if (typeof fetchEmployee === "function" && doc.isEmployee) {
-            fetchEmployee(doc.id);
-          }
-          if (typeof fetchOutsourcer === "function" && !doc.isEmployee) {
-            fetchOutsourcer(doc.id);
-          }
-        },
-      );
-    } catch (error) {
-      logger.error({
-        message: "Failed to subscribe with given 'from' and 'to' values.",
-        error,
-        data: { fromDate, toDate },
-      });
-      scheduleInstance.unsubscribe();
-      arrangementNotificationInstance.unsubscribe();
-    }
-  }
-
-  /*****************************************************************************
-   * WATCHERS
-   *****************************************************************************/
-  /**
-   * `from` と `to` の変更を監視して、期間が変更された際に `subscribe()` を呼び出します。
-   * - `immediate: true` オプションにより、コンポーザブルの初期化時にも `subscribe()` が呼び出されます。
-   */
-  Vue.watch(
-    [from, to],
-    ([newFrom, newTo]) => {
-      if (isDev) {
-        const message = `'from' or 'to' changed. Subscribing with new values.`;
-        logger.debug({ message, data: { newFrom, newTo } });
-      }
-      subscribe([newFrom, newTo]);
-    },
-    { immediate: true },
-  );
-
-  /*****************************************************************************
-   * CLEANUP
-   *****************************************************************************/
-  // `useArrangementsInRange` のスコープが破棄されたときに購読も解放します。
-  Vue.onScopeDispose(() => {
-    scheduleInstance.unsubscribe();
-    arrangementNotificationInstance.unsubscribe();
-  });
-
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
   return {
     /** DATA */
-    schedules: scheduleInstance.docs,
-    notifications: arrangementNotificationInstance.docs,
+    schedules,
+    notifications,
     arrangedEmployeesMap,
     arrangedOutsourcersMap,
     selectableEmployees,

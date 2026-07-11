@@ -18,6 +18,7 @@
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { SiteOperationSchedule } from "@/schemas";
 
 // DATA LAYER COMPOSABLES
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
@@ -141,7 +142,9 @@ const workerManager = useTemplateRef("workerManager");
  * @param {string} options.shiftType - 勤務区分
  */
 async function handleClickAddSchedule({ siteId, shiftType }) {
-  await siteOperationScheduleManager.value.toCreate({ siteId, shiftType });
+  await siteOperationScheduleManager.value.toCreate(
+    new SiteOperationSchedule({ siteId, shiftType }),
+  );
 }
 
 /*****************************************************************************

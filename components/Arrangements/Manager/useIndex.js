@@ -5,6 +5,7 @@
  * - この composable は配置表 UI の補助と、更新・PDF・通知操作の仲介を担当します。
  *****************************************************************************/
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useSelectableDate } from "./useSelectableDate";
@@ -112,7 +113,7 @@ export function useIndex(schedules) {
   const openPdf = async (date) => {
     const key = loadings.add(`Generating PDF for ${date}`);
     try {
-      const dayFilteredSchedules = schedules.filter(
+      const dayFilteredSchedules = Vue.unref(schedules).filter(
         (schedule) => schedule.date === date,
       );
       await pdfComposable.open({

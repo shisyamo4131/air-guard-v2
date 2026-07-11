@@ -1,24 +1,20 @@
 import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
-import { Outsourcer } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { ArrangementNotification } from "@/schemas";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
- * @file ./composables/dataLayer/useOutsourcersInRange.js
- * @description 外注先範囲用データレイヤーコンポーザブル
- * [NOTE]
- * - `useEmployeesInRange` と同様の構造で実装していますが、2026-06-15 現在、外注先には
- *   契約の開始や終了といった日時データが存在しないため、期間に基づくフィルタリングは行っていません。
- *   純粋な「契約中外注先の購読」コンポーザブルとして機能します。
- * @param {Object} options - コンポーザブルのオプション
- * @param {Ref<Date>} options.from - 外注先範囲の開始日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
- * @param {Ref<Date>} options.to - 外注先範囲の終了日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
+ * @file ./composables/dataLayers/arrangementNotification/useArrangementNotificationsInRange.js
+ * @description ArrangementNotification range data layer composable.
+ * @param {Object} options
+ * @param {import("vue").Ref<Date>} options.from
+ * @param {import("vue").Ref<Date>} options.to
  * @returns {{
- *   docs: ComputedRef<Outsourcer[]>
+ *   docs: import("vue").ComputedRef<ArrangementNotification[]>
  * }}
  *****************************************************************************/
-export function useOutsourcersInRange({ from, to } = {}) {
+export function useArrangementNotificationsInRange({ from, to } = {}) {
   const { isDev } = useAuthStore();
 
   /*****************************************************************************
@@ -33,14 +29,6 @@ export function useOutsourcersInRange({ from, to } = {}) {
   /*****************************************************************************
    * VALIDATORS
    *****************************************************************************/
-  /**
-   * `fromDate` と `toDate` の値が適切な Date インスタンスであることを検証します。
-   * - `fromDate` が `toDate` より前であることも検証します。
-   * @param {[Date, Date]} dateRange - `fromDate` と `toDate` の配列
-   * @returns {void}
-   * @throws {TypeError} `fromDate` または `toDate` が Date インスタンスでない場合にスローされます。
-   * @throws {RangeError} `fromDate` が `toDate` より後の場合にスローされます。
-   */
   function validateDateValues([fromDate, toDate]) {
     if (!(fromDate instanceof Date)) {
       throw new TypeError("Invalid 'from' value. Must be a Date instance.");
@@ -56,63 +44,62 @@ export function useOutsourcersInRange({ from, to } = {}) {
   }
 
   /*****************************************************************************
-   * SETUP STORES & COMPOSABLES
+   * SETUP COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useOutsourcersInRange");
-  const { fetchOutsourcerComposable } = useFetch("useOutsourcersInRange");
-  const { pushOutsourcer } = fetchOutsourcerComposable;
+  const logger = useLogger("useArrangementNotificationsInRange");
+  const {
+    fetchSiteComposable,
+    fetchEmployeeComposable,
+    fetchOutsourcerComposable,
+  } = useFetch("useArrangementNotificationsInRange");
+  const { fetchSite } = fetchSiteComposable;
+  const { fetchEmployee } = fetchEmployeeComposable;
+  const { fetchOutsourcer } = fetchOutsourcerComposable;
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const outsourcerInstance = Vue.reactive(new Outsourcer()); // Outsourcer インスタンス
+  const instance = Vue.reactive(new ArrangementNotification());
 
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
-  /**
-   * 指定された期間の外注先ドキュメントについて購読を開始します。
-   * - 各インスタンスの `subscribe()` は直前に `unsubscribe()` を自動実行します。
-   * - `subscribeDocs` のコールバック内で、関連する外注先情報をフェッチします。
-   * @param {[Date, Date]} dateRange - `from` と `to` の配列
-   * @returns {void}
-   */
   function subscribe([fromDate, toDate]) {
     validateDateValues([fromDate, toDate]);
-    const activeConstraints = [
-      ["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE],
+    const constraints = [
+      ["where", "dateAt", ">=", fromDate],
+      ["where", "dateAt", "<=", toDate],
     ];
     try {
-      outsourcerInstance.subscribeDocs(
-        { constraints: activeConstraints },
-        (doc) => {
-          if (typeof pushOutsourcer === "function") {
-            pushOutsourcer(doc);
-          }
-        },
-      );
+      instance.subscribeDocs({ constraints }, (doc) => {
+        if (typeof fetchSite === "function") {
+          fetchSite(doc.siteId);
+        }
+        if (typeof fetchEmployee === "function" && doc.employeeId) {
+          fetchEmployee(doc.employeeId);
+        }
+        if (typeof fetchOutsourcer === "function" && doc.outsourcerId) {
+          fetchOutsourcer(doc.outsourcerId);
+        }
+      });
     } catch (error) {
       logger.error({
         message: "Failed to subscribe with given 'from' and 'to' values.",
         error,
         data: { fromDate, toDate },
       });
-      outsourcerInstance.unsubscribe();
+      instance.unsubscribe();
     }
   }
 
   /*****************************************************************************
    * WATCHERS
    *****************************************************************************/
-  /**
-   * `from` と `to` の変更を監視して、期間が変更された際に `subscribe()` を呼び出します。
-   * - `immediate: true` オプションにより、コンポーザブルの初期化時にも `subscribe()` が呼び出されます。
-   */
   Vue.watch(
     [from, to],
     ([newFrom, newTo]) => {
       if (isDev) {
-        const message = `'from' or 'to' changed. Subscribing with new values.`;
+        const message = "'from' or 'to' changed. Subscribing with new values.";
         logger.debug({ message, data: { newFrom, newTo } });
       }
       subscribe([newFrom, newTo]);
@@ -125,7 +112,7 @@ export function useOutsourcersInRange({ from, to } = {}) {
    *****************************************************************************/
   const docs = Vue.computed(() => {
     const map = new Map();
-    for (const doc of outsourcerInstance.docs) {
+    for (const doc of instance.docs) {
       map.set(doc.docId, doc);
     }
     return [...map.values()];
@@ -135,7 +122,7 @@ export function useOutsourcersInRange({ from, to } = {}) {
    * CLEANUP
    *****************************************************************************/
   Vue.onScopeDispose(() => {
-    outsourcerInstance.unsubscribe();
+    instance.unsubscribe();
   });
 
   /*****************************************************************************
