@@ -54,16 +54,7 @@ defineExpose({ init, submit, cancel });
       <slot name="subtitle" v-bind="slotProps || {}" />
     </template>
     <template #text>
-      <draggable v-model="items" item-key="key">
-        <template #item="{ element }">
-          <SiteShiftTypeOrderListItem
-            v-bind="element"
-            border
-            class="pa-2 mb-2"
-            rounded
-          />
-        </template>
-      </draggable>
+      <DraggableSiteShiftTypeOrder v-model="items" />
     </template>
     <template #actions>
       <slot
