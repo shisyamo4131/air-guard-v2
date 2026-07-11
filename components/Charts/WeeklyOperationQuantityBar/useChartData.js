@@ -5,7 +5,7 @@
 import { computed } from "vue";
 import { useDateRange } from "@/composables/useDateRange";
 import { useConstants } from "@/composables/useConstants";
-import { useOperationResultsInRange } from "@/composables/dataLayers/useOperationResultsInRange";
+import { useOperationResultsInRange } from "@/composables/dataLayers/operationResult/useOperationResultsInRange";
 import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange";
 import { useOperationQuantityBySecurityTypeInRange } from "@/composables/domain/operation/useOperationQuantityBySecurityTypeInRange";
 
@@ -28,9 +28,9 @@ export function useChartData(props) {
   });
 
   // 指定期間の OperationResult を取得
-  const operations = useOperationResultsInRange({
-    startDate,
-    endDate,
+  const { docs: operations } = useOperationResultsInRange({
+    from: startDate,
+    to: endDate,
   });
 
   // 日付 × 警備種別ごとの稼働数
