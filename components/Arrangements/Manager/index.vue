@@ -19,16 +19,22 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { SiteOperationSchedule } from "@/schemas";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 // DATA LAYER COMPOSABLES
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
 
+// DOMAIN COMPOSABLES
+import { useSiteOperationScheduleActions } from "@/composables/domain/siteOperationSchedule/useSiteOperationScheduleActions";
+import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+
+// MANAGER COMPOSABLES
+import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
+import { useIndex } from "./useIndex";
+
 // OVERLAY COMPOSABLES
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
-
-// DOMAIN COMPOSABLES
-import { useSiteOperationScheduleActions } from "@/composables/domain/siteOperationSchedule/useSiteOperationScheduleActions";
 
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
@@ -36,7 +42,14 @@ import CommandTextDialog from "./CommandTextDialog.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
 
-import { useIndex } from "./useIndex";
+// OTHER（後で整理）
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
+
+/**
+ * Duplicator Composable
+ * @description 現場運用スケジュール複製用コンポーザブル
+ */
+const duplicatorComposable = useSiteOperationScheduleDuplicator();
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -71,7 +84,7 @@ const {
   isEmployeeArranged,
   selectableEmployees,
   selectableOutsourcers,
-  siteShiftTypeOrder,
+  siteShiftTypeOrder, // 補完済みの現場勤務区分オーダー
 } = useArrangementsInRange({
   from: toRef(() => props.startDate),
   to: toRef(() => props.endDate),
@@ -94,27 +107,31 @@ const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
 /*****************************************************************************
  * SETUP DOMAIN COMPOSABLES
  *****************************************************************************/
+/** 現場稼働予定更新アクション */
 const { notify, updateSchedule, updateSchedules } =
   useSiteOperationScheduleActions();
+
+/** 現場勤務区分オーダー更新アクション */
+const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
+  useSiteShiftTypeOrderActions({
+    type: ORDER_TYPE.ARRANGEMENT,
+  });
 
 /*****************************************************************************
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
-const managerComposable = useIndex(schedules);
+const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
 const {
-  // COMPOSABLES
-  siteShiftTypeReorderComposable,
-  duplicatorComposable,
-
   // DATA
   selectedDate,
   openPdf,
   getCommandText,
-
-  // METHODS
-  updateSiteShiftTypeOrder,
-  removeSiteShiftTypeOrder,
 } = managerComposable;
+
+const siteShiftTypeReorderComposable = useSiteShiftTypeReorder({
+  items: siteShiftTypeOrder,
+  onUpdate: updateSiteShiftTypeOrder,
+});
 
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
