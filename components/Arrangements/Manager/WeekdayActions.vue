@@ -1,6 +1,6 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Arrangements/Manager/TableWeekdayActions.vue
+ * @file ./components/Arrangements/Manager/WeekdayActions.vue
  * @description `ArrangementsManager` 専用 曜日セル アクションコンポーネント
  *
  * @note 集中モードは機能拡充ができるまでは開発者のみ利用可能
@@ -12,7 +12,7 @@ import { useDefaults } from "vuetify";
  * DEFINE OPTIONS
  *****************************************************************************/
 defineOptions({
-  name: "ArrangementsManagerTableWeekdayActions",
+  name: "ArrangementsManagerWeekdayActions",
   inheritAttrs: false,
 });
 
@@ -30,7 +30,7 @@ const _props = defineProps({
   column: { type: Object, required: true },
   isSelected: { type: Boolean, default: false },
 });
-const props = useDefaults(_props, "ArrangementsManagerTableWeekdayActions");
+const props = useDefaults(_props, "ArrangementsManagerWeekdayActions");
 const emit = defineEmits([
   "click:focus",
   "click:pdf",

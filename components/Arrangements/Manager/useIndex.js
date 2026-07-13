@@ -124,7 +124,7 @@ export function useIndex(
             "onUpdate:scrollToRowKey": (newKey) =>
               (rowKeyToScroll.value = newKey),
           },
-          tableWeekdayActions: {
+          weekdayActions: {
             attrs: {
               "onClick:command-text": ($event) =>
                 (commandText.value =

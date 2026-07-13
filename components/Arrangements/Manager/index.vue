@@ -8,13 +8,12 @@
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { SiteOperationSchedule } from "@/schemas";
 
 // MANAGER COMPOSABLES
 import { useIndex } from "./useIndex";
 
 // Components
-import TableWeekdayActions from "./TableWeekdayActions.vue";
+import WeekdayActions from "./WeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
@@ -108,8 +107,8 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
 
       <!-- 曜日セルのカスタマイズ -->
       <template #weekday="{ column, isSelected }">
-        <TableWeekdayActions
-          v-bind="uiOperationSchedulesTable.component.tableWeekdayActions.attrs"
+        <WeekdayActions
+          v-bind="uiOperationSchedulesTable.component.weekdayActions.attrs"
           :column="column"
           :is-selected="isSelected"
         />
