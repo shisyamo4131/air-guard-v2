@@ -7,6 +7,8 @@ import { useSelectableDate } from "./useSelectableDate";
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
 import { useOpenArrangementSheetPdf } from "@/composables/application/arrangement/useOpenArrangementSheetPdf";
 import { useSiteOperationScheduleActions } from "@/composables/application/siteOperationSchedule/useSiteOperationScheduleActions";
+import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
  * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
@@ -15,6 +17,8 @@ import { useSiteOperationScheduleActions } from "@/composables/application/siteO
  *   selectedDate: Ref<string|null>,
  *   openPdf: Function,
  *   getCommandText: Function,
+ *   updateSiteShiftTypeOrder: Function,
+ *   removeSiteShiftTypeOrder: Function,
  * }}
  *****************************************************************************/
 export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
@@ -31,6 +35,12 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
   /** 現場稼働予定更新アクション */
   const { notify, updateSchedule, updateSchedules } =
     useSiteOperationScheduleActions();
+
+  /** 現場勤務区分オーダー更新アクション */
+  const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
+    useSiteShiftTypeOrderActions({
+      type: ORDER_TYPE.ARRANGEMENT,
+    });
 
   /** 選択中日付管理コンポーザブル */
   const { selectedDate } = useSelectableDate();
@@ -61,5 +71,7 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
     notify,
     updateSchedule,
     updateSchedules,
+    updateSiteShiftTypeOrder,
+    removeSiteShiftTypeOrder,
   };
 }

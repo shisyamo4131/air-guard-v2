@@ -19,20 +19,16 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { SiteOperationSchedule } from "@/schemas";
-import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 // DATA LAYER COMPOSABLES
 import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
 
-// DOMAIN COMPOSABLES
-import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
-
 // MANAGER COMPOSABLES
-import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
 import { useIndex } from "./useIndex";
 
 // OVERLAY COMPOSABLES
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
+import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 
 // Components
@@ -90,30 +86,30 @@ const {
 });
 
 /*****************************************************************************
- * SETUP DOMAIN COMPOSABLES
- *****************************************************************************/
-/** 現場勤務区分オーダー更新アクション */
-const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
-  useSiteShiftTypeOrderActions({
-    type: ORDER_TYPE.ARRANGEMENT,
-  });
-
-/*****************************************************************************
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
 const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
 const { selectedDate } = managerComposable;
-const { openPdf, getCommandText, notify, updateSchedule, updateSchedules } =
-  managerComposable;
-
-const siteShiftTypeReorderComposable = useSiteShiftTypeReorder({
-  items: siteShiftTypeOrder,
-  onUpdate: updateSiteShiftTypeOrder,
-});
+const {
+  openPdf,
+  getCommandText,
+  notify,
+  updateSchedule,
+  updateSchedules,
+  updateSiteShiftTypeOrder,
+  removeSiteShiftTypeOrder,
+} = managerComposable;
 
 /*****************************************************************************
  * SETUP OVERLAY COMPOSABLE
  *****************************************************************************/
+/** Dialog for SiteShiftTypeOrderReorderForm */
+const siteShiftTypeReorderDialog = useManagedDialog({
+  loggerName: "ArrangementsManagerSiteShiftTypeReorder",
+  closeOnSubmit: true,
+  onSubmit: updateSiteShiftTypeOrder,
+});
+
 /** Targeted menu for SiteShiftTypeListJumpMenu */
 const {
   isOpen: siteShiftTypeJumpListMenu,
@@ -274,12 +270,15 @@ provide("selectableOutsourcers", selectableOutsourcers);
 
     <!-- 現場オーダー並び替え用コンポーネント -->
     <AtomsDialogsFullscreen
-      v-model="siteShiftTypeReorderComposable.dialog.value"
+      v-model="siteShiftTypeReorderDialog.isOpen.value"
       max-width="480"
     >
       <template #default>
         <SiteShiftTypeOrderReorderForm
-          v-bind="siteShiftTypeReorderComposable.attrs.value"
+          :site-shift-type-order="siteShiftTypeOrder"
+          :loading="siteShiftTypeReorderDialog.isLoading.value"
+          @submit="siteShiftTypeReorderDialog.submit"
+          @cancel="siteShiftTypeReorderDialog.cancel"
         >
         </SiteShiftTypeOrderReorderForm>
       </template>
@@ -315,7 +314,7 @@ provide("selectableOutsourcers", selectableOutsourcers);
       color="primary"
       @click:workers="toggleFloatingWindow"
       @click:add-schedule="() => siteOperationScheduleManager.toCreate()"
-      @click:site-shift-type-order="siteShiftTypeReorderComposable.open"
+      @click:site-shift-type-order="siteShiftTypeReorderDialog.open"
     />
   </div>
 </template>

@@ -13,7 +13,7 @@ import { useOperationScheduleTable } from "@/composables/useOperationScheduleTab
 import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
-import { useSiteShiftTypeReorder } from "@/composables/useSiteShiftTypeReorder";
+import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { useSiteShiftTypeOrderActions } from "~/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
 
@@ -80,10 +80,11 @@ const selector = useSiteOperationScheduleSelector({
   fetchSiteComposable,
 });
 
-// 現場オーダー並び替え用コンポーザブル
-const reorder = useSiteShiftTypeReorder({
-  items: siteShiftTypeOrder,
-  onUpdate: update,
+// 現場オーダー並び替え用ダイアログ
+const reorderDialog = useManagedDialog({
+  loggerName: "OperationSchedulesManagerSiteShiftTypeReorder",
+  closeOnSubmit: true,
+  onSubmit: update,
 });
 </script>
 
@@ -91,7 +92,7 @@ const reorder = useSiteShiftTypeReorder({
   <div class="d-flex flex-column fill-height">
     <!-- ツールバー -->
     <Toolbar
-      @click:sort="reorder.open"
+      @click:sort="reorderDialog.open"
       @click:create="() => siteOperationScheduleManager.toCreate()"
     />
 
@@ -140,9 +141,14 @@ const reorder = useSiteShiftTypeReorder({
     <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 現場オーダー並び替え用コンポーネント -->
-    <AtomsDialogsFullscreen v-model="reorder.dialog.value" max-width="480">
+    <AtomsDialogsFullscreen v-model="reorderDialog.isOpen.value" max-width="480">
       <template #default>
-        <SiteShiftTypeOrderReorderForm v-bind="reorder.attrs.value">
+        <SiteShiftTypeOrderReorderForm
+          :site-shift-type-order="siteShiftTypeOrder"
+          :loading="reorderDialog.isLoading.value"
+          @submit="reorderDialog.submit"
+          @cancel="reorderDialog.cancel"
+        >
           <template #title>並び替え</template>
           <template #subtitle>現場の並び順を変更できます。</template>
         </SiteShiftTypeOrderReorderForm>
