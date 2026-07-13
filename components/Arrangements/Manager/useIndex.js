@@ -10,33 +10,35 @@ import { useSelectableDate } from "./useSelectableDate";
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
+import { SiteOperationSchedule } from "@/schemas";
 
 /*****************************************************************************
  * @param {Object} props
  * @param {string} props.startDate - 開始日付（YYYY-MM-DD）
  * @param {string} props.endDate - 終了日付（YYYY-MM-DD）
  * @returns {{
- *   schedules: Ref<import("@/schemas").SiteOperationSchedule[]>,
- *   siteShiftTypeOrder: Ref<Array<Object>>,
- *   selectableEmployees: Ref<Array<Object>>,
- *   selectableOutsourcers: Ref<Array<Object>>,
- *   selectedDate: Ref<string|null>,
+ *   uiOperationSchedulesTable: ComputedRef<Object>,
  *   uiWorkerSelector: ComputedRef<Object>,
- *   uiSiteShiftTypeJumpListMenu: ComputedRef<Object>,
- *   uiSiteShiftTypeReorderDialog: ComputedRef<Object>,
+ *   uiSiteShiftTypeJumpList: ComputedRef<Object>,
+ *   uiSiteShiftTypeReorder: ComputedRef<Object>,
+ *   uiCommandTextDialog: ComputedRef<Object>,
+ *   uiSpeedDial: ComputedRef<Object>,
  *   getNotification: Function,
- *   isEmployeeArranged: Function,
- *   openPdf: Function,
- *   getCommandText: Function,
  *   notify: Function,
  *   updateSchedule: Function,
  *   updateSchedules: Function,
  *   updateSiteShiftTypeOrder: Function,
- *   removeSiteShiftTypeOrder: Function,
  * }}
  *****************************************************************************/
 // export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
-export function useIndex(props) {
+export function useIndex(
+  props,
+  {
+    refSiteOperationScheduleManager,
+    refArrangementNotificationManager,
+    refWorkerManager,
+  } = {},
+) {
   /*****************************************************************************
    * SETUP DATA LAYER COMPOSABLE
    *****************************************************************************/
@@ -80,48 +82,132 @@ export function useIndex(props) {
   });
 
   /*****************************************************************************
+   * DEFINE STATES
+   *****************************************************************************/
+  const commandText = Vue.ref(null);
+  const rowKeyToScroll = Vue.ref(null);
+
+  /*****************************************************************************
+   * METHODS
+   *****************************************************************************/
+  /**
+   * `siteOperationScheduleManager` の `toCreate` メソッドを実行します。
+   * @param {string} options.siteId - 現場ドキュメントID
+   * @param {string} options.shiftType - 勤務区分
+   */
+  async function handleClickCreateSchedule({ siteId, shiftType } = {}) {
+    const fn = refSiteOperationScheduleManager?.value?.toCreate;
+    if (!fn) return;
+    await fn(new SiteOperationSchedule({ siteId, shiftType }));
+  }
+
+  /*****************************************************************************
    * RETURN
    *****************************************************************************/
   return {
-    /** DATA  */
-    schedules,
-    siteShiftTypeOrder,
-    selectedDate,
-    selectableEmployees,
-    selectableOutsourcers,
-
     /** UI controller */
+    uiOperationSchedulesTable: Vue.computed(() => {
+      return {
+        component: {
+          attrs: {
+            columnWidth: 256,
+            dayFormat: "MM/DD(ddd)",
+            endDate: props.endDate,
+            schedules: schedules.value,
+            scrollToRowKey: rowKeyToScroll.value,
+            selectedDate: selectedDate.value,
+            siteShiftTypeOrder: siteShiftTypeOrder.value,
+            startDate: props.startDate,
+            "onClick:add-schedule": handleClickCreateSchedule,
+            "onClick:remove-site-order":
+              arrangementsActions.removeSiteShiftTypeOrder,
+            "onUpdate:scrollToRowKey": (newKey) =>
+              (rowKeyToScroll.value = newKey),
+          },
+          tableWeekdayActions: {
+            attrs: {
+              "onClick:command-text": ($event) =>
+                (commandText.value =
+                  arrangementsActions.getCommandText($event)),
+              "onClick:focus": ($event) => (selectedDate.value = $event),
+              "onClick:jump-list": siteShiftTypeJumpListMenu.open,
+              "onClick:pdf": arrangementsActions.openPdf,
+            },
+          },
+        },
+      };
+    }),
     uiWorkerSelector: Vue.computed(() => {
       return {
-        attrs: workerSelectorWindow.attrs.value,
+        dialog: {
+          attrs: workerSelectorWindow.attrs.value,
+        },
+        component: {
+          attrs: {
+            employees: selectableEmployees.value,
+            outsourcers: selectableOutsourcers.value,
+            isEmployeeArranged,
+          },
+        },
         toggle: workerSelectorWindow.toggle,
       };
     }),
-    uiSiteShiftTypeJumpListMenu: Vue.computed(() => {
+    uiSiteShiftTypeJumpList: Vue.computed(() => {
       return {
-        attrs: siteShiftTypeJumpListMenu.attrs.value,
-        open: siteShiftTypeJumpListMenu.open,
+        menu: {
+          attrs: siteShiftTypeJumpListMenu.attrs.value,
+        },
+        component: {
+          attrs: {
+            siteShiftTypeOrder: siteShiftTypeOrder.value,
+            density: "compact",
+            "onClick:select": ({ id }) => (rowKeyToScroll.value = id.key),
+          },
+        },
       };
     }),
-    uiSiteShiftTypeReorderDialog: Vue.computed(() => {
+    uiSiteShiftTypeReorder: Vue.computed(() => {
       return {
-        attrs: siteShiftTypeReorderDialog.attrs.value,
-        open: siteShiftTypeReorderDialog.open,
-        loading: siteShiftTypeReorderDialog.isLoading.value,
-        onSubmit: siteShiftTypeReorderDialog.submit,
-        onCancel: siteShiftTypeReorderDialog.cancel,
+        dialog: {
+          attrs: { ...siteShiftTypeReorderDialog.attrs.value, maxWidth: "480" },
+          open: siteShiftTypeReorderDialog.open,
+        },
+        component: {
+          attrs: {
+            loading: siteShiftTypeReorderDialog.isLoading.value,
+            siteShiftTypeOrder: siteShiftTypeOrder.value,
+            onSubmit: siteShiftTypeReorderDialog.submit,
+            onCancel: siteShiftTypeReorderDialog.cancel,
+          },
+        },
+      };
+    }),
+    uiCommandTextDialog: Vue.computed(() => {
+      return {
+        attrs: {
+          modelValue: commandText.value,
+          "onUpdate:modelValue": () => (commandText.value = null),
+        },
+      };
+    }),
+    uiSpeedDial: Vue.computed(() => {
+      return {
+        attrs: {
+          app: true,
+          location: "bottom right",
+          color: "primary",
+          "onClick:workers": workerSelectorWindow.toggle,
+          "onClick:add-schedule": handleClickCreateSchedule,
+          "onClick:site-shift-type-order": siteShiftTypeReorderDialog.open,
+        },
       };
     }),
 
     /** METHODS */
     getNotification,
-    isEmployeeArranged,
-    openPdf: arrangementsActions.openPdf,
-    getCommandText: arrangementsActions.getCommandText,
     notify: arrangementsActions.notify,
     updateSchedule: arrangementsActions.updateSchedule,
     updateSchedules: arrangementsActions.updateSchedules,
     updateSiteShiftTypeOrder: arrangementsActions.updateSiteShiftTypeOrder,
-    removeSiteShiftTypeOrder: arrangementsActions.removeSiteShiftTypeOrder,
   };
 }

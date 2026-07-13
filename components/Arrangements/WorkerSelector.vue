@@ -6,6 +6,7 @@
  * [更新履歴]
  * 2026-06-22 - `employees`, `outsourcers`, `isEmployeeArranged` を inject で取得するように修正。
  *****************************************************************************/
+import { useDefaults } from "vuetify";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -13,25 +14,28 @@
 defineOptions({ name: "ArrangementsWorkerSelector", inheritAttrs: false });
 
 /*****************************************************************************
- * INJECTS
+ * DEFINE PROPS
  *****************************************************************************/
-const employees = inject("selectableEmployees");
-const outsourcers = inject("selectableOutsourcers");
-const isEmployeeArranged = inject("isEmployeeArranged");
+const _props = defineProps({
+  employees: { type: Array, default: () => [] },
+  outsourcers: { type: Array, default: () => [] },
+  isEmployeeArranged: { type: Function, default: () => false },
+});
+const props = useDefaults(_props, "ArrangementsWorkerSelector");
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
 function getEmployeeVariant(employeeId) {
-  return isEmployeeArranged(employeeId) ? "disabled" : "default";
+  return props.isEmployeeArranged(employeeId) ? "disabled" : "default";
 }
 </script>
 
 <template>
   <MoleculesWorkerSelector
     v-bind="$attrs"
-    :employees="employees"
-    :outsourcers="outsourcers"
+    :employees="props.employees"
+    :outsourcers="props.outsourcers"
     :is-draggable="true"
   >
     <template #employee-tag="slotProps">

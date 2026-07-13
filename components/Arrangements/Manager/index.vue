@@ -4,16 +4,6 @@
  * @description A component for managing site operation schedules, including viewing, creating, updating, and duplicating schedules.
  * It also provides functionalities for managing workers, site orders, and notifications.
  *
- * [改修]
- * - `fetchXxxComposable` はルートコンポーネントで保持するように修正✅
- * - `dateRangeComposable` を `useIndex` から分離✅
- * - `schedules`, `notifications` をデータレイヤーから取得するように修正✅
- *
- * [更新履歴]
- * 2026-06-22 - 集中モード機能を開発者のみ利用可能に修正。
- *              → 集中モード on 時の機能について再検討。
- *            - `selectableEmployees`, `selectableOutsourcers` をデータレイヤーから取得し、provide するように修正。
- *
  * @property {Date} startDate - スケジュール表示の開始日
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
@@ -61,40 +51,6 @@ const _props = defineProps({
 const props = useDefaults(_props, "ArrangementsManager");
 
 /*****************************************************************************
- * SETUP MANAGER COMPOSABLE
- *****************************************************************************/
-// const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
-const managerComposable = useIndex(props);
-const {
-  schedules,
-  siteShiftTypeOrder,
-  selectedDate,
-  selectableEmployees,
-  selectableOutsourcers,
-} = managerComposable;
-const {
-  uiWorkerSelector,
-  uiSiteShiftTypeJumpListMenu,
-  uiSiteShiftTypeReorderDialog,
-} = managerComposable;
-const {
-  getNotification,
-  isEmployeeArranged,
-  openPdf,
-  getCommandText,
-  notify,
-  updateSchedule,
-  updateSchedules,
-  removeSiteShiftTypeOrder,
-} = managerComposable;
-
-/*****************************************************************************
- * DEFINE REACTIVE OBJECTS
- *****************************************************************************/
-const arrangementCommandText = ref(null);
-const rowKeyToScroll = ref(null); // OperationSchedulesTable のスクロール用
-
-/*****************************************************************************
  * DEFINE TEMPLATE REFS
  *****************************************************************************/
 const siteOperationScheduleManager = useTemplateRef(
@@ -106,58 +62,44 @@ const arrangementNotificationManager = useTemplateRef(
 const workerManager = useTemplateRef("workerManager");
 
 /*****************************************************************************
- * METHODS
+ * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
-/**
- * `siteOperationScheduleManager` の `toCreate` メソッドを実行します。
- * @param {string} options.siteId - 現場ドキュメントID
- * @param {string} options.shiftType - 勤務区分
- */
-async function handleClickAddSchedule({ siteId, shiftType }) {
-  await siteOperationScheduleManager.value.toCreate(
-    new SiteOperationSchedule({ siteId, shiftType }),
-  );
-}
+const managerComposable = useIndex(props, {
+  refSiteOperationScheduleManager: siteOperationScheduleManager,
+  refArrangementNotificationManager: arrangementNotificationManager,
+  refWorkerManager: workerManager,
+});
 
-/*****************************************************************************
- * PROVIDES
- *****************************************************************************/
-/** ArrangementsWorkerSelector で使用 */
-provide("isEmployeeArranged", isEmployeeArranged);
-provide("selectableEmployees", selectableEmployees);
-provide("selectableOutsourcers", selectableOutsourcers);
+const {
+  uiOperationSchedulesTable,
+  uiWorkerSelector,
+  uiSiteShiftTypeJumpList,
+  uiSiteShiftTypeReorder,
+  uiCommandTextDialog,
+  uiSpeedDial,
+} = managerComposable;
+const { getNotification, notify, updateSchedule, updateSchedules } =
+  managerComposable;
 </script>
 
 <template>
   <div class="fill-height">
     <!-- フローティング作業員選択ウィンドウ -->
-    <FloatingWindow v-bind="uiWorkerSelector.attrs" title="作業員選択">
-      <ArrangementsWorkerSelector />
+    <FloatingWindow v-bind="uiWorkerSelector.dialog.attrs" title="作業員選択">
+      <ArrangementsWorkerSelector v-bind="uiWorkerSelector.component.attrs" />
     </FloatingWindow>
 
     <!-- 現場勤務区分ジャンプメニュー -->
-    <v-menu v-bind="uiSiteShiftTypeJumpListMenu.attrs">
-      <!-- @click:select の $event.id は siteShiftType オブジェクト -->
+    <v-menu v-bind="uiSiteShiftTypeJumpList.menu.attrs">
       <SiteShiftTypeOrderList
-        :site-shift-type-order="siteShiftTypeOrder"
-        density="compact"
-        @click:select="({ id }) => (rowKeyToScroll = id.key)"
+        v-bind="uiSiteShiftTypeJumpList.component.attrs"
       />
     </v-menu>
 
     <!-- スケジュール管理テーブル -->
     <OperationSchedulesTable
       class="fill-height"
-      v-model:scroll-to-row-key="rowKeyToScroll"
-      :start-date="props.startDate"
-      :end-date="props.endDate"
-      :schedules="schedules"
-      :site-shift-type-order="siteShiftTypeOrder"
-      :column-width="256"
-      day-format="MM/DD(ddd)"
-      :selectedDate="selectedDate"
-      @click:add-schedule="handleClickAddSchedule"
-      @click:remove-site-order="removeSiteShiftTypeOrder"
+      v-bind="uiOperationSchedulesTable.component.attrs"
     >
       <!-- 日付の表示形式をカスタマイズ -->
       <template #append-day="{ column, holidayIcon }">
@@ -167,12 +109,9 @@ provide("selectableOutsourcers", selectableOutsourcers);
       <!-- 曜日セルのカスタマイズ -->
       <template #weekday="{ column, isSelected }">
         <TableWeekdayActions
+          v-bind="uiOperationSchedulesTable.component.tableWeekdayActions.attrs"
           :column="column"
           :is-selected="isSelected"
-          @click:focus="selectedDate = $event"
-          @click:pdf="openPdf($event)"
-          @click:command-text="arrangementCommandText = getCommandText($event)"
-          @click:jump-list="uiSiteShiftTypeJumpListMenu.open($event)"
         />
       </template>
 
@@ -233,18 +172,11 @@ provide("selectableOutsourcers", selectableOutsourcers);
     </OperationSchedulesTable>
 
     <!-- 現場オーダー並び替え用コンポーネント -->
-    <AtomsDialogsFullscreen
-      v-bind="uiSiteShiftTypeReorderDialog.attrs"
-      max-width="480"
-    >
+    <AtomsDialogsFullscreen v-bind="uiSiteShiftTypeReorder.dialog.attrs">
       <template #default>
         <SiteShiftTypeOrderReorderForm
-          :site-shift-type-order="siteShiftTypeOrder"
-          :loading="uiSiteShiftTypeReorderDialog.loading"
-          @submit="uiSiteShiftTypeReorderDialog.onSubmit"
-          @cancel="uiSiteShiftTypeReorderDialog.onCancel"
-        >
-        </SiteShiftTypeOrderReorderForm>
+          v-bind="uiSiteShiftTypeReorder.component.attrs"
+        />
       </template>
     </AtomsDialogsFullscreen>
 
@@ -269,17 +201,10 @@ provide("selectableOutsourcers", selectableOutsourcers);
     />
 
     <!-- 配置テキスト表示ダイアログ -->
-    <CommandTextDialog v-model="arrangementCommandText" />
+    <CommandTextDialog v-bind="uiCommandTextDialog.attrs" />
 
     <!-- スピードダイアル -->
-    <SpeedDial
-      app
-      location="bottom right"
-      color="primary"
-      @click:workers="uiWorkerSelector.toggle"
-      @click:add-schedule="() => siteOperationScheduleManager.toCreate()"
-      @click:site-shift-type-order="uiSiteShiftTypeReorderDialog.open"
-    />
+    <SpeedDial v-bind="uiSpeedDial.attrs" />
   </div>
 </template>
 
