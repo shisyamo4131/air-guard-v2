@@ -26,11 +26,6 @@ import { useArrangementsInRange } from "@/composables/dataLayers/useArrangements
 // MANAGER COMPOSABLES
 import { useIndex } from "./useIndex";
 
-// OVERLAY COMPOSABLES
-import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
-import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
-import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
-
 // Components
 import TableWeekdayActions from "./TableWeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
@@ -91,35 +86,18 @@ const {
 const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
 const { selectedDate } = managerComposable;
 const {
+  uiWorkerSelector,
+  uiSiteShiftTypeJumpListMenu,
+  uiSiteShiftTypeReorderDialog,
+} = managerComposable;
+const {
   openPdf,
   getCommandText,
   notify,
   updateSchedule,
   updateSchedules,
-  updateSiteShiftTypeOrder,
   removeSiteShiftTypeOrder,
 } = managerComposable;
-
-/*****************************************************************************
- * SETUP OVERLAY COMPOSABLE
- *****************************************************************************/
-/** Dialog for SiteShiftTypeOrderReorderForm */
-const siteShiftTypeReorderDialog = useManagedDialog({
-  loggerName: "ArrangementsManagerSiteShiftTypeReorder",
-  closeOnSubmit: true,
-  onSubmit: updateSiteShiftTypeOrder,
-});
-
-/** Targeted menu for SiteShiftTypeListJumpMenu */
-const {
-  isOpen: siteShiftTypeJumpListMenu,
-  target: siteShiftTypeJumpListMenuTarget,
-  open: openSiteShiftTypeJumpListMenu,
-} = useTargetedMenu({ target: ".v-btn" });
-
-/** Floating window for ArrangementsWorkerSelector */
-const { attrs: floatingWindowAttrs, toggle: toggleFloatingWindow } =
-  useFloatingWindow();
 
 /*****************************************************************************
  * DEFINE REACTIVE OBJECTS
@@ -164,15 +142,12 @@ provide("selectableOutsourcers", selectableOutsourcers);
 <template>
   <div class="fill-height">
     <!-- フローティング作業員選択ウィンドウ -->
-    <FloatingWindow v-bind="floatingWindowAttrs" title="作業員選択">
+    <FloatingWindow v-bind="uiWorkerSelector.attrs" title="作業員選択">
       <ArrangementsWorkerSelector />
     </FloatingWindow>
 
     <!-- 現場勤務区分ジャンプメニュー -->
-    <v-menu
-      v-model="siteShiftTypeJumpListMenu"
-      :target="siteShiftTypeJumpListMenuTarget"
-    >
+    <v-menu v-bind="uiSiteShiftTypeJumpListMenu.attrs">
       <!-- @click:select の $event.id は siteShiftType オブジェクト -->
       <SiteShiftTypeOrderList
         :site-shift-type-order="siteShiftTypeOrder"
@@ -208,7 +183,7 @@ provide("selectableOutsourcers", selectableOutsourcers);
           @click:focus="selectedDate = $event"
           @click:pdf="openPdf($event)"
           @click:command-text="arrangementCommandText = getCommandText($event)"
-          @click:jump-list="openSiteShiftTypeJumpListMenu($event)"
+          @click:jump-list="uiSiteShiftTypeJumpListMenu.open($event)"
         />
       </template>
 
@@ -270,15 +245,15 @@ provide("selectableOutsourcers", selectableOutsourcers);
 
     <!-- 現場オーダー並び替え用コンポーネント -->
     <AtomsDialogsFullscreen
-      v-model="siteShiftTypeReorderDialog.isOpen.value"
+      v-bind="uiSiteShiftTypeReorderDialog.attrs"
       max-width="480"
     >
       <template #default>
         <SiteShiftTypeOrderReorderForm
           :site-shift-type-order="siteShiftTypeOrder"
-          :loading="siteShiftTypeReorderDialog.isLoading.value"
-          @submit="siteShiftTypeReorderDialog.submit"
-          @cancel="siteShiftTypeReorderDialog.cancel"
+          :loading="uiSiteShiftTypeReorderDialog.loading"
+          @submit="uiSiteShiftTypeReorderDialog.onSubmit"
+          @cancel="uiSiteShiftTypeReorderDialog.onCancel"
         >
         </SiteShiftTypeOrderReorderForm>
       </template>
@@ -312,9 +287,9 @@ provide("selectableOutsourcers", selectableOutsourcers);
       app
       location="bottom right"
       color="primary"
-      @click:workers="toggleFloatingWindow"
+      @click:workers="uiWorkerSelector.toggle"
       @click:add-schedule="() => siteOperationScheduleManager.toCreate()"
-      @click:site-shift-type-order="siteShiftTypeReorderDialog.open"
+      @click:site-shift-type-order="uiSiteShiftTypeReorderDialog.open"
     />
   </div>
 </template>

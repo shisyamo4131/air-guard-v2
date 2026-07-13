@@ -5,6 +5,8 @@
  * メニューを表示できます。この composable は、そのために必要な「開閉状態」、
  * 「表示起点となる target 要素」、「メニューの対象データ」をまとめて扱います。
  *
+ * `attrs` は `VMenu` に渡すための属性オブジェクトです。
+ *
  * 同じメニューを別の target で開き直す場合、開いたまま target だけを差し替えると
  * 位置が更新されないことがあります。そのため `open()` は、すでに開いている場合に
  * 一度閉じ、短い待機時間を挟んでから新しい target で開き直します。
@@ -56,7 +58,18 @@ export function useTargetedMenu(options = {}) {
     isOpen.value = true;
   }
 
+  const attrs = computed(() => {
+    return {
+      modelValue: isOpen.value,
+      target: target.value,
+      "onUpdate:modelValue": (value) => {
+        isOpen.value = value;
+      },
+    };
+  });
+
   return {
+    attrs,
     isOpen,
     target,
     context,

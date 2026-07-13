@@ -141,7 +141,7 @@ const reorderDialog = useManagedDialog({
     <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 現場オーダー並び替え用コンポーネント -->
-    <AtomsDialogsFullscreen v-model="reorderDialog.isOpen.value" max-width="480">
+    <AtomsDialogsFullscreen v-bind="reorderDialog.attrs.value" max-width="480">
       <template #default>
         <SiteShiftTypeOrderReorderForm
           :site-shift-type-order="siteShiftTypeOrder"

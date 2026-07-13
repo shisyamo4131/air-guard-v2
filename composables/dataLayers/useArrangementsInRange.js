@@ -9,7 +9,7 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
 
 /*****************************************************************************
  * @file ./composables/dataLayers/useArrangementsInRange.js
- * @description 配置管理用データレイヤーコンポーザブル
+ * @description 配置管理用 Facade データレイヤーコンポーザブル
  * @param {Object} options - コンポーザブルのオプション
  * @param {Ref<Date>} options.from - 配置管理の開始日時を表す Ref
  * @param {Ref<Date>} options.to - 配置管理の終了日時を表す Ref

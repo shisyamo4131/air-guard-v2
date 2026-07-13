@@ -9,6 +9,8 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
  * submit 中の loading、submit / cancel 後に閉じるかどうか、error handling が
  * まとまりがちです。この composable はそれらの汎用的な制御だけを担当します。
  *
+ * `attrs` は Dialog コンポーネントのルートに渡すための属性オブジェクトです。
+ *
  * @param {Object} options
  * @param {Function} [options.onSubmit] - submit 時に実行する処理。
  * @param {Function} [options.onCancel] - cancel 時に実行する処理。
@@ -16,6 +18,7 @@ import { useErrorsStore } from "@/stores/useErrorsStore";
  * @param {boolean} [options.closeOnCancel=true] - cancel 後に Dialog を閉じるかどうか。
  * @param {string} [options.loggerName="useManagedDialog"] - logger の送信元名。
  * @returns {Object}
+ * @returns {import("vue").ComputedRef<Object>} returns.attrs - Dialog に渡す属性。
  * @returns {import("vue").Ref<boolean>} returns.isOpen - Dialog の v-model に渡す開閉状態。
  * @returns {import("vue").Ref<boolean>} returns.isLoading - submit 中の loading 状態。
  * @returns {Function} returns.open - Dialog を開きます。
@@ -73,7 +76,17 @@ export function useManagedDialog(options = {}) {
     }
   }
 
+  const attrs = Vue.computed(() => {
+    return {
+      modelValue: isOpen.value,
+      "onUpdate:modelValue": (value) => {
+        isOpen.value = value;
+      },
+    };
+  });
+
   return {
+    attrs,
     isOpen,
     isLoading,
     open,
