@@ -12,8 +12,9 @@ import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 
 /*****************************************************************************
- * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
- * @param {Ref<Array<Object>>} siteShiftTypeOrder - 現場勤務区分オーダーの配列（補完済み）
+ * @param {Object} props
+ * @param {string} props.startDate - 開始日付（YYYY-MM-DD）
+ * @param {string} props.endDate - 終了日付（YYYY-MM-DD）
  * @returns {{
  *   schedules: Ref<import("@/schemas").SiteOperationSchedule[]>,
  *   siteShiftTypeOrder: Ref<Array<Object>>,
