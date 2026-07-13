@@ -15,10 +15,16 @@ import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
  * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
  * @param {Ref<Array<Object>>} siteShiftTypeOrder - 現場勤務区分オーダーの配列（補完済み）
  * @returns {{
+ *   schedules: Ref<import("@/schemas").SiteOperationSchedule[]>,
+ *   siteShiftTypeOrder: Ref<Array<Object>>,
+ *   selectableEmployees: Ref<Array<Object>>,
+ *   selectableOutsourcers: Ref<Array<Object>>,
  *   selectedDate: Ref<string|null>,
  *   uiWorkerSelector: ComputedRef<Object>,
  *   uiSiteShiftTypeJumpListMenu: ComputedRef<Object>,
  *   uiSiteShiftTypeReorderDialog: ComputedRef<Object>,
+ *   getNotification: Function,
+ *   isEmployeeArranged: Function,
  *   openPdf: Function,
  *   getCommandText: Function,
  *   notify: Function,
