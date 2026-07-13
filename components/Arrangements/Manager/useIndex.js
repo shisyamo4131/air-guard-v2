@@ -1,14 +1,10 @@
 /*****************************************************************************
  * @file ./components/Arrangements/Manager/useIndex.js
- * @description ArrangementsManager 専用 コンポーザブル
+ * @description ArrangementsManager 専用 local facade コンポーザブル
  * - ArrangementsManager で必要となる状態管理と操作（機能）を提供する専用コンポーザブルです。
  *****************************************************************************/
+import { useArrangementsActions } from "@/composables/application/arrangement/useArrangementsActions";
 import { useSelectableDate } from "./useSelectableDate";
-import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
-import { useOpenArrangementSheetPdf } from "@/composables/application/arrangement/useOpenArrangementSheetPdf";
-import { useSiteOperationScheduleActions } from "@/composables/application/siteOperationSchedule/useSiteOperationScheduleActions";
-import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
-import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
  * @param {import("@/schemas").SiteOperationSchedule[]} schedules - 表示対象のスケジュール配列
@@ -17,6 +13,9 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
  *   selectedDate: Ref<string|null>,
  *   openPdf: Function,
  *   getCommandText: Function,
+ *   notify: Function,
+ *   updateSchedule: Function,
+ *   updateSchedules: Function,
  *   updateSiteShiftTypeOrder: Function,
  *   removeSiteShiftTypeOrder: Function,
  * }}
@@ -25,53 +24,28 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
-  const { openPdf: openArrangementSheetPdf } = useOpenArrangementSheetPdf();
-
-  const { getCommandText } = useArrangementNotificationsCommandText({
+  const arrangementsActions = useArrangementsActions({
     schedules,
     siteShiftTypeOrder,
   });
 
-  /** 現場稼働予定更新アクション */
-  const { notify, updateSchedule, updateSchedules } =
-    useSiteOperationScheduleActions();
-
-  /** 現場勤務区分オーダー更新アクション */
-  const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
-    useSiteShiftTypeOrderActions({
-      type: ORDER_TYPE.ARRANGEMENT,
-    });
-
-  /** 選択中日付管理コンポーザブル */
-  const { selectedDate } = useSelectableDate();
-
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
   /**
-   * 指定された日付の配置表PDFを生成して表示します。
-   * @param {string} date - PDFを生成する対象の日付（例: "2024-01-01"）
-   * @returns {Promise<void>}
+   * 選択中日付管理コンポーザブル
+   * - 現在選択中である日付を管理します。
    */
-  const openPdf = async (date) => {
-    await openArrangementSheetPdf({
-      date,
-      schedules: schedules.value, // useArrangementSheetPdf 側での fetch を避けて読み取り件数を抑制
-      siteShiftTypeOrder: siteShiftTypeOrder.value,
-    });
-  };
+  const { selectedDate } = useSelectableDate();
 
   return {
     /** DATA  */
     selectedDate,
 
     /** METHODS */
-    openPdf,
-    getCommandText,
-    notify,
-    updateSchedule,
-    updateSchedules,
-    updateSiteShiftTypeOrder,
-    removeSiteShiftTypeOrder,
+    openPdf: arrangementsActions.openPdf,
+    getCommandText: arrangementsActions.getCommandText,
+    notify: arrangementsActions.notify,
+    updateSchedule: arrangementsActions.updateSchedule,
+    updateSchedules: arrangementsActions.updateSchedules,
+    updateSiteShiftTypeOrder: arrangementsActions.updateSiteShiftTypeOrder,
+    removeSiteShiftTypeOrder: arrangementsActions.removeSiteShiftTypeOrder,
   };
 }
