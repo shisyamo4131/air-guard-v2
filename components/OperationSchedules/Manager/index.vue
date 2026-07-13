@@ -15,7 +15,7 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
 
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
-import { useSiteShiftTypeOrderActions } from "~/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { useSiteShiftTypeOrderActions } from "~/composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
 
 /** SETUP COMPOSABLES */
 const { fetchSiteComposable } = useFetch("OperationSchedulesManager");

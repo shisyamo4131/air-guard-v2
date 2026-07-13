@@ -6,9 +6,11 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
- * @file ./composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js
+ * @file ./composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js
  * @description
- * - `SiteShiftTypeOrder` の更新処理を提供します。
+ * - 現場勤務区分オーダーの更新・削除を、画面操作から利用しやすい形で提供する
+ *   application composable です。
+ * - auth.company の更新処理、loading、error handling を担当します。
  *****************************************************************************/
 export function useSiteShiftTypeOrderActions({
   type = Vue.ref(TYPE.ARRANGEMENT),

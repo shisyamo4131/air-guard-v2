@@ -11,7 +11,7 @@
 import { useArrangementNotificationsCommandText } from "@/composables/useArrangementNotificationsCommandText";
 import { useOpenArrangementSheetPdf } from "@/composables/application/arrangement/useOpenArrangementSheetPdf";
 import { useSiteOperationScheduleActions } from "@/composables/application/siteOperationSchedule/useSiteOperationScheduleActions";
-import { useSiteShiftTypeOrderActions } from "@/composables/domain/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { useSiteShiftTypeOrderActions } from "@/composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
