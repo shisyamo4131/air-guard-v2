@@ -20,9 +20,6 @@
 import { useDefaults } from "vuetify";
 import { SiteOperationSchedule } from "@/schemas";
 
-// DATA LAYER COMPOSABLES
-import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
-
 // MANAGER COMPOSABLES
 import { useIndex } from "./useIndex";
 
@@ -64,33 +61,25 @@ const _props = defineProps({
 const props = useDefaults(_props, "ArrangementsManager");
 
 /*****************************************************************************
- * SETUP DATA LAYER COMPOSABLE
- * - `props.startDate`, `props.endDate` で指定された期間の配置管理に関わる
- *   データを取得・提供します。
- *****************************************************************************/
-const {
-  schedules,
-  getNotification,
-  isEmployeeArranged,
-  selectableEmployees,
-  selectableOutsourcers,
-  siteShiftTypeOrder, // 補完済みの現場勤務区分オーダー
-} = useArrangementsInRange({
-  from: toRef(() => props.startDate),
-  to: toRef(() => props.endDate),
-});
-
-/*****************************************************************************
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
-const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
-const { selectedDate } = managerComposable;
+// const managerComposable = useIndex({ schedules, siteShiftTypeOrder });
+const managerComposable = useIndex(props);
+const {
+  schedules,
+  siteShiftTypeOrder,
+  selectedDate,
+  selectableEmployees,
+  selectableOutsourcers,
+} = managerComposable;
 const {
   uiWorkerSelector,
   uiSiteShiftTypeJumpListMenu,
   uiSiteShiftTypeReorderDialog,
 } = managerComposable;
 const {
+  getNotification,
+  isEmployeeArranged,
   openPdf,
   getCommandText,
   notify,

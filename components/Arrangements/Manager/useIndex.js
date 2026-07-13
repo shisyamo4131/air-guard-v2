@@ -4,6 +4,7 @@
  * - ArrangementsManager で必要となる状態管理と操作（機能）を提供する専用コンポーザブルです。
  *****************************************************************************/
 import * as Vue from "vue";
+import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
 import { useArrangementsActions } from "@/composables/application/arrangement/useArrangementsActions";
 import { useSelectableDate } from "./useSelectableDate";
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
@@ -27,7 +28,23 @@ import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
  *   removeSiteShiftTypeOrder: Function,
  * }}
  *****************************************************************************/
-export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
+// export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
+export function useIndex(props) {
+  /*****************************************************************************
+   * SETUP DATA LAYER COMPOSABLE
+   *****************************************************************************/
+  const {
+    schedules,
+    getNotification,
+    isEmployeeArranged,
+    selectableEmployees,
+    selectableOutsourcers,
+    siteShiftTypeOrder, // 補完済みの現場勤務区分オーダー
+  } = useArrangementsInRange({
+    from: Vue.toRef(() => props.startDate),
+    to: Vue.toRef(() => props.endDate),
+  });
+
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
@@ -60,7 +77,11 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
    *****************************************************************************/
   return {
     /** DATA  */
+    schedules,
+    siteShiftTypeOrder,
     selectedDate,
+    selectableEmployees,
+    selectableOutsourcers,
 
     /** UI controller */
     uiWorkerSelector: Vue.computed(() => {
@@ -86,7 +107,8 @@ export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
     }),
 
     /** METHODS */
-
+    getNotification,
+    isEmployeeArranged,
     openPdf: arrangementsActions.openPdf,
     getCommandText: arrangementsActions.getCommandText,
     notify: arrangementsActions.notify,
