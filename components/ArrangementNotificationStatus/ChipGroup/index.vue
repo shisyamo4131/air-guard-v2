@@ -37,6 +37,7 @@ const { ARRANGEMENT_NOTIFICATION_STATUS: STATUS } = useConstants();
       :text="item.title"
       filter
       label
+      size="small"
     />
   </v-chip-group>
 </template>

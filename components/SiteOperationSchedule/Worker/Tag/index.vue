@@ -72,7 +72,7 @@ defineOptions({ inheritAttrs: false });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({ ...importedProps });
-const props = useDefaults(_props, "WorkerTag");
+const props = useDefaults(_props, "SiteOperationScheduleWorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
 const { attrs, editProps, notificationProps } = useIndex(props, emit);
