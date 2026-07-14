@@ -355,10 +355,4 @@ provide("columns", columns);
 #operation-schedules-table :deep(table) {
   table-layout: fixed !important;
 }
-
-.fixed-left {
-  position: sticky;
-  left: 16px;
-  z-index: 1;
-}
 </style>

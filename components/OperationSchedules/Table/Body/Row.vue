@@ -75,3 +75,12 @@ const props = useDefaults(_props, "OperationSchedulesTableBodyRow");
     </td>
   </tr>
 </template>
+
+<style scoped>
+/* 現場勤務区分行を左端でフロートさせる */
+.fixed-left {
+  position: sticky;
+  left: 16px;
+  z-index: 1;
+}
+</style>
