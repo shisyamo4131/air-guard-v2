@@ -123,7 +123,7 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
             updateSchedules($event, { date, siteId, shiftType })
           "
         >
-          <template #default="{ schedule }">
+          <template #default="{ schedule, disabled }">
             <!--
               現場稼働予定カードコンポーネント
               - `update:schedule` イベントは `DraggableWorkers` によって作業員の追加や削除、順序変更が行われた場合に発火。
@@ -132,20 +132,27 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
             <SiteOperationScheduleCard
               class="mb-2"
               style="border: 1px dashed grey"
-              is-draggable
+              :is-draggable="!disabled"
               :schedule="schedule"
-              show-actions
+              :show-actions="!disabled"
               @click:duplicate="duplicatorComposable.set(schedule)"
               @click:notify="notify(schedule)"
               @click:edit="siteOperationScheduleManager.toUpdate(schedule)"
               @update:schedule="updateSchedule($event)"
             >
               <template #default="cardProps">
-                <!-- draggableWorkerProps: { worker, schedule, highlight, isDraggable, removable, onClick:remove } -->
-                <DraggableWorkers v-bind="cardProps.model" class="fill-height">
+                <DraggableWorkers
+                  class="fill-height"
+                  v-bind="cardProps.model"
+                  :disabled="disabled"
+                >
+                  <!-- draggableWorkerProps: { worker, highlight, isDraggable, removable, onClick:remove } -->
                   <template #default="draggableWorkersProps">
                     <SiteOperationScheduleWorkerTag
                       v-bind="draggableWorkersProps"
+                      :schedule="schedule"
+                      :hide-edit="disabled"
+                      :hide-notification="disabled"
                       :notification="
                         notificationIndexes.byDocId.get(
                           draggableWorkersProps.worker.notificationKey,

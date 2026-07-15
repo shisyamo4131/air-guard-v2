@@ -11,6 +11,7 @@
  *
  * @extends vuedraggable
  *
+ * @property {Boolean} disabled - ドラッグ操作を無効化するかどうか
  * @property {String} groupName - vue-draggable の group 名
  * @property {String} handle - vue-draggable の drag handle セレクタ
  * @property {String} itemKey - vue-draggable の item key 名
@@ -35,6 +36,7 @@ defineOptions({ name: "DraggableWorkers", inheritAttrs: false });
  * SETUP PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  disabled: { type: Boolean, default: false },
   // vue-draggable の group 名
   groupName: { type: String, default: "workers" },
   // vue-draggable の drag handle セレクタ

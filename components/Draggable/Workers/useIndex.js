@@ -198,7 +198,7 @@ export function useIndex(props, emit) {
   const attrs = Vue.computed(() => {
     return {
       modelValue: internalSchedule?.value?.workers || [],
-      disabled: !internalSchedule.value.isEditable,
+      disabled: props.disabled || !internalSchedule.value.isEditable,
       group: { name: props.groupName, put: handlePut },
       handle: props.handle,
       itemKey: props.itemKey,
@@ -214,9 +214,8 @@ export function useIndex(props, emit) {
   const defaultSlotProps = Vue.computed(() => {
     return {
       highlight: (id) => isEmployeeExist(id),
-      isDraggable: internalSchedule.value.isEditable,
-      removable: internalSchedule.value.isEditable,
-      schedule: internalSchedule.value,
+      isDraggable: props.disabled ? false : internalSchedule.value.isEditable,
+      removable: props.disabled ? false : internalSchedule.value.isEditable,
       remove: ({ workerId, isEmployee }) => {
         handleChange({ removed: { element: { workerId, isEmployee } } });
       },
