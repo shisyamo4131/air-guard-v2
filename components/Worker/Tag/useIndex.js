@@ -3,8 +3,6 @@
  *****************************************************************************/
 import dayjs from "dayjs";
 import * as Vue from "vue";
-import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
-import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import EmployeeTag from "@/components/Employee/Tag/index.vue";
 import OutsourcerTag from "@/components/Outsourcer/Tag/index.vue";
 
@@ -42,14 +40,6 @@ export function useIndex(props, emit) {
     return props.isEmployee ? EmployeeTag : OutsourcerTag;
   });
 
-  // useFetchEmployeeのインスタンス取得（propsで渡されたものか、新規作成）
-  const fetchEmployeeComposable =
-    props.fetchEmployeeComposable || useFetchEmployee();
-
-  // useFetchOutsourcerのインスタンス取得（propsで渡されたものか、新規作成）
-  const fetchOutsourcerComposable =
-    props.fetchOutsourcerComposable || useFetchOutsourcer();
-
   /**
    * 子コンポーネント（EmployeeTag/OutsourcerTag）に渡す属性の算出
    */
@@ -65,22 +55,7 @@ export function useIndex(props, emit) {
         ? props.highlight(props.id)
         : props.highlight;
 
-    // isEmployeeに応じて適切なpropsを渡す
-    if (props.isEmployee) {
-      return {
-        ...props,
-        ...baseAttrs,
-        fetchEmployeeComposable: fetchEmployeeComposable,
-        highlight,
-      };
-    } else {
-      return {
-        ...props,
-        ...baseAttrs,
-        fetchOutsourcerComposable: fetchOutsourcerComposable,
-        highlight,
-      };
-    }
+    return { ...props, ...baseAttrs, highlight };
   });
 
   return { componentTag, attrs, startTime, endTime };

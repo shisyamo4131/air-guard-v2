@@ -28,24 +28,6 @@ export default {
    * 作業員ID (従業員IDまたは外注先ID)
    */
   id: { type: String, required: true },
-  /**
-   * useFetchEmployee コンポーザブルのインスタンス
-   * 親コンポーネントから渡される場合は、キャッシュを共有できます。
-   * 指定されない場合は、コンポーネント内部で新規インスタンスを作成します。
-   */
-  fetchEmployeeComposable: {
-    type: Object,
-    default: undefined,
-  },
-  /**
-   * useFetchOutsourcer コンポーザブルのインスタンス
-   * 親コンポーネントから渡される場合は、キャッシュを共有できます。
-   * 指定されない場合は、コンポーネント内部で新規インスタンスを作成します。
-   */
-  fetchOutsourcerComposable: {
-    type: Object,
-    default: undefined,
-  },
   /** End time of the site operation schedule worker's shift */
   endTime: { type: String, default: undefined },
   /** Whether to hide the time display */

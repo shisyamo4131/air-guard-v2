@@ -1,5 +1,5 @@
 <script setup>
-/**
+/*****************************************************************************
  * WorkerTag
  * @file components/Worker/Tag/index.vue
  * @description 作業員（従業員または外注先）情報表示用タグコンポーネントです。
@@ -14,8 +14,6 @@
  * @property {Boolean} highlightStartTime - 開始時刻を強調表示するかどうか（既定値: false）
  * @property {Boolean} highlightEndTime - 終了時刻を強調表示するかどうか（既定値: false）
  * @property {Boolean} isEmployee - true: 従業員、false: 外注先
- * @property {Object} fetchEmployeeComposable - useFetchEmployeeのインスタンス（任意）
- * @property {Object} fetchOutsourcerComposable - useFetchOutsourcerのインスタンス（任意）
  * @property {String} id - 作業員ID（必須 / 'workerId' ではないことに注意）
  *
  * [Properties imported from components/Tag]
@@ -42,7 +40,7 @@
  *   - append-end-time: 終了時刻の後に表示するコンテンツ
  *
  * @emits click:remove - 削除ボタンがクリックされた際に発火
- */
+ *****************************************************************************/
 import { useDefaults } from "vuetify";
 import importedProps from "@/components/Worker/Tag/props";
 import { useIndex } from "./useIndex";
