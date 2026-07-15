@@ -45,7 +45,8 @@ watch(
  * COMPUTED
  *****************************************************************************/
 const date = computed(() => {
-  return dayjs(props.schedule.date).tz("Asia/Tokyo").format("YYYY/MM/DD (ddd)");
+  // return dayjs(props.schedule.date).tz("Asia/Tokyo").format("YYYY/MM/DD (ddd)");
+  return dayjs.tz(props.schedule.date, "Asia/Tokyo").format("YYYY/MM/DD (ddd)");
 });
 
 /** 時間 */

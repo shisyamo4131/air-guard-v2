@@ -49,8 +49,11 @@ watch(
  * COMPUTED
  *****************************************************************************/
 const date = computed(() => {
-  return dayjs(props.schedule.date)
-    .tz("Asia/Tokyo")
+  // return dayjs(props.schedule.date)
+  //   .tz("Asia/Tokyo")
+  //   .format("YYYY年MM月DD日 (ddd)");
+  return dayjs
+    .tz(props.schedule.date, "Asia/Tokyo")
     .format("YYYY年MM月DD日 (ddd)");
 });
 
