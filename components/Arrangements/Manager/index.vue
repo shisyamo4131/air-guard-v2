@@ -141,11 +141,9 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
               @update:schedule="updateSchedule($event)"
             >
               <template #default="cardProps">
+                <!-- draggableWorkerProps: { worker, schedule, highlight, isDraggable, removable, onClick:remove } -->
                 <DraggableWorkers v-bind="cardProps.model" class="fill-height">
                   <template #default="draggableWorkersProps">
-                    <!--
-                      draggableWorkerProps: { worker, schedule, highlight, isDraggable, removable, onClick:remove }
-                    -->
                     <SiteOperationScheduleWorkerTag
                       v-bind="draggableWorkersProps"
                       :notification="
