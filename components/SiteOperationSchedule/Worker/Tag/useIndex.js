@@ -43,12 +43,25 @@ export function useIndex(props, emit) {
 
   /**
    * Tag コンポーネントに渡す属性の算出
-   * - `worker`、`schedule`、`notifications` プロパティは除外して渡す
+   * - WorkerTag との契約に基づいたプロパティを返します。
    * - `removable` 属性は `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化する
    */
   const attrs = Vue.computed(() => {
-    const { worker, schedule, notifications, ...rest } = props;
+    const {
+      disableEdit,
+      disableNotification,
+      editIcon,
+      hideEdit,
+      hideNotification,
+      notification,
+      schedule,
+      worker,
+      ...rest
+    } = props;
     const scheduleIsEditable = props.schedule?.isEditable || false;
+    const workerId = worker.workerId;
+    const isEmployee = worker.isEmployee;
+    const onClickRemove = () => emit("click:remove", { workerId, isEmployee });
     return {
       ...rest,
       id: worker.id,
@@ -59,11 +72,7 @@ export function useIndex(props, emit) {
       highlightEndTime: isTimesHasDifference.value.endTime,
       removable: props.removable && scheduleIsEditable,
       isDraggable: props.isDraggable && scheduleIsEditable,
-      "onClick:remove": () =>
-        emit("click:remove", {
-          workerId: worker.workerId,
-          isEmployee: worker.isEmployee,
-        }),
+      "onClick:remove": onClickRemove,
     };
   });
 
