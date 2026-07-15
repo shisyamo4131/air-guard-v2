@@ -1,5 +1,6 @@
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
+import { createDraggableFallbackOptions } from "@/composables/application/draggable/createDraggableFallbackOptions";
 
 export function useIndex(props, emit) {
   /*****************************************************************************
@@ -47,10 +48,7 @@ export function useIndex(props, emit) {
 
       // 以下、スマホやタブレット端末においてドラッグ中の要素をPCと同様に取り扱うための追加設定
       // この設定を行わないと、ドラッグ中の要素が親コンテナの描画範囲からはみ出ないなどの問題が発生する
-      ghostClass: "sortable-ghost",
-      forceFallback: true,
-      fallbackOnBody: true,
-      appendTo: "body",
+      ...createDraggableFallbackOptions(),
     };
   });
 
