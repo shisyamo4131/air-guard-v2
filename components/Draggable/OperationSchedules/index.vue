@@ -26,7 +26,11 @@ import draggable from "vuedraggable";
 import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
 
-defineOptions({ name: "DraggableOperationSchedules" });
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({ name: "DraggableOperationSchedules", inheritAttrs: false });
+
 /*****************************************************************************
  * SETUP PROPS & EMITS
  *****************************************************************************/
@@ -52,7 +56,7 @@ const { attrs, defaultSlotProps } = useIndex(props, emit);
 </script>
 
 <template>
-  <draggable v-bind="attrs" class="fill-height">
+  <draggable v-bind="{ ...$attrs, ...attrs }">
     <template #item="{ element: schedule }">
       <div>
         <slot name="default" v-bind="{ schedule, ...defaultSlotProps }">

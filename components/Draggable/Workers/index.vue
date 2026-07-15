@@ -26,7 +26,10 @@ import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
 import { SiteOperationSchedule } from "@/schemas";
 
-defineOptions({ name: "DraggableWorkers" });
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
+defineOptions({ name: "DraggableWorkers", inheritAttrs: false });
 
 /*****************************************************************************
  * SETUP PROPS & EMITS
@@ -56,7 +59,7 @@ const { attrs, defaultSlotProps } = useIndex(props, emit);
 </script>
 
 <template>
-  <draggable v-bind="attrs" class="fill-height">
+  <draggable v-bind="{ ...$attrs, ...attrs }">
     <template #item="{ element: worker }">
       <div>
         <slot name="default" v-bind="{ worker, ...defaultSlotProps }" />
