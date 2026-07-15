@@ -194,11 +194,22 @@ export function useIndex(props, emit) {
   /*****************************************************************************
    * COMPUTED PROPERTIES
    *****************************************************************************/
+  /**
+   * 当該コンポーネントの disabled を返します。
+   * - props.disabled が true の場合は true
+   * - 内部管理用の schedule が編集不可の場合は true
+   * - それ以外の場合は false
+   * @returns {boolean} - 当該コンポーネントが disabled かどうか
+   */
+  const disabled = Vue.computed(() => {
+    return props.disabled || !internalSchedule.value.isEditable;
+  });
+
   // draggable コンポーネントに渡す属性
   const attrs = Vue.computed(() => {
     return {
       modelValue: internalSchedule?.value?.workers || [],
-      disabled: props.disabled || !internalSchedule.value.isEditable,
+      disabled: disabled.value,
       group: { name: props.groupName, put: handlePut },
       handle: props.handle,
       itemKey: props.itemKey,
@@ -214,11 +225,8 @@ export function useIndex(props, emit) {
   const defaultSlotProps = Vue.computed(() => {
     return {
       highlight: (id) => isEmployeeExist(id),
-      isDraggable: props.disabled ? false : internalSchedule.value.isEditable,
-      removable: props.disabled ? false : internalSchedule.value.isEditable,
-      remove: ({ workerId, isEmployee }) => {
-        handleChange({ removed: { element: { workerId, isEmployee } } });
-      },
+      isDraggable: !disabled.value,
+      removable: !disabled.value,
       "onClick:remove": ({ workerId, isEmployee }) => {
         handleChange({ removed: { element: { workerId, isEmployee } } });
       },

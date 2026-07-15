@@ -160,7 +160,7 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
                       "
                       @click:edit="
                         workerManager.toUpdate({
-                          schedule: draggableWorkersProps.schedule,
+                          schedule,
                           worker: draggableWorkersProps.worker,
                         })
                       "
