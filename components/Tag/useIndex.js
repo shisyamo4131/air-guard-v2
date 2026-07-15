@@ -43,7 +43,7 @@ export function useIndex(props, emit) {
   /**
    * Tag height based on size
    */
-  const tagHeight = Vue.computed(() => sizeConfig.value.height);
+  const tagHeight = Vue.computed(() => sizeConfig.value.minHeight);
 
   /**
    * Title classes based on size
