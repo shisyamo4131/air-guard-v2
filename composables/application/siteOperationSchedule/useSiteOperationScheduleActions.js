@@ -1,3 +1,4 @@
+import dayjs from "dayjs";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
@@ -64,18 +65,42 @@ export function useSiteOperationScheduleActions() {
   };
 
   /**
-   * 引数で受け取った複数のスケジュールを一括で更新します。
-   * - `DraggableOperationSchedules` の `update:schedules` イベントで使用される、
-   *   複数スケジュールの更新をデータベースに反映するためのものです。
-   *   `displayOrder` の変更を反映することを目的としています。
-   * - トランザクションを使用して一括更新を行います。
-   * - 空配列なら呼び出されても実質的に処理は走りません。
-   * @param {Array<SiteOperationSchedule>} schedules
+   * 現場稼働予定の配列を受け取り、siteId, shiftType, dateAt, displayOrder を `options` で
+   * 指定された値に更新して返します。
+   * @param {Array<SiteOperationSchedule>} schedules - 正規化するスケジュール配列
+   * @param {{ date: string, siteId: string, shiftType: string }} options - 正規化に必要なオプション
+   * @returns {Array<SiteOperationSchedule>} 正規化されたスケジュール配列
+   * @throws {Error} options に date, siteId, shiftType が含まれていない場合にスローされます。
    */
-  const updateSchedules = async (schedules) => {
+  function normalizeSchedules(schedules, options = {}) {
+    const { date, siteId, shiftType } = options;
+    if (!date || !siteId || !shiftType) {
+      throw new Error("Missing required options: date, siteId, shiftType");
+    }
+    const dateAt = dayjs.tz(date, "Asia/Tokyo").startOf("day").toDate();
+    return schedules.map((schedule, index) => {
+      schedule.siteId = siteId;
+      schedule.shiftType = shiftType;
+      schedule.dateAt = dateAt;
+      schedule.displayOrder = index;
+      return schedule;
+    });
+  }
+  /**
+   * 引数で受け取った複数の現場稼働予定を一括でデータベースに更新します。
+   * - `displayOrder` が配列の要素順で更新されます。
+   * - `siteId`, `shiftType`, `dateAt` は `options` で指定された値に更新されます。
+   * - トランザクションを使用して一括更新を行います。
+   * - 空配列の場合、呼び出されても実質的に処理は走りません。
+   * @param {Array<SiteOperationSchedule>} schedules
+   * @param {{ date: string, siteId: string, shiftType: string }} options - 正規化に必要なオプション
+   * @returns {Promise<void>}
+   */
+  const updateSchedules = async (schedules, options = {}) => {
     try {
+      const normalizedSchedules = normalizeSchedules(schedules, options);
       await SiteOperationSchedule.runTransaction(async (transaction) => {
-        const promises = schedules.map((schedule) =>
+        const promises = normalizedSchedules.map((schedule) =>
           schedule.update({ transaction }),
         );
         await Promise.all(promises);

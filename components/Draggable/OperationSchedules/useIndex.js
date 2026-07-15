@@ -1,14 +1,7 @@
 import * as Vue from "vue";
-import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
-import { useBaseManager } from "@/composables/useBaseManager";
 
 export function useIndex(props, emit) {
-  /*****************************************************************************
-   * SETUP COMPOSABLES
-   *****************************************************************************/
-  const { logger, isDev } = useBaseManager("DraggableOperationSchedules");
-
   /*****************************************************************************
    * SETUP STATES
    *****************************************************************************/
@@ -29,40 +22,13 @@ export function useIndex(props, emit) {
    * METHODS
    *****************************************************************************/
   /**
-   * 引数で受け取った新しいスケジュール配列を元に、siteId, shiftType, dateAt, displayOrder を更新し、
-   * 内部状態を更新した後、親コンポーネントに更新を通知します。
-   * - ドラッグアンドドロップによるスケジュールの順序変更や、他のグループからのスケジュールの移動など、
-   *   スケジュール配列が変更された際に呼び出されます。
-   * - 他のグループからのスケジュールの移動の場合、siteId, shiftType, dateAt が移動元の値のままであるため
-   *   これらを props から取得して更新します。
-   * - 順序変更の場合は displayOrder を新しい配列のインデックスに基づいて更新します。
+   * 引数で受け取ったスケジュール配列を内部状態に反映し、親コンポーネントに更新を通知します。
+   * - Optimistic Update のため、内部状態を先に更新してから親コンポーネントに通知します。
    * @param {Array} newSchedules - ドラッグアンドドロップ後の新しいスケジュール配列
-   * @returns {Promise<void>}
+   * @returns {void}
    */
-  async function handleUpdateModelValue(newSchedules) {
-    // ログ出力（開発環境のみ）
-    if (isDev) {
-      logger.info({
-        message: "Updating schedules with new schedules",
-        data: newSchedules,
-      });
-    }
-
-    // siteId, shiftType, date, displayOrder を更新
-    newSchedules.forEach((schedule, index) => {
-      schedule.siteId = props.siteId;
-      schedule.shiftType = props.shiftType;
-      schedule.dateAt = dayjs // 実行環境に依存せず Asia/Tokyo として扱う
-        .tz(props.date, "Asia/Tokyo")
-        .startOf("day")
-        .toDate();
-      schedule.displayOrder = index;
-    });
-
-    // 内部状態を更新（Optimistic Updates）
+  function handleUpdateModelValue(newSchedules) {
     internalSchedules.value = newSchedules;
-
-    // 親コンポーネントに更新を通知
     emit("update:schedules", newSchedules);
   }
 

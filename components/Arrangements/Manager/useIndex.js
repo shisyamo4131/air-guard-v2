@@ -17,7 +17,7 @@ import { SiteOperationSchedule } from "@/schemas";
  * @param {string} props.startDate - 開始日付（YYYY-MM-DD）
  * @param {string} props.endDate - 終了日付（YYYY-MM-DD）
  * @returns {{
- *   uiOperationSchedulesTable: ComputedRef<Object>,
+ *   uiTable: ComputedRef<Object>,
  *   uiWorkerSelector: ComputedRef<Object>,
  *   uiSiteShiftTypeJumpList: ComputedRef<Object>,
  *   uiSiteShiftTypeReorder: ComputedRef<Object>,
@@ -44,6 +44,7 @@ export function useIndex(
    *****************************************************************************/
   const {
     schedules,
+    notificationIndexes,
     getNotification,
     isEmployeeArranged,
     selectableEmployees,
@@ -106,13 +107,14 @@ export function useIndex(
    *****************************************************************************/
   return {
     /** UI controller */
-    uiOperationSchedulesTable: Vue.computed(() => {
+    uiTable: Vue.computed(() => {
       return {
         component: {
           attrs: {
             columnWidth: 256,
             dayFormat: "MM/DD(ddd)",
             endDate: props.endDate,
+            notificationIndexes: notificationIndexes.value,
             schedules: schedules.value,
             scrollToRowKey: rowKeyToScroll.value,
             selectedDate: selectedDate.value,

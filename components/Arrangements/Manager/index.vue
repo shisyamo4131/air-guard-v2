@@ -13,6 +13,7 @@ import { useDefaults } from "vuetify";
 import { useIndex } from "./useIndex";
 
 // Components
+import Table from "./Table.vue";
 import WeekdayActions from "./WeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
@@ -70,7 +71,7 @@ const managerComposable = useIndex(props, {
 });
 
 const {
-  uiOperationSchedulesTable,
+  uiTable,
   uiWorkerSelector,
   uiSiteShiftTypeJumpList,
   uiSiteShiftTypeReorder,
@@ -96,10 +97,7 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
     </v-menu>
 
     <!-- スケジュール管理テーブル -->
-    <OperationSchedulesTable
-      class="fill-height"
-      v-bind="uiOperationSchedulesTable.component.attrs"
-    >
+    <Table class="fill-height" v-bind="uiTable.component.attrs">
       <!-- 日付の表示形式をカスタマイズ -->
       <template #append-day="{ column, holidayIcon }">
         <v-icon v-if="column.isHoliday" v-bind="holidayIcon" />
@@ -108,20 +106,21 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
       <!-- 曜日セルのカスタマイズ -->
       <template #weekday="{ column, isSelected }">
         <WeekdayActions
-          v-bind="uiOperationSchedulesTable.component.weekdayActions.attrs"
+          v-bind="uiTable.component.weekdayActions.attrs"
           :column="column"
           :is-selected="isSelected"
         />
       </template>
 
       <!-- セルのカスタマイズ -->
-      <template #cell="{ date, siteId, shiftType, schedules }">
+      <template
+        #cell="{ date, siteId, shiftType, schedules, notificationIndexes }"
+      >
         <DraggableOperationSchedules
-          :date="date"
-          :shift-type="shiftType"
-          :site-id="siteId"
           :schedules="schedules"
-          @update:schedules="updateSchedules($event)"
+          @update:schedules="
+            updateSchedules($event, { date, siteId, shiftType })
+          "
         >
           <template #default="{ schedule }">
             <!--
@@ -149,7 +148,9 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
                     <SiteOperationScheduleWorkerTag
                       v-bind="draggableWorkersProps"
                       :notification="
-                        getNotification(draggableWorkersProps.worker)
+                        notificationIndexes.byDocId.get(
+                          draggableWorkersProps.worker.notificationKey,
+                        )
                       "
                       @click:edit="
                         workerManager.toUpdate({
@@ -168,7 +169,7 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
           </template>
         </DraggableOperationSchedules>
       </template>
-    </OperationSchedulesTable>
+    </Table>
 
     <!-- 現場オーダー並び替え用コンポーネント -->
     <AtomsDialogsFullscreen v-bind="uiSiteShiftTypeReorder.dialog.attrs">

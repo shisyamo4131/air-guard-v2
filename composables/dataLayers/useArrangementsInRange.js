@@ -339,17 +339,21 @@ export function useArrangementsInRange({ from, to } = {}) {
     siteShiftTypeOrder, // 補完された現場勤務区分オーダー
 
     /** INDEXES */
-    schedulesIndex: {
-      byDocId: schedulesByDocId,
-      byGroupKey: schedulesByGroupKey,
-      groupKeyByScheduleId,
-    },
+    schedulesIndex: Vue.computed(() => {
+      return {
+        byDocId: schedulesByDocId.value,
+        byGroupKey: schedulesByGroupKey.value,
+        groupKeyByScheduleId: groupKeyByScheduleId.value,
+      };
+    }),
 
     /** NOTIFICATION INDEXES */
-    notificationIndexes: {
-      byDocId: notificationsByDocId,
-      byScheduleId: notificationsByScheduleId,
-    },
+    notificationIndexes: Vue.computed(() => {
+      return {
+        byDocId: notificationsByDocId.value,
+        byScheduleId: notificationsByScheduleId.value,
+      };
+    }),
 
     // LOOKUPS
     getSchedule,
