@@ -17,6 +17,11 @@ defineOptions({ name: "ArrangementsManagerTable", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   notificationIndexes: { type: Object, required: true },
+  /**
+   * 選択された日付
+   * - 指定された日付に該当するセル以外をぼやけさせます。
+   */
+  selectedDate: { type: String, default: undefined },
 });
 const props = useDefaults(_props, "ArrangementsManagerTable");
 
@@ -29,15 +34,20 @@ const props = useDefaults(_props, "ArrangementsManagerTable");
  * @return {Object} - `cell` スロットに渡すプロパティ
  */
 function createCellSlotProps(scope = {}) {
+  const { date } = scope;
+  const disabled = props.selectedDate && props.selectedDate !== date;
   return {
     ...scope,
+    disabled,
     notificationIndexes: props.notificationIndexes || {},
   };
 }
 </script>
 
 <template>
-  <OperationSchedulesTable v-bind="$attrs">
+  <OperationSchedulesTable
+    v-bind="{ ...$attrs, selectedDate: props.selectedDate }"
+  >
     <!-- すべてのスロットをパススルー -->
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot

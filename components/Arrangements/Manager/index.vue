@@ -114,11 +114,19 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
 
       <!-- セルのカスタマイズ -->
       <template
-        #cell="{ date, siteId, shiftType, schedules, notificationIndexes }"
+        #cell="{
+          date,
+          siteId,
+          shiftType,
+          schedules,
+          disabled,
+          notificationIndexes,
+        }"
       >
         <DraggableOperationSchedules
           class="fill-height"
           :schedules="schedules"
+          :disabled="disabled"
           @update:schedules="
             updateSchedules($event, { date, siteId, shiftType })
           "
