@@ -16,7 +16,6 @@ defineOptions({ name: "ArrangementsManagerTable", inheritAttrs: false });
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
-  notificationIndexes: { type: Object, required: true },
   /**
    * 選択された日付
    * - 指定された日付に該当するセル以外をぼやけさせます。
@@ -39,7 +38,6 @@ function createCellSlotProps(scope = {}) {
   return {
     ...scope,
     disabled,
-    notificationIndexes: props.notificationIndexes || {},
   };
 }
 </script>

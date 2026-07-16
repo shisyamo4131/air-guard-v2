@@ -113,16 +113,7 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
       </template>
 
       <!-- セルのカスタマイズ -->
-      <template
-        #cell="{
-          date,
-          siteId,
-          shiftType,
-          schedules,
-          disabled,
-          notificationIndexes,
-        }"
-      >
+      <template #cell="{ date, siteId, shiftType, schedules, disabled }">
         <DraggableOperationSchedules
           class="fill-height"
           :schedules="schedules"
@@ -162,8 +153,8 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
                       :hide-edit="disabled"
                       :hide-notification="disabled"
                       :notification="
-                        notificationIndexes.byDocId.get(
-                          draggableWorkersProps.worker.notificationKey,
+                        managerComposable.getNotification(
+                          draggableWorkersProps.worker,
                         )
                       "
                       @click:edit="

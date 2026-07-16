@@ -44,7 +44,6 @@ export function useIndex(
    *****************************************************************************/
   const {
     schedules,
-    notificationIndexes,
     getNotification,
     isEmployeeArranged,
     selectableEmployees,
@@ -114,7 +113,6 @@ export function useIndex(
             columnWidth: 256,
             dayFormat: "MM/DD(ddd)",
             endDate: props.endDate,
-            notificationIndexes: notificationIndexes.value,
             schedules: schedules.value,
             scrollToRowKey: rowKeyToScroll.value,
             selectedDate: selectedDate.value,
