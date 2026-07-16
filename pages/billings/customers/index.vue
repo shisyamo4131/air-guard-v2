@@ -10,6 +10,8 @@ import { useCustomerBillingsManager } from "@/composables/useCustomerBillingsMan
 import { useBillingPdf } from "@/composables/pdf/useBillingPdf";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { exportOperationResultsCsv } from "@/utils/csv/exportOperationResultsCsv";
+import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -22,9 +24,10 @@ defineOptions({ name: "billings-customers-index" });
 const router = useRouter();
 
 /*****************************************************************************
- * SETUP LOADINGS STORE
+ * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 const loadings = useLoadingsStore();
+const logger = useLogger("billings-customers-index", useErrorsStore());
 
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
@@ -67,18 +70,23 @@ async function handleGroupPdfClick(item) {
 
 // グループ行のCSV出力ボタンのクリックハンドラ
 async function handleGroupCsvClick(item) {
-  const billings = item.items.map((i) => i.raw);
+  const key = loadings.add(`Creating billing CSV`);
+  try {
+    const billings = item.items.map((i) => i.raw);
+    const operationResults = billings.flatMap(
+      (billing) => billing.operationResults ?? [],
+    );
 
-  console.log(billings);
-  const operationResults = billings.flatMap(
-    (billing) => billing.operationResults ?? [],
-  );
-
-  exportOperationResultsCsv({
-    operationResults,
-    cachedSites: cachedSites.value,
-    fileName: "operation_results.csv",
-  });
+    exportOperationResultsCsv({
+      operationResults,
+      cachedSites: cachedSites.value,
+      fileName: "operation_results.csv", // 要改修: 関数はこの引数を受け取っていない。
+    });
+  } catch (error) {
+    logger.error({ message: "Failed to create billing CSV", error });
+  } finally {
+    loadings.remove(key);
+  }
 }
 
 // 現場ごとのPDF出力ボタンのクリックハンドラ（既存）

@@ -19,7 +19,7 @@ export function exportOperationResultsCsv({
     // 現場
     "siteId",
     "siteCode",
-    "siteNumber", // 将来用
+    "siteNumber",
     "siteName",
 
     // 取極め
