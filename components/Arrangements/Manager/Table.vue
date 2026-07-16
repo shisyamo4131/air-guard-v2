@@ -1,8 +1,9 @@
 <script setup>
 /*****************************************************************************
  * @file ./components/Arrangements/Manager/Table.vue
- * @description ArrangementManager 専用 配置管理テーブルコンポーネント
  * @extends OperationSchedulesTable
+ * @description ArrangementManager 専用 配置管理テーブルコンポーネント
+ * - `selectedDate` プロパティを参照し、cell スロットに渡すスコープに `disabled` プロパティを追加します。
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 
@@ -12,20 +13,9 @@ import { useDefaults } from "vuetify";
 defineOptions({ name: "ArrangementsManagerTable", inheritAttrs: false });
 
 /*****************************************************************************
- * DEFINE PROPS
- *****************************************************************************/
-const _props = defineProps({
-  /**
-   * 選択された日付
-   * - 指定された日付に該当するセル以外をぼやけさせます。
-   */
-  selectedDate: { type: String, default: undefined },
-});
-const props = useDefaults(_props, "ArrangementsManagerTable");
-
-/*****************************************************************************
  * METHODS
  *****************************************************************************/
+const attrs = useAttrs();
 /**
  * `cell` スロットに渡すプロパティを生成して返します。
  * @param scope - OperationSchedulesTable の `cell` スロットが提供するスコープ
@@ -33,7 +23,8 @@ const props = useDefaults(_props, "ArrangementsManagerTable");
  */
 function createCellSlotProps(scope = {}) {
   const { date } = scope;
-  const disabled = !!props.selectedDate && props.selectedDate !== date;
+  const selectedDate = attrs.selectedDate;
+  const disabled = !!selectedDate && selectedDate !== date;
   return {
     ...scope,
     disabled,
@@ -42,9 +33,7 @@ function createCellSlotProps(scope = {}) {
 </script>
 
 <template>
-  <OperationSchedulesTable
-    v-bind="{ ...$attrs, selectedDate: props.selectedDate }"
-  >
+  <OperationSchedulesTable v-bind="$attrs">
     <!-- すべてのスロットをパススルー -->
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot

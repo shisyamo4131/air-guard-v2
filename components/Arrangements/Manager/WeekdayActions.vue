@@ -2,9 +2,6 @@
 /*****************************************************************************
  * @file ./components/Arrangements/Manager/WeekdayActions.vue
  * @description `ArrangementsManager` 専用 曜日セル アクションコンポーネント
- *
- * @note 集中モードは機能拡充ができるまでは開発者のみ利用可能
- * - 集中モード機能の完成を以てこの条件を削除する
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 
@@ -15,13 +12,6 @@ defineOptions({
   name: "ArrangementsManagerWeekdayActions",
   inheritAttrs: false,
 });
-
-/*****************************************************************************
- * 集中モードは機能拡充ができるまでは開発者のみ利用可能
- * - 集中モード機能の完成を以てこの条件を削除すること。
- *****************************************************************************/
-import { useAuthStore } from "@/stores/useAuthStore";
-const { isDeveloper } = useAuthStore();
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -42,7 +32,6 @@ const emit = defineEmits([
 <template>
   <div class="d-flex ga-6">
     <v-btn
-      v-if="isDeveloper"
       v-tooltip:top="`集中モード切替`"
       :icon="props.isSelected ? 'mdi-eye-off' : 'mdi-eye'"
       size="x-small"
