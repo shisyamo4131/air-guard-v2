@@ -8,25 +8,12 @@
  * @property {Date} endDate - スケジュール表示の終了日
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-
-// MANAGER COMPOSABLES
 import { useIndex } from "./useIndex";
-
-// Components
 import Table from "./Table.vue";
 import WeekdayActions from "./WeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
-
-// OTHER（後で整理）
-import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
-
-/**
- * Duplicator Composable
- * @description 現場運用スケジュール複製用コンポーザブル
- */
-const duplicatorComposable = useSiteOperationScheduleDuplicator();
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -53,20 +40,16 @@ const props = useDefaults(_props, "ArrangementsManager");
 /*****************************************************************************
  * DEFINE TEMPLATE REFS
  *****************************************************************************/
-const siteOperationScheduleManager = useTemplateRef(
-  "siteOperationScheduleManager",
-);
-const arrangementNotificationManager = useTemplateRef(
-  "arrangementNotificationManager",
-);
+const scheduleManager = useTemplateRef("scheduleManager");
+const notificationManager = useTemplateRef("notificationManager");
 const workerManager = useTemplateRef("workerManager");
 
 /*****************************************************************************
  * SETUP MANAGER COMPOSABLE
  *****************************************************************************/
 const managerComposable = useIndex(props, {
-  refSiteOperationScheduleManager: siteOperationScheduleManager,
-  refArrangementNotificationManager: arrangementNotificationManager,
+  refSiteOperationScheduleManager: scheduleManager,
+  refArrangementNotificationManager: notificationManager,
   refWorkerManager: workerManager,
 });
 
@@ -75,11 +58,10 @@ const {
   uiWorkerSelector,
   uiSiteShiftTypeJumpList,
   uiSiteShiftTypeReorder,
+  uiSiteOperationScheduleDuplicator,
   uiCommandTextDialog,
   uiSpeedDial,
 } = managerComposable;
-const { getNotification, notify, updateSchedule, updateSchedules } =
-  managerComposable;
 </script>
 
 <template>
@@ -104,22 +86,18 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
       </template>
 
       <!-- 曜日セルのカスタマイズ -->
-      <template #weekday="{ column, isSelected }">
+      <template #weekday="weekdayProps">
         <WeekdayActions
-          v-bind="uiTable.component.weekdayActions.attrs"
-          :column="column"
-          :is-selected="isSelected"
+          v-bind="uiTable.component.weekdayActions.getAttrs(weekdayProps)"
         />
       </template>
 
       <!-- セルのカスタマイズ -->
-      <template #cell="{ date, siteId, shiftType, schedules, disabled }">
+      <template #cell="cellProps">
         <DraggableOperationSchedules
           class="fill-height"
-          :schedules="schedules"
-          :disabled="disabled"
-          @update:schedules="
-            updateSchedules($event, { date, siteId, shiftType })
+          v-bind="
+            uiTable.component.draggableOperationSchedules.getAttrs(cellProps)
           "
         >
           <template #default="{ schedule, disabled }">
@@ -131,40 +109,27 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
             <SiteOperationScheduleCard
               class="mb-2"
               style="border: 1px dashed grey"
-              :is-draggable="!disabled"
-              :schedule="schedule"
-              :show-actions="!disabled"
-              @click:duplicate="duplicatorComposable.set(schedule)"
-              @click:notify="notify(schedule)"
-              @click:edit="siteOperationScheduleManager.toUpdate(schedule)"
-              @update:schedule="updateSchedule($event)"
+              v-bind="
+                uiTable.component.siteOperationScheduleCard.getAttrs({
+                  schedule,
+                  disabled,
+                })
+              "
             >
               <template #default="cardProps">
                 <DraggableWorkers
                   class="fill-height"
-                  v-bind="cardProps.model"
-                  :disabled="disabled"
+                  v-bind="
+                    uiTable.component.draggableWorkers.getAttrs(cardProps)
+                  "
                 >
-                  <!-- draggableWorkerProps: { worker, highlight, isDraggable, removable, onClick:remove } -->
-                  <template #default="draggableWorkersProps">
+                  <template #default="propsForTag">
                     <SiteOperationScheduleWorkerTag
-                      v-bind="draggableWorkersProps"
-                      :schedule="schedule"
-                      :hide-edit="disabled"
-                      :hide-notification="disabled"
-                      :notification="
-                        managerComposable.getNotification(
-                          draggableWorkersProps.worker,
-                        )
-                      "
-                      @click:edit="
-                        workerManager.toUpdate({
+                      v-bind="
+                        uiTable.component.workerTag.getAttrs({
+                          slotProps: propsForTag,
                           schedule,
-                          worker: draggableWorkersProps.worker,
                         })
-                      "
-                      @click:notification="
-                        arrangementNotificationManager.toUpdate($event)
                       "
                     />
                   </template>
@@ -186,18 +151,15 @@ const { getNotification, notify, updateSchedule, updateSchedules } =
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集コンポーネント -->
-    <SiteOperationScheduleManager ref="siteOperationScheduleManager" />
+    <SiteOperationScheduleManager ref="scheduleManager" />
 
     <!-- スケジュール複製コンポーネント -->
     <SiteOperationScheduleDuplicator
-      v-bind="duplicatorComposable.attrs.value"
+      v-bind="uiSiteOperationScheduleDuplicator.attrs"
     />
 
     <!-- 通知ステータス更新コンポーネント -->
-    <ArrangementNotificationManager
-      ref="arrangementNotificationManager"
-      includes-status
-    />
+    <ArrangementNotificationManager ref="notificationManager" includes-status />
 
     <!-- 作業員配置詳細情報編集コンポーネント -->
     <SiteOperationScheduleWorkerDetailManager

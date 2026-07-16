@@ -2,7 +2,6 @@
 /*****************************************************************************
  * @file ./components/Arrangements/Manager/Table.vue
  * @description ArrangementManager 専用 配置管理テーブルコンポーネント
- * - `cell` スロットで `notificationIndexes` を提供するように `OperationSchedulesTable` を拡張しています。
  * @extends OperationSchedulesTable
  *****************************************************************************/
 import { useDefaults } from "vuetify";
@@ -34,7 +33,7 @@ const props = useDefaults(_props, "ArrangementsManagerTable");
  */
 function createCellSlotProps(scope = {}) {
   const { date } = scope;
-  const disabled = props.selectedDate && props.selectedDate !== date;
+  const disabled = !!props.selectedDate && props.selectedDate !== date;
   return {
     ...scope,
     disabled,

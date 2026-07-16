@@ -44,7 +44,12 @@ export function useIndex(props, emit) {
    * ドラッグアイコンを表示するかどうかを返します。
    */
   const isDraggable = Vue.computed(() => {
+    if (props.disabled) return false;
     return props.schedule.isEditable && props.isDraggable;
+  });
+
+  const showActions = Vue.computed(() => {
+    return !props.disabled && props.showActions;
   });
 
   /**
@@ -66,11 +71,10 @@ export function useIndex(props, emit) {
    */
   const defaultSlotProps = Vue.computed(() => {
     return {
+      disabled: props.disabled,
       schedule: internalModelValue.value,
-      model: {
-        modelValue: internalModelValue.value,
-        "onUpdate:modelValue": handleUpdateModelValue,
-      },
+      modelValue: internalModelValue.value,
+      "onUpdate:modelValue": handleUpdateModelValue,
     };
   });
 
@@ -78,6 +82,7 @@ export function useIndex(props, emit) {
     titleClass,
     isDraggable,
     timeLabel,
+    showActions,
     showQualificationChip,
     defaultSlotProps,
   };

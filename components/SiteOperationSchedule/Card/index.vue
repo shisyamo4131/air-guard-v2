@@ -35,6 +35,7 @@ import OverAndShortIcon from "./OverAndShortIcon.vue";
  * SETUP PROPS
  *****************************************************************************/
 const _props = defineProps({
+  disabled: { type: Boolean, default: false },
   hideBadge: { type: Boolean, default: false },
   isDraggable: { type: Boolean, default: false },
   schedule: {
@@ -63,6 +64,7 @@ const {
   titleClass,
   isDraggable,
   timeLabel,
+  showActions,
   showQualificationChip,
   defaultSlotProps,
 } = useIndex(props, emit);
@@ -145,6 +147,6 @@ const showRemarksIcon = computed(() => {
     </v-card-text>
 
     <!-- ACTIONS -->
-    <Actions v-if="props.showActions" />
+    <Actions v-if="showActions" />
   </v-card>
 </template>

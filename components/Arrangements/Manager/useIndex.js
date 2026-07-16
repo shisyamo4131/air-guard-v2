@@ -10,32 +10,33 @@ import { useSelectableDate } from "./useSelectableDate";
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
+import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
 import { SiteOperationSchedule } from "@/schemas";
 
 /*****************************************************************************
  * @param {Object} props
  * @param {string} props.startDate - 開始日付（YYYY-MM-DD）
  * @param {string} props.endDate - 終了日付（YYYY-MM-DD）
+ * @param {Object} options
+ * @param {Ref} options.refSiteOperationScheduleManager - 現場稼働予定管理コンポーネントの ref
+ * @param {Ref} options.refArrangementNotificationManager - 通知ステータス更新コンポーネントの ref
+ * @param {Ref} options.refWorkerManager - 作業員管理コンポーネントの ref
+ * @returns {Object} - ArrangementsManager 専用 local facade コンポーザブル
  * @returns {{
  *   uiTable: ComputedRef<Object>,
  *   uiWorkerSelector: ComputedRef<Object>,
  *   uiSiteShiftTypeJumpList: ComputedRef<Object>,
  *   uiSiteShiftTypeReorder: ComputedRef<Object>,
+ *   uiSiteOperationScheduleDuplicator: ComputedRef<Object>,
  *   uiCommandTextDialog: ComputedRef<Object>,
  *   uiSpeedDial: ComputedRef<Object>,
- *   getNotification: Function,
- *   notify: Function,
- *   updateSchedule: Function,
- *   updateSchedules: Function,
- *   updateSiteShiftTypeOrder: Function,
  * }}
  *****************************************************************************/
-// export function useIndex({ schedules, siteShiftTypeOrder } = {}) {
 export function useIndex(
   props,
   {
-    refSiteOperationScheduleManager,
-    refArrangementNotificationManager,
+    refSiteOperationScheduleManager: refScheduleManager,
+    refArrangementNotificationManager: refNotificationManager,
     refWorkerManager,
   } = {},
 ) {
@@ -81,6 +82,9 @@ export function useIndex(
     onSubmit: arrangementsActions.updateSiteShiftTypeOrder,
   });
 
+  /** 現場稼働予定複製コンポーザブル */
+  const duplicatorComposable = useSiteOperationScheduleDuplicator();
+
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
@@ -96,7 +100,7 @@ export function useIndex(
    * @param {string} options.shiftType - 勤務区分
    */
   async function handleClickCreateSchedule({ siteId, shiftType } = {}) {
-    const fn = refSiteOperationScheduleManager?.value?.toCreate;
+    const fn = refScheduleManager?.value?.toCreate;
     if (!fn) return;
     await fn(new SiteOperationSchedule({ siteId, shiftType }));
   }
@@ -125,13 +129,82 @@ export function useIndex(
               (rowKeyToScroll.value = newKey),
           },
           weekdayActions: {
-            attrs: {
-              "onClick:command-text": ($event) =>
-                (commandText.value =
-                  arrangementsActions.getCommandText($event)),
-              "onClick:focus": ($event) => (selectedDate.value = $event),
-              "onClick:jump-list": siteShiftTypeJumpListMenu.open,
-              "onClick:pdf": arrangementsActions.openPdf,
+            getAttrs: (slotProps) => {
+              return {
+                column: slotProps.column,
+                isSelected: slotProps.isSelected,
+                "onClick:command-text": ($event) =>
+                  (commandText.value =
+                    arrangementsActions.getCommandText($event)),
+                "onClick:focus": ($event) => (selectedDate.value = $event),
+                "onClick:jump-list": siteShiftTypeJumpListMenu.open,
+                "onClick:pdf": arrangementsActions.openPdf,
+              };
+            },
+          },
+          draggableOperationSchedules: {
+            getAttrs: (slotProps) => {
+              return {
+                schedules: slotProps.schedules,
+                disabled: slotProps.disabled,
+                "onUpdate:schedules": ($event) => {
+                  arrangementsActions.updateSchedules($event, {
+                    date: slotProps.date,
+                    siteId: slotProps.siteId,
+                    shiftType: slotProps.shiftType,
+                  });
+                },
+              };
+            },
+          },
+          siteOperationScheduleCard: {
+            getAttrs: (slotProps) => {
+              return {
+                disabled: slotProps.disabled,
+                schedule: slotProps.schedule,
+                isDraggable: true,
+                showActions: true,
+                "onClick:duplicate": () =>
+                  duplicatorComposable.set(slotProps.schedule),
+                "onClick:edit": () =>
+                  refScheduleManager?.value?.toUpdate(slotProps.schedule),
+                "onClick:notify": () =>
+                  arrangementsActions.notify(slotProps.schedule),
+                "onUpdate:schedule": ($event) =>
+                  arrangementsActions.updateSchedule($event),
+              };
+            },
+          },
+          draggableWorkers: {
+            getAttrs: (slotProps) => {
+              return {
+                disabled: slotProps.disabled,
+                modelValue: slotProps.modelValue,
+                "onUpdate:modelValue": slotProps["onUpdate:modelValue"],
+              };
+            },
+          },
+          workerTag: {
+            getAttrs: ({ slotProps, schedule }) => {
+              return {
+                highlight: slotProps.highlight,
+                hideEdit: !!slotProps.disabled,
+                hideNotification: !!slotProps.disabled,
+                isDraggable: slotProps.isDraggable,
+                notification: getNotification(slotProps.worker),
+                removable: slotProps.removable,
+                schedule,
+                worker: slotProps.worker,
+                "onClick:edit": () =>
+                  refWorkerManager?.value?.toUpdate({
+                    schedule,
+                    worker: slotProps.worker,
+                  }),
+                "onClick:notification": ($event) =>
+                  refNotificationManager?.value?.toUpdate($event),
+                "onClick:remove": ($event) =>
+                  slotProps["onClick:remove"]?.($event),
+              };
             },
           },
         },
@@ -182,6 +255,11 @@ export function useIndex(
         },
       };
     }),
+    uiSiteOperationScheduleDuplicator: Vue.computed(() => {
+      return {
+        attrs: duplicatorComposable.attrs.value,
+      };
+    }),
     uiCommandTextDialog: Vue.computed(() => {
       return {
         attrs: {
@@ -202,12 +280,5 @@ export function useIndex(
         },
       };
     }),
-
-    /** METHODS */
-    getNotification,
-    notify: arrangementsActions.notify,
-    updateSchedule: arrangementsActions.updateSchedule,
-    updateSchedules: arrangementsActions.updateSchedules,
-    updateSiteShiftTypeOrder: arrangementsActions.updateSiteShiftTypeOrder,
   };
 }

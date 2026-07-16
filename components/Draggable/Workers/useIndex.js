@@ -224,6 +224,7 @@ export function useIndex(props, emit) {
   // デフォルトスロットに渡すプロパティ
   const defaultSlotProps = Vue.computed(() => {
     return {
+      disabled: disabled.value,
       highlight: (id) => isEmployeeExist(id),
       isDraggable: !disabled.value,
       removable: !disabled.value,
