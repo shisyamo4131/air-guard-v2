@@ -10,18 +10,11 @@ import { useAuthStore } from "@/stores/useAuthStore";
  * @param {Object} options
  * @param {import("vue").Ref<Date>} options.from
  * @param {import("vue").Ref<Date>} options.to
- * @param {Object} [options.fetchCustomerComposable]
- * @param {Object} [options.fetchSiteComposable]
  * @returns {{
  *   docs: import("vue").ComputedRef<Billing[]>
  * }}
  *****************************************************************************/
-export function useBillingsInRange({
-  from,
-  to,
-  fetchCustomerComposable,
-  fetchSiteComposable,
-} = {}) {
+export function useBillingsInRange({ from, to } = {}) {
   const { isDev } = useAuthStore();
 
   /*****************************************************************************
@@ -54,12 +47,10 @@ export function useBillingsInRange({
   * SETUP COMPOSABLES
  *****************************************************************************/
   const logger = useLogger("useBillingsInRange");
-  const fetchComposables =
-    fetchCustomerComposable && fetchSiteComposable
-      ? { fetchCustomerComposable, fetchSiteComposable }
-      : useFetch("useBillingsInRange");
-  const { fetchCustomer } = fetchComposables.fetchCustomerComposable;
-  const { fetchSite } = fetchComposables.fetchSiteComposable;
+  const { fetchCustomerComposable, fetchSiteComposable } =
+    useFetch("useBillingsInRange");
+  const { fetchCustomer } = fetchCustomerComposable;
+  const { fetchSite } = fetchSiteComposable;
 
   /*****************************************************************************
    * DEFINE STATES

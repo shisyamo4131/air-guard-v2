@@ -110,13 +110,6 @@ const headers = computed(() => [
         ? dayjs(item.paymentDueDate).format("MM月DD日(ddd)")
         : "未設定",
   },
-  {
-    title: "",
-    key: "actions",
-    align: "end",
-    sortable: false,
-    width: 120,
-  },
 ]);
 
 /*****************************************************************************

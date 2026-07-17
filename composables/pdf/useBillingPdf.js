@@ -1,7 +1,6 @@
 import { formatCurrency } from "@/utils/formats/util";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
-import { useFetchSite } from "@/composables/fetch/useFetchSite";
+import { useFetch } from "@/composables/fetch/useFetch";
 import dayjs from "dayjs";
 import "dayjs/locale/ja";
 
@@ -42,8 +41,10 @@ async function initializePdf() {
  */
 export function useBillingPdf() {
   const auth = useAuthStore();
-  const { fetchCustomer, cachedCustomers } = useFetchCustomer();
-  const { fetchSite, cachedSites } = useFetchSite();
+  const { fetchCustomerComposable, fetchSiteComposable } =
+    useFetch("useBillingPdf");
+  const { fetchCustomer, cachedCustomers } = fetchCustomerComposable;
+  const { fetchSite, cachedSites } = fetchSiteComposable;
 
   /**
    * 請求書PDFを生成
