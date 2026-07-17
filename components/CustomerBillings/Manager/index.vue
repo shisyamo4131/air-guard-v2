@@ -1,15 +1,12 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/CustomerBillings/Manager/index.vue
- * @description 取引先請求一覧の表示と各種アクションを管理します。
+ * @file components/CustomerBillings/Manager/index.vue
+ * @description 取引先請求を管理するAirArrayManager拡張コンポーネントです。
  * @extends AirArrayManager
  *****************************************************************************/
-import dayjs from "dayjs";
-import { useRouter } from "vue-router";
+import { useDefaults } from "vuetify";
 import { Billing } from "@/schemas";
-import { useDateRange } from "@/composables/useDateRange.js";
-import { useBillingsInRange } from "@/composables/dataLayers/billing/useBillingsInRange";
-import { useCustomerBillingActions } from "@/composables/application/customerBilling/useCustomerBillingActions";
+import { useBaseManager } from "@/composables/useBaseManager";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -17,73 +14,49 @@ import { useCustomerBillingActions } from "@/composables/application/customerBil
 defineOptions({ name: "CustomerBillingsManager", inheritAttrs: false });
 
 /*****************************************************************************
- * SETUP STORES & COMPOSABLES
+ * DEFINE PROPS
  *****************************************************************************/
-const router = useRouter();
-const { downloadBillingPdf, downloadConsolidatedBillingPdf, downloadCsv } =
-  useCustomerBillingActions();
-
-/*****************************************************************************
- * SETUP DATE RANGE COMPOSABLE
- *****************************************************************************/
-const baseDate = dayjs().startOf("month").startOf("day").toDate();
-const endDate = dayjs().endOf("month").endOf("day").toDate();
-const dateRangeComposable = useDateRange({ baseDate, endDate });
-const { dateRange, debouncedStartDate, debouncedEndDate } = dateRangeComposable;
-
-/*****************************************************************************
- * SETUP BILLINGS DATA LAYER
- *****************************************************************************/
-const { docs } = useBillingsInRange({
-  from: debouncedStartDate,
-  to: debouncedEndDate,
+const _props = defineProps({
+  docs: { type: Array, default: () => [] },
+  handleCreate: {
+    type: Function,
+    default: () => {
+      throw new Error("Creation of customer billings is not supported");
+    },
+  },
+  handleUpdate: {
+    type: Function,
+    default: () => {
+      throw new Error("Update of customer billings is not supported");
+    },
+  },
+  handleDelete: {
+    type: Function,
+    default: () => {
+      throw new Error("Deletion of customer billings is not supported");
+    },
+  },
 });
+const props = useDefaults(_props, "CustomerBillingsManager");
 
 /*****************************************************************************
- * METHODS
+ * SETUP BASE MANAGER COMPOSABLE
  *****************************************************************************/
-function handleEditClick(billing) {
-  router.push(`/billings/customers/${billing.docId}`);
-}
-
-function rejectCreate() {
-  throw new Error("Creation of customer billings is not supported");
-}
-
-function rejectUpdate() {
-  throw new Error("Update of customer billings is not supported");
-}
-
-function rejectDelete() {
-  throw new Error("Deletion of customer billings is not supported");
-}
+const { attrs } = useBaseManager("CustomerBillingsManager");
 </script>
 
 <template>
   <AirArrayManager
-    v-bind="$attrs"
-    :model-value="docs"
+    v-bind="{ ...$attrs, ...attrs }"
+    :model-value="props.docs"
     :schema="Billing"
-    :handle-create="rejectCreate"
-    :handle-update="rejectUpdate"
-    :handle-delete="rejectDelete"
+    :handle-create="props.handleCreate"
+    :handle-update="props.handleUpdate"
+    :handle-delete="props.handleDelete"
     hide-create-btn
   >
-    <template #table="slotProps">
-      <v-toolbar class="mb-4 bg-transparent" density="compact">
-        <MoleculesMonthSelector
-          :model-value="dateRange.from"
-          @date-range="dateRange = $event"
-        />
-      </v-toolbar>
-      <CustomerBillingsDataTable
-        class="flex-grow-1 overflow-y-hidden"
-        v-bind="slotProps"
-        @click:edit="handleEditClick"
-        @click:billing-pdf="downloadBillingPdf"
-        @click:consolidated-billing-pdf="downloadConsolidatedBillingPdf"
-        @click:csv="downloadCsv"
-      />
+    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
+      <slot :name="slotName" v-bind="scope ?? {}"></slot>
     </template>
   </AirArrayManager>
 </template>

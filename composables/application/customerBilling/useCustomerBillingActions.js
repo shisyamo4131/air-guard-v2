@@ -9,13 +9,16 @@ import { exportOperationResultsCsv } from "@/utils/csv/exportOperationResultsCsv
  * @file composables/application/customerBilling/useCustomerBillingActions.js
  * @description 取引先請求のPDF・CSV出力に必要なアプリケーション処理を提供します。
  *****************************************************************************/
-export function useCustomerBillingActions() {
+export function useCustomerBillingActions(options = {}) {
   /***************************************************************************
    * SETUP STORES & COMPOSABLES
    ***************************************************************************/
   const loadings = useLoadingsStore();
   const logger = useLogger("useCustomerBillingActions", useErrorsStore());
-  const { fetchSiteComposable } = useFetch("useCustomerBillingActions");
+  const fetchComposables = options.fetchSiteComposable
+    ? options
+    : useFetch("useCustomerBillingActions");
+  const { fetchSiteComposable } = fetchComposables;
   const { fetchSite, cachedSites } = fetchSiteComposable;
   const { generateBillingPdf, generateConsolidatedBillingPdf } =
     useBillingPdf();
