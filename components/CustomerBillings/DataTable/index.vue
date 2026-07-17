@@ -9,6 +9,7 @@ import { useDefaults } from "vuetify";
 import { Customer, Site } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { formatCurrency } from "@/utils/formats/util";
+import GroupSummaryRow from "./GroupSummaryRow.vue";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -155,17 +156,6 @@ watch(
     <template #group-header="scope">
       <tr>
         <td :colspan="headers.length + 1">
-          <v-btn
-            class="me-2"
-            :icon="
-              scope.isGroupOpen(scope.item)
-                ? 'mdi-chevron-up'
-                : 'mdi-chevron-down'
-            "
-            variant="text"
-            size="small"
-            @click="scope.toggleGroup(scope.item)"
-          />
           <strong>{{ getGroupLabel(scope.item) }}</strong>
           <v-chip class="ml-2" size="small">
             {{ scope.item.items.length }}件
@@ -194,6 +184,11 @@ watch(
           />
         </td>
       </tr>
+      <GroupSummaryRow
+        :billings="getGroupBillings(scope.item)"
+        :is-open="scope.isGroupOpen(scope.item)"
+        @click:toggle="scope.toggleGroup(scope.item)"
+      />
     </template>
 
     <!-- 請求行ごとの標準アクション -->
