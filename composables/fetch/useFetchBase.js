@@ -83,8 +83,9 @@ export function useFetchBase({
   const isLoading = ref(false);
   const searchCache = ref({});
 
-  // フェッチ中のIDを記録する Set
-  const inFlightFetches = ref(new Set());
+  // フェッチ中のIDとPromiseを対応付けるMap。
+  // 同じIDへの後続リクエストは、先行リクエストのPromiseを共有する。
+  const inFlightFetches = new Map();
 
   /**
    * ソースからドキュメントIDを抽出する関数
@@ -107,16 +108,18 @@ export function useFetchBase({
   /**
    * 指定されたソースからドキュメントIDを抽出し、該当するデータをFirestoreから取得し、
    * 内部キャッシュに格納します。
-   * キャッシュに既に存在する場合、または現在フェッチ中の場合は何もしません。
+   * キャッシュに既に存在する場合は取得を省略し、現在フェッチ中の場合は
+   * 先行リクエストのPromiseを待機します。
    *
    * **重要な動作:**
    * - `inFlightFetches` により、同じIDに対する並行実行を防止します
+   * - 後続リクエストは先行リクエストと同じPromiseを待機します
    * - これにより、`subscribeDocs` などで同じIDが複数回要求されても、
-   *   Firestoreへのアクセスは1回のみとなり、キャッシュの重複も防ぎます
+   *   Firestoreへのアクセスは1回のみとなり、await後のキャッシュ利用も保証されます
    *
    * **キャッシュチェックの優先順位:**
    * 1. 既にキャッシュに存在するか？ → スキップ
-   * 2. 現在フェッチ中か？ → スキップ
+   * 2. 現在フェッチ中か？ → 先行Promiseを共有
    * 3. どちらでもない → Firestoreから取得
    *
    * @param {string | Object | Array<string | Object>} source - 取得するドキュメントのID、IDを含むオブジェクト、またはそれらの配列
@@ -136,7 +139,6 @@ export function useFetchBase({
    */
   async function fetchItems(source) {
     isLoading.value = true;
-    let addedInFlightIds = [];
 
     try {
       let potentialDocIds = [];
@@ -153,52 +155,57 @@ export function useFetchBase({
 
       if (potentialDocIds.length === 0) return;
 
-      // 有効かつ未キャッシュ、かつフェッチ中でないIDのみを抽出
-      const idsToActuallyFetch = [
-        ...new Set(
-          potentialDocIds.filter((id) => {
-            return (
-              id &&
-              !cache.value.some((cachedItem) => cachedItem.docId === id) &&
-              !inFlightFetches.value.has(id) // ← フェッチ中でないことを確認
-            );
-          }),
-        ),
-      ];
+      const uniqueDocIds = [...new Set(potentialDocIds.filter(Boolean))];
 
-      if (idsToActuallyFetch.length === 0) {
-        return;
-      }
+      const fetchPromises = uniqueDocIds.map((docId) => {
+        // 取得済みの場合は即座に完了する。
+        if (cache.value.some((cachedItem) => cachedItem.docId === docId)) {
+          return Promise.resolve();
+        }
 
-      // フェッチ中のIDを記録
-      idsToActuallyFetch.forEach((id) => inFlightFetches.value.add(id));
-      addedInFlightIds = idsToActuallyFetch;
+        // 同じIDが取得中の場合は、先行リクエストの完了を待つ。
+        const inFlightPromise = inFlightFetches.get(docId);
+        if (inFlightPromise) return inFlightPromise;
 
-      const fetchPromises = idsToActuallyFetch.map(async (docId) => {
-        try {
-          const instance = await new SchemaClass().fetchDoc({ docId });
-          if (instance) {
-            cache.value.push(instance);
-          } else {
-            if (warnIfNotFound) {
+        const fetchPromise = (async () => {
+          // Mapへの登録を完了してから実際の取得を開始する。
+          await Promise.resolve();
+          try {
+            const instance = await new SchemaClass().fetchDoc({ docId });
+            if (instance) {
+              // searchItemsなど別経路から追加済みの場合に重複させない。
+              if (
+                !cache.value.some(
+                  (cachedItem) => cachedItem.docId === instance.docId,
+                )
+              ) {
+                cache.value.push(instance);
+              }
+            } else if (warnIfNotFound) {
               logger.warn({
                 message: `${entityName} (ID: ${docId}) not found in Firestore.`,
               });
             }
+          } catch (error) {
+            // 既存仕様を維持し、呼び出し元へはrejectせずログへ記録する。
+            logger.error({
+              message: `Failed to fetch ${entityName} (ID: ${docId}) from Firestore. Error: ${error.message}`,
+              error,
+            });
+          } finally {
+            // 万一同じIDに別Promiseが登録されても、それを削除しない。
+            if (inFlightFetches.get(docId) === fetchPromise) {
+              inFlightFetches.delete(docId);
+            }
           }
-        } catch (error) {
-          logger.error({
-            message: `Failed to fetch ${entityName} (ID: ${docId}) from Firestore. Error: ${error.message}`,
-            error,
-          });
-        }
+        })();
+
+        inFlightFetches.set(docId, fetchPromise);
+        return fetchPromise;
       });
 
       await Promise.all(fetchPromises);
     } finally {
-      // フェッチ完了後、この呼び出しで追加したIDのみ記録を削除
-      addedInFlightIds.forEach((id) => inFlightFetches.value.delete(id));
-
       isLoading.value = false;
     }
   }
