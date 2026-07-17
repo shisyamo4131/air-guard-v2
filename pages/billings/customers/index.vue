@@ -105,7 +105,10 @@ async function handlePdfClick(billing) {
 </script>
 
 <template>
-  <v-container class="fill-height">
+  <v-container
+    class="align-start"
+    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <AirArrayManager v-bind="attrs" class="fill-height" ref="managerRef">
       <template #table="slotProps">
         <v-toolbar class="mb-4 bg-transparent" density="compact">
