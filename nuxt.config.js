@@ -8,6 +8,9 @@ export default defineNuxtConfig({
   /** firebase hosting を使用するので CSR モードに設定 */
   ssr: false,
 
+  /** Vue アプリの起動が完了するまで SPA ローディング画面を表示 */
+  spaLoadingTemplate: true,
+
   /** TypeScript を使用しない */
   typescript: {
     strict: false,
