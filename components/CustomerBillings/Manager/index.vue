@@ -7,6 +7,11 @@
 import { useDefaults } from "vuetify";
 import { Billing } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
+import {
+  handleCreate,
+  handleUpdate,
+  handleDelete,
+} from "@/handlers/customerBillingHandlers";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -18,24 +23,9 @@ defineOptions({ name: "CustomerBillingsManager", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   docs: { type: Array, default: () => [] },
-  handleCreate: {
-    type: Function,
-    default: () => {
-      throw new Error("Creation of customer billings is not supported");
-    },
-  },
-  handleUpdate: {
-    type: Function,
-    default: () => {
-      throw new Error("Update of customer billings is not supported");
-    },
-  },
-  handleDelete: {
-    type: Function,
-    default: () => {
-      throw new Error("Deletion of customer billings is not supported");
-    },
-  },
+  handleCreate: { type: Function, default: handleCreate },
+  handleUpdate: { type: Function, default: handleUpdate },
+  handleDelete: { type: Function, default: handleDelete },
 });
 const props = useDefaults(_props, "CustomerBillingsManager");
 
@@ -53,7 +43,6 @@ const { attrs } = useBaseManager("CustomerBillingsManager");
     :handle-create="props.handleCreate"
     :handle-update="props.handleUpdate"
     :handle-delete="props.handleDelete"
-    hide-create-btn
   >
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}"></slot>
