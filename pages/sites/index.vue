@@ -83,7 +83,10 @@ onUnmounted(unsubscribe);
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    class="align-start"
+    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <SitesManager
       class="fill-height"
       :docs="filteredSites"
@@ -139,9 +142,8 @@ onUnmounted(unsubscribe);
           </v-dialog>
         </v-toolbar>
         <SitesDataTable
-          class="flex-grow-1"
+          class="flex-grow-1 overflow-hidden"
           v-bind="slotProps"
-          hide-search
           :search="search"
         />
         <!-- 2026-06-30 コメントアウト -->

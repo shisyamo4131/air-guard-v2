@@ -83,7 +83,11 @@ watch(
 </script>
 
 <template>
-  <air-data-table v-bind="{ ...props, ...$attrs }" :headers="headers">
+  <air-data-table
+    v-bind="{ ...props, ...$attrs }"
+    :headers="headers"
+    hide-search
+  >
     <!-- 現場名の下には取引先名を表示 -->
     <template #[`item.name`]="{ item }">
       <div>
