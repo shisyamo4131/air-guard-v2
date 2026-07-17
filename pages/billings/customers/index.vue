@@ -3,7 +3,17 @@
  * @file pages/billings/customers/index.vue
  * @description 取引先請求一覧ページ
  *****************************************************************************/
+import { useFetch } from "@/composables/fetch/useFetch";
+
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "billings-customers-index" });
+
+/*****************************************************************************
+ * SETUP COMPOSABLES
+ *****************************************************************************/
+useFetch("billings-customers-index", true);
 </script>
 
 <template>
