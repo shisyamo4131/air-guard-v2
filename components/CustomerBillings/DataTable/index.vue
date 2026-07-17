@@ -51,19 +51,21 @@ const { cachedSites, fetchSite } = fetchSiteComposable;
  * COMPUTED
  *****************************************************************************/
 /**
- * Billingへ表示用の取引先・現場とグループキーを付加します。
+ * Billingへ表示用の取引先・現場、取引先＋請求締日のグループ情報を付加します。
  */
 const enrichedItems = computed(() =>
   props.items.map((billing) => {
     const customer =
       cachedCustomers.value[billing.customerId] || new Customer();
     const site = cachedSites.value[billing.siteId] || new Site();
+    const billingDate = billing.billingDate;
 
     return {
       ...billing,
       customer,
       site,
-      groupKey: `${customer.code}: ${customer.name}`,
+      groupKey: `${billing.customerId}_${billingDate}`,
+      groupLabel: `${customer.code}: ${customer.name} / 締日: ${billingDate}`,
     };
   }),
 );
@@ -122,6 +124,13 @@ function getGroupBillings(groupItem) {
   return groupItem.items.map(({ raw }) => raw);
 }
 
+/**
+ * グループ内の先頭のBillingから表示用ラベルを取得します。
+ */
+function getGroupLabel(groupItem) {
+  return groupItem.items[0]?.raw?.groupLabel ?? groupItem.value;
+}
+
 /*****************************************************************************
  * WATCHERS
  *****************************************************************************/
@@ -142,7 +151,7 @@ watch(
     hide-search
     :items="enrichedItems"
   >
-    <!-- 取引先ごとの標準グループヘッダー -->
+    <!-- 取引先・請求締日ごとの標準グループヘッダー -->
     <template #group-header="scope">
       <tr>
         <td :colspan="headers.length + 1">
@@ -157,7 +166,7 @@ watch(
             size="small"
             @click="scope.toggleGroup(scope.item)"
           />
-          <strong>{{ scope.item.value }}</strong>
+          <strong>{{ getGroupLabel(scope.item) }}</strong>
           <v-chip class="ml-2" size="small">
             {{ scope.item.items.length }}件
           </v-chip>
