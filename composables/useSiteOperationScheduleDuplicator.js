@@ -134,10 +134,8 @@ export function useSiteOperationScheduleDuplicator({
 
       // 追加属性
       dialogProps: { width: 376 },
-      editorProps: {
-        disableCancel: docManager.isLoading.value,
-        disableSubmit: !isSubmittable.value,
-      },
+      disableCancel: docManager.isLoading.value,
+      disableSubmit: !isSubmittable.value,
       hideDeleteBtn: true,
       label: "予定複製",
       onInitialized: _initialize,
