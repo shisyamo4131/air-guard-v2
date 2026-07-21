@@ -4,42 +4,24 @@
  * @description 退職従業員検索ページ
  *****************************************************************************/
 import { useRouter } from "vue-router";
-import { Employee } from "@/schemas";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
-
-defineOptions({ name: "employees-resigned-index" });
+import { useEmployeesResigned } from "@/composables/dataLayers/employee/useEmployeesResigned";
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
-const search = ref("");
+const search = ref(null);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
 const router = useRouter();
-
-const defaultOption = [
-  "where",
-  "employmentStatus",
-  "==",
-  Employee.STATUS_RESIGNED,
-];
-const options = computed(() => {
-  if (!search.value) {
-    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
-  } else {
-    return [defaultOption, ["orderBy", "code", "desc"]];
-  }
-});
-const { docs } = useDocuments("Employee", {
-  search,
-  options,
-});
+const { docs } = useEmployeesResigned({ search });
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <EmployeesManager
       class="fill-height"
       :docs="docs"
