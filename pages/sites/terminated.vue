@@ -4,33 +4,18 @@
  * @description 終了現場検索ページ
  *****************************************************************************/
 import { useRouter } from "vue-router";
-import { Site } from "@/schemas";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
-
-defineOptions({ name: "sites-terminated-index" });
+import { useSitesTerminated } from "@/composables/dataLayers/site/useSitesTerminated";
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
-const search = ref("");
+const search = ref(null);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
 const router = useRouter();
-
-const defaultOption = ["where", "status", "==", Site.STATUS_TERMINATED];
-const options = computed(() => {
-  if (!search.value) {
-    return [defaultOption, ["orderBy", "updatedAt", "desc"], ["limit", 10]];
-  } else {
-    return [defaultOption, ["orderBy", "code", "desc"]];
-  }
-});
-const { docs } = useDocuments("Site", {
-  search,
-  options,
-});
+const { docs } = useSitesTerminated({ search });
 </script>
 
 <template>
@@ -40,6 +25,9 @@ const { docs } = useDocuments("Site", {
       :docs="docs"
       v-model:search="search"
       :items-per-page="20"
+      :table-props="{
+        customFilter: () => true,
+      }"
       @click:detail="(item) => router.push(`/sites/${item.docId}`)"
     />
   </v-container>

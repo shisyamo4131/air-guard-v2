@@ -1,19 +1,19 @@
 /*****************************************************************************
- * @file ./composables/dataLayers/employee/useEmployeesResigned.js
- * @description 退職者検索用 データレイヤーコンポーザブル
+ * @file ./composables/dataLayers/site/useSitesTerminated.js
+ * @description 終了現場検索用 データレイヤーコンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
-import { Employee } from "@/schemas";
+import { Site } from "@/schemas";
 
 /**
  * @param {{ search: import('vue').Ref<string|null> }} options
  * @returns {{ docs: import('vue').Ref<Array<Object>> }}
  */
-export function useEmployeesResigned({ search }) {
+export function useSitesTerminated({ search }) {
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const instance = Vue.reactive(new Employee());
+  const instance = Vue.reactive(new Site());
   const docs = Vue.ref([]);
 
   /*****************************************************************************
@@ -26,7 +26,7 @@ export function useEmployeesResigned({ search }) {
     }
     docs.value = await instance.fetchDocs({
       constraints: Vue.unref(search),
-      options: [["where", "employmentStatus", "==", Employee.STATUS_RESIGNED]],
+      options: [["where", "status", "==", Site.STATUS_TERMINATED]],
     });
   }
 
