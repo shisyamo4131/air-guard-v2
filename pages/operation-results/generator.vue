@@ -15,7 +15,10 @@ useFetch("OperationResultRegister", true);
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    class="align-start"
+    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <OperationResultGenerator
       class="fill-height"
       :site-operation-schedules="docs"
