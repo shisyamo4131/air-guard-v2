@@ -40,6 +40,30 @@ const notificationsMap = inject("notificationsMap", {}); // From index.vue
 const isTemporarySite = computed(() => {
   return cachedSites.value[selectedSchedule.value?.siteId]?.isTemporary;
 });
+
+/**
+ * 要資格者現場で作業員に資格者がいない場合 true を返します。
+ */
+const invalid = computed(() => {
+  if (!selectedSchedule.value) return false;
+  const hasQualifiedWorker = selectedSchedule.value.workers.some((worker) => {
+    const notification = notificationsMap.value[worker.notificationKey];
+    return notification?.isQualified ?? worker.isQualified;
+  });
+  return selectedSchedule.value.qualificationRequired && !hasQualifiedWorker;
+});
+
+/**
+ * アクションボタンの属性を返します。
+ */
+const actionBtnAttrs = computed(() => {
+  const text = invalid.value ? "資格者が必要です" : "上下番を確定する";
+  const color = invalid.value ? "error" : "primary";
+  return {
+    text,
+    color,
+  };
+});
 </script>
 
 <template>
@@ -95,12 +119,11 @@ const isTemporarySite = computed(() => {
     />
     <v-card-actions v-if="selectedSchedule" class="flex-grow-0 justify-end">
       <v-btn
-        text="上下番を確定する"
+        v-bind="actionBtnAttrs"
         :loading="props.loading"
-        :disabled="props.loading || isTemporarySite"
+        :disabled="props.loading || isTemporarySite || invalid"
         variant="flat"
         block
-        color="primary"
         @click="emit('click:submit', selectedSchedule)"
       />
     </v-card-actions>
