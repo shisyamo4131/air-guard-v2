@@ -3,6 +3,10 @@ import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useRoute, useRouter } from "vue-router";
 
+// 稼働実績複製ボタンは開発者のみに限定しておく
+import { useAuthStore } from "@/stores/useAuthStore";
+const auth = useAuthStore();
+
 /*****************************************************************************
  * ROUTER
  *****************************************************************************/
@@ -57,6 +61,20 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
                 />
               </template>
             </OperationResultManager>
+          </v-col>
+          <v-col v-if="auth.isDeveloper" cols="12">
+            <OperationResultDuplicator
+              @duplicated="router.replace(`/operation-results/${$event.docId}`)"
+            >
+              <template #activator="{ set }">
+                <v-btn
+                  color="primary"
+                  text="この稼働実績を複製する"
+                  block
+                  @click="set(doc)"
+                />
+              </template>
+            </OperationResultDuplicator>
           </v-col>
           <!-- 警備日報 -->
           <v-col cols="12">
