@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/utils/formats/util";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { calculateTaxBreakdown } from "@/utils/billings/calculateTaxBreakdown";
 import dayjs from "dayjs";
 import "dayjs/locale/ja";
 
@@ -41,8 +42,12 @@ async function initializePdf() {
  */
 export function useBillingPdf() {
   const auth = useAuthStore();
-  const { fetchCustomerComposable, fetchSiteComposable } =
-    useFetch("useBillingPdf");
+  const {
+    fetchArticleComposable,
+    fetchCustomerComposable,
+    fetchSiteComposable,
+  } = useFetch("useBillingPdf");
+  const { fetchArticle, cachedArticles } = fetchArticleComposable;
   const { fetchCustomer, cachedCustomers } = fetchCustomerComposable;
   const { fetchSite, cachedSites } = fetchSiteComposable;
 
@@ -63,6 +68,11 @@ export function useBillingPdf() {
       ...new Set(billing.operationResults.map((or) => or.siteId)),
     ];
     await Promise.all(siteIds.map((siteId) => fetchSite(siteId)));
+
+    // 稼働外請求の商品情報を取得
+    await fetchArticle(
+      billing.operationResults.flatMap((or) => or.articles ?? []),
+    );
 
     // 会社情報
     const company = auth.company;
@@ -105,6 +115,13 @@ export function useBillingPdf() {
 
         // 稼働明細
         ...createOperationDetails(billing, cachedSites.value),
+
+        // 稼働外請求
+        ...createNonOperationDetails(
+          billing,
+          cachedSites.value,
+          cachedArticles.value,
+        ),
       ],
     };
 
@@ -142,13 +159,26 @@ export function useBillingPdf() {
     ];
     await Promise.all(allSiteIds.map((siteId) => fetchSite(siteId)));
 
+    // 全Billingの稼働外請求の商品情報を取得
+    await fetchArticle(
+      billings.flatMap((billing) =>
+        billing.operationResults.flatMap((or) => or.articles ?? []),
+      ),
+    );
+
     // 会社情報
     const company = auth.company;
 
     // 全Billingの合計を計算
     const totalSubtotal = billings.reduce((sum, b) => sum + b.subtotal, 0);
-    const totalTaxAmount = billings.reduce((sum, b) => sum + b.taxAmount, 0);
-    const totalAmount = billings.reduce((sum, b) => sum + b.totalAmount, 0);
+    const consolidatedTaxBreakdown = calculateTaxBreakdown(
+      billings.flatMap((billing) => billing.operationResults),
+    );
+    const totalTaxAmount = consolidatedTaxBreakdown.reduce(
+      (sum, item) => sum + item.taxAmount,
+      0,
+    );
+    const totalAmount = totalSubtotal + totalTaxAmount;
 
     // 全現場の合計を集計
     const allSiteSummary = billings.reduce((acc, billing) => {
@@ -196,6 +226,7 @@ export function useBillingPdf() {
           subtotal: totalSubtotal,
           taxAmount: totalTaxAmount,
           totalAmount: totalAmount,
+          taxBreakdown: consolidatedTaxBreakdown,
         }),
 
         // 全現場の請求明細
@@ -220,6 +251,13 @@ export function useBillingPdf() {
 
           // 稼働明細
           ...createOperationDetails(billing, cachedSites.value),
+
+          // 稼働外請求
+          ...createNonOperationDetails(
+            billing,
+            cachedSites.value,
+            cachedArticles.value,
+          ),
         ]),
       ],
     };
@@ -334,13 +372,19 @@ export function useBillingPdf() {
         layout: "lightHorizontalLines",
         margin: [0, 0, 0, 20],
       },
+      createTaxBreakdownTable(billing.taxBreakdown),
     ];
   }
 
   /**
    * 総請求額部分を生成（複数Billing対応）
    */
-  function createConsolidatedSummary({ subtotal, taxAmount, totalAmount }) {
+  function createConsolidatedSummary({
+    subtotal,
+    taxAmount,
+    totalAmount,
+    taxBreakdown,
+  }) {
     return [
       {
         table: {
@@ -371,7 +415,50 @@ export function useBillingPdf() {
         layout: "lightHorizontalLines",
         margin: [0, 0, 0, 20],
       },
+      createTaxBreakdownTable(taxBreakdown),
     ];
+  }
+
+  /**
+   * 税率別の課税対象額・消費税額を表示
+   */
+  function createTaxBreakdownTable(taxBreakdown = []) {
+    return {
+      table: {
+        widths: [80, "*", "*"],
+        body: [
+          [
+            { text: "適用税率", style: "tableHeader", alignment: "center" },
+            {
+              text: "税抜対象額",
+              style: "tableHeader",
+              alignment: "right",
+            },
+            {
+              text: "消費税額",
+              style: "tableHeader",
+              alignment: "right",
+            },
+          ],
+          ...taxBreakdown.map((item) => [
+            {
+              text: `${item.taxRate * 100}%`,
+              alignment: "center",
+            },
+            {
+              text: formatCurrency(item.taxableAmount),
+              alignment: "right",
+            },
+            {
+              text: formatCurrency(item.taxAmount),
+              alignment: "right",
+            },
+          ]),
+        ],
+      },
+      layout: "lightHorizontalLines",
+      margin: [0, 0, 0, 20],
+    };
   }
 
   /**
@@ -596,6 +683,68 @@ export function useBillingPdf() {
       layout: "lightHorizontalLines",
       fontSize: 9,
     };
+  }
+
+  /**
+   * 稼働外請求部分を生成
+   */
+  function createNonOperationDetails(billing, sites, articles) {
+    const rows = billing.operationResults.flatMap((operationResult) =>
+      (operationResult.articles ?? []).map((article) => ({
+        operationResult,
+        article,
+      })),
+    );
+
+    if (rows.length === 0) return [];
+
+    const header = [
+      { text: "日付", style: "tableHeader", alignment: "center" },
+      { text: "現場", style: "tableHeader" },
+      { text: "コード", style: "tableHeader" },
+      { text: "商品名", style: "tableHeader" },
+      { text: "数量", style: "tableHeader", alignment: "center" },
+      { text: "単価", style: "tableHeader", alignment: "right" },
+      { text: "金額", style: "tableHeader", alignment: "right" },
+    ];
+
+    const body = [
+      header,
+      ...rows.map(({ operationResult, article }) => {
+        const master = articles[article.articleId];
+        const site = sites[operationResult.siteId];
+        const quantity = article.quantity ?? 0;
+        const price = article.price ?? 0;
+
+        return [
+          {
+            text: dayjs(operationResult.dateAt).format("MM/DD"),
+            alignment: "center",
+          },
+          { text: site?.name ?? "不明な現場" },
+          { text: master?.code ?? "-" },
+          { text: master?.name ?? "N/A" },
+          { text: quantity, alignment: "center" },
+          { text: formatCurrency(price), alignment: "right" },
+          {
+            text: formatCurrency(price * quantity),
+            alignment: "right",
+          },
+        ];
+      }),
+    ];
+
+    return [
+      { text: "稼働外請求", style: "sectionTitle" },
+      {
+        table: {
+          widths: [45, "*", 45, "*", 30, 55, 60],
+          body,
+        },
+        layout: "lightHorizontalLines",
+        fontSize: 9,
+      },
+    ];
   }
 
   return {

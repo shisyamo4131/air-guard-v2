@@ -47,18 +47,6 @@ const headers = computed(() => {
       value: (item) => formatCurrency(item.salesAmount),
       align: "end",
     },
-    {
-      title: "消費税額",
-      key: "tax",
-      value: (item) => formatCurrency(item.tax),
-      align: "end",
-    },
-    {
-      title: "請求金額（税込）",
-      key: "billingAmount",
-      value: (item) => formatCurrency(item.billingAmount),
-      align: "end",
-    },
     { title: "請求月", key: "billingMonth", align: "center" },
   ];
 });

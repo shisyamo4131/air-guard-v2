@@ -93,8 +93,6 @@ export function exportOperationResultsCsv({
     "billingMonth",
     "salesArticles",
     "salesAmount",
-    "tax",
-    "billingAmount",
   ];
 
   const rows = operationResults.map((operationResult) => {
@@ -182,8 +180,6 @@ export function exportOperationResultsCsv({
       operationResult.billingMonth ?? "",
       operationResult.salesArticles ?? 0,
       operationResult.salesAmount ?? 0,
-      operationResult.tax ?? 0,
-      operationResult.billingAmount ?? 0,
     ];
   });
 
