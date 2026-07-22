@@ -4,6 +4,7 @@
  * @description 取引先請求グループの集計行を表示します。
  *****************************************************************************/
 import { formatCurrency } from "@/utils/formats/util";
+import { calculateTaxBreakdown } from "@/utils/billings/calculateTaxBreakdown";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -17,13 +18,11 @@ const emit = defineEmits(["click:toggle"]);
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const summary = computed(() =>
-  props.billings.reduce(
+const summary = computed(() => {
+  const result = props.billings.reduce(
     (result, billing) => {
       result.operationCount += billing.operationResults?.length ?? 0;
       result.subtotal += billing.subtotal ?? 0;
-      result.taxAmount += billing.taxAmount ?? 0;
-      result.totalAmount += billing.totalAmount ?? 0;
       return result;
     },
     {
@@ -32,8 +31,19 @@ const summary = computed(() =>
       taxAmount: 0,
       totalAmount: 0,
     },
-  ),
-);
+  );
+
+  const taxBreakdown = calculateTaxBreakdown(
+    props.billings.flatMap((billing) => billing.operationResults ?? []),
+  );
+  result.taxAmount = taxBreakdown.reduce(
+    (sum, item) => sum + item.taxAmount,
+    0,
+  );
+  result.totalAmount = result.subtotal + result.taxAmount;
+
+  return result;
+});
 </script>
 
 <template>
