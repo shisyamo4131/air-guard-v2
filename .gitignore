@@ -24,6 +24,9 @@ logs
 .env.*
 !.env.example
 
+# Local Codex settings
+.codex/config.toml
+
 # npm package
 air-firebase-v2*
 air-guard-v2-schemas
