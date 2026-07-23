@@ -81,6 +81,7 @@ export function useBillingPdf() {
     const docDefinition = {
       pageSize: "A4",
       pageMargins: [40, 60, 40, 60],
+      footer: createPageFooter,
       defaultStyle: {
         font: "NotoSansJP",
         fontSize: 10,
@@ -195,6 +196,7 @@ export function useBillingPdf() {
     const docDefinition = {
       pageSize: "A4",
       pageMargins: [40, 60, 40, 60],
+      footer: createPageFooter,
       defaultStyle: {
         font: "NotoSansJP",
         fontSize: 10,
@@ -267,6 +269,19 @@ export function useBillingPdf() {
       firstBilling.billingDateAt,
     ).format("YYYYMMDD")}_統合.pdf`;
     pdfMake.createPdf(docDefinition).download(fileName);
+  }
+
+  /**
+   * 全ページ共通のページ番号を生成
+   */
+  function createPageFooter(currentPage, pageCount) {
+    return {
+      text: `${currentPage} / ${pageCount}`,
+      alignment: "center",
+      fontSize: 8,
+      color: "#666666",
+      margin: [40, 20, 40, 0],
+    };
   }
 
   /**
@@ -348,9 +363,9 @@ export function useBillingPdf() {
           widths: ["*", "*", "*"],
           body: [
             [
-              { text: "税抜請求額", style: "tableHeader", alignment: "center" },
-              { text: "消費税額", style: "tableHeader", alignment: "center" },
-              { text: "税込請求額", style: "tableHeader", alignment: "center" },
+              { text: "税抜請求額", style: "tableHeader", alignment: "right" },
+              { text: "消費税額", style: "tableHeader", alignment: "right" },
+              { text: "税込請求額", style: "tableHeader", alignment: "right" },
             ],
             [
               {
@@ -391,9 +406,9 @@ export function useBillingPdf() {
           widths: ["*", "*", "*"],
           body: [
             [
-              { text: "税抜請求額", style: "tableHeader", alignment: "center" },
-              { text: "消費税額", style: "tableHeader", alignment: "center" },
-              { text: "税込請求額", style: "tableHeader", alignment: "center" },
+              { text: "税抜請求額", style: "tableHeader", alignment: "right" },
+              { text: "消費税額", style: "tableHeader", alignment: "right" },
+              { text: "税込請求額", style: "tableHeader", alignment: "right" },
             ],
             [
               {
@@ -484,6 +499,7 @@ export function useBillingPdf() {
 
     return {
       table: {
+        headerRows: 1,
         widths: ["*", 100],
         body,
       },
@@ -524,6 +540,7 @@ export function useBillingPdf() {
 
     return {
       table: {
+        headerRows: 1,
         widths: ["*", 100],
         body,
       },
@@ -677,6 +694,7 @@ export function useBillingPdf() {
 
     return {
       table: {
+        headerRows: 1,
         widths: [50, 30, 30, 30, 50, 40, 50, "*"],
         body,
       },
@@ -738,6 +756,7 @@ export function useBillingPdf() {
       { text: "稼働外請求", style: "sectionTitle" },
       {
         table: {
+          headerRows: 1,
           widths: [45, "*", 45, "*", 30, 55, 60],
           body,
         },
