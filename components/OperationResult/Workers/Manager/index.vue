@@ -23,9 +23,13 @@ defineOptions({ name: "OperationResultWorkersManager", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   customInput: { type: Object, default: () => CustomInput },
+  defaultDateAt: { type: Object, default: undefined },
+  defaultSiteId: { type: String, default: undefined },
+  defaultShiftType: { type: String, default: undefined },
   defaultStartTime: { type: String, default: undefined },
   defaultEndTime: { type: String, default: undefined },
   defaultIsStartNextDay: { type: Boolean, default: false },
+  defaultRegulationWorkMinutes: { type: Number, default: undefined },
   defaultBreakMinutes: { type: Number, default: undefined },
   tableProps: { type: Object, default: () => ({}) },
 });
@@ -45,9 +49,13 @@ const { attrs } = useBaseManager("OperationResultWorkersManager");
     :before-edit="
       (editMode, item) => {
         if (editMode !== 'CREATE') return true;
+        item.dateAt = props.defaultDateAt || item.dateAt;
+        item.siteId = props.defaultSiteId || item.siteId;
         item.startTime = props.defaultStartTime || item.startTime;
         item.endTime = props.defaultEndTime || item.endTime;
         item.isStartNextDay = props.defaultIsStartNextDay;
+        item.regulationWorkMinutes =
+          props.defaultRegulationWorkMinutes ?? item.regulationWorkMinutes;
         item.breakMinutes = props.defaultBreakMinutes ?? item.breakMinutes;
         return true;
       }

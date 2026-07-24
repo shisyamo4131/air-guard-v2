@@ -93,9 +93,13 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
             <OperationResultWorkersManager
               v-model="doc.workers"
               :disabled="doc.isLocked"
+              :default-date-at="doc.dateAt"
+              :default-site-id="doc.siteId"
+              :default-shift-type="doc.shiftType"
               :default-start-time="doc.startTime"
               :default-end-time="doc.endTime"
               :default-is-start-next-day="doc.isStartNextDay"
+              :default-regulation-work-minutes="doc.regulationWorkMinutes"
               :default-break-minutes="doc.breakMinutes"
               @submit:complete="async () => await doc.update()"
             />
