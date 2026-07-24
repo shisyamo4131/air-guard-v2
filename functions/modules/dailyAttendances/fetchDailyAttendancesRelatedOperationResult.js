@@ -57,6 +57,7 @@ export async function fetchDailyAttendancesRelatedOperationResult({
     });
     if (!attendanceExists) {
       attendanceInstance.initialize({
+        docId: attendanceDocId, // 2026-07-24 追加: `docId` を設定しておかないと、呼び出し元で Map を生成する際に Key が空文字列になってしまっていた。
         employeeId: employee.id,
         dateAt: employee.attendanceDateAt, // 勤怠なので `attendanceDateAt` を使用
         operationResults: [],
