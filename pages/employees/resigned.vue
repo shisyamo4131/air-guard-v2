@@ -20,7 +20,7 @@ const { docs } = useEmployeesResigned({ search });
 
 <template>
   <v-container
-    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
   >
     <EmployeesManager
       class="fill-height"

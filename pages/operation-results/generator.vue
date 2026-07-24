@@ -17,7 +17,7 @@ useFetch("OperationResultRegister", true);
 <template>
   <v-container
     class="align-start"
-    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
   >
     <OperationResultGenerator
       class="fill-height"

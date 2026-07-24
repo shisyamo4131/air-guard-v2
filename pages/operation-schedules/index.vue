@@ -16,7 +16,7 @@ useFetch("operation-schedules-index", true);
 
 <template>
   <div
-    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
   >
     <OperationSchedulesManager />
   </div>

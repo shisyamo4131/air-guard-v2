@@ -8,6 +8,7 @@ export { Certification } from "@shisyamo4131/air-guard-v2-schemas";
 export { default as Company } from "./Company.js";
 export { Customer } from "@shisyamo4131/air-guard-v2-schemas";
 export { CutoffDate } from "@shisyamo4131/air-guard-v2-schemas";
+export { DailyAttendance } from "@shisyamo4131/air-guard-v2-schemas";
 export { Employee } from "@shisyamo4131/air-guard-v2-schemas";
 export { FcmToken } from "@shisyamo4131/air-guard-v2-schemas";
 export { GeocodableMixin } from "@shisyamo4131/air-guard-v2-schemas";

@@ -37,7 +37,7 @@ const { startDate, endDate } = useDateRange({
 
 <template>
   <div
-    style="height: calc(100vh - var(--v-layout-top) - var(--v-layout-bottom))"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
   >
     <ArrangementsManager :start-date="startDate" :end-date="endDate" />
   </div>
