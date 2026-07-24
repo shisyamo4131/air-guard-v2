@@ -51,6 +51,7 @@ const { attrs } = useBaseManager("OperationResultWorkersManager");
         if (editMode !== 'CREATE') return true;
         item.dateAt = props.defaultDateAt || item.dateAt;
         item.siteId = props.defaultSiteId || item.siteId;
+        item.shiftType = props.defaultShiftType || item.shiftType;
         item.startTime = props.defaultStartTime || item.startTime;
         item.endTime = props.defaultEndTime || item.endTime;
         item.isStartNextDay = props.defaultIsStartNextDay;
