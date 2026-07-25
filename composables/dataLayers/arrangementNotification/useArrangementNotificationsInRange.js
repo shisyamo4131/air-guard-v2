@@ -3,6 +3,10 @@ import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { ArrangementNotification } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import {
+  rangeIsRef,
+  rangeIsValid,
+} from "@/composables/validators/rangeValidator";
 
 /*****************************************************************************
  * @file ./composables/dataLayers/arrangementNotification/useArrangementNotificationsInRange.js
@@ -20,28 +24,8 @@ export function useArrangementNotificationsInRange({ from, to } = {}) {
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
-
-  /*****************************************************************************
-   * VALIDATORS
-   *****************************************************************************/
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date)) {
-      throw new TypeError("Invalid 'from' value. Must be a Date instance.");
-    }
-
-    if (!(toDate instanceof Date)) {
-      throw new TypeError("Invalid 'to' value. Must be a Date instance.");
-    }
-
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
    * SETUP COMPOSABLES
@@ -65,7 +49,9 @@ export function useArrangementNotificationsInRange({ from, to } = {}) {
    * METHODS
    *****************************************************************************/
   function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
     const constraints = [
       ["where", "dateAt", ">=", fromDate],
       ["where", "dateAt", "<=", toDate],

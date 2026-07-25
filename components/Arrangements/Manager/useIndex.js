@@ -4,7 +4,7 @@
  * - ArrangementsManager で必要となる状態管理と操作（機能）を提供する専用コンポーザブルです。
  *****************************************************************************/
 import * as Vue from "vue";
-import { useArrangementsInRange } from "@/composables/dataLayers/useArrangementsInRange";
+import { useArrangementsInRange } from "@/composables/dataLayers/arrangement/useArrangementsInRange";
 import { useArrangementsActions } from "@/composables/application/arrangement/useArrangementsActions";
 import { useSelectableDate } from "./useSelectableDate";
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";

@@ -1,3 +1,7 @@
+/*****************************************************************************
+ * @file ./composables/dataLayers/arrangement/useArrangementsInRange.js
+ * @description 配置管理用 Facade データレイヤーコンポーザブル
+ *****************************************************************************/
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { useEmployeesInRange } from "@/composables/dataLayers/employee/useEmployeesInRange";
@@ -6,10 +10,9 @@ import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/siteO
 import { useArrangementNotificationsInRange } from "@/composables/dataLayers/arrangementNotification/useArrangementNotificationsInRange";
 import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
+import { rangeIsRef } from "@/composables/validators/rangeValidator";
 
 /*****************************************************************************
- * @file ./composables/dataLayers/useArrangementsInRange.js
- * @description 配置管理用 Facade データレイヤーコンポーザブル
  * @param {Object} options - コンポーザブルのオプション
  * @param {Ref<Date>} options.from - 配置管理の開始日時を表す Ref
  * @param {Ref<Date>} options.to - 配置管理の終了日時を表す Ref
@@ -47,11 +50,8 @@ export function useArrangementsInRange({ from, to } = {}) {
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES

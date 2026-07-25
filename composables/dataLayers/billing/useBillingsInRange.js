@@ -3,6 +3,10 @@ import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { Billing } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import {
+  rangeIsRef,
+  rangeIsValid,
+} from "@/composables/validators/rangeValidator";
 
 /*****************************************************************************
  * @file ./composables/dataLayers/billing/useBillingsInRange.js
@@ -20,32 +24,12 @@ export function useBillingsInRange({ from, to } = {}) {
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
-   * VALIDATORS
+   * SETUP COMPOSABLES
    *****************************************************************************/
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date)) {
-      throw new TypeError("Invalid 'from' value. Must be a Date instance.");
-    }
-
-    if (!(toDate instanceof Date)) {
-      throw new TypeError("Invalid 'to' value. Must be a Date instance.");
-    }
-
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
-
-  /*****************************************************************************
-  * SETUP COMPOSABLES
- *****************************************************************************/
   const logger = useLogger("useBillingsInRange");
   const { fetchCustomerComposable, fetchSiteComposable } =
     useFetch("useBillingsInRange");
@@ -61,7 +45,9 @@ export function useBillingsInRange({ from, to } = {}) {
    * METHODS
    *****************************************************************************/
   function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
     const constraints = [
       ["where", "billingDateAt", ">=", fromDate],
       ["where", "billingDateAt", "<=", toDate],

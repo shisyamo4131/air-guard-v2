@@ -1,68 +1,48 @@
-import * as Vue from "vue";
-import { useLogger } from "@/composables/useLogger";
-import { Employee } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useFetch } from "@/composables/fetch/useFetch";
-
 /*****************************************************************************
  * @file ./composables/dataLayers/employee/useEmployeesInRange.js
- * @description 従業員範囲用データレイヤーコンポーザブル
+ * @description 期間内在籍従業員 取得用 データレイヤーコンポーザブル
+ * - `from` と `to` の期間内に在籍している従業員インスタンスの配列を返します。
+ * - `employmentStatus` が `ACTIVE` である従業員と、`RESIGNED` である従業員の両方を
+ *   別々に取得する必要があるため、2つの `Employee` インスタンスを使用して購読（または取得）を行います。
+ *****************************************************************************/
+import * as Vue from "vue";
+import { Employee } from "@/schemas";
+import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useFetch } from "@/composables/fetch/useFetch";
+import {
+  rangeIsRef,
+  rangeIsValid,
+} from "@/composables/validators/rangeValidator";
+
+/*****************************************************************************
  * @param {Object} options - コンポーザブルのオプション
  * @param {Ref<Date>} options.from - 従業員範囲の開始日時を表す Ref
  * @param {Ref<Date>} options.to - 従業員範囲の終了日時を表す Ref
- * @returns {{
- *   docs: ComputedRef<Employee[]>
- * }}
+ * @param {boolean} [options.snapshot=false] - true の場合、購読ではなく一度だけフェッチします。
+ * @returns {{docs: ComputedRef<Employee[]>, loading: Ref<boolean>}} - 取得した従業員ドキュメントの配列と、ロード中かどうかを示す Ref
  *****************************************************************************/
-export function useEmployeesInRange({ from, to } = {}) {
-  const { isDev } = useAuthStore();
-
+export function useEmployeesInRange({ from, to, snapshot = false } = {}) {
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
-
-  /*****************************************************************************
-   * VALIDATORS
-   *****************************************************************************/
-  /**
-   * `fromDate` と `toDate` の値が適切な Date インスタンスであることを検証します。
-   * - `fromDate` が `toDate` より前であることも検証します。
-   * @param {[Date, Date]} dateRange - `fromDate` と `toDate` の配列
-   * @returns {void}
-   * @throws {TypeError} `fromDate` または `toDate` が Date インスタンスでない場合にスローされます。
-   * @throws {RangeError} `fromDate` が `toDate` より後の場合にスローされます。
-   */
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date)) {
-      throw new TypeError("Invalid 'from' value. Must be a Date instance.");
-    }
-
-    if (!(toDate instanceof Date)) {
-      throw new TypeError("Invalid 'to' value. Must be a Date instance.");
-    }
-
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useEmployeesInRange");
+  const logger = useLogger("useEmployeesInRange", useErrorsStore());
   const { fetchEmployeeComposable } = useFetch("useEmployeesInRange");
-  const { pushEmployee } = fetchEmployeeComposable;
+  const { pushEmployee, pushEmployees } = fetchEmployeeComposable;
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
   const activeEmployeeInstance = Vue.reactive(new Employee()); // 在職者用 Employee インスタンス
   const resignedEmployeeInstance = Vue.reactive(new Employee()); // 退職者用 Employee インスタンス
+  const fetchedDocs = Vue.ref([]);
+  const loading = Vue.ref(false); // `true` の場合、データの取得中であることを表します。（snapshot モードでのフェッチ中に使用）
 
   /*****************************************************************************
    * METHODS
@@ -75,7 +55,9 @@ export function useEmployeesInRange({ from, to } = {}) {
    * @returns {void}
    */
   function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
     const activeConstraints = [
       ["where", "employmentStatus", "==", Employee.STATUS_ACTIVE],
       ["where", "dateOfHire", "<=", toDate],
@@ -88,19 +70,11 @@ export function useEmployeesInRange({ from, to } = {}) {
     try {
       activeEmployeeInstance.subscribeDocs(
         { constraints: activeConstraints },
-        (doc) => {
-          if (typeof pushEmployee === "function") {
-            pushEmployee(doc);
-          }
-        },
+        (doc) => pushEmployee(doc),
       );
       resignedEmployeeInstance.subscribeDocs(
         { constraints: resignedConstraints },
-        (doc) => {
-          if (typeof pushEmployee === "function") {
-            pushEmployee(doc);
-          }
-        },
+        (doc) => pushEmployee(doc),
       );
     } catch (error) {
       logger.error({
@@ -113,6 +87,42 @@ export function useEmployeesInRange({ from, to } = {}) {
     }
   }
 
+  async function fetch([fromDate, toDate]) {
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
+    const activeConstraints = [
+      ["where", "employmentStatus", "==", Employee.STATUS_ACTIVE],
+      ["where", "dateOfHire", "<=", toDate],
+    ];
+    const resignedConstraints = [
+      ["where", "employmentStatus", "==", Employee.STATUS_RESIGNED],
+      ["where", "dateOfHire", "<=", toDate],
+      ["where", "dateOfTermination", ">=", fromDate],
+    ];
+
+    loading.value = true;
+    try {
+      const activeDocs = await activeEmployeeInstance.fetchDocs({
+        constraints: activeConstraints,
+      });
+      const resignedDocs = await resignedEmployeeInstance.fetchDocs({
+        constraints: resignedConstraints,
+      });
+      fetchedDocs.value = [...activeDocs, ...resignedDocs];
+      pushEmployees(fetchedDocs.value);
+    } catch (error) {
+      logger.error({
+        message: "Failed to fetch with given 'from' and 'to' values.",
+        error,
+        data: { fromDate, toDate },
+      });
+      activeEmployeeInstance.unsubscribe();
+      resignedEmployeeInstance.unsubscribe();
+    } finally {
+      loading.value = false;
+    }
+  }
   /*****************************************************************************
    * WATCHERS
    *****************************************************************************/
@@ -122,12 +132,12 @@ export function useEmployeesInRange({ from, to } = {}) {
    */
   Vue.watch(
     [from, to],
-    ([newFrom, newTo]) => {
-      if (isDev) {
-        const message = `'from' or 'to' changed. Subscribing with new values.`;
-        logger.debug({ message, data: { newFrom, newTo } });
+    async ([newFrom, newTo]) => {
+      if (snapshot) {
+        await fetch([newFrom, newTo]);
+      } else {
+        subscribe([newFrom, newTo]);
       }
-      subscribe([newFrom, newTo]);
     },
     { immediate: true },
   );
@@ -136,14 +146,18 @@ export function useEmployeesInRange({ from, to } = {}) {
    * COMPUTED
    *****************************************************************************/
   const docs = Vue.computed(() => {
-    const map = new Map();
-    for (const doc of activeEmployeeInstance.docs) {
-      map.set(doc.docId, doc);
+    if (snapshot) {
+      return fetchedDocs.value;
+    } else {
+      const map = new Map();
+      for (const doc of activeEmployeeInstance.docs) {
+        map.set(doc.docId, doc);
+      }
+      for (const doc of resignedEmployeeInstance.docs) {
+        map.set(doc.docId, doc);
+      }
+      return [...map.values()];
     }
-    for (const doc of resignedEmployeeInstance.docs) {
-      map.set(doc.docId, doc);
-    }
-    return [...map.values()];
   });
 
   /*****************************************************************************
@@ -157,7 +171,5 @@ export function useEmployeesInRange({ from, to } = {}) {
   /*****************************************************************************
    * RETURNS
    *****************************************************************************/
-  return {
-    docs,
-  };
+  return { docs, loading };
 }

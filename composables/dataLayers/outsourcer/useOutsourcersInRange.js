@@ -3,6 +3,10 @@ import { useLogger } from "@/composables/useLogger";
 import { Outsourcer } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useFetch } from "@/composables/fetch/useFetch";
+import {
+  rangeIsRef,
+  rangeIsValid,
+} from "@/composables/validators/rangeValidator";
 
 /*****************************************************************************
  * @file ./composables/dataLayers/outsourcer/useOutsourcersInRange.js
@@ -24,36 +28,8 @@ export function useOutsourcersInRange({ from, to } = {}) {
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
-
-  /*****************************************************************************
-   * VALIDATORS
-   *****************************************************************************/
-  /**
-   * `fromDate` と `toDate` の値が適切な Date インスタンスであることを検証します。
-   * - `fromDate` が `toDate` より前であることも検証します。
-   * @param {[Date, Date]} dateRange - `fromDate` と `toDate` の配列
-   * @returns {void}
-   * @throws {TypeError} `fromDate` または `toDate` が Date インスタンスでない場合にスローされます。
-   * @throws {RangeError} `fromDate` が `toDate` より後の場合にスローされます。
-   */
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date)) {
-      throw new TypeError("Invalid 'from' value. Must be a Date instance.");
-    }
-
-    if (!(toDate instanceof Date)) {
-      throw new TypeError("Invalid 'to' value. Must be a Date instance.");
-    }
-
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
@@ -78,7 +54,9 @@ export function useOutsourcersInRange({ from, to } = {}) {
    * @returns {void}
    */
   function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
     const activeConstraints = [
       ["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE],
     ];

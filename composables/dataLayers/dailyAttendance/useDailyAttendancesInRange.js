@@ -6,7 +6,10 @@ import * as Vue from "vue";
 import { DailyAttendance } from "@/schemas";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import {
+  rangeIsRef,
+  rangeIsValid,
+} from "@/composables/validators/rangeValidator";
 
 /**
  * @param {Object} options
@@ -16,7 +19,8 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
  * @throws {TypeError} - `from` または `to` が `Ref<Date>` ではない場合にスローされます。
  * @throws {RangeError} - `from` が `to` よりも後の日付である場合にスローされます。
  * @returns {{
- *   docs: import("vue").ComputedRef<DailyAttendance[]>
+ *   docs: import("vue").ComputedRef<DailyAttendance[]>,
+ *   loading: import("vue").Ref<boolean>
  * }}
  */
 export function useDailyAttendancesInRange({
@@ -27,38 +31,27 @@ export function useDailyAttendancesInRange({
   /*****************************************************************************
    * VALIDATION
    *****************************************************************************/
-  if (!Vue.isRef(from) || !Vue.isRef(to)) {
-    throw new TypeError(
-      "Invalid 'from' or 'to' option. Both must be Ref<Date>.",
-    );
-  }
+  /** Validate `from` and `to` are Ref<Date>. */
+  rangeIsRef({ from, to });
 
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const logger = useLogger("useDailyAttendancesInRange", useErrorsStore());
-  const loadingsStore = useLoadingsStore();
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
   const instance = Vue.reactive(new DailyAttendance());
   const docs = Vue.ref([]);
+  const loading = Vue.ref(false); // `true` の場合、データの取得中であることを表します。（snapshot モードでのフェッチ中に使用）
 
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
-  function validateDateValues([fromDate, toDate]) {
-    if (!(fromDate instanceof Date) || !(toDate instanceof Date)) {
-      throw new TypeError("'from' and 'to' must be Date instances.");
-    }
-    if (fromDate > toDate) {
-      throw new RangeError("'from' must be earlier than or equal to 'to'.");
-    }
-  }
-
   function subscribe([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
 
     try {
       docs.value = instance.subscribeDocs({
@@ -78,8 +71,10 @@ export function useDailyAttendancesInRange({
   }
 
   async function fetch([fromDate, toDate]) {
-    validateDateValues([fromDate, toDate]);
-    const loadingKey = loadingsStore.add("Fetching DailyAttendances...");
+    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
+    rangeIsValid({ from: fromDate, to: toDate });
+
+    loading.value = true;
     try {
       docs.value = await instance.fetchDocs({
         constraints: [
@@ -94,7 +89,7 @@ export function useDailyAttendancesInRange({
         data: { fromDate, toDate },
       });
     } finally {
-      loadingsStore.remove(loadingKey);
+      loading.value = false;
     }
   }
 
@@ -125,5 +120,6 @@ export function useDailyAttendancesInRange({
    *****************************************************************************/
   return {
     docs: Vue.computed(() => [...docs.value]),
+    loading,
   };
 }
