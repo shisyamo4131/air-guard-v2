@@ -176,6 +176,33 @@ export const pageStructure = [
     ],
   },
 
+  // ===== 勤怠管理 =====
+  {
+    id: "attendances-group",
+    label: "勤怠管理",
+    icon: "mdi-clock-check",
+    roles: ["developer"],
+    navigation: true,
+    children: [
+      {
+        id: "attendances-index",
+        path: "/attendances",
+        label: "従業員別勤怠情報",
+        icon: "mdi-calendar",
+        roles: ["developer"],
+        navigation: true,
+      },
+      {
+        id: "attendances-export",
+        path: "/attendances/export",
+        label: "打刻データ出力",
+        icon: "mdi-file-export",
+        roles: ["developer"],
+        navigation: true,
+      },
+    ],
+  },
+
   // ===== 請求管理 =====
   {
     id: "billings-group",
