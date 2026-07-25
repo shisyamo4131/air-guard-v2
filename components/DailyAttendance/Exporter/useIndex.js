@@ -6,6 +6,7 @@ import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDailyAttendancesInRange } from "@/composables/dataLayers/dailyAttendance/useDailyAttendancesInRange";
+import { useFetch } from "@/composables/fetch/useFetch";
 import {
   ATTENDANCE_PUNCH_TYPE,
   createAttendancePunchRows,
@@ -20,22 +21,34 @@ const PUNCH_TYPE_LABELS = Object.freeze({
 });
 
 export function useIndex() {
+  const { fetchEmployeeComposable } = useFetch("DailyAttendanceExporter");
+  const {
+    fetchEmployee,
+    cachedEmployees,
+    isLoading: loadingEmployees,
+  } = fetchEmployeeComposable;
   const baseDate = dayjs().startOf("month").toDate();
   const endDate = dayjs().endOf("month").toDate();
-  const { dateRange, startDate, endDate: rangeEndDate } = useDateRange({
+  const { dateRange, debouncedStartDate, debouncedEndDate } = useDateRange({
     baseDate,
     endDate,
   });
-  const { docs, employeesById, loadingEmployees } =
-    useDailyAttendancesInRange({
-      from: startDate,
-      to: rangeEndDate,
-    });
+  const { docs } = useDailyAttendancesInRange({
+    from: debouncedStartDate,
+    to: debouncedEndDate,
+    snapshot: true,
+  });
+
+  Vue.watch(
+    () => docs.value.map(({ employeeId }) => employeeId),
+    (employeeIds) => fetchEmployee(employeeIds),
+    { immediate: true },
+  );
 
   const exportResult = Vue.computed(() =>
     createAttendancePunchRows({
       dailyAttendances: docs.value,
-      employeesById: employeesById.value,
+      employeesById: cachedEmployees.value,
     }),
   );
 
@@ -66,8 +79,8 @@ export function useIndex() {
   function onClickExport() {
     exportAttendancePunchesCsv({
       rows: exportResult.value.rows,
-      from: startDate.value,
-      to: rangeEndDate.value,
+      from: debouncedStartDate.value,
+      to: debouncedEndDate.value,
     });
   }
 

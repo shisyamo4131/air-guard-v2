@@ -12,29 +12,43 @@ export function useIndex() {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
+  /** FETCH COMPOSABLE */
   const { fetchEmployeeComposable } = useFetch("DailyAttendanceIndex");
-  const { cachedEmployeesArray } = fetchEmployeeComposable;
+  const { fetchEmployee, cachedEmployeesArray } = fetchEmployeeComposable;
+
+  /** DATE RANGE COMPOSABLE */
   const baseDate = dayjs().tz("Asia/Tokyo").startOf("month").toDate();
   const endDate = dayjs().tz("Asia/Tokyo").endOf("month").toDate();
-  const {
-    dateRange,
-    startDate,
-    endDate: rangeEndDate,
-  } = useDateRange({ baseDate, endDate });
+  const { dateRange, debouncedStartDate, debouncedEndDate } = useDateRange({
+    baseDate,
+    endDate,
+  });
+
+  /** DATA LAYER COMPOSABLE */
   const { docs } = useDailyAttendancesInRange({
-    from: startDate,
-    to: rangeEndDate,
+    from: debouncedStartDate,
+    to: debouncedEndDate,
+    snapshot: true,
   });
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const selectedEmployeeId = ref(null);
+  const selectedEmployeeId = Vue.ref(null);
+
+  /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+  Vue.watch(
+    () => docs.value.map(({ employeeId }) => employeeId),
+    (employeeIds) => fetchEmployee(employeeIds),
+    { immediate: true },
+  );
 
   /*****************************************************************************
    * COMPUTED
    *****************************************************************************/
-  const filteredDocs = computed(() => {
+  const filteredDocs = Vue.computed(() => {
     return docs.value.filter(
       ({ employeeId }) => employeeId === selectedEmployeeId.value,
     );
