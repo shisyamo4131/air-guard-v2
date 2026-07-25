@@ -33,8 +33,8 @@ const { doc } = useDocument("Site", { docId });
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
  *****************************************************************************/
-const baseDate = dayjs().startOf("month").toDate();
-const endDate = dayjs().endOf("month").toDate();
+const baseDate = dayjs().tz().startOf("month").toDate();
+const endDate = dayjs().tz().endOf("month").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 

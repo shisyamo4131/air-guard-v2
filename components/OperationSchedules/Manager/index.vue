@@ -23,8 +23,8 @@ const { fetchSiteComposable } = useFetch("OperationSchedulesManager");
 // dateRange コンポーザブル
 // 初期表示は当月
 const dateRangeComposable = useDateRange({
-  baseDate: dayjs().startOf("month").toDate(),
-  endDate: dayjs().endOf("month").toDate(),
+  baseDate: dayjs().tz().startOf("month").toDate(),
+  endDate: dayjs().tz().endOf("month").toDate(),
 });
 const { debouncedDateRange } = dateRangeComposable;
 provide("dateRangeComposable", dateRangeComposable);

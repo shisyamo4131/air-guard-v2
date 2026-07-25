@@ -40,7 +40,7 @@ export async function duplicate({ source, dates = [] } = {}) {
 
   /** Normalize dates to the start of the day in Asia/Tokyo timezone */
   const normalizedDates = dates.map((date) => {
-    return dayjs.tz(date, "Asia/Tokyo").startOf("day").toDate();
+    return dayjs.tz(date).startOf("day").toDate();
   });
 
   /** Prepair new instances */

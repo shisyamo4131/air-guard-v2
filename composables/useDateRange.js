@@ -59,7 +59,7 @@ export function useDateRange({
     // 1. endDateが指定されていれば最優先
     if (endDateInput && isValidDate(endDateInput)) {
       const calculatedDays =
-        dayjs(endDateInput).diff(dayjs(validBaseDate), "day") + 1;
+        dayjs(endDateInput).tz().diff(dayjs(validBaseDate).tz(), "day") + 1;
       if (calculatedDays > 0) {
         return calculatedDays;
       } else {
@@ -122,6 +122,7 @@ export function useDateRange({
    */
   const startDate = Vue.computed(() => {
     return dayjs(currentBaseDate.value)
+      .tz()
       .add(currentOffsetDays.value, "day")
       .startOf("day")
       .toDate();
@@ -132,6 +133,7 @@ export function useDateRange({
    */
   const endDate = Vue.computed(() => {
     return dayjs(startDate.value)
+      .tz()
       .add(currentDayCount.value - 1, "day")
       .endOf("day")
       .toDate();
@@ -143,6 +145,7 @@ export function useDateRange({
   const debouncedStartDate = Vue.computed(() => {
     const config = debouncedConfig.debouncedValue.value;
     return dayjs(config.baseDate)
+      .tz()
       .add(config.offsetDays, "day")
       .startOf("day")
       .toDate();
@@ -154,6 +157,7 @@ export function useDateRange({
   const debouncedEndDate = Vue.computed(() => {
     const config = debouncedConfig.debouncedValue.value;
     return dayjs(debouncedStartDate.value)
+      .tz()
       .add(config.dayCount - 1, "day")
       .endOf("day")
       .toDate();
@@ -173,7 +177,7 @@ export function useDateRange({
         if (typeof to === "number") {
           setDayCount(to);
         } else if (to instanceof Date) {
-          const dayCount = dayjs(to).diff(dayjs(startDate.value), "day");
+          const dayCount = dayjs(to).tz().diff(dayjs(startDate.value).tz(), "day");
           setDayCount(dayCount + 1);
         }
       }
@@ -217,9 +221,9 @@ export function useDateRange({
    * 今日が表示範囲に含まれているかどうか
    */
   const includesToday = Vue.computed(() => {
-    const today = dayjs().startOf("day");
-    const start = dayjs(startDate.value).startOf("day");
-    const end = dayjs(endDate.value).startOf("day");
+    const today = dayjs().tz().startOf("day");
+    const start = dayjs(startDate.value).tz().startOf("day");
+    const end = dayjs(endDate.value).tz().startOf("day");
 
     return today.isSameOrAfter(start) && today.isSameOrBefore(end);
   });
@@ -265,7 +269,9 @@ export function useDateRange({
   const setEndDate = (newEndDate) => {
     if (isValidDate(newEndDate)) {
       const calculatedDayCount =
-        dayjs(newEndDate).diff(dayjs(currentBaseDate.value), "day") + 1;
+        dayjs(newEndDate)
+          .tz()
+          .diff(dayjs(currentBaseDate.value).tz(), "day") + 1;
       if (calculatedDayCount > 0) {
         currentDayCount.value = calculatedDayCount;
       } else {
@@ -298,16 +304,18 @@ export function useDateRange({
   const move = ({ value, unit = "range" }) => {
     if (unit === "range") {
       currentBaseDate.value = dayjs(currentBaseDate.value)
+        .tz()
         .add(value, "day")
         .toDate();
     } else if (unit === "month") {
       setBaseDate(
         dayjs(currentBaseDate.value)
+          .tz()
           .add(value, "month")
           .startOf("month")
           .toDate(),
       );
-      setEndDate(dayjs(currentBaseDate.value).endOf("month").toDate());
+      setEndDate(dayjs(currentBaseDate.value).tz().endOf("month").toDate());
     }
   };
 
@@ -316,6 +324,7 @@ export function useDateRange({
    */
   const movePrevious = (days = currentDayCount.value) => {
     currentBaseDate.value = dayjs(currentBaseDate.value)
+      .tz()
       .subtract(days, "day")
       .toDate();
   };
@@ -325,6 +334,7 @@ export function useDateRange({
    */
   const moveNext = (days = currentDayCount.value) => {
     currentBaseDate.value = dayjs(currentBaseDate.value)
+      .tz()
       .add(days, "day")
       .toDate();
   };
@@ -343,6 +353,7 @@ export function useDateRange({
     // 指定日が範囲の中央付近になるように基準日を調整
     const halfDays = Math.floor(currentDayCount.value / 2);
     currentBaseDate.value = dayjs(targetDate)
+      .tz()
       .subtract(halfDays - currentOffsetDays.value, "day")
       .toDate();
   };
@@ -364,7 +375,7 @@ export function useDateRange({
   const daysInRangeMap = Vue.computed(() => {
     const map = new Map();
     for (let i = 0; i < currentDayCount.value; i++) {
-      const dateAt = dayjs(startDate.value).add(i, "day").toDate();
+      const dateAt = dayjs(startDate.value).tz().add(i, "day").toDate();
       const dateKey = formatDate(dateAt, "YYYY-MM-DD");
       map.set(dateKey, {
         date: formatDate(dateAt, "YYYY-MM-DD"),
@@ -374,8 +385,8 @@ export function useDateRange({
         isToday:
           formatDate(dateAt, "YYYY-MM-DD") ===
           formatDate(new Date(), "YYYY-MM-DD"),
-        isPreviousDay: dateAt < dayjs().startOf("day").toDate(),
-        isFuture: dateAt > dayjs().startOf("day").toDate(),
+        isPreviousDay: dateAt < dayjs().tz().startOf("day").toDate(),
+        isFuture: dateAt > dayjs().tz().startOf("day").toDate(),
         isHoliday: isHoliday(dateAt),
       });
     }

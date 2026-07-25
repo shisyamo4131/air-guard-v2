@@ -14,7 +14,7 @@ export function useSitesMustBeTerminated() {
    * DEFINE STATES
    *****************************************************************************/
   const siteInstance = Vue.reactive(new Site());
-  const today = dayjs().tz("Asia/Tokyo").startOf("day").toDate();
+  const today = dayjs().tz().startOf("day").toDate();
   const constraints = [
     ["where", "status", "==", Site.STATUS_ACTIVE],
     ["where", "hasConstructionPeriodEndAt", "==", true],

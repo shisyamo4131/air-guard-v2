@@ -62,9 +62,7 @@ const displayName = computed(() => {
 });
 const dateTime = computed(() => {
   if (!props.item) return "N/A";
-  const date = dayjs(props.item.dateAt)
-    .tz("Asia/Tokyo")
-    .format("YYYY年MM月DD日（ddd）");
+  const date = dayjs(props.item.dateAt).tz().format("YYYY年MM月DD日（ddd）");
   const start = props.item.startTime || "N/A";
   const end = props.item.endTime || "N/A";
   return `${date}${start}～${end}`;

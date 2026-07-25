@@ -44,7 +44,7 @@ const itemsPerPage = computed(() => {
  * FUNCTIONS
  *****************************************************************************/
 function formatDate(date) {
-  return date ? dayjs(date).format("YYYY年MM月DD日") : "-";
+  return date ? dayjs(date).tz().format("YYYY年MM月DD日") : "-";
 }
 </script>
 

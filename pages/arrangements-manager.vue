@@ -29,7 +29,7 @@ useFetch("arrangements-manager", true);
 const { mobile } = useDisplay();
 const dayCount = mobile.value ? 4 : 14;
 const { startDate, endDate } = useDateRange({
-  baseDate: dayjs().tz("Asia/Tokyo").toDate(),
+  baseDate: dayjs().tz().toDate(),
   dayCount,
   offsetDays: -1,
 });

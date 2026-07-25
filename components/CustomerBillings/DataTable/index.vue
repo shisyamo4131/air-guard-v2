@@ -78,7 +78,7 @@ const headers = computed(() => [
   {
     title: "請求日",
     key: "billingDateAt",
-    value: (item) => dayjs(item.billingDateAt).format("MM月DD日(ddd)"),
+    value: (item) => dayjs(item.billingDateAt).tz().format("MM月DD日(ddd)"),
   },
   { title: "現場", key: "site.name" },
   {
@@ -110,7 +110,7 @@ const headers = computed(() => [
     key: "paymentDueDate",
     value: (item) =>
       item.paymentDueDate
-        ? dayjs(item.paymentDueDate).format("MM月DD日(ddd)")
+        ? dayjs.tz(item.paymentDueDate).format("MM月DD日(ddd)")
         : "未設定",
   },
 ]);

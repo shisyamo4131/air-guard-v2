@@ -18,7 +18,7 @@ const emit = defineEmits(["click:sort", "click:create"]);
 
 /** LABEL */
 const label = computed(() => {
-  return `${dayjs(dateRange.value.from).format("YYYY年MM月")}`;
+  return `${dayjs(dateRange.value.from).tz().format("YYYY年MM月")}`;
 });
 
 /** PREVIOUS BUTTON ATTRIBUTES */

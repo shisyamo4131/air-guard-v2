@@ -59,7 +59,7 @@ const transitionAction = computed(() => {
 });
 const enrollmentDate = computed(() => {
   const formattedDate = model.value.enrollmentDate;
-  return formattedDate ? dayjs(formattedDate).format("YYYY/MM/DD") : "-";
+  return formattedDate ? dayjs.tz(formattedDate).format("YYYY/MM/DD") : "-";
 });
 /*****************************************************************************
  * METHODS

@@ -38,7 +38,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
         </tr>
         <tr>
           <td>請求日</td>
-          <td>{{ dayjs(doc.billingDateAt).format("YYYY年MM月DD日(ddd)") }}</td>
+          <td>{{ dayjs(doc.billingDateAt).tz().format("YYYY年MM月DD日(ddd)") }}</td>
         </tr>
         <tr>
           <td>売上金額</td>
@@ -61,7 +61,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
               label="入金予定日編集"
             >
               <template #activator="activatorProps">
-                {{ dayjs(doc.paymentDueDateAt).format("YYYY年MM月DD日(ddd)") }}
+                {{ dayjs(doc.paymentDueDateAt).tz().format("YYYY年MM月DD日(ddd)") }}
                 <v-btn
                   v-bind="activatorProps.attrs"
                   class="ml-2"
@@ -102,7 +102,7 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
                   :key="index"
                 >
                   <td>
-                    {{ dayjs(operation.dateAt).format("YYYY年MM月DD日(ddd)") }}
+                    {{ dayjs(operation.dateAt).tz().format("YYYY年MM月DD日(ddd)") }}
                   </td>
                   <td>
                     {{ operation.statistics.base.quantity.toLocaleString() }}

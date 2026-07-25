@@ -17,8 +17,8 @@ export function useIndex() {
   const { fetchEmployee, cachedEmployeesArray } = fetchEmployeeComposable;
 
   /** DATE RANGE COMPOSABLE */
-  const baseDate = dayjs().tz("Asia/Tokyo").startOf("month").toDate();
-  const endDate = dayjs().tz("Asia/Tokyo").endOf("month").toDate();
+  const baseDate = dayjs().tz().startOf("month").toDate();
+  const endDate = dayjs().tz().endOf("month").toDate();
   const { dateRange, debouncedStartDate, debouncedEndDate } = useDateRange({
     baseDate,
     endDate,

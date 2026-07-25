@@ -27,7 +27,7 @@ const emit = defineEmits(["click:edit"]);
  *****************************************************************************/
 const formattedPeriodOfStay = computed(() => {
   return props.item.periodOfStay
-    ? dayjs(props.item.periodOfStay).format("YYYY/MM/DD")
+    ? dayjs(props.item.periodOfStay).tz().format("YYYY/MM/DD")
     : "";
 });
 

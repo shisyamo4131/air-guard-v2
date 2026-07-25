@@ -204,7 +204,7 @@ const LINE_LAYOUT = {
  * @returns {Object} ヘッダー定義オブジェクト
  */
 const header = (currentPage, pageCount, date) => {
-  const dateString = dayjs(date).locale(ja).format("YYYY年MM月DD日(dddd)");
+  const dateString = dayjs(date).tz().locale(ja).format("YYYY年MM月DD日(dddd)");
   const pageString = `${currentPage} / ${pageCount}`;
   return {
     columns: [

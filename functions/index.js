@@ -4,6 +4,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
+dayjs.tz.setDefault("Asia/Tokyo");
 
 /** Firebase, FireModel の初期化 */
 import "./modules/firebase.init.js";

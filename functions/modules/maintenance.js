@@ -68,7 +68,7 @@ const cleanUpSiteOperationSchedules = async () => {
 
     // JST で現在日時を取得し、60日前の日付を計算
     const deadline = dayjs()
-      .tz("Asia/Tokyo")
+      .tz()
       .subtract(SITE_OPERATION_SCHEDULES_KEEP_DAYS, "day")
       .format("YYYY-MM-DD");
 

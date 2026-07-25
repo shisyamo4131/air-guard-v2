@@ -129,7 +129,9 @@ export function useBillingPdf() {
     // PDFを生成してダウンロード
     const fileName = `請求書_${customer.name}_${dayjs(
       billing.billingDateAt,
-    ).format("YYYYMMDD")}.pdf`;
+    )
+      .tz()
+      .format("YYYYMMDD")}.pdf`;
     pdfMake.createPdf(docDefinition).download(fileName);
   }
 
@@ -241,9 +243,9 @@ export function useBillingPdf() {
 
           // 請求日と入金予定日
           {
-            text: `請求日: ${dayjs(billing.billingDateAt).format(
+            text: `請求日: ${dayjs(billing.billingDateAt).tz().format(
               "YYYY年MM月DD日",
-            )} / 入金予定日: ${dayjs(billing.paymentDueDateAt).format(
+            )} / 入金予定日: ${dayjs(billing.paymentDueDateAt).tz().format(
               "YYYY年MM月DD日",
             )}`,
             fontSize: 10,
@@ -267,7 +269,9 @@ export function useBillingPdf() {
     // PDFを生成してダウンロード
     const fileName = `請求書_${customer.name}_${dayjs(
       firstBilling.billingDateAt,
-    ).format("YYYYMMDD")}_統合.pdf`;
+    )
+      .tz()
+      .format("YYYYMMDD")}_統合.pdf`;
     pdfMake.createPdf(docDefinition).download(fileName);
   }
 
@@ -617,7 +621,7 @@ export function useBillingPdf() {
       // 各稼働実績の明細を出力
       sorted.forEach((or) => {
         // 日付と曜日を結合
-        const date = dayjs(or.dateAt);
+        const date = dayjs(or.dateAt).tz();
         const dateWithDay = `${date.format("MM/DD")} ${date
           .locale("ja")
           .format("(ddd)")}`;
@@ -736,7 +740,7 @@ export function useBillingPdf() {
 
         return [
           {
-            text: dayjs(operationResult.dateAt).format("MM/DD"),
+            text: dayjs(operationResult.dateAt).tz().format("MM/DD"),
             alignment: "center",
           },
           { text: site?.name ?? "不明な現場" },

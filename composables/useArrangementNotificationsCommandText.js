@@ -39,7 +39,10 @@ export function useArrangementNotificationsCommandText({
    * @returns {string}
    */
   function getCommandText(date) {
-    const formattedDate = dayjs(date).locale(ja).format("YYYY年MM月DD日(ddd)");
+    const formattedDate = dayjs(date)
+      .tz()
+      .locale(ja)
+      .format("YYYY年MM月DD日(ddd)");
 
     const dayFilteredSchedules = Vue.unref(schedules).filter(
       (schedule) => schedule.date === date,

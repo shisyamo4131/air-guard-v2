@@ -77,7 +77,7 @@ export function useSiteOperationScheduleActions() {
     if (!date || !siteId || !shiftType) {
       throw new Error("Missing required options: date, siteId, shiftType");
     }
-    const dateAt = dayjs.tz(date, "Asia/Tokyo").startOf("day").toDate();
+    const dateAt = dayjs.tz(date).startOf("day").toDate();
     return schedules.map((schedule, index) => {
       schedule.siteId = siteId;
       schedule.shiftType = shiftType;

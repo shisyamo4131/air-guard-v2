@@ -31,15 +31,15 @@ const internalModel = ref(props.modelValue);
  * COMPUTED PROPERTIES
  *****************************************************************************/
 const monthString = computed(() => {
-  return dayjs(internalModel.value).format("YYYY年MM月");
+  return dayjs(internalModel.value).tz().format("YYYY年MM月");
 });
 
 const from = computed(() => {
-  return dayjs(internalModel.value).startOf("month").toDate();
+  return dayjs(internalModel.value).tz().startOf("month").toDate();
 });
 
 const to = computed(() => {
-  return dayjs(internalModel.value).endOf("month").toDate();
+  return dayjs(internalModel.value).tz().endOf("month").toDate();
 });
 
 /*****************************************************************************
@@ -57,6 +57,7 @@ watch(
  *****************************************************************************/
 function onClickPrev() {
   internalModel.value = dayjs(internalModel.value)
+    .tz()
     .startOf("month")
     .subtract(1, "month")
     .toDate();
@@ -68,6 +69,7 @@ function onClickPrev() {
 
 function onClickNext() {
   internalModel.value = dayjs(internalModel.value)
+    .tz()
     .startOf("month")
     .add(1, "month")
     .toDate();

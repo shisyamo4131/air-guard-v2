@@ -44,10 +44,10 @@ export async function rebuildHistory(companyId, siteId, employeeId) {
 
   // 履歴を作成（SiteEmployeeHistoryクラスを使用）
   const firstDateAt = Timestamp.fromDate(
-    dayjs.tz(firstDoc.get("date"), "Asia/Tokyo").startOf("day").toDate(),
+    dayjs.tz(firstDoc.get("date")).startOf("day").toDate(),
   );
   const lastDateAt = Timestamp.fromDate(
-    dayjs.tz(lastDoc.get("date"), "Asia/Tokyo").startOf("day").toDate(),
+    dayjs.tz(lastDoc.get("date")).startOf("day").toDate(),
   );
   const instance = new SiteEmployeeHistory({
     siteId,

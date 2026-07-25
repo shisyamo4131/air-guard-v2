@@ -10,6 +10,9 @@ import holiday_jp from "@holiday-jp/holiday_jp"; // 2026-01-23 祝日判定の�
  * Date utility composable
  */
 export function useDateUtil() {
+  const toJstDayjs = (date) =>
+    date instanceof Date ? dayjs(date).tz() : dayjs.tz(date);
+
   /**
    * Validates and processes date range parameters.
    * @param {Date|string} from - Start date
@@ -27,7 +30,7 @@ export function useDateUtil() {
       return null;
     }
 
-    const fromDate = dayjs(from);
+    const fromDate = toJstDayjs(from);
     if (!fromDate.isValid()) {
       console.error("Invalid start date provided.");
       return null;
@@ -41,7 +44,7 @@ export function useDateUtil() {
       }
       toDate = fromDate.add(to, "day");
     } else {
-      toDate = dayjs(to);
+      toDate = toJstDayjs(to);
       if (!toDate.isValid()) {
         console.error("Invalid end date provided.");
         return null;
@@ -68,8 +71,8 @@ export function useDateUtil() {
       return false;
     }
 
-    const fromDate = dayjs(from);
-    const toDate = dayjs(to);
+    const fromDate = toJstDayjs(from);
+    const toDate = toJstDayjs(to);
 
     if (!fromDate.isValid() || !toDate.isValid()) {
       console.error("Invalid date provided for 'from' or 'to'.");
@@ -91,7 +94,7 @@ export function useDateUtil() {
    * @returns {string|null} Formatted date string or null if invalid
    */
   const formatDate = (date, format = "YYYY-MM-DD") => {
-    const dayjsDate = dayjs.tz(date, "Asia/Tokyo");
+    const dayjsDate = toJstDayjs(date);
     if (!dayjsDate.isValid()) {
       console.error("Invalid date provided for formatting.");
       return null;
@@ -114,7 +117,7 @@ export function useDateUtil() {
    * @returns {boolean} 祝日であれば true、それ以外は false
    */
   const isHoliday = (date) => {
-    const dateObj = dayjs.tz(date, "Asia/Tokyo").toDate();
+    const dateObj = toJstDayjs(date).toDate();
     return holiday_jp.isHoliday(dateObj);
   };
 

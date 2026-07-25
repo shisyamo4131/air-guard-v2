@@ -24,7 +24,7 @@ const _props = defineProps({
   borderWidth: { type: Number, default: 1 },
   hideLabel: { type: Boolean, default: false },
   label: { type: String, default: "稼働数" },
-  startDate: { type: Object, default: () => dayjs().tz("Asia/Tokyo").toDate() },
+  startDate: { type: Object, default: () => dayjs().tz().toDate() },
 });
 const props = useDefaults(_props, "ChartsWeeklyOperationQuantityBar");
 

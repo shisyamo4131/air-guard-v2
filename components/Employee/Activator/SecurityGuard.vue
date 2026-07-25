@@ -30,7 +30,9 @@ const emit = defineEmits(["click:edit"]);
  *****************************************************************************/
 const formattedDateOfSecurityGuardRegistration = computed(() => {
   return props.item.dateOfSecurityGuardRegistration
-    ? dayjs(props.item.dateOfSecurityGuardRegistration).format("YYYY年MM月DD日")
+    ? dayjs(props.item.dateOfSecurityGuardRegistration)
+        .tz()
+        .format("YYYY年MM月DD日")
     : "";
 });
 

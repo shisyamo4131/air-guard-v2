@@ -9,7 +9,7 @@ export function useUnconfirmedSiteOperationSchedules() {
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const currentDate = dayjs().tz("Asia/Tokyo").format("YYYY-MM-DD");
+  const currentDate = dayjs().tz().format("YYYY-MM-DD");
 
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES

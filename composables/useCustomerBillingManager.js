@@ -82,7 +82,7 @@ export function useCustomerBillingManager({
       {
         title: "日付",
         props: {
-          subtitle: dayjs(doc.dateAt).format("YYYY年M月D日（ddd）"),
+          subtitle: dayjs(doc.dateAt).tz().format("YYYY年M月D日（ddd）"),
         },
       },
       {
@@ -115,7 +115,7 @@ export function useCustomerBillingManager({
     const overtimeUnitPriceQualified =
       doc.agreement?.overtimeUnitPriceQualified || 0;
     const billingDate = doc.billingDateAt
-      ? dayjs(doc.billingDateAt).format("YYYY年M月D日")
+      ? dayjs(doc.billingDateAt).tz().format("YYYY年M月D日")
       : "未設定";
     const billings = [
       {

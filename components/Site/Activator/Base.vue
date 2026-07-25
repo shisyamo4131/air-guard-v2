@@ -44,14 +44,10 @@ const securityTypeTitle = computed(() => {
  */
 const constructionPeriod = computed(() => {
   const start = props.item.constructionPeriodStartAt
-    ? dayjs(props.item.constructionPeriodStartAt)
-        .tz("Asia/Tokyo")
-        .format("YYYY/MM/DD")
+    ? dayjs(props.item.constructionPeriodStartAt).tz().format("YYYY/MM/DD")
     : null;
   const end = props.item.constructionPeriodEndAt
-    ? dayjs(props.item.constructionPeriodEndAt)
-        .tz("Asia/Tokyo")
-        .format("YYYY/MM/DD")
+    ? dayjs(props.item.constructionPeriodEndAt).tz().format("YYYY/MM/DD")
     : null;
 
   if (!start && !end) return "-";

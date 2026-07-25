@@ -40,8 +40,8 @@ const { SHIFT_TYPE } = useConstants();
 const events = computed(() => {
   return props.docs.flatMap((doc) =>
     doc.details.map((detail) => {
-      const startTime = dayjs(detail.startAt).tz("Asia/Tokyo").format("HH:mm");
-      const endTime = dayjs(detail.endAt).tz("Asia/Tokyo").format("HH:mm");
+      const startTime = dayjs(detail.startAt).tz().format("HH:mm");
+      const endTime = dayjs(detail.endAt).tz().format("HH:mm");
       const name = `${startTime} - ${endTime}`;
       const color = SHIFT_TYPE.value[detail.shiftType]?.color || "grey";
       return {

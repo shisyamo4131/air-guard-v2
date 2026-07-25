@@ -21,7 +21,7 @@ export function useIndex(props, emit) {
 
   /** subtitle */
   const subtitle = Vue.computed(() => {
-    return dayjs(props.dateAt).format("YYYY年MM月DD日(ddd)");
+    return dayjs(props.dateAt).tz().format("YYYY年MM月DD日(ddd)");
   });
 
   /**

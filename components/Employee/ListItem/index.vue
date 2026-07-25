@@ -36,12 +36,12 @@ const isForeigner = computed(() => internalItem.isForeigner);
 
 const dateOfHire = computed(() => {
   const date = internalItem.dateOfHire;
-  return date ? `入社日: ${dayjs(date).format("YYYY/MM/DD")}` : "N/A";
+  return date ? `入社日: ${dayjs(date).tz().format("YYYY/MM/DD")}` : "N/A";
 });
 
 const dateOfTermination = computed(() => {
   const date = internalItem.dateOfTermination;
-  return date ? `退社日: ${dayjs(date).format("YYYY/MM/DD")}` : "N/A";
+  return date ? `退社日: ${dayjs(date).tz().format("YYYY/MM/DD")}` : "N/A";
 });
 
 const showDateOfTermination = computed(() => {

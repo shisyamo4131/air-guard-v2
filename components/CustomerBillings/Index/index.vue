@@ -24,8 +24,8 @@ const { downloadBillingPdf, downloadConsolidatedBillingPdf, downloadCsv } =
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
  *****************************************************************************/
-const baseDate = dayjs().startOf("month").startOf("day").toDate();
-const endDate = dayjs().endOf("month").endOf("day").toDate();
+const baseDate = dayjs().tz().startOf("month").startOf("day").toDate();
+const endDate = dayjs().tz().endOf("month").endOf("day").toDate();
 const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedStartDate, debouncedEndDate } = dateRangeComposable;
 

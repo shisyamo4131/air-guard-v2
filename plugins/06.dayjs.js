@@ -10,4 +10,5 @@ export default defineNuxtPlugin(() => {
   dayjs.extend(isSameOrAfter);
   dayjs.extend(utc);
   dayjs.extend(timezone);
+  dayjs.tz.setDefault("Asia/Tokyo");
 });

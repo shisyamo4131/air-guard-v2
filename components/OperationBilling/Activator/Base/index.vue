@@ -52,9 +52,7 @@ const customerName = computed(() => {
   return customer.value?.abbreviation || "読み込み中...";
 });
 const dateString = computed(() => {
-  return dayjs(props.item.dateAt)
-    .tz("Asia/Tokyo")
-    .format("YYYY年MM月DD日 (ddd)");
+  return dayjs(props.item.dateAt).tz().format("YYYY年MM月DD日 (ddd)");
 });
 const dayTypeTitle = computed(() => {
   return DAY_TYPE.value?.[props.item.dayType]?.title || "N/A";

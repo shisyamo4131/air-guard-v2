@@ -12,7 +12,7 @@ export async function sitesAutoTermination() {
   logger.info("Starting sites auto termination...");
 
   /** define constants */
-  const today = dayjs().tz("Asia/Tokyo").startOf("day");
+  const today = dayjs().tz().startOf("day");
   const deadline = today.subtract(3, "month").toDate();
   const updatedAt = Timestamp.now();
 

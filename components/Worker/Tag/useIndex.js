@@ -18,7 +18,7 @@ export function useIndex(props, emit) {
   const resolveTime = (time) => {
     if (!time) return "--:--";
     if (typeof time === "string") return time;
-    return dayjs(time).tz("Asia/Tokyo").format("HH:mm");
+    return dayjs(time).tz().format("HH:mm");
   };
 
   /**

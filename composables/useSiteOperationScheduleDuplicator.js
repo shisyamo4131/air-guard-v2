@@ -79,7 +79,7 @@ export function useSiteOperationScheduleDuplicator({
    * @returns {boolean} - Whether the date is allowed for duplication.
    */
   function _isDateAllowed(date) {
-    return dayjs(date).format("YYYY-MM-DD") !== instance.date;
+    return dayjs(date).tz().format("YYYY-MM-DD") !== instance.date;
   }
 
   /*****************************************************************************

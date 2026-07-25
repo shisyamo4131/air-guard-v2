@@ -33,12 +33,12 @@ const { GENDER } = useConstants();
  *****************************************************************************/
 const formattedDateOfBirth = computed(() => {
   return props.item.dateOfBirth
-    ? dayjs(props.item.dateOfBirth).format("YYYY/MM/DD")
+    ? dayjs(props.item.dateOfBirth).tz().format("YYYY/MM/DD")
     : "";
 });
 const formattedDateOfHire = computed(() => {
   return props.item.dateOfHire
-    ? dayjs(props.item.dateOfHire).format("YYYY/MM/DD")
+    ? dayjs(props.item.dateOfHire).tz().format("YYYY/MM/DD")
     : "";
 });
 

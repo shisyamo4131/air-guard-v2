@@ -40,9 +40,7 @@ const tab = Vue.ref("WEEKDAY");
  * 適用開始日ラベル
  */
 const startDateLabel = computed(() => {
-  const startDate = dayjs(props.agreement.dateAt)
-    .tz("Asia/Tokyo")
-    .format("YYYY年MM月DD日");
+  const startDate = dayjs(props.agreement.dateAt).tz().format("YYYY年MM月DD日");
   return `${startDate}～`;
 });
 

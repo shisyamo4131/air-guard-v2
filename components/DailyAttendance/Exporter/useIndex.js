@@ -27,8 +27,8 @@ export function useIndex() {
     cachedEmployees,
     isLoading: loadingEmployees,
   } = fetchEmployeeComposable;
-  const baseDate = dayjs().startOf("month").toDate();
-  const endDate = dayjs().endOf("month").toDate();
+  const baseDate = dayjs().tz().startOf("month").toDate();
+  const endDate = dayjs().tz().endOf("month").toDate();
   const { dateRange, debouncedStartDate, debouncedEndDate } = useDateRange({
     baseDate,
     endDate,

@@ -87,7 +87,7 @@ export function useIndex(props) {
    * @returns {number} - 現在有効な取極め情報のインデックス。存在しない場合は -1。
    */
   const validIndex = Vue.computed(() => {
-    const today = dayjs().tz("Asia/Tokyo").format("YYYY-MM-DD");
+    const today = dayjs().tz().format("YYYY-MM-DD");
     const index = [...internalAgreements.value].findLastIndex(
       ({ date }) => date <= today,
     );
