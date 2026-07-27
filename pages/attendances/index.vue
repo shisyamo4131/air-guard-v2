@@ -20,6 +20,7 @@ useFetch("daily-attendance-index", true);
   <v-container
     class="align-start pa-0"
     style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+    fluid
   >
     <DailyAttendanceIndex class="fill-height" />
   </v-container>

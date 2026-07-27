@@ -42,10 +42,6 @@ const items = computed(() => {
       title: "実労働時間",
       value: formatAttendanceMinutes(props.statistics.totalWorkMinutes),
     },
-    {
-      title: "休憩時間",
-      value: formatAttendanceMinutes(props.statistics.totalBreakMinutes),
-    },
   ];
 });
 </script>

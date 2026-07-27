@@ -36,14 +36,26 @@ const items = computed(() => {
   const byShiftType = props.statistics?.byShiftType;
   if (!(byShiftType instanceof Map)) return [];
 
-  return Array.from(byShiftType, ([shiftType, statistics]) => ({
-    shiftType,
-    shiftTypeTitle: SHIFT_TYPE.value[shiftType]?.title ?? shiftType,
-    attendanceCount: statistics.attendanceCount,
-    detailCount: statistics.detailCount,
-    totalWorkMinutes: formatAttendanceMinutes(statistics.totalWorkMinutes),
-    totalBreakMinutes: formatAttendanceMinutes(statistics.totalBreakMinutes),
-  }));
+  const definedShiftTypes = Object.values(SHIFT_TYPE.value).map(
+    ({ value }) => value,
+  );
+  const additionalShiftTypes = Array.from(byShiftType.keys()).filter(
+    (shiftType) => !definedShiftTypes.includes(shiftType),
+  );
+
+  return [...definedShiftTypes, ...additionalShiftTypes].map((shiftType) => {
+    const statistics = byShiftType.get(shiftType);
+
+    return {
+      shiftType,
+      shiftTypeTitle: SHIFT_TYPE.value[shiftType]?.title ?? shiftType,
+      attendanceCount: statistics?.attendanceCount ?? 0,
+      detailCount: statistics?.detailCount ?? 0,
+      totalWorkMinutes: formatAttendanceMinutes(
+        statistics?.totalWorkMinutes ?? 0,
+      ),
+    };
+  });
 });
 </script>
 
@@ -55,7 +67,6 @@ const items = computed(() => {
         <th class="text-end">日数</th>
         <th class="text-end">稼働</th>
         <th class="text-end">実労働</th>
-        <th class="text-end">休憩</th>
       </tr>
     </thead>
     <tbody>
@@ -64,7 +75,6 @@ const items = computed(() => {
         <td class="text-end">{{ item.attendanceCount }}</td>
         <td class="text-end">{{ item.detailCount }}</td>
         <td class="text-end">{{ item.totalWorkMinutes }}</td>
-        <td class="text-end">{{ item.totalBreakMinutes }}</td>
       </tr>
     </tbody>
   </v-table>
