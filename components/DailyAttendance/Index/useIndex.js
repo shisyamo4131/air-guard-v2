@@ -127,6 +127,24 @@ export function useIndex() {
         width: 320,
         variant: "solo",
       },
+      employeesList: {
+        color: "primary",
+        density: "compact",
+        items: employees.value.map((employee) => {
+          return {
+            ...employee,
+            props: {
+              subtitle: employee.code,
+            },
+          };
+        }),
+        itemTitle: "fullName",
+        itemValue: "docId",
+        selected: selectedEmployeeId.value ? [selectedEmployeeId.value] : [],
+        width: 240,
+        "onUpdate:selected": (value) =>
+          (selectedEmployeeId.value = value[0] || null),
+      },
       monthSelector: {
         modelValue: dateRange.value.from,
         onDateRange: (value) => (dateRange.value = value),
