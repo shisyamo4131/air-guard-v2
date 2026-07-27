@@ -79,8 +79,13 @@ export function useSecurityReports(
   Vue.watch(
     operationId,
     async (newOperationId, oldOperationId) => {
-      if (!fetchOnChanged) return;
       if (newOperationId === oldOperationId) return;
+
+      reports.value = [];
+      listError.value = null;
+      isListing.value = false;
+
+      if (!newOperationId || !fetchOnChanged) return;
       await fetch();
     },
     { immediate: true },
@@ -93,18 +98,26 @@ export function useSecurityReports(
    * 警備日報写真の一覧を取得する
    */
   async function fetch() {
-    if (!Vue.unref(operationId)) {
+    const requestedOperationId = Vue.unref(operationId);
+    if (!requestedOperationId) {
       listError.value = "operationId を入力してください。";
       return;
     }
     listError.value = null;
     isListing.value = true;
     try {
-      reports.value = await listSecurityReports(Vue.unref(operationId));
+      const fetchedReports = await listSecurityReports(requestedOperationId);
+      if (Vue.unref(operationId) === requestedOperationId) {
+        reports.value = fetchedReports;
+      }
     } catch (e) {
-      listError.value = e.message;
+      if (Vue.unref(operationId) === requestedOperationId) {
+        listError.value = e.message;
+      }
     } finally {
-      isListing.value = false;
+      if (Vue.unref(operationId) === requestedOperationId) {
+        isListing.value = false;
+      }
     }
   }
 

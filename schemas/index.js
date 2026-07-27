@@ -21,6 +21,7 @@ export { OperationResultDetail } from "@shisyamo4131/air-guard-v2-schemas";
 export { Outsourcer } from "@shisyamo4131/air-guard-v2-schemas";
 export { RateSet, DayTypeRates } from "@shisyamo4131/air-guard-v2-schemas";
 export { RoundSetting } from "@shisyamo4131/air-guard-v2-schemas";
+export { SecurityReportIndex } from "@shisyamo4131/air-guard-v2-schemas";
 export { Site } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteEmployeeHistory } from "@shisyamo4131/air-guard-v2-schemas";
 export { SiteOperationSchedule } from "@shisyamo4131/air-guard-v2-schemas";

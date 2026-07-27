@@ -37,6 +37,14 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "ArrangementsManager");
 
+/** 以下は後日、useIndex 側に集約すべき */
+const securityReportDialog = ref(false);
+const selectedScheduleId = ref(null);
+watch(securityReportDialog, (newVal) => {
+  if (newVal) return;
+  selectedScheduleId.value = null;
+});
+
 /*****************************************************************************
  * DEFINE TEMPLATE REFS
  *****************************************************************************/
@@ -115,6 +123,12 @@ const {
                   disabled,
                 })
               "
+              @click:security-report="
+                () => {
+                  selectedScheduleId = schedule.docId;
+                  securityReportDialog = true;
+                }
+              "
             >
               <template #default="cardProps">
                 <DraggableWorkers
@@ -172,6 +186,20 @@ const {
 
     <!-- スピードダイアル -->
     <SpeedDial v-bind="uiSpeedDial.attrs" />
+
+    <!-- 警備日報表示ダイアログ -->
+    <v-dialog v-model="securityReportDialog" max-width="480">
+      <v-card :border="false">
+        <v-toolbar color="secondary" flat density="compact">
+          <v-toolbar-title>警備日報</v-toolbar-title>
+          <v-spacer />
+          <v-btn icon="mdi-close" @click="securityReportDialog = false" />
+        </v-toolbar>
+        <v-card-text class="pb-0">
+          <SecurityReportsManager :schedule-id="selectedScheduleId" />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </div>
 </template>
 

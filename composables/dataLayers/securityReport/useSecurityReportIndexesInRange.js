@@ -1,29 +1,24 @@
-/*****************************************************************************
- * @file composables/dataLayers/dailyAttendance/useDailyAttendancesInRange.js
- * @description 指定期間のDailyAttendanceを取得する。
- *****************************************************************************/
 import * as Vue from "vue";
-import { DailyAttendance } from "@/schemas";
 import { useLogger } from "@/composables/useLogger";
-import { useErrorsStore } from "@/stores/useErrorsStore";
+import { SecurityReportIndex } from "@/schemas";
 import {
   rangeIsRef,
   rangeIsValid,
 } from "@/composables/validators/rangeValidator";
 
-/**
+/*****************************************************************************
+ * @file ./composables/dataLayers/securityReport/useSecurityReportIndexesInRange.js
+ * @description SecurityReportIndex range data layer composable.
  * @param {Object} options
  * @param {import("vue").Ref<Date>} options.from
  * @param {import("vue").Ref<Date>} options.to
  * @param {boolean} [options.snapshot=false] - `true` の場合、Firestoreのリアルタイム購読ではなく、単発の取得を行う。
- * @throws {TypeError} - `from` または `to` が `Ref<Date>` ではない場合にスローされます。
- * @throws {RangeError} - `from` が `to` よりも後の日付である場合にスローされます。
  * @returns {{
- *   docs: import("vue").ComputedRef<DailyAttendance[]>,
+ *   docs: import("vue").ComputedRef<SecurityReportIndex[]>,
  *   loading: import("vue").Ref<boolean>
  * }}
- */
-export function useDailyAttendancesInRange({
+ *****************************************************************************/
+export function useSecurityReportIndexesInRange({
   from,
   to,
   snapshot = false,
@@ -35,14 +30,14 @@ export function useDailyAttendancesInRange({
   rangeIsRef({ from, to });
 
   /*****************************************************************************
-   * SETUP STORES & COMPOSABLES
+   * SETUP COMPOSABLES
    *****************************************************************************/
-  const logger = useLogger("useDailyAttendancesInRange", useErrorsStore());
+  const logger = useLogger("useSecurityReportIndexesInRange");
 
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
-  const instance = Vue.reactive(new DailyAttendance());
+  const instance = Vue.reactive(new SecurityReportIndex());
   const docs = Vue.ref([]);
   const loading = Vue.ref(false); // `true` の場合、データの取得中であることを表します。（snapshot モードでのフェッチ中に使用）
 
@@ -53,16 +48,15 @@ export function useDailyAttendancesInRange({
     /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
     rangeIsValid({ from: fromDate, to: toDate });
 
+    const constraints = [
+      ["where", "dateAt", ">=", fromDate],
+      ["where", "dateAt", "<=", toDate],
+    ];
     try {
-      docs.value = instance.subscribeDocs({
-        constraints: [
-          ["where", "dateAt", ">=", fromDate],
-          ["where", "dateAt", "<=", toDate],
-        ],
-      });
+      docs.value = instance.subscribeDocs({ constraints });
     } catch (error) {
       logger.error({
-        message: "Failed to subscribe DailyAttendances.",
+        message: "Failed to subscribe with given 'from' and 'to' values.",
         error,
         data: { fromDate, toDate },
       });
@@ -84,7 +78,7 @@ export function useDailyAttendancesInRange({
       });
     } catch (error) {
       logger.error({
-        message: "Failed to fetch DailyAttendances.",
+        message: "Failed to fetch SecurityReportIndexes.",
         error,
         data: { fromDate, toDate },
       });
@@ -105,9 +99,7 @@ export function useDailyAttendancesInRange({
         subscribe([fromDate, toDate]);
       }
     },
-    {
-      immediate: true,
-    },
+    { immediate: true },
   );
 
   /*****************************************************************************
@@ -116,7 +108,7 @@ export function useDailyAttendancesInRange({
   Vue.onScopeDispose(() => instance.unsubscribe());
 
   /*****************************************************************************
-   * RETURN
+   * RETURNS
    *****************************************************************************/
   return {
     docs: Vue.computed(() => [...docs.value]),

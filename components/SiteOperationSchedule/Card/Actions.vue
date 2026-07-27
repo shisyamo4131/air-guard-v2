@@ -9,6 +9,7 @@
  * @emits click:notify - 作業員への通知ボタンがクリックされたときに発火
  * @emits click:duplicate - 複製ボタンがクリックされたときに発火
  * @emits click:edit - 編集ボタンがクリックされたときに発火
+ * @emits click:security-report - 警備日報表示ボタンがクリックされたときに発火
  *****************************************************************************/
 const props = inject("props");
 const emit = inject("emit");
@@ -51,6 +52,11 @@ const btns = computed(() => {
       tooltip: "現場稼働予定を編集します",
       disabled: !editable.value,
       onClick: () => emit("click:edit"),
+    },
+    {
+      icon: "mdi-image",
+      tooltip: "警備日報を表示します",
+      onClick: () => emit("click:security-report"),
     },
   ];
 });

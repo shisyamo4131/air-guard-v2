@@ -11,6 +11,7 @@ import { useArrangementNotificationsInRange } from "@/composables/dataLayers/arr
 import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 import { rangeIsRef } from "@/composables/validators/rangeValidator";
+import { useSecurityReportIndexesInRange } from "@/composables/dataLayers/securityReport/useSecurityReportIndexesInRange";
 
 /*****************************************************************************
  * @param {Object} options - コンポーザブルのオプション
@@ -38,11 +39,16 @@ import { rangeIsRef } from "@/composables/validators/rangeValidator";
  *    byScheduleId: Ref<Map<string, Map<string, Object>>>,
  *    byScheduleId は siteOperationScheduleId でまとめて通知を引くための補助インデックスです。
  *  },
+ *  securityReportIndexes: {
+ *    byOperationId: Ref<Map<string, Object>>,
+ *    byOperationId は現場稼働予定の operationId から警備日報インデックスを引くための補助インデックスです。
+ *  },
  *  getSchedule: Function, - `docId(scheduleId)` から現場稼働予定を引くための関数
  *  getScheduleByGroupKey: Function, - `groupKey` から現場稼働予定を引くための関数
  *  getNotification: Function, - `siteOperationScheduleId` と `workerId` から配置通知を引くための関数
  *  getNotificationsByScheduleId: Function, - `siteOperationScheduleId` から配置通知の配列を引くための関数
  *  hasNotificationForSchedule: Function, - `siteOperationScheduleId` から配置通知の有無を確認するための関数
+ *  hasSecurityReportsForOperation: Function, - `operationId` から警備日報の有無を確認するための関数
  *  isEmployeeArranged: Function, - `employeeId` と `date` から配置済みかどうかを確認するための関数
  * }}
  *****************************************************************************/
@@ -75,6 +81,12 @@ export function useArrangementsInRange({ from, to } = {}) {
   const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
     type: ORDER_TYPE.ARRANGEMENT,
     enrichmentOrders: schedules,
+  });
+
+  /** SecurityReportIndexes from useSecurityReportIndexesInRange */
+  const { docs: securityReportIndexes } = useSecurityReportIndexesInRange({
+    from,
+    to,
   });
 
   /*****************************************************************************
@@ -154,6 +166,39 @@ export function useArrangementsInRange({ from, to } = {}) {
     return result;
   });
 
+  /**
+   * 現場稼働予定に対する警備日報インデックス。
+   * - キー: operationId
+   * - 値: SecurityReportIndex ドキュメント
+   */
+  const securityReportIndexesByOperationId = Vue.computed(() => {
+    const result = new Map();
+    for (const index of securityReportIndexes.value) {
+      result.set(index.docId, index);
+    }
+    return result;
+  });
+
+  /**
+   * 現場稼働予定に対する従業員配置インデックス。
+   * - 日付ごとおよび勤務区分ごとの配置済み従業員IDのマップです。
+   * - `index.vue` などから直接参照される想定の公開 state です。
+   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<employeeId: string>>>
+   */
+  const arrangedEmployeesMap = Vue.computed(() => {
+    return _createArrangementMap(schedules.value, "employeeIds");
+  });
+
+  /**
+   * 現場稼働予定に対する外注配置インデックス。
+   * - 日付ごとおよび勤務区分ごとの配置済み外注先IDのマップです。
+   * - `index.vue` などから直接参照される想定の公開 state です。
+   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<outsourcerId: string>>>
+   */
+  const arrangedOutsourcersMap = Vue.computed(() => {
+    return _createArrangementMap(schedules.value, "outsourcerIds");
+  });
+
   /*****************************************************************************
    * METHODS (INTERNAL)
    *****************************************************************************/
@@ -222,26 +267,6 @@ export function useArrangementsInRange({ from, to } = {}) {
 
     return result;
   }
-
-  /**
-   * 現場稼働予定に対する従業員配置インデックス。
-   * - 日付ごとおよび勤務区分ごとの配置済み従業員IDのマップです。
-   * - `index.vue` などから直接参照される想定の公開 state です。
-   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<employeeId: string>>>
-   */
-  const arrangedEmployeesMap = Vue.computed(() => {
-    return _createArrangementMap(schedules.value, "employeeIds");
-  });
-
-  /**
-   * 現場稼働予定に対する外注配置インデックス。
-   * - 日付ごとおよび勤務区分ごとの配置済み外注先IDのマップです。
-   * - `index.vue` などから直接参照される想定の公開 state です。
-   * @returns {Map} - Map<date: string, Map<shiftType: string, Array<outsourcerId: string>>>
-   */
-  const arrangedOutsourcersMap = Vue.computed(() => {
-    return _createArrangementMap(schedules.value, "outsourcerIds");
-  });
 
   /**
    * 指定された日付の指定勤務区分に、指定作業員が配置されているか判定します。
@@ -325,6 +350,15 @@ export function useArrangementsInRange({ from, to } = {}) {
     return !!notificationsMap && notificationsMap.size > 0;
   }
 
+  /**
+   * 指定された operationId に対応する警備日報が存在するかどうかを判定します。
+   * @param {string} operationId
+   * @returns {boolean} - 警備日報が存在するかどうか
+   */
+  function hasSecurityReportsForOperation(operationId) {
+    return securityReportIndexesByOperationId.value.has(operationId);
+  }
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
@@ -355,12 +389,19 @@ export function useArrangementsInRange({ from, to } = {}) {
       };
     }),
 
+    securityReportIndexes: Vue.computed(() => {
+      return {
+        byOperationId: securityReportIndexesByOperationId.value,
+      };
+    }),
+
     // LOOKUPS
     getSchedule,
     getScheduleByGroupKey,
     getNotification,
     getNotificationsByScheduleId,
     hasNotificationForSchedule,
+    hasSecurityReportsForOperation,
     isEmployeeArranged,
   };
 }

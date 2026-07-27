@@ -30,6 +30,13 @@ const { attrs, reports, isDeleting, del, isUploading } = useSecurityReports(
  * DEFINE STATES
  *****************************************************************************/
 const currentReport = ref(null); // 現在表示中の警備日報
+
+watch(
+  () => props.scheduleId,
+  () => {
+    currentReport.value = null;
+  },
+);
 </script>
 
 <template>

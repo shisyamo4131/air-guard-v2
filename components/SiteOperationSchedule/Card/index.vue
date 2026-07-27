@@ -23,6 +23,7 @@
  * @emits click:duplicate - 複製ボタンがクリックされたときに発火
  * @emits click:edit - 編集ボタンがクリックされたときに発火
  * @emits update:schedule - 現場稼働予定データが更新されたときに発火
+ * @emits click:security-report - 警備日報表示ボタンがクリックされたときに発火
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { SiteOperationSchedule } from "@/schemas";
@@ -55,6 +56,7 @@ const emit = defineEmits([
   "click:duplicate",
   "click:edit",
   "update:schedule",
+  "click:security-report",
 ]);
 
 /*****************************************************************************
