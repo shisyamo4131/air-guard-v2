@@ -48,10 +48,26 @@ async function onClickRebuildAllHistories() {
     loadings.remove(key);
   }
 }
+
+async function onClickRebuildSecurityReportIndexes() {
+  const key = loadings.add("警備日報インデックスを再構築しています...");
+  try {
+    const callable = httpsCallable(
+      $functions,
+      "rebuildSecurityReportIndexes",
+    );
+    const result = await callable({ companyId });
+    messages.add(result.data.message);
+  } catch (error) {
+    logger.error({ error });
+  } finally {
+    loadings.remove(key);
+  }
+}
 </script>
 
 <template>
-  <v-container>
+  <v-container class="d-flex flex-column ga-4">
     <v-card
       title="現場入場履歴再構築"
       subtitle="全会社の現場入場履歴を再構築します。"
@@ -61,6 +77,18 @@ async function onClickRebuildAllHistories() {
           color="primary"
           text="実行"
           @click="onClickRebuildAllHistories"
+        />
+      </template>
+    </v-card>
+    <v-card
+      title="警備日報インデックス再構築"
+      subtitle="現在の会社に保存されている警備日報を基に、検索用インデックスを再構築します。"
+    >
+      <template #actions>
+        <v-btn
+          color="primary"
+          text="実行"
+          @click="onClickRebuildSecurityReportIndexes"
         />
       </template>
     </v-card>

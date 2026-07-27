@@ -167,6 +167,18 @@ service cloud.firestore {
                               || isSuperUser();
     }
 
+    // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---
+    // SecurityReportIndexesコレクションは、Storageに保存されている警備日報の
+    // 検索用インデックスとしてCloud Functionsが管理する。
+    // - 読み取り: 同じ会社の認証ユーザー、またはスーパーユーザーのみ許可。
+    // - 書き込み: Admin SDKを使用するCloud Functionsのみに限定し、
+    //   クライアントからの作成・更新・削除は許可しない。
+    match /Companies/{companyId}/SecurityReportIndexes/{docId} {
+      allow read: if (isAuthenticated() && userCompanyId() == companyId)
+                       || isSuperUser();
+      allow write: if false;
+    }
+
     // --- Rules for 'Outsourcers' subcollection under 'Companies' ---
     // OutsourcersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
@@ -241,12 +253,17 @@ service cloud.firestore {
     }
 
     // --- General SuperUser Access & Default Deny for Others ---
-    // スーパーユーザーはすべてのドキュメントに対して Read/Write アクセスを持つ。
-    // このルールは、上記のより具体的なルールでアクセスが許可されなかった場合に評価される。
-    // 非スーパーユーザーの場合、上記の具体的なルールにマッチしないパスへのアクセスは、
-    // 他に明示的な許可ルールがなければデフォルトで拒否される。
-    match /{path=**} {
-      allow read, write: if isSuperUser();
+    // Companies以外の未定義パスについて、スーパーユーザーにRead/Writeを許可する。
+    // Companies配下は、次のルールでSecurityReportIndexesを除外して許可する。
+    match /{collection}/{document=**} {
+      allow read, write: if isSuperUser() && collection != "Companies";
+    }
+
+    // Companies配下の未定義パスについて、スーパーユーザーにRead/Writeを許可する。
+    // SecurityReportIndexesはCloud Functions専用書き込みとするため除外する。
+    match /Companies/{companyId}/{collection}/{document=**} {
+      allow read, write: if isSuperUser()
+                              && collection != "SecurityReportIndexes";
     }
   }
 }
