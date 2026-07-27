@@ -27,15 +27,15 @@ const { ui, statistics } = useIndex();
     </v-toolbar>
     <div class="d-flex flex-grow-1 overflow-hidden">
       <v-card
-        class="fill-height overflow-y-auto"
+        class="flex-shrink-0 fill-height overflow-y-auto"
         :border="false"
-        width="360"
+        width="196"
         tile
       >
         <v-list v-bind="ui.employeesList" />
       </v-card>
       <DailyAttendanceCalendar v-bind="ui.calendar" />
-      <v-card class="flex-shrink-0 overflow-y-auto" tile width="420">
+      <v-card class="flex-shrink-0 overflow-y-auto" tile width="300">
         <v-card-title>勤怠サマリー</v-card-title>
 
         <template v-if="statistics">
