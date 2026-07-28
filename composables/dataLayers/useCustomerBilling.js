@@ -8,7 +8,7 @@
  * @create 2025-11-22
  *****************************************************************************/
 import * as Vue from "vue";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import { Billing } from "@/schemas";
 
 /**
@@ -22,8 +22,8 @@ import { Billing } from "@/schemas";
 export function useCustomerBilling({ docId } = {}) {
   const instance = Vue.reactive(new Billing());
 
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
+  /** SETUP SYSTEM STORE FOR DEBUGGING PURPOSES */
+  const { isDev } = useSystemStore();
 
   /***************************************************************************
    * VALIDATION

@@ -27,7 +27,7 @@
  */
 import * as Vue from "vue";
 import * as Schemas from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 
 /**
  * A composable for subscribing to a single Firestore document of any schema class.
@@ -67,8 +67,8 @@ export function useDocument(className, { docId } = {}, callback = (doc) => {}) {
   // 2. Create a reactive instance of the schema class
   const schemaInstance = Vue.reactive(new SchemaClass());
 
-  // 3. Setup auth store for debugging purposes
-  const { isDev } = useAuthStore();
+  // 3. Setup system store for debugging purposes
+  const { isDev } = useSystemStore();
 
   /** VALIDATION */
   if (!docId || typeof docId !== "string") {

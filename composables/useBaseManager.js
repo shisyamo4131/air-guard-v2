@@ -8,7 +8,7 @@ import * as Vue from "vue";
 import { useRouter } from "vue-router";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 
 /**
  * @param {string} composableName - Name of the composable for logging purposes
@@ -26,8 +26,8 @@ export function useBaseManager(composableName = "useBaseManager") {
   /** SETUP ROUTER */
   const router = useRouter();
 
-  /** SETUP AUTH STORE FOR DEBUGGING PURPOSES */
-  const { isDev } = useAuthStore();
+  /** SETUP SYSTEM STORE FOR DEBUGGING PURPOSES */
+  const { isDev } = useSystemStore();
 
   /** SETUP REACTIVE OBJECTS */
   const isLoading = Vue.ref(false);

@@ -1,7 +1,7 @@
 import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { Outsourcer } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import { useFetch } from "@/composables/fetch/useFetch";
 import {
   rangeIsRef,
@@ -23,7 +23,7 @@ import {
  * }}
  *****************************************************************************/
 export function useOutsourcersInRange({ from, to } = {}) {
-  const { isDev } = useAuthStore();
+  const { isDev } = useSystemStore();
 
   /*****************************************************************************
    * VALIDATION

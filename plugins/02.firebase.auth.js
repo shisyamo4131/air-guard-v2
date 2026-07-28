@@ -24,16 +24,18 @@ export default defineNuxtPlugin(() => {
   }
 
   let auth;
+  let system;
   let setUser;
   let sessionUpdate = Promise.resolve(); // 認証状態が変化したことによる手続きを直列化するための Promise チェーン
 
   onAuthStateChanged(getAuth(), (user) => {
     auth ??= useAuthStore();
+    system ??= useSystemStore();
     if (!setUser) {
       ({ setUser } = useAuthActions());
     }
 
-    if (auth.isDev) {
+    if (system.isDev) {
       const message = user ? AUTH_STATE_SIGNED_IN : AUTH_STATE_SIGNED_OUT;
       console.info(`[firebase.auth.js] ${message}`);
     }

@@ -5,6 +5,7 @@
 import * as Vue from "vue";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import { FcmToken } from "@/schemas";
 
 export const NOTIFICATION_STATUS = {
@@ -37,7 +38,7 @@ export function useNotification() {
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const logger = useLogger("useNotification", useErrorsStore());
-  const isDev = ref(process.env.NODE_ENV === "development"); // Development environment flag
+  const system = useSystemStore();
 
   /*****************************************************************************
    * METHODS
@@ -84,7 +85,7 @@ export function useNotification() {
   async function registFCMToken(userInstance) {
     try {
       // 開発環境であればログを出力
-      if (isDev.value) {
+      if (system.isDev) {
         logger.info({
           message: "registFCMToken called.",
           data: { user: toRaw(userInstance) },
@@ -145,7 +146,7 @@ export function useNotification() {
       });
 
       // 開発環境であればログを出力
-      if (isDev.value) {
+      if (system.isDev) {
         logger.info({
           message: `The current token has been obtained.`,
           data: { currentToken },
@@ -165,7 +166,7 @@ export function useNotification() {
       await fcmToken.create({ docId: currentToken });
 
       // 開発環境であればログを出力
-      if (isDev.value) {
+      if (system.isDev) {
         logger.info({ message: "FCM token registered successfully" });
       }
     } catch (error) {

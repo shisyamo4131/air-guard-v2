@@ -2,7 +2,7 @@ import * as Vue from "vue";
 import { useLogger } from "@/composables/useLogger";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { SiteOperationSchedule } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import {
   rangeIsRef,
   rangeIsValid,
@@ -19,7 +19,7 @@ import {
  * }}
  *****************************************************************************/
 export function useSiteOperationSchedulesInRange({ from, to } = {}) {
-  const { isDev } = useAuthStore();
+  const { isDev } = useSystemStore();
 
   /*****************************************************************************
    * VALIDATION

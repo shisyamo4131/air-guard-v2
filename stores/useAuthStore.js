@@ -19,7 +19,6 @@ export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * DEFINE STATES
    ***************************************************************************/
-  const isDev = ref(process.env.NODE_ENV === "development"); // Development environment flag
   const isReady = ref(false); // Variable for navigation guards to check if the initial auth state check is complete.
 
   // User state
@@ -84,6 +83,46 @@ export const useAuthStore = defineStore("auth", () => {
    * METHODS
    ***************************************************************************/
   /**
+   * 指定された条件を満たすまで待機します。
+   * @param {() => boolean} condition - 待機条件
+   * @param {Object} [options] - オプション
+   * @param {number} [options.timeoutMs=5000] - タイムアウトまでのミリ秒数
+   * @param {string} [options.timeoutMessage] - タイムアウト時のメッセージ
+   * @returns {Promise<void>} - 条件を満たすと解決される Promise
+   * @throws {Error} - 指定時間内に条件を満たさなかった場合
+   */
+  async function waitUntil(
+    condition,
+    {
+      timeoutMs = 5000,
+      timeoutMessage = `waitUntil timed out after ${timeoutMs}ms.`,
+    } = {},
+  ) {
+    let watcherStop = null;
+    let timeoutId = null;
+
+    try {
+      await new Promise((resolve, reject) => {
+        watcherStop = watch(
+          condition,
+          (satisfied) => {
+            if (satisfied) resolve();
+          },
+          { immediate: true },
+        );
+
+        timeoutId = setTimeout(() => {
+          logger.warn({ message: timeoutMessage });
+          reject(new Error(timeoutMessage));
+        }, timeoutMs);
+      });
+    } finally {
+      watcherStop?.();
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
    * ミドルウェア（ナビゲーションガード）で使用される関数。
    * Firebase の初期認証状態チェックが完了し、ストアの isReady フラグが true になるまで待機します。
    * これにより、認証状態が不確定なままナビゲーションガードが実行されるのを防ぎます。
@@ -97,47 +136,10 @@ export const useAuthStore = defineStore("auth", () => {
    * @throws {Error} - 指定時間内に isReady が true にならなかった場合にタイムアウトエラーをスローします。 / Throws a timeout error if isReady does not become true within the specified time.
    */
   async function waitUntilReady(timeoutMs = 5000) {
-    // すでに準備完了なら即座にリターン / Return immediately if already ready
-    if (isReady.value) {
-      return;
-    }
-
-    let watcherStop = null;
-    let timeoutId = null;
-
-    try {
-      // isReady が true になるか、タイムアウトするまで待機する Promise / Promise that waits until isReady becomes true or times out
-      await new Promise((resolve, reject) => {
-        // isReady の変更を監視 / Watch for changes in isReady
-        watcherStop = watch(
-          () => isReady.value,
-          (ready) => {
-            if (ready) {
-              resolve(); // 準備完了なら Promise を解決 / Resolve the promise if ready
-            }
-          },
-        );
-
-        // タイムアウト処理を設定 / Set up the timeout
-        timeoutId = setTimeout(() => {
-          const message = `waitUntilReady timed out after ${timeoutMs}ms.`;
-          logger.warn({ message }); // タイムアウトを警告ログに記録 / Log timeout as a warning
-          reject(new Error(message)); // タイムアウトしたら Promise を reject / Reject the promise on timeout
-        }, timeoutMs);
-      });
-    } catch (error) {
-      // タイムアウトエラーをログに記録済みなので、ここでは再スローする
-      // The timeout error is already logged, so re-throw it here
-      throw error;
-    } finally {
-      // 必ずウォッチャーとタイマーをクリーンアップ / Always clean up the watcher and timer
-      if (watcherStop) {
-        watcherStop();
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    }
+    return waitUntil(() => isReady.value, {
+      timeoutMs,
+      timeoutMessage: `waitUntilReady timed out after ${timeoutMs}ms.`,
+    });
   }
 
   /**
@@ -147,33 +149,10 @@ export const useAuthStore = defineStore("auth", () => {
    * @throws {Error} - 指定時間内にセッションがクリアされなかった場合にタイムアウトエラーをスローします。
    */
   async function waitUntilSessionCleared(timeoutMs = 5000) {
-    // 既にセッションがクリアされている場合は即座にリターン
-    // `uid` と `isReady` の値を以てセッションがクリアされたと判断する
-    if (uid.value === null && isReady.value) return;
-
-    let watcherStop = null;
-    let timeoutId = null;
-
-    try {
-      // `uid` が null かつ `isReady` が true になるまで待機する Promise
-      await new Promise((resolve, reject) => {
-        watcherStop = watch(
-          () => [uid.value, isReady.value],
-          ([currentUid, currentIsReady]) => {
-            if (currentUid === null && currentIsReady) resolve();
-          },
-        );
-        // タイムアウト処理を設定
-        timeoutId = setTimeout(() => {
-          const message = `waitUntilSessionCleared timed out after ${timeoutMs}ms.`;
-          logger.warn({ message });
-          reject(new Error(message));
-        }, timeoutMs);
-      });
-    } finally {
-      watcherStop?.();
-      clearTimeout(timeoutId);
-    }
+    return waitUntil(() => uid.value === null && isReady.value, {
+      timeoutMs,
+      timeoutMessage: `waitUntilSessionCleared timed out after ${timeoutMs}ms.`,
+    });
   }
 
   /**
@@ -223,7 +202,6 @@ export const useAuthStore = defineStore("auth", () => {
     companyId,
     isSuperUser,
     isDeveloper,
-    isDev,
     waitUntilReady,
     waitUntilSessionCleared,
     hasRole,

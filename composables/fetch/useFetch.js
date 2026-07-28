@@ -14,7 +14,7 @@ import { useFetchOutsourcer } from "@/composables/fetch/useFetchOutsourcer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 
 /**
  * Provides `fetchEmployee`, `fetchOutsourcer` and `fetchSite` composable to component.
@@ -30,8 +30,7 @@ export function useFetch(componentName, isOrigin = false) {
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const logger = useLogger(componentName, useErrorsStore());
-  const auth = useAuthStore();
-  const { isDev } = auth;
+  const { isDev } = useSystemStore();
 
   /*****************************************************************************
    * FACTORY FUNCTIONS
