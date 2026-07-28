@@ -12,7 +12,7 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { useRolePresets } from "@/composables/useRolePresets";
+import { ROLE_PRESETS } from "@/constants/rolePresets";
 import { useDefaults } from "vuetify";
 import UserCardMenu from "./CardMenu.vue";
 import { useBaseManager } from "@/composables/useBaseManager";
@@ -39,7 +39,6 @@ const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const { enableUser, disableUser, checkEmailAvailabilityGlobal } =
   useAuthFunctions();
-const { ROLE_PRESETS } = useRolePresets();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************

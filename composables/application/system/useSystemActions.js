@@ -1,4 +1,4 @@
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 
@@ -7,19 +7,19 @@ export function useSystemActions() {
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const logger = useLogger("useSystemActions", useErrorsStore());
-  const auth = useAuthStore();
+  const systemStore = useSystemStore();
 
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
   async function initializeSystem() {
     try {
-      await auth.system.fetch({ docId: "system" });
-      auth.system.subscribe({ docId: "system" });
+      await systemStore.system.fetch({ docId: "system" });
+      systemStore.system.subscribe({ docId: "system" });
     } catch (error) {
       logger.error({ message: "Failed to fetch System document:", error });
       // On fetch failure, force maintenance mode to be true
-      auth.system.isMaintenance = true;
+      systemStore.system.isMaintenance = true;
     }
   }
 

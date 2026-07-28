@@ -22,7 +22,7 @@
 import * as Vue from "vue";
 import { User } from "@/schemas";
 import { useDefaults } from "vuetify";
-import { useRolePresets } from "@/composables/useRolePresets";
+import { ROLE_PRESETS } from "@/constants/rolePresets";
 
 /*****************************************************************************
  * SETUP PROPS & EMITS
@@ -41,11 +41,6 @@ const _props = defineProps({
 });
 const props = useDefaults(_props, "UserCard");
 const emit = defineEmits(["click:select", "click:edit", "click:detail"]);
-
-/*****************************************************************************
- * SETUP STORES & COMPOSABLES
- *****************************************************************************/
-const { ROLE_PRESETS } = useRolePresets();
 
 /*****************************************************************************
  * SETUP STATES

@@ -3,19 +3,19 @@
  * @description システムの状態初期化とメンテナンス画面への遷移を担当する Nuxt プラグイン
  *****************************************************************************/
 import * as Vue from "vue";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemStore } from "@/stores/useSystemStore";
 import { useSystemActions } from "@/composables/application/system/useSystemActions";
 import { useRouter } from "vue-router";
 
 /**
- * - `useAuthStore.isMaintenance` の状態を監視し、メンテナンスモードの切り替えに応じてルーティングを制御します。
+ * - `useSystemStore.isMaintenance` の状態を監視し、メンテナンスモードの切り替えに応じてルーティングを制御します。
  * - `useSystemActions.initializeSystem` で システムの状態を初期化します。
  */
 export default defineNuxtPlugin(async () => {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const auth = useAuthStore();
+  const systemStore = useSystemStore();
   const router = useRouter();
   const { initializeSystem } = useSystemActions();
 
@@ -23,7 +23,7 @@ export default defineNuxtPlugin(async () => {
    * WATCHERS
    *****************************************************************************/
   Vue.watch(
-    () => auth.isMaintenance,
+    () => systemStore.isMaintenance,
     (newVal) => {
       const currentPath = router.currentRoute.value.path;
       if (newVal) {

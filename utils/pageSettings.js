@@ -436,7 +436,7 @@ export const pageStructure = [
 ];
 
 // --- ヘルパー関数 ---
-import { useRolePresets } from "@/composables/useRolePresets";
+import { getPermissions } from "@/utils/auth/authorization";
 /**
  * ユーザーが指定されたページにアクセス可能かどうかを判定する
  * - 役割プリセット（manager, controller など）と機能単位の権限（sites:read など）の両方に対応
@@ -502,9 +502,6 @@ function hasAccess(requiredRoles, userRoles) {
   if (userRoles.includes("admin")) {
     return true;
   }
-
-  // useRolePresets から権限チェック関数を取得
-  const { getPermissions } = useRolePresets();
 
   // ユーザーが持つすべての権限を取得
   const userPermissions = getPermissions(userRoles);

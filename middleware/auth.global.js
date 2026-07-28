@@ -13,17 +13,19 @@
 
 import { getPageConfig, isPageAllowed } from "~/utils/pageSettings";
 import { useAuthStore } from "~/stores/useAuthStore";
+import { useSystemStore } from "~/stores/useSystemStore";
 import { useErrorsStore } from "~/stores/useErrorsStore";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const auth = useAuthStore();
+  const systemStore = useSystemStore();
   const errors = useErrorsStore();
 
   // 画面遷移時にはエラーをクリア
   errors.clear();
 
   // メンテナンスモードの処理
-  if (auth.isMaintenance) {
+  if (systemStore.isMaintenance) {
     // メンテナンス画面への遷移の場合は何もしない
     if (to.path === "/maintenance") return;
 

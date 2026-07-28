@@ -1,14 +1,20 @@
 import { computed, watch } from "vue";
-import { Company, User, System } from "@/schemas";
+import { Company, User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useRolePresets } from "@/composables/useRolePresets";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { getCustomerType } from "@/utils/subscription/getCustomerType";
+import {
+  buildRoles,
+  getPermissions,
+  hasPermission as checkPermission,
+  hasRole as checkRole,
+} from "@/utils/auth/authorization";
 
 export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * DEFINE STORES AND COMPOSABLES
-   ***************************************************************************/
+  ***************************************************************************/
   const logger = useLogger("useAuthStore", useErrorsStore());
 
   /***************************************************************************
@@ -25,7 +31,6 @@ export const useAuthStore = defineStore("auth", () => {
   const companyId = ref(null);
 
   // Company state fetched by companyId
-  const systemInstance = reactive(new System());
   const companyInstance = reactive(new Company());
   const userInstance = reactive(new User());
 
@@ -68,12 +73,15 @@ export const useAuthStore = defineStore("auth", () => {
    * - 機能単位の権限: "sites:read", "sites:write" など
    */
   const roles = computed(() => {
-    const result = [...(userInstance.roles || [])];
-    if (isSuperUser.value) result.push("super-user");
-    if (isDeveloper.value) result.push("developer");
-    if (userInstance.isAdmin) result.push("admin");
-    return result;
+    return buildRoles({
+      roles: userInstance.roles,
+      isSuperUser: isSuperUser.value,
+      isDeveloper: isDeveloper.value,
+      isAdmin: userInstance.isAdmin,
+    });
   });
+
+  const permissions = computed(() => getPermissions(roles.value));
 
   /**
    * 顧客タイプ（課金状態）
@@ -97,47 +105,9 @@ export const useAuthStore = defineStore("auth", () => {
    * - 新規データ作成不可
    * - 閲覧のみ可能（または完全にアクセス不可）
    */
-  const customerType = computed(() => {
-    const subscription = companyInstance?.subscription;
-
-    // サブスクリプション情報がない場合は free
-    if (!subscription || !subscription.id) {
-      return "free";
-    }
-
-    // 期限切れチェック
-    const status = subscription.status;
-    const currentPeriodEnd = subscription.currentPeriodEnd;
-
-    // キャンセル済み、支払い遅延、未払いの場合は expired
-    if (["canceled", "past_due", "unpaid"].includes(status)) {
-      return "expired";
-    }
-
-    // 期限が過去の場合は expired
-    if (currentPeriodEnd && currentPeriodEnd.toMillis() < Date.now()) {
-      return "expired";
-    }
-
-    // active または trialing の場合は paid
-    if (["active", "trialing"].includes(status)) {
-      return "paid";
-    }
-
-    // それ以外（incomplete など）は free 扱い
-    return "free";
-  });
-
-  /**
-   * Returns whether the application is currently in maintenance mode.
-   * - Combines system-wide and company-specific maintenance states.
-   * @returns {boolean} True if either system or company maintenance mode is active.
-   */
-  const isMaintenance = computed(() => {
-    return (
-      systemInstance?.isMaintenance || companyInstance?.maintenanceMode || false
-    );
-  });
+  const customerType = computed(() =>
+    getCustomerType(companyInstance.subscription),
+  );
 
   /***************************************************************************
    * METHODS
@@ -241,13 +211,13 @@ export const useAuthStore = defineStore("auth", () => {
    * @returns {boolean} - 指定ロールを持つ場合は true
    */
   function hasRole(role) {
-    return roles.value.includes(role);
+    return checkRole(roles.value, role);
   }
 
   /**
    * 指定された権限を保持しているかどうかを判定します
    * - 役割プリセット（manager, controller など）から展開された権限もチェック
-   * - admin と super-user はすべての権限を持つ
+   * - super-user はすべての権限を持つ
    *
    * @param {string} permission - チェック対象の権限（例: "sites:write"）
    * @returns {boolean} - 指定権限を持つ場合は true
@@ -257,19 +227,12 @@ export const useAuthStore = defineStore("auth", () => {
    * hasPermission('sites:write') // → true (controller に含まれる)
    * hasPermission('billings:write') // → false (controller には含まれない)
    *
-   * // admin ロールを持つユーザー
+   * // super-user ロールを持つユーザー
    * hasPermission('sites:write') // → true (すべての権限)
    * hasPermission('billings:write') // → true (すべての権限)
    */
   function hasPermission(permission) {
-    const { getPermissions } = useRolePresets();
-    const permissions = getPermissions(roles.value);
-
-    // すべての権限を持つ場合
-    if (permissions.includes("*")) return true;
-
-    // 特定の権限を持つ場合
-    return permissions.includes(permission);
+    return checkPermission(permissions.value, permission);
   }
 
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
@@ -290,10 +253,8 @@ export const useAuthStore = defineStore("auth", () => {
     isSuperUser,
     isDeveloper,
     company: companyInstance, // companyInstance を company として返す
-    isMaintenance,
     isDev,
     customerType, // ← 追加
-    system: systemInstance,
     waitUntilReady,
     waitUntilSessionCleared,
     hasRole,

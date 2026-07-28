@@ -1,0 +1,71 @@
+export const ROLE_PRESETS = {
+  manager: {
+    label: "統括",
+    description: "統括管理",
+    icon: "mdi-hammer-wrench",
+    permissions: [
+      "customers:write",
+      "sites:write",
+      "employees:write",
+      "outsourcers:write",
+      "site-operation-schedules:write",
+      "operation-results:write",
+      "billings:write",
+    ],
+  },
+  controller: {
+    label: "管制",
+    description: "現場・スケジュール管理",
+    icon: "mdi-hammer-wrench",
+    permissions: [
+      "customers:read",
+      "sites:write",
+      "employees:read",
+      "outsourcers:read",
+      "site-operation-schedules:write",
+      "operation-results:write",
+    ],
+  },
+  accountant: {
+    label: "経理",
+    description: "請求・集計管理",
+    icon: "mdi-calculator",
+    permissions: [
+      "customers:read",
+      "sites:read",
+      "employees:read",
+      "outsourcers:read",
+      "operation-results:read",
+      "operation-billings:write",
+      "billings:write",
+    ],
+  },
+  "human-resource": {
+    label: "人事",
+    description: "人事管理",
+    icon: "mdi-account-tie",
+    permissions: [
+      "customers:read",
+      "sites:read",
+      "employees:write",
+      "operation-results:read",
+    ],
+  },
+  labor: {
+    label: "労務",
+    description: "労務管理",
+    icon: "mdi-clipboard-account",
+    permissions: [
+      "customers:read",
+      "sites:read",
+      "employees:read",
+      "operation-results:read",
+    ],
+  },
+  legal: {
+    label: "法務",
+    description: "契約管理",
+    icon: "mdi-gavel",
+    permissions: ["customers:write", "sites:write", "employees:read"],
+  },
+};

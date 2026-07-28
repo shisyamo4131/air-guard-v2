@@ -1,14 +1,14 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { ROLE_PRESETS, useRolePresets } from "@/composables/useRolePresets";
+import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { getPermissions } from "@/utils/auth/authorization";
 
 definePageMeta({
   layout: "default",
 });
 
 const auth = useAuthStore();
-const { getPermissions } = useRolePresets();
 
 // 現在のユーザーの権限リスト
 const userPermissions = computed(() => getPermissions(auth.roles));
