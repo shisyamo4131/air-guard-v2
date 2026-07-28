@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import * as CONSTANTS from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /**
@@ -140,20 +140,20 @@ function createConstantWithColors(defaultDef, categoryKey, company) {
  * 定数と色設定を管理する Composable
  */
 export function useConstants() {
-  const auth = useAuthStore();
+  const companyStore = useCompanyStore();
 
   const ARRANGEMENT_NOTIFICATION_STATUS = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.ARRANGEMENT_NOTIFICATION_STATUS,
       "arrangementNotificationStatus",
-      auth.company,
+      companyStore.company,
     ),
   );
   const BILLING_UNIT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
       "billingUnitType",
-      auth.company,
+      companyStore.company,
     ),
   );
 
@@ -161,14 +161,14 @@ export function useConstants() {
     createConstantWithColors(
       DEFAULT_DEFINITIONS.DAY_OF_WEEK,
       "dayOfWeek",
-      auth.company,
+      companyStore.company,
     ),
   );
   const DAY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.DAY_TYPE,
       "dayType",
-      auth.company,
+      companyStore.company,
     ),
   );
 
@@ -176,56 +176,56 @@ export function useConstants() {
     createConstantWithColors(
       DEFAULT_DEFINITIONS.EMPLOYMENT_STATUS,
       "employmentStatus",
-      auth.company,
+      companyStore.company,
     ),
   );
   const GENDER = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.GENDER,
       "gender",
-      auth.company,
+      companyStore.company,
     ),
   );
   const INSURANCE_STATUS = computed(() => {
     return createConstantWithColors(
       DEFAULT_DEFINITIONS.INSURANCE_STATUS,
       "insuranceStatus",
-      auth.company,
+      companyStore.company,
     );
   });
   const PAYMENT_MONTH = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.PAYMENT_MONTH,
       "paymentMonth",
-      auth.company,
+      companyStore.company,
     ),
   );
   const QUALIFIED_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.QUALIFIED_TYPE,
       "qualifiedType",
-      auth.company,
+      companyStore.company,
     ),
   );
   const SECURITY_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SECURITY_TYPE,
       "securityType",
-      auth.company,
+      companyStore.company,
     ),
   );
   const SHIFT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.SHIFT_TYPE,
       "shiftType",
-      auth.company,
+      companyStore.company,
     ),
   );
   const SITE_STATUS = computed(() => {
     return createConstantWithColors(
       DEFAULT_DEFINITIONS.SITE_STATUS,
       "siteStatus",
-      auth.company,
+      companyStore.company,
     );
   });
   const WEEK_COLORS = computed(() => {

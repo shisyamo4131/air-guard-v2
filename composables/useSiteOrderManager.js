@@ -4,7 +4,7 @@
  */
 import * as Vue from "vue";
 import { SiteOrder } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
@@ -27,7 +27,7 @@ export function useSiteOrderManager({
   /***************************************************************************
    * DEFINE COMPOSABLE
    ***************************************************************************/
-  const { company } = useAuthStore();
+  const { company } = useCompanyStore();
   const logger = useLogger("useSiteOrderManager", useErrorsStore());
   const { fetchSite, cachedSites } = fetchSiteComposable || useFetchSite();
 

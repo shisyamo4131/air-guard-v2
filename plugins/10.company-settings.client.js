@@ -5,13 +5,13 @@
 import * as Vue from "vue";
 import { useComponentDefaults } from "@/composables/useComponentDefaults";
 import { RoundSetting } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 
 export default defineNuxtPlugin(() => {
   /*****************************************************************************
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
-  const auth = useAuthStore();
+  const companyStore = useCompanyStore();
   const { set } = useComponentDefaults();
 
   /***************************************************************************
@@ -23,12 +23,14 @@ export default defineNuxtPlugin(() => {
    */
   Vue.watchEffect(() => {
     // Set allowed minutes for VTimePicker based on company settings
-    set("VTimePicker", auth.company?.minuteInterval);
+    set("VTimePicker", companyStore.company?.minuteInterval);
 
     // Update `RoundSetting` global setting based on company settings
-    RoundSetting.set(auth.company?.roundSetting || RoundSetting.ROUND);
+    RoundSetting.set(
+      companyStore.company?.roundSetting || RoundSetting.ROUND,
+    );
 
     // Update `firstDayOfWeek` for `VCalendar` based on company settings
-    set("VCalendar", auth.company?.firstDayOfWeek || 0);
+    set("VCalendar", companyStore.company?.firstDayOfWeek || 0);
   });
 });

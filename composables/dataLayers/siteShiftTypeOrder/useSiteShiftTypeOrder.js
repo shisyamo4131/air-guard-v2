@@ -1,5 +1,5 @@
 import * as Vue from "vue";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 
 /*****************************************************************************
@@ -12,7 +12,7 @@ export function useSiteShiftTypeOrder({
   /*****************************************************************************
    * SETUP STORES
    *****************************************************************************/
-  const auth = useAuthStore();
+  const companyStore = useCompanyStore();
 
   /*****************************************************************************
    * DEFINE STATES
@@ -24,10 +24,10 @@ export function useSiteShiftTypeOrder({
    *****************************************************************************/
   const siteShiftTypeOrder = Vue.computed(() => {
     if (internalType.value === TYPE.ARRANGEMENT) {
-      return auth.company.siteOrder || [];
+      return companyStore.company.siteOrder || [];
     }
     if (internalType.value === TYPE.SCHEDULE) {
-      return auth.company.scheduleOrder || [];
+      return companyStore.company.scheduleOrder || [];
     }
     return [];
   });

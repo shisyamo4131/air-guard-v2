@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/utils/formats/util";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { calculateTaxBreakdown } from "@/utils/billings/calculateTaxBreakdown";
 import dayjs from "dayjs";
@@ -41,7 +41,7 @@ async function initializePdf() {
  * 請求書PDF生成用コンポーザブル
  */
 export function useBillingPdf() {
-  const auth = useAuthStore();
+  const companyStore = useCompanyStore();
   const {
     fetchArticleComposable,
     fetchCustomerComposable,
@@ -75,7 +75,7 @@ export function useBillingPdf() {
     );
 
     // 会社情報
-    const company = auth.company;
+    const company = companyStore.company;
 
     // PDF定義
     const docDefinition = {
@@ -170,7 +170,7 @@ export function useBillingPdf() {
     );
 
     // 会社情報
-    const company = auth.company;
+    const company = companyStore.company;
 
     // 全Billingの合計を計算
     const totalSubtotal = billings.reduce((sum, b) => sum + b.subtotal, 0);

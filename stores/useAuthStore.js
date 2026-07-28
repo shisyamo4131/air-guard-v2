@@ -1,9 +1,8 @@
 import { computed, watch } from "vue";
-import { Company, User } from "@/schemas";
+import { User } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { getCustomerType } from "@/utils/subscription/getCustomerType";
 import {
   buildRoles,
   getPermissions,
@@ -30,8 +29,6 @@ export const useAuthStore = defineStore("auth", () => {
   const isDeveloper = ref(false);
   const companyId = ref(null);
 
-  // Company state fetched by companyId
-  const companyInstance = reactive(new Company());
   const userInstance = reactive(new User());
 
   /**
@@ -82,32 +79,6 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   const permissions = computed(() => getPermissions(roles.value));
-
-  /**
-   * 顧客タイプ（課金状態）
-   *
-   * @returns {'free' | 'paid' | 'expired'} 顧客の課金状態
-   *
-   * ## 顧客タイプの種類
-   *
-   * ### `free` (無料ユーザー)
-   * - サブスクリプション未契約
-   * - 従業員登録数が制限される（デフォルト: 5名まで）
-   * - 一部機能が制限される可能性
-   *
-   * ### `paid` (有料ユーザー)
-   * - 有効なサブスクリプション契約中
-   * - プランに応じた従業員数まで登録可能
-   * - すべての機能を利用可能
-   *
-   * ### `expired` (期限切れ)
-   * - サブスクリプションが期限切れまたはキャンセル済み
-   * - 新規データ作成不可
-   * - 閲覧のみ可能（または完全にアクセス不可）
-   */
-  const customerType = computed(() =>
-    getCustomerType(companyInstance.subscription),
-  );
 
   /***************************************************************************
    * METHODS
@@ -252,9 +223,7 @@ export const useAuthStore = defineStore("auth", () => {
     companyId,
     isSuperUser,
     isDeveloper,
-    company: companyInstance, // companyInstance を company として返す
     isDev,
-    customerType, // ← 追加
     waitUntilReady,
     waitUntilSessionCleared,
     hasRole,

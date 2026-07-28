@@ -7,6 +7,7 @@ import {
   signOut as authSignOut,
 } from "firebase/auth";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import FireModel from "@shisyamo4131/air-firebase-v2";
@@ -24,6 +25,7 @@ export function useAuthActions() {
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const auth = useAuthStore();
+  const companyStore = useCompanyStore();
   const logger = useLogger("useAuthActions", useErrorsStore());
   const { registFCMToken } = useNotification();
 
@@ -85,8 +87,8 @@ export function useAuthActions() {
     if (!auth.uid || !auth.companyId) {
       auth.user.unsubscribe();
       auth.user.initialize();
-      auth.company.unsubscribe();
-      auth.company.initialize();
+      companyStore.company.unsubscribe();
+      companyStore.company.initialize();
       FireModel.setConfig({ prefix: "Companies/unknown" });
       return;
     }
@@ -94,9 +96,9 @@ export function useAuthActions() {
     // subscribeだけでは初回取得の完了を待てないため、先にfetchを実行する。
     FireModel.setConfig({ prefix: `Companies/${auth.companyId}` });
     await auth.user.fetch({ docId: auth.uid });
-    await auth.company.fetch({ docId: auth.companyId });
+    await companyStore.company.fetch({ docId: auth.companyId });
     auth.user.subscribe({ docId: auth.uid });
-    auth.company.subscribe({ docId: auth.companyId });
+    companyStore.company.subscribe({ docId: auth.companyId });
 
     await registFCMToken(auth.user);
   }
@@ -115,8 +117,8 @@ export function useAuthActions() {
 
     auth.user.unsubscribe();
     auth.user.initialize();
-    auth.company.unsubscribe();
-    auth.company.initialize();
+    companyStore.company.unsubscribe();
+    companyStore.company.initialize();
     FireModel.setConfig({ prefix: "Companies/unknown" });
   }
 

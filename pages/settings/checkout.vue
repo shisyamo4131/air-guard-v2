@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onUnmounted } from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useNuxtApp } from "#app";
 import {
   collection,
@@ -23,6 +24,7 @@ import {
 definePageMeta({ layout: "default" });
 
 const authStore = useAuthStore();
+const companyStore = useCompanyStore();
 const { $firestore } = useNuxtApp();
 const router = useRouter();
 
@@ -38,7 +40,9 @@ const STRIPE_PRICE_ID = "price_1SZPgXDs5cB9LhvEz0NwgJTc"; // 実際のPrice ID�
 
 // Computed
 const companyId = computed(() => authStore.companyId);
-const stripeCustomerId = computed(() => authStore.company?.stripeCustomerId);
+const stripeCustomerId = computed(
+  () => companyStore.company?.stripeCustomerId,
+);
 
 /**
  * Checkout Sessionを作成し、Stripe決済ページにリダイレクトします
@@ -163,17 +167,17 @@ onUnmounted(() => {
               <div class="text-subtitle-2 mb-2">現在のステータス</div>
               <v-chip
                 :color="
-                  authStore.customerType === 'paid'
+                  companyStore.customerType === 'paid'
                     ? 'success'
-                    : authStore.customerType === 'expired'
+                    : companyStore.customerType === 'expired'
                     ? 'error'
                     : 'default'
                 "
               >
                 {{
-                  authStore.customerType === "paid"
+                  companyStore.customerType === "paid"
                     ? "有料プラン契約中"
-                    : authStore.customerType === "expired"
+                    : companyStore.customerType === "expired"
                     ? "期限切れ"
                     : "無料プラン"
                 }}
@@ -181,7 +185,7 @@ onUnmounted(() => {
             </v-sheet>
 
             <!-- プラン情報（仮） -->
-            <div v-if="authStore.customerType !== 'paid'" class="mb-4">
+            <div v-if="companyStore.customerType !== 'paid'" class="mb-4">
               <div class="text-h6 mb-2">スタンダードプラン</div>
               <div class="text-body-2 mb-2">
                 従業員数に応じた柔軟な料金体系で、すべての機能をご利用いただけます。
@@ -194,29 +198,29 @@ onUnmounted(() => {
             </div>
 
             <!-- サブスクリプション情報 -->
-            <div v-if="authStore.customerType === 'paid'" class="mb-4">
+            <div v-if="companyStore.customerType === 'paid'" class="mb-4">
               <div class="text-subtitle-2 mb-2">契約情報</div>
               <v-list density="compact">
                 <v-list-item>
                   <v-list-item-title>ステータス</v-list-item-title>
                   <v-list-item-subtitle>
-                    {{ authStore.company?.subscription?.status || "-" }}
+                    {{ companyStore.company?.subscription?.status || "-" }}
                   </v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item>
                   <v-list-item-title>従業員上限</v-list-item-title>
                   <v-list-item-subtitle>
-                    {{ authStore.company?.subscription?.employeeLimit || 0 }}名
+                    {{ companyStore.company?.subscription?.employeeLimit || 0 }}名
                   </v-list-item-subtitle>
                 </v-list-item>
                 <v-list-item
-                  v-if="authStore.company?.subscription?.currentPeriodEnd"
+                  v-if="companyStore.company?.subscription?.currentPeriodEnd"
                 >
                   <v-list-item-title>次回更新日</v-list-item-title>
                   <v-list-item-subtitle>
                     {{
                       new Date(
-                        authStore.company.subscription.currentPeriodEnd.toMillis()
+                        companyStore.company.subscription.currentPeriodEnd.toMillis()
                       ).toLocaleDateString("ja-JP")
                     }}
                   </v-list-item-subtitle>
@@ -229,7 +233,7 @@ onUnmounted(() => {
             <v-btn @click="router.push('/dashboard')"> 戻る </v-btn>
             <v-spacer />
             <v-btn
-              v-if="authStore.customerType !== 'paid'"
+              v-if="companyStore.customerType !== 'paid'"
               color="primary"
               :loading="isLoading"
               :disabled="isLoading || !!error"

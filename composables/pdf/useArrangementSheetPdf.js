@@ -7,7 +7,7 @@
  */
 import dayjs from "dayjs";
 import ja from "dayjs/locale/ja";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 import { SiteOperationSchedule } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
 
@@ -399,7 +399,7 @@ export function useArrangementSheetPdf() {
     fetchOutsourcerComposable,
     fetchSiteComposable,
   } = useFetch("useArrangementSheetPdf");
-  const { company } = useAuthStore();
+  const { company } = useCompanyStore();
 
   /**
    * 指定された日付の配置表PDFを生成してブラウザで開きます。

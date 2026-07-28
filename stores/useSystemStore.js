@@ -4,7 +4,7 @@
  *****************************************************************************/
 import { computed, reactive } from "vue";
 import { System } from "@/schemas";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 
 /**
  * @returns {{
@@ -16,7 +16,7 @@ export const useSystemStore = defineStore("system", () => {
   /*****************************************************************************
    * SETUP STORES
    *****************************************************************************/
-  const auth = useAuthStore();
+  const companyStore = useCompanyStore();
 
   /*****************************************************************************
    * DEFINE STATES
@@ -28,7 +28,9 @@ export const useSystemStore = defineStore("system", () => {
    */
   const isMaintenance = computed(() => {
     return (
-      systemInstance.isMaintenance || auth.company.maintenanceMode || false
+      systemInstance.isMaintenance ||
+      companyStore.company.maintenanceMode ||
+      false
     );
   });
 

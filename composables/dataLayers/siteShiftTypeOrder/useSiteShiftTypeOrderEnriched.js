@@ -9,7 +9,8 @@ import { TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
  * @description
  * - `useSiteShiftTypeOrder` のラッパーコンポーザブル
  * - データ配列（例: SiteOperationSchedule）を受け取り、補完された現場勤務区分オーダーを提供します。
- * - 配置管理などで、`auth.company.siteOrder` や `auth.company.scheduleOrder` に
+ * - 配置管理などで、`companyStore.company.siteOrder` や
+ *   `companyStore.company.scheduleOrder` に
  *   未登録である現場勤務区分オーダーを表示対象とするためなどに使用します。
  * - 同時に、未登録である現場勤務区分オーダーの情報も提供します。
  * @param {Object} options - コンポーザブルのオプション

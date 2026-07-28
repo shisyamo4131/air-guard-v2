@@ -1,11 +1,11 @@
 <script setup>
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useCompanyStore } from "@/stores/useCompanyStore";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const auth = useAuthStore();
-const { company: doc } = auth;
+const companyStore = useCompanyStore();
+const { company: doc } = companyStore;
 </script>
 
 <template>
