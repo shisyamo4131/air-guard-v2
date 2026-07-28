@@ -1,14 +1,39 @@
+/*****************************************************************************
+ * @file ./plugins/07.system.js
+ * @description システムの状態初期化とメンテナンス画面への遷移を担当する Nuxt プラグイン
+ *****************************************************************************/
+import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useSystemActions } from "@/composables/application/system/useSystemActions";
+import { useRouter } from "vue-router";
 
 /**
- * Monitor the "System" document in Firestore to handle maintenance mode.
- * - There is a possibility that `System/system` document does not exist in Firestore.
- *   - `System/system` document is created at Admin SDK.
- * - This plugin tries to fetch `System/system` document before subscribing it because
- *   it initializes `isMaintenance` state synchronously.
- * - Redirects users to the maintenance page when maintenance mode is enabled.
+ * - `useAuthStore.isMaintenance` の状態を監視し、メンテナンスモードの切り替えに応じてルーティングを制御します。
+ * - `useSystemActions.initializeSystem` で システムの状態を初期化します。
  */
-export default defineNuxtPlugin(async (nuxtApp) => {
-  const { initSystemStates } = useAuthStore();
-  await initSystemStates();
+export default defineNuxtPlugin(async () => {
+  /*****************************************************************************
+   * SETUP STORES & COMPOSABLES
+   *****************************************************************************/
+  const auth = useAuthStore();
+  const router = useRouter();
+  const { initializeSystem } = useSystemActions();
+
+  /*****************************************************************************
+   * WATCHERS
+   *****************************************************************************/
+  Vue.watch(
+    () => auth.isMaintenance,
+    (newVal) => {
+      const currentPath = router.currentRoute.value.path;
+      if (newVal) {
+        if (currentPath === "/maintenance") return;
+        router.replace("/maintenance");
+      } else {
+        if (currentPath !== "/maintenance") return;
+        router.replace("/");
+      }
+    },
+  );
+  await initializeSystem();
 });

@@ -3,7 +3,7 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthActions } from "@/composables/application/auth/useAuthActions";
 
 /**
  * 管理者アカウント登録
@@ -12,6 +12,7 @@ export const useCreateAdminUser = () => {
   const { $auth } = useNuxtApp();
   const auth = $auth;
   const { createAdminAccount, checkEmailAvailability } = useAuthFunctions();
+  const { setUser } = useAuthActions();
 
   /**
    * 管理者アカウント登録処理
@@ -42,7 +43,7 @@ export const useCreateAdminUser = () => {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
 
       try {
@@ -63,8 +64,7 @@ export const useCreateAdminUser = () => {
         // createUserWithEmailAndPassword によって認証状態になっているため、auth.global の onAuthStateChanged が
         // 先に反応し、カスタムクレーム反映前のデータで setUser が実行されている。
         // カスタムクレーム反映後に再度 setUser を実行して最新化する。
-        const authStore = useAuthStore();
-        await authStore.setUser(userCredential.user);
+        await setUser(userCredential.user);
 
         return { success: true, userCredential };
       } catch (error) {
@@ -75,7 +75,7 @@ export const useCreateAdminUser = () => {
         throw new Error(
           `アカウントの設定中にエラーが発生しました。\n` +
             `カスタマーサポートまでお問い合わせください。\n` +
-            `(UID: ${userCredential.user.uid})`
+            `(UID: ${userCredential.user.uid})`,
         );
       }
     } catch (error) {

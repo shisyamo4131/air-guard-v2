@@ -6,6 +6,8 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useLogger } from "@/composables/useLogger";
 
+import { useAuthActions } from "@/composables/application/auth/useAuthActions";
+
 definePageMeta({ layout: "auth" });
 
 /**
@@ -47,6 +49,8 @@ const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
 
+const { signIn } = useAuthActions();
+
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
@@ -60,7 +64,7 @@ const handleSignIn = async () => {
   logger.clearError();
   const key = loadings.add("サインインしています...");
   try {
-    await auth.signIn({ email: email.value, password: password.value });
+    await signIn({ email: email.value, password: password.value });
     messages.add("サインインに成功しました！");
     // ✅ ここで待機
     loadings.replace(key, { text: "データベースへの接続を確立しています..." });

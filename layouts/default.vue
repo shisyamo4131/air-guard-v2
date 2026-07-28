@@ -1,26 +1,38 @@
 <script setup>
 import { useRouter } from "vue-router";
 import { useAppStore } from "@/stores/useAppStore";
+import { useAuthActions } from "@/composables/application/auth/useAuthActions";
+import { useLoadingsStore } from "@/stores/useLoadingsStore";
+import { useMessagesStore } from "@/stores/useMessagesStore";
+import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 /** SETUP STORES */
 const appStore = useAppStore();
 const messages = useMessagesStore();
 const { queue } = useLoadingsStore();
 
+const { signOut } = useAuthActions();
+const loadings = useLoadingsStore();
+const logger = useLogger("default-layout", useErrorsStore());
+
 // ルーターと認証ストアの取得
 const router = useRouter();
-const auth = useAuthStore();
 
 /**
  * サインアウト処理
  * Handle user sign-out and redirect to top page
  */
 const handleSignOut = async () => {
+  const loadingsKey = loadings.add("サインアウトしています...");
   try {
-    await auth.signOut();
+    await signOut();
+    messages.add("サインアウトしました。");
     await router.push("/");
   } catch (error) {
-    console.error("Failed to sign out:", error);
+    logger.error({ error });
+  } finally {
+    loadings.remove(loadingsKey);
   }
 };
 </script>

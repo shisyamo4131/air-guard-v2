@@ -3,7 +3,7 @@ import { sendEmailVerification } from "firebase/auth";
 import { useRouter } from "vue-router";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthActions } from "@/composables/application/auth/useAuthActions";
 
 definePageMeta({ layout: "auth" });
 
@@ -14,8 +14,8 @@ const errors = useErrorsStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const router = useRouter();
-const auth = useAuthStore();
 const { $auth } = useNuxtApp();
+const { setUser } = useAuthActions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -46,7 +46,7 @@ onMounted(() => {
     if ($auth.currentUser) {
       await $auth.currentUser.reload();
       if ($auth.currentUser.emailVerified) {
-        await auth.setUser($auth.currentUser);
+        await setUser($auth.currentUser);
         router.replace("/dashboard"); // 認証後のリダイレクト先
       }
     }

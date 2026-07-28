@@ -2,8 +2,11 @@
  * Tag コンポーネント用コンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
+import { useDisplay } from "vuetify";
 
 export function useIndex(props, emit) {
+  const display = useDisplay();
+
   /*****************************************************************************
    * SIZE CONFIGURATIONS
    *****************************************************************************/
@@ -31,9 +34,16 @@ export function useIndex(props, emit) {
    * COMPUTED PROPERTIES
    *****************************************************************************/
   /**
-   * Normalized size value (lowercase)
+   * Normalized size value (lowercase).
+   * Tags are always displayed in the small size on mobile devices.
    */
-  const normalizedSize = Vue.computed(() => props.size.toLowerCase());
+  const normalizedSize = Vue.computed(() => {
+    if (display.mobile.value) {
+      return "small";
+    }
+
+    return props.size.toLowerCase();
+  });
 
   /**
    * Size configuration based on normalized size

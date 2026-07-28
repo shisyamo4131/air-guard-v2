@@ -1,37 +1,15 @@
-import { computed, watch, watchEffect } from "vue";
-import { useDisplay } from "vuetify";
-import { useRouter } from "vue-router";
-import {
-  signInWithEmailAndPassword,
-  signOut as authSignOut,
-} from "firebase/auth";
-import FireModel from "@shisyamo4131/air-firebase-v2";
-import { Company, User, RoundSetting, System } from "@/schemas";
+import { computed, watch } from "vue";
+import { Company, User, System } from "@/schemas";
 import { useLogger } from "../composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useRolePresets } from "@/composables/useRolePresets";
-import { useComponentDefaults } from "@/composables/useComponentDefaults";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { useNotification } from "@/composables/useNotification";
 
-/**
- * Provides authentication functionality and stores information about the signed-in user.
- * - `signIn`: Signs in the user using Firebase Authentication.
- * - `signOut`: Signs out the user.
- * - `setUser`: Stores user data in the store.
- * - `clearUser`: Clears stored user data.
- */
 export const useAuthStore = defineStore("auth", () => {
   /***************************************************************************
    * DEFINE STORES AND COMPOSABLES
    ***************************************************************************/
-  const router = useRouter();
   const logger = useLogger("useAuthStore", useErrorsStore());
-  const errors = useErrorsStore();
-  const loadings = useLoadingsStore();
-  const messages = useMessagesStore();
-  const { set: setComponentDefault } = useComponentDefaults();
-  const { registFCMToken } = useNotification();
 
   /***************************************************************************
    * DEFINE STATES
@@ -52,59 +30,16 @@ export const useAuthStore = defineStore("auth", () => {
   const userInstance = reactive(new User());
 
   /**
-   * タグサイズ設定
-   * - ユーザーのタグ表示サイズを管理
-   * - 変更時に Firestore の User ドキュメントを更新
-   * - モバイル表示時は強制的に SMALL サイズを返す
-   *
-   * ```
-   * import { useAuthStore } from "@/stores/useAuthStore";
-   * const auth = useAuthStore();
-   *
-   * // タグサイズを取得
-   * const currentTagSize = auth.tagSize;
-   *
-   * // タグサイズを変更
-   * auth.tagSize = `LARGE`;
-   * ```
+   * ユーザーが設定したタグ表示サイズを返します。
+   * 未設定または不正な値の場合はMEDIUMを返します。
    */
-  const internalTagSize = ref(TAG_SIZE_VALUES.MEDIUM.value);
-  const tagSize = computed({
-    get() {
-      const display = useDisplay();
-      if (display.mobile.value) {
-        return TAG_SIZE_VALUES.SMALL.value;
-      }
-      return internalTagSize.value;
-    },
-    async set(value) {
-      if (!TAG_SIZE_VALUES[value]) {
-        logger.warn({ message: `Invalid tag size value`, data: value });
-        return;
-      }
-      internalTagSize.value = value;
-      if (isReady.value && !!uid.value) {
-        try {
-          await userInstance.updateProperties({ tagSize: value });
-        } catch (error) {
-          logger.error({ message: "Failed to update tag size", error });
-        }
-      }
-    },
-  });
+  const tagSize = computed(() => {
+    if (TAG_SIZE_VALUES[userInstance.tagSize]) {
+      return userInstance.tagSize;
+    }
 
-  /**
-   * ユーザーインスタンスの tagSize プロパティを監視し、変更があれば internalTagSize を更新する。
-   */
-  watch(
-    () => userInstance.tagSize,
-    (newVal) => {
-      if (newVal && TAG_SIZE_VALUES[newVal]) {
-        internalTagSize.value = newVal;
-        setComponentDefault("Tag", newVal);
-      }
-    },
-  );
+    return TAG_SIZE_VALUES.MEDIUM.value;
+  });
 
   /***************************************************************************
    * COMPUTED PROPERTIES
@@ -205,141 +140,8 @@ export const useAuthStore = defineStore("auth", () => {
   });
 
   /***************************************************************************
-   * WATCHERS
-   ***************************************************************************/
-  /**
-   * Watches `companyInstance` and updates vuetify's global settings accordingly.
-   * @update 2026-01-07 - Added `firstDayOfWeek` setting for `VCalendar`.
-   */
-  watchEffect(() => {
-    // Set allowed minutes for VTimePicker based on company settings
-    setComponentDefault("VTimePicker", companyInstance?.minuteInterval);
-
-    // Update `RoundSetting` global setting based on company settings
-    RoundSetting.set(companyInstance?.roundSetting || RoundSetting.ROUND);
-
-    // Update `firstDayOfWeek` for `VCalendar` based on company settings
-    setComponentDefault("VCalendar", companyInstance?.firstDayOfWeek || 0);
-  });
-
-  /**
-   * Watches `isMaintenance` and redirects to the maintenance page if changed to true.
-   */
-  watch(isMaintenance, (newVal) => {
-    const currentPath = router.currentRoute.value.path;
-    if (newVal) {
-      if (currentPath === "/maintenance") return;
-      router.replace("/maintenance");
-    } else {
-      if (currentPath !== "/maintenance") return;
-      router.replace("/");
-    }
-  });
-
-  /***************************************************************************
    * METHODS
    ***************************************************************************/
-  async function setUser(user) {
-    errors.clear();
-    isReady.value = false;
-    try {
-      // Force refresh the ID token to get the latest custom claims.
-      const idTokenResult = user ? await user.getIdTokenResult(true) : null;
-
-      // Update store state with user information and claims.
-      uid.value = user?.uid || null;
-      isEmailVerified.value = user?.emailVerified || false;
-      isSuperUser.value = !!idTokenResult?.claims?.isSuperUser || false;
-      isDeveloper.value = !!idTokenResult?.claims?.isDeveloper || false;
-      companyId.value = idTokenResult?.claims?.companyId || null;
-
-      // uid と companyId が存在する場合に、FireModel の設定とドキュメントの取得を行う。
-      // subscribe だけだと、初回取得時にデータの取得をまたず isReady が true になってしまうため
-      // ナビゲーションガードが roles を正しく判断できない。
-      // 一旦 fetch でデータを取得してから subscribe を行う。
-      if (user && uid.value && companyId.value) {
-        FireModel.setConfig({ prefix: `Companies/${companyId.value}` });
-        await userInstance.fetch({ docId: uid.value });
-        await companyInstance.fetch({ docId: companyId.value });
-        userInstance.subscribe({ docId: uid.value });
-        companyInstance.subscribe({ docId: companyId.value });
-
-        // ========== FCMトークンの取得と保存 ==========
-        await registFCMToken(userInstance);
-        // ==========================================
-      } else {
-        userInstance.unsubscribe();
-        userInstance.initialize();
-        companyInstance.unsubscribe();
-        companyInstance.initialize();
-        FireModel.setConfig({ prefix: `Companies/unknown` });
-      }
-    } catch (error) {
-      // Error handling process.
-      logger.error({
-        message: `Failed to set user: ${error.message}`,
-        error,
-      });
-    } finally {
-      isReady.value = true;
-    }
-  }
-
-  /**
-   * Signs in using email and password.
-   * @param {object} credentials - Sign-in credentials.
-   * @param {string} credentials.email - User's email address.
-   * @param {string} credentials.password - User's password.
-   */
-  async function signIn(credentials = {}) {
-    const { email, password } = credentials;
-    const { $auth } = useNuxtApp();
-    if (!email || !password) {
-      throw new Error("Email and password are required.");
-    }
-    if (typeof email !== "string" || typeof password !== "string") {
-      throw new TypeError("Email and password must be strings.");
-    }
-    await signInWithEmailAndPassword($auth, email, password);
-  }
-
-  /**
-   * Firebase Authentication を使用してユーザーをサインアウトさせます。
-   * 成功時にはストアの状態が onAuthStateChanged リスナー経由でクリアされます。
-   *
-   * Signs the user out using Firebase Authentication.
-   * On success, the store state is cleared via the onAuthStateChanged listener.
-   */
-  async function signOut() {
-    // Nuxt アプリケーションインスタンスから $auth を取得 / Get $auth from the Nuxt application instance
-    const { $auth } = useNuxtApp();
-    try {
-      // サインアウト試行の開始時にエラーをクリア / Clear errors at the start of the sign-out attempt
-      errors.clear();
-
-      // ローディング状態を開始 / Start loading state
-      loadings.add({ key: "signOut", text: "サインアウトしています..." }); // Signing out...
-
-      // Firebase Authentication でサインアウトを実行 / Execute sign-out with Firebase Authentication
-      await authSignOut($auth);
-
-      // 成功メッセージを追加 / Add success message
-      messages.add("サインアウトしました");
-
-      // 成功ログを記録 / Log success
-      // logger.info({ message: "Signed out successfully." });
-    } catch (error) {
-      // エラーログを記録 / Log the error
-      logger.error({
-        message: `Sign-out failed: ${error.message}`,
-        error,
-      });
-    } finally {
-      // ローディング状態を必ず終了させる / Always end the loading state
-      loadings.remove("signOut");
-    }
-  }
-
   /**
    * ミドルウェア（ナビゲーションガード）で使用される関数。
    * Firebase の初期認証状態チェックが完了し、ストアの isReady フラグが true になるまで待機します。
@@ -398,6 +200,42 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   /**
+   * 指定された時間内にセッションがクリアされるのを待機します
+   * @param {number} [timeoutMs=5000] - タイムアウトまでのミリ秒数
+   * @returns {Promise<void>} - セッションがクリアされると解決される Promise
+   * @throws {Error} - 指定時間内にセッションがクリアされなかった場合にタイムアウトエラーをスローします。
+   */
+  async function waitUntilSessionCleared(timeoutMs = 5000) {
+    // 既にセッションがクリアされている場合は即座にリターン
+    // `uid` と `isReady` の値を以てセッションがクリアされたと判断する
+    if (uid.value === null && isReady.value) return;
+
+    let watcherStop = null;
+    let timeoutId = null;
+
+    try {
+      // `uid` が null かつ `isReady` が true になるまで待機する Promise
+      await new Promise((resolve, reject) => {
+        watcherStop = watch(
+          () => [uid.value, isReady.value],
+          ([currentUid, currentIsReady]) => {
+            if (currentUid === null && currentIsReady) resolve();
+          },
+        );
+        // タイムアウト処理を設定
+        timeoutId = setTimeout(() => {
+          const message = `waitUntilSessionCleared timed out after ${timeoutMs}ms.`;
+          logger.warn({ message });
+          reject(new Error(message));
+        }, timeoutMs);
+      });
+    } finally {
+      watcherStop?.();
+      clearTimeout(timeoutId);
+    }
+  }
+
+  /**
    * 指定されたロールを保持しているかどうかを判定します
    * @param {string} role - チェック対象のロール（例: "controller"）
    * @returns {boolean} - 指定ロールを持つ場合は true
@@ -434,22 +272,6 @@ export const useAuthStore = defineStore("auth", () => {
     return permissions.includes(permission);
   }
 
-  /**
-   * Initializes system's condition states by fetching the System document.
-   * - Fetches the `System/system` document to set initial states.
-   * - Subscribes to changes in the `System/system` document to keep states updated.
-   */
-  async function initSystemStates() {
-    try {
-      await systemInstance.fetch({ docId: "system" });
-      systemInstance.subscribe({ docId: "system" });
-    } catch (error) {
-      console.error("Failed to fetch System document:", error);
-      // On fetch failure, force maintenance mode to be true
-      systemInstance.isMaintenance = true;
-    }
-  }
-
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   // ただし、分割代入を行うとリアクティブ性が失われることに注意。
@@ -471,12 +293,10 @@ export const useAuthStore = defineStore("auth", () => {
     isMaintenance,
     isDev,
     customerType, // ← 追加
-    signIn,
-    signOut,
-    setUser,
+    system: systemInstance,
     waitUntilReady,
+    waitUntilSessionCleared,
     hasRole,
     hasPermission,
-    initSystemStates,
   };
 });
