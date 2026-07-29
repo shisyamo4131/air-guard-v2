@@ -1,6 +1,7 @@
 import { onDocumentWritten } from "firebase-functions/v2/firestore";
 import { logger } from "firebase-functions";
 import { syncOperationResultToDailyAttendances } from "../modules/dailyAttendances/index.js";
+import { syncOperationResultToDailyOperationsByEmployee } from "../modules/dailyOperationsByEmployee/index.js";
 import {
   removeOperationResultFromBilling,
   addOperationResultToBilling,
@@ -40,7 +41,13 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: before,
           afterData: null,
         });
-        // 3. SiteEmployeeHistories ドキュメントの再構築
+        // 3. DailyOperationsByEmployee ドキュメントへの反映
+        await syncOperationResultToDailyOperationsByEmployee({
+          companyId,
+          beforeData: before,
+          afterData: null,
+        });
+        // 4. SiteEmployeeHistories ドキュメントの再構築
         await rebuildHistories(companyId, before.siteId, before.employeeIds);
       }
       // OperationResult ドキュメントが作成された時の処理
@@ -53,7 +60,13 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: null,
           afterData: after,
         });
-        // 3. SiteEmployeeHistories ドキュメントの再構築
+        // 3. DailyOperationsByEmployee ドキュメントへの反映
+        await syncOperationResultToDailyOperationsByEmployee({
+          companyId,
+          beforeData: null,
+          afterData: after,
+        });
+        // 4. SiteEmployeeHistories ドキュメントの再構築
         await rebuildHistories(companyId, after.siteId, after.employeeIds);
       }
       // OperationResult ドキュメントが更新された時の処理
@@ -66,7 +79,13 @@ export const onOperationResultChange = onDocumentWritten(
           beforeData: before,
           afterData: after,
         });
-        // 3. SiteEmployeeHistories ドキュメントの再構築
+        // 3. DailyOperationsByEmployee ドキュメントへの反映
+        await syncOperationResultToDailyOperationsByEmployee({
+          companyId,
+          beforeData: before,
+          afterData: after,
+        });
+        // 4. SiteEmployeeHistories ドキュメントの再構築
         const employeeIds = [...before.employeeIds, ...after.employeeIds]; // before/after の和集合（重複は rebuildHistories() 内で除外）
         if (before.siteId !== after.siteId || before.date !== after.date) {
           await rebuildHistories(companyId, before.siteId, employeeIds);
