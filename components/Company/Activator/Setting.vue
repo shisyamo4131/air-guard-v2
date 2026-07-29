@@ -25,7 +25,7 @@ const emit = defineEmits(["click:edit"]);
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
-const { DAY_OF_WEEK } = useConstants();
+const { ATTENDANCE_MANAGEMENT_MODE, DAY_OF_WEEK } = useConstants();
 
 /*****************************************************************************
  * COMPUTED
@@ -46,6 +46,15 @@ const items = computed(() => {
         subtitle: DAY_OF_WEEK.value?.[props.item.firstDayOfWeek]?.title || "-",
       },
     },
+    {
+      title: "勤怠管理方式",
+      props: {
+        subtitle:
+          Object.values(ATTENDANCE_MANAGEMENT_MODE.value).find(
+            ({ value }) => value === props.item.attendanceManagementMode,
+          )?.title || "-",
+      },
+    },
   ];
 });
 
@@ -58,7 +67,12 @@ const items = computed(() => {
  * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
  *****************************************************************************/
 defineExpose({
-  includedKeys: ["minuteInterval", "roundSetting", "firstDayOfWeek"],
+  includedKeys: [
+    "minuteInterval",
+    "roundSetting",
+    "firstDayOfWeek",
+    "attendanceManagementMode",
+  ],
 });
 </script>
 

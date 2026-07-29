@@ -6,9 +6,14 @@ import * as Vue from "vue";
 import dayjs from "dayjs";
 import { useDateRange } from "@/composables/useDateRange";
 import { useDailyAttendanceIndexData } from "@/composables/application/dailyAttendance/useDailyAttendanceIndexData";
+import { useDailyOperationsByEmployeeIndexData } from "@/composables/application/dailyOperationByEmployee/useDailyOperationsByEmployeeIndexData";
 import { useDailyAttendanceStatistics } from "@/composables/transforms/useDailyAttendanceStatistics";
+import { useDailyOperationByEmployeeAttendanceStatistics } from "@/composables/transforms/useDailyOperationByEmployeeAttendanceStatistics";
+import { ATTENDANCE_MANAGEMENT_MODE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
-export function useIndex() {
+export function useIndex({
+  attendanceManagementMode = ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
+} = {}) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
@@ -20,12 +25,28 @@ export function useIndex() {
     endDate,
   });
 
-  const { dailyAttendances, employees, loading } = useDailyAttendanceIndexData({
-    from: debouncedStartDate,
-    to: debouncedEndDate,
-  });
+  const isOperationDate =
+    attendanceManagementMode ===
+    ATTENDANCE_MANAGEMENT_MODE_VALUES.OPERATION_DATE.value;
 
-  const statistics = useDailyAttendanceStatistics(dailyAttendances);
+  const indexData = isOperationDate
+    ? useDailyOperationsByEmployeeIndexData({
+        from: debouncedStartDate,
+        to: debouncedEndDate,
+      })
+    : useDailyAttendanceIndexData({
+        from: debouncedStartDate,
+        to: debouncedEndDate,
+      });
+
+  const docs = isOperationDate
+    ? indexData.dailyOperationsByEmployee
+    : indexData.dailyAttendances;
+  const { employees, loading } = indexData;
+
+  const statistics = isOperationDate
+    ? useDailyOperationByEmployeeAttendanceStatistics(docs)
+    : useDailyAttendanceStatistics(docs);
 
   /*****************************************************************************
    * DEFINE STATES
@@ -51,7 +72,7 @@ export function useIndex() {
    * COMPUTED
    *****************************************************************************/
   const filteredDocs = Vue.computed(() => {
-    return dailyAttendances.value.filter(
+    return docs.value.filter(
       ({ employeeId }) => employeeId === selectedEmployeeId.value,
     );
   });
@@ -103,6 +124,7 @@ export function useIndex() {
       },
       calendar: {
         docs: filteredDocs.value,
+        attendanceManagementMode,
         modelValue: dateRange.value.from,
       },
     })),

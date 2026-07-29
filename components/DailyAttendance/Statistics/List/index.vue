@@ -4,6 +4,7 @@
  * @description 従業員別勤怠統計の全体集計をリスト表示します。
  *****************************************************************************/
 import { formatAttendanceMinutes } from "@/utils/attendance/formatAttendanceMinutes";
+import { ATTENDANCE_MANAGEMENT_MODE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -21,6 +22,10 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  attendanceManagementMode: {
+    type: String,
+    default: ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
+  },
 });
 
 /*****************************************************************************
@@ -31,7 +36,11 @@ const items = computed(() => {
 
   return [
     {
-      title: "勤務日数",
+      title:
+        props.attendanceManagementMode ===
+        ATTENDANCE_MANAGEMENT_MODE_VALUES.OPERATION_DATE.value
+          ? "稼働日数"
+          : "勤務日数",
       value: `${props.statistics.attendanceCount}日`,
     },
     {

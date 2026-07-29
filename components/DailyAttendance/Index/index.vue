@@ -4,6 +4,7 @@
  * @description 従業員別勤怠情報確認コンポーネント
  *****************************************************************************/
 import { useIndex } from "./useIndex";
+import { ATTENDANCE_MANAGEMENT_MODE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -11,9 +12,27 @@ import { useIndex } from "./useIndex";
 defineOptions({ name: "DailyAttendanceIndex", inheritAttrs: false });
 
 /*****************************************************************************
+ * DEFINE PROPS
+ *****************************************************************************/
+const props = defineProps({
+  attendanceManagementMode: {
+    type: String,
+    default: ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
+  },
+});
+
+/*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { ui, statistics } = useIndex();
+const { ui, statistics } = useIndex({
+  attendanceManagementMode: props.attendanceManagementMode,
+});
+
+const isActualDateMode = computed(
+  () =>
+    props.attendanceManagementMode ===
+    ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
+);
 </script>
 
 <template>
@@ -41,6 +60,7 @@ const { ui, statistics } = useIndex();
         <template v-if="statistics">
           <DailyAttendanceStatisticsList
             density="compact"
+            :attendance-management-mode="props.attendanceManagementMode"
             :statistics="statistics"
           />
 
@@ -49,11 +69,15 @@ const { ui, statistics } = useIndex();
           <v-card-subtitle class="pt-4">勤務区分別</v-card-subtitle>
           <DailyAttendanceStatisticsTable
             density="compact"
+            :attendance-management-mode="props.attendanceManagementMode"
             :statistics="statistics"
           />
 
           <v-alert
-            v-if="statistics.unexportableAttendanceCount > 0"
+            v-if="
+              isActualDateMode &&
+              statistics.unexportableAttendanceCount > 0
+            "
             class="ma-3"
             density="compact"
             type="warning"

@@ -9,8 +9,9 @@
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useDefaults } from "vuetify";
-import { DailyAttendance } from "@/schemas";
+import { DailyAttendance, DailyOperationByEmployee } from "@/schemas";
 import { useConstants } from "@/composables/useConstants";
+import { ATTENDANCE_MANAGEMENT_MODE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -24,7 +25,16 @@ const _props = defineProps({
   docs: {
     type: Array,
     default: () => [],
-    validator: (value) => value.every((doc) => doc instanceof DailyAttendance),
+    validator: (value) =>
+      value.every(
+        (doc) =>
+          doc instanceof DailyAttendance ||
+          doc instanceof DailyOperationByEmployee,
+      ),
+  },
+  attendanceManagementMode: {
+    type: String,
+    default: ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
   },
 });
 const props = useDefaults(_props, "DailyAttendanceCalendar");
@@ -44,10 +54,15 @@ const events = computed(() => {
       const endTime = dayjs(detail.endAt).tz().format("HH:mm");
       const name = `${startTime} - ${endTime}`;
       const color = SHIFT_TYPE.value[detail.shiftType]?.color || "grey";
+      const start =
+        props.attendanceManagementMode ===
+        ATTENDANCE_MANAGEMENT_MODE_VALUES.OPERATION_DATE.value
+          ? dayjs.tz(`${doc.date} ${startTime}`, "Asia/Tokyo").toDate()
+          : detail.startAt;
       return {
         id: detail.docId,
         name,
-        start: detail.startAt,
+        start,
         color,
         timed: true,
       };

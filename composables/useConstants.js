@@ -10,6 +10,9 @@ const DEFAULT_DEFINITIONS = {
   ARRANGEMENT_NOTIFICATION_STATUS: {
     ...CONSTANTS.ARRANGEMENT_NOTIFICATION_STATUS_VALUES,
   },
+  ATTENDANCE_MANAGEMENT_MODE: {
+    ...CONSTANTS.ATTENDANCE_MANAGEMENT_MODE_VALUES,
+  },
   BILLING_UNIT_TYPE: {
     PER_DAY: {
       ...CONSTANTS.BILLING_UNIT_TYPE_VALUES.PER_DAY,
@@ -149,6 +152,13 @@ export function useConstants() {
       companyStore.company,
     ),
   );
+  const ATTENDANCE_MANAGEMENT_MODE = computed(() =>
+    createConstantWithColors(
+      DEFAULT_DEFINITIONS.ATTENDANCE_MANAGEMENT_MODE,
+      "attendanceManagementMode",
+      companyStore.company,
+    ),
+  );
   const BILLING_UNIT_TYPE = computed(() =>
     createConstantWithColors(
       DEFAULT_DEFINITIONS.BILLING_UNIT_TYPE,
@@ -246,6 +256,7 @@ export function useConstants() {
 
   return {
     ARRANGEMENT_NOTIFICATION_STATUS,
+    ATTENDANCE_MANAGEMENT_MODE,
     BILLING_UNIT_TYPE,
     DAY_OF_WEEK,
     DAY_TYPE,

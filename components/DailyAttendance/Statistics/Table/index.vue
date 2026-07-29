@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { useConstants } from "@/composables/useConstants";
 import { formatAttendanceMinutes } from "@/utils/attendance/formatAttendanceMinutes";
+import { ATTENDANCE_MANAGEMENT_MODE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -22,6 +23,17 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  attendanceManagementMode: {
+    type: String,
+    default: ATTENDANCE_MANAGEMENT_MODE_VALUES.ACTUAL_DATE.value,
+  },
+});
+
+const attendanceCountTitle = computed(() => {
+  return props.attendanceManagementMode ===
+    ATTENDANCE_MANAGEMENT_MODE_VALUES.OPERATION_DATE.value
+    ? "稼働日"
+    : "勤務日";
 });
 
 /*****************************************************************************
@@ -64,7 +76,7 @@ const items = computed(() => {
     <thead>
       <tr>
         <th>区分</th>
-        <th class="text-end">日数</th>
+        <th class="text-end">{{ attendanceCountTitle }}</th>
         <th class="text-end">稼働</th>
         <th class="text-end">実労働</th>
       </tr>
