@@ -21,6 +21,8 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 - [`docs/manual/`](docs/manual/index.md): 管理者向け画面マニュアル
 - [`KNOWLEDGE.md`](KNOWLEDGE.md): Git、dayjs などの一般的な学習メモ
 - [`INITIAL_PROMPT.md`](INITIAL_PROMPT.md): 新しい Codex タスクの開始用プロンプト
+- [`.codex/config.toml`](.codex/config.toml): プロジェクトのマルチエージェント設定
+- [`.codex/agents/`](.codex/agents/): 実装、テスト、調査、レビュー、UI・セキュリティ検証の専門エージェント
 
 `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/` は既存情報を保持する参考資料です。内容が競合する場合は `docs/specification.md` と承認済みの ADR を優先します。
 

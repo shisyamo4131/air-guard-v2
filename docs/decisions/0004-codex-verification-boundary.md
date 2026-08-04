@@ -1,9 +1,9 @@
 # 0004 Codex とユーザーの確認責務
 
 - 日付: 2026-08-03
-- 状態: Accepted
+- 状態: Superseded
 - 関連仕様: 現段階の完了条件
-- 置換対象: なし
+- 置換対象: [0005](0005-multi-agent-and-emulator-testing.md)
 
 ## 背景
 

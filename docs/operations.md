@@ -44,6 +44,43 @@ npm run local
 
 Firebase Emulator Suite は `firebase.json` で Auth、Functions、Firestore、Realtime Database、Storage、Hosting、Emulator UI を構成しています。起動前に使用プロジェクトと `.env.local` のエミュレーター設定を確認してください。
 
+Codexまたはテスターが検証用に起動する場合は、保存済みデータを読み込みます。
+
+```powershell
+$env:NODE_USE_SYSTEM_CA = "1"
+npx -y firebase-tools@latest emulators:start --import=./saved-data
+```
+
+- 明示的な指示なしに `--export-on-exit` を指定しない。
+- CLIが未起動サービスから本番へ到達する可能性を警告した場合、対象コードとテスト操作を確認し、外部作用を排除できなければテストしない。
+- FunctionsからStripe、メール、FCM、ジオコーディングなどの外部サービスを呼ぶ操作は、個別に隔離できることを確認する。
+
+Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
+
+```powershell
+npx nuxt dev --dotenv .env.local --host 127.0.0.1
+```
+
+認証後の画面操作が必要な場合は、Emulator専用アカウントを使用します。必要なアカウントがなければ、用途と権限を示してユーザーへ作成を依頼します。
+
+### Codexのブラウザ操作に関する現在の制約
+
+CodexのインアプリブラウザとChrome拡張による操作のどちらからもNuxtローカルサーバーの画面は取得できますが、現在の環境ではCodexがAuth Emulatorの `127.0.0.1:9099` へ直接接続してサインインを自動化する経路が、ブラウザ操作レイヤーで `ERR_BLOCKED_BY_CLIENT` として遮断されます。
+
+認証後のUIテストは、次の準備をユーザーが行った後、Codexがサインイン済みChromeタブを引き継ぐ方式とします。
+
+1. `--import=./saved-data` を付けてFirebase Emulatorを起動する。
+2. `.env.local` を使ってローカルサーバーを起動する。
+3. Chrome拡張が有効なプロファイルでChromeを起動する。
+4. Emulator専用アカウントでサインインし、必要に応じてテスト対象画面まで移動する。
+5. 画面の準備が完了したことをCodexへ伝える。
+
+Codexは既存タブを引き継いだ後、SPAローディングテンプレートの表示を即時エラーとみなさず、画面遷移の完了または明確なタイムアウトまで待機します。データ作成・更新・削除を伴う操作は、ユーザーがテスト内容として明示的に許可した範囲だけで行います。テスト終了時はユーザーが起動したEmulator、ローカルサーバー、ChromeをCodex側から停止しません。
+
+同一オリジンプロキシ、専用E2Eブラウザ、危険なChrome起動オプションなど、ユーザーの通常環境を変更する回避策は採用しません。将来、Chrome操作レイヤーからAuth Emulatorへ安全に直接接続できるようになった場合は、この条件を再検討します。
+
+Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にCodexからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してから検証を再開します。
+
 ## 静的生成
 
 開発向け:

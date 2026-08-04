@@ -14,7 +14,7 @@ AirGuard v2 は、警備業務に特化したデータ管理・スタッフ運�
 ### 管制業務
 
 - [(Beta) 稼働予定管理](./operation-schedules.md)
-- [配置管理](./arrangement-manager.md)
+- [配置管理](./control-operation.md#配置管理)
 - [上下番確定処理](./operation-results-generator.md)
 
 ### 稼働実績管理
