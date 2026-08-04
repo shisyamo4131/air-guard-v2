@@ -134,17 +134,23 @@ async function beforeEdit(editMode, item) {
     throw new Error("Unsupported edit mode: " + editMode);
   }
 
-  // Sync the schedule item to the operation result using the notifications map.
-  await item.syncToOperationResult(notificationsMap.value);
+  const loadingKey = loadings.add("上下番を確定しています...");
 
-  // Show a success message and clear the selected schedules.
-  messages.add("上下番を確定しました。");
+  try {
+    // Sync the schedule item to the operation result using the notifications map.
+    await item.syncToOperationResult(notificationsMap.value);
 
-  // Clear the selected schedule after syncing.
-  selectedSchedule.value = null;
+    // Show a success message and clear the selected schedules.
+    messages.add("上下番を確定しました。");
 
-  // Return false to indicate that the edit action has been handled and no further processing is needed.
-  return false;
+    // Clear the selected schedule after syncing.
+    selectedSchedule.value = null;
+
+    // Return false to indicate that the edit action has been handled and no further processing is needed.
+    return false;
+  } finally {
+    loadings.remove(loadingKey);
+  }
 }
 
 /*****************************************************************************

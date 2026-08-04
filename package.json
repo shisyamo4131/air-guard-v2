@@ -5,7 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --dotenv .env.development",
-    "deploy:dev": "nuxt generate --dotenv .env.develpment && firebase use dev && firebase deploy",
+    "deploy:dev": "nuxt generate --dotenv .env.development && firebase use dev && firebase deploy",
     "generate:prod": "nuxt generate",
     "generate:dev": "nuxt generate --dotenv .env.development",
     "install:firemodel": "npm install @shisyamo4131/air-firebase-v2@latest && cd functions && npm install @shisyamo4131/air-firebase-v2@latest && cd ..",

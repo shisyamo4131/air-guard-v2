@@ -36,3 +36,16 @@ air-vuetify-v3
 saved-data
 *.md
 *.pdf
+
+# Project governance and product documentation
+!/AGENTS.md
+!/CHANGELOG.md
+!/DEFINITION.md
+!/DESIGN.md
+!/HISTORY.md
+!/INITIAL_PROMPT.md
+!/KNOWLEDGE.md
+!/definitions/
+!/definitions/*.md
+!/docs/
+!/docs/**/*.md
