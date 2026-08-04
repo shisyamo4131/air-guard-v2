@@ -25,6 +25,7 @@
  * @property {Boolean} hideEdit - 編集ボタンを非表示にするかどうか。
  * @property {Boolean} hideNotification - 通知表示エリアを非表示にするかどうか。
  * @property {Object} notification - 配置通知オブジェクト。
+ * @property {String[]} consecutiveWorkWarnings - 連勤警告理由。
  * @property {Object} schedule - SiteOperationSchedule インスタンス（worker の時刻と比較して強調表示を判定）
  * @property {Object} worker - 作業員情報オブジェクト（SiteOperationScheduleDetail の worker オブジェクト）
  *
@@ -73,7 +74,8 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "SiteOperationScheduleWorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
-const { attrs, editProps, notificationProps } = useIndex(props, emit);
+const { attrs, editProps, notificationProps, consecutiveWorkWarningProps } =
+  useIndex(props, emit);
 
 const isQualified = computed(() => {
   if (props.notification) {
@@ -94,7 +96,28 @@ const isQualified = computed(() => {
 
     <!-- Provide `append-label` slot with slot props -->
     <template #append-label="slotProps">
-      <slot name="append-label" v-bind="slotProps || {}" />
+      <div class="d-flex align-center">
+        <slot name="append-label" v-bind="slotProps || {}" />
+        <v-tooltip
+          v-if="consecutiveWorkWarningProps.visible"
+          location="top"
+          open-on-click
+          :text="consecutiveWorkWarningProps.text"
+        >
+          <template #activator="{ props: tooltipActivatorProps }">
+            <v-btn
+              v-bind="tooltipActivatorProps"
+              :aria-label="consecutiveWorkWarningProps.ariaLabel"
+              class="ml-1"
+              color="warning"
+              density="compact"
+              icon="mdi-alert"
+              size="x-small"
+              variant="text"
+            />
+          </template>
+        </v-tooltip>
+      </div>
     </template>
 
     <!-- Provide `prepend-start-time` slot with slot props -->

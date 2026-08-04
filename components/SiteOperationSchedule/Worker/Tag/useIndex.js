@@ -50,6 +50,7 @@ export function useIndex(props, emit) {
     const {
       disableEdit,
       disableNotification,
+      consecutiveWorkWarnings,
       editIcon,
       hideEdit,
       hideNotification,
@@ -107,5 +108,11 @@ export function useIndex(props, emit) {
     return result;
   });
 
-  return { attrs, editProps, notificationProps };
+  const consecutiveWorkWarningProps = Vue.computed(() => ({
+    visible: props.consecutiveWorkWarnings.length > 0,
+    text: props.consecutiveWorkWarnings.join("／"),
+    ariaLabel: `連勤警告：${props.consecutiveWorkWarnings.join("／")}`,
+  }));
+
+  return { attrs, editProps, notificationProps, consecutiveWorkWarningProps };
 }

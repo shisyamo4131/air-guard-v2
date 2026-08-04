@@ -20,6 +20,7 @@
 | [0005](0005-multi-agent-and-emulator-testing.md) | マルチエージェント体制とEmulator検証 | Accepted | 2026-08-04 |
 | [0006](0006-user-prepared-authenticated-browser-testing.md) | ユーザー準備済み認証画面によるUI検証 | Accepted | 2026-08-04 |
 | [0007](0007-project-scoped-specialist-agents.md) | プロジェクト専用の専門エージェント構成 | Accepted | 2026-08-04 |
+| [0008](0008-consecutive-work-warning.md) | 配置管理の連勤判定と注意喚起 | Accepted | 2026-08-04 |
 
 ## 新しい ADR の形式
 

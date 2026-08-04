@@ -10,6 +10,8 @@ const { startTime, endTime, isEmployee, id, ...rest } = importedProps;
 
 export default {
   ...rest,
+  // この配置から見た連勤警告理由
+  consecutiveWorkWarnings: { type: Array, default: () => [] },
   disableEdit: { type: Boolean, default: false },
   disableNotification: { type: Boolean, default: false },
   editIcon: { type: String, default: "mdi-pencil" },

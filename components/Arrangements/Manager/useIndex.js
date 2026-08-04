@@ -46,6 +46,7 @@ export function useIndex(
   const {
     schedules,
     getNotification,
+    getConsecutiveWorkWarnings,
     isEmployeeArranged,
     selectableEmployees,
     selectableOutsourcers,
@@ -192,6 +193,12 @@ export function useIndex(
                 hideNotification: !!slotProps.disabled,
                 isDraggable: slotProps.isDraggable,
                 notification: getNotification(slotProps.worker),
+                consecutiveWorkWarnings: slotProps.worker.isEmployee
+                  ? getConsecutiveWorkWarnings({
+                      scheduleId: schedule.docId,
+                      employeeId: slotProps.worker.workerId,
+                    })
+                  : [],
                 removable: slotProps.removable,
                 schedule,
                 worker: slotProps.worker,

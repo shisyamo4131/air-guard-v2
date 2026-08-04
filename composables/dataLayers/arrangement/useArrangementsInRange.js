@@ -3,6 +3,7 @@
  * @description 配置管理用 Facade データレイヤーコンポーザブル
  *****************************************************************************/
 import * as Vue from "vue";
+import dayjs from "dayjs";
 import { SiteOperationSchedule } from "@/schemas";
 import { useEmployeesInRange } from "@/composables/dataLayers/employee/useEmployeesInRange";
 import { useOutsourcersInRange } from "@/composables/dataLayers/outsourcer/useOutsourcersInRange";
@@ -50,6 +51,7 @@ import { useSecurityReportIndexesInRange } from "@/composables/dataLayers/securi
  *  hasNotificationForSchedule: Function, - `siteOperationScheduleId` から配置通知の有無を確認するための関数
  *  hasSecurityReportsForOperation: Function, - `operationId` から警備日報の有無を確認するための関数
  *  isEmployeeArranged: Function, - `employeeId` と `date` から配置済みかどうかを確認するための関数
+ *  getConsecutiveWorkWarnings: Function, - 配置と従業員に対する連勤警告理由を取得する関数
  * }}
  *****************************************************************************/
 export function useArrangementsInRange({ from, to } = {}) {
@@ -68,8 +70,34 @@ export function useArrangementsInRange({ from, to } = {}) {
   /** selectableOutsourcers from useOutsourcersInRange */
   const { docs: selectableOutsourcers } = useOutsourcersInRange({ from, to });
 
-  /** SiteOperationSchedules from useSiteOperationSchedulesInRange */
-  const { docs: schedules } = useSiteOperationSchedulesInRange({ from, to });
+  /**
+   * SiteOperationSchedules from useSiteOperationSchedulesInRange
+   * - 連勤判定用に前後 1 日を購読します。
+   * - 公開する schedules は従来どおり表示期間内だけに限定します。
+   */
+  const scheduleFrom = Vue.computed(() =>
+    dayjs(from.value).tz().subtract(1, "day").toDate(),
+  );
+  const scheduleTo = Vue.computed(() =>
+    dayjs(to.value).tz().add(1, "day").toDate(),
+  );
+  const { docs: schedulesForConsecutiveWork } =
+    useSiteOperationSchedulesInRange({
+      from: scheduleFrom,
+      to: scheduleTo,
+    });
+  const displayFrom = Vue.computed(() =>
+    dayjs(from.value).tz().format("YYYY-MM-DD"),
+  );
+  const displayTo = Vue.computed(() =>
+    dayjs(to.value).tz().format("YYYY-MM-DD"),
+  );
+  const schedules = Vue.computed(() =>
+    schedulesForConsecutiveWork.value.filter(
+      (schedule) =>
+        schedule.date >= displayFrom.value && schedule.date <= displayTo.value,
+    ),
+  );
 
   /** ArrangementNotifications from useArrangementNotificationsInRange */
   const { docs: notifications } = useArrangementNotificationsInRange({
@@ -197,6 +225,86 @@ export function useArrangementsInRange({ from, to } = {}) {
    */
   const arrangedOutsourcersMap = Vue.computed(() => {
     return _createArrangementMap(schedules.value, "outsourcerIds");
+  });
+
+  /**
+   * 連勤警告索引。
+   * - キー: SiteOperationSchedule の docId、従業員 ID
+   * - 値: その配置から見た警告理由の配列
+   * - 外注先は個人を一意に識別できないため判定しません。
+   */
+  const consecutiveWorkWarnings = Vue.computed(() => {
+    const warnings = new Map();
+    const schedulesByDateAndShift = new Map();
+
+    for (const schedule of schedulesForConsecutiveWork.value) {
+      const key = `${schedule.date}_${schedule.shiftType}`;
+      if (!schedulesByDateAndShift.has(key)) {
+        schedulesByDateAndShift.set(key, []);
+      }
+      schedulesByDateAndShift.get(key).push(schedule);
+    }
+
+    const addWarning = (schedule, employeeId, reason) => {
+      if (!warnings.has(schedule.docId)) warnings.set(schedule.docId, new Map());
+      const byEmployee = warnings.get(schedule.docId);
+      if (!byEmployee.has(employeeId)) byEmployee.set(employeeId, []);
+      const reasons = byEmployee.get(employeeId);
+      if (!reasons.includes(reason)) reasons.push(reason);
+    };
+
+    const linkSchedules = (
+      leftSchedules,
+      rightSchedules,
+      leftReason,
+      rightReason,
+    ) => {
+      for (const left of leftSchedules) {
+        const leftEmployeeIds = new Set(left.employeeIds || []);
+        for (const right of rightSchedules) {
+          for (const employeeId of right.employeeIds || []) {
+            if (!leftEmployeeIds.has(employeeId)) continue;
+            addWarning(left, employeeId, leftReason);
+            addWarning(right, employeeId, rightReason);
+          }
+        }
+      }
+    };
+
+    const dates = new Set(
+      schedulesForConsecutiveWork.value.map((schedule) => schedule.date),
+    );
+    for (const date of dates) {
+      const daySchedules =
+        schedulesByDateAndShift.get(
+          `${date}_${SiteOperationSchedule.SHIFT_TYPE.DAY.value}`,
+        ) || [];
+      const nightSchedules =
+        schedulesByDateAndShift.get(
+          `${date}_${SiteOperationSchedule.SHIFT_TYPE.NIGHT.value}`,
+        ) || [];
+
+      linkSchedules(
+        daySchedules,
+        nightSchedules,
+        "同日の夜勤にも配置されています",
+        "同日の日勤にも配置されています",
+      );
+
+      const nextDate = dayjs.tz(date).add(1, "day").format("YYYY-MM-DD");
+      const nextDaySchedules =
+        schedulesByDateAndShift.get(
+          `${nextDate}_${SiteOperationSchedule.SHIFT_TYPE.DAY.value}`,
+        ) || [];
+      linkSchedules(
+        nightSchedules,
+        nextDaySchedules,
+        "翌日の日勤にも配置されています",
+        "前日の夜勤にも配置されています",
+      );
+    }
+
+    return warnings;
   });
 
   /*****************************************************************************
@@ -359,6 +467,11 @@ export function useArrangementsInRange({ from, to } = {}) {
     return securityReportIndexesByOperationId.value.has(operationId);
   }
 
+  function getConsecutiveWorkWarnings({ scheduleId, employeeId } = {}) {
+    if (!scheduleId || !employeeId) return [];
+    return consecutiveWorkWarnings.value.get(scheduleId)?.get(employeeId) || [];
+  }
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
@@ -403,5 +516,6 @@ export function useArrangementsInRange({ from, to } = {}) {
     hasNotificationForSchedule,
     hasSecurityReportsForOperation,
     isEmployeeArranged,
+    getConsecutiveWorkWarnings,
   };
 }
