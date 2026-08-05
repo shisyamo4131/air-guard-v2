@@ -12,6 +12,7 @@
  *   `worker` オブジェクトから自動的に取得されます。
  * - `notification` プロパティとして、配置通知オブジェクトを受け取ります。
  * - `notification` プロパティが有効である場合、`ArrangementNotificationChip` コンポーネントが表示されます。
+ * - 通知優先の実効値がOJTの場合、資格アイコンの後、氏名の前にOJTアイコンを表示します。
  * - 編集ボタンと通知表示エリアは `props.schedule` の `isEditable` プロパティが `false` の場合、自動的に無効化されます。
  * - `removable` プロパティは `props.removable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
  * - `isDraggable` プロパティは `props.isDraggable` と `props.schedule.isEditable` の両方が `true` の場合にのみ有効化されます。
@@ -74,15 +75,13 @@ const _props = defineProps({ ...importedProps });
 const props = useDefaults(_props, "SiteOperationScheduleWorkerTag");
 const emit = defineEmits(["click:remove", "click:edit", "click:notification"]);
 
-const { attrs, editProps, notificationProps, consecutiveWorkWarningProps } =
-  useIndex(props, emit);
-
-const isQualified = computed(() => {
-  if (props.notification) {
-    return props.notification.isQualified;
-  }
-  return props.worker?.isQualified || false;
-});
+const {
+  attrs,
+  editProps,
+  notificationProps,
+  consecutiveWorkWarningProps,
+  effectiveWorkerProperties,
+} = useIndex(props, emit);
 </script>
 
 <template>
@@ -90,7 +89,27 @@ const isQualified = computed(() => {
     <!-- Provide `prepend-label` slot with slot props -->
     <template #prepend-label="slotProps">
       <slot name="prepend-label" v-bind="slotProps || {}">
-        <AtomsIconsHasLicense v-if="isQualified" size="small" />
+        <AtomsIconsHasLicense
+          v-if="effectiveWorkerProperties.isQualified"
+          size="small"
+        />
+        <v-tooltip
+          v-if="effectiveWorkerProperties.isOjt"
+          location="top"
+          open-on-click
+          text="OJT、配置人数には含まれません。"
+        >
+          <template #activator="{ props: tooltipActivatorProps }">
+            <v-icon
+              v-bind="tooltipActivatorProps"
+              aria-label="OJT"
+              color="info"
+              icon="mdi-school-outline"
+              size="small"
+              tabindex="0"
+            />
+          </template>
+        </v-tooltip>
       </slot>
     </template>
 

@@ -1,4 +1,5 @@
 import * as Vue from "vue";
+import { resolveEffectiveWorkerProperty } from "@/components/SiteOperationSchedule/effectiveWorker";
 
 /*****************************************************************************
  * @file ./components/SiteOperationSchedule/Worker/Tag/useIndex.js
@@ -108,11 +109,33 @@ export function useIndex(props, emit) {
     return result;
   });
 
+  /** 通知の明示値を優先した資格・OJT表示用プロパティ */
+  const effectiveWorkerProperties = Vue.computed(() => ({
+    isQualified: resolveEffectiveWorkerProperty(
+      props.worker,
+      props.notification,
+      "isQualified",
+      false,
+    ),
+    isOjt: resolveEffectiveWorkerProperty(
+      props.worker,
+      props.notification,
+      "isOjt",
+      false,
+    ),
+  }));
+
   const consecutiveWorkWarningProps = Vue.computed(() => ({
     visible: props.consecutiveWorkWarnings.length > 0,
     text: props.consecutiveWorkWarnings.join("／"),
     ariaLabel: `連勤警告：${props.consecutiveWorkWarnings.join("／")}`,
   }));
 
-  return { attrs, editProps, notificationProps, consecutiveWorkWarningProps };
+  return {
+    attrs,
+    editProps,
+    notificationProps,
+    consecutiveWorkWarningProps,
+    effectiveWorkerProperties,
+  };
 }

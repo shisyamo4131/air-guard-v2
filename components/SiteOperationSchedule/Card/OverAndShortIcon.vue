@@ -18,6 +18,8 @@ defineOptions({
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  /** 過不足判定の上書き値。未指定ならスケジュールの従来値を使用します。 */
+  assignedPersonnelCount: { type: Number, default: null },
   schedule: {
     type: Object,
     default: () => new SiteOperationSchedule(),
@@ -29,10 +31,24 @@ const props = useDefaults(_props, "SiteOperationScheduleCardOverAndShortIcon");
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
+const effectiveAssignedPersonnelCount = computed(
+  () =>
+    props.assignedPersonnelCount ?? props.schedule.assignedPersonnelCount,
+);
+const requiredPersonnel = computed(
+  () => Number(props.schedule.requiredPersonnel) || 0,
+);
+const isPersonnelShortage = computed(
+  () => effectiveAssignedPersonnelCount.value < requiredPersonnel.value,
+);
+const isPersonnelSurplus = computed(
+  () => effectiveAssignedPersonnelCount.value > requiredPersonnel.value,
+);
+
 const tooltipMessage = computed(() => {
-  if (props.schedule.isPersonnelShortage) {
+  if (isPersonnelShortage.value) {
     return "必要人数を満たしていません。";
-  } else if (props.schedule.isPersonnelSurplus) {
+  } else if (isPersonnelSurplus.value) {
     return "必要人数を超えています。";
   } else {
     return "";
@@ -40,9 +56,9 @@ const tooltipMessage = computed(() => {
 });
 
 const color = computed(() => {
-  if (props.schedule.isPersonnelShortage) {
+  if (isPersonnelShortage.value) {
     return "error";
-  } else if (props.schedule.isPersonnelSurplus) {
+  } else if (isPersonnelSurplus.value) {
     return "warning";
   } else {
     return "";

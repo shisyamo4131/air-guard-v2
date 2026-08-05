@@ -11,7 +11,83 @@ import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useManagedDialog } from "@/composables/overlay/useManagedDialog";
 import { useSiteOperationScheduleDuplicator } from "@/composables/useSiteOperationScheduleDuplicator";
+import { useConstants } from "@/composables/useConstants";
 import { SiteOperationSchedule } from "@/schemas";
+import { getEffectiveAssignedPersonnelCount } from "@/components/SiteOperationSchedule/effectiveWorker";
+
+/**
+ * 表示期間内の配置予定と通知から、日付単位の人数・状態集計を生成します。
+ * - 状態件数は配置明細単位で数え、OJTも含めます。
+ * - 配置人数は通知優先の実効OJT値で判定し、OJTを除外します。
+ * - 通知なし・通知済みフラグなしは仮配置、通知とフラグの不整合や未知状態は要確認です。
+ * @param {Array<Object>} schedules 表示期間内の現場稼働予定
+ * @param {Array<Object>} notifications 表示期間内の配置通知
+ * @param {Object} statusDefinitions `useConstants` の配置通知状態定義
+ * @returns {Map<string, Object>} 日付（YYYY-MM-DD）をキーとする日別集計
+ */
+export function createDailyArrangementSummaries(
+  schedules = [],
+  notifications = [],
+  statusDefinitions = {},
+) {
+  const statusKeyByValue = new Map(
+    Object.entries(statusDefinitions).map(([key, definition]) => [
+      definition.value,
+      key.toLowerCase(),
+    ]),
+  );
+  const notificationById = new Map(
+    notifications.map((notification) => [notification.docId, notification]),
+  );
+  const result = new Map();
+
+  for (const schedule of schedules) {
+    if (!result.has(schedule.date)) {
+      result.set(schedule.date, {
+        required: 0,
+        assigned: 0,
+        difference: 0,
+        provisional: 0,
+        arranged: 0,
+        confirmed: 0,
+        arrived: 0,
+        leaved: 0,
+        needsReview: 0,
+      });
+    }
+
+    const summary = result.get(schedule.date);
+    summary.required += Number(schedule.requiredPersonnel) || 0;
+    summary.assigned += getEffectiveAssignedPersonnelCount(
+      schedule,
+      notificationById,
+    );
+
+    for (const worker of schedule.workers || []) {
+      const notification = notificationById.get(worker.notificationKey);
+      if (!notification && !worker.hasNotification) {
+        summary.provisional += 1;
+        continue;
+      }
+
+      if (
+        !notification ||
+        !worker.hasNotification ||
+        !statusKeyByValue.has(notification.status)
+      ) {
+        summary.needsReview += 1;
+        continue;
+      }
+
+      summary[statusKeyByValue.get(notification.status)] += 1;
+    }
+  }
+
+  for (const summary of result.values()) {
+    summary.difference = summary.assigned - summary.required;
+  }
+  return result;
+}
 
 /*****************************************************************************
  * @param {Object} props
@@ -45,6 +121,7 @@ export function useIndex(
    *****************************************************************************/
   const {
     schedules,
+    notifications,
     getNotification,
     getConsecutiveWorkWarnings,
     isEmployeeArranged,
@@ -86,11 +163,38 @@ export function useIndex(
   /** 現場稼働予定複製コンポーザブル */
   const duplicatorComposable = useSiteOperationScheduleDuplicator();
 
+  /** 会社設定を反映した配置通知状態定義 */
+  const { ARRANGEMENT_NOTIFICATION_STATUS } = useConstants();
+
   /*****************************************************************************
    * DEFINE STATES
    *****************************************************************************/
   const commandText = Vue.ref(null);
   const rowKeyToScroll = Vue.ref(null);
+  /** 表示期間内データだけを使用する、配置管理固有の日別集計 */
+  const dailySummaries = Vue.computed(() =>
+    createDailyArrangementSummaries(
+      schedules.value,
+      notifications.value,
+      ARRANGEMENT_NOTIFICATION_STATUS.value,
+    ),
+  );
+
+  /** カードの過不足表示に使う、予定単位の通知優先実効配置人数 */
+  const effectiveAssignedPersonnelCountByScheduleId = Vue.computed(() => {
+    const notificationById = new Map(
+      notifications.value.map((notification) => [
+        notification.docId,
+        notification,
+      ]),
+    );
+    return new Map(
+      schedules.value.map((schedule) => [
+        schedule.docId,
+        getEffectiveAssignedPersonnelCount(schedule, notificationById),
+      ]),
+    );
+  });
 
   /*****************************************************************************
    * METHODS
@@ -129,6 +233,11 @@ export function useIndex(
             "onUpdate:scrollToRowKey": (newKey) =>
               (rowKeyToScroll.value = newKey),
           },
+          dailySummary: {
+            getAttrs: ({ column }) => ({
+              summary: dailySummaries.value.get(column.date),
+            }),
+          },
           weekdayActions: {
             getAttrs: (slotProps) => {
               return {
@@ -163,6 +272,10 @@ export function useIndex(
               return {
                 disabled: slotProps.disabled,
                 schedule: slotProps.schedule,
+                assignedPersonnelCount:
+                  effectiveAssignedPersonnelCountByScheduleId.value.get(
+                    slotProps.schedule.docId,
+                  ),
                 isDraggable: true,
                 showActions: true,
                 "onClick:duplicate": () =>

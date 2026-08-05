@@ -10,6 +10,7 @@
  *   発火して編集後の現場稼働予定データを親コンポーネントに伝達します。
  *
  * @prop {Boolean} hideBadge - 必要人数バッジを非表示にするかどうか（デフォルト: false）
+ * @prop {Number|null} assignedPersonnelCount 過不足判定に使う配置人数。未指定時はscheduleの値を使用。
  * @prop {Boolean} isDraggable - カードのドラッグ操作用アイコンを表示するかどうか（デフォルト: false）
  *                               `props.schedule.isEditable` が false の場合は常に false として扱われます。
  * @prop {Object} schedule - 現場稼働予定データオブジェクト（デフォルト: 空の SiteOperationSchedule インスタンス）
@@ -36,6 +37,7 @@ import OverAndShortIcon from "./OverAndShortIcon.vue";
  * SETUP PROPS
  *****************************************************************************/
 const _props = defineProps({
+  assignedPersonnelCount: { type: Number, default: null },
   disabled: { type: Boolean, default: false },
   hideBadge: { type: Boolean, default: false },
   isDraggable: { type: Boolean, default: false },
@@ -81,8 +83,11 @@ provide("emit", emit);
  * COMPUTED
  *****************************************************************************/
 const showOverAndShortIcon = computed(() => {
-  const isPersonnelShortage = props.schedule.isPersonnelShortage;
-  const isPersonnelSurplus = props.schedule.isPersonnelSurplus;
+  const assigned =
+    props.assignedPersonnelCount ?? props.schedule.assignedPersonnelCount;
+  const required = Number(props.schedule.requiredPersonnel) || 0;
+  const isPersonnelShortage = assigned < required;
+  const isPersonnelSurplus = assigned > required;
   return isPersonnelShortage || isPersonnelSurplus;
 });
 
@@ -97,6 +102,7 @@ const showRemarksIcon = computed(() => {
     <OverAndShortIcon
       v-if="showOverAndShortIcon"
       :schedule="props.schedule"
+      :assigned-personnel-count="props.assignedPersonnelCount"
       style="position: absolute; top: 4px; left: 24px"
     />
 

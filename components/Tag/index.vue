@@ -5,6 +5,7 @@
  * @description VListItem をベースにした、汎用的なタグコンポーネントです。
  * - Vuetify の v-list-item コンポーネントを拡張して、タグ表示に特化したスタイルと機能を提供します。
  * - タグのサイズ、バリアント、読み込み状態、削除ボタンなどのカスタマイズが可能です。
+ * - ラベルだけを可変幅にして省略表示し、前後の装飾とアクションの表示を維持します。
  * - `inheritAttrs: false` を指定して、不要な属性の継承を防止しています。
  *
  * @property {String | Number | Boolean} border - タグの枠線を表示するかどうか。
@@ -65,18 +66,26 @@ const {
       <!-- Label content (shown when label is available and not loading) -->
       <div v-if="!isLoading" class="tag-base__label-content">
         <!-- Draggable Icon -->
-        <AtomsIconsDraggable v-if="props.isDraggable" />
+        <div v-if="props.isDraggable" class="tag-base__label-decoration">
+          <AtomsIconsDraggable />
+        </div>
 
         <!-- SLOT: prepend-label -->
-        <slot name="prepend-label" v-bind="{ label: props.label }" />
+        <div class="tag-base__label-prepend">
+          <slot name="prepend-label" v-bind="{ label: props.label }" />
+        </div>
 
         <!-- SLOT: label -->
-        <slot name="label" v-bind="{ label: props.label }">
-          {{ props.label }}
-        </slot>
+        <div class="tag-base__label">
+          <slot name="label" v-bind="{ label: props.label }">
+            {{ props.label }}
+          </slot>
+        </div>
 
         <!-- SLOT: append-label -->
-        <slot name="append-label" v-bind="{ label: props.label }" />
+        <div class="tag-base__label-append">
+          <slot name="append-label" v-bind="{ label: props.label }" />
+        </div>
       </div>
 
       <!-- Loading indicator (shown when loading or no label) -->
@@ -124,6 +133,7 @@ const {
 .tag-base__title {
   display: flex;
   align-items: center;
+  min-width: 0;
   min-height: 100%;
 }
 
@@ -132,6 +142,29 @@ const {
   align-items: center;
   gap: 4px;
   flex: 1;
+  min-width: 0;
+}
+
+.tag-base__label-prepend,
+.tag-base__label-append,
+.tag-base__label-decoration {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.tag-base__label-prepend:empty,
+.tag-base__label-append:empty {
+  display: none;
+}
+
+.tag-base__label {
+  display: block;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .tag-base__loading {

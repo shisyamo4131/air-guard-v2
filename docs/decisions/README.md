@@ -21,6 +21,8 @@
 | [0006](0006-user-prepared-authenticated-browser-testing.md) | ユーザー準備済み認証画面によるUI検証 | Accepted | 2026-08-04 |
 | [0007](0007-project-scoped-specialist-agents.md) | プロジェクト専用の専門エージェント構成 | Accepted | 2026-08-04 |
 | [0008](0008-consecutive-work-warning.md) | 配置管理の連勤判定と注意喚起 | Accepted | 2026-08-04 |
+| [0009](0009-arrangement-daily-summary.md) | 配置管理の日別稼働・配置・状態集計 | Superseded | 2026-08-05 |
+| [0010](0010-notification-preferred-effective-worker-values.md) | 配置通知を優先する作業員実効値と人員集計 | Accepted | 2026-08-05 |
 
 ## 新しい ADR の形式
 

@@ -14,6 +14,8 @@ import WeekdayActions from "./WeekdayActions.vue";
 import CommandTextDialog from "./CommandTextDialog.vue";
 import FloatingWindow from "@/components/molecules/FloatingWindow.vue";
 import SpeedDial from "./SpeedDial.vue";
+import DailyHeaderSummary from "./DailyHeaderSummary.vue";
+import DailyStatusSummary from "./DailyStatusSummary.vue";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -88,7 +90,17 @@ const {
 
     <!-- スケジュール管理テーブル -->
     <Table class="fill-height" v-bind="uiTable.component.attrs">
-      <!-- 日付の表示形式をカスタマイズ -->
+      <!-- 日付と日別人数集計を縦に表示 -->
+      <template #day="{ column }">
+        <div class="d-flex flex-column align-center">
+          <span>{{ column.format("MM/DD(ddd)") }}</span>
+          <DailyHeaderSummary
+            v-bind="uiTable.component.dailySummary.getAttrs({ column })"
+          />
+        </div>
+      </template>
+
+      <!-- 既存の祝日アイコンを保持 -->
       <template #append-day="{ column, holidayIcon }">
         <v-icon v-if="column.isHoliday" v-bind="holidayIcon" />
       </template>
@@ -152,6 +164,12 @@ const {
             </SiteOperationScheduleCard>
           </template>
         </DraggableOperationSchedules>
+      </template>
+
+      <template #footer="{ column }">
+        <DailyStatusSummary
+          v-bind="uiTable.component.dailySummary.getAttrs({ column })"
+        />
       </template>
     </Table>
 
