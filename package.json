@@ -43,6 +43,7 @@
     "vuetify": "^3.11.6"
   },
   "devDependencies": {
+    "toml": "^3.0.0",
     "vite-plugin-vuetify": "^2.1.0"
   }
 }

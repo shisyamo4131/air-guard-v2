@@ -14,7 +14,9 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 ## ドキュメント
 
 - [`AGENTS.md`](AGENTS.md): Codex が従う作業規則
+- [`docs/README.md`](docs/README.md): 作業目的別の文書案内。`AGENTS.md` の次に参照
 - [`docs/specification.md`](docs/specification.md): 現在確認されている仕様の唯一の正本
+- [`docs/roadmaps/`](docs/roadmaps/README.md): 正式運用までの残作業、完了条件、証拠に基づく進捗
 - [`docs/decisions/`](docs/decisions/README.md): 重要な設計・運用判断と理由
 - [`CHANGELOG.md`](CHANGELOG.md): 利用者・仕様・運用に見える変更履歴
 - [`docs/operations.md`](docs/operations.md): 開発、生成、デプロイ、障害復旧の手順
@@ -25,6 +27,8 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 - [`.codex/agents/`](.codex/agents/): 実装、テスト、調査、レビュー、UI・セキュリティ検証の専門エージェント
 
 `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/` は既存情報を保持する参考資料です。内容が競合する場合は `docs/specification.md` と承認済みの ADR を優先します。
+
+Codexによる作業は `AGENTS.md` を読んだ後、`docs/README.md` から依頼に必要な最小限の文書へ進んでください。
 
 ## 開発
 

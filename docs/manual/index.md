@@ -10,12 +10,13 @@ AirGuard v2 は、警備業務に特化したデータ管理・スタッフ運�
 ### はじめに
 
 - [サインイン・アカウント登録](./auth.md)
+- [ダッシュボード](./dashboard.md)
 
 ### 管制業務
 
-- [(Beta) 稼働予定管理](./operation-schedules.md)
+- [(Beta) 稼働予定管理](./control-operation.md#beta-稼働予定管理)
 - [配置管理](./control-operation.md#配置管理)
-- [上下番確定処理](./operation-results-generator.md)
+- [上下番確定処理](./control-operation.md#上下番確定処理)
 
 ### 稼働実績管理
 
@@ -23,8 +24,8 @@ AirGuard v2 は、警備業務に特化したデータ管理・スタッフ運�
 
 ### 請求管理
 
-- [稼働請求管理](./billings-operations.md)
-- [取引先請求管理](./billings-customers.md)
+- [稼働請求管理](./billings.md#稼働請求管理稼働請求一覧)
+- [取引先請求管理](./billings.md#取引先請求管理取引先請求一覧)
 
 ### マスタ管理
 
