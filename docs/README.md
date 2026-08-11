@@ -33,6 +33,7 @@
 | [ADR](decisions/README.md) | 重要判断の状態と理由 |
 | [運用・開発手順](operations.md) | 実施可能、計画中、利用不可の運用と復旧手順 |
 | [画面マニュアル](manual/index.md) | 管理者が利用する画面操作 |
+| [実装調査索引](implementation/README.md) | コードから確認した実装事実、未確認範囲、将来対応、確認待ち事項。確認済み要件の正本ではない |
 | [変更履歴](../CHANGELOG.md) | 利用者・仕様・セキュリティ・運用に見える変更 |
 | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/` | 参考・履歴。現行仕様と競合する場合は正本ではない |
 
