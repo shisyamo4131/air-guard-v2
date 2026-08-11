@@ -46,3 +46,6 @@ saved-data
 !/definitions/*.md
 !/docs/
 !/docs/**/*.md
+!/governance/
+!/governance/*.md
+!/governance/*.toml

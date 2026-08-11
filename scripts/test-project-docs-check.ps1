@@ -1,7 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $sourceRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("airguard-governance-" + [guid]::NewGuid().ToString('N'))
-$checker = Join-Path $PSScriptRoot 'check-governance.ps1'
+$checker = Join-Path $PSScriptRoot 'check-project-docs.ps1'
 
 function Invoke-Checker([bool]$ShouldPass, [string]$CaseName) {
     $previousErrorAction = $ErrorActionPreference
@@ -18,7 +18,7 @@ function Invoke-Checker([bool]$ShouldPass, [string]$CaseName) {
 
 try {
     New-Item -ItemType Directory -Path $fixtureRoot | Out-Null
-    foreach ($directory in @('docs', '.codex', 'scripts')) {
+    foreach ($directory in @('docs', 'governance', '.codex', 'scripts')) {
         Copy-Item -LiteralPath (Join-Path $sourceRoot $directory) -Destination (Join-Path $fixtureRoot $directory) -Recurse
     }
     foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -File -Filter '*.md') {

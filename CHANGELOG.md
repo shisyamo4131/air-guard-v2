@@ -6,6 +6,7 @@
 
 ### Added
 
+- 共通managed governance 1.0.0とAirGuardV2所有の`governance/project-rules.md`を分離し、lock、renderer、managed validator、生成`AGENTS.md`を再構築する方針を追加した。
 - 作業目的別の文書案内、正式運用準備ロードマップ、証拠に基づく加重進捗管理を追加した。
 - Codexのイベント駆動チェックポイント、300 MiBでのセッション引継ぎ、再起動後のコールバック検証手順を追加した。
 - 文書リンク、索引、ADR状態、ロードマップ計算、TOMLを確認するローカルガバナンス検証を追加した。
@@ -21,6 +22,8 @@
 
 ### Changed
 
+- AirGuardV2固有の文書・ADR・roadmap・TOML検査を`check-project-docs.ps1`へ改名し、managed validatorと所有・ファイル名を分離した。
+- Codexの起動経路を生成`AGENTS.md`、`governance/project-rules.md`、task-routedな`docs/README.md`の順へ変更した。
 - 実装・修正・改修を機能単位ブランチで行い、利用者の動作確認と明示承認後にだけマージコミットで `main` へ統合する運用を採用した。
 - 関連5リポジトリは事前承認なく読み取り可能とし、各役割と、変更時の影響確認・個別承認境界を明確化した。
 - Codex専門タスクは差分と検証を報告し、コーディネーターが受入れたファイルだけをコミット・統合する運用へ明確化した。

@@ -123,7 +123,13 @@ $env:NODE_USE_SYSTEM_CA = "1"
 npm run install:schemas@dev
 ```
 
-公開元でのバージョン作成・タグ push・Trusted Publishing の詳細は `AGENTS.md` に従います。ローカルから `npm publish` しません。
+公開元でのバージョン作成・タグ push・Trusted Publishing は`governance/project-rules.md`と次の手順に従います。ローカルから`npm publish`しません。
+
+1. `air-guard-v2-schemas`のbranchとworktreeを確認し、変更をcommitする。
+2. `npm version prerelease --preid=dev`を実行する。
+3. current branchと作成された`v*-dev.*` tagを個別にpushする。`--follow-tags`は使用しない。
+4. `.github/workflows/publish.yml`のTrusted Publishingと`npm view @shisyamo4131/air-guard-v2-schemas@dev version`で公開結果を確認する。
+5. pushだけが失敗した場合は`npm version`を再実行せず、既存commit・tagを確認して失敗したpushだけを再開する。
 
 ## 出力と成功確認
 
@@ -214,8 +220,19 @@ powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -S
 
 ## ガバナンス文書の確認
 
+Managed governanceの再生成と検証:
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1
+powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath .
+powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath .
+```
+
+`governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`は直接編集せず、承認済みのskill syncで更新します。project固有規則は`governance/project-rules.md`を更新し、rendererとvalidatorを上記の明示path引数で実行します。
+
+Project-owned文書・設定の検証:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1
 ```
 
 相対MarkdownリンクとGitHub互換見出しアンカー、重要文書の索引到達性、ADR索引と本文の状態、ロードマップの重み・得点・無部分加点・索引進捗を確認します。Node.jsから正式なTOMLパーサーを使用し、`.codex/config.toml` と専門エージェントTOMLの構文、必須キー、型、名前、sandbox modeを確認します。アプリケーションのビルドや外部接続は行いません。
@@ -223,7 +240,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1
 検証器自体の陰性試験:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/test-governance-check.ps1
+powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 ```
 
 ## エラーと復旧

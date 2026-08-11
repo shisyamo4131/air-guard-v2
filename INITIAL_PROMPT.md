@@ -5,12 +5,12 @@ AirGuardV2 の作業を開始してください。応答は日本語で行って
 作業前に、次の順で内容を確認してください。
 
 1. `AGENTS.md`
-2. `docs/README.md` で今回の作業経路を選ぶ
-3. `docs/specification.md`
-4. `docs/roadmaps/README.md` と関連ロードマップ
-5. `docs/decisions/README.md` と今回に関連する ADR
-6. `CHANGELOG.md`
-7. 関連コード、Firebase ルール、設定、テスト、`docs/manual/`
+2. `governance/project-rules.md`
+3. `docs/README.md` で今回の作業経路を選ぶ
+4. 作業経路が指定する仕様、ロードマップ、ADR、運用文書
+5. 関連コード、Firebase ルール、設定、テスト、`docs/manual/`
+
+タスク作成、交代、Codex再起動後の最初の報告で、common governance versionとactive instruction sourcesを示してください。
 
 最初に、今回関係する確認済み仕様、現在の開発段階、未決事項、リポジトリとの不整合を簡潔に整理してください。質問や検討を仕様変更の承認として扱わず、正式な変更依頼がない限りコードを変更しないでください。
 

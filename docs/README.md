@@ -7,9 +7,10 @@
 ## 作業の開始順序
 
 1. ルートの `AGENTS.md` を読む。
-2. 下表から作業種別を選び、必要最小限の文書を読む。
-3. 関連するロードマップと ADR を確認する。
-4. 変更前に、関連コード、ルール、設定、テスト、運用証拠を照合する。
+2. `governance/project-rules.md` を読む。
+3. 下表から作業種別を選び、必要最小限の文書を読む。
+4. 関連するロードマップと ADR を確認する。
+5. 変更前に、関連コード、ルール、設定、テスト、運用証拠を照合する。
 
 ## 作業別ルーティング
 
@@ -42,4 +43,5 @@
 - 重要文書を追加・改名・移動・廃止した場合、この案内または該当索引とリンクを同じ変更で更新する。
 - 確認済み、未確認、提案、証拠、履歴を混同しない。
 - ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
-- `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
+- `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
+- `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath .` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。

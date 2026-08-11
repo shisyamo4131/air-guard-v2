@@ -1,9 +1,3 @@
-# AGENTS.md
-
-<!-- GENERATED FILE. DO NOT EDIT DIRECTLY. -->
-<!-- Common governance version: 1.0.0 -->
-<!-- Common governance SHA-256: 8e2f52bb790d3f2dbf35fb50f41f3d36adbaeaa0077713f48dd03cc8d1afefc0 -->
-<!-- Edit project-specific rules in governance/project-rules.md, then validate. -->
 <!-- common-governance-version: 1.0.0 -->
 # Common Project Governance Contract
 
@@ -112,7 +106,3 @@ Before completion, verify and report:
 - the user's next action.
 
 Do not claim completion while required work, validation, integration, documentation, or approval remains outstanding.
-
-## Project-specific Rules
-
-Before any write, delegation, Git mutation, external action, implementation, or completion claim, read `governance/project-rules.md` and the task-routed authoritative documents it identifies. Project-specific rules may be stricter than the common contract but must not weaken or contradict it.

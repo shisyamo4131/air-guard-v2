@@ -38,7 +38,7 @@
 
 | マイルストーン | 設計・判断 | 実装 | テスト・レビュー・環境受入れ |
 |---|---|---|---|
-| ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md) | 文書・`.codex/` 設定 | `scripts/check-governance.ps1` |
+| ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
 | 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md) | Rules、認証・管理者処理 | セキュリティレビュー、Emulator検証（未完了） |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |

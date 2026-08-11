@@ -1,0 +1,5 @@
+schema_version = "1"
+common_governance_version = "1.0.0"
+common_governance_sha256 = "8e2f52bb790d3f2dbf35fb50f41f3d36adbaeaa0077713f48dd03cc8d1afefc0"
+renderer_sha256 = "c9b86899c233f484ff94ad8b49cef62e38d21668301ea38ea2837eac34690615"
+validator_sha256 = "5ecd6e3d6aab6b22065de603aee8215dfeca129a785f18a10c77cfdf2fdc4c3d"

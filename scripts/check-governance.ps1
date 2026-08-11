@@ -1,182 +1,68 @@
+[CmdletBinding()]
 param(
-    [string]$RepositoryRoot = (Join-Path $PSScriptRoot '..')
+    [string]$ProjectPath = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path,
+    [int]$MaxAgentsBytes = 32768
 )
 
 $ErrorActionPreference = 'Stop'
-$repoRoot = (Resolve-Path -LiteralPath $RepositoryRoot).Path
-$errors = [System.Collections.Generic.List[string]]::new()
 
-function Add-CheckError([string]$Message) {
-    $errors.Add($Message)
-}
+$resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
+$governanceRoot = Join-Path $resolvedProject 'governance'
+$lockPath = Join-Path $governanceRoot 'governance.lock.toml'
+$commonPath = Join-Path $governanceRoot 'common-governance.md'
+$projectRulesPath = Join-Path $governanceRoot 'project-rules.md'
+$agentsPath = Join-Path $resolvedProject 'AGENTS.md'
+$rendererPath = Join-Path $resolvedProject 'scripts\render-governance.ps1'
+$validatorPath = Join-Path $resolvedProject 'scripts\check-governance.ps1'
 
-$requiredFiles = @(
-    'AGENTS.md', 'README.md', 'CHANGELOG.md', 'INITIAL_PROMPT.md',
-    'docs/README.md', 'docs/specification.md', 'docs/operations.md',
-    'docs/decisions/README.md', 'docs/roadmaps/README.md',
-    '.codex/config.toml'
-)
-foreach ($relativePath in $requiredFiles) {
-    if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $relativePath))) {
-        Add-CheckError "Missing required file: $relativePath"
+foreach ($requiredPath in @($lockPath, $commonPath, $projectRulesPath, $agentsPath, $rendererPath, $validatorPath)) {
+    if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
+        throw "Required governance file is missing: $requiredPath"
     }
 }
 
-$markdownFiles = @(Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Filter '*.md' |
-    Where-Object { $_.FullName -notmatch '\\(node_modules|\.agents|\.codex|\.nuxt|\.output|dist|\.git|\.governance-backup)\\' })
-$linkPattern = [regex]'\[[^\]]+\]\((?<target>[^)]+)\)'
-$linkGraph = @{}
-
-function Get-MarkdownAnchorSet([string]$FilePath) {
-    $anchors = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-    $headingCounts = @{}
-    foreach ($line in Get-Content -LiteralPath $FilePath -Encoding UTF8) {
-        if ($line -notmatch '^#{1,6}\s+(?<heading>.+?)\s*#*\s*$') { continue }
-        $heading = $Matches['heading'] -replace '<[^>]+>', '' -replace '[`*_~]', ''
-        $slug = $heading.ToLowerInvariant() -replace '\s+', '-' -replace '[^\p{L}\p{Nd}_-]', '' -replace '-+', '-'
-        $slug = $slug.Trim('-')
-        if ([string]::IsNullOrWhiteSpace($slug)) { continue }
-        if ($headingCounts.ContainsKey($slug)) {
-            $headingCounts[$slug]++
-            $slug = "$slug-$($headingCounts[$slug])"
-        } else {
-            $headingCounts[$slug] = 0
-        }
-        [void]$anchors.Add($slug)
+function Get-LockValue {
+    param([string]$Name)
+    $pattern = '^%s\s*=\s*"([^"]+)"\s*$' -replace '%s', [regex]::Escape($Name)
+    $match = Select-String -LiteralPath $lockPath -Pattern $pattern | Select-Object -First 1
+    if (-not $match) {
+        throw "Missing lock value: $Name"
     }
-    return $anchors
+    return $match.Matches[0].Groups[1].Value.ToLowerInvariant()
 }
 
-foreach ($file in $markdownFiles) {
-    $content = Get-Content -LiteralPath $file.FullName -Raw -Encoding UTF8
-    $sourceRelative = $file.FullName.Substring($repoRoot.Length + 1).Replace('\', '/')
-    $linkGraph[$sourceRelative] = [System.Collections.Generic.List[string]]::new()
-    foreach ($match in $linkPattern.Matches($content)) {
-        $target = $match.Groups['target'].Value.Trim().Trim('<', '>')
-        if ($target -match '^(https?://|mailto:|#)') { continue }
-        if ($target -match '[`"'']') { continue }
-        $targetParts = $target -split '#', 2
-        $pathPart = $targetParts[0]
-        $anchorPart = if ($targetParts.Count -eq 2) { [uri]::UnescapeDataString($targetParts[1]).ToLowerInvariant() } else { $null }
-        if ([string]::IsNullOrWhiteSpace($pathPart)) { continue }
-        $decodedPath = [uri]::UnescapeDataString($pathPart)
-        $resolvedTarget = Join-Path $file.DirectoryName $decodedPath
-        if (-not (Test-Path -LiteralPath $resolvedTarget)) {
-            Add-CheckError "Broken link in $($file.FullName.Substring($repoRoot.Length + 1)): $target"
-            continue
-        }
-        $targetItem = Get-Item -LiteralPath $resolvedTarget
-        if ($targetItem.PSIsContainer) {
-            $resolvedTarget = Join-Path $targetItem.FullName 'README.md'
-            if (-not (Test-Path -LiteralPath $resolvedTarget)) { continue }
-        }
-        if ([IO.Path]::GetExtension($resolvedTarget) -ieq '.md') {
-            $targetRelative = (Resolve-Path -LiteralPath $resolvedTarget).Path.Substring($repoRoot.Length + 1).Replace('\', '/')
-            $linkGraph[$sourceRelative].Add($targetRelative)
-            if ($anchorPart) {
-                $anchors = Get-MarkdownAnchorSet $resolvedTarget
-                if (-not $anchors.Contains($anchorPart)) {
-                    Add-CheckError "Missing heading anchor in ${sourceRelative}: $target"
-                }
-            }
-        }
+$checks = [ordered]@{
+    common_governance = @($commonPath, 'common_governance_sha256')
+    renderer = @($rendererPath, 'renderer_sha256')
+    validator = @($validatorPath, 'validator_sha256')
+}
+
+foreach ($entry in $checks.GetEnumerator()) {
+    $actual = (Get-FileHash -LiteralPath $entry.Value[0] -Algorithm SHA256).Hash.ToLowerInvariant()
+    $expected = Get-LockValue -Name $entry.Value[1]
+    if ($actual -ne $expected) {
+        throw "Managed $($entry.Key) differs from governance.lock.toml. Restore it through the approved skill sync."
     }
 }
 
-$reachable = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-$queue = [System.Collections.Generic.Queue[string]]::new()
-$queue.Enqueue('docs/README.md')
-while ($queue.Count -gt 0) {
-    $current = $queue.Dequeue()
-    if (-not $reachable.Add($current)) { continue }
-    if (-not $linkGraph.ContainsKey($current)) { continue }
-    foreach ($next in $linkGraph[$current]) {
-        if (-not $reachable.Contains($next)) { $queue.Enqueue($next) }
-    }
-}
-foreach ($importantFile in $markdownFiles | Where-Object { $_.FullName.StartsWith((Join-Path $repoRoot 'docs') + '\') }) {
-    $importantRelative = $importantFile.FullName.Substring($repoRoot.Length + 1).Replace('\', '/')
-    if (-not $reachable.Contains($importantRelative)) {
-        Add-CheckError "Important documentation is not reachable from docs/README.md: $importantRelative"
-    }
+$projectRules = [IO.File]::ReadAllText($projectRulesPath)
+if ($projectRules -match '\[(Project Name|Purpose, users|Task-routed|Products, systems|Optional agents|Sensitive data|Verified commands|Roadmaps, weights|Task names)') {
+    throw 'Project rules still contain template placeholders.'
 }
 
-$decisionIndexPath = Join-Path $repoRoot 'docs/decisions/README.md'
-$decisionIndex = Get-Content -LiteralPath $decisionIndexPath -Raw -Encoding UTF8
-$decisionFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/decisions') -File -Filter '*.md' |
-    Where-Object { $_.Name -match '^\d{4}-.+\.md$' })
-foreach ($decisionFile in $decisionFiles) {
-    $body = Get-Content -LiteralPath $decisionFile.FullName -Raw -Encoding UTF8
-    $statusMatch = [regex]::Match($body, '(?m)^- [^:\r\n]+: (?<status>Accepted|Proposed|Rejected|Superseded)\r?$')
-    if (-not $statusMatch.Success) {
-        Add-CheckError "ADR status missing or invalid: $($decisionFile.Name)"
-        continue
-    }
-    $id = $decisionFile.BaseName.Substring(0, 4)
-    $indexMatch = [regex]::Match($decisionIndex, "(?m)^\| \[$id\]\([^\)]+\) \|.*\| (?<status>Accepted|Proposed|Rejected|Superseded) \|")
-    if (-not $indexMatch.Success) {
-        Add-CheckError "ADR is missing from index: $($decisionFile.Name)"
-    } elseif ($indexMatch.Groups['status'].Value -ne $statusMatch.Groups['status'].Value) {
-        Add-CheckError "ADR status mismatch for ${id}: body=$($statusMatch.Groups['status'].Value), index=$($indexMatch.Groups['status'].Value)"
-    }
+& $rendererPath -ProjectPath $resolvedProject -Check | Out-Null
+
+$agentsBytes = (Get-Item -LiteralPath $agentsPath).Length
+if ($agentsBytes -gt $MaxAgentsBytes) {
+    throw "Generated AGENTS.md is $agentsBytes bytes, above the configured maximum of $MaxAgentsBytes bytes."
 }
 
-$roadmapIndex = Get-Content -LiteralPath (Join-Path $repoRoot 'docs/roadmaps/README.md') -Raw -Encoding UTF8
-$roadmapFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/roadmaps') -File -Filter '*.md' |
-    Where-Object { $_.Name -ne 'README.md' })
-foreach ($roadmapFile in $roadmapFiles) {
-    $body = Get-Content -LiteralPath $roadmapFile.FullName -Raw -Encoding UTF8
-    $progressMatch = [regex]::Match($body, '(?m)^- [^:\r\n]+: (?<progress>\d+)%\r?$')
-    if (-not $progressMatch.Success) {
-        Add-CheckError "Roadmap progress missing: $($roadmapFile.Name)"
-        continue
-    }
-    $rows = [regex]::Matches($body, '(?m)^\| (?!\*\*)(?<name>[^|]+) \| (?<weight>\d+) \| (?<earned>\d+) \| (?<status>[^|]+) \|')
-    $weight = 0
-    $earned = 0
-    foreach ($row in $rows) {
-        $rowWeight = [int]$row.Groups['weight'].Value
-        $rowEarned = [int]$row.Groups['earned'].Value
-        $rowStatus = $row.Groups['status'].Value.Trim()
-        $weight += $rowWeight
-        $earned += $rowEarned
-        if ($rowEarned -gt $rowWeight) { Add-CheckError "Roadmap earned exceeds weight in $($roadmapFile.Name): $($row.Groups['name'].Value.Trim())" }
-        if ($rowStatus -like 'Completed*' -and $rowEarned -ne $rowWeight) { Add-CheckError "Completed roadmap milestone must earn full weight in $($roadmapFile.Name): $($row.Groups['name'].Value.Trim())" }
-        if ($rowStatus -notlike 'Completed*' -and $rowEarned -ne 0) { Add-CheckError "Incomplete roadmap milestone must earn zero in $($roadmapFile.Name): $($row.Groups['name'].Value.Trim())" }
-    }
-    if ($weight -ne 100) { Add-CheckError "Roadmap weights do not total 100 in $($roadmapFile.Name): $weight" }
-    if ($earned -ne [int]$progressMatch.Groups['progress'].Value) { Add-CheckError "Roadmap earned points do not match progress in $($roadmapFile.Name): earned=$earned" }
-    $escapedName = [regex]::Escape($roadmapFile.Name)
-    $indexMatch = [regex]::Match($roadmapIndex, "(?m)^\| .* \| (?<progress>\d+)% \| .* \| \[[^\]]+\]\($escapedName\) \|")
-    if (-not $indexMatch.Success) {
-        Add-CheckError "Roadmap is missing from index: $($roadmapFile.Name)"
-    } elseif ([int]$indexMatch.Groups['progress'].Value -ne [int]$progressMatch.Groups['progress'].Value) {
-        Add-CheckError "Roadmap index progress mismatch: $($roadmapFile.Name)"
-    }
+[pscustomobject]@{
+    project_path = $resolvedProject
+    common_governance_version = (Get-LockValue -Name 'common_governance_version')
+    agents_bytes = $agentsBytes
+    max_agents_bytes = $MaxAgentsBytes
+    managed_hashes_current = $true
+    generated_agents_current = $true
+    project_rules_present = $true
 }
-
-$tomlFiles = @((Join-Path $repoRoot '.codex/config.toml')) +
-    @(Get-ChildItem -LiteralPath (Join-Path $repoRoot '.codex/agents') -File -Filter '*.toml' | Select-Object -ExpandProperty FullName)
-$tomlValidator = Join-Path $PSScriptRoot 'check-toml.mjs'
-$nodeCommand = Get-Command node -ErrorAction SilentlyContinue
-$nodeExecutable = if ($nodeCommand) { $nodeCommand.Source } else { Join-Path $env:ProgramFiles 'nodejs\node.exe' }
-if (-not (Test-Path -LiteralPath $nodeExecutable)) {
-    Add-CheckError 'Node.js was not found; TOML validation cannot run.'
-} else {
-    $previousErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $tomlOutput = & $nodeExecutable $tomlValidator @tomlFiles 2>&1
-    $tomlExitCode = $LASTEXITCODE
-    $ErrorActionPreference = $previousErrorAction
-    $tomlOutput | ForEach-Object { Write-Output $_ }
-    if ($tomlExitCode -ne 0) {
-        Add-CheckError 'TOML parser validation failed.'
-    }
-}
-
-if ($errors.Count -gt 0) {
-    $errors | ForEach-Object { Write-Output "ERROR: $_" }
-    exit 1
-}
-
-Write-Output "Governance validation passed: $($markdownFiles.Count) Markdown files, $($decisionFiles.Count) ADRs, $($roadmapFiles.Count) roadmaps, $($tomlFiles.Count) TOML files."
