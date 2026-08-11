@@ -6,6 +6,35 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-NormalizedLfSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sourceBytes = [IO.File]::ReadAllBytes($Path)
+    $normalizedBytes = [IO.MemoryStream]::new()
+    try {
+        for ($index = 0; $index -lt $sourceBytes.Length; $index++) {
+            if ($sourceBytes[$index] -eq 13) {
+                if (($index + 1) -lt $sourceBytes.Length -and $sourceBytes[$index + 1] -eq 10) {
+                    $index++
+                }
+                $normalizedBytes.WriteByte(10)
+            } else {
+                $normalizedBytes.WriteByte($sourceBytes[$index])
+            }
+        }
+
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($normalizedBytes.ToArray())
+            return ([BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+        } finally {
+            $sha256.Dispose()
+        }
+    } finally {
+        $normalizedBytes.Dispose()
+    }
+}
+
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $governanceRoot = Join-Path $resolvedProject 'governance'
 $lockPath = Join-Path $governanceRoot 'governance.lock.toml'
@@ -38,7 +67,7 @@ $checks = [ordered]@{
 }
 
 foreach ($entry in $checks.GetEnumerator()) {
-    $actual = (Get-FileHash -LiteralPath $entry.Value[0] -Algorithm SHA256).Hash.ToLowerInvariant()
+    $actual = Get-NormalizedLfSha256 -Path $entry.Value[0]
     $expected = Get-LockValue -Name $entry.Value[1]
     if ($actual -ne $expected) {
         throw "Managed $($entry.Key) differs from governance.lock.toml. Restore it through the approved skill sync."

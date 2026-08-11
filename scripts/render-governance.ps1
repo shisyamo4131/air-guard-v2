@@ -6,6 +6,41 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Get-NormalizedLfText {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    return [IO.File]::ReadAllText($Path).Replace("`r`n", "`n").Replace("`r", "`n")
+}
+
+function Get-NormalizedLfSha256 {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $sourceBytes = [IO.File]::ReadAllBytes($Path)
+    $normalizedBytes = [IO.MemoryStream]::new()
+    try {
+        for ($index = 0; $index -lt $sourceBytes.Length; $index++) {
+            if ($sourceBytes[$index] -eq 13) {
+                if (($index + 1) -lt $sourceBytes.Length -and $sourceBytes[$index + 1] -eq 10) {
+                    $index++
+                }
+                $normalizedBytes.WriteByte(10)
+            } else {
+                $normalizedBytes.WriteByte($sourceBytes[$index])
+            }
+        }
+
+        $sha256 = [Security.Cryptography.SHA256]::Create()
+        try {
+            $hashBytes = $sha256.ComputeHash($normalizedBytes.ToArray())
+            return ([BitConverter]::ToString($hashBytes)).Replace('-', '').ToLowerInvariant()
+        } finally {
+            $sha256.Dispose()
+        }
+    } finally {
+        $normalizedBytes.Dispose()
+    }
+}
+
 $resolvedProject = (Resolve-Path -LiteralPath $ProjectPath).Path
 $governanceRoot = Join-Path $resolvedProject 'governance'
 $commonPath = Join-Path $governanceRoot 'common-governance.md'
@@ -31,12 +66,12 @@ function Get-LockValue {
 
 $commonVersion = Get-LockValue -Name 'common_governance_version'
 $lockedHash = Get-LockValue -Name 'common_governance_sha256'
-$actualHash = (Get-FileHash -LiteralPath $commonPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$actualHash = Get-NormalizedLfSha256 -Path $commonPath
 if ($actualHash -ne $lockedHash.ToLowerInvariant()) {
     throw 'Managed common governance differs from governance.lock.toml. Run the approved skill sync instead of editing it directly.'
 }
 
-$common = [IO.File]::ReadAllText($commonPath).TrimEnd()
+$common = (Get-NormalizedLfText -Path $commonPath).TrimEnd()
 $newline = "`n"
 $header = @(
     '# AGENTS.md',
@@ -61,7 +96,7 @@ if ($Check) {
     if (-not (Test-Path -LiteralPath $agentsPath -PathType Leaf)) {
         throw "Generated AGENTS.md is missing: $agentsPath"
     }
-    $actual = [IO.File]::ReadAllText($agentsPath).Replace("`r`n", "`n")
+    $actual = (Get-NormalizedLfText -Path $agentsPath)
     if ($actual -ne $expected) {
         throw 'AGENTS.md is stale or was edited directly. Run scripts/render-governance.ps1 after an approved managed update.'
     }
