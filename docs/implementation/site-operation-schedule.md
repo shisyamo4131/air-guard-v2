@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-023
-- 最終確認日: 2026-08-11（SPEC-DEEP-015で配置管理component本文、SPEC-DEEP-031でOperationSchedules component本文を再確認）
+- 対象セグメント: SPEC-SEG-023、SPEC-DEEP-036、SPEC-DEEP-037、SPEC-DEEP-038、SPEC-DEEP-039b、SPEC-DEEP-041
+- 最終確認日: 2026-08-12（SPEC-DEEP-015で配置管理component本文、SPEC-DEEP-031でOperationSchedules component本文、SPEC-DEEP-036〜037でSiteOperationSchedule component本文を再確認）
 - 根拠ファイル: `pages/operation-schedules/index.vue`、`components/SiteOperationSchedule/**`、`components/SiteOperationSchedules/**`、`components/Arrangements/Manager/useIndex.js`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`useSiteOperationScheduleDuplicator.js`、range data layer、`firestore.rules`、schemas `SiteOperationSchedule.js`、`SiteOperationScheduleDetail.js`、直接のArrangementNotification/OperationResult境界
 
 ## 入口・権限
@@ -108,3 +108,38 @@ Schedule/Arrangement 2pageの公開契約とresponsive・manager委譲境界のf
 - ArrangementNotification/OperationResult内部、OperationResult削除からschedule unlockの詳細。
 - worker選択UIの全候補制約、従業員の重複勤務検知、calendar library挙動、security report。
 - Rules/Emulator/ブラウザ/実データ、transaction retry時の実測、必要index。
+
+## effective worker・Card・CustomInput追加確認（SPEC-DEEP-036）
+
+- `effectiveWorker`は通知側の`false`をnullish fallbackで保持し、実効OJTは0人、従業員は1人、外注amountは有限非負値だけを採用する。null/空白/不正値は1、数値・文字列の0は0として扱う。通知側のoverride対象は`isOjt`等で、外注amountはschedule worker値だけを読む。
+- Cardの不足/超過iconはcallerが渡す実効配置人数を使えるが、必要人数avatarの色は常に`schedule.isPersonnelShortage/isPersonnelSurplus`を使う。同じcard内で通知反映後のiconとschedule元値のavatar色が食い違い得る。時間labelは開始・終了だけで翌日表示を持たない。
+- Cardは親scheduleを内部instanceへdeep watchで再初期化し、slot更新値をそのまま`update:schedule`へemitする。保存失敗はapplication actionが吸収し、version/dirty conflict/rollbackはこのcomponentにない。実績作成済みでも複製と警備日報actionは有効で、通知・編集だけが`isEditable`に従う。
+- CustomInputのSite変更watchは変更時点の`cachedSites`だけを同期参照し、未cacheならfetch完了を待たず、旧securityTypeをclearしない。後からcacheが埋まってもwatchは再実行されないため、別SiteのsecurityTypeを保持し得る。`useDefaults`のcomponent名は`OperationResultCustomInput`で、Schedule用default namespaceと一致しない。
+
+## Duplicator・ListItem・Manager・Selector・Table追加確認（SPEC-DEEP-037）
+
+- DuplicatorはAirItemManagerのcreate/update/delete入口をそのまま公開し、複製日配列をVDatePickerからemitするだけで、件数・重複・元日・権限・lockはcomponent内で検査しない。制約はcaller/schemaへ委譲される。
+- ListItemの「配置人数」は`workers.length`で、OJT除外や外注amountを反映する実効配置人数と一致しない。必要人数判定と同じ予定を別componentで異なる人数として表示し得る。
+- Managerは`operationResultId`付き予定をdisableUpdate/deleteへ渡すが、Air managerはdisable error後もcallbackを続けるため操作guardにならない。親docのdeep更新はinternalDocを再初期化し、開いているdraftとのversion/conflict契約を持たない。
+- Selectorはnullを含む`siteId`変更ごとにfetchを呼び、missing/失敗時はIDまたはloading表示へ畳み込む。編集・複製・新規作成buttonにpermission、`isEditable`、loading、single-flightがなく、row keyはindexである。`prepend-list-item`、`list-item-title`、`list-item-subtitle` slotを子へ渡そうとするが、ListItem側はappendしか公開しないため3 slotは到達しない。
+- TableのcommentはcacheにSiteがなければ仮登録扱いとするが、実装はoptional accessの`undefined`をfalse扱いし、通常branchの`loading...`へ進む。missing、permission failure、fetch中、実際の仮登録を明示的な状態として分離しない。
+
+## Worker Tag・Detail Manager・Calendar追加確認（SPEC-DEEP-038）
+
+- Worker Tagは資格・OJTについて通知側の`false`も保持するnullish resolverを使い、OJT iconと連勤警告にaccessible nameを付ける。一方、表示時刻は`actualStartTime || worker.startTime`、`actualEndTime || worker.endTime`で解決し、空文字を明示値ではなく予定値fallbackとして扱うため、共有propertyのnullish優先契約と一致しない。
+- Tagの編集・削除・drag・通知操作は`schedule.isEditable`へ従うが、これはclient instance上の表示guardである。`schedule`と`worker` propにはschema instance validatorがなく、公開eventもactor・tenantを検証しない。
+- WorkerDetailManagerは公開`toCreate/toUpdate/toDelete`からschedule lockを再検査せず、先に`internalSchedule`へworkerを追加・変更・削除してからfull updateする。update失敗時の明示rollback/refetchがなく、loading解除だけを保証する。下位Air managerのdisable/single-flight問題も継承する。
+- Detail CustomInputは時刻、翌日開始、休憩、資格、OJTを編集するが、`disabled`を独立propとして強制せず生成attrsへ依存する。AirTimePickerInputのattr routing問題によりreadonly/disabledが実入力へ届かない可能性がある。
+- SiteOperationSchedules Calendarは親値をlocal refへ同期し、month rangeとevent itemをemitする。Managerは各docの`toEvent()`を無条件実行し、operationResultId付き予定のupdate/deleteをAir managerのdisableへ委譲するため、公開method経路ではlock guardにならない。現場詳細pageは`sites:read`だけで同ManagerのCRUDへ到達する。
+
+## root schedule composables追加確認（SPEC-DEEP-039b）
+
+- `useSetRegularTime`は選択siteIdがあっても`useFetch` cache未準備・取得失敗なら「現場を指定してください」と表示し、fetchをawaitしない。valid Agreementのcallbackもawaitしないため、将来async callbackへ変わると完了・error契約がずれる。
+- `useSiteOperationScheduleDuplicator._duplicate`はschema duplicate errorをcatchしてrethrowしない。Air managerのhandleUpdateはfulfilledと認識し、失敗でもsuccess emit/quitへ進み得る。default disableSubmitは0/21件をUI抑止するが、manager公開submitはdisableを内部強制しない。
+- current OperationSchedules Managerのtable/selector wrappersは値をattrsへ写すだけでactor/permission/versionを追加しない。selectorはgroupKey/date/site/shiftを無検証で受け、missing groupをempty dialogとして開く。
+
+## schedule index transform追加確認（SPEC-DEEP-041）
+
+- groupKey indexは同一keyの全scheduleを保持し、件数・複数判定・必要人数合計を返す。`requiredPersonnel`の型/有限性を検査しないため、undefinedで`NaN`、stringで連結値になり得る。missing groupKeyも同じ`undefined` entryへ集約される。
+- orderKey indexは`requiredPersonnel: 0`をentryへ定義するが加算しない。現callerはorderの存在判定だけに使うため直接表示影響はないが、公開shape/commentの不一致であり未使用field候補である。
+- `returnEmptyEntry=true`のmissing getは毎回新しい空objectを返す。callerがこれを編集してもMapへ保存されない。indexはread-only viewとして扱う必要がある。

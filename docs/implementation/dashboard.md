@@ -1,8 +1,8 @@
 # Dashboard（ログイン後トップ）（実装調査）
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-047
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-047、SPEC-DEEP-042
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/dashboard/index.vue`、直接ArrangementNotifications manager、WeeklyOperationQuantityBarとchart composables、recent arrangement/site alert/range data composables、`pageSettings.js`
 - 関連文書: `arrangement-notification-ui.md`、`site-master.md`、`site-operation-schedule.md`、`operation-result-ui-export.md`、`authorization-model.md`
 - 制約: 遷移先業務、store/auth内部、全model集計は再調査していない。
@@ -101,3 +101,9 @@ layoutはemployee rowがmobile 12列、md以上で配置4/calendar8。admin+deve
 ## 未確認範囲
 
 実UI、Firestore/Emulator、実件数・index、network/offline、chart tooltip/色accessibility、AirCalendar/SitesDataTable内部、Auth初期化race、遷移先Site/Arrangement業務本文は未確認である。query cost、render時間、mobile実機、screen reader、production role distribution、正式KPI要件も未確認である。
+
+## dashboard data layer追加確認（SPEC-DEEP-042）
+
+- `useRecentArrangements`はsetup時に`auth.employeeId`を通常値としてcaptureし、未準備ならplain `{docs: []}`を返す。後からemployeeIdが設定されても購読を開始しない。
+- `useSitesMustBeTerminated`のtodayと`useUnconfirmedSiteOperationSchedules`のcurrentDateはsetup時に一度だけ計算する。画面を開いたままJST日付を跨いでもquery境界は更新されない。
+- Site alert 2層とrecent arrangementはloading/error/retry/lastUpdatedを返さず、listener async errorを受けるcallbackもない。master cache fetchも結果をawaitしない。

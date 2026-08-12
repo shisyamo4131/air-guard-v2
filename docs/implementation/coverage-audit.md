@@ -1,10 +1,10 @@
 # Implementation coverage mechanical / review-depth audit
 
-> Current review-depth (2026-08-11): SPEC-DEEP-033 completed — A 310, B 43, C 166, D 11, E 1, Unknown 0; remaining B/C 209 files in 23 execution checkpoints. This line supersedes earlier progress counters in this historical audit text.
+> Current review-depth (2026-08-12): SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed — A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints. This line supersedes earlier progress counters in this historical audit text.
 
 - 状態: 機械監査
 - 対象チェックポイント: SPEC-AUDIT-001
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-12
 - 対象: app `pages/`、`components/`、`composables/`、`stores/`、`plugins/`、`middleware/`、`utils/`、`services/`、`functions/`、schemas `src/`
 - 根拠: `rg --files`、import/export/route symbol、既存`docs/implementation/*.md`のfile/symbol mentionとcoverage scope
 - 制約: code本文の新規深読、runtime、外部環境、実dataは行っていない。
@@ -15,9 +15,9 @@
 
 | depth | 件数 | 意味 |
 | --- | ---: | --- |
-| A Deep-reviewed | 310 | 本文、responsibility/public API、主要分岐、error/side effect、callerまで精査した証拠が明確。 |
-| B Flow-reviewed | 43 | 業務flowに必要な範囲は読んだが、file全公開契約は未確認。 |
-| C Mapped-only | 166 | 親domainへ機械対応しただけで本文精査証拠がないか曖昧。 |
+| A Deep-reviewed | 519 | 本文、responsibility/public API、主要分岐、error/side effect、callerまで精査した証拠が明確。 |
+| B Flow-reviewed | 0 | 残件なし。 |
+| C Mapped-only | 0 | 残件なし。 |
 | D Generated/config/test/asset | 11 | test route、font asset、migration、Functions package metadata。 |
 | E External boundary | 1 | package re-export境界。 |
 | Unknown | 0 | なし。 |
@@ -28,6 +28,34 @@ Aは初期6 filesにSPEC-DEEP-001〜003のFunctions 36 files、SPEC-DEEP-004のp
 SPEC-DEEP-023〜032でDailyAttendance 7、Worker/drag 14、Employee 10、certification/custom-input 7、Employees/Insurance 11、molecules 12、OperationBilling 10、OperationResult 14、OperationSchedules 11、organisms 6の計102 filesを追加でAへ昇格し、A 303 filesとなった。
 
 SPEC-DEEP-033でOutsourcer/Outsourcers components 7 filesを追加でAへ昇格し、A 310 filesとなった。
+
+SCHEMA-BASE-001、SCHEMA-MASTER-001、SCHEMA-OPS-001、SCHEMA-FINANCE-001でschema `src` 75 filesを排他的に精査し、SPEC-DEEP-046〜054の終了条件を満たす証拠としてCからAへ昇格した。package root `index.js`は531-file母数外で、別package conservationだけに含める。これによりA 385、C 91、残B/C 134 filesとなった。
+
+SPEC-DEEP-034で`components/Site/**` 9 filesを追加でAへ昇格し、A 394、C 82、残B/C 125 filesとなった。
+
+SPEC-DEEP-035でSites、SiteEmployeeHistory、SiteShiftTypeOrder、User/Users、SecurityReports components 15 filesを追加でAへ昇格し、A 409、C 67、残B/C 110 filesとなった。
+
+SPEC-DEEP-036でSiteOperationScheduleのeffective worker、Card、CustomInput 7 filesを追加でAへ昇格し、A 416、C 60、残B/C 103 filesとなった。
+
+SPEC-DEEP-037でSiteOperationScheduleのDuplicator、ListItem、Manager、RequiredPersonnel、Selector、Table 7 filesを追加でAへ昇格し、A 423、C 53、残B/C 96 filesとなった。
+
+SPEC-DEEP-038でSiteOperationScheduleのWorker Tag、WorkerDetailManager、Detail、Schedules Calendar/Manager 8 filesを追加でAへ昇格し、A 431、C 45、残B/C 88 filesとなった。
+
+SPEC-DEEP-039aでroot composables前半のauth onboarding、manager/default/constants、Customer Billing、配置指示text、かなfilter 9 filesを追加でAへ昇格し、A 440、C 36、残B/C 79 filesとなった。
+
+SPEC-DEEP-039bでroot composables後半のlogger/FCM、OperationBilling、Schedule table/selector/duplicator、Site order 9 filesを追加でAへ昇格し、A 449、C 27、残B/C 70 filesとなった。
+
+SPEC-DEEP-040で`composables/application/**`の認証、配置、請求、勤怠、schedule、system、user settings等12 filesを追加でAへ昇格し、A 461、C 15、残B/C 58 filesとなった。
+
+SPEC-DEEP-041で`composables/auth/**`、`domain/**`、`transforms/**`のCallable adapter、実績複製、勤怠/予定集計8 filesを追加でAへ昇格し、A 469、C 7、残B/C 50 filesとなった。
+
+SPEC-DEEP-042でgeneric/rangeのsubscription、Billing、勤怠、配置、dashboard queryを担うdata layer 15 filesを追加でAへ昇格し、A 484、B 28、残B/C 35 filesとなった。
+
+SPEC-DEEP-043でEmployee/Outsourcer/OperationResult/Schedule/SecurityReport/order等のdomain data layer 11 filesを追加でAへ昇格し、A 495、B 17、残B/C 24 filesとなった。
+
+SPEC-DEEP-044でmaster fetch/cache、overlay、SecurityReport Storageのshared lifecycle 11 filesを追加でAへ昇格し、A 506、B 6、残B/C 13 filesとなった。
+
+SPEC-DEEP-045a/045bでPDF、CSV、attendance、authorization、page settings、Storage、subscription、format、operation serviceの13 filesを追加でAへ昇格し、A 519、B/C 0、残execution checkpoints 0となった。これにより531 filesはA/D/Eのいずれかへ排他的に分類され、B/C/Unknownは0となった。
 
 ## 方法と分類基準
 
@@ -59,8 +87,8 @@ SPEC-DEEP-033でOutsourcer/Outsourcers components 7 filesを追加でAへ昇格�
 
 | 分類 | 件数 | 主な範囲 |
 | --- | ---: | --- |
-| Covered | 518 | legacy mechanical分類。review-depthは上表を使用する。 |
-| Partially covered | 1 | `utils/formats/util.js` 1 |
+| Covered | 519 | legacy mechanical分類。review-depthは上表を使用する。 |
+| Partially covered | 0 | なし |
 | Uncovered | 0 | なし |
 | generated-config-test-asset | 11 | `/test` 5、font 3、migration 1、Functions package metadata 2 |
 | external package boundary | 1 | `functions/schemas/index.js` package re-export |
@@ -77,7 +105,7 @@ SPEC-DEEP-033でOutsourcer/Outsourcers components 7 filesを追加でAへ昇格�
 
 ## 未被覆・部分被覆cluster
 
-未被覆clusterは0である。`utils/generateCollectingReport.js`は`collecting-report-utility.md`で、実体がcaller 0件の運転日報PDF utilityであること、input/output、browser作用、privacy/error境界まで調査した。Partially covered 1件は`utils/formats/util.js`である。`formatNumber`/`formatCurrency`の直接callerはBilling PDF・Billing table・Worker tableにあり、各domainの値源と表示は既存文書scopeに含まれる。専用format API catalogがないという分類で、CONF再照合を妨げる未調査業務clusterではない。
+未被覆・部分被覆clusterは0である。`utils/generateCollectingReport.js`は`collecting-report-utility.md`で、実体がcaller 0件の運転日報PDF utilityであること、input/output、browser作用、privacy/error境界まで調査した。`utils/formats/util.js`はSPEC-DEEP-045bで`formatNumber`/`formatCurrency`の公開契約、直接caller、validation境界を確認しCoveredへ昇格した。
 
 ## Functions・schema export
 

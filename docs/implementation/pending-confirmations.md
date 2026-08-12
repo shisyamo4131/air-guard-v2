@@ -1,7 +1,7 @@
 # 実装調査から得た要確認事項台帳
 
 - 状態: 実装調査・暫定台帳
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-12
 - 対象: `docs/implementation/*.md` と `future-actions.md` に残る、実装検証だけでは確定できないユーザー判断
 - 運用: 同一判断は既存CONFへ証拠・関連FUTを追記する。回答後はStatusをAnsweredへ変更し、Answerへ日付と回答を記録する。実装だけで確認できる未検証事項は登録しない。
 
@@ -16,6 +16,20 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - `Merge-candidate`: 17件。IDと本文は保持するが、個別には提示せず上位CONFへ統合する候補。
 - `Implementation-detail-no-user-question`: 0件。
 - `Blocked-by-uninvestigated`: 0件。
+
+## 2026-08-12 優先判断セット
+
+[2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md)を既存138件へ再照合した。実装で答えられる問題はFUTへ統合し、新しいCONFは追加しない。利用者へ提示するときは内部IDの羅列ではなく、次の7テーマを平文で一つずつ確認する。
+
+1. 誰がどのtenant・field・管理操作を実行できるか。
+2. 招待された本人であることを、いつ・何で証明するか。
+3. 請求確定後とlocked稼働を、訂正・取消・管理者修復する正式手順は何か。
+4. 何をbackupし、どの時点まで、どれだけの時間で復旧するか。
+5. 個人・勤怠・請求・通知・backup情報を誰が見て、どれだけ保持するか。
+6. 非同期処理の部分失敗、重複、順序逆転をどう検知し再実行するか。
+7. 編集中競合、error/loading、日付時刻入力、accessibilityの共通UXをどうするか。
+
+対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。既存のAnswered 43件、Open-deferred 3件、各Answer本文とStatusは変更しない。
 
 `Open` 95件は削除・Answered化しておらず、部分回答は各`Answer`のまま保持した。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
@@ -566,7 +580,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: Siteの閲覧、作成、基本情報・取引先・取極め編集、終了、archive、restoreを誰に許可するか。
 - Why needed: 配置・請求の基礎masterを改変できる主体を制限しUIとRulesを一致させるため。
 - Options and impact: read/write分離、取極め/終了/削除の個別権限、管理role限定。
-- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含む。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
+- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報、Agreement変更、終了、再有効化、archiveを含む。Customer変更の回答部分は現行仕様の変更禁止と衝突するため、正本変更までは権限があっても許可しない。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
 - Related FUT IDs: FUT-0060
 - Answer: 2026-08-11回答。`sites:read`/`sites:write`の2権限を採用し、細分化しない。`sites:write`は作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含む。archiveは理由・監査を必須とし、通常restoreは提供せず、運営operatorの緊急復旧だけに限定する。UI・Rules・Callableを一致させ、role presetから付与する。
 
@@ -574,11 +588,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
-- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。
+- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。現行仕様70行は過去請求整合のためCustomer変更を禁止しており、2026-08-11のAnswerは正本へ反映されていない。
 - Question: Customer変更をどの条件で許し、既存予定・実績・請求・埋込みCustomerをどう扱うか。
 - Why needed: tenant内の所属・請求先整合と履歴再現性を保つため。
 - Options and impact: 初回設定後固定、未稼働時のみ変更、明示的移管workflow、全履歴維持で将来分のみ変更。
-- Current provisional treatment: SiteのCustomer変更を許す。既存OperationResultの`customerId`はsnapshotとして自動変更せず、必要時だけ対象を利用者が選ぶ明示的な再適用処理を将来設ける。
+- Current provisional treatment: Answer履歴は保持するが、implementation台帳だけで現行仕様を上書きしない。別途の仕様変更承認と仕様・ADR・migration・test同期が完了するまでは、初回の仮登録解消後のCustomer変更を禁止する。
 - Related FUT IDs: FUT-0061
 - Answer: 2026-08-11回答。SiteのCustomer変更を許す。既存OperationResultの`customerId`はsnapshotであり、自動変更しない。現行コードの空updateは再同期せず、`groupKey`変更時だけ同期する。将来は明示的な「Customer/Agreement再適用」method/Callableで対象OperationResultを選択し、変更前後のCustomer/AgreementとBilling影響を表示する。発行済み請求書は除外し、actor・reason・before/afterを監査する。OperationResult update triggerはBillingを旧keyから新keyへ移動する。空updateへ隠れた意味を持たせない。
 
@@ -590,7 +604,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: 終了Siteに許す閲覧・編集・新規参照と、誤終了/再開時の再有効化条件をどうするか。
 - Why needed: 終了後の不正な新規利用と、必要な訂正・再開を区別するため。
 - Options and impact: read-only、限定訂正、管理者再開、常時編集可だが新規選択不可。
-- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。
+- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。Customer変更は現行仕様どおり許可しない。
 - Related FUT IDs: FUT-0062
 - Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。
 
@@ -811,7 +825,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-025; `user-auth-lifecycle.md`
-- Evidence: 現行は招待メールなしの仮User作成、email検索、client Auth作成、Firestore移行、claims設定で、後段失敗を自動回復しない。
+- Evidence: 現行は招待メールなしの仮User作成、email検索、client Auth作成、Firestore移行、claims設定で、後段失敗を自動回復しない。SEC-002で通常clientがemail verification前にsetupへ進めることを確認した。token email一致はmailbox所有や一回限りinvite proofにならず、第三者による仮account取得を防がない。
 - Question: 招待の通知・期限・本人確認、重複、取消、再送、失敗復旧、Auth-only accountの扱いをどう定義するか。
 - Why needed: 正しい本人だけをtenantへ参加させ、部分状態から安全に復旧するため。
 - Options and impact: one-time invite token、email事前登録継続+repair、管理者発行link、support手動復旧。
@@ -1339,7 +1353,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-039; `authorization-model.md`
-- Evidence: 6業務preset、直接permission、admin、super-user、developerが混在し、現在の分割は試作段階である。clientとserverは同じcatalogを共有しない。
+- Evidence: 6業務preset、直接permission、admin、super-user、developerが混在し、現在の分割は試作段階である。clientとserverは同じcatalogを共有しない。SEC-002とschema reviewで、同一tenant一般UserによるCompany/User/locked OperationResult write、global `admin_users` write、Storageのcross-tenant object操作、UI wildcardとRulesのadditive super-user override差を確認した。
 - Question: 正式に残すroleとpermission、各actorの操作・tenant scope、およびadmin/super-user/developerの用途・運用者・強制境界をどう定義するか。
 - Why needed: UI、Rules、Functionsを同じ最小権限matrixへ揃え、暫定roleを確定仕様として固定しないため。
 - Options and impact: preset中心、permission中心、role+scope、admin全権/限定権、developer非production、super-user緊急運用。
@@ -1375,7 +1389,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-040; `error-logging-feedback.md`
-- Evidence: errorはlogger設定によりsnackbar有無が変わり、catch後のswallow/null/rethrowが混在する。guestにsnackbarがなく、route遷移はErrorsだけclearしてMessagesを残す。
+- Evidence: errorはlogger設定によりsnackbar有無が変わり、catch後のswallow/null/rethrowが混在する。guestにsnackbarがなく、route遷移はErrorsだけclearしてMessagesを残す。UI package reviewではmanager errorがraw causeを保持し、step final validation、submit single-flight、dirty conflict、async latest-winsがないことも確認した。
 - Question: blocking/non-blocking error、成功、警告、retryをどのUIで示し、どの層がerrorを吸収・再throwし、route遷移時に何を保持するか。
 - Why needed: 失敗を成功や空dataと誤認せず、全layoutで一貫した回復導線を提供するため。
 - Options and impact: typed Result+inline、exception+global snackbar、page error boundary、toastは補助のみ、route owner付きmessage。
@@ -1387,7 +1401,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-040; `error-logging-feedback.md`
-- Evidence: consoleだけで環境filter/redaction/correlation/remote monitoringがなく、payloadやobjectを直接出す箇所がある。
+- Evidence: consoleだけで環境filter/redaction/correlation/remote monitoringがなく、payloadやobjectを直接出す箇所がある。notification FunctionsはFCM send resultに含まれるraw tokenをlogし、UI clone/managerとContextualErrorは個人・勤務・請求object全体を出し得る。Admin restoreはtemporary passwordをconsoleと平文artifactへ出す。
 - Question: productionで許可するlevel/data、mask対象、監視service、correlation context、保持期間、閲覧者、利用者への開示をどう定めるか。
 - Why needed: 個人・勤怠・請求・通知情報を保護しながら、障害を検知・追跡・監査するため。
 - Options and impact: production error/warnのみ、structured allowlist、remote監視、local console禁止、短期保持、tenant pseudonymization。
@@ -1495,7 +1509,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-043; `admin-backup-recovery.md`
-- Evidence: Admin SDKは固定catalogの一階層Firestore subcollectionと一部Auth情報だけを逐次取得し、catalog外collection、nested subcollection、Storage、Systemを含めない。単一consistent snapshotでもない。
+- Evidence: Admin SDKは固定catalogの一階層Firestore subcollectionと一部Auth情報だけを逐次取得し、catalog外collection、nested subcollection、Storage、System、Rules/index/configを含めない。Authもpassword hash、provider/MFA、session/revoke stateを含まず、単一consistent snapshotでもない。
 - Question: 正式なbackup対象、再生成可能対象、Auth/Storage/nested data、整合した復旧点、必要RPO/RTOをどう定めるか。
 - Why needed: 「完全backup」の完了条件と災害復旧後のデータ整合を検証可能にするため。
 - Options and impact: 全tenant data+Auth+Storage、業務正本だけ+派生再構築、Firestore managed export併用、短期snapshot+長期世代、RPO/RTO別tier。
@@ -1519,7 +1533,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-043; `admin-backup-recovery.md`
-- Evidence: 機微dataをlocal/Storageへ平文JSON保存し、完全復旧の仮passwordをconsoleと固定JSONへ平文出力する。SDK内に暗号化、署名、retention、secure deletionはない。
+- Evidence: 機微dataをlocal/Storageへ平文JSON保存し、完全復旧の仮passwordをconsoleと固定JSONへ平文出力する。SDK内にartifact version、checksum/signature、complete marker、暗号化、retention、secure deletion、immutable generationがない。
 - Question: artifactの保存場所、暗号化鍵、閲覧者、保持世代/期間、改変検知、仮credentialの安全な配送・期限・破棄をどう定めるか。
 - Why needed: backup自体からの大量漏えい・account takeoverと、改変artifactによるsilent corruptionを防ぐため。
 - Options and impact: managed encrypted export、customer-managed key、immutable bucket、offline encrypted copy、passwordを作らずreset/invite、one-time secret delivery。
@@ -1531,7 +1545,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-043; `admin-backup-recovery.md`
-- Evidence: Admin credential保有者がRulesを迂回し、skip-confirmationで破壊確認を省略できる。operation actor/reason、二者承認、durable audit、定期restore testはSDKにない。
+- Evidence: Admin credential保有者がRulesを迂回し、skip-confirmationで破壊確認を省略できる。claims変更、company全削除、Auth repair、restore、locked result migrationにtarget claim/company、self/last-admin、operation actor/reason、二者承認、durable audit、resume/rollback、定期restore testがない。
 - Question: PROD復旧を誰が、どの承認・maintenance・監査・検証・解除条件で実行し、どの頻度でrestore drillするか。
 - Why needed: 誤環境/誤tenantへの破壊操作と、未検証backupを緊急時に初めて使うriskを下げるため。
 - Options and impact: break-glass二者承認、CI/CD限定service identity、change ticket必須、isolated restore drill、検証完了までmaintenance保持。
@@ -1555,7 +1569,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056; `cloud-functions-catalog.md`、`callable-authorization.md`、`super-user-operations-ui.md`
-- Evidence: sign-up前用途を含む5 callableが未認証で、rebuildAllHistoriesも任意companyIdを受ける。super-user UIはcurrent companyIdを送るだけでserver guardはなく、隣接SecurityReport rebuildだけauth+isSuperUserを強制する。auth-v2ではdisable/enableがcaller role/tenantを検証せず対象Auth claimのcompanyを操作し、changeAdminUserは同社pathへ限定するがcaller adminを確認しない。createAdminAccountも認証のみで既存所属を検証しない。pre-registrationは未認証でcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limit宣言はなく、Users/Companies Rulesも同社一般Userへ全field writeを許す。
+- Evidence: sign-up前用途を含む5 callableが未認証で、rebuildAllHistoriesも任意companyIdを受ける。super-user UIはcurrent companyIdを送るだけでserver guardはなく、隣接SecurityReport rebuildだけauth+isSuperUserを強制する。auth-v2ではdisable/enableがcaller role/tenantを検証せず対象Auth claimのcompanyを操作し、changeAdminUserは同社pathへ限定するがcaller adminを確認しない。createAdminAccountも認証のみで既存所属を検証しない。pre-registrationは未認証でcompanyId/displayName/roles/tempUserIdを返す。SEC-002でこれらのsource chainを再現可能な入口として確認した。App Check/rate limit宣言はなく、Users/Companies Rulesも同社一般Userへ全field writeを許す。
 - Question: 各callableを匿名、認証User、company admin、super-userの誰に許可し、tenant一致、App Check、rate limit、列挙防止をどう強制するか。
 - Why needed: signup UXを維持しつつ、他社操作、管理権限昇格、個人情報列挙、quota abuseを防ぐため。
 - Options and impact: anonymous最小応答+App Check、authenticated onboarding token、admin/super-user guard、server-generated invitation、per-IP/UID quota。
@@ -1567,7 +1581,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-044; `cloud-functions-catalog.md`
-- Evidence: global region/Nodeと1 timeout以外のruntime optionをほぼ明示せず、scheduled/customer syncはerrorを吸収する。dedupe、DLQ、correlation、manual replay契約は入口にない。
+- Evidence: global region/Nodeと1 timeout以外のruntime optionをほぼ明示せず、scheduled/customer syncはerrorを吸収する。OperationResult同期はBilling、DailyAttendance、DailyOperationByEmployee、SiteEmployeeHistoryを別々に順次更新し、後段失敗で前段だけが残る。dedupe、event revision、DLQ、correlation、cross-family reconcile、manual replay契約は入口にない。
 - Question: trigger/callable/scheduled別にtimeout、memory、concurrency、instances、retry、idempotency、alert、手動再実行、成功条件をどう定めるか。
 - Why needed: 負荷と費用を制御し、部分失敗を検知・安全に再処理し、重複副作用を防ぐため。
 - Options and impact: no-retry+durable queue、bounded retry+ledger、scheduled per-task result、DLQ/replay、function class別標準profile。

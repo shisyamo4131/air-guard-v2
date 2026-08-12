@@ -1,5 +1,12 @@
 # DailyAttendance集約値の勤怠CSV出力利用の実装調査
 
+## Attendance/CSV utility最終確認（SPEC-DEEP-045a/045b）
+
+- `createAttendancePunchRows`はbrowser local timeのDate getterで出力値を作り、JSTを明示しない。breakMinutesが勤務時間を超える場合もclamp/rejectせず、勤務区間外へ休憩開始・終了がはみ出し得る。
+- 非有限break値はInvalid Dateを作り、後段の区間mergeで落ちると休憩なしの行へ縮退し得る。明細間gapは全体を休憩として出力し、overlapの拒否はこのutility自身にはない。
+- `exportAttendancePunchesCsv`はcomma/quote/改行をescapeするが、先頭`=,+,-,@`をneutralizeしない。従業員code/nameがspreadsheet式として解釈される可能性があり、OperationResult CSVと同じformula対策境界を持つ。
+- Blob/download処理は同期例外のuser feedbackを持たず、filenameの日付はbrowser local timeである。
+
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-014 — DailyAttendance集約値のfreee/勤怠出力利用、SPEC-DEEP-011、SPEC-DEEP-023
 - 最終確認日: 2026-08-11

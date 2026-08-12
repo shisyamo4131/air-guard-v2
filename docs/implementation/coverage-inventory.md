@@ -1,16 +1,16 @@
 # 実装仕様調査カバレッジ棚卸し
 
-> **Current review-depth (2026-08-11):** SPEC-DEEP-033 completed — A 310, B 43, C 166, D 11, E 1, Unknown 0; remaining B/C 209 files in 23 execution checkpoints. The [deep review plan](deep-review-plan.md) is authoritative for exclusive assignment.
+> **Current review-depth (2026-08-12):** SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed — A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints. The [deep review plan](deep-review-plan.md) is authoritative for exclusive assignment.
 
 - 状態: 棚卸し（実装仕様の新規断定を目的としない）
 - 対象セグメント: SPEC-SEG-045
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-12
 - 根拠: `rg --files`による`pages/`、`components/`、`composables/`、`stores/`、`services/`、`utils/`、`functions/`、関連schemas `src/`のファイル名、route/import/export対応、および既存`docs/implementation/*.md`の対象・未確認範囲
 - 制約: 新しい業務実装本文は深読みに入らず、coverage判定は文書とfile/symbol対応の有無に基づく。
 
 SPEC-AUDIT-001で531 source filesを機械再照合した。分類方法、母数、重複/漏れ検査、未被覆clusterは[coverage mechanical audit](coverage-audit.md)を参照する。
 
-> **review-depth進捗:** 本文精査の完了判定にはMechanical Coveredを使用しない。SPEC-DEEP-033完了時点はA 310、B 43、C 166、D 11、E 1、Unknown 0である。残るB/C 209 filesの排他的割当と終了条件は[deep review plan](deep-review-plan.md)を正とする。
+> **review-depth進捗:** 本文精査の完了判定にはMechanical Coveredを使用しない。SPEC-DEEP-045a/045b反映後はA 519、B 0、C 0、D 11、E 1、Unknown 0である。排他的割当と終了条件は[deep review plan](deep-review-plan.md)を正とする。
 
 ## coverage基準
 
@@ -38,7 +38,7 @@ SPEC-AUDIT-001で531 source filesを機械再照合した。分類方法、母�
 | Notification/PWA | pwa-notifications、notification-delivery、notification-authorization | service worker、messaging plugin、Notification/FcmToken、trigger | Covered |
 | Operation/SecurityReport | operation-management、security-report | operation service/schema、SecurityReports components/storage trigger | Covered |
 | address/archive/admin/cloud surface | address-geocoding、archive-restore、admin-backup-recovery、cloud-functions-catalog | geocoding、adapters、Admin SDK、functions entry | Covered |
-| ledgers / coverage audit | future-actions、pending-confirmations、coverage-audit | FUT-0001〜0176、CONF-0001〜0138、531-file inventory | Cross-cutting |
+| ledgers / coverage audit | future-actions、pending-confirmations、coverage-audit、review-reconciliation-2026-08-12 | FUT-0001〜0183、CONF-0001〜0138、531-file inventory | Cross-cutting |
 
 ## route coverage
 
@@ -85,7 +85,7 @@ Coveredまたは主要flow内で部分確認済みの大分類はAgreement、Arr
 | billing/customerBilling/OperationBilling managers | Covered〜Partial | billing文書群で主要操作は確認済み。composable相互の重複責務は未統合。 |
 | date/range/timed/regular-time/performance | Covered | `date-range-performance-utilities.md`で固定5 utilityのJST range、debounce、timer/cache lifecycleを調査。regular-timeはrounding文書を参照。 |
 | `services/operation.js` | Covered | Operation文書で責務境界と直接APIを確認済み。 |
-| `utils/formats/util.js` | Partially covered | `formatNumber`/`formatCurrency`はBilling PDF・Billing/Worker tableで利用確認済み。専用format API catalogはないが、CONFをblockする業務gapではない。 |
+| `utils/formats/util.js` | Covered | SPEC-DEEP-045bで`formatNumber`/`formatCurrency`の公開契約、Intlへの直接委譲、直接caller、validation非担当境界を確認。 |
 | `utils/billings/calculateTaxBreakdown.js` | Covered | `tax-cutoff-billing-primitives.md`でschema/client差、税率別集約、端数、負数境界を調査。 |
 | `utils/csv/exportOperationResultsCsv.js` | Covered | `operation-result-ui-export.md`。実入口はOperationResult画面でなくBilling groupである。 |
 | `utils/generateCollectingReport.js` | Covered | `collecting-report-utility.md`で、実体は運転日報PDF、caller 0件、browser open作用、input/error/privacy境界を調査。 |
@@ -138,7 +138,7 @@ Coveredな主要schemaはCompany、System、User、Customer、Site、Agreement/A
 
 ## 優先セグメントbacklog
 
-SPEC-SEG-062時点の**mechanical** audit backlogは0件。一方、SPEC-DEEP-033完了後のreview-depth backlogはB/C 209 files、23 execution checkpointsである。追加調査は[deep review plan](deep-review-plan.md)から1件ずつ明示割当する。
+SPEC-SEG-062時点の**mechanical** audit backlogは0件であり、SPEC-DEEP-045a/045b反映後のreview-depth backlogもB/C 0 files、0 execution checkpointsである。D/Eは分類済みのtest/config/asset・外部境界であり、runtime検証済みという意味ではない。
 
 ## 未確認範囲
 

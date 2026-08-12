@@ -1,10 +1,10 @@
 # 531-file deep review plan
 
-> Current progress (2026-08-11): SPEC-DEEP-033 completed / A. Cumulative B/C→A promotions: 304; A 310, B 43, C 166, D 11, E 1, Unknown 0; remaining B/C 209 files in 23 execution checkpoints.
+> Current progress (2026-08-12): SPEC-DEEP-045a/045b and schema checkpoints 046〜054 completed. Cumulative B/C→A promotions: 513; A 519, B 0, C 0, D 11, E 1, Unknown 0; remaining B/C 0 files in 0 execution checkpoints.
 
 - 状態: 詳細精査計画
 - 対象チェックポイント: SPEC-DEEP-AUDIT-001
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-12
 - 対象: app `pages/components/composables/stores/plugins/middleware/utils/services/functions` 456 files、schemas `src` 75 files
 - 根拠: `rg --files` path inventory、既存implementation文書のSource/Scope/checkpoint証拠
 - 制約: このcheckpointではcode本文を読んでいない。分類は過去調査証拠だけに基づく。
@@ -24,15 +24,15 @@
 
 | depth | count |
 | --- | ---: |
-| A | 310 |
-| B | 43 |
-| C | 166 |
+| A | 519 |
+| B | 0 |
+| C | 0 |
 | D | 11 |
 | E | 1 |
 | Unknown | 0 |
 | **total** | **531** |
 
-進捗: SPEC-DEEP-033 completed。累計304 filesをB/C→Aへ昇格し、残B/Cは209 files、残execution checkpointsは23。
+進捗: SPEC-DEEP-045a/045bとschema source reviewがSPEC-DEEP-046〜054を満たした。累計513 filesをB/C→Aへ昇格し、残B/Cは0 files、残execution checkpointsは0。
 
 ### A: 再読不要（代表manifestとcompleted rows）
 
@@ -99,27 +99,27 @@ globの`*`は直下file、`**`は全子fileを表す。各rowはA/D/E manifest�
 | SPEC-DEEP-031 | 11 | `components/OperationSchedules/**` | **completed / A**。schedule schema後。High | M |
 | SPEC-DEEP-032 | 6 | `components/organisms/**` | **completed / A**。atoms/molecules後。Medium | S |
 | SPEC-DEEP-033 | 7 | `components/Outsourcer/**`, `components/Outsourcers/**` | **completed / A**。Outsourcer schema後。High | S |
-| SPEC-DEEP-034 | 9 | `components/Site/**` | Site schema後。High | M |
-| SPEC-DEEP-035 | 15 | `components/Sites/**`, `components/SiteEmployeeHistory/**`, `components/SiteShiftTypeOrder/**`, `components/User/**`, `components/Users/**`, `components/SecurityReports/**` | Site/User/report schema後。High | L |
-| SPEC-DEEP-036 | 7 | `components/SiteOperationSchedule/effectiveWorker.js`, `components/SiteOperationSchedule/Card/**`, `components/SiteOperationSchedule/CustomInput/**` | Schedule schema後。High | S |
-| SPEC-DEEP-037 | 7 | `components/SiteOperationSchedule/Duplicator/**`, `components/SiteOperationSchedule/ListItem/**`, `components/SiteOperationSchedule/Manager/**`, `components/SiteOperationSchedule/RequiredPersonnel/**`, `components/SiteOperationSchedule/Selector/**`, `components/SiteOperationSchedule/Table/**` | 036後。High | S |
-| SPEC-DEEP-038 | 8 | `components/SiteOperationSchedule/Worker/**`, `components/SiteOperationSchedule/WorkerDetailManager/**`, `components/SiteOperationScheduleDetail/**`, `components/SiteOperationSchedules/**` | 036後。High | S |
-| SPEC-DEEP-039 | 18 | `composables/*.js`からAの4 filesを除く18 filesを辞書順前半9/後半9の2 checkpoint（039a/039b） | shared/business APIs。High | 2×M |
-| SPEC-DEEP-040 | 12 | `composables/application/**` | domain flow。High | M |
-| SPEC-DEEP-041 | 8 | `composables/auth/**`, `composables/domain/**`, `composables/transforms/**` | auth/aggregation。High | S |
-| SPEC-DEEP-042 | 15 | `composables/dataLayers/*.js`, `composables/dataLayers/arrangement/**`, `composables/dataLayers/arrangementNotification/**`, `composables/dataLayers/billing/**`, `composables/dataLayers/dailyAttendance/**` | query/subscription。High | L |
-| SPEC-DEEP-043 | 11 | `composables/dataLayers/dailyOperationByEmployee/**`, `employee/**`, `operationResult/**`, `outsourcer/**`, `securityReport/**`, `site/**`, `siteOperationSchedule/**`, `siteShiftTypeOrder/**` | query/privacy。High | M |
-| SPEC-DEEP-044 | 11 | `composables/fetch/**`, `composables/overlay/**`, `composables/storage/**` | shared lifecycle/storage。High | M |
-| SPEC-DEEP-045 | 13 | `composables/pdf/**`, app `utils/**`からA/Dを除く10 files、`services/**` 1を合わせ、辞書順で7/6の2 checkpoint（045a/045b） | PDF/format/storage。High | 2×S |
-| SPEC-DEEP-046 | 7 | schemas `Agreement.js`, `AgreementV2.js`, `Article.js`, `ArticleDetail.js`, `SiteOrder.js`, `Certification.js`, `Insurance.js` | master contracts。High | S |
-| SPEC-DEEP-047 | 7 | schemas `Company.js`, `Customer.js`, `Site.js`, `User.js`, `Employee.js`, `Outsourcer.js`, `System.js` | tenant/PII。Critical | S |
-| SPEC-DEEP-048 | 9 | schemas `ArrangementNotification.js`, `SiteOperationSchedule.js`, `SiteOperationScheduleDetail.js`, `Operation.js`, `OperationDetail.js`, `OperationResult.js`, `OperationResultDetail.js`, `WorkingResult.js`, `WorkTimeBase.js` | operation contract。Critical | M |
-| SPEC-DEEP-049 | 12 | schemas `Billing.js`, `OperationBilling.js`, `DailyAttendance.js`, `DailyOperationByEmployee.js`, `SiteEmployeeHistory.js`, `Tax.js`, `RoundSetting.js`, `FcmToken.js`, `Notification.js`, `NotificationRecipient.js`, `SecurityReportIndex.js`, `errorDefinitions.js` | billing/derived/security。Critical | M |
-| SPEC-DEEP-050 | 10 | schemas constants `arrangement-notification-status`, `attendanceManagementMode`, `billing-unit-type`, `certification-type`, `contract-status`, `day-of-week`, `day-type`, `employment-status`, `security-type`, `shift-type` | saved enums。High | M |
-| SPEC-DEEP-051 | 9 | schemas constants `blood-type`, `emergency-contact-relation`, `gender`, `index`, `insurance-status`, `payment-month`, `prefectures`, `site-status`, `tag-size` | legacy/personal enums。Medium | M |
-| SPEC-DEEP-052 | 8 | schemas `src/parts/*.js` plus fieldDefinitions `array`, `check`, `code`, `constants`, `defaultDefinition`, `object` | validation base。High | S |
-| SPEC-DEEP-053 | 8 | schemas fieldDefinitions `dateAt`, `dateTimeAt`, `multipleLine`, `number`, `oneLine`, `radio`, `select`, `time` | input validation.High | S |
-| SPEC-DEEP-054 | 5 | schemas `src/apis/**`, `src/mixins/**`, `src/utils/**` | API/geocode/date/error。High | S |
+| SPEC-DEEP-034 | 9 | `components/Site/**` | **completed / A**。Site schema、UI-BASE/MANAGERS後。High | M |
+| SPEC-DEEP-035 | 15 | `components/Sites/**`, `components/SiteEmployeeHistory/**`, `components/SiteShiftTypeOrder/**`, `components/User/**`, `components/Users/**`, `components/SecurityReports/**` | **completed / A**。Site/User/report schema後。High | L |
+| SPEC-DEEP-036 | 7 | `components/SiteOperationSchedule/effectiveWorker.js`, `components/SiteOperationSchedule/Card/**`, `components/SiteOperationSchedule/CustomInput/**` | **completed / A**。Schedule schema後。High | S |
+| SPEC-DEEP-037 | 7 | `components/SiteOperationSchedule/Duplicator/**`, `components/SiteOperationSchedule/ListItem/**`, `components/SiteOperationSchedule/Manager/**`, `components/SiteOperationSchedule/RequiredPersonnel/**`, `components/SiteOperationSchedule/Selector/**`, `components/SiteOperationSchedule/Table/**` | **completed / A**。036後。High | S |
+| SPEC-DEEP-038 | 8 | `components/SiteOperationSchedule/Worker/**`, `components/SiteOperationSchedule/WorkerDetailManager/**`, `components/SiteOperationScheduleDetail/**`, `components/SiteOperationSchedules/**` | **completed / A**。036後。High | S |
+| SPEC-DEEP-039 | 18 | `composables/*.js`からAの4 filesを除く18 filesを辞書順前半9/後半9の2 checkpoint（039a/039b） | **039a/039b completed / A**。shared/business APIs。High | 2×M |
+| SPEC-DEEP-040 | 12 | `composables/application/**` | **completed / A**。domain flow。High | M |
+| SPEC-DEEP-041 | 8 | `composables/auth/**`, `composables/domain/**`, `composables/transforms/**` | **completed / A**。auth/aggregation。High | S |
+| SPEC-DEEP-042 | 15 | `composables/dataLayers/*.js`, `composables/dataLayers/arrangement/**`, `composables/dataLayers/arrangementNotification/**`, `composables/dataLayers/billing/**`, `composables/dataLayers/dailyAttendance/**` | **completed / A**。query/subscription。High | L |
+| SPEC-DEEP-043 | 11 | `composables/dataLayers/dailyOperationByEmployee/**`, `employee/**`, `operationResult/**`, `outsourcer/**`, `securityReport/**`, `site/**`, `siteOperationSchedule/**`, `siteShiftTypeOrder/**` | **completed / A**。query/privacy。High | M |
+| SPEC-DEEP-044 | 11 | `composables/fetch/**`, `composables/overlay/**`, `composables/storage/**` | **completed / A**。shared lifecycle/storage。High | M |
+| SPEC-DEEP-045 | 13 | `composables/pdf/**`, app `utils/**`からA/Dを除く10 files、`services/**` 1を合わせ、辞書順で7/6の2 checkpoint（045a/045b） | **045a/045b completed / A**。PDF/format/storage。High | 2×S |
+| SPEC-DEEP-046 | 7 | schemas `Agreement.js`, `AgreementV2.js`, `Article.js`, `ArticleDetail.js`, `SiteOrder.js`, `Certification.js`, `Insurance.js` | **completed / A**。SCHEMA-MASTER-001。High | S |
+| SPEC-DEEP-047 | 7 | schemas `Company.js`, `Customer.js`, `Site.js`, `User.js`, `Employee.js`, `Outsourcer.js`, `System.js` | **completed / A**。SCHEMA-MASTER-001。Critical | S |
+| SPEC-DEEP-048 | 9 | schemas `ArrangementNotification.js`, `SiteOperationSchedule.js`, `SiteOperationScheduleDetail.js`, `Operation.js`, `OperationDetail.js`, `OperationResult.js`, `OperationResultDetail.js`, `WorkingResult.js`, `WorkTimeBase.js` | **completed / A**。SCHEMA-OPS-001。Critical | M |
+| SPEC-DEEP-049 | 12 | schemas `Billing.js`, `OperationBilling.js`, `DailyAttendance.js`, `DailyOperationByEmployee.js`, `SiteEmployeeHistory.js`, `Tax.js`, `RoundSetting.js`, `FcmToken.js`, `Notification.js`, `NotificationRecipient.js`, `SecurityReportIndex.js`, `errorDefinitions.js` | **completed / A**。SCHEMA-BASE/OPS/FINANCE-001。Critical | M |
+| SPEC-DEEP-050 | 10 | schemas constants `arrangement-notification-status`, `attendanceManagementMode`, `billing-unit-type`, `certification-type`, `contract-status`, `day-of-week`, `day-type`, `employment-status`, `security-type`, `shift-type` | **completed / A**。SCHEMA-MASTER/OPS/FINANCE-001。High | M |
+| SPEC-DEEP-051 | 9 | schemas constants `blood-type`, `emergency-contact-relation`, `gender`, `index`, `insurance-status`, `payment-month`, `prefectures`, `site-status`, `tag-size` | **completed / A**。SCHEMA-MASTER/FINANCE-001。Medium | M |
+| SPEC-DEEP-052 | 8 | schemas `src/parts/*.js` plus fieldDefinitions `array`, `check`, `code`, `constants`, `defaultDefinition`, `object` | **completed / A**。SCHEMA-BASE-001。High | S |
+| SPEC-DEEP-053 | 8 | schemas fieldDefinitions `dateAt`, `dateTimeAt`, `multipleLine`, `number`, `oneLine`, `radio`, `select`, `time` | **completed / A**。SCHEMA-BASE-001。High | S |
+| SPEC-DEEP-054 | 5 | schemas `src/apis/**`, `src/mixins/**`, `src/utils/**` | **completed / A**。SCHEMA-BASE/MASTER/FINANCE-001。High | S |
 
 上表のcandidateは54主IDだが、039と045をa/bへ分割するため実行checkpoint数は**56**である。SPEC-DEEP-009は残る4 Functions filesを対象とする。全row count合計はB/C合計513 filesである。
 
@@ -143,4 +143,4 @@ globの`*`は直下file、`**`は全子fileを表す。各rowはA/D/E manifest�
 
 - このcheckpointではcode本文を再読しておらず、B/Cの個別品質・bugを判定していない。
 - runtime、UI、Emulator、外部環境、実data、build artifact。
-- A 6 files以外の全公開契約。既存implementation文書は業務flow証拠として使えるがdeep review完了証拠ではない。
+- runtime、UI、Emulator、remote環境、実data、build artifactは、このsource本文精査の完了によって検証済みにはならない。

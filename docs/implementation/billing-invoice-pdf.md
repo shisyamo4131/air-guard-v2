@@ -1,8 +1,14 @@
 # Billing請求書PDFの生成・表示・保存/ダウンロード契約の実装調査
 
+## PDF/format/tax utility最終確認（SPEC-DEEP-045a/045b）
+
+- pdfMake/VFSはmodule-scope singletonとして再利用され、生成物のschema/version/hashを保持しない。Customer/Site/Article/Companyのlive masterを再取得するため、同じBillingからの再生成結果はmaster更新で変化し得る。
+- `formatNumber`/`formatCurrency`はIntlへ値を直接渡し、domain上のfinite/nonnegative/integerを保証しない。表示formatはvalidation境界ではない。
+- app側`calculateTaxBreakdown`はtaxRateのnumber/NaNだけを拒否し、負数、1超、Infinityを許す。salesAmountは`|| 0`で取り出して加算するため、文字列混入時は数値合計でなく連結し得る。丸めは現在のprocess-global RoundSettingに依存する。
+
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-019 — 請求書PDFの生成・表示・保存/ダウンロード契約
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-019、SPEC-DEEP-040 — 請求書PDFの生成・表示・保存/ダウンロード契約
+- 最終確認日: 2026-08-12
 - 根拠ファイル: CustomerBillings一覧のPDF action、`useCustomerBillingActions.js`、`useBillingPdf.js`、`calculateTaxBreakdown.js`、format utility、NotoSansJP VFS、直接参照するBilling/Customer/Company/Site/Article field
 
 ## 入口・権限
@@ -124,3 +130,8 @@
 - 実PDF生成・render・日本語glyph・download・OS filename・印刷・free viewer互換性。
 - pdfmakeの実行時version、browser memory、大量明細性能、global loading overlayの多重click遮断。
 - PDF/税計算の下流、Storage、外部送信/会計API、実data・master欠損実態。
+
+## Customer Billing application action追加確認（SPEC-DEEP-040）
+
+- 単票PDF、統合PDF、CSVは各々global loadingを付けるが、errorをloggerへ記録してrethrowせず、callerへsuccess/failureを返さない。button側のsingle-flight/disabledがないため同時生成を開始できる。
+- CSVは全Billingのembedded OperationResultをflat化し、Site master fetch後にbrowser exportへ渡す。master fetch errorは共通fetchで吸収され得て、欠損Siteを含む出力の成功/部分成功をactionが検査しない。

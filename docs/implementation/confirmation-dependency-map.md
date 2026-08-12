@@ -2,7 +2,7 @@
 
 - 状態: 台帳再照合
 - 対象チェックポイント: SPEC-RECONCILE-001
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-12
 - 根拠: `pending-confirmations.md`全138件、`future-actions.md`の関連CONF/判断欄、各CONFが直接指定するimplementation文書の該当section、coverage索引
 - 制約: 新規実装調査、runtime、外部環境、実dataは確認していない。ユーザー回答、既存ID、既存Statusは変更していない。
 
@@ -201,11 +201,13 @@
 
 Open-user-decisionは75件。優先順は、G-AUTHZ、G-BILLING、G-ONBOARDING、G-ARCHIVE、G-RECOVERYを先行し、依存するdomain差分を後続とする。これは回答推奨ではなく、重複を減らす提示順である。
 
+2026-08-12のsource review後も件数とdispositionは変わらない。新しい実装事実は既存canonical groupへEvidenceとして統合した。利用者向けには、(1) actor/tenant/role、(2) invitation identity、(3) Billing/lock、(4) backup/recovery、(5) privacy/retention、(6) retry/reconcile、(7) shared UX/date-timeの順に平文で提示する。詳細は[2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md#要判断事項の優先グループ)を参照する。
+
 Open-deferredはCONF-0021、CONF-0033、CONF-0035の3件。負数等の請求調整、Billing status/発行trigger、payment仕様について利用者が保留しており、再開指示まで推奨案へ置換しない。
 
 ## coverageとの照合
 
-coverage inventoryは531 filesについてUncovered 0、unknown 0である。Partially covered 1の正体は`utils/formats/util.js`で、`formatNumber`/`formatCurrency`はBilling PDF・Billing table・Worker tableから直接利用されるが、表示format API全体の専用catalogがないという粒度差である。各callerの業務値・請求計算は既存文書でCoveredであり、CONFのEvidenceを欠く独立業務clusterではない。従って`Blocked-by-uninvestigated`は0とした。
+coverage inventoryは531 filesについてUncovered 0、Partially covered 0、unknown 0である。最後の部分被覆だった`utils/formats/util.js`はSPEC-DEEP-045bで公開契約、直接caller、validation非担当境界を確認してCoveredへ昇格した。従って`Blocked-by-uninvestigated`は0のままである。
 
 ## 未確認範囲
 

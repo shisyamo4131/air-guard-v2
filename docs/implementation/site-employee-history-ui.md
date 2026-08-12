@@ -1,8 +1,8 @@
 # SiteEmployeeHistory UI
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-059
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-059、SPEC-DEEP-035、SPEC-DEEP-042
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/sites/[id].vue`、`components/SiteEmployeeHistory/Employee/Chip.vue`、`composables/dataLayers/useSiteEmployeeHistoriesBySiteId.js`、schemas `SiteEmployeeHistory.js`、`utils/pageSettings.js`、`firestore.rules`
 - 制約: runtime、実data、同期Functions本文は再調査していない。
 
@@ -84,3 +84,12 @@ Employee fetchはchip watcherとpage callbackの両方から呼ばれるが共�
 - Nuxt route param変更時のcomponent再mount、Employee cacheの更新購読。
 - 本人/管理者用の将来route/API、実role preset、実利用者・実data。
 - SiteEmployeeHistory同期・repairの本文は`site-employee-history-sync.md`を参照し再調査していない。
+
+## Chip境界の追加確認（SPEC-DEEP-035）
+
+Employee欠損・取得失敗は終了状態へ遷移せず`...loading`を残す。tooltipはhoverではなくclickで開き、初回/最終日だけを表示するため、親subtitleの「クリックすると詳細表示」に対応するEmployee/OperationResult navigationは存在しない。page callbackとchip watcherは同じEmployee取得を要求し、cacheが実通信を抑えても二重caller契約は残る。
+
+## history data layer追加確認（SPEC-DEEP-042）
+
+- `useSiteEmployeeHistoriesBySiteId`はsetup時のsiteId文字列を無検証で固定し、mountedで全該当履歴をlive購読する。route/siteId変更、loading/error/not-found、async listener error、retryを公開しない。
+- callbackは任意だがawait・error handlingを持たない。通常会社Userを拒否する現Rulesとの矛盾は画面側でempty/errorとして区別されない。

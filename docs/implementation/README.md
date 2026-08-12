@@ -1,6 +1,6 @@
 # 実装調査文書索引
 
-最終集計日: 2026-08-11
+最終集計日: 2026-08-12
 
 このdirectoryは、AirGuardV2の実装から観察した現在の挙動、責務、data flow、境界、矛盾候補をsegment単位で記録した調査資料である。確認済み仕様の正本ではない。設計意図や正式要件を確定するときは、プロジェクトの正本仕様と承認済みADRを優先し、このdirectoryの記述は根拠codeの再確認に使用する。
 
@@ -15,13 +15,13 @@
 
 ## 終了時集計
 
-- このREADME追加前の文書数: 94
-- このREADMEを含む文書数: 100
+- このREADME追加前の文書数: 95
+- このREADMEを含む文書数: 101
 - 実装領域文書: 93
-- 横断索引・台帳: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency mapの7文書
-- FUT: 176件
-  - 状態: Open 125、Needs decision 47、Hypothesis 3、Resolved 1
-  - 重大度: Critical 13、High 88、Medium 60、Low 13、未評価 2
+- 横断索引・台帳: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録の8文書
+- FUT: 183件
+  - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
+  - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
 - CONF: 138件
   - 状態: Open 95、Answered 43
   - reconciliation disposition: Answered 43、Open-user-decision 75、Open-deferred 3、Resolved-by-implementation-fact 0、Merge-candidate 17、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
@@ -34,9 +34,10 @@
 - [Coverage inventory](coverage-inventory.md): 調査済み/部分調査/未調査の棚卸しと次segment候補。
 - [Coverage mechanical audit](coverage-audit.md): 531 source filesの分類、未被覆cluster、dynamic import/export棚卸し。
 - [Deep review plan](deep-review-plan.md): Mechanical Coveredを訂正し、A/B/C/D/E depthとB/C全fileの排他的精査計画を管理。
-- [Future actions](future-actions.md): FUT-0001〜FUT-0176。
+- [Future actions](future-actions.md): FUT-0001〜FUT-0183。
 - [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
+- [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
 
 ## アプリ入口・認証・共通基盤
 

@@ -1,8 +1,14 @@
 # 配置表・稼働予定表PDF（実装調査）
 
+## PDF utility最終確認（SPEC-DEEP-045a）
+
+- worker `amount`は有限・非負・整数を検証しない。小数は実質的に切上げ人数として展開され、負数は0人、`Infinity`は終了しないloopとなり得る。
+- 文字切詰めhelperはstringを前提とし、型不正を安全に正規化しない。0件でも空contentのPDFをopenしようとし、実際のviewer結果は未確認である。
+- Site/Employee/Outsourcer取得はlive masterであり、共通fetchが失敗を吸収すると欠損を`N/A`として成功扱いし得る。帳票生成時点の完全性、予定作成時snapshot、部分成功表示は区別されない。
+
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-048
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-048、SPEC-DEEP-040
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/arrangements-manager.vue`、`components/Arrangements/Manager/WeekdayActions.vue`と直接facade、`useArrangementsActions`、`useOpenArrangementSheetPdf`、`useArrangementSheetPdf`、直接参照するSchedule/Site/Employee/Outsourcer field
 - 関連文書: `site-operation-schedule.md`、`arrangement-notification-ui.md`、`layout-navigation-components.md`
 - 制約: PDFを実生成せず、Schedule/Notification業務内部、請求PDF、外部送信は再調査していない。
@@ -105,3 +111,8 @@ PDF button自身にloading/disabled/debounceはなく、global overlayがclick�
 ## 未確認範囲
 
 実PDF、browser、popup/download filename、印刷、font rendering、page overflow、0/8/10/11/70人・大量現場、長い全角文字、欠損master、mobile click、外部配布は未確認である。pdfmake version既定page size、Air loading/error UI、Schedule/Notification内部、Rules runtime、実個人情報は未調査・未使用である。
+
+## Application action追加確認（SPEC-DEEP-040）
+
+- `useOpenArrangementSheetPdf.openPdf`はglobal loadingをfinallyで除去するが、PDF生成/open errorをErrors storeなしのloggerへ記録してrethrowしない。利用者feedback・retry・popup-blocked案内はなく、上位facadeも成功と失敗を区別できない。
+- loading keyは日付入り自由文から生成され、同一日付の並行生成をsingle-flight化しない。button側にも処理中disabledがない既知境界と合流する。

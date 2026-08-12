@@ -1,10 +1,16 @@
 # SecurityReport（警備日報）実装調査
 
+## Storage utility最終確認（SPEC-DEEP-045b）
+
+- uploadはclient圧縮後、入力形式にかかわらず`.jpg`へ保存し、`contentType`を明示しない。metadataは`uploadedBy`だけで、company・operation・原file名・hash・revisionは記録しない。
+- listはfolder全件を`listAll`し、各本体のmetadata/download URLとthumbnail URLを並行取得する。1本体のmetadata/URL失敗で全体がrejectし、件数上限・pagination・部分結果契約はない。
+- deleteは本体とthumbnailを並行削除し、thumbnail側の全errorを「未存在」として吸収する。本体成功後にthumbnailがpermission/network等で残っても成功扱いとなり、原因分類・repair markerを持たない。
+
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-030、SPEC-DEEP-008
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-030、SPEC-DEEP-008、SPEC-DEEP-035
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `utils/storage.js`、`composables/useSecurityReports.js`、`components/SecurityReports/Manager/index.vue`、`components/SecurityReports/Window/index.vue`、`functions/triggers/securityReport.js`、`functions/modules/securityReport/`、`functions/modules/operationCleanup.js`、`functions/apis/index.js`、`storage.rules`、`firestore.rules`、schemas `SecurityReportIndex`
 
 ## 入口・権限
@@ -88,3 +94,19 @@ CONF-0088〜CONF-0092を`pending-confirmations.md`へ登録した。
 ## 未確認範囲
 
 実Storageデータ、remote Rules/deploy状態、ブラウザupload、画像decoderの各形式挙動、親画面の業務ロジック全文、他報告書、PDF、外部送信は未確認である。
+
+## Manager / Window境界の追加確認（SPEC-DEEP-035）
+
+Managerはcomposableの`isListing`、`listError`、`uploadError`を表示せず、loading・permission failure・真の空件数を同じempty表示へ畳み込む。削除は確認、status/lock、actor判定なしで直接実行し、宣言した`click:delete` emitも発火しない。最後の1件を削除するとWindowがunmountする一方、Manager側`currentReport`はscheduleId変更時しかresetされないため、削除済みURLをfull-size/delete操作が参照し続け得る。Windowはindexをkeyにし、明示的なempty/error状態を持たない。
+
+## SecurityReportIndex range data layer追加確認（SPEC-DEEP-043）
+
+- range layerはlive/snapshot両modeを持つが、snapshotの連続range変更にgeneration/cancelがなく、失敗時は旧docsを保持する。live modeは同期登録errorだけをcatchし、listener後続errorを受けない。
+- loadingはsnapshot fetch中だけで、live initial load、permission failure、empty、stale、lastUpdatedを区別しない。このIndexを合成する配置管理画面も同じpartial-state境界を継承する。
+
+## Storage composable追加確認（SPEC-DEEP-044）
+
+- operationId変更時のlistはrequested ID一致時だけ結果を採用し、単純なstale list上書きを防ぐ。一方、in-flight request自体はcancelせず、同一IDの重複fetchにgenerationがない。
+- uploadはfile watchで即時開始しUI attrをdisabledにするが、programmatic file変更のsingle-flight guardはない。upload後fetchまで別作用で、成功後のlist失敗はupload済み/表示旧値となる。
+- deleteはoperationId/revisionをcaptureせず、完了時に現在のreportsからpathを除く。対象切替中のdelete、同一path重複、invalid report、partial failureのrefetch/rollbackはない。
+- upload/list errorはmessageをlocal refへ入れる一方deleteはloggerだけで、Managerは既確認どおりlocal errorを表示しない。scope disposeでrequestをcancelせず、global loading keyはuploadだけに使う。

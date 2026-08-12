@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-032
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-032、SPEC-DEEP-039a、SPEC-DEEP-042、SPEC-DEEP-043、SPEC-DEEP-044
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `composables/fetch/useFetch.js`、`useFetchBase.js`、`useFetchArticle.js`、`useFetchCustomer.js`、`useFetchEmployee.js`、`useFetchOutsourcer.js`、`useFetchSite.js`、`composables/useBaseManager.js`、`composables/useDocManager.js`、`package.json`、`package-lock.json`
 
 ## 対象一覧
@@ -17,7 +17,7 @@
 | `useBaseManager` | AirItemManager/AirArrayManager向けloading・error event attrs、router/logger |
 | `useDocManager` | deprecatedなAirItemManager wrapper。doc CRUD handler、component ref、削除後redirect |
 
-`useItemManager`、`useArrayManager`というapp composableは存在しない。AirItemManager/AirArrayManagerはfile依存`air-vuetify-v3`のcomponentだが、package source directory/node_modules実体はこのworktreeに存在せず、内部dialog/validation/lockは確認できなかった。
+`useItemManager`、`useArrayManager`というapp composableは存在しない。AirItemManager/AirArrayManagerはfile依存`air-vuetify-v3`のcomponentである。隔離worktree内にpackage実体はないが、承認済みprimary nested repositoryをUI-BASE/MANAGERS-001で精査済みであり、内部dialog/validation/disable/single-flight契約はそちらを正とする。
 
 ## 責務・API表
 
@@ -90,3 +90,30 @@ CONF-0094〜CONF-0095を`pending-confirmations.md`へ追加した。
 ## 未確認範囲
 
 AirItemManager/AirArrayManager package内部、個別業務manager、Auth/store、SSR実行test、build、Firestore/Emulator、client adapterの内部実装は未確認である。
+
+## SPEC-DEEP-039a addendum
+
+- `useBaseManager`はAir managerの単一boolean loadingとerror/error:clear eventをapp loggerへ橋渡しするだけで、disable、single-flight、rollback、actor/tenantを強制しない。`error:clear`は共有Errors storeのclearへ到達するため、別処理のerrorまで消し得る既知の共通UI境界を再確認した。
+- `useDocManager`はdeprecated warningを常時出すが、Customer Billing、Operation Billing、Schedule複製から現役到達する。公開`toCreate/toUpdate/toDelete`はcomponent refへそのまま委譲し、schema CRUD以外のversion・permission・operation guardを追加しない。
+- `useKatakanaFilter`は選択indexから正規表現を選び配列をfilterするだけで、欠損・非stringの読み仮、重複doc ID、actor/tenantを検査しない。直接callerのWorkerSelectorはwatch時にMapを再初期化せず、削除済みmasterのentryをcomponent寿命中保持するが、表示候補自体は現行propsをfilterする。
+
+## 汎用data layer追加確認（SPEC-DEEP-042）
+
+- `useDocument`はJSDocでreactive `docId`へ再購読すると説明するが、入口で`typeof docId === "string"`を要求してRefを拒否する。実装の`watchEffect`もstatic string以外の依存を読まない。現callerはsetup時のroute param文字列で成立するが、同一page instance内のroute変更には追従しない。
+- `useDocuments`はsearch/optionsの初期shapeだけを検査し、購読中のloading/error/not-found/permission stateを返さない。短いsearchではunsubscribeし、空検索時だけ`fetchAllOnEmpty`で全件購読する。動的option/searchの不正値、async listener error、retryは公開契約外である。
+- 単一/複数ともschema instanceのmutable live stateを返し、query revision、lastUpdated、request ownerを持たない。callbackからのmaster fetchはawait・cancel・失敗集約されず、一覧本体とcacheが別時点になり得る。
+- `useActiveSites`は静的callerがなく、`useOperationBilling`は旧managerからだけ到達するlegacy候補である。`useCustomerBilling`は現行請求画面で到達するが、両単一Billing wrapperの不要なsystem-store参照と古いJSDocが残る。
+
+## domain data layer追加確認（SPEC-DEEP-043）
+
+- 退職Employee/終了Site検索はsearch変更ごとにsnapshot fetchを開始するが、loading/error、request generation、cancel、latest-only判定を持たない。遅い旧検索responseが新検索結果を上書きでき、失敗は直接rejectする。
+- Employee range snapshotはACTIVE取得後にRESIGNEDを直列取得し、両方成功してからだけdocs/cacheを更新する。二queryの共通read timeはなく、range連続変更の世代管理もない。
+- Outsourcer rangeはfrom/toをvalidation・watchするがqueryには使わず、期間変更ごとに全ACTIVE外注先を再購読する。過去期間でも現時点のACTIVEだけを返すため、名称上の期間契約と一致しない。
+- OperationResult/Schedule等のrange layerはdocId Mapで重複を後勝ち除去し、Site/Employee/Outsourcer cache fetchをawaitしない。async listener errorとpartial cache stateはSPEC-DEEP-042のgeneric境界と同じである。
+
+## master fetch/cache追加確認（SPEC-DEEP-044）
+
+- `useFetchBase`は同一docIdの同時point fetchをPromise共有して重複排除する。一方、成功/失敗をcallerへ返さず、fetch error・not-foundはいずれもcache miss/nullへ畳み込む。
+- item cacheは同一docIdが既にあるとpoint fetchも`pushItem(s)`も更新をskipする。明示TTL/revision/invalidationがなく、master変更・archive・権限変更後もcomponent/provider寿命中にstale instanceを返し得る。`clearCache`はitemだけを消しsearch cacheを残す。
+- fetchとsearchは同じ単一`isLoading`を使う。異なるID/検索の並行処理で先に終わった処理がfalseへ戻し、残処理中も非loadingに見える。search自体のin-flight dedupe/latest-only/cancelもない。
+- search cache keyはsearch text、constraints、limitだけで、actor/company/revisionを含まない。providerはcomponent tree内だが、認証/tenant切替時の一括clear契約はない。

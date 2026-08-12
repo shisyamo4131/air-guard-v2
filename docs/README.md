@@ -20,7 +20,7 @@
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |
 | 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |
-| ローカル検証・UI検証 | [運用・開発手順](operations.md)、ADR 0005・0006 | `firebase.json`、`.env` の変数名のみ、対象テスト |
+| ローカル検証・UI検証 | [運用・開発手順](operations.md)、ADR 0005・0006・0014 | `firebase.json`、`firebase.codex-test.json`、`.env` の変数名のみ、対象テスト |
 | デプロイ・公開・移行 | [運用・開発手順](operations.md)、関連 ADR | 対象環境、復旧手順、バックアップ、明示的承認 |
 | Codexによる長期作業・引継ぎ | [運用・開発手順](operations.md)のプロジェクト管理節、ADR 0011、[ロードマップ索引](roadmaps/README.md) | Git 状態、チェックポイント記録、タスクID・ホスト、コールバック経路 |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |

@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-028
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-028、SPEC-DEEP-040
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `stores/useSystemStore.js`、`composables/application/system/useSystemActions.js`、`plugins/07.system.js`、`plugins/02.firebase.auth.js`、`middleware/auth.global.js`、`pages/maintenance.vue`、`firestore.rules`、schemas `src/System.js`、`src/Company.js`、admin-sdk `src/commands/system.js`、`src/commands/companies.js`、`src/commands/backup.js`
 
 ## 確認済み環境
@@ -105,3 +105,8 @@ role例外はなく、admin/developer/super-userも実効値trueならmaintenanc
 - DEV Firebase/EmulatorのSystem実doc、network断、subscription再接続、route競合の実行結果。
 - Firebase Functions/Rules levelでの保守中write排除、進行中request、background trigger、Service Workerの挙動。
 - Admin SDK CLIの実行権限・監査・復旧runbook、PROD環境設計。
+
+## System application action追加確認（SPEC-DEEP-040）
+
+- 初期fetch成功後にlive subscribeするが、subscribe error channel・retry・last-known state・teardown ownerをactionは返さない。
+- 初期fetch errorはloggerへ記録しlocal `isMaintenance=true`へ倒すためfail-closedだが、not-found、permission、network、corrupt dataを区別せず、復旧操作や再試行状態を画面へ公開しない。

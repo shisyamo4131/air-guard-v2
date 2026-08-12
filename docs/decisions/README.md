@@ -26,6 +26,7 @@
 | [0011](0011-roadmap-and-codex-session-lifecycle.md) | ロードマップとCodexセッションライフサイクル | Accepted | 2026-08-10 |
 | [0012](0012-feature-branch-acceptance-and-related-repositories.md) | 機能ブランチ受入れと関連リポジトリ境界 | Accepted | 2026-08-10 |
 | [0013](0013-managed-governance-reconstruction.md) | Managed governance再構築 | Accepted | 2026-08-11 |
+| [0014](0014-codex-dedicated-local-test-data.md) | Codex専用localテストデータとloopback隔離 | Accepted | 2026-08-12 |
 
 ## 新しい ADR の形式
 

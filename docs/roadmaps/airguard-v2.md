@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-10
+- 最終確認日: 2026-08-12
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -11,14 +11,22 @@
 | マイルストーン | 重み | 得点 | 状態 | 完了証拠と残作業 |
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
-| 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | 配置、稼働実績、勤怠、請求を試験運用で照合する。`DailyAttendance.operationResultIds` の逆引き方式が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | Authentication、カスタムクレーム、Firestore/Storage/Realtime Database Rules、管理者処理を独立レビューとEmulatorで検証する。 |
-| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、Stripe、バックアップ、監視、障害復旧、依存関係脆弱性を確認する。 |
-| 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 試験運用の主要画面を利用者が確認し、仕様・実装・マニュアルの差異を解消する。 |
+| 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | 静的security reviewでinvitation takeover、global Auth target、Callable、Rules、Storageの重大な境界不備を確認した。修正とEmulator/remote検証が未完了。 |
+| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
+| 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
 | **合計** | **100** | **10** |  |  |
 
 部分加点は行わない。各マイルストーンの完了条件をすべて満たした時点で、その重み全体を得点する。
+
+## 調査証拠の進捗（正式運用準備スコアとは別）
+
+- 主repoの531-file deep reviewは、A 310件から519件へ増加した。B/C残数は209件から0件へ減少し、予定したsource本文精査を完了した。D 11件とE 1件は分類済みのtest/config/asset・外部境界であり、runtime検証済みという意味ではない。
+- schema runtime 76 paths、共通UI runtime 43 paths、Admin SDK runtime 14 pathsを、主repo母数とは別のpackage境界として静的レビューした。
+- 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore Rulesの4件の基盤testを追加した。Functions、Storage/Realtime Database Rules、UI、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
+- 調査完了は問題の特定証拠であり、修正、test、運用受入れの完了証拠ではない。そのため公式進捗は10%のままとする。
+- 詳細な問題、台帳対応、要判断事項は[2026-08-12 source review統合記録](../implementation/review-reconciliation-2026-08-12.md)を参照する。
 
 ### ガバナンス基準線の完了ゲート
 
@@ -30,9 +38,11 @@
 
 ## 次の作業
 
-1. `DailyAttendance.operationResultIds` の更新・削除方式について、現行実装、影響、移行、テストを調査する。
-2. ルートアプリと Cloud Functions の依存関係脆弱性を、破壊的な自動修正を行わず調査する。
-3. FCM・Storage・Stripe・バックアップの現状と旧資料の完了表記を再照合する。
+1. Critical security問題を、remote dataに触れないEmulator/contract test計画へ落とし込み、Rules/Functions/modelの修正単位とrollbackを決める。
+2. locked OperationResult、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
+3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
+4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
+5. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
 
 ## 成果物と検証証拠
 
@@ -40,18 +50,32 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md) | Rules、認証・管理者処理 | セキュリティレビュー、Emulator検証（未完了） |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、Auth・Firestore基盤test。問題修正後の回帰検証は未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
 
 ## 未解決問題
 
-- 日次勤怠の逆引き更新・削除方式と既存データへの影響。
+- invitation/account setup、User documentとglobal Auth UID、Callable actor/tenant、同一tenant内field権限、SecurityReport Storageの認可不備。
+- locked OperationResult、agreementなしresult、Billing status、請求書snapshot、同時更新、勤怠・履歴・report indexの部分失敗と再構築。
+- FireModelのprocess-global context、full-set/upsert、serialization、validation、client/server adapter差。
+- 通知の重複、FCM token lifecycle/log、ArrangementNotification日時・状態遷移。
+- UI managerのdisable非強制、二重送信、draft競合、入力debounce、非同期stale response、date-time、accessibility。
+- Admin backup/restoreのcoverage、平文artifact/credential、operator権限、監査、rollback/resume、migration例外。
 - npm依存関係の脆弱性と互換性を保つ更新方法。
 - Stripe本番運用、キャンセル、プラン、従業員数制限。
-- FCM、Storage、バックアップ、監視、SLA、保持期間、復旧目標の実施状況。
-- 主要業務の試験運用受入れ証拠を、機密情報を含めず再確認可能に残す方法。
+- remote/Emulator/browser/real dataによる検証、監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
+
+## 要判断事項
+
+1. 正式なrole・permission matrixと、管理Callable・super-user・developerのactor/tenant境界。
+2. 招待本人の証明方法、verification前操作、取消・再送・部分状態の回復手順。
+3. 請求確定後とlocked稼働の訂正・取消・管理者修復、およびAdmin migration例外。
+4. 正式backup対象、復旧時点、RPO/RTO、artifact保護、operator承認・監査・drill。
+5. 個人・勤怠・請求・通知・backupの閲覧者、log、保持、匿名化、削除。
+6. trigger/callable/scheduled処理のretry、重複防止、部分成功、manual replay、SLO。
+7. 編集競合、error/loading、date-time入力、外部住所lookup、accessibilityの共通UX基準。
 
 ## 完了条件
 
@@ -65,3 +89,5 @@
 | 日付 | 進捗 | 変化 | 理由と証拠 |
 |---|---:|---:|---|
 | 2026-08-10 | 10% | 基準線 | 既存ガバナンス、現行仕様、ADR、運用手順を確認し、正式運用準備を100点の加重マイルストーンとして新規設定した。 |
+| 2026-08-12 | 10% | 0 | 主repoのdeep reviewを310/531から519/531へ進め、B/Cを0として予定したsource本文精査を完了した。schema、components、composables、PDF/CSV/utils/service、共通UI、Admin SDK、認証・Functionsの問題を台帳化した。各未完了マイルストーンは修正・test・運用受入れの全ゲートを満たしていないため、無部分加点規則により公式進捗は据え置いた。 |
+| 2026-08-12 | 10% | 0 | 利用者用local環境から分離したCodex専用Emulator seed、容量・指紋ガード、Auth・Firestore Rulesの4件の基盤testを追加した。未完了マイルストーンの回帰・受入れ条件は満たしていないため進捗は据え置いた。 |

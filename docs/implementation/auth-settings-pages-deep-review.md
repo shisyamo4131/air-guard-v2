@@ -1,8 +1,8 @@
 # Auth / settings / super-user pages deep review
 
 - 状態: 実装調査（deep review）
-- 対象セグメント: SPEC-DEEP-004
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-DEEP-004、SPEC-DEEP-040
+- 最終確認日: 2026-08-12
 - 対象: 12 route files
 - 注記: deep-review-planの`pages/dashboard.vue`表記は実在path `pages/dashboard/index.vue`として精査した
 
@@ -57,3 +57,8 @@ Company/User設定pageはadmin向け表示だが、Rulesの同社一般User writ
 - browserでのform submit、double click、interval overlap、Stripe redirect/snapshot timeout
 - child manager/composableの内部CRUD・validation（各既存domain文書または後続deep segment）
 - runtime Rules/Callable enforcement、App Check、実メール・Stripe・Firestore data
+
+## User settings action追加確認（SPEC-DEEP-040）
+
+- `useUserSettingsActions.updateTagSize`はschema constant keyを検査して`auth.user.updateProperties({tagSize})`へ渡すが、静的callerは見つからなかった。現行User設定componentは別経路を使うためlegacy候補である。
+- 到達した場合、User全documentのfull updateと同じclient/Rules境界に乗り、tagSizeだけのfield allowlist、version、actor auditをaction自身は追加しない。

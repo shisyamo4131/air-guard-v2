@@ -44,7 +44,7 @@ npm run local
 
 Firebase Emulator Suite は `firebase.json` で Auth、Functions、Firestore、Realtime Database、Storage、Hosting、Emulator UI を構成しています。起動前に使用プロジェクトと `.env.local` のエミュレーター設定を確認してください。
 
-Codexまたはテスターが検証用に起動する場合は、保存済みデータを読み込みます。
+利用者が画面確認用のlocal環境を起動する場合は、利用者用の保存済みデータを読み込みます。
 
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
@@ -54,6 +54,36 @@ npx -y firebase-tools@latest emulators:start --import=./saved-data
 - 明示的な指示なしに `--export-on-exit` を指定しない。
 - CLIが未起動サービスから本番へ到達する可能性を警告した場合、対象コードとテスト操作を確認し、外部作用を排除できなければテストしない。
 - FunctionsからStripe、メール、FCM、ジオコーディングなどの外部サービスを呼ぶ操作は、個別に隔離できることを確認する。
+
+### Codex専用localテスト
+
+Codexの自動テストは、利用者用`./saved-data`、通常の`firebase.json`、`.env.local`を変更しません。[ADR 0014](decisions/0014-codex-dedicated-local-test-data.md)に従い、Git対象外の`.codex-test/saved-data`へ合成fixtureだけを保存します。
+
+初回または承認済みの再生成時だけ、専用seedを作成します。
+
+```powershell
+npm run test:local:seed
+```
+
+- `demo-air-guard-v2-codex`だけを使い、remote Firebase projectを選択しない。
+- Auth、Firestore、Realtime Database、Storageを`127.0.0.1`の専用ポートで起動する。
+- Functions Emulatorは起動しないため、FCM、Stripe、ジオコーディングの実呼出し経路を含まない。
+- 合成会社・合成利用者だけを作成し、実在データ、`.env.local`のアカウント、利用者用`./saved-data`を複製しない。
+- 既に`.codex-test/saved-data`がある場合は上書きせず失敗する。削除・再生成は別の承認済み作業として行う。
+
+通常テストは専用exportを読込専用で使用します。
+
+```powershell
+npm run test:local
+```
+
+- `--import=.codex-test/saved-data`を使い、`--export-on-exit`は指定しない。
+- 実行前後に利用者用`./saved-data`と専用exportの指紋を比較し、変化した場合は失敗する。
+- `.codex-test`が50 MiB以上なら警告し、100 MiB以上ならEmulator起動前に停止する。通常は20 MiB以下を目標とする。
+- 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
+- CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
+
+初期suiteは専用seed、Authサインイン、Firestore Rulesの未認証拒否、同一会社claim許可、別会社拒否を検証します。Functions、画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 
@@ -269,6 +299,6 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
-- 自動テスト用 npm script はルートと `functions/` の `package.json` に定義されていない。
+- Codex専用local suiteはAuthとFirestore Rulesの基盤確認に限定され、Functions、Storage Rules、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。

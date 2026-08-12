@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-027
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/modules/auth-v2.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
 
 ## 入口・権限
@@ -106,6 +106,12 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - CompanyManager only type-checks `doc` as object, delegates update to `item.update(item)`, and relies on AirItemManager for loading/error/dirty/double-submit behavior. The three icon edit activators add no role/loading/disabled guard.
 - Active Activators expose distinct included-key lists; hidden Company integration fields are not editor keys but remain in the same broadly writable document. The three legacy `Company/Table/*Info.vue` files have no static caller.
 - SettingInfo's weekday display directly dereferences an indexed constant and has no unknown fallback, unlike the active Setting activator. Full component-level evidence is in [Company components deep review](company-components-deep-review.md).
+
+### SPEC-DEEP-039a addendum
+
+- company pluginはCompany変更ごとにVuetifyのprocess-global defaultsとschema `RoundSetting` global modeを直接更新する。`minuteInterval`が0/null/falsyなら全minuteを許し、負数・小数・NaNのfail-closed validationはない。これはpicker候補制御であって保存値・計算丸めの強制ではない。
+- user pluginもAuth UserのtagSizeからVuetify global defaultsを更新する。logout/account切替時にdefaultへ明示resetするbranchはなく、次Userがtruthyな既知値を持たない場合は以前のsizeが残り得る。
+- `useConstants`はCompany colorDefinitionsをlive computedへ反映するが、空文字colorは`||`でdefaultへ戻す。`DEFAULT_DEFINITIONS`とWEEK_COLORSを参照のまま公開し、callerによるprocess内mutationを防がない。enum allowlistやpersisted value validationは別途必要である。
 
 - 実Company/Stripe/subscriptionデータ、外部geocoding、Rules/Emulator、同時更新の再現。
 - Subscription/Stripe/Billing/税計算、PDF layout、maintenance middlewareの内部。

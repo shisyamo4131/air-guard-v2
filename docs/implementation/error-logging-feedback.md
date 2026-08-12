@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-040
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-040、SPEC-DEEP-039b
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `composables/useLogger.js`、`stores/useErrorsStore.js`、`stores/useMessagesStore.js`、`stores/useLoadingsStore.js`、`layouts/default.vue`、`layouts/auth.vue`、`layouts/guest.vue`、`middleware/auth.global.js`、代表利用箇所 `useFetchBase.js`、`useSiteShiftTypeOrderActions.js`、`useDuplicate.js`、`plugins/02.firebase.auth.js`、`plugins/03.air-firebase.init.js`、`plugins/08.firebase-messaging.client.js`
 - 関連調査: `layout-navigation-components.md`、`data-management-composables.md`、`attendance-ui.md`
 
@@ -131,3 +131,9 @@ Functions側の未使用候補`ContextualError`は生成時にcontext全体をlo
 - 全業務catch、全console出力、air-loading-dialogとVuetify snackbar内部、SSR/server console。
 - production build実行時のconsole削除有無、browser extension/devtools、外部監視導入予定。
 - Emulator/実network error、unhandled rejection、複数tab、keep-alive/unmount中処理のruntime検証。
+
+## SPEC-DEEP-039b addendum
+
+- `useLogger.send`は全levelを無条件consoleへ出し、truthyな`data`だけを追加するため0/false/empty stringを診断contextから落とす。field allowlist・redaction・size/circular guard・correlationはなく、error store指定時だけoriginal Errorをmemoryへ保持する。
+- `logger.clearError()`はownerやoperationを識別せず共有Errors store全体をclearする。各managerが開始時に呼ぶため、並行中の別処理errorを消し得る。
+- root composablesはcatch後のswallowを多用する。特にFCM登録、OperationBilling lock、schedule複製、Company siteOrder更新は失敗をcallerへ返さず、上位が成功と区別できない。

@@ -1,8 +1,8 @@
 # OperationBilling components deep review
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-DEEP-029 — `components/OperationBilling/**` 10 files
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-DEEP-029、SPEC-DEEP-039b — `components/OperationBilling/**` 10 filesと旧root composables
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `components/OperationBilling/**` 10 files、直接callerの`pages/billings/operations/[id].vue`・`components/OperationBillings/DataTable/index.vue`、直接契約の`useBaseManager`・`MoleculesActivatorCard`・schemas `OperationBilling`/`OperationResult`
 - 制約: AirItemManager package内部、runtime/UI、Firestore/Functions実行、Rules再検証は対象外
 
@@ -76,6 +76,12 @@
 - 新規CONFは追加しない。正式permissionはCONF-0019、負数・税・roundingはCONF-0021/0039、invoice-issued後immutableはCONF-0033系の上位判断に統合済みである。
 
 ## 未確認範囲
+
+### SPEC-DEEP-039b追加確認
+
+- 旧`useOperationBillingManager`と`useOperationBillingsManager`は静的callerがなく、現行page/component経路から未到達である。前者のtoggleLockはerrorを吸収しlocal rollbackをせず、後者はOperationBilling createを許すattrsと相対`operation-billings/{id}`遷移を持つため、現行model/page contractと一致しない。
+- 旧一覧managerの`set`はtruthy stringのsiteIdだけを採用し、null/emptyで既存filterをclearできない。date range変更時は再subscribeするが、permission/network/not-foundを独立表示せずloggerへ委譲する。
+- これらは即時削除ではなく、外部/dynamic consumer確認後に現行component managerへ統合または明示deprecated化する候補である。
 
 - AirItemManager/Air input package内部、adapterのupdate field mask、runtime dialog/input、UI/Emulator、Rules enforcement。
 - OperationResult/Billing Functions本文、Billing tax/PDF、invoice lifecycleは既存文書を参照し再読していない。

@@ -1,10 +1,16 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-08-11
+- 最終更新日: 2026-08-12
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
+
+## 2026-08-12 調査統合
+
+[2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md)で、認証・Rules・Functions、schema/base/adapters、共通UI、Admin SDKを再照合した。既存原因はFUT-0003、FUT-0004、FUT-0008〜0012、FUT-0018〜0031、FUT-0045〜0052、FUT-0080〜0084、FUT-0090、FUT-0105〜0109、FUT-0113〜0117、FUT-0136〜0153、FUT-0160、FUT-0165〜0167へ統合した。独立した未登録原因だけFUT-0177〜FUT-0183として追加した。
+
+確認済みの主な追加証拠は、verified email前のinvitation takeover、偽造User doc IDからglobal Authへの作用、cross-tenant SecurityReport object操作、unauthenticated history rebuild、locked OperationResultのmodel/Rules/UI bypass、full-set/upsertとprocess-global adapter/config、通知token log、UI managerのdisabled非強制、限定的で平文のAdmin backup/restoreである。runtime・remote・実dataでの発生頻度は未確認のまま保持する。
 
 ## FUT-0001 ページアクセスをfail-closedへ変更する
 
@@ -45,6 +51,8 @@
 - 必要なテスト: token claim、User fetch、Company fetch、各subscribe失敗と復旧、middleware timeout、FCM登録失敗を個別に注入する結合test。
 - ユーザー判断が必要な事項: User・Company初期化failure時に利用を止める範囲。
 
+SPEC-DEEP-040追加根拠: `composables/application/auth/useAuthActions.js` の `setUser` はUser/Company取得・購読開始の失敗をcatchした後も必ず `isReady=true` にする。missing companyId時は認証状態を維持したままmodelをclearし、prefixを `Companies/unknown` にするため、処理終了と利用可能状態が区別されていない。
+
 ## FUT-0004 User切替時の購読置換を保証する
 
 - 状態: Open
@@ -57,6 +65,8 @@
 - 推奨する将来対応: sign-outを経ないUser切替を許可しない境界を実装・検証し、sign-out時に旧購読が確実に解除されることを確認する。
 - 必要なテスト: 未認証を挟まないUser/会社切替、rapid auth callback、listener件数、旧document更新が新sessionへ反映されないこと。
 - ユーザー判断が必要な事項: なし。
+
+SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cleanupを待つが、FCM token documentの削除・端末sessionとの切離しは行わない。
 
 ## FUT-0005 サインアウト完了条件へmodel cleanupを含める
 
@@ -101,14 +111,16 @@
 
 - 状態: Open
 - 重大度: Medium
-- 発見セグメント: SPEC-SEG-003、SPEC-SEG-004、SPEC-SEG-005
+- 発見セグメント: SPEC-SEG-003、SPEC-SEG-004、SPEC-SEG-005、SPEC-DEEP-035
 - 対象ファイル・シンボル: `composables/useNotification.js` のpermission・`registFCMToken`、`FcmToken`、server invalid-token cleanup
-- 確認済み実装事実: permission stateはcomposableごとのrefで自動refreshしない。ログイン後にpermissionを許可してもtoken登録を自動再実行しない。clientにdeleteToken・token refresh監視・FcmToken削除呼出しはない。serverは送信時無効tokenとAuth User削除時tokenを削除する。
+- 確認済み実装事実: permission stateはcomposableごとのrefで自動refreshしない。ログイン後にpermissionを許可してもtoken登録を自動再実行しない。clientにdeleteToken・token refresh監視・FcmToken削除呼出しはない。serverは送信時無効tokenとAuth User削除時tokenを削除する。SPEC-DEEP-035で、User設定componentのpermission request/token登録にlocal loading、single-flight、error/retry表示がなく、denied時の回復案内もないことを確認した。
 - 想定影響と発生条件: 後から許可した端末が未登録、token rotation後の旧token残存、sign-out後も最後の所有情報が残る、登録失敗が利用者に見えず通知欠落となる可能性がある。
 - 未確認点・仮説: Firebase SDKのrotation契約、他UIからの再登録呼出し、server cleanup頻度は未確認。
 - 推奨する将来対応: tokenを現在login中Userだけに紐付け、sign-out時にFirestore紐付けを削除し、次回login時に再取得・再登録する。permission grant、rotation、browser data消去、登録失敗ごとのretryを追加設計する。invalid token最終削除はserver送信処理、Auth User削除時は関連token削除とし、定期orphan token検査を追加する。
 - 必要なテスト: permission default/denied/granted遷移、offline、getToken/create failure、rotation、複数端末、User切替、Auth削除。
 - ユーザー判断が必要な事項: 通知未準備のUI、登録retry回数、定期orphan token検査の間隔・保持期限。
+
+SPEC-DEEP-039b追加根拠: client token登録はgetToken/FcmToken createを含む全errorをcatchしてrethrowせず、認証初期化callerは登録失敗を成功完了と区別できない。
 
 ## FUT-0009 tokenとUser情報をログへ出さない
 
@@ -122,6 +134,8 @@
 - 推奨する将来対応: dev/prodともtoken全文、User document、notification payload丸ごとをlogしない。調査用token識別子は不可逆hash先頭8文字等に限定し、prod contextはuserId・companyId・notificationId等の必要最小限にする。test responseからtokenを除去する。
 - 必要なテスト: log captureでtoken・email・User属性が含まれないこと、error pathとemulator pathのsnapshot検査。
 - ユーザー判断が必要な事項: 監視基盤導入時のlog保持期間と閲覧権限。
+
+SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User objectとFCM token全文を`useLogger` dataへ渡し、loggerにはfield redactionがない。
 
 ## FUT-0010 FcmTokens Rulesのtenant・所有権・field検証を強化する
 
@@ -270,7 +284,7 @@
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-007
+- 発見セグメント: SPEC-SEG-007、SPEC-DEEP-038
 - 対象ファイル・シンボル: schemas `ArrangementNotification.update`・`toArranged`・`toConfirmed`・`toArrived`・`toLeaved`、status enum、ArrangementNotifications Rules
 - 確認済み実装事実: transition methodは現在statusを検査せず任意状態から呼べる。override updateはinstance.statusでdispatchするため事前にstatusを書き換えて任意transitionを選べ、未知statusではsilent no-opする。Rulesも任意status updateを許可する。配置管理UIは4statusをchipで選び対応methodを直接実行し、上下番確定UIは編集開始時にstatusをLEAVEDへ強制するため、順序飛ばし・逆遷移は画面から到達可能である。従業員UIはenum nextによる順方向だけを提示する。SPEC-DEEP-014で、`ArrangementNotificationChip`は未知status時にthrowし得る一方、ListItem/StatusChipは別のfallbackを使う表示契約不一致も確認した。toArrived/toLeavedは存在未確認の `confirmAt` を参照するため、通常のCONFIRMED→ARRIVED→LEAVEDでもconfirmedAtが現在日時へ上書きされ得る。enum commentとCONFIRMED.prevも矛盾する。
 - 想定影響と発生条件: 不正順序・直接write・取消し操作でstatusとconfirmed/arrived/leaved timestampが履歴を正しく表さず、通知再送、上下番確定、監査・稼働実績の誤判定につながり得る。
@@ -285,7 +299,7 @@
 - 重大度: High
 - 発見セグメント: SPEC-SEG-007
 - 対象ファイル・シンボル: `actualStartAt`、`actualEndAt`、`totalWorkMinutes`、`actualIsStartNextDay`、3transitionのactual field設定、`toLeaved` timeOptions
-- 確認済み実装事実: actual日時はactualIsStartNextDayではなく予定isStartNextDayを使い、終了跨日はactual時刻ではなく予定isSpansNextDayを使う。従業員下番UIと上下番確定UIはactualStartTime、actualIsStartNextDay、actualEndTime、actualBreakMinutesをinstanceへ直接結線してから引数なしでtoLeavedを呼ぶため、timeOptions未使用は現在のUIでは入力喪失の直接原因ではないが、入力したactualIsStartNextDayは日時計算へ反映されない。toArranged/toConfirmed/toArrivedはactualBreakMinutesを予定breakMinutesではなく60へ固定し、配置管理UIからこれらのstatusを選んだ場合にも同じ上書きが起こる。
+- 確認済み実装事実: actual日時はactualIsStartNextDayではなく予定isStartNextDayを使い、終了跨日はactual時刻ではなく予定isSpansNextDayを使う。従業員下番UIと上下番確定UIはactualStartTime、actualIsStartNextDay、actualEndTime、actualBreakMinutesをinstanceへ直接結線してから引数なしでtoLeavedを呼ぶため、timeOptions未使用は現在のUIでは入力喪失の直接原因ではないが、入力したactualIsStartNextDayは日時計算へ反映されない。toArranged/toConfirmed/toArrivedはactualBreakMinutesを予定breakMinutesではなく60へ固定し、配置管理UIからこれらのstatusを選んだ場合にも同じ上書きが起こる。SPEC-DEEP-038では配置Tagだけがactual時刻を`||`で予定へfallbackし、資格・OJTで用いるnullish実効値契約と異なることを確認した。
 - 想定影響と発生条件: 実開始・終了が予定と異なる日跨ぎ、翌日開始、休憩変更の場合、totalWorkMinutesが誤り、稼働実績・勤怠・請求へ不正な時間が連携される可能性がある。
 - 未確認点・仮説: datetime/break validationの具体的許容範囲、scheduled/actual breakの保存field・migrationは未確認。
 - 推奨する将来対応: base dateをschedule dateとし、`actualIsStartNextDay`を明示する。end <= startは翌日とする。actual値を優先し、scheduled値はfallback/defaultだけに使う。breakはactual入力・確認値とし、固定60分を自動確定せずscheduled defaultだけにする。scheduled/actual breakを別保持し、保存前に日跨ぎを含むdatetime・breakを検証する。
@@ -356,6 +370,8 @@
 - 推奨する将来対応: 3pathを実装する。(1) schedule＋notificationsは可能な範囲でOperationResult作成、schedule.operationResultId、既存notification LEAVEDを同一transactionにしpushしない。(2) scheduleのみはnotificationを作らずOperationResult＋schedule linkをatomic化し、入力優先・欠損schedule fallback・no-notification sourceを記録する。(3) standaloneはOperationResultのみでreason/sourceTypeを記録する。scheduleId/sourceTypeをoptionalにし、schedule重複防止、standalone専用permission/audit、missing notification非error、存在するnotificationだけ更新を強制する。
 - 必要なテスト: 3path、notification 0/1/複数、pushなし、入力優先/fallback、optional scheduleId/sourceType、schedule重複拒否、既存同一ID・stale link時の非上書き、standalone/duplicate permission・provenance・audit、transaction abort/retry、missing notification非error。
 - ユーザー判断が必要な事項: 具体的sourceType語彙、standalone permission名、audit保持等の実装詳細。3path契約は2026-08-11に確認済み。
+
+SPEC-DEEP-041追加根拠: developer duplicateのdomain APIは複数日と同日重複を許し、各Resultをrandom IDで同一transactionへcreateする。`beforeCreate`はSiteをtransaction外で再fetchして現在のcustomer/agreementを再適用するため、複製元snapshotの保持、Site変更とのread consistency、同日同内容重複を保証しない。
 
 ## FUT-0028 配置通知作成失敗時の上下番確定方針を決める
 
@@ -522,7 +538,7 @@
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-015
 - 対象ファイル・シンボル: `createAttendancePunchRows`、`exportAttendancePunchesCsv`、`DailyAttendanceExporter`
-- 確認済み実装事実: 現行はemployeeCode、employeeName、punchTypeCode、punchDateTimeの4列をUTF-8 BOM・CRLFでbrowser downloadする。2026-08-11にfreee勤怠管理Plusへ引き渡す想定と確認されたが、仮実装で取込テストは未実施である。同日複数実績間の空きを休憩打刻にする挙動は承認済みである。
+- 確認済み実装事実: 現行はemployeeCode、employeeName、punchTypeCode、punchDateTimeの4列をUTF-8 BOM・CRLFでbrowser downloadする。2026-08-11にfreee勤怠管理Plusへ引き渡す想定と確認されたが、仮実装で取込テストは未実施である。同日複数実績間の空きを休憩打刻にする挙動は承認済みである。SPEC-DEEP-045ではbrowser local timeを明示JSTへ変換しないこと、過大・非有限breakの拒否がなく勤務区間外または休憩欠落へなり得ること、employee code/nameのCSV formula neutralizationがないことを確認した。
 - 想定影響と発生条件: freee勤怠管理Plusがheader名、code、文字コード、timezone、日跨ぎ、休憩打刻等を異なる形式で要求する場合、取込拒否または誤った勤怠として登録される可能性がある。
 - 未確認点・仮説: 公式の対象取込機能・template version、必須列、従業員code対応、DEV取込結果は未確認。
 - 推奨する将来対応: exporterへ対象・format versionを持たせ、公式template確定後、同日・夜勤・複数実績・休憩・空値等の代表matrixをstatic testし、DEV test employeeへ取込検証する。error、丸め、timezone、encodingを確認し、対応versionと確認日を文書化する。検証完了までは非表示またはtrial labelとする。
@@ -559,7 +575,7 @@
 
 - 状態: Hypothesis
 - 重大度: Medium
-- 発見セグメント: SPEC-SEG-016
+- 発見セグメント: SPEC-SEG-016、SPEC-SEG-059、SPEC-DEEP-035
 - 対象ファイル・シンボル: `rebuildHistories`、`rebuildHistory`、OperationResult trigger update branch
 - 確認済み実装事実: 各employeeを逐次処理し、queryとhistory writeを共通transactionに含めない。同じsite/employeeの並行event間にversion検査はない。dateだけでfirst/lastをsortし同日document IDのtie-breakを指定しない。site同一のdate変更は同じ集合を2回再構築する。
 - 想定影響と発生条件: 並行eventで古いquery結果が後からsetされるとfirst/lastがstaleになる可能性がある。同日複数実績ではfirst/last OperationResult IDが再実行で変わり得る。途中failureではemployee間で部分更新となる。
@@ -574,7 +590,7 @@
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-016
 - 対象ファイル・シンボル: `firestore.rules` Companies配下fallback、`SiteEmployeeHistory`、`rebuildHistory`
-- 確認済み実装事実: SiteEmployeeHistories専用Rulesはない。通常の同社認証Userはclient read/writeできず、super-userは全read/write可能である。FunctionsはOperationResultからAdmin SDKで再構築する。SPEC-SEG-059で、`sites:read`のSite detailが`siteId == route id`で全履歴を無制限subscribeし、全従業員名と初回/最終日を表示する一方、通常User向けprojection/CallableがなくRulesでqueryを拒否されることを確認した。
+- 確認済み実装事実: SiteEmployeeHistories専用Rulesはない。通常の同社認証Userはclient read/writeできず、super-userは全read/write可能である。FunctionsはOperationResultからAdmin SDKで再構築する。SPEC-SEG-059で、`sites:read`のSite detailが`siteId == route id`で全履歴を無制限subscribeし、全従業員名と初回/最終日を表示する一方、通常User向けprojection/CallableがなくRulesでqueryを拒否されることを確認した。SPEC-DEEP-035で、ChipがEmployee欠損・取得失敗を`...loading`へ畳み込み、click tooltipに初回/最終日だけを表示して詳細navigationを持たないことを確認した。
 - 想定影響と発生条件: 通常User向け履歴表示は現在read不能で、Site画面にempty/errorの区別なく入場者が表示されない可能性がある。Rulesを単純に同社readへ広げると`sites:read` Userへ全従業員履歴を開示する。super-user clientがfirst/last ID・date等を直接変更すると再構築契約を迂回し、監査・現場従事表示を不整合にできる。
 - 未確認点・仮説: 本人用Callable/projectionの具体path・response schema、現場/配置管理者の具体的permission、derived historyの保持・削除期間、audit保持は未実装・未確定である。
 - 推奨する将来対応: 本人確認済みCallable/projectionで自己が入場した現場名・初回/最終入場日だけを返し、他従業員履歴、顧客取極め・請求、他配置者を除外する。現場/配置管理者は同一会社履歴をreadできるようにする。whole documentのbroad readを避け、writeはFunctions-only、OperationResultからのrebuildは監査付きprocessとする。OperationResult retentionは別契約で扱う。
@@ -649,6 +665,8 @@
 - 必要なテスト: 全status表示、許可/禁止遷移、発行前期日編集、発行後reason/history、paid/cancelled期日変更拒否、Customer条件変更後の既存Billing不変、権限、二重click、失敗rollback、部分/全額入金、取消/再発行、直接write、PDF/CSV条件。
 - ユーザー判断が必要な事項: 確定・支払・取消・訂正のworkflow、支払記録field、部分入金、PAID判定、各actor権限。
 
+SPEC-DEEP-039a追加根拠: Billing詳細managerの未使用`info` computedは未importの`OperationBilling`とBillingにないfieldsを参照し、再利用時に例外または誤model表示となるlatent contractである。
+
 ## FUT-0050 OperationBilling lock toggleの失敗・多重実行を安全にする
 
 - 状態: Open
@@ -661,6 +679,8 @@
 - 推奨する将来対応: 明示するdesired valueとversion/preconditionで更新し、buttonをprocessing中disabledにする。失敗時rollback/refetchと利用者messageを追加する。UIへ「稼働管理者の編集を止めるlockで、請求担当者のOperationBilling編集は可能」と明示し、operationLocked/billingLockedへは強い必要性が生じるまで分割しない。
 - 必要なテスト: lock/unlock成功、permission/network failure、double click、two-tab concurrent toggle、subscription復元、lock中請求編集。
 - ユーザー判断が必要な事項: なし。controller/operation edit lockとして現行scopeを維持する方針は2026-08-11に確認済み。invoice-issued後immutableは別判断とする。
+
+SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerrorを吸収してlocal rollbackせず、静的caller不在で現行button経路とは別のlegacy contractである。
 
 ## FUT-0051 Billing client編集とaggregation更新の競合を防ぐ
 
@@ -782,9 +802,9 @@
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-010
-- 対象ファイル・シンボル: `utils/pageSettings.js` sites routes、`pages/sites/**`、Sites Rules
-- 確認済み実装事実: `sites:read`で作成、全編集、取極め変更、終了、archiveへ到達し、Rulesは同一会社User/super-userに全field writeを許す。SPEC-DEEP-010で6種のSite side effectにpage側write guardがなく、ACTIVE一覧・TERMINATED検索の双方から同じ詳細へ到達することを確認した。
+- 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-010、SPEC-DEEP-034
+- 対象ファイル・シンボル: `utils/pageSettings.js` sites routes、`pages/sites/**`、`components/Site/**`、Sites Rules
+- 確認済み実装事実: `sites:read`で作成、全編集、取極め変更、終了、archiveへ到達し、Rulesは同一会社User/super-userに全field writeを許す。SPEC-DEEP-010で6種のSite side effectにpage側write guardがなく、ACTIVE一覧・TERMINATED検索の双方から同じ詳細へ到達することを確認した。SPEC-DEEP-034ではSite Manager/Activator/Autocompleteがpermission・statusを検査せずedit/create入口を公開し、Air managerもdisabledを操作guardとして強制しないことを確認した。
 - 想定影響と発生条件: 閲覧利用者が配置・請求の基礎masterや取極めを改変・削除できる可能性がある。
 - 未確認点・仮説: role presetの具体的な割当、Callableのactor/field検証、archive監査schema、operator緊急restoreの実装方式は未確認。
 - 推奨する将来対応: `sites:read`/`sites:write`の2権限を実装し、writeへ作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含める。archiveは理由・監査必須、通常restoreは禁止し、operator緊急restoreを通常UIから分離する。route/button/Rules/Callable/role presetを一致させる。
@@ -795,22 +815,22 @@
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-021
-- 対象ファイル・シンボル: schemas `Site.customerId/customer/beforeUpdate`、`SiteActivatorCustomer`、OperationResult customer同期
-- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能。一覧はlive Customer、詳細等は埋込みCustomerを使う。SPEC-DEEP-002で、Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播する実装を確認した。ただし複数batchはatomicでなく、event version guardもない。
-- 想定影響と発生条件: 同じSiteで取引先表示・締条件が画面別に不一致となり、Customer変更前後のschedule/result/billingが異なる所属・条件を保持し得る。
-- 未確認点・仮説: 明示的再適用Callableの対象query/UI、発行済み判定、Agreement候補、batch上限・部分失敗回復は未確認。
-- 推奨する将来対応: SiteのCustomer変更を許し、既存OperationResultのCustomerはsnapshotとして維持する。必要時だけ利用者が対象を選ぶCustomer/Agreement再適用method/Callableを設け、old/new Customer・AgreementとBilling影響を表示し、発行済み請求書を除外してactor/reason/before-afterを監査する。空updateへ再同期の隠れた意味を持たせず、OperationResult update triggerでBillingをold→newへ移す。
-- 必要なテスト: 仮登録→本登録、A→B変更、empty updateで非同期、選択再適用、対象外維持、発行済み除外、old/new Billing移動、監査、同時変更・部分失敗。
-- ユーザー判断が必要な事項: なし。CONF-0047で方針確定済み。
+- 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-034、SCHEMA-MASTER-001
+- 対象ファイル・シンボル: schemas `Site.customerId/customer/beforeUpdate`、`SiteActivatorCustomer`、`SiteManager`、Customer→Site同期
+- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能で、詳細UIもcustomerId editorを常時公開する。一覧はlive Customer、詳細等は埋込みCustomerを使う。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播するが、複数batchはatomicでなくevent version guardもない。現行仕様は過去請求整合のためSite Customer変更を禁止する一方、CONF-0047には変更許可の回答履歴があり、正本と台帳が衝突している。
+- 想定影響と発生条件: 現行UI/sourceでA→B変更すると仕様に違反し、schedule/result/billingが異なる所属・条件を保持し得る。通常Customer更新でもout-of-order/partial batchにより同じSiteの取引先表示・締条件が画面別に不一致となり得る。
+- 未確認点・仮説: 既存A→B変更data、古いCustomer eventの順序逆転、partial batch件数、正本仕様を変更する正式承認は未確認。
+- 推奨する将来対応: 現行仕様を優先し、仮登録の初回Customer設定後はcustomerId変更・unsetをRules/server/schema/UIで拒否する。Customer masterから埋込みsnapshotへの同期はsource revisionを持つ収束可能な処理とし、失敗を監視・再実行する。将来Customer移管を採用する場合は、先に仕様・ADR・migration・Billing影響・rollbackを正式変更する。
+- 必要なテスト: 仮登録→初回設定、A→B/unset直接write拒否、同Customer master更新、out-of-order/replay、300件境界、partial failure/reconcile、一覧/詳細整合、既存違反data検出。
+- ユーザー判断が必要な事項: CONF-0047の回答履歴と現行仕様のどちらを将来正本とするかはrepository conflictである。変更指示がない限り現行仕様の変更禁止を適用する。
 
 ## FUT-0062 Site status lifecycleと検索・編集境界を統一する
 
 - 状態: Open
 - 重大度: Medium
-- 発見セグメント: SPEC-SEG-021、SPEC-DEEP-010
+- 発見セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: schemas `Site.terminate`、`pages/sites/terminated.vue`、`SiteAutocomplete.vue`、`pages/sites/[id].vue`
-- 確認済み実装事実: terminateは当日以降scheduleだけを阻止する。TERMINATEDもAutocomplete候補となり、詳細で編集・取引先変更・取極め変更・削除・再終了UIが表示される。再有効化経路はない。SPEC-DEEP-010で終了検索にloading/error/request sequenceがなく、連続検索responseの逆転防止もないことを確認した。
+- 確認済み実装事実: terminateは当日以降scheduleだけを阻止する。TERMINATEDもAutocomplete候補となり、詳細で編集・取引先変更・取極め変更・削除・再終了UIが表示される。再有効化経路はない。SPEC-DEEP-010で終了検索にloading/error/request sequenceがなく、連続検索responseの逆転防止もないことを確認した。SPEC-DEEP-034ではAutocomplete wrapper自体にもstatus constraintがなく、基本情報cardの工期片端欠損時に`null`文字列を表示することを確認した。
 - 想定影響と発生条件: 終了Siteへの新規紐付けや終了後master改変、誤終了から回復不能、再終了errorが発生し得る。
 - 未確認点・仮説: 限定訂正を許すfieldと監査schema、Agreementを再開時にどう選び直すかは実装設計未確認。
 - 推奨する将来対応: TERMINATEDをread-only・新規選択不可とし、履歴表示と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。Customer変更時はFUT-0061の方針を使い、Agreementは自動再有効化しない。archiveは誤登録等だけ、通常restoreは禁止する。
@@ -910,9 +930,9 @@
 
 - 状態: Needs decision
 - 重大度: High
-- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031
+- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031、SPEC-DEEP-038
 - 対象ファイル・シンボル: operation-schedules pageSettings、schedule managers/actions、SiteOperationSchedules Rules
-- 確認済み実装事実: `site-operation-schedules:read`で作成・更新・削除・通知・複製へ到達し、Rulesは同一会社User/super-userに全writeを許す。SPEC-DEEP-015で、ArrangementsManager component群自身にrole/permission検査がなく、worker notification操作もgeneric managerへ直接渡すことを再確認した。SPEC-DEEP-031で、OperationSchedules route/table/selector/order dialogにもwrite role・tenant・field allowlist再検査がなく、Company `scheduleOrder`全体更新とschedule CRUDへ到達することを確認した。
+- 確認済み実装事実: `site-operation-schedules:read`で作成・更新・削除・通知・複製へ到達し、Rulesは同一会社User/super-userに全writeを許す。SPEC-DEEP-015で、ArrangementsManager component群自身にrole/permission検査がなく、worker notification操作もgeneric managerへ直接渡すことを再確認した。SPEC-DEEP-031で、OperationSchedules route/table/selector/order dialogにもwrite role・tenant・field allowlist再検査がなく、Company `scheduleOrder`全体更新とschedule CRUDへ到達することを確認した。SPEC-DEEP-038で、現場詳細pageが`sites:read`だけで予定Manager CRUDへ到達し、WorkerDetailManagerの公開methodにもactor/tenant/permission再検査がないことを確認した。
 - 想定影響と発生条件: 閲覧利用者が予定、worker、通知flag、operationResultIdを直接改変できる。
 - 未確認点・仮説: 配置編集、通知、削除、確定解除の正式roleは未決定。
 - 推奨する将来対応: 操作別権限とfield ownershipを定義し、UI/Rules/server入口を一致させる。
@@ -923,22 +943,28 @@
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-023、SPEC-SEG-052、SPEC-DEEP-024、SPEC-DEEP-031
+- 発見セグメント: SPEC-SEG-023、SPEC-SEG-052、SPEC-DEEP-024、SPEC-DEEP-031、SPEC-DEEP-035
 - 対象ファイル・シンボル: `SiteOperationSchedule.create`、`updateSchedules`、card optimistic update、`Draggable/{OperationSchedules,SiteShiftTypeOrder}`、`useSiteShiftTypeOrderActions.update`、Company `siteOrder/scheduleOrder`
-- 確認済み実装事実: 最大displayOrder queryはcreate transaction外で、同時createが同じ+1を採り得る。scheduleのdrag一括更新はtransactionだがversion/preconditionはない。Companyの表示順更新は配列全体をinstanceへ先に代入してCompanyをupdateし、transaction/version/precondition、失敗時rollback、例外再throwがない。保存中もreorder draft自体はdrag可能で、重複保存entry、欠損Site、補完だけのentryを正規化しない。SPEC-DEEP-015で、range facadeのgroupKey indexは同一site/shift/dateの後方scheduleで前方を上書きし、duplicateを画面で明示しないこと、focused date以外のUI disableは同日内・別tabの競合を防がないことを追加確認した。SPEC-DEEP-024で、OperationSchedules dragは並び替えた配列を直ちにemitするだけでdisplayOrder再採番、loading latch、error/rollbackを持たず、SiteShiftTypeOrder dragもattrs透過だけのwrapperであることを確認した。SPEC-DEEP-031で、OperationSchedulesManagerのreorder dialogはerrorを吸収する`update` actionをawaitするためCompany update失敗時もcloseし得ること、public remove-order APIのdisable判定が現在range内のscheduleだけを見ることを確認した。
+- 確認済み実装事実: 最大displayOrder queryはcreate transaction外で、同時createが同じ+1を採り得る。scheduleのdrag一括更新はtransactionだがversion/preconditionはない。Companyの表示順更新は配列全体をinstanceへ先に代入してCompanyをupdateし、transaction/version/precondition、失敗時rollback、例外再throwがない。保存中もreorder draft自体はdrag可能で、重複保存entry、欠損Site、補完だけのentryを正規化しない。SPEC-DEEP-015で、range facadeのgroupKey indexは同一site/shift/dateの後方scheduleで前方を上書きし、duplicateを画面で明示しないこと、focused date以外のUI disableは同日内・別tabの競合を防がないことを追加確認した。SPEC-DEEP-024で、OperationSchedules dragは並び替えた配列を直ちにemitするだけでdisplayOrder再採番、loading latch、error/rollbackを持たず、SiteShiftTypeOrder dragもattrs透過だけのwrapperであることを確認した。SPEC-DEEP-031で、OperationSchedulesManagerのreorder dialogはerrorを吸収する`update` actionをawaitするためCompany update失敗時もcloseし得ること、public remove-order APIのdisable判定が現在range内のscheduleだけを見ることを確認した。SPEC-DEEP-035で、親prop更新がopen中draftを無通知resetし、loading中もdrag可能、submitはclone・validation・awaitなしで内部配列をemitし、差し替え用fetch propも未使用であることを確認した。
 - 想定影響と発生条件: 同一group同時作成・並べ替え・個別編集、別端末のCompany設定/表示順更新、保存失敗で、順序重複・後勝ち上書き・画面だけ更新済みの状態が起き得る。
 - 未確認点・仮説: FireModel updateの送信field粒度・暗黙precondition、offline再送、UIの同時利用頻度は未確認。
 - 推奨する将来対応: group順序をtransaction内で採番し、Company表示順にはrevision/preconditionまたは専用document/server更新と競合再読込を導入する。保存失敗をcallerへ返して旧値へ戻し、重複・欠損entryの扱いを明示する。
 - 必要なテスト: 2client同時create、drag対drag、drag対Company設定更新、保存拒否/timeout/offline、rollback/refetch、重複key、削除/archive Site、transaction retry、同一displayOrder表示。
 - ユーザー判断が必要な事項: CONF-0057。
 
+SPEC-DEEP-039b追加根拠: caller不在の旧`useSiteOrderManager`もCompany配列を先に全置換してerrorを吸収し、replacement arrayはinitialize時のadd/change/remove helperをsubscription再初期化まで失う。
+
+SPEC-DEEP-040追加根拠: `siteShiftTypeOrder/useSiteShiftTypeOrderActions.js` もCompanyのorder配列をremote update前に直接変更し、失敗をloggerへ渡して吸収する。rollback・最新値再取得・callerへの失敗結果がない。
+
+SPEC-DEEP-043追加根拠: order data layerは未知typeを空配列へ畳み込み、保存済み重複/invalid entryを保持したままmissing `SiteOrder` instanceを末尾へ連結する。plain objectとinstanceが混在し、Site fetch失敗・削除Site・重複keyを正規化しない。
+
 ## FUT-0072 ScheduleのOperationResult lockをserver境界で強制する
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031
+- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031、SPEC-DEEP-038
 - 対象ファイル・シンボル: `SiteOperationSchedule.operationResultId/isEditable/beforeUpdate/beforeDelete`、Rules
-- 確認済み実装事実: UI/schemaは_beforeData.operationResultIdでupdate/deleteを拒否するが、RulesはoperationResultId変更やlocked schedule direct writeを制限しない。SPEC-DEEP-031で、Table Selectorはlocked scheduleにもedit/duplicate iconを表示し、component自身はlock/loading/permissionを表示・disableしないことを確認した。manager/schemaの後段拒否に依存する。
+- 確認済み実装事実: UI/schemaは_beforeData.operationResultIdでupdate/deleteを拒否するが、RulesはoperationResultId変更やlocked schedule direct writeを制限しない。SPEC-DEEP-031で、Table Selectorはlocked scheduleにもedit/duplicate iconを表示し、component自身はlock/loading/permissionを表示・disableしないことを確認した。manager/schemaの後段拒否に依存する。SPEC-DEEP-038で、WorkerDetailManagerの公開create/update/deleteはschedule lockを再検査せず、SiteOperationSchedulesManagerもAir managerのdisableに依存するため公開submit経路を止めないことを確認した。
 - 想定影響と発生条件: 直接writeでlock解除・予定改変・削除を行うとOperationResultとの1対1整合が崩れる。
 - 未確認点・仮説: super-user修復、OperationResult削除時unlockの正式主体は未決定。
 - 推奨する将来対応: server transaction/RulesでResult存在と許可transitionを検証し、修復経路を分離する。
@@ -949,27 +975,31 @@
 
 - 状態: Open
 - 重大度: High
-- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-024
+- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-024、SPEC-DEEP-038
 - 対象ファイル・シンボル: `SiteOperationSchedule.update/delete/notify`、application actions、`Draggable/Workers`
-- 確認済み実装事実: 通知documentとflag/cascadeはtransaction化されるが、snapshot購読により失敗時instance rollback不能の場合がschema commentにある。actionsはerrorを吸収する。SPEC-DEEP-015で、配置管理facadeはnotify結果を利用者へ表示・返却せず、共通row lock/rollback/refetchを提供しないことを確認した。SPEC-DEEP-024で、Worker dragはinternal schedule mutation例外をloggerへ記録して吸収し、元modelへの明示rollback、callerへのreject/error、再fetch指示を持たないことを確認した。
+- 確認済み実装事実: 通知documentとflag/cascadeはtransaction化されるが、snapshot購読により失敗時instance rollback不能の場合がschema commentにある。actionsはerrorを吸収する。SPEC-DEEP-015で、配置管理facadeはnotify結果を利用者へ表示・返却せず、共通row lock/rollback/refetchを提供しないことを確認した。SPEC-DEEP-024で、Worker dragはinternal schedule mutation例外をloggerへ記録して吸収し、元modelへの明示rollback、callerへのreject/error、再fetch指示を持たないことを確認した。SPEC-DEEP-038でWorkerDetailManagerもschedule instanceを先にmutateしてからupdateし、失敗時にloading解除以外のrollback/refetchを行わないことを確認した。
 - 想定影響と発生条件: transaction失敗・retry・競合後、画面が誤った通知済み状態を示し、利用者が再通知/再編集結果を判断できない。
 - 未確認点・仮説: subscriptionが常に正本へ収束する時間、UI error表示と手動retry導線は未確認。
 - 推奨する将来対応: 失敗時にserver stateを再fetchしてinstanceを置換し、結果をcallerへ返し、idempotent retryを提供する。
 - 必要なテスト: notify/update/delete各段階失敗、transaction retry、onSnapshot競合、二重click、再通知。
 - ユーザー判断が必要な事項: CONF-0059。
 
+SPEC-DEEP-040追加根拠: application schedule actionsはnotify/update/bulk updateのerrorをloggerへ渡して吸収する。normalizeはtransaction前にschedule instanceを変更するため、remote failure時もlocal objectへ変更が残り得る。
+
 ## FUT-0074 Schedule複製・過去変更・worker充足validationを確定する
 
 - 状態: Needs decision
 - 重大度: Medium
-- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031
+- 発見セグメント: SPEC-SEG-023、SPEC-DEEP-031、SPEC-DEEP-036、SPEC-DEEP-037
 - 対象ファイル・シンボル: `duplicate`、schedule input、Operation personnel getters、Card Actions
-- 確認済み実装事実: 実績作成済みscheduleも複製buttonが有効。最大20日、同日除外、既存groupへの追加を許す。OperationResult未作成なら過去予定も変更/削除でき、必要人数・資格不足は表示用で保存を拒否しない。SPEC-DEEP-031で、Selector/duplicatorは`isEditable`を検査せずlocked scheduleをtemplateとして複製でき、同じtransaction内で元linkをnullにした新規scheduleを作ることを確認した。
+- 確認済み実装事実: 実績作成済みscheduleも複製buttonが有効。最大20日、同日除外、既存groupへの追加を許す。OperationResult未作成なら過去予定も変更/削除でき、必要人数・資格不足は表示用で保存を拒否しない。SPEC-DEEP-031で、Selector/duplicatorは`isEditable`を検査せずlocked scheduleをtemplateとして複製でき、同じtransaction内で元linkをnullにした新規scheduleを作ることを確認した。SPEC-DEEP-036で、実効OJT/外注人数を使う過不足iconに対し必要人数avatar色はschedule元値を使い、通知override後に同一card内の表示が食い違い得ることを確認した。SPEC-DEEP-037ではListItemが`workers.length`を配置人数として表示し、OJT除外・外注amountを使う実効人数と一致しないこと、Selectorの編集・複製・作成buttonもlock/permissionを検査しないことを確認した。
 - 想定影響と発生条件: 意図しない重複予定、過去配置の改変、資格/人数不足のまま通知・運用が進む可能性がある。
 - 未確認点・仮説: 重複予定、実績済みからのtemplate複製、過去訂正、不足許容の正式方針は未決定。
 - 推奨する将来対応: 複製元/先、過去日、重複、人数・資格不足の警告/拒否規則を仕様化する。
 - 必要なテスト: locked元複製、20/21日、既存group、過去日、0人、不足/超過、資格者0、OJTのみ。
 - ユーザー判断が必要な事項: CONF-0060。
+SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchしてrethrowしないためAir managerがsuccess/quitへ進み得る。公開submitはdisableSubmitを内部強制せず、0/21件のUI制約もprogrammatic pathではguardにならない。
+
 ## FUT-0075 Employee個人情報の閲覧・編集権限を最小化する
 
 - 状態: Needs decision
@@ -1040,9 +1070,9 @@
 
 - 状態: Needs decision
 - 重大度: Critical
-- 発見セグメント: SPEC-SEG-025
+- 発見セグメント: SPEC-SEG-025、SPEC-DEEP-035
 - 対象ファイル・シンボル: `firestore.rules` Users match、`auth-v2.disableUser/enableUser/changeAdminUser`、UsersManager、`components/organisms/ChangeAdminUserDialog/index.vue`
-- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。SPEC-DEEP-001で、disable/enableは認証のみでtarget Auth claimのcompanyを採用し、管理者移譲もcallerのisAdmin/from本人性およびtoのdisabled/temporaryをserver検証しないことを本文再確認した。SPEC-DEEP-032ではdialogが`/settings/users`から実到達し、clientは`auth.isAdmin`だけをguard、callableは同社path・from admin・to non-admin・transaction更新を検証するが、caller本人性、target状態、理由/監査/versionを検証しないことを確認した。
+- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。SPEC-DEEP-001で、disable/enableは認証のみでtarget Auth claimのcompanyを採用し、管理者移譲もcallerのisAdmin/from本人性およびtoのdisabled/temporaryをserver検証しないことを本文再確認した。SPEC-DEEP-032ではdialogが`/settings/users`から実到達し、clientは`auth.isAdmin`だけをguard、callableは同社path・from admin・to non-admin・transaction更新を検証するが、caller本人性、target状態、理由/監査/versionを検証しないことを確認した。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
 - 想定影響と発生条件: 一般Userの直接write/callable呼出しによりroles、isAdmin、disabled、employeeId等の改変、管理者移譲、別tenant UIDの無効化要求が可能になる。
 - 未確認点・仮説: 正式なUser管理role、本人更新可能field、super-user修復権限は未決定。
 - 推奨する将来対応: actor/action/field別権限を決め、Admin SDK callableとRulesでtenant・role・doc ID/UID・immutable fieldを強制する。
@@ -1064,18 +1094,22 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 - 必要なテスト: 各段階failure、同一request retry、二重click、既存Auth/User/Company組合せ、trigger遅延。
 - ユーザー判断が必要な事項: CONF-0067。
 
+SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/resumeせず、内部UID付きsupport案内だけを返す直列flowを再確認した。
+
 ## FUT-0082 User doc ID・仮登録email・Employee linkの不変条件を強制する
 
 - 状態: Open
-- 重大度: High
-- 発見セグメント: SPEC-SEG-025
+- 重大度: Critical
+- 発見セグメント: SPEC-SEG-025、SEC-002、SCHEMA-MASTER-001
 - 対象ファイル・シンボル: schemas `User`、`setupUserAccount`、Users Rules、`EmployeeUserManager`
-- 確認済み実装事実: 本登録処理はdoc ID=Auth UIDを採るがRules/schemaは強制しない。仮User emailとemployeeIdに一意制約がなく、事前登録検索は複数一致の先頭を使用する。
-- 想定影響と発生条件: 重複仮登録、誤employee紐付け、UIDでない本UserによりAuth update/deleteが別accountへ作用または失敗し得る。
+- 確認済み実装事実: 本登録処理はdoc ID=Auth UIDを採るがRules/schemaは強制しない。仮User emailとemployeeIdに一意制約がなく、事前登録検索は複数一致の先頭を使用する。SEC-002では、attacker tenantへ別UIDをdoc IDとするUserを作成し、そのglobal UIDをAuth update/delete targetとして扱わせるsource chain、およびemail ownership確認前に通常clientがsetupを呼べるchainを確認した。token email一致は`email_verified`や一回限りinvite proofを代替しない。
+- 想定影響と発生条件: 重複仮登録、誤employee紐付け、invitation takeoverに加え、任意doc IDを書けるactorが別tenantのglobal Auth accountをdisable・更新・削除し得る。影響がcross-tenant Auth hard deletionを含むためCriticalとした。
 - 未確認点・仮説: 既存重複、1 Employee対複数Userを許す運用は未確認。
 - 推奨する将来対応: server予約/indexと作成callableでemail、UID、employeeIdの不変条件をtransactionally検証する。
 - 必要なテスト: 同時仮登録、同email複数company、同employee複数User、任意doc ID、本登録競合。
 - ユーザー判断が必要な事項: CONF-0067、CONF-0062。
+
+SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず、composableがemailで先頭docを再検索してverification成立前にsetupする。表示対象・setup対象・mailbox所有を同じone-time proof/revisionへbindしない。
 
 ## FUT-0083 User/Auth同期triggerの失敗と遅延を可視化・修復する
 
@@ -1093,10 +1127,10 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 ## FUT-0084 未認証の事前登録照会で返す情報を最小化する
 
 - 状態: Open
-- 重大度: Medium
-- 発見セグメント: SPEC-SEG-025
+- 重大度: High
+- 発見セグメント: SPEC-SEG-025、SEC-002
 - 対象ファイル・シンボル: `checkUserPreRegistration`、`checkEmailAvailability*`
-- 確認済み実装事実: 未認証callerがemailを指定すると、登録有無に加えcompanyId、displayName、roles、tempUserIdを取得できる。rate limit/challengeは直接実装にない。
+- 確認済み実装事実: 未認証callerがemailを指定すると、登録有無に加えcompanyId、displayName、roles、tempUserIdを取得できる。rate limit/challengeは直接実装にない。SEC-002でanonymous callerからこの応答差とmetadata返却へ到達するsource chainを確認し、仮説ではなく現行実装の公開境界として分類した。
 - 想定影響と発生条件: email推測・列挙により所属会社識別子、氏名、role、仮doc IDが漏れる。
 - 未確認点・仮説: App Check、platform側rate limit、招待secretの別実装は未確認。
 - 推奨する将来対応: opaque invitation token方式または返却最小化、App Check/rate limit、enumeration-resistant responseを検討する。
@@ -1259,6 +1293,8 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 - 必要なテスト: doc不存在、permission/network断、初回/購読後切断、Company fetch失敗、再接続、複数tab。
 - ユーザー判断が必要な事項: CONF-0081。
 
+SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時にmaintenance=trueへ倒す点はfail-closedだが、unknown/error区分、利用者向けretry、subscription error channel、明示的teardownを持たない。
+
 ## FUT-0097 System/Company maintenance field契約と表示を統一する
 
 - 状態: Open
@@ -1343,7 +1379,7 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 - 重大度: High
 - 発見セグメント: SPEC-SEG-029
 - 対象ファイル・シンボル: Company.subscription、`getCustomerType`、checkout subscription_data、webhook metadata
-- 確認済み実装事実: checkoutはemployeeLimit metadataを設定せずwebhookは欠損時0。delete後id nullでfree。未分類statusはfree。period end時刻経過だけではcomputed再評価されない。
+- 確認済み実装事実: checkoutはemployeeLimit metadataを設定せずwebhookは欠損時0。delete後id nullでfree。未分類statusはfree。period end時刻経過だけではcomputed再評価されない。SPEC-DEEP-045で`currentPeriodEnd.toMillis()`を前提にDate/string等を正規化せず、未知statusを不明状態でなくfreeへ縮退することを確認した。
 - 想定影響と発生条件: paid/trialingなのに上限0、失効時state stale、支払異常や解約をfree扱いし、機能制限・案内が不整合になる。
 - 未確認点・仮説: plan別上限、trial、grace period、past_due、cancel-at-period-end、free移行の正式仕様は未決定。
 - 推奨する将来対応: 正式state machine/plan entitlement、server算出、reactive expiry timer、status/limit validationを定義する。
@@ -1367,9 +1403,9 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 
 - 状態: Open
 - 重大度: Critical
-- 発見セグメント: SPEC-SEG-030
+- 発見セグメント: SPEC-SEG-030、SPEC-DEEP-035
 - 対象ファイル・シンボル: `storage.rules` SecurityReports match、`uploadSecurityReport`、`deleteSecurityReport`
-- 確認済み実装事実: SecurityReports pathは認証のみでread/write可能で、companyId、role、permission、operation、uploaderを検証しない。
+- 確認済み実装事実: SecurityReports pathは認証のみでread/write可能で、companyId、role、permission、operation、uploaderを検証しない。SPEC-DEEP-045でclient utilityのtenant pathがauth storeのcompanyIdだけに依存し、server-bound actor/reference validationを追加しないことを確認した。
 - 想定影響と発生条件: 認証Userが他社pathを知るか推測すると、機微な現場画像を閲覧、追加、上書き、削除できる。
 - 未確認点・仮説: remote deployed Rules、operation IDの推測容易性、既存access logは未確認。
 - 推奨する将来対応: token companyIdとpathを一致させ、操作別permission/actorとoperation存在をserverまたはRulesで強制する。
@@ -1408,7 +1444,7 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 - 重大度: High
 - 発見セグメント: SPEC-SEG-030
 - 対象ファイル・シンボル: Manager delete、`operationCleanup`、Storage metadata
-- 確認済み実装事実: 確認、status/lock、uploader/role判定、soft delete、履歴なしで削除でき、予定/実績削除時にはfolderを連鎖削除する。
+- 確認済み実装事実: 確認、status/lock、uploader/role判定、soft delete、履歴なしで削除でき、予定/実績削除時にはfolderを連鎖削除する。SPEC-DEEP-035で、最後の1件を削除した後もManagerの`currentReport`が削除済みreportを保持し、full-size/delete操作がstale URLを参照し続け得ることを確認した。SPEC-DEEP-045で本体とthumbnailを並行削除し、thumbnailのpermission/networkを含む全errorを未存在相当として吸収するためorphanを成功扱いし得ることを確認した。
 - 想定影響と発生条件: 誤操作や親doc削除で報告画像が復元不能となり、請求・事故・監査後も証拠を失い得る。
 - 未確認点・仮説: 正式保持期間、確定後削除、法務/顧客要件、bucket versioningは未確認。
 - 推奨する将来対応: 保持/lock/取消/復元policy、確認UI、audit log、削除権限、親削除guardを仕様化する。
@@ -1419,7 +1455,7 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 
 - 状態: Open
 - 重大度: Medium
-- 発見セグメント: SPEC-SEG-030
+- 発見セグメント: SPEC-SEG-030、SPEC-DEEP-035
 - 対象ファイル・シンボル: `syncSecurityReportIndex`、`createSecurityReportThumbnail`、`rebuildSecurityReportIndexes`、client delete
 - 確認済み実装事実: 絶対件数再計算と再構築はあるが、operation欠損画像とmain欠損thumbnailを削除せず、clientはthumbnail削除失敗を無視する。SPEC-DEEP-001/008でupload triggerがindex同期後にthumbnailを作り、main delete triggerはindex同期だけでthumbnailを直接削除しないこと、rebuildもorphan本体/thumbnailを除去しないことを本文再確認した。同一thumbnail pathへのsaveは再実行で重複fileを増やさないがgeneration preconditionはない。
 - 想定影響と発生条件: trigger/削除/親docの部分失敗でorphan、thumbnail欠損、索引と表示の一時不一致、Storage残存が起きる。
@@ -1434,7 +1470,7 @@ SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admi
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-030
 - 対象ファイル・シンボル: `useSecurityReports`、Manager、Storage `listAll`、`rebuildSecurityReportIndexes`
-- 確認済み実装事実: upload/list errorはManagerに表示されず、delete errorはconsoleへ吸収される。全件listAllと各file metadata/URL取得を行う。SPEC-DEEP-008で再構築もStorage全件と索引全件をmemoryへ取得し、20件chunkの`Promise.all`が1件失敗すると後続chunkへ進まず、開始済み処理はrollbackされず、failed ID/resume cursorを返さないことを確認した。
+- 確認済み実装事実: upload/list errorはManagerに表示されず、delete errorはconsoleへ吸収される。全件listAllと各file metadata/URL取得を行う。SPEC-DEEP-008で再構築もStorage全件と索引全件をmemoryへ取得し、20件chunkの`Promise.all`が1件失敗すると後続chunkへ進まず、開始済み処理はrollbackされず、failed ID/resume cursorを返さないことを確認した。SPEC-DEEP-035で、Managerが`isListing`、`listError`、`uploadError`を描画せず、loading・permission failure・emptyを同じ表示へ畳み込むこと、宣言した`click:delete`も発火しないことを確認した。
 - 想定影響と発生条件: network/permission/trigger障害を利用者が認識・再試行できず、件数増加時に表示遅延と多数requestが発生する。
 - 未確認点・仮説: 想定最大枚数、offline要件、URL取得制限は未決定。
 - 推奨する将来対応: 明示error/retry/progress、pagination/limit、upload resultと索引処理状態の可視化を実装する。
@@ -1708,6 +1744,12 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: 連続前月/翌月変更、遅延response逆転、permission/network error、retry、選択employee clear、旧data非表示。
 - ユーザー判断が必要な事項: error時に旧dataを明示付きで保持するか空にするか。
 
+SPEC-DEEP-040追加根拠: DailyAttendanceとDailyOperationByEmployeeのapplication indexは、projection snapshotとEmployee snapshotを別々に取得し、共通read revision・all-or-nothing境界を持たない。片方だけ成功した場合に新旧snapshotが混在し得る一方、loadingは単一booleanである。
+
+SPEC-DEEP-042追加根拠: DailyAttendance snapshot layerは連続range変更をgeneration/cancelせず、失敗時に旧docsを保持したままerrorをloggerへ吸収する。range validationはtry外で、invalid rangeはwatcherの未処理例外になり得る。
+
+SPEC-DEEP-043追加根拠: DailyOperationByEmployeeとEmployee snapshotも同じ世代管理欠落を持ち、EmployeeはACTIVE/RESIGNEDを直列別queryする。projection・Employee間、Employee二query間の共通read revisionがなく、片方失敗時は前回値を残す。
+
 ## FUT-0131 勤怠閲覧のresponsive・詳細・accessibility契約を整備する
 
 - 2026-08-11 SPEC-DEEP-023 evidence: IndexのAutocomplete選択templateはコメントアウトされ、内部`employeeSelect`設定は未到達候補である。calendar event click/detail dialog、event focus/aria説明、対象7 componentのテストは確認できなかった。
@@ -1754,7 +1796,7 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-039、SPEC-DEEP-005
 - 対象ファイル・シンボル: `ROLE_PRESETS`、`getPermissions`、`User.roles`、`validatePageSettings`
-- 確認済み実装事実: central enum/schema validationがなく、未知roleを同名permissionとして採用する。User rolesは任意string arrayで、development validatorも未知値を拒否せず、`human-resource`を通常role警告listから漏らす。
+- 確認済み実装事実: central enum/schema validationがなく、未知roleを同名permissionとして採用する。User rolesは任意string arrayで、development validatorも未知値を拒否せず、`human-resource`を通常role警告listから漏らす。SPEC-DEEP-045でpermission重複を除去せず、page required配列をANDでなくOR評価し、未登録pathが親設定へfallbackすることを再確認した。
 - 想定影響と発生条件: typoで権限を失う、page側にも同じtypoがあると意図せず通る、未管理custom permissionが蓄積し、移行・監査不能になる。
 - 未確認点・仮説: 実dataの未知role、直接permissionをUserへ保存する正式意図は未確認。
 - 推奨する将来対応: version付きrole/permission catalog、schema/server validation、unknown fail-closed、migration/reportを設ける。
@@ -1787,6 +1829,16 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: validation/auth/permission/network/not-found/conflict、swallow/rethrow、retry、partial success、unhandled rejection、user/internal message分離。
 - ユーザー判断が必要な事項: CONF-0114。
 
+SPEC-DEEP-039b追加根拠: root composablesでもFCM登録、OperationBilling lock、schedule複製、Company siteOrder更新がerrorをswallowし、callerが成功と失敗を判別できない。`clearError`は共有Errors store全体をclearする。
+
+SPEC-DEEP-040追加根拠: application actionsでも配置表PDF、請求PDF/CSV、schedule notify/update、site shift order更新がerrorをloggerへ渡して吸収し、callerへ成功/失敗を返さない。再試行・重複防止・canonical refreshも統一されていない。
+
+SPEC-DEEP-042追加根拠: generic/range data layersもloading/error/not-found/lastUpdatedを統一せず、同期購読登録errorだけをcatchしてasync listener errorを受けない。`useDocument`はreactive docId対応を文書化しながらRefを拒否し、callback master fetchもawait/cancel/error集約しない。
+
+SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest generation・cancel・loading/errorを持たず旧responseが新検索を上書きし得る。Outsourcer rangeは期間をqueryに使わず、range変更ごとに全ACTIVEを再購読する。
+
+SPEC-DEEP-044追加根拠: master fetch cacheは同一docIdのin-flight point fetchをdedupeする一方、既存cacheを更新せずTTL/revision/tenant切替clearを持たない。fetch errorとnot-foundをcache missへ畳み込み、searchはlatest-only/cancel/in-flight dedupeがない。
+
 ## FUT-0137 global loadingをowner・reference count・取消し対応にする
 
 - 状態: Open
@@ -1800,6 +1852,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: 同一/異なるkey並行、順序逆転、throw、cancel、unmount、clear、replace、empty text。
 - ユーザー判断が必要な事項: CONF-0116。
 
+SPEC-DEEP-044追加根拠: master fetch/searchは同じ単一`isLoading`を共有し、異なる並行処理の先行完了がfalseへ戻す。ManagedDialogもsubmitのsingle-flightを持たず、SecurityReportはupload/list/deleteで別のboolean/Set/global keyを使い取消し・ownerを統一しない。
+
 ## FUT-0138 production logging・redaction・monitoring・相関を設計する
 
 - 状態: Needs decision
@@ -1812,6 +1866,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 推奨する将来対応: CONF-0115決定後、level/env filter、field allowlist/redaction、structured context、correlation ID、remote monitoring、retention/access controlを実装する。
 - 必要なテスト: DEV/PROD各level、token/email/payload redaction、large/circular data、monitoring failure、correlation、retention/access。
 - ユーザー判断が必要な事項: CONF-0115。
+
+SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsoleへ出し、truthy dataだけを無加工で渡す。redaction・size/circular guard・correlation・structured contextはない。
 
 ## FUT-0139 layout間のsnackbarとErrors/Messages lifecycleを統一する
 
@@ -2015,7 +2071,7 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: High
 - 発見セグメント: SPEC-SEG-046、SPEC-DEEP-022
 - 対象ファイル・シンボル: `exportOperationResultsCsv`、`useCustomerBillingActions.downloadCsv`、CustomerBillings group CSV button
-- 確認済み実装事実: CSVはBilling groupの埋込みOperationResultを53列へflattenし、live一覧からは出さない。site/customer IDs、site name/code、勤務時間、単価・売上を含む。formula prefixをescapeせず、isStartNextDay/実datetime/worker identityは出さず、siteNumberは常に空、filenameはUTC実行日だけである。SPEC-DEEP-022で標準UIのgroupKeyは同一customerId/billingDateを保証する一方、download actionはstatus/件数確認/processing disable/監査を持たないことを確認した。
+- 確認済み実装事実: CSVはBilling groupの埋込みOperationResultを53列へflattenし、live一覧からは出さない。site/customer IDs、site name/code、勤務時間、単価・売上を含む。formula prefixをescapeせず、isStartNextDay/実datetime/worker identityは出さず、siteNumberは常に空、filenameはUTC実行日だけである。SPEC-DEEP-022で標準UIのgroupKeyは同一customerId/billingDateを保証する一方、download actionはstatus/件数確認/processing disable/監査を持たないことを確認した。SPEC-DEEP-045でUTC filenameがJST深夜帯の利用者日付とずれ得ることを確定した。
 - 想定影響と発生条件: `=,+,-,@`で始まるmaster文字列をspreadsheetで開くとformula実行候補となる。日跨ぎをCSV単独で復元できず、snapshot時点・customer/期間を識別できないため、外部取込・監査・再生成比較を誤る可能性がある。
 - 未確認点・仮説: 正式consumer、agreementDate/siteNumberの要否、Excel等のformula挙動、embedded snapshotの重複、保持/監査要件は未確認。
 - 推奨する将来対応: CONF-0131後、consumer version付き列schema、formula neutralization、explicit datetime/timezone/day-crossing、source revision/group/period、deterministic filename、dedupe/件数preview、export auditを実装する。
@@ -2035,6 +2091,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: role組合せ、employeeId遅延、0/大量件数、duplicate cache fetch、network断/復旧、unmount、multi-tab、read count。
 - ユーザー判断が必要な事項: widget audienceはCONF-0132。
 
+SPEC-DEEP-042追加根拠: `useRecentArrangements`はsetup時のemployeeIdを非reactive captureし、未準備なら以後も購読しない。site alert/recent queriesは日付境界をsetup時に固定し、JST日付跨ぎ、loading/error/retry/lastUpdatedへ追従しない。
+
 ## FUT-0156 Dashboardのaudience・calendar・稼働数KPI・empty experienceを仕様化する
 
 - 状態: Needs decision
@@ -2048,13 +2106,15 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: 全role/employeeId組合せ、予定のみ/実績のみ/同ID/異ID/status別、0件、timezone、calendar event/navigation、responsive/accessibility。
 - ユーザー判断が必要な事項: CONF-0132。
 
+SPEC-DEEP-041追加根拠: dashboard稼働数transformは`requiredPersonnel`とresult quantityの有限・非負・number型を検査せず、string連結または`NaN`をdatasetへ伝播し得る。欠損/未知securityTypeは既知datasetへ表示されない。
+
 ## FUT-0157 配置表PDFのfield・日時・要員属性・再現性・layout契約を確立する
 
 - 状態: Needs decision
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-048
 - 対象ファイル・シンボル: `useArrangementSheetPdf.fetchData`、mapping/layout/splitWorkers
-- 確認済み実装事実: 帳票は取引先、site.address/name、DAY/NIGHT印、必要人数、start/end、worker表示名だけを出す。日跨ぎ、資格/OJT、外注区分、休憩、companyを出さず、live masterで再生成する。長文を文字数切詰め、10人超を主要項目空のblockへ分割し、7block/pageとする。
+- 確認済み実装事実: 帳票は取引先、site.address/name、DAY/NIGHT印、必要人数、start/end、worker表示名だけを出す。日跨ぎ、資格/OJT、外注区分、休憩、companyを出さず、live masterで再生成する。長文を文字数切詰め、10人超を主要項目空のblockへ分割し、7block/pageとする。SPEC-DEEP-045でworker amountの有限・非負・整数検証がなく、小数切上げ相当、負数0人、Infinity非終了loop候補となること、master fetch失敗がN/Aへ縮退し得ることを確認した。
 - 想定影響と発生条件: 夜勤終了日、資格/OJT/外注要員を帳票で誤認し、master変更で同じ予定の再生成結果が変わる。長文/大人数/欠損masterで識別不能なN/A・切詰め・空blockとなる可能性がある。
 - 未確認点・仮説: 正式必須項目、紙への手書き用途、住所field、他shift type、snapshot要否、最大件数は未決定。
 - 推奨する将来対応: CONF-0133後、version付きfield mapping、explicit datetime/day-crossing、qualification/OJT/worker type、snapshot/as-of、overflow/continuation label、empty/missing validationを仕様化する。
@@ -2067,12 +2127,16 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: High
 - 発見セグメント: SPEC-SEG-048
 - 対象ファイル・シンボル: weekday PDF button、`useOpenArrangementSheetPdf`、`pdf.open`
-- 確認済み実装事実: schedule read route内の全利用者が個人名・現場住所入りPDFを生成でき、専用permission/確認/auditはない。UIはdownload表記だがfilenameなしでbrowser openし、loading中button guard、success/error message、popup block、保存/送信/retention契約がない。
+- 確認済み実装事実: schedule read route内の全利用者が個人名・現場住所入りPDFを生成でき、専用permission/確認/auditはない。UIはdownload表記だがfilenameなしでbrowser openし、loading中button guard、success/error message、popup block、保存/送信/retention契約がない。SPEC-DEEP-045で0件でも空contentのPDFをopenしようとし、部分fetch失敗と完全成功を区別しないことを確認した。
 - 想定影響と発生条件: 権限過大、誤日付/誤配布、複数popup、利用者が成功を確認できない、保存fileの識別不能、個人・現場情報の無監査持出しが起き得る。
 - 未確認点・仮説: 正式利用者、配布先、紙/電子、browser filename、global overlay click遮断、保持/廃棄要件は未確認。
 - 推奨する将来対応: CONF-0133後、export permission、対象preview/件数確認、deterministic filename/revision/generatedAt/by、explicit download/open、single-flight、popup fallback、audit/watermark/handling noticeを実装する。
 - 必要なテスト: role別、double click、popup blocked、font/fetch failure、0件、filename/timezone、audit、PII masking/watermark、download/open各browser。
 - ユーザー判断が必要な事項: CONF-0133。
+
+SPEC-DEEP-039a追加根拠: 配置指示textも現場名・住所・予定時刻・従業員名/役職・外注先名/人数を、専用permission、revision、generatedAt/by、mask、copy/share auditなしで生成し、master取得失敗を`unknown`等へ畳み込む。
+
+SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使うが専用error stateを持たず、生成失敗をloggerへ渡して吸収する。呼出し側はdownload成功と失敗を判別できず、inline retryや生成監査もない。
 
 ## FUT-0159 Insurance履歴・監査・validation・遷移を正式化する
 
@@ -2119,7 +2183,7 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-055
 - 対象ファイル・シンボル: schema `Tax`、`utils/CutoffDate`、`Customer.getPaymentDueDateAt`、`OperationResult.taxRate/refreshBillingDateAt`、`Billing.taxBreakdown`、app `calculateTaxBreakdown`
-- 確認済み実装事実: TaxはOperationResult日付の固定履歴表から単一rateをlive算出し、Articleも同率、adjustmentは課税対象外である。CutoffDate.isValidCutoffDateはdefinition object配列へnumberをincludesするため許可値でもfalseとなり、直接callerはない。締日/支払期日計算はvalidatorを呼ばず、invalid Date、未知cutoff、負/非整数paymentMonth等を明示拒否しない。schema/app tax breakdownで負taxRate validationも異なる。tax rate/mode/versionは正式invoice snapshotへ保存されない。
+- 確認済み実装事実: TaxはOperationResult日付の固定履歴表から単一rateをlive算出し、Articleも同率、adjustmentは課税対象外である。CutoffDate.isValidCutoffDateはdefinition object配列へnumberをincludesするため許可値でもfalseとなり、直接callerはない。締日/支払期日計算はvalidatorを呼ばず、invalid Date、未知cutoff、負/非整数paymentMonth等を明示拒否しない。schema/app tax breakdownで負taxRate validationも異なる。tax rate/mode/versionは正式invoice snapshotへ保存されない。SPEC-DEEP-045でapp集約が負・1超・InfinityのtaxRateを許し、string salesAmountを数値化せず連結し得ること、process-global RoundSettingに依存することを確認した。
 - 想定影響と発生条件: direct writeや旧dataの不正値で締日・支払期日がrollover/invalidとなる。同日軽減税率・非課税を表現できず、package/Company設定変更後の再生成、client/server、単票/統合で税額を再現できない可能性がある。
 - 未確認点・仮説: 実dataのinvalid値、軽減/非課税需要、Tax/CutoffDate consumer全体、正式invoice snapshot schema、package version差は未確認。
 - 推奨する将来対応: FUT-0066/CONF-0134と整合させ、許可cutoff/payment rangeとdate型を全入口で検証する。validator bugを直し、Tax/app utilityを共通化する。正式発行時にtax category/rate、round mode、calculation version、payment termsをsnapshotし、既存dataをdry-run検査する。
@@ -2165,6 +2229,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 必要なテスト: double click、slow/error mail、各setup段階failure、reload/back/offline、poll overlap/error/recovery、verified/unverified/disabled、duplicate/temp missing、reset direct route、anonymous enumeration/rate/App Check。
 - ユーザー判断が必要な事項: 正式account setup/recoveryはCONF-0067、公開情報はCONF-0069、匿名防御はCONF-0129。
 
+SPEC-DEEP-039a追加根拠: 一般signupは事前確認結果をsubmitへbindせず再検索し、利用者向けerrorへFirebase Auth UIDを直接表示する。
+
 ## FUT-0166 Enum・field validation・unknown表示を単一contractへ揃える
 
 - 状態: Open
@@ -2177,6 +2243,10 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 推奨する将来対応: CONF-0137後、value集合からoptions/validator/display fallbackを生成し、keyでなく`.value`を検証する。error factory callerをcontract testし、既存data dry-run、legacy mapping、unknown read-only表示、server/Rules validationを段階導入する。
 - 必要なテスト: 全enum valid/unknown/null/type違い、direct write/hydration/reserialize、deprecated mapping、Chip fallback、filter-only ALL非保存、Article required、error factory export/caller、Tag大小文字、client/server/Rules。
 - ユーザー判断が必要な事項: CONF-0137。error factory欠落自体は実装修正事項。
+
+SPEC-DEEP-039a追加根拠: `useConstants`は`DEFAULT_DEFINITIONS`とWEEK_COLORSを参照のまま公開し、empty custom colorをdefaultへ畳み込み、enum validationを追加しない。
+
+SPEC-DEEP-040追加根拠: `user/useUserSettingsActions.js` のtagSize更新はenumを検査するがUser document全体をupdateする。静的callerは見つからず、現行設定経路との重複・互換性を確認してから統合または廃止する必要がある。
 
 ## FUT-0167 Date range・debounce・timer lifecycleを安全な共通contractへ揃える
 
@@ -2221,8 +2291,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 
 - 状態: Open
 - 重大度: Medium
-- 発見セグメント: SPEC-DEEP-016、SPEC-DEEP-021、SPEC-DEEP-027、SPEC-DEEP-028、SPEC-DEEP-033
-- 対象ファイル・シンボル: `components/Articles/Manager/index.vue`、`Articles/Iterator/index.vue`、`ArticleDetails/DataTable/index.vue`、`components/Customers/Iterator/index.vue`、`Site/CustomInput/index.vue`、`components/Employees/{Manager,Iterator}`、`components/Outsourcers/{Manager,Iterator}/index.vue`、`components/molecules/cards/SelectCancel.vue`、`WorkerSelector.vue`
+- 発見セグメント: SPEC-DEEP-016、SPEC-DEEP-021、SPEC-DEEP-027、SPEC-DEEP-028、SPEC-DEEP-033、SPEC-DEEP-034、SPEC-DEEP-035、SPEC-DEEP-037
+- 対象ファイル・シンボル: `components/Articles/Manager/index.vue`、`Articles/Iterator/index.vue`、`ArticleDetails/DataTable/index.vue`、`components/Customers/Iterator/index.vue`、`Site/{CustomInput,Card}`、`components/Sites/Iterator/index.vue`、`components/Employees/{Manager,Iterator}`、`components/Outsourcers/{Manager,Iterator}/index.vue`、`components/molecules/cards/SelectCancel.vue`、`WorkerSelector.vue`
 - 確認済み実装事実: ArticlesManagerは`showCreate` falseでもtoolbarのplusを常時表示する。Managerが渡す`itemsPerPage`と`hideDefaultFooter`はIteratorが定義・透過せず、Article pageの取得limit 10と指定page size 20の差を解消しない。ArticleDetailsDataTableは5 headersに対しfooterで`colspan=5`のlabel cellとtotal cellを出力し、6列相当となる。SPEC-DEEP-021でCustomersIteratorも`modelValue`、`show-select`、`select-strategy`を内部`air-data-iterator`へ転送せず、Site create wizardの既存Customer選択を成立させないことを確認した。SPEC-DEEP-027でEmployeesManagerも`showCreate=false`のtoolbar plusを常時表示し、EmployeesIteratorは宣言した`hideDefaultFooter`をrootへ渡さず、JSDoc記載のitem/footer slotもforwardしないことを確認した。SPEC-DEEP-028でcards/SelectCancelのinternal model updateがconst再代入、WorkerSelectorの`tab-changed`が未発火であることを確認した。
 - 想定影響と発生条件: callerがcreate禁止、selection、pagination、footer非表示を指定しても画面挙動が一致せず、Site作成時に既存Customerを選べず取引先未設定の仮登録へ流れるか、一覧件数・table totalの視覚的整列を誤認する。
 - 未確認点・仮説: AirDataIterator/AirDataTableが独自にattrを補正するか、実browserでfooterがどのようにrenderされるかは未確認。
@@ -2231,6 +2301,12 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - ユーザー判断が必要な事項: なし。公開component APIとrenderingの実装修正事項である。
 
 SPEC-DEEP-033でOutsourcersManagerも`showCreate=false`を無視してtoolbar plusを表示し、OutsourcersIteratorもdeclared `hideDefaultFooter`をrootへ渡さないことを確認した。`itemsPerPage`はundeclared attrとしてfallthroughし得るため、全propが同じく失われるとは断定しない。
+
+SPEC-DEEP-034では、Site create wizardがselection/v-modelを転送しないCustomersIteratorへ依存することを再確認した。SiteCardはSitesIteratorだけから到達し、そのroute使用はcomment outされている。Card selectionはclickable iconだけでaccessible name/keyboard handlerがなく、公開componentのdynamic/external reachabilityは未確認である。
+
+SPEC-DEEP-035では、Sites/Users Iteratorも宣言した`hideDefaultFooter`を内部iteratorへ渡さず、selection propsはJSDocだけであることを確認した。UsersManagerは`showCreate=false`でもplusを表示し、検索欄はfilter/emitせず、empty create handlerは未定義`toCreate`を参照する。Sites DataTableはCustomer欠損・失敗を`...loading`へ畳み込み、環境localの日付整形を使う。
+
+SPEC-DEEP-037では、SiteOperationSchedule SelectorがListItemへ渡そうとするprepend/title/subtitle 3 slotを子が公開せず、row keyにindexを使うことを確認した。Tableはmissing/permission failure/fetch中を仮登録と区別せず`loading...`へ畳み込む。
 
 ## FUT-0171 ArticleDetailの非同期選択を最新値・失敗安全にする
 
@@ -2284,18 +2360,20 @@ SPEC-DEEP-033でOutsourcersManagerも`showCreate=false`を無視してtoolbar pl
 - 必要なテスト: 3 cardのedit clickで期待するBase/Agreement/Adjust inputが開くこと、取極め/請求日/adjusted値の保存、cancel/validation/error、稼働外売上ありのworker明細とsalesAmount、permission/lock、keyboard/focus。
 - ユーザー判断が必要な事項: なし。既存の承認済み手動調整経路を到達可能にし、表示範囲を明示する実装修正事項である。
 
-## FUT-0175 OperationResultのSite変更時securityTypeを最新選択へ収束させる
+## FUT-0175 OperationResult・ScheduleのSite変更時securityTypeを最新選択へ収束させる
 
 - 状態: Open
 - 重大度: Medium
-- 発見セグメント: SPEC-DEEP-030
-- 対象ファイル・シンボル: `components/OperationResult/CustomInput/index.vue` のSite watcher、`useSetRegularTime`、`services/operation.initializeSecurityType`
-- 確認済み実装事実: Site変更watcherは変更時点で`useFetch` cacheに存在し、truthyなsecurityTypeを持つSiteだけをdraftへcopyする。cache取得完了を待つwatchや変更世代tokenはなく、cache未取得・取得失敗時に以前のSiteのsecurityTypeをclearしない。before create/update handlerもcurrent securityTypeがUNSETの場合だけSite値を補うため、以前の非UNSET値を保持する。
-- 想定影響と発生条件: 別Siteへ変更した時に新Siteが未cacheなら、以前のSiteのsecurityTypeが新しいOperationResultへ保存され、警備種別別の表示・集計・検索が選択Siteと一致しない可能性がある。rapid Site変更では遅い取得結果の適用先も曖昧になる。
+- 発見セグメント: SPEC-DEEP-030、SPEC-DEEP-036
+- 対象ファイル・シンボル: `components/{OperationResult,SiteOperationSchedule}/CustomInput/index.vue` のSite watcher、`useSetRegularTime`、`services/operation.initializeSecurityType`
+- 確認済み実装事実: OperationResultのSite変更watcherは変更時点で`useFetch` cacheに存在し、truthyなsecurityTypeを持つSiteだけをdraftへcopyする。cache取得完了を待つwatchや変更世代tokenはなく、cache未取得・取得失敗時に以前のSiteのsecurityTypeをclearしない。before create/update handlerもcurrent securityTypeがUNSETの場合だけSite値を補うため、以前の非UNSET値を保持する。SPEC-DEEP-036でSiteOperationSchedule CustomInputも同じ同期cache-only watcherを持ち、cacheが後から埋まっても再実行されず、旧Site値を保持し得ることを確認した。
+- 想定影響と発生条件: 別Siteへ変更した時に新Siteが未cacheなら、以前のSiteのsecurityTypeが新しいOperationResultまたはSiteOperationScheduleへ保存され、警備種別別の表示・集計・検索が選択Siteと一致しない可能性がある。rapid Site変更では遅い取得結果の適用先も曖昧になる。
 - 未確認点・仮説: Site autocompleteが選択前に必ずcacheへ登録するruntime契約、securityTypeを利用者がSite既定値から意図的にoverrideする正式方針、実dataでの発生有無は未確認である。
 - 推奨する将来対応: 選択Site IDに対するfetch完了を待ち、latest-selection tokenを確認してから既定値を適用する。未取得/失敗時は保存を止めるかUNSETとしてhandlerで解決し、利用者overrideを保持する条件を明示する。stale値を無言で保存しない。
 - 必要なテスト: cache済み/未取得Site変更、取得失敗、A→Bのrapid変更、以前の非UNSET値、同じSite再選択、手動override、create/update handler、集計反映。
 - ユーザー判断が必要な事項: なし。現commentとhandlerが示すSite既定値同期を安全に収束させる実装修正として管理し、overrideの詳細は実装時に既存仕様と再照合する。
+
+SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをcacheだけで同期参照し、未cache/取得失敗を「現場を指定してください」へ畳み込みfetchをawaitしない。
 
 ## FUT-0176 OperationSchedules Tableのrow actionを到達可能かつ操作可能にする
 
@@ -2309,3 +2387,94 @@ SPEC-DEEP-033でOutsourcersManagerも`showCreate=false`を無視してtoolbar pl
 - 推奨する将来対応: row actionを削除するか、Managerでcreate/remove actionを明示結線して確認dialog・loading/error・rangeを超えた参照guardを設ける。操作を残すなら`v-btn`等のsemantic control、accessible name、keyboard/focusを用いる。
 - 必要なテスト: route上のrow add/remove到達性、icon click/keyboard、permission/Rules拒否、range内外schedule、remove confirmation/cancel/error、Site cache未取得、mobile/table scroll。
 - ユーザー判断が必要な事項: なし。少なくとも公開されたrow操作を実装するか表示しないかは実装修正として決められる。order削除の業務規則は既存CONF-0057へ統合する。
+
+## FUT-0177 admin_users collectionの用途・tenant・actor・field境界を確定しRulesを閉じる
+
+- 状態: Open
+- 重大度: 未評価
+- 発見セグメント: SEC-002
+- 対象ファイル・シンボル: Firestore Rulesの`admin_users` match
+- 確認済み実装事実: 現行Rulesはauthenticated userへ`admin_users`のglobal read/writeを許す。調査したapplication/Functionsからcollection-specific caller、用途、tenant key、実data存在は確認できなかった。
+- 想定影響と発生条件: collectionに権限・運用者・個人情報等が存在する場合、任意authenticated userによる閲覧・改変につながる。用途とdata不在の場合の実害は小さいため、存在確認前に重大度を断定しない。
+- 未確認点・仮説: remote data、外部consumer、document schema、UID/path推測可能性、認可判定への利用は未確認。
+- 推奨する将来対応: 用途とownerを棚卸しし、未使用ならRulesをdenyして安全に廃止する。使用中ならtenant/actor/field/old-ownerを明示し、server-onlyまたは最小権限Rulesへ変更する。
+- 必要なテスト: unauthenticated/authenticated/tenant admin/super-userのread/create/update/delete、field diff、tenant変更、存在/不存在data migration。
+- ユーザー判断が必要な事項: 正式role matrixはCONF-0111へ統合する。用途・data有無の確認は実装調査事項である。
+
+## FUT-0178 Firebase/Nuxt plugin初期化順とruntimeConfig型をfail-fastで検証する
+
+- 状態: Open
+- 重大度: Medium
+- 発見セグメント: ARCH-001
+- 対象ファイル・シンボル: Firebase/Nuxt plugins、`runtimeConfig`、emulator切替、FireModel adapter初期化
+- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、`firebaseUseEmulator`等の文字列/boolean coercionを明示検証しない。初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。
+- 想定影響と発生条件: plugin順序・環境設定差で別adapter、未初期化service、誤ったemulator/remote接続を選び、errorが後段の業務処理として現れ得る。
+- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の値、build/runtimeでのcoercionは未確認。
+- 推奨する将来対応: dependencyを明示した単一bootstrap、typed config parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。
+- 必要なテスト: plugin順序、重複初期化、欠落設定、文字列true/false、emulator/DEV/PROD matrix、SSR/client再初期化。
+- ユーザー判断が必要な事項: なし。環境選択の正式値は既存運用文書と照合する。
+
+## FUT-0179 FireModel adapter/configをrequest・tenant単位へscopeしclient/server契約を統一する
+
+- 状態: Open
+- 重大度: High
+- 発見セグメント: SCHEMA-BASE-001
+- 対象ファイル・シンボル: FireModelのstatic `_adapter`/`config`、ClientAdapter、ServerAdapter、Functions migrationの`setConfig`
+- 確認済み実装事実: adapterとprefix configはprocess-global mutable stateで、reset/context APIがない。Functions migrationはinvocation中にglobal prefixを変更して復元しない。client/serverは公開method、transaction利用、error型、callback spelling、`hasMany` field名が一致しない。
+- 想定影響と発生条件: long-lived SSR/Functions processの並行requestでtenant prefixやadapterが混線し、誤tenant read/writeまたは再現しにくい失敗を起こし得る。server-only method欠落やquery import不足は到達時にruntime failureとなる。
+- 未確認点・仮説: 実際の同時実行再現、module instance分離、該当server APIの本番到達頻度は未確認。
+- 推奨する将来対応: immutable app/request contextへadapter・tenant routingを注入し、global mutationを除く。client/server共通interfaceとcontract testを定義し、未対応methodは明示拒否または実装する。
+- 必要なテスト: concurrent tenant contexts、prefix reset、client/server API parity、transaction read、hasMany、query builder、error/callback契約。
+- ユーザー判断が必要な事項: global collectionの正式tenant方針はCONF-0111と既存domain判断へ統合する。
+
+## FUT-0180 FireModelのcreate/update/serialization/validation契約を明示しデータ損失を防ぐ
+
+- 状態: Open
+- 重大度: High
+- 発見セグメント: SCHEMA-BASE-001、SCHEMA-MASTER-001、SCHEMA-OPS-001、SCHEMA-FINANCE-001
+- 対象ファイル・シンボル: FireModel converter/create/update/fromFirestore、BaseClass defaults/validate、schema fieldDefinitions/accessors
+- 確認済み実装事実: create/updateはfull set/upsertで存在・versionを確認せず、hydrateで無視したunknown fieldを後続saveで削除し得る。hidden/readOnlyとenumerable accessorは保存制御でなく、snapshot IDをdocument IDから導出しない。mutable default共有、nested class二重構築、type/enum/nested validation不足も確認した。
+- 想定影響と発生条件: concurrent editor/trigger、schema version差、未知fieldを含むdocumentでlost update・field消失・派生値の意図しない固定化が起きる。UI metadataだけを信頼した直接writeは不正値を保存できる。
+- 未確認点・仮説: 既存unknown/derived fieldの実data、migration互換、document size、全domainでの発生件数は未確認。
+- 推奨する将来対応: create-must-not-exist/update-must-exist、field-safe patchまたはversion precondition、明示persistence whitelist、snapshot ID、unknown field policy、deep-cloned defaults、strict/nested validationを段階移行する。
+- 必要なテスト: create collision、update missing/version conflict、unknown field preservation、accessor/hidden serialization、shared defaults、nested classes、type/enum/date/numeric boundary、legacy data migration。
+- ユーザー判断が必要な事項: overwrite/merge、保存field、legacy compatibilityはCONF-0137ほか既存data compatibility判断へ統合する。
+
+## FUT-0181 Air managerのdisable・validation・single-flight・draft conflictを永続化前に強制する
+
+- 状態: Open
+- 重大度: High
+- 発見セグメント: UI-BASE-001、UI-MANAGERS-001、SPEC-DEEP-034、SPEC-DEEP-035、SPEC-DEEP-037、SPEC-DEEP-038
+- 対象ファイル・シンボル: `useItemManager`、`useArrayManager`、AirItemManager、AirArrayManager、AirEditCard、OperationResult/Schedule manager callers
+- 確認済み実装事実: function-valued `disableSubmit`へ`{item, editMode}`を渡す一方callerはitem単体を期待するためlocked result UIが無効化されない。disableUpdate/disableDeleteはerror後もcallbackを実行し、manager.submit自身はdisableを検査しない。step final validation、submit mutex、live parent更新とのdirty conflict、external handler後のcanonical result取込みもない。Site create wizardはstep 3用VForm validatorを実装するが、標準の最終stepはchild `handleGoToNext`を呼ばず直接submitするため、そのvalidatorへ到達しない具体例である。SPEC-DEEP-035でemployee-linked User削除がdisable error後も続行し得る実到達例、SitesManagerの同じCRUD依存、Site order draftの親更新reset・loading中drag・raw array emitを確認した。SPEC-DEEP-037でSiteOperationSchedule ManagerのoperationResultId disableも同じくcallbackを止めず、親docのdeep更新がinternalDoc/draftを再初期化し得る実到達例を確認した。SPEC-DEEP-038でSiteOperationSchedulesManagerとWorkerDetailManagerも同じ公開method・disable・single-flight境界に依存することを確認した。
+- 想定影響と発生条件: custom slot/exposed method、double click、subscription更新、server-assigned fieldを伴う保存で、禁止操作、重複処理、stale full update、成功後の古いarray emitが起き得る。UI guardは認可ではないが、model/Rules到達前の誤操作防止も成立しない。
+- 未確認点・仮説: Vuetifyのclick抑止、browserでの具体的重複頻度、外部package consumerは未確認。
+- 推奨する将来対応: callback signatureを移行し、toX/submit内部で全disableとloadingをfail-closedに検査する。default/step/custom validation、single-flight token、dirty conflict/version reject、handlerのcanonical return契約を実装する。
+- 必要なテスト: locked result、linked schedule、boolean/function disable、exposed submit、double submit、final step、live refresh、falsy/missing key、external handler canonical result。
+- ユーザー判断が必要な事項: edit conflict、canonical result、validation ownershipはCONF-0114と既存UI判断へ統合する。
+
+## FUT-0182 共通入力のdebounce・非同期検索・date/time・accessibility契約を統一する
+
+- 状態: Open
+- 重大度: Medium
+- 発見セグメント: UI-BASE-001、UI-CONTROLS-001、UI-MANAGERS-001、SPEC-DEEP-034
+- 対象ファイル・シンボル: AirTextField、AirAutocompleteApi/AirApiLoader、AirPostalCode、AirTimePickerInput、AirDateTimePicker/Input、validation/focus composables
+- 確認済み実装事実: TextFieldはvisible valueと遅延emitがずれ、submit/unmount時flushがない。非同期検索と郵便番号lookupはrequest generation/abortがなく、古い結果が新しい入力へ適用され得る。TimePickerInputのfield attrsはdialogへfallthroughし、date/timeはinvalid/null/timezone/secondsを明示しない。required markerとicon操作のaccessibilityも視覚実装に依存する。Site create wizardはAirPostalCodeの`update:address`をlistenせず、現行root appに住所結果consumerがない具体例である。
+- 想定影響と発生条件: 高速入力・画面遷移・offline/遅延response・mobile/keyboard利用で、未反映値保存、stale候補、disabled field編集、誤日時、操作不能が起き得る。
+- 未確認点・仮説: Vuetify runtime value型、Nuxt auto-import、DST/browser timezone、provider応答、screen reader挙動は未確認。
+- 推奨する将来対応: user-input-only synchronous commitまたは明示flush、latest-wins/abort、loading owner分離、strict date/time parse、inputへのattrs routing、ARIA/keyboard/focus contractを実装する。
+- 必要なテスト: debounce submit/unmount、reversed requests、clear/null/invalid date、timezone/seconds、disabled/readonly time input、keyboard/screen reader/mobile。
+- ユーザー判断が必要な事項: timezone、debounce、provider、accessibility受入基準はCONF-0114、CONF-0116、CONF-0138へ統合する。
+
+## FUT-0183 Admin operator・claims・company破壊・migrationを承認・監査・再開可能な境界へ移す
+
+- 状態: Open
+- 重大度: Critical
+- 発見セグメント: ADMIN-SDK-001
+- 対象ファイル・シンボル: Admin SDK claims/companies/migration/system commands、CLI/library初期化、User/Auth delete/restore paths
+- 確認済み実装事実: Admin credential保有者をcode上でactor認証せず、claims変更、company全削除、Auth repair、restore、locked result migrationを実行できる。target claim/company、self/last-admin、artifact company/integrity、二者承認、operation ID、durable audit、resume/rollbackを強制しない。User doc IDをglobal Auth UIDとしてdeleteするchainもある。
+- 想定影響と発生条件: 誤環境・誤tenant・改変artifact・破損User document・並行操作により、global Auth、tenant data、locked financial resultを不可逆または部分的に変更し得る。service account/IAMとoperator端末アクセスが前提だが、影響は重大である。
+- 未確認点・仮説: 実IAM、service account配布、production利用、last-admin運用、実artifact、drill実績は未確認。
+- 推奨する将来対応: least-privilege operator identity、target tenant/claim preflight、two-person approval、maintenance hard gate、immutable audit、backup receipt、dry-run/apply token、cursor/resume/reconcile/rollbackを共通command frameworkで強制する。
+- 必要なテスト: actor/target/env matrix、self/last-admin、forged UID、tampered artifact、partial failure、499/500/501件、locked result exception、trigger reconcile、resume/idempotent replay。
+- ユーザー判断が必要な事項: PROD operator、company decommission、locked migration例外、restore scope/RPO/RTOはCONF-0111、CONF-0124〜0130へ統合する。

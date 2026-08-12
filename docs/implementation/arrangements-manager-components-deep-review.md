@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査（file本文deep review）
-- 対象checkpoint: SPEC-DEEP-015
-- 最終確認日: 2026-08-11
+- 対象checkpoint: SPEC-DEEP-015、SPEC-DEEP-039a、SPEC-DEEP-042
+- 最終確認日: 2026-08-12
 - 対象: `components/Arrangements/**` のexact 10 files
 - 境界: 直接callerの`pages/arrangements-manager.vue`、range data facade、arrangement actions、schedule actions、実効人数utilityだけを照合した。子component本文、Rules、runtime、PDF生成は未確認。
 
@@ -53,3 +53,15 @@
 ## 未確認範囲
 
 - table/card/drag/dialog子component、PDF/text/notifyの内部、Rules/Functions、実data、runtime responsive/keyboard/focus、transaction競合、テスト。
+
+## SPEC-DEEP-039a addendum
+
+- `useArrangementNotificationsCommandText`は指定日のscheduleを新しい配列へfilterして表示順にsortし、現場名・住所、予定時刻、従業員名/役職、外注先名/人数をplain textへ出力する。masterは`useFetch` cacheだけを同期参照し、未取得・not-found・permission/network errorを「不明な現場」・`unknown`・空住所へ畳み込む。
+- text生成自体に専用permission、preview revision、generatedAt/by、mask、copy/share audit、retentionはない。route read権限と親UIに依存し、PDFと同じ個人・現場情報の持出し境界である。
+- `orderMap`は`siteShiftTypeOrder.value.map`を無条件に呼ぶ。現行facadeは補完済みRefを渡すが、公開composable単独利用でundefined/nullを渡すと生成時に失敗する。
+
+## arrangement range data layer追加確認（SPEC-DEEP-042）
+
+- 表示期間に前後1日を足してscheduleを購読し、日勤↔同日夜勤と夜勤↔翌日日勤のemployee重複だけを連勤warningへする。外注個人、夜勤↔翌夜勤、複数日連続、実時間/休息時間は判定しない。
+- groupKey indexは同一site/shift/dateの複数scheduleを後勝ち1件へ上書きする一方、docId indexは全件保持する。既存重複時に`getScheduleByGroupKey`だけを使うcallerは対象を一意に識別できない。
+- schedule、notification、SecurityReportIndex、Employee、Outsourcer、Site orderを別々のlive/cache sourceから合成し、共通revision・loading・error・partial-stateを持たない。範囲層のcatchは同期登録errorだけで、async listener failureを公開しない。

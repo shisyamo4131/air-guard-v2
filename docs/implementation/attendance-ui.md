@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-038、SPEC-DEEP-011、SPEC-DEEP-023
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-038、SPEC-DEEP-011、SPEC-DEEP-023、SPEC-DEEP-040、SPEC-DEEP-041、SPEC-DEEP-043
+- 最終確認日: 2026-08-12
 - 2026-08-11のSPEC-DEEP-023で対象7 componentsをfile単位で再精査した。component API、detail実日時表示、mode別snapshot取得、選択・empty/loading、CSV入口との境界は [DailyAttendance components deep review](daily-attendance-components-deep-review.md) を参照する。
 - 根拠ファイル: `pages/attendances/index.vue`、`components/DailyAttendance/Index/index.vue`、`components/DailyAttendance/Index/useIndex.js`、`components/DailyAttendance/Calendar/index.vue`、`components/DailyAttendance/Statistics/List/index.vue`、`components/DailyAttendance/Statistics/Table/index.vue`、`composables/application/dailyAttendance/useDailyAttendanceIndexData.js`、`composables/dataLayers/dailyAttendance/useDailyAttendancesInRange.js`、`composables/dataLayers/employee/useEmployeesInRange.js`、`composables/transforms/useDailyAttendanceStatistics.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/DailyAttendance.js`
 - 関連調査: `daily-attendance-sync.md`、`attendance-export.md`、`page-access.md`
@@ -113,3 +113,19 @@ UIの`developer` role判定とFirestore Rulesのsuper-user判定は同じ条件�
 - 認証済みbrowserでの表示、実claimsとRulesの到達性、mobile実機、screen reader、keyboard操作。
 - 実Firestore data、offline挙動、同時月変更のruntime再現。
 - `/attendances/export`、OperationResult同期Functions、給与、freee/API、将来の休暇model。
+
+## Index application data追加確認（SPEC-DEEP-040）
+
+- actual-date modeとoperation-date modeはいずれも勤怠projectionと在職Employeeを別々のsnapshot queryで取得し、ORした単一loadingだけを返す。二つのqueryに共通read time/revisionやall-or-nothing error契約はない。
+- loading transitionごとにglobal loading keyを追加/削除しscope disposeでもcleanupする点は安全側だが、下位data layerのerror/stale/emptyを公開せず、片方失敗時にもう片方の新dataと旧dataが混在しても画面で識別できない。
+
+## 勤怠統計transform追加確認（SPEC-DEEP-041）
+
+- ACTUAL_DATE側は`DailyAttendance.isAttended/isExportable/details`、OPERATION_DATE側は`details.length/details`を使う別transformである。同じ表示項目でもattendanceCountとexportabilityの意味がmodeにより異なる。
+- 両transformは`employeeId`・`shiftType`の存在/enumを検査せず、欠損値を`undefined` Map keyへ集約する。時間値は`Number()`後の非有限値だけ0へ畳み込むため、空文字/nullも0として扱い、invalid rowをerrorやuncalculable countへ残さない。
+- transformは純粋なlive computedで、snapshot revision、loading/error、監査情報を持たない。表示側はsource projectionのvalidation・整合性へ依存する。
+
+## mode別range data layer追加確認（SPEC-DEEP-043）
+
+- OPERATION_DATE側snapshot layerはACTUAL_DATE側と同じくrange変更のgeneration/cancelを持たず、失敗時に旧docsを保持する。Employee snapshotはACTIVE/RESIGNEDを直列に別queryし、projectionとの共通revisionもない。
+- Employee cache pushは両query成功後だけで、片方失敗時は前回cache/docsを残す。画面の単一loadingでは「旧値保持」「片方失敗」「0件」を区別できない。

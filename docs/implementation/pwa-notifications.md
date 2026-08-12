@@ -1,8 +1,8 @@
 # PWA Service Worker・FCMクライアント境界の実装調査
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-004 — PWA Service Worker・FCMクライアント境界
-- 最終確認日: 2026-08-10
+- 対象セグメント: SPEC-SEG-004、SPEC-DEEP-039b — PWA Service Worker・FCMクライアント境界
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `service-worker/sw.js`、`plugins/08.firebase-messaging.client.js`、`composables/useNotification.js`
 
 この文書は指定されたクライアント境界から観察できる実装事実を記録する。Firebase設定値、実トークン、実データは読み取っていない。Cloud Functions、Security Rules、送信側、モデル内部は未調査であり、外部通知は送信していない。
@@ -100,6 +100,12 @@
 - PWA更新時の古いcache不整合を抑えるという仕様に対し、このService Workerはアプリcacheを作成せず、`skipWaiting` と `clients.claim` を使う。HTTP cacheと実際の更新体験は未確認である。
 
 ## 矛盾・未使用候補
+
+### SPEC-DEEP-039b追加確認
+
+- `registFCMToken`はdevelopment時にraw User objectとFCM token全文をlogger dataへ渡す。logger自体にredactionはなく、既存の「token/User全文をlogしない」方針へ反する。
+- getToken/FcmToken createを含む全errorをcatchしてErrors storeへ記録するがrethrowしない。認証初期化callerは通知登録失敗を成功完了と区別できず、automatic retry・token rotation・logout cleanupもない。
+- FcmTokenはtokenをfieldとdoc IDへ複製し、uid/companyIdをclient User instanceから設定する。schema/Rulesでdoc ID=token、company claim、old ownerを強制しない既知のglobal collection境界である。
 
 - Service Workerの独自 `push` listenerはログ出力だけであり、業務処理には使われていない。診断用途の可能性がある。
 - `notificationclick` はpayload dataをnotification optionsへ保存しているにもかかわらず参照せず、常に `/` を新しいWindowで開く。dataはこのクライアント境界では未使用である。

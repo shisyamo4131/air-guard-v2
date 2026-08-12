@@ -1,8 +1,8 @@
 # Auth onboarding UI
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-058
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-058、SPEC-DEEP-039a、SPEC-DEEP-041
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/auth/*.vue`、`pages/unconfirmedEmail.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`composables/application/auth/useAuthActions.js`、`middleware/auth.global.js`、`utils/pageSettings.js`
 - 制約: runtime、実メール、外部Firebase、実dataは確認していない。Callable内部認可は既存`callable-authorization.md`を参照する。
 
@@ -85,3 +85,16 @@ middlewareは未認証をsign-inへ、認証済み未確認Userをverification�
 - browser reload/back/offline、rate limit、actual error code、global overlayがclickを遮断するruntime挙動。
 - Callable内部の全transaction/rollbackは既存文書を参照し再調査していない。
 - account recovery support手順、実orphan/duplicate件数、disabled sessionの失効時点。
+
+## SPEC-DEEP-039a addendum
+
+- 一般signup pageは事前登録結果を`preRegData`へ保持するが、submit時にその結果やone-time proofを`signupUser`へ渡さない。composableはemailで事前登録を再検索し、その時点の先頭結果を使うため、表示確認とsetup targetの間に同一性・revision bindingがない。
+- `setupUserAccount`はverification mail送信後ではあるが`email_verified`成立前に呼ばれる。token email一致だけではmailbox所有を証明しない既知のinvitation takeover境界を、通常clientの実行順で再確認した。
+- Auth作成後の後段失敗messageはFirebase Auth UIDを画面へ表示する。support correlationとして使う意図はあるが、利用者向けerrorへ内部identityを直接出す必要性・mask・監査は定義されていない。
+- 初回admin signupもAuth作成、mail、Company/User transaction、claims、token refresh、`setUser`を直列実行し、後段失敗時はrollback/resumeせずUID案内だけを返す。
+
+## Auth Callable adapter追加確認（SPEC-DEEP-041）
+
+- `useAuthFunctions`は8 callable名を毎回`httpsCallable`で生成し、入力をそのまま渡して`result.data`を返す薄いadapterである。client側のshape/tenant/actor validation、timeout、App Check token状態、typed error/result normalization、retry、request generationはない。
+- 呼出し元はsignup、User/Employee管理、admin変更dialogへ到達する。従ってUIの入力制約やbutton表示はCallable authorizationではなく、Functions側検査が唯一のserver境界である。
+- adapter自体に未使用exportはない。`checkEmailAvailabilityGlobal`もEmployee/User作成UIから到達する。

@@ -3,8 +3,8 @@
 ## Metadata
 
 - Status: implementation investigation (deep review)
-- Checkpoint: SPEC-DEEP-019
-- Last verified: 2026-08-11
+- Checkpoint: SPEC-DEEP-019、SPEC-DEEP-041
+- Last verified: 2026-08-12
 - Sources: the 13 exact files in `components/Charts/**`, `DayType/**`, `EmploymentStatus/**`, `IsStartNextDay/**`, `SecurityType/**`, `ShiftType/**`, and `Tag/**`
 - Direct callers/dependencies read: dashboard chart caller, representative ShiftType/EmploymentStatus/SecurityType/IsStartNextDay/Tag callers, and `useOperationQuantityBySecurityTypeInRange.js`
 
@@ -39,6 +39,7 @@
 - Tag's validator lowercases for acceptance but `useIndex` uses the original `props.variant` in the CSS class. Uppercase accepted inputs therefore do not match lowercase CSS classes. Loading hides label and disables the remove action; mobile forces small sizing and hides loading text. No keyboard drag/reorder operation exists in Tag itself.
 - `IsStartNextDay` provides a tooltip explanation but relies on the underlying Air checkbox for model/validation and accessible labeling. SecurityType Select relies on Air select for filtering/error/empty behavior.
 - The chart aggregation can retain unknown security types in its intermediate map, but only known `SECURITY_TYPE` values become datasets; those quantities are not visible. `label` is not used, `hideLabel` is not reactive after setup, and OperationResult/schedule input failures are not surfaced by this layer.
+- SPEC-DEEP-041 confirmed that quantity aggregation does not validate finite/nonnegative numeric inputs. `requiredPersonnel` or result quantity can therefore concatenate as a string or propagate `NaN`; missing/unknown date and security type are grouped outside the rendered known datasets. The older total-only composable has no static caller and is an explicit source-marked unused candidate.
 
 ## Consistency and future actions
 

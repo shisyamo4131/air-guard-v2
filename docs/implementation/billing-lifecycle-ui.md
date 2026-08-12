@@ -1,8 +1,8 @@
 # Billing請求書の画面操作・状態遷移・ロック契約の実装調査
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-018、SPEC-DEEP-022
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-018、SPEC-DEEP-022、SPEC-DEEP-039a、SPEC-DEEP-042
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `utils/pageSettings.js`、`pages/billings/customers/`、`components/CustomerBillings/`、Billing data layer/manager/handler、OperationBilling詳細page・manager・lock button/composable、schemas `Billing.js`・`OperationBilling.js`、Billings/OperationResults Rules
 
 ## 入口・権限
@@ -123,3 +123,15 @@ Billing 4pageの公開契約とcreate/edit/lock/status・error境界のfile単�
 - AirItemManager package内部のdialog loading、submit disable、error表示、rollback挙動。
 - 認証済みUI/Emulatorでのstatus別表示、double click、同時tab、Rules直接write。
 - PDF生成、税計算式、aggregation Functions内部、外部会計連携、Customer詳細。
+
+## SPEC-DEEP-039a addendum
+
+- `useCustomerBillingManager`は唯一のcallerであるBilling詳細pageへ`attrs`とmaster cacheを返し、create/deleteを同期throw、updateをdeprecated `useDocManager`経由のfull Billing updateへ委譲する。status・permission・version・single-flightは追加しない。
+- 同composableが返す`info` computedは唯一のcallerから未使用で、評価時には未importの`OperationBilling`とBillingにない`dateAt/dayType/shiftType/startTime/endTime/workDescription/agreement`を参照する。現行pageではlazy computedのため発火しないが、再利用すると例外または別modelの誤表示になるlatent contractである。
+- doc全体のdeep changeでCustomer/Site fetchを呼ぶ。master未取得・permission failureは表示上`loading...`へ畳み込まれ、Billing保存失敗のrollback/refetchはmanager共通境界に委ねられる。
+
+## Billing data layer追加確認（SPEC-DEEP-042）
+
+- range layerはbillingDateAt範囲をlive購読し、docId重複をMapで後勝ち除去する。Customer/Site cache fetchはcallbackからawaitせず、失敗・完了を一覧stateへ返さない。
+- subscription開始の同期throwだけをcatchし、Firebase listenerの後続error channelは登録しない。range validationはtry外なのでwatch中のinvalid Date/rangeは未処理例外となる。
+- `useCustomerBilling`はstatic docIdをmounted時に購読するがloading/error/not-foundを返さない。旧`useOperationBilling`はlegacy manager以外に現行callerがない。

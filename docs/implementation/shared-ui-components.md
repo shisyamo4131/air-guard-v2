@@ -114,3 +114,9 @@ Air Vuetify内部のARIA、keyboard、debounce、error/empty、validation、dial
 SPEC-DEEP-032で`components/organisms/**`の6ファイルをfile単位確認した。`ChangeAdminUserDialog`は`UsersManager`から到達し、4段階dialog、open/close購読、loading中の再実行抑止、`changeAdminUser` callable呼出しを持つ。WindowItem 1〜4はinjectされたUser/selectionを表示する薄いchildで、独自props/emits、validation、error、ARIA/focus契約はない。`SiteOrderManager.vue`は`siteOrder`の旧drag/submit wrapperで、直接callerを確認できないlegacy候補である。
 
 admin移譲のclient `auth.isAdmin` guardとcallableのserver検証差は[User/Auth lifecycle](user-auth-lifecycle.md)および`FUT-0080`、icon/dragとdialog focusの共通課題は`FUT-0115`、fileごとの根拠は[Organisms components deep review](organisms-components-deep-review.md)を参照する。
+
+## overlay composables追加確認（SPEC-DEEP-044）
+
+- `useManagedDialog`はsubmit errorをloggerへ吸収してdialogを残すが、single-flight guardがなくsubmit同士やcancelとの重複を許す。cancel中loadingもなく、遅いsubmit成功が利用者のcancel後にdialogを閉じ得る。
+- `useTargetedMenu`は開いたmenuを別targetへ移す際に固定delayを待つ。世代/cancelがなく、待機中のcloseや別open後に古いopenが再表示し得る。target解決失敗でもnull targetでopenする。
+- `useFloatingWindow`はbrowser event targetとwindow寸法を直接使い、SSR/keyboard target/resize中の再境界調整、focus/ARIAを持たない。三composableともexplicit Vue importが一部なくNuxt auto-importへ依存する。

@@ -1,5 +1,12 @@
 # role・permission認可モデル（実装調査）
 
+## Authorization/page helper最終確認（SPEC-DEEP-045a/045b）
+
+- `getPermissions`は複数role由来permissionを重複した配列で返し得る。未知roleは拒否されず、その文字列自体をpermissionとして採用する。
+- `pageSettings.hasAccess`はadminを多くの通常pageへ通し、super-user/developer専用値だけを個別扱いする。required配列はANDではなくORで評価される。
+- 未登録pathは`getPageConfig`が親pathへfallbackするため、明示登録漏れが親の公開・権限設定を継承し得る。development validatorはwarningのみでbuildを失敗させない。
+- 以上はnavigationとclient middlewareの表示・遷移制御であり、Firestore Rules/Functionsのactor・tenant認可を代替しない。
+
 ## メタデータ
 
 - 状態: 実装調査

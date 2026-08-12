@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-025
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-025、SPEC-DEEP-035、SPEC-DEEP-040
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/modules/auth-v2.js`、`functions/triggers/user.js`、`functions/modules/auth/deleteUser.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
 
 ## 入口と暫定権限
@@ -113,3 +113,15 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 - 実Firebase Auth/Firestoreデータ、Emulator、メール到達、token refreshの実行結果。
 - Employee退職処理本文、login/middleware全体、super-user運用、admin SDK保守CLI。
 - Functions retry設定、監視・手動reconcile運用、既存重複/orphanデータ。
+
+## Users UI境界の追加確認（SPEC-DEEP-035）
+
+Managerは親から受けた`docs`を表示する一方、別のUser instanceで`subscribeDocs()`を開始して得た配列を使わないため、冗長なlive listenerとなっている。検索欄はlocal値を変えるだけでfilterも`update:search` emitも行わず、`showCreate=false`でもtoolbar plusを表示する。empty時のcreate handlerは未定義の`toCreate`を参照し、標準create入口として成立しない。
+
+有効化・無効化は確認・理由・監査・single-flightなしで既存callableを呼ぶ。employeeId付きUserの削除はUI callbackでdisable指定されるが、Air managerはdisable error後もdelete callbackを続行し、User modelはadminだけを拒否するため、公開/exposed submit経路ではUser削除と後続Auth削除triggerへ到達し得る。User Cardの`loading` propとrole optionsは未使用で、selectionはaccessible name/keyboard contractのないicon操作である。通知設定はpermission requestとtoken登録にlocal loading・retry・error表示がなく、denied時の回復案内もない。
+
+## Auth application flow追加確認（SPEC-DEEP-040）
+
+- `initializeSession`はclaimをstoreへ設定後、process-global FireModel prefixを切替え、User/Companyをfetchしてからsubscribeする。User/Company/FCMのいずれかで失敗しても`setUser`がerrorを吸収し、finallyで`isReady=true`とするため、「初期化処理終了」と「利用可能状態」は一致しない。
+- companyId欠損時は認証自体を維持し、User/Companyをinitializeしてprefixを`Companies/unknown`へ設定する。repair・再取得・専用状態表示はこのactionにない。
+- signOutはFirebase sign-out後にstoreの`uid===null && isReady`待機へ委譲する。clearSession後段のmodel cleanup失敗も`setUser`が吸収する既知境界で、FCM token削除は行わない。

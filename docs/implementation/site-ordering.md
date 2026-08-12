@@ -3,8 +3,8 @@
 ## メタデータ
 
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-052
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-052、SPEC-DEEP-035、SPEC-DEEP-039b
+- 最終確認日: 2026-08-12
 - 根拠ファイル: schemas `src/SiteOrder.js`、`src/Company.js`、`composables/dataLayers/siteShiftTypeOrder/*`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`components/SiteShiftTypeOrder/**`、`components/Draggable/SiteShiftTypeOrder/index.vue`、`components/Arrangements/Manager/**`、`components/OperationSchedules/Manager/index.vue`、`utils/pageSettings.js`、`firestore.rules`
 
 ## 責務と保存契約
@@ -74,3 +74,19 @@ Company初期化時、両配列に`add/change/remove`が追加される。`siteO
 - Emulatorでの同時更新、offline queue、再接続、Rules enforcement。
 - 実Company document内の重複・欠損・underscore入りSite ID、旧componentの動的参照。
 - 並び順の正式な業務権限、競合解決方針、削除Site entryの保持期間は未決定。
+
+## Component境界の追加確認（SPEC-DEEP-035）
+
+reorder formはopen中に親配列を受け取るとdraftを無通知で再初期化する。`loading`はbuttonだけを無効化してdraggable自体を止めず、`submit()`はvalidation・clone・await・error処理なしで内部配列をemitする。`ListItem`の差し替え可能な`fetchSiteComposable` propは同名local変数に隠されて未使用で、欠損Site・取得失敗はいずれも`...loading`のままになる。permission、actor、revision、auditはcomponent内にない。
+
+## 旧useSiteOrderManager追加確認（SPEC-DEEP-039b）
+
+- 静的caller不在を再確認した。旧managerはdialog draftをCompany instanceへ先に全置換してfull updateし、失敗をloggerへ吸収してCompany値をrollback/refetchしない。
+- `Company.initialize`時にarrayへ付与される`add/change/remove` helperは、`company.siteOrder = [...internalSiteOrder]`のplain array置換直後には引き継がれない。live subscriptionが再initializeする前に旧managerのpublic add/change/removeを呼ぶとmethod欠損となるlatent境界である。
+- public add/change/removeもCompany配列を先にmutationしてからupdateし、version・single-flight・actor/permission・rollbackを持たない。
+
+## order data layer追加確認（SPEC-DEEP-043）
+
+- order typeはmutable plain objectで、未知typeはerrorでなく空配列を返す。保存済み`siteOrder/scheduleOrder`の重複key・invalid entryは検査せずそのまま残す。
+- enrichmentはmissing keyだけを`SiteOrder` instanceとして末尾追加するため、保存済みplain objectと補完instanceが混在する。既存重複はSetで検知してもresolved配列から除去しない。
+- Site fetchは各entry changeでawaitせず開始され、loading/error/cancelをorder stateへ返さない。missing/deleted Siteを含むorderも保持される。

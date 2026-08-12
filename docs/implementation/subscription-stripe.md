@@ -1,5 +1,11 @@
 # Subscription・Stripe連携（実装調査）
 
+## Customer type utility最終確認（SPEC-DEEP-045b）
+
+- `getCustomerType`はsubscription ID欠損をfree、`canceled`/`past_due`/`unpaid`または期限超過をexpired、`active`/`trialing`をpaid、それ以外の未知statusをfreeとする。
+- `currentPeriodEnd`はFirestore Timestampの`toMillis()`を前提とし、Date/string/不正objectを正規化しない。期限判定は呼出し時刻だけで、時刻経過によるreactive再計算はutility自身にない。
+- 未知statusをfail-closedな不明状態として扱わずfreeへ縮退するため、Stripe state追加や破損data時のentitlement・案内契約が曖昧である。
+
 ## メタデータ
 
 - 状態: 実装調査

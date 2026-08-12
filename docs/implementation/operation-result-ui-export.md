@@ -1,8 +1,13 @@
 # OperationResult一覧・詳細・汎用CSV出力（実装調査）
 
+## CSV/service utility最終確認（SPEC-DEEP-045a/045b）
+
+- CSVはmaster由来文字列をformula neutralizationせず出す。filenameは`new Date().toISOString()`のUTC日付であり、JST深夜帯には利用者の暦日とずれ得る。customer、billingDate、snapshot revisionはfilenameに含めない。
+- `services/operation.initializeSecurityType`はnull itemのerror文生成時に`item.constructor`へ触れ、意図したinvalid-type errorより先にTypeErrorとなる。Site取得はtransaction外で、Site欠損時はwarningだけでUNSETを残してreturnする。
+
 - 状態: 実装調査
-- 対象セグメント: SPEC-SEG-046、SPEC-DEEP-022
-- 最終確認日: 2026-08-11
+- 対象セグメント: SPEC-SEG-046、SPEC-DEEP-022、SPEC-DEEP-041
+- 最終確認日: 2026-08-12
 - 根拠ファイル: `pages/operation-results/index.vue`、`pages/operation-results/[id].vue`、直接OperationResult(s) components、`useDocuments`、`useDocument`、OperationResult handlers/duplicate、`useCustomerBillingActions`、`exportOperationResultsCsv.js`、`pageSettings.js`、OperationResults Rules、schemas `OperationResult.js`/`OperationResultDetail.js`
 - 関連文書: `operation-result-generation.md`、`billing-access-and-manual-adjustment.md`、`billing-lifecycle-ui.md`、各派生sync文書、`data-management-composables.md`
 
@@ -149,3 +154,9 @@ SiteのCustomer変更は既存OperationResultへ自動伝播しない。将来�
 ## 未確認範囲
 
 実CSV生成、Excel等へのimport、実data、UI/Emulator、Air manager/data table内部、Functions同期本文、Generator、OperationBilling、Attendance/freee CSVは未実行・未再調査。大量件数性能、同時tab、network failure、Rules runtime、CSV consumer、agreement.dateの業務意味は未確認である。
+
+## domain duplicate追加確認（SPEC-DEEP-041）
+
+- domain `duplicate`のpublic contractは複数日配列を受け付け、同日重複を除外しない。各instanceはrandom IDで同一transactionへ`set`されるため、同じ日を複数指定すると内容が重複した複数Resultを作成できる。
+- `beforeCreate`はSiteをtransaction外で再fetchして現在のcustomer/agreementを適用する。複製元のhistorical agreement snapshotを保持せず、複製中のSite変更とも同一read境界にない。
+- 現UIは1日入力だがpublic/programmatic callerの防御にはならない。source lockだけはdomain入口で拒否する。
