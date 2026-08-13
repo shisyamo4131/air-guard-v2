@@ -43,6 +43,28 @@
 
 利用者から「次の作業は？」と聞かれた場合、最初に`codex/local-test-harness`がcommit済みだが`main`未mergeであることを開示し、統合済み基準として扱う前に別のmain merge承認を求める。その後、業務用語で最大3問の最初の判断batchとして、actor・permission境界、招待本人確認、lock後・請求後の訂正権限を提案する。並行してraw FCM token logのredactionなど判断に依存しない小さな修正案を準備するが、承認前に実装しない。
 
+## 次回task交代時の一時的な採用方針
+
+- 状態: 利用者承認済みの試験計画。現在は未適用であり、現行permission、`.codex/config.toml`、Git運用をこの記録変更では変えない。
+- 現状: user-levelの`default_permissions = ":workspace"`とproject-levelの`sandbox_mode = "workspace-write"`が併存する。sandbox内では検証用Nodeの起動が拒否された実績があり、`.git`はread-onlyのためGit mutationに権限昇格が必要である。
+- 試験する推奨構成: user-level設定と他projectを変更せず、AirGuardV2のproject専用permission profileへ統一する。Nodeの必要最小限のread/execute経路を許可し、`.git`のsandbox内read-only保護は維持し、承認済みGit mutationは失敗を挟まず最初から限定的な権限昇格で実行する。global rule、`.git`の通常write許可、`danger-full-access`は採用しない。
+
+### 適用と交代
+
+1. 次回task交代時は、新規割当を止めて安全なcheckpoint、基準commit、clean worktree、復元対象設定を記録する。
+2. 交代前に推奨構成と必要なproject-owned permission・運用文書を更新し、TOML、project docs、managed governance、差分、rollback手順を検証してcommitする。
+3. project-wide permissionのinstruction-chain変更として、履歴をforkせずPMと影響workerを新しいtaskへ交代する。旧taskは新taskのrepository restart、permission、callback経路、変更なし確認が成功するまでarchiveしない。
+
+### 交代後の受入れ条件
+
+- Sandbox: AirGuardV2の許可されたworkspace fileを通常どおり読取り・編集でき、workspace外、secret、remote、network、実dataへの境界を広げない。
+- Node: `scripts/check-project-docs.ps1`内のNode製TOML validatorがsandbox内で`Access is denied`を起こさず完了する。
+- Git: read-only Git確認がsandbox内で成功し、明示承認済みのstage・commitは最初の試行から限定的な権限昇格で成功する一方、`.git`はsandbox内の通常write対象にならない。
+- Scope: user-level Codex設定と他projectの設定・挙動を変更していないことを確認する。
+- Validation: project docs validator、managed governance validator、TOML検証、`git diff --check`、exact diff、branch・HEAD・worktreeを確認する。application、Emulator、browser、remote、external、実data testはこのpermission受入れに含めない。
+
+全条件を満たす場合だけ、推奨構成をAirGuardV2専用設定として採用し、試験状態を採用済みへ更新する。一つでもsandbox・Git・Nodeの必要な利用を妨げる場合は一時的な採用方針を棄却し、失敗証拠、影響、暫定運用、復元対象を記録する。棄却後は同じtask内で設定を継ぎ足さず、その後の安全なtask交代時に試験直前のproject設定と関連運用文書へ戻し、同じ交代・検証手順で復元を確認する。
+
 ## 再開時の正確な読書集合
 
 1. `AGENTS.md`
