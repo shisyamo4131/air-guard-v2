@@ -1,6 +1,6 @@
 # 実装調査文書索引
 
-最終集計日: 2026-08-12
+最終集計日: 2026-08-13
 
 このdirectoryは、AirGuardV2の実装から観察した現在の挙動、責務、data flow、境界、矛盾候補をsegment単位で記録した調査資料である。確認済み仕様の正本ではない。設計意図や正式要件を確定するときは、プロジェクトの正本仕様と承認済みADRを優先し、このdirectoryの記述は根拠codeの再確認に使用する。
 
@@ -16,9 +16,9 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 101
+- このREADMEを含む文書数: 102
 - 実装領域文書: 93
-- 横断索引・台帳: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録の8文書
+- 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録の9文書
 - FUT: 183件
   - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
   - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
@@ -38,6 +38,7 @@
 - [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
+- [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): PM交代後にrepositoryから再開するための基準、承認境界、優先順。
 
 ## アプリ入口・認証・共通基盤
 
