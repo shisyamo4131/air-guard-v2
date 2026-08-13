@@ -57,7 +57,7 @@ Billing 4pageの公開契約とcreate/edit/lock/status・error境界のfile単�
 - toggleLockはlocal instanceのisLockedを先に反転し、`update()`する。errorはlogger/errors storeへ渡すがlocal値をrollbackしない（FUT-0050）。
 - button handlerはglobal loading entryを追加・finallyで削除する。button自身のdisabled/processing guardはなく、overlayが実際に多重clickを遮断するかは未確認。
 - OperationBillingは `_shouldCheckLock=false` のため、lock中でも請求画面からagreement、請求日、調整数量/単価、稼働外売上等をupdateできる。lockは請求編集を凍結するものではない。
-- 2026-08-11に、このscopeを維持すると確認された。`isLocked`はaccountantが請求作業中にcontrollerの稼働編集を止めるcontroller/operation edit lockであり、OperationBillingの請求編集は許可する。全体immutable lockではなく、operationLocked/billingLockedへは強い必要性が生じるまで分割しない。invoice-issued後immutableは別契約である。
+- 2026-08-13に、このscopeと権限境界が補足確定された。`isLocked`は`operation-billings:write`を持つUserが、請求調整を後続の管制側更新から保護するために設定・解除する管制側編集lockである。lock中は`operation-results:write`による稼働編集・削除を止め、`operation-billings:write`によるOperationBillingの請求編集を許可する。請求確定、承認済み、全体immutableを意味せず、追加承認や理由入力UIを要求しない。最終更新者・日時には現行の`uid`・`updatedAt`を使い、変更前後の永続履歴collectionは現時点で追加しない。invoice-issued後のBilling lifecycleは別契約である。
 
 ### payment
 
@@ -98,7 +98,7 @@ Billing 4pageの公開契約とcreate/edit/lock/status・error境界のfile単�
 - Billing statusとconfirm/markAsPaid methodは存在するがfrontendから未参照で、一覧・詳細にもstatusを表示しない。
 - CANCELLEDは定数だけで遷移method/UIがない。paymentRecordsもfieldだけで未実装である。
 - CustomerBillings array managerへcreate/update/deleteを拒否するhandlerを渡す一方、詳細ではpaymentDueDateAtだけgeneric updateできる。許可fieldはRulesで強制されない。
-- 「lock」はcontroller/operation edit lockであり、Billing確定statusや請求画面内編集停止とは連動しない。この意味をUIへ明示する必要がある。
+- 「lock」は管制側の稼働編集・削除を止めるもので、Billing確定status、承認、請求画面内編集停止とは連動しない。この意味と、請求担当者が設定・解除できることをUIへ明示する必要がある。
 - paymentDueDateAtはBilling集計作成時のCustomer条件から算出されるが、detailで直接変更でき、変更理由・actor・履歴を保存しない。
 - OperationBilling managerはcreateを拒否する一方、一覧pageはplusを表示して`toCreate()`へ到達させるため、必ず失敗する操作が残る。
 
@@ -113,7 +113,7 @@ Billing 4pageの公開契約とcreate/edit/lock/status・error境界のfile単�
 ## 要確認事項参照
 
 - CONF-0019: Billing/OperationResultの閲覧・編集権限。lock scope自体はCONF-0037で回答済み。
-- CONF-0037: 回答済み。controller/operation edit lockとして現行scopeを維持し、OperationBilling編集を許可する。
+- CONF-0037: 回答済み。管制側編集lockとして現行scopeを維持し、`operation-billings:write`によるOperationBilling編集とlock設定・解除を許可する。理由入力・承認・新規履歴collectionは要求しない。
 - CONF-0033: status別の再集計・削除・訂正・再発行。
 - CONF-0035: 支払記録・部分入金・PAID判定。
 - CONF-0036: 回答済み。invoice-issued前後、履歴、paid/cancelled immutable、Customer default、権限の暫定方針。

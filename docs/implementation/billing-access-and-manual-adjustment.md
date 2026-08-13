@@ -15,6 +15,8 @@
 
 ## 暫定権限表
 
+2026-08-13にOperationResultの編集境界だけが確定した。特別な管理者区分ではなく、Userまたはrole presetが持つpermissionで判定する。`operation-results:write`はlockされていない稼働実績の編集・削除、`operation-billings:write`は請求項目の編集と`isLocked`の設定・解除を担う。請求書発行・入金・取消等の権限は引き続き未確定である。
+
 | 境界 | 現在の実装 | 確定性 |
 |---|---|---|
 | 一覧・詳細page表示 | `billings:read` を要求 | 暫定 |

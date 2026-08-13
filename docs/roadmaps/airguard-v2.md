@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-13
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -39,7 +39,7 @@
 ## 次の作業
 
 1. Critical security問題を、remote dataに触れないEmulator/contract test計画へ落とし込み、Rules/Functions/modelの修正単位とrollbackを決める。
-2. locked OperationResult、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
+2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
 5. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
@@ -58,7 +58,7 @@
 ## 未解決問題
 
 - invitation/account setup、User documentとglobal Auth UID、Callable actor/tenant、同一tenant内field権限、SecurityReport Storageの認可不備。
-- locked OperationResult、agreementなしresult、Billing status、請求書snapshot、同時更新、勤怠・履歴・report indexの部分失敗と再構築。
+- OperationResultの管制側編集lock・権限強制、agreementなしresult、Billing status、請求書snapshot、同時更新、勤怠・履歴・report indexの部分失敗と再構築。
 - FireModelのprocess-global context、full-set/upsert、serialization、validation、client/server adapter差。
 - 通知の重複、FCM token lifecycle/log、ArrangementNotification日時・状態遷移。
 - UI managerのdisable非強制、二重送信、draft競合、入力debounce、非同期stale response、date-time、accessibility。
@@ -71,7 +71,7 @@
 
 1. 正式なrole・permission matrixと、管理Callable・super-user・developerのactor/tenant境界。
 2. 招待本人の証明方法、verification前操作、取消・再送・部分状態の回復手順。
-3. 請求確定後とlocked稼働の訂正・取消・管理者修復、およびAdmin migration例外。
+3. 請求書発行後の訂正・取消・管理者修復、およびAdmin migration例外。OperationResultの`isLocked`は請求確定とは分離し、`operation-billings:write`による設定・解除と請求編集を許可する方針で確定済み。
 4. 正式backup対象、復旧時点、RPO/RTO、artifact保護、operator承認・監査・drill。
 5. 個人・勤怠・請求・通知・backupの閲覧者、log、保持、匿名化、削除。
 6. trigger/callable/scheduled処理のretry、重複防止、部分成功、manual replay、SLO。
@@ -91,3 +91,4 @@
 | 2026-08-10 | 10% | 基準線 | 既存ガバナンス、現行仕様、ADR、運用手順を確認し、正式運用準備を100点の加重マイルストーンとして新規設定した。 |
 | 2026-08-12 | 10% | 0 | 主repoのdeep reviewを310/531から519/531へ進め、B/Cを0として予定したsource本文精査を完了した。schema、components、composables、PDF/CSV/utils/service、共通UI、Admin SDK、認証・Functionsの問題を台帳化した。各未完了マイルストーンは修正・test・運用受入れの全ゲートを満たしていないため、無部分加点規則により公式進捗は据え置いた。 |
 | 2026-08-12 | 10% | 0 | 利用者用local環境から分離したCodex専用Emulator seed、容量・指紋ガード、Auth・Firestore Rulesの4件の基盤testを追加した。未完了マイルストーンの回帰・受入れ条件は満たしていないため進捗は据え置いた。 |
+| 2026-08-13 | 10% | 0 | OperationResultの`isLocked`を請求確定から分離し、管制側編集保護、機能権限、理由入力・承認・新規履歴collectionを要求しない契約を確定した。文書整合のみで実装・Rules・回帰testは未完了のため進捗は据え置いた。 |
