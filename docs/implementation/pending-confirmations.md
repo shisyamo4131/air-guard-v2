@@ -257,9 +257,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: 閲覧・取極め適用・手動調整・OperationResult lock・Billing集計writeをどのpermissionへ分割するか。
 - Why needed: read利用者による請求変更を防ぐため。
 - Options and impact: read/write/lock分離、請求管理role、現行一体。
-- Current provisional treatment: User管理画面で利用者が権限設定する現行方針と、機能別read/writeの2種を暫定実装として記録する。細分化しすぎると混乱するためusabilityを考慮して将来再考し、definitive modelは未確定とする。
+- Current provisional treatment: 権限はUserまたはrole presetが持つ機能permissionで判定する。`operation-results:write`はlockされていない稼働実績の編集・削除、`operation-billings:write`は請求項目の編集とlock設定・解除を担う。その他のBilling lifecycle権限は未確定とする。
 - Related FUT IDs: FUT-0031
-- Answer: 2026-08-11 部分回答。権限はUser管理画面で利用者が設定する。現行は機能別read/writeの2種であり、細分化しすぎると混乱するためusabilityを考慮して再考が必要である。正式なpermission modelは未確定のため、StatusはOpenを維持する。
+- Answer: 2026-08-13 追加部分回答。特別な「指定管理者」は設けず、対象操作に必要なpermissionを持つUserを権限者とする。`operation-results:write`はlockされていない稼働実績の編集・削除、`operation-billings:write`は請求項目の編集と`isLocked`の設定・解除を許可する。請求書発行・入金・取消等の正式permission modelは未確定のため、StatusはOpenを維持する。
 
 ## CONF-0020 請求稼働の手動新規作成要否
 
@@ -473,9 +473,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: lockを通常稼働編集だけの保護とし請求編集を許すか、請求field/集計も凍結するか。
 - Why needed: 利用者のlock認識と実際の変更可能範囲を一致させるため。
 - Options and impact: 現行scope、全OperationResult凍結、Billing statusへ統合。
-- Current provisional treatment: `isLocked`はcontrollerによる稼働編集を止めるlockであり、accountantのOperationBilling請求編集は許可する。全体immutable lockとは表示・文書上で明確に区別する。
+- Current provisional treatment: `isLocked`は`operation-results:write`による管制側の稼働編集・削除を止めるlockであり、`operation-billings:write`によるOperationBilling請求編集とlock設定・解除は許可する。全体immutable lockや請求確定とは表示・文書上で明確に区別する。
 - Related FUT IDs: FUT-0050
-- Answer: 2026-08-11 回答済み。OperationResultはcontrollerの稼働管理とaccountantの請求管理の双方で使う。`isLocked`はaccountantが請求作業中にcontrollerの稼働編集を止めるためのもので、lock中もOperationBillingの請求編集は許可する。強い必要性がない限りoperationLocked/billingLockedへ分割せず現行挙動を維持する。UIではcontroller/operation edit lockであり全体immutable lockではないと明示する。将来のinvoice-issued後immutableは別の確認事項として扱う。
+- Answer: 2026-08-13 補足確定。OperationResultは管制等の稼働実績担当者と請求担当者が共用する。`isLocked`は請求担当者の調整を後続の管制側更新から保護するもので、請求確定、承認済み、全体immutableを意味しない。lock中も`operation-billings:write`による請求編集を許可し、同permissionを持つUserがlockを設定・解除する。追加承認・理由入力UI・変更前後の永続履歴は要求せず、現行classが自動設定する`uid`・`updatedAt`を最終更新者・日時として利用する。新しい履歴collectionは現時点で作成しない。invoice-issued後のBilling lifecycleは別事項として扱う。
 
 ## CONF-0038 請求書PDFの必須項目・番号・status別発行
 

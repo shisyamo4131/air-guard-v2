@@ -38,7 +38,7 @@
 
 - FireModelのcreate/updateはfull-document set/upsertで、create-must-not-exist、update-must-exist、merge mask、revision preconditionがない。未知fieldと同時更新を失い得る。
 - hidden/readOnlyはUI metadataで、enumerableな派生値も保存される。type、enum、nested valueのvalidationは限定的である。
-- OperationResult lockは現在値をfalseへ変えるとmodel guardを回避でき、Rules/direct writeも拒否しない。これは仕様とADR 0003に反する。
+- OperationResult lockは現在値をfalseへ変えるとmodel guardを回避でき、Rules/direct writeもpermissionやlock境界を強制しない。2026-08-13に確定した契約では、`operation-billings:write`だけがlockを設定・解除し、lock中の`operation-results:write`による稼働編集・削除を拒否する必要がある。
 - agreementなしresultの理由・許可flagがなく、billing eligibilityがagreementの妥当性を要求しない。site変更時に同じagreement keyだと以前のsite単価を保持し得る。
 - Billing同一keyの通常追加・更新・削除はtransactionalでなく、確定・支払済み状態もFunctions/Rulesに強制されない。請求書はimmutable artifactでなく、masterの現在値とsnapshotを混在させる。
 - OperationResult同期はBilling、DailyAttendance、DailyOperationByEmployee、SiteEmployeeHistoryを順に処理し、後段失敗時に前段だけが残る。event ledger、全体reconcile、順序逆転防止がない。
@@ -84,7 +84,7 @@
 | ---: | --- | --- | --- |
 | 1 | 正式role、permission、special role、Callable actor/tenant | CONF-0111、CONF-0129 | 現行UI/claimを正式認可とみなさず、Rules/Functionsをfail-safeに扱う |
 | 2 | invitation/account setup、mailbox確認、User/Auth identity | CONF-0067、CONF-0113 | verified emailまたは一回限りinvite proofなしの強い操作を承認しない |
-| 3 | Billing発行後の変更、lock解除、訂正・取消 | CONF-0033ほか保留中のBilling群 | 仕様/ADRのlocked拒否を優先し、Admin例外を暗黙承認しない |
+| 3 | Billing発行後の変更、訂正・取消 | CONF-0033ほか保留中のBilling群 | OperationResultの管制側編集lockとは分離し、未確定のBilling lifecycleを暗黙承認しない |
 | 4 | backup scope、RPO/RTO、restore semantics、実行権限 | CONF-0124〜CONF-0127 | 現行artifactを完全backupやproduction-ready復旧と呼ばない |
 | 5 | archive/retention/privacy/log | CONF-0115、CONF-0123、CONF-0126 | 平文credentialやraw token/個人data logを安全とみなさない |
 | 6 | retry、event reconciliation、SLO、manual replay | CONF-0130 | 部分成功を完了とみなさず、再構築結果を監査不能のまま確定しない |
