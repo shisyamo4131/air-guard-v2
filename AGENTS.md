@@ -1,185 +1,118 @@
-# AirGuardV2 作業規則
+# AGENTS.md
 
-## プロジェクト
+<!-- GENERATED FILE. DO NOT EDIT DIRECTLY. -->
+<!-- Common governance version: 1.0.0 -->
+<!-- Common governance SHA-256: 8e2f52bb790d3f2dbf35fb50f41f3d36adbaeaa0077713f48dd03cc8d1afefc0 -->
+<!-- Edit project-specific rules in governance/project-rules.md, then validate. -->
+<!-- common-governance-version: 1.0.0 -->
+# Common Project Governance Contract
 
-AirGuardV2 は警備会社向けのマルチテナント業務管理 Web アプリケーションである。現在は試験運用を行いながらアジャイルに開発している。実装事実と利用者が明示的に承認した仕様を区別し、文書・実装・運用の整合性を維持する。
+This contract contains mandatory governance shared by every project created or migrated with `scaffold-project-governance`. A project may add stricter or more specific rules, but must not weaken, replace, or silently contradict this contract.
 
-## マルチエージェント体制
+## Instruction Ownership
 
-主エージェントが司令塔として作業を統括し、依頼内容とリスクに応じて `.codex/agents/` の専門エージェントへ具体的で独立したサブタスクを割り当てる。単純な確認や小規模作業で分担の利点がない場合は、不要なサブエージェントを起動しない。
+- Treat this file and the generated root `AGENTS.md` as managed artifacts. Do not edit them in the project.
+- Put project-specific instructions in `governance/project-rules.md` and project facts in the task-routed authoritative documents.
+- Regenerate managed artifacts with the project renderer after an approved common-contract update.
+- Reject direct changes to managed artifacts, stale hashes, an oversized generated `AGENTS.md`, or a project rule that weakens this contract.
+- Keep the common contract concise. Route detailed product, environment, command, data, and operational guidance through project-owned documents.
 
-### 主エージェント（司令塔）
+## Non-negotiable Coordinator Gate
 
-- ユーザーの指示を受け取り、関連仕様、作業範囲、承認状況、リスクを整理する。
-- 各サブエージェントへ、役割、対象ファイル、禁止事項、期待する回答を明示して指示する。
-- サブエージェント間で重複編集や競合が起きないよう担当範囲を分離する。
-- 各回答とコード差分を確認し、矛盾や未解決事項を統合してユーザーへ報告する。
-- `AGENTS.md`、仕様書、ADR、変更履歴、運用文書、マニュアルなど、プロジェクト文書の作成・更新・整合性管理を担当する。
-- 仕様判断、作業範囲の拡大、外部作用を伴う操作の承認をサブエージェントへ委譲しない。
+Before any file write, delegation, Git mutation, external write, implementation, or completion claim, the coordinator must:
 
-### 基本エージェント
+1. Read the active `AGENTS.md`, `governance/project-rules.md`, and the smallest task-routed authoritative document set.
+2. Identify the current phase, confirmed scope, source of truth, unresolved decisions, and existing behavior that may already satisfy the request.
+3. State or internally verify the allowed files, forbidden scope, approval boundaries, required validation, fallback or rollback, and completion contract.
+4. Separate confirmed facts, reasonable but unconfirmed assumptions, open decisions, and repository conflicts.
 
-- `developer`（実装役）: 主エージェントから割り当てられた個別機能、API、UI、不具合修正を実装する。指定範囲だけを変更し、関連しない既存差分を保持する。仕様との相違、範囲拡大、隣接リポジトリ変更の必要性を発見した場合は作業を止めて報告する。
-- `tester`（検証役）: 単体・結合・回帰・境界・失敗経路を検証する。テストファイルは明示的に委譲された場合だけ編集し、アプリケーションコードは変更しない。実行コマンド、環境、成功・失敗、再現条件、未確認範囲を報告する。
-- `code_explorer`（コード調査役）: コード、設定、ログ、関連文書から責務、実行経路、状態遷移、依存関係、原因候補を読み取り専用で調査する。確認済み事実、仮説、未決事項、競合を区別する。
-- `docs_researcher`（外部文書調査役）: 外部Webの公式資料や一次情報から、依存ライブラリ、Firebase、外部APIなどの最新・バージョン固有情報を読み取り専用で調査し、参照元と適用条件を示す。
-- `reviewer`（独立レビュー役）: 変更差分を読み取り専用でレビューし、正確性、回帰、セキュリティ、データ損失、テナント境界、仕様違反、テスト不足を重大度順に報告する。
+If any required item is missing, stale, contradictory, or unauthorized, remain read-only and obtain direction. Do not bypass this gate because a change appears small, beneficial, obvious, or reversible.
 
-### 任意エージェント
+## Source of Truth and Reading
 
-- `ui_tester`（UI検証役）: 認証済みChromeを使う画面操作が必要な場合に限って起動し、ADR 0006と `docs/operations.md` の準備・待機・データ操作条件に従う。
-- `security_reviewer`（セキュリティレビュー役）: Authentication、認可、カスタムクレーム、Firebase Rules、テナント分離、秘密情報、個人・勤怠・請求データ、Stripeなどの変更時に限って起動する。
+- Keep one current confirmed specification. Use Git for previous text, ADRs for decision rationale, roadmaps for evidence-backed progress, and the changelog for concise visible changes.
+- Use the project documentation map to select the smallest sufficient reading set. Do not require every task to load every document.
+- Keep important documents reachable from a root or product/domain index. Update indexes and inbound links in the same change when a document is added, renamed, moved, or retired.
+- Do not use chat history as the sole source of requirements, decisions, progress, operations, ownership, or restart state.
+- Distinguish implemented, planned, proposed, unavailable, and historical behavior.
 
-### 分担と統合
+## Approval and Specification Changes
 
-- 小規模な実装は `developer` に委譲し、必要に応じて `tester` または `reviewer` で確認する。
-- 不具合調査は `code_explorer`、外部仕様が関係する場合は `docs_researcher` も並行して用いる。原因と範囲が確定してから `developer` へ実装を委譲する。
-- 重要な機能、認証、権限、データ整合性に関わる変更は、実装後に `tester` と `reviewer` を分離して確認する。セキュリティ境界がある場合は `security_reviewer` も用いる。
-- 認証後の画面操作は、ユーザーの準備完了後に `ui_tester` へ委譲できる。
-- すべてのタスクで全エージェントを起動しない。独立した読み取り調査、テスト、レビューは並行化できるが、必要な結果をすべて待ってから統合する。
-- 同じファイルを複数のサブエージェントへ同時に編集させない。
-- アプリケーションコードの書込みは原則として `developer` に集中させる。`tester` の書込みは明示的に委譲されたテストファイルに限定する。調査、レビュー、UI検証エージェントはファイルを変更しない。
-- サブエージェントの報告をそのまま確定仕様や完了結果として扱わず、主エージェントが根拠と差分を確認する。
-- サブエージェントが仕様との相違、外部作用、隣接リポジトリ変更の必要性を発見した場合は、主エージェントへ戻し、必要に応じてユーザーへ確認する。
+- Do not convert brainstorming, questions, comparisons, research, or assumptions into confirmed requirements.
+- Treat explicit adoption or change instructions as approval only for the stated scope.
+- Before a material change, present the current rule, proposed rule, reason, impact, compatibility, migration, rollback, and required tests.
+- After approval, update the specification, affected roadmaps, relevant ADRs and index, changelog, implementation, tests, operations, and user documentation in the same task.
+- If the full update cannot be completed, list every unreflected surface and do not claim completion.
+- Ask at most three confirmation or approval questions per round. State why each answer is needed and what changes with the answer.
 
-## 必読順序と正本
+## Multi-agent Coordination
 
-作業開始時は次の順で読む。
+- Keep the user-facing primary task as coordinator. Do not create a separate coordinator subagent.
+- Use only roles whose results are needed. Keep application-code writes concentrated in the developer; allow the tester to edit tests only when explicitly delegated; keep explorer, researcher, reviewer, security review, and release review read-only unless a project contract explicitly requires otherwise.
+- Prefer parallel work only for independent scopes. Never allow overlapping parallel writes without explicit disjoint ownership.
+- Give every delegated checkpoint its ID, common baseline, owned and forbidden files, source of truth, completion contract, validation, approval boundary, and callback destination.
+- A delegated task normally stops after editing and validation, then reports exact files, diff, tests, unverified items, approval boundaries, and worktree state. The coordinator reviews and commits accepted files.
+- Never treat unintegrated work as a confirmed dependency. Prioritize review and integration over launching another write cycle.
+- Wait for all requested evidence before consolidating or claiming completion.
 
-1. `AGENTS.md`
-2. `docs/README.md` で作業種別に応じた必要最小限の文書を選ぶ
-3. `docs/specification.md`
-4. `docs/roadmaps/README.md` と関連ロードマップ
-5. `docs/decisions/README.md` と関連 ADR
-6. `CHANGELOG.md`
-7. 関連するコード、ルール、設定、テスト、`docs/manual/`
-8. 必要に応じて `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`
+## Event-driven Checkpoints
 
-`docs/specification.md` を現在確認済みの仕様の唯一の正本とする。旧資料と競合した場合は、正本と承認済み ADR を優先し、競合をユーザーへ報告する。Git 履歴を過去仕様の保存先とし、版ごとの仕様書を増やさない。
+- For ongoing coordination, issue one reviewable checkpoint at a time and wait for one completion, failure, specification-question, or approval-boundary callback before issuing the next.
+- Establish the user-defined work-session ending condition before ongoing assignments.
+- After task creation, replacement, or application restart, verify the route with a no-change callback before real work.
+- A callback must identify the checkpoint and terminal state, exact files, diff, tests, unverified items, approval boundaries, and worktree state. After notification, the task waits.
+- If callback delivery fails, do not retry repeatedly. Preserve the complete report in the delegated task and stop for recovery.
+- Use scheduled polling only when callbacks are unavailable or the user explicitly selects it. Keep unchanged polls silent and delta-only; cadence is not a task deadline.
 
-`docs/roadmaps/` を目標、残作業、完了条件、証拠に基づく進捗の正本とする。重要文書を追加、改名、移動、廃止した場合は、`docs/README.md` または該当索引と参照リンクを同じ変更で更新する。
+## Git and Worktree Integrity
 
-## ロードマップと長期作業
+- Preserve unrelated user changes. Do not discard, overwrite, stage, or commit files outside the accepted owned scope.
+- Prefer coordinator-owned Git integration. Stage only reviewed files and reuse an existing reviewed delegated-task commit instead of duplicating it.
+- Before handoff, require retiring tasks to validate their owned work and report exact files, diff, tests, unverified items, and worktree state. The coordinator commits and integrates accepted work.
+- Require a clean worktree at handoff. If an exception is unavoidable, record files, purpose, verification, reason, owner, and restart procedure, and prevent duplicate ownership.
+- Do not push, deploy, delete material data, rewrite history, or perform other external or destructive actions without separate authorization.
 
-- 正式運用準備の進捗は、合計100点の加重マイルストーンで管理する。現在はマイルストーン単位の部分加点を行わず、完了条件と再検証可能な証拠が揃った場合だけ得点する。
-- スコープ追加または完了判定の訂正で進捗が低下する場合は、変更前、変更後、理由をロードマップと利用者向け報告へ記載する。
-- 長期作業では、コーディネーターと専門タスクのID・ホスト、作業ツリー、チェックポイントID、共通基準、コールバック先、終了条件を確認する。作成、交代、Codex再起動後は、実作業前に変更なしコールバックを1回成功させる。
-- レビュー可能なチェックポイントを1件ずつ割り当てる。専門タスクは完了、失敗、仕様質問、承認境界のいずれかで一度だけ通知し、次の指示を待つ。通知に失敗した場合は繰り返し送信せず、完全な結果を当該タスクへ残して復旧を待つ。
-- 標準の作業セッション終了条件は「安全に独立実行できる作業が尽きた時点」とする。通常のタスク制御は逐次報告せず終了時に統合し、承認、安全境界、失敗、進捗低下、タスク・作業ツリー消失、状態・コールバック障害、容量閾値は直ちに報告する。
-- コールバックが利用できない場合、またはユーザーが明示した場合だけ、変更なしを通知しない差分型ポーリングを代替として使用する。確認間隔を作業期限とみなさず、未完了チェックポイントへ割当を重ねない。
-- 専門タスクは原則として編集・検証後に停止し、正確な対象ファイル、差分、テスト、未確認事項、承認境界、作業ツリー状態を報告する。主エージェントが受入れたファイルだけをステージ、コミット、統合する。既に作成済みのコミットは確認後に再利用する。
-- 並行書込みではチェックポイントIDと共通基準を付与し、担当ファイルを分離する。限定された一群を統合・検証して次の共通基準へ昇格するまで、未統合結果を確定依存関係にしない。
+## Governance-change Task Turnover
 
-### Codexセッションの引継ぎ
+- Treat changes to this common contract, root `AGENTS.md`, project Codex permissions, approval policy, coordinator responsibilities, delegation/Git integration, callback/handoff rules, or safety boundaries as instruction-chain changes.
+- After an approved instruction-chain change, stop new assignments at a safe checkpoint, validate and commit owned work, generate and verify the new governance artifacts, then replace every affected active task with a completely new task. Do not fork old task history.
+- Replace all active project tasks for a common contract, root `AGENTS.md`, project-wide permission, or approval-policy change. Replace only the affected role plus its coordinator when a role-specific agent definition changes.
+- Routine specification, roadmap, ADR, changelog, evidence, or implementation updates do not require turnover unless they change scope ownership, approval boundaries, safety, current phase, or task instructions.
+- Require explicit user approval before replacing the coordinator. Delegated tasks may rotate automatically only under previously approved conditions and at a safe checkpoint.
+- Use the same base task name plus the next sequence number. Send the baseline commit, checkpoint, progress, results, tests, unintegrated work, approvals, owned and forbidden scope, next instructions, governance version, and callback destination.
+- Verify repository-based restart, active instruction sources, project permissions, a no-change callback, and retargeted assignment/callback identifiers before archiving the former task. On failure, keep the former task active and prevent duplicate assignments.
+- Archiving is a UI/state operation, not proof of physical deletion or storage shrinkage. Do not make direct maintenance of Codex-owned SQLite or WAL files a routine project procedure.
 
-- コーディネーターと専門タスクの役割は、仕様、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントで継続可能にする。
-- セッション容量は作業開始、状態変更後、終了時に確認する。状態変化がない反復確認は1時間に1回を上限とする。コーディネーターの引継ぎ閾値は300 MiBとする。
-- 閾値到達時は新規割当と自動レビューを停止し、基準コミット、進捗、実行中・待機中チェックポイント、未統合ブランチ、テスト、承認事項、次の指示を正本へ記録する。
-- 旧コーディネーターは自身の完了変更を検証・コミットする。専門タスクは担当差分を報告し、主エージェントが受入れた変更をコミット・統合する。原則としてクリーンな作業ツリーを確認する。
-- 未コミット例外が不可避な場合は、対象ファイル、目的、検証状態、コミットできない理由、所有者、再開手順をリポジトリへ記録し、旧新タスクに同じ差分を重複所有させない。
-- コーディネーター交代はユーザーの明示承認を得る。新しいタスクをforkせず、同じ基本名に連番を付け、旧タスクID、基準コミット、チェックポイント、進捗、結果、テスト、未統合作業、承認事項、禁止範囲、次の指示、コールバック先を引き継ぐ。
-- 新タスクがリポジトリから再開でき、割当・コールバックIDが更新され、プロジェクト権限設定を読み込み、最初の実ファイル限定コミットを実行できたことを確認してから旧タスクをアーカイブする。失敗時は旧タスクを維持し、重複割当を行わない。
-- 専門タスクは、安全なチェックポイントで担当差分が統合済みの場合に限り自動交代できる。コーディネーターは自動交代しない。
-- アーカイブは物理削除や保存容量縮小を保証しない。交代後はアクティブ・アーカイブ済みを含む容量を再測定し、Codex所有のSQLiteやWALを通常運用で直接保守しない。
+## Roadmaps and Progress
 
-## Gitブランチと利用者受入れ
+- Use roadmaps for ongoing, multi-phase, multi-product, or autonomously coordinated work. Keep them separate from confirmed requirements.
+- Base progress on verified deliverables or completed gates, not elapsed time or unverified self-report.
+- Weighted milestones must total 100 and state whether partial credit is allowed. Do not average materially different products without approved program weighting.
+- If scope growth or corrected completion judgment lowers progress, record the old value, new value, and reason.
+- Link milestones to principal design, implementation, test, review, deployment, or acceptance evidence.
 
-- ユーザーの依頼は原則として機能単位で扱い、作業開始前に `codex/<機能名>` の作業ブランチを作成する。承認済みの別命名がある場合はそれに従う。
-- 作業者は担当範囲を編集・検証して司令塔へ報告する。司令塔は差分、仕様、テスト、回帰リスク、作業ツリーを確認し、受入れたファイルだけを機能ブランチへコミットする。
-- ユーザーが機能ブランチ上の動作を確認し、明示的に承認するまで `main` へマージしない。質問、途中確認、作業完了報告をマージ承認とみなさない。
-- `main` への統合は、機能境界と取消し単位を残すため、原則としてマージコミットを作成する。競合解消後は関連テストとガバナンス検証を再実行する。
-- `main` への直接コミットは、変更内容と理由を確認したユーザーが、その変更について明示的に許可した場合だけ行う。
-- `main` へのマージ、Git push、デプロイは別々の外部作用として扱い、それぞれユーザーの明示的指示なしに実行しない。
-- 受入れ前に不具合が見つかった場合は機能ブランチ上で修正する。受入れ後に `main` で問題が見つかった場合は、影響とデータ互換性を確認し、必要に応じて機能単位のマージコミットをrevertするか、修正ブランチを作成する。
+## Safety and Sensitive Information
 
-## 変更の承認と仕様管理
+- Never place secrets, credentials, session data, private production records, or unredacted confidential samples in repository documents, prompts, tests, logs, or generated artifacts.
+- Do not invent commands, environments, test results, implementation status, compliance claims, external-service behavior, business facts, or operational capabilities.
+- Keep network access and external writes disabled unless separately approved. Apply least privilege to project roles and tools.
+- Mark unimplemented, unavailable, unverified, and planned behavior clearly.
+- Keep project-specific sensitive-data rules and external-effect boundaries in `governance/project-rules.md` and the authoritative specification/operations documents.
 
-- ユーザーから正式な修正・改修依頼があった場合のみコードを変更する。質問、比較、検討、診断を正式な変更依頼として扱わない。
-- 正式な依頼か判断できない場合は、コードを変更しない。
-- 作業指示を受けたら、関連する仕様書、ADR、マニュアル、コード、ルール、設定を確認し、指示と現在の仕様・実装が一致するかを確認する。
-- 文書だけでは仕様が明らかでない場合は、実装されているコードを確認して現在の挙動を特定する。コードからも一意に判断できない事項を推測で補わない。
-- 作業指示と文書または実装に相違がある場合は、相違点、影響、考えられる選択肢を示し、コード変更前にユーザーへ質問する。
-- 実装から確認できた恒久的な仕様が文書群に記載されていない場合は、関連コードの変更有無にかかわらず、役割に合う仕様書、ADR、マニュアル、運用文書へ同じタスクで反映する。ただし、実装事実を設計意図や承認済み要件と混同しない。
-- 未確認の推測、将来案、検討事項を確定仕様として記載しない。
-- 重要な仕様変更の実装前に、現行仕様、変更案、理由、利用者・データ・互換性・移行・運用への影響、確認方法を提示し、ユーザーの明示的承認を得る。
-- 承認後は同じタスク内で、実装に加えて `docs/specification.md`、関連 ADR と索引、`CHANGELOG.md`、関連マニュアル、必要な運用文書を更新する。
-- 変更が目標、残作業、完了条件、進捗へ影響する場合は、関連ロードマップと索引も同じタスクで更新する。
-- 全面を更新できない場合は、未反映の対象を列挙し、完了と報告しない。
-- ユーザーに Markdown の整形作業を求めない。
-- 日々の作業で別タスクにも必要な恒久情報が判明した場合は、役割に応じて本ファイル、仕様書、ADR、運用文書、または `KNOWLEDGE.md` へ反映する。
+## Completion Gate
 
-## 作業範囲と安全
+Before completion, verify and report:
 
-- 指定されたリポジトリと依頼範囲だけを変更する。
-- 原則として作業対象は `air-guard-v2` とする。隣接リポジトリは AirGuardV2 のコンポーネント、コンポーザブル、モデルなどのコア基盤を提供し、変更の影響範囲が大きいため、ユーザーがそのリポジトリを明示的に変更対象へ含めた場合だけ修正する。
-- 隣接リポジトリの変更が必要に見える場合も直ちに修正せず、必要性、影響を受ける利用側、互換性、公開・更新手順、代替案を提示してユーザーの承認を得る。AirGuardV2 側だけで安全に解決できるかも先に検討する。
-- プライマリ以外の関連リポジトリは、AirGuardV2の調査に必要な範囲で事前承認なく自由に読み取ることができる。読み取ったこと自体を変更許可とみなさず、秘密情報や実データの取扱規則はすべてのリポジトリに適用する。
-- `.env`、秘密鍵、アクセストークン、Stripe シークレット、Webhook シークレット、本番の個人情報・顧客情報・勤怠情報を文書や応答へ転記しない。
-- 実データの作成・更新・削除、Firebase デプロイ、データ移行、npm 公開、Git push、履歴書き換えは、ユーザーからその操作を明示的に依頼された場合だけ行う。
-- 破壊的操作の前に、対象環境・対象データ・復旧方法を確認する。
-- `npm audit fix` と `npm audit fix --force` を無条件に実行しない。影響範囲と破壊的変更の有無を先に調査する。
+- changed behavior and exact changed files;
+- owned diff and worktree state;
+- specification, roadmap, ADR, changelog, operations, and index alignment;
+- validation and tests actually performed;
+- unverified items, residual risks, unresolved decisions, and pending approvals;
+- governance/configuration changes and required task turnover;
+- the user's next action.
 
-## 実装と確認
+Do not claim completion while required work, validation, integration, documentation, or approval remains outstanding.
 
-- PowerShell を使用し、文字コードは UTF-8 とする。
-- 既存の設計、命名、責務分割を確認してから変更する。
-- 読み取りによる整合性確認と差分確認は主エージェントまたはテスターが行う。
-- ユーザーが明示的に許可した場合、テスターはローカルのFirebase Emulator環境で単体テスト・結合テストを実行できる。
-- Emulatorは必ず `--import=./saved-data` を付けて起動する。明示的な指示なしに `--export-on-exit` や同等の操作で `saved-data` へ上書きしない。
-- ローカルサーバーは `.env.local` を使用し、原則として `127.0.0.1` のみにバインドして外部ネットワークへ公開しない。
-- Emulator環境でも、未起動サービス、外部API、Stripe、メール、通知、測位サービスなどへ到達する可能性を確認し、外部作用を排除できないテストは実行前にユーザーへ報告する。
-- 認証後の画面操作に専用アカウントが必要な場合は、用途と必要権限を示してユーザーへ作成を依頼する。既存ユーザーの資格情報を推測・流用しない。
-- 現在のChrome操作レイヤーからAuth Emulatorへ直接接続してサインインを自動化することはできない。認証後のUIテストは、ユーザーがEmulator、ローカルサーバー、Chromeを起動し、Emulator専用アカウントでサインインした状態を準備した場合に実行する。
-- ユーザーが準備したサインイン済みChromeを引き継いだ後は、SPA初期化画面を即時エラーと判断せず、対象画面への遷移完了または明確なタイムアウトまで待機する。データ変更を伴う操作は、テスト内容として明示的に許可された範囲だけで行う。
-- デプロイ、本番・開発リモート環境での検証、実データを使う検証は、ユーザーが明示的に許可した場合だけ行う。
-- ローカル環境の起動またはブラウザ操作が技術的に利用できない場合は、無理に代替経路を作らず、確認できた範囲とユーザーが確認すべき観点を報告する。
-- 実施していない確認を成功したと記載しない。
-- 不具合修正では、可能であれば再現条件、原因、影響範囲、ユーザーが確認する観点を示す。
+## Project-specific Rules
 
-## 用語
-
-このプロジェクトのクラスには、`Object.defineProperty` で実装されたプロパティと JavaScript の getter で定義されたプロパティがある。
-
-- `Object.defineProperty` で実装され、返り値が Firestore に保存されるものを、ユーザーとのやり取りでは「読み取り専用プロパティ」と呼ぶ。
-- インスタンス化後に取得できる計算結果である JavaScript getter を、ユーザーとのやり取りでは「ゲッター」と呼ぶ。
-
-## 関連パッケージ
-
-### `air-guard-v2-schemas`
-
-- `air-guard-v2` と同じ親ディレクトリにあり、AirGuardV2 で使う各種クラスを提供する。
-- npm 公開は GitHub Actions の Trusted Publishing を使用する。ローカルから `npm publish` を直接実行しない。
-- `.github/workflows/publish.yml` は `v*-dev.*` 形式のタグ push で `npm publish --tag dev` を実行する。
-- ローカルで npm を実行する必要があるときは、同じ PowerShell プロセス内だけで `$env:NODE_USE_SYSTEM_CA = "1"` を設定する。`setx` や `strict-ssl=false` は使用しない。
-- 開発版公開は、ブランチと作業ツリー確認、変更コミット、`npm version prerelease --preid=dev`、現在ブランチと作成タグの個別 push、GitHub Actions と `npm view @shisyamo4131/air-guard-v2-schemas@dev version` による確認の順で行う。
-- `--follow-tags` は使用しない。push だけ失敗した場合は `npm version` を再実行しない。
-- AirGuardV2 への反映はプロジェクトルートの `npm run install:schemas@dev` を使用し、ルートアプリと Cloud Functions の両方を更新する。
-
-### その他
-
-- `air-firebase-v2`: AirGuardV2で使用するクラスの継承元である `BaseClass`、`FireModel` を提供する。
-- `air-firebase-v2-client-adapter`: `FireModel` にクライアント側の Firestore CRUD 機能を注入するアダプターを提供する。
-- `air-firebase-v2-server-adapter`: `FireModel` にサーバー側の Firestore CRUD 機能を注入するアダプターを提供する。
-- `air-guard-v2-schemas`: AirGuardV2で使用する業務クラスを提供する。公開・反映手順は前節に従う。
-- `air-guard-v2-admin-sdk`: AirGuardV2専用のAdmin SDKを提供する。
-- `air-vuetify-v3`: このリポジトリ内にあり、ファイル参照で導入するカスタム Vuetify コンポーネントパッケージである。
-
-これらの関連リポジトリを変更するとAirGuardV2全体、ルートアプリ、Cloud Functions、他の利用側、パッケージ互換性へ影響する可能性がある。変更前に対象リポジトリ、必要性、影響を受ける利用側、互換性、公開・導入順序、代替案を提示し、ユーザーの明示的承認を得る。
-
-## フロントエンドの責務
-
-- `useAuthStore`: Firebase 認証状態、カスタムクレーム、ログインユーザー、ロール・権限、認証初期化・クリア待機を管理する。会社情報とシステム環境情報は持たない。
-- `useCompanyStore`: ログインユーザー所属会社の `Company` と、サブスクリプションから導出される `customerType` を管理する。認証状態は持たない。
-- `useSystemStore`: `System`、システムまたは会社単位のメンテナンス状態、開発環境判定を管理し、会社固有状態のため `useCompanyStore` に依存する。
-- `useAppStore`: ナビゲーションドロワー、アプリバー、ページタイトル、戻るボタンなど、アプリケーションシェルと画面表示だけを管理する。
-- `useAuthStore` は `useCompanyStore` と `useSystemStore` に依存しない。認証状態に応じた `User` と `Company` の取得・購読・初期化は `useAuthActions` が調整する。
-- `useFetch` は原則として page コンポーネントで第2引数を `true` にしてセットアップし、子コンポーネントへ provide する。`false` または未指定では inject する。
-
-## 後続 ToDo
-
-- `DailyAttendance` の更新・削除を、`DailyAttendance.operationResultIds` の `array-contains` による逆引き方式へ変更する。対象 OperationResult 除去後、残件があれば更新し、0件なら削除する方式へ統一する。
-- ルートアプリと Cloud Functions の npm 依存関係について、`npm audit` が報告する脆弱性を調査・解消する。
-
-## 完了報告
-
-完了時は、変更した挙動、更新した仕様・ADR・ロードマップ・マニュアル、進捗と前回差分、実施した確認と未実施の確認、未解決事項、設定や移行の有無、ユーザーが次に行うことを簡潔に報告する。進捗が低下した場合は理由を示す。
+Before any write, delegation, Git mutation, external action, implementation, or completion claim, read `governance/project-rules.md` and the task-routed authoritative documents it identifies. Project-specific rules may be stricter than the common contract but must not weaken or contradict it.

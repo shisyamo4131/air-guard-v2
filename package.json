@@ -14,6 +14,8 @@
     "list:adapter": "npm list @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm list @shisyamo4131/air-firebase-v2-server-adapter && cd ..",
     "list:schemas": "npm list @shisyamo4131/air-guard-v2-schemas && cd functions && npm list @shisyamo4131/air-guard-v2-schemas && cd ..",
     "local": "nuxt dev --dotenv .env.local --host",
+    "test:local": "powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test",
+    "test:local:seed": "powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Seed",
     "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd .. && npm run list:adapter",
     "update:firemodel": "npm update @shisyamo4131/air-firebase-v2 && cd functions && npm update @shisyamo4131/air-firebase-v2 && cd ..",
     "update:schemas": "npm update @shisyamo4131/air-guard-v2-schemas && cd functions && npm update @shisyamo4131/air-guard-v2-schemas && cd .. && npm run list:schemas",
@@ -43,6 +45,7 @@
     "vuetify": "^3.11.6"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
     "toml": "^3.0.0",
     "vite-plugin-vuetify": "^2.1.0"
   }

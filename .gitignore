@@ -31,6 +31,7 @@ air-vuetify-v3
 
 # saved-data
 saved-data
+.codex-test/
 *.md
 *.pdf
 
@@ -46,3 +47,6 @@ saved-data
 !/definitions/*.md
 !/docs/
 !/docs/**/*.md
+!/governance/
+!/governance/*.md
+!/governance/*.toml
