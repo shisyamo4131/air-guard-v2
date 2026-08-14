@@ -1,34 +1,31 @@
+/*****************************************************************************
+ * @file ./functions/triggers/user.js
+ * @description User ドキュメントの更新・削除トリガーを定義するモジュールです。
+ * @method onUserUpdated - User ドキュメントの更新トリガーを定義します。
+ * @method onUserDeleted - User ドキュメントの削除トリガーを定義します。
+ *****************************************************************************/
 import {
   onDocumentDeleted,
   onDocumentUpdated,
 } from "firebase-functions/v2/firestore";
 import { getAuth } from "firebase-admin/auth";
 import { deleteUser } from "../modules/auth/deleteUser.js";
+import { syncUserAuthAccount } from "../modules/auth/syncUserAuthAccount.js";
 
 /*****************************************************************************
  * User ドキュメントの更新トリガー
- * - displayName または disabled フィールドが変更された場合、対応する Firebase Authentication ユーザーを更新します。
- * - isTemporary=true の仮登録ユーザーの場合は Authentication が存在しないため更新不要
  *****************************************************************************/
 export const onUserUpdated = onDocumentUpdated(
   "Companies/{companyId}/Users/{docId}",
   async (event) => {
-    const beforeData = event.data.before.data();
-    const afterData = event.data.after.data();
-    const userId = event.params.docId;
-
-    if (afterData.isTemporary) return;
-
-    const needsAuthUpdate =
-      beforeData.displayName !== afterData.displayName ||
-      beforeData.disabled !== afterData.disabled;
-
-    if (needsAuthUpdate) {
-      await getAuth().updateUser(userId, {
-        displayName: afterData.displayName,
-        disabled: afterData.disabled,
-      });
-    }
+    // User ドキュメントの変更に基づいて Auth アカウントを同期
+    return syncUserAuthAccount({
+      auth: getAuth(),
+      pathCompanyId: event.params.companyId,
+      docId: event.params.docId,
+      beforeData: event.data.before.data(),
+      afterData: event.data.after.data(),
+    });
   },
 );
 

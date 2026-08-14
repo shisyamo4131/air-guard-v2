@@ -57,10 +57,13 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## claims・User更新
 
 - User UIはrolesを直接更新する。roles変更時にAuth claimsを更新するtriggerはない。
-- 本登録Userの`displayName`または`disabled`変更をFirestore triggerが検出し、doc IDをUIDとしてAuth `updateUser`へ反映する。
-- `isTemporary=true`ならupdate triggerは何も行わない。
+- 本登録Userの`displayName`または`disabled`変更をFirestore triggerが検出し、`syncUserAuthAccount`へ委譲してAuth `updateUser`へ反映する。それ以外のfieldだけが変わった場合はAuthへアクセスしない。
+- `isTemporary=true`ならupdate triggerはAuthへアクセスせず終了する。Auth同期対象の変更で`isTemporary`が`false`以外なら、登録状態を安全側で拒否する。
+- Auth更新前に、Userの`companyId`とpathの会社ID、User doc IDとAuth UID、Auth custom claimの`companyId`とpathの会社IDが一致することを検証する。claim欠損または不一致ではAuthを更新しない。
 - trigger失敗時はFirestore更新済み/Auth未反映の部分状態になり得る。再同期用callableまたは状態照合処理は確認できない。
 - 管理者移譲は同一Firestore transactionで旧Userの`isAdmin=false`、新Userの`isAdmin=true`と`roles=[]`を更新する。claimsは変更しない。
+
+この同期境界は`userAuthCompanyPolicy.js`と`syncUserAuthAccount.js`へ分離した。Firebaseへ接続しないNode.js単体テスト27件で、正常更新、変更なし・仮登録のskip、User/Authの会社不一致、claim欠損、UID不一致、登録状態欠損、Auth取得・更新失敗を確認した。
 
 ## 無効化・削除
 
@@ -111,6 +114,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## 未確認範囲
 
 - 実Firebase Auth/Firestoreデータ、Emulator、メール到達、token refreshの実行結果。
+- 実Cloud Functions triggerからのAuth同期、既存Auth accountのcompany claim充足状況、同期失敗後の再試行・手動reconcile。
 - Employee退職処理本文、login/middleware全体、super-user運用、admin SDK保守CLI。
 - Functions retry設定、監視・手動reconcile運用、既存重複/orphanデータ。
 
