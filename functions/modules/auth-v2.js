@@ -5,35 +5,8 @@ import { getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Company, FcmToken, User } from "@shisyamo4131/air-guard-v2-schemas";
 
-/**
- * Authentication からスローされるエラーのリスト
- */
-const AUTH_ERROR_CODE_MAP = {
-  "auth/user-disabled": {
-    status: "user-disabled",
-    message: "このアカウントは無効化されています。",
-  },
-  "auth/user-not-found": {
-    status: "user-not-found",
-    message: "メールアドレス、パスワードをご確認ください。",
-  },
-  "auth/email-already-exists": {
-    status: "already-exists",
-    message: "このメールアドレスは既に使用されています。",
-  },
-  "auth/invalid-email": {
-    status: "invalid-argument",
-    message: "メールアドレスの形式が正しくありません。",
-  },
-  "auth/invalid-password": {
-    status: "invalid-argument",
-    message: "パスワードの形式が正しくありません。",
-  },
-  "auth/weak-password": {
-    status: "invalid-argument",
-    message: "パスワードが簡単すぎます（最低6文字以上にしてください）。",
-  },
-};
+import { changeUserEnabledState } from "./auth/changeUserEnabledState.js";
+import { mapUserEnabledStateError } from "./auth/mapUserEnabledStateError.js";
 
 /**
  * メールアドレスの利用可不可をチェック（グローバル）
@@ -461,116 +434,69 @@ export const setupUserAccount = onCall(async (request) => {
 });
 
 /**
- * Switch user enabled/disabled state
- * - Disabled flag is updated in `onUserUpdated` trigger.
- * @param {string} uid - user ID
- * @param {boolean} [enabled] - enabled state (default: true)
- * @returns {Promise<{ success: boolean, uid: string }>} - result
- * @throws {HttpsError} if uid is not provided or if any operation fails
- * @throws {ContextualError} if any operation fails
+ * 利用者の有効・無効状態変更リクエストを処理します。
+ * @param {Object} request - Callable リクエスト
+ * @param {boolean} enabled - 変更後の有効状態
+ * @returns {Promise<{ success: boolean, uid: string }>}
  */
-async function switchUserEnabled(uid, enabled = true) {
-  if (!uid) {
-    throw new HttpsError("invalid-argument", "UIDが指定されていません。");
+async function handleUserEnabledStateChangeRequest(request, enabled) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const auth = getAuth();
-  const firestore = getFirestore();
+  const targetUid = request.data?.uid;
 
-  // 1. Authentication でユーザー情報を取得
-  const user = await auth.getUser(uid);
-  if (!user) {
-    throw new HttpsError("not-found", `ユーザー ${uid} が見つかりません。`);
-  }
-
-  // 2. カスタムクレームから companyId を取得
-  const companyId = user.customClaims?.companyId;
-  if (!companyId) {
+  if (typeof targetUid !== "string" || !targetUid) {
     throw new HttpsError(
-      "failed-precondition",
-      "ユーザーの会社情報が見つかりません。",
+      "invalid-argument",
+      "対象ユーザーIDが指定されていません。",
     );
   }
 
-  // 3. Firestore ドキュメント参照を構築
-  const userDocRef = firestore.doc(`Companies/${companyId}/Users/${uid}`);
-  const userDoc = await userDocRef.get();
+  const actorUid = request.auth.uid;
+  const companyId = request.auth.token?.companyId;
 
-  if (!userDoc.exists) {
-    throw new HttpsError(
-      "not-found",
-      `ユーザー ${uid} のFirestoreドキュメントが見つかりません。`,
-    );
+  if (
+    typeof actorUid !== "string" ||
+    !actorUid ||
+    typeof companyId !== "string" ||
+    !companyId
+  ) {
+    throw new HttpsError("permission-denied", "認証情報を確認できません。");
   }
 
-  // 4. disabled フラグを更新
-  await userDocRef.update({ disabled: !enabled });
+  try {
+    return await changeUserEnabledState({
+      auth: getAuth(),
+      firestore: getFirestore(),
+      companyId,
+      actorUid,
+      targetUid,
+      enabled,
+    });
+  } catch (error) {
+    const mappedError = mapUserEnabledStateError(error);
+    logger.error("User enabled state change failed", {
+      errorName: error?.name,
+      errorCode: error?.code,
+    });
 
-  logger.info(`User ${uid} ${enabled ? "enabled" : "disabled"} successfully`);
-
-  return { success: true, uid };
+    throw new HttpsError(mappedError.code, mappedError.message);
+  }
 }
 
 /**
- * ユーザーアカウントを無効化します。
- * 認証状態での実行を想定
+ * User アカウントを無効化します。
  */
 export const disableUser = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "認証が必要です。");
-  }
-
-  const { uid } = request.data;
-  if (!uid) {
-    throw new HttpsError(
-      "invalid-argument",
-      "無効化するユーザーIDが指定されていません。",
-    );
-  }
-
-  try {
-    return await switchUserEnabled(uid, false);
-  } catch (error) {
-    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
-    if (mappedAuthError) {
-      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
-    }
-    throw new HttpsError(
-      "internal",
-      `ユーザー ${uid} の無効化中に予期しないエラーが発生しました。`,
-    );
-  }
+  return handleUserEnabledStateChangeRequest(request, false);
 });
 
 /**
- * ユーザーアカウントを有効化します。
- * 認証状態での実行を想定
+ * User アカウントを有効化します。
  */
 export const enableUser = onCall(async (request) => {
-  if (!request.auth) {
-    throw new HttpsError("unauthenticated", "認証が必要です。");
-  }
-
-  const { uid } = request.data;
-  if (!uid) {
-    throw new HttpsError(
-      "invalid-argument",
-      "有効化するユーザーIDが指定されていません。",
-    );
-  }
-
-  try {
-    return await switchUserEnabled(uid);
-  } catch (error) {
-    const mappedAuthError = AUTH_ERROR_CODE_MAP[error.code];
-    if (mappedAuthError) {
-      throw new HttpsError(mappedAuthError.status, mappedAuthError.message);
-    }
-    throw new HttpsError(
-      "internal",
-      `ユーザー ${uid} の有効化中に予期しないエラーが発生しました。`,
-    );
-  }
+  return handleUserEnabledStateChangeRequest(request, true);
 });
 
 /**

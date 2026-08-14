@@ -14,7 +14,7 @@
 | `/settings/users` | pageSettingsは`roles: ["admin"]` | User Rulesは同一company claimの認証Userまたはsuper-userに全read/writeを許可 |
 | User仮登録・編集・削除 | UsersManager。管理者Userはroles編集と削除をUIで抑止し、employeeId付きUserも削除を抑止 | Rulesにrole、field、本人、admin、employeeId guardはない |
 | 従業員からUser仮登録・削除 | Employee UserManager | Rulesは上記と同じ。User.deleteは`isAdmin`だけを拒否 |
-| 有効化・無効化callable | UsersManagerから呼ぶ | `disableUser`/`enableUser`は認証のみ確認し、actor company/roleと対象companyの一致を検証しない |
+| 有効化・無効化callable | UsersManagerから呼ぶ | `disableUser`/`enableUser`はactor UIDとcompany claimを起点に、transaction内でactor/target User、管理者・有効・本登録状態、自己操作禁止、対象非管理者、対象Auth UID/company claimを検証して`disabled`を更新する |
 | 管理者移譲 | UI activatorは`auth.isAdmin`で無効化 | `changeAdminUser`は認証とcompany claimを要求するがactorが現管理者か、`from`がactor本人かを検証しない |
 
 権限設計は試作段階の暫定実装であり、確定仕様として扱わない。
@@ -67,7 +67,9 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 ## 無効化・削除
 
-- `disableUser`/`enableUser`は対象UIDのAuth recordを読み、そのcustom claim `companyId`からUser docを特定し、Firestore `disabled`を更新する。Auth disabled反映は非同期onUserUpdated triggerに委ねる。
+- `disableUser`/`enableUser`は認証済みactorのUIDとcompany claimを使用し、同じ会社pathのactor/target UserをFirestore transaction内で読む。actorが有効な本登録管理者であること、targetが別UIDの本登録非管理者であること、両Userのcompany整合性を検証する。
+- 書込み前にtarget Auth accountのUIDとcompany claimも検証し、transaction内でFirestore `disabled`だけを更新する。Auth disabled反映は検証済み`onUserUpdated` triggerに委ねる。
+- 自己操作、非管理者・無効actor、別会社、仮登録、管理者target、Auth claim欠損・不一致は更新前に拒否する。内部UID・会社ID・元例外messageをCallable応答へ含めず、安全な`HttpsError`へ変換する。
 - User doc削除後、onUserDeleted triggerがdoc IDをUIDとしてAuth accountを削除する。Auth user不存在は成功扱い。
 - Auth account削除後、別のAuth delete triggerが当該UIDのFCM tokenを削除する。cleanup失敗はログ後に吸収する。
 - User.deleteは`isAdmin=true`を拒否するが、Rulesの直接deleteはこのschema guardを強制しない。
@@ -85,7 +87,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
 - `checkEmailAvailabilityGlobal`、`checkEmailAvailability`、`checkUserPreRegistration`は未認証で呼べる。事前登録確認は一致emailについてcompanyId、displayName、roles、tempUserIdを返す。
-- disable/enable callableは対象UID側claimsからcompanyを決め、callerとの同一tenantを検証しない。
+- disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。実Callable/Emulator検証は未実施である。
 - 管理者移譲callableはcallerのcompany内docを操作するが、caller自身の`isAdmin`をserverで確認しない。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。
 
@@ -95,6 +97,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 - temporary Userは別state・identifierで明確化し、registered Userへのconversionはserver-onlyとする。
 - companyId・role・admin・Auth linkはgeneral client変更不可とする。company adminによるrole変更もtenant・actor・fieldを検証するCallableに限定する。
 - 既存のUser document ID/Auth UID mismatchはmigration前にdetect・listする。
+- 2026-08-14: 会社管理者は各会社に`User.isAdmin === true`の1人だけとする。会社管理者だけが同社別の本登録非管理者Userを有効化・無効化でき、自分自身には実行できない。自身を無効化する必要がある場合は先に管理者権限を移譲する。
 
 ## 矛盾・未使用候補
 
@@ -115,6 +118,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 - 実Firebase Auth/Firestoreデータ、Emulator、メール到達、token refreshの実行結果。
 - 実Cloud Functions triggerからのAuth同期、既存Auth accountのcompany claim充足状況、同期失敗後の再試行・手動reconcile。
+- `disableUser`/`enableUser`の実Callable起動、Firestore transactionと後続Auth同期triggerのEmulator結合、既存Userの`isAdmin`・`disabled`・`isTemporary`・company claim充足状況。
 - Employee退職処理本文、login/middleware全体、super-user運用、admin SDK保守CLI。
 - Functions retry設定、監視・手動reconcile運用、既存重複/orphanデータ。
 
