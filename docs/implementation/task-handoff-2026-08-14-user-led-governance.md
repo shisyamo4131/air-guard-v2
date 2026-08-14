@@ -1,6 +1,6 @@
 # 2026-08-14 利用者主導開発ガバナンス交代引継ぎ
 
-- 状態: coordinator交代承認待ち
+- 状態: coordinator交代承認済み・新task作成前
 - current coordinator task: `019ffe2d-ae4c-7420-a52c-b9279ced3f75`
 - branch: `codex/user-led-development-governance`
 - main基準: `30c037ed618fab5a5958b4ced9a33302a17044c9`
@@ -23,7 +23,7 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 
 ## 検証
 
-- `scripts/check-project-docs.ps1`: pass。152 Markdown、15 ADR、1 roadmap、8 TOML。
+- `scripts/check-project-docs.ps1`: pass。153 Markdown、15 ADR、1 roadmap、8 TOML。
 - `scripts/check-governance.ps1 -ProjectPath .`: pass。common governance 1.0.0、managed hash current、generated AGENTS current、project rules present。
 - `scripts/test-project-docs-check.ps1`: pass。valid baseline、invalid TOML、broken anchor、unindexed document、roadmap over-creditの期待結果を確認した。
 - `git diff --check`: pass。
@@ -31,7 +31,7 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 
 ## 未確認・承認境界
 
-- 新規coordinator taskの作成と旧taskのarchiveは利用者の明示承認待ち。
+- 新規coordinator taskの作成は利用者承認済み。旧taskのarchiveは新taskのrepository再開、変更なしcallback、識別子更新、最初の実ファイル限定stage・commitの成功後に行う。
 - `main` merge、push、deploy、migration、remote data操作、外部service変更は未承認・未実施。
 - 認証問題の最初のsegment、branch、変更契約は新coordinatorで利用者と相談して決める。交代完了までは新規application作業を開始しない。
 
