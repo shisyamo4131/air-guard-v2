@@ -38,7 +38,7 @@
 - [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
-- [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): PM交代後にrepositoryから再開するための基準、承認境界、優先順。
+- [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
 
 ## アプリ入口・認証・共通基盤
 

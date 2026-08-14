@@ -22,4 +22,4 @@
 
 | 対象 | 進捗 | 最終確認日 | ロードマップ |
 |---|---:|---|---|
-| AirGuardV2 正式運用準備 | 10% | 2026-08-12 | [airguard-v2.md](airguard-v2.md) |
+| AirGuardV2 正式運用準備 | 10% | 2026-08-14 | [airguard-v2.md](airguard-v2.md) |

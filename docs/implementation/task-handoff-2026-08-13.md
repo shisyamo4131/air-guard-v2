@@ -1,11 +1,11 @@
 # 2026-08-13 PM交代引継ぎ記録
 
-- 状態: PM交代時のrepository restart基準
+- 状態: Historical / 2026-08-14のADR 0015によりactive restart指示としては失効
 - 日付: 2026-08-13
 - 記録前基準: branch `codex/local-test-harness`、commit `8c00232adf49f6717b096c9c9375c28b66412b37`、worktree clean
 - 公式進捗: 10%
 
-この記録はtask再開用の状態記録であり、確認済み仕様の正本ではない。2026-08-12の予定source本文静的レビューは完了したが、特定した問題の修正、回帰test、runtime・local環境・browser・remote・実data検証、利用者受入れは完了していない。
+この記録は2026-08-13時点のtask交代履歴であり、確認済み仕様または現在のrestart指示の正本ではない。現在の作業は`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`、[ADR 0015](../decisions/0015-user-led-implementation-and-codex-assurance.md)から再開する。2026-08-12の予定source本文静的レビューは完了したが、特定した問題の修正、回帰test、runtime・local環境・browser・remote・実data検証、利用者受入れは完了していない。
 
 ## 交代状態
 
@@ -41,11 +41,11 @@
 4. 共通UIのdisable、single-flight、draft、latest-wins、date-time、accessibility契約を整理する。
 5. 破壊的な自動修正をせず依存関係脆弱性を調査する。
 
-利用者から「次の作業は？」と聞かれた場合、最初に`codex/local-test-harness`がcommit済みだが`main`未mergeであることを開示し、統合済み基準として扱う前に別のmain merge承認を求める。その後、業務用語で最大3問の最初の判断batchとして、actor・permission境界、招待本人確認、lock後・請求後の訂正権限を提案する。並行してraw FCM token logのredactionなど判断に依存しない小さな修正案を準備するが、承認前に実装しない。
+この時点の`codex/local-test-harness`未merge指示は、後続のmain merge commit `36ace65`により履行済みである。次作業のactive優先順と役割分担には使用しない。
 
-## 次回task交代時の一時的な採用方針
+## Historical: 次回task交代時の一時的な採用方針
 
-- 状態: 利用者承認済みの試験計画。現在は未適用であり、現行permission、`.codex/config.toml`、Git運用をこの記録変更では変えない。
+- 状態: 2026-08-13時点の試験計画。現在のpermission、`.codex/config.toml`、Git運用を変更するactive承認として扱わない。
 - 現状: user-levelの`default_permissions = ":workspace"`とproject-levelの`sandbox_mode = "workspace-write"`が併存する。sandbox内では検証用Nodeの起動が拒否された実績があり、`.git`はread-onlyのためGit mutationに権限昇格が必要である。
 - 試験する推奨構成: user-level設定と他projectを変更せず、AirGuardV2のproject専用permission profileへ統一する。Nodeの必要最小限のread/execute経路を許可し、`.git`のsandbox内read-only保護は維持し、承認済みGit mutationは失敗を挟まず最初から限定的な権限昇格で実行する。global rule、`.git`の通常write許可、`danger-full-access`は採用しない。
 
@@ -65,7 +65,7 @@
 
 全条件を満たす場合だけ、推奨構成をAirGuardV2専用設定として採用し、試験状態を採用済みへ更新する。一つでもsandbox・Git・Nodeの必要な利用を妨げる場合は一時的な採用方針を棄却し、失敗証拠、影響、暫定運用、復元対象を記録する。棄却後は同じtask内で設定を継ぎ足さず、その後の安全なtask交代時に試験直前のproject設定と関連運用文書へ戻し、同じ交代・検証手順で復元を確認する。
 
-## 再開時の正確な読書集合
+## Historical: 2026-08-13再開時の読書集合
 
 1. `AGENTS.md`
 2. `governance/project-rules.md`
