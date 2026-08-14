@@ -1,8 +1,11 @@
 # 2026-08-14 利用者主導開発ガバナンス交代引継ぎ
 
-- 状態: coordinator交代承認済み・新task作成前
-- current coordinator task: `019ffe2d-ae4c-7420-a52c-b9279ced3f75`
+- 状態: 新coordinator有効化済み・旧coordinator archive可能
+- new coordinator task: `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`
+- old coordinator task: `019ffe2d-ae4c-7420-a52c-b9279ced3f75` host `local`
+- callback destination: 新しいcheckpointはnew coordinator `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`
 - branch: `codex/user-led-development-governance`
+- coordinator有効化基準: `185e1728a4520ba7adedd5ae411c100046b33990`
 - main基準: `30c037ed618fab5a5958b4ced9a33302a17044c9`
 - 統治変更commit: `0c8e79d`
 - common governance version: `1.0.0`
@@ -31,16 +34,17 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 
 ## 未確認・承認境界
 
-- 新規coordinator taskの作成は利用者承認済み。旧taskのarchiveは新taskのrepository再開、変更なしcallback、識別子更新、最初の実ファイル限定stage・commitの成功後に行う。
+- 新規coordinator taskの作成と有効化は完了した。旧coordinatorのarchiveは本記録だけを対象とする最初の実ファイル限定commitと`GOV-HANDOFF-002` callbackの成功後に、旧coordinatorが行う。
 - `main` merge、push、deploy、migration、remote data操作、外部service変更は未承認・未実施。
-- 認証問題の最初のsegment、branch、変更契約は新coordinatorで利用者と相談して決める。交代完了までは新規application作業を開始しない。
+- 認証問題の最初のsegmentは開始していない。branchと変更契約を含め、次の利用者指示を待つ。
 
-## 新coordinatorの開始確認
+## 新coordinatorの有効化結果
 
-1. `AGENTS.md`、`governance/project-rules.md`、`docs/README.md`、[ADR 0015](../decisions/0015-user-led-implementation-and-codex-assurance.md)、`docs/operations.md`、`docs/roadmaps/airguard-v2.md`、本記録を読む。
-2. common governance 1.0.0、branch、HEAD、clean worktree、進捗10%、承認境界を報告する。
-3. application codeを書き込まず、変更なしcallbackを旧coordinatorへ返す。
-4. task・callback識別子を新coordinatorへ更新する。
-5. 最初の実ファイル限定stage・commitが新しい役割・権限で成功した後に、旧coordinatorをarchive可能とする。失敗時は旧taskを維持し、重複割当を行わない。
+- `GOV-HANDOFF-001`はcompleted。最初の試行でdetached HEADを検出し、`recovery-1`で`codex/user-led-development-governance`へ接続した。
+- recovery後のHEADは`185e1728a4520ba7adedd5ae411c100046b33990`、worktreeはcleanだった。
+- common governance 1.0.0、active instruction sources、利用者主導のapplication実装、Codexの設計・review・検証・document・local Git管理、developerとtesterの境界、未承認操作をrepositoryから復元した。
+- taskとcallback destinationをnew coordinatorへ更新した。
+- 本記録だけを新coordinatorによる最初の実ファイル限定commitとして作成する。commit hashはGit履歴を正本とする。
+- `GOV-HANDOFF-002`完了後、旧coordinatorはarchive可能である。archive操作自体は旧coordinatorが行う。
 
 この記録にsecret、credential、private production data、Codex session本文は含めない。
