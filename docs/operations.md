@@ -106,7 +106,7 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-初期suiteは専用seed、Authサインイン、Firestore Rulesの未認証拒否、同一会社claim許可、別会社拒否を検証します。Functions、画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendantの同一tenant操作・他tenant拒否と、SecurityReportIndexes・StripeDataの個別操作制約を含む32件です。Functions、Storage Rules、Realtime Database Rules、画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 

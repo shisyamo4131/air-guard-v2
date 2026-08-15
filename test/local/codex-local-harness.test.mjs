@@ -7,7 +7,7 @@ import {
   getAuth,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import {
   assertFails,
   assertSucceeds,
@@ -31,6 +31,54 @@ function parseEmulatorHost(name) {
 }
 
 let testEnvironment;
+
+async function seedRegisteredUser({
+  uid,
+  pathCompanyId = CODEX_LOCAL_COMPANIES.primary.id,
+  companyId = pathCompanyId,
+  isTemporary = false,
+  disabled = false,
+  omit = [],
+}) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const data = { companyId, isTemporary, disabled };
+    for (const field of omit) delete data[field];
+    await setDoc(
+      doc(context.firestore(), "Companies", pathCompanyId, "Users", uid),
+      data,
+    );
+  });
+}
+
+function authenticatedFirestore(uid, claims = {}) {
+  return testEnvironment
+    .authenticatedContext(uid, {
+      email_verified: true,
+      companyId: CODEX_LOCAL_COMPANIES.primary.id,
+      ...claims,
+    })
+    .firestore();
+}
+
+const TENANT_READ_WRITE_COLLECTIONS = [
+  "ArrangementNotifications",
+  "Articles",
+  "Articles_archive",
+  "Autonumbers",
+  "Billings",
+  "Customers",
+  "Customers_archive",
+  "Employees",
+  "Employees_archive",
+  "meta",
+  "OperationResults",
+  "Outsourcers",
+  "Outsourcers_archive",
+  "Sites",
+  "Sites_archive",
+  "SiteOperationSchedules",
+  "Users",
+];
 
 before(async () => {
   assert.equal(process.env.GCLOUD_PROJECT, CODEX_LOCAL_PROJECT_ID);
@@ -88,12 +136,10 @@ test("Firestore Rules reject unauthenticated tenant access", async () => {
   );
 });
 
-test("Firestore Rules allow the matching company claim and reject another tenant", async () => {
-  const firestore = testEnvironment
-    .authenticatedContext("codex-rules-user", {
-      companyId: CODEX_LOCAL_COMPANIES.primary.id,
-    })
-    .firestore();
+test("Firestore Rules allow a verified active registered User in the matching tenant", async () => {
+  const uid = "codex-rules-active-user";
+  await seedRegisteredUser({ uid });
+  const firestore = authenticatedFirestore(uid);
 
   await assertSucceeds(
     getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
@@ -101,4 +147,327 @@ test("Firestore Rules allow the matching company claim and reject another tenant
   await assertFails(
     getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id)),
   );
+});
+
+test("Firestore Rules reject an unverified email", async () => {
+  const uid = "codex-rules-unverified-user";
+  await seedRegisteredUser({ uid });
+  const firestore = authenticatedFirestore(uid, { email_verified: false });
+  const missingClaimFirestore = testEnvironment
+    .authenticatedContext(uid, {
+      companyId: CODEX_LOCAL_COMPANIES.primary.id,
+    })
+    .firestore();
+
+  await assertFails(
+    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+  );
+  await assertFails(
+    getDoc(
+      doc(
+        missingClaimFirestore,
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+      ),
+    ),
+  );
+});
+
+test("Firestore Rules reject missing or malformed company claims", async () => {
+  const uid = "codex-rules-invalid-claim-user";
+  await seedRegisteredUser({ uid });
+  const missingClaimFirestore = testEnvironment
+    .authenticatedContext(uid, { email_verified: true })
+    .firestore();
+
+  await assertFails(
+    getDoc(
+      doc(
+        missingClaimFirestore,
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+      ),
+    ),
+  );
+
+  for (const companyId of [null, 1, true, ""]) {
+    const firestore = authenticatedFirestore(uid, { companyId });
+    await assertFails(
+      getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+    );
+  }
+});
+
+test("Firestore Rules reject a missing registered User", async () => {
+  const firestore = authenticatedFirestore("codex-rules-missing-user");
+
+  await assertFails(
+    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+  );
+});
+
+test("Firestore Rules reject temporary and disabled Users", async () => {
+  const temporaryUid = "codex-rules-temporary-user";
+  const disabledUid = "codex-rules-disabled-user";
+  await seedRegisteredUser({ uid: temporaryUid, isTemporary: true });
+  await seedRegisteredUser({ uid: disabledUid, disabled: true });
+
+  await assertFails(
+    getDoc(
+      doc(
+        authenticatedFirestore(temporaryUid),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+      ),
+    ),
+  );
+  await assertFails(
+    getDoc(
+      doc(
+        authenticatedFirestore(disabledUid),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+      ),
+    ),
+  );
+});
+
+test("Firestore Rules reject malformed User registration states", async () => {
+  const invalidTemporaryUid = "codex-rules-invalid-temporary-user";
+  const invalidDisabledUid = "codex-rules-invalid-disabled-user";
+  const missingTemporaryUid = "codex-rules-missing-temporary-user";
+  const missingDisabledUid = "codex-rules-missing-disabled-user";
+  await seedRegisteredUser({
+    uid: invalidTemporaryUid,
+    isTemporary: "false",
+  });
+  await seedRegisteredUser({ uid: invalidDisabledUid, disabled: "false" });
+  await seedRegisteredUser({ uid: missingTemporaryUid, omit: ["isTemporary"] });
+  await seedRegisteredUser({ uid: missingDisabledUid, omit: ["disabled"] });
+
+  for (const uid of [
+    invalidTemporaryUid,
+    invalidDisabledUid,
+    missingTemporaryUid,
+    missingDisabledUid,
+  ]) {
+    const firestore = authenticatedFirestore(uid);
+    await assertFails(
+      getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+    );
+  }
+});
+
+test("Firestore Rules reject a membership company mismatch", async () => {
+  const uid = "codex-rules-membership-mismatch-user";
+  await seedRegisteredUser({
+    uid,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+  });
+  const firestore = authenticatedFirestore(uid);
+
+  await assertFails(
+    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+  );
+});
+
+test("Firestore Rules reject permanent super-user cross-tenant access", async () => {
+  const uid = "codex-rules-super-user";
+  await seedRegisteredUser({ uid });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: true });
+
+  await assertSucceeds(
+    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.primary.id)),
+  );
+  await assertFails(
+    getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id)),
+  );
+});
+
+test("Firestore Rules apply the tenant identity gate to company descendants", async () => {
+  const uid = "codex-rules-descendant-user";
+  await seedRegisteredUser({ uid });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+      await setDoc(
+        doc(context.firestore(), "Companies", company.id, "RulesProbe", "probe"),
+        { fixture: "tenant-identity-gate" },
+      );
+    }
+  });
+  const firestore = authenticatedFirestore(uid);
+
+  await assertSucceeds(
+    getDoc(
+      doc(
+        firestore,
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "RulesProbe",
+        "probe",
+      ),
+    ),
+  );
+  await assertFails(
+    getDoc(
+      doc(
+        firestore,
+        "Companies",
+        CODEX_LOCAL_COMPANIES.secondary.id,
+        "RulesProbe",
+        "probe",
+      ),
+    ),
+  );
+});
+
+test("Firestore Rules allow Company document access only in the registered tenant", async () => {
+  const uid = "codex-rules-company-document-user";
+  await seedRegisteredUser({ uid });
+  const firestore = authenticatedFirestore(uid);
+  const sameTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+  );
+  const otherTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.secondary.id,
+  );
+
+  await assertSucceeds(getDoc(sameTenant));
+  await assertSucceeds(setDoc(sameTenant, { rulesProbe: true }, { merge: true }));
+  await assertFails(getDoc(otherTenant));
+  await assertFails(setDoc(otherTenant, { rulesProbe: true }, { merge: true }));
+});
+
+for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
+  test(`Firestore Rules enforce tenant read/write access for ${collectionName}`, async () => {
+    const uid = `codex-rules-${collectionName.toLowerCase()}-user`;
+    await seedRegisteredUser({ uid });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          CODEX_LOCAL_COMPANIES.secondary.id,
+          collectionName,
+          "rules-probe",
+        ),
+        { revision: 1 },
+      );
+    });
+    const firestore = authenticatedFirestore(uid);
+    const sameTenant = doc(
+      firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.primary.id,
+      collectionName,
+      "rules-probe",
+    );
+    const otherTenant = doc(
+      firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.secondary.id,
+      collectionName,
+      "rules-probe",
+    );
+
+    await assertSucceeds(setDoc(sameTenant, { revision: 1 }));
+    await assertSucceeds(getDoc(sameTenant));
+    await assertSucceeds(setDoc(sameTenant, { revision: 2 }));
+    await assertSucceeds(deleteDoc(sameTenant));
+    await assertFails(getDoc(otherTenant));
+    await assertFails(setDoc(otherTenant, { revision: 2 }));
+    await assertFails(deleteDoc(otherTenant));
+  });
+}
+
+test("Firestore Rules keep SecurityReportIndexes client writes denied", async () => {
+  const uid = "codex-rules-security-report-index-user";
+  await seedRegisteredUser({ uid });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+      await setDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          company.id,
+          "SecurityReportIndexes",
+          "rules-probe",
+        ),
+        { fixture: true },
+      );
+    }
+  });
+  const firestore = authenticatedFirestore(uid);
+  const sameTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "SecurityReportIndexes",
+    "rules-probe",
+  );
+  const otherTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "SecurityReportIndexes",
+    "rules-probe",
+  );
+
+  await assertSucceeds(getDoc(sameTenant));
+  await assertFails(setDoc(sameTenant, { fixture: false }));
+  await assertFails(deleteDoc(sameTenant));
+  await assertFails(getDoc(otherTenant));
+});
+
+test("Firestore Rules keep StripeData client update and delete denied", async () => {
+  const uid = "codex-rules-stripe-data-user";
+  await seedRegisteredUser({ uid });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+      await setDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          company.id,
+          "StripeData",
+          "existing-session",
+        ),
+        { fixture: true },
+      );
+    }
+  });
+  const firestore = authenticatedFirestore(uid);
+  const existingSameTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "StripeData",
+    "existing-session",
+  );
+  const newSameTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "StripeData",
+    "new-session",
+  );
+  const existingOtherTenant = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "StripeData",
+    "existing-session",
+  );
+
+  await assertSucceeds(getDoc(existingSameTenant));
+  await assertSucceeds(setDoc(newSameTenant, { fixture: true }));
+  await assertFails(setDoc(existingSameTenant, { fixture: false }));
+  await assertFails(deleteDoc(existingSameTenant));
+  await assertFails(getDoc(existingOtherTenant));
+  await assertFails(setDoc(existingOtherTenant, { fixture: false }));
+  await assertFails(deleteDoc(existingOtherTenant));
 });

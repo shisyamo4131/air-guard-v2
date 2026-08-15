@@ -65,6 +65,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - prod環境は未構築であり確認対象外。Dev環境、remote data、deploy、実dataは未接続・未実施である。
 - 次はAuth claim・tenant path・User状態の認可整合性を最優先segmentとして再開する。Firestore、Storage、Callableの保護が完了するまでdeploy不可の境界は変わらない。
 
+## Firestore identity gate checkpoint
+
+- FirestoreのCompanies配下では、Authentication email確認済み、非空文字列の会社claim、claim会社配下に存在する同一companyの本登録User、`isTemporary === false`、`disabled === false`、要求tenant path一致をすべて要求する。
+- 恒久的なsuper-user全会社client bypassを廃止した。将来の他社support accessは、明示的な開始・終了手続きを持つ未実装の別機能として保留した。
+- Companies本体、名前付き17 subcollection、未定義descendant、SecurityReportIndexes、StripeDataを専用loopback Emulatorで検証した。汎用CompaniesルールがStripeDataのupdate/delete禁止を迂回する競合をtestで検出し、汎用ルールからStripeDataを除外した。
+- 専用local suiteは32件すべてpassし、Functions未起動、利用者用saved-data不変、専用saved-data読込専用を確認した。remote、実data、deployは未実施である。
+- Firestore Rules fileは利用者確認済み。次はStorage Rulesの最小segment、その後Callableと本登録bootstrap例外へ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。
