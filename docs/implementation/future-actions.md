@@ -1072,14 +1072,14 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-025、SPEC-DEEP-035
 - 対象ファイル・シンボル: `firestore.rules` Users match、`auth-v2.disableUser/enableUser/changeAdminUser`、UsersManager、`components/organisms/ChangeAdminUserDialog/index.vue`
-- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。SPEC-DEEP-001で、disable/enableは認証のみでtarget Auth claimのcompanyを採用し、管理者移譲もcallerのisAdmin/from本人性およびtoのdisabled/temporaryをserver検証しないことを本文再確認した。SPEC-DEEP-032ではdialogが`/settings/users`から実到達し、clientは`auth.isAdmin`だけをguard、callableは同社path・from admin・to non-admin・transaction更新を検証するが、caller本人性、target状態、理由/監査/versionを検証しないことを確認した。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
-- 想定影響と発生条件: 一般Userの直接write/callable呼出しによりroles、isAdmin、disabled、employeeId等の改変、管理者移譲、別tenant UIDの無効化要求が可能になる。
+- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修し、一般User・別tenant・別人from・仮登録・無効・管理者targetを更新前に拒否する。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
+- 想定影響と発生条件: Callableの旧actor/tenant経路は修正したが、一般Userの直接Firestore writeによりroles、isAdmin、disabled、employeeId等を改変できる。User管理UIの二重送信、削除連鎖、監査不足も別途残る。
 - 未確認点・仮説: 正式なUser管理role、本人更新可能field、super-user修復権限は未決定。
 - 推奨する将来対応: actor/action/field別権限を決め、Admin SDK callableとRulesでtenant・role・doc ID/UID・immutable fieldを強制する。
 - 必要なテスト: 一般/admin/super-user、本人/他人/他社UID、roles/isAdmin/companyId/disabled直接write、管理者移譲偽装。
 - ユーザー判断が必要な事項: CONF-0066。
 
-SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admin・to non-admin・transactionを検証する一方、caller本人性、対象disabled/temporary、理由・監査・versionを検証しないことを追加確認した。既存の認可課題の証拠であり、新規FUT/CONFは追加しない。
+2026-08-15の管理者移譲改修でcaller本人性、唯一の会社管理者、対象disabled/temporary、User/Auth company・UID整合をtransaction更新前に検証するよう変更した。理由・監査の要否とRulesの直接write境界は既存FUT/CONFで継続し、新規FUT/CONFは追加しない。
 
 ## FUT-0081 Auth・Firestore・claimsの部分状態を回復可能にする
 
@@ -2032,8 +2032,8 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
 - 対象ファイル・シンボル: `rebuildAllHistories`、auth-v2 callables、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。rebuildAllHistoriesは未認証で任意companyIdを受け、隣接rebuildSecurityReportIndexesだけ認証+isSuperUserを強制する。disable/enable userは認証だけでtarget Auth claimからcompany pathを決めcaller tenant/roleを検証しない。changeAdminUserはcaller claim company内へ限定するがcaller admin/from本人性とdisabled/temporary targetを検証しない。createAdminAccountは認証のみで既存company/User/claimを拒否しない。email/pre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。
-- 想定影響と発生条件: 未認証callerによる他社履歴再構築・負荷、認証Userによる他User状態変更/管理者移譲、email/仮登録情報列挙、quota消費が起き得る。
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。rebuildAllHistoriesは未認証で任意companyIdを受け、隣接rebuildSecurityReportIndexesだけ認証+isSuperUserを強制する。createAdminAccountは認証のみで既存company/User/claimを拒否しない。email/pre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。Users/Companies Rulesは同社一般Userの直接writeを許す。
+- 想定影響と発生条件: disable/enable/changeAdminの旧Callable経由の任意操作は修正したが、未認証callerによる他社履歴再構築・負荷、直接Firestore writeによるUser/admin field変更、email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
 - 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。
 - 必要なテスト: 未認証、同社/他社、admin/non-admin/super-user、disabled、App Check有無、enumeration/rate、arbitrary companyId/uid。

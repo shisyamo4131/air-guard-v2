@@ -4,9 +4,9 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-049
-- 最終確認日: 2026-08-11
-- 根拠ファイル: `functions/index.js`、`functions/modules/auth-v2.js`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
-- 調査境界: entryからexportされるauth-v2 callable 8件の入口guard、対象解決、直接UI入口、Users/Companies Rulesだけを確認した。runtime、Firebase CLI、実data、他callable本文は未確認。
+- 最終確認日: 2026-08-15
+- 根拠ファイル: `functions/index.js`、`functions/modules/auth-v2.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
+- 調査境界: entryからexportされるauth-v2 callable 8件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認し、User Auth同期、有効化・無効化、会社管理者移譲の純粋Node.js単体testを実行した。Functions runtime、Firebase Emulator、実data、他callable本文は未確認。
 
 ## Callable別認証・対象解決
 
@@ -17,19 +17,19 @@
 | `createAdminAccount` | 認証必須のみ。admin/super-user判定、既存company claim、App Checkなし | caller UID/emailで新Companyと`Users/{uid}`を作成 | companyName/companyNameKana/displayName必須。caller自身を`isAdmin=true`、claimを新companyIdへ設定 | 公開signup-adminでAuth作成直後 |
 | `checkUserPreRegistration` | 未認証可。App Check、rate limitなし | emailで全tenantのtemporary Userを検索し先頭1件を採用 | email必須。存在時companyId/displayName/roles/tempUserIdを返す | `/auth/sign-up` |
 | `setupUserAccount` | 認証必須。caller UID/token emailを利用 | caller入力companyId/tempUserIdのpathを読み、temporary User emailとtoken emailを照合 | companyId/tempUserId必須。temporary document全体を本Userへ複製し、doc IDをcaller UIDへ変更 | 一般signupでAuth作成直後 |
-| `disableUser` | 認証必須のみ。caller admin/super-user/company検証なし | 入力UIDからAuth Userを取得し、targetのcustom claim companyIdでUser pathを決定 | uid必須。User documentの`disabled=true`だけを更新 | admin route `/settings/users`のmanager |
-| `enableUser` | 認証必須のみ。同上 | disableと同じ | uid必須。`disabled=false`だけを更新 | 同上 |
-| `changeAdminUser` | 認証とcaller token companyId必須。caller自身のadmin/super-user判定なし | from/toはcaller token company配下だけをfetch | from/to必須・相違。from.isAdmin=true、to.isAdmin=falseを確認し、2 UserのisAdminとto.rolesをtransaction更新 | admin route内の変更dialog |
+| `disableUser` | 認証、caller UID/company claim、有効な本登録会社管理者を必須化 | caller company配下のactor/target Userとtarget Authをtransaction内で検証 | uid必須。自己操作、管理者・仮登録target、会社・Auth UID/claim不一致を拒否し、`disabled=true`へ更新 | admin route `/settings/users`のmanager |
+| `enableUser` | disableと同じ | disableと同じ | 同じ境界で`disabled=false`へ更新 | 同上 |
+| `changeAdminUser` | 認証、caller UID/company claim、caller自身が唯一の有効な本登録会社管理者であることを必須化 | caller company配下のfrom/to User、`isAdmin=true`一覧、actor/target Auth UID・company claim・disabledを検証 | from/to必須・相違、from=actor、管理者1人、active registered targetを要求し、2 UserのisAdminとto.rolesをtransaction更新 | admin route内の変更dialog |
 
 `functions/index.js`は`auth-v2.js`をstar exportするため、8件はいずれもdeployment candidateである。列挙したv2 callableに`enforceAppCheck`や共通guardは指定されない。
 
 ## caller・target・tenant境界
 
-- `disableUser`/`enableUser`はcallerのcompanyIdを使用しない。対象Auth Userのclaimからpathを決めるため、認証済み一般Userが知っている任意UIDを渡せば、同社・他社を問わず対象User documentのdisabledを変更し得る。targetがdisabledかtemporaryか、caller自身かも制限しない。
-- `changeAdminUser`は対象をcaller claimのcompany pathへ限定するためcross-tenant targetはnot-foundになる。ただしcaller adminを検証しないため、同社一般Userでも既存adminから任意のactive Userへadmin fieldを移せる入口である。UIはdisabled/temporaryを候補から外すがserverはtoのdisabled/temporaryを検証しない。
+- `disableUser`/`enableUser`はcaller UIDとcompany claimを起点に、同社actor/target Userをtransaction内で読み、有効な本登録会社管理者、別UIDの本登録非管理者target、target Auth UID/company claimを更新前に検証する。Auth disabledの反映はUser update triggerへ委ねる。
+- `changeAdminUser`はcaller UIDと`from`の一致、同社の`isAdmin=true` Userがcaller 1人だけであること、from/toの本登録・有効・company・admin状態、actor/target Auth UID・company claim・disabledを更新前に検証する。旧adminのrolesは空のまま、新adminのrolesは空配列へ初期化する。
 - `setupUserAccount`は入力companyIdをcaller claimと比較しないが、temporary Userのemailとcaller token emailを照合する。これは招待先本人のtenant onboardingを成立させる直接guardであり、一般的な「caller company一致」とは異なる。
 - `createAdminAccount`は新規signup用途だが、任意の認証済みcallerが再度呼べる。既存User/company/claimの有無、email verification、disabled、1 UID 1 companyを検証しない。Firestore transaction後のcustom claim設定はtransaction外である。
-- server入口はcaller Auth Userのdisabled状態を独自検査しない。Firebaseが既発行tokenをどの時点で拒否するかはruntime未確認であり、無効化直後の既存sessionをcodeだけで拒否する契約は確認できない。
+- `changeAdminUser`はactor AuthとUser双方のdisabledを検証する。有効化・無効化Callableはactor Userのdisabledを検証するがactor Authの現在値は取得しない。Firebaseが既発行tokenをどの時点で拒否するかはruntime未確認である。
 
 ## 匿名signup callableと情報境界
 
@@ -40,7 +40,7 @@
 
 ## UI guardとserver enforcementの差
 
-- `/settings/users`と管理者変更dialogはpageSettingsの`admin` route内にあり、UI上はadmin向けである。しかしroute/navigation判定はclient制御であり、callableは`isAdmin`を検証しない。
+- `/settings/users`と管理者変更dialogはpageSettingsの`admin` route内にあり、UI上もadmin向けである。有効化・無効化と管理者移譲Callableはserverでもactorの`isAdmin`を検証するが、他のUser直接writeは引き続きRules境界に依存する。
 - Users managerのcreate/update/deleteはCallableではなくFirestore client writeも使用する。Users Rulesは同社認証Userまたはsuper-userへ全field read/writeを許し、client admin UIを迂回できる。
 - signup pagesはauth layoutから匿名checkを呼び、Auth account作成後にcreate/setup callableを呼ぶ。この順序に対応するserver guardはあるが、失敗時のAuth/Firestore/claims間rollbackはない。
 
@@ -60,12 +60,12 @@
 
 - registered User doc IDをAuth UIDとする承認済み方針にはcreate/setupの作成先が一致する。
 - temporary Userからregistered Userへのconversionをserver-onlyにする承認済み方針とは、Rulesが一般同社Userへ直接writeを許すため一致しない。
-- User role/admin/company/Auth linkの変更をtenant・actor・field検証Callableへ限定する承認済み方針とは、disable/enable/changeAdminのactor guardおよびUsers Rulesが一致しない。
+- User role/admin/company/Auth linkの変更をtenant・actor・field検証Callableへ限定する承認済み方針に対し、disable/enable/changeAdminのCallable actor guardは整合したが、Users Rulesの同社一般User直接write境界は一致しない。
 - 既存`cloud-functions-catalog.md`の入口一覧と矛盾せず、今回target解決・UI・Rulesまで根拠を追加した。
 
 ## 将来要対応
 
-- FUT-0151: auth-v2各入口へactor/tenant/target/App Check/abuse guardを実装し、Users Rulesと一体で強制する。
+- FUT-0151: disable/enable/changeAdminのactor・tenant・target guardは実装済み。残るauth-v2/API入口、App Check、abuse guard、Users Rulesを一体で強制する。
 - FUT-0098、FUT-0099、FUT-0100: User/Authの作成・更新・削除におけるserver-only field、部分失敗、retry/idempotencyを整備する。
 - FUT-0133: client admin表示とserver権限の意味を統一する。
 
@@ -77,11 +77,11 @@
 ## code evidenceで質問不要となった事項
 
 - `setupUserAccount`のcross-tenant onboardingが単純なcompany claim一致では成立しない理由は、招待先temporary User emailと新規Auth token emailの一致を直接検証する実装で説明できる。これは実装事実であり、正式な招待security policyの承認を意味しない。
-- `changeAdminUser`のcross-tenant対象はcaller claim company path内に限定されるため、別tenant documentを直接選ぶ経路はcode上not-foundとなる。ただしcaller admin不足は別の未解決riskである。
-- disable/enable対象companyはrequest dataではなく対象Auth Userのclaimから決まる。したがって「入力companyId改ざん」の質問は不要だが、任意UIDによるcross-tenant操作riskは解消しない。
+- `changeAdminUser`のcross-tenant対象はcaller claim company path内に限定され、caller本人が唯一の会社管理者であることもserverで検証する。別tenant、一般User、別人をfromにした移譲は更新前に拒否される。
+- disable/enable対象companyはrequest dataやtarget claimではなくcaller company claimから決まり、同社User/Auth整合性を更新前に検証する。任意UIDによるcross-tenant状態変更経路はこのCallableでは解消した。
 
 ## 未確認範囲
 
-- Emulator/runtimeでの拒否code、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data。
+- Emulator/runtimeでの拒否code、Functions module実import、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data。
 - User/Auth trigger本文、Employee連携、削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。
 - 正式actor matrix、rate limit値、audit retentionはユーザー判断待ちである。

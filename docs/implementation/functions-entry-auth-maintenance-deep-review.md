@@ -6,6 +6,11 @@
 - 対象: deep-review-plan `SPEC-DEEP-001`のexact 11 files
 - 制約: 直接依存はsignature/caller確認だけとし、通知・派生同期・SecurityReport core・Site自動終了の内部は既存文書参照に留めた。runtime、Firebase、実dataは未確認。
 
+## 後続改修
+
+- 2026-08-14〜15にUser更新Auth同期、`disableUser`、`enableUser`、`changeAdminUser`のactor・company・target境界を新規policy/use-caseへ分離して改修し、Firebase非接続の認証関連単体test 151件を追加した。
+- 下記表は2026-08-11時点のdeep-review基準線である。現在の認証実装事実は`user-auth-lifecycle.md`と`callable-authorization.md`を正とし、Functions実import、Emulator、remote、実dataは未確認である。
+
 ## per-file public contract
 
 | file | responsibility / exports | input・main branches / output | auth・tenant / error・side effect / reachability |

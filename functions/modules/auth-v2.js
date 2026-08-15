@@ -5,8 +5,13 @@ import { getFirestore } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { Company, FcmToken, User } from "@shisyamo4131/air-guard-v2-schemas";
 
+// User の有効状態切替
 import { changeUserEnabledState } from "./auth/changeUserEnabledState.js";
 import { mapUserEnabledStateError } from "./auth/mapUserEnabledStateError.js";
+
+// 管理者権限移譲処理
+import { transferCompanyAdmin } from "./auth/transferCompanyAdmin.js";
+import { mapCompanyAdminTransferError } from "./auth/mapCompanyAdminTransferError.js";
 
 /**
  * メールアドレスの利用可不可をチェック（グローバル）
@@ -500,107 +505,53 @@ export const enableUser = onCall(async (request) => {
 });
 
 /**
- * 管理者ユーザー変更
- * - 現在の管理者ユーザーIDから新しい管理者ユーザーIDへ、管理者権限を移行します。
- * @param {Object} request
+ * 会社管理者の権限を別のUserへ移譲します。
+ *
+ * @param {Object} request - Callableリクエスト
  * @param {Object} request.auth - 認証情報
- * @param {Object} request.data
- * @param {string} request.data.from - 移行元ユーザーID
- * @param {string} request.data.to - 移行先ユーザーID
- * @return {Object} 処理結果
- * @return {boolean} return.success - 成功フラグ
- * @return {string} return.from - 移行元ユーザーID
- * @return {string} return.to - 移行先ユーザーID
- * @throws {HttpsError} if any validation or operation fails
+ * @param {Object} request.data - リクエストデータ
+ * @param {string} request.data.from - 移譲元UserのUID
+ * @param {string} request.data.to - 移譲先UserのUID
+ * @returns {Promise<{success: boolean, from: string, to: string}>}
+ * @throws {HttpsError} 認証または管理者移譲に失敗した場合
  */
 export const changeAdminUser = onCall(async (request) => {
-  // 1. 認証チェック
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  // 2. companyId の取得と検証
-  const { companyId } = request.auth.token;
-  if (!companyId) {
-    throw new HttpsError("permission-denied", "会社情報が見つかりません。");
-  }
+  const actorUid = request.auth.uid;
+  const companyId = request.auth.token?.companyId;
+  const fromUid = request.data?.from;
+  const toUid = request.data?.to;
 
-  // 3. パラメータの検証
-  const { from, to } = request.data;
-  if (!from || !to) {
-    throw new HttpsError(
-      "invalid-argument",
-      "移行元・移行先のユーザーIDが指定されていません。",
-    );
-  }
-  if (from === to) {
-    throw new HttpsError(
-      "invalid-argument",
-      "移行元・移行先のユーザーIDが同一です。",
-    );
-  }
-
-  // 4. ユーザードキュメントの存在と状態の検証
-  const fromUser = new User();
-  const fromExists = await fromUser.fetch({
-    docId: from,
-    prefix: `Companies/${request.auth.token.companyId}`,
-  });
-  if (!fromExists) {
-    throw new HttpsError(
-      "not-found",
-      `移行元ユーザー ${from} が見つかりません。`,
-    );
-  }
-  if (!fromUser.isAdmin) {
-    throw new HttpsError(
-      "failed-precondition",
-      `移行元ユーザー ${from} は管理者ではありません。`,
-    );
-  }
-
-  // 5. 移行先ユーザーの存在と状態の検証
-  const toUser = new User();
-  const toExists = await toUser.fetch({
-    docId: to,
-    prefix: `Companies/${request.auth.token.companyId}`,
-  });
-  if (!toExists) {
-    throw new HttpsError(
-      "not-found",
-      `移行先ユーザー ${to} が見つかりません。`,
-    );
-  }
-  if (toUser.isAdmin) {
-    throw new HttpsError(
-      "failed-precondition",
-      `移行先ユーザー ${to} は既に管理者です。`,
-    );
+  if (
+    typeof actorUid !== "string" ||
+    !actorUid ||
+    typeof companyId !== "string" ||
+    !companyId
+  ) {
+    throw new HttpsError("permission-denied", "認証情報を確認できません。");
   }
 
   try {
-    const db = getFirestore();
+    return await transferCompanyAdmin({
+      auth: getAuth(),
+      firestore: getFirestore(),
+      companyId,
+      actorUid,
+      fromUid,
+      toUid,
+    });
+  } catch (error) {
+    const mappedError = mapCompanyAdminTransferError(error);
 
-    const result = await db.runTransaction(async (transaction) => {
-      fromUser.isAdmin = false;
-      toUser.isAdmin = true;
-      toUser.roles = []; // 管理者は roles を持たない仕様とする
-      const promises = [
-        fromUser.update({ transaction, prefix: `Companies/${companyId}` }),
-        toUser.update({ transaction, prefix: `Companies/${companyId}` }),
-      ];
-      await Promise.all(promises);
-      return { from: fromUser.docId, to: toUser.docId };
+    logger.error("Company admin transfer failed", {
+      errorName: error?.name,
+      errorCode: error?.code,
     });
 
-    logger.info(`Admin user changed from ${from} to ${to} successfully`);
-    return { success: true, ...result };
-  } catch (error) {
-    logger.error("changeAdminUser でエラーが発生しました:", error);
-    throw new HttpsError(
-      "internal",
-      `管理者ユーザーの変更中に予期しないエラーが発生しました。`,
-    );
+    throw new HttpsError(mappedError.code, mappedError.message);
   }
 });
 

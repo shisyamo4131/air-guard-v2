@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-044
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-08-15
 - 根拠ファイル: `functions/index.js`、`functions/package.json`、`functions/modules/firebase.init.js`、entryから直接re-exportされるmodules/triggers/apisの宣言部
 - 調査方法: entryのstar exportを起点にexport名を列挙し、各宣言のtrigger/optionsと入口認証の狭い範囲だけを確認した。業務処理本文は既存実装文書を参照し、再調査していない。
 
@@ -30,9 +30,9 @@ entryから到達するFirebase Function objectは25件である。明示のな�
 | `createAdminAccount` | v2 callable | 新Companyと最初のadmin User/claimsを作成 | 認証必須。既存role/claimによる管理者許可は入口にない。 |
 | `checkUserPreRegistration` | v2 callable | emailから仮登録Userを検索 | なし。companyId、displayName、roles、tempUserIdを返し得る。 |
 | `setupUserAccount` | v2 callable | 仮Userを認証UIDのUserへ変換しclaims設定 | 認証必須。入力companyId/tempUserIdとtoken emailを照合。 |
-| `disableUser` | v2 callable | 指定UIDのAuth/Userを無効化 | 認証必須のみ。caller company/roleとtarget companyの一致検証は入口にない。 |
-| `enableUser` | v2 callable | 指定UIDのAuth/Userを有効化 | 認証必須のみ。同上。 |
-| `changeAdminUser` | v2 callable | 同一token company内でadminを移譲 | 認証・token companyId必須。caller自身のadmin権限は入口で確認しない。 |
+| `disableUser` | v2 callable | 同社の本登録非管理者Userを無効化 | 認証、caller UID/company claim、有効な本登録会社管理者、別UIDの同社target、target Auth UID/company claimを必須化。 |
+| `enableUser` | v2 callable | 同社の本登録非管理者Userを有効化 | disableと同じactor・company・target境界。 |
+| `changeAdminUser` | v2 callable | 同社のactive本登録Userへadminを移譲 | 認証、caller UID/company claim、from=caller、会社管理者1人、from/to User/Auth company・UID・disabled整合を必須化。 |
 | `rebuildAllHistories` | v2 callable | 指定companyのSiteEmployeeHistories全再構築 | 認証なし。companyId stringのみ検証。`site-employee-history-sync.md`参照。 |
 | `rebuildSecurityReportIndexes` | v2 callable、timeout 540秒 | StorageからSecurityReportIndexes再構築 | 認証かつ`isSuperUser === true`。入力companyIdとの追加tenant制約なし。 |
 
@@ -110,7 +110,7 @@ handlerは全体をtry/catchし、errorをlog後rethrowしないため、実処�
 
 未認証callableはgeocoding、checkEmailAvailabilityGlobal、checkEmailAvailability、checkUserPreRegistration、rebuildAllHistoriesである。最初の4件にはsign-up前用途がコメントされるものがあるが、App Check/rate limitはない。rebuildAllHistoriesは管理操作であるにもかかわらず認証・role・tenant検証がない。
 
-認証必須でもcreateAdminAccount、disableUser、enableUserは入口で管理roleを要求しない。changeAdminUserもtoken companyIdは使うがcaller adminを確認しない。UI非表示はserver authorizationを代替しない。認証・tenant・actorの詳細調査は`user-auth-lifecycle.md`、`authorization-model.md`を参照する。
+認証必須のcreateAdminAccountは既存所属・再実行境界が未解決である。disableUser、enableUser、changeAdminUserは2026-08-14〜15の最小segmentで会社管理者、caller company、target User/Authをserver検証するよう変更した。UI非表示は引き続きserver authorizationを代替せず、Users Rulesの直接write境界も別途未解決である。詳細は`user-auth-lifecycle.md`、`authorization-model.md`を参照する。
 
 ## retry / observability
 
@@ -131,7 +131,7 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 ## 将来要対応
 
 - FUT-0140: geocoding auth/App Check/rate limitは既登録。
-- FUT-0151: callableごとのactor・tenant・App Check・abuse防止をserverで強制する。
+- FUT-0151: disable/enable/changeAdminのactor・tenant・target guardは実装済み。残るCallable、App Check、abuse防止、Rulesをserverで強制する。
 - FUT-0152: deployment manifestとexport contract testを設け、plain helper/unexported候補を分離する。
 - FUT-0153: runtime options、retry/idempotency、failure/observability契約を入口別に明示する。
 

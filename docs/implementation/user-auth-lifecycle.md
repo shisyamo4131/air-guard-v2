@@ -4,7 +4,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-025、SPEC-DEEP-035、SPEC-DEEP-040
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-15
 - 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/modules/auth-v2.js`、`functions/triggers/user.js`、`functions/modules/auth/deleteUser.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
 
 ## 入口と暫定権限
@@ -15,13 +15,13 @@
 | User仮登録・編集・削除 | UsersManager。管理者Userはroles編集と削除をUIで抑止し、employeeId付きUserも削除を抑止 | Rulesにrole、field、本人、admin、employeeId guardはない |
 | 従業員からUser仮登録・削除 | Employee UserManager | Rulesは上記と同じ。User.deleteは`isAdmin`だけを拒否 |
 | 有効化・無効化callable | UsersManagerから呼ぶ | `disableUser`/`enableUser`はactor UIDとcompany claimを起点に、transaction内でactor/target User、管理者・有効・本登録状態、自己操作禁止、対象非管理者、対象Auth UID/company claimを検証して`disabled`を更新する |
-| 管理者移譲 | UI activatorは`auth.isAdmin`で無効化 | `changeAdminUser`は認証とcompany claimを要求するがactorが現管理者か、`from`がactor本人かを検証しない |
+| 管理者移譲 | UI activatorは`auth.isAdmin`で無効化 | `changeAdminUser`はactor本人が同社の唯一の有効な本登録管理者であること、移譲先が別UIDの有効な本登録非管理者であること、両User/Authのcompany・UID・disabled整合を検証する |
 
 権限設計は試作段階の暫定実装であり、確定仕様として扱わない。
 
 ## User / Authデータ契約
 
-SPEC-DEEP-032で、`ChangeAdminUserDialog`は`/settings/users`の`UsersManager`から実到達し、active・非temporary Userを購読して移行元/移行先を選択すること、成功時にdashboardへ戻ることを確認した。移行先のdisabled/temporary再確認、理由・監査、version競合はUI/Callableにない。
+SPEC-DEEP-032で、`ChangeAdminUserDialog`は`/settings/users`の`UsersManager`から実到達し、active・非temporary Userを購読して移行元/移行先を選択すること、成功時にdashboardへ戻ることを確認した。移行先のdisabled/temporaryと管理者数はCallableでも再確認する。理由・監査、明示version fieldは未実装である。
 
 - 保存先は`Companies/{companyId}/Users/{userDocId}`。
 - User fieldsは`email`（required、CREATE後UI編集不可）、`displayName`（required）、任意`employeeId`、`roles`、`disabled`、`companyId`（required）、`isAdmin`、`isTemporary`（default `true`）、`tagSize`（required）、配置通知受信flag 3種。
@@ -61,9 +61,9 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 - `isTemporary=true`ならupdate triggerはAuthへアクセスせず終了する。Auth同期対象の変更で`isTemporary`が`false`以外なら、登録状態を安全側で拒否する。
 - Auth更新前に、Userの`companyId`とpathの会社ID、User doc IDとAuth UID、Auth custom claimの`companyId`とpathの会社IDが一致することを検証する。claim欠損または不一致ではAuthを更新しない。
 - trigger失敗時はFirestore更新済み/Auth未反映の部分状態になり得る。再同期用callableまたは状態照合処理は確認できない。
-- 管理者移譲は同一Firestore transactionで旧Userの`isAdmin=false`、新Userの`isAdmin=true`と`roles=[]`を更新する。claimsは変更しない。
+- 管理者移譲はactor/target Authを検証した後、同一Firestore transactionでfrom/to Userと`isAdmin=true`一覧を読み、actor本人が唯一の会社管理者であることを再確認して旧Userの`isAdmin=false`、新Userの`isAdmin=true`と`roles=[]`を更新する。claimsは変更しない。
 
-この同期境界は`userAuthCompanyPolicy.js`と`syncUserAuthAccount.js`へ分離した。Firebaseへ接続しないNode.js単体テスト27件で、正常更新、変更なし・仮登録のskip、User/Authの会社不一致、claim欠損、UID不一致、登録状態欠損、Auth取得・更新失敗を確認した。
+この同期境界は`userAuthCompanyPolicy.js`と`syncUserAuthAccount.js`へ分離した。管理者移譲は`companyAdminTransferPolicy.js`、`transferCompanyAdmin.js`、`mapCompanyAdminTransferError.js`へ分離した。Firebaseへ接続しない認証関連Node.js単体テスト151件で、Auth同期、有効化・無効化、管理者移譲の正常系・陰性経路・安全なerror mappingを確認した。
 
 ## 無効化・削除
 
@@ -88,7 +88,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
 - `checkEmailAvailabilityGlobal`、`checkEmailAvailability`、`checkUserPreRegistration`は未認証で呼べる。事前登録確認は一致emailについてcompanyId、displayName、roles、tempUserIdを返す。
 - disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。実Callable/Emulator検証は未実施である。
-- 管理者移譲callableはcallerのcompany内docを操作するが、caller自身の`isAdmin`をserverで確認しない。
+- 管理者移譲callableはcaller UIDとfromの一致、同社の唯一の有効な本登録会社管理者、移譲先User/Authのcompany・UID・登録・管理者・disabled状態をserverで確認する。実Callable/Emulator検証は未実施である。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。
 
 ## ユーザー確認済みUser不変条件
