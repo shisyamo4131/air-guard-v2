@@ -26,7 +26,7 @@ SPEC-AUDIT-001で531 source filesを機械再照合した。分類方法、母�
 | 領域 | 主なimplementation文書 | 主要source群 | 判定 |
 | --- | --- | --- | --- |
 | app entry/layout/navigation/access | app-shell、page-access、layout-navigation-components | app.vue、layouts、middleware、plugins、pageSettings、shell components | Covered |
-| auth/User/state/authorization | state-initialization、user-auth-lifecycle、authorization-model、callable-authorization | 4 core stores、auth actions、auth-v2 callable guards/target/UI/Rules、User、settings/users | Covered |
+| auth/User/state/authorization | state-initialization、user-auth-lifecycle、authorization-model、callable-authorization | 4 core stores、auth actions、API callable guards/target/UI/Rules、User、settings/users | Covered |
 | shared data/UI/error | data-management-composables、shared-ui-components、organisms-components-deep-review、error-logging-feedback | useFetch/base managers、atoms/molecules/organisms、error/loading/message stores | Covered（選定された共通部品。全componentではない） |
 | Company/System/subscription | company-settings、system-maintenance、subscription-stripe | settings/company、Company/System、maintenance、Stripe module/UI | Covered（Stripe export停止状態を含む） |
 | Customer/Site/Agreement/Article | customer-master、site-master、agreement-master、article-master | master pages/components/schema/Rules | Covered |

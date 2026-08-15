@@ -5,7 +5,7 @@
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-12
-- 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/modules/auth-v2.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
+- 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/apis/createAdminAccount.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
 
 ## 入口・権限
 

@@ -104,6 +104,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 未認証入口、caller指定`isAdmin`、email登録状況を識別できる応答、App Check・rate limitは既存の残存riskである。Functions Emulator、Functions transport、Dev・remote、実data、deployは未実施である。
 - 次は`auth-v2.js`に残るCallableを一つずつ現行挙動と認可境界から確認し、利用者review後に単体APIへ整理する。
 
+## Remaining Callable and Auth trigger extraction checkpoint
+
+- `createAdminAccount`、`checkUserPreRegistration`、`setupUserAccount`、`disableUser`、`enableUser`、`changeAdminUser`を`functions/apis`へ移し、全10 Callableを正式API indexへ集約した。`disableUser`と`enableUser`は同じAPI fileで非公開request handlerを共有する。
+- `onAuthUserDeleted`を`functions/modules/auth-v2.js`から`functions/triggers/auth.js`へ移し、旧`auth-v2.js`を廃止した。公開Function名、gen1、region、処理、error吸収を変更せず、`functions/index.js`のexport先だけを更新した。
+- 移設前後のCallableとAuth削除trigger本体一致、対象fileの`node --check`、functions entry実import、全domain単体test 201件、正式API index経由の専用loopback Emulator suite 60件、`git diff --check`はpassした。Functions Emulator、Functions transport、Auth削除event transport、Dev・remote、実data、deployは未実施である。
+- `createAdminAccount`の既存所属・再実行・部分状態、匿名signup入口、App Check、rate limit、Users Rules等の残存riskは変更していない。次は認可整合性検証の優先改修へ戻る。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

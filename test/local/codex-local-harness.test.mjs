@@ -1089,3 +1089,135 @@ test("signup email availability Callable requires a temporary User for a normal 
   });
   assert.deepEqual(result, { available: true });
 });
+
+test("API index exports every public Callable without internal request helpers", async () => {
+  const apis = await loadRebuildApis();
+  const publicCallables = [
+    "changeAdminUser",
+    "checkEmailAvailability",
+    "checkEmailAvailabilityGlobal",
+    "checkUserPreRegistration",
+    "createAdminAccount",
+    "disableUser",
+    "enableUser",
+    "rebuildAllHistories",
+    "rebuildSecurityReportIndexes",
+    "setupUserAccount",
+  ];
+
+  for (const callable of publicCallables) {
+    assert.equal(callable in apis, true, `${callable} must be exported`);
+  }
+  assert.equal("authorizeCompanyRebuild" in apis, false);
+  assert.equal("handleUserEnabledStateChangeRequest" in apis, false);
+});
+
+test("pre-registration Callable validates email and returns a matching temporary User", async () => {
+  const { checkUserPreRegistration } = await loadRebuildApis();
+  await assertCallableError(
+    checkUserPreRegistration.run({ data: {} }),
+    "invalid-argument",
+  );
+
+  const uid = "codex-pre-registration-user";
+  const email = `${uid}@codex-test.invalid`;
+  await seedRegisteredUser({ uid, isTemporary: true, email });
+  const result = await checkUserPreRegistration.run({ data: { email } });
+
+  assert.deepEqual(result, {
+    isPreRegistered: true,
+    companyId: CODEX_LOCAL_COMPANIES.primary.id,
+    displayName: "",
+    roles: [],
+    tempUserId: uid,
+  });
+});
+
+test("moved authenticated User Callables retain their entry guards", async () => {
+  const { changeAdminUser, disableUser, enableUser, setupUserAccount } =
+    await loadRebuildApis();
+
+  for (const callable of [
+    changeAdminUser,
+    disableUser,
+    enableUser,
+    setupUserAccount,
+  ]) {
+    await assertCallableError(callable.run({ data: {} }), "unauthenticated");
+  }
+
+  await assertCallableError(
+    disableUser.run(callableRequest({ data: {} })),
+    "invalid-argument",
+  );
+  await assertCallableError(
+    enableUser.run(callableRequest({ data: {} })),
+    "invalid-argument",
+  );
+});
+
+test("admin account creation Callable validates authentication and required input", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+
+  await assertCallableError(
+    createAdminAccount.run({ data: {} }),
+    "unauthenticated",
+  );
+  await assertCallableError(
+    createAdminAccount.run(callableRequest({ data: {} })),
+    "invalid-argument",
+  );
+});
+
+test("admin account creation Callable creates the Company, User, and custom claims", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const uid = "codex-create-admin-account";
+  const email = `${uid}@codex-test.invalid`;
+  await seedCallableAuthUser({ uid });
+
+  const result = await createAdminAccount.run(
+    callableRequest({
+      uid,
+      claims: { email },
+      data: {
+        companyName: "Codex新規会社",
+        companyNameKana: "コーデックスシンキガイシャ",
+        displayName: "管理者",
+      },
+    }),
+  );
+
+  assert.equal(result.success, true);
+  assert.equal(result.userId, uid);
+  assert.equal(typeof result.companyId, "string");
+  assert.ok(result.companyId.length > 0);
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const company = await getDoc(
+      doc(context.firestore(), "Companies", result.companyId),
+    );
+    const user = await getDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        result.companyId,
+        "Users",
+        uid,
+      ),
+    );
+    assert.equal(company.exists(), true);
+    assert.equal(company.data().companyName, "Codex新規会社");
+    assert.equal(user.exists(), true);
+    assert.equal(user.data().companyId, result.companyId);
+    assert.equal(user.data().email, email);
+    assert.equal(user.data().displayName, "管理者");
+    assert.equal(user.data().isAdmin, true);
+    assert.equal(user.data().isTemporary, false);
+  });
+
+  const authUser = await getAdminAuth().getUser(uid);
+  assert.deepEqual(authUser.customClaims, {
+    companyId: result.companyId,
+    isSuperUser: false,
+  });
+});

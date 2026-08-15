@@ -233,7 +233,7 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-005
-- 対象ファイル・シンボル: `functions/modules/auth-v2.js` の `onAuthUserDeleted`、`FcmToken.deleteByUid`
+- 対象ファイル・シンボル: `functions/triggers/auth.js` の `onAuthUserDeleted`、`FcmToken.deleteByUid`
 - 確認済み実装事実: token削除失敗はlog後に吸収され、triggerを失敗させない。独立retry・orphan scanは確認できない。
 - 想定影響と発生条件: Firestore一時障害やmodel error時、削除済みUserのtokenが残り、同UID対象queryや運用上の不要データとなる可能性がある。
 - 未確認点・仮説: Authentication UID再利用可否、保持されたtokenへの実送信経路、監視alertは未確認。
@@ -272,7 +272,7 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-006
-- 対象ファイル・シンボル: `functions/modules/auth-v2.js` の管理者・本User作成、Users Rules、通知producerとFcmToken検索
+- 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`と`functions/apis/setupUserAccount.js`の管理者・本User作成、Users Rules、通知producerとFcmToken検索
 - 確認済み実装事実: 管理者作成と仮Userからの本登録はAuth UIDをUser document IDにする。通知配送もrecipient User document ID = FcmToken.uidを前提とする。一方Users Rulesは同一会社Userによる任意User document ID・fieldのwriteを許可し、この不変条件を強制しない。
 - 想定影響と発生条件: client writeで不正IDの本登録相当Userや通知設定を作成・変更できる場合、通知targetとAuthentication/FcmTokenの対応が崩れ、欠落・誤集計・権限データ不整合につながり得る。
 - 未確認点・仮説: temporary Userの具体的identifier形式、既存mismatch件数、migration手順は未確認。
@@ -2033,7 +2033,7 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
-- 対象ファイル・シンボル: `functions/apis/*.js`、auth-v2 callables、`geocoding`、Users/Companies Rules
+- 対象ファイル・シンボル: `functions/apis/*.js`、`geocoding`、Users/Companies Rules
 - 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`とpre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。

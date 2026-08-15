@@ -5,7 +5,7 @@
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-025、SPEC-DEEP-035、SPEC-DEEP-040
 - 最終確認日: 2026-08-15
-- 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/apis/checkEmailAvailability.js`、`functions/modules/auth-v2.js`、`functions/triggers/user.js`、`functions/modules/auth/deleteUser.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
+- 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/triggers/user.js`、`functions/modules/auth/*.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
 
 ## 入口と暫定権限
 

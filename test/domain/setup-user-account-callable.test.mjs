@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { setupUserAccount } from "../../functions/modules/auth-v2.js";
+import { setupUserAccount } from "../../functions/apis/setupUserAccount.js";
 
 test("unauthenticated callable request is rejected", async () => {
   await assert.rejects(

@@ -23,6 +23,7 @@
 
 ### Changed
 
+- `auth-v2.js`に残っていた全Callableを`functions/apis`へ分離し、有効化・無効化は共通request処理と2つの公開Callableを1ファイルへ集約した。Authentication削除triggerは`functions/triggers/auth.js`へ移し、公開Function名と既存挙動を維持した。
 - signup用`checkEmailAvailability`を`functions/apis`の単体ファイルへ分離し、Cloud Functionsの公開名と既存挙動を維持したままAPI index経由のexportへ整理した。
 - 公開Callableの`checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`を`functions/apis`の単体ファイルへ分離し、API indexを公開export一覧へ限定した。再構築で共有する認可処理は内部moduleとして維持し、Cloud Functionsの公開名は変更していない。
 - スーパーユーザーの恒久的な全会社Firestore client accessを廃止する方針と、将来は明示的な手続きを経た一時的な他社support accessを提供する未実装構想を記録した。

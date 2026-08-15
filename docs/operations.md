@@ -106,7 +106,7 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、再構築Callable、全会社メール重複確認Callable、signup用メール利用可否Callableのhandlerを正式な`functions/apis/index.js`経由で直接実行します。再構築はID token、現在のAuthentication User、User document、要求会社の整合性を、全会社メール重複確認は同じidentityに加えて会社管理者状態と全会社重複拒否を確認します。signup用メール利用可否は入力型、Authentication重複、管理者登録時の全会社User重複、一般User登録時の仮User有無を確認します。合計55件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、Functions transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、正式な`functions/apis/index.js`から公開する10 Callableを読み込み、内部helperが非公開であることを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合も確認します。合計60件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、Functions transport、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 

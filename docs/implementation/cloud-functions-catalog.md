@@ -10,8 +10,8 @@
 
 `functions/index.js`はdayjsをAsia/Tokyoへ初期化し、`firebase.init.js`でAdmin app、FireModel server adapter、geocoding callbackを初期化した後、次をstar exportする。
 
-- modules: maintenance、dependentSync、geocoding、Employees、auth-v2、operationCleanup、utils/notifications
-- triggers: arrangementNotification、operationResult、user、securityReport
+- modules: maintenance、dependentSync、geocoding、Employees、operationCleanup、utils/notifications
+- triggers: arrangementNotification、auth、operationResult、user、securityReport
 - APIs: `apis/index.js`
 
 Stripe moduleのstar exportはcomment outされる。migration moduleもentryからimport/exportされない。package runtimeはNode.js 22、`setGlobalOptions({region:"asia-northeast1"})`が全体既定である。
@@ -131,7 +131,7 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 ## 将来要対応
 
 - FUT-0140: geocoding auth/App Check/rate limitは既登録。
-- FUT-0151: disable/enable/changeAdminのactor・tenant・target guardは実装済み。残るCallable、App Check、abuse防止、Rulesをserverで強制する。
+- FUT-0151: disable/enable/changeAdminのactor・tenant・target guardは実装済み。createAdmin・匿名signup入口等の残存guard、App Check、abuse防止、Rulesをserverで強制する。
 - FUT-0152: deployment manifestとexport contract testを設け、plain helper/unexported候補を分離する。
 - FUT-0153: runtime options、retry/idempotency、failure/observability契約を入口別に明示する。
 
