@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { after, before, test } from "node:test";
 import { initializeApp, deleteApp } from "firebase/app";
 import {
@@ -39,6 +40,62 @@ function parseEmulatorHost(name) {
 }
 
 let testEnvironment;
+let rebuildApis;
+const requireFromFunctions = createRequire(
+  new URL("../../functions/package.json", import.meta.url),
+);
+const { getAuth: getAdminAuth } = requireFromFunctions("firebase-admin/auth");
+
+async function loadRebuildApis() {
+  if (!rebuildApis) {
+    await import("../../functions/modules/firebase.init.js");
+    rebuildApis = await import("../../functions/apis/index.js");
+  }
+  return rebuildApis;
+}
+
+function callableRequest({
+  uid = "codex-callable-super-user",
+  claims = {},
+  data = { companyId: CODEX_LOCAL_COMPANIES.primary.id },
+} = {}) {
+  return {
+    auth: {
+      uid,
+      token: {
+        email_verified: true,
+        companyId: CODEX_LOCAL_COMPANIES.primary.id,
+        isSuperUser: true,
+        ...claims,
+      },
+    },
+    data,
+  };
+}
+
+async function assertCallableError(promise, expectedCode) {
+  await assert.rejects(promise, (error) => {
+    assert.equal(error.code, expectedCode);
+    return true;
+  });
+}
+
+async function seedCallableAuthUser({
+  uid,
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  emailVerified = true,
+  disabled = false,
+  isSuperUser = true,
+}) {
+  const auth = getAdminAuth();
+  await auth.createUser({
+    uid,
+    email: `${uid}@codex-test.invalid`,
+    emailVerified,
+    disabled,
+  });
+  await auth.setCustomUserClaims(uid, { companyId, isSuperUser });
+}
 
 async function seedRegisteredUser({
   uid,
@@ -452,6 +509,20 @@ test("Firestore Rules keep SecurityReportIndexes client writes denied", async ()
   await assertFails(setDoc(sameTenant, { fixture: false }));
   await assertFails(deleteDoc(sameTenant));
   await assertFails(getDoc(otherTenant));
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+      await deleteDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          company.id,
+          "SecurityReportIndexes",
+          "rules-probe",
+        ),
+      );
+    }
+  });
 });
 
 test("Firestore Rules keep StripeData client update and delete denied", async () => {
@@ -671,4 +742,148 @@ test("Storage Rules reject permanent super-user cross-tenant access", async () =
 
   await assertSucceeds(uploadBytes(sameTenant, new Uint8Array([1])));
   await assertFails(uploadBytes(otherTenant, new Uint8Array([1])));
+});
+
+test("rebuild Callables require authentication", async () => {
+  const { rebuildAllHistories, rebuildSecurityReportIndexes } =
+    await loadRebuildApis();
+
+  await assertCallableError(
+    rebuildAllHistories.run({
+      data: { companyId: CODEX_LOCAL_COMPANIES.primary.id },
+    }),
+    "unauthenticated",
+  );
+  await assertCallableError(
+    rebuildSecurityReportIndexes.run({
+      data: { companyId: CODEX_LOCAL_COMPANIES.primary.id },
+    }),
+    "unauthenticated",
+  );
+});
+
+test("rebuild Callables reject an unverified or non-super-user account", async () => {
+  const { rebuildAllHistories, rebuildSecurityReportIndexes } =
+    await loadRebuildApis();
+
+  await assertCallableError(
+    rebuildAllHistories.run(
+      callableRequest({ claims: { email_verified: false } }),
+    ),
+    "permission-denied",
+  );
+  await assertCallableError(
+    rebuildSecurityReportIndexes.run(
+      callableRequest({ claims: { isSuperUser: false } }),
+    ),
+    "permission-denied",
+  );
+});
+
+test("rebuild Callables reject missing, malformed, and cross-tenant company identity", async () => {
+  const { rebuildAllHistories } = await loadRebuildApis();
+
+  await assertCallableError(
+    rebuildAllHistories.run(callableRequest({ data: {} })),
+    "invalid-argument",
+  );
+  await assertCallableError(
+    rebuildAllHistories.run(callableRequest({ claims: { companyId: 1 } })),
+    "permission-denied",
+  );
+  await assertCallableError(
+    rebuildAllHistories.run(
+      callableRequest({
+        data: { companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+      }),
+    ),
+    "permission-denied",
+  );
+});
+
+test("rebuild Callables reject missing, temporary, disabled, and mismatched Users", async () => {
+  const { rebuildAllHistories } = await loadRebuildApis();
+
+  await seedCallableAuthUser({ uid: "codex-callable-missing-user" });
+  await assertCallableError(
+    rebuildAllHistories.run(
+      callableRequest({ uid: "codex-callable-missing-user" }),
+    ),
+    "permission-denied",
+  );
+
+  for (const [name, user] of [
+    ["temporary", { isTemporary: true }],
+    ["disabled", { disabled: true }],
+    ["invalid-temporary", { isTemporary: "false" }],
+    ["invalid-disabled", { disabled: "false" }],
+    [
+      "company-mismatch",
+      { companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+    ],
+  ]) {
+    const uid = `codex-callable-${name}-user`;
+    await seedCallableAuthUser({ uid });
+    await seedRegisteredUser({ uid, ...user });
+    await assertCallableError(
+      rebuildAllHistories.run(callableRequest({ uid })),
+      "permission-denied",
+    );
+  }
+});
+
+test("rebuild history Callable allows an active registered same-tenant super-user", async () => {
+  const { rebuildAllHistories } = await loadRebuildApis();
+  const uid = "codex-callable-super-user";
+  await seedCallableAuthUser({ uid });
+  await seedRegisteredUser({ uid });
+
+  const result = await rebuildAllHistories.run(callableRequest({ uid }));
+
+  assert.deepEqual(result, {
+    message: "Successfully rebuilt all histories.",
+  });
+});
+
+test("rebuild Callables reject a disabled or inconsistent current Auth account", async () => {
+  const { rebuildAllHistories } = await loadRebuildApis();
+  const missingAuthUid = "codex-callable-missing-auth-user";
+  await seedRegisteredUser({ uid: missingAuthUid });
+  await assertCallableError(
+    rebuildAllHistories.run(callableRequest({ uid: missingAuthUid })),
+    "permission-denied",
+  );
+
+  const cases = [
+    ["auth-disabled", { disabled: true }],
+    ["auth-unverified", { emailVerified: false }],
+    ["auth-not-super-user", { isSuperUser: false }],
+    [
+      "auth-company-mismatch",
+      { companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+    ],
+  ];
+
+  for (const [name, authUser] of cases) {
+    const uid = `codex-callable-${name}-user`;
+    await seedCallableAuthUser({ uid, ...authUser });
+    await seedRegisteredUser({ uid });
+    await assertCallableError(
+      rebuildAllHistories.run(callableRequest({ uid })),
+      "permission-denied",
+    );
+  }
+});
+
+test("security report rebuild Callable allows an active registered same-tenant super-user", async () => {
+  const { rebuildSecurityReportIndexes } = await loadRebuildApis();
+  const uid = "codex-callable-super-user";
+
+  const result = await rebuildSecurityReportIndexes.run(
+    callableRequest({ uid }),
+  );
+
+  assert.equal(Number.isInteger(result.processedCount), true);
+  assert.equal(Number.isInteger(result.indexedCount), true);
+  assert.match(result.message, /^警備日報インデックスを再構築しました。/);
 });

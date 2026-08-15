@@ -81,6 +81,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - Storage Rulesを含む次回deploy前に、対象project・alias、cross-service IAM許可prompt、`Firebase Rules Firestore Service Agent` roleを利用者へ通知し、明示承認後にだけ実行する運用を追加した。
 - 次はCallable identity gateと本登録bootstrap例外へ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
 
+## Rebuild Callable identity gate checkpoint
+
+- スーパーユーザー向けの`rebuildAllHistories`と`rebuildSecurityReportIndexes`は、ID tokenのverified email・会社claim・`isSuperUser`、現在のAuthentication Userのemail確認・有効状態・会社claim・`isSuperUser`、同社User documentの本登録・有効状態、要求会社一致をすべて要求する。
+- 既存`assertAuthUserCompany`と`assertUserDocumentCompany`を会社・UID・本登録整合性に再利用し、操作固有のAuth/User有効状態はCallable側で検証する。恒久的な他社再構築は許可しない。
+- 専用loopback Emulator suiteは46件すべてpassし、両再構築の正常経路、未認証、未確認、権限不足、Auth不在・無効・claim不一致、User不在・仮登録・無効・会社不一致、他社指定拒否を確認した。全domain単体test 201件と対象fileの構文検査もpassした。
+- Functions Emulatorは起動せずCallable handlerを直接実行した。利用者用saved-dataは不変、専用saved-dataは読込専用だった。Functions transport、Dev・remote、実data、deploy、runtime service accountのAuth参照権限は未確認である。
+- 次は残る管理・signup Callableと本登録bootstrap例外の最小segmentへ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

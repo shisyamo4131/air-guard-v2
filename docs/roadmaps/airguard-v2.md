@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲のactor/company/target境界を修正した。一般User本登録をverified email・一意仮登録use-caseとメール確認後client flowへ接続した。Firestore・Storage Rulesはverified email、正常な会社claim、tenant path、有効な本登録Userを要求し、恒久的なsuper-user全会社bypassを廃止して専用Emulator 39件で検証した。Callable、Dev・remote検証は未完了で、deploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲のactor/company/target境界を修正した。一般User本登録をverified email・一意仮登録use-caseとメール確認後client flowへ接続した。Firestore・Storage Rulesはverified email、正常な会社claim、tenant path、有効な本登録Userを要求し、恒久的なsuper-user全会社bypassを廃止した。再構築CallableはID token、現在のAuth User、User document、要求会社を照合し、専用Emulator suite 46件で検証した。残るCallable、Dev・remote検証は未完了で、deploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -24,7 +24,7 @@
 
 - 主repoの531-file deep reviewは、A 310件から519件へ増加した。B/C残数は209件から0件へ減少し、予定したsource本文精査を完了した。D 11件とE 1件は分類済みのtest/config/asset・外部境界であり、runtime検証済みという意味ではない。
 - schema runtime 76 paths、共通UI runtime 43 paths、Admin SDK runtime 14 pathsを、主repo母数とは別のpackage境界として静的レビューした。
-- 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore・Storage Rulesの39件のtestを追加した。全Companies collectionとSecurityReports fileのtenant identity gate、恒久的なsuper-user bypass廃止、SecurityReportIndexes・StripeDataの個別操作制約を確認した。Functions、Realtime Database Rules、UI、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
+- 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore・Storage Rules・再構築Callable handlerの46件のtestを追加した。全Companies collectionとSecurityReports fileのtenant identity gate、恒久的なsuper-user bypass廃止、SecurityReportIndexes・StripeDataの個別操作制約、再構築実行者の現在Auth/User整合性を確認した。Functions transport、Realtime Database Rules、UI、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
 - 調査完了は問題の特定証拠であり、修正、test、運用受入れの完了証拠ではない。そのため公式進捗は10%のままとする。
 - 詳細な問題、台帳対応、要判断事項は[2026-08-12 source review統合記録](../implementation/review-reconciliation-2026-08-12.md)を参照する。
 
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rulesは完了したため、次はCallableと本登録bootstrap例外を扱う。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了まで一般User本登録client接続をdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rulesとスーパーユーザー向け再構築Callableは完了したため、次は残る管理・signup Callableと本登録bootstrap例外の境界を扱う。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了まで一般User本登録client接続をdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -50,14 +50,14 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、Auth・Firestore・Storage 39件、User更新Auth同期、有効化・無効化Callable、会社管理者移譲、本登録基盤の単体test。一般User本登録はlocal Emulatorの合成Userで仮登録照合、Auth作成、メール確認、本登録Callable、claim反映、dashboard到達を確認済み。Firestore・Storage tenant identity gateは完了し、CallableとDev・remote受入れは未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、Auth・Firestore・Storage・再構築Callable 46件、User更新Auth同期、有効化・無効化Callable、会社管理者移譲、本登録基盤の単体test。一般User本登録はlocal Emulatorの合成Userで仮登録照合、Auth作成、メール確認、本登録Callable、claim反映、dashboard到達を確認済み。Firestore・Storage tenant identity gateと再構築Callable gateは完了し、残るCallableとDev・remote受入れは未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
 
 ## 未解決問題
 
-- invitation/account setup、User documentとglobal Auth UID、Callable actor/tenant、同一tenant内field権限、SecurityReport Storageの認可不備。
+- invitation/account setup、User documentとglobal Auth UID、残る管理・signup Callableのactor/tenant、同一tenant内field権限。
 - OperationResultの管制側編集lock・権限強制、agreementなしresult、Billing status、請求書snapshot、同時更新、勤怠・履歴・report indexの部分失敗と再構築。
 - FireModelのprocess-global context、full-set/upsert、serialization、validation、client/server adapter差。
 - 通知の重複、FCM token lifecycle/log、ArrangementNotification日時・状態遷移。
@@ -101,3 +101,4 @@
 | 2026-08-15 | 10% | 0 | 一般User本登録のclient flowをlocal Emulatorの合成Userで検証し、明示import漏れと、メール確認済み・会社claim未設定Userをglobal middlewareがdashboardへ早期転送する問題を修正した。全domain単体test 201件、構文・SFC検査、仮登録照合、Auth作成、メール確認、本登録Callable、company claim反映、dashboard再読込みが成功した。認可整合性とRules等のrelease blockerが残るため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | Firestore Rulesへverified email、正常なcompany claim、tenant path、有効な本登録Userの整合性gateを追加し、恒久的なsuper-user全会社bypassを廃止した。専用loopback Emulator 32件で全Companies collectionの同一tenant操作・他tenant拒否とSecurityReportIndexes・StripeDataの個別制約を確認した。Storage・Callable・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | Storage RulesのSecurityReportsをverified email、正常なcompany claim、tenant path、有効な本登録Userが整合する場合だけ許可した。専用loopback Emulator 39件でupload、list、metadata、download URL、byte download、delete、他tenant・不正identity拒否を確認した。画像圧縮・Vue画面・thumbnail Functions、IAM、Dev・remote受入れ、Callableが未完了のため進捗は据え置いた。 |
+| 2026-08-15 | 10% | 0 | スーパーユーザー向けの履歴・警備日報インデックス再構築Callableを、ID token、現在のAuthentication User、同社の有効な本登録User、要求会社がすべて整合する場合だけ許可した。Auth無効・User無効・他社指定等を含む専用loopback Emulator 46件と全domain単体test 201件が成功した。残る管理・signup Callable、Functions transport、Dev・remote受入れが未完了のため進捗は据え置いた。 |
