@@ -73,6 +73,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 一般Userのclient登録はAuthentication account作成と確認メール送信までとし、メール確認後に更新したID tokenで本登録Callableを呼ぶ。本登録Callableはclient dataを受け取らず、確認済みAuthenticationメールから仮登録と会社をserver側で解決する。
 - 保護対象のFirestore、Storage、Callableは、確認済みメール、正常な会社claim、要求tenant path、対応する有効な本登録Userの整合がすべて確認できる場合だけ許可する。claim欠損、型不正、path不一致、User不在、仮登録、無効状態ではfail closedとする。本登録Callableは、会社claimと本登録Userがまだ存在しない確認済みUserにだけ必要なbootstrap例外として扱う。
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
+- 全会社Userを対象とするメールアドレス重複確認は、ID tokenと現在のAuthentication Userがメール確認済み・有効・同社会社claimであり、同社のUser documentが有効な本登録会社管理者である場合だけ許可する。`isSuperUser`だけでは許可しない。
 - 従業員の退職と Authentication アカウント削除は同一操作とみなさず、業務記録との関係を保つ。
 
 ## 主要データと業務規則

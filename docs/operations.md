@@ -106,7 +106,7 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、再構築Callableのhandlerを直接実行し、ID token、現在のAuthentication User、User document、要求会社の整合性と正常な合成再構築を確認します。合計46件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、Functions transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、再構築Callableと全会社メール重複確認Callableのhandlerを正式な`functions/apis/index.js`経由で直接実行します。再構築はID token、現在のAuthentication User、User document、要求会社の整合性を、メール重複確認は同じidentityに加えて会社管理者状態と全会社重複拒否を確認します。合計51件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、Functions transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 
@@ -334,6 +334,6 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
-- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable handlerを確認する。Functions transport、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
+- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、全会社メール重複確認Callableのhandlerを確認する。Functions transport、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。

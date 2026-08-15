@@ -9,7 +9,8 @@
 ## 後続改修
 
 - 2026-08-14〜15にUser更新Auth同期、`disableUser`、`enableUser`、`changeAdminUser`のactor・company・target境界を新規policy/use-caseへ分離して改修し、Firebase非接続の認証関連単体test 151件を追加した。
-- 下記表は2026-08-11時点のdeep-review基準線である。現在の認証実装事実は`user-auth-lifecycle.md`と`callable-authorization.md`を正とし、Functions実import、Emulator、remote、実dataは未確認である。
+- 2026-08-15に`checkEmailAvailabilityGlobal`を有効な同社会社管理者へ限定し、2つの再構築Callableを同社の有効なスーパーユーザーへ統一した。3つの公開Callableと共有再構築認可を`functions/apis`の単体ファイルへ分離し、専用Emulator suite 51件を確認した。
+- 下記表は2026-08-11時点のdeep-review基準線である。現在の認証実装事実は`user-auth-lifecycle.md`と`callable-authorization.md`を正とし、Functions transport、remote、実dataは未確認である。
 
 ## per-file public contract
 

@@ -2033,9 +2033,9 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
-- 対象ファイル・シンボル: `rebuildAllHistories`、auth-v2 callables、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。rebuildAllHistoriesは未認証で任意companyIdを受け、隣接rebuildSecurityReportIndexesだけ認証+isSuperUserを強制する。createAdminAccountは認証のみで既存company/User/claimを拒否しない。email/pre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。Users/Companies Rulesは同社一般Userの直接writeを許す。
-- 想定影響と発生条件: disable/enable/changeAdminの旧Callable経由の任意操作は修正したが、未認証callerによる他社履歴再構築・負荷、直接Firestore writeによるUser/admin field変更、email/仮登録情報列挙、quota消費が起き得る。
+- 対象ファイル・シンボル: `functions/apis/*.js`、auth-v2 callables、`geocoding`、Users/Companies Rules
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`とpre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
 - 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。
 - 必要なテスト: 未認証、同社/他社、admin/non-admin/super-user、disabled、App Check有無、enumeration/rate、arbitrary companyId/uid。

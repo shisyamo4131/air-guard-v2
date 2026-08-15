@@ -89,6 +89,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - Functions Emulatorは起動せずCallable handlerを直接実行した。利用者用saved-dataは不変、専用saved-dataは読込専用だった。Functions transport、Dev・remote、実data、deploy、runtime service accountのAuth参照権限は未確認である。
 - 次は残る管理・signup Callableと本登録bootstrap例外の最小segmentへ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
 
+## Global email availability Callable checkpoint
+
+- `checkEmailAvailabilityGlobal`は、verified emailと正常な会社claimを持つ現在の有効なAuthentication User、同社の有効な本登録User、`User.isAdmin === true`がすべて整合する場合だけ許可する。`isSuperUser`だけでは許可しない。
+- 未認証、token不整合、現在Auth不在・未確認・無効・会社不一致、User不在・仮登録・無効・会社不一致・非管理者・型不正を更新前に拒否し、有効な会社管理者には全会社Userの重複確認を許可する。
+- `checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`を`functions/apis`の単体ファイルへ分離した。`functions/apis/index.js`は3つの公開Callableだけをexportし、2つの再構築で共有する`authorizeCompanyRebuild`は公開しない。
+- 正式なAPI index経由の専用loopback Emulator suite 51件、全domain単体test 201件、対象7ファイルの`node --check`、project-owned validator、managed governance validator、`git diff --check`はpassした。Functions Emulator、Functions transport、Dev・remote、実data、deployは未実施である。
+- 次は残るsignup・管理Callableのactor/tenant、App Check、rate limit、本登録bootstrap例外を最小segmentで扱う。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

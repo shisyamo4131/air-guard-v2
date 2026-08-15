@@ -86,7 +86,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## Rules・tenant・security
 
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
-- `checkEmailAvailabilityGlobal`、`checkEmailAvailability`、`checkUserPreRegistration`は未認証で呼べる。事前登録確認は一致emailについてcompanyId、displayName、roles、tempUserIdを返す。
+- `checkEmailAvailabilityGlobal`はverified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者を要求し、`isSuperUser`だけでは許可しない。`checkEmailAvailability`と`checkUserPreRegistration`は未認証で呼べ、事前登録確認は一致emailについてcompanyId、displayName、roles、tempUserIdを返す。
 - disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。実Callable/Emulator検証は未実施である。
 - 管理者移譲callableはcaller UIDとfromの一致、同社の唯一の有効な本登録会社管理者、移譲先User/Authのcompany・UID・登録・管理者・disabled状態をserverで確認する。実Callable/Emulator検証は未実施である。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。

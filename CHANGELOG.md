@@ -23,6 +23,7 @@
 
 ### Changed
 
+- 公開Callableの`checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`を`functions/apis`の単体ファイルへ分離し、API indexを公開export一覧へ限定した。再構築で共有する認可処理は内部moduleとして維持し、Cloud Functionsの公開名は変更していない。
 - スーパーユーザーの恒久的な全会社Firestore client accessを廃止する方針と、将来は明示的な手続きを経た一時的な他社support accessを提供する未実装構想を記録した。
 - application codeの標準実装者を利用者へ変更し、Codexを設計、仕様整理、security・差分review、test計画・許可済み検証、document、local Git管理へ集中させた。Codex developerは明示された補助実装、testerのtest code編集は明示されたtest scopeに限定した。
 - 認証・認可・tenant分離の改善を最優先とし、一括置換ではなく、現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを説明できる最小segmentごとに進める運用へ変更した。
@@ -63,6 +64,7 @@
 
 ### Security
 
+- 全会社Userのメールアドレス重複確認Callableを、確認済みメール、正常な会社claim、現在の有効なAuthentication User、同社の有効な本登録会社管理者がすべて整合する場合だけ許可した。`isSuperUser`だけでは許可せず、拒否経路と全会社重複検出を専用loopback Emulatorで検証した。
 - スーパーユーザー向けの履歴・警備日報インデックス再構築Callableを、ID token、現在のAuthentication User、同社の有効な本登録User、要求会社がすべて整合する場合だけ許可した。Auth無効・User無効・他社指定を含む拒否経路と両再構築の正常経路を専用loopback Emulatorで検証した。
 - StorageのSecurityReportsを、確認済みメール、正常な会社claim、同一tenant path、対応する有効な本登録Userがすべて整合する場合だけ許可するよう変更した。専用loopback Emulatorでupload、list、metadata、download URL、byte download、deleteと不正identity・他tenant拒否を検証した。
 - FirestoreのCompanies配下を、確認済みメール、正常な会社claim、同一tenant path、対応する有効な本登録Userがすべて整合する場合だけ許可するよう変更した。恒久的なsuper-user全会社bypassを廃止し、SecurityReportIndexesとStripeDataの個別操作制約を汎用ルールで迂回できないようにした。専用loopback Emulator 32件で検証した。
