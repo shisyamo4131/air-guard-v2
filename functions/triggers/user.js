@@ -12,6 +12,18 @@ import { getAuth } from "firebase-admin/auth";
 import { deleteUser } from "../modules/auth/deleteUser.js";
 import { syncUserAuthAccount } from "../modules/auth/syncUserAuthAccount.js";
 
+/**
+ * 削除されたUserに対応するAuthentication Userを削除してよいか判定します。
+ *
+ * 本登録済みであることを明示的に確認できない場合は、Auth削除を許可しません。
+ *
+ * @param {Object} userData - 削除されたUserドキュメントのデータ
+ * @returns {boolean} Authentication Userを削除してよい場合はtrue
+ */
+export function shouldDeleteAuthUser(userData) {
+  return userData?.isTemporary === false;
+}
+
 /*****************************************************************************
  * User ドキュメントの更新トリガー
  *****************************************************************************/
@@ -37,10 +49,12 @@ export const onUserDeleted = onDocumentDeleted(
   "Companies/{companyId}/Users/{docId}",
   async (event) => {
     const userId = event.params.docId;
+    const deletedUser = event.data?.data();
 
-    // 対応する Authentication ユーザーを削除
-    // → isTemporary=true の仮登録ユーザーの場合は Authentication が存在しないが
-    //   deleteUser 関数内でユーザーが存在しない場合のエラーは無視されるため問題なし
+    // 仮登録Userや状態を確認できないUserの削除ではAuthへ作用しない
+    if (!shouldDeleteAuthUser(deletedUser)) return;
+
+    // 本登録Userに対応するAuthentication Userを削除
     await deleteUser(userId);
   },
 );

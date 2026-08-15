@@ -1111,6 +1111,8 @@ SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/
 
 SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず、composableがemailで先頭docを再検索してverification成立前にsetupする。表示対象・setup対象・mailbox所有を同じone-time proof/revisionへbindしない。
 
+2026-08-15に、確認済みAuth emailへ完全一致する一意の仮登録だけを選ぶpolicy、会社ID・仮User IDをclient入力として受け取らないuse-case、内部識別子を返さないerror mappingを追加した。新use-caseはまだ既存Callableとclient flowへ接続しておらず、verification後実行、再読込、claims失敗後の回復、rate limit/App Check、既存重複dataは未解決である。仮User削除ではAuth削除triggerを停止するが、本登録User doc IDを利用するglobal Auth削除のRules/claim境界は残る。
+
 ## FUT-0083 User/Auth同期triggerの失敗と遅延を可視化・修復する
 
 - 状態: Open
