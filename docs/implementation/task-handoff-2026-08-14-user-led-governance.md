@@ -1,15 +1,17 @@
 # 2026-08-14 利用者主導開発ガバナンス交代引継ぎ
 
-- 状態: 新coordinator有効化済み・旧coordinator archive可能
-- new coordinator task: `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`
-- old coordinator task: `019ffe2d-ae4c-7420-a52c-b9279ced3f75` host `local`
-- callback destination: 新しいcheckpointはnew coordinator `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`
-- branch: `codex/user-led-development-governance`
-- coordinator有効化基準: `185e1728a4520ba7adedd5ae411c100046b33990`
-- main基準: `30c037ed618fab5a5958b4ced9a33302a17044c9`
-- 統治変更commit: `0c8e79d`
+- 状態: local repository直結の新coordinator有効化済み・旧coordinator archive可能
+- new coordinator task: `01a003d9-8782-79b2-9419-682e582bb1ac` host `local`（PM（AirGuardV2）-03）
+- old coordinator task: `019ffe53-4eb9-7922-9012-34a526ebbbd4` host `local`（PM（AirGuardV2）-02）
+- callback destination: 今後のcheckpointはnew coordinator `01a003d9-8782-79b2-9419-682e582bb1ac` host `local`
+- repository/environment: `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktreeではない
+- branch: `codex/auth-user-trigger-tenant-guard`
+- baseline HEAD: `25c78f484a1a9431a6792fe0f786b900386be0bc`
+- baseline worktree: clean
 - common governance version: `1.0.0`
 - 公式進捗: 10%（変更なし）
+- old worktree target: `C:\Users\seven\.codex\worktrees\9a17\air-guard-v2`
+- excluded worktree: `C:\Users\seven\.codex\worktrees\b4d7\air-guard-v2`は別task所有の可能性があるため対象外
 
 ## 完了した変更
 
@@ -24,27 +26,36 @@
 
 application code、Functions、Firebase Rules、Firebase設定、test code、実data、remote環境、外部serviceは変更していない。
 
-## 検証
+## local repository coordinatorの有効化結果
 
-- `scripts/check-project-docs.ps1`: pass。153 Markdown、15 ADR、1 roadmap、8 TOML。
-- `scripts/check-governance.ps1 -ProjectPath .`: pass。common governance 1.0.0、managed hash current、generated AGENTS current、project rules present。
-- `scripts/test-project-docs-check.ps1`: pass。valid baseline、invalid TOML、broken anchor、unindexed document、roadmap over-creditの期待結果を確認した。
-- `git diff --check`: pass。
-- application、Emulator、browser、remote、external、実data test: 今回は製品変更がないため未実施。
+- `WORKSPACE-HANDOFF-001`はcompleted。
+- cwdとGit top-levelは保存済みrepositoryそのものに一致し、Git directoryとcommon directoryはいずれも同repositoryの`.git`だった。
+- branchは`codex/auth-user-trigger-tenant-guard`、HEADは`25c78f484a1a9431a6792fe0f786b900386be0bc`、worktreeはcleanだった。
+- root `AGENTS.md`、`governance/project-rules.md`、task-routed authoritative documents、common governance 1.0.0、公式進捗10%をrepositoryから復元した。
+- application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路、差分review、test計画・許可済み検証、document、roadmap、ADR、local Gitを管理する。本task chainで利用者が明示したapplication実装範囲では、実装fileを1件ずつreviewし、test fileは利用者review不要、実装file提示前に単体testを行う。
+
+## Pre-integration checkpoint
+
+- baseline commit `25c78f4`（`security: prepare verified user account setup`）。
+- verified email、一意な仮登録、path/company一致、client指定`companyId`・`tempUserId`を信頼しないpolicy、use-case、安全なerror mappingを追加した。
+- 仮User削除時はglobal Authentication User削除へ進まないtrigger guardを追加した。
+- 新しい`setupUserAccount` use-caseは既存auth-v2 Callable/client flowへ未接続である。
+- 認証関連単体test 193件、project-owned validator、managed governance validator、4実装fileの`node --check`、`git diff --check`はpass済みである。
+- Emulator、remote環境、実dataを使う検証は未実施である。
+- 残存riskは、custom claims失敗後の部分状態、Security Rules、rate limit/App Check、既存重複data、登録User document ID経由のglobal Authentication User削除境界である。
 
 ## 未確認・承認境界
 
-- 新規coordinator taskの作成と有効化は完了した。旧coordinatorのarchiveは本記録だけを対象とする最初の実ファイル限定commitと`GOV-HANDOFF-002` callbackの成功後に、旧coordinatorが行う。
-- `main` merge、push、deploy、migration、remote data操作、外部service変更は未承認・未実施。
-- 認証問題の最初のsegmentは開始していない。branchと変更契約を含め、次の利用者指示を待つ。
+- `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。
+- 次は既存auth-v2 Callable/client flowへ接続する前の最小segmentから再開する。現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理する。
+- 旧coordinatorのarchiveは`WORKSPACE-HANDOFF-002` callback成功後に旧coordinatorが行う。新coordinatorはarchiveしない。
 
-## 新coordinatorの有効化結果
+## WORKSPACE-HANDOFF-002
 
-- `GOV-HANDOFF-001`はcompleted。最初の試行でdetached HEADを検出し、`recovery-1`で`codex/user-led-development-governance`へ接続した。
-- recovery後のHEADは`185e1728a4520ba7adedd5ae411c100046b33990`、worktreeはcleanだった。
-- common governance 1.0.0、active instruction sources、利用者主導のapplication実装、Codexの設計・review・検証・document・local Git管理、developerとtesterの境界、未承認操作をrepositoryから復元した。
-- taskとcallback destinationをnew coordinatorへ更新した。
-- 本記録だけを新coordinatorによる最初の実ファイル限定commitとして作成する。commit hashはGit履歴を正本とする。
-- `GOV-HANDOFF-002`完了後、旧coordinatorはarchive可能である。archive操作自体は旧coordinatorが行う。
+- 本記録だけを新coordinatorのowned fileとして更新し、project-owned validator、managed governance validator、`git diff --check`を実行する。
+- owned fileだけをstageし、`docs: activate local repository coordinator`でlocal commitする。application testは再実行しない。
+- commit後、旧worktree targetがexact path、元repository外、`9a17`配下、detached HEAD `ff9871a32e6d347de17a933c85e65dc3a6c0d4b1`、cleanであることを読み取り確認する。
+- 全条件が一致する場合だけ、元repositoryからnative Gitの`git worktree remove`を`--force`なしで実行する。`b4d7`は削除対象へ含めない。
+- 削除条件不一致または削除失敗時は再試行せず、完全な結果をcallbackへ残す。
 
 この記録にsecret、credential、private production data、Codex session本文は含めない。
