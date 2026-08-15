@@ -6,7 +6,7 @@
 - 対象セグメント: SPEC-SEG-049
 - 最終確認日: 2026-08-15
 - 根拠ファイル: `functions/index.js`、`functions/apis/*.js`、`functions/modules/auth-v2.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`test/local/codex-local-harness.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
-- 調査境界: entryからexportされるauth-v2 callable 7件とAPI callable 3件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。全domain単体test 201件と、Auth・Firestore・Storage EmulatorおよびCallable handlerの専用local suite 51件を実行した。Functions transport、Dev・remote、実dataは未確認。
+- 調査境界: entryからexportされるauth-v2 callable 6件とAPI callable 4件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。全domain単体test 201件と、Auth・Firestore・Storage EmulatorおよびCallable handlerの専用local suite 55件を実行した。Functions transport、Dev・remote、実dataは未確認。
 
 ## Callable別認証・対象解決
 
@@ -21,7 +21,7 @@
 | `enableUser` | disableと同じ | disableと同じ | 同じ境界で`disabled=false`へ更新 | 同上 |
 | `changeAdminUser` | 認証、caller UID/company claim、caller自身が唯一の有効な本登録会社管理者であることを必須化 | caller company配下のfrom/to User、`isAdmin=true`一覧、actor/target Auth UID・company claim・disabledを検証 | from/to必須・相違、from=actor、管理者1人、active registered targetを要求し、2 UserのisAdminとto.rolesをtransaction更新 | admin route内の変更dialog |
 
-`functions/index.js`は`auth-v2.js`と`apis/index.js`をstar exportする。`checkEmailAvailabilityGlobal`と2つの再構築Callableは`functions/apis`の単体ファイルからAPI indexを経由し、共有`authorizeCompanyRebuild`はAPI indexからexportしない。列挙したv2 callableに`enforceAppCheck`や共通rate limitは指定されない。
+`functions/index.js`は`auth-v2.js`と`apis/index.js`をstar exportする。`checkEmailAvailability`、`checkEmailAvailabilityGlobal`、2つの再構築Callableは`functions/apis`の単体ファイルからAPI indexを経由し、共有`authorizeCompanyRebuild`はAPI indexからexportしない。列挙したCallableに`enforceAppCheck`や共通rate limitは指定されない。
 
 ## caller・target・tenant境界
 

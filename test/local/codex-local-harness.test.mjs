@@ -1015,3 +1015,77 @@ test("global email availability Callable rejects an email already used by any co
     "already-exists",
   );
 });
+
+test("signup email availability Callable validates its input", async () => {
+  const { checkEmailAvailability } = await loadRebuildApis();
+
+  await assertCallableError(
+    checkEmailAvailability.run({ data: {} }),
+    "invalid-argument",
+  );
+  await assertCallableError(
+    checkEmailAvailability.run({
+      data: { email: "signup-invalid-flag@codex-test.invalid" },
+    }),
+    "invalid-argument",
+  );
+});
+
+test("signup email availability Callable rejects an existing Auth account", async () => {
+  const { checkEmailAvailability } = await loadRebuildApis();
+  const uid = "codex-signup-existing-auth";
+  const email = `${uid}@codex-test.invalid`;
+  await seedCallableAuthUser({ uid });
+
+  await assertCallableError(
+    checkEmailAvailability.run({ data: { email, isAdmin: true } }),
+    "already-exists",
+  );
+});
+
+test("signup email availability Callable checks global User duplication for an administrator signup", async () => {
+  const { checkEmailAvailability } = await loadRebuildApis();
+  const duplicateEmail = "signup-admin-duplicate@codex-test.invalid";
+  await seedRegisteredUser({
+    uid: "codex-signup-admin-existing-user",
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    email: duplicateEmail,
+  });
+
+  await assertCallableError(
+    checkEmailAvailability.run({
+      data: { email: duplicateEmail, isAdmin: true },
+    }),
+    "already-exists",
+  );
+
+  const result = await checkEmailAvailability.run({
+    data: {
+      email: "signup-admin-available@codex-test.invalid",
+      isAdmin: true,
+    },
+  });
+  assert.deepEqual(result, { available: true });
+});
+
+test("signup email availability Callable requires a temporary User for a normal signup", async () => {
+  const { checkEmailAvailability } = await loadRebuildApis();
+  const missingEmail = "signup-user-missing@codex-test.invalid";
+  await assertCallableError(
+    checkEmailAvailability.run({
+      data: { email: missingEmail, isAdmin: false },
+    }),
+    "not-found",
+  );
+
+  const email = "signup-user-registered@codex-test.invalid";
+  await seedRegisteredUser({
+    uid: "codex-signup-temporary-user",
+    isTemporary: true,
+    email,
+  });
+  const result = await checkEmailAvailability.run({
+    data: { email, isAdmin: false },
+  });
+  assert.deepEqual(result, { available: true });
+});

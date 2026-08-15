@@ -97,6 +97,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 正式なAPI index経由の専用loopback Emulator suite 51件、全domain単体test 201件、対象7ファイルの`node --check`、project-owned validator、managed governance validator、`git diff --check`はpassした。Functions Emulator、Functions transport、Dev・remote、実data、deployは未実施である。
 - 次は残るsignup・管理Callableのactor/tenant、App Check、rate limit、本登録bootstrap例外を最小segmentで扱う。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
 
+## Signup email availability API extraction checkpoint
+
+- `checkEmailAvailability`を`functions/modules/auth-v2.js`から`functions/apis/checkEmailAvailability.js`へ移し、`functions/apis/index.js`から公開した。Cloud Functionsの公開名、入力、応答、error、loggingを含む既存挙動は変更していない。
+- 正式なAPI index経由で入力型、Authentication重複、管理者登録時の全会社User重複、一般User登録時の仮User不在・存在を確認した。専用loopback Emulator suite 55件、全domain単体test 201件、対象ファイルの`node --check`、project-owned validator、managed governance validator、`git diff --check`はpassした。
+- 未認証入口、caller指定`isAdmin`、email登録状況を識別できる応答、App Check・rate limitは既存の残存riskである。Functions Emulator、Functions transport、Dev・remote、実data、deployは未実施である。
+- 次は`auth-v2.js`に残るCallableを一つずつ現行挙動と認可境界から確認し、利用者review後に単体APIへ整理する。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。
