@@ -3,10 +3,35 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    function hasValidIdentityClaims(companyId) {
+      return request.auth != null
+        && "email_verified" in request.auth.token
+        && request.auth.token.email_verified is bool
+        && request.auth.token.email_verified == true
+        && "companyId" in request.auth.token
+        && request.auth.token.companyId is string
+        && request.auth.token.companyId.size() > 0
+        && request.auth.token.companyId == companyId;
+    }
+
+    function hasActiveRegisteredUser(companyId) {
+      return hasValidIdentityClaims(companyId)
+        && firestore.exists(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid))
+        && "companyId" in firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.companyId is string
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.companyId == companyId
+        && "isTemporary" in firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.isTemporary is bool
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.isTemporary == false
+        && "disabled" in firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.disabled is bool
+        && firestore.get(/databases/(default)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data.disabled == false;
+    }
+
     // 警備日報写真
-    // - 認証済みユーザーであれば読み書き可能
+    // - 同じ会社の有効な本登録ユーザーだけが読み書き可能
     match /Companies/{companyId}/Operations/{operationId}/SecurityReports/{file} {
-      allow read, write: if request.auth != null;
+      allow read, write: if hasActiveRegisteredUser(companyId);
     }
 
     // その他のパスはすべて拒否

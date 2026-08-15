@@ -106,7 +106,7 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendantの同一tenant操作・他tenant拒否と、SecurityReportIndexes・StripeDataの個別操作制約を含む32件です。Functions、Storage Rules、Realtime Database Rules、画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを含む39件です。Functions、Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 
@@ -158,6 +158,14 @@ npm run generate:prod
 4. `firebase use <alias>` で対象を確認する。
 5. デプロイ対象と影響を確認し、明示的承認後に `firebase deploy` または限定デプロイを行う。
 6. Firebase Console、Functions ログ、対象画面で結果を確認する。
+
+Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場合、coordinatorはStorage Rulesを含むデプロイ承認を求める前に、利用者へ次を明示して通知する。
+
+- 対象Firebase project ID・aliasと、Storage Rulesをデプロイすること。
+- Firebase CLIまたはConsoleがStorageとFirestoreの連携許可を求める可能性があること。
+- 許可時にFirebase Storage service accountへ`Firebase Rules Firestore Service Agent` roleが付与されること。
+- 許可が付与済みか、初回promptで付与できたか、権限不足で失敗したかをデプロイ結果として報告すること。
+- デプロイ後に正常Userと拒否対象UserのStorage accessを確認し、連携roleが欠ける場合のfail-closedを検出すること。
 
 開発環境の生成、Firebase alias の切り替え、デプロイを連続して行うスクリプトも定義されています。
 

@@ -73,6 +73,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 専用local suiteは32件すべてpassし、Functions未起動、利用者用saved-data不変、専用saved-data読込専用を確認した。remote、実data、deployは未実施である。
 - Firestore Rules fileは利用者確認済み。次はStorage Rulesの最小segment、その後Callableと本登録bootstrap例外へ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
 
+## Storage identity gate checkpoint
+
+- StorageのSecurityReports pathでは、Authentication email確認済み、非空文字列の会社claim、claim会社配下に存在する同一companyの本登録User、`isTemporary === false`、`disabled === false`、要求tenant path一致をすべて要求する。恒久的なsuper-user他社bypassは設けない。
+- 専用loopback Emulatorでupload、list、metadata、download URL、byte download、custom metadata、deleteと、未認証、未確認・不正claim、User不在、仮登録、無効、field欠損・型不正、会社不一致、super-user他社拒否を確認した。Firestore・Storageを含むlocal suite 39件はpassした。
+- `utils/storage.js`のStorage pathはRulesと一致し、既存client flowに直ちに必要な実装修正は確認されなかった。画像圧縮、Vue画面、thumbnail Functions、StorageとFirestoreの連携IAM、Dev・remote受入れは未確認である。
+- Storage Rulesを含む次回deploy前に、対象project・alias、cross-service IAM許可prompt、`Firebase Rules Firestore Service Agent` roleを利用者へ通知し、明示承認後にだけ実行する運用を追加した。
+- 次はCallable identity gateと本登録bootstrap例外へ進む。全認可整合性gateが完了するまでdeploy不可の境界は変わらない。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

@@ -9,6 +9,14 @@ import {
 } from "firebase/auth";
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import {
+  deleteObject,
+  getDownloadURL,
+  getMetadata,
+  listAll,
+  ref as storageRef,
+  uploadBytes,
+} from "firebase/storage";
+import {
   assertFails,
   assertSucceeds,
   initializeTestEnvironment,
@@ -60,6 +68,23 @@ function authenticatedFirestore(uid, claims = {}) {
     .firestore();
 }
 
+function authenticatedStorage(uid, claims = {}) {
+  return testEnvironment
+    .authenticatedContext(uid, {
+      email_verified: true,
+      companyId: CODEX_LOCAL_COMPANIES.primary.id,
+      ...claims,
+    })
+    .storage();
+}
+
+function securityReportRef(storage, companyId, fileName) {
+  return storageRef(
+    storage,
+    `Companies/${companyId}/Operations/rules-operation/SecurityReports/${fileName}`,
+  );
+}
+
 const TENANT_READ_WRITE_COLLECTIONS = [
   "ArrangementNotifications",
   "Articles",
@@ -85,10 +110,16 @@ before(async () => {
   assert.equal(process.env.FUNCTIONS_EMULATOR, undefined);
 
   const firestoreHost = parseEmulatorHost("FIRESTORE_EMULATOR_HOST");
+  const storageHost = parseEmulatorHost("FIREBASE_STORAGE_EMULATOR_HOST");
   const rules = await readFile(new URL("../../firestore.rules", import.meta.url), "utf8");
+  const storageRules = await readFile(
+    new URL("../../storage.rules", import.meta.url),
+    "utf8",
+  );
   testEnvironment = await initializeTestEnvironment({
     projectId: CODEX_LOCAL_PROJECT_ID,
     firestore: { ...firestoreHost, rules },
+    storage: { ...storageHost, rules: storageRules },
   });
 });
 
@@ -470,4 +501,174 @@ test("Firestore Rules keep StripeData client update and delete denied", async ()
   await assertFails(getDoc(existingOtherTenant));
   await assertFails(setDoc(existingOtherTenant, { fixture: false }));
   await assertFails(deleteDoc(existingOtherTenant));
+});
+
+test("Storage Rules reject unauthenticated SecurityReports access", async () => {
+  const storage = testEnvironment.unauthenticatedContext().storage();
+  const report = securityReportRef(
+    storage,
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "unauthenticated.jpg",
+  );
+
+  await assertFails(uploadBytes(report, new Uint8Array([1])));
+  await assertFails(getMetadata(report));
+});
+
+test("Storage Rules allow an active registered User only in the matching tenant", async () => {
+  const uid = "codex-storage-active-user";
+  await seedRegisteredUser({ uid });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await uploadBytes(
+      securityReportRef(
+        context.storage(),
+        CODEX_LOCAL_COMPANIES.secondary.id,
+        "other-tenant.jpg",
+      ),
+      new Uint8Array([2]),
+    );
+  });
+  const storage = authenticatedStorage(uid);
+  const sameTenant = securityReportRef(
+    storage,
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "same-tenant.jpg",
+  );
+  const otherTenant = securityReportRef(
+    storage,
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "other-tenant.jpg",
+  );
+
+  await assertSucceeds(
+    uploadBytes(sameTenant, new Uint8Array([1]), {
+      contentType: "image/jpeg",
+      customMetadata: { uploadedBy: uid },
+    }),
+  );
+  const metadata = await assertSucceeds(getMetadata(sameTenant));
+  assert.equal(metadata.contentType, "image/jpeg");
+  assert.equal(metadata.customMetadata.uploadedBy, uid);
+  const folder = storageRef(
+    storage,
+    `Companies/${CODEX_LOCAL_COMPANIES.primary.id}/Operations/rules-operation/SecurityReports`,
+  );
+  const listed = await assertSucceeds(listAll(folder));
+  assert.ok(listed.items.some((item) => item.fullPath === sameTenant.fullPath));
+  const downloadUrl = await assertSucceeds(getDownloadURL(sameTenant));
+  const downloadResponse = await fetch(downloadUrl);
+  assert.equal(downloadResponse.ok, true);
+  assert.deepEqual(
+    new Uint8Array(await downloadResponse.arrayBuffer()),
+    new Uint8Array([1]),
+  );
+  await assertSucceeds(deleteObject(sameTenant));
+  await assert.rejects(
+    getMetadata(sameTenant),
+    (error) => error?.code === "storage/object-not-found",
+  );
+  await assertFails(uploadBytes(otherTenant, new Uint8Array([3])));
+  await assertFails(getMetadata(otherTenant));
+  await assertFails(deleteObject(otherTenant));
+});
+
+test("Storage Rules reject unverified and malformed identity claims", async () => {
+  const uid = "codex-storage-invalid-claims-user";
+  await seedRegisteredUser({ uid });
+
+  for (const [index, claims] of [
+    { email_verified: false },
+    { email_verified: "true" },
+    { companyId: null },
+    { companyId: 1 },
+    { companyId: true },
+    { companyId: "" },
+  ].entries()) {
+    const report = securityReportRef(
+      authenticatedStorage(uid, claims),
+      CODEX_LOCAL_COMPANIES.primary.id,
+      `invalid-${index}.jpg`,
+    );
+    await assertFails(uploadBytes(report, new Uint8Array([1])));
+  }
+
+  const missingClaimsStorage = testEnvironment
+    .authenticatedContext(uid, {})
+    .storage();
+  await assertFails(
+    uploadBytes(
+      securityReportRef(
+        missingClaimsStorage,
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "missing-claims.jpg",
+      ),
+      new Uint8Array([1]),
+    ),
+  );
+});
+
+test("Storage Rules reject a missing registered User", async () => {
+  const report = securityReportRef(
+    authenticatedStorage("codex-storage-missing-user"),
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "missing-user.jpg",
+  );
+
+  await assertFails(uploadBytes(report, new Uint8Array([1])));
+});
+
+test("Storage Rules reject temporary, disabled, and malformed Users", async () => {
+  const cases = [
+    ["temporary", { isTemporary: true }],
+    ["disabled", { disabled: true }],
+    ["invalid-temporary", { isTemporary: "false" }],
+    ["invalid-disabled", { disabled: "false" }],
+    ["missing-temporary", { omit: ["isTemporary"] }],
+    ["missing-disabled", { omit: ["disabled"] }],
+  ];
+
+  for (const [name, user] of cases) {
+    const uid = `codex-storage-${name}-user`;
+    await seedRegisteredUser({ uid, ...user });
+    const report = securityReportRef(
+      authenticatedStorage(uid),
+      CODEX_LOCAL_COMPANIES.primary.id,
+      `${name}.jpg`,
+    );
+    await assertFails(uploadBytes(report, new Uint8Array([1])));
+  }
+});
+
+test("Storage Rules reject a membership company mismatch", async () => {
+  const uid = "codex-storage-membership-mismatch-user";
+  await seedRegisteredUser({
+    uid,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+  });
+  const report = securityReportRef(
+    authenticatedStorage(uid),
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "membership-mismatch.jpg",
+  );
+
+  await assertFails(uploadBytes(report, new Uint8Array([1])));
+});
+
+test("Storage Rules reject permanent super-user cross-tenant access", async () => {
+  const uid = "codex-storage-super-user";
+  await seedRegisteredUser({ uid });
+  const storage = authenticatedStorage(uid, { isSuperUser: true });
+  const sameTenant = securityReportRef(
+    storage,
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "super-user-same-tenant.jpg",
+  );
+  const otherTenant = securityReportRef(
+    storage,
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "super-user-other-tenant.jpg",
+  );
+
+  await assertSucceeds(uploadBytes(sameTenant, new Uint8Array([1])));
+  await assertFails(uploadBytes(otherTenant, new Uint8Array([1])));
 });
