@@ -13,6 +13,10 @@ import { mapUserEnabledStateError } from "./auth/mapUserEnabledStateError.js";
 import { transferCompanyAdmin } from "./auth/transferCompanyAdmin.js";
 import { mapCompanyAdminTransferError } from "./auth/mapCompanyAdminTransferError.js";
 
+// 一般User本登録処理
+import { setupUserAccount as setupUserAccountUseCase } from "./auth/setupUserAccount.js";
+import { mapUserAccountSetupError } from "./auth/mapUserAccountSetupError.js";
+
 /**
  * メールアドレスの利用可不可をチェック（グローバル）
  * - Users コレクションについて、グローバルにメールアドレスの重複をチェックします。
@@ -342,100 +346,42 @@ export const checkUserPreRegistration = onCall(async (request) => {
 });
 
 /**
- * 一般ユーザーアカウント作成
- * クライアント側でAuthentication作成後に呼び出される
- * 認証状態での実行を想定
- * @param {Object} request
- * @param {Object} request.auth - 認証情報
- * @param {Object} request.data
- * @param {string} request.data.companyId - 会社ID
- * @param {string} request.data.tempUserId - 仮ユーザードキュメントID
- * @return {Object} 処理結果
+ * 一般User本登録Callableを処理します。
+ *
+ * Authenticationの確認済みメールアドレスから事前登録を解決するため、
+ * クライアント指定の会社ID・仮User IDは使用しません。policyを含む
+ * use-caseとFirebaseサービスは固定し、実装依存関係を差し替える
+ * production APIは公開しません。
+ *
+ * @param {Object} request - Callableリクエスト
+ * @return {Promise<{success: boolean, companyId: string, userId: string}>}
  */
-export const setupUserAccount = onCall(async (request) => {
+async function handleSetupUserAccountRequest(request) {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const { companyId, tempUserId } = request.data;
-  const uid = request.auth.uid;
-  const email = request.auth.token.email;
-
-  if (!companyId || !tempUserId) {
-    throw new HttpsError(
-      "invalid-argument",
-      "必須パラメータが不足しています。",
-    );
-  }
-
-  logger.info(
-    `setupUserAccount started for UID: ${uid}, Email: ${email}, CompanyId: ${companyId}`,
-  );
-
   try {
-    const db = getFirestore();
-    const auth = getAuth();
-
-    // 仮Userドキュメントの存在、メールアドレスの一致、仮登録状態であることを確認
-    const tempUser = new User();
-    const tempUserExists = await tempUser.fetch({
-      docId: tempUserId,
-      prefix: `Companies/${companyId}`,
+    return await setupUserAccountUseCase({
+      auth: getAuth(),
+      firestore: getFirestore(),
+      authUid: request.auth.uid,
+      authEmail: request.auth.token?.email,
+      authEmailVerified: request.auth.token?.email_verified,
     });
-    if (!tempUserExists) {
-      throw new HttpsError("not-found", "事前登録が見つかりません。");
-    }
-    if (tempUser.email !== email) {
-      throw new HttpsError(
-        "permission-denied",
-        "メールアドレスが一致しません。",
-      );
-    }
-    if (!tempUser.isTemporary) {
-      throw new HttpsError(
-        "failed-precondition",
-        "このユーザーは既に本登録されています。",
-      );
-    }
-
-    // 本登録用インスタンスの準備
-    const user = new User({ ...tempUser.toObject(), isTemporary: false });
-
-    // トランザクションで本Userドキュメント作成と仮ドキュメント削除
-    await db.runTransaction(async (transaction) => {
-      await tempUser.delete({ transaction, prefix: `Companies/${companyId}` });
-      await user.create({
-        docId: uid,
-        transaction,
-        prefix: `Companies/${companyId}`,
-      });
-
-      logger.info(
-        `User document created with ID: ${uid} for UID: ${uid}, temp doc deleted: ${tempUserId}`,
-      );
-    });
-
-    // カスタムクレーム設定
-    await auth.setCustomUserClaims(uid, {
-      companyId,
-      isSuperUser: false,
-    });
-
-    logger.info(`Custom claims set for UID: ${uid}, CompanyId: ${companyId}`);
-
-    return { success: true };
   } catch (error) {
-    logger.error("setupUserAccount でエラーが発生しました:", error);
+    const mappedError = mapUserAccountSetupError(error);
+    logger.error("User account setup failed", {
+      errorName: error?.name,
+      errorCode: error?.code,
+    });
 
-    if (error instanceof HttpsError) {
-      throw error;
-    }
-
-    throw new HttpsError(
-      "internal",
-      "ユーザーアカウント作成中に予期しないエラーが発生しました。",
-    );
+    throw new HttpsError(mappedError.code, mappedError.message);
   }
+}
+
+export const setupUserAccount = onCall(async (request) => {
+  return handleSetupUserAccountRequest(request);
 });
 
 /**

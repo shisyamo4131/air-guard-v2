@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲のactor/company/target境界を修正した。一般User本登録のverified email・一意仮登録policy/use-case/error mappingは追加したが、既存Callable/clientへ未接続である。Rules、Storage、Emulator/remote検証も未完了。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲のactor/company/target境界を修正した。一般User本登録をverified email・一意仮登録use-caseとメール確認後client flowへ接続した。Auth claim・tenant path・User状態の認可整合性、Rules、Storage、Emulator/remote検証は未完了で、deploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Critical security問題を利用者が仕様理解できる最小segmentへ分け、remote dataに触れないEmulator/contract test計画、現行の攻撃・失敗経路、Rules/Functions/modelの変更契約、互換性、rollback、陰性testを1件ずつ決める。application codeは利用者が原則実装し、Codexは設計、差分review、許可済み検証、document、local Gitを担当する。
+1. Auth claim・tenant path・User状態の認可整合性を次の最優先segmentとし、Firestore、Storage、Callableを確認済みメール、正常な会社claim、path一致、有効な本登録Userが揃う場合だけ許可する。bootstrap Callableの限定例外、remote dataに触れないRules/contract test、互換性、rollback、陰性testを先に確定し、このgate完了まで一般User本登録client接続をdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -97,3 +97,4 @@
 | 2026-08-14 | 10% | 0 | User有効化・無効化をactor company起点のFirestore transactionへ変更し、有効な本登録会社管理者、別UIDの本登録非管理者target、Auth UID/company claimを更新前に検証するよう改修した。認証単体test 75件は成功したが、管理者移譲等の残存問題、Emulator、既存data、運用受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | 会社管理者移譲をactor本人かつ同社の唯一の有効な本登録管理者に限定し、移譲元・移譲先のUser/Auth整合性、管理者数、無効・仮登録状態を同一Firestore transactionの更新前に検証するよう改修した。認証関連単体test 151件と4ファイルの構文検査は成功したが、Functions依存packageを使う実import、Emulator、既存data、Rules、運用受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | 一般User本登録のverified email、一意仮登録、path/company一致、client指定ID非信頼をpolicy/use-caseへ分離し、安全なerror mappingと仮User削除時のAuth削除抑止を追加した。認証関連単体test 193件は成功したが、既存Callable/client flowへの接続、部分状態回復、Rules、rate limit、Emulator/remote受入れは未完了のため進捗は据え置いた。 |
+| 2026-08-15 | 10% | 0 | 一般User本登録を既存Callableとメール確認後client flowへ接続し、client指定会社ID・仮User IDを廃止した。全domain単体test 200件と4実装fileの構文・SFC検査は成功した。Auth claim・tenant path・User状態の認可整合性、Rules、Storage、Emulator/remote受入れが未完了でdeploy不可のため、進捗は据え置いた。 |

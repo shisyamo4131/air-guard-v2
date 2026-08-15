@@ -56,14 +56,12 @@ export const useAuthFunctions = () => {
 
   /**
    * 利用者アカウント作成
-   * @param {Object} data
-   * @param {string} data.companyId - 会社ID
-   * @param {string} data.tempUserId - 仮ユーザードキュメントID
-   * @returns {Promise<{success: boolean}>}
+   * Authenticationの確認済みメールアドレスからserver側で仮登録を解決します。
+   * @returns {Promise<{success: boolean, companyId: string, userId: string}>}
    */
-  const setupUserAccount = async (data) => {
+  const setupUserAccount = async () => {
     const callable = httpsCallable($functions, "setupUserAccount");
-    const result = await callable(data);
+    const result = await callable();
     return result.data;
   };
 

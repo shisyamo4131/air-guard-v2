@@ -44,6 +44,17 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - Emulator、remote環境、実dataを使う検証は未実施である。
 - 残存riskは、custom claims失敗後の部分状態、Security Rules、rate limit/App Check、既存重複data、登録User document ID経由のglobal Authentication User削除境界である。
 
+## Client integration checkpoint
+
+- 既存`setupUserAccount` Callableを新use-caseと安全なerror mappingへ接続し、client指定`companyId`・`tempUserId`を廃止した。
+- 一般Userのclient flowはAuthentication account作成と確認メール送信で停止し、メール確認後にID tokenを強制更新してから本登録する。管理者は既存`companyId` claimにより一般User本登録をskipする。
+- 確認画面のpollingをsingle-flight化し、本登録後に最新claimでsessionを初期化してからdashboardへ遷移する。
+- application実装4fileは利用者が1fileずつreviewして確認済み。追加test fileは利用者review不要の契約に従った。
+- 全domain単体test 200件、3 JavaScript実装fileの`node --check`、1 Vue SFC compile、`git diff --check`はpassした。Emulator、remote環境、実dataは未実施である。
+- Auth accountが有効でも、確認済みメール、正常な会社claim、tenant path、対応する有効な本登録Userの整合が揃わなければFirestore、Storage、Callableを拒否する方針を利用者が採用した。
+- 上記認可整合性は次の最優先segmentかつrelease blockerである。Firestore Rules、Storage Rules、Callableの実装と陰性testが完了するまで、本client接続をdeployしない。
+- 残存riskは、custom claims失敗後の部分状態、既発行tokenとclaimの陳腐化、Rules、rate limit/App Check、既存重複data、登録User document ID経由のglobal Authentication User削除境界である。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

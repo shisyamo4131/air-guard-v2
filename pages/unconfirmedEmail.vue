@@ -16,11 +16,13 @@ const messages = useMessagesStore();
 const router = useRouter();
 const { $auth } = useNuxtApp();
 const { setUser } = useAuthActions();
+const { setupUserAccount } = useAuthFunctions();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 let intervalId = null;
+let verificationCheckInProgress = false;
 
 /*****************************************************************************
  * METHODS
@@ -43,12 +45,32 @@ const handleSendEmailVerification = async () => {
  *****************************************************************************/
 onMounted(() => {
   intervalId = setInterval(async () => {
-    if ($auth.currentUser) {
-      await $auth.currentUser.reload();
-      if ($auth.currentUser.emailVerified) {
-        await setUser($auth.currentUser);
-        router.replace("/dashboard"); // 認証後のリダイレクト先
+    const currentUser = $auth.currentUser;
+    if (!currentUser || verificationCheckInProgress) return;
+
+    verificationCheckInProgress = true;
+
+    try {
+      await currentUser.reload();
+      if (!currentUser.emailVerified) return;
+
+      // email_verifiedを反映したtokenで本登録Callableを呼ぶ
+      const idTokenResult = await currentUser.getIdTokenResult(true);
+
+      // 管理者はcreateAdminAccountでcompanyId claimを設定済みのため、
+      // companyId claimがない一般Userだけ本登録する
+      if (!idTokenResult.claims?.companyId) {
+        await setupUserAccount();
       }
+
+      // setupUserAccountで設定されたclaimを取得し、sessionを初期化する
+      await setUser(currentUser);
+      await router.replace("/dashboard");
+    } catch (error) {
+      errors.clear();
+      errors.add(error);
+    } finally {
+      verificationCheckInProgress = false;
     }
   }, 3000); // 3秒ごとにチェック
 });
