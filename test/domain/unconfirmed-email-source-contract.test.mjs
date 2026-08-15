@@ -6,6 +6,10 @@ const sourceUrl = new URL("../../pages/unconfirmedEmail.vue", import.meta.url);
 
 test("verified normal user completes setup before session initialization", async () => {
   const source = await readFile(sourceUrl, "utf8");
+  assert.match(
+    source,
+    /import \{ useAuthFunctions \} from "@\/composables\/auth\/useAuthFunctions";/,
+  );
   const reloadIndex = source.indexOf("await currentUser.reload()");
   const refreshIndex = source.indexOf(
     "await currentUser.getIdTokenResult(true)",

@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useAuthActions } from "@/composables/application/auth/useAuthActions";
+import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 
 definePageMeta({ layout: "auth" });
 

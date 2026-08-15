@@ -55,6 +55,16 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 上記認可整合性は次の最優先segmentかつrelease blockerである。Firestore Rules、Storage Rules、Callableの実装と陰性testが完了するまで、本client接続をdeployしない。
 - 残存riskは、custom claims失敗後の部分状態、既発行tokenとclaimの陳腐化、Rules、rate limit/App Check、既存重複data、登録User document ID経由のglobal Authentication User削除境界である。
 
+## Client local acceptance checkpoint
+
+- 利用者が起動したlocal Emulator、local server、認証済みChromeを使い、会社管理者兼super-userの既存session回帰と一般User本登録flowを確認した。super-user用の再構築処理は本segment外であり実行していない。
+- 一般User本登録の初回確認で`unconfirmedEmail.vue`の`useAuthFunctions`明示import漏れを検出して修正した。
+- メール確認済みでも`companyId` claimが未設定のUserをglobal middlewareがdashboardへ早期転送し、本登録Callableを実行できない問題を修正した。メール未確認または会社claim未設定の認証Userは`/unconfirmedEmail`へ限定し、両方が揃ったUserだけ通常の画面認可へ進む。
+- local合成Userで仮登録照合、Authentication account作成、メール確認、本登録Callable、`companyId`と`isSuperUser: false`のclaim反映、dashboard到達、再読込み後のFirestore error不在を確認した。
+- 全domain単体test 201件、対象middlewareの`node --check`、対象Vue SFC compile、project-owned validator、managed governance validator、`git diff --check`はpassした。
+- prod環境は未構築であり確認対象外。Dev環境、remote data、deploy、実dataは未接続・未実施である。
+- 次はAuth claim・tenant path・User状態の認可整合性を最優先segmentとして再開する。Firestore、Storage、Callableの保護が完了するまでdeploy不可の境界は変わらない。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。
