@@ -1268,6 +1268,47 @@ test("admin account creation Callable rejects disabled, mismatched, and already 
   }
 });
 
+test("admin account creation Callable rejects an existing User email in any registration state", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+
+  for (const isTemporary of [false, true]) {
+    const state = isTemporary ? "temporary" : "registered";
+    const uid = `codex-admin-exists-${isTemporary ? "temp" : "reg"}`;
+    const email = `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({
+      uid,
+      companyId: null,
+      email,
+      isSuperUser: false,
+    });
+    await seedRegisteredUser({
+      uid: `${uid}-user-document`,
+      pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      email,
+      isTemporary,
+    });
+
+    await assertCallableError(
+      createAdminAccount.run(
+        callableRequest({
+          uid,
+          claims: {
+            companyId: undefined,
+            email,
+            isSuperUser: false,
+          },
+          data: {
+            companyName: "既存User拒否会社",
+            companyNameKana: "キソンユーザーキョヒガイシャ",
+            displayName: "管理者",
+          },
+        }),
+      ),
+      "already-exists",
+    );
+  }
+});
+
 test("admin account creation Callable creates the Company, User, and custom claims", async () => {
   const { createAdminAccount } = await loadRebuildApis();
   const uid = "codex-create-admin-account";

@@ -61,6 +61,19 @@ export const createAdminAccount = onCall(async (request) => {
       );
     }
 
+    const existingUsers = await db
+      .collectionGroup("Users")
+      .where("email", "==", email)
+      .limit(1)
+      .get();
+
+    if (!existingUsers.empty) {
+      throw new HttpsError(
+        "already-exists",
+        "このメールアドレスは既に使用されています。",
+      );
+    }
+
     logger.info("createAdminAccount identity validation passed.");
 
     // トランザクションでCompanyとUser作成
