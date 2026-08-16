@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 1 | 8 | UWB-01契約確定、実装未開始 |
+| 実装ゲート | 1 | 9 | UWB-01契約確定、UWB-02進行中 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -134,8 +134,10 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 作業
 
-- [ ] permission catalogへ`users:write`を追加する。
-- [ ] `manager`と`human-resource`へ`users:write`を付与する。
+- [x] clientとFunctionsに同一のrole・permission対応表を設置する。
+- [x] parity testで両対応表の完全一致を検証する。
+- [x] permission catalogへ`users:write`を追加する。
+- [x] `manager`と`human-resource`へ`users:write`を付与する。
 - [ ] `employees:write`だけではUser管理を許可しないtestを追加する。
 - [ ] User一覧とEmployee詳細で、閲覧とUser管理actionの表示条件を分離する。
 - [ ] 会社管理者は明示permissionの有無にかかわらず仮登録Userを管理できることを維持する。
@@ -262,7 +264,28 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] 既存CallableはAdmin SDK経由で正常に動作する。
 - [ ] 利用者が`firestore.rules`を確認している。
 
-### UWB-08 全体検証・文書確定・main統合準備
+### UWB-08 role・permission対応表のschemas package統合
+
+- 状態: Not started
+- 対象repository: `air-guard-v2-schemas`、本repositoryのroot・Functions dependency
+
+#### 作業
+
+- [ ] client／Functionsで重複管理しているrole・permission対応表をschemas packageの共通constantsへ移す。
+- [ ] schemas packageの責務、export名、互換性、version、公開順序を提示し、別repository変更の明示承認を得る。
+- [ ] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
+- [ ] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
+- [ ] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
+- [ ] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
+
+#### 完了条件
+
+- [ ] role・permission対応表の正本がschemas package内の1箇所だけになっている。
+- [ ] rootとFunctionsが同じ公開versionと内容を使用している。
+- [ ] package更新・rollback・導入順序が記録されている。
+- [ ] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
+
+### UWB-09 全体検証・文書確定・main統合準備
 
 - 状態: Not started
 
@@ -279,7 +302,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] UWB-01〜UWB-07がすべて完了している。
+- [ ] UWB-01〜UWB-08がすべて完了している。
 - [ ] local testとChrome受入れがすべて成功している。
 - [ ] 利用者がUWBのlocal確定を明示している。
 - [ ] main統合対象commit、差分、test、未確認事項が提示されている。
