@@ -1016,7 +1016,7 @@ test("global email availability Callable rejects an email already used by any co
   );
 });
 
-test("signup email availability Callable validates its input", async () => {
+test("administrator signup email preflight validates its input", async () => {
   const { checkEmailAvailability } = await loadRebuildApis();
 
   await assertCallableError(
@@ -1025,25 +1025,25 @@ test("signup email availability Callable validates its input", async () => {
   );
   await assertCallableError(
     checkEmailAvailability.run({
-      data: { email: "signup-invalid-flag@codex-test.invalid" },
+      data: { email: 123 },
     }),
     "invalid-argument",
   );
 });
 
-test("signup email availability Callable rejects an existing Auth account", async () => {
+test("administrator signup email preflight rejects an existing Auth account", async () => {
   const { checkEmailAvailability } = await loadRebuildApis();
   const uid = "codex-signup-existing-auth";
   const email = `${uid}@codex-test.invalid`;
   await seedCallableAuthUser({ uid });
 
   await assertCallableError(
-    checkEmailAvailability.run({ data: { email, isAdmin: true } }),
+    checkEmailAvailability.run({ data: { email } }),
     "already-exists",
   );
 });
 
-test("signup email availability Callable checks global User duplication for an administrator signup", async () => {
+test("administrator signup email preflight checks global User duplication", async () => {
   const { checkEmailAvailability } = await loadRebuildApis();
   const duplicateEmail = "signup-admin-duplicate@codex-test.invalid";
   await seedRegisteredUser({
@@ -1054,40 +1054,30 @@ test("signup email availability Callable checks global User duplication for an a
 
   await assertCallableError(
     checkEmailAvailability.run({
-      data: { email: duplicateEmail, isAdmin: true },
+      data: { email: duplicateEmail },
     }),
     "already-exists",
   );
 
   const result = await checkEmailAvailability.run({
-    data: {
-      email: "signup-admin-available@codex-test.invalid",
-      isAdmin: true,
-    },
+    data: { email: "signup-admin-available@codex-test.invalid" },
   });
   assert.deepEqual(result, { available: true });
 });
 
-test("signup email availability Callable requires a temporary User for a normal signup", async () => {
+test("caller isAdmin cannot select a weaker email preflight policy", async () => {
   const { checkEmailAvailability } = await loadRebuildApis();
-  const missingEmail = "signup-user-missing@codex-test.invalid";
-  await assertCallableError(
-    checkEmailAvailability.run({
-      data: { email: missingEmail, isAdmin: false },
-    }),
-    "not-found",
-  );
-
-  const email = "signup-user-registered@codex-test.invalid";
+  const email = "signup-admin-existing-temporary@codex-test.invalid";
   await seedRegisteredUser({
-    uid: "codex-signup-temporary-user",
+    uid: "codex-signup-admin-existing-temporary",
     isTemporary: true,
     email,
   });
-  const result = await checkEmailAvailability.run({
-    data: { email, isAdmin: false },
-  });
-  assert.deepEqual(result, { available: true });
+
+  await assertCallableError(
+    checkEmailAvailability.run({ data: { email, isAdmin: false } }),
+    "already-exists",
+  );
 });
 
 test("API index exports every public Callable without internal request helpers", async () => {
