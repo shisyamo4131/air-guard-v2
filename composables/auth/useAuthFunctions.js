@@ -15,11 +15,9 @@ export const useAuthFunctions = () => {
   };
 
   /**
-   * メールアドレスが利用可能かをチェックします。
-   * - isAdminフラグに基づき、管理者登録または利用者登録用としてチェックします。
+   * 管理者サインアップ前にメールアドレスが利用可能かをチェックします。
    * @param {Object} data
    * @param {string} data.email - メールアドレス
-   * @param {boolean} data.isAdmin - 管理者フラグ
    * @returns {Promise<{available: boolean}>}
    */
   const checkEmailAvailability = async (data) => {
