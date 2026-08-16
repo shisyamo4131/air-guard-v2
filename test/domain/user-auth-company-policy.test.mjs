@@ -117,6 +117,7 @@ test("target Auth account with matching UID and company passes", () => {
         uid: USER_ID,
         customClaims: {
           companyId: COMPANY_ID,
+          isSuperUser: false,
         },
       },
     }),
@@ -162,6 +163,7 @@ test("target Auth account from another company is rejected", () => {
           uid: USER_ID,
           customClaims: {
             companyId: "company-b",
+            isSuperUser: false,
           },
         },
       }),
@@ -179,11 +181,50 @@ test("target Auth account with another UID is rejected", () => {
           uid: "user-b",
           customClaims: {
             companyId: COMPANY_ID,
+            isSuperUser: false,
           },
         },
       }),
     USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_UID_MISMATCH,
   );
+});
+
+test("target Auth account requires a boolean super-user claim", () => {
+  for (const isSuperUser of [undefined, null, "false", 0]) {
+    assertPolicyError(
+      () =>
+        assertAuthUserCompany({
+          pathCompanyId: COMPANY_ID,
+          docId: USER_ID,
+          authUser: {
+            uid: USER_ID,
+            customClaims: {
+              companyId: COMPANY_ID,
+              ...(isSuperUser === undefined ? {} : { isSuperUser }),
+            },
+          },
+        }),
+      USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_SUPER_USER_CLAIM_INVALID,
+    );
+  }
+});
+
+test("target Auth account accepts both boolean super-user states", () => {
+  for (const isSuperUser of [false, true]) {
+    assert.doesNotThrow(() =>
+      assertAuthUserCompany({
+        pathCompanyId: COMPANY_ID,
+        docId: USER_ID,
+        authUser: {
+          uid: USER_ID,
+          customClaims: {
+            companyId: COMPANY_ID,
+            isSuperUser,
+          },
+        },
+      }),
+    );
+  }
 });
 
 test("displayName or disabled changes require an Auth update", () => {

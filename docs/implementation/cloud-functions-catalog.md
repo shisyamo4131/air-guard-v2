@@ -27,7 +27,7 @@ entryから到達するFirebase Function objectは25件である。明示のな�
 | `geocoding` | v2 callable | addressを座標へ変換 | なし。address stringのみ検証し、App Check、length、rate limit、quota制御なし。FUT-0140参照。 |
 | `checkEmailAvailabilityGlobal` | v2 callable | 全Usersでemail重複確認 | verified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者。`isSuperUser`単独では不可。 |
 | `checkEmailAvailability` | v2 callable | 初期会社管理者signup前にAuth/全Usersのemail重複を確認 | なし。emailだけを検証し、caller指定のpolicy区分では分岐しない。 |
-| `createAdminAccount` | v2 callable | 新Companyと最初のadmin User/claimsを作成 | 認証必須。既存role/claimによる管理者許可は入口にない。 |
+| `createAdminAccount` | v2 callable | 新Companyと最初のadmin User/claimsを作成 | token/current AuthのUID・email・verified・disabled・claim整合を要求し、別の既存所属を拒否する。同じUIDの有効な初期管理者状態はclaims再設定のため再利用する。 |
 | `checkUserPreRegistration` | v2 callable | emailから仮登録Userを検索 | なし。0件/1件の登録状態だけを返し、複数一致を拒否する。App Check、rate limitなし。 |
 | `setupUserAccount` | v2 callable | 仮Userを認証UIDのUserへ変換しclaims設定 | 認証・verified email必須。client dataを受け取らず、token emailから仮Userを一意解決する。 |
 | `disableUser` | v2 callable | 同社の本登録非管理者Userを無効化 | 認証、caller UID/company claim、有効な本登録会社管理者、別UIDの同社target、target Auth UID/company claimを必須化。 |
@@ -110,7 +110,7 @@ handlerは全体をtry/catchし、errorをlog後rethrowしないため、実処�
 
 未認証callableはgeocoding、checkEmailAvailability、checkUserPreRegistrationである。`checkEmailAvailability`は初期会社管理者signup専用でemailだけを受け取り、Authと全Usersを照合する。一般User signupはこれを呼ばない。sign-up前用途を持つ未認証CallableにApp Check/rate limitはない。`checkEmailAvailabilityGlobal`は有効な同社会社管理者、2つの再構築Callableは有効な同社スーパーユーザーと要求会社一致をserverで検証する。
 
-認証必須のcreateAdminAccountは既存所属・再実行境界が未解決である。disableUser、enableUser、changeAdminUserは2026-08-14〜15の最小segmentで会社管理者、caller company、target User/Authをserver検証するよう変更した。UI非表示は引き続きserver authorizationを代替せず、Users Rulesの直接write境界も別途未解決である。詳細は`user-auth-lifecycle.md`、`authorization-model.md`を参照する。
+認証必須のcreateAdminAccountはメール確認、現在Auth、有効状態、既存所属、token/current claimを検証し、claims設定失敗後の整合した既存Company/Userを再利用できる。disableUser、enableUser、changeAdminUserは2026-08-14〜15の最小segmentで会社管理者、caller company、target User/Authをserver検証するよう変更した。UI非表示は引き続きserver authorizationを代替せず、Users Rulesの直接write境界も別途未解決である。詳細は`user-auth-lifecycle.md`、`authorization-model.md`を参照する。
 
 ## retry / observability
 
@@ -131,7 +131,7 @@ scheduled handlerはerrorを吸収する。onUpdateCustomerも内部同期error�
 ## 将来要対応
 
 - FUT-0140: geocoding auth/App Check/rate limitは既登録。
-- FUT-0151: disable/enable/changeAdminのactor・tenant・target guardは実装済み。createAdmin・匿名signup入口等の残存guard、App Check、abuse防止、Rulesをserverで強制する。
+- FUT-0151: disable/enable/changeAdmin、createAdminのactor・identity・既存所属guardは実装済み。匿名signup入口、App Check、abuse防止、Users Rulesのfield・actor制約、全Callableのclaim schema統一を継続する。
 - FUT-0152: deployment manifestとexport contract testを設け、plain helper/unexported候補を分離する。
 - FUT-0153: runtime options、retry/idempotency、failure/observability契約を入口別に明示する。
 

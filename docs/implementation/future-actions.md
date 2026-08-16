@@ -1087,7 +1087,7 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025
 - 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`apis/setupUserAccount`、`apis/createAdminAccount`、`apis/checkEmailAvailability`
-- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。2026-08-16に、初期管理者のemail事前確認とAuth/User作成もatomicではなく、同時実行競合とAuth-only状態が残り得ることを利用者確認済みの残存riskとして再確認した。
+- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。初期管理者はメール確認後にCompany/User/claimsを作成し、claims失敗後の整合した既存Company/Userを再利用できるが、同時実行競合、Auth-only、不整合な部分状態は残り得る。
 - 想定影響と発生条件: network/Admin SDK/trigger失敗でAuth-only、Firestore-only、claims欠損のaccountが残り、login初期化やtenant accessが不能・不整合になる。
 - 未確認点・仮説: 運用reconcile、監視、既存orphan件数は未確認。
 - 推奨する将来対応: idempotent setup state machine、再実行可能なclaims設定、orphan検出・管理者repairを設計する。
@@ -1111,7 +1111,7 @@ SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/
 
 SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず、composableがemailで先頭docを再検索してverification成立前にsetupする。表示対象・setup対象・mailbox所有を同じone-time proof/revisionへbindしない。
 
-2026-08-15に、確認済みAuth emailへ完全一致する一意の仮登録だけを選ぶpolicy、会社ID・仮User IDをclient入力として受け取らないuse-case、内部識別子を返さないerror mappingを追加した。新use-caseはまだ既存Callableとclient flowへ接続しておらず、verification後実行、再読込、claims失敗後の回復、rate limit/App Check、既存重複dataは未解決である。仮User削除ではAuth削除triggerを停止するが、本登録User doc IDを利用するglobal Auth削除のRules/claim境界は残る。
+2026-08-15に、確認済みAuth emailへ完全一致する一意の仮登録だけを選ぶpolicy、会社ID・仮User IDをclient入力として受け取らないuse-case、内部識別子を返さないerror mappingを追加し、既存Callableとメール確認後client flowへ接続した。local EmulatorとChromeで一般User本登録を確認済みだが、一般Userのclaims失敗後回復、rate limit/App Check、既存重複dataは未解決である。仮User削除ではAuth削除triggerを停止するが、本登録User doc IDを利用するglobal Auth削除のRules/claim境界は残る。
 
 ## FUT-0083 User/Auth同期triggerの失敗と遅延を可視化・修復する
 
@@ -2034,10 +2034,10 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
 - 対象ファイル・シンボル: `functions/apis/*.js`、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、client指定policy区分を信頼しない。pre-registrationも未認証だが、booleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountはメール確認、現在Auth、有効状態、token/current claim、既存User/Company所属を検証し、整合した再実行だけを許可する。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、client指定policy区分を信頼しない。pre-registrationも未認証だが、booleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
-- 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。
+- 推奨する将来対応: callable policy matrixを維持し、保護対象Callableではtoken/current Auth/User/path間のclaim schemaと整合性を共通にfail closedで強制する。続いてApp Check、rate limit、匿名応答minimization、security audit、Users/Companies Rulesのfield/actor制約を揃える。
 - 必要なテスト: 未認証、同社/他社、admin/non-admin/super-user、disabled、App Check有無、enumeration/rate、arbitrary companyId/uid。
 - ユーザー判断が必要な事項: CONF-0129、権限全体はCONF-0111。
 

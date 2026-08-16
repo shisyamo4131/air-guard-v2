@@ -4,14 +4,14 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-025、SPEC-DEEP-035、SPEC-DEEP-040
-- 最終確認日: 2026-08-15
+- 最終確認日: 2026-08-16
 - 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/triggers/user.js`、`functions/modules/auth/*.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
 
 ## 入口と暫定権限
 
 | 入口 | UI上の境界 | server / Rulesの実装境界 |
 |---|---|---|
-| `/settings/users` | pageSettingsは`roles: ["admin"]` | User Rulesは同一company claimの認証Userまたはsuper-userに全read/writeを許可 |
+| `/settings/users` | pageSettingsは`roles: ["admin"]` | User Rulesはverified email、正常なcompany claim、同一tenant path、有効な本登録Userを要求するが、同一tenant内のfield・actor制約はない |
 | User仮登録・編集・削除 | UsersManager。管理者Userはroles編集と削除をUIで抑止し、employeeId付きUserも削除を抑止 | Rulesにrole、field、本人、admin、employeeId guardはない |
 | 従業員からUser仮登録・削除 | Employee UserManager | Rulesは上記と同じ。User.deleteは`isAdmin`だけを拒否 |
 | 有効化・無効化callable | UsersManagerから呼ぶ | `disableUser`/`enableUser`はactor UIDとcompany claimを起点に、transaction内でactor/target User、管理者・有効・本登録状態、自己操作禁止、対象非管理者、対象Auth UID/company claimを検証して`disabled`を更新する |
@@ -49,10 +49,12 @@ Auth account作成、verification mail、Firestore transaction、claims設定は
 ### 初期管理者
 
 1. clientがemailだけを未認証`checkEmailAvailability`へ渡し、Authと全会社Userの重複を事前確認してからAuth accountを作り、verification emailを送る。
-2. 認証済み`createAdminAccount`がCompanyと`Users/{uid}`を同一Firestore transactionで作る。Userは`isAdmin=true`、`isTemporary=false`。
-3. transaction後に`companyId`/`isSuperUser:false` claimsを設定し、token refresh後にauth storeを再初期化する。
+2. verification待ち画面がメール確認後に`createAdminAccount`を呼ぶ。入力中の会社情報は同じbrowserのsession storageに保持する。
+3. Callableがtokenと現在AuthのUID、email、email確認、有効状態、company claim、`isSuperUser`の型・一致を検証する。既存の別User、別company、欠損Company、不正な初期管理者状態は拒否する。
+4. 未所属AuthではCompanyと`Users/{uid}`を同一Firestore transactionで作る。Userは`isAdmin=true`、`isTemporary=false`。
+5. transaction後に既存claimsを保持して`companyId`とbooleanの`isSuperUser`を設定し、token refresh後にauth storeを再初期化する。
 
-callableは認証された本人UIDを使用するが、メール確認済みであることは検証しない。
+claims設定だけが失敗して同じUIDの有効な初期管理者UserとCompanyが残った場合、再実行はその既存状態を検証して再利用し、新しいCompanyを重複作成しない。Authだけが作成されCompany/Userがない状態も、同じbrowserにpending情報が残る間はメール確認後に再開できる。
 
 ## claims・User更新
 
@@ -63,7 +65,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 - trigger失敗時はFirestore更新済み/Auth未反映の部分状態になり得る。再同期用callableまたは状態照合処理は確認できない。
 - 管理者移譲はactor/target Authを検証した後、同一Firestore transactionでfrom/to Userと`isAdmin=true`一覧を読み、actor本人が唯一の会社管理者であることを再確認して旧Userの`isAdmin=false`、新Userの`isAdmin=true`と`roles=[]`を更新する。claimsは変更しない。
 
-この同期境界は`userAuthCompanyPolicy.js`と`syncUserAuthAccount.js`へ分離した。管理者移譲は`companyAdminTransferPolicy.js`、`transferCompanyAdmin.js`、`mapCompanyAdminTransferError.js`へ分離した。Firebaseへ接続しない認証関連Node.js単体テスト151件で、Auth同期、有効化・無効化、管理者移譲の正常系・陰性経路・安全なerror mappingを確認した。
+この同期境界は`userAuthCompanyPolicy.js`と`syncUserAuthAccount.js`へ分離した。管理者移譲は`companyAdminTransferPolicy.js`、`transferCompanyAdmin.js`、`mapCompanyAdminTransferError.js`へ分離した。全domain単体テスト212件と専用local Emulator suite 67件で、認証処理の正常系・陰性経路・安全なerror mappingを確認した。
 
 ## 無効化・削除
 
@@ -78,9 +80,9 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## failure・再試行・冪等性
 
 - email重複確認と作成はatomicではなく、並行登録で競合し得る。Auth email一意性はAuth作成時に最終検査されるが、仮User emailにはserver一意制約がない。
-- 初期管理者の事前確認はUX用であり、確認後にAuth作成または`createAdminAccount`が失敗するとAuth-onlyを含む部分状態が残り得る。既存company claim/User/Companyを持つAuthによる再実行防止は未実装である。
+- 初期管理者の事前確認はUX用であり、同時実行競合とAuth-only状態は残り得る。`createAdminAccount`は別の既存所属を拒否し、同じUIDの有効な初期管理者User/Companyだけをclaims失敗後の再実行として再利用する。
 - `setupUserAccount`はFirestore移行後のclaims失敗を補償しない。再実行すると仮docが消えているため`not-found`となる。
-- `createAdminAccount`はCompany/User transaction後のclaims失敗を補償せず、再実行時の重複Company回避契約もない。
+- `createAdminAccount`はCompany/User transaction後のclaims失敗をrollbackしないが、同じ整合状態からの再実行では既存Company/Userを再利用してclaims設定を再試行する。Company/Userの一部欠損や不整合を自動修復する契約はない。
 - disable/enableはUser doc更新成功をcallable成功として返し、Auth反映完了を待たない。
 - deleteはFirestore先行、Authはtrigger後続で、失敗時にUser docを復元しない。
 
@@ -117,7 +119,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 ## 未確認範囲
 
-- 実Firebase Auth/Firestoreデータ、Emulator、メール到達、token refreshの実行結果。
+- Dev・remoteのFirebase Auth/Firestore実data、実メール到達、実action link、deploy後のtoken refresh。
 - 実Cloud Functions triggerからのAuth同期、既存Auth accountのcompany claim充足状況、同期失敗後の再試行・手動reconcile。
 - `disableUser`/`enableUser`の後続Auth同期trigger完了とAuth disabled値、既存Userの`isAdmin`・`disabled`・`isTemporary`・company claim充足状況。ChromeからのCallable起動とUser画面への状態反映はlocal Emulatorで確認済みである。
 - Employee退職処理本文、login/middleware全体、super-user運用、admin SDK保守CLI。

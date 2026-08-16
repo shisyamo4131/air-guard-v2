@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲のactor/company/target境界を修正した。一般User本登録をverified email・一意仮登録use-caseとメール確認後client flowへ接続した。Firestore・Storage Rulesはverified email、正常な会社claim、tenant path、有効な本登録Userを要求し、恒久的なsuper-user全会社bypassを廃止した。全10 Callableを`functions/apis`の公開indexへ整理し、Auth削除処理をtriggerへ分離した。既存挙動と入口guardを専用Emulator suite 60件で検証した。残存Callable guard、Dev・remote検証は未完了で、deploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲、一般User本登録、初期管理者signupのactor/company/identity境界を修正した。Firestore・Storage Rulesはverified email、正常な会社claim、tenant path、有効な本登録Userを要求し、恒久的なsuper-user全会社bypassを廃止した。Auth/User会社整合性helperは`isSuperUser`のbooleanを必須化し、管理SDKでEmulator・Devの既存所属アカウントを検証した。全10 Callableを`functions/apis`の公開indexへ整理し、Auth削除処理をtriggerへ分離した。専用Emulator suite 67件、全domain単体test 214件、初期管理者を含むChrome flowで検証した。保護対象Callable全体のclaim schema統一、Users Rulesのfield/actor制約、App Check、Dev・remoteのアプリflow検証は未完了で、deploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rulesとスーパーユーザー向け再構築Callableは完了したため、次は残る管理・signup Callableと本登録bootstrap例外の境界を扱う。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了まで一般User本登録client接続をdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rules、主要管理Callable、一般User本登録、初期管理者signupの個別guardは実装済みのため、次は保護対象Callableの共通claim schema、token/current Auth/User整合性とUsers Rulesのfield/actor制約を扱う。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、Auth・Firestore・Storage・Callable 60件、User更新Auth同期、有効化・無効化Callable、会社管理者移譲、本登録基盤の単体test。一般User本登録はlocal Emulatorの合成Userで仮登録照合、Auth作成、メール確認、本登録Callable、claim反映、dashboard到達を確認済み。全10 Callableの正式API export、内部helper非公開、管理者会社作成のCompany・User・claim整合を確認済み。残存Callable guardとDev・remote受入れは未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、専用local suite 67件、全domain単体test 212件。一般Userと初期管理者はlocal Emulatorの合成UserでAuth作成、メール確認、Callable、claim反映、dashboard到達を確認済み。全10 Callableの正式API export、内部helper非公開、管理者会社作成のCompany・User・claim整合と再実行を確認済み。claim schema統一、Users Rulesのfield/actor制約、Dev・remote受入れは未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -108,3 +108,5 @@
 | 2026-08-16 | 10% | 0 | 認証済みChromeからlocal Emulatorへ接続し、履歴・警備日報index再構築、非管理者Userの無効化・再有効化の4 CallableについてFunctions transportと画面反映を確認した。dashboard復帰後も認証を維持し、console errorは0件だった。残るCallable transport、匿名signup情報境界、App Check・rate limit、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-16 | 10% | 0 | 未認証の事前登録確認応答をbooleanだけへ縮小し、会社ID・表示名・role・仮User IDの公開を廃止した。複数仮登録を拒否し、signup画面もbooleanだけを保持する。専用loopback Emulator 61件、全domain単体test 202件、SFC・構文検査が成功した。存在有無の列挙、App Check・rate limit、招待token、残る匿名Callable境界が未完了のため進捗は据え置いた。 |
 | 2026-08-16 | 10% | 0 | `checkEmailAvailability`を初期会社管理者signup専用へ限定し、client指定`isAdmin`を廃止してemailだけでAuthと全会社Userを確認するよう変更した。一般User signupは当該Callableを使用しない。専用loopback Emulator 61件、全domain単体test 207件、SFC・構文検査が成功した。非atomicな競合・Auth-only部分状態、`createAdminAccount`の既存所属・再実行guard、email列挙、App Check・rate limit、Dev・remote受入れが未完了のため進捗は据え置いた。 |
+| 2026-08-16 | 10% | 0 | `createAdminAccount`をメール確認済み・有効な未所属Authへ限定し、token/current Auth、既存User/Company、company claim、`isSuperUser`を検証した。claims失敗後の整合した既存Company/Userを再利用して重複Companyを防ぎ、管理者setupをメール確認後へ移した。専用local suite 67件、全domain単体test 212件、ChromeでAuth作成からdashboard到達、6文字の管理者名validationまで確認した。claim schema統一、一般User部分状態、App Check、Users Rules、Dev・remote受入れが未完了のため進捗は据え置いた。 |
+| 2026-08-16 | 10% | 0 | Auth/User会社整合性helperで`isSuperUser`の欠損・非booleanを拒否し、管理SDKの権限解除を`false`保存へ変更した。専用マイグレーションをEmulator 3件とDev 6件へdry-run、apply、再dry-runの順で実行し、全件が既にbooleanで不整合0件、更新0件であることを確認した。全domain単体test 214件と管理SDK単体test 9件が成功した。保護対象Callable全体のclaim schema統一、Users Rules、App Checkが未完了のため進捗は据え置いた。 |

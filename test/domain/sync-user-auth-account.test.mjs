@@ -38,6 +38,7 @@ function createAuthUser(overrides = {}) {
     uid: USER_ID,
     customClaims: {
       companyId: COMPANY_ID,
+      isSuperUser: false,
     },
     ...overrides,
   };
@@ -204,7 +205,7 @@ test("Auth account without a company claim is not updated", async () => {
 test("Auth account from another company is not updated", async () => {
   const { auth, calls } = createAuthFake({
     authUser: createAuthUser({
-      customClaims: { companyId: "company-b" },
+      customClaims: { companyId: "company-b", isSuperUser: false },
     }),
   });
 

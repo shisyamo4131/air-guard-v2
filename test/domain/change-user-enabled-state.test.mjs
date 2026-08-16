@@ -46,6 +46,7 @@ function createAuthUser(overrides = {}) {
     uid: TARGET_UID,
     customClaims: {
       companyId: COMPANY_ID,
+      isSuperUser: false,
     },
     ...overrides,
   };
@@ -364,7 +365,7 @@ test("policy rejection aborts before Auth access or update", async () => {
 test("Auth account from another company aborts before update", async () => {
   const dependencies = createDependencies({
     authUser: createAuthUser({
-      customClaims: { companyId: "company-b" },
+      customClaims: { companyId: "company-b", isSuperUser: false },
     }),
   });
 

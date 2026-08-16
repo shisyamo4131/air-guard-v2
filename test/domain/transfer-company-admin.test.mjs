@@ -25,7 +25,7 @@ const USERS_PATH = `Companies/${COMPANY_ID}/Users`;
 function createAuthUser(uid, overrides = {}) {
   return {
     uid,
-    customClaims: { companyId: COMPANY_ID },
+    customClaims: { companyId: COMPANY_ID, isSuperUser: false },
     disabled: false,
     ...overrides,
   };
@@ -251,7 +251,7 @@ test("Firestore service must provide required methods", async () => {
 test("actor Auth User from another company is rejected", async () => {
   const dependencies = createDependencies({
     actorAuthUser: createAuthUser(ACTOR_UID, {
-      customClaims: { companyId: "company-b" },
+      customClaims: { companyId: "company-b", isSuperUser: false },
     }),
   });
 
@@ -297,7 +297,7 @@ test("disabled actor Auth User is rejected", async () => {
 test("target Auth User from another company is rejected", async () => {
   const dependencies = createDependencies({
     targetAuthUser: createAuthUser(TARGET_UID, {
-      customClaims: { companyId: "company-b" },
+      customClaims: { companyId: "company-b", isSuperUser: false },
     }),
   });
 

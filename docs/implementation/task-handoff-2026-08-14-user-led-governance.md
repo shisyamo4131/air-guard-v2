@@ -139,6 +139,24 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 次は既存auth-v2 Callable/client flowへ接続する前の最小segmentから再開する。現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理する。
 - 旧coordinatorのarchiveは`WORKSPACE-HANDOFF-002` callback成功後に旧coordinatorが行う。新coordinatorはarchiveしない。
 
+## Initial administrator signup checkpoint
+
+- `createAdminAccount`はメール確認済みで有効な未所属Authentication Userだけに新規Company作成を許可し、ID tokenと現在AuthのUID、email、email確認、disabled、company claim、`isSuperUser`の型と一致を検証する。
+- 既存Userは同じUID・email・company pathの有効な本登録初期管理者で、Companyが存在する場合だけclaims失敗後の再実行として再利用する。別User、別company、不正claim、Company欠損等は更新前に拒否する。
+- clientはAuth作成と確認メール送信で停止し、同じbrowserのsession storageへpending Company情報を保持する。メール確認後に`createAdminAccount`、token refresh、session初期化を行う。
+- 管理者表示名は6文字以内をVuetify `rules`と処理前guardで強制し、超過値を切り捨てずfield errorを表示する。
+- 専用local Emulator suite 67件、全domain単体test 212件、対象構文・SFC検査、ChromeによるAuth作成、メール確認状態のEmulator更新、Company/User/claims作成、dashboard到達、表示名境界を確認した。実メールlink、Dev・remote、deploy、実dataは未確認である。
+- 次はカスタムクレーム整合性を、保護対象Callableの共通claim schema、token/current Auth/User/path整合性、Firestore・Storage Rulesで検証可能な境界へ分けて進める。一般Userのclaims失敗後回復、Users Rulesのfield/actor制約、App Check、rate limitは継続課題である。
+
+## Super-user claim normalization checkpoint
+
+- `assertAuthUserCompany`は、所属済みAuthentication Userの`isSuperUser`が`true`または`false`のbooleanであることを必須化し、欠損・文字列・数値・nullを拒否する。
+- 関連repository `air-guard-v2-admin-sdk`の`claims remove-superuser`は他のclaimを保持して`isSuperUser: false`を保存する。専用migrationはdry-runを既定とし、Emulator・明示Devだけを許可し、全件検査で不正identity・不正claim・errorがある場合は書込み前に停止する。local commitは`1be81f6 security: normalize super-user claim state`である。
+- 利用者Emulatorで3件を確認し、`true` 1件、`false` 2件、未設定・不正・不整合0件だった。dry-run、apply、再dry-runはいずれも成功し、更新対象は0件だった。利用者もAuthentication全件の更新状態を確認した。
+- 明示承認されたDev `air-guard-v2-dev`で6件を確認し、`true` 1件、`false` 5件、未設定・不正・不整合0件だった。dry-run、apply、再dry-runはいずれも成功し、更新対象は0件だった。本番環境には接続していない。
+- 管理SDKは3実装fileの構文検査、単体test 9件、`git diff --check`が成功した。AirGuardV2は全domain単体test 214件、専用local suite 67件、project-owned validator、managed governance validator、`git diff --check`を確定前に実行する。
+- 次は10 Callableに散在するtoken/current Auth/User/path検査を可視化し、bootstrap例外を分離した共通claim schemaを最小segmentとして扱う。Users Rules、App Check、rate limit、一般Userのclaims失敗後回復は継続課題である。
+
 ## WORKSPACE-HANDOFF-002
 
 - 本記録だけを新coordinatorのowned fileとして更新し、project-owned validator、managed governance validator、`git diff --check`を実行する。

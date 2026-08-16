@@ -1569,11 +1569,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056; `cloud-functions-catalog.md`、`callable-authorization.md`、`super-user-operations-ui.md`
-- Evidence: 2026-08-16までにdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authを、2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を、`checkEmailAvailabilityGlobal`は有効な同社会社管理者をserver検証するよう改修した。createAdminAccountは認証のみで既存所属を検証しない。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、Authと全Userを確認してclient指定policy区分を無視する。一般User signupはpre-registrationだけを使用し、booleanだけを受け取り複数一致を拒否する。`geocoding`を含む未認証入口にApp Check/rate limit宣言はなく、Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- Evidence: 2026-08-16までにdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authを、2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を、`checkEmailAvailabilityGlobal`は有効な同社会社管理者をserver検証するよう改修した。createAdminAccountはメール確認、現在Auth、有効状態、token/current claim、既存User/Company所属を検証し、整合した再実行だけを許可する。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、Authと全Userを確認してclient指定policy区分を無視する。一般User signupはpre-registrationだけを使用し、booleanだけを受け取り複数一致を拒否する。`geocoding`を含む未認証入口にApp Check/rate limit宣言はなく、Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - Question: 各callableを匿名、認証User、company admin、super-userの誰に許可し、tenant一致、App Check、rate limit、列挙防止をどう強制するか。
 - Why needed: signup UXを維持しつつ、他社操作、管理権限昇格、個人情報列挙、quota abuseを防ぐため。
 - Options and impact: anonymous最小応答+App Check、authenticated onboarding token、admin/super-user guard、server-generated invitation、per-IP/UID quota。
-- Current provisional treatment: 現行入口認証とtarget解決を実装事実とし、未認証・認証のみの操作を承認済みsecurity policyとは扱わない。`setupUserAccount`、disable/enable/changeAdmin、再構築2件、global email確認のguardと、管理者signup事前確認のclient非選択policyは確認済みだが、`createAdminAccount`、匿名signup入口、App Check、rate limit、Rulesを含む全体方針を確定する根拠にはしない。
+- Current provisional treatment: 現行入口認証とtarget解決を実装事実とし、未認証操作を承認済みsecurity policyとは扱わない。`setupUserAccount`、createAdmin、disable/enable/changeAdmin、再構築2件、global email確認のguardと、管理者signup事前確認のclient非選択policyは確認済みだが、匿名signup入口、App Check、rate limit、Rulesのfield/actor制約を含む全体方針を確定する根拠にはしない。
 - Related FUT IDs: FUT-0151、FUT-0163、FUT-0140、FUT-0133
 - Answer: 未回答
 

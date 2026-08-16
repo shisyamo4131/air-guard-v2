@@ -11,6 +11,7 @@ export const USER_AUTH_COMPANY_POLICY_ERROR_CODES = Object.freeze({
   AUTH_UID_MISMATCH: "auth-uid-mismatch",
   AUTH_COMPANY_MISSING: "auth-company-missing",
   AUTH_COMPANY_MISMATCH: "auth-company-mismatch",
+  AUTH_SUPER_USER_CLAIM_INVALID: "auth-super-user-claim-invalid",
   USER_IS_TEMPORARY: "user-is-temporary",
   USER_TEMPORARY_STATE_INVALID: "user-temporary-state-invalid",
 });
@@ -96,6 +97,13 @@ export function assertAuthUserCompany({ pathCompanyId, docId, authUser } = {}) {
     throw new UserAuthCompanyPolicyError(
       USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_COMPANY_MISMATCH,
       "[assertAuthUserCompany] Auth account companyId does not match path companyId",
+    );
+  }
+
+  if (typeof authUser.customClaims?.isSuperUser !== "boolean") {
+    throw new UserAuthCompanyPolicyError(
+      USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_SUPER_USER_CLAIM_INVALID,
+      "[assertAuthUserCompany] Auth account isSuperUser claim is invalid",
     );
   }
 

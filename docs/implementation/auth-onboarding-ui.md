@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | `/auth/sign-in` | `auth` / public | email/password login。成功後`auth.isReady`を最大15秒待ち`/dashboard` |
 | `/auth/sign-up` | `auth` / public | 仮Userの事前登録確認後、一般Userを本登録し`/unconfirmedEmail` |
-| `/auth/sign-up-admin` | `auth` / public | Company・初回adminを作成し`/unconfirmedEmail` |
+| `/auth/sign-up-admin` | `auth` / public | Auth作成と確認メール送信後、`/unconfirmedEmail`で初回admin設定を完了 |
 | `/auth/reset-password` | `auth` / pageSettings未登録 | Firebase password reset mail送信 |
 | `/unconfirmedEmail` | `auth` / pageSettings未登録 | verification mail再送、3秒pollで認証完了後`/dashboard` |
 
@@ -43,9 +43,9 @@ Auth作成後のmail/setup/token refresh失敗ではAuth Userが残る。画面�
 
 ## 初回admin signup
 
-3 stepでemail/password、Company名/カナ、displayNameを入力する。step 1でemailだけを未認証`checkEmailAvailability`へ渡し、Authenticationと全会社Userの重複を事前確認する。submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。この確認はUX用であり、`createAdminAccount`の認可・既存所属・再実行検証を代替しない。
+3 stepでemail/password、Company名/カナ、6文字以内のdisplayNameを入力する。displayName超過はVuetifyの`rules`でfield下部に表示し、値を切り捨てず作成buttonを無効化する。step 1でemailだけを未認証`checkEmailAvailability`へ渡し、Authenticationと全会社Userの重複を事前確認する。submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。この確認はUX用であり、`createAdminAccount`のserver検証を代替しない。
 
-Auth User作成、verification mail、`createAdminAccount`によるCompany/User/claims作成、token refresh、`setUser`再初期化の順である。後段失敗時はAuth-onlyまたは部分Company/User/claimsが残り、UID付きsupport案内以外のrepair UIはない。公開routeから開始するが、Auth作成でsigned-inになった後にCallableを呼ぶ。
+Auth User作成、verification mail、verification待ちへの遷移、メール確認後の`createAdminAccount`によるCompany/User/claims作成、token refresh、`setUser`再初期化の順である。Company入力は同じbrowserのsession storageに保持し、完了時に削除する。Callableはtoken/current Authと既存所属を検証し、claims設定だけが失敗して同じUIDの有効な初期管理者User/Companyが残った場合は既存状態から再開する。別browser・別端末、session storage消失、不整合な部分状態のrepair UIはない。
 
 ## password reset・email confirmation
 
