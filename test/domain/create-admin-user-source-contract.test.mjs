@@ -62,6 +62,49 @@ test("administrator signup page sends no client-selected preflight policy", asyn
   assert.equal(source.includes("auth-v2.js"), false);
 });
 
+test("administrator signup enforces the User display name length", async () => {
+  const source = await readFile(pageSourceUrl, "utf8");
+  const displayNameModelIndex = source.indexOf(
+    'v-model="model.displayName"',
+  );
+  const displayNameFieldStart = source.lastIndexOf(
+    "<air-text-field",
+    displayNameModelIndex,
+  );
+  const displayNameFieldEnd = source.indexOf("/>", displayNameModelIndex);
+  const displayNameField = source.slice(
+    displayNameFieldStart,
+    displayNameFieldEnd + 2,
+  );
+
+  assert.match(
+    source,
+    /case 3:[\s\S]*model\.displayName\.trim\(\)\.length <= 6/,
+  );
+  assert.ok(displayNameModelIndex >= 0);
+  assert.ok(displayNameFieldStart >= 0);
+  assert.ok(displayNameFieldEnd > displayNameModelIndex);
+  assert.equal(displayNameField.includes("maxLength"), false);
+  assert.equal(source.includes("maxLengthMessage"), false);
+  assert.match(
+    source,
+    /const DISPLAY_NAME_LENGTH_MESSAGE =\s*"管理者名は6文字以内で入力してください。"/,
+  );
+  assert.match(
+    source,
+    /const displayNameRules = \[[\s\S]*DISPLAY_NAME_LENGTH_MESSAGE/,
+  );
+  assert.match(
+    source,
+    /v-model="model\.displayName"[\s\S]*?:rules="displayNameRules"/,
+  );
+  assert.match(source, /if \(!isStepValid\.value\) return/);
+  assert.match(
+    source,
+    /:disabled="!formValid \|\| !isStepValid \|\| loading"/,
+  );
+});
+
 test("email preflight client contract is administrator signup with email only", async () => {
   const source = await readFile(authFunctionsSourceUrl, "utf8");
 
