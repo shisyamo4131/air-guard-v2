@@ -185,7 +185,7 @@ Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場
 - 許可が付与済みか、初回promptで付与できたか、権限不足で失敗したかをデプロイ結果として報告すること。
 - デプロイ後に正常Userと拒否対象UserのStorage accessを確認し、連携roleが欠ける場合のfail-closedを検出すること。
 
-再構築Callableを含むFunctionsをデプロイする場合、実行service accountがFirebase Authentication Userの参照権限を持つことを確認する。デプロイ後の開発環境では、同社の有効なスーパーユーザーによる正常実行と、Auth無効・User無効・他社指定の拒否をFunctions logと画面結果で確認する。権限不足によるAuth参照失敗は再構築失敗として扱い、権限を推測で追加せず対象project・service account・必要roleを確認する。
+共通Auth identity gateまたは再構築認可を使うFunctionsをデプロイする場合、実行service accountがFirebase Authentication Userの参照権限を持つことを事前に確認し、Codexは次回deploy承認前に利用者へこの確認を通知する。デプロイ後の開発環境では、同社の有効な実行者による正常実行と、Auth無効・claim不一致・User無効・他社指定など各APIの拒否をFunctions logと画面結果で確認する。権限不足によるAuth参照失敗はfail closedとして検出し、権限を推測で追加せず対象project・service account・必要roleを確認する。
 
 開発環境の生成、Firebase alias の切り替え、デプロイを連続して行うスクリプトも定義されています。
 

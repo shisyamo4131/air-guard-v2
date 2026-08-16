@@ -10,6 +10,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { changeUserEnabledState } from "../modules/auth/changeUserEnabledState.js";
 import { mapUserEnabledStateError } from "../modules/auth/mapUserEnabledStateError.js";
+import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 /**
  * 利用者の有効・無効状態変更リクエストを処理します。
@@ -22,37 +23,38 @@ async function handleUserEnabledStateChangeRequest(request, enabled) {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const targetUid = request.data?.uid;
-
-  if (typeof targetUid !== "string" || !targetUid) {
-    throw new HttpsError(
-      "invalid-argument",
-      "対象ユーザーIDが指定されていません。",
-    );
-  }
-
-  const actorUid = request.auth.uid;
-  const companyId = request.auth.token?.companyId;
-
-  if (
-    typeof actorUid !== "string" ||
-    !actorUid ||
-    typeof companyId !== "string" ||
-    !companyId
-  ) {
-    throw new HttpsError("permission-denied", "認証情報を確認できません。");
-  }
+  const actorToken = request.auth.token ?? {};
+  const auth = getAuth();
 
   try {
+    const actorIdentity = await resolveCallableAuthIdentity({
+      auth,
+      tokenUid: request.auth.uid,
+      tokenEmail: actorToken.email,
+      tokenEmailVerified: actorToken.email_verified,
+      tokenCompanyId: actorToken.companyId,
+      tokenIsSuperUser: actorToken.isSuperUser,
+    });
+    const targetUid = request.data?.uid;
+
+    if (typeof targetUid !== "string" || !targetUid) {
+      throw new HttpsError(
+        "invalid-argument",
+        "対象ユーザーIDが指定されていません。",
+      );
+    }
+
     return await changeUserEnabledState({
-      auth: getAuth(),
+      auth,
       firestore: getFirestore(),
-      companyId,
-      actorUid,
+      companyId: actorIdentity.companyId,
+      actorUid: actorIdentity.uid,
       targetUid,
       enabled,
     });
   } catch (error) {
+    if (error instanceof HttpsError) throw error;
+
     const mappedError = mapUserEnabledStateError(error);
     logger.error("User enabled state change failed", {
       errorName: error?.name,

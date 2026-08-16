@@ -1159,14 +1159,109 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("enabled state Callables reject incomplete and inactive actor identities", async () => {
+  const { disableUser, enableUser } = await loadRebuildApis();
+  const targetUid = "codex-enabled-state-rejected-target";
+
   await assertCallableError(
     disableUser.run(callableRequest({ data: {} })),
-    "invalid-argument",
+    "permission-denied",
   );
+
   await assertCallableError(
-    enableUser.run(callableRequest({ data: {} })),
+    disableUser.run(callableRequest({ data: { uid: targetUid } })),
+    "permission-denied",
+  );
+
+  const disabledActorUid = "codex-enabled-state-disabled-actor";
+  const disabledActorEmail = `${disabledActorUid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid: disabledActorUid,
+    email: disabledActorEmail,
+    disabled: true,
+  });
+
+  await assertCallableError(
+    enableUser.run(
+      callableRequest({
+        uid: disabledActorUid,
+        claims: { email: disabledActorEmail },
+        data: { uid: targetUid },
+      }),
+    ),
+    "permission-denied",
+  );
+});
+
+test("enabled state Callables allow a consistent active company administrator", async () => {
+  const { disableUser, enableUser } = await loadRebuildApis();
+  const actorUid = "codex-enabled-state-admin";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  const targetUid = "codex-enabled-state-target";
+
+  await seedCallableAuthUser({ uid: actorUid, email: actorEmail });
+  await seedRegisteredUser({
+    uid: actorUid,
+    email: actorEmail,
+    isAdmin: true,
+  });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+    isAdmin: false,
+  });
+
+  const request = callableRequest({
+    uid: actorUid,
+    claims: { email: actorEmail },
+    data: { uid: targetUid },
+  });
+
+  await assertCallableError(
+    disableUser.run({ ...request, data: {} }),
     "invalid-argument",
   );
+
+  assert.deepEqual(await disableUser.run(request), {
+    success: true,
+    uid: targetUid,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const snapshot = await getDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "Users",
+        targetUid,
+      ),
+    );
+    assert.equal(snapshot.data().disabled, true);
+  });
+
+  assert.deepEqual(await enableUser.run(request), {
+    success: true,
+    uid: targetUid,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const snapshot = await getDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "Users",
+        targetUid,
+      ),
+    );
+    assert.equal(snapshot.data().disabled, false);
+  });
 });
 
 test("admin account creation Callable validates authentication and required input", async () => {

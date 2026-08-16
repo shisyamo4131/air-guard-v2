@@ -15,6 +15,7 @@ import {
   USER_ENABLED_STATE_CHANGE_ERROR_CODES,
   UserEnabledStateChangeError,
 } from "./changeUserEnabledState.js";
+import { mapCallableAuthIdentityError } from "./mapCallableAuthIdentityError.js";
 
 const INTERNAL_ERROR_RESPONSE = Object.freeze({
   code: "internal",
@@ -28,6 +29,9 @@ const INTERNAL_ERROR_RESPONSE = Object.freeze({
  * @returns {{ code: string, message: string }}
  */
 export function mapUserEnabledStateError(error) {
+  const authIdentityResponse = mapCallableAuthIdentityError(error);
+  if (authIdentityResponse) return authIdentityResponse;
+
   if (error instanceof UserEnabledStateChangeError) {
     switch (error.code) {
       case USER_ENABLED_STATE_CHANGE_ERROR_CODES.REQUIRED_FIELD_MISSING:

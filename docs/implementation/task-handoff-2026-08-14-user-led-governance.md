@@ -165,4 +165,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 全条件が一致する場合だけ、元repositoryからnative Gitの`git worktree remove`を`--force`なしで実行する。`b4d7`は削除対象へ含めない。
 - 削除条件不一致または削除失敗時は再試行せず、完全な結果をcallbackへ残す。
 
+## Common Callable Auth identity gate checkpoint
+
+- 会社所属済みの認証必須Callable向けに`resolveCallableAuthIdentity`を追加し、ID tokenと現在のAuthentication UserのUID、email、email確認、company claim、`isSuperUser`のboolean型と値、disabled状態をAPI固有処理より先に照合する境界を確立した。
+- 共通identity errorを内部情報のない`permission-denied`または`internal`へ変換するmapperを追加した。匿名事前確認Callableは対象外とし、`createAdminAccount`と`setupUserAccount`は所属確立前bootstrapの専用検査を維持する。
+- 最初の適用対象は`disableUser`と`enableUser`である。共通gateの確認済みUID・companyだけを有効状態変更use-caseへ渡し、use-case内に重複していたactor token/current Auth検査を除去した。actor Userの本登録・有効・管理者検査とtarget User/Auth検査はAPI固有policyとして維持した。
+- 全domain単体test 228件、Codex専用loopback Emulator suite 69件、対象実装fileの構文検査、project-owned validator、managed governance validator、`git diff --check`を確定条件とする。利用者用`./saved-data`は変更せず、専用seedは読込専用とする。
+- 実装fileは利用者が1fileずつ確認済みである。公式進捗は10%のまま。次は`changeAdminUser`など残る会社所属済みCallableを1つずつ共通gateへ移す。
+- Users Rulesのfield/actor制約、App Check、rate limit、token失効、部分状態、残るCallableの共通gate移行、Dev・remote受入れは未完了である。main merge、push、deploy、remote data操作は未承認のまま。
+
 この記録にsecret、credential、private production data、Codex session本文は含めない。

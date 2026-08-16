@@ -69,6 +69,7 @@
 
 ### Security
 
+- 会社所属済みの認証必須Callable向けに、ID tokenと現在のAuthentication UserのUID・email・email確認・company claim・`isSuperUser`・有効状態をAPI固有処理より先に照合する共通identity gateと安全なerror mappingを追加した。最初に`disableUser`と`enableUser`へ適用し、重複した実行者Auth検査をuse-caseから除去した。匿名事前確認と所属確立前bootstrapは専用境界を維持する。
 - Authentication Userと会社Userの整合性検査で`isSuperUser`を必須boolean claimとして扱い、欠損・型不正を拒否するようにした。管理SDKの権限解除はclaimを削除せず`false`を保存し、Emulator・Devの全所属アカウントをdry-run、apply、再dry-runの順で検証した。
 - 初期会社管理者作成を、メール確認済みで有効な未所属Authに限定した。ID tokenと現在AuthのUID・email・claimを照合し、別の既存User/Company所属を拒否する。claims設定失敗後は同じUIDの整合した初期管理者状態だけを再利用し、Company重複作成を防ぐ。
 - 管理者signupの匿名email事前確認で、callerが`isAdmin`を偽装して弱い一般User分岐を選べないようにした。事前確認は認可ではなく、作成との競合、Auth-only部分状態、email列挙、App Check・rate limitは残存riskとして継続する。

@@ -29,6 +29,7 @@
 | [0014](0014-codex-dedicated-local-test-data.md) | Codex専用localテストデータとloopback隔離 | Accepted | 2026-08-12 |
 | [0015](0015-user-led-implementation-and-codex-assurance.md) | 利用者主導実装とCodexによる設計・検証・文書・Git管理 | Accepted | 2026-08-14 |
 | [0016](0016-firemodel-crud-boundary.md) | FireModel CRUDの利用境界 | Accepted | 2026-08-15 |
+| [0017](0017-callable-auth-identity-gate.md) | Callableの共通Auth identity gate | Accepted | 2026-08-16 |
 
 ## 新しい ADR の形式
 

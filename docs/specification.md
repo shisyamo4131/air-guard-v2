@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-16
-- 仕様バージョン: 0.5.3
+- 仕様バージョン: 0.5.4
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -75,6 +75,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 初期会社管理者のsignup前メール確認は、clientからemailだけを受け取り、Authenticationと全会社のUser documentを照合する未認証のUX事前確認とする。client指定の管理者・一般User区分は信頼せず、一般User signupではこのCallableを使用しない。事前確認とAuth/User作成はatomicではないため、同時実行競合とAuthだけが残る部分状態を防ぐ認可境界とはみなさない。
 - 初期会社管理者のCompany・User作成はメール確認後にだけ行う。CallableはID tokenと現在のAuthentication UserについてUID、email、email確認、有効状態、既存company claim、`isSuperUser`の型と一致を検証する。未所属Authだけが新規作成でき、同じUIDの有効な初期管理者UserとCompanyが既に存在する場合は、claims設定失敗後の再実行として既存状態を検証して再利用する。
 - 保護対象のFirestore、Storage、Callableは、確認済みメール、正常な会社claim、要求tenant path、対応する有効な本登録Userの整合がすべて確認できる場合だけ許可する。claim欠損、型不正、path不一致、User不在、仮登録、無効状態ではfail closedとする。本登録Callableは、会社claimと本登録Userがまだ存在しない確認済みUserにだけ必要なbootstrap例外として扱う。
+- 会社所属が確立した認証必須Callableは、API固有の入力・権限・対象検査より先に、ID tokenと現在のAuthentication UserのUID、email、email確認、company claim、`isSuperUser`のboolean型と値、有効状態を共通境界で照合する。不一致や既に無効なAuthはfail closedとし、確認済みidentityだけを後段へ渡す。未認証で利用できる事前確認Callableはこの境界の対象外とし、初期管理者・一般Userの本登録Callableは所属claim確立前のbootstrapとして専用検査を使用する。
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
 - 全会社Userを対象とするメールアドレス重複確認は、ID tokenと現在のAuthentication Userがメール確認済み・有効・同社会社claimであり、同社のUser documentが有効な本登録会社管理者である場合だけ許可する。`isSuperUser`だけでは許可しない。
 - 従業員の退職と Authentication アカウント削除は同一操作とみなさず、業務記録との関係を保つ。

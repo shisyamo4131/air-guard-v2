@@ -16,6 +16,10 @@ import {
   USER_ENABLED_STATE_POLICY_ERROR_CODES,
   UserEnabledStatePolicyError,
 } from "../../functions/modules/auth/userEnabledStatePolicy.js";
+import {
+  CALLABLE_AUTH_IDENTITY_ERROR_CODES,
+  CallableAuthIdentityError,
+} from "../../functions/modules/auth/resolveCallableAuthIdentity.js";
 
 const SENSITIVE_INTERNAL_MESSAGE =
   "internal uid=user-secret companyId=company-secret";
@@ -68,6 +72,24 @@ test("missing actor and target map without exposing identifiers", () => {
     "not-found",
     "対象ユーザーが見つかりません。",
   );
+});
+
+test("common Callable Auth identity errors use the shared safe response", () => {
+  for (const code of [
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.TOKEN_IDENTITY_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.AUTH_USER_NOT_FOUND,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_IDENTITY_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_STATE_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_NOT_ACTIVE,
+  ]) {
+    assertSafeResponse(
+      mapUserEnabledStateError(
+        new CallableAuthIdentityError(code, SENSITIVE_INTERNAL_MESSAGE),
+      ),
+      "permission-denied",
+      "この操作を行う権限がありません。",
+    );
+  }
 });
 
 test("invalid services and unknown change errors map to internal", () => {

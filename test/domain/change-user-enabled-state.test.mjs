@@ -41,7 +41,7 @@ function createTargetUser(overrides = {}) {
   };
 }
 
-function createAuthUser(overrides = {}) {
+function createTargetAuthUser(overrides = {}) {
   return {
     uid: TARGET_UID,
     customClaims: {
@@ -64,10 +64,10 @@ function createSnapshot(data, exists = true) {
 function createDependencies({
   actorUser = createActorUser(),
   targetUser = createTargetUser(),
-  authUser = createAuthUser(),
+  targetAuthUser = createTargetAuthUser(),
   actorExists = true,
   targetExists = true,
-  authError,
+  targetAuthError,
   transactionError,
   updateError,
   attempts = 1,
@@ -77,8 +77,11 @@ function createDependencies({
   const auth = {
     async getUser(uid) {
       calls.push({ method: "auth.getUser", uid });
-      if (authError) throw authError;
-      return authUser;
+      if (uid === TARGET_UID) {
+        if (targetAuthError) throw targetAuthError;
+        return targetAuthUser;
+      }
+      throw new Error(`Unexpected Auth uid: ${uid}`);
     },
   };
 
@@ -292,7 +295,7 @@ test("invalid Firestore dependency is rejected", async () => {
   assert.deepEqual(dependencies.calls, []);
 });
 
-test("missing actor User aborts before target or Auth access", async () => {
+test("missing actor User aborts before target Auth access", async () => {
   const dependencies = createDependencies({ actorExists: false });
 
   await assertChangeError(
@@ -301,7 +304,9 @@ test("missing actor User aborts before target or Auth access", async () => {
   );
 
   assert.equal(
-    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    dependencies.calls.some(
+      (call) => call.method === "auth.getUser" && call.uid === TARGET_UID,
+    ),
     false,
   );
   assert.equal(
@@ -317,7 +322,7 @@ test("missing actor User aborts before target or Auth access", async () => {
   );
 });
 
-test("missing target User aborts before Auth access or update", async () => {
+test("missing target User aborts before target Auth access or update", async () => {
   const dependencies = createDependencies({ targetExists: false });
 
   await assertChangeError(
@@ -326,7 +331,9 @@ test("missing target User aborts before Auth access or update", async () => {
   );
 
   assert.equal(
-    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    dependencies.calls.some(
+      (call) => call.method === "auth.getUser" && call.uid === TARGET_UID,
+    ),
     false,
   );
   assert.equal(
@@ -335,7 +342,7 @@ test("missing target User aborts before Auth access or update", async () => {
   );
 });
 
-test("policy rejection aborts before Auth access or update", async () => {
+test("policy rejection aborts before target Auth access or update", async () => {
   const dependencies = createDependencies({
     actorUser: createActorUser({ isAdmin: false }),
   });
@@ -353,7 +360,9 @@ test("policy rejection aborts before Auth access or update", async () => {
   );
 
   assert.equal(
-    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    dependencies.calls.some(
+      (call) => call.method === "auth.getUser" && call.uid === TARGET_UID,
+    ),
     false,
   );
   assert.equal(
@@ -364,7 +373,7 @@ test("policy rejection aborts before Auth access or update", async () => {
 
 test("Auth account from another company aborts before update", async () => {
   const dependencies = createDependencies({
-    authUser: createAuthUser({
+    targetAuthUser: createTargetAuthUser({
       customClaims: { companyId: "company-b", isSuperUser: false },
     }),
   });
@@ -389,7 +398,7 @@ test("Auth account from another company aborts before update", async () => {
 
 test("Auth account with another UID aborts before update", async () => {
   const dependencies = createDependencies({
-    authUser: createAuthUser({ uid: "user-b" }),
+    targetAuthUser: createTargetAuthUser({ uid: "user-b" }),
   });
 
   await assert.rejects(
@@ -410,9 +419,9 @@ test("Auth account with another UID aborts before update", async () => {
   );
 });
 
-test("Auth lookup failure is propagated without update", async () => {
+test("target Auth lookup failure is propagated without update", async () => {
   const authError = new Error("synthetic Auth lookup failure");
-  const dependencies = createDependencies({ authError });
+  const dependencies = createDependencies({ targetAuthError: authError });
 
   await assert.rejects(
     changeUserEnabledState(createInput(dependencies)),
@@ -425,7 +434,7 @@ test("Auth lookup failure is propagated without update", async () => {
   );
 });
 
-test("transaction start failure is propagated without document or Auth access", async () => {
+test("transaction start failure is propagated without document or target Auth access", async () => {
   const transactionError = new Error("synthetic transaction failure");
   const dependencies = createDependencies({ transactionError });
 
@@ -439,7 +448,9 @@ test("transaction start failure is propagated without document or Auth access", 
     false,
   );
   assert.equal(
-    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    dependencies.calls.some(
+      (call) => call.method === "auth.getUser" && call.uid === TARGET_UID,
+    ),
     false,
   );
   assert.equal(
@@ -472,7 +483,9 @@ test("transaction retry repeats only reads, validation, and scheduled update", a
 
   assert.deepEqual(result, { success: true, uid: TARGET_UID });
   assert.equal(
-    dependencies.calls.filter((call) => call.method === "auth.getUser").length,
+    dependencies.calls.filter(
+      (call) => call.method === "auth.getUser" && call.uid === TARGET_UID,
+    ).length,
     2,
   );
   assert.equal(
