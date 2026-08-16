@@ -36,7 +36,7 @@ export const useCreateAdminUser = () => {
     try {
       // 1. メールアドレス重複チェック（スキップフラグがfalseの場合のみ）
       if (!skipEmailCheck) {
-        await checkEmailAvailability({ email, isAdmin: true });
+        await checkEmailAvailability({ email });
       }
 
       // 2. Authenticationアカウント作成（自動的にサインイン）
