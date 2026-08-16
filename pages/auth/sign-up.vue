@@ -31,7 +31,7 @@ const currentStep = ref(1); // 現在のステップを管理 (1-based)
 const totalSteps = 2; // 合計ステップ数
 const formValid = ref(false);
 const loading = ref(false);
-const preRegData = ref(null); // 事前登録データ
+const preRegistrationConfirmed = ref(false);
 const emailChecked = ref(false); // メールアドレスチェック済みフラグ
 
 /*****************************************************************************
@@ -107,18 +107,14 @@ async function nextStep() {
         );
       }
 
-      // 事前登録データを保存
-      preRegData.value = preReg;
-
       // 2. メールアドレス重複チェック
       await checkEmailAvailability({ email: model.email, isAdmin: false });
 
+      preRegistrationConfirmed.value = true;
       emailChecked.value = true;
       currentStep.value++;
 
-      messages.add(
-        `${preReg.displayName || "利用者"}様の事前登録を確認しました。`,
-      );
+      messages.add("利用者様の事前登録を確認しました。");
     } catch (error) {
       console.error("Email check error:", error);
       errors.add(error);
@@ -140,7 +136,7 @@ function prevStep() {
     // ステップ1に戻る場合、フラグをリセット
     if (currentStep.value === 1) {
       emailChecked.value = false;
-      preRegData.value = null;
+      preRegistrationConfirmed.value = false;
     }
   }
 }
@@ -152,11 +148,11 @@ function prevStep() {
       アカウント登録
     </v-card-title>
 
-    <v-card-subtitle v-if="preRegData" class="text-center mb-4">
-      <v-chip color="primary" variant="tonal">
-        {{ preRegData.displayName || "利用者" }}
-      </v-chip>
-      として登録します
+    <v-card-subtitle
+      v-if="preRegistrationConfirmed"
+      class="text-center mb-4"
+    >
+      利用者として登録します
     </v-card-subtitle>
 
     <v-form v-model="formValid">
