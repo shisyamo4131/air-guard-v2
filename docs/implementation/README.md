@@ -16,8 +16,8 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 103
-- 実装領域文書: 93
+- このREADMEを含む文書数: 104
+- 実装領域文書: 94
 - 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
 - FUT: 183件
   - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
@@ -50,6 +50,7 @@
 - [Stores / auth middleware deep review](stores-middleware-deep-review.md)
 - [Nuxt plugins deep review](plugins-deep-review.md)
 - [User / Firebase Auth lifecycle](user-auth-lifecycle.md)
+- [User Write Boundary（UWB）改修計画](user-write-boundary.md): Usersコレクションのactor・operation・field別書込み境界と、Callable・UI・Rulesの段階的な改修状況。
 - [Auth onboarding UI](auth-onboarding-ui.md)
 - [Auth / settings / super-user pages deep review](auth-settings-pages-deep-review.md)
 - [role・permission認可model](authorization-model.md)
