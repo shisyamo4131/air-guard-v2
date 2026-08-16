@@ -125,6 +125,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 変更前にmetadata応答と重複先頭採用を再現し、修正後はCodex専用loopback Emulator suite 61件、全domain単体test 202件、JavaScript・Vue SFC検査、`git diff --check`がpassした。利用者用saved-dataは不変、専用saved-dataは読込専用だった。
 - 存在有無の列挙、App Check、rate limit、招待token、`checkEmailAvailability`の匿名境界、Dev・remote・deploy・実dataは未解決・未確認である。公式進捗は10%に据え置く。
 
+## Signup email preflight policy checkpoint
+
+- `checkEmailAvailability`を初期会社管理者signup専用の未認証UX事前確認へ変更した。入力はemailだけとし、Authenticationと全会社の全User状態を照合する。caller指定`isAdmin`はpolicy選択に使用せず、追加入力されても無視する。
+- 一般User signupから`checkEmailAvailability`を除去し、未認証段階は`checkUserPreRegistration`、Auth email一意性はFirebase Auth作成時、本登録対象の一意性は`setupUserAccount`で確認する。管理者signupのpage/composableもemailだけを送る。
+- 専用loopback Emulator suite 61件、全domain単体test 207件、JavaScript・Vue SFC検査、`git diff --check`がpassした。Functions transport、Dev・remote・deploy・実dataは未確認である。
+- 事前確認と作成はatomicではなく、同時実行競合とAuth-onlyを含む部分状態が残り得ることをFUT-0081へ利用者確認済みriskとして記録した。email列挙、App Check、rate limit、`createAdminAccount`の既存所属・再実行・部分状態は未解決である。
+- 次は`createAdminAccount`のserver enforcementを、現行挙動、移行・rollback、陰性testを先に整理した最小segmentとして扱う。公式進捗は10%に据え置く。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

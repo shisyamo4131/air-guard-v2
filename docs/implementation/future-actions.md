@@ -1086,8 +1086,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025
-- 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`auth-v2.setupUserAccount/createAdminAccount`
-- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。
+- 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`apis/setupUserAccount`、`apis/createAdminAccount`、`apis/checkEmailAvailability`
+- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。2026-08-16に、初期管理者のemail事前確認とAuth/User作成もatomicではなく、同時実行競合とAuth-only状態が残り得ることを利用者確認済みの残存riskとして再確認した。
 - 想定影響と発生条件: network/Admin SDK/trigger失敗でAuth-only、Firestore-only、claims欠損のaccountが残り、login初期化やtenant accessが不能・不整合になる。
 - 未確認点・仮説: 運用reconcile、監視、既存orphan件数は未確認。
 - 推奨する将来対応: idempotent setup state machine、再実行可能なclaims設定、orphan検出・管理者repairを設計する。
@@ -1132,7 +1132,7 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025、SEC-002
 - 対象ファイル・シンボル: `checkUserPreRegistration`、`checkEmailAvailability*`
-- 確認済み実装事実: 2026-08-16に応答を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdの匿名公開を廃止した。複数temporary Userも先頭採用せず拒否する。登録有無の応答差と、App Check、rate limit、challengeの不在は残る。
+- 確認済み実装事実: 2026-08-16に応答を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdの匿名公開を廃止した。複数temporary Userも先頭採用せず拒否する。`checkEmailAvailability`は初期管理者signup専用となり、emailだけでAuthと全Userを確認するが、登録有無の応答差と、App Check、rate limit、challengeの不在は残る。
 - 想定影響と発生条件: email推測・列挙により事前登録の存在有無を判別でき、無制限呼出しでquota abuseとなり得る。所属会社識別子、氏名、role、仮doc IDの直接漏えいは解消済みである。
 - 未確認点・仮説: App Check、platform側rate limit、招待secretの別実装は未確認。
 - 推奨する将来対応: App Check/rate limit、opaque invitation token、enumeration-resistant responseを検討する。
@@ -1222,7 +1222,7 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-027
-- 対象ファイル・シンボル: `auth-v2.createAdminAccount`、Company/User transaction、custom claims、`useAuthActions`
+- 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`、Company/User transaction、custom claims、`useAuthActions`
 - 確認済み実装事実: Companyとadmin Userはtransactionだがclaims設定は後続。tenant identityはCompany doc ID/claim/prefixにまたがり、移転・再concile経路はない。
 - 想定影響と発生条件: claims失敗・誤Company削除でAuth account、User、Company、subcollectionsのanchorが不一致になる。
 - 未確認点・仮説: orphan Company/Userの検出・support修復運用は未確認。
@@ -2034,7 +2034,7 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
 - 対象ファイル・シンボル: `functions/apis/*.js`、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`とpre-registrationは未認証だが、pre-registrationはbooleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、client指定policy区分を信頼しない。pre-registrationも未認証だが、booleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
 - 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。

@@ -23,6 +23,7 @@
 
 ### Changed
 
+- 初期会社管理者signup用`checkEmailAvailability`をemailだけのAuth・全User重複事前確認へ変更し、client指定`isAdmin`によるpolicy選択を廃止した。一般User signupは当該Callableを使用せず、事前登録確認とAuth作成時のemail一意性へ責務を分離した。
 - 一般Userの未認証事前登録確認をboolean応答だけに縮小し、会社ID・表示名・role・仮User IDの公開を廃止した。複数仮登録は先頭を採用せず拒否し、signup画面も汎用表示へ変更した。
 - `auth-v2.js`に残っていた全Callableを`functions/apis`へ分離し、有効化・無効化は共通request処理と2つの公開Callableを1ファイルへ集約した。Authentication削除triggerは`functions/triggers/auth.js`へ移し、公開Function名と既存挙動を維持した。
 - signup用`checkEmailAvailability`を`functions/apis`の単体ファイルへ分離し、Cloud Functionsの公開名と既存挙動を維持したままAPI index経由のexportへ整理した。
@@ -67,6 +68,7 @@
 
 ### Security
 
+- 管理者signupの匿名email事前確認で、callerが`isAdmin`を偽装して弱い一般User分岐を選べないようにした。事前確認は認可ではなく、作成との競合、Auth-only部分状態、email列挙、App Check・rate limit、`createAdminAccount`のserver guardは残存riskとして継続する。
 - 全会社Userのメールアドレス重複確認Callableを、確認済みメール、正常な会社claim、現在の有効なAuthentication User、同社の有効な本登録会社管理者がすべて整合する場合だけ許可した。`isSuperUser`だけでは許可せず、拒否経路と全会社重複検出を専用loopback Emulatorで検証した。
 - スーパーユーザー向けの履歴・警備日報インデックス再構築Callableを、ID token、現在のAuthentication User、同社の有効な本登録User、要求会社がすべて整合する場合だけ許可した。Auth無効・User無効・他社指定を含む拒否経路と両再構築の正常経路を専用loopback Emulatorで検証した。
 - StorageのSecurityReportsを、確認済みメール、正常な会社claim、同一tenant path、対応する有効な本登録Userがすべて整合する場合だけ許可するよう変更した。専用loopback Emulatorでupload、list、metadata、download URL、byte download、deleteと不正identity・他tenant拒否を検証した。

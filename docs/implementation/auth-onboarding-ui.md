@@ -29,9 +29,9 @@ logout UIはこのscopeのauth pagesにはなく、app shell側の`useAuthAction
 ## 一般User signup・事前登録
 
 1. emailを入力し、未認証Callable `checkUserPreRegistration`で仮Userを検索する。
-2. 結果が1件なら確認済みbooleanだけを保持し、汎用の利用者表示で`checkEmailAvailability`を実行する。会社ID、表示名、role、仮User IDは受け取らない。
+2. 結果が1件なら確認済みbooleanだけを保持し、汎用の利用者表示を行う。会社ID、表示名、role、仮User IDは受け取らない。
 3. password/confirm（6文字以上・一致）を入力する。
-4. submit時にcomposableが事前登録とemail availabilityを再確認する。
+4. submit時にcomposableが事前登録を再確認する。管理者signup用`checkEmailAvailability`は呼ばない。
 5. Firebase Auth Userを作成し自動sign-inする。
 6. verification mailを送信する。
 7. verification待ちへ遷移し、メール確認後に`setupUserAccount`が確認済みtoken emailから仮Userを一意解決して本Userへ変換し、claimsを設定する。
@@ -43,7 +43,7 @@ Auth作成後のmail/setup/token refresh失敗ではAuth Userが残る。画面�
 
 ## 初回admin signup
 
-3 stepでemail/password、Company名/カナ、displayNameを入力する。step 1でemail availabilityを確認し、submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。
+3 stepでemail/password、Company名/カナ、displayNameを入力する。step 1でemailだけを未認証`checkEmailAvailability`へ渡し、Authenticationと全会社Userの重複を事前確認する。submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。この確認はUX用であり、`createAdminAccount`の認可・既存所属・再実行検証を代替しない。
 
 Auth User作成、verification mail、`createAdminAccount`によるCompany/User/claims作成、token refresh、`setUser`再初期化の順である。後段失敗時はAuth-onlyまたは部分Company/User/claimsが残り、UID付きsupport案内以外のrepair UIはない。公開routeから開始するが、Auth作成でsigned-inになった後にCallableを呼ぶ。
 
@@ -65,8 +65,8 @@ middlewareは未認証をsign-inへ、認証済み未確認Userをverification�
 
 ## duplicate・orphan・unused候補
 
-- `checkEmailAvailabilityGlobal`はdirect onboarding pagesから呼ばれず、現行flowは`checkEmailAvailability`を使う。
-- 一般signupはpageで事前登録/emailを確認した後、composableが同じ確認を再実行する。安全側の再確認だがrequestは重複する。
+- `checkEmailAvailabilityGlobal`はdirect onboarding pagesから呼ばれない。`checkEmailAvailability`は初回admin signupだけが使用する。
+- 一般signupはpageで事前登録を確認した後、composableが同じ事前登録確認を再実行する。安全側の再確認だがrequestは重複する。
 - admin signupは確認後submitまでemail変更をdisabledにする一方、競合予約やidempotency keyはない。
 - verification済みUser向けsign-in buttonは現在sessionをclearせず、意味のある復帰操作にならない候補である。
 - password resetとunconfirmedEmailはpageSettings設定漏れである。

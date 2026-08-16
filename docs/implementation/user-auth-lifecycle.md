@@ -37,7 +37,7 @@ SPEC-DEEP-032で、`ChangeAdminUserDialog`は`/settings/users`の`UsersManager`�
 
 1. 管理画面または従業員詳細が`checkEmailAvailabilityGlobal`を呼び、collection group `Users`でemail重複を確認する。
 2. clientが`isTemporary=true`のUser docを直接作成する。この処理は招待メールを送信しないため、実装上は「事前登録」である。
-3. 本人のsign-up画面が未認証callable `checkUserPreRegistration`と`checkEmailAvailability`を呼ぶ。
+3. 本人のsign-up画面が未認証callable `checkUserPreRegistration`を呼ぶ。管理者signup用`checkEmailAvailability`は呼ばない。
 4. client Firebase SDKがemail/password Auth accountを作成し、自動sign-inする。
 5. clientがverification emailを送り、email確認完了まで本登録を行わない。
 6. メール確認後、認証済みcallable `setupUserAccount`がclient dataを受け取らず、確認済みAuth token emailから一意のtemporary Userと会社pathを解決する。
@@ -48,7 +48,7 @@ Auth account作成、verification mail、Firestore transaction、claims設定は
 
 ### 初期管理者
 
-1. clientがemail重複を確認してAuth accountを作り、verification emailを送る。
+1. clientがemailだけを未認証`checkEmailAvailability`へ渡し、Authと全会社Userの重複を事前確認してからAuth accountを作り、verification emailを送る。
 2. 認証済み`createAdminAccount`がCompanyと`Users/{uid}`を同一Firestore transactionで作る。Userは`isAdmin=true`、`isTemporary=false`。
 3. transaction後に`companyId`/`isSuperUser:false` claimsを設定し、token refresh後にauth storeを再初期化する。
 
@@ -78,6 +78,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## failure・再試行・冪等性
 
 - email重複確認と作成はatomicではなく、並行登録で競合し得る。Auth email一意性はAuth作成時に最終検査されるが、仮User emailにはserver一意制約がない。
+- 初期管理者の事前確認はUX用であり、確認後にAuth作成または`createAdminAccount`が失敗するとAuth-onlyを含む部分状態が残り得る。既存company claim/User/Companyを持つAuthによる再実行防止は未実装である。
 - `setupUserAccount`はFirestore移行後のclaims失敗を補償しない。再実行すると仮docが消えているため`not-found`となる。
 - `createAdminAccount`はCompany/User transaction後のclaims失敗を補償せず、再実行時の重複Company回避契約もない。
 - disable/enableはUser doc更新成功をcallable成功として返し、Auth反映完了を待たない。
@@ -86,7 +87,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 ## Rules・tenant・security
 
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
-- `checkEmailAvailabilityGlobal`はverified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者を要求し、`isSuperUser`だけでは許可しない。`checkEmailAvailability`と`checkUserPreRegistration`は未認証で呼べるが、事前登録確認は登録状態のbooleanだけを返し、複数一致を拒否する。
+- `checkEmailAvailabilityGlobal`はverified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者を要求し、`isSuperUser`だけでは許可しない。初期管理者用`checkEmailAvailability`は未認証でemailだけを受け取り、Authと全User状態を照合する。一般User用`checkUserPreRegistration`も未認証で呼べるが、登録状態のbooleanだけを返し、複数一致を拒否する。
 - disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。2026-08-16に会社管理者で認証済みのChromeからlocal Emulatorへ接続し、非管理者の合成test Userを無効化して操作表示が「有効化」へ変わり、再有効化して「無効化」へ戻ることを確認した。
 - 管理者移譲callableはcaller UIDとfromの一致、同社の唯一の有効な本登録会社管理者、移譲先User/Authのcompany・UID・登録・管理者・disabled状態をserverで確認する。実Callable/Emulator検証は未実施である。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。
