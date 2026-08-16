@@ -111,6 +111,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 移設前後のCallableとAuth削除trigger本体一致、対象fileの`node --check`、functions entry実import、全domain単体test 201件、正式API index経由の専用loopback Emulator suite 60件、`git diff --check`はpassした。Functions Emulator、Functions transport、Auth削除event transport、Dev・remote、実data、deployは未実施である。
 - `createAdminAccount`の既存所属・再実行・部分状態、匿名signup入口、App Check、rate limit、Users Rules等の残存riskは変更していない。次は認可整合性検証の優先改修へ戻る。
 
+## Chrome Callable transport checkpoint
+
+- 会社管理者かつスーパーユーザーで認証済みのChromeからlocal Emulatorへ接続し、`rebuildAllHistories`、`rebuildSecurityReportIndexes`の成功応答を確認した。警備日報index再構築は処理0件・index 0件だった。
+- 非管理者の合成test Userに対して`disableUser`と`enableUser`を順に実行し、画面上の操作表示が「無効化」→「有効化」→「無効化」と変化することを確認した。dashboard復帰後も認証状態を維持し、Chrome console errorは0件だった。
+- Emulatorは利用者の指示どおりdata変更可、export-on-exitなしの環境を使用した。停止・exportは行っていない。`changeAdminUser`、signup系Callable、Auth削除event、Dev・remote・deploy・実dataは未確認である。
+- この実測は4 CallableのFunctions transport証拠を追加するもので、残存する匿名signup情報境界、App Check、rate limit、部分状態、Users Rulesを解消しない。公式進捗は10%に据え置く。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

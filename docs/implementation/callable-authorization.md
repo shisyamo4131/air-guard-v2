@@ -4,9 +4,9 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-049
-- 最終確認日: 2026-08-15
+- 最終確認日: 2026-08-16
 - 根拠ファイル: `functions/index.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`test/local/codex-local-harness.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
-- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 10件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。全domain単体test 201件と、Auth・Firestore・Storage EmulatorおよびCallable handlerの専用local suite 60件を実行した。Functions transport、Dev・remote、実dataは未確認。
+- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 10件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。全domain単体test 201件と、Auth・Firestore・Storage EmulatorおよびCallable handlerの専用local suite 60件を実行した。ChromeからFunctions Emulatorへのtransportは`rebuildAllHistories`、`rebuildSecurityReportIndexes`、`disableUser`、`enableUser`の4件を確認した。残るCallable transport、Dev・remote、実dataは未確認。
 
 ## Callable別認証・対象解決
 
@@ -83,6 +83,13 @@
 
 ## 未確認範囲
 
-- Functions transport、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data、Dev・remote・実data。
+- `changeAdminUser`、`checkEmailAvailabilityGlobal`、signup系CallableのChrome transport、Auth削除event transport、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data、Dev・remote・実data。
 - User/Auth trigger本文、Employee連携、削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。
 - 正式actor matrix、rate limit値、audit retentionはユーザー判断待ちである。
+
+## Chrome Callable transport確認（2026-08-16）
+
+- 会社管理者かつスーパーユーザーで認証済みのChromeとlocal Emulatorを使用し、`rebuildAllHistories`と`rebuildSecurityReportIndexes`の成功応答を画面で確認した。後者の処理件数・index件数は0件だった。
+- 非管理者の合成test Userを対象に`disableUser`を実行し、画面上の操作が「無効化」から「有効化」へ変わることを確認した。続けて`enableUser`を実行し、「無効化」へ戻ることを確認した。
+- dashboardへ戻った後も認証状態を維持し、Chrome console errorは0件だった。既存の子menu role警告と、通常画面遷移に伴うFCM token登録logは残った。
+- 利用者のEmulatorはexport-on-exitなしで起動されており、この確認では停止・exportを行っていない。4 Callable以外のtransport、Auth削除event、Dev・remote・deploy・実dataは確認していない。

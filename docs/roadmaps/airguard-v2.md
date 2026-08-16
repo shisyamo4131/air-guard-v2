@@ -24,7 +24,7 @@
 
 - 主repoの531-file deep reviewは、A 310件から519件へ増加した。B/C残数は209件から0件へ減少し、予定したsource本文精査を完了した。D 11件とE 1件は分類済みのtest/config/asset・外部境界であり、runtime検証済みという意味ではない。
 - schema runtime 76 paths、共通UI runtime 43 paths、Admin SDK runtime 14 pathsを、主repo母数とは別のpackage境界として静的レビューした。
-- 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore・Storage Rules・再構築Callable・全会社メール重複確認Callable handlerの51件のtestを追加した。全Companies collectionとSecurityReports fileのtenant identity gate、恒久的なsuper-user bypass廃止、SecurityReportIndexes・StripeDataの個別操作制約、再構築実行者の現在Auth/User整合性、全会社メール重複確認の会社管理者境界を確認した。Functions transport、Realtime Database Rules、UI、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
+- 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore・Storage Rules・再構築Callable・全会社メール重複確認Callable handlerの51件のtestを追加した。全Companies collectionとSecurityReports fileのtenant identity gate、恒久的なsuper-user bypass廃止、SecurityReportIndexes・StripeDataの個別操作制約、再構築実行者の現在Auth/User整合性、全会社メール重複確認の会社管理者境界を確認した。Chromeからlocal EmulatorへのFunctions transportは再構築2件とUser有効化・無効化の4件を実測した。残るFunctions transport、Realtime Database Rules、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
 - 調査完了は問題の特定証拠であり、修正、test、運用受入れの完了証拠ではない。そのため公式進捗は10%のままとする。
 - 詳細な問題、台帳対応、要判断事項は[2026-08-12 source review統合記録](../implementation/review-reconciliation-2026-08-12.md)を参照する。
 
@@ -105,3 +105,4 @@
 | 2026-08-15 | 10% | 0 | 全会社メール重複確認Callableを、有効な同社会社管理者だけに限定した。公開Callableと再構築Callableを`functions/apis`の単体ファイルへ分離し、共有再構築認可はAPI indexから非公開とした。正式なAPI index経由の専用loopback Emulator 51件、全domain単体test 201件、両validatorが成功した。残るsignup Callable、App Check・rate limit、Functions transport、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | signup用`checkEmailAvailability`を`functions/apis`の単体ファイルへ移し、公開名と既存挙動を維持した。正式なAPI index経由で入力型、Authentication重複、管理者登録時の全会社User重複、一般User登録時の仮User有無を含む専用loopback Emulator 55件と全domain単体test 201件が成功した。未認証入口、caller指定`isAdmin`、App Check・rate limit、Functions transport、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-15 | 10% | 0 | `auth-v2.js`に残る全Callableを`functions/apis`へ移し、Auth削除処理を`functions/triggers/auth.js`へ分離した。公開Function名と既存挙動を維持し、正式API indexの10 Callable、内部helper非公開、仮登録検索、管理者会社作成、各入口guardを専用loopback Emulator 60件、全domain単体test 201件、functions entry実importで確認した。認可改善ではないため残存guard、Functions transport、Dev・remote受入れは未完了で、進捗は据え置いた。 |
+| 2026-08-16 | 10% | 0 | 認証済みChromeからlocal Emulatorへ接続し、履歴・警備日報index再構築、非管理者Userの無効化・再有効化の4 CallableについてFunctions transportと画面反映を確認した。dashboard復帰後も認証を維持し、console errorは0件だった。残るCallable transport、匿名signup情報境界、App Check・rate limit、Dev・remote受入れが未完了のため進捗は据え置いた。 |

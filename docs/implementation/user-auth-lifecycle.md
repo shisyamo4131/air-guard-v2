@@ -87,7 +87,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
 - `checkEmailAvailabilityGlobal`はverified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者を要求し、`isSuperUser`だけでは許可しない。`checkEmailAvailability`と`checkUserPreRegistration`は未認証で呼べ、事前登録確認は一致emailについてcompanyId、displayName、roles、tempUserIdを返す。
-- disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。実Callable/Emulator検証は未実施である。
+- disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。2026-08-16に会社管理者で認証済みのChromeからlocal Emulatorへ接続し、非管理者の合成test Userを無効化して操作表示が「有効化」へ変わり、再有効化して「無効化」へ戻ることを確認した。
 - 管理者移譲callableはcaller UIDとfromの一致、同社の唯一の有効な本登録会社管理者、移譲先User/Authのcompany・UID・登録・管理者・disabled状態をserverで確認する。実Callable/Emulator検証は未実施である。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。
 
@@ -118,7 +118,7 @@ callableは認証された本人UIDを使用するが、メール確認済みで
 
 - 実Firebase Auth/Firestoreデータ、Emulator、メール到達、token refreshの実行結果。
 - 実Cloud Functions triggerからのAuth同期、既存Auth accountのcompany claim充足状況、同期失敗後の再試行・手動reconcile。
-- `disableUser`/`enableUser`の実Callable起動、Firestore transactionと後続Auth同期triggerのEmulator結合、既存Userの`isAdmin`・`disabled`・`isTemporary`・company claim充足状況。
+- `disableUser`/`enableUser`の後続Auth同期trigger完了とAuth disabled値、既存Userの`isAdmin`・`disabled`・`isTemporary`・company claim充足状況。ChromeからのCallable起動とUser画面への状態反映はlocal Emulatorで確認済みである。
 - Employee退職処理本文、login/middleware全体、super-user運用、admin SDK保守CLI。
 - Functions retry設定、監視・手動reconcile運用、既存重複/orphanデータ。
 
