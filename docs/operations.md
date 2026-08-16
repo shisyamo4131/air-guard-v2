@@ -59,6 +59,30 @@ user-confirmation: <実装前判断と実装後確認>
 npm run dev
 ```
 
+### Firestore instance baseline
+
+2026-08-17にFirebase CLI 15.27.0でDev環境を読み取り確認した。
+
+| 項目 | 確認値 |
+|---|---|
+| Firebase project | `air-guard-v2-dev`（`.firebaserc`の`default`・`dev` alias） |
+| Database | `(default)` |
+| Edition | `STANDARD` |
+| Type | `FIRESTORE_NATIVE` |
+| Location | `asia-northeast1` |
+| Delete protection | `DELETE_PROTECTION_DISABLED` |
+| Point-in-time recovery | `POINT_IN_TIME_RECOVERY_DISABLED` |
+
+確認には次の読み取り専用コマンドを使用する。edition依存のFirestore実装を開始するときは、まず本baselineを確認し、対象projectまたはdatabase構成が変更されている場合だけ再取得する。
+
+```powershell
+npx -y firebase-tools@latest use
+npx -y firebase-tools@latest firestore:databases:list --project air-guard-v2-dev
+npx -y firebase-tools@latest firestore:databases:get "(default)" --project air-guard-v2-dev
+```
+
+Prod環境`air-guard-v2`のdatabase editionと保護設定は未確認であり、deploy判断へ流用しない。
+
 ローカル用設定でホストを公開する場合:
 
 ```powershell
