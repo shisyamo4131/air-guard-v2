@@ -30,6 +30,13 @@ test("normal signup does not complete registration before verification", async (
   assert.equal(source.includes("getIdToken(true)"), false);
 });
 
+test("normal signup does not use the administrator email preflight", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+
+  assert.equal(source.includes("checkEmailAvailability"), false);
+  assert.equal(source.includes("skipEmailCheck"), false);
+});
+
 test("normal signup UI does not consume anonymous pre-registration metadata", async () => {
   const source = await readFile(signUpPageUrl, "utf8");
 

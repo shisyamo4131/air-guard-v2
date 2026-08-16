@@ -10,8 +10,7 @@ import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 export const useCreateNormalUser = () => {
   const { $auth } = useNuxtApp();
   const auth = $auth;
-  const { checkUserPreRegistration, checkEmailAvailability } =
-    useAuthFunctions();
+  const { checkUserPreRegistration } = useAuthFunctions();
 
   /**
    * 利用者アカウント登録処理
@@ -19,14 +18,12 @@ export const useCreateNormalUser = () => {
    * @param {string} params.email - メールアドレス
    * @param {string} params.password - パスワード
    * @param {boolean} [params.skipPreRegCheck=false] - 事前登録確認をスキップするか
-   * @param {boolean} [params.skipEmailCheck=false] - メールアドレスチェックをスキップするか
    * @returns {Promise<{success: boolean, userCredential: UserCredential}>}
    */
   const signupUser = async ({
     email,
     password,
     skipPreRegCheck = false,
-    skipEmailCheck = false,
   }) => {
     try {
       // 1. 事前登録確認（スキップフラグがfalseの場合のみ）
@@ -40,12 +37,7 @@ export const useCreateNormalUser = () => {
         }
       }
 
-      // 2. メールアドレス重複チェック（スキップフラグがfalseの場合のみ）
-      if (!skipEmailCheck) {
-        await checkEmailAvailability({ email, isAdmin: false });
-      }
-
-      // 3. Authenticationアカウント作成
+      // 2. Authenticationアカウント作成
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
@@ -53,7 +45,7 @@ export const useCreateNormalUser = () => {
       );
 
       try {
-        // 4. メール認証送信
+        // 3. メール認証送信
         await sendEmailVerification(userCredential.user);
 
         // User本登録はメール確認後にunconfirmedEmail画面から行う
