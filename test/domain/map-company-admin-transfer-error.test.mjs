@@ -16,6 +16,10 @@ import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
 } from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+import {
+  CALLABLE_AUTH_IDENTITY_ERROR_CODES,
+  CallableAuthIdentityError,
+} from "../../functions/modules/auth/resolveCallableAuthIdentity.js";
 
 const INTERNAL_RESPONSE = {
   code: "internal",
@@ -46,6 +50,24 @@ function assertSafeResponse(error, expected) {
   assert.equal(response.message.includes("synthetic internal detail"), false);
 }
 
+test("common Callable Auth identity errors use the shared safe response", () => {
+  for (const code of [
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.TOKEN_IDENTITY_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.AUTH_USER_NOT_FOUND,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_IDENTITY_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_STATE_INVALID,
+    CALLABLE_AUTH_IDENTITY_ERROR_CODES.CURRENT_AUTH_NOT_ACTIVE,
+  ]) {
+    assertSafeResponse(
+      new CallableAuthIdentityError(
+        code,
+        "synthetic internal detail admin-a company-a",
+      ),
+      PERMISSION_DENIED_RESPONSE,
+    );
+  }
+});
+
 const transferErrorCases = [
   {
     code: COMPANY_ADMIN_TRANSFER_ERROR_CODES.REQUIRED_FIELD_MISSING,
@@ -63,17 +85,8 @@ const transferErrorCases = [
     expected: USER_STATE_UNAVAILABLE_RESPONSE,
   },
   {
-    code: COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_NOT_ACTIVE,
-    expected: PERMISSION_DENIED_RESPONSE,
-  },
-  {
     code: COMPANY_ADMIN_TRANSFER_ERROR_CODES.TARGET_AUTH_NOT_ACTIVE,
     expected: TARGET_STATE_INVALID_RESPONSE,
-  },
-  {
-    code:
-      COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_DISABLED_STATE_INVALID,
-    expected: USER_STATE_UNAVAILABLE_RESPONSE,
   },
   {
     code:

@@ -19,7 +19,7 @@
 - 共通Auth errorは内部の存在・不整合理由を公開せず、安全なCallable errorへ共通変換する。
 - 既存Callableを一括置換せず、1つの最小segmentごとに重複検査を除去して陰性testとEmulator testを行う。
 
-最初の適用対象は`disableUser`と`enableUser`とし、Auth identity検査後に同社の有効な本登録会社管理者、対象User/Auth、状態変更policyを検査する。
+適用対象は、会社所属済みの`disableUser`、`enableUser`、`changeAdminUser`、`checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`とする。Auth identity検査後に、各API固有の会社管理者・スーパーユーザー・User document・対象User/Auth・tenant・入力policyを検査する。
 
 ## 理由
 

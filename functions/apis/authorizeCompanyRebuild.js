@@ -7,9 +7,10 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError } from "firebase-functions/v2/https";
 import {
-  assertAuthUserCompany,
   assertUserDocumentCompany,
 } from "../modules/auth/userAuthCompanyPolicy.js";
+import { mapCallableAuthIdentityError } from "../modules/auth/mapCallableAuthIdentityError.js";
+import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 const PERMISSION_DENIED_MESSAGE =
   "An active same-company super user is required";
@@ -25,58 +26,39 @@ export async function authorizeCompanyRebuild(request) {
     throw new HttpsError("unauthenticated", "Authentication is required");
   }
 
+  const token = request.auth.token ?? {};
+  let actorIdentity;
+
+  try {
+    actorIdentity = await resolveCallableAuthIdentity({
+      auth: getAuth(),
+      tokenUid: request.auth.uid,
+      tokenEmail: token.email,
+      tokenEmailVerified: token.email_verified,
+      tokenCompanyId: token.companyId,
+      tokenIsSuperUser: token.isSuperUser,
+    });
+  } catch (error) {
+    const mappedError = mapCallableAuthIdentityError(error);
+    if (mappedError) {
+      throw new HttpsError(mappedError.code, mappedError.message);
+    }
+    throw new HttpsError("internal", "Unable to verify the Auth account");
+  }
+
   const { companyId } = request.data ?? {};
   if (!companyId || typeof companyId !== "string") {
     throw new HttpsError("invalid-argument", "companyId is required");
   }
 
-  const { uid, token } = request.auth;
   if (
-    !uid ||
-    typeof uid !== "string" ||
-    token?.email_verified !== true ||
-    token.isSuperUser !== true
+    actorIdentity.isSuperUser !== true ||
+    actorIdentity.companyId !== companyId
   ) {
     throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
   }
 
-  try {
-    assertAuthUserCompany({
-      pathCompanyId: companyId,
-      docId: uid,
-      authUser: { uid, customClaims: token },
-    });
-  } catch {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
-
-  let authUser;
-  try {
-    authUser = await getAuth().getUser(uid);
-  } catch (error) {
-    if (error?.code === "auth/user-not-found") {
-      throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-    }
-    throw new HttpsError("internal", "Unable to verify the Auth account");
-  }
-
-  try {
-    assertAuthUserCompany({
-      pathCompanyId: companyId,
-      docId: uid,
-      authUser,
-    });
-  } catch {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
-
-  if (
-    authUser.emailVerified !== true ||
-    authUser.disabled !== false ||
-    authUser.customClaims?.isSuperUser !== true
-  ) {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
+  const { uid } = actorIdentity;
 
   const actorSnapshot = await getFirestore()
     .collection("Companies")

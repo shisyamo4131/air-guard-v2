@@ -8,9 +8,10 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import {
-  assertAuthUserCompany,
   assertUserDocumentCompany,
 } from "../modules/auth/userAuthCompanyPolicy.js";
+import { mapCallableAuthIdentityError } from "../modules/auth/mapCallableAuthIdentityError.js";
+import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 const PERMISSION_DENIED_MESSAGE = "有効な会社管理者権限を確認できません。";
 
@@ -28,51 +29,31 @@ export const checkEmailAvailabilityGlobal = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const { uid, token } = request.auth;
-  const companyId = token?.companyId;
-  if (
-    typeof uid !== "string" ||
-    !uid ||
-    token?.email_verified !== true
-  ) {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
+  const token = request.auth.token ?? {};
+  const auth = getAuth();
+  const db = getFirestore();
+  let actorIdentity;
 
   try {
-    assertAuthUserCompany({
-      pathCompanyId: companyId,
-      docId: uid,
-      authUser: { uid, customClaims: token },
+    actorIdentity = await resolveCallableAuthIdentity({
+      auth,
+      tokenUid: request.auth.uid,
+      tokenEmail: token.email,
+      tokenEmailVerified: token.email_verified,
+      tokenCompanyId: token.companyId,
+      tokenIsSuperUser: token.isSuperUser,
     });
-  } catch {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
-
-  let authUser;
-  try {
-    authUser = await getAuth().getUser(uid);
   } catch (error) {
-    if (error?.code === "auth/user-not-found") {
-      throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
+    const mappedError = mapCallableAuthIdentityError(error);
+    if (mappedError) {
+      throw new HttpsError(mappedError.code, mappedError.message);
     }
     throw new HttpsError("internal", "Authアカウントを確認できません。");
   }
 
-  try {
-    assertAuthUserCompany({
-      pathCompanyId: companyId,
-      docId: uid,
-      authUser,
-    });
-  } catch {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
+  const { uid, companyId } = actorIdentity;
 
-  if (authUser.emailVerified !== true || authUser.disabled !== false) {
-    throw new HttpsError("permission-denied", PERMISSION_DENIED_MESSAGE);
-  }
-
-  const actorSnapshot = await getFirestore()
+  const actorSnapshot = await db
     .collection("Companies")
     .doc(companyId)
     .collection("Users")
@@ -107,7 +88,7 @@ export const checkEmailAvailabilityGlobal = onCall(async (request) => {
   }
 
   try {
-    const usersSnapshot = await getFirestore()
+    const usersSnapshot = await db
       .collectionGroup("Users")
       .where("email", "==", email)
       .get();

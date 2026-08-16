@@ -53,7 +53,6 @@ function createTargetUser(overrides = {}) {
 }
 
 function createDependencies({
-  actorAuthUser = createAuthUser(ACTOR_UID),
   targetAuthUser = createAuthUser(TARGET_UID),
   sourceUser = createSourceUser(),
   targetUser = createTargetUser(),
@@ -71,7 +70,8 @@ function createDependencies({
       if (authErrors.has(uid)) {
         throw authErrors.get(uid);
       }
-      return uid === ACTOR_UID ? actorAuthUser : targetAuthUser;
+      if (uid === TARGET_UID) return targetAuthUser;
+      throw new Error(`Unexpected Auth uid: ${uid}`);
     },
   };
 
@@ -194,7 +194,7 @@ test("active sole administrator transfers authority atomically", async () => {
     dependencies.calls
       .filter((call) => call.method === "auth.getUser")
       .map((call) => call.uid),
-    [ACTOR_UID, TARGET_UID],
+    [TARGET_UID],
   );
   assert.deepEqual(
     dependencies.calls
@@ -245,52 +245,6 @@ test("Firestore service must provide required methods", async () => {
   await assertTransferError(
     transferCompanyAdmin(createInput(dependencies, { firestore: {} })),
     COMPANY_ADMIN_TRANSFER_ERROR_CODES.FIRESTORE_SERVICE_INVALID,
-  );
-});
-
-test("actor Auth User from another company is rejected", async () => {
-  const dependencies = createDependencies({
-    actorAuthUser: createAuthUser(ACTOR_UID, {
-      customClaims: { companyId: "company-b", isSuperUser: false },
-    }),
-  });
-
-  await assert.rejects(
-    transferCompanyAdmin(createInput(dependencies)),
-    (error) => {
-      assert.ok(error instanceof UserAuthCompanyPolicyError);
-      assert.equal(
-        error.code,
-        USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_COMPANY_MISMATCH,
-      );
-      return true;
-    },
-  );
-  assert.equal(
-    dependencies.calls.some((call) => call.method === "firestore.runTransaction"),
-    false,
-  );
-});
-
-test("actor Auth User with an invalid disabled state is rejected", async () => {
-  const actorAuthUser = createAuthUser(ACTOR_UID);
-  delete actorAuthUser.disabled;
-  const dependencies = createDependencies({ actorAuthUser });
-
-  await assertTransferError(
-    transferCompanyAdmin(createInput(dependencies)),
-    COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_DISABLED_STATE_INVALID,
-  );
-});
-
-test("disabled actor Auth User is rejected", async () => {
-  const dependencies = createDependencies({
-    actorAuthUser: createAuthUser(ACTOR_UID, { disabled: true }),
-  });
-
-  await assertTransferError(
-    transferCompanyAdmin(createInput(dependencies)),
-    COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_NOT_ACTIVE,
   );
 });
 
@@ -392,10 +346,10 @@ test("caller cannot transfer another administrator's authority", async () => {
       createInput(dependencies, { actorUid: "user-b" }),
     ),
     (error) => {
-      assert.ok(error instanceof UserAuthCompanyPolicyError);
+      assert.ok(error instanceof CompanyAdminTransferPolicyError);
       assert.equal(
         error.code,
-        USER_AUTH_COMPANY_POLICY_ERROR_CODES.AUTH_UID_MISMATCH,
+        COMPANY_ADMIN_TRANSFER_POLICY_ERROR_CODES.ACTOR_SOURCE_MISMATCH,
       );
       return true;
     },

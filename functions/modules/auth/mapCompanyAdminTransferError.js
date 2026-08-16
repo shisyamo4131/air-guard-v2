@@ -15,6 +15,9 @@ import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
 } from "./userAuthCompanyPolicy.js";
+import {
+  mapCallableAuthIdentityError,
+} from "./mapCallableAuthIdentityError.js";
 
 const INTERNAL_ERROR_RESPONSE = Object.freeze({
   code: "internal",
@@ -45,6 +48,9 @@ const TARGET_STATE_INVALID_RESPONSE = Object.freeze({
  * @returns {{code: string, message: string}}
  */
 export function mapCompanyAdminTransferError(error) {
+  const authIdentityResponse = mapCallableAuthIdentityError(error);
+  if (authIdentityResponse) return authIdentityResponse;
+
   if (error instanceof CompanyAdminTransferError) {
     switch (error.code) {
       case COMPANY_ADMIN_TRANSFER_ERROR_CODES.REQUIRED_FIELD_MISSING:
@@ -57,13 +63,9 @@ export function mapCompanyAdminTransferError(error) {
       case COMPANY_ADMIN_TRANSFER_ERROR_CODES.TARGET_USER_NOT_FOUND:
         return USER_STATE_UNAVAILABLE_RESPONSE;
 
-      case COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_NOT_ACTIVE:
-        return PERMISSION_DENIED_RESPONSE;
-
       case COMPANY_ADMIN_TRANSFER_ERROR_CODES.TARGET_AUTH_NOT_ACTIVE:
         return TARGET_STATE_INVALID_RESPONSE;
 
-      case COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_DISABLED_STATE_INVALID:
       case COMPANY_ADMIN_TRANSFER_ERROR_CODES.TARGET_AUTH_DISABLED_STATE_INVALID:
         return USER_STATE_UNAVAILABLE_RESPONSE;
 

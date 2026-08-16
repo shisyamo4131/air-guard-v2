@@ -63,6 +63,7 @@ function callableRequest({
     auth: {
       uid,
       token: {
+        email: `${uid}@codex-test.invalid`,
         email_verified: true,
         companyId: CODEX_LOCAL_COMPANIES.primary.id,
         isSuperUser: true,
@@ -777,6 +778,12 @@ test("rebuild Callables reject an unverified or non-super-user account", async (
 
   await assertCallableError(
     rebuildAllHistories.run(
+      callableRequest({ claims: { email: undefined } }),
+    ),
+    "permission-denied",
+  );
+  await assertCallableError(
+    rebuildAllHistories.run(
       callableRequest({ claims: { email_verified: false } }),
     ),
     "permission-denied",
@@ -791,18 +798,24 @@ test("rebuild Callables reject an unverified or non-super-user account", async (
 
 test("rebuild Callables reject missing, malformed, and cross-tenant company identity", async () => {
   const { rebuildAllHistories } = await loadRebuildApis();
+  const uid = "codex-callable-company-input-user";
+  await seedCallableAuthUser({ uid });
+  await seedRegisteredUser({ uid });
 
   await assertCallableError(
-    rebuildAllHistories.run(callableRequest({ data: {} })),
+    rebuildAllHistories.run(callableRequest({ uid, data: {} })),
     "invalid-argument",
   );
   await assertCallableError(
-    rebuildAllHistories.run(callableRequest({ claims: { companyId: 1 } })),
+    rebuildAllHistories.run(
+      callableRequest({ uid, claims: { companyId: 1 } }),
+    ),
     "permission-denied",
   );
   await assertCallableError(
     rebuildAllHistories.run(
       callableRequest({
+        uid,
         data: { companyId: CODEX_LOCAL_COMPANIES.secondary.id },
       }),
     ),
@@ -904,6 +917,12 @@ test("global email availability Callable requires authentication and a valid tok
   await assertCallableError(
     checkEmailAvailabilityGlobal.run({ data }),
     "unauthenticated",
+  );
+  await assertCallableError(
+    checkEmailAvailabilityGlobal.run(
+      callableRequest({ data, claims: { email: undefined } }),
+    ),
+    "permission-denied",
   );
   await assertCallableError(
     checkEmailAvailabilityGlobal.run(
@@ -1166,12 +1185,19 @@ test("enabled state Callables reject incomplete and inactive actor identities", 
   const targetUid = "codex-enabled-state-rejected-target";
 
   await assertCallableError(
-    disableUser.run(callableRequest({ data: {} })),
+    disableUser.run(
+      callableRequest({ data: {}, claims: { email: undefined } }),
+    ),
     "permission-denied",
   );
 
   await assertCallableError(
-    disableUser.run(callableRequest({ data: { uid: targetUid } })),
+    disableUser.run(
+      callableRequest({
+        data: { uid: targetUid },
+        claims: { email: undefined },
+      }),
+    ),
     "permission-denied",
   );
 
@@ -1261,6 +1287,107 @@ test("enabled state Callables allow a consistent active company administrator", 
       ),
     );
     assert.equal(snapshot.data().disabled, false);
+  });
+});
+
+test("admin transfer Callable rejects incomplete and inactive actor identities", async () => {
+  const { changeAdminUser } = await loadRebuildApis();
+  const targetUid = "codex-admin-transfer-rejected-target";
+
+  await assertCallableError(
+    changeAdminUser.run(
+      callableRequest({
+        claims: { email: undefined },
+        data: {
+          from: "codex-admin-transfer-rejected-actor",
+          to: targetUid,
+        },
+      }),
+    ),
+    "permission-denied",
+  );
+
+  const companyId = "codex-admin-transfer-disabled-company";
+  const actorUid = "codex-admin-transfer-disabled-actor";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid: actorUid,
+    companyId,
+    email: actorEmail,
+    disabled: true,
+    isSuperUser: false,
+  });
+
+  await assertCallableError(
+    changeAdminUser.run(
+      callableRequest({
+        uid: actorUid,
+        claims: { email: actorEmail, companyId, isSuperUser: false },
+        data: { from: actorUid, to: targetUid },
+      }),
+    ),
+    "permission-denied",
+  );
+});
+
+test("admin transfer Callable allows a consistent active company administrator", async () => {
+  const { changeAdminUser } = await loadRebuildApis();
+  const companyId = "codex-admin-transfer-company";
+  const actorUid = "codex-admin-transfer-actor";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  const targetUid = "codex-admin-transfer-target";
+  const targetEmail = `${targetUid}@codex-test.invalid`;
+
+  await seedCallableAuthUser({
+    uid: actorUid,
+    companyId,
+    email: actorEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: actorUid,
+    pathCompanyId: companyId,
+    companyId,
+    email: actorEmail,
+    isAdmin: true,
+  });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    companyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    pathCompanyId: companyId,
+    companyId,
+    email: targetEmail,
+    isAdmin: false,
+  });
+
+  const result = await changeAdminUser.run(
+    callableRequest({
+      uid: actorUid,
+      claims: { email: actorEmail, companyId, isSuperUser: false },
+      data: { from: actorUid, to: targetUid },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    from: actorUid,
+    to: targetUid,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const actorSnapshot = await getDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", actorUid),
+    );
+    const targetSnapshot = await getDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", targetUid),
+    );
+    assert.equal(actorSnapshot.data().isAdmin, false);
+    assert.equal(targetSnapshot.data().isAdmin, true);
+    assert.deepEqual(targetSnapshot.data().roles, []);
   });
 });
 

@@ -9,6 +9,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { transferCompanyAdmin } from "../modules/auth/transferCompanyAdmin.js";
 import { mapCompanyAdminTransferError } from "../modules/auth/mapCompanyAdminTransferError.js";
+import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 /**
  * 会社管理者の権限を別のUserへ移譲します。
@@ -26,28 +27,26 @@ export const changeAdminUser = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const actorUid = request.auth.uid;
-  const companyId = request.auth.token?.companyId;
-  const fromUid = request.data?.from;
-  const toUid = request.data?.to;
-
-  if (
-    typeof actorUid !== "string" ||
-    !actorUid ||
-    typeof companyId !== "string" ||
-    !companyId
-  ) {
-    throw new HttpsError("permission-denied", "認証情報を確認できません。");
-  }
+  const actorToken = request.auth.token ?? {};
+  const auth = getAuth();
 
   try {
+    const actorIdentity = await resolveCallableAuthIdentity({
+      auth,
+      tokenUid: request.auth.uid,
+      tokenEmail: actorToken.email,
+      tokenEmailVerified: actorToken.email_verified,
+      tokenCompanyId: actorToken.companyId,
+      tokenIsSuperUser: actorToken.isSuperUser,
+    });
+
     return await transferCompanyAdmin({
-      auth: getAuth(),
+      auth,
       firestore: getFirestore(),
-      companyId,
-      actorUid,
-      fromUid,
-      toUid,
+      companyId: actorIdentity.companyId,
+      actorUid: actorIdentity.uid,
+      fromUid: request.data?.from,
+      toUid: request.data?.to,
     });
   } catch (error) {
     const mappedError = mapCompanyAdminTransferError(error);

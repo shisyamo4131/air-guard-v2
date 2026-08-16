@@ -12,8 +12,6 @@ export const COMPANY_ADMIN_TRANSFER_ERROR_CODES = Object.freeze({
   FIRESTORE_SERVICE_INVALID: "firestore-service-invalid",
   SOURCE_USER_NOT_FOUND: "source-user-not-found",
   TARGET_USER_NOT_FOUND: "target-user-not-found",
-  SOURCE_AUTH_DISABLED_STATE_INVALID: "source-auth-disabled-state-invalid",
-  SOURCE_AUTH_NOT_ACTIVE: "source-auth-not-active",
   TARGET_AUTH_DISABLED_STATE_INVALID: "target-auth-disabled-state-invalid",
   TARGET_AUTH_NOT_ACTIVE: "target-auth-not-active",
 });
@@ -90,31 +88,6 @@ export async function transferCompanyAdmin({
     throw new CompanyAdminTransferError(
       COMPANY_ADMIN_TRANSFER_ERROR_CODES.FIRESTORE_SERVICE_INVALID,
       "[transferCompanyAdmin] Firestore service is invalid",
-    );
-  }
-
-  // 操作者のAuth Userを取得して、UIDと会社claimを検証
-  const actorAuthUser = await auth.getUser(actorUid);
-
-  // 操作者の所属会社の整合性を検証 → 不整合の場合は例外をスロー
-  assertAuthUserCompany({
-    pathCompanyId: companyId,
-    docId: actorUid,
-    authUser: actorAuthUser,
-  });
-
-  // 操作者のAuth disabled状態をfail-closedで検証
-  if (typeof actorAuthUser.disabled !== "boolean") {
-    throw new CompanyAdminTransferError(
-      COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_DISABLED_STATE_INVALID,
-      "[transferCompanyAdmin] Source Auth disabled state is invalid",
-    );
-  }
-
-  if (actorAuthUser.disabled === true) {
-    throw new CompanyAdminTransferError(
-      COMPANY_ADMIN_TRANSFER_ERROR_CODES.SOURCE_AUTH_NOT_ACTIVE,
-      "[transferCompanyAdmin] Source Auth user is not active",
     );
   }
 

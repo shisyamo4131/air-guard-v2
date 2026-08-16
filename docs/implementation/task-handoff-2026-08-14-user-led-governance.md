@@ -174,4 +174,12 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 実装fileは利用者が1fileずつ確認済みである。公式進捗は10%のまま。次は`changeAdminUser`など残る会社所属済みCallableを1つずつ共通gateへ移す。
 - Users Rulesのfield/actor制約、App Check、rate limit、token失効、部分状態、残るCallableの共通gate移行、Dev・remote受入れは未完了である。main merge、push、deploy、remote data操作は未承認のまま。
 
+## Established Callable Auth identity gate completion checkpoint
+
+- 共通Auth identity gateを`changeAdminUser`、`checkEmailAvailabilityGlobal`、`authorizeCompanyRebuild`へ追加し、共有認可を通じて`rebuildAllHistories`と`rebuildSecurityReportIndexes`へ適用した。既適用の`disableUser`・`enableUser`と合わせ、会社所属済み6 Callableすべてが共通gateをAPI固有policyより先に通る。
+- `changeAdminUser`のuse-caseから重複していたactor Auth取得・会社・disabled検査と旧error codeを除去した。target Auth、actor/target User、唯一の会社管理者、tenant、transaction検査は維持した。global email確認と再構築は重複したtoken/current Auth検査を共通gateへ置換し、会社管理者・スーパーユーザー・User document・対象会社検査を維持した。
+- 未認証の`checkEmailAvailability`・`checkUserPreRegistration`は共通gate対象外である。所属claim確立前の`createAdminAccount`・`setupUserAccount`は各bootstrap lifecycleの専用identity検査を維持する。分類契約testでこの境界を固定した。
+- 全domain単体test 226件、Codex専用loopback Emulator suite 71件、対象8実装fileの`node --check`、`git diff --check`が成功した。専用suiteでは6 Callableの必須claim欠損・現在Auth不整合拒否と、管理者移譲を含む正常経路を確認した。利用者用`./saved-data`は不変、専用seedは読込専用だった。
+- 公式進捗は10%のまま。次はUsers Rulesのfield/actor制約、その後App Check・rate limitとDev受入れである。token失効、部分状態、匿名列挙、main merge、push、deploy、remote data操作は未完了または未承認のまま。
+
 この記録にsecret、credential、private production data、Codex session本文は含めない。
