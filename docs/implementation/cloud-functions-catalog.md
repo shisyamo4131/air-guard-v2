@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-044
-- 最終確認日: 2026-08-15
+- 最終確認日: 2026-08-16
 - 根拠ファイル: `functions/index.js`、`functions/package.json`、`functions/modules/firebase.init.js`、`functions/apis/*.js`、entryから直接re-exportされるmodules/triggers/apisの宣言部
 - 調査方法: entryのstar exportを起点にexport名を列挙し、各宣言のtrigger/optionsと入口認証の狭い範囲だけを確認した。業務処理本文は既存実装文書を参照し、再調査していない。
 
@@ -28,8 +28,8 @@ entryから到達するFirebase Function objectは25件である。明示のな�
 | `checkEmailAvailabilityGlobal` | v2 callable | 全Usersでemail重複確認 | verified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者。`isSuperUser`単独では不可。 |
 | `checkEmailAvailability` | v2 callable | Auth/Usersの登録可否確認 | なし。caller指定`isAdmin`で分岐。 |
 | `createAdminAccount` | v2 callable | 新Companyと最初のadmin User/claimsを作成 | 認証必須。既存role/claimによる管理者許可は入口にない。 |
-| `checkUserPreRegistration` | v2 callable | emailから仮登録Userを検索 | なし。companyId、displayName、roles、tempUserIdを返し得る。 |
-| `setupUserAccount` | v2 callable | 仮Userを認証UIDのUserへ変換しclaims設定 | 認証必須。入力companyId/tempUserIdとtoken emailを照合。 |
+| `checkUserPreRegistration` | v2 callable | emailから仮登録Userを検索 | なし。0件/1件の登録状態だけを返し、複数一致を拒否する。App Check、rate limitなし。 |
+| `setupUserAccount` | v2 callable | 仮Userを認証UIDのUserへ変換しclaims設定 | 認証・verified email必須。client dataを受け取らず、token emailから仮Userを一意解決する。 |
 | `disableUser` | v2 callable | 同社の本登録非管理者Userを無効化 | 認証、caller UID/company claim、有効な本登録会社管理者、別UIDの同社target、target Auth UID/company claimを必須化。 |
 | `enableUser` | v2 callable | 同社の本登録非管理者Userを有効化 | disableと同じactor・company・target境界。 |
 | `changeAdminUser` | v2 callable | 同社のactive本登録Userへadminを移譲 | 認証、caller UID/company claim、from=caller、会社管理者1人、from/to User/Auth company・UID・disabled整合を必須化。 |

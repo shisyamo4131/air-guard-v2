@@ -118,6 +118,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - Emulatorは利用者の指示どおりdata変更可、export-on-exitなしの環境を使用した。停止・exportは行っていない。`changeAdminUser`、signup系Callable、Auth削除event、Dev・remote・deploy・実dataは未確認である。
 - この実測は4 CallableのFunctions transport証拠を追加するもので、残存する匿名signup情報境界、App Check、rate limit、部分状態、Users Rulesを解消しない。公式進捗は10%に据え置く。
 
+## Pre-registration anonymous response checkpoint
+
+- `checkUserPreRegistration`の未認証応答を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdを公開しないよう変更した。検索は最大2件とし、複数temporary Userは`failed-precondition`で拒否する。
+- signup画面は事前登録確認済みbooleanだけを保持して汎用の利用者表示を使い、Callable client contractもboolean応答へ統一した。匿名入力のemail・会社IDを当該Callableのlogへ残さない。
+- 変更前にmetadata応答と重複先頭採用を再現し、修正後はCodex専用loopback Emulator suite 61件、全domain単体test 202件、JavaScript・Vue SFC検査、`git diff --check`がpassした。利用者用saved-dataは不変、専用saved-dataは読込専用だった。
+- 存在有無の列挙、App Check、rate limit、招待token、`checkEmailAvailability`の匿名境界、Dev・remote・deploy・実dataは未解決・未確認である。公式進捗は10%に据え置く。
+
 ## 未確認・承認境界
 
 - `main`への直接commit・merge、Git push、history rewrite、deploy、npm公開、migration、remote接続・remote data操作、実data操作、外部service変更は個別の明示承認がないため行わない。

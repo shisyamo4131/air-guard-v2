@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-058、SPEC-DEEP-039a、SPEC-DEEP-041
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-16
 - 根拠ファイル: `pages/auth/*.vue`、`pages/unconfirmedEmail.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`composables/application/auth/useAuthActions.js`、`middleware/auth.global.js`、`utils/pageSettings.js`
 - 制約: runtime、実メール、外部Firebase、実dataは確認していない。Callable内部認可は既存`callable-authorization.md`を参照する。
 
@@ -29,15 +29,15 @@ logout UIはこのscopeのauth pagesにはなく、app shell側の`useAuthAction
 ## 一般User signup・事前登録
 
 1. emailを入力し、未認証Callable `checkUserPreRegistration`で仮Userを検索する。
-2. 結果があればdisplayNameを画面表示し、`checkEmailAvailability`を実行する。
+2. 結果が1件なら確認済みbooleanだけを保持し、汎用の利用者表示で`checkEmailAvailability`を実行する。会社ID、表示名、role、仮User IDは受け取らない。
 3. password/confirm（6文字以上・一致）を入力する。
 4. submit時にcomposableが事前登録とemail availabilityを再確認する。
 5. Firebase Auth Userを作成し自動sign-inする。
 6. verification mailを送信する。
-7. `setupUserAccount`が仮Userから本Userへ変換しclaimsを設定する。
-8. token refresh後、verification待ちへ遷移する。
+7. verification待ちへ遷移し、メール確認後に`setupUserAccount`が確認済みtoken emailから仮Userを一意解決して本Userへ変換し、claimsを設定する。
+8. token refreshとsession初期化後、dashboardへ遷移する。
 
-step中はlocal loadingにより戻る/次へ/作成buttonをdisabledにする。前stepへ戻ると事前登録結果を破棄する。仮登録emailの複数一致・公開情報・本人性は既存FUT-0082/0084、CONF-0067/0069の対象である。
+step中はlocal loadingにより戻る/次へ/作成buttonをdisabledにする。前stepへ戻ると事前登録確認済み状態を破棄する。仮登録emailの複数一致は事前登録確認と本登録の双方で拒否し、匿名応答のmetadata公開は解消した。存在有無の列挙、App Check、rate limit、招待tokenはFUT-0084、CONF-0069の未完了範囲である。
 
 Auth作成後のmail/setup/token refresh失敗ではAuth Userが残る。画面はUID付きsupport案内を出すが、自動rollback、resume、同一account再実行、orphan検出はない。再度signupすると既存emailにより進めない候補である。
 

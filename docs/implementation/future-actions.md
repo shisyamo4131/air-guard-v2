@@ -1126,16 +1126,16 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 必要なテスト: update/delete trigger失敗・retry、Auth user不存在、連続enable/disable、削除再作成、FCM cleanup失敗。
 - ユーザー判断が必要な事項: CONF-0068。
 
-## FUT-0084 未認証の事前登録照会で返す情報を最小化する
+## FUT-0084 未認証の事前登録照会を列挙・abuseから保護する
 
-- 状態: Open
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025、SEC-002
 - 対象ファイル・シンボル: `checkUserPreRegistration`、`checkEmailAvailability*`
-- 確認済み実装事実: 未認証callerがemailを指定すると、登録有無に加えcompanyId、displayName、roles、tempUserIdを取得できる。rate limit/challengeは直接実装にない。SEC-002でanonymous callerからこの応答差とmetadata返却へ到達するsource chainを確認し、仮説ではなく現行実装の公開境界として分類した。
-- 想定影響と発生条件: email推測・列挙により所属会社識別子、氏名、role、仮doc IDが漏れる。
+- 確認済み実装事実: 2026-08-16に応答を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdの匿名公開を廃止した。複数temporary Userも先頭採用せず拒否する。登録有無の応答差と、App Check、rate limit、challengeの不在は残る。
+- 想定影響と発生条件: email推測・列挙により事前登録の存在有無を判別でき、無制限呼出しでquota abuseとなり得る。所属会社識別子、氏名、role、仮doc IDの直接漏えいは解消済みである。
 - 未確認点・仮説: App Check、platform側rate limit、招待secretの別実装は未確認。
-- 推奨する将来対応: opaque invitation token方式または返却最小化、App Check/rate limit、enumeration-resistant responseを検討する。
+- 推奨する将来対応: App Check/rate limit、opaque invitation token、enumeration-resistant responseを検討する。
 - 必要なテスト: 未認証列挙、存在/不存在response差、rate limit、期限切れ/再利用token、他社email。
 - ユーザー判断が必要な事項: CONF-0069。
 
@@ -2034,7 +2034,7 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
 - 対象ファイル・シンボル: `functions/apis/*.js`、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`とpre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountは認証のみで既存company/User/claimを拒否しない。`checkEmailAvailability`とpre-registrationは未認証だが、pre-registrationはbooleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
 - 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。
