@@ -45,3 +45,10 @@ test("normal signup UI does not consume anonymous pre-registration metadata", as
   assert.match(source, /利用者様の事前登録を確認しました。/);
   assert.match(source, /利用者として登録します/);
 });
+
+test("normal signup UI does not call the administrator email preflight", async () => {
+  const source = await readFile(signUpPageUrl, "utf8");
+
+  assert.equal(source.includes("checkEmailAvailability"), false);
+  assert.equal(source.includes("isAdmin: false"), false);
+});
