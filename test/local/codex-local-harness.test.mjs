@@ -1309,6 +1309,147 @@ test("admin account creation Callable rejects an existing User email in any regi
   }
 });
 
+test("admin account creation Callable resumes claims for one matching initial administrator", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const uid = "codex-admin-resume";
+  const email = `${uid}@codex-test.invalid`;
+  const companyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  await seedCallableAuthUser({
+    uid,
+    companyId: null,
+    email,
+    isSuperUser: true,
+  });
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    email,
+    isAdmin: true,
+  });
+
+  const result = await createAdminAccount.run(
+    callableRequest({
+      uid,
+      claims: {
+        companyId: undefined,
+        email,
+        isSuperUser: true,
+      },
+      data: {
+        companyName: "再開時未使用会社",
+        companyNameKana: "サイカイジミシヨウガイシャ",
+        displayName: "再開管理者",
+      },
+    }),
+  );
+
+  assert.deepEqual(result, { success: true, companyId, userId: uid });
+  const authUser = await getAdminAuth().getUser(uid);
+  assert.deepEqual(authUser.customClaims, {
+    companyId,
+    isSuperUser: true,
+  });
+});
+
+test("admin account creation Callable is idempotent after matching claims exist", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const uid = "codex-admin-idempotent";
+  const email = `${uid}@codex-test.invalid`;
+  const companyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  await seedCallableAuthUser({
+    uid,
+    companyId,
+    email,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    email,
+    isAdmin: true,
+  });
+
+  const result = await createAdminAccount.run(
+    callableRequest({
+      uid,
+      claims: { companyId, email, isSuperUser: false },
+      data: {
+        companyName: "完了時未使用会社",
+        companyNameKana: "カンリョウジミシヨウガイシャ",
+        displayName: "完了管理者",
+      },
+    }),
+  );
+
+  assert.deepEqual(result, { success: true, companyId, userId: uid });
+});
+
+test("admin account creation Callable fails closed for inconsistent existing membership", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const cases = [
+    {
+      name: "wrong-uid",
+      user: { uid: "another-admin", isAdmin: true },
+      expectedCode: "already-exists",
+    },
+    {
+      name: "temporary",
+      user: { isAdmin: true, isTemporary: true },
+    },
+    {
+      name: "regular-user",
+      user: { isAdmin: false },
+    },
+    {
+      name: "disabled",
+      user: { isAdmin: true, disabled: true },
+    },
+    {
+      name: "missing-company",
+      pathCompanyId: "codex-missing-admin-company",
+      user: { isAdmin: true },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const uid = `codex-admin-bad-${testCase.name}`;
+    const email = `${uid}@codex-test.invalid`;
+    const pathCompanyId =
+      testCase.pathCompanyId ?? CODEX_LOCAL_COMPANIES.secondary.id;
+    await seedCallableAuthUser({
+      uid,
+      companyId: null,
+      email,
+      isSuperUser: false,
+    });
+    await seedRegisteredUser({
+      uid: testCase.user.uid ?? uid,
+      pathCompanyId,
+      email,
+      ...testCase.user,
+    });
+
+    await assertCallableError(
+      createAdminAccount.run(
+        callableRequest({
+          uid,
+          claims: {
+            companyId: undefined,
+            email,
+            isSuperUser: false,
+          },
+          data: {
+            companyName: "不整合拒否会社",
+            companyNameKana: "フセイゴウキョヒガイシャ",
+            displayName: "管理者",
+          },
+        }),
+      ),
+      testCase.expectedCode ?? "failed-precondition",
+    );
+  }
+});
+
 test("admin account creation Callable creates the Company, User, and custom claims", async () => {
   const { createAdminAccount } = await loadRebuildApis();
   const uid = "codex-create-admin-account";

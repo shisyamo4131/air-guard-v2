@@ -40,8 +40,11 @@ export const createAdminAccount = onCall(async (request) => {
     const db = getFirestore();
     const auth = getAuth();
     const authUser = await auth.getUser(uid);
+    const currentClaims = authUser.customClaims ?? {};
     const currentCompanyId = authUser.customClaims?.companyId;
     const tokenCompanyId = request.auth.token.companyId;
+    const currentIsSuperUser = currentClaims.isSuperUser;
+    const tokenIsSuperUser = request.auth.token.isSuperUser;
 
     if (
       typeof email !== "string" ||
@@ -52,8 +55,21 @@ export const createAdminAccount = onCall(async (request) => {
       authUser.email !== email ||
       authUser.emailVerified !== true ||
       authUser.disabled !== false ||
-      tokenCompanyId !== undefined ||
-      currentCompanyId !== undefined
+      (tokenCompanyId !== undefined &&
+        (typeof tokenCompanyId !== "string" || !tokenCompanyId)) ||
+      (currentCompanyId !== undefined &&
+        (typeof currentCompanyId !== "string" || !currentCompanyId)) ||
+      (tokenCompanyId !== undefined &&
+        currentCompanyId === undefined) ||
+      (tokenCompanyId !== undefined &&
+        currentCompanyId !== undefined &&
+        tokenCompanyId !== currentCompanyId) ||
+      (currentIsSuperUser !== undefined &&
+        typeof currentIsSuperUser !== "boolean") ||
+      (tokenIsSuperUser !== undefined &&
+        typeof tokenIsSuperUser !== "boolean") ||
+      (tokenIsSuperUser !== undefined &&
+        tokenIsSuperUser !== currentIsSuperUser)
     ) {
       throw new HttpsError(
         "failed-precondition",
@@ -64,54 +80,111 @@ export const createAdminAccount = onCall(async (request) => {
     const existingUsers = await db
       .collectionGroup("Users")
       .where("email", "==", email)
-      .limit(1)
+      .limit(2)
       .get();
 
-    if (!existingUsers.empty) {
+    let result;
+
+    if (existingUsers.size > 1) {
       throw new HttpsError(
-        "already-exists",
-        "このメールアドレスは既に使用されています。",
+        "failed-precondition",
+        "既存のアカウント情報を確認できません。",
       );
     }
 
-    logger.info("createAdminAccount identity validation passed.");
+    if (existingUsers.size === 1) {
+      const existingUserDocument = existingUsers.docs[0];
 
-    // トランザクションでCompanyとUser作成
-    const result = await db.runTransaction(async (transaction) => {
-      // Company作成
-      const company = new Company({
-        companyName: companyName,
-        companyNameKana: companyNameKana,
+      if (existingUserDocument.id !== uid) {
+        throw new HttpsError(
+          "already-exists",
+          "このメールアドレスは既に使用されています。",
+        );
+      }
+
+      const pathSegments = existingUserDocument.ref.path.split("/");
+      const existingUser = existingUserDocument.data();
+      const pathCompanyId = pathSegments[1];
+      const hasValidPath =
+        pathSegments.length === 4 &&
+        pathSegments[0] === "Companies" &&
+        pathSegments[2] === "Users" &&
+        pathSegments[3] === uid;
+      const companyDocument = hasValidPath
+        ? await db.doc(`Companies/${pathCompanyId}`).get()
+        : null;
+
+      if (
+        !hasValidPath ||
+        existingUser.companyId !== pathCompanyId ||
+        existingUser.email !== email ||
+        existingUser.isAdmin !== true ||
+        existingUser.isTemporary !== false ||
+        existingUser.disabled !== false ||
+        !companyDocument?.exists ||
+        (currentCompanyId !== undefined &&
+          currentCompanyId !== pathCompanyId) ||
+        (tokenCompanyId !== undefined && tokenCompanyId !== pathCompanyId)
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "既存のアカウント情報を確認できません。",
+        );
+      }
+
+      result = { companyId: pathCompanyId, userId: uid };
+      logger.info("Existing initial administrator state validated.");
+    } else {
+      if (
+        currentCompanyId !== undefined ||
+        tokenCompanyId !== undefined
+      ) {
+        throw new HttpsError(
+          "failed-precondition",
+          "既存のアカウント情報を確認できません。",
+        );
+      }
+
+      logger.info("createAdminAccount identity validation passed.");
+
+      // トランザクションでCompanyとUser作成
+      result = await db.runTransaction(async (transaction) => {
+        // Company作成
+        const company = new Company({
+          companyName: companyName,
+          companyNameKana: companyNameKana,
+        });
+
+        const companyRef = await company.create({ transaction });
+
+        logger.info("Company document created for initial administrator.");
+
+        // User作成（Companiesのサブコレクション、uidをdocIdとして使用）
+        const user = new User({
+          email,
+          displayName: displayName || "",
+          companyId: companyRef.id,
+          isAdmin: true,
+          isTemporary: false,
+        });
+
+        await user.create({
+          docId: uid,
+          transaction,
+          prefix: `Companies/${companyRef.id}`,
+        });
+
+        logger.info("Initial administrator User document created.");
+
+        return { companyId: companyRef.id, userId: uid };
       });
-
-      const companyRef = await company.create({ transaction });
-
-      logger.info("Company document created for initial administrator.");
-
-      // User作成（Companiesのサブコレクション、uidをdocIdとして使用）
-      const user = new User({
-        email,
-        displayName: displayName || "",
-        companyId: companyRef.id,
-        isAdmin: true,
-        isTemporary: false,
-      });
-
-      await user.create({
-        docId: uid,
-        transaction,
-        prefix: `Companies/${companyRef.id}`,
-      });
-
-      logger.info("Initial administrator User document created.");
-
-      return { companyId: companyRef.id, userId: uid };
-    });
+    }
 
     // カスタムクレーム設定
     await auth.setCustomUserClaims(uid, {
+      ...currentClaims,
       companyId: result.companyId,
-      isSuperUser: false,
+      isSuperUser: currentIsSuperUser === true,
     });
 
     logger.info("Initial administrator custom claims set.");
