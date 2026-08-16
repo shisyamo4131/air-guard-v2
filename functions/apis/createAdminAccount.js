@@ -25,7 +25,7 @@ export const createAdminAccount = onCall(async (request) => {
     throw new HttpsError("unauthenticated", "認証が必要です。");
   }
 
-  const { companyName, companyNameKana, displayName } = request.data;
+  const { companyName, companyNameKana, displayName } = request.data ?? {};
   const uid = request.auth.uid;
   const email = request.auth.token.email;
 
@@ -36,11 +36,32 @@ export const createAdminAccount = onCall(async (request) => {
     );
   }
 
-  logger.info(`createAdminAccount started for UID: ${uid}, Email: ${email}`);
-
   try {
     const db = getFirestore();
     const auth = getAuth();
+    const authUser = await auth.getUser(uid);
+    const currentCompanyId = authUser.customClaims?.companyId;
+    const tokenCompanyId = request.auth.token.companyId;
+
+    if (
+      typeof email !== "string" ||
+      !email ||
+      request.auth.token.email_verified !== true ||
+      authUser.uid !== uid ||
+      typeof authUser.email !== "string" ||
+      authUser.email !== email ||
+      authUser.emailVerified !== true ||
+      authUser.disabled !== false ||
+      tokenCompanyId !== undefined ||
+      currentCompanyId !== undefined
+    ) {
+      throw new HttpsError(
+        "failed-precondition",
+        "認証情報を確認できません。",
+      );
+    }
+
+    logger.info("createAdminAccount identity validation passed.");
 
     // トランザクションでCompanyとUser作成
     const result = await db.runTransaction(async (transaction) => {
@@ -52,9 +73,7 @@ export const createAdminAccount = onCall(async (request) => {
 
       const companyRef = await company.create({ transaction });
 
-      logger.info(
-        `Company created with ID: ${companyRef.id} for admin UID: ${uid}`,
-      );
+      logger.info("Company document created for initial administrator.");
 
       // User作成（Companiesのサブコレクション、uidをdocIdとして使用）
       const user = new User({
@@ -71,9 +90,7 @@ export const createAdminAccount = onCall(async (request) => {
         prefix: `Companies/${companyRef.id}`,
       });
 
-      logger.info(
-        `User document created with ID: ${uid} for UID: ${uid} under company ID: ${companyRef.id}`,
-      );
+      logger.info("Initial administrator User document created.");
 
       return { companyId: companyRef.id, userId: uid };
     });
@@ -84,9 +101,7 @@ export const createAdminAccount = onCall(async (request) => {
       isSuperUser: false,
     });
 
-    logger.info(
-      `Custom claims set for UID: ${uid}, CompanyId: ${result.companyId}`,
-    );
+    logger.info("Initial administrator custom claims set.");
 
     return {
       success: true,

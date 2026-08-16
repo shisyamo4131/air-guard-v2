@@ -83,6 +83,7 @@ async function assertCallableError(promise, expectedCode) {
 async function seedCallableAuthUser({
   uid,
   companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  email = `${uid}@codex-test.invalid`,
   emailVerified = true,
   disabled = false,
   isSuperUser = true,
@@ -90,11 +91,13 @@ async function seedCallableAuthUser({
   const auth = getAdminAuth();
   await auth.createUser({
     uid,
-    email: `${uid}@codex-test.invalid`,
+    email,
     emailVerified,
     disabled,
   });
-  await auth.setCustomUserClaims(uid, { companyId, isSuperUser });
+  const customClaims = { isSuperUser };
+  if (companyId !== null) customClaims.companyId = companyId;
+  await auth.setCustomUserClaims(uid, customClaims);
 }
 
 async function seedRegisteredUser({
@@ -1179,16 +1182,106 @@ test("admin account creation Callable validates authentication and required inpu
   );
 });
 
+test("admin account creation Callable rejects an unverified current Auth account", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const uid = "codex-create-admin-unverified";
+  const email = `${uid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid,
+    companyId: null,
+    emailVerified: false,
+    isSuperUser: false,
+  });
+
+  await assertCallableError(
+    createAdminAccount.run(
+      callableRequest({
+        uid,
+        claims: { companyId: undefined, email, isSuperUser: false },
+        data: {
+          companyName: "未確認会社",
+          companyNameKana: "ミカクニンガイシャ",
+          displayName: "管理者",
+        },
+      }),
+    ),
+    "failed-precondition",
+  );
+});
+
+test("admin account creation Callable rejects disabled, mismatched, and already assigned Auth identities", async () => {
+  const { createAdminAccount } = await loadRebuildApis();
+  const cases = [
+    {
+      name: "disabled",
+      auth: { companyId: null, disabled: true, isSuperUser: false },
+      claims: { companyId: undefined, isSuperUser: false },
+    },
+    {
+      name: "unverified-token",
+      auth: { companyId: null, isSuperUser: false },
+      claims: {
+        companyId: undefined,
+        email_verified: false,
+        isSuperUser: false,
+      },
+    },
+    {
+      name: "email-mismatch",
+      auth: {
+        companyId: null,
+        email: "canonical-admin@codex-test.invalid",
+        isSuperUser: false,
+      },
+      claims: {
+        companyId: undefined,
+        email: "stale-admin@codex-test.invalid",
+        isSuperUser: false,
+      },
+    },
+    {
+      name: "assigned-company",
+      auth: { isSuperUser: false },
+      claims: { isSuperUser: false },
+    },
+  ];
+
+  for (const testCase of cases) {
+    const uid = `codex-create-admin-${testCase.name}`;
+    const email = testCase.auth.email ?? `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({ uid, email, ...testCase.auth });
+
+    await assertCallableError(
+      createAdminAccount.run(
+        callableRequest({
+          uid,
+          claims: { email, ...testCase.claims },
+          data: {
+            companyName: `拒否会社-${testCase.name}`,
+            companyNameKana: "キョヒガイシャ",
+            displayName: "管理者",
+          },
+        }),
+      ),
+      "failed-precondition",
+    );
+  }
+});
+
 test("admin account creation Callable creates the Company, User, and custom claims", async () => {
   const { createAdminAccount } = await loadRebuildApis();
   const uid = "codex-create-admin-account";
   const email = `${uid}@codex-test.invalid`;
-  await seedCallableAuthUser({ uid });
+  await seedCallableAuthUser({
+    uid,
+    companyId: null,
+    isSuperUser: false,
+  });
 
   const result = await createAdminAccount.run(
     callableRequest({
       uid,
-      claims: { email },
+      claims: { companyId: undefined, email, isSuperUser: false },
       data: {
         companyName: "Codex新規会社",
         companyNameKana: "コーデックスシンキガイシャ",
