@@ -14,17 +14,13 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
  * @param {Object} request
  * @param {Object} request.data
  * @param {string} request.data.email - 確認するメールアドレス
- * @return {Object} 登録状況と仮登録情報
+ * @return {Object} 登録状況
  * @return {boolean} return.isPreRegistered - 事前登録されているかどうか
- * @return {string} [return.companyId] - 事前登録されている場合の会社ID
- * @return {string} [return.displayName] - 事前登録されている場合の表示名
- * @return {Array} [return.roles] - 事前登録されている場合の役割リスト
- * @return {string} [return.tempUserId] - 事前登録されている場合の仮ユーザードキュメントID
  */
 export const checkUserPreRegistration = onCall(async (request) => {
-  const { email } = request.data;
+  const { email } = request.data ?? {};
 
-  if (!email) {
+  if (typeof email !== "string" || email.trim() === "") {
     throw new HttpsError(
       "invalid-argument",
       "メールアドレスが指定されていません。",
@@ -39,27 +35,24 @@ export const checkUserPreRegistration = onCall(async (request) => {
       .collectionGroup("Users")
       .where("email", "==", email)
       .where("isTemporary", "==", true)
+      .limit(2)
       .get();
 
     if (preRegSnapshot.empty) {
-      logger.info(`No pre-registration found for email: ${email}`);
+      logger.info("No pre-registration found.");
       return { isPreRegistered: false };
     }
 
-    const preRegDoc = preRegSnapshot.docs[0];
-    const preRegData = preRegDoc.data();
+    if (preRegSnapshot.size !== 1) {
+      logger.warn("Multiple pre-registration records found.");
+      throw new HttpsError(
+        "failed-precondition",
+        "事前登録情報を確認できません。管理者にお問い合わせください。",
+      );
+    }
 
-    logger.info(
-      `Pre-registration found for email: ${email}, CompanyId: ${preRegData.companyId}`,
-    );
-
-    return {
-      isPreRegistered: true,
-      companyId: preRegData.companyId,
-      displayName: preRegData.displayName || "",
-      roles: preRegData.roles || [],
-      tempUserId: preRegDoc.id,
-    };
+    logger.info("Pre-registration found.");
+    return { isPreRegistered: true };
   } catch (error) {
     logger.error("checkUserPreRegistration でエラーが発生しました:", error);
 

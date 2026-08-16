@@ -1112,25 +1112,45 @@ test("API index exports every public Callable without internal request helpers",
   assert.equal("handleUserEnabledStateChangeRequest" in apis, false);
 });
 
-test("pre-registration Callable validates email and returns a matching temporary User", async () => {
+test("pre-registration Callable validates email and returns only registration state", async () => {
   const { checkUserPreRegistration } = await loadRebuildApis();
   await assertCallableError(
     checkUserPreRegistration.run({ data: {} }),
     "invalid-argument",
   );
 
+  const missingResult = await checkUserPreRegistration.run({
+    data: { email: "codex-pre-registration-missing@codex-test.invalid" },
+  });
+  assert.deepEqual(missingResult, { isPreRegistered: false });
+
   const uid = "codex-pre-registration-user";
   const email = `${uid}@codex-test.invalid`;
   await seedRegisteredUser({ uid, isTemporary: true, email });
   const result = await checkUserPreRegistration.run({ data: { email } });
 
-  assert.deepEqual(result, {
-    isPreRegistered: true,
-    companyId: CODEX_LOCAL_COMPANIES.primary.id,
-    displayName: "",
-    roles: [],
-    tempUserId: uid,
+  assert.deepEqual(result, { isPreRegistered: true });
+});
+
+test("pre-registration Callable rejects duplicate temporary Users", async () => {
+  const { checkUserPreRegistration } = await loadRebuildApis();
+  const email = "codex-pre-registration-duplicate@codex-test.invalid";
+  await seedRegisteredUser({
+    uid: "codex-pre-registration-duplicate-primary",
+    email,
+    isTemporary: true,
   });
+  await seedRegisteredUser({
+    uid: "codex-pre-registration-duplicate-secondary",
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    email,
+    isTemporary: true,
+  });
+
+  await assertCallableError(
+    checkUserPreRegistration.run({ data: { email } }),
+    "failed-precondition",
+  );
 });
 
 test("moved authenticated User Callables retain their entry guards", async () => {
