@@ -6,6 +6,7 @@ const sourceUrl = new URL(
   "../../composables/useCreateAdminUser.js",
   import.meta.url,
 );
+const pageSourceUrl = new URL("../../pages/auth/sign-up-admin.vue", import.meta.url);
 
 test("administrator signup sends no client-selected preflight policy", async () => {
   const source = await readFile(sourceUrl, "utf8");
@@ -13,4 +14,15 @@ test("administrator signup sends no client-selected preflight policy", async () 
   assert.match(source, /checkEmailAvailability\(\{ email \}\)/);
   assert.equal(source.includes("isAdmin"), false);
   assert.equal(source.includes("checkEmailAvailabilityGlobal"), false);
+});
+
+test("administrator signup page sends no client-selected preflight policy", async () => {
+  const source = await readFile(pageSourceUrl, "utf8");
+
+  assert.match(
+    source,
+    /checkEmailAvailability\(\{ email: model\.email \}\)/,
+  );
+  assert.equal(source.includes("isAdmin"), false);
+  assert.equal(source.includes("auth-v2.js"), false);
 });

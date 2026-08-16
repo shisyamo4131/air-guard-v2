@@ -66,7 +66,7 @@ const isStepValid = computed(() => {
  *****************************************************************************/
 /**
  * Handle the creation of a new admin user account.
- * - Uses the new auth-v2.js Cloud Functions.
+ * - Uses the administrator account Cloud Functions.
  * - Creates Authentication account and Firestore documents.
  * - Sets custom claims and waits for token refresh.
  */
@@ -115,7 +115,7 @@ async function nextStep() {
     const key = loadings.add({ text: "メールアドレスを確認しています" });
 
     try {
-      await checkEmailAvailability({ email: model.email, isAdmin: true });
+      await checkEmailAvailability({ email: model.email });
       emailChecked.value = true;
       currentStep.value++;
     } catch (error) {
