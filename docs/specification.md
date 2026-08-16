@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-16
-- 仕様バージョン: 0.5.4
+- 仕様バージョン: 0.5.5
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -67,6 +67,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
+- Userは、Employeeとの紐付けを持たない単独Userと、同じ会社のEmployeeへ`User.employeeId`で紐付くEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効はUser種類とは別の状態として扱う。
+- 会社管理者に加え、`users:write` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・編集・削除できる。`manager`と`human-resource`のrole presetへ`users:write`を付与する。`employees:write`だけではUserアカウント管理を許可しない。
+- 単独仮Userの作成とEmployee連携仮Userの作成は別の公開操作として扱う。Employee連携では、同じ会社に実在し、他のUserと紐付いていないEmployeeだけをserver側で確定し、client指定の任意`employeeId`を信頼しない。1 Employeeに紐付くUserは最大1件とする。
+- Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのメールアドレスが会社管理者による仮登録メールアドレスと完全一致し、該当する仮登録Userが全会社を通じて一意であることを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをクライアント入力だけで信頼する処理、複数一致時の先頭採用は許可しない。
@@ -79,6 +83,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
 - 全会社Userを対象とするメールアドレス重複確認は、ID tokenと現在のAuthentication Userがメール確認済み・有効・同社会社claimであり、同社のUser documentが有効な本登録会社管理者である場合だけ許可する。`isSuperUser`だけでは許可しない。
 - 従業員の退職と Authentication アカウント削除は同一操作とみなさず、業務記録との関係を保つ。
+- User管理の段階改修では、まず仮登録Userと保護fieldの境界を確立する。本登録Userの削除、Employee退職時のUser/Auth状態遷移、本人向けEmployee情報の具体的なread境界は、各専用ゲートで別に確定する。
 
 ## 主要データと業務規則
 

@@ -811,15 +811,15 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0066 User/Auth管理の正式権限と本人操作範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-025; `user-auth-lifecycle.md`
 - Evidence: UIはadmin向けだがUser Rulesとcallableのserver認可はより広く、権限設計は暫定実装である。
 - Question: User閲覧、仮登録、role変更、有効化、削除、管理者移譲を誰に許し、本人が変更できるfieldをどこまでとするか。
 - Why needed: account乗っ取り、権限昇格、個人情報閲覧をserver境界で防ぐため。
 - Options and impact: admin専用、操作別permission、本人設定field分離、super-user repair専用。
-- Current provisional treatment: 現行UI/Rules/callable境界を実装事実とし、安全な確定仕様とはしない。
+- Current provisional treatment: 仮登録User管理は`users:write`へ分離し、本登録User lifecycleとEmployee本人readの具体field/pathは後続専用ゲートで扱う。
 - Related FUT IDs: FUT-0080
-- Answer: 未回答
+- Answer: 2026-08-16 回答済み。Userは単独UserとEmployee連携Userに分け、仮登録・本登録等は別の状態軸とする。会社管理者と`users:write`保有者が同社の仮登録Userを管理し、`manager`と`human-resource`へ当該permissionを付与する。`employees:write`だけからUser管理権限を派生させない。単独仮UserとEmployee連携仮Userは公開作成操作を分け、Employee連携は同社Employee存在、未紐付け、1 Employee対最大1 Userをserver検証する。Employee連携Userは自身のEmployee情報へアクセスできるが、公開field/pathはEmployee Self Accessの別ゲートで確定する。本登録User削除、退職連携、role値、本人設定field、email予約pathは一括確定せず後続gateで扱う。
 
 ## CONF-0067 事前登録・招待・account setupの正式workflow
 

@@ -2,13 +2,13 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Planning
+- 状態: Active（UWB-01契約確定）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
 - 作成日: 2026-08-16
 - 関連仕様: [現行仕様](../specification.md)の「テナントと認証」
-- 関連ADR: [ADR 0015](../decisions/0015-user-led-implementation-and-codex-assurance.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)
+- 関連ADR: [ADR 0015](../decisions/0015-user-led-implementation-and-codex-assurance.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)
 - 関連実装調査: [User / Firebase Auth lifecycle](user-auth-lifecycle.md)、[Callable認可境界](callable-authorization.md)
 - 関連backlog: FUT-0080、FUT-0082、CONF-0066
 
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 0 | 8 | 未開始 |
+| 実装ゲート | 1 | 8 | UWB-01契約確定、実装未開始 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -69,17 +69,26 @@ Usersコレクションへの書込みを、同一会社であることだけに
 - 管理者Userは削除できない。
 - 恒久的なsuper-user他社write bypassは設けない。
 
-### UWB-01で確定する事項
+### UWB-01で確定した段階契約
 
-- 同社User一覧を読めるactorの範囲。
-- 本人が直接変更できるfieldの確定一覧。
-- 会社管理者が変更できる通常プロフィールfieldの確定一覧。
-- 仮登録Userを作成・編集・削除できるactor。
-- 本登録非管理者Userの削除条件と、Employee退職との関係。
-- role値をプリセット限定にするか、明示permission文字列も許可するか。
-- 仮登録emailとemployeeIdの重複防止方式。
+- Userを単独UserとEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効は別の状態軸とする。
+- 会社管理者と`users:write`保有者が、同じ会社の仮登録Userを作成・編集・削除できる。
+- `manager`と`human-resource`へ`users:write`を付与する。`employees:write`だけからUser管理権限を派生させない。
+- 単独仮UserとEmployee連携仮Userは別の公開作成操作とする。
+- Employee連携では同一会社のEmployee存在、未紐付け、1 Employee対最大1 Userをserver側で検証する。
+- `employees:read`だけのactorはEmployee詳細でUserの紐付け・状態を確認できるが、User管理操作は行えない。必要な最小表示をUser文書全体のreadへ依存させない。
+- User一覧は会社管理者と`users:write`保有者を対象とし、非管理者には管理者移譲、有効化・無効化、本登録User削除、role変更を提供しない。
+- UWBは仮登録Userと保護fieldのCritical境界から開始し、本登録User lifecycleを一括変更しない。
 
-未確定事項を推測でRulesやCallableへ固定しない。
+### 後続ゲートへ分離した契約
+
+- 本登録Userの削除条件とEmployee退職時のUser/Auth状態遷移。
+- role値をpresetだけに限定するか、明示permission文字列も許可するか。
+- 本人が変更できるUser設定fieldと更新方式。
+- 仮登録emailの競合防止に使用する予約文書の具体pathとmigration。
+- Employee連携User本人へ公開するEmployee fieldと提供path。これはEmployee Self AccessとしてUWB外の専用ゲートで扱う。
+
+後続ゲートの未確定事項を推測でRulesやCallableへ固定しない。
 
 ## 利用者確認の進め方
 
@@ -100,67 +109,66 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-01 操作・actor・field契約の確定
 
-- 状態: Not started
+- 状態: Completed（2026-08-16 利用者承認）
 - application file変更: なし
 
 #### 作業
 
-- [ ] 現行のUser管理画面で到達可能な操作を画面別に再確認する。
-- [ ] create/read/update/deleteをactor別に表へ固定する。
-- [ ] User fieldをimmutable、server-only、admin-editable、self-editableへ分類する。
-- [ ] 仮登録、本登録、管理者、無効User、Employee紐付きUserの状態遷移を固定する。
-- [ ] 未確定事項を利用者へ提示し、回答を仕様とCONFへ反映する。
+- [x] 現行のUser管理画面で到達可能な操作を画面別に再確認した。
+- [x] 仮登録Userのcreate/read/update/deleteをactor別に固定した。
+- [x] 単独UserとEmployee連携User、および仮登録・本登録等の状態軸を分離した。
+- [x] `users:write`と既存Employee permissionの責務を分離した。
+- [x] 一括確定しない本登録User lifecycleとEmployee Self Accessを後続専用ゲートへ分離した。
+- [x] 利用者の回答を仕様、ADR、CONF、UWBへ反映した。
 
 #### 完了条件
 
-- [ ] 利用者がactor/action/field matrixを承認している。
-- [ ] 現行仕様、関連FUT/CONF、UWB文書が一致している。
-- [ ] 後続ゲートで推測しなければならない業務判断が残っていない。
+- [x] 利用者が仮登録Userのactor/action matrixと段階的なgate縮小を承認している。
+- [x] 現行仕様、ADR 0018、関連FUT/CONF、UWB文書が一致している。
+- [x] UWB-02開始に必要な`users:write`の意味と初期付与roleが確定している。
 
-### UWB-02 role変更のserver境界
+### UWB-02 `users:write`認可基盤
 
 - 状態: Not started
-- 主な影響画面: `components/Users/Manager/index.vue`
+- 主な影響file: `constants/rolePresets.js`、認可utility、page access設定
 
 #### 作業
 
-- [ ] role変更policyを独立モジュールとして実装する。
-- [ ] 実行者、対象User、会社、登録状態、管理者状態、role入力を検証する。
-- [ ] role以外のfieldを変更しないuse-caseを実装する。
-- [ ] 内部情報を公開しないerror mappingを実装する。
-- [ ] Callable APIとして公開し、client composableへ接続する。
-- [ ] `UsersManager`の直接role更新をCallableへ置換する。
-- [ ] 失敗時にeditor内容とUser一覧が不整合にならないことを確認する。
+- [ ] permission catalogへ`users:write`を追加する。
+- [ ] `manager`と`human-resource`へ`users:write`を付与する。
+- [ ] `employees:write`だけではUser管理を許可しないtestを追加する。
+- [ ] User一覧とEmployee詳細で、閲覧とUser管理actionの表示条件を分離する。
+- [ ] 会社管理者は明示permissionの有無にかかわらず仮登録Userを管理できることを維持する。
+- [ ] `isSuperUser`だけではUser管理actorにならないことを維持する。
 
 #### 完了条件
 
-- [ ] 一般User、他社User、無効・仮登録actorのrole変更が拒否される。
-- [ ] 許可された会社管理者だけが同社対象Userのroleを変更できる。
-- [ ] `isAdmin`、`disabled`、`companyId`等が同時変更されない。
+- [ ] `users:write`の付与、展開、画面判定が一致している。
+- [ ] permissionを持たない`employees:read`・`employees:write` actorへ管理actionが出ない。
+- [ ] 既存の会社管理者専用操作を非管理者`users:write` actorへ広げていない。
 - [ ] 利用者が各application implementation fileを確認している。
 - [ ] 単体testと対象UIのlocal確認が成功している。
 
-### UWB-03 User削除のserver境界
+### UWB-03 仮登録User削除のserver境界
 
 - 状態: Not started
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
 
-- [ ] 仮登録User削除と本登録User削除のpolicyを分離する。
-- [ ] 管理者削除、自己削除、他社削除、状態不正を拒否する。
-- [ ] 本登録Userではdocument ID、Auth UID、会社claimを削除前に照合する。
-- [ ] 任意UIDの偽造User documentからglobal Auth削除へ到達できないようにする。
-- [ ] Employee紐付きUserの削除・無効化・退職の境界を確定契約に合わせる。
-- [ ] clientの直接`delete()`をCallableへ置換する。
+- [ ] 会社管理者または`users:write`保有者だけをactorとする。
+- [ ] 同社の仮登録Userだけを対象とし、本登録、管理者、自己、他社、状態不正を拒否する。
+- [ ] 仮登録User削除ではAuthenticationへ一切作用しない。
+- [ ] 単独UserとEmployee連携Userの削除結果を分けて検証する。
+- [ ] 仮登録Userのclient直接`delete()`をCallableへ置換する。
+- [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
 - [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
 #### 完了条件
 
 - [ ] 仮登録削除ではAuthenticationへ作用しない。
-- [ ] 本登録削除では検証済みの同一Userだけが対象になる。
-- [ ] 管理者と許可されていないactorからの削除が拒否される。
-- [ ] 削除triggerとの二重削除・部分状態・再試行結果が記録されている。
+- [ ] 本登録User、管理者、許可されていないactorからの削除が拒否される。
+- [ ] 既存削除triggerが仮登録削除でAuthへ進まないことと再試行結果が記録されている。
 - [ ] 利用者が各application implementation fileを確認している。
 - [ ] 単体testと対象UIのlocal確認が成功している。
 
@@ -181,7 +189,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] 一般Userや他社Userから仮登録を作成できない。
+- [ ] `users:write`を持たない一般Userや他社Userから仮登録を作成できない。
 - [ ] clientから本登録・管理者・無効Userを作成できない。
 - [ ] 重複、競合、再試行の結果が定義されている。
 - [ ] 利用者が各application implementation fileを確認している。
@@ -194,8 +202,9 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 作業
 
-- [ ] 管理者が編集できる通常プロフィールfieldをUWB-01の確定一覧へ限定する。
-- [ ] 本人が編集できる設定fieldをUWB-01の確定一覧へ限定する。
+- [ ] このgateの実装前に、管理者・`users:write` actorが編集できる通常プロフィールfieldを利用者と確定する。
+- [ ] このgateの実装前に、本人が編集できる設定fieldを利用者と確定する。
+- [ ] role値をpreset限定または明示permission許可のどちらにするか確定し、role変更は会社管理者専用Callableへ分離する。
 - [ ] email、companyId、isAdmin、isTemporary、disabled、rolesの混入を拒否する。
 - [ ] `tagSize`と通知受信flagの型・許容値を検証する。
 - [ ] FireModelのfull updateで非対象fieldが再保存されないことを確認する。
@@ -288,6 +297,8 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 - custom claims変更後の既発行token失効。
 - 一般User本登録でclaims設定に失敗した場合のreconcile。
 - Auth・Firestore triggerの部分失敗監視と再同期。
+- 本登録User削除とEmployee退職・削除時のUser/Auth状態遷移。
+- Employee連携User本人へ提供するEmployee Self Accessのfield・path境界。
 - 将来の明示的なsuper-user support access。
 - Dev・production deployとremote受入れ。
 
@@ -296,3 +307,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 日付 | 状態 | 内容 | Commit | 検証 |
 |---|---|---|---|---|
 | 2026-08-16 | Planning | `User Write Boundary（UWB）`と改修追跡ゲートを作成 | 本変更 | project-owned・managed governance validator pass |
+| 2026-08-16 | UWB-01 completed | 単独／Employee連携User、`users:write`、仮登録管理actor、段階的gate縮小を確定 | 本変更 | project-owned・managed governance validator pass |

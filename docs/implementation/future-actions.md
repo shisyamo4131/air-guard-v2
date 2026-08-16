@@ -1068,16 +1068,16 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0080 User/Auth管理のserver認可とfield制約を実装する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-025、SPEC-DEEP-035
 - 対象ファイル・シンボル: `firestore.rules` Users match、`auth-v2.disableUser/enableUser/changeAdminUser`、UsersManager、`components/organisms/ChangeAdminUserDialog/index.vue`
 - 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修し、一般User・別tenant・別人from・仮登録・無効・管理者targetを更新前に拒否する。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
 - 想定影響と発生条件: Callableの旧actor/tenant経路は修正したが、一般Userの直接Firestore writeによりroles、isAdmin、disabled、employeeId等を改変できる。User管理UIの二重送信、削除連鎖、監査不足も別途残る。
-- 未確認点・仮説: 正式なUser管理role、本人更新可能field、super-user修復権限は未決定。
-- 推奨する将来対応: actor/action/field別権限を決め、Admin SDK callableとRulesでtenant・role・doc ID/UID・immutable fieldを強制する。
+- 未確認点・仮説: 仮登録管理actorは確定したが、本登録User削除、role値、本人更新field、super-user修復権限は後続gateで未決定である。
+- 推奨する将来対応: 2026-08-16に採用した`users:write`を`manager`と`human-resource`へ付与し、会社管理者と当該permission保有者だけを同社仮登録Userの管理actorとする。単独UserとEmployee連携Userの作成APIを分け、後続gateごとにactor/action/field境界を拡張する。Admin SDK CallableとRulesでtenant・permission・doc ID/UID・immutable fieldを強制する。
 - 必要なテスト: 一般/admin/super-user、本人/他人/他社UID、roles/isAdmin/companyId/disabled直接write、管理者移譲偽装。
-- ユーザー判断が必要な事項: CONF-0066。
+- ユーザー判断が必要な事項: 仮登録管理actorはCONF-0066で回答済み。後続gateで本登録削除、role値、本人設定fieldを個別確認する。
 
 2026-08-15の管理者移譲改修でcaller本人性、唯一の会社管理者、対象disabled/temporary、User/Auth company・UID整合をtransaction更新前に検証するよう変更した。理由・監査の要否とRulesの直接write境界は既存FUT/CONFで継続し、新規FUT/CONFは追加しない。
 
@@ -1104,8 +1104,8 @@ SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/
 - 対象ファイル・シンボル: schemas `User`、`setupUserAccount`、Users Rules、`EmployeeUserManager`
 - 確認済み実装事実: 本登録処理はdoc ID=Auth UIDを採るがRules/schemaは強制しない。仮User emailとemployeeIdに一意制約がなく、事前登録検索は複数一致の先頭を使用する。SEC-002では、attacker tenantへ別UIDをdoc IDとするUserを作成し、そのglobal UIDをAuth update/delete targetとして扱わせるsource chain、およびemail ownership確認前に通常clientがsetupを呼べるchainを確認した。token email一致は`email_verified`や一回限りinvite proofを代替しない。
 - 想定影響と発生条件: 重複仮登録、誤employee紐付け、invitation takeoverに加え、任意doc IDを書けるactorが別tenantのglobal Auth accountをdisable・更新・削除し得る。影響がcross-tenant Auth hard deletionを含むためCriticalとした。
-- 未確認点・仮説: 既存重複、1 Employee対複数Userを許す運用は未確認。
-- 推奨する将来対応: server予約/indexと作成callableでemail、UID、employeeIdの不変条件をtransactionally検証する。
+- 未確認点・仮説: 既存重複件数と予約documentの具体path・migrationは未確認である。
+- 推奨する将来対応: 2026-08-16に1 Employee対最大1 Userを確定した。単独仮UserとEmployee連携仮Userの公開作成操作を分け、server予約/indexと作成Callableでemail、UID、同一会社Employeeの存在・未紐付け・employeeId一意性をtransactionally検証する。
 - 必要なテスト: 同時仮登録、同email複数company、同employee複数User、任意doc ID、本登録競合。
 - ユーザー判断が必要な事項: CONF-0067、CONF-0062。
 
