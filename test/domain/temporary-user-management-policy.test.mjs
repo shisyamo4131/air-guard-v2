@@ -65,7 +65,7 @@ test("roles without users:write are denied", () => {
 });
 
 test("a direct permission string or unknown role is rejected", () => {
-  for (const role of ["users:write", "unknown-role"]) {
+  for (const role of ["users:write", "employees:write", "unknown-role"]) {
     assert.throws(
       () =>
         assertActorCanManageTemporaryUsers({
@@ -82,6 +82,24 @@ test("a direct permission string or unknown role is rejected", () => {
       },
     );
   }
+});
+
+test("isSuperUser alone does not grant temporary User management", () => {
+  assert.throws(
+    () =>
+      assertActorCanManageTemporaryUsers({
+        companyId: COMPANY_ID,
+        actorUser: createActorUser({ isSuperUser: true }),
+      }),
+    (error) => {
+      assert.ok(error instanceof TemporaryUserManagementPolicyError);
+      assert.equal(
+        error.code,
+        TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES.ACTOR_PERMISSION_DENIED,
+      );
+      return true;
+    },
+  );
 });
 
 test("another-company or temporary actor is rejected by the shared User policy", () => {

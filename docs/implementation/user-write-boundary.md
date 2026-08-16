@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 1 | 9 | UWB-01契約確定、UWB-02進行中 |
+| 実装ゲート | 2 | 9 | UWB-01〜02完了 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -129,8 +129,8 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-02 `users:write`認可基盤
 
-- 状態: Not started
-- 主な影響file: `constants/rolePresets.js`、認可utility、page access設定
+- 状態: Completed（2026-08-17 利用者確認）
+- 主な影響file: client／Functions role対応表、server role展開utility、仮登録User管理actor policy
 
 #### 作業
 
@@ -138,18 +138,19 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] parity testで両対応表の完全一致を検証する。
 - [x] permission catalogへ`users:write`を追加する。
 - [x] `manager`と`human-resource`へ`users:write`を付与する。
-- [ ] `employees:write`だけではUser管理を許可しないtestを追加する。
-- [ ] User一覧とEmployee詳細で、閲覧とUser管理actionの表示条件を分離する。
-- [ ] 会社管理者は明示permissionの有無にかかわらず仮登録Userを管理できることを維持する。
-- [ ] `isSuperUser`だけではUser管理actorにならないことを維持する。
+- [x] 既知presetだけを展開し、未知roleと直接permission文字列をserver認可で拒否する。
+- [x] `employees:write`だけではUser管理を許可しないtestを追加する。
+- [x] 会社管理者は明示permissionの有無にかかわらず仮登録Userを管理できることを維持する。
+- [x] `isSuperUser`だけではUser管理actorにならないことを維持する。
+- [x] User一覧とEmployee詳細のaction表示は、未接続APIを先に露出しないようUWB-03、UWB-04、UWB-06の各接続segmentへ移す。
 
 #### 完了条件
 
-- [ ] `users:write`の付与、展開、画面判定が一致している。
-- [ ] permissionを持たない`employees:read`・`employees:write` actorへ管理actionが出ない。
-- [ ] 既存の会社管理者専用操作を非管理者`users:write` actorへ広げていない。
-- [ ] 利用者が各application implementation fileを確認している。
-- [ ] 単体testと対象UIのlocal確認が成功している。
+- [x] client／Functionsの対応表と`users:write`付与presetがparity testで一致している。
+- [x] serverが会社管理者、`manager`、`human-resource`だけを仮登録User管理actorとして許可する。
+- [x] permissionなし、他社、仮登録、無効、不正状態、未知role、直接permission、`isSuperUser`だけのactorを拒否する。
+- [x] 利用者が各application implementation fileを確認している。
+- [x] 対象単体testが成功している。UIは後続API接続前のため変更・実行していない。
 
 ### UWB-03 仮登録User削除のserver境界
 
@@ -163,6 +164,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] 仮登録User削除ではAuthenticationへ一切作用しない。
 - [ ] 単独UserとEmployee連携Userの削除結果を分けて検証する。
 - [ ] 仮登録Userのclient直接`delete()`をCallableへ置換する。
+- [ ] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
 - [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
 - [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
@@ -187,6 +189,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] email、displayName、employeeId、roles初期値のfield・型を検証する。
 - [ ] emailとemployeeIdの重複・同時実行方針を実装する。
 - [ ] User一覧と従業員画面の直接`create()`をCallableへ置換する。
+- [ ] 作成API接続と同時に、User一覧・Employee詳細の作成actionを`users:write`または会社管理者へ限定する。
 - [ ] 作成失敗時に未完成Userや誤った画面状態を残さない。
 
 #### 完了条件
