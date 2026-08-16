@@ -17,7 +17,7 @@ const messages = useMessagesStore();
 const router = useRouter();
 const { $auth } = useNuxtApp();
 const { setUser } = useAuthActions();
-const { setupUserAccount } = useAuthFunctions();
+const { createAdminAccount, setupUserAccount } = useAuthFunctions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -57,14 +57,51 @@ onMounted(() => {
 
       // email_verifiedを反映したtokenで本登録Callableを呼ぶ
       const idTokenResult = await currentUser.getIdTokenResult(true);
+      const pendingAdminSetupKey =
+        `airguard-v2:pending-admin-account-setup:${currentUser.uid}`;
+      const pendingAdminSetupSource = localStorage.getItem(
+        pendingAdminSetupKey,
+      );
 
-      // 管理者はcreateAdminAccountでcompanyId claimを設定済みのため、
-      // companyId claimがない一般Userだけ本登録する
       if (!idTokenResult.claims?.companyId) {
-        await setupUserAccount();
+        if (pendingAdminSetupSource) {
+          let pendingAdminSetup;
+
+          try {
+            pendingAdminSetup = JSON.parse(pendingAdminSetupSource);
+          } catch {
+            throw new Error("管理者アカウントの登録情報を確認できません。");
+          }
+
+          if (
+            !pendingAdminSetup ||
+            typeof pendingAdminSetup !== "object" ||
+            typeof pendingAdminSetup.companyName !== "string" ||
+            !pendingAdminSetup.companyName.trim() ||
+            typeof pendingAdminSetup.companyNameKana !== "string" ||
+            !pendingAdminSetup.companyNameKana.trim() ||
+            typeof pendingAdminSetup.displayName !== "string" ||
+            !pendingAdminSetup.displayName.trim()
+          ) {
+            throw new Error("管理者アカウントの登録情報を確認できません。");
+          }
+
+          await createAdminAccount({
+            companyName: pendingAdminSetup.companyName,
+            companyNameKana: pendingAdminSetup.companyNameKana,
+            displayName: pendingAdminSetup.displayName,
+          });
+          await currentUser.getIdToken(true);
+          localStorage.removeItem(pendingAdminSetupKey);
+        } else {
+          await setupUserAccount();
+        }
+      } else if (pendingAdminSetupSource) {
+        // Callable成功後に画面処理が中断された場合の一時情報を片付ける
+        localStorage.removeItem(pendingAdminSetupKey);
       }
 
-      // setupUserAccountで設定されたclaimを取得し、sessionを初期化する
+      // Callableで設定されたclaimを取得し、sessionを初期化する
       await setUser(currentUser);
       await router.replace("/dashboard");
     } catch (error) {
