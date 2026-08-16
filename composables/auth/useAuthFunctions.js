@@ -46,7 +46,7 @@ export const useAuthFunctions = () => {
    * ユーザー事前登録確認
    * @param {Object} data
    * @param {string} data.email - メールアドレス
-   * @returns {Promise<{isPreRegistered: boolean, companyId?: string, displayName?: string, roles?: Array, tempUserId?: string}>}
+   * @returns {Promise<{isPreRegistered: boolean}>}
    */
   const checkUserPreRegistration = async (data) => {
     const callable = httpsCallable($functions, "checkUserPreRegistration");
