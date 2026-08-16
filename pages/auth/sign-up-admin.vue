@@ -21,6 +21,13 @@ const { checkEmailAvailability } = useAuthFunctions();
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
+const DISPLAY_NAME_LENGTH_MESSAGE =
+  "管理者名は6文字以内で入力してください。";
+const displayNameRules = [
+  (value) =>
+    !value || value.length <= 6 || DISPLAY_NAME_LENGTH_MESSAGE,
+];
+
 const model = reactive({
   email: "",
   password: "",
@@ -55,7 +62,10 @@ const isStepValid = computed(() => {
       );
     case 3:
       // 管理者情報
-      return model.displayName.trim() !== "";
+      return (
+        model.displayName.trim() !== "" &&
+        model.displayName.trim().length <= 6
+      );
     default:
       return false;
   }
@@ -66,11 +76,13 @@ const isStepValid = computed(() => {
  *****************************************************************************/
 /**
  * Handle the creation of a new admin user account.
- * - Uses the new auth-v2.js Cloud Functions.
+ * - Uses the administrator account Cloud Functions.
  * - Creates Authentication account and Firestore documents.
  * - Sets custom claims and waits for token refresh.
  */
 async function handleCreateUser() {
+  if (!isStepValid.value) return;
+
   errors.clear();
   loading.value = true;
   const key = loadings.add({ text: "管理者アカウントを作成しています" });
@@ -115,7 +127,7 @@ async function nextStep() {
     const key = loadings.add({ text: "メールアドレスを確認しています" });
 
     try {
-      await checkEmailAvailability({ email: model.email, isAdmin: true });
+      await checkEmailAvailability({ email: model.email });
       emailChecked.value = true;
       currentStep.value++;
     } catch (error) {
@@ -220,7 +232,7 @@ function prevStep() {
                   v-model="model.displayName"
                   label="管理者名"
                   required
-                  :maxLength="40"
+                  :rules="displayNameRules"
                 />
               </v-col>
             </v-row>
@@ -266,7 +278,7 @@ function prevStep() {
           v-else
           color="primary"
           type="submit"
-          :disabled="!formValid || loading"
+          :disabled="!formValid || !isStepValid || loading"
           :loading="loading"
           variant="elevated"
           @click="handleCreateUser"

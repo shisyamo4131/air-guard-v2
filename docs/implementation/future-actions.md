@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-08-12
+- 最終更新日: 2026-08-15
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -74,11 +74,11 @@ SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cl
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-003、SPEC-DEEP-005
 - 対象ファイル・シンボル: `useAuthActions.clearSession`・`signOut`、`useAuthStore.waitUntilSessionCleared`
-- 確認済み実装事実: clearSessionはauth scalarを先に初期化してからUser/Company unsubscribe・initializeを行う。後段例外はsetUserが吸収し、待機条件 `uid === null && isReady` はmodel cleanup失敗でも成立し得る。2026-08-11に、cleanup失敗時は強制reloadする方針が承認された。
+- 確認済み実装事実: clearSessionはauth scalarを先に初期化してからUser/Company unsubscribe・initializeを行う。後段例外はsetUserが吸収し、待機条件 `uid === null && isReady` はmodel cleanup失敗でも成立し得る。2026-08-11に、cleanup失敗時は強制reloadする方針が承認された。2026-08-15のlocal Emulator・Chrome検証では、旧管理者のsign-outから新管理者のsign-inへ移る間にFirestore listener由来のpermission-deniedが2件発生したが、新管理者の管理者menu、User一覧、管理者移譲dialogの利用に影響せず、その後は再発しなかった。
 - 想定影響と発生条件: unsubscribe/initializeがthrowした場合、signOut呼出し側は成功と判断しても旧model stateまたはlistenerが残る可能性がある。
-- 未確認点・仮説: model cleanupが実際にthrowするか、初期化が部分適用されるかは未確認。
+- 未確認点・仮説: model cleanupが実際にthrowするか、初期化が部分適用されるかは未確認。2026-08-15のpermission-deniedは、Authが未認証状態になった後もUser/Company購読が短時間残った可能性と整合するが、対象listener・document path・発生順序は特定していないため原因とは断定しない。
 - 推奨する将来対応: cleanup完了状態・errorを待機条件へ含め、失敗時はlog後に強制reloadする。
-- 必要なテスト: unsubscribe/initialize各failure、二重signOut、timeout、旧listener残存確認。
+- 必要なテスト: unsubscribe/initialize各failure、二重signOut、timeout、旧listener残存確認。sign-out時のAuth状態変更・User/Company unsubscribe・Firestore listener errorの順序を計測し、正常な画面遷移を維持したままpermission-deniedが解消されることを確認する。
 - ユーザー判断が必要な事項: なし。
 
 ## FUT-0006 通知クリックを安全なpayload遷移と既存client再利用へ変更する
@@ -233,7 +233,7 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-005
-- 対象ファイル・シンボル: `functions/modules/auth-v2.js` の `onAuthUserDeleted`、`FcmToken.deleteByUid`
+- 対象ファイル・シンボル: `functions/triggers/auth.js` の `onAuthUserDeleted`、`FcmToken.deleteByUid`
 - 確認済み実装事実: token削除失敗はlog後に吸収され、triggerを失敗させない。独立retry・orphan scanは確認できない。
 - 想定影響と発生条件: Firestore一時障害やmodel error時、削除済みUserのtokenが残り、同UID対象queryや運用上の不要データとなる可能性がある。
 - 未確認点・仮説: Authentication UID再利用可否、保持されたtokenへの実送信経路、監視alertは未確認。
@@ -272,7 +272,7 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-006
-- 対象ファイル・シンボル: `functions/modules/auth-v2.js` の管理者・本User作成、Users Rules、通知producerとFcmToken検索
+- 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`と`functions/apis/setupUserAccount.js`の管理者・本User作成、Users Rules、通知producerとFcmToken検索
 - 確認済み実装事実: 管理者作成と仮Userからの本登録はAuth UIDをUser document IDにする。通知配送もrecipient User document ID = FcmToken.uidを前提とする。一方Users Rulesは同一会社Userによる任意User document ID・fieldのwriteを許可し、この不変条件を強制しない。
 - 想定影響と発生条件: client writeで不正IDの本登録相当Userや通知設定を作成・変更できる場合、通知targetとAuthentication/FcmTokenの対応が崩れ、欠落・誤集計・権限データ不整合につながり得る。
 - 未確認点・仮説: temporary Userの具体的identifier形式、既存mismatch件数、migration手順は未確認。
@@ -1072,22 +1072,22 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-025、SPEC-DEEP-035
 - 対象ファイル・シンボル: `firestore.rules` Users match、`auth-v2.disableUser/enableUser/changeAdminUser`、UsersManager、`components/organisms/ChangeAdminUserDialog/index.vue`
-- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。SPEC-DEEP-001で、disable/enableは認証のみでtarget Auth claimのcompanyを採用し、管理者移譲もcallerのisAdmin/from本人性およびtoのdisabled/temporaryをserver検証しないことを本文再確認した。SPEC-DEEP-032ではdialogが`/settings/users`から実到達し、clientは`auth.isAdmin`だけをguard、callableは同社path・from admin・to non-admin・transaction更新を検証するが、caller本人性、target状態、理由/監査/versionを検証しないことを確認した。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
-- 想定影響と発生条件: 一般Userの直接write/callable呼出しによりroles、isAdmin、disabled、employeeId等の改変、管理者移譲、別tenant UIDの無効化要求が可能になる。
+- 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修し、一般User・別tenant・別人from・仮登録・無効・管理者targetを更新前に拒否する。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
+- 想定影響と発生条件: Callableの旧actor/tenant経路は修正したが、一般Userの直接Firestore writeによりroles、isAdmin、disabled、employeeId等を改変できる。User管理UIの二重送信、削除連鎖、監査不足も別途残る。
 - 未確認点・仮説: 正式なUser管理role、本人更新可能field、super-user修復権限は未決定。
 - 推奨する将来対応: actor/action/field別権限を決め、Admin SDK callableとRulesでtenant・role・doc ID/UID・immutable fieldを強制する。
 - 必要なテスト: 一般/admin/super-user、本人/他人/他社UID、roles/isAdmin/companyId/disabled直接write、管理者移譲偽装。
 - ユーザー判断が必要な事項: CONF-0066。
 
-SPEC-DEEP-032のdialog再確認では、server callableが同社path・from admin・to non-admin・transactionを検証する一方、caller本人性、対象disabled/temporary、理由・監査・versionを検証しないことを追加確認した。既存の認可課題の証拠であり、新規FUT/CONFは追加しない。
+2026-08-15の管理者移譲改修でcaller本人性、唯一の会社管理者、対象disabled/temporary、User/Auth company・UID整合をtransaction更新前に検証するよう変更した。理由・監査の要否とRulesの直接write境界は既存FUT/CONFで継続し、新規FUT/CONFは追加しない。
 
 ## FUT-0081 Auth・Firestore・claimsの部分状態を回復可能にする
 
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025
-- 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`auth-v2.setupUserAccount/createAdminAccount`
-- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。
+- 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`apis/setupUserAccount`、`apis/createAdminAccount`、`apis/checkEmailAvailability`
+- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。初期管理者はメール確認後にCompany/User/claimsを作成し、claims失敗後の整合した既存Company/Userを再利用できるが、同時実行競合、Auth-only、不整合な部分状態は残り得る。
 - 想定影響と発生条件: network/Admin SDK/trigger失敗でAuth-only、Firestore-only、claims欠損のaccountが残り、login初期化やtenant accessが不能・不整合になる。
 - 未確認点・仮説: 運用reconcile、監視、既存orphan件数は未確認。
 - 推奨する将来対応: idempotent setup state machine、再実行可能なclaims設定、orphan検出・管理者repairを設計する。
@@ -1111,6 +1111,8 @@ SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/
 
 SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず、composableがemailで先頭docを再検索してverification成立前にsetupする。表示対象・setup対象・mailbox所有を同じone-time proof/revisionへbindしない。
 
+2026-08-15に、確認済みAuth emailへ完全一致する一意の仮登録だけを選ぶpolicy、会社ID・仮User IDをclient入力として受け取らないuse-case、内部識別子を返さないerror mappingを追加し、既存Callableとメール確認後client flowへ接続した。local EmulatorとChromeで一般User本登録を確認済みだが、一般Userのclaims失敗後回復、rate limit/App Check、既存重複dataは未解決である。仮User削除ではAuth削除triggerを停止するが、本登録User doc IDを利用するglobal Auth削除のRules/claim境界は残る。
+
 ## FUT-0083 User/Auth同期triggerの失敗と遅延を可視化・修復する
 
 - 状態: Open
@@ -1124,16 +1126,16 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 必要なテスト: update/delete trigger失敗・retry、Auth user不存在、連続enable/disable、削除再作成、FCM cleanup失敗。
 - ユーザー判断が必要な事項: CONF-0068。
 
-## FUT-0084 未認証の事前登録照会で返す情報を最小化する
+## FUT-0084 未認証の事前登録照会を列挙・abuseから保護する
 
-- 状態: Open
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025、SEC-002
 - 対象ファイル・シンボル: `checkUserPreRegistration`、`checkEmailAvailability*`
-- 確認済み実装事実: 未認証callerがemailを指定すると、登録有無に加えcompanyId、displayName、roles、tempUserIdを取得できる。rate limit/challengeは直接実装にない。SEC-002でanonymous callerからこの応答差とmetadata返却へ到達するsource chainを確認し、仮説ではなく現行実装の公開境界として分類した。
-- 想定影響と発生条件: email推測・列挙により所属会社識別子、氏名、role、仮doc IDが漏れる。
+- 確認済み実装事実: 2026-08-16に応答を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdの匿名公開を廃止した。複数temporary Userも先頭採用せず拒否する。`checkEmailAvailability`は初期管理者signup専用となり、emailだけでAuthと全Userを確認するが、登録有無の応答差と、App Check、rate limit、challengeの不在は残る。
+- 想定影響と発生条件: email推測・列挙により事前登録の存在有無を判別でき、無制限呼出しでquota abuseとなり得る。所属会社識別子、氏名、role、仮doc IDの直接漏えいは解消済みである。
 - 未確認点・仮説: App Check、platform側rate limit、招待secretの別実装は未確認。
-- 推奨する将来対応: opaque invitation token方式または返却最小化、App Check/rate limit、enumeration-resistant responseを検討する。
+- 推奨する将来対応: App Check/rate limit、opaque invitation token、enumeration-resistant responseを検討する。
 - 必要なテスト: 未認証列挙、存在/不存在response差、rate limit、期限切れ/再利用token、他社email。
 - ユーザー判断が必要な事項: CONF-0069。
 
@@ -1220,7 +1222,7 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-027
-- 対象ファイル・シンボル: `auth-v2.createAdminAccount`、Company/User transaction、custom claims、`useAuthActions`
+- 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`、Company/User transaction、custom claims、`useAuthActions`
 - 確認済み実装事実: Companyとadmin Userはtransactionだがclaims設定は後続。tenant identityはCompany doc ID/claim/prefixにまたがり、移転・再concile経路はない。
 - 想定影響と発生条件: claims失敗・誤Company削除でAuth account、User、Company、subcollectionsのanchorが不一致になる。
 - 未確認点・仮説: orphan Company/Userの検出・support修復運用は未確認。
@@ -2031,11 +2033,11 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056、SPEC-DEEP-004
-- 対象ファイル・シンボル: `rebuildAllHistories`、auth-v2 callables、`geocoding`、Users/Companies Rules
-- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。rebuildAllHistoriesは未認証で任意companyIdを受け、隣接rebuildSecurityReportIndexesだけ認証+isSuperUserを強制する。disable/enable userは認証だけでtarget Auth claimからcompany pathを決めcaller tenant/roleを検証しない。changeAdminUserはcaller claim company内へ限定するがcaller admin/from本人性とdisabled/temporary targetを検証しない。createAdminAccountは認証のみで既存company/User/claimを拒否しない。email/pre-registrationは未認証で、pre-registrationはcompanyId/displayName/roles/tempUserIdを返す。App Check/rate limitは入口にない。
-- 想定影響と発生条件: 未認証callerによる他社履歴再構築・負荷、認証Userによる他User状態変更/管理者移譲、email/仮登録情報列挙、quota消費が起き得る。
+- 対象ファイル・シンボル: `functions/apis/*.js`、`geocoding`、Users/Companies Rules
+- 確認済み実装事実: SPEC-DEEP-001で全auth-v2/API入口本文を再確認した。2026-08-14〜16にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修した。2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を共有認可で強制し、`checkEmailAvailabilityGlobal`は有効な同社会社管理者へ限定した。createAdminAccountはメール確認、現在Auth、有効状態、token/current claim、既存User/Company所属を検証し、整合した再実行だけを許可する。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、client指定policy区分を信頼しない。pre-registrationも未認証だが、booleanだけを返し複数一致を拒否する。App Check/rate limitは入口にない。Users/Companies Rulesのfield単位・actor単位制約も未完了である。
+- 想定影響と発生条件: 修正済みCallableの旧任意操作経路は閉じたが、直接Firestore writeによるUser/admin field変更、残る匿名email/仮登録情報列挙、quota消費が起き得る。
 - 未確認点・仮説: Cloud側App Check/IAM override、disabled token失効時期、重複temporary User、各operationの正式actorは未確認。UIはsignup pagesおよびadmin routeのUsers manager/dialogから到達する。
-- 推奨する将来対応: CONF-0129後、callable policy matrix、auth/claim/role/company-target一致、disabled/temporary target制約、App Check、rate limit、匿名応答minimization、security auditを共通guardで強制する。Admin SDK callableだけでなくUsers/Companies Rulesのfield/actor制約も同時に揃える。
+- 推奨する将来対応: callable policy matrixを維持し、保護対象Callableではtoken/current Auth/User/path間のclaim schemaと整合性を共通にfail closedで強制する。続いてApp Check、rate limit、匿名応答minimization、security audit、Users/Companies Rulesのfield/actor制約を揃える。
 - 必要なテスト: 未認証、同社/他社、admin/non-admin/super-user、disabled、App Check有無、enumeration/rate、arbitrary companyId/uid。
 - ユーザー判断が必要な事項: CONF-0129、権限全体はCONF-0111。
 

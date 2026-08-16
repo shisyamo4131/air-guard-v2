@@ -5,8 +5,10 @@
 - 状態: 実装調査（SPEC-DEEP-032、deep-reviewed）
 - 最終確認日: 2026-08-11
 - 対象: `components/organisms/**` の6ファイル
-- 根拠: 対象6ファイル、直接caller `components/Users/Manager/index.vue`、`composables/auth/useAuthFunctions.js`、Functions `modules/auth-v2.js`、既存の `site-ordering.md`・`user-auth-lifecycle.md`
+- 根拠: 対象6ファイル、直接caller `components/Users/Manager/index.vue`、`composables/auth/useAuthFunctions.js`、Functions `apis/*.js`、既存の `site-ordering.md`・`user-auth-lifecycle.md`
 - 制約: Air/Firebase/Vuetify内部、runtime、実ブラウザ、Rules評価、実dataは未確認。直接依存の公開契約だけを確認した。
+
+> 後続改修: 2026-08-15に`changeAdminUser`のserver認可を強化した。以下は2026-08-11時点の画面・旧Callable調査記録であり、現在のCallable境界は`callable-authorization.md`と`user-auth-lifecycle.md`を正とする。
 
 ## コンポーネント/API表
 

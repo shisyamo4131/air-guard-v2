@@ -16,9 +16,9 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 102
+- このREADMEを含む文書数: 103
 - 実装領域文書: 93
-- 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録の9文書
+- 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
 - FUT: 183件
   - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
   - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
@@ -38,7 +38,8 @@
 - [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
-- [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): PM交代後にrepositoryから再開するための基準、承認境界、優先順。
+- [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
+- [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): coordinator交代承認待ち。新しい役割、基準commit、検証、承認境界、再開手順。
 
 ## アプリ入口・認証・共通基盤
 

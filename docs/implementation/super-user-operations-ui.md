@@ -7,6 +7,8 @@
 - 最終確認日: 2026-08-11
 - 根拠ファイル: `pages/super-user/index.vue`、`utils/pageSettings.js`、`stores/useAuthStore.js`、`useAuthActions.js`、Functions `apis/index.js`、`siteEmployeeHistories/rebuildAllHistories.js`、`rebuildHistory.js`、SecurityReport index rebuild/sync、関連実装文書
 
+> 後続改修: 2026-08-15に両再構築Callableは、verified email、token/current Auth双方の同社会社claim・`isSuperUser`・有効状態、同社の有効な本登録User、要求会社一致を共有認可で強制するよう変更した。以下のserver guard記述は2026-08-11時点の基準線であり、現在の境界は`callable-authorization.md`を正とする。
+
 ## route一覧・入口
 
 `pages/super-user`配下の実在routeは`/super-user` 1件だけで、子routeはない。pageSettingsは`roles: ["super-user"]`、`navigation: true`とする。clientのsuper-user roleはFirebase ID token custom claim `isSuperUser=true`からstoreへ設定され、会社adminとは別である。
@@ -17,8 +19,8 @@ page middleware/navigationの判定はclient表示・遷移guardであり、Call
 
 | UI表示 | Callable | 入力tenant | 作用 | server guard |
 | --- | --- | --- | --- | --- |
-| 現場入場履歴再構築 | `rebuildAllHistories` | login tokenの`companyId`をclientから送信 | 指定会社の全OperationResultからsite/employee組を列挙し、SiteEmployeeHistoryを作成/上書き。該当実績なしpairは個別rebuild時に削除 | 認証、super-user、caller/target tenant、App Checkの確認なし。companyId stringだけ |
-| 警備日報インデックス再構築 | `rebuildSecurityReportIndexes` | 同上 | 指定会社Storageと既存SecurityReportIndexesを走査し、indexを作成/更新/削除 | 認証必須、token `isSuperUser===true`。任意companyIdを許す全会社横断 |
+| 現場入場履歴再構築 | `rebuildAllHistories` | login tokenの`companyId`をclientから送信 | 指定会社の全OperationResultからsite/employee組を列挙し、SiteEmployeeHistoryを作成/上書き。該当実績なしpairは個別rebuild時に削除 | verified email、token/current Auth双方の同社会社claim・`isSuperUser`・有効状態、同社の有効な本登録User、要求会社一致 |
+| 警備日報インデックス再構築 | `rebuildSecurityReportIndexes` | 同上 | 指定会社Storageと既存SecurityReportIndexesを走査し、indexを作成/更新/削除 | 履歴再構築と同じ共有認可 |
 
 画面の1枚目subtitleは「全会社の現場入場履歴を再構築」と表示するが、handlerは現在の`auth.companyId` 1社だけを送る。全会社loopはない。super-user tokenにcompanyIdがない/空の場合はCallableのstring検証で拒否される。
 
@@ -26,7 +28,7 @@ page middleware/navigationの判定はclient表示・遷移guardであり、Call
 
 serverは指定CompanyのOperationResultsを全件取得し、各documentのsiteIdとemployeeIdsからunique pairを作り、pairを直列で`rebuildHistory`する。各pairは最古/最新OperationResultをqueryし、`${siteId}_${employeeId}`へSiteEmployeeHistoryをcreateする。
 
-- callable入口が未認証のため、UIを経由しないcallerが任意companyIdで実行できる。
+- Callableは同社の有効なスーパーユーザーをserverで強制し、会社admin・一般User・他社指定を拒否する。
 - App Check、rate limit、件数上限、pagination、timeout/memory option、run ID、actor/reason、dry-run/previewがない。
 - pairを直列処理し、途中failureで後続を止める。既に更新済みpairはrollbackしない。
 - 現在OperationResultsに存在するpairだけを列挙するため、過去には存在したが現在0件となったstale SiteEmployeeHistoryを全体scanして削除しない。`rebuildHistory`の0件delete branchは、このall-rebuild経路では通常pair自体が作られず到達しない。
@@ -37,7 +39,7 @@ serverは指定CompanyのOperationResultsを全件取得し、各documentのsite
 serverは指定CompanyのStorage prefixを全件listし、本体画像からoperationIdを集め、既存index IDもunionする。20 IDずつ`Promise.all`で同期し、画像0件または親Operation欠損なら既存indexを削除、その他はdateAt/reportCountをcreate/updateする。
 
 - Callableはsuper-userをserverで強制し、会社admin・一般Userを拒否する。
-- super-userは運営側全会社横断actorという確認済み定義のため、caller claim companyIdとの一致を要求しない。入力companyIdが本当に意図したtenantかの確認UIはない。
+- caller claim companyIdと入力companyIdの一致を要求する。入力companyIdが本当に意図したtenantかの確認UIはない。
 - Storage全件listとindex全件fetchを行い、page/cursor/件数previewはない。timeoutは540秒だがmemory/concurrency/rate limit/App Checkは未指定である。
 - 20件chunk内は部分成功し得て、chunk failureで後続を止める。再実行は絶対件数同期のため概ね収束するが、run result・failed IDs・resume checkpointはない。
 
@@ -52,9 +54,8 @@ server側にsecurity audit document、actor UID、reason、before/after、run ID
 ## UI-onlyとserver enforcement
 
 - `/super-user`表示はclient token roleで守られる。
-- `rebuildSecurityReportIndexes`は同じclaimをserverでも検証する。
-- `rebuildAllHistories`はserver guardがなく、最も強いUI-only境界である。
-- Firestore Rulesのsuper-user全会社fallbackはclient direct read/writeを広く許すが、これらCallableはAdmin SDKでRulesをbypassする。
+- 両再構築Callableは同じ共有認可をserverで検証する。
+- Firestore Rulesの恒久的なsuper-user全会社fallbackは廃止済みである。これらCallableはAdmin SDKでRulesをbypassするため、Callable自身の共有認可が境界となる。
 - disabled Userの既存token、claim失効/変更の即時反映、App Check/IAM overrideは未確認である。
 
 ## 他の保守領域との境界
@@ -64,19 +65,18 @@ server側にsecurity audit document、actor UID、reason、before/after、run ID
 ## 誤操作・cross-tenant
 
 - UIはlogin storeのcompanyIdを自動送信し、対象tenantを選択・確認できない。運営super-userがどのCompany contextでloginしているかを画面内に表示しない。
-- rebuildSecurityReportIndexes callableは任意companyIdを許す設計上の全社横断処理だが、UIはcurrent companyだけである。
-- rebuildAllHistoriesは未認証callerも任意companyIdを指定でき、cross-tenant destructive derived-data write/負荷を起動できる。
+- 両Callableはcurrent companyだけを許可し、他社指定を拒否する。UIもcurrent companyだけを送信する。
 - 同時実行、OperationResult/Storage更新中の実行、通常triggerとの競合をlockせず、途中状態が閲覧され得る。
 
 ## 未使用・stub候補
 
 - page subtitleの「全会社」は実装と不一致で、全会社操作UI/loopは存在しない。
 - super-user向けと想定されるmaintenance解除、archive緊急restore、backup/recovery等はこのpageにstubすらない。
-- `rebuildAllHistories`の未認証公開はUIのsuper-user限定意図と矛盾する。
+- 両再構築Callableのserver guardはUIのsuper-user限定意図と整合した。
 
 ## 将来要対応
 
-- FUT-0151: `rebuildAllHistories`を含むCallableのactor/tenant/App Checkをserver強制する。
+- FUT-0151: 両再構築Callableのactor/tenantは実装済み。残るApp Check、rate limit、idempotency、監査をserverで強制する。
 - FUT-0163: super-user保守操作へ対象確認、single-flight、preview、監査、部分結果・resumeを実装する。
 - CONF-0111: super-user/developer/adminを含む正式authorization model。
 - CONF-0129: 管理Callableのactor/tenant/App Check/rate limit。

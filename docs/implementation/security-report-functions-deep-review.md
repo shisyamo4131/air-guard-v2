@@ -8,6 +8,8 @@
 - 対象: `functions/modules/securityReport/**` 6ファイル
 - 境界: trigger/callableは直接callerと入口guardだけを照合し、runtime、Storage実データ、deploy状態は確認していない。
 
+> 後続改修: 2026-08-15に警備日報インデックス再構築Callableは、verified email、token/current Auth双方の同社会社claim・`isSuperUser`・有効状態、同社の有効な本登録User、要求会社一致を共有認可で強制するよう変更した。以下の入口guard記述は2026-08-11時点の基準線であり、現在の境界は`callable-authorization.md`を正とする。
+
 ## ファイル別公開契約
 
 | ファイル | export / 入出力 | 責務・主要分岐 | 到達経路 |

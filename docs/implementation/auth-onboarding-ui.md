@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-058、SPEC-DEEP-039a、SPEC-DEEP-041
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-16
 - 根拠ファイル: `pages/auth/*.vue`、`pages/unconfirmedEmail.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`composables/application/auth/useAuthActions.js`、`middleware/auth.global.js`、`utils/pageSettings.js`
 - 制約: runtime、実メール、外部Firebase、実dataは確認していない。Callable内部認可は既存`callable-authorization.md`を参照する。
 
@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | `/auth/sign-in` | `auth` / public | email/password login。成功後`auth.isReady`を最大15秒待ち`/dashboard` |
 | `/auth/sign-up` | `auth` / public | 仮Userの事前登録確認後、一般Userを本登録し`/unconfirmedEmail` |
-| `/auth/sign-up-admin` | `auth` / public | Company・初回adminを作成し`/unconfirmedEmail` |
+| `/auth/sign-up-admin` | `auth` / public | Auth作成と確認メール送信後、`/unconfirmedEmail`で初回admin設定を完了 |
 | `/auth/reset-password` | `auth` / pageSettings未登録 | Firebase password reset mail送信 |
 | `/unconfirmedEmail` | `auth` / pageSettings未登録 | verification mail再送、3秒pollで認証完了後`/dashboard` |
 
@@ -29,23 +29,23 @@ logout UIはこのscopeのauth pagesにはなく、app shell側の`useAuthAction
 ## 一般User signup・事前登録
 
 1. emailを入力し、未認証Callable `checkUserPreRegistration`で仮Userを検索する。
-2. 結果があればdisplayNameを画面表示し、`checkEmailAvailability`を実行する。
+2. 結果が1件なら確認済みbooleanだけを保持し、汎用の利用者表示を行う。会社ID、表示名、role、仮User IDは受け取らない。
 3. password/confirm（6文字以上・一致）を入力する。
-4. submit時にcomposableが事前登録とemail availabilityを再確認する。
+4. submit時にcomposableが事前登録を再確認する。管理者signup用`checkEmailAvailability`は呼ばない。
 5. Firebase Auth Userを作成し自動sign-inする。
 6. verification mailを送信する。
-7. `setupUserAccount`が仮Userから本Userへ変換しclaimsを設定する。
-8. token refresh後、verification待ちへ遷移する。
+7. verification待ちへ遷移し、メール確認後に`setupUserAccount`が確認済みtoken emailから仮Userを一意解決して本Userへ変換し、claimsを設定する。
+8. token refreshとsession初期化後、dashboardへ遷移する。
 
-step中はlocal loadingにより戻る/次へ/作成buttonをdisabledにする。前stepへ戻ると事前登録結果を破棄する。仮登録emailの複数一致・公開情報・本人性は既存FUT-0082/0084、CONF-0067/0069の対象である。
+step中はlocal loadingにより戻る/次へ/作成buttonをdisabledにする。前stepへ戻ると事前登録確認済み状態を破棄する。仮登録emailの複数一致は事前登録確認と本登録の双方で拒否し、匿名応答のmetadata公開は解消した。存在有無の列挙、App Check、rate limit、招待tokenはFUT-0084、CONF-0069の未完了範囲である。
 
 Auth作成後のmail/setup/token refresh失敗ではAuth Userが残る。画面はUID付きsupport案内を出すが、自動rollback、resume、同一account再実行、orphan検出はない。再度signupすると既存emailにより進めない候補である。
 
 ## 初回admin signup
 
-3 stepでemail/password、Company名/カナ、displayNameを入力する。step 1でemail availabilityを確認し、submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。
+3 stepでemail/password、Company名/カナ、6文字以内のdisplayNameを入力する。displayName超過はVuetifyの`rules`でfield下部に表示し、値を切り捨てず作成buttonを無効化する。step 1でemailだけを未認証`checkEmailAvailability`へ渡し、Authenticationと全会社Userの重複を事前確認する。submitは確認済みとしてcheckをskipするため、確認から作成までの競合はFirebase Auth作成が最終的に検出する。この確認はUX用であり、`createAdminAccount`のserver検証を代替しない。
 
-Auth User作成、verification mail、`createAdminAccount`によるCompany/User/claims作成、token refresh、`setUser`再初期化の順である。後段失敗時はAuth-onlyまたは部分Company/User/claimsが残り、UID付きsupport案内以外のrepair UIはない。公開routeから開始するが、Auth作成でsigned-inになった後にCallableを呼ぶ。
+Auth User作成、verification mail、verification待ちへの遷移、メール確認後の`createAdminAccount`によるCompany/User/claims作成、token refresh、`setUser`再初期化の順である。Company入力は同じbrowserのsession storageに保持し、完了時に削除する。Callableはtoken/current Authと既存所属を検証し、claims設定だけが失敗して同じUIDの有効な初期管理者User/Companyが残った場合は既存状態から再開する。別browser・別端末、session storage消失、不整合な部分状態のrepair UIはない。
 
 ## password reset・email confirmation
 
@@ -65,8 +65,8 @@ middlewareは未認証をsign-inへ、認証済み未確認Userをverification�
 
 ## duplicate・orphan・unused候補
 
-- `checkEmailAvailabilityGlobal`はdirect onboarding pagesから呼ばれず、現行flowは`checkEmailAvailability`を使う。
-- 一般signupはpageで事前登録/emailを確認した後、composableが同じ確認を再実行する。安全側の再確認だがrequestは重複する。
+- `checkEmailAvailabilityGlobal`はdirect onboarding pagesから呼ばれない。`checkEmailAvailability`は初回admin signupだけが使用する。
+- 一般signupはpageで事前登録を確認した後、composableが同じ事前登録確認を再実行する。安全側の再確認だがrequestは重複する。
 - admin signupは確認後submitまでemail変更をdisabledにする一方、競合予約やidempotency keyはない。
 - verification済みUser向けsign-in buttonは現在sessionをclearせず、意味のある復帰操作にならない候補である。
 - password resetとunconfirmedEmailはpageSettings設定漏れである。

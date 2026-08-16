@@ -30,6 +30,29 @@ npm install
 
 ## 通常の開発
 
+### 担当と変更単位
+
+- application codeの標準実装者はユーザーとする。
+- Codexは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法を整理し、ユーザー実装後の差分review、許可済みtest、documentとlocal Gitを管理する。
+- Codexの`developer`によるapplication code編集は、ユーザーが対象fileまたは機能境界を明示した補助実装だけで行う。
+- `tester`によるtest code編集は明示されたtest scopeだけで行い、application codeを変更しない。
+- 認証・認可・tenant分離は一括改修せず、独立して説明・review・rollbackできる最小segmentを1件ずつ扱う。
+
+認証・認可segmentは、実装前に次を揃えます。
+
+```text
+segment: <一つの入口・権限・data境界>
+current-behavior: <codeとtestから確認した現行挙動>
+threat-or-failure: <actor、前提、操作、影響>
+in-scope: <今回変更するfile・rule・contract>
+out-of-scope: <後続segmentへ残す境界>
+proposed-contract: <許可・拒否・状態遷移>
+compatibility-and-data: <既存利用者・data・migrationへの影響>
+rollback: <code、rule、data、外部作用を戻す条件と方法>
+tests: <許可経路、拒否経路、tenant境界、失敗経路>
+user-confirmation: <実装前判断と実装後確認>
+```
+
 開発環境:
 
 ```powershell
@@ -83,7 +106,25 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-初期suiteは専用seed、Authサインイン、Firestore Rulesの未認証拒否、同一会社claim許可、別会社拒否を検証します。Functions、画面、実端末FCM、外部APIは未対象です。Functionsテストを追加する場合は、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、正式な`functions/apis/index.js`から公開する10 Callableを読み込み、内部helperが非公開であることを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計67件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、未確認CallableのFunctions transport、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+
+### `isSuperUser` claimの正規化
+
+関連repository `air-guard-v2-admin-sdk`の`migration is-super-user-claim`は、所属済みAuthentication User、Company、同一UIDの本登録Userが整合する場合だけ、未設定の`isSuperUser`を`false`へ正規化します。既定はdry-runで、不正claim、identity不整合、読取errorがある場合はapply前に停止します。Emulatorまたは明示的なDev環境だけを許可し、Prod環境では拒否します。
+
+```powershell
+# Emulator: dry-run -> apply -> dry-run
+npm run cli:emulator -- migration is-super-user-claim
+npm run cli:emulator -- migration is-super-user-claim apply
+npm run cli:emulator -- migration is-super-user-claim
+
+# Dev: 個別のremote data操作承認後だけ、同じ順序で実行
+npm run cli:dev -- migration is-super-user-claim
+npm run cli:dev -- migration is-super-user-claim apply
+npm run cli:dev -- migration is-super-user-claim
+```
+
+実行前に対象環境、復旧可能性、件数だけを出力することを確認します。dry-runの`invalidIdentity`、`invalidClaim`、`errors`がすべて0の場合だけapplyへ進み、apply後のdry-runで`eligibleMissing`が0であることを確認します。
 
 Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
 
@@ -136,6 +177,16 @@ npm run generate:prod
 5. デプロイ対象と影響を確認し、明示的承認後に `firebase deploy` または限定デプロイを行う。
 6. Firebase Console、Functions ログ、対象画面で結果を確認する。
 
+Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場合、coordinatorはStorage Rulesを含むデプロイ承認を求める前に、利用者へ次を明示して通知する。
+
+- 対象Firebase project ID・aliasと、Storage Rulesをデプロイすること。
+- Firebase CLIまたはConsoleがStorageとFirestoreの連携許可を求める可能性があること。
+- 許可時にFirebase Storage service accountへ`Firebase Rules Firestore Service Agent` roleが付与されること。
+- 許可が付与済みか、初回promptで付与できたか、権限不足で失敗したかをデプロイ結果として報告すること。
+- デプロイ後に正常Userと拒否対象UserのStorage accessを確認し、連携roleが欠ける場合のfail-closedを検出すること。
+
+共通Auth identity gateまたは再構築認可を使うFunctionsをデプロイする場合、実行service accountがFirebase Authentication Userの参照権限を持つことを事前に確認し、Codexは次回deploy承認前に利用者へこの確認を通知する。デプロイ後の開発環境では、同社の有効な実行者による正常実行と、Auth無効・claim不一致・User無効・他社指定など各APIの拒否をFunctions logと画面結果で確認する。権限不足によるAuth参照失敗はfail closedとして検出し、権限を推測で追加せず対象project・service account・必要roleを確認する。
+
 開発環境の生成、Firebase alias の切り替え、デプロイを連続して行うスクリプトも定義されています。
 
 ```powershell
@@ -173,10 +224,11 @@ npm run install:schemas@dev
 
 ## Git統合
 
-- ユーザーの依頼ごとに、原則として機能単位の `codex/<機能名>` ブランチを `main` から作成する。開始時に現在ブランチ、基準コミット、作業ツリーを確認する。
+- 作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位の `codex/<機能名>` ブランチを合意済み基準から作成する。開始時に現在ブランチ、基準コミット、作業ツリーを確認する。
+- Codexはlocal branch作成・切替、review済みfileのstage・commit、差分確認を担当する。ユーザーの未コミットapplication codeを独自判断で修正、破棄、stage、commitしない。
 - 専門タスクは担当ファイルだけを編集・検証し、原則としてステージやコミットを行わない。
 - 専門タスクはチェックポイントID、正確な変更ファイル、差分、テスト、未確認事項、承認境界、作業ツリー状態をコーディネーターへ報告する。
-- コーディネーターは差分と仕様・ロードマップとの整合を確認し、受入れた担当ファイルだけをステージ、コミット、統合する。専門タスクが既にコミットを作成している場合は、確認後に再利用する。
+- コーディネーターは差分と仕様・ロードマップとの整合を確認し、合意済み作業単位のreview済みfileだけをステージ、コミット、統合する。ユーザー実装をcommit対象に含める場合は対象差分と検証状態をユーザーと確認する。専門タスクが既にコミットを作成している場合は、確認後に再利用する。
 - 並行書込みでは共通の基準コミットとチェックポイントIDを使用し、担当ファイルを重複させない。限定された一群を統合・検証してから次の共通基準へ昇格する。
 - 未統合の変更を、別タスクの確定済み依存関係として扱わない。統合待ちがある場合は新規割当より統合を優先する。
 - ユーザーは機能ブランチ上の動作を確認する。明示的な受入れ承認を得るまで `main` へマージしない。
@@ -208,11 +260,12 @@ worktree: <clean or exact dirty paths>
 
 ### 通常ループ
 
-1. レビュー可能な変更単位を1件だけ割り当てる。
-2. 専門タスクは完了、失敗、仕様質問、承認境界で一度だけ通知し、待機する。
-3. コーディネーターは報告、担当差分、テスト、未確認事項、作業ツリー、仕様・ロードマップとの整合を確認する。
-4. 受入れた変更をコミット・統合し、必要な統合検証を行う。
-5. 終了条件に達していなければ次のチェックポイントを割り当てる。
+1. Codexが現行挙動、変更契約、影響、rollback、test条件を、利用者が理解・判断できる最小単位に整理する。
+2. ユーザーの承認後、ユーザーがapplication codeを実装する。補助実装またはtest編集を委譲する場合だけ、Codexが明示された範囲を専門タスクへ割り当てる。
+3. 専門タスクは完了、失敗、仕様質問、承認境界で一度だけ通知し、待機する。
+4. コーディネーターはユーザーまたは専門タスクの差分、テスト、未確認事項、作業ツリー、仕様・ロードマップとの整合を確認する。
+5. 合意済み変更をコミットし、必要な統合検証とdocument同期を行う。
+6. 終了条件に達していなければ次のチェックポイントへ進む。
 
 通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
 
@@ -299,6 +352,6 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
-- Codex専用local suiteはAuthとFirestore Rulesの基盤確認に限定され、Functions、Storage Rules、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
+- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、全会社メール重複確認Callableのhandlerを確認する。Functions transport、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。

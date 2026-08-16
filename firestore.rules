@@ -8,16 +8,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userCompanyId() {
-      // request.auth.token.companyId がカスタムクレームに設定されていることを前提とします
-      return request.auth.token.companyId;
+    function hasValidIdentityClaims() {
+      return isAuthenticated()
+        && request.auth.token.email_verified is bool
+        && request.auth.token.email_verified == true
+        && request.auth.token.companyId is string
+        && request.auth.token.companyId.size() > 0;
     }
 
-    function isSuperUser() {
-      // isSuperUserがtrueの場合のみスーパーユーザーと判定
-      return request.auth != null
-        && "isSuperUser" in request.auth.token
-        && request.auth.token.isSuperUser == true;
+    function hasActiveRegisteredUser() {
+      return hasValidIdentityClaims()
+        && exists(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.companyId is string
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.companyId == request.auth.token.companyId
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.isTemporary is bool
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.isTemporary == false
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.disabled is bool
+        && get(/databases/$(database)/documents/Companies/$(request.auth.token.companyId)/Users/$(request.auth.uid)).data.disabled == false;
+    }
+
+    function userCompanyId() {
+      return hasActiveRegisteredUser()
+        ? request.auth.token.companyId
+        : "";
     }
 
     // --- Rules for 'System' collection ---
@@ -51,131 +64,106 @@ service cloud.firestore {
     // --- Rules for 'Companies' collection ---
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyDocId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyDocId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyDocId;
     }
 
     // --- Rules for 'ArrangementNotifications' subcollection under 'Companies' ---
     // ArrangementNotificationsコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // ArrangementNotifications ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/ArrangementNotifications/{id} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Articles' subcollection under 'Companies' ---
     // ArticlesコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Articles ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Articles/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Articles_archive' subcollection under 'Companies' ---
     // Articles_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Articles_archive ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Articles_archive/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Autonumbers' subcollection under 'Companies' ---
     // AutonumbersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Autonumbers ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Autonumbers/{id} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Billings' subcollection under 'Companies' ---
     // BillingsコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Billings ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Billings/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Customers' subcollection under 'Companies' ---
     // CustomersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Customers ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Customers/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Customers_archive' subcollection under 'Companies' ---
     // Customers_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Customers_archive ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Customers_archive/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
     // EmployeesコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Employees ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Employees/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---
     // Employees_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Employees_archive ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Employees_archive/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'mets' subcollection under 'Companies' ---
     // metaコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // meta ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/meta/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
     // OperationResultsコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // OperationResults ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/OperationResults/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---
     // SecurityReportIndexesコレクションは、Storageに保存されている警備日報の
     // 検索用インデックスとしてCloud Functionsが管理する。
-    // - 読み取り: 同じ会社の認証ユーザー、またはスーパーユーザーのみ許可。
+    // - 読み取り: 同じ会社の有効な本登録ユーザーのみ許可。
     // - 書き込み: Admin SDKを使用するCloud Functionsのみに限定し、
     //   クライアントからの作成・更新・削除は許可しない。
     match /Companies/{companyId}/SecurityReportIndexes/{docId} {
-      allow read: if (isAuthenticated() && userCompanyId() == companyId)
-                       || isSuperUser();
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow write: if false;
     }
 
@@ -183,59 +171,49 @@ service cloud.firestore {
     // OutsourcersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Outsourcers ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Outsourcers/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Outsourcers_archive' subcollection under 'Companies' ---
     // Outsourcers_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Outsourcers ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Outsourcers_archive/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Sites' subcollection under 'Companies' ---
     // SitesコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Sites ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Sites/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Sites_archive' subcollection under 'Companies' ---
     // Sites_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Sites_archive ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Sites_archive/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'SiteOperationSchedules' subcollection under 'Companies' ---
     // SiteOperationSchedulesコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // SiteOperationSchedules ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/SiteOperationSchedules/{docId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // Companies/{companyId}/StripeData/{docId}
     match /Companies/{companyId}/StripeData/{docId} {
       // 同じ会社のユーザーのみ読み取り可能
-      allow read: if (isAuthenticated() && userCompanyId() == companyId) || isSuperUser();
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
       
       // 同じ会社のユーザーのみ作成可能（Checkout Session作成用）
-      allow create: if (isAuthenticated() && userCompanyId() == companyId) || isSuperUser();
+      allow create: if isAuthenticated() && userCompanyId() == companyId;
       
       // Cloud Functionsからの書き込みのみ許可（sessionUrl, error更新用）
       // クライアントからの更新・削除は不可
@@ -246,24 +224,17 @@ service cloud.firestore {
     // UsersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Users ドキュメントのみ Read/Write を許可。
-    // または、ユーザーがスーパーユーザーの場合も許可。
     match /Companies/{companyId}/Users/{userId} {
-      allow read, write: if (isAuthenticated() && userCompanyId() == companyId)
-                              || isSuperUser();
+      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
-    // --- General SuperUser Access & Default Deny for Others ---
-    // Companies以外の未定義パスについて、スーパーユーザーにRead/Writeを許可する。
-    // Companies配下は、次のルールでSecurityReportIndexesを除外して許可する。
-    match /{collection}/{document=**} {
-      allow read, write: if isSuperUser() && collection != "Companies";
-    }
-
-    // Companies配下の未定義パスについて、スーパーユーザーにRead/Writeを許可する。
-    // SecurityReportIndexesはCloud Functions専用書き込みとするため除外する。
+    // Companies配下の未定義パスにも同じtenant identity gateを適用する。
+    // SecurityReportIndexesとStripeDataの個別操作制約を迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
-      allow read, write: if isSuperUser()
-                              && collection != "SecurityReportIndexes";
+      allow read, write: if isAuthenticated()
+                              && userCompanyId() == companyId
+                              && collection != "SecurityReportIndexes"
+                              && collection != "StripeData";
     }
   }
 }

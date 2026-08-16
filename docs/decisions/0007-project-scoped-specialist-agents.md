@@ -1,7 +1,8 @@
 # 0007 プロジェクト専用の専門エージェント構成
 
 - 日付: 2026-08-04
-- 状態: Accepted
+- 状態: Superseded
+- 置換先: [0015 利用者主導実装とCodexによる設計・検証・文書・Git管理](0015-user-led-implementation-and-codex-assurance.md)
 - 関連仕様: 仕様変更規則、現段階の完了条件
 - 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)、[0006](0006-user-prepared-authenticated-browser-testing.md)
 

@@ -15,11 +15,9 @@ export const useAuthFunctions = () => {
   };
 
   /**
-   * メールアドレスが利用可能かをチェックします。
-   * - isAdminフラグに基づき、管理者登録または利用者登録用としてチェックします。
+   * 管理者サインアップ前にメールアドレスが利用可能かをチェックします。
    * @param {Object} data
    * @param {string} data.email - メールアドレス
-   * @param {boolean} data.isAdmin - 管理者フラグ
    * @returns {Promise<{available: boolean}>}
    */
   const checkEmailAvailability = async (data) => {
@@ -46,7 +44,7 @@ export const useAuthFunctions = () => {
    * ユーザー事前登録確認
    * @param {Object} data
    * @param {string} data.email - メールアドレス
-   * @returns {Promise<{isPreRegistered: boolean, companyId?: string, displayName?: string, roles?: Array, tempUserId?: string}>}
+   * @returns {Promise<{isPreRegistered: boolean}>}
    */
   const checkUserPreRegistration = async (data) => {
     const callable = httpsCallable($functions, "checkUserPreRegistration");
@@ -56,14 +54,12 @@ export const useAuthFunctions = () => {
 
   /**
    * 利用者アカウント作成
-   * @param {Object} data
-   * @param {string} data.companyId - 会社ID
-   * @param {string} data.tempUserId - 仮ユーザードキュメントID
-   * @returns {Promise<{success: boolean}>}
+   * Authenticationの確認済みメールアドレスからserver側で仮登録を解決します。
+   * @returns {Promise<{success: boolean, companyId: string, userId: string}>}
    */
-  const setupUserAccount = async (data) => {
+  const setupUserAccount = async () => {
     const callable = httpsCallable($functions, "setupUserAccount");
-    const result = await callable(data);
+    const result = await callable();
     return result.data;
   };
 

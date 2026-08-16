@@ -3,7 +3,6 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
-import { useAuthActions } from "@/composables/application/auth/useAuthActions";
 
 /**
  * 管理者アカウント登録
@@ -11,8 +10,7 @@ import { useAuthActions } from "@/composables/application/auth/useAuthActions";
 export const useCreateAdminUser = () => {
   const { $auth } = useNuxtApp();
   const auth = $auth;
-  const { createAdminAccount, checkEmailAvailability } = useAuthFunctions();
-  const { setUser } = useAuthActions();
+  const { checkEmailAvailability } = useAuthFunctions();
 
   /**
    * 管理者アカウント登録処理
@@ -36,7 +34,7 @@ export const useCreateAdminUser = () => {
     try {
       // 1. メールアドレス重複チェック（スキップフラグがfalseの場合のみ）
       if (!skipEmailCheck) {
-        await checkEmailAvailability({ email, isAdmin: true });
+        await checkEmailAvailability({ email });
       }
 
       // 2. Authenticationアカウント作成（自動的にサインイン）
@@ -50,25 +48,19 @@ export const useCreateAdminUser = () => {
         // 3. メール認証送信
         await sendEmailVerification(userCredential.user);
 
-        // 4. Firestoreドキュメント作成
-        await createAdminAccount({
-          companyName,
-          companyNameKana,
-          displayName,
-        });
-
-        // 5. カスタムクレーム反映（トークンリフレッシュ）
-        await userCredential.user.getIdToken(true);
-
-        // 6. useAuthStore のユーザーデータを更新
-        // createUserWithEmailAndPassword によって認証状態になっているため、auth.global の onAuthStateChanged が
-        // 先に反応し、カスタムクレーム反映前のデータで setUser が実行されている。
-        // カスタムクレーム反映後に再度 setUser を実行して最新化する。
-        await setUser(userCredential.user);
+        // 4. メール確認後のCompany・User作成に必要な値だけを一時保存
+        localStorage.setItem(
+          `airguard-v2:pending-admin-account-setup:${userCredential.user.uid}`,
+          JSON.stringify({
+            companyName,
+            companyNameKana,
+            displayName,
+          }),
+        );
 
         return { success: true, userCredential };
       } catch (error) {
-        // Firestoreドキュメント作成やカスタムクレーム設定でエラー
+        // 認証メール送信または一時保存でエラー
         console.error("Account setup error:", error);
 
         // Authenticationアカウントは残るため、カスタマーサポート対応が必要

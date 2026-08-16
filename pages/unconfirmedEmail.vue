@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useAuthActions } from "@/composables/application/auth/useAuthActions";
+import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 
 definePageMeta({ layout: "auth" });
 
@@ -16,11 +17,13 @@ const messages = useMessagesStore();
 const router = useRouter();
 const { $auth } = useNuxtApp();
 const { setUser } = useAuthActions();
+const { createAdminAccount, setupUserAccount } = useAuthFunctions();
 
 /*****************************************************************************
  * DEFINE STATES
  *****************************************************************************/
 let intervalId = null;
+let verificationCheckInProgress = false;
 
 /*****************************************************************************
  * METHODS
@@ -43,12 +46,69 @@ const handleSendEmailVerification = async () => {
  *****************************************************************************/
 onMounted(() => {
   intervalId = setInterval(async () => {
-    if ($auth.currentUser) {
-      await $auth.currentUser.reload();
-      if ($auth.currentUser.emailVerified) {
-        await setUser($auth.currentUser);
-        router.replace("/dashboard"); // 認証後のリダイレクト先
+    const currentUser = $auth.currentUser;
+    if (!currentUser || verificationCheckInProgress) return;
+
+    verificationCheckInProgress = true;
+
+    try {
+      await currentUser.reload();
+      if (!currentUser.emailVerified) return;
+
+      // email_verifiedを反映したtokenで本登録Callableを呼ぶ
+      const idTokenResult = await currentUser.getIdTokenResult(true);
+      const pendingAdminSetupKey =
+        `airguard-v2:pending-admin-account-setup:${currentUser.uid}`;
+      const pendingAdminSetupSource = localStorage.getItem(
+        pendingAdminSetupKey,
+      );
+
+      if (!idTokenResult.claims?.companyId) {
+        if (pendingAdminSetupSource) {
+          let pendingAdminSetup;
+
+          try {
+            pendingAdminSetup = JSON.parse(pendingAdminSetupSource);
+          } catch {
+            throw new Error("管理者アカウントの登録情報を確認できません。");
+          }
+
+          if (
+            !pendingAdminSetup ||
+            typeof pendingAdminSetup !== "object" ||
+            typeof pendingAdminSetup.companyName !== "string" ||
+            !pendingAdminSetup.companyName.trim() ||
+            typeof pendingAdminSetup.companyNameKana !== "string" ||
+            !pendingAdminSetup.companyNameKana.trim() ||
+            typeof pendingAdminSetup.displayName !== "string" ||
+            !pendingAdminSetup.displayName.trim()
+          ) {
+            throw new Error("管理者アカウントの登録情報を確認できません。");
+          }
+
+          await createAdminAccount({
+            companyName: pendingAdminSetup.companyName,
+            companyNameKana: pendingAdminSetup.companyNameKana,
+            displayName: pendingAdminSetup.displayName,
+          });
+          await currentUser.getIdToken(true);
+          localStorage.removeItem(pendingAdminSetupKey);
+        } else {
+          await setupUserAccount();
+        }
+      } else if (pendingAdminSetupSource) {
+        // Callable成功後に画面処理が中断された場合の一時情報を片付ける
+        localStorage.removeItem(pendingAdminSetupKey);
       }
+
+      // Callableで設定されたclaimを取得し、sessionを初期化する
+      await setUser(currentUser);
+      await router.replace("/dashboard");
+    } catch (error) {
+      errors.clear();
+      errors.add(error);
+    } finally {
+      verificationCheckInProgress = false;
     }
   }, 3000); // 3秒ごとにチェック
 });

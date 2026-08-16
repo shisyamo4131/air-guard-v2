@@ -23,6 +23,15 @@
 
 ### Changed
 
+- 初期会社管理者signup用`checkEmailAvailability`をemailだけのAuth・全User重複事前確認へ変更し、client指定`isAdmin`によるpolicy選択を廃止した。一般User signupは当該Callableを使用せず、事前登録確認とAuth作成時のemail一意性へ責務を分離した。
+- 一般Userの未認証事前登録確認をboolean応答だけに縮小し、会社ID・表示名・role・仮User IDの公開を廃止した。複数仮登録は先頭を採用せず拒否し、signup画面も汎用表示へ変更した。
+- `auth-v2.js`に残っていた全Callableを`functions/apis`へ分離し、有効化・無効化は共通request処理と2つの公開Callableを1ファイルへ集約した。Authentication削除triggerは`functions/triggers/auth.js`へ移し、公開Function名と既存挙動を維持した。
+- signup用`checkEmailAvailability`を`functions/apis`の単体ファイルへ分離し、Cloud Functionsの公開名と既存挙動を維持したままAPI index経由のexportへ整理した。
+- 公開Callableの`checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`を`functions/apis`の単体ファイルへ分離し、API indexを公開export一覧へ限定した。再構築で共有する認可処理は内部moduleとして維持し、Cloud Functionsの公開名は変更していない。
+- スーパーユーザーの恒久的な全会社Firestore client accessを廃止する方針と、将来は明示的な手続きを経た一時的な他社support accessを提供する未実装構想を記録した。
+- application codeの標準実装者を利用者へ変更し、Codexを設計、仕様整理、security・差分review、test計画・許可済み検証、document、local Git管理へ集中させた。Codex developerは明示された補助実装、testerのtest code編集は明示されたtest scopeに限定した。
+- 認証・認可・tenant分離の改善を最優先とし、一括置換ではなく、現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを説明できる最小segmentごとに進める運用へ変更した。
+- local Emulatorはtest用1社、Devは利用者の会社と協力会社の2社が試用するremote環境として、一般公開の有無にかかわらずtenant境界を必須とする環境条件を記録した。
 - `OperationResult.isLocked`を請求確定や全体凍結ではなく管制側編集保護と定義し、`operation-results:write`と`operation-billings:write`の権限境界、理由入力・追加承認・新規履歴collectionを要求しない方針を仕様、ADR、実装調査、マニュアル、ロードマップへ反映した。
 - 2026-08-12までの静的source reviewをFUT/CONF、coverage、正式運用準備roadmapへ再照合し、主repoのdeep-reviewed件数を310/531から519/531へ更新してB/Cを0とした。公式進捗は無部分加点規則により10%へ据え置いた。
 - 認証・認可、請求・派生同期、共通UI、Admin backup/restoreの問題と要判断事項を、既存canonical groupと新規FUT-0177〜FUT-0183へ整理した。
@@ -50,6 +59,9 @@
 
 ### Fixed
 
+- 初期会社管理者のCompany/User作成をメール確認後へ移し、同じbrowserでは確認待ちから再開できるようにした。管理者表示名は値を切り捨てず、6文字超過をfield errorとして表示して作成を抑止する。
+- 一般Userのメール確認後画面で認証Callable composableの明示importがなく、クリーンなclientで本登録を開始できない問題を修正した。
+- メール確認済みでも会社claim未設定の一般Userをglobal middlewareがdashboardへ早期転送し、本登録Callableを実行できない問題を修正した。
 - 管制業務マニュアルの上下番確定処理リンクが存在しない文書を参照していた問題を修正した。
 - 上下番確認画面で確定処理中のダイアログが表示されず、処理対象の現場稼働予定を再選択できる問題を修正した。
 
@@ -57,5 +69,19 @@
 
 ### Security
 
+- 会社所属済みの認証必須Callable向けに、ID tokenと現在のAuthentication UserのUID・email・email確認・company claim・`isSuperUser`・有効状態をAPI固有処理より先に照合する共通identity gateと安全なerror mappingを追加した。`disableUser`、`enableUser`、`changeAdminUser`、`checkEmailAvailabilityGlobal`、再構築2 APIへ適用し、重複した実行者Auth検査を除去した。匿名事前確認と所属確立前bootstrapは専用境界を維持する。
+- Authentication Userと会社Userの整合性検査で`isSuperUser`を必須boolean claimとして扱い、欠損・型不正を拒否するようにした。管理SDKの権限解除はclaimを削除せず`false`を保存し、Emulator・Devの全所属アカウントをdry-run、apply、再dry-runの順で検証した。
+- 初期会社管理者作成を、メール確認済みで有効な未所属Authに限定した。ID tokenと現在AuthのUID・email・claimを照合し、別の既存User/Company所属を拒否する。claims設定失敗後は同じUIDの整合した初期管理者状態だけを再利用し、Company重複作成を防ぐ。
+- 管理者signupの匿名email事前確認で、callerが`isAdmin`を偽装して弱い一般User分岐を選べないようにした。事前確認は認可ではなく、作成との競合、Auth-only部分状態、email列挙、App Check・rate limitは残存riskとして継続する。
+- 全会社Userのメールアドレス重複確認Callableを、確認済みメール、正常な会社claim、現在の有効なAuthentication User、同社の有効な本登録会社管理者がすべて整合する場合だけ許可した。`isSuperUser`だけでは許可せず、拒否経路と全会社重複検出を専用loopback Emulatorで検証した。
+- スーパーユーザー向けの履歴・警備日報インデックス再構築Callableを、ID token、現在のAuthentication User、同社の有効な本登録User、要求会社がすべて整合する場合だけ許可した。Auth無効・User無効・他社指定を含む拒否経路と両再構築の正常経路を専用loopback Emulatorで検証した。
+- StorageのSecurityReportsを、確認済みメール、正常な会社claim、同一tenant path、対応する有効な本登録Userがすべて整合する場合だけ許可するよう変更した。専用loopback Emulatorでupload、list、metadata、download URL、byte download、deleteと不正identity・他tenant拒否を検証した。
+- FirestoreのCompanies配下を、確認済みメール、正常な会社claim、同一tenant path、対応する有効な本登録Userがすべて整合する場合だけ許可するよう変更した。恒久的なsuper-user全会社bypassを廃止し、SecurityReportIndexesとStripeDataの個別操作制約を汎用ルールで迂回できないようにした。専用loopback Emulator 32件で検証した。
+- 一般User本登録について、確認済みAuthenticationメールに完全一致する一意の仮登録だけを選択し、会社ID・仮User IDをクライアント入力として信頼しないpolicy、use-case、安全なCallable error mappingを既存Callableへ接続した。clientはAuthentication account作成と確認メール送信で一度停止し、メール確認後に更新したID tokenで本登録してからsessionを初期化する。
+- Auth accountが有効でも、確認済みメール、正常な会社claim、tenant path、対応する有効な本登録Userの整合が確認できなければFirestore、Storage、Callableを拒否する方針を確定した。この認可整合性は次の最優先改修であり、実装・Rules test完了まで一般User本登録client接続はdeploy不可とする。
+- 仮登録UserのFirestore削除では、対応するglobal Authentication Userを削除しないようUser削除triggerを変更した。本登録済み状態を明示的に確認できる場合だけAuth削除へ進む。
+- 会社管理者移譲Callableを、認証済みactor自身が同社の唯一の有効な本登録管理者である場合だけ実行できるtransactionへ変更した。移譲元・移譲先のUser/Auth UID・company・登録・管理者・disabled状態を検証し、管理者0人・複数人、別人による移譲、内部識別子を含むerror応答を拒否する。
+- User有効化・無効化Callableを、認証済みactorの会社内transactionへ変更した。有効な本登録会社管理者だけが同社別の本登録非管理者Userを操作でき、自己操作、会社・UID・Auth claim不一致、仮登録、管理者targetを更新前に拒否する。
+- User更新triggerのAuth同期を独立モジュールへ分離し、Auth更新前にFirestore path・User document・Auth UID・Auth company claimの整合性を検証するよう変更した。会社不一致、claim欠損、UID不一致、登録状態不正ではAuthを更新しない。
 - invitation本人確認前のaccount setup、global Auth target、管理Callable、同一tenant Rules、SecurityReport Storage、`admin_users`、FcmToken、Admin operator境界の静的調査結果をsecurity backlogへ反映した。
 - 秘密情報、個人情報、本番データ、外部操作に関する文書化・承認境界を明文化した。

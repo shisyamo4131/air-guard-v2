@@ -845,17 +845,17 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Related FUT IDs: FUT-0083、FUT-0076、FUT-0077
 - Answer: 未回答
 
-## CONF-0069 未認証事前登録確認の公開情報と防御
+## CONF-0069 未認証事前登録確認の列挙・abuse防御
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-025; `user-auth-lifecycle.md`
-- Evidence: email一致時にcompanyId、displayName、roles、tempUserIdを未認証callerへ返す。
-- Question: 本登録前にclientへ必要な最小情報は何か。招待token、App Check、rate limit、同一response化を必須とするか。
+- Evidence: 2026-08-16にclientへ返す情報を`isPreRegistered`だけへ縮小し、companyId、displayName、roles、tempUserIdの匿名公開と複数一致時の先頭採用を廃止した。存在有無の応答差、App Check、rate limit、招待tokenは未解決である。
+- Question: 残る存在有無の列挙に対し、招待token、App Check、rate limit、同一response化をどこまで必須とするか。
 - Why needed: account/email列挙と所属・role情報漏えいを抑えるため。
-- Options and impact: opaque token、booleanのみ返却、setup callable内部だけで解決、現行返却+防御追加。
-- Current provisional treatment: 実装事実を記録し、公開してよい情報とは確定しない。
+- Options and impact: opaque token、App Check+rate limit、setup callable内部だけで解決、boolean応答の維持。
+- Current provisional treatment: booleanだけを返し、複数一致を拒否する。列挙・abuse防御は未確定のため未認証入口を最終security policyとは扱わない。
 - Related FUT IDs: FUT-0084
-- Answer: 未回答
+- Answer: 2026-08-16にboolean最小応答を採用。App Check、rate limit、招待token、同一response化は保留。
 
 ## CONF-0070 Outsourcerマスターの正式操作権限
 
@@ -1569,11 +1569,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-044、SPEC-SEG-049、SPEC-SEG-056; `cloud-functions-catalog.md`、`callable-authorization.md`、`super-user-operations-ui.md`
-- Evidence: sign-up前用途を含む5 callableが未認証で、rebuildAllHistoriesも任意companyIdを受ける。super-user UIはcurrent companyIdを送るだけでserver guardはなく、隣接SecurityReport rebuildだけauth+isSuperUserを強制する。auth-v2ではdisable/enableがcaller role/tenantを検証せず対象Auth claimのcompanyを操作し、changeAdminUserは同社pathへ限定するがcaller adminを確認しない。createAdminAccountも認証のみで既存所属を検証しない。pre-registrationは未認証でcompanyId/displayName/roles/tempUserIdを返す。SEC-002でこれらのsource chainを再現可能な入口として確認した。App Check/rate limit宣言はなく、Users/Companies Rulesも同社一般Userへ全field writeを許す。
+- Evidence: 2026-08-16までにdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authを、2つの再構築Callableは同社の有効なスーパーユーザーと要求会社一致を、`checkEmailAvailabilityGlobal`は有効な同社会社管理者をserver検証するよう改修した。createAdminAccountはメール確認、現在Auth、有効状態、token/current claim、既存User/Company所属を検証し、整合した再実行だけを許可する。`checkEmailAvailability`は初期管理者signup専用の未認証email事前確認となり、Authと全Userを確認してclient指定policy区分を無視する。一般User signupはpre-registrationだけを使用し、booleanだけを受け取り複数一致を拒否する。`geocoding`を含む未認証入口にApp Check/rate limit宣言はなく、Users/Companies Rulesのfield単位・actor単位制約も未完了である。
 - Question: 各callableを匿名、認証User、company admin、super-userの誰に許可し、tenant一致、App Check、rate limit、列挙防止をどう強制するか。
 - Why needed: signup UXを維持しつつ、他社操作、管理権限昇格、個人情報列挙、quota abuseを防ぐため。
 - Options and impact: anonymous最小応答+App Check、authenticated onboarding token、admin/super-user guard、server-generated invitation、per-IP/UID quota。
-- Current provisional treatment: 現行入口認証とtarget解決を実装事実とし、未認証・認証のみの管理操作を承認済みsecurity policyとは扱わない。`setupUserAccount`のemail照合、`changeAdminUser`のcaller company path限定は確認済みguardだが、全体方針を確定する根拠にはしない。
+- Current provisional treatment: 現行入口認証とtarget解決を実装事実とし、未認証操作を承認済みsecurity policyとは扱わない。`setupUserAccount`、createAdmin、disable/enable/changeAdmin、再構築2件、global email確認のguardと、管理者signup事前確認のclient非選択policyは確認済みだが、匿名signup入口、App Check、rate limit、Rulesのfield/actor制約を含む全体方針を確定する根拠にはしない。
 - Related FUT IDs: FUT-0151、FUT-0163、FUT-0140、FUT-0133
 - Answer: 未回答
 

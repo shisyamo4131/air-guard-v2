@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-08-10
+- 最終確認日: 2026-08-14
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -17,6 +17,7 @@
 | 作業種別 | 必読文書 | 追加で確認する対象 |
 |---|---|---|
 | 仕様・機能変更 | [現行仕様](specification.md)、[正式運用ロードマップ](roadmaps/airguard-v2.md)、[ADR索引](decisions/README.md) | 関連コード、テスト、[画面マニュアル](manual/index.md) |
+| 利用者実装の設計・差分review | [現行仕様](specification.md)、[ADR 0015](decisions/0015-user-led-implementation-and-codex-assurance.md)、[運用・開発手順](operations.md)の担当・Git統合 | 利用者の対象差分、関連test、rollback、roadmap |
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |
 | 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |

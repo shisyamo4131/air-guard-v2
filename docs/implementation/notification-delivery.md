@@ -3,7 +3,7 @@
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-005 — FCMサーバー送信・FcmToken・無効トークン処理
 - 最終確認日: 2026-08-10
-- 根拠ファイル: `functions/modules/utils/notifications.js`、`functions/triggers/arrangementNotification.js`、`functions/modules/notifications/createNotificationForArrangement.js`、`functions/modules/notifications/createNotificationForConfirmedArrangement.js`、`functions/modules/notifications/createNotificationForArrivedArrangement.js`、`functions/modules/notifications/createNotificationForLeavedArrangement.js`、`functions/modules/auth-v2.js` のAuthentication削除時FcmToken処理、`functions/index.js` の通知export、`firestore.rules` の `FcmTokens` match、`air-guard-v2-schemas/src/FcmToken.js`、同schemasの `index.js`
+- 根拠ファイル: `functions/modules/utils/notifications.js`、`functions/triggers/arrangementNotification.js`、`functions/modules/notifications/createNotificationForArrangement.js`、`functions/modules/notifications/createNotificationForConfirmedArrangement.js`、`functions/modules/notifications/createNotificationForArrivedArrangement.js`、`functions/modules/notifications/createNotificationForLeavedArrangement.js`、`functions/triggers/auth.js` のAuthentication削除時FcmToken処理、`functions/index.js` の通知export、`firestore.rules` の `FcmTokens` match、`air-guard-v2-schemas/src/FcmToken.js`、同schemasの `index.js`
 
 この文書は指定された通知配送境界から観察できる実装事実を記録する。環境値、実token、実データは読み取らず、外部通知やFunctionsを実行していない。通知以外のFunctions、Rules全体、他モデルは調査していない。
 

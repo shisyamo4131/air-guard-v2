@@ -3,7 +3,7 @@
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-006 — Notification作成認可とRecipients/Rules境界
 - 最終確認日: 2026-08-10
-- 根拠ファイル: `air-guard-v2-schemas/src/Notification.js`、`air-guard-v2-schemas/src/NotificationRecipient.js`、同schemasの `index.js`、`firestore.rules` のhelper・ArrangementNotifications・Users・Companies配下fallback match、`functions/modules/utils/notifications.js` のonCreate入力部分、`functions/triggers/arrangementNotification.js` のtrigger条件、4件の `functions/modules/notifications/createNotificationFor*Arrangement.js` の対象選定・Notification作成部分、`functions/modules/auth-v2.js` の登録済みUser作成部分
+- 根拠ファイル: `air-guard-v2-schemas/src/Notification.js`、`air-guard-v2-schemas/src/NotificationRecipient.js`、同schemasの `index.js`、`firestore.rules` のhelper・ArrangementNotifications・Users・Companies配下fallback match、`functions/modules/utils/notifications.js` のonCreate入力部分、`functions/triggers/arrangementNotification.js` のtrigger条件、4件の `functions/modules/notifications/createNotificationFor*Arrangement.js` の対象選定・Notification作成部分、`functions/apis/createAdminAccount.js`と`functions/apis/setupUserAccount.js`の登録済みUser作成部分
 
 この文書はNotification作成とRecipientsの信頼境界から観察できる実装事実を記録する。実token、環境値、実データを読み取らず、通知・Functions・Rules testを実行していない。producerの通知以外の業務ロジック、Rules全体、他モデルは調査していない。
 

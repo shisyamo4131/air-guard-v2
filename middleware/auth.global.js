@@ -6,7 +6,7 @@
  *    - public: true のページのみアクセス可能。
  *    - それ以外へのアクセスは /auth/sign-in へリダイレクト。
  * B. 認証済みの場合:
- *    - メール未認証の場合は /unconfirmedEmail へリダイレクト。
+ *    - メール未認証、または会社claim未設定の場合は /unconfirmedEmail へリダイレクト。
  *    - public: true のページへのアクセスは /dashboard にリダイレクト。
  *    - それ以外の場合は isPageAllowed で権限を確認し、権限がなければ /dashboard にリダイレクト。
  */
@@ -66,15 +66,16 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   // --- B. 認証済みユーザーの処理 ---
 
-  // 1. メール未認証の場合
-  if (!auth.isEmailVerified) {
+  // 1. メール未認証、または本登録前で会社claimが未設定の場合
+  if (!auth.isEmailVerified || !auth.companyId) {
     if (targetPath !== "/unconfirmedEmail") {
       return navigateTo("/unconfirmedEmail", { replace: true });
     }
     return;
   }
 
-  // 2. メール認証済みだが /unconfirmedEmail にいる場合はリダイレクト
+  // 2. メール認証と会社claim設定が完了済みだが
+  //    /unconfirmedEmail にいる場合はリダイレクト
   if (targetPath === "/unconfirmedEmail") {
     return navigateTo("/dashboard", { replace: true });
   }

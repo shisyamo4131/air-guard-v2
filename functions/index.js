@@ -16,10 +16,10 @@ export * from "./modules/geocoding.js";
 export * from "./modules/Employees.js";
 
 export * from "./triggers/arrangementNotification.js";
+export * from "./triggers/auth.js";
 export * from "./triggers/operationResult.js";
 export * from "./triggers/user.js";
 
-export * from "./modules/auth-v2.js";
 export * from "./triggers/securityReport.js";
 export * from "./modules/operationCleanup.js";
 export * from "./modules/utils/notifications.js";
