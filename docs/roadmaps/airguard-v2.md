@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-16
+- 最終確認日: 2026-08-17
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -113,3 +113,4 @@
 | 2026-08-16 | 10% | 0 | 会社所属済みCallableの共通Auth identity gateと安全なerror mappingを追加し、`disableUser`・`enableUser`でtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を固有policyより先に照合した。全domain単体test 228件、専用local suite 69件が成功した。残る保護対象Callable、Users Rules、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-16 | 10% | 0 | 共通Auth identity gateを`changeAdminUser`、`checkEmailAvailabilityGlobal`、再構築2 APIにも適用し、会社所属済み6 Callableすべてでtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を固有policyより先に照合した。全domain単体test 226件、専用local suite 71件が成功した。Users Rules、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-16 | 10% | 0 | UWB-01で単独UserとEmployee連携Userを分け、会社管理者と`users:write`保有者による仮登録管理、`manager`・`human-resource`への初期付与、単独／Employee連携の作成入口分離、1 Employee対最大1 Userを確定した。本登録User lifecycleとEmployee Self Accessは別ゲートへ分離した。文書契約のみで実装・Rules・test・受入れは未完了のため進捗は据え置いた。 |
+| 2026-08-17 | 10% | 0 | Codexが専用Emulator、隔離済みFunctions、local server、合成account/data、Codex管理ブラウザを準備し、利用者のChrome起動やsign-inなしにlocal UI testを完結させる方針を確定した。専用Functions接続、開発サーバー設定、browser sign-inは未実装・未検証であり、既存マイルストーンの完了条件を満たさないため進捗は据え置いた。 |

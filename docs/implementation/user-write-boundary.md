@@ -249,7 +249,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] 各操作の成功・拒否・失敗・再試行をChromeで確認している。
+- [ ] 各操作の成功・拒否・失敗・再試行をCodex専用local UI環境のブラウザ、または移行期間中の承認済みChromeで確認している。
 - [ ] console errorと意図しないFirestore直接writeがない。
 - [ ] 利用者が変更されたUI implementation fileをすべて確認している。
 
@@ -307,7 +307,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 - [ ] 全domain単体testを実行する。
 - [ ] Codex専用Firestore/Auth Emulator testを実行する。
-- [ ] 認証済みChromeでUser管理flowを一巡する。
+- [ ] Codex専用local UI環境のブラウザでUser管理flowを一巡する。
 - [ ] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
 - [ ] project-owned validatorとmanaged governance validatorを実行する。
 - [ ] `git diff --check`とclean worktreeを確認する。
@@ -347,3 +347,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-16 | UWB-01 completed | 単独／Employee連携User、`users:write`、仮登録管理actor、段階的gate縮小を確定 | 本変更 | project-owned・managed governance validator pass |
 | 2026-08-17 | UWB-03 client policy | 仮登録User削除のclient事前判定policyと拒否理由を追加 | `7998440` | client／server関連単体test 31件、`node --check`、`git diff --check` pass |
 | 2026-08-17 | UWB-03 client integration | 共通composableを追加し、User一覧・Employee詳細の表示判定と削除実行を接続。共通条件parity、自己対象拒否、再試行を追加 | `5338cbc`、`14202f4`、`27f2050`、`4869807`、`8ceb540` | UWB-03対象単体test 73件、自己対象・再試行・trigger関連28件、両SFC compile、`git diff --check` pass。UI／Emulator未実施 |
+| 2026-08-17 | UWB-03 local delete verification | composableの明示importを修正し、削除modeで更新field validationを走らせず、削除禁止時にhandlerへ進まない共通UI package境界を追加 | `5a26ef4`、air-vuetify-v3 `07886a4` | composable単体test 3件、共通UI package単体test 3件、SFC compile、構文、Chrome＋Emulatorで合成仮登録User削除、Firestore対象不存在、Auth 3件不変を確認。全UI状態は未完了 |

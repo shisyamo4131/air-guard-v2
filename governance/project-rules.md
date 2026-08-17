@@ -58,10 +58,12 @@
 - PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を確認してから変更する。
 - `npm audit fix`と`npm audit fix --force`を無条件に実行しない。lockfile、互換性、破壊的変更、root/functions双方への影響を先に確認する。
 - Codexは静的生成・buildを実行しない。利用者の正規運用は妨げない。deploy・package更新を含む正確なcommandと復旧手順は`docs/operations.md`を参照する。
-- Codexまたはtesterがlocal serverを起動する場合は`.env.local`を使い、loopbackへ限定する。LAN公開は実行ごとの利用者承認を必要とする。
-- Firebase Emulatorは利用者が明示的に許可した場合だけ使用する。起動前にproject、bind先、未起動serviceからのremote到達、外部API・Stripe・mail・FCM等への作用を確認し、隔離できなければ実行しない。
-- Emulator起動時は`--import=./saved-data`を使い、明示指示なしに`--export-on-exit`または同等操作で`saved-data`を上書きしない。
-- 認証後UI検証はADR 0006と`docs/operations.md`に従い、利用者が準備したEmulator、local server、認証済みChromeを引き継ぐ。利用者が起動したprocessを停止しない。
+- 利用者用local serverは`.env.local`、Codex専用local UI環境は専用設定を使い、いずれもloopbackへ限定する。LAN公開は実行ごとの利用者承認を必要とする。
+- CodexはADR 0014と`docs/operations.md`の隔離条件を満たす専用demo projectについて、追加承認なしにEmulator、Functions、local server、Codex管理processを起動・停止し、合成Authentication accountと合成dataを作成・更新・削除してよい。利用者用local環境、Dev、Prod、remote service、実dataへこの許可を拡張しない。
+- Codex専用環境の起動前にproject、bind先、未起動serviceからのremote到達、外部API・Stripe・mail・FCM等への作用を確認し、fail-closedで隔離できなければ実行しない。利用者用Emulatorは従来どおり対象実行ごとの明示許可を必要とする。
+- 利用者用Emulatorは`--import=./saved-data`を使い、明示指示なしに`--export-on-exit`または同等操作で`saved-data`を上書きしない。Codex専用環境は`.codex-test/saved-data`と専用runtimeだけを使い、利用者用`./saved-data`を読込・変更しない。
+- Codex専用local UI検証は、Codexが専用Emulator、Functions、local server、合成account/data、Codex管理ブラウザを準備して完結させることを標準目標とする。利用者のChrome起動・sign-inを通常の前提にしない。専用経路の実装・検証が完了するまでは未提供と明記し、利用者が起動したprocessを停止しない。
+- 数百件規模の合成documentを扱う場合は段階的に投入し、応答遅延、memory、Emulator logを監視する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は停止条件と復旧方法を定めた別の明示承認なしに行わない。これはFirebaseの公式上限とは扱わない。
 - deploy、remote環境検証、実dataを使う検証は対象操作ごとの明示承認なしに行わない。
 - 実施していない確認を成功と記載しない。技術的に実施できない場合は、確認済み範囲、未確認範囲、利用者の確認観点を報告する。
 - 認証・認可・tenant分離の既知Critical問題を最優先とし、既存構造を一括置換せず、利用者が仕様と影響を理解できる最小segmentへ分ける。各segmentは現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理し、利用者の実装後にCodexが差分reviewと許可済み検証を行う。

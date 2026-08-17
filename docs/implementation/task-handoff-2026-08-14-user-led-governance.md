@@ -183,3 +183,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 公式進捗は10%のまま。次はUsers Rulesのfield/actor制約、その後App Check・rate limitとDev受入れである。token失効、部分状態、匿名列挙、main merge、push、deploy、remote data操作は未完了または未承認のまま。
 
 この記録にsecret、credential、private production data、Codex session本文は含めない。
+
+## Codex self-contained local UI test governance checkpoint
+
+- 2026-08-17に、利用者のChrome、Emulator、local server、test account準備へ依存せず、Codexが専用環境の起動、合成account/data作成、browser操作、終了までを担当する方針が承認された。
+- 許可対象は`demo-air-guard-v2-codex`、専用loopback port、`.codex-test`配下、Codex管理process、合成dataだけである。利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote service、実dataへ拡張しない。
+- Functionsは外部API、Stripe、mail、FCM、通知、ジオコーディング等をfail-closedで隔離できたものだけを専用UI modeで起動する。現行suiteはFunctionsを起動せず、自己完結UI modeは未実装・未検証である。
+- Codexは合成会社、super-user兼管理者、管理者、一般User、仮登録User、必要な業務documentを作成してよい。実在情報・資格情報・sessionはrepository、log、promptへ保存しない。
+- 数百件のdocumentは段階投入する。約1000件でEmulatorが停止した利用者経験をlocal riskとし、同規模の一括投入は停止条件・復旧方法を定めた別承認なしに行わない。Firebaseの公式上限とは扱わない。
+- 基準application commitは`5a26ef4`（仮登録User削除composableの明示importと単体test）である。関連package `air-vuetify-v3`は利用者が`07886a4`を`main`へcommit・push済みと報告し、local repositoryはcleanを確認した。remote pushは未検証である。
+- 公式進捗は10%のまま。次はinstruction-chain変更に伴うcoordinator交代を完了し、新taskで専用Functions、専用開発サーバー設定、合成account fixture、Codex管理ブラウザsign-in、process cleanupを最小segmentに分けて実装・検証する。
+- main merge、AirGuardV2のGit push、deploy、remote接続、remote data、実data、外部service変更は未承認のまま。

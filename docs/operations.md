@@ -153,7 +153,23 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、正式な`functions/apis/index.js`から公開する10 Callableを読み込み、内部helperが非公開であることを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計67件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、未確認CallableのFunctions transport、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離する変更案を提示し、別途承認を得ます。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、正式な`functions/apis/index.js`から公開する10 Callableを読み込み、内部helperが非公開であることを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計71件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、未確認CallableのFunctions transport、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離します。
+
+### Codexだけで完結するlocal UI test（構築予定）
+
+2026-08-17に、利用者がChrome、Emulator、local server、test accountを準備せず、Codexが専用環境の起動から終了までを担当する方針を承認した。現時点ではFunctions接続、専用開発サーバー設定、Codex管理ブラウザからのsign-inが未実装・未検証であり、利用可能とは扱わない。
+
+完成条件は次のとおりとする。
+
+1. `demo-air-guard-v2-codex`と通常local環境とは異なるloopback portだけを使用する。
+2. CodexがAuth、Firestore、Realtime Database、Storage、必要なFunctions、local serverを起動し、Codexが起動したprocessだけを終了する。
+3. 合成会社、super-user兼管理者、管理者、一般User、仮登録User、必要な業務documentを再生成可能なfixtureから作成する。
+4. Functionsから外部API、Stripe、mail、FCM、通知、ジオコーディング等へ到達しないことを陰性testまたは明示拒否設定で確認する。
+5. Codex管理ブラウザがlocal appを開き、合成accountでsign-inし、対象画面を操作できる。
+6. 利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataが実行前後で変更されない。
+7. 終了時にserverとEmulatorを停止し、一時runtimeをproject配下の明示pathだけから削除する。失敗時も同じcleanupと状態報告を行う。
+
+数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 
 ### `isSuperUser` claimの正規化
 
@@ -179,13 +195,13 @@ Codexまたはテスターがローカル画面を起動する場合は、`.env.
 npx nuxt dev --dotenv .env.local --host 127.0.0.1
 ```
 
-認証後の画面操作が必要な場合は、Emulator専用アカウントを使用します。必要なアカウントがなければ、用途と権限を示してユーザーへ作成を依頼します。
+認証後の画面操作が必要な場合は、Emulator専用アカウントを使用します。利用者用local環境では必要なアカウント作成を利用者へ依頼します。Codex専用環境では、Codexが実在情報を含まない合成accountをfixtureまたは実行時生成で作成します。
 
-### Codexのブラウザ操作に関する現在の制約
+### 利用者用local環境を使うブラウザ操作の現在の制約
 
 CodexのインアプリブラウザとChrome拡張による操作のどちらからもNuxtローカルサーバーの画面は取得できますが、現在の環境ではCodexがAuth Emulatorの `127.0.0.1:9099` へ直接接続してサインインを自動化する経路が、ブラウザ操作レイヤーで `ERR_BLOCKED_BY_CLIENT` として遮断されます。
 
-認証後のUIテストは、次の準備をユーザーが行った後、Codexがサインイン済みChromeタブを引き継ぐ方式とします。
+Codex専用UI modeが完成するまで、利用者用local環境で認証後のUIテストを行う場合は、次の準備をユーザーが行った後、Codexがサインイン済みChromeタブを引き継ぐ方式とします。
 
 1. `--import=./saved-data` を付けてFirebase Emulatorを起動する。
 2. `.env.local` を使ってローカルサーバーを起動する。
@@ -195,7 +211,7 @@ CodexのインアプリブラウザとChrome拡張による操作のどちらか
 
 Codexは既存タブを引き継いだ後、SPAローディングテンプレートの表示を即時エラーとみなさず、画面遷移の完了または明確なタイムアウトまで待機します。データ作成・更新・削除を伴う操作は、ユーザーがテスト内容として明示的に許可した範囲だけで行います。テスト終了時はユーザーが起動したEmulator、ローカルサーバー、ChromeをCodex側から停止しません。
 
-同一オリジンプロキシ、専用E2Eブラウザ、危険なChrome起動オプションなど、ユーザーの通常環境を変更する回避策は採用しません。将来、Chrome操作レイヤーからAuth Emulatorへ安全に直接接続できるようになった場合は、この条件を再検討します。
+危険なChrome起動オプションや利用者の通常profile変更は採用しません。Codex専用UI modeは利用者用環境の制約を回避するために混在させず、専用project、専用port、合成account、Codex管理ブラウザで独立して検証します。
 
 Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にCodexからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してから検証を再開します。
 
