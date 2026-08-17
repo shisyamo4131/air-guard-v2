@@ -194,3 +194,19 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 基準application commitは`5a26ef4`（仮登録User削除composableの明示importと単体test）である。関連package `air-vuetify-v3`は利用者が`07886a4`を`main`へcommit・push済みと報告し、local repositoryはcleanを確認した。remote pushは未検証である。
 - 公式進捗は10%のまま。次はinstruction-chain変更に伴うcoordinator交代を完了し、新taskで専用Functions、専用開発サーバー設定、合成account fixture、Codex管理ブラウザsign-in、process cleanupを最小segmentに分けて実装・検証する。
 - main merge、AirGuardV2のGit push、deploy、remote接続、remote data、実data、外部service変更は未承認のまま。
+
+## COORDINATOR-HANDOFF-005 activation checkpoint
+
+- 状態: PM（AirGuardV2）-04 local coordinator有効化済み、PM（AirGuardV2）-03 archive可能。
+- new coordinator task: `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`（PM（AirGuardV2）-04）。
+- old coordinator task: `01a003d9-8782-79b2-9419-682e582bb1ac` host `local`（PM（AirGuardV2）-03）。
+- callback destination: 今後のcheckpointはnew coordinator `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-004`はcompleted。repositoryからactive instruction sourcesと正本を復元し、変更なしcallbackが旧coordinatorへ到達した。
+- branchは`codex/user-write-boundary`、baseline HEADは`b208fc384fdfe855cf6fe86a8467a704f02a0156`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- self-contained UI testの許可対象は`demo-air-guard-v2-codex`、専用loopback port、`.codex-test`、Codex管理process、合成account/dataだけである。利用者用local、Dev、Prod、remote、実dataへ拡張しない。
+- self-contained UI modeは方針確定済みだが未実装・未検証である。専用Functions、専用server設定、合成account fixture、Codex管理browser sign-in、cleanupを利用可能とは扱わない。
+- 数百件のdocumentは段階投入し、約1000件でEmulatorが停止した利用者経験をlocal riskとして扱う。同規模の一括投入は停止条件と復旧方法を定めた別承認を必要とし、Firebaseの公式上限とは扱わない。
+- main merge、AirGuardV2のGit push、deploy、remote接続・remote data、実data、外部service変更は未承認のままである。
+- next: self-contained UI環境を、外部作用fail-closed、専用Functions、専用server設定、合成account fixture、Codex管理browser sign-in、cleanupの最小segmentで構築・検証し、その後UWBへ戻る。
