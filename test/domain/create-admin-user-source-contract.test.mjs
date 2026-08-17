@@ -98,10 +98,27 @@ test("administrator signup enforces the User display name length", async () => {
     source,
     /v-model="model\.displayName"[\s\S]*?:rules="displayNameRules"/,
   );
-  assert.match(source, /if \(!isStepValid\.value\) return/);
   assert.match(
     source,
     /:disabled="!formValid \|\| !isStepValid \|\| loading"/,
+  );
+});
+
+test("administrator signup owns submission at the form boundary", async () => {
+  const source = await readFile(pageSourceUrl, "utf8");
+
+  assert.match(
+    source,
+    /<v-form v-model="formValid" @submit\.prevent="handleCreateUser">/,
+  );
+  assert.match(
+    source,
+    /if \(loading\.value \|\| !formValid\.value \|\| !isStepValid\.value\) return;/,
+  );
+  assert.equal(source.includes('@click="handleCreateUser"'), false);
+  assert.equal(
+    source.match(/(?:@submit\.prevent|@click)="handleCreateUser"/g)?.length,
+    1,
   );
 });
 

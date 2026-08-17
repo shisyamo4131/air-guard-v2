@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $dedicatedRoot = Join-Path $projectRoot '.codex-test'
-$seedPath = Join-Path $dedicatedRoot 'saved-data'
+$seedPath = Join-Path $dedicatedRoot 'isolated-saved-data'
 $runtimeRoot = Join-Path $dedicatedRoot 'runtime'
 $runtimePath = Join-Path $runtimeRoot ("{0}-{1}" -f $Mode.ToLowerInvariant(), $PID)
 $userSavedDataPath = Join-Path $projectRoot 'saved-data'
@@ -93,10 +93,10 @@ if ($existingBytes -ge $WarnBytes) {
 
 $metadataPath = Join-Path $seedPath 'firebase-export-metadata.json'
 if ($Mode -eq 'Seed' -and (Test-Path -LiteralPath $seedPath)) {
-    throw 'Dedicated saved-data already exists. Normal tests never overwrite it; remove it only through a separately approved cleanup.'
+    throw 'Dedicated isolated-saved-data already exists. Normal tests never overwrite it; remove it only through a separately approved cleanup.'
 }
 if ($Mode -eq 'Test' -and -not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
-    throw 'Dedicated saved-data is missing. Run npm run test:local:seed once before the normal test command.'
+    throw 'Dedicated isolated-saved-data is missing. Run npm run test:local:seed once before the normal test command.'
 }
 
 $nodeExe = Resolve-Executable -Command 'node.exe' -Fallback (Join-Path $env:ProgramFiles 'nodejs\node.exe')
@@ -110,7 +110,7 @@ $seedBefore = if ($Mode -eq 'Test') { Get-DirectoryFingerprint -Path $seedPath }
 New-Item -ItemType Directory -Path $runtimePath -Force | Out-Null
 $childScriptPath = Join-Path $runtimePath 'run-child.cmd'
 $firebaseArguments = @(
-    '-y', 'firebase-tools@latest',
+    '-y', '--offline', 'firebase-tools@latest',
     '--config', $configPath,
     '--project', $projectId,
     'emulators:exec',
