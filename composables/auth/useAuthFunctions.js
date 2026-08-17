@@ -64,6 +64,22 @@ export const useAuthFunctions = () => {
   };
 
   /**
+   * 仮登録Userを削除します。
+   * @param {string} targetUserId - 削除対象の仮登録User ID
+   * @returns {Promise<{
+   *   success: boolean,
+   *   userId: string,
+   *   linkType: "standalone" | "employee-linked",
+   *   employeeId: string | null,
+   * }>}
+   */
+  const deleteTemporaryUser = async (targetUserId) => {
+    const callable = httpsCallable($functions, "deleteTemporaryUser");
+    const result = await callable({ targetUserId });
+    return result.data;
+  };
+
+  /**
    * アカウント無効化
    * @param {Object} data
    * @param {string} data.uid - ユーザーID
@@ -105,6 +121,7 @@ export const useAuthFunctions = () => {
     createAdminAccount,
     checkUserPreRegistration,
     setupUserAccount,
+    deleteTemporaryUser,
     disableUser,
     enableUser,
     changeAdminUser,
