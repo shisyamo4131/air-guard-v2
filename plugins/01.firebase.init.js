@@ -40,6 +40,7 @@ import {
 import { connectStorageEmulator, getStorage } from "firebase/storage";
 import { connectDatabaseEmulator, getDatabase } from "firebase/database";
 import { connectFunctionsEmulator, getFunctions } from "firebase/functions";
+import { resolveFirebaseEmulatorConfig } from "../utils/firebaseEmulatorConfig.js";
 
 // Messages for logging
 const FIREBASE_INITIALIZED = "Firebase has been successfully initialized.";
@@ -67,8 +68,14 @@ export default defineNuxtPlugin(() => {
   // Default region for Cloud Functions
   const firebaseRegion = config.public.firebaseRegion || "us-central1";
 
-  // Flag to determine whether to use emulators
-  const useEmulator = config.public.firebaseUseEmulator || false;
+  const browserHostname = import.meta.client
+    ? window.location.hostname
+    : "localhost";
+  const emulatorConfig = resolveFirebaseEmulatorConfig(
+    config.public,
+    browserHostname,
+  );
+  const { useEmulator } = emulatorConfig;
 
   // Firebase initialization
   const apps = getApps();
@@ -96,22 +103,12 @@ export default defineNuxtPlugin(() => {
   if (useEmulator) {
     sendMessage(FIREBASE_USE_EMULATORS);
 
-    // --- 実機確認のために修正 ---
-    // connectFirestoreEmulator(firestore, "localhost", 8080);
-    // connectAuthEmulator(auth, "http://127.0.0.1:9099");
-    // connectStorageEmulator(storage, "localhost", 9199);
-    // connectDatabaseEmulator(database, "localhost", 9000);
-    // connectFunctionsEmulator(functions, "localhost", 5001);
-
-    // PCのIPアドレスを取得（開発時は手動設定も可）
-    const hostIP = import.meta.client ? window.location.hostname : "localhost";
-
-    connectFirestoreEmulator(firestore, hostIP, 8080);
-    connectAuthEmulator(auth, `http://${hostIP}:9099`);
-    connectStorageEmulator(storage, hostIP, 9199);
-    connectDatabaseEmulator(database, hostIP, 9000);
-    connectFunctionsEmulator(functions, hostIP, 5001);
-    // --------------------------
+    const { host, ports } = emulatorConfig;
+    connectFirestoreEmulator(firestore, host, ports.firestore);
+    connectAuthEmulator(auth, `http://${host}:${ports.auth}`);
+    connectStorageEmulator(storage, host, ports.storage);
+    connectDatabaseEmulator(database, host, ports.database);
+    connectFunctionsEmulator(functions, host, ports.functions);
   }
 
   return {

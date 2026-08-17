@@ -18,3 +18,17 @@ test("Nuxt exposes configurable Firebase Emulator endpoints", async () => {
     assert.match(source, new RegExp(`process\\.env\\.${environmentName}`));
   }
 });
+
+test("Firebase plugin resolves and uses configured emulator endpoints", async () => {
+  const source = await readFile(
+    new URL("../../plugins/01.firebase.init.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /resolveFirebaseEmulatorConfig/);
+  assert.match(source, /connectAuthEmulator\(auth, `http:\/\/\$\{host\}:\$\{ports\.auth\}`\)/);
+  assert.match(source, /connectFirestoreEmulator\(firestore, host, ports\.firestore\)/);
+  assert.match(source, /connectStorageEmulator\(storage, host, ports\.storage\)/);
+  assert.match(source, /connectDatabaseEmulator\(database, host, ports\.database\)/);
+  assert.match(source, /connectFunctionsEmulator\(functions, host, ports\.functions\)/);
+});
