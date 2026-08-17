@@ -59,6 +59,7 @@ function createFirestore({ actorUser, targetUser } = {}) {
     },
     delete(reference) {
       deletes.push(reference.path);
+      snapshots.set(reference.path, { exists: false });
     },
   };
 
@@ -254,4 +255,47 @@ test("target policy failures are preserved without deletion", async () => {
     TemporaryUserDeletionPolicyError,
   );
   assert.deepEqual(firestore.deletes, []);
+});
+
+test("an actor cannot delete its own registered User document", async () => {
+  const firestore = createFirestore();
+
+  await assert.rejects(
+    () =>
+      deleteTemporaryUser({
+        firestore,
+        companyId: COMPANY_ID,
+        actorUid: ACTOR_UID,
+        targetUserId: ACTOR_UID,
+      }),
+    TemporaryUserDeletionPolicyError,
+  );
+  assert.deepEqual(firestore.deletes, []);
+});
+
+test("retry after deletion reports the missing target without another delete", async () => {
+  const firestore = createFirestore();
+  const input = {
+    firestore,
+    companyId: COMPANY_ID,
+    actorUid: ACTOR_UID,
+    targetUserId: TARGET_USER_ID,
+  };
+
+  await deleteTemporaryUser(input);
+
+  await assert.rejects(
+    () => deleteTemporaryUser(input),
+    (error) => {
+      assert.ok(error instanceof DeleteTemporaryUserError);
+      assert.equal(
+        error.code,
+        DELETE_TEMPORARY_USER_ERROR_CODES.TARGET_USER_NOT_FOUND,
+      );
+      return true;
+    },
+  );
+  assert.deepEqual(firestore.deletes, [
+    `Companies/${COMPANY_ID}/Users/${TARGET_USER_ID}`,
+  ]);
 });
