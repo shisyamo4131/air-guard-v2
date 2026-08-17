@@ -12,6 +12,14 @@ test("temporary User deletion composable applies the client policy", async () =>
 
   assert.match(
     source,
+    /import \{ useAuthStore \} from "\.\.\/\.\.\/\.\.\/stores\/useAuthStore"/,
+  );
+  assert.match(
+    source,
+    /import \{ useAuthFunctions \} from "\.\.\/\.\.\/auth\/useAuthFunctions"/,
+  );
+  assert.match(
+    source,
     /evaluateClientTemporaryUserDeletion[\s\S]*temporaryUserDeletionPolicy\.js/,
   );
   assert.match(source, /const auth = useAuthStore\(\)/);

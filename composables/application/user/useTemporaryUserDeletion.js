@@ -4,6 +4,8 @@
  * @method useTemporaryUserDeletion
  *****************************************************************************/
 import { evaluateClientTemporaryUserDeletion } from "../../../utils/auth/policies/temporaryUserDeletionPolicy.js";
+import { useAuthStore } from "../../../stores/useAuthStore";
+import { useAuthFunctions } from "../../auth/useAuthFunctions";
 
 const DELETE_NOT_ALLOWED_MESSAGE =
   "現在の状態では、この仮登録ユーザーを削除できません。";
