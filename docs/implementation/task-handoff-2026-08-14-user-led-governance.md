@@ -248,3 +248,20 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - Nortonが隔離したhelperは復元・再利用せず、processはforegroundだけを使用する。buildは実行ごとの明示承認を必要とする。
 - remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。
 - next: mandatory restart項目を設計者との壁打ちで最小segment化して実装・検証し、正規UI routeのbaseline生成へ戻る。
+
+## PC migration shutdown checkpoint
+
+- 日付: 2026-08-17。利用者は本日の作業終了と、翌日の新Windows PCへのproject移行を指示した。
+- active coordinatorはPM（AirGuardV2）-05 task `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`、callback destinationも同taskである。
+- repository/environmentはWindows native、PowerShell、保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal taskであり、Codex worktreeやWSLではない。
+- shutdown文書更新前のbranchは`codex/user-write-boundary`、HEADは`3e3fb9dcde4fdb08ebb1935cd5767b3d1553f081`、root worktreeはcleanだった。branchにupstreamは設定されていないため、remote cloneだけでは現在refを復元できない。`.git`を含むAirGuard directory copyとrepositoryごとのGit bundleを必要とする。
+- AirGuard配下で確認したtop-level 7 repositoryと内部`air-vuetify-v3`はcleanだった。`air-vuetify-v3`はbranch `main`、HEAD `07886a412262184636380bd4936f11b9a12f052c`である。
+- `.codex-test/runtime`は空、Codex専用port `14400`、`14500`、`14600`、`15001`、`18080`、`19000`、`19099`、`19199`にLISTENはなかった。`.output`は空directoryで、移行対象または受入れ証拠にしない。
+- Git外local dataとして`.env`、`.env.development`、`.env.local`、利用者用`saved-data`、`.codex-test/saved-data`が存在する。内容を表示せず、暗号化された媒体でrepositoryとともに移す。`node_modules`と`functions/node_modules`は再生成し、copyしない。
+- Codex task sizeは1.15 MiBで300 MiB handoff閾値未満。Codex全体は約1615.98 MiBで2 GiB参考警告未満だったが、scanは1 errorを含むため完全な容量証明ではない。
+- Codex local thread復元はbest-effortとし、app停止後にsession、thread DB、設定、個人skill等のportable subsetをcopyする。`auth.json`、sandbox secret、SID、installation ID、browser profile、worktree、log、cacheはcopyせず、新PCでOpenAI、plugin、connector、Firebase CLI、Git hostへ再loginする。
+- 新PCのWindowsユーザー名は同じ`seven`とし、project pathを一致させる。最初は現在と同じWindows native・PowerShellを維持し、WSLへの切替は別の明示判断とする。
+- official progressは10%のまま。implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。
+- restore後の最初の作業は変更なし`PC-MIGRATION-RESTORE-001`。repository、関連repository、local data存在、active instructions、callback、permission、validatorを照合し、成功するまで新規実装、Emulator、server、browser、remote接続を開始しない。
+- mandatory restartは、build identity fail-closed、candidate acceptance fingerprintと停止済みpromotion gate、verifier会社名カナ・Firestore path segment、Auth POST/Firestore GET契約分離である。その後human-equivalent UIを再検証する。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。旧PCとbackupは新PCのrestore checkpointと最初の実file限定commit確認後まで保持する。
