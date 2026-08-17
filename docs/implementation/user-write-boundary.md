@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01契約確定）
+- 状態: Active（UWB-03進行中）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 2 | 9 | UWB-01〜02完了 |
+| 実装ゲート | 2 | 9 | UWB-01〜02完了、UWB-03進行中 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -154,17 +154,18 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-03 仮登録User削除のserver境界
 
-- 状態: Not started
+- 状態: In progress（2026-08-17）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
 
-- [ ] 会社管理者または`users:write`保有者だけをactorとする。
+- [x] 会社管理者または既知preset由来の`users:write`保有者だけをactorとする。
 - [ ] 同社の仮登録Userだけを対象とし、本登録、管理者、自己、他社、状態不正を拒否する。
-- [ ] 仮登録User削除ではAuthenticationへ一切作用しない。
-- [ ] 単独UserとEmployee連携Userの削除結果を分けて検証する。
+- [x] 仮登録User削除use-caseはAuth serviceを受け取らず、Authenticationへ一切作用しない。
+- [x] 単独UserとEmployee連携Userの削除結果を分けて検証する。
 - [ ] 仮登録Userのclient直接`delete()`をCallableへ置換する。
 - [ ] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
+- [x] User一覧の直接`delete()`をCallableへ置換し、会社管理者またはstrict preset由来`users:write`と有効な仮登録targetだけで操作を有効化する。
 - [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
 - [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
@@ -236,6 +237,8 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] UIの非表示・disabledだけを認可境界として扱っていないことを確認する。
 - [ ] keyboard、focus、確認dialog、取消操作への回帰がないことを確認する。
 - [ ] 共通UI packageの変更が必要な場合は、別repository境界として事前承認を得る。
+- [ ] 現行`hasPermission`利用箇所を監査し、super-user wildcard、直接permission、未知roleを許容する一般判定と、既知User presetだけを許可する`hasPresetPermission`のどちらが必要か分類する。
+- [ ] 認証・認可actionの表示判定でstrict presetが必要な箇所を`useAuthStore.hasPresetPermission`へ置換し、route、navigation、component、server policyの許可結果を一致させる。
 
 #### 完了条件
 
@@ -279,6 +282,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
 - [ ] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
 - [ ] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
+- [ ] `hasPresetPermission`とserver preset resolverが同じcatalog・unknown fail-closed規則を使用する構成を確定する。
 - [ ] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
 
 #### 完了条件

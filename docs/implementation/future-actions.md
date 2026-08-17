@@ -1841,6 +1841,8 @@ SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest gene
 
 SPEC-DEEP-044追加根拠: master fetch cacheは同一docIdのin-flight point fetchをdedupeする一方、既存cacheを更新せずTTL/revision/tenant切替clearを持たない。fetch errorとnot-foundをcache missへ畳み込み、searchはlatest-only/cancel/in-flight dedupeがない。
 
+UWB-03追加確定（2026-08-17）: `AirArrayManager`・`AirItemManager`管理下のCRUDはhandlerでerrorを重複捕捉せず、managerから`useBaseManager`、`useLogger`、`useErrorsStore`、`useMessagesStore`へ伝播する。manager外の独立操作はloadingの`try/catch/finally`所有者を明示する。この原則はUWB固有ではなくproject共通運用とする。
+
 ## FUT-0137 global loadingをowner・reference count・取消し対応にする
 
 - 状態: Open
@@ -1855,6 +1857,8 @@ SPEC-DEEP-044追加根拠: master fetch cacheは同一docIdのin-flight point fe
 - ユーザー判断が必要な事項: CONF-0116。
 
 SPEC-DEEP-044追加根拠: master fetch/searchは同じ単一`isLoading`を共有し、異なる並行処理の先行完了がfalseへ戻す。ManagedDialogもsubmitのsingle-flightを持たず、SecurityReportはupload/list/deleteで別のboolean/Set/global keyを使い取消し・ownerを統一しない。
+
+UWB-03追加確定（2026-08-17）: manager管理下のCRUDへglobal loadingを理由なく重ねず、manager外の独立操作だけが`useLoadingsStore.add()`と`finally remove()`を所有する。Air manager自身のloading責務分割はFUT-0181と合わせて後続整理する。
 
 ## FUT-0138 production logging・redaction・monitoring・相関を設計する
 
@@ -2454,6 +2458,8 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - 推奨する将来対応: callback signatureを移行し、toX/submit内部で全disableとloadingをfail-closedに検査する。default/step/custom validation、single-flight token、dirty conflict/version reject、handlerのcanonical return契約を実装する。
 - 必要なテスト: locked result、linked schedule、boolean/function disable、exposed submit、double submit、final step、live refresh、falsy/missing key、external handler canonical result。
 - ユーザー判断が必要な事項: edit conflict、canonical result、validation ownershipはCONF-0114と既存UI判断へ統合する。
+
+UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayManager`のerror、loading、dialog、validation、CRUD orchestration等の責務が多岐にわたるため、将来整理する方針を採用した。責務分割の構造整理自体は低優先度とする。既知のdisable継続、single-flight欠如等の安全問題は本FUTのHighを維持し、分割時も現行のmanager→`useBaseManager`→Errors/Message Storeという利用者feedback経路をcontract testなしに破棄しない。
 
 ## FUT-0182 共通入力のdebounce・非同期検索・date/time・accessibility契約を統一する
 
