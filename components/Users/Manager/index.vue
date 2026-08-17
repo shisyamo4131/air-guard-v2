@@ -17,6 +17,7 @@ import { useDefaults } from "vuetify";
 import UserCardMenu from "./CardMenu.vue";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
+import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -40,9 +41,9 @@ const messages = useMessagesStore();
 const {
   enableUser,
   disableUser,
-  deleteTemporaryUser,
   checkEmailAvailabilityGlobal,
 } = useAuthFunctions();
+const { deleteTemporaryUser, canDelete } = useTemporaryUserDeletion();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -72,10 +73,6 @@ const roleOptions = computed(() => {
     description: preset.description,
     icon: preset.icon,
   }));
-});
-
-const canManageTemporaryUsers = computed(() => {
-  return auth.isAdmin === true || auth.hasPresetPermission("users:write");
 });
 
 /*****************************************************************************
@@ -145,21 +142,7 @@ async function handleCreate(item) {
  * @param {User} item - 削除対象の仮登録User
  */
 async function handleDelete(item) {
-  await deleteTemporaryUser(item.docId);
-}
-
-/**
- * 実行者と対象Userの状態から削除操作の有効性を判定します。
- * @param {User} item - 判定対象のUser
- * @returns {boolean}
- */
-function canDeleteTemporaryUser(item) {
-  return (
-    canManageTemporaryUsers.value &&
-    item.isTemporary === true &&
-    item.isAdmin === false &&
-    item.disabled === false
-  );
+  await deleteTemporaryUser(item);
 }
 </script>
 
@@ -176,7 +159,7 @@ function canDeleteTemporaryUser(item) {
     :handle-create="handleCreate"
     :handle-update="(item) => item.update(item)"
     :handle-delete="handleDelete"
-    :disable-delete="(item) => !canDeleteTemporaryUser(item)"
+    :disable-delete="(item) => !canDelete(item)"
     :excluded-keys="
       (item) => {
         return item.isAdmin ? ['roles'] : [];
