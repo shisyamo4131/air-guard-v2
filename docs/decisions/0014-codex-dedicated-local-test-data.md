@@ -46,7 +46,7 @@
 
 ## 移行
 
-`npm run test:local:seed`を一度だけ実行して専用exportを作成し、以後は`npm run test:local`で読込専用テストを行う。初期suiteは合成seed、Auth Emulatorへのサインイン、Firestore Rulesの未認証拒否、同一会社許可、別会社拒否を確認する。Functionsと画面を含む自己完結UI modeは後続実装とし、外部作用隔離、専用環境変数、process終了、Codex管理ブラウザのsign-inを独立したgateで検証する。実端末FCMとremote APIは含めない。
+`npm run test:local:seed`を一度だけ実行して専用exportを作成し、以後は`npm run test:local`で読込専用テストを行う。専用seedはメール確認済みAuth account、`companyId`・`isSuperUser` claim、有効な本登録Userを生成する。2026-08-17にFunctionsと画面を含む自己完結UI modeの最小経路について、外部作用隔離、専用環境変数、Codex管理ブラウザのsign-in、dashboard到達、process・一時build cleanupを検証した。実端末FCMとremote APIは含めない。Nuxt buildを使う再検証はプロジェクト規則に従い実行ごとの明示承認を必要とする。
 
 ## 再検討条件
 

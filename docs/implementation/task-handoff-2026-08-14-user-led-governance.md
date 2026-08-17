@@ -210,3 +210,12 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 数百件のdocumentは段階投入し、約1000件でEmulatorが停止した利用者経験をlocal riskとして扱う。同規模の一括投入は停止条件と復旧方法を定めた別承認を必要とし、Firebaseの公式上限とは扱わない。
 - main merge、AirGuardV2のGit push、deploy、remote接続・remote data、実data、外部service変更は未承認のままである。
 - next: self-contained UI環境を、外部作用fail-closed、専用Functions、専用server設定、合成account fixture、Codex管理browser sign-in、cleanupの最小segmentで構築・検証し、その後UWBへ戻る。
+
+## Self-contained local UI minimum segment result
+
+- 2026-08-17にPM（AirGuardV2）-04で最小segmentを完了した。専用Functions、Firebase Emulator port解決、loopback server、PWA・Service Worker・通知・FCM無効化、メール確認済み・company claim付き合成account、有効な本登録User、Codex管理browser sign-in、dashboard到達、cleanupまで確認した。
+- 専用suite 72件とUI設定契約9件が成功し、dashboard滞在中のconsole errorは0件だった。利用者用`./saved-data`は不変、専用seedはread-only testで不変、容量0.01 MiB、終了後は全専用port閉鎖、`.codex-test/runtime`空、`.output`削除を確認した。
+- Nuxt開発サーバーはHTTP readyだったが、Windows上のCodex管理ブラウザではVite module取得後にSPA hydrationが完了しなかった。利用者の一回限りの明示承認で専用Nuxt buildとloopback Node serverを使い、生成版でUI検証を完了した。恒久的なbuild許可には変更せず、再実行は個別承認を必要とする。
+- `scripts/run-codex-local-ui-child.ps1`はNortonが`IDP.Generic`として検出したため利用者が隔離し、実装をrevertした。復元・allowlist登録は行わず、現在はEmulatorとserverを独立した前景processとして直接起動する。
+- 残存事項として、sign-out直後に購読解除前のFirestore snapshot listenerが`permission-denied`を2件出す。dashboard到達と通常表示には影響しなかったが、logout cleanupの製品課題として未完了に残す。
+- remote、Dev、Prod、利用者用local、実data、外部service、push、deploy、main mergeは実行していない。公式進捗は10%のまま。next product workはUWBへ戻る。

@@ -51,6 +51,22 @@ test("dedicated UI skips Messaging before Service Worker registration", async ()
   );
 });
 
+test("dedicated UI disables the PWA module during local build", async () => {
+  const source = await readFile(
+    new URL("../../nuxt.config.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /const isCodexDedicatedUi =\s*process\.env\.NUXT_PUBLIC_FIREBASE_PROJECT_ID ===\s*"demo-air-guard-v2-codex"/,
+  );
+  assert.match(
+    source,
+    /\.\.\.\(!isCodexDedicatedUi \? \["@vite-pwa\/nuxt"\] : \[\]\)/,
+  );
+});
+
 test("dedicated UI skips notification permission and FCM token effects", async () => {
   const source = await readFile(
     new URL("../../composables/useNotification.js", import.meta.url),

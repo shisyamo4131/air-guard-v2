@@ -3,10 +3,17 @@ import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
+  reload,
+  sendEmailVerification,
   updateProfile,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
 import { initializeTestEnvironment } from "@firebase/rules-unit-testing";
+import {
+  deleteApp as deleteAdminApp,
+  initializeApp as initializeAdminApp,
+} from "../functions/node_modules/firebase-admin/lib/esm/app/index.js";
+import { getAuth as getAdminAuth } from "../functions/node_modules/firebase-admin/lib/esm/auth/index.js";
 import {
   CODEX_LOCAL_COMPANIES,
   CODEX_LOCAL_PROJECT_ID,
@@ -26,6 +33,48 @@ function parseEmulatorHost(name) {
     throw new Error(`${name} must point to a loopback host and numeric port.`);
   }
   return { host, port };
+}
+
+async function readAuthEmulatorResponse(response, operation) {
+  if (!response.ok) {
+    throw new Error(`${operation} failed with HTTP ${response.status}.`);
+  }
+  return response.json();
+}
+
+async function verifySyntheticEmail(user, authHost) {
+  await sendEmailVerification(user);
+
+  const emulatorBaseUrl = `http://${authHost.host}:${authHost.port}`;
+  const codes = await readAuthEmulatorResponse(
+    await fetch(
+      `${emulatorBaseUrl}/emulator/v1/projects/${CODEX_LOCAL_PROJECT_ID}/oobCodes`,
+    ),
+    "Reading Auth Emulator verification codes",
+  );
+  const verification = codes.oobCodes?.find(
+    ({ email, requestType }) =>
+      email === user.email && requestType === "VERIFY_EMAIL",
+  );
+  if (!verification?.oobCode) {
+    throw new Error("Auth Emulator did not create a verification code.");
+  }
+
+  await readAuthEmulatorResponse(
+    await fetch(
+      `${emulatorBaseUrl}/identitytoolkit.googleapis.com/v1/accounts:update?key=codex-local-only`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ oobCode: verification.oobCode }),
+      },
+    ),
+    "Confirming the synthetic email",
+  );
+  await reload(user);
+  if (!user.emailVerified) {
+    throw new Error("Synthetic Auth user remained unverified.");
+  }
 }
 
 if (process.env.GCLOUD_PROJECT !== CODEX_LOCAL_PROJECT_ID) {
@@ -48,6 +97,11 @@ const auth = getAuth(app);
 connectAuthEmulator(auth, `http://${authHost.host}:${authHost.port}`, {
   disableWarnings: true,
 });
+const adminApp = initializeAdminApp(
+  { projectId: CODEX_LOCAL_PROJECT_ID },
+  `codex-seed-admin-${process.pid}`,
+);
+const adminAuth = getAdminAuth(adminApp);
 
 const createdUsers = [];
 let testEnvironment;
@@ -60,6 +114,11 @@ try {
       fixture.password,
     );
     await updateProfile(credential.user, { displayName: fixture.displayName });
+    await verifySyntheticEmail(credential.user, authHost);
+    await adminAuth.setCustomUserClaims(credential.user.uid, {
+      companyId: fixture.companyId,
+      isSuperUser: false,
+    });
     createdUsers.push({ ...fixture, uid: credential.user.uid });
   }
 
@@ -94,6 +153,7 @@ try {
           companyId: user.companyId,
           isAdmin: false,
           isTemporary: false,
+          disabled: false,
           roles: [],
           fixture: "codex-local-seed-v1",
         },
@@ -111,5 +171,6 @@ try {
   );
 } finally {
   if (testEnvironment) await testEnvironment.cleanup();
+  await deleteAdminApp(adminApp);
   await deleteApp(app);
 }

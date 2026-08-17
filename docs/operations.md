@@ -153,11 +153,22 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、Functions Emulatorを起動せず、正式な`functions/apis/index.js`から公開する10 Callableを読み込み、内部helperが非公開であることを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計71件です。Realtime Database Rules、画像圧縮、Vue画面、実端末FCM、外部API、未確認CallableのFunctions transport、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離します。
+現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、正式な`functions/apis/index.js`から公開する10 Callableを専用Functions Emulatorで読み込み、内部helperが非公開であることとCallable transport readinessを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計72件です。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離します。
 
-### Codexだけで完結するlocal UI test（構築予定）
+### Codexだけで完結するlocal UI test
 
-2026-08-17に、利用者がChrome、Emulator、local server、test accountを準備せず、Codexが専用環境の起動から終了までを担当する方針を承認した。現時点ではFunctions接続、専用開発サーバー設定、Codex管理ブラウザからのsign-inが未実装・未検証であり、利用可能とは扱わない。
+2026-08-17に最小経路を実装・検証した。専用Functions、Firebase clientの専用port解決、loopback server設定、確認済み合成Auth account、company claim、有効な本登録User、Codex管理ブラウザsign-in、dashboard到達、process・runtime cleanupまでを、利用者用環境へ触れずに完結できる。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+
+Emulatorと開発サーバーは、次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
+
+```powershell
+npm run test:local:emulators
+npm run test:local:ui:server
+```
+
+Windows上のCodex管理ブラウザでは、Nuxt開発サーバーのVite moduleをHTTP 200で取得できてもSPA hydrationが完了しない事象を確認した。一回限りの利用者承認により、`config/codex-test-ui.env`を使ったNuxt buildと`127.0.0.1:14600`限定のNode serverで代替検証し、sign-inからdashboard到達まで成功した。プロジェクト規則のbuild禁止は維持されるため、Codexがこのbuild経路を再実行する場合は、その都度明示承認を得る。生成した`.output`は検証後に削除する。
+
+`scripts/run-codex-local-ui-child.ps1`を使うprocess管理案はNortonに`IDP.Generic`として検出されたため破棄・revertした。隔離解除、allowlist登録、同方式の復元を行わない。現在の前景commandはこのhelperに依存しない。
 
 完成条件は次のとおりとする。
 
@@ -168,6 +179,8 @@ npm run test:local
 5. Codex管理ブラウザがlocal appを開き、合成accountでsign-inし、対象画面を操作できる。
 6. 利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataが実行前後で変更されない。
 7. 終了時にserverとEmulatorを停止し、一時runtimeをproject配下の明示pathだけから削除する。失敗時も同じcleanupと状態報告を行う。
+
+2026-08-17の受入れでは、専用suite 72件、UI設定契約9件、専用build、dashboard表示、dashboard滞在中のconsole error 0件、全専用port閉鎖、`.codex-test/runtime`空、`.output`削除を確認した。サインアウト直後に購読解除前のFirestore snapshot listenerが2件の`permission-denied`を出す既存挙動は残っており、製品側のlogout cleanup課題として扱う。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

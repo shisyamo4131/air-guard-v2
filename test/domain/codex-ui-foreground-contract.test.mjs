@@ -43,3 +43,20 @@ test("flagged PowerShell UI child helper is absent", async () => {
     (error) => error?.code === "ENOENT",
   );
 });
+
+test("synthetic seed verifies email through Auth Emulator only", async () => {
+  const source = await readFile(
+    new URL("scripts/seed-codex-local-test.mjs", projectRoot),
+    "utf8",
+  );
+
+  assert.match(source, /sendEmailVerification/);
+  assert.match(source, /\/emulator\/v1\/projects\/\$\{CODEX_LOCAL_PROJECT_ID\}\/oobCodes/);
+  assert.match(source, /\/identitytoolkit\.googleapis\.com\/v1\/accounts:update\?key=codex-local-only/);
+  assert.match(source, /requestType === "VERIFY_EMAIL"/);
+  assert.match(source, /setCustomUserClaims\(credential\.user\.uid/);
+  assert.match(source, /companyId: fixture\.companyId/);
+  assert.match(source, /isSuperUser: false/);
+  assert.match(source, /isTemporary: false,[\s\S]*disabled: false/);
+  assert.doesNotMatch(source, /https:\/\//);
+});
