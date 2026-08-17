@@ -7,6 +7,7 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
+import { assertExternalEffectAllowed } from "./externalEffectsPolicy.js";
 
 // エミュレーター環境かどうかを判定
 const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
@@ -19,6 +20,8 @@ const isEmulator = process.env.FUNCTIONS_EMULATOR === "true";
  * @returns {Promise<Object>} { success: boolean, messageId?: string, error?: string }
  */
 export async function sendNotification(token, notification, data = {}) {
+  assertExternalEffectAllowed("fcm.send");
+
   // エミュレーター環境での警告
   if (isEmulator) {
     logger.warn(
@@ -68,6 +71,8 @@ export async function sendMulticastNotification(
   if (!tokens || tokens.length === 0) {
     throw new Error("No tokens provided");
   }
+
+  assertExternalEffectAllowed("fcm.send-multicast");
 
   // エミュレーター環境での警告
   if (isEmulator) {
@@ -136,6 +141,8 @@ export async function sendBatchNotifications(messages) {
   if (!messages || messages.length === 0) {
     throw new Error("No messages provided");
   }
+
+  assertExternalEffectAllowed("fcm.send-batch");
 
   // エミュレーター環境での警告
   if (isEmulator) {
