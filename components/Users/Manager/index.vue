@@ -37,8 +37,12 @@ const emit = defineEmits(["update:search"]);
 const auth = useAuthStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
-const { enableUser, disableUser, checkEmailAvailabilityGlobal } =
-  useAuthFunctions();
+const {
+  enableUser,
+  disableUser,
+  deleteTemporaryUser,
+  checkEmailAvailabilityGlobal,
+} = useAuthFunctions();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -68,6 +72,10 @@ const roleOptions = computed(() => {
     description: preset.description,
     icon: preset.icon,
   }));
+});
+
+const canManageTemporaryUsers = computed(() => {
+  return auth.isAdmin === true || auth.hasPresetPermission("users:write");
 });
 
 /*****************************************************************************
@@ -131,6 +139,28 @@ async function handleCreate(item) {
   await checkEmailAvailabilityGlobal(item.email);
   await item.create();
 }
+
+/**
+ * 仮登録UserをCallable経由で削除します。
+ * @param {User} item - 削除対象の仮登録User
+ */
+async function handleDelete(item) {
+  await deleteTemporaryUser(item.docId);
+}
+
+/**
+ * 実行者と対象Userの状態から削除操作の有効性を判定します。
+ * @param {User} item - 判定対象のUser
+ * @returns {boolean}
+ */
+function canDeleteTemporaryUser(item) {
+  return (
+    canManageTemporaryUsers.value &&
+    item.isTemporary === true &&
+    item.isAdmin === false &&
+    item.disabled === false
+  );
+}
 </script>
 
 <template>
@@ -145,8 +175,8 @@ async function handleCreate(item) {
     "
     :handle-create="handleCreate"
     :handle-update="(item) => item.update(item)"
-    :handle-delete="(item) => item.delete(item)"
-    :disable-delete="(item) => !!item.isAdmin || !!item.employeeId"
+    :handle-delete="handleDelete"
+    :disable-delete="(item) => !canDeleteTemporaryUser(item)"
     :excluded-keys="
       (item) => {
         return item.isAdmin ? ['roles'] : [];
