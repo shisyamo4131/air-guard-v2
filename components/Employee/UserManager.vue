@@ -24,7 +24,8 @@ const props = useDefaults(_props, "EmployeeUserManager");
  *****************************************************************************/
 const { attrs } = useBaseManager("EmployeeUserManager");
 const auth = useAuthStore();
-const { checkEmailAvailabilityGlobal } = useAuthFunctions();
+const { checkEmailAvailabilityGlobal, deleteTemporaryUser } =
+  useAuthFunctions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -42,8 +43,18 @@ watch(
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const isAdmin = computed(() => {
-  return props.user.isAdmin;
+const canManageTemporaryUsers = computed(() => {
+  return auth.isAdmin === true || auth.hasPresetPermission("users:write");
+});
+
+const canDeleteTemporaryUser = computed(() => {
+  return (
+    canManageTemporaryUsers.value &&
+    props.user.isTemporary === true &&
+    props.user.isAdmin === false &&
+    props.user.disabled === false &&
+    props.user.employeeId === props.employee.docId
+  );
 });
 
 /*****************************************************************************
@@ -73,7 +84,7 @@ async function handleCreate(item) {
  * @param item
  */
 async function handleDelete(item) {
-  await item.delete();
+  await deleteTemporaryUser(item.docId);
 }
 </script>
 
@@ -141,7 +152,7 @@ async function handleDelete(item) {
           <v-btn
             block
             color="warning"
-            :disabled="isAdmin"
+            :disabled="!canDeleteTemporaryUser"
             variant="flat"
             text="ユーザーアカウント削除"
             @click="() => toDelete()"
