@@ -39,6 +39,19 @@ function parseEmulatorHost(name) {
   return { host, port };
 }
 
+async function readDedicatedFunctionsHost() {
+  const config = JSON.parse(
+    await readFile(
+      new URL("../../firebase.codex-test.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const { host, port } = config.emulators?.functions ?? {};
+  assert.equal(host, "127.0.0.1", "Functions Emulator must use loopback");
+  assert.ok(Number.isInteger(port), "Functions Emulator must use a numeric port");
+  return { host, port };
+}
+
 let testEnvironment;
 let rebuildApis;
 const requireFromFunctions = createRequire(
@@ -200,6 +213,22 @@ test("dedicated seed contains only the expected synthetic company marker", async
     assert.equal(snapshot.exists(), true);
     assert.equal(snapshot.data().fixture, "codex-local-seed-v1");
   });
+});
+
+test("dedicated Functions entrypoint is ready over the Callable transport", async () => {
+  const functionsHost = await readDedicatedFunctionsHost();
+  const response = await fetch(
+    `http://${functionsHost.host}:${functionsHost.port}/${CODEX_LOCAL_PROJECT_ID}/asia-northeast1/checkUserPreRegistration`,
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ data: {} }),
+    },
+  );
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.error?.status, "INVALID_ARGUMENT");
 });
 
 test("dedicated Auth seed accepts the synthetic fixture account", async () => {

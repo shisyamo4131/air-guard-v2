@@ -24,13 +24,14 @@ test("dedicated Functions entrypoint exports Callables without background trigge
 
   process.env.GCLOUD_PROJECT = "demo-air-guard-v2-codex";
   process.env.FUNCTIONS_EMULATOR = "true";
-  process.env.AIR_GUARD_EXTERNAL_EFFECTS = "deny";
+  delete process.env.AIR_GUARD_EXTERNAL_EFFECTS;
 
   try {
     const entrypoint = await import(
       `../../functions/codex-test/index.js?test=${Date.now()}`
     );
 
+    assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
     assert.deepEqual(Object.keys(entrypoint).sort(), PUBLIC_CALLABLES.sort());
     for (const forbiddenExport of [
       "geocoding",
