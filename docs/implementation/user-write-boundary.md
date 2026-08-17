@@ -160,28 +160,28 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 #### 作業
 
 - [x] 会社管理者または既知preset由来の`users:write`保有者だけをactorとする。
-- [ ] 同社の仮登録Userだけを対象とし、本登録、管理者、自己、他社、状態不正を拒否する。
+- [x] 同社の仮登録Userだけを対象とし、本登録、管理者、自己、他社、状態不正を拒否する。
 - [x] 仮登録User削除use-caseはAuth serviceを受け取らず、Authenticationへ一切作用しない。
 - [x] 単独UserとEmployee連携Userの削除結果を分けて検証する。
-- [ ] 仮登録Userのclient直接`delete()`をCallableへ置換する。
-- [ ] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
+- [x] 仮登録Userのclient直接`delete()`をCallableへ置換する。
+- [x] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
 - [x] User一覧の直接`delete()`をCallableへ置換し、会社管理者またはstrict preset由来`users:write`と有効な仮登録targetだけで操作を有効化する。
 - [x] server側policyのうちclientで確認可能な条件を、VueやFirebaseに依存しないclient専用仮登録User削除policyとして実装する。
 - [x] client policyは許可可否だけでなく安定した拒否理由を返し、実行者、対象User、会社、document ID、Employee画面固有の紐付けcontextをfail closedで検査する。
-- [ ] `useTemporaryUserDeletion` composableを実装し、client policyのreactiveな適用結果、拒否理由、Callable実行をcomponentへ提供する。
-- [ ] composableは表示用判定だけに依存せず、Callable実行直前にもclient policyを再評価し、拒否状態ではrequestを送信しない。
-- [ ] User一覧とEmployee詳細から重複した削除可否判定を除き、同じcomposableへ接続する。Employee詳細だけは表示中Employeeとの紐付け一致を追加contextとして渡す。
-- [ ] client policyとserver policyで共通する条件についてparity testを設ける。client事前判定はUX補助であり、server最終認可を代替しないことを固定する。
+- [x] `useTemporaryUserDeletion` composableを実装し、client policyのreactiveな適用結果、拒否理由、Callable実行をcomponentへ提供する。
+- [x] composableは表示用判定だけに依存せず、Callable実行直前にもclient policyを再評価し、拒否状態ではrequestを送信しない。
+- [x] User一覧とEmployee詳細から重複した削除可否判定を除き、同じcomposableへ接続する。Employee詳細だけは表示中Employeeとの紐付け一致を追加contextとして渡す。
+- [x] client policyとserver policyで共通する条件についてparity testを設ける。client事前判定はUX補助であり、server最終認可を代替しないことを固定する。
 - [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
 - [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
 #### 完了条件
 
-- [ ] 仮登録削除ではAuthenticationへ作用しない。
-- [ ] 本登録User、管理者、許可されていないactorからの削除が拒否される。
-- [ ] client policy、composable、User一覧、Employee詳細の許可・拒否結果が一致し、拒否時にCallableが呼ばれない。
-- [ ] 既存削除triggerが仮登録削除でAuthへ進まないことと再試行結果が記録されている。
-- [ ] 利用者が各application implementation fileを確認している。
+- [x] 仮登録削除ではAuthenticationへ作用しない。
+- [x] 本登録User、管理者、許可されていないactorからの削除が拒否される。
+- [x] client policy、composable、User一覧、Employee詳細の許可・拒否結果が一致し、拒否時にCallableが呼ばれない。
+- [x] 既存削除triggerが仮登録削除でAuthへ進まないことと再試行結果が記録されている。
+- [x] 利用者が各application implementation fileを確認している。
 - [ ] 単体testと対象UIのlocal確認が成功している。
 
 ### UWB-04 仮登録User作成のserver境界
@@ -346,3 +346,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-16 | Planning | `User Write Boundary（UWB）`と改修追跡ゲートを作成 | 本変更 | project-owned・managed governance validator pass |
 | 2026-08-16 | UWB-01 completed | 単独／Employee連携User、`users:write`、仮登録管理actor、段階的gate縮小を確定 | 本変更 | project-owned・managed governance validator pass |
 | 2026-08-17 | UWB-03 client policy | 仮登録User削除のclient事前判定policyと拒否理由を追加 | `7998440` | client／server関連単体test 31件、`node --check`、`git diff --check` pass |
+| 2026-08-17 | UWB-03 client integration | 共通composableを追加し、User一覧・Employee詳細の表示判定と削除実行を接続。共通条件parity、自己対象拒否、再試行を追加 | `5338cbc`、`14202f4`、`27f2050`、`4869807`、`8ceb540` | UWB-03対象単体test 73件、自己対象・再試行・trigger関連28件、両SFC compile、`git diff --check` pass。UI／Emulator未実施 |
