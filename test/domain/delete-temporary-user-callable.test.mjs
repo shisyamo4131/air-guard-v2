@@ -8,6 +8,10 @@ const apiSourceUrl = new URL(
   "../../functions/apis/deleteTemporaryUser.js",
   import.meta.url,
 );
+const apiIndexSourceUrl = new URL(
+  "../../functions/apis/index.js",
+  import.meta.url,
+);
 
 test("unauthenticated temporary User deletion is rejected", async () => {
   await assert.rejects(
@@ -39,4 +43,17 @@ test("Callable derives actor identity on the server and accepts only the target 
   assert.equal(source.includes("request.data?.companyId"), false);
   assert.equal(source.includes("request.data?.actorUid"), false);
   assert.equal(source.includes("auth: auth"), false);
+});
+
+test("API index exports the Callable without exporting internal helpers", async () => {
+  const source = await readFile(apiIndexSourceUrl, "utf8");
+
+  assert.match(
+    source,
+    /export \{ deleteTemporaryUser \} from "\.\/deleteTemporaryUser\.js";/,
+  );
+  assert.equal(source.includes("deleteTemporaryUserUseCase"), false);
+  assert.equal(source.includes("mapDeleteTemporaryUserError"), false);
+  assert.equal(source.includes("assertTemporaryUserCanBeDeleted"), false);
+  assert.equal(source.includes("assertActorCanManageTemporaryUsers"), false);
 });
