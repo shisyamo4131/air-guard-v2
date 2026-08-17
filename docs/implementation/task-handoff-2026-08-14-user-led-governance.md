@@ -230,3 +230,21 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - browser、generated server、Emulatorは停止済みで、専用portのLISTENは残っていない。`.output`は承認済みbuildの再利用候補として残しているが、build identity gate実装前に一般化したserver commandへ使用しない。
 - このproject-wide検証・証拠契約と`ui_tester` role変更はinstruction-chain変更である。common governance `1.0.0`は不変。ガバナンスcommit後、PM（AirGuardV2）-04を含むactive project taskをrepositoryから再開する新taskへ交代する必要があり、coordinator交代は利用者の別の明示承認を待つ。
 - 公式進捗は10%のまま。remote、Dev、Prod、利用者用local、実data、external service、push、deploy、main mergeは未承認・未実行のままである。
+
+## COORDINATOR-HANDOFF-007 activation checkpoint
+
+- 状態: PM（AirGuardV2）-05 local coordinator有効化済み、PM（AirGuardV2）-04 archive可能。
+- new coordinator task: `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`（PM（AirGuardV2）-05）。
+- old coordinator task: `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`（PM（AirGuardV2）-04）。
+- callback destination: 今後のcheckpointはnew coordinator `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-006`はcompleted。repositoryからactive instruction sources、承認境界、正本、未完成checkpoint、再開条件を復元し、変更なしcallbackが旧coordinatorへ到達した。
+- branchは`codex/user-write-boundary`、baseline HEADは`2a97a49332f150eb98c413fa198f84d98adb43be`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。governance commit `2a97a49`でinstruction-chainが変更済みである。
+- browser UIの挙動・受入れ証拠は、可視・有効なcontrolへの実利用者相当のpointer・keyboard操作だけで取得する。`fill`、`clear`、DOM・storage・cookie・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測とnon-UI setup・backend assertionはUI操作証拠から分離する。
+- 旧基準のUI証拠は履歴としてだけ保持する。正規signup、candidate export/import、再sign-in、dashboard到達は新基準で未検証である。
+- mandatory restartは、専用build identityのfail-closed検証、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、human-equivalent UIを再検証する。
+- Nortonが隔離したhelperは復元・再利用せず、processはforegroundだけを使用する。buildは実行ごとの明示承認を必要とする。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。
+- next: mandatory restart項目を設計者との壁打ちで最小segment化して実装・検証し、正規UI routeのbaseline生成へ戻る。
