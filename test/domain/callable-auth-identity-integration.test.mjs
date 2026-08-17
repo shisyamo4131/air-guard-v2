@@ -13,6 +13,7 @@ test("every established-company Callable enters through the common Auth identity
     "changeAdminUser.js",
     "changeUserEnabledState.js",
     "checkEmailAvailabilityGlobal.js",
+    "deleteTemporaryUser.js",
     "authorizeCompanyRebuild.js",
   ]) {
     const source = await readApiSource(fileName);
