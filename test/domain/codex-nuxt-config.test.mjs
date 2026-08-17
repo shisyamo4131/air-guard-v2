@@ -50,3 +50,23 @@ test("dedicated UI skips Messaging before Service Worker registration", async ()
     "dedicated project guard must run before Service Worker registration",
   );
 });
+
+test("dedicated UI skips notification permission and FCM token effects", async () => {
+  const source = await readFile(
+    new URL("../../composables/useNotification.js", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(
+    source,
+    /const messagingDisabled =\s*config\.public\.firebaseProjectId ===\s*"demo-air-guard-v2-codex"/,
+  );
+  assert.match(
+    source,
+    /async function requestPermission\(\) \{\s*if \(messagingDisabled\)/,
+  );
+  assert.match(
+    source,
+    /async function registFCMToken\(userInstance\) \{\s*if \(messagingDisabled\) return;/,
+  );
+});

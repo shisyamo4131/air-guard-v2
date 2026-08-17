@@ -39,6 +39,9 @@ export function useNotification() {
    *****************************************************************************/
   const logger = useLogger("useNotification", useErrorsStore());
   const system = useSystemStore();
+  const config = useRuntimeConfig();
+  const messagingDisabled =
+    config.public.firebaseProjectId === "demo-air-guard-v2-codex";
 
   /*****************************************************************************
    * METHODS
@@ -62,6 +65,10 @@ export function useNotification() {
    * @returns {Promise<string>} 許可の結果（granted/denied/default）
    */
   async function requestPermission() {
+    if (messagingDisabled) {
+      permission.value = NOTIFICATION_STATUS.NOT_SUPPORTED;
+      return NOTIFICATION_STATUS.NOT_SUPPORTED;
+    }
     if ("Notification" in window) {
       const result = await Notification.requestPermission();
       permission.value = result;
@@ -83,6 +90,8 @@ export function useNotification() {
    * @returns {Promise<void>}
    */
   async function registFCMToken(userInstance) {
+    if (messagingDisabled) return;
+
     try {
       // 開発環境であればログを出力
       if (system.isDev) {
@@ -137,7 +146,6 @@ export function useNotification() {
       const registration = await navigator.serviceWorker.ready;
 
       // FCMトークンを取得
-      const config = useRuntimeConfig();
       const vapidKey = config.public.firebaseVapidKey;
 
       const currentToken = await getToken(messaging, {
