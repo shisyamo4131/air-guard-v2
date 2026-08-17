@@ -23,6 +23,7 @@
 
 ### Changed
 
+- Codexのbrowser UI検証を、可視・有効なcontrolへの実利用者相当のpointer・keyboard操作だけに限定した。`fill`、DOM・event・handler・client APIの直接操作、force・disabled回避を禁止し、read-only観測、非UI setup、backend assertionをUI操作証拠から分離した。旧基準のUI証拠は履歴として保持するが、新基準で再検証する。
 - Codex専用local UIの最小経路を実装し、専用Functionsとloopback server、PWA・通知のfail-closed、メール確認済み・company claim付き合成account、Codex管理ブラウザでのdashboard到達、process・runtime cleanupを検証した。Nortonが`IDP.Generic`として検出したPowerShell child helperはrevertし、独立した前景processへ置き換えた。
 - Codex専用local testを、専用Emulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザまでCodexが起動・操作・終了し、利用者のChrome起動やsign-inを通常の前提にしない方針へ拡張した。約1000件でEmulatorが停止した利用者経験をlocal riskとして記録し、多数documentは段階投入する。
 - ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、これを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する共通原則を採用した。client判定はUX補助とし、server最終認可を維持する。

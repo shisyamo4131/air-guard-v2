@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-17
-- 仕様バージョン: 0.5.6
+- 仕様バージョン: 0.5.7
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -187,7 +187,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
-- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。利用者のChrome起動やsign-inを通常の前提にしない。2026-08-17に最小経路のdashboard到達とcleanupまで検証済みだが、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。Codexによるbuild禁止は維持し、検証用buildは実行ごとの明示承認を必要とする。
+- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。利用者のChrome起動やsign-inを通常の前提にしない。利用者用local環境、Dev、Prod、実dataへ権限を拡張せず、Codexによるbuild禁止を維持し、検証用buildは実行ごとの明示承認を必要とする。
+- CodexがブラウザUIの挙動・受入れを検証するときは、可視画面上で実利用者が行える通常のpointer・keyboard入力だけを操作証拠とする。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避を用いた結果は受入れ証拠にしない。read-only観測と、OOB確認・backend verifier・export/import等の非UI処理は許可するが、それぞれUI操作、非UI準備、backend assertionとして区別する。2026-08-17までの旧基準によるdashboard到達証拠は履歴として保持するが、この基準での正規signup、再import後sign-in、dashboard到達は再検証が必要である。
 - 実装、修正、改修は作業単位ごとにbranch境界を利用者と確認し、原則として機能単位の作業ブランチで行う。コーディネーターは合意済み範囲の差分と検証を確認してlocal Gitを管理し、利用者が動作を確認して明示的に承認するまで `main` へマージしない。
 - `main` への統合は原則として機能単位のマージコミットを残し、Git上の取消し境界を明確にする。revert前にはデータ、外部作用、契約互換性を確認する。`main` への直接コミット、マージ、Git push、デプロイはそれぞれ明示的承認を必要とする。
 - 関連リポジトリはAirGuardV2の調査に必要な範囲で事前承認なく読み取れるが、変更は対象、影響、互換性、公開・導入順序を確認した利用者の明示的承認を必要とする。

@@ -34,6 +34,8 @@ application codeの標準実装者はユーザーです。Codexは設計、仕�
 
 Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。デプロイやリモート環境の検証は、対象操作ごとの明示的承認と環境確認なしに行わず、未実施部分についてユーザーが動作確認できる観点を提示してください。秘密情報や実データを読み上げたり文書へ転記したりしないでください。
 
+ブラウザUIの挙動・受入れ検証では、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけを使用してください。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止です。read-only観測、非UI setup、backend assertionはUI操作証拠から分離して報告してください。
+
 今回の依頼:
 
 > ここに依頼内容を記載する。

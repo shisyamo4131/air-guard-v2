@@ -63,6 +63,7 @@
 - Codex専用環境の起動前にproject、bind先、未起動serviceからのremote到達、外部API・Stripe・mail・FCM等への作用を確認し、fail-closedで隔離できなければ実行しない。利用者用Emulatorは従来どおり対象実行ごとの明示許可を必要とする。
 - 利用者用Emulatorは`--import=./saved-data`を使い、明示指示なしに`--export-on-exit`または同等操作で`saved-data`を上書きしない。Codex専用環境は`.codex-test/saved-data`と専用runtimeだけを使い、利用者用`./saved-data`を読込・変更しない。
 - Codex専用local UI検証は、Codexが専用Emulator、Functions、local server、合成account/data、Codex管理ブラウザを準備して完結させることを標準目標とする。利用者のChrome起動・sign-inを通常の前提にしない。専用経路の実装・検証が完了するまでは未提供と明記し、利用者が起動したprocessを停止しない。
+- CodexがブラウザUIの挙動または受入れ証拠を取得する場合は、可視画面上で実利用者が行える通常のpointer・keyboard操作だけを使用する。可視・有効で通常のactionability条件を満たすcontrolへのclick、一文字ずつのtyping、通常のkey操作、scroll、drag、可視optionの選択は許可する。`fill`・`clear`、DOM property・valueの直接変更、event・handler・component method・`requestSubmit`・client APIの直接呼出し、force操作、disabled・hidden・overlayの回避は禁止する。`localStorage`、`sessionStorage`、IndexedDB、cookie、Firebase Auth persistenceを直接変更して挙動・受入れ状態を作ってはならない。初期URL open、reload、clean browser context準備は非UIの環境準備に限り、画面内navigationや製品flowの証拠には数えない。read-onlyのDOM・ARIA・screenshot・console・network観測は許可するが、状態を変更してはならない。Emulator OOB確認、backend verifier、export・importは非UIの準備またはassertionとしてUI操作証拠と分離する。
 - 数百件規模の合成documentを扱う場合は段階的に投入し、応答遅延、memory、Emulator logを監視する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は停止条件と復旧方法を定めた別の明示承認なしに行わない。これはFirebaseの公式上限とは扱わない。
 - deploy、remote環境検証、実dataを使う検証は対象操作ごとの明示承認なしに行わない。
 - 実施していない確認を成功と記載しない。技術的に実施できない場合は、確認済み範囲、未確認範囲、利用者の確認観点を報告する。

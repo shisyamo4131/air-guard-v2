@@ -18,6 +18,7 @@
 - 初回生成は`npm run test:local:seed`に限定し、既存exportがある場合は上書きせず失敗する。通常の`npm run test:local`は`--import`だけを使用し、`--export-on-exit`を指定しない。
 - 専用Firebase設定は`demo-air-guard-v2-codex`、`127.0.0.1`、通常local環境と異なるポートへ固定する。初期段階ではFunctions Emulatorを起動せず、FCM、Stripe、ジオコーディング等の外部作用経路を含めない。
 - 2026-08-17以降の拡張目標として、Codexが専用Emulator、Functions、local server、合成Authentication accountと業務fixture、Codex管理ブラウザを一連で起動・操作・停止し、利用者によるChrome起動やsign-inを通常の前提にしない。
+- Codex管理ブラウザの挙動・受入れ証拠は、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけで取得する。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測と非UI setup・backend assertionは許可するがUI操作証拠から分離する。
 - Functions追加前に外部API、Stripe、mail、FCM、通知、ジオコーディング等をstub、明示拒否、または到達不能設定でfail-closedにする。隔離を証明できないFunctionを専用UI testから呼ばない。
 - 専用accountの資格情報は実在の資格情報を流用せず、local demo projectだけで有効な合成値または実行時生成値を使う。秘密情報、session、実在emailをrepository、log、prompt、成果物へ保存しない。
 - 数百件のdocumentは段階的に生成し、件数、応答時間、memory、Emulator logを監視する。約1000件で停止した利用者経験をlocal riskとして記録し、同規模の一括生成は停止条件と復旧方法を定めた別承認なしに行わない。公式Firebase上限とは断定しない。
@@ -39,14 +40,14 @@
 ## 影響
 
 - 利用者: 既存`firebase.json`、`.env.local`、`./saved-data`、通常のlocal起動手順は変更されない。
-- 実装: 専用Firebase設定、合成fixture、seed、Node標準テスト、容量・指紋ガードを追加する。
+- 実装: 専用Firebase設定、合成fixture、seed、Node標準テスト、容量・指紋ガードを追加する。browser automationは実利用者相当の入力経路に限定し、実行不能な操作をDOM・event直接操作で補完しない。
 - データ: `.codex-test/saved-data`はローカル生成物であり、Git、Dev環境、実データへ反映しない。
 - 外部作用: 現行の初期テストではFunctionsを起動しない。承認済みUI拡張では、FCM、Stripe、mail、通知、ジオコーディング、郵便番号検索等を個別にfail-closedで隔離できたFunctionだけを起動する。
 - 容量: 合成exportは100 MiB未満を必須とし、通常は20 MiB以下を目標とする。
 
 ## 移行
 
-`npm run test:local:seed`を一度だけ実行して専用exportを作成し、以後は`npm run test:local`で読込専用テストを行う。専用seedはメール確認済みAuth account、`companyId`・`isSuperUser` claim、有効な本登録Userを生成する。2026-08-17にFunctionsと画面を含む自己完結UI modeの最小経路について、外部作用隔離、専用環境変数、Codex管理ブラウザのsign-in、dashboard到達、process・一時build cleanupを検証した。実端末FCMとremote APIは含めない。Nuxt buildを使う再検証はプロジェクト規則に従い実行ごとの明示承認を必要とする。
+Rules・Callable等の隔離test用直接生成fixtureは`.codex-test/isolated-saved-data`で管理し、正規UI登録の受入れ証拠には使用しない。UI基準snapshotは正規signup、Authentication Emulator OOB確認、同じbrowser contextでの`createAdminAccount`、token refresh、dashboard到達を完了したbackend状態からcandidate exportし、fresh import後のbackend assertionと実利用者相当sign-in・dashboard再到達に合格してから`.codex-test/saved-data`へ昇格する。OOB確認とbackend assertionはUI操作証拠には数えない。2026-08-17までの旧基準のbrowser証拠は履歴として保持するが、新しいpointer・keyboard操作基準では未検証である。実端末FCMとremote APIは含めない。Nuxt buildを使う再検証はプロジェクト規則に従い実行ごとの明示承認を必要とする。
 
 ## 再検討条件
 

@@ -219,3 +219,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - `scripts/run-codex-local-ui-child.ps1`はNortonが`IDP.Generic`として検出したため利用者が隔離し、実装をrevertした。復元・allowlist登録は行わず、現在はEmulatorとserverを独立した前景processとして直接起動する。
 - 残存事項として、sign-out直後に購読解除前のFirestore snapshot listenerが`permission-denied`を2件出す。dashboard到達と通常表示には影響しなかったが、logout cleanupの製品課題として未完了に残す。
 - remote、Dev、Prod、利用者用local、実data、外部service、push、deploy、main mergeは実行していない。公式進捗は10%のまま。next product workはUWBへ戻る。
+
+## User-equivalent browser interaction governance checkpoint
+
+- 2026-08-17に利用者は、Codex自身のin-app browser testを、可視画面上で実利用者が行える通常のpointer・keyboard操作へ限定した。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測と非UI setup・backend assertionは許可するがUI操作証拠から分離する。
+- 旧基準で得たsignup、button状態、dashboard到達等のbrowser証拠は履歴として保持するが、新基準の受入れには使用しない。source・単体testと、固定loopbackのAuth・Firestore backend読取りはそれぞれsource/test証拠、backend assertionとして維持する。
+- self-contained UI再設計の未完成checkpointをcommit `126e903`（`test: checkpoint regular-route UI harness`）へ保存した。このcommitは正規signup由来baseline、candidate export/import、再sign-in、full 72件suite、console・network、cleanupを完了したものではない。
+- 必須の再開事項は、専用build identityのfail-closed検証、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、正規signupからのbaseline生成と再import後sign-inを新browser基準で検証する。
+- 誤った`!`入り合成passwordを使った観察と、それに基づく製品不具合推定は受入れ証拠にしない。利用者は通常操作で無効passwordのfield errorと「次へ」無効になる画面を画像とともに報告したため、製品application codeの追加修正は採用していない。
+- browser、generated server、Emulatorは停止済みで、専用portのLISTENは残っていない。`.output`は承認済みbuildの再利用候補として残しているが、build identity gate実装前に一般化したserver commandへ使用しない。
+- このproject-wide検証・証拠契約と`ui_tester` role変更はinstruction-chain変更である。common governance `1.0.0`は不変。ガバナンスcommit後、PM（AirGuardV2）-04を含むactive project taskをrepositoryから再開する新taskへ交代する必要があり、coordinator交代は利用者の別の明示承認を待つ。
+- 公式進捗は10%のまま。remote、Dev、Prod、利用者用local、実data、external service、push、deploy、main mergeは未承認・未実行のままである。
