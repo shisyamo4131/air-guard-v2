@@ -3,6 +3,7 @@
  */
 import { defineString } from "firebase-functions/params";
 import { logger } from "firebase-functions/v2";
+import { assertExternalEffectAllowed } from "./externalEffectsPolicy.js";
 
 /**
  * 住所から緯度・経度・正規化住所を取得して返します。
@@ -14,6 +15,8 @@ export async function fetchCoordinates(address) {
     if (!address || typeof address !== "string") {
       throw new Error(`引数 'address' を文字列で指定する必要があります。`);
     }
+
+    assertExternalEffectAllowed("geocoding.fetch");
 
     const GEOCODING_API_KEY = defineString("GEOCODING_API_KEY");
     const apiKey = GEOCODING_API_KEY.value();
