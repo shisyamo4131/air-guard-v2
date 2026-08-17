@@ -17,7 +17,9 @@ $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
 $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
 $testPath = Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs'
 $projectId = 'demo-air-guard-v2-codex'
-$emulators = 'auth,firestore,database,storage'
+$seedEmulators = 'auth,firestore,database,storage'
+$testEmulators = 'auth,firestore,database,storage,functions'
+$emulators = if ($Mode -eq 'Seed') { $seedEmulators } else { $testEmulators }
 
 function Assert-ProjectChild {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -127,12 +129,20 @@ Set-Content -LiteralPath $childScriptPath -Value $childScriptContent -Encoding A
 $firebaseArguments += $childScriptPath
 
 $exitCode = 1
+$externalEffectsModeWasSet = Test-Path Env:\AIR_GUARD_EXTERNAL_EFFECTS
+$externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
 try {
+    $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
     Push-Location $runtimePath
     & $nodeExe $npxCli @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    if ($externalEffectsModeWasSet) {
+        $env:AIR_GUARD_EXTERNAL_EFFECTS = $externalEffectsModeBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_EXTERNAL_EFFECTS -ErrorAction SilentlyContinue
+    }
     if (Test-Path -LiteralPath $runtimePath) {
         Assert-ProjectChild -Path $runtimePath | Out-Null
         Remove-Item -LiteralPath $runtimePath -Recurse -Force
@@ -166,7 +176,7 @@ if ($finalBytes -ge $StopBytes) {
     mode = $Mode
     project_id = $projectId
     emulators = $emulators
-    functions_started = $false
+    functions_started = $Mode -eq 'Test'
     loopback_only = $true
     user_saved_data_unchanged = $true
     dedicated_saved_data_read_only = $Mode -eq 'Test'
