@@ -9,6 +9,7 @@ import { User } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
+import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -24,8 +25,9 @@ const props = useDefaults(_props, "EmployeeUserManager");
  *****************************************************************************/
 const { attrs } = useBaseManager("EmployeeUserManager");
 const auth = useAuthStore();
-const { checkEmailAvailabilityGlobal, deleteTemporaryUser } =
-  useAuthFunctions();
+const { checkEmailAvailabilityGlobal } = useAuthFunctions();
+const { deleteTemporaryUser, getDeleteControl } =
+  useTemporaryUserDeletion();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -43,18 +45,10 @@ watch(
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const canManageTemporaryUsers = computed(() => {
-  return auth.isAdmin === true || auth.hasPresetPermission("users:write");
-});
-
-const canDeleteTemporaryUser = computed(() => {
-  return (
-    canManageTemporaryUsers.value &&
-    props.user.isTemporary === true &&
-    props.user.isAdmin === false &&
-    props.user.disabled === false &&
-    props.user.employeeId === props.employee.docId
-  );
+const deleteControl = computed(() => {
+  return getDeleteControl(props.user, {
+    employeeId: props.employee.docId,
+  });
 });
 
 /*****************************************************************************
@@ -84,7 +78,9 @@ async function handleCreate(item) {
  * @param item
  */
 async function handleDelete(item) {
-  await deleteTemporaryUser(item.docId);
+  await deleteTemporaryUser(item, {
+    employeeId: props.employee.docId,
+  });
 }
 </script>
 
@@ -152,7 +148,7 @@ async function handleDelete(item) {
           <v-btn
             block
             color="warning"
-            :disabled="!canDeleteTemporaryUser"
+            :disabled="deleteControl.disabled"
             variant="flat"
             text="ユーザーアカウント削除"
             @click="() => toDelete()"
