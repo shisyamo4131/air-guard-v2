@@ -32,3 +32,21 @@ test("Firebase plugin resolves and uses configured emulator endpoints", async ()
   assert.match(source, /connectDatabaseEmulator\(database, host, ports\.database\)/);
   assert.match(source, /connectFunctionsEmulator\(functions, host, ports\.functions\)/);
 });
+
+test("dedicated UI skips Messaging before Service Worker registration", async () => {
+  const source = await readFile(
+    new URL("../../plugins/08.firebase-messaging.client.js", import.meta.url),
+    "utf8",
+  );
+  const guardIndex = source.indexOf(
+    'config.public.firebaseProjectId === "demo-air-guard-v2-codex"',
+  );
+  const registrationIndex = source.indexOf("navigator.serviceWorker.register");
+
+  assert.ok(guardIndex >= 0, "dedicated project guard must exist");
+  assert.ok(registrationIndex >= 0, "Service Worker registration must exist");
+  assert.ok(
+    guardIndex < registrationIndex,
+    "dedicated project guard must run before Service Worker registration",
+  );
+});

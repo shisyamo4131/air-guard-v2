@@ -14,6 +14,12 @@ export default defineNuxtPlugin(async () => {
   // ブラウザ環境のみで実行
   if (typeof window === "undefined") return;
 
+  const config = useRuntimeConfig();
+  if (config.public.firebaseProjectId === "demo-air-guard-v2-codex") {
+    console.info("[FCM] Disabled in the dedicated Codex UI environment.");
+    return;
+  }
+
   // 通知がサポートされていない場合は終了
   if (!("Notification" in window)) return;
 
