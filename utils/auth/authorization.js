@@ -1,4 +1,4 @@
-import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { ROLE_PRESETS } from "../../constants/rolePresets.js";
 
 /**
  * Userのロールと認証クレームから、現在のユーザーが持つ全ロールを構築します。
@@ -88,4 +88,44 @@ export function hasPermission(permissions, permission) {
   }
 
   return permissions.includes("*") || permissions.includes(permission);
+}
+
+/**
+ * User.rolesに保存された既知presetだけから権限を判定します。
+ * 未知role、special role、直接permission文字列が含まれる場合はfail-closedで拒否します。
+ *
+ * @param {Array<string>} roles
+ * @param {string} permission
+ * @returns {boolean}
+ */
+export function hasPresetPermission(roles, permission) {
+  if (
+    !Array.isArray(roles) ||
+    typeof permission !== "string" ||
+    !permission ||
+    permission.trim() !== permission
+  ) {
+    return false;
+  }
+
+  const presets = [];
+  for (const role of roles) {
+    if (typeof role !== "string" || !role || !ROLE_PRESETS[role]) {
+      return false;
+    }
+    presets.push(ROLE_PRESETS[role]);
+  }
+
+  if (presets.some((preset) => preset.permissions.includes(permission))) {
+    return true;
+  }
+
+  if (permission.endsWith(":read")) {
+    const writePermission = permission.replace(/:read$/, ":write");
+    return presets.some((preset) =>
+      preset.permissions.includes(writePermission),
+    );
+  }
+
+  return false;
 }
