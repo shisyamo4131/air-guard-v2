@@ -9,7 +9,7 @@ test("dedicated Firebase config exposes Functions on its own loopback port", asy
     await readFile(new URL("firebase.codex-test.json", projectRoot), "utf8"),
   );
 
-  assert.equal(config.functions.source, "functions");
+  assert.equal(config.functions.source, "functions/codex-test");
   assert.deepEqual(config.emulators.functions, {
     host: "127.0.0.1",
     port: 15001,
