@@ -36,6 +36,7 @@ function createTargetUser(overrides = {}) {
 
 function createFirestore({ actorUser, targetUser } = {}) {
   const deletes = [];
+  const reads = [];
   const snapshots = new Map([
     [
       `Companies/${COMPANY_ID}/Users/${ACTOR_UID}`,
@@ -53,6 +54,7 @@ function createFirestore({ actorUser, targetUser } = {}) {
 
   const transaction = {
     async get(reference) {
+      reads.push(reference.path);
       return snapshots.get(reference.path) ?? { exists: false };
     },
     delete(reference) {
@@ -62,6 +64,7 @@ function createFirestore({ actorUser, targetUser } = {}) {
 
   return {
     deletes,
+    reads,
     doc(path) {
       return { path };
     },
@@ -229,6 +232,9 @@ test("actor authorization failures are preserved without deletion", async () => 
       }),
     TemporaryUserManagementPolicyError,
   );
+  assert.deepEqual(firestore.reads, [
+    `Companies/${COMPANY_ID}/Users/${ACTOR_UID}`,
+  ]);
   assert.deepEqual(firestore.deletes, []);
 });
 

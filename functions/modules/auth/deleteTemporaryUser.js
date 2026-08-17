@@ -102,6 +102,9 @@ export async function deleteTemporaryUser({
       );
     }
 
+    const actorUser = actorSnapshot.data();
+    assertActorCanManageTemporaryUsers({ companyId, actorUser });
+
     const targetSnapshot = await transaction.get(targetUserRef);
     if (!targetSnapshot.exists) {
       throw new DeleteTemporaryUserError(
@@ -110,10 +113,8 @@ export async function deleteTemporaryUser({
       );
     }
 
-    const actorUser = actorSnapshot.data();
     const targetUser = targetSnapshot.data();
 
-    assertActorCanManageTemporaryUsers({ companyId, actorUser });
     assertTemporaryUserCanBeDeleted({ companyId, targetUser });
 
     transaction.delete(targetUserRef);
