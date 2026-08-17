@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-16
-- 仕様バージョン: 0.5.5
+- 最終更新日: 2026-08-17
+- 仕様バージョン: 0.5.6
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -46,6 +46,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firebase Hosting 向けの CSR SPA とし、PWA Service Worker を持つ。
 - `air-vuetify-v3` をファイル参照で使用する。
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
+- ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
 
 ### バックエンド
 

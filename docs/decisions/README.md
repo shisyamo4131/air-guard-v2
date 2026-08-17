@@ -31,6 +31,7 @@
 | [0016](0016-firemodel-crud-boundary.md) | FireModel CRUDの利用境界 | Accepted | 2026-08-15 |
 | [0017](0017-callable-auth-identity-gate.md) | Callableの共通Auth identity gate | Accepted | 2026-08-16 |
 | [0018](0018-user-provisioning-and-employee-link-boundary.md) | User provisioningとEmployee紐付け境界 | Accepted | 2026-08-16 |
+| [0019](0019-client-operation-policy-composable-boundary.md) | Client操作policyとcomposable境界 | Accepted | 2026-08-17 |
 
 ## 新しい ADR の形式
 
