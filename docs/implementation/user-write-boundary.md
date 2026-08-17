@@ -152,7 +152,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 利用者が各application implementation fileを確認している。
 - [x] 対象単体testが成功している。UIは後続API接続前のため変更・実行していない。
 
-### UWB-03 仮登録User削除のserver境界
+### UWB-03 仮登録User削除境界
 
 - 状態: In progress（2026-08-17）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
@@ -166,6 +166,12 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] 仮登録Userのclient直接`delete()`をCallableへ置換する。
 - [ ] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
 - [x] User一覧の直接`delete()`をCallableへ置換し、会社管理者またはstrict preset由来`users:write`と有効な仮登録targetだけで操作を有効化する。
+- [ ] server側policyのうちclientで確認可能な条件を、VueやFirebaseに依存しないclient専用仮登録User削除policyとして実装する。
+- [ ] client policyは許可可否だけでなく安定した拒否理由を返し、実行者、対象User、会社、document ID、Employee画面固有の紐付けcontextをfail closedで検査する。
+- [ ] `useTemporaryUserDeletion` composableを実装し、client policyのreactiveな適用結果、拒否理由、Callable実行をcomponentへ提供する。
+- [ ] composableは表示用判定だけに依存せず、Callable実行直前にもclient policyを再評価し、拒否状態ではrequestを送信しない。
+- [ ] User一覧とEmployee詳細から重複した削除可否判定を除き、同じcomposableへ接続する。Employee詳細だけは表示中Employeeとの紐付け一致を追加contextとして渡す。
+- [ ] client policyとserver policyで共通する条件についてparity testを設ける。client事前判定はUX補助であり、server最終認可を代替しないことを固定する。
 - [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
 - [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
@@ -173,6 +179,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 - [ ] 仮登録削除ではAuthenticationへ作用しない。
 - [ ] 本登録User、管理者、許可されていないactorからの削除が拒否される。
+- [ ] client policy、composable、User一覧、Employee詳細の許可・拒否結果が一致し、拒否時にCallableが呼ばれない。
 - [ ] 既存削除triggerが仮登録削除でAuthへ進まないことと再試行結果が記録されている。
 - [ ] 利用者が各application implementation fileを確認している。
 - [ ] 単体testと対象UIのlocal確認が成功している。
