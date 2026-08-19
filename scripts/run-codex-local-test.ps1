@@ -49,7 +49,15 @@ function Get-DirectoryFingerprint {
     $normalizedRoot = [IO.Path]::GetFullPath($Path).TrimEnd('\')
     $records = foreach ($file in Get-ChildItem -LiteralPath $Path -File -Force -Recurse | Sort-Object FullName) {
         $relativePath = $file.FullName.Substring($normalizedRoot.Length).TrimStart('\')
-        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+        $stream = [System.IO.File]::OpenRead($file.FullName)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace('-', '')
+        }
+        finally {
+            $sha256.Dispose()
+            $stream.Dispose()
+        }
         "$relativePath|$($file.Length)|$hash"
     }
     $joined = $records -join "`n"
@@ -72,6 +80,24 @@ function Resolve-Executable {
     if ($resolved) { return $resolved.Source }
     if (Test-Path -LiteralPath $Fallback -PathType Leaf) { return $Fallback }
     throw "Required executable was not found: $Command"
+}
+
+function Remove-RuntimeDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        try {
+            Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+            return
+        }
+        catch [System.IO.IOException] {
+            if ($attempt -eq 20) {
+                Write-Warning "Runtime cleanup remains deferred because Windows still has an open handle: $Path"
+                return
+            }
+            Start-Sleep -Milliseconds 500
+        }
+    }
 }
 
 Assert-ProjectChild -Path $dedicatedRoot | Out-Null
@@ -100,17 +126,13 @@ if ($Mode -eq 'Test' -and -not (Test-Path -LiteralPath $metadataPath -PathType L
 }
 
 $nodeExe = Resolve-Executable -Command 'node.exe' -Fallback (Join-Path $env:ProgramFiles 'nodejs\node.exe')
-$npxCli = Join-Path (Split-Path -Parent $nodeExe) 'node_modules\npm\bin\npx-cli.js'
-if (-not (Test-Path -LiteralPath $npxCli -PathType Leaf)) {
-    throw "npx CLI entrypoint was not found: $npxCli"
-}
+$firebaseExe = Resolve-Executable -Command 'firebase.cmd' -Fallback (Join-Path $env:APPDATA 'npm\firebase.cmd')
 $userDataBefore = Get-DirectoryFingerprint -Path $userSavedDataPath
 $seedBefore = if ($Mode -eq 'Test') { Get-DirectoryFingerprint -Path $seedPath } else { '<not-created>' }
 
 New-Item -ItemType Directory -Path $runtimePath -Force | Out-Null
 $childScriptPath = Join-Path $runtimePath 'run-child.cmd'
 $firebaseArguments = @(
-    '-y', '--offline', 'firebase-tools@latest',
     '--config', $configPath,
     '--project', $projectId,
     'emulators:exec',
@@ -134,7 +156,7 @@ $externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
 try {
     $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
     Push-Location $runtimePath
-    & $nodeExe $npxCli @firebaseArguments
+    & $firebaseExe @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
@@ -145,7 +167,7 @@ try {
     }
     if (Test-Path -LiteralPath $runtimePath) {
         Assert-ProjectChild -Path $runtimePath | Out-Null
-        Remove-Item -LiteralPath $runtimePath -Recurse -Force
+        Remove-RuntimeDirectory -Path $runtimePath
     }
 }
 

@@ -114,6 +114,8 @@ npm run local
 
 Firebase Emulator Suite は `firebase.json` で Auth、Functions、Firestore、Realtime Database、Storage、Hosting、Emulator UI を構成しています。起動前に使用プロジェクトと `.env.local` のエミュレーター設定を確認してください。
 
+Firebase CLIはWindowsユーザーのglobal npm領域へ導入し、正式運用開始まではlatestを使用する。新規PCまたは更新時は`npm install -g firebase-tools@latest`を実行し、`firebase --version`で確認する。AirGuardV2のCodex専用Emulator scriptはglobal `firebase` commandを使用し、npm/npxのoffline cacheを実行前提にしない。CLI更新で回帰した場合は、直前に確認済みのversionを`npm install -g firebase-tools@<version>`で再導入して戻す。
+
 利用者が画面確認用のlocal環境を起動する場合は、利用者用の保存済みデータを読み込みます。
 
 ```powershell
@@ -147,6 +149,7 @@ npm run test:local:seed
 npm run test:local
 ```
 
+- 実行前にglobal `firebase` commandが利用可能であることを確認する。正式運用開始まではglobal CLIをlatestへ更新してよい。
 - `--import=.codex-test/saved-data`を使い、`--export-on-exit`は指定しない。
 - 実行前後に利用者用`./saved-data`と専用exportの指紋を比較し、変化した場合は失敗する。
 - `.codex-test`が50 MiB以上なら警告し、100 MiB以上ならEmulator起動前に停止する。通常は20 MiB以下を目標とする。

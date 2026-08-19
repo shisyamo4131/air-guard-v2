@@ -1,7 +1,7 @@
 # 0014 Codex専用localテストデータとloopback隔離
 
 - 日付: 2026-08-12
-- 更新日: 2026-08-17
+- 更新日: 2026-08-19
 - 状態: Accepted
 - 関連仕様: 開発ガバナンスとCodex作業手順
 - 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)、[0006](0006-user-prepared-authenticated-browser-testing.md)、[0011](0011-roadmap-and-codex-session-lifecycle.md)
@@ -16,6 +16,7 @@
 - Codex専用の合成データを`.codex-test/saved-data`へ保存する。実在の会社、利用者、メールアドレス、資格情報、業務データは複製しない。
 - 合成fixture定義と生成・実行スクリプトはGit管理し、Emulator exportと一時runtimeは`.gitignore`で除外する。専用exportを破棄しても同じ定義から再生成できる。
 - 初回生成は`npm run test:local:seed`に限定し、既存exportがある場合は上書きせず失敗する。通常の`npm run test:local`は`--import`だけを使用し、`--export-on-exit`を指定しない。
+- Firebase CLIはWindowsユーザーのglobal npm領域に1つ導入し、正式運用開始まではlatestを使用する。Codex専用Emulator scriptはglobal `firebase` commandを使用し、`npx --offline` cacheを実行前提にしない。CLI更新で回帰した場合は直前に確認済みのversionへ戻す。
 - 専用Firebase設定は`demo-air-guard-v2-codex`、`127.0.0.1`、通常local環境と異なるポートへ固定する。初期段階ではFunctions Emulatorを起動せず、FCM、Stripe、ジオコーディング等の外部作用経路を含めない。
 - 2026-08-17以降の拡張目標として、Codexが専用Emulator、Functions、local server、合成Authentication accountと業務fixture、Codex管理ブラウザを一連で起動・操作・停止し、利用者によるChrome起動やsign-inを通常の前提にしない。
 - Codex管理ブラウザの挙動・受入れ証拠は、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけで取得する。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測と非UI setup・backend assertionは許可するがUI操作証拠から分離する。
@@ -41,6 +42,7 @@
 
 - 利用者: 既存`firebase.json`、`.env.local`、`./saved-data`、通常のlocal起動手順は変更されない。
 - 実装: 専用Firebase設定、合成fixture、seed、Node標準テスト、容量・指紋ガードを追加する。browser automationは実利用者相当の入力経路に限定し、実行不能な操作をDOM・event直接操作で補完しない。
+- 開発環境: Firebase CLIはprojectごとに複製せずglobal導入する。新規PCではglobal CLIの導入・認証を別々に確認し、npm/npx cacheをCLIの存在証明にしない。
 - データ: `.codex-test/saved-data`はローカル生成物であり、Git、Dev環境、実データへ反映しない。
 - 外部作用: 現行の初期テストではFunctionsを起動しない。承認済みUI拡張では、FCM、Stripe、mail、通知、ジオコーディング、郵便番号検索等を個別にfail-closedで隔離できたFunctionだけを起動する。
 - 容量: 合成exportは100 MiB未満を必須とし、通常は20 MiB以下を目標とする。

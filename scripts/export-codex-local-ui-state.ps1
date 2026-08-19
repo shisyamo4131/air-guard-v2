@@ -42,7 +42,15 @@ function Get-DirectoryFingerprint {
     $normalizedRoot = [IO.Path]::GetFullPath($Path).TrimEnd('\')
     $records = foreach ($file in Get-ChildItem -LiteralPath $Path -File -Force -Recurse | Sort-Object FullName) {
         $relativePath = $file.FullName.Substring($normalizedRoot.Length).TrimStart('\')
-        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+        $stream = [System.IO.File]::OpenRead($file.FullName)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace('-', '')
+        }
+        finally {
+            $sha256.Dispose()
+            $stream.Dispose()
+        }
         "$relativePath|$($file.Length)|$hash"
     }
     $bytes = [Text.Encoding]::UTF8.GetBytes($records -join "`n")
@@ -71,20 +79,19 @@ if (Test-Path -LiteralPath $stagingPath) {
 
 $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
 $nodeExe = if ($nodeCommand) { $nodeCommand.Source } else { Join-Path $env:ProgramFiles 'nodejs\node.exe' }
-$npxCli = Join-Path (Split-Path -Parent $nodeExe) 'node_modules\npm\bin\npx-cli.js'
+$firebaseCommand = Get-Command firebase.cmd -ErrorAction SilentlyContinue
+$firebaseExe = if ($firebaseCommand) { $firebaseCommand.Source } else { Join-Path $env:APPDATA 'npm\firebase.cmd' }
 if (-not (Test-Path -LiteralPath $nodeExe -PathType Leaf) -or
-    -not (Test-Path -LiteralPath $npxCli -PathType Leaf)) {
-    throw 'Node.js or the npx CLI entrypoint was not found.'
+    -not (Test-Path -LiteralPath $firebaseExe -PathType Leaf)) {
+    throw 'Node.js or the global Firebase CLI was not found.'
 }
 
 $userDataBefore = Get-DirectoryFingerprint -Path $userSavedDataPath
-$previousOffline = $env:npm_config_offline
 $previousExternalEffects = $env:AIR_GUARD_EXTERNAL_EFFECTS
 
 try {
-    $env:npm_config_offline = 'true'
     $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
-    & $nodeExe $npxCli -y --offline firebase-tools@latest `
+    & $firebaseExe `
         --config $configPath `
         --project $projectId `
         emulators:export $stagingPath
@@ -103,7 +110,6 @@ try {
 
     Move-Item -LiteralPath $stagingPath -Destination $candidatePath
 } finally {
-    $env:npm_config_offline = $previousOffline
     $env:AIR_GUARD_EXTERNAL_EFFECTS = $previousExternalEffects
     foreach ($path in @($stagingPath)) {
         if (Test-Path -LiteralPath $path) {
