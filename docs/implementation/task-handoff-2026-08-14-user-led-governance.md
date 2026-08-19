@@ -265,3 +265,27 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - restore後の最初の作業は変更なし`PC-MIGRATION-RESTORE-001`。repository、関連repository、local data存在、active instructions、callback、permission、validatorを照合し、成功するまで新規実装、Emulator、server、browser、remote接続を開始しない。
 - mandatory restartは、build identity fail-closed、candidate acceptance fingerprintと停止済みpromotion gate、verifier会社名カナ・Firestore path segment、Auth POST/Firestore GET契約分離である。その後human-equivalent UIを再検証する。
 - remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。旧PCとbackupは新PCのrestore checkpointと最初の実file限定commit確認後まで保持する。
+
+## COORDINATOR-HANDOFF-009 migrated local coordinator activation checkpoint
+
+- 状態: PM（AirGuardV2）-06 migrated local coordinator有効化済み、PM（AirGuardV2）-05 archive可能。
+- new coordinator task: `01a0184a-48ef-7690-beb4-607dd384a874` host `DESKTOP-9L00IP0`。
+- old coordinator task: `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`（旧PC）。
+- callback destination: 今後のcheckpointはnew coordinator `01a0184a-48ef-7690-beb4-607dd384a874` host `DESKTOP-9L00IP0`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うWindows native local task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-008`はcompleted。branchは`codex/user-write-boundary`、baseline HEADは`92d17c81162b6125a3afaff6942d4b596db43486`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- root repositoryと`air-vuetify-v3`は移行後cleanで、`git fsck --full`が成功した。`air-vuetify-v3`はbranch `main`、HEAD `07886a412262184636380bd4936f11b9a12f052c`である。
+- Node v22.23.2、npm 10.9.8、OpenJDK 21.0.12、Firebase CLI 15.27.0を確認済みである。
+- rootとFunctionsの依存関係は`npm ci`後に`npm ls --depth=0`が成功した。Functionsの`@emnapi/runtime@1.8.1 extraneous`表示は`sharp@0.34.5`のoptional dependency由来と照合済みで、変更・prune・lockfile変更は行っていない。
+- `.env`、`.env.development`、`.env.local`、`saved-data`、`.codex-test\saved-data`の存在を内容非表示で確認済みである。
+- project-owned validator、managed governance validator、`git diff --check`が成功した。
+- implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。
+- 旧UI証拠は履歴としてだけ保持する。正規signup、candidate export/import、再sign-in、dashboard到達は新基準で未検証である。
+- mandatory restartは、build identity fail-closed、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、human-equivalent UIを再検証する。
+- browser UI証拠は実利用者相当のpointer・keyboard操作だけで取得する。`fill`、`clear`、DOM・storage・cookie・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測とnon-UI setup・backend assertionはUI証拠から分離する。
+- Nortonが隔離したhelperは復元・再利用せず、processはforegroundだけを使用する。buildは実行ごとの明示承認を必要とする。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。
+- 旧PCと外付けHDD backupは、このactivation commitを旧coordinatorが確認するまで保持する。
+- PC間Remote実験はrepository変更なしで終了した。cross-host callbackは利用不能だったため、このcheckpoint結果は利用者が旧coordinatorへ手動中継する。
+- next: mandatory restart 4項目を設計者との壁打ちで最小segment化する。利用者の開始指示までは新規実装しない。
