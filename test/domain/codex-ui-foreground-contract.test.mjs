@@ -30,6 +30,8 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   const emulators = packageJson.scripts["test:local:ui:emulators"];
   const candidateEmulators =
     packageJson.scripts["test:local:ui:emulators:candidate"];
+  const candidateAcceptance =
+    packageJson.scripts["test:local:ui:candidate:accept"];
   const server = packageJson.scripts["test:local:ui:server"];
   const generatedServer =
     packageJson.scripts["test:local:ui:server:generated"];
@@ -45,6 +47,7 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   assert.match(emulators, /emulators:start/);
   assert.match(emulators, /--import \.codex-test\/saved-data/);
   assert.match(candidateEmulators, /--import \.codex-test\/ui-candidate/);
+  assert.match(candidateAcceptance, /accept-codex-local-ui-candidate\.mjs/);
   assert.match(server, /--dotenv config\/codex-test-ui\.env/);
   assert.match(server, /--host 127\.0\.0\.1 --port 14600/);
   assert.match(generatedServer, /serve-codex-local-ui\.mjs/);
@@ -52,7 +55,7 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   assert.match(exportState, /export-codex-local-ui-state\.ps1/);
   assert.match(promoteState, /promote-codex-local-ui-state\.ps1/);
   assert.doesNotMatch(
-    `${freshEmulators}\n${emulators}\n${candidateEmulators}\n${server}\n${generatedBuild}\n${generatedServer}\n${exportState}\n${promoteState}`,
+    `${freshEmulators}\n${emulators}\n${candidateEmulators}\n${candidateAcceptance}\n${server}\n${generatedBuild}\n${generatedServer}\n${exportState}\n${promoteState}`,
     /Start-Process|--detach|&\s*$/,
   );
 });
@@ -134,7 +137,15 @@ test("UI snapshot promotion happens only through the dedicated promotion script"
   assert.match(source, /ui-candidate/);
   assert.match(source, /saved-data/);
   assert.match(source, /firebase-export-metadata\.json/);
+  assert.match(source, /ui-candidate-acceptance\.json/);
   assert.match(source, /ui-promotion-backup/);
+  assert.match(source, /GetActiveTcpListeners/);
+  for (const port of [14400, 14500, 14600, 15001, 18080, 19000, 19099, 19199]) {
+    assert.match(source, new RegExp(String(port)));
+  }
+  assert.match(source, /accept-codex-local-ui-candidate\.mjs/);
+  assert.match(source, /--assert-only/);
+  assert.match(source, /cleanup_required/);
   assert.match(source, /Move-Item -LiteralPath \$candidatePath -Destination \$savedDataPath/);
 });
 

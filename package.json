@@ -20,6 +20,7 @@
     "test:local:ui:emulators:fresh": "npx -y --offline firebase-tools@latest --config firebase.codex-test.json --project demo-air-guard-v2-codex emulators:start --only auth,firestore,database,storage,functions",
     "test:local:ui:emulators": "npx -y --offline firebase-tools@latest --config firebase.codex-test.json --project demo-air-guard-v2-codex emulators:start --only auth,firestore,database,storage,functions --import .codex-test/saved-data",
     "test:local:ui:emulators:candidate": "npx -y --offline firebase-tools@latest --config firebase.codex-test.json --project demo-air-guard-v2-codex emulators:start --only auth,firestore,database,storage,functions --import .codex-test/ui-candidate",
+    "test:local:ui:candidate:accept": "node scripts/accept-codex-local-ui-candidate.mjs",
     "test:local:ui:export": "powershell -ExecutionPolicy Bypass -File scripts/export-codex-local-ui-state.ps1",
     "test:local:ui:promote": "powershell -ExecutionPolicy Bypass -File scripts/promote-codex-local-ui-state.ps1",
     "test:local:ui:build": "node scripts/build-codex-local-ui.mjs",

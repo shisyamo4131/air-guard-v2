@@ -8,6 +8,7 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $dedicatedRoot = Join-Path $projectRoot '.codex-test'
 $runtimeRoot = Join-Path $dedicatedRoot 'runtime'
 $candidatePath = Join-Path $dedicatedRoot 'ui-candidate'
+$candidateAcceptancePath = Join-Path $dedicatedRoot 'ui-candidate-acceptance.json'
 $stagingPath = Join-Path $runtimeRoot ("ui-export-{0}" -f $PID)
 $userSavedDataPath = Join-Path $projectRoot 'saved-data'
 $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
@@ -53,13 +54,16 @@ function Get-DirectoryFingerprint {
     }
 }
 
-foreach ($path in @($dedicatedRoot, $runtimeRoot, $candidatePath, $stagingPath)) {
+foreach ($path in @($dedicatedRoot, $runtimeRoot, $candidatePath, $candidateAcceptancePath, $stagingPath)) {
     Assert-ProjectChild -Path $path | Out-Null
 }
 
 New-Item -ItemType Directory -Path $runtimeRoot -Force | Out-Null
 if (Test-Path -LiteralPath $candidatePath) {
     throw 'Dedicated UI candidate already exists; do not overwrite unverified state.'
+}
+if (Test-Path -LiteralPath $candidateAcceptancePath) {
+    throw 'Stale dedicated UI candidate acceptance exists; do not overwrite it.'
 }
 if (Test-Path -LiteralPath $stagingPath) {
     throw 'Dedicated UI export staging path already exists.'

@@ -297,3 +297,10 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - generated serverはmarker、専用dotenv SHA-256、現在のclean source HEAD、project identity、外部作用拒否が一致しなければ`.output/server/index.mjs`をimportせず停止する。手動markerは正規経路としない。
 - sourceの構文検査、build identity・foreground契約test 14件、`git diff --check`は成功した。Nuxt build、generated server、Emulator、browserは実行しておらず、実build identityの受入れは実行ごとの明示承認待ちである。
 - mandatory restartの残りは、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 2
+
+- candidate exportだけでは専用saved-dataへ昇格できないようにし、candidate importに対するbackend verifier合格後だけ、candidate directory SHA-256、clean source HEAD、demo project identityを別acceptance receiptへ記録する経路を追加した。合成email・会社名・表示名だけを入力とし、password、token、実在情報は扱わない。
+- promotionはacceptance receiptとcandidate再計算SHA-256・現在HEADの一致に加え、専用Emulator hub/logging、Functions、Auth、Firestore、Realtime Database、Storage、generated serverの8 portがすべて停止済みであることを変更前に要求する。receiptと既存saved-dataは失敗時の復旧対象に含めた。
+- Node・PowerShell構文検査、candidate fingerprint・build identity・foreground契約test 16件、`git diff --check`は成功した。candidate export/import、backend verifier、promotion、Emulator、server、browserは実行していない。
+- mandatory restartの残りは、verifierの会社名カナ・Firestore path segment検証と、Auth POST・Firestore GETの契約test分離である。実build identityの受入れとhuman-equivalent UI再検証は別途build承認後に行う。公式進捗は10%のまま。
