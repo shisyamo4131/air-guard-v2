@@ -149,7 +149,7 @@ test("UI snapshot promotion happens only through the dedicated promotion script"
   assert.match(source, /Move-Item -LiteralPath \$candidatePath -Destination \$savedDataPath/);
 });
 
-test("UI state verifier reads the regular lifecycle result without repairing it", async () => {
+test("UI state verifier checks lifecycle state without repairing it", async () => {
   const source = await readFile(
     new URL("scripts/verify-codex-local-ui-state.mjs", projectRoot),
     "utf8",
@@ -157,18 +157,15 @@ test("UI state verifier reads the regular lifecycle result without repairing it"
 
   assert.match(source, /http:\/\/127\.0\.0\.1:19099/);
   assert.match(source, /demo-air-guard-v2-codex/);
-  assert.match(source, /accounts:query/);
   assert.match(source, /authorization: "Bearer owner"/);
-  assert.match(source, /maxResults: 2/);
-  assert.match(source, /method: "GET"/);
   assert.match(source, /EMULATOR_ADMIN_HEADERS/);
   assert.match(source, /users\.length !== 1 \|\| hasMore/);
   assert.match(source, /authUser\.email !== email/);
   assert.match(source, /emailVerified !== true/);
   assert.match(source, /claims\.companyId/);
   assert.match(source, /isValidFirestorePathSegment/);
-  assert.match(source, /encodeURIComponent\(claims\.companyId\)/);
-  assert.match(source, /encodeURIComponent\(authUser\.localId\)/);
+  assert.match(source, /encodeURIComponent\(companyId\)/);
+  assert.match(source, /encodeURIComponent\(userId\)/);
   assert.match(source, /companyNameKana/);
   assert.match(source, /claims\.isSuperUser !== false/);
   assert.match(source, /fieldValue\(user\.fields\?\.isAdmin\) !== true/);

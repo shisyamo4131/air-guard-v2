@@ -311,3 +311,10 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - claim company IDとAuthentication UIDを、空、前後space、`.`、`..`、slash、NUL、UTF-8 1500 bytes超過ではない単一Firestore path segmentとして検証し、検証後に各segmentをURL encodeしてCompany/User documentを読むようにした。
 - verifier・acceptance sourceの構文検査、会社名カナ・path segment・candidate・build identity・foreground契約test 19件、`git diff --check`は成功した。Emulator/backend接続、candidate、server、browser、buildは実行していない。
 - mandatory restartの残りはAuth POST・Firestore GETの契約test分離だけである。その後、実行ごとのbuild承認を得てbuild identityとhuman-equivalent UIの受入れを行う。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 4
+
+- backend verifierのtransportを注入可能なread-only helperへ分離した。Authentication account列挙はAuth Emulator `127.0.0.1:19099`へJSON body付きPOSTを1回だけ行い、Company/User document読取りはFirestore Emulator `127.0.0.1:18080`へbodyなしGETを2回だけ行う。
+- 独立した契約testでAuth helperがFirestore portへ、Firestore helperがAuth portへ到達しないこと、method、request body、owner header、URL encoded pathを確認した。source-patternだけでなくstub fetchが受けた実request引数を検証している。
+- verifier source構文検査、Auth POST・Firestore GET分離を含むmandatory restart関連契約test 21件、全domain単体test 359件、project-owned validator、managed governance validator、`git diff --check`は成功した。Emulator、server、browser、build、candidate data操作は実行していない。
+- mandatory restart 4項目の実装・非接続契約検証は完了したが、runtime受入れは未完了である。次は利用者の実行ごとの明示承認を得て専用buildを1回行い、build identity fail-closed、正規signup、candidate export/import、backend acceptance、停止済みpromotion、実利用者相当の再sign-in・dashboard、console/network、cleanupを順に検証する。公式進捗は10%のまま。

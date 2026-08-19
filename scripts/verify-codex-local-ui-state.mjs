@@ -45,8 +45,8 @@ export function isValidCompanyNameKana(value) {
   );
 }
 
-async function readOnlyAuthUsers() {
-  const response = await fetch(
+export async function readOnlyAuthUsers(fetchImpl = globalThis.fetch) {
+  const response = await fetchImpl(
     `${AUTH_ORIGIN}/identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:query`,
     {
       method: "POST",
@@ -62,6 +62,42 @@ async function readOnlyAuthUsers() {
     users: result.userInfo ?? [],
     hasMore: Boolean(result.nextPageToken),
   };
+}
+
+export async function readOnlyCompanyDocuments(
+  { companyId, userId },
+  fetchImpl = globalThis.fetch,
+) {
+  if (
+    !isValidFirestorePathSegment(companyId) ||
+    !isValidFirestorePathSegment(userId)
+  ) {
+    throw new Error("Dedicated Firestore document path is invalid.");
+  }
+  const documentsOrigin =
+    `${FIRESTORE_ORIGIN}/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+  const companyPathSegment = encodeURIComponent(companyId);
+  const userPathSegment = encodeURIComponent(userId);
+  const [company, user] = await Promise.all([
+    readJson(
+      await fetchImpl(`${documentsOrigin}/Companies/${companyPathSegment}`, {
+        method: "GET",
+        headers: EMULATOR_ADMIN_HEADERS,
+      }),
+      "company-read",
+    ),
+    readJson(
+      await fetchImpl(
+        `${documentsOrigin}/Companies/${companyPathSegment}/Users/${userPathSegment}`,
+        {
+          method: "GET",
+          headers: EMULATOR_ADMIN_HEADERS,
+        },
+      ),
+      "user-read",
+    ),
+  ]);
+  return { company, user };
 }
 
 async function verifyCodexLocalUiStateOrThrow({
@@ -101,29 +137,10 @@ async function verifyCodexLocalUiStateOrThrow({
     throw new Error("The regular account lifecycle is incomplete.");
   }
 
-  const documentsOrigin =
-    `${FIRESTORE_ORIGIN}/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
-  const companyPathSegment = encodeURIComponent(claims.companyId);
-  const userPathSegment = encodeURIComponent(authUser.localId);
-  const [company, user] = await Promise.all([
-    readJson(
-      await fetch(`${documentsOrigin}/Companies/${companyPathSegment}`, {
-        method: "GET",
-        headers: EMULATOR_ADMIN_HEADERS,
-      }),
-      "company-read",
-    ),
-    readJson(
-      await fetch(
-        `${documentsOrigin}/Companies/${companyPathSegment}/Users/${userPathSegment}`,
-        {
-          method: "GET",
-          headers: EMULATOR_ADMIN_HEADERS,
-        },
-      ),
-      "user-read",
-    ),
-  ]);
+  const { company, user } = await readOnlyCompanyDocuments({
+    companyId: claims.companyId,
+    userId: authUser.localId,
+  });
 
   if (
     fieldValue(company.fields?.companyName) !== companyName ||
