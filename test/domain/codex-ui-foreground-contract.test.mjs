@@ -166,6 +166,10 @@ test("UI state verifier reads the regular lifecycle result without repairing it"
   assert.match(source, /authUser\.email !== email/);
   assert.match(source, /emailVerified !== true/);
   assert.match(source, /claims\.companyId/);
+  assert.match(source, /isValidFirestorePathSegment/);
+  assert.match(source, /encodeURIComponent\(claims\.companyId\)/);
+  assert.match(source, /encodeURIComponent\(authUser\.localId\)/);
+  assert.match(source, /companyNameKana/);
   assert.match(source, /claims\.isSuperUser !== false/);
   assert.match(source, /fieldValue\(user\.fields\?\.isAdmin\) !== true/);
   assert.doesNotMatch(

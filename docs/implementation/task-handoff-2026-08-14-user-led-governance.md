@@ -304,3 +304,10 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - promotionはacceptance receiptとcandidate再計算SHA-256・現在HEADの一致に加え、専用Emulator hub/logging、Functions、Auth、Firestore、Realtime Database、Storage、generated serverの8 portがすべて停止済みであることを変更前に要求する。receiptと既存saved-dataは失敗時の復旧対象に含めた。
 - Node・PowerShell構文検査、candidate fingerprint・build identity・foreground契約test 16件、`git diff --check`は成功した。candidate export/import、backend verifier、promotion、Emulator、server、browserは実行していない。
 - mandatory restartの残りは、verifierの会社名カナ・Firestore path segment検証と、Auth POST・Firestore GETの契約test分離である。実build identityの受入れとhuman-equivalent UI再検証は別途build承認後に行う。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 3
+
+- backend verifierの期待identityへ会社名カナを追加し、全角カタカナ・半角／全角space・40文字以内の合成値だけを許可してCompany保存値との完全一致を要求した。candidate acceptance commandも会社名カナを別の合成環境変数から受け取る。
+- claim company IDとAuthentication UIDを、空、前後space、`.`、`..`、slash、NUL、UTF-8 1500 bytes超過ではない単一Firestore path segmentとして検証し、検証後に各segmentをURL encodeしてCompany/User documentを読むようにした。
+- verifier・acceptance sourceの構文検査、会社名カナ・path segment・candidate・build identity・foreground契約test 19件、`git diff --check`は成功した。Emulator/backend接続、candidate、server、browser、buildは実行していない。
+- mandatory restartの残りはAuth POST・Firestore GETの契約test分離だけである。その後、実行ごとのbuild承認を得てbuild identityとhuman-equivalent UIの受入れを行う。公式進捗は10%のまま。

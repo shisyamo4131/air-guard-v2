@@ -15,6 +15,7 @@ if (process.argv.includes("--assert-only")) {
   const expectedIdentity = {
     email: process.env.CODEX_UI_SYNTHETIC_EMAIL,
     companyName: process.env.CODEX_UI_SYNTHETIC_COMPANY_NAME,
+    companyNameKana: process.env.CODEX_UI_SYNTHETIC_COMPANY_NAME_KANA,
     displayName: process.env.CODEX_UI_SYNTHETIC_DISPLAY_NAME,
   };
   const verification = await verifyCodexLocalUiState(expectedIdentity);

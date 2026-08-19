@@ -23,6 +23,28 @@ function fieldValue(field) {
   return undefined;
 }
 
+export function isValidFirestorePathSegment(value) {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    value === value.trim() &&
+    value !== "." &&
+    value !== ".." &&
+    !value.includes("/") &&
+    !value.includes("\0") &&
+    Buffer.byteLength(value, "utf8") <= 1500
+  );
+}
+
+export function isValidCompanyNameKana(value) {
+  return (
+    typeof value === "string" &&
+    value.length <= 40 &&
+    value.trim().length > 0 &&
+    /^[\u30A0-\u30FF\u3000 ]+$/u.test(value)
+  );
+}
+
 async function readOnlyAuthUsers() {
   const response = await fetch(
     `${AUTH_ORIGIN}/identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts:query`,
@@ -45,6 +67,7 @@ async function readOnlyAuthUsers() {
 async function verifyCodexLocalUiStateOrThrow({
   email,
   companyName,
+  companyNameKana,
   displayName,
 }) {
   if (
@@ -52,6 +75,7 @@ async function verifyCodexLocalUiStateOrThrow({
     !/^[^@]+@codex-test\.invalid$/.test(email) ||
     typeof companyName !== "string" ||
     !companyName ||
+    !isValidCompanyNameKana(companyNameKana) ||
     typeof displayName !== "string" ||
     !displayName
   ) {
@@ -70,7 +94,8 @@ async function verifyCodexLocalUiStateOrThrow({
     authUser.emailVerified !== true ||
     authUser.disabled === true ||
     typeof claims.companyId !== "string" ||
-    !claims.companyId ||
+    !isValidFirestorePathSegment(claims.companyId) ||
+    !isValidFirestorePathSegment(authUser.localId) ||
     claims.isSuperUser !== false
   ) {
     throw new Error("The regular account lifecycle is incomplete.");
@@ -78,9 +103,11 @@ async function verifyCodexLocalUiStateOrThrow({
 
   const documentsOrigin =
     `${FIRESTORE_ORIGIN}/v1/projects/${PROJECT_ID}/databases/(default)/documents`;
+  const companyPathSegment = encodeURIComponent(claims.companyId);
+  const userPathSegment = encodeURIComponent(authUser.localId);
   const [company, user] = await Promise.all([
     readJson(
-      await fetch(`${documentsOrigin}/Companies/${claims.companyId}`, {
+      await fetch(`${documentsOrigin}/Companies/${companyPathSegment}`, {
         method: "GET",
         headers: EMULATOR_ADMIN_HEADERS,
       }),
@@ -88,7 +115,7 @@ async function verifyCodexLocalUiStateOrThrow({
     ),
     readJson(
       await fetch(
-        `${documentsOrigin}/Companies/${claims.companyId}/Users/${authUser.localId}`,
+        `${documentsOrigin}/Companies/${companyPathSegment}/Users/${userPathSegment}`,
         {
           method: "GET",
           headers: EMULATOR_ADMIN_HEADERS,
@@ -100,6 +127,7 @@ async function verifyCodexLocalUiStateOrThrow({
 
   if (
     fieldValue(company.fields?.companyName) !== companyName ||
+    fieldValue(company.fields?.companyNameKana) !== companyNameKana ||
     fieldValue(user.fields?.companyId) !== claims.companyId ||
     fieldValue(user.fields?.email) !== email ||
     fieldValue(user.fields?.displayName) !== displayName ||
