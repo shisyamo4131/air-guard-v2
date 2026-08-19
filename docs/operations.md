@@ -178,6 +178,8 @@ npm run test:local:ui:server
 
 Windows上のCodex管理ブラウザでは、Nuxt開発サーバーのVite moduleをHTTP 200で取得できてもSPA hydrationが完了しない事象を確認した。一回限りの利用者承認により、`config/codex-test-ui.env`を使ったNuxt buildと`127.0.0.1:14600`限定のNode serverで代替検証し、sign-inからdashboard到達まで成功した。プロジェクト規則のbuild禁止は維持されるため、Codexがこのbuild経路を再実行する場合は、その都度明示承認を得る。生成した`.output`は検証後に削除する。
 
+承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
+
 `scripts/run-codex-local-ui-child.ps1`を使うprocess管理案はNortonに`IDP.Generic`として検出されたため破棄・revertした。隔離解除、allowlist登録、同方式の復元を行わない。現在の前景commandはこのhelperに依存しない。
 
 完成条件は次のとおりとする。

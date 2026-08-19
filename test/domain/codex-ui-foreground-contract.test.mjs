@@ -33,6 +33,7 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   const server = packageJson.scripts["test:local:ui:server"];
   const generatedServer =
     packageJson.scripts["test:local:ui:server:generated"];
+  const generatedBuild = packageJson.scripts["test:local:ui:build"];
   const exportState = packageJson.scripts["test:local:ui:export"];
   const promoteState = packageJson.scripts["test:local:ui:promote"];
 
@@ -47,10 +48,11 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   assert.match(server, /--dotenv config\/codex-test-ui\.env/);
   assert.match(server, /--host 127\.0\.0\.1 --port 14600/);
   assert.match(generatedServer, /serve-codex-local-ui\.mjs/);
+  assert.match(generatedBuild, /build-codex-local-ui\.mjs/);
   assert.match(exportState, /export-codex-local-ui-state\.ps1/);
   assert.match(promoteState, /promote-codex-local-ui-state\.ps1/);
   assert.doesNotMatch(
-    `${freshEmulators}\n${emulators}\n${candidateEmulators}\n${server}\n${generatedServer}\n${exportState}\n${promoteState}`,
+    `${freshEmulators}\n${emulators}\n${candidateEmulators}\n${server}\n${generatedBuild}\n${generatedServer}\n${exportState}\n${promoteState}`,
     /Start-Process|--detach|&\s*$/,
   );
 });
@@ -101,6 +103,8 @@ test("generated UI server fixes loopback and external-effect denial", async () =
   assert.match(source, /NITRO_HOST: "127\.0\.0\.1"/);
   assert.match(source, /NITRO_PORT: "14600"/);
   assert.match(source, /AIR_GUARD_EXTERNAL_EFFECTS: "deny"/);
+  assert.match(source, /assertCodexUiBuildIdentity/);
+  assert.match(source, /CODEX_UI_BUILD_IDENTITY_FILE/);
   assert.match(source, /\.\.\/\.output\/server\/index\.mjs/);
 });
 

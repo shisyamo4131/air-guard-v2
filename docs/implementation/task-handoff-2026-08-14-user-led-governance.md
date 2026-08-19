@@ -289,3 +289,11 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 旧PCと外付けHDD backupは、このactivation commitを旧coordinatorが確認するまで保持する。
 - PC間Remote実験はrepository変更なしで終了した。cross-host callbackは利用不能だったため、このcheckpoint結果は利用者が旧coordinatorへ手動中継する。
 - next: mandatory restart 4項目を設計者との壁打ちで最小segment化する。利用者の開始指示までは新規実装しない。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 1
+
+- 2026-08-19にPM（AirGuardV2）-06で自己完結local UI test環境の構築を再開した。最初の最小segmentは専用build identityのfail-closed gateであり、application code、build、Emulator、server、browser、saved-dataを対象外とした。
+- `npm run test:local:ui:build`は専用dotenvの全キー・全値をdemo project、loopback、Emulator用合成値のallowlistと照合し、build前後のclean source HEADが同一の場合だけ`.output/codex-local-ui-build-identity.json`を生成する。build失敗またはsource変化時は有効markerを残さない。
+- generated serverはmarker、専用dotenv SHA-256、現在のclean source HEAD、project identity、外部作用拒否が一致しなければ`.output/server/index.mjs`をimportせず停止する。手動markerは正規経路としない。
+- sourceの構文検査、build identity・foreground契約test 14件、`git diff --check`は成功した。Nuxt build、generated server、Emulator、browserは実行しておらず、実build identityの受入れは実行ごとの明示承認待ちである。
+- mandatory restartの残りは、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。公式進捗は10%のまま。
