@@ -24,6 +24,7 @@
 
 ### Changed
 
+- Codex専用local UI testについて、保存済み合成Auth accountを起動ごとに再作成せずimportして使う契約、Emulator→Nuxt→インアプリブラウザの起動順序、一回限定reload、dashboard到達、終了時port確認を運用手順へ記録した。Nuxt dev serverは専用dotenvのexact allowlistと外部作用拒否を検証するwrapper経由へ変更した。Browser visibilityは再試験時に有効化できず、background UI成功と利用者目視未達を分離して記録した。
 - Firebase CLIをWindowsユーザーのglobal npm領域でlatest運用し、Codex専用Emulator・seed・export scriptから`npx --offline` cache依存を除去した。CLI更新で回帰した場合は直前の確認済みversionへ戻す運用を追加した。
 - Codex専用generated UI serverを、専用build commandが記録したdemo project、外部作用拒否、専用dotenv SHA-256、clean source HEADのidentityと現在状態が一致する場合だけ起動するfail-closed方式へ変更した。実buildは引き続き実行ごとの明示承認を必要とする。
 - Codex専用UI candidateを、backend verifier合格時のdirectory SHA-256とclean source HEADへ結び付け、専用Emulator・server portがすべて停止し、acceptance receiptが現在状態と一致する場合だけsaved-dataへ昇格できるようにした。

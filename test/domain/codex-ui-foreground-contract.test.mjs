@@ -48,8 +48,7 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   assert.match(emulators, /--import \.codex-test\/saved-data/);
   assert.match(candidateEmulators, /--import \.codex-test\/ui-candidate/);
   assert.match(candidateAcceptance, /accept-codex-local-ui-candidate\.mjs/);
-  assert.match(server, /--dotenv config\/codex-test-ui\.env/);
-  assert.match(server, /--host 127\.0\.0\.1 --port 14600/);
+  assert.match(server, /run-codex-local-ui-dev\.mjs/);
   assert.match(generatedServer, /serve-codex-local-ui\.mjs/);
   assert.match(generatedBuild, /build-codex-local-ui\.mjs/);
   assert.match(exportState, /export-codex-local-ui-state\.ps1/);
@@ -58,6 +57,21 @@ test("dedicated UI commands remain separate foreground processes", async () => {
     `${freshEmulators}\n${emulators}\n${candidateEmulators}\n${candidateAcceptance}\n${server}\n${generatedBuild}\n${generatedServer}\n${exportState}\n${promoteState}`,
     /Start-Process|--detach|&\s*$/,
   );
+});
+
+test("dedicated UI dev server validates config and denies external effects", async () => {
+  const source = await readFile(
+    new URL("scripts/run-codex-local-ui-dev.mjs", projectRoot),
+    "utf8",
+  );
+
+  assert.match(source, /readDedicatedConfigFingerprint/);
+  assert.match(source, /config\/codex-test-ui\.env/);
+  assert.match(source, /"127\.0\.0\.1"/);
+  assert.match(source, /"14600"/);
+  assert.match(source, /AIR_GUARD_EXTERNAL_EFFECTS: "deny"/);
+  assert.match(source, /stdio: "inherit"/);
+  assert.doesNotMatch(source, /Start-Process|detached:\s*true/);
 });
 
 test("flagged PowerShell UI child helper is absent", async () => {

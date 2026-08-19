@@ -160,7 +160,23 @@ npm run test:local
 
 ### Codexだけで完結するlocal UI test
 
-2026-08-17に旧browser操作基準で最小経路を検証した。専用Functions、Firebase clientの専用port解決、loopback server設定、確認済み合成Auth account、company claim、有効な本登録User、Codex管理ブラウザsign-in、dashboard到達、process・runtime cleanupの履歴証拠は保持する。2026-08-17に追加した実利用者相当のpointer・keyboard操作基準では、正規signupからのbaseline生成、再import後sign-in、dashboard再到達が未検証であり、自己完結UI modeの現在の受入れは未完了とする。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+2026-08-19にNuxt開発サーバーを使う自己完結最小経路を再検証した。Codexが専用Emulator、Functions、Nuxt、インアプリブラウザを順に起動し、保存済み合成Auth accountを可視controlへ一文字ずつ入力してsign-inし、`/dashboard`へ到達した。初回navigation待機中は起動templateのままtimeoutしたが、Nuxt warm-up後の通常reloadでSPA hydrationが完了したため、起動templateだけを接続失敗と判定しない。正規signupからのbaseline再生成はこの最小経路とは別の受入れであり、引き続き未検証とする。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+
+標準の起動・確認・終了順序は次のとおりとする。
+
+1. 専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。
+2. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
+3. `npm run test:local:ui:server`を別の前景processで起動する。このwrapperは専用dotenvのexact allowlist、demo project、loopback emulator設定を値を出力せず検証し、`AIR_GUARD_EXTERNAL_EFFECTS=deny`を固定してからNuxtを同じ前景processで起動する。Nuxt、Vite、Nitroのready出力とloopback HTTP 200を待つ。
+4. Codexインアプリブラウザで`http://127.0.0.1:14600/`を開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、直後の状態が`true`であることを確認する。`false`のままなら目視可能と報告せず、background検証として続行するか利用者と停止判断を行う。
+5. 製品landmarkが現れるまで待ち、起動templateを成功証拠にしない。起動templateが残る場合は、Nuxt側のready、HTTP 200、consoleを確認してから通常reloadを1回だけ行い、DOM、URL、consoleでhydrationを確認する。再度失敗した場合は接続成功とせず停止する。
+6. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。
+7. Codexが作成したtabを閉じ、Nuxt、Emulatorの順に停止し、専用portがLISTENしていないことを確認する。
+
+インアプリブラウザは既定ではbackgroundで操作される。利用者が目視を希望する検証ではvisibilityを要求し、可視状態を取得できた同じtabだけを目視可能な操作証拠とする。これはChrome拡張ではなくCodex Desktop内の専用ブラウザ表示であり、利用者のChrome profileを使用しない。2026-08-19の再試験ではvisibilityを2回要求しても状態は`false`のままで、Emulator sign-inとdashboard到達はbackgroundで成功したが、利用者による目視は未提供である。Codex DesktopまたはBrowser plugin更新後に再確認する。
+
+`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-19時点で2件を確認済みであり、通常起動は`--import .codex-test/saved-data`だけを使う。sign-inに使う合成credentialの権威ある定義は`test/fixtures/codex-local-seed.mjs`とし、local demo project以外へ使用しない。credential値を応答や検証logへ出力しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。fixture変更またはsnapshot破損時だけ、承認済みcandidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+
+`npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
 
 ブラウザUIの挙動・受入れ証拠は次の操作契約に従う。
 
@@ -175,7 +191,7 @@ npm run test:local
 Emulatorと開発サーバーは、次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
 
 ```powershell
-npm run test:local:emulators
+npm run test:local:ui:emulators
 npm run test:local:ui:server
 ```
 
@@ -202,6 +218,8 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 7. 終了時にserverとEmulatorを停止し、一時runtimeをproject配下の明示pathだけから削除する。失敗時も同じcleanupと状態報告を行う。
 
 2026-08-17の旧基準による受入れでは、専用suite 72件、UI設定契約9件、専用build、dashboard表示、dashboard滞在中のconsole error 0件、全専用port閉鎖、`.codex-test/runtime`空、`.output`削除を確認した。ただし`fill`等を含む旧操作証拠は新基準の受入れには再利用しない。サインアウト直後に購読解除前のFirestore snapshot listenerが2件の`permission-denied`を出す既存挙動は残っており、製品側のlogout cleanup課題として扱う。
+
+2026-08-19のレビュー後再試験では、専用dotenv exact allowlistと外部作用拒否のpreflight、保存Auth fixture 2件、saved-data fingerprint、全専用port未使用、Emulator importと全service ready、Nuxt/Vite/Nitro ready、loopback HTTP 200を確認してからインアプリブラウザを開いた。起動template後の一回限定reloadで製品topを確認し、可視button clickと一文字ずつのkeyboard入力だけでsign-inして`/dashboard`へ到達し、dashboard滞在中のconsole errorは0件だった。終了後は全専用port閉鎖とsaved-data fingerprint不変を確認した。visibilityは`false`のままで利用者目視だけは未達である。network host一覧のbrowser証拠は取得しておらず、exact configとdemo projectのEmulator fail-closed出力を非UI証拠とする。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

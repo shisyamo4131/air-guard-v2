@@ -22,6 +22,7 @@
 - Codex管理ブラウザの挙動・受入れ証拠は、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけで取得する。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測と非UI setup・backend assertionは許可するがUI操作証拠から分離する。
 - Functions追加前に外部API、Stripe、mail、FCM、通知、ジオコーディング等をstub、明示拒否、または到達不能設定でfail-closedにする。隔離を証明できないFunctionを専用UI testから呼ばない。
 - 専用accountの資格情報は実在の資格情報を流用せず、local demo projectだけで有効な合成値または実行時生成値を使う。秘密情報、session、実在emailをrepository、log、prompt、成果物へ保存しない。
+- 通常のUI testでは検証済み合成Authentication accountを含む`.codex-test/saved-data`を`--import`して再利用し、起動ごとにaccountを再作成しない。snapshotの置換はfixture変更または破損時のcandidate受入れ・promotionに限定する。
 - 数百件のdocumentは段階的に生成し、件数、応答時間、memory、Emulator logを監視する。約1000件で停止した利用者経験をlocal riskとして記録し、同規模の一括生成は停止条件と復旧方法を定めた別承認なしに行わない。公式Firebase上限とは断定しない。
 - `.codex-test`は50 MiBで警告、100 MiBで実行停止とする。実行ごとの一時runtimeは終了時に専用領域配下であることを確認して削除する。
 - Codex所有のSQLite、WAL、セッション記録はテスト基盤から変更、削除、`VACUUM`しない。タスク容量はADR 0011の手順で別に監視する。
@@ -49,7 +50,7 @@
 
 ## 移行
 
-Rules・Callable等の隔離test用直接生成fixtureは`.codex-test/isolated-saved-data`で管理し、正規UI登録の受入れ証拠には使用しない。UI基準snapshotは正規signup、Authentication Emulator OOB確認、同じbrowser contextでの`createAdminAccount`、token refresh、dashboard到達を完了したbackend状態からcandidate exportし、fresh import後のbackend assertionと実利用者相当sign-in・dashboard再到達に合格してから`.codex-test/saved-data`へ昇格する。OOB確認とbackend assertionはUI操作証拠には数えない。2026-08-17までの旧基準のbrowser証拠は履歴として保持するが、新しいpointer・keyboard操作基準では未検証である。実端末FCMとremote APIは含めない。Nuxt buildを使う再検証はプロジェクト規則に従い実行ごとの明示承認を必要とする。
+Rules・Callable等の隔離test用直接生成fixtureは`.codex-test/isolated-saved-data`で管理し、正規UI登録の受入れ証拠には使用しない。UI基準snapshotは正規signup、Authentication Emulator OOB確認、同じbrowser contextでの`createAdminAccount`、token refresh、dashboard到達を完了したbackend状態からcandidate exportし、fresh import後のbackend assertionと実利用者相当sign-in・dashboard再到達に合格してから`.codex-test/saved-data`へ昇格する。OOB確認とbackend assertionはUI操作証拠には数えない。2026-08-19には既存saved-dataの合成accountをfresh importし、pointer・keyboard操作でsign-inしてdashboardへ再到達する最小経路をNuxt開発サーバーとインアプリブラウザで確認した。利用者向けbrowser visibilityは状態が`false`のままで未提供だったため、background UI検証の成功と目視可能性を分けて扱う。正規signupからのsnapshot再生成は別途未検証である。実端末FCMとremote APIは含めない。Nuxt buildを使う再検証はプロジェクト規則に従い実行ごとの明示承認を必要とする。
 
 ## 再検討条件
 

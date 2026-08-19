@@ -24,7 +24,7 @@
     "test:local:ui:export": "powershell -ExecutionPolicy Bypass -File scripts/export-codex-local-ui-state.ps1",
     "test:local:ui:promote": "powershell -ExecutionPolicy Bypass -File scripts/promote-codex-local-ui-state.ps1",
     "test:local:ui:build": "node scripts/build-codex-local-ui.mjs",
-    "test:local:ui:server": "nuxt dev --dotenv config/codex-test-ui.env --host 127.0.0.1 --port 14600",
+    "test:local:ui:server": "node scripts/run-codex-local-ui-dev.mjs",
     "test:local:ui:server:generated": "node scripts/serve-codex-local-ui.mjs",
     "update:adapter": "npm update @shisyamo4131/air-firebase-v2-client-adapter && cd functions && npm update @shisyamo4131/air-firebase-v2-server-adapter && cd .. && npm run list:adapter",
     "update:firemodel": "npm update @shisyamo4131/air-firebase-v2 && cd functions && npm update @shisyamo4131/air-firebase-v2 && cd ..",
