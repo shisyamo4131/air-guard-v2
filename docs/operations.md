@@ -156,7 +156,28 @@ npm run test:local
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
 
-現在のsuiteは専用seed、Authサインインに加え、Firestore・Storage Rulesについてverified email、正常な会社claim、tenant path、有効な本登録User、恒久的なsuper-user bypass拒否を検証します。Companies本体、名前付きsubcollection、未定義descendant、SecurityReportIndexes・StripeDataの個別操作制約と、SecurityReportsのupload、list、metadata、download URL、byte download、deleteを確認します。さらに、正式な`functions/apis/index.js`から公開する10 Callableを専用Functions Emulatorで読み込み、内部helperが非公開であることとCallable transport readinessを確認します。再構築、全会社メール重複確認、signup用メール利用可否に加え、仮登録検索、管理者会社作成、一般User本登録・有効化・無効化・管理者移譲の入口guardを検証し、管理者会社作成はCompany、User、custom claimsの成功時整合と再実行も確認します。合計72件です。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportは未対象です。追加のFunctionsテストでは、外部作用をモックまたはfail-closedで隔離します。
+#### UWB-04 User予約migration
+
+`scripts/migrate-user-reservations.mjs`はCodex専用Firestore Emulatorにimport済みのUserを監査し、全Userのemail予約とEmployee予約を再構築する。既定はdry-runで、`demo-air-guard-v2-codex`、`FIRESTORE_EMULATOR_HOST=127.0.0.1:18080`、一致するdemo project環境以外ではAdmin SDK初期化前に停止する。remote modeは実装していない。
+
+```powershell
+# 専用Emulatorをcandidate importで起動した別process内の環境を使用する
+node scripts/migrate-user-reservations.mjs --target codex-local
+
+# dry-runが出力したplanDigestと同じ状態にだけ適用する
+node scripts/migrate-user-reservations.mjs --target codex-local --apply --plan-digest <64文字のdigest>
+
+# apply後に再度dry-runし、cleanを確認する
+node scripts/migrate-user-reservations.mjs --target codex-local
+```
+
+- dry-runで変更予定がある場合の終了codeは2、data blockerは3である。applyはblocking findingが1件でもあればwrite 0で停止する。
+- canonical email重複、同社Employee重複、不正User状態、dangling Employee、予約のmissing・malformed・mismatch・orphanを監査する。
+- applyが変更できるのは、missing予約のcreateと、旧pointer先Userが不存在で競合再検査に合格したstale pointerのupdateだけである。予約delete、User、Employee、Authenticationのwriteは行わない。
+- reportは分類別件数、計画digest、opaque subject hashだけを出力し、email、氏名、company ID、User ID、path、document bodyを出力しない。
+- `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Dev/Prodへのmigrationはmaintenance、backup、dry-run、別の明示承認を得るまで実行しない。
+
+UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firestore・Storage Rules、旧公開Callableを含む72件である。UWB-04では`functions/apis/index.js`の公開Callableを12件へ更新し、旧global availability testを退役させた。production entry全体のCallable候補は、別exportの`geocoding`を含む13件である。新しいemail/Employee予約fixture、予約Rules、仮登録作成・削除、本登録変換、初期管理者作成、concurrencyを含む専用Emulator suiteは、candidate migration後に再実行するまで未確認として扱う。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportも未対象である。
 
 ### Codexだけで完結するlocal UI test
 
@@ -581,6 +602,6 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
-- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、全会社メール重複確認Callableのhandlerを確認する。Functions transport、Realtime Database Rules、UI、外部サービスの自動回帰testは未整備である。
+- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、User lifecycle Callableのhandlerを確認する。UWB-04予約fixtureの再受入れ、Realtime Database Rules、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。

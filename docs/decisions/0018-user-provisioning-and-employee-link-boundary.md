@@ -19,6 +19,9 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 - `employees:write`だけではUserアカウント管理を許可しない。
 - 単独仮User作成とEmployee連携仮User作成は別の公開操作とする。
 - Employee連携では、serverが同一会社のEmployee存在、未紐付け、1 Employee対最大1 Userを検証し、任意のclient指定`employeeId`を信頼しない。
+- Employee連携は在職中Employeeだけを対象とし、会社管理者またはstrict preset由来`users:write`保有者は単独・Employee連携の両方で既知role presetを任意設定できる。既定は空配列で、`isAdmin`は常にfalseとする。
+- 全Userのcanonical emailとEmployee紐付けの一意性は、server-onlyのemail予約とEmployee予約を正本にする。予約は作成だけでなく本登録変換、仮登録削除、初期管理者作成まで同じlifecycleで更新し、missing・malformed・mismatchをfail closedとする。
+- 予約導入前のUserはmigrationで監査・backfillし、製品runtimeにlegacy query fallbackを置かない。AuthenticationとFirestoreを跨ぐ完全なatomicityは保証せず、claims失敗等は整合した再実行を可能にする。
 - Employee連携Userは自身のEmployee情報へアクセスできる。ただし公開fieldと提供pathはEmployee Self Accessの別ゲートで確定し、UWBではUser書込み境界を先行する。
 - UWBは最初から全User lifecycleを一括変更せず、仮登録Userと保護fieldのCritical境界から段階的に広げる。
 
@@ -38,7 +41,7 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 - 権限: `users:write`をpermission catalogと対象role presetへ追加する必要がある。
 - API: 単独仮UserとEmployee連携仮Userの作成入口を分離する。
 - UI: User一覧とEmployee詳細は、閲覧permissionとUser管理permissionを区別する。
-- data: `employeeId`の同一会社内一意性と既存重複の確認が必要になる。
+- data: email予約`UserEmailReservations/{sha256(canonicalEmail)}`とEmployee予約`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を追加し、既存Userの重複・不正状態・予約pointerをmigrationで確認する。
 - security: Usersの汎用Rules迂回、任意field write、任意UID削除連鎖をUWB完了までdeploy不可のCritical riskとして維持する。
 
 ## 移行

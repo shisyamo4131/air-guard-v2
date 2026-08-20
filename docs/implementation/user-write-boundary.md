@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-03完了、UWB-04着手待ち）
+- 状態: Active（UWB-04実装・単体test完了、Emulator/UI受入れ待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 3 | 10 | UWB-01〜03完了、UWB-04着手待ち |
+| 実装ゲート | 3 | 10 | UWB-01〜03完了、UWB-04は受入れ未完了のため未加点 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -34,7 +34,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 - [x] 一般User本登録は、確認済みAuthentication emailに一致する一意の仮登録をserver側で解決する。
 - [x] 初期会社管理者は、メール確認後にCompany・User・custom claimsを作成する。
-- [x] 会社所属済み6 Callableは共通Auth identity gateを通る。
+- [x] 会社所属済み8 Callableは共通Auth identity gateを通る。
 - [x] `disableUser`、`enableUser`、`changeAdminUser`は操作固有のactor・target検査を持つ。
 - [x] Firestore・Storage Rulesはverified email、会社claim、tenant path、有効な本登録Userを共通入口で検査する。
 - [x] 上記はlocal `main`の`3b161ff`へ統合済みである。
@@ -45,8 +45,8 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 | 操作 | 現行経路 | UWBでの扱い |
 |---|---|---|
-| User一覧から仮User作成 | `UsersManager`からmodel `create()` | server境界へ移行する |
-| 従業員画面から仮User作成 | `EmployeeUserManager`からmodel `create()` | server境界へ移行する |
+| User一覧から仮User作成 | `createStandaloneTemporaryUser` Callable | UWB-04でserver境界へ移行済み、local UI未検証 |
+| 従業員画面から仮User作成 | `createEmployeeLinkedTemporaryUser` Callable | UWB-04でserver境界へ移行済み、local UI未検証 |
 | displayName・roles等の編集 | `UsersManager`からmodel `update()` | field別に分離する |
 | 有効化・無効化 | 既存Callable | 維持し、Rules迂回を閉じる |
 | 管理者移譲 | 既存Callable | 維持し、Rules迂回を閉じる |
@@ -85,7 +85,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 - 本登録Userの削除条件とEmployee退職時のUser/Auth状態遷移。
 - role値をpresetだけに限定するか、明示permission文字列も許可するか。
 - 本人が変更できるUser設定fieldと更新方式。
-- 仮登録emailの競合防止に使用する予約文書の具体pathとmigration。
+- 予約導入後のDev/Prod migration実行時期とmaintenance window。予約path、runtime契約、Codex専用Emulator向けdry-run/apply toolはUWB-04で確定・実装済みである。
 - Employee連携User本人へ公開するEmployee fieldと提供path。これはEmployee Self AccessとしてUWB外の専用ゲートで扱う。
 
 後続ゲートの未確定事項を推測でRulesやCallableへ固定しない。
@@ -186,26 +186,34 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Not started
+- 状態: Implementation and unit tests complete（Emulator・正規UI・saved-data migration未実施）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
 
-- [ ] 仮登録作成actorをUWB-01の契約に限定する。
-- [ ] `companyId`を実行者identityから解決し、client入力を信頼しない。
-- [ ] `isTemporary=true`、`isAdmin=false`、`disabled=false`をserverで固定する。
-- [ ] email、displayName、employeeId、roles初期値のfield・型を検証する。
-- [ ] emailとemployeeIdの重複・同時実行方針を実装する。
-- [ ] User一覧と従業員画面の直接`create()`をCallableへ置換する。
-- [ ] 作成API接続と同時に、User一覧・Employee詳細の作成actionを`users:write`または会社管理者へ限定する。
-- [ ] 作成失敗時に未完成Userや誤った画面状態を残さない。
+- [x] 仮登録作成actorを会社管理者またはstrict preset由来`users:write`へ限定し、transaction内で再検証する。
+- [x] `companyId`を確認済み実行者identityから解決し、client入力を受け取らない。
+- [x] `isTemporary=true`、`isAdmin=false`、`disabled=false`をserverで固定する。
+- [x] standaloneとEmployee-linkedのexact allowlist、email、displayName、employeeId、roles、tag・通知fieldを検証する。
+- [x] Employee連携を在職中・同社・未紐付けEmployeeへ限定し、rolesを任意・既定空配列にする。
+- [x] canonical email予約と同社Employee予約をserver-only正本とし、同時callをFirestore transactionで排他する。
+- [x] 仮登録削除、本登録変換、初期管理者作成、未認証事前登録確認、初期管理者email事前確認を予約awareへ揃える。
+- [x] 予約missing・malformed・mismatchをfail closedとし、runtime legacy query fallbackを廃止する。
+- [x] Codex専用demo Emulator以外を初期化前に拒否するdry-run既定の予約migration toolとpure unit testを追加する。実dataへのapplyは行っていない。
+- [x] 予約collectionをFirestore clientからrecursive denyし、Companies汎用matchからEmployee予約を除外する。Users直接writeはUWB-08 blockerとして残す。
+- [x] User一覧と従業員画面の直接`create()`を各Callableへ置換し、送信直前にclient policyを再評価する。
+- [x] User設定routeと両作成actionを会社管理者または`users:write`へ合わせ、Employee-linked roles選択UIを追加する。
+- [x] 製品caller 0を確認して`checkEmailAvailabilityGlobal`を公開API indexとclient transportから除外する。source fileはrollback用に残置する。
+- [x] 2026-08-20時点の全domain単体test 462件と対象SFC compileが成功している。
+- [ ] Codex専用saved-dataをcandidate migrationし、予約pointerとsource User不変をbackend assertionで確認する。
+- [ ] Emulator concurrency、Rules、Callable lifecycle、正規UIの作成→本登録または削除を検証する。
 
 #### 完了条件
 
-- [ ] `users:write`を持たない一般Userや他社Userから仮登録を作成できない。
-- [ ] clientから本登録・管理者・無効Userを作成できない。
-- [ ] 重複、競合、再試行の結果が定義されている。
-- [ ] 利用者が各application implementation fileを確認している。
+- [x] 単体testで`users:write`を持たない一般User、他社、仮登録、無効、不正actorを拒否する。
+- [x] 単体testでclientから本登録・管理者・無効Userや保護fieldを作成できない。
+- [x] 重複、競合、再試行、claims部分失敗、予約pointer lifecycleが定義されている。
+- [x] 利用者がUWB-04に限り1 application fileごとの確認を省略し、単体test完了までの連続作業を承認している。
 - [ ] 単体testと両作成UIのlocal確認が成功している。
 
 ### UWB-05 通常プロフィールと本人設定のfield境界

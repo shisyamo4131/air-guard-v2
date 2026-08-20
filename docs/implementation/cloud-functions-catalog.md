@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-044
-- 最終確認日: 2026-08-16
+- 最終確認日: 2026-08-20
 - 根拠ファイル: `functions/index.js`、`functions/package.json`、`functions/modules/firebase.init.js`、`functions/apis/*.js`、entryから直接re-exportされるmodules/triggers/apisの宣言部
 - 調査方法: entryのstar exportを起点にexport名を列挙し、各宣言のtrigger/optionsと入口認証の狭い範囲だけを確認した。業務処理本文は既存実装文書を参照し、再調査していない。
 
@@ -18,18 +18,20 @@ Stripe moduleのstar exportはcomment outされる。migration moduleもentryか
 
 ## deployed-candidate catalog
 
-entryから到達するFirebase Function objectは25件である。明示のないmemory、CPU、concurrency、min/max instances、timeout、retry、invoker、service account、secrets、App Checkはplatform/default設定に委ねられ、repository宣言から確定しない。
+entryから到達するFirebase Function objectは27件である。明示のないmemory、CPU、concurrency、min/max instances、timeout、retry、invoker、service account、secrets、App Checkはplatform/default設定に委ねられ、repository宣言から確定しない。
 
 ### Callable / HTTP相当
 
 | export名 | trigger / options | 1行責務 | 入口認証 |
 | --- | --- | --- | --- |
 | `geocoding` | v2 callable | addressを座標へ変換 | なし。address stringのみ検証し、App Check、length、rate limit、quota制御なし。FUT-0140参照。 |
-| `checkEmailAvailabilityGlobal` | v2 callable | 全Usersでemail重複確認 | verified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者。`isSuperUser`単独では不可。 |
-| `checkEmailAvailability` | v2 callable | 初期会社管理者signup前にAuth/全Usersのemail重複を確認 | なし。emailだけを検証し、caller指定のpolicy区分では分岐しない。 |
-| `createAdminAccount` | v2 callable | 新Companyと最初のadmin User/claimsを作成 | token/current AuthのUID・email・verified・disabled・claim整合を要求し、別の既存所属を拒否する。同じUIDの有効な初期管理者状態はclaims再設定のため再利用する。 |
-| `checkUserPreRegistration` | v2 callable | emailから仮登録Userを検索 | なし。0件/1件の登録状態だけを返し、複数一致を拒否する。App Check、rate limitなし。 |
-| `setupUserAccount` | v2 callable | 仮Userを認証UIDのUserへ変換しclaims設定 | 認証・verified email必須。client dataを受け取らず、token emailから仮Userを一意解決する。 |
+| `checkEmailAvailability` | v2 callable | 初期会社管理者signup前にAuth/email予約の重複をadvisory確認 | なし。emailだけを検証し、caller指定のpolicy区分では分岐しない。予約は作成しない。 |
+| `createAdminAccount` | v2 callable | 新Company、最初のadmin User、email予約、claimsを作成 | token/current AuthのUID・email・verified・disabled・claim整合を要求し、別の既存所属を拒否する。整合した予約・Company・Userはclaims再設定のため再利用する。 |
+| `checkUserPreRegistration` | v2 callable | email予約から仮登録状態を確認 | なし。予約、pointer先仮User、必要なEmployee予約が整合する場合だけbooleanを返す。App Check、rate limitなし。 |
+| `setupUserAccount` | v2 callable | 予約pointer先の仮Userを認証UIDのUserへ変換しclaims設定 | 認証・verified email必須。client dataを受け取らず、email/Employee予約pointerを同じtransactionでUIDへ更新する。 |
+| `createStandaloneTemporaryUser` | v2 callable | 単独仮登録Userとemail予約をtransaction作成 | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:write`を要求する。 |
+| `createEmployeeLinkedTemporaryUser` | v2 callable | 在職Employee連携仮登録Userと2予約をtransaction作成 | standaloneと同じactor境界に加え、同社ACTIVE Employeeと未紐付けを要求する。 |
+| `deleteTemporaryUser` | v2 callable | 仮登録Userと対応予約をtransaction削除 | standaloneと同じactor境界。予約pointer不整合はfail closedで、Authenticationへ作用しない。 |
 | `disableUser` | v2 callable | 同社の本登録非管理者Userを無効化 | 認証、caller UID/company claim、有効な本登録会社管理者、別UIDの同社target、target Auth UID/company claimを必須化。 |
 | `enableUser` | v2 callable | 同社の本登録非管理者Userを有効化 | disableと同じactor・company・target境界。 |
 | `changeAdminUser` | v2 callable | 同社のactive本登録Userへadminを移譲 | 認証、caller UID/company claim、from=caller、会社管理者1人、from/to User/Auth company・UID・disabled整合を必須化。 |
@@ -108,7 +110,7 @@ handlerは全体をtry/catchし、errorをlog後rethrowしないため、実処�
 
 ## auth / security
 
-未認証callableはgeocoding、checkEmailAvailability、checkUserPreRegistrationである。`checkEmailAvailability`は初期会社管理者signup専用でemailだけを受け取り、Authと全Usersを照合する。一般User signupはこれを呼ばない。sign-up前用途を持つ未認証CallableにApp Check/rate limitはない。`checkEmailAvailabilityGlobal`は有効な同社会社管理者、2つの再構築Callableは有効な同社スーパーユーザーと要求会社一致をserverで検証する。
+未認証callableはgeocoding、checkEmailAvailability、checkUserPreRegistrationである。`checkEmailAvailability`は初期会社管理者signup専用でemailだけを受け取り、Authとemail予約を照合する。一般User signupはこれを呼ばない。sign-up前用途を持つ未認証CallableにApp Check/rate limitはない。仮登録作成前の旧`checkEmailAvailabilityGlobal`は製品caller 0を確認してAPI indexから非公開化し、重複確認を2つの作成transactionへ移した。2つの再構築Callableは有効な同社スーパーユーザーと要求会社一致をserverで検証する。
 
 認証必須のcreateAdminAccountはメール確認、現在Auth、有効状態、既存所属、token/current claimを検証し、claims設定失敗後の整合した既存Company/Userを再利用できる。disableUser、enableUser、changeAdminUserは2026-08-14〜15の最小segmentで会社管理者、caller company、target User/Authをserver検証するよう変更した。UI非表示は引き続きserver authorizationを代替せず、Users Rulesの直接write境界も別途未解決である。詳細は`user-auth-lifecycle.md`、`authorization-model.md`を参照する。
 

@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-17
+- 最終確認日: 2026-08-20
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | User更新Auth同期、有効化・無効化Callable、会社管理者移譲、一般User本登録、初期管理者signupのactor/company/identity境界を修正した。Firestore・Storage Rulesはverified email、正常な会社claim、tenant path、有効な本登録Userを要求し、恒久的なsuper-user全会社bypassを廃止した。Auth/User会社整合性helperは`isSuperUser`のbooleanを必須化し、管理SDKでEmulator・Devの既存所属アカウントを検証した。全10 Callableを`functions/apis`の公開indexへ整理し、Auth削除処理をtriggerへ分離した。会社所属済み6 Callableを共通Auth identity gateへ統一した。UWB-01で単独／Employee連携User、`users:write`、仮登録管理actor、段階的な改修順を確定した。専用Emulator suite 71件、全domain単体test 226件、初期管理者を含むChrome flowで検証した。UWBの実装、Users Rulesのfield/actor制約、App Check、Dev・remoteのアプリflow検証は未完了で、deploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-04で全User email予約とEmployee予約、単独／Employee連携仮登録作成、仮登録削除、本登録変換、初期管理者作成、匿名事前確認を同じreservation lifecycleへ統一した。client直接作成を2 Callableへ置換し、会社管理者またはstrict preset由来`users:write`を送信直前とserverで検証する。予約Rules hardeningとCodex専用Emulator向けmigration toolは実装・単体test済みだが、saved-data migration、Emulator concurrency、正規UIは未検証である。Users blanket Rulesを含むUWB-08、App Check、Dev・remote受入れも未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rules、会社所属済み6 Callableの共通Auth identity gate、一般User本登録、初期管理者signupの専用guard、UWB-01〜03は実装・local検証済みである。次はUWB-04で単独／Employee連携の仮登録User作成をserver境界へ移し、UWB-07で本登録Userの利用停止・退職・削除についてarchive、UID参照、削除条件、監査・復旧を具体例から確定してから、Users Rulesのfield/actor制約を閉じる。続いてApp Check・rate limitとDev受入れへ進む。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-04の実装と単体testは完了したため、次はCodex専用saved-dataをcandidate migrationし、Emulator concurrency・Rules・正規作成UIを受入れる。その後UWB-05〜06、UWB-07の具体例壁打ち、UWB-08のUsers Rules閉鎖へ進む。App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | セキュリティレビュー、専用local suite 72件、全domain単体test 226件。一般Userと初期管理者はlocal Emulatorの合成UserでAuth作成、メール確認、Callable、claim反映、dashboard到達を確認済み。Codex専用UIの最小経路も専用Functions、合成account、Codex管理ブラウザ、cleanupまで確認済み。全10 Callableの正式API export、内部helper非公開、管理者会社作成のCompany・User・claim整合と再実行を確認済み。会社所属済み6 Callableは共通Auth identity gateへ統一済み。UWB-01契約は確定したが実装、Users Rulesのfield/actor制約、App Check、Dev・remote受入れは未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-04でAPI indexの公開Callableは12件（production entry全体では`geocoding`を含む候補13件）、会社所属済み共通identity gate対象は8件となり、全User予約lifecycle、仮登録作成・削除、初期管理者・一般User本登録、client接続を単体test済み。UWB-03までの専用local suiteと正規UI証拠はあるが、新予約fixtureによるUWB-04 Emulator・UI受入れは未実施。Users Rulesのfield/actor制約、App Check、Dev・remote受入れも未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -116,3 +116,4 @@
 | 2026-08-17 | 10% | 0 | Codexが専用Emulator、隔離済みFunctions、local server、合成account/data、Codex管理ブラウザを準備し、利用者のChrome起動やsign-inなしにlocal UI testを完結させる方針を確定した。専用Functions接続、開発サーバー設定、browser sign-inは未実装・未検証であり、既存マイルストーンの完了条件を満たさないため進捗は据え置いた。 |
 | 2026-08-17 | 10% | 0 | Codex専用UIの最小経路を実装し、外部作用deny、専用Functions・Firebase port、PWA/通知無効化、メール確認済み・company claim付き合成User、Codex管理ブラウザsign-in、dashboard到達、専用suite 72件、process・runtime・一時build cleanupを確認した。サインアウト直後のsnapshot listener error、Users Rules、UWB、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-20 | 10% | 0 | UWB-03の仮登録User削除を、正規UIで作成した単独UserとEmployee連携Userで再検証し、取消、処理中、成功、既削除への安全な失敗、Auth不変を確認した。正規管理者signupからCodex専用saved-dataを更新し通常再起動も確認した。UWB-04以降、Users Rules、App Check、Dev・remote受入れが未完了でdeploy不可のため進捗は据え置いた。 |
+| 2026-08-20 | 10% | 0 | UWB-04で全User email予約・Employee予約を正本化し、単独／Employee連携仮登録作成、削除、本登録変換、初期管理者作成、匿名事前確認、Rules、Emulator限定migration tool、client policy/controller/UI接続を実装した。旧global availability APIを非公開化し、全domain単体test 462件と対象SFC compileが成功した。saved-data migration、Emulator concurrency、正規UI、UWB-08 Users Rules、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |

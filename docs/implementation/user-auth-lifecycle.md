@@ -4,16 +4,16 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-025、SPEC-DEEP-035、SPEC-DEEP-040
-- 最終確認日: 2026-08-16
+- 最終確認日: 2026-08-20
 - 根拠ファイル: `pages/settings/users.vue`、`pages/auth/sign-up.vue`、`components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`composables/useCreateNormalUser.js`、`composables/useCreateAdminUser.js`、`composables/auth/useAuthFunctions.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/triggers/user.js`、`functions/modules/auth/*.js`、`firestore.rules`、`utils/pageSettings.js`、schemas `src/User.js`
 
 ## 入口と暫定権限
 
 | 入口 | UI上の境界 | server / Rulesの実装境界 |
 |---|---|---|
-| `/settings/users` | pageSettingsは`roles: ["admin"]` | User Rulesはverified email、正常なcompany claim、同一tenant path、有効な本登録Userを要求するが、同一tenant内のfield・actor制約はない |
-| User仮登録・編集・削除 | UsersManager。管理者Userはroles編集と削除をUIで抑止し、employeeId付きUserも削除を抑止 | Rulesにrole、field、本人、admin、employeeId guardはない |
-| 従業員からUser仮登録・削除 | Employee UserManager | Rulesは上記と同じ。User.deleteは`isAdmin`だけを拒否 |
+| `/settings/users` | pageSettingsは会社管理者または`users:write` | User Rulesはverified email、正常なcompany claim、同一tenant path、有効な本登録Userを要求するが、同一tenant内のfield・actor制約はUWB-08まで未完了 |
+| User仮登録・削除 | UsersManagerから専用Callable。client policyも送信直前に再評価 | serverがactor、tenant、field、email予約、対象予約pointerをtransaction検証 |
+| 従業員からUser仮登録・削除 | Employee UserManagerからEmployee連携専用Callable | serverがACTIVE Employee、同社、未紐付け、email/Employee予約をtransaction検証 |
 | 有効化・無効化callable | UsersManagerから呼ぶ | `disableUser`/`enableUser`はactor UIDとcompany claimを起点に、transaction内でactor/target User、管理者・有効・本登録状態、自己操作禁止、対象非管理者、対象Auth UID/company claimを検証して`disabled`を更新する |
 | 管理者移譲 | UI activatorは`auth.isAdmin`で無効化 | `changeAdminUser`はactor本人が同社の唯一の有効な本登録管理者であること、移譲先が別UIDの有効な本登録非管理者であること、両User/Authのcompany・UID・disabled整合を検証する |
 
@@ -27,31 +27,31 @@ SPEC-DEEP-032で、`ChangeAdminUserDialog`は`/settings/users`の`UsersManager`�
 - User fieldsは`email`（required、CREATE後UI編集不可）、`displayName`（required）、任意`employeeId`、`roles`、`disabled`、`companyId`（required）、`isAdmin`、`isTemporary`（default `true`）、`tagSize`（required）、配置通知受信flag 3種。
 - 仮登録Userのdoc IDは通常のFirestore自動ID。本登録時は仮docを削除し、Firebase Auth UIDをdoc IDとする。
 - 本登録Userでは、User doc ID = Auth UIDをupdate/delete triggerと有効化処理が前提にする。schema/Rules自体はこの不変条件を強制しない。
-- `employeeId`は任意で、User側に一意制約はない。従業員画面はEmployee値を複製して仮Userを作り、`employeeId`を設定する。
-- Employee UserManagerのcomponent単位契約は[Employee components deep review](employee-components-deep-review.md)を参照する。rolesは空配列、tagSizeはschema defaultで作成され、同componentのeditorからは除外される。
+- `employeeId`は任意で、Employee連携作成は同社Employee予約により1 Employee対最大1 Userを排他する。従業員画面からEmployee全体を送らず、Employee ID、email、任意rolesだけをCallableへ渡す。
+- Employee UserManagerのcomponent単位契約は[Employee components deep review](employee-components-deep-review.md)を参照する。rolesは既知presetを任意選択でき、既定は空配列である。tagSize、通知field、displayNameはEmployee連携作成payloadへ含めない。
 - rolesはUser documentに保存される。確認範囲のcustom claimsは`companyId`と`isSuperUser`だけで、roles/isAdminはclaimsへ設定しない。
 
 ## 作成・事前登録・本登録フロー
 
 ### 一般User
 
-1. 管理画面または従業員詳細が`checkEmailAvailabilityGlobal`を呼び、collection group `Users`でemail重複を確認する。
-2. clientが`isTemporary=true`のUser docを直接作成する。この処理は招待メールを送信しないため、実装上は「事前登録」である。
-3. 本人のsign-up画面が未認証callable `checkUserPreRegistration`を呼ぶ。管理者signup用`checkEmailAvailability`は呼ばない。
+1. 管理画面または従業員詳細が、単独またはEmployee連携の専用作成Callableを呼ぶ。独立したglobal availability preflightは呼ばない。
+2. Callableがactorを事前・transaction内で検証し、Authentication email存在も確認したうえで、仮Userとemail予約、必要なEmployee予約を同じtransactionで作成する。この処理は招待メールを送信しないため、実装上は「事前登録」である。
+3. 本人のsign-up画面が未認証`checkUserPreRegistration`を呼び、email予約、pointer先仮User、必要なEmployee予約の整合したbooleanだけを受け取る。
 4. client Firebase SDKがemail/password Auth accountを作成し、自動sign-inする。
 5. clientがverification emailを送り、email確認完了まで本登録を行わない。
-6. メール確認後、認証済みcallable `setupUserAccount`がclient dataを受け取らず、確認済みAuth token emailから一意のtemporary Userと会社pathを解決する。
-7. Firestore transactionで仮docを削除し、同じ内容をAuth UIDのdoc IDで`isTemporary=false`として作成する。
+6. メール確認後、認証済み`setupUserAccount`がclient dataを受け取らず、確認済みAuth token emailの予約からtemporary Userと会社pathをdirect解決する。
+7. Firestore transactionで仮docをAuth UIDの本Userへ変換し、email予約と必要なEmployee予約のpointerもAuth UIDへ更新する。
 8. transaction後にAdmin SDKが`companyId`/`isSuperUser:false` claimsを設定し、clientがID tokenを強制refreshする。
 
 Auth account作成、verification mail、Firestore transaction、claims設定は単一transactionではない。後段失敗時、clientはUID付きsupport案内を出すが、自動rollback/reconcileはない。
 
 ### 初期管理者
 
-1. clientがemailだけを未認証`checkEmailAvailability`へ渡し、Authと全会社Userの重複を事前確認してからAuth accountを作り、verification emailを送る。
+1. clientがemailだけを未認証`checkEmailAvailability`へ渡し、Authとemail予約の重複をadvisory確認してからAuth accountを作り、verification emailを送る。
 2. verification待ち画面がメール確認後に`createAdminAccount`を呼ぶ。入力中の会社情報は同じbrowserのsession storageに保持する。
 3. Callableがtokenと現在AuthのUID、email、email確認、有効状態、company claim、`isSuperUser`の型・一致を検証する。既存の別User、別company、欠損Company、不正な初期管理者状態は拒否する。
-4. 未所属AuthではCompanyと`Users/{uid}`を同一Firestore transactionで作る。Userは`isAdmin=true`、`isTemporary=false`。
+4. 未所属AuthではCompany、`Users/{uid}`、email予約を同一Firestore transactionで作る。Userは`isAdmin=true`、`isTemporary=false`。
 5. transaction後に既存claimsを保持して`companyId`とbooleanの`isSuperUser`を設定し、token refresh後にauth storeを再初期化する。
 
 claims設定だけが失敗して同じUIDの有効な初期管理者UserとCompanyが残った場合、再実行はその既存状態を検証して再利用し、新しいCompanyを重複作成しない。Authだけが作成されCompany/Userがない状態も、同じbrowserにpending情報が残る間はメール確認後に再開できる。
@@ -79,9 +79,9 @@ claims設定だけが失敗して同じUIDの有効な初期管理者UserとComp
 
 ## failure・再試行・冪等性
 
-- email重複確認と作成はatomicではなく、並行登録で競合し得る。Auth email一意性はAuth作成時に最終検査されるが、仮User emailにはserver一意制約がない。
+- AuthとFirestoreはatomicではないが、Firestore内の全User canonical emailとEmployee連携は予約transactionで排他する。同時createのうち1件だけがcommitし、他は`already-exists`となる。
 - 初期管理者の事前確認はUX用であり、同時実行競合とAuth-only状態は残り得る。`createAdminAccount`は別の既存所属を拒否し、同じUIDの有効な初期管理者User/Companyだけをclaims失敗後の再実行として再利用する。
-- `setupUserAccount`はFirestore移行後のclaims失敗を補償しない。再実行すると仮docが消えているため`not-found`となる。
+- `setupUserAccount`はFirestore移行後のclaims失敗をrollbackしないが、予約pointerがAuth UIDへ更新済みの整合したregistered stateを再実行で検証し、Firestore write 0でclaimsだけを再試行できる。
 - `createAdminAccount`はCompany/User transaction後のclaims失敗をrollbackしないが、同じ整合状態からの再実行では既存Company/Userを再利用してclaims設定を再試行する。Company/Userの一部欠損や不整合を自動修復する契約はない。
 - disable/enableはUser doc更新成功をcallable成功として返し、Auth反映完了を待たない。
 - deleteはFirestore先行、Authはtrigger後続で、失敗時にUser docを復元しない。
@@ -89,7 +89,7 @@ claims設定だけが失敗して同じUIDの有効な初期管理者UserとComp
 ## Rules・tenant・security
 
 - User Rulesはpath companyとrequest claim companyの一致だけを確認する。作成時`request.resource.data.companyId`、doc ID/UID、email、roles、isAdmin、isTemporary、employeeId、disabledの整合を検証しない。
-- `checkEmailAvailabilityGlobal`はverified email、正常な会社claim、現在の有効なAuth User、同社の有効な本登録会社管理者を要求し、`isSuperUser`だけでは許可しない。初期管理者用`checkEmailAvailability`は未認証でemailだけを受け取り、Authと全User状態を照合する。一般User用`checkUserPreRegistration`も未認証で呼べるが、登録状態のbooleanだけを返し、複数一致を拒否する。
+- 旧`checkEmailAvailabilityGlobal`は製品caller 0を確認して公開API indexから除外した。初期管理者用`checkEmailAvailability`は未認証でemailだけを受け取り、Authとemail予約を照合する。一般User用`checkUserPreRegistration`も未認証で呼べるが、予約lifecycleが整合する場合のbooleanだけを返す。
 - disable/enable callableのactor・tenant・target境界は、2026-08-14の最小segmentでserver検証へ変更した。2026-08-16に会社管理者で認証済みのChromeからlocal Emulatorへ接続し、非管理者の合成test Userを無効化して操作表示が「有効化」へ変わり、再有効化して「無効化」へ戻ることを確認した。
 - 管理者移譲callableはcaller UIDとfromの一致、同社の唯一の有効な本登録会社管理者、移譲先User/Authのcompany・UID・登録・管理者・disabled状態をserverで確認する。実Callable/Emulator検証は未実施である。
 - UIが隠す操作は認可境界ではない。正式なrole/permission分割は未決定。

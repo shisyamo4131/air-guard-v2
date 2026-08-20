@@ -38,7 +38,7 @@
 
 ## 移行
 
-UWB-03の仮登録User削除を最初の適用例とし、client専用policy、`useTemporaryUserDeletion`、User一覧、Employee詳細の順に小さいsegmentで接続する。既存component内判定は同じcomposableへの接続後に削除する。
+UWB-03の仮登録User削除を最初の適用例とし、UWB-04の仮登録User作成にも同じ境界を適用する。作成では純粋policy、test可能なapplication controller、`useTemporaryUserCreation`、User一覧、Employee詳細の順に接続し、controllerがserver allowlistだけのpayloadを構成する。既存component内判定と直接Firestore CRUDは同じcomposableへの接続後に削除する。
 
 ## ロールバック
 
