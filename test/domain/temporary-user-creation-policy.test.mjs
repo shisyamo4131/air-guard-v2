@@ -5,6 +5,7 @@ import { User as FunctionsUser } from "../../functions/node_modules/@shisyamo413
 
 import {
   normalizeTemporaryUserEmail,
+  resolveEmployeeLinkedTemporaryUserInput,
   resolveEmployeeLinkedTemporaryUserData,
   resolveStandaloneTemporaryUserData,
   TEMPORARY_USER_CREATION_POLICY_ERROR_CODES,
@@ -98,6 +99,21 @@ test("employee-linked creation derives display name and accepts known role prese
     isAdmin: false,
     disabled: false,
   });
+});
+
+test("employee-linked input is canonicalized before external reads", () => {
+  const result = resolveEmployeeLinkedTemporaryUserInput({
+    employeeId: "employee-a",
+    email: " Employee@Example.COM ",
+    roles: ["manager"],
+  });
+
+  assert.deepEqual(result, {
+    employeeId: "employee-a",
+    email: "employee@example.com",
+    roles: ["manager"],
+  });
+  assert.equal(Object.isFrozen(result), true);
 });
 
 test("protected and unrelated fields are rejected instead of ignored", () => {

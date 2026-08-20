@@ -249,6 +249,22 @@ export function resolveStandaloneTemporaryUserData({ companyId, input } = {}) {
 }
 
 /**
+ * Employee連携仮登録Userのclient入力だけを外部read前に検証します。
+ * @param {Object} input
+ * @returns {Readonly<{employeeId: string, email: string, roles: string[]}>}
+ */
+export function resolveEmployeeLinkedTemporaryUserInput(input) {
+  assertAllowedFields(input, EMPLOYEE_LINKED_ALLOWED_FIELDS);
+  assertDocumentId(input.employeeId, "employeeId");
+
+  return Object.freeze({
+    employeeId: input.employeeId,
+    email: normalizeTemporaryUserEmail(input.email),
+    roles: resolveRoles(input.roles),
+  });
+}
+
+/**
  * Employee連携仮登録Userの作成dataを確定します。
  * displayNameはclient入力ではなく、serverが取得したEmployeeから解決します。
  * rolesは任意の既知presetだけを受け入れ、未指定時は空配列にします。
@@ -272,8 +288,7 @@ export function resolveEmployeeLinkedTemporaryUserData({
     );
   }
 
-  assertAllowedFields(input, EMPLOYEE_LINKED_ALLOWED_FIELDS);
-  assertDocumentId(input.employeeId, "employeeId");
+  const resolvedInput = resolveEmployeeLinkedTemporaryUserInput(input);
   if (!isPlainObject(employee)) {
     throwPolicyError(
       TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_INVALID,
@@ -299,10 +314,10 @@ export function resolveEmployeeLinkedTemporaryUserData({
   }
 
   return {
-    email: normalizeTemporaryUserEmail(input.email),
+    email: resolvedInput.email,
     displayName: resolveDisplayName(employee.displayName),
-    employeeId: input.employeeId,
-    roles: resolveRoles(input.roles),
+    employeeId: resolvedInput.employeeId,
+    roles: resolvedInput.roles,
     tagSize: TAG_SIZE_VALUES.MEDIUM.value,
     ...Object.fromEntries(NOTIFICATION_FIELDS.map((field) => [field, false])),
     ...resolveServerManagedFields(companyId),
