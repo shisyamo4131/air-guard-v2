@@ -2,188 +2,129 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  resolveUserAccountSetupIdentity,
   resolveUserAccountSetupRegistration,
+  resolveUserAccountSetupReservation,
   USER_ACCOUNT_SETUP_POLICY_ERROR_CODES,
   UserAccountSetupPolicyError,
 } from "../../functions/modules/auth/userAccountSetupPolicy.js";
 
-const AUTH_UID = "user-a";
-const AUTH_EMAIL = "user@example.com";
+const identity = Object.freeze({ authUid: "auth-a", email: "user@example.com" });
+const reservation = Object.freeze({ companyId: "company-a", userId: "temp-a" });
 
-function createRegistration(overrides = {}) {
+function user(overrides = {}) {
   return {
-    id: "temporary-user-a",
-    pathCompanyId: "company-a",
     companyId: "company-a",
-    email: AUTH_EMAIL,
+    email: "user@example.com",
     isTemporary: true,
+    isAdmin: false,
+    disabled: false,
     ...overrides,
   };
 }
 
-function createPolicyInput(overrides = {}) {
-  return {
-    authUid: AUTH_UID,
-    authEmail: AUTH_EMAIL,
-    authEmailVerified: true,
-    registrations: [createRegistration()],
-    ...overrides,
-  };
-}
-
-function assertSetupPolicyError(callback, expectedCode) {
-  assert.throws(callback, (error) => {
+function assertPolicyError(run, code) {
+  assert.throws(run, (error) => {
     assert.ok(error instanceof UserAccountSetupPolicyError);
-    assert.equal(error.name, "UserAccountSetupPolicyError");
-    assert.equal(error.code, expectedCode);
+    assert.equal(error.code, code);
     return true;
   });
 }
 
-test("setup policy error preserves its code and cause", () => {
-  const cause = new Error("synthetic cause");
-  const error = new UserAccountSetupPolicyError(
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_NOT_VERIFIED,
-    "synthetic message",
-    { cause },
+test("verified Authentication identity is canonicalized before reads", () => {
+  const result = resolveUserAccountSetupIdentity({
+    authUid: "auth-a",
+    authEmail: " User@Example.COM ",
+    authEmailVerified: true,
+  });
+  assert.deepEqual(result, identity);
+  assert.equal(Object.isFrozen(result), true);
+});
+
+test("invalid identity and unverified email fail closed", () => {
+  for (const [input, code] of [
+    [undefined, "auth-uid-invalid"],
+    [{ authUid: "auth-a", authEmailVerified: true }, "auth-email-invalid"],
+    [{ authUid: "auth/a", authEmail: "user@example.com", authEmailVerified: true }, "auth-uid-invalid"],
+    [{ authUid: "auth-a", authEmail: "invalid", authEmailVerified: true }, "auth-email-invalid"],
+    [{ authUid: "auth-a", authEmail: "user@example.com" }, "email-verified-state-invalid"],
+    [{ authUid: "auth-a", authEmail: "user@example.com", authEmailVerified: false }, "email-not-verified"],
+  ]) {
+    assertPolicyError(() => resolveUserAccountSetupIdentity(input), code);
+  }
+});
+
+test("email reservation accepts only exact safe pointer fields", () => {
+  assert.deepEqual(
+    resolveUserAccountSetupReservation({ identity, reservation }),
+    reservation,
   );
 
-  assert.equal(error.name, "UserAccountSetupPolicyError");
-  assert.equal(
-    error.code,
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_NOT_VERIFIED,
+  for (const value of [
+    null,
+    [],
+    { companyId: "company-a" },
+    { companyId: "company/a", userId: "temp-a" },
+    { companyId: "company-a", userId: "temp/a" },
+    { companyId: "company-a", userId: "temp-a", extra: true },
+  ]) {
+    assertPolicyError(
+      () => resolveUserAccountSetupReservation({ identity, reservation: value }),
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.RESERVATION_STATE_INVALID,
+    );
+  }
+});
+
+test("temporary and registered retry states are distinguished", () => {
+  assert.deepEqual(
+    resolveUserAccountSetupRegistration({ identity, reservation, user: user() }),
+    { mode: "temporary", employeeId: null },
   );
-  assert.equal(error.cause, cause);
-});
-
-test("setup policy error codes are frozen", () => {
-  assert.equal(Object.isFrozen(USER_ACCOUNT_SETUP_POLICY_ERROR_CODES), true);
-});
-
-test("verified Authentication User receives the unique matching registration", () => {
-  const input = createPolicyInput();
-
-  const registration = resolveUserAccountSetupRegistration(input);
-
-  assert.equal(registration, input.registrations[0]);
-});
-
-test("policy validation does not mutate its inputs", () => {
-  const input = createPolicyInput();
-  const before = structuredClone(input);
-
-  resolveUserAccountSetupRegistration(input);
-
-  assert.deepEqual(input, before);
-});
-
-test("required Authentication fields and registration list must be present", () => {
-  assertSetupPolicyError(
-    () => resolveUserAccountSetupRegistration(),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REQUIRED_FIELD_MISSING,
-  );
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({ registrations: undefined }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REQUIRED_FIELD_MISSING,
-  );
-});
-
-test("invalid email verified state is rejected", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({ authEmailVerified: undefined }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_VERIFIED_STATE_INVALID,
-  );
-});
-
-test("unverified email is rejected", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({ authEmailVerified: false }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_NOT_VERIFIED,
+  const retryReservation = { companyId: "company-a", userId: "auth-a" };
+  assert.deepEqual(
+    resolveUserAccountSetupRegistration({
+      identity,
+      reservation: retryReservation,
+      user: user({ isTemporary: false, employeeId: "employee-a" }),
+    }),
+    { mode: "registered-retry", employeeId: "employee-a" },
   );
 });
 
-test("missing pre-registration is rejected", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({ registrations: [] }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_FOUND,
-  );
-});
-
-test("multiple pre-registrations for the same email are rejected", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({
-          registrations: [
-            createRegistration(),
-            createRegistration({
-              id: "temporary-user-b",
-              companyId: "company-b",
-            }),
-          ],
+test("candidate company, email, protected state, and Employee ID are validated", () => {
+  const cases = [
+    [user({ companyId: "company-b" }), "registration-company-mismatch"],
+    [user({ email: "other@example.com" }), "registration-email-mismatch"],
+    [user({ email: "User@Example.COM" }), "registration-email-mismatch"],
+    [user({ email: " user@example.com " }), "registration-email-mismatch"],
+    [user({ isAdmin: true }), "registration-state-invalid"],
+    [user({ disabled: true }), "registration-state-invalid"],
+    [user({ employeeId: "employee/a" }), "registration-state-invalid"],
+    [user({ employeeId: "" }), "registration-state-invalid"],
+    [user({ employeeId: 0 }), "registration-state-invalid"],
+    [user({ employeeId: " employee-a" }), "registration-state-invalid"],
+  ];
+  for (const [candidate, code] of cases) {
+    assertPolicyError(
+      () =>
+        resolveUserAccountSetupRegistration({
+          identity,
+          reservation,
+          user: candidate,
         }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_UNIQUE,
-  );
+      code,
+    );
+  }
 });
 
-test("malformed pre-registration is rejected", () => {
-  const registration = createRegistration();
-  delete registration.companyId;
-
-  assertSetupPolicyError(
+test("a registered User at a different pointer is not a safe retry", () => {
+  assertPolicyError(
     () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({ registrations: [registration] }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID,
-  );
-});
-
-test("pre-registration company must match its document path", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({
-          registrations: [createRegistration({ companyId: "company-b" })],
-        }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_COMPANY_MISMATCH,
-  );
-});
-
-test("pre-registration email must exactly match the authenticated email", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({
-          registrations: [createRegistration({ email: "other@example.com" })],
-        }),
-      ),
-    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_EMAIL_MISMATCH,
-  );
-});
-
-test("already registered User cannot be registered again", () => {
-  assertSetupPolicyError(
-    () =>
-      resolveUserAccountSetupRegistration(
-        createPolicyInput({
-          registrations: [createRegistration({ isTemporary: false })],
-        }),
-      ),
+      resolveUserAccountSetupRegistration({
+        identity,
+        reservation,
+        user: user({ isTemporary: false }),
+      }),
     USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_TEMPORARY,
   );
 });

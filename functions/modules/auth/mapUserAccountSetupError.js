@@ -27,6 +27,20 @@ const REGISTRATION_STATE_UNAVAILABLE_RESPONSE = Object.freeze({
   message: "事前登録情報を確認できません。",
 });
 
+const REGISTRATION_NOT_FOUND_RESPONSE = Object.freeze({
+  code: "not-found",
+  message: "事前登録が見つかりません。",
+});
+
+const ABORTED_RESPONSE = Object.freeze({
+  code: "aborted",
+  message: "同時更新が発生しました。状態を更新してから再試行してください。",
+});
+
+function isFirestoreAborted(error) {
+  return error?.code === 10 || error?.code === "10" || error?.code === "aborted";
+}
+
 /**
  * User本登録時の内部エラーを安全なCallable応答へ変換します。
  *
@@ -47,6 +61,15 @@ export function mapUserAccountSetupError(error) {
           message: "ユーザーアカウントは既に本登録されています。",
         };
 
+      case USER_ACCOUNT_SETUP_ERROR_CODES.EMAIL_RESERVATION_NOT_FOUND:
+      case USER_ACCOUNT_SETUP_ERROR_CODES.TARGET_USER_NOT_FOUND:
+        return REGISTRATION_NOT_FOUND_RESPONSE;
+
+      case USER_ACCOUNT_SETUP_ERROR_CODES.EMPLOYEE_RESERVATION_NOT_FOUND:
+      case USER_ACCOUNT_SETUP_ERROR_CODES.EMPLOYEE_RESERVATION_INVALID:
+      case USER_ACCOUNT_SETUP_ERROR_CODES.EMPLOYEE_RESERVATION_MISMATCH:
+        return REGISTRATION_STATE_UNAVAILABLE_RESPONSE;
+
       case USER_ACCOUNT_SETUP_ERROR_CODES.AUTH_SERVICE_INVALID:
       case USER_ACCOUNT_SETUP_ERROR_CODES.FIRESTORE_SERVICE_INVALID:
       default:
@@ -57,6 +80,8 @@ export function mapUserAccountSetupError(error) {
   if (error instanceof UserAccountSetupPolicyError) {
     switch (error.code) {
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_VERIFIED_STATE_INVALID:
+      case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.AUTH_UID_INVALID:
+      case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.AUTH_EMAIL_INVALID:
         return AUTH_STATE_UNAVAILABLE_RESPONSE;
 
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_NOT_VERIFIED:
@@ -66,12 +91,10 @@ export function mapUserAccountSetupError(error) {
         };
 
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_FOUND:
-        return {
-          code: "not-found",
-          message: "事前登録が見つかりません。",
-        };
+        return REGISTRATION_NOT_FOUND_RESPONSE;
 
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_UNIQUE:
+      case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.RESERVATION_STATE_INVALID:
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID:
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_COMPANY_MISMATCH:
       case USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_EMAIL_MISMATCH:
@@ -84,5 +107,6 @@ export function mapUserAccountSetupError(error) {
     }
   }
 
+  if (isFirestoreAborted(error)) return ABORTED_RESPONSE;
   return INTERNAL_ERROR_RESPONSE;
 }

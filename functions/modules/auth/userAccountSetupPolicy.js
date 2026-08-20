@@ -1,30 +1,25 @@
 /*****************************************************************************
  * @file ./functions/modules/auth/userAccountSetupPolicy.js
- * @description 一般Userの本登録に必要な本人確認と仮登録状態を検証します。
- * @method resolveUserAccountSetupRegistration 本登録に使用できる仮登録を返します。
+ * @description 一般User本登録のidentity・予約・User状態を純粋検証します。
  *****************************************************************************/
+import { normalizeTemporaryUserEmail } from "./temporaryUserCreationPolicy.js";
 
 export const USER_ACCOUNT_SETUP_POLICY_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",
+  AUTH_UID_INVALID: "auth-uid-invalid",
+  AUTH_EMAIL_INVALID: "auth-email-invalid",
   EMAIL_VERIFIED_STATE_INVALID: "email-verified-state-invalid",
   EMAIL_NOT_VERIFIED: "email-not-verified",
   REGISTRATION_NOT_FOUND: "registration-not-found",
   REGISTRATION_NOT_UNIQUE: "registration-not-unique",
+  RESERVATION_STATE_INVALID: "reservation-state-invalid",
   REGISTRATION_STATE_INVALID: "registration-state-invalid",
   REGISTRATION_COMPANY_MISMATCH: "registration-company-mismatch",
   REGISTRATION_EMAIL_MISMATCH: "registration-email-mismatch",
   REGISTRATION_NOT_TEMPORARY: "registration-not-temporary",
 });
 
-/**
- * User本登録ポリシーの検証エラーです。
- */
 export class UserAccountSetupPolicyError extends Error {
-  /**
-   * @param {string} code - エラーコード
-   * @param {string} message - エラーメッセージ
-   * @param {{ cause?: unknown }} [options] - エラーの追加情報
-   */
   constructor(code, message, options = {}) {
     super(message, options);
 
@@ -33,108 +28,166 @@ export class UserAccountSetupPolicyError extends Error {
   }
 }
 
-/**
- * 一般Userの本登録に使用できる仮登録を返します。
- *
- * この関数はFirestoreやAuthenticationへアクセスしません。
- * 呼び出し側が認証情報のメールアドレスで検索した仮登録を検証します。
- *
- * @param {Object} param - 検証対象
- * @param {string} param.authUid - 本登録を行うAuthentication UserのUID
- * @param {string} param.authEmail - Authenticationで確認したメールアドレス
- * @param {boolean} param.authEmailVerified - メールアドレス確認済み状態
- * @param {Object[]} param.registrations - authEmailに一致した仮登録User一覧
- * @returns {Object} 本登録に使用できる唯一の仮登録User
- * @throws {UserAccountSetupPolicyError} ポリシーに違反した場合
- */
-export function resolveUserAccountSetupRegistration({
+function throwPolicyError(code, message, options) {
+  throw new UserAccountSetupPolicyError(code, message, options);
+}
+
+function isSafeDocumentId(value) {
+  return (
+    typeof value === "string" &&
+    Boolean(value) &&
+    value.trim() === value &&
+    !value.includes("/")
+  );
+}
+
+function isPlainObject(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      (Object.getPrototypeOf(value) === Object.prototype ||
+        Object.getPrototypeOf(value) === null),
+  );
+}
+
+/** Firestore read前にAuthentication identityを検証します。 */
+export function resolveUserAccountSetupIdentity({
   authUid,
   authEmail,
   authEmailVerified,
-  registrations,
 } = {}) {
-  if (
-    typeof authUid !== "string" ||
-    !authUid ||
-    typeof authEmail !== "string" ||
-    !authEmail ||
-    !Array.isArray(registrations)
-  ) {
-    throw new UserAccountSetupPolicyError(
-      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REQUIRED_FIELD_MISSING,
-      "[resolveUserAccountSetupRegistration] Required fields are missing",
+  if (!isSafeDocumentId(authUid)) {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.AUTH_UID_INVALID,
+      "[resolveUserAccountSetupIdentity] Auth UID is invalid",
     );
   }
-
   if (typeof authEmailVerified !== "boolean") {
-    throw new UserAccountSetupPolicyError(
+    throwPolicyError(
       USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_VERIFIED_STATE_INVALID,
-      "[resolveUserAccountSetupRegistration] Email verified state is invalid",
+      "[resolveUserAccountSetupIdentity] Email verified state is invalid",
     );
   }
-
   if (authEmailVerified !== true) {
-    throw new UserAccountSetupPolicyError(
+    throwPolicyError(
       USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.EMAIL_NOT_VERIFIED,
-      "[resolveUserAccountSetupRegistration] Email is not verified",
+      "[resolveUserAccountSetupIdentity] Email is not verified",
     );
   }
 
-  if (registrations.length === 0) {
-    throw new UserAccountSetupPolicyError(
-      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_FOUND,
-      "[resolveUserAccountSetupRegistration] Pre-registration was not found",
+  let email;
+  try {
+    email = normalizeTemporaryUserEmail(authEmail);
+  } catch (error) {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.AUTH_EMAIL_INVALID,
+      "[resolveUserAccountSetupIdentity] Auth email is invalid",
+      { cause: error },
     );
   }
 
-  if (registrations.length !== 1) {
-    throw new UserAccountSetupPolicyError(
-      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_UNIQUE,
-      "[resolveUserAccountSetupRegistration] Pre-registration is not unique",
+  return Object.freeze({ authUid, email });
+}
+
+/** root email予約のbodyを検証してsafe pointerを返します。 */
+export function resolveUserAccountSetupReservation({
+  identity,
+  reservation,
+} = {}) {
+  if (!identity || typeof identity !== "object") {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REQUIRED_FIELD_MISSING,
+      "[resolveUserAccountSetupReservation] Identity is missing",
     );
   }
-
-  const registration = registrations[0];
-
   if (
-    !registration ||
-    typeof registration !== "object" ||
-    typeof registration.id !== "string" ||
-    !registration.id ||
-    typeof registration.pathCompanyId !== "string" ||
-    !registration.pathCompanyId ||
-    typeof registration.companyId !== "string" ||
-    !registration.companyId ||
-    typeof registration.email !== "string" ||
-    !registration.email ||
-    typeof registration.isTemporary !== "boolean"
+    !isPlainObject(reservation) ||
+    Object.keys(reservation).sort().join("\0") !== "companyId\0userId" ||
+    !isSafeDocumentId(reservation.companyId) ||
+    !isSafeDocumentId(reservation.userId)
   ) {
-    throw new UserAccountSetupPolicyError(
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.RESERVATION_STATE_INVALID,
+      "[resolveUserAccountSetupReservation] Reservation is invalid",
+    );
+  }
+
+  return Object.freeze({
+    companyId: reservation.companyId,
+    userId: reservation.userId,
+  });
+}
+
+/** 予約pointer先Userを本登録候補または安全な再試行状態として検証します。 */
+export function resolveUserAccountSetupRegistration({
+  identity,
+  reservation,
+  user,
+} = {}) {
+  if (!identity || !reservation || !isPlainObject(user)) {
+    throwPolicyError(
       USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID,
-      "[resolveUserAccountSetupRegistration] Pre-registration state is invalid",
+      "[resolveUserAccountSetupRegistration] Registration is invalid",
     );
   }
-
-  if (registration.companyId !== registration.pathCompanyId) {
-    throw new UserAccountSetupPolicyError(
+  if (
+    typeof user.companyId !== "string" ||
+    typeof user.email !== "string" ||
+    typeof user.isTemporary !== "boolean" ||
+    user.isAdmin !== false ||
+    user.disabled !== false
+  ) {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID,
+      "[resolveUserAccountSetupRegistration] User state is invalid",
+    );
+  }
+  if (user.companyId !== reservation.companyId) {
+    throwPolicyError(
       USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_COMPANY_MISMATCH,
-      "[resolveUserAccountSetupRegistration] Pre-registration company does not match document path",
+      "[resolveUserAccountSetupRegistration] Company does not match reservation",
     );
   }
 
-  if (registration.email !== authEmail) {
-    throw new UserAccountSetupPolicyError(
+  let userEmail;
+  try {
+    userEmail = normalizeTemporaryUserEmail(user.email);
+  } catch (error) {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID,
+      "[resolveUserAccountSetupRegistration] User email is invalid",
+      { cause: error },
+    );
+  }
+  if (userEmail !== identity.email || user.email !== userEmail) {
+    throwPolicyError(
       USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_EMAIL_MISMATCH,
-      "[resolveUserAccountSetupRegistration] Pre-registration email does not match authenticated email",
+      "[resolveUserAccountSetupRegistration] Email does not match identity",
     );
   }
 
-  if (registration.isTemporary !== true) {
-    throw new UserAccountSetupPolicyError(
-      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_TEMPORARY,
-      "[resolveUserAccountSetupRegistration] User is not temporary",
+  const employeeId =
+    user.employeeId === undefined ||
+    user.employeeId === null
+      ? null
+      : user.employeeId;
+  if (employeeId !== null && !isSafeDocumentId(employeeId)) {
+    throwPolicyError(
+      USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_STATE_INVALID,
+      "[resolveUserAccountSetupRegistration] Employee ID is invalid",
     );
   }
 
-  return registration;
+  if (user.isTemporary === true) {
+    return Object.freeze({ mode: "temporary", employeeId });
+  }
+  if (reservation.userId === identity.authUid) {
+    return Object.freeze({ mode: "registered-retry", employeeId });
+  }
+
+  throwPolicyError(
+    USER_ACCOUNT_SETUP_POLICY_ERROR_CODES.REGISTRATION_NOT_TEMPORARY,
+    "[resolveUserAccountSetupRegistration] User is not temporary",
+  );
 }
