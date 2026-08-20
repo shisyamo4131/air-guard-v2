@@ -1139,6 +1139,8 @@ test("API index exports every public Callable without internal request helpers",
     "checkEmailAvailabilityGlobal",
     "checkUserPreRegistration",
     "createAdminAccount",
+    "createEmployeeLinkedTemporaryUser",
+    "createStandaloneTemporaryUser",
     "deleteTemporaryUser",
     "disableUser",
     "enableUser",
@@ -1198,6 +1200,8 @@ test("pre-registration Callable rejects duplicate temporary Users", async () => 
 test("moved authenticated User Callables retain their entry guards", async () => {
   const {
     changeAdminUser,
+    createEmployeeLinkedTemporaryUser,
+    createStandaloneTemporaryUser,
     deleteTemporaryUser,
     disableUser,
     enableUser,
@@ -1206,6 +1210,8 @@ test("moved authenticated User Callables retain their entry guards", async () =>
 
   for (const callable of [
     changeAdminUser,
+    createEmployeeLinkedTemporaryUser,
+    createStandaloneTemporaryUser,
     deleteTemporaryUser,
     disableUser,
     enableUser,

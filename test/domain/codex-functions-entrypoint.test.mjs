@@ -7,6 +7,8 @@ const PUBLIC_CALLABLES = [
   "checkEmailAvailabilityGlobal",
   "checkUserPreRegistration",
   "createAdminAccount",
+  "createEmployeeLinkedTemporaryUser",
+  "createStandaloneTemporaryUser",
   "deleteTemporaryUser",
   "disableUser",
   "enableUser",

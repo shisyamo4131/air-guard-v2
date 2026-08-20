@@ -7,6 +7,10 @@ export { checkEmailAvailability } from "./checkEmailAvailability.js";
 export { checkEmailAvailabilityGlobal } from "./checkEmailAvailabilityGlobal.js";
 export { checkUserPreRegistration } from "./checkUserPreRegistration.js";
 export { createAdminAccount } from "./createAdminAccount.js";
+export {
+  createEmployeeLinkedTemporaryUser,
+  createStandaloneTemporaryUser,
+} from "./createTemporaryUser.js";
 export { deleteTemporaryUser } from "./deleteTemporaryUser.js";
 export { disableUser, enableUser } from "./changeUserEnabledState.js";
 export { rebuildAllHistories } from "./rebuildAllHistories.js";

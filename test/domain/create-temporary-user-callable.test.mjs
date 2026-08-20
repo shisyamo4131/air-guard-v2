@@ -86,8 +86,13 @@ test("failure logging records only fixed operation and error classifications", a
   }
 });
 
-test("new Callables remain unreachable until the public index segment", async () => {
+test("API index exports both Callables without internal helpers", async () => {
   const indexSource = await readFile(apiIndexSourceUrl, "utf8");
-  assert.equal(indexSource.includes("createStandaloneTemporaryUser"), false);
-  assert.equal(indexSource.includes("createEmployeeLinkedTemporaryUser"), false);
+  assert.match(
+    indexSource,
+    /export \{[\s\S]*createEmployeeLinkedTemporaryUser,[\s\S]*createStandaloneTemporaryUser,[\s\S]*\} from "\.\/createTemporaryUser\.js";/,
+  );
+  assert.equal(indexSource.includes("createStandaloneTemporaryUserUseCase"), false);
+  assert.equal(indexSource.includes("createEmployeeLinkedTemporaryUserUseCase"), false);
+  assert.equal(indexSource.includes("handleCreateRequest"), false);
 });
