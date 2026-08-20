@@ -139,7 +139,15 @@ test("disabled and malformed disabled states are rejected", () => {
 });
 
 test("malformed Employee links are rejected", () => {
-  for (const employeeId of [" ", " employee-a", "employee-a ", 1, {}, []]) {
+  for (const employeeId of [
+    " ",
+    " employee-a",
+    "employee-a ",
+    "employee/a",
+    1,
+    {},
+    [],
+  ]) {
     assertPolicyError(
       {
         companyId: COMPANY_ID,

@@ -104,7 +104,8 @@ export function assertTemporaryUserCanBeDeleted({
     employeeId !== undefined &&
     employeeId !== null &&
     (typeof employeeId !== "string" ||
-      (employeeId.length > 0 && employeeId.trim() !== employeeId))
+      (employeeId.length > 0 &&
+        (employeeId.trim() !== employeeId || employeeId.includes("/"))))
   ) {
     throw new TemporaryUserDeletionPolicyError(
       TEMPORARY_USER_DELETION_POLICY_ERROR_CODES.TARGET_EMPLOYEE_ID_INVALID,

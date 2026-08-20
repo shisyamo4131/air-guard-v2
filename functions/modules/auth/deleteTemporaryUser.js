@@ -5,6 +5,8 @@
  *****************************************************************************/
 import { assertTemporaryUserCanBeDeleted } from "./temporaryUserDeletionPolicy.js";
 import { assertActorCanManageTemporaryUsers } from "./temporaryUserManagementPolicy.js";
+import { createUserEmailReservationId } from "./createTemporaryUser.js";
+import { TemporaryUserCreationPolicyError } from "./temporaryUserCreationPolicy.js";
 
 export const DELETE_TEMPORARY_USER_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",
@@ -12,6 +14,13 @@ export const DELETE_TEMPORARY_USER_ERROR_CODES = Object.freeze({
   FIRESTORE_SERVICE_INVALID: "firestore-service-invalid",
   ACTOR_USER_NOT_FOUND: "actor-user-not-found",
   TARGET_USER_NOT_FOUND: "target-user-not-found",
+  TARGET_EMAIL_INVALID: "target-email-invalid",
+  EMAIL_RESERVATION_NOT_FOUND: "email-reservation-not-found",
+  EMAIL_RESERVATION_INVALID: "email-reservation-invalid",
+  EMAIL_RESERVATION_MISMATCH: "email-reservation-mismatch",
+  EMPLOYEE_RESERVATION_NOT_FOUND: "employee-reservation-not-found",
+  EMPLOYEE_RESERVATION_INVALID: "employee-reservation-invalid",
+  EMPLOYEE_RESERVATION_MISMATCH: "employee-reservation-mismatch",
 });
 
 export class DeleteTemporaryUserError extends Error {
@@ -25,6 +34,54 @@ export class DeleteTemporaryUserError extends Error {
 
 function isValidDocumentId(value) {
   return value.trim() === value && !value.includes("/");
+}
+
+function isPlainObject(value) {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      !Array.isArray(value) &&
+      (Object.getPrototypeOf(value) === Object.prototype ||
+        Object.getPrototypeOf(value) === null),
+  );
+}
+
+function assertReservation({
+  snapshot,
+  expected,
+  notFoundCode,
+  invalidCode,
+  mismatchCode,
+  label,
+}) {
+  if (!snapshot.exists) {
+    throw new DeleteTemporaryUserError(
+      notFoundCode,
+      `[deleteTemporaryUser] ${label} reservation was not found`,
+    );
+  }
+
+  const data = snapshot.data();
+  const expectedKeys = Object.keys(expected).sort();
+  if (
+    !isPlainObject(data) ||
+    Object.keys(data).sort().join("\0") !== expectedKeys.join("\0") ||
+    expectedKeys.some(
+      (key) => typeof data[key] !== "string" || !data[key],
+    )
+  ) {
+    throw new DeleteTemporaryUserError(
+      invalidCode,
+      `[deleteTemporaryUser] ${label} reservation is invalid`,
+    );
+  }
+
+  if (expectedKeys.some((key) => data[key] !== expected[key])) {
+    throw new DeleteTemporaryUserError(
+      mismatchCode,
+      `[deleteTemporaryUser] ${label} reservation does not match target`,
+    );
+  }
 }
 
 /**
@@ -117,9 +174,64 @@ export async function deleteTemporaryUser({
 
     assertTemporaryUserCanBeDeleted({ companyId, targetUser });
 
-    transaction.delete(targetUserRef);
+    let emailReservationId;
+    try {
+      emailReservationId = createUserEmailReservationId(targetUser.email);
+    } catch (error) {
+      if (error instanceof TemporaryUserCreationPolicyError) {
+        throw new DeleteTemporaryUserError(
+          DELETE_TEMPORARY_USER_ERROR_CODES.TARGET_EMAIL_INVALID,
+          "[deleteTemporaryUser] Target email is invalid",
+          { cause: error },
+        );
+      }
+      throw error;
+    }
+
+    const emailReservationRef = firestore.doc(
+      `UserEmailReservations/${emailReservationId}`,
+    );
+    const emailReservationSnapshot = await transaction.get(
+      emailReservationRef,
+    );
+    assertReservation({
+      snapshot: emailReservationSnapshot,
+      expected: { companyId, userId: targetUserId },
+      notFoundCode:
+        DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_NOT_FOUND,
+      invalidCode:
+        DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_INVALID,
+      mismatchCode:
+        DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_MISMATCH,
+      label: "Email",
+    });
 
     const employeeId = targetUser.employeeId || null;
+    let employeeReservationRef = null;
+    if (employeeId) {
+      employeeReservationRef = firestore.doc(
+        `Companies/${companyId}/EmployeeUserReservations/${employeeId}`,
+      );
+      const employeeReservationSnapshot = await transaction.get(
+        employeeReservationRef,
+      );
+      assertReservation({
+        snapshot: employeeReservationSnapshot,
+        expected: { userId: targetUserId },
+        notFoundCode:
+          DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_NOT_FOUND,
+        invalidCode:
+          DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_INVALID,
+        mismatchCode:
+          DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_MISMATCH,
+        label: "Employee",
+      });
+    }
+
+    transaction.delete(targetUserRef);
+    transaction.delete(emailReservationRef);
+    if (employeeReservationRef) transaction.delete(employeeReservationRef);
+
     return {
       success: true,
       userId: targetUserId,

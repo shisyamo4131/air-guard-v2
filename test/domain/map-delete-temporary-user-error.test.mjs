@@ -41,6 +41,10 @@ const TARGET_STATE_RESPONSE = {
   code: "failed-precondition",
   message: "対象ユーザーは削除できる仮登録状態ではありません。",
 };
+const TARGET_REGISTRATION_RESPONSE = {
+  code: "failed-precondition",
+  message: "対象ユーザーの登録状態を確認できないため削除できません。",
+};
 const INTERNAL_RESPONSE = {
   code: "internal",
   message: "仮登録ユーザーの削除中に予期しないエラーが発生しました。",
@@ -99,6 +103,28 @@ test("actor permission failures do not expose internal details", () => {
     ),
     PERMISSION_DENIED_RESPONSE,
   );
+});
+
+test("reservation lifecycle failures map to one safe response", () => {
+  for (const key of [
+    "TARGET_EMAIL_INVALID",
+    "EMAIL_RESERVATION_NOT_FOUND",
+    "EMAIL_RESERVATION_INVALID",
+    "EMAIL_RESERVATION_MISMATCH",
+    "EMPLOYEE_RESERVATION_NOT_FOUND",
+    "EMPLOYEE_RESERVATION_INVALID",
+    "EMPLOYEE_RESERVATION_MISMATCH",
+  ]) {
+    assert.deepEqual(
+      mapDeleteTemporaryUserError(
+        new DeleteTemporaryUserError(
+          DELETE_TEMPORARY_USER_ERROR_CODES[key],
+          "user@example.com/company-a/temporary-a",
+        ),
+      ),
+      TARGET_REGISTRATION_RESPONSE,
+    );
+  }
 });
 
 test("malformed actor state is mapped to a safe precondition error", () => {

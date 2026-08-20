@@ -46,6 +46,11 @@ const TARGET_STATE_INVALID_RESPONSE = Object.freeze({
   message: "対象ユーザーは削除できる仮登録状態ではありません。",
 });
 
+const TARGET_REGISTRATION_INVALID_RESPONSE = Object.freeze({
+  code: "failed-precondition",
+  message: "対象ユーザーの登録状態を確認できないため削除できません。",
+});
+
 /**
  * 仮登録User削除時の内部エラーを安全なCallable応答へ変換します。
  * @param {unknown} error
@@ -69,6 +74,15 @@ export function mapDeleteTemporaryUserError(error) {
           code: "not-found",
           message: "対象ユーザーが見つかりません。",
         };
+
+      case DELETE_TEMPORARY_USER_ERROR_CODES.TARGET_EMAIL_INVALID:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_NOT_FOUND:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_INVALID:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMAIL_RESERVATION_MISMATCH:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_NOT_FOUND:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_INVALID:
+      case DELETE_TEMPORARY_USER_ERROR_CODES.EMPLOYEE_RESERVATION_MISMATCH:
+        return TARGET_REGISTRATION_INVALID_RESPONSE;
 
       case DELETE_TEMPORARY_USER_ERROR_CODES.FIRESTORE_SERVICE_INVALID:
       default:
