@@ -61,6 +61,11 @@ service cloud.firestore {
       allow read: if false; // Cloud Functions only
     }
 
+    // User email reservations are owned exclusively by Cloud Functions/Admin SDK.
+    match /UserEmailReservations/{document=**} {
+      allow read, write: if false;
+    }
+
     // --- Rules for 'Companies' collection ---
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
@@ -228,13 +233,19 @@ service cloud.firestore {
       allow read, write: if isAuthenticated() && userCompanyId() == companyId;
     }
 
+    // Employee/User link reservations are owned exclusively by Cloud Functions/Admin SDK.
+    match /Companies/{companyId}/EmployeeUserReservations/{document=**} {
+      allow read, write: if false;
+    }
+
     // Companies配下の未定義パスにも同じtenant identity gateを適用する。
     // SecurityReportIndexesとStripeDataの個別操作制約を迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
       allow read, write: if isAuthenticated()
                               && userCompanyId() == companyId
                               && collection != "SecurityReportIndexes"
-                              && collection != "StripeData";
+                              && collection != "StripeData"
+                              && collection != "EmployeeUserReservations";
     }
   }
 }
