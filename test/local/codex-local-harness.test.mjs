@@ -27,6 +27,9 @@ import {
   CODEX_LOCAL_PROJECT_ID,
   CODEX_LOCAL_USERS,
 } from "../fixtures/codex-local-seed.mjs";
+import {
+  createUserEmailReservationId,
+} from "../../functions/modules/auth/createTemporaryUser.js";
 
 function parseEmulatorHost(name) {
   const value = process.env[name];
@@ -132,6 +135,16 @@ async function seedRegisteredUser({
     await setDoc(
       doc(context.firestore(), "Companies", pathCompanyId, "Users", uid),
       data,
+    );
+  });
+}
+
+async function seedEmailReservation({ email, companyId, userId }) {
+  const reservationId = createUserEmailReservationId(email);
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "UserEmailReservations", reservationId),
+      { companyId, userId },
     );
   });
 }
@@ -974,6 +987,11 @@ test("administrator signup email preflight checks global User duplication", asyn
     pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
     email: duplicateEmail,
   });
+  await seedEmailReservation({
+    email: duplicateEmail,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    userId: "codex-signup-admin-existing-user",
+  });
 
   await assertCallableError(
     checkEmailAvailability.run({
@@ -994,7 +1012,13 @@ test("caller isAdmin cannot select a weaker email preflight policy", async () =>
   await seedRegisteredUser({
     uid: "codex-signup-admin-existing-temporary",
     isTemporary: true,
+    isAdmin: false,
     email,
+  });
+  await seedEmailReservation({
+    email,
+    companyId: CODEX_LOCAL_COMPANIES.primary.id,
+    userId: "codex-signup-admin-existing-temporary",
   });
 
   await assertCallableError(
@@ -1041,15 +1065,20 @@ test("pre-registration Callable validates email and returns only registration st
 
   const uid = "codex-pre-registration-user";
   const email = `${uid}@codex-test.invalid`;
-  await seedRegisteredUser({ uid, isTemporary: true, email });
+  await seedRegisteredUser({ uid, isTemporary: true, isAdmin: false, email });
+  await seedEmailReservation({
+    email,
+    companyId: CODEX_LOCAL_COMPANIES.primary.id,
+    userId: uid,
+  });
   const result = await checkUserPreRegistration.run({ data: { email } });
 
   assert.deepEqual(result, { isPreRegistered: true });
 });
 
-test("pre-registration Callable rejects duplicate temporary Users", async () => {
+test("pre-registration Callable does not fall back to legacy duplicate User queries", async () => {
   const { checkUserPreRegistration } = await loadRebuildApis();
-  const email = "codex-pre-registration-duplicate@codex-test.invalid";
+  const email = "pre-reg-duplicate@codex-test.invalid";
   await seedRegisteredUser({
     uid: "codex-pre-registration-duplicate-primary",
     email,
@@ -1062,9 +1091,9 @@ test("pre-registration Callable rejects duplicate temporary Users", async () => 
     isTemporary: true,
   });
 
-  await assertCallableError(
-    checkUserPreRegistration.run({ data: { email } }),
-    "failed-precondition",
+  assert.deepEqual(
+    await checkUserPreRegistration.run({ data: { email } }),
+    { isPreRegistered: false },
   );
 });
 
@@ -1392,7 +1421,7 @@ test("admin account creation Callable rejects disabled, mismatched, and already 
           uid,
           claims: { email, ...testCase.claims },
           data: {
-            companyName: `拒否会社-${testCase.name}`,
+            companyName: "拒否会社",
             companyNameKana: "キョヒガイシャ",
             displayName: "管理者",
           },
@@ -1421,6 +1450,11 @@ test("admin account creation Callable rejects an existing User email in any regi
       pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
       email,
       isTemporary,
+    });
+    await seedEmailReservation({
+      email,
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      userId: `${uid}-user-document`,
     });
 
     await assertCallableError(
@@ -1461,6 +1495,7 @@ test("admin account creation Callable resumes claims for one matching initial ad
     email,
     isAdmin: true,
   });
+  await seedEmailReservation({ email, companyId, userId: uid });
 
   const result = await createAdminAccount.run(
     callableRequest({
@@ -1503,6 +1538,7 @@ test("admin account creation Callable is idempotent after matching claims exist"
     email,
     isAdmin: true,
   });
+  await seedEmailReservation({ email, companyId, userId: uid });
 
   const result = await createAdminAccount.run(
     callableRequest({
@@ -1562,6 +1598,11 @@ test("admin account creation Callable fails closed for inconsistent existing mem
       pathCompanyId,
       email,
       ...testCase.user,
+    });
+    await seedEmailReservation({
+      email,
+      companyId: pathCompanyId,
+      userId: testCase.user.uid ?? uid,
     });
 
     await assertCallableError(
