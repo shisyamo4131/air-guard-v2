@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { User } from "@shisyamo4131/air-guard-v2-schemas";
+import { User as FunctionsUser } from "../../functions/node_modules/@shisyamo4131/air-guard-v2-schemas/index.js";
 
 import {
   normalizeTemporaryUserEmail,
@@ -71,21 +73,22 @@ test("standalone creation applies safe defaults", () => {
   assert.equal(result.receiveLeavedArrangementNotification, false);
 });
 
-test("employee-linked creation derives display name and fixes role/settings defaults", () => {
+test("employee-linked creation derives display name and accepts known role presets", () => {
   const result = resolveEmployeeLinkedTemporaryUserData({
     companyId: COMPANY_ID,
     input: {
       employeeId: "employee-a",
       email: "Employee@Example.COM",
+      roles: ["human-resource"],
     },
-    employee: { displayName: "田中" },
+    employee: { displayName: "田中", employmentStatus: "ACTIVE" },
   });
 
   assert.deepEqual(result, {
     email: "employee@example.com",
     displayName: "田中",
     employeeId: "employee-a",
-    roles: [],
+    roles: ["human-resource"],
     tagSize: "MEDIUM",
     receiveConfirmedArrangementNotification: false,
     receiveArrivedArrangementNotification: false,
@@ -121,8 +124,21 @@ test("protected and unrelated fields are rejected instead of ignored", () => {
   }
 });
 
-test("employee-linked creation accepts only employeeId and email", () => {
-  for (const field of ["displayName", "roles", "tagSize", "companyId"]) {
+test("employee-linked creation accepts only employeeId, email, and roles", () => {
+  for (const field of [
+    "displayName",
+    "tagSize",
+    "companyId",
+    "isTemporary",
+    "isAdmin",
+    "disabled",
+    "createdAt",
+    "updatedAt",
+    "uid",
+    "receiveConfirmedArrangementNotification",
+    "receiveArrivedArrangementNotification",
+    "receiveLeavedArrangementNotification",
+  ]) {
     assertPolicyError(
       () =>
         resolveEmployeeLinkedTemporaryUserData({
@@ -130,11 +146,38 @@ test("employee-linked creation accepts only employeeId and email", () => {
           input: {
             employeeId: "employee-a",
             email: "employee@example.com",
-            [field]: field === "roles" ? [] : "value",
+            [field]: "value",
           },
-          employee: { displayName: "田中" },
+          employee: { displayName: "田中", employmentStatus: "ACTIVE" },
         }),
       TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.UNEXPECTED_FIELD,
+    );
+  }
+});
+
+test("employee-linked creation rejects malformed and unauthorized roles", () => {
+  const cases = [
+    { roles: "manager", code: "roles-invalid" },
+    { roles: ["unknown"], code: "role-invalid" },
+    { roles: ["users:write"], code: "role-invalid" },
+    { roles: ["manager", "manager"], code: "role-duplicated" },
+    { roles: [1], code: "role-invalid" },
+    { roles: null, code: "roles-invalid" },
+  ];
+
+  for (const { roles, code } of cases) {
+    assertPolicyError(
+      () =>
+        resolveEmployeeLinkedTemporaryUserData({
+          companyId: COMPANY_ID,
+          input: {
+            employeeId: "employee-a",
+            email: "employee@example.com",
+            roles,
+          },
+          employee: { displayName: "田中", employmentStatus: "ACTIVE" },
+        }),
+      code,
     );
   }
 });
@@ -238,7 +281,7 @@ test("required inputs, identifiers, and Employee state are validated", () => {
       resolveEmployeeLinkedTemporaryUserData({
         companyId: COMPANY_ID,
         input: { employeeId: "employee/a", email: "user@example.com" },
-        employee: { displayName: "田中" },
+        employee: { displayName: "田中", employmentStatus: "ACTIVE" },
       }),
     TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.IDENTIFIER_INVALID,
   );
@@ -250,5 +293,78 @@ test("required inputs, identifiers, and Employee state are validated", () => {
         employee: [],
       }),
     TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_INVALID,
+  );
+});
+
+test("employee-linked creation defaults roles and rejects inactive Employees", () => {
+  const activeResult = resolveEmployeeLinkedTemporaryUserData({
+    companyId: COMPANY_ID,
+    input: { employeeId: "employee-a", email: "user@example.com" },
+    employee: { displayName: "田中", employmentStatus: "ACTIVE" },
+  });
+  assert.deepEqual(activeResult.roles, []);
+
+  assertPolicyError(
+    () =>
+      resolveEmployeeLinkedTemporaryUserData({
+        companyId: COMPANY_ID,
+        input: { employeeId: "employee-a", email: "user@example.com" },
+        employee: { displayName: "田中", employmentStatus: "RESIGNED" },
+      }),
+    TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_NOT_ACTIVE,
+  );
+
+  for (const employmentStatus of [undefined, null, "UNKNOWN", 1]) {
+    assertPolicyError(
+      () =>
+        resolveEmployeeLinkedTemporaryUserData({
+          companyId: COMPANY_ID,
+          input: { employeeId: "employee-a", email: "user@example.com" },
+          employee: { displayName: "田中", employmentStatus },
+        }),
+      TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_INVALID,
+    );
+  }
+});
+
+test("policy string limits stay in parity with the User schema", () => {
+  const emailLimit = User.classProps.email.length;
+  const displayNameLimit = User.classProps.displayName.length;
+  assert.equal(emailLimit, 50);
+  assert.equal(displayNameLimit, 6);
+  assert.equal(FunctionsUser.classProps.email.length, emailLimit);
+  assert.equal(FunctionsUser.classProps.displayName.length, displayNameLimit);
+
+  assert.doesNotThrow(() =>
+    resolveStandaloneTemporaryUserData({
+      companyId: COMPANY_ID,
+      input: {
+        email: `${"a".repeat(emailLimit - "@example.com".length)}@example.com`,
+        displayName: "a".repeat(displayNameLimit),
+      },
+    }),
+  );
+
+  assertPolicyError(
+    () =>
+      resolveStandaloneTemporaryUserData({
+        companyId: COMPANY_ID,
+        input: {
+          email: `${"a".repeat(emailLimit + 1 - "@example.com".length)}@example.com`,
+          displayName: "利用者",
+        },
+      }),
+    TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMAIL_INVALID,
+  );
+  assertPolicyError(
+    () =>
+      resolveStandaloneTemporaryUserData({
+        companyId: COMPANY_ID,
+        input: {
+          email: "user@example.com",
+          displayName: "a".repeat(displayNameLimit + 1),
+        },
+      }),
+    TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.DISPLAY_NAME_INVALID,
   );
 });

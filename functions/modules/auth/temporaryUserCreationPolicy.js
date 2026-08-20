@@ -2,7 +2,10 @@
  * @file ./functions/modules/auth/temporaryUserCreationPolicy.js
  * @description 仮登録User作成入力を検証し、server管理fieldを確定します。
  *****************************************************************************/
-import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import {
+  EMPLOYMENT_STATUS_VALUES,
+  TAG_SIZE_VALUES,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { ROLE_PRESETS } from "../../constants/rolePresets.js";
 
 const EMAIL_MAX_LENGTH = 50;
@@ -17,7 +20,11 @@ const STANDALONE_ALLOWED_FIELDS = new Set([
   "receiveArrivedArrangementNotification",
   "receiveLeavedArrangementNotification",
 ]);
-const EMPLOYEE_LINKED_ALLOWED_FIELDS = new Set(["employeeId", "email"]);
+const EMPLOYEE_LINKED_ALLOWED_FIELDS = new Set([
+  "employeeId",
+  "email",
+  "roles",
+]);
 const NOTIFICATION_FIELDS = [
   "receiveConfirmedArrangementNotification",
   "receiveArrivedArrangementNotification",
@@ -40,6 +47,7 @@ export const TEMPORARY_USER_CREATION_POLICY_ERROR_CODES = Object.freeze({
   TAG_SIZE_INVALID: "tag-size-invalid",
   NOTIFICATION_FLAG_INVALID: "notification-flag-invalid",
   EMPLOYEE_INVALID: "employee-invalid",
+  EMPLOYEE_NOT_ACTIVE: "employee-not-active",
 });
 
 export class TemporaryUserCreationPolicyError extends Error {
@@ -243,9 +251,12 @@ export function resolveStandaloneTemporaryUserData({ companyId, input } = {}) {
 /**
  * Employee連携仮登録Userの作成dataを確定します。
  * displayNameはclient入力ではなく、serverが取得したEmployeeから解決します。
+ * rolesは任意の既知presetだけを受け入れ、未指定時は空配列にします。
+ * Employeeは在職中（ACTIVE）の場合だけ連携できます。
  * @param {Object} param
  * @param {string} param.companyId
  * @param {Object} param.input
+ * @param {string[]} [param.input.roles]
  * @param {Object} param.employee
  * @returns {Object}
  */
@@ -269,12 +280,29 @@ export function resolveEmployeeLinkedTemporaryUserData({
       "[resolveEmployeeLinkedTemporaryUserData] employee is invalid",
     );
   }
+  if (
+    typeof employee.employmentStatus !== "string" ||
+    !Object.values(EMPLOYMENT_STATUS_VALUES).some(
+      ({ value }) => value === employee.employmentStatus,
+    )
+  ) {
+    throwPolicyError(
+      TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_INVALID,
+      "[resolveEmployeeLinkedTemporaryUserData] employmentStatus is invalid",
+    );
+  }
+  if (employee.employmentStatus !== EMPLOYMENT_STATUS_VALUES.ACTIVE.value) {
+    throwPolicyError(
+      TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.EMPLOYEE_NOT_ACTIVE,
+      "[resolveEmployeeLinkedTemporaryUserData] employee is not active",
+    );
+  }
 
   return {
     email: normalizeTemporaryUserEmail(input.email),
     displayName: resolveDisplayName(employee.displayName),
     employeeId: input.employeeId,
-    roles: [],
+    roles: resolveRoles(input.roles),
     tagSize: TAG_SIZE_VALUES.MEDIUM.value,
     ...Object.fromEntries(NOTIFICATION_FIELDS.map((field) => [field, false])),
     ...resolveServerManagedFields(companyId),
