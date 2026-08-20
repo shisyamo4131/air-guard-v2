@@ -557,7 +557,7 @@ Managed governanceの再生成と検証:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath .
-powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath .
+powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2
 ```
 
 `governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`は直接編集せず、承認済みのskill syncで更新します。project固有規則は`governance/project-rules.md`を更新し、rendererとvalidatorを上記の明示path引数で実行します。
@@ -565,7 +565,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPa
 Project-owned文書・設定の検証:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1
+powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2
 ```
 
 相対MarkdownリンクとGitHub互換見出しアンカー、重要文書の索引到達性、ADR索引と本文の状態、ロードマップの重み・得点・無部分加点・索引進捗を確認します。Node.jsから正式なTOMLパーサーを使用し、`.codex/config.toml` と専門エージェントTOMLの構文、必須キー、型、名前、sandbox modeを確認します。アプリケーションのビルドや外部接続は行いません。
