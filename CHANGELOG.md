@@ -24,6 +24,8 @@
 
 ### Changed
 
+- 本登録Userの単なる操作権限剥奪は無効化、Employee退職時は別tenantで同じメールアドレスを再利用できるようAuthentication accountとUser documentを物理削除し、EmployeeとのUser紐付けだけを解除する契約をUWB-07として追加した。`Users_archive`、UID参照、削除条件、監査・復旧、部分失敗reconcileは具体例による実装前の確認事項とした。
+- UWB-03の仮登録User削除を、製品UIで正規作成した単独UserとEmployee連携Userで再検証し、取消、処理中、成功、競合時の安全な失敗、Authentication不変を確認した。正規管理者signupで作成した合成管理者1件をCodex専用saved-dataへ昇格し、通常再起動とdashboard復帰も確認した。
 - CodexのUI受入れでは、架空のテスト値であっても対象業務dataをbackendへ直接注入せず、製品の可視UIと正規application処理経路で作成してから同じUI経路で操作し、backendは結果確認だけに使う契約を追加した。
 - Codex専用local UI testについて、保存済み合成Auth accountを起動ごとに再作成せずimportして使う契約、Emulator→Nuxt→インアプリブラウザの起動順序、一回限定reload、dashboard到達、終了時port確認を運用手順へ記録した。Nuxt dev serverは専用dotenvのexact allowlistと外部作用拒否を検証するwrapper経由へ変更した。Browser visibilityは再試験時に有効化できず、background UI成功と利用者目視未達を分離して記録した。
 - Firebase CLIをWindowsユーザーのglobal npm領域でlatest運用し、Codex専用Emulator・seed・export scriptから`npx --offline` cache依存を除去した。CLI更新で回帰した場合は直前の確認済みversionへ戻す運用を追加した。

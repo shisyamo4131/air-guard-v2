@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-03進行中）
+- 状態: Active（UWB-03完了、UWB-04着手待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 2 | 9 | UWB-01〜02完了、UWB-03進行中 |
+| 実装ゲート | 3 | 10 | UWB-01〜03完了、UWB-04着手待ち |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -154,7 +154,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-03 仮登録User削除境界
 
-- 状態: In progress（2026-08-17）
+- 状態: Completed（2026-08-20）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
@@ -172,8 +172,8 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] composableは表示用判定だけに依存せず、Callable実行直前にもclient policyを再評価し、拒否状態ではrequestを送信しない。
 - [x] User一覧とEmployee詳細から重複した削除可否判定を除き、同じcomposableへ接続する。Employee詳細だけは表示中Employeeとの紐付け一致を追加contextとして渡す。
 - [x] client policyとserver policyで共通する条件についてparity testを設ける。client事前判定はUX補助であり、server最終認可を代替しないことを固定する。
-- [ ] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
-- [ ] 確認、処理中、取消、成功、失敗のUI状態を確認する。
+- [x] 本登録User削除とEmployee退職・削除連鎖は実装せず、Rulesでclient直接deleteを閉じるまでdeploy不可として保持する。
+- [x] 確認、処理中、取消、成功、失敗のUI状態を確認する。
 
 #### 完了条件
 
@@ -182,7 +182,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] client policy、composable、User一覧、Employee詳細の許可・拒否結果が一致し、拒否時にCallableが呼ばれない。
 - [x] 既存削除triggerが仮登録削除でAuthへ進まないことと再試行結果が記録されている。
 - [x] 利用者が各application implementation fileを確認している。
-- [ ] 単体testと対象UIのlocal確認が成功している。
+- [x] 単体testと対象UIのlocal確認が成功している。
 
 ### UWB-04 仮登録User作成のserver境界
 
@@ -253,7 +253,37 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] console errorと意図しないFirestore直接writeがない。
 - [ ] 利用者が変更されたUI implementation fileをすべて確認している。
 
-### UWB-07 Firestore Rulesのactor・field制約
+### UWB-07 本登録Userの利用停止・退職・削除境界
+
+- 状態: Specification discussion required（具体例による壁打ち待ち）
+- 主な影響画面: User一覧、Employee詳細、退職処理
+- 主な実装境界: 専用Callable、Authentication、Users、Employee連携、監査・復旧
+
+#### 確定済み契約
+
+- [x] AirGuardV2の操作権限だけを剥奪し、Employeeと業務記録を維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
+- [x] Employeeの退職に伴う本登録User削除では、別tenantで同じメールアドレスを再利用できるようAuthentication accountを削除する。
+- [x] 退職時は本登録User documentを物理削除し、EmployeeとのUser紐付けを解除する。
+- [x] EmployeeとEmployeeに紐付く勤怠・配置・請求等の業務記録はUser削除に連鎖して削除しない。
+
+#### 実装前に具体例で確定する事項
+
+- [ ] `Users_archive`を設けるか、退避するfield、個人情報の保持期間、参照権限、復旧可否を具体例で確定する。
+- [ ] 作成者・更新者として保存されたUIDの全参照箇所を調査し、User削除後の表示名・監査主体・不明User表記を具体例で確定する。
+- [ ] 会社管理者本人、移譲前後の会社管理者、通常User、無効User、Employee未連携User、他社Userの削除可否を具体例で確定する。現行の「管理者Userは直接削除不可・別Userへの管理者移譲を先行」という規則も、この壁打ちで具体例へ照合する。
+- [ ] 退職取消、誤削除、同一メールで別tenantへ再登録、元tenantへの再入社を具体例に、復旧方法と再登録契約を確定する。
+- [ ] Authentication削除、User削除、Employee紐付け解除、監査記録の実行順序、冪等性、部分失敗reconcileを確定する。
+- [ ] 監査記録へ保存するactor、target、理由、時刻、元tenant、結果、失敗段階と、閲覧権限・保持期間を確定する。
+
+#### 完了条件
+
+- [ ] 無効化と退職削除が別操作としてUI・Callable・監査記録で区別されている。
+- [ ] 退職削除後に旧Authと旧Userが不存在で、Employeeと業務記録が維持され、EmployeeのUser紐付けだけが解除されている。
+- [ ] 同じメールアドレスで別tenantへ正規登録できる。
+- [ ] 管理者、自己、他社、状態不正、二重実行、各段階の部分失敗をfail closedまたは安全にreconcileできる。
+- [ ] archive・UID参照・監査・復旧について利用者が具体例を確認し、単体・Emulator・UI testが成功している。
+
+### UWB-08 Firestore Rulesのactor・field制約
 
 - 状態: Not started
 - 主な実装file: `firestore.rules`
@@ -277,7 +307,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] 既存CallableはAdmin SDK経由で正常に動作する。
 - [ ] 利用者が`firestore.rules`を確認している。
 
-### UWB-08 role・permission対応表のschemas package統合
+### UWB-09 role・permission対応表のschemas package統合
 
 - 状態: Not started
 - 対象repository: `air-guard-v2-schemas`、本repositoryのroot・Functions dependency
@@ -299,7 +329,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] package更新・rollback・導入順序が記録されている。
 - [ ] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
 
-### UWB-09 全体検証・文書確定・main統合準備
+### UWB-10 全体検証・文書確定・main統合準備
 
 - 状態: Not started
 
@@ -316,7 +346,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] UWB-01〜UWB-08がすべて完了している。
+- [ ] UWB-01〜UWB-09がすべて完了している。
 - [ ] local testとChrome受入れがすべて成功している。
 - [ ] 利用者がUWBのlocal確定を明示している。
 - [ ] main統合対象commit、差分、test、未確認事項が提示されている。
@@ -334,7 +364,6 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 - custom claims変更後の既発行token失効。
 - 一般User本登録でclaims設定に失敗した場合のreconcile。
 - Auth・Firestore triggerの部分失敗監視と再同期。
-- 本登録User削除とEmployee退職・削除時のUser/Auth状態遷移。
 - Employee連携User本人へ提供するEmployee Self Accessのfield・path境界。
 - 将来の明示的なsuper-user support access。
 - Dev・production deployとremote受入れ。
@@ -348,3 +377,5 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-17 | UWB-03 client policy | 仮登録User削除のclient事前判定policyと拒否理由を追加 | `7998440` | client／server関連単体test 31件、`node --check`、`git diff --check` pass |
 | 2026-08-17 | UWB-03 client integration | 共通composableを追加し、User一覧・Employee詳細の表示判定と削除実行を接続。共通条件parity、自己対象拒否、再試行を追加 | `5338cbc`、`14202f4`、`27f2050`、`4869807`、`8ceb540` | UWB-03対象単体test 73件、自己対象・再試行・trigger関連28件、両SFC compile、`git diff --check` pass。UI／Emulator未実施 |
 | 2026-08-17 | UWB-03 local delete verification | composableの明示importを修正し、削除modeで更新field validationを走らせず、削除禁止時にhandlerへ進まない共通UI package境界を追加 | `5a26ef4`、air-vuetify-v3 `07886a4` | composable単体test 3件、共通UI package単体test 3件、SFC compile、構文、Chrome＋Emulatorで合成仮登録User削除、Firestore対象不存在、Auth 3件不変を確認。全UI状態は未完了 |
+| 2026-08-20 | UWB-03 completed | 正規UIで作成した単独・Employee連携仮登録Userを対象に、取消、処理中、成功、既削除への安全な失敗をインアプリブラウザで確認。正規signup管理者をCodex専用saved-dataへ昇格 | 本変更 | UWB-03単体test 32件、Auth 1件・管理者User 1件不変、仮登録3件不存在、通常import、dashboard、console error 0件、全専用port閉鎖、snapshot fingerprint不変 |
+| 2026-08-20 | UWB-07 planning | 本登録Userの単なる利用停止は無効化、退職時はAuth・User物理削除とEmployee紐付け解除としてUWB内へ追加。archive、UID参照、削除条件、監査・復旧は具体例による壁打ち事項として分離 | 本変更 | project-owned・managed governance validator、`git diff --check` pass。application codeとdataは未変更 |

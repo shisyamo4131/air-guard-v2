@@ -73,6 +73,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 単独仮Userの作成とEmployee連携仮Userの作成は別の公開操作として扱う。Employee連携では、同じ会社に実在し、他のUserと紐付いていないEmployeeだけをserver側で確定し、client指定の任意`employeeId`を信頼しない。1 Employeeに紐付くUserは最大1件とする。
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
+- 本登録UserからAirGuardV2の操作権限だけを一時的または継続的に剥奪し、雇用・業務記録上のEmployeeを維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
+- Employeeの退職に伴って本登録Userを削除する場合は、別tenantへの所属後に同じメールアドレスで新規登録できるようAuthentication accountとUser documentを物理削除し、EmployeeとのUser紐付けを解除する。EmployeeとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除対象に含めない。
+- 物理削除するUserを`Users_archive`へ退避するか、UIDを作成者・更新者として保持する既存dataの表示・監査をどう維持するか、削除actor・target条件、監査記録、誤削除復旧、部分失敗reconcileは、本登録User削除の専用UWBゲートで具体例を用いて確定するまでは未実装とする。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのメールアドレスが会社管理者による仮登録メールアドレスと完全一致し、該当する仮登録Userが全会社を通じて一意であることを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをクライアント入力だけで信頼する処理、複数一致時の先頭採用は許可しない。
 - 本登録前の未認証事前登録確認は、該当する仮登録Userが0件なら未登録、1件なら登録済みという真偽値だけを返す。会社ID、表示名、role、仮User IDは返さず、複数一致は異常として拒否する。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。
@@ -83,8 +86,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 会社所属が確立した認証必須Callableは、API固有の入力・権限・対象検査より先に、ID tokenと現在のAuthentication UserのUID、email、email確認、company claim、`isSuperUser`のboolean型と値、有効状態を共通境界で照合する。不一致や既に無効なAuthはfail closedとし、確認済みidentityだけを後段へ渡す。未認証で利用できる事前確認Callableはこの境界の対象外とし、初期管理者・一般Userの本登録Callableは所属claim確立前のbootstrapとして専用検査を使用する。
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
 - 全会社Userを対象とするメールアドレス重複確認は、ID tokenと現在のAuthentication Userがメール確認済み・有効・同社会社claimであり、同社のUser documentが有効な本登録会社管理者である場合だけ許可する。`isSuperUser`だけでは許可しない。
-- 従業員の退職と Authentication アカウント削除は同一操作とみなさず、業務記録との関係を保つ。
-- User管理の段階改修では、まず仮登録Userと保護fieldの境界を確立する。本登録Userの削除、Employee退職時のUser/Auth状態遷移、本人向けEmployee情報の具体的なread境界は、各専用ゲートで別に確定する。
+- 従業員の退職、Employeeの業務状態変更、Userの利用停止、Authentication accountとUser documentの削除は別の状態遷移として扱い、専用use-caseが順序・再試行・部分失敗を管理する。退職時もEmployeeと業務記録の関係を保つ。
+- User管理の段階改修では、まず仮登録Userと保護fieldの境界を確立する。本登録Userの利用停止・退職・削除境界はUWB内の専用ゲート、本人向けEmployee情報の具体的なread境界は別のEmployee Self Accessゲートで確定する。
 
 ## 主要データと業務規則
 

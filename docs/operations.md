@@ -174,7 +174,7 @@ npm run test:local
 
 インアプリブラウザは既定ではbackgroundで操作される。利用者が目視を希望する検証ではvisibilityを要求し、可視状態を取得できた同じtabだけを目視可能な操作証拠とする。これはChrome拡張ではなくCodex Desktop内の専用ブラウザ表示であり、利用者のChrome profileを使用しない。2026-08-19の再試験ではvisibilityを2回要求しても状態は`false`のままで、Emulator sign-inとdashboard到達はbackgroundで成功したが、利用者による目視は未提供である。Codex DesktopまたはBrowser plugin更新後に再確認する。
 
-`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-19時点で2件を確認済みであり、通常起動は`--import .codex-test/saved-data`だけを使う。sign-inに使う合成credentialの権威ある定義は`test/fixtures/codex-local-seed.mjs`とし、local demo project以外へ使用しない。credential値を応答や検証logへ出力しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。fixture変更またはsnapshot破損時だけ、承認済みcandidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser session喪失時にcredentialを永続管理する場合は、repository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、承認済みcandidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
 
 `npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
 
@@ -223,6 +223,8 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 2026-08-17の旧基準による受入れでは、専用suite 72件、UI設定契約9件、専用build、dashboard表示、dashboard滞在中のconsole error 0件、全専用port閉鎖、`.codex-test/runtime`空、`.output`削除を確認した。ただし`fill`等を含む旧操作証拠は新基準の受入れには再利用しない。サインアウト直後に購読解除前のFirestore snapshot listenerが2件の`permission-denied`を出す既存挙動は残っており、製品側のlogout cleanup課題として扱う。
 
 2026-08-19のレビュー後再試験では、専用dotenv exact allowlistと外部作用拒否のpreflight、保存Auth fixture 2件、saved-data fingerprint、全専用port未使用、Emulator importと全service ready、Nuxt/Vite/Nitro ready、loopback HTTP 200を確認してからインアプリブラウザを開いた。起動template後の一回限定reloadで製品topを確認し、可視button clickと一文字ずつのkeyboard入力だけでsign-inして`/dashboard`へ到達し、dashboard滞在中のconsole errorは0件だった。終了後は全専用port閉鎖とsaved-data fingerprint不変を確認した。visibilityは`false`のままで利用者目視だけは未達である。network host一覧のbrowser証拠は取得しておらず、exact configとdemo projectのEmulator fail-closed出力を非UI証拠とする。
+
+2026-08-20のUWB-03受入れでは、fresh専用Emulator上で初期会社管理者を正規signup UIから作成し、Authentication EmulatorのOOB確認だけを非UI setupとして行った。User一覧から単独仮登録Userを、Employee詳細からEmployee連携仮登録Userをそれぞれ可視UIで作成し、取消、削除中、成功を確認した。別tabで先に削除した対象へ古い確認dialogから再実行する競合では`Item to delete not found.`を表示し、画面を壊さず失敗した。削除後のbackend assertionはAuth 1件と管理者User 1件だけが残り、3件の仮登録Userが不存在であることを確認した。Employee作成時は外部geocoding拒否による既知のconsole errorが1件出たが作成・User連携・User削除は完了した。正規signup後の管理者だけをcandidate受入れ・promotion経路で`.codex-test/saved-data`へ昇格し、通常import、HTTP 200、Auth/User各1件、`/dashboard`復帰、console error 0件、終了時全専用port閉鎖、saved-data fingerprint不変を再確認した。Firebase CLIがWindows上でexport一時directoryのrenameを`EPERM`にしたため、Emulatorが残した最新の完全exportについてworkspace内、metadata、容量上限、candidate未存在を検証してcandidateへ移し、通常のacceptance verifierとpromotion gateを通した。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

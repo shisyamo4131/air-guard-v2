@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rules、会社所属済み6 Callableの共通Auth identity gate、一般User本登録、初期管理者signupの専用guardは実装済みである。次はUWB-02で`users:write`認可基盤を実装し、仮登録Userのserver境界とUIを段階的に接続してからUsers Rulesのfield/actor制約を閉じる。その後App Check・rate limitとDev受入れへ進む。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。Firestore・Storage Rules、会社所属済み6 Callableの共通Auth identity gate、一般User本登録、初期管理者signupの専用guard、UWB-01〜03は実装・local検証済みである。次はUWB-04で単独／Employee連携の仮登録User作成をserver境界へ移し、UWB-07で本登録Userの利用停止・退職・削除についてarchive、UID参照、削除条件、監査・復旧を具体例から確定してから、Users Rulesのfield/actor制約を閉じる。続いてApp Check・rate limitとDev受入れへ進む。将来の他社support accessは明示的な開始・終了手続きを持つ別機能として設計する。このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -115,3 +115,4 @@
 | 2026-08-16 | 10% | 0 | UWB-01で単独UserとEmployee連携Userを分け、会社管理者と`users:write`保有者による仮登録管理、`manager`・`human-resource`への初期付与、単独／Employee連携の作成入口分離、1 Employee対最大1 Userを確定した。本登録User lifecycleとEmployee Self Accessは別ゲートへ分離した。文書契約のみで実装・Rules・test・受入れは未完了のため進捗は据え置いた。 |
 | 2026-08-17 | 10% | 0 | Codexが専用Emulator、隔離済みFunctions、local server、合成account/data、Codex管理ブラウザを準備し、利用者のChrome起動やsign-inなしにlocal UI testを完結させる方針を確定した。専用Functions接続、開発サーバー設定、browser sign-inは未実装・未検証であり、既存マイルストーンの完了条件を満たさないため進捗は据え置いた。 |
 | 2026-08-17 | 10% | 0 | Codex専用UIの最小経路を実装し、外部作用deny、専用Functions・Firebase port、PWA/通知無効化、メール確認済み・company claim付き合成User、Codex管理ブラウザsign-in、dashboard到達、専用suite 72件、process・runtime・一時build cleanupを確認した。サインアウト直後のsnapshot listener error、Users Rules、UWB、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
+| 2026-08-20 | 10% | 0 | UWB-03の仮登録User削除を、正規UIで作成した単独UserとEmployee連携Userで再検証し、取消、処理中、成功、既削除への安全な失敗、Auth不変を確認した。正規管理者signupからCodex専用saved-dataを更新し通常再起動も確認した。UWB-04以降、Users Rules、App Check、Dev・remote受入れが未完了でdeploy不可のため進捗は据え置いた。 |
