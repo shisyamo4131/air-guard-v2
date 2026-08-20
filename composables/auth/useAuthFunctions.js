@@ -4,17 +4,6 @@ export const useAuthFunctions = () => {
   const { $functions } = useNuxtApp();
 
   /**
-   * グローバルにメールアドレスの利用可能性をチェックします。
-   * @param {string} email - チェックするメールアドレス
-   * @returns {Promise<{available: boolean}>} - 利用可能かどうかの結果
-   */
-  const checkEmailAvailabilityGlobal = async (email) => {
-    const callable = httpsCallable($functions, "checkEmailAvailabilityGlobal");
-    const result = await callable({ email });
-    return result.data;
-  };
-
-  /**
    * 管理者サインアップ前にメールアドレスが利用可能かをチェックします。
    * @param {Object} data
    * @param {string} data.email - メールアドレス
@@ -60,6 +49,26 @@ export const useAuthFunctions = () => {
   const setupUserAccount = async () => {
     const callable = httpsCallable($functions, "setupUserAccount");
     const result = await callable();
+    return result.data;
+  };
+
+  /** 仮登録の単独Userを作成します。 */
+  const createStandaloneTemporaryUser = async (data) => {
+    const callable = httpsCallable(
+      $functions,
+      "createStandaloneTemporaryUser",
+    );
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** Employeeに紐づく仮登録Userを作成します。 */
+  const createEmployeeLinkedTemporaryUser = async (data) => {
+    const callable = httpsCallable(
+      $functions,
+      "createEmployeeLinkedTemporaryUser",
+    );
+    const result = await callable(data);
     return result.data;
   };
 
@@ -121,10 +130,11 @@ export const useAuthFunctions = () => {
     createAdminAccount,
     checkUserPreRegistration,
     setupUserAccount,
+    createStandaloneTemporaryUser,
+    createEmployeeLinkedTemporaryUser,
     deleteTemporaryUser,
     disableUser,
     enableUser,
     changeAdminUser,
-    checkEmailAvailabilityGlobal,
   };
 };

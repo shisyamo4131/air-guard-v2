@@ -4,7 +4,6 @@ import test from "node:test";
 const PUBLIC_CALLABLES = [
   "changeAdminUser",
   "checkEmailAvailability",
-  "checkEmailAvailabilityGlobal",
   "checkUserPreRegistration",
   "createAdminAccount",
   "createEmployeeLinkedTemporaryUser",

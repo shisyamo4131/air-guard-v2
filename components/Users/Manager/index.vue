@@ -18,6 +18,7 @@ import UserCardMenu from "./CardMenu.vue";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
+import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -38,12 +39,10 @@ const emit = defineEmits(["update:search"]);
 const auth = useAuthStore();
 const loadings = useLoadingsStore();
 const messages = useMessagesStore();
-const {
-  enableUser,
-  disableUser,
-  checkEmailAvailabilityGlobal,
-} = useAuthFunctions();
+const { enableUser, disableUser } = useAuthFunctions();
 const { deleteTemporaryUser, canDelete } = useTemporaryUserDeletion();
+const { createStandaloneTemporaryUser, canCreate } =
+  useTemporaryUserCreation();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -129,12 +128,11 @@ async function handleEnableUser(user) {
 
 /**
  * AirArrayManager の handle-create に渡す関数
- * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
+ * - server側の予約transactionを使って仮登録Userを作成します。
  * @param item
  */
 async function handleCreate(item) {
-  await checkEmailAvailabilityGlobal(item.email);
-  await item.create();
+  await createStandaloneTemporaryUser(item);
 }
 
 /**
@@ -209,7 +207,11 @@ async function handleDelete(item) {
           :model-value="search"
           @update:model-value="(value) => (search = value)"
         />
-        <v-btn icon="mdi-plus" @click="() => tableProps.toCreate()" />
+        <v-btn
+          :disabled="!canCreate()"
+          icon="mdi-plus"
+          @click="() => tableProps.toCreate()"
+        />
         <v-menu v-model="toolberMenu">
           <template #activator="{ props: activatorProps }">
             <v-btn v-bind="activatorProps" icon="mdi-dots-vertical" />
@@ -231,9 +233,9 @@ async function handleDelete(item) {
         :users="tableProps.items"
         :hide-default-footer="props.hideDefaultFooter"
         :items-per-page="props.itemsPerPage"
-        :show-create="props.showCreate"
+        :show-create="props.showCreate && canCreate()"
         show-edit
-        @click:create="() => toCreate()"
+        @click:create="() => tableProps.toCreate()"
         @click:edit="(item) => tableProps.toUpdate(item)"
       >
         <template #card-append="{ item }">

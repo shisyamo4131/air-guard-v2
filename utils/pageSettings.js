@@ -403,7 +403,7 @@ export const pageStructure = [
     id: "admin-settings",
     label: "管理者メニュー",
     icon: "mdi-cog",
-    roles: ["admin"],
+    roles: ["admin", "users:write"],
     navigation: true,
     children: [
       {
@@ -419,7 +419,7 @@ export const pageStructure = [
         path: "/settings/users",
         label: "ユーザー設定",
         icon: "mdi-account-cog",
-        roles: ["admin"],
+        roles: ["users:write"],
         navigation: true,
       },
       {

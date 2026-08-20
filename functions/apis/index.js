@@ -4,7 +4,6 @@
  *****************************************************************************/
 export { changeAdminUser } from "./changeAdminUser.js";
 export { checkEmailAvailability } from "./checkEmailAvailability.js";
-export { checkEmailAvailabilityGlobal } from "./checkEmailAvailabilityGlobal.js";
 export { checkUserPreRegistration } from "./checkUserPreRegistration.js";
 export { createAdminAccount } from "./createAdminAccount.js";
 export {

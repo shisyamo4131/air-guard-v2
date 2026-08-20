@@ -41,3 +41,25 @@ test("temporary User deletion callable sends only the target User ID", async () 
   assert.equal(deleteSource.includes("actorUid"), false);
   assert.match(deleteSource, /return result\.data/);
 });
+
+test("temporary User creation transports forward only their prepared payload", async () => {
+  const source = await readFile(sourceUrl, "utf8");
+  for (const callableName of [
+    "createStandaloneTemporaryUser",
+    "createEmployeeLinkedTemporaryUser",
+  ]) {
+    const start = source.indexOf(`const ${callableName} = async (data) =>`);
+    const end = source.indexOf("\n  };", start);
+    const functionSource = source.slice(start, end);
+    assert.ok(start >= 0, callableName);
+    assert.ok(end > start, callableName);
+    assert.match(
+      functionSource,
+      new RegExp(`httpsCallable\\([\\s\\S]*"${callableName}"`),
+    );
+    assert.match(functionSource, /await callable\(data\)/);
+    assert.match(functionSource, /return result\.data/);
+    for (const forbidden of ["companyId", "actorUid", "isAdmin", "isTemporary"])
+      assert.equal(functionSource.includes(forbidden), false);
+  }
+});
