@@ -8,7 +8,17 @@ import {
   getAuth,
   signInWithEmailAndPassword,
 } from "firebase/auth";
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+  query,
+  setDoc,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import {
   deleteObject,
   getDownloadURL,
@@ -125,12 +135,18 @@ async function seedRegisteredUser({
   disabled = false,
   isAdmin,
   email,
+  displayName,
+  employeeId,
+  roles,
   omit = [],
 }) {
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     const data = { companyId, isTemporary, disabled };
     if (isAdmin !== undefined) data.isAdmin = isAdmin;
     if (email !== undefined) data.email = email;
+    if (displayName !== undefined) data.displayName = displayName;
+    if (employeeId !== undefined) data.employeeId = employeeId;
+    if (roles !== undefined) data.roles = roles;
     for (const field of omit) delete data[field];
     await setDoc(
       doc(context.firestore(), "Companies", pathCompanyId, "Users", uid),
@@ -147,6 +163,67 @@ async function seedEmailReservation({ email, companyId, userId }) {
       { companyId, userId },
     );
   });
+}
+
+async function seedTemporaryManagementActor({
+  uid,
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  isAdmin = false,
+  roles = ["manager"],
+}) {
+  const email = `${uid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid,
+    companyId,
+    email,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin,
+    isTemporary: false,
+    disabled: false,
+    email,
+    roles,
+  });
+  return { uid, companyId, email };
+}
+
+async function seedEmployee({
+  employeeId,
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  displayName = "仮従業員",
+  employmentStatus = "ACTIVE",
+}) {
+  const data = { displayName, employmentStatus };
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Employees", employeeId),
+      data,
+    );
+  });
+  return data;
+}
+
+function actorCallableRequest({ actor, data }) {
+  return callableRequest({
+    uid: actor.uid,
+    claims: {
+      email: actor.email,
+      companyId: actor.companyId,
+      isSuperUser: false,
+    },
+    data,
+  });
+}
+
+function splitSettled(results) {
+  return {
+    fulfilled: results.filter((result) => result.status === "fulfilled"),
+    rejected: results.filter((result) => result.status === "rejected"),
+  };
 }
 
 function authenticatedFirestore(uid, claims = {}) {
@@ -521,6 +598,144 @@ for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
     await assertFails(deleteDoc(otherTenant));
   });
 }
+
+test("Firestore Rules keep User reservation collections server-only", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const sameTenantUid = "uwb04-rules-reservation-primary";
+  const otherTenantUid = "uwb04-rules-reservation-secondary";
+  const email = "uwb04-rules@codex-test.invalid";
+  const emailReservationId = createUserEmailReservationId(email);
+  const employeeId = "uwb04-rules-employee";
+  await seedRegisteredUser({
+    uid: sameTenantUid,
+    isAdmin: true,
+    roles: [],
+  });
+  await seedRegisteredUser({
+    uid: otherTenantUid,
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isAdmin: true,
+    roles: [],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(
+      doc(firestore, "UserEmailReservations", emailReservationId),
+      { companyId, userId: "uwb04-rules-user" },
+    );
+    await setDoc(
+      doc(
+        firestore,
+        "Companies",
+        companyId,
+        "EmployeeUserReservations",
+        employeeId,
+      ),
+      { userId: "uwb04-rules-user" },
+    );
+    await setDoc(
+      doc(
+        firestore,
+        "Companies",
+        companyId,
+        "EmployeeUserReservations",
+        employeeId,
+        "Nested",
+        "probe",
+      ),
+      { fixture: true },
+    );
+  });
+
+  const contexts = [
+    authenticatedFirestore(sameTenantUid, { isSuperUser: true }),
+    authenticatedFirestore(otherTenantUid, {
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      isSuperUser: true,
+    }),
+    testEnvironment.unauthenticatedContext().firestore(),
+  ];
+  for (const firestore of contexts) {
+    const emailReservation = doc(
+      firestore,
+      "UserEmailReservations",
+      emailReservationId,
+    );
+    const employeeReservation = doc(
+      firestore,
+      "Companies",
+      companyId,
+      "EmployeeUserReservations",
+      employeeId,
+    );
+    await assertFails(getDoc(emailReservation));
+    await assertFails(setDoc(emailReservation, { companyId, userId: "forged" }));
+    await assertFails(deleteDoc(emailReservation));
+    await assertFails(getDoc(employeeReservation));
+    await assertFails(setDoc(employeeReservation, { userId: "forged" }));
+    await assertFails(deleteDoc(employeeReservation));
+  }
+
+  const sameTenantFirestore = contexts[0];
+  await assertFails(
+    getDocs(collection(sameTenantFirestore, "UserEmailReservations")),
+  );
+  await assertFails(
+    getDocs(
+      collection(
+        sameTenantFirestore,
+        "Companies",
+        companyId,
+        "EmployeeUserReservations",
+      ),
+    ),
+  );
+  const nestedReservation = doc(
+    sameTenantFirestore,
+    "Companies",
+    companyId,
+    "EmployeeUserReservations",
+    employeeId,
+    "Nested",
+    "probe",
+  );
+  await assertFails(getDoc(nestedReservation));
+  await assertFails(setDoc(nestedReservation, { fixture: false }));
+  await assertFails(deleteDoc(nestedReservation));
+
+  const allowedProbe = doc(
+    sameTenantFirestore,
+    "Companies",
+    companyId,
+    "RulesProbe",
+    "uwb04-batch-smuggling",
+  );
+  const forbiddenProbe = doc(
+    sameTenantFirestore,
+    "UserEmailReservations",
+    createUserEmailReservationId("uwb04-batch@codex-test.invalid"),
+  );
+  const batch = writeBatch(sameTenantFirestore);
+  batch.set(allowedProbe, { fixture: true });
+  batch.set(forbiddenProbe, { companyId, userId: "forged" });
+  await assertFails(batch.commit());
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    assert.equal(
+      (
+        await getDoc(
+          doc(
+            context.firestore(),
+            "Companies",
+            companyId,
+            "RulesProbe",
+            "uwb04-batch-smuggling",
+          ),
+        )
+      ).exists(),
+      false,
+    );
+  });
+});
 
 test("Firestore Rules keep SecurityReportIndexes client writes denied", async () => {
   const uid = "codex-rules-security-report-index-user";
@@ -1120,6 +1335,529 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("standalone temporary User creation writes canonical User and email reservation", async () => {
+  const { createStandaloneTemporaryUser } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb04-standalone-manager",
+  });
+  const email = "uwb04-standalone@codex-test.invalid";
+  const result = await createStandaloneTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        email: ` ${email.toUpperCase()} `,
+        displayName: "仮利用者",
+        roles: ["human-resource"],
+        tagSize: "SMALL",
+        receiveConfirmedArrangementNotification: true,
+      },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    userId: result.userId,
+    linkType: "standalone",
+    employeeId: null,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const user = await getDoc(
+      doc(firestore, "Companies", actor.companyId, "Users", result.userId),
+    );
+    assert.equal(user.exists(), true);
+    assert.equal(user.data().email, email);
+    assert.equal(user.data().displayName, "仮利用者");
+    assert.deepEqual(user.data().roles, ["human-resource"]);
+    assert.equal(user.data().companyId, actor.companyId);
+    assert.equal(user.data().isTemporary, true);
+    assert.equal(user.data().isAdmin, false);
+    assert.equal(user.data().disabled, false);
+    assert.equal(user.data().tagSize, "SMALL");
+    assert.equal(user.data().receiveConfirmedArrangementNotification, true);
+    assert.equal(user.data().receiveArrivedArrangementNotification, false);
+    assert.equal(user.data().receiveLeavedArrangementNotification, false);
+    const reservation = await getDoc(
+      doc(
+        firestore,
+        "UserEmailReservations",
+        createUserEmailReservationId(email),
+      ),
+    );
+    assert.deepEqual(reservation.data(), {
+      companyId: actor.companyId,
+      userId: result.userId,
+    });
+  });
+  await assert.rejects(
+    () => getAdminAuth().getUserByEmail(email),
+    (error) => error.code === "auth/user-not-found",
+  );
+});
+
+test("Employee-linked temporary User creation uses the active Employee snapshot", async () => {
+  const { createEmployeeLinkedTemporaryUser } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb04-linked-hr",
+    roles: ["human-resource"],
+  });
+  const employeeId = "uwb04-linked-employee";
+  const employee = await seedEmployee({
+    employeeId,
+    displayName: "連携社員",
+  });
+  const email = "uwb04-linked@codex-test.invalid";
+  const result = await createEmployeeLinkedTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { employeeId, email, roles: ["manager"] },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    userId: result.userId,
+    linkType: "employee-linked",
+    employeeId,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const user = await getDoc(
+      doc(firestore, "Companies", actor.companyId, "Users", result.userId),
+    );
+    assert.equal(user.data().displayName, employee.displayName);
+    assert.equal(user.data().employeeId, employeeId);
+    assert.deepEqual(user.data().roles, ["manager"]);
+    assert.equal(user.data().isTemporary, true);
+    assert.equal(user.data().isAdmin, false);
+    assert.equal(user.data().disabled, false);
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "UserEmailReservations",
+            createUserEmailReservationId(email),
+          ),
+        )
+      ).data(),
+      { companyId: actor.companyId, userId: result.userId },
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "EmployeeUserReservations",
+            employeeId,
+          ),
+        )
+      ).data(),
+      { userId: result.userId },
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "Employees",
+            employeeId,
+          ),
+        )
+      ).data(),
+      employee,
+    );
+  });
+});
+
+test("concurrent cross-tenant creation commits one User for the same email", async () => {
+  const { createStandaloneTemporaryUser } = await loadRebuildApis();
+  const actors = [
+    await seedTemporaryManagementActor({
+      uid: "uwb04-email-race-primary",
+    }),
+    await seedTemporaryManagementActor({
+      uid: "uwb04-email-race-secondary",
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    }),
+  ];
+  const email = "uwb04-email-race@codex-test.invalid";
+  const results = await Promise.allSettled(
+    actors.map((actor) =>
+      createStandaloneTemporaryUser.run(
+        actorCallableRequest({
+          actor,
+          data: { email, displayName: "競合作成" },
+        }),
+      ),
+    ),
+  );
+  const { fulfilled, rejected } = splitSettled(results);
+
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason.code, "already-exists");
+  const winner = fulfilled[0].value;
+  const winnerActor =
+    actors[results.findIndex((result) => result.status === "fulfilled")];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const usersByCompany = await Promise.all(
+      actors.map((actor) =>
+        getDocs(
+          query(
+            collection(firestore, "Companies", actor.companyId, "Users"),
+            where("email", "==", email),
+          ),
+        ),
+      ),
+    );
+    assert.equal(
+      usersByCompany.reduce((count, users) => count + users.size, 0),
+      1,
+    );
+    assert.equal(
+      usersByCompany.find((users) => users.size === 1).docs[0].id,
+      winner.userId,
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "UserEmailReservations",
+            createUserEmailReservationId(email),
+          ),
+        )
+      ).data(),
+      { companyId: winnerActor.companyId, userId: winner.userId },
+    );
+  });
+});
+
+test("concurrent Employee-linked creation commits one User and winner reservations", async () => {
+  const { createEmployeeLinkedTemporaryUser } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb04-employee-race-manager",
+  });
+  const employeeId = "uwb04-race-employee";
+  await seedEmployee({ employeeId, displayName: "競合社員" });
+  const emails = [
+    "uwb04-race-a@codex-test.invalid",
+    "uwb04-race-b@codex-test.invalid",
+  ];
+  const { fulfilled, rejected } = splitSettled(
+    await Promise.allSettled(
+      emails.map((email) =>
+        createEmployeeLinkedTemporaryUser.run(
+          actorCallableRequest({
+            actor,
+            data: { employeeId, email },
+          }),
+        ),
+      ),
+    ),
+  );
+
+  assert.equal(fulfilled.length, 1);
+  assert.equal(rejected.length, 1);
+  assert.equal(rejected[0].reason.code, "already-exists");
+  const winner = fulfilled[0].value;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const users = await getDocs(
+      query(
+        collection(firestore, "Companies", actor.companyId, "Users"),
+        where("employeeId", "==", employeeId),
+      ),
+    );
+    assert.equal(users.size, 1);
+    assert.equal(users.docs[0].id, winner.userId);
+    const winnerEmail = users.docs[0].data().email;
+    assert.equal(emails.includes(winnerEmail), true);
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "EmployeeUserReservations",
+            employeeId,
+          ),
+        )
+      ).data(),
+      { userId: winner.userId },
+    );
+    for (const email of emails) {
+      const reservation = await getDoc(
+        doc(
+          firestore,
+          "UserEmailReservations",
+          createUserEmailReservationId(email),
+        ),
+      );
+      assert.equal(reservation.exists(), email === winnerEmail);
+      if (reservation.exists()) {
+        assert.deepEqual(reservation.data(), {
+          companyId: actor.companyId,
+          userId: winner.userId,
+        });
+      }
+    }
+  });
+});
+
+test("Employee-linked deletion removes the User and both reservations", async () => {
+  const { createEmployeeLinkedTemporaryUser, deleteTemporaryUser } =
+    await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb04-delete-manager",
+  });
+  const employeeId = "uwb04-delete-employee";
+  const employee = await seedEmployee({
+    employeeId,
+    displayName: "削除社員",
+  });
+  const email = "uwb04-delete@codex-test.invalid";
+  const created = await createEmployeeLinkedTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { employeeId, email },
+    }),
+  );
+  let actorUserBefore;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    actorUserBefore = (
+      await getDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          actor.companyId,
+          "Users",
+          actor.uid,
+        ),
+      )
+    ).data();
+  });
+  const actorAuthBefore = await getAdminAuth().getUser(actor.uid);
+  const actorAuthStateBefore = {
+    email: actorAuthBefore.email,
+    emailVerified: actorAuthBefore.emailVerified,
+    disabled: actorAuthBefore.disabled,
+    customClaims: actorAuthBefore.customClaims,
+  };
+  const deleted = await deleteTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { targetUserId: created.userId },
+    }),
+  );
+
+  assert.deepEqual(deleted, {
+    success: true,
+    userId: created.userId,
+    linkType: "employee-linked",
+    employeeId,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    assert.equal(
+      (
+        await getDoc(
+          doc(firestore, "Companies", actor.companyId, "Users", created.userId),
+        )
+      ).exists(),
+      false,
+    );
+    assert.equal(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "EmployeeUserReservations",
+            employeeId,
+          ),
+        )
+      ).exists(),
+      false,
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "Employees",
+            employeeId,
+          ),
+        )
+      ).data(),
+      employee,
+    );
+    assert.equal(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "UserEmailReservations",
+            createUserEmailReservationId(email),
+          ),
+        )
+      ).exists(),
+      false,
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(firestore, "Companies", actor.companyId, "Users", actor.uid),
+        )
+      ).data(),
+      actorUserBefore,
+    );
+  });
+  const actorAuthAfter = await getAdminAuth().getUser(actor.uid);
+  assert.deepEqual(
+    {
+      email: actorAuthAfter.email,
+      emailVerified: actorAuthAfter.emailVerified,
+      disabled: actorAuthAfter.disabled,
+      customClaims: actorAuthAfter.customClaims,
+    },
+    actorAuthStateBefore,
+  );
+  await assert.rejects(
+    () => getAdminAuth().getUserByEmail(email),
+    (error) => error.code === "auth/user-not-found",
+  );
+});
+
+test("Employee-linked signup converts the temporary User and both reservations", async () => {
+  const {
+    checkUserPreRegistration,
+    createEmployeeLinkedTemporaryUser,
+    setupUserAccount,
+  } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb04-signup-manager",
+  });
+  const employeeId = "uwb04-signup-employee";
+  const employee = await seedEmployee({
+    employeeId,
+    displayName: "登録社員",
+  });
+  const email = "uwb04-signup@codex-test.invalid";
+  const temporary = await createEmployeeLinkedTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { employeeId, email, roles: ["human-resource"] },
+    }),
+  );
+  assert.deepEqual(
+    await checkUserPreRegistration.run({ data: { email } }),
+    { isPreRegistered: true },
+  );
+
+  const authUid = "uwb04-signup-auth-user";
+  await getAdminAuth().createUser({ uid: authUid, email, emailVerified: true });
+  const setupRequest = {
+    auth: {
+      uid: authUid,
+      token: { email, email_verified: true },
+    },
+    data: {},
+  };
+  const registered = await setupUserAccount.run(setupRequest);
+  assert.deepEqual(registered, {
+    success: true,
+    companyId: actor.companyId,
+    userId: authUid,
+  });
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    assert.equal(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "Users",
+            temporary.userId,
+          ),
+        )
+      ).exists(),
+      false,
+    );
+    const user = await getDoc(
+      doc(firestore, "Companies", actor.companyId, "Users", authUid),
+    );
+    assert.equal(user.data().email, email);
+    assert.equal(user.data().isTemporary, false);
+    assert.equal(user.data().isAdmin, false);
+    assert.equal(user.data().disabled, false);
+    assert.equal(user.data().employeeId, employeeId);
+    assert.deepEqual(user.data().roles, ["human-resource"]);
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "UserEmailReservations",
+            createUserEmailReservationId(email),
+          ),
+        )
+      ).data(),
+      { companyId: actor.companyId, userId: authUid },
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "EmployeeUserReservations",
+            employeeId,
+          ),
+        )
+      ).data(),
+      { userId: authUid },
+    );
+    assert.deepEqual(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "Companies",
+            actor.companyId,
+            "Employees",
+            employeeId,
+          ),
+        )
+      ).data(),
+      employee,
+    );
+  });
+  assert.deepEqual((await getAdminAuth().getUser(authUid)).customClaims, {
+    companyId: actor.companyId,
+    isSuperUser: false,
+  });
+  assert.deepEqual(
+    await checkUserPreRegistration.run({ data: { email } }),
+    { isPreRegistered: false },
+  );
+  assert.deepEqual(await setupUserAccount.run(setupRequest), registered);
 });
 
 test("enabled state Callables reject incomplete and inactive actor identities", async () => {
