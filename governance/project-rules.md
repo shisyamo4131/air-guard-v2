@@ -36,6 +36,7 @@
 ## Project-specific Roles and Workstreams
 
 - primary taskをcoordinatorとし、別のcoordinator subagentは作らない。
+- AirGuardV2の全Codex taskは、利用者がrepositoryとして管理する`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続する。Codex専用worktreeを作成・使用せず、task作成・交代・再起動後の変更なしcallbackでcwdとGit top-levelがこのpathそのものであることを確認する。不一致時はfile変更、Git mutation、process起動、外部作用を開始せず利用者へ報告する。
 - base rolesは`developer`、`tester`、`code_explorer`、`docs_researcher`、`reviewer`とする。認証済み画面操作が必要な場合だけ`ui_tester`、security境界がある場合だけ`security_reviewer`を使う。
 - roleごとの具体的な権限と報告契約は`.codex/agents/*.toml`を正とする。
 - application codeの書込みは原則として利用者だけが行う。`developer`は利用者が範囲を明示した補助実装でのみ使用し、その場合のCodex側application code書込みを`developer`へ集中させる。
@@ -84,6 +85,7 @@
 - callback失敗時は繰り返し送信せず、完全な結果を当該taskへ残して停止する。coordinatorはstateを安全に1回だけ再取得し、照合不能なら同じ割当を再送しない。
 - 標準の作業session終了条件は「安全に独立実行できる作業が尽きた時点」とする。
 - coordinatorと専門taskのsession handoff閾値は300 MiBとする。閾値到達時は新規割当を止め、基準commit、進捗、checkpoint、未統合作業、test、承認事項、次の指示をrepositoryへ記録する。
-- coordinator交代は利用者の明示承認を必要とする。新taskはforkせず連番名で作成し、repositoryからの再開、権限、callback経路、最初のfile限定commitを検証してから旧taskをarchiveする。
+- coordinator交代は利用者の明示承認を必要とする。新taskはforkせず連番名で作成し、repositoryからの再開、権限、callback経路、最初のfile限定commitを検証し、archive可能な状態を利用者へ報告する。
+- taskのarchiveは利用者だけが行う。Codexは旧taskのarchiveを実行・依頼せず、新taskの直接repository接続、変更なしcallback、権限、最初のfile限定commitの検証完了を利用者へ報告して待機する。利用者がarchiveを完了するまで、旧新taskに重複した作業を割り当てない。
 - common governance、生成`AGENTS.md`、project-wide permissions、approval policy、coordinator責務、delegation/Git統合、callback/handoff、安全境界を変更した場合はinstruction-chain変更としてaffected taskを交代する。
 - 2026-08-11のmanaged governance再構築に伴うtask交代は履歴上完了済みとする。今後はinstruction-chain変更が生じた場合だけ、利用者が承認した手順に従ってaffected taskを交代し、交代完了までは新規application作業を開始しない。

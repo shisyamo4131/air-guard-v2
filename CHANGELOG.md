@@ -24,6 +24,7 @@
 
 ### Changed
 
+- AirGuardV2の全Codex taskを利用者repositoryへの直接接続に限定し、Codex専用worktreeの作成・使用を禁止した。task交代時の旧task archiveは利用者だけが行い、Codexは交代検証結果の報告後に待機する運用へ変更した。
 - Codex専用demo環境の`.codex-test`配下と通常の専用test sessionにある合成dataについて、作成・変更・削除、予約migration、candidate acceptance・promotionを操作ごとの利用者承認なしに行える境界へ更新した。利用者用`./saved-data`、Dev、Prod、remote service、実data、および上位のCodex・Browser安全確認は対象外のまま維持する。
 - UWB-04として、全Userのcanonical email予約とEmployee予約をserver-onlyの一意性正本にし、単独／Employee連携の仮登録作成、仮登録削除、本登録変換、初期会社管理者作成、未認証事前確認を同じtransaction lifecycleへ統一した。User一覧とEmployee詳細の直接Firestore作成を専用Callableへ置換し、会社管理者またはstrict preset由来`users:write`をclient送信直前とserverで検証する。旧`checkEmailAvailabilityGlobal`は製品caller 0を確認してpublic APIから除外した。全domain単体test 462件が成功した。Codex専用Emulator以外を拒否するdry-run既定migration toolを追加したが、saved-data・Dev・Prodへのapplyは未実施である。
 - 本登録Userの単なる操作権限剥奪は無効化、Employee退職時は別tenantで同じメールアドレスを再利用できるようAuthentication accountとUser documentを物理削除し、EmployeeとのUser紐付けだけを解除する契約をUWB-07として追加した。`Users_archive`、UID参照、削除条件、監査・復旧、部分失敗reconcileは具体例による実装前の確認事項とした。
