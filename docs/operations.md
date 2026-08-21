@@ -131,7 +131,7 @@ npx -y firebase-tools@latest emulators:start --import=./saved-data
 
 Codexの自動テストは、利用者用`./saved-data`、通常の`firebase.json`、`.env.local`を変更しません。[ADR 0014](decisions/0014-codex-dedicated-local-test-data.md)に従い、Git対象外の`.codex-test/saved-data`へ合成fixtureだけを保存します。
 
-初回または承認済みの再生成時だけ、専用seedを作成します。
+初回、fixture変更時、または破損からの再生成時だけ、専用seedを作成します。
 
 ```powershell
 npm run test:local:seed
@@ -141,7 +141,7 @@ npm run test:local:seed
 - Auth、Firestore、Realtime Database、Storageを`127.0.0.1`の専用ポートで起動する。
 - Functions Emulatorは起動しないため、FCM、Stripe、ジオコーディングの実呼出し経路を含まない。
 - 合成会社・合成利用者だけを作成し、実在データ、`.env.local`のアカウント、利用者用`./saved-data`を複製しない。
-- 既に`.codex-test/saved-data`がある場合は上書きせず失敗する。削除・再生成は別の承認済み作業として行う。
+- 既に対象の専用exportがある場合は上書きせず失敗する。Codexは対象path、demo project、容量、指紋、復旧方法を確認したうえで、専用saved-dataを削除・再生成でき、操作ごとの利用者承認を必要としない。
 
 通常テストは専用exportを読込専用で使用します。
 
@@ -155,6 +155,7 @@ npm run test:local
 - `.codex-test`が50 MiB以上なら警告し、100 MiB以上ならEmulator起動前に停止する。通常は20 MiB以下を目標とする。
 - 一時ログと子スクリプトは`.codex-test/runtime`だけに作り、終了時にproject配下であることを確認して削除する。
 - CodexのSQLite、WAL、セッション記録へテスト成果物を書かない。タスク容量は`check-codex-session-size.ps1`で別に監視する。
+- `.codex-test/saved-data`、`.codex-test/ui-candidate`、`.codex-test/isolated-saved-data`、専用runtimeまたは通常のCodex専用test sessionにある合成dataの作成・変更・削除、予約migration、candidate acceptance・promotionは、操作ごとの利用者承認を必要としない。利用者用`./saved-data`、Dev、Prod、remote service、実dataは対象外とし、CodexまたはBrowserの上位安全policyが要求するaction-time confirmationは省略しない。
 
 #### UWB-04 User予約migration
 
@@ -175,9 +176,9 @@ node scripts/migrate-user-reservations.mjs --target codex-local
 - canonical email重複、同社Employee重複、不正User状態、dangling Employee、予約のmissing・malformed・mismatch・orphanを監査する。
 - applyが変更できるのは、missing予約のcreateと、旧pointer先Userが不存在で競合再検査に合格したstale pointerのupdateだけである。予約delete、User、Employee、Authenticationのwriteは行わない。
 - reportは分類別件数、計画digest、opaque subject hashだけを出力し、email、氏名、company ID、User ID、path、document bodyを出力しない。
-- `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Dev/Prodへのmigrationはmaintenance、backup、dry-run、別の明示承認を得るまで実行しない。
+- `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Codex専用candidateでの操作は個別承認を要しない。Dev/Prodへのmigrationはmaintenance、backup、dry-run、別の明示承認を得るまで実行しない。
 
-UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firestore・Storage Rules、旧公開Callableを含む72件である。UWB-04では`functions/apis/index.js`の公開Callableを12件へ更新し、旧global availability testを退役させた。production entry全体のCallable候補は、別exportの`geocoding`を含む13件である。新しいemail/Employee予約fixture、予約Rules、仮登録作成・削除、本登録変換、初期管理者作成、concurrencyを含む専用Emulator suiteは、candidate migration後に再実行するまで未確認として扱う。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportも未対象である。
+UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firestore・Storage Rules、旧公開Callableを含む72件である。UWB-04では`functions/apis/index.js`の公開Callableを12件へ更新し、旧global availability testを退役させた。production entry全体のCallable候補は、別exportの`geocoding`を含む13件である。2026-08-21にemail/Employee予約fixture、予約Rules、仮登録作成・削除、本登録変換、初期管理者作成、cross-tenant emailとEmployeeのconcurrencyを含む専用Emulator suite 74件を確認した。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportは未対象である。
 
 ### Codexだけで完結するlocal UI test
 
@@ -195,7 +196,7 @@ UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firesto
 
 インアプリブラウザは既定ではbackgroundで操作される。利用者が目視を希望する検証ではvisibilityを要求し、可視状態を取得できた同じtabだけを目視可能な操作証拠とする。これはChrome拡張ではなくCodex Desktop内の専用ブラウザ表示であり、利用者のChrome profileを使用しない。2026-08-19の再試験ではvisibilityを2回要求しても状態は`false`のままで、Emulator sign-inとdashboard到達はbackgroundで成功したが、利用者による目視は未提供である。Codex DesktopまたはBrowser plugin更新後に再確認する。
 
-`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser session喪失時にcredentialを永続管理する場合は、repository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、承認済みcandidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser session喪失時にcredentialを永続管理する場合は、repository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
 
 `npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
 

@@ -1,7 +1,7 @@
 # 0014 Codex専用localテストデータとloopback隔離
 
 - 日付: 2026-08-12
-- 更新日: 2026-08-19
+- 更新日: 2026-08-21
 - 状態: Accepted
 - 関連仕様: 開発ガバナンスとCodex作業手順
 - 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)、[0006](0006-user-prepared-authenticated-browser-testing.md)、[0011](0011-roadmap-and-codex-session-lifecycle.md)
@@ -26,7 +26,7 @@
 - 数百件のdocumentは段階的に生成し、件数、応答時間、memory、Emulator logを監視する。約1000件で停止した利用者経験をlocal riskとして記録し、同規模の一括生成は停止条件と復旧方法を定めた別承認なしに行わない。公式Firebase上限とは断定しない。
 - `.codex-test`は50 MiBで警告、100 MiBで実行停止とする。実行ごとの一時runtimeは終了時に専用領域配下であることを確認して削除する。
 - Codex所有のSQLite、WAL、セッション記録はテスト基盤から変更、削除、`VACUUM`しない。タスク容量はADR 0011の手順で別に監視する。
-- 専用saved-dataの削除・再生成は自動実行せず、容量異常またはfixture変更時に別の承認済み作業として行う。
+- `.codex-test/saved-data`、`.codex-test/ui-candidate`、`.codex-test/isolated-saved-data`、専用runtimeまたは通常のCodex専用test sessionにある合成dataは、Codexが作成・変更・削除してよく、予約migration、candidate acceptance・promotionを含めて操作ごとの利用者承認を必要としない。対象project、loopback、容量、指紋、candidate受入れ・復旧条件は省略しない。利用者用`./saved-data`、Dev、Prod、remote service、実dataはこの許可に含めず、上位のCodexまたはBrowser安全policyが要求する確認は維持する。
 
 ## 理由
 
@@ -44,7 +44,7 @@
 - 利用者: 既存`firebase.json`、`.env.local`、`./saved-data`、通常のlocal起動手順は変更されない。
 - 実装: 専用Firebase設定、合成fixture、seed、Node標準テスト、容量・指紋ガードを追加する。browser automationは実利用者相当の入力経路に限定し、実行不能な操作をDOM・event直接操作で補完しない。
 - 開発環境: Firebase CLIはprojectごとに複製せずglobal導入する。新規PCではglobal CLIの導入・認証を別々に確認し、npm/npx cacheをCLIの存在証明にしない。
-- データ: `.codex-test/saved-data`はローカル生成物であり、Git、Dev環境、実データへ反映しない。
+- データ: `.codex-test`配下の専用saved-data、candidate、isolated fixture、runtimeはローカル生成物であり、Codexが操作ごとの利用者承認なしに管理できる。Git、利用者用`./saved-data`、Dev環境、Prod環境、実データへ反映しない。
 - 外部作用: 現行の初期テストではFunctionsを起動しない。承認済みUI拡張では、FCM、Stripe、mail、通知、ジオコーディング、郵便番号検索等を個別にfail-closedで隔離できたFunctionだけを起動する。
 - 容量: 合成exportは100 MiB未満を必須とし、通常は20 MiB以下を目標とする。
 

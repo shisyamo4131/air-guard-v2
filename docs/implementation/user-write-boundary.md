@@ -186,7 +186,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Implementation and unit tests complete（Emulator・正規UI・saved-data migration未実施）
+- 状態: Implementation、unit test、専用Emulator、単独User正規UIは完了（Employee連携User正規UIは未完了）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
@@ -205,8 +205,10 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] User設定routeと両作成actionを会社管理者または`users:write`へ合わせ、Employee-linked roles選択UIを追加する。
 - [x] 製品caller 0を確認して`checkEmailAvailabilityGlobal`を公開API indexとclient transportから除外する。source fileはrollback用に残置する。
 - [x] 2026-08-20時点の全domain単体test 462件と対象SFC compileが成功している。
-- [ ] Codex専用saved-dataをcandidate migrationし、予約pointerとsource User不変をbackend assertionで確認する。
-- [ ] Emulator concurrency、Rules、Callable lifecycle、正規UIの作成→本登録または削除を検証する。
+- [x] Codex専用saved-dataへ予約migration dry-runを実行し、変更0、blocker 0、既存予約1件のno-opを確認した。apply・candidate promotionは不要と判断し、saved-dataを変更していない。
+- [x] 専用Emulator suite 74件でconcurrency、予約Rules、Callable lifecycle、Employee連携削除、本登録変換を確認した。
+- [x] 単独仮登録Userを正規UIで作成してbackend状態を確認し、同じUIから削除してUser・email予約・Authentication不存在を確認した。
+- [ ] Employee連携仮登録Userの正規UI作成と、作成後の本登録または削除を確認する。2026-08-21の確認ではEmployeeを正規UIで作成しUser登録dialogまで到達したが、承認境界変更の安全なcheckpointとして未送信のまま閉じ、専用processを停止した。
 
 #### 完了条件
 
