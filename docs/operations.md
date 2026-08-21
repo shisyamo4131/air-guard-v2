@@ -254,12 +254,14 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 
 機能branchを利用者が確認するときは、次を最小確認とする。Dev・Prod・実dataではなく、承認済みlocal環境の合成dataを使用する。
 
-- User設定で、会社管理者または`users:write`を持つ既知roleから単独仮登録Userを作成でき、一覧へ仮登録として表示される。
+- User設定で、会社管理者または`users:write`を持つ既知roleから単独仮登録Userを作成でき、email・表示名が一覧へ表示される。2026-08-21時点のUser一覧には明示的な「仮登録」表示はなく、Employee詳細だけが「仮登録」を表示する。
 - Employee詳細で、未紐付けの在職Employeeへemailと任意の既知roleを指定して仮登録Userを作成でき、email・仮登録状態が表示される。
 - 作成dialogの取消ではUserが作成されず、確定の連打中は二重作成されない。
 - 作成した単独／Employee連携仮登録Userを同じ画面から削除でき、削除後は未登録表示または一覧からの不存在へ戻る。
 - permissionなし、既登録・管理者・無効・他社・既に紐付いたEmployeeなどの拒否対象では作成・削除actionが提供されないか、安全なerrorで終了する。
 - Employee作成時の外部住所・geocoding失敗はUser作成結果と分けて確認し、外部作用denyを解除しない。
+
+2026-08-21に利用者が上記最小UI確認を実施し、単独／Employee連携の作成、取消、削除、表示・操作感を受入れた。User一覧に「仮登録」表示がない点を確認したうえでUWB-04の利用者testをOKとした。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

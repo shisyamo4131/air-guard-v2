@@ -209,6 +209,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 専用Emulator suite 74件でconcurrency、予約Rules、Callable lifecycle、Employee連携削除、本登録変換を確認した。
 - [x] 単独仮登録Userを正規UIで作成してbackend状態を確認し、同じUIから削除してUser・email予約・Authentication不存在を確認した。
 - [x] Employeeを正規UIで作成し、既知role `human-resource`付きのEmployee連携仮登録Userを同じ正規UIで作成した。backend assertionで仮登録状態、Employee link、role、email・Employee予約pointer、Authentication不存在を確認し、同じUIでUserを削除した。削除後はUser・両予約・Authenticationが不存在でEmployeeが残ることを確認した。
+- [x] 2026-08-21に利用者が機能branchのlocal UIで、単独仮登録User作成、Employee連携仮登録User作成、取消、削除、表示・操作感を受入れた。Employee詳細では「仮登録」表示を確認した。User一覧には明示的な「仮登録」表示がない現行挙動も確認し、UWB-04の受入れをOKとした。
 
 #### 完了条件
 
@@ -220,8 +221,16 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
-- 状態: Not started
+- 状態: Specification discussion required（現行write境界の調査完了、field契約の利用者判断待ち）
 - 主な影響画面: `components/Users/Manager/index.vue`、User設定の呼出し元
+
+#### 確認済みの現行挙動
+
+- User一覧の更新は`item.update(item)`からFireModel client adapterの`txn.set(docRef, this)`へ進み、User instance全体を再保存する。field単位のpartial updateではない。
+- User一覧editorは`displayName`、`roles`、`tagSize`、配置確認・上番・下番の通知受信flagを編集可能にし、emailは更新時disabled、company・admin・temporary・disabled・Employee linkはhiddenとする。hidden fieldもfull document再保存には含まれ得る。
+- `/settings/users`のclient routeは会社管理者またはstrict preset由来`users:write`へ提供されるが、Firestore Rulesは同社の有効な本登録UserへUsers全fieldの直接writeを許すため、UI guardを迂回できる。
+- `useUserSettingsActions.updateTagSize`は`tagSize`だけを受け取るが、静的callerはなく、到達した場合も`auth.user.updateProperties()`からfull document updateへ進む。
+- `displayName`または`disabled`の変更はUser update triggerからAuthentication同期を試みる。tag・通知flag・role変更はAuth同期対象外である。
 
 #### 作業
 
