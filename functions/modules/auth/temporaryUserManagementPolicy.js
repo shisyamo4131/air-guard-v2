@@ -13,6 +13,7 @@ export const TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES = Object.freeze({
   ACTOR_ADMIN_STATE_INVALID: "actor-admin-state-invalid",
   ACTOR_ROLES_INVALID: "actor-roles-invalid",
   ACTOR_PERMISSION_DENIED: "actor-permission-denied",
+  ACTOR_ROLE_ASSIGNMENT_DENIED: "actor-role-assignment-denied",
 });
 
 export class TemporaryUserManagementPolicyError extends Error {
@@ -25,23 +26,27 @@ export class TemporaryUserManagementPolicyError extends Error {
 }
 
 /**
- * 会社管理者またはusers:write保有者であることを検証します。
+ * 会社管理者またはusers:provision保有者であることを検証します。
+ * 非空rolesを指定する場合はusers:writeも要求します。
  * @param {Object} param
  * @param {string} param.companyId
  * @param {Object} param.actorUser
+ * @param {string[]} [param.requestedRoles=[]]
  * @throws {TemporaryUserManagementPolicyError}
  * @throws {UserAuthCompanyPolicyError}
  */
 export function assertActorCanManageTemporaryUsers({
   companyId,
   actorUser,
+  requestedRoles = [],
 } = {}) {
   if (
     typeof companyId !== "string" ||
     !companyId.trim() ||
     !actorUser ||
     typeof actorUser !== "object" ||
-    Array.isArray(actorUser)
+    Array.isArray(actorUser) ||
+    !Array.isArray(requestedRoles)
   ) {
     throw new TemporaryUserManagementPolicyError(
       TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES.REQUIRED_FIELD_MISSING,
@@ -89,10 +94,24 @@ export function assertActorCanManageTemporaryUsers({
     throw error;
   }
 
-  if (actorUser.isAdmin !== true && !permissions.includes("users:write")) {
+  if (
+    actorUser.isAdmin !== true &&
+    !permissions.includes("users:provision")
+  ) {
     throw new TemporaryUserManagementPolicyError(
       TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES.ACTOR_PERMISSION_DENIED,
       "[assertActorCanManageTemporaryUsers] Actor cannot manage temporary Users",
+    );
+  }
+
+  if (
+    requestedRoles.length > 0 &&
+    actorUser.isAdmin !== true &&
+    !permissions.includes("users:write")
+  ) {
+    throw new TemporaryUserManagementPolicyError(
+      TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES.ACTOR_ROLE_ASSIGNMENT_DENIED,
+      "[assertActorCanManageTemporaryUsers] Actor cannot assign temporary User roles",
     );
   }
 }

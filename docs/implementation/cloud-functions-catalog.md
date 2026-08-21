@@ -29,7 +29,7 @@ entryから到達するFirebase Function objectは27件である。明示のな�
 | `createAdminAccount` | v2 callable | 新Company、最初のadmin User、email予約、claimsを作成 | token/current AuthのUID・email・verified・disabled・claim整合を要求し、別の既存所属を拒否する。整合した予約・Company・Userはclaims再設定のため再利用する。 |
 | `checkUserPreRegistration` | v2 callable | email予約から仮登録状態を確認 | なし。予約、pointer先仮User、必要なEmployee予約が整合する場合だけbooleanを返す。App Check、rate limitなし。 |
 | `setupUserAccount` | v2 callable | 予約pointer先の仮Userを認証UIDのUserへ変換しclaims設定 | 認証・verified email必須。client dataを受け取らず、email/Employee予約pointerを同じtransactionでUIDへ更新する。 |
-| `createStandaloneTemporaryUser` | v2 callable | 単独仮登録Userとemail予約をtransaction作成 | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:write`を要求する。 |
+| `createStandaloneTemporaryUser` | v2 callable | 単独仮登録Userとemail予約をtransaction作成 | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:provision`を要求する。非空rolesは別に`users:write`を要求する。 |
 | `createEmployeeLinkedTemporaryUser` | v2 callable | 在職Employee連携仮登録Userと2予約をtransaction作成 | standaloneと同じactor境界に加え、同社ACTIVE Employeeと未紐付けを要求する。 |
 | `deleteTemporaryUser` | v2 callable | 仮登録Userと対応予約をtransaction削除 | standaloneと同じactor境界。予約pointer不整合はfail closedで、Authenticationへ作用しない。 |
 | `disableUser` | v2 callable | 同社の本登録非管理者Userを無効化 | 認証、caller UID/company claim、有効な本登録会社管理者、別UIDの同社target、target Auth UID/company claimを必須化。 |

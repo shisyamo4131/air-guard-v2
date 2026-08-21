@@ -9,10 +9,16 @@ test("client and server role preset tables are identical", () => {
 });
 
 test("User provisioning permission is granted only by the approved presets", () => {
+  const rolesWithProvision = Object.entries(SERVER_ROLE_PRESETS)
+    .filter(([, preset]) => preset.permissions.includes("users:provision"))
+    .map(([role]) => role)
+    .sort();
+
+  assert.deepEqual(rolesWithProvision, ["human-resource", "manager"]);
+
   const rolesWithUserWrite = Object.entries(SERVER_ROLE_PRESETS)
     .filter(([, preset]) => preset.permissions.includes("users:write"))
     .map(([role]) => role)
     .sort();
-
-  assert.deepEqual(rolesWithUserWrite, ["human-resource", "manager"]);
+  assert.deepEqual(rolesWithUserWrite, ["manager"]);
 });

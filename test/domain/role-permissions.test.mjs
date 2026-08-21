@@ -7,21 +7,24 @@ import {
   resolveRolePermissions,
 } from "../../functions/modules/auth/rolePermissions.js";
 
-test("manager and human-resource resolve the approved User permissions", () => {
-  for (const role of ["manager", "human-resource"]) {
-    const permissions = resolveRolePermissions([role]);
+test("manager and human-resource resolve separated User permissions", () => {
+  const manager = resolveRolePermissions(["manager"]);
+  assert.equal(manager.includes("users:write"), true);
+  assert.equal(manager.includes("users:provision"), true);
+  assert.equal(manager.includes("users:read"), true);
 
-    assert.equal(permissions.includes("users:write"), true);
-    assert.equal(permissions.includes("users:read"), true);
-    assert.equal(permissions.includes("employees:write"), true);
-    assert.equal(permissions.includes("employees:read"), true);
-  }
+  const humanResource = resolveRolePermissions(["human-resource"]);
+  assert.equal(humanResource.includes("users:write"), false);
+  assert.equal(humanResource.includes("users:provision"), true);
+  assert.equal(humanResource.includes("users:read"), false);
+  assert.equal(humanResource.includes("employees:write"), true);
+  assert.equal(humanResource.includes("employees:read"), true);
 });
 
 test("other presets do not resolve User provisioning permission", () => {
   for (const role of ["controller", "accountant", "labor", "legal"]) {
     assert.equal(
-      resolveRolePermissions([role]).includes("users:write"),
+      resolveRolePermissions([role]).includes("users:provision"),
       false,
     );
   }
@@ -32,6 +35,7 @@ test("multiple presets are merged without duplicate permissions", () => {
 
   assert.equal(permissions.length, new Set(permissions).size);
   assert.equal(permissions.includes("users:write"), true);
+  assert.equal(permissions.includes("users:provision"), true);
   assert.equal(permissions.includes("operation-results:write"), true);
   assert.equal(permissions.includes("operation-results:read"), true);
 });

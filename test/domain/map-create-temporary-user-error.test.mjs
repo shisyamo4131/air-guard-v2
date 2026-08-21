@@ -86,7 +86,11 @@ test("creation policy errors separate input and Employee state", () => {
 });
 
 test("actor policy errors distinguish permission and malformed state", () => {
-  for (const key of ["ACTOR_NOT_ACTIVE", "ACTOR_PERMISSION_DENIED"]) {
+  for (const key of [
+    "ACTOR_NOT_ACTIVE",
+    "ACTOR_PERMISSION_DENIED",
+    "ACTOR_ROLE_ASSIGNMENT_DENIED",
+  ]) {
     assertMapping(
       new TemporaryUserManagementPolicyError(
         TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES[key],

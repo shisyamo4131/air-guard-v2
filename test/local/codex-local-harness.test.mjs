@@ -1397,7 +1397,7 @@ test("standalone temporary User creation writes canonical User and email reserva
   );
 });
 
-test("Employee-linked temporary User creation uses the active Employee snapshot", async () => {
+test("provision-only Employee-linked creation forces roleless Users", async () => {
   const { createEmployeeLinkedTemporaryUser } = await loadRebuildApis();
   const actor = await seedTemporaryManagementActor({
     uid: "uwb04-linked-hr",
@@ -1409,10 +1409,19 @@ test("Employee-linked temporary User creation uses the active Employee snapshot"
     displayName: "連携社員",
   });
   const email = "uwb04-linked@codex-test.invalid";
+  await assertCallableError(
+    createEmployeeLinkedTemporaryUser.run(
+      actorCallableRequest({
+        actor,
+        data: { employeeId, email, roles: ["manager"] },
+      }),
+    ),
+    "permission-denied",
+  );
   const result = await createEmployeeLinkedTemporaryUser.run(
     actorCallableRequest({
       actor,
-      data: { employeeId, email, roles: ["manager"] },
+      data: { employeeId, email, roles: [] },
     }),
   );
 
@@ -1429,7 +1438,7 @@ test("Employee-linked temporary User creation uses the active Employee snapshot"
     );
     assert.equal(user.data().displayName, employee.displayName);
     assert.equal(user.data().employeeId, employeeId);
-    assert.deepEqual(user.data().roles, ["manager"]);
+    assert.deepEqual(user.data().roles, []);
     assert.equal(user.data().isTemporary, true);
     assert.equal(user.data().isAdmin, false);
     assert.equal(user.data().disabled, false);

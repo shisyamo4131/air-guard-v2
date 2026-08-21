@@ -16,8 +16,8 @@
 | `createAdminAccount` | 認証、token/current AuthのUID・email・verified・disabled・company claim・`isSuperUser`整合を必須化。App Checkなし | 未所属callerは新Company、`Users/{uid}`、email予約を同じtransactionで作成。整合した予約・Company・Userだけ再利用 | companyName/companyNameKana/displayName必須。別User・別company・不整合状態を拒否し、既存claimsを保持してcompanyIdを設定 | 公開signup-adminのメール確認後 |
 | `checkUserPreRegistration` | 未認証可。App Check、rate limitなし | canonical email予約からpointer先Userと必要なEmployee予約をdirect解決 | email string必須。予約lifecycleが整合する場合だけbooleanを返す | `/auth/sign-up` |
 | `setupUserAccount` | 認証必須。caller UID/token emailを利用 | 確認済みtoken emailの予約からtemporary Userをdirect解決 | client dataを受け取らず、本User変換と予約pointer更新を同じtransactionで行う | メール確認後の一般signup |
-| `createStandaloneTemporaryUser` | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:write` | actor company配下へUserを作り、root email予約で全tenant一意性を確定 | standalone exact allowlist。company/admin/temporary/disabledはserver固定 | `/settings/users` |
-| `createEmployeeLinkedTemporaryUser` | standaloneと同じ | actor company配下のACTIVE Employee、Employee予約、既存linkをtransaction検証 | `{employeeId,email,roles?}`だけ。displayNameはEmployee由来 | Employee詳細 |
+| `createStandaloneTemporaryUser` | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:provision`。非空rolesは別に`users:write`必須 | actor company配下へUserを作り、root email予約で全tenant一意性を確定 | standalone exact allowlist。company/admin/temporary/disabledはserver固定 | `/settings/users` |
+| `createEmployeeLinkedTemporaryUser` | standaloneと同じ | actor company配下のACTIVE Employee、Employee予約、既存linkをtransaction検証 | `{employeeId,email,roles?}`だけ。displayNameはEmployee由来。provision-only actorの非空rolesは拒否 | Employee詳細 |
 | `deleteTemporaryUser` | standaloneと同じ | actor company配下targetと対応するemail/Employee予約pointerをtransaction検証 | `{targetUserId}`だけ。仮登録Userと予約だけを削除しAuth不変 | User一覧、Employee詳細 |
 | `disableUser` | 共通gateでtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を照合し、有効な本登録会社管理者を必須化 | 確認済みcaller company配下のactor/target Userとtarget Authをtransaction内で検証 | uid必須。自己操作、管理者・仮登録target、会社・Auth UID/claim不一致を拒否し、`disabled=true`へ更新 | admin route `/settings/users`のmanager |
 | `enableUser` | disableと同じ | disableと同じ | 同じ境界で`disabled=false`へ更新 | 同上 |
@@ -29,7 +29,7 @@
 
 - 会社所属済みの保護対象Callable 8件は、共通`resolveCallableAuthIdentity`でtoken/current AuthのUID、email、verified、company claim、`isSuperUser`のboolean型と値、disabled状態をAPI固有検査より先に照合する。仮登録作成2件、仮登録削除、`disableUser`、`enableUser`、`changeAdminUser`、再構築2件が対象である。匿名事前確認2件は対象外で、`createAdminAccount`と`setupUserAccount`は所属確立前のbootstrap専用検査を使用する。
 - `disableUser`/`enableUser`は共通gateで確認したcaller UIDとcompanyを起点に、同社actor/target Userをtransaction内で読み、有効な本登録会社管理者、別UIDの本登録非管理者target、target Auth UID/company claimを更新前に検証する。Auth disabledの反映はUser update triggerへ委ねる。
-- 仮登録作成2件は共通gateの確認済みidentityとtransaction内actor Userを照合し、会社管理者またはstrict preset由来`users:write`だけを許可する。emailとEmployee一意性は予約文書で排他する。
+- 仮登録作成2件は共通gateの確認済みidentityとtransaction内actor Userを照合し、会社管理者またはstrict preset由来`users:provision`だけを許可する。非空roles指定はpreflightとtransaction内の両方で`users:write`を追加要求する。emailとEmployee一意性は予約文書で排他する。
 - `checkEmailAvailability`は初期会社管理者signupのUX事前確認に限定し、clientからemailだけを受け取る。Authとemail予約を確認し、caller指定の管理者・一般User区分ではpolicyを選択しない。一般User signupは`checkUserPreRegistration`とAuth作成時のemail一意性を使用する。
 - `changeAdminUser`は共通gateでactor Authを確認後、caller UIDと`from`の一致、同社の`isAdmin=true` Userがcaller 1人だけであること、from/toの本登録・有効・company・admin状態、target Auth UID・company claim・disabledを更新前に検証する。旧adminのrolesは空のまま、新adminのrolesは空配列へ初期化する。
 - `setupUserAccount`はclient指定companyId/tempUserIdを受け取らず、確認済みcaller token emailから一意のtemporary Userと会社pathをserver側で解決する。これは招待先本人のtenant onboardingを成立させるbootstrap guardであり、通常の「caller company一致」とは異なる。
@@ -45,7 +45,7 @@
 
 ## UI guardとserver enforcementの差
 
-- `/settings/users`は会社管理者または`users:write`で到達し、作成はclient pure policy/controllerで送信直前にもstrict presetを再評価する。有効化・無効化と管理者移譲は引き続き会社管理者だけである。
+- `/settings/users`は会社管理者または`users:write`で到達し、Employee詳細の仮登録操作は`users:provision`でも利用できる。作成はclient pure policy/controllerで送信直前にもstrict presetとrole設定可否を再評価する。有効化・無効化と管理者移譲は引き続き会社管理者だけである。
 - Users managerの仮登録create/deleteはCallableへ移行したが、通常update等はFirestore client writeを使用する。Users Rulesは同社認証Userへ全field read/writeを許すため、UWB-08までclient UIを迂回できる。
 - signup pagesはauth layoutから匿名checkを呼び、一般UserはAuth account作成・メール確認後にsetup callableを呼ぶ。この順序に対応するserver guardはあるが、失敗時のAuth/Firestore/claims間rollbackはない。
 

@@ -222,7 +222,7 @@ function resolveServerManagedFields(companyId) {
 
 /**
  * 単独仮登録Userの作成dataを確定します。
- * 会社管理者とusers:write保有者はいずれも既知のrole presetを設定できます。
+ * users:write保有者と会社管理者だけが既知のrole presetを設定できます。
  * @param {Object} param
  * @param {string} param.companyId
  * @param {Object} param.input

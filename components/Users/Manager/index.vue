@@ -41,7 +41,7 @@ const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const { enableUser, disableUser } = useAuthFunctions();
 const { deleteTemporaryUser, canDelete } = useTemporaryUserDeletion();
-const { createStandaloneTemporaryUser, canCreate } =
+const { createStandaloneTemporaryUser, canCreate, canAssignRoles } =
   useTemporaryUserCreation();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
@@ -166,7 +166,7 @@ async function handleDelete(item) {
   >
     <!-- 役割選択 UI -->
     <template #[`input.roles`]="inputProps">
-      <v-card border variant="flat" class="mb-4">
+      <v-card v-if="canAssignRoles()" border variant="flat" class="mb-4">
         <v-card-title class="text-subtitle-1">
           <v-icon icon="mdi-shield-account" class="mr-2" />
           役割の設定

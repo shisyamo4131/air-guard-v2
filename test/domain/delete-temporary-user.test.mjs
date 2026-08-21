@@ -131,7 +131,7 @@ test("an administrator deletes only a standalone temporary User", async () => {
   assert.equal(firestore.reads.includes(EMPLOYEE_RESERVATION_PATH), false);
 });
 
-test("a users:write actor deletes only an Employee-linked temporary User", async () => {
+test("a users:provision actor deletes only an Employee-linked temporary User", async () => {
   const firestore = createFirestore({
     actorUser: createActorUser({ isAdmin: false, roles: ["manager"] }),
     targetUser: createTargetUser({ employeeId: "employee-a" }),

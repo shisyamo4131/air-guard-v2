@@ -18,7 +18,7 @@ test("UsersManager creates through the standalone feature operation", async () =
   assert.match(source, /useTemporaryUserCreation/);
   assert.match(
     source,
-    /const \{ createStandaloneTemporaryUser, canCreate \} =\s*useTemporaryUserCreation\(\)/,
+    /const \{ createStandaloneTemporaryUser, canCreate, canAssignRoles \} =\s*useTemporaryUserCreation\(\)/,
   );
   assert.match(
     source,
@@ -26,11 +26,12 @@ test("UsersManager creates through the standalone feature operation", async () =
   );
   assert.match(source, /:disabled="!canCreate\(\)"/);
   assert.match(source, /:show-create="props\.showCreate && canCreate\(\)"/);
+  assert.match(source, /v-if="canAssignRoles\(\)"/);
   assert.equal(source.includes("checkEmailAvailabilityGlobal"), false);
   assert.equal(/item\.create\s*\(/.test(source), false);
 });
 
-test("Employee UserManager sends linked input and exposes optional preset roles", async () => {
+test("Employee UserManager exposes preset roles only to role assigners", async () => {
   const source = await readFile(employeeUrl, "utf8");
   assert.match(source, /useTemporaryUserCreation/);
   assert.match(
@@ -39,6 +40,7 @@ test("Employee UserManager sends linked input and exposes optional preset roles"
   );
   assert.match(source, /<template #\[`input\.roles`\]="inputProps">/);
   assert.match(source, /v-for="option in roleOptions"/);
+  assert.match(source, /v-if="canAssignRoles\(\)"/);
   assert.match(source, /roles: \[\]/);
   assert.match(
     source,

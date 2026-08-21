@@ -38,7 +38,7 @@ function evaluate({ actorUser, targetUser, companyId, employeeId } = {}) {
   });
 }
 
-test("company administrators and approved users:write presets may delete", () => {
+test("company administrators and approved users:provision presets may delete", () => {
   for (const actorUser of [
     createActor({ isAdmin: true, roles: [] }),
     createActor({ roles: ["manager"] }),
@@ -54,7 +54,7 @@ test("company administrators and approved users:write presets may delete", () =>
 test("actors without a strict preset permission fail closed", () => {
   for (const roles of [
     ["controller"],
-    ["users:write"],
+    ["users:provision"],
     ["super-user"],
     ["unknown-role"],
     "manager",

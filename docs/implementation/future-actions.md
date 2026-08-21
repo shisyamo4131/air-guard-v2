@@ -1075,7 +1075,7 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修し、一般User・別tenant・別人from・仮登録・無効・管理者targetを更新前に拒否する。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
 - 想定影響と発生条件: Callableの旧actor/tenant経路は修正したが、一般Userの直接Firestore writeによりroles、isAdmin、disabled、employeeId等を改変できる。User管理UIの二重送信、削除連鎖、監査不足も別途残る。
 - 未確認点・仮説: 仮登録管理actorは確定したが、本登録User削除、role値、本人更新field、super-user修復権限は後続gateで未決定である。
-- 推奨する将来対応: 2026-08-16に採用した`users:write`を`manager`と`human-resource`へ付与し、会社管理者と当該permission保有者だけを同社仮登録Userの管理actorとする。単独UserとEmployee連携Userの作成APIを分け、後続gateごとにactor/action/field境界を拡張する。Admin SDK CallableとRulesでtenant・permission・doc ID/UID・immutable fieldを強制する。
+- 推奨する将来対応: 2026-08-21に仮登録作成・削除を`users:provision`、role・通知等の管理を`users:write`へ分離した。managerへ両方、human-resourceへprovisionだけを明示付与し、provision-only actorの非空rolesを拒否する。後続gateではAdmin SDK CallableとRulesでtenant・permission・doc ID/UID・immutable fieldを強制する。
 - 必要なテスト: 一般/admin/super-user、本人/他人/他社UID、roles/isAdmin/companyId/disabled直接write、管理者移譲偽装。
 - ユーザー判断が必要な事項: 仮登録管理actorはCONF-0066で回答済み。後続gateで本登録削除、role値、本人設定fieldを個別確認する。
 

@@ -62,6 +62,7 @@ role間の優先順位、deny、scope、company別role、期限付きroleは存�
 | --- | --- |
 | `hasRole(roles, role)` | role配列の完全一致。wildcard展開なし。 |
 | `getPermissions(roles)` | preset union、未知文字列の直接permission化、write→read、super-user→`*`。 |
+| strict User管理判定 | `users:provision`はmanagerとhuman-resourceへ、`users:write`はmanagerだけへpreset内で明示付与する。`users:write`からprovisionへの特殊展開は行わない。 |
 | `hasPermission(permissions, permission)` | `*`または完全一致。admin特例なし。 |
 | store `hasRole` | computed `roles`に対する`hasRole`。 |
 | store `hasPermission` | computed `permissions`に対する`hasPermission`。 |
@@ -124,6 +125,7 @@ middlewareは認証初期化完了を待ち、公開・email確認・maintenance
 
 - FUT-0133: admin/special roleを含むrouteとcomponentの実効権限判定を統一する。
 - FUT-0134: role/permission語彙、validation、unknown処理をcentral contract化する。
+- `getPermissions`は現行callerが残るlegacy互換APIであり、UWBのstrict認可へ新しい包含規則を追加しない。FUT-0133/0134の単一authorization API移行後に置換・削除可否を判断する。
 - FUT-0135: claimsとUser role変更の反映・失効・company境界を検証可能にする。
 - 個別業務のserver認可不足は既存future-actionsを参照し、本項目で重複登録しない。
 

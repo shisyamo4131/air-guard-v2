@@ -20,21 +20,29 @@ function evaluate(actorUser = actor(), companyId = "COMPANY_A") {
   return evaluateClientTemporaryUserCreation({ companyId, actorUser });
 }
 
-test("company admin and strict users:write presets may create", () => {
-  for (const actorUser of [
-    actor({ isAdmin: true, roles: [] }),
-    actor({ roles: ["manager"] }),
-    actor({ roles: ["human-resource"] }),
-  ]) {
-    assert.deepEqual(evaluate(actorUser), { allowed: true, reason: null });
-  }
+test("approved provisioning actors expose role assignment separately", () => {
+  assert.deepEqual(evaluate(actor({ isAdmin: true, roles: [] })), {
+    allowed: true,
+    reason: null,
+    canAssignRoles: true,
+  });
+  assert.deepEqual(evaluate(actor({ roles: ["manager"] })), {
+    allowed: true,
+    reason: null,
+    canAssignRoles: true,
+  });
+  assert.deepEqual(evaluate(actor({ roles: ["human-resource"] })), {
+    allowed: true,
+    reason: null,
+    canAssignRoles: false,
+  });
 });
 
-test("roles without users:write and direct permissions are denied", () => {
-  for (const roles of [["controller"], ["labor"], ["users:write"], []]) {
+test("roles without users:provision and direct permissions are denied", () => {
+  for (const roles of [["controller"], ["labor"], ["users:provision"], []]) {
     assert.equal(
       evaluate(actor({ roles })).reason,
-      roles[0] === "users:write"
+      roles[0] === "users:provision"
         ? REASONS.ACTOR_ROLES_INVALID
         : REASONS.ACTOR_PERMISSION_DENIED,
     );

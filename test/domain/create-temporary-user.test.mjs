@@ -559,6 +559,43 @@ test("users:write actors may create and inactive Employees fail before writes", 
   );
 });
 
+test("provision-only actors create roleless Users and cannot assign roles", async () => {
+  const actor = createActor({
+    isAdmin: false,
+    roles: ["human-resource"],
+  });
+  const roleless = createDependencies({
+    preflightActor: actor,
+    transactionActor: actor,
+  });
+  await createEmployeeLinkedTemporaryUser(
+    linkedInput(roleless, { roles: [] }),
+  );
+  const userWrite = roleless.calls.find(
+    (call) => call.method === "transaction.set",
+  );
+  assert.deepEqual(userWrite.data.roles, []);
+
+  const assigned = createDependencies({
+    preflightActor: actor,
+    transactionActor: actor,
+  });
+  await assert.rejects(
+    () => createEmployeeLinkedTemporaryUser(linkedInput(assigned)),
+    (error) =>
+      error instanceof TemporaryUserManagementPolicyError &&
+      error.code === "actor-role-assignment-denied",
+  );
+  assert.equal(
+    assigned.calls.some((call) => call.method === "auth.getUserByEmail"),
+    false,
+  );
+  assert.equal(
+    assigned.calls.some((call) => call.method === "transaction.set"),
+    false,
+  );
+});
+
 test("required identities and services fail before external work", async () => {
   const dependencies = createDependencies();
   for (const [overrides, code] of [

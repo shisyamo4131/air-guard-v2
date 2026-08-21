@@ -69,9 +69,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
 - Userは、Employeeとの紐付けを持たない単独Userと、同じ会社のEmployeeへ`User.employeeId`で紐付くEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効はUser種類とは別の状態として扱う。
-- 会社管理者に加え、`users:write` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・編集・削除できる。`manager`と`human-resource`のrole presetへ`users:write`を付与する。`employees:write`だけではUserアカウント管理を許可しない。
+- 会社管理者に加え、`users:provision` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・削除できる。`manager`には`users:provision`と`users:write`、`human-resource`には`users:provision`だけを明示付与する。`employees:write`だけではUserアカウント管理を許可しない。
 - 単独仮Userの作成とEmployee連携仮Userの作成は別の公開操作として扱う。Employee連携では、同じ会社に実在し、他のUserと紐付いていないEmployeeだけをserver側で確定し、client指定の任意`employeeId`を信頼しない。1 Employeeに紐付くUserは最大1件とする。
-- 仮登録User作成時の`companyId`、`isTemporary=true`、`isAdmin=false`、`disabled=false`はserverが確定する。Employee連携は在職中のEmployeeだけを対象とし、単独・Employee連携のどちらでも会社管理者または既知preset由来の`users:write`保有者が既知のrole presetを任意設定できる。roleの既定値は空配列とする。
+- 仮登録User作成時の`companyId`、`isTemporary=true`、`isAdmin=false`、`disabled=false`はserverが確定する。Employee連携は在職中のEmployeeだけを対象とする。会社管理者または既知preset由来の`users:write`保有者だけが、単独・Employee連携の作成時に既知role presetを任意設定できる。`users:provision`だけのactorはroleを設定できず、非空roles入力をserverが拒否して保存値を空配列に限定する。
+- 有効な本登録Userは、自分のアプリ内表示名`displayName`と利用環境のタグ表示サイズ`tagSize`だけを本人設定として変更できる。業務通知の3フラグと他Userのroleは`users:write`を持つmanagerまたは会社管理者が管理する。自己role変更、会社管理者を対象とするrole・状態変更、`isAdmin`の通常更新は許可しない。このfield別更新境界はUWB-05で専用Callableへ接続するまで未実装である。
 - 全Userのcanonical email一意性は`UserEmailReservations/{sha256(trim(lowercase(email)))}`を正本とし、Employee連携の一意性は`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を正本とする。User作成、本登録変換、仮登録削除、初期会社管理者作成は、対応する予約pointerを同じFirestore transactionで作成・更新・削除する。予約欠損・不正・不一致はfail closedとし、runtimeで旧queryへfallbackしない。
 - email利用可否の事前確認は権利確保ではなくUX上のadvisoryであり、最終的な一意性は作成transactionが判定する。AuthenticationとFirestoreはatomicに更新できないため、Authだけまたはclaims未設定の部分状態を自動的に完全解消する保証は持たず、整合した再実行と後続reconcileで扱う。
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
@@ -88,7 +89,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 保護対象のFirestore、Storage、Callableは、確認済みメール、正常な会社claim、要求tenant path、対応する有効な本登録Userの整合がすべて確認できる場合だけ許可する。claim欠損、型不正、path不一致、User不在、仮登録、無効状態ではfail closedとする。本登録Callableは、会社claimと本登録Userがまだ存在しない確認済みUserにだけ必要なbootstrap例外として扱う。
 - 会社所属が確立した認証必須Callableは、API固有の入力・権限・対象検査より先に、ID tokenと現在のAuthentication UserのUID、email、email確認、company claim、`isSuperUser`のboolean型と値、有効状態を共通境界で照合する。不一致や既に無効なAuthはfail closedとし、確認済みidentityだけを後段へ渡す。未認証で利用できる事前確認Callableはこの境界の対象外とし、初期管理者・一般Userの本登録Callableは所属claim確立前のbootstrapとして専用検査を使用する。
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
-- 仮登録User作成前の独立した全会社email重複確認Callableは公開せず、作成Callable内部でAuthenticationとemail予約を確認する。User一覧とEmployee詳細は同じclient作成policy・application controllerを使い、送信直前にも会社管理者またはstrict preset由来`users:write`を再評価するが、server最終認可を代替しない。
+- 仮登録User作成前の独立した全会社email重複確認Callableは公開せず、作成Callable内部でAuthenticationとemail予約を確認する。User一覧とEmployee詳細は同じclient作成policy・application controllerを使い、送信直前にも会社管理者またはstrict preset由来`users:provision`を再評価し、role指定時は別に`users:write`を要求するが、server最終認可を代替しない。
 - 従業員の退職、Employeeの業務状態変更、Userの利用停止、Authentication accountとUser documentの削除は別の状態遷移として扱い、専用use-caseが順序・再試行・部分失敗を管理する。退職時もEmployeeと業務記録の関係を保つ。
 - User管理の段階改修では、まず仮登録Userと保護fieldの境界を確立する。本登録Userの利用停止・退職・削除境界はUWB内の専用ゲート、本人向けEmployee情報の具体的なread境界は別のEmployee Self Accessゲートで確定する。
 

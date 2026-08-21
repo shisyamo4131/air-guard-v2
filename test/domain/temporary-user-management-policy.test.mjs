@@ -44,7 +44,7 @@ test("approved User provisioning presets may manage temporary Users", () => {
   }
 });
 
-test("roles without users:write are denied", () => {
+test("roles without users:provision are denied", () => {
   for (const role of ["controller", "accountant", "labor", "legal"]) {
     assert.throws(
       () =>
@@ -60,6 +60,47 @@ test("roles without users:write are denied", () => {
         );
         return true;
       },
+    );
+  }
+});
+
+test("provision-only actors cannot assign non-empty roles", () => {
+  assert.throws(
+    () =>
+      assertActorCanManageTemporaryUsers({
+        companyId: COMPANY_ID,
+        actorUser: createActorUser({ roles: ["human-resource"] }),
+        requestedRoles: ["manager"],
+      }),
+    (error) => {
+      assert.ok(error instanceof TemporaryUserManagementPolicyError);
+      assert.equal(
+        error.code,
+        TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES.ACTOR_ROLE_ASSIGNMENT_DENIED,
+      );
+      return true;
+    },
+  );
+  assert.doesNotThrow(() =>
+    assertActorCanManageTemporaryUsers({
+      companyId: COMPANY_ID,
+      actorUser: createActorUser({ roles: ["human-resource"] }),
+      requestedRoles: [],
+    }),
+  );
+});
+
+test("manager and company administrators may assign known roles", () => {
+  for (const actorUser of [
+    createActorUser({ roles: ["manager"] }),
+    createActorUser({ isAdmin: true }),
+  ]) {
+    assert.doesNotThrow(() =>
+      assertActorCanManageTemporaryUsers({
+        companyId: COMPANY_ID,
+        actorUser,
+        requestedRoles: ["human-resource"],
+      }),
     );
   }
 });
@@ -170,6 +211,11 @@ test("required inputs are validated", () => {
     {},
     { companyId: COMPANY_ID },
     { companyId: " ", actorUser: createActorUser() },
+    {
+      companyId: COMPANY_ID,
+      actorUser: createActorUser({ roles: ["manager"] }),
+      requestedRoles: "manager",
+    },
   ]) {
     assert.throws(
       () => assertActorCanManageTemporaryUsers(input),

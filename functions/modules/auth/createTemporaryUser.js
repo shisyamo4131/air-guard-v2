@@ -188,7 +188,11 @@ async function createTemporaryUser({
 
   const actorRef = firestore.doc(`Companies/${companyId}/Users/${actorUid}`);
   const preflightActor = await readActorUser(actorRef);
-  assertActorCanManageTemporaryUsers({ companyId, actorUser: preflightActor });
+  assertActorCanManageTemporaryUsers({
+    companyId,
+    actorUser: preflightActor,
+    requestedRoles: resolvedInput.roles,
+  });
 
   await assertAuthEmailAvailable(auth, normalizedEmail);
 
@@ -218,7 +222,11 @@ async function createTemporaryUser({
 
   return firestore.runTransaction(async (transaction) => {
     const actorUser = await readTransactionActor(transaction, actorRef);
-    assertActorCanManageTemporaryUsers({ companyId, actorUser });
+    assertActorCanManageTemporaryUsers({
+      companyId,
+      actorUser,
+      requestedRoles: resolvedInput.roles,
+    });
 
     const emailReservationSnapshot = await transaction.get(
       emailReservationRef,

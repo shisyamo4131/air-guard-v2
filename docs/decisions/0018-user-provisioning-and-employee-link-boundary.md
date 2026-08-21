@@ -1,6 +1,7 @@
 # 0018 User provisioningとEmployee紐付け境界
 
 - 日付: 2026-08-16
+- 更新日: 2026-08-21
 - 状態: Accepted
 - 関連仕様: テナントと認証
 - 関連実装計画: [User Write Boundary](../implementation/user-write-boundary.md)
@@ -14,12 +15,12 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 ## 決定
 
 - Userを単独UserとEmployee連携Userに分類し、仮登録・本登録、管理者、有効・無効とは別の軸として扱う。
-- 仮登録Userの作成・編集・削除には専用permission `users:write`を使用する。
-- `manager`と`human-resource`のrole presetへ`users:write`を付与する。
+- 仮登録Userの作成・削除には専用permission `users:provision`を使用する。
+- `manager`へ`users:provision`と`users:write`、`human-resource`へ`users:provision`だけを明示付与する。permission展開の特殊な包含規則は追加しない。
 - `employees:write`だけではUserアカウント管理を許可しない。
 - 単独仮User作成とEmployee連携仮User作成は別の公開操作とする。
 - Employee連携では、serverが同一会社のEmployee存在、未紐付け、1 Employee対最大1 Userを検証し、任意のclient指定`employeeId`を信頼しない。
-- Employee連携は在職中Employeeだけを対象とし、会社管理者またはstrict preset由来`users:write`保有者は単独・Employee連携の両方で既知role presetを任意設定できる。既定は空配列で、`isAdmin`は常にfalseとする。
+- Employee連携は在職中Employeeだけを対象とする。会社管理者またはstrict preset由来`users:write`保有者だけが単独・Employee連携の作成時に既知role presetを任意設定できる。`users:provision`だけのactorは非空rolesを指定できず、serverは空へ丸めず拒否する。既定は空配列で、`isAdmin`は常にfalseとする。
 - 全Userのcanonical emailとEmployee紐付けの一意性は、server-onlyのemail予約とEmployee予約を正本にする。予約は作成だけでなく本登録変換、仮登録削除、初期管理者作成まで同じlifecycleで更新し、missing・malformed・mismatchをfail closedとする。
 - 予約導入前のUserはmigrationで監査・backfillし、製品runtimeにlegacy query fallbackを置かない。AuthenticationとFirestoreを跨ぐ完全なatomicityは保証せず、claims失敗等は整合した再実行を可能にする。
 - Employee連携Userは自身のEmployee情報へアクセスできる。ただし公開fieldと提供pathはEmployee Self Accessの別ゲートで確定し、UWBではUser書込み境界を先行する。
@@ -27,7 +28,7 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 
 ## 理由
 
-会社管理者不在時にも権限委譲された担当者がUserを増やせるようにしつつ、Employee編集権限からAuthentication管理権限が暗黙に派生することを防ぐためである。また、単独UserとEmployee連携Userの作成目的をAPI上で分けることで、`employeeId`の偽装、重複紐付け、UIごとの検査差をserver境界へ集約できる。
+会社管理者やmanager不在時にもhuman-resourceがEmployeeとroleなしUserを紐付けられるようにしつつ、role・通知等のUser管理権限を`users:write`へ分離するためである。また、単独UserとEmployee連携Userの作成目的をAPI上で分けることで、`employeeId`の偽装、重複紐付け、UIごとの検査差をserver境界へ集約できる。
 
 ## 代替案
 
@@ -38,7 +39,7 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 
 ## 影響
 
-- 権限: `users:write`をpermission catalogと対象role presetへ追加する必要がある。
+- 権限: `users:provision`をpermission catalogへ追加し、managerとhuman-resourceへ明示付与する。`users:write`はmanagerだけに付与する。
 - API: 単独仮UserとEmployee連携仮Userの作成入口を分離する。
 - UI: User一覧とEmployee詳細は、閲覧permissionとUser管理permissionを区別する。
 - data: email予約`UserEmailReservations/{sha256(canonicalEmail)}`とEmployee予約`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を追加し、既存Userの重複・不正状態・予約pointerをmigrationで確認する。
@@ -46,7 +47,7 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 
 ## 移行
 
-`users:write`の認可基盤、仮登録操作、UI、Rulesを小さいsegmentごとに実装・確認する。本登録User削除、Employee退職時の状態遷移、Employee Self Accessは専用ゲートで別に扱う。
+`users:provision`と`users:write`の認可基盤、仮登録操作、UI、Rulesを小さいsegmentごとに実装・確認する。本登録User削除、Employee退職時の状態遷移、Employee Self Accessは専用ゲートで別に扱う。
 
 ## ロールバック
 
@@ -54,4 +55,4 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 
 ## 再検討条件
 
-正式な全role・permission matrixを確定するとき、User provisioningを別roleへ分離するとき、またはEmployee Self Accessのfield/path契約を確定するときに再検討する。
+正式な全role・permission matrix、permission展開APIの統一、またはEmployee Self Accessのfield/path契約を確定するときに再検討する。

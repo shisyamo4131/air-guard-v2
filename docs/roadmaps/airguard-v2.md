@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-04で全User email予約とEmployee予約、単独／Employee連携仮登録作成、仮登録削除、本登録変換、初期管理者作成、匿名事前確認を同じreservation lifecycleへ統一した。全domain単体test 462件、専用Emulator 74件、予約migration dry-run、両作成UIの正規作成・削除とbackend assertionを完了し、UWB-04は完了した。Users blanket Rulesを含むUWB-08、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-04の予約lifecycleとUI受入れ後、仮登録操作を`users:provision`、role等の管理を`users:write`へ分離した。domain単体test 467件と専用Emulator 74件でhuman-resourceのrole付き作成拒否・roleなし作成成功まで再検証した。改訂後UI再受入れ、Users blanket Rulesを含むUWB-08、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-04は専用migration dry-run、Emulator、両作成UIまで完了したため、次はUWB-05〜06、UWB-07の具体例壁打ち、UWB-08のUsers Rules閉鎖へ進む。App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-02R〜04Rの自動検証は完了し、human-resource UI再受入れ後にUWB-05〜06、UWB-07の具体例壁打ち、UWB-08のUsers Rules閉鎖へ進む。App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-04でAPI indexの公開Callableは12件（production entry全体では`geocoding`を含む候補13件）、会社所属済み共通identity gate対象は8件となり、全User予約lifecycle、仮登録作成・削除、初期管理者・一般User本登録、client接続を実装した。全domain単体test 462件、専用Emulator 74件、予約migration dry-run、単独／Employee連携の正規UI作成・削除とbackend assertionを完了した。Users Rulesのfield/actor制約、App Check、Dev・remote受入れは未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-04の全User予約lifecycle、仮登録作成・削除、初期管理者・一般User本登録、client接続に加え、UWB-02R〜04Rで`users:provision`と`users:write`を分離した。domain単体test 467件、専用Emulator 74件でprovision-only actorのrole制約を確認した。改訂後UI再受入れ、Users Rulesのfield/actor制約、App Check、Dev・remote受入れは未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -119,3 +119,4 @@
 | 2026-08-20 | 10% | 0 | UWB-04で全User email予約・Employee予約を正本化し、単独／Employee連携仮登録作成、削除、本登録変換、初期管理者作成、匿名事前確認、Rules、Emulator限定migration tool、client policy/controller/UI接続を実装した。旧global availability APIを非公開化し、全domain単体test 462件と対象SFC compileが成功した。saved-data migration、Emulator concurrency、正規UI、UWB-08 Users Rules、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-21 | 10% | 0 | UWB-04の予約migration dry-runはclean、専用Emulator suite 74件、単独／Employee連携仮登録Userの正規UI作成・削除とbackend assertionが成功した。Employee連携では既知role、両予約pointer、Auth不存在、削除後のEmployee残存を確認した。UWB-08 Users Rules、App Check、Dev・remote受入れ等が残るためマイルストーンは未完了で、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-21 | 10% | 0 | 利用者が機能branchのlocal UIでUWB-04の単独／Employee連携作成、取消、削除、表示・操作感を受入れた。User一覧に明示的な「仮登録」表示がなく、Employee詳細には表示される現行差異も確認した。UWB全体と認証マイルストーンは未完了のため進捗は据え置いた。 |
+| 2026-08-21 | 10% | 0 | UWB-02R〜04Rで仮登録操作を`users:provision`、role・通知等の管理を`users:write`へ分離した。managerへ両方、human-resourceへprovisionだけを付与し、provision-only actorの非空rolesを拒否した。domain単体test 467件と専用Emulator 74件は成功したが、human-resource UI再受入れと後続UWBが未完了のため進捗は据え置いた。 |

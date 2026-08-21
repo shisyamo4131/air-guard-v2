@@ -2,6 +2,7 @@ import { evaluateClientTemporaryUserCreation } from "./policies/temporaryUserCre
 
 const CREATE_NOT_ALLOWED_MESSAGE =
   "現在の状態では、仮登録ユーザーを作成できません。";
+const ROLE_ASSIGNMENT_NOT_ALLOWED_REASON = "actor-role-assignment-denied";
 
 export class TemporaryUserCreationClientError extends Error {
   constructor(reason) {
@@ -34,6 +35,10 @@ export function createTemporaryUserCreationController({
     return evaluate().allowed;
   }
 
+  function canAssignRoles() {
+    return evaluate().canAssignRoles === true;
+  }
+
   function getCreateControl() {
     const result = evaluate();
     return { disabled: !result.allowed, reason: result.reason };
@@ -46,13 +51,28 @@ export function createTemporaryUserCreationController({
     }
   }
 
+  function resolveRoles(item) {
+    const roles = item?.roles;
+    if (roles === undefined) return undefined;
+    if (!canAssignRoles() && Array.isArray(roles) && roles.length === 0) {
+      return [];
+    }
+    if (!canAssignRoles()) {
+      throw new TemporaryUserCreationClientError(
+        ROLE_ASSIGNMENT_NOT_ALLOWED_REASON,
+      );
+    }
+    return roles;
+  }
+
   async function createStandaloneTemporaryUser(item) {
     assertAllowed();
+    const roles = resolveRoles(item);
     return await requestStandalone({
       email: item?.email,
       displayName: item?.displayName,
+      ...(roles === undefined ? {} : { roles }),
       ...includeDefined(item, [
-        "roles",
         "tagSize",
         "receiveConfirmedArrangementNotification",
         "receiveArrivedArrangementNotification",
@@ -63,16 +83,18 @@ export function createTemporaryUserCreationController({
 
   async function createEmployeeLinkedTemporaryUser(item, { employeeId } = {}) {
     assertAllowed();
+    const roles = resolveRoles(item);
     return await requestEmployeeLinked({
       employeeId,
       email: item?.email,
-      ...includeDefined(item, ["roles"]),
+      ...(roles === undefined ? {} : { roles }),
     });
   }
 
   return {
     evaluate,
     canCreate,
+    canAssignRoles,
     getCreateControl,
     createStandaloneTemporaryUser,
     createEmployeeLinkedTemporaryUser,

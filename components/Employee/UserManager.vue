@@ -28,7 +28,7 @@ const { attrs } = useBaseManager("EmployeeUserManager");
 const auth = useAuthStore();
 const { deleteTemporaryUser, getDeleteControl } =
   useTemporaryUserDeletion();
-const { createEmployeeLinkedTemporaryUser, canCreate } =
+const { createEmployeeLinkedTemporaryUser, canCreate, canAssignRoles } =
   useTemporaryUserCreation();
 
 /*****************************************************************************
@@ -120,7 +120,7 @@ async function handleDelete(item) {
     hide-delete-btn
   >
     <template #[`input.roles`]="inputProps">
-      <v-card border variant="flat" class="mb-4">
+      <v-card v-if="canAssignRoles()" border variant="flat" class="mb-4">
         <v-card-title class="text-subtitle-1">
           <v-icon icon="mdi-shield-account" class="mr-2" />
           役割の設定

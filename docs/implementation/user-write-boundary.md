@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-04完了、UWB-05着手前）
+- 状態: Active（UWB-02R〜04R実装・local自動検証完了、human-resource UI再受入れ待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -72,8 +72,9 @@ Usersコレクションへの書込みを、同一会社であることだけに
 ### UWB-01で確定した段階契約
 
 - Userを単独UserとEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効は別の状態軸とする。
-- 会社管理者と`users:write`保有者が、同じ会社の仮登録Userを作成・編集・削除できる。
-- `manager`と`human-resource`へ`users:write`を付与する。`employees:write`だけからUser管理権限を派生させない。
+- 会社管理者と`users:provision`保有者が、同じ会社の仮登録Userを作成・削除できる。
+- `manager`へ`users:provision`と`users:write`、`human-resource`へ`users:provision`だけを明示付与する。`employees:write`だけからUser管理権限を派生させない。
+- 会社管理者と`users:write`保有者だけが仮登録作成時に既知roleを設定できる。provision-only actorの非空rolesはserverで拒否する。
 - 単独仮UserとEmployee連携仮Userは別の公開作成操作とする。
 - Employee連携では同一会社のEmployee存在、未紐付け、1 Employee対最大1 Userをserver側で検証する。
 - `employees:read`だけのactorはEmployee詳細でUserの紐付け・状態を確認できるが、User管理操作は行えない。必要な最小表示をUser文書全体のreadへ依存させない。
@@ -117,7 +118,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 現行のUser管理画面で到達可能な操作を画面別に再確認した。
 - [x] 仮登録Userのcreate/read/update/deleteをactor別に固定した。
 - [x] 単独UserとEmployee連携User、および仮登録・本登録等の状態軸を分離した。
-- [x] `users:write`と既存Employee permissionの責務を分離した。
+- [x] `users:provision`、`users:write`、既存Employee permissionの責務を分離した。
 - [x] 一括確定しない本登録User lifecycleとEmployee Self Accessを後続専用ゲートへ分離した。
 - [x] 利用者の回答を仕様、ADR、CONF、UWBへ反映した。
 
@@ -125,19 +126,19 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 - [x] 利用者が仮登録Userのactor/action matrixと段階的なgate縮小を承認している。
 - [x] 現行仕様、ADR 0018、関連FUT/CONF、UWB文書が一致している。
-- [x] UWB-02開始に必要な`users:write`の意味と初期付与roleが確定している。
+- [x] UWB-02開始に必要なUser permissionの意味と初期付与roleが確定している。
 
-### UWB-02 `users:write`認可基盤
+### UWB-02 User permission認可基盤
 
-- 状態: Completed（2026-08-17 利用者確認）
+- 状態: Completed（2026-08-17、2026-08-21 permission分離改訂）
 - 主な影響file: client／Functions role対応表、server role展開utility、仮登録User管理actor policy
 
 #### 作業
 
 - [x] clientとFunctionsに同一のrole・permission対応表を設置する。
 - [x] parity testで両対応表の完全一致を検証する。
-- [x] permission catalogへ`users:write`を追加する。
-- [x] `manager`と`human-resource`へ`users:write`を付与する。
+- [x] permission catalogへ`users:provision`と`users:write`を追加する。
+- [x] managerへ両permission、human-resourceへ`users:provision`だけを明示付与する。特殊なpermission包含展開は追加しない。
 - [x] 既知presetだけを展開し、未知roleと直接permission文字列をserver認可で拒否する。
 - [x] `employees:write`だけではUser管理を許可しないtestを追加する。
 - [x] 会社管理者は明示permissionの有無にかかわらず仮登録Userを管理できることを維持する。
@@ -146,7 +147,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [x] client／Functionsの対応表と`users:write`付与presetがparity testで一致している。
+- [x] client／Functionsの対応表と両permissionの付与presetがparity testで一致している。
 - [x] serverが会社管理者、`manager`、`human-resource`だけを仮登録User管理actorとして許可する。
 - [x] permissionなし、他社、仮登録、無効、不正状態、未知role、直接permission、`isSuperUser`だけのactorを拒否する。
 - [x] 利用者が各application implementation fileを確認している。
@@ -159,13 +160,13 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 作業
 
-- [x] 会社管理者または既知preset由来の`users:write`保有者だけをactorとする。
+- [x] 会社管理者または既知preset由来の`users:provision`保有者だけをactorとする。
 - [x] 同社の仮登録Userだけを対象とし、本登録、管理者、自己、他社、状態不正を拒否する。
 - [x] 仮登録User削除use-caseはAuth serviceを受け取らず、Authenticationへ一切作用しない。
 - [x] 単独UserとEmployee連携Userの削除結果を分けて検証する。
 - [x] 仮登録Userのclient直接`delete()`をCallableへ置換する。
 - [x] 削除API接続と同時に、User一覧・Employee詳細の削除actionをactor・対象状態別に表示制御する。
-- [x] User一覧の直接`delete()`をCallableへ置換し、会社管理者またはstrict preset由来`users:write`と有効な仮登録targetだけで操作を有効化する。
+- [x] User一覧の直接`delete()`をCallableへ置換し、会社管理者またはstrict preset由来`users:provision`と有効な仮登録targetだけで操作を有効化する。
 - [x] server側policyのうちclientで確認可能な条件を、VueやFirebaseに依存しないclient専用仮登録User削除policyとして実装する。
 - [x] client policyは許可可否だけでなく安定した拒否理由を返し、実行者、対象User、会社、document ID、Employee画面固有の紐付けcontextをfail closedで検査する。
 - [x] `useTemporaryUserDeletion` composableを実装し、client policyのreactiveな適用結果、拒否理由、Callable実行をcomponentへ提供する。
@@ -186,23 +187,23 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Completed（2026-08-21）
+- 状態: Revalidated（2026-08-21 permission分離の実装・自動検証完了、human-resource UI再受入れ待ち）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
 
-- [x] 仮登録作成actorを会社管理者またはstrict preset由来`users:write`へ限定し、transaction内で再検証する。
+- [x] 仮登録作成actorを会社管理者またはstrict preset由来`users:provision`へ限定し、transaction内で再検証する。
 - [x] `companyId`を確認済み実行者identityから解決し、client入力を受け取らない。
 - [x] `isTemporary=true`、`isAdmin=false`、`disabled=false`をserverで固定する。
 - [x] standaloneとEmployee-linkedのexact allowlist、email、displayName、employeeId、roles、tag・通知fieldを検証する。
-- [x] Employee連携を在職中・同社・未紐付けEmployeeへ限定し、rolesを任意・既定空配列にする。
+- [x] Employee連携を在職中・同社・未紐付けEmployeeへ限定する。会社管理者と`users:write` actorだけがrolesを任意指定でき、provision-only actorの非空rolesを拒否する。
 - [x] canonical email予約と同社Employee予約をserver-only正本とし、同時callをFirestore transactionで排他する。
 - [x] 仮登録削除、本登録変換、初期管理者作成、未認証事前登録確認、初期管理者email事前確認を予約awareへ揃える。
 - [x] 予約missing・malformed・mismatchをfail closedとし、runtime legacy query fallbackを廃止する。
 - [x] Codex専用demo Emulator以外を初期化前に拒否するdry-run既定の予約migration toolとpure unit testを追加する。実dataへのapplyは行っていない。
 - [x] 予約collectionをFirestore clientからrecursive denyし、Companies汎用matchからEmployee予約を除外する。Users直接writeはUWB-08 blockerとして残す。
 - [x] User一覧と従業員画面の直接`create()`を各Callableへ置換し、送信直前にclient policyを再評価する。
-- [x] User設定routeと両作成actionを会社管理者または`users:write`へ合わせ、Employee-linked roles選択UIを追加する。
+- [x] User設定routeは会社管理者または`users:write`に維持し、Employee-linked作成actionは`users:provision`へ合わせる。role選択UIは会社管理者と`users:write` actorだけに表示する。
 - [x] 製品caller 0を確認して`checkEmailAvailabilityGlobal`を公開API indexとclient transportから除外する。source fileはrollback用に残置する。
 - [x] 2026-08-20時点の全domain単体test 462件と対象SFC compileが成功している。
 - [x] Codex専用saved-dataへ予約migration dry-runを実行し、変更0、blocker 0、既存予約1件のno-opを確認した。apply・candidate promotionは不要と判断し、saved-dataを変更していない。
@@ -213,15 +214,17 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [x] 単体testで`users:write`を持たない一般User、他社、仮登録、無効、不正actorを拒否する。
+- [x] 単体testで`users:provision`を持たない一般User、他社、仮登録、無効、不正actorを拒否し、provision-only actorの非空rolesを拒否する。
 - [x] 単体testでclientから本登録・管理者・無効Userや保護fieldを作成できない。
 - [x] 重複、競合、再試行、claims部分失敗、予約pointer lifecycleが定義されている。
 - [x] 利用者がUWB-04に限り1 application fileごとの確認を省略し、単体test完了までの連続作業を承認している。
 - [x] 単体testと両作成UIのlocal確認が成功している。
+- [x] 2026-08-21のpermission分離改訂でdomain単体test 467件と専用Emulator 74件が成功し、human-resourceのrole付きEmployee連携作成拒否とroleなし作成成功を確認した。
+- [ ] 改訂後のhuman-resource画面でrole選択が表示されず、emailだけで作成・削除できることを正規UIで再受入れする。
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
-- 状態: Specification discussion required（現行write境界の調査完了、field契約の利用者判断待ち）
+- 状態: Ready after UWB-04R UI acceptance（field契約承認済み、実装未着手）
 - 主な影響画面: `components/Users/Manager/index.vue`、User設定の呼出し元
 
 #### 確認済みの現行挙動
@@ -234,10 +237,11 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 作業
 
-- [ ] このgateの実装前に、管理者・`users:write` actorが編集できる通常プロフィールfieldを利用者と確定する。
-- [ ] このgateの実装前に、本人が編集できる設定fieldを利用者と確定する。
-- [ ] role値をpreset限定または明示permission許可のどちらにするか確定し、role変更は会社管理者専用Callableへ分離する。
-- [ ] email、companyId、isAdmin、isTemporary、disabled、rolesの混入を拒否する。
+- [x] 本人が編集できるfieldを`displayName`と`tagSize`に限定する契約を利用者が承認した。
+- [x] 通知受信3フラグを`users:write`管理fieldとする契約を利用者が承認した。
+- [x] role値を既知presetだけに限定し、`users:write`を持つmanagerまたは会社管理者が他の非管理者Userを変更できる契約を利用者が承認した。自己role変更と会社管理者targetは拒否する。
+- [ ] 本人設定、通知設定、role変更をfield別の専用Callableへ分離する。
+- [ ] 各Callableで許可field以外のemail、companyId、isAdmin、isTemporary、disabled、roles等の混入を拒否する。
 - [ ] `tagSize`と通知受信flagの型・許容値を検証する。
 - [ ] FireModelのfull updateで非対象fieldが再保存されないことを確認する。
 - [ ] 必要なら管理者更新と本人設定を別Callableへ分離する。
@@ -399,3 +403,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-20 | UWB-03 completed | 正規UIで作成した単独・Employee連携仮登録Userを対象に、取消、処理中、成功、既削除への安全な失敗をインアプリブラウザで確認。正規signup管理者をCodex専用saved-dataへ昇格 | 本変更 | UWB-03単体test 32件、Auth 1件・管理者User 1件不変、仮登録3件不存在、通常import、dashboard、console error 0件、全専用port閉鎖、snapshot fingerprint不変 |
 | 2026-08-20 | UWB-07 planning | 本登録Userの単なる利用停止は無効化、退職時はAuth・User物理削除とEmployee紐付け解除としてUWB内へ追加。archive、UID参照、削除条件、監査・復旧は具体例による壁打ち事項として分離 | 本変更 | project-owned・managed governance validator、`git diff --check` pass。application codeとdataは未変更 |
 | 2026-08-21 | UWB-04 completed | 予約migration、専用Emulator、単独／Employee連携仮登録Userの正規UI作成・削除を完了 | 本変更 | 全domain単体test 462件、SFC compile、専用Emulator 74件。Employee連携Userは`human-resource`付きで作成し、作成後・削除後のUser、email予約、Employee予約、Auth、Employee残存をbackend assertion。外部geocoding拒否の既知console error 1件、snapshot不変、全専用port閉鎖 |
+| 2026-08-21 | UWB-02R〜04R automated | `users:provision`を新設し、managerへ両User permission、human-resourceへprovisionだけを付与。provision-only actorのroles指定をclient/serverで拒否 | 本変更 | domain単体test 467件、SFC compile、専用Emulator 74件。role付き作成はpermission-denied、roleなし作成は成功。全専用port閉鎖、利用者用saved-data不変。human-resource UI再受入れは未実施 |

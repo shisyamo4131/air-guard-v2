@@ -817,9 +817,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: User閲覧、仮登録、role変更、有効化、削除、管理者移譲を誰に許し、本人が変更できるfieldをどこまでとするか。
 - Why needed: account乗っ取り、権限昇格、個人情報閲覧をserver境界で防ぐため。
 - Options and impact: admin専用、操作別permission、本人設定field分離、super-user repair専用。
-- Current provisional treatment: 仮登録User管理は`users:write`へ分離し、本登録User lifecycleとEmployee本人readの具体field/pathは後続専用ゲートで扱う。
+- Current provisional treatment: 仮登録Userの作成・削除は`users:provision`、role・通知等の管理は`users:write`へ分離し、本登録User lifecycleとEmployee本人readの具体field/pathは後続専用ゲートで扱う。
 - Related FUT IDs: FUT-0080
-- Answer: 2026-08-16 回答済み。Userは単独UserとEmployee連携Userに分け、仮登録・本登録等は別の状態軸とする。会社管理者と`users:write`保有者が同社の仮登録Userを管理し、`manager`と`human-resource`へ当該permissionを付与する。`employees:write`だけからUser管理権限を派生させない。単独仮UserとEmployee連携仮Userは公開作成操作を分け、Employee連携は同社Employee存在、未紐付け、1 Employee対最大1 Userをserver検証する。Employee連携Userは自身のEmployee情報へアクセスできるが、公開field/pathはEmployee Self Accessの別ゲートで確定する。本登録User削除、退職連携、role値、本人設定field、email予約pathは一括確定せず後続gateで扱う。
+- Answer: 2026-08-16 回答済み、2026-08-21改訂。Userは単独UserとEmployee連携Userに分け、仮登録・本登録等は別の状態軸とする。会社管理者と`users:provision`保有者が同社の仮登録Userを作成・削除する。managerへ`users:provision`と`users:write`、human-resourceへ`users:provision`だけを明示付与し、provision-only actorは作成時roleを設定できない。`employees:write`だけからUser管理権限を派生させない。単独仮UserとEmployee連携仮Userは公開作成操作を分け、Employee連携は同社Employee存在、未紐付け、1 Employee対最大1 Userをserver検証する。Employee連携User本人の公開field/path、本登録User削除、退職連携は後続gateで扱う。
 
 ## CONF-0067 事前登録・招待・account setupの正式workflow
 

@@ -110,7 +110,7 @@ export function evaluateClientTemporaryUserDeletion({
   }
   if (
     actorUser.isAdmin !== true &&
-    !hasPresetPermission(actorUser.roles, "users:write")
+    !hasPresetPermission(actorUser.roles, "users:provision")
   ) {
     return deny(
       CLIENT_TEMPORARY_USER_DELETION_REASONS.ACTOR_PERMISSION_DENIED,

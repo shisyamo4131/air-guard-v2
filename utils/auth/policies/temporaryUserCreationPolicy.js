@@ -81,11 +81,17 @@ export function evaluateClientTemporaryUserCreation({
   }
   if (
     !actorUser.isAdmin &&
-    !hasPresetPermission(actorUser.roles, "users:write")
+    !hasPresetPermission(actorUser.roles, "users:provision")
   ) {
     return deny(
       CLIENT_TEMPORARY_USER_CREATION_REASONS.ACTOR_PERMISSION_DENIED,
     );
   }
-  return { allowed: true, reason: null };
+  return {
+    allowed: true,
+    reason: null,
+    canAssignRoles:
+      actorUser.isAdmin ||
+      hasPresetPermission(actorUser.roles, "users:write"),
+  };
 }

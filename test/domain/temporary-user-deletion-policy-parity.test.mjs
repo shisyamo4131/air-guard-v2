@@ -55,14 +55,14 @@ const scenarios = [
     actorUser: createActor({ roles: ["human-resource"] }),
   },
   {
-    name: "actor without users write",
+    name: "actor without users provision",
     expected: false,
     actorUser: createActor({ roles: ["controller"] }),
   },
   {
     name: "actor with direct permission string",
     expected: false,
-    actorUser: createActor({ roles: ["users:write"] }),
+    actorUser: createActor({ roles: ["users:provision"] }),
   },
   {
     name: "actor with unknown role",

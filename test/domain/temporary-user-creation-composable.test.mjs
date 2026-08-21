@@ -102,3 +102,30 @@ test("authorization is re-evaluated immediately before transport", async () => {
   assert.deepEqual(fixture.standalone, []);
   assert.equal(fixture.controller.getCreateControl().disabled, true);
 });
+
+test("provision-only actors send empty roles and reject role assignment", async () => {
+  const fixture = setup();
+  fixture.setContext(context({ roles: ["human-resource"] }));
+  assert.equal(fixture.controller.canCreate(), true);
+  assert.equal(fixture.controller.canAssignRoles(), false);
+
+  await fixture.controller.createEmployeeLinkedTemporaryUser(
+    { email: "employee@example.com", roles: [] },
+    { employeeId: "EMPLOYEE_A" },
+  );
+  assert.deepEqual(fixture.linked, [
+    { employeeId: "EMPLOYEE_A", email: "employee@example.com", roles: [] },
+  ]);
+
+  await assert.rejects(
+    () =>
+      fixture.controller.createEmployeeLinkedTemporaryUser(
+        { email: "second@example.com", roles: ["manager"] },
+        { employeeId: "EMPLOYEE_B" },
+      ),
+    (error) =>
+      error instanceof TemporaryUserCreationClientError &&
+      error.reason === "actor-role-assignment-denied",
+  );
+  assert.equal(fixture.linked.length, 1);
+});

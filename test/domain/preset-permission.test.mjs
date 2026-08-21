@@ -4,12 +4,11 @@ import test from "node:test";
 
 import { hasPresetPermission } from "../../utils/auth/authorization.js";
 
-test("approved presets expose users:write", () => {
+test("approved presets expose the separated User permissions", () => {
   assert.equal(hasPresetPermission(["manager"], "users:write"), true);
-  assert.equal(
-    hasPresetPermission(["human-resource"], "users:write"),
-    true,
-  );
+  assert.equal(hasPresetPermission(["manager"], "users:provision"), true);
+  assert.equal(hasPresetPermission(["human-resource"], "users:write"), false);
+  assert.equal(hasPresetPermission(["human-resource"], "users:provision"), true);
 });
 
 test("preset write permissions imply the matching read permission", () => {
