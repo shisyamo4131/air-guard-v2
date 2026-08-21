@@ -24,6 +24,8 @@
 
 ### Changed
 
+- managed governance validatorを必須の明示`-ProjectPath`付き正規commandで実行し、Windows user configstoreを参照するFirebase CLIベースのCodex専用Emulator suiteを既存のdemo隔離・承認境界内で最初からworkspace sandbox外で実行するプロジェクト運用へ変更した。
+
 - User管理permissionを、仮登録Userの作成・削除を行う`users:provision`と、role・通知等を管理する`users:write`へ分離した。managerへ両方、human-resourceへ`users:provision`だけを明示付与し、provision-only actorの作成時rolesは空配列に限定した。非空rolesはclient transport前とCallableのpreflight・transaction内で拒否する。
 - AirGuardV2の全Codex taskを利用者repositoryへの直接接続に限定し、Codex専用worktreeの作成・使用を禁止した。task交代時の旧task archiveは利用者だけが行い、Codexは交代検証結果の報告後に待機する運用へ変更した。
 - Codex専用demo環境の`.codex-test`配下と通常の専用test sessionにある合成dataについて、作成・変更・削除、予約migration、candidate acceptance・promotionを操作ごとの利用者承認なしに行える境界へ更新した。利用者用`./saved-data`、Dev、Prod、remote service、実data、および上位のCodex・Browser安全確認は対象外のまま維持する。

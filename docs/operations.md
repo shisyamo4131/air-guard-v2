@@ -116,6 +116,8 @@ Firebase Emulator Suite は `firebase.json` で Auth、Functions、Firestore、R
 
 Firebase CLIはWindowsユーザーのglobal npm領域へ導入し、正式運用開始まではlatestを使用する。新規PCまたは更新時は`npm install -g firebase-tools@latest`を実行し、`firebase --version`で確認する。AirGuardV2のCodex専用Emulator scriptはglobal `firebase` commandを使用し、npm/npxのoffline cacheを実行前提にしない。CLI更新で回帰した場合は、直前に確認済みのversionを`npm install -g firebase-tools@<version>`で再導入して戻す。
 
+Windows上のFirebase CLIは`C:\Users\seven\.config\configstore\firebase-tools.json`を参照する。Codexのworkspace sandbox内ではこの参照が`EPERM`になることを確認済みであるため、Firebase CLIを起動するCodex専用Emulator suite（`npm run test:local`、専用seed、専用UI Emulatorを含む）は、既存のCodex専用demo data承認境界に基づき最初からsandbox外の承認済みprocessとして実行する。sandbox内で一度失敗させることを前提にしない。demo project、loopback bind、合成data、外部作用denyのpreflightは省略せず、network、利用者用local環境、Dev、Prod、remote service、実dataへ許可を広げない。
+
 利用者が画面確認用のlocal環境を起動する場合は、利用者用の保存済みデータを読み込みます。
 
 ```powershell
@@ -577,6 +579,8 @@ powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPa
 ```
 
 `governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`は直接編集せず、承認済みのskill syncで更新します。project固有規則は`governance/project-rules.md`を更新し、rendererとvalidatorを上記の明示path引数で実行します。
+
+上記は正規commandです。特にmanaged governance validatorの`-ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を省略した短縮commandや、scriptのdefault project pathへ依存する呼出しを使用しません。
 
 Project-owned文書・設定の検証:
 
