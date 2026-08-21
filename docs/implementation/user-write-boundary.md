@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-04実装・単体test完了、Emulator/UI受入れ待ち）
+- 状態: Active（UWB-04完了、UWB-05着手前）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 3 | 10 | UWB-01〜03完了、UWB-04は受入れ未完了のため未加点 |
+| 実装ゲート | 4 | 10 | UWB-01〜04完了 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
@@ -45,8 +45,8 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 | 操作 | 現行経路 | UWBでの扱い |
 |---|---|---|
-| User一覧から仮User作成 | `createStandaloneTemporaryUser` Callable | UWB-04でserver境界へ移行済み、local UI未検証 |
-| 従業員画面から仮User作成 | `createEmployeeLinkedTemporaryUser` Callable | UWB-04でserver境界へ移行済み、local UI未検証 |
+| User一覧から仮User作成 | `createStandaloneTemporaryUser` Callable | UWB-04でserver境界へ移行し、Codex専用local UIで確認済み |
+| 従業員画面から仮User作成 | `createEmployeeLinkedTemporaryUser` Callable | UWB-04でserver境界へ移行し、Codex専用local UIで確認済み |
 | displayName・roles等の編集 | `UsersManager`からmodel `update()` | field別に分離する |
 | 有効化・無効化 | 既存Callable | 維持し、Rules迂回を閉じる |
 | 管理者移譲 | 既存Callable | 維持し、Rules迂回を閉じる |
@@ -186,7 +186,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Implementation、unit test、専用Emulator、単独User正規UIは完了（Employee連携User正規UIは未完了）
+- 状態: Completed（2026-08-21）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
@@ -208,7 +208,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] Codex専用saved-dataへ予約migration dry-runを実行し、変更0、blocker 0、既存予約1件のno-opを確認した。apply・candidate promotionは不要と判断し、saved-dataを変更していない。
 - [x] 専用Emulator suite 74件でconcurrency、予約Rules、Callable lifecycle、Employee連携削除、本登録変換を確認した。
 - [x] 単独仮登録Userを正規UIで作成してbackend状態を確認し、同じUIから削除してUser・email予約・Authentication不存在を確認した。
-- [ ] Employee連携仮登録Userの正規UI作成と、作成後の本登録または削除を確認する。2026-08-21の確認ではEmployeeを正規UIで作成しUser登録dialogまで到達したが、承認境界変更の安全なcheckpointとして未送信のまま閉じ、専用processを停止した。
+- [x] Employeeを正規UIで作成し、既知role `human-resource`付きのEmployee連携仮登録Userを同じ正規UIで作成した。backend assertionで仮登録状態、Employee link、role、email・Employee予約pointer、Authentication不存在を確認し、同じUIでUserを削除した。削除後はUser・両予約・Authenticationが不存在でEmployeeが残ることを確認した。
 
 #### 完了条件
 
@@ -216,7 +216,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 単体testでclientから本登録・管理者・無効Userや保護fieldを作成できない。
 - [x] 重複、競合、再試行、claims部分失敗、予約pointer lifecycleが定義されている。
 - [x] 利用者がUWB-04に限り1 application fileごとの確認を省略し、単体test完了までの連続作業を承認している。
-- [ ] 単体testと両作成UIのlocal確認が成功している。
+- [x] 単体testと両作成UIのlocal確認が成功している。
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
@@ -389,3 +389,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-17 | UWB-03 local delete verification | composableの明示importを修正し、削除modeで更新field validationを走らせず、削除禁止時にhandlerへ進まない共通UI package境界を追加 | `5a26ef4`、air-vuetify-v3 `07886a4` | composable単体test 3件、共通UI package単体test 3件、SFC compile、構文、Chrome＋Emulatorで合成仮登録User削除、Firestore対象不存在、Auth 3件不変を確認。全UI状態は未完了 |
 | 2026-08-20 | UWB-03 completed | 正規UIで作成した単独・Employee連携仮登録Userを対象に、取消、処理中、成功、既削除への安全な失敗をインアプリブラウザで確認。正規signup管理者をCodex専用saved-dataへ昇格 | 本変更 | UWB-03単体test 32件、Auth 1件・管理者User 1件不変、仮登録3件不存在、通常import、dashboard、console error 0件、全専用port閉鎖、snapshot fingerprint不変 |
 | 2026-08-20 | UWB-07 planning | 本登録Userの単なる利用停止は無効化、退職時はAuth・User物理削除とEmployee紐付け解除としてUWB内へ追加。archive、UID参照、削除条件、監査・復旧は具体例による壁打ち事項として分離 | 本変更 | project-owned・managed governance validator、`git diff --check` pass。application codeとdataは未変更 |
+| 2026-08-21 | UWB-04 completed | 予約migration、専用Emulator、単独／Employee連携仮登録Userの正規UI作成・削除を完了 | 本変更 | 全domain単体test 462件、SFC compile、専用Emulator 74件。Employee連携Userは`human-resource`付きで作成し、作成後・削除後のUser、email予約、Employee予約、Auth、Employee残存をbackend assertion。外部geocoding拒否の既知console error 1件、snapshot不変、全専用port閉鎖 |

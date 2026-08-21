@@ -248,6 +248,19 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 
 2026-08-20のUWB-03受入れでは、fresh専用Emulator上で初期会社管理者を正規signup UIから作成し、Authentication EmulatorのOOB確認だけを非UI setupとして行った。User一覧から単独仮登録Userを、Employee詳細からEmployee連携仮登録Userをそれぞれ可視UIで作成し、取消、削除中、成功を確認した。別tabで先に削除した対象へ古い確認dialogから再実行する競合では`Item to delete not found.`を表示し、画面を壊さず失敗した。削除後のbackend assertionはAuth 1件と管理者User 1件だけが残り、3件の仮登録Userが不存在であることを確認した。Employee作成時は外部geocoding拒否による既知のconsole errorが1件出たが作成・User連携・User削除は完了した。正規signup後の管理者だけをcandidate受入れ・promotion経路で`.codex-test/saved-data`へ昇格し、通常import、HTTP 200、Auth/User各1件、`/dashboard`復帰、console error 0件、終了時全専用port閉鎖、saved-data fingerprint不変を再確認した。Firebase CLIがWindows上でexport一時directoryのrenameを`EPERM`にしたため、Emulatorが残した最新の完全exportについてworkspace内、metadata、容量上限、candidate未存在を検証してcandidateへ移し、通常のacceptance verifierとpromotion gateを通した。
 
+2026-08-21のUWB-04受入れでは、既存の専用snapshotを読込専用で起動し、Employeeを正規UIで作成した後、Employee詳細から合成emailと既知role `human-resource`を指定してEmployee連携仮登録Userを作成した。作成後のbackend assertionで仮登録User、Employee link、role、email予約、Employee予約が一致し、Authentication accountが存在しないことを確認した。同じEmployee詳細UIから仮登録Userを削除し、User・両予約・Authenticationが不存在でEmployeeだけが残ることを確認した。UI操作は通常のpointer clickと一文字ずつのkeyboard入力だけを使った。Employee作成時のconsole errorは外部geocodingをfail-closedで拒否した既知の`FirebaseError: internal` 1件だけだった。終了後は全専用port閉鎖、runtime空、saved-dataのfile数・容量不変、root worktree cleanを確認した。
+
+#### UWB-04 利用者向け最小UI確認一覧
+
+機能branchを利用者が確認するときは、次を最小確認とする。Dev・Prod・実dataではなく、承認済みlocal環境の合成dataを使用する。
+
+- User設定で、会社管理者または`users:write`を持つ既知roleから単独仮登録Userを作成でき、一覧へ仮登録として表示される。
+- Employee詳細で、未紐付けの在職Employeeへemailと任意の既知roleを指定して仮登録Userを作成でき、email・仮登録状態が表示される。
+- 作成dialogの取消ではUserが作成されず、確定の連打中は二重作成されない。
+- 作成した単独／Employee連携仮登録Userを同じ画面から削除でき、削除後は未登録表示または一覧からの不存在へ戻る。
+- permissionなし、既登録・管理者・無効・他社・既に紐付いたEmployeeなどの拒否対象では作成・削除actionが提供されないか、安全なerrorで終了する。
+- Employee作成時の外部住所・geocoding失敗はUser作成結果と分けて確認し、外部作用denyを解除しない。
+
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 
 ### `isSuperUser` claimの正規化

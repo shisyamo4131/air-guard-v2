@@ -4,9 +4,9 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-049
-- 最終確認日: 2026-08-20
+- 最終確認日: 2026-08-21
 - 根拠ファイル: `functions/index.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`test/local/codex-local-harness.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
-- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 12件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。UWB-04のdomain単体testとSFC compileは成功したが、新しい予約fixtureを使うEmulator・正規UI、Dev・remote、実dataは未確認である。
+- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 12件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。UWB-04はdomain単体test、SFC compile、専用Emulator、単独／Employee連携の正規UI作成・削除を確認した。Dev・remote・実dataは未確認である。
 
 ## Callable別認証・対象解決
 
@@ -89,7 +89,7 @@
 ## 未確認範囲
 
 - `changeAdminUser`、一般User signup Callable、Auth削除event transport、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data、Dev・remote・実data。初期管理者signupはChromeとlocal Emulatorで確認済みである。
-- User/Auth trigger本文、Employee連携、削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。
+- User/Auth trigger本文、Employee Self Access、本登録User削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。Employee連携仮登録Userの作成・削除cleanupはCodex専用UIとbackend assertionで確認済みである。
 - 正式actor matrix、rate limit値、audit retentionはユーザー判断待ちである。
 
 ## Chrome Callable transport確認（2026-08-16）
