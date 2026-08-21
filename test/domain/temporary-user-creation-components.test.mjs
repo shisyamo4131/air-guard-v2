@@ -41,6 +41,11 @@ test("Employee UserManager exposes preset roles only to role assigners", async (
   assert.match(source, /<template #\[`input\.roles`\]="inputProps">/);
   assert.match(source, /v-for="option in roleOptions"/);
   assert.match(source, /v-if="canAssignRoles\(\)"/);
+  assert.match(
+    source,
+    /\.\.\.\(canAssignRoles\(\) \? \[\] : \["roles"\]\)/,
+  );
+  assert.match(source, /:excluded-keys="excludedKeys"/);
   assert.match(source, /roles: \[\]/);
   assert.match(
     source,

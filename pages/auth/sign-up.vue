@@ -152,7 +152,7 @@ function prevStep() {
       利用者として登録します
     </v-card-subtitle>
 
-    <v-form v-model="formValid">
+    <v-form v-model="formValid" @submit.prevent="handleCreateUser">
       <v-stepper
         v-model="currentStep"
         hide-actions
@@ -247,7 +247,6 @@ function prevStep() {
           :disabled="!formValid || loading"
           :loading="loading"
           variant="elevated"
-          @click="handleCreateUser"
         >
           アカウント作成
         </v-btn>

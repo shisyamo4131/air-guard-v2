@@ -52,6 +52,14 @@ const deleteControl = computed(() => {
     employeeId: props.employee.docId,
   });
 });
+const excludedKeys = computed(() => [
+  "displayName",
+  "tagSize",
+  "receiveConfirmedArrangementNotification",
+  "receiveArrivedArrangementNotification",
+  "receiveLeavedArrangementNotification",
+  ...(canAssignRoles() ? [] : ["roles"]),
+]);
 const roleOptions = computed(() =>
   Object.entries(ROLE_PRESETS).map(([value, preset]) => ({
     value,
@@ -110,13 +118,7 @@ async function handleDelete(item) {
       }
     "
     :handle-delete="handleDelete"
-    :excluded-keys="[
-      'displayName',
-      'tagSize',
-      'receiveConfirmedArrangementNotification',
-      'receiveArrivedArrangementNotification',
-      'receiveLeavedArrangementNotification',
-    ]"
+    :excluded-keys="excludedKeys"
     hide-delete-btn
   >
     <template #[`input.roles`]="inputProps">

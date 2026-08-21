@@ -187,7 +187,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Revalidated（2026-08-21 permission分離の実装・自動検証完了、human-resource UI再受入れ待ち）
+- 状態: Completed（2026-08-21 permission分離後のhuman-resource正規UI再受入れ完了）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
@@ -220,7 +220,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 利用者がUWB-04に限り1 application fileごとの確認を省略し、単体test完了までの連続作業を承認している。
 - [x] 単体testと両作成UIのlocal確認が成功している。
 - [x] 2026-08-21のpermission分離改訂でdomain単体test 467件と専用Emulator 74件が成功し、human-resourceのrole付きEmployee連携作成拒否とroleなし作成成功を確認した。
-- [ ] 改訂後のhuman-resource画面でrole選択が表示されず、emailだけで作成・削除できることを正規UIで再受入れする。
+- [x] 改訂後のhuman-resource画面でrole選択が表示されず、emailだけで作成・削除できることを正規UIで再受入れした。作成後は`roles=[]`、Employee link、email・Employee予約、Authentication不存在を確認し、UI削除後はUser・両予約・Authentication不存在とEmployee残存を確認した。
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
@@ -404,3 +404,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-20 | UWB-07 planning | 本登録Userの単なる利用停止は無効化、退職時はAuth・User物理削除とEmployee紐付け解除としてUWB内へ追加。archive、UID参照、削除条件、監査・復旧は具体例による壁打ち事項として分離 | 本変更 | project-owned・managed governance validator、`git diff --check` pass。application codeとdataは未変更 |
 | 2026-08-21 | UWB-04 completed | 予約migration、専用Emulator、単独／Employee連携仮登録Userの正規UI作成・削除を完了 | 本変更 | 全domain単体test 462件、SFC compile、専用Emulator 74件。Employee連携Userは`human-resource`付きで作成し、作成後・削除後のUser、email予約、Employee予約、Auth、Employee残存をbackend assertion。外部geocoding拒否の既知console error 1件、snapshot不変、全専用port閉鎖 |
 | 2026-08-21 | UWB-02R〜04R automated | `users:provision`を新設し、managerへ両User permission、human-resourceへprovisionだけを付与。provision-only actorのroles指定をclient/serverで拒否 | 本変更 | domain単体test 467件、SFC compile、専用Emulator 74件。role付き作成はpermission-denied、roleなし作成は成功。全専用port閉鎖、利用者用saved-data不変。human-resource UI再受入れは未実施 |
+| 2026-08-21 | UWB-04R UI completed | 一般User signupの通常submitがpage reloadで中断される問題と、provision-only Employee User dialogにgeneric role fieldが残る問題を修正。human-resourceの正規signup、Employee作成、roleなし仮登録Userの作成・削除を製品UIで再受入れ | 本変更 | domain単体test 468件、変更2 SFC compile、専用Emulator 74件。作成後の`roles=[]`、Employee link、両予約、Auth不存在と、削除後のUser・両予約・Auth不存在、Employee残存をbackend assertion。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |

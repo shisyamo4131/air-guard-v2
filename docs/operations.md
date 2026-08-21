@@ -252,6 +252,8 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 
 2026-08-21のUWB-04受入れでは、既存の専用snapshotを読込専用で起動し、Employeeを正規UIで作成した後、Employee詳細から合成emailと既知role `human-resource`を指定してEmployee連携仮登録Userを作成した。作成後のbackend assertionで仮登録User、Employee link、role、email予約、Employee予約が一致し、Authentication accountが存在しないことを確認した。同じEmployee詳細UIから仮登録Userを削除し、User・両予約・Authenticationが不存在でEmployeeだけが残ることを確認した。UI操作は通常のpointer clickと一文字ずつのkeyboard入力だけを使った。Employee作成時のconsole errorは外部geocodingをfail-closedで拒否した既知の`FirebaseError: internal` 1件だけだった。終了後は全専用port閉鎖、runtime空、saved-dataのfile数・容量不変、root worktree cleanを確認した。
 
+同日のpermission分離後再受入れでは、保存済み合成管理者から正規UIで`human-resource`仮登録Userを作成し、一般User signupとAuth EmulatorのOOB確認を経てhuman-resourceとしてdashboardへ到達した。通常submitのpage reload中断と、Employee User dialogでcustom role slotが空でもgeneric `roles` fieldが残る問題を修正した。human-resourceのactor Userが`roles=["human-resource"]`であること、作成dialogの入力がemail 1 fieldだけでrole controlが存在しないことを確認した。正規UIでEmployeeとEmployee連携仮登録Userを作成し、作成後は`roles=[]`、Employee link、email・Employee予約pointer、Authentication不存在をbackend assertionした。同じUIから仮登録Userを削除し、User・両予約・Authentication不存在とEmployee残存を確認した。終了後は全専用port閉鎖、saved-data 7 files・3492 bytes不変を確認した。
+
 #### UWB-04 利用者向け最小UI確認一覧
 
 機能branchを利用者が確認するときは、次を最小確認とする。Dev・Prod・実dataではなく、承認済みlocal環境の合成dataを使用する。
@@ -622,6 +624,6 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
-- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、User lifecycle Callableのhandlerを確認する。UWB-04予約fixtureの再受入れ、Realtime Database Rules、外部サービスの自動回帰testは未整備である。
+- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、UWB-04予約fixtureを含むUser lifecycle Callableのhandlerを確認する。Realtime Database Rules、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。
