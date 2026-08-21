@@ -318,3 +318,16 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 独立した契約testでAuth helperがFirestore portへ、Firestore helperがAuth portへ到達しないこと、method、request body、owner header、URL encoded pathを確認した。source-patternだけでなくstub fetchが受けた実request引数を検証している。
 - verifier source構文検査、Auth POST・Firestore GET分離を含むmandatory restart関連契約test 21件、全domain単体test 359件、project-owned validator、managed governance validator、`git diff --check`は成功した。Emulator、server、browser、build、candidate data操作は実行していない。
 - mandatory restart 4項目の実装・非接続契約検証は完了したが、runtime受入れは未完了である。次は利用者の実行ごとの明示承認を得て専用buildを1回行い、build identity fail-closed、正規signup、candidate export/import、backend acceptance、停止済みpromotion、実利用者相当の再sign-in・dashboard、console/network、cleanupを順に検証する。公式進捗は10%のまま。
+
+## GOVERNANCE-TURNOVER-001 managed governance 1.3.0 coordinator activation checkpoint
+
+- 日付: 2026-08-21。
+- former coordinator: PM（AirGuardV2）-03 / task `01a0224f-3efd-7ea3-84a2-37f6d7a1b134`。
+- new coordinator: PM（AirGuardV2）-04 / task `01a022d4-dced-7562-83a4-878aa7f47b7e` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`45932a0a4c7871c3e1baabe5281845fd65377e42`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-003`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- UWB-02R〜04Rのapplication実装とlocal自動検証は完了済みである。未完了gateはpermission分離後のhuman-resource provision-only actorによる正規UI再受入れであり、role選択が表示されずemailだけでEmployee連携仮登録Userを作成・削除できることを確認する。このgate完了後にUWB-05へ進む。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
