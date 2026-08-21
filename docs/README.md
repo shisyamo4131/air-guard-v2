@@ -46,3 +46,4 @@
 - ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
 - `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
 - `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。
+- 必須validator、test、build、lint、migration checkは各commandの結果とexit statusを独立して確認する。まとめる場合は検証済みのfail-fastまたはaggregate runnerだけを使い、後続成功が先行失敗を隠す`;`等のchainやdiagnostic batchを完了証拠にしない。

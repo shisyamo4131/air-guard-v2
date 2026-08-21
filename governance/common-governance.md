@@ -1,4 +1,4 @@
-<!-- common-governance-version: 1.0.0 -->
+<!-- common-governance-version: 1.3.0 -->
 # Common Project Governance Contract
 
 This contract contains mandatory governance shared by every project created or migrated with `scaffold-project-governance`. A project may add stricter or more specific rules, but must not weaken, replace, or silently contradict this contract.
@@ -60,6 +60,8 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 
 ## Git and Worktree Integrity
 
+- Use the repository in the primary working directory configured by the user for every project task. Do not create, select, or assign a task-specific linked worktree or alternate repository copy by default.
+- Before using a separate worktree, explain why the primary working directory is insufficient and obtain explicit user approval. State the proposed path, branch, owner, integration method, lifetime, and cleanup plan. If an unapproved separate worktree is discovered, stop state-changing work there, preserve it, and ask the user for direction; do not delete it automatically.
 - Preserve unrelated user changes. Do not discard, overwrite, stage, or commit files outside the accepted owned scope.
 - Prefer coordinator-owned Git integration. Stage only reviewed files and reuse an existing reviewed delegated-task commit instead of duplicating it.
 - Before handoff, require retiring tasks to validate their owned work and report exact files, diff, tests, unverified items, and worktree state. The coordinator commits and integrates accepted work.
@@ -74,8 +76,8 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Routine specification, roadmap, ADR, changelog, evidence, or implementation updates do not require turnover unless they change scope ownership, approval boundaries, safety, current phase, or task instructions.
 - Require explicit user approval before replacing the coordinator. Delegated tasks may rotate automatically only under previously approved conditions and at a safe checkpoint.
 - Use the same base task name plus the next sequence number. Send the baseline commit, checkpoint, progress, results, tests, unintegrated work, approvals, owned and forbidden scope, next instructions, governance version, and callback destination.
-- Verify repository-based restart, active instruction sources, project permissions, a no-change callback, and retargeted assignment/callback identifiers before archiving the former task. On failure, keep the former task active and prevent duplicate assignments.
-- Archiving is a UI/state operation, not proof of physical deletion or storage shrinkage. Do not make direct maintenance of Codex-owned SQLite or WAL files a routine project procedure.
+- Verify repository-based restart, active instruction sources, project permissions, a no-change callback, and retargeted assignment/callback identifiers before retiring ownership from the former task. On failure, keep the former task active and prevent duplicate assignments.
+- After successful replacement, leave the former task in place and do not archive or delete it through Codex. Tell the user which former task is safe to delete manually; deletion remains a user action. Do not make direct maintenance of Codex-owned SQLite or WAL files a routine project procedure.
 
 ## Roadmaps and Progress
 
@@ -84,6 +86,14 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Weighted milestones must total 100 and state whether partial credit is allowed. Do not average materially different products without approved program weighting.
 - If scope growth or corrected completion judgment lowers progress, record the old value, new value, and reason.
 - Link milestones to principal design, implementation, test, review, deployment, or acceptance evidence.
+
+## Verification Evidence Integrity
+
+- Run every required validator, test, build, lint, migration check, or other completion gate so that its result and exit status are independently observable.
+- When combining required checks, use only a verified fail-fast wrapper that exits nonzero on the first failure or a verified aggregate runner that records every result and exits nonzero if any check fails.
+- Do not use command chaining such as `;` as completion evidence when a later successful command can replace an earlier failure in the overall process exit status.
+- Record each required check's command, result, and exit status separately in callbacks, completion reports, handoffs, commit or integration evidence, and release decisions.
+- Diagnostic command batches may use other grouping for investigation, but must be labeled diagnostic and must not be reused as completion evidence or a success decision.
 
 ## Safety and Sensitive Information
 
@@ -100,7 +110,7 @@ Before completion, verify and report:
 - changed behavior and exact changed files;
 - owned diff and worktree state;
 - specification, roadmap, ADR, changelog, operations, and index alignment;
-- validation and tests actually performed;
+- each required validation and test command, its result, and its independently determined exit status;
 - unverified items, residual risks, unresolved decisions, and pending approvals;
 - governance/configuration changes and required task turnover;
 - the user's next action.

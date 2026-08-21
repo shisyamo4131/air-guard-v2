@@ -24,6 +24,7 @@
 
 ### Changed
 
+- managed common governanceを1.3.0へ同期し、必須検証ごとの結果・exit statusを独立して扱い、後続commandの成功で先行失敗を隠さない完了証拠契約を適用した。
 - managed governance validatorを必須の明示`-ProjectPath`付き正規commandで実行し、Windows user configstoreを参照するFirebase CLIベースのCodex専用Emulator suiteを既存のdemo隔離・承認境界内で最初からworkspace sandbox外で実行するプロジェクト運用へ変更した。
 
 - User管理permissionを、仮登録Userの作成・削除を行う`users:provision`と、role・通知等を管理する`users:write`へ分離した。managerへ両方、human-resourceへ`users:provision`だけを明示付与し、provision-only actorの作成時rolesは空配列に限定した。非空rolesはclient transport前とCallableのpreflight・transaction内で拒否する。
