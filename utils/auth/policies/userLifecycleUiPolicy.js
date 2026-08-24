@@ -13,10 +13,16 @@ function isSafeId(value) {
   );
 }
 
-function isActiveRegisteredActor({ companyId, actorUid, actorUser }) {
+function isActiveRegisteredActor({
+  companyId,
+  actorUid,
+  actorUser,
+  isSuperUser,
+}) {
   return Boolean(
     isSafeId(companyId) &&
       isSafeId(actorUid) &&
+      isSuperUser === false &&
       actorUser?.docId === actorUid &&
       actorUser?.companyId === companyId &&
       actorUser?.isTemporary === false &&
@@ -28,11 +34,17 @@ export function canTerminateEmployee({
   companyId,
   actorUid,
   actorUser,
+  isSuperUser,
   employee,
   linkedUser = null,
 } = {}) {
   if (
-    !isActiveRegisteredActor({ companyId, actorUid, actorUser }) ||
+    !isActiveRegisteredActor({
+      companyId,
+      actorUid,
+      actorUser,
+      isSuperUser,
+    }) ||
     !isSafeId(employee?.docId) ||
     employee?.employmentStatus !== "ACTIVE" ||
     actorUser.employeeId === employee.docId ||
@@ -50,10 +62,16 @@ export function canReinstateEmployee({
   companyId,
   actorUid,
   actorUser,
+  isSuperUser,
   employee,
 } = {}) {
   return Boolean(
-    isActiveRegisteredActor({ companyId, actorUid, actorUser }) &&
+    isActiveRegisteredActor({
+      companyId,
+      actorUid,
+      actorUser,
+      isSuperUser,
+    }) &&
       actorUser.isAdmin === true &&
       isSafeId(employee?.docId) &&
       employee?.employmentStatus === "RESIGNED",
@@ -64,10 +82,16 @@ export function canDeleteStandaloneRegisteredUser({
   companyId,
   actorUid,
   actorUser,
+  isSuperUser,
   targetUser,
 } = {}) {
   return Boolean(
-    isActiveRegisteredActor({ companyId, actorUid, actorUser }) &&
+    isActiveRegisteredActor({
+      companyId,
+      actorUid,
+      actorUser,
+      isSuperUser,
+    }) &&
       actorUser.isAdmin === true &&
       isSafeId(targetUser?.docId) &&
       targetUser.docId !== actorUid &&

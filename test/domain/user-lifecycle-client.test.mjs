@@ -49,6 +49,35 @@ test("registered User deletion is separated from temporary User deletion", async
   assert.match(source, /deleteTemporaryUser/);
   assert.match(source, /removeStandaloneRegisteredUser/);
   assert.match(source, /canDeleteStandaloneRegisteredUser/);
+  assert.match(
+    source,
+    /canDeleteStandaloneRegisteredUser\(\{[\s\S]*?isSuperUser:\s*auth\.isSuperUser,[\s\S]*?targetUser,[\s\S]*?\}\)/,
+  );
+});
+
+test("Employee lifecycle controls pass the token super-user state", async () => {
+  const url = new URL(
+    "../../components/Employee/LifecycleActions.vue",
+    import.meta.url,
+  );
+  const source = await readFile(url, "utf8");
+  const matches = source.match(/isSuperUser:\s*auth\.isSuperUser/g) ?? [];
+  assert.equal(matches.length, 2);
+});
+
+test("Employee lifecycle UI has one element root for inherited layout attributes", async () => {
+  const url = new URL(
+    "../../components/Employee/LifecycleActions.vue",
+    import.meta.url,
+  );
+  const source = await readFile(url, "utf8");
+  const { descriptor, errors } = parse(source, { filename: url.pathname });
+  assert.deepEqual(errors, []);
+  const rootElements = descriptor.template.ast.children.filter(
+    (node) => node.type === 1,
+  );
+  assert.equal(rootElements.length, 1);
+  assert.equal(rootElements[0].tag, "div");
 });
 
 for (const file of components) {

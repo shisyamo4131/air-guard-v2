@@ -200,6 +200,7 @@ function canDeleteRegisteredUser(targetUser) {
     companyId: auth.companyId,
     actorUid: auth.uid,
     actorUser: auth.user,
+    isSuperUser: auth.isSuperUser,
     targetUser,
   });
 }

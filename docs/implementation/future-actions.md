@@ -74,9 +74,9 @@ SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cl
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-003、SPEC-DEEP-005
 - 対象ファイル・シンボル: `useAuthActions.clearSession`・`signOut`、`useAuthStore.waitUntilSessionCleared`
-- 確認済み実装事実: clearSessionはauth scalarを先に初期化してからUser/Company unsubscribe・initializeを行う。後段例外はsetUserが吸収し、待機条件 `uid === null && isReady` はmodel cleanup失敗でも成立し得る。2026-08-11に、cleanup失敗時は強制reloadする方針が承認された。2026-08-15のlocal Emulator・Chrome検証では、旧管理者のsign-outから新管理者のsign-inへ移る間にFirestore listener由来のpermission-deniedが2件発生したが、新管理者の管理者menu、User一覧、管理者移譲dialogの利用に影響せず、その後は再発しなかった。
+- 確認済み実装事実: clearSessionはauth scalarを先に初期化してからUser/Company unsubscribe・initializeを行う。後段例外はsetUserが吸収し、待機条件 `uid === null && isReady` はmodel cleanup失敗でも成立し得る。2026-08-11に、cleanup失敗時は強制reloadする方針が承認された。2026-08-15のlocal Emulator・Chrome検証では、旧管理者のsign-outから新管理者のsign-inへ移る間にFirestore listener由来のpermission-deniedが2件発生したが、新管理者の管理者menu、User一覧、管理者移譲dialogの利用に影響せず、その後は再発しなかった。2026-08-24のEmployee詳細からのsign-outでも3件を再現し、`signOut`がAuth sessionを先に解除し、認証observerによる`clearSession`と画面遷移・page listener unmountが後続する現在の順序をrepositoryで確認した。
 - 想定影響と発生条件: unsubscribe/initializeがthrowした場合、signOut呼出し側は成功と判断しても旧model stateまたはlistenerが残る可能性がある。
-- 未確認点・仮説: model cleanupが実際にthrowするか、初期化が部分適用されるかは未確認。2026-08-15のpermission-deniedは、Authが未認証状態になった後もUser/Company購読が短時間残った可能性と整合するが、対象listener・document path・発生順序は特定していないため原因とは断定しない。
+- 未確認点・仮説: model cleanupが実際にthrowするか、初期化が部分適用されるかは未確認。Auth解除後もpage固有・User・Companyのどのlistenerが各errorを出したかはpath単位で特定しておらず、共通の購読終了順序を変更する前に計測が必要である。
 - 推奨する将来対応: cleanup完了状態・errorを待機条件へ含め、失敗時はlog後に強制reloadする。
 - 必要なテスト: unsubscribe/initialize各failure、二重signOut、timeout、旧listener残存確認。sign-out時のAuth状態変更・User/Company unsubscribe・Firestore listener errorの順序を計測し、正常な画面遷移を維持したままpermission-deniedが解消されることを確認する。
 - ユーザー判断が必要な事項: なし。

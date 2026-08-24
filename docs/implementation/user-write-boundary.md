@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06完了、UWB-07/08は実装・自動検証・Codex UI smoke完了、利用者local受入れ待ち）
+- 状態: Active（UWB-01〜06完了、UWB-07/08は実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity完了、UWB-07 retention contract確認待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Local automated implementation ready / Codex UI smoke complete / 利用者local受入れ・retention contract pending
+- 状態: Local automated implementation ready / Codex UI smoke・利用者local受入れ・UI policy parity complete / retention contract pending
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -404,7 +404,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 5. [x] 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
 6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionは保持契約とともに未実装とし、Rules gate完了後にUIを公開する。
 7. [x] 5分reconcilerの`LifecycleOperations.state` collection-group queryに必要なindexを`firestore.indexes.json`へ明示し、source contract testで固定する。
-8. [ ] 単体、EmulatorのRules・並行・phase failureとCodex UI smokeは完了。利用者local操作受入れ、保持・運用確認を完了する。
+8. [ ] 単体、EmulatorのRules・並行・phase failure、Codex UI smoke、利用者local操作受入れ、super-userの3操作control/server policy parityは完了。保持・運用確認を完了する。
 
 #### 完了条件
 
@@ -538,3 +538,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 checkpoint 2 | server-only operation/event/lock/head schema、request fingerprint、Firestore transaction store、外部Auth/FCM作用をtransaction外へ分離した共通registered User削除phase engineを実装 | 本変更 | 対象test 17件、全domain単体test 557件が成功。正常完了、operation ID競合、lock、phase飛越し拒否、Auth disable/delete・disposition不正、data finalize、FCM cleanup、transaction・failure記録失敗を注入。A/B/C use-case、gateway、Callable、Emulator、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07 checkpoint 3A core | Employee-only退職をoperation・event・一時lock・head・Employee更新の単一transactionへ統合し、本登録User連携Aを予約pointer・一意User検査、Auth identity再照合、共通削除phase engine、FCM cleanupへ接続 | 本変更 | UWB-07A対象testを含む対象35件、全domain単体test 575件が成功。仮User、予約欠損＋User残存、会社管理者、super-user、Auth disable前delete、cleanup失敗後再開を陰性・failure testで固定。Callable、error mapper、public export、Emulator、B/C、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07/08 automated ready | A/B/C Callable、5分間隔reconcilerと必要なcollection-group index、訂正用最小context、client policy/composable、Employee詳細・User管理UI、User/Employee/lifecycle/FCM Rules、通知eligibility再検証とprivacy log是正を実装 | 本変更 | 全domain単体test 609件、専用Emulator suite 88件（Rules 35件を含む）pass。Codex専用UIで合成管理者sign-in、User設定、在職者一覧、退職者検索のsmokeを通常pointer/keyboardで確認し、console error 0件、既知PWA warningのみ、全専用port閉鎖、saved-data 7 files・3492 bytes不変。利用者local操作受入れ、`firestore.rules`確認、履歴reader・保持期間・legal hold・terminal後UID縮小は未完了 |
+| 2026-08-24 | UWB-07 local UI acceptance | 利用者用EmulatorとChromeでhuman-resource、super-user、会社管理者の権限別表示とA/B/Cを確認。正規UIでEmployee連携仮Userを作成し、一般User signupとAuth Emulator OOB確認で本登録へ変換してから、同じUserを伴う退職・Auth/User削除・誤退職訂正を一巡 | 本変更 | human-resourceのEmployee-only・本登録User連携退職、会社管理者のEmployee-only退職・訂正、単独本登録User削除、本登録User連携退職・訂正が成功。訂正後はEmployeeが同一IDで在職一覧へ戻り、User/Authは非復元。対象操作中のconsole warning/error 0件。既存旧fixtureの予約不整合はserverがfail closedした。super-userの訂正control表示から判明した不一致は退職・訂正・単独User削除の全client policyをserverと同じfail closedへ修正した。sign-out時listener permission-deniedは既存の共通認証課題FUT-0005へ分離し、retention contractは未完了 |

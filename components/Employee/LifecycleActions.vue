@@ -54,6 +54,7 @@ const mayRetire = computed(() =>
     companyId: auth.companyId,
     actorUid: auth.uid,
     actorUser: auth.user,
+    isSuperUser: auth.isSuperUser,
     employee: props.employee,
     linkedUser: props.linkedUser,
   }),
@@ -63,6 +64,7 @@ const mayReinstate = computed(() =>
     companyId: auth.companyId,
     actorUid: auth.uid,
     actorUser: auth.user,
+    isSuperUser: auth.isSuperUser,
     employee: props.employee,
   }),
 );
@@ -154,92 +156,94 @@ async function handleReinstatement() {
 </script>
 
 <template>
-  <v-btn
-    v-if="mayRetire"
-    block
-    color="warning"
-    text="退職処理"
-    variant="flat"
-    @click="openRetirementDialog"
-  />
-  <v-btn
-    v-if="mayReinstate"
-    block
-    color="warning"
-    :loading="contextPending"
-    text="誤退職を訂正する"
-    variant="outlined"
-    @click="openReinstatementDialog"
-  />
+  <div>
+    <v-btn
+      v-if="mayRetire"
+      block
+      color="warning"
+      text="退職処理"
+      variant="flat"
+      @click="openRetirementDialog"
+    />
+    <v-btn
+      v-if="mayReinstate"
+      block
+      color="warning"
+      :loading="contextPending"
+      text="誤退職を訂正する"
+      variant="outlined"
+      @click="openReinstatementDialog"
+    />
 
-  <v-dialog v-model="retirementDialog" max-width="520" persistent>
-    <v-card>
-      <v-toolbar color="warning" density="compact" title="退職処理" />
-      <v-card-text>
-        <v-form ref="retirementForm" @submit.prevent="handleRetirement">
-          <v-text-field
-            v-model="retirement.terminationDate"
-            label="退職日"
-            type="date"
-            :max="todayJst"
-            :rules="[
-              (value) => !!value || '退職日は必須です。',
-              (value) => value <= todayJst || '未来日は指定できません。',
-            ]"
+    <v-dialog v-model="retirementDialog" max-width="520" persistent>
+      <v-card>
+        <v-toolbar color="warning" density="compact" title="退職処理" />
+        <v-card-text>
+          <v-form ref="retirementForm" @submit.prevent="handleRetirement">
+            <v-text-field
+              v-model="retirement.terminationDate"
+              label="退職日"
+              type="date"
+              :max="todayJst"
+              :rules="[
+                (value) => !!value || '退職日は必須です。',
+                (value) => value <= todayJst || '未来日は指定できません。',
+              ]"
+            />
+            <v-text-field
+              v-model="retirement.reasonOfTermination"
+              label="退職理由"
+              maxlength="20"
+              :rules="reasonRules"
+            />
+          </v-form>
+          <v-alert type="warning" density="compact">
+            Employeeは退職状態で保持されます。紐づく本登録Userがある場合、UserとAuthは物理削除されます。
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            :disabled="retirementPending"
+            text="キャンセル"
+            @click="retirementDialog = false"
           />
-          <v-text-field
-            v-model="retirement.reasonOfTermination"
-            label="退職理由"
-            maxlength="20"
-            :rules="reasonRules"
+          <v-btn
+            color="warning"
+            :disabled="retirementPending"
+            :loading="retirementPending"
+            text="退職処理を実行"
+            @click="handleRetirement"
           />
-        </v-form>
-        <v-alert type="warning" density="compact">
-          Employeeは退職状態で保持されます。紐づく本登録Userがある場合、UserとAuthは物理削除されます。
-        </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          :disabled="retirementPending"
-          text="キャンセル"
-          @click="retirementDialog = false"
-        />
-        <v-btn
-          color="warning"
-          :disabled="retirementPending"
-          :loading="retirementPending"
-          text="退職処理を実行"
-          @click="handleRetirement"
-        />
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
-  <v-dialog v-model="reinstatementDialog" max-width="520" persistent>
-    <v-card>
-      <v-toolbar color="warning" density="compact" title="誤退職の訂正" />
-      <v-card-text>
-        <p>このEmployeeを在職状態へ戻します。</p>
-        <v-alert type="warning" density="compact" class="mt-4">
-          退職時に削除されたUserとAuthは復元されません。必要な場合は訂正後にUserを再登録してください。
-        </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn
-          :disabled="reinstatementPending"
-          text="キャンセル"
-          @click="reinstatementDialog = false"
-        />
-        <v-btn
-          color="warning"
-          :disabled="reinstatementPending"
-          :loading="reinstatementPending"
-          text="在職状態へ戻す"
-          @click="handleReinstatement"
-        />
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    <v-dialog v-model="reinstatementDialog" max-width="520" persistent>
+      <v-card>
+        <v-toolbar color="warning" density="compact" title="誤退職の訂正" />
+        <v-card-text>
+          <p>このEmployeeを在職状態へ戻します。</p>
+          <v-alert type="warning" density="compact" class="mt-4">
+            退職時に削除されたUserとAuthは復元されません。必要な場合は訂正後にUserを再登録してください。
+          </v-alert>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            :disabled="reinstatementPending"
+            text="キャンセル"
+            @click="reinstatementDialog = false"
+          />
+          <v-btn
+            color="warning"
+            :disabled="reinstatementPending"
+            :loading="reinstatementPending"
+            text="在職状態へ戻す"
+            @click="handleReinstatement"
+          />
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </div>
 </template>
