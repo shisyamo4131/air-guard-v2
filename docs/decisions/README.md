@@ -32,6 +32,7 @@
 | [0017](0017-callable-auth-identity-gate.md) | Callableの共通Auth identity gate | Accepted | 2026-08-16 |
 | [0018](0018-user-provisioning-and-employee-link-boundary.md) | User provisioningとEmployee紐付け境界 | Accepted | 2026-08-16 |
 | [0019](0019-client-operation-policy-composable-boundary.md) | Client操作policyとcomposable境界 | Accepted | 2026-08-17 |
+| [0020](0020-employee-retirement-user-offboarding-and-reinstatement.md) | Employee退職・単独User削除・誤退職訂正境界 | Accepted | 2026-08-24 |
 
 ## 新しい ADR の形式
 

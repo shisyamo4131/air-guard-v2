@@ -131,8 +131,8 @@ SPEC-DEEP-039b追加根拠: client token登録はgetToken/FcmToken createを含�
 - 確認済み実装事実: client development logはtoken全体とraw Userをlogger dataへ渡す。serverはmulticast responseをJSON化してtoken全体をconsoleへ出し、単体emulator warningもtokenを含む。未export test handlerはtokenをlogとresponseへ含める。
 - 想定影響と発生条件: development/emulator/Functions logまたはtest handler有効化時に、通知送信能力に関わるtokenやUser情報がlog閲覧者・HTTP呼出し元へ露出する。
 - 未確認点・仮説: loggerの保存・送信先、log retention、token単体で悪用可能な範囲は未確認。
-- 推奨する将来対応: dev/prodともtoken全文、User document、notification payload丸ごとをlogしない。調査用token識別子は不可逆hash先頭8文字等に限定し、prod contextはuserId・companyId・notificationId等の必要最小限にする。test responseからtokenを除去する。
-- 必要なテスト: log captureでtoken・email・User属性が含まれないこと、error pathとemulator pathのsnapshot検査。
+- 推奨する将来対応: dev/prodともtoken全文・一部・token由来識別子、User document、notification payload丸ごとをlogしない。UWB-07/08 release gateの通知処理はoperationId、件数、allowlist済みdomain error codeだけに限定し、test responseからもtokenを除去する。
+- 必要なテスト: log captureでraw・partial・token由来識別子、email、User属性、通知本文、custom dataが含まれないこと、error pathとemulator pathのsnapshot検査。
 - ユーザー判断が必要な事項: 監視基盤導入時のlog保持期間と閲覧権限。
 
 SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User objectとFCM token全文を`useLogger` dataへ渡し、loggerにはfield redactionがない。
@@ -143,11 +143,11 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: High
 - 発見セグメント: SPEC-SEG-005
 - 対象ファイル・シンボル: `firestore.rules` の `match /FcmTokens/{token}`、schemas `FcmToken`
-- 確認済み実装事実: create/updateはrequest後uidとAuth UIDの一致だけを検査し、companyIdの所属整合、token fieldとdocument ID一致、field allowlist、既存owner一致を検査しない。readは拒否、deleteは既存uid本人だけを許可する。
+- 確認済み実装事実: create/updateはrequest後uidとAuth UIDの一致だけを検査し、active registered Userの存在・disabled/temporary状態、companyIdの所属整合、token fieldとdocument ID一致、field allowlist、既存owner一致を検査しない。readは拒否、deleteは既存uid本人だけを許可する。
 - 想定影響と発生条件: 認証済みUserがtoken document IDを知る場合、ownerを自分へ上書きし任意companyIdを設定できる。誤ったcompanyIdで別tenantの送信targetに混入・欠落する可能性がある。
 - 未確認点・仮説: token IDの推測困難性、custom claimsで利用可能なcompanyId、createの既存document挙動は未確認。
-- 推奨する将来対応: tenant claimとのcompanyId一致、token/docId一致、field・型制限をRulesへ追加する。別Userへのowner移管を許可せず、sign-out削除後に次回login Userが再取得・再登録する契約を強制する。
-- 必要なテスト: 未認証、他UID、他company、既存owner上書き、余分field、token不一致、正当な同device User切替のRules emulator test。
+- 推奨する将来対応: current Authと同じUIDのactive registered User、User/token/tenant claimのcompanyId一致、token/docId一致、field・型制限をRulesへ追加する。disabled・temporary・User不在を拒否し、client updateと別Userへのowner上書きを全面拒否する。sign-out時に旧owner documentを削除し、次回login Userは削除成功後に同tokenをcreateする。削除失敗はserver cleanup対象とする。
+- 必要なテスト: 未認証、User不在、disabled、temporary、他UID、他company、全update、既存owner上書き、余分field、token不一致、旧owner delete成功後だけ許可する同device User切替のRules emulator test。
 - ユーザー判断が必要な事項: なし。
 
 ## FUT-0011 FCM error分類で有効tokenを削除しない
@@ -1022,23 +1022,23 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 対象ファイル・シンボル: `Employee.toTerminated`、`EmployeeUserManager`、`onEmployeeDeleted`、`User.employeeId`
 - 確認済み実装事実: User.employeeIdはoptionalで一意制約がなく、UI/退職/削除triggerはquery先頭Userだけを扱う。SPEC-DEEP-001で`onEmployeeDeleted`本文を再確認し、複数一致でも`users[0]`だけを削除してreturnし、残件検査/reconcileがないことを確認した。退職検索はtransaction外、物理削除cleanupは後続trigger。SPEC-DEEP-025で、detail pageの退職/Employee削除buttonが購読結果でなく初期空Userの`isAdmin`を参照し、admin紐付きでも事前disableされないこと、削除dialogがUserを「同時に削除」と説明する一方でEmployee archiveとUser trigger cleanupは別eventであることを確認した。
 - 想定影響と発生条件: duplicate User、検索後競合、trigger失敗でlogin可能Userだけが残る、admin判定漏れが起き得る。
-- 未確認点・仮説: Auth account cleanupの最終保証、duplicate既存dataは未確認。
-- 推奨する将来対応: employeeId一意mappingをserverで強制し、全関連User検出、idempotent cleanup/reconcileを実装する。
-- 必要なテスト: 0/1/複数User、admin混在、同時User作成、退職/delete trigger失敗・retry、Auth残存。
-- ユーザー判断が必要な事項: CONF-0062。
+- 未確認点・仮説: 既存dataの予約欠損・duplicate、Auth account cleanupの実環境状態は未確認。
+- 推奨する将来対応: 2026-08-24に確定したUWB-07A/B契約に従い、Employee予約を正本にした0/1関係、`employees:terminate`、会社管理者専用offboarding、統合`LifecycleOperations`、対象lock、本登録UserのAuth削除intent、idempotent cleanup/reconcileを実装する。仮User連携は既存仮登録削除後のEmployee-only再実行を要求し、emailからAuthを推定削除しない。UWB-08のRules閉鎖と同じrelease gateにする。
+- 必要なテスト: Employee-only/仮User拒否/本登録User/単独User、予約欠損・複数User、admin/super-user、同時User作成、退職/delete trigger失敗・retry、Auth残存、他tenant email再利用。
+- ユーザー判断が必要な事項: actor・target・archive・audit・reconcileのUWB-07仕様は回答済み。保持期間とProd運用条件は別途確定が必要。
 
 ## FUT-0077 Employee雇用状態・将来退職・復職workflowを確定する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-024、SPEC-DEEP-011
 - 対象ファイル・シンボル: `Employee.toTerminated/beforeUpdate`、resignation UI、employee range queries
 - 確認済み実装事実: 退職処理は指定日が将来でも即RESIGNED/User削除となる。復職methodなし。RESIGNEDでも多くのmaster編集・archiveは可能。SPEC-DEEP-011でRESIGNED detailは基本・国籍・保険・警備員・資格updateとdeleteを表示し続け、退職者検索にも共通create actionが残ることを確認した。
 - 想定影響と発生条件: 退職予定者が予定日前にlogin/worker候補から外れ、訂正・復職が正式経路で行えない。
-- 未確認点・仮説: 将来退職予約、取消、再雇用時ID継続、退職後編集範囲は未決定。
-- 推奨する将来対応: ACTIVE/退職予定/RESIGNED/復職のeffective-date workflowとUser disabled/delete時点を仕様化する。
-- 必要なテスト: 当日/未来/過去退職、取消、復職、期間query、User login、予定済みworker。
-- ユーザー判断が必要な事項: CONF-0063。
+- 未確認点・仮説: 将来退職予約、予約取消、実際の退職期間を伴う再雇用時のEmployee ID・雇用期間model、退職後編集範囲は未決定。
+- 推奨する将来対応: UWB-07では退職日をserverTodayJST以前に限定し、会社管理者専用UWB-07Cで完了済み退職の誤操作だけを同じEmployee IDのACTIVEへ訂正する。旧User/Authは復元せず、必要なら通常provisioningで新UIDを作成する。将来退職と真の再雇用は別のeffective-date workflowとして設計する。
+- 必要なテスト: 当日/過去退職、未来拒否、完了済み退職の訂正、旧User/Auth非復元、期間query、User再provision、真の再雇用を訂正操作が拒否すること。
+- ユーザー判断が必要な事項: 誤退職訂正は回答済み。将来退職と実際の再雇用modelはCONF-0063に残る。
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
@@ -1048,7 +1048,7 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 対象ファイル・シンボル: `Employee.hasMany/logicalDelete`、client adapter delete、Employees archive Rules
 - 確認済み実装事実: delete guardはschedule/result/arrangement notificationだけ。日次勤怠・日次稼働・現場履歴等のemployeeId参照はguard外。child queryはtransaction外で、UI restore経路なし。
 - 想定影響と発生条件: guard外履歴の表示名欠損、同時参照追加、誤削除回復不能、保存義務のある個人/勤怠dataとの不整合が起き得る。
-- 未確認点・仮説: 退職者の保持期間、匿名化、restore、法的保存要件は未決定。
+- 未確認点・仮説: 通常退職はEmployeeをarchiveせず保持し、誤退職は専用ACTIVE訂正を使う方針を確定した。退職者の保持期間、法定保持後匿名化、誤登録archive、archive restoreは未決定。
 - 推奨する将来対応: 参照catalogと退職/削除/匿名化/restore policyを定義し、競合安全なserver処理へ移す。
 - 必要なテスト: 全参照collection、同時予定/実績追加、archive/restore、過去勤怠表示、保持期限。
 - ユーザー判断が必要な事項: CONF-0064。
@@ -1074,10 +1074,10 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 対象ファイル・シンボル: `firestore.rules` Users match、`auth-v2.disableUser/enableUser/changeAdminUser`、UsersManager、`components/organisms/ChangeAdminUserDialog/index.vue`
 - 確認済み実装事実: UIはadmin向けだがRulesは同一会社UserにUser全fieldのread/writeを許す。2026-08-14〜15にdisable/enable/changeAdminはcaller UID/company、会社管理者、target User/Authをserver検証するよう改修し、一般User・別tenant・別人from・仮登録・無効・管理者targetを更新前に拒否する。SPEC-DEEP-035で、有効化・無効化UIに確認・理由・監査・single-flightがなく、employee-linked UserのdisableDeleteもAir managerがerror後に処理を続けるため、公開submit経路ではUser/Auth削除連鎖へ到達し得ることを確認した。
 - 想定影響と発生条件: Callableの旧actor/tenant経路は修正したが、一般Userの直接Firestore writeによりroles、isAdmin、disabled、employeeId等を改変できる。User管理UIの二重送信、削除連鎖、監査不足も別途残る。
-- 未確認点・仮説: 仮登録管理actorは確定したが、本登録User削除、role値、本人更新field、super-user修復権限は後続gateで未決定である。
-- 推奨する将来対応: 2026-08-21に仮登録作成・削除を`users:provision`、role・通知等の管理を`users:write`へ分離した。managerへ両方、human-resourceへprovisionだけを明示付与し、provision-only actorの非空rolesを拒否する。後続gateではAdmin SDK CallableとRulesでtenant・permission・doc ID/UID・immutable fieldを強制する。
+- 未確認点・仮説: 仮登録管理actor、UWB-05の既知preset限定role・本人`displayName`/`tagSize`、UWB-07Bの単独本登録User削除actor・target・物理削除・再作成契約は確定した。既存data不整合、super-user repair権限、UWB-08 Rulesは未確定または未実装である。
+- 推奨する将来対応: 2026-08-21に仮登録作成・削除を`users:provision`、role・通知等の管理を`users:write`へ分離した。managerへ両方、human-resourceへprovisionだけを明示付与し、provision-only actorの非空rolesを拒否する。UWB-05でroleを既知presetへ限定し、本人更新を`displayName`・`tagSize`へ限定した。UWB-07Bは会社管理者だけに単独本登録User削除を許可する。後続gateではAdmin SDK CallableとRulesでtenant・permission・doc ID/UID・immutable fieldを強制する。
 - 必要なテスト: 一般/admin/super-user、本人/他人/他社UID、roles/isAdmin/companyId/disabled直接write、管理者移譲偽装。
-- ユーザー判断が必要な事項: 仮登録管理actorはCONF-0066で回答済み。後続gateで本登録削除、role値、本人設定fieldを個別確認する。
+- ユーザー判断が必要な事項: 仮登録管理actor・role値・本人設定fieldはCONF-0066、本登録User削除はCONF-0068で回答済み。super-user repair権限だけを後続gateで個別確認する。
 
 2026-08-15の管理者移譲改修でcaller本人性、唯一の会社管理者、対象disabled/temporary、User/Auth company・UID整合をtransaction更新前に検証するよう変更した。理由・監査の要否とRulesの直接write境界は既存FUT/CONFで継続し、新規FUT/CONFは追加しない。
 
@@ -1087,11 +1087,11 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025
 - 対象ファイル・シンボル: `useCreateNormalUser.signupUser`、`useCreateAdminUser.signupAdmin`、`apis/setupUserAccount`、`apis/createAdminAccount`、`apis/checkEmailAvailability`
-- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。初期管理者はメール確認後にCompany/User/claimsを作成し、claims失敗後の整合した既存Company/Userを再利用できるが、同時実行競合、Auth-only、不整合な部分状態は残り得る。
+- 確認済み実装事実: Auth作成、verification mail、Firestore transaction、claims設定はatomicでない。Firestore移行後claims失敗は補償されず、一般User再実行は仮doc消失で失敗する。初期管理者はメール確認後にCompany/User/claimsを作成し、claims失敗後の整合した既存Company/Userを再利用できるが、同時実行競合、Auth-only、不整合な部分状態は残り得る。本登録User削除でもAuth削除成功からemail予約解放までの間に同emailの新Auth UIDが作成され、再登録を阻害するAuth-only部分状態が残り得る。
 - 想定影響と発生条件: network/Admin SDK/trigger失敗でAuth-only、Firestore-only、claims欠損のaccountが残り、login初期化やtenant accessが不能・不整合になる。
 - 未確認点・仮説: 運用reconcile、監視、既存orphan件数は未確認。
-- 推奨する将来対応: idempotent setup state machine、再実行可能なclaims設定、orphan検出・管理者repairを設計する。
-- 必要なテスト: 各段階failure、同一request retry、二重click、既存Auth/User/Company組合せ、trigger遅延。
+- 推奨する将来対応: idempotent setup state machine、再実行可能なclaims設定、signup leaseまたは同等のserver-verifiable gate、orphan検出・管理者repairを設計する。UWB-07は競合する新UIDをemailから推定削除しない。
+- 必要なテスト: 各段階failure、同一request retry、二重click、既存Auth/User/Company組合せ、trigger遅延、Auth削除直後から予約解放までの同email signup競合、新UID非削除とrepair検出。
 - ユーザー判断が必要な事項: CONF-0067。
 
 SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/resumeせず、内部UID付きsupport案内だけを返す直列flowを再確認した。
@@ -1107,7 +1107,7 @@ SPEC-DEEP-039a追加根拠: 一般/admin signupとも後段失敗時にrollback/
 - 未確認点・仮説: 既存重複件数と予約documentの具体path・migrationは未確認である。
 - 推奨する将来対応: 2026-08-16に1 Employee対最大1 Userを確定した。単独仮UserとEmployee連携仮Userの公開作成操作を分け、server予約/indexと作成Callableでemail、UID、同一会社Employeeの存在・未紐付け・employeeId一意性をtransactionally検証する。
 - 必要なテスト: 同時仮登録、同email複数company、同employee複数User、任意doc ID、本登録競合。
-- ユーザー判断が必要な事項: CONF-0067、CONF-0062。
+- ユーザー判断が必要な事項: Employee/Userの0/1関係と予約正本はCONF-0062で回答済み。招待・本人確認・既存重複dataはCONF-0067に残る。
 
 SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず、composableがemailで先頭docを再検索してverification成立前にsetupする。表示対象・setup対象・mailbox所有を同じone-time proof/revisionへbindしない。
 
@@ -1119,12 +1119,12 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 重大度: High
 - 発見セグメント: SPEC-SEG-025
 - 対象ファイル・シンボル: `onUserUpdated`、`onUserDeleted`、`switchUserEnabled`、`onAuthUserDeleted`
-- 確認済み実装事実: disabled/displayNameはFirestore先行でAuth反映を非同期triggerに委ね、削除もFirestore先行でAuthを後続削除する。SPEC-DEEP-001でUser delete→Auth delete→Auth delete event→FcmToken cleanupの3段chainと、最後のcleanup失敗だけがcatchで吸収されることを本文再確認した。
+- 確認済み実装事実: disabled/displayNameはFirestore先行でAuth反映を非同期triggerに委ね、削除もFirestore先行でAuthを後続削除する。SPEC-DEEP-001でUser delete→Auth delete→Auth delete event→FcmToken cleanupの3段chainと、最後のcleanup失敗だけがcatchで吸収されることを本文再確認した。仮User signupではclientがAuthentication accountを直接作成してからFirestore本登録へ進むため、仮登録削除との競合でAuth-only部分状態が残り得る。email・claim不存在・未setup状態だけでは、そのAuthが当該仮登録から作成されたことをserverが証明できない。現行通知dispatcherはUser存在だけで送信しdisabled・temporary・company一致を検査せず、raw tokenを含むprovider responseやtoken断片・payloadをlogへ出す経路がある。FcmTokens Rulesもactive registered Userとcompany一致を要求しない。
 - 想定影響と発生条件: trigger失敗・遅延時に無効化したUserがlogin可能、削除済みUserのAuthが残存、表示名差異、token残存が起き得る。
 - 未確認点・仮説: Functions retry/alert、定期reconcile、利用者向け反映待ち表示は未確認。
-- 推奨する将来対応: 同期状態と監視、idempotent retry/reconcile、重要操作のserver完了確認を設ける。
-- 必要なテスト: update/delete trigger失敗・retry、Auth user不存在、連続enable/disable、削除再作成、FCM cleanup失敗。
-- ユーザー判断が必要な事項: CONF-0068。
+- 推奨する将来対応: 無効化の同期状態と監視を設ける。UWB-07の本登録User物理削除はFirestore先行triggerを主体にせず、統合`LifecycleOperations`、Auth削除intent、idempotent retry/reconcile、明示的FCM cleanupでserver完了を確認する。通知dispatcherとFcmTokens Rulesはactive registered User・company一致を必須にし、token・payload logをallowlist化する。仮登録削除raceで残るAuth-only accountは、signup leaseまたは同等のserver-verifiable provenanceを導入するか、安全な管理者repairとして別途設計し、UWB-07Aからemail検索削除しない。
+- 必要なテスト: update/delete trigger失敗・retry、Auth user不存在、連続enable/disable、削除再作成、仮登録削除とsignupの競合、provenance不明Authの非削除、disabled/temporary/company不一致Userのtoken write・通知拒否、queued通知、FCM cleanup失敗、logger token/payload非出力。
+- ユーザー判断が必要な事項: 物理削除・退職・誤退職訂正の契約はCONF-0068で回答済み。無効化triggerの監視・repair運用は未確定。
 
 ## FUT-0084 未認証の事前登録照会を列挙・abuseから保護する
 

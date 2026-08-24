@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-24
-- 仕様バージョン: 0.5.8
+- 仕様バージョン: 0.5.9
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -80,8 +80,15 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
 - 本登録UserからAirGuardV2の操作権限だけを一時的または継続的に剥奪し、雇用・業務記録上のEmployeeを維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
-- Employeeの退職に伴って本登録Userを削除する場合は、別tenantへの所属後に同じメールアドレスで新規登録できるようAuthentication accountとUser documentを物理削除し、EmployeeとのUser紐付けを解除する。EmployeeとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除対象に含めない。
-- 物理削除するUserを`Users_archive`へ退避するか、UIDを作成者・更新者として保持する既存dataの表示・監査をどう維持するか、削除actor・target条件、監査記録、誤削除復旧、部分失敗reconcileは、本登録User削除の専用UWBゲートで具体例を用いて確定するまでは未実装とする。
+- Employee退職は専用操作とし、退職日はserverのAsia/Tokyo暦日を基準に入社日以降かつ実行日以前に限定する。`human-resource`既定roleへ新設する`employees:terminate`を付与し、有効な本登録会社管理者にもoverrideを許可する。manager、`employees:write`、`users:provision`、`users:write`だけでは退職を許可しない。managerが別Userへ`human-resource` roleを設定して退職担当者を任命できる現行role管理境界は維持する。
+- Employeeの退職に伴って本登録Userを削除する場合は、旧accountが別tenantでの同じメールアドレスの新規登録を妨げないようAuthentication accountとUser documentを物理削除し、User email予約とEmployee予約を解放する。Employee documentとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除せず、Employeeを`RESIGNED`として保持する。Employeeだけ、仮登録User連携、本登録User連携を予約pointerから識別し、queryの先頭Userへfallbackしない。仮登録User連携は退職操作内でAuthをemailから推定・削除せず、既存の仮登録削除を完了してEmployee-only状態を確認してから退職を再実行する。signup途中のAuth-only部分状態は退職操作の対象にせず、別のaccount repairで扱う。Auth削除直後に同emailの別Authが作成される競合では新UIDを自動削除せず、再登録を無条件には保証しない。
+- Employeeに紐付かない単独本登録Userの物理削除は、退職とは別のaccount offboarding操作とし、有効な本登録会社管理者だけに許可する。自己、会社管理者、super-user、他社User、仮登録User、Employee連携Userは対象外とし、Employee連携UserにはEmployee退職操作、仮登録Userには既存の仮登録削除操作を使用する。
+- 物理削除したUser/Authは`Users_archive`へ保存せず、旧UID、email、role、通知設定、User/Auth全文を復元しない。Employee連携Userは必要なEmployee状態を訂正した後にEmployee連携User作成、単独Userは会社管理者による単独仮User作成を改めて実行し、新しいAuth UIDとUser、role・設定を作る。旧UIDを持つ履歴は新UIDへ書き換えず、一般表示で解決できない場合は削除済みUserとして扱う。
+- Employee退職、単独本登録User削除、誤退職訂正の実行状態と監査は、server-onlyの`LifecycleOperations`を操作単位の唯一の正本とする。operation ID、対象別lock、Auth削除前の永続的intent、phase、再試行、部分失敗reconcile、完了結果を保持し、clientからの直接read/writeを許可しない。email、email hash、role、通知設定、User/Auth全文、FCM tokenは保存しない。actor UIDと最大6文字の表示名、target UIDと最大6文字の表示名、Employee ID、退職日・現在上限20文字の退職理由、単独User削除理由を操作種別に必要な最小snapshotとしてserver-onlyで保持する。
+- UWB-07の全Callableは、ID tokenだけでなく現在のAuthentication accountと同社の有効な本登録Userを再取得し、UID、確認済みemail、company claim、super-user、disabled状態を照合してから認可する。Userをaccess-revoked状態へ移した後は通知dispatcherも有効な本登録User・会社一致・非disabledを送信直前に再検証し、FcmTokensのcreateを同じ条件・token/document ID一致・field allowlistへ限定してclient updateを拒否する。client deleteは本人所有tokenの削除だけ、server cleanupはAdmin SDKだけに許可する。外部FCM送信と退職transactionはatomicにできないため、commit前にeligibility確認を通過したin-flight messageは回収不能riskとして区別する。raw・partial tokenとtoken由来識別子、通知本文、custom dataをlogへ保存しない。
+- 誤って完了したEmployee退職は、会社管理者専用の訂正操作で同じEmployee documentを`ACTIVE`へ戻し、現在値の退職日・退職理由を消去できる。元の退職operationは変更・削除せず、訂正operationから参照する。訂正は完了済みのUWB-07退職だけを対象とし、旧User/Authを自動復元せず、業務記録を変更しない。UWB-07導入前の退職者は別のbackfillまたは管理者repair、実際の退職期間を伴う再雇用は別の雇用状態設計として扱う。
+- `LifecycleOperations`の自動削除は保持期間を確定するまで行わない。保持期間、閲覧投影、legal hold、完了後識別子の縮小を確定し、UWB-07とUWB-08のRules閉鎖を同じrelease gateで完了するまではProdへ公開しない。
+- 以上のUWB-07契約は確認済み仕様だが、application、Functions、Rules、履歴UIは未実装である。実装完了までは画面マニュアルに記載した現行経路だけを利用可能な挙動として扱う。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
 - 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。
