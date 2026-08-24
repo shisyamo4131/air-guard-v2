@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-06の実装・検証・利用者受入れを完了した。UWB-07はEmployee退職、単独本登録User削除、誤退職訂正、統合`LifecycleOperations`の仕様を確定し、第1checkpointのpermission catalogとA/B/C純粋policyを実装・単体検証した。operation基盤、use-case、Callable、UIと、UWB-08のUsers/Employees/ledger/FcmTokens Rules閉鎖、disabled Userへの通知拒否とtoken/payload log是正、ledger reader・保持期間・legal hold・terminal後識別子縮小、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-06の実装・検証・利用者受入れを完了した。UWB-07は仕様、permission・純粋policyに加え、第2checkpointのoperation/event/lock/head schema、transaction store、共通registered User削除phase engineを実装・単体検証した。A/B/C use-case、Auth/FCM gateway、reconciler、Callable、UIと、UWB-08のUsers/Employees/ledger/FcmTokens Rules閉鎖、disabled Userへの通知拒否とtoken/payload log是正、ledger reader・保持期間・legal hold・terminal後識別子縮小、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/Cと統合`LifecycleOperations`の仕様、permission catalog、current Auth gate再利用境界、A/B/C純粋policyは確定・実装済みである。仮User連携は既存仮登録削除後のEmployee-only退職へ限定し、Auth-only部分状態は別repairで扱う。次はoperation/event/lock/head基盤と共通registered User削除engineを実装し、その後3 use-caseを段階実装する。UWB-08ではUsers、Employees、予約、ledger/event/lock/headとFcmTokensのRules迂回、disabled Userへの通知送信、token/payload logを同じrelease gateとして閉じる。ledger reader・保持期間・legal hold・terminal後識別子縮小、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/Cと統合`LifecycleOperations`の仕様、permission、current Auth gate再利用境界、純粋policy、operation/event/lock/head schema、transaction store、共通registered User削除phase engineは確定・実装済みである。仮User連携は既存仮登録削除後のEmployee-only退職へ限定し、Auth-only部分状態は別repairで扱う。次はUWB-07A、B、Cのuse-case、Auth/FCM gateway、error mapper、Callable、reconcilerを段階実装する。UWB-08ではUsers、Employees、予約、ledger/event/lock/headとFcmTokensのRules迂回、disabled Userへの通知送信、token/payload logを同じrelease gateとして閉じる。ledger reader・保持期間・legal hold・terminal後識別子縮小、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。汎用single-flightは現時点で採用せず、未対応client、複数tab・端末・actorの多重実行riskとserver側追加対策の要否をUWB-10後段で評価する。
@@ -130,3 +130,4 @@
 | 2026-08-24 | 10% | 0 | 利用者がUWB-06の画面確認完了を報告し、実装・自動検証・UI受入れを完了した。UWB-07以降、Users Rules、App Check、Dev・remote受入れが未完了で認証マイルストーンを満たさないため、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | UWB-07をEmployee退職、会社管理者専用の単独本登録User削除、会社管理者専用の誤退職訂正へ再構成し、User archive不採用、統合`LifecycleOperations`、本登録Auth削除intent・reconcile、User/Auth非復元、仮Userのfail-closed分離、current Auth gate、FCM通知・Rules・logを含むUWB-08同時release gateを確定した。実装、保持期間、Rules、test、UI受入れは未完了のため、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | UWB-07第1checkpointとして`employees:terminate`をclient/serverのstrict `human-resource` presetへ追加し、A/B/Cのexact input、actor、targetを検証するFunctions純粋policyを実装した。対象test 34件と全domain単体test 540件が成功した。operation基盤、use-case、Callable、Emulator、Rules、UI受入れが未完了のため、無部分加点規則により進捗は据え置いた。 |
+| 2026-08-24 | 10% | 0 | UWB-07第2checkpointとしてserver-only operation/event/lock/head schema、request fingerprint、Firestore transaction store、共通registered User削除phase engineを実装した。外部Auth/FCM作用をtransaction外へ限定し、phase順序、冪等再開、failure記録、terminal cleanup後だけのlock解放を対象test 17件と全domain単体test 557件で検証した。A/B/C use-case、Callable、Emulator、Rules、UI受入れが未完了のため、無部分加点規則により進捗は据え置いた。 |
