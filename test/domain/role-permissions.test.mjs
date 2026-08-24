@@ -19,12 +19,36 @@ test("manager and human-resource resolve separated User permissions", () => {
   assert.equal(humanResource.includes("users:read"), false);
   assert.equal(humanResource.includes("employees:write"), true);
   assert.equal(humanResource.includes("employees:read"), true);
+  assert.equal(humanResource.includes("employees:terminate"), true);
+  assert.equal(manager.includes("employees:terminate"), false);
 });
 
 test("other presets do not resolve User provisioning permission", () => {
   for (const role of ["controller", "accountant", "labor", "legal"]) {
     assert.equal(
       resolveRolePermissions([role]).includes("users:provision"),
+      false,
+    );
+  }
+});
+
+test("only human-resource resolves Employee termination permission", () => {
+  assert.equal(
+    resolveRolePermissions(["human-resource"]).includes(
+      "employees:terminate",
+    ),
+    true,
+  );
+
+  for (const role of [
+    "manager",
+    "controller",
+    "accountant",
+    "labor",
+    "legal",
+  ]) {
+    assert.equal(
+      resolveRolePermissions([role]).includes("employees:terminate"),
       false,
     );
   }

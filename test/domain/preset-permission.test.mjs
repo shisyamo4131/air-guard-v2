@@ -11,6 +11,21 @@ test("approved presets expose the separated User permissions", () => {
   assert.equal(hasPresetPermission(["human-resource"], "users:provision"), true);
 });
 
+test("only human-resource exposes strict Employee termination permission", () => {
+  assert.equal(
+    hasPresetPermission(["human-resource"], "employees:terminate"),
+    true,
+  );
+  assert.equal(
+    hasPresetPermission(["manager"], "employees:terminate"),
+    false,
+  );
+  assert.equal(
+    hasPresetPermission(["employees:terminate"], "employees:terminate"),
+    false,
+  );
+});
+
 test("preset write permissions imply the matching read permission", () => {
   assert.equal(hasPresetPermission(["manager"], "users:read"), true);
 });

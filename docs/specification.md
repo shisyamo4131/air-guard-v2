@@ -88,7 +88,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - UWB-07の全Callableは、ID tokenだけでなく現在のAuthentication accountと同社の有効な本登録Userを再取得し、UID、確認済みemail、company claim、super-user、disabled状態を照合してから認可する。Userをaccess-revoked状態へ移した後は通知dispatcherも有効な本登録User・会社一致・非disabledを送信直前に再検証し、FcmTokensのcreateを同じ条件・token/document ID一致・field allowlistへ限定してclient updateを拒否する。client deleteは本人所有tokenの削除だけ、server cleanupはAdmin SDKだけに許可する。外部FCM送信と退職transactionはatomicにできないため、commit前にeligibility確認を通過したin-flight messageは回収不能riskとして区別する。raw・partial tokenとtoken由来識別子、通知本文、custom dataをlogへ保存しない。
 - 誤って完了したEmployee退職は、会社管理者専用の訂正操作で同じEmployee documentを`ACTIVE`へ戻し、現在値の退職日・退職理由を消去できる。元の退職operationは変更・削除せず、訂正operationから参照する。訂正は完了済みのUWB-07退職だけを対象とし、旧User/Authを自動復元せず、業務記録を変更しない。UWB-07導入前の退職者は別のbackfillまたは管理者repair、実際の退職期間を伴う再雇用は別の雇用状態設計として扱う。
 - `LifecycleOperations`の自動削除は保持期間を確定するまで行わない。保持期間、閲覧投影、legal hold、完了後識別子の縮小を確定し、UWB-07とUWB-08のRules閉鎖を同じrelease gateで完了するまではProdへ公開しない。
-- 以上のUWB-07契約は確認済み仕様だが、application、Functions、Rules、履歴UIは未実装である。実装完了までは画面マニュアルに記載した現行経路だけを利用可能な挙動として扱う。
+- 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalogと、Functions内のA/B/C input・actor・target純粋policyは実装済みだが、operation基盤、use-case、Callable、Rules、application UI、履歴UIは未実装である。実装完了までは画面マニュアルに記載した現行経路だけを利用可能な挙動として扱う。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
 - 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。

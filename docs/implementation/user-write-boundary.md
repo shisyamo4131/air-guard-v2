@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Core security contract confirmed / retention contract pending / implementation not started
+- 状態: Core security contract confirmed / implementation in progress (checkpoint 1 complete) / retention contract pending
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -393,7 +393,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 実装checkpoint
 
-1. permission catalog、actor/target/input policy、role preset parity testを実装する。
+1. [x] permission catalog、actor/target/input policy、role preset parity testを実装する。
 2. `LifecycleOperations`、events、locks、共通registered User deletion engineとfailure injection testを実装する。
 3. UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
 4. UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
@@ -529,3 +529,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-06 page access policy | 全35 routeを共有accessPolicy catalogへ移行し、route・navigationを同じevaluatorへ接続。12 pathless groupは子から導出し、legacy field併記と未知policyをfail closed化。User管理strict判定を維持し、super-userの会社設定menu表示をroute許可と整合 | 本変更 | 全domain単体test 521件（page policy、validator、navigation matrix、対象SFC compileを含む）pass。server・Rules・fixtureは未変更のため専用Emulatorは直前の79件passを参照。利用者UI受入れは未完了 |
 | 2026-08-24 | UWB-06 completed | 利用者がUser管理操作、dialog・keyboard・focus・取消、権限別の管理者メニューとroute拒否を画面確認し、UWB-06のUI受入れ完了を報告 | 本変更 | 利用者UI受入れ完了。自動検証証拠はUWB-06 automated、concurrency scope corrected、page access policyの各記録を参照 |
 | 2026-08-24 | UWB-07 specification confirmed | 退職・単独本登録User削除・誤退職訂正をA/B/Cへ分離し、`employees:terminate`、会社管理者専用B/C、User archive不採用、統合`LifecycleOperations`、本登録Auth削除intent・reconcile、仮Userのfail-closed分離、User/Auth非復元、legacy repair・再雇用分離、UWB-08同時Rules gateを確定 | 本変更 | 設計・security subagentのread-only reviewを反映。application・Rules・test・dataは未変更。文書validatorは本変更の完了時に実行 |
+| 2026-08-24 | UWB-07 checkpoint 1 | `employees:terminate`をstrict `human-resource`へ追加し、A/B/Cのexact input・actor・target純粋policyとrole preset parity testを実装 | 本変更 | 対象test 34件、全domain単体test 540件が成功。operation基盤、use-case、Callable、Emulator、Rules、UIは未実装 |

@@ -50,6 +50,7 @@ export const ROLE_PRESETS = {
       "customers:read",
       "sites:read",
       "employees:write",
+      "employees:terminate",
       "users:provision",
       "operation-results:read",
     ],

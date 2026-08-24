@@ -22,3 +22,14 @@ test("User provisioning permission is granted only by the approved presets", () 
     .sort();
   assert.deepEqual(rolesWithUserWrite, ["manager"]);
 });
+
+test("Employee termination permission is granted only to human-resource", () => {
+  const rolesWithTermination = Object.entries(SERVER_ROLE_PRESETS)
+    .filter(([, preset]) =>
+      preset.permissions.includes("employees:terminate"),
+    )
+    .map(([role]) => role)
+    .sort();
+
+  assert.deepEqual(rolesWithTermination, ["human-resource"]);
+});
