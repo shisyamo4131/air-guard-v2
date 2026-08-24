@@ -75,7 +75,7 @@ test("User manager and own settings do not use FireModel full updates", async ()
   assert.match(manager, /:handle-update="handleUpdate"/);
   assert.match(
     manager,
-    /run\("update", item\.docId, \(\) => updateManagedUser\(item\)\)/,
+    /async function handleUpdate\(item\)\s*\{\s*await updateManagedUser\(item\);\s*\}/,
   );
   assert.equal(manager.includes("item.update(item)"), false);
   assert.equal(settings.includes("auth.user.updateProperties"), false);

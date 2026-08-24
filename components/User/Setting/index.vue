@@ -11,7 +11,7 @@ import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
+import { useOperationState } from "@/composables/useOperationState";
 
 const { permission, refreshPermission, requestPermission, registFCMToken } =
   useNotification();
@@ -20,7 +20,7 @@ const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const logger = useLogger("UserSetting", useErrorsStore());
 const { updateProfile } = useUserSettingsActions();
-const { run, isPending } = useUserOperationState();
+const { run, isPending } = useOperationState();
 const dialog = ref(false);
 const form = ref(null);
 const model = reactive({ displayName: "", tagSize: "" });

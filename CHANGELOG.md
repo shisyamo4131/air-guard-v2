@@ -24,7 +24,7 @@
 
 ### Changed
 
-- UWB-06として、User管理操作をoperation・target単位のsingle-flightへ統合し、作成・編集・削除・有効化・無効化・管理者移譲・本人設定の二重送信を防止した。会社管理者専用controlをfail closedで表示し、`/settings/users`のroute・navigationを会社管理者または既知preset由来`users:write`へ限定した。全domain単体test 507件と専用Emulator suite 79件は成功し、利用者UI受入れは未完了である。
+- UWB-06として、共通managerの`submit()`へ`isLoading`再入guardを追加し、共通managerを通らないUser有効化・無効化、管理者移譲、本人プロフィール保存をapplication共通operation stateへ接続した。全documentへの汎用single-flightは採用せず、多重実行riskとserver側追加対策の要否をUWB全工程の後段へ移した。会社管理者専用controlをfail closedで表示し、`/settings/users`のroute・navigationを会社管理者または既知preset由来`users:write`へ限定した。全domain単体test 508件と専用Emulator suite 79件は成功し、利用者UI受入れは未完了である。
 - UWB-05として、本人の`displayName`・`tagSize`、管理対象Userの通知3フラグ、他の非管理者Userのroleを3つの専用Callableへ分離した。各操作はexact field allowlist、型・既知preset、同一tenantの有効な実行者、会社管理者またはstrict preset由来`users:write`をserverで検証し、自己role変更と会社管理者targetを拒否する。User一覧と本人設定からFireModel full document updateを除去し、全domain単体test 490件、専用Emulator suite 79件、利用者によるapplication file・動作受入れを完了した。
 - `functions/modules/auth`のpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ移し、公開export名と挙動を変えずに責務別の配置へ整理した。利用者のUWB-04確認通過後、全domain単体test 468件と専用Emulator suite 74件で回帰がないことを確認し、UWB-04を完了した。
 - managed common governanceを1.3.0へ同期し、必須検証ごとの結果・exit statusを独立して扱い、後続commandの成功で先行失敗を隠さない完了証拠契約を適用した。

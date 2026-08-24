@@ -1,6 +1,6 @@
 /*****************************************************************************
- * @file ./composables/application/user/useUserOperationState.js
- * @description User管理操作をoperation・target単位でsingle-flight管理します。
+ * @file ./composables/useOperationState.js
+ * @description operation・target単位のpending状態と実行中Promiseを管理します。
  *****************************************************************************/
 import { computed, shallowReactive } from "vue";
 
@@ -18,7 +18,7 @@ function resolveOperationKey(operation, targetId) {
   return `${operation}:${targetId}`;
 }
 
-export function useUserOperationState() {
+export function useOperationState() {
   const pending = shallowReactive(new Map());
 
   function isPending(operation, targetId) {

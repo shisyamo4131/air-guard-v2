@@ -17,6 +17,8 @@
 - composableは表示制御だけに依存せず、request送信直前にもpolicyを再評価し、拒否状態では送信しない。
 - client policyはUX上の事前判定であり、serverのidentity、actor、tenant、対象、入力、最新状態の最終検証を代替しない。
 - 必須入力、文字数、書式など画面field単体の一般的なvalidationは本決定の対象外とし、既存のvalidatorまたはcomponent ruleを使用できる。
+- 共通managerは`isLoading`中の`submit()`再入を冒頭で拒否する。全documentへ汎用single-flightを展開せず、共通managerを通らないUser有効化・無効化、管理者移譲、本人プロフィール保存だけをapplication共通operation stateへ接続する。
+- clientのpending制御は通常UIのUX境界であり、未対応client、複数tab・端末・actorによる同時要求の整合性を保証しない。包括的な多重実行対策は、攻撃手段が存在しないことや100%防御を完了条件にせず、server transaction、policy、version、idempotency、reconcileの残存riskをUWB全工程の後段で評価して採否を決める。
 
 ## 理由
 

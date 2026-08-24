@@ -22,7 +22,7 @@ test("UsersManager creates through the standalone feature operation", async () =
   );
   assert.match(
     source,
-    /async function handleCreate\(item\)[\s\S]*?run\("create", "standalone",[\s\S]*?createStandaloneTemporaryUser\(item\)/,
+    /async function handleCreate\(item\)\s*\{\s*await createStandaloneTemporaryUser\(item\);\s*\}/,
   );
   assert.match(source, /:disabled="!canCreate\(\)"/);
   assert.match(source, /:show-create="props\.showCreate && canCreate\(\)"/);

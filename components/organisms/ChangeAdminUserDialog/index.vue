@@ -17,7 +17,7 @@ import WindowItem1 from "./WindowItem1.vue";
 import WindowItem2 from "./WindowItem2.vue";
 import WindowItem3 from "./WindowItem3.vue";
 import WindowItem4 from "./WindowItem4.vue";
-import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
+import { useOperationState } from "@/composables/useOperationState";
 import { canTransferCompanyAdmin } from "@/utils/auth/policies/userManagementUiPolicy";
 
 /*****************************************************************************
@@ -33,7 +33,7 @@ const messages = useMessagesStore();
 const auth = useAuthStore();
 const logger = useLogger();
 const { changeAdminUser } = useAuthFunctions();
-const { run, isPending } = useUserOperationState();
+const { run, isPending } = useOperationState();
 
 /*****************************************************************************
  * DEFINE STATES

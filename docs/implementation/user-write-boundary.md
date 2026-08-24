@@ -264,12 +264,12 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 作業
 
-- [x] 作成・編集・削除・有効化・無効化・管理者移譲のloadingをoperation・target単位で独立管理する。
-- [x] 同一operation・targetの二重送信をsingle-flightで防止し、異なる操作・対象は独立して実行できるようにする。
+- [x] 共通managerの作成・編集・削除は`isLoading`中の`submit()`再入を拒否し、有効化・無効化、管理者移譲、本人プロフィール保存は共通operation stateで対象ごとのpendingを管理する。
+- [x] 通常UIの再入は共通manager guardと独自actionのpendingで抑止する。全documentへ汎用single-flightを展開する変更は採用せず、多重実行riskと追加対策の要否をUWB-10後段へ移す。
 - [ ] error後にdialog、editor、一覧、対象Userが正しい状態へ戻ることを確認する。
 - [x] UIの非表示・disabledだけを認可境界として扱わず、既存のCallable・Firestore Rulesによるserver認可を維持する。
 - [ ] keyboard、focus、確認dialog、取消操作への回帰がないことを確認する。
-- [x] 共通UI packageを変更せずAirGuardV2内で完結する。別repositoryへの承認は不要だった。
+- [x] 利用者が共通UI packageの`useItemManager.submit()`へ`isLoading`再入guardを追加した。AirGuardV2ではUser専用operation stateをapplication共通composableへ昇格し、共通managerを通らない3系統だけへ接続する。
 - [x] 現行`hasPermission`利用箇所を監査し、一般page判定はsuper-user wildcard・直接permissionを許容する従来契約、User管理route・navigation・actionは既知User presetまたは会社管理者だけを許可するstrict判定へ分類する。
 - [x] `/settings/users`のroute・navigationとUser管理actionをstrict preset／会社管理者判定へ揃え、直接permission文字列、未知role、`isSuperUser`だけではUser管理を許可しない。
 
@@ -365,6 +365,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] Codex専用Firestore/Auth Emulator testを実行する。
 - [ ] Codex専用local UI環境のブラウザでUser管理flowを一巡する。
 - [ ] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
+- [ ] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価する。100%防御や攻撃経路が存在しないことの証明を完了条件にせず、transaction、policy、version、idempotency、reconcileの追加改修を採用するか残存riskとして受容するかを記録する。
 - [ ] project-owned validatorとmanaged governance validatorを実行する。
 - [ ] `git diff --check`とclean worktreeを確認する。
 - [ ] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
@@ -373,6 +374,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 #### 完了条件
 
 - [ ] UWB-01〜UWB-09がすべて完了している。
+- [ ] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
 - [ ] local testとChrome受入れがすべて成功している。
 - [ ] 利用者がUWBのlocal確定を明示している。
 - [ ] main統合対象commit、差分、test、未確認事項が提示されている。
@@ -412,3 +414,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-05 automated | 本人プロフィール、管理対象Userの通知3フラグ、他の非管理者Userのroleを3つの専用Callableへ分離。exact allowlistとstrict preset認可をserverで強制し、User一覧・本人設定のFireModel full updateを除去 | 本変更 | 全domain単体test 490件（対象SFC 2件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、saved-data 7 files・3492 bytes不変。利用者によるapplication file・local UI受入れは未完了 |
 | 2026-08-24 | UWB-05 completed | 利用者がUWB-05のapplication implementation fileと動作を確認し、完了を承認 | 本変更 | 利用者受入れ完了。自動検証証拠は直前のUWB-05 automated記録を参照 |
 | 2026-08-24 | UWB-06 automated | User管理操作をoperation・target単位のsingle-flightへ統合し、対象ごとのloading、二重送信防止、会社管理者専用controlのfail-closed表示、`/settings/users`のstrict preset route・navigation判定を実装。User管理経路の直接Firestore writeがないことを監査 | 本変更 | 全domain単体test 507件（対象SFC 6件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、専用saved-data 7 files・3492 bytes不変。error後の画面状態、keyboard・focus・確認・取消、console error、利用者による変更file確認は未完了 |
+| 2026-08-24 | UWB-06 concurrency scope corrected | 全documentへの汎用single-flight展開を採用せず、利用者が共通UI `useItemManager.submit()`へ最小の`isLoading`再入guardを追加。AirGuardV2のUser専用operation stateをapplication共通composableへ昇格し、有効化・無効化、管理者移譲、本人プロフィール保存だけへ接続。包括的な多重実行対策の要否はUWB-10後段へ移管 | 共通UI `5705426`、本変更 | 全domain単体test 508件（共通UI guard source contractを含む）pass。server・Rules・fixtureは未変更のため専用Emulatorは直前の79件passを参照。利用者UI受入れは未完了 |

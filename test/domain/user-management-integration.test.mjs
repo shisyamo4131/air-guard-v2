@@ -73,23 +73,35 @@ test("general page access retains wildcard and direct-permission behavior", () =
   assert.equal(isPageConfigAllowed(config, ["human-resource"]), false);
 });
 
-test("User operation components use application single-flight boundaries", async () => {
+test("custom User actions use the shared pending-operation boundary", async () => {
   const sources = await Promise.all(
     components.slice(0, 5).map((file) =>
       readFile(new URL(`../../${file}`, import.meta.url), "utf8"),
     ),
   );
-  for (const index of [0, 2, 3, 4]) {
-    assert.match(sources[index], /useUserOperationState/);
+  for (const index of [0, 3, 4]) {
+    assert.match(sources[index], /useOperationState/);
   }
-  assert.match(sources[0], /run\("create", "standalone"/);
-  assert.match(sources[0], /run\("update", item\.docId/);
-  assert.match(sources[0], /run\("delete", item\.docId/);
+  assert.doesNotMatch(sources[1], /useOperationState/);
+  assert.doesNotMatch(sources[0], /run\("create"|run\("update"|run\("delete"/);
   assert.match(sources[0], /run\("enable", user\.docId/);
   assert.match(sources[0], /run\("disable", user\.docId/);
-  assert.match(sources[2], /run\("create", `employee:/);
   assert.match(sources[3], /run\("profile", auth\.uid \|\| "self"/);
   assert.match(sources[4], /run\("transfer-admin", auth\.uid \|\| "self"/);
+});
+
+test("common manager submit drops a reentrant call before clearing state", async () => {
+  const source = await readFile(
+    new URL(
+      "../../air-vuetify-v3/src/composables/useItemManager.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /async function submit\(\)\s*\{\s*if \(isLoading\.value\) return;\s*clearErrors\(\)/,
+  );
 });
 
 test("User operation UI does not perform direct Firestore writes", async () => {

@@ -20,7 +20,7 @@ import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
 import { useUserFieldUpdates } from "@/composables/application/user/useUserFieldUpdates";
-import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
+import { useOperationState } from "@/composables/useOperationState";
 import {
   canChangeUserEnabledState,
   canTransferCompanyAdmin,
@@ -54,7 +54,7 @@ const {
   canUpdateUserRoles,
   updateManagedUser,
 } = useUserFieldUpdates();
-const { run, isPending } = useUserOperationState();
+const { run, isPending } = useOperationState();
 const { attrs, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -144,9 +144,7 @@ async function handleEnableUser(user) {
  * @param item
  */
 async function handleCreate(item) {
-  return run("create", "standalone", () =>
-    createStandaloneTemporaryUser(item),
-  );
+  await createStandaloneTemporaryUser(item);
 }
 
 /**
@@ -154,12 +152,12 @@ async function handleCreate(item) {
  * @param {User} item - 削除対象の仮登録User
  */
 async function handleDelete(item) {
-  return run("delete", item.docId, () => deleteTemporaryUser(item));
+  await deleteTemporaryUser(item);
 }
 
 /** User管理fieldだけを専用Callableへ送信します。 */
 async function handleUpdate(item) {
-  return run("update", item.docId, () => updateManagedUser(item));
+  await updateManagedUser(item);
 }
 
 function canChangeEnabledState(targetUser) {

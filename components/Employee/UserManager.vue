@@ -11,7 +11,6 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
 import { ROLE_PRESETS } from "@/constants/rolePresets";
-import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -31,7 +30,6 @@ const { deleteTemporaryUser, getDeleteControl } =
   useTemporaryUserDeletion();
 const { createEmployeeLinkedTemporaryUser, canCreate, canAssignRoles } =
   useTemporaryUserCreation();
-const { run } = useUserOperationState();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -91,11 +89,9 @@ async function handleAction(createFn) {
  * @param item
  */
 async function handleCreate(item) {
-  return run("create", `employee:${props.employee.docId}`, () =>
-    createEmployeeLinkedTemporaryUser(item, {
-      employeeId: props.employee.docId,
-    }),
-  );
+  await createEmployeeLinkedTemporaryUser(item, {
+    employeeId: props.employee.docId,
+  });
 }
 
 /**
@@ -103,11 +99,9 @@ async function handleCreate(item) {
  * @param item
  */
 async function handleDelete(item) {
-  return run("delete", item.docId, () =>
-    deleteTemporaryUser(item, {
-      employeeId: props.employee.docId,
-    }),
-  );
+  await deleteTemporaryUser(item, {
+    employeeId: props.employee.docId,
+  });
 }
 </script>
 

@@ -20,7 +20,7 @@ test("UsersManager deletes temporary Users through the feature composable", asyn
   );
   assert.match(
     source,
-    /async function handleDelete\(item\)\s*\{\s*return run\("delete", item\.docId, \(\) => deleteTemporaryUser\(item\)\);\s*\}/,
+    /async function handleDelete\(item\)\s*\{\s*await deleteTemporaryUser\(item\);\s*\}/,
   );
   assert.match(source, /:handle-delete="handleDelete"/);
   assert.equal(/\.delete\s*\(/.test(source), false);
@@ -47,7 +47,7 @@ test("UsersManager delegates deletion errors to the manager error pipeline", asy
   assert.ok(handlerStart >= 0);
   assert.ok(handlerEnd > handlerStart);
   assert.match(source, /<air-array-manager\s+v-bind="attrs"/);
-  assert.match(handlerSource, /return run\("delete", item\.docId/);
+  assert.match(handlerSource, /await deleteTemporaryUser\(item\)/);
   assert.match(handlerSource, /deleteTemporaryUser\(item\)/);
   assert.equal(handlerSource.includes("catch"), false);
   assert.equal(handlerSource.includes("logger.error"), false);

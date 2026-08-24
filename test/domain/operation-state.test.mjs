@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { useUserOperationState } from "../../composables/application/user/useUserOperationState.js";
+import { useOperationState } from "../../composables/useOperationState.js";
 
 function deferred() {
   let resolve;
@@ -13,8 +13,8 @@ function deferred() {
   return { promise, resolve, reject };
 }
 
-test("same operation and target share one in-flight action", async () => {
-  const state = useUserOperationState();
+test("same operation and target share one pending execution", async () => {
+  const state = useOperationState();
   const gate = deferred();
   let calls = 0;
   const action = async () => {
@@ -38,7 +38,7 @@ test("same operation and target share one in-flight action", async () => {
 });
 
 test("different operations and targets remain independent", async () => {
-  const state = useUserOperationState();
+  const state = useOperationState();
   const firstGate = deferred();
   const secondGate = deferred();
 
@@ -59,7 +59,7 @@ test("different operations and targets remain independent", async () => {
 });
 
 test("failure clears the key and permits an explicit retry", async () => {
-  const state = useUserOperationState();
+  const state = useOperationState();
   let calls = 0;
 
   await assert.rejects(
@@ -80,7 +80,7 @@ test("failure clears the key and permits an explicit retry", async () => {
 });
 
 test("invalid keys and actions fail before state changes", () => {
-  const state = useUserOperationState();
+  const state = useOperationState();
   assert.throws(() => state.run("", "user-a", () => {}), TypeError);
   assert.throws(() => state.run("update", "", () => {}), TypeError);
   assert.throws(() => state.run("update", "user-a", null), TypeError);
