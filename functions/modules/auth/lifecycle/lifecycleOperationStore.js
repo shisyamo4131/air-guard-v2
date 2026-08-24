@@ -7,9 +7,12 @@ import { FieldValue } from "firebase-admin/firestore";
 import {
   assertLifecycleLockRecord,
   assertLifecycleOperationRecord,
+  createEmployeeOnlyRetirementOperationRecord,
   createLifecycleEventRecord,
   createLifecycleLockRecord,
+  createNextEmployeeLifecycleHead,
   createRegisteredUserDeletionOperationRecord,
+  employeeLifecycleHeadPath,
   employeeLifecycleLockPath,
   LIFECYCLE_AUTH_DISPOSITIONS,
   LIFECYCLE_CLEANUP_STATES,
@@ -412,6 +415,97 @@ export function createFirestoreLifecycleOperationStore({
   }
 
   return Object.freeze({
+    async completeEmployeeOnlyRetirement({
+      companyId,
+      operationInput,
+      readRequests = [],
+      mutation,
+    } = {}) {
+      const timestamp = timestampFactory();
+      const operation = createEmployeeOnlyRetirementOperationRecord({
+        ...operationInput,
+        timestamp,
+      });
+      const operationRef = firestore.doc(
+        lifecycleOperationPath(companyId, operation.operationId),
+      );
+      const lockRef = firestore.doc(
+        employeeLifecycleLockPath(companyId, operation.employeeId),
+      );
+      const headRef = firestore.doc(
+        employeeLifecycleHeadPath(companyId, operation.employeeId),
+      );
+      const resolvedReadRequests = resolveReadRequests(readRequests);
+
+      return firestore.runTransaction(async (transaction) => {
+        assertTransaction(transaction);
+        const operationSnapshot = await transaction.get(operationRef);
+        if (operationSnapshot.exists) {
+          return Object.freeze({
+            created: false,
+            operation: resolveExistingOperation(operationSnapshot, operation),
+          });
+        }
+
+        const lockSnapshot = await transaction.get(lockRef);
+        if (lockSnapshot.exists) {
+          fail(
+            LIFECYCLE_OPERATION_STORE_ERROR_CODES.TARGET_OPERATION_ACTIVE,
+            "[lifecycleOperationStore] target already has an active operation",
+          );
+        }
+        const headSnapshot = await transaction.get(headRef);
+        const currentHead = headSnapshot.exists ? headSnapshot.data() : null;
+        const reads = await readRequestedSnapshots(
+          transaction,
+          resolvedReadRequests,
+        );
+        const event = createLifecycleEventRecord({
+          phase: LIFECYCLE_EVENT_PHASES.EMPLOYEE_RETIREMENT,
+          attempt: operation.attemptCount,
+          outcome: LIFECYCLE_EVENT_OUTCOMES.SUCCEEDED,
+          timestamp,
+        });
+        const lock = createLifecycleLockRecord({
+          operationId: operation.operationId,
+          operationType: operation.operationType,
+          timestamp,
+        });
+        const head = createNextEmployeeLifecycleHead({
+          currentHead,
+          operationId: operation.operationId,
+          operationType: operation.operationType,
+          timestamp,
+        });
+
+        applySynchronousMutation(mutation, {
+          write: createWriteOnlyTransaction(transaction),
+          operation,
+          timestamp,
+          reads,
+          currentHead,
+          head,
+        });
+        transaction.create(operationRef, operation);
+        transaction.create(
+          firestore.doc(
+            lifecycleEventPath(
+              companyId,
+              operation.operationId,
+              event.phase,
+              event.attempt,
+            ),
+          ),
+          event,
+        );
+        transaction.create(lockRef, lock);
+        transaction.set(headRef, head);
+        transaction.delete(lockRef);
+
+        return Object.freeze({ created: true, operation });
+      });
+    },
+
     async beginRegisteredUserDeletion({
       companyId,
       operationInput,

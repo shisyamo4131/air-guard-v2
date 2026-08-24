@@ -5,6 +5,7 @@ import {
   assertEmployeeLifecycleHeadRecord,
   assertLifecycleEventRecord,
   assertLifecycleOperationRecord,
+  createEmployeeOnlyRetirementOperationRecord,
   createLifecycleEventRecord,
   createLifecycleRequestFingerprint,
   createNextEmployeeLifecycleHead,
@@ -312,6 +313,74 @@ test("registered Employee retirement record acquires both target locks", async (
   assert.ok(fake.documents.has(userLifecycleLockPath(COMPANY_ID, TARGET_UID)));
   assert.ok(
     fake.documents.has(employeeLifecycleLockPath(COMPANY_ID, EMPLOYEE_ID)),
+  );
+});
+
+test("Employee-only retirement completes operation, event, Employee update, and head atomically", async () => {
+  const employeePath = `Companies/${COMPANY_ID}/Employees/${EMPLOYEE_ID}`;
+  const headPath = employeeLifecycleHeadPath(COMPANY_ID, EMPLOYEE_ID);
+  const fingerprint = createLifecycleRequestFingerprint({
+    actorUid: ACTOR_UID,
+    operationType: LIFECYCLE_OPERATION_TYPES.EMPLOYEE_RETIREMENT,
+    normalizedInput: {
+      employeeId: EMPLOYEE_ID,
+      terminationDate: "2026-08-24",
+      reasonOfTermination: "契約満了",
+    },
+  });
+  const input = {
+    operationId: OPERATION_ID,
+    actorUid: ACTOR_UID,
+    actorDisplayName: "担当者",
+    employeeId: EMPLOYEE_ID,
+    terminationDate: "2026-08-24",
+    reasonOfTermination: "契約満了",
+    requestFingerprint: fingerprint,
+  };
+  const record = createEmployeeOnlyRetirementOperationRecord({
+    ...input,
+    timestamp: TIMESTAMP,
+  });
+  assert.equal(record.targetUserUid, null);
+  assert.equal(record.authDisposition, LIFECYCLE_AUTH_DISPOSITIONS.NOT_APPLICABLE);
+  assert.equal(record.cleanupState, LIFECYCLE_CLEANUP_STATES.NOT_APPLICABLE);
+  assert.equal(record.state, LIFECYCLE_OPERATION_STATES.COMPLETED);
+
+  const fake = createFakeFirestore({
+    initial: { [employeePath]: { employmentStatus: "ACTIVE" } },
+  });
+  const result = await createStore(fake).completeEmployeeOnlyRetirement({
+    companyId: COMPANY_ID,
+    operationInput: input,
+    readRequests: [
+      { key: "employee", reference: fake.firestore.doc(employeePath) },
+    ],
+    mutation: ({ write, reads, head }) => {
+      assert.equal(reads.employee.data().employmentStatus, "ACTIVE");
+      assert.equal(head.revision, 1);
+      write.update(fake.firestore.doc(employeePath), {
+        employmentStatus: "RESIGNED",
+      });
+    },
+  });
+
+  assert.equal(result.created, true);
+  assert.equal(result.operation.state, LIFECYCLE_OPERATION_STATES.COMPLETED);
+  assert.equal(fake.documents.get(employeePath).employmentStatus, "RESIGNED");
+  assert.equal(fake.documents.get(headPath).revision, 1);
+  assert.equal(
+    fake.documents.has(employeeLifecycleLockPath(COMPANY_ID, EMPLOYEE_ID)),
+    false,
+  );
+  assert.ok(
+    fake.documents.has(
+      lifecycleEventPath(
+        COMPANY_ID,
+        OPERATION_ID,
+        LIFECYCLE_EVENT_PHASES.EMPLOYEE_RETIREMENT,
+        1,
+      ),
+    ),
   );
 });
 

@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Core security contract confirmed / implementation in progress (checkpoints 1-2 complete) / retention contract pending
+- 状態: Core security contract confirmed / implementation in progress (checkpoints 1-2 and 3A core complete) / retention contract pending
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -396,6 +396,9 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 1. [x] permission catalog、actor/target/input policy、role preset parity testを実装する。
 2. [x] `LifecycleOperations`、events、locks、共通registered User deletion engineとfailure injection testを実装する。
 3. UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
+   - [x] UWB-07A core: Employee-only atomic completion、本登録User連携の予約pointer整合、Auth disable・再照合・delete、User・両予約finalize、FCM cleanupと同一operation再開。
+   - [ ] UWB-07A transport: current Auth gateを使うCallable、error mapper、public export、Functions transport／Emulator検証。
+   - [ ] UWB-07B/C use-case、Callable、error mapper、public export。
 4. UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
 5. 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
 6. client policy、composable、Employee詳細、User管理、履歴projectionを接続する。Rules gate完了前にUIを公開しない。
@@ -531,3 +534,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 specification confirmed | 退職・単独本登録User削除・誤退職訂正をA/B/Cへ分離し、`employees:terminate`、会社管理者専用B/C、User archive不採用、統合`LifecycleOperations`、本登録Auth削除intent・reconcile、仮Userのfail-closed分離、User/Auth非復元、legacy repair・再雇用分離、UWB-08同時Rules gateを確定 | 本変更 | 設計・security subagentのread-only reviewを反映。application・Rules・test・dataは未変更。文書validatorは本変更の完了時に実行 |
 | 2026-08-24 | UWB-07 checkpoint 1 | `employees:terminate`をstrict `human-resource`へ追加し、A/B/Cのexact input・actor・target純粋policyとrole preset parity testを実装 | 本変更 | 対象test 34件、全domain単体test 540件が成功。operation基盤、use-case、Callable、Emulator、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07 checkpoint 2 | server-only operation/event/lock/head schema、request fingerprint、Firestore transaction store、外部Auth/FCM作用をtransaction外へ分離した共通registered User削除phase engineを実装 | 本変更 | 対象test 17件、全domain単体test 557件が成功。正常完了、operation ID競合、lock、phase飛越し拒否、Auth disable/delete・disposition不正、data finalize、FCM cleanup、transaction・failure記録失敗を注入。A/B/C use-case、gateway、Callable、Emulator、Rules、UIは未実装 |
+| 2026-08-24 | UWB-07 checkpoint 3A core | Employee-only退職をoperation・event・一時lock・head・Employee更新の単一transactionへ統合し、本登録User連携Aを予約pointer・一意User検査、Auth identity再照合、共通削除phase engine、FCM cleanupへ接続 | 本変更 | UWB-07A対象testを含む対象35件、全domain単体test 575件が成功。仮User、予約欠損＋User残存、会社管理者、super-user、Auth disable前delete、cleanup失敗後再開を陰性・failure testで固定。Callable、error mapper、public export、Emulator、B/C、Rules、UIは未実装 |
