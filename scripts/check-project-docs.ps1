@@ -24,8 +24,33 @@ foreach ($relativePath in $requiredFiles) {
     }
 }
 
-$markdownFiles = @(Get-ChildItem -LiteralPath $repoRoot -Recurse -File -Filter '*.md' |
-    Where-Object { $_.FullName -notmatch '\\(node_modules|\.agents|\.codex|\.nuxt|\.output|dist|\.git|\.governance-backup)\\' })
+function Get-ProjectMarkdownFiles([string]$RootPath) {
+    $excludedDirectoryNames = @(
+        'node_modules', '.agents', '.codex', '.nuxt', '.output', 'dist',
+        '.git', '.governance-backup'
+    )
+    $pendingDirectories = [System.Collections.Generic.Stack[string]]::new()
+    $pendingDirectories.Push($RootPath)
+
+    while ($pendingDirectories.Count -gt 0) {
+        $currentDirectory = $pendingDirectories.Pop()
+
+        Get-ChildItem -LiteralPath $currentDirectory -File -Filter '*.md'
+
+        foreach ($directory in Get-ChildItem -LiteralPath $currentDirectory -Directory) {
+            if ($excludedDirectoryNames -contains $directory.Name) { continue }
+            if (($directory.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+
+            # A child directory with its own Git marker is an independent repository.
+            # Check children only so the project root's own .git does not prune the project.
+            if (Test-Path -LiteralPath (Join-Path $directory.FullName '.git')) { continue }
+
+            $pendingDirectories.Push($directory.FullName)
+        }
+    }
+}
+
+$markdownFiles = @(Get-ProjectMarkdownFiles -RootPath $repoRoot)
 $linkPattern = [regex]'\[[^\]]+\]\((?<target>[^)]+)\)'
 $linkGraph = @{}
 
