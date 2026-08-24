@@ -4,7 +4,6 @@
  *****************************************************************************/
 import { getMessaging } from "firebase-admin/messaging";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onRequest } from "firebase-functions/v2/https";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { logger } from "firebase-functions/v2";
 import { assertExternalEffectAllowed } from "./externalEffectsPolicy.js";
@@ -26,7 +25,7 @@ export async function sendNotification(token, notification, data = {}) {
   if (isEmulator) {
     logger.warn(
       "⚠️ [EMULATOR] Sending REAL push notification using Dev environment!",
-      { token, notification, data },
+      { recipientCount: 1 },
     );
   }
 
@@ -44,16 +43,27 @@ export async function sendNotification(token, notification, data = {}) {
     const messageId = await getMessaging().send(message);
     return { success: true, messageId };
   } catch (error) {
-    return { success: false, error: error.message };
+    return {
+      success: false,
+      error: "FCM送信に失敗しました",
+      errorCode: error?.code,
+    };
   }
 }
 
 const FCM_MULTICAST_LIMIT = 500;
 
-function maskToken(token) {
-  if (!token) return "";
-  if (token.length <= 16) return token;
-  return `${token.slice(0, 8)}...${token.slice(-8)}`;
+export function isNotificationRecipientEligible({ userData, companyId } = {}) {
+  return Boolean(
+    userData &&
+      typeof userData === "object" &&
+      !Array.isArray(userData) &&
+      typeof companyId === "string" &&
+      companyId.length > 0 &&
+      userData.companyId === companyId &&
+      userData.isTemporary === false &&
+      userData.disabled === false,
+  );
 }
 
 /**
@@ -78,7 +88,7 @@ export async function sendMulticastNotification(
   if (isEmulator) {
     logger.warn(
       "⚠️ [EMULATOR] Sending REAL push notification using Dev environment!",
-      { tokenCount: tokens.length, notification, data },
+      { recipientCount: tokens.length },
     );
   }
 
@@ -105,7 +115,7 @@ export async function sendMulticastNotification(
         token: chunk[idx],
         success: resp.success,
         messageId: resp.messageId,
-        error: resp.error?.message,
+        error: resp.success ? null : "FCM送信に失敗しました",
         errorCode: resp.error?.code,
       });
     });
@@ -115,7 +125,6 @@ export async function sendMulticastNotification(
   const invalidTokens = allResponses
     .filter((r) => {
       if (r.success) return false;
-      console.log(`Token failed: ${r.errorCode} - ${r.error}`);
       return (
         r.errorCode === "messaging/registration-token-not-registered" ||
         r.errorCode === "messaging/invalid-registration-token" ||
@@ -186,80 +195,6 @@ export async function sendBatchNotifications(messages) {
 }
 
 /**
- * テスト用 HTTP トリガー（開発時のみ使用）
- * デプロイ後、ブラウザから以下のURLでテスト可能：
- * https://asia-northeast1-air-guard-v2.cloudfunctions.net/testNotification?userId=xxx&companyId=xxx
- *
- * ⚠️ テスト時のみ export のコメントを外すこと
- */
-// export const testNotification = onRequest(
-const testNotification = onRequest(
-  { region: "asia-northeast1" },
-  async (req, res) => {
-    try {
-      const { userId, companyId } = req.query;
-
-      if (!userId || !companyId) {
-        res.status(400).json({
-          error: "userId と companyId が必要です",
-        });
-        return;
-      }
-
-      // User ドキュメントを取得
-      const userDoc = await getFirestore()
-        .doc(`Companies/${companyId}/Users/${userId}`)
-        .get();
-
-      if (!userDoc.exists) {
-        res.status(404).json({ error: "User not found" });
-        return;
-      }
-
-      const userData = userDoc.data();
-
-      // FcmTokens コレクションから uid と companyId でトークンを取得
-      const fcmTokensSnapshot = await getFirestore()
-        .collection("FcmTokens")
-        .where("uid", "==", userData.uid)
-        .where("companyId", "==", companyId)
-        .get();
-
-      const tokens = fcmTokensSnapshot.docs.map((doc) => doc.id); // ドキュメントID = トークン
-
-      if (tokens.length === 0) {
-        res.status(400).json({ error: "No FCM tokens" });
-        return;
-      }
-
-      console.log("FCM Tokens to send:", tokens);
-
-      // 通知送信
-      const result = await sendMulticastNotification(
-        tokens,
-        {
-          title: "テスト通知",
-          body: `${new Date().toLocaleString("ja-JP")} に送信されました`,
-        },
-        {
-          type: "test",
-          timestamp: new Date().toISOString(),
-        },
-      );
-
-      res.json({
-        success: true,
-        tokens, // デバッグ用にトークンも返す
-        ...result,
-      });
-    } catch (error) {
-      console.error("Test notification error:", error);
-      res.status(500).json({ error: error.message });
-    }
-  },
-);
-
-/**
  * Notification ドキュメント作成時のトリガー
  * - recipientUserIds の各ユーザーの FcmToken を取得してプッシュ通知を送信
  * - Recipients サブコレクションに送信結果を記録
@@ -286,14 +221,7 @@ export const onNotificationCreated = onDocumentCreated(
 
     try {
       logger.info("[onNotificationCreated] start", {
-        companyId,
-        notificationId,
         recipientCount: recipientUserIds.length,
-        hasImage: Boolean(imageUrl),
-        hasCustomData: Boolean(customData),
-        customDataKeys: customData ? Object.keys(customData) : [],
-        title,
-        bodyLength: body ? body.length : 0,
       });
 
       // ステータスを processing に更新
@@ -301,48 +229,24 @@ export const onNotificationCreated = onDocumentCreated(
 
       // recipientUserIds から FcmToken を収集
       // → recipientUserId = User ドキュメント ID = FcmToken.uid であることに注意
-      // → 該当する User ドキュメントが存在しない場合は userTokenMap[userId] を空配列にして userTokenDiagnostics に記録してスキップ
-      // → 該当する User ドキュメントが存在する場合は FcmTokens コレクションから uid と companyId でトークンを取得して userTokenMap[userId] に格納し、userTokenDiagnostics に記録
+      // 送信直前にUserを再取得し、有効な同社本登録Userだけtoken検索へ進める。
       const userTokenMap = {}; // userId → token[]
-      const userTokenDiagnostics = [];
       for (const userId of recipientUserIds) {
-        const userDoc = await db
-          .doc(`Companies/${companyId}/Users/${userId}`)
-          .get();
-        if (!userDoc.exists) {
+        const [userDoc, lifecycleLock] = await Promise.all([
+          db.doc(`Companies/${companyId}/Users/${userId}`).get(),
+          db.doc(`Companies/${companyId}/UserLifecycleLocks/${userId}`).get(),
+        ]);
+        if (
+          lifecycleLock.exists ||
+          !userDoc.exists ||
+          !isNotificationRecipientEligible({
+            userData: userDoc.data(),
+            companyId,
+          })
+        ) {
           userTokenMap[userId] = [];
-          userTokenDiagnostics.push({
-            userId,
-            userDocExists: false,
-            uidPresent: false,
-            tokenCount: 0,
-            tokenSamples: [],
-          });
           continue;
         }
-
-        /*****************************************************************************
-         * 2026-06-24 修正
-         * - User ドキュメントの uid ベースで FcmToken ドキュメントを取得してしまっていた。
-         * - User ドキュメントの uid は `当該ドキュメントを作成または更新した Auth.uid` である。
-         *****************************************************************************/
-        // const { uid } = userDoc.data();
-        // if (!uid) {
-        //   userTokenMap[userId] = [];
-        //   userTokenDiagnostics.push({
-        //     userId,
-        //     userDocExists: true,
-        //     uidPresent: false,
-        //     tokenCount: 0,
-        //     tokenSamples: [],
-        //   });
-        //   continue;
-        // }
-        // const fcmTokensSnapshot = await db
-        //   .collection("FcmTokens")
-        //   .where("uid", "==", uid)
-        //   .where("companyId", "==", companyId)
-        //   .get();
 
         const fcmTokensSnapshot = await db
           .collection("FcmTokens")
@@ -350,13 +254,6 @@ export const onNotificationCreated = onDocumentCreated(
           .where("companyId", "==", companyId)
           .get();
         userTokenMap[userId] = fcmTokensSnapshot.docs.map((doc) => doc.id);
-        userTokenDiagnostics.push({
-          userId,
-          userDocExists: true,
-          uidPresent: true,
-          tokenCount: userTokenMap[userId].length,
-          tokenSamples: userTokenMap[userId].slice(0, 3).map(maskToken),
-        });
       }
 
       // Recipients サブコレクションを作成（pending）
@@ -376,19 +273,13 @@ export const onNotificationCreated = onDocumentCreated(
       const allTokens = [...new Set(Object.values(userTokenMap).flat())];
 
       logger.info("[onNotificationCreated] token lookup summary", {
-        companyId,
-        notificationId,
         recipientCount: recipientUserIds.length,
         uniqueTokenCount: allTokens.length,
-        diagnostics: userTokenDiagnostics,
       });
 
       if (allTokens.length === 0) {
-        logger.warn("[onNotificationCreated] no tokens found for recipients", {
-          companyId,
-          notificationId,
-          recipientUserIds,
-          diagnostics: userTokenDiagnostics,
+        logger.warn("[onNotificationCreated] no eligible tokens found", {
+          recipientCount: recipientUserIds.length,
         });
 
         // トークンなし - 全員 failed
@@ -427,8 +318,6 @@ export const onNotificationCreated = onDocumentCreated(
         { title, body, imageUrl },
         fcmData,
       );
-      console.log("Send result:", JSON.stringify(result, null, 2));
-
       // トークン → userId の逆引きマップ
       const tokenUserMap = {};
       const tokenOwnersMap = {};
@@ -442,19 +331,13 @@ export const onNotificationCreated = onDocumentCreated(
         }
       }
 
-      const duplicatedTokenDiagnostics = Object.entries(tokenOwnersMap)
-        .filter(([, owners]) => owners.length > 1)
-        .map(([token, owners]) => ({
-          token: maskToken(token),
-          ownerUserIds: owners,
-        }));
+      const duplicatedTokenCount = Object.values(tokenOwnersMap).filter(
+        (owners) => owners.length > 1,
+      ).length;
 
-      if (duplicatedTokenDiagnostics.length > 0) {
+      if (duplicatedTokenCount > 0) {
         logger.warn("[onNotificationCreated] duplicated tokens detected", {
-          companyId,
-          notificationId,
-          duplicatedTokenCount: duplicatedTokenDiagnostics.length,
-          duplicatedTokens: duplicatedTokenDiagnostics,
+          duplicatedTokenCount,
         });
       }
 
@@ -475,9 +358,7 @@ export const onNotificationCreated = onDocumentCreated(
         const userId = tokenUserMap[resp.token];
         if (!userId) {
           unmatchedResponses.push({
-            token: maskToken(resp.token),
             success: resp.success,
-            error: resp.error,
             errorCode: resp.errorCode,
           });
           continue;
@@ -492,28 +373,17 @@ export const onNotificationCreated = onDocumentCreated(
 
       if (unmatchedResponses.length > 0) {
         logger.warn("[onNotificationCreated] unmatched FCM responses", {
-          companyId,
-          notificationId,
           count: unmatchedResponses.length,
-          responses: unmatchedResponses,
         });
       }
 
-      const failedUserDiagnostics = Object.entries(userResults)
-        .filter(([, res]) => !res.success)
-        .map(([userId, res]) => ({
-          userId,
-          tokenCount: (userTokenMap[userId] || []).length,
-          tokenSamples: (userTokenMap[userId] || []).slice(0, 3).map(maskToken),
-          error: res.error,
-        }));
+      const failedUserCount = Object.values(userResults).filter(
+        (result) => !result.success,
+      ).length;
 
-      if (failedUserDiagnostics.length > 0) {
+      if (failedUserCount > 0) {
         logger.warn("[onNotificationCreated] failed recipients summary", {
-          companyId,
-          notificationId,
-          failedUserCount: failedUserDiagnostics.length,
-          failedUsers: failedUserDiagnostics,
+          failedUserCount,
         });
       }
 
@@ -538,7 +408,9 @@ export const onNotificationCreated = onDocumentCreated(
           invalidBatch.delete(db.collection("FcmTokens").doc(token));
         });
         await invalidBatch.commit();
-        console.log(`Removed ${result.invalidTokens.length} invalid tokens`);
+        logger.info("[onNotificationCreated] invalid tokens removed", {
+          removedCount: result.invalidTokens.length,
+        });
       }
 
       const successUserCount = Object.values(userResults).filter(
@@ -552,15 +424,14 @@ export const onNotificationCreated = onDocumentCreated(
         successCount: successUserCount,
         failureCount: failureUserCount,
       });
-      console.log(
-        `onNotificationCreated completed: success=${successUserCount}, failure=${failureUserCount}`,
-      );
+      logger.info("[onNotificationCreated] completed", {
+        successCount: successUserCount,
+        failureCount: failureUserCount,
+      });
     } catch (error) {
       logger.error("[onNotificationCreated] error", {
-        companyId,
-        notificationId,
-        errorMessage: error?.message,
-        errorStack: error?.stack,
+        errorName: error?.name,
+        errorCode: error?.code,
       });
       await event.data.ref.update({ status: "failed" });
     }

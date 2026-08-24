@@ -747,6 +747,46 @@ export function createEmployeeOnlyRetirementOperationRecord({
   return Object.freeze(assertLifecycleOperationRecord(record));
 }
 
+export function createEmployeeReinstatementOperationRecord({
+  operationId,
+  actorUid,
+  actorDisplayName,
+  employeeId,
+  reversesOperationId,
+  correctionReasonCode,
+  requestFingerprint,
+  timestamp,
+} = {}) {
+  const record = {
+    schemaVersion: 1,
+    operationId,
+    operationType: LIFECYCLE_OPERATION_TYPES.EMPLOYEE_REINSTATEMENT,
+    state: LIFECYCLE_OPERATION_STATES.COMPLETED,
+    actorUid,
+    actorDisplayName,
+    employeeId,
+    targetUserUid: null,
+    targetDisplayName: null,
+    reversesOperationId,
+    terminationDate: null,
+    reasonOfTermination: null,
+    offboardingReason: null,
+    correctionReasonCode,
+    requestFingerprint,
+    authDisposition: LIFECYCLE_AUTH_DISPOSITIONS.NOT_APPLICABLE,
+    cleanupState: LIFECYCLE_CLEANUP_STATES.NOT_APPLICABLE,
+    attemptCount: 1,
+    lastErrorPhase: null,
+    lastErrorCode: null,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+    authDeletedAt: null,
+    dataFinalizedAt: null,
+    completedAt: timestamp,
+  };
+  return Object.freeze(assertLifecycleOperationRecord(record));
+}
+
 export function createLifecycleEventRecord({
   phase,
   attempt,

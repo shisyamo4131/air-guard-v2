@@ -88,6 +88,40 @@ export const useAuthFunctions = () => {
     return result.data;
   };
 
+  /** 従業員を退職状態へ遷移させます。 */
+  const terminateEmployee = async (data) => {
+    const callable = httpsCallable($functions, "terminateEmployee");
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** 単独本登録Userを物理削除します。 */
+  const deleteStandaloneRegisteredUser = async (data) => {
+    const callable = httpsCallable(
+      $functions,
+      "deleteStandaloneRegisteredUser",
+    );
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** 誤退職訂正に必要な最小contextを取得します。 */
+  const getEmployeeReinstatementContext = async (data) => {
+    const callable = httpsCallable(
+      $functions,
+      "getEmployeeReinstatementContext",
+    );
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** 誤退職を訂正しEmployeeだけを在職状態へ戻します。 */
+  const reinstateEmployee = async (data) => {
+    const callable = httpsCallable($functions, "reinstateEmployee");
+    const result = await callable(data);
+    return result.data;
+  };
+
   /**
    * アカウント無効化
    * @param {Object} data
@@ -157,6 +191,10 @@ export const useAuthFunctions = () => {
     createStandaloneTemporaryUser,
     createEmployeeLinkedTemporaryUser,
     deleteTemporaryUser,
+    terminateEmployee,
+    deleteStandaloneRegisteredUser,
+    getEmployeeReinstatementContext,
+    reinstateEmployee,
     disableUser,
     enableUser,
     changeAdminUser,

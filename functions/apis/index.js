@@ -11,10 +11,14 @@ export {
   createStandaloneTemporaryUser,
 } from "./createTemporaryUser.js";
 export { deleteTemporaryUser } from "./deleteTemporaryUser.js";
+export { deleteStandaloneRegisteredUser } from "./deleteStandaloneRegisteredUser.js";
 export { disableUser, enableUser } from "./changeUserEnabledState.js";
+export { getEmployeeReinstatementContext } from "./getEmployeeReinstatementContext.js";
 export { rebuildAllHistories } from "./rebuildAllHistories.js";
 export { rebuildSecurityReportIndexes } from "./rebuildSecurityReportIndexes.js";
+export { reinstateEmployee } from "./reinstateEmployee.js";
 export { setupUserAccount } from "./setupUserAccount.js";
+export { terminateEmployee } from "./terminateEmployee.js";
 export {
   updateOwnUserProfile,
   updateUserNotificationSettings,

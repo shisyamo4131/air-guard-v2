@@ -23,6 +23,7 @@ const REINSTATEMENT_INPUT_FIELDS = new Set([
   "reversesOperationId",
   "correctionReasonCode",
 ]);
+const REINSTATEMENT_CONTEXT_INPUT_FIELDS = new Set(["employeeId"]);
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -494,6 +495,14 @@ export function resolveEmployeeReinstatementInput(input) {
       "reversesOperationId",
     ),
     correctionReasonCode: input.correctionReasonCode,
+  });
+}
+
+/** UWB-07C UIへ返す最小訂正contextのexact inputを検証します。 */
+export function resolveEmployeeReinstatementContextInput(input) {
+  assertExactFields(input, REINSTATEMENT_CONTEXT_INPUT_FIELDS);
+  return Object.freeze({
+    employeeId: resolveDocumentId(input.employeeId, "employeeId"),
   });
 }
 

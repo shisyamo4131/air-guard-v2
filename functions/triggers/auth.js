@@ -16,22 +16,24 @@ export const onAuthUserDeleted = functions
   .region("asia-northeast1")
   .auth.user()
   .onDelete(async (user) => {
-    logger.info(`Authentication user deleted: ${user.uid}`);
-    logger.info(`Email: ${user.email || "N/A"}`);
-
     try {
       // FcmTokensコレクションから該当ドキュメントを削除
       const deletedCount = await FcmToken.deleteByUid(user.uid);
 
       if (deletedCount === 0) {
-        logger.info(`No FCM token documents found for user: ${user.uid}`);
+        logger.info("Authentication deletion FCM cleanup completed", {
+          deletedCount: 0,
+        });
       } else {
-        logger.info(
-          `Deleted ${deletedCount} FCM token document(s) for user: ${user.uid}`,
-        );
+        logger.info("Authentication deletion FCM cleanup completed", {
+          deletedCount,
+        });
       }
     } catch (error) {
-      logger.error(`Error deleting FCM token for user ${user.uid}:`, error);
+      logger.error("Authentication deletion FCM cleanup failed", {
+        errorName: error?.name,
+        errorCode: error?.code,
+      });
       // エラーが発生してもトリガーは失敗させない（他のクリーンアップ処理を妨げないため）
     }
   });

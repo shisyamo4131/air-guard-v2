@@ -21,10 +21,12 @@ import { useTemporaryUserDeletion } from "@/composables/application/user/useTemp
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
 import { useUserFieldUpdates } from "@/composables/application/user/useUserFieldUpdates";
 import { useOperationState } from "@/composables/useOperationState";
+import { useUserLifecycleOperations } from "@/composables/application/user/useUserLifecycleOperations";
 import {
   canChangeUserEnabledState,
   canTransferCompanyAdmin,
 } from "@/utils/auth/policies/userManagementUiPolicy";
+import { canDeleteStandaloneRegisteredUser } from "@/utils/auth/policies/userLifecycleUiPolicy";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -55,6 +57,10 @@ const {
   updateManagedUser,
 } = useUserFieldUpdates();
 const { run, isPending } = useOperationState();
+const {
+  isPending: isLifecyclePending,
+  removeStandaloneRegisteredUser,
+} = useUserLifecycleOperations();
 const { attrs, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -69,6 +75,10 @@ const {
   context: userCardMenuTargetUser,
   open: openUserCardMenu,
 } = useTargetedMenu();
+const registeredUserDeletionDialog = ref(false);
+const registeredUserDeletionTarget = ref(null);
+const registeredUserDeletionForm = ref(null);
+const registeredUserDeletionReason = ref("");
 
 /*****************************************************************************
  * COMPUTED
@@ -185,6 +195,61 @@ function canTransferAdmin() {
   });
 }
 
+function canDeleteRegisteredUser(targetUser) {
+  return canDeleteStandaloneRegisteredUser({
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    actorUser: auth.user,
+    targetUser,
+  });
+}
+
+function hasUserCardActions(targetUser) {
+  return canChangeEnabledState(targetUser) || canDeleteRegisteredUser(targetUser);
+}
+
+function isUserCardActionPending(targetUser) {
+  if (!targetUser?.docId) return false;
+  return (
+    isEnabledStatePending(targetUser) ||
+    isLifecyclePending("delete-registered-user", targetUser.docId)
+  );
+}
+
+function openRegisteredUserDeletion(targetUser) {
+  userCardMenu.value = false;
+  if (!canDeleteRegisteredUser(targetUser)) return;
+  registeredUserDeletionTarget.value = targetUser;
+  registeredUserDeletionReason.value = "";
+  registeredUserDeletionDialog.value = true;
+}
+
+async function handleRegisteredUserDeletion() {
+  const targetUser = registeredUserDeletionTarget.value;
+  if (
+    !canDeleteRegisteredUser(targetUser) ||
+    isLifecyclePending("delete-registered-user", targetUser.docId)
+  ) {
+    return;
+  }
+  const validation = await registeredUserDeletionForm.value?.validate();
+  if (!validation?.valid) return;
+  const key = loadings.add("ユーザーアカウントを削除しています...");
+  try {
+    await removeStandaloneRegisteredUser({
+      targetUserId: targetUser.docId,
+      reason: registeredUserDeletionReason.value,
+    });
+    registeredUserDeletionDialog.value = false;
+    registeredUserDeletionTarget.value = null;
+    messages.add("ユーザーアカウントを削除しました。");
+  } catch (error) {
+    logger.error({ error });
+  } finally {
+    loadings.remove(key);
+  }
+}
+
 function resolveExcludedKeys(item) {
   if (!item.docId) {
     return canAssignRoles() ? [] : ["roles"];
@@ -296,9 +361,9 @@ function resolveExcludedKeys(item) {
       >
         <template #card-append="{ item }">
           <v-btn
-            v-if="canChangeEnabledState(item)"
-            :disabled="isEnabledStatePending(item)"
-            :loading="isEnabledStatePending(item)"
+            v-if="hasUserCardActions(item)"
+            :disabled="isUserCardActionPending(item)"
+            :loading="isUserCardActionPending(item)"
             icon="mdi-dots-vertical"
             size="small"
             @click="(event) => openUserCardMenu(event, item)"
@@ -309,13 +374,79 @@ function resolveExcludedKeys(item) {
         v-model="userCardMenu"
         :target="userCardMenuTarget"
         :user="userCardMenuTargetUser"
-        :loading="isEnabledStatePending(userCardMenuTargetUser)"
+        :loading="isUserCardActionPending(userCardMenuTargetUser)"
+        :show-enabled-state="canChangeEnabledState(userCardMenuTargetUser)"
+        :show-delete="canDeleteRegisteredUser(userCardMenuTargetUser)"
         :offset="[-8, -12]"
         location="bottom start"
         scroll-strategy="close"
         @click:enable="handleEnableUser"
         @click:disable="handleDisableUser"
+        @click:delete="openRegisteredUserDeletion"
       />
+      <v-dialog v-model="registeredUserDeletionDialog" max-width="520" persistent>
+        <v-card>
+          <v-toolbar color="error" density="compact" title="アカウント削除" />
+          <v-card-text>
+            <p>
+              {{ registeredUserDeletionTarget?.displayName || "対象ユーザー" }}
+              の本登録UserとAuthを物理削除します。
+            </p>
+            <v-form
+              ref="registeredUserDeletionForm"
+              class="mt-4"
+              @submit.prevent="handleRegisteredUserDeletion"
+            >
+              <v-text-field
+                v-model="registeredUserDeletionReason"
+                label="削除理由"
+                maxlength="20"
+                :rules="[
+                  (value) => !!value || '削除理由は必須です。',
+                  (value) =>
+                    value?.trim() === value ||
+                    '理由の前後に空白は使用できません。',
+                  (value) =>
+                    value?.length <= 20 || '理由は20文字以内で入力してください。',
+                ]"
+              />
+            </v-form>
+            <v-alert type="warning" density="compact">
+              この操作は元に戻せません。必要になった場合は新しいUserとして再登録してください。
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-spacer />
+            <v-btn
+              :disabled="
+                isLifecyclePending(
+                  'delete-registered-user',
+                  registeredUserDeletionTarget?.docId || 'none',
+                )
+              "
+              text="キャンセル"
+              @click="registeredUserDeletionDialog = false"
+            />
+            <v-btn
+              color="error"
+              :disabled="
+                isLifecyclePending(
+                  'delete-registered-user',
+                  registeredUserDeletionTarget?.docId || 'none',
+                )
+              "
+              :loading="
+                isLifecyclePending(
+                  'delete-registered-user',
+                  registeredUserDeletionTarget?.docId || 'none',
+                )
+              "
+              text="削除する"
+              @click="handleRegisteredUserDeletion"
+            />
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </template>
   </air-array-manager>
 </template>

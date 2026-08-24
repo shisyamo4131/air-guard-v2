@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜05完了、UWB-06は自動検証済み・利用者UI受入れ待ち）
+- 状態: Active（UWB-01〜06完了、UWB-07/08は実装・自動検証・Codex UI smoke完了、利用者local受入れ待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -285,9 +285,9 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Core security contract confirmed / implementation in progress (checkpoints 1-2 and 3A core complete) / retention contract pending
+- 状態: Local automated implementation ready / Codex UI smoke complete / 利用者local受入れ・retention contract pending
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
-- 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules
+- 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
 
 #### 確定済み契約
@@ -356,6 +356,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 #### UWB-07C 誤退職訂正
 
 - Callableは`reinstateEmployee`とし、exact inputを`operationId`、`employeeId`、`reversesOperationId`、`correctionReasonCode=MISTAKEN_RETIREMENT`に限定する。雇用開始日として誤用される`effectiveDate`やemail、旧UIDは受け取らない。
+- UIはserver-only ledgerを直接読まず、`getEmployeeReinstatementContext`へ`employeeId`だけを送り、会社管理者・対象状態・User関係・latest head・元退職完了をserverで確認したうえで`reversesOperationId`とUser再登録要否だけを受け取る。これは訂正入力の準備であり、`reinstateEmployee`のtransaction内最終検証を置き換えない。履歴一覧readerは保持契約とともに未実装のままとする。
 - 有効な本登録会社管理者だけに許可する。`employees:terminate`、manager、human-resource、super-user、直接permission文字列だけでは実行できない。
 - 対象Employeeが`RESIGNED`で、参照するUWB-07A operationが同じ会社・同じEmployeeの`completed`、`cleanupState`が`completed`または`not-applicable`であり、`EmployeeLifecycleHeads/{employeeId}`のlatest operationとrevisionがその退職を指すことをtransactionで確認する。active lock、User・Employee予約があれば拒否する。同じ訂正operation ID・同じfingerprintの再送だけは保存済み結果を返し、別IDで既にACTIVEまたはreverse済みなら`ALREADY_REINSTATED`とする。
 - 1回のFirestore transactionで訂正operationとlockを作成し、Employeeを`ACTIVE`へ戻して現在値の退職日・退職理由を消去し、元operationへのreverse linkと完了eventを記録してlockを解除する。
@@ -397,23 +398,24 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 2. [x] `LifecycleOperations`、events、locks、共通registered User deletion engineとfailure injection testを実装する。
 3. UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
    - [x] UWB-07A core: Employee-only atomic completion、本登録User連携の予約pointer整合、Auth disable・再照合・delete、User・両予約finalize、FCM cleanupと同一operation再開。
-   - [ ] UWB-07A transport: current Auth gateを使うCallable、error mapper、public export、Functions transport／Emulator検証。
-   - [ ] UWB-07B/C use-case、Callable、error mapper、public export。
-4. UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
-5. 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
-6. client policy、composable、Employee詳細、User管理、履歴projectionを接続する。Rules gate完了前にUIを公開しない。
-7. 単体、EmulatorのRules・並行・phase failure、UI受入れ、保持・運用確認を完了する。
+   - [x] UWB-07A transport: current Auth gateを使うCallable、error mapper、public export、Functions transport／Emulator検証。
+   - [x] UWB-07B/C use-case、Callable、error mapper、public export。
+4. [x] UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
+5. [x] 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
+6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionは保持契約とともに未実装とし、Rules gate完了後にUIを公開する。
+7. [x] 5分reconcilerの`LifecycleOperations.state` collection-group queryに必要なindexを`firestore.indexes.json`へ明示し、source contract testで固定する。
+8. [ ] 単体、EmulatorのRules・並行・phase failureとCodex UI smokeは完了。利用者local操作受入れ、保持・運用確認を完了する。
 
 #### 完了条件
 
 - [ ] 無効化、Employee退職、単独User削除、誤退職訂正が別操作としてUI・Callable・履歴で区別されている。
-- [ ] 本登録User連携のUWB-07A後に旧Authと旧Userが不存在で、Employeeと業務記録が維持され、EmployeeのUser紐付けだけが解除されている。Employee-onlyではAuth/Userへ作用しない。
+- [x] 本登録User連携のUWB-07A後に旧Authと旧Userが不存在で、Employeeと業務記録が維持され、EmployeeのUser紐付けだけが解除されている。Employee-onlyではAuth/Userへ作用しない。
 - [ ] 旧User/Authと予約が同じメールアドレスの再登録を妨げず、競合する新Authがない通常系では別tenantへ正規登録できる。Auth削除直後から予約解放までの競合では新UIDを検索・削除しないことを陰性testで確認し、検出・repairはFUT-0081/FUT-0083の未完了gateとして残す。
-- [ ] UWB-07Bが会社管理者専用で、Employee連携、仮登録、管理者、自己、super-user、他社を拒否する。
-- [ ] UWB-07Cが元退職履歴を保持したままEmployeeだけを同じIDで`ACTIVE`へ戻し、User/Auth・旧UID・業務記録へ作用しない。
+- [x] UWB-07Bが会社管理者専用で、Employee連携、仮登録、管理者、自己、super-user、他社を拒否する。
+- [x] UWB-07Cが元退職履歴を保持したままEmployeeだけを同じIDで`ACTIVE`へ戻し、User/Auth・旧UID・業務記録へ作用しない。
 - [ ] 管理者、自己、他社、状態不正、二重実行、並行operation、全phaseの部分失敗をfail closedまたは安全にreconcileできる。
 - [ ] 3 Callableがmissing auth、stale token、current Auth不存在・disabled、email未確認、UID・email・company claim・super-user不一致、actor User不在・仮登録・disabled・他社を拒否する。
-- [ ] UWB-08のgeneric match迂回、User直接delete、Employee退職・訂正field直接write、ledger/event/lock/head直接accessの拒否testが成功している。
+- [x] UWB-08のgeneric match迂回、User直接delete、Employee退職・訂正field直接write、ledger/event/lock/head直接accessの拒否testが成功している。
 - [ ] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
 - [ ] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
 - [ ] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
@@ -421,30 +423,30 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-08 Firestore Rulesのactor・field・lifecycle制約
 
-- 状態: Not started
+- 状態: Automated verification complete / 利用者Rules確認待ち
 - 主な実装file: `firestore.rules`
 
 #### 作業
 
-- [ ] Companies配下の汎用matchから`Users`、`Employees`、`EmployeeUserReservations`、`LifecycleOperations`、events、lifecycle locks、`EmployeeLifecycleHeads`を除外する。個別matchの拒否が汎用matchの許可に負けない構造にする。
-- [ ] Usersの`read`、`create`、`update`、`delete`を分離する。
-- [ ] 実行者の有効な本登録状態と会社管理者状態を型付きで検証する。
-- [ ] `request.resource.data`だけを権限根拠にせず、既存の実行者Userを参照する。
-- [ ] create時のfield allowlist、必須field、型、会社一致、仮登録状態を検証する。
-- [ ] update時は`diff().affectedKeys()`で許可fieldだけに限定する。
-- [ ] immutable・server-only fieldの直接変更を拒否する。
-- [ ] 本登録Userのclient deleteを拒否する。
-- [ ] Employeeの`ACTIVE`/`RESIGNED`遷移、`dateOfTermination`、`reasonOfTermination`の変更とEmployee deleteをclientから拒否し、UWB-07A/CのAdmin SDKだけに限定する。
-- [ ] `LifecycleOperations`、events、User/Employee lifecycle locks、`EmployeeLifecycleHeads`のclient read/writeを全面拒否し、承認済みCallable projectionだけを公開する。
-- [ ] FcmTokens createはcurrent Authと同じUIDの有効な本登録User、User・token・tenant claimの同一company、`token == document ID`、`token`・`uid`・`companyId`・`updatedAt`だけのexact field/typeに限定する。client updateは全面拒否し、同deviceを別Userが使う場合は旧ownerがsign-out時に削除してから新ownerがcreateする。旧owner削除失敗時はowner上書きを許可せずserver cleanup対象とする。deleteはresource owner本人またはserver cleanupだけに許可し、disabled・仮User・User不在・company不一致・unknown fieldを拒否する。
-- [ ] super-user claimによる恒久的な例外を追加しない。
+- [x] Companies配下の汎用matchから`Users`、`Employees`、`EmployeeUserReservations`、`LifecycleOperations`、events、lifecycle locks、`EmployeeLifecycleHeads`を除外する。個別matchの拒否が汎用matchの許可に負けない構造にする。
+- [x] Usersの`read`、`create`、`update`、`delete`を分離する。現行User create/update/deleteはすべて専用Callableへ移行済みのため、client create/update/deleteはfield allowlistを設けず全面拒否する。
+- [x] User読取、Employee一般write、FcmTokens createで実行者の有効な本登録状態とtenantを既存Userから型付きで検証する。会社管理者・strict presetの最終認可は各Callableで再検証する。
+- [x] `request.resource.data`だけを権限根拠にせず、既存の実行者Userを参照する。
+- [x] Employee createは`ACTIVE`かつ退職fieldなし/null、FcmTokens createはexact field allowlist・型・本人・会社一致へ限定する。User client createは全面拒否する。
+- [x] Employee updateは`diff().affectedKeys()`でlifecycle field不変を要求し、FcmTokensとUserのclient updateは全面拒否する。
+- [x] immutable・server-only fieldの直接変更を拒否する。
+- [x] 本登録Userのclient deleteを拒否する。
+- [x] Employeeの`ACTIVE`/`RESIGNED`遷移、`dateOfTermination`、`reasonOfTermination`の変更とEmployee deleteをclientから拒否し、UWB-07A/CのAdmin SDKだけに限定する。
+- [x] `LifecycleOperations`、events、User/Employee lifecycle locks、`EmployeeLifecycleHeads`のclient read/writeを全面拒否し、訂正用最小Callable projectionだけを公開する。履歴一覧readerは未実装である。
+- [x] FcmTokens createはcurrent Authと同じUIDの有効な本登録User、User・token・tenant claimの同一company、`token == document ID`、`token`・`uid`・`companyId`・`updatedAt`だけのexact field/typeに限定する。client updateは全面拒否し、同deviceを別Userが使う場合は旧ownerがsign-out時に削除してから新ownerがcreateする。旧owner削除失敗時はowner上書きを許可せずserver cleanup対象とする。deleteはresource owner本人だけに許可し、server cleanupはAdmin SDKで行う。
+- [x] super-user claimによる恒久的な例外を追加しない。
 
 #### 完了条件
 
-- [ ] 汎用matchからUsers、Employees、予約、operation、event、lock、headの制約を迂回できない。
-- [ ] disabled・仮登録・User不在・company不一致Userのcreate、`token != document ID`、unknown field・型不正、全client update、既存owner上書きを拒否する。同device User切替は旧owner delete成功後の新owner createだけを許可し、access revoke後の通知dispatcherはtokenを読出し・送信しない。
-- [ ] actor、対象、操作、field、型ごとの許可・拒否testが成功している。
-- [ ] 既存CallableはAdmin SDK経由で正常に動作する。
+- [x] 汎用matchからUsers、Employees、予約、operation、event、lock、headの制約を迂回できない。
+- [x] disabled・仮登録・User不在・company不一致Userのcreate、`token != document ID`、unknown field・型不正、全client update、既存owner上書きを拒否する。同device User切替は旧owner delete成功後の新owner createだけを許可し、access revoke後の通知dispatcherはtokenを読出し・送信しない。
+- [x] actor、対象、操作、field、型ごとの許可・拒否testが成功している。
+- [x] 既存CallableはAdmin SDK経由で正常に動作する。
 - [ ] 利用者が`firestore.rules`を確認している。
 
 ### UWB-09 role・permission対応表のschemas package統合
@@ -535,3 +537,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 checkpoint 1 | `employees:terminate`をstrict `human-resource`へ追加し、A/B/Cのexact input・actor・target純粋policyとrole preset parity testを実装 | 本変更 | 対象test 34件、全domain単体test 540件が成功。operation基盤、use-case、Callable、Emulator、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07 checkpoint 2 | server-only operation/event/lock/head schema、request fingerprint、Firestore transaction store、外部Auth/FCM作用をtransaction外へ分離した共通registered User削除phase engineを実装 | 本変更 | 対象test 17件、全domain単体test 557件が成功。正常完了、operation ID競合、lock、phase飛越し拒否、Auth disable/delete・disposition不正、data finalize、FCM cleanup、transaction・failure記録失敗を注入。A/B/C use-case、gateway、Callable、Emulator、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07 checkpoint 3A core | Employee-only退職をoperation・event・一時lock・head・Employee更新の単一transactionへ統合し、本登録User連携Aを予約pointer・一意User検査、Auth identity再照合、共通削除phase engine、FCM cleanupへ接続 | 本変更 | UWB-07A対象testを含む対象35件、全domain単体test 575件が成功。仮User、予約欠損＋User残存、会社管理者、super-user、Auth disable前delete、cleanup失敗後再開を陰性・failure testで固定。Callable、error mapper、public export、Emulator、B/C、Rules、UIは未実装 |
+| 2026-08-24 | UWB-07/08 automated ready | A/B/C Callable、5分間隔reconcilerと必要なcollection-group index、訂正用最小context、client policy/composable、Employee詳細・User管理UI、User/Employee/lifecycle/FCM Rules、通知eligibility再検証とprivacy log是正を実装 | 本変更 | 全domain単体test 609件、専用Emulator suite 88件（Rules 35件を含む）pass。Codex専用UIで合成管理者sign-in、User設定、在職者一覧、退職者検索のsmokeを通常pointer/keyboardで確認し、console error 0件、既知PWA warningのみ、全専用port閉鎖、saved-data 7 files・3492 bytes不変。利用者local操作受入れ、`firestore.rules`確認、履歴reader・保持期間・legal hold・terminal後UID縮小は未完了 |

@@ -33,6 +33,41 @@ service cloud.firestore {
         : "";
     }
 
+    function isSafeIdentifier(value) {
+      return value is string && value.size() > 0 && value.size() <= 128;
+    }
+
+    function isValidFcmTokenCreate(token) {
+      return hasActiveRegisteredUser()
+        && request.resource.data.keys().hasOnly([
+          'token', 'uid', 'companyId', 'updatedAt'
+        ])
+        && request.resource.data.token is string
+        && request.resource.data.token.size() > 0
+        && request.resource.data.token.size() <= 4096
+        && request.resource.data.token == token
+        && isSafeIdentifier(request.resource.data.uid)
+        && request.resource.data.uid == request.auth.uid
+        && isSafeIdentifier(request.resource.data.companyId)
+        && request.resource.data.companyId == request.auth.token.companyId
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function isValidActiveEmployeeCreate() {
+      return request.resource.data.employmentStatus is string
+        && request.resource.data.employmentStatus == 'ACTIVE'
+        && (!request.resource.data.keys().hasAny(['dateOfTermination'])
+          || request.resource.data.dateOfTermination == null)
+        && (!request.resource.data.keys().hasAny(['reasonOfTermination'])
+          || request.resource.data.reasonOfTermination == null);
+    }
+
+    function preservesEmployeeLifecycleFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'employmentStatus', 'dateOfTermination', 'reasonOfTermination'
+      ]);
+    }
+
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -41,23 +76,28 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // --- Rules for 'admin_users' collection ---
-    // admin_users コレクション は認証ユーザーであれば許可
+    // Legacy admin_users is not an authorization source and is server-only.
     match /admin_users/{uid} {
-      allow read, write: if isAuthenticated();
+      allow read, write: if false;
     }
 
     // --- Rules for 'FcmTokens' collection (Global Collection) ---
     // FcmTokens コレクションはグローバルコレクション（Companies配下ではない）
-    // - 作成・更新: 認証済みユーザーが自分のuidでのみ作成可能
-    //   同じトークン（デバイス）で別ユーザーがログインした場合は上書きされる（意図した動作）
+    // - 作成: 有効な本登録User本人がexact schemaでのみ作成可能
+    // - 更新: owner移管を含め全面拒否。旧owner delete後に新ownerがcreateする
     // - 削除: 自分のuidのドキュメントのみ削除可能
     // - 読み取り: Cloud Functionsが管理者SDKで実行するため、クライアント側は不可
     match /FcmTokens/{token} {
-      allow create, update: if isAuthenticated() 
-                            && request.resource.data.uid == request.auth.uid;
-      allow delete: if isAuthenticated() 
-                    && resource.data.uid == request.auth.uid;
+      allow create: if isValidFcmTokenCreate(token);
+      allow update: if false;
+      allow delete: if hasValidIdentityClaims()
+                    && resource.data.keys().hasOnly([
+                      'token', 'uid', 'companyId', 'updatedAt'
+                    ])
+                    && resource.data.uid is string
+                    && resource.data.uid == request.auth.uid
+                    && resource.data.companyId is string
+                    && resource.data.companyId == request.auth.token.companyId;
       allow read: if false; // Cloud Functions only
     }
 
@@ -134,7 +174,14 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Employees ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/Employees/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidActiveEmployeeCreate();
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && preservesEmployeeLifecycleFields();
+      allow delete: if false;
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---
@@ -230,11 +277,26 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Users ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/Users/{userId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create, update, delete: if false;
     }
 
     // Employee/User link reservations are owned exclusively by Cloud Functions/Admin SDK.
     match /Companies/{companyId}/EmployeeUserReservations/{document=**} {
+      allow read, write: if false;
+    }
+
+    // Lifecycle ledger, events, locks, and Employee heads are server-only.
+    match /Companies/{companyId}/LifecycleOperations/{document=**} {
+      allow read, write: if false;
+    }
+    match /Companies/{companyId}/UserLifecycleLocks/{document=**} {
+      allow read, write: if false;
+    }
+    match /Companies/{companyId}/EmployeeLifecycleLocks/{document=**} {
+      allow read, write: if false;
+    }
+    match /Companies/{companyId}/EmployeeLifecycleHeads/{document=**} {
       allow read, write: if false;
     }
 
@@ -245,7 +307,13 @@ service cloud.firestore {
                               && userCompanyId() == companyId
                               && collection != "SecurityReportIndexes"
                               && collection != "StripeData"
-                              && collection != "EmployeeUserReservations";
+                              && collection != "Users"
+                              && collection != "Employees"
+                              && collection != "EmployeeUserReservations"
+                              && collection != "LifecycleOperations"
+                              && collection != "UserLifecycleLocks"
+                              && collection != "EmployeeLifecycleLocks"
+                              && collection != "EmployeeLifecycleHeads";
     }
   }
 }

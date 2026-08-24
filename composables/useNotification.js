@@ -157,7 +157,6 @@ export function useNotification() {
       if (system.isDev) {
         logger.info({
           message: `The current token has been obtained.`,
-          data: { currentToken },
         });
       }
 

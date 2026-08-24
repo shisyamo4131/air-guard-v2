@@ -15,6 +15,7 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
   where,
   writeBatch,
@@ -182,6 +183,7 @@ async function seedTemporaryManagementActor({
   companyId = CODEX_LOCAL_COMPANIES.primary.id,
   isAdmin = false,
   roles = ["manager"],
+  displayName = "管理担当",
 }) {
   const email = `${uid}@codex-test.invalid`;
   await seedCallableAuthUser({
@@ -199,6 +201,7 @@ async function seedTemporaryManagementActor({
     disabled: false,
     email,
     roles,
+    displayName,
   });
   return { uid, companyId, email };
 }
@@ -208,8 +211,10 @@ async function seedEmployee({
   companyId = CODEX_LOCAL_COMPANIES.primary.id,
   displayName = "仮従業員",
   employmentStatus = "ACTIVE",
+  dateOfHire = "2026-01-01",
+  additionalData = {},
 }) {
-  const data = { displayName, employmentStatus };
+  const data = { displayName, employmentStatus, dateOfHire, ...additionalData };
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     await setDoc(
       doc(context.firestore(), "Companies", companyId, "Employees", employeeId),
@@ -273,7 +278,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Billings",
   "Customers",
   "Customers_archive",
-  "Employees",
   "Employees_archive",
   "meta",
   "OperationResults",
@@ -282,7 +286,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Sites",
   "Sites_archive",
   "SiteOperationSchedules",
-  "Users",
 ];
 
 before(async () => {
@@ -610,6 +613,271 @@ for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
     await assertFails(deleteDoc(otherTenant));
   });
 }
+
+test("Firestore Rules keep User mutations server-only while allowing tenant reads", async () => {
+  const actorUid = "uwb08-rules-user-actor";
+  const targetUid = "uwb08-rules-user-target";
+  await seedRegisteredUser({ uid: actorUid, isAdmin: true, roles: ["manager"] });
+  await seedRegisteredUser({
+    uid: targetUid,
+    isAdmin: false,
+    roles: ["controller"],
+    displayName: "対象者",
+  });
+  const firestore = authenticatedFirestore(actorUid);
+  const targetRef = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "Users",
+    targetUid,
+  );
+  const newRef = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "Users",
+    "uwb08-rules-forged-user",
+  );
+
+  await assertSucceeds(getDoc(targetRef));
+  await assertFails(setDoc(targetRef, { displayName: "改変" }, { merge: true }));
+  await assertFails(deleteDoc(targetRef));
+  await assertFails(
+    setDoc(newRef, {
+      companyId: CODEX_LOCAL_COMPANIES.primary.id,
+      isTemporary: false,
+      disabled: false,
+      isAdmin: true,
+      roles: ["manager"],
+    }),
+  );
+});
+
+test("Firestore Rules keep legacy admin_users server-only", async () => {
+  const uid = "uwb08-admin-users-actor";
+  await seedRegisteredUser({ uid, isAdmin: true });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: true });
+  const reference = doc(firestore, "admin_users", uid);
+  await assertFails(getDoc(reference));
+  await assertFails(setDoc(reference, { isAdmin: true }));
+  await assertFails(deleteDoc(reference));
+});
+
+test("Firestore Rules reserve Employee lifecycle fields and deletion for Admin SDK", async () => {
+  const actorUid = "uwb08-rules-employee-actor";
+  await seedRegisteredUser({ uid: actorUid, roles: ["human-resource"] });
+  const firestore = authenticatedFirestore(actorUid);
+  const employeeRef = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "Employees",
+    "uwb08-rules-employee",
+  );
+  const invalidEmployeeRef = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "Employees",
+    "uwb08-rules-resigned-create",
+  );
+
+  await assertSucceeds(
+    setDoc(employeeRef, {
+      displayName: "規則社員",
+      employmentStatus: "ACTIVE",
+      dateOfTermination: null,
+      reasonOfTermination: null,
+    }),
+  );
+  await assertSucceeds(
+    setDoc(employeeRef, { displayName: "更新社員" }, { merge: true }),
+  );
+  await assertFails(
+    setDoc(
+      employeeRef,
+      {
+        employmentStatus: "RESIGNED",
+        dateOfTermination: new Date("2026-08-20T00:00:00+09:00"),
+        reasonOfTermination: "直接退職",
+      },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      employeeRef,
+      { reasonOfTermination: "理由改変" },
+      { merge: true },
+    ),
+  );
+  await assertFails(deleteDoc(employeeRef));
+  await assertFails(
+    setDoc(invalidEmployeeRef, {
+      displayName: "不正社員",
+      employmentStatus: "RESIGNED",
+      dateOfTermination: new Date("2026-08-20T00:00:00+09:00"),
+      reasonOfTermination: "直接作成",
+    }),
+  );
+});
+
+test("Firestore Rules keep lifecycle ledger, events, locks, and heads server-only", async () => {
+  const actorUid = "uwb08-rules-lifecycle-actor";
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  await seedRegisteredUser({ uid: actorUid, isAdmin: true, roles: [] });
+  const paths = [
+    ["LifecycleOperations", "07000000-0000-4000-8000-000000000201"],
+    [
+      "LifecycleOperations",
+      "07000000-0000-4000-8000-000000000201",
+      "Events",
+      "access-revoke-1",
+    ],
+    ["UserLifecycleLocks", "target-user"],
+    ["EmployeeLifecycleLocks", "target-employee"],
+    ["EmployeeLifecycleHeads", "target-employee"],
+  ];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const path of paths) {
+      await setDoc(
+        doc(context.firestore(), "Companies", companyId, ...path),
+        { fixture: true },
+      );
+    }
+  });
+  const firestore = authenticatedFirestore(actorUid, { isSuperUser: true });
+  for (const path of paths) {
+    const reference = doc(firestore, "Companies", companyId, ...path);
+    await assertFails(getDoc(reference));
+    await assertFails(setDoc(reference, { fixture: false }));
+    await assertFails(deleteDoc(reference));
+  }
+});
+
+test("Firestore Rules enforce exact FCM token create and owner transfer", async () => {
+  const firstUid = "uwb08-fcm-first-owner";
+  const secondUid = "uwb08-fcm-second-owner";
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const token = "uwb08-fcm-token";
+  await seedRegisteredUser({ uid: firstUid });
+  await seedRegisteredUser({ uid: secondUid });
+  const firstFirestore = authenticatedFirestore(firstUid);
+  const secondFirestore = authenticatedFirestore(secondUid);
+  const firstRef = doc(firstFirestore, "FcmTokens", token);
+  const secondRef = doc(secondFirestore, "FcmTokens", token);
+
+  await assertSucceeds(
+    setDoc(firstRef, {
+      token,
+      uid: firstUid,
+      companyId,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(getDoc(firstRef));
+  await assertFails(
+    setDoc(firstRef, { updatedAt: serverTimestamp() }, { merge: true }),
+  );
+  await assertFails(
+    setDoc(secondRef, {
+      token,
+      uid: secondUid,
+      companyId,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+  await assertFails(deleteDoc(secondRef));
+  await assertSucceeds(deleteDoc(firstRef));
+  await assertSucceeds(
+    setDoc(secondRef, {
+      token,
+      uid: secondUid,
+      companyId,
+      updatedAt: serverTimestamp(),
+    }),
+  );
+});
+
+test("Firestore Rules reject malformed or inactive FCM token owners", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const activeUid = "uwb08-fcm-active";
+  const disabledUid = "uwb08-fcm-disabled";
+  const temporaryUid = "uwb08-fcm-temporary";
+  await seedRegisteredUser({ uid: activeUid });
+  await seedRegisteredUser({ uid: disabledUid, disabled: true });
+  await seedRegisteredUser({ uid: temporaryUid, isTemporary: true });
+  const activeFirestore = authenticatedFirestore(activeUid);
+  const malformed = [
+    {
+      pathToken: "uwb08-fcm-mismatch-path",
+      data: {
+        token: "uwb08-fcm-other-token",
+        uid: activeUid,
+        companyId,
+        updatedAt: serverTimestamp(),
+      },
+    },
+    {
+      pathToken: "uwb08-fcm-wrong-uid",
+      data: {
+        token: "uwb08-fcm-wrong-uid",
+        uid: "another-user",
+        companyId,
+        updatedAt: serverTimestamp(),
+      },
+    },
+    {
+      pathToken: "uwb08-fcm-wrong-company",
+      data: {
+        token: "uwb08-fcm-wrong-company",
+        uid: activeUid,
+        companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+        updatedAt: serverTimestamp(),
+      },
+    },
+    {
+      pathToken: "uwb08-fcm-unknown-field",
+      data: {
+        token: "uwb08-fcm-unknown-field",
+        uid: activeUid,
+        companyId,
+        updatedAt: serverTimestamp(),
+        ownerOverride: true,
+      },
+    },
+    {
+      pathToken: "uwb08-fcm-invalid-time",
+      data: {
+        token: "uwb08-fcm-invalid-time",
+        uid: activeUid,
+        companyId,
+        updatedAt: "now",
+      },
+    },
+  ];
+  for (const candidate of malformed) {
+    await assertFails(
+      setDoc(
+        doc(activeFirestore, "FcmTokens", candidate.pathToken),
+        candidate.data,
+      ),
+    );
+  }
+  for (const uid of [disabledUid, temporaryUid, "uwb08-fcm-missing"]) {
+    const firestore = authenticatedFirestore(uid);
+    const token = `${uid}-token`;
+    await assertFails(
+      setDoc(doc(firestore, "FcmTokens", token), {
+        token,
+        uid,
+        companyId,
+        updatedAt: serverTimestamp(),
+      }),
+    );
+  }
+});
 
 test("Firestore Rules keep User reservation collections server-only", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
@@ -1263,12 +1531,15 @@ test("API index exports every public Callable without internal request helpers",
     "createAdminAccount",
     "createEmployeeLinkedTemporaryUser",
     "createStandaloneTemporaryUser",
+    "deleteStandaloneRegisteredUser",
     "deleteTemporaryUser",
     "disableUser",
     "enableUser",
     "rebuildAllHistories",
     "rebuildSecurityReportIndexes",
+    "reinstateEmployee",
     "setupUserAccount",
+    "terminateEmployee",
     "updateOwnUserProfile",
     "updateUserNotificationSettings",
     "updateUserRoles",
@@ -1332,10 +1603,13 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     changeAdminUser,
     createEmployeeLinkedTemporaryUser,
     createStandaloneTemporaryUser,
+    deleteStandaloneRegisteredUser,
     deleteTemporaryUser,
     disableUser,
     enableUser,
     setupUserAccount,
+    terminateEmployee,
+    reinstateEmployee,
     updateOwnUserProfile,
     updateUserNotificationSettings,
     updateUserRoles,
@@ -1345,10 +1619,13 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     changeAdminUser,
     createEmployeeLinkedTemporaryUser,
     createStandaloneTemporaryUser,
+    deleteStandaloneRegisteredUser,
     deleteTemporaryUser,
     disableUser,
     enableUser,
     setupUserAccount,
+    terminateEmployee,
+    reinstateEmployee,
     updateOwnUserProfile,
     updateUserNotificationSettings,
     updateUserRoles,
@@ -1356,6 +1633,439 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("Employee-only retirement completes atomically through the public Callable", async () => {
+  const { terminateEmployee } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-retire-employee-only-actor",
+    roles: ["human-resource"],
+  });
+  const employeeId = "uwb07-retire-employee-only";
+  const operationId = "07000000-0000-4000-8000-000000000001";
+  await seedEmployee({ employeeId, displayName: "単独社員" });
+
+  const result = await terminateEmployee.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        operationId,
+        employeeId,
+        terminationDate: "2026-08-20",
+        reasonOfTermination: "本人都合",
+      },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    operationId,
+    status: "completed",
+    employeeId,
+    userDeletion: { kind: "none", userAccessDeleted: false },
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const employee = (
+      await getDoc(
+        doc(firestore, "Companies", actor.companyId, "Employees", employeeId),
+      )
+    ).data();
+    const operation = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "LifecycleOperations",
+          operationId,
+        ),
+      )
+    ).data();
+    const lock = await getDoc(
+      doc(
+        firestore,
+        "Companies",
+        actor.companyId,
+        "EmployeeLifecycleLocks",
+        employeeId,
+      ),
+    );
+
+    assert.equal(employee.employmentStatus, "RESIGNED");
+    assert.equal(employee.reasonOfTermination, "本人都合");
+    assert.equal(operation.state, "completed");
+    assert.equal(operation.targetUserUid, null);
+    assert.equal(lock.exists(), false);
+  });
+});
+
+test("registered Employee retirement deletes Auth, User, and reservation pointers", async () => {
+  const { terminateEmployee } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-retire-registered-actor",
+    roles: ["human-resource"],
+  });
+  const employeeId = "uwb07-retire-registered-employee";
+  const targetUid = "uwb07-retire-registered-user";
+  const targetEmail = `${targetUid}@codex-test.invalid`;
+  const operationId = "07000000-0000-4000-8000-000000000002";
+  await seedEmployee({ employeeId, displayName: "登録社員" });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    isTemporary: false,
+    disabled: false,
+    isAdmin: false,
+    email: targetEmail,
+    displayName: "登録社員",
+    employeeId,
+    roles: ["controller"],
+  });
+  await seedEmailReservation({
+    email: targetEmail,
+    companyId: actor.companyId,
+    userId: targetUid,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        actor.companyId,
+        "EmployeeUserReservations",
+        employeeId,
+      ),
+      { userId: targetUid },
+    );
+  });
+
+  const result = await terminateEmployee.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        operationId,
+        employeeId,
+        terminationDate: "2026-08-20",
+        reasonOfTermination: "契約満了",
+      },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    operationId,
+    status: "completed",
+    employeeId,
+    userDeletion: { kind: "registered", userAccessDeleted: true },
+  });
+  await assert.rejects(
+    () => getAdminAuth().getUser(targetUid),
+    (error) => error.code === "auth/user-not-found",
+  );
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const employee = (
+      await getDoc(
+        doc(firestore, "Companies", actor.companyId, "Employees", employeeId),
+      )
+    ).data();
+    const operation = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "LifecycleOperations",
+          operationId,
+        ),
+      )
+    ).data();
+    const targetUser = await getDoc(
+      doc(firestore, "Companies", actor.companyId, "Users", targetUid),
+    );
+    const employeeReservation = await getDoc(
+      doc(
+        firestore,
+        "Companies",
+        actor.companyId,
+        "EmployeeUserReservations",
+        employeeId,
+      ),
+    );
+    const emailReservation = await getDoc(
+      doc(
+        firestore,
+        "UserEmailReservations",
+        createUserEmailReservationId(targetEmail),
+      ),
+    );
+
+    assert.equal(employee.employmentStatus, "RESIGNED");
+    assert.equal(operation.state, "completed");
+    assert.equal(operation.authDisposition, "deleted");
+    assert.equal(operation.cleanupState, "completed");
+    assert.equal(targetUser.exists(), false);
+    assert.equal(employeeReservation.exists(), false);
+    assert.equal(emailReservation.exists(), false);
+  });
+});
+
+test("company administrator offboards a standalone registered User", async () => {
+  const { deleteStandaloneRegisteredUser } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-offboard-admin",
+    isAdmin: true,
+  });
+  const targetUid = "uwb07-offboard-standalone-user";
+  const targetEmail = `${targetUid}@codex-test.invalid`;
+  const operationId = "07000000-0000-4000-8000-000000000003";
+  await seedCallableAuthUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    isTemporary: false,
+    disabled: false,
+    isAdmin: false,
+    email: targetEmail,
+    displayName: "単独利用",
+    roles: ["controller"],
+  });
+  await seedEmailReservation({
+    email: targetEmail,
+    companyId: actor.companyId,
+    userId: targetUid,
+  });
+
+  const result = await deleteStandaloneRegisteredUser.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        operationId,
+        targetUserId: targetUid,
+        reason: "利用終了",
+      },
+    }),
+  );
+
+  assert.deepEqual(result, {
+    success: true,
+    operationId,
+    status: "completed",
+    userId: targetUid,
+  });
+  await assert.rejects(
+    () => getAdminAuth().getUser(targetUid),
+    (error) => error.code === "auth/user-not-found",
+  );
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    assert.equal(
+      (
+        await getDoc(
+          doc(firestore, "Companies", actor.companyId, "Users", targetUid),
+        )
+      ).exists(),
+      false,
+    );
+    assert.equal(
+      (
+        await getDoc(
+          doc(
+            firestore,
+            "UserEmailReservations",
+            createUserEmailReservationId(targetEmail),
+          ),
+        )
+      ).exists(),
+      false,
+    );
+    const operation = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "LifecycleOperations",
+          operationId,
+        ),
+      )
+    ).data();
+    assert.equal(operation.state, "completed");
+    assert.equal(operation.offboardingReason, "利用終了");
+    assert.equal(operation.employeeId, null);
+  });
+});
+
+test("non-administrator cannot offboard a standalone registered User", async () => {
+  const { deleteStandaloneRegisteredUser } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-offboard-manager-denied",
+    isAdmin: false,
+  });
+  const targetUid = "uwb07-offboard-denied-target";
+  const targetEmail = `${targetUid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    isTemporary: false,
+    disabled: false,
+    isAdmin: false,
+    email: targetEmail,
+    displayName: "拒否対象",
+    roles: ["controller"],
+  });
+  await seedEmailReservation({
+    email: targetEmail,
+    companyId: actor.companyId,
+    userId: targetUid,
+  });
+
+  await assertCallableError(
+    deleteStandaloneRegisteredUser.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          operationId: "07000000-0000-4000-8000-000000000004",
+          targetUserId: targetUid,
+          reason: "利用終了",
+        },
+      }),
+    ),
+    "permission-denied",
+  );
+  assert.equal((await getAdminAuth().getUser(targetUid)).disabled, false);
+});
+
+test("company administrator corrects a completed mistaken retirement idempotently", async () => {
+  const {
+    getEmployeeReinstatementContext,
+    reinstateEmployee,
+    terminateEmployee,
+  } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-reinstate-admin",
+    isAdmin: true,
+  });
+  const employeeId = "uwb07-reinstate-employee";
+  const retirementOperationId = "07000000-0000-4000-8000-000000000005";
+  const reinstatementOperationId = "07000000-0000-4000-8000-000000000006";
+  await seedEmployee({ employeeId, displayName: "訂正社員" });
+  await terminateEmployee.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        operationId: retirementOperationId,
+        employeeId,
+        terminationDate: "2026-08-20",
+        reasonOfTermination: "誤操作",
+      },
+    }),
+  );
+  const correctionContext = await getEmployeeReinstatementContext.run(
+    actorCallableRequest({
+      actor,
+      data: { employeeId },
+    }),
+  );
+  assert.deepEqual(correctionContext, {
+    eligible: true,
+    employeeId,
+    reversesOperationId: retirementOperationId,
+    requiresUserReprovisioning: false,
+  });
+  const request = actorCallableRequest({
+    actor,
+    data: {
+      operationId: reinstatementOperationId,
+      employeeId,
+      reversesOperationId: retirementOperationId,
+      correctionReasonCode: "MISTAKEN_RETIREMENT",
+    },
+  });
+
+  const first = await reinstateEmployee.run(request);
+  const repeated = await reinstateEmployee.run(request);
+  const expected = {
+    success: true,
+    operationId: reinstatementOperationId,
+    status: "completed",
+    employeeId,
+    employeeReinstated: true,
+    userAccessRestored: false,
+    requiresUserReprovisioning: false,
+  };
+  assert.deepEqual(first, expected);
+  assert.deepEqual(repeated, expected);
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const employee = (
+      await getDoc(
+        doc(firestore, "Companies", actor.companyId, "Employees", employeeId),
+      )
+    ).data();
+    const source = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "LifecycleOperations",
+          retirementOperationId,
+        ),
+      )
+    ).data();
+    const correction = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "LifecycleOperations",
+          reinstatementOperationId,
+        ),
+      )
+    ).data();
+    const head = (
+      await getDoc(
+        doc(
+          firestore,
+          "Companies",
+          actor.companyId,
+          "EmployeeLifecycleHeads",
+          employeeId,
+        ),
+      )
+    ).data();
+
+    assert.equal(employee.employmentStatus, "ACTIVE");
+    assert.equal("dateOfTermination" in employee, false);
+    assert.equal("reasonOfTermination" in employee, false);
+    assert.equal(source.state, "completed");
+    assert.equal(source.reasonOfTermination, "誤操作");
+    assert.equal(correction.reversesOperationId, retirementOperationId);
+    assert.equal(head.revision, 2);
+    assert.equal(head.latestOperationId, reinstatementOperationId);
+    assert.equal(head.latestOperationType, "employee-reinstatement");
+  });
 });
 
 test("own profile Callable updates only displayName and tagSize", async () => {

@@ -188,6 +188,8 @@ UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firesto
 
 標準の起動・確認・終了順序は次のとおりとする。
 
+Windows上でCodexがこの経路を実行する場合、Firebase CLIだけでなくNuxt開発サーバーも、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
+
 1. 専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。
 2. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
 3. `npm run test:local:ui:server`を別の前景processで起動する。このwrapperは専用dotenvのexact allowlist、demo project、loopback emulator設定を値を出力せず検証し、`AIR_GUARD_EXTERNAL_EFFECTS=deny`を固定してからNuxtを同じ前景processで起動する。Nuxt、Vite、Nitroのready出力とloopback HTTP 200を待つ。
@@ -199,6 +201,8 @@ UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firesto
 インアプリブラウザは既定ではbackgroundで操作される。利用者が目視を希望する検証ではvisibilityを要求し、可視状態を取得できた同じtabだけを目視可能な操作証拠とする。これはChrome拡張ではなくCodex Desktop内の専用ブラウザ表示であり、利用者のChrome profileを使用しない。2026-08-19の再試験ではvisibilityを2回要求しても状態は`false`のままで、Emulator sign-inとdashboard到達はbackgroundで成功したが、利用者による目視は未提供である。Codex DesktopまたはBrowser plugin更新後に再確認する。
 
 `.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser session喪失時にcredentialを永続管理する場合は、repository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+
+Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を含まない合成accountという承認済み境界内では、保存sessionの再利用または合成credentialの通常keyboard入力によるsign-inのたびに利用者へ再承認を求めない。credentialは画面へ入力する直前まで表示せず、repository、応答、command出力、検証logへ残さない。接続先が利用者用local環境、Dev、Prod、remote serviceまたは実dataへ変わる場合はこの継続承認を適用しない。
 
 `npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
 
@@ -266,6 +270,19 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 - Employee作成時の外部住所・geocoding失敗はUser作成結果と分けて確認し、外部作用denyを解除しない。
 
 2026-08-21に利用者が上記最小UI確認を実施し、単独／Employee連携の作成、取消、削除、表示・操作感を受入れた。User一覧に「仮登録」表示がない点を確認したうえでUWB-04の利用者testをOKとした。
+
+#### UWB-07 利用者向けlocal UI確認一覧
+
+UWB-07/08の自動検証完了後、利用者用local環境のテストデータで次を確認する。実データ、remote、Dev、Prod、deployは使用しない。
+
+1. `human-resource` Userでは、他の在職Employee詳細に「退職処理」が表示され、自分自身と会社管理者に紐づくEmployeeでは表示されないこと。退職日・20文字以内の理由、取消、未来日拒否を確認する。
+2. Employee-only対象を退職すると「現在在職していません」となり、Employeeが残ること。会社管理者で「誤退職を訂正する」を実行すると同じEmployeeが在職へ戻り、退職日・理由が消えること。
+3. 本登録User連携Employeeを退職するとEmployeeは残り、User一覧から対象Userが消え、旧accountでsign-inできないこと。誤退職訂正後も旧User/Authは自動復元されず、必要ならEmployee連携Userを別操作で再登録する案内が表示されること。
+4. 会社管理者のUser管理で、Employee未連携・非管理者・本登録Userに「アカウント削除」が表示されること。理由・取消・最終確認を確認し、削除後に一覧から消えて旧accountでsign-inできないこと。仮登録、Employee連携、自己、会社管理者には表示されないこと。
+5. 退職・User削除・訂正を連打しても対象単位のloading中に再送されず、成功後にdialogが閉じること。失敗時は画面が壊れず再試行できること。
+6. `firestore.rules`でUsersのclient create/update/delete、Employee lifecycle field/delete、lifecycle ledger/event/lock/head、FcmTokens updateが拒否される方針を確認すること。
+
+利用者受入れ後も、履歴一覧reader、保持期間、legal hold、terminal後UID縮小、Firestore Rules全体に残る広いtenant内write、App Check、Dev/Prod/remote受入れが完了するまでdeploy可能とは扱わない。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

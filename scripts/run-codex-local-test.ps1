@@ -2,6 +2,7 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
+    [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
     [long]$StopBytes = 100MB
 )
@@ -145,7 +146,15 @@ if ($Mode -eq 'Seed') {
     $childScriptContent = '@"{0}" "{1}"' -f $nodeExe, $seedScriptPath
 } else {
     $firebaseArguments += @('--import', $seedPath)
-    $childScriptContent = '@"{0}" --test "{1}"' -f $nodeExe, $testPath
+    $testArguments = if ($TestNamePattern) {
+        if ($TestNamePattern.Contains('"') -or $TestNamePattern.Contains("`r") -or $TestNamePattern.Contains("`n")) {
+            throw 'TestNamePattern contains unsupported characters.'
+        }
+        '--test --test-name-pattern "{0}" "{1}"' -f $TestNamePattern, $testPath
+    } else {
+        '--test "{0}"' -f $testPath
+    }
+    $childScriptContent = '@"{0}" {1}' -f $nodeExe, $testArguments
 }
 Set-Content -LiteralPath $childScriptPath -Value $childScriptContent -Encoding Ascii
 $firebaseArguments += $childScriptPath

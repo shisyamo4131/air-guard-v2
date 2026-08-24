@@ -25,6 +25,6 @@ test("Companies fallback cannot override Employee reservation denial", async () 
   const executable = fallback.replace(/\/\/.*$/gm, "").replace(/\s+/g, " ").trim();
   assert.equal(
     executable,
-    'allow read, write: if isAuthenticated() && userCompanyId() == companyId && collection != "SecurityReportIndexes" && collection != "StripeData" && collection != "EmployeeUserReservations";',
+    'allow read, write: if isAuthenticated() && userCompanyId() == companyId && collection != "SecurityReportIndexes" && collection != "StripeData" && collection != "Users" && collection != "Employees" && collection != "EmployeeUserReservations" && collection != "LifecycleOperations" && collection != "UserLifecycleLocks" && collection != "EmployeeLifecycleLocks" && collection != "EmployeeLifecycleHeads";',
   );
 });

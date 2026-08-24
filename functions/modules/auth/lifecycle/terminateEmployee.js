@@ -634,3 +634,140 @@ export async function terminateEmployee({
   });
   return responseFromOperation(result.operation);
 }
+
+/**
+ * 保存済みの本登録User連携退職operationをservice identityで再開します。
+ * original actorは監査値として維持し、現在のactor User状態へ置換しません。
+ */
+export async function resumeEmployeeRetirementOperation({
+  firestore,
+  auth,
+  cleanupFcm,
+  companyId,
+  operation,
+  store = null,
+} = {}) {
+  assertDependencies({ firestore, auth, cleanupFcm });
+  const persisted = assertLifecycleOperationRecord(operation);
+  if (
+    persisted.operationType !== LIFECYCLE_OPERATION_TYPES.EMPLOYEE_RETIREMENT ||
+    persisted.targetUserUid === null ||
+    persisted.employeeId === null ||
+    typeof companyId !== "string" ||
+    !companyId
+  ) {
+    fail(
+      TERMINATE_EMPLOYEE_ERROR_CODES.IDENTITY_INVALID,
+      "[resumeEmployeeRetirementOperation] persisted operation is invalid",
+      LIFECYCLE_DOMAIN_ERROR_CODES.INTERNAL,
+    );
+  }
+  if (persisted.state === LIFECYCLE_OPERATION_STATES.COMPLETED) {
+    return responseFromOperation(persisted);
+  }
+  const lifecycleStore =
+    store ?? createFirestoreLifecycleOperationStore({ firestore });
+  if (persisted.state === LIFECYCLE_OPERATION_STATES.DATA_FINALIZED) {
+    const resumed = await runRegisteredUserDeletion({
+      store: lifecycleStore,
+      authGateway: inertAuthGateway(),
+      cleanupFcm,
+      mutations: { accessRevoke() {}, finalizeData() {} },
+      companyId,
+      operationInput: persisted,
+    });
+    return responseFromOperation(resumed.operation);
+  }
+
+  const employeeRef = firestore.doc(
+    `Companies/${companyId}/Employees/${persisted.employeeId}`,
+  );
+  const employeeReservationRef = firestore.doc(
+    `Companies/${companyId}/EmployeeUserReservations/${persisted.employeeId}`,
+  );
+  const employeeUsersQuery = firestore
+    .collection(`Companies/${companyId}/Users`)
+    .where("employeeId", "==", persisted.employeeId)
+    .limit(2);
+  const targetUserRef = firestore.doc(
+    `Companies/${companyId}/Users/${persisted.targetUserUid}`,
+  );
+  const targetSnapshot = await targetUserRef.get();
+  const targetData = snapshotData(targetSnapshot, {
+    missingCode: TERMINATE_EMPLOYEE_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+    label: "reserved User",
+    domainCode: LIFECYCLE_DOMAIN_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+  });
+  if (typeof targetData.email !== "string") {
+    fail(
+      TERMINATE_EMPLOYEE_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+      "[resumeEmployeeRetirementOperation] target email is invalid",
+      LIFECYCLE_DOMAIN_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+    );
+  }
+  const emailReservationRef = firestore.doc(
+    `UserEmailReservations/${createUserEmailReservationId(targetData.email)}`,
+  );
+  const headRef = firestore.doc(
+    employeeLifecycleHeadPath(companyId, persisted.employeeId),
+  );
+  const authGateway = createRegisteredUserAuthGateway({
+    auth,
+    companyId,
+    expectedUid: persisted.targetUserUid,
+    expectedEmail: targetData.email,
+  });
+  const finalizeReads = [
+    { key: "employee", reference: employeeRef },
+    { key: "employeeReservation", reference: employeeReservationRef },
+    { key: "employeeUsers", reference: employeeUsersQuery },
+    { key: "targetUser", reference: targetUserRef },
+    { key: "emailReservation", reference: emailReservationRef },
+    { key: "head", reference: headRef },
+  ];
+  const result = await runRegisteredUserDeletion({
+    store: lifecycleStore,
+    authGateway,
+    cleanupFcm,
+    companyId,
+    operationInput: persisted,
+    reads: { finalizeData: finalizeReads },
+    mutations: {
+      accessRevoke() {},
+      finalizeData: ({ write, operation: current, reads }) => {
+        const target = assertRegisteredRelationship({
+          companyId,
+          employeeId: persisted.employeeId,
+          targetUserUid: persisted.targetUserUid,
+          reservationSnapshot: reads.employeeReservation,
+          usersSnapshot: reads.employeeUsers,
+          targetUserSnapshot: reads.targetUser,
+          emailReservationSnapshot: reads.emailReservation,
+        });
+        const employee = snapshotData(reads.employee, {
+          missingCode: TERMINATE_EMPLOYEE_ERROR_CODES.TARGET_NOT_FOUND,
+          label: "Employee",
+        });
+        const head = reads.head?.exists ? reads.head.data() : null;
+        if (
+          target.disabled !== true ||
+          employee.employmentStatus !== "RESIGNED" ||
+          toDateOnly(employee.dateOfTermination) !== persisted.terminationDate ||
+          employee.reasonOfTermination !== persisted.reasonOfTermination ||
+          head?.latestOperationId !== current.operationId ||
+          head?.latestOperationType !== current.operationType
+        ) {
+          fail(
+            TERMINATE_EMPLOYEE_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+            "[resumeEmployeeRetirementOperation] persisted retirement changed",
+            LIFECYCLE_DOMAIN_ERROR_CODES.RELATIONSHIP_INCONSISTENT,
+          );
+        }
+        write.delete(targetUserRef);
+        write.delete(emailReservationRef);
+        write.delete(employeeReservationRef);
+      },
+    },
+  });
+  return responseFromOperation(result.operation);
+}
