@@ -269,9 +269,13 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] error後にdialog、editor、一覧、対象Userが正しい状態へ戻ることを確認する。
 - [x] UIの非表示・disabledだけを認可境界として扱わず、既存のCallable・Firestore Rulesによるserver認可を維持する。
 - [ ] keyboard、focus、確認dialog、取消操作への回帰がないことを確認する。
+- [ ] super-user、会社管理者、manager、human-resourceで管理者メニューとUser管理routeの期待表示・拒否を確認する。
 - [x] 利用者が共通UI packageの`useItemManager.submit()`へ`isLoading`再入guardを追加した。AirGuardV2ではUser専用operation stateをapplication共通composableへ昇格し、共通managerを通らない3系統だけへ接続する。
 - [x] 現行`hasPermission`利用箇所を監査し、一般page判定はsuper-user wildcard・直接permissionを許容する従来契約、User管理route・navigation・actionは既知User presetまたは会社管理者だけを許可するstrict判定へ分類する。
+- [x] 全35 routeをVue/Nuxt非依存の共有`accessPolicy` catalogへ移行し、route middlewareとnavigationを同じevaluatorへ接続する。12のpathなしgroupはpolicyを持たず、アクセス可能なnavigation childから表示を導出する。
+- [x] `public`、`roles`、`strictPresetPermissions`、`allowAdmin`をpage設定から除去し、未知・複製policy、旧field併記、不正contextをruntimeとvalidatorでfail closedとする。
 - [x] `/settings/users`のroute・navigationとUser管理actionをstrict preset／会社管理者判定へ揃え、直接permission文字列、未知role、`isSuperUser`だけではUser管理を許可しない。
+- [x] super-userは従来の`/settings/company`直接route許可に合わせて管理者メニュー内の会社設定を表示する。User管理と`navigation: false`のcheckoutは表示しない。
 
 #### 完了条件
 
@@ -415,3 +419,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-05 completed | 利用者がUWB-05のapplication implementation fileと動作を確認し、完了を承認 | 本変更 | 利用者受入れ完了。自動検証証拠は直前のUWB-05 automated記録を参照 |
 | 2026-08-24 | UWB-06 automated | User管理操作をoperation・target単位のsingle-flightへ統合し、対象ごとのloading、二重送信防止、会社管理者専用controlのfail-closed表示、`/settings/users`のstrict preset route・navigation判定を実装。User管理経路の直接Firestore writeがないことを監査 | 本変更 | 全domain単体test 507件（対象SFC 6件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、専用saved-data 7 files・3492 bytes不変。error後の画面状態、keyboard・focus・確認・取消、console error、利用者による変更file確認は未完了 |
 | 2026-08-24 | UWB-06 concurrency scope corrected | 全documentへの汎用single-flight展開を採用せず、利用者が共通UI `useItemManager.submit()`へ最小の`isLoading`再入guardを追加。AirGuardV2のUser専用operation stateをapplication共通composableへ昇格し、有効化・無効化、管理者移譲、本人プロフィール保存だけへ接続。包括的な多重実行対策の要否はUWB-10後段へ移管 | 共通UI `5705426`、本変更 | 全domain単体test 508件（共通UI guard source contractを含む）pass。server・Rules・fixtureは未変更のため専用Emulatorは直前の79件passを参照。利用者UI受入れは未完了 |
+| 2026-08-24 | UWB-06 page access policy | 全35 routeを共有accessPolicy catalogへ移行し、route・navigationを同じevaluatorへ接続。12 pathless groupは子から導出し、legacy field併記と未知policyをfail closed化。User管理strict判定を維持し、super-userの会社設定menu表示をroute許可と整合 | 本変更 | 全domain単体test 521件（page policy、validator、navigation matrix、対象SFC compileを含む）pass。server・Rules・fixtureは未変更のため専用Emulatorは直前の79件passを参照。利用者UI受入れは未完了 |

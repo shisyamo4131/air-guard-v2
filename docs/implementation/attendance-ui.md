@@ -24,7 +24,7 @@ Attendance 2pageのroute、mode、self/manager、表示・export境界のfile単
 | 項目 | 現在の実装事実 |
 | --- | --- |
 | route | `/attendances`。`pages/attendances/index.vue`だけが対象。`/attendances/export`は本調査対象外。 |
-| pageSettings | `attendances` groupと`/attendances`はいずれも`roles: ["developer"]`、navigation表示あり。暫定実装である。 |
+| pageSettings | `/attendances`は`DEVELOPER` access policyを参照し、pathなしの`attendances` groupはアクセス可能な子から表示を導出する。暫定実装である。 |
 | data取得 | pageで`useFetch("daily-attendance-index", true)`を起点としてprovideする。 |
 | 表示mode | `Company.attendanceManagementMode`を子へ渡し、値をcomponent keyにも使うためmode変更時は一覧componentが再生成される。 |
 | Rules | `DailyAttendances`専用matchはない。通常の同社認証Userにはfallbackでread/writeが許可されず、super-user fallbackとAdmin SDKは別境界である。 |

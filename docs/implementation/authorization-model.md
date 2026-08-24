@@ -3,7 +3,7 @@
 ## Authorization/page helper最終確認（SPEC-DEEP-045a/045b）
 
 - `getPermissions`は複数role由来permissionを重複した配列で返し得る。未知roleは拒否されず、その文字列自体をpermissionとして採用する。
-- `pageSettings.hasAccess`はadminを多くの通常pageへ通し、super-user/developer専用値だけを個別扱いする。required配列はANDではなくORで評価される。
+- page routeとnavigationは共有`PAGE_ACCESS_POLICIES` catalogと`isPageAccessAllowed`を使用する。一般page policyは従来のadmin override、super-user wildcard、直接permission、preset展開を維持し、User管理policyだけは会社管理者または既知preset由来`users:write`へ限定する。
 - 未登録pathは`getPageConfig`が親pathへfallbackするため、明示登録漏れが親の公開・権限設定を継承し得る。development validatorはwarningのみでbuildを失敗させない。
 - 以上はnavigationとclient middlewareの表示・遷移制御であり、Firestore Rules/Functionsのactor・tenant認可を代替しない。
 
@@ -11,8 +11,8 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-039
-- 最終確認日: 2026-08-11
-- 根拠ファイル: `constants/rolePresets.js`、`utils/auth/authorization.js`、`stores/useAuthStore.js`、`composables/application/auth/useAuthActions.js`、`utils/pageSettings.js`、`middleware/auth.global.js`、schemas `src/User.js`、`src/parts/fieldDefinitions/array.js`、admin-sdk `src/commands/claims.js`
+- 最終確認日: 2026-08-24
+- 根拠ファイル: `constants/rolePresets.js`、`utils/auth/authorization.js`、`utils/auth/policies/pageAccessPolicy.js`、`stores/useAuthStore.js`、`composables/application/auth/useAuthActions.js`、`utils/pageSettings.js`、`middleware/auth.global.js`、schemas `src/User.js`、`src/parts/fieldDefinitions/array.js`、admin-sdk `src/commands/claims.js`
 - 関連調査: `state-initialization.md`、`page-access.md`、`user-auth-lifecycle.md`
 
 ## 確認済み方針
@@ -37,10 +37,10 @@
 
 | preset | 展開されるpermission |
 | --- | --- |
-| `manager` | customers/sites/employees/outsourcers/site-operation-schedules/operation-results/billings の各`write` |
+| `manager` | customers/sites/employees/outsourcers/site-operation-schedules/operation-results/billings の各`write`、`users:provision`、`users:write` |
 | `controller` | customers:read、sites:write、employees:read、outsourcers:read、site-operation-schedules:write、operation-results:write |
 | `accountant` | customers/sites/employees/outsourcers/operation-resultsのread、operation-billings/billingsのwrite |
-| `human-resource` | customers/sitesのread、employees:write、operation-results:read |
+| `human-resource` | customers/sitesのread、employees:write、operation-results:read、`users:provision` |
 | `labor` | customers/sites/employees/operation-resultsのread |
 | `legal` | customers/sitesのwrite、employees:read |
 
@@ -52,7 +52,7 @@
 2. claimのcompany pathから`Users/{uid}`をfetch・subscribeし、User `roles`と`isAdmin`をstoreへ反映する。
 3. `buildRoles`がUser roles、claim flags、User `isAdmin`を1配列へまとめる。
 4. `getPermissions`がpresetを展開し、未知文字列はそのままpermissionとして採用し、writeからreadを追加する。
-5. route middlewareとnavigationは`auth.roles`を`pageSettings` helperへ渡す。componentは必要に応じてstoreの`hasRole`/`hasPermission`を直接使う。
+5. route middlewareとnavigationは`auth.roles`と必要なraw User contextを`pageSettings`から共有page policy evaluatorへ渡す。componentは必要に応じてstoreの`hasRole`/`hasPermission`を直接使う。
 
 role間の優先順位、deny、scope、company別role、期限付きroleは存在しない。
 
@@ -66,11 +66,13 @@ role間の優先順位、deny、scope、company別role、期限付きroleは存�
 | `hasPermission(permissions, permission)` | `*`または完全一致。admin特例なし。 |
 | store `hasRole` | computed `roles`に対する`hasRole`。 |
 | store `hasPermission` | computed `permissions`に対する`hasPermission`。 |
-| page `hasAccess` | required配列が空なら許可。special role guard後、adminを許可し、それ以外はrole/permissionのいずれか1件一致で許可。 |
-| `isPageAllowed` | page configなしならfalse。configありなら`hasAccess`。 |
-| `getNavigationItems` | page routeと同じ`hasAccess`でnavigation itemをfilterする。 |
+| `PAGE_ACCESS_POLICIES` | 35のpath付きpageが参照する13件のdeep-frozen policy descriptor。catalog identity外の値を未知policyとして扱う。 |
+| `isPageAccessAllowed` | 一般pageの従来判定とstrict User管理判定をpolicy別に評価する純粋関数。client UX gateでありserver認可ではない。 |
+| `isPageConfigAllowed` | configなし、未知・複製policy、legacy access field併記をfalseとし、既知policyだけを評価する。 |
+| `isPageAllowed` | page configなしならfalse。configありなら`isPageConfigAllowed`。 |
+| `getNavigationItems` | page routeと同じpolicy evaluatorで子itemをfilterし、pathなしgroupの表示をアクセス可能なnavigation childから導出する。 |
 
-required `roles`はANDではなくORである。ただし`super-user`または`developer`をrequired配列に含めると、それぞれを直接持たないUserは他のrequired permissionを持っていても先に拒否される。adminはsuper-user/developer専用以外のpageをpermissionに関係なく通過する。
+一般page policy内部のrequired role／permissionはANDではなくORである。ただし`SUPER_USER`と`DEVELOPER` policyはそれぞれのspecial roleを直接持つUserだけを許可する。adminはこの2種類の専用page以外の一般pageをpermissionに関係なく通過し、super-userは一般pageで`*`として扱われる。`USER_MANAGEMENT`はこの一般互換規則を使わない。
 
 ## UI data flow
 
@@ -82,9 +84,9 @@ User subscription ─ roles[] / isAdmin
                  ▼
         useAuthStore.roles
                  ├─ getPermissions → store.hasPermission → component表示/操作
-                 └─ pageSettings.hasAccess
+                 └─ pageSettings → pageAccessPolicy.isPageAccessAllowed
                       ├─ auth.global route guard
-                      └─ navigation item filter
+                      └─ navigation item／group filter
 ```
 
 middlewareは認証初期化完了を待ち、公開・email確認・maintenance判定後にpage configとroleを検査する。設定のない実在pageをmiddlewareが許可する既知fail-openは`page-access.md`の将来修正事項であり、`isPageAllowed`単体のfail-closedとは異なる。
@@ -100,25 +102,26 @@ middlewareは認証初期化完了を待ち、公開・email確認・maintenance
 ## unknown・error
 
 - User rolesが配列でなければ`buildRoles`は空配列からspecial rolesだけを構築する。`getPermissions`へ非配列を直接渡すと空配列を返す。
-- 未知role、typo、未知permissionはerrorにならず、その文字列自体をpermissionにする。同じtypoをpage側にも書けば一致し得る。
-- role/permissionのcentral enumはなく、presetとpageSettings、component文字列が独立している。
-- `validatePageSettings`はdevelopmentだけconsole warningを出す。通常roleの警告listに`human-resource`が含まれず、未知permissionやpresetに存在しないresourceを検証しない。
-- parent/child validationはpermission包含関係やwrite→readを展開せず文字列比較するため、実効権限の強弱を正確には判定しない。
+- 一般page evaluatorの`userRoles`は`useAuthStore.roles`が供給する配列をcaller契約とする。`PUBLIC`と`AUTHENTICATED`はrole内容に依存せず、任意の不正入力を新たなroute認可規則として扱う変更は本移行に含めない。
+- 未知role、typo、未知permissionは一般`getPermissions`ではerrorにならず、その文字列自体をpermissionにする。ただし`USER_MANAGEMENT`はraw rolesを既知presetだけに限定してfail closedとする。
+- page access policyはcentral catalog化されたが、componentが直接使うrole/permission文字列とpreset全体の語彙は引き続き単一enumへ統合されていない。
+- `validatePageSettings`はdevelopmentだけconsole warningを出すが、validator自体は単体test可能である。重複ID・path、path policy欠損・未知policy・legacy field、group policy、不完全nodeを検査する。
+- pathなしgroupはaccess policyを持たないため、親子permission包含関係の検査とdriftは廃止された。
 
 ## server enforcement境界
 
 - client route/navigation/component判定はUX上の制御であり、直接Firestore SDK、callable、triggerの実行を防止しない。
-- Firestore Rulesはtoken claims、path、document fieldsを各matchで独自判定し、clientのROLE_PRESETSや`hasAccess`を共有しない。
+- Firestore Rulesはtoken claims、path、document fieldsを各matchで独自判定し、clientの`ROLE_PRESETS`や`PAGE_ACCESS_POLICIES`／`isPageAccessAllowed`を共有しない。
 - Functionsも各入口でactor・tenant・roleを個別検証する必要がある。clientでadmin扱いでもserverで同じ権限を持つとは限らず、その逆もある。
 - `isAdmin`はUser document、`isSuperUser`/`isDeveloper`はclaimsという別のtrust sourceにあり、serverごとの利用差が生じ得る。
 
 ## 矛盾・未使用候補
 
-- pageSettingsのfield名と説明は`roles`だが、多くの値は`sites:read`等のpermissionである。
-- page `hasAccess`ではadminを広く許可する一方、store `getPermissions(["admin"])`は`admin`文字列だけを返す。このためadminがrouteへ入れても、componentの`hasPermission("x:write")`ではfalseになり得る。
-- storeコメントのpreset一覧から`human-resource`が欠落し、pageSettings validatorのnormal role一覧からも欠落する。
+- page accessの`roles` fieldとpermission値の混在は共有policy参照へ置換された。ただしpolicy内部とcomponent側のpermission語彙は別管理である。
+- 一般page policyではadminを広く許可する一方、store `getPermissions(["admin"])`は`admin`文字列だけを返す。このためadminがrouteへ入れても、componentの`hasPermission("x:write")`ではfalseになり得る。
+- storeコメントのpreset一覧から`human-resource`が欠落する。
 - presetには`operation-billings:write`があるが、pageSettingsの請求系入口は`billings:read`を使い、両permissionの境界は正式化されていない。
-- unknown roleをpermissionとして扱うため、typoとcustom direct permissionを区別できない。
+- 一般authorizationがunknown roleをpermissionとして扱うため、typoとcustom direct permissionを区別できない。User管理page policyはこの互換挙動を採用しない。
 - deny、permission version、role revision、監査情報は未実装である。
 
 ## 将来要対応

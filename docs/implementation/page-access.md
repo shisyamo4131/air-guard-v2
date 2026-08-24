@@ -2,8 +2,8 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-002 — ページアクセス設定
-- 最終確認日: 2026-08-10
-- 根拠ファイル: `utils/pageSettings.js`、`middleware/auth.global.js`、`pages/` 配下の `.vue` ファイル名、および各ページ内の `definePageMeta`・`usePageSetting`・権限メタ情報の検索箇所
+- 最終確認日: 2026-08-24
+- 根拠ファイル: `utils/auth/policies/pageAccessPolicy.js`、`utils/pageSettings.js`、`middleware/auth.global.js`、`pages/` 配下の `.vue` ファイル名、および`test/domain/page-access-policy.test.mjs`
 
 この文書は実装から観察できたアクセス設定と、ユーザーが明示的に回答した運用・将来方針を分離して記録する。各ページの本文、業務ロジック、ストア、composable は調査していない。
 
@@ -11,31 +11,32 @@
 
 ### 設定モデル
 
-- `pageStructure` は、ページまたはナビゲーショングループごとに `id`、任意の `path`、`public`、`label`、`icon`、`roles`、`navigation`、`children` を定義する。
-- `public` の未指定値は `false` としてフラット化される。`roles` が空または未指定なら、ロール判定上は認証済みユーザーを許可する。
-- `roles` はロール名と機能権限名の両方を受け付ける。`super-user` 専用ページと `developer` 専用ページはそれぞれ該当ロールを直接要求する。`admin` はこの2種類の専用ページを除いて許可される。
-- その他の判定では、ユーザーの直接ロールまたは `getPermissions` が返す展開済み権限のいずれかが要求項目に一致すれば許可される。`*` 権限も許可される。
-- `getNavigationItems` は同じ `roles` 判定を使い、`navigation: true` の項目だけを階層化して返す。
+- `pageStructure` は47 nodeで構成される。35のpath付きpageは`id`、`path`、既知の`accessPolicy`、表示情報を持ち、12のpathなしnavigation groupはpolicyを持たない。
+- `PAGE_ACCESS_POLICIES`は13件のdeep-frozen descriptorを公開する。catalog objectとdescriptorのidentityを既知policyの境界とし、clone、未知object、`null`、文字列値を許可しない。
+- `public`、`roles`、`strictPresetPermissions`、`allowAdmin`はlegacy fieldであり、page設定に保持しない。既知policyと旧fieldを併記したconfigもruntimeとvalidatorの双方で拒否する。
+- `PUBLIC`、`AUTHENTICATED`、`SUPER_USER`、`DEVELOPER`、`ADMIN`と7種類のread permission policyは一般pageの既存実効条件を維持する。`super-user`／`developer`専用pageは排他的に扱い、通常pageではadmin override、super-user wildcard、直接permission、preset展開、writeからreadへの展開を許可する。
+- `USER_MANAGEMENT`だけはrawのpreset rolesと`isAdmin`を追加検査し、会社管理者または既知preset由来の`users:write`だけを許可する。直接`users:write`、未知・非文字列role、`super-user`だけのactorは拒否する。
+- `getNavigationItems` はrouteと同じpolicy evaluatorを使用する。pathなしgroupは、アクセス可能かつ`navigation: true`の子itemが1件以上ある場合だけ表示する。
 - `getPageConfig` は末尾スラッシュを除去して完全一致を試し、次に `[id]` または `:id` の動的セグメントを一致させ、その後は URL の末尾セグメントを順に除いて登録済みの親パスを探す。
 - `/` 自体が公開ページとして登録されているため、上記の親探索は任意の未登録絶対パスに対して最終的に `/` の設定を返し得る。
 - `isPageAllowed` 自体は設定が見つからない場合に `false` を返す。しかし現在の親探索では `/` がフォールバックになり得るため、通常の絶対パスで「設定なし」へ到達しない場合がある。
-- 開発環境では `validatePageSettings` を呼び出し、通常ロール名の使用、親より緩い子、親と異なる子ロールをコンソール警告する。ファイルルートと設定パスの存在照合は行わない。
+- 開発環境では `validatePageSettings` を呼び出す。重複ID・path、path付きpageのpolicy欠損・未知policy・legacy field、pathなしgroupのpolicy保持、pathもchildrenもないnodeを検出する。ファイルルートと設定パスの存在照合は行わない。
 
 ### グローバルミドルウェアの判定順
 
 1. 画面遷移時にエラーストアをクリアする。
 2. メンテナンス中は `/maintenance` だけを許可し、それ以外を同ページへ置換遷移する。メンテナンス中でなければ `/maintenance` から `/` へ戻す。
 3. 認証ストアの準備完了を待つ。
-4. 未認証の場合は、取得した設定が `public: true` なら許可し、それ以外は `/auth/sign-in` へ置換遷移する。
+4. 未認証の場合は、取得した設定がlegacy fieldを含まない既知の`PUBLIC` policyなら許可し、それ以外は `/auth/sign-in` へ置換遷移する。
 5. 認証済みかつメール未確認の場合は `/unconfirmedEmail` だけを許可する。
 6. メール確認済みで `/unconfirmedEmail` にいる場合は `/dashboard` へ遷移する。
-7. 認証済みで公開ページへ遷移した場合は `/dashboard` へ遷移する。
+7. 認証済みで`PUBLIC` policyのページへ遷移した場合は `/dashboard` へ遷移する。
 8. ページ設定が存在しない場合は許可する。
-9. それ以外は `isPageAllowed` でロール・権限を判定し、不許可なら `/dashboard` へ遷移する。
+9. それ以外は `isPageAllowed` で共有policyを判定し、不許可なら `/dashboard` へ遷移する。
 
 ### 登録済みページ設定
 
-`public: true` が明示されている公開ページは次の4件である。
+`PUBLIC` policyを参照する公開ページは次の4件である。
 
 | パス | 用途 | ナビゲーション |
 |---|---|---|
@@ -44,43 +45,43 @@
 | `/auth/sign-up` | 利用者アカウントサインアップ | 非表示 |
 | `/auth/sign-up-admin` | 管理者アカウントサインアップ | 非表示 |
 
-認証後の登録済みページと要求ロール・権限は次のとおりである。空欄は `roles: []`、つまり認証済みであればロールを問わない設定を表す。
+認証後の登録済みページと共有policyは次のとおりである。
 
-| パス | 要求ロール・権限 | ナビゲーション |
+| パス | accessPolicy | ナビゲーション |
 |---|---|---|
-| `/dashboard` | なし | 表示 |
-| `/super-user` | `super-user` | 表示 |
-| `/operation-schedules` | `site-operation-schedules:read` | 表示 |
-| `/arrangements-manager` | `site-operation-schedules:read` | 表示 |
-| `/operation-results/generator` | `site-operation-schedules:read` | 表示 |
-| `/operation-results` | `operation-results:read` | 表示 |
-| `/operation-results/[id]` | `operation-results:read` | 非表示 |
-| `/attendances` | `developer` | 表示 |
-| `/attendances/export` | `developer` | 表示 |
-| `/billings/operations` | `billings:read` | 表示 |
-| `/billings/operations/[id]` | `billings:read` | 非表示 |
-| `/billings/customers` | `billings:read` | 表示 |
-| `/billings/customers/[id]` | `billings:read` | 非表示 |
-| `/customers` | `customers:read` | 表示 |
-| `/customers/[id]` | `customers:read` | 非表示 |
-| `/sites` | `sites:read` | 表示 |
-| `/sites/[id]` | `sites:read` | 非表示 |
-| `/sites/terminated` | `sites:read` | 表示 |
-| `/employees` | `employees:read` | 表示 |
-| `/employees/[id]` | `employees:read` | 非表示 |
-| `/employees/resigned` | `employees:read` | 表示 |
-| `/outsourcers` | `outsourcers:read` | 表示 |
-| `/articles` | `developer` | 表示 |
-| `/settings/company` | `admin` | 表示 |
-| `/settings/users` | `admin` | 表示 |
-| `/settings/checkout` | `super-user` | 非表示 |
-| `/test/component-test` | `developer` | 表示 |
-| `/test/permissions-test` | `developer` | 表示 |
-| `/test/rollback-operation-result` | `developer` | 表示 |
-| `/test/round-setting-test` | `developer` | 表示 |
-| `/settings/user` | `admin` | 非表示 |
+| `/dashboard` | `AUTHENTICATED` | 表示 |
+| `/super-user` | `SUPER_USER` | 表示 |
+| `/operation-schedules` | `SITE_OPERATION_SCHEDULES_READ` | 表示 |
+| `/arrangements-manager` | `SITE_OPERATION_SCHEDULES_READ` | 表示 |
+| `/operation-results/generator` | `SITE_OPERATION_SCHEDULES_READ` | 表示 |
+| `/operation-results` | `OPERATION_RESULTS_READ` | 表示 |
+| `/operation-results/[id]` | `OPERATION_RESULTS_READ` | 非表示 |
+| `/attendances` | `DEVELOPER` | 表示 |
+| `/attendances/export` | `DEVELOPER` | 表示 |
+| `/billings/operations` | `BILLINGS_READ` | 表示 |
+| `/billings/operations/[id]` | `BILLINGS_READ` | 非表示 |
+| `/billings/customers` | `BILLINGS_READ` | 表示 |
+| `/billings/customers/[id]` | `BILLINGS_READ` | 非表示 |
+| `/customers` | `CUSTOMERS_READ` | 表示 |
+| `/customers/[id]` | `CUSTOMERS_READ` | 非表示 |
+| `/sites` | `SITES_READ` | 表示 |
+| `/sites/[id]` | `SITES_READ` | 非表示 |
+| `/sites/terminated` | `SITES_READ` | 表示 |
+| `/employees` | `EMPLOYEES_READ` | 表示 |
+| `/employees/[id]` | `EMPLOYEES_READ` | 非表示 |
+| `/employees/resigned` | `EMPLOYEES_READ` | 表示 |
+| `/outsourcers` | `OUTSOURCERS_READ` | 表示 |
+| `/articles` | `DEVELOPER` | 表示 |
+| `/settings/company` | `ADMIN` | 表示 |
+| `/settings/users` | `USER_MANAGEMENT` | 表示 |
+| `/settings/checkout` | `SUPER_USER` | 非表示 |
+| `/test/component-test` | `DEVELOPER` | 表示 |
+| `/test/permissions-test` | `DEVELOPER` | 表示 |
+| `/test/rollback-operation-result` | `DEVELOPER` | 表示 |
+| `/test/round-setting-test` | `DEVELOPER` | 表示 |
+| `/settings/user` | `ADMIN` | 非表示 |
 
-パスを持たないグループにも、その子と同種の要求が設定されている。管制業務は `site-operation-schedules:read`、稼働実績は `operation-results:read`、勤怠とマスタメンテナンスとテストは `developer`、請求は `billings:read`、取引先は `customers:read`、現場は `sites:read`、従業員は `employees:read`、外注先は `outsourcers:read`、管理者メニューは `admin` を要求する。
+pathなしgroupはpolicyを持たず、表示できる子itemから導出する。このため親子の権限fieldは重複しない。承認済みのroute/menu parityとして、super-userは`admin-settings`内の`company-setting`を表示する一方、`users-setting`は表示されず、`checkout`も`navigation: false`のため表示されない。
 
 ### ページ側メタ情報
 
@@ -100,11 +101,11 @@
 | `/unconfirmedEmail` | `pages/unconfirmedEmail.vue` | 親探索により `/` の公開設定を取得し得る。ただしメール確認状態の専用分岐がある |
 
 - `/settings/user` は設定に存在するが、対応する `.vue` ファイルはない。実在する `/settings/users` も別途登録されているため、旧設定または将来設定の候補である。利用箇所の意図は未確認である。
-- `validatePageSettings` はパスの設定漏れ、重複、対応ファイルの不存在を検査しないため、上記差異を検出しない。
+- `validatePageSettings` は設定内の重複pathを検出するが、ページファイルとの存在照合は行わないため、上記の未登録実在pageと不存在設定の差異は検出しない。
 
 ## コメント・実装・確定方針の差
 
-- ミドルウェア冒頭コメントは、未認証なら `public: true` のページだけを許可すると説明する。一方、実装には「設定がないページを許可する」分岐があり、`getPageConfig` はさらに未登録パスへ `/` の公開設定を返し得る。
+- ミドルウェアは未認証なら既知の`PUBLIC` policyだけを許可する。一方、認証済み経路には「設定がないページを許可する」分岐があり、`getPageConfig` はさらに未登録パスへ `/` の公開設定を返し得る。
 - `isPageAllowed` のコメントと直接実装は設定なしを不許可とするが、呼出し前のミドルウェアが設定なしを許可し、かつ `getPageConfig` の `/` フォールバックが設定なしを覆い隠す。このため関数単体の fail-closed と経路全体の挙動が一致しない。
 - ユーザー回答により、ページ設定がない実在ページを許可する現在の fail-open 挙動は望ましくなく、将来 fail-closed へ修正すべき事項と確定した。これは将来方針であり、現在の実装事実ではない。
 

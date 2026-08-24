@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
+import { PAGE_ACCESS_POLICIES } from "../../utils/auth/policies/pageAccessPolicy.js";
+import { getPageConfig } from "../../utils/pageSettings.js";
 
 const usersUrl = new URL(
   "../../components/Users/Manager/index.vue",
@@ -11,7 +13,6 @@ const employeeUrl = new URL(
   "../../components/Employee/UserManager.vue",
   import.meta.url,
 );
-const pageSettingsUrl = new URL("../../utils/pageSettings.js", import.meta.url);
 
 test("UsersManager creates through the standalone feature operation", async () => {
   const source = await readFile(usersUrl, "utf8");
@@ -56,26 +57,20 @@ test("Employee UserManager exposes preset roles only to role assigners", async (
   assert.equal(/item\.create\s*\(/.test(source), false);
 });
 
-test("users:write grants the User settings route without opening Company settings", async () => {
-  const source = await readFile(pageSettingsUrl, "utf8");
-  const adminSettings = source.slice(
-    source.indexOf('id: "admin-settings"'),
-    source.indexOf("// 他のページやグループを追加"),
+test("User and Company settings use distinct access policies", () => {
+  const companySetting = getPageConfig("/settings/company");
+  const usersSetting = getPageConfig("/settings/users");
+
+  assert.equal(companySetting.accessPolicy, PAGE_ACCESS_POLICIES.ADMIN);
+  assert.equal(
+    usersSetting.accessPolicy,
+    PAGE_ACCESS_POLICIES.USER_MANAGEMENT,
   );
-  assert.match(adminSettings, /roles: \["admin", "users:write"\]/);
-  assert.match(adminSettings, /strictPresetPermissions: \["users:write"\]/);
-  const companySetting = adminSettings.slice(
-    adminSettings.indexOf('id: "company-setting"'),
-    adminSettings.indexOf('id: "users-setting"'),
-  );
-  assert.match(companySetting, /roles: \["admin"\]/);
-  const usersSetting = adminSettings.slice(
-    adminSettings.indexOf('id: "users-setting"'),
-    adminSettings.indexOf('id: "checkout"'),
-  );
-  assert.match(usersSetting, /roles: \["users:write"\]/);
-  assert.match(usersSetting, /strictPresetPermissions: \["users:write"\]/);
-  assert.match(usersSetting, /allowAdmin: true/);
+  for (const config of [companySetting, usersSetting]) {
+    assert.equal(Object.hasOwn(config, "roles"), false);
+    assert.equal(Object.hasOwn(config, "strictPresetPermissions"), false);
+    assert.equal(Object.hasOwn(config, "allowAdmin"), false);
+  }
 });
 
 for (const [name, url] of [

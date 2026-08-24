@@ -11,7 +11,7 @@
 
 Page 1ファイルのroute、query、CRUD到達性、状態・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を参照する。
 
-`/articles`の「商品管理」pageだけがmaster一覧/CRUD入口で、pageSettingsは`developer` role、navigation trueである。UIはsearch、追加、card編集をAirArrayManagerへ渡す。独立詳細routeはない。
+`/articles`の「商品管理」pageだけがmaster一覧/CRUD入口で、pageSettingsは`DEVELOPER` access policy、navigation trueである。UIはsearch、追加、card編集をAirArrayManagerへ渡す。独立詳細routeはない。
 
 Firestore Rulesは`Companies/{companyId}/Articles/{docId}`と`Articles_archive/{docId}`について、同一company claimの全認証Userまたはsuper-userへread/writeを包括許可する。UIのdeveloper限定と実write許可は一致せず、UI roleはsecurity boundaryではない。
 

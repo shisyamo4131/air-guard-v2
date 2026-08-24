@@ -36,7 +36,7 @@ bottom navigation、breadcrumb component、notification indicator、個別page t
 
 ## Route・store data flow
 
-route change → auth middlewareがerror storeをclearし認証/maintenance/page roleを判定 → layout render → useAppStoreがroute.pathからtitle/back visibilityを計算 → drawerがauth.rolesからnavigation treeを再計算する。navigation表示とroute accessは同じpageSettings/role helperを使うが、表示はsecurity boundaryではなくmiddleware/Rulesが別途必要である。
+route change → auth middlewareがerror storeをclearし認証/maintenance/page access policyを判定 → layout render → useAppStoreがroute.pathからtitle/back visibilityを計算 → drawerがauth stateからnavigation treeを再計算する。navigation表示とroute accessは同じpage policy evaluatorを使い、pathなしgroupはアクセス可能な子から導出するが、表示はsecurity boundaryではなくmiddleware/Rulesが別途必要である。
 
 drawer child active判定はroute.name末尾`-id`を除いた値とpage idを比較する。単独itemはVuetify RouterLinkのactive判定へ任せ、`exact=false`である。
 

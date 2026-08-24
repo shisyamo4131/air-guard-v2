@@ -1784,11 +1784,11 @@ SPEC-DEEP-043追加根拠: DailyOperationByEmployeeとEmployee snapshotも同じ
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-039、SPEC-DEEP-005
-- 対象ファイル・シンボル: `pageSettings.hasAccess`、`authorization.getPermissions/hasPermission`、`useAuthStore.hasPermission`
-- 確認済み実装事実: page helperはsuper-user/developer専用guard後にadminを全許可するが、`getPermissions(["admin"])`は`["admin"]`だけを返す。required配列は通常ORだがspecial roleを含むと先行guardで他条件を無視して拒否する。
+- 対象ファイル・シンボル: `pageAccessPolicy.isPageAccessAllowed`、`authorization.getPermissions/hasPermission`、`useAuthStore.hasPermission`
+- 確認済み実装事実: routeとnavigationは共有page policy evaluatorへ統一された。一般page policyはsuper-user/developer専用guard後にadminを許可するが、component側の`getPermissions(["admin"])`は`["admin"]`だけを返す。special policyは排他的に評価される。
 - 想定影響と発生条件: adminがrouteへ入れてもcomponent permission checkで操作を見られない、または将来の複合required条件が意図と異なる拒否/許可になる。
 - 未確認点・仮説: 現在admin route内で実害があるcomponent、special roleを他permissionと混在させる意図は未確認。
-- 推奨する将来対応: CONF-0111/0112決定後、単一authorization policy/APIをroute・navigation・componentで共有し、special roleを明示的にtestする。
+- 推奨する将来対応: CONF-0111/0112決定後、現在共有済みのroute・navigationにcomponent判定も整合させ、単一authorization policy/APIとspecial roleの意味を確定する。
 - 必要なテスト: preset別、admin/super-user/developer、複数role、required空/単一/複合、route/navigation/buttonの一致。
 - ユーザー判断が必要な事項: CONF-0111、CONF-0112。
 

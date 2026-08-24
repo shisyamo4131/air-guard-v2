@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-17
-- 仕様バージョン: 0.5.7
+- 最終更新日: 2026-08-24
+- 仕様バージョン: 0.5.8
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -47,6 +47,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `air-vuetify-v3` をファイル参照で使用する。
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
 - ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
+- 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
 
 ### バックエンド
 
@@ -73,7 +74,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 単独仮Userの作成とEmployee連携仮Userの作成は別の公開操作として扱う。Employee連携では、同じ会社に実在し、他のUserと紐付いていないEmployeeだけをserver側で確定し、client指定の任意`employeeId`を信頼しない。1 Employeeに紐付くUserは最大1件とする。
 - 仮登録User作成時の`companyId`、`isTemporary=true`、`isAdmin=false`、`disabled=false`はserverが確定する。Employee連携は在職中のEmployeeだけを対象とする。会社管理者または既知preset由来の`users:write`保有者だけが、単独・Employee連携の作成時に既知role presetを任意設定できる。`users:provision`だけのactorはroleを設定できず、非空roles入力をserverが拒否して保存値を空配列に限定する。
 - 有効な本登録Userは、自分のアプリ内表示名`displayName`と利用環境のタグ表示サイズ`tagSize`だけを本人設定として変更できる。業務通知の3フラグと他Userのroleは`users:write`を持つmanagerまたは会社管理者が管理する。自己role変更、会社管理者を対象とするrole・状態変更、`isAdmin`の通常更新は許可しない。このfield別更新境界はUWB-05の専用Callableへ接続済みで、自動検証と利用者受入れを完了している。
-- `/settings/users`のroute・navigationは会社管理者または既知preset由来の`users:write`へ限定する。直接permission文字列、未知role、`isSuperUser`だけをUser管理権限の根拠にせず、clientの表示・disabledはserver認可の代替にしない。共通managerのsubmitは処理中の再入を拒否し、有効化・無効化、管理者移譲、本人プロフィール保存は共通operation stateで対象ごとのpendingを管理する。全documentへ汎用single-flightを展開する変更は採用せず、未対応client、複数tab・端末・actorを含む多重実行riskと追加対策の要否をUWB全工程の後段で再評価する。
+- `/settings/users`のroute・navigationは会社管理者または既知preset由来の`users:write`へ限定する。直接permission文字列、未知role、`isSuperUser`だけをUser管理権限の根拠にせず、clientの表示・disabledはserver認可の代替にしない。super-userは従来どおり`/settings/company`へアクセスでき、子itemから表示を導出するnavigationでも会社設定だけを表示するが、User管理は表示・許可しない。共通managerのsubmitは処理中の再入を拒否し、有効化・無効化、管理者移譲、本人プロフィール保存は共通operation stateで対象ごとのpendingを管理する。全documentへ汎用single-flightを展開する変更は採用せず、未対応client、複数tab・端末・actorを含む多重実行riskと追加対策の要否をUWB全工程の後段で再評価する。
 - 全Userのcanonical email一意性は`UserEmailReservations/{sha256(trim(lowercase(email)))}`を正本とし、Employee連携の一意性は`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を正本とする。User作成、本登録変換、仮登録削除、初期会社管理者作成は、対応する予約pointerを同じFirestore transactionで作成・更新・削除する。予約欠損・不正・不一致はfail closedとし、runtimeで旧queryへfallbackしない。
 - email利用可否の事前確認は権利確保ではなくUX上のadvisoryであり、最終的な一意性は作成transactionが判定する。AuthenticationとFirestoreはatomicに更新できないため、Authだけまたはclaims未設定の部分状態を自動的に完全解消する保証は持たず、整合した再実行と後続reconcileで扱う。
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。

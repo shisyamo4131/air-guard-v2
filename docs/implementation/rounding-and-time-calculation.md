@@ -51,7 +51,7 @@ client pluginはCompany storeをwatchし、Company未取得または値がfalsy�
 
 ## test route・UI到達性
 
-`/test/round-setting-test`はNuxt pageとして存在し、pageSettingsのdeveloper role付きnavigationに登録される。environmentによるroute除外やproduction guardは直接確認できず、production bundleにも含まれる候補である。画面はbuttonでbrowser内の手製test関数を実行するが、自動test suiteではない。
+`/test/round-setting-test`はNuxt pageとして存在し、pageSettingsの`DEVELOPER` access policy付きnavigationに登録される。environmentによるroute除外やproduction guardは直接確認できず、production bundleにも含まれる候補である。画面はbuttonでbrowser内の手製test関数を実行するが、自動test suiteではない。
 
 test画面は`new RoundSetting()`へ`operationResultSales`と`operationResultTax`をbindするが、現行classにそれらのinstance field/validationはない。JSDocの`@props`とも不一致で、実装は単一static modeだけである。画面の操作でglobal modeを変更でき、Company pluginの次回watchEffectまでは同じtabの業務計算へ影響し得る。
 

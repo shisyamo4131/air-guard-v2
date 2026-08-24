@@ -34,7 +34,7 @@
 
 - CompanyManager has no create/delete UI path and its handlers throw if invoked. Update is a direct client model update; no transaction/version/precondition, server allowlist, audit reason, or local rollback is added here.
 - `useBaseManager` tracks a boolean `isLoading` from AirItemManager events and routes errors to the common logger/store. Manager itself adds no synchronous submit latch, dirty-state prompt, cancellation rollback, success message, or retry policy; these remain AirItemManager/parent behavior.
-- Each activator always renders an icon-only edit button and emits immediately. It does not inspect roles, loading, disabled state, or dirty state. The page route is admin-only in pageSettings, while Firestore Company rules remain broader as documented elsewhere.
+- Each activator always renders an icon-only edit button and emits immediately. It does not inspect roles, loading, disabled state, or dirty state. The page route uses the shared `ADMIN` access policy, which permits company admin and super-user under the retained general-page semantics, while Firestore Company rules remain broader as documented elsewhere.
 - CompanyStore exposes one reactive Company instance; these components do not subscribe independently. Changes to roundSetting, maintenance, subscription, or global settings are observed elsewhere through store/plugin consumers, not through these display components.
 
 ## Validation and field effects

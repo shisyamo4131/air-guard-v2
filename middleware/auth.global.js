@@ -1,17 +1,22 @@
 /**
  * グローバル認証ミドルウェア (Ver.5)
- * pageSettings の public プロパティと roles プロパティに基づいてアクセス制御を行う
+ * pageSettings の accessPolicy に基づいてアクセス制御を行う
  *
  * A. 未認証の場合:
- *    - public: true のページのみアクセス可能。
+ *    - PUBLIC policyのページのみアクセス可能。
  *    - それ以外へのアクセスは /auth/sign-in へリダイレクト。
  * B. 認証済みの場合:
  *    - メール未認証、または会社claim未設定の場合は /unconfirmedEmail へリダイレクト。
- *    - public: true のページへのアクセスは /dashboard にリダイレクト。
+ *    - PUBLIC policyのページへのアクセスは /dashboard にリダイレクト。
  *    - それ以外の場合は isPageAllowed で権限を確認し、権限がなければ /dashboard にリダイレクト。
  */
 
-import { getPageConfig, isPageAllowed } from "~/utils/pageSettings";
+import {
+  getPageConfig,
+  isPageAllowed,
+  isPageConfigAllowed,
+} from "~/utils/pageSettings";
+import { isPublicPageAccessPolicy } from "~/utils/auth/policies/pageAccessPolicy";
 import { useAuthStore } from "~/stores/useAuthStore";
 import { useSystemStore } from "~/stores/useSystemStore";
 import { useErrorsStore } from "~/stores/useErrorsStore";
@@ -50,11 +55,13 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   // ターゲットパスのページ設定を取得
   const pageConfig = getPageConfig(targetPath);
+  const isPublicPage =
+    isPageConfigAllowed(pageConfig, []) &&
+    isPublicPageAccessPolicy(pageConfig?.accessPolicy);
 
   // --- A. 未認証ユーザーの処理 ---
   if (!isAuthenticated) {
-    // public: true のページ、または設定がないページへのアクセスは許可
-    if (pageConfig?.public) return;
+    if (isPublicPage) return;
 
     // 非公開ページへのアクセスは /auth/sign-in へリダイレクト
     if (targetPath !== "/auth/sign-in") {
@@ -81,7 +88,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // 3. 公開ページ（sign-in, sign-up等）へのアクセスは /dashboard へリダイレクト
-  if (pageConfig?.public) {
+  if (isPublicPage) {
     if (targetPath !== "/dashboard") {
       return navigateTo("/dashboard", { replace: true });
     }

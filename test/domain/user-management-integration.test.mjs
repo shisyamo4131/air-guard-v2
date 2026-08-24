@@ -8,6 +8,7 @@ import {
   isPageAllowed,
   isPageConfigAllowed,
 } from "../../utils/pageSettings.js";
+import { PAGE_ACCESS_POLICIES } from "../../utils/auth/policies/pageAccessPolicy.js";
 
 const components = [
   "components/Users/Manager/index.vue",
@@ -25,7 +26,7 @@ function navigationValues(items) {
   ]);
 }
 
-test("User settings route and navigation require admin or strict preset permission", () => {
+test("User settings route and navigation share the User management access policy", () => {
   const managerContext = { presetRoles: ["manager"], isAdmin: false };
   const directContext = { presetRoles: ["users:write"], isAdmin: false };
   const superUserContext = { presetRoles: [], isAdmin: false };
@@ -66,9 +67,9 @@ test("User settings route and navigation require admin or strict preset permissi
 });
 
 test("general page access retains wildcard and direct-permission behavior", () => {
-  const config = { roles: ["sites:write"] };
+  const config = { accessPolicy: PAGE_ACCESS_POLICIES.OUTSOURCERS_READ };
   assert.equal(isPageConfigAllowed(config, ["super-user"]), true);
-  assert.equal(isPageConfigAllowed(config, ["sites:write"]), true);
+  assert.equal(isPageConfigAllowed(config, ["outsourcers:write"]), true);
   assert.equal(isPageConfigAllowed(config, ["controller"]), true);
   assert.equal(isPageConfigAllowed(config, ["human-resource"]), false);
 });

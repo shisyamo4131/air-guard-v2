@@ -20,8 +20,8 @@ Nuxtのfile-based routingにより5 pageはいずれもroute候補になる。`n
 
 ## guardとserver enforcement
 
-- 登録済み4 routeはclient `pageSettings`の`developer` special-role判定だけで入口を制限する。これはserver authorizationではない。
-- `/test/user-permission-info`は明示設定がなく、現在のglobal middlewareのfail-openにより、認証済みUserはroleを問わず到達し得る。未認証時はsign-inへredirectされる。
+- 登録済み4 routeはclient `pageSettings`の`DEVELOPER` access policyだけで入口を制限する。これはserver authorizationではない。
+- `/test/user-permission-info`は明示設定がなく、`getPageConfig`が`/`の`PUBLIC` policyへfallbackする。未認証Userは到達でき、メール確認・会社claim確立済みの認証Userは公開page扱いでdashboardへredirectされる。未確認または会社未確立Userは専用分岐で`/unconfirmedEmail`へredirectされる。
 - permission表示2 pageはlocal store情報だけを読む。UID/email/role/permissionは個人・認可情報であり、画面到達者へそのまま表示する。
 - Employee取得はFirestore Rulesが実際のtenant read境界となる。固定IDはtenantや環境に適合する保証がない。
 - rollbackはclientからFirestoreへ直接delete/updateするため、実際の許可はRulesの同一company認証境界に依存する。`developer` roleはRulesで強制されず、直接API利用を防がない。
