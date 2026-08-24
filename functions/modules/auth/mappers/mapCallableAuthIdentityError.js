@@ -1,12 +1,12 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapCallableAuthIdentityError.js
+ * @file ./functions/modules/auth/mappers/mapCallableAuthIdentityError.js
  * @description Callable実行者のAuth整合性エラーを安全な応答へ変換します。
  * @method mapCallableAuthIdentityError - 共通Authエラーを変換します。
  *****************************************************************************/
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,
-} from "./resolveCallableAuthIdentity.js";
+} from "../resolveCallableAuthIdentity.js";
 
 const PERMISSION_DENIED_RESPONSE = Object.freeze({
   code: "permission-denied",

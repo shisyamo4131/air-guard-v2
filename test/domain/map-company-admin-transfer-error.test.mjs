@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   mapCompanyAdminTransferError,
-} from "../../functions/modules/auth/mapCompanyAdminTransferError.js";
+} from "../../functions/modules/auth/mappers/mapCompanyAdminTransferError.js";
 import {
   COMPANY_ADMIN_TRANSFER_ERROR_CODES,
   CompanyAdminTransferError,
@@ -11,11 +11,11 @@ import {
 import {
   COMPANY_ADMIN_TRANSFER_POLICY_ERROR_CODES,
   CompanyAdminTransferPolicyError,
-} from "../../functions/modules/auth/companyAdminTransferPolicy.js";
+} from "../../functions/modules/auth/policies/companyAdminTransferPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,

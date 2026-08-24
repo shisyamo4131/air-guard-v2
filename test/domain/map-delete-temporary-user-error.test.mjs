@@ -7,19 +7,19 @@ import {
 } from "../../functions/modules/auth/deleteTemporaryUser.js";
 import {
   mapDeleteTemporaryUserError,
-} from "../../functions/modules/auth/mapDeleteTemporaryUserError.js";
+} from "../../functions/modules/auth/mappers/mapDeleteTemporaryUserError.js";
 import {
   TEMPORARY_USER_DELETION_POLICY_ERROR_CODES,
   TemporaryUserDeletionPolicyError,
-} from "../../functions/modules/auth/temporaryUserDeletionPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserDeletionPolicy.js";
 import {
   TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES,
   TemporaryUserManagementPolicyError,
-} from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,

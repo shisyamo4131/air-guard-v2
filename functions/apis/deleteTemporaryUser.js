@@ -8,7 +8,7 @@ import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { deleteTemporaryUser as deleteTemporaryUserUseCase } from "../modules/auth/deleteTemporaryUser.js";
-import { mapDeleteTemporaryUserError } from "../modules/auth/mapDeleteTemporaryUserError.js";
+import { mapDeleteTemporaryUserError } from "../modules/auth/mappers/mapDeleteTemporaryUserError.js";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 /**

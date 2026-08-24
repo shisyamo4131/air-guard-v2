@@ -7,7 +7,7 @@ import {
   hasAuthRelevantChanges,
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 
 const COMPANY_ID = "company-a";
 const USER_ID = "user-a";

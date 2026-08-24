@@ -7,8 +7,8 @@ import {
   DeleteTemporaryUserError,
 } from "../../functions/modules/auth/deleteTemporaryUser.js";
 import { createUserEmailReservationId } from "../../functions/modules/auth/createTemporaryUser.js";
-import { TemporaryUserManagementPolicyError } from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
-import { TemporaryUserDeletionPolicyError } from "../../functions/modules/auth/temporaryUserDeletionPolicy.js";
+import { TemporaryUserManagementPolicyError } from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
+import { TemporaryUserDeletionPolicyError } from "../../functions/modules/auth/policies/temporaryUserDeletionPolicy.js";
 
 const COMPANY_ID = "company-a";
 const ACTOR_UID = "actor-a";

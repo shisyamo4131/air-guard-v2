@@ -7,7 +7,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { createAdminAccount as createAdminAccountUseCase } from "../modules/auth/createAdminAccount.js";
-import { mapCreateAdminAccountError } from "../modules/auth/mapCreateAdminAccountError.js";
+import { mapCreateAdminAccountError } from "../modules/auth/mappers/mapCreateAdminAccountError.js";
 
 export const createAdminAccount = onCall(async (request) => {
   if (!request.auth) {

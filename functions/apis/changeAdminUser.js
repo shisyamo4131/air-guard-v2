@@ -8,7 +8,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { transferCompanyAdmin } from "../modules/auth/transferCompanyAdmin.js";
-import { mapCompanyAdminTransferError } from "../modules/auth/mapCompanyAdminTransferError.js";
+import { mapCompanyAdminTransferError } from "../modules/auth/mappers/mapCompanyAdminTransferError.js";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 /**

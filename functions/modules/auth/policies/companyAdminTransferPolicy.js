@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/companyAdminTransferPolicy.js
+ * @file ./functions/modules/auth/policies/companyAdminTransferPolicy.js
  * @description 会社管理者の移譲可否を検証するためのモジュールです。
  * @method assertCompanyAdminTransferPolicy 会社管理者の移譲可否を検証します。
  *****************************************************************************/

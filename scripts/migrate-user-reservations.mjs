@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { createUserEmailReservationId } from "../functions/modules/auth/createTemporaryUser.js";
-import { normalizeTemporaryUserEmail } from "../functions/modules/auth/temporaryUserCreationPolicy.js";
+import { normalizeTemporaryUserEmail } from "../functions/modules/auth/policies/temporaryUserCreationPolicy.js";
 
 export const CODEX_RESERVATION_MIGRATION_TARGET = Object.freeze({
   name: "codex-local",

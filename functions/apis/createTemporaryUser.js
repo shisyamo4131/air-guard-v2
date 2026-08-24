@@ -10,7 +10,7 @@ import {
   createEmployeeLinkedTemporaryUser as createEmployeeLinkedTemporaryUserUseCase,
   createStandaloneTemporaryUser as createStandaloneTemporaryUserUseCase,
 } from "../modules/auth/createTemporaryUser.js";
-import { mapCreateTemporaryUserError } from "../modules/auth/mapCreateTemporaryUserError.js";
+import { mapCreateTemporaryUserError } from "../modules/auth/mappers/mapCreateTemporaryUserError.js";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 async function handleCreateRequest(request, { operation, useCase }) {

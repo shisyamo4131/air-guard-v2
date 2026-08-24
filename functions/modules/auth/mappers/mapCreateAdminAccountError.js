@@ -1,15 +1,15 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapCreateAdminAccountError.js
+ * @file ./functions/modules/auth/mappers/mapCreateAdminAccountError.js
  * @description 初期管理者作成errorを安全なCallable応答へ変換します。
  *****************************************************************************/
 import {
   CREATE_ADMIN_ACCOUNT_ERROR_CODES,
   CreateAdminAccountError,
-} from "./createAdminAccount.js";
+} from "../createAdminAccount.js";
 import {
   INITIAL_ADMIN_ACCOUNT_POLICY_ERROR_CODES,
   InitialAdminAccountPolicyError,
-} from "./initialAdminAccountPolicy.js";
+} from "../policies/initialAdminAccountPolicy.js";
 
 const RESPONSES = Object.freeze({
   INTERNAL: { code: "internal", message: "管理者アカウント作成中に予期しないエラーが発生しました。" },

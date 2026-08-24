@@ -9,8 +9,8 @@ import {
   resolveEmployeeLinkedTemporaryUserInput,
   resolveStandaloneTemporaryUserData,
   normalizeTemporaryUserEmail,
-} from "./temporaryUserCreationPolicy.js";
-import { assertActorCanManageTemporaryUsers } from "./temporaryUserManagementPolicy.js";
+} from "./policies/temporaryUserCreationPolicy.js";
+import { assertActorCanManageTemporaryUsers } from "./policies/temporaryUserManagementPolicy.js";
 
 export const CREATE_TEMPORARY_USER_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",

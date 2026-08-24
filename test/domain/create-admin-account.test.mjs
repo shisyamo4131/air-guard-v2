@@ -8,7 +8,7 @@ import {
   CreateAdminAccountError,
   createAdminAccount,
 } from "../../functions/modules/auth/createAdminAccount.js";
-import { InitialAdminAccountPolicyError } from "../../functions/modules/auth/initialAdminAccountPolicy.js";
+import { InitialAdminAccountPolicyError } from "../../functions/modules/auth/policies/initialAdminAccountPolicy.js";
 
 const UID = "auth-a";
 const EMAIL = "admin@example.com";

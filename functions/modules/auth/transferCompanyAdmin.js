@@ -3,8 +3,8 @@
  * @description 会社管理者の権限を別のUserへ移譲するモジュールです。
  * @method transferCompanyAdmin 会社管理者の権限を移譲します。
  *****************************************************************************/
-import { assertAuthUserCompany } from "./userAuthCompanyPolicy.js";
-import { assertCompanyAdminTransferPolicy } from "./companyAdminTransferPolicy.js";
+import { assertAuthUserCompany } from "./policies/userAuthCompanyPolicy.js";
+import { assertCompanyAdminTransferPolicy } from "./policies/companyAdminTransferPolicy.js";
 
 export const COMPANY_ADMIN_TRANSFER_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",

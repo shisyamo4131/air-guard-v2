@@ -1,20 +1,20 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapCompanyAdminTransferError.js
+ * @file ./functions/modules/auth/mappers/mapCompanyAdminTransferError.js
  * @description 会社管理者移譲時の内部エラーを安全なCallable応答へ変換します。
  * @method mapCompanyAdminTransferError 内部エラーをcodeとmessageへ変換します。
  *****************************************************************************/
 import {
   COMPANY_ADMIN_TRANSFER_ERROR_CODES,
   CompanyAdminTransferError,
-} from "./transferCompanyAdmin.js";
+} from "../transferCompanyAdmin.js";
 import {
   COMPANY_ADMIN_TRANSFER_POLICY_ERROR_CODES,
   CompanyAdminTransferPolicyError,
-} from "./companyAdminTransferPolicy.js";
+} from "../policies/companyAdminTransferPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "./userAuthCompanyPolicy.js";
+} from "../policies/userAuthCompanyPolicy.js";
 import {
   mapCallableAuthIdentityError,
 } from "./mapCallableAuthIdentityError.js";

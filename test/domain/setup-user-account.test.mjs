@@ -9,7 +9,7 @@ import {
   USER_ACCOUNT_SETUP_ERROR_CODES,
   UserAccountSetupError,
 } from "../../functions/modules/auth/setupUserAccount.js";
-import { UserAccountSetupPolicyError } from "../../functions/modules/auth/userAccountSetupPolicy.js";
+import { UserAccountSetupPolicyError } from "../../functions/modules/auth/policies/userAccountSetupPolicy.js";
 
 const AUTH_UID = "auth-a";
 const AUTH_EMAIL = "user@example.com";

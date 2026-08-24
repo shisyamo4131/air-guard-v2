@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   mapUserAccountSetupError,
-} from "../../functions/modules/auth/mapUserAccountSetupError.js";
+} from "../../functions/modules/auth/mappers/mapUserAccountSetupError.js";
 import {
   USER_ACCOUNT_SETUP_ERROR_CODES,
   UserAccountSetupError,
@@ -11,7 +11,7 @@ import {
 import {
   USER_ACCOUNT_SETUP_POLICY_ERROR_CODES,
   UserAccountSetupPolicyError,
-} from "../../functions/modules/auth/userAccountSetupPolicy.js";
+} from "../../functions/modules/auth/policies/userAccountSetupPolicy.js";
 
 const SENSITIVE_INTERNAL_MESSAGE =
   "internal uid=user-secret companyId=company-secret";

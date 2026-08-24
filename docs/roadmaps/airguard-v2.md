@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-21
+- 最終確認日: 2026-08-24
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -121,3 +121,4 @@
 | 2026-08-21 | 10% | 0 | 利用者が機能branchのlocal UIでUWB-04の単独／Employee連携作成、取消、削除、表示・操作感を受入れた。User一覧に明示的な「仮登録」表示がなく、Employee詳細には表示される現行差異も確認した。UWB全体と認証マイルストーンは未完了のため進捗は据え置いた。 |
 | 2026-08-21 | 10% | 0 | UWB-02R〜04Rで仮登録操作を`users:provision`、role・通知等の管理を`users:write`へ分離した。managerへ両方、human-resourceへprovisionだけを付与し、provision-only actorの非空rolesを拒否した。domain単体test 467件と専用Emulator 74件は成功したが、human-resource UI再受入れと後続UWBが未完了のため進捗は据え置いた。 |
 | 2026-08-21 | 10% | 0 | permission分離後のhuman-resource正規UI再受入れを完了した。一般User signupの通常submit中断とprovision-only dialogのgeneric role field露出を修正し、role control不存在、emailだけのEmployee連携仮登録作成・削除、作成後・削除後のbackend状態を確認した。domain単体test 468件、変更2 SFC compile、専用Emulator 74件が成功した。UWB-05以降が未完了のため進捗は据え置いた。 |
+| 2026-08-24 | 10% | 0 | 利用者がUWB-04の最小確認項目通過を報告した。Functions authのpolicy・permission定義とCallable error mapperを専用directoryへ整理し、全domain単体test 468件と専用Emulator suite 74件で挙動不変を確認してUWB-04を最終完了とした。UWB-05以降が未完了のため進捗は据え置いた。 |

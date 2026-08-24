@@ -1,12 +1,12 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/temporaryUserCreationPolicy.js
+ * @file ./functions/modules/auth/policies/temporaryUserCreationPolicy.js
  * @description 仮登録User作成入力を検証し、server管理fieldを確定します。
  *****************************************************************************/
 import {
   EMPLOYMENT_STATUS_VALUES,
   TAG_SIZE_VALUES,
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { ROLE_PRESETS } from "../../constants/rolePresets.js";
+import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
 
 const EMAIL_MAX_LENGTH = 50;
 const DISPLAY_NAME_MAX_LENGTH = 6;

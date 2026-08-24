@@ -5,7 +5,7 @@ import {
   ROLE_PERMISSION_ERROR_CODES,
   RolePermissionError,
   resolveRolePermissions,
-} from "../../functions/modules/auth/rolePermissions.js";
+} from "../../functions/modules/auth/policies/rolePermissions.js";
 
 test("manager and human-resource resolve separated User permissions", () => {
   const manager = resolveRolePermissions(["manager"]);

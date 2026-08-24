@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { CREATE_ADMIN_ACCOUNT_ERROR_CODES, CreateAdminAccountError } from "../../functions/modules/auth/createAdminAccount.js";
-import { INITIAL_ADMIN_ACCOUNT_POLICY_ERROR_CODES, InitialAdminAccountPolicyError } from "../../functions/modules/auth/initialAdminAccountPolicy.js";
-import { mapCreateAdminAccountError } from "../../functions/modules/auth/mapCreateAdminAccountError.js";
+import { INITIAL_ADMIN_ACCOUNT_POLICY_ERROR_CODES, InitialAdminAccountPolicyError } from "../../functions/modules/auth/policies/initialAdminAccountPolicy.js";
+import { mapCreateAdminAccountError } from "../../functions/modules/auth/mappers/mapCreateAdminAccountError.js";
 
 const SECRET = "uid-secret email-secret@example.com company-secret";
 function assertMap(error, code) {

@@ -6,7 +6,7 @@
 import {
   assertAuthUserCompany,
   UserAuthCompanyPolicyError,
-} from "./userAuthCompanyPolicy.js";
+} from "./policies/userAuthCompanyPolicy.js";
 
 export const CALLABLE_AUTH_IDENTITY_ERROR_CODES = Object.freeze({
   TOKEN_IDENTITY_INVALID: "token-identity-invalid",

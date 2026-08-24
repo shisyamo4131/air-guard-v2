@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/userAuthCompanyPolicy.js
+ * @file ./functions/modules/auth/policies/userAuthCompanyPolicy.js
  * @description 利用者、所属会社、Auth アカウントの整合性検証および Auth アカウントの変更検知を行うためのモジュール群です。
  * @method assertUserDocumentCompany - 利用者と所属会社の整合性を検証します。
  * @method assertAuthUserCompany - Auth アカウントと所属会社の整合性を検証します。

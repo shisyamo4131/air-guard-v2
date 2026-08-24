@@ -3,7 +3,7 @@
  * @description 初期管理者signup用emailの助言的な利用可否を確認します。
  *****************************************************************************/
 import { createUserEmailReservationId } from "./createTemporaryUser.js";
-import { normalizeTemporaryUserEmail } from "./temporaryUserCreationPolicy.js";
+import { normalizeTemporaryUserEmail } from "./policies/temporaryUserCreationPolicy.js";
 
 export const CHECK_EMAIL_AVAILABILITY_ERROR_CODES = Object.freeze({
   INPUT_INVALID: "input-invalid",

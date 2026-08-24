@@ -1,11 +1,11 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/rolePermissions.js
+ * @file ./functions/modules/auth/policies/rolePermissions.js
  * @description FunctionsでUser role presetをpermissionへ展開します。
  * - 既知のrole presetだけを受け入れます。
  * - 未知roleを直接permissionとして扱いません。
  * - write permissionに対応するread permissionを追加します。
  *****************************************************************************/
-import { ROLE_PRESETS } from "../../constants/rolePresets.js";
+import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
 
 export const ROLE_PERMISSION_ERROR_CODES = Object.freeze({
   ROLES_INVALID: "roles-invalid",

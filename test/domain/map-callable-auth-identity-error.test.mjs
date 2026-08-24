@@ -3,7 +3,7 @@ import test from "node:test";
 
 import {
   mapCallableAuthIdentityError,
-} from "../../functions/modules/auth/mapCallableAuthIdentityError.js";
+} from "../../functions/modules/auth/mappers/mapCallableAuthIdentityError.js";
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,

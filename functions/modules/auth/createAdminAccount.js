@@ -11,7 +11,7 @@ import {
   resolveInitialAdminAccountInput,
   resolveInitialAdminAuthIdentity,
   resolveInitialAdminReservation,
-} from "./initialAdminAccountPolicy.js";
+} from "./policies/initialAdminAccountPolicy.js";
 
 export const CREATE_ADMIN_ACCOUNT_ERROR_CODES = Object.freeze({
   AUTH_SERVICE_INVALID: "auth-service-invalid",

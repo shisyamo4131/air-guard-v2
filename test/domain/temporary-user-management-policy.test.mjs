@@ -5,11 +5,11 @@ import {
   TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES,
   TemporaryUserManagementPolicyError,
   assertActorCanManageTemporaryUsers,
-} from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 
 const COMPANY_ID = "company-a";
 

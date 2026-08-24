@@ -7,7 +7,7 @@ import {
   resolveUserAccountSetupReservation,
   USER_ACCOUNT_SETUP_POLICY_ERROR_CODES,
   UserAccountSetupPolicyError,
-} from "../../functions/modules/auth/userAccountSetupPolicy.js";
+} from "../../functions/modules/auth/policies/userAccountSetupPolicy.js";
 
 const identity = Object.freeze({ authUid: "auth-a", email: "user@example.com" });
 const reservation = Object.freeze({ companyId: "company-a", userId: "temp-a" });

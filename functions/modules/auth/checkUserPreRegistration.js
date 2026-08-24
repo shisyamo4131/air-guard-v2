@@ -3,7 +3,7 @@
  * @description email予約pointerから一般Userの事前登録状態を確認します。
  *****************************************************************************/
 import { createUserEmailReservationId } from "./createTemporaryUser.js";
-import { normalizeTemporaryUserEmail } from "./temporaryUserCreationPolicy.js";
+import { normalizeTemporaryUserEmail } from "./policies/temporaryUserCreationPolicy.js";
 
 export const CHECK_USER_PRE_REGISTRATION_ERROR_CODES = Object.freeze({
   INPUT_INVALID: "input-invalid",

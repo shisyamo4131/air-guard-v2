@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/initialAdminAccountPolicy.js
+ * @file ./functions/modules/auth/policies/initialAdminAccountPolicy.js
  * @description 初期会社管理者の入力・Auth identity・既存状態を純粋検証します。
  *****************************************************************************/
 import { normalizeTemporaryUserEmail } from "./temporaryUserCreationPolicy.js";

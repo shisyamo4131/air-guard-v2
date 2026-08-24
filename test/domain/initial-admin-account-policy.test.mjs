@@ -9,7 +9,7 @@ import {
   resolveInitialAdminAccountInput,
   resolveInitialAdminAuthIdentity,
   resolveInitialAdminReservation,
-} from "../../functions/modules/auth/initialAdminAccountPolicy.js";
+} from "../../functions/modules/auth/policies/initialAdminAccountPolicy.js";
 
 const input = {
   companyName: "警備会社",

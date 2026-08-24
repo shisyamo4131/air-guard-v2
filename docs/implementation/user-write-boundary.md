@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-02R〜04R実装・local自動検証完了、human-resource UI再受入れ待ち）
+- 状態: Active（UWB-01〜04完了、次はUWB-05）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -187,7 +187,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-04 仮登録User作成のserver境界
 
-- 状態: Completed（2026-08-21 permission分離後のhuman-resource正規UI再受入れ完了）
+- 状態: Completed（2026-08-24 利用者受入れ・整理後回帰検証完了）
 - 主な影響画面: `components/Users/Manager/index.vue`、`components/Employee/UserManager.vue`
 
 #### 作業
@@ -211,6 +211,8 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 単独仮登録Userを正規UIで作成してbackend状態を確認し、同じUIから削除してUser・email予約・Authentication不存在を確認した。
 - [x] Employeeを正規UIで作成し、既知role `human-resource`付きのEmployee連携仮登録Userを同じ正規UIで作成した。backend assertionで仮登録状態、Employee link、role、email・Employee予約pointer、Authentication不存在を確認し、同じUIでUserを削除した。削除後はUser・両予約・Authenticationが不存在でEmployeeが残ることを確認した。
 - [x] 2026-08-21に利用者が機能branchのlocal UIで、単独仮登録User作成、Employee連携仮登録User作成、取消、削除、表示・操作感を受入れた。Employee詳細では「仮登録」表示を確認した。User一覧には明示的な「仮登録」表示がない現行挙動も確認し、UWB-04の受入れをOKとした。
+- [x] 2026-08-24に利用者が提示済みの最小確認項目によるUWB-04 test通過を報告した。
+- [x] `functions/modules/auth`直下のpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ整理した。export名と挙動は変更せず、全参照を更新した。
 
 #### 完了条件
 
@@ -221,10 +223,11 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 単体testと両作成UIのlocal確認が成功している。
 - [x] 2026-08-21のpermission分離改訂でdomain単体test 467件と専用Emulator 74件が成功し、human-resourceのrole付きEmployee連携作成拒否とroleなし作成成功を確認した。
 - [x] 改訂後のhuman-resource画面でrole選択が表示されず、emailだけで作成・削除できることを正規UIで再受入れした。作成後は`roles=[]`、Employee link、email・Employee予約、Authentication不存在を確認し、UI削除後はUser・両予約・Authentication不存在とEmployee残存を確認した。
+- [x] directory整理後に全domain単体test 468件と専用Emulator suite 74件が成功し、利用者用saved-data 7 files・3492 bytesが不変であることを確認した。
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
-- 状態: Ready after UWB-04R UI acceptance（field契約承認済み、実装未着手）
+- 状態: Ready（UWB-04完了、field契約承認済み、実装未着手）
 - 主な影響画面: `components/Users/Manager/index.vue`、User設定の呼出し元
 
 #### 確認済みの現行挙動
@@ -405,3 +408,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-21 | UWB-04 completed | 予約migration、専用Emulator、単独／Employee連携仮登録Userの正規UI作成・削除を完了 | 本変更 | 全domain単体test 462件、SFC compile、専用Emulator 74件。Employee連携Userは`human-resource`付きで作成し、作成後・削除後のUser、email予約、Employee予約、Auth、Employee残存をbackend assertion。外部geocoding拒否の既知console error 1件、snapshot不変、全専用port閉鎖 |
 | 2026-08-21 | UWB-02R〜04R automated | `users:provision`を新設し、managerへ両User permission、human-resourceへprovisionだけを付与。provision-only actorのroles指定をclient/serverで拒否 | 本変更 | domain単体test 467件、SFC compile、専用Emulator 74件。role付き作成はpermission-denied、roleなし作成は成功。全専用port閉鎖、利用者用saved-data不変。human-resource UI再受入れは未実施 |
 | 2026-08-21 | UWB-04R UI completed | 一般User signupの通常submitがpage reloadで中断される問題と、provision-only Employee User dialogにgeneric role fieldが残る問題を修正。human-resourceの正規signup、Employee作成、roleなし仮登録Userの作成・削除を製品UIで再受入れ | 本変更 | domain単体test 468件、変更2 SFC compile、専用Emulator 74件。作成後の`roles=[]`、Employee link、両予約、Auth不存在と、削除後のUser・両予約・Auth不存在、Employee残存をbackend assertion。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |
+| 2026-08-24 | UWB-04 final completed | 利用者が最小確認項目の通過を報告。Functions authのpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ整理し、export名と挙動を維持 | 本変更 | 全domain単体test 468件、専用Emulator suite 74件、project-owned・managed governance validator、`git diff --check` pass。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |

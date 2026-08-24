@@ -5,19 +5,19 @@ import {
   CREATE_TEMPORARY_USER_ERROR_CODES,
   CreateTemporaryUserError,
 } from "../../functions/modules/auth/createTemporaryUser.js";
-import { mapCreateTemporaryUserError } from "../../functions/modules/auth/mapCreateTemporaryUserError.js";
+import { mapCreateTemporaryUserError } from "../../functions/modules/auth/mappers/mapCreateTemporaryUserError.js";
 import {
   TEMPORARY_USER_CREATION_POLICY_ERROR_CODES,
   TemporaryUserCreationPolicyError,
-} from "../../functions/modules/auth/temporaryUserCreationPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserCreationPolicy.js";
 import {
   TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES,
   TemporaryUserManagementPolicyError,
-} from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,

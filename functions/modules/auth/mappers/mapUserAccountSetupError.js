@@ -1,16 +1,16 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapUserAccountSetupError.js
+ * @file ./functions/modules/auth/mappers/mapUserAccountSetupError.js
  * @description User本登録時の内部エラーを安全なCallable応答へ変換します。
  * @method mapUserAccountSetupError 内部エラーをcodeとmessageへ変換します。
  *****************************************************************************/
 import {
   USER_ACCOUNT_SETUP_ERROR_CODES,
   UserAccountSetupError,
-} from "./setupUserAccount.js";
+} from "../setupUserAccount.js";
 import {
   USER_ACCOUNT_SETUP_POLICY_ERROR_CODES,
   UserAccountSetupPolicyError,
-} from "./userAccountSetupPolicy.js";
+} from "../policies/userAccountSetupPolicy.js";
 
 const INTERNAL_ERROR_RESPONSE = Object.freeze({
   code: "internal",

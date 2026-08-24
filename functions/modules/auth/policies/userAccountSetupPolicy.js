@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/userAccountSetupPolicy.js
+ * @file ./functions/modules/auth/policies/userAccountSetupPolicy.js
  * @description 一般User本登録のidentity・予約・User状態を純粋検証します。
  *****************************************************************************/
 import { normalizeTemporaryUserEmail } from "./temporaryUserCreationPolicy.js";

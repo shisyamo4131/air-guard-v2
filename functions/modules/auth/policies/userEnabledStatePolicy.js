@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/userEnabledStatePolicy.js
+ * @file ./functions/modules/auth/policies/userEnabledStatePolicy.js
  * @description 利用者の有効状態変更に関するポリシーを検証するためのモジュールです。
  * @method assertUserEnabledStateChangePolicy - 利用者の有効状態変更に関するポリシーを検証します。
  *****************************************************************************/

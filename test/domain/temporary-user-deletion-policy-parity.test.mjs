@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { evaluateClientTemporaryUserDeletion } from "../../utils/auth/policies/temporaryUserDeletionPolicy.js";
-import { assertTemporaryUserCanBeDeleted } from "../../functions/modules/auth/temporaryUserDeletionPolicy.js";
-import { assertActorCanManageTemporaryUsers } from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
+import { assertTemporaryUserCanBeDeleted } from "../../functions/modules/auth/policies/temporaryUserDeletionPolicy.js";
+import { assertActorCanManageTemporaryUsers } from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
 
 function createActor(overrides = {}) {
   return {

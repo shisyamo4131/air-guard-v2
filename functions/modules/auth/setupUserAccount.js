@@ -8,7 +8,7 @@ import {
   resolveUserAccountSetupIdentity,
   resolveUserAccountSetupRegistration,
   resolveUserAccountSetupReservation,
-} from "./userAccountSetupPolicy.js";
+} from "./policies/userAccountSetupPolicy.js";
 
 export const USER_ACCOUNT_SETUP_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",

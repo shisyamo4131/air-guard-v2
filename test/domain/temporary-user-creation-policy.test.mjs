@@ -10,7 +10,7 @@ import {
   resolveStandaloneTemporaryUserData,
   TEMPORARY_USER_CREATION_POLICY_ERROR_CODES,
   TemporaryUserCreationPolicyError,
-} from "../../functions/modules/auth/temporaryUserCreationPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserCreationPolicy.js";
 
 const COMPANY_ID = "company-a";
 

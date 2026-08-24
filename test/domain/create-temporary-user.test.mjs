@@ -10,8 +10,8 @@ import {
   CREATE_TEMPORARY_USER_ERROR_CODES,
   CreateTemporaryUserError,
 } from "../../functions/modules/auth/createTemporaryUser.js";
-import { TemporaryUserCreationPolicyError } from "../../functions/modules/auth/temporaryUserCreationPolicy.js";
-import { TemporaryUserManagementPolicyError } from "../../functions/modules/auth/temporaryUserManagementPolicy.js";
+import { TemporaryUserCreationPolicyError } from "../../functions/modules/auth/policies/temporaryUserCreationPolicy.js";
+import { TemporaryUserManagementPolicyError } from "../../functions/modules/auth/policies/temporaryUserManagementPolicy.js";
 
 const COMPANY_ID = "company-a";
 const ACTOR_UID = "actor-a";

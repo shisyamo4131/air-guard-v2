@@ -7,7 +7,7 @@ import {
   assertAuthUserCompany,
   assertUserDocumentCompany,
   hasAuthRelevantChanges,
-} from "./userAuthCompanyPolicy.js";
+} from "./policies/userAuthCompanyPolicy.js";
 
 export const USER_AUTH_SYNC_RESULTS = Object.freeze({
   UPDATED: "updated",

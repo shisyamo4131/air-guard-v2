@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/temporaryUserDeletionPolicy.js
+ * @file ./functions/modules/auth/policies/temporaryUserDeletionPolicy.js
  * @description 仮登録Userを削除対象にできる状態であることを検証します。
  * @method assertTemporaryUserCanBeDeleted
  *****************************************************************************/

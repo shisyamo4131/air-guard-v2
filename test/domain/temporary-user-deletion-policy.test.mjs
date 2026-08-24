@@ -5,7 +5,7 @@ import {
   assertTemporaryUserCanBeDeleted,
   TEMPORARY_USER_DELETION_POLICY_ERROR_CODES,
   TemporaryUserDeletionPolicyError,
-} from "../../functions/modules/auth/temporaryUserDeletionPolicy.js";
+} from "../../functions/modules/auth/policies/temporaryUserDeletionPolicy.js";
 
 const COMPANY_ID = "company-a";
 

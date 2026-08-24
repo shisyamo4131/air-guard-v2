@@ -1,5 +1,5 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/temporaryUserManagementPolicy.js
+ * @file ./functions/modules/auth/policies/temporaryUserManagementPolicy.js
  * @description 仮登録Userを管理できる実行者であることを検証します。
  * @method assertActorCanManageTemporaryUsers
  *****************************************************************************/

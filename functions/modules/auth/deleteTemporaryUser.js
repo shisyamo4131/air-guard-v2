@@ -3,10 +3,10 @@
  * @description 検証済みの実行者が同じ会社の仮登録Userを削除します。
  * @method deleteTemporaryUser
  *****************************************************************************/
-import { assertTemporaryUserCanBeDeleted } from "./temporaryUserDeletionPolicy.js";
-import { assertActorCanManageTemporaryUsers } from "./temporaryUserManagementPolicy.js";
+import { assertTemporaryUserCanBeDeleted } from "./policies/temporaryUserDeletionPolicy.js";
+import { assertActorCanManageTemporaryUsers } from "./policies/temporaryUserManagementPolicy.js";
 import { createUserEmailReservationId } from "./createTemporaryUser.js";
-import { TemporaryUserCreationPolicyError } from "./temporaryUserCreationPolicy.js";
+import { TemporaryUserCreationPolicyError } from "./policies/temporaryUserCreationPolicy.js";
 
 export const DELETE_TEMPORARY_USER_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",

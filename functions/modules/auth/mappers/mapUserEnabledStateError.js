@@ -1,20 +1,20 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapUserEnabledStateError.js
+ * @file ./functions/modules/auth/mappers/mapUserEnabledStateError.js
  * @description User有効状態変更時の内部エラーを安全なCallable応答へ変換します。
  * @method mapUserEnabledStateError - 内部エラーをcodeとmessageへ変換します。
  *****************************************************************************/
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "./userAuthCompanyPolicy.js";
+} from "../policies/userAuthCompanyPolicy.js";
 import {
   USER_ENABLED_STATE_POLICY_ERROR_CODES,
   UserEnabledStatePolicyError,
-} from "./userEnabledStatePolicy.js";
+} from "../policies/userEnabledStatePolicy.js";
 import {
   USER_ENABLED_STATE_CHANGE_ERROR_CODES,
   UserEnabledStateChangeError,
-} from "./changeUserEnabledState.js";
+} from "../changeUserEnabledState.js";
 import { mapCallableAuthIdentityError } from "./mapCallableAuthIdentityError.js";
 
 const INTERNAL_ERROR_RESPONSE = Object.freeze({

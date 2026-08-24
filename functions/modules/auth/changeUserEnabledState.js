@@ -3,8 +3,8 @@
  * @description 利用者の有効状態を変更するためのモジュールです。
  * @method changeUserEnabledState 利用者の有効状態を変更します。
  *****************************************************************************/
-import { assertAuthUserCompany } from "./userAuthCompanyPolicy.js";
-import { assertUserEnabledStateChangePolicy } from "./userEnabledStatePolicy.js";
+import { assertAuthUserCompany } from "./policies/userAuthCompanyPolicy.js";
+import { assertUserEnabledStateChangePolicy } from "./policies/userEnabledStatePolicy.js";
 
 export const USER_ENABLED_STATE_CHANGE_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",

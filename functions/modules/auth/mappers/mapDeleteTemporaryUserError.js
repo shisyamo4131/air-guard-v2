@@ -1,25 +1,25 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapDeleteTemporaryUserError.js
+ * @file ./functions/modules/auth/mappers/mapDeleteTemporaryUserError.js
  * @description 仮登録User削除時の内部エラーを安全なCallable応答へ変換します。
  * @method mapDeleteTemporaryUserError
  *****************************************************************************/
 import {
   DELETE_TEMPORARY_USER_ERROR_CODES,
   DeleteTemporaryUserError,
-} from "./deleteTemporaryUser.js";
+} from "../deleteTemporaryUser.js";
 import { mapCallableAuthIdentityError } from "./mapCallableAuthIdentityError.js";
 import {
   TEMPORARY_USER_DELETION_POLICY_ERROR_CODES,
   TemporaryUserDeletionPolicyError,
-} from "./temporaryUserDeletionPolicy.js";
+} from "../policies/temporaryUserDeletionPolicy.js";
 import {
   TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES,
   TemporaryUserManagementPolicyError,
-} from "./temporaryUserManagementPolicy.js";
+} from "../policies/temporaryUserManagementPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "./userAuthCompanyPolicy.js";
+} from "../policies/userAuthCompanyPolicy.js";
 
 const INTERNAL_ERROR_RESPONSE = Object.freeze({
   code: "internal",

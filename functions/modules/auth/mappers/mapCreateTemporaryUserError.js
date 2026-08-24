@@ -1,24 +1,24 @@
 /*****************************************************************************
- * @file ./functions/modules/auth/mapCreateTemporaryUserError.js
+ * @file ./functions/modules/auth/mappers/mapCreateTemporaryUserError.js
  * @description 仮登録User作成時の内部エラーを安全なCallable応答へ変換します。
  *****************************************************************************/
 import {
   CREATE_TEMPORARY_USER_ERROR_CODES,
   CreateTemporaryUserError,
-} from "./createTemporaryUser.js";
+} from "../createTemporaryUser.js";
 import { mapCallableAuthIdentityError } from "./mapCallableAuthIdentityError.js";
 import {
   TEMPORARY_USER_CREATION_POLICY_ERROR_CODES,
   TemporaryUserCreationPolicyError,
-} from "./temporaryUserCreationPolicy.js";
+} from "../policies/temporaryUserCreationPolicy.js";
 import {
   TEMPORARY_USER_MANAGEMENT_POLICY_ERROR_CODES,
   TemporaryUserManagementPolicyError,
-} from "./temporaryUserManagementPolicy.js";
+} from "../policies/temporaryUserManagementPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "./userAuthCompanyPolicy.js";
+} from "../policies/userAuthCompanyPolicy.js";
 
 const RESPONSES = Object.freeze({
   INTERNAL: {
