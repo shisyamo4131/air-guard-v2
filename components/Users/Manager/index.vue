@@ -19,6 +19,7 @@ import { useBaseManager } from "@/composables/useBaseManager";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
+import { useUserFieldUpdates } from "@/composables/application/user/useUserFieldUpdates";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -43,6 +44,11 @@ const { enableUser, disableUser } = useAuthFunctions();
 const { deleteTemporaryUser, canDelete } = useTemporaryUserDeletion();
 const { createStandaloneTemporaryUser, canCreate, canAssignRoles } =
   useTemporaryUserCreation();
+const {
+  canManageUserFields,
+  canUpdateUserRoles,
+  updateManagedUser,
+} = useUserFieldUpdates();
 const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
@@ -142,6 +148,29 @@ async function handleCreate(item) {
 async function handleDelete(item) {
   await deleteTemporaryUser(item);
 }
+
+/** User管理fieldだけを専用Callableへ送信します。 */
+async function handleUpdate(item) {
+  await updateManagedUser(item);
+}
+
+function resolveExcludedKeys(item) {
+  if (!item.docId) {
+    return canAssignRoles() ? [] : ["roles"];
+  }
+
+  return [
+    "email",
+    "displayName",
+    "employeeId",
+    "disabled",
+    "companyId",
+    "isAdmin",
+    "isTemporary",
+    "tagSize",
+    ...(canUpdateUserRoles(item) ? [] : ["roles"]),
+  ];
+}
 </script>
 
 <template>
@@ -155,14 +184,10 @@ async function handleDelete(item) {
       }
     "
     :handle-create="handleCreate"
-    :handle-update="(item) => item.update(item)"
+    :handle-update="handleUpdate"
     :handle-delete="handleDelete"
     :disable-delete="(item) => !canDelete(item)"
-    :excluded-keys="
-      (item) => {
-        return item.isAdmin ? ['roles'] : [];
-      }
-    "
+    :excluded-keys="resolveExcludedKeys"
   >
     <!-- 役割選択 UI -->
     <template #[`input.roles`]="inputProps">
@@ -234,7 +259,7 @@ async function handleDelete(item) {
         :hide-default-footer="props.hideDefaultFooter"
         :items-per-page="props.itemsPerPage"
         :show-create="props.showCreate && canCreate()"
-        show-edit
+        :show-edit="() => canManageUserFields()"
         @click:create="() => tableProps.toCreate()"
         @click:edit="(item) => tableProps.toUpdate(item)"
       >

@@ -14,6 +14,9 @@ const PUBLIC_CALLABLES = [
   "rebuildAllHistories",
   "rebuildSecurityReportIndexes",
   "setupUserAccount",
+  "updateOwnUserProfile",
+  "updateUserNotificationSettings",
+  "updateUserRoles",
 ];
 
 test("dedicated Functions entrypoint exports Callables without background triggers", async () => {

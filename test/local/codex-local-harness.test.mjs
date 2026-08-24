@@ -155,6 +155,18 @@ async function seedRegisteredUser({
   });
 }
 
+async function readRegisteredUser(uid, companyId = CODEX_LOCAL_COMPANIES.primary.id) {
+  let userData;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const snapshot = await getDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", uid),
+    );
+    assert.equal(snapshot.exists(), true);
+    userData = snapshot.data();
+  });
+  return userData;
+}
+
 async function seedEmailReservation({ email, companyId, userId }) {
   const reservationId = createUserEmailReservationId(email);
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -1257,6 +1269,9 @@ test("API index exports every public Callable without internal request helpers",
     "rebuildAllHistories",
     "rebuildSecurityReportIndexes",
     "setupUserAccount",
+    "updateOwnUserProfile",
+    "updateUserNotificationSettings",
+    "updateUserRoles",
   ];
 
   for (const callable of publicCallables) {
@@ -1321,6 +1336,9 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     disableUser,
     enableUser,
     setupUserAccount,
+    updateOwnUserProfile,
+    updateUserNotificationSettings,
+    updateUserRoles,
   } = await loadRebuildApis();
 
   for (const callable of [
@@ -1331,10 +1349,172 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     disableUser,
     enableUser,
     setupUserAccount,
+    updateOwnUserProfile,
+    updateUserNotificationSettings,
+    updateUserRoles,
   ]) {
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("own profile Callable updates only displayName and tagSize", async () => {
+  const { updateOwnUserProfile } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb05-own-profile",
+    roles: ["controller"],
+  });
+
+  const result = await updateOwnUserProfile.run(
+    actorCallableRequest({
+      actor,
+      data: { displayName: "新表示", tagSize: "LARGE" },
+    }),
+  );
+  assert.deepEqual(result, { success: true, userId: actor.uid });
+
+  const user = await readRegisteredUser(actor.uid);
+  assert.equal(user.displayName, "新表示");
+  assert.equal(user.tagSize, "LARGE");
+  assert.equal(user.email, actor.email);
+  assert.deepEqual(user.roles, ["controller"]);
+  assert.equal(user.isAdmin, false);
+  assert.equal(user.isTemporary, false);
+  assert.equal(user.disabled, false);
+});
+
+test("managed notification Callable updates only three notification flags", async () => {
+  const { updateUserNotificationSettings } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb05-notification-manager",
+  });
+  const targetUid = "uwb05-notification-target";
+  await seedRegisteredUser({
+    uid: targetUid,
+    isAdmin: false,
+    email: `${targetUid}@codex-test.invalid`,
+    displayName: "通知対象",
+    roles: ["controller"],
+  });
+
+  const result = await updateUserNotificationSettings.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        targetUserId: targetUid,
+        receiveConfirmedArrangementNotification: true,
+        receiveArrivedArrangementNotification: false,
+        receiveLeavedArrangementNotification: true,
+      },
+    }),
+  );
+  assert.deepEqual(result, { success: true, userId: targetUid });
+
+  const user = await readRegisteredUser(targetUid);
+  assert.equal(user.receiveConfirmedArrangementNotification, true);
+  assert.equal(user.receiveArrivedArrangementNotification, false);
+  assert.equal(user.receiveLeavedArrangementNotification, true);
+  assert.equal(user.displayName, "通知対象");
+  assert.equal(user.email, `${targetUid}@codex-test.invalid`);
+  assert.deepEqual(user.roles, ["controller"]);
+});
+
+test("managed role Callable accepts known presets and protects other fields", async () => {
+  const { updateUserRoles } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb05-role-manager",
+  });
+  const targetUid = "uwb05-role-target";
+  await seedRegisteredUser({
+    uid: targetUid,
+    isAdmin: false,
+    email: `${targetUid}@codex-test.invalid`,
+    displayName: "役割対象",
+    roles: ["controller"],
+  });
+
+  const result = await updateUserRoles.run(
+    actorCallableRequest({
+      actor,
+      data: { targetUserId: targetUid, roles: ["human-resource", "labor"] },
+    }),
+  );
+  assert.deepEqual(result, { success: true, userId: targetUid });
+
+  const user = await readRegisteredUser(targetUid);
+  assert.deepEqual(user.roles, ["human-resource", "labor"]);
+  assert.equal(user.displayName, "役割対象");
+  assert.equal(user.email, `${targetUid}@codex-test.invalid`);
+  assert.equal(user.isAdmin, false);
+});
+
+test("provision-only actor cannot update managed User fields", async () => {
+  const { updateUserNotificationSettings, updateUserRoles } =
+    await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb05-provision-only",
+    roles: ["human-resource"],
+  });
+  const targetUid = "uwb05-provision-only-target";
+  await seedRegisteredUser({
+    uid: targetUid,
+    isAdmin: false,
+    roles: [],
+  });
+
+  await assertCallableError(
+    updateUserNotificationSettings.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          targetUserId: targetUid,
+          receiveConfirmedArrangementNotification: false,
+          receiveArrivedArrangementNotification: false,
+          receiveLeavedArrangementNotification: false,
+        },
+      }),
+    ),
+    "permission-denied",
+  );
+  await assertCallableError(
+    updateUserRoles.run(
+      actorCallableRequest({
+        actor,
+        data: { targetUserId: targetUid, roles: ["controller"] },
+      }),
+    ),
+    "permission-denied",
+  );
+});
+
+test("field Callables reject protected-field injection and self role changes", async () => {
+  const { updateOwnUserProfile, updateUserRoles } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb05-negative-manager",
+  });
+
+  await assertCallableError(
+    updateOwnUserProfile.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          displayName: "利用者",
+          tagSize: "MEDIUM",
+          isAdmin: true,
+        },
+      }),
+    ),
+    "invalid-argument",
+  );
+  await assertCallableError(
+    updateUserRoles.run(
+      actorCallableRequest({
+        actor,
+        data: { targetUserId: actor.uid, roles: [] },
+      }),
+    ),
+    "failed-precondition",
+  );
 });
 
 test("standalone temporary User creation writes canonical User and email reservation", async () => {

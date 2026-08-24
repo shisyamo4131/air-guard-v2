@@ -125,6 +125,30 @@ export const useAuthFunctions = () => {
     return result.data;
   };
 
+  /** 自分の表示名とタグサイズを更新します。 */
+  const updateOwnUserProfile = async (data) => {
+    const callable = httpsCallable($functions, "updateOwnUserProfile");
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** 管理対象Userの通知受信設定を更新します。 */
+  const updateUserNotificationSettings = async (data) => {
+    const callable = httpsCallable(
+      $functions,
+      "updateUserNotificationSettings",
+    );
+    const result = await callable(data);
+    return result.data;
+  };
+
+  /** 管理対象Userのroleを更新します。 */
+  const updateUserRoles = async (data) => {
+    const callable = httpsCallable($functions, "updateUserRoles");
+    const result = await callable(data);
+    return result.data;
+  };
+
   return {
     checkEmailAvailability,
     createAdminAccount,
@@ -136,5 +160,8 @@ export const useAuthFunctions = () => {
     disableUser,
     enableUser,
     changeAdminUser,
+    updateOwnUserProfile,
+    updateUserNotificationSettings,
+    updateUserRoles,
   };
 };

@@ -15,3 +15,8 @@ export { disableUser, enableUser } from "./changeUserEnabledState.js";
 export { rebuildAllHistories } from "./rebuildAllHistories.js";
 export { rebuildSecurityReportIndexes } from "./rebuildSecurityReportIndexes.js";
 export { setupUserAccount } from "./setupUserAccount.js";
+export {
+  updateOwnUserProfile,
+  updateUserNotificationSettings,
+  updateUserRoles,
+} from "./updateUserFields.js";

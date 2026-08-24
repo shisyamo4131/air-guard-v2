@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜04完了、次はUWB-05）
+- 状態: Active（UWB-01〜04完了、UWB-05は自動検証済み・利用者受入れ待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -227,7 +227,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-05 通常プロフィールと本人設定のfield境界
 
-- 状態: Ready（UWB-04完了、field契約承認済み、実装未着手）
+- 状態: In verification（実装・自動検証完了、利用者によるapplication file・local UI受入れ待ち）
 - 主な影響画面: `components/Users/Manager/index.vue`、User設定の呼出し元
 
 #### 確認済みの現行挙動
@@ -243,16 +243,16 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] 本人が編集できるfieldを`displayName`と`tagSize`に限定する契約を利用者が承認した。
 - [x] 通知受信3フラグを`users:write`管理fieldとする契約を利用者が承認した。
 - [x] role値を既知presetだけに限定し、`users:write`を持つmanagerまたは会社管理者が他の非管理者Userを変更できる契約を利用者が承認した。自己role変更と会社管理者targetは拒否する。
-- [ ] 本人設定、通知設定、role変更をfield別の専用Callableへ分離する。
-- [ ] 各Callableで許可field以外のemail、companyId、isAdmin、isTemporary、disabled、roles等の混入を拒否する。
-- [ ] `tagSize`と通知受信flagの型・許容値を検証する。
-- [ ] FireModelのfull updateで非対象fieldが再保存されないことを確認する。
-- [ ] 必要なら管理者更新と本人設定を別Callableへ分離する。
+- [x] 本人設定、通知設定、role変更をfield別の専用Callableへ分離する。
+- [x] 各Callableで許可field以外のemail、companyId、isAdmin、isTemporary、disabled、roles等の混入を拒否する。
+- [x] `tagSize`と通知受信flagの型・許容値を検証する。
+- [x] User一覧と本人設定からFireModelのfull updateを除き、非対象fieldを再保存しないpartial updateへ置換する。
+- [x] 管理者による通知・role更新と本人による`displayName`・`tagSize`更新を別Callableへ分離する。
 
 #### 完了条件
 
-- [ ] 本人設定が他Userやserver-only fieldへ作用しない。
-- [ ] 管理者プロフィール編集がAuth連携fieldを暗黙変更しない。
+- [x] 本人設定が他Userやserver-only fieldへ作用しないことをdomain単体testと専用Emulatorで確認する。
+- [x] 管理者による通知・role編集がAuth連携fieldを暗黙変更しないことをdomain単体testと専用Emulatorで確認する。
 - [ ] 既存設定UIの表示・保存・再読込みが維持される。
 - [ ] 利用者が各application implementation fileを確認している。
 - [ ] 単体testと対象UIのlocal確認が成功している。
@@ -409,3 +409,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-21 | UWB-02R〜04R automated | `users:provision`を新設し、managerへ両User permission、human-resourceへprovisionだけを付与。provision-only actorのroles指定をclient/serverで拒否 | 本変更 | domain単体test 467件、SFC compile、専用Emulator 74件。role付き作成はpermission-denied、roleなし作成は成功。全専用port閉鎖、利用者用saved-data不変。human-resource UI再受入れは未実施 |
 | 2026-08-21 | UWB-04R UI completed | 一般User signupの通常submitがpage reloadで中断される問題と、provision-only Employee User dialogにgeneric role fieldが残る問題を修正。human-resourceの正規signup、Employee作成、roleなし仮登録Userの作成・削除を製品UIで再受入れ | 本変更 | domain単体test 468件、変更2 SFC compile、専用Emulator 74件。作成後の`roles=[]`、Employee link、両予約、Auth不存在と、削除後のUser・両予約・Auth不存在、Employee残存をbackend assertion。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |
 | 2026-08-24 | UWB-04 final completed | 利用者が最小確認項目の通過を報告。Functions authのpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ整理し、export名と挙動を維持 | 本変更 | 全domain単体test 468件、専用Emulator suite 74件、project-owned・managed governance validator、`git diff --check` pass。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |
+| 2026-08-24 | UWB-05 automated | 本人プロフィール、管理対象Userの通知3フラグ、他の非管理者Userのroleを3つの専用Callableへ分離。exact allowlistとstrict preset認可をserverで強制し、User一覧・本人設定のFireModel full updateを除去 | 本変更 | 全domain単体test 490件（対象SFC 2件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、saved-data 7 files・3492 bytes不変。利用者によるapplication file・local UI受入れは未完了 |
