@@ -20,6 +20,11 @@ import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
 import { useUserFieldUpdates } from "@/composables/application/user/useUserFieldUpdates";
+import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
+import {
+  canChangeUserEnabledState,
+  canTransferCompanyAdmin,
+} from "@/utils/auth/policies/userManagementUiPolicy";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -49,7 +54,8 @@ const {
   canUpdateUserRoles,
   updateManagedUser,
 } = useUserFieldUpdates();
-const { attrs, isLoading, router, logger } = useBaseManager("UsersManager");
+const { run, isPending } = useUserOperationState();
+const { attrs, router, logger } = useBaseManager("UsersManager");
 
 /*****************************************************************************
  * REACTIVE OBJECTS
@@ -100,17 +106,17 @@ onUnmounted(() => {
  * @return {Promise<void>} - 無効化処理が完了するまでの Promise
  */
 async function handleDisableUser(user) {
-  const key = loadings.add("ユーザーを無効化しています...");
-  try {
-    isLoading.value = true;
-    await disableUser({ uid: user.docId });
-    messages.add("ユーザーアカウントを無効化しました");
-  } catch (error) {
-    logger.error({ error });
-  } finally {
-    isLoading.value = false;
-    loadings.remove(key);
-  }
+  return run("disable", user.docId, async () => {
+    const key = loadings.add("ユーザーを無効化しています...");
+    try {
+      await disableUser({ uid: user.docId });
+      messages.add("ユーザーアカウントを無効化しました");
+    } catch (error) {
+      logger.error({ error });
+    } finally {
+      loadings.remove(key);
+    }
+  });
 }
 
 /**
@@ -119,17 +125,17 @@ async function handleDisableUser(user) {
  * @return {Promise<void>} - 有効化処理が完了するまでの Promise
  */
 async function handleEnableUser(user) {
-  const key = loadings.add("ユーザーを有効化しています...");
-  try {
-    isLoading.value = true;
-    await enableUser({ uid: user.docId });
-    messages.add("ユーザーアカウントを有効化しました");
-  } catch (error) {
-    logger.error({ error });
-  } finally {
-    isLoading.value = false;
-    loadings.remove(key);
-  }
+  return run("enable", user.docId, async () => {
+    const key = loadings.add("ユーザーを有効化しています...");
+    try {
+      await enableUser({ uid: user.docId });
+      messages.add("ユーザーアカウントを有効化しました");
+    } catch (error) {
+      logger.error({ error });
+    } finally {
+      loadings.remove(key);
+    }
+  });
 }
 
 /**
@@ -138,7 +144,9 @@ async function handleEnableUser(user) {
  * @param item
  */
 async function handleCreate(item) {
-  await createStandaloneTemporaryUser(item);
+  return run("create", "standalone", () =>
+    createStandaloneTemporaryUser(item),
+  );
 }
 
 /**
@@ -146,12 +154,37 @@ async function handleCreate(item) {
  * @param {User} item - 削除対象の仮登録User
  */
 async function handleDelete(item) {
-  await deleteTemporaryUser(item);
+  return run("delete", item.docId, () => deleteTemporaryUser(item));
 }
 
 /** User管理fieldだけを専用Callableへ送信します。 */
 async function handleUpdate(item) {
-  await updateManagedUser(item);
+  return run("update", item.docId, () => updateManagedUser(item));
+}
+
+function canChangeEnabledState(targetUser) {
+  return canChangeUserEnabledState({
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    actorUser: auth.user,
+    targetUser,
+  });
+}
+
+function isEnabledStatePending(targetUser) {
+  if (!targetUser?.docId) return false;
+  return (
+    isPending("enable", targetUser.docId) ||
+    isPending("disable", targetUser.docId)
+  );
+}
+
+function canTransferAdmin() {
+  return canTransferCompanyAdmin({
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    actorUser: auth.user,
+  });
 }
 
 function resolveExcludedKeys(item) {
@@ -237,7 +270,7 @@ function resolveExcludedKeys(item) {
           icon="mdi-plus"
           @click="() => tableProps.toCreate()"
         />
-        <v-menu v-model="toolberMenu">
+        <v-menu v-if="canTransferAdmin()" v-model="toolberMenu">
           <template #activator="{ props: activatorProps }">
             <v-btn v-bind="activatorProps" icon="mdi-dots-vertical" />
           </template>
@@ -265,6 +298,9 @@ function resolveExcludedKeys(item) {
       >
         <template #card-append="{ item }">
           <v-btn
+            v-if="canChangeEnabledState(item)"
+            :disabled="isEnabledStatePending(item)"
+            :loading="isEnabledStatePending(item)"
             icon="mdi-dots-vertical"
             size="small"
             @click="(event) => openUserCardMenu(event, item)"
@@ -275,6 +311,7 @@ function resolveExcludedKeys(item) {
         v-model="userCardMenu"
         :target="userCardMenuTarget"
         :user="userCardMenuTargetUser"
+        :loading="isEnabledStatePending(userCardMenuTargetUser)"
         :offset="[-8, -12]"
         location="bottom start"
         scroll-strategy="close"

@@ -11,6 +11,7 @@ import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
+import { useUserOperationState } from "@/composables/application/user/useUserOperationState";
 
 const { permission, refreshPermission, requestPermission, registFCMToken } =
   useNotification();
@@ -19,9 +20,11 @@ const loadings = useLoadingsStore();
 const messages = useMessagesStore();
 const logger = useLogger("UserSetting", useErrorsStore());
 const { updateProfile } = useUserSettingsActions();
+const { run, isPending } = useUserOperationState();
 const dialog = ref(false);
 const form = ref(null);
 const model = reactive({ displayName: "", tagSize: "" });
+const isSaving = computed(() => isPending("profile", auth.uid || "self"));
 
 const tagSizeOptions = Object.values(TAG_SIZE_VALUES).map(({ value, title }) => ({
   value,
@@ -71,22 +74,25 @@ async function handleRequestPermission() {
 }
 
 async function handleSaveProfile() {
+  if (isSaving.value) return;
   const validation = await form.value?.validate();
   if (!validation?.valid) return;
 
-  const loadingKey = loadings.add("ユーザー設定を保存しています...");
-  try {
-    await updateProfile({
-      displayName: model.displayName,
-      tagSize: model.tagSize,
-    });
-    messages.add("ユーザー設定を保存しました。");
-    dialog.value = false;
-  } catch (error) {
-    logger.error({ error });
-  } finally {
-    loadings.remove(loadingKey);
-  }
+  return run("profile", auth.uid || "self", async () => {
+    const loadingKey = loadings.add("ユーザー設定を保存しています...");
+    try {
+      await updateProfile({
+        displayName: model.displayName,
+        tagSize: model.tagSize,
+      });
+      messages.add("ユーザー設定を保存しました。");
+      dialog.value = false;
+    } catch (error) {
+      logger.error({ error });
+    } finally {
+      loadings.remove(loadingKey);
+    }
+  });
 }
 </script>
 
@@ -129,8 +135,18 @@ async function handleSaveProfile() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn text="キャンセル" @click="dialog = false" />
-        <v-btn color="primary" text="保存" @click="handleSaveProfile" />
+        <v-btn
+          :disabled="isSaving"
+          text="キャンセル"
+          @click="dialog = false"
+        />
+        <v-btn
+          :disabled="isSaving"
+          :loading="isSaving"
+          color="primary"
+          text="保存"
+          @click="handleSaveProfile"
+        />
       </v-card-actions>
     </v-card>
   </v-dialog>

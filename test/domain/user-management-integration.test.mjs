@@ -1,0 +1,137 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
+
+import {
+  getNavigationItems,
+  isPageAllowed,
+  isPageConfigAllowed,
+} from "../../utils/pageSettings.js";
+
+const components = [
+  "components/Users/Manager/index.vue",
+  "components/Users/Manager/CardMenu.vue",
+  "components/Employee/UserManager.vue",
+  "components/User/Setting/index.vue",
+  "components/organisms/ChangeAdminUserDialog/index.vue",
+  "components/AppNavigationDrawer.vue",
+];
+
+function navigationValues(items) {
+  return items.flatMap((item) => [
+    item.value,
+    ...navigationValues(item.children ?? []),
+  ]);
+}
+
+test("User settings route and navigation require admin or strict preset permission", () => {
+  const managerContext = { presetRoles: ["manager"], isAdmin: false };
+  const directContext = { presetRoles: ["users:write"], isAdmin: false };
+  const superUserContext = { presetRoles: [], isAdmin: false };
+  const adminContext = { presetRoles: [], isAdmin: true };
+
+  assert.equal(
+    isPageAllowed("/settings/users", ["manager"], managerContext),
+    true,
+  );
+  assert.equal(
+    isPageAllowed("/settings/users", ["users:write"], directContext),
+    false,
+  );
+  assert.equal(
+    isPageAllowed("/settings/users", ["super-user"], superUserContext),
+    false,
+  );
+  assert.equal(isPageAllowed("/settings/users", ["admin"], adminContext), true);
+
+  assert.equal(
+    navigationValues(getNavigationItems(["manager"], managerContext)).includes(
+      "users-setting",
+    ),
+    true,
+  );
+  assert.equal(
+    navigationValues(
+      getNavigationItems(["users:write"], directContext),
+    ).includes("users-setting"),
+    false,
+  );
+  assert.equal(
+    navigationValues(
+      getNavigationItems(["super-user"], superUserContext),
+    ).includes("users-setting"),
+    false,
+  );
+});
+
+test("general page access retains wildcard and direct-permission behavior", () => {
+  const config = { roles: ["sites:write"] };
+  assert.equal(isPageConfigAllowed(config, ["super-user"]), true);
+  assert.equal(isPageConfigAllowed(config, ["sites:write"]), true);
+  assert.equal(isPageConfigAllowed(config, ["controller"]), true);
+  assert.equal(isPageConfigAllowed(config, ["human-resource"]), false);
+});
+
+test("User operation components use application single-flight boundaries", async () => {
+  const sources = await Promise.all(
+    components.slice(0, 5).map((file) =>
+      readFile(new URL(`../../${file}`, import.meta.url), "utf8"),
+    ),
+  );
+  for (const index of [0, 2, 3, 4]) {
+    assert.match(sources[index], /useUserOperationState/);
+  }
+  assert.match(sources[0], /run\("create", "standalone"/);
+  assert.match(sources[0], /run\("update", item\.docId/);
+  assert.match(sources[0], /run\("delete", item\.docId/);
+  assert.match(sources[0], /run\("enable", user\.docId/);
+  assert.match(sources[0], /run\("disable", user\.docId/);
+  assert.match(sources[2], /run\("create", `employee:/);
+  assert.match(sources[3], /run\("profile", auth\.uid \|\| "self"/);
+  assert.match(sources[4], /run\("transfer-admin", auth\.uid \|\| "self"/);
+});
+
+test("User operation UI does not perform direct Firestore writes", async () => {
+  const files = [
+    ...components.slice(0, 5),
+    "composables/application/user/useTemporaryUserCreation.js",
+    "composables/application/user/useTemporaryUserDeletion.js",
+    "composables/application/user/useUserFieldUpdates.js",
+    "composables/application/user/useUserSettingsActions.js",
+  ];
+  for (const file of files) {
+    const source = await readFile(
+      new URL(`../../${file}`, import.meta.url),
+      "utf8",
+    );
+    for (const forbidden of [
+      "updateDoc(",
+      "setDoc(",
+      "addDoc(",
+      "writeBatch(",
+      "item.create(",
+      "item.update(",
+      "item.delete(",
+      "auth.user.updateProperties(",
+    ]) {
+      assert.equal(source.includes(forbidden), false, `${file}: ${forbidden}`);
+    }
+  }
+});
+
+for (const file of components) {
+  test(`${file} compiles for the UWB-06 integration`, async () => {
+    const url = new URL(`../../${file}`, import.meta.url);
+    const source = await readFile(url, "utf8");
+    const { descriptor, errors } = parse(source, { filename: url.pathname });
+    assert.deepEqual(errors, []);
+    compileScript(descriptor, { id: file });
+    const result = compileTemplate({
+      id: file,
+      filename: url.pathname,
+      source: descriptor.template.content,
+    });
+    assert.deepEqual(result.errors, []);
+  });
+}

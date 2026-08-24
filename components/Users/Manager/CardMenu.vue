@@ -19,6 +19,7 @@ import { useDefaults } from "vuetify";
  *****************************************************************************/
 const _props = defineProps({
   user: { type: Object, default: null }, // メニューの対象となるユーザーオブジェクト
+  loading: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "UserCardMenu");
 const emit = defineEmits(["click:enable", "click:disable"]);
@@ -45,7 +46,7 @@ const menuItems = computed(() => {
     <!-- `props.user` が null または `isAdmin` の場合はリスト自体を無効化 -->
     <v-list
       class="py-0"
-      :disabled="!props.user || props.user?.isAdmin"
+      :disabled="props.loading || !props.user || props.user?.isAdmin"
       :items="menuItems"
       slim
       density="compact"

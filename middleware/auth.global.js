@@ -94,7 +94,10 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return;
   }
 
-  const allowed = isPageAllowed(targetPath, userRoles);
+  const allowed = isPageAllowed(targetPath, userRoles, {
+    presetRoles: auth.user.roles,
+    isAdmin: auth.isAdmin,
+  });
 
   // 権限がない場合は /dashboard へリダイレクト
   if (!allowed) {

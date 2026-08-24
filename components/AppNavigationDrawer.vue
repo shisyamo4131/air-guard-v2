@@ -11,7 +11,10 @@ const route = useRoute();
  * Generate navigation items based on user roles using the new function
  */
 const navigationItems = computed(() => {
-  return getNavigationItems(auth.roles);
+  return getNavigationItems(auth.roles, {
+    presetRoles: auth.user.roles,
+    isAdmin: auth.isAdmin,
+  });
 });
 
 const normalizeRouteName = computed(() =>

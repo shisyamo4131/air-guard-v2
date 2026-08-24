@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜05完了、次はUWB-06）
+- 状態: Active（UWB-01〜05完了、UWB-06は自動検証済み・利用者UI受入れ待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -259,19 +259,19 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-06 User管理UIの統合回帰
 
-- 状態: Not started
+- 状態: In verification（実装・自動検証完了、利用者UI受入れ待ち）
 - 主な影響画面: User一覧、従業員詳細、管理者移譲、本人設定
 
 #### 作業
 
-- [ ] 作成・編集・削除・有効化・無効化・管理者移譲のloadingを独立管理する。
-- [ ] 同一操作の二重送信を防止する。
+- [x] 作成・編集・削除・有効化・無効化・管理者移譲のloadingをoperation・target単位で独立管理する。
+- [x] 同一operation・targetの二重送信をsingle-flightで防止し、異なる操作・対象は独立して実行できるようにする。
 - [ ] error後にdialog、editor、一覧、対象Userが正しい状態へ戻ることを確認する。
-- [ ] UIの非表示・disabledだけを認可境界として扱っていないことを確認する。
+- [x] UIの非表示・disabledだけを認可境界として扱わず、既存のCallable・Firestore Rulesによるserver認可を維持する。
 - [ ] keyboard、focus、確認dialog、取消操作への回帰がないことを確認する。
-- [ ] 共通UI packageの変更が必要な場合は、別repository境界として事前承認を得る。
-- [ ] 現行`hasPermission`利用箇所を監査し、super-user wildcard、直接permission、未知roleを許容する一般判定と、既知User presetだけを許可する`hasPresetPermission`のどちらが必要か分類する。
-- [ ] 認証・認可actionの表示判定でstrict presetが必要な箇所を`useAuthStore.hasPresetPermission`へ置換し、route、navigation、component、server policyの許可結果を一致させる。
+- [x] 共通UI packageを変更せずAirGuardV2内で完結する。別repositoryへの承認は不要だった。
+- [x] 現行`hasPermission`利用箇所を監査し、一般page判定はsuper-user wildcard・直接permissionを許容する従来契約、User管理route・navigation・actionは既知User presetまたは会社管理者だけを許可するstrict判定へ分類する。
+- [x] `/settings/users`のroute・navigationとUser管理actionをstrict preset／会社管理者判定へ揃え、直接permission文字列、未知role、`isSuperUser`だけではUser管理を許可しない。
 
 #### 完了条件
 
@@ -411,3 +411,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-04 final completed | 利用者が最小確認項目の通過を報告。Functions authのpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ整理し、export名と挙動を維持 | 本変更 | 全domain単体test 468件、専用Emulator suite 74件、project-owned・managed governance validator、`git diff --check` pass。全専用port閉鎖、saved-data 7 files・3492 bytes不変 |
 | 2026-08-24 | UWB-05 automated | 本人プロフィール、管理対象Userの通知3フラグ、他の非管理者Userのroleを3つの専用Callableへ分離。exact allowlistとstrict preset認可をserverで強制し、User一覧・本人設定のFireModel full updateを除去 | 本変更 | 全domain単体test 490件（対象SFC 2件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、saved-data 7 files・3492 bytes不変。利用者によるapplication file・local UI受入れは未完了 |
 | 2026-08-24 | UWB-05 completed | 利用者がUWB-05のapplication implementation fileと動作を確認し、完了を承認 | 本変更 | 利用者受入れ完了。自動検証証拠は直前のUWB-05 automated記録を参照 |
+| 2026-08-24 | UWB-06 automated | User管理操作をoperation・target単位のsingle-flightへ統合し、対象ごとのloading、二重送信防止、会社管理者専用controlのfail-closed表示、`/settings/users`のstrict preset route・navigation判定を実装。User管理経路の直接Firestore writeがないことを監査 | 本変更 | 全domain単体test 507件（対象SFC 6件のcompileを含む）、専用Emulator suite 79件 pass。全専用port閉鎖、runtime残留0、専用saved-data 7 files・3492 bytes不変。error後の画面状態、keyboard・focus・確認・取消、console error、利用者による変更file確認は未完了 |

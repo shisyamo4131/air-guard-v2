@@ -22,7 +22,7 @@ test("UsersManager creates through the standalone feature operation", async () =
   );
   assert.match(
     source,
-    /async function handleCreate\(item\)\s*\{\s*await createStandaloneTemporaryUser\(item\);\s*\}/,
+    /async function handleCreate\(item\)[\s\S]*?run\("create", "standalone",[\s\S]*?createStandaloneTemporaryUser\(item\)/,
   );
   assert.match(source, /:disabled="!canCreate\(\)"/);
   assert.match(source, /:show-create="props\.showCreate && canCreate\(\)"/);
@@ -63,6 +63,7 @@ test("users:write grants the User settings route without opening Company setting
     source.indexOf("// 他のページやグループを追加"),
   );
   assert.match(adminSettings, /roles: \["admin", "users:write"\]/);
+  assert.match(adminSettings, /strictPresetPermissions: \["users:write"\]/);
   const companySetting = adminSettings.slice(
     adminSettings.indexOf('id: "company-setting"'),
     adminSettings.indexOf('id: "users-setting"'),
@@ -73,6 +74,8 @@ test("users:write grants the User settings route without opening Company setting
     adminSettings.indexOf('id: "checkout"'),
   );
   assert.match(usersSetting, /roles: \["users:write"\]/);
+  assert.match(usersSetting, /strictPresetPermissions: \["users:write"\]/);
+  assert.match(usersSetting, /allowAdmin: true/);
 });
 
 for (const [name, url] of [

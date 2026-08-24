@@ -20,7 +20,7 @@ test("Employee UserManager deletes temporary Users through the feature composabl
   );
   assert.match(
     source,
-    /await deleteTemporaryUser\(item, \{\s*employeeId: props\.employee\.docId,\s*\}\)/,
+    /run\("delete", item\.docId,[\s\S]*?deleteTemporaryUser\(item, \{\s*employeeId: props\.employee\.docId,\s*\}\)/,
   );
   assert.match(source, /:handle-delete="handleDelete"/);
   assert.equal(/\.delete\s*\(/.test(source), false);
@@ -48,7 +48,8 @@ test("Employee UserManager delegates deletion errors to the manager error pipeli
   assert.ok(handlerStart >= 0);
   assert.ok(handlerEnd > handlerStart);
   assert.match(source, /<air-item-manager\s+v-bind="attrs"/);
-  assert.match(handlerSource, /await deleteTemporaryUser\(item,/);
+  assert.match(handlerSource, /return run\("delete", item\.docId/);
+  assert.match(handlerSource, /deleteTemporaryUser\(item,/);
   assert.equal(handlerSource.includes("catch"), false);
   assert.equal(handlerSource.includes("logger.error"), false);
   assert.equal(handlerSource.includes("loadings.add"), false);

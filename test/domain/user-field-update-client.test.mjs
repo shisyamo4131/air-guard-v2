@@ -73,7 +73,10 @@ test("User manager and own settings do not use FireModel full updates", async ()
     "utf8",
   );
   assert.match(manager, /:handle-update="handleUpdate"/);
-  assert.match(manager, /await updateManagedUser\(item\)/);
+  assert.match(
+    manager,
+    /run\("update", item\.docId, \(\) => updateManagedUser\(item\)\)/,
+  );
   assert.equal(manager.includes("item.update(item)"), false);
   assert.equal(settings.includes("auth.user.updateProperties"), false);
 });

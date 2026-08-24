@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-05で本人プロフィール、通知、roleのfield別Callableを実装し、domain単体test 490件、専用Emulator 79件、利用者受入れが完了した。UWB-06以降、Users blanket Rulesを含むUWB-08、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-06のsingle-flight、独立loading、strict User管理UI判定を実装し、domain単体test 507件、専用Emulator 79件が成功した。UWB-06の利用者UI受入れ、UWB-07以降、Users blanket Rulesを含むUWB-08、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-05のfield別Callable実装、自動検証、利用者受入れは完了した。次はUWB-06、UWB-07の具体例壁打ち、UWB-08のUsers Rules閉鎖へ進む。App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-06の実装・自動検証は完了し、利用者UI受入れ待ちである。受入れ後にUWB-07の具体例壁打ち、UWB-08のUsers Rules閉鎖へ進む。App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、single-flight、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-04までの予約・permission分離に加え、UWB-05で本人プロフィール、通知、roleを専用Callableへ分離し、exact field allowlist、strict preset、自己role・管理者target拒否を実装した。domain単体test 490件、専用Emulator 79件、利用者受入れが完了した。Users Rulesのfield/actor制約、App Check、Dev・remote受入れは未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-05までのfield別Callableに加え、UWB-06でUser管理UIのsingle-flight、独立loading、会社管理者controlとstrict preset route・navigation判定を実装した。domain単体test 507件、専用Emulator 79件が成功した。UWB-06利用者UI受入れ、Users Rulesのfield/actor制約、App Check、Dev・remote受入れは未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -124,3 +124,4 @@
 | 2026-08-24 | 10% | 0 | 利用者がUWB-04の最小確認項目通過を報告した。Functions authのpolicy・permission定義とCallable error mapperを専用directoryへ整理し、全domain単体test 468件と専用Emulator suite 74件で挙動不変を確認してUWB-04を最終完了とした。UWB-05以降が未完了のため進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | UWB-05で本人プロフィール、管理対象Userの通知3フラグ、他の非管理者Userのroleをfield別Callableへ分離し、User一覧・本人設定のFireModel full updateを除去した。全domain単体test 490件と専用Emulator suite 79件が成功した。利用者によるapplication file・local UI受入れと後続UWBが未完了のため進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | 利用者がUWB-05のapplication implementation fileと動作を確認し、完了を承認した。UWB-06以降、Users Rules、App Check、Dev・remote受入れが未完了で認証マイルストーンを満たさないため、無部分加点規則により進捗は据え置いた。 |
+| 2026-08-24 | 10% | 0 | UWB-06でUser管理操作をoperation・target単位のsingle-flightへ統合し、独立loading、会社管理者専用controlのfail-closed表示、`/settings/users`のstrict preset route・navigation判定、直接Firestore write不在の監査を実装した。domain単体test 507件と専用Emulator suite 79件が成功した。利用者UI受入れと後続UWBが未完了のため進捗は据え置いた。 |

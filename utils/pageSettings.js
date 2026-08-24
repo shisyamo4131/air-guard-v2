@@ -8,6 +8,8 @@
  * - icon: ナビゲーション表示用の Vuetify アイコン（mdi-xxx）
  * - roles: アクセス許可されたロール配列 (認証済みユーザー向け)。
  *          空配列は認証済みであればロールに関わらず許可。
+ * - strictPresetPermissions: User.rolesの既知presetだけから判定するpermission配列。
+ * - allowAdmin: strictPresetPermissions指定時に会社管理者を許可するか。
  * - navigation: (boolean) ナビゲーションメニューに表示するか
  * - children: 子ページの配列（同じ構造を持つ）
  *
@@ -404,6 +406,8 @@ export const pageStructure = [
     label: "管理者メニュー",
     icon: "mdi-cog",
     roles: ["admin", "users:write"],
+    strictPresetPermissions: ["users:write"],
+    allowAdmin: true,
     navigation: true,
     children: [
       {
@@ -420,6 +424,8 @@ export const pageStructure = [
         label: "ユーザー設定",
         icon: "mdi-account-cog",
         roles: ["users:write"],
+        strictPresetPermissions: ["users:write"],
+        allowAdmin: true,
         navigation: true,
       },
       {
@@ -436,7 +442,10 @@ export const pageStructure = [
 ];
 
 // --- ヘルパー関数 ---
-import { getPermissions } from "@/utils/auth/authorization";
+import {
+  getPermissions,
+  hasPresetPermission,
+} from "./auth/authorization.js";
 /**
  * ユーザーが指定されたページにアクセス可能かどうかを判定する
  * - 役割プリセット（manager, controller など）と機能単位の権限（sites:read など）の両方に対応
@@ -525,6 +534,26 @@ function hasAccess(requiredRoles, userRoles) {
 
     return false;
   });
+}
+
+/**
+ * page固有のstrict preset指定を優先し、指定がなければ従来の一般判定を使う。
+ */
+export function isPageConfigAllowed(
+  pageConfig,
+  userRoles,
+  { presetRoles = [], isAdmin = false } = {},
+) {
+  if (!pageConfig || typeof pageConfig !== "object") return false;
+
+  if (Array.isArray(pageConfig.strictPresetPermissions)) {
+    if (pageConfig.allowAdmin === true && isAdmin === true) return true;
+    return pageConfig.strictPresetPermissions.some((permission) =>
+      hasPresetPermission(presetRoles, permission),
+    );
+  }
+
+  return hasAccess(pageConfig.roles, userRoles);
 }
 
 /**
@@ -688,7 +717,7 @@ export function getPageConfig(path) {
  * @param {string[]} userRoles - 現在のユーザーのロール配列
  * @returns {boolean} アクセス可能か (ページ設定が見つからない場合も false)
  */
-export function isPageAllowed(path, userRoles) {
+export function isPageAllowed(path, userRoles, accessContext = {}) {
   const pageConfig = getPageConfig(path);
 
   if (!pageConfig) {
@@ -698,7 +727,7 @@ export function isPageAllowed(path, userRoles) {
   }
 
   // public フラグはここでは見ない。純粋にロールのチェックのみ。
-  return hasAccess(pageConfig.roles, userRoles);
+  return isPageConfigAllowed(pageConfig, userRoles, accessContext);
 }
 
 /**
@@ -707,14 +736,14 @@ export function isPageAllowed(path, userRoles) {
  * @param {string[]} userRoles - 現在のユーザーロール配列
  * @returns {Array} ナビゲーション項目リスト
  */
-export function getNavigationItems(userRoles) {
+export function getNavigationItems(userRoles, accessContext = {}) {
   function filterAndMap(items) {
     const result = [];
     for (const item of items) {
       const config = { public: false, ...item }; // public デフォルト値
 
       // ナビゲーション表示は roles を満たす必要がある
-      if (hasAccess(config.roles, userRoles)) {
+      if (isPageConfigAllowed(config, userRoles, accessContext)) {
         if (config.navigation) {
           const navItem = {
             title: config.label,
