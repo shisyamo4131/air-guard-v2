@@ -34,6 +34,8 @@ AuthenticationとFirestoreは一つのtransactionで更新できない。さら�
 - UWB-07導入前のRESIGNED EmployeeはUWB-07Cで自動訂正せず、別のbackfillまたは管理者repairで扱う。実際の退職期間を伴う再雇用も別設計とする。
 - `LifecycleOperations`は現段階で固定の保存期間を設けず、自動purgeしない。operation、event、head、reverse参照を現行schemaのまま保持し、削除を前提とするlegal holdとterminal後識別子縮小も実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で、削除対象、参照chain、訂正可能期間、legal hold、識別子縮小、移行・復旧を改めて決定する。
 - 履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧できるものとする。super-user、human-resource、manager、直接permissionだけのUserには許可しない。UWB-07と、Users・Employees・予約・operation・event・lock・`EmployeeLifecycleHeads`へのclient迂回を閉じるUWB-08を同じrelease gateとする。
+- 履歴一覧は`listLifecycleOperations` Callableと会社管理者専用の`/settings/lifecycle-history` pageで提供する。serverは検証済みidentityから会社を決め、同社の現在Userが有効・本登録・会社管理者・非super-userであることを再確認する。初版は作成時刻の降順で20件固定とし、client入力を`cursor`だけへ限定して検索、filter、件数指定、sort、CSV、total countを提供しない。cursorは同社operation IDを使う非秘密の位置情報であり、認可には使わず、同社path内のrecord・document ID・Timestamp・schemaを再検証する。
+- 一覧には3操作と、内部stateを`processing|retrying|completed`へ丸めた状態、実行者表示名、Employee IDまたは単独削除対象表示名、User account削除を含む操作かどうか、退職日、理由、作成・完了時刻だけを返す。raw UID、request fingerprint、内部state・error・attempt・disposition、event、lock、head、email、role、claim、tokenは返さない。client直接readのRules denyを維持し、一覧dataとcursorを永続cacheやlogへ保存しない。
 
 ## 理由
 
@@ -42,6 +44,8 @@ Employee退職とUser削除を別々の監査documentへ重複記録すると、
 誤退職訂正とaccount再作成を分けることで、別tenantが正当に取得したemailやAuthへ作用せず、Employee IDと既存業務参照を維持できる。会社管理者だけに訂正を許可すると、退職担当者が自分の操作記録を単独で取り消す境界を避けられる。
 
 現時点では`LifecycleOperations`のdata量・費用が削除機構を必要とする証拠はなく、単純な期間削除はhead、reverse参照、冪等再送、誤退職訂正を壊し得る。不可逆なpurgeとそのためのlegal hold・識別子縮小を先行実装せず、必要性と正式な保持根拠を確認できた時点でまとめて再設計する方が、現在の整合性と運用を保てる。
+
+履歴readerで未完了stateも公開上の粗い状態として表示すると、会社管理者は処理が完了したか、自動再処理中かを内部errorやUIDを受け取らずに確認できる。filterなし・20件固定・不変の作成時刻順にすると、追加の検索index、全件scan、件数集計を初版へ持ち込まず、費用と列挙範囲を限定できる。
 
 ## 代替案
 
@@ -59,6 +63,7 @@ Employee退職とUser削除を別々の監査documentへ重複記録すると、
 - Client: 無効化、退職、単独User削除、誤退職訂正を別policy・composable・確認UIとして表示する。訂正成功時はUser accessが戻らないことを明示する。
 - Data: Employeeと業務記録は保持される。User/Auth削除後のaccount再作成は新UIDとなり、旧UID履歴を書き換えない。Auth削除直後から予約解放までに同emailの新Authが作成される競合は、新UIDを推定削除せずaccount repair対象とする。
 - Privacy/operations: server-only履歴は固定期限なし・自動削除なしで保持する。会社管理者専用readerの最小projectionをProd前に実装・検証し、削除・legal hold・完了後識別子縮小は将来の保持方針見直しまで提供しない。
+- Client/Functions: 会社管理者専用pageとCallableを追加し、1回の取得をcursor確認1件と一覧最大21件へ制限する。pageを離れるか権限を失った場合は一覧とcursorをclient memoryから破棄する。Firestore Rulesはreaderのために緩和しない。
 - 互換性: 現行のclient `Employee.toTerminated()`、generic RESIGNED→ACTIVE更新、User/Employee削除triggerは新境界へ移行し、Rulesで直接経路を閉じる必要がある。
 
 ## 移行
@@ -67,9 +72,13 @@ permissionとpure policy、operation・lock基盤、UWB-07A、UWB-07B、UWB-07C�
 
 legacy RESIGNED Employeeを訂正対象にする場合は、実データへ作用する前に退職情報とUser・予約不整合をread-onlyで分類し、信頼できる退職operationをbackfillできる対象と管理者repair対象を分ける。Dev・Prodのmigrationとdeployは別承認を必要とする。
 
+履歴readerは専用actor policy、Callable projection、cursor pagination、会社管理者専用route・navigation、client memoryだけのpage stateの順に接続する。既存operationのmigrationと新しいcomposite indexは初版契約では不要と見込み、Emulatorでqueryを確認して実証された場合だけindexを追加する。Dev・Prodの既存operation schema確認はremote接続の別承認を必要とする。
+
 ## ロールバック
 
 問題発生時は新UIを先に閉じるが、Rulesを旧direct writeへ戻さない。pending operationがある間はengineとreconcilerを撤去せず、完了済みAuth/User削除や誤退職訂正をdata rollbackしない。必要な訂正は新しいlifecycle operationで行い、terminal operation履歴を削除しない。
+
+履歴readerだけに問題がある場合はpageとCallable exportを閉じる。ledger、既存A/B/C、reconciler、Rules deny、保存済みdataは変更・削除せず、cursorはserver stateや秘密を持たないためdata rollbackを行わない。
 
 ## 再検討条件
 

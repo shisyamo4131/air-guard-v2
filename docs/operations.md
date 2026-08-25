@@ -287,6 +287,8 @@ UWB-07/08の自動検証完了後、利用者用local環境のテストデータ
 
 `LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない。削除を前提とするlegal hold、terminal後UID縮小、purge command・scheduled jobは提供しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した場合は、実dataへ作用する前に参照chain、誤退職訂正、移行、backup・復旧を含む新しい仕様とrollbackを承認する。
 
+履歴一覧readerは`/settings/lifecycle-history`から`listLifecycleOperations`だけを呼び、会社管理者へ新しい順に20件ずつ表示する。clientから会社ID、件数、検索、filter、sortを送らず、cursorは画面・URL・永続store・storage・analytics・consoleへ出さない。page移動失敗時は現在pageを維持し、権限喪失、sign-out、page離脱時にitemsとcursor stackをmemoryから破棄する。Emulator受入れでは会社管理者の3操作・3公開状態・前後page、他roleとsuper-userのroute/Callable拒否、raw UID・内部error非表示、ledger/event/lock/headのclient直読拒否を確認する。実装前後を通じてRulesをreaderのために緩和しない。
+
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 
 ### `isSuperUser` claimの正規化

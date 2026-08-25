@@ -24,6 +24,7 @@
 
 ### Changed
 
+- UWB-07の会社管理者専用履歴readerを、`/settings/lifecycle-history`の専用page、20件固定cursor、全stateの`processing|retrying|completed`表示、exact最小projectionとして確定した。会社はserver identityから導出し、super-user・manager・human-resource・直接permissionを拒否する。Firestore client直読deny、検索・filter・export・total count・永続cacheなしを維持し、実装・検証は次checkpointとする。
 - UWB-07の`LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない契約へ確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧する境界を維持する。
 - UWB-07の利用者local UI受入れとして、正規UIで作成・本登録したEmployee連携Userを伴う退職、Auth/User物理削除、誤退職訂正、User/Auth非復元、Employee在職復帰と、単独本登録User削除・Employee-only経路を確認した。Employee lifecycle componentを単一element rootへ修正して継承属性warningを除去し、Chrome拡張接続後はデバッグ表示による座標変化を3秒待ってから最新画面で対象を再取得する手順を追加した。serverが拒否するsuper-userについては退職・訂正・単独User削除のclient controlもfail closedで非表示へ揃えた。sign-out listenerは既存の共通認証課題FUT-0005へ分離し、UWB-07はretention contractを未完了として残した。
 - UWB-07/08のlocal自動検証readyとして、Employee退職、単独本登録User削除、誤退職訂正、訂正用最小context、5分間隔reconcilerを専用Callable・server-only ledgerへ接続し、reconcilerの`LifecycleOperations.state` collection-group indexを追加した。Employee詳細とUser管理はclient policy・共通operation stateからCallableだけを呼び、旧Employee物理削除UIを除去した。Users client write、Employee lifecycle fieldとdelete、ledger/event/lock/head、legacy `admin_users`をRulesで閉じ、FcmTokens exact create・update拒否、通知送信前のactive User・lifecycle lock再検証、token・payload・email等のlog除去を実装した。全domain単体609件と専用Emulator 88件は成功し、利用者local UI受入れ、Rules確認、履歴reader・保持契約は未完了である。

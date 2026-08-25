@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装し、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityを完了した。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、削除を前提とするlegal hold・terminal後UID縮小は将来再検討へ移した。会社管理者専用履歴reader、利用者Rules確認、UWB-09、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装し、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityを完了した。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、会社管理者専用履歴readerの20件cursor・全state coarse projection契約を確定した。reader実装・検証、利用者Rules確認、UWB-09、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UI、UWB-08 Rules・通知privacy、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityは完了した。次は会社管理者専用の履歴readerを実装・検証し、利用者の`firestore.rules`確認後にUWB-09へ進む。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、保存期間、legal hold、terminal後UID縮小、purgeは将来見直しが必要になった時点で再検討する。Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UI、UWB-08 Rules・通知privacy、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityは完了した。会社管理者専用履歴readerは20件cursor・全state coarse projection・専用page契約を確定したため、次は利用者実装、Codex review・自動検証・UI受入れを行い、利用者の`firestore.rules`確認後にUWB-09へ進む。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、保存期間、legal hold、terminal後UID縮小、purgeは将来見直しが必要になった時点で再検討する。Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。汎用single-flightは現時点で採用せず、未対応client、複数tab・端末・actorの多重実行riskとserver側追加対策の要否をUWB-10後段で評価する。
@@ -135,3 +135,4 @@
 | 2026-08-24 | 10% | 0 | UWB-07/08のA/B/C Callable、reconcilerと必要なcollection-group index、訂正用最小context、client UI、User・Employee・lifecycle・FCM Rules、通知eligibilityとprivacy是正を実装した。全domain単体test 609件、専用Emulator suite 88件、Codex専用UIの管理者sign-inと対象一覧画面smokeが成功した。利用者local操作受入れ、Rules確認、履歴reader・保持期間・legal hold・terminal後UID縮小が未完了のため進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | 利用者用EmulatorとChromeでUWB-07の権限別UIを受け入れ、正規UIで作成・本登録したEmployee連携Userを対象に退職、Auth/User削除、誤退職訂正、User/Auth非復元、Employeeの在職一覧復帰を確認した。単独本登録User削除とEmployee-only経路も成功した。super-userの退職・訂正・単独User削除controlをserverと同じfail closedへ揃え、sign-out listenerは既存の共通認証課題FUT-0005へ分離した。履歴reader・保持期間・legal hold・terminal後UID縮小が未完了のため、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-25 | 10% | 0 | `LifecycleOperations`は現段階で固定保存期限を設けず自動削除しないと確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。会社管理者専用履歴reader、利用者Rules確認等が未完了で認証マイルストーンを満たさないため、進捗は据え置いた。 |
+| 2026-08-25 | 10% | 0 | 会社管理者専用履歴readerを、専用page、全stateの3段階表示、20件固定cursor、exact最小projection、Firestore client直読denyとして確定した。reader実装・検証と利用者Rules確認が未完了で認証マイルストーンを満たさないため、進捗は据え置いた。 |
