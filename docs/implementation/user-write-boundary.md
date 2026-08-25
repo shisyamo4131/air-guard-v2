@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06完了。UWB-07はA/B/C、固定保存期限なし・自動削除なし、会社管理者専用履歴readerの実装・自動検証まで完了し、履歴pageの実browser確認待ち。UWB-08は自動検証完了・利用者Rules確認待ち）
+- 状態: Active（UWB-01〜06完了。UWB-07はA/B/C、固定保存期限なし・自動削除なし、会社管理者専用履歴readerの実装・自動検証とChromeでの空状態確認まで完了。UWB-08は自動検証と利用者Rules確認を完了）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -414,9 +414,9 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
    - [x] UWB-07B/C use-case、Callable、error mapper、public export。
 4. [x] UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
 5. [x] 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
-6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionだけは会社管理者専用の最小Callableとして未実装であり、実装・検証後にUIを公開する。
+6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionも会社管理者専用の最小Callableと専用pageへ接続する。
 7. [x] 5分reconcilerの`LifecycleOperations.state` collection-group queryに必要なindexを`firestore.indexes.json`へ明示し、source contract testで固定する。
-8. [ ] 単体、EmulatorのRules・並行・phase failure、Codex UI smoke、利用者local操作受入れ、super-userの3操作control/server policy parity、固定保存期限なし・自動削除なしの保持方針確定は完了。会社管理者専用履歴readerの実装・検証と利用者による`firestore.rules`確認を完了する。
+8. [x] 単体、EmulatorのRules・並行・phase failure、Codex UI smoke、利用者local操作受入れ、super-userの3操作control/server policy parity、固定保存期限なし・自動削除なしの保持方針、会社管理者専用履歴readerの実装・自動検証・Chrome空状態確認、利用者による`firestore.rules`確認を完了する。
 
 #### 完了条件
 
@@ -431,11 +431,11 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
 - [ ] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
 - [ ] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
-- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。固定保存期限なし・自動削除なしの契約と会社管理者専用reader projectionは実装・自動検証済みである。履歴pageの実browser確認とUWB-08 release gateを完了するまでProd公開しない。
+- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。固定保存期限なし・自動削除なしの契約、会社管理者専用reader projection、履歴pageのChrome空状態確認、UWB-08 release gateは完了済みである。履歴data行と実page移動は対象dataがなかったため実browser未確認であり、上記の未完了条件とともに完了判断前に再照合する。Prod公開は別承認まで行わない。
 
 ### UWB-08 Firestore Rulesのactor・field・lifecycle制約
 
-- 状態: Automated verification complete / 利用者Rules確認待ち
+- 状態: Completed（自動検証・利用者Rules確認完了）
 - 主な実装file: `firestore.rules`
 
 #### 作業
@@ -459,7 +459,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] disabled・仮登録・User不在・company不一致Userのcreate、`token != document ID`、unknown field・型不正、全client update、既存owner上書きを拒否する。同device User切替は旧owner delete成功後の新owner createだけを許可し、access revoke後の通知dispatcherはtokenを読出し・送信しない。
 - [x] actor、対象、操作、field、型ごとの許可・拒否testが成功している。
 - [x] 既存CallableはAdmin SDK経由で正常に動作する。
-- [ ] 利用者が`firestore.rules`を確認している。
+- [x] 利用者が`firestore.rules`のUser client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否を確認している。
 
 ### UWB-09 role・permission対応表のschemas package統合
 
