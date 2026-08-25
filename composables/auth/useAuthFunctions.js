@@ -115,6 +115,13 @@ export const useAuthFunctions = () => {
     return result.data;
   };
 
+  /** 会社管理者向けの退職・アカウント削除履歴を取得します。 */
+  const listLifecycleOperations = async (data) => {
+    const callable = httpsCallable($functions, "listLifecycleOperations");
+    const result = await callable(data);
+    return result.data;
+  };
+
   /** 誤退職を訂正しEmployeeだけを在職状態へ戻します。 */
   const reinstateEmployee = async (data) => {
     const callable = httpsCallable($functions, "reinstateEmployee");
@@ -194,6 +201,7 @@ export const useAuthFunctions = () => {
     terminateEmployee,
     deleteStandaloneRegisteredUser,
     getEmployeeReinstatementContext,
+    listLifecycleOperations,
     reinstateEmployee,
     disableUser,
     enableUser,

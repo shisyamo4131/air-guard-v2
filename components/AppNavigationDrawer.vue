@@ -14,6 +14,10 @@ const navigationItems = computed(() => {
   return getNavigationItems(auth.roles, {
     presetRoles: auth.user.roles,
     isAdmin: auth.isAdmin,
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    actorUser: auth.user,
+    isSuperUser: auth.isSuperUser,
   });
 });
 

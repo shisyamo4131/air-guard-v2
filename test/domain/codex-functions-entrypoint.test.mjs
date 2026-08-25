@@ -13,6 +13,7 @@ const PUBLIC_CALLABLES = [
   "disableUser",
   "enableUser",
   "getEmployeeReinstatementContext",
+  "listLifecycleOperations",
   "rebuildAllHistories",
   "rebuildSecurityReportIndexes",
   "reinstateEmployee",

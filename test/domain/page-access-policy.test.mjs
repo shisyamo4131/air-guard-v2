@@ -24,6 +24,7 @@ const expectedPolicyKeys = [
   "CUSTOMERS_READ",
   "DEVELOPER",
   "EMPLOYEES_READ",
+  "LIFECYCLE_HISTORY",
   "OPERATION_RESULTS_READ",
   "OUTSOURCERS_READ",
   "PUBLIC",
@@ -77,6 +78,7 @@ const expectedRoutePolicies = new Map([
   ["/articles", PAGE_ACCESS_POLICIES.DEVELOPER],
   ["/settings/company", PAGE_ACCESS_POLICIES.ADMIN],
   ["/settings/users", PAGE_ACCESS_POLICIES.USER_MANAGEMENT],
+  ["/settings/lifecycle-history", PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY],
   ["/settings/checkout", PAGE_ACCESS_POLICIES.SUPER_USER],
 ]);
 
@@ -110,10 +112,10 @@ test("page structure assigns one known policy to every route and none to groups"
   const routeNodes = nodes.filter((node) => Object.hasOwn(node, "path"));
   const groupNodes = nodes.filter((node) => !Object.hasOwn(node, "path"));
 
-  assert.equal(nodes.length, 47);
-  assert.equal(routeNodes.length, 35);
+  assert.equal(nodes.length, 48);
+  assert.equal(routeNodes.length, 36);
   assert.equal(groupNodes.length, 12);
-  assert.equal(expectedRoutePolicies.size, 35);
+  assert.equal(expectedRoutePolicies.size, 36);
 
   for (const node of routeNodes) {
     assert.equal(
@@ -160,7 +162,7 @@ test("page structure assigns one known policy to every route and none to groups"
 test("policy catalog and shared descriptors are immutable identity values", () => {
   assert.deepEqual(Object.keys(PAGE_ACCESS_POLICIES).sort(), expectedPolicyKeys);
   assert.equal(Object.isFrozen(PAGE_ACCESS_POLICIES), true);
-  assert.equal(new Set(Object.values(PAGE_ACCESS_POLICIES)).size, 13);
+  assert.equal(new Set(Object.values(PAGE_ACCESS_POLICIES)).size, 14);
 
   for (const policy of Object.values(PAGE_ACCESS_POLICIES)) {
     assert.equal(Object.isFrozen(policy), true);
@@ -449,6 +451,73 @@ test("route and navigation share User management policy while groups derive chil
   assert.equal(directNavigation.includes("sites-group"), true);
   assert.equal(directNavigation.includes("sites"), true);
   assert.equal(directNavigation.includes("admin-settings"), false);
+});
+
+test("lifecycle history route and navigation are company-admin only", () => {
+  const actorUser = {
+    docId: "actor-a",
+    companyId: "company-a",
+    isTemporary: false,
+    disabled: false,
+    isAdmin: true,
+    roles: [],
+  };
+  const context = {
+    presetRoles: [],
+    isAdmin: true,
+    companyId: "company-a",
+    actorUid: "actor-a",
+    actorUser,
+    isSuperUser: false,
+  };
+
+  assert.equal(
+    isPageAllowed("/settings/lifecycle-history", ["admin"], context),
+    true,
+  );
+  assert.equal(
+    navigationValues(getNavigationItems(["admin"], context)).includes(
+      "lifecycle-history",
+    ),
+    true,
+  );
+
+  const deniedContexts = [
+    {
+      ...context,
+      isAdmin: false,
+      actorUser: { ...actorUser, isAdmin: false, roles: ["manager"] },
+    },
+    {
+      ...context,
+      isAdmin: false,
+      actorUser: {
+        ...actorUser,
+        isAdmin: false,
+        roles: ["human-resource"],
+      },
+    },
+    {
+      ...context,
+      isAdmin: false,
+      actorUser: { ...actorUser, isAdmin: false, roles: ["users:write"] },
+    },
+    { ...context, isSuperUser: true },
+    { ...context, actorUid: "stale", actorUser },
+    { ...context, companyId: "company-b" },
+  ];
+  for (const denied of deniedContexts) {
+    assert.equal(
+      isPageAllowed("/settings/lifecycle-history", ["manager"], denied),
+      false,
+    );
+    assert.equal(
+      navigationValues(getNavigationItems(["manager"], denied)).includes(
+        "lifecycle-history",
+      ),
+      false,
+    );
+  }
 });
 
 test("super-user navigation exposes Company settings but not User settings", () => {

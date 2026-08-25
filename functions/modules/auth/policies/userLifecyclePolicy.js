@@ -4,7 +4,10 @@
  * 副作用なしで検証します。
  *****************************************************************************/
 import { resolveRolePermissions, RolePermissionError } from "./rolePermissions.js";
-import { assertUserDocumentCompany } from "./userAuthCompanyPolicy.js";
+import {
+  assertUserDocumentCompany,
+  UserAuthCompanyPolicyError,
+} from "./userAuthCompanyPolicy.js";
 
 const RETIREMENT_INPUT_FIELDS = new Set([
   "operationId",
@@ -24,6 +27,7 @@ const REINSTATEMENT_INPUT_FIELDS = new Set([
   "correctionReasonCode",
 ]);
 const REINSTATEMENT_CONTEXT_INPUT_FIELDS = new Set(["employeeId"]);
+const LIFECYCLE_HISTORY_INPUT_FIELDS = new Set(["cursor"]);
 const UUID_V4_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const DATE_ONLY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -504,6 +508,44 @@ export function resolveEmployeeReinstatementContextInput(input) {
   return Object.freeze({
     employeeId: resolveDocumentId(input.employeeId, "employeeId"),
   });
+}
+
+/**
+ * UWB-07履歴一覧readerのexact inputを検証します。
+ */
+export function resolveLifecycleOperationHistoryInput(input) {
+  assertExactFields(input, LIFECYCLE_HISTORY_INPUT_FIELDS);
+  if (input.cursor === null) {
+    return Object.freeze({ cursor: null });
+  }
+  return Object.freeze({ cursor: resolveOperationId(input.cursor, "cursor") });
+}
+
+/**
+ * 履歴一覧を閲覧できる有効な本登録会社管理者かを検証します。
+ * roleや直接permissionは会社管理者判定の代替にしません。
+ */
+export function assertLifecycleOperationHistoryActor({
+  companyId,
+  actorUser,
+} = {}) {
+  resolveDocumentId(companyId, "companyId");
+  try {
+    assertCompanyAdministrator({ companyId, actorUser });
+  } catch (error) {
+    if (
+      error instanceof UserAuthCompanyPolicyError ||
+      (error instanceof UserLifecyclePolicyError &&
+        error.code === USER_LIFECYCLE_POLICY_ERROR_CODES.INPUT_INVALID)
+    ) {
+      throwPolicyError(
+        USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+        "[assertLifecycleOperationHistoryActor] actor is not an active registered company administrator",
+        { cause: error },
+      );
+    }
+    throw error;
+  }
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   getPermissions,
   hasPresetPermission,
 } from "../authorization.js";
+import { canViewLifecycleOperationHistory } from "./userLifecycleUiPolicy.js";
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) {
@@ -45,6 +46,7 @@ export const PAGE_ACCESS_POLICIES = deepFreeze({
     "outsourcers:read",
   ]),
   USER_MANAGEMENT: createPolicy("user-management"),
+  LIFECYCLE_HISTORY: createPolicy("lifecycle-history"),
 });
 
 const knownPolicies = new Set(Object.values(PAGE_ACCESS_POLICIES));
@@ -137,6 +139,15 @@ export function isPageAccessAllowed(
       accessContext.isAdmin === true ||
       hasPresetPermission(accessContext.presetRoles, "users:write")
     );
+  }
+
+  if (policy === PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY) {
+    return canViewLifecycleOperationHistory({
+      companyId: accessContext.companyId,
+      actorUid: accessContext.actorUid,
+      actorUser: accessContext.actorUser,
+      isSuperUser: accessContext.isSuperUser,
+    });
   }
 
   return hasAccess(policy.requiredRoles, userRoles);

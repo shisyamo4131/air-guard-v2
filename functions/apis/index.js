@@ -14,6 +14,7 @@ export { deleteTemporaryUser } from "./deleteTemporaryUser.js";
 export { deleteStandaloneRegisteredUser } from "./deleteStandaloneRegisteredUser.js";
 export { disableUser, enableUser } from "./changeUserEnabledState.js";
 export { getEmployeeReinstatementContext } from "./getEmployeeReinstatementContext.js";
+export { listLifecycleOperations } from "./listLifecycleOperations.js";
 export { rebuildAllHistories } from "./rebuildAllHistories.js";
 export { rebuildSecurityReportIndexes } from "./rebuildSecurityReportIndexes.js";
 export { reinstateEmployee } from "./reinstateEmployee.js";

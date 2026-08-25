@@ -423,6 +423,14 @@ export const pageStructure = [
         navigation: true,
       },
       {
+        id: "lifecycle-history",
+        path: "/settings/lifecycle-history",
+        label: "退職・アカウント削除履歴",
+        icon: "mdi-history",
+        accessPolicy: PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY,
+        navigation: true,
+      },
+      {
         id: "checkout",
         path: "/settings/checkout",
         label: "サブスクリプション管理",

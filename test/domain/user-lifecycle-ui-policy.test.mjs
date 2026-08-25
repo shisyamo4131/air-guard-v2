@@ -5,6 +5,7 @@ import {
   canDeleteStandaloneRegisteredUser,
   canReinstateEmployee,
   canTerminateEmployee,
+  canViewLifecycleOperationHistory,
 } from "../../utils/auth/policies/userLifecycleUiPolicy.js";
 
 const companyId = "company-a";
@@ -33,6 +34,36 @@ const user = (overrides = {}) => ({
   isAdmin: false,
   employeeId: null,
   ...overrides,
+});
+
+test("history UI is company-admin only and fails closed for stale identity", () => {
+  const context = {
+    companyId,
+    actorUid,
+    actorUser: actor({ isAdmin: true, roles: [] }),
+    isSuperUser: false,
+  };
+  assert.equal(canViewLifecycleOperationHistory(context), true);
+
+  for (const denied of [
+    { actorUser: actor({ isAdmin: false, roles: ["manager"] }) },
+    { actorUser: actor({ isAdmin: false, roles: ["human-resource"] }) },
+    { actorUser: actor({ isAdmin: false, roles: ["users:write"] }) },
+    { actorUser: actor({ isAdmin: true, roles: [], isTemporary: true }) },
+    { actorUser: actor({ isAdmin: true, roles: [], disabled: true }) },
+    { actorUser: actor({ isAdmin: true, roles: [], companyId: "company-b" }) },
+    { actorUser: actor({ isAdmin: true, roles: [], docId: "stale-actor" }) },
+    { isSuperUser: true },
+    { isSuperUser: undefined },
+    { actorUid: null },
+    { actorUser: null },
+  ]) {
+    assert.equal(
+      canViewLifecycleOperationHistory({ ...context, ...denied }),
+      false,
+      JSON.stringify(denied),
+    );
+  }
 });
 
 test("retirement UI follows strict employees:terminate and administrator policy", () => {

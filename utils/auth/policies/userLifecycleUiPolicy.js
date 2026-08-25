@@ -30,6 +30,26 @@ function isActiveRegisteredActor({
   );
 }
 
+/**
+ * LifecycleOperationsの最小履歴を閲覧できる会社管理者かを判定します。
+ * client判定はUX補助であり、Callableの最終認可を代替しません。
+ */
+export function canViewLifecycleOperationHistory({
+  companyId,
+  actorUid,
+  actorUser,
+  isSuperUser,
+} = {}) {
+  return Boolean(
+    isActiveRegisteredActor({
+      companyId,
+      actorUid,
+      actorUser,
+      isSuperUser,
+    }) && actorUser.isAdmin === true,
+  );
+}
+
 export function canTerminateEmployee({
   companyId,
   actorUid,

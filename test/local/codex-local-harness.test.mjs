@@ -68,6 +68,7 @@ async function readDedicatedFunctionsHost() {
 
 let testEnvironment;
 let rebuildApis;
+const HISTORY_COMPANY_ID = "uwb07-history-reader-company";
 const requireFromFunctions = createRequire(
   new URL("../../functions/package.json", import.meta.url),
 );
@@ -156,6 +157,15 @@ async function seedRegisteredUser({
   });
 }
 
+async function captureCallableError(promise) {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  assert.fail("Callable was expected to reject");
+}
+
 async function readRegisteredUser(uid, companyId = CODEX_LOCAL_COMPANIES.primary.id) {
   let userData;
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -222,6 +232,105 @@ async function seedEmployee({
     );
   });
   return data;
+}
+
+function historyOperationId(index) {
+  return `08000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+}
+
+function historyOperationRecord(index, overrides = {}) {
+  const operationId = overrides.operationId ?? historyOperationId(index);
+  const at =
+    overrides.createdAt ??
+    new Date(Date.UTC(2026, 7, 25, 0, Math.floor((index - 1) / 2)));
+  return {
+    schemaVersion: 1,
+    operationId,
+    operationType: "employee-retirement",
+    state: "completed",
+    actorUid: "uwb07-history-source-actor",
+    actorDisplayName: "履歴担当",
+    employeeId: `history-employee-${String(index).padStart(3, "0")}`,
+    targetUserUid: null,
+    targetDisplayName: null,
+    reversesOperationId: null,
+    terminationDate: "2026-08-20",
+    reasonOfTermination: "本人都合",
+    offboardingReason: null,
+    correctionReasonCode: null,
+    requestFingerprint: "b".repeat(64),
+    authDisposition: "not-applicable",
+    cleanupState: "not-applicable",
+    attemptCount: 1,
+    lastErrorPhase: null,
+    lastErrorCode: null,
+    createdAt: at,
+    updatedAt: at,
+    authDeletedAt: null,
+    dataFinalizedAt: null,
+    completedAt: at,
+    ...overrides,
+  };
+}
+
+async function seedHistoryOperations(records) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const batch = writeBatch(firestore);
+    for (const record of records) {
+      batch.set(
+        doc(
+          firestore,
+          "Companies",
+          HISTORY_COMPANY_ID,
+          "LifecycleOperations",
+          record.operationId,
+        ),
+        record,
+      );
+    }
+    await batch.commit();
+  });
+}
+
+async function removeHistoryOperations(operationIds) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const batch = writeBatch(firestore);
+    for (const operationId of operationIds) {
+      batch.delete(
+        doc(
+          firestore,
+          "Companies",
+          HISTORY_COMPANY_ID,
+          "LifecycleOperations",
+          operationId,
+        ),
+      );
+    }
+    await batch.commit();
+  });
+}
+
+async function removeHistoryActor(uid) {
+  let authCleanupError = null;
+  try {
+    await getAdminAuth().deleteUser(uid);
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") authCleanupError = error;
+  }
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await deleteDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        HISTORY_COMPANY_ID,
+        "Users",
+        uid,
+      ),
+    );
+  });
+  if (authCleanupError) throw authCleanupError;
 }
 
 function actorCallableRequest({ actor, data }) {
@@ -1607,6 +1716,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     deleteTemporaryUser,
     disableUser,
     enableUser,
+    listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
     reinstateEmployee,
@@ -1623,6 +1733,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     deleteTemporaryUser,
     disableUser,
     enableUser,
+    listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
     reinstateEmployee,
@@ -1633,6 +1744,270 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("company administrator pages lifecycle history through the public Callable", async () => {
+  const { listLifecycleOperations } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-history-admin",
+    companyId: HISTORY_COMPANY_ID,
+    isAdmin: true,
+    roles: [],
+  });
+  const records = Array.from({ length: 22 }, (_, index) =>
+    historyOperationRecord(index + 1),
+  );
+  const operationIds = records.map((record) => record.operationId);
+  const request = (cursor) =>
+    listLifecycleOperations.run(
+      actorCallableRequest({ actor, data: { cursor } }),
+    );
+
+  try {
+    await seedHistoryOperations(records.slice(0, 20));
+    const twenty = await request(null);
+    assert.equal(twenty.schemaVersion, 1);
+    assert.equal(twenty.items.length, 20);
+    assert.equal(twenty.nextCursor, null);
+    assert.deepEqual(
+      twenty.items.map((item) => item.employeeId),
+      Array.from(
+        { length: 20 },
+        (_, index) => `history-employee-${String(20 - index).padStart(3, "0")}`,
+      ),
+    );
+
+    await seedHistoryOperations([records[20]]);
+    const twentyOne = await request(null);
+    assert.equal(twentyOne.items.length, 20);
+    assert.equal(twentyOne.nextCursor, historyOperationId(2));
+    assert.equal(twentyOne.items[0].employeeId, "history-employee-021");
+    assert.equal(twentyOne.items.at(-1).employeeId, "history-employee-002");
+
+    await seedHistoryOperations([records[21]]);
+    const firstPage = await request(null);
+    assert.equal(firstPage.items.length, 20);
+    assert.equal(firstPage.nextCursor, historyOperationId(3));
+    assert.deepEqual(
+      firstPage.items.slice(0, 3).map((item) => item.employeeId),
+      [
+        "history-employee-022",
+        "history-employee-021",
+        "history-employee-020",
+      ],
+    );
+    assert.equal(firstPage.items[0].createdAt, firstPage.items[1].createdAt);
+    assert.notEqual(firstPage.items[1].createdAt, firstPage.items[2].createdAt);
+
+    const secondPage = await request(firstPage.nextCursor);
+    assert.deepEqual(
+      secondPage.items.map((item) => item.employeeId),
+      ["history-employee-002", "history-employee-001"],
+    );
+    assert.equal(secondPage.nextCursor, null);
+
+    const item = firstPage.items[0];
+    assert.deepEqual(Object.keys(item).sort(), [
+      "actorDisplayName",
+      "completedAt",
+      "createdAt",
+      "effectiveDate",
+      "employeeId",
+      "includesUserAccountDeletion",
+      "operationType",
+      "reason",
+      "status",
+      "subjectDisplayName",
+    ]);
+    assert.deepEqual(item, {
+      operationType: "employee-retirement",
+      status: "completed",
+      actorDisplayName: "履歴担当",
+      employeeId: "history-employee-022",
+      subjectDisplayName: null,
+      includesUserAccountDeletion: false,
+      effectiveDate: "2026-08-20",
+      reason: "本人都合",
+      createdAt: records[21].createdAt.toISOString(),
+      completedAt: records[21].completedAt.toISOString(),
+    });
+    const serializedItems = JSON.stringify(firstPage.items);
+    for (const forbidden of [
+      "uwb07-history-source-actor",
+      "b".repeat(64),
+      "requestFingerprint",
+      "targetUserUid",
+      "authDisposition",
+      "cleanupState",
+      "attemptCount",
+      "lastErrorCode",
+      "operationId",
+    ]) {
+      assert.equal(serializedItems.includes(forbidden), false, forbidden);
+    }
+  } finally {
+    await removeHistoryOperations(operationIds);
+  }
+});
+
+test("lifecycle history Callable rejects every non-company-admin actor class", async () => {
+  const { listLifecycleOperations } = await loadRebuildApis();
+  const deniedActors = [
+    { name: "manager", isAdmin: false, roles: ["manager"] },
+    {
+      name: "human-resource",
+      isAdmin: false,
+      roles: ["human-resource"],
+    },
+    { name: "direct-permission", isAdmin: false, roles: ["users:write"] },
+    { name: "super-user", isAdmin: true, roles: [], isSuperUser: true },
+    { name: "temporary", isAdmin: true, roles: [], isTemporary: true },
+    {
+      name: "disabled",
+      isAdmin: true,
+      roles: [],
+      disabled: true,
+      authDisabled: true,
+      expectedCode: "failed-precondition",
+    },
+    {
+      name: "other-tenant",
+      isAdmin: true,
+      roles: [],
+      userCompanyId: "uwb07-history-other-company",
+    },
+  ];
+
+  for (const denied of deniedActors) {
+    const uid = `uwb07-history-denied-${denied.name}`;
+    const isSuperUser = denied.isSuperUser ?? false;
+    try {
+      await seedCallableAuthUser({
+        uid,
+        companyId: HISTORY_COMPANY_ID,
+        disabled: denied.authDisabled ?? false,
+        isSuperUser,
+      });
+      await seedRegisteredUser({
+        uid,
+        pathCompanyId: HISTORY_COMPANY_ID,
+        companyId: denied.userCompanyId ?? HISTORY_COMPANY_ID,
+        isTemporary: denied.isTemporary ?? false,
+        disabled: denied.disabled ?? false,
+        isAdmin: denied.isAdmin,
+        displayName: "拒否利用者",
+        roles: denied.roles,
+      });
+
+      await assertCallableError(
+        listLifecycleOperations.run(
+          callableRequest({
+            uid,
+            claims: {
+              companyId: HISTORY_COMPANY_ID,
+              isSuperUser,
+            },
+            data: { cursor: null },
+          }),
+        ),
+        denied.expectedCode ?? "permission-denied",
+      );
+    } finally {
+      await removeHistoryActor(uid);
+    }
+  }
+});
+
+test("lifecycle history cursor failures expose one uniform Callable error", async () => {
+  const { listLifecycleOperations } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-history-cursor-admin",
+    companyId: HISTORY_COMPANY_ID,
+    isAdmin: true,
+    roles: [],
+  });
+  const corruptSchema = {
+    ...historyOperationRecord(901),
+    internalSecret: "must-not-leak",
+  };
+  const corruptTimestamp = {
+    ...historyOperationRecord(902),
+    createdAt: "not-a-firestore-timestamp",
+  };
+  const corruptIds = [
+    corruptSchema.operationId,
+    corruptTimestamp.operationId,
+  ];
+  const cursors = [historyOperationId(900), ...corruptIds];
+
+  try {
+    await seedHistoryOperations([corruptSchema, corruptTimestamp]);
+    const errors = [];
+    for (const cursor of cursors) {
+      errors.push(
+        await captureCallableError(
+          listLifecycleOperations.run(
+            actorCallableRequest({ actor, data: { cursor } }),
+          ),
+        ),
+      );
+    }
+    assert.equal(
+      new Set(errors.map((error) => `${error.code}|${error.message}`)).size,
+      1,
+    );
+    assert.equal(errors[0].code, "invalid-argument");
+    const serializedErrors = JSON.stringify(
+      errors.map((error) => ({ code: error.code, message: error.message })),
+    );
+    assert.equal(serializedErrors.includes("must-not-leak"), false);
+    assert.equal(serializedErrors.includes("not-a-firestore-timestamp"), false);
+  } finally {
+    await removeHistoryOperations(corruptIds);
+  }
+});
+
+test("Firestore Rules deny company-admin direct lifecycle history reads", async () => {
+  const uid = "uwb07-history-rules-admin";
+  const record = historyOperationRecord(950);
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: HISTORY_COMPANY_ID,
+    companyId: HISTORY_COMPANY_ID,
+    isAdmin: true,
+    roles: [],
+  });
+
+  try {
+    await seedHistoryOperations([record]);
+    const firestore = authenticatedFirestore(uid, {
+      companyId: HISTORY_COMPANY_ID,
+      isSuperUser: false,
+    });
+    await assertFails(
+      getDoc(
+        doc(
+          firestore,
+          "Companies",
+          HISTORY_COMPANY_ID,
+          "LifecycleOperations",
+          record.operationId,
+        ),
+      ),
+    );
+    await assertFails(
+      getDocs(
+        collection(
+          firestore,
+          "Companies",
+          HISTORY_COMPANY_ID,
+          "LifecycleOperations",
+        ),
+      ),
+    );
+  } finally {
+    await removeHistoryOperations([record.operationId]);
+  }
 });
 
 test("Employee-only retirement completes atomically through the public Callable", async () => {

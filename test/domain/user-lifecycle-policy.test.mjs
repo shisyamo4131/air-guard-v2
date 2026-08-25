@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  assertLifecycleOperationHistoryActor,
   assertEmployeeReinstatementActor,
   assertEmployeeReinstatementTarget,
   assertEmployeeRetirementActor,
@@ -11,6 +12,7 @@ import {
   EMPLOYEE_REINSTATEMENT_REASON_CODES,
   resolveEmployeeReinstatementInput,
   resolveEmployeeRetirementInput,
+  resolveLifecycleOperationHistoryInput,
   resolveStandaloneRegisteredUserDeletionInput,
   USER_LIFECYCLE_POLICY_ERROR_CODES,
   UserLifecyclePolicyError,
@@ -67,6 +69,88 @@ test("lifecycle policy error preserves its code and cause", () => {
 test("lifecycle policy error codes and reinstatement reasons are frozen", () => {
   assert.equal(Object.isFrozen(USER_LIFECYCLE_POLICY_ERROR_CODES), true);
   assert.equal(Object.isFrozen(EMPLOYEE_REINSTATEMENT_REASON_CODES), true);
+});
+
+test("history input accepts only exact cursor null or lower-case UUID v4", () => {
+  assert.deepEqual(resolveLifecycleOperationHistoryInput({ cursor: null }), {
+    cursor: null,
+  });
+  assert.deepEqual(
+    resolveLifecycleOperationHistoryInput({ cursor: OPERATION_ID }),
+    { cursor: OPERATION_ID },
+  );
+  assert.equal(
+    Object.isFrozen(
+      resolveLifecycleOperationHistoryInput({ cursor: OPERATION_ID }),
+    ),
+    true,
+  );
+
+  for (const input of [
+    undefined,
+    null,
+    [],
+    {},
+    { cursor: null, companyId: COMPANY_ID },
+    { cursor: null, pageSize: 20 },
+    { cursor: "not-a-uuid" },
+    { cursor: OPERATION_ID.toUpperCase() },
+    { cursor: "018f0f5e-7b4a-3a1f-8f35-cd5658b762d1" },
+  ]) {
+    assertPolicyError(
+      () => resolveLifecycleOperationHistoryInput(input),
+      input && !Array.isArray(input) && Object.keys(input).length > 1
+        ? USER_LIFECYCLE_POLICY_ERROR_CODES.UNEXPECTED_FIELD
+        : input?.cursor && input.cursor !== OPERATION_ID
+          ? USER_LIFECYCLE_POLICY_ERROR_CODES.OPERATION_ID_INVALID
+          : USER_LIFECYCLE_POLICY_ERROR_CODES.INPUT_INVALID,
+    );
+  }
+});
+
+test("history actor is limited to active registered same-company administrators", () => {
+  assert.doesNotThrow(() =>
+    assertLifecycleOperationHistoryActor({
+      companyId: COMPANY_ID,
+      actorUser: actor({ isAdmin: true, roles: [] }),
+    }),
+  );
+
+  for (const [deniedActor, expectedCode] of [
+    [
+      actor({ isAdmin: false, roles: ["manager"] }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+    ],
+    [
+      actor({ isAdmin: false, roles: ["human-resource"] }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+    ],
+    [
+      actor({ isAdmin: false, roles: ["users:write"] }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_ROLES_INVALID,
+    ],
+    [
+      actor({ isAdmin: true, roles: [], isTemporary: true }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+    ],
+    [
+      actor({ isAdmin: true, roles: [], disabled: true }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ACTIVE,
+    ],
+    [
+      actor({ isAdmin: true, roles: [], companyId: "company-b" }),
+      USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+    ],
+  ]) {
+    assertPolicyError(
+      () =>
+        assertLifecycleOperationHistoryActor({
+          companyId: COMPANY_ID,
+          actorUser: deniedActor,
+        }),
+      expectedCode,
+    );
+  }
 });
 
 test("retirement input accepts only the exact normalized contract", () => {
