@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-08-15
+- 最終更新日: 2026-08-25
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -112,12 +112,12 @@ SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cl
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-003、SPEC-SEG-004、SPEC-SEG-005、SPEC-DEEP-035
-- 対象ファイル・シンボル: `composables/useNotification.js` のpermission・`registFCMToken`、`FcmToken`、server invalid-token cleanup
-- 確認済み実装事実: permission stateはcomposableごとのrefで自動refreshしない。ログイン後にpermissionを許可してもtoken登録を自動再実行しない。clientにdeleteToken・token refresh監視・FcmToken削除呼出しはない。serverは送信時無効tokenとAuth User削除時tokenを削除する。SPEC-DEEP-035で、User設定componentのpermission request/token登録にlocal loading、single-flight、error/retry表示がなく、denied時の回復案内もないことを確認した。
-- 想定影響と発生条件: 後から許可した端末が未登録、token rotation後の旧token残存、sign-out後も最後の所有情報が残る、登録失敗が利用者に見えず通知欠落となる可能性がある。
+- 対象ファイル・シンボル: `plugins/08.firebase-messaging.client.js` のService Worker初期化、`composables/useNotification.js` のpermission・`registFCMToken`、`FcmToken`、server invalid-token cleanup
+- 確認済み実装事実: permission stateはcomposableごとのrefで自動refreshしない。ログイン後にpermissionを許可してもtoken登録を自動再実行しない。clientにdeleteToken・token refresh監視・FcmToken削除呼出しはない。serverは送信時無効tokenとAuth User削除時tokenを削除する。SPEC-DEEP-035で、User設定componentのpermission request/token登録にlocal loading、single-flight、error/retry表示がなく、denied時の回復案内もないことを確認した。2026-08-25の起動停止調査では、async pluginが`navigator.serviceWorker.register()`と通知許可済み時の`navigator.serviceWorker.ready`をapp-level timeoutなしでawaitし、認証初期化も`serviceWorker.ready`、`getToken()`、FcmToken writeを有限時間で打ち切らないことを確認した。Promiseがrejectせずpendingのままならcatchへ到達しない。
+- 想定影響と発生条件: 後から許可した端末が未登録、token rotation後の旧token残存、sign-out後も最後の所有情報が残る、登録失敗が利用者に見えず通知欠落となる可能性がある。Service WorkerまたはMessaging SDKがpendingのままになると、任意機能である通知準備がNuxt mountまたは認証readyを止め、起動templateの固定や初期navigation失敗として現れ得る。
 - 未確認点・仮説: Firebase SDKのrotation契約、他UIからの再登録呼出し、server cleanup頻度は未確認。
-- 推奨する将来対応: tokenを現在login中Userだけに紐付け、sign-out時にFirestore紐付けを削除し、次回login時に再取得・再登録する。permission grant、rotation、browser data消去、登録失敗ごとのretryを追加設計する。invalid token最終削除はserver送信処理、Auth User削除時は関連token削除とし、定期orphan token検査を追加する。
-- 必要なテスト: permission default/denied/granted遷移、offline、getToken/create failure、rotation、複数端末、User切替、Auth削除。
+- 推奨する将来対応: tokenを現在login中Userだけに紐付け、sign-out時にFirestore紐付けを削除し、次回login時に再取得・再登録する。permission grant、rotation、browser data消去、登録失敗ごとのretryを追加設計する。通知初期化はapp mountと基本認証readyの必須条件から外し、mount後の非blocking処理へ移して有限timeout・状態・明示retryを持たせる。Service Workerの自動登録と手動登録の正を一本化する。invalid token最終削除はserver送信処理、Auth User削除時は関連token削除とし、定期orphan token検査を追加する。
+- 必要なテスト: permission default/denied/granted遷移、offline、getToken/create failure、rotation、複数端末、User切替、Auth削除、`serviceWorker.register`・`serviceWorker.ready`・`getToken`の永久pending時にもVue mountと基本認証readyが有限時間内に完了すること。
 - ユーザー判断が必要な事項: 通知未準備のUI、登録retry回数、定期orphan token検査の間隔・保持期限。
 
 SPEC-DEEP-039b追加根拠: client token登録はgetToken/FcmToken createを含む全errorをcatchしてrethrowせず、認証初期化callerは登録失敗を成功完了と区別できない。
@@ -1288,11 +1288,11 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 重大度: High
 - 発見セグメント: SPEC-SEG-028、SPEC-DEEP-004、SPEC-DEEP-006
 - 対象ファイル・シンボル: `useSystemActions.initializeSystem`、System/Company subscriptions、auth session initialization
-- 確認済み実装事実: 初回System fetch失敗はlocal trueでfail-closedだがretry/subscribeなし。System初回成功後のsubscription error処理は明示されず、Company fetch失敗時はcompany modeがdefault falseになる。
-- 想定影響と発生条件: 一時障害後にmaintenance画面へ固定、またはstale falseのまま保守開始を見逃す可能性がある。
+- 確認済み実装事実: 初回System fetch失敗はlocal trueでfail-closedだがretry/subscribeなし。System初回成功後のsubscription error処理は明示されず、Company fetch失敗時はcompany modeがdefault falseになる。2026-08-25の起動停止調査では、asyncな`plugins/07.system.js`が`initializeSystem()`をawaitし、その内部の`system.fetch()`がFirestore `getDoc`をapp-level timeoutなしで待つことを確認した。Promiseがrejectせずpendingのままならfail-closed用catchにも到達せず、後続pluginとVue mountが進まない。
+- 想定影響と発生条件: 一時障害後にmaintenance画面へ固定、またはstale falseのまま保守開始を見逃す可能性がある。初回取得がpendingのままの場合は、静的な起動templateが残り続け、利用者は保守中・通信障害・再試行可否を区別できない。
 - 未確認点・仮説: FireModel subscriptionの内部retry/error callback、offline cache挙動は未確認。
-- 推奨する将来対応: 状態をloading/active/inactive/unknownへ分け、retry/backoff、last-known state、接続監視と安全な復旧UIを設ける。
-- 必要なテスト: doc不存在、permission/network断、初回/購読後切断、Company fetch失敗、再接続、複数tab。
+- 推奨する将来対応: 状態をloading/active/inactive/unknownへ分け、初回取得に有限deadline、世代または取消し、retry/backoff、last-known state、接続監視と安全な復旧UIを設ける。timeout後に遅れて完了した旧fetchが新しい状態を上書きしないようにし、System未確認中は保護対象pageを表示しない。
+- 必要なテスト: doc不存在、permission/network断、永久pending、有限timeout、timeout後の遅延完了、初回/購読後切断、Company fetch失敗、再接続、複数tab、System未確認中に保護pageが表示されないこと。
 - ユーザー判断が必要な事項: CONF-0081。
 
 SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時にmaintenance=trueへ倒す点はfail-closedだが、unknown/error区分、利用者向けretry、subscription error channel、明示的teardownを持たない。
@@ -2410,14 +2410,14 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 ## FUT-0178 Firebase/Nuxt plugin初期化順とruntimeConfig型をfail-fastで検証する
 
 - 状態: Open
-- 重大度: Medium
+- 重大度: High
 - 発見セグメント: ARCH-001
-- 対象ファイル・シンボル: Firebase/Nuxt plugins、`runtimeConfig`、emulator切替、FireModel adapter初期化
-- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、`firebaseUseEmulator`等の文字列/boolean coercionを明示検証しない。初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。
-- 想定影響と発生条件: plugin順序・環境設定差で別adapter、未初期化service、誤ったemulator/remote接続を選び、errorが後段の業務処理として現れ得る。
-- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の値、build/runtimeでのcoercionは未確認。
-- 推奨する将来対応: dependencyを明示した単一bootstrap、typed config parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。
-- 必要なテスト: plugin順序、重複初期化、欠落設定、文字列true/false、emulator/DEV/PROD matrix、SSR/client再初期化。
+- 対象ファイル・シンボル: Firebase/Nuxt plugins、`runtimeConfig`、emulator切替、FireModel adapter初期化、`scripts/run-codex-local-ui-dev.mjs`、Codex専用local UI readiness手順
+- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、`firebaseUseEmulator`等の文字列/boolean coercionを明示検証しない。初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。local UI起動wrapperはNuxt dev processを開始するだけで、root HTTP 200後にbrowserのclient entryと推移的module graphが評価可能になったことを判定しない。2026-08-25の再現ではroot、Vite client、Nuxt entry、上位pluginがHTTP 200でVite接続済みでも起動templateのままNuxt mountへ到達せず、module warm-up後の通常reload 1回で同じtabがdashboardへ到達した。
+- 想定影響と発生条件: plugin順序・環境設定差で別adapter、未初期化service、誤ったemulator/remote接続を選び、errorが後段の業務処理として現れ得る。Windows上のcold dev startではHTTP readyをapplication readyと誤認して初回navigationが起動templateへ固定され、UI testが不安定になる。
+- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の値、build/runtimeでのcoercion、初回module graphが完了しないVite/browser内部原因は未確認。
+- 推奨する将来対応: dependencyを明示した単一bootstrap、typed config parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。Codex専用dev UIはclient entryの推移的module graphまたは製品landmarkを有限時間で確認するreadiness/warm-up契約を追加し、失敗時は自動反復せず診断情報と一回限定reloadの要否を明示する。
+- 必要なテスト: plugin順序、重複初期化、欠落設定、文字列true/false、emulator/DEV/PROD matrix、SSR/client再初期化、cold dev startを複数回行ってreloadなしで製品landmarkへ到達する回帰test、timeout時の停止と診断情報。
 - ユーザー判断が必要な事項: なし。環境選択の正式値は既存運用文書と照合する。
 
 ## FUT-0179 FireModel adapter/configをrequest・tenant単位へscopeしclient/server契約を統一する
