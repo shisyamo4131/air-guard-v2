@@ -6,6 +6,7 @@
 
 ### Added
 
+- Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
 - Windows PC移行について、repository・Git外local data・Codex portable stateの停止時backup、Windows native/WSL境界、再認証、変更なしrestore checkpoint、旧PC保持条件を含む手順を追加した。
 - 利用者用`./saved-data`と通常local環境を変更せず、loopback限定demo project、合成Auth/Firestore seed、読込専用export、容量・指紋ガードを使うCodex専用localテスト基盤を追加した。
 - 共通managed governance 1.0.0とAirGuardV2所有の`governance/project-rules.md`を分離し、lock、renderer、managed validator、生成`AGENTS.md`を再構築する方針を追加した。

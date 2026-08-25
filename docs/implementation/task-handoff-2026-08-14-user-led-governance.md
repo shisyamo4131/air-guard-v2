@@ -346,3 +346,15 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - UWB-08は自動検証完了であり、利用者による`firestore.rules`確認を待つ。
 - 公式進捗は10%である。Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
 - coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## IN-APP-BROWSER-GOVERNANCE-001 PM-05 turnover preparation
+
+- 日付: 2026-08-25。
+- coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622` host `local`。
+- repository/environment: `C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続し、branch `codex/user-write-boundary`、開始HEAD `4ea6001540ba853f076556cdf7d12dcfe33d008e`、開始worktree cleanで実施した。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`のまま変更しない。
+- Codex専用Emulator ready、Nuxtの`Vite client warmed up`、初回module graph 2巡probe後にインアプリブラウザを初めて開く手順で、cold restart 3回すべてreloadなしに製品topへ到達し、保存済み合成accountのsign-inからdashboard到達も確認した。利用者はこの手順を標準採用し、project governance更新とtask交代を明示承認した。
+- 利用者Chromeは補助経路へ変更する。session喪失時の一時credentialは専用loopback Auth Emulator内の合成accountだけに限定し、saved-data・repository・出力へ残さず、平文表示中の観測を禁止し、即時再mask、saved-data指紋不変、Emulator停止による失効を要求する。
+- instruction-chain変更のため、文書検証・local commit・clean worktree確認後に完全新規task `PM（AirGuardV2）-06`を作成する。新taskのID、no-change callback、最初のfile限定commitは新task自身がこのhandoff文書へ追記する。成功するまでownershipはPM-05に残す。
+- UWB-01〜08は完了し、公式進捗は10%である。次のapplication工程はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序の確認であり、task交代完了までは開始しない。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataは未承認であり、実行しない。旧taskのarchive・deleteはCodexが行わず、交代成功後に利用者へ手動削除可能と報告する。

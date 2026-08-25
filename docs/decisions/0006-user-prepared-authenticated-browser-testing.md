@@ -1,9 +1,11 @@
 # 0006 ユーザー準備済み認証画面によるUI検証
 
 - 日付: 2026-08-04
-- 状態: Accepted
+- 状態: Superseded
 - 関連仕様: 現段階の完了条件
-- 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)
+- 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)、[0021](0021-codex-in-app-browser-ui-testing.md)
+
+> 2026-08-25に[ADR 0021](0021-codex-in-app-browser-ui-testing.md)で、Codex専用loopback環境の標準経路をインアプリブラウザへ置換した。利用者準備済みChromeは補助的な受入れ経路としてのみ残る。
 
 ## 背景
 

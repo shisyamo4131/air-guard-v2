@@ -184,7 +184,7 @@ UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firesto
 
 ### Codexだけで完結するlocal UI test
 
-2026-08-19にNuxt開発サーバーを使う自己完結最小経路を再検証した。Codexが専用Emulator、Functions、Nuxt、インアプリブラウザを順に起動し、保存済み合成Auth accountを可視controlへ一文字ずつ入力してsign-inし、`/dashboard`へ到達した。初回navigation待機中は起動templateのままtimeoutしたが、Nuxt warm-up後の通常reloadでSPA hydrationが完了したため、起動templateだけを接続失敗と判定しない。正規signupからのbaseline再生成はこの最小経路とは別の受入れであり、引き続き未検証とする。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+2026-08-25にNuxt開発サーバーを使う自己完結経路を再確認した。Codexが専用Emulator、Functions、Nuxt、インアプリブラウザを順に管理し、Nuxt/Viteを十分に予熱してから初回navigationすることで、reloadなしに製品topへ到達するcold restartを3回連続で確認した。続けて保存済み合成Auth accountでsign-inし、`/dashboard`へ到達した。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
 
 標準の起動・確認・終了順序は次のとおりとする。
 
@@ -192,19 +192,21 @@ Windows上でCodexがこの経路を実行する場合、Firebase CLIだけで�
 
 1. 専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。
 2. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
-3. `npm run test:local:ui:server`を別の前景processで起動する。このwrapperは専用dotenvのexact allowlist、demo project、loopback emulator設定を値を出力せず検証し、`AIR_GUARD_EXTERNAL_EFFECTS=deny`を固定してからNuxtを同じ前景processで起動する。Nuxt、Vite、Nitroのready出力とloopback HTTP 200を待つ。
-4. Codexインアプリブラウザで`http://127.0.0.1:14600/`を開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、直後の状態が`true`であることを確認する。`false`のままなら目視可能と報告せず、background検証として続行するか利用者と停止判断を行う。
-5. 製品landmarkが現れるまで待ち、起動templateを成功証拠にしない。起動templateが残る場合は、Nuxt側のready、HTTP 200、consoleを確認してから通常reloadを1回だけ行い、DOM、URL、consoleでhydrationを確認する。再度失敗した場合は接続成功とせず停止する。
+3. `npm run test:local:ui:server`を別の前景processで起動する。このwrapperは専用dotenvのexact allowlist、demo project、loopback emulator設定を値を出力せず検証し、`AIR_GUARD_EXTERNAL_EFFECTS=deny`を固定してからNuxtを同じ前景processで起動する。`Vite client warmed up`とNitro readyを待ち、loopback rootと初回読込みで発見したVite/Nuxt entry・plugin moduleをbounded probeする。同じmodule集合を2巡し、全requestがHTTP 200で完了してからbrowserを開く。requestがpending、timeout、非200ならnavigationへ進まず停止する。
+4. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
+5. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。予熱後も起動templateが残る場合はreloadを通常手順にせず失敗として停止し、Nuxt/Vite readiness、module request、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
 6. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。
 7. Codexが作成したtabを閉じ、Nuxt、Emulatorの順に停止し、専用portがLISTENしていないことを確認する。
 
-インアプリブラウザは既定ではbackgroundで操作される。利用者が目視を希望する検証ではvisibilityを要求し、可視状態を取得できた同じtabだけを目視可能な操作証拠とする。これはChrome拡張ではなくCodex Desktop内の専用ブラウザ表示であり、利用者のChrome profileを使用しない。2026-08-19の再試験ではvisibilityを2回要求しても状態は`false`のままで、Emulator sign-inとdashboard到達はbackgroundで成功したが、利用者による目視は未提供である。Codex DesktopまたはBrowser plugin更新後に再確認する。
+インアプリブラウザはCodex Desktop内の専用browserであり、利用者のChrome profileを使用しない。利用者が目視を希望する検証ではvisibilityを要求し、同じtabを監視対象にする。visibility状態を機械的に取得できない場合は、利用者が実際に監視できた事実とtool上の未確認を分けて報告する。Chrome拡張経路は、利用者が既存sessionを使う受入れまたはインアプリブラウザ障害の補助経路であり、標準のCodex専用UI testの前提ではない。
 
-`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser session喪失時にcredentialを永続管理する場合は、repository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
+`.codex-test/saved-data/auth_export/accounts.json`には実在情報を含まない検証済み合成Auth accountを保存する。2026-08-20時点のUI snapshotは、正規管理者signup UIから作成した管理者1件だけを含む。通常起動は`--import .codex-test/saved-data`だけを使い、確認済みのCodex管理ブラウザ認証sessionを再利用する。sign-in credentialはtracked repository、応答、検証logへ保存・出力しない。browser sessionを喪失した場合は、対象が専用loopback Auth Emulatorの保存済み合成accountであることを確認し、running Emulator内だけへrandom alphanumeric passwordを一時設定してよい。saved-dataを更新せず、停止後に同じcredentialを再利用可能と扱わない。永続管理が必要になった場合はrepository外の保護済みlocal credential storeと復旧手順を別途確定するまで平文保存しない。Rules・Callable test用の`CODEX_LOCAL_USERS`とは分離し、いずれもlocal demo project以外へ使用しない。起動ごとにaccountを作成せず、既存snapshotを読取り利用する。snapshot破損時だけ、candidate生成・backend assertion・promotion手順で置換し、通常のUI testから`--export-on-exit`で上書きしない。
 
 Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を含まない合成accountという承認済み境界内では、保存sessionの再利用または合成credentialの通常keyboard入力によるsign-inのたびに利用者へ再承認を求めない。credentialは画面へ入力する直前まで表示せず、repository、応答、command出力、検証logへ残さない。接続先が利用者用local環境、Dev、Prod、remote serviceまたは実dataへ変わる場合はこの継続承認を適用しない。
 
 `npm run test:local:seed`が生成する`.codex-test/isolated-saved-data`はRules・Callable test用であり、UI用`.codex-test/saved-data`を生成・更新しない。UI snapshotの更新はcandidate受入れ・promotion手順だけで行う。
+
+インアプリブラウザで`type=password`への通常typingが利用できない場合は、専用loopback demo accountの一時credentialに限って、製品の可視なpassword表示切替controlを通常pointerで操作し、可視fieldへ一文字ずつkeyboard入力した直後に再maskする。平文表示中はscreenshot、DOM snapshot、console、networkその他のread-only観測も行わない。入力値をtool outputへ含めず、終了時にEmulatorを停止してcredentialを失効させ、実行前後のsaved-data file数・SHA-256指紋が一致することを確認する。実account、利用者用local、Dev、Prod、remote serviceではこのfallbackを禁止し、通常のsecure credential入力を利用できなければ未検証として停止する。
 
 ブラウザUIの挙動・受入れ証拠は次の操作契約に従う。
 
@@ -227,7 +229,7 @@ npm run test:local:ui:emulators
 npm run test:local:ui:server
 ```
 
-Windows上のCodex管理ブラウザでは、Nuxt開発サーバーのVite moduleをHTTP 200で取得できてもSPA hydrationが完了しない事象を確認した。一回限りの利用者承認により、`config/codex-test-ui.env`を使ったNuxt buildと`127.0.0.1:14600`限定のNode serverで代替検証し、sign-inからdashboard到達まで成功した。プロジェクト規則のbuild禁止は維持されるため、Codexがこのbuild経路を再実行する場合は、その都度明示承認を得る。生成した`.output`は検証後に削除する。
+Windows上のCodex管理ブラウザでは、Nuxt開発サーバーがHTTP 200を返しても、Viteの初回module変換中にSPA hydrationが完了しない事象を確認した。2026-08-25にEmulator ready、`Vite client warmed up`、2巡のmodule probeを初回navigationより前へ置くことで、reloadなしの製品top到達を3回連続、sign-inからdashboard到達を1回確認した。初回module集合はsource変更で変わり得るため件数を固定せず、各実行でrootから発見した集合を記録する。専用build serverはdev経路がこのready契約を満たしても失敗する場合の診断用fallbackとする。プロジェクト規則のbuild禁止は維持されるため、Codexがbuild経路を再実行する場合は、その都度明示承認を得る。生成した`.output`は検証後に削除する。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
 
@@ -323,7 +325,7 @@ npx nuxt dev --dotenv .env.local --host 127.0.0.1
 
 CodexのインアプリブラウザとChrome拡張による操作のどちらからもNuxtローカルサーバーの画面は取得できますが、現在の環境ではCodexがAuth Emulatorの `127.0.0.1:9099` へ直接接続してサインインを自動化する経路が、ブラウザ操作レイヤーで `ERR_BLOCKED_BY_CLIENT` として遮断されます。
 
-Codex専用UI modeが完成するまで、利用者用local環境で認証後のUIテストを行う場合は、次の準備をユーザーが行った後、Codexがサインイン済みChromeタブを引き継ぐ方式とします。
+利用者用local環境そのものの受入れが必要な場合は、Codex専用UI testと混在させず、次の準備をユーザーが行った後にCodexがサインイン済みChromeタブを引き継ぐ補助経路を使います。
 
 1. `--import=./saved-data` を付けてFirebase Emulatorを起動する。
 2. `.env.local` を使ってローカルサーバーを起動する。
