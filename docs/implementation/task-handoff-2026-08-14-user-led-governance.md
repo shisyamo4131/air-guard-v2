@@ -331,3 +331,18 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - UWB-02R〜04Rのapplication実装とlocal自動検証は完了済みである。未完了gateはpermission分離後のhuman-resource provision-only actorによる正規UI再受入れであり、role選択が表示されずemailだけでEmployee連携仮登録Userを作成・削除できることを確認する。このgate完了後にUWB-05へ進む。
 - Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
 - coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## COORDINATOR-HANDOFF-011 PM-05 coordinator activation checkpoint
+
+- 日付: 2026-08-25。
+- former coordinator: PM（AirGuardV2）-04 / task `01a022d4-dced-7562-83a4-878aa7f47b7e`。
+- new coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`787ffcab8813dd39d2a90281fe92c1b6b0442ac4`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-004`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- UWB-01〜06は完了した。UWB-07/08はapplication・server・Rules実装、自動検証、Codex UI smoke、利用者local UI受入れ、super-user UI/server policy parityまで完了した。
+- UWB-07の未完了gateはretention contractであり、履歴reader、保持期間、legal hold、terminal後UID縮小を確定する必要がある。次は現状をread-onlyで調査し、現行契約、提案、影響、互換性、移行、rollback、testを利用者へ提示する。
+- UWB-08は自動検証完了であり、利用者による`firestore.rules`確認を待つ。
+- 公式進捗は10%である。Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
