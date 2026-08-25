@@ -358,3 +358,18 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - instruction-chain変更のため、文書検証・local commit・clean worktree確認後に完全新規task `PM（AirGuardV2）-06`を作成する。新taskのID、no-change callback、最初のfile限定commitは新task自身がこのhandoff文書へ追記する。成功するまでownershipはPM-05に残す。
 - UWB-01〜08は完了し、公式進捗は10%である。次のapplication工程はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序の確認であり、task交代完了までは開始しない。
 - Git push、`main` merge、deploy、Dev、Prod、remote service、実dataは未承認であり、実行しない。旧taskのarchive・deleteはCodexが行わず、交代成功後に利用者へ手動削除可能と報告する。
+
+## COORDINATOR-HANDOFF-012 PM-06 coordinator activation checkpoint
+
+- 日付: 2026-08-25。
+- former coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622`。
+- new coordinator: PM（AirGuardV2）-06 / task `01a037d6-c3a8-7f01-837e-66236b2a9508` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`7b6ce86375c99f430e247367942a3ae09cfbaeac`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-005`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- Codex専用local UI testは、Emulatorの`All emulators ready`、Nuxtの`Vite client warmed up`、loopback応答、初回module graphの2巡bounded probe成功を初回navigation前に確認する。起動templateまたはHTTP 200だけを成功証拠にせず、Codexインアプリブラウザを標準経路、Chromeを補助経路とする。
+- Codex専用一時credentialは専用loopback Auth Emulatorの合成accountだけに限定する。値をsaved-data、repository、terminal、応答、log、screenshot、DOM・console・network観測へ残さず、平文表示中は観測を停止し、通常keyboard入力後に即時再maskする。Emulator停止による失効とsaved-data指紋不変を要求する。
+- UWB-01〜08は完了し、公式進捗は10%である。次はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序を確認する。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
