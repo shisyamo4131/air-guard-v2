@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-24
-- 仕様バージョン: 0.5.9
+- 最終更新日: 2026-08-25
+- 仕様バージョン: 0.5.10
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -87,8 +87,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Employee退職、単独本登録User削除、誤退職訂正の実行状態と監査は、server-onlyの`LifecycleOperations`を操作単位の唯一の正本とする。operation ID、対象別lock、Auth削除前の永続的intent、phase、再試行、部分失敗reconcile、完了結果を保持し、clientからの直接read/writeを許可しない。email、email hash、role、通知設定、User/Auth全文、FCM tokenは保存しない。actor UIDと最大6文字の表示名、target UIDと最大6文字の表示名、Employee ID、退職日・現在上限20文字の退職理由、単独User削除理由を操作種別に必要な最小snapshotとしてserver-onlyで保持する。
 - UWB-07の全Callableは、ID tokenだけでなく現在のAuthentication accountと同社の有効な本登録Userを再取得し、UID、確認済みemail、company claim、super-user、disabled状態を照合してから認可する。Userをaccess-revoked状態へ移した後は通知dispatcherも有効な本登録User・会社一致・非disabledを送信直前に再検証し、FcmTokensのcreateを同じ条件・token/document ID一致・field allowlistへ限定してclient updateを拒否する。client deleteは本人所有tokenの削除だけ、server cleanupはAdmin SDKだけに許可する。外部FCM送信と退職transactionはatomicにできないため、commit前にeligibility確認を通過したin-flight messageは回収不能riskとして区別する。raw・partial tokenとtoken由来識別子、通知本文、custom dataをlogへ保存しない。
 - 誤って完了したEmployee退職は、会社管理者専用の訂正操作で同じEmployee documentを`ACTIVE`へ戻し、現在値の退職日・退職理由を消去できる。元の退職operationは変更・削除せず、訂正operationから参照する。訂正は完了済みのUWB-07退職だけを対象とし、旧User/Authを自動復元せず、業務記録を変更しない。UWB-07導入前の退職者は別のbackfillまたは管理者repair、実際の退職期間を伴う再雇用は別の雇用状態設計として扱う。
-- `LifecycleOperations`の自動削除は保持期間を確定するまで行わない。保持期間、閲覧投影、legal hold、完了後識別子の縮小を確定し、UWB-07とUWB-08のRules閉鎖を同じrelease gateで完了するまではProdへ公開しない。
-- 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engineに加え、UWB-07AのEmployee-only／本登録User連携core use-case、対象Auth再照合gateway、FCM cleanup adapterは実装済みである。UWB-07AのCallable・error mapper・public export・Emulator検証、UWB-07B/C use-case、reconciler、Rules、application UI、履歴UIは未実装である。実装完了までは画面マニュアルに記載した現行経路だけを利用可能な挙動として扱う。
+- `LifecycleOperations`は現段階で固定の保存期間を設けず、自動削除しない。operation、event、head、reverse参照を維持し、削除を前提とするlegal hold、完了後識別子縮小、purgeは実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で、参照整合性、訂正可能性、移行、復旧を含めて改めて仕様変更する。履歴一覧はFirestoreをclientへ直接公開せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧できるものとする。
+- 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engine、A/B/C Callable、5分間隔reconciler、訂正用最小context、Rules、application UIは実装・自動検証済みで、Codex UI smokeと利用者local UI受入れも完了している。履歴一覧readerは未実装であり、UWB-08は利用者による`firestore.rules`確認を待つ。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
 - 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。

@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06完了、UWB-07/08は実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity完了、UWB-07 retention contract確認待ち）
+- 状態: Active（UWB-01〜06完了、UWB-07/08は実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity完了、UWB-07は固定保存期限なし・自動削除なしを確定し会社管理者専用履歴reader待ち）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Local automated implementation ready / Codex UI smoke・利用者local受入れ・UI policy parity complete / retention contract pending
+- 状態: Local automated implementation ready / Codex UI smoke・利用者local受入れ・UI policy parity complete / no automatic purge confirmed / company-admin history reader pending
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -301,7 +301,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] User/Authは`Users_archive`へ保存せず、旧UID、email、role、通知設定、User/Auth全文を復元しない。Employee連携UserはEmployee訂正後のEmployee連携provisioning、単独Userは会社管理者による単独provisioningで新UIDとして再作成する。
 - [x] `LifecycleOperations`を3操作の実行状態と監査の唯一の正本にし、対象別lockとappend-only eventをserver-onlyで管理する。別々のUser削除auditとEmployee退職auditを完了判定の正本にしない。
 - [x] 誤退職訂正は会社管理者だけに許可し、完了済みUWB-07Aを参照して同じEmployeeを`ACTIVE`へ戻す。元の退職operationを変更せず、User/Authと業務記録を自動復元・変更しない。
-- [x] 元の退職日と現在上限20文字の退職理由は訂正後もserver-only履歴へ保持する。ledger reader・保持期間・legal hold・terminal後識別子縮小を確定するまでは自動purgeせず、Prod公開不可とする。
+- [x] 元の退職日と現在上限20文字の退職理由は訂正後もserver-only履歴へ保持する。現段階では固定の保存期間を設けず、自動purge、legal hold、terminal後識別子縮小を実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で改めて仕様変更する。履歴一覧は会社管理者専用の最小Callable projectionとし、その実装・検証まではProd公開不可とする。
 
 #### Firestore実装baseline
 
@@ -349,14 +349,14 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### UWB-07B 単独本登録User削除
 
-- Callableは`deleteStandaloneRegisteredUser`とし、exact inputを`operationId`、`targetUserId`、trim済み1〜20文字の`reason`に限定する。reasonはserver-only履歴へ保存し、reader・保持期間をProd前に確定する。
+- Callableは`deleteStandaloneRegisteredUser`とし、exact inputを`operationId`、`targetUserId`、trim済み1〜20文字の`reason`に限定する。reasonは固定期限なし・自動削除なしのserver-only履歴へ保存し、会社管理者専用readerの最小projectionをProd前に確定する。
 - 有効な本登録会社管理者だけが、同じ会社のEmployee未連携・非管理者・非super-user本登録Userを削除できる。active/disabledは対象にできるが、自己削除を許可しない。
 - Employee予約またはEmployee連携があればUWB-07A、仮登録なら既存`deleteTemporaryUser`を要求し、対象種類をclient指定だけで切り替えない。
 
 #### UWB-07C 誤退職訂正
 
 - Callableは`reinstateEmployee`とし、exact inputを`operationId`、`employeeId`、`reversesOperationId`、`correctionReasonCode=MISTAKEN_RETIREMENT`に限定する。雇用開始日として誤用される`effectiveDate`やemail、旧UIDは受け取らない。
-- UIはserver-only ledgerを直接読まず、`getEmployeeReinstatementContext`へ`employeeId`だけを送り、会社管理者・対象状態・User関係・latest head・元退職完了をserverで確認したうえで`reversesOperationId`とUser再登録要否だけを受け取る。これは訂正入力の準備であり、`reinstateEmployee`のtransaction内最終検証を置き換えない。履歴一覧readerは保持契約とともに未実装のままとする。
+- UIはserver-only ledgerを直接読まず、`getEmployeeReinstatementContext`へ`employeeId`だけを送り、会社管理者・対象状態・User関係・latest head・元退職完了をserverで確認したうえで`reversesOperationId`とUser再登録要否だけを受け取る。これは訂正入力の準備であり、`reinstateEmployee`のtransaction内最終検証を置き換えない。履歴一覧readerは会社管理者専用の最小Callable projectionとして未実装のままとする。
 - 有効な本登録会社管理者だけに許可する。`employees:terminate`、manager、human-resource、super-user、直接permission文字列だけでは実行できない。
 - 対象Employeeが`RESIGNED`で、参照するUWB-07A operationが同じ会社・同じEmployeeの`completed`、`cleanupState`が`completed`または`not-applicable`であり、`EmployeeLifecycleHeads/{employeeId}`のlatest operationとrevisionがその退職を指すことをtransactionで確認する。active lock、User・Employee予約があれば拒否する。同じ訂正operation ID・同じfingerprintの再送だけは保存済み結果を返し、別IDで既にACTIVEまたはreverse済みなら`ALREADY_REINSTATED`とする。
 - 1回のFirestore transactionで訂正operationとlockを作成し、Employeeを`ACTIVE`へ戻して現在値の退職日・退職理由を消去し、元operationへのreverse linkと完了eventを記録してlockを解除する。
@@ -389,7 +389,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - `failed-retryable`はdata finalize前の失敗で、lockを保持して同じoperationだけを再開する。server reconcilerは新しいactor requestではなく、保存済みoriginal actor・fingerprint・targetをservice identityで再検証して続行するため、original actorが後にdisabled・削除されてもactorUidを置換しない。既知phaseにretry上限や直接unlockを設けず、回復不能な不変条件違反はlockを保持して運用alertを出す。別actorによる手動lock削除・fingerprint変更は許可せず、将来admin repairを提供する場合は別の監査付きoperationとして仕様変更する。UWB-07Cは一つのtransactionでoperation・Employee lock・head、Employee訂正、event、`state=completed`を確定してlockを解除する。
 - Functions停止、Auth応答喪失、Firestore競合、FCM cleanup失敗は同じoperation IDの再送とserver-only reconcilerで処理する。最初のtransaction完了後は利用者取消を許可せず、元operationをcancelledへ書き換えない。
 - Auth削除成功からFirestore finalizeによるemail予約解放までの間に同emailの新Auth UIDが作成された場合、旧operationはそのUIDを検索・削除せずcore finalizeを完了する。email予約解放だけではAuthenticationのemail再利用を無条件に保証できないため、signup leaseまたは同等のserver-verifiable gateを採用するまで、新UIDの検出・repairはUWB-07の完了条件にせずFUT-0081/FUT-0083で扱う。
-- email、email hash、role、通知設定、User/Auth全文、claims、FCM tokenをledger、event、error、logへ保存しない。pending/reconcile中のraw UID、actor/targetのtrim済み最大6文字表示名、Employee ID、退職日・最大20文字退職理由、単独User削除理由だけを最小snapshotとする。core削除後の`state=data-finalized, cleanupState=pending|failed`からは、cleanup成功時の`state=completed, cleanupState=completed`へだけ遷移できる。`completed-cleanup-pending`はCallable応答statusでありoperation stateではない。completed operationは将来承認するidentifier縮小・purge以外で変更しない。core ledgerはserver-only・自動purgeなしでlocal実装できるが、reader、保持期間、legal hold、terminal後UID縮小を確定するまでProd公開しない。
+- email、email hash、role、通知設定、User/Auth全文、claims、FCM tokenをledger、event、error、logへ保存しない。pending/reconcile中のraw UID、actor/targetのtrim済み最大6文字表示名、Employee ID、退職日・最大20文字退職理由、単独User削除理由だけを最小snapshotとする。core削除後の`state=data-finalized, cleanupState=pending|failed`からは、cleanup成功時の`state=completed, cleanupState=completed`へだけ遷移できる。`completed-cleanup-pending`はCallable応答statusでありoperation stateではない。completed operationは現行の訂正・冪等性・参照整合性を維持するserver-only記録として固定期限なしで保持し、自動purge、legal hold、terminal後UID縮小を実装しない。会社管理者専用readerの実装・検証まではProd公開しない。
 - 通知logは該当する場合の`operationId`、件数、allowlist済みdomain error codeだけに限定し、raw・partial FCM token、token由来識別子、email、退職・削除理由、通知本文、custom data、provider response全文を記録しない。既存`sendMulticastNotification`とnotification triggerのtoken・payload logをUWB-07/08 release gateで是正する。
 
 #### 実装checkpoint
@@ -402,9 +402,9 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
    - [x] UWB-07B/C use-case、Callable、error mapper、public export。
 4. [x] UWB-08でUsers、Employees、予約、operation、event、lock、headをCompanies汎用matchから除外し、User client deleteとEmployee退職・訂正fieldのclient writeを閉じる。
 5. [x] 既存User/Employee削除triggerの連鎖、email log、FCM cleanup、通知dispatcherのactive User再検証、token・payload logを新operation/reconcile契約へ整合させる。
-6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionは保持契約とともに未実装とし、Rules gate完了後にUIを公開する。
+6. [x] client policy、composable、Employee詳細、User管理、訂正用最小projectionを接続する。履歴一覧projectionだけは会社管理者専用の最小Callableとして未実装であり、実装・検証後にUIを公開する。
 7. [x] 5分reconcilerの`LifecycleOperations.state` collection-group queryに必要なindexを`firestore.indexes.json`へ明示し、source contract testで固定する。
-8. [ ] 単体、EmulatorのRules・並行・phase failure、Codex UI smoke、利用者local操作受入れ、super-userの3操作control/server policy parityは完了。保持・運用確認を完了する。
+8. [ ] 単体、EmulatorのRules・並行・phase failure、Codex UI smoke、利用者local操作受入れ、super-userの3操作control/server policy parity、固定保存期限なし・自動削除なしの保持方針確定は完了。会社管理者専用履歴readerの実装・検証と利用者による`firestore.rules`確認を完了する。
 
 #### 完了条件
 
@@ -419,7 +419,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [ ] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
 - [ ] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
 - [ ] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
-- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。保持期間、reader projection、legal hold、terminal後UID縮小とUWB-08 release gateを確定・完了するまでProd公開しない。
+- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。固定保存期限なし・自動削除なしの契約を維持し、会社管理者専用reader projectionとUWB-08 release gateを完了するまでProd公開しない。
 
 ### UWB-08 Firestore Rulesのactor・field・lifecycle制約
 
@@ -510,6 +510,7 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 - Auth・Firestore triggerの部分失敗監視と再同期。
 - Employee連携User本人へ提供するEmployee Self Accessのfield・path境界。
 - 将来の明示的なsuper-user support access。
+- `LifecycleOperations`のdata量、法令・社内規程、privacy、費用、運用上の必要性に基づく保存期間・legal hold・terminal後識別子縮小・purgeの再検討。
 - Dev・production deployとremote受入れ。
 
 ## 変更記録
@@ -539,3 +540,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 checkpoint 3A core | Employee-only退職をoperation・event・一時lock・head・Employee更新の単一transactionへ統合し、本登録User連携Aを予約pointer・一意User検査、Auth identity再照合、共通削除phase engine、FCM cleanupへ接続 | 本変更 | UWB-07A対象testを含む対象35件、全domain単体test 575件が成功。仮User、予約欠損＋User残存、会社管理者、super-user、Auth disable前delete、cleanup失敗後再開を陰性・failure testで固定。Callable、error mapper、public export、Emulator、B/C、Rules、UIは未実装 |
 | 2026-08-24 | UWB-07/08 automated ready | A/B/C Callable、5分間隔reconcilerと必要なcollection-group index、訂正用最小context、client policy/composable、Employee詳細・User管理UI、User/Employee/lifecycle/FCM Rules、通知eligibility再検証とprivacy log是正を実装 | 本変更 | 全domain単体test 609件、専用Emulator suite 88件（Rules 35件を含む）pass。Codex専用UIで合成管理者sign-in、User設定、在職者一覧、退職者検索のsmokeを通常pointer/keyboardで確認し、console error 0件、既知PWA warningのみ、全専用port閉鎖、saved-data 7 files・3492 bytes不変。利用者local操作受入れ、`firestore.rules`確認、履歴reader・保持期間・legal hold・terminal後UID縮小は未完了 |
 | 2026-08-24 | UWB-07 local UI acceptance | 利用者用EmulatorとChromeでhuman-resource、super-user、会社管理者の権限別表示とA/B/Cを確認。正規UIでEmployee連携仮Userを作成し、一般User signupとAuth Emulator OOB確認で本登録へ変換してから、同じUserを伴う退職・Auth/User削除・誤退職訂正を一巡 | 本変更 | human-resourceのEmployee-only・本登録User連携退職、会社管理者のEmployee-only退職・訂正、単独本登録User削除、本登録User連携退職・訂正が成功。訂正後はEmployeeが同一IDで在職一覧へ戻り、User/Authは非復元。対象操作中のconsole warning/error 0件。既存旧fixtureの予約不整合はserverがfail closedした。super-userの訂正control表示から判明した不一致は退職・訂正・単独User削除の全client policyをserverと同じfail closedへ修正した。sign-out時listener permission-deniedは既存の共通認証課題FUT-0005へ分離し、retention contractは未完了 |
+| 2026-08-25 | UWB-07 retention decision | `LifecycleOperations`は現段階で固定保存期限を設けず、自動purge、legal hold、terminal後UID縮小を実装しない。data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点で再検討する。履歴一覧は会社管理者専用の最小Callable projectionとして残す | 本変更 | 3件のread-only code/security調査を反映。application、Rules、test、dataは未変更。文書validatorは本変更の完了時に実行 |

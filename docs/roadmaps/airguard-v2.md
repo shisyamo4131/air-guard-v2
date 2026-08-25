@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-24
+- 最終確認日: 2026-08-25
 - 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
 
 ## マイルストーン
@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装した。全domain単体608件と専用Emulator 88件は成功。Codex UIと利用者local受入れ、利用者Rules確認、履歴reader・保持期間・legal hold・terminal後識別子縮小、UWB-09、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装し、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityを完了した。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、削除を前提とするlegal hold・terminal後UID縮小は将来再検討へ移した。会社管理者専用履歴reader、利用者Rules確認、UWB-09、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UIとUWB-08 Rules・通知privacyは自動検証まで完了した。次はCodex UI・利用者local受入れと利用者Rules確認を行い、その後UWB-09へ進む。履歴reader・保持期間・legal hold・terminal後識別子縮小、Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UI、UWB-08 Rules・通知privacy、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityは完了した。次は会社管理者専用の履歴readerを実装・検証し、利用者の`firestore.rules`確認後にUWB-09へ進む。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、保存期間、legal hold、terminal後UID縮小、purgeは将来見直しが必要になった時点で再検討する。Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。汎用single-flightは現時点で採用せず、未対応client、複数tab・端末・actorの多重実行riskとserver側追加対策の要否をUWB-10後段で評価する。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-07/08は自動検証完了。Codex UI・利用者local受入れ、利用者Rules確認、履歴reader・保持契約、Firestore Rules全体のtenant内write縮小、多重実行risk後段評価、App Check、Dev・remote受入れが未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-07/08は自動検証、Codex UI smoke、利用者local受入れ、UI policy parity完了。固定保存期限なし・自動削除なしの保持契約を確定した。会社管理者専用履歴reader、利用者Rules確認、Firestore Rules全体のtenant内write縮小、多重実行risk後段評価、App Check、Dev・remote受入れが未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -134,3 +134,4 @@
 | 2026-08-24 | 10% | 0 | UWB-07第3A core checkpointとしてEmployee-only退職をoperation・event・一時lock・head・Employee更新の単一transactionへ統合し、本登録User連携Aを予約pointer・一意User検査、Auth再照合・削除、User・両予約finalize、FCM cleanupへ接続した。対象35件と全domain単体test 575件が成功した。Callable・Emulator・B/C・Rules・UI受入れが未完了のため、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | UWB-07/08のA/B/C Callable、reconcilerと必要なcollection-group index、訂正用最小context、client UI、User・Employee・lifecycle・FCM Rules、通知eligibilityとprivacy是正を実装した。全domain単体test 609件、専用Emulator suite 88件、Codex専用UIの管理者sign-inと対象一覧画面smokeが成功した。利用者local操作受入れ、Rules確認、履歴reader・保持期間・legal hold・terminal後UID縮小が未完了のため進捗は据え置いた。 |
 | 2026-08-24 | 10% | 0 | 利用者用EmulatorとChromeでUWB-07の権限別UIを受け入れ、正規UIで作成・本登録したEmployee連携Userを対象に退職、Auth/User削除、誤退職訂正、User/Auth非復元、Employeeの在職一覧復帰を確認した。単独本登録User削除とEmployee-only経路も成功した。super-userの退職・訂正・単独User削除controlをserverと同じfail closedへ揃え、sign-out listenerは既存の共通認証課題FUT-0005へ分離した。履歴reader・保持期間・legal hold・terminal後UID縮小が未完了のため、無部分加点規則により進捗は据え置いた。 |
+| 2026-08-25 | 10% | 0 | `LifecycleOperations`は現段階で固定保存期限を設けず自動削除しないと確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。会社管理者専用履歴reader、利用者Rules確認等が未完了で認証マイルストーンを満たさないため、進捗は据え置いた。 |

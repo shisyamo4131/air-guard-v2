@@ -283,7 +283,9 @@ UWB-07/08の自動検証完了後、利用者用local環境のテストデータ
 5. 退職・User削除・訂正を連打しても対象単位のloading中に再送されず、成功後にdialogが閉じること。失敗時は画面が壊れず再試行できること。
 6. `firestore.rules`でUsersのclient create/update/delete、Employee lifecycle field/delete、lifecycle ledger/event/lock/head、FcmTokens updateが拒否される方針を確認すること。
 
-利用者受入れ後も、履歴一覧reader、保持期間、legal hold、terminal後UID縮小、Firestore Rules全体に残る広いtenant内write、App Check、Dev/Prod/remote受入れが完了するまでdeploy可能とは扱わない。
+利用者受入れ後も、会社管理者専用の履歴一覧reader、利用者による`firestore.rules`確認、Firestore Rules全体に残る広いtenant内write、App Check、Dev/Prod/remote受入れが完了するまでdeploy可能とは扱わない。
+
+`LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない。削除を前提とするlegal hold、terminal後UID縮小、purge command・scheduled jobは提供しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した場合は、実dataへ作用する前に参照chain、誤退職訂正、移行、backup・復旧を含む新しい仕様とrollbackを承認する。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

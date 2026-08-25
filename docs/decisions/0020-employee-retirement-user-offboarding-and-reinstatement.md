@@ -1,6 +1,7 @@
 # 0020 Employee退職・単独User削除・誤退職訂正境界
 
 - 日付: 2026-08-24
+- 最終更新日: 2026-08-25
 - 状態: Accepted
 - 関連仕様: テナントと認証
 - 関連実装計画: [User Write Boundary](../implementation/user-write-boundary.md)
@@ -31,13 +32,16 @@ AuthenticationとFirestoreは一つのtransactionで更新できない。さら�
 - UWB-07Cは有効な本登録会社管理者だけに許可する。完了済みUWB-07Aを参照し、同じEmployee documentを`ACTIVE`へ戻して現在値の退職日・退職理由を消去する。元の退職operationは不変のままreverse linkを記録し、User/Auth、role、通知設定、旧UID、業務記録を復元・変更しない。
 - 元の退職日と現在上限20文字の退職理由は、訂正後の監査に必要なserver-only履歴として保持する。email、email hash、role、通知設定、User/Auth全文、claims、FCM tokenはledger、event、error、logへ保存しない。
 - UWB-07導入前のRESIGNED EmployeeはUWB-07Cで自動訂正せず、別のbackfillまたは管理者repairで扱う。実際の退職期間を伴う再雇用も別設計とする。
-- `LifecycleOperations`のreader projection、保持期間、legal hold、terminal後識別子縮小を確定するまでは自動purgeを行わず、Prod公開を許可しない。UWB-07と、Users・Employees・予約・operation・event・lock・`EmployeeLifecycleHeads`へのclient迂回を閉じるUWB-08を同じrelease gateとする。
+- `LifecycleOperations`は現段階で固定の保存期間を設けず、自動purgeしない。operation、event、head、reverse参照を現行schemaのまま保持し、削除を前提とするlegal holdとterminal後識別子縮小も実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で、削除対象、参照chain、訂正可能期間、legal hold、識別子縮小、移行・復旧を改めて決定する。
+- 履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧できるものとする。super-user、human-resource、manager、直接permissionだけのUserには許可しない。UWB-07と、Users・Employees・予約・operation・event・lock・`EmployeeLifecycleHeads`へのclient迂回を閉じるUWB-08を同じrelease gateとする。
 
 ## 理由
 
 Employee退職とUser削除を別々の監査documentへ重複記録すると、片方の更新後に処理が停止した場合に完了状態が食い違う。操作単位の正本を一つにすると、Auth削除のような非原子的外部作用の次の再開地点を一意に決め、誤退職訂正を完了済み退職だけへ限定できる。
 
 誤退職訂正とaccount再作成を分けることで、別tenantが正当に取得したemailやAuthへ作用せず、Employee IDと既存業務参照を維持できる。会社管理者だけに訂正を許可すると、退職担当者が自分の操作記録を単独で取り消す境界を避けられる。
+
+現時点では`LifecycleOperations`のdata量・費用が削除機構を必要とする証拠はなく、単純な期間削除はhead、reverse参照、冪等再送、誤退職訂正を壊し得る。不可逆なpurgeとそのためのlegal hold・識別子縮小を先行実装せず、必要性と正式な保持根拠を確認できた時点でまとめて再設計する方が、現在の整合性と運用を保てる。
 
 ## 代替案
 
@@ -54,7 +58,7 @@ Employee退職とUser削除を別々の監査documentへ重複記録すると、
 - Firestore Rules: UsersとEmployeesのlifecycle field、予約、operation、event、lock、`EmployeeLifecycleHeads`をCompanies汎用matchから除外し、client直接delete・退職・訂正・head改変を拒否する必要がある。FcmTokens createはactive registered User、uid・company一致、token/document ID一致、exact field/typeへ限定し、client updateを全面拒否する。deleteはresource owner本人またはserver cleanupだけに許可する。
 - Client: 無効化、退職、単独User削除、誤退職訂正を別policy・composable・確認UIとして表示する。訂正成功時はUser accessが戻らないことを明示する。
 - Data: Employeeと業務記録は保持される。User/Auth削除後のaccount再作成は新UIDとなり、旧UID履歴を書き換えない。Auth削除直後から予約解放までに同emailの新Authが作成される競合は、新UIDを推定削除せずaccount repair対象とする。
-- Privacy/operations: server-only履歴のreader、保持期間、legal hold、完了後識別子縮小をProd前に決める必要がある。
+- Privacy/operations: server-only履歴は固定期限なし・自動削除なしで保持する。会社管理者専用readerの最小projectionをProd前に実装・検証し、削除・legal hold・完了後識別子縮小は将来の保持方針見直しまで提供しない。
 - 互換性: 現行のclient `Employee.toTerminated()`、generic RESIGNED→ACTIVE更新、User/Employee削除triggerは新境界へ移行し、Rulesで直接経路を閉じる必要がある。
 
 ## 移行
@@ -69,4 +73,4 @@ legacy RESIGNED Employeeを訂正対象にする場合は、実データへ作�
 
 ## 再検討条件
 
-将来日退職・取消を提供するとき、実際の退職期間を伴う再雇用のEmployee ID・雇用期間modelを決めるとき、退職・削除履歴の法令・社内保持期間を確定するとき、または会社管理者以外へ誤退職訂正を委譲する必要が生じたときに再検討する。
+将来日退職・取消を提供するとき、実際の退職期間を伴う再雇用のEmployee ID・雇用期間modelを決めるとき、退職・削除履歴のdata量・費用・privacy・法令・社内規程から固定保存期間または削除が必要と判断したとき、または会社管理者以外へ誤退職訂正を委譲する必要が生じたときに再検討する。
