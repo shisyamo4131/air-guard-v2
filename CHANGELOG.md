@@ -25,7 +25,7 @@
 
 ### Changed
 
-- UWB-09として、公開Schemas `2.4.2-dev.166`のrole preset catalogをルートアプリとCloud Functionsへexact同一artifactで導入し、重複local catalogを削除した。strict client/Functions判定はpackageのprototype-safe membershipを使い、一般clientの直接permission互換とconsumer側write→read規則を維持した。
+- UWB-09として、公開Schemas `2.4.2-dev.166`のrole preset catalogをルートアプリとCloud Functionsへexact同一artifactで導入し、重複local catalogを削除した。strict client/Functions判定はpackageのprototype-safe membershipを使い、一般clientの直接permission互換とconsumer側write→read規則を維持した。利用者はUser管理とEmployee詳細のrole表示・選択肢、および権限別User管理controlの最小UI smokeを確認した。
 - 利用者のログイン済みChromeで、管理者menuからUWB-07の「退職・アカウント削除履歴」へ通常操作で到達し、空状態、無効な前後button、console warning/error 0件を確認した。対象環境に履歴dataがなかったため、data行と実page移動は実browser未確認である。利用者はUWB-08の`firestore.rules`について、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否を確認し、UWB-08を完了した。
 - UWB-07の会社管理者専用履歴readerを、`listLifecycleOperations` Callable、`/settings/lifecycle-history`の専用page、20件固定cursor、全stateの`processing|retrying|completed`表示、exact最小projectionとして実装した。会社はserver identityから導出し、返却直前にcurrent Authとactor Userを再検証する。super-user・manager・human-resource・直接permissionを拒否し、全Timestamp・cursorを厳格検査する。Firestore client直読deny、検索・filter・export・total count・永続cacheなしを維持した。対象70件、全domain 635件、専用Emulator 92件は成功し、追加indexは不要だった。
 - UWB-07の`LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない契約へ確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧する境界を維持する。
