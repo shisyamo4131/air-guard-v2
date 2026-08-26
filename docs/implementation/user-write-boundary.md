@@ -491,19 +491,19 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 - [x] 全domain単体testを実行する。
 - [x] Codex専用Firestore/Auth Emulator testを実行する。
-- [ ] Codex専用local UI環境のブラウザでUser管理flowを一巡する。
-- [ ] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
+- [x] 利用者起動のlocal Emulator・開発サーバーへ接続したChromeでUser管理flowを一巡する。
+- [x] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
 - [x] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価した。role更新と有効・無効変更だけへclient期待値とtransaction内現在値の一致確認を追加し、対象Userのlifecycle lock中は拒否する。会社管理者移譲、仮User作成・削除、UWB-07 lifecycleは既存transaction・予約・lock・reconcileを維持し、通知設定の同時編集はlast-write-winsとして受容する。全document共通revision・lock・ledgerは採用せず、通常CRUDと他collectionへ展開しない。
 - [x] project-owned validatorとmanaged governance validatorを実行する。
-- [ ] `git diff --check`とclean worktreeを確認する。
-- [ ] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
+- [x] `git diff --check`とclean worktreeを確認する。
+- [x] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
 - [ ] 利用者の全file確認とlocal動作確認後にmain統合承認を得る。
 
 #### 完了条件
 
 - [x] UWB-01〜UWB-09がすべて完了している。
 - [x] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
-- [ ] local testとChrome受入れがすべて成功している。
+- [x] local testとChrome受入れがすべて成功している。
 - [ ] 利用者がUWBのlocal確定を明示している。
 - [ ] main統合対象commit、差分、test、未確認事項が提示されている。
 
@@ -555,3 +555,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-25 | UWB-07 retention decision | `LifecycleOperations`は現段階で固定保存期限を設けず、自動purge、legal hold、terminal後UID縮小を実装しない。data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点で再検討する。履歴一覧は会社管理者専用の最小Callable projectionとして残す | 本変更 | 3件のread-only code/security調査を反映。application、Rules、test、dataは未変更。文書validatorは本変更の完了時に実行 |
 | 2026-08-25 | UWB-07 lifecycle history reader automated | 会社管理者専用`listLifecycleOperations`、20件cursor paging、全stateの3段階projection、専用route・navigation、desktop/mobile pageを実装。返却直前にcurrent Authとactor Userを再検証し、全operation Timestampとcursorを厳格検査する。Firestore client直読denyと固定保存期限なし・自動削除なしを維持 | 本変更 | 対象70/70、全domain 635/635、Codex専用Emulator 92/92が成功。実queryに追加index要求なし。Nuxt dev serverはHTTP接続・console error 0だが既知の起動templateからhydrateせず、通常reload 1回後も履歴pageへ到達できなかったため実browser確認は未完了。利用者Rules確認、Dev/Prod/remoteは未確認 |
 | 2026-08-26 | UWB-10 authentication concurrency automated | role更新へ編集前`expectedRoles`、有効・無効変更へ`expectedDisabled`を追加し、transaction内の現在値との不一致と対象Userのactive lifecycle lockを安全な`aborted`として拒否した。通知設定・本人プロフィール・通常CRUD・他collectionへ共通revision、lock、ledgerを展開しない境界をADR 0023へ記録 | 本変更 | 全domain単体test 646/646、Codex専用Emulator 93/93、project-owned・managed governance validator、renderer drift、`git diff --check`が成功。内蔵ブラウザはEmulator ready、Vite warmup、root 200、11 moduleの2巡probe後も2回とも起動templateで停止し、Nuxtに`ECONNRESET`、browser console error 0件を観測した。Chrome補助経路は接続不可。全専用port閉鎖、saved-data 7 filesの指紋不変、runtime残留0を確認。通常UI受入れ、利用者の全file確認、feature commit・main統合は未完了 |
+| 2026-08-26 | UWB-10 Chrome concurrency acceptance | 利用者起動のimport-only local Emulator、開発サーバー、会社管理者でsign-in済みChromeをCodexが通常pointer操作で使用。非管理者の対象Userを無効化・再有効化し、2画面の片方で`労務`を先行保存、もう片方の古い`法務`保存を競合させた | `bc47459` | 無効化・再有効化が成功。古い保存は「対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。」で拒否され、`法務`は保存されず`労務`だけが維持された。最後にrole未設定へ戻し、対象Userが有効・全preset未選択であることを再読込確認。既知のChrome extension message-channel errorと期待されたstale拒否loggerを分離し、account切替・削除・他User変更は0件 |
