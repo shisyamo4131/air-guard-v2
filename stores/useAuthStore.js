@@ -7,6 +7,7 @@ import {
   buildRoles,
   getPermissions,
   hasPermission as checkPermission,
+  hasPresetPermission as checkPresetPermission,
   hasRole as checkRole,
 } from "@/utils/auth/authorization";
 
@@ -185,6 +186,16 @@ export const useAuthStore = defineStore("auth", () => {
     return checkPermission(permissions.value, permission);
   }
 
+  /**
+   * 現在Userに保存された既知presetだけから権限を判定します。
+   * special roleと直接permission文字列は権限根拠にしません。
+   * @param {string} permission
+   * @returns {boolean}
+   */
+  function hasPresetPermission(permission) {
+    return checkPresetPermission(userInstance.roles, permission);
+  }
+
   // pinia を使う場合、return で公開されるものは自動的にリアクティブになる。
   // また、ref で定義されたプロパティも .value を意識せずにアクセス可能。
   // ただし、分割代入を行うとリアクティブ性が失われることに注意。
@@ -206,5 +217,6 @@ export const useAuthStore = defineStore("auth", () => {
     waitUntilSessionCleared,
     hasRole,
     hasPermission,
+    hasPresetPermission,
   };
 });

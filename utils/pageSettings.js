@@ -1,42 +1,57 @@
 /**
- * ページの表示・アクセスに関する設定 Ver.3
+ * ページの表示・アクセスに関する設定 Ver.4
  *
  * - id: 一意の識別子
  * - path: Nuxt Router で使用する絶対パス
- * - public: (boolean) 未認証ユーザーでもアクセス可能か (デフォルト: false)
+ * - accessPolicy: pathを持つページに適用する共有access policy
  * - label: ナビゲーションやパンくずリストで表示する名称
  * - icon: ナビゲーション表示用の Vuetify アイコン（mdi-xxx）
- * - roles: アクセス許可されたロール配列 (認証済みユーザー向け)。
- *          空配列は認証済みであればロールに関わらず許可。
  * - navigation: (boolean) ナビゲーションメニューに表示するか
  * - children: 子ページの配列（同じ構造を持つ）
  *
  * NOTE: "/" を除き、`id` と `path` を一致させると NavigationDrawer コンポーネントでの
  *       アクティブ判定が有効になる。
  */
+import {
+  isKnownPageAccessPolicy,
+  isPageAccessAllowed,
+  PAGE_ACCESS_POLICIES,
+} from "./auth/policies/pageAccessPolicy.js";
+
+const LEGACY_PAGE_ACCESS_FIELDS = Object.freeze([
+  "public",
+  "roles",
+  "strictPresetPermissions",
+  "allowAdmin",
+]);
+
+function getLegacyPageAccessFields(pageConfig) {
+  if (!pageConfig || typeof pageConfig !== "object") return [];
+  return LEGACY_PAGE_ACCESS_FIELDS.filter((field) =>
+    Object.hasOwn(pageConfig, field),
+  );
+}
+
 export const pageStructure = [
   {
     id: "sign-up-admin",
     path: "/auth/sign-up-admin",
-    public: true, // 公開ページ
+    accessPolicy: PAGE_ACCESS_POLICIES.PUBLIC,
     label: "管理者アカウントサインアップ",
-    roles: [],
     navigation: false,
   },
   {
     id: "sign-up",
     path: "/auth/sign-up",
-    public: true, // 公開ページ
+    accessPolicy: PAGE_ACCESS_POLICIES.PUBLIC,
     label: "利用者アカウントサインアップ",
-    roles: [],
     navigation: false,
   },
   {
     id: "sign-in",
     path: "/auth/sign-in",
-    public: true, // 公開ページ
+    accessPolicy: PAGE_ACCESS_POLICIES.PUBLIC,
     label: "サインイン",
-    roles: [], // 認証済みユーザーはアクセスしない想定だが定義はしておく
     navigation: false,
   },
 
@@ -44,9 +59,8 @@ export const pageStructure = [
   {
     id: "super-user",
     path: "/super-user",
-    public: false,
+    accessPolicy: PAGE_ACCESS_POLICIES.SUPER_USER,
     label: "スーパーユーザー",
-    roles: ["super-user"],
     navigation: true,
   },
 
@@ -55,7 +69,6 @@ export const pageStructure = [
     id: "module-tests",
     label: "テスト",
     icon: "mdi-domain",
-    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -63,7 +76,7 @@ export const pageStructure = [
         path: "/test/component-test",
         label: "コンポーネント",
         icon: "mdi-domain",
-        roles: ["developer"], // ← 統一
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
       {
@@ -71,7 +84,7 @@ export const pageStructure = [
         path: "/test/permissions-test",
         label: "権限システムテスト",
         icon: "mdi-shield-check",
-        roles: ["developer"], // ← 統一
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
       {
@@ -79,7 +92,7 @@ export const pageStructure = [
         path: "/test/rollback-operation-result",
         label: "稼働実績ロールバック",
         icon: "mdi-domain",
-        roles: ["developer"], // ← 統一
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
       {
@@ -87,7 +100,7 @@ export const pageStructure = [
         path: "/test/round-setting-test",
         label: "端数処理設定クラス",
         icon: "mdi-domain",
-        roles: ["developer"], // ← 統一
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
     ],
@@ -97,9 +110,8 @@ export const pageStructure = [
   {
     id: "home", // ルートパスを追加 (公開ページとする例)
     path: "/",
-    public: true, // 公開ページ
+    accessPolicy: PAGE_ACCESS_POLICIES.PUBLIC,
     label: "ホーム",
-    roles: [],
     navigation: false,
   },
 
@@ -109,7 +121,7 @@ export const pageStructure = [
     path: "/dashboard",
     label: "ダッシュボード",
     icon: "mdi-view-dashboard",
-    roles: [],
+    accessPolicy: PAGE_ACCESS_POLICIES.AUTHENTICATED,
     navigation: true,
   },
 
@@ -118,7 +130,6 @@ export const pageStructure = [
     id: "control-operation-group",
     label: "管制業務",
     icon: "mdi-camera-control",
-    roles: ["site-operation-schedules:read"],
     navigation: true,
     children: [
       {
@@ -126,7 +137,7 @@ export const pageStructure = [
         path: "/operation-schedules",
         label: "(Beta) 稼働予定管理",
         icon: "mdi-calendar-multiselect",
-        roles: ["site-operation-schedules:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITE_OPERATION_SCHEDULES_READ,
         navigation: true,
       },
       {
@@ -134,7 +145,7 @@ export const pageStructure = [
         path: "/arrangements-manager",
         label: "配置管理",
         icon: "mdi-calendar-account",
-        roles: ["site-operation-schedules:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITE_OPERATION_SCHEDULES_READ,
         navigation: true,
       },
       {
@@ -142,7 +153,7 @@ export const pageStructure = [
         path: "/operation-results/generator",
         label: "上下番確定処理",
         icon: "mdi-calendar-check",
-        roles: ["site-operation-schedules:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITE_OPERATION_SCHEDULES_READ,
         navigation: true,
       },
     ],
@@ -151,10 +162,8 @@ export const pageStructure = [
   // ===== 稼働実績管理 =====
   {
     id: "operation-results-group",
-    // public: false,
     label: "稼働実績管理",
     icon: "mdi-clipboard-check",
-    roles: ["operation-results:read"],
     navigation: true,
     children: [
       {
@@ -162,7 +171,7 @@ export const pageStructure = [
         path: "/operation-results",
         label: "稼働実績一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["operation-results:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.OPERATION_RESULTS_READ,
         navigation: true,
       },
       {
@@ -170,7 +179,7 @@ export const pageStructure = [
         path: "/operation-results/[id]",
         label: "稼働実績詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["operation-results:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.OPERATION_RESULTS_READ,
         navigation: false,
       },
     ],
@@ -181,7 +190,6 @@ export const pageStructure = [
     id: "attendances-group",
     label: "勤怠管理",
     icon: "mdi-clock-check",
-    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -189,7 +197,7 @@ export const pageStructure = [
         path: "/attendances",
         label: "従業員別勤怠情報",
         icon: "mdi-calendar",
-        roles: ["developer"],
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
       {
@@ -197,7 +205,7 @@ export const pageStructure = [
         path: "/attendances/export",
         label: "打刻データ出力",
         icon: "mdi-file-export",
-        roles: ["developer"],
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
     ],
@@ -208,7 +216,6 @@ export const pageStructure = [
     id: "billings-group",
     label: "請求管理",
     icon: "mdi-file-document-multiple",
-    roles: ["billings:read"],
     navigation: true,
     children: [
       {
@@ -216,7 +223,7 @@ export const pageStructure = [
         path: "/billings/operations",
         label: "稼働請求一覧",
         icon: "mdi-file-document",
-        roles: ["billings:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.BILLINGS_READ,
         navigation: true,
       },
       {
@@ -224,7 +231,7 @@ export const pageStructure = [
         path: "/billings/operations/[id]",
         label: "稼働請求詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["billings:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.BILLINGS_READ,
         navigation: false,
       },
       {
@@ -232,7 +239,7 @@ export const pageStructure = [
         path: "/billings/customers",
         label: "取引先請求一覧",
         icon: "mdi-file-document-outline",
-        roles: ["billings:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.BILLINGS_READ,
         navigation: true,
       },
       {
@@ -240,7 +247,7 @@ export const pageStructure = [
         path: "/billings/customers/[id]",
         label: "取引先請求詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["billings:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.BILLINGS_READ,
         navigation: false,
       },
     ],
@@ -251,7 +258,6 @@ export const pageStructure = [
     id: "customers-group",
     label: "取引先管理",
     icon: "mdi-domain",
-    roles: ["customers:read"],
     navigation: true,
     children: [
       {
@@ -259,7 +265,7 @@ export const pageStructure = [
         path: "/customers",
         label: "取引先一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["customers:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_READ,
         navigation: true,
       },
       {
@@ -267,7 +273,7 @@ export const pageStructure = [
         path: "/customers/[id]",
         label: "取引先詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["customers:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_READ,
         navigation: false,
       },
     ],
@@ -278,7 +284,6 @@ export const pageStructure = [
     id: "sites-group",
     label: "現場管理",
     icon: "mdi-pickaxe",
-    roles: ["sites:read"],
     navigation: true,
     children: [
       {
@@ -286,7 +291,7 @@ export const pageStructure = [
         path: "/sites",
         label: "稼働中現場一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["sites:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITES_READ,
         navigation: true,
       },
       {
@@ -294,7 +299,7 @@ export const pageStructure = [
         path: "/sites/[id]",
         label: "現場詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["sites:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITES_READ,
         navigation: false,
       },
       {
@@ -302,7 +307,7 @@ export const pageStructure = [
         path: "/sites/terminated",
         label: "終了現場検索",
         icon: "mdi-magnify",
-        roles: ["sites:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SITES_READ,
         navigation: true,
       },
     ],
@@ -313,7 +318,6 @@ export const pageStructure = [
     id: "employees-group",
     label: "従業員管理",
     icon: "mdi-account-multiple",
-    roles: ["employees:read"],
     navigation: true,
     children: [
       {
@@ -321,7 +325,7 @@ export const pageStructure = [
         path: "/employees",
         label: "在職者一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.EMPLOYEES_READ,
         navigation: true,
       },
       {
@@ -329,7 +333,7 @@ export const pageStructure = [
         path: "/employees/[id]",
         label: "従業員詳細",
         icon: "mdi-format-list-bulleted",
-        roles: ["employees:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.EMPLOYEES_READ,
         navigation: false,
       },
       {
@@ -337,7 +341,7 @@ export const pageStructure = [
         path: "/employees/resigned",
         label: "退職者検索",
         icon: "mdi-magnify",
-        roles: ["employees:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.EMPLOYEES_READ,
         navigation: true,
       },
     ],
@@ -348,7 +352,6 @@ export const pageStructure = [
     id: "outsourcers-group",
     label: "外注先管理",
     icon: "mdi-handshake",
-    roles: ["outsourcers:read"],
     navigation: true,
     children: [
       {
@@ -356,7 +359,7 @@ export const pageStructure = [
         path: "/outsourcers",
         label: "外注先一覧",
         icon: "mdi-format-list-bulleted",
-        roles: ["outsourcers:read"],
+        accessPolicy: PAGE_ACCESS_POLICIES.OUTSOURCERS_READ,
         navigation: true,
       },
     ],
@@ -367,7 +370,6 @@ export const pageStructure = [
     id: "settings",
     label: "管理者メニュー",
     icon: "mdi-cog",
-    roles: ["admin"],
     navigation: false,
     children: [
       {
@@ -375,7 +377,7 @@ export const pageStructure = [
         path: "/settings/user",
         label: "アプリ設定",
         icon: "mdi-account-cog",
-        roles: ["admin"],
+        accessPolicy: PAGE_ACCESS_POLICIES.ADMIN,
         navigation: false,
       },
     ],
@@ -385,7 +387,6 @@ export const pageStructure = [
     id: "master-maintenance",
     label: "マスタメンテナンス",
     icon: "mdi-cog",
-    roles: ["developer"],
     navigation: true,
     children: [
       {
@@ -393,7 +394,7 @@ export const pageStructure = [
         path: "/articles",
         label: "商品管理",
         icon: "mdi-office-building",
-        roles: ["developer"],
+        accessPolicy: PAGE_ACCESS_POLICIES.DEVELOPER,
         navigation: true,
       },
     ],
@@ -403,7 +404,6 @@ export const pageStructure = [
     id: "admin-settings",
     label: "管理者メニュー",
     icon: "mdi-cog",
-    roles: ["admin"],
     navigation: true,
     children: [
       {
@@ -411,7 +411,7 @@ export const pageStructure = [
         path: "/settings/company",
         label: "会社設定",
         icon: "mdi-office-building",
-        roles: ["admin"],
+        accessPolicy: PAGE_ACCESS_POLICIES.ADMIN,
         navigation: true,
       },
       {
@@ -419,7 +419,15 @@ export const pageStructure = [
         path: "/settings/users",
         label: "ユーザー設定",
         icon: "mdi-account-cog",
-        roles: ["admin"],
+        accessPolicy: PAGE_ACCESS_POLICIES.USER_MANAGEMENT,
+        navigation: true,
+      },
+      {
+        id: "lifecycle-history",
+        path: "/settings/lifecycle-history",
+        label: "退職・アカウント削除履歴",
+        icon: "mdi-history",
+        accessPolicy: PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY,
         navigation: true,
       },
       {
@@ -427,7 +435,7 @@ export const pageStructure = [
         path: "/settings/checkout",
         label: "サブスクリプション管理",
         icon: "mdi-account-cog",
-        roles: ["super-user"],
+        accessPolicy: PAGE_ACCESS_POLICIES.SUPER_USER,
         navigation: false,
       },
     ],
@@ -436,95 +444,18 @@ export const pageStructure = [
 ];
 
 // --- ヘルパー関数 ---
-import { getPermissions } from "@/utils/auth/authorization";
-/**
- * ユーザーが指定されたページにアクセス可能かどうかを判定する
- * - 役割プリセット（manager, controller など）と機能単位の権限（sites:read など）の両方に対応
- *
- * @param {Array<string>} requiredRoles - ページに必要な役割・権限の配列
- * @param {Array<string>} userRoles - ユーザーが持つ役割の配列
- * @returns {boolean} アクセス可能な場合は true
- *
- * ## 動作例
- *
- * ### 役割指定がない場合
- * ```javascript
- * hasAccess([], ['controller']) // → true (認証済みなら誰でもOK)
- * ```
- *
- * ### 役割プリセットでチェック
- * ```javascript
- * // controller ロールを持つユーザー
- * hasAccess(['controller'], ['controller']) // → true (直接一致)
- * hasAccess(['manager'], ['controller']) // → false (一致しない)
- * ```
- *
- * ### 機能単位の権限でチェック
- * ```javascript
- * // controller ロールを持つユーザー
- * hasAccess(['sites:write'], ['controller'])
- * // → true (controller には sites:write が含まれる)
- *
- * hasAccess(['billings:write'], ['controller'])
- * // → false (controller には billings:write が含まれない)
- * ```
- *
- * ### super-user は常にアクセス可能
- * ```javascript
- * hasAccess(['billings:write'], ['super-user']) // → true (すべての権限)
- * ```
- */
-function hasAccess(requiredRoles, userRoles) {
-  // 役割指定がない場合は、認証済みならOK
-  if (!requiredRoles || requiredRoles.length === 0) {
-    return true;
-  }
-
-  // ユーザーに役割がない場合はアクセス不可
-  if (!userRoles || userRoles.length === 0) {
-    return false;
-  }
-
-  // super-user 専用ページは super-user のみ許可
-  if (
-    requiredRoles.includes("super-user") &&
-    !userRoles.includes("super-user")
-  ) {
-    return false;
-  }
-
-  // developer 専用ページは developer のみ許可
-  if (requiredRoles.includes("developer") && !userRoles.includes("developer")) {
-    return false;
-  }
-
-  // admin は専用ページを除き許可
-  if (userRoles.includes("admin")) {
-    return true;
-  }
-
-  // ユーザーが持つすべての権限を取得
-  const userPermissions = getPermissions(userRoles);
-
-  // すべての権限を持つ場合（super-user）
-  if (userPermissions.includes("*")) {
-    return true;
-  }
-
-  // 要求される役割・権限のいずれかを持っているかチェック
-  return requiredRoles.some((required) => {
-    // 1. ユーザーの役割に直接含まれているか
-    if (userRoles.includes(required)) {
-      return true;
-    }
-
-    // 2. ユーザーの権限に含まれているか
-    if (userPermissions.includes(required)) {
-      return true;
-    }
-
-    return false;
-  });
+export function isPageConfigAllowed(
+  pageConfig,
+  userRoles,
+  accessContext = {},
+) {
+  if (!pageConfig || typeof pageConfig !== "object") return false;
+  if (getLegacyPageAccessFields(pageConfig).length > 0) return false;
+  return isPageAccessAllowed(
+    pageConfig.accessPolicy,
+    userRoles,
+    accessContext,
+  );
 }
 
 /**
@@ -536,17 +467,12 @@ function createPathMap(pages) {
   const map = {};
   function recurse(items) {
     for (const item of items) {
-      // public プロパティのデフォルト値を設定
-      const config = { public: false, ...item };
-      if (config.path) {
-        const normalizedPath = config.path.replace(/\/$/, "") || "/";
-        map[normalizedPath] = config; // public を含んだオブジェクトを格納
+      if (item.path) {
+        const normalizedPath = item.path.replace(/\/$/, "") || "/";
+        map[normalizedPath] = item;
       }
-      if (config.children) {
-        // children にも public: false を伝播させるか、
-        // もしくは children 内で明示的に public を設定するかは設計次第
-        // ここでは子の public は子自身で定義される想定
-        recurse(config.children);
+      if (item.children) {
+        recurse(item.children);
       }
     }
   }
@@ -565,10 +491,8 @@ function createParentPathMap(pages) {
 
   function recurse(items, parentPath = null) {
     for (const item of items) {
-      const config = { public: false, ...item };
-
-      if (config.path) {
-        const normalizedPath = config.path.replace(/\/$/, "") || "/";
+      if (item.path) {
+        const normalizedPath = item.path.replace(/\/$/, "") || "/";
 
         // 親パスを記録
         if (parentPath) {
@@ -576,15 +500,15 @@ function createParentPathMap(pages) {
         }
 
         // このアイテムが子を持つ場合、子の親はこのアイテム
-        if (config.children) {
-          recurse(config.children, normalizedPath);
+        if (item.children) {
+          recurse(item.children, normalizedPath);
         }
-      } else if (config.children) {
+      } else if (item.children) {
         // path がないグループの場合
         // 子要素同士で親子関係を判定する必要がある
 
         // まず子要素を収集
-        const childPaths = config.children
+        const childPaths = item.children
           .filter((child) => child.path)
           .map((child) => child.path.replace(/\/$/, "") || "/");
 
@@ -602,7 +526,7 @@ function createParentPathMap(pages) {
         }
 
         // 再帰処理（親パスは引き継ぐ）
-        recurse(config.children, parentPath);
+        recurse(item.children, parentPath);
       }
     }
   }
@@ -688,7 +612,7 @@ export function getPageConfig(path) {
  * @param {string[]} userRoles - 現在のユーザーのロール配列
  * @returns {boolean} アクセス可能か (ページ設定が見つからない場合も false)
  */
-export function isPageAllowed(path, userRoles) {
+export function isPageAllowed(path, userRoles, accessContext = {}) {
   const pageConfig = getPageConfig(path);
 
   if (!pageConfig) {
@@ -697,8 +621,7 @@ export function isPageAllowed(path, userRoles) {
     return false;
   }
 
-  // public フラグはここでは見ない。純粋にロールのチェックのみ。
-  return hasAccess(pageConfig.roles, userRoles);
+  return isPageConfigAllowed(pageConfig, userRoles, accessContext);
 }
 
 /**
@@ -707,34 +630,42 @@ export function isPageAllowed(path, userRoles) {
  * @param {string[]} userRoles - 現在のユーザーロール配列
  * @returns {Array} ナビゲーション項目リスト
  */
-export function getNavigationItems(userRoles) {
+export function getNavigationItems(userRoles, accessContext = {}) {
   function filterAndMap(items) {
     const result = [];
     for (const item of items) {
-      const config = { public: false, ...item }; // public デフォルト値
+      if (!item.navigation) continue;
 
-      // ナビゲーション表示は roles を満たす必要がある
-      if (hasAccess(config.roles, userRoles)) {
-        if (config.navigation) {
+      if (item.path) {
+        if (isPageConfigAllowed(item, userRoles, accessContext)) {
           const navItem = {
-            title: config.label,
-            value: config.id,
-            to: config.path,
-            prependIcon: config.icon,
+            title: item.label,
+            value: item.id,
+            to: item.path,
+            prependIcon: item.icon,
           };
 
-          if (config.children) {
-            const accessibleChildren = filterAndMap(config.children);
+          if (item.children) {
+            const accessibleChildren = filterAndMap(item.children);
             if (accessibleChildren.length > 0) {
               navItem.children = accessibleChildren;
-              if (!config.path) {
-                delete navItem.to;
-              }
-              result.push(navItem);
             }
-          } else if (config.path) {
-            result.push(navItem);
           }
+
+          result.push(navItem);
+        }
+        continue;
+      }
+
+      if (item.children) {
+        const accessibleChildren = filterAndMap(item.children);
+        if (accessibleChildren.length > 0) {
+          result.push({
+            title: item.label,
+            value: item.id,
+            prependIcon: item.icon,
+            children: accessibleChildren,
+          });
         }
       }
     }
@@ -815,66 +746,86 @@ export function getParentPagePath(path) {
 // utils/pageSettings.js
 
 /**
- * pageSettings の整合性をチェック
- * - 親の roles より子の roles が緩い場合は警告
+ * pageSettings のpath、policy、group構造を検証します。
  */
-export function validatePageSettings() {
-  function validate(items, parentRoles = []) {
+export function validatePageSettings(pages = pageStructure) {
+  let isValid = true;
+  const ids = new Set();
+  const paths = new Set();
+
+  function warn(item, message) {
+    isValid = false;
+    console.warn(
+      `⚠️ [pageSettings] "${item.label}" (${item.id}): ${message}`,
+    );
+  }
+
+  function validate(items) {
     for (const item of items) {
-      const config = { public: false, roles: [], ...item };
-
-      // 通常の役割（manager, controller など）が含まれている場合は警告
-      const normalRoles = [
-        "manager",
-        "controller",
-        "accountant",
-        "labor",
-        "legal",
-      ];
-      const foundNormalRoles = config.roles.filter((role) =>
-        normalRoles.includes(role),
-      );
-
-      if (foundNormalRoles.length > 0) {
-        console.warn(
-          `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
-            `通常の役割 [${foundNormalRoles}] が指定されています。` +
-            `権限ベース（例: "sites:read"）での指定を推奨します。`,
-        );
+      if (!item || typeof item !== "object" || Array.isArray(item)) {
+        warn({}, "pageまたはgroupはobjectでなければなりません");
+        continue;
       }
 
-      // 親に roles がある場合、子も同等以上の制限が必要
-      if (parentRoles.length > 0 && config.roles.length === 0) {
-        console.warn(
-          `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
-            `親は roles: [${parentRoles}] だが、子は roles: [] (制限なし)`,
-        );
+      if (typeof item.id !== "string" || item.id.length === 0) {
+        warn(item, "空でないidが必要です");
+      } else if (ids.has(item.id)) {
+        warn(item, `id "${item.id}" が重複しています`);
+      } else {
+        ids.add(item.id);
       }
 
-      // 親の roles に含まれない role が子にある場合も警告
-      if (config.roles.length > 0 && parentRoles.length > 0) {
-        const missingRoles = config.roles.filter(
-          (role) => !parentRoles.includes(role),
-        );
-        if (missingRoles.length > 0) {
-          console.warn(
-            `⚠️ [pageSettings] "${config.label}" (${config.id}): ` +
-              `子の roles [${missingRoles}] は親の roles [${parentRoles}] に含まれていません`,
-          );
+      if (typeof item.navigation !== "boolean") {
+        warn(item, "navigationはbooleanでなければなりません");
+      }
+
+      const foundLegacyFields = getLegacyPageAccessFields(item);
+      if (foundLegacyFields.length > 0) {
+        warn(item, `旧access field [${foundLegacyFields}] は使用できません`);
+      }
+
+      const hasPath = Object.hasOwn(item, "path");
+      const hasValidPath =
+        hasPath &&
+        typeof item.path === "string" &&
+        item.path.startsWith("/");
+
+      if (hasPath && !hasValidPath) {
+        warn(item, "pathは/から始まる文字列でなければなりません");
+      }
+
+      if (hasValidPath) {
+        const normalizedPath = item.path.replace(/\/$/, "") || "/";
+        if (paths.has(normalizedPath)) {
+          warn(item, `path "${normalizedPath}" が重複しています`);
+        } else {
+          paths.add(normalizedPath);
         }
+
+        if (!isKnownPageAccessPolicy(item.accessPolicy)) {
+          warn(item, "pathを持つpageには既知のaccessPolicyが必要です");
+        }
+      } else if (Object.hasOwn(item, "accessPolicy")) {
+        warn(item, "pathを持たないgroupへaccessPolicyは設定できません");
+      } else if (!Array.isArray(item.children) || item.children.length === 0) {
+        warn(item, "pathを持たないgroupにはchildrenが必要です");
       }
 
-      // 再帰的にチェック
-      if (config.children) {
-        validate(
-          config.children,
-          config.roles.length > 0 ? config.roles : parentRoles,
-        );
+      if (Object.hasOwn(item, "children") && !Array.isArray(item.children)) {
+        warn(item, "childrenは配列でなければなりません");
+      } else if (item.children) {
+        validate(item.children);
       }
     }
   }
 
-  validate(pageStructure);
+  if (!Array.isArray(pages)) {
+    warn({}, "page settings rootは配列でなければなりません");
+    return false;
+  }
+
+  validate(pages);
+  return isValid;
 }
 
 // 開発環境でのみバリデーション実行

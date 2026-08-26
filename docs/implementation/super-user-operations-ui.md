@@ -11,7 +11,7 @@
 
 ## route一覧・入口
 
-`pages/super-user`配下の実在routeは`/super-user` 1件だけで、子routeはない。pageSettingsは`roles: ["super-user"]`、`navigation: true`とする。clientのsuper-user roleはFirebase ID token custom claim `isSuperUser=true`からstoreへ設定され、会社adminとは別である。
+`pages/super-user`配下の実在routeは`/super-user` 1件だけで、子routeはない。pageSettingsは`SUPER_USER` access policy、`navigation: true`とする。clientのsuper-user roleはFirebase ID token custom claim `isSuperUser=true`からstoreへ設定され、会社adminとは別である。
 
 page middleware/navigationの判定はclient表示・遷移guardであり、Callableのserver認可を代替しない。会社adminは`super-user`専用先行guardによりrouteへ入れない。super-userはpermission catalog上`*`を持ち、通常業務pageにもclient上到達できる。
 

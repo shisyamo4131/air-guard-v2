@@ -16,15 +16,15 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 103
-- 実装領域文書: 93
+- このREADMEを含む文書数: 104
+- 実装領域文書: 94
 - 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
 - FUT: 183件
   - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
   - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
 - CONF: 138件
-  - 状態: Open 95、Answered 43
-  - reconciliation disposition: Answered 43、Open-user-decision 75、Open-deferred 3、Resolved-by-implementation-fact 0、Merge-candidate 17、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
+  - 状態: Open 94、Answered 44
+  - reconciliation disposition: Answered 44、Open-user-decision 75、Open-deferred 3、Resolved-by-implementation-fact 0、Merge-candidate 16、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
 - 未調査優先候補: 0件（P0 0、P1 0、P2 0、P3 0）。詳細は[coverage inventoryの優先segment backlog](coverage-inventory.md#優先セグメントbacklog)を参照。
 
 件数は本checkpointの静的集計値である。追加・状態変更時は台帳と本集計を同時更新する。
@@ -50,6 +50,7 @@
 - [Stores / auth middleware deep review](stores-middleware-deep-review.md)
 - [Nuxt plugins deep review](plugins-deep-review.md)
 - [User / Firebase Auth lifecycle](user-auth-lifecycle.md)
+- [User Write Boundary（UWB）改修計画](user-write-boundary.md): Usersコレクションのactor・operation・field別書込み境界と、Callable・UI・Rulesの段階的な改修状況。
 - [Auth onboarding UI](auth-onboarding-ui.md)
 - [Auth / settings / super-user pages deep review](auth-settings-pages-deep-review.md)
 - [role・permission認可model](authorization-model.md)

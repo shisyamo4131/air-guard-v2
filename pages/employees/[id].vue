@@ -5,10 +5,9 @@
  * [更新履歴]
  * 2026-06-11 - 警備員情報登録の VEmptyState を Activator に内包。
  *****************************************************************************/
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useConstants } from "@/composables/useConstants";
-import CustomInputResignation from "@/components/Employee/CustomInput/Resignation.vue";
 import { User } from "@/schemas";
 
 defineOptions({ name: "employee-detail" });
@@ -17,7 +16,6 @@ defineOptions({ name: "employee-detail" });
  * SETUP COMPOSABLES
  *****************************************************************************/
 const docId = useRoute().params.id;
-const router = useRouter();
 const { doc } = useDocument("Employee", { docId });
 const { EMPLOYMENT_STATUS } = useConstants();
 
@@ -66,33 +64,12 @@ onUnmounted(() => {
             <EmployeeManager :doc="doc" label="基本情報" hide-delete-btn>
               <template #activator="activatorProps">
                 <EmployeeActivatorBase v-bind="activatorProps">
-                  <template v-if="!showResignedAlert" #actions>
-                    <EmployeeManager
+                  <template #actions>
+                    <EmployeeLifecycleActions
                       class="flex-grow-1"
-                      :doc="doc"
-                      label="退職処理"
-                      hide-delete-btn
-                      :handle-update="
-                        (item) =>
-                          item.toTerminated(
-                            item.dateOfTermination,
-                            item.reasonOfTermination,
-                          )
-                      "
-                      :custom-input="CustomInputResignation"
-                      @submit:complete="router.replace('/employees')"
-                    >
-                      <template #activator="{ toUpdate }">
-                        <v-btn
-                          block
-                          color="warning"
-                          :disabled="user.isAdmin"
-                          variant="flat"
-                          text="退職処理"
-                          @click="() => toUpdate()"
-                        />
-                      </template>
-                    </EmployeeManager>
+                      :employee="doc"
+                      :linked-user="userDocs[0] || null"
+                    />
                   </template>
                 </EmployeeActivatorBase>
               </template>
@@ -157,50 +134,6 @@ onUnmounted(() => {
             />
           </v-col>
         </v-row>
-      </v-col>
-
-      <!-- 削除処理ボタン -->
-      <v-col cols="12">
-        <EmployeeManager
-          :doc="doc"
-          hide-delete-btn
-          @submit:complete="router.replace('/employees')"
-        >
-          <template #activator="{ toDelete }">
-            <v-btn
-              block
-              color="error"
-              :disabled="user.isAdmin"
-              text="この従業員を削除する"
-              @click="() => toDelete()"
-            />
-          </template>
-          <template #editor="{ actions: editorActions }">
-            <v-card>
-              <template #prepend>
-                <v-icon icon="mdi-alert" color="error" />
-              </template>
-              <template #title> 削除処理 </template>
-              <template #text>
-                <div>在職中の従業員です。本当に削除しますか？</div>
-                <v-alert type="warning" density="compact" class="mt-4">
-                  <div>
-                    <div>一度削除すると復元することはできません。</div>
-                    <div>
-                      AirGuard のユーザーアカウントも同時に削除されます。
-                    </div>
-                  </div>
-                </v-alert>
-              </template>
-              <template #actions>
-                <MoleculesActionsSubmitCancel
-                  v-bind="editorActions"
-                  submitText="実行"
-                />
-              </template>
-            </v-card>
-          </template>
-        </EmployeeManager>
       </v-col>
     </v-row>
   </v-container>

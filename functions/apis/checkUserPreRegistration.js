@@ -1,11 +1,16 @@
 /*****************************************************************************
  * @file ./functions/apis/checkUserPreRegistration.js
- * @description 一般Userの事前登録状態を確認するCallable APIです。
- * @method checkUserPreRegistration メールアドレスに一致する仮Userを確認します。
+ * @description 一般Userの事前登録状態を予約pointerから確認するCallable APIです。
  *****************************************************************************/
 import { logger } from "firebase-functions";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import {
+  CHECK_USER_PRE_REGISTRATION_ERROR_CODES,
+  CheckUserPreRegistrationError,
+  checkUserPreRegistration as checkUserPreRegistrationUseCase,
+  resolveCheckUserPreRegistrationEmail,
+} from "../modules/auth/checkUserPreRegistration.js";
 
 /**
  * ユーザー事前登録確認
@@ -18,51 +23,35 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
  * @return {boolean} return.isPreRegistered - 事前登録されているかどうか
  */
 export const checkUserPreRegistration = onCall(async (request) => {
-  const { email } = request.data ?? {};
-
-  if (typeof email !== "string" || email.trim() === "") {
-    throw new HttpsError(
-      "invalid-argument",
-      "メールアドレスが指定されていません。",
-    );
-  }
-
   try {
-    const db = getFirestore();
-
-    // コレクショングループクエリで仮Userドキュメントを検索
-    const preRegSnapshot = await db
-      .collectionGroup("Users")
-      .where("email", "==", email)
-      .where("isTemporary", "==", true)
-      .limit(2)
-      .get();
-
-    if (preRegSnapshot.empty) {
-      logger.info("No pre-registration found.");
-      return { isPreRegistered: false };
-    }
-
-    if (preRegSnapshot.size !== 1) {
-      logger.warn("Multiple pre-registration records found.");
-      throw new HttpsError(
-        "failed-precondition",
-        "事前登録情報を確認できません。管理者にお問い合わせください。",
-      );
-    }
-
-    logger.info("Pre-registration found.");
-    return { isPreRegistered: true };
+    const email = resolveCheckUserPreRegistrationEmail(request.data?.email);
+    return await checkUserPreRegistrationUseCase({
+      firestore: getFirestore(),
+      email,
+    });
   } catch (error) {
-    logger.error("checkUserPreRegistration でエラーが発生しました:", error);
-
-    if (error instanceof HttpsError) {
-      throw error;
+    let code = "internal";
+    let message = "ユーザー事前登録確認中に予期しないエラーが発生しました。";
+    if (
+      error instanceof CheckUserPreRegistrationError &&
+      error.code === CHECK_USER_PRE_REGISTRATION_ERROR_CODES.INPUT_INVALID
+    ) {
+      code = "invalid-argument";
+      message = "メールアドレスの形式が正しくありません。";
     }
 
-    throw new HttpsError(
-      "internal",
-      "ユーザー事前登録確認中に予期しないエラーが発生しました。",
-    );
+    if (code === "internal") {
+      logger.error("User pre-registration check failed", {
+        operation: "check-user-pre-registration",
+        errorName:
+          typeof error?.name === "string" ? error.name : "UnknownError",
+        errorCode:
+          typeof error?.code === "string" || typeof error?.code === "number"
+            ? error.code
+            : "unknown",
+        callableCode: code,
+      });
+    }
+    throw new HttpsError(code, message);
   }
 });

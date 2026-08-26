@@ -4,47 +4,49 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-049
-- 最終確認日: 2026-08-16
+- 最終確認日: 2026-08-21
 - 根拠ファイル: `functions/index.js`、`functions/apis/*.js`、`functions/triggers/auth.js`、`functions/modules/auth/*.js`、`test/domain/*user*.test.mjs`、`test/domain/*company-admin*.test.mjs`、`test/domain/transfer-company-admin.test.mjs`、`test/local/codex-local-harness.test.mjs`、`composables/auth/useAuthFunctions.js`、`composables/useCreateAdminUser.js`、`composables/useCreateNormalUser.js`、`pages/auth/sign-up*.vue`、`pages/settings/users.vue`、`components/Users/Manager/index.vue`、`components/organisms/ChangeAdminUserDialog/index.vue`、`utils/pageSettings.js`、`firestore.rules`
-- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 10件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。全domain単体test 226件と、Auth・Firestore・Storage EmulatorおよびCallable handlerの専用local suite 71件を実行した。ChromeからFunctions Emulatorへのtransportは再構築2件、User有効化・無効化、初期管理者signupの5系統を確認した。残るCallable transport、Dev・remote、実dataは未確認。
+- 調査境界: entryから`functions/apis/index.js`経由でexportされるCallable 12件の入口guard、対象解決、直接UI入口、Users/Companies Rulesを確認した。UWB-04はdomain単体test、SFC compile、専用Emulator、単独／Employee連携の正規UI作成・削除を確認した。Dev・remote・実dataは未確認である。
 
 ## Callable別認証・対象解決
 
 | Callable | authentication / actor | tenant・target解決 | input / field境界 | 主な直接UI |
 | --- | --- | --- | --- | --- |
-| `checkEmailAvailabilityGlobal` | 共通gateでtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を照合し、同社の有効な本登録会社管理者を必須化。App Check、rate limitなし | 確認済みactor companyのUserを照合後、`collectionGroup("Users")`を全tenant検索 | email string必須。存在時`already-exists`、不在時availableだけを返す。`isSuperUser`だけでは許可しない | User/Employeeの仮User作成前 |
-| `checkEmailAvailability` | 未認証可。App Check、rate limitなし | Auth全体と全tenantのUsers collection group | email string必須。AuthまたはUserが存在すれば`already-exists`、不在時availableだけを返す。追加の`isAdmin`入力は無視する | `/auth/sign-up-admin` |
-| `createAdminAccount` | 認証、token/current AuthのUID・email・verified・disabled・company claim・`isSuperUser`整合を必須化。App Checkなし | 未所属callerは新Companyと`Users/{uid}`を作成。同じUIDの有効な既存初期管理者状態だけ再利用 | companyName/companyNameKana/displayName必須。別User・別company・不整合状態を拒否し、既存claimsを保持してcompanyIdを設定 | 公開signup-adminのメール確認後 |
-| `checkUserPreRegistration` | 未認証可。App Check、rate limitなし | emailで全tenantのtemporary Userを最大2件検索 | email string必須。0件はfalse、1件はtrueだけを返し、複数一致は`failed-precondition`で拒否 | `/auth/sign-up` |
-| `setupUserAccount` | 認証必須。caller UID/token emailを利用 | 確認済みtoken emailから全tenantのtemporary Userをserver側で一意解決 | client dataを受け取らず、temporary documentを本Userへ変換してdoc IDをcaller UIDへ変更 | メール確認後の一般signup |
+| `checkEmailAvailability` | 未認証可。App Check、rate limitなし | Auth全体とemail予約 | email string必須。Authまたは予約が存在すれば`already-exists`、不在時availableだけを返す。予約を作らないadvisory | `/auth/sign-up-admin` |
+| `createAdminAccount` | 認証、token/current AuthのUID・email・verified・disabled・company claim・`isSuperUser`整合を必須化。App Checkなし | 未所属callerは新Company、`Users/{uid}`、email予約を同じtransactionで作成。整合した予約・Company・Userだけ再利用 | companyName/companyNameKana/displayName必須。別User・別company・不整合状態を拒否し、既存claimsを保持してcompanyIdを設定 | 公開signup-adminのメール確認後 |
+| `checkUserPreRegistration` | 未認証可。App Check、rate limitなし | canonical email予約からpointer先Userと必要なEmployee予約をdirect解決 | email string必須。予約lifecycleが整合する場合だけbooleanを返す | `/auth/sign-up` |
+| `setupUserAccount` | 認証必須。caller UID/token emailを利用 | 確認済みtoken emailの予約からtemporary Userをdirect解決 | client dataを受け取らず、本User変換と予約pointer更新を同じtransactionで行う | メール確認後の一般signup |
+| `createStandaloneTemporaryUser` | 共通identity gate後、同社の有効な本登録会社管理者またはstrict preset由来`users:provision`。非空rolesは別に`users:write`必須 | actor company配下へUserを作り、root email予約で全tenant一意性を確定 | standalone exact allowlist。company/admin/temporary/disabledはserver固定 | `/settings/users` |
+| `createEmployeeLinkedTemporaryUser` | standaloneと同じ | actor company配下のACTIVE Employee、Employee予約、既存linkをtransaction検証 | `{employeeId,email,roles?}`だけ。displayNameはEmployee由来。provision-only actorの非空rolesは拒否 | Employee詳細 |
+| `deleteTemporaryUser` | standaloneと同じ | actor company配下targetと対応するemail/Employee予約pointerをtransaction検証 | `{targetUserId}`だけ。仮登録Userと予約だけを削除しAuth不変 | User一覧、Employee詳細 |
 | `disableUser` | 共通gateでtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を照合し、有効な本登録会社管理者を必須化 | 確認済みcaller company配下のactor/target Userとtarget Authをtransaction内で検証 | uid必須。自己操作、管理者・仮登録target、会社・Auth UID/claim不一致を拒否し、`disabled=true`へ更新 | admin route `/settings/users`のmanager |
 | `enableUser` | disableと同じ | disableと同じ | 同じ境界で`disabled=false`へ更新 | 同上 |
 | `changeAdminUser` | 共通gateでtoken/current AuthのUID・email・verified・company・`isSuperUser`・有効状態を照合し、caller自身が唯一の有効な本登録会社管理者であることを必須化 | 確認済みcaller company配下のfrom/to User、`isAdmin=true`一覧、target Auth UID・company claim・disabledを検証 | from/to必須・相違、from=actor、管理者1人、active registered targetを要求し、2 UserのisAdminとto.rolesをtransaction更新 | admin route内の変更dialog |
 
-`functions/index.js`は`apis/index.js`をstar exportし、10件の公開Callableをそこへ集約する。`disableUser`と`enableUser`は同じAPI fileで非公開request handlerを共有し、共有`authorizeCompanyRebuild`もAPI indexからexportしない。Authentication削除triggerは`functions/triggers/auth.js`から別にexportする。列挙したCallableに`enforceAppCheck`や共通rate limitは指定されない。
+`functions/index.js`は`apis/index.js`をstar exportし、12件の公開Callableをそこへ集約する。旧`checkEmailAvailabilityGlobal` sourceはrollback用に残るがAPI indexから非公開である。`disableUser`と`enableUser`は同じAPI fileで非公開request handlerを共有し、共有`authorizeCompanyRebuild`もAPI indexからexportしない。Authentication削除triggerは`functions/triggers/auth.js`から別にexportする。列挙したCallableに`enforceAppCheck`や共通rate limitは指定されない。
 
 ## caller・target・tenant境界
 
-- 会社所属済みの保護対象Callable 6件は、共通`resolveCallableAuthIdentity`でtoken/current AuthのUID、email、verified、company claim、`isSuperUser`のboolean型と値、disabled状態をAPI固有検査より先に照合する。`disableUser`、`enableUser`、`changeAdminUser`、`checkEmailAvailabilityGlobal`、`rebuildAllHistories`、`rebuildSecurityReportIndexes`が対象である。匿名事前確認2件は対象外で、`createAdminAccount`と`setupUserAccount`は所属確立前のbootstrap専用検査を使用する。
+- 会社所属済みの保護対象Callable 8件は、共通`resolveCallableAuthIdentity`でtoken/current AuthのUID、email、verified、company claim、`isSuperUser`のboolean型と値、disabled状態をAPI固有検査より先に照合する。仮登録作成2件、仮登録削除、`disableUser`、`enableUser`、`changeAdminUser`、再構築2件が対象である。匿名事前確認2件は対象外で、`createAdminAccount`と`setupUserAccount`は所属確立前のbootstrap専用検査を使用する。
 - `disableUser`/`enableUser`は共通gateで確認したcaller UIDとcompanyを起点に、同社actor/target Userをtransaction内で読み、有効な本登録会社管理者、別UIDの本登録非管理者target、target Auth UID/company claimを更新前に検証する。Auth disabledの反映はUser update triggerへ委ねる。
-- `checkEmailAvailabilityGlobal`は共通gateの確認済みidentityと、同社Userの本登録・disabled・`isAdmin`を照合する。会社管理者だけが全tenantの重複有無を確認でき、super-user claim単独では許可しない。
-- `checkEmailAvailability`は初期会社管理者signupのUX事前確認に限定し、clientからemailだけを受け取る。Authと全tenantの全User状態を確認し、caller指定の管理者・一般User区分ではpolicyを選択しない。一般User signupは`checkUserPreRegistration`とAuth作成時のemail一意性を使用する。
+- 仮登録作成2件は共通gateの確認済みidentityとtransaction内actor Userを照合し、会社管理者またはstrict preset由来`users:provision`だけを許可する。非空roles指定はpreflightとtransaction内の両方で`users:write`を追加要求する。emailとEmployee一意性は予約文書で排他する。
+- `checkEmailAvailability`は初期会社管理者signupのUX事前確認に限定し、clientからemailだけを受け取る。Authとemail予約を確認し、caller指定の管理者・一般User区分ではpolicyを選択しない。一般User signupは`checkUserPreRegistration`とAuth作成時のemail一意性を使用する。
 - `changeAdminUser`は共通gateでactor Authを確認後、caller UIDと`from`の一致、同社の`isAdmin=true` Userがcaller 1人だけであること、from/toの本登録・有効・company・admin状態、target Auth UID・company claim・disabledを更新前に検証する。旧adminのrolesは空のまま、新adminのrolesは空配列へ初期化する。
 - `setupUserAccount`はclient指定companyId/tempUserIdを受け取らず、確認済みcaller token emailから一意のtemporary Userと会社pathをserver側で解決する。これは招待先本人のtenant onboardingを成立させるbootstrap guardであり、通常の「caller company一致」とは異なる。
 - `createAdminAccount`はメール確認済みで有効な未所属Authだけに新規Company作成を許可する。別の既存User/company/claim、不正な`isSuperUser`型、token/current Auth不一致を拒否する。Firestore transaction後のcustom claim設定はtransaction外だが、同じUIDの有効な初期管理者状態は再実行時に検証して再利用する。
-- 会社所属済み6 Callableは共通gateでactor Auth、各固有policyで必要なactor User状態を検証する。Firebaseが既発行tokenをどの時点で拒否するかはruntime未確認であるが、これらのAPIは現在Auth不整合を拒否する。
+- 会社所属済み8 Callableは共通gateでactor Auth、各固有policyで必要なactor User状態を検証する。Firebaseが既発行tokenをどの時点で拒否するかはruntime未確認であるが、これらのAPIは現在Auth不整合を拒否する。
 
 ## 匿名signup callableと情報境界
 
-- 未認証の`checkEmailAvailability`は成功/存在errorによりemail登録有無を判別可能である。`checkEmailAvailabilityGlobal`も全tenantの存在有無を返すが、実行者を有効な会社管理者へ限定した。
+- 未認証の`checkEmailAvailability`は成功/存在errorによりemail登録有無を判別可能である。旧`checkEmailAvailabilityGlobal`はpublic exportから除外した。
 - `checkUserPreRegistration`は一致時にも`isPreRegistered: true`だけを返し、companyId、displayName、roles、temporary document IDを未認証callerへ公開しない。signup UIも確認済みbooleanだけを保持し、汎用表示を使用する。
-- 同一emailのtemporary Userが複数tenantに存在する場合は`failed-precondition`で拒否し、先頭documentを採用しない。本登録は`setupUserAccount`が一意性を再検証する。
+- 同一emailの複数Userはmigration blockerであり、runtimeはemail予約pointerだけを解決する。本登録は`setupUserAccount`が予約とUserの整合性を再検証する。
 - App Check、IP/UID/email単位rate limit、challenge、招待token、応答の一定化は入口にない。
 
 ## UI guardとserver enforcementの差
 
-- `/settings/users`と管理者変更dialogはpageSettingsの`admin` route内にあり、UI上もadmin向けである。有効化・無効化と管理者移譲Callableはserverでもactorの`isAdmin`を検証するが、他のUser直接writeは引き続きRules境界に依存する。
-- Users managerのcreate/update/deleteはCallableではなくFirestore client writeも使用する。Users Rulesは同社認証Userまたはsuper-userへ全field read/writeを許し、client admin UIを迂回できる。
+- `/settings/users`は会社管理者または`users:write`で到達し、Employee詳細の仮登録操作は`users:provision`でも利用できる。作成はclient pure policy/controllerで送信直前にもstrict presetとrole設定可否を再評価する。有効化・無効化と管理者移譲は引き続き会社管理者だけである。
+- Users managerの仮登録create/deleteはCallableへ移行したが、通常update等はFirestore client writeを使用する。Users Rulesは同社認証Userへ全field read/writeを許すため、UWB-08までclient UIを迂回できる。
 - signup pagesはauth layoutから匿名checkを呼び、一般UserはAuth account作成・メール確認後にsetup callableを呼ぶ。この順序に対応するserver guardはあるが、失敗時のAuth/Firestore/claims間rollbackはない。
 
 ## Firestore Rulesとの境界
@@ -87,7 +89,7 @@
 ## 未確認範囲
 
 - `changeAdminUser`、一般User signup Callable、Auth削除event transport、App Check/IAM platform override、token失効、disabled Userの既存session、email enumeration耐性、concurrent signup、重複temporary User実data、Dev・remote・実data。初期管理者signupはChromeとlocal Emulatorで確認済みである。
-- User/Auth trigger本文、Employee連携、削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。
+- User/Auth trigger本文、Employee Self Access、本登録User削除cleanup、全signup error recovery、関連schema/adaptersの内部validation。Employee連携仮登録Userの作成・削除cleanupはCodex専用UIとbackend assertionで確認済みである。
 - 正式actor matrix、rate limit値、audit retentionはユーザー判断待ちである。
 
 ## Chrome Callable transport確認（2026-08-16）

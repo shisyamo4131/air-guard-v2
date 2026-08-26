@@ -17,6 +17,8 @@ import WindowItem1 from "./WindowItem1.vue";
 import WindowItem2 from "./WindowItem2.vue";
 import WindowItem3 from "./WindowItem3.vue";
 import WindowItem4 from "./WindowItem4.vue";
+import { useOperationState } from "@/composables/useOperationState";
+import { canTransferCompanyAdmin } from "@/utils/auth/policies/userManagementUiPolicy";
 
 /*****************************************************************************
  * DEFINE EMITS
@@ -31,6 +33,7 @@ const messages = useMessagesStore();
 const auth = useAuthStore();
 const logger = useLogger();
 const { changeAdminUser } = useAuthFunctions();
+const { run, isPending } = useOperationState();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -38,7 +41,6 @@ const { changeAdminUser } = useAuthFunctions();
 const dialog = Vue.ref(false); // ダイアログの開閉状態
 const userInstance = Vue.reactive(new User()); // User インスタンス
 const step = Vue.ref(1); // 現在のステップ
-const isLoading = Vue.ref(false); // 管理者変更処理のローディング状態
 const selectedNewAdminUser = Vue.ref(null); // 新しい管理者ユーザーとして選択されたユーザー情報
 
 /*****************************************************************************
@@ -67,7 +69,11 @@ Vue.watch(
  * @returns {Object|null} 管理者ユーザーのドキュメント、または見つからない場合は `null`
  */
 const adminUser = Vue.computed(() => {
-  return userInstance.docs.find((doc) => doc.isAdmin);
+  const administrators = userInstance.docs.filter(
+    (doc) => doc.isAdmin === true,
+  );
+  if (administrators.length !== 1) return null;
+  return administrators[0].docId === auth.uid ? administrators[0] : null;
 });
 
 /**
@@ -76,8 +82,18 @@ const adminUser = Vue.computed(() => {
  * @returns {Array} 管理者ユーザー以外のユーザードキュメントの配列
  */
 const otherUsers = Vue.computed(() => {
-  return userInstance.docs.filter((doc) => !doc.isAdmin);
+  return userInstance.docs.filter((doc) => doc.isAdmin === false);
 });
+const canTransferAdmin = Vue.computed(() =>
+  canTransferCompanyAdmin({
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    actorUser: auth.user,
+  }),
+);
+const isLoading = Vue.computed(() =>
+  isPending("transfer-admin", auth.uid || "self"),
+);
 
 /**
  * 次へボタン（確定ボタン）の有効/無効を判定する。
@@ -187,21 +203,22 @@ function unsubscribe() {
  * @returns {Promise<void>}
  */
 async function handleChangeAdminUser() {
-  const key = loadings.add("管理者権限を移譲しています...");
-  try {
-    isLoading.value = true;
-    await changeAdminUser({
-      from: adminUser.value.docId,
-      to: selectedNewAdminUser.value.docId,
-    });
-    step.value = 4;
-    messages.add("管理者権限の移譲に成功しました！");
-  } catch (error) {
-    logger.error({ error });
-  } finally {
-    isLoading.value = false;
-    loadings.remove(key);
-  }
+  if (!canTransferAdmin.value) return;
+  return run("transfer-admin", auth.uid || "self", async () => {
+    const key = loadings.add("管理者権限を移譲しています...");
+    try {
+      await changeAdminUser({
+        from: adminUser.value.docId,
+        to: selectedNewAdminUser.value.docId,
+      });
+      step.value = 4;
+      messages.add("管理者権限の移譲に成功しました！");
+    } catch (error) {
+      logger.error({ error });
+    } finally {
+      loadings.remove(key);
+    }
+  });
 }
 
 /*****************************************************************************
@@ -221,12 +238,12 @@ Vue.provide("otherUsers", otherUsers);
         name="activator"
         v-bind="{
           ...slotProps,
-          props: { ...slotProps.props, disabled: !auth.isAdmin },
+          props: { ...slotProps.props, disabled: !canTransferAdmin },
         }"
       >
         <v-btn
           v-bind="slotProps.props"
-          :disabled="!auth.isAdmin"
+          :disabled="!canTransferAdmin"
           text="管理者変更"
         />
       </slot>

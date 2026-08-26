@@ -8,7 +8,9 @@ import { useDefaults } from "vuetify";
 import { User } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
+import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
+import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -24,7 +26,10 @@ const props = useDefaults(_props, "EmployeeUserManager");
  *****************************************************************************/
 const { attrs } = useBaseManager("EmployeeUserManager");
 const auth = useAuthStore();
-const { checkEmailAvailabilityGlobal } = useAuthFunctions();
+const { deleteTemporaryUser, getDeleteControl } =
+  useTemporaryUserDeletion();
+const { createEmployeeLinkedTemporaryUser, canCreate, canAssignRoles } =
+  useTemporaryUserCreation();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -42,30 +47,51 @@ watch(
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const isAdmin = computed(() => {
-  return props.user.isAdmin;
+const deleteControl = computed(() => {
+  return getDeleteControl(props.user, {
+    employeeId: props.employee.docId,
+  });
 });
+const excludedKeys = computed(() => [
+  "displayName",
+  "tagSize",
+  "receiveConfirmedArrangementNotification",
+  "receiveArrivedArrangementNotification",
+  "receiveLeavedArrangementNotification",
+  ...(canAssignRoles() ? [] : ["roles"]),
+]);
+const roleOptions = computed(() =>
+  Object.entries(ROLE_PRESETS).map(([value, preset]) => ({
+    value,
+    title: preset.label,
+    description: preset.description,
+    icon: preset.icon,
+  })),
+);
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
 async function handleAction(createFn) {
+  if (!canCreate()) return;
   const newUser = new User({
-    ...props.employee,
+    displayName: props.employee.displayName,
     employeeId: props.employee.docId,
     companyId: auth.companyId,
+    roles: [],
   });
   return await createFn(newUser);
 }
 
 /**
  * AirArrayManager の handle-create に渡す関数
- * - ユーザー作成前にメールアドレスのグローバルチェックを行います。
+ * - Employee IDと入力email/rolesだけをCallableへ送信します。
  * @param item
  */
 async function handleCreate(item) {
-  await checkEmailAvailabilityGlobal(item.email);
-  await item.create();
+  await createEmployeeLinkedTemporaryUser(item, {
+    employeeId: props.employee.docId,
+  });
 }
 
 /**
@@ -73,7 +99,9 @@ async function handleCreate(item) {
  * @param item
  */
 async function handleDelete(item) {
-  await item.delete();
+  await deleteTemporaryUser(item, {
+    employeeId: props.employee.docId,
+  });
 }
 </script>
 
@@ -90,9 +118,44 @@ async function handleDelete(item) {
       }
     "
     :handle-delete="handleDelete"
-    :excluded-keys="['roles', 'tagSize']"
+    :excluded-keys="excludedKeys"
     hide-delete-btn
   >
+    <template #[`input.roles`]="inputProps">
+      <v-card v-if="canAssignRoles()" border variant="flat" class="mb-4">
+        <v-card-title class="text-subtitle-1">
+          <v-icon icon="mdi-shield-account" class="mr-2" />
+          役割の設定
+        </v-card-title>
+        <v-card-subtitle class="text-caption text-wrap">
+          必要な役割を選択してください。未選択でも登録できます。
+        </v-card-subtitle>
+        <v-card-text>
+          <v-chip-group
+            :model-value="inputProps.item.roles"
+            column
+            multiple
+            @update:modelValue="inputProps.updateProperties({ roles: $event })"
+          >
+            <v-chip
+              v-for="option in roleOptions"
+              :key="option.value"
+              :value="option.value"
+              :prepend-icon="option.icon"
+              filter
+              variant="flat"
+              color="primary"
+            >
+              {{ option.title }}
+              <v-tooltip activator="parent" location="bottom">
+                {{ option.description }}
+              </v-tooltip>
+            </v-chip>
+          </v-chip-group>
+        </v-card-text>
+      </v-card>
+    </template>
+
     <template #activator="{ toCreate, toDelete }">
       <v-card>
         <v-toolbar title="ユーザー情報" color="secondary" density="compact" />
@@ -126,7 +189,7 @@ async function handleDelete(item) {
             v-else
             title="ユーザー未登録"
             icon="mdi-account-off"
-            action-text="ユーザーを登録する"
+            :action-text="canCreate() ? 'ユーザーを登録する' : undefined"
             @click:action="() => handleAction(toCreate)"
           >
             <template #text>
@@ -141,7 +204,7 @@ async function handleDelete(item) {
           <v-btn
             block
             color="warning"
-            :disabled="isAdmin"
+            :disabled="deleteControl.disabled"
             variant="flat"
             text="ユーザーアカウント削除"
             @click="() => toDelete()"

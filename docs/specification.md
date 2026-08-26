@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-16
-- 仕様バージョン: 0.5.4
+- 最終更新日: 2026-08-26
+- 仕様バージョン: 0.5.12
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -46,6 +46,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firebase Hosting 向けの CSR SPA とし、PWA Service Worker を持つ。
 - `air-vuetify-v3` をファイル参照で使用する。
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
+- role presetの識別子、表示metadata、permission配列は`@shisyamo4131/air-guard-v2-schemas/constants`を環境非依存の単一正本とし、ルートアプリとCloud Functionsは同じ公開version・tarball・integrityを使用する。現在の確認済みversionはexact `2.4.2-dev.166`である。このpackage catalogはactor・tenant・target・request contextからallow/denyを決定せず、clientとFunctionsがそれぞれ認可policyを所有する。
+- ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
+- 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
 
 ### バックエンド
 
@@ -67,18 +70,42 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
+- Userは、Employeeとの紐付けを持たない単独Userと、同じ会社のEmployeeへ`User.employeeId`で紐付くEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効はUser種類とは別の状態として扱う。
+- 会社管理者に加え、`users:provision` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・削除できる。`manager`には`users:provision`と`users:write`、`human-resource`には`users:provision`だけを明示付与する。`employees:write`だけではUserアカウント管理を許可しない。
+- 既知presetの判定はpackageの`isRolePresetId`によるown-catalog membershipだけを使用し、通常の未知値に加えて`toString`、`constructor`、`__proto__`をstrict client/Functions経路でfail closedとする。strict `hasPresetPermission`と`resolveRolePermissions`は直接permission文字列をpresetとして受け入れない。一方、一般clientの`getPermissions`が未知文字列を直接permissionとして扱う既存互換挙動は維持し、strict認可へ流用しない。`*:write`から同resourceの`*:read`を導出する規則もconsumer側の責務とする。
+- 単独仮Userの作成とEmployee連携仮Userの作成は別の公開操作として扱う。Employee連携では、同じ会社に実在し、他のUserと紐付いていないEmployeeだけをserver側で確定し、client指定の任意`employeeId`を信頼しない。1 Employeeに紐付くUserは最大1件とする。
+- 仮登録User作成時の`companyId`、`isTemporary=true`、`isAdmin=false`、`disabled=false`はserverが確定する。Employee連携は在職中のEmployeeだけを対象とする。会社管理者または既知preset由来の`users:write`保有者だけが、単独・Employee連携の作成時に既知role presetを任意設定できる。`users:provision`だけのactorはroleを設定できず、非空roles入力をserverが拒否して保存値を空配列に限定する。
+- 有効な本登録Userは、自分のアプリ内表示名`displayName`と利用環境のタグ表示サイズ`tagSize`だけを本人設定として変更できる。業務通知の3フラグと他Userのroleは`users:write`を持つmanagerまたは会社管理者が管理する。自己role変更、会社管理者を対象とするrole・状態変更、`isAdmin`の通常更新は許可しない。このfield別更新境界はUWB-05の専用Callableへ接続済みで、自動検証と利用者受入れを完了している。
+- `/settings/users`のroute・navigationは会社管理者または既知preset由来の`users:write`へ限定する。直接permission文字列、未知role、`isSuperUser`だけをUser管理権限の根拠にせず、clientの表示・disabledはserver認可の代替にしない。super-userは従来どおり`/settings/company`へアクセスでき、子itemから表示を導出するnavigationでも会社設定だけを表示するが、User管理は表示・許可しない。共通managerのsubmitは処理中の再入を拒否し、有効化・無効化、管理者移譲、本人プロフィール保存は共通operation stateで対象ごとのpendingを管理する。全documentへ汎用single-flightを展開する変更は採用せず、未対応client、複数tab・端末・actorを含む多重実行riskと追加対策の要否をUWB全工程の後段で再評価する。
+- 全Userのcanonical email一意性は`UserEmailReservations/{sha256(trim(lowercase(email)))}`を正本とし、Employee連携の一意性は`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を正本とする。User作成、本登録変換、仮登録削除、初期会社管理者作成は、対応する予約pointerを同じFirestore transactionで作成・更新・削除する。予約欠損・不正・不一致はfail closedとし、runtimeで旧queryへfallbackしない。
+- email利用可否の事前確認は権利確保ではなくUX上のadvisoryであり、最終的な一意性は作成transactionが判定する。AuthenticationとFirestoreはatomicに更新できないため、Authだけまたはclaims未設定の部分状態を自動的に完全解消する保証は持たず、整合した再実行と後続reconcileで扱う。
+- Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
+- 本登録UserからAirGuardV2の操作権限だけを一時的または継続的に剥奪し、雇用・業務記録上のEmployeeを維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
+- Employee退職は専用操作とし、退職日はserverのAsia/Tokyo暦日を基準に入社日以降かつ実行日以前に限定する。`human-resource`既定roleへ新設する`employees:terminate`を付与し、有効な本登録会社管理者にもoverrideを許可する。manager、`employees:write`、`users:provision`、`users:write`だけでは退職を許可しない。managerが別Userへ`human-resource` roleを設定して退職担当者を任命できる現行role管理境界は維持する。
+- Employeeの退職に伴って本登録Userを削除する場合は、旧accountが別tenantでの同じメールアドレスの新規登録を妨げないようAuthentication accountとUser documentを物理削除し、User email予約とEmployee予約を解放する。Employee documentとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除せず、Employeeを`RESIGNED`として保持する。Employeeだけ、仮登録User連携、本登録User連携を予約pointerから識別し、queryの先頭Userへfallbackしない。仮登録User連携は退職操作内でAuthをemailから推定・削除せず、既存の仮登録削除を完了してEmployee-only状態を確認してから退職を再実行する。signup途中のAuth-only部分状態は退職操作の対象にせず、別のaccount repairで扱う。Auth削除直後に同emailの別Authが作成される競合では新UIDを自動削除せず、再登録を無条件には保証しない。
+- Employeeに紐付かない単独本登録Userの物理削除は、退職とは別のaccount offboarding操作とし、有効な本登録会社管理者だけに許可する。自己、会社管理者、super-user、他社User、仮登録User、Employee連携Userは対象外とし、Employee連携UserにはEmployee退職操作、仮登録Userには既存の仮登録削除操作を使用する。
+- 物理削除したUser/Authは`Users_archive`へ保存せず、旧UID、email、role、通知設定、User/Auth全文を復元しない。Employee連携Userは必要なEmployee状態を訂正した後にEmployee連携User作成、単独Userは会社管理者による単独仮User作成を改めて実行し、新しいAuth UIDとUser、role・設定を作る。旧UIDを持つ履歴は新UIDへ書き換えず、一般表示で解決できない場合は削除済みUserとして扱う。
+- Employee退職、単独本登録User削除、誤退職訂正の実行状態と監査は、server-onlyの`LifecycleOperations`を操作単位の唯一の正本とする。operation ID、対象別lock、Auth削除前の永続的intent、phase、再試行、部分失敗reconcile、完了結果を保持し、clientからの直接read/writeを許可しない。email、email hash、role、通知設定、User/Auth全文、FCM tokenは保存しない。actor UIDと最大6文字の表示名、target UIDと最大6文字の表示名、Employee ID、退職日・現在上限20文字の退職理由、単独User削除理由を操作種別に必要な最小snapshotとしてserver-onlyで保持する。
+- UWB-07の全Callableは、ID tokenだけでなく現在のAuthentication accountと同社の有効な本登録Userを再取得し、UID、確認済みemail、company claim、super-user、disabled状態を照合してから認可する。Userをaccess-revoked状態へ移した後は通知dispatcherも有効な本登録User・会社一致・非disabledを送信直前に再検証し、FcmTokensのcreateを同じ条件・token/document ID一致・field allowlistへ限定してclient updateを拒否する。client deleteは本人所有tokenの削除だけ、server cleanupはAdmin SDKだけに許可する。外部FCM送信と退職transactionはatomicにできないため、commit前にeligibility確認を通過したin-flight messageは回収不能riskとして区別する。raw・partial tokenとtoken由来識別子、通知本文、custom dataをlogへ保存しない。
+- 誤って完了したEmployee退職は、会社管理者専用の訂正操作で同じEmployee documentを`ACTIVE`へ戻し、現在値の退職日・退職理由を消去できる。元の退職operationは変更・削除せず、訂正operationから参照する。訂正は完了済みのUWB-07退職だけを対象とし、旧User/Authを自動復元せず、業務記録を変更しない。UWB-07導入前の退職者は別のbackfillまたは管理者repair、実際の退職期間を伴う再雇用は別の雇用状態設計として扱う。
+- `LifecycleOperations`は現段階で固定の保存期間を設けず、自動削除しない。operation、event、head、reverse参照を維持し、削除を前提とするlegal hold、完了後識別子縮小、purgeは実装しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した時点で、参照整合性、訂正可能性、移行、復旧を含めて改めて仕様変更する。履歴一覧はFirestoreをclientへ直接公開せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧できるものとする。
+- 履歴一覧は`listLifecycleOperations` Callableだけから取得し、`/settings/lifecycle-history`の「退職・アカウント削除履歴」へ新しい順に20件ずつ表示する。入力は同じ会社の次page開始位置を表す`cursor`だけとし、会社ID、件数、検索・filter・sort条件をclientから受け取らない。会社IDは検証済みAuthentication identityからserverが導出し、現在のAuthと同社Userを再取得して、有効・本登録・非super-user・会社管理者であることを毎回確認する。super-user、manager、human-resource、直接permissionだけのUserにはroute、navigation、Callableを許可しない。
+- 履歴projectionはschema version、最大20件のitem、次page cursorだけを返す。各itemは操作種別、`processing|retrying|completed`へ丸めた公開状態、実行者表示名、Employee IDまたは削除対象表示名、User account削除を含む操作かどうか、退職日、理由、作成・完了時刻だけに限定する。raw state、actor/target UID、request fingerprint、Auth・cleanup disposition、attempt、内部error、event、lock、head、email、role、claim、tokenを返さない。operation IDは次page cursorとしてclientへ渡り得る非秘密の同社内位置情報であり、認可token、会社特定、画面表示、logには使用しない。検索、filter、CSV export、total count、全page事前取得、永続client cacheは初期範囲外とする。
+- 保存stateは`completed`を公開`completed`、`failed-retryable`とcleanup失敗中の`data-finalized`を`retrying`、その他の有効な未完了stateを`processing`へ変換する。取得record、cursor、Timestamp、document IDのいずれかがschemaと一致しない場合は不完全な一覧を成功扱いせずpage全体をfail closedとする。clientは初回・空・安全なerror・再試行・前後page、権限喪失とunmount時のmemory破棄を扱い、Firestoreからledgerや現在のUser/Employeeを直接読み直さない。
+- 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engine、A/B/C Callable、5分間隔reconciler、訂正用最小context、Rules、application UIは実装・自動検証済みで、Codex UI smokeと利用者local UI受入れも完了している。履歴一覧readerもCallable、専用page、route・navigation、cursor paging、自動単体・Emulator・Rules検証まで完了している。2026-08-25に利用者のログイン済みChromeで管理者menuから専用pageへ到達し、空状態、無効な前後button、console warning/error 0件を確認した。履歴data行と実page移動は対象dataがなかったため実browser未確認である。UWB-08の`firestore.rules`は、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否の3点について利用者確認を完了した。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
-- 一般Userの本登録では、Authenticationで確認済みのメールアドレスが会社管理者による仮登録メールアドレスと完全一致し、該当する仮登録Userが全会社を通じて一意であることを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをクライアント入力だけで信頼する処理、複数一致時の先頭採用は許可しない。
-- 本登録前の未認証事前登録確認は、該当する仮登録Userが0件なら未登録、1件なら登録済みという真偽値だけを返す。会社ID、表示名、role、仮User IDは返さず、複数一致は異常として拒否する。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。
+- 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
+- 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。
 - 一般Userのclient登録はAuthentication account作成と確認メール送信までとし、メール確認後に更新したID tokenで本登録Callableを呼ぶ。本登録Callableはclient dataを受け取らず、確認済みAuthenticationメールから仮登録と会社をserver側で解決する。
-- 初期会社管理者のsignup前メール確認は、clientからemailだけを受け取り、Authenticationと全会社のUser documentを照合する未認証のUX事前確認とする。client指定の管理者・一般User区分は信頼せず、一般User signupではこのCallableを使用しない。事前確認とAuth/User作成はatomicではないため、同時実行競合とAuthだけが残る部分状態を防ぐ認可境界とはみなさない。
+- 初期会社管理者のsignup前メール確認は、clientからemailだけを受け取り、Authenticationとemail予約を照合する未認証のUX事前確認とする。client指定の管理者・一般User区分は信頼せず、一般User signupではこのCallableを使用しない。事前確認とAuth/User作成はatomicではないため、同時実行競合とAuthだけが残る部分状態を防ぐ認可境界とはみなさない。
 - 初期会社管理者のCompany・User作成はメール確認後にだけ行う。CallableはID tokenと現在のAuthentication UserについてUID、email、email確認、有効状態、既存company claim、`isSuperUser`の型と一致を検証する。未所属Authだけが新規作成でき、同じUIDの有効な初期管理者UserとCompanyが既に存在する場合は、claims設定失敗後の再実行として既存状態を検証して再利用する。
 - 保護対象のFirestore、Storage、Callableは、確認済みメール、正常な会社claim、要求tenant path、対応する有効な本登録Userの整合がすべて確認できる場合だけ許可する。claim欠損、型不正、path不一致、User不在、仮登録、無効状態ではfail closedとする。本登録Callableは、会社claimと本登録Userがまだ存在しない確認済みUserにだけ必要なbootstrap例外として扱う。
 - 会社所属が確立した認証必須Callableは、API固有の入力・権限・対象検査より先に、ID tokenと現在のAuthentication UserのUID、email、email確認、company claim、`isSuperUser`のboolean型と値、有効状態を共通境界で照合する。不一致や既に無効なAuthはfail closedとし、確認済みidentityだけを後段へ渡す。未認証で利用できる事前確認Callableはこの境界の対象外とし、初期管理者・一般Userの本登録Callableは所属claim確立前のbootstrapとして専用検査を使用する。
 - スーパーユーザー向けの履歴再構築と警備日報インデックス再構築は、要求会社がID tokenの会社claimと一致し、現在のAuthentication Userがメール確認済み・有効・同社会社claim・`isSuperUser === true`であり、同社のUser documentも有効な本登録状態である場合だけ許可する。恒久的な他社再構築は許可しない。
-- 全会社Userを対象とするメールアドレス重複確認は、ID tokenと現在のAuthentication Userがメール確認済み・有効・同社会社claimであり、同社のUser documentが有効な本登録会社管理者である場合だけ許可する。`isSuperUser`だけでは許可しない。
-- 従業員の退職と Authentication アカウント削除は同一操作とみなさず、業務記録との関係を保つ。
+- 仮登録User作成前の独立した全会社email重複確認Callableは公開せず、作成Callable内部でAuthenticationとemail予約を確認する。User一覧とEmployee詳細は同じclient作成policy・application controllerを使い、送信直前にも会社管理者またはstrict preset由来`users:provision`を再評価し、role指定時は別に`users:write`を要求するが、server最終認可を代替しない。
+- 従業員の退職、Employeeの業務状態変更、Userの利用停止、Authentication accountとUser documentの削除は別の状態遷移として扱い、専用use-caseが順序・再試行・部分失敗を管理する。退職時もEmployeeと業務記録の関係を保つ。
+- User管理の段階改修では、まず仮登録Userと保護fieldの境界を確立する。本登録Userの利用停止・退職・削除境界はUWB内の専用ゲート、本人向けEmployee情報の具体的なread境界は別のEmployee Self Accessゲートで確定する。
 
 ## 主要データと業務規則
 
@@ -181,6 +208,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
+- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持し、Codexによるbuild禁止と検証用buildの実行ごとの明示承認も変更しない。
+- CodexがブラウザUIの挙動・受入れを検証するときは、可視画面上で実利用者が行える通常のpointer・keyboard入力だけを操作証拠とする。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避を用いた結果は受入れ証拠にしない。read-only観測と、OOB確認・backend verifier・export/import等の非UI処理は許可するが、それぞれUI操作、非UI準備、backend assertionとして区別する。2026-08-17までの旧基準によるdashboard到達証拠は履歴として保持するが、この基準での正規signup、再import後sign-in、dashboard到達は再検証が必要である。
 - 実装、修正、改修は作業単位ごとにbranch境界を利用者と確認し、原則として機能単位の作業ブランチで行う。コーディネーターは合意済み範囲の差分と検証を確認してlocal Gitを管理し、利用者が動作を確認して明示的に承認するまで `main` へマージしない。
 - `main` への統合は原則として機能単位のマージコミットを残し、Git上の取消し境界を明確にする。revert前にはデータ、外部作用、契約互換性を確認する。`main` への直接コミット、マージ、Git push、デプロイはそれぞれ明示的承認を必要とする。
 - 関連リポジトリはAirGuardV2の調査に必要な範囲で事前承認なく読み取れるが、変更は対象、影響、互換性、公開・導入順序を確認した利用者の明示的承認を必要とする。
@@ -202,7 +231,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - データ移行、設定変更、デプロイが必要な場合、その手順と復旧方法が記録されている。
 - ユーザーが対象環境で動作確認を行い、結果を判断できる。
 
-Codexによる検証が明示的に許可された変更では、ローカルのFirebase Emulator環境に限定して単体・結合テストを実施できる。認証後のUIテストは、ユーザーがEmulator、ローカルサーバー、Chromeを起動し、Emulator専用アカウントでサインインした画面を準備する方式を採用する。ただし、外部サービスへの作用を排除できない検証、リモート環境の検証、最終的な試験運用上の判断はユーザーが担当する。
+Codexによる検証が明示的に許可された変更では、Codex専用のlocal Firebase Emulator環境に限定して単体・結合・UIテストを実施できる。認証後のUIテストも、Codexが専用Emulator、隔離済みFunctions、local server、合成account・data、Codex管理ブラウザの起動から終了までを所有し、可視画面上の通常操作で行う。利用者のChrome起動やsign-in済み画面の準備を通常の前提にしない。ただし、外部サービスへの作用を排除できない検証、リモート環境の検証、最終的な試験運用上の判断はユーザーが担当する。
 
 ## 未決事項
 

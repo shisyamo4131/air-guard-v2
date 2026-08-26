@@ -6,6 +6,8 @@
 
 ### Added
 
+- Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
+- Windows PC移行について、repository・Git外local data・Codex portable stateの停止時backup、Windows native/WSL境界、再認証、変更なしrestore checkpoint、旧PC保持条件を含む手順を追加した。
 - 利用者用`./saved-data`と通常local環境を変更せず、loopback限定demo project、合成Auth/Firestore seed、読込専用export、容量・指紋ガードを使うCodex専用localテスト基盤を追加した。
 - 共通managed governance 1.0.0とAirGuardV2所有の`governance/project-rules.md`を分離し、lock、renderer、managed validator、生成`AGENTS.md`を再構築する方針を追加した。
 - 作業目的別の文書案内、正式運用準備ロードマップ、証拠に基づく加重進捗管理を追加した。
@@ -23,6 +25,42 @@
 
 ### Changed
 
+- UWB-09として、公開Schemas `2.4.2-dev.166`のrole preset catalogをルートアプリとCloud Functionsへexact同一artifactで導入し、重複local catalogを削除した。strict client/Functions判定はpackageのprototype-safe membershipを使い、一般clientの直接permission互換とconsumer側write→read規則を維持した。利用者はUser管理とEmployee詳細のrole表示・選択肢、および権限別User管理controlの最小UI smokeを確認した。
+- 利用者のログイン済みChromeで、管理者menuからUWB-07の「退職・アカウント削除履歴」へ通常操作で到達し、空状態、無効な前後button、console warning/error 0件を確認した。対象環境に履歴dataがなかったため、data行と実page移動は実browser未確認である。利用者はUWB-08の`firestore.rules`について、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否を確認し、UWB-08を完了した。
+- UWB-07の会社管理者専用履歴readerを、`listLifecycleOperations` Callable、`/settings/lifecycle-history`の専用page、20件固定cursor、全stateの`processing|retrying|completed`表示、exact最小projectionとして実装した。会社はserver identityから導出し、返却直前にcurrent Authとactor Userを再検証する。super-user・manager・human-resource・直接permissionを拒否し、全Timestamp・cursorを厳格検査する。Firestore client直読deny、検索・filter・export・total count・永続cacheなしを維持した。対象70件、全domain 635件、専用Emulator 92件は成功し、追加indexは不要だった。
+- UWB-07の`LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない契約へ確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧する境界を維持する。
+- UWB-07の利用者local UI受入れとして、正規UIで作成・本登録したEmployee連携Userを伴う退職、Auth/User物理削除、誤退職訂正、User/Auth非復元、Employee在職復帰と、単独本登録User削除・Employee-only経路を確認した。Employee lifecycle componentを単一element rootへ修正して継承属性warningを除去し、Chrome拡張接続後はデバッグ表示による座標変化を3秒待ってから最新画面で対象を再取得する手順を追加した。serverが拒否するsuper-userについては退職・訂正・単独User削除のclient controlもfail closedで非表示へ揃えた。sign-out listenerは既存の共通認証課題FUT-0005へ分離し、UWB-07はretention contractを未完了として残した。
+- UWB-07/08のlocal自動検証readyとして、Employee退職、単独本登録User削除、誤退職訂正、訂正用最小context、5分間隔reconcilerを専用Callable・server-only ledgerへ接続し、reconcilerの`LifecycleOperations.state` collection-group indexを追加した。Employee詳細とUser管理はclient policy・共通operation stateからCallableだけを呼び、旧Employee物理削除UIを除去した。Users client write、Employee lifecycle fieldとdelete、ledger/event/lock/head、legacy `admin_users`をRulesで閉じ、FcmTokens exact create・update拒否、通知送信前のactive User・lifecycle lock再検証、token・payload・email等のlog除去を実装した。全domain単体609件と専用Emulator 88件は成功し、利用者local UI受入れ、Rules確認、履歴reader・保持契約は未完了である。
+- WindowsのCodex専用local UI検証では、既知のsandbox read制限によるNuxt起動失敗を繰り返さないよう、Firebase EmulatorとNuxt test serverを最初から承認済みのworkspace sandbox外前景processとして起動する手順へ統一した。demo project、loopback、合成data、外部作用denyの範囲では合成credentialの通常sign-inごとに再承認を求めず、credentialをrepository・応答・logへ残さない。
+- UWB-07第3A core checkpointとして、Employee-only退職をoperation・event・一時lock・head・Employee更新とともに単一Firestore transactionで完了し、本登録User連携退職をEmployee予約pointer・一意User・email予約の再検証、Auth disable・identity再照合・物理削除、User・両予約finalize、FCM cleanupへ接続した。仮User、予約欠損なのにUserが残る状態、会社管理者・super-user、不一致Authをoperation開始前に拒否し、cleanup失敗後はcore削除を戻さず同一operationで再開する。Callable、error mapper、public export、Emulator、UWB-07B/C、Rules、UIは未実装である。
+- UWB-07第2checkpointとして、server-onlyの`LifecycleOperations`、append-only event、User/Employee lock、Employee lifecycle headのexact schema・path・request fingerprintとFirestore transaction storeを追加した。本登録User削除の共通phase engineはaccess revoke、Auth disable、durable delete intent、Auth再照合・削除、Firestore finalize、FCM cleanupを順に進め、Auth/FCM外部作用をtransaction callback外へ限定する。同じoperationの再開、異なるfingerprint・active lock・phase飛越しの拒否、cleanup完了後だけのlock解放、各phaseとfailure記録自体の失敗注入を単体testで固定した。A/B/C use-case、実Auth/FCM gateway、reconciler、Callable、Rules、UIは未実装である。
+- UWB-07第1checkpointとして、`employees:terminate`をclient/serverのstrict `human-resource` role presetへ追加し、managerと直接permission文字列には付与しない境界を実装した。Employee退職、単独本登録User削除、誤退職訂正のexact input、実行者、対象状態を副作用なしで検証するFunctions policyを追加し、会社管理者override、本人退職拒否、単独Userの管理者・super-user・Employee連携拒否、誤退職訂正の会社管理者限定を単体testで固定した。operation基盤、use-case、Callable、Rules、UIは未実装のままである。
+- UWB-07をEmployee退職、会社管理者専用の単独本登録User削除、会社管理者専用の誤退職訂正へ再構成した。`employees:terminate`、User archive不採用、操作単位の統合`LifecycleOperations`、本登録Auth削除intent・冪等reconcile、旧User/Auth非復元、current Auth再照合、UWB-08との同一Rules release gateを確定した。仮User連携は既存仮登録削除後のEmployee-only退職へ限定し、作成元を証明できないsignup途中Authをemailから推定削除しない。disabled UserへのFCM通知、token Rules・log、同email signup競合をrelease blockerまたはrepair対象へ加えた。将来日退職と実際の再雇用、legacy退職者repairを分離し、ledger reader・保持期間・legal hold・terminal後識別子縮小の確定までは自動purgeとProd公開を行わない。
+- UWB-06として、共通managerの`submit()`へ`isLoading`再入guardを追加し、共通managerを通らないUser有効化・無効化、管理者移譲、本人プロフィール保存をapplication共通operation stateへ接続した。全documentへの汎用single-flightは採用せず、多重実行riskとserver側追加対策の要否をUWB全工程の後段へ移した。全35 routeを共有`accessPolicy` catalogへ移行し、12のpathなしgroupをアクセス可能な子から導出する。routeとnavigationは同じevaluatorを使い、legacy field併記、未知・複製policy、不正なUser管理contextをfail closedとする。User管理は会社管理者または既知preset由来`users:write`へ限定し、super-userには従来の直接route許可と揃えて会社設定menuだけを表示する。全domain単体test 521件、専用Emulator suite 79件、利用者UI受入れが成功し、UWB-06を完了した。
+- UWB-05として、本人の`displayName`・`tagSize`、管理対象Userの通知3フラグ、他の非管理者Userのroleを3つの専用Callableへ分離した。各操作はexact field allowlist、型・既知preset、同一tenantの有効な実行者、会社管理者またはstrict preset由来`users:write`をserverで検証し、自己role変更と会社管理者targetを拒否する。User一覧と本人設定からFireModel full document updateを除去し、全domain単体test 490件、専用Emulator suite 79件、利用者によるapplication file・動作受入れを完了した。
+- `functions/modules/auth`のpolicy・permission定義を`policies/`、Callable error mapperを`mappers/`へ移し、公開export名と挙動を変えずに責務別の配置へ整理した。利用者のUWB-04確認通過後、全domain単体test 468件と専用Emulator suite 74件で回帰がないことを確認し、UWB-04を完了した。
+- managed common governanceを1.3.0へ同期し、必須検証ごとの結果・exit statusを独立して扱い、後続commandの成功で先行失敗を隠さない完了証拠契約を適用した。
+- managed governance validatorを必須の明示`-ProjectPath`付き正規commandで実行し、Windows user configstoreを参照するFirebase CLIベースのCodex専用Emulator suiteを既存のdemo隔離・承認境界内で最初からworkspace sandbox外で実行するプロジェクト運用へ変更した。
+
+- User管理permissionを、仮登録Userの作成・削除を行う`users:provision`と、role・通知等を管理する`users:write`へ分離した。managerへ両方、human-resourceへ`users:provision`だけを明示付与し、provision-only actorの作成時rolesは空配列に限定した。非空rolesはclient transport前とCallableのpreflight・transaction内で拒否する。
+- AirGuardV2の全Codex taskを利用者repositoryへの直接接続に限定し、Codex専用worktreeの作成・使用を禁止した。task交代時の旧task archiveは利用者だけが行い、Codexは交代検証結果の報告後に待機する運用へ変更した。
+- Codex専用demo環境の`.codex-test`配下と通常の専用test sessionにある合成dataについて、作成・変更・削除、予約migration、candidate acceptance・promotionを操作ごとの利用者承認なしに行える境界へ更新した。利用者用`./saved-data`、Dev、Prod、remote service、実data、および上位のCodex・Browser安全確認は対象外のまま維持する。
+- UWB-04として、全Userのcanonical email予約とEmployee予約をserver-onlyの一意性正本にし、単独／Employee連携の仮登録作成、仮登録削除、本登録変換、初期会社管理者作成、未認証事前確認を同じtransaction lifecycleへ統一した。User一覧とEmployee詳細の直接Firestore作成を専用Callableへ置換し、会社管理者またはstrict preset由来`users:write`をclient送信直前とserverで検証する。旧`checkEmailAvailabilityGlobal`は製品caller 0を確認してpublic APIから除外した。全domain単体test 462件が成功した。Codex専用Emulator以外を拒否するdry-run既定migration toolを追加したが、saved-data・Dev・Prodへのapplyは未実施である。
+- UWB-04のCodex専用受入れとして、予約migration dry-runのclean、専用Emulator suite 74件、単独／Employee連携仮登録Userの正規UI作成・削除を確認した。Employee連携では既知role、User・email予約・Employee予約、Authentication不存在を作成後に確認し、削除後はUser・両予約・Authentication不存在とEmployee残存を確認した。
+- 本登録Userの単なる操作権限剥奪は無効化、Employee退職時は旧accountが別tenantでの同じメールアドレスの再利用を妨げないようAuthentication accountとUser documentを物理削除し、EmployeeとのUser紐付けだけを解除する契約をUWB-07として追加した。`Users_archive`、UID参照、削除条件、監査・復旧、部分失敗reconcileは具体例による実装前の確認事項とした。
+- UWB-03の仮登録User削除を、製品UIで正規作成した単独UserとEmployee連携Userで再検証し、取消、処理中、成功、競合時の安全な失敗、Authentication不変を確認した。正規管理者signupで作成した合成管理者1件をCodex専用saved-dataへ昇格し、通常再起動とdashboard復帰も確認した。
+- CodexのUI受入れでは、架空のテスト値であっても対象業務dataをbackendへ直接注入せず、製品の可視UIと正規application処理経路で作成してから同じUI経路で操作し、backendは結果確認だけに使う契約を追加した。
+- Codex専用local UI testについて、保存済み合成Auth accountを起動ごとに再作成せずimportして使う契約、Emulator→Nuxt→インアプリブラウザの起動順序、一回限定reload、dashboard到達、終了時port確認を運用手順へ記録した。Nuxt dev serverは専用dotenvのexact allowlistと外部作用拒否を検証するwrapper経由へ変更した。Browser visibilityは再試験時に有効化できず、background UI成功と利用者目視未達を分離して記録した。
+- Firebase CLIをWindowsユーザーのglobal npm領域でlatest運用し、Codex専用Emulator・seed・export scriptから`npx --offline` cache依存を除去した。CLI更新で回帰した場合は直前の確認済みversionへ戻す運用を追加した。
+- Codex専用generated UI serverを、専用build commandが記録したdemo project、外部作用拒否、専用dotenv SHA-256、clean source HEADのidentityと現在状態が一致する場合だけ起動するfail-closed方式へ変更した。実buildは引き続き実行ごとの明示承認を必要とする。
+- Codex専用UI candidateを、backend verifier合格時のdirectory SHA-256とclean source HEADへ結び付け、専用Emulator・server portがすべて停止し、acceptance receiptが現在状態と一致する場合だけsaved-dataへ昇格できるようにした。
+- Codex専用UI backend verifierへ会社名カナの形式・長さ・保存値一致と、claim company ID・Auth UIDの単一Firestore path segment検査およびURL encodeを追加した。
+- Codex専用UI backend verifierのtransport契約を、Auth EmulatorへのPOST 1回とFirestore EmulatorへのbodyなしGET 2回へ分離し、それぞれが相手のportへ到達しない単体testを追加した。
+- Codexのbrowser UI検証を、可視・有効なcontrolへの実利用者相当のpointer・keyboard操作だけに限定した。`fill`、DOM・event・handler・client APIの直接操作、force・disabled回避を禁止し、read-only観測、非UI setup、backend assertionをUI操作証拠から分離した。旧基準のUI証拠は履歴として保持するが、新基準で再検証する。
+- Codex専用local UIの最小経路を実装し、専用Functionsとloopback server、PWA・通知のfail-closed、メール確認済み・company claim付き合成account、Codex管理ブラウザでのdashboard到達、process・runtime cleanupを検証した。Nortonが`IDP.Generic`として検出したPowerShell child helperはrevertし、独立した前景processへ置き換えた。
+- Codex専用local testを、専用Emulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザまでCodexが起動・操作・終了し、利用者のChrome起動やsign-inを通常の前提にしない方針へ拡張した。約1000件でEmulatorが停止した利用者経験をlocal riskとして記録し、多数documentは段階投入する。
+- ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、これを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する共通原則を採用した。client判定はUX補助とし、server最終認可を維持する。
+- Userを単独UserとEmployee連携Userへ分類し、会社管理者に依存しない仮登録管理permissionとして`users:write`を採用した。`manager`と`human-resource`へ付与し、単独・Employee連携の作成入口を分離して、本人Employee情報のread境界は別ゲートで扱う方針を確定した。
 - 初期会社管理者signup用`checkEmailAvailability`をemailだけのAuth・全User重複事前確認へ変更し、client指定`isAdmin`によるpolicy選択を廃止した。一般User signupは当該Callableを使用せず、事前登録確認とAuth作成時のemail一意性へ責務を分離した。
 - 一般Userの未認証事前登録確認をboolean応答だけに縮小し、会社ID・表示名・role・仮User IDの公開を廃止した。複数仮登録は先頭を採用せず拒否し、signup画面も汎用表示へ変更した。
 - `auth-v2.js`に残っていた全Callableを`functions/apis`へ分離し、有効化・無効化は共通request処理と2つの公開Callableを1ファイルへ集約した。Authentication削除triggerは`functions/triggers/auth.js`へ移し、公開Function名と既存挙動を維持した。
@@ -59,6 +97,7 @@
 
 ### Fixed
 
+- 一般User signupの確定buttonが通常のform submitでpage reloadを起こし、account作成を中断する問題を修正した。Employee連携仮登録User作成では、`users:provision`だけを持つactorにgeneric role fieldが残る問題も修正し、human-resource正規UIでemailだけの作成・削除を再受入れした。
 - 初期会社管理者のCompany/User作成をメール確認後へ移し、同じbrowserでは確認待ちから再開できるようにした。管理者表示名は値を切り捨てず、6文字超過をfield errorとして表示して作成を抑止する。
 - 一般Userのメール確認後画面で認証Callable composableの明示importがなく、クリーンなclientで本登録を開始できない問題を修正した。
 - メール確認済みでも会社claim未設定の一般Userをglobal middlewareがdashboardへ早期転送し、本登録Callableを実行できない問題を修正した。

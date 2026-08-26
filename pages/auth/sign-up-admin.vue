@@ -81,7 +81,7 @@ const isStepValid = computed(() => {
  * - Sets custom claims and waits for token refresh.
  */
 async function handleCreateUser() {
-  if (!isStepValid.value) return;
+  if (loading.value || !formValid.value || !isStepValid.value) return;
 
   errors.clear();
   loading.value = true;
@@ -160,7 +160,7 @@ function prevStep() {
   <v-card :border="false" max-width="480">
     <v-card-title class="text-center text-h5 mb-4">アカウント作成</v-card-title>
 
-    <v-form v-model="formValid">
+    <v-form v-model="formValid" @submit.prevent="handleCreateUser">
       <v-stepper
         v-model="currentStep"
         hide-actions
@@ -281,7 +281,6 @@ function prevStep() {
           :disabled="!formValid || !isStepValid || loading"
           :loading="loading"
           variant="elevated"
-          @click="handleCreateUser"
         >
           アカウント作成
         </v-btn>

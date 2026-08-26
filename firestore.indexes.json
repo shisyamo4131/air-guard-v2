@@ -331,6 +331,21 @@
   ],
   "fieldOverrides": [
     {
+      "collectionGroup": "LifecycleOperations",
+      "fieldPath": "state",
+      "ttl": false,
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
       "collectionGroup": "SiteOperationSchedules",
       "fieldPath": "date",
       "ttl": false,

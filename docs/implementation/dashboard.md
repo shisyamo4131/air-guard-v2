@@ -9,7 +9,7 @@
 
 ## 入口・権限
 
-`/dashboard`はnavigation表示対象で、pageSettingsのrequired rolesは空配列である。認証global middlewareを通過した全login userがrouteへ入れる。widgetの表示はpage内で次の2条件に分かれる。
+`/dashboard`はnavigation表示対象で、pageSettingsの`AUTHENTICATED` access policyを参照する。認証global middlewareを通過した全login userがrouteへ入れる。widgetの表示はpage内で次の2条件に分かれる。
 
 - `auth.employeeId` truthy: 直近配置情報とcalendar。
 - `auth.isAdmin && auth.isDeveloper`: 7日稼働数graphと2つのSite警告。

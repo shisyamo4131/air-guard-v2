@@ -183,3 +183,193 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 公式進捗は10%のまま。次はUsers Rulesのfield/actor制約、その後App Check・rate limitとDev受入れである。token失効、部分状態、匿名列挙、main merge、push、deploy、remote data操作は未完了または未承認のまま。
 
 この記録にsecret、credential、private production data、Codex session本文は含めない。
+
+## Codex self-contained local UI test governance checkpoint
+
+- 2026-08-17に、利用者のChrome、Emulator、local server、test account準備へ依存せず、Codexが専用環境の起動、合成account/data作成、browser操作、終了までを担当する方針が承認された。
+- 許可対象は`demo-air-guard-v2-codex`、専用loopback port、`.codex-test`配下、Codex管理process、合成dataだけである。利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote service、実dataへ拡張しない。
+- Functionsは外部API、Stripe、mail、FCM、通知、ジオコーディング等をfail-closedで隔離できたものだけを専用UI modeで起動する。現行suiteはFunctionsを起動せず、自己完結UI modeは未実装・未検証である。
+- Codexは合成会社、super-user兼管理者、管理者、一般User、仮登録User、必要な業務documentを作成してよい。実在情報・資格情報・sessionはrepository、log、promptへ保存しない。
+- 数百件のdocumentは段階投入する。約1000件でEmulatorが停止した利用者経験をlocal riskとし、同規模の一括投入は停止条件・復旧方法を定めた別承認なしに行わない。Firebaseの公式上限とは扱わない。
+- 基準application commitは`5a26ef4`（仮登録User削除composableの明示importと単体test）である。関連package `air-vuetify-v3`は利用者が`07886a4`を`main`へcommit・push済みと報告し、local repositoryはcleanを確認した。remote pushは未検証である。
+- 公式進捗は10%のまま。次はinstruction-chain変更に伴うcoordinator交代を完了し、新taskで専用Functions、専用開発サーバー設定、合成account fixture、Codex管理ブラウザsign-in、process cleanupを最小segmentに分けて実装・検証する。
+- main merge、AirGuardV2のGit push、deploy、remote接続、remote data、実data、外部service変更は未承認のまま。
+
+## COORDINATOR-HANDOFF-005 activation checkpoint
+
+- 状態: PM（AirGuardV2）-04 local coordinator有効化済み、PM（AirGuardV2）-03 archive可能。
+- new coordinator task: `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`（PM（AirGuardV2）-04）。
+- old coordinator task: `01a003d9-8782-79b2-9419-682e582bb1ac` host `local`（PM（AirGuardV2）-03）。
+- callback destination: 今後のcheckpointはnew coordinator `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-004`はcompleted。repositoryからactive instruction sourcesと正本を復元し、変更なしcallbackが旧coordinatorへ到達した。
+- branchは`codex/user-write-boundary`、baseline HEADは`b208fc384fdfe855cf6fe86a8467a704f02a0156`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- self-contained UI testの許可対象は`demo-air-guard-v2-codex`、専用loopback port、`.codex-test`、Codex管理process、合成account/dataだけである。利用者用local、Dev、Prod、remote、実dataへ拡張しない。
+- self-contained UI modeは方針確定済みだが未実装・未検証である。専用Functions、専用server設定、合成account fixture、Codex管理browser sign-in、cleanupを利用可能とは扱わない。
+- 数百件のdocumentは段階投入し、約1000件でEmulatorが停止した利用者経験をlocal riskとして扱う。同規模の一括投入は停止条件と復旧方法を定めた別承認を必要とし、Firebaseの公式上限とは扱わない。
+- main merge、AirGuardV2のGit push、deploy、remote接続・remote data、実data、外部service変更は未承認のままである。
+- next: self-contained UI環境を、外部作用fail-closed、専用Functions、専用server設定、合成account fixture、Codex管理browser sign-in、cleanupの最小segmentで構築・検証し、その後UWBへ戻る。
+
+## Self-contained local UI minimum segment result
+
+- 2026-08-17にPM（AirGuardV2）-04で最小segmentを完了した。専用Functions、Firebase Emulator port解決、loopback server、PWA・Service Worker・通知・FCM無効化、メール確認済み・company claim付き合成account、有効な本登録User、Codex管理browser sign-in、dashboard到達、cleanupまで確認した。
+- 専用suite 72件とUI設定契約9件が成功し、dashboard滞在中のconsole errorは0件だった。利用者用`./saved-data`は不変、専用seedはread-only testで不変、容量0.01 MiB、終了後は全専用port閉鎖、`.codex-test/runtime`空、`.output`削除を確認した。
+- Nuxt開発サーバーはHTTP readyだったが、Windows上のCodex管理ブラウザではVite module取得後にSPA hydrationが完了しなかった。利用者の一回限りの明示承認で専用Nuxt buildとloopback Node serverを使い、生成版でUI検証を完了した。恒久的なbuild許可には変更せず、再実行は個別承認を必要とする。
+- `scripts/run-codex-local-ui-child.ps1`はNortonが`IDP.Generic`として検出したため利用者が隔離し、実装をrevertした。復元・allowlist登録は行わず、現在はEmulatorとserverを独立した前景processとして直接起動する。
+- 残存事項として、sign-out直後に購読解除前のFirestore snapshot listenerが`permission-denied`を2件出す。dashboard到達と通常表示には影響しなかったが、logout cleanupの製品課題として未完了に残す。
+- remote、Dev、Prod、利用者用local、実data、外部service、push、deploy、main mergeは実行していない。公式進捗は10%のまま。next product workはUWBへ戻る。
+
+## User-equivalent browser interaction governance checkpoint
+
+- 2026-08-17に利用者は、Codex自身のin-app browser testを、可視画面上で実利用者が行える通常のpointer・keyboard操作へ限定した。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測と非UI setup・backend assertionは許可するがUI操作証拠から分離する。
+- 旧基準で得たsignup、button状態、dashboard到達等のbrowser証拠は履歴として保持するが、新基準の受入れには使用しない。source・単体testと、固定loopbackのAuth・Firestore backend読取りはそれぞれsource/test証拠、backend assertionとして維持する。
+- self-contained UI再設計の未完成checkpointをcommit `126e903`（`test: checkpoint regular-route UI harness`）へ保存した。このcommitは正規signup由来baseline、candidate export/import、再sign-in、full 72件suite、console・network、cleanupを完了したものではない。
+- 必須の再開事項は、専用build identityのfail-closed検証、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、正規signupからのbaseline生成と再import後sign-inを新browser基準で検証する。
+- 誤った`!`入り合成passwordを使った観察と、それに基づく製品不具合推定は受入れ証拠にしない。利用者は通常操作で無効passwordのfield errorと「次へ」無効になる画面を画像とともに報告したため、製品application codeの追加修正は採用していない。
+- browser、generated server、Emulatorは停止済みで、専用portのLISTENは残っていない。`.output`は承認済みbuildの再利用候補として残しているが、build identity gate実装前に一般化したserver commandへ使用しない。
+- このproject-wide検証・証拠契約と`ui_tester` role変更はinstruction-chain変更である。common governance `1.0.0`は不変。ガバナンスcommit後、PM（AirGuardV2）-04を含むactive project taskをrepositoryから再開する新taskへ交代する必要があり、coordinator交代は利用者の別の明示承認を待つ。
+- 公式進捗は10%のまま。remote、Dev、Prod、利用者用local、実data、external service、push、deploy、main mergeは未承認・未実行のままである。
+
+## COORDINATOR-HANDOFF-007 activation checkpoint
+
+- 状態: PM（AirGuardV2）-05 local coordinator有効化済み、PM（AirGuardV2）-04 archive可能。
+- new coordinator task: `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`（PM（AirGuardV2）-05）。
+- old coordinator task: `01a00e4f-2255-7122-8f9c-9c3765013558` host `local`（PM（AirGuardV2）-04）。
+- callback destination: 今後のcheckpointはnew coordinator `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-006`はcompleted。repositoryからactive instruction sources、承認境界、正本、未完成checkpoint、再開条件を復元し、変更なしcallbackが旧coordinatorへ到達した。
+- branchは`codex/user-write-boundary`、baseline HEADは`2a97a49332f150eb98c413fa198f84d98adb43be`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。governance commit `2a97a49`でinstruction-chainが変更済みである。
+- browser UIの挙動・受入れ証拠は、可視・有効なcontrolへの実利用者相当のpointer・keyboard操作だけで取得する。`fill`、`clear`、DOM・storage・cookie・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測とnon-UI setup・backend assertionはUI操作証拠から分離する。
+- 旧基準のUI証拠は履歴としてだけ保持する。正規signup、candidate export/import、再sign-in、dashboard到達は新基準で未検証である。
+- mandatory restartは、専用build identityのfail-closed検証、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、human-equivalent UIを再検証する。
+- Nortonが隔離したhelperは復元・再利用せず、processはforegroundだけを使用する。buildは実行ごとの明示承認を必要とする。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。
+- next: mandatory restart項目を設計者との壁打ちで最小segment化して実装・検証し、正規UI routeのbaseline生成へ戻る。
+
+## PC migration shutdown checkpoint
+
+- 日付: 2026-08-17。利用者は本日の作業終了と、翌日の新Windows PCへのproject移行を指示した。
+- active coordinatorはPM（AirGuardV2）-05 task `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`、callback destinationも同taskである。
+- repository/environmentはWindows native、PowerShell、保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal taskであり、Codex worktreeやWSLではない。
+- shutdown文書更新前のbranchは`codex/user-write-boundary`、HEADは`3e3fb9dcde4fdb08ebb1935cd5767b3d1553f081`、root worktreeはcleanだった。branchにupstreamは設定されていないため、remote cloneだけでは現在refを復元できない。`.git`を含むAirGuard directory copyとrepositoryごとのGit bundleを必要とする。
+- AirGuard配下で確認したtop-level 7 repositoryと内部`air-vuetify-v3`はcleanだった。`air-vuetify-v3`はbranch `main`、HEAD `07886a412262184636380bd4936f11b9a12f052c`である。
+- `.codex-test/runtime`は空、Codex専用port `14400`、`14500`、`14600`、`15001`、`18080`、`19000`、`19099`、`19199`にLISTENはなかった。`.output`は空directoryで、移行対象または受入れ証拠にしない。
+- Git外local dataとして`.env`、`.env.development`、`.env.local`、利用者用`saved-data`、`.codex-test/saved-data`が存在する。内容を表示せず、暗号化された媒体でrepositoryとともに移す。`node_modules`と`functions/node_modules`は再生成し、copyしない。
+- Codex task sizeは1.15 MiBで300 MiB handoff閾値未満。Codex全体は約1615.98 MiBで2 GiB参考警告未満だったが、scanは1 errorを含むため完全な容量証明ではない。
+- Codex local thread復元はbest-effortとし、app停止後にsession、thread DB、設定、個人skill等のportable subsetをcopyする。`auth.json`、sandbox secret、SID、installation ID、browser profile、worktree、log、cacheはcopyせず、新PCでOpenAI、plugin、connector、Firebase CLI、Git hostへ再loginする。
+- 新PCのWindowsユーザー名は同じ`seven`とし、project pathを一致させる。最初は現在と同じWindows native・PowerShellを維持し、WSLへの切替は別の明示判断とする。
+- official progressは10%のまま。implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。
+- restore後の最初の作業は変更なし`PC-MIGRATION-RESTORE-001`。repository、関連repository、local data存在、active instructions、callback、permission、validatorを照合し、成功するまで新規実装、Emulator、server、browser、remote接続を開始しない。
+- mandatory restartは、build identity fail-closed、candidate acceptance fingerprintと停止済みpromotion gate、verifier会社名カナ・Firestore path segment、Auth POST/Firestore GET契約分離である。その後human-equivalent UIを再検証する。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。旧PCとbackupは新PCのrestore checkpointと最初の実file限定commit確認後まで保持する。
+
+## COORDINATOR-HANDOFF-009 migrated local coordinator activation checkpoint
+
+- 状態: PM（AirGuardV2）-06 migrated local coordinator有効化済み、PM（AirGuardV2）-05 archive可能。
+- new coordinator task: `01a0184a-48ef-7690-beb4-607dd384a874` host `DESKTOP-9L00IP0`。
+- old coordinator task: `01a00f49-9460-7940-8b98-11fa4cab17fe` host `local`（旧PC）。
+- callback destination: 今後のcheckpointはnew coordinator `01a0184a-48ef-7690-beb4-607dd384a874` host `DESKTOP-9L00IP0`。
+- repository/environment: 保存済みrepository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うWindows native local task。Codex worktreeではない。
+- `COORDINATOR-HANDOFF-008`はcompleted。branchは`codex/user-write-boundary`、baseline HEADは`92d17c81162b6125a3afaff6942d4b596db43486`、baseline worktreeはcleanだった。
+- common governanceは`1.0.0`、公式進捗は10%である。
+- root repositoryと`air-vuetify-v3`は移行後cleanで、`git fsck --full`が成功した。`air-vuetify-v3`はbranch `main`、HEAD `07886a412262184636380bd4936f11b9a12f052c`である。
+- Node v22.23.2、npm 10.9.8、OpenJDK 21.0.12、Firebase CLI 15.27.0を確認済みである。
+- rootとFunctionsの依存関係は`npm ci`後に`npm ls --depth=0`が成功した。Functionsの`@emnapi/runtime@1.8.1 extraneous`表示は`sharp@0.34.5`のoptional dependency由来と照合済みで、変更・prune・lockfile変更は行っていない。
+- `.env`、`.env.development`、`.env.local`、`saved-data`、`.codex-test\saved-data`の存在を内容非表示で確認済みである。
+- project-owned validator、managed governance validator、`git diff --check`が成功した。
+- implementation checkpoint `126e903`は未完成で、新browser基準では未検証である。
+- 旧UI証拠は履歴としてだけ保持する。正規signup、candidate export/import、再sign-in、dashboard到達は新基準で未検証である。
+- mandatory restartは、build identity fail-closed、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。その後、human-equivalent UIを再検証する。
+- browser UI証拠は実利用者相当のpointer・keyboard操作だけで取得する。`fill`、`clear`、DOM・storage・cookie・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止する。read-only観測とnon-UI setup・backend assertionはUI証拠から分離する。
+- Nortonが隔離したhelperは復元・再利用せず、processはforegroundだけを使用する。buildは実行ごとの明示承認を必要とする。
+- remote、Dev、Prod、利用者用local、実data、external service、Git push、deploy、main mergeは未承認のままである。
+- 旧PCと外付けHDD backupは、このactivation commitを旧coordinatorが確認するまで保持する。
+- PC間Remote実験はrepository変更なしで終了した。cross-host callbackは利用不能だったため、このcheckpoint結果は利用者が旧coordinatorへ手動中継する。
+- next: mandatory restart 4項目を設計者との壁打ちで最小segment化する。利用者の開始指示までは新規実装しない。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 1
+
+- 2026-08-19にPM（AirGuardV2）-06で自己完結local UI test環境の構築を再開した。最初の最小segmentは専用build identityのfail-closed gateであり、application code、build、Emulator、server、browser、saved-dataを対象外とした。
+- `npm run test:local:ui:build`は専用dotenvの全キー・全値をdemo project、loopback、Emulator用合成値のallowlistと照合し、build前後のclean source HEADが同一の場合だけ`.output/codex-local-ui-build-identity.json`を生成する。build失敗またはsource変化時は有効markerを残さない。
+- generated serverはmarker、専用dotenv SHA-256、現在のclean source HEAD、project identity、外部作用拒否が一致しなければ`.output/server/index.mjs`をimportせず停止する。手動markerは正規経路としない。
+- sourceの構文検査、build identity・foreground契約test 14件、`git diff --check`は成功した。Nuxt build、generated server、Emulator、browserは実行しておらず、実build identityの受入れは実行ごとの明示承認待ちである。
+- mandatory restartの残りは、candidate acceptance fingerprintと停止済みprocessのpromotion gate、verifierの会社名カナ・Firestore path segment検証、Auth POSTとFirestore GETの契約test分離である。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 2
+
+- candidate exportだけでは専用saved-dataへ昇格できないようにし、candidate importに対するbackend verifier合格後だけ、candidate directory SHA-256、clean source HEAD、demo project identityを別acceptance receiptへ記録する経路を追加した。合成email・会社名・表示名だけを入力とし、password、token、実在情報は扱わない。
+- promotionはacceptance receiptとcandidate再計算SHA-256・現在HEADの一致に加え、専用Emulator hub/logging、Functions、Auth、Firestore、Realtime Database、Storage、generated serverの8 portがすべて停止済みであることを変更前に要求する。receiptと既存saved-dataは失敗時の復旧対象に含めた。
+- Node・PowerShell構文検査、candidate fingerprint・build identity・foreground契約test 16件、`git diff --check`は成功した。candidate export/import、backend verifier、promotion、Emulator、server、browserは実行していない。
+- mandatory restartの残りは、verifierの会社名カナ・Firestore path segment検証と、Auth POST・Firestore GETの契約test分離である。実build identityの受入れとhuman-equivalent UI再検証は別途build承認後に行う。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 3
+
+- backend verifierの期待identityへ会社名カナを追加し、全角カタカナ・半角／全角space・40文字以内の合成値だけを許可してCompany保存値との完全一致を要求した。candidate acceptance commandも会社名カナを別の合成環境変数から受け取る。
+- claim company IDとAuthentication UIDを、空、前後space、`.`、`..`、slash、NUL、UTF-8 1500 bytes超過ではない単一Firestore path segmentとして検証し、検証後に各segmentをURL encodeしてCompany/User documentを読むようにした。
+- verifier・acceptance sourceの構文検査、会社名カナ・path segment・candidate・build identity・foreground契約test 19件、`git diff --check`は成功した。Emulator/backend接続、candidate、server、browser、buildは実行していない。
+- mandatory restartの残りはAuth POST・Firestore GETの契約test分離だけである。その後、実行ごとのbuild承認を得てbuild identityとhuman-equivalent UIの受入れを行う。公式進捗は10%のまま。
+
+## PM-ACTIVATION-010 mandatory restart checkpoint 4
+
+- backend verifierのtransportを注入可能なread-only helperへ分離した。Authentication account列挙はAuth Emulator `127.0.0.1:19099`へJSON body付きPOSTを1回だけ行い、Company/User document読取りはFirestore Emulator `127.0.0.1:18080`へbodyなしGETを2回だけ行う。
+- 独立した契約testでAuth helperがFirestore portへ、Firestore helperがAuth portへ到達しないこと、method、request body、owner header、URL encoded pathを確認した。source-patternだけでなくstub fetchが受けた実request引数を検証している。
+- verifier source構文検査、Auth POST・Firestore GET分離を含むmandatory restart関連契約test 21件、全domain単体test 359件、project-owned validator、managed governance validator、`git diff --check`は成功した。Emulator、server、browser、build、candidate data操作は実行していない。
+- mandatory restart 4項目の実装・非接続契約検証は完了したが、runtime受入れは未完了である。次は利用者の実行ごとの明示承認を得て専用buildを1回行い、build identity fail-closed、正規signup、candidate export/import、backend acceptance、停止済みpromotion、実利用者相当の再sign-in・dashboard、console/network、cleanupを順に検証する。公式進捗は10%のまま。
+
+## GOVERNANCE-TURNOVER-001 managed governance 1.3.0 coordinator activation checkpoint
+
+- 日付: 2026-08-21。
+- former coordinator: PM（AirGuardV2）-03 / task `01a0224f-3efd-7ea3-84a2-37f6d7a1b134`。
+- new coordinator: PM（AirGuardV2）-04 / task `01a022d4-dced-7562-83a4-878aa7f47b7e` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`45932a0a4c7871c3e1baabe5281845fd65377e42`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-003`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- UWB-02R〜04Rのapplication実装とlocal自動検証は完了済みである。未完了gateはpermission分離後のhuman-resource provision-only actorによる正規UI再受入れであり、role選択が表示されずemailだけでEmployee連携仮登録Userを作成・削除できることを確認する。このgate完了後にUWB-05へ進む。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## COORDINATOR-HANDOFF-011 PM-05 coordinator activation checkpoint
+
+- 日付: 2026-08-25。
+- former coordinator: PM（AirGuardV2）-04 / task `01a022d4-dced-7562-83a4-878aa7f47b7e`。
+- new coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`787ffcab8813dd39d2a90281fe92c1b6b0442ac4`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-004`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- UWB-01〜06は完了した。UWB-07/08はapplication・server・Rules実装、自動検証、Codex UI smoke、利用者local UI受入れ、super-user UI/server policy parityまで完了した。
+- UWB-07の未完了gateはretention contractであり、履歴reader、保持期間、legal hold、terminal後UID縮小を確定する必要がある。次は現状をread-onlyで調査し、現行契約、提案、影響、互換性、移行、rollback、testを利用者へ提示する。
+- UWB-08は自動検証完了であり、利用者による`firestore.rules`確認を待つ。
+- 公式進捗は10%である。Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## IN-APP-BROWSER-GOVERNANCE-001 PM-05 turnover preparation
+
+- 日付: 2026-08-25。
+- coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622` host `local`。
+- repository/environment: `C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続し、branch `codex/user-write-boundary`、開始HEAD `4ea6001540ba853f076556cdf7d12dcfe33d008e`、開始worktree cleanで実施した。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`のまま変更しない。
+- Codex専用Emulator ready、Nuxtの`Vite client warmed up`、初回module graph 2巡probe後にインアプリブラウザを初めて開く手順で、cold restart 3回すべてreloadなしに製品topへ到達し、保存済み合成accountのsign-inからdashboard到達も確認した。利用者はこの手順を標準採用し、project governance更新とtask交代を明示承認した。
+- 利用者Chromeは補助経路へ変更する。session喪失時の一時credentialは専用loopback Auth Emulator内の合成accountだけに限定し、saved-data・repository・出力へ残さず、平文表示中の観測を禁止し、即時再mask、saved-data指紋不変、Emulator停止による失効を要求する。
+- instruction-chain変更のため、文書検証・local commit・clean worktree確認後に完全新規task `PM（AirGuardV2）-06`を作成する。新taskのID、no-change callback、最初のfile限定commitは新task自身がこのhandoff文書へ追記する。成功するまでownershipはPM-05に残す。
+- UWB-01〜08は完了し、公式進捗は10%である。次のapplication工程はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序の確認であり、task交代完了までは開始しない。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataは未承認であり、実行しない。旧taskのarchive・deleteはCodexが行わず、交代成功後に利用者へ手動削除可能と報告する。
+
+## COORDINATOR-HANDOFF-012 PM-06 coordinator activation checkpoint
+
+- 日付: 2026-08-25。
+- former coordinator: PM（AirGuardV2）-05 / task `01a03666-dab2-7ab2-aec1-c2ba9925f622`。
+- new coordinator: PM（AirGuardV2）-06 / task `01a037d6-c3a8-7f01-837e-66236b2a9508` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktreeまたは別repository copyではない。
+- branchは`codex/user-write-boundary`、baseline HEADは`7b6ce86375c99f430e247367942a3ae09cfbaeac`、baseline worktreeはcleanだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-005`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、worktreeはcleanだった。直接repository接続、権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- Codex専用local UI testは、Emulatorの`All emulators ready`、Nuxtの`Vite client warmed up`、loopback応答、初回module graphの2巡bounded probe成功を初回navigation前に確認する。起動templateまたはHTTP 200だけを成功証拠にせず、Codexインアプリブラウザを標準経路、Chromeを補助経路とする。
+- Codex専用一時credentialは専用loopback Auth Emulatorの合成accountだけに限定する。値をsaved-data、repository、terminal、応答、log、screenshot、DOM・console・network観測へ残さず、平文表示中は観測を停止し、通常keyboard入力後に即時再maskする。Emulator停止による失効とsaved-data指紋不変を要求する。
+- UWB-01〜08は完了し、公式進捗は10%である。次はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序を確認する。
+- Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。

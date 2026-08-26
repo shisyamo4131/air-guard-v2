@@ -62,7 +62,7 @@ const { attrs } = useBaseManager("OperationResultsManager");
     :handle-delete="props.handleDelete"
     :custom-input="props.customInput"
     :disable-delete="(item) => item.isLocked"
-    :disable-submit="(item) => item.isLocked"
+    :disable-submit="({ item }) => item.isLocked"
   >
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
       <slot :name="slotName" v-bind="scope ?? {}"></slot>

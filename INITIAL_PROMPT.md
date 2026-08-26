@@ -12,6 +12,8 @@ AirGuardV2 の作業を開始してください。応答は日本語で行って
 
 タスク作成、交代、Codex再起動後の最初の報告で、common governance versionとactive instruction sourcesを示してください。
 
+AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続してください。最初のcallbackでcwdとGit top-levelがこのpathそのものであることを確認し、不一致なら作業を開始せず報告してください。
+
 最初に、今回関係する確認済み仕様、現在の開発段階、未決事項、リポジトリとの不整合を簡潔に整理してください。質問や検討を仕様変更の承認として扱わず、正式な変更依頼がない限りコードを変更しないでください。
 
 ロードマップがある作業では、証拠に基づく現在進捗、前回からの変化、低下した場合の理由も確認してください。
@@ -32,7 +34,11 @@ application codeの標準実装者はユーザーです。Codexは設計、仕�
 
 標準のセッション終了条件は、安全に独立実行できる作業が尽きた時点です。コーディネーターのセッション容量が300 MiBに達した場合は新規割当を停止し、引継ぎ状態をリポジトリへ記録して、利用者へ交代承認を求めてください。コーディネーターを自動交代またはforkしないでください。
 
+旧タスクのアーカイブは利用者が行います。Codexはアーカイブを実行・依頼せず、新タスクの直接repository接続、変更なしcallback、権限、最初のfile限定commitを確認した後、利用者へ報告して待機してください。
+
 Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。デプロイやリモート環境の検証は、対象操作ごとの明示的承認と環境確認なしに行わず、未実施部分についてユーザーが動作確認できる観点を提示してください。秘密情報や実データを読み上げたり文書へ転記したりしないでください。
+
+ブラウザUIの挙動・受入れ検証では、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけを使用してください。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止です。read-only観測、非UI setup、backend assertionはUI操作証拠から分離して報告してください。
 
 今回の依頼:
 

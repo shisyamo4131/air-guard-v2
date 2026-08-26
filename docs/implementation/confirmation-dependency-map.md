@@ -89,7 +89,7 @@
 | CONF-0063 | Open-user-decision | SELF |
 | CONF-0064 | Open-user-decision | SELF; depends-on CONF-0043, CONF-0123 |
 | CONF-0065 | Open-user-decision | SELF |
-| CONF-0066 | Merge-candidate | superseded-by CONF-0111, CONF-0129 |
+| CONF-0066 | Answered | SELF |
 | CONF-0067 | Open-user-decision | SELF |
 | CONF-0068 | Open-user-decision | SELF; depends-on CONF-0062, CONF-0063 |
 | CONF-0069 | Open-user-decision | SELF; depends-on CONF-0129 |

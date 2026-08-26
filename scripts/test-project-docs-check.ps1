@@ -27,6 +27,16 @@ try {
 
     Invoke-Checker $true 'valid baseline'
 
+    $nestedRepositoryPath = Join-Path $fixtureRoot 'vendor/nested-project'
+    New-Item -ItemType Directory -Path (Join-Path $nestedRepositoryPath '.git') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $nestedRepositoryPath 'README.md') -Encoding UTF8 -Value @'
+# Nested repository fixture
+
+[Broken only inside nested repository](./missing-document.md)
+'@
+    Invoke-Checker $true 'broken Markdown link inside nested independent repository is pruned'
+    Remove-Item -LiteralPath (Join-Path $fixtureRoot 'vendor') -Recurse -Force
+
     $configPath = Join-Path $fixtureRoot '.codex/config.toml'
     $validConfig = Get-Content -LiteralPath $configPath -Raw -Encoding UTF8
     Set-Content -LiteralPath $configPath -Encoding UTF8 -Value "[agents`nenabled = definitely-not-toml"
@@ -38,6 +48,10 @@ try {
     $badAnchorIndex = [regex]::Replace($validManualIndex, '(\./control-operation\.md#)[^)]+', '${1}missing-heading-anchor', 1)
     Set-Content -LiteralPath $manualIndexPath -Encoding UTF8 -Value $badAnchorIndex
     Invoke-Checker $false 'missing Markdown heading anchor'
+    Set-Content -LiteralPath $manualIndexPath -Encoding UTF8 -Value $validManualIndex
+
+    Set-Content -LiteralPath $manualIndexPath -Encoding UTF8 -Value ($validManualIndex + "`n[Broken root project link](./missing-document.md)`n")
+    Invoke-Checker $false 'broken Markdown link in root project is rejected'
     Set-Content -LiteralPath $manualIndexPath -Encoding UTF8 -Value $validManualIndex
 
     Set-Content -LiteralPath (Join-Path $fixtureRoot 'docs/unindexed-important-document.md') -Encoding UTF8 -Value "# Unindexed fixture"

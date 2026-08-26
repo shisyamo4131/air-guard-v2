@@ -3,11 +3,11 @@ import test from "node:test";
 
 import {
   mapUserEnabledStateError,
-} from "../../functions/modules/auth/mapUserEnabledStateError.js";
+} from "../../functions/modules/auth/mappers/mapUserEnabledStateError.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 import {
   USER_ENABLED_STATE_CHANGE_ERROR_CODES,
   UserEnabledStateChangeError,
@@ -15,7 +15,7 @@ import {
 import {
   USER_ENABLED_STATE_POLICY_ERROR_CODES,
   UserEnabledStatePolicyError,
-} from "../../functions/modules/auth/userEnabledStatePolicy.js";
+} from "../../functions/modules/auth/policies/userEnabledStatePolicy.js";
 import {
   CALLABLE_AUTH_IDENTITY_ERROR_CODES,
   CallableAuthIdentityError,

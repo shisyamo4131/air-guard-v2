@@ -18,7 +18,7 @@
 | [0003](0003-operation-result-billing-integrity.md) | 稼働実績と請求の整合性 | Accepted | 2026-08-03 |
 | [0004](0004-codex-verification-boundary.md) | Codex とユーザーの確認責務 | Superseded | 2026-08-03 |
 | [0005](0005-multi-agent-and-emulator-testing.md) | マルチエージェント体制とEmulator検証 | Accepted | 2026-08-04 |
-| [0006](0006-user-prepared-authenticated-browser-testing.md) | ユーザー準備済み認証画面によるUI検証 | Accepted | 2026-08-04 |
+| [0006](0006-user-prepared-authenticated-browser-testing.md) | ユーザー準備済み認証画面によるUI検証 | Superseded | 2026-08-04 |
 | [0007](0007-project-scoped-specialist-agents.md) | プロジェクト専用の専門エージェント構成 | Superseded | 2026-08-04 |
 | [0008](0008-consecutive-work-warning.md) | 配置管理の連勤判定と注意喚起 | Accepted | 2026-08-04 |
 | [0009](0009-arrangement-daily-summary.md) | 配置管理の日別稼働・配置・状態集計 | Superseded | 2026-08-05 |
@@ -30,6 +30,11 @@
 | [0015](0015-user-led-implementation-and-codex-assurance.md) | 利用者主導実装とCodexによる設計・検証・文書・Git管理 | Accepted | 2026-08-14 |
 | [0016](0016-firemodel-crud-boundary.md) | FireModel CRUDの利用境界 | Accepted | 2026-08-15 |
 | [0017](0017-callable-auth-identity-gate.md) | Callableの共通Auth identity gate | Accepted | 2026-08-16 |
+| [0018](0018-user-provisioning-and-employee-link-boundary.md) | User provisioningとEmployee紐付け境界 | Accepted | 2026-08-16 |
+| [0019](0019-client-operation-policy-composable-boundary.md) | Client操作policyとcomposable境界 | Accepted | 2026-08-17 |
+| [0020](0020-employee-retirement-user-offboarding-and-reinstatement.md) | Employee退職・単独User削除・誤退職訂正境界 | Accepted | 2026-08-24 |
+| [0021](0021-codex-in-app-browser-ui-testing.md) | Codexインアプリブラウザによるlocal UI検証 | Accepted | 2026-08-25 |
+| [0022](0022-shared-role-preset-catalog-consumer-adoption.md) | 共有role preset catalogのconsumer導入 | Accepted | 2026-08-26 |
 
 ## 新しい ADR の形式
 

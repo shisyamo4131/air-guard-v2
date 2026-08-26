@@ -8,7 +8,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { setupUserAccount as setupUserAccountUseCase } from "../modules/auth/setupUserAccount.js";
-import { mapUserAccountSetupError } from "../modules/auth/mapUserAccountSetupError.js";
+import { mapUserAccountSetupError } from "../modules/auth/mappers/mapUserAccountSetupError.js";
 
 /**
  * 一般User本登録Callableを処理します。

@@ -2,6 +2,7 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
+    [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
     [long]$StopBytes = 100MB
 )
@@ -9,7 +10,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $dedicatedRoot = Join-Path $projectRoot '.codex-test'
-$seedPath = Join-Path $dedicatedRoot 'saved-data'
+$seedPath = Join-Path $dedicatedRoot 'isolated-saved-data'
 $runtimeRoot = Join-Path $dedicatedRoot 'runtime'
 $runtimePath = Join-Path $runtimeRoot ("{0}-{1}" -f $Mode.ToLowerInvariant(), $PID)
 $userSavedDataPath = Join-Path $projectRoot 'saved-data'
@@ -17,7 +18,9 @@ $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
 $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
 $testPath = Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs'
 $projectId = 'demo-air-guard-v2-codex'
-$emulators = 'auth,firestore,database,storage'
+$seedEmulators = 'auth,firestore,database,storage'
+$testEmulators = 'auth,firestore,database,storage,functions'
+$emulators = if ($Mode -eq 'Seed') { $seedEmulators } else { $testEmulators }
 
 function Assert-ProjectChild {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -47,7 +50,15 @@ function Get-DirectoryFingerprint {
     $normalizedRoot = [IO.Path]::GetFullPath($Path).TrimEnd('\')
     $records = foreach ($file in Get-ChildItem -LiteralPath $Path -File -Force -Recurse | Sort-Object FullName) {
         $relativePath = $file.FullName.Substring($normalizedRoot.Length).TrimStart('\')
-        $hash = (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash
+        $stream = [System.IO.File]::OpenRead($file.FullName)
+        $sha256 = [System.Security.Cryptography.SHA256]::Create()
+        try {
+            $hash = ([System.BitConverter]::ToString($sha256.ComputeHash($stream))).Replace('-', '')
+        }
+        finally {
+            $sha256.Dispose()
+            $stream.Dispose()
+        }
         "$relativePath|$($file.Length)|$hash"
     }
     $joined = $records -join "`n"
@@ -72,6 +83,24 @@ function Resolve-Executable {
     throw "Required executable was not found: $Command"
 }
 
+function Remove-RuntimeDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    for ($attempt = 1; $attempt -le 20; $attempt++) {
+        try {
+            Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+            return
+        }
+        catch [System.IO.IOException] {
+            if ($attempt -eq 20) {
+                Write-Warning "Runtime cleanup remains deferred because Windows still has an open handle: $Path"
+                return
+            }
+            Start-Sleep -Milliseconds 500
+        }
+    }
+}
+
 Assert-ProjectChild -Path $dedicatedRoot | Out-Null
 Assert-ProjectChild -Path $seedPath | Out-Null
 Assert-ProjectChild -Path $runtimePath | Out-Null
@@ -91,24 +120,20 @@ if ($existingBytes -ge $WarnBytes) {
 
 $metadataPath = Join-Path $seedPath 'firebase-export-metadata.json'
 if ($Mode -eq 'Seed' -and (Test-Path -LiteralPath $seedPath)) {
-    throw 'Dedicated saved-data already exists. Normal tests never overwrite it; remove it only through a separately approved cleanup.'
+    throw 'Dedicated isolated-saved-data already exists. Normal tests never overwrite it; remove it only through a separately approved cleanup.'
 }
 if ($Mode -eq 'Test' -and -not (Test-Path -LiteralPath $metadataPath -PathType Leaf)) {
-    throw 'Dedicated saved-data is missing. Run npm run test:local:seed once before the normal test command.'
+    throw 'Dedicated isolated-saved-data is missing. Run npm run test:local:seed once before the normal test command.'
 }
 
 $nodeExe = Resolve-Executable -Command 'node.exe' -Fallback (Join-Path $env:ProgramFiles 'nodejs\node.exe')
-$npxCli = Join-Path (Split-Path -Parent $nodeExe) 'node_modules\npm\bin\npx-cli.js'
-if (-not (Test-Path -LiteralPath $npxCli -PathType Leaf)) {
-    throw "npx CLI entrypoint was not found: $npxCli"
-}
+$firebaseExe = Resolve-Executable -Command 'firebase.cmd' -Fallback (Join-Path $env:APPDATA 'npm\firebase.cmd')
 $userDataBefore = Get-DirectoryFingerprint -Path $userSavedDataPath
 $seedBefore = if ($Mode -eq 'Test') { Get-DirectoryFingerprint -Path $seedPath } else { '<not-created>' }
 
 New-Item -ItemType Directory -Path $runtimePath -Force | Out-Null
 $childScriptPath = Join-Path $runtimePath 'run-child.cmd'
 $firebaseArguments = @(
-    '-y', 'firebase-tools@latest',
     '--config', $configPath,
     '--project', $projectId,
     'emulators:exec',
@@ -121,21 +146,37 @@ if ($Mode -eq 'Seed') {
     $childScriptContent = '@"{0}" "{1}"' -f $nodeExe, $seedScriptPath
 } else {
     $firebaseArguments += @('--import', $seedPath)
-    $childScriptContent = '@"{0}" --test "{1}"' -f $nodeExe, $testPath
+    $testArguments = if ($TestNamePattern) {
+        if ($TestNamePattern.Contains('"') -or $TestNamePattern.Contains("`r") -or $TestNamePattern.Contains("`n")) {
+            throw 'TestNamePattern contains unsupported characters.'
+        }
+        '--test --test-name-pattern "{0}" "{1}"' -f $TestNamePattern, $testPath
+    } else {
+        '--test "{0}"' -f $testPath
+    }
+    $childScriptContent = '@"{0}" {1}' -f $nodeExe, $testArguments
 }
 Set-Content -LiteralPath $childScriptPath -Value $childScriptContent -Encoding Ascii
 $firebaseArguments += $childScriptPath
 
 $exitCode = 1
+$externalEffectsModeWasSet = Test-Path Env:\AIR_GUARD_EXTERNAL_EFFECTS
+$externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
 try {
+    $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
     Push-Location $runtimePath
-    & $nodeExe $npxCli @firebaseArguments
+    & $firebaseExe @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    if ($externalEffectsModeWasSet) {
+        $env:AIR_GUARD_EXTERNAL_EFFECTS = $externalEffectsModeBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_EXTERNAL_EFFECTS -ErrorAction SilentlyContinue
+    }
     if (Test-Path -LiteralPath $runtimePath) {
         Assert-ProjectChild -Path $runtimePath | Out-Null
-        Remove-Item -LiteralPath $runtimePath -Recurse -Force
+        Remove-RuntimeDirectory -Path $runtimePath
     }
 }
 
@@ -166,7 +207,7 @@ if ($finalBytes -ge $StopBytes) {
     mode = $Mode
     project_id = $projectId
     emulators = $emulators
-    functions_started = $false
+    functions_started = $Mode -eq 'Test'
     loopback_only = $true
     user_saved_data_unchanged = $true
     dedicated_saved_data_read_only = $Mode -eq 'Test'

@@ -1,5 +1,9 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
 
+const isCodexDedicatedUi =
+  process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID ===
+  "demo-air-guard-v2-codex";
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: "2024-11-01",
@@ -33,8 +37,8 @@ export default defineNuxtConfig({
     },
     // pinia
     "@pinia/nuxt",
-    // pwa
-    "@vite-pwa/nuxt",
+    // Codex専用UIではService Workerと外部通知経路をbuild時から無効化
+    ...(!isCodexDedicatedUi ? ["@vite-pwa/nuxt"] : []),
   ],
 
   // PWA 設定（FCM とインストール機能のみ）
@@ -157,6 +161,17 @@ export default defineNuxtConfig({
       firebaseAppId: process.env.NUXT_PUBLIC_FIREBASE_APP_ID,
       firebaseRegion: process.env.NUXT_PUBLIC_FIREBASE_REGION,
       firebaseVapidKey: process.env.NUXT_PUBLIC_FIREBASE_VAPID_KEY,
+      firebaseEmulatorHost: process.env.NUXT_PUBLIC_FIREBASE_EMULATOR_HOST,
+      firebaseAuthEmulatorPort:
+        process.env.NUXT_PUBLIC_FIREBASE_AUTH_EMULATOR_PORT,
+      firebaseFirestoreEmulatorPort:
+        process.env.NUXT_PUBLIC_FIREBASE_FIRESTORE_EMULATOR_PORT,
+      firebaseDatabaseEmulatorPort:
+        process.env.NUXT_PUBLIC_FIREBASE_DATABASE_EMULATOR_PORT,
+      firebaseStorageEmulatorPort:
+        process.env.NUXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_PORT,
+      firebaseFunctionsEmulatorPort:
+        process.env.NUXT_PUBLIC_FIREBASE_FUNCTIONS_EMULATOR_PORT,
     },
   },
 

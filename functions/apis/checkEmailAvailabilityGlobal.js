@@ -9,8 +9,8 @@ import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import {
   assertUserDocumentCompany,
-} from "../modules/auth/userAuthCompanyPolicy.js";
-import { mapCallableAuthIdentityError } from "../modules/auth/mapCallableAuthIdentityError.js";
+} from "../modules/auth/policies/userAuthCompanyPolicy.js";
+import { mapCallableAuthIdentityError } from "../modules/auth/mappers/mapCallableAuthIdentityError.js";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 const PERMISSION_DENIED_MESSAGE = "有効な会社管理者権限を確認できません。";

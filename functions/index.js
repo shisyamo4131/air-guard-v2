@@ -17,6 +17,7 @@ export * from "./modules/Employees.js";
 
 export * from "./triggers/arrangementNotification.js";
 export * from "./triggers/auth.js";
+export * from "./triggers/lifecycleReconciler.js";
 export * from "./triggers/operationResult.js";
 export * from "./triggers/user.js";
 

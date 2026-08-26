@@ -9,7 +9,7 @@ import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { changeUserEnabledState } from "../modules/auth/changeUserEnabledState.js";
-import { mapUserEnabledStateError } from "../modules/auth/mapUserEnabledStateError.js";
+import { mapUserEnabledStateError } from "../modules/auth/mappers/mapUserEnabledStateError.js";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 
 /**

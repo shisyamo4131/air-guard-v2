@@ -9,6 +9,9 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": {
+    "source": "functions/codex-test"
+  },
   "emulators": {
     "auth": {
       "host": "127.0.0.1",
@@ -25,6 +28,10 @@
     "storage": {
       "host": "127.0.0.1",
       "port": 19199
+    },
+    "functions": {
+      "host": "127.0.0.1",
+      "port": 15001
     },
     "hub": {
       "host": "127.0.0.1",

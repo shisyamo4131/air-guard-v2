@@ -8,7 +8,7 @@
  * @property {Array} users - 表示するユーザー情報の配列
  * @property {Object|Array|String|Number} modelValue - 選択されたアイテムの値。selectStrategy に応じて、単一の値、配列、またはオブジェクトになる。
  * @property {Boolean} showCreate - 新規登録機能の表示有無
- * @property {Boolean} showEdit - 編集ボタンの表示有無
+ * @property {Boolean|Function} showEdit - 編集ボタンの表示有無、またはUserごとの表示判定関数
  * @property {Boolean} showDetail - 詳細ボタンの表示有無
  *
  * - その他、AirDataIterator に実装されているすべてのプロパティが使用可能です。
@@ -58,10 +58,17 @@ const _props = defineProps({
   hideDefaultFooter: { type: Boolean, default: false },
   showCreate: { type: Boolean, default: false },
   showDetail: { type: Boolean, default: false },
-  showEdit: { type: Boolean, default: false },
+  showEdit: { type: [Boolean, Function], default: false },
 });
 const props = useDefaults(_props, "UsersIterator");
 const emit = defineEmits(["click:create", "click:detail", "click:edit"]);
+
+function resolveShowEdit(user) {
+  if (typeof props.showEdit === "function") {
+    return props.showEdit(user) === true;
+  }
+  return props.showEdit === true;
+}
 </script>
 
 <template>
@@ -87,7 +94,7 @@ const emit = defineEmits(["click:create", "click:detail", "click:edit"]);
         v-bind="{
           user: item.raw,
           isSelected: isSelected(item),
-          showEdit: props.showEdit,
+          showEdit: resolveShowEdit(item.raw),
           showDetail: props.showDetail,
           showSelect: showSelect,
           'onClick:detail': () => emit('click:detail', item.raw),

@@ -16,7 +16,7 @@
 
 ## 入口・権限
 
-- `/settings/checkout`はpageSettingsで`roles: ["super-user"]`、`navigation:false`。Company admin向けnavigationには表示されない。
+- `/settings/checkout`はpageSettingsで`SUPER_USER` access policy、`navigation:false`。Company admin向けnavigationには表示されない。
 - checkout pageは現在状態と登録buttonだけを持ち、解約、再開、支払方法変更、Stripe Customer Portal入口はない。
 - StripeData Rulesは同一company claimの認証Userまたはsuper-userにread/createを許し、client update/deleteを拒否する。page roleとRules create主体が一致しない。
 - Company Rulesは同一会社の全認証Userに`stripeCustomerId/subscription`を含むCompany全writeを許すため、derived契約状態をclientが直接改変できる。

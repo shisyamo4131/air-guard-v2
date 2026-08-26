@@ -115,7 +115,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 完全削除、短いhash/mask、開発限定。診断容易性と漏えいriskが異なる。
 - Current provisional treatment: dev/prodともFCM token全文、User document、notification payload丸ごとをlogしない。調査用は不可逆hash先頭8文字等の照合IDだけとし、prodはuserId・companyId・notificationId等の必要最小限に限定する。
 - Related FUT IDs: FUT-0009
-- Answer: 2026-08-11 回答済み。FCM token全文をdev/prodともlogしない。調査用は不可逆hash先頭8文字等の照合IDだけを使用し、User document・notification payload丸ごとのlogを禁止する。prodはuserId・companyId・notificationId等の必要最小限とする。保持期間・閲覧権限は監視基盤導入時に別途決定する。
+- Answer: 2026-08-11 回答済み、2026-08-24 UWB-07/08限定で厳格化。FCM token全文をdev/prodともlogしない。一般診断でtoken由来の不可逆照合IDを使う余地は残すが、UWB-07/08 release gateの通知処理はtoken由来識別子も使用せず、operationId、件数、allowlist済みdomain error codeだけに限定する。User document・notification payload丸ごとのlogを禁止し、保持期間・閲覧権限は監視基盤導入時に別途決定する。
 
 ## CONF-0008 Notification配送のretry・重複・結果count契約
 
@@ -763,39 +763,39 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: User.employeeIdはoptional/非一意で、退職・delete cleanupはquery先頭だけを扱う。
 - Question: 1 Employeeに許すUser数、User/Auth削除またはdisabledの主体・時点、admin例外をどうするか。
 - Why needed: 退職・削除後の不正loginとorphan Userを防ぐため。
 - Options and impact: 厳格1対1、複数account許可で全disable、Authは保持しUser role剥奪。
-- Current provisional treatment: 1件前提の現行実装を不変条件とはしない。
+- Current provisional treatment: 予約pointerを1対0/1関係の正本とし、不一致時はfail closedとする。
 - Related FUT IDs: FUT-0076
-- Answer: 未回答
+- Answer: 2026-08-24 回答済み。EmployeeとUserはoptionalな1対0/1関係とし、`EmployeeUserReservations/{employeeId}`を正本にする。退職はstrict `human-resource`由来の`employees:terminate`または会社管理者overrideだけに許可し、Employee-only、仮User連携、本登録User連携を識別する。Employee退職時はEmployeeと業務記録を残し、本登録User連携ではUser/Authと両予約を削除する。仮User連携は退職操作で削除せず、既存の仮登録削除後にEmployee-onlyとして再実行する。単独本登録User削除は会社管理者専用の別操作とする。
 
 ## CONF-0063 将来退職・復職・再雇用の状態model
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: future退職日でも即RESIGNED/User削除、復職methodなし。
 - Question: 退職予定を別statusで持つか、effective date到来時に切替えるか、復職/再雇用時に同じEmployee IDを使うか。
 - Why needed: worker候補、login、勤怠期間と雇用契約日を一致させるため。
 - Options and impact: scheduled status、即時status+日付filter、再雇用は新ID、同ID revision。
-- Current provisional treatment: 即時RESIGNEDを実装事実として記録し、正式運用とはしない。
+- Current provisional treatment: UWB-07ではserverTodayJST以前の即時退職と、完了済み退職の誤操作訂正だけを実装対象にする。
 - Related FUT IDs: FUT-0077
-- Answer: 未回答
+- Answer: 2026-08-24 部分回答。将来日退職・予約取消はUWB-07に含めず、退職日は入社日以降かつserverTodayJST以前に限定する。誤退職は会社管理者専用のUWB-07Cで同じEmployee IDを`ACTIVE`へ戻すが、User/Authは自動復元しない。実際の退職期間を伴う再雇用で同じEmployee IDを継続するか、新IDと雇用期間を使うかは未回答のままFUT-0077へ残す。
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: RESIGNEDとlogical archiveが併存し、guard外勤怠/履歴参照があり、UI restoreなし。
 - Question: 通常退職、誤登録削除、法定保持後匿名化、restoreをどう使い分けるか。
 - Why needed: 個人情報削除要求と勤怠・請求・監査履歴保持を両立するため。
 - Options and impact: 退職者保持、期限後field匿名化、誤登録のみarchive、管理者restore。
-- Current provisional treatment: 現行RESIGNED/archiveを実装事実とし、保持policyは未確定。
+- Current provisional treatment: 通常退職ではEmployeeを`RESIGNED`として保持し、archive・物理削除しない。保持期間と匿名化は未確定。
 - Related FUT IDs: FUT-0078
-- Answer: 未回答
+- Answer: 2026-08-24 部分回答。通常退職はEmployeeと業務記録を保持し、本登録User連携ではUser/Authだけを物理削除する。仮User連携は既存の仮登録削除後にEmployee-onlyとして退職する。誤退職訂正はarchive restoreではなく、元の退職operationを残した専用のACTIVE訂正とする。Employeeの法定保持後匿名化、誤登録archive、archive復元は未回答のままFUT-0078へ残す。
 
 ## CONF-0065 Employee code・表示名・退職者候補の規則
 
@@ -811,15 +811,15 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0066 User/Auth管理の正式権限と本人操作範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-025; `user-auth-lifecycle.md`
 - Evidence: UIはadmin向けだがUser Rulesとcallableのserver認可はより広く、権限設計は暫定実装である。
 - Question: User閲覧、仮登録、role変更、有効化、削除、管理者移譲を誰に許し、本人が変更できるfieldをどこまでとするか。
 - Why needed: account乗っ取り、権限昇格、個人情報閲覧をserver境界で防ぐため。
 - Options and impact: admin専用、操作別permission、本人設定field分離、super-user repair専用。
-- Current provisional treatment: 現行UI/Rules/callable境界を実装事実とし、安全な確定仕様とはしない。
+- Current provisional treatment: 仮登録Userの作成・削除は`users:provision`、role・通知等の管理は`users:write`へ分離し、本登録User lifecycleとEmployee本人readの具体field/pathは後続専用ゲートで扱う。
 - Related FUT IDs: FUT-0080
-- Answer: 未回答
+- Answer: 2026-08-16 回答済み、2026-08-21・2026-08-24改訂。Userは単独UserとEmployee連携Userに分け、仮登録・本登録等は別の状態軸とする。会社管理者と`users:provision`保有者が同社の仮登録Userを作成・削除する。managerへ`users:provision`と`users:write`、human-resourceへ`users:provision`だけを付与し、provision-only actorは作成時roleを設定できない。`employees:write`だけからUser管理権限を派生させない。単独仮UserとEmployee連携仮Userは公開作成操作を分け、Employee連携は同社Employee存在、未紐付け、1 Employee対最大1 Userをserver検証する。本登録Userの無効化・物理削除・退職連携はCONF-0068で回答し、Employee連携User本人の公開field/pathだけを後続gateへ残す。
 
 ## CONF-0067 事前登録・招待・account setupの正式workflow
 
@@ -835,15 +835,15 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0068 無効化・削除・退職・管理者移譲のaccount保持方針
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-025; `user-auth-lifecycle.md`
 - Evidence: disabled/deleteはFirestore先行trigger同期、User.deleteはadmin拒否、退職との詳細時点は未確定。
 - Question: 退職/利用停止でAuthをdisabled・delete・保持のどれにし、復職、監査、誤操作復旧、最後の管理者をどう扱うか。
 - Why needed: 不正login防止と監査・復旧可能性を両立するため。
 - Options and impact: 原則disabled+期限後delete、即delete、User archive+Auth保持、管理者移譲必須guard。
-- Current provisional treatment: 現行非同期同期を実装事実とし、保持policyとはしない。
+- Current provisional treatment: UWB-07の専用Callable・統合operation ledger・reconcilerを実装するまでは現行処理を正式境界としない。
 - Related FUT IDs: FUT-0083、FUT-0076、FUT-0077
-- Answer: 未回答
+- Answer: 2026-08-24 回答済み。AirGuardV2 accessだけを止める場合はUser/Authを保持してdisableする。Employee退職時はEmployeeと業務記録を残し、本登録User連携ではUser/Authと予約を物理削除する。仮User連携は既存の仮登録削除後にEmployee-onlyとして退職し、emailからsignup途中Authを推定削除しない。単独本登録User削除は会社管理者専用とし、管理者・自己・super-user・Employee連携Userを拒否する。User archiveは作らず、`LifecycleOperations`を実行・監査正本とする。誤退職は会社管理者がEmployeeだけを同じIDでACTIVEへ訂正し、accountが必要なら新UIDで再provisionする。管理者targetは先に管理者移譲を要求する。
 
 ## CONF-0069 未認証事前登録確認の列挙・abuse防御
 

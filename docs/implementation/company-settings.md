@@ -9,7 +9,7 @@
 
 ## 入口・権限
 
-- `/settings/company`はpageSettingsで`roles: ["admin"]`を要求する。
+- `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
 - 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。CompanyManagerは作成と削除をUIで拒否し、更新だけを直接`Company.update()`へ渡す。
 - Rulesは`Companies/{companyDocId}`の全read/writeを、claim companyIdがdoc IDと一致する認証Userまたはsuper-userへ許可する。admin、field ownership、delete制約はない。
 - UIのadmin制御は暫定入口で、server-side認可とは一致しない。

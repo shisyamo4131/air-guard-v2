@@ -5,11 +5,11 @@ import {
   assertCompanyAdminTransferPolicy,
   COMPANY_ADMIN_TRANSFER_POLICY_ERROR_CODES,
   CompanyAdminTransferPolicyError,
-} from "../../functions/modules/auth/companyAdminTransferPolicy.js";
+} from "../../functions/modules/auth/policies/companyAdminTransferPolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 
 const COMPANY_ID = "company-a";
 const ACTOR_UID = "admin-a";

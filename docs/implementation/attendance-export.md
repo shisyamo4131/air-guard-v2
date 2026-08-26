@@ -18,7 +18,7 @@
 Export pageのroute、PII preview、loading・download境界のfile単位確認は[Employee・Outsourcer・Attendance pages deep review](employee-outsourcer-attendance-pages-deep-review.md)を参照する。
 
 - 入口は `/attendances/export` で、pageはfetch contextを初期化して `DailyAttendanceExporter` を表示する。
-- pageSettingsの現行rolesは `developer` のみである。これは現在の実装事実であり、確定した勤怠出力権限とは扱わない。
+- pageSettingsは`DEVELOPER` access policyを参照する。これは現在の実装事実であり、確定した勤怠出力権限とは扱わない。
 - 出力はbrowser内でCSV Blobを生成してdownloadする。外部freee APIを呼ぶ処理は、調査対象の直接経路にはない。
 - 2026-08-11のユーザー回答では、この4列CSVはfreee勤怠管理Plusへ引き渡す想定である。ただし仮実装で取込テスト未実施のため、形式互換性と正式運用は保留であり、確定仕様とは扱わない。
 - 2026-08-11の追加回答により、公式の取込対象・templateを確認し、代表matrixとDEV test employeeによる取込検証を完了するまでは実験的機能として非表示またはtrial表示にする。exporterの対象・format version、対応version・確認日を記録する方針である。

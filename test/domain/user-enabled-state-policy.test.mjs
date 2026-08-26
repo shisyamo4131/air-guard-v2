@@ -5,11 +5,11 @@ import {
   assertUserEnabledStateChangePolicy,
   USER_ENABLED_STATE_POLICY_ERROR_CODES,
   UserEnabledStatePolicyError,
-} from "../../functions/modules/auth/userEnabledStatePolicy.js";
+} from "../../functions/modules/auth/policies/userEnabledStatePolicy.js";
 import {
   USER_AUTH_COMPANY_POLICY_ERROR_CODES,
   UserAuthCompanyPolicyError,
-} from "../../functions/modules/auth/userAuthCompanyPolicy.js";
+} from "../../functions/modules/auth/policies/userAuthCompanyPolicy.js";
 
 const COMPANY_ID = "company-a";
 const ACTOR_UID = "admin-a";

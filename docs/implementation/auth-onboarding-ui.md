@@ -65,7 +65,7 @@ middlewareは未認証をsign-inへ、認証済み未確認Userをverification�
 
 ## duplicate・orphan・unused候補
 
-- `checkEmailAvailabilityGlobal`はdirect onboarding pagesから呼ばれない。`checkEmailAvailability`は初回admin signupだけが使用する。
+- 旧`checkEmailAvailabilityGlobal`はpublic APIから除外済みである。`checkEmailAvailability`は初回admin signupだけが使用する。
 - 一般signupはpageで事前登録を確認した後、composableが同じ事前登録確認を再実行する。安全側の再確認だがrequestは重複する。
 - admin signupは確認後submitまでemail変更をdisabledにする一方、競合予約やidempotency keyはない。
 - verification済みUser向けsign-in buttonは現在sessionをclearせず、意味のある復帰操作にならない候補である。
@@ -95,6 +95,6 @@ middlewareは未認証をsign-inへ、認証済み未確認Userをverification�
 
 ## Auth Callable adapter追加確認（SPEC-DEEP-041）
 
-- `useAuthFunctions`は8 callable名を毎回`httpsCallable`で生成し、入力をそのまま渡して`result.data`を返す薄いadapterである。client側のshape/tenant/actor validation、timeout、App Check token状態、typed error/result normalization、retry、request generationはない。
+- `useAuthFunctions`は10 callable名を毎回`httpsCallable`で生成し、入力をそのまま渡して`result.data`を返す薄いadapterである。client側のshape/tenant/actor validation、timeout、App Check token状態、typed error/result normalization、retry、request generationはない。
 - 呼出し元はsignup、User/Employee管理、admin変更dialogへ到達する。従ってUIの入力制約やbutton表示はCallable authorizationではなく、Functions側検査が唯一のserver境界である。
-- adapter自体に未使用exportはない。`checkEmailAvailabilityGlobal`もEmployee/User作成UIから到達する。
+- adapterの製品exportに`checkEmailAvailabilityGlobal`はない。Employee/User作成UIは専用の単独・Employee連携仮登録作成Callableへ接続する。

@@ -52,3 +52,17 @@ test("normal signup UI does not call the administrator email preflight", async (
   assert.equal(source.includes("checkEmailAvailability"), false);
   assert.equal(source.includes("isAdmin: false"), false);
 });
+
+test("normal signup submits once without reloading the page", async () => {
+  const source = await readFile(signUpPageUrl, "utf8");
+
+  assert.match(
+    source,
+    /<v-form v-model="formValid" @submit\.prevent="handleCreateUser">/,
+  );
+  assert.equal(source.includes('@click="handleCreateUser"'), false);
+  assert.equal(
+    source.match(/(?:@submit\.prevent|@click)="handleCreateUser"/g)?.length,
+    1,
+  );
+});

@@ -48,7 +48,6 @@ const auth = getAuth(app);
 connectAuthEmulator(auth, `http://${authHost.host}:${authHost.port}`, {
   disableWarnings: true,
 });
-
 const createdUsers = [];
 let testEnvironment;
 
@@ -94,6 +93,7 @@ try {
           companyId: user.companyId,
           isAdmin: false,
           isTemporary: false,
+          disabled: false,
           roles: [],
           fixture: "codex-local-seed-v1",
         },
@@ -107,6 +107,7 @@ try {
       companies: Object.keys(CODEX_LOCAL_COMPANIES).length,
       authUsers: createdUsers.length,
       syntheticOnly: true,
+      purpose: "isolated-rules-callable-fixture",
     })}\n`,
   );
 } finally {
