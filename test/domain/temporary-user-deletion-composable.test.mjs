@@ -35,12 +35,13 @@ test("temporary User deletion composable applies the client policy", async () =>
 test("temporary User deletion composable rechecks before sending", async () => {
   const source = await readFile(sourceUrl, "utf8");
   const functionStart = source.indexOf("async function deleteTemporaryUser(");
-  const functionEnd =
-    source.indexOf("\n  }\n\n  return {", functionStart) + "\n  }".length;
-  const functionSource = source.slice(functionStart, functionEnd);
+  const functionRemainder = source.slice(functionStart);
+  const functionEnd = functionRemainder.search(/\r?\n  }\r?\n\r?\n  return \{/);
+  const functionSource =
+    functionEnd >= 0 ? functionRemainder.slice(0, functionEnd) : "";
 
   assert.ok(functionStart >= 0);
-  assert.ok(functionEnd > functionStart);
+  assert.ok(functionEnd > 0);
   assert.ok(
     functionSource.indexOf("evaluate(targetUser, context)") <
       functionSource.indexOf("requestDeleteTemporaryUser(targetUser.docId)"),
