@@ -23,7 +23,7 @@ const NOTIFICATION_INPUT_FIELDS = new Set([
   "targetUserId",
   ...NOTIFICATION_FIELDS,
 ]);
-const ROLE_INPUT_FIELDS = new Set(["targetUserId", "roles"]);
+const ROLE_INPUT_FIELDS = new Set(["targetUserId", "expectedRoles", "roles"]);
 const VALID_TAG_SIZES = new Set(
   Object.values(TAG_SIZE_VALUES).map(({ value }) => value),
 );
@@ -38,6 +38,8 @@ export const USER_FIELD_UPDATE_POLICY_ERROR_CODES = Object.freeze({
   ROLES_INVALID: "roles-invalid",
   ROLE_INVALID: "role-invalid",
   ROLE_DUPLICATED: "role-duplicated",
+  TARGET_ROLES_INVALID: "target-roles-invalid",
+  TARGET_ROLES_STALE: "target-roles-stale",
   USER_DISABLED_STATE_INVALID: "user-disabled-state-invalid",
   USER_NOT_ACTIVE: "user-not-active",
   USER_ADMIN_STATE_INVALID: "user-admin-state-invalid",
@@ -204,33 +206,77 @@ export function resolveUserNotificationSettingsUpdate(input) {
 export function resolveUserRolesUpdate(input) {
   assertExactFields(input, ROLE_INPUT_FIELDS);
   const targetUserId = resolveDocumentId(input.targetUserId);
-  if (!Array.isArray(input.roles)) {
+
+  function resolveRoles(value) {
+    if (!Array.isArray(value)) {
+      throwPolicyError(
+        USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLES_INVALID,
+        "[resolveUserRolesUpdate] roles must be an array",
+      );
+    }
+
+    const roles = [];
+    const seen = new Set();
+    for (const role of value) {
+      if (!isRolePresetId(role)) {
+        throwPolicyError(
+          USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_INVALID,
+          "[resolveUserRolesUpdate] role must be a known preset",
+        );
+      }
+      if (seen.has(role)) {
+        throwPolicyError(
+          USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_DUPLICATED,
+          "[resolveUserRolesUpdate] roles must not contain duplicates",
+        );
+      }
+      seen.add(role);
+      roles.push(role);
+    }
+    return Object.freeze(roles);
+  }
+
+  return Object.freeze({
+    targetUserId,
+    expectedRoles: resolveRoles(input.expectedRoles),
+    roles: resolveRoles(input.roles),
+  });
+}
+
+function assertTargetRolesMatch({ targetUser, expectedRoles }) {
+  if (!Array.isArray(targetUser.roles)) {
     throwPolicyError(
-      USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLES_INVALID,
-      "[resolveUserRolesUpdate] roles must be an array",
+      USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_INVALID,
+      "[assertTargetRolesMatch] Target User roles are invalid",
     );
   }
 
-  const roles = [];
   const seen = new Set();
-  for (const role of input.roles) {
+  for (const role of targetUser.roles) {
     if (!isRolePresetId(role)) {
       throwPolicyError(
-        USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_INVALID,
-        "[resolveUserRolesUpdate] role must be a known preset",
+        USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_INVALID,
+        "[assertTargetRolesMatch] Target User role is invalid",
       );
     }
     if (seen.has(role)) {
       throwPolicyError(
-        USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_DUPLICATED,
-        "[resolveUserRolesUpdate] roles must not contain duplicates",
+        USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_INVALID,
+        "[assertTargetRolesMatch] Target User roles contain duplicates",
       );
     }
     seen.add(role);
-    roles.push(role);
   }
 
-  return Object.freeze({ targetUserId, roles: Object.freeze(roles) });
+  if (
+    targetUser.roles.length !== expectedRoles.length ||
+    targetUser.roles.some((role, index) => role !== expectedRoles[index])
+  ) {
+    throwPolicyError(
+      USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_STALE,
+      "[assertTargetRolesMatch] Target User roles changed after client read",
+    );
+  }
 }
 
 export function assertOwnProfileUpdatePolicy({ companyId, actorUser } = {}) {
@@ -273,6 +319,7 @@ export function assertUserRolesUpdatePolicy({
   targetUserId,
   actorUser,
   targetUser,
+  expectedRoles,
 } = {}) {
   assertManagedUserUpdatePolicy({ companyId, actorUser, targetUser });
 
@@ -288,6 +335,8 @@ export function assertUserRolesUpdatePolicy({
       "[assertUserRolesUpdatePolicy] Administrator roles cannot be changed",
     );
   }
+
+  assertTargetRolesMatch({ targetUser, expectedRoles });
 }
 
 export { NOTIFICATION_FIELDS as USER_NOTIFICATION_FIELDS };

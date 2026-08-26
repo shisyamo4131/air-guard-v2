@@ -39,6 +39,24 @@ test("field update mapper exposes safe expected classifications", () => {
     ),
     { code: "failed-precondition", message: "自分自身の役割を変更することはできません。" },
   );
+  assert.equal(
+    mapUserFieldUpdateError(
+      new UserFieldUpdatePolicyError(
+        USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_STALE,
+        "private",
+      ),
+    ).code,
+    "aborted",
+  );
+  assert.equal(
+    mapUserFieldUpdateError(
+      new UserFieldUpdateError(
+        USER_FIELD_UPDATE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE,
+        "private",
+      ),
+    ).code,
+    "aborted",
+  );
 });
 
 test("unexpected errors map to a generic internal response", () => {

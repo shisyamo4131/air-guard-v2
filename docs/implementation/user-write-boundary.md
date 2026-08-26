@@ -463,46 +463,46 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-09 role・permission対応表のschemas package統合
 
-- 状態: Not started
+- 状態: Completed
 - 対象repository: `air-guard-v2-schemas`、本repositoryのroot・Functions dependency
 
 #### 作業
 
-- [ ] client／Functionsで重複管理しているrole・permission対応表をschemas packageの共通constantsへ移す。
-- [ ] schemas packageの責務、export名、互換性、version、公開順序を提示し、別repository変更の明示承認を得る。
-- [ ] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
-- [ ] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
-- [ ] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
-- [ ] `hasPresetPermission`とserver preset resolverが同じcatalog・unknown fail-closed規則を使用する構成を確定する。
-- [ ] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
+- [x] client／Functionsで重複管理しているrole・permission対応表をschemas packageの共通constantsへ移す。
+- [x] schemas packageの責務、export名、互換性、version、公開順序を提示し、別repository変更の明示承認を得る。
+- [x] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
+- [x] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
+- [x] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
+- [x] `hasPresetPermission`とserver preset resolverが同じcatalog・unknown fail-closed規則を使用する構成を確定する。
+- [x] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
 
 #### 完了条件
 
-- [ ] role・permission対応表の正本がschemas package内の1箇所だけになっている。
-- [ ] rootとFunctionsが同じ公開versionと内容を使用している。
-- [ ] package更新・rollback・導入順序が記録されている。
-- [ ] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
+- [x] role・permission対応表の正本がschemas package内の1箇所だけになっている。
+- [x] rootとFunctionsが同じ公開versionと内容を使用している。
+- [x] package更新・rollback・導入順序が記録されている。
+- [x] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
 
 ### UWB-10 全体検証・文書確定・main統合準備
 
-- 状態: Not started
+- 状態: In progress
 
 #### 作業
 
-- [ ] 全domain単体testを実行する。
-- [ ] Codex専用Firestore/Auth Emulator testを実行する。
+- [x] 全domain単体testを実行する。
+- [x] Codex専用Firestore/Auth Emulator testを実行する。
 - [ ] Codex専用local UI環境のブラウザでUser管理flowを一巡する。
 - [ ] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
-- [ ] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価する。100%防御や攻撃経路が存在しないことの証明を完了条件にせず、transaction、policy、version、idempotency、reconcileの追加改修を採用するか残存riskとして受容するかを記録する。
-- [ ] project-owned validatorとmanaged governance validatorを実行する。
+- [x] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価した。role更新と有効・無効変更だけへclient期待値とtransaction内現在値の一致確認を追加し、対象Userのlifecycle lock中は拒否する。会社管理者移譲、仮User作成・削除、UWB-07 lifecycleは既存transaction・予約・lock・reconcileを維持し、通知設定の同時編集はlast-write-winsとして受容する。全document共通revision・lock・ledgerは採用せず、通常CRUDと他collectionへ展開しない。
+- [x] project-owned validatorとmanaged governance validatorを実行する。
 - [ ] `git diff --check`とclean worktreeを確認する。
 - [ ] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
 - [ ] 利用者の全file確認とlocal動作確認後にmain統合承認を得る。
 
 #### 完了条件
 
-- [ ] UWB-01〜UWB-09がすべて完了している。
-- [ ] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
+- [x] UWB-01〜UWB-09がすべて完了している。
+- [x] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
 - [ ] local testとChrome受入れがすべて成功している。
 - [ ] 利用者がUWBのlocal確定を明示している。
 - [ ] main統合対象commit、差分、test、未確認事項が提示されている。
@@ -554,3 +554,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 local UI acceptance | 利用者用EmulatorとChromeでhuman-resource、super-user、会社管理者の権限別表示とA/B/Cを確認。正規UIでEmployee連携仮Userを作成し、一般User signupとAuth Emulator OOB確認で本登録へ変換してから、同じUserを伴う退職・Auth/User削除・誤退職訂正を一巡 | 本変更 | human-resourceのEmployee-only・本登録User連携退職、会社管理者のEmployee-only退職・訂正、単独本登録User削除、本登録User連携退職・訂正が成功。訂正後はEmployeeが同一IDで在職一覧へ戻り、User/Authは非復元。対象操作中のconsole warning/error 0件。既存旧fixtureの予約不整合はserverがfail closedした。super-userの訂正control表示から判明した不一致は退職・訂正・単独User削除の全client policyをserverと同じfail closedへ修正した。sign-out時listener permission-deniedは既存の共通認証課題FUT-0005へ分離し、retention contractは未完了 |
 | 2026-08-25 | UWB-07 retention decision | `LifecycleOperations`は現段階で固定保存期限を設けず、自動purge、legal hold、terminal後UID縮小を実装しない。data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点で再検討する。履歴一覧は会社管理者専用の最小Callable projectionとして残す | 本変更 | 3件のread-only code/security調査を反映。application、Rules、test、dataは未変更。文書validatorは本変更の完了時に実行 |
 | 2026-08-25 | UWB-07 lifecycle history reader automated | 会社管理者専用`listLifecycleOperations`、20件cursor paging、全stateの3段階projection、専用route・navigation、desktop/mobile pageを実装。返却直前にcurrent Authとactor Userを再検証し、全operation Timestampとcursorを厳格検査する。Firestore client直読denyと固定保存期限なし・自動削除なしを維持 | 本変更 | 対象70/70、全domain 635/635、Codex専用Emulator 92/92が成功。実queryに追加index要求なし。Nuxt dev serverはHTTP接続・console error 0だが既知の起動templateからhydrateせず、通常reload 1回後も履歴pageへ到達できなかったため実browser確認は未完了。利用者Rules確認、Dev/Prod/remoteは未確認 |
+| 2026-08-26 | UWB-10 authentication concurrency automated | role更新へ編集前`expectedRoles`、有効・無効変更へ`expectedDisabled`を追加し、transaction内の現在値との不一致と対象Userのactive lifecycle lockを安全な`aborted`として拒否した。通知設定・本人プロフィール・通常CRUD・他collectionへ共通revision、lock、ledgerを展開しない境界をADR 0023へ記録 | 本変更 | 全domain単体test 646/646、Codex専用Emulator 93/93、project-owned・managed governance validator、renderer drift、`git diff --check`が成功。内蔵ブラウザはEmulator ready、Vite warmup、root 200、11 moduleの2巡probe後も2回とも起動templateで停止し、Nuxtに`ECONNRESET`、browser console error 0件を観測した。Chrome補助経路は接続不可。全専用port閉鎖、saved-data 7 filesの指紋不変、runtime残留0を確認。通常UI受入れ、利用者の全file確認、feature commit・main統合は未完了 |

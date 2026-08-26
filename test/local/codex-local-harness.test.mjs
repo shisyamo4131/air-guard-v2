@@ -2521,7 +2521,11 @@ test("managed role Callable accepts known presets and protects other fields", as
   const result = await updateUserRoles.run(
     actorCallableRequest({
       actor,
-      data: { targetUserId: targetUid, roles: ["human-resource", "labor"] },
+      data: {
+        targetUserId: targetUid,
+        expectedRoles: ["controller"],
+        roles: ["human-resource", "labor"],
+      },
     }),
   );
   assert.deepEqual(result, { success: true, userId: targetUid });
@@ -2531,6 +2535,20 @@ test("managed role Callable accepts known presets and protects other fields", as
   assert.equal(user.displayName, "役割対象");
   assert.equal(user.email, `${targetUid}@codex-test.invalid`);
   assert.equal(user.isAdmin, false);
+
+  await assertCallableError(
+    updateUserRoles.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          targetUserId: targetUid,
+          expectedRoles: ["controller"],
+          roles: ["manager"],
+        },
+      }),
+    ),
+    "aborted",
+  );
 });
 
 test("provision-only actor cannot update managed User fields", async () => {
@@ -2565,7 +2583,11 @@ test("provision-only actor cannot update managed User fields", async () => {
     updateUserRoles.run(
       actorCallableRequest({
         actor,
-        data: { targetUserId: targetUid, roles: ["controller"] },
+        data: {
+          targetUserId: targetUid,
+          expectedRoles: [],
+          roles: ["controller"],
+        },
       }),
     ),
     "permission-denied",
@@ -2595,7 +2617,7 @@ test("field Callables reject protected-field injection and self role changes", a
     updateUserRoles.run(
       actorCallableRequest({
         actor,
-        data: { targetUserId: actor.uid, roles: [] },
+        data: { targetUserId: actor.uid, expectedRoles: [], roles: [] },
       }),
     ),
     "failed-precondition",
@@ -3198,18 +3220,18 @@ test("enabled state Callables allow a consistent active company administrator", 
     isAdmin: false,
   });
 
-  const request = callableRequest({
+  const disableRequest = callableRequest({
     uid: actorUid,
     claims: { email: actorEmail },
-    data: { uid: targetUid },
+    data: { uid: targetUid, expectedDisabled: false },
   });
 
   await assertCallableError(
-    disableUser.run({ ...request, data: {} }),
+    disableUser.run({ ...disableRequest, data: {} }),
     "invalid-argument",
   );
 
-  assert.deepEqual(await disableUser.run(request), {
+  assert.deepEqual(await disableUser.run(disableRequest), {
     success: true,
     uid: targetUid,
   });
@@ -3226,7 +3248,14 @@ test("enabled state Callables allow a consistent active company administrator", 
     assert.equal(snapshot.data().disabled, true);
   });
 
-  assert.deepEqual(await enableUser.run(request), {
+  await assertCallableError(disableUser.run(disableRequest), "aborted");
+
+  const enableRequest = callableRequest({
+    uid: actorUid,
+    claims: { email: actorEmail },
+    data: { uid: targetUid, expectedDisabled: true },
+  });
+  assert.deepEqual(await enableUser.run(enableRequest), {
     success: true,
     uid: targetUid,
   });
@@ -3242,6 +3271,67 @@ test("enabled state Callables allow a consistent active company administrator", 
     );
     assert.equal(snapshot.data().disabled, false);
   });
+});
+
+test("enabled state Callable rejects a target with an active lifecycle lock", async () => {
+  const { disableUser } = await loadRebuildApis();
+  const actorUid = "codex-enabled-lock-admin";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  const targetUid = "codex-enabled-lock-target";
+
+  await seedCallableAuthUser({ uid: actorUid, email: actorEmail });
+  await seedRegisteredUser({
+    uid: actorUid,
+    email: actorEmail,
+    isAdmin: true,
+  });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+    isAdmin: false,
+  });
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "UserLifecycleLocks",
+        targetUid,
+      ),
+      { operationId: "00000000-0000-4000-8000-000000000001" },
+    );
+  });
+
+  try {
+    await assertCallableError(
+      disableUser.run(
+        callableRequest({
+          uid: actorUid,
+          claims: { email: actorEmail },
+          data: { uid: targetUid, expectedDisabled: false },
+        }),
+      ),
+      "aborted",
+    );
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          CODEX_LOCAL_COMPANIES.primary.id,
+          "UserLifecycleLocks",
+          targetUid,
+        ),
+      );
+    });
+  }
 });
 
 test("admin transfer Callable rejects incomplete and inactive actor identities", async () => {

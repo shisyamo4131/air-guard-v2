@@ -36,8 +36,12 @@ export function createNotificationSettingsPayload(targetUser) {
 }
 
 export function createRolesPayload(targetUser) {
+  if (!Array.isArray(targetUser?._beforeData?.roles)) {
+    throw new Error("Original User roles are unavailable.");
+  }
   return {
     targetUserId: targetUser.docId,
+    expectedRoles: [...targetUser._beforeData.roles],
     roles: [...targetUser.roles],
   };
 }

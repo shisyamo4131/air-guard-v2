@@ -133,6 +133,7 @@ export const useAuthFunctions = () => {
    * アカウント無効化
    * @param {Object} data
    * @param {string} data.uid - ユーザーID
+   * @param {boolean} data.expectedDisabled - 画面が読み取った変更前disabled値
    * @returns {Promise<{success: boolean, uid: string}>}
    */
   const disableUser = async (data) => {
@@ -145,6 +146,7 @@ export const useAuthFunctions = () => {
    * アカウント有効化
    * @param {Object} data
    * @param {string} data.uid - ユーザーID
+   * @param {boolean} data.expectedDisabled - 画面が読み取った変更前disabled値
    * @returns {Promise<{success: boolean, uid: string}>}
    */
   const enableUser = async (data) => {

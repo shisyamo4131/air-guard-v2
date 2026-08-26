@@ -20,6 +20,8 @@ const ACTOR_UID = "admin-a";
 const TARGET_UID = "user-a";
 const ACTOR_PATH = `Companies/${COMPANY_ID}/Users/${ACTOR_UID}`;
 const TARGET_PATH = `Companies/${COMPANY_ID}/Users/${TARGET_UID}`;
+const TARGET_LOCK_PATH =
+  `Companies/${COMPANY_ID}/UserLifecycleLocks/${TARGET_UID}`;
 
 function createActorUser(overrides = {}) {
   return {
@@ -67,6 +69,7 @@ function createDependencies({
   targetAuthUser = createTargetAuthUser(),
   actorExists = true,
   targetExists = true,
+  targetLifecycleLockExists = false,
   targetAuthError,
   transactionError,
   updateError,
@@ -110,6 +113,12 @@ function createDependencies({
             if (reference.path === TARGET_PATH) {
               return createSnapshot(targetUser, targetExists);
             }
+            if (reference.path === TARGET_LOCK_PATH) {
+              return createSnapshot(
+                { operationId: "operation-a" },
+                targetLifecycleLockExists,
+              );
+            }
             throw new Error(`Unexpected document path: ${reference.path}`);
           },
           update(reference, properties) {
@@ -141,6 +150,7 @@ function createInput({ auth, firestore }, overrides = {}) {
     actorUid: ACTOR_UID,
     targetUid: TARGET_UID,
     enabled: false,
+    expectedDisabled: false,
     ...overrides,
   };
 }
@@ -185,9 +195,11 @@ test("disabling a regular User writes disabled true in the transaction", async (
   assert.deepEqual(dependencies.calls, [
     { method: "firestore.doc", path: ACTOR_PATH },
     { method: "firestore.doc", path: TARGET_PATH },
+    { method: "firestore.doc", path: TARGET_LOCK_PATH },
     { method: "firestore.runTransaction" },
     { method: "transaction.get", path: ACTOR_PATH, attempt: 1 },
     { method: "transaction.get", path: TARGET_PATH, attempt: 1 },
+    { method: "transaction.get", path: TARGET_LOCK_PATH, attempt: 1 },
     { method: "auth.getUser", uid: TARGET_UID },
     {
       method: "transaction.update",
@@ -204,7 +216,7 @@ test("enabling a regular User writes disabled false in the transaction", async (
   });
 
   const result = await changeUserEnabledState(
-    createInput(dependencies, { enabled: true }),
+    createInput(dependencies, { enabled: true, expectedDisabled: true }),
   );
 
   assert.deepEqual(result, { success: true, uid: TARGET_UID });
@@ -255,6 +267,64 @@ test("enabled state must be boolean", async () => {
   );
 
   assert.deepEqual(dependencies.calls, []);
+});
+
+test("expected disabled state must be boolean", async () => {
+  const dependencies = createDependencies();
+
+  await assertChangeError(
+    changeUserEnabledState(
+      createInput(dependencies, { expectedDisabled: undefined }),
+    ),
+    USER_ENABLED_STATE_CHANGE_ERROR_CODES.EXPECTED_DISABLED_STATE_INVALID,
+  );
+
+  assert.deepEqual(dependencies.calls, []);
+});
+
+test("stale disabled state aborts before Auth access or update", async () => {
+  const dependencies = createDependencies({
+    targetUser: createTargetUser({ disabled: true }),
+  });
+
+  await assert.rejects(
+    changeUserEnabledState(createInput(dependencies)),
+    (error) => {
+      assert.ok(error instanceof UserEnabledStatePolicyError);
+      assert.equal(
+        error.code,
+        USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_STALE,
+      );
+      return true;
+    },
+  );
+
+  assert.equal(
+    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    false,
+  );
+  assert.equal(
+    dependencies.calls.some((call) => call.method === "transaction.update"),
+    false,
+  );
+});
+
+test("active lifecycle operation aborts before Auth access or update", async () => {
+  const dependencies = createDependencies({ targetLifecycleLockExists: true });
+
+  await assertChangeError(
+    changeUserEnabledState(createInput(dependencies)),
+    USER_ENABLED_STATE_CHANGE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE,
+  );
+
+  assert.equal(
+    dependencies.calls.some((call) => call.method === "auth.getUser"),
+    false,
+  );
+  assert.equal(
+    dependencies.calls.some((call) => call.method === "transaction.update"),
+    false,
+  );
 });
 
 test("invalid Auth dependency is rejected", async () => {

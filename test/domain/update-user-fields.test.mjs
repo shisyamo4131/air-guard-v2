@@ -12,6 +12,8 @@ import {
 const COMPANY_ID = "company-a";
 const ACTOR_UID = "actor-a";
 const TARGET_UID = "target-a";
+const TARGET_LOCK_PATH =
+  `Companies/${COMPANY_ID}/UserLifecycleLocks/${TARGET_UID}`;
 
 function actor(overrides = {}) {
   return {
@@ -109,13 +111,55 @@ test("role updates write only a copied roles array", async () => {
     firestore: deps.firestore,
     companyId: COMPANY_ID,
     actorUid: ACTOR_UID,
-    input: { targetUserId: TARGET_UID, roles: ["controller"] },
+    input: {
+      targetUserId: TARGET_UID,
+      expectedRoles: [],
+      roles: ["controller"],
+    },
   });
   assert.deepEqual(deps.calls.at(-1), {
     method: "update",
     path: `Companies/${COMPANY_ID}/Users/${TARGET_UID}`,
     updates: { roles: ["controller"] },
   });
+});
+
+test("role updates reject stale roles and active lifecycle operations", async () => {
+  const stale = dependencies({ targetUser: target({ roles: ["manager"] }) });
+  await assert.rejects(
+    updateUserRoles({
+      firestore: stale.firestore,
+      companyId: COMPANY_ID,
+      actorUid: ACTOR_UID,
+      input: {
+        targetUserId: TARGET_UID,
+        expectedRoles: [],
+        roles: ["controller"],
+      },
+    }),
+    (error) => error?.code === "target-roles-stale",
+  );
+  assert.equal(stale.calls.some((call) => call.method === "update"), false);
+
+  const locked = dependencies();
+  locked.documents.set(TARGET_LOCK_PATH, { operationId: "operation-a" });
+  await assert.rejects(
+    updateUserRoles({
+      firestore: locked.firestore,
+      companyId: COMPANY_ID,
+      actorUid: ACTOR_UID,
+      input: {
+        targetUserId: TARGET_UID,
+        expectedRoles: [],
+        roles: ["controller"],
+      },
+    }),
+    (error) =>
+      error instanceof UserFieldUpdateError &&
+      error.code ===
+        USER_FIELD_UPDATE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE,
+  );
+  assert.equal(locked.calls.some((call) => call.method === "update"), false);
 });
 
 test("missing actor or target documents fail before any write", async () => {

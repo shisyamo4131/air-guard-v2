@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装し、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityを完了した。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、会社管理者専用履歴readerも20件cursor・全state coarse projection・専用pageへ実装してdomain 635件とEmulator 92件で検証した。UWB-09では公開Schemas `2.4.2-dev.166`のrole・permission catalogをルートとFunctionsの同一artifactへ統合し、local catalogを除去してNode 22の全domain 638件で検証した。履歴data行・実page移動、UWB-10後段の多重実行risk評価、App Check、Dev・remote受入れは未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-07A/B/C、統合ledger、5分間隔reconciler、訂正用最小context、client UIと、UWB-08のUser/Employee/lifecycle/FcmTokens Rules、通知eligibility再検証・privacy log是正を実装し、自動検証、Codex UI smoke、利用者local受入れ、UI policy parityを完了した。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、会社管理者専用履歴readerも20件cursor・全state coarse projection・専用pageへ実装してdomain 635件とEmulator 92件で検証した。UWB-09では公開Schemas `2.4.2-dev.166`のrole・permission catalogをルートとFunctionsの同一artifactへ統合した。UWB-10の多重実行評価ではroleと有効状態だけを局所的に強化し、汎用revision・lock・ledgerを他CRUDへ展開しない判断を確定した。UWB-10全体回帰、履歴data行・実page移動、App Check、Dev・remote受入れは未完了でdeploy不可。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,10 +38,10 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UI、UWB-08 Rules・通知privacy、自動検証、Codex UI smoke、利用者local受入れ、UI policy parity、会社管理者専用履歴readerのdomain・Emulator・Rules検証、Chromeでのnavigation・空状態確認、利用者の`firestore.rules`確認、およびUWB-09のSchemas package catalog統合は完了した。次はUWB-10として未対応client、複数tab・端末・actorを含む多重実行riskとserver側追加対策の要否を評価する。履歴data行と実page移動、Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。`LifecycleOperations`は固定保存期限なし・自動削除なしとし、保存期間、legal hold、terminal後UID縮小、purgeは将来見直しが必要になった時点で再検討する。
+1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-07A/B/C、reconciler、訂正用最小context、client UI、UWB-08 Rules・通知privacy、自動検証、Codex UI smoke、利用者local受入れ、UI policy parity、会社管理者専用履歴reader、利用者の`firestore.rules`確認、およびUWB-09のSchemas package catalog統合は完了した。UWB-10の多重実行判断も、roleと有効状態だけの期待値照合・lifecycle lock拒否、通常CRUDへの非展開として確定した。次はこの局所変更の全domain・Emulator・UI回帰と文書・差分確定を行う。履歴data行と実page移動、Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev受入れも未完了であり、このgate全体の完了までdeployしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
-4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。汎用single-flightは現時点で採用せず、未対応client、複数tab・端末・actorの多重実行riskとserver側追加対策の要否をUWB-10後段で評価する。
+4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
 5. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
 
 ## 成果物と検証証拠
@@ -141,3 +141,5 @@
 | 2026-08-25 | 10% | 0 | Codex専用EmulatorとNuxt/Viteを十分に予熱してからインアプリブラウザを開く標準手順を確定し、cold restart 3回でreloadなしの製品top、保存済み合成accountでsign-inからdashboard到達を確認した。application deliverableではなく、UWB-09以降、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-26 | 10% | 0 | UWB-09としてSchemasの公開`2.4.2-dev.166`からrole preset catalogをルートとFunctionsへexact同一version・tarball・integrityで導入し、重複local catalogを削除した。strict client/Functionsはprototype-keyを含む未知roleをfail closedとし、一般clientの直接permission互換を維持した。対象26件と全domain 638件がNode 22で成功したが、認証マイルストーン全体のApp Check、Dev・remote受入れ等が未完了のため進捗は据え置いた。 |
 | 2026-08-26 | 10% | 0 | 利用者がUWB-09の最小UI smokeとして、User管理とEmployee詳細のrole名称・icon・選択肢、および権限に応じたUser管理controlの表示を確認した。UWB-09のconsumer導入受入れを完了したが、認証マイルストーン全体のApp Check、Dev・remote受入れ等は未完了のため進捗は据え置いた。 |
+| 2026-08-26 | 10% | 0 | UWB-10の多重実行riskを操作別に評価し、認証・認可へ直接影響するrole更新と有効状態変更だけへ期待値照合とlifecycle lock拒否を採用した。管理者移譲、仮User、lifecycleは既存保護を維持し、通知設定はlast-write-winsを受容する。全document共通のrevision・lock・ledgerは不採用とし、通常CRUDと他collectionへ展開しない。全体回帰と利用者受入れが未完了のため進捗は据え置いた。 |
+| 2026-08-26 | 10% | 0 | UWB-10の認証限定競合制御について、全domain単体test 646件とCodex専用Emulator 93件が成功した。stale role、有効状態のstale再操作、active lifecycle lock中の変更を安全な`aborted`として確認した。内蔵ブラウザは標準予熱後も起動templateで停止し、Chrome補助経路も接続できなかったためUI成功とはしない。全専用port閉鎖、saved-data指紋不変、runtime残留0を確認した。通常UI受入れ、利用者の全file確認、feature commit・main統合、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
