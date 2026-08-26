@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06完了。UWB-07はA/B/C、固定保存期限なし・自動削除なし、会社管理者専用履歴readerの実装・自動検証とChromeでの空状態確認まで完了。UWB-08は自動検証と利用者Rules確認を完了）
+- 状態: Active（UWB-01〜06・08〜10完了。UWB-07は実装・自動検証・local UI受入れまで進んでいるが、競合・部分失敗・通知・Auth raceの残存陰性証拠が未完了）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,10 +25,10 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 4 | 10 | UWB-01〜04完了 |
+| 実装ゲート | 9 | 10 | UWB-01〜06・08〜10完了。UWB-07の残存陰性証拠が未完了 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
-実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
+実装ゲートは部分加点しない。各ゲートの完了条件と検証証拠を満たし、利用者が変更挙動、security境界、残存risk、rollbackを受け入れた時点で完了とする。利用者による全file・全行の確認は完了条件にしない。
 
 ## 前提として完了済みの認証基盤
 
@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Local automated implementation ready / Codex UI smoke・利用者local受入れ・UI policy parity complete / no automatic purge confirmed / company-admin history reader pending
+- 状態: In progress（実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity・固定保存期限なし・会社管理者専用履歴readerは完了。下記の残存陰性証拠は未完了）
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -485,7 +485,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-10 全体検証・文書確定・main統合準備
 
-- 状態: In progress
+- 状態: Completed（2026-08-26 local検証・Chrome受入れ・利用者確定。main統合は別承認）
 
 #### 作業
 
@@ -493,19 +493,19 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 - [x] Codex専用Firestore/Auth Emulator testを実行する。
 - [x] 利用者起動のlocal Emulator・開発サーバーへ接続したChromeでUser管理flowを一巡する。
 - [x] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
-- [x] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価した。role更新と有効・無効変更だけへclient期待値とtransaction内現在値の一致確認を追加し、対象Userのlifecycle lock中は拒否する。会社管理者移譲、仮User作成・削除、UWB-07 lifecycleは既存transaction・予約・lock・reconcileを維持し、通知設定の同時編集はlast-write-winsとして受容する。全document共通revision・lock・ledgerは採用せず、通常CRUDと他collectionへ展開しない。
+- [x] UWB-01〜09の実装状態を再照合し、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価した。role更新と有効・無効変更だけへclient期待値とtransaction内現在値の一致確認を追加し、対象Userのlifecycle lock中は拒否する。会社管理者移譲、仮User作成・削除、UWB-07 lifecycleは既存transaction・予約・lock・reconcileを維持し、通知設定の同時編集はlast-write-winsとして受容する。全document共通revision・lock・ledgerは採用せず、通常CRUDと他collectionへ展開しない。
 - [x] project-owned validatorとmanaged governance validatorを実行する。
 - [x] `git diff --check`とclean worktreeを確認する。
 - [x] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
-- [ ] 利用者の全file確認とlocal動作確認後にmain統合承認を得る。
+- [x] 変更挙動、security境界、test、残存risk、rollback、main統合対象を提示し、利用者がUWB-10のlocal確定を明示した。全file・全行の確認は要求しない。main統合は別承認のため未実施である。
 
 #### 完了条件
 
-- [x] UWB-01〜UWB-09がすべて完了している。
+- [x] UWB-01〜09を再照合し、UWB-07だけに残る未完了条件をUWB-10やUWB全体の完了へ誤って含めず記録している。
 - [x] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
 - [x] local testとChrome受入れがすべて成功している。
-- [ ] 利用者がUWBのlocal確定を明示している。
-- [ ] main統合対象commit、差分、test、未確認事項が提示されている。
+- [x] 利用者がUWB-10のlocal確定を明示している。
+- [x] main統合対象は`bc4745970717514ef459ec8ae651e68ee0e0579b`、`40b6889d91efc529abf7f3dc8492f9acfd6a6baf`と本完了文書commitであり、差分、test、未確認事項を提示している。main merge・push・deployは未承認・未実施である。
 
 ## Dev環境受入れ
 
@@ -556,3 +556,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-25 | UWB-07 lifecycle history reader automated | 会社管理者専用`listLifecycleOperations`、20件cursor paging、全stateの3段階projection、専用route・navigation、desktop/mobile pageを実装。返却直前にcurrent Authとactor Userを再検証し、全operation Timestampとcursorを厳格検査する。Firestore client直読denyと固定保存期限なし・自動削除なしを維持 | 本変更 | 対象70/70、全domain 635/635、Codex専用Emulator 92/92が成功。実queryに追加index要求なし。Nuxt dev serverはHTTP接続・console error 0だが既知の起動templateからhydrateせず、通常reload 1回後も履歴pageへ到達できなかったため実browser確認は未完了。利用者Rules確認、Dev/Prod/remoteは未確認 |
 | 2026-08-26 | UWB-10 authentication concurrency automated | role更新へ編集前`expectedRoles`、有効・無効変更へ`expectedDisabled`を追加し、transaction内の現在値との不一致と対象Userのactive lifecycle lockを安全な`aborted`として拒否した。通知設定・本人プロフィール・通常CRUD・他collectionへ共通revision、lock、ledgerを展開しない境界をADR 0023へ記録 | 本変更 | 全domain単体test 646/646、Codex専用Emulator 93/93、project-owned・managed governance validator、renderer drift、`git diff --check`が成功。内蔵ブラウザはEmulator ready、Vite warmup、root 200、11 moduleの2巡probe後も2回とも起動templateで停止し、Nuxtに`ECONNRESET`、browser console error 0件を観測した。Chrome補助経路は接続不可。全専用port閉鎖、saved-data 7 filesの指紋不変、runtime残留0を確認。通常UI受入れ、利用者の全file確認、feature commit・main統合は未完了 |
 | 2026-08-26 | UWB-10 Chrome concurrency acceptance | 利用者起動のimport-only local Emulator、開発サーバー、会社管理者でsign-in済みChromeをCodexが通常pointer操作で使用。非管理者の対象Userを無効化・再有効化し、2画面の片方で`労務`を先行保存、もう片方の古い`法務`保存を競合させた | `bc47459` | 無効化・再有効化が成功。古い保存は「対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。」で拒否され、`法務`は保存されず`労務`だけが維持された。最後にrole未設定へ戻し、対象Userが有効・全preset未選択であることを再読込確認。既知のChrome extension message-channel errorと期待されたstale拒否loggerを分離し、account切替・削除・他User変更は0件 |
+| 2026-08-26 | UWB-10 completed | 利用者は全file・全行の確認を完了条件にせず、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した | 本変更 | UWB-10は完了。UWB-07の競合・部分失敗・通知・Auth raceの残存陰性証拠は未完了のため、UWB全体は9/10のActiveを維持する。main merge・push・deploy・Dev/remote受入れは未実施 |

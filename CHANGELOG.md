@@ -25,6 +25,7 @@
 
 ### Changed
 
+- UWB-10のlocal確定を、利用者による全file・全行確認ではなく、変更挙動、security境界、独立した自動検証、Chrome受入れ、残存risk、rollbackの確認に基づく受入れへ整理した。UWB-10は完了したが、UWB-07に残る競合・部分失敗・通知・Auth raceの陰性証拠は未完了として分離し、UWB全体を誤って完了扱いしない。
 - UWB-10の多重実行対策を認証・認可へ直接影響する操作に限定した。role更新は編集前`expectedRoles`、有効・無効変更は`expectedDisabled`をtransaction内現在値と照合し、対象Userのlifecycle lock中は両操作を拒否する。競合は安全な`aborted`応答とし、全document共通のrevision・lock・operation ledgerは採用せず、通知設定・本人プロフィール・通常CRUD・他collection・Schemas packageへ展開しない。
 - UWB-10のlocal Chrome受入れで、非管理者Userの無効化・再有効化、2画面のrole先行保存、古いrole保存の安全な拒否、最終的な有効・role未設定への復元を確認した。
 - UWB-09として、公開Schemas `2.4.2-dev.166`のrole preset catalogをルートアプリとCloud Functionsへexact同一artifactで導入し、重複local catalogを削除した。strict client/Functions判定はpackageのprototype-safe membershipを使い、一般clientの直接permission互換とconsumer側write→read規則を維持した。利用者はUser管理とEmployee詳細のrole表示・選択肢、および権限別User管理controlの最小UI smokeを確認した。
