@@ -11,8 +11,8 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-039
-- 最終確認日: 2026-08-24
-- 根拠ファイル: `constants/rolePresets.js`、`utils/auth/authorization.js`、`utils/auth/policies/pageAccessPolicy.js`、`stores/useAuthStore.js`、`composables/application/auth/useAuthActions.js`、`utils/pageSettings.js`、`middleware/auth.global.js`、schemas `src/User.js`、`src/parts/fieldDefinitions/array.js`、admin-sdk `src/commands/claims.js`
+- 最終確認日: 2026-08-26
+- 根拠ファイル: `@shisyamo4131/air-guard-v2-schemas/constants`、`utils/auth/authorization.js`、`utils/auth/policies/pageAccessPolicy.js`、`stores/useAuthStore.js`、`composables/application/auth/useAuthActions.js`、`utils/pageSettings.js`、`middleware/auth.global.js`、schemas `src/User.js`、`src/parts/fieldDefinitions/array.js`、admin-sdk `src/commands/claims.js`
 - 関連調査: `state-initialization.md`、`page-access.md`、`user-auth-lifecycle.md`
 
 ## 確認済み方針
@@ -40,7 +40,7 @@
 | `manager` | customers/sites/employees/outsourcers/site-operation-schedules/operation-results/billings の各`write`、`users:provision`、`users:write` |
 | `controller` | customers:read、sites:write、employees:read、outsourcers:read、site-operation-schedules:write、operation-results:write |
 | `accountant` | customers/sites/employees/outsourcers/operation-resultsのread、operation-billings/billingsのwrite |
-| `human-resource` | customers/sitesのread、employees:write、operation-results:read、`users:provision` |
+| `human-resource` | customers/sitesのread、employees:write、`employees:terminate`、operation-results:read、`users:provision` |
 | `labor` | customers/sites/employees/operation-resultsのread |
 | `legal` | customers/sitesのwrite、employees:read |
 
@@ -104,7 +104,7 @@ middlewareは認証初期化完了を待ち、公開・email確認・maintenance
 - User rolesが配列でなければ`buildRoles`は空配列からspecial rolesだけを構築する。`getPermissions`へ非配列を直接渡すと空配列を返す。
 - 一般page evaluatorの`userRoles`は`useAuthStore.roles`が供給する配列をcaller契約とする。`PUBLIC`と`AUTHENTICATED`はrole内容に依存せず、任意の不正入力を新たなroute認可規則として扱う変更は本移行に含めない。
 - 未知role、typo、未知permissionは一般`getPermissions`ではerrorにならず、その文字列自体をpermissionにする。ただし`USER_MANAGEMENT`はraw rolesを既知presetだけに限定してfail closedとする。
-- page access policyはcentral catalog化されたが、componentが直接使うrole/permission文字列とpreset全体の語彙は引き続き単一enumへ統合されていない。
+- role preset catalogはSchemas packageへ集約されたが、componentが直接使うpermission文字列とpreset外のpermission語彙は単一enumへ統合されていない。
 - `validatePageSettings`はdevelopmentだけconsole warningを出すが、validator自体は単体test可能である。重複ID・path、path policy欠損・未知policy・legacy field、group policy、不完全nodeを検査する。
 - pathなしgroupはaccess policyを持たないため、親子permission包含関係の検査とdriftは廃止された。
 
@@ -127,7 +127,7 @@ middlewareは認証初期化完了を待ち、公開・email確認・maintenance
 ## 将来要対応
 
 - FUT-0133: admin/special roleを含むrouteとcomponentの実効権限判定を統一する。
-- FUT-0134: role/permission語彙、validation、unknown処理をcentral contract化する。
+- FUT-0134: role preset catalogのcentral contract化は完了した。preset外のpermission語彙、User保存値validation、一般`getPermissions`のunknown処理を引き続き整理する。
 - `getPermissions`は現行callerが残るlegacy互換APIであり、UWBのstrict認可へ新しい包含規則を追加しない。FUT-0133/0134の単一authorization API移行後に置換・削除可否を判断する。
 - FUT-0135: claimsとUser role変更の反映・失効・company境界を検証可能にする。
 - 個別業務のserver認可不足は既存future-actionsを参照し、本項目で重複登録しない。

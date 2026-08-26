@@ -2,8 +2,10 @@
  * @file ./functions/modules/auth/policies/userFieldUpdatePolicy.js
  * @description Userの本人プロフィール、通知設定、role更新境界を検証します。
  *****************************************************************************/
-import { TAG_SIZE_VALUES } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
+import {
+  isRolePresetId,
+  TAG_SIZE_VALUES,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 import {
   resolveRolePermissions,
   RolePermissionError,
@@ -212,7 +214,7 @@ export function resolveUserRolesUpdate(input) {
   const roles = [];
   const seen = new Set();
   for (const role of input.roles) {
-    if (typeof role !== "string" || !ROLE_PRESETS[role]) {
+    if (!isRolePresetId(role)) {
       throwPolicyError(
         USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_INVALID,
         "[resolveUserRolesUpdate] role must be a known preset",

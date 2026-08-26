@@ -4,9 +4,9 @@
  *****************************************************************************/
 import {
   EMPLOYMENT_STATUS_VALUES,
+  isRolePresetId,
   TAG_SIZE_VALUES,
 } from "@shisyamo4131/air-guard-v2-schemas/constants";
-import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
 
 const EMAIL_MAX_LENGTH = 50;
 const DISPLAY_NAME_MAX_LENGTH = 6;
@@ -162,7 +162,7 @@ function resolveRoles(value) {
   const roles = [];
   const seen = new Set();
   for (const role of value) {
-    if (typeof role !== "string" || !ROLE_PRESETS[role]) {
+    if (!isRolePresetId(role)) {
       throwPolicyError(
         TEMPORARY_USER_CREATION_POLICY_ERROR_CODES.ROLE_INVALID,
         "[temporaryUserCreationPolicy] role must be a known preset",

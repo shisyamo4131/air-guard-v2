@@ -5,7 +5,10 @@
  * - 未知roleを直接permissionとして扱いません。
  * - write permissionに対応するread permissionを追加します。
  *****************************************************************************/
-import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
+import {
+  ROLE_PRESETS,
+  isRolePresetId,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 export const ROLE_PERMISSION_ERROR_CODES = Object.freeze({
   ROLES_INVALID: "roles-invalid",
@@ -46,13 +49,13 @@ export function resolveRolePermissions(roles = []) {
       );
     }
 
-    const preset = ROLE_PRESETS[role];
-    if (!preset) {
+    if (!isRolePresetId(role)) {
       throw new RolePermissionError(
         ROLE_PERMISSION_ERROR_CODES.UNKNOWN_ROLE,
         `[resolveRolePermissions] unknown role: ${role}`,
       );
     }
+    const preset = ROLE_PRESETS[role];
 
     for (const permission of preset.permissions) {
       permissions.add(permission);

@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { hasPresetPermission } from "../../utils/auth/authorization.js";
+import {
+  getPermissions,
+  hasPresetPermission,
+} from "../../utils/auth/authorization.js";
 
 test("approved presets expose the separated User permissions", () => {
   assert.equal(hasPresetPermission(["manager"], "users:write"), true);
@@ -45,6 +48,9 @@ test("special roles and direct permission strings are not presets", () => {
 test("unknown or malformed role collections fail closed", () => {
   for (const roles of [
     ["manager", "unknown-role"],
+    ["manager", "toString"],
+    ["manager", "constructor"],
+    ["manager", "__proto__"],
     ["manager", ""],
     ["manager", null],
     "manager",
@@ -52,6 +58,13 @@ test("unknown or malformed role collections fail closed", () => {
   ]) {
     assert.equal(hasPresetPermission(roles, "users:write"), false);
   }
+});
+
+test("general permission expansion still treats unknown strings as direct permissions", () => {
+  assert.deepEqual(getPermissions(["custom:write"]), [
+    "custom:write",
+    "custom:read",
+  ]);
 });
 
 test("invalid permission input is rejected", () => {

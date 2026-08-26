@@ -2,8 +2,8 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-011 — 暫定権限・取極め選択・取極めなし請求境界
-- 最終確認日: 2026-08-11
-- 根拠ファイル: `utils/pageSettings.js` の請求page設定・access helper、`constants/rolePresets.js`、`utils/auth/authorization.js`、`firestore.rules` のhelperとOperationResults match、請求稼働一覧・詳細page、OperationBilling Agreement/Adjust UI、schemas `OperationResult`・`OperationBilling` のfield・sales・billing・lock契約
+- 最終確認日: 2026-08-26
+- 根拠ファイル: `utils/pageSettings.js` の請求page設定・access helper、`@shisyamo4131/air-guard-v2-schemas/constants`、`utils/auth/authorization.js`、`firestore.rules` のhelperとOperationResults match、請求稼働一覧・詳細page、OperationBilling Agreement/Adjust UI、schemas `OperationResult`・`OperationBilling` のfield・sales・billing・lock契約
 
 ## ユーザー確認済み方針
 

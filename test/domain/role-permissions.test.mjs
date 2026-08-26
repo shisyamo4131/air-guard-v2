@@ -79,8 +79,17 @@ test("a non-array role value is rejected", () => {
   );
 });
 
-test("unknown, empty, and non-string roles are rejected", () => {
-  for (const role of ["users:write", "", " ", null, 1]) {
+test("unknown, prototype-key, empty, and non-string roles are rejected", () => {
+  for (const role of [
+    "users:write",
+    "toString",
+    "constructor",
+    "__proto__",
+    "",
+    " ",
+    null,
+    1,
+  ]) {
     assert.throws(
       () => resolveRolePermissions([role]),
       (error) => {

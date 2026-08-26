@@ -10,7 +10,7 @@ import { useBaseManager } from "@/composables/useBaseManager";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useTemporaryUserDeletion } from "@/composables/application/user/useTemporaryUserDeletion";
 import { useTemporaryUserCreation } from "@/composables/application/user/useTemporaryUserCreation";
-import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * DEFINE PROPS

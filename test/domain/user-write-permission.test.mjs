@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { ROLE_PRESETS } from "../../constants/rolePresets.js";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 const USER_WRITE = "users:write";
 const USER_PROVISION = "users:provision";

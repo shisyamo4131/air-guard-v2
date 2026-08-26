@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { getPermissions } from "@/utils/auth/authorization";
 
 definePageMeta({

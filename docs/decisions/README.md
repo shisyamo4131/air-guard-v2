@@ -34,6 +34,7 @@
 | [0019](0019-client-operation-policy-composable-boundary.md) | Client操作policyとcomposable境界 | Accepted | 2026-08-17 |
 | [0020](0020-employee-retirement-user-offboarding-and-reinstatement.md) | Employee退職・単独User削除・誤退職訂正境界 | Accepted | 2026-08-24 |
 | [0021](0021-codex-in-app-browser-ui-testing.md) | Codexインアプリブラウザによるlocal UI検証 | Accepted | 2026-08-25 |
+| [0022](0022-shared-role-preset-catalog-consumer-adoption.md) | 共有role preset catalogのconsumer導入 | Accepted | 2026-08-26 |
 
 ## 新しい ADR の形式
 

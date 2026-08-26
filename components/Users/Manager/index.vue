@@ -12,7 +12,7 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useAuthFunctions } from "@/composables/auth/useAuthFunctions";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { useDefaults } from "vuetify";
 import UserCardMenu from "./CardMenu.vue";
 import { useBaseManager } from "@/composables/useBaseManager";

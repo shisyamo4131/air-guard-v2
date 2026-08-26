@@ -1,4 +1,7 @@
-import { ROLE_PRESETS } from "../../constants/rolePresets.js";
+import {
+  ROLE_PRESETS,
+  isRolePresetId,
+} from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /**
  * Userのロールと認証クレームから、現在のユーザーが持つ全ロールを構築します。
@@ -44,8 +47,8 @@ export function getPermissions(roles = []) {
       return ["*"];
     }
 
-    const preset = ROLE_PRESETS[role];
-    if (preset) {
+    if (isRolePresetId(role)) {
+      const preset = ROLE_PRESETS[role];
       for (const permission of preset.permissions) {
         permissions.add(permission);
       }
@@ -110,7 +113,7 @@ export function hasPresetPermission(roles, permission) {
 
   const presets = [];
   for (const role of roles) {
-    if (typeof role !== "string" || !role || !ROLE_PRESETS[role]) {
+    if (!isRolePresetId(role)) {
       return false;
     }
     presets.push(ROLE_PRESETS[role]);

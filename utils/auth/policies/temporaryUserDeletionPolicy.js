@@ -1,4 +1,4 @@
-import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
+import { isRolePresetId } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { hasPresetPermission } from "../authorization.js";
 
 export const CLIENT_TEMPORARY_USER_DELETION_REASONS = Object.freeze({
@@ -46,12 +46,7 @@ function isValidDocumentId(value) {
 function hasValidPresetRoles(roles) {
   return (
     Array.isArray(roles) &&
-    roles.every(
-      (role) =>
-        typeof role === "string" &&
-        Boolean(role) &&
-        Object.hasOwn(ROLE_PRESETS, role),
-    )
+    roles.every((role) => isRolePresetId(role))
   );
 }
 

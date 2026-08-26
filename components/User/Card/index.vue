@@ -22,7 +22,7 @@
 import * as Vue from "vue";
 import { User } from "@/schemas";
 import { useDefaults } from "vuetify";
-import { ROLE_PRESETS } from "@/constants/rolePresets";
+import { ROLE_PRESETS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 
 /*****************************************************************************
  * SETUP PROPS & EMITS

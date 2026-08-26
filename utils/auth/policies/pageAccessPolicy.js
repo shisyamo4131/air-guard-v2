@@ -2,7 +2,7 @@
  * このmoduleはroute・navigationのclient UX gateです。
  * client stateは改変や陳腐化が可能なため、server側の認証・認可を代替しません。
  */
-import { ROLE_PRESETS } from "../../../constants/rolePresets.js";
+import { isRolePresetId } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import {
   getPermissions,
   hasPresetPermission,
@@ -103,10 +103,7 @@ function hasValidUserManagementContext(accessContext) {
     accessContext &&
       typeof accessContext === "object" &&
       Array.isArray(accessContext.presetRoles) &&
-      accessContext.presetRoles.every(
-        (role) =>
-          typeof role === "string" && Object.hasOwn(ROLE_PRESETS, role),
-      ) &&
+      accessContext.presetRoles.every((role) => isRolePresetId(role)) &&
       typeof accessContext.isAdmin === "boolean",
   );
 }
