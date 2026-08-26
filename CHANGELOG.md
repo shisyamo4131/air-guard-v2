@@ -25,11 +25,12 @@
 
 ### Changed
 
-- UWB-10のlocal確定を、利用者による全file・全行確認ではなく、変更挙動、security境界、独立した自動検証、Chrome受入れ、残存risk、rollbackの確認に基づく受入れへ整理した。UWB-10は完了したが、UWB-07に残る競合・部分失敗・通知・Auth raceの陰性証拠は未完了として分離し、UWB全体を誤って完了扱いしない。
+- UWB-07に残っていたcurrent Auth disabled、仮User連携、同emailの別tenant再登録・Auth-only raceを専用Emulatorの陰性testで固定し、既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合した。実page移動のためだけに21件の退職・削除を作らず、data行・前後pageは自動test、実route・loading・empty・button状態はChromeで分離検証し、UWB-01〜10のlocal完了を確定した。
+- UWB-10のlocal確定を、利用者による全file・全行確認ではなく、変更挙動、security境界、独立した自動検証、Chrome受入れ、残存risk、rollbackの確認に基づく受入れへ整理した。
 - UWB-10の多重実行対策を認証・認可へ直接影響する操作に限定した。role更新は編集前`expectedRoles`、有効・無効変更は`expectedDisabled`をtransaction内現在値と照合し、対象Userのlifecycle lock中は両操作を拒否する。競合は安全な`aborted`応答とし、全document共通のrevision・lock・operation ledgerは採用せず、通知設定・本人プロフィール・通常CRUD・他collection・Schemas packageへ展開しない。
 - UWB-10のlocal Chrome受入れで、非管理者Userの無効化・再有効化、2画面のrole先行保存、古いrole保存の安全な拒否、最終的な有効・role未設定への復元を確認した。
 - UWB-09として、公開Schemas `2.4.2-dev.166`のrole preset catalogをルートアプリとCloud Functionsへexact同一artifactで導入し、重複local catalogを削除した。strict client/Functions判定はpackageのprototype-safe membershipを使い、一般clientの直接permission互換とconsumer側write→read規則を維持した。利用者はUser管理とEmployee詳細のrole表示・選択肢、および権限別User管理controlの最小UI smokeを確認した。
-- 利用者のログイン済みChromeで、管理者menuからUWB-07の「退職・アカウント削除履歴」へ通常操作で到達し、空状態、無効な前後button、console warning/error 0件を確認した。対象環境に履歴dataがなかったため、data行と実page移動は実browser未確認である。利用者はUWB-08の`firestore.rules`について、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否を確認し、UWB-08を完了した。
+- 利用者のログイン済みChromeで、管理者menuからUWB-07の「退職・アカウント削除履歴」へ通常操作で到達し、loading、空状態、無効な前後buttonを確認した。対象環境に履歴dataがないため21件の退職・削除は作らず、data行のexact projectionと前後page移動は自動test・Emulatorで検証した。利用者はUWB-08の`firestore.rules`について、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否を確認し、UWB-08を完了した。
 - UWB-07の会社管理者専用履歴readerを、`listLifecycleOperations` Callable、`/settings/lifecycle-history`の専用page、20件固定cursor、全stateの`processing|retrying|completed`表示、exact最小projectionとして実装した。会社はserver identityから導出し、返却直前にcurrent Authとactor Userを再検証する。super-user・manager・human-resource・直接permissionを拒否し、全Timestamp・cursorを厳格検査する。Firestore client直読deny、検索・filter・export・total count・永続cacheなしを維持した。対象70件、全domain 635件、専用Emulator 92件は成功し、追加indexは不要だった。
 - UWB-07の`LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない契約へ確定した。削除を前提とするlegal hold、terminal後UID縮小、purgeは、data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点の将来検討へ移した。履歴一覧はFirestore client readを開放せず、有効な本登録会社管理者だけが専用Callableの最小projectionで閲覧する境界を維持する。
 - UWB-07の利用者local UI受入れとして、正規UIで作成・本登録したEmployee連携Userを伴う退職、Auth/User物理削除、誤退職訂正、User/Auth非復元、Employee在職復帰と、単独本登録User削除・Employee-only経路を確認した。Employee lifecycle componentを単一element rootへ修正して継承属性warningを除去し、Chrome拡張接続後はデバッグ表示による座標変化を3秒待ってから最新画面で対象を再取得する手順を追加した。serverが拒否するsuper-userについては退職・訂正・単独User削除のclient controlもfail closedで非表示へ揃えた。sign-out listenerは既存の共通認証課題FUT-0005へ分離し、UWB-07はretention contractを未完了として残した。

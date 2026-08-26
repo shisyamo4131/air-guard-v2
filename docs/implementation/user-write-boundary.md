@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06・08〜10完了。UWB-07は実装・自動検証・local UI受入れまで進んでいるが、競合・部分失敗・通知・Auth raceの残存陰性証拠が未完了）
+- 状態: Completed（UWB-01〜10のlocal実装・自動検証・必要なUI受入れ完了。main統合・push・deploy・Dev/remote受入れは別承認）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,7 +25,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 9 | 10 | UWB-01〜06・08〜10完了。UWB-07の残存陰性証拠が未完了 |
+| 実装ゲート | 10 | 10 | UWB-01〜10のlocal実装・検証・必要なUI受入れ完了 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
 実装ゲートは部分加点しない。各ゲートの完了条件と検証証拠を満たし、利用者が変更挙動、security境界、残存risk、rollbackを受け入れた時点で完了とする。利用者による全file・全行の確認は完了条件にしない。
@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: In progress（実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity・固定保存期限なし・会社管理者専用履歴readerは完了。下記の残存陰性証拠は未完了）
+- 状態: Completed（実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity・固定保存期限なし・会社管理者専用履歴reader・残存陰性証拠を完了）
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -408,7 +408,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 1. [x] permission catalog、actor/target/input policy、role preset parity testを実装する。
 2. [x] `LifecycleOperations`、events、locks、共通registered User deletion engineとfailure injection testを実装する。
-3. UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
+3. [x] UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
    - [x] UWB-07A core: Employee-only atomic completion、本登録User連携の予約pointer整合、Auth disable・再照合・delete、User・両予約finalize、FCM cleanupと同一operation再開。
    - [x] UWB-07A transport: current Auth gateを使うCallable、error mapper、public export、Functions transport／Emulator検証。
    - [x] UWB-07B/C use-case、Callable、error mapper、public export。
@@ -420,18 +420,18 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] 無効化、Employee退職、単独User削除、誤退職訂正が別操作としてUI・Callable・履歴で区別されている。
+- [x] 無効化、Employee退職、単独User削除、誤退職訂正が別操作としてUI・Callable・履歴で区別されている。
 - [x] 本登録User連携のUWB-07A後に旧Authと旧Userが不存在で、Employeeと業務記録が維持され、EmployeeのUser紐付けだけが解除されている。Employee-onlyではAuth/Userへ作用しない。
-- [ ] 旧User/Authと予約が同じメールアドレスの再登録を妨げず、競合する新Authがない通常系では別tenantへ正規登録できる。Auth削除直後から予約解放までの競合では新UIDを検索・削除しないことを陰性testで確認し、検出・repairはFUT-0081/FUT-0083の未完了gateとして残す。
+- [x] 旧User/Authと予約が同じメールアドレスの再登録を妨げず、競合する新Authがない通常系では別tenantへ正規登録できる。Auth削除直後から予約解放までの競合では新UIDを検索・削除しないことを陰性testで確認し、検出・repairはFUT-0081/FUT-0083の未完了gateとして残す。
 - [x] UWB-07Bが会社管理者専用で、Employee連携、仮登録、管理者、自己、super-user、他社を拒否する。
 - [x] UWB-07Cが元退職履歴を保持したままEmployeeだけを同じIDで`ACTIVE`へ戻し、User/Auth・旧UID・業務記録へ作用しない。
-- [ ] 管理者、自己、他社、状態不正、二重実行、並行operation、全phaseの部分失敗をfail closedまたは安全にreconcileできる。
-- [ ] 3 Callableがmissing auth、stale token、current Auth不存在・disabled、email未確認、UID・email・company claim・super-user不一致、actor User不在・仮登録・disabled・他社を拒否する。
+- [x] 管理者、自己、他社、状態不正、二重実行、並行operation、全phaseの部分失敗をfail closedまたは安全にreconcileできる。
+- [x] 3 Callableがmissing auth、stale token、current Auth不存在・disabled、email未確認、UID・email・company claim・super-user不一致、actor User不在・仮登録・disabled・他社を拒否する。
 - [x] UWB-08のgeneric match迂回、User直接delete、Employee退職・訂正field直接write、ledger/event/lock/head直接accessの拒否testが成功している。
-- [ ] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
-- [ ] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
-- [ ] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
-- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。固定保存期限なし・自動削除なしの契約、会社管理者専用reader projection、履歴pageのChrome空状態確認、UWB-08 release gateは完了済みである。履歴data行と実page移動は対象dataがなかったため実browser未確認であり、上記の未完了条件とともに完了判断前に再照合する。Prod公開は別承認まで行わない。
+- [x] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
+- [x] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
+- [x] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
+- [x] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了した。固定保存期限なし・自動削除なしの契約、会社管理者専用reader projection、履歴pageのChrome空状態確認、UWB-08 release gateは完了済みである。対象環境に履歴dataがないため実browserで21件の退職・削除を作らず、data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで直接検証した。Prod公開は別承認まで行わない。
 
 ### UWB-08 Firestore Rulesのactor・field・lifecycle制約
 
@@ -557,3 +557,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-26 | UWB-10 authentication concurrency automated | role更新へ編集前`expectedRoles`、有効・無効変更へ`expectedDisabled`を追加し、transaction内の現在値との不一致と対象Userのactive lifecycle lockを安全な`aborted`として拒否した。通知設定・本人プロフィール・通常CRUD・他collectionへ共通revision、lock、ledgerを展開しない境界をADR 0023へ記録 | 本変更 | 全domain単体test 646/646、Codex専用Emulator 93/93、project-owned・managed governance validator、renderer drift、`git diff --check`が成功。内蔵ブラウザはEmulator ready、Vite warmup、root 200、11 moduleの2巡probe後も2回とも起動templateで停止し、Nuxtに`ECONNRESET`、browser console error 0件を観測した。Chrome補助経路は接続不可。全専用port閉鎖、saved-data 7 filesの指紋不変、runtime残留0を確認。通常UI受入れ、利用者の全file確認、feature commit・main統合は未完了 |
 | 2026-08-26 | UWB-10 Chrome concurrency acceptance | 利用者起動のimport-only local Emulator、開発サーバー、会社管理者でsign-in済みChromeをCodexが通常pointer操作で使用。非管理者の対象Userを無効化・再有効化し、2画面の片方で`労務`を先行保存、もう片方の古い`法務`保存を競合させた | `bc47459` | 無効化・再有効化が成功。古い保存は「対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。」で拒否され、`法務`は保存されず`労務`だけが維持された。最後にrole未設定へ戻し、対象Userが有効・全preset未選択であることを再読込確認。既知のChrome extension message-channel errorと期待されたstale拒否loggerを分離し、account切替・削除・他User変更は0件 |
 | 2026-08-26 | UWB-10 completed | 利用者は全file・全行の確認を完了条件にせず、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した | 本変更 | UWB-10は完了。UWB-07の競合・部分失敗・通知・Auth raceの残存陰性証拠は未完了のため、UWB全体は9/10のActiveを維持する。main merge・push・deploy・Dev/remote受入れは未実施 |
+| 2026-08-26 | UWB-07/UWB completed | current Auth disabledの3 Callable拒否、仮User削除前の退職拒否と削除後Employee-only退職、完了済み旧退職の再送が同emailの別tenant新User・予約・新Auth UIDまたはAuth-only状態へ作用しないことを専用Emulatorで固定。既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合し、UWB-01〜10のlocal完了を確定 | 本変更 | 全domain 646/646、専用Emulator 96/96が成功。実browserで21件の退職・削除を作ることは行わず、data行・次page・前pageは自動test、実route・権限・loading・empty・button状態はChromeで分離確認。main merge・push・deploy・Dev/remote受入れは別承認 |
