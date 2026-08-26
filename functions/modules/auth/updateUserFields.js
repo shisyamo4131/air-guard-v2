@@ -17,6 +17,7 @@ export const USER_FIELD_UPDATE_ERROR_CODES = Object.freeze({
   FIRESTORE_SERVICE_INVALID: "firestore-service-invalid",
   ACTOR_USER_NOT_FOUND: "actor-user-not-found",
   TARGET_USER_NOT_FOUND: "target-user-not-found",
+  TARGET_LIFECYCLE_OPERATION_ACTIVE: "target-lifecycle-operation-active",
 });
 
 export class UserFieldUpdateError extends Error {
@@ -144,6 +145,9 @@ export async function updateUserRoles({
     companyId,
     resolvedInput.targetUserId,
   );
+  const targetLifecycleLockRef = firestore.doc(
+    `Companies/${companyId}/UserLifecycleLocks/${resolvedInput.targetUserId}`,
+  );
 
   await firestore.runTransaction(async (transaction) => {
     const actorSnapshot = await transaction.get(actorRef);
@@ -158,13 +162,23 @@ export async function updateUserRoles({
       USER_FIELD_UPDATE_ERROR_CODES.TARGET_USER_NOT_FOUND,
       "[updateUserRoles] Target User was not found",
     );
+    const targetLifecycleLockSnapshot = await transaction.get(
+      targetLifecycleLockRef,
+    );
     assertUserRolesUpdatePolicy({
       companyId,
       actorUid,
       targetUserId: resolvedInput.targetUserId,
       actorUser,
       targetUser,
+      expectedRoles: resolvedInput.expectedRoles,
     });
+    if (targetLifecycleLockSnapshot.exists) {
+      throw new UserFieldUpdateError(
+        USER_FIELD_UPDATE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE,
+        "[updateUserRoles] Target User lifecycle operation is active",
+      );
+    }
     transaction.update(targetRef, { roles: [...resolvedInput.roles] });
   });
 

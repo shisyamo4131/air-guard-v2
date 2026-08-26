@@ -35,9 +35,30 @@ async function handleUserEnabledStateChangeRequest(request, enabled) {
       tokenCompanyId: actorToken.companyId,
       tokenIsSuperUser: actorToken.isSuperUser,
     });
-    const targetUid = request.data?.uid;
+    const requestData = request.data;
+    const requestFields =
+      requestData && typeof requestData === "object" && !Array.isArray(requestData)
+        ? Object.keys(requestData)
+        : [];
+    if (
+      requestFields.length !== 2 ||
+      !requestFields.includes("uid") ||
+      !requestFields.includes("expectedDisabled")
+    ) {
+      throw new HttpsError(
+        "invalid-argument",
+        "必要な情報が不足しているか、形式が正しくありません。",
+      );
+    }
 
-    if (typeof targetUid !== "string" || !targetUid) {
+    const targetUid = requestData.uid;
+    const expectedDisabled = requestData.expectedDisabled;
+
+    if (
+      typeof targetUid !== "string" ||
+      !targetUid ||
+      typeof expectedDisabled !== "boolean"
+    ) {
       throw new HttpsError(
         "invalid-argument",
         "対象ユーザーIDが指定されていません。",
@@ -51,6 +72,7 @@ async function handleUserEnabledStateChangeRequest(request, enabled) {
       actorUid: actorIdentity.uid,
       targetUid,
       enabled,
+      expectedDisabled,
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;

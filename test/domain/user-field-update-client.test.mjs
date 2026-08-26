@@ -44,6 +44,7 @@ test("client payloads include only operation-specific fields", () => {
   const user = {
     docId: "target-a",
     roles: ["controller"],
+    _beforeData: { roles: ["labor"] },
     displayName: "秘密",
     email: "secret@example.com",
     disabled: true,
@@ -53,6 +54,7 @@ test("client payloads include only operation-specific fields", () => {
   };
   assert.deepEqual(createRolesPayload(user), {
     targetUserId: "target-a",
+    expectedRoles: ["labor"],
     roles: ["controller"],
   });
   assert.deepEqual(createNotificationSettingsPayload(user), {
@@ -61,6 +63,10 @@ test("client payloads include only operation-specific fields", () => {
     receiveArrivedArrangementNotification: false,
     receiveLeavedArrangementNotification: true,
   });
+  assert.throws(
+    () => createRolesPayload({ docId: "target-a", roles: [] }),
+    /Original User roles are unavailable/,
+  );
 });
 
 test("User manager and own settings do not use FireModel full updates", async () => {

@@ -13,6 +13,8 @@ export const USER_ENABLED_STATE_POLICY_ERROR_CODES = Object.freeze({
   SELF_STATUS_CHANGE_FORBIDDEN: "self-status-change-forbidden",
   TARGET_IS_ADMIN: "target-is-admin",
   TARGET_ADMIN_STATE_INVALID: "target-admin-state-invalid",
+  TARGET_DISABLED_STATE_INVALID: "target-disabled-state-invalid",
+  TARGET_DISABLED_STATE_STALE: "target-disabled-state-stale",
 });
 
 /**
@@ -41,6 +43,7 @@ export class UserEnabledStatePolicyError extends Error {
  * @param {Object} param.actorUser - The actor's user data
  * @param {string} param.targetUid - The UID of the target user (the user being changed)
  * @param {Object} param.targetUser - The target user's data
+ * @param {boolean} param.expectedDisabled - Clientが読み取った変更前disabled値
  * @throws {UserEnabledStatePolicyError} - If required fields are missing
  * @throws {UserAuthCompanyPolicyError} - If the actor does not have company consistency
  * @throws {UserEnabledStatePolicyError} - If the actor is not an admin
@@ -57,6 +60,7 @@ export function assertUserEnabledStateChangePolicy({
   actorUser,
   targetUid,
   targetUser,
+  expectedDisabled,
 } = {}) {
   if (!companyId || !actorUid || !actorUser || !targetUid || !targetUser) {
     throw new UserEnabledStatePolicyError(
@@ -115,6 +119,20 @@ export function assertUserEnabledStateChangePolicy({
     throw new UserEnabledStatePolicyError(
       USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_IS_ADMIN,
       "[assertUserEnabledStateChangePolicy] Target is an admin",
+    );
+  }
+
+  if (typeof targetUser.disabled !== "boolean") {
+    throw new UserEnabledStatePolicyError(
+      USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_INVALID,
+      "[assertUserEnabledStateChangePolicy] Target disabled state is invalid",
+    );
+  }
+
+  if (targetUser.disabled !== expectedDisabled) {
+    throw new UserEnabledStatePolicyError(
+      USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_STALE,
+      "[assertUserEnabledStateChangePolicy] Target disabled state changed after client read",
     );
   }
 }

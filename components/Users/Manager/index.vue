@@ -119,7 +119,10 @@ async function handleDisableUser(user) {
   return run("disable", user.docId, async () => {
     const key = loadings.add("ユーザーを無効化しています...");
     try {
-      await disableUser({ uid: user.docId });
+      await disableUser({
+        uid: user.docId,
+        expectedDisabled: user.disabled,
+      });
       messages.add("ユーザーアカウントを無効化しました");
     } catch (error) {
       logger.error({ error });
@@ -138,7 +141,10 @@ async function handleEnableUser(user) {
   return run("enable", user.docId, async () => {
     const key = loadings.add("ユーザーを有効化しています...");
     try {
-      await enableUser({ uid: user.docId });
+      await enableUser({
+        uid: user.docId,
+        expectedDisabled: user.disabled,
+      });
       messages.add("ユーザーアカウントを有効化しました");
     } catch (error) {
       logger.error({ error });

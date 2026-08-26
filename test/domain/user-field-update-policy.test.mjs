@@ -114,18 +114,29 @@ test("role updates accept known unique presets only", () => {
   assert.deepEqual(
     resolveUserRolesUpdate({
       targetUserId: TARGET_UID,
+      expectedRoles: [],
       roles: ["manager", "human-resource"],
     }),
-    { targetUserId: TARGET_UID, roles: ["manager", "human-resource"] },
+    {
+      targetUserId: TARGET_UID,
+      expectedRoles: [],
+      roles: ["manager", "human-resource"],
+    },
   );
   assertPolicyError(
-    () => resolveUserRolesUpdate({ targetUserId: TARGET_UID, roles: ["root"] }),
+    () =>
+      resolveUserRolesUpdate({
+        targetUserId: TARGET_UID,
+        expectedRoles: [],
+        roles: ["root"],
+      }),
     USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_INVALID,
   );
   assertPolicyError(
     () =>
       resolveUserRolesUpdate({
         targetUserId: TARGET_UID,
+        expectedRoles: [],
         roles: ["manager", "manager"],
       }),
     USER_FIELD_UPDATE_POLICY_ERROR_CODES.ROLE_DUPLICATED,
@@ -196,6 +207,7 @@ test("role updates reject self and company administrator targets", () => {
         targetUserId: ACTOR_UID,
         actorUser: actor(),
         targetUser: target(),
+        expectedRoles: [],
       }),
     USER_FIELD_UPDATE_POLICY_ERROR_CODES.SELF_ROLE_CHANGE_FORBIDDEN,
   );
@@ -207,7 +219,35 @@ test("role updates reject self and company administrator targets", () => {
         targetUserId: TARGET_UID,
         actorUser: actor(),
         targetUser: target({ isAdmin: true }),
+        expectedRoles: [],
       }),
     USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_IS_ADMIN,
+  );
+});
+
+test("role updates reject stale or malformed target roles", () => {
+  assertPolicyError(
+    () =>
+      assertUserRolesUpdatePolicy({
+        companyId: COMPANY_ID,
+        actorUid: ACTOR_UID,
+        targetUserId: TARGET_UID,
+        actorUser: actor(),
+        targetUser: target({ roles: ["controller"] }),
+        expectedRoles: [],
+      }),
+    USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_STALE,
+  );
+  assertPolicyError(
+    () =>
+      assertUserRolesUpdatePolicy({
+        companyId: COMPANY_ID,
+        actorUid: ACTOR_UID,
+        targetUserId: TARGET_UID,
+        actorUser: actor(),
+        targetUser: target({ roles: ["unknown"] }),
+        expectedRoles: ["unknown"],
+      }),
+    USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_INVALID,
   );
 });

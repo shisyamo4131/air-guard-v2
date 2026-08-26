@@ -180,7 +180,7 @@ node scripts/migrate-user-reservations.mjs --target codex-local
 - reportは分類別件数、計画digest、opaque subject hashだけを出力し、email、氏名、company ID、User ID、path、document bodyを出力しない。
 - `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Codex専用candidateでの操作は個別承認を要しない。Dev/Prodへのmigrationはmaintenance、backup、dry-run、別の明示承認を得るまで実行しない。
 
-UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firestore・Storage Rules、旧公開Callableを含む72件である。UWB-04では`functions/apis/index.js`の公開Callableを12件へ更新し、旧global availability testを退役させた。2026-08-21にemail/Employee予約fixture、予約Rules、仮登録作成・削除、本登録変換、初期管理者作成、cross-tenant emailとEmployeeのconcurrencyを含む専用Emulator suite 74件を確認した。2026-08-25には会社管理者専用`listLifecycleOperations`、20/21件cursor paging、同時刻document ID tie-break、exact projection、actor拒否、cursor failure統一、LifecycleOperations client read denyを含む専用Emulator suite 92件を確認し、追加composite indexが不要であることを実queryで確認した。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportは未対象である。
+UWB-03までに確認したsuiteは、専用seed、Authサインイン、Firestore・Storage Rules、旧公開Callableを含む72件である。UWB-04では`functions/apis/index.js`の公開Callableを12件へ更新し、旧global availability testを退役させた。2026-08-21にemail/Employee予約fixture、予約Rules、仮登録作成・削除、本登録変換、初期管理者作成、cross-tenant emailとEmployeeのconcurrencyを含む専用Emulator suite 74件を確認した。2026-08-25には会社管理者専用`listLifecycleOperations`、20/21件cursor paging、同時刻document ID tie-break、exact projection、actor拒否、cursor failure統一、LifecycleOperations client read denyを含む専用Emulator suite 92件を確認し、追加composite indexが不要であることを実queryで確認した。2026-08-26にはcurrent Auth disabledの全UWB-07 mutation Callable拒否、仮User削除前後の退職境界、完了済み旧退職の再送が同emailの別tenant新User・予約・新Auth UIDまたはAuth-only accountへ作用しないことを追加し、suite 96件を確認した。Realtime Database Rules、画像圧縮、実端末FCM、外部API、Authentication削除triggerのevent transportは未対象である。
 
 ### Codexだけで完結するlocal UI test
 
@@ -291,7 +291,7 @@ UWB-07/08の自動検証完了後、利用者用local環境のテストデータ
 
 履歴一覧readerは`/settings/lifecycle-history`から`listLifecycleOperations`だけを呼び、会社管理者へ新しい順に20件ずつ表示する。clientから会社ID、件数、検索、filter、sortを送らず、cursorは画面・URL・永続store・storage・analytics・consoleへ出さない。page移動失敗時は現在pageを維持し、権限喪失、sign-out、page離脱時にitemsとcursor stackをmemoryから破棄する。Emulator受入れでは会社管理者の3操作・3公開状態・前後page、他roleとsuper-userのroute/Callable拒否、raw UID・内部error非表示、ledger/event/lock/headのclient直読拒否を確認する。実装前後を通じてRulesをreaderのために緩和しない。
 
-2026-08-25の利用者Chrome受入れでは、ログイン済み会社管理者が可視navigationの管理者menuから「退職・アカウント削除履歴」へ到達し、空状態、無効な前後button、console warning/error 0件を確認した。対象環境に履歴dataがなかったため、data行の表示と実page移動は自動test・Emulator証拠だけを採用し、実browser未確認として残す。
+2026-08-25と26の利用者Chrome受入れでは、ログイン済み会社管理者が可視navigationの管理者menuから「退職・アカウント削除履歴」へ到達し、loading、空状態、無効な前後buttonを確認した。対象環境に履歴dataがない場合、実page移動のためだけに21件の退職・削除を作らない。data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで直接検証し、Chromeは実route、認可された到達、読み込み、empty、button状態を受け持つ。この分離をlocal受入れの完了証拠とする。
 
 数百件のdocumentを必要とする場合は小さいbatchから段階的に投入し、件数、応答時間、memory、Emulator logを記録する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は行わない。正確な安全件数は実測前に固定せず、停止兆候があれば追加投入とUI操作を中止する。
 

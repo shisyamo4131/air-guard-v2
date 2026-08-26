@@ -42,6 +42,7 @@ function createPolicyInput(overrides = {}) {
     actorUser: createActorUser(),
     targetUid: TARGET_UID,
     targetUser: createTargetUser(),
+    expectedDisabled: false,
     ...overrides,
   };
 }
@@ -89,16 +90,40 @@ test("active company administrator may change another regular User", () => {
   );
 });
 
-test("target's current disabled value does not affect authorization", () => {
+test("target disabled state is accepted only when it matches the client expectation", () => {
   assert.doesNotThrow(() =>
     assertUserEnabledStateChangePolicy(
-      createPolicyInput({ targetUser: createTargetUser({ disabled: true }) }),
+      createPolicyInput({
+        targetUser: createTargetUser({ disabled: true }),
+        expectedDisabled: true,
+      }),
     ),
   );
   assert.doesNotThrow(() =>
     assertUserEnabledStateChangePolicy(
       createPolicyInput({ targetUser: createTargetUser({ disabled: false }) }),
     ),
+  );
+  assertEnabledStatePolicyError(
+    () =>
+      assertUserEnabledStateChangePolicy(
+        createPolicyInput({
+          targetUser: createTargetUser({ disabled: true }),
+          expectedDisabled: false,
+        }),
+      ),
+    USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_STALE,
+  );
+});
+
+test("target User with an invalid disabled state is rejected", () => {
+  const targetUser = createTargetUser();
+  delete targetUser.disabled;
+
+  assertEnabledStatePolicyError(
+    () =>
+      assertUserEnabledStateChangePolicy(createPolicyInput({ targetUser })),
+    USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_INVALID,
   );
 });
 

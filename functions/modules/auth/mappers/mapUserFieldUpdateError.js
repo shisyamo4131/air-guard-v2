@@ -39,6 +39,12 @@ export function mapUserFieldUpdateError(error) {
         };
       case USER_FIELD_UPDATE_ERROR_CODES.TARGET_USER_NOT_FOUND:
         return { code: "not-found", message: "対象ユーザーが見つかりません。" };
+      case USER_FIELD_UPDATE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE:
+        return {
+          code: "aborted",
+          message:
+            "対象ユーザーの退職または削除処理中です。処理完了後に最新状態を確認してください。",
+        };
       default:
         return INTERNAL_ERROR_RESPONSE;
     }
@@ -59,6 +65,12 @@ export function mapUserFieldUpdateError(error) {
           code: "invalid-argument",
           message: "更新内容の形式が正しくありません。",
         };
+      case USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_STALE:
+        return {
+          code: "aborted",
+          message:
+            "対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。",
+        };
       case USER_FIELD_UPDATE_POLICY_ERROR_CODES.ACTOR_PERMISSION_DENIED:
       case USER_FIELD_UPDATE_POLICY_ERROR_CODES.ACTOR_ROLES_INVALID:
         return {
@@ -78,6 +90,7 @@ export function mapUserFieldUpdateError(error) {
       case USER_FIELD_UPDATE_POLICY_ERROR_CODES.USER_NOT_ACTIVE:
       case USER_FIELD_UPDATE_POLICY_ERROR_CODES.USER_DISABLED_STATE_INVALID:
       case USER_FIELD_UPDATE_POLICY_ERROR_CODES.USER_ADMIN_STATE_INVALID:
+      case USER_FIELD_UPDATE_POLICY_ERROR_CODES.TARGET_ROLES_INVALID:
         return {
           code: "failed-precondition",
           message: "ユーザーはこの操作を行える状態ではありません。",

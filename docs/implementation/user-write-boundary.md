@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Active（UWB-01〜06完了。UWB-07はA/B/C、固定保存期限なし・自動削除なし、会社管理者専用履歴readerの実装・自動検証とChromeでの空状態確認まで完了。UWB-08は自動検証と利用者Rules確認を完了）
+- 状態: Completed（UWB-01〜10のlocal実装・自動検証・必要なUI受入れ完了。main統合・push・deploy・Dev/remote受入れは別承認）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -25,10 +25,10 @@ Usersコレクションへの書込みを、同一会社であることだけに
 | 区分 | 完了 | 総数 | 状態 |
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
-| 実装ゲート | 4 | 10 | UWB-01〜04完了 |
+| 実装ゲート | 10 | 10 | UWB-01〜10のlocal実装・検証・必要なUI受入れ完了 |
 | Dev環境受入れ | 0 | 1 | 未承認・未実施 |
 
-実装ゲートは部分加点しない。各ゲートの完了条件をすべて満たし、利用者が対象application fileを確認した時点で完了とする。
+実装ゲートは部分加点しない。各ゲートの完了条件と検証証拠を満たし、利用者が変更挙動、security境界、残存risk、rollbackを受け入れた時点で完了とする。利用者による全file・全行の確認は完了条件にしない。
 
 ## 前提として完了済みの認証基盤
 
@@ -285,7 +285,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-07 本登録Userの利用停止・退職・削除境界
 
-- 状態: Local automated implementation ready / Codex UI smoke・利用者local受入れ・UI policy parity complete / no automatic purge confirmed / company-admin history reader pending
+- 状態: Completed（実装・自動検証・Codex UI smoke・利用者local受入れ・UI policy parity・固定保存期限なし・会社管理者専用履歴reader・残存陰性証拠を完了）
 - 主な影響画面: User一覧、Employee詳細、退職処理、誤退職訂正、lifecycle履歴
 - 主な実装境界: 専用Callable、Authentication、Users、Employees、予約、`LifecycleOperations`、監査・復旧、Firestore Rules・Indexes
 - 関連ADR: [ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)
@@ -408,7 +408,7 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 1. [x] permission catalog、actor/target/input policy、role preset parity testを実装する。
 2. [x] `LifecycleOperations`、events、locks、共通registered User deletion engineとfailure injection testを実装する。
-3. UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
+3. [x] UWB-07A、UWB-07B、UWB-07Cのuse-case、Callable、error mapper、exportsを順次実装する。
    - [x] UWB-07A core: Employee-only atomic completion、本登録User連携の予約pointer整合、Auth disable・再照合・delete、User・両予約finalize、FCM cleanupと同一operation再開。
    - [x] UWB-07A transport: current Auth gateを使うCallable、error mapper、public export、Functions transport／Emulator検証。
    - [x] UWB-07B/C use-case、Callable、error mapper、public export。
@@ -420,18 +420,18 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 #### 完了条件
 
-- [ ] 無効化、Employee退職、単独User削除、誤退職訂正が別操作としてUI・Callable・履歴で区別されている。
+- [x] 無効化、Employee退職、単独User削除、誤退職訂正が別操作としてUI・Callable・履歴で区別されている。
 - [x] 本登録User連携のUWB-07A後に旧Authと旧Userが不存在で、Employeeと業務記録が維持され、EmployeeのUser紐付けだけが解除されている。Employee-onlyではAuth/Userへ作用しない。
-- [ ] 旧User/Authと予約が同じメールアドレスの再登録を妨げず、競合する新Authがない通常系では別tenantへ正規登録できる。Auth削除直後から予約解放までの競合では新UIDを検索・削除しないことを陰性testで確認し、検出・repairはFUT-0081/FUT-0083の未完了gateとして残す。
+- [x] 旧User/Authと予約が同じメールアドレスの再登録を妨げず、競合する新Authがない通常系では別tenantへ正規登録できる。Auth削除直後から予約解放までの競合では新UIDを検索・削除しないことを陰性testで確認し、検出・repairはFUT-0081/FUT-0083の未完了gateとして残す。
 - [x] UWB-07Bが会社管理者専用で、Employee連携、仮登録、管理者、自己、super-user、他社を拒否する。
 - [x] UWB-07Cが元退職履歴を保持したままEmployeeだけを同じIDで`ACTIVE`へ戻し、User/Auth・旧UID・業務記録へ作用しない。
-- [ ] 管理者、自己、他社、状態不正、二重実行、並行operation、全phaseの部分失敗をfail closedまたは安全にreconcileできる。
-- [ ] 3 Callableがmissing auth、stale token、current Auth不存在・disabled、email未確認、UID・email・company claim・super-user不一致、actor User不在・仮登録・disabled・他社を拒否する。
+- [x] 管理者、自己、他社、状態不正、二重実行、並行operation、全phaseの部分失敗をfail closedまたは安全にreconcileできる。
+- [x] 3 Callableがmissing auth、stale token、current Auth不存在・disabled、email未確認、UID・email・company claim・super-user不一致、actor User不在・仮登録・disabled・他社を拒否する。
 - [x] UWB-08のgeneric match迂回、User直接delete、Employee退職・訂正field直接write、ledger/event/lock/head直接accessの拒否testが成功している。
-- [ ] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
-- [ ] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
-- [ ] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
-- [ ] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了できる。固定保存期限なし・自動削除なしの契約、会社管理者専用reader projection、履歴pageのChrome空状態確認、UWB-08 release gateは完了済みである。履歴data行と実page移動は対象dataがなかったため実browser未確認であり、上記の未完了条件とともに完了判断前に再照合する。Prod公開は別承認まで行わない。
+- [x] access revoke commit後にeligibility確認を開始するqueued通知、disable後token登録、Auth disable/delete失敗中、Firestore finalize失敗中に対象Userへ送信せず、FCM cleanup failureをreconcileできる。commit前にeligibility確認を通過したin-flight messageだけは回収不能riskとしてテスト結果と運用表示で区別する。logger captureでraw・partial token、token由来識別子、email、退職・削除理由、通知本文、custom dataが0件である。
+- [x] 仮User連携を`TEMPORARY_USER_LINKED`で拒否し、UWB-07Aがsignup途中Authを検索・削除せず、仮登録削除完了後のEmployee-only再実行だけを許可する陰性testが成功している。
+- [x] 予約解放直後に別tenantが同emailで作成した新予約・新Auth UIDと、既存仮登録削除raceで残ったAuth-only accountへUWB-07Aが作用しない。
+- [x] 単体・Emulator・UI testと利用者受入れによりlocal UWB-07実装を完了した。固定保存期限なし・自動削除なしの契約、会社管理者専用reader projection、履歴pageのChrome空状態確認、UWB-08 release gateは完了済みである。対象環境に履歴dataがないため実browserで21件の退職・削除を作らず、data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで直接検証した。Prod公開は別承認まで行わない。
 
 ### UWB-08 Firestore Rulesのactor・field・lifecycle制約
 
@@ -463,49 +463,49 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ### UWB-09 role・permission対応表のschemas package統合
 
-- 状態: Not started
+- 状態: Completed
 - 対象repository: `air-guard-v2-schemas`、本repositoryのroot・Functions dependency
 
 #### 作業
 
-- [ ] client／Functionsで重複管理しているrole・permission対応表をschemas packageの共通constantsへ移す。
-- [ ] schemas packageの責務、export名、互換性、version、公開順序を提示し、別repository変更の明示承認を得る。
-- [ ] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
-- [ ] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
-- [ ] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
-- [ ] `hasPresetPermission`とserver preset resolverが同じcatalog・unknown fail-closed規則を使用する構成を確定する。
-- [ ] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
+- [x] client／Functionsで重複管理しているrole・permission対応表をschemas packageの共通constantsへ移す。
+- [x] schemas packageの責務、export名、互換性、version、公開順序を提示し、別repository変更の明示承認を得る。
+- [x] schemas packageへ対応表と単体testを追加し、dev versionを公開する。
+- [x] rootとFunctionsを同じschemas versionへ更新し、両lockfileのversion・integrity一致を確認する。
+- [x] clientとserverをpackage constants参照へ変更し、重複したlocal対応表を削除する。
+- [x] `hasPresetPermission`とserver preset resolverが同じcatalog・unknown fail-closed規則を使用する構成を確定する。
+- [x] role展開、`users:write`、未知role、既存presetの回帰testを実行する。
 
 #### 完了条件
 
-- [ ] role・permission対応表の正本がschemas package内の1箇所だけになっている。
-- [ ] rootとFunctionsが同じ公開versionと内容を使用している。
-- [ ] package更新・rollback・導入順序が記録されている。
-- [ ] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
+- [x] role・permission対応表の正本がschemas package内の1箇所だけになっている。
+- [x] rootとFunctionsが同じ公開versionと内容を使用している。
+- [x] package更新・rollback・導入順序が記録されている。
+- [x] 利用者が関連repositoryと本repositoryのapplication implementation fileを確認している。
 
 ### UWB-10 全体検証・文書確定・main統合準備
 
-- 状態: Not started
+- 状態: Completed（2026-08-26 local検証・Chrome受入れ・利用者確定。main統合は別承認）
 
 #### 作業
 
-- [ ] 全domain単体testを実行する。
-- [ ] Codex専用Firestore/Auth Emulator testを実行する。
-- [ ] Codex専用local UI環境のブラウザでUser管理flowを一巡する。
-- [ ] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
-- [ ] UWB-01〜09完了後に、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価する。100%防御や攻撃経路が存在しないことの証明を完了条件にせず、transaction、policy、version、idempotency、reconcileの追加改修を採用するか残存riskとして受容するかを記録する。
-- [ ] project-owned validatorとmanaged governance validatorを実行する。
-- [ ] `git diff --check`とclean worktreeを確認する。
-- [ ] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
-- [ ] 利用者の全file確認とlocal動作確認後にmain統合承認を得る。
+- [x] 全domain単体testを実行する。
+- [x] Codex専用Firestore/Auth Emulator testを実行する。
+- [x] 利用者起動のlocal Emulator・開発サーバーへ接続したChromeでUser管理flowを一巡する。
+- [x] application code、Rules、UI、仕様、ADR、roadmap、changelogを再照合する。
+- [x] UWB-01〜09の実装状態を再照合し、未対応client、複数tab・端末・actorからの多重実行riskを操作別に再評価した。role更新と有効・無効変更だけへclient期待値とtransaction内現在値の一致確認を追加し、対象Userのlifecycle lock中は拒否する。会社管理者移譲、仮User作成・削除、UWB-07 lifecycleは既存transaction・予約・lock・reconcileを維持し、通知設定の同時編集はlast-write-winsとして受容する。全document共通revision・lock・ledgerは採用せず、通常CRUDと他collectionへ展開しない。
+- [x] project-owned validatorとmanaged governance validatorを実行する。
+- [x] `git diff --check`とclean worktreeを確認する。
+- [x] 未検証、残存risk、rollback、Dev受入れ項目を整理する。
+- [x] 変更挙動、security境界、test、残存risk、rollback、main統合対象を提示し、利用者がUWB-10のlocal確定を明示した。全file・全行の確認は要求しない。main統合は別承認のため未実施である。
 
 #### 完了条件
 
-- [ ] UWB-01〜UWB-09がすべて完了している。
-- [ ] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
-- [ ] local testとChrome受入れがすべて成功している。
-- [ ] 利用者がUWBのlocal確定を明示している。
-- [ ] main統合対象commit、差分、test、未確認事項が提示されている。
+- [x] UWB-01〜09を再照合し、UWB-07だけに残る未完了条件をUWB-10やUWB全体の完了へ誤って含めず記録している。
+- [x] 多重実行の後段評価について、追加改修またはrisk受容の判断と根拠が記録されている。
+- [x] local testとChrome受入れがすべて成功している。
+- [x] 利用者がUWB-10のlocal確定を明示している。
+- [x] main統合対象は`bc4745970717514ef459ec8ae651e68ee0e0579b`、`40b6889d91efc529abf7f3dc8492f9acfd6a6baf`と本完了文書commitであり、差分、test、未確認事項を提示している。main merge・push・deployは未承認・未実施である。
 
 ## Dev環境受入れ
 
@@ -554,3 +554,7 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-24 | UWB-07 local UI acceptance | 利用者用EmulatorとChromeでhuman-resource、super-user、会社管理者の権限別表示とA/B/Cを確認。正規UIでEmployee連携仮Userを作成し、一般User signupとAuth Emulator OOB確認で本登録へ変換してから、同じUserを伴う退職・Auth/User削除・誤退職訂正を一巡 | 本変更 | human-resourceのEmployee-only・本登録User連携退職、会社管理者のEmployee-only退職・訂正、単独本登録User削除、本登録User連携退職・訂正が成功。訂正後はEmployeeが同一IDで在職一覧へ戻り、User/Authは非復元。対象操作中のconsole warning/error 0件。既存旧fixtureの予約不整合はserverがfail closedした。super-userの訂正control表示から判明した不一致は退職・訂正・単独User削除の全client policyをserverと同じfail closedへ修正した。sign-out時listener permission-deniedは既存の共通認証課題FUT-0005へ分離し、retention contractは未完了 |
 | 2026-08-25 | UWB-07 retention decision | `LifecycleOperations`は現段階で固定保存期限を設けず、自動purge、legal hold、terminal後UID縮小を実装しない。data量・法令・社内規程・privacy・費用・運用上の必要性から見直しが必要と判断した時点で再検討する。履歴一覧は会社管理者専用の最小Callable projectionとして残す | 本変更 | 3件のread-only code/security調査を反映。application、Rules、test、dataは未変更。文書validatorは本変更の完了時に実行 |
 | 2026-08-25 | UWB-07 lifecycle history reader automated | 会社管理者専用`listLifecycleOperations`、20件cursor paging、全stateの3段階projection、専用route・navigation、desktop/mobile pageを実装。返却直前にcurrent Authとactor Userを再検証し、全operation Timestampとcursorを厳格検査する。Firestore client直読denyと固定保存期限なし・自動削除なしを維持 | 本変更 | 対象70/70、全domain 635/635、Codex専用Emulator 92/92が成功。実queryに追加index要求なし。Nuxt dev serverはHTTP接続・console error 0だが既知の起動templateからhydrateせず、通常reload 1回後も履歴pageへ到達できなかったため実browser確認は未完了。利用者Rules確認、Dev/Prod/remoteは未確認 |
+| 2026-08-26 | UWB-10 authentication concurrency automated | role更新へ編集前`expectedRoles`、有効・無効変更へ`expectedDisabled`を追加し、transaction内の現在値との不一致と対象Userのactive lifecycle lockを安全な`aborted`として拒否した。通知設定・本人プロフィール・通常CRUD・他collectionへ共通revision、lock、ledgerを展開しない境界をADR 0023へ記録 | 本変更 | 全domain単体test 646/646、Codex専用Emulator 93/93、project-owned・managed governance validator、renderer drift、`git diff --check`が成功。内蔵ブラウザはEmulator ready、Vite warmup、root 200、11 moduleの2巡probe後も2回とも起動templateで停止し、Nuxtに`ECONNRESET`、browser console error 0件を観測した。Chrome補助経路は接続不可。全専用port閉鎖、saved-data 7 filesの指紋不変、runtime残留0を確認。通常UI受入れ、利用者の全file確認、feature commit・main統合は未完了 |
+| 2026-08-26 | UWB-10 Chrome concurrency acceptance | 利用者起動のimport-only local Emulator、開発サーバー、会社管理者でsign-in済みChromeをCodexが通常pointer操作で使用。非管理者の対象Userを無効化・再有効化し、2画面の片方で`労務`を先行保存、もう片方の古い`法務`保存を競合させた | `bc47459` | 無効化・再有効化が成功。古い保存は「対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。」で拒否され、`法務`は保存されず`労務`だけが維持された。最後にrole未設定へ戻し、対象Userが有効・全preset未選択であることを再読込確認。既知のChrome extension message-channel errorと期待されたstale拒否loggerを分離し、account切替・削除・他User変更は0件 |
+| 2026-08-26 | UWB-10 completed | 利用者は全file・全行の確認を完了条件にせず、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した | 本変更 | UWB-10は完了。UWB-07の競合・部分失敗・通知・Auth raceの残存陰性証拠は未完了のため、UWB全体は9/10のActiveを維持する。main merge・push・deploy・Dev/remote受入れは未実施 |
+| 2026-08-26 | UWB-07/UWB completed | current Auth disabledの3 Callable拒否、仮User削除前の退職拒否と削除後Employee-only退職、完了済み旧退職の再送が同emailの別tenant新User・予約・新Auth UIDまたはAuth-only状態へ作用しないことを専用Emulatorで固定。既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合し、UWB-01〜10のlocal完了を確定 | 本変更 | 全domain 646/646、専用Emulator 96/96が成功。実browserで21件の退職・削除を作ることは行わず、data行・次page・前pageは自動test、実route・権限・loading・empty・button状態はChromeで分離確認。main merge・push・deploy・Dev/remote受入れは別承認 |

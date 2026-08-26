@@ -9,10 +9,12 @@ import { assertUserEnabledStateChangePolicy } from "./policies/userEnabledStateP
 export const USER_ENABLED_STATE_CHANGE_ERROR_CODES = Object.freeze({
   REQUIRED_FIELD_MISSING: "required-field-missing",
   ENABLED_STATE_INVALID: "enabled-state-invalid",
+  EXPECTED_DISABLED_STATE_INVALID: "expected-disabled-state-invalid",
   AUTH_SERVICE_INVALID: "auth-service-invalid",
   FIRESTORE_SERVICE_INVALID: "firestore-service-invalid",
   ACTOR_USER_NOT_FOUND: "actor-user-not-found",
   TARGET_USER_NOT_FOUND: "target-user-not-found",
+  TARGET_LIFECYCLE_OPERATION_ACTIVE: "target-lifecycle-operation-active",
 });
 
 /**
@@ -42,6 +44,7 @@ export class UserEnabledStateChangeError extends Error {
  * @param {string} param.actorUid - The UID of the user making the change.
  * @param {string} param.targetUid - The UID of the user whose enabled state is being changed.
  * @param {boolean} param.enabled - The new enabled state.
+ * @param {boolean} param.expectedDisabled - Clientが読み取った変更前disabled値。
  * @returns {Promise<{ success: boolean, uid: string }>} A promise resolving to the result of the operation.
  * @throws {UserEnabledStateChangeError} If required fields are missing or if the operation fails due to policy violations or service issues.
  * @throws {UserEnabledStateChangeError} If the `enabled` parameter is not a boolean.
@@ -57,6 +60,7 @@ export async function changeUserEnabledState({
   actorUid,
   targetUid,
   enabled,
+  expectedDisabled,
 } = {}) {
   // 引数の検証
   if (
@@ -77,6 +81,13 @@ export async function changeUserEnabledState({
     throw new UserEnabledStateChangeError(
       USER_ENABLED_STATE_CHANGE_ERROR_CODES.ENABLED_STATE_INVALID,
       "[changeUserEnabledState] Enabled state must be boolean",
+    );
+  }
+
+  if (typeof expectedDisabled !== "boolean") {
+    throw new UserEnabledStateChangeError(
+      USER_ENABLED_STATE_CHANGE_ERROR_CODES.EXPECTED_DISABLED_STATE_INVALID,
+      "[changeUserEnabledState] Expected disabled state must be boolean",
     );
   }
 
@@ -105,6 +116,9 @@ export async function changeUserEnabledState({
   const targetUserRef = firestore.doc(
     `Companies/${companyId}/Users/${targetUid}`,
   );
+  const targetLifecycleLockRef = firestore.doc(
+    `Companies/${companyId}/UserLifecycleLocks/${targetUid}`,
+  );
 
   return firestore.runTransaction(async (transaction) => {
     // 実行者の User ドキュメントを取得
@@ -131,6 +145,9 @@ export async function changeUserEnabledState({
 
     const actorUser = actorSnapshot.data();
     const targetUser = targetSnapshot.data();
+    const targetLifecycleLockSnapshot = await transaction.get(
+      targetLifecycleLockRef,
+    );
 
     // 実行者と対象者の有効状態変更ポリシーを検証 → 不整合の場合は例外をスロー
     assertUserEnabledStateChangePolicy({
@@ -139,7 +156,15 @@ export async function changeUserEnabledState({
       actorUser,
       targetUid,
       targetUser,
+      expectedDisabled,
     });
+
+    if (targetLifecycleLockSnapshot.exists) {
+      throw new UserEnabledStateChangeError(
+        USER_ENABLED_STATE_CHANGE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE,
+        "[changeUserEnabledState] Target User lifecycle operation is active",
+      );
+    }
 
     // 対象者の Auth アカウントを取得
     const authUser = await auth.getUser(targetUid);

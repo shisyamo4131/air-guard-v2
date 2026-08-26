@@ -36,6 +36,7 @@ export function mapUserEnabledStateError(error) {
     switch (error.code) {
       case USER_ENABLED_STATE_CHANGE_ERROR_CODES.REQUIRED_FIELD_MISSING:
       case USER_ENABLED_STATE_CHANGE_ERROR_CODES.ENABLED_STATE_INVALID:
+      case USER_ENABLED_STATE_CHANGE_ERROR_CODES.EXPECTED_DISABLED_STATE_INVALID:
         return {
           code: "invalid-argument",
           message: "必要な情報が不足しているか、形式が正しくありません。",
@@ -51,6 +52,13 @@ export function mapUserEnabledStateError(error) {
         return {
           code: "not-found",
           message: "対象ユーザーが見つかりません。",
+        };
+
+      case USER_ENABLED_STATE_CHANGE_ERROR_CODES.TARGET_LIFECYCLE_OPERATION_ACTIVE:
+        return {
+          code: "aborted",
+          message:
+            "対象ユーザーの退職または削除処理中です。処理完了後に最新状態を確認してください。",
         };
 
       case USER_ENABLED_STATE_CHANGE_ERROR_CODES.AUTH_SERVICE_INVALID:
@@ -84,9 +92,17 @@ export function mapUserEnabledStateError(error) {
 
       case USER_ENABLED_STATE_POLICY_ERROR_CODES.ACTOR_DISABLED_STATE_INVALID:
       case USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_ADMIN_STATE_INVALID:
+      case USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_INVALID:
         return {
           code: "failed-precondition",
           message: "ユーザーの状態を確認できません。",
+        };
+
+      case USER_ENABLED_STATE_POLICY_ERROR_CODES.TARGET_DISABLED_STATE_STALE:
+        return {
+          code: "aborted",
+          message:
+            "対象ユーザーの有効状態が別の操作で変更されました。最新状態を確認して再実行してください。",
         };
 
       default:

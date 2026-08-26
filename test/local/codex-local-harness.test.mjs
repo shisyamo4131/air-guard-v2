@@ -2192,6 +2192,243 @@ test("registered Employee retirement deletes Auth, User, and reservation pointer
   });
 });
 
+test("completed retirement replay preserves a new cross-tenant account using the released email", async () => {
+  const { terminateEmployee } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-retire-replay-actor",
+    roles: ["human-resource"],
+  });
+  const employeeId = "uwb07-retire-replay-employee";
+  const targetUid = "uwb07-retire-replay-old-user";
+  const replacementUid = "uwb07-retire-replay-new-user";
+  const replacementCompanyId = "uwb07-retire-replay-new-company";
+  const targetEmail = "uwb07-retire-replay@codex-test.invalid";
+  const operationId = "07000000-0000-4000-8000-000000000007";
+  const request = actorCallableRequest({
+    actor,
+    data: {
+      operationId,
+      employeeId,
+      terminationDate: "2026-08-20",
+      reasonOfTermination: "契約満了",
+    },
+  });
+
+  await seedEmployee({ employeeId, displayName: "再送確認" });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    companyId: actor.companyId,
+    isTemporary: false,
+    disabled: false,
+    isAdmin: false,
+    email: targetEmail,
+    displayName: "旧利用者",
+    employeeId,
+    roles: ["controller"],
+  });
+  await seedEmailReservation({
+    email: targetEmail,
+    companyId: actor.companyId,
+    userId: targetUid,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        actor.companyId,
+        "EmployeeUserReservations",
+        employeeId,
+      ),
+      { userId: targetUid },
+    );
+  });
+
+  const completed = await terminateEmployee.run(request);
+  assert.equal(completed.status, "completed");
+  await seedCallableAuthUser({
+    uid: replacementUid,
+    companyId: replacementCompanyId,
+    email: targetEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: replacementUid,
+    pathCompanyId: replacementCompanyId,
+    companyId: replacementCompanyId,
+    isTemporary: false,
+    disabled: false,
+    isAdmin: false,
+    email: targetEmail,
+    displayName: "新利用者",
+    roles: ["controller"],
+  });
+  await seedEmailReservation({
+    email: targetEmail,
+    companyId: replacementCompanyId,
+    userId: replacementUid,
+  });
+
+  const replayed = await terminateEmployee.run(request);
+  assert.deepEqual(replayed, completed);
+  const replacementAuth = await getAdminAuth().getUser(replacementUid);
+  assert.equal(replacementAuth.email, targetEmail);
+  assert.equal(replacementAuth.disabled, false);
+  assert.equal(replacementAuth.customClaims.companyId, replacementCompanyId);
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const replacementUserRef = doc(
+      firestore,
+      "Companies",
+      replacementCompanyId,
+      "Users",
+      replacementUid,
+    );
+    const replacementReservationRef = doc(
+      firestore,
+      "UserEmailReservations",
+      createUserEmailReservationId(targetEmail),
+    );
+    const replacementUser = await getDoc(replacementUserRef);
+    const replacementReservation = await getDoc(replacementReservationRef);
+    assert.equal(replacementUser.exists(), true);
+    assert.deepEqual(replacementReservation.data(), {
+      companyId: replacementCompanyId,
+      userId: replacementUid,
+    });
+    await deleteDoc(replacementUserRef);
+    await deleteDoc(replacementReservationRef);
+  });
+
+  const authOnlyReplay = await terminateEmployee.run(request);
+  assert.deepEqual(authOnlyReplay, completed);
+  const authOnlyReplacement = await getAdminAuth().getUser(replacementUid);
+  assert.equal(authOnlyReplacement.email, targetEmail);
+  assert.equal(authOnlyReplacement.disabled, false);
+  assert.equal(
+    authOnlyReplacement.customClaims.companyId,
+    replacementCompanyId,
+  );
+});
+
+test("temporary Employee link must be deleted before Employee-only retirement", async () => {
+  const {
+    createEmployeeLinkedTemporaryUser,
+    deleteTemporaryUser,
+    terminateEmployee,
+  } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-temporary-link-actor",
+    roles: ["human-resource"],
+  });
+  const employeeId = "uwb07-temporary-link-employee";
+  const email = "uwb07-temporary-link@codex-test.invalid";
+  await seedEmployee({ employeeId, displayName: "仮連携確認" });
+  const temporaryUser = await createEmployeeLinkedTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { employeeId, email },
+    }),
+  );
+
+  await assertCallableError(
+    terminateEmployee.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          operationId: "07000000-0000-4000-8000-000000000008",
+          employeeId,
+          terminationDate: "2026-08-20",
+          reasonOfTermination: "契約満了",
+        },
+      }),
+    ),
+    "failed-precondition",
+  );
+  await assert.rejects(
+    () => getAdminAuth().getUserByEmail(email),
+    (error) => error.code === "auth/user-not-found",
+  );
+  await deleteTemporaryUser.run(
+    actorCallableRequest({
+      actor,
+      data: { targetUserId: temporaryUser.userId },
+    }),
+  );
+
+  const retired = await terminateEmployee.run(
+    actorCallableRequest({
+      actor,
+      data: {
+        operationId: "07000000-0000-4000-8000-000000000009",
+        employeeId,
+        terminationDate: "2026-08-20",
+        reasonOfTermination: "契約満了",
+      },
+    }),
+  );
+  assert.deepEqual(retired.userDeletion, {
+    kind: "none",
+    userAccessDeleted: false,
+  });
+  assert.equal(retired.status, "completed");
+});
+
+test("all UWB-07 mutation Callables reject a currently disabled actor Auth", async () => {
+  const {
+    deleteStandaloneRegisteredUser,
+    reinstateEmployee,
+    terminateEmployee,
+  } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "uwb07-disabled-current-auth-actor",
+    isAdmin: true,
+    roles: ["human-resource"],
+  });
+  const requests = [
+    [
+      terminateEmployee,
+      {
+        operationId: "07000000-0000-4000-8000-000000000010",
+        employeeId: "uwb07-disabled-current-auth-employee",
+        terminationDate: "2026-08-20",
+        reasonOfTermination: "契約満了",
+      },
+    ],
+    [
+      deleteStandaloneRegisteredUser,
+      {
+        operationId: "07000000-0000-4000-8000-000000000011",
+        targetUserId: "uwb07-disabled-current-auth-user",
+        reason: "利用終了",
+      },
+    ],
+    [
+      reinstateEmployee,
+      {
+        operationId: "07000000-0000-4000-8000-000000000012",
+        employeeId: "uwb07-disabled-current-auth-employee",
+        reversesOperationId: "07000000-0000-4000-8000-000000000013",
+        correctionReasonCode: "MISTAKEN_RETIREMENT",
+      },
+    ],
+  ];
+  await getAdminAuth().updateUser(actor.uid, { disabled: true });
+
+  for (const [callable, data] of requests) {
+    await assertCallableError(
+      callable.run(actorCallableRequest({ actor, data })),
+      "failed-precondition",
+    );
+  }
+});
+
 test("company administrator offboards a standalone registered User", async () => {
   const { deleteStandaloneRegisteredUser } = await loadRebuildApis();
   const actor = await seedTemporaryManagementActor({
@@ -2521,7 +2758,11 @@ test("managed role Callable accepts known presets and protects other fields", as
   const result = await updateUserRoles.run(
     actorCallableRequest({
       actor,
-      data: { targetUserId: targetUid, roles: ["human-resource", "labor"] },
+      data: {
+        targetUserId: targetUid,
+        expectedRoles: ["controller"],
+        roles: ["human-resource", "labor"],
+      },
     }),
   );
   assert.deepEqual(result, { success: true, userId: targetUid });
@@ -2531,6 +2772,20 @@ test("managed role Callable accepts known presets and protects other fields", as
   assert.equal(user.displayName, "役割対象");
   assert.equal(user.email, `${targetUid}@codex-test.invalid`);
   assert.equal(user.isAdmin, false);
+
+  await assertCallableError(
+    updateUserRoles.run(
+      actorCallableRequest({
+        actor,
+        data: {
+          targetUserId: targetUid,
+          expectedRoles: ["controller"],
+          roles: ["manager"],
+        },
+      }),
+    ),
+    "aborted",
+  );
 });
 
 test("provision-only actor cannot update managed User fields", async () => {
@@ -2565,7 +2820,11 @@ test("provision-only actor cannot update managed User fields", async () => {
     updateUserRoles.run(
       actorCallableRequest({
         actor,
-        data: { targetUserId: targetUid, roles: ["controller"] },
+        data: {
+          targetUserId: targetUid,
+          expectedRoles: [],
+          roles: ["controller"],
+        },
       }),
     ),
     "permission-denied",
@@ -2595,7 +2854,7 @@ test("field Callables reject protected-field injection and self role changes", a
     updateUserRoles.run(
       actorCallableRequest({
         actor,
-        data: { targetUserId: actor.uid, roles: [] },
+        data: { targetUserId: actor.uid, expectedRoles: [], roles: [] },
       }),
     ),
     "failed-precondition",
@@ -3198,18 +3457,18 @@ test("enabled state Callables allow a consistent active company administrator", 
     isAdmin: false,
   });
 
-  const request = callableRequest({
+  const disableRequest = callableRequest({
     uid: actorUid,
     claims: { email: actorEmail },
-    data: { uid: targetUid },
+    data: { uid: targetUid, expectedDisabled: false },
   });
 
   await assertCallableError(
-    disableUser.run({ ...request, data: {} }),
+    disableUser.run({ ...disableRequest, data: {} }),
     "invalid-argument",
   );
 
-  assert.deepEqual(await disableUser.run(request), {
+  assert.deepEqual(await disableUser.run(disableRequest), {
     success: true,
     uid: targetUid,
   });
@@ -3226,7 +3485,14 @@ test("enabled state Callables allow a consistent active company administrator", 
     assert.equal(snapshot.data().disabled, true);
   });
 
-  assert.deepEqual(await enableUser.run(request), {
+  await assertCallableError(disableUser.run(disableRequest), "aborted");
+
+  const enableRequest = callableRequest({
+    uid: actorUid,
+    claims: { email: actorEmail },
+    data: { uid: targetUid, expectedDisabled: true },
+  });
+  assert.deepEqual(await enableUser.run(enableRequest), {
     success: true,
     uid: targetUid,
   });
@@ -3242,6 +3508,67 @@ test("enabled state Callables allow a consistent active company administrator", 
     );
     assert.equal(snapshot.data().disabled, false);
   });
+});
+
+test("enabled state Callable rejects a target with an active lifecycle lock", async () => {
+  const { disableUser } = await loadRebuildApis();
+  const actorUid = "codex-enabled-lock-admin";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  const targetUid = "codex-enabled-lock-target";
+
+  await seedCallableAuthUser({ uid: actorUid, email: actorEmail });
+  await seedRegisteredUser({
+    uid: actorUid,
+    email: actorEmail,
+    isAdmin: true,
+  });
+  await seedCallableAuthUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+  });
+  await seedRegisteredUser({
+    uid: targetUid,
+    email: `${targetUid}@codex-test.invalid`,
+    isAdmin: false,
+  });
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        CODEX_LOCAL_COMPANIES.primary.id,
+        "UserLifecycleLocks",
+        targetUid,
+      ),
+      { operationId: "00000000-0000-4000-8000-000000000001" },
+    );
+  });
+
+  try {
+    await assertCallableError(
+      disableUser.run(
+        callableRequest({
+          uid: actorUid,
+          claims: { email: actorEmail },
+          data: { uid: targetUid, expectedDisabled: false },
+        }),
+      ),
+      "aborted",
+    );
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          CODEX_LOCAL_COMPANIES.primary.id,
+          "UserLifecycleLocks",
+          targetUid,
+        ),
+      );
+    });
+  }
 });
 
 test("admin transfer Callable rejects incomplete and inactive actor identities", async () => {

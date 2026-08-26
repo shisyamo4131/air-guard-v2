@@ -91,6 +91,24 @@ test("custom User actions use the shared pending-operation boundary", async () =
   assert.match(sources[4], /run\("transfer-admin", auth\.uid \|\| "self"/);
 });
 
+test("authentication mutations carry only their local concurrency preconditions", async () => {
+  const manager = await readFile(
+    new URL("../../components/Users/Manager/index.vue", import.meta.url),
+    "utf8",
+  );
+  const rolePolicy = await readFile(
+    new URL(
+      "../../utils/auth/policies/userFieldUpdatePolicy.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  assert.match(manager, /expectedDisabled:\s*user\.disabled/);
+  assert.match(rolePolicy, /expectedRoles:\s*\[\.\.\.targetUser\._beforeData\.roles\]/);
+  assert.doesNotMatch(manager, /revision|operationId/);
+  assert.doesNotMatch(rolePolicy, /revision|operationId/);
+});
+
 test("common manager submit drops a reentrant call before clearing state", async () => {
   const source = await readFile(
     new URL(
