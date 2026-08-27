@@ -28,6 +28,7 @@
 
 ### Changed
 
+- Firestore Rulesの段階的縮小として、Company root documentのclient作成・削除を禁止し、初期作成をCloud Functions/Admin SDK専用とした。同一tenantの既存更新は互換性のため維持し、残るwrite境界はCUDを一律Functions化せず機能単位で見直す方針とした。Codex専用Emulator suite 97件で、同社read/update、client create/delete拒否、他社拒否、Functionsによる初期Company作成を確認した。
 - UWBの認証済みDev受入れとして、一般Userのrole別menu・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴のremote空結果、本登録User削除確認の取消とUser残存を確認した。第2のCodex専用合成会社を正規signupし、そのID tokenによるbackend assertionで自社User read 200、別会社pathのread・list・存在必須precondition付きupdate/delete 403、mutation 0を確認した。UWBのDev受入れは完了し、Rules全体縮小、App Check・rate limit、継続監視を正式運用準備の別残件として維持する。
 - 専用合成会社の認証済みDev受入れで、管理者・一般Userの正規signup、roleless route拒否、2 tabのstale role拒否、User/Auth無効化・サインイン拒否・再有効化・復帰を確認した。`disableuser`/`enableuser`だけCloud Run public invokerが欠落しbrowser preflightが403となる問題をDev限定の明示承認済みIAM付与で修復し、全v2 Callableのpublic invokerとbrowser-origin CORS preflightをdeploy後に確認するgateを追加した。
 - `docs/operations.md`を共通hubへ縮小し、通常開発、local Emulator、local UI、data migration、package release、project coordination、Windows PC migrationをtask-routed runbookへlossless分割した。各旧sectionを一度だけ移動し、Dev deployを含む作業が無関係な運用本文を読み込まない構成へ変更した。

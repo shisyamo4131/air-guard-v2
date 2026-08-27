@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Firestore Rules全体に残る広いtenant内write、App Check・rate limitは残作業である。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Company rootのclient create/deleteは閉じたが、既存Company更新と他collectionに残る広いtenant内write、App Check・rate limitは残作業である。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。Stripe、継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. DEV-UWB-RELEASE-001後の認証済みDev受入れでsignup、roleless・role別route、stale role、disabled User復帰、非破壊lifecycle、第2合成会社からのtenant拒否を完了した。次はFirestore Rules全体のtenant内write縮小、App Check・rate limit、Callable public invokerの継続監視を正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. DEV-UWB-RELEASE-001後の認証済みDev受入れでsignup、roleless・role別route、stale role、disabled User復帰、非破壊lifecycle、第2合成会社からのtenant拒否を完了し、Company rootのclient create/deleteを閉じた。次は既存Company updateと各業務collectionのtenant内writeを、CUD一律Functions化ではなく機能ごとのactor・field・整合性・監査・同時実行・offline要件に基づいて縮小する。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -150,3 +150,4 @@
 | 2026-08-27 | 10% | 0 | DEV-UWB-RELEASE-001を実施した。release commit `52dd607d16e9b77f90ec238250eca11757548097`で、PITR 7日保持、maintenance後snapshot 22,268 documents、Rules・indexes・全Functions、create-only予約migration 16 writes、Hosting live version `049afa156793e630`、maintenance解除を確認した。Functions 36件は全ACTIVE、廃止`checkEmailAvailabilityGlobal`は0件、UWB 11 Callableは未認証を401で拒否し、scheduled reconcilerはENABLED、cutover以降のFunctions ERROR logは0件だった。新browser sessionでtopとsign-in画面、console error 0件を確認した。認証済み実accountのrole・tenant・disabled・stale/lifecycle受入れ、App Check・rate limit、Rules全体縮小、復旧演習等が残り、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-27 | 10% | 0 | 専用合成会社の認証済みDev受入れで、管理者・一般User signup、roleless route拒否、2 tabのstale role拒否、一般Userの無効化・サインイン拒否・再有効化・復帰を確認した。当初の無効化失敗は`disableuser`/`enableuser`だけCloud Run `allUsers -> roles/run.invoker`が欠落しbrowser `OPTIONS`が403となる入口IAM不整合で、Dev限定・明示承認の付与と独立再取得後に正常化した。tenant拒否、非破壊lifecycle、Rules全体縮小等が残るため無部分加点規則で10%を維持した。 |
 | 2026-08-27 | 10% | 0 | 認証済みDev受入れの残件として、一般Userの`労務`role表示・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴の空結果、User削除確認の取消とUser残存を確認した。第2合成会社管理者の正規tokenによるbackend assertionでは自社readが200、別会社pathのread・list・precondition付きupdate/deleteが各403、mutation 0だった。UWBのDev受入れは完了したが、Rules全体縮小、App Check・rate limit等が未完了のため進捗は10%に据え置いた。 |
+| 2026-08-27 | 10% | 0 | Firestore Rules縮小の最初の安全な単位として、Company root documentのclient create/deleteを拒否し、同社read/updateとFunctionsによる初期作成を維持した。Codex専用Emulator suite 97件が成功した。以後はCUDを一律Functions化せず機能単位で境界を見直す。既存Company update、他collection、App Check・rate limitが残るため進捗は10%に据え置いた。 |

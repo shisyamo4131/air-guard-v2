@@ -1206,14 +1206,14 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 
 ## FUT-0090 Company rootの認可・field ownership・削除禁止を強制する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-027
 - 対象ファイル・シンボル: Company pageSettings/Manager、`firestore.rules` Companies match、schemas `Company`
-- 確認済み実装事実: UIはadmin限定だがRulesは同一会社UserにCompany全read/write/deleteを許す。銀行・請求・Stripe/subscription・maintenance・設定・取極めが同一docにある。SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
-- 想定影響と発生条件: 一般Userが口座/請求表示を改ざんし、subscription/maintenanceを偽装し、Company rootを削除してtenantを破損できる。
-- 未確認点・仮説: 正式な設定担当、server-owned field、super-user repair、deleteを許す正式手続きは未決定。
-- 推奨する将来対応: field/action別認可、server-owned field分離、Company delete deny、管理操作callableと監査logを設計する。
+- 確認済み実装事実: UIはadmin限定だが、同一会社の有効な本登録UserはCompany全fieldをclientから更新できる。2026-08-27にclient create/deleteを無条件拒否し、初期Company作成をCloud Functions/Admin SDK専用とした。銀行・請求・Stripe/subscription・maintenance・設定・取極めは引き続き同一docにあり、SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
+- 想定影響と発生条件: Company rootのclient作成・削除によるtenant破損は閉じたが、一般Userは依然として口座/請求表示を改ざんし、subscription/maintenanceを偽装できる。
+- 未確認点・仮説: 正式な設定担当、server-owned field、super-user repair、各fieldをclient RulesとFunctionsのどちらで更新するかは未決定。
+- 推奨する将来対応: CUDを一律Functions化せず、Company機能ごとにactor、field ownership、整合性、監査、同時実行、offline要件を確定し、必要な更新だけをfield/action別Rulesまたは管理Callableへ移す。
 - 必要なテスト: role別read/write、口座/請求/Stripe/maintenance直接write、Company delete、他社doc、super-user repair。
 - ユーザー判断が必要な事項: CONF-0074、CONF-0075。
 

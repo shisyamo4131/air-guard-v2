@@ -660,7 +660,7 @@ test("Firestore Rules apply the tenant identity gate to company descendants", as
   );
 });
 
-test("Firestore Rules allow Company document access only in the registered tenant", async () => {
+test("Firestore Rules allow Company reads and updates only in the registered tenant", async () => {
   const uid = "codex-rules-company-document-user";
   await seedRegisteredUser({ uid });
   const firestore = authenticatedFirestore(uid);
@@ -677,8 +677,22 @@ test("Firestore Rules allow Company document access only in the registered tenan
 
   await assertSucceeds(getDoc(sameTenant));
   await assertSucceeds(setDoc(sameTenant, { rulesProbe: true }, { merge: true }));
+  await assertFails(deleteDoc(sameTenant));
   await assertFails(getDoc(otherTenant));
   await assertFails(setDoc(otherTenant, { rulesProbe: true }, { merge: true }));
+});
+
+test("Firestore Rules keep Company creation server-only", async () => {
+  const companyId = "codex-rules-company-create-denied";
+  const uid = "codex-rules-company-create-user";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId });
+  const firestore = authenticatedFirestore(uid, { companyId });
+
+  await assertFails(
+    setDoc(doc(firestore, "Companies", companyId), {
+      name: "Client-created company",
+    }),
+  );
 });
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {

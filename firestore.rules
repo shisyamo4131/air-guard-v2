@@ -110,7 +110,8 @@ service cloud.firestore {
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
     match /Companies/{companyDocId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow read, update: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow create, delete: if false;
     }
 
     // --- Rules for 'ArrangementNotifications' subcollection under 'Companies' ---
