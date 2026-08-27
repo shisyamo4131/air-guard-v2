@@ -2413,11 +2413,11 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - 重大度: High
 - 発見セグメント: ARCH-001
 - 対象ファイル・シンボル: Firebase/Nuxt plugins、`runtimeConfig`、emulator切替、FireModel adapter初期化、`scripts/run-codex-local-ui-dev.mjs`、Codex専用local UI readiness手順
-- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、`firebaseUseEmulator`等の文字列/boolean coercionを明示検証しない。初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。local UI起動wrapperはNuxt dev processを開始するだけで、root HTTP 200後にbrowserのclient entryと推移的module graphが評価可能になったことを判定しない。2026-08-25の再現ではroot、Vite client、Nuxt entry、上位pluginがHTTP 200でVite接続済みでも起動templateのままNuxt mountへ到達せず、module warm-up後の通常reload 1回で同じtabがdashboardへ到達した。
+- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。2026-08-27に`firebaseUseEmulator`はbooleanまたは文字列の`true`/`false`だけを受理し、未設定・空文字列をfalse、その他を起動時errorとする厳格parseへ修正し、Devの文字列`false`がremote接続を選ぶ境界を単体testで固定した。local UI起動wrapperはNuxt dev processを開始するだけで、root HTTP 200後にbrowserのclient entryと推移的module graphが評価可能になったことを判定しない。2026-08-25の再現ではroot、Vite client、Nuxt entry、上位pluginがHTTP 200でVite接続済みでも起動templateのままNuxt mountへ到達せず、module warm-up後の通常reload 1回で同じtabがdashboardへ到達した。
 - 想定影響と発生条件: plugin順序・環境設定差で別adapter、未初期化service、誤ったemulator/remote接続を選び、errorが後段の業務処理として現れ得る。Windows上のcold dev startではHTTP readyをapplication readyと誤認して初回navigationが起動templateへ固定され、UI testが不安定になる。
-- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の値、build/runtimeでのcoercion、初回module graphが完了しないVite/browser内部原因は未確認。
-- 推奨する将来対応: dependencyを明示した単一bootstrap、typed config parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。Codex専用dev UIはclient entryの推移的module graphまたは製品landmarkを有限時間で確認するreadiness/warm-up契約を追加し、失敗時は自動反復せず診断情報と一回限定reloadの要否を明示する。
-- 必要なテスト: plugin順序、重複初期化、欠落設定、文字列true/false、emulator/DEV/PROD matrix、SSR/client再初期化、cold dev startを複数回行ってreloadなしで製品landmarkへ到達する回帰test、timeout時の停止と診断情報。
+- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の実値、build後の環境選択、初回module graphが完了しないVite/browser内部原因は未確認。
+- 推奨する将来対応: dependencyを明示した単一bootstrap、残るruntime configのtyped parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。Codex専用dev UIはclient entryの推移的module graphまたは製品landmarkを有限時間で確認するreadiness/warm-up契約を追加し、失敗時は自動反復せず診断情報と一回限定reloadの要否を明示する。
+- 必要なテスト: plugin順序、重複初期化、欠落設定、emulator/DEV/PROD build matrix、SSR/client再初期化、cold dev startを複数回行ってreloadなしで製品landmarkへ到達する回帰test、timeout時の停止と診断情報。`firebaseUseEmulator`のboolean・文字列true/falseと不正値拒否の単体testは追加済み。
 - ユーザー判断が必要な事項: なし。環境選択の正式値は既存運用文書と照合する。
 
 ## FUT-0179 FireModel adapter/configをrequest・tenant単位へscopeしclient/server契約を統一する

@@ -105,6 +105,7 @@
 
 ### Fixed
 
+- Firebase Emulator切替flagの文字列`"false"`をtruthyとして扱い、Dev clientが誤ってEmulator接続を選ぶ問題を修正した。booleanと文字列の`true`/`false`だけを厳格に解釈し、その他の値は起動時に拒否する。
 - 一般User signupの確定buttonが通常のform submitでpage reloadを起こし、account作成を中断する問題を修正した。Employee連携仮登録User作成では、`users:provision`だけを持つactorにgeneric role fieldが残る問題も修正し、human-resource正規UIでemailだけの作成・削除を再受入れした。
 - 初期会社管理者のCompany/User作成をメール確認後へ移し、同じbrowserでは確認待ちから再開できるようにした。管理者表示名は値を切り捨てず、6文字超過をfield errorとして表示して作成を抑止する。
 - 一般Userのメール確認後画面で認証Callable composableの明示importがなく、クリーンなclientで本登録を開始できない問題を修正した。
