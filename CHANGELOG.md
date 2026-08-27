@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Dev既存Userのemail・Employee予約backfillに向けて、予約migrationへ利用者用EmulatorとDevのtarget guardを追加した。Devはservice account identity、Emulator不使用、maintenance・backup確認、dry-run digestを必須とし、missing予約のcreateだけを許可する。既存予約、User、Employee、Authenticationのupdate・deleteは行わない。
+
 ### Added
 
 - Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
