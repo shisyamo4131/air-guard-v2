@@ -12,8 +12,8 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal実装・自動検証・必要なUI受入れを完了した。UWB-07A/B/C、統合ledger、reconciler、通知privacy、固定保存期限なしの履歴reader、UWB-08 Rules、UWB-09 Schemas `2.4.2-dev.166`同一artifact、UWB-10の局所的なrole・有効状態競合拒否を含む。最終証拠は全domain 646件、専用Emulator 96件、Chromeの競合受入れと履歴route・loading・empty確認である。履歴data行・前後pageは20/21件自動testで検証し、実browser用に21件の退職・削除は作成しない。Firestore Rules全体に残る広いtenant内write、App Check・rate limitは正式運用準備の残作業だがDev deploy blockerとはしない。次はmaintenance中のUWB全体cutover、予約migration、Dev・remote受入れを行う。 |
-| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal実装・自動検証・必要なUI受入れに加え、DEV-UWB-RELEASE-001で全server境界、予約migration、client/HostingのDev cutoverを完了した。全domain 654件、専用Emulator 96件、Dev Functions 36件全ACTIVE、UWB 11 Callableの未認証拒否、scheduled reconcilerの有効化を確認した。認証済み実accountによるrole・tenant・disabled・stale input・User/Auth lifecycleのremote受入れ、Firestore Rules全体に残る広いtenant内write、App Check・rate limitは残作業である。 |
+| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。Stripe、継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
 | **合計** | **100** | **10** |  |  |
@@ -25,7 +25,7 @@
 - 主repoの531-file deep reviewは、A 310件から519件へ増加した。B/C残数は209件から0件へ減少し、予定したsource本文精査を完了した。D 11件とE 1件は分類済みのtest/config/asset・外部境界であり、runtime検証済みという意味ではない。
 - schema runtime 76 paths、共通UI runtime 43 paths、Admin SDK runtime 14 pathsを、主repo母数とは別のpackage境界として静的レビューした。
 - 利用者用local環境から分離したCodex専用Emulator seedとAuth・Firestore・Storage Rules・再構築Callable・全会社メール重複確認Callable handlerの51件のtestを追加した。全Companies collectionとSecurityReports fileのtenant identity gate、恒久的なsuper-user bypass廃止、SecurityReportIndexes・StripeDataの個別操作制約、再構築実行者の現在Auth/User整合性、全会社メール重複確認の会社管理者境界を確認した。Chromeからlocal EmulatorへのFunctions transportは再構築2件とUser有効化・無効化の4件を実測した。残るFunctions transport、Realtime Database Rules、外部サービスの回帰testは未完了であり、公式進捗は加点しない。
-- 調査完了は問題の特定証拠であり、修正、test、運用受入れの完了証拠ではない。そのため公式進捗は10%のままとする。
+- 調査完了とDEV-UWB-RELEASE-001は重要な実装・remote証拠だが、いずれの未完了マイルストーンも全ゲートには達していない。そのため無部分加点規則により公式進捗は10%のままとする。
 - 詳細な問題、台帳対応、要判断事項は[2026-08-12 source review統合記録](../implementation/review-reconciliation-2026-08-12.md)を参照する。
 
 ### ガバナンス基準線の完了ゲート
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. UWB-01〜10を、正式運用準備の完了を待たず、承認済みbounded Dev release checkpointで試行環境へ導入する。System maintenance、整合snapshot、UWB全server境界、予約migration、client/Hosting、role・tenant・User/Auth lifecycleのremote受入れを一つのcutoverとして実施する。Firestore Rules全体のtenant内write縮小、App Check・rate limitはDev証拠を得ながら正式運用準備の残作業として継続する。
+1. DEV-UWB-RELEASE-001で完了したcutoverを前提に、利用者の認証済みDev accountでrole別control、tenant拒否、disabled User、stale input、User/Auth lifecycleの非破壊なremote受入れを行う。実accountの退職・削除は別の明示対象なしに実行しない。Firestore Rules全体のtenant内write縮小、App Check・rate limitは正式運用準備の残作業として継続する。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -50,8 +50,8 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10はlocal完了。全domain 646件、専用Emulator 96件、利用者UI受入れ、Chrome競合・履歴route確認、利用者Rules確認を完了した。次はUWB全体のDev cutoverとremote受入れを行い、Firestore Rules全体のtenant内write縮小、App Check、rate limitを正式運用準備として継続する |
-| 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10のlocal完了に加え、DEV-UWB-RELEASE-001で全server境界、予約migration、client/HostingをDevへ導入した。全domain 654件、専用Emulator 96件、Functions 36件全ACTIVE、UWB 11 Callableの未認証拒否、scheduled reconciler、migration cleanを確認した。認証済みrole・tenant・disabled・stale/lifecycle remote受入れとApp Check・rate limit等は未完了 |
+| 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | Dev PITR、maintenance snapshot、deployとERROR log 0件を確認。復旧演習、継続監視、正式backup scopeは未完了 |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
 
@@ -65,7 +65,7 @@
 - Admin backup/restoreのcoverage、平文artifact/credential、operator権限、監査、rollback/resume、migration例外。
 - npm依存関係の脆弱性と互換性を保つ更新方法。
 - Stripe本番運用、キャンセル、プラン、従業員数制限。
-- remote/Emulator/browser/real dataによる検証、監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
+- 認証済み実accountによるDevのrole・tenant・disabled・stale/lifecycle受入れ、監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
 
 ## 要判断事項
 
@@ -147,3 +147,4 @@
 | 2026-08-26 | 10% | 0 | 利用者は全file・全行の確認ではなく、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した。UWB-10は完了したが、UWB-07の残存陰性証拠、main統合、App Check、Dev・remote受入れが未完了であり、認証マイルストーンも未達のため進捗は据え置いた。 |
 | 2026-08-26 | 10% | 0 | UWB-07に残っていたcurrent Auth disabled、仮User連携、同emailの別tenant新User・予約・Auth UIDとAuth-only raceの陰性証拠を追加した。既存のphase failure・reconcile・通知privacy・20/21件cursor paging、Chromeの履歴route・loading・empty確認と合わせ、全domain 646件、専用Emulator 96件でUWB-01〜10のlocal完了を確定した。main統合、Firestore Rules全体のtenant内write縮小、App Check・rate limit、Dev・remote受入れが未完了で認証マイルストーンを満たさないため、無部分加点規則により進捗は10%に据え置いた。 |
 | 2026-08-27 | 10% | 0 | Devを正式運用可否判定前の非本番試行環境として、検証済み変更を積極的にdeploy・受入れする方針へ訂正した。UWB全体cutoverと予約migrationをmaintenance、snapshot、server境界、migration、client、解除の標準checkpointへ統合した。Dev証拠は未取得でマイルストーン完了条件を満たさないため進捗は据え置いた。 |
+| 2026-08-27 | 10% | 0 | DEV-UWB-RELEASE-001を実施した。release commit `52dd607d16e9b77f90ec238250eca11757548097`で、PITR 7日保持、maintenance後snapshot 22,268 documents、Rules・indexes・全Functions、create-only予約migration 16 writes、Hosting live version `049afa156793e630`、maintenance解除を確認した。Functions 36件は全ACTIVE、廃止`checkEmailAvailabilityGlobal`は0件、UWB 11 Callableは未認証を401で拒否し、scheduled reconcilerはENABLED、cutover以降のFunctions ERROR logは0件だった。新browser sessionでtopとsign-in画面、console error 0件を確認した。認証済み実accountのrole・tenant・disabled・stale/lifecycle受入れ、App Check・rate limit、Rules全体縮小、復旧演習等が残り、無部分加点規則により進捗は据え置いた。 |

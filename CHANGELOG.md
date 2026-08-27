@@ -27,6 +27,7 @@
 
 ### Changed
 
+- DEV-UWB-RELEASE-001でSystem maintenance、Firestore PITRと整合snapshot、Rules・全Functions、create-only予約migration、client/Hostingを一体でDevへ導入した。廃止済み`checkEmailAvailabilityGlobal`をremoteから削除し、予約migration後のclean、Functions全件ACTIVE、scheduled reconciler、Hosting配信artifact一致、maintenance解除後のtop・sign-in画面を確認した。認証済み実accountによるrole・tenant・disabled・stale/lifecycle受入れは残作業として分離した。
 - 2026年5月から潜在していたPWA `injectManifest`設定とService Workerの不整合を修正し、precachingを無効のまま必須挿入点を維持するsource-contract testを追加した。Dev maintenance releaseは固定commitの静的生成をmaintenance・snapshot・server deployより前のpreflight gateとし、build blockerをremote変更前に検出する。
 - Devを正式運用準備の完了前でも積極的にdeploy・検証する非本番試行環境として明確化した。対象commit、service、data影響、backup、rollback、停止条件、受入れを一つのbounded release checkpointで承認し、UWB全体をSystem maintenance、整合snapshot、全server境界、予約migration、client/Hosting、解除の順で導入する再利用可能な手順を追加した。
 
