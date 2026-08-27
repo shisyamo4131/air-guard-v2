@@ -151,6 +151,8 @@ releaseが複数classへ該当する場合は最も強いdata・互換性境界�
 - Callableのinvoker欠落を修復する場合は、Dev project、exact service、`allUsers -> roles/run.invoker`、公開範囲、内部認証、rollbackとなるbinding削除を提示して明示承認を得る。修復後は変更commandとは別のread-only IAM取得、browser preflight、正常actor、未認証・権限不足actorの拒否を独立確認する。
 - Rulesは正常経路と拒否経路を確認する。Storage Rulesに`firestore.get()`または`firestore.exists()`がある場合、StorageとFirestoreの連携許可、Firebase Storage service accountの`Firebase Rules Firestore Service Agent` role、正常Userと拒否対象Userのaccessを確認する。権限を推測で追加せず、初回prompt、付与済み状態、権限不足をdeploy結果として区別する。
 - 共通Auth identity gateまたは再構築認可を使うFunctionsでは、実行service accountがFirebase Authentication Userを参照できることを確認する。正常actorと、Auth無効・claim不一致・User無効・他社指定等の拒否をFunctions logと画面結果で確認し、権限不足はfail closedとして扱う。
+- Firestore tenant拒否のremote確認は、既存の利用者・協力会社tenantを無断使用せず、利用者承認済みの専用合成会社と正規ID tokenを使う。自社pathの陽性readと、別の合成会社IDに対するdocument read・collection listを分け、write拒否probeには`currentDocument.exists=true`等の存在必須preconditionを付け、Rules不備時も新規documentを作らない。credential、token、会社ID、UID、取得dataをfile、command line、log、callbackへ出さず、UI操作ではなくbackend assertionとして報告する。
+- User/Auth lifecycleの非破壊remote確認は、会社管理者専用履歴pageの正常応答・空状態・page buttonと、本登録User削除確認の対象・理由・不可逆性を確認して取消し、対象User残存と履歴不変を再確認する。退職または本登録User物理削除を実行する場合は、明示した合成対象、data影響、復旧不能範囲、停止条件を別途承認する。
 - maintenanceを使うreleaseは解除前にserver、data、client、log、主要正常・拒否経路を確認し、解除後は新しいbrowser sessionで受入れる。
 
 ## UWB固有cutover

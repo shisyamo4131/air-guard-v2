@@ -28,6 +28,7 @@
 
 ### Changed
 
+- UWBの認証済みDev受入れとして、一般Userのrole別menu・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴のremote空結果、本登録User削除確認の取消とUser残存を確認した。第2のCodex専用合成会社を正規signupし、そのID tokenによるbackend assertionで自社User read 200、別会社pathのread・list・存在必須precondition付きupdate/delete 403、mutation 0を確認した。UWBのDev受入れは完了し、Rules全体縮小、App Check・rate limit、継続監視を正式運用準備の別残件として維持する。
 - 専用合成会社の認証済みDev受入れで、管理者・一般Userの正規signup、roleless route拒否、2 tabのstale role拒否、User/Auth無効化・サインイン拒否・再有効化・復帰を確認した。`disableuser`/`enableuser`だけCloud Run public invokerが欠落しbrowser preflightが403となる問題をDev限定の明示承認済みIAM付与で修復し、全v2 Callableのpublic invokerとbrowser-origin CORS preflightをdeploy後に確認するgateを追加した。
 - `docs/operations.md`を共通hubへ縮小し、通常開発、local Emulator、local UI、data migration、package release、project coordination、Windows PC migrationをtask-routed runbookへlossless分割した。各旧sectionを一度だけ移動し、Dev deployを含む作業が無関係な運用本文を読み込まない構成へ変更した。
 - Dev deploy taskを83KB超の総合operations文書ではなく専用runbookへ直接routeし、確認済みinstalled Firebase CLIをrelease中に固定する方針、Dev Firestore PITR 7日保持、正式運用準備の残件をDev deploy blockerにしない境界へ既存記述を整合した。未検証のWindows CA exportやpersistent gcloud CA設定は標準手順に採用せず、実測済みのprocess-scoped Python truststore経路だけを記録した。

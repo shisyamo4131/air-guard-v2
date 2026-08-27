@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless route拒否、2 tabのstale role拒否、User/Auth無効化・サインイン拒否・再有効化・復帰を確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復した。tenant拒否、非破壊lifecycle remote証拠、Firestore Rules全体に残る広いtenant内write、App Check・rate limitは残作業である。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Firestore Rules全体に残る広いtenant内write、App Check・rate limitは残作業である。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。Stripe、継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. DEV-UWB-RELEASE-001後の認証済みDev受入れで完了したsignup、roleless route、stale role、disabled User復帰を前提に、専用の別tenantを用意するかbackend verifierを使うかを確定してtenant拒否を検証し、実accountを破壊しないUser/Auth lifecycleのremote証拠を取得する。実accountの退職・削除は別の明示対象なしに実行しない。Firestore Rules全体のtenant内write縮小、App Check・rate limitは正式運用準備の残作業として継続する。
+1. DEV-UWB-RELEASE-001後の認証済みDev受入れでsignup、roleless・role別route、stale role、disabled User復帰、非破壊lifecycle、第2合成会社からのtenant拒否を完了した。次はFirestore Rules全体のtenant内write縮小、App Check・rate limit、Callable public invokerの継続監視を正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10のlocal完了とDev cutoverに加え、認証済みDevでsignup、roleless route、stale role、disabled User/Auth同期と復帰を確認した。Cloud Run invoker欠落2件を修復し、browser CORS/IAM gateをrunbookへ追加した。tenant拒否、非破壊lifecycle、App Check・rate limit等は未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10のlocal完了とDev cutoverに加え、認証済みDevでsignup、roleless・role別route、stale role、disabled User/Auth同期と復帰、非破壊lifecycle、第2合成会社からのtenant拒否を確認した。Cloud Run invoker欠落2件を修復し、browser CORS/IAM gateをrunbookへ追加した。App Check・rate limit、Rules全体縮小等は未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | Dev PITR、maintenance snapshot、deployとERROR log 0件を確認。復旧演習、継続監視、正式backup scopeは未完了 |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -65,7 +65,7 @@
 - Admin backup/restoreのcoverage、平文artifact/credential、operator権限、監査、rollback/resume、migration例外。
 - npm依存関係の脆弱性と互換性を保つ更新方法。
 - Stripe本番運用、キャンセル、プラン、従業員数制限。
-- 認証済みDev受入れのうち未完了のtenant拒否・非破壊lifecycle証拠、Callable public invokerの継続監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
+- 認証済みDev受入れ後のCallable public invoker継続監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
 
 ## 要判断事項
 
@@ -149,3 +149,4 @@
 | 2026-08-27 | 10% | 0 | Devを正式運用可否判定前の非本番試行環境として、検証済み変更を積極的にdeploy・受入れする方針へ訂正した。UWB全体cutoverと予約migrationをmaintenance、snapshot、server境界、migration、client、解除の標準checkpointへ統合した。Dev証拠は未取得でマイルストーン完了条件を満たさないため進捗は据え置いた。 |
 | 2026-08-27 | 10% | 0 | DEV-UWB-RELEASE-001を実施した。release commit `52dd607d16e9b77f90ec238250eca11757548097`で、PITR 7日保持、maintenance後snapshot 22,268 documents、Rules・indexes・全Functions、create-only予約migration 16 writes、Hosting live version `049afa156793e630`、maintenance解除を確認した。Functions 36件は全ACTIVE、廃止`checkEmailAvailabilityGlobal`は0件、UWB 11 Callableは未認証を401で拒否し、scheduled reconcilerはENABLED、cutover以降のFunctions ERROR logは0件だった。新browser sessionでtopとsign-in画面、console error 0件を確認した。認証済み実accountのrole・tenant・disabled・stale/lifecycle受入れ、App Check・rate limit、Rules全体縮小、復旧演習等が残り、無部分加点規則により進捗は据え置いた。 |
 | 2026-08-27 | 10% | 0 | 専用合成会社の認証済みDev受入れで、管理者・一般User signup、roleless route拒否、2 tabのstale role拒否、一般Userの無効化・サインイン拒否・再有効化・復帰を確認した。当初の無効化失敗は`disableuser`/`enableuser`だけCloud Run `allUsers -> roles/run.invoker`が欠落しbrowser `OPTIONS`が403となる入口IAM不整合で、Dev限定・明示承認の付与と独立再取得後に正常化した。tenant拒否、非破壊lifecycle、Rules全体縮小等が残るため無部分加点規則で10%を維持した。 |
+| 2026-08-27 | 10% | 0 | 認証済みDev受入れの残件として、一般Userの`労務`role表示・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴の空結果、User削除確認の取消とUser残存を確認した。第2合成会社管理者の正規tokenによるbackend assertionでは自社readが200、別会社pathのread・list・precondition付きupdate/deleteが各403、mutation 0だった。UWBのDev受入れは完了したが、Rules全体縮小、App Check・rate limit等が未完了のため進捗は10%に据え置いた。 |
