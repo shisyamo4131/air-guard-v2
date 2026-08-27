@@ -373,3 +373,18 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - UWB-01〜08は完了し、公式進捗は10%である。次はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序を確認する。
 - Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
 - coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## COORDINATOR-HANDOFF-013 PM-07 coordinator activation checkpoint
+
+- 日付: 2026-08-27。
+- former coordinator: PM（AirGuardV2）-06 / task `01a037d6-c3a8-7f01-837e-66236b2a9508`。
+- new coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- branchは`codex/dev-user-reservation-migration`、activation baseline HEADは`5ac546edb68f6f6b9569bfd6eb91373411a163cc`、baseline worktreeはclean、upstreamはnone、primary worktree registryは上記repository 1件だけだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-006`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、現taskの権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- Devは正式運用準備または正式運用開始の完了前でも、検証済み変更を積極的にdeploy・受入れする非本番試行環境とする。利用者が対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む一つのbounded Dev release checkpointを承認した場合、そのrunbook内のbuild、deploy、remote検証はcommandごとの再承認を必要としない。新しいmigration、破壊的repair、対象service・data・期間の拡張、Prod適用は別の明示承認を必要とする。
+- UWBの初回Dev導入は予約処理だけを選択deployしない。System全体maintenance、整合snapshot、UWBの全server境界、server deploy後のfresh create-only予約migration、client/Hosting、maintenance中検証、解除・remote受入れを一つのcutoverとして行う。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、scheduled・direct Functions、開始済みwriteを停止する排他lockではない。
+- local `main`とlocal tracking ref `origin/main`は`4eab588895a2ab47e7ae2ec867c9c10a0d7c5917`である。branch上には未push local commit `40264f32f068783c2d2fd584236fd2d462f4c133`（guarded Dev reservation migration）と`5ac546edb68f6f6b9569bfd6eb91373411a163cc`（Dev trial release runbook）の2件がある。正式運用準備roadmapの公式進捗はDev証拠未取得のため10%のままである。
+- 次はfull release commitと対象Firebase project、services、data影響、backup、rollback、停止条件、検証を固定したbounded Dev release checkpointを構築し、利用者承認後に実行する。実際のDev deploy、network、snapshot、migration、remote検証、実data操作はまだ0件である。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
