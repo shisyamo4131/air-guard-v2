@@ -24,7 +24,7 @@ AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users
 
 application codeの標準実装者はユーザーです。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当してください。Codexによるapplication code編集は、ユーザーが対象を明示した補助実装だけに限定してください。testerによるtest code編集は、明示されたtest scopeで許可されています。
 
-実装、修正、改修は作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位で `codex/<機能名>` ブランチを作成してください。主エージェントは合意済み範囲のreview済み差分だけをlocal Gitへstage・commitします。ユーザーの未コミットapplication codeを独自判断で修正、破棄、stage、commitしないでください。ユーザーが機能ブランチ上の動作を確認して明示的に承認するまで `main` へマージしないでください。`main` への直接コミット、マージ、Git push、デプロイはそれぞれ個別の明示的指示を必要とします。
+実装、修正、改修は作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位で `codex/<機能名>` ブランチを作成してください。主エージェントは合意済み範囲のreview済み差分だけをlocal Gitへstage・commitします。ユーザーの未コミットapplication codeを独自判断で修正、破棄、stage、commitしないでください。ユーザーが機能ブランチ上の動作を確認して明示的に承認するまで `main` へマージしないでください。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ個別の明示的指示を必要とします。Devでは対象commit、service、data影響、backup、rollback、停止条件、検証を含む一つのbounded release checkpoint承認を、同runbook内の静的生成、deploy、remote検証の承認として扱ってください。
 
 重要な仕様変更が必要な場合は、現行仕様、変更案、理由、影響、互換性、移行、rollback、ユーザーが行う確認を提示して承認を得てください。承認後は、ユーザーの実装とCodexのreview・検証に合わせて、仕様書、ADRと索引、変更履歴、関連マニュアル、運用文書を更新してください。
 
@@ -36,7 +36,7 @@ application codeの標準実装者はユーザーです。Codexは設計、仕�
 
 旧タスクのアーカイブは利用者が行います。Codexはアーカイブを実行・依頼せず、新タスクの直接repository接続、変更なしcallback、権限、最初のfile限定commitを確認した後、利用者へ報告して待機してください。
 
-Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。デプロイやリモート環境の検証は、対象操作ごとの明示的承認と環境確認なしに行わず、未実施部分についてユーザーが動作確認できる観点を提示してください。秘密情報や実データを読み上げたり文書へ転記したりしないでください。
+Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。Devは正式運用準備の完了を待たず、利用者承認済みbounded release checkpointの対象・期間・runbook内で積極的にdeploy・remote検証してください。新しいdata migration、破壊的repair、対象拡張、Prodは別の明示承認を必要とします。未実施部分についてユーザーが動作確認できる観点を提示し、秘密情報や実データを読み上げたり文書へ転記したりしないでください。
 
 ブラウザUIの挙動・受入れ検証では、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけを使用してください。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止です。read-only観測、非UI setup、backend assertionはUI操作証拠から分離して報告してください。
 

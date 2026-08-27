@@ -60,8 +60,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### 検証・試行環境
 
 - local環境はFirebase Emulatorを使用し、test用の1社だけを扱う。
-- Dev環境は利用者の会社と協力会社の2社が試用するremote環境である。一般公開はしていないが、会社境界を持つ試行環境として認証・認可・tenant分離を必須とする。
-- Codexは個別の明示承認なしにDev環境へ接続せず、remote dataの確認、変更、deployを行わない。
+- Dev環境は利用者の会社と協力会社の2社が試用する非本番のremote試行環境である。一般公開はしていないが、会社境界を持つ試行環境として認証・認可・tenant分離を必須とする。正式運用準備または正式運用開始の完了判定をDev deployの前提にせず、検証済み変更を積極的にdeployして実利用条件の受入れ証拠を得る。
+- Codexは対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded Dev release checkpointだけでDevへ接続する。同checkpoint内の静的生成、deploy、remote検証はcommandごとの再承認を必要としないが、新しいdata migration、破壊的repair、対象拡張、Prod適用は別の明示承認を必要とする。
 
 ## テナントと認証
 
@@ -79,6 +79,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `/settings/users`のroute・navigationは会社管理者または既知preset由来の`users:write`へ限定する。直接permission文字列、未知role、`isSuperUser`だけをUser管理権限の根拠にせず、clientの表示・disabledはserver認可の代替にしない。super-userは従来どおり`/settings/company`へアクセスでき、子itemから表示を導出するnavigationでも会社設定だけを表示するが、User管理は表示・許可しない。共通managerのsubmitは処理中の再入を拒否し、有効化・無効化、管理者移譲、本人プロフィール保存は共通operation stateで対象ごとのpendingを管理する。複数tab・端末・actorと未対応clientに対しては、role更新の`expectedRoles`と有効・無効変更の`expectedDisabled`をtransaction内現在値と比較し、対象Userのlifecycle lockが存在する要求を拒否する。競合は上書きせず`aborted`とし、最新状態の再確認を求める。全documentへの汎用single-flight、revision、lock、operation ledgerは採用せず、通知設定・本人プロフィール・通常の業務CRUDへこの認証専用preconditionを展開しない。
 - 全Userのcanonical email一意性は`UserEmailReservations/{sha256(trim(lowercase(email)))}`を正本とし、Employee連携の一意性は`Companies/{companyId}/EmployeeUserReservations/{employeeId}`を正本とする。User作成、本登録変換、仮登録削除、初期会社管理者作成は、対応する予約pointerを同じFirestore transactionで作成・更新・削除する。予約欠損・不正・不一致はfail closedとし、runtimeで旧queryへfallbackしない。
 - 予約導入前の既存Userは、対象環境を固定したmigrationのdry-run、plan digest、競合再検査を経てbackfillする。Dev初回backfillはmissing予約のcreateだけを許可し、既存予約のupdate・delete、User・Employee・Authenticationの変更を行わない。競合、不正、orphan、stale pointerは自動修復せず、別の管理者repairとして扱う。
+- UWBをDevへ初めて導入するときは、予約処理だけを選択的にdeployしない。System全体maintenanceを維持した一つのcutoverで、UWBのFirestore・Storage・Realtime Database Rules、全変更Functionsと共有contract、予約migration、client/Hostingを整合したreleaseとして導入する。server境界を先に有効化し、旧処理のin-flight収束後にfresh dry-runと予約backfillを行い、clientを切り替え、全体検証後にだけmaintenanceを解除する。
 - email利用可否の事前確認は権利確保ではなくUX上のadvisoryであり、最終的な一意性は作成transactionが判定する。AuthenticationとFirestoreはatomicに更新できないため、Authだけまたはclaims未設定の部分状態を自動的に完全解消する保証は持たず、整合した再実行と後続reconcileで扱う。
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
@@ -209,10 +210,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
-- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持し、Codexによるbuild禁止と検証用buildの実行ごとの明示承認も変更しない。
+- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持する。Codex専用generated UIのbuildは従来どおり実行ごとの明示承認とし、承認済みbounded Dev release checkpointのDev buildとは分離する。
 - CodexがブラウザUIの挙動・受入れを検証するときは、可視画面上で実利用者が行える通常のpointer・keyboard入力だけを操作証拠とする。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避を用いた結果は受入れ証拠にしない。read-only観測と、OOB確認・backend verifier・export/import等の非UI処理は許可するが、それぞれUI操作、非UI準備、backend assertionとして区別する。2026-08-17までの旧基準によるdashboard到達証拠は履歴として保持するが、この基準での正規signup、再import後sign-in、dashboard到達は再検証が必要である。
 - 実装、修正、改修は作業単位ごとにbranch境界を利用者と確認し、原則として機能単位の作業ブランチで行う。コーディネーターは合意済み範囲の差分と検証を確認してlocal Gitを管理し、利用者が動作を確認して明示的に承認するまで `main` へマージしない。
-- `main` への統合は原則として機能単位のマージコミットを残し、Git上の取消し境界を明確にする。revert前にはデータ、外部作用、契約互換性を確認する。`main` への直接コミット、マージ、Git push、デプロイはそれぞれ明示的承認を必要とする。
+- `main` への統合は原則として機能単位のマージコミットを残し、Git上の取消し境界を明確にする。revert前にはデータ、外部作用、契約互換性を確認する。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ明示的承認を必要とする。Devは一つのbounded release checkpointに対する明示承認を、同runbook内の静的生成、deploy、remote検証の承認として扱う。
 - 関連リポジトリはAirGuardV2の調査に必要な範囲で事前承認なく読み取れるが、変更は対象、影響、互換性、公開・導入順序を確認した利用者の明示的承認を必要とする。
 
 ## セキュリティと機密情報

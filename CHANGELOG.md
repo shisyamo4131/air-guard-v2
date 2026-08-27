@@ -27,6 +27,8 @@
 
 ### Changed
 
+- Devを正式運用準備の完了前でも積極的にdeploy・検証する非本番試行環境として明確化した。対象commit、service、data影響、backup、rollback、停止条件、受入れを一つのbounded release checkpointで承認し、UWB全体をSystem maintenance、整合snapshot、全server境界、予約migration、client/Hosting、解除の順で導入する再利用可能な手順を追加した。
+
 - UWB-07に残っていたcurrent Auth disabled、仮User連携、同emailの別tenant再登録・Auth-only raceを専用Emulatorの陰性testで固定し、既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合した。実page移動のためだけに21件の退職・削除を作らず、data行・前後pageは自動test、実route・loading・empty・button状態はChromeで分離検証し、UWB-01〜10のlocal完了を確定した。
 - UWB-10のlocal確定を、利用者による全file・全行確認ではなく、変更挙動、security境界、独立した自動検証、Chrome受入れ、残存risk、rollbackの確認に基づく受入れへ整理した。
 - UWB-10の多重実行対策を認証・認可へ直接影響する操作に限定した。role更新は編集前`expectedRoles`、有効・無効変更は`expectedDisabled`をtransaction内現在値と照合し、対象Userのlifecycle lock中は両操作を拒否する。競合は安全な`aborted`応答とし、全document共通のrevision・lock・operation ledgerは採用せず、通知設定・本人プロフィール・通常CRUD・他collection・Schemas packageへ展開しない。

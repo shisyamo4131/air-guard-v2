@@ -9,7 +9,7 @@
 - メンテナンス状態とキルスイッチの切り替え
 - Firestore のスケジュールバックアップ（既存資料上の記載。現在の設定はデプロイ前に再確認する）
 
-デプロイ、データ変更、Secret 登録は Codex が自動実行する操作ではなく、人の明示的承認と環境確認を必要とします。
+Devの静的生成、デプロイ、remote検証は、対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded release checkpointとして実行します。Prod、Secret登録、新しいdata migration、破壊的repairは別の明示的承認と環境確認を必要とします。
 
 ## 準備
 
@@ -385,7 +385,7 @@ npm run generate:prod
 2. 対象が開発環境か本番環境かを確認する。
 3. 対応する環境設定で静的生成する。
 4. `firebase use <alias>` で対象を確認する。
-5. デプロイ対象と影響を確認し、明示的承認後に `firebase deploy` または限定デプロイを行う。
+5. デプロイ対象と影響を確認し、Prodは対象操作の明示的承認後、Devは承認済みbounded release checkpoint内で `firebase deploy` または限定デプロイを行う。
 6. Firebase Console、Functions ログ、対象画面で結果を確認する。
 
 Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場合、coordinatorはStorage Rulesを含むデプロイ承認を求める前に、利用者へ次を明示して通知する。
@@ -404,7 +404,29 @@ Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場
 npm run deploy:dev
 ```
 
-このコマンドは外部環境を変更するため、対象プロジェクトと差分を確認し、明示的承認を得た場合だけ実行します。
+このコマンドは外部環境を変更するため、対象プロジェクトと差分を確認します。Devでは承認済みbounded release checkpoint内、Prodでは別の明示的承認後だけ実行します。完了証拠では静的生成とFirebase deployの結果・終了statusを分離するため、通常は次のcommandを独立して実行します。
+
+```powershell
+npm run generate:dev
+firebase deploy --project air-guard-v2-dev
+```
+
+### Dev maintenance deployment・migration標準checkpoint
+
+Devは正式運用開始前の試行環境であり、正式運用準備roadmapの未完了をdeploy禁止理由にしない。一方で実account・実dataを持つため、変更を無制限に即時反映せず、次の一つのbounded checkpointをDev deploy、data migration、remote受入れの再利用可能なひな型とする。個別migrationはこのひな型に、対象collection、plan、dry-run、apply、post-check、固有rollbackを追加する。
+
+1. **release固定**: branch、full commit、clean worktree、root/Functions dependencyのversion・resolved・integrity、対象Firebase service、local test、未検証範囲を記録する。複数段階の未統合差分や未commit scriptを実dataへ使用しない。
+2. **cutover承認**: 対象project、release commit、静的生成、Rules、Functions、Hosting、data影響、backup、rollback、停止条件、受入れを一つのcheckpointとして利用者が承認する。checkpoint内の各deploy commandに同じ承認を繰り返さない。新しいmigration、破壊的repair、対象拡張、Prodは別承認とする。
+3. **maintenance開始**: `air-guard-v2-admin-sdk`で`npm run cli:dev -- system status`、`maintenance-on`、`status`を独立実行する。`maintenance-toggle`は使わない。Dev画面が`/maintenance`へ遷移することを確認し、Devへ接続したlocal server・browser、User管理操作、他operator作業を停止してin-flight requestを収束させる。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、既に開始したwriteを物理的に停止しない。
+4. **整合snapshot**: maintenance開始後の完了済みUTC分を`--snapshot-time`へ指定し、固有prefixのCloud StorageへFirestore全体を`gcloud firestore export`する。`--async`を使わず、command exit、operation `done`、error不在、output URI、metadata objectを独立確認する。exportは復旧証拠だが、snapshotに存在しない追加documentをimportだけで削除できるとは扱わない。
+5. **server境界deploy**: clientより先に、releaseで変更したFirestore Rules/Indexes、Storage Rules、Realtime Database Rules、Cloud Functions、共有contractを整合した単位でdeployする。認証改修では予約Functionだけを選択せず、role・permission、User/Auth作成・更新・削除、lifecycle、concurrencyを含む全変更Functionsを導入する。deploy成功、runtime/service account権限、公開Function集合、logを確認し、旧revisionの開始済み処理が収束する時間を置く。
+6. **fresh migration**: server deploy完了後に対象dataをread-only dry-runし、件数、blocking finding、plan digestを記録する。承認済み固有apply条件を満たす場合だけmigrationを実行し、直後の再dry-runでcleanを確認する。dry-run後のdata変化、digest不一致、競合、部分失敗はfail closedとし、推測deleteや自動rollbackを行わない。
+7. **client deploy**: Dev用静的生成を独立実行し、release commitとの対応を確認してHostingをdeployする。古いtab・cache済みJavaScriptが残ってもserver側が最終認可を行うことを確認し、利用者へreloadまたは再sign-inを求める。
+8. **maintenance中検証**: deployed revision、Rules、Functions、Hosting、migration post-check、主要正常経路、role・tenant・disabled・stale inputの拒否、Functions log、秘密情報非出力を確認する。メンテナンス画面だけを全機能成功の証拠にしない。
+9. **解除と受入れ**: 全必須check成功後だけ`maintenance-off`と`status`を独立実行する。新しいbrowser sessionでsign-in、role別control、User/Auth lifecycle、主要画面を確認する。失敗した場合は直ちにmaintenanceへ戻し、未確認状態で運用を継続しない。
+10. **失敗・rollback**: server deploy前の失敗は変更を適用せず停止する。server deploy後またはmigration後の失敗はmaintenanceを維持し、新契約に沿うcorrective releaseまたは証拠付きrepairを使用する。予約backfill後に予約を保守しない旧Functionsへ戻してtrafficを再開せず、npm unpublish、force push、history rewrite、推測data削除に依存しない。
+
+各stepのcommand、結果、独立exit status、remote operation ID、対象commit、data件数、未確認事項をcheckpoint evidenceとして残す。正式運用開始可否はこのDev checkpointの成功だけでは確定せず、Devで得た証拠を正式運用準備roadmapへ反映する。
 
 ## 関連パッケージの更新
 

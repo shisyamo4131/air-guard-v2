@@ -3,8 +3,8 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-26
-- 承認境界: 重要仕様変更、実データ操作、Firebaseデプロイ、データ移行、外部サービス変更、Git push、正式運用開始は利用者の明示的承認を必要とする。
+- 最終確認日: 2026-08-27
+- 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
 
@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
-| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal実装・自動検証・必要なUI受入れを完了した。UWB-07A/B/C、統合ledger、reconciler、通知privacy、固定保存期限なしの履歴reader、UWB-08 Rules、UWB-09 Schemas `2.4.2-dev.166`同一artifact、UWB-10の局所的なrole・有効状態競合拒否を含む。最終証拠は全domain 646件、専用Emulator 96件、Chromeの競合受入れと履歴route・loading・empty確認である。履歴data行・前後pageは20/21件自動testで検証し、実browser用に21件の退職・削除は作成しない。Firestore Rules全体に残る広いtenant内write、App Check・rate limit、Dev・remote受入れが未完了でdeploy不可。 |
+| 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal実装・自動検証・必要なUI受入れを完了した。UWB-07A/B/C、統合ledger、reconciler、通知privacy、固定保存期限なしの履歴reader、UWB-08 Rules、UWB-09 Schemas `2.4.2-dev.166`同一artifact、UWB-10の局所的なrole・有効状態競合拒否を含む。最終証拠は全domain 646件、専用Emulator 96件、Chromeの競合受入れと履歴route・loading・empty確認である。履歴data行・前後pageは20/21件自動testで検証し、実browser用に21件の退職・削除は作成しない。Firestore Rules全体に残る広いtenant内write、App Check・rate limitは正式運用準備の残作業だがDev deploy blockerとはしない。次はmaintenance中のUWB全体cutover、予約migration、Dev・remote受入れを行う。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | 通知、Storage、派生同期、Admin backup/restoreを静的レビューした。Stripe、監視、復旧演習、依存関係脆弱性、実環境検証が未完了。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. Auth claim・tenant path・User状態の認可整合性を最優先で継続する。UWB-01〜10はlocalで完了した。次はFirestore Rules全体に残る広いtenant内writeの縮小、App Check・rate limit、Dev受入れを別checkpointで扱い、この認証・認可マイルストーン全体の完了までdeployしない。
+1. UWB-01〜10を、正式運用準備の完了を待たず、承認済みbounded Dev release checkpointで試行環境へ導入する。System maintenance、整合snapshot、UWB全server境界、予約migration、client/Hosting、role・tenant・User/Auth lifecycleのremote受入れを一つのcutoverとして実施する。Firestore Rules全体のtenant内write縮小、App Check・rate limitはDev証拠を得ながら正式運用準備の残作業として継続する。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -50,7 +50,7 @@
 |---|---|---|---|
 | ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
-| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10はlocal完了。全domain 646件、専用Emulator 96件、利用者UI受入れ、Chrome競合・履歴route確認、利用者Rules確認を完了した。Firestore Rules全体のtenant内write縮小、App Check、rate limit、Dev・remote受入れが未完了 |
+| 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10はlocal完了。全domain 646件、専用Emulator 96件、利用者UI受入れ、Chrome競合・履歴route確認、利用者Rules確認を完了した。次はUWB全体のDev cutoverとremote受入れを行い、Firestore Rules全体のtenant内write縮小、App Check、rate limitを正式運用準備として継続する |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | 障害経路・復旧確認（未完了） |
 | 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
@@ -146,3 +146,4 @@
 | 2026-08-26 | 10% | 0 | 利用者起動のlocal Emulator・開発サーバーと会社管理者Chromeで、非管理者Userの無効化・再有効化、2画面のrole先行保存、古いrole保存の安全な拒否、最終的な有効・role未設定への復元を確認した。通常UIのUWB-10受入れは成功したが、利用者の全file確認とUWB local確定、main統合、App Check、Dev・remote受入れが未完了のため進捗は据え置いた。 |
 | 2026-08-26 | 10% | 0 | 利用者は全file・全行の確認ではなく、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した。UWB-10は完了したが、UWB-07の残存陰性証拠、main統合、App Check、Dev・remote受入れが未完了であり、認証マイルストーンも未達のため進捗は据え置いた。 |
 | 2026-08-26 | 10% | 0 | UWB-07に残っていたcurrent Auth disabled、仮User連携、同emailの別tenant新User・予約・Auth UIDとAuth-only raceの陰性証拠を追加した。既存のphase failure・reconcile・通知privacy・20/21件cursor paging、Chromeの履歴route・loading・empty確認と合わせ、全domain 646件、専用Emulator 96件でUWB-01〜10のlocal完了を確定した。main統合、Firestore Rules全体のtenant内write縮小、App Check・rate limit、Dev・remote受入れが未完了で認証マイルストーンを満たさないため、無部分加点規則により進捗は10%に据え置いた。 |
+| 2026-08-27 | 10% | 0 | Devを正式運用可否判定前の非本番試行環境として、検証済み変更を積極的にdeploy・受入れする方針へ訂正した。UWB全体cutoverと予約migrationをmaintenance、snapshot、server境界、migration、client、解除の標準checkpointへ統合した。Dev証拠は未取得でマイルストーン完了条件を満たさないため進捗は据え置いた。 |

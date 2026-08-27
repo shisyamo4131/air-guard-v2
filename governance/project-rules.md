@@ -50,7 +50,8 @@
 - 重要な仕様変更前に、現行仕様、変更案、理由、利用者・data・互換性・移行・運用への影響、rollback、確認方法を提示し、利用者の明示承認を得る。
 - 実装・修正・改修は作業単位ごとに利用者とbranch境界を確認し、原則として機能単位の`codex/<feature>` branchで行う。Codexは合意済み作業単位のlocal branch作成・切替、review済みfileのstage・commitを担当できる。利用者のapplication codeをcommit対象に含める場合は、対象差分と検証状態を利用者と確認する。
 - 利用者が機能branch上の動作を確認して明示承認するまで`main`へmergeしない。
-- `main`への直接commit、`main`へのmerge、Git push、history rewrite、deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更はそれぞれ別の明示指示を必要とする。
+- `main`への直接commit、`main`へのmerge、Git push、history rewrite、Prod deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更はそれぞれ別の明示指示を必要とする。
+- Devは利用者の会社と協力会社が利用する非本番の試行環境であり、正式運用準備または正式運用開始の完了判定をDev deployの前提にしない。利用者が対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む一つのbounded Dev release checkpointを明示承認した場合、そのrunbook内の静的生成、deploy、remote検証をcommandごとに再承認せず実行できる。対象service・data・期間の拡張、新しいdata migration、破壊的repair、Prodへの適用は別の明示指示を必要とする。
 - `.env`値、秘密鍵、access token、Firebase Admin資格情報、Stripe secret、Webhook secret、本番の個人・顧客・勤怠・請求dataをrepository文書、prompt、log、応答へ転記しない。
 - 破壊的操作前に対象環境、対象data、復旧方法を確認する。
 
@@ -59,7 +60,7 @@
 - PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を確認してから変更する。
 - repository文書に必須引数を含む正規commandが記録されている場合は、そのcommandを省略・短縮せず正確に使用する。managed governance validatorは`powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を正規commandとし、scriptのdefault project pathへ依存しない。
 - `npm audit fix`と`npm audit fix --force`を無条件に実行しない。lockfile、互換性、破壊的変更、root/functions双方への影響を先に確認する。
-- Codexは静的生成・buildを実行しない。利用者の正規運用は妨げない。deploy・package更新を含む正確なcommandと復旧手順は`docs/operations.md`を参照する。
+- Codexは未承認の静的生成・buildを実行しない。利用者が承認したbounded Dev release checkpointでは、記録済みのexact commandによるDev用静的生成・buildを実行し、生成結果を同checkpointのdeploy証拠にできる。Prod build、対象外artifact、別releaseへの再利用は承認を拡張せず、deploy・package更新を含む正確なcommandと復旧手順は`docs/operations.md`を参照する。
 - 利用者用local serverは`.env.local`、Codex専用local UI環境は専用設定を使い、いずれもloopbackへ限定する。LAN公開は実行ごとの利用者承認を必要とする。
 - CodexはADR 0014と`docs/operations.md`の隔離条件を満たす専用demo projectについて、追加承認なしにEmulator、Functions、local server、Codex管理processを起動・停止し、合成Authentication accountと合成dataを作成・更新・削除してよい。`.codex-test/saved-data`、`.codex-test/ui-candidate`、`.codex-test/isolated-saved-data`、専用runtimeまたは通常のCodex専用test sessionにある合成dataの作成・変更・削除、予約migration、candidate acceptance・promotionは、操作ごとの利用者承認を必要としない。上位のCodexまたはBrowser安全policyがaction-time confirmationを要求する場合は、その確認を省略しない。利用者用local環境、Dev、Prod、remote service、実dataへこの許可を拡張しない。
 - Codex専用環境の起動前にproject、bind先、未起動serviceからのremote到達、外部API・Stripe・mail・FCM等への作用を確認し、fail-closedで隔離できなければ実行しない。利用者用Emulatorは従来どおり対象実行ごとの明示許可を必要とする。
@@ -69,10 +70,10 @@
 - Codex専用Auth credentialは、loopbackのdemo projectにある実在情報を含まない合成accountだけへ使用する。保存済みbrowser sessionを優先し、session喪失時はrunning Auth Emulator内だけの一時random passwordを利用できるが、saved-data、repository、terminal、応答、screenshot、DOM・console・network観測へ値を残さない。password入力controlを通常typingできない場合に限り、製品の可視な表示切替control、通常keyboard入力、即時再maskを使用できる。平文表示中はread-only観測も停止し、Emulator終了で一時credentialを失効させ、saved-data指紋不変を確認する。利用者用local、Dev、Prod、remote service、実accountまたは永続credentialへこの例外を拡張しない。
 - CodexがブラウザUIの挙動または受入れ証拠を取得する場合は、可視画面上で実利用者が行える通常のpointer・keyboard操作だけを使用する。可視・有効で通常のactionability条件を満たすcontrolへのclick、一文字ずつのtyping、通常のkey操作、scroll、drag、可視optionの選択は許可する。`fill`・`clear`、DOM property・valueの直接変更、event・handler・component method・`requestSubmit`・client APIの直接呼出し、force操作、disabled・hidden・overlayの回避は禁止する。`localStorage`、`sessionStorage`、IndexedDB、cookie、Firebase Auth persistenceを直接変更して挙動・受入れ状態を作ってはならない。初期URL open、reload、clean browser context準備は非UIの環境準備に限り、画面内navigationや製品flowの証拠には数えない。read-onlyのDOM・ARIA・screenshot・console・network観測は許可するが、状態を変更してはならない。Emulator OOB確認、backend verifier、export・importは非UIの準備またはassertionとしてUI操作証拠と分離する。
 - 数百件規模の合成documentを扱う場合は段階的に投入し、応答遅延、memory、Emulator logを監視する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は停止条件と復旧方法を定めた別の明示承認なしに行わない。これはFirebaseの公式上限とは扱わない。
-- deploy、remote環境検証、実dataを使う検証は対象操作ごとの明示承認なしに行わない。
+- Dev deployとremote検証は、承認済みbounded Dev release checkpointの対象・期間・runbook内で積極的に行える。正式運用準備の未完了だけを理由にDev環境証拠の取得を延期しない。実data migration、破壊的repair、checkpoint外のdata変更、Prod deployは対象操作ごとの明示承認なしに行わない。
 - 実施していない確認を成功と記載しない。技術的に実施できない場合は、確認済み範囲、未確認範囲、利用者の確認観点を報告する。
 - 認証・認可・tenant分離の既知Critical問題を最優先とし、既存構造を一括置換せず、利用者が仕様と影響を理解できる最小segmentへ分ける。各segmentは現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理し、利用者の実装後にCodexが差分reviewと許可済み検証を行う。
-- local Emulator環境はtest用1社だけを扱う。Dev環境は利用者の会社と協力会社の2社が試用するremote環境であり、Codexは個別承認なしに接続、検証、data操作、deployを行わない。一般公開していないことをsecurity controlの代替とはみなさない。
+- local Emulator環境はtest用1社だけを扱う。Dev環境は利用者の会社と協力会社の2社が試用するremote環境であり、正式運用前の変更を実際の利用条件で積極的にdeploy・検証する。ただし実dataと実accountを含むため、承認済みbounded Dev release checkpoint外の接続・変更、未計画のdata操作、秘密情報の観測を行わず、一般公開していないことをsecurity controlの代替とはみなさない。
 - project-owned document validatorとmanaged governance validatorの両方を実行し、application testの実施有無と区別して報告する。
 
 ## Project-specific Progress and Reporting
