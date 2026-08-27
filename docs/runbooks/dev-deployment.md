@@ -147,6 +147,8 @@ releaseが複数classへ該当する場合は最も強いdata・互換性境界�
 - client/server同時変更は原則serverを先行し、旧clientが残ってもserverが最終認可を維持することを確認してからclientをdeployする。
 - Hostingはpreflightで確認した同一artifactをdeployし、配信中version、HTTP status、cache header、主要artifactの一致を確認する。
 - Functionsは期待した公開集合、region、runtime、状態、scheduled job、ERROR logを確認する。raw configや秘密情報を出力しない。
+- Web clientから呼ぶv2 Callableは、対応するCloud Run serviceごとに`roles/run.invoker`の`allUsers` bindingとbrowser originからのCORS preflightを確認する。Functionが`ACTIVE`であること、operator credential付きの`gcloud functions call`、originなしのserver-side request、Callable内部の未認証拒否だけではbrowser到達性の証拠にしない。bindingが欠落するとapplication codeへ到達する前の`OPTIONS`がHTTP 403となる。入口を公開してもCallable内部のFirebase ID token、actor、tenant、target検証を省略しない。
+- Callableのinvoker欠落を修復する場合は、Dev project、exact service、`allUsers -> roles/run.invoker`、公開範囲、内部認証、rollbackとなるbinding削除を提示して明示承認を得る。修復後は変更commandとは別のread-only IAM取得、browser preflight、正常actor、未認証・権限不足actorの拒否を独立確認する。
 - Rulesは正常経路と拒否経路を確認する。Storage Rulesに`firestore.get()`または`firestore.exists()`がある場合、StorageとFirestoreの連携許可、Firebase Storage service accountの`Firebase Rules Firestore Service Agent` role、正常Userと拒否対象Userのaccessを確認する。権限を推測で追加せず、初回prompt、付与済み状態、権限不足をdeploy結果として区別する。
 - 共通Auth identity gateまたは再構築認可を使うFunctionsでは、実行service accountがFirebase Authentication Userを参照できることを確認する。正常actorと、Auth無効・claim不一致・User無効・他社指定等の拒否をFunctions logと画面結果で確認し、権限不足はfail closedとして扱う。
 - maintenanceを使うreleaseは解除前にserver、data、client、log、主要正常・拒否経路を確認し、解除後は新しいbrowser sessionで受入れる。

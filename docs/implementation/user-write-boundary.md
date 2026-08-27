@@ -2,7 +2,7 @@
 
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
-- 状態: Completed（UWB-01〜10のlocal実装・自動検証・必要なUI受入れ完了。main統合・push・deploy・Dev/remote受入れは別承認）
+- 状態: Completed（UWB-01〜10のlocal完了とDev cutover完了。認証済みDev/remote受入れは進行中）
 - 対象: `Companies/{companyId}/Users/{userId}`への書込み境界
 - 基準branch: `main`
 - 基準commit: `3b161ff186b236963e4aa3324b70c5c8ad98776e`
@@ -26,7 +26,7 @@ Usersコレクションへの書込みを、同一会社であることだけに
 |---|---:|---:|---|
 | 準備 | 2 | 2 | 改修名と追跡文書を作成 |
 | 実装ゲート | 10 | 10 | UWB-01〜10のlocal実装・検証・必要なUI受入れ完了 |
-| Dev環境受入れ | 0 | 1 | 未承認・未実施 |
+| Dev環境受入れ | 0 | 1 | 進行中。cutover、signup、role/route、stale role、disabled復帰を確認。tenant拒否と非破壊lifecycle証拠が残る |
 
 実装ゲートは部分加点しない。各ゲートの完了条件と検証証拠を満たし、利用者が変更挙動、security境界、残存risk、rollbackを受け入れた時点で完了とする。利用者による全file・全行の確認は完了条件にしない。
 
@@ -509,9 +509,15 @@ UWBはUser管理UIへ大きく影響するため、次の手順を各application
 
 ## Dev環境受入れ
 
-- 状態: Not approved
+- 状態: In progress（DEV-UWB-RELEASE-001 cutover完了、2026-08-27認証済み受入れを一部完了）
 
-UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev環境でのRules・Functions deploy、remote data確認、既存User migration、実Auth accountを使う受入れは、対象とrollbackを提示して別途承認を得る。
+DEV-UWB-RELEASE-001ではrelease commit `52dd607d16e9b77f90ec238250eca11757548097`を固定し、System maintenance、Firestore PITRと整合snapshot、Rules・全Functions、create-only予約migration、client/Hosting、maintenance解除を一体で完了した。
+
+2026-08-27の認証済み受入れでは、専用の合成会社管理者と一般Userを正規signup・メール確認経路で作成した。一般Userはrole未設定でdashboardだけを表示し、管理者用URLの直接openはdashboardへ戻された。別の合成仮Userを2つのChrome tabで編集し、先行する`労務`保存は成功、古いtabの`法務`保存はstale競合として拒否され、再読込後も先行値だけが維持された。
+
+一般Userの無効化は当初2回とも`internal`で失敗した。Cloud Run request logでは`disableuser`へのbrowser `OPTIONS`がHTTP 403でCallable本体へ到達しておらず、read-only IAM比較で`disableuser`と`enableuser`だけ`roles/run.invoker`の`allUsers` bindingが欠落し、正常な`updateuserroles`には存在することを確認した。利用者がDevの2 serviceだけへのIAM付与、入口公開、内部Firebase認証維持、binding削除によるrollbackを明示承認し、各付与commandと独立IAM再取得がexit 0となった。修復後は一般Userの無効化、サインイン拒否、再有効化、dashboard復帰がすべて成功した。
+
+Dev受入れの単一ゲートは部分加点しない。role別control、roleless route拒否、stale input、User/Auth disabled同期と復帰は確認済みとし、別tenantを無断使用しないtenant拒否証拠と、実accountを破壊しないUser/Auth lifecycleのremote確認方法が残る。App Check・rate limit、Firestore Rules全体に残る広いtenant内writeは正式運用準備の別残件である。
 
 ## UWB完了後も残る境界
 
@@ -558,3 +564,4 @@ UWBのlocal確定とmain統合だけではdeploy可能とは扱わない。Dev�
 | 2026-08-26 | UWB-10 Chrome concurrency acceptance | 利用者起動のimport-only local Emulator、開発サーバー、会社管理者でsign-in済みChromeをCodexが通常pointer操作で使用。非管理者の対象Userを無効化・再有効化し、2画面の片方で`労務`を先行保存、もう片方の古い`法務`保存を競合させた | `bc47459` | 無効化・再有効化が成功。古い保存は「対象ユーザーの役割が別の操作で変更されました。最新状態を確認して再実行してください。」で拒否され、`法務`は保存されず`労務`だけが維持された。最後にrole未設定へ戻し、対象Userが有効・全preset未選択であることを再読込確認。既知のChrome extension message-channel errorと期待されたstale拒否loggerを分離し、account切替・削除・他User変更は0件 |
 | 2026-08-26 | UWB-10 completed | 利用者は全file・全行の確認を完了条件にせず、変更挙動、security境界、test、残存risk、rollbackに基づいてUWB-10のlocal確定を承認した | 本変更 | UWB-10は完了。UWB-07の競合・部分失敗・通知・Auth raceの残存陰性証拠は未完了のため、UWB全体は9/10のActiveを維持する。main merge・push・deploy・Dev/remote受入れは未実施 |
 | 2026-08-26 | UWB-07/UWB completed | current Auth disabledの3 Callable拒否、仮User削除前の退職拒否と削除後Employee-only退職、完了済み旧退職の再送が同emailの別tenant新User・予約・新Auth UIDまたはAuth-only状態へ作用しないことを専用Emulatorで固定。既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合し、UWB-01〜10のlocal完了を確定 | 本変更 | 全domain 646/646、専用Emulator 96/96が成功。実browserで21件の退職・削除を作ることは行わず、data行・次page・前pageは自動test、実route・権限・loading・empty・button状態はChromeで分離確認。main merge・push・deploy・Dev/remote受入れは別承認 |
+| 2026-08-27 | Dev authenticated acceptance partial | 専用合成会社で管理者・一般Userの正規signup、roleless route、2 tabのstale role拒否、一般Userの無効化・拒否・再有効化・復帰を確認。`disableuser`/`enableuser`だけに欠落したCloud Run public invokerをDev限定・明示承認で修復 | 本変更 | signup・確認メール・dashboard、管理者URL redirect、先行role維持とstale拒否、disabled sign-in拒否と復帰をChromeで確認。IAM付与2件と独立再取得は各exit 0。tenant拒否と非破壊lifecycle remote証拠は未完了 |
