@@ -28,6 +28,7 @@
 
 ### Changed
 
+- `docs/operations.md`を共通hubへ縮小し、通常開発、local Emulator、local UI、data migration、package release、project coordination、Windows PC migrationをtask-routed runbookへlossless分割した。各旧sectionを一度だけ移動し、Dev deployを含む作業が無関係な運用本文を読み込まない構成へ変更した。
 - Dev deploy taskを83KB超の総合operations文書ではなく専用runbookへ直接routeし、確認済みinstalled Firebase CLIをrelease中に固定する方針、Dev Firestore PITR 7日保持、正式運用準備の残件をDev deploy blockerにしない境界へ既存記述を整合した。未検証のWindows CA exportやpersistent gcloud CA設定は標準手順に採用せず、実測済みのprocess-scoped Python truststore経路だけを記録した。
 - DEV-UWB-RELEASE-001でSystem maintenance、Firestore PITRと整合snapshot、Rules・全Functions、create-only予約migration、client/Hostingを一体でDevへ導入した。廃止済み`checkEmailAvailabilityGlobal`をremoteから削除し、予約migration後のclean、Functions全件ACTIVE、scheduled reconciler、Hosting配信artifact一致、maintenance解除後のtop・sign-in画面を確認した。認証済み実accountによるrole・tenant・disabled・stale/lifecycle受入れは残作業として分離した。
 - 2026年5月から潜在していたPWA `injectManifest`設定とService Workerの不整合を修正し、precachingを無効のまま必須挿入点を維持するsource-contract testを追加した。Dev maintenance releaseは固定commitの静的生成をmaintenance・snapshot・server deployより前のpreflight gateとし、build blockerをremote変更前に検出する。

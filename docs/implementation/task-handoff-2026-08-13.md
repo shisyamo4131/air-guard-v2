@@ -70,7 +70,7 @@
 1. `AGENTS.md`
 2. `governance/project-rules.md`
 3. `docs/README.md`
-4. `docs/operations.md`の「Git統合」「プロジェクト管理タスクループ」「Codexセッションのライフサイクル」
+4. `docs/runbooks/project-coordination.md`の「Git統合」「プロジェクト管理タスクループ」「Codexセッションのライフサイクル」
 5. `docs/roadmaps/airguard-v2.md`
 6. `docs/implementation/review-reconciliation-2026-08-12.md`
 7. `docs/decisions/0011-roadmap-and-codex-session-lifecycle.md`

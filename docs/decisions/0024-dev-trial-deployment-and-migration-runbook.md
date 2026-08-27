@@ -5,6 +5,7 @@
 - 関連仕様: 検証・試行環境、プロジェクト運用
 - 関連手順: [運用・開発手順](../operations.md)
 - 共通runbook: [Dev環境deploy runbook](../runbooks/dev-deployment.md)
+- Migration runbook: [data migration runbook](../runbooks/data-migrations.md)
 - 関連ロードマップ: [AirGuardV2 正式運用準備ロードマップ](../roadmaps/airguard-v2.md)
 
 ## 背景
