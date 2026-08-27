@@ -8,6 +8,7 @@
 
 ### Added
 
+- Company設定のclient、server、Rules/security、下流依存を再調査し、全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復を手戻りの少ない順序で改修する専用ロードマップを追加した。
 - Dev deployをUWB固有手順から分離したproject共通runbookを追加し、release固定、Firebase CLIとgcloudの独立trust・token refresh確認、fail-fast診断、remote変更前build、release種別ごとのmaintenance・backup・rollback、証拠契約を正本化した。
 - Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
 - Windows PC移行について、repository・Git外local data・Codex portable stateの停止時backup、Windows native/WSL境界、再認証、変更なしrestore checkpoint、旧PC保持条件を含む手順を追加した。

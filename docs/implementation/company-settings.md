@@ -4,14 +4,14 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-27
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/apis/createAdminAccount.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
 - 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。CompanyManagerは作成と削除をUIで拒否し、更新だけを直接`Company.update()`へ渡す。
-- Rulesは`Companies/{companyDocId}`の全read/writeを、claim companyIdがdoc IDと一致する認証Userまたはsuper-userへ許可する。admin、field ownership、delete制約はない。
+- Rulesは`Companies/{companyDocId}`のread/updateを、claim companyId、Auth、同じtenantの有効な本登録Userが整合する場合に許可する。actor roleとfield ownershipの制約はない。client create/deleteは2026-08-27に拒否済みで、初期作成はFunctions/Admin SDKに限定した。
 - UIのadmin制御は暫定入口で、server-side認可とは一致しない。
 
 ## データ契約
@@ -50,7 +50,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
 - schemaのminuteInterval min/maxはcomponent attrsであり、Rulesは範囲を検証しない。他のenum、invoiceNumber、口座番号もRules/serverで形を強制しない。
 - 住所変更時GeocodableMixinはgeocodeを試みる。関数未設定・失敗・座標欠損では例外を伝播せずlocationをnullにしてCompany更新を継続する。
-- 更新にversion/preconditionはなく、設定画面・並び順・Stripe webhook等の同時更新はfield単位updateか全体updateの実装差により競合し得る。
+- 更新にversion/preconditionはない。Company設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldは再保存時に失われる可能性もある。
 
 ## tenant identity
 
@@ -72,24 +72,34 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 - Company固有のstatus、停止、archive、delete guard、restore methodはない。
 - UI CompanyManagerはcreate/deleteを拒否する。
-- RulesはCompany rootのdeleteを禁止しない。同一会社Userによる直接deleteが可能で、subcollectionは自動cascadeされないため、tenant root欠損と子data残存が併存し得る。
+- RulesはCompany rootのclient deleteを拒否する。server/operatorによる停止・decommission・repairとsubcollection保持は未確定であり、root欠損と子data残存の既存・部分失敗状態を検知・修復する契約もない。
 - `maintenanceMode`は利用停止ではなくSystemStoreのmaintenance表示判定に使われるhidden fieldで、設定画面から編集できない。
 - subscription終了はStripe側同期でsubscription内容をnull/employeeLimit 0へ更新する境界であり、Company削除やtenant停止は行わない。
 
 ## Rules・security
 
-- 銀行口座、請求書番号、住所・電話は同一会社の全認証UserがRules上read/write可能である。
-- hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientが直接変更できる。
-- Company delete、必須field除去、invalid enum/number、siteOrder/agreementsV2改変もRulesで検証しない。
+- 銀行口座、請求書番号、住所・電話は同一会社の有効な本登録User全員がRules上read/write可能である。
+- hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientがroot updateの一部として直接変更できる。
+- Company create/deleteはclient拒否済みだが、必須field除去、invalid enum/number、siteOrder/agreementsV2改変をRulesで検証しない。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。
 
 ## 矛盾・未使用候補
 
-- admin限定画面と、同一会社User全write/delete Rulesが不一致。
+- admin限定画面と、同一会社の有効な本登録User全員に対するroot全field update許可が不一致。
 - 基本情報editorは`fullAddress`構成fieldのうちaddressだけを含み、zipcode/prefCode/city/buildingを編集対象に含めない一方、`isCompleteRequiredFields`はそれらを要求する。
 - `Company.scheduleOrder.add`はimportされていない`ScheduleOrder`をnewしており、呼出し時ReferenceErrorとなる実装である。配列customClassはSiteOrderなので命名不一致でもある。
 - hidden server-owned候補fieldと利用者編集fieldが同一document/全write Rulesに混在する。
 - Company旧`agreements` accessorは常に空/無処理で残存する。
+
+## 2026-08-27 横断再調査
+
+- Company documentは会社プロフィールだけでなく、請求元・口座、丸め・勤怠方式、取極め、Site/Schedule表示順、maintenance、Stripe/subscription、tenant初期化を共有する。確認済みの現在影響は本実装調査、改修順と進捗は[Company設定改修ロードマップ](../roadmaps/company-settings.md)を参照する。
+- 請求PDFはlive Company情報を参照し、`roundSetting`はprocess-global設定へ反映されるため、設定変更後の過去帳票・計算結果の再現性を保証できない。
+- `attendanceManagementMode`は参照する勤怠data経路を切り替えるが、既存data migration、preview、発効時点は確認できない。`minuteInterval`と`firstDayOfWeek`は主にUI表示・選択肢へ作用する。
+- `siteOrder`と`scheduleOrder`は配置・予定画面に利用される。専用write permission、revision、参照切れ修復はない。Company既定`agreementsV2`は設定入口を確認したが、Site取極めへfallbackする実consumerを静的調査で確認できず、manual記述と一致しない。
+- maintenanceはclient routeの抑止であり排他lockではない。Admin SDKの`maintenanceStartedAt`等とCompany schemaのfield名にも差がある。
+- Stripe moduleは現行Functions entryで公開停止中だが、同じrootにあるsubscription fieldはclient update/read可能である。再有効化前にserver ownership、price/origin allowlist、冪等性、event順序、tenant mapping、Employee上限強制が必要である。
+- Firestore Rulesはdocument内のfieldをread時に隠せない。銀行、Stripe、maintenance等の閲覧者を狭める場合、subdocument分割またはserver projectionが必要になる。
 
 ## 将来要対応
 

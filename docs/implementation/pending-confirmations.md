@@ -921,11 +921,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
-- Evidence: Company status/archive/guardなし。UIはdelete不可だがRulesはdelete可で、claim/doc/subcollectionsがtenant identityを分担する。
+- Evidence: Company status/archive/guardなし。2026-08-27にrootのclient create/deleteはRulesで拒否したが、claim/doc/subcollectionsがtenant identityを分担し、server/operatorの停止・decommission・repairは未確定である。
 - Question: 解約・停止・誤登録・法的削除をどう区別し、Company root削除、subcollection保持、復元、tenant移転を誰が行うか。
 - Why needed: tenant root欠損、orphan data、誤削除から安全に復旧するため。
 - Options and impact: root永久保持+status、server cascade/匿名化、論理停止、super-user repairのみ。
-- Current provisional treatment: Companyを削除不能なanchorとして扱うが、Rulesは未強制。
+- Current provisional treatment: Companyを削除不能なanchorとして扱い、client deleteはRulesで強制拒否する。server/operatorによる停止・decommission・repair、root欠損・orphanの回復は未確定のまま維持する。
 - Related FUT IDs: FUT-0090、FUT-0091
 - Answer: 未回答
 
