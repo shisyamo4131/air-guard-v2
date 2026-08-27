@@ -377,7 +377,7 @@ npm run generate:dev
 npm run generate:prod
 ```
 
-生成物は `dist/` に配置され、Firebase Hosting は同ディレクトリを公開します。Codex はプロジェクト規則により生成・ビルドを実行しません。
+生成物は `dist/` に配置され、Firebase Hosting は同ディレクトリを公開します。Codexは通常この生成・ビルドを実行せず、利用者が承認したbounded Dev release checkpoint内だけ、固定release commitのpreflightとして実行します。
 
 ## デプロイ
 
@@ -417,14 +417,15 @@ Devは正式運用開始前の試行環境であり、正式運用準備roadmap�
 
 1. **release固定**: branch、full commit、clean worktree、root/Functions dependencyのversion・resolved・integrity、対象Firebase service、local test、未検証範囲を記録する。複数段階の未統合差分や未commit scriptを実dataへ使用しない。
 2. **cutover承認**: 対象project、release commit、静的生成、Rules、Functions、Hosting、data影響、backup、rollback、停止条件、受入れを一つのcheckpointとして利用者が承認する。checkpoint内の各deploy commandに同じ承認を繰り返さない。新しいmigration、破壊的repair、対象拡張、Prodは別承認とする。
-3. **maintenance開始**: `air-guard-v2-admin-sdk`で`npm run cli:dev -- system status`、`maintenance-on`、`status`を独立実行する。`maintenance-toggle`は使わない。Dev画面が`/maintenance`へ遷移することを確認し、Devへ接続したlocal server・browser、User管理操作、他operator作業を停止してin-flight requestを収束させる。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、既に開始したwriteを物理的に停止しない。
-4. **整合snapshot**: maintenance開始後の完了済みUTC分を`--snapshot-time`へ指定し、固有prefixのCloud StorageへFirestore全体を`gcloud firestore export`する。`--async`を使わず、command exit、operation `done`、error不在、output URI、metadata objectを独立確認する。exportは復旧証拠だが、snapshotに存在しない追加documentをimportだけで削除できるとは扱わない。
-5. **server境界deploy**: clientより先に、releaseで変更したFirestore Rules/Indexes、Storage Rules、Realtime Database Rules、Cloud Functions、共有contractを整合した単位でdeployする。認証改修では予約Functionだけを選択せず、role・permission、User/Auth作成・更新・削除、lifecycle、concurrencyを含む全変更Functionsを導入する。deploy成功、runtime/service account権限、公開Function集合、logを確認し、旧revisionの開始済み処理が収束する時間を置く。
-6. **fresh migration**: server deploy完了後に対象dataをread-only dry-runし、件数、blocking finding、plan digestを記録する。承認済み固有apply条件を満たす場合だけmigrationを実行し、直後の再dry-runでcleanを確認する。dry-run後のdata変化、digest不一致、競合、部分失敗はfail closedとし、推測deleteや自動rollbackを行わない。
-7. **client deploy**: Dev用静的生成を独立実行し、release commitとの対応を確認してHostingをdeployする。古いtab・cache済みJavaScriptが残ってもserver側が最終認可を行うことを確認し、利用者へreloadまたは再sign-inを求める。
-8. **maintenance中検証**: deployed revision、Rules、Functions、Hosting、migration post-check、主要正常経路、role・tenant・disabled・stale inputの拒否、Functions log、秘密情報非出力を確認する。メンテナンス画面だけを全機能成功の証拠にしない。
-9. **解除と受入れ**: 全必須check成功後だけ`maintenance-off`と`status`を独立実行する。新しいbrowser sessionでsign-in、role別control、User/Auth lifecycle、主要画面を確認する。失敗した場合は直ちにmaintenanceへ戻し、未確認状態で運用を継続しない。
-10. **失敗・rollback**: server deploy前の失敗は変更を適用せず停止する。server deploy後またはmigration後の失敗はmaintenanceを維持し、新契約に沿うcorrective releaseまたは証拠付きrepairを使用する。予約backfill後に予約を保守しない旧Functionsへ戻してtrafficを再開せず、npm unpublish、force push、history rewrite、推測data削除に依存しない。
+3. **client生成preflight**: maintenance開始またはremote変更より前に、固定release commitのclean worktreeで`npm run generate:dev`を独立実行する。`injectManifest`を使う場合はService Workerに`self.__WB_MANIFEST`挿入点が存在することを自動testで固定する。生成失敗、release HEAD変化、tracked差分、対象project・Emulator flag不一致はcutover開始前の停止条件とし、生成物を別commitまたは別releaseへ再利用しない。
+4. **maintenance開始**: `air-guard-v2-admin-sdk`で`npm run cli:dev -- system status`、`maintenance-on`、`status`を独立実行する。`maintenance-toggle`は使わない。Dev画面が`/maintenance`へ遷移することを確認し、Devへ接続したlocal server・browser、User管理操作、他operator作業を停止してin-flight requestを収束させる。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、既に開始したwriteを物理的に停止しない。
+5. **整合snapshot**: maintenance開始後の完了済みUTC分を`--snapshot-time`へ指定し、固有prefixのCloud StorageへFirestore全体を`gcloud firestore export`する。`--async`を使わず、command exit、operation `done`、error不在、output URI、metadata objectを独立確認する。exportは復旧証拠だが、snapshotに存在しない追加documentをimportだけで削除できるとは扱わない。
+6. **server境界deploy**: clientより先に、releaseで変更したFirestore Rules/Indexes、Storage Rules、Realtime Database Rules、Cloud Functions、共有contractを整合した単位でdeployする。認証改修では予約Functionだけを選択せず、role・permission、User/Auth作成・更新・削除、lifecycle、concurrencyを含む全変更Functionsを導入する。deploy成功、runtime/service account権限、公開Function集合、logを確認し、旧revisionの開始済み処理が収束する時間を置く。
+7. **fresh migration**: server deploy完了後に対象dataをread-only dry-runし、件数、blocking finding、plan digestを記録する。承認済み固有apply条件を満たす場合だけmigrationを実行し、直後の再dry-runでcleanを確認する。dry-run後のdata変化、digest不一致、競合、部分失敗はfail closedとし、推測deleteや自動rollbackを行わない。
+8. **client deploy**: preflight生成物が同じrelease commit、clean worktree、Dev設定に対応することを再確認し、再生成せずHostingをdeployする。古いtab・cache済みJavaScriptが残ってもserver側が最終認可を行うことを確認し、利用者へreloadまたは再sign-inを求める。
+9. **maintenance中検証**: deployed revision、Rules、Functions、Hosting、migration post-check、主要正常経路、role・tenant・disabled・stale inputの拒否、Functions log、秘密情報非出力を確認する。メンテナンス画面だけを全機能成功の証拠にしない。
+10. **解除と受入れ**: 全必須check成功後だけ`maintenance-off`と`status`を独立実行する。新しいbrowser sessionでsign-in、role別control、User/Auth lifecycle、主要画面を確認する。失敗した場合は直ちにmaintenanceへ戻し、未確認状態で運用を継続しない。
+11. **失敗・rollback**: client生成preflight以前の失敗とpreflight失敗はremote変更を開始せず停止する。server deploy後またはmigration後の失敗はmaintenanceを維持し、新契約に沿うcorrective releaseまたは証拠付きrepairを使用する。予約backfill後に予約を保守しない旧Functionsへ戻してtrafficを再開せず、npm unpublish、force push、history rewrite、推測data削除に依存しない。
 
 各stepのcommand、結果、独立exit status、remote operation ID、対象commit、data件数、未確認事項をcheckpoint evidenceとして残す。正式運用開始可否はこのDev checkpointの成功だけでは確定せず、Devで得た証拠を正式運用準備roadmapへ反映する。
 

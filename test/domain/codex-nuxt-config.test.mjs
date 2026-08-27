@@ -67,6 +67,24 @@ test("dedicated UI disables the PWA module during local build", async () => {
   );
 });
 
+test("Dev injectManifest keeps its required Service Worker injection point", async () => {
+  const [configSource, serviceWorkerSource] = await Promise.all([
+    readFile(new URL("../../nuxt.config.js", import.meta.url), "utf8"),
+    readFile(new URL("../../service-worker/sw.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(configSource, /strategies:\s*"injectManifest"/);
+  assert.match(configSource, /globPatterns:\s*\[\]/);
+  assert.match(
+    serviceWorkerSource,
+    /const injectedPrecacheManifest = self\.__WB_MANIFEST;/,
+  );
+  assert.match(
+    serviceWorkerSource,
+    /if \(injectedPrecacheManifest\.length > 0\)/,
+  );
+});
+
 test("dedicated UI skips notification permission and FCM token effects", async () => {
   const source = await readFile(
     new URL("../../composables/useNotification.js", import.meta.url),

@@ -15,6 +15,12 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging } from "firebase/messaging/sw";
 
+// Keep the injectManifest insertion point in the built output without caching it.
+const injectedPrecacheManifest = self.__WB_MANIFEST;
+if (injectedPrecacheManifest.length > 0) {
+  console.warn("[SW] Precache manifest entries are intentionally ignored");
+}
+
 /**
  * Firebase の設定
  * プレースホルダーはビルド時に環境変数に置換されます

@@ -27,6 +27,7 @@
 
 ### Changed
 
+- 2026年5月から潜在していたPWA `injectManifest`設定とService Workerの不整合を修正し、precachingを無効のまま必須挿入点を維持するsource-contract testを追加した。Dev maintenance releaseは固定commitの静的生成をmaintenance・snapshot・server deployより前のpreflight gateとし、build blockerをremote変更前に検出する。
 - Devを正式運用準備の完了前でも積極的にdeploy・検証する非本番試行環境として明確化した。対象commit、service、data影響、backup、rollback、停止条件、受入れを一つのbounded release checkpointで承認し、UWB全体をSystem maintenance、整合snapshot、全server境界、予約migration、client/Hosting、解除の順で導入する再利用可能な手順を追加した。
 
 - UWB-07に残っていたcurrent Auth disabled、仮User連携、同emailの別tenant再登録・Auth-only raceを専用Emulatorの陰性testで固定し、既存のphase failure・reconcile・通知privacy・20/21件cursor paging証拠とChrome履歴空状態を再照合した。実page移動のためだけに21件の退職・削除を作らず、data行・前後pageは自動test、実route・loading・empty・button状態はChromeで分離検証し、UWB-01〜10のlocal完了を確定した。

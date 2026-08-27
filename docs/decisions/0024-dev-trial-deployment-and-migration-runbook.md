@@ -18,7 +18,7 @@ Devは正式運用準備または正式運用開始の完了判定とは独立�
 
 data migrationはrelease checkpoint内でも固有の対象、dry-run、apply、post-check、rollbackを明示する。新しいmigration、破壊的repair、対象拡張、Prod適用は承認を引き継がない。一般公開されていないことをsecurity controlの代替にせず、Devの実account・実dataを秘密情報・個人情報境界として扱う。
 
-schemaまたはruntimeと既存dataの同時切替が必要なreleaseは、System全体maintenance、整合snapshot、server境界deploy、fresh migration、client deploy、maintenance中検証、解除後受入れを一つのcutoverとする。maintenanceはclient route制御であって排他lockではないため、他operator、Dev接続client、開始済みrequest、scheduled・direct Functionsを別に収束・監視する。
+schemaまたはruntimeと既存dataの同時切替が必要なreleaseは、固定commitのclient生成preflight、System全体maintenance、整合snapshot、server境界deploy、fresh migration、client deploy、maintenance中検証、解除後受入れを一つのcutoverとする。client生成preflightはmaintenance開始とremote変更より前に完了させる。maintenanceはclient route制御であって排他lockではないため、他operator、Dev接続client、開始済みrequest、scheduled・direct Functionsを別に収束・監視する。
 
 UWB初回導入では、予約関連Functionだけを選択deployしない。UWBで変更したRules、全Functions、共有Schemas contract、予約migration、client/Hostingを同じreleaseとして導入し、全体確認後にだけmaintenanceを解除する。
 
@@ -27,6 +27,7 @@ UWB初回導入では、予約関連Functionだけを選択deployしない。UWB
 - Devの目的は、正式運用前に実利用条件の不具合、権限、IAM、Functions transport、migration、rollbackを発見することである。
 - 正式運用準備の未完了をDev deploy blockerにすると、remote証拠を取得できず完了条件へ進めない。
 - 一つのbounded checkpointは、commandごとの形式的な再承認を減らしながら、対象・data・復旧・停止条件を固定できる。
+- client生成をmaintenance前のpreflight gateにすれば、PWA、依存関係、環境設定等のbuild blockerをremote変更前に検出できる。
 - server、data、clientをmaintenance期間内で整合させれば、旧clientが残ってもserver最終認可を維持し、migration後に旧処理がdata contractを壊す期間を作らない。
 
 ## 代替案
@@ -45,7 +46,7 @@ UWB初回導入では、予約関連Functionだけを選択deployしない。UWB
 
 ## 移行
 
-現行UWB releaseは、全server境界を先にDevへdeployし、旧revisionのin-flight処理を収束させ、予約migrationをfresh dry-run・create-only apply・再dry-runし、UWB client/Hostingをdeployしてからmaintenanceを解除する。実行前に正確なrelease commit、Firebase対象、gcloud snapshot、service account、validation、failure stopをcheckpointへ固定する。
+現行UWB releaseは、固定commitのDev静的生成をremote変更前に成功させてから、全server境界をDevへdeployし、旧revisionのin-flight処理を収束させ、予約migrationをfresh dry-run・create-only apply・再dry-runし、同じ生成物をUWB client/Hostingへdeployしてからmaintenanceを解除する。実行前に正確なrelease commit、Firebase対象、gcloud snapshot、service account、validation、failure stopをcheckpointへ固定する。
 
 既存の「認証・認可マイルストーン全体の完了までdeployしない」というroadmap記述を廃止し、Firestore Rules全体のtenant内write縮小、App Check、rate limitを正式運用準備の残作業として維持する。これらが未完了でもDev deploy・受入れは行うが、正式運用開始可とは判定しない。
 
@@ -58,7 +59,7 @@ server deploy前の失敗はremote変更を開始せず停止する。server dep
 ## 検証
 
 - project-owned document validator、managed governance validator、renderer drift、`git diff --check`を独立実行する。
-- Dev checkpointごとにbuild、Rules、Functions、Hosting、migration dry-run/apply/post-check、maintenance status、role・tenant・User/Auth lifecycleの正常・拒否経路を独立したexit statusとremote evidenceで確認する。
+- Dev checkpointごとにmaintenance前のbuild preflight、Rules、Functions、Hosting、migration dry-run/apply/post-check、maintenance status、role・tenant・User/Auth lifecycleの正常・拒否経路を独立したexit statusとremote evidenceで確認する。`injectManifest`を採用するService Workerでは、必須挿入点をsource-contract testで固定する。
 - 正式運用準備の進捗はDev deployだけで加点せず、roadmapのmilestone完了条件が揃った場合だけ更新する。
 
 ## 再検討条件
