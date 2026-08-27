@@ -7,9 +7,11 @@
 - 開発・本番設定による静的生成
 - Firebase Hosting、Functions、Firestore Rules/Indexes、Storage Rules、Realtime Database Rules のデプロイ
 - メンテナンス状態とキルスイッチの切り替え
-- Firestore のスケジュールバックアップ（既存資料上の記載。現在の設定はデプロイ前に再確認する）
+- Firestore PITR 7日保持と、承認済みrelease checkpoint内の整合snapshot
 
 Devの静的生成、デプロイ、remote検証は、対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded release checkpointとして実行します。Prod、Secret登録、新しいdata migration、破壊的repairは別の明示的承認と環境確認を必要とします。
+
+Dev deployのCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を正本とします。UWB固有のmaintenance migrationは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を追加で確認します。
 
 ## 準備
 
@@ -84,7 +86,7 @@ npm run dev
 
 ### Firestore instance baseline
 
-2026-08-17にFirebase CLI 15.27.0でDev環境を読み取り確認した。
+2026-08-27にFirebase CLI 15.28.1とgcloudの独立したread-only requestでDev環境を再確認した。
 
 | 項目 | 確認値 |
 |---|---|
@@ -94,15 +96,9 @@ npm run dev
 | Type | `FIRESTORE_NATIVE` |
 | Location | `asia-northeast1` |
 | Delete protection | `DELETE_PROTECTION_DISABLED` |
-| Point-in-time recovery | `POINT_IN_TIME_RECOVERY_DISABLED` |
+| Point-in-time recovery | `POINT_IN_TIME_RECOVERY_ENABLED`、保持`604800s`（7日） |
 
-確認には次の読み取り専用コマンドを使用する。edition依存のFirestore実装を開始するときは、まず本baselineを確認し、対象projectまたはdatabase構成が変更されている場合だけ再取得する。
-
-```powershell
-npx -y firebase-tools@latest use
-npx -y firebase-tools@latest firestore:databases:list --project air-guard-v2-dev
-npx -y firebase-tools@latest firestore:databases:get "(default)" --project air-guard-v2-dev
-```
+edition依存のFirestore実装またはreleaseを開始するときは、本baselineをDev環境deploy runbookのprocess-scoped trust経路で確認する。Firebase CLIとgcloudを独立したread-only requestで確認し、対象projectまたはdatabase構成が変更されている場合だけ値を更新する。
 
 Prod環境`air-guard-v2`のdatabase editionと保護設定は未確認であり、deploy判断へ流用しない。
 
@@ -114,7 +110,7 @@ npm run local
 
 Firebase Emulator Suite は `firebase.json` で Auth、Functions、Firestore、Realtime Database、Storage、Hosting、Emulator UI を構成しています。起動前に使用プロジェクトと `.env.local` のエミュレーター設定を確認してください。
 
-Firebase CLIはWindowsユーザーのglobal npm領域へ導入し、正式運用開始まではlatestを使用する。新規PCまたは更新時は`npm install -g firebase-tools@latest`を実行し、`firebase --version`で確認する。AirGuardV2のCodex専用Emulator scriptはglobal `firebase` commandを使用し、npm/npxのoffline cacheを実行前提にしない。CLI更新で回帰した場合は、直前に確認済みのversionを`npm install -g firebase-tools@<version>`で再導入して戻す。
+Firebase CLIはWindowsユーザーのglobal npm領域へ導入する。releaseではcheckpointへ記録したinstalled executableとversionを固定し、`npx -y firebase-tools@latest`による暗黙導入・更新を行わない。実行file不存在、破損、またはversion固有問題が確認された場合だけ、CLI更新をrelease本体と分離した変更として扱う。AirGuardV2のCodex専用Emulator scriptはglobal `firebase` commandを使用し、npm/npxのoffline cacheを実行前提にしない。CLI更新で回帰した場合は、直前に確認済みのversionへ戻して再検証する。
 
 Windows上のFirebase CLIは`C:\Users\seven\.config\configstore\firebase-tools.json`を参照する。Codexのworkspace sandbox内ではこの参照が`EPERM`になることを確認済みであるため、Firebase CLIを起動するCodex専用Emulator suite（`npm run test:local`、専用seed、専用UI Emulatorを含む）は、既存のCodex専用demo data承認境界に基づき最初からsandbox外の承認済みprocessとして実行する。sandbox内で一度失敗させることを前提にしない。demo project、loopback bind、合成data、外部作用denyのpreflightは省略せず、network、利用者用local環境、Dev、Prod、remote service、実dataへ許可を広げない。
 
@@ -309,7 +305,7 @@ UWB-07/08の自動検証完了後、利用者用local環境のテストデータ
 5. 退職・User削除・訂正を連打しても対象単位のloading中に再送されず、成功後にdialogが閉じること。失敗時は画面が壊れず再試行できること。
 6. `firestore.rules`でUsersのclient create/update/delete、Employee lifecycle field/delete、lifecycle ledger/event/lock/head、FcmTokens updateが拒否される方針を確認すること。
 
-会社管理者専用の履歴一覧readerと利用者による`firestore.rules`確認は完了した。Firestore Rules全体に残る広いtenant内write、App Check、Dev/Prod/remote受入れが完了するまでdeploy可能とは扱わない。
+会社管理者専用の履歴一覧readerと利用者による`firestore.rules`確認は完了した。Firestore Rules全体に残る広いtenant内write、App Check、rate limit、認証済み実accountのDev受入れは正式運用準備の残作業であるが、それだけをDev deploy blockerとはしない。Prodまたは正式運用開始可とは扱わない。
 
 `LifecycleOperations`は現段階で固定保存期限を設けず、自動削除しない。削除を前提とするlegal hold、terminal後UID縮小、purge command・scheduled jobは提供しない。data量、法令・社内規程、privacy、費用、運用上の必要性から見直しが必要と判断した場合は、実dataへ作用する前に参照chain、誤退職訂正、移行、backup・復旧を含む新しい仕様とrollbackを承認する。
 
@@ -363,71 +359,13 @@ Codexは既存タブを引き継いだ後、SPAローディングテンプレー
 
 Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にCodexからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してから検証を再開します。
 
-## 静的生成
+## 静的生成とデプロイ
 
-開発向け:
+Devの静的生成、CLI・trust・認証preflight、release分類、deploy順序、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を読む。Hostingを含むreleaseでは、maintenanceとremote変更より前に固定commitと実際のDev設定で`npm run generate:dev`を成功させる。`npm run deploy:dev`は生成、project切替、deployをまとめる外部作用commandであり、個別のbuild・deploy exit statusを必要とするrelease証拠には使用しない。
 
-```powershell
-npm run generate:dev
-```
+Prod生成は`npm run generate:prod`であるが、本runbookとbounded Dev release checkpointの承認対象外とし、Prod deployと合わせて別の明示承認を得る。
 
-本番向け:
-
-```powershell
-npm run generate:prod
-```
-
-生成物は `dist/` に配置され、Firebase Hosting は同ディレクトリを公開します。Codexは通常この生成・ビルドを実行せず、利用者が承認したbounded Dev release checkpoint内だけ、固定release commitのpreflightとして実行します。
-
-## デプロイ
-
-1. `git status` と差分を確認する。
-2. 対象が開発環境か本番環境かを確認する。
-3. 対応する環境設定で静的生成する。
-4. `firebase use <alias>` で対象を確認する。
-5. デプロイ対象と影響を確認し、Prodは対象操作の明示的承認後、Devは承認済みbounded release checkpoint内で `firebase deploy` または限定デプロイを行う。
-6. Firebase Console、Functions ログ、対象画面で結果を確認する。
-
-Storage Rulesに`firestore.get()`または`firestore.exists()`が含まれる場合、coordinatorはStorage Rulesを含むデプロイ承認を求める前に、利用者へ次を明示して通知する。
-
-- 対象Firebase project ID・aliasと、Storage Rulesをデプロイすること。
-- Firebase CLIまたはConsoleがStorageとFirestoreの連携許可を求める可能性があること。
-- 許可時にFirebase Storage service accountへ`Firebase Rules Firestore Service Agent` roleが付与されること。
-- 許可が付与済みか、初回promptで付与できたか、権限不足で失敗したかをデプロイ結果として報告すること。
-- デプロイ後に正常Userと拒否対象UserのStorage accessを確認し、連携roleが欠ける場合のfail-closedを検出すること。
-
-共通Auth identity gateまたは再構築認可を使うFunctionsをデプロイする場合、実行service accountがFirebase Authentication Userの参照権限を持つことを事前に確認し、Codexは次回deploy承認前に利用者へこの確認を通知する。デプロイ後の開発環境では、同社の有効な実行者による正常実行と、Auth無効・claim不一致・User無効・他社指定など各APIの拒否をFunctions logと画面結果で確認する。権限不足によるAuth参照失敗はfail closedとして検出し、権限を推測で追加せず対象project・service account・必要roleを確認する。
-
-開発環境の生成、Firebase alias の切り替え、デプロイを連続して行うスクリプトも定義されています。
-
-```powershell
-npm run deploy:dev
-```
-
-このコマンドは外部環境を変更するため、対象プロジェクトと差分を確認します。Devでは承認済みbounded release checkpoint内、Prodでは別の明示的承認後だけ実行します。完了証拠では静的生成とFirebase deployの結果・終了statusを分離するため、通常は次のcommandを独立して実行します。
-
-```powershell
-npm run generate:dev
-firebase deploy --project air-guard-v2-dev
-```
-
-### Dev maintenance deployment・migration標準checkpoint
-
-Devは正式運用開始前の試行環境であり、正式運用準備roadmapの未完了をdeploy禁止理由にしない。一方で実account・実dataを持つため、変更を無制限に即時反映せず、次の一つのbounded checkpointをDev deploy、data migration、remote受入れの再利用可能なひな型とする。個別migrationはこのひな型に、対象collection、plan、dry-run、apply、post-check、固有rollbackを追加する。
-
-1. **release固定**: branch、full commit、clean worktree、root/Functions dependencyのversion・resolved・integrity、対象Firebase service、local test、未検証範囲を記録する。複数段階の未統合差分や未commit scriptを実dataへ使用しない。
-2. **cutover承認**: 対象project、release commit、静的生成、Rules、Functions、Hosting、data影響、backup、rollback、停止条件、受入れを一つのcheckpointとして利用者が承認する。checkpoint内の各deploy commandに同じ承認を繰り返さない。新しいmigration、破壊的repair、対象拡張、Prodは別承認とする。
-3. **client生成preflight**: maintenance開始またはremote変更より前に、固定release commitのclean worktreeで`npm run generate:dev`を独立実行する。`injectManifest`を使う場合はService Workerに`self.__WB_MANIFEST`挿入点が存在することを自動testで固定する。生成失敗、release HEAD変化、tracked差分、対象project・Emulator flag不一致はcutover開始前の停止条件とし、生成物を別commitまたは別releaseへ再利用しない。
-4. **maintenance開始**: `air-guard-v2-admin-sdk`で`npm run cli:dev -- system status`、`maintenance-on`、`status`を独立実行する。`maintenance-toggle`は使わない。Dev画面が`/maintenance`へ遷移することを確認し、Devへ接続したlocal server・browser、User管理操作、他operator作業を停止してin-flight requestを収束させる。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、既に開始したwriteを物理的に停止しない。
-5. **整合snapshot**: maintenance開始後の完了済みUTC分を`--snapshot-time`へ指定し、固有prefixのCloud StorageへFirestore全体を`gcloud firestore export`する。`--async`を使わず、command exit、operation `done`、error不在、output URI、metadata objectを独立確認する。exportは復旧証拠だが、snapshotに存在しない追加documentをimportだけで削除できるとは扱わない。
-6. **server境界deploy**: clientより先に、releaseで変更したFirestore Rules/Indexes、Storage Rules、Realtime Database Rules、Cloud Functions、共有contractを整合した単位でdeployする。認証改修では予約Functionだけを選択せず、role・permission、User/Auth作成・更新・削除、lifecycle、concurrencyを含む全変更Functionsを導入する。deploy成功、runtime/service account権限、公開Function集合、logを確認し、旧revisionの開始済み処理が収束する時間を置く。
-7. **fresh migration**: server deploy完了後に対象dataをread-only dry-runし、件数、blocking finding、plan digestを記録する。承認済み固有apply条件を満たす場合だけmigrationを実行し、直後の再dry-runでcleanを確認する。dry-run後のdata変化、digest不一致、競合、部分失敗はfail closedとし、推測deleteや自動rollbackを行わない。
-8. **client deploy**: preflight生成物が同じrelease commit、clean worktree、Dev設定に対応することを再確認し、再生成せずHostingをdeployする。古いtab・cache済みJavaScriptが残ってもserver側が最終認可を行うことを確認し、利用者へreloadまたは再sign-inを求める。
-9. **maintenance中検証**: deployed revision、Rules、Functions、Hosting、migration post-check、主要正常経路、role・tenant・disabled・stale inputの拒否、Functions log、秘密情報非出力を確認する。メンテナンス画面だけを全機能成功の証拠にしない。
-10. **解除と受入れ**: 全必須check成功後だけ`maintenance-off`と`status`を独立実行する。新しいbrowser sessionでsign-in、role別control、User/Auth lifecycle、主要画面を確認する。失敗した場合は直ちにmaintenanceへ戻し、未確認状態で運用を継続しない。
-11. **失敗・rollback**: client生成preflight以前の失敗とpreflight失敗はremote変更を開始せず停止する。server deploy後またはmigration後の失敗はmaintenanceを維持し、新契約に沿うcorrective releaseまたは証拠付きrepairを使用する。予約backfill後に予約を保守しない旧Functionsへ戻してtrafficを再開せず、npm unpublish、force push、history rewrite、推測data削除に依存しない。
-
-各stepのcommand、結果、独立exit status、remote operation ID、対象commit、data件数、未確認事項をcheckpoint evidenceとして残す。正式運用開始可否はこのDev checkpointの成功だけでは確定せず、Devで得た証拠を正式運用準備roadmapへ反映する。
+UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh create-only予約migration、client/Hosting、解除・受入れは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を正本とする。このmaintenance migration順序をHosting-onlyや独立Functions等へ一般化しない。
 
 ## 関連パッケージの更新
 
@@ -691,7 +629,8 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## バックアップと保持
 
-- 既存資料では Firestore のスケジュールバックアップが記載されているが、対象プロジェクト、スケジュール、保持期間、復元演習の現状は未確認である。
+- Dev Firestore `(default)`は2026-08-27にPITR有効・保持7日を確認した。PITRをrelease固有の整合snapshot、Storage・Authentication・外部serviceのbackup、復旧演習の代替にしない。
+- Firestoreのスケジュールバックアップは既存資料に記載があるが、現在のschedule、保持、復元演習は未確認である。
 - データ移行前は、対象データと復旧手順を定め、必要なバックアップが取得済みであることを人が確認する。
 - Storage、Authentication、Stripe の状態は Firestore バックアップだけでは完全に復元できない。
 - 文書と仕様の履歴は Git で保持する。

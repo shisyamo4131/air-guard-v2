@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-08-14
+- 最終確認日: 2026-08-27
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -22,7 +22,8 @@
 | 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |
 | ローカル検証・UI検証 | [運用・開発手順](operations.md)、ADR 0005・0006・0014 | `firebase.json`、`firebase.codex-test.json`、`.env` の変数名のみ、対象テスト |
-| デプロイ・公開・移行 | [運用・開発手順](operations.md)、関連 ADR | 対象環境、復旧手順、バックアップ、明示的承認 |
+| Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | 対象serviceの設定・test、release checkpoint、機能・migration固有ADR、backup、rollback、明示的承認 |
+| Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連 ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | Codexによる長期作業・引継ぎ | [運用・開発手順](operations.md)のプロジェクト管理節、ADR 0011、[ロードマップ索引](roadmaps/README.md) | Git 状態、チェックポイント記録、タスクID・ホスト、コールバック経路 |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |
 
@@ -34,6 +35,7 @@
 | [ロードマップ](roadmaps/README.md) | 目標、残作業、完了条件、証拠に基づく進捗 |
 | [ADR](decisions/README.md) | 重要判断の状態と理由 |
 | [運用・開発手順](operations.md) | 実施可能、計画中、利用不可の運用と復旧手順 |
+| [Runbook索引](runbooks/README.md) | Dev deploy等の作業種別ごとに選ぶ実行・停止・rollback手順 |
 | [画面マニュアル](manual/index.md) | 管理者が利用する画面操作 |
 | [実装調査索引](implementation/README.md) | コードから確認した実装事実、未確認範囲、将来対応、確認待ち事項。確認済み要件の正本ではない |
 | [変更履歴](../CHANGELOG.md) | 利用者・仕様・セキュリティ・運用に見える変更 |

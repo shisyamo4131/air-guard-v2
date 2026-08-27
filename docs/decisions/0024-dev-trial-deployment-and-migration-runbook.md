@@ -4,6 +4,7 @@
 - 状態: Accepted
 - 関連仕様: 検証・試行環境、プロジェクト運用
 - 関連手順: [運用・開発手順](../operations.md)
+- 共通runbook: [Dev環境deploy runbook](../runbooks/dev-deployment.md)
 - 関連ロードマップ: [AirGuardV2 正式運用準備ロードマップ](../roadmaps/airguard-v2.md)
 
 ## 背景
@@ -15,6 +16,8 @@ UWBはrole・permission、User/Authの作成・更新・削除、lifecycle、競
 ## 決定
 
 Devは正式運用準備または正式運用開始の完了判定とは独立して、検証済み変更を積極的にdeploy・受入れする試行環境とする。対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を記載した一つのbounded Dev release checkpointを利用者が承認した場合、そのrunbook内の静的生成、deploy、remote検証はcommandごとの再承認を必要としない。
+
+project共通のCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止条件はDev環境deploy runbookを正本とする。client/Hostingのみ、Functionsのみ、互換なRules・Indexes変更へ、本ADRのmaintenance、snapshot、migrationを自動適用しない。release classがclient/serverの非互換な同時変更、data migration、破壊的repairへ強まる場合に、data・互換性境界に応じた手順を追加する。
 
 data migrationはrelease checkpoint内でも固有の対象、dry-run、apply、post-check、rollbackを明示する。新しいmigration、破壊的repair、対象拡張、Prod適用は承認を引き継がない。一般公開されていないことをsecurity controlの代替にせず、Devの実account・実dataを秘密情報・個人情報境界として扱う。
 
@@ -60,6 +63,7 @@ server deploy前の失敗はremote変更を開始せず停止する。server dep
 
 - project-owned document validator、managed governance validator、renderer drift、`git diff --check`を独立実行する。
 - Dev checkpointごとにmaintenance前のbuild preflight、Rules、Functions、Hosting、migration dry-run/apply/post-check、maintenance status、role・tenant・User/Auth lifecycleの正常・拒否経路を独立したexit statusとremote evidenceで確認する。`injectManifest`を採用するService Workerでは、必須挿入点をsource-contract testで固定する。
+- Firebase CLIとgcloudは別のtrust・token refresh経路として独立確認し、対象projectをcommandへ明示する。CLI、TLS、credential、token refresh、account、project、IAM、API、buildの失敗層を切り分け、未導入と確認できないCLIの再install、TLS検証無効化、token本文の表示、persistent CA設定を診断の近道にしない。
 - 正式運用準備の進捗はDev deployだけで加点せず、roadmapのmilestone完了条件が揃った場合だけ更新する。
 
 ## 再検討条件

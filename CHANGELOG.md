@@ -8,6 +8,7 @@
 
 ### Added
 
+- Dev deployをUWB固有手順から分離したproject共通runbookを追加し、release固定、Firebase CLIとgcloudの独立trust・token refresh確認、fail-fast診断、remote変更前build、release種別ごとのmaintenance・backup・rollback、証拠契約を正本化した。
 - Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
 - Windows PC移行について、repository・Git外local data・Codex portable stateの停止時backup、Windows native/WSL境界、再認証、変更なしrestore checkpoint、旧PC保持条件を含む手順を追加した。
 - 利用者用`./saved-data`と通常local環境を変更せず、loopback限定demo project、合成Auth/Firestore seed、読込専用export、容量・指紋ガードを使うCodex専用localテスト基盤を追加した。
@@ -27,6 +28,7 @@
 
 ### Changed
 
+- Dev deploy taskを83KB超の総合operations文書ではなく専用runbookへ直接routeし、確認済みinstalled Firebase CLIをrelease中に固定する方針、Dev Firestore PITR 7日保持、正式運用準備の残件をDev deploy blockerにしない境界へ既存記述を整合した。未検証のWindows CA exportやpersistent gcloud CA設定は標準手順に採用せず、実測済みのprocess-scoped Python truststore経路だけを記録した。
 - DEV-UWB-RELEASE-001でSystem maintenance、Firestore PITRと整合snapshot、Rules・全Functions、create-only予約migration、client/Hostingを一体でDevへ導入した。廃止済み`checkEmailAvailabilityGlobal`をremoteから削除し、予約migration後のclean、Functions全件ACTIVE、scheduled reconciler、Hosting配信artifact一致、maintenance解除後のtop・sign-in画面を確認した。認証済み実accountによるrole・tenant・disabled・stale/lifecycle受入れは残作業として分離した。
 - 2026年5月から潜在していたPWA `injectManifest`設定とService Workerの不整合を修正し、precachingを無効のまま必須挿入点を維持するsource-contract testを追加した。Dev maintenance releaseは固定commitの静的生成をmaintenance・snapshot・server deployより前のpreflight gateとし、build blockerをremote変更前に検出する。
 - Devを正式運用準備の完了前でも積極的にdeploy・検証する非本番試行環境として明確化した。対象commit、service、data影響、backup、rollback、停止条件、受入れを一つのbounded release checkpointで承認し、UWB全体をSystem maintenance、整合snapshot、全server境界、予約migration、client/Hosting、解除の順で導入する再利用可能な手順を追加した。
