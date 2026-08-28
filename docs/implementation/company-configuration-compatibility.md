@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas契約は別project taskへ移管済み。staging actor/backup/audit/delete境界、Dev残存2 tenantの用途とmigration対象性は未確定）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2は別project taskでlocal実装中。staging actorとDev 4 tenant対象性は確定、backup/audit/delete境界は未確定）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -149,6 +149,8 @@ AirGuardV2、schemas、Admin SDKを3系統のread-only調査として再照合�
 
 Schemasの管理はAirGuardV2 repositoryではなく別project `AirGuardV2Schemas`が担う。2026-08-28、利用者指示により既存task `PM（Schemas）-02`（task `01a03be0-539a-79f2-921b-311c85e135ce`）へcheckpoint `CCB-SCHEMAS-CONTRACT-001`を1回送達した。Schemas側は自身のgovernanceと正本に従い、additive `./company-configuration`契約とrelease guardを検討・実装する。version確定、tag、push、publish、consumer install、deployは移管checkpointに含めず、別承認とした。AirGuardV2 taskはSchemas repositoryを直接編集しない。
 
+同日、利用者はSchemas側のS1文書とS2 pure package contract・targeted testを承認した。checkpoint `CCB-SCHEMAS-S1S2-IMPLEMENT-001`ではlegacy mappingをS2へ含め、決定不能値をexplicit conflictにする。package version・lock変更、S3 release guard、tag、push、publish、consumer install、deployは含めていない。
+
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
 | schemas | `main`、HEAD `3310dfe8c754a8d5840e486f95688d02fe4daf67`、clean、package `2.4.2-dev.166`。CCB model/exportなし。tag push workflowは`npm ci`後にtest・tag/version照合・package内容検査なしで直ちにpublishする。 | additive exact schemaとrelease gateが必要。次候補は現行慣行上`2.4.2-dev.167`だが、registry未使用確認と採用承認は未実施。 |
@@ -190,10 +192,10 @@ local実装候補は`scripts/migrate-company-settings.mjs`、専用domain test�
 CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
-- DevではCompany root 4件のうち承認済み合成test 2件を用途分類できた。残る2件は、識別情報を出力しない自動照合だけでは利用者会社・協力会社・残存tenantを確実に区別できず`residual_review`とした。4件すべてをstaging・migration対象と仮定せず、残る用途とinclude/excludeを利用者確認で固定する。推測削除は行わない。
+- Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
 - Schemas変更は別project taskへ移管済み。Schemas側の変更範囲・version・検証結果と、Admin SDKの変更範囲、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認が必要である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
-- migration actor ID、PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。
+- PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。migration actorとmaintenance中の決定不能mapping停止は確定済みである。
 
 ## 2026-08-28 Dev read-only preflight
 
@@ -239,6 +241,8 @@ aggregate digestは、root field名とtype別件数をfield名・type名順、sh
 - result: `approved_synthetic_test` 2件、`user_company` 0件、`partner_company` 0件、`residual_review` 2件。未解決2件のためterminal stateは`REVIEW_REQUIRED`である。
 - classification manifest digest: `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`。domain separatorと、非出力company ID・分類の組だけをID順に並べたSHA-256であり、個別ID、名称、email、document値、per-subject hashは出力していない。migration plan digestには再利用しない。
 - command result: 単一のfail-fast PowerShell processがexit 0。識別情報出力0、remote create/update/delete 0、repository外artifact 0。用途を断定できない2件は分類を推測せず、migration include/excludeを未確定のまま維持した。
+- user resolution: 利用者は非出力の識別情報に基づき、未解決2件を利用者会社1件・試用中の別会社1件と確認した。先に分類済みの合成test 2件と合わせ、4件すべてをmigration対象と承認した。この回答は用途とinclude方針を確定するが、既存の観測digestを書き換えず、実migrationのtarget manifest digestはfresh dry-runで別途生成・承認する。
+- staging metadata: 利用者は`createdBy/updatedBy`へ承認済みDev service accountのstable non-email opaque IDを使用することを承認した。既にmaintenance中で内部理由・scopeを旧dataから決定できないtenantは`ambiguousMapping`としてapply前に停止する。
 
 ## 実施していないこと
 

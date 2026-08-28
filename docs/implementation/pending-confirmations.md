@@ -1695,19 +1695,19 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
 - Current provisional treatment: Schemasは別project taskへ移管し、AirGuardV2 taskから直接編集しない。Admin SDKのlocal変更承認と、version/tag/push/publish/installは未確定のまま分離する。
 - Related FUT IDs: FUT-0090、FUT-0092
-- Answer: 2026-08-28 部分回答。Schemas管理は別project `AirGuardV2Schemas`が担うため、既存task `PM（Schemas）-02`へ指示して進める。checkpoint `CCB-SCHEMAS-CONTRACT-001`をtask `01a03be0-539a-79f2-921b-311c85e135ce`へ1回送達した。Schemas側のversion確定、tag、push、publish、consumer install、deployと、Admin SDK側のlocal変更は未承認のためStatusはPartially answeredを維持する。
+- Answer: 2026-08-28 部分回答。Schemas管理は別project `AirGuardV2Schemas`が担うため、既存task `PM（Schemas）-02`へ指示して進める。checkpoint `CCB-SCHEMAS-CONTRACT-001`をtask `01a03be0-539a-79f2-921b-311c85e135ce`へ1回送達した。続いて利用者はS1文書とS2 pure package contract・test、legacy mappingの同時実装、決定不能値のconflict停止を承認し、`CCB-SCHEMAS-S1S2-IMPLEMENT-001`を送達した。Schemas側のversion確定、S3 release guard、tag、push、publish、consumer install、deployと、Admin SDK側のlocal変更は未承認のためStatusはPartially answeredを維持する。
 
 ## CONF-0140 CCB staging actor・maintenance mapping
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
 - Evidence: backfill metadataはnon-email opaque actorを必要とし、legacy maintenance onからPrivateSettingsのscope/internal reasonを決定できない。
 - Question: 移行で新しい設定documentを作った記録の「実行者」には、個人のメールアドレスではなくDev用service accountの変更されにくい匿名IDを保存してよいか。また、移行前からmaintenance中の会社は、新documentに必要な内部理由・停止範囲が旧dataにないため、値を想像で補わずその会社の移行を停止してよいか。
 - Why needed: migration actorの捏造・email保存と、sourceにないmaintenance private値の推測を防ぐため。
 - Options and impact: 推奨はservice account匿名IDを記録し、既にmaintenance中の会社だけ停止する。別の運営者ID台帳を先に作る、または全stagingを延期する選択もある。
-- Current provisional treatment: actor未固定、maintenance onはambiguousとしてremote stagingを行わない。
+- Current provisional treatment: actorは承認済みDev service accountのstable non-email opaque IDへ固定する。maintenance onで内部理由・scopeを決定できないtenantは`ambiguousMapping`としてapply前に停止する。
 - Related FUT IDs: FUT-0090、FUT-0095、FUT-0097
-- Answer: 2026-08-28、元の表現は理解できないとの回答。仕様判断は行わず、質問を上記の平易な表現へ書き換えた。
+- Answer: 2026-08-28 承認済み。移行記録のactorは個人emailでなく承認済みDev service accountのstable non-email opaque IDを使う。移行前からmaintenance中で、旧dataに内部理由・停止範囲がないtenantは値を推測せず、そのtenantのapplyを停止する。
 
 ## CONF-0141 CCB PrivateSettings backup境界
 
@@ -1753,6 +1753,6 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: `air-guard-v2-dev`の4 rootについて、company ID、会社名、同社Userの最小識別情報をprocess内だけで読み、用途を利用者会社・協力会社・承認済み合成test・残存要確認へ分類してよいか。応答とrepositoryには分類別件数、manifest digest、未解決件数だけを残し、ID・名称・email・document値を出力しない。
 - Why needed: 4 rootすべてを推測でmigration対象にせず、外部target manifestのinclude/excludeを利用者の意図と一致させるため。
 - Options and impact: bounded read-only分類、利用者がUIで分類してmanifestを渡す、CCB staging延期。bounded readは最小限のDev実data観測を伴う。
-- Current provisional treatment: 承認済みbounded read-only分類は完了した。合成test 2件は分類済み、残る2件は`residual_review`であり、migration対象性を推測しない。
+- Current provisional treatment: 利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確認済みで、4件すべてをmigration対象とする。実行時のtarget manifest digestはfresh dry-runで別途固定する。
 - Related FUT IDs: FUT-0090、FUT-0091
-- Answer: 2026-08-28 承認済み。`CCB-02-DEV-TENANT-CLASSIFY-001`をexit 0で実施し、承認済み合成test 2件、利用者会社0件、協力会社0件、要確認2件、manifest digest `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`を得た。ID、名称、email、document値の出力は0、remote writeは0。残る2件の用途と全4件のmigration include/excludeは別途利用者確認が必要である。
+- Answer: 2026-08-28 承認済み。`CCB-02-DEV-TENANT-CLASSIFY-001`をexit 0で実施し、合成test 2件、要確認2件、観測digest `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`を得た。ID、名称、email、document値の出力は0、remote writeは0。その後、利用者が要確認2件を利用者会社1件・試用中の別会社1件と確認し、合成test 2件を含む4件すべてをmigration対象として承認した。会社名はrepositoryへ保存しない。実migrationのtarget manifest digest、dry-run、applyは別承認である。

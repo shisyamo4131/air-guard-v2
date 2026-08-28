@@ -142,6 +142,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
 - Stripe、checkout、webhook、plan、課金状態とemployeeLimitの実強制はCCBで再有効化しない。CCBはserver-owned entitlementの保存境界と表示interfaceだけを分離し、全機能改修後の正式release直前に別仕様・別承認で完成させる。
 - CCB cutoverはadditive schemas、Admin SDK backup対応、Functions/client compatible reader、generic Rules fallbackからの新path除外、create-only backfill、最終Rules/Functions/clientの順で準備する。root activation前にclient、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認し、`schemaVersion`とactivation markerを最後に設定する。cutover後のrollback先は旧whole-document writerでなくSettingsを読める既知のcompatible releaseとし、新Settings、legacy root、schema markerを推測削除・巻戻ししない。
+- 既存tenantのCCB backfillで`createdBy/updatedBy`へ記録するactorは、承認済みservice accountの1〜128文字のstable non-email opaque IDとする。移行前からmaintenance中のtenantは、旧dataに新しいPrivateSettingsが要求する内部理由・停止範囲が存在しない場合に値を推測せず、そのtenantを`ambiguousMapping`としてapply前に停止する。
 - pre-containmentでは新規CCB root fieldと既存`createdAt`をclient変更から予約するが、現行writerが毎回変更するlegacy `updatedAt`はroot client updateを全面拒否するcutoverまで許容する。これによりpre-containmentだけで現行Company保存を停止させない。
 
 ### 取引先・現場・取極め

@@ -116,7 +116,7 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 
 実装前にDevのFirestore editionを再確認し、`STANDARD / FIRESTORE_NATIVE`の現在baselineと一致することを確かめる。additive schemasとAdmin SDK backup対応、未有効のFunctions/client compatible readerを準備し、generic Rules fallbackから新pathを除外するpre-containment Rulesを新documentより先にdeployする。新規Companyと既存tenantのSettingsはrootをlegacy正本のままcreate-onlyでstagingし、maintenance cutoverで最終Rules/Functions/clientを有効化する。client、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認してからrootの`schemaVersion`とactivation markerを最後に設定する。dual-writeを採用する場合は期間・正本・競合判定をcheckpointで固定し、無期限に残さない。
 
-migrationは対象company、field mapping、write件数、plan digest、backup、rollback、停止条件を固定する。`ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ写像し、欠損時だけ`LABOR_STANDARD`を補う。未知値は自動変換しない。既存rootやlegacy fieldを最初のreleaseで削除せず、旧clientを戻せる互換期間を設ける。rollbackは新setting documentを推測削除せず、Settingsを読める既知の互換releaseへ戻し、正本切替後のdataを再dry-runして別repairで扱う。旧whole-document writerへ戻す場合はSettingsからrootへのreverse planを別承認する。
+migrationは対象company、field mapping、write件数、plan digest、backup、rollback、停止条件を固定する。`createdBy/updatedBy`は承認済みservice accountのstable non-email opaque IDを使い、個人emailや表示名を保存しない。`ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ写像し、欠損時だけ`LABOR_STANDARD`を補う。未知値は自動変換しない。移行前からmaintenance中で、PrivateSettingsに必要な内部理由・scopeを旧dataから決定できないtenantは`ambiguousMapping`としてapply前に停止し、値を推測しない。既存rootやlegacy fieldを最初のreleaseで削除せず、旧clientを戻せる互換期間を設ける。rollbackは新setting documentを推測削除せず、Settingsを読める既知の互換releaseへ戻し、正本切替後のdataを再dry-runして別repairで扱う。旧whole-document writerへ戻す場合はSettingsからrootへのreverse planを別承認する。
 
 ## 再検討条件
 
