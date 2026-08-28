@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2とS3 release readinessはreview受入れ済み。staging actorとDev 4 tenant対象性は確定、package公開・consumer導入・backup/audit/delete境界は未確定）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2/S3はreview・公開・artifact検証済み。staging actorとDev 4 tenant対象性は確定、consumer導入・backup/audit/delete境界は未確定）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -157,11 +157,13 @@ corrective review後、Schemas repositoryは`main`、HEAD `53fb53de35d2cf4f40804
 
 S3 commit `78bb1f427ffec9bd5f89bb405770502b0f083f58`（`build: prepare 2.4.2-dev.167 release`）でpackage/lockを`2.4.2-dev.167`へ揃え、全10 test fileのfail-closed inventory、tag/version/export/root非公開/public import/package内容を検査するrelease guard、Node 22/24 test成功後だけNode 24で公開するtag-only workflowを追加した。Schemas taskではNode 22/24の全test、実release guard、pack dry-run、project/managed/renderer validatorが各exit 0で、registry readは`.167`未公開を示した。AirGuardV2 coordinatorもNode 22.23.2で`npm test`と`RELEASE_TAG=v2.4.2-dev.167 npm run check:release`を独立に再実行し、各exit 0を確認した。GitHub公式の`actions/checkout@v6`・`actions/setup-node@v6`とnpm Trusted Publishingの`id-token: write`要件にも整合する。
 
-S3は公開準備のlocal commitまでを受入れた状態である。local tag、branch/tag push、workflow実行、npm registry公開・integrity、fresh external install、AirGuardV2/Admin SDK adoption、deploy/data operationは未実施・別承認とする。公開前にはfresh remote-main、tag不存在、registry未使用を再確認する。公開後はunpublish、tag移動・削除、history rewriteをrollbackに使わず、問題があれば後続versionでsupersedeする。
+S3後、active project ruleに旧「7 scriptはdiagnostic、error test失敗」の記述が残っていることを公開preflightで検出し、外部作用前に停止した。利用者承認後、Schemas commit `bb2390997153b2e57470d0c04012d93ddde2f971`でformal 10-file suiteへ正本を一致させ、managed governance 1.3.0のinstruction-chain手順により`PM（Schemas）-03`へ完全新規task交代と変更なしcallbackを完了した。package runtime/API/version/workflow/test fileはS3から不変である。
+
+commit `bb23909`へannotated tag `v2.4.2-dev.167`を付け、normal main push、separate tag push、GitHub Actions run `33150835365`のNode 22/24 test、Node 24 release guard、Trusted Publishingがすべて成功した。registryの`dev`はexact `2.4.2-dev.167`を指し、shasumは`b4cbc285438179f75b69bd754141b0a4492c722d`、integrityは`sha512-EsMVhMXo9Rrc6AdLT98sdiN5iGniVZq6mEDN+XMgxuB1e8TYbNPPQCHRCdf+HcnvbTseruo23A+4PQnFpw/p0g==`である。Windows事前packのdigestとは異なったが、`core.autocrlf=true`のCRLF checkout・npm 10.9.8と、CIのLF checkout・npm 11.17.0の差で再現した。exact commitのLF clean treeを公開toolchainでpackするとregistry tarballとbyte-identicalとなり、84 filesのraw差0、source/runtime/API差0だった。fresh exact installではversion、CCB 27 exports、主要parser、root非公開、peer importがexit 0である。package公開は受入れ済みだが、AirGuardV2/Admin SDK adoption、deploy/data operationは未実施・別checkpointとする。公開後はunpublish、tag移動・削除、history rewriteをrollbackに使わず、問題があれば後続versionでsupersedeする。
 
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
-| schemas | `main`、HEAD `3310dfe8c754a8d5840e486f95688d02fe4daf67`、clean、package `2.4.2-dev.166`。CCB model/exportなし。tag push workflowは`npm ci`後にtest・tag/version照合・package内容検査なしで直ちにpublishする。 | additive exact schemaとrelease gateが必要。次候補は現行慣行上`2.4.2-dev.167`だが、registry未使用確認と採用承認は未実施。 |
+| schemas | `main`、HEAD/origin `bb2390997153b2e57470d0c04012d93ddde2f971`、clean、tag/public package `2.4.2-dev.167`。additive `./company-configuration`、formal Node 22/24 suite、release guard、Trusted Publishing、registry artifact/fresh install検証済み。 | package側blockerは解消。AirGuardV2とFunctions、Admin SDKへ同じexact version/contentを導入し、各consumer回帰を確認する必要がある。 |
 | AirGuardV2 app/Functions | root・Functionsともschemas exact `2.4.2-dev.166`。 | 新CCB exportを使う同一exact versionへ揃え、client/Functions別に導入検証する必要がある。 |
 | Admin SDK | branch `codex/is-super-user-claim-migration`、HEAD `1be81f6745e0033093bb84988194358d0a85a71f`、clean。schemas range `^2.4.2-dev.162`、lock `.162`。 | exact version不一致、新path未対応、compatible rollback artifact不在。 |
 
@@ -201,7 +203,7 @@ CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas変更は別project taskへ移管済み。Schemas `2.4.2-dev.167`のlocal release readinessは受入れ済みだが、tag/push/Trusted Publishing/registry・fresh-install確認と、Admin SDKの変更範囲、consumer install/deploy順、backup/restore互換、rollback releaseの個別承認が必要である。
+- Schemas変更は別project taskへ移管し、`2.4.2-dev.167`のtag/push/Trusted Publishing/registry・fresh-install確認まで受入れ済みである。残るのはAdmin SDKの変更範囲、AirGuardV2/Functions/Admin SDKのexact consumer install・deploy順、backup/restore互換、rollback releaseの個別承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 - PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。migration actorとmaintenance中の決定不能mapping停止は確定済みである。
 

@@ -8,6 +8,7 @@
 
 ### Added
 
+- `AirGuardV2Schemas`のガバナンス内に残った旧7-script診断記述を修正し、新coordinatorで変更なし再開を確認した後、commit `bb23909`をtag `v2.4.2-dev.167`としてTrusted Publishingした。GitHub ActionsのNode 22/24 testとrelease guard、registry metadata、LF clean treeとの84-file byte比較、fresh exact install、CCB 27 export・root非公開・peer importはすべて成功した。Windows事前packとのdigest差はCRLF checkoutとnpm 10、CI公開物はLF checkoutとnpm 11という再現環境差で、source/runtime/API差は0だった。AirGuardV2/Admin SDKへのconsumer導入・deploy・data操作は未実施である。
 - 別project `AirGuardV2Schemas`のS3 release readiness commit `78bb1f4`をreview受入れした。package/lockを`2.4.2-dev.167`へ揃え、全10 test fileのfail-closed inventory、tag/version/export/package-content/public-import guard、Node 22/24 test後だけNode 24でTrusted Publishingするworkflowを確認した。coordinator再検証でも`npm test`と`RELEASE_TAG=v2.4.2-dev.167 npm run check:release`は各exit 0だった。`.167`のtag・push・workflow・npm公開・consumer導入・deployは未実施である。
 - 別project `AirGuardV2Schemas`のCCB S1/S2をreviewし、pure `./company-configuration`契約commit `ebfc173`とlegacy互換補正commit `53fb53d`を受入れた。空口座の旧`accountType=普通`を全nullへ写す例外と、activation期間の既知legacy framework/computed field 6件をcorrective commitで補い、CCB 11件・既存role preset 6件・public self-importを再確認した。package version、S3 release guard、publish、consumer install、deploy、data migrationは未実施である。
 - CCB-02の移行境界として、migration actorを承認済みDev service accountの非email匿名IDへ固定し、既にmaintenance中で旧dataから内部理由・範囲を決定できないtenantは推測せず停止する方針を採用した。Dev 4 tenantは利用者会社1、試用中の別会社1、承認済み合成test 2と確認し、4件すべてを将来のmigration対象に含める。SchemasのS1文書とS2純粋package契約・testのlocal実装を別project taskへ承認したが、version、公開、consumer導入、deploy、data applyは未承認である。

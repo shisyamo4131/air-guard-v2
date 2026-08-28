@@ -6,7 +6,7 @@
 
 ## 関連パッケージの更新
 
-`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。UWB-09で確認済みのversionは`2.4.2-dev.166`である。
+`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。UWB-09で現在のconsumerへ導入済みのversionは`2.4.2-dev.166`である。CCBを含む`2.4.2-dev.167`は公開・artifact検証済みだが、AirGuardV2 consumerへはまだ導入していない。
 
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
@@ -28,5 +28,7 @@ UWB-09のconsumer rollbackは、AirGuardV2の依存をexact `2.4.2-dev.164`へ�
 4. review済みrelease commitへannotated `v*-dev.*` tagを作り、current branchとtagを個別にpushする。`--follow-tags`は使用しない。
 5. `.github/workflows/publish.yml`のTrusted Publishing完了、exact registry version・integrity、一時directoryへのfresh installとpublic subpath importを確認する。
 6. pushだけが失敗した場合はversion作成やtag作成を再実行せず、既存commit・tag・remote refを確認して失敗したpushだけを再開する。
+
+Windowsの`core.autocrlf=true` checkoutで得たlocal pack digestは、GitHub/LinuxのLF checkoutから公開したtarballと一致しない場合がある。digest差だけでsource差と判定せず、registry tarball自身のmetadata digestを確認した上で、exact commitを`git -c core.autocrlf=false -c core.eol=lf archive`した一時treeを公開時と同じNode/npmでpackし、tarball bytesと全published pathを比較する。LF-normalized比較だけで受入れず、LF clean treeとregistry artifactのraw byte差0、fresh exact install、public importを完了条件とする。
 
 公開後はunpublish、tag移動・削除、force push、history rewriteをrollbackに使わない。consumer未導入なら既存exact versionを維持し、公開packageに問題がある場合は修正版を後続versionとして公開する。
