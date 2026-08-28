@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。cross-repository local変更、staging actor/backup/audit/delete境界、Dev tenant分類は未承認）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas契約は別project taskへ移管済み。staging actor/backup/audit/delete境界、Dev残存2 tenantの用途とmigration対象性は未確定）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -147,6 +147,8 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 
 AirGuardV2、schemas、Admin SDKを3系統のread-only調査として再照合した。以下は確認済みの実装事実であり、関連repositoryの変更・公開承認ではない。
 
+Schemasの管理はAirGuardV2 repositoryではなく別project `AirGuardV2Schemas`が担う。2026-08-28、利用者指示により既存task `PM（Schemas）-02`（task `01a03be0-539a-79f2-921b-311c85e135ce`）へcheckpoint `CCB-SCHEMAS-CONTRACT-001`を1回送達した。Schemas側は自身のgovernanceと正本に従い、additive `./company-configuration`契約とrelease guardを検討・実装する。version確定、tag、push、publish、consumer install、deployは移管checkpointに含めず、別承認とした。AirGuardV2 taskはSchemas repositoryを直接編集しない。
+
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
 | schemas | `main`、HEAD `3310dfe8c754a8d5840e486f95688d02fe4daf67`、clean、package `2.4.2-dev.166`。CCB model/exportなし。tag push workflowは`npm ci`後にtest・tag/version照合・package内容検査なしで直ちにpublishする。 | additive exact schemaとrelease gateが必要。次候補は現行慣行上`2.4.2-dev.167`だが、registry未使用確認と採用承認は未実施。 |
@@ -188,8 +190,8 @@ local実装候補は`scripts/migrate-company-settings.mjs`、専用domain test�
 CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
-- DevではCompany rootを4件観測したが、現行試用主体、承認済み合成test tenant、過去の残存tenant、orphanの内訳とmigration対象性は未分類である。4件すべてをstaging・migration対象と仮定せず、ID・値を応答へ出さない別checkpointで用途分類と対象件数を固定する。推測削除は行わない。
-- schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。local read-only設計案は作成済みだがcross-repository変更は未承認である。
+- DevではCompany root 4件のうち承認済み合成test 2件を用途分類できた。残る2件は、識別情報を出力しない自動照合だけでは利用者会社・協力会社・残存tenantを確実に区別できず`residual_review`とした。4件すべてをstaging・migration対象と仮定せず、残る用途とinclude/excludeを利用者確認で固定する。推測削除は行わない。
+- Schemas変更は別project taskへ移管済み。Schemas側の変更範囲・version・検証結果と、Admin SDKの変更範囲、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認が必要である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 - migration actor ID、PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。
 
@@ -229,9 +231,18 @@ aggregate digestは、root field名とtype別件数をfield名・type名順、sh
 
 不採用診断も成功証拠と分ける。最初のaggregate processは`"$base/$relativePath?pageSize=1000"`がPowerShellで`.../documents/=1000`へ展開され、exit 0・0件を返した。後続の成功で覆わず、既知状態との矛盾を理由に不採用とした。operator確認の最初のbatchもsandbox ownership errorを内包したままexit 0となり、package-lock初回parseもnon-terminating errorをexit 0に畳み込んだため不採用とし、command-local safe-directoryとterminating JSON parseで個別に再確認した。
 
+## 2026-08-28 Dev tenant用途分類
+
+- checkpoint: `CCB-02-DEV-TENANT-CLASSIFY-001`
+- approval: 利用者はDev 4 rootのcompany ID、会社名、同社Userの最小識別情報をprocess内だけで読むbounded read-only分類を承認した。
+- process: gcloud access tokenをprocess内だけで取得し、明示project `air-guard-v2-dev`・database `(default)`のCompany rootと各UsersをFirestore REST GETでpage token付き読取りした。会社名・カナ、User email・表示名の合成test signalを照合し、Gmail plus addressから安全に同一base accountを確認できる場合だけ利用者会社候補とした。残り1件を協力会社とみなす推測は、利用者会社を確定できた場合にだけ許すfail-closed分類とした。
+- result: `approved_synthetic_test` 2件、`user_company` 0件、`partner_company` 0件、`residual_review` 2件。未解決2件のためterminal stateは`REVIEW_REQUIRED`である。
+- classification manifest digest: `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`。domain separatorと、非出力company ID・分類の組だけをID順に並べたSHA-256であり、個別ID、名称、email、document値、per-subject hashは出力していない。migration plan digestには再利用しない。
+- command result: 単一のfail-fast PowerShell processがexit 0。識別情報出力0、remote create/update/delete 0、repository外artifact 0。用途を断定できない2件は分類を推測せず、migration include/excludeを未確定のまま維持した。
+
 ## 実施していないこと
 
 - application code、Rules、test、fixture、package、Admin SDK、正本仕様の変更
 - test、validator、build、Emulator、application/server/browser起動
 - deploy、migration、backup、restore、maintenance、remote data create/update/delete、credential変更、persistent trust設定。remote作用は承認済みDev metadataとCompany data-shapeのreadだけで、data writeは0だった。
-- remote inspectionの開始から結果確定までのbranch/HEAD変更、stage、commit。結果反映はこの3文書だけを後続のlocal document commit対象とする。
+- remote inspectionの開始から結果確定までのbranch/HEAD変更、stage、commit。結果反映は本checkpointで明示したproject-owned文書だけを後続のlocal document commit対象とする。
