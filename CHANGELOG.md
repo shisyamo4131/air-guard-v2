@@ -8,6 +8,7 @@
 
 ### Added
 
+- CCB-02のrepository静的調査として、Companyのclient・Functions/Admin SDK・Firestore Rules/fixture・関連packageを再照合し、新Settingsを現行generic Rules下で作れないこと、旧whole-document writerが未知server fieldを失うこと、Admin SDK backup catalogとschemas versionの不整合を記録した。推奨するoperation別Callable、exact schema共通規則、create-only backfill、schema activation、compatible rollbackは利用者確認前の候補であり、application・Rules・Dev dataは変更していない。
 - CCB（Company Configuration Boundary）の承認済み仕様として、Company rootを最小tenant anchorへ縮小し、profile、billing、operations、arrangement、entitlement、maintenanceを責務別documentへ分割する計画を追加した。actor、validation、revision/audit、issuer・round snapshot、attendanceSummaryMode、ACTIVE/SUSPENDED/CLOSED、Stripe延期をADR 0025と専用roadmapへ記録した。application実装とdata migrationは未実施である。
 - maintenanceをCompany固有でなくproject-wideの運用境界とし、通常client/Callable/scheduled・trigger処理の最小gate、bounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせるrunbookとADR 0026を追加した。maintenanceは排他lockではなく、product gateは未実装である。
 - Company設定のclient、server、Rules/security、下流依存を再調査し、全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復を手戻りの少ない順序で改修する専用ロードマップを追加した。

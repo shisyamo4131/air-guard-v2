@@ -8,10 +8,12 @@
 - 基準日: 2026-08-28
 - 調査基準commit: `c8718a82c43a05d3ea70f928747333ef985e77db`
 - 文書化基準commit: `919733aea74476b5839d5e3c277d75641e4a5ccb`
+- CCB-02静的調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
 - 親ロードマップ: [AirGuardV2 正式運用準備](airguard-v2.md)
 - 現行仕様: [Company設定とtenant lifecycle](../specification.md#company設定とtenant-lifecycle)
 - 主要判断: [ADR 0025](../decisions/0025-company-configuration-boundary.md)、[ADR 0026](../decisions/0026-maintenance-quiescence-and-data-change.md)
 - 実装調査: [Company（自社情報・会社設定）](../implementation/company-settings.md)
+- 互換性調査: [CCB-02 Company data・package互換性調査](../implementation/company-configuration-compatibility.md)
 - 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
 - 加点方式: マイルストーン単位。部分加点なし。
 
@@ -81,7 +83,7 @@ CCB-01 confirmed contract
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
-| CCB-02 data・field・package互換契約 | 10 | 0 | Not started | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査は完了し、技術契約の利用者確認、Dev edition/data-shape、package release承認が残る。 |
 | CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
 | CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済み長さ・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
 | CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
@@ -128,3 +130,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 |---|---:|---:|---|
 | 2026-08-27 | 0% | 基準線 | client、server、Rules/security、下流依存の4系統を独立調査し、影響範囲、判断ゲート、実施順、検証・rollback条件を設定した。 |
 | 2026-08-28 | 10% | +10 | Company document分割、actor、validation、revision/audit、snapshot、attendanceSummaryMode、廃止field、lifecycle、project-wide maintenance、Stripe延期を質疑で承認し、仕様・ADR 0025/0026・runbook・台帳・manualへ反映した。application実装・test・migration・Dev受入れは未着手のためCCB-01だけを加点した。 |
+| 2026-08-28 | 10% | ±0 | CCB-02のclient、Functions/Admin SDK、Rules/fixture、packageを4系統で再調査した。generic Rules fallback、新server fieldを落とす旧whole-document writer、Admin SDK backup欠落、package version差を確認し、release順と技術契約候補を記録した。利用者確認とDev実data照合が未完了のため加点しない。 |

@@ -16,8 +16,8 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 104
-- 実装領域文書: 94
+- このREADMEを含む文書数: 105
+- 実装領域文書: 95
 - 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
 - FUT: 183件
   - 状態: Open 136、Needs decision 41、In progress 2、Hypothesis 3、Resolved 1
@@ -72,6 +72,7 @@
 ## System・Company・subscription・保守
 
 - [Company設定](company-settings.md)
+- [CCB-02 Company data・package互換性調査](company-configuration-compatibility.md)
 - [Company components deep review](company-components-deep-review.md)
 - [端数処理・時間計算](rounding-and-time-calculation.md)
 - [税・締日・請求計算primitive](tax-cutoff-billing-primitives.md)
