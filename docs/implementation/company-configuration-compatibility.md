@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-checkは実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。Dev reader/apply、backup表示、audit restore、Rules、remote stagingは未完了）
+- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rulesのlocal prototypeは実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。Dev reader/apply、deployed Rules receipt、Callable、remote stagingは未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -24,7 +24,7 @@ Company rootへ`status`や`schemaVersion`だけを先に追加することも安
 1. additiveな共通schemaと旧新compatible readerを準備する。
 2. Admin SDKをexact schemaへpinし、旧backup・restore・maintenance・deleteを新path検出時にfail closedとする。CCB-aware backup本体はPrivateSettings・audit・削除・provider maintenance契約を確定してから追加する。
 3. Functionsの新規Company作成、operation別writer、tenant gateを未有効のまま準備する。
-4. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesを先にdeployする。rootの旧business field updateはこの時点では維持する。clientによる新規CCB field `status/schemaVersion/configurationState/createdBy/updatedBy`の追加・変更・削除と既存`createdAt`の変更は拒否するが、現行adapterがCompany保存ごとに変更するlegacy `updatedAt`はcutoverまで許容する。
+4. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesを先にdeployする。rootの旧business field updateはこの時点では維持する。clientによる新規CCB field `status/schemaVersion/configurationState/createdBy/updatedBy`の追加・変更・削除と既存`createdAt`の変更は拒否するが、現行adapterがCompany保存ごとに変更するlegacy `updatedAt`はcutoverまで許容する。予約fieldが一部だけ存在する異常rootでは、予約fieldに触れないpatch updateだけを互換とし、予約fieldを落とす現行legacy whole-document writerはfail closedで拒否する。これは自動補修対象ではなく、cutover前のbounded preflightで検出して停止する。
 5. client deploy前に、Dev edition、deploy済みFunctions、operator tool、rootのfield名・`schemaVersion`・activation marker分布を値・秘密を出さないbounded read-only dry-runで確認する。
 6. 新規Companyもrootをlegacy modeのまま作ってSettingsをstagingできるFunctionsと、専用activation marker未設定時はlegacy root、設定後はSettingsだけを読むcompatible clientをdeployする。
 7. [maintenance・data change runbook](../runbooks/maintenance-and-data-change.md)に従い、maintenance開始、bounded quiet period、対象Function log確認、連続dry-run digest一致、整合snapshot/backup、create-only apply、同一dry-runとpost-checkを行う。
@@ -203,7 +203,7 @@ publish済みpackageをunpublishせず、未採用ならconsumerを旧exact vers
 - dry-runは変更なし0、create候補あり2、data blocker 3、digest/concurrency/partial/post-check mismatch 4、usage 64、unexpected pre-write error 70、target/credential/edition/rules proof拒否78を使う。applyはlive stateから同planを再生成してdigest一致後だけ進み、tenantごとのtransactionでroot source/marker/updateTimeと8 target不存在を再検査して8 documentをcreateする。root、audit、既存targetのupdate/deleteは0とする。
 - 複数tenantは全体atomicではない。途中成功後は作成済みdocumentを削除せずfresh dry-runし、成功tenantが`alreadyEquivalent`、残りが`eligibleCreate`となる新digestで再開する。post-checkはinclude tenantが全件equivalent、eligible/blocker 0、root business値・marker不変、audit 0、create件数一致、update/delete/root write 0を必須とする。activationは別checkpointである。
 
-local実装は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、保護付きCodex local harnessへ追加した。exact demo project・loopback Firestore・external effects deny・credential拒否のtarget guard内でだけ、公開REST readerと`Bearer owner`、tenant単位read-write transaction、`currentDocument.exists=false`付き8 create、fresh post-checkを提供する。現行generic Rules下ではremote staging不可であり、local Rules file receiptはpre-containment deployed rulesetの証拠に再利用しない。Dev reader/apply、application、Rules、remote staging、実data applyは別checkpointまで無効である。
+local実装は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、保護付きCodex local harnessへ追加した。exact demo project・loopback Firestore・external effects deny・credential拒否のtarget guard内でだけ、公開REST readerと`Bearer owner`、tenant単位read-write transaction、`currentDocument.exists=false`付き8 create、fresh post-checkを提供する。pre-containment Rulesのlocal prototypeは、`Settings`、`PrivateSettings`、`SettingAudits`のrecursive denyとgeneric fallback除外、legacy root reserved field保護、active root update拒否を実装し、専用Emulator 8件と既存Firestore Rules回帰37件で検証した。local Rules file receiptはpre-containment deployed rulesetの証拠に再利用しない。Dev reader/apply、Rules deploy/remote receipt、remote staging、実data applyは別checkpointまで無効である。
 
 ## 未確認事項・完了条件
 
@@ -211,8 +211,8 @@ CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。pure plannerは2026-08-28に実装し、Schemas exact mapping、8 target create-only、complete exact、partial、不一致、unknown、invalid、ambiguous、orphan、edition未確認、manifest/environment/full snapshot digest binding、UTF-8 byte順、primary分類と全finding保持、per-subject非出力、fresh re-planを合成fixtureで検証した。同日、Codex専用合成Emulatorの公開REST reader、local target guard、tenant単位transaction、fresh post-checkを追加し、2 tenantのdry-run 16 create、apply、root不変、audit 0、update/delete 0、再dry-run全件`alreadyEquivalent`を確認した。実Dev値をmigration commandから取得する経路、Dev manifest/deployed Rules receipt、remote dry-run/apply/post-checkはまだ提供しない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、pure migration plan/digest、Codex専用合成EmulatorのREST reader・create-only transaction・post-checkまでは完了した。残るのはDev向けmanifest/reader/apply証拠、backup表示、専用audit restore、rollback release、Rules・Callable・staging・deploy順の個別実装・検証・承認である。
-- generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
+- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、pure migration plan/digest、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rulesのlocal sourceと合成回帰までは完了した。残るのはDev向けmanifest/reader/apply証拠、deployed Rules receipt、audit artifact/apply、rollback release、Callable・staging・deploy順の個別実装・検証・承認である。
+- generic Rules fallbackを閉じるlocal sourceと合成回帰は完了した。remote staging前に対象project/databaseへdeployしたrulesetと承認済みsourceの一致を機械検証し、全client/Functions/Admin SDK callerのrelease回帰matrixを確定する。
 - CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettingsは既存logical backupから除外し、当面はmanaged backup/PITRへ依存する。SettingAudits restoreは同一company/schema/IDのcreate-only、同値skip、異値拒否に限定し、update/delete/clearを禁止する。専用実装・復旧演習とprovider maintenanceは未完了である。migration actorとmaintenance中の決定不能mapping停止も確定済みである。
 
 ## 2026-08-28 Dev read-only preflight

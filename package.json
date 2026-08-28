@@ -18,6 +18,8 @@
     "test:company-settings-migration": "node --test test/domain/migrate-company-settings.test.mjs",
     "test:company-settings-migration:emulator": "powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test -Suite CompanySettingsMigration",
     "test:company-setting-audit-restore": "node --test test/domain/restore-company-setting-audits.test.mjs",
+    "test:ccb-rules-precontainment": "node --test test/domain/firestore-rules-reservation-source-contract.test.mjs",
+    "test:ccb-rules-precontainment:emulator": "powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test -Suite CcbRulesPrecontainment",
     "test:local:emulators": "firebase --config firebase.codex-test.json --project demo-air-guard-v2-codex emulators:start --only auth,firestore,database,storage,functions --import .codex-test/saved-data",
     "test:local:seed": "powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Seed",
     "test:local:ui:emulators:fresh": "firebase --config firebase.codex-test.json --project demo-air-guard-v2-codex emulators:start --only auth,firestore,database,storage,functions",

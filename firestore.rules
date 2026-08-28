@@ -33,6 +33,24 @@ service cloud.firestore {
         : "";
     }
 
+    // During CCB pre-containment, legacy root writers remain compatible but
+    // cannot add, change, or remove the activation/server-owned fields. An
+    // existing createdAt is also immutable; legacy roots without it may add it.
+    function preservesPreContainmentCompanyRootFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'status', 'schemaVersion', 'configurationState', 'createdBy', 'updatedBy'
+        ])
+        && (!resource.data.keys().hasAny(['createdAt'])
+          || (request.resource.data.keys().hasAll(['createdAt'])
+            && request.resource.data.createdAt == resource.data.createdAt));
+    }
+
+    function isCcbV1ActiveCompanyRoot() {
+      return resource.data.keys().hasAll(['schemaVersion', 'configurationState'])
+        && resource.data.schemaVersion == 1
+        && resource.data.configurationState == 'CCB_V1_ACTIVE';
+    }
+
     function isSafeIdentifier(value) {
       return value is string && value.size() > 0 && value.size() <= 128;
     }
@@ -110,7 +128,11 @@ service cloud.firestore {
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
     match /Companies/{companyDocId} {
-      allow read, update: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow read: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow update: if isAuthenticated()
+                      && userCompanyId() == companyDocId
+                      && !isCcbV1ActiveCompanyRoot()
+                      && preservesPreContainmentCompanyRootFields();
       allow create, delete: if false;
     }
 
@@ -301,6 +323,18 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // CCB pre-containment: no client path is available until the final
+    // actor-, lifecycle-, and document-specific contracts are activated.
+    match /Companies/{companyId}/Settings/{document=**} {
+      allow read, write: if false;
+    }
+    match /Companies/{companyId}/PrivateSettings/{document=**} {
+      allow read, write: if false;
+    }
+    match /Companies/{companyId}/SettingAudits/{document=**} {
+      allow read, write: if false;
+    }
+
     // Companies配下の未定義パスにも同じtenant identity gateを適用する。
     // SecurityReportIndexesとStripeDataの個別操作制約を迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
@@ -314,7 +348,10 @@ service cloud.firestore {
                               && collection != "LifecycleOperations"
                               && collection != "UserLifecycleLocks"
                               && collection != "EmployeeLifecycleLocks"
-                              && collection != "EmployeeLifecycleHeads";
+                              && collection != "EmployeeLifecycleHeads"
+                              && collection != "Settings"
+                              && collection != "PrivateSettings"
+                              && collection != "SettingAudits";
     }
   }
 }

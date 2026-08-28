@@ -1,7 +1,7 @@
 # local Emulator検証runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 役割: Firestore baseline、利用者用local環境、Codex専用Emulator test
 
 ## Firestore instance baseline
@@ -66,6 +66,15 @@ npm run test:local:seed
 ```powershell
 npm run test:local
 ```
+
+CCB pre-containment Rulesだけを、Firestore Emulatorと合成dataで検証する場合は次を使います。
+
+```powershell
+npm run test:ccb-rules-precontainment
+npm run test:ccb-rules-precontainment:emulator
+```
+
+前者はRules sourceのrecursive deny、generic fallback除外、Company root guardを静的に固定する。後者はRulesを実際にcompileし、全client actorのCRUD・list・collection-group・nested/orphan拒否、legacy root互換、active root更新拒否を確認する。どちらもremote deployまたはdeployed rules receiptの代替にはしない。
 
 - 実行前にglobal `firebase` commandが利用可能であることを確認する。正式運用開始まではglobal CLIをlatestへ更新してよい。
 - `--import=.codex-test/saved-data`を使い、`--export-on-exit`は指定しない。

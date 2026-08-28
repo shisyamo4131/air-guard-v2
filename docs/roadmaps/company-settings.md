@@ -3,7 +3,7 @@
 ## メタデータ
 
 - 改修コード: CCB（Company Configuration Boundary）
-- 状態: In progress（仕様確定・compatible reader・Codex専用migration Emulator経路をlocal実装済み）
+- 状態: In progress（仕様確定・compatible reader・Codex専用migration Emulator経路・pre-containment Rulesをlocal実装済み）
 - 現在の進捗: 10%
 - 基準日: 2026-08-28
 - 調査基準commit: `c8718a82c43a05d3ea70f928747333ef985e77db`
@@ -18,7 +18,7 @@
 - CCB-02技術契約: 2026-08-28承認。Company設定専用Callable、schema/marker、pre-containment、create-only staging、旧writer 0件後activation、compatible rollbackを採用する。
 - CCB-02 exact schema v1: 2026-08-28承認。Unicode見た目文字数、全field allowlist・型・長さ・enum・相関・default・maskをADR 0025へ固定した。
 - CCB-02 local release/parity調査: 2026-08-28完了。Schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsは同versionへpin済みで、Admin SDKの旧破壊操作とActive Companyの旧root writeを外部作用前にfail closedとした。client compatible readerは両marker成立後にcomplete 6 Settingsを厳密検証する。Dev 4 tenantは全件migration対象、staging actorとmaintenance conflict停止も確定した。
-- CCB-02 parity/backup/restore契約: 2026-08-28承認。異常1件で全tenant write 0、8 target create-only、partial set自動修復禁止、fresh digest再開を採用する。PrivateSettingsは既存logical backupから除外しmanaged backup/PITRを当面の復旧基盤とする。SettingAuditsは同一company/schema/IDのcreate-only、同値skip、異値拒否とし、update/delete/clearを禁止する。pure migration planner・type-tagged digest・合成回帰test、Codex専用合成EmulatorのREST reader・transaction apply・post-check、Admin SDKのINCOMPLETE backup inventory/metadata sidecar、SettingAuditsのlocal-only pure create-planと合成testは完了した。Dev reader/apply、audit artifact真正性・apply、Rules、remote staging、復旧演習は未完了。
+- CCB-02 parity/backup/restore契約: 2026-08-28承認。異常1件で全tenant write 0、8 target create-only、partial set自動修復禁止、fresh digest再開を採用する。PrivateSettingsは既存logical backupから除外しmanaged backup/PITRを当面の復旧基盤とする。SettingAuditsは同一company/schema/IDのcreate-only、同値skip、異値拒否とし、update/delete/clearを禁止する。pure migration planner・type-tagged digest・合成回帰test、Codex専用合成EmulatorのREST reader・transaction apply・post-check、Admin SDKのINCOMPLETE backup inventory/metadata sidecar、SettingAuditsのlocal-only pure create-planと合成test、pre-containment Rulesのlocal source/Emulator回帰は完了した。Dev reader/apply、audit artifact真正性・apply、deployed Rules receipt、remote staging、復旧演習は未完了。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
@@ -60,7 +60,7 @@
 |---|---|---|
 | 保存 | root 1 documentの全体set | 設定document分割、操作別writer、revision、unknown field保護が未実装 |
 | actor | 同社有効User全員がroot全field update | 会社管理者・日常業務actor・providerの分離が未実装 |
-| read | legacy rootとActive CCBのcompatible readerをlocal実装。Active時は6 Settingsを厳密検証 | Rulesによるclient-safe projection保護、Dev cutover・受入れが未実装 |
+| read | legacy rootとActive CCBのcompatible readerをlocal実装。Active時は6 Settingsを厳密検証。pre-containmentでは新3 collectionを全client deny | final Rulesによるclient-safe projection開放、Dev deploy receipt・cutover・受入れが未実装 |
 | lifecycle | statusなし、client create/deleteだけ拒否済み | ACTIVE/SUSPENDED/CLOSEDとaccess gateが未実装 |
 | profile/billing | 長さ・住所editor・invoice/bank validation不一致 | 承認済みvalidation、audit、帳票snapshotが未実装 |
 | operations | process-global round、旧attendance enum | snapshot、改名、両projectionの表示切替が未実装 |
@@ -90,7 +90,7 @@ additive schemas、Admin SDKの旧破壊操作fail-closed、承認済みCCB back
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
-| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。Schemas公開、3 consumerのexact導入、Admin SDK安全停止、client compatible reader、canonical parity・PrivateSettings backup・SettingAudits restore契約、pure migration plan/digest・合成回帰test、Codex専用REST reader/create-only transaction/post-checkは完了した。Dev reader/apply、backup表示、専用audit restore、Rules・回帰matrix・staging検証が残る。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。Schemas公開、3 consumerのexact導入、Admin SDK安全停止、client compatible reader、canonical parity・backup coverage・SettingAudits restore契約、pure migration/audit planと合成回帰、Codex専用REST create-only transaction/post-check、pre-containment Rules local回帰は完了した。Dev reader/apply、audit artifact/apply、deployed Rules receipt、Callable・staging検証が残る。 |
 | CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
 | CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済みgrapheme長・kana結合濁点・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。合成済み/結合表現、結合濁点単独拒否、長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
 | CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
@@ -154,3 +154,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-28 | 10% | ±0 | Codex専用合成Emulatorへexact project/loopback/external-effects/credential target guard、公開REST reader、tenant単位read-write transaction、8 create-only、fresh post-checkを追加した。domain 34件と専用Emulator 1件で2 tenant・16 create、root不変、audit 0、update/delete 0、再dry-run全件equivalent、利用者saved-data・専用seed不変を確認した。Dev reader/apply、deployed Rules receipt、backup/audit restore、remote stagingが残るため、部分加点なしのCCB-02は未完了とする。 |
 | 2026-08-28 | 10% | ±0 | SettingAuditsのlocal-only pure restore plannerを追加し、同一project/database/company/schema/ID、manifest/artifact digest、manifest全IDの同一snapshot present/absent観測、Schemas exact `.167`、strict Firestore wire形式とcanonical round-tripを満たす場合だけ`exists=false` createを計画し、同値skip・観測欠落・異値または不正1件で全体write 0とする20件の合成testを実装した。artifact真正性・保存・暗号化/IAM/保持、apply、復旧演習が残りoperational restoreは利用不可のため、部分加点なしのCCB-02は未完了とする。 |
 | 2026-08-28 | 10% | ±0 | Admin SDKの新規legacy backupを固定16 collectionの`INCOMPLETE` v1とし、verified v1だけPrivateSettings除外、旧・不正metadataは含有`UNVERIFIED`、PrivateSettings/SettingAudits restoreとCCB backup/restoreは`UNAVAILABLE`と一覧表示する。local一覧は厳密なPID/UUID lock・generation ID・temp publishを使う`.metadata` sidecarだけを読み、payloadを開かない18件のtestを実装した。active lockを拒否し、妥当なownerの死亡済みorphanだけを新規UUIDの隔離pathへ限定回収する。暗号化logical backup、restore、実artifact検証、復旧演習が残るためCCB-02は未完了とする。 |
+| 2026-08-28 | 10% | ±0 | pre-containment Firestore Rulesのlocal prototypeを追加し、`Settings`、`PrivateSettings`、`SettingAudits`をgeneric fallbackから除外して全client actorへ再帰deny、legacy rootのreserved field保護、CCB v1 active rootのclient update停止を実装した。静的契約4件、専用Firestore Emulator 8件、既存Firestore Rules回帰37件が成功し、全CRUD、list/collection-group、nested/orphan、legacy patch互換、partial reserved rootでのwhole-document replacement拒否、利用者saved-data・専用seed不変を確認した。remote deployとdeployed Rules receipt、Dev stagingが残るためCCB-02は加点しない。 |

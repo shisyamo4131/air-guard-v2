@@ -2,7 +2,7 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
-    [ValidateSet('Harness', 'CompanySettingsMigration')]
+    [ValidateSet('Harness', 'CompanySettingsMigration', 'CcbRulesPrecontainment')]
     [string]$Suite = 'Harness',
     [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
@@ -21,10 +21,11 @@ $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
 $testPath = switch ($Suite) {
     'Harness' { Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs' }
     'CompanySettingsMigration' { Join-Path $projectRoot 'test\local\company-settings-migration-emulator.test.mjs' }
+    'CcbRulesPrecontainment' { Join-Path $projectRoot 'test\local\ccb-rules-precontainment-emulator.test.mjs' }
 }
 $projectId = 'demo-air-guard-v2-codex'
 $seedEmulators = 'auth,firestore,database,storage'
-$testEmulators = if ($Suite -eq 'CompanySettingsMigration') {
+$testEmulators = if ($Suite -in @('CompanySettingsMigration', 'CcbRulesPrecontainment')) {
     'firestore'
 } else {
     'auth,firestore,database,storage,functions'
