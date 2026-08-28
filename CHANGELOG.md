@@ -8,6 +8,7 @@
 
 ### Added
 
+- CCB-02の追加read-only調査として、schemas packageのadditive CCB exportとrelease gate、Admin SDKの新path・backup/restore/delete/maintenance対応、AirGuardV2の値を出さないcanonical parity digestとcreate-only staging契約案を記録した。schemas/Admin SDK変更、package version/tag/push/publish/install、application・Rules・migration実装、Dev remote read/data操作は未実施である。cross-repository local変更、staging actor/maintenance mapping、PrivateSettings backup、audit restore、tenant delete、Dev tenant分類を独立した利用者承認待ちへ分離した。
 - CCB-02のrepository静的調査として、Companyのclient・Functions/Admin SDK・Firestore Rules/fixture・関連packageを再照合し、新Settingsを現行generic Rules下で作れないこと、旧whole-document writerが未知server fieldを失うこと、Admin SDK backup catalogとschemas versionの不整合を記録した。推奨するoperation別Callable、exact schema共通規則、create-only backfill、schema activation、compatible rollbackは利用者確認前の候補であり、application・Rules・Dev dataは変更していない。
 - CCB（Company Configuration Boundary）の承認済み仕様として、Company rootを最小tenant anchorへ縮小し、profile、billing、operations、arrangement、entitlement、maintenanceを責務別documentへ分割する計画を追加した。actor、validation、revision/audit、issuer・round snapshot、attendanceSummaryMode、ACTIVE/SUSPENDED/CLOSED、Stripe延期をADR 0025と専用roadmapへ記録した。application実装とdata migrationは未実施である。
 - maintenanceをCompany固有でなくproject-wideの運用境界とし、通常client/Callable/scheduled・trigger処理の最小gate、bounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせるrunbookとADR 0026を追加した。maintenanceは排他lockではなく、product gateは未実装である。

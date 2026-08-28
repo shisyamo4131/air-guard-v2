@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、Dev tenant分類・canonical parity plan・package release契約は未完了）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。cross-repository local変更、staging actor/backup/audit/delete境界、Dev tenant分類は未承認）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -143,14 +143,55 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 - backfill中はrootをlegacy正本のまま維持する。全tenant parityが整ったmaintenance cutoverで最終Rules、Functions、clientを有効化し、root client updateを拒否する。remote Functions、operator、Admin SDKを含む旧whole-document writer 0件を確認してから、root schemaとactivation markerを最後に設定する。
 - cutover後のrollback先は、旧whole-document writerではなく、Settingsを読めて新writeを停止できる既知のcompatible releaseとする。新Settingsやlegacy rootを推測削除せず、schemaVersionを戻さない。data apply後の旧client復帰が必要なら、Settingsからrootへの明示reverse planを別repairとして承認する。
 
+## 2026-08-28 package・Admin SDK follow-up
+
+AirGuardV2、schemas、Admin SDKを3系統のread-only調査として再照合した。以下は確認済みの実装事実であり、関連repositoryの変更・公開承認ではない。
+
+| 対象 | 確認済み状態 | CCB blocker |
+|---|---|---|
+| schemas | `main`、HEAD `3310dfe8c754a8d5840e486f95688d02fe4daf67`、clean、package `2.4.2-dev.166`。CCB model/exportなし。tag push workflowは`npm ci`後にtest・tag/version照合・package内容検査なしで直ちにpublishする。 | additive exact schemaとrelease gateが必要。次候補は現行慣行上`2.4.2-dev.167`だが、registry未使用確認と採用承認は未実施。 |
+| AirGuardV2 app/Functions | root・Functionsともschemas exact `2.4.2-dev.166`。 | 新CCB exportを使う同一exact versionへ揃え、client/Functions別に導入検証する必要がある。 |
+| Admin SDK | branch `codex/is-super-user-claim-migration`、HEAD `1be81f6745e0033093bb84988194358d0a85a71f`、clean。schemas range `^2.4.2-dev.162`、lock `.162`。 | exact version不一致、新path未対応、compatible rollback artifact不在。 |
+
+Admin SDKの固定flat catalogは`Settings`、`PrivateSettings`、`SettingAudits`と他の未知nested pathを発見しない。現行の完全restoreは固定catalogを削除してrootをwhole-document `set`し、Auth失敗を警告だけで継続できる。selective/diff restoreはgeneric merge、Company deleteはAuthと固定catalogを部分削除し得る。これらはcanonical root、append-only audit、PrivateSettings、fail-closed契約と両立しない。さらにpublic classのrestore引数と実装signature、READMEの「全collection」説明にも不一致がある。CCB document作成前に、旧toolのdestructive restore/deleteをCCB tenantへfail closedにし、backup formatと実API説明を一致させる必要がある。
+
+### 推奨package・consumer導入順（承認待ち）
+
+1. schemasへ旧`Company`とroot exportを変更せず、pureな`./company-configuration` subpathとしてv1 constants、strict parser/normalizer/serializer、legacy mapping、audit maskをadditive追加する。AirFirebase adapterとFirebase SDK class identityへ依存させない。
+2. schemasのtargeted testでstrict allowlist、全field制約、grapheme、結合濁点、Timestamp structural boundary、legacy mapping、audit mask、旧`Company`回帰を固定する。publish workflowへtag/version一致、targeted test、public self-import、package file検査を加え、成功前にpublishしない。
+3. 承認済みimmutable prereleaseをtag/publishし、workflow、registry version、integrity、fresh public importを確認する。tag pushがpublishをtriggerするため、tag作成、push、Trusted Publishingは明示承認後だけ行う。
+4. Admin SDKを同じexact versionへpinし、marker-aware reader、catalog inventory、version付きbackup manifest、CCB destructive operation拒否、maintenance compatible path、testと説明を先に整える。新CCB documentはこのtoolが安全になるまで作らない。
+5. AirGuardV2 rootとFunctionsを同じexact versionへpinし、compatible readerと未有効writerを検証する。その後にだけpre-containment Rules、complete-set staging、final cutoverへ進む。
+
+publish済みpackageをunpublishせず、未採用ならconsumerを旧exact versionに留める。採用後・activation前のconsumer rollbackは各consumerの既知versionとlock/integrityを戻してtestする。activationまたはdata apply後はpackage downgradeだけをdata rollbackとみなさず、Settings対応済みreleaseへ戻す。Admin SDKの現行`.162`はSettingsを読めないため、CCB cutover後のrollback artifactにはできない。
+
+## canonical parity plan案（承認待ち）
+
+### 対象と分類
+
+- candidate universeは、外部保管する承認済みtarget manifest、Company root、既存CCB target pathのunionとする。manifestは全観測rootをinclude/exclude理由付きで分類し、company ID、会社名、個人情報をrepository・stdout・応答へ出さない。未分類root、manifest不一致、orphan targetはglobal blockerとする。
+- tenantのprimary classificationは順に`editionUnverified`、`rootMissingOrOrphan`、`targetConflict`、`unknownFieldReview`、`invalidSource`、`ambiguousMapping`、`alreadyEquivalent`、`eligibleCreate`とする。先行classを優先し、全finding codeと件数を別に保持する。1〜6が1件でもあればapply全体をwrite 0で停止する。
+- `alreadyEquivalent`は8 target documentがcomplete、exact、revision 1、valid metadata、source mappingとbusiness parityを持ち、unexpected audit・pathがない場合だけとする。partial setを残りcreateで自動修復しない。`eligibleCreate`はmarker未active、sourceが決定的にmapでき、8 targetとauditがすべて不存在の場合だけとする。
+
+### mapping・digest・write契約
+
+- exact mappingはADR 0025を再実装せずschemas packageのpure mappingを使う。legacy `ACTUAL_DATE/OPERATION_DATE`だけを承認済みenumへ写し、unknownは停止する。空bankは`accountType`を含め全null、active legacy maintenanceからprivate scope等を決められなければ`ambiguousMapping`とする。Stripe・legacy employeeLimitをentitlementへ昇格しない。
+- migration metadataのactorはcheckpointで固定した1〜128文字のnon-email opaque provider IDとし、timestampはserver-set sentinelとしてplanへ含める。個別値、path、company ID、per-subject hashを出力しない。
+- plan digestはdomain separator `airguard:ccb-v1:create-only-plan:v1`と、project、database、edition、fixed commit、schema version、schema contract version、deployed pre-containment rules receipt digest、target manifest digest、全tenantのraw source/target fingerprint・updateTime・classification・expected bodyをtype-tagged canonical encodingでUTF-8 byte順に並べたSHA-256とする。Firestore integer/double、Timestamp、GeoPoint、reference、bytes、list、mapを型付きで区別し、単純な`JSON.stringify(data())`やprivate SDK fieldへ依存しない。
+- dry-runは変更なし0、create候補あり2、data blocker 3、digest/concurrency/partial/post-check mismatch 4、usage 64、unexpected pre-write error 70、target/credential/edition/rules proof拒否78を使う。applyはlive stateから同planを再生成してdigest一致後だけ進み、tenantごとのtransactionでroot source/marker/updateTimeと8 target不存在を再検査して8 documentをcreateする。root、audit、既存targetのupdate/deleteは0とする。
+- 複数tenantは全体atomicではない。途中成功後は作成済みdocumentを削除せずfresh dry-runし、成功tenantが`alreadyEquivalent`、残りが`eligibleCreate`となる新digestで再開する。post-checkはinclude tenantが全件equivalent、eligible/blocker 0、root business値・marker不変、audit 0、create件数一致、update/delete/root write 0を必須とする。activationは別checkpointである。
+
+local実装候補は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、Codex local harness追加である。現行generic Rules下ではstaging不可であり、pre-containment deployed rulesetをmachine-verifiable receiptへ結ぶまでapplyを有効化しない。runbookのexact commandは実装・target guard・testが揃った後に記録する。
+
 ## 未確認事項・完了条件
 
 CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - DevではCompany rootを4件観測したが、現行試用主体、承認済み合成test tenant、過去の残存tenant、orphanの内訳とmigration対象性は未分類である。4件すべてをstaging・migration対象と仮定せず、ID・値を応答へ出さない別checkpointで用途分類と対象件数を固定する。推測削除は行わない。
-- schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。
+- schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。local read-only設計案は作成済みだがcross-repository変更は未承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
+- migration actor ID、PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。
 
 ## 2026-08-28 Dev read-only preflight
 

@@ -1684,3 +1684,75 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Current provisional treatment: 現行JST start/end両端包含と500ms query delayを実装事実とし、無制限rangeやsilent fallbackを承認済み仕様とは扱わない。
 - Related FUT IDs: FUT-0167
 - Answer: 未回答
+
+## CONF-0139 CCB schemas・Admin SDKのcross-repository release境界
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: schemas `2.4.2-dev.166`にCCB exportがなくpublish workflowはtestなしでtag pushからpublishする。Admin SDKはschemas range `^2.4.2-dev.162`、新path未対応で、現行restore/deleteはcanonical root・append-only auditを破壊し得る。
+- Question: schemasへ旧Companyを維持したpureな`./company-configuration` v1 exportとrelease guardを実装し、Admin SDKのCCB destructive operationをfail closedにするための3 repositoryのlocal file変更・test・local commit設計を開始してよいか。version採用、tag作成、Git push、Trusted Publishing/npm publish、consumer install、deployは含まず、各action前に別承認とする。
+- Why needed: AirGuardV2内へのschema重複実装、無検査publish、consumer version差、危険な旧operatorのまま新documentを作ることを防ぐため。
+- Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
+- Current provisional treatment: read-only変更surfaceとrelease/rollback案だけを記録し、schemas/Admin SDK編集、version/tag/push/publish/installを行わない。
+- Related FUT IDs: FUT-0090、FUT-0092
+- Answer: 未回答
+
+## CONF-0140 CCB staging actor・maintenance mapping
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: backfill metadataはnon-email opaque actorを必要とし、legacy maintenance onからPrivateSettingsのscope/internal reasonを決定できない。
+- Question: Dev stagingの`createdBy/updatedBy`を承認済みservice accountのstable non-email unique IDへ固定し、legacy maintenance onはprivate scope/internal reasonを推測せず`ambiguousMapping`で停止するか。
+- Why needed: migration actorの捏造・email保存と、sourceにないmaintenance private値の推測を防ぐため。
+- Options and impact: service account unique ID＋maintenance on停止、別のprovider actor registryを先行設計、全staging延期。推奨案はoff tenantだけを決定的にmapできる。
+- Current provisional treatment: actor未固定、maintenance onはambiguousとしてremote stagingを行わない。
+- Related FUT IDs: FUT-0090、FUT-0095、FUT-0097
+- Answer: 未回答
+
+## CONF-0141 CCB PrivateSettings backup境界
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: Admin SDKのlogical backupはversion・sensitivity・暗号化・retention契約を持たず、PrivateSettingsはprovider actor、内部理由、operation/error、将来のStripe識別子を含み得る。
+- Question: 当面の通常logical backupからPrivateSettingsを明示除外して「完全backup」と呼ばず、project-level managed backup/PITRを復旧基盤とするか。logical restoreが必要になる前に保存先、暗号化、IAM、retention、redaction、cross-environment可否を別承認するか。
+- Why needed: 秘密metadataを既存JSON backupへ無保護で混入させず、復旧可能性を過大表示しないため。
+- Options and impact: 推奨のmanaged backup依存、暗号化logical backupを先行設計、CCB延期。推奨案ではPrivateSettings単独logical restoreをまだ提供しない。
+- Current provisional treatment: PrivateSettingsを既存logical backupへ追加せず、完全backup/restore対応済みと扱わない。
+- Related FUT IDs: FUT-0090、FUT-0097
+- Answer: 未回答
+
+## CONF-0142 CCB SettingAudits restore境界
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: SettingAuditsはappend-onlyだが、現行generic restoreはmerge/set/deleteを行い得る。
+- Question: auditのlogical restoreを同一company・同一schemaでの同ID create-only、既存同値skip、同ID異値拒否に限定し、update/delete/clearを禁止するか。保持・legal holdは共通audit方針で別途確定するか。
+- Why needed: restore名目の監査改変・消去と重複を防ぐため。
+- Options and impact: create-only restore、audit restore全面禁止、専用署名済みarchiveを先行設計。推奨案は災害復旧余地を残しつつ既存auditを変更しない。
+- Current provisional treatment: SettingAuditsのgeneric restore/update/deleteを許可しない。
+- Related FUT IDs: FUT-0090
+- Answer: 未回答
+
+## CONF-0143 CCB tenant物理削除境界
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: 現行Company deleteはAuthと固定flat catalogを部分削除し得て、PrivateSettings、SettingAudits、未知nested path、retention、resumeを扱わない。Company root物理削除はADR 0025で別承認対象である。
+- Question: CCB tenantに対する現行`companies delete`をfail closedにし、法的削除、retention、全path inventory、backup receipt、Auth順序、resume/idempotencyを別設計・別承認するまで物理削除を提供しないか。
+- Why needed: orphan、監査欠落、秘密metadata残存、部分削除を成功扱いすることを防ぐため。
+- Options and impact: 推奨のfail closed、専用削除workflowを先行設計、現行delete継続。現行継続はCCBと両立しない。
+- Current provisional treatment: CCB tenantの物理削除を未提供とし、現行deleteを安全な経路とみなさない。
+- Related FUT IDs: FUT-0090、FUT-0091
+- Answer: 未回答
+
+## CONF-0144 CCB Dev 4 tenantの用途分類read scope
+
+- Status: Open
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: Devに同一38-field shapeのCompany rootを4件観測したが、利用者会社、協力会社、Codex合成tenant、残存/orphanの内訳とmigration対象性は未分類である。ID・値を見ないshape集計だけではinclude/exclude manifestを作れない。
+- Question: `air-guard-v2-dev`の4 rootについて、company ID、会社名、同社Userの最小識別情報をprocess内だけで読み、用途を利用者会社・協力会社・承認済み合成test・残存要確認へ分類してよいか。応答とrepositoryには分類別件数、manifest digest、未解決件数だけを残し、ID・名称・email・document値を出力しない。
+- Why needed: 4 rootすべてを推測でmigration対象にせず、外部target manifestのinclude/excludeを利用者の意図と一致させるため。
+- Options and impact: bounded read-only分類、利用者がUIで分類してmanifestを渡す、CCB staging延期。bounded readは最小限のDev実data観測を伴う。
+- Current provisional treatment: remote readを開始せず、4 rootすべての用途とmigration対象性を未確認とする。
+- Related FUT IDs: FUT-0090、FUT-0091
+- Answer: 未回答
