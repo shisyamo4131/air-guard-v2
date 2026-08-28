@@ -28,6 +28,7 @@
 | Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | 対象serviceの設定・test、release checkpoint、機能・migration固有ADR、backup、rollback、明示的承認 |
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | 関連package更新・公開 | [package release](runbooks/package-release.md) | package repository、互換性、version、tag・push・公開承認 |
+| `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [project coordination](runbooks/project-coordination.md) | `scripts/check-codex-session-size.ps1`、現在のtask ID。最新sessionの推測禁止 |
 | Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、ADR 0011、[ロードマップ索引](roadmaps/README.md) | Git状態、checkpoint、task ID・host、callback経路 |
 | Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) | backup・restore対象、Git bundle、local data、restore checkpoint |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |

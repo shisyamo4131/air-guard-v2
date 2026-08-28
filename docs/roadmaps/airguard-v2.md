@@ -153,3 +153,4 @@
 | 2026-08-27 | 10% | 0 | Firestore Rules縮小の最初の安全な単位として、Company root documentのclient create/deleteを拒否し、同社read/updateとFunctionsによる初期作成を維持した。Codex専用Emulator suite 97件が成功した。以後はCUDを一律Functions化せず機能単位で境界を見直す。既存Company update、他collection、App Check・rate limitが残るため進捗は10%に据え置いた。 |
 | 2026-08-27 | 10% | 0 | Company設定のclient、server、Rules/security、下流依存を独立調査し、専用ロードマップへ全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復の実施順と検証条件を設定した。計画作成のみで実装・test・Dev受入れは未完了のため、親ロードマップ進捗は10%に据え置いた。 |
 | 2026-08-28 | 10% | 0 | CCB-01でCompany設定分割、actor、validation、revision/audit、snapshot、勤怠表示方式、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を承認済み仕様・ADR・runbookへ反映し、CCB専用進捗を10%とした。親ロードマップの未完了マイルストーンは実装・test・Dev受入れを満たさないため、公式進捗は10%に据え置いた。 |
+| 2026-08-28 | 10% | 0 | Managed common governance 1.4.0へ移行し、4つの容量確認表現を現在task IDのsession JSONL実測へ明示routeした。300 MiB task handoff、10 GiB全体参考警告、最新session推測禁止、標準報告・停止条件・回帰testを整合した。application、product gate、Dev受入れの完了条件は変わらないため公式進捗は据え置いた。 |

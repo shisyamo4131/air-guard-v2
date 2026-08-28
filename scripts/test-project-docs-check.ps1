@@ -27,6 +27,13 @@ try {
 
     Invoke-Checker $true 'valid baseline'
 
+    $documentationMapPath = Join-Path $fixtureRoot 'docs/README.md'
+    $validDocumentationMap = Get-Content -LiteralPath $documentationMapPath -Raw -Encoding UTF8
+    $capacityAliasPrefix = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('YOWuuemHj+ODgeOCp+ODg+OCr2AgLyA='))
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value ($validDocumentationMap.Replace($capacityAliasPrefix, ''))
+    Invoke-Checker $false 'capacity routing alias is required'
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value $validDocumentationMap
+
     $nestedRepositoryPath = Join-Path $fixtureRoot 'vendor/nested-project'
     New-Item -ItemType Directory -Path (Join-Path $nestedRepositoryPath '.git') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $nestedRepositoryPath 'README.md') -Encoding UTF8 -Value @'

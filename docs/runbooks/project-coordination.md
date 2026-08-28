@@ -57,15 +57,34 @@ worktree: <clean or exact dirty paths>
 
 ### 容量確認
 
-対象のタスクIDを指定して、作業開始、コールバックによる状態変更後、終了時に確認します。状態変化がない場合は1時間に1回を上限とします。タスクIDを指定せず「最新ファイル」を選ぶ方法は、並行タスクがある場合に使用しません。
+`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は同じtask容量確認指示として、この節へrouteしてから回答します。これらはmodelのtoken数やcontext windowではなく、現在taskの永続Codex session JSONL容量を意味します。
+
+trusted task metadataから現在のtask IDを特定し、作業開始、コールバックによる状態変更後、終了時に確認します。状態変化がない場合は1時間に1回を上限とします。並行taskの有無にかかわらず、最新・最終更新sessionやtimestampから対象を推測しません。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <task-id>
+powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
 ```
 
-- コーディネーターのセッション閾値: 300 MiB
-- Codex全体の参考警告値: 2 GiB。これは削除を自動実行する基準ではない。
-- 容量スクリプトは `.codex/sessions` のJSONLとCodexルート全体を読み取る。業務データや秘密情報の本文は出力しない。
+commandの結果とexit statusを独立して確認します。scriptは指定IDに一致するsession fileを正確に1件だけ解決しなければなりません。
+
+標準報告は次をすべて含めます。
+
+- target task IDとresolved session file。
+- session size MiB、handoff threshold MiB、usage percentage、`handoff_required`。
+- Codex全体の参考容量と10 GiB warning threshold。
+- total scanのcomplete/error count。
+- session測定時刻、Codex全体の測定時刻・source。
+- command resultと独立して観測したexit status。
+
+コーディネーターと専門taskのhandoff閾値は300 MiBです。`handoff_required`が`true`の場合だけtask交代を提案します。`false`の場合、taskの経過時間、会話の長さ、token/context推測を根拠に交代を勧めません。Codex全体の10 GiBは参考警告であり、task handoffや削除を自動実行する基準ではありません。
+
+停止・error契約は次のとおりです。
+
+- 現在task IDを特定できない場合はIDを確認し、推測しません。
+- ID一致が0件または複数件なら件数とnonzero exitを報告して停止します。
+- script失敗時は簡潔なerrorとnonzero exitを報告し、handoff結論を出しません。
+- `codex_scan_complete`が`false`なら`codex_scan_error_count`を報告します。task単体測定は報告できますが、Codex全体を完全な容量、cleanup、threshold判断の証拠にしません。
+- `.codex/sessions`の本文、prompt、credential、秘密情報、業務dataを読み上げたり出力したりしません。Codex所有SQLite・WALを照会・変更しません。
 
 ### 安全な引継ぎ
 

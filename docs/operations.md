@@ -41,10 +41,13 @@ npm install
 | maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md) |
 | Dev build・deploy・remote検証 | [Dev deploy](runbooks/dev-deployment.md) |
 | 関連package更新・公開 | [package release](runbooks/package-release.md) |
+| `容量チェック`、task/session容量確認 | [project coordination](runbooks/project-coordination.md) |
 | Git統合、task loop、session handoff | [project coordination](runbooks/project-coordination.md) |
 | Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) |
 
 `governance/project-rules.md`が参照するCodex専用demo projectの隔離条件は、[local Emulator検証](runbooks/local-emulator-testing.md)と[local UI検証](runbooks/local-ui-testing.md)を合わせて正本とする。package更新、Git統合、task lifecycleを含む正確なcommandと復旧手順も、上表の該当runbookへrouteする。
+
+`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は、model token/context windowではなく現在taskの永続session JSONL容量を意味する。現在のtask IDを明示してproject-local scriptを実行し、並行taskがある場合に最新sessionを推測しない。task handoffは300 MiB、Codex全体は10 GiBの参考警告として分離し、詳細な出力・停止条件は[project coordination](runbooks/project-coordination.md)を正本とする。
 
 ## 静的生成とデプロイ
 

@@ -88,7 +88,8 @@
 - 長期作業はreview可能なcheckpointを1件ずつ割り当て、完了・失敗・仕様質問・承認境界で一度だけcallbackし、coordinatorのreview後に次へ進む。
 - callback失敗時は繰り返し送信せず、完全な結果を当該taskへ残して停止する。coordinatorはstateを安全に1回だけ再取得し、照合不能なら同じ割当を再送しない。
 - 標準の作業session終了条件は「安全に独立実行できる作業が尽きた時点」とする。
-- coordinatorと専門taskのsession handoff閾値は300 MiBとする。閾値到達時は新規割当を止め、基準commit、進捗、checkpoint、未統合作業、test、承認事項、次の指示をrepositoryへ記録する。
+- `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は、model token/context windowではなく現在taskの永続session JSONL容量を実測する指示として扱う。`docs/README.md`から`docs/runbooks/project-coordination.md`へrouteし、現在task IDを明示したproject-local scriptを使う。最新・最終更新sessionを推測しない。
+- coordinatorと専門taskのsession handoff閾値は300 MiB、Codex全体の参考警告値は10 GiBとする。task ID不明、session一致0件・複数件、script失敗、全体scan不完全時は推測せず該当判断を停止する。task閾値未到達時に経過時間やtoken/context推測から交代を提案しない。閾値到達時は新規割当を止め、基準commit、進捗、checkpoint、未統合作業、test、承認事項、次の指示をrepositoryへ記録する。
 - coordinator交代は利用者の明示承認を必要とする。新taskはforkせず連番名で作成し、repositoryからの再開、権限、callback経路、最初のfile限定commitを検証し、archive可能な状態を利用者へ報告する。
 - taskのarchiveは利用者だけが行う。Codexは旧taskのarchiveを実行・依頼せず、新taskの直接repository接続、変更なしcallback、権限、最初のfile限定commitの検証完了を利用者へ報告して待機する。利用者がarchiveを完了するまで、旧新taskに重複した作業を割り当てない。
 - common governance、生成`AGENTS.md`、project-wide permissions、approval policy、coordinator責務、delegation/Git統合、callback/handoff、安全境界を変更した場合はinstruction-chain変更としてaffected taskを交代する。

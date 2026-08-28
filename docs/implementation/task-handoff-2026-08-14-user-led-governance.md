@@ -388,3 +388,20 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - local `main`とlocal tracking ref `origin/main`は`4eab588895a2ab47e7ae2ec867c9c10a0d7c5917`である。branch上には未push local commit `40264f32f068783c2d2fd584236fd2d462f4c133`（guarded Dev reservation migration）と`5ac546edb68f6f6b9569bfd6eb91373411a163cc`（Dev trial release runbook）の2件がある。正式運用準備roadmapの公式進捗はDev証拠未取得のため10%のままである。
 - 次はfull release commitと対象Firebase project、services、data影響、backup、rollback、停止条件、検証を固定したbounded Dev release checkpointを構築し、利用者承認後に実行する。実際のDev deploy、network、snapshot、migration、remote検証、実data操作はまだ0件である。
 - coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## GOV14-AIRGUARDV2-01 migration preparation checkpoint
+
+- 日付: 2026-08-28。
+- coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- program coordinator / callback destination: PM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`。
+- ownerはinstalled `scaffold-project-governance` common governance `1.4.0`への移行、限定local commit、AirGuardV2の全active task交代を承認した。program source commitは`25fb125a1a656b7a6906d11456f6c7f0a4050363`である。
+- migration baselineはbranch `codex/dev-user-reservation-migration`、HEAD `e9af484d47005b8eb28afe764a038b195d7409d2`、upstream none、clean、保存済みprimary repository `C:\Users\seven\projects\AirGuard\air-guard-v2`のworktree 1件だけである。
+- managed common governanceは移行前`1.3.0`、common SHA-256 `d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。installed skillは36 files、`1.4.0`、skill validator exit 0である。
+- active AirGuardV2 Codex taskはPM（AirGuardV2）-07だけ、内部subagentは0である。未統合worktree変更はなく、交代対象はPM-07 1件である。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`公開・検証、Admin SDKのfail-closed安全停止、AirGuardV2 app/Functionsのexact package導入とcompatible reader local実装まで完了した。次はcanonical parity、PrivateSettings backup、SettingAudits restore契約を確定する。application変更、deploy、migration、remote/data操作をgovernance移行へ含めない。
+- 移行前のtask sessionは73.45 MiB / 300 MiBでhandoff threshold未到達だった。旧2 GiB Codex-wide scanは2004.64 MiB、scan incomplete / error 1であり、全体容量の完全な判断証拠には使用しない。
+- 移行はmanaged artifactをsync commandだけで更新し、project-owned容量alias、coordination runbook、measurement script、仕様、ADR、roadmap、operations、INITIAL_PROMPT、validator/test、changelog、handoffを整合させる。push、fetch、network、deploy、data操作、archive/delete、history rewrite、別worktreeは禁止する。
+- migration commitと全検証後、完全新規task `PM（AirGuardV2）-08`を保存済みprojectへ直接作成し、governance `1.4.0`、managed restricted workspace-write、primary-only worktree、no-change callback、最初のfile限定self-routing commitを確認する。成功するまでownershipはPM-07に残し、旧taskをCodexがarchive/deleteしない。
+- managed sync後はcommon governance `1.4.0`、common SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、generated `AGENTS.md` 13,659 bytes / 32,768 bytesである。project specificationは`0.5.15`へ更新した。
+- 容量確認は実task IDを必須とし、exactly one matching JSONLだけを測定する。handoff閾値はtask session 300 MiB、Codex全体10 GiBは別の参考warningであり、session本文を表示しない。移行中の実測は74.10 MiB / 300 MiB、24.70%、handoff不要だった。Codex全体scanは2011.32 MiB / 10 GiB、scan incomplete / error 1のため完全値として扱わない。
+- pre-commit検証ではmanaged governance、renderer、project documentation、documentation negative fixtures、capacity routing regression 7件、`git diff --check`が独立exit 0となった。最初のproject documentation検査はWindows PowerShellの日本語literal文字コード解釈でparser exit 1となり、validator/test内のalias fixtureをUTF-8 Base64復号へ変更した後に再実行してexit 0を確認した。

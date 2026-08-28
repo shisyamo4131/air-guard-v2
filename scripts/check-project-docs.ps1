@@ -16,11 +16,62 @@ $requiredFiles = @(
     'AGENTS.md', 'README.md', 'CHANGELOG.md', 'INITIAL_PROMPT.md',
     'docs/README.md', 'docs/specification.md', 'docs/operations.md',
     'docs/decisions/README.md', 'docs/roadmaps/README.md',
+    'docs/runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1',
     '.codex/config.toml'
 )
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $relativePath))) {
         Add-CheckError "Missing required file: $relativePath"
+    }
+}
+
+$capacityAliases = @(
+    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('5a656YeP44OB44Kn44OD44Kv')),
+    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('44K/44K544Kv5a656YeP56K66KqN')),
+    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('44K744OD44K344On44Oz5a656YeP56K66KqN')),
+    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('c2Vzc2lvbiBzaXplIC8gaGFuZG9mZiB0aHJlc2hvbGTnorroqo0='))
+)
+$documentationMapPath = Join-Path $repoRoot 'docs/README.md'
+$coordinationRunbookPath = Join-Path $repoRoot 'docs/runbooks/project-coordination.md'
+$capacityScriptPath = Join-Path $repoRoot 'scripts/check-codex-session-size.ps1'
+if (Test-Path -LiteralPath $documentationMapPath) {
+    $documentationMapContent = Get-Content -LiteralPath $documentationMapPath -Raw -Encoding UTF8
+    foreach ($alias in $capacityAliases) {
+        if (-not $documentationMapContent.Contains($alias)) {
+            Add-CheckError "Capacity routing alias is missing from docs/README.md: $alias"
+        }
+    }
+    foreach ($requiredRoute in @('runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1')) {
+        if (-not $documentationMapContent.Contains($requiredRoute)) {
+            Add-CheckError "Capacity route is missing from docs/README.md: $requiredRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $coordinationRunbookPath) {
+    $coordinationContent = Get-Content -LiteralPath $coordinationRunbookPath -Raw -Encoding UTF8
+    foreach ($alias in $capacityAliases) {
+        if (-not $coordinationContent.Contains($alias)) {
+            Add-CheckError "Capacity routing alias is missing from project coordination runbook: $alias"
+        }
+    }
+    foreach ($requiredContract in @('<current-task-id>', '300 MiB', '10 GiB', 'codex_scan_complete', 'model')) {
+        if (-not $coordinationContent.Contains($requiredContract)) {
+            Add-CheckError "Capacity contract is missing from project coordination runbook: $requiredContract"
+        }
+    }
+}
+if (Test-Path -LiteralPath $capacityScriptPath) {
+    $capacityScriptContent = Get-Content -LiteralPath $capacityScriptPath -Raw -Encoding UTF8
+    foreach ($requiredScriptContract in @(
+        'SessionId is required',
+        'Expected exactly one session',
+        'TotalThresholdBytes = 10GB',
+        'usage_percent',
+        "selection = 'session_id'"
+    )) {
+        if (-not $capacityScriptContent.Contains($requiredScriptContract)) {
+            Add-CheckError "Capacity script contract is missing: $requiredScriptContract"
+        }
     }
 }
 
