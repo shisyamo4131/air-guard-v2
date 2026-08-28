@@ -2,12 +2,12 @@
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否をlocal実装済み。staging actorとDev 4 tenant対象性は確定。canonical parity、PrivateSettings backup・SettingAudits restore本契約は未完了）
+- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否をlocal実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。local migration/restore実装、Rules、remote stagingは未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
 - 現行仕様: [Company設定とtenant lifecycle](../specification.md#company設定とtenant-lifecycle)
-- 主要判断: [ADR 0025](../decisions/0025-company-configuration-boundary.md)
+- 主要判断: [ADR 0025](../decisions/0025-company-configuration-boundary.md)、[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)
 - ロードマップ: [Company設定改修ロードマップ](../roadmaps/company-settings.md)
 - 調査方法: client、Functions/Admin SDK、Firestore Rules/fixture、関連packageの4系統を独立したread-only調査として実施した。
 
@@ -187,7 +187,7 @@ Active後の欠損、unknown、invalid、listener errorはlegacyへ戻さずComp
 
 publish済みpackageをunpublishせず、未採用ならconsumerを旧exact versionに留める。採用後・activation前のconsumer rollbackは各consumerの既知versionとlock/integrityを戻してtestする。activationまたはdata apply後はpackage downgradeだけをdata rollbackとみなさず、Settings対応済みreleaseへ戻す。Admin SDKの現行`.162`はSettingsを読めないため、CCB cutover後のrollback artifactにはできない。
 
-## canonical parity plan案（承認待ち）
+## canonical parity確定契約
 
 ### 対象と分類
 
@@ -203,7 +203,7 @@ publish済みpackageをunpublishせず、未採用ならconsumerを旧exact vers
 - dry-runは変更なし0、create候補あり2、data blocker 3、digest/concurrency/partial/post-check mismatch 4、usage 64、unexpected pre-write error 70、target/credential/edition/rules proof拒否78を使う。applyはlive stateから同planを再生成してdigest一致後だけ進み、tenantごとのtransactionでroot source/marker/updateTimeと8 target不存在を再検査して8 documentをcreateする。root、audit、既存targetのupdate/deleteは0とする。
 - 複数tenantは全体atomicではない。途中成功後は作成済みdocumentを削除せずfresh dry-runし、成功tenantが`alreadyEquivalent`、残りが`eligibleCreate`となる新digestで再開する。post-checkはinclude tenantが全件equivalent、eligible/blocker 0、root business値・marker不変、audit 0、create件数一致、update/delete/root write 0を必須とする。activationは別checkpointである。
 
-local実装候補は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、Codex local harness追加である。現行generic Rules下ではstaging不可であり、pre-containment deployed rulesetをmachine-verifiable receiptへ結ぶまでapplyを有効化しない。runbookのexact commandは実装・target guard・testが揃った後に記録する。
+後続のlocal実装候補は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、Codex local harness追加である。現行generic Rules下ではstaging不可であり、pre-containment deployed rulesetをmachine-verifiable receiptへ結ぶまでapplyを有効化しない。runbookのexact commandは実装・target guard・testが揃った後に記録する。application・test code、remote staging、data applyは本契約承認だけでは許可されない。
 
 ## 未確認事項・完了条件
 
@@ -211,9 +211,9 @@ CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closedはlocal受入れ対象まで実装済みである。残るのはcanonical parity、CCB-aware backup/restore、rollback release、Rules・Callable・staging・deploy順の個別承認である。
+- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定までは完了した。残るのはlocal migration plan/digest、backup表示、専用audit restore、rollback release、Rules・Callable・staging・deploy順の個別実装・検証・承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
-- CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettings backupとSettingAudits restoreの本契約、provider maintenanceは未確定である。migration actorとmaintenance中の決定不能mapping停止は確定済みである。
+- CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettingsは既存logical backupから除外し、当面はmanaged backup/PITRへ依存する。SettingAudits restoreは同一company/schema/IDのcreate-only、同値skip、異値拒否に限定し、update/delete/clearを禁止する。専用実装・復旧演習とprovider maintenanceは未完了である。migration actorとmaintenance中の決定不能mapping停止も確定済みである。
 
 ## 2026-08-28 Dev read-only preflight
 

@@ -12,6 +12,12 @@ CCBの既存tenant backfillはcreate-only complete-set stagingとして後続実
 
 2026-08-28時点のDev target universeはCompany root 4件で、利用者会社1件、試用中の別会社1件、承認済み合成test 2件をすべてmigration対象とする。会社ID、名称、emailはrepository・command output・callbackへ保存しない。実装済みmigration command、target manifest digest、pre-containment Rules receipt、backup、dry-run、apply承認はまだ存在しないため、この分類だけでremote stagingまたはapplyを開始してはならない。
 
+candidate universeは外部保管する承認済みtarget manifest、Company root、既存CCB target pathのunionとする。未分類root、manifest不一致、orphan target、target conflict、unknown field、invalid source、ambiguous mappingが1件でもあれば、全tenantのapplyをwrite 0で停止する。partial setへ不足documentを足して修復しない。`alreadyEquivalent`は8 targetのcomplete/exact/parity、`eligibleCreate`はmarker未active・source決定可能・8 targetとauditが全不存在の場合だけとする。
+
+dry-runとapplyはSchemasのpure mappingから同じtype-tagged canonical planを生成し、applyはlive stateで再生成したdigestが承認値と一致した場合だけtenant単位transactionで8 targetをcreateする。root、既存target、auditのupdate/deleteは0とする。途中成功後は作成済みdocumentを削除せず、fresh dry-runで成功tenantを`alreadyEquivalent`として新しいdigestを承認し直す。activationは別checkpointである。詳細は[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
+
+`PrivateSettings`は現行logical backupへ含めず、そのbackupを完全backupと呼ばない。当面の復旧基盤はmanaged Firestore backup/PITRとする。専用の暗号化logical backup/restoreは保存先、暗号化、IAM、保持、redaction、環境間restoreを別承認するまで未提供である。`SettingAudits` restoreは専用経路の同一company/schema/ID create-onlyだけを許可し、同値skip、異値で全体停止、update/delete/clear禁止とする。専用実装と復旧演習がない間は、いずれも利用可能なlogical restoreとして案内しない。
+
 ## UWB-04 User予約migration
 
 `scripts/migrate-user-reservations.mjs`はFirestoreのUserを監査し、全Userのemail予約とEmployee予約を再構築する。既定はdry-runで、対象ごとにproject、Emulator routing、資格情報をAdmin SDK初期化前に検査する。`codex-local`は専用demo projectと`127.0.0.1:18080`だけを許可する。`user-local`は利用者用`air-guard-v2-dev` Emulatorと`127.0.0.1:8080`だけを許可し、Devと同じcreate-only制約で動作する。`dev`はEmulator routingを拒否し、明示されたDev service account資格情報のproject・identityを検査する。Prod targetは提供しない。

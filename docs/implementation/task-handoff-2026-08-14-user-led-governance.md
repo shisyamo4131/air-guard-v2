@@ -421,3 +421,13 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - nextはcanonical parity、PrivateSettings backup、SettingAudits restore契約の確定である。application変更、test code変更、deploy、migration、network、remote/data操作、push、`main` merge、Prod、未承認scopeは別checkpointとする。
 - 本checkpointの限定commitとpost-commit verificationが成功した時点で、active AirGuardV2 coordinator ownershipをPM（AirGuardV2）-08へ移管する。former PM（AirGuardV2）-07はCodexがarchiveまたはdeleteせず、利用者が手動削除できる状態とする。
 - 今後のAirGuardV2 checkpoint callbackとassignmentはPM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`へretargetする。program完了callbackだけはformer PM（AirGuardV2）-07がPM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`へ一度送る。
+
+## CCB-02-PARITY-RECOVERY-CONTRACT-001 checkpoint
+
+- 日付: 2026-08-28。
+- 利用者はcanonical parity、PrivateSettings backup、SettingAudits restoreの3契約を承認した。project specificationは`0.5.16`へ更新し、判断理由と復旧境界はADR 0028を正本とする。
+- canonical parityは、未分類・不正・partial・決定不能が1件でもあれば全tenant write 0とし、条件を満たすtenantへ8 target documentをcreateするだけとする。既存root・target・auditのupdate/delete、partial setの自動修復、途中成功分の推測削除を禁止する。
+- PrivateSettingsは既存logical backupへ含めず、そのbackupを完全backupと呼ばない。当面の復旧基盤はmanaged Firestore backup/PITRとし、専用暗号化logical backup/restoreは別仕様・別承認とする。
+- SettingAudits restoreは同一company・同一schema・同一document IDのcreate-only、既存同値skip、異値で全体停止とし、update/delete/clear/generic mergeを禁止する。専用実装・復旧演習までは利用不可である。
+- 関連repository `air-guard-v2-schemas`ではlocal generated capacity cacheを`.gitignore`へ追加し、local commit `7a3b0cbf04659f0cf0f87a3d20f8fc8093a72e2f`を作成した。repositoryはcleanで、push・network・package・application変更は行っていない。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はlocal migration plan/digest・synthetic fixture・停止/再実行test、PrivateSettings除外表示、専用audit restoreの実装範囲をcheckpoint化する。application/test code変更、Rules、Emulator、deploy、migration、network、remote/data操作、push、`main` merge、Prodは本checkpointに含めない。

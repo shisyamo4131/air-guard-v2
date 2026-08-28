@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- CCB-02のcanonical parity、PrivateSettings backup、SettingAudits restore境界を承認・文書化した。Company設定stagingは異常1件で全tenant write 0、8 target create-only、partial set自動修復禁止、fresh digest再開とする。PrivateSettingsは既存logical backupから除外してmanaged Firestore backup/PITRを当面の復旧基盤とし、監査履歴は同一company/schema/IDのcreate-only、同値skip、異値拒否、update/delete/clear禁止とする。application、migration、Rules、remote data、専用restoreは未実装である。
 - Managed common governanceを1.4.0へ同期し、`容量チェック`等の4表現を現在task IDの永続session JSONL実測へ明示routeした。task handoff 300 MiBとCodex全体10 GiB参考警告、最新session推測禁止、標準出力、scan不完全・0件・複数件・失敗時の停止契約、回帰testを追加した。application、deploy、remote/data操作は変更しない。
 - AirGuardV2 appとFunctionsを公開Schemas exact `2.4.2-dev.167`へ揃え、Company compatible readerを追加した。両marker成立前はlegacy rootを維持し、成立後はroot projectionと6 Settingsを厳密検証する。欠損・invalidはmaintenance側へfail closedとし、Active/error時の旧root全体更新をFirestore呼出し前に拒否する。新Settings write、Rules、migration、deploy、remote data操作は未実施である。
 - repository projectを持たない`air-guard-v2-admin-sdk`をcoordinatorが直接更新し、Schemasをexact `2.4.2-dev.167`へpinした。CCB root marker、新3 collection、CCB backup payloadを検出した旧backup/snapshot/diff/restore、Company delete、legacy maintenanceをAuth・Firestore・storage write前にfail closedとし、検査不能も停止する。Node 22/24専用17件と既存9件は成功した。PrivateSettings backup、SettingAudits restore、CCB tenant削除・provider maintenanceの本実装、push、deploy、data操作は未実施である。

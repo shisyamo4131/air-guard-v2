@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-08-28のCCB質疑後、本文`Status`はOpen 80件、Answered 55件、Partially answered 3件である。上のreconciliation dispositionはAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-08-28のCCB質疑後、全144件の本文`Status`はOpen 80件、Answered 60件、Partially answered 4件である。CONF-0141とCONF-0142はPrivateSettings backupとSettingAudits restoreの承認によりAnsweredへ変更した。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -1711,7 +1711,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0141 CCB PrivateSettings backup境界
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
 - Evidence: Admin SDKのlogical backupはversion・sensitivity・暗号化・retention契約を持たず、PrivateSettingsはprovider actor、内部理由、operation/error、将来のStripe識別子を含み得る。
 - Question: 当面の通常logical backupからPrivateSettingsを明示除外して「完全backup」と呼ばず、project-level managed backup/PITRを復旧基盤とするか。logical restoreが必要になる前に保存先、暗号化、IAM、retention、redaction、cross-environment可否を別承認するか。
@@ -1719,11 +1719,11 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 推奨のmanaged backup依存、暗号化logical backupを先行設計、CCB延期。推奨案ではPrivateSettings単独logical restoreをまだ提供しない。
 - Current provisional treatment: PrivateSettingsを既存logical backupへ追加せず、完全backup/restore対応済みと扱わない。
 - Related FUT IDs: FUT-0090、FUT-0097
-- Answer: 未回答
+- Answer: 2026-08-28 承認済み。PrivateSettingsは保存先・暗号化・IAM・保持・redaction・環境間restore契約のない既存logical backupへ追加せず、そのbackupを完全backupと呼ばない。当面はproject-level managed Firestore backup/PITRを復旧基盤とし、PrivateSettings単独logical restoreは未提供とする。Authentication、Storage、外部serviceまで復旧できるとは扱わない。専用の暗号化logical backup/restoreは別仕様・別承認・復旧演習を必要とする。
 
 ## CONF-0142 CCB SettingAudits restore境界
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
 - Evidence: SettingAuditsはappend-onlyだが、現行generic restoreはmerge/set/deleteを行い得る。
 - Question: auditのlogical restoreを同一company・同一schemaでの同ID create-only、既存同値skip、同ID異値拒否に限定し、update/delete/clearを禁止するか。保持・legal holdは共通audit方針で別途確定するか。
@@ -1731,7 +1731,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: create-only restore、audit restore全面禁止、専用署名済みarchiveを先行設計。推奨案は災害復旧余地を残しつつ既存auditを変更しない。
 - Current provisional treatment: SettingAuditsのgeneric restore/update/deleteを許可しない。
 - Related FUT IDs: FUT-0090
-- Answer: 未回答
+- Answer: 2026-08-28 承認済み。SettingAuditsのlogical restoreは同一company・同一schema・同一document IDのcreate-onlyに限定する。既存同IDがcanonical同値ならskipし、異値なら全対象をwrite 0で停止する。update、delete、clear、generic merge restoreは禁止する。保持期間とlegal holdはproject共通audit方針で別途確定し、専用実装・復旧演習までは利用可能と扱わない。
 
 ## CONF-0143 CCB tenant物理削除境界
 

@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-28
-- 仕様バージョン: 0.5.15
+- 仕様バージョン: 0.5.16
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -141,8 +141,11 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。課金機能が未提供である間もsignupと通常業務を妨げない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
 - Stripe、checkout、webhook、plan、課金状態とemployeeLimitの実強制はCCBで再有効化しない。CCBはserver-owned entitlementの保存境界と表示interfaceだけを分離し、全機能改修後の正式release直前に別仕様・別承認で完成させる。
+- CCB stagingの候補集合は承認済みtarget manifest、Company root、既存CCB target pathのunionとする。未分類root、manifest不一致、orphan target、partial set、不正source、決定不能mappingが1件でもあれば全tenantのapplyをwrite 0で停止する。既存root・target・auditは更新・削除せず、marker未activeかつ8 target documentとauditがすべて不存在で、Schemasのpure mappingからexact canonical bodyを決定できるtenantだけをcreate対象とする。途中成功後は作成済みdocumentを推測削除せず、fresh dry-runと新しいplan digestで残りを再計画する。詳細は[ADR 0028](decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
 - CCB cutoverはadditive schemas、Admin SDKへのexact schema導入と旧破壊操作のfail-closed化、CCB-aware backup方針、Functions/client compatible reader、generic Rules fallbackからの新path除外、create-only backfill、最終Rules/Functions/clientの順で準備する。root activation前にclient、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認し、`schemaVersion`とactivation markerを最後に設定する。cutover後のrollback先は旧whole-document writerでなくSettingsを読める既知のcompatible releaseとし、新Settings、legacy root、schema markerを推測削除・巻戻ししない。
-- legacy Admin SDKのbackup、snapshot、diff、restore、Company物理削除、Company root maintenance操作は、root markerまたは`Settings`、`PrivateSettings`、`SettingAudits`を検出した場合、Auth削除・Firestore write・backup保存前にfail closedとする。検査不能もfail closedとし、backup payload側のmarker/pathもrestore前に拒否する。このguardはCCB backup/restore対応ではない。PrivateSettingsの保存先・暗号化・retention、SettingAuditsのcreate-only restore、CCB tenant物理削除、provider maintenanceは各別契約が確定するまで未提供とする。
+- legacy Admin SDKのbackup、snapshot、diff、restore、Company物理削除、Company root maintenance操作は、root markerまたは`Settings`、`PrivateSettings`、`SettingAudits`を検出した場合、Auth削除・Firestore write・backup保存前にfail closedとする。検査不能もfail closedとし、backup payload側のmarker/pathもrestore前に拒否する。このguardはCCB backup/restore対応ではない。
+- `PrivateSettings`は、保存先・暗号化・IAM・retention・redaction・cross-environment可否を持たない既存logical backupへ追加しない。そのbackupを完全backupと呼ばず、当面の復旧基盤はproject-level managed backup/PITRとする。PrivateSettings単独logical restoreは未提供とし、専用の暗号化logical backup/restoreは別仕様・別承認とする。Firestore以外のAuthentication、Storage、外部serviceはmanaged Firestore backupだけで復旧できない。
+- `SettingAudits`のlogical restoreは、同一company・同一schemaの同一document IDをcreate-onlyで補う場合だけ許可する。既存同IDがcanonical同値ならskipし、異値なら全対象をwrite 0で停止する。update、delete、clear、generic merge restoreは禁止する。保持期間とlegal holdはproject共通audit方針で別途確定する。この契約の専用実装・復旧演習が完了するまではSettingAudits restoreを利用可能と扱わない。
 - 既存tenantのCCB backfillで`createdBy/updatedBy`へ記録するactorは、承認済みservice accountの1〜128文字のstable non-email opaque IDとする。移行前からmaintenance中のtenantは、旧dataに新しいPrivateSettingsが要求する内部理由・停止範囲が存在しない場合に値を推測せず、そのtenantを`ambiguousMapping`としてapply前に停止する。
 - pre-containmentでは新規CCB root fieldと既存`createdAt`をclient変更から予約するが、現行writerが毎回変更するlegacy `updatedAt`はroot client updateを全面拒否するcutoverまで許容する。これによりpre-containmentだけで現行Company保存を停止させない。
 
