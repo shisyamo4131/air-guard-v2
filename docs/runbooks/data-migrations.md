@@ -1,12 +1,12 @@
 # data migration runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 役割: 確認済みmigrationのtarget、dry-run、apply、post-check、rollback
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
-## CCB Company設定migration（契約確定・未実装）
+## CCB Company設定migration（pure planner実装済み・実行経路未実装）
 
 CCBの既存tenant backfillはcreate-only complete-set stagingとして後続実装する。`createdBy/updatedBy`は承認済みDev service accountのstable non-email opaque IDを使用し、個人email・表示名を保存しない。移行前からmaintenance中で、旧dataからPrivateSettingsの内部理由・停止範囲を決定できないtenantは`ambiguousMapping`としてapply前に停止し、既定値や推測で補わない。
 
@@ -15,6 +15,15 @@ CCBの既存tenant backfillはcreate-only complete-set stagingとして後続実
 candidate universeは外部保管する承認済みtarget manifest、Company root、既存CCB target pathのunionとする。未分類root、manifest不一致、orphan target、target conflict、unknown field、invalid source、ambiguous mappingが1件でもあれば、全tenantのapplyをwrite 0で停止する。partial setへ不足documentを足して修復しない。`alreadyEquivalent`は8 targetのcomplete/exact/parity、`eligibleCreate`はmarker未active・source決定可能・8 targetとauditが全不存在の場合だけとする。
 
 dry-runとapplyはSchemasのpure mappingから同じtype-tagged canonical planを生成し、applyはlive stateで再生成したdigestが承認値と一致した場合だけtenant単位transactionで8 targetをcreateする。root、既存target、auditのupdate/deleteは0とする。途中成功後は作成済みdocumentを削除せず、fresh dry-runで成功tenantを`alreadyEquivalent`として新しいdigestを承認し直す。activationは別checkpointである。詳細は[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
+
+2026-08-28に`scripts/migrate-company-settings.mjs`へpure plannerだけを実装した。入力は呼出元が取得・正規化したmanifest、Company root、target、audit、unexpected pathであり、planner自身はFirestore、Emulator、network、credentialへ接続しない。Schemas exact `2.4.2-dev.167`の`mapLegacyCompanyToConfigurationV1`を使い、公開Firestore REST Valueだけからinteger/double、Timestamp、GeoPoint、reference、bytes、array、mapを区別したcanonical digestを作る。標準summaryは分類別件数、計画digest、opaque subject、create予定件数だけで、company ID、名称、path、document bodyを出力しない。
+
+```powershell
+# 合成fixtureだけを使うpure planner回帰test
+npm run test:company-settings-migration
+```
+
+このcheckpointでは実行可能なFirestore reader、dry-run CLI、transaction apply、post-checkを意図的に提供しない。`node scripts/migrate-company-settings.mjs`の直接実行はexit 64で停止する。次の実装は、まずCodex専用合成Emulator向けの公開REST readerとcreate-only transactionを別checkpointで追加し、target guard、Rules receipt、manifest receipt、read-after-write、root/audit write 0を検証する。Dev/Prodまたは既存Emulator dataに対する読取・適用へ、このpure plannerだけを根拠に進んではならない。
 
 `PrivateSettings`は現行logical backupへ含めず、そのbackupを完全backupと呼ばない。当面の復旧基盤はmanaged Firestore backup/PITRとする。専用の暗号化logical backup/restoreは保存先、暗号化、IAM、保持、redaction、環境間restoreを別承認するまで未提供である。`SettingAudits` restoreは専用経路の同一company/schema/ID create-onlyだけを許可し、同値skip、異値で全体停止、update/delete/clear禁止とする。専用実装と復旧演習がない間は、いずれも利用可能なlogical restoreとして案内しない。
 

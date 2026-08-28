@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否をlocal実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。local migration/restore実装、Rules、remote stagingは未完了）
+- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、local-only pure migration planner・type-tagged digest・合成回帰testは実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。Firestore reader/apply、backup表示、audit restore、Rules、remote stagingは未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -209,9 +209,9 @@ publish済みpackageをunpublishせず、未採用ならconsumerを旧exact vers
 
 CCB-02は次が完了するまで10点を加点しない。
 
-- Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
+- Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。local-only pure plannerは2026-08-28に実装し、Schemas exact mapping、8 target create-only、complete exact、partial、不一致、unknown、invalid、ambiguous、orphan、edition未確認、manifest digest binding、fresh re-planを合成fixture 17件で検証した。実Dev値の取得、manifest/Rules receipt、dry-run、apply、post-checkはまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定までは完了した。残るのはlocal migration plan/digest、backup表示、専用audit restore、rollback release、Rules・Callable・staging・deploy順の個別実装・検証・承認である。
+- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、local-only pure migration plan/digestと合成回帰testまでは完了した。残るのはFirestore reader/create-only transaction/post-check、backup表示、専用audit restore、rollback release、Rules・Callable・staging・deploy順の個別実装・検証・承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 - CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettingsは既存logical backupから除外し、当面はmanaged backup/PITRへ依存する。SettingAudits restoreは同一company/schema/IDのcreate-only、同値skip、異値拒否に限定し、update/delete/clearを禁止する。専用実装・復旧演習とprovider maintenanceは未完了である。migration actorとmaintenance中の決定不能mapping停止も確定済みである。
 

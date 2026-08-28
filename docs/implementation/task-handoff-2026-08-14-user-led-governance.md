@@ -431,3 +431,14 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - SettingAudits restoreは同一company・同一schema・同一document IDのcreate-only、既存同値skip、異値で全体停止とし、update/delete/clear/generic mergeを禁止する。専用実装・復旧演習までは利用不可である。
 - 関連repository `air-guard-v2-schemas`ではlocal generated capacity cacheを`.gitignore`へ追加し、local commit `7a3b0cbf04659f0cf0f87a3d20f8fc8093a72e2f`を作成した。repositoryはcleanで、push・network・package・application変更は行っていない。
 - current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はlocal migration plan/digest・synthetic fixture・停止/再実行test、PrivateSettings除外表示、専用audit restoreの実装範囲をcheckpoint化する。application/test code変更、Rules、Emulator、deploy、migration、network、remote/data操作、push、`main` merge、Prodは本checkpointに含めない。
+
+## CCB-02-LOCAL-PURE-PLANNER-001 checkpoint
+
+- 日付: 2026-08-28。
+- 利用者は実dataへ触れる前までのlocal implementation、合成test、文書、local commitを承認した。本checkpointは保存済みprimary repository、branch `codex/dev-user-reservation-migration`、baseline `0ab844fa009a753c8def16f96415608c45580bd6`、upstream none、clean、primary-only worktreeから開始した。
+- `scripts/migrate-company-settings.mjs`へFirestore/network非接続のpure plannerを追加した。Schemas exact `2.4.2-dev.167`のlegacy mappingと公開Firestore REST Valueのtype-tagged canonical encodingを使い、candidate union、edition、manifest/root、8 target、audit/unexpected pathを`eligibleCreate`、`alreadyEquivalent`、6種のblocking分類へ決定的に分ける。
+- blockingが1件でもあれば全tenantのoperationを空にし、成功planはtenantごとにSettings 6件・PrivateSettings 2件のcreateだけを返す。root、既存target、SettingAuditsのupdate/delete、partial repair、activationは実装しない。summaryは件数、digest、opaque subject、create予定数だけで、company ID、名称、path、document bodyを出力しない。
+- 合成fixtureとdomain testを追加し、create-only 8件、complete exact、partial、不一致、unknown、invalid、ambiguous、manifest/root mismatch、orphan target、audit、active marker、edition未確認、integer/double差、manifest digest binding、fresh re-plan、非識別summary、固定version/receipt guardの17件を確認した。
+- pre-commit検証はCompany migration 17件、compatible reader 8件、既存User予約migration 18件、Node構文検査、project documentation validator、managed governance validator、renderer、`git diff --check`がそれぞれexit 0だった。managed validatorの最初のnested PowerShell既定引数呼出しだけ`PSScriptRoot`が空となりexit 1だったため不採用とし、absolute `-ProjectPath`を明示した独立processでexit 0、managed hash current、AGENTS 13,659 / 32,768 bytesを確認した。直接実行停止はprocess内`LASTEXITCODE=64`を確認した。
+- plannerはFirestore reader、credential、dry-run CLI、transaction apply、post-checkを持たない。直接実行はexit 64で停止する。Emulator/application/server/browser、network、remote/data read/write、deploy、push、`main` merge、Prodは0件である。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はCodex専用合成Emulatorだけを対象に、public REST reader、local target guard、create-only transaction、read-after-write/post-checkを別checkpointで実装・検証する候補である。実dataに触れるDev/Prod read、manifest生成、apply、backup/restoreは利用者へ停止境界を示して別承認を得る。
