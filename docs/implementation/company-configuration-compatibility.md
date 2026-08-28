@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約確認完了、Dev実data照合は未完了）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合完了、exact schema・package release契約は未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -79,7 +79,7 @@ Company hydrateは未知fieldを捨て、serializerはenumerable own propertyを
 - `hasActiveRegisteredUser()`はCompany rootの存在とstatusを確認しない。root欠損でもUser subdocumentが残ればgeneric fallback経由のdescendant accessが成立し得る。
 - profile/billing/operationsへappend-only auditを必須にする場合、client direct updateと非同期triggerでは設定更新とauditをatomicにできない。
 - 現行合成seedはCompany root 2件を作るが、各rootは会社名、カナ、fixture markerだけである。schema default、legacy、unknown field、Settings、PrivateSettings、audit、migration conflictをfixtureしていない。
-- 利用者用`saved-data`とbinary export bodyは調査対象にせず、値を読んでいない。Dev editionとDev Company実data分布もremote未接続のため未確認である。
+- 利用者用`saved-data`とbinary export bodyは調査対象にせず、値を読んでいない。Devの現在分布は後述のbounded read-only preflightで、会社ID・値・個人情報を出力せず集計した。
 
 ## package互換性
 
@@ -88,6 +88,8 @@ Company hydrateは未知fieldを捨て、serializerはenumerable own propertyを
 | root app | air-firebase `2.3.1-dev.6`、client adapter `2.1.3-dev.10`、schemas exact `2.4.2-dev.166` |
 | Functions | air-firebase `2.3.1-dev.6`、server adapter `2.2.1-dev.3`、schemas exact `2.4.2-dev.166` |
 | Admin SDK | schemas `2.4.2-dev.162`。app/Functionsより古く、Companyに`attendanceManagementMode`がない。 |
+
+2026-08-28のoperator tool再確認では、関連repository `air-guard-v2-admin-sdk`はbranch `codex/is-super-user-claim-migration`、HEAD `1be81f6745e0033093bb84988194358d0a85a71f`、clean、package `1.0.0`、lockfile解決schemas `2.4.2-dev.162`だった。Company maintenanceはrootへのfield update、会社削除は固定catalogのsubcollectionとroot deleteであり、`Settings`、`PrivateSettings`、`SettingAudits`をcatalogに含まない。Company root全体のset writerではないが、CCB後のpath・field・backup/delete contractへ未対応なのでactivation前の更新対象である。
 
 推奨するpackage境界は次である。
 
@@ -135,8 +137,8 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 CCB-02は次が完了するまで10点を加点しない。
 
 - root、各Settings、PrivateSettings、auditの完全なfield allowlist、型、長さ、enum、相関、Timestamp、mask形式の確定。
-- Dev Firestore editionのremote再確認と、秘密・値を応答へ出さないbounded data-shape dry-run。
-- Dev Companyごとのlegacy、unknown、旧enum、partial field、subscription/maintenance、target conflict件数とplan digestの確認。
+- Dev Companyごとのcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、未確定のSettings schemaへ値を写像・比較していない。
+- DevではCompany rootを4件観測したが、現行試用主体、承認済み合成test tenant、過去の残存tenant、orphanの内訳とmigration対象性は未分類である。4件すべてをstaging・migration対象と仮定せず、ID・値を応答へ出さない別checkpointで用途分類と対象件数を固定する。推測削除は行わない。
 - schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 
@@ -145,13 +147,40 @@ CCB-02は次が完了するまで10点を加点しない。
 - checkpoint: `CCB-02-DEV-SHAPE-001`
 - target: `air-guard-v2-dev`、Firestore `(default)`
 - approved read: edition、deploy済みFunctions、operator tool、Company rootのfield名・型・分類件数・digest。値、company ID、個人情報、Stripe識別子、credentialは出力しない。
-- local preflight: Node `v22.23.2`、Firebase CLI `15.28.1`、primary-only repository、HEAD `0eaca09e60f413c5a53f2156cb33c66f8282ec2e`、cleanを確認した。
-- remote result: `npx -y firebase-tools@latest firestore:databases:list --project air-guard-v2-dev --json`は、Firebase CLI credential失効を理由にexit 1。remote認証attemptは発生したがdatabase APIへ到達せず、Firestore document read 0、data write 0で停止した。
-- boundary: 別credential、gcloud、service account、Admin SDKへ迂回しない。Firebase CLI再認証後、同じ最初のcommandから再開する。
+- local preflight: Node `v22.23.2`、Firebase CLI `15.28.1`、cwdとGit top-level `C:\Users\seven\projects\AirGuard\air-guard-v2`、branch `codex/dev-user-reservation-migration`、HEAD `41a73c3995963c85545f7ffa4deaddd4c109bb5d`、upstream none、clean、primary-only worktreeを確認した。
+- authentication recovery: 初回はFirebase CLI credential失効でdatabase API到達前にexit 1となり、Firestore document read 0で停止した。利用者のFirebase CLI再認証後、同じ`firestore:databases:list --project air-guard-v2-dev --json`を再実行してexit 0を確認してから後続へ進んだ。gcloudはrunbook記録済みのprocess-scoped Python truststore経路でdatabase describeがexit 0となった後だけ、access tokenをprocess内に保持するFirestore REST読取へ使用した。token本文、credential、document ID・値は出力していない。
+- database: `FIRESTORE_NATIVE`、`STANDARD`、`asia-northeast1`、PITR有効、version retention `604800s`、pessimistic concurrency。Firebase CLI database list/getとgcloud database describeは各exit 0だった。
+- deployed Functions: 36件すべて`ACTIVE`、region `asia-northeast1`、runtime `nodejs22`。35件が`gcfv2`、`onAuthUserDeleted`だけが`gcfv1`。承認済みの4つのCCB Company設定Callableは0件で、まだ未deployである。
+- Company root: 4件、すべて同じ38 field shapeだった。`schemaVersion`と`configurationState`は各4件すべて欠損、`attendanceManagementMode`は4件すべて`ACTUAL_DATE`で、`OPERATION_DATE`、unknown、欠損は0件だった。current known-root setに対するunknown fieldは0件である。
+- legacy・leak baseline: `agreementsV2`、`location`、`geopoint`、`subscription`、`stripeCustomerId`、maintenance fieldは各4件に存在した。`docId`、`uid`、`fullAddress`、`prefecture`、`hasBankInfo`、`isCompleteRequiredFields`も各4件に保存され、computed/framework field混入が実dataでも確認された。Admin SDK側が使う`maintenanceStartedAt`は0件、schema側の`maintenanceStartAt`は4件だった。
+- target documents: `Settings/{profile,billing,operations,arrangement,entitlement,maintenance}`、`PrivateSettings/{entitlement,maintenance}`、`SettingAudits`は観測した4 rootすべてで0件だった。partial、complete、unexpected target documentも0件で、data shape上は全件staging前のempty状態である。ただし各rootのmigration対象性とcanonical expected valueが未確定なので、4件すべてを対象とする判断、parity・target conflict判定はまだ行っていない。
+- aggregate digest: field名、Firestore型、件数、固定enum分類だけから作ったSHA-256は`295d7a924c6ae9c899e625bed54565b517135af6c7d308b0f4c8766160cd981a`。会社ID、field値、PII、Stripe識別子をdigest入力へ含めていない。
+- invalid diagnostic: 最初のfull aggregate probeはPowerShell URL補間の変数境界が曖昧で誤ったcollection pathを読み、exit 0・Company 0件を返した。既知状態と矛盾したため証拠採用せず、明示URLのmasked count probeで4件を確認してから修正版を再実行した。誤probeも読取専用で、writeは0だった。
+- operator tool: `air-guard-v2-admin-sdk`のlocal repositoryをcommand-local safe-directoryだけで確認し、HEAD `1be81f6745e0033093bb84988194358d0a85a71f`、clean、package `1.0.0`、schemas `2.4.2-dev.162`を確認した。tool自体は実行せず、Dev dataやcredentialを渡していない。
+
+### command・exit status証拠
+
+各行は別processまたは明示したfail-fast processで観測した。`result`へtoken、credential、Company ID、field値、PII、Stripe識別子を含めていない。
+
+| 種別 | command・処理契約 | result | exit |
+|---|---|---|---:|
+| Node | `node --version` | `v22.23.2` | 0 |
+| Firebase CLI | `C:\Users\seven\AppData\Roaming\npm\firebase.cmd --version`。同processだけ`NODE_USE_SYSTEM_CA=1` | `15.28.1` | 0 |
+| database list | `npx -y firebase-tools@latest firestore:databases:list --project air-guard-v2-dev --json`。同processだけ`NODE_USE_SYSTEM_CA=1` | `(default)` 1件、Standard/Native | 0 |
+| database get | installed Firebase CLIの`firestore:databases:get "(default)" --project air-guard-v2-dev --json`をprocess内でparseし、project、database、location、type、edition、concurrency、PITR、retention、delete protectionだけを出力 | allowlist fieldが期待値と一致 | 0 |
+| Functions | installed Firebase CLIの`functions:list --project air-guard-v2-dev --json`をprocess内でparseし、ID、region、runtime、platform、stateだけを出力 | 36件ACTIVE、gcfv2 35、gcfv1 1、CCB Callable 0 | 0 |
+| gcloud trust/token refresh | [Dev deploy runbook](../runbooks/dev-deployment.md#2026-08-27に確認した実行環境)記録のPython `truststore.inject_into_ssl()`付き`gcloud firestore databases describe` exact process | Dev `(default)` metadata取得成功 | 0 |
+| masked count | gcloud access tokenをprocess内だけで取得し、`Invoke-RestMethod -Method Get -Uri "${base}/Companies?pageSize=1000"`へ`mask.fieldPaths=schemaVersion`を付けたread-only GET。件数だけ出力 | Company root 4件 | 0 |
+| aggregate | `ErrorActionPreference=Stop`の単一PowerShell fail-fast process。`GET .../documents/Companies?pageSize=1000`と、各非出力ID配下の`Settings`、`PrivateSettings`、`SettingAudits`をpage token付きでreadし、field名・Firestore型・件数・固定enum分類だけを出力 | 4 root、同一38-field shape、target 0、digest `295d7a...981a` | 0 |
+| operator Git | `git -c safe.directory=C:\Users\seven\projects\AirGuard\air-guard-v2-admin-sdk -C <repo> ...`を各Git段階でfail-fastし、package/lockfileはPowerShell JSON parse | HEAD、clean、package/schema version確認 | 0 |
+
+aggregate digestは、root field名とtype別件数をfield名・type名順、shape classをfield名連結key順にsortし、`project`、`database`、root件数、schema分類、activation分類、attendance分類、選択field存在数、target件数、field inventory、unknown inventory、shape classの順でordered objectを作った。PowerShell `ConvertTo-Json -Depth 20 -Compress`のUTF-8 bytesへ.NET `SHA256.HashData`を適用した観測用digestである。値parityや将来migration planの正本digestには再利用しない。
+
+不採用診断も成功証拠と分ける。最初のaggregate processは`"$base/$relativePath?pageSize=1000"`がPowerShellで`.../documents/=1000`へ展開され、exit 0・0件を返した。後続の成功で覆わず、既知状態との矛盾を理由に不採用とした。operator確認の最初のbatchもsandbox ownership errorを内包したままexit 0となり、package-lock初回parseもnon-terminating errorをexit 0に畳み込んだため不採用とし、command-local safe-directoryとterminating JSON parseで個別に再確認した。
 
 ## 実施していないこと
 
 - application code、Rules、test、fixture、package、Admin SDK、正本仕様の変更
 - test、validator、build、Emulator、application/server/browser起動
-- database API成功、Firestore document read、Dev実data取得、deploy、migration、backup、restore。networkはFirebase CLI認証失敗までのremote attemptだけを実施した。
-- Git mutation
+- deploy、migration、backup、restore、maintenance、remote data create/update/delete、credential変更、persistent trust設定。remote作用は承認済みDev metadataとCompany data-shapeのreadだけで、data writeは0だった。
+- remote inspectionの開始から結果確定までのbranch/HEAD変更、stage、commit。結果反映はこの3文書だけを後続のlocal document commit対象とする。
