@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2 local実装・corrective review受入れ済み。staging actorとDev 4 tenant対象性は確定、package release・consumer導入・backup/audit/delete境界は未確定）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2とS3 release readinessはreview受入れ済み。staging actorとDev 4 tenant対象性は確定、package公開・consumer導入・backup/audit/delete境界は未確定）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -155,7 +155,9 @@ Schemas taskはcommit `ebfc173053c0fba6e7931ff2825bcfff61698763`（`feat: add co
 
 corrective review後、Schemas repositoryは`main`、HEAD `53fb53de35d2cf4f408041969ba443b49d756484`、upstream比0/2、clean、primary-onlyだった。Schemas側Node 24でCCB 11/11、既存role preset 6/6、self-import、package/lock/export互換、project/managed/renderer validator、`git diff --check`が各exit 0である。AirGuardV2 coordinatorもNode 22.23.2で同じCCB 11/11、role preset 6/6、空口座5 field全null、6 extras受入れ・7 reserved field返却、public self-importとroot非公開を独立に各exit 0で確認した。S1/S2 local contractはこの2 commitを一体として受入れる。
 
-versionは`2.4.2-dev.166`のままで、公開済み同versionにCCB contractは含まれない。S3 release guard、次version、tag、push、publish、registry/fresh install、AirGuardV2/Admin SDK adoption、deploy/data operationは受入れ対象外である。
+S3 commit `78bb1f427ffec9bd5f89bb405770502b0f083f58`（`build: prepare 2.4.2-dev.167 release`）でpackage/lockを`2.4.2-dev.167`へ揃え、全10 test fileのfail-closed inventory、tag/version/export/root非公開/public import/package内容を検査するrelease guard、Node 22/24 test成功後だけNode 24で公開するtag-only workflowを追加した。Schemas taskではNode 22/24の全test、実release guard、pack dry-run、project/managed/renderer validatorが各exit 0で、registry readは`.167`未公開を示した。AirGuardV2 coordinatorもNode 22.23.2で`npm test`と`RELEASE_TAG=v2.4.2-dev.167 npm run check:release`を独立に再実行し、各exit 0を確認した。GitHub公式の`actions/checkout@v6`・`actions/setup-node@v6`とnpm Trusted Publishingの`id-token: write`要件にも整合する。
+
+S3は公開準備のlocal commitまでを受入れた状態である。local tag、branch/tag push、workflow実行、npm registry公開・integrity、fresh external install、AirGuardV2/Admin SDK adoption、deploy/data operationは未実施・別承認とする。公開前にはfresh remote-main、tag不存在、registry未使用を再確認する。公開後はunpublish、tag移動・削除、history rewriteをrollbackに使わず、問題があれば後続versionでsupersedeする。
 
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
@@ -199,7 +201,7 @@ CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas変更は別project taskへ移管済み。Schemas側の変更範囲・version・検証結果と、Admin SDKの変更範囲、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認が必要である。
+- Schemas変更は別project taskへ移管済み。Schemas `2.4.2-dev.167`のlocal release readinessは受入れ済みだが、tag/push/Trusted Publishing/registry・fresh-install確認と、Admin SDKの変更範囲、consumer install/deploy順、backup/restore互換、rollback releaseの個別承認が必要である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 - PrivateSettings backup、SettingAudits restore、CCB tenant deleteのfail-closed境界確定。migration actorとmaintenance中の決定不能mapping停止は確定済みである。
 

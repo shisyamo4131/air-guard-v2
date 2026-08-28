@@ -1,7 +1,7 @@
 # package release runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 役割: 関連packageのconsumer更新、公開、rollback
 
 ## 関連パッケージの更新
@@ -22,8 +22,11 @@ UWB-09のconsumer rollbackは、AirGuardV2の依存をexact `2.4.2-dev.164`へ�
 
 公開元でのバージョン作成・タグ push・Trusted Publishing は`governance/project-rules.md`と次の手順に従います。ローカルから`npm publish`しません。
 
-1. `air-guard-v2-schemas`のbranchとworktreeを確認し、変更をcommitする。
-2. `npm version prerelease --preid=dev`を実行する。
-3. current branchと作成された`v*-dev.*` tagを個別にpushする。`--follow-tags`は使用しない。
-4. `.github/workflows/publish.yml`のTrusted Publishingと`npm view @shisyamo4131/air-guard-v2-schemas@dev version`で公開結果を確認する。
-5. pushだけが失敗した場合は`npm version`を再実行せず、既存commit・tagを確認して失敗したpushだけを再開する。
+1. `air-guard-v2-schemas`のbranch、HEAD、upstream、clean、primary-only worktreeを確認し、fresh remote refとfast-forward可能性を照合する。
+2. version未準備なら承認済みversion checkpointで`npm version prerelease --preid=dev`を実行する。package/lock versionがreview済みrelease commitに既に含まれる場合は再実行せず、exact version、commit、tag不存在、registry未使用を確認する。
+3. exact release tagを与えたrelease guardを実行し、test、public import、pack内容を独立に確認する。
+4. review済みrelease commitへannotated `v*-dev.*` tagを作り、current branchとtagを個別にpushする。`--follow-tags`は使用しない。
+5. `.github/workflows/publish.yml`のTrusted Publishing完了、exact registry version・integrity、一時directoryへのfresh installとpublic subpath importを確認する。
+6. pushだけが失敗した場合はversion作成やtag作成を再実行せず、既存commit・tag・remote refを確認して失敗したpushだけを再開する。
+
+公開後はunpublish、tag移動・削除、force push、history rewriteをrollbackに使わない。consumer未導入なら既存exact versionを維持し、公開packageに問題がある場合は修正版を後続versionとして公開する。

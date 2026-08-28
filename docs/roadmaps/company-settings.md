@@ -17,7 +17,7 @@
 - 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
 - CCB-02技術契約: 2026-08-28承認。Company設定専用Callable、schema/marker、pre-containment、create-only staging、旧writer 0件後activation、compatible rollbackを採用する。
 - CCB-02 exact schema v1: 2026-08-28承認。Unicode見た目文字数、全field allowlist・型・長さ・enum・相関・default・maskをADR 0025へ固定した。
-- CCB-02 local release/parity調査: 2026-08-28完了。Schemas S1/S2は2 local commitを一体でreview受入れ済み。Dev 4 tenantは利用者会社1・試用中の別会社1・合成test 2として全件migration対象、staging actorとmaintenance conflict停止も確定した。S3/version/package公開、Admin SDK変更とbackup/audit/delete境界はCONF-0139、0141〜0143で未確定。
+- CCB-02 local release/parity調査: 2026-08-28完了。Schemas S1/S2の2 local commitとS3 release readiness `78bb1f4`をreview受入れ済みで、versionは`2.4.2-dev.167`に固定した。Dev 4 tenantは利用者会社1・試用中の別会社1・合成test 2として全件migration対象、staging actorとmaintenance conflict停止も確定した。package公開・consumer導入、Admin SDK変更とbackup/audit/delete境界はCONF-0139、0141〜0143で未確定。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
@@ -144,3 +144,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-28 | 10% | ±0 | Schemas契約を別projectの既存task `PM（Schemas）-02`へ移管し、承認済みDev read-only分類でCompany root 4件中、合成test 2件・要確認2件を識別情報非出力で確認した。remote write 0。残る用途、migration include/exclude、Schemas/Admin/Application実装が未完了のため加点しない。 |
 | 2026-08-28 | 10% | ±0 | 利用者が残る2 tenantを利用者会社1件・試用中の別会社1件と確認し、合成test 2件を含む4件すべてをmigration対象とした。staging actorはservice account匿名ID、maintenance中の決定不能値はconflict停止と確定。Schemas S1/S2 local実装を別project taskへ承認したが、package完了、Admin/Application実装、Dev applyは未完了のため加点しない。 |
 | 2026-08-28 | 10% | ±0 | Schemas S1/S2 commit `ebfc173`をreviewし、旧空口座defaultとactivation root既知extrasの不足を検出、corrective `53fb53d`で補正した。Schemas Node 24とcoordinator Node 22でCCB 11/11、role preset 6/6、public self-import・root非公開を確認し、2 commit一体でlocal contractを受入れた。package公開・consumer導入・CCB-02完了gateは未完了のため加点しない。 |
+| 2026-08-28 | 10% | ±0 | Schemas S3 commit `78bb1f4`をreviewし、version `2.4.2-dev.167`、全10 test fileのfail-closed inventory、tag/version/export/package-content/public-import guard、Node 22/24 test後のTrusted Publishing workflowを受入れた。coordinator再検証の`npm test`と実release guardもexit 0。tag・push・公開・fresh install・consumer導入は未実施でCCB-02完了gateを満たさないため加点しない。 |
