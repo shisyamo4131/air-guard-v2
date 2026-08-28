@@ -1693,9 +1693,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: schemasへ旧Companyを維持したpureな`./company-configuration` v1 exportとrelease guardを実装し、Admin SDKのCCB destructive operationをfail closedにするための3 repositoryのlocal file変更・test・local commit設計を開始してよいか。version採用、tag作成、Git push、Trusted Publishing/npm publish、consumer install、deployは含まず、各action前に別承認とする。
 - Why needed: AirGuardV2内へのschema重複実装、無検査publish、consumer version差、危険な旧operatorのまま新documentを作ることを防ぐため。
 - Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
-- Current provisional treatment: Schemasは別project taskへ移管し、AirGuardV2 taskから直接編集しない。Admin SDKのlocal変更承認と、version/tag/push/publish/installは未確定のまま分離する。
+- Current provisional treatment: Schemas S1/S2のlocal実装は2 commit一体でreview受入れ済み。AirGuardV2 taskからSchemas repositoryを直接編集せず、Admin SDKのlocal変更、S3 release guard、version/tag/push/publish/installは未確定のまま分離する。
 - Related FUT IDs: FUT-0090、FUT-0092
-- Answer: 2026-08-28 部分回答。Schemas管理は別project `AirGuardV2Schemas`が担うため、既存task `PM（Schemas）-02`へ指示して進める。checkpoint `CCB-SCHEMAS-CONTRACT-001`をtask `01a03be0-539a-79f2-921b-311c85e135ce`へ1回送達した。続いて利用者はS1文書とS2 pure package contract・test、legacy mappingの同時実装、決定不能値のconflict停止を承認し、`CCB-SCHEMAS-S1S2-IMPLEMENT-001`を送達した。Schemas側のversion確定、S3 release guard、tag、push、publish、consumer install、deployと、Admin SDK側のlocal変更は未承認のためStatusはPartially answeredを維持する。
+- Answer: 2026-08-28 部分回答。Schemas管理は別project `AirGuardV2Schemas`が担うため、既存task `PM（Schemas）-02`へ指示して進めた。S1/S2はcommit `ebfc173053c0fba6e7931ff2825bcfff61698763`とcorrective `53fb53de35d2cf4f408041969ba443b49d756484`の2 commit一体でreview受入れ済み。corrective reviewで旧空口座既定値とactivation rootの既知legacy extrasを補正し、Schemas Node 24とcoordinator Node 22のtargeted test・互換診断は各exit 0となった。Schemas側のversion確定、S3 release guard、tag、push、publish、consumer install、deployと、Admin SDK側のlocal変更は未承認のためStatusはPartially answeredを維持する。
 
 ## CONF-0140 CCB staging actor・maintenance mapping
 

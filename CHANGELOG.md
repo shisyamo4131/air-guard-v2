@@ -8,6 +8,7 @@
 
 ### Added
 
+- 別project `AirGuardV2Schemas`のCCB S1/S2をreviewし、pure `./company-configuration`契約commit `ebfc173`とlegacy互換補正commit `53fb53d`を受入れた。空口座の旧`accountType=普通`を全nullへ写す例外と、activation期間の既知legacy framework/computed field 6件をcorrective commitで補い、CCB 11件・既存role preset 6件・public self-importを再確認した。package version、S3 release guard、publish、consumer install、deploy、data migrationは未実施である。
 - CCB-02の移行境界として、migration actorを承認済みDev service accountの非email匿名IDへ固定し、既にmaintenance中で旧dataから内部理由・範囲を決定できないtenantは推測せず停止する方針を採用した。Dev 4 tenantは利用者会社1、試用中の別会社1、承認済み合成test 2と確認し、4件すべてを将来のmigration対象に含める。SchemasのS1文書とS2純粋package契約・testのlocal実装を別project taskへ承認したが、version、公開、consumer導入、deploy、data applyは未承認である。
 - CCB-02のSchemas契約を別project所有として既存task `PM（Schemas）-02`へ正式移管し、Dev 4 tenantの承認済みread-only用途分類を実施した。識別情報を出力せず、承認済み合成test 2件、要確認2件、manifest digestを記録した。remote write、migration、deployは0であり、残る2件の用途と全4件のmigration対象性は未確定である。
 - CCB-02の追加read-only調査として、schemas packageのadditive CCB exportとrelease gate、Admin SDKの新path・backup/restore/delete/maintenance対応、AirGuardV2の値を出さないcanonical parity digestとcreate-only staging契約案を記録した。schemas/Admin SDK変更、package version/tag/push/publish/install、application・Rules・migration実装、Dev remote read/data操作は未実施である。cross-repository local変更、staging actor/maintenance mapping、PrivateSettings backup、audit restore、tenant delete、Dev tenant分類を独立した利用者承認待ちへ分離した。

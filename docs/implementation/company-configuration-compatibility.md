@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2は別project taskでlocal実装中。staging actorとDev 4 tenant対象性は確定、backup/audit/delete境界は未確定）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、local package/Admin/parity設計案作成済み。Schemas S1/S2 local実装・corrective review受入れ済み。staging actorとDev 4 tenant対象性は確定、package release・consumer導入・backup/audit/delete境界は未確定）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -150,6 +150,12 @@ AirGuardV2、schemas、Admin SDKを3系統のread-only調査として再照合�
 Schemasの管理はAirGuardV2 repositoryではなく別project `AirGuardV2Schemas`が担う。2026-08-28、利用者指示により既存task `PM（Schemas）-02`（task `01a03be0-539a-79f2-921b-311c85e135ce`）へcheckpoint `CCB-SCHEMAS-CONTRACT-001`を1回送達した。Schemas側は自身のgovernanceと正本に従い、additive `./company-configuration`契約とrelease guardを検討・実装する。version確定、tag、push、publish、consumer install、deployは移管checkpointに含めず、別承認とした。AirGuardV2 taskはSchemas repositoryを直接編集しない。
 
 同日、利用者はSchemas側のS1文書とS2 pure package contract・targeted testを承認した。checkpoint `CCB-SCHEMAS-S1S2-IMPLEMENT-001`ではlegacy mappingをS2へ含め、決定不能値をexplicit conflictにする。package version・lock変更、S3 release guard、tag、push、publish、consumer install、deployは含めていない。
+
+Schemas taskはcommit `ebfc173053c0fba6e7931ff2825bcfff61698763`（`feat: add company configuration v1 contract`）を作成した。AirGuardV2 coordinator reviewでは、旧空口座で4 fieldが空かつ旧既定`accountType=普通`のcaseが競合になることと、Dev実dataに存在する既知legacy framework/computed field 6件をactivation root projectionが拒否することを合成値診断で再現したため、初回commit単独では受入れなかった。Schemas taskはhistory rewriteを行わず、corrective commit `53fb53de35d2cf4f408041969ba443b49d756484`（`fix: align company configuration legacy compatibility`）を追加した。
+
+corrective review後、Schemas repositoryは`main`、HEAD `53fb53de35d2cf4f408041969ba443b49d756484`、upstream比0/2、clean、primary-onlyだった。Schemas側Node 24でCCB 11/11、既存role preset 6/6、self-import、package/lock/export互換、project/managed/renderer validator、`git diff --check`が各exit 0である。AirGuardV2 coordinatorもNode 22.23.2で同じCCB 11/11、role preset 6/6、空口座5 field全null、6 extras受入れ・7 reserved field返却、public self-importとroot非公開を独立に各exit 0で確認した。S1/S2 local contractはこの2 commitを一体として受入れる。
+
+versionは`2.4.2-dev.166`のままで、公開済み同versionにCCB contractは含まれない。S3 release guard、次version、tag、push、publish、registry/fresh install、AirGuardV2/Admin SDK adoption、deploy/data operationは受入れ対象外である。
 
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
