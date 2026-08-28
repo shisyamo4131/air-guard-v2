@@ -6,24 +6,29 @@
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
-## CCB Company設定migration（pure planner実装済み・実行経路未実装）
+## CCB Company設定migration（Codex専用合成Emulator経路まで実装済み）
 
 CCBの既存tenant backfillはcreate-only complete-set stagingとして後続実装する。`createdBy/updatedBy`は承認済みDev service accountのstable non-email opaque IDを使用し、個人email・表示名を保存しない。移行前からmaintenance中で、旧dataからPrivateSettingsの内部理由・停止範囲を決定できないtenantは`ambiguousMapping`としてapply前に停止し、既定値や推測で補わない。
 
-2026-08-28時点のDev target universeはCompany root 4件で、利用者会社1件、試用中の別会社1件、承認済み合成test 2件をすべてmigration対象とする。会社ID、名称、emailはrepository・command output・callbackへ保存しない。実装済みmigration command、target manifest digest、pre-containment Rules receipt、backup、dry-run、apply承認はまだ存在しないため、この分類だけでremote stagingまたはapplyを開始してはならない。
+2026-08-28時点のDev target universeはCompany root 4件で、利用者会社1件、試用中の別会社1件、承認済み合成test 2件をすべてmigration対象とする。会社ID、名称、emailはrepository・command output・callbackへ保存しない。Codex専用合成Emulator commandは存在するが、Dev用target manifest、deploy済みpre-containment Rules receipt、backup、remote dry-run/apply commandと実data migration承認はまだ存在しないため、このlocal経路を根拠にremote stagingまたはapplyを開始してはならない。
 
 candidate universeは外部保管する承認済みtarget manifest、Company root、既存CCB target pathのunionとする。未分類root、manifest不一致、orphan target、target conflict、unknown field、invalid source、ambiguous mappingが1件でもあれば、全tenantのapplyをwrite 0で停止する。partial setへ不足documentを足して修復しない。`alreadyEquivalent`は8 targetのcomplete/exact/parity、`eligibleCreate`はmarker未active・source決定可能・8 targetとauditが全不存在の場合だけとする。
 
 dry-runとapplyはSchemasのpure mappingから同じtype-tagged canonical planを生成し、applyはlive stateで再生成したdigestが承認値と一致した場合だけtenant単位transactionで8 targetをcreateする。root、既存target、auditのupdate/deleteは0とする。途中成功後は作成済みdocumentを削除せず、fresh dry-runで成功tenantを`alreadyEquivalent`として新しいdigestを承認し直す。activationは別checkpointである。詳細は[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
 
-2026-08-28に`scripts/migrate-company-settings.mjs`へpure plannerだけを実装した。入力は呼出元が取得・正規化したmanifest、Company root、target、audit、unexpected documentであり、planner自身はFirestore、Emulator、network、credentialへ接続しない。Schemas exact `2.4.2-dev.167`の`mapLegacyCompanyToConfigurationV1`を使い、公開Firestore REST Valueだけからinteger/double、Timestamp、GeoPoint、reference、bytes、array、mapを区別したcanonical digestを作る。digestはproject、database、database type、edition、edition receipt、fixed commit、schema package/contract、Rules receipt、manifest、全root/target/audit/unexpected documentのpath hash・raw fingerprint・updateTime、primary分類、全finding、expected bodyへ結ぶ。edition確認はboolean `true`だけを許可する。標準summaryはprimary分類別件数、finding code別件数、計画digest、create予定件数だけで、company ID、名称、path、document body、per-subject hashを出力しない。
+2026-08-28に`scripts/migrate-company-settings.mjs`へpure plannerを実装し、同日にCodex専用合成Emulatorだけを許可する公開REST reader、dry-run CLI、REST read-write transaction apply、fresh post-checkを追加した。pure planner自身はI/Oを行わず、Schemas exact `2.4.2-dev.167`の`mapLegacyCompanyToConfigurationV1`と公開Firestore REST Valueを使ってinteger/double、Timestamp、GeoPoint、reference、bytes、array、mapを区別する。digestはproject、database、database type、edition、local edition receipt、fixed commit、schema package/contract、local Rules file receipt、manifest、全root/target/audit/unexpected documentのpath hash・raw fingerprint・updateTime、primary分類、全finding、expected bodyへ結ぶ。edition確認はboolean `true`だけを許可する。標準summaryはprimary分類別件数、finding code別件数、計画digest、create予定件数だけで、company ID、名称、path、document body、per-subject hashを出力しない。
 
 ```powershell
 # 合成fixtureだけを使うpure planner回帰test
 npm run test:company-settings-migration
+
+# 保護付き一時runtimeへ専用seedをimportし、Firestoreだけを起動する統合test
+npm run test:company-settings-migration:emulator
 ```
 
-このcheckpointでは実行可能なFirestore reader、dry-run CLI、transaction apply、post-checkを意図的に提供しない。`node scripts/migrate-company-settings.mjs`の直接実行はexit 64で停止する。次の実装は、まずCodex専用合成Emulator向けの公開REST readerとcreate-only transactionを別checkpointで追加し、target guard、Rules receipt、manifest receipt、read-after-write、root/audit write 0を検証する。Dev/Prodまたは既存Emulator dataに対する読取・適用へ、このpure plannerだけを根拠に進んではならない。
+実行targetは`codex-local` 1件だけで、project `demo-air-guard-v2-codex`、database `(default)`、Firestore `127.0.0.1:18080`、`AIR_GUARD_EXTERNAL_EFFECTS=deny`をすべて一致させ、資格情報を拒否する。REST transportの`Bearer owner`はこのexact Emulator target guard内だけで使用する。applyは直前dry-runのdigestを必須とし、tenantごとのtransactionでroot raw fingerprint・updateTime・markerとSettings、PrivateSettings、SettingAuditsを再読取してから、`currentDocument.exists=false`付きの8 createだけをcommitする。途中成功分を削除せず、post-checkは全include tenantの`alreadyEquivalent`、root不変、audit 0、create件数一致、update/delete/root/audit write 0を要求する。
+
+local Rules receiptはrepositoryの`firestore.rules` bytesを固定する合成Emulator用receiptであり、deploy済みpre-containment Rulesの証拠ではない。CLIは`--target codex-local --manifest-file <synthetic-manifest.json> --actor-uid <non-email-id> --timestamp <UTC-RFC3339> --fixed-commit <full-commit>`を必須とし、apply時だけ`--apply --plan-digest <64-hex>`を追加する。Dev、Prod、利用者用Emulator、資格情報付きtargetは提供しない。実dataのread、manifest生成、remote dry-run/apply、backup、Rules deployは別checkpointと利用者承認まで停止する。
 
 `PrivateSettings`は現行logical backupへ含めず、そのbackupを完全backupと呼ばない。当面の復旧基盤はmanaged Firestore backup/PITRとする。専用の暗号化logical backup/restoreは保存先、暗号化、IAM、保持、redaction、環境間restoreを別承認するまで未提供である。`SettingAudits` restoreは専用経路の同一company/schema/ID create-onlyだけを許可し、同値skip、異値で全体停止、update/delete/clear禁止とする。専用実装と復旧演習がない間は、いずれも利用可能なlogical restoreとして案内しない。
 

@@ -2,6 +2,8 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
+    [ValidateSet('Harness', 'CompanySettingsMigration')]
+    [string]$Suite = 'Harness',
     [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
     [long]$StopBytes = 100MB
@@ -12,15 +14,26 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $dedicatedRoot = Join-Path $projectRoot '.codex-test'
 $seedPath = Join-Path $dedicatedRoot 'isolated-saved-data'
 $runtimeRoot = Join-Path $dedicatedRoot 'runtime'
-$runtimePath = Join-Path $runtimeRoot ("{0}-{1}" -f $Mode.ToLowerInvariant(), $PID)
+$runtimePath = Join-Path $runtimeRoot ("{0}-{1}-{2}" -f $Mode.ToLowerInvariant(), $Suite.ToLowerInvariant(), $PID)
 $userSavedDataPath = Join-Path $projectRoot 'saved-data'
 $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
 $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
-$testPath = Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs'
+$testPath = switch ($Suite) {
+    'Harness' { Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs' }
+    'CompanySettingsMigration' { Join-Path $projectRoot 'test\local\company-settings-migration-emulator.test.mjs' }
+}
 $projectId = 'demo-air-guard-v2-codex'
 $seedEmulators = 'auth,firestore,database,storage'
-$testEmulators = 'auth,firestore,database,storage,functions'
+$testEmulators = if ($Suite -eq 'CompanySettingsMigration') {
+    'firestore'
+} else {
+    'auth,firestore,database,storage,functions'
+}
 $emulators = if ($Mode -eq 'Seed') { $seedEmulators } else { $testEmulators }
+
+if ($Mode -eq 'Seed' -and $Suite -ne 'Harness') {
+    throw 'Seed mode is only available for the Harness suite.'
+}
 
 function Assert-ProjectChild {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -205,9 +218,10 @@ if ($finalBytes -ge $StopBytes) {
 
 [pscustomobject]@{
     mode = $Mode
+    suite = $Suite
     project_id = $projectId
     emulators = $emulators
-    functions_started = $Mode -eq 'Test'
+    functions_started = $Mode -eq 'Test' -and $Suite -eq 'Harness'
     loopback_only = $true
     user_saved_data_unchanged = $true
     dedicated_saved_data_read_only = $Mode -eq 'Test'

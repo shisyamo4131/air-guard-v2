@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { mapLegacyCompanyToConfigurationV1 } from "@shisyamo4131/air-guard-v2-schemas/company-configuration";
@@ -26,6 +27,19 @@ export const COMPANY_SETTINGS_TARGETS = Object.freeze([
   Object.freeze({ collection: "PrivateSettings", document: "entitlement", valueKey: "privateEntitlement" }),
   Object.freeze({ collection: "PrivateSettings", document: "maintenance", valueKey: "privateMaintenance" }),
 ]);
+
+export const CODEX_COMPANY_SETTINGS_MIGRATION_TARGET = Object.freeze({
+  name: "codex-local",
+  projectId: "demo-air-guard-v2-codex",
+  databaseId: "(default)",
+  databaseType: "FIRESTORE_NATIVE",
+  edition: "STANDARD",
+  firestoreHost: "127.0.0.1:18080",
+  remote: false,
+});
+
+const EDITION_RECEIPT_DOMAIN = "airguard:ccb-v1:codex-local-edition:v1";
+const RULES_RECEIPT_DOMAIN = "airguard:ccb-v1:codex-local-rules-file:v1";
 
 const LEGACY_KEYS = new Set([
   "companyName", "companyNameKana", "zipcode", "prefCode", "city", "address",
@@ -105,12 +119,31 @@ function canonicalDouble(value) {
 function canonicalTimestamp(value) {
   if (typeof value !== "string") throw new TypeError("timestampValue must be a string");
   const match =
-    /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,9}))?Z$/u.exec(value);
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?Z$/u.exec(value);
   if (!match) throw new TypeError("timestampValue must be UTC RFC 3339");
-  const milliseconds = Date.parse(`${match[1]}Z`);
-  if (!Number.isFinite(milliseconds)) throw new TypeError("timestampValue is invalid");
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  if (
+    year < 1 ||
+    month < 1 || month > 12 ||
+    hour > 23 || minute > 59 || second > 59
+  ) {
+    throw new TypeError("timestampValue is outside the Firestore Timestamp range");
+  }
+  const leapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const daysInMonth = [31, leapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (day < 1 || day > daysInMonth[month - 1]) {
+    throw new TypeError("timestampValue has an invalid calendar date");
+  }
+  const base = `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}`;
+  const milliseconds = Date.parse(`${base}Z`);
+  if (
+    !Number.isFinite(milliseconds) ||
+    new Date(milliseconds).toISOString().slice(0, 19) !== base
+  ) {
+    throw new TypeError("timestampValue is invalid");
+  }
   const seconds = Math.trunc(milliseconds / 1000);
-  const nanos = (match[2] ?? "").padEnd(9, "0");
+  const nanos = (match[7] ?? "").padEnd(9, "0");
   return [String(seconds), nanos];
 }
 
@@ -313,7 +346,7 @@ function snapshotReceipt(record) {
 
 function sortedSnapshotReceipts(records) {
   return records.map(snapshotReceipt).sort((a, b) =>
-    stableJson(a).localeCompare(stableJson(b)),
+    compareUtf8(stableJson(a), stableJson(b)),
   );
 }
 
@@ -707,13 +740,718 @@ export function summarizeCompanySettingsPlan(plan) {
   });
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  console.error(
-    JSON.stringify({
-      status: "not-runnable",
-      exitCode: COMPANY_SETTINGS_EXIT_CODES.USAGE,
-      message: "This checkpoint provides a pure planner only; no Firestore reader or writer is available.",
-    }),
+function companySettingsError(message, exitCode) {
+  const error = new Error(message);
+  error.exitCode = exitCode;
+  return error;
+}
+
+function targetRejected(message) {
+  return companySettingsError(message, COMPANY_SETTINGS_EXIT_CODES.TARGET_REJECTED);
+}
+
+function assertExactCodexTargetDefinition(target) {
+  if (stableJson(target) !== stableJson(CODEX_COMPANY_SETTINGS_MIGRATION_TARGET)) {
+    throw targetRejected("Company settings migration is limited to the exact Codex-local target.");
+  }
+  return target;
+}
+
+export function assertCompanySettingsMigrationTarget(
+  targetName,
+  env = process.env,
+) {
+  if (targetName !== CODEX_COMPANY_SETTINGS_MIGRATION_TARGET.name) {
+    throw targetRejected("Company settings migration target is invalid.");
+  }
+  const target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET;
+  for (const name of ["GCLOUD_PROJECT", "GOOGLE_CLOUD_PROJECT"]) {
+    if (env[name] && env[name] !== target.projectId) {
+      throw targetRejected("Company settings migration rejected a different project.");
+    }
+  }
+  if (!env.GCLOUD_PROJECT && !env.GOOGLE_CLOUD_PROJECT) {
+    throw targetRejected("Company settings migration requires an explicit project.");
+  }
+  if (env.FIRESTORE_EMULATOR_HOST !== target.firestoreHost) {
+    throw targetRejected("Company settings migration requires the exact Codex Firestore Emulator.");
+  }
+  if (env.AIR_GUARD_EXTERNAL_EFFECTS !== "deny") {
+    throw targetRejected("Company settings migration requires external effects to be denied.");
+  }
+  if (env.GOOGLE_APPLICATION_CREDENTIALS) {
+    throw targetRejected("Codex-local company settings migration rejects credentials.");
+  }
+  if (env.FIREBASE_CONFIG) {
+    let config;
+    try {
+      config = JSON.parse(env.FIREBASE_CONFIG);
+    } catch {
+      throw targetRejected("FIREBASE_CONFIG is invalid.");
+    }
+    if (config?.projectId && config.projectId !== target.projectId) {
+      throw targetRejected("Company settings migration rejected a different Firebase config.");
+    }
+  }
+  return target;
+}
+
+export function createCodexCompanySettingsEditionReceiptDigest(
+  target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET,
+) {
+  assertExactCodexTargetDefinition(target);
+  return sha256(`${EDITION_RECEIPT_DOMAIN}\0${stableJson({
+    projectId: target.projectId,
+    databaseId: target.databaseId,
+    databaseType: target.databaseType,
+    edition: target.edition,
+    firestoreHost: target.firestoreHost,
+  })}`);
+}
+
+export function createCodexCompanySettingsRulesReceiptDigest(rulesText) {
+  if (typeof rulesText !== "string" || rulesText.length === 0) {
+    throw new TypeError("rulesText must be non-empty");
+  }
+  return sha256(`${RULES_RECEIPT_DOMAIN}\0${rulesText}`);
+}
+
+export function parseCompanySettingsTimestamp(value) {
+  const [seconds, nanoseconds] = canonicalTimestamp(value);
+  const numericSeconds = Number(seconds);
+  const numericNanoseconds = Number(nanoseconds);
+  if (!Number.isSafeInteger(numericSeconds)) {
+    throw new TypeError("timestamp seconds must be a safe integer");
+  }
+  return Object.freeze({ seconds: numericSeconds, nanoseconds: numericNanoseconds });
+}
+
+export function createCodexCompanySettingsPlanInput({
+  manifest,
+  actorUid,
+  timestamp,
+  fixedCommit,
+  rulesText,
+  target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET,
+} = {}) {
+  assertExactCodexTargetDefinition(target);
+  if (
+    typeof actorUid !== "string" ||
+    actorUid.length < 1 ||
+    actorUid.length > 128 ||
+    actorUid.trim() !== actorUid ||
+    actorUid.includes("@")
+  ) {
+    throw new TypeError("actorUid must be a 1-128 character non-email opaque ID");
+  }
+  if (typeof fixedCommit !== "string" || !/^[0-9a-f]{40}$/u.test(fixedCommit)) {
+    throw new TypeError("fixedCommit must be a full Git commit");
+  }
+  timestampLikeToRfc3339(timestamp);
+  return Object.freeze({
+    editionVerified: true,
+    projectId: target.projectId,
+    databaseId: target.databaseId,
+    databaseType: target.databaseType,
+    edition: target.edition,
+    editionReceiptDigest: createCodexCompanySettingsEditionReceiptDigest(target),
+    actorUid,
+    timestamp,
+    fixedCommit,
+    schemaPackageVersion: "2.4.2-dev.167",
+    schemaContractVersion: 1,
+    targetManifestDigest: createCompanySettingsManifestDigest(manifest),
+    rulesReceiptDigest: createCodexCompanySettingsRulesReceiptDigest(rulesText),
+    manifest: Object.freeze([...manifest]),
+  });
+}
+
+function firestoreDocumentsBase(target) {
+  return `http://${target.firestoreHost}/v1/projects/${encodeURIComponent(target.projectId)}` +
+    `/databases/${encodeURIComponent(target.databaseId)}/documents`;
+}
+
+async function requestFirestoreJson(fetchImpl, url, { method = "GET", body } = {}) {
+  const expectedOrigin = `http://${CODEX_COMPANY_SETTINGS_MIGRATION_TARGET.firestoreHost}`;
+  const requestUrl = new URL(url);
+  if (requestUrl.origin !== expectedOrigin) {
+    throw targetRejected("Firestore Emulator REST request escaped the exact loopback origin.");
+  }
+  const response = await fetchImpl(url, {
+    method,
+    redirect: "error",
+    headers: {
+      authorization: "Bearer owner",
+      ...(body === undefined ? {} : { "content-type": "application/json" }),
+    },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let responseOrigin;
+  try {
+    responseOrigin = new URL(response?.url).origin;
+  } catch {
+    throw targetRejected("Firestore Emulator REST response origin could not be verified.");
+  }
+  if (responseOrigin !== expectedOrigin) {
+    throw targetRejected("Firestore Emulator REST response escaped the exact loopback origin.");
+  }
+  if (!response?.ok) {
+    const error = new Error(`Firestore Emulator REST request failed with status ${response?.status ?? "unknown"}.`);
+    error.httpResponseReceived = true;
+    error.httpStatus = response?.status ?? null;
+    throw error;
+  }
+  const text = await response.text();
+  return text.length === 0 ? null : JSON.parse(text);
+}
+
+function restDocumentToRecord(document, target) {
+  if (!isPlainObject(document) || typeof document.name !== "string") {
+    throw new TypeError("Firestore REST document is invalid");
+  }
+  const prefix = `projects/${target.projectId}/databases/${target.databaseId}/documents/`;
+  if (!document.name.startsWith(prefix)) {
+    throw targetRejected("Firestore REST document escaped the Codex-local database.");
+  }
+  return Object.freeze({
+    path: document.name.slice(prefix.length),
+    value: { mapValue: { fields: document.fields ?? {} } },
+    updateTime: document.updateTime,
+  });
+}
+
+async function listRootDocuments(target, fetchImpl) {
+  const records = [];
+  let pageToken = null;
+  do {
+    const query = new URLSearchParams({ pageSize: "1000" });
+    if (pageToken) query.set("pageToken", pageToken);
+    const response = await requestFirestoreJson(
+      fetchImpl,
+      `${firestoreDocumentsBase(target)}/Companies?${query}`,
+    );
+    for (const document of response?.documents ?? []) {
+      records.push(restDocumentToRecord(document, target));
+    }
+    pageToken = response?.nextPageToken ?? null;
+  } while (pageToken);
+  return records;
+}
+
+function documentsFromRunQuery(response, target) {
+  if (!Array.isArray(response)) throw new TypeError("Firestore runQuery response must be an array");
+  return response
+    .filter((entry) => entry?.document)
+    .map((entry) => restDocumentToRecord(entry.document, target));
+}
+
+async function runCollectionGroupQuery(target, collectionId, fetchImpl) {
+  const response = await requestFirestoreJson(
+    fetchImpl,
+    `${firestoreDocumentsBase(target)}:runQuery`,
+    {
+      method: "POST",
+      body: {
+        structuredQuery: {
+          from: [{ collectionId, allDescendants: true }],
+        },
+      },
+    },
   );
-  process.exitCode = COMPANY_SETTINGS_EXIT_CODES.USAGE;
+  return documentsFromRunQuery(response, target);
+}
+
+export async function readCompanySettingsMigrationState({
+  target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  assertExactCodexTargetDefinition(target);
+  const [roots, settings, privateSettings, audits] = await Promise.all([
+    listRootDocuments(target, fetchImpl),
+    runCollectionGroupQuery(target, "Settings", fetchImpl),
+    runCollectionGroupQuery(target, "PrivateSettings", fetchImpl),
+    runCollectionGroupQuery(target, "SettingAudits", fetchImpl),
+  ]);
+  return Object.freeze({
+    roots: Object.freeze(roots),
+    targets: Object.freeze([...settings, ...privateSettings]),
+    audits: Object.freeze(audits),
+    unexpectedDocuments: Object.freeze([]),
+  });
+}
+
+export async function readCompanySettingsMigrationPlan({
+  target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET,
+  planInput,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  const state = await readCompanySettingsMigrationState({ target, fetchImpl });
+  return planCompanySettingsMigration({ ...planInput, ...state });
+}
+
+async function beginFirestoreTransaction(target, fetchImpl) {
+  const response = await requestFirestoreJson(
+    fetchImpl,
+    `${firestoreDocumentsBase(target)}:beginTransaction`,
+    { method: "POST", body: { options: { readWrite: {} } } },
+  );
+  if (typeof response?.transaction !== "string" || response.transaction.length === 0) {
+    throw new TypeError("Firestore Emulator did not return a transaction");
+  }
+  return response.transaction;
+}
+
+async function rollbackFirestoreTransaction(target, transaction, fetchImpl) {
+  await requestFirestoreJson(
+    fetchImpl,
+    `${firestoreDocumentsBase(target)}:rollback`,
+    { method: "POST", body: { transaction } },
+  );
+}
+
+function companyDocumentParentUrl(target, companyPath) {
+  const match = ROOT_PATH.exec(companyPath);
+  if (!match) throw new TypeError("companyPath must identify a Company root");
+  return `${firestoreDocumentsBase(target)}/Companies/${encodeURIComponent(match[1])}`;
+}
+
+async function readTransactionQuery(
+  target,
+  companyPath,
+  collectionId,
+  transaction,
+  fetchImpl,
+) {
+  const response = await requestFirestoreJson(
+    fetchImpl,
+    `${companyDocumentParentUrl(target, companyPath)}:runQuery`,
+    {
+      method: "POST",
+      body: {
+        transaction,
+        structuredQuery: { from: [{ collectionId }] },
+      },
+    },
+  );
+  return documentsFromRunQuery(response, target);
+}
+
+async function readTenantTransactionState(
+  target,
+  companyPath,
+  transaction,
+  fetchImpl,
+) {
+  const rootName = `projects/${target.projectId}/databases/${target.databaseId}/documents/${companyPath}`;
+  const rootResponse = await requestFirestoreJson(
+    fetchImpl,
+    `${firestoreDocumentsBase(target)}:batchGet`,
+    { method: "POST", body: { documents: [rootName], transaction } },
+  );
+  if (!Array.isArray(rootResponse)) {
+    throw new TypeError("Firestore batchGet response must be an array");
+  }
+  const roots = rootResponse
+    .filter((entry) => entry?.found)
+    .map((entry) => restDocumentToRecord(entry.found, target));
+  const [settings, privateSettings, audits] = await Promise.all([
+    readTransactionQuery(target, companyPath, "Settings", transaction, fetchImpl),
+    readTransactionQuery(target, companyPath, "PrivateSettings", transaction, fetchImpl),
+    readTransactionQuery(target, companyPath, "SettingAudits", transaction, fetchImpl),
+  ]);
+  return {
+    roots,
+    targets: [...settings, ...privateSettings],
+    audits,
+    unexpectedDocuments: [],
+  };
+}
+
+function operationInvariant(operation) {
+  return stableJson({
+    companyPath: operation.companyPath,
+    sourceUpdateTime: operation.sourceUpdateTime,
+    sourceFingerprint: operation.sourceFingerprint,
+    writes: operation.writes.map(({ kind, path, value }) => ({
+      kind,
+      path,
+      value: canonicalizeFirestoreValue(value),
+    })),
+  });
+}
+
+function createRestWrite(target, write) {
+  if (write.kind !== "create" || !TARGET_PATH.test(write.path)) {
+    throw companySettingsError(
+      "Company settings migration rejected a non-create target write.",
+      COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+    );
+  }
+  if (write.value?.mapValue?.fields === undefined) {
+    throw new TypeError("Company settings migration write must be a map value");
+  }
+  return {
+    update: {
+      name: `projects/${target.projectId}/databases/${target.databaseId}/documents/${write.path}`,
+      fields: write.value.mapValue.fields,
+    },
+    currentDocument: { exists: false },
+  };
+}
+
+async function commitTenantOperation({
+  target,
+  planInput,
+  operation,
+  fetchImpl,
+}) {
+  const transaction = await beginFirestoreTransaction(target, fetchImpl);
+  let commitRequestSent = false;
+  try {
+    const state = await readTenantTransactionState(
+      target,
+      operation.companyPath,
+      transaction,
+      fetchImpl,
+    );
+    const tenantInput = {
+      ...planInput,
+      manifest: [operation.companyPath],
+      targetManifestDigest: createCompanySettingsManifestDigest([operation.companyPath]),
+    };
+    const transactionPlan = planCompanySettingsMigration({ ...tenantInput, ...state });
+    if (
+      transactionPlan.exitCode !== COMPANY_SETTINGS_EXIT_CODES.CHANGES ||
+      transactionPlan.findings.length !== 0 ||
+      transactionPlan.operations.length !== 1 ||
+      operationInvariant(transactionPlan.operations[0]) !== operationInvariant(operation)
+    ) {
+      throw companySettingsError(
+        "Company settings migration state changed before create.",
+        COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+      );
+    }
+    commitRequestSent = true;
+    const response = await requestFirestoreJson(
+      fetchImpl,
+      `${firestoreDocumentsBase(target)}:commit`,
+      {
+        method: "POST",
+        body: {
+          transaction,
+          writes: operation.writes.map((write) => createRestWrite(target, write)),
+        },
+      },
+    );
+    if (!Array.isArray(response?.writeResults) || response.writeResults.length !== COMPANY_SETTINGS_TARGETS.length) {
+      throw companySettingsError(
+        "Company settings migration commit result was incomplete.",
+        COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+      );
+    }
+    commitRequestSent = false;
+    return response.writeResults.length;
+  } catch (error) {
+    const commitRejected = commitRequestSent && error?.httpResponseReceived === true;
+    if (!commitRequestSent || commitRejected) {
+      try {
+        await rollbackFirestoreTransaction(target, transaction, fetchImpl);
+      } catch {
+        // The original failure remains authoritative; rollback never deletes a committed create.
+      }
+    }
+    const failure = error?.exitCode
+      ? error
+      : companySettingsError(
+          "Company settings migration transaction failed.",
+          COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+        );
+    failure.commitOutcomeMayBeUnknown = commitRequestSent && !commitRejected;
+    throw failure;
+  }
+}
+
+export function assertCompanySettingsPostCheck({
+  beforePlan,
+  afterPlan,
+  appliedTenantCount,
+  createdDocumentCount,
+}) {
+  const beforeByPath = new Map(
+    beforePlan.candidates.map((candidate) => [candidate.companyPath, candidate]),
+  );
+  const complete =
+    afterPlan.exitCode === COMPANY_SETTINGS_EXIT_CODES.CLEAN &&
+    afterPlan.findings.length === 0 &&
+    afterPlan.operations.length === 0 &&
+    afterPlan.candidates.length === beforePlan.candidates.length &&
+    afterPlan.candidates.every((candidate) => {
+      const before = beforeByPath.get(candidate.companyPath);
+      return Boolean(
+        before &&
+        candidate.classification === "alreadyEquivalent" &&
+        candidate.sourceUpdateTime === before.sourceUpdateTime &&
+        candidate.sourceFingerprint === before.sourceFingerprint &&
+        candidate.currentAudits.length === 0 &&
+        candidate.unexpectedDocuments.length === 0,
+      );
+    }) &&
+    Number.isInteger(appliedTenantCount) &&
+    createdDocumentCount === appliedTenantCount * COMPANY_SETTINGS_TARGETS.length;
+  if (!complete) {
+    throw companySettingsError(
+      "Company settings migration post-check failed.",
+      COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+    );
+  }
+  return Object.freeze({
+    status: "clean",
+    appliedTenantCount,
+    createdDocumentCount,
+    updatedDocumentCount: 0,
+    deletedDocumentCount: 0,
+    rootWriteCount: 0,
+    auditWriteCount: 0,
+  });
+}
+
+export async function applyCompanySettingsMigrationPlan({
+  target = CODEX_COMPANY_SETTINGS_MIGRATION_TARGET,
+  planInput,
+  plan,
+  approvedPlanDigest,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  assertExactCodexTargetDefinition(target);
+  if (plan.findings.length > 0 || plan.exitCode === COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER) {
+    throw companySettingsError(
+      "Company settings migration has blocking findings.",
+      COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER,
+    );
+  }
+  if (plan.planDigest !== approvedPlanDigest) {
+    throw companySettingsError(
+      "Company settings migration plan changed.",
+      COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+    );
+  }
+  let appliedTenantCount = 0;
+  let createdDocumentCount = 0;
+  try {
+    for (const operation of plan.operations) {
+      createdDocumentCount += await commitTenantOperation({
+        target,
+        planInput,
+        operation,
+        fetchImpl,
+      });
+      appliedTenantCount += 1;
+    }
+  } catch (error) {
+    error.appliedTenantCount = appliedTenantCount;
+    error.createdDocumentCount = createdDocumentCount;
+    error.commitOutcomeMayBeUnknown = error.commitOutcomeMayBeUnknown === true;
+    try {
+      const recoveryPlan = await readCompanySettingsMigrationPlan({
+        target,
+        planInput,
+        fetchImpl,
+      });
+      error.recoveryPlanSummary = summarizeCompanySettingsPlan(recoveryPlan);
+      const beforeByPath = new Map(
+        plan.candidates.map((candidate) => [candidate.companyPath, candidate.classification]),
+      );
+      error.observedCreatedTenantCount = recoveryPlan.candidates.filter((candidate) =>
+        beforeByPath.get(candidate.companyPath) === "eligibleCreate" &&
+        candidate.classification === "alreadyEquivalent",
+      ).length;
+      error.observedCreatedDocumentCount =
+        error.observedCreatedTenantCount * COMPANY_SETTINGS_TARGETS.length;
+    } catch {
+      error.recoveryPlanSummary = null;
+      error.observedCreatedTenantCount = null;
+      error.observedCreatedDocumentCount = null;
+    }
+    error.stateVerificationRequired = error.recoveryPlanSummary === null;
+    throw error;
+  }
+  const afterPlan = await readCompanySettingsMigrationPlan({
+    target,
+    planInput,
+    fetchImpl,
+  });
+  const postCheck = assertCompanySettingsPostCheck({
+    beforePlan: plan,
+    afterPlan,
+    appliedTenantCount,
+    createdDocumentCount,
+  });
+  return Object.freeze({ afterPlan, postCheck });
+}
+
+export function parseCompanySettingsMigrationArgs(args) {
+  const parsed = {
+    target: null,
+    manifestFile: null,
+    actorUid: null,
+    timestamp: null,
+    fixedCommit: null,
+    apply: false,
+    planDigest: null,
+  };
+  const valueArguments = new Map([
+    ["--target", "target"],
+    ["--manifest-file", "manifestFile"],
+    ["--actor-uid", "actorUid"],
+    ["--timestamp", "timestamp"],
+    ["--fixed-commit", "fixedCommit"],
+    ["--plan-digest", "planDigest"],
+  ]);
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--apply") {
+      if (parsed.apply) throw companySettingsError("Duplicate --apply.", COMPANY_SETTINGS_EXIT_CODES.USAGE);
+      parsed.apply = true;
+      continue;
+    }
+    const key = valueArguments.get(argument);
+    if (!key || parsed[key] !== null || index + 1 >= args.length || args[index + 1].startsWith("--")) {
+      throw companySettingsError("Invalid company settings migration arguments.", COMPANY_SETTINGS_EXIT_CODES.USAGE);
+    }
+    parsed[key] = args[++index];
+  }
+  if (
+    parsed.target !== CODEX_COMPANY_SETTINGS_MIGRATION_TARGET.name ||
+    !parsed.manifestFile ||
+    !parsed.actorUid ||
+    !parsed.timestamp ||
+    !/^[0-9a-f]{40}$/u.test(parsed.fixedCommit ?? "")
+  ) {
+    throw companySettingsError(
+      "Codex-local target, manifest, actor, timestamp, and full fixed commit are required.",
+      COMPANY_SETTINGS_EXIT_CODES.USAGE,
+    );
+  }
+  try {
+    parseCompanySettingsTimestamp(parsed.timestamp);
+  } catch {
+    throw companySettingsError("--timestamp must be UTC RFC 3339.", COMPANY_SETTINGS_EXIT_CODES.USAGE);
+  }
+  if (parsed.apply && !/^[0-9a-f]{64}$/u.test(parsed.planDigest ?? "")) {
+    throw companySettingsError(
+      "--apply requires a dry-run --plan-digest.",
+      COMPANY_SETTINGS_EXIT_CODES.USAGE,
+    );
+  }
+  if (!parsed.apply && parsed.planDigest !== null) {
+    throw companySettingsError(
+      "--plan-digest is only valid with --apply.",
+      COMPANY_SETTINGS_EXIT_CODES.USAGE,
+    );
+  }
+  return Object.freeze(parsed);
+}
+
+export async function runCompanySettingsMigrationCli(
+  args,
+  {
+    env = process.env,
+    fetchImpl = globalThis.fetch,
+    readText = (path) => readFileSync(path, "utf8"),
+  } = {},
+) {
+  const parsed = parseCompanySettingsMigrationArgs(args);
+  const target = assertCompanySettingsMigrationTarget(parsed.target, env);
+  let manifest;
+  try {
+    manifest = JSON.parse(readText(parsed.manifestFile));
+  } catch {
+    throw companySettingsError("Manifest file is invalid.", COMPANY_SETTINGS_EXIT_CODES.USAGE);
+  }
+  const rulesText = readText(new URL("../firestore.rules", import.meta.url));
+  const planInput = createCodexCompanySettingsPlanInput({
+    manifest,
+    actorUid: parsed.actorUid,
+    timestamp: parseCompanySettingsTimestamp(parsed.timestamp),
+    fixedCommit: parsed.fixedCommit,
+    rulesText,
+    target,
+  });
+  const plan = await readCompanySettingsMigrationPlan({ target, planInput, fetchImpl });
+  const summary = Object.freeze({
+    ...summarizeCompanySettingsPlan(plan),
+    mode: parsed.apply ? "apply" : "dry-run",
+    target: target.name,
+    receiptKind: "codex-local-emulator-rules-file",
+  });
+  if (!parsed.apply) return Object.freeze({ exitCode: plan.exitCode, summary });
+  if (plan.exitCode === COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER) {
+    return Object.freeze({
+      exitCode: COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER,
+      summary: Object.freeze({
+        ...summary,
+        status: "blocked",
+        exitCode: COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER,
+      }),
+    });
+  }
+  if (plan.planDigest !== parsed.planDigest) {
+    return Object.freeze({
+      exitCode: COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+      summary: Object.freeze({
+        ...summary,
+        status: "plan-changed",
+        exitCode: COMPANY_SETTINGS_EXIT_CODES.APPLY_INCOMPLETE,
+      }),
+    });
+  }
+  const result = await applyCompanySettingsMigrationPlan({
+    target,
+    planInput,
+    plan,
+    approvedPlanDigest: parsed.planDigest,
+    fetchImpl,
+  });
+  return Object.freeze({
+    exitCode: COMPANY_SETTINGS_EXIT_CODES.CLEAN,
+    summary: Object.freeze({
+      ...summary,
+      status: "applied",
+      exitCode: COMPANY_SETTINGS_EXIT_CODES.CLEAN,
+      postCheck: result.postCheck,
+    }),
+  });
+}
+
+export function summarizeCompanySettingsMigrationError(error) {
+  const exitCode = error?.exitCode ?? COMPANY_SETTINGS_EXIT_CODES.UNEXPECTED;
+  return Object.freeze({
+    status: "error",
+    exitCode,
+    ...(Number.isInteger(error?.appliedTenantCount)
+      ? {
+          acknowledgedAppliedTenantCount: error.appliedTenantCount,
+          acknowledgedCreatedDocumentCount: error.createdDocumentCount,
+          commitOutcomeMayBeUnknown: error.commitOutcomeMayBeUnknown === true,
+          observedCreatedTenantCount: error.observedCreatedTenantCount ?? null,
+          observedCreatedDocumentCount: error.observedCreatedDocumentCount ?? null,
+          recoveryPlan: error.recoveryPlanSummary ?? null,
+          stateVerificationRequired: error.stateVerificationRequired === true,
+          resumeRequired: true,
+        }
+      : {}),
+  });
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  runCompanySettingsMigrationCli(process.argv.slice(2))
+    .then(({ exitCode, summary }) => {
+      process.stdout.write(`${JSON.stringify(summary)}\n`);
+      process.exitCode = exitCode;
+    })
+    .catch((error) => {
+      const summary = summarizeCompanySettingsMigrationError(error);
+      process.stderr.write(`${JSON.stringify(summary)}\n`);
+      process.exitCode = summary.exitCode;
+    });
 }
