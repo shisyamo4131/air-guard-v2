@@ -15,6 +15,7 @@
 - 実装調査: [Company（自社情報・会社設定）](../implementation/company-settings.md)
 - 互換性調査: [CCB-02 Company data・package互換性調査](../implementation/company-configuration-compatibility.md)
 - 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
+- CCB-02技術契約: 2026-08-28承認。Company設定専用Callable、schema/marker、pre-containment、create-only staging、旧writer 0件後activation、compatible rollbackを採用する。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
@@ -46,6 +47,9 @@
 - lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`。root物理削除、法的削除、tenant移転は別scopeとする。
 - maintenanceはproject-wide quiet procedureとし、CCBはCompany状態・表示の統合だけを担う。
 - Stripe再有効化とemployeeLimit強制は正式release直前の別改修へ延期し、CCBはentitlement documentのserver ownershipだけを準備する。
+- profile/billing/operations/arrangementは専用Callableから更新し、Settingsのclient CUDを拒否する。siteOrderは`sites:write`、scheduleOrderは`site-operation-schedules:write`をstrict actor条件にする。この判断を他collectionへ一律展開しない。
+- `schemaVersion=1`と`configurationState=CCB_V1_ACTIVE`の両方で正本を切り替え、activation前に全旧whole-document writer 0件を確認する。backfillはcomplete Settings setのcreate-only stagingとし、legacy root cleanupは別migrationへ残す。
+- legacy attendanceは`ACTUAL_DATE`から`LABOR_STANDARD`、`OPERATION_DATE`から`OPERATION_COUNT`へ写像し、欠損時だけ`LABOR_STANDARD`を補う。未知値はmigration conflictとして停止する。
 
 ## 現在実装との差
 
@@ -76,14 +80,14 @@ CCB-01 confirmed contract
   → CCB-09 migration・回帰・Dev受入れ
 ```
 
-互換readerを先に導入し、設定documentのcreate-only backfill、操作別writer、制限的Rules、旧全体writer撤去、旧field cleanupの順で進める。関連Schemas/Admin SDK repository変更は対象、互換性、公開・導入順、rollbackを示して別承認を得る。
+additive schemasとAdmin SDK backup対応を準備し、generic fallbackから新pathを除外するpre-containment Rulesを新documentより先にdeployする。次にlegacy rootを正本としたcompatible Functions/clientとcomplete Settingsのcreate-only stagingを導入する。maintenance cutoverでは最終Rules・Functions・clientを有効化し、client、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認してからroot activation markerを設定する。旧field cleanupは別migrationとする。関連Schemas/Admin SDK repository変更は対象、互換性、公開・導入順、rollbackを示して別承認を得る。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
-| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査は完了し、技術契約の利用者確認、Dev edition/data-shape、package release承認が残る。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査と技術契約確認は完了し、Dev edition/data-shape、完全field allowlist、package release承認が残る。 |
 | CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
 | CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済み長さ・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
 | CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
@@ -131,3 +135,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-27 | 0% | 基準線 | client、server、Rules/security、下流依存の4系統を独立調査し、影響範囲、判断ゲート、実施順、検証・rollback条件を設定した。 |
 | 2026-08-28 | 10% | +10 | Company document分割、actor、validation、revision/audit、snapshot、attendanceSummaryMode、廃止field、lifecycle、project-wide maintenance、Stripe延期を質疑で承認し、仕様・ADR 0025/0026・runbook・台帳・manualへ反映した。application実装・test・migration・Dev受入れは未着手のためCCB-01だけを加点した。 |
 | 2026-08-28 | 10% | ±0 | CCB-02のclient、Functions/Admin SDK、Rules/fixture、packageを4系統で再調査した。generic Rules fallback、新server fieldを落とす旧whole-document writer、Admin SDK backup欠落、package version差を確認し、release順と技術契約候補を記録した。利用者確認とDev実data照合が未完了のため加点しない。 |
+| 2026-08-28 | 10% | ±0 | CCB-02のCompany設定専用Callable、exact schema共通規則、enum mapping、pre-containment、create-only staging、activation marker、旧writer 0件gate、compatible rollbackを利用者が承認した。Dev read-only preflightはFirebase CLI credential失効でdatabase API到達前に停止し、Firestore document read 0、data write 0だった。Dev edition・data-shape未確認のため加点しない。 |

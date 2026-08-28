@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査完了、技術契約の利用者確認・Dev実data照合は未完了）
+- 状態: In progress（repository静的調査・技術契約確認完了、Dev実data照合は未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -11,7 +11,7 @@
 - ロードマップ: [Company設定改修ロードマップ](../roadmaps/company-settings.md)
 - 調査方法: client、Functions/Admin SDK、Firestore Rules/fixture、関連packageの4系統を独立したread-only調査として実施した。
 
-この文書は実装事実と互換性候補を記録する。承認済み仕様の正本ではない。以下の「推奨する技術契約」は利用者確認前の候補であり、確認後に仕様・ADR・ロードマップへ反映する。
+この文書は実装事実と互換性を記録する。承認済み仕様の正本ではない。「承認済み技術契約」は2026-08-28に利用者が確認し、現行仕様・ADR・ロードマップへ反映した。
 
 ## 結論
 
@@ -96,7 +96,7 @@ Company hydrateは未知fieldを捨て、serializerはenumerable own propertyを
 - app、Functions、Admin SDKは同一の承認済みexact schemas versionへ揃える。range、古いAdmin SDK、local duplicate schemaを正本にしない。
 - Admin SDK側の変更、schemas release・tag・publish、consumer installは別repository・外部作用であり、個別の利用者承認を必要とする。
 
-## 推奨する技術契約（利用者確認待ち）
+## 承認済み技術契約
 
 ### 1. Company設定write方式
 
@@ -111,7 +111,7 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 
 これは全collectionのCUDをFunctionsへ移す共通規則ではない。Company設定はaudit atomicity、list item検証、root/private containmentが同時に必要なための機能限定判断であり、Customer、Site、Employee、Outsourcerは各改修で改めて判断する。
 
-actor候補は、profile/billing/operationsが会社管理者、siteOrderが`sites:write`、scheduleOrderが`site-operation-schedules:write`である。manager/controller/legal等のrole名を直接判定せず、既知presetから得たpermissionを使う。super-userと直接permission文字列をstrict actorへ含めない。
+確定actorは、profile/billing/operationsが会社管理者、siteOrderが`sites:write`、scheduleOrderが`site-operation-schedules:write`である。manager/controller/legal等のrole名を直接判定せず、既知presetから得たpermissionを使う。super-userと直接permission文字列をstrict actorへ含めない。
 
 ### 2. exact document共通規則
 
@@ -134,16 +134,24 @@ actor候補は、profile/billing/operationsが会社管理者、siteOrderが`sit
 
 CCB-02は次が完了するまで10点を加点しない。
 
-- 上記3技術契約の利用者確認。
 - root、各Settings、PrivateSettings、auditの完全なfield allowlist、型、長さ、enum、相関、Timestamp、mask形式の確定。
 - Dev Firestore editionのremote再確認と、秘密・値を応答へ出さないbounded data-shape dry-run。
 - Dev Companyごとのlegacy、unknown、旧enum、partial field、subscription/maintenance、target conflict件数とplan digestの確認。
 - schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 
+## 2026-08-28 Dev read-only preflight
+
+- checkpoint: `CCB-02-DEV-SHAPE-001`
+- target: `air-guard-v2-dev`、Firestore `(default)`
+- approved read: edition、deploy済みFunctions、operator tool、Company rootのfield名・型・分類件数・digest。値、company ID、個人情報、Stripe識別子、credentialは出力しない。
+- local preflight: Node `v22.23.2`、Firebase CLI `15.28.1`、primary-only repository、HEAD `0eaca09e60f413c5a53f2156cb33c66f8282ec2e`、cleanを確認した。
+- remote result: `npx -y firebase-tools@latest firestore:databases:list --project air-guard-v2-dev --json`は、Firebase CLI credential失効を理由にexit 1。remote認証attemptは発生したがdatabase APIへ到達せず、Firestore document read 0、data write 0で停止した。
+- boundary: 別credential、gcloud、service account、Admin SDKへ迂回しない。Firebase CLI再認証後、同じ最初のcommandから再開する。
+
 ## 実施していないこと
 
 - application code、Rules、test、fixture、package、Admin SDK、正本仕様の変更
 - test、validator、build、Emulator、application/server/browser起動
-- network、Firestore/Firebase remote、Dev実data、deploy、migration、backup、restore
+- database API成功、Firestore document read、Dev実data取得、deploy、migration、backup、restore。networkはFirebase CLI認証失敗までのremote attemptだけを実施した。
 - Git mutation
