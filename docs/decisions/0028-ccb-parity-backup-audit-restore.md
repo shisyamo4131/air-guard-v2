@@ -54,7 +54,7 @@ CCB stagingはlegacy Company rootから8件の`Settings`・`PrivateSettings`を�
 
 - 利用者: document確定だけでは画面や実dataは変化しない。将来のmigrationは異常が1件でもあれば全体停止となる。
 - data: stagingは新規8 documentのcreateだけで、root、既存target、auditを更新・削除しない。PrivateSettingsとSettingAuditsの復旧可能範囲を明示的に限定する。
-- implementation: migration plan/digest、target guard、synthetic test、PrivateSettingsを除外したbackup表示、専用audit restoreが後続実装対象となる。
+- implementation: migration plan/digest、target guard、synthetic test、PrivateSettingsを除外したbackup表示、専用audit restoreが後続実装対象となる。backup表示はverified v1だけ除外を断定し、旧・不正metadataはPrivateSettings含有を`UNVERIFIED`とする。SettingAuditsはまずI/Oを持たないlocal-only pure plannerでscope、snapshot、digest、schema、canonical同値性とcreate候補だけを検証し、artifact真正性・保存・apply・復旧演習は別checkpointとする。
 - operations: Dev apply、managed backup確認、復旧演習、Rules receipt、maintenance、remote/data操作はそれぞれ別checkpointと承認を必要とする。
 - progress: 契約確定だけではCCB-02の実装・検証完了条件を満たさないため、ロードマップ進捗は10%のままとする。
 

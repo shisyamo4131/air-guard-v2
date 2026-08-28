@@ -115,7 +115,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - lifecycleは`ACTIVE`/`SUSPENDED`/`CLOSED`とし、rootを通常削除しない。Company maintenanceは[project-wide quiet procedure](../runbooks/maintenance-and-data-change.md)へ接続する。
 - Stripe本体とemployeeLimit実強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement隔離だけを行う。
 
-現行application code、Rules、実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合、exact schema v1、Schemas `.167`公開は完了した。Admin SDK、AirGuardV2 app、Functionsはexact `.167`へpin済みである。Admin SDKはCCB tenantへの旧backup/restore/delete/maintenanceをwrite前に拒否し、client compatible readerはActive marker後のcomplete 6 Settingsを厳密検証して旧root全体更新を拒否する。CCB-aware backup/restore、migration mapping/parity、Rules、Callable、設定画面、Dev staging/cutoverは未完了である。
+現行application code、Rules、実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合、exact schema v1、Schemas `.167`公開は完了した。Admin SDK、AirGuardV2 app、Functionsはexact `.167`へpin済みである。Admin SDKはCCB tenantへの旧backup/restore/delete/maintenanceをwrite前に拒否し、新規legacy backupを固定16 collectionの`INCOMPLETE` v1、PrivateSettings除外、restore未提供として表示する。旧・不正metadataはPrivateSettings含有を`UNVERIFIED`とし、local一覧は分離sidecarだけを読む。client compatible readerはActive marker後のcomplete 6 Settingsを厳密検証して旧root全体更新を拒否する。canonical parityはCodex専用合成Emulatorのcreate-only transactionまで実装済みである。SettingAuditsはlocal-only pure plannerと合成testだけを実装し、同一scope・snapshot・digest・canonical schemaを満たす`exists=false` create候補以外を全体停止する。artifact真正性・保存・apply・復旧演習、Rules、Callable、設定画面、Dev staging/cutoverは未完了である。
 
 ## 将来要対応
 

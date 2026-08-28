@@ -172,7 +172,13 @@ export function canonicalizeFirestoreValue(value, path = "$") {
       if (typeof body !== "boolean") throw new TypeError(`${path}.booleanValue must be boolean`);
       return ["bool", body];
     case "integerValue": {
-      const integer = typeof body === "bigint" ? body : BigInt(body);
+      if (typeof body !== "string" || !/^-?(?:0|[1-9]\d*)$/u.test(body)) {
+        throw new TypeError(`${path}.integerValue must be a canonical decimal string`);
+      }
+      const integer = BigInt(body);
+      if (integer < -9_223_372_036_854_775_808n || integer > 9_223_372_036_854_775_807n) {
+        throw new TypeError(`${path}.integerValue is outside the int64 range`);
+      }
       return ["int", integer.toString()];
     }
     case "doubleValue":
@@ -184,23 +190,39 @@ export function canonicalizeFirestoreValue(value, path = "$") {
       return ["string", body];
     case "bytesValue":
       if (typeof body !== "string") throw new TypeError(`${path}.bytesValue must be base64`);
-      return ["bytes", Buffer.from(body, "base64").toString("base64")];
+      if (Buffer.from(body, "base64").toString("base64") !== body) {
+        throw new TypeError(`${path}.bytesValue must use canonical base64`);
+      }
+      return ["bytes", body];
     case "referenceValue":
       if (typeof body !== "string") throw new TypeError(`${path}.referenceValue must be string`);
       return ["reference", body];
     case "geoPointValue":
-      if (!isPlainObject(body) || !Object.hasOwn(body, "latitude") || !Object.hasOwn(body, "longitude")) {
+      if (
+        !isPlainObject(body) ||
+        Object.keys(body).sort().join("\0") !== "latitude\0longitude" ||
+        typeof body.latitude !== "number" || !Number.isFinite(body.latitude) ||
+        typeof body.longitude !== "number" || !Number.isFinite(body.longitude) ||
+        body.latitude < -90 || body.latitude > 90 ||
+        body.longitude < -180 || body.longitude > 180
+      ) {
         throw new TypeError(`${path}.geoPointValue is invalid`);
       }
       return ["geopoint", canonicalDouble(body.latitude), canonicalDouble(body.longitude)];
     case "arrayValue": {
       if (!isPlainObject(body)) throw new TypeError(`${path}.arrayValue must be an object`);
+      if (Object.keys(body).some((key) => key !== "values")) {
+        throw new TypeError(`${path}.arrayValue has unsupported fields`);
+      }
       const values = body.values ?? [];
       if (!Array.isArray(values)) throw new TypeError(`${path}.arrayValue.values must be an array`);
       return ["array", values.map((item, index) => canonicalizeFirestoreValue(item, `${path}[${index}]`))];
     }
     case "mapValue": {
       if (!isPlainObject(body)) throw new TypeError(`${path}.mapValue must be an object`);
+      if (Object.keys(body).some((key) => key !== "fields")) {
+        throw new TypeError(`${path}.mapValue has unsupported fields`);
+      }
       const fields = body.fields ?? {};
       if (!isPlainObject(fields)) throw new TypeError(`${path}.mapValue.fields must be an object`);
       return [
@@ -215,7 +237,7 @@ export function canonicalizeFirestoreValue(value, path = "$") {
   }
 }
 
-function decodeFirestoreValue(value, path = "$") {
+export function decodeFirestoreValue(value, path = "$") {
   const canonical = canonicalizeFirestoreValue(value, path);
   switch (canonical[0]) {
     case "null": return null;
