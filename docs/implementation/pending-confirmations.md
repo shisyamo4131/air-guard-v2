@@ -1689,13 +1689,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Partially answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
-- Evidence: schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDK local commit `c95660d`は同versionへpinし、CCB marker/pathを検出した旧restore/delete等をwrite前にfail closedとする。AirGuardV2 app/Functionsは`.166`のままである。
+- Evidence: schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDK local commit `c95660d`、AirGuardV2 app、Functionsは同versionへpin済みである。Admin SDKはCCB marker/pathを検出した旧restore/delete等をwrite前にfail closedとし、client compatible readerはActive marker後のcomplete 6 Settingsを検証して旧root updateを拒否する。
 - Question: schemasへ旧Companyを維持したpureな`./company-configuration` v1 exportとrelease guardを実装し、Admin SDKのCCB destructive operationをfail closedにするための3 repositoryのlocal file変更・test・local commit設計を開始してよいか。version採用、tag作成、Git push、Trusted Publishing/npm publish、consumer install、deployは含まず、各action前に別承認とする。
 - Why needed: AirGuardV2内へのschema重複実装、無検査publish、consumer version差、危険な旧operatorのまま新documentを作ることを防ぐため。
 - Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
-- Current provisional treatment: Schemas公開とAdmin SDKのlocal exact導入・旧破壊操作fail-closedは受入れ済み。AirGuardV2 app/Functionsのconsumer導入、Admin SDK push/deploy、CCB-aware backup/restore、data操作は別checkpointとする。
+- Current provisional treatment: Schemas公開、Admin SDKとAirGuardV2 app/Functionsのlocal exact導入、旧破壊操作・旧root updateのfail-closedは受入れ対象まで実装済み。Admin SDK push/deploy、CCB-aware backup/restore、Rules、migration、data操作は別checkpointとする。
 - Related FUT IDs: FUT-0090、FUT-0092
-- Answer: 2026-08-28 部分回答。Schemasはrecovery `bb23909`と新coordinator移行後にexact `.167`をTrusted Publishingし、workflow、registry、LF clean tree、fresh install、27 exportsを検証した。利用者はprojectを持たないAdmin SDKをAirGuardV2 coordinatorが直接更新することを承認し、commit `c95660d`でexact `.167`とCCB fail-closed guardを実装した。Node 22/24専用17件と既存9件は成功した。AirGuardV2 app/Functions consumer導入、Admin SDK push/deploy、CCB-aware backup/restoreは未承認・未実施のためStatusはPartially answeredを維持する。
+- Answer: 2026-08-28 部分回答。Schemasはrecovery `bb23909`と新coordinator移行後にexact `.167`をTrusted Publishingし、workflow、registry、LF clean tree、fresh install、27 exportsを検証した。利用者はprojectを持たないAdmin SDKをAirGuardV2 coordinatorが直接更新することを承認し、commit `c95660d`でexact `.167`とCCB fail-closed guardを実装した。続いてAirGuardV2 app/Functionsもexact `.167`へ揃え、client compatible readerとActive時の旧root write拒否をlocal実装した。Admin SDK push/deploy、CCB-aware backup/restore、Rules・migrationは未実施のためStatusはPartially answeredを維持する。
 
 ## CONF-0140 CCB staging actor・maintenance mapping
 

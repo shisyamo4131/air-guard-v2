@@ -6,11 +6,11 @@ import test from "node:test";
 
 const SCHEMAS_PACKAGE = "@shisyamo4131/air-guard-v2-schemas";
 const SCHEMAS_CONSTANTS = `${SCHEMAS_PACKAGE}/constants`;
-const EXPECTED_VERSION = "2.4.2-dev.166";
+const EXPECTED_VERSION = "2.4.2-dev.167";
 const EXPECTED_RESOLVED =
-  "https://registry.npmjs.org/@shisyamo4131/air-guard-v2-schemas/-/air-guard-v2-schemas-2.4.2-dev.166.tgz";
+  "https://registry.npmjs.org/@shisyamo4131/air-guard-v2-schemas/-/air-guard-v2-schemas-2.4.2-dev.167.tgz";
 const EXPECTED_INTEGRITY =
-  "sha512-z1lPb3Q/DhXffFXxxih69b7fqUJlrnC8jZ1LotwGqflCA+tL1iO/gjH92Pky0YxIaxSbHGkNX4Cby6PZymeb/g==";
+  "sha512-EsMVhMXo9Rrc6AdLT98sdiN5iGniVZq6mEDN+XMgxuB1e8TYbNPPQCHRCdf+HcnvbTseruo23A+4PQnFpw/p0g==";
 
 const rootPackageJsonUrl = new URL("../../package.json", import.meta.url);
 const rootPackageLockUrl = new URL("../../package-lock.json", import.meta.url);

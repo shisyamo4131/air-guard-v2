@@ -6,13 +6,13 @@
 
 ## 関連パッケージの更新
 
-`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。UWB-09で現在のAirGuardV2 app/Functions consumerへ導入済みのversionは`2.4.2-dev.166`である。CCBを含む`2.4.2-dev.167`は公開・artifact検証済みだが、app/Functionsへはまだ導入していない。Admin SDKはlocal commit `c95660d`でexact `.167`へ導入済みで、CCB tenantへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
+`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは、UWB role presetとCCB v1 public contractを含む`2.4.2-dev.167`へ固定している。Admin SDKもlocal commit `c95660d`でexact `.167`へ導入済みで、CCB tenantへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
 
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.166
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.167
 Push-Location functions
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.166
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.167
 Pop-Location
 ```
 

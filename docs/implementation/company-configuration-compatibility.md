@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDKはexact導入と旧破壊操作fail-closedをlocal実装済み。staging actorとDev 4 tenant対象性は確定。AirGuardV2 app/Functions導入、canonical parity、PrivateSettings backup・SettingAudits restore本契約は未完了）
+- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否をlocal実装済み。staging actorとDev 4 tenant対象性は確定。canonical parity、PrivateSettings backup・SettingAudits restore本契約は未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -85,8 +85,8 @@ Company hydrateは未知fieldを捨て、serializerはenumerable own propertyを
 
 | consumer | 現行実解決 |
 |---|---|
-| root app | air-firebase `2.3.1-dev.6`、client adapter `2.1.3-dev.10`、schemas exact `2.4.2-dev.166` |
-| Functions | air-firebase `2.3.1-dev.6`、server adapter `2.2.1-dev.3`、schemas exact `2.4.2-dev.166` |
+| root app | air-firebase `2.3.1-dev.6`、client adapter `2.1.3-dev.10`、schemas exact `2.4.2-dev.167`。marker未成立時はlegacy root、成立後はroot projectionと6 Settingsを検証するcompatible readerをlocal実装済み。 |
+| Functions | air-firebase `2.3.1-dev.6`、server adapter `2.2.1-dev.3`、schemas exact `2.4.2-dev.167`。CCB write Callableは未実装・未有効。 |
 | Admin SDK | local commit `c95660d`でschemas exact `2.4.2-dev.167`。CCB public contractをimportし、旧破壊操作をCCB tenantへfail closedにする。 |
 
 2026-08-28の初回operator tool再確認では、関連repository `air-guard-v2-admin-sdk`はHEAD `1be81f6`、schemas `.162`だった。その後、利用者承認によりlocal commit `c95660d`へ更新し、exact `.167`とCCB safety guardを導入した。固定catalog自体はCCB backup/restoreに未対応だが、Company maintenance、会社削除、backup/restore等はroot markerまたは新pathを検出するとwrite前に停止する。
@@ -163,8 +163,8 @@ commit `bb23909`へannotated tag `v2.4.2-dev.167`を付け、normal main push、
 
 | 対象 | 確認済み状態 | CCB blocker |
 |---|---|---|
-| schemas | `main`、HEAD/origin `bb2390997153b2e57470d0c04012d93ddde2f971`、clean、tag/public package `2.4.2-dev.167`。additive `./company-configuration`、formal Node 22/24 suite、release guard、Trusted Publishing、registry artifact/fresh install検証済み。 | package側blockerは解消。Admin SDK導入は完了し、AirGuardV2 app/Functionsを同じexact version/contentへ導入して各consumer回帰を確認する必要がある。 |
-| AirGuardV2 app/Functions | root・Functionsともschemas exact `2.4.2-dev.166`。 | 新CCB exportを使う同一exact versionへ揃え、client/Functions別に導入検証する必要がある。 |
+| schemas | `main`、HEAD/origin `bb2390997153b2e57470d0c04012d93ddde2f971`、clean、tag/public package `2.4.2-dev.167`。additive `./company-configuration`、formal Node 22/24 suite、release guard、Trusted Publishing、registry artifact/fresh install検証済み。 | package側blockerは解消。Admin SDKとAirGuardV2 app/Functionsは同じexact version/contentへ導入済み。 |
+| AirGuardV2 app/Functions | root・Functionsともschemas exact `2.4.2-dev.167`。clientは両marker未成立時だけlegacy rootを読み、成立後はreserved root projectionと6 Settingsをpackage parserで検証する。欠損・invalid時はread errorとしてmaintenance側へfail closedにし、Active/error時の旧whole-document updateを実行前に拒否する。 | package consumer導入とcompatible read境界はlocal実装済み。canonical parity、Rules、Callable、staging、Dev cutoverは未実施。 |
 | Admin SDK | branch `codex/is-super-user-claim-migration`、local commit `c95660d2f60b93f7f0c3f3fe1ddc42373374aade`、clean。schemas exact `2.4.2-dev.167`。CCB root marker、新3 collection、backup payloadを検査し、旧backup/snapshot/diff/restore/delete/maintenanceをwrite前に拒否する。Node 22/24専用17件と既存9件成功。 | CCB-aware backup/restore、PrivateSettings保管、SettingAudits create-only restore、CCB tenant delete、provider maintenance、push/deployは未実装・未確認。 |
 
 Admin SDKの固定flat catalogは`Settings`、`PrivateSettings`、`SettingAudits`と他の未知nested pathを発見しない。現行の完全restoreは固定catalogを削除してrootをwhole-document `set`し、Auth失敗を警告だけで継続できる。selective/diff restoreはgeneric merge、Company deleteはAuthと固定catalogを部分削除し得る。これらはcanonical root、append-only audit、PrivateSettings、fail-closed契約と両立しない。さらにpublic classのrestore引数と実装signature、READMEの「全collection」説明にも不一致がある。CCB document作成前に、旧toolのdestructive restore/deleteをCCB tenantへfail closedにし、backup formatと実API説明を一致させる必要がある。
@@ -177,7 +177,13 @@ Admin SDKの固定flat catalogは`Settings`、`PrivateSettings`、`SettingAudits
 2. schemasのtargeted testでstrict allowlist、全field制約、grapheme、結合濁点、Timestamp structural boundary、legacy mapping、audit mask、旧`Company`回帰を固定する。publish workflowへtag/version一致、targeted test、public self-import、package file検査を加え、成功前にpublishしない。
 3. 承認済みimmutable prereleaseをtag/publishし、workflow、registry version、integrity、fresh public importを確認する。tag pushがpublishをtriggerするため、tag作成、push、Trusted Publishingは明示承認後だけ行う。
 4. Admin SDKを同じexact versionへpinし、CCB destructive operation拒否とtest・説明を先に整える。この安全停止はcommit `c95660d`で完了した。version付きbackup manifest、catalog inventory、CCB-aware backup/restore、provider maintenanceは別契約として残し、承認済み復旧方針がないまま新CCB documentを作らない。
-5. AirGuardV2 rootとFunctionsを同じexact versionへpinし、compatible readerと未有効writerを検証する。その後にだけpre-containment Rules、complete-set staging、final cutoverへ進む。
+5. AirGuardV2 rootとFunctionsを同じexact versionへpinし、compatible readerと未有効writerを検証する。このlocal境界は完了した。新CCB writerはまだ存在せず、次はcanonical parityとbackup契約を確定してからpre-containment Rules、complete-set staging、final cutoverへ進む。
+
+### AirGuardV2 compatible reader local実装
+
+AirGuardV2のCompany singletonはrootだけを読む旧`FireModel.fetch/subscribe`を上書きし、rootに`schemaVersion=1`と`configurationState=CCB_V1_ACTIVE`の両方がない間はlegacy rootを現行Company modelへhydrateする。両marker成立後はactivation期間用root projectionと`Settings/profile`、`billing`、`operations`、`arrangement`、`entitlement`、`maintenance`の6件をexact `.167` parserで検証し、complete setだけを現行表示形へ写す。`attendanceSummaryMode`は表示互換のため`LABOR_STANDARD→ACTUAL_DATE`、`OPERATION_COUNT→OPERATION_DATE`へ写すが、正本値はparsed Settingsとして別保持する。
+
+Active後の欠損、unknown、invalid、listener errorはlegacyへ戻さずCompany read errorとし、system maintenance判定をtrueにする。root statusが`SUSPENDED`または`CLOSED`の場合も通常画面をmaintenance側へfail closedにする。Active、read error、初期化中のCompanyに対する旧`update()`は`LEGACY_COMPANY_WRITE_DISABLED`でFirestore呼出し前に拒否する。legacy modeの既存更新だけを維持する。新Settings writer、Callable、Rules、migration、remote dataはこのlocal実装に含めない。
 
 publish済みpackageをunpublishせず、未採用ならconsumerを旧exact versionに留める。採用後・activation前のconsumer rollbackは各consumerの既知versionとlock/integrityを戻してtestする。activationまたはdata apply後はpackage downgradeだけをdata rollbackとみなさず、Settings対応済みreleaseへ戻す。Admin SDKの現行`.162`はSettingsを読めないため、CCB cutover後のrollback artifactにはできない。
 
@@ -205,7 +211,7 @@ CCB-02は次が完了するまで10点を加点しない。
 
 - Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
-- Schemas `2.4.2-dev.167`の公開・artifact確認とAdmin SDKのexact consumer導入・旧破壊操作fail-closedは受入れ済みである。残るのはAirGuardV2 app/Functionsのexact consumer導入、CCB-aware backup/restore、rollback release、deploy順の個別承認である。
+- Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closedはlocal受入れ対象まで実装済みである。残るのはcanonical parity、CCB-aware backup/restore、rollback release、Rules・Callable・staging・deploy順の個別承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。
 - CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettings backupとSettingAudits restoreの本契約、provider maintenanceは未確定である。migration actorとmaintenance中の決定不能mapping停止は確定済みである。
 
