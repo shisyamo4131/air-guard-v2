@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- repository projectを持たない`air-guard-v2-admin-sdk`をcoordinatorが直接更新し、Schemasをexact `2.4.2-dev.167`へpinした。CCB root marker、新3 collection、CCB backup payloadを検出した旧backup/snapshot/diff/restore、Company delete、legacy maintenanceをAuth・Firestore・storage write前にfail closedとし、検査不能も停止する。Node 22/24専用17件と既存9件は成功した。PrivateSettings backup、SettingAudits restore、CCB tenant削除・provider maintenanceの本実装、push、deploy、data操作は未実施である。
 - Dev既存Userのemail・Employee予約backfillに向けて、予約migrationへ利用者用EmulatorとDevのtarget guardを追加した。Devはservice account identity、Emulator不使用、maintenance・backup確認、dry-run digestを必須とし、missing予約のcreateだけを許可する。既存予約、User、Employee、Authenticationのupdate・deleteは行わない。
 
 ### Added

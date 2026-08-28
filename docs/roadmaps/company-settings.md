@@ -17,7 +17,7 @@
 - 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
 - CCB-02技術契約: 2026-08-28承認。Company設定専用Callable、schema/marker、pre-containment、create-only staging、旧writer 0件後activation、compatible rollbackを採用する。
 - CCB-02 exact schema v1: 2026-08-28承認。Unicode見た目文字数、全field allowlist・型・長さ・enum・相関・default・maskをADR 0025へ固定した。
-- CCB-02 local release/parity調査: 2026-08-28完了。Schemas S1/S2/S3とgovernance recovery `bb23909`をreviewし、exact `2.4.2-dev.167`のTrusted Publishing、registry artifact、fresh installまで受入れ済み。Dev 4 tenantは利用者会社1・試用中の別会社1・合成test 2として全件migration対象、staging actorとmaintenance conflict停止も確定した。consumer導入、Admin SDK変更とbackup/audit/delete境界はCONF-0139、0141〜0143で未確定。
+- CCB-02 local release/parity調査: 2026-08-28完了。Schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDKはcommit `c95660d`で同versionへpinし、CCB tenantへの旧backup/restore/delete/maintenanceをwrite前にfail closedとした。Dev 4 tenantは全件migration対象、staging actorとmaintenance conflict停止も確定した。AirGuardV2 app/Functions consumer導入、canonical parity、PrivateSettings backupとSettingAudits restoreの本契約は未完了。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
@@ -82,14 +82,14 @@ CCB-01 confirmed contract
   → CCB-09 migration・回帰・Dev受入れ
 ```
 
-additive schemasとAdmin SDK backup対応を準備し、generic fallbackから新pathを除外するpre-containment Rulesを新documentより先にdeployする。次にlegacy rootを正本としたcompatible Functions/clientとcomplete Settingsのcreate-only stagingを導入する。maintenance cutoverでは最終Rules・Functions・clientを有効化し、client、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認してからroot activation markerを設定する。旧field cleanupは別migrationとする。関連Schemas/Admin SDK repository変更は対象、互換性、公開・導入順、rollbackを示して別承認を得る。
+additive schemas、Admin SDKの旧破壊操作fail-closed、承認済みCCB backup方針を準備し、generic fallbackから新pathを除外するpre-containment Rulesを新documentより先にdeployする。次にlegacy rootを正本としたcompatible Functions/clientとcomplete Settingsのcreate-only stagingを導入する。maintenance cutoverでは最終Rules・Functions・clientを有効化し、client、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認してからroot activation markerを設定する。旧field cleanupは別migrationとする。関連Schemas/Admin SDK repository変更は対象、互換性、公開・導入順、rollbackを示して別承認を得る。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
-| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査、技術契約、Dev edition/data-shape確認、exact schema v1承認は完了し、観測4 rootの用途・migration対象分類、canonical parity plan、package release承認が残る。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。Schemas公開とAdmin SDKのexact導入・安全停止は完了し、AirGuardV2 app/Functions導入、canonical parity plan、CCB backup/audit restore契約が残る。 |
 | CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
 | CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済みgrapheme長・kana結合濁点・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。合成済み/結合表現、結合濁点単独拒否、長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
 | CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
@@ -146,3 +146,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-28 | 10% | ±0 | Schemas S1/S2 commit `ebfc173`をreviewし、旧空口座defaultとactivation root既知extrasの不足を検出、corrective `53fb53d`で補正した。Schemas Node 24とcoordinator Node 22でCCB 11/11、role preset 6/6、public self-import・root非公開を確認し、2 commit一体でlocal contractを受入れた。package公開・consumer導入・CCB-02完了gateは未完了のため加点しない。 |
 | 2026-08-28 | 10% | ±0 | Schemas S3 commit `78bb1f4`をreviewし、version `2.4.2-dev.167`、全10 test fileのfail-closed inventory、tag/version/export/package-content/public-import guard、Node 22/24 test後のTrusted Publishing workflowを受入れた。coordinator再検証の`npm test`と実release guardもexit 0。tag・push・公開・fresh install・consumer導入は未実施でCCB-02完了gateを満たさないため加点しない。 |
 | 2026-08-28 | 10% | ±0 | Schemasの旧project-rule記述をrecovery `bb23909`で修正し、新coordinatorの変更なし再開後にexact `2.4.2-dev.167`を公開した。Node 22/24 workflow、registry metadata、LF clean treeとの84-file byte一致、fresh install、CCB 27 exports・root非公開・peer importを確認。Windows packとの差は改行/toolchain環境差でsource/runtime/API差0だった。consumer導入・Admin SDK・parity migrationが未完了のため加点しない。 |
+| 2026-08-28 | 10% | ±0 | Admin SDK commit `c95660d`でSchemasをexact `.167`へpinし、CCB root marker・新3 collection・backup payloadを検査するfail-closed guardを追加した。旧backup/snapshot/diff/restore、Company delete、legacy maintenanceはAuth/Firestore/storage write前に停止し、Node 22/24専用17件と既存9件が成功した。CCB backup本体、AirGuardV2 app/Functions導入、canonical parity、Rules・migrationが未完了のため加点しない。 |

@@ -115,7 +115,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - lifecycleは`ACTIVE`/`SUSPENDED`/`CLOSED`とし、rootを通常削除しない。Company maintenanceは[project-wide quiet procedure](../runbooks/maintenance-and-data-change.md)へ接続する。
 - Stripe本体とemployeeLimit実強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement隔離だけを行う。
 
-現行code、Rules、Schemas、Admin SDK、実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合とexact schema v1の承認は完了したが、互換reader、migration mapping/parity、package release、Rules・application実装は未完了である。
+現行application code、Rules、実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合、exact schema v1、Schemas `.167`公開は完了した。Admin SDKはlocal commit `c95660d`で`.167`へpinし、CCB tenantへの旧backup/restore/delete/maintenanceをwrite前に拒否するが、CCB-aware backup/restoreは未実装である。互換reader、migration mapping/parity、app/Functions consumer導入、Rules・application実装は未完了である。
 
 ## 将来要対応
 

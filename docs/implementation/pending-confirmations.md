@@ -1689,13 +1689,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Partially answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
-- Evidence: schemas `2.4.2-dev.166`にCCB exportがなくpublish workflowはtestなしでtag pushからpublishする。Admin SDKはschemas range `^2.4.2-dev.162`、新path未対応で、現行restore/deleteはcanonical root・append-only auditを破壊し得る。
+- Evidence: schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDK local commit `c95660d`は同versionへpinし、CCB marker/pathを検出した旧restore/delete等をwrite前にfail closedとする。AirGuardV2 app/Functionsは`.166`のままである。
 - Question: schemasへ旧Companyを維持したpureな`./company-configuration` v1 exportとrelease guardを実装し、Admin SDKのCCB destructive operationをfail closedにするための3 repositoryのlocal file変更・test・local commit設計を開始してよいか。version採用、tag作成、Git push、Trusted Publishing/npm publish、consumer install、deployは含まず、各action前に別承認とする。
 - Why needed: AirGuardV2内へのschema重複実装、無検査publish、consumer version差、危険な旧operatorのまま新documentを作ることを防ぐため。
 - Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
-- Current provisional treatment: Schemas S1/S2/S3とgovernance recoveryをreviewし、`2.4.2-dev.167`のtag/push/Trusted Publishing/registry artifact・fresh-install確認まで受入れ済み。AirGuardV2 taskからSchemas repositoryを直接編集せず、Admin SDKのlocal変更とAirGuardV2/Functions/Admin SDKのconsumer install/deployは個別承認のまま分離する。
+- Current provisional treatment: Schemas公開とAdmin SDKのlocal exact導入・旧破壊操作fail-closedは受入れ済み。AirGuardV2 app/Functionsのconsumer導入、Admin SDK push/deploy、CCB-aware backup/restore、data操作は別checkpointとする。
 - Related FUT IDs: FUT-0090、FUT-0092
-- Answer: 2026-08-28 部分回答。Schemas管理は別project `AirGuardV2Schemas`が担うため、既存taskへ指示して進めた。S1/S2はcommit `ebfc173`とcorrective `53fb53d`を一体でreviewし、S3 `78bb1f4`でformal test/release guardを実装した。公開前にproject ruleの旧診断記述を検出して停止し、recovery `bb23909`と完全新規coordinator `PM（Schemas）-03`への交代後、exact `2.4.2-dev.167`をTrusted Publishingした。Node 22/24 workflow、registry metadata、LF clean treeとの84-file byte一致、fresh install、CCB 27 exports・root非公開・peer importは各exit 0である。Windows packとのdigest差はCRLF/npm 10とLF/npm 11の再現環境差でsource/runtime/API差0と確認した。Schemas公開境界は回答済みだが、Admin SDKのlocal変更とconsumer install/deployは未承認のためStatusはPartially answeredを維持する。
+- Answer: 2026-08-28 部分回答。Schemasはrecovery `bb23909`と新coordinator移行後にexact `.167`をTrusted Publishingし、workflow、registry、LF clean tree、fresh install、27 exportsを検証した。利用者はprojectを持たないAdmin SDKをAirGuardV2 coordinatorが直接更新することを承認し、commit `c95660d`でexact `.167`とCCB fail-closed guardを実装した。Node 22/24専用17件と既存9件は成功した。AirGuardV2 app/Functions consumer導入、Admin SDK push/deploy、CCB-aware backup/restoreは未承認・未実施のためStatusはPartially answeredを維持する。
 
 ## CONF-0140 CCB staging actor・maintenance mapping
 
@@ -1735,15 +1735,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0143 CCB tenant物理削除境界
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: CCB-02; `company-configuration-compatibility.md`
 - Evidence: 現行Company deleteはAuthと固定flat catalogを部分削除し得て、PrivateSettings、SettingAudits、未知nested path、retention、resumeを扱わない。Company root物理削除はADR 0025で別承認対象である。
 - Question: CCB tenantに対する現行`companies delete`をfail closedにし、法的削除、retention、全path inventory、backup receipt、Auth順序、resume/idempotencyを別設計・別承認するまで物理削除を提供しないか。
 - Why needed: orphan、監査欠落、秘密metadata残存、部分削除を成功扱いすることを防ぐため。
 - Options and impact: 推奨のfail closed、専用削除workflowを先行設計、現行delete継続。現行継続はCCBと両立しない。
-- Current provisional treatment: CCB tenantの物理削除を未提供とし、現行deleteを安全な経路とみなさない。
+- Current provisional treatment: CCB tenantの物理削除を未提供とし、現行deleteはCCB marker/pathの検出または検査失敗時にAuth・Firestore write前でfail closedとする。
 - Related FUT IDs: FUT-0090、FUT-0091
-- Answer: 未回答
+- Answer: 2026-08-28 承認・local実装済み。Admin SDK commit `c95660d`で現行`companies delete`をCCB tenantへ`CCB_UNSUPPORTED_OPERATION`、検査不能時に`CCB_BOUNDARY_CHECK_FAILED`で停止させ、Auth削除、Firestore batch、Company root削除前であることを専用testで確認した。法的削除、retention、全path inventory、backup receipt、resume/idempotencyを備えたCCB tenant物理削除は未提供のまま別設計・別承認とする。
 
 ## CONF-0144 CCB Dev 4 tenantの用途分類read scope
 
