@@ -16,7 +16,7 @@ candidate universeは外部保管する承認済みtarget manifest、Company roo
 
 dry-runとapplyはSchemasのpure mappingから同じtype-tagged canonical planを生成し、applyはlive stateで再生成したdigestが承認値と一致した場合だけtenant単位transactionで8 targetをcreateする。root、既存target、auditのupdate/deleteは0とする。途中成功後は作成済みdocumentを削除せず、fresh dry-runで成功tenantを`alreadyEquivalent`として新しいdigestを承認し直す。activationは別checkpointである。詳細は[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
 
-2026-08-28に`scripts/migrate-company-settings.mjs`へpure plannerだけを実装した。入力は呼出元が取得・正規化したmanifest、Company root、target、audit、unexpected pathであり、planner自身はFirestore、Emulator、network、credentialへ接続しない。Schemas exact `2.4.2-dev.167`の`mapLegacyCompanyToConfigurationV1`を使い、公開Firestore REST Valueだけからinteger/double、Timestamp、GeoPoint、reference、bytes、array、mapを区別したcanonical digestを作る。標準summaryは分類別件数、計画digest、opaque subject、create予定件数だけで、company ID、名称、path、document bodyを出力しない。
+2026-08-28に`scripts/migrate-company-settings.mjs`へpure plannerだけを実装した。入力は呼出元が取得・正規化したmanifest、Company root、target、audit、unexpected documentであり、planner自身はFirestore、Emulator、network、credentialへ接続しない。Schemas exact `2.4.2-dev.167`の`mapLegacyCompanyToConfigurationV1`を使い、公開Firestore REST Valueだけからinteger/double、Timestamp、GeoPoint、reference、bytes、array、mapを区別したcanonical digestを作る。digestはproject、database、database type、edition、edition receipt、fixed commit、schema package/contract、Rules receipt、manifest、全root/target/audit/unexpected documentのpath hash・raw fingerprint・updateTime、primary分類、全finding、expected bodyへ結ぶ。edition確認はboolean `true`だけを許可する。標準summaryはprimary分類別件数、finding code別件数、計画digest、create予定件数だけで、company ID、名称、path、document body、per-subject hashを出力しない。
 
 ```powershell
 # 合成fixtureだけを使うpure planner回帰test

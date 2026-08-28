@@ -27,15 +27,6 @@ export const COMPANY_SETTINGS_TARGETS = Object.freeze([
   Object.freeze({ collection: "PrivateSettings", document: "maintenance", valueKey: "privateMaintenance" }),
 ]);
 
-const BLOCKING_CLASSIFICATIONS = new Set([
-  "editionUnverified",
-  "rootMissingOrOrphan",
-  "targetConflict",
-  "unknownFieldReview",
-  "invalidSource",
-  "ambiguousMapping",
-]);
-
 const LEGACY_KEYS = new Set([
   "companyName", "companyNameKana", "zipcode", "prefCode", "city", "address",
   "building", "tel", "fax", "invoiceNumber", "bankName", "branchName",
@@ -51,6 +42,7 @@ const ROOT_PATH = /^Companies\/([^/]+)$/u;
 const TARGET_PATH =
   /^Companies\/([^/]+)\/(Settings|PrivateSettings)\/([^/]+)$/u;
 const AUDIT_PATH = /^Companies\/([^/]+)\/SettingAudits\/([^/]+)$/u;
+const COMPANY_DESCENDANT_PATH = /^Companies\/([^/]+)(?:\/.*)?$/u;
 
 function isPlainObject(value) {
   return Boolean(
@@ -66,6 +58,10 @@ function sha256(value) {
   return createHash("sha256").update(value, "utf8").digest("hex");
 }
 
+function compareUtf8(left, right) {
+  return Buffer.from(left, "utf8").compare(Buffer.from(right, "utf8"));
+}
+
 function opaqueSubject(path) {
   return sha256(`airguard:ccb-v1:subject:v1\0${path}`).slice(0, 20);
 }
@@ -78,7 +74,7 @@ export function createCompanySettingsManifestDigest(manifest) {
     throw new TypeError("manifest must not contain duplicate Company roots");
   }
   return sha256(
-    `airguard:ccb-v1:target-manifest:v1\0${stableJson([...manifest].sort())}`,
+    `airguard:ccb-v1:target-manifest:v1\0${stableJson([...manifest].sort(compareUtf8))}`,
   );
 }
 
@@ -86,7 +82,7 @@ function stableJson(value) {
   if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
   if (isPlainObject(value)) {
     return `{${Object.keys(value)
-      .sort((a, b) => Buffer.from(a).compare(Buffer.from(b)))
+      .sort(compareUtf8)
       .map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`)
       .join(",")}}`;
   }
@@ -177,7 +173,7 @@ export function canonicalizeFirestoreValue(value, path = "$") {
       return [
         "map",
         Object.keys(fields)
-          .sort((a, b) => Buffer.from(a).compare(Buffer.from(b)))
+          .sort(compareUtf8)
           .map((key) => [key, canonicalizeFirestoreValue(fields[key], `${path}.${key}`)]),
       ];
     }
@@ -271,8 +267,8 @@ function classifyMappingFailure(path) {
     : "invalidSource";
 }
 
-function makeFinding(classification, subject, detail = null) {
-  return Object.freeze({ classification, subject, detail, blocking: true });
+function makeFinding(code, classification, subject, detail = null) {
+  return Object.freeze({ code, classification, subject, detail, blocking: true });
 }
 
 function addCandidatePath(paths, path) {
@@ -294,6 +290,33 @@ function canonicalFingerprint(value) {
   return sha256(stableJson(canonicalizeFirestoreValue(value)));
 }
 
+function snapshotFingerprint(value) {
+  try {
+    return Object.freeze({ fingerprint: canonicalFingerprint(value), valid: true });
+  } catch {
+    return Object.freeze({
+      fingerprint: sha256(`invalid-firestore-value\0${stableJson(value)}`),
+      valid: false,
+    });
+  }
+}
+
+function snapshotReceipt(record) {
+  const snapshot = snapshotFingerprint(record?.value);
+  return Object.freeze({
+    pathSubject: opaqueSubject(String(record?.path ?? "invalid")),
+    updateTime: typeof record?.updateTime === "string" ? record.updateTime : null,
+    fingerprint: snapshot.fingerprint,
+    valid: snapshot.valid && typeof record?.updateTime === "string",
+  });
+}
+
+function sortedSnapshotReceipts(records) {
+  return records.map(snapshotReceipt).sort((a, b) =>
+    stableJson(a).localeCompare(stableJson(b)),
+  );
+}
+
 function validateHexDigest(value, name, { nullable = false } = {}) {
   if (nullable && value === null) return;
   if (typeof value !== "string" || !/^[0-9a-f]{64}$/u.test(value)) {
@@ -306,20 +329,31 @@ function validateHexDigest(value, name, { nullable = false } = {}) {
  */
 export function planCompanySettingsMigration({
   editionVerified = false,
+  projectId,
+  databaseId,
+  databaseType,
+  edition,
+  editionReceiptDigest,
   actorUid,
   timestamp,
   fixedCommit,
   schemaPackageVersion,
+  schemaContractVersion,
   targetManifestDigest,
   rulesReceiptDigest = null,
   manifest = [],
   roots = [],
   targets = [],
   audits = [],
-  unexpectedPaths = [],
+  unexpectedDocuments = [],
 } = {}) {
-  if (!Array.isArray(manifest) || !Array.isArray(roots) || !Array.isArray(targets) || !Array.isArray(audits) || !Array.isArray(unexpectedPaths)) {
+  if (!Array.isArray(manifest) || !Array.isArray(roots) || !Array.isArray(targets) || !Array.isArray(audits) || !Array.isArray(unexpectedDocuments)) {
     throw new TypeError("migration snapshot collections must be arrays");
+  }
+  for (const [name, value] of Object.entries({ projectId, databaseId, databaseType, edition })) {
+    if (typeof value !== "string" || value.length < 1 || value.trim() !== value) {
+      throw new TypeError(`${name} must be a non-empty string`);
+    }
   }
   if (typeof fixedCommit !== "string" || !/^[0-9a-f]{40}$/u.test(fixedCommit)) {
     throw new TypeError("fixedCommit must be a full Git commit");
@@ -327,6 +361,10 @@ export function planCompanySettingsMigration({
   if (schemaPackageVersion !== "2.4.2-dev.167") {
     throw new TypeError("schemaPackageVersion must be exact 2.4.2-dev.167");
   }
+  if (schemaContractVersion !== 1) {
+    throw new TypeError("schemaContractVersion must be exact 1");
+  }
+  validateHexDigest(editionReceiptDigest, "editionReceiptDigest");
   validateHexDigest(targetManifestDigest, "targetManifestDigest");
   validateHexDigest(rulesReceiptDigest, "rulesReceiptDigest", { nullable: true });
   if (createCompanySettingsManifestDigest(manifest) !== targetManifestDigest) {
@@ -348,59 +386,85 @@ export function planCompanySettingsMigration({
   for (const record of roots) if (!addCandidatePath(candidatePaths, record?.path)) invalidPaths.push(record?.path);
   for (const record of targets) if (!addCandidatePath(candidatePaths, record?.path)) invalidPaths.push(record?.path);
   for (const record of audits) if (!addCandidatePath(candidatePaths, record?.path)) invalidPaths.push(record?.path);
-  for (const path of unexpectedPaths) if (!addCandidatePath(candidatePaths, path)) invalidPaths.push(path);
+  for (const record of unexpectedDocuments) {
+    const match = COMPANY_DESCENDANT_PATH.exec(record?.path ?? "");
+    if (match) candidatePaths.add(`Companies/${match[1]}`);
+    else invalidPaths.push(record?.path);
+  }
 
   const manifestSet = new Set(manifest);
   const rootsByPath = new Map();
-  const duplicateRoots = new Set();
   for (const record of roots) {
-    if (rootsByPath.has(record?.path)) duplicateRoots.add(record?.path);
-    rootsByPath.set(record?.path, record);
+    const bucket = rootsByPath.get(record?.path) ?? [];
+    bucket.push(record);
+    rootsByPath.set(record?.path, bucket);
   }
   const targetsByCompany = new Map();
-  const invalidTargetCompanies = new Set();
   for (const record of targets) {
     const match = TARGET_PATH.exec(record?.path ?? "");
     if (!match) continue;
     const companyPath = `Companies/${match[1]}`;
     const key = `${match[2]}/${match[3]}`;
     const bucket = targetsByCompany.get(companyPath) ?? new Map();
-    if (bucket.has(key) || !targetDefinition(match[2], match[3])) invalidTargetCompanies.add(companyPath);
-    bucket.set(key, record);
+    const records = bucket.get(key) ?? [];
+    records.push(record);
+    bucket.set(key, records);
     targetsByCompany.set(companyPath, bucket);
   }
-  const auditCompanies = new Set(
-    audits.map((record) => AUDIT_PATH.exec(record?.path ?? "")).filter(Boolean).map((match) => `Companies/${match[1]}`),
-  );
-  const unexpectedCompanies = new Set();
-  for (const path of unexpectedPaths) {
-    const match = TARGET_PATH.exec(path ?? "") ?? AUDIT_PATH.exec(path ?? "");
-    if (match) unexpectedCompanies.add(`Companies/${match[1]}`);
-    else if (ROOT_PATH.test(path ?? "")) unexpectedCompanies.add(path);
+  const auditsByCompany = new Map();
+  for (const record of audits) {
+    const match = AUDIT_PATH.exec(record?.path ?? "");
+    if (!match) continue;
+    const companyPath = `Companies/${match[1]}`;
+    const bucket = auditsByCompany.get(companyPath) ?? [];
+    bucket.push(record);
+    auditsByCompany.set(companyPath, bucket);
+  }
+  const unexpectedByCompany = new Map();
+  for (const record of unexpectedDocuments) {
+    const match = COMPANY_DESCENDANT_PATH.exec(record?.path ?? "");
+    if (!match) continue;
+    const companyPath = `Companies/${match[1]}`;
+    const bucket = unexpectedByCompany.get(companyPath) ?? [];
+    bucket.push(record);
+    unexpectedByCompany.set(companyPath, bucket);
   }
 
   const candidatePlans = [];
   const findings = invalidPaths.map((path) =>
-    makeFinding("rootMissingOrOrphan", opaqueSubject(String(path ?? "invalid")), "invalidPath"),
+    makeFinding("invalid-path", "rootMissingOrOrphan", opaqueSubject(String(path ?? "invalid"))),
   );
-  if (!editionVerified && candidatePaths.size === 0) {
-    findings.push(makeFinding("editionUnverified", opaqueSubject("no-candidate")));
+  if (editionVerified !== true && candidatePaths.size === 0) {
+    findings.push(makeFinding("edition-unverified", "editionUnverified", opaqueSubject("no-candidate")));
   }
 
-  for (const companyPath of [...candidatePaths].sort()) {
+  for (const companyPath of [...candidatePaths].sort(compareUtf8)) {
     const subject = opaqueSubject(companyPath);
-    const root = rootsByPath.get(companyPath);
+    const rootRecords = rootsByPath.get(companyPath) ?? [];
+    const root = rootRecords[0];
     const actualTargets = targetsByCompany.get(companyPath) ?? new Map();
-    let classification;
+    const actualAudits = auditsByCompany.get(companyPath) ?? [];
+    const actualUnexpected = unexpectedByCompany.get(companyPath) ?? [];
+    const candidateFindings = [];
     let mapping = null;
 
-    if (!editionVerified) {
-      classification = "editionUnverified";
-    } else if (!manifestSet.has(companyPath) || !root || duplicateRoots.has(companyPath)) {
-      classification = "rootMissingOrOrphan";
-    } else if (!isPlainObject(root.value) || typeof root.updateTime !== "string") {
-      classification = "invalidSource";
-    } else {
+    if (editionVerified !== true) {
+      candidateFindings.push(makeFinding("edition-unverified", "editionUnverified", subject));
+    }
+    if (!manifestSet.has(companyPath)) {
+      candidateFindings.push(makeFinding("manifest-root-mismatch", "rootMissingOrOrphan", subject));
+    }
+    if (rootRecords.length === 0) {
+      candidateFindings.push(makeFinding("root-missing", "rootMissingOrOrphan", subject));
+    } else if (rootRecords.length > 1) {
+      candidateFindings.push(makeFinding("root-duplicate", "rootMissingOrOrphan", subject));
+    }
+
+    const rootReceipt = root ? snapshotReceipt(root) : null;
+    if (root && !rootReceipt.valid) {
+      candidateFindings.push(makeFinding("root-snapshot-invalid", "invalidSource", subject));
+    }
+    if (rootReceipt?.valid) {
       let sourceData;
       try {
         sourceData = decodeFirestoreValue(root.value);
@@ -408,40 +472,109 @@ export function planCompanySettingsMigration({
         sourceData = null;
       }
       if (!isPlainObject(sourceData)) {
-        classification = "invalidSource";
-      } else if (
+        candidateFindings.push(makeFinding("root-value-invalid", "invalidSource", subject));
+      } else {
+        if (
         sourceData.schemaVersion !== undefined ||
         sourceData.configurationState !== undefined ||
-        sourceData.status !== undefined ||
-        invalidTargetCompanies.has(companyPath) ||
-        auditCompanies.has(companyPath) ||
-        unexpectedCompanies.has(companyPath)
-      ) {
-        classification = "targetConflict";
-      } else {
-        const unknownKeys = Object.keys(sourceData).filter((key) => !LEGACY_KEYS.has(key));
+        sourceData.status !== undefined
+        ) {
+          candidateFindings.push(makeFinding("active-marker-present", "targetConflict", subject));
+        }
+        const hasActiveMarker =
+          sourceData.schemaVersion !== undefined ||
+          sourceData.configurationState !== undefined ||
+          sourceData.status !== undefined;
+        const unknownKeys = hasActiveMarker
+          ? []
+          : Object.keys(sourceData).filter((key) => !LEGACY_KEYS.has(key));
         if (unknownKeys.length > 0) {
-          classification = "unknownFieldReview";
-        } else {
+          candidateFindings.push(makeFinding("legacy-unknown-field", "unknownFieldReview", subject));
+        }
+        if (
+          !candidateFindings.some(({ code }) =>
+            ["active-marker-present", "legacy-unknown-field"].includes(code),
+          )
+        ) {
           mapping = mapLegacyCompanyToConfigurationV1(sourceData, { actorUid, timestamp });
           if (!mapping.ok) {
-            classification = classifyMappingFailure(mapping.conflict.path);
-          } else if (actualTargets.size === 0) {
-            classification = "eligibleCreate";
-          } else if (actualTargets.size !== COMPANY_SETTINGS_TARGETS.length) {
-            classification = "targetConflict";
-          } else {
-            const exact = COMPANY_SETTINGS_TARGETS.every((definition) => {
-              const record = actualTargets.get(`${definition.collection}/${definition.document}`);
-              if (!record || !isPlainObject(record.value)) return false;
-              const expected = encodeJsAsFirestoreValue(mapping.value[definition.valueKey]);
-              return stableJson(canonicalizeFirestoreValue(record.value)) ===
-                stableJson(canonicalizeFirestoreValue(expected));
-            });
-            classification = exact ? "alreadyEquivalent" : "targetConflict";
+            const classification = classifyMappingFailure(mapping.conflict.path);
+            candidateFindings.push(
+              makeFinding(
+                classification === "ambiguousMapping"
+                  ? "legacy-mapping-ambiguous"
+                  : "legacy-mapping-invalid",
+                classification,
+                subject,
+                mapping.conflict.path,
+              ),
+            );
           }
         }
       }
+    }
+
+    for (const [key, records] of actualTargets) {
+      const [collection, document] = key.split("/");
+      if (!targetDefinition(collection, document)) {
+        candidateFindings.push(makeFinding("target-unexpected", "targetConflict", subject));
+      }
+      if (records.length > 1) {
+        candidateFindings.push(makeFinding("target-duplicate", "targetConflict", subject));
+      }
+      for (const record of records) {
+        if (!snapshotReceipt(record).valid) {
+          candidateFindings.push(makeFinding("target-snapshot-invalid", "targetConflict", subject));
+        }
+      }
+    }
+    if (actualAudits.length > 0) {
+      candidateFindings.push(makeFinding("audit-present", "targetConflict", subject));
+      if (actualAudits.some((record) => !snapshotReceipt(record).valid)) {
+        candidateFindings.push(makeFinding("audit-snapshot-invalid", "targetConflict", subject));
+      }
+    }
+    if (actualUnexpected.length > 0) {
+      candidateFindings.push(makeFinding("unexpected-document-present", "targetConflict", subject));
+      if (actualUnexpected.some((record) => !snapshotReceipt(record).valid)) {
+        candidateFindings.push(makeFinding("unexpected-snapshot-invalid", "targetConflict", subject));
+      }
+    }
+
+    const knownTargetCount = COMPANY_SETTINGS_TARGETS.filter((definition) =>
+      actualTargets.has(`${definition.collection}/${definition.document}`),
+    ).length;
+    if (knownTargetCount > 0 && knownTargetCount < COMPANY_SETTINGS_TARGETS.length) {
+      candidateFindings.push(makeFinding("target-partial", "targetConflict", subject));
+    }
+    if (mapping?.ok && knownTargetCount === COMPANY_SETTINGS_TARGETS.length) {
+      const exact = COMPANY_SETTINGS_TARGETS.every((definition) => {
+        const records = actualTargets.get(`${definition.collection}/${definition.document}`) ?? [];
+        if (records.length !== 1 || !snapshotReceipt(records[0]).valid) return false;
+        const expected = encodeJsAsFirestoreValue(mapping.value[definition.valueKey]);
+        return stableJson(canonicalizeFirestoreValue(records[0].value)) ===
+          stableJson(canonicalizeFirestoreValue(expected));
+      });
+      if (!exact) {
+        candidateFindings.push(makeFinding("target-parity-mismatch", "targetConflict", subject));
+      }
+    }
+
+    const deduplicatedFindings = [...new Map(
+      candidateFindings.map((finding) => [`${finding.code}:${finding.detail ?? ""}`, finding]),
+    ).values()];
+    const classification = [
+      "editionUnverified", "rootMissingOrOrphan", "targetConflict",
+      "unknownFieldReview", "invalidSource", "ambiguousMapping",
+    ].find((candidate) => deduplicatedFindings.some((finding) => finding.classification === candidate)) ??
+      (mapping?.ok && knownTargetCount === COMPANY_SETTINGS_TARGETS.length
+        ? "alreadyEquivalent"
+        : mapping?.ok && knownTargetCount === 0
+          ? "eligibleCreate"
+          : "invalidSource");
+
+    if (classification === "invalidSource" && deduplicatedFindings.length === 0) {
+      deduplicatedFindings.push(makeFinding("mapping-unavailable", "invalidSource", subject));
     }
 
     const expectedWrites = mapping?.ok
@@ -456,14 +589,17 @@ export function planCompanySettingsMigration({
       subject,
       companyPath,
       classification,
-      sourceUpdateTime: root?.updateTime ?? null,
-      sourceFingerprint: root?.value ? canonicalFingerprint(root.value) : null,
+      sourceUpdateTime: rootReceipt?.updateTime ?? null,
+      sourceFingerprint: rootReceipt?.fingerprint ?? null,
+      currentRoots: Object.freeze(sortedSnapshotReceipts(rootRecords)),
+      currentTargets: Object.freeze(sortedSnapshotReceipts([...actualTargets.values()].flat())),
+      currentAudits: Object.freeze(sortedSnapshotReceipts(actualAudits)),
+      unexpectedDocuments: Object.freeze(sortedSnapshotReceipts(actualUnexpected)),
+      findings: Object.freeze(deduplicatedFindings),
       expectedWrites: Object.freeze(expectedWrites),
     });
     candidatePlans.push(candidate);
-    if (BLOCKING_CLASSIFICATIONS.has(classification)) {
-      findings.push(makeFinding(classification, subject));
-    }
+    findings.push(...deduplicatedFindings);
   }
 
   const blocked = findings.some(({ blocking }) => blocking);
@@ -481,19 +617,33 @@ export function planCompanySettingsMigration({
 
   const digestPayload = {
     domain: COMPANY_SETTINGS_PLAN_DOMAIN,
+    projectId,
+    databaseId,
+    databaseType,
+    edition,
+    editionReceiptDigest,
     fixedCommit,
     schemaPackageVersion,
+    schemaContractVersion,
     targetManifestDigest,
     rulesReceiptDigest,
-    editionVerified,
+    editionVerifiedType: typeof editionVerified,
+    editionVerifiedValue: editionVerified,
     findings: findings
-      .map(({ classification, subject, detail }) => ({ classification, subject, detail }))
-      .sort((a, b) => `${a.classification}:${a.subject}`.localeCompare(`${b.classification}:${b.subject}`)),
+      .map(({ code, classification, subject, detail }) => ({ code, classification, subject, detail }))
+      .sort((a, b) => compareUtf8(
+        `${a.classification}:${a.code}:${a.subject}`,
+        `${b.classification}:${b.code}:${b.subject}`,
+      )),
     candidates: candidatePlans.map((candidate) => ({
       subject: candidate.subject,
       classification: candidate.classification,
       sourceUpdateTime: candidate.sourceUpdateTime,
       sourceFingerprint: candidate.sourceFingerprint,
+      currentRoots: candidate.currentRoots,
+      currentTargets: candidate.currentTargets,
+      currentAudits: candidate.currentAudits,
+      unexpectedDocuments: candidate.unexpectedDocuments,
       writes: candidate.expectedWrites.map(({ path, value }) => ({
         pathSubject: opaqueSubject(path),
         value: canonicalizeFirestoreValue(value),
@@ -508,8 +658,14 @@ export function planCompanySettingsMigration({
       : COMPANY_SETTINGS_EXIT_CODES.CLEAN;
 
   return Object.freeze({
+    projectId,
+    databaseId,
+    databaseType,
+    edition,
+    editionReceiptDigest,
     fixedCommit,
     schemaPackageVersion,
+    schemaContractVersion,
     targetManifestDigest,
     rulesReceiptDigest,
     planDigest,
@@ -531,6 +687,11 @@ export function summarizeCompanySettingsPlan(plan) {
       plan.candidates.filter((candidate) => candidate.classification === classification).length,
     ]),
   );
+  const findingCounts = Object.fromEntries(
+    [...new Set(plan.findings.map(({ code }) => code))]
+      .sort()
+      .map((code) => [code, plan.findings.filter((finding) => finding.code === code).length]),
+  );
   return Object.freeze({
     status:
       plan.exitCode === COMPANY_SETTINGS_EXIT_CODES.DATA_BLOCKER
@@ -541,8 +702,8 @@ export function summarizeCompanySettingsPlan(plan) {
     exitCode: plan.exitCode,
     planDigest: plan.planDigest,
     counts: Object.freeze(counts),
+    findingCounts: Object.freeze(findingCounts),
     createDocumentCount: plan.operations.reduce((total, operation) => total + operation.writes.length, 0),
-    subjects: Object.freeze(plan.candidates.map(({ subject, classification }) => ({ subject, classification }))),
   });
 }
 

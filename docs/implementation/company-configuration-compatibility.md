@@ -209,7 +209,7 @@ publish済みpackageをunpublishせず、未採用ならconsumerを旧exact vers
 
 CCB-02は次が完了するまで10点を加点しない。
 
-- Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。local-only pure plannerは2026-08-28に実装し、Schemas exact mapping、8 target create-only、complete exact、partial、不一致、unknown、invalid、ambiguous、orphan、edition未確認、manifest digest binding、fresh re-planを合成fixture 17件で検証した。実Dev値の取得、manifest/Rules receipt、dry-run、apply、post-checkはまだ行っていない。
+- Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。local-only pure plannerは2026-08-28に実装し、Schemas exact mapping、8 target create-only、complete exact、partial、不一致、unknown、invalid、ambiguous、orphan、edition未確認、manifest/environment/full snapshot digest binding、UTF-8 byte順、primary分類と全finding保持、per-subject非出力、fresh re-planを合成fixture 23件で検証した。実Dev値の取得、manifest/Rules receipt、dry-run、apply、post-checkはまだ行っていない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
 - Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、local-only pure migration plan/digestと合成回帰testまでは完了した。残るのはFirestore reader/create-only transaction/post-check、backup表示、専用audit restore、rollback release、Rules・Callable・staging・deploy順の個別実装・検証・承認である。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。

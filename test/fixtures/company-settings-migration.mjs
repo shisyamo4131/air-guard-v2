@@ -54,16 +54,22 @@ export function syntheticRoot(path = SYNTHETIC_CCB_COMPANIES[0], overrides = {})
 export function syntheticMigrationSnapshot(overrides = {}) {
   const snapshot = {
     editionVerified: true,
+    projectId: "demo-air-guard-v2-codex",
+    databaseId: "(default)",
+    databaseType: "FIRESTORE_NATIVE",
+    edition: "STANDARD",
+    editionReceiptDigest: "e".repeat(64),
     actorUid: SYNTHETIC_CCB_ACTOR,
     timestamp: SYNTHETIC_CCB_TIMESTAMP,
     fixedCommit: "0ab844fa009a753c8def16f96415608c45580bd6",
     schemaPackageVersion: "2.4.2-dev.167",
+    schemaContractVersion: 1,
     rulesReceiptDigest: null,
     manifest: [SYNTHETIC_CCB_COMPANIES[0]],
     roots: [syntheticRoot()],
     targets: [],
     audits: [],
-    unexpectedPaths: [],
+    unexpectedDocuments: [],
     ...overrides,
   };
   snapshot.targetManifestDigest = overrides.targetManifestDigest ??
