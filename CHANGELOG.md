@@ -32,6 +32,7 @@
 
 ### Changed
 
+- CCB exact schema v1として、文字数をUnicode Extended Grapheme Cluster単位へ固定し、結合文字で表した`が`も1文字と数えること、`minuteInterval`を5分単位の`5/10/15/20/25/30`だけにすることを承認した。Company root、Settings、PrivateSettings、audit、Callableのfield allowlist、型、長さ、enum、相関、default、maskをADR 0025のnormative schemaとし、仕様・互換性調査・roadmap・確認台帳を整合させた。pre-containmentではlegacy `updatedAt`をcutoverまで許容し、activation期間のrootはreserved field必須かつ既知legacy extras一時許容とする。application・Rules・package・Dev dataは変更していない。
 - Firebase CLI再認証後のCCB-02 Dev read-only preflightで、Firestore Standard/Native、Company root 4件の同一shape、schema/activation未設定、旧勤怠enum分布、unknown field 0、CCB target document 0をfield名・型・集計件数・digestだけで確認した。deploy済みFunctions 36件は全ACTIVEでCCB Callableは未deploy、operator toolはschemas `2.4.2-dev.162`と新path未対応のままである。application・Rules・package・Dev dataは変更していない。
 - CCB-02の技術契約として、Company設定のprofile、billing、operations、arrangementを専用Callableから更新し、client Settings CUDを拒否する方針を確定した。`schemaVersion=1`と専用activation marker、旧勤怠enum mapping、complete create-only staging、pre-containment Rules、全旧whole-document writer 0件後のactivation、Settings対応releaseへのrollbackを仕様・ADR・roadmapへ反映した。Dev read-only確認はFirebase CLI credential失効でdatabase API到達前に停止し、Firestore document readとdata writeは行っていない。
 - Company設定の改修コードを`CCB`へ確定した。`attendanceManagementMode`は将来`attendanceSummaryMode`の`LABOR_STANDARD`/`OPERATION_COUNT`へ置換し、両projectionを常時生成したまま表示・navigationだけを切り替える。Stripe本体とemployeeLimit実強制は全機能改修後の正式release直前へ延期した。

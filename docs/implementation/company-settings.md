@@ -108,13 +108,14 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 改修コードを`CCB`とし、rootはserver-controlledの最小tenant anchor、設定は`Settings/profile`、`billing`、`operations`、`arrangement`へ分割する。entitlement/maintenanceはclient-safe `Settings` projectionとserver-only `PrivateSettings`を分け、collection数抑制は制約としない。
 - profile/billing/operationsは会社管理者write、profile/billingは同社の有効な本登録User read、arrangementは配置・予定の既存permission actor writeとする。rootとclient-safe `Settings/entitlement`・`Settings/maintenance`はserver/providerだけがwriteし、必要なprojectionを同社Userがreadする。`PrivateSettings/entitlement`・`PrivateSettings/maintenance`はclient read/write不可とする。super-userはCompany設定actorに含めない。
 - profile/billing/operationsはrevisionとmasked append-only auditを持つ。auditは会社管理者専用Callableだけで閲覧し、理由を必須にしない。arrangementは履歴なしの現在値・revisionとする。
-- 会社名100文字、カナ200文字、invoice 13数字保存、完全入力時だけ有効なbank、signupと請求確定の別必須条件、長値を切り捨てない帳票を採用する。
+- 文字数は利用者の見た目と一致するUnicode Extended Grapheme Cluster単位とし、結合文字で表した`が`も1文字と数える。会社名100文字、カナ200文字、invoice 13数字保存、完全入力時だけ有効なbank、signupと請求確定の別必須条件、長値を切り捨てない帳票を採用する。保存時はtrim以外のUnicode正規化を自動適用しない。
+- `minuteInterval`は5分単位の`5/10/15/20/25/30`だけを許可する。root、各Settings、PrivateSettings、auditのexact schema v1は[ADR 0025](../decisions/0025-company-configuration-boundary.md#exact-schema-v1)を正本とする。
 - `attendanceManagementMode`は`attendanceSummaryMode`の`LABOR_STANDARD`/`OPERATION_COUNT`へ置換し、両projectionを常時生成して表示・navigationだけを切り替える。`roundSetting`はOperationResult作成時、issuer情報は請求確定時にsnapshotする。
 - `agreementsV2`とCompany geocodingは廃止予定で、既存fieldの削除は別migrationとする。Site既定取極めはCustomer側の後続設計へ移す。
 - lifecycleは`ACTIVE`/`SUSPENDED`/`CLOSED`とし、rootを通常削除しない。Company maintenanceは[project-wide quiet procedure](../runbooks/maintenance-and-data-change.md)へ接続する。
 - Stripe本体とemployeeLimit実強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement隔離だけを行う。
 
-現行code、Rules、Schemas、Admin SDK、実dataは上記へ未移行であり、CCB-02以降でDev edition、fixture、全caller、exact schema、互換reader、migration mappingを再確認する。
+現行code、Rules、Schemas、Admin SDK、実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合とexact schema v1の承認は完了したが、互換reader、migration mapping/parity、package release、Rules・application実装は未完了である。
 
 ## 将来要対応
 

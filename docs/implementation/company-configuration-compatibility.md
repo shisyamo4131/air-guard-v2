@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合完了、exact schema・package release契約は未完了）
+- 状態: In progress（repository静的調査・技術契約・Dev read-only data-shape照合・exact schema v1確定、Dev tenant分類・canonical parity plan・package release契約は未完了）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-28
 - 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
@@ -24,7 +24,7 @@ Company rootへ`status`や`schemaVersion`だけを先に追加することも安
 1. additiveな共通schemaと旧新compatible readerを準備する。
 2. Admin SDKのbackup・restore・maintenance・collection catalogを新pathへ対応させる。
 3. Functionsの新規Company作成、operation別writer、tenant gateを未有効のまま準備する。
-4. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesを先にdeployする。rootの旧updateはこの時点では維持する。
+4. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesを先にdeployする。rootの旧business field updateはこの時点では維持する。clientによる新規CCB field `status/schemaVersion/configurationState/createdBy/updatedBy`の追加・変更・削除と既存`createdAt`の変更は拒否するが、現行adapterがCompany保存ごとに変更するlegacy `updatedAt`はcutoverまで許容する。
 5. client deploy前に、Dev edition、deploy済みFunctions、operator tool、rootのfield名・`schemaVersion`・activation marker分布を値・秘密を出さないbounded read-only dry-runで確認する。
 6. 新規Companyもrootをlegacy modeのまま作ってSettingsをstagingできるFunctionsと、専用activation marker未設定時はlegacy root、設定後はSettingsだけを読むcompatible clientをdeployする。
 7. [maintenance・data change runbook](../runbooks/maintenance-and-data-change.md)に従い、maintenance開始、bounded quiet period、対象Function log確認、連続dry-run digest一致、整合snapshot/backup、create-only apply、同一dry-runとpost-checkを行う。
@@ -125,7 +125,18 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 - `ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ決定的に写像する。欠損時だけ`LABOR_STANDARD`を補う。未知値は自動変換せずmigration conflictとする。
 - legacy `agreementsV2`、`location/geopoint`、root subscription/maintenance、unknown fieldは初回migrationで削除しない。新Settingsへ必要値を写した後もcleanupは別承認migrationまでrootへ保持する。
 
-### 3. cutoverとrollback
+### 3. exact schema v1
+
+2026-08-28にroot、6 Settings、2 PrivateSettings、SettingAuditsの完全field allowlist、型、文字数、enum、相関、default、Timestamp、maskを承認した。詳細の正本は[ADR 0025のExact schema v1](../decisions/0025-company-configuration-boundary.md#exact-schema-v1)と[現行仕様](../specification.md#company設定とtenant-lifecycle)である。互換実装では特に次をpackage・fixture・migrationへ同一に写す。
+
+- 文字数はUnicode Extended Grapheme Cluster単位とし、結合文字で表した`が`も1文字と数える。trim以外のUnicode正規化を保存時に自動適用しない。
+- `minuteInterval`はinteger `5/10/15/20/25/30`だけを許可する。現行UIの1〜30連続範囲を互換仕様へ持ち込まない。
+- 空の振込先は`accountType`を含む5 fieldすべてnullにする。現行default `普通`を空口座へ残さない。
+- arrangement itemはexact `{siteId,shiftType}`でcomputed `key`を除外し、各配列最大2000件、組合せ一意とする。1 callはsite/scheduleの一方だけを変更する。
+- entitlement v1はdisabled/nullだけ、maintenanceはpublic/privateの相関を検査し、auditのbank非null値はliteral `***`へ置換する。
+- canonical rootはcleanup後にreserved 7 field exactとする。activation期間はreserved 7 field必須かつ既知legacy extras一時許容とし、readerはreserved projectionだけを検査する。legacy extrasをactivation時に削除しない。
+
+### 4. cutoverとrollback
 
 - compatible clientはrootの`schemaVersion=1`と`configurationState=CCB_V1_ACTIVE`の両方が一致しない間だけlegacy rootを読み、両方が一致した後はcompleteなSettings setだけを読む。client deploy前に全対象rootの同名field分布を確認する。個別document欠損、version不一致、invalid shapeをlegacyへsilent fallbackせずfail closedとする。
 - create-only backfillはSettings/PrivateSettingsの不存在時createだけを許可し、既存targetのupdate/deleteとroot cleanupを行わない。分類は`eligibleCreate`、`alreadyEquivalent`、`targetConflict`、`invalidSource`、`unknownFieldReview`、`ambiguousMapping`、`rootMissingOrOrphan`、`editionUnverified`等に分ける。
@@ -136,8 +147,7 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 
 CCB-02は次が完了するまで10点を加点しない。
 
-- root、各Settings、PrivateSettings、auditの完全なfield allowlist、型、長さ、enum、相関、Timestamp、mask形式の確定。
-- Dev Companyごとのcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、未確定のSettings schemaへ値を写像・比較していない。
+- Dev Companyごとの承認済みcanonical Settings expected valueとのparity、`alreadyEquivalent`・`targetConflict`・`invalidSource`等を判定するmigration plan digest。2026-08-28のread-only preflightではedition、root field/type、旧enum、unknown field、target document存在を確認したが、exact schema v1への値の写像・比較はまだ行っていない。
 - DevではCompany rootを4件観測したが、現行試用主体、承認済み合成test tenant、過去の残存tenant、orphanの内訳とmigration対象性は未分類である。4件すべてをstaging・migration対象と仮定せず、ID・値を応答へ出さない別checkpointで用途分類と対象件数を固定する。推測削除は行わない。
 - schemas/Admin SDKの変更範囲、version、publish/install/deploy順、backup/restore互換、rollback releaseの個別承認。
 - generic Rules fallbackを先に閉じるreleaseと、全client/Functions/Admin SDK callerの回帰matrix確定。

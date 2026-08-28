@@ -52,6 +52,44 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 - lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`とする。`SUSPENDED`はproviderだけが一時停止・再開し、`CLOSED`は通常のACTIVE復帰を持たない。root物理削除と法的削除は別手順とする。
 - 新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。
 
+## Exact schema v1
+
+### 共通規則とroot
+
+- 文字列長はUnicode Extended Grapheme Cluster単位で数える。合成済み・結合文字列のどちらで表した`が`も1文字である。外側をtrimするがNFC/NFKCへ自動変換せず、1行fieldはCR/LFとcontrol characterを拒否する。
+- optional stringは空文字を`null`へ揃える。各documentはstrict allowlistでunknown keyを拒否し、canonical Settingsへ`docId`、`uid`、computed accessor、geopointを保存しない。
+- Settings/PrivateSettingsは`schemaVersion=1`、`revision`を1から開始して更新ごとにexactly `+1`し、server-setの`createdAt:Timestamp`、`createdBy:string`、`updatedAt:Timestamp`、`updatedBy:string`を持つ。actor IDはnull不可、1〜128文字のopaque UIDとし、email等の表示識別子を保存しない。rootとappend-only auditはrevisionを持たない。
+- cleanup完了後のcanonical rootはexact `{schemaVersion:1, configurationState:'CCB_V1_ACTIVE', status:'ACTIVE'|'SUSPENDED'|'CLOSED', createdAt:Timestamp, createdBy:string, updatedAt:Timestamp, updatedBy:string}`とし、actor UIDは同じ1〜128文字・null不可契約を使う。activation期間のphysical rootはこのreserved 7 fieldを必須とし、移行前から存在した既知legacy extrasだけを一時許容する。compatible readerはreserved projectionとcomplete Settingsを検査し、physical root全体を7 field parserへ渡さない。legacy extrasの削除と7 field exact化は別承認cleanupで行う。
+- marker未設定中はlegacy rootを正本とする。pre-containmentでは新規CCB field `status/schemaVersion/configurationState/createdBy/updatedBy`のclient追加・変更・削除と既存`createdAt`の変更を拒否する一方、現行whole-document writerが毎回変更するlegacy `updatedAt`はroot client updateを全面拒否するcutoverまで許容する。activation transactionでserverがreserved 7 fieldを整えた後はroot client CUDを拒否する。
+
+### client-visible Settings
+
+| document | business fieldのexact契約 |
+|---|---|
+| `Settings/profile` | `companyName`: trim後1〜100文字。`companyNameKana`: trim後1〜200文字でUnicode `U+30A0–U+30FF`、`U+3000`、`U+FF10–U+FF19`、control characterを除く空白。`U+3099/U+309A`は直前のKatakana baseと同一grapheme clusterの場合だけ許可する。`zipcode`: nullまたはASCII数字7桁。`prefCode`: nullまたは`01`〜`47`。`city`: nullまたは100文字以内。`address/building`: nullまたは各200文字以内。`tel/fax`: nullまたは32文字以内のASCII数字・`+ - ( ) .`・空白。 |
+| `Settings/billing` | `invoiceNumber`: nullまたはASCII数字13桁。入力先頭の`T/t`を除去する。`bankName/branchName`: nullまたは各100文字以内。`accountType`: null・`普通`・`当座`。`accountNumber`: nullまたは先頭0を保持するASCII数字1〜7桁。`accountHolder`: nullまたはtrim後200文字以内。振込先5 fieldは全nullまたは全field有効のどちらかだけとする。 |
+| `Settings/operations` | `minuteInterval`: integer `5/10/15/20/25/30`、default 15。`roundSetting`: `FLOOR/ROUND/CEIL`、default `ROUND`。`firstDayOfWeek`: integer 0〜6、default 0。`attendanceSummaryMode`: `LABOR_STANDARD/OPERATION_COUNT`、default `LABOR_STANDARD`。 |
+| `Settings/arrangement` | `siteOrder/scheduleOrder`: default `[]`、各最大2000件。itemはexact `{siteId, shiftType}`で、`siteId`は1〜128文字かつ`/`・control character不可、`shiftType`は`DAY/NIGHT`、同一配列内の組合せは一意。computed `key`は保存しない。 |
+| `Settings/entitlement` | `entitlementState:'DISABLED'`、`planCode:null`、`featureCodes:[]`、`employeeLimit:null`だけをv1で許可する。legacyの`employeeLimit=10`を有効な課金制限へ昇格しない。 |
+| `Settings/maintenance` | `maintenanceMode:boolean`、`maintenanceReason:null|string(最大200文字)`、`maintenanceStartAt:null|Timestamp`。offでは理由・開始時刻をnull、onでは両方を必須とする。 |
+
+`updateCompanyArrangement`はexact `{expectedRevision, field:'siteOrder'|'scheduleOrder', order:[...]}`を受け、1 callで一方だけを変更する。変更fieldに対応するpermissionだけを検査する。transaction中に全Site documentの存在を検査せず、UIはarchive・削除済みIDを非表示にして次回保存で除去する。
+
+### private Settingsとaudit
+
+| document | business fieldのexact契約 |
+|---|---|
+| `PrivateSettings/entitlement` | `stripeCustomerId:null`、`stripeSubscriptionId:null`、`stripeSubscriptionStatus:null`、`currentPeriodEnd:null`だけをv1で許可する。Stripe再開は後続schema revisionと別承認を必要とする。 |
+| `PrivateSettings/maintenance` | `maintenanceMode:boolean`、`internalReason:null|string(最大500文字)`、`scope:string[]`最大50件・各1〜100文字、`maintenanceStartAt:null|Timestamp`、`maintenanceStartedBy:null|string(最大128文字)`、`operationId:null|string(最大128文字)`、`lastErrorCode:null|string(最大100文字)`、`lastErrorAt:null|Timestamp`。off時はscopeを空、他のprivate operation fieldをnullとする。on時はinternalReason、非空scope、startAt、startedByを必須、operationIdは任意、error code/timeは両方nullまたは両方存在とする。raw error textとemailを保存しない。 |
+
+`SettingAudits/{auditId}`はexact `{schemaVersion:1, settingType, fromRevision, toRevision, actorUid, createdAt, changes}`とする。`settingType`は`PROFILE/BILLING/OPERATIONS`、`fromRevision`は1以上、`toRevision=fromRevision+1`、actor UIDは1〜128文字、`changes`はfield名順・重複なし・1〜9件で、各itemはexact `{field,before,after}`とする。field allowlistはPROFILEが`companyName/companyNameKana/zipcode/prefCode/city/address/building/tel/fax`、BILLINGが`invoiceNumber/bankName/branchName/accountType/accountNumber/accountHolder`、OPERATIONSが`minuteInterval/roundSetting/firstDayOfWeek/attendanceSummaryMode`である。変更fieldだけをfieldごとのcanonical型で記録する。bank 5 fieldはnullをnullのまま、それ以外をliteral `***`へ置換し、表示名・email・理由を保存しない。clientのaudit直接read/writeを拒否する。
+
+### Callable、Auth、Rules
+
+- profile/billing/operationsはexact `{expectedRevision, value:<完全business payload>}`を受け、arrangementは前記exact inputを受ける。`expectedRevision`はinteger 1以上とする。clientからcompany ID、actor、metadataを受け取らない。成功結果は`{success:true, setting:<canonical updated document>}`とする。
+- Firebase Authの有効状態はFirestore transaction内でatomicに再読取できないため、Callableはtransaction直前にcurrent Authを確認し、transaction内でUser/root/lifecycle/maintenance/actor/revisionを再検査する。Auth確認後のdisable raceはbounded in-flight riskとして受容する。
+- pre-containment Rulesは`Settings`、`PrivateSettings`、`SettingAudits`をgeneric fallbackから除外して再帰的client denyを置き、rootのreserved field変更を拒否する。activation後はrootのclient create/update/deleteを拒否する。通常descendant accessはroot存在と`ACTIVE`を必須とし、`SUSPENDED`は停止案内projectionだけ、`CLOSED`は全client accessを拒否する。System maintenance中はsignupも通常処理として拒否する。complete setを正本とし、個別欠損はfail closedとする。
+
 ## 理由
 
 - Firestore Rulesのdocument単位read制約に合わせ、閲覧範囲とserver ownershipをdocument境界で表現できる。
@@ -62,7 +100,7 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 ## 代替案
 
 - 単一Company documentを維持してfield diffだけで守る案は、read分離ができず、全体set互換とserver-owned field競合が残るため採用しない。
-- Companyの全CUDをFunctionsへ移す案は、配置・予定の高頻度な表示順まで一律にserver API化し、機能別のoffline・競合要件を無視するため採用しない。
+- 全collectionのCUDを共通Functions wrapperへ移す案は、機能別のoffline・競合・atomicity要件を無視して実装範囲を広げるため採用しない。Company設定では承認済みの4操作だけを専用Callableとする。
 - 全設定変更へ履歴・undoを付ける案は、価値のない表示順履歴を大量生成するため採用しない。
 - super-userを恒久的なCompany管理者として残す案は、利用目的と承認境界が確定していないため採用しない。
 

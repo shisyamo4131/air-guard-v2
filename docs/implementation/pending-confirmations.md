@@ -939,7 +939,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 機能利用時validation、設定保存時strict validation、警告付き段階入力、server schema enforcement。
 - Current provisional treatment: schema default/requiredを実装事実とし、業務上の完全条件とは確定しない。
 - Related FUT IDs: FUT-0092
-- Answer: 2026-08-28承認。会社名trim後1〜100、カナ1〜200。signupは両者だけ、請求確定は会社名・郵便・都道府県・市区町村・番地・電話を必須とする。invoiceは空または正規化した13数字、bankは全空または5項目完全入力とし、口座番号は数字7桁以内、種別は普通/当座。運用設定defaultとenumはADR 0025・現行仕様を正本とする。
+- Answer: 2026-08-28承認。文字数はUnicode Extended Grapheme Cluster単位で、結合文字表現の`が`も1文字と数え、trim以外のUnicode正規化は自動適用しない。会社名1〜100、カナ1〜200。signupは両者だけ、請求確定は会社名・郵便・都道府県・市区町村・番地・電話を必須とする。invoiceはnullまたは正規化した13数字、bankは5項目全nullまたは完全入力とし、口座番号は先頭0を保つASCII数字1〜7桁、種別はnull/普通/当座とする。`minuteInterval`は5分単位の`5/10/15/20/25/30`だけを許可する。他の長さ、default、enum、相関はADR 0025のexact schema v1を正本とする。
 
 ## CONF-0077 確定帳票でのCompany情報snapshotと再発行
 
@@ -963,7 +963,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: revision+audit log、field別documents、optimistic concurrency、後勝ち+通知。
 - Current provisional treatment: 現行更新を実装事実とし、監査・競合policyは未確定。
 - Related FUT IDs: FUT-0090、FUT-0092、FUT-0093
-- Answer: 2026-08-28承認。全設定documentにrevisionを持たせstale saveを拒否する。profile/billing/operationsはactor・時刻・field・before/afterのappend-only auditを持ち、bank値はmaskする。理由入力は必須にせず、会社管理者だけが専用Callableからmask済み最小projectionを閲覧し、client直接CUDを拒否する。arrangementは頻繁な並べ替えのため履歴・undoを持たず、現在値・revision・updatedAt/byだけを保存する。
+- Answer: 2026-08-28承認。全設定documentにrevisionを持たせstale saveを拒否する。profile/billing/operationsは変更fieldだけをfield名順で記録するappend-only auditを持ち、bankの非null値はliteral `***`、nullはnullのまま保存する。理由・表示名・emailは保存せず、会社管理者だけが専用Callableからmask済み最小projectionを閲覧し、client直接CUDを拒否する。arrangementは履歴・undoを持たず、現在値・revision・updatedAt/byだけを保存する。site/scheduleの一方だけを1 callで変更し、そのfieldのpermissionだけを検査する。
 
 ## CONF-0079 Maintenance中に停止するserver処理の範囲
 
@@ -1011,7 +1011,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: current state+history collection、予約window、最小booleanのみ、status APIで詳細提供。
 - Current provisional treatment: boolean OR判定だけを確認済みとし、metadata仕様は未確定。
 - Related FUT IDs: FUT-0097
-- Answer: 2026-08-28承認。server-owned current stateへreason、scope、開始時刻、actor等の運用metadataを持ち、利用者には停止案内に必要な最小projectionだけを表示する。quiet period、監視Function、予定・解除条件はmigration/release checkpointごとに固定し、共通固定値や予約maintenanceを必須化しない。
+- Answer: 2026-08-28承認。server-owned current stateへreason、scope、開始時刻、actor、operation ID、error code/timeを持ち、利用者には`maintenanceMode`、最大200文字の理由、開始時刻だけを表示する。private側は最大500文字の内部理由、最大50件のscope、opaque actor UIDを保持し、raw error・emailを保存しない。off/on時のnull・必須相関はADR 0025のexact schema v1を正本とする。quiet period、監視Function、予定・解除条件はmigration/release checkpointごとに固定し、共通固定値や予約maintenanceを必須化しない。
 
 ## CONF-0083 Stripe機能の有効環境・公開条件
 

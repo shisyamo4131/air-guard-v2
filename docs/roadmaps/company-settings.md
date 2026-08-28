@@ -16,6 +16,7 @@
 - 互換性調査: [CCB-02 Company data・package互換性調査](../implementation/company-configuration-compatibility.md)
 - 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
 - CCB-02技術契約: 2026-08-28承認。Company設定専用Callable、schema/marker、pre-containment、create-only staging、旧writer 0件後activation、compatible rollbackを採用する。
+- CCB-02 exact schema v1: 2026-08-28承認。Unicode見た目文字数、全field allowlist・型・長さ・enum・相関・default・maskをADR 0025へ固定した。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
@@ -87,9 +88,9 @@ additive schemasとAdmin SDK backup対応を準備し、generic fallbackから�
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
-| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査、技術契約、Dev edition/data-shape確認は完了し、観測4 rootの用途・migration対象分類、完全field allowlist、canonical parity plan、package release承認が残る。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | In progress | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。repository静的調査、技術契約、Dev edition/data-shape確認、exact schema v1承認は完了し、観測4 rootの用途・migration対象分類、canonical parity plan、package release承認が残る。 |
 | CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
-| CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済み長さ・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
+| CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済みgrapheme長・kana結合濁点・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。合成済み/結合表現、結合濁点単独拒否、長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
 | CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
 | CCB-06 arrangement・master接点 | 10 | 0 | Not started | agreements/geocoding callerを撤去し、site/schedule orderを既存業務permission、revision、1 reorder 1 save、新規ID末尾補完、archive・削除済みIDの無視・次回保存時除去へ移す。Customer既定取極めと後続masterの共通actor/validation/競合契約を引き渡す。 |
 | CCB-07 tenant lifecycle・maintenance統合 | 10 | 0 | Not started | ACTIVE/SUSPENDED/CLOSED、停止案内、通常read/write/Callable拒否、provider restore、root欠損・orphan検出を実装する。project-wide Rules/Callable/scheduled maintenance gate、unknown fail-closed、quiet runbookを検証する。 |
@@ -137,3 +138,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-28 | 10% | ±0 | CCB-02のclient、Functions/Admin SDK、Rules/fixture、packageを4系統で再調査した。generic Rules fallback、新server fieldを落とす旧whole-document writer、Admin SDK backup欠落、package version差を確認し、release順と技術契約候補を記録した。利用者確認とDev実data照合が未完了のため加点しない。 |
 | 2026-08-28 | 10% | ±0 | CCB-02のCompany設定専用Callable、exact schema共通規則、enum mapping、pre-containment、create-only staging、activation marker、旧writer 0件gate、compatible rollbackを利用者が承認した。Dev read-only preflightはFirebase CLI credential失効でdatabase API到達前に停止し、Firestore document read 0、data write 0だった。Dev edition・data-shape未確認のため加点しない。 |
 | 2026-08-28 | 10% | ±0 | Firebase CLI再認証後の`CCB-02-DEV-SHAPE-001`で、Dev `(default)`がStandard/Native、Company root 4件が同一38-field shape、schema/activation未設定、旧enum全件`ACTUAL_DATE`、unknown field 0、CCB target document 0であることを値・IDなしの集計とdigestで確認した。Functions 36件は全ACTIVE、CCB Callable未deploy、operator toolは旧schema・新path未対応だった。4 rootの用途・migration対象性、exact Settings schema、canonical parity plan、package release契約が残るため加点しない。 |
+| 2026-08-28 | 10% | ±0 | CCB exact schema v1として、利用者の見た目に一致するUnicode Extended Grapheme Cluster文字数、`minuteInterval`の5分単位、root・Settings・PrivateSettings・audit・Callableの全allowlist、型、長さ、enum、相関、default、maskを承認・文書化した。application、Rules、package、migration parityは未実装のため加点しない。 |
