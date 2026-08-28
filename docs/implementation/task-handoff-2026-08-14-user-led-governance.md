@@ -405,3 +405,19 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - managed sync後はcommon governance `1.4.0`、common SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、generated `AGENTS.md` 13,659 bytes / 32,768 bytesである。project specificationは`0.5.15`へ更新した。
 - 容量確認は実task IDを必須とし、exactly one matching JSONLだけを測定する。handoff閾値はtask session 300 MiB、Codex全体10 GiBは別の参考warningであり、session本文を表示しない。移行中の実測は74.10 MiB / 300 MiB、24.70%、handoff不要だった。Codex全体scanは2011.32 MiB / 10 GiB、scan incomplete / error 1のため完全値として扱わない。
 - pre-commit検証ではmanaged governance、renderer、project documentation、documentation negative fixtures、capacity routing regression 7件、`git diff --check`が独立exit 0となった。最初のproject documentation検査はWindows PowerShellの日本語literal文字コード解釈でparser exit 1となり、validator/test内のalias fixtureをUTF-8 Base64復号へ変更した後に再実行してexit 0を確認した。
+
+## GOV14-AIRGUARDV2-PM08-SELF-ROUTING-001 coordinator activation checkpoint
+
+- 日付: 2026-08-28。
+- checkpoint: `GOV14-AIRGUARDV2-PM08-SELF-ROUTING-001`。
+- former coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- new coordinator: PM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- activation baselineはbranch `codex/dev-user-reservation-migration`、HEAD `c60e700dccaf34979e7adc9daa50ef6aaf517ed1`、upstream none、clean、保存済みprimary repositoryのworktree 1件だけである。
+- managed common governanceは`1.4.0`、common SHA-256は`d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、project specificationは`0.5.15`である。
+- `NO-CHANGE-GOV14-AIRGUARDV2-001`は成功した。exact cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとfull HEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、managed restricted `workspace-write`、`auto_review`、network restricted、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sources、承認・権限境界をrepositoryとtrusted task metadataから復元した。
+- governance移行commit `c60e700dccaf34979e7adc9daa50ef6aaf517ed1`は21 files、363 insertions、34 deletionsである。PM（AirGuardV2）-07ではpost-commitのmanaged governance validator、renderer、project-owned documentation validator、documentation negative fixture、capacity routing regression 7件、committed diff checkがそれぞれ独立exit 0だった。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`は公開・artifact検証済み、Admin SDKのfail-closed safety guardは完了し、AirGuardV2 app/Functionsへのexact package導入とcompatible reader local実装も完了した。
+- nextはcanonical parity、PrivateSettings backup、SettingAudits restore契約の確定である。application変更、test code変更、deploy、migration、network、remote/data操作、push、`main` merge、Prod、未承認scopeは別checkpointとする。
+- 本checkpointの限定commitとpost-commit verificationが成功した時点で、active AirGuardV2 coordinator ownershipをPM（AirGuardV2）-08へ移管する。former PM（AirGuardV2）-07はCodexがarchiveまたはdeleteせず、利用者が手動削除できる状態とする。
+- 今後のAirGuardV2 checkpoint callbackとassignmentはPM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`へretargetする。program完了callbackだけはformer PM（AirGuardV2）-07がPM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`へ一度送る。
