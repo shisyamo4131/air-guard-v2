@@ -23,4 +23,4 @@
 | 対象 | 進捗 | 最終確認日 | ロードマップ |
 |---|---:|---|---|
 | AirGuardV2 正式運用準備 | 10% | 2026-08-27 | [airguard-v2.md](airguard-v2.md) |
-| Company設定改修 | 0% | 2026-08-27 | [company-settings.md](company-settings.md) |
+| Company設定改修（CCB） | 10% | 2026-08-28 | [company-settings.md](company-settings.md) |

@@ -1,7 +1,7 @@
 # AirGuardV2 Runbook索引
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 役割: 作業種別ごとに必要な実行手順だけを選ぶための索引
 
 ## 正本runbook
@@ -12,6 +12,7 @@
 | local環境、Emulator、Codex専用backend test | Confirmed | [local Emulator検証](local-emulator-testing.md) | ADR 0005・0014、Firebase設定、対象test |
 | Codex専用・利用者用local UI受入れ | Confirmed | [local UI検証](local-ui-testing.md) | ADR 0006・0014、対象画面・manual、browser境界 |
 | User予約・claim等の確認済みmigration | Confirmed | [data migration](data-migrations.md) | migration固有ADR、target、backup、rollback、承認 |
+| maintenanceを伴うmigration・repair・restore | Confirmed policy / gates pending | [maintenance・data change](maintenance-and-data-change.md) | 対象data、quiet period、監視Function、snapshot、rollback、承認 |
 | Dev環境へのbuild・deploy・remote検証 | Confirmed | [Dev deploy runbook](dev-deployment.md) | 対象serviceの設定・test、関連ADR、承認済みrelease checkpoint |
 | 関連packageのconsumer更新・公開 | Confirmed | [package release](package-release.md) | package repository、互換性、version、公開承認 |
 | Git統合、task loop、session handoff | Confirmed | [project coordination](project-coordination.md) | roadmap、checkpoint、task ID・host、Git状態 |

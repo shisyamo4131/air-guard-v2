@@ -8,6 +8,8 @@
 
 ### Added
 
+- CCB（Company Configuration Boundary）の承認済み仕様として、Company rootを最小tenant anchorへ縮小し、profile、billing、operations、arrangement、entitlement、maintenanceを責務別documentへ分割する計画を追加した。actor、validation、revision/audit、issuer・round snapshot、attendanceSummaryMode、ACTIVE/SUSPENDED/CLOSED、Stripe延期をADR 0025と専用roadmapへ記録した。application実装とdata migrationは未実施である。
+- maintenanceをCompany固有でなくproject-wideの運用境界とし、通常client/Callable/scheduled・trigger処理の最小gate、bounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせるrunbookとADR 0026を追加した。maintenanceは排他lockではなく、product gateは未実装である。
 - Company設定のclient、server、Rules/security、下流依存を再調査し、全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復を手戻りの少ない順序で改修する専用ロードマップを追加した。
 - Dev deployをUWB固有手順から分離したproject共通runbookを追加し、release固定、Firebase CLIとgcloudの独立trust・token refresh確認、fail-fast診断、remote変更前build、release種別ごとのmaintenance・backup・rollback、証拠契約を正本化した。
 - Codex専用local UI testをインアプリブラウザの標準経路とし、Emulator ready、Nuxt/Vite warm-up、2巡のbounded module probe後に初回navigationする手順を追加した。cold restart 3回と合成accountのsign-inからdashboard到達を確認し、利用者Chromeは補助経路へ変更した。session喪失時の一時credentialはrunning Auth Emulator内の合成accountだけに限定し、平文観測禁止、即時再mask、saved-data指紋不変、Emulator停止による失効を必須とした。
@@ -29,6 +31,8 @@
 
 ### Changed
 
+- Company設定の改修コードを`CCB`へ確定した。`attendanceManagementMode`は将来`attendanceSummaryMode`の`LABOR_STANDARD`/`OPERATION_COUNT`へ置換し、両projectionを常時生成したまま表示・navigationだけを切り替える。Stripe本体とemployeeLimit実強制は全機能改修後の正式release直前へ延期した。
+- Company既定取極めとCompany geocodingを廃止対象へ確定した。既存fieldはこの文書変更では削除せず、backup・dry-run・rollbackを固定した別migrationまで保持する。将来のSite既定取極めはCustomer側で設計する。
 - Firestore Rulesの段階的縮小として、Company root documentのclient作成・削除を禁止し、初期作成をCloud Functions/Admin SDK専用とした。同一tenantの既存更新は互換性のため維持し、残るwrite境界はCUDを一律Functions化せず機能単位で見直す方針とした。Codex専用Emulator suite 97件で、同社read/update、client create/delete拒否、他社拒否、Functionsによる初期Company作成を確認した。
 - UWBの認証済みDev受入れとして、一般Userのrole別menu・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴のremote空結果、本登録User削除確認の取消とUser残存を確認した。第2のCodex専用合成会社を正規signupし、そのID tokenによるbackend assertionで自社User read 200、別会社pathのread・list・存在必須precondition付きupdate/delete 403、mutation 0を確認した。UWBのDev受入れは完了し、Rules全体縮小、App Check・rate limit、継続監視を正式運用準備の別残件として維持する。
 - 専用合成会社の認証済みDev受入れで、管理者・一般Userの正規signup、roleless route拒否、2 tabのstale role拒否、User/Auth無効化・サインイン拒否・再有効化・復帰を確認した。`disableuser`/`enableuser`だけCloud Run public invokerが欠落しbrowser preflightが403となる問題をDev限定の明示承認済みIAM付与で修復し、全v2 Callableのpublic invokerとbrowser-origin CORS preflightをdeploy後に確認するgateを追加した。

@@ -12,6 +12,8 @@ Devは正式運用準備の完了前でも検証済み変更を積極的にdeplo
 
 すべてのDev deployへmaintenance、snapshot、migrationを適用しない。data contractまたはclient/server contractの整合cutoverが必要なreleaseだけが、それらを条件付きで使用する。新しいmigration、破壊的repair、対象service・data・期間の拡張、Prodは別承認とする。
 
+maintenanceを使うreleaseは、[maintenance・data change runbook](maintenance-and-data-change.md)でnormal stop、quiet period、監視Function、連続dry-run、整合snapshot、post-checkを固定する。maintenanceは排他lockではなく、logだけを実行中処理不存在の証拠にしない。
+
 ## 2026-08-27に確認した実行環境
 
 | 項目 | 確認済み経路 |

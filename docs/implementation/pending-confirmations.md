@@ -1,19 +1,19 @@
 # 実装調査から得た要確認事項台帳
 
 - 状態: 実装調査・暫定台帳
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-28
 - 対象: `docs/implementation/*.md` と `future-actions.md` に残る、実装検証だけでは確定できないユーザー判断
 - 運用: 同一判断は既存CONFへ証拠・関連FUTを追記する。回答後はStatusをAnsweredへ変更し、Answerへ日付と回答を記録する。実装だけで確認できる未検証事項は登録しない。
 
 ## reconciliation metadata
 
-SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文は変更せず、追加の`Disposition`、canonical question、dependency、superseded関係は[confirmation dependency map](confirmation-dependency-map.md)を正規の再照合索引とする。
+SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本文を変更せず再照合した。2026-08-28のCCB質疑ではCONF-0074〜0082のStatus/AnswerとCONF-0083〜0087の保留Answerだけを更新した。`Disposition`、canonical question、dependency、superseded関係は[confirmation dependency map](confirmation-dependency-map.md)を正規の再照合索引とする。
 
-- `Answered`: 43件。既存の承認済み回答を保持する。
-- `Open-user-decision`: 75件。本当に利用者判断が残るcanonical question。
-- `Open-deferred`: 3件。利用者が明示的に保留した事項で、推奨案へ置換しない。
+- `Answered`: 53件。既存の承認済み回答を保持する。
+- `Open-user-decision`: 65件。本当に利用者判断が残るcanonical question。
+- `Open-deferred`: 8件。利用者が明示的に保留した事項で、推奨案へ置換しない。
 - `Resolved-by-implementation-fact`: 0件。
-- `Merge-candidate`: 17件。IDと本文は保持するが、個別には提示せず上位CONFへ統合する候補。
+- `Merge-candidate`: 12件。IDと本文は保持するが、個別には提示せず上位CONFへ統合する候補。
 - `Implementation-detail-no-user-question`: 0件。
 - `Blocked-by-uninvestigated`: 0件。
 
@@ -29,9 +29,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 6. 非同期処理の部分失敗、重複、順序逆転をどう検知し再実行するか。
 7. 編集中競合、error/loading、日付時刻入力、accessibilityの共通UXをどうするか。
 
-対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。既存のAnswered 43件、Open-deferred 3件、各Answer本文とStatusは変更しない。
+対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-`Open` 95件は削除・Answered化しておらず、部分回答は各`Answer`のまま保持した。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-08-28のCCB質疑後、本文`Status`はOpen 80件、Answered 55件、Partially answered 3件である。上のreconciliation dispositionはAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -907,7 +907,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0074 Company設定の正式権限とserver-owned field
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: admin画面に対しRulesは同一会社Userへ全write。銀行、請求、取極め、運用設定、Stripe/subscription、maintenanceが同一docに混在する。
 - Question: 各fieldを誰が閲覧・編集し、Stripe/subscription/maintenanceをFunctions専用にするか。
@@ -915,11 +915,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: field別document分割、admin callable、操作別permission、server-owned field write deny。
 - Current provisional treatment: 現行UI/Rulesを暫定実装として記録し、確定権限とはしない。
 - Related FUT IDs: FUT-0090
-- Answer: 未回答
+- Answer: 2026-08-28承認。profile/billing/operationsは会社管理者write、profile/billingは同社の有効な本登録User read、arrangementは既存の配置・予定管理actor write、root/entitlement/maintenanceはserver/provider onlyとする。専用Company permissionとsuper-user actorは採用せず、責務別Settings documentへ分割する。詳細はADR 0025。
 
 ## CONF-0075 Company停止・削除・tenant修復policy
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: Company status/archive/guardなし。2026-08-27にrootのclient create/deleteはRulesで拒否したが、claim/doc/subcollectionsがtenant identityを分担し、server/operatorの停止・decommission・repairは未確定である。
 - Question: 解約・停止・誤登録・法的削除をどう区別し、Company root削除、subcollection保持、復元、tenant移転を誰が行うか。
@@ -927,11 +927,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: root永久保持+status、server cascade/匿名化、論理停止、super-user repairのみ。
 - Current provisional treatment: Companyを削除不能なanchorとして扱い、client deleteはRulesで強制拒否する。server/operatorによる停止・decommission・repair、root欠損・orphanの回復は未確定のまま維持する。
 - Related FUT IDs: FUT-0090、FUT-0091
-- Answer: 未回答
+- Answer: 2026-08-28承認。rootは通常削除しないtenant anchorとし、ACTIVE/SUSPENDED/CLOSEDを採用する。SUSPENDEDはproviderだけが停止・再開、CLOSEDは通常再開不可とする。法的削除、物理削除、tenant移転・統合・分割、CLOSED誤操作は別承認の削除またはincident recoveryで扱う。
 
 ## CONF-0076 Company基本・口座・請求設定の必須/validation
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: 初期作成は会社名/カナだけ。complete getterは住所/電話も要求するが画面editorは住所構成field全部を含まない。口座・invoiceは任意。
 - Question: 運用開始・請求書発行に必要なfield、番号形式、口座完全性、minute/round/attendance設定の許容値をどう定義するか。
@@ -939,11 +939,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 機能利用時validation、設定保存時strict validation、警告付き段階入力、server schema enforcement。
 - Current provisional treatment: schema default/requiredを実装事実とし、業務上の完全条件とは確定しない。
 - Related FUT IDs: FUT-0092
-- Answer: 未回答
+- Answer: 2026-08-28承認。会社名trim後1〜100、カナ1〜200。signupは両者だけ、請求確定は会社名・郵便・都道府県・市区町村・番地・電話を必須とする。invoiceは空または正規化した13数字、bankは全空または5項目完全入力とし、口座番号は数字7桁以内、種別は普通/当座。運用設定defaultとenumはADR 0025・現行仕様を正本とする。
 
 ## CONF-0077 確定帳票でのCompany情報snapshotと再発行
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: Billing PDFは生成時のlive Company名称・住所・電話・登録番号・口座を参照する。
 - Question: 請求確定時に発行者Company情報をsnapshotし、再生成で当時値を維持するか。訂正・再発行時はどう扱うか。
@@ -951,11 +951,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: Billing確定snapshot、PDF artifact保存、常にlive、revision付き再発行。
 - Current provisional treatment: live参照を実装事実とし、確定帳票仕様とはしない。
 - Related FUT IDs: FUT-0093
-- Answer: 未回答
+- Answer: 2026-08-28承認。draftはlive Company、確定時に名称・住所・電話・invoice・bankをissuer snapshotへ保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionとする。実write lifecycleはBilling改修で完成させる。
 
 ## CONF-0078 Company設定変更の監査・同時編集方針
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: 画面、並び順action、Stripe webhookが同じCompany docを更新し、version/preconditionと設定変更監査は確認できない。
 - Question: 銀行・invoice・端数・勤怠設定・取極め変更の履歴を残すか。同時更新時に拒否、merge、後勝ちのどれを採るか。
@@ -963,11 +963,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: revision+audit log、field別documents、optimistic concurrency、後勝ち+通知。
 - Current provisional treatment: 現行更新を実装事実とし、監査・競合policyは未確定。
 - Related FUT IDs: FUT-0090、FUT-0092、FUT-0093
-- Answer: 未回答
+- Answer: 2026-08-28承認。全設定documentにrevisionを持たせstale saveを拒否する。profile/billing/operationsはactor・時刻・field・before/afterのappend-only auditを持ち、bank値はmaskする。理由入力は必須にせず、会社管理者だけが専用Callableからmask済み最小projectionを閲覧し、client直接CUDを拒否する。arrangementは頻繁な並べ替えのため履歴・undoを持たず、現在値・revision・updatedAt/byだけを保存する。
 
 ## CONF-0079 Maintenance中に停止するserver処理の範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: 現行maintenanceはroute redirectだけで、Rules/Functions/background writeを止めないがbackup/restoreは排他前提にする。
 - Question: System/Company maintenance中にread、write、Callable、trigger、通知、scheduled処理のどれを停止し、開始済み処理をどうdrainするか。
@@ -975,11 +975,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 全write停止、対象collectionだけ停止、read-only mode、UI表示のみ。background処理の扱いが異なる。
 - Current provisional treatment: route制御を実装事実とし、server排他が成立するとみなさない。
 - Related FUT IDs: FUT-0095
-- Answer: 未回答
+- Answer: 2026-08-28承認。maintenanceはproject-wideで排他lockではない。通常client write、business Callableの新規処理、対象scheduled/triggerの通常自動変更を止め、明示承認されたprovider migration/repair/rebuild/verificationだけを例外とする。in-flight処理はbounded wait、log、連続dry-run digest、snapshot、post-checkで静穏化する。
 
 ## CONF-0080 Maintenance中の例外actor・route・復旧操作
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: 全roleをmaintenance pageへ送り、logout/refresh/admin bypassなし。SystemはAdmin SDK、Companyも運用上Admin SDKで切替える。
 - Question: super-user/admin/developerのどれにstatus確認・解除・修復を許し、一般Userへlogoutやread-only routeを提供するか。
@@ -987,11 +987,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: CLI専用、super-user専用route、署名済みbreak-glass、全員完全遮断+logoutのみ。
 - Current provisional treatment: 例外なしroute制御を実装事実とし、正式復旧policyとはしない。
 - Related FUT IDs: FUT-0095、FUT-0098
-- Answer: 未回答
+- Answer: 2026-08-28承認。一般利用者は停止案内とsign-outだけを利用する。製品内super-user/admin bypassを正式経路にせず、provider migration・repairは対象と作用を固定した個別承認operator checkpointから実行する。全Function wrapper/lease/registryは現段階で実装しない。
 
 ## CONF-0081 System/Company状態不明時のfail-open/closedと復旧UX
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: System初回fetch失敗はfail-closed固定、Company fetch失敗はcompany modeを認識できず、retry UIなし。
 - Question: 初回障害、購読断、offline、Company欠損でunknownとなった際にアクセスを止めるか、last-known状態を使うか。再試行をどう提供するか。
@@ -999,11 +999,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 常にfail-closed、自動retry後closed、署名済みlast-known、限定read-only。
 - Current provisional treatment: 現行のSystem closed/Company open候補を確定仕様とはしない。
 - Related FUT IDs: FUT-0096
-- Answer: 未回答
+- Answer: 2026-08-28承認。保護対象操作はmaintenance状態不明時にfail closedとし、有限deadline、retry/backoff、状態再取得、停止・通信障害を区別する表示を提供する。last-known falseだけで通常処理を許可しない。
 
 ## CONF-0082 Maintenance metadata・期間・利用者表示
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: boolean即時切替で予定期間なし。Company開始時刻field名がschema/CLIで不一致。pageは固定文言のみ。
 - Question: 理由、開始/予定終了/実終了、更新者、対象範囲、連絡先を保存・監査・表示するか。予約maintenanceを必要とするか。
@@ -1011,7 +1011,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: current state+history collection、予約window、最小booleanのみ、status APIで詳細提供。
 - Current provisional treatment: boolean OR判定だけを確認済みとし、metadata仕様は未確定。
 - Related FUT IDs: FUT-0097
-- Answer: 未回答
+- Answer: 2026-08-28承認。server-owned current stateへreason、scope、開始時刻、actor等の運用metadataを持ち、利用者には停止案内に必要な最小projectionだけを表示する。quiet period、監視Function、予定・解除条件はmigration/release checkpointごとに固定し、共通固定値や予約maintenanceを必須化しない。
 
 ## CONF-0083 Stripe機能の有効環境・公開条件
 
@@ -1023,7 +1023,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 機能flagで閉鎖、DEV test modeのみ、Emulator stub、準備完了後export。
 - Current provisional treatment: Functions未公開を現在の実装事実とし、Stripe外部作用は実行しない。
 - Related FUT IDs: FUT-0099
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。Stripe本体は全機能改修後の正式release直前に別仕様・別承認で再開する。CCBではFunctions/UIを再有効化せず、server-owned entitlement隔離だけを扱う。
 
 ## CONF-0084 Subscription購入・管理actorとplan選択
 
@@ -1035,7 +1035,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: Company adminのみ、billing permission、super-user代行、server catalog+Customer Portal。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式課金権限とはしない。
 - Related FUT IDs: FUT-0100
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。正式release直前のStripe改修までactor、plan、portal、解約、再開を確定しない。現行page/Rulesを正式課金権限として採用しない。
 
 ## CONF-0085 Company・Stripe Customer・Subscriptionの一意性と再契約
 
@@ -1047,7 +1047,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 1:1厳格、Customer 1:Subscription history複数、active 1件、複数plan併存。
 - Current provisional treatment: 1 Customer/1 current subscription前提の実装を不変条件とはしない。
 - Related FUT IDs: FUT-0101、FUT-0102
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。正式release直前のStripe改修で一意性、再契約、event収束を決める。CCBでは既存前提を仕様へ昇格しない。
 
 ## CONF-0086 Subscription status・trial・grace・employeeLimit仕様
 
@@ -1059,7 +1059,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: server entitlement table、即時停止、grace/read-only、free downgrade、employee超過時既存保持。
 - Current provisional treatment: 現行customerTypeを実装事実とし、正式state/entitlement仕様とはしない。
 - Related FUT IDs: FUT-0102、FUT-0103
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。CCBはentitlement fieldのserver ownershipとinterfaceだけを分離し、status、trial、grace、plan、employeeLimitの実強制は正式release直前の別改修で決める。
 
 ## CONF-0087 Checkout成功条件・表示情報・保存期間
 
@@ -1071,7 +1071,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: server verify+poll、webhook完了待ち、pending state、owner/admin限定read+TTL。
 - Current provisional treatment: query表示を実装事実とし、契約成立の確定条件とはしない。
 - Related FUT IDs: FUT-0104
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。checkout成功、intent projection、保持・TTLは正式release直前のStripe改修で確定する。現行query表示を正式成功条件としない。
 
 ## CONF-0088 警備報告を写真共有または構造化提出書類のどちらとするか
 

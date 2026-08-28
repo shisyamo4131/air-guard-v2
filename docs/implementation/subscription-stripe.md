@@ -117,9 +117,11 @@ Customer Portal、解約callable、再契約専用処理、checkout session clea
 
 - FUT-0099〜FUT-0104を`future-actions.md`へ登録し、FUT-0090へsubscription改変の証拠を追加した。
 
+2026-08-28にStripe本体、checkout、webhook、plan、status、employeeLimit実強制を全機能改修後の正式release直前まで明示保留とした。CCBではFunctions/UIを再有効化せず、server-owned entitlement documentとclient最小projectionの隔離だけを行う。現行実装を正式課金仕様へ昇格しない。
+
 ## 要確認事項
 
-- CONF-0083〜CONF-0087を`pending-confirmations.md`へ登録した。
+- CONF-0083〜CONF-0087は2026-08-28に正式release直前まで明示保留とした。
 
 ## 未確認範囲
 

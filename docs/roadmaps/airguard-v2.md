@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. DEV-UWB-RELEASE-001後の認証済みDev受入れでsignup、roleless・role別route、stale role、disabled User復帰、非破壊lifecycle、第2合成会社からのtenant拒否を完了し、Company rootのclient create/deleteを閉じた。次は[Company設定改修ロードマップ](company-settings.md)に従い、全体保存の撤去、actor・field ownership、履歴再現性、取極め・表示順・勤怠・請求との接点を先に確定する。その後、master CRUDを機能単位で見直す。CUD一律Functions化は前提にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. CCB-01でCompany document分割、actor、validation、revision/audit、snapshot、attendanceSummaryMode、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を確定した。次は[Company設定改修ロードマップ](company-settings.md)のCCB-02として、Dev fixtureと全callerを再照合し、exact schema、related package、互換reader、migration mappingを固定する。その後、server-owned containmentから機能単位で実装・reviewする。CUD一律Functions化は前提にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -152,3 +152,4 @@
 | 2026-08-27 | 10% | 0 | 認証済みDev受入れの残件として、一般Userの`労務`role表示・管理者route拒否・role未設定への復元、会社管理者用lifecycle履歴の空結果、User削除確認の取消とUser残存を確認した。第2合成会社管理者の正規tokenによるbackend assertionでは自社readが200、別会社pathのread・list・precondition付きupdate/deleteが各403、mutation 0だった。UWBのDev受入れは完了したが、Rules全体縮小、App Check・rate limit等が未完了のため進捗は10%に据え置いた。 |
 | 2026-08-27 | 10% | 0 | Firestore Rules縮小の最初の安全な単位として、Company root documentのclient create/deleteを拒否し、同社read/updateとFunctionsによる初期作成を維持した。Codex専用Emulator suite 97件が成功した。以後はCUDを一律Functions化せず機能単位で境界を見直す。既存Company update、他collection、App Check・rate limitが残るため進捗は10%に据え置いた。 |
 | 2026-08-27 | 10% | 0 | Company設定のclient、server、Rules/security、下流依存を独立調査し、専用ロードマップへ全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復の実施順と検証条件を設定した。計画作成のみで実装・test・Dev受入れは未完了のため、親ロードマップ進捗は10%に据え置いた。 |
+| 2026-08-28 | 10% | 0 | CCB-01でCompany設定分割、actor、validation、revision/audit、snapshot、勤怠表示方式、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を承認済み仕様・ADR・runbookへ反映し、CCB専用進捗を10%とした。親ロードマップの未完了マイルストーンは実装・test・Dev受入れを満たさないため、公式進捗は10%に据え置いた。 |

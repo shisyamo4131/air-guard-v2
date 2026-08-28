@@ -2,145 +2,129 @@
 
 ## メタデータ
 
-- 状態: Planned（計画済み・未着手）
-- 現在の進捗: 0%
-- 基準日: 2026-08-27
+- 改修コード: CCB（Company Configuration Boundary）
+- 状態: In progress（仕様確定・実装未着手）
+- 現在の進捗: 10%
+- 基準日: 2026-08-28
 - 調査基準commit: `c8718a82c43a05d3ea70f928747333ef985e77db`
+- 文書化基準commit: `919733aea74476b5839d5e3c277d75641e4a5ccb`
 - 親ロードマップ: [AirGuardV2 正式運用準備](airguard-v2.md)
+- 現行仕様: [Company設定とtenant lifecycle](../specification.md#company設定とtenant-lifecycle)
+- 主要判断: [ADR 0025](../decisions/0025-company-configuration-boundary.md)、[ADR 0026](../decisions/0026-maintenance-quiescence-and-data-change.md)
 - 実装調査: [Company（自社情報・会社設定）](../implementation/company-settings.md)
-- 確認事項: [未決定事項台帳](../implementation/pending-confirmations.md) の CONF-0074〜CONF-0087、CONF-0111、CONF-0115、CONF-0129、CONF-0134
+- 確認事項: CONF-0074〜CONF-0082は回答済み。CONF-0083〜CONF-0087のStripe詳細は正式release直前まで明示保留。
 - 加点方式: マイルストーン単位。部分加点なし。
 
 ## 目的
 
-Company root documentをtenant anchorとして維持しながら、会社設定を機能単位の安全な操作へ分解する。画面上の入口だけでなく、actor、field ownership、validation、同時更新、監査、履歴再現性、外部連携、移行と復旧を一貫させる。
+単一Company documentに混在するtenant anchor、会社・請求元情報、運用設定、表示順、maintenance、entitlementを責務別documentと操作へ分離する。後続のCustomer、Site、Employee、Outsourcer、Billingが依存できるactor、validation、revision、snapshot、lifecycleを先に確立する。
 
-このロードマップは「Companyの全CUDを一律にFunctionsへ移す」ことを前提にしない。単純なreadや安全なfield更新はClientを選択できるが、server-owned field、複数document整合、外部作用、秘密性、履歴再現性が必要な操作は専用server境界を候補とし、機能ごとに決定する。
+このロードマップはCompanyの全CUDを一律Functions化しない。会社管理者設定、日常業務の表示順、server-owned lifecycle・entitlementの性質に合わせてclient Rules、transaction、Callable/operatorを使い分ける。
 
-## 対象範囲
+## 確定した目標境界
 
-### 対象
-
-- `Companies/{companyId}`のschema、Rules、client store・plugin・設定画面・更新経路
-- 初期Company作成、root欠損時のsession挙動、停止・修復・decommission境界
-- 会社基本情報、住所、連絡先、適格請求書番号、振込先
-- `minuteInterval`、`roundSetting`、`firstDayOfWeek`、`attendanceManagementMode`
-- `agreementsV2`、`siteOrder`、`scheduleOrder`
-- `maintenance*`、`stripeCustomerId`、`subscription`、geocoding
-- Company設定を参照する請求・PDF/CSV・税計算・勤怠・配置・予定・認証初期化・管理運用
-- 互換移行、Rules切替、Emulator回帰、Dev受入れ、rollback
-
-関連Schemas packageまたは別repositoryのAdmin SDK変更が必要な場合は、このrepositoryの承認を流用せず、対象repository、release順、後方互換性、rollbackを提示して別途承認を得る。
-
-### 対象外
-
-- Customer、Site、Employee、Outsourcer等のmaster CRUDそのものの全面改修
-- StripeのProd有効化、tenantの実削除、実data repair、Prod migration・deploy
-- Company設定と無関係な全collectionの共通CRUD基盤化
-
-ただし、後続master CRUDで手戻りを起こさないため、Siteの取極め・表示順、Employeeの勤怠方式・利用人数、請求先snapshotなど、Companyとの接点は本ロードマップで契約を固定する。
-
-## 確認済みの現在状態
-
-| 領域 | 主なfield・経路 | 主な利用先 | 現在の問題 |
+| document | 主なfield | 読取 | 更新 |
 |---|---|---|---|
-| tenant anchor・初期作成 | Company doc ID、Auth claim、User.companyId、`createAdminAccount` | 認証初期化、全subcollection path | Company/User transactionとAuth claimが非atomic。root欠損時も子documentが残り得る。一般clientのroot create/deleteは拒否済みだが、運用停止・修復は未確定。 |
-| 会社・請求元情報 | 会社名、住所、電話、invoiceNumber、振込先 | Company設定、請求PDF・帳票 | 同一tenantの有効な本登録User全員がrootをread/update可能。過去帳票はlive Company値で再生成され、当時値を再現できない。画面の住所編集fieldも不完全。 |
-| 運用既定値 | minuteInterval、roundSetting、firstDayOfWeek、attendanceManagementMode | time picker、process-global丸め、OperationResult CSV、請求・税、calendar、勤怠data経路 | UI属性以外の強制validationがなく、変更の発効時点・既存dataへの作用・rollbackが未定。丸めは請求・税・帳票・CSVの再現性へ影響する。 |
-| 取極め・表示順 | agreementsV2、siteOrder、scheduleOrder | Company設定、配置、予定 | Company既定取極めの実consumerを確認できずmanual記述と不一致。表示順更新に専用permission・revision・参照整合性がない。 |
-| maintenance | maintenanceMode、reason、時刻・actor | client middleware、Admin運用 | UI redirectであり排他lockではない。server writeを停止せず、field名にもclient schemaとAdmin SDKの不一致がある。root全体更新で上書きされ得る。 |
-| Stripe・利用制限 | stripeCustomerId、subscription、employeeLimit、StripeData | checkout表示、webhook、Employee数表示 | hiddenでもclient read/update可能。Functions exportは停止中だが、再有効化前にprice/origin、冪等性、event順序、tenant mapping、人数制限のserver強制が必要。 |
-| 位置情報 | 住所、location/geopoint、geocoding Callable | Company直接consumerは未確認。geocoding保存経路のみ確認 | geocode失敗でもlocationをnullにして保存を継続し得る。現在公開中のCallableに認証、App Check、rate/input制限がない。 |
-| 保存方式 | `Company.update()`、Firestore adapterのdocument全体set | 設定、取極め、表示順、外部同期 | revision・preconditionなし。古い画面が別機能の更新を上書きでき、schemaが知らないserver fieldを消す可能性がある。 |
+| Company root | status、schemaVersion、作成metadata | 同社の有効な本登録Userへ必要最小 | server/provider only |
+| `Settings/profile` | 会社名、カナ、住所、電話、FAX | 同社の有効な本登録User | 会社管理者 |
+| `Settings/billing` | invoice number、振込先 | 同社の有効な本登録User | 会社管理者 |
+| `Settings/operations` | minute、round、week、attendance summary | 同社の有効な本登録User | 会社管理者 |
+| `Settings/arrangement` | siteOrder、scheduleOrder | 同社の有効な本登録User | 既存の配置・予定管理actor |
+| `Settings/entitlement` | client-safe plan/feature/employeeLimit projection | 同社の有効な本登録User | server/provider only |
+| `Settings/maintenance` | client-safe停止状態・理由・時刻projection | 停止案内対象の同社User | server/provider only |
+| `PrivateSettings/entitlement` | Stripe/customer ID、provider metadata、内部状態 | client不可 | server/provider only |
+| `PrivateSettings/maintenance` | operator、内部operation/error、private metadata | client不可 | server/provider only |
+| `SettingAudits/{auditId}` | profile/billing/operationsのmask済み変更履歴 | 会社管理者専用Callableだけ | server only append |
 
-## 最優先の横断リスク
+- profile/billing/operationsはrevisionとappend-only auditを持ち、auditは会社管理者だけが専用Callableからmask済みprojectionを閲覧できる。理由入力は必須にしない。arrangementは現在値とrevisionだけを持つ。
+- super-userをCompany設定actorに含めず、会社横断処理は個別承認されたprovider/operator手順とする。
+- `attendanceManagementMode`は`attendanceSummaryMode`へ改名し、`LABOR_STANDARD`/`OPERATION_COUNT`で画面・navigationだけを切り替える。両projectionは常時生成する。
+- round modeはOperationResult作成時、issuer情報は請求確定時にsnapshotする。
+- Company既定取極めとCompany geocodingを廃止する。既存値の削除は別migrationとする。
+- lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`。root物理削除、法的削除、tenant移転は別scopeとする。
+- maintenanceはproject-wide quiet procedureとし、CCBはCompany状態・表示の統合だけを担う。
+- Stripe再有効化とemployeeLimit強制は正式release直前の別改修へ延期し、CCBはentitlement documentのserver ownershipだけを準備する。
 
-1. **actor不一致**: `/settings/company`は会社管理者・super-user向けだが、Rulesは同一tenantの有効な本登録User全員へ全field updateを許可する。
-2. **field ownership混在**: 利用者編集field、運用field、server-owned field、外部連携fieldが同じdocumentにあり、readの秘密性とwrite制御を分離できない。
-3. **全体保存競合**: 設定、取極め、並び順、maintenance、Stripeが互いのfieldを失わせ得る。field制限だけを先に厳格化すると既存の全体保存が失敗するため、操作別writeを先に互換導入する必要がある。
-4. **履歴再現性**: 会社情報と丸め方式をlive参照する帳票・計算は、設定変更後に過去結果が変わり得る。
-5. **運用境界の過大評価**: maintenanceは利用者画面の抑止であり、排他lock、server停止、drain、backup/restore lockではない。
+## 現在実装との差
 
-## 実装前の判断ゲート
-
-次を一つの巨大判断にせず、該当マイルストーンの実装前に確定する。確定前は現行挙動を実装事実として扱い、仕様へ昇格しない。
-
-1. 会社管理者、strict role permission、super-user support procedureのread/write actor matrix。銀行・請求・subscription等を全Userへ読ませるかも決める。
-2. root documentに残すtenant anchor fieldと、機能別subdocumentまたはserver projectionへ分離するfield。
-3. 各既存`Company.update()` callerを対応する業務操作へ割り当て、操作別allowlist、型・長さ・enum・相関・正規化、state transition、snapshot、参照整合、未知field、既存legacy値の扱いを決める。
-4. revision/precondition、監査対象、競合時の拒否・再読込・merge方針。
-5. 会社・請求元情報、丸め、勤怠方式の発効時点と、請求・勤怠・帳票へ保存するsnapshot。
-6. Company既定取極めを実際にSiteへ継承するか、未使用機能として廃止するか。表示順の参照切れ修復方法。
-7. maintenanceを通知、書込gate、drain、migration/restore lockのどこまで担わせるか。
-8. Stripeを再有効化する条件、price/origin allowlist、event ledger、人数制限、解約・reconcile。
-9. legacy Company documentの互換期間、migration、dry-run、停止条件、rollback。
+| 領域 | 現在実装 | 目標との差 |
+|---|---|---|
+| 保存 | root 1 documentの全体set | 設定document分割、操作別writer、revision、unknown field保護が未実装 |
+| actor | 同社有効User全員がroot全field update | 会社管理者・日常業務actor・providerの分離が未実装 |
+| read | 全field同一read | server-owned entitlement/maintenanceの最小projectionが未実装 |
+| lifecycle | statusなし、client create/deleteだけ拒否済み | ACTIVE/SUSPENDED/CLOSEDとaccess gateが未実装 |
+| profile/billing | 長さ・住所editor・invoice/bank validation不一致 | 承認済みvalidation、audit、帳票snapshotが未実装 |
+| operations | process-global round、旧attendance enum | snapshot、改名、両projectionの表示切替が未実装 |
+| arrangement | 全体set、revisionなし | 専用actor、stale拒否、履歴なし現在値保存が未実装 |
+| legacy | agreements/geocodingがrootに残る | caller撤去と別migrationが未実装 |
+| maintenance | route redirect中心 | Rules/Callable/scheduled gateとquiet procedureのproduct実装が未完了 |
+| Stripe | Functions公開停止、root fieldはclient writable | entitlement隔離未実装。課金本体は意図的に延期 |
 
 ## 手戻りを抑える実施順序
 
 ```text
-現状fixture・全業務操作の契約確定
-  → field ownershipとpackage/client/functions契約の一致
-  → server-owned field containmentと共通mutation基盤
-  → 各業務単位で操作別writeへ移行し全体保存を撤去
-  → 対応する制限的Rulesへ段階切替
-  → 請求・勤怠・取極め・表示順の下流契約へ引渡し
-  → maintenance・外部連携・修復
-  → migration、Dev受入れ、旧経路撤去
+CCB-01 confirmed contract
+  → CCB-02 data/package compatibility contract
+  → CCB-03 root・server-owned containment
+  → CCB-04 profile/billing
+  → CCB-05 operations・snapshot
+  → CCB-06 arrangement・master handoff
+  → CCB-07 lifecycle・maintenance integration
+  → CCB-08 entitlement isolation
+  → CCB-09 migration・回帰・Dev受入れ
 ```
 
-releaseでは、互換API、必要なmigration、client、制限的Rules、remote検証の順を固定する。先にRulesだけを狭めて現行clientを停止させない。server-owned fieldを分離するまでは、Company全体setを新規追加しない。
+互換readerを先に導入し、設定documentのcreate-only backfill、操作別writer、制限的Rules、旧全体writer撤去、旧field cleanupの順で進める。関連Schemas/Admin SDK repository変更は対象、互換性、公開・導入順、rollbackを示して別承認を得る。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
-| COM-01 現状証拠・判断基準線 | 10 | 0 | Not started | actor/field/consumer/writer matrix、全`Company.update()` callerと業務操作の対応、state・snapshot・参照整合、代表Dev fixture、CONF依存、互換・rollback方針を利用者承認済み仕様へ反映する。 |
-| COM-02 data・field・package契約 | 10 | 0 | Not started | Company fieldをtenant anchor、利用者設定、運用、server-owned、snapshotへ分類し、Schemas package・client・Functions・Admin SDKの名前、default、validationを一致させる。未知fieldを失わない移行策を検証する。 |
-| COM-03 server-owned containmentとmutation基盤 | 20 | 0 | Not started | root create/delete拒否を維持し、server-owned fieldをclient差分から保護する。共通actor・tenant・field diff・current state・precondition・audit境界を用意するが、未確定の業務semanticsを仮API化しない。同社一般User、管理者、permission actor、super-user、他社、無効Userの陰性testを通す。 |
-| COM-04 会社・請求元情報 | 10 | 0 | Not started | 承認済み操作契約に基づいて対象の全体setを撤去し、住所editor、invoiceNumber正規化、口座情報の閲覧・編集actor、現在公開中のgeocodingの認証・abuse防止・失敗動作を実装・検証する。Company側はissuer snapshot schema・source・revision・互換契約を確定し、実際のsnapshot writeは請求確定・訂正・取消・再発行lifecycleの承認済み実装へ引き渡す。 |
-| COM-05 運用既定値と履歴再現性 | 15 | 0 | Not started | 承認済み操作契約に基づいて対象の全体setを撤去し、minuteInterval、roundSetting、firstDayOfWeek、attendanceManagementModeのvalidation、発効時点、既存data、計算・勤怠・帳票snapshot、変更監査、rollbackを検証する。process-global設定のaccount切替・未設定時resetも確認する。 |
-| COM-06 取極め・表示順とmaster接点 | 10 | 0 | Not started | Company既定取極めの採否、Siteへの継承、siteOrder/scheduleOrderのpermission・参照整合性・競合処理を先に確定してから、対象の全体setを撤去する。後続Site/master CRUDが依存できる契約とtestを残す。 |
-| COM-07 tenant anchor・maintenance | 10 | 0 | Not started | root欠損・claim失敗・orphan子dataの検知と修復、停止/decommission境界を定める。maintenanceの通知とserver write gate等を分離し、field名、actor、開始・解除・失敗時復旧を検証する。 |
-| COM-08 外部連携・利用制限・復旧境界 | 10 | 0 | Not started | Stripeを再有効化できるserver-owned subscription契約、冪等性、allowlist、event順序、reconcileと、Employee側が利用するentitlement projection・上限判定interface・競合契約を設計・検証する。Employee作成時の実強制は後続Employee master roadmapへ引き渡す。正式backup scopeの不足を別運用課題へ接続する。 |
-| COM-09 migration・回帰・Dev受入れ | 5 | 0 | Not started | dry-run、backup、rollback、停止条件を固定し、local自動test、Emulator、固定commit build、bounded Dev release、管理者と非管理者のUI受入れ、remote陰性検証を完了する。旧全体保存経路0件を確認する。 |
-| **合計** | **100** | **0** |  |  |
+| CCB-01 確認済み仕様・判断基準線 | 10 | 10 | Completed | actor、document分割、validation、revision/audit、snapshot、勤怠、廃止field、lifecycle、maintenance、Stripe延期を質疑で承認し、仕様、ADR、CONF/FUT、roadmap、runbook、manualへ反映してvalidatorを通す。 |
+| CCB-02 data・field・package互換契約 | 10 | 0 | Not started | Dev fixtureと全Company callerを再照合し、root・各Settingsのexact schema、default、unknown/legacy field、Schemas/client/Functions/Admin SDKのrelease順、dual-read期間、migration mappingを検証する。 |
+| CCB-03 root・server-owned containment | 20 | 0 | Not started | root create/delete拒否を維持し、client-safe entitlement/maintenance projectionとPrivateSettingsを分離してclient writeを拒否する。共通tenant/actor/revision/audit境界、会社管理者専用audit readerと陰性testを実装し、旧client互換中もserver fieldを失わない。 |
+| CCB-04 profile・billing | 10 | 0 | Not started | 操作別保存、承認済み長さ・invoice・bank validation、完全住所editor、全User read/管理者write、masked auditを実装する。長値PDF renderとissuer snapshot schemaを検証し、snapshot writeをBillingへ引き渡す。 |
+| CCB-05 operations・履歴再現性 | 15 | 0 | Not started | minute/round/week/attendanceSummaryModeを操作別保存へ移し、enum・範囲、即時表示、account切替reset、両勤怠projection、OperationResult round snapshot、既存data不変を検証する。 |
+| CCB-06 arrangement・master接点 | 10 | 0 | Not started | agreements/geocoding callerを撤去し、site/schedule orderを既存業務permission、revision、1 reorder 1 save、新規ID末尾補完、archive・削除済みIDの無視・次回保存時除去へ移す。Customer既定取極めと後続masterの共通actor/validation/競合契約を引き渡す。 |
+| CCB-07 tenant lifecycle・maintenance統合 | 10 | 0 | Not started | ACTIVE/SUSPENDED/CLOSED、停止案内、通常read/write/Callable拒否、provider restore、root欠損・orphan検出を実装する。project-wide Rules/Callable/scheduled maintenance gate、unknown fail-closed、quiet runbookを検証する。 |
+| CCB-08 entitlement隔離・外部連携延期境界 | 10 | 0 | Not started | subscription/feature/employeeLimitをserver-owned documentへ隔離し、client最小projectionとdisabled UIを検証する。Stripe本体を再有効化せず、正式release直前の別roadmapへ未決仕様を引き渡す。 |
+| CCB-09 migration・回帰・Dev受入れ | 5 | 0 | Not started | dry-run、backup、rollback、quiet period、旧新compatibilityを固定し、local自動test、Emulator、PDF render、fixed-commit build、bounded Dev release、管理者・一般User・業務actor・providerの受入れ、旧全体writer 0件を確認する。 |
+| **合計** | **100** | **10** |  |  |
 
 ## 必須検証matrix
 
-- actor: 会社管理者、権限preset、権限なしUser、super-user、無効User、他tenant、未認証。
-- write: 許可fieldだけ、server-owned field混入、未知field、必須field欠損、enum/範囲、stale revision、同時tab、Functions/webhook競合。
-- read: 銀行・請求・Stripe・maintenance fieldの必要最小開示。Firestore Rulesでfield非表示にできない制約も含める。
-- 下流: 請求確定・再生成、PDF/CSV、税・丸め、勤怠方式切替、calendar、配置・予定順、取極め継承。
-- lifecycle: 初期作成のclaim失敗、root欠損、orphan、停止、maintenance中write、解除失敗、repair再実行。
-- 外部: geocodingの未認証・他tenant・過長入力・rate/App Check・provider失敗・privacy log、Stripe重複event・順不同event・不正price/origin・entitlement競合。Employee作成時の上限未満・到達・並行作成・既存超過・trial/grace/expiredは後続Employee側testへ引き渡す。
-- migration: legacy値、field名不一致、dry-run digest、再実行、部分失敗、rollback、Rules切替順。
+- actor: 会社管理者、配置・予定permission actor、権限なしUser、super-user、provider operator、無効User、他tenant、未認証。
+- read: profile/billingの同社read、entitlement/maintenanceのclient-safe projection、PrivateSettingsの全client拒否、auditの会社管理者Callableだけ、一般User・super-user・他tenant・未認証拒否、bank before/after mask。
+- write: exact field、required/optional、型・長さ・enum・相関、server-owned混入、unknown field、stale revision、同時tab、旧client、Functions競合。
+- lifecycle: ACTIVE/SUSPENDED/CLOSED、restore、CLOSED誤操作incident、root欠損、orphan、claim不一致、maintenance unknown。
+- downstream: draft/final invoice、issuer snapshot、長値render、OperationResult round snapshot、両attendance projection、calendar、site/schedule order。
+- migration: edition、legacy enum/field、agreements/location、dry-run digest、create-only backfill、再実行、部分失敗、derived data、rollback、Rules切替順。
 
-各test、validator、build、migration check、Dev検証はcommand、結果、独立exit statusを記録する。画面非表示だけを認可証拠にしない。
+各validator、test、build、migration check、Dev検証はcommand、result、独立exit statusを記録する。画面非表示だけを認可証拠にしない。
 
 ## 停止・rollback条件
 
-- 現在のCompany documentにschemaで復元できないfield、型、field名差異が見つかった。
-- client、Functions、Admin SDKのいずれかが旧全体保存を続け、server-owned field消失を防げない。
-- 請求・勤怠・配置・予定の既存結果が設定変更で意図せず変わる。
-- migration digest、対象会社、対象field、write件数が承認済みcheckpointと一致しない。
-- maintenance解除、root/session復旧、Stripe reconcile、Rules rollbackのいずれかを実証できない。
-- actor matrixに未決定の経路があるままwrite権限を拡張する必要が生じた。
+- Devのcurrent edition、schema、unknown field、実callerが基準線と異なる。
+- 旧全体writerがserver-owned fieldを失わせる、または互換readerが旧新dataを決定的に合成できない。
+- stale saveが拒否されず別設定を上書きする。
+- Company変更が既存OperationResult、Billing、確定帳票、勤怠projectionを意図せず再計算する。
+- migration digest、対象company、field、write件数、quiet状態、snapshotがcheckpointと一致しない。
+- SUSPENDED/CLOSED/maintenance中に通常business処理が通る。
 
-停止時は新旧経路を混在させず、直前の互換releaseへ戻す。migrationはcreate-onlyまたはbefore snapshotから復元可能なfield単位を優先し、rootやsubcollectionの推測削除は行わない。
+停止時はmaintenanceを維持し、既知の互換releaseへ戻す。新setting document、legacy field、root/subcollectionを推測削除しない。apply後はsnapshotと前後digestからexact corrective releaseまたは別repairを組み立てる。
 
-## 後続master CRUDへの引渡し条件
+## 後続master CRUDへの引渡し
 
-Company改修の全完了を待たず、次の契約が確定・検証された時点で対応するmaster機能を並行計画できる。
+- Customer・Outsourcer: tenant actor確認、操作別field allowlist、revisionによるstale拒否、必要なaudit、archive/lifecycleを機能単位で選ぶ。
+- Site: Customer既定取極め、Company arrangement order、終了・再有効化、参照切れを接続する。
+- Employee: attendanceSummaryModeの表示契約だけを受け、給与用勤務回数詳細とentitlement実強制は各後続改修で完成させる。
+- Billing: issuer snapshot schemaとround snapshotを受け、draft・確定・取消・訂正・再発行のwrite lifecycleを完成させる。
 
-- Customer・Outsourcer: tenant actor matrix、共通validation、監査・競合の採否。
-- Site: Company既定取極め、siteOrder、終了・再有効化時の参照整合性。
-- Employee: attendanceManagementMode、subscription entitlement・employeeLimit判定interface、User lifecycleとの境界。Employee作成時の上限強制と競合testはEmployee側で完成させる。
-- 請求・transaction系: issuer snapshot schema・source・revision、roundSettingの発効・履歴再現性。snapshot書込時点はdraft・確定・取消・訂正・再発行を含むBilling lifecycle側で完成させる。
-
-master CRUDの実装順は、Company側の依存契約と各masterの参照関係を確認した別ロードマップで確定する。この文書だけで一律Client CUDまたは一律Functions CUDを決定しない。
+Company全完了を待たず、各引渡し契約が実装・検証された時点で対応masterを開始できる。CUD一律Functions化や全collection共通auditは前提にしない。
 
 ## 進捗履歴
 
 | 日付 | 進捗 | 変化 | 理由と証拠 |
 |---|---:|---:|---|
-| 2026-08-27 | 0% | 基準線 | client、server、Rules/security、下流依存の4系統を独立調査し、影響範囲、判断ゲート、実施順、検証・rollback条件を設定した。実装・仕様決定・test・Dev受入れは未着手のため得点0とした。 |
+| 2026-08-27 | 0% | 基準線 | client、server、Rules/security、下流依存の4系統を独立調査し、影響範囲、判断ゲート、実施順、検証・rollback条件を設定した。 |
+| 2026-08-28 | 10% | +10 | Company document分割、actor、validation、revision/audit、snapshot、attendanceSummaryMode、廃止field、lifecycle、project-wide maintenance、Stripe延期を質疑で承認し、仕様・ADR 0025/0026・runbook・台帳・manualへ反映した。application実装・test・migration・Dev受入れは未着手のためCCB-01だけを加点した。 |

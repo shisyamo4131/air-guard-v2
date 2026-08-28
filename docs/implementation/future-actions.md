@@ -1212,10 +1212,10 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: Company pageSettings/Manager、`firestore.rules` Companies match、schemas `Company`
 - 確認済み実装事実: UIはadmin限定だが、同一会社の有効な本登録UserはCompany全fieldをclientから更新できる。2026-08-27にclient create/deleteを無条件拒否し、初期Company作成をCloud Functions/Admin SDK専用とした。銀行・請求・Stripe/subscription・maintenance・設定・取極めは引き続き同一docにあり、SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
 - 想定影響と発生条件: Company rootのclient作成・削除によるtenant破損は閉じたが、一般Userは依然として口座/請求表示を改ざんし、subscription/maintenanceを偽装できる。
-- 未確認点・仮説: 正式な設定担当、server-owned field、super-user repair、各fieldをclient RulesとFunctionsのどちらで更新するかは未決定。
-- 推奨する将来対応: CUDを一律Functions化せず、Company機能ごとにactor、field ownership、整合性、監査、同時実行、offline要件を確定し、必要な更新だけをfield/action別Rulesまたは管理Callableへ移す。
+- 未確認点・仮説: 2026-08-28にactorとdocument ownershipはADR 0025で確定した。exact Rules/Callable配分、schema、互換期間はCCB-02以降で実装前確認する。
+- 推奨する将来対応: root/entitlement/maintenanceをserver-owned、profile/billing/operationsを会社管理者、arrangementを既存業務permission actorへ分離し、CUDを一律Functions化せず操作別Rules/transaction/Callableを選ぶ。
 - 必要なテスト: role別read/write、口座/請求/Stripe/maintenance直接write、Company delete、他社doc、super-user repair。
-- ユーザー判断が必要な事項: CONF-0074、CONF-0075。
+- ユーザー判断が必要な事項: なし。CONF-0074、CONF-0075は2026-08-28回答済み。
 
 ## FUT-0091 Company/Auth tenant作成の部分状態とidentityを回復可能にする
 
@@ -1225,10 +1225,10 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`、Company/User transaction、custom claims、`useAuthActions`
 - 確認済み実装事実: Companyとadmin Userはtransactionだがclaims設定は後続。tenant identityはCompany doc ID/claim/prefixにまたがり、移転・再concile経路はない。
 - 想定影響と発生条件: claims失敗・誤Company削除でAuth account、User、Company、subcollectionsのanchorが不一致になる。
-- 未確認点・仮説: orphan Company/Userの検出・support修復運用は未確認。
-- 推奨する将来対応: idempotent provisioning state、anchor整合検査、repair callable、削除保護を実装する。
+- 未確認点・仮説: ACTIVE/SUSPENDED/CLOSEDとroot非削除は確定した。orphan検出、idempotent provisioning、incident recoveryのexact operator APIは未設計。
+- 推奨する将来対応: root非削除、idempotent provisioning state、anchor整合検査、bounded provider repairを実装する。CLOSED通常再開や推測root再作成を提供しない。
 - 必要なテスト: claims前後failure、再実行、Company欠損、User欠損、誤claim、同一Auth二重作成。
-- ユーザー判断が必要な事項: CONF-0075。
+- ユーザー判断が必要な事項: なし。CONF-0075は2026-08-28回答済み。
 
 ## FUT-0092 Company設定のvalidationと編集fieldを整合させる
 
@@ -1238,23 +1238,23 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: Company Activator Base/Bank/Setting、schemas `Company.isCompleteRequiredFields`、Rules
 - 確認済み実装事実: 基本editorはzipcode/prefCode/city/buildingを含めないがcomplete getterは住所構成fieldを要求する。数値/enum/口座/請求番号validationは主にUI attrsでRules強制がない。SPEC-DEEP-020でCompanyManagerのdoc validatorはCompany instanceでなくObjectだけ、invoice表示はstored値へ常に`T`を付加、legacy SettingInfoは未知weekdayを直接dereferenceすることを確認した。
 - 想定影響と発生条件: 必要住所を画面で補完できない、直接writeで不正設定を保存し、PDF・勤怠・税・時刻UIへ影響する。
-- 未確認点・仮説: 正式必須field、invoiceNumberのT保持、銀行口座形式、住所検索UIの意図は未決定。
-- 推奨する将来対応: editable/required fieldを仕様化し、server validationと完全な住所editorを揃える。
+- 未確認点・仮説: 必須field、invoice正規化、bank完全性、長さは2026-08-28確定した。電話・郵便等のexact formatと住所検索UXはCCB-04実装前に既存consumerと照合する。
+- 推奨する将来対応: ADR 0025のvalidationをserverとRulesで強制し、完全な住所editorと長値render testを揃える。
 - 必要なテスト: 初期空Company、住所全field、invoice番号、口座桁/空、minute 0/31、invalid enum、直接write。
-- ユーザー判断が必要な事項: CONF-0076。
+- ユーザー判断が必要な事項: なし。CONF-0076は2026-08-28回答済み。
 
 ## FUT-0093 Company master変更と帳票・計算の再現性を保証する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-027
 - 対象ファイル・シンボル: `useBillingPdf` Company live参照、Company roundSetting/attendance settings
 - 確認済み実装事実: 請求書PDFは生成時のlive Company名・住所・電話・登録番号・口座を使用し、過去BillingのCompany snapshotを使わない。
 - 想定影響と発生条件: 会社名・住所・口座・登録番号変更後に過去請求書を再生成すると、当時と異なる帳票となる。
-- 未確認点・仮説: 確定請求書の不変性、訂正版、発行者情報snapshot時点は未決定。
-- 推奨する将来対応: 帳票確定時snapshot/revisionと再発行policyを仕様化し、live master利用範囲を分ける。
+- 未確認点・仮説: draft live、確定時issuer snapshot、訂正・再発行の新revisionは2026-08-28確定した。Billing側のexact state transitionとsnapshot write schemaは未実装。
+- 推奨する将来対応: CCBでissuer snapshot schemaを固定し、Billing改修で確定・訂正・再発行へ接続する。round modeはOperationResult作成時にsnapshotする。
 - 必要なテスト: 確定前後のCompany変更、再生成、複数Billing、口座欠損、invoice番号変更、取消/再発行。
-- ユーザー判断が必要な事項: CONF-0077。
+- ユーザー判断が必要な事項: なし。CONF-0077は2026-08-28回答済み。
 
 ## FUT-0094 Company.scheduleOrder.addの未定義class参照を修正する
 
@@ -1269,18 +1269,18 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 必要なテスト: scheduleOrder add/duplicate/change/remove/serialize/update、siteOrderとの対称性、UI追加経路。
 - ユーザー判断が必要な事項: なし（実装修正と回帰確認が必要）。
 
-## FUT-0095 Maintenanceをroute表示ではなく実データ排他境界として設計する
+## FUT-0095 Maintenanceをroute表示だけでなくwrite gateとquiet procedureへ拡張する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-028、SPEC-DEEP-004、SPEC-DEEP-005
 - 対象ファイル・シンボル: `auth.global`、`plugins/07.system`、Firestore Rules、Functions、admin-sdk backup/companies
 - 確認済み実装事実: maintenanceはclientをpageへredirectするだけで、Rules/Functions/API writeや進行中requestを拒否しない。Admin SDK backup/restoreはcompany maintenanceを排他前提にする。
 - 想定影響と発生条件: 保守・restore中も直接SDK、別client、開始済み操作、background処理がdataを書き、snapshot/restore対象と競合し得る。
-- 未確認点・仮説: maintenance中に止める処理、read許可、background trigger、緊急修復actorは未決定。
-- 推奨する将来対応: server-side maintenance gate、write停止範囲、drain/lock、admin bypass、開始/終了手順を仕様化する。
+- 未確認点・仮説: project-wideの通常client/Callable/scheduled/trigger停止、provider例外、quiet procedureは2026-08-28確定した。collection/function別の適用表とproduct gateは未実装。
+- 推奨する将来対応: ADR 0026に従いserver-owned state、Rules write deny、business Callable共通gate、scheduled/trigger skipを実装し、bounded wait・log・連続dry-run・snapshot・post-checkを運用する。排他lock、lease、全Function registryは現段階で実装しない。
 - 必要なテスト: client/REST/callable/direct Rules、進行中write、trigger、全体/会社mode、admin repair、restore並行性。
-- ユーザー判断が必要な事項: CONF-0079、CONF-0080。
+- ユーザー判断が必要な事項: なし。CONF-0079、CONF-0080は2026-08-28回答済み。
 
 ## FUT-0096 Maintenance初期化・購読断のfail-safeと復旧を実装する
 
@@ -1293,7 +1293,7 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 未確認点・仮説: FireModel subscriptionの内部retry/error callback、offline cache挙動は未確認。
 - 推奨する将来対応: 状態をloading/active/inactive/unknownへ分け、初回取得に有限deadline、世代または取消し、retry/backoff、last-known state、接続監視と安全な復旧UIを設ける。timeout後に遅れて完了した旧fetchが新しい状態を上書きしないようにし、System未確認中は保護対象pageを表示しない。
 - 必要なテスト: doc不存在、permission/network断、永久pending、有限timeout、timeout後の遅延完了、初回/購読後切断、Company fetch失敗、再接続、複数tab、System未確認中に保護pageが表示されないこと。
-- ユーザー判断が必要な事項: CONF-0081。
+- ユーザー判断が必要な事項: なし。CONF-0081は2026-08-28回答済み。unknownは保護対象操作をfail closedとする。
 
 SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時にmaintenance=trueへ倒す点はfail-closedだが、unknown/error区分、利用者向けretry、subscription error channel、明示的teardownを持たない。
 
@@ -1305,23 +1305,23 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 対象ファイル・シンボル: schemas `System/Company`、admin-sdk system/companies、`pages/maintenance.vue`
 - 確認済み実装事実: Company schemaはmaintenanceStartAtだがCLIはmaintenanceStartedAtを書き、ended fieldsもschema外。System CLIのversion/createdAtもschema外。reason/timestamps/updaterはpageに表示しない。
 - 想定影響と発生条件: 開始時刻・監査情報がclient modelで失われ、保守理由/予定を利用者が判断できず、運用・実装が異なるfieldを参照する。
-- 未確認点・仮説: どちらの時刻名を正本とするか、終了履歴をcurrent docに残すかは未決定。
-- 推奨する将来対応: 共通schema/command契約、migration、監査履歴、利用者向け表示fieldを定義する。
+- 未確認点・仮説: server-owned metadataと利用者向け最小projectionは確定した。exact field名、history保存先、旧field migrationはCCB-07実装前に決める。
+- 推奨する将来対応: 共通schema/command契約、旧field migration、operator audit、利用者向け停止表示を実装する。quiet periodと監視Functionはcheckpointごとに固定する。
 - 必要なテスト: on/off serialize、旧新field migration、System initialize、reason/time display、timezone、missing fields。
-- ユーザー判断が必要な事項: CONF-0082。
+- ユーザー判断が必要な事項: なし。CONF-0082は2026-08-28回答済み。
 
-## FUT-0098 Maintenance例外role・操作と退出導線を定義する
+## FUT-0098 Maintenance例外operator・操作と退出導線を実装する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-028
 - 対象ファイル・シンボル: `auth.global` maintenance branch、`plugins/07.system`、`pages/maintenance.vue`
 - 確認済み実装事実: maintenance trueではrole/auth状態を問わずmaintenance pageだけ許可し、pageにlogout、再試行、管理者修復導線がない。
 - 想定影響と発生条件: admin/super-userもアプリ内診断・解除・account切替ができず、誤設定時にCLI以外の復旧経路がない。
-- 未確認点・仮説: 緊急修復をCLIだけに限定する意図、閲覧-only許可、logout必要性は未決定。
-- 推奨する将来対応: bypass actor/route/action、read-only mode、logout/status refresh、break-glass監査を仕様化する。
+- 未確認点・仮説: 一般利用者は停止案内とsign-out、provider処理は個別承認operator checkpointと確定した。exact CLI/API、status refresh、operator auditは未実装。
+- 推奨する将来対応: 製品内super-user bypassを追加せず、停止案内、sign-out、状態再取得と、対象・作用を固定したprovider操作・監査を実装する。
 - 必要なテスト: unauth/user/admin/developer/super-user、System/company mode、logout/login、誤mode解除、bypass監査。
-- ユーザー判断が必要な事項: CONF-0080。
+- ユーザー判断が必要な事項: なし。CONF-0080は2026-08-28回答済み。
 
 ## FUT-0099 Stripe Functionsの公開状態と環境別有効化を整備する
 
@@ -1334,7 +1334,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: remote DEVに旧版Functionが残るか、コメントアウト理由、secret/webhook準備状況は未確認。
 - 推奨する将来対応: 環境別rollout/disable switch、export、secret/webhook/region、health checkを明示し、未提供時はUIを閉じる。
 - 必要なテスト: export一覧、Emulator stub、DEV deploy確認、trigger/webhook health、機能disabled UI、timeout。
-- ユーザー判断が必要な事項: CONF-0083。
+- ユーザー判断が必要な事項: CONF-0083（2026-08-28に正式release直前まで明示保留）。CCBでは再有効化しない。
 
 ## FUT-0100 Checkout作成を認可済みserver APIへ移し入力を固定する
 
@@ -1347,7 +1347,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: 正式購入actor、許可price、return origin、App Check/rate limitは未決定。
 - 推奨する将来対応: 認可callableでplan keyだけを受け、server allowlistからprice/URL/customerを決定しrate limit/idempotencyを適用する。
 - 必要なテスト: role/他社、任意price/URL、重複click、rate limit、App Check、disabled plan、open redirect。
-- ユーザー判断が必要な事項: CONF-0084。
+- ユーザー判断が必要な事項: CONF-0084（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0101 Stripe Customer/Session作成を冪等・競合安全にする
 
@@ -1360,7 +1360,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: Stripe側の暗黙重複抑止、既存重複Customerは未確認。
 - 推奨する将来対応: company/intent単位lock、deterministic idempotency key、intent status state machine、reconcileを実装する。
 - 必要なテスト: 同時2 session、各外部作用後failure/retry、既存customer欠損、stale intent、cleanup。
-- ユーザー判断が必要な事項: CONF-0085。
+- ユーザー判断が必要な事項: CONF-0085（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0102 Webhookの重複・順序逆転・再契約を安全に処理する
 
@@ -1373,7 +1373,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: 1 Company 1 active subscriptionの正式制約、event retention/replay運用は未決定。
 - 推奨する将来対応: processed-event ledger、Stripe object取得による最新state収束、subscription ID/version比較、retryable missing mapping、reconcile jobを設ける。
 - 必要なテスト: duplicate/out-of-order create-update-delete、解約直後再契約、mapping遅延、webhook retry、複数subscription。
-- ユーザー判断が必要な事項: CONF-0085、CONF-0086。
+- ユーザー判断が必要な事項: CONF-0085、CONF-0086（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0103 Subscription/customerType/employeeLimit契約を整合させる
 
@@ -1386,7 +1386,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: plan別上限、trial、grace period、past_due、cancel-at-period-end、free移行の正式仕様は未決定。
 - 推奨する将来対応: 正式state machine/plan entitlement、server算出、reactive expiry timer、status/limit validationを定義する。
 - 必要なテスト: 全Stripe status、period境界、trial/cancel/reopen、metadata欠損/不正、plan変更、offline stale。
-- ユーザー判断が必要な事項: CONF-0086。
+- ユーザー判断が必要な事項: CONF-0086（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0104 Checkout成功判定・Customer mapping・error情報を堅牢化する
 
@@ -1399,7 +1399,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: error内容、session URLの寿命、Company contact email値源は未決定。
 - 推奨する将来対応: server-side session verification/status polling、正しいCompany field mapping、sanitized error、owner-only intent readとTTL cleanupを実装する。
 - 必要なテスト: query偽装、webhook遅延/失敗、Company名称/email欠損、error sanitization、別User read、TTL削除。
-- ユーザー判断が必要な事項: CONF-0087。
+- ユーザー判断が必要な事項: CONF-0087（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0105 警備日報Storageをテナント・権限で分離する
 

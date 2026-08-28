@@ -37,6 +37,8 @@
 | [0022](0022-shared-role-preset-catalog-consumer-adoption.md) | 共有role preset catalogのconsumer導入 | Accepted | 2026-08-26 |
 | [0023](0023-authentication-mutation-concurrency-boundary.md) | 認証状態変更の局所的な競合制御 | Accepted | 2026-08-26 |
 | [0024](0024-dev-trial-deployment-and-migration-runbook.md) | Dev試行環境の積極的deployとmaintenance migration標準手順 | Accepted | 2026-08-27 |
+| [0025](0025-company-configuration-boundary.md) | Company Configuration Boundaryとtenant lifecycle | Accepted | 2026-08-28 |
+| [0026](0026-maintenance-quiescence-and-data-change.md) | project-wide maintenance静穏化とdata change境界 | Accepted | 2026-08-28 |
 
 ## 新しい ADR の形式
 

@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-26
-- 仕様バージョン: 0.5.12
+- 最終更新日: 2026-08-28
+- 仕様バージョン: 0.5.13
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -29,7 +29,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - メンテナンス状態とキルスイッチ
 - PWA、Firebase Cloud Messaging による通知
 - 警備日報などの Firebase Storage ファイル管理
-- Stripe Checkout と Webhook によるサブスクリプション情報同期
+- Stripe Checkout と Webhook によるサブスクリプション情報同期（現在は公開停止中。正式release直前の別改修で再設計する）
 - freee 勤怠管理へ取り込む勤怠データのエクスポート
 
 ### 現在の範囲外または未確定
@@ -69,6 +69,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` の会社documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。同一会社の有効な本登録Userによる既存document更新は、field・actor境界を機能単位で移行するまでの互換経路として維持する。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
+- Company設定ではsuper-userを正式actorに含めない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
@@ -113,6 +114,26 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ## 主要データと業務規則
 
+### Company設定とtenant lifecycle
+
+- 改修コードは`CCB`（Company Configuration Boundary）とする。以下は承認済みの目標契約であり、現行の単一Company document実装からの移行は未完了である。
+- `Companies/{companyId}` rootは削除しない最小tenant anchorとし、`status`、`schemaVersion`、作成時刻等のserver-controlled fieldだけを保持する。設定は`Settings/profile`、`Settings/billing`、`Settings/operations`、`Settings/arrangement`、`Settings/entitlement`、`Settings/maintenance`へ責務別に分割し、clientは必要なdocumentを合成して現在会社を表示する。collection数の抑制は目標architectureの制約としない。
+- `profile`は会社名・カナ・住所・電話・FAX、`billing`は適格請求書番号と振込先、`operations`は時間間隔・丸め・週開始日・勤怠summary方式、`arrangement`は現場・予定の表示順を保持する。`Settings/entitlement`と`Settings/maintenance`はserverが生成するclient-safe projectionとし、同社Userの画面に必要なplan/feature/employeeLimitまたは停止状態・理由・時刻だけを持つ。Stripe/customer ID、provider actor、内部operation、error等は`PrivateSettings/entitlement`と`PrivateSettings/maintenance`へ分離し、client read/writeを拒否する。root、両projection、PrivateSettingsはserver-ownedとし、clientから作成・更新・削除させない。
+- 同社の有効な本登録Userはprofileとbillingを閲覧できる。profile、billing、operationsの変更は会社管理者だけに許可し、専用Company設定permissionは新設しない。siteOrderとscheduleOrderは、配置・予定を日常管理する既存permission actorが会社共通値を変更できる。
+- Company設定documentの更新はrevisionを必須とし、stale revisionを上書きせず再読込を要求する。profile、billing、operationsは変更ごとにserver-onlyの`SettingAudits/{auditId}`へappend-only auditを残し、actor、時刻、変更field、変更前後を記録する。変更理由は必須にしない。銀行口座の旧値・平文値はauditでmaskし、project共通の保持方針が確定するまで自動purgeしない。audit documentのclient直接read/writeを拒否し、会社管理者だけが専用Callableからmask済み最小projectionを閲覧できる。arrangementは履歴を残さず、現在値、revision、更新者、更新時刻だけを保持する。新規master IDは未登録順序の末尾へ補完し、archive・削除済みIDは表示時に無視して次回保存時に除去する。
+- 会社名はtrim後1〜100文字、会社名カナはtrim後1〜200文字とし、一意性を要求しない。初期signupは会社名とカナだけで通常利用へ進める。請求確定時は会社名、郵便番号、都道府県、市区町村、番地、電話を必須とし、建物、FAX、適格請求書番号、振込先は任意とする。
+- 適格請求書番号は保存時に先頭の`T`/`t`を除き13桁の数字だけへ正規化する。空を許可し、表示・帳票では存在する場合だけ大文字`T`を付ける。
+- 振込先は全field空を許可する。1項目でも入力する場合は銀行名、支店名、口座種別、口座番号、口座名義をすべて必須とし、口座種別は普通・当座、口座番号は数字7桁以内、口座名義はtrimする。完全な振込先だけを帳票へ印字する。
+- 会社情報の表示・帳票layoutは長い値を折返し、縮小または表示上の省略で扱い、保存値またはsnapshot値を切り捨てない。100文字の会社名、長い住所・建物・口座名義をrender test対象とする。
+- `minuteInterval`の初期値は15、`roundSetting`は四捨五入、`firstDayOfWeek`は日曜日とし、変更は画面へ即時反映する。`roundSetting`はCompany defaultであり、OperationResult作成時に適用modeをsnapshotする。変更後に既存OperationResult、Billing、帳票を再計算せず、訂正は新しいrevisionで扱う。
+- `attendanceManagementMode`は`attendanceSummaryMode`へ改名し、値を`LABOR_STANDARD`と`OPERATION_COUNT`に限定する。両方のprojectionは常時生成し、mode変更は即時かつ可逆な画面・navigation切替だけとする。`LABOR_STANDARD`では労基準拠の勤怠一覧と打刻CSV、`OPERATION_COUNT`では勤務回数実績を表示し、労基準拠一覧と打刻CSVを非表示にする。mode変更による過去data migration、再集計、移動、削除は行わない。初期値は`LABOR_STANDARD`とする。
+- 給与計算へ用いる勤務回数、日勤・夜勤、同日複数勤務、夜勤跨ぎ、休憩、訂正、認可、CSVの詳細は勤怠実績管理改修で改めて決める。CCBは現在の集計方法を最終仕様として固定しない。
+- Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
+- Company lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`とする。`SUSPENDED`はservice providerによる一時停止で、認証後は停止案内だけを許可し、通常read/writeと業務Callableを拒否する。provider/operatorだけが`ACTIVE`へ戻せる。`CLOSED`は通常の再開経路を持たない恒久終了で、事前export後に全app accessを拒否し、dataは別の保持・削除手順まで維持する。誤った`CLOSED`は通常再開でなくincident recoveryとして扱う。Company rootの物理削除、法的削除、tenant移転・統合・分割は別承認・別設計とする。
+- 新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。課金機能が未提供である間もsignupと通常業務を妨げない。
+- 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
+- Stripe、checkout、webhook、plan、課金状態とemployeeLimitの実強制はCCBで再有効化しない。CCBはserver-owned entitlementの保存境界と表示interfaceだけを分離し、全機能改修後の正式release直前に別仕様・別承認で完成させる。
+
 ### 取引先・現場・取極め
 
 - 現場は取引先に紐づく。
@@ -155,13 +176,13 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 稼働実績から稼働請求を生成し、取引先・現場・締め期間を単位として請求を集約する。
 - 稼働請求画面から、元となる稼働実績を伴わない稼働請求を直接作成しない。稼働外の商品・調整項目は定められた追加明細として扱う。
 - 消費税率は稼働実績の日付から判定し、消費税額は請求書内の税率別税抜合計に対して計算する。
-- 金額や時間の端数処理は、対象会社または業務で定義された丸め設定に従う。
+- 金額や時間の端数処理は、対象会社または業務で定義された丸め設定に従う。Company defaultを使うOperationResultは作成時のmodeをsnapshotし、後日のCompany設定変更で既存結果を再計算しない。
 
 ### 勤怠
 
-- 従業員別の日次勤怠は稼働実績を元に同期する。
-- AirGuardV2 は勤怠実績をエクスポートし、給与計算そのものは freee 勤怠管理へ委ねる。
-- 複数の稼働実績が同日に存在する場合の勤務・休憩統合は、確定済みルールと現在の実装を一致させる。
+- 稼働実績から、労基準拠の日次勤怠と勤務回数実績の両projectionを常時同期する。
+- AirGuardV2 は`LABOR_STANDARD`で労基準拠の勤怠一覧と打刻CSVを表示し、`OPERATION_COUNT`で勤務回数実績を表示する。`OPERATION_COUNT`用exportは後続の勤怠実績管理改修まで未確定とし、給与計算そのものは外部サービスへ委ねる。
+- 複数の稼働実績が同日に存在する場合の勤務・休憩統合と、給与用勤務回数の詳細契約は勤怠実績管理改修で確定する。現在実装を最終仕様とみなさない。
 
 ### 通知・ファイル
 
@@ -171,10 +192,18 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### サブスクリプション
 
-- 初回 Checkout 開始時に必要なら Stripe Customer を作成し、会社と関連付ける。
-- Stripe Webhook を正本としてサブスクリプション状態を会社データへ同期する。
-- Webhook 署名を検証し、シークレットは Cloud Functions の秘密情報として管理する。
-- `free`、`paid`、`expired` などの顧客区分はサブスクリプション状態から導出し、認証ストアではなく会社ストアの責務とする。
+- 現在のStripe Functionsは公開停止中であり、checkout、webhook、plan、解約、再契約、課金状態、従業員上限を提供済み機能として扱わない。
+- CCBではsubscriptionとentitlementをserver-owned設定へ分離し、clientからの変更を拒否できる保存・表示interfaceだけを準備する。
+- Stripeを再有効化する場合は、正式release直前の別改修でactor、plan allowlist、署名、冪等性、event順序、reconcile、状態遷移、保持、秘密情報、employeeLimit強制を承認・検証する。
+
+### 保守状態とdata change
+
+- maintenanceはCompany固有機能ではなくproject共通の運用境界であり、排他lockではない。
+- product側の目標境界は、maintenance状態をserver-ownedとし、Firestore Rulesが通常client writeを拒否し、共通Callable identity/auth gateが新しい通常業務処理を拒否し、scheduled・trigger処理が対象tenantへの通常自動変更をskipすることである。明示承認されたprovider migration・repairと、checkpointに列挙したrebuild・検証だけを例外とする。
+- operation lease、全Function共通wrapper、実行中処理registry、`DRAINING`状態は現段階で実装しない。maintenance開始後に処理別のbounded quiet periodを待ち、対象Functionのlog、連続するdry-run digestの安定、snapshot、post-checkを組み合わせて静穏状態を運用確認する。logだけを処理不存在の数学的証明とはみなさない。
+- migration checkpointは対象環境・commit・service・collection/data・停止対象・quiet period・監視Function・backup・rollback・停止条件・dry-run/apply/post-check・derived data rebuild・解除後受入れを固定する。Site migration中の自動終了等、対象dataを変える通常scheduled/trigger処理は停止対象とする。
+- maintenance開始前に受理済みの処理はbounded waitで終了を待つ。quiet period後にdry-runを繰り返し、連続するdigestが安定してからsnapshotとapplyへ進む。移行後は同じdry-run、対象integrity、必要と明示したderived dataの再構築、error logを確認してからmaintenanceを解除する。
+- maintenance状態の取得不能は保護対象操作をfail closedとし、有限deadline、retry、状態再取得、利用者向け停止・通信障害表示を提供する。一般利用者の例外routeは停止案内とsign-outに限定し、保守・repairは製品内super-user権限でなく個別承認されたoperator手順から実行する。
 
 ## アプリケーション状態の責務
 

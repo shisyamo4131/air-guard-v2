@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-28
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -24,6 +24,7 @@
 | local Emulator・backend検証 | [local Emulator検証](runbooks/local-emulator-testing.md)、ADR 0005・0014 | `firebase.json`、`firebase.codex-test.json`、`.env`の変数名のみ、対象test |
 | local UI・browser受入れ | [local UI検証](runbooks/local-ui-testing.md)、ADR 0006・0014 | 対象画面・manual、Emulator・server、browser操作境界 |
 | data migration | [data migration](runbooks/data-migrations.md)、関連ADR | target、dry-run、apply、post-check、backup、rollback、明示的承認 |
+| maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md)、関連ADR | normal stop、quiet period、監視Function、連続dry-run、snapshot、rollback、明示的承認 |
 | Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | 対象serviceの設定・test、release checkpoint、機能・migration固有ADR、backup、rollback、明示的承認 |
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | 関連package更新・公開 | [package release](runbooks/package-release.md) | package repository、互換性、version、tag・push・公開承認 |

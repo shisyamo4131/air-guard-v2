@@ -11,7 +11,7 @@
 
 Devの静的生成、デプロイ、remote検証は、対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded release checkpointとして実行します。Prod、Secret登録、新しいdata migration、破壊的repairは別の明示的承認と環境確認を必要とします。
 
-Dev deployのCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を正本とします。UWB固有のmaintenance migrationは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を追加で確認します。
+Dev deployのCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を正本とします。maintenanceを伴うmigration・repair・restoreは[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)、UWB固有の初回cutoverは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を追加で確認します。
 
 ## 準備
 
@@ -38,6 +38,7 @@ npm install
 | local環境、Emulator、Codex専用test | [local Emulator検証](runbooks/local-emulator-testing.md) |
 | Codex専用・利用者用local UI検証 | [local UI検証](runbooks/local-ui-testing.md) |
 | User予約・claim等のmigration | [data migration](runbooks/data-migrations.md) |
+| maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md) |
 | Dev build・deploy・remote検証 | [Dev deploy](runbooks/dev-deployment.md) |
 | 関連package更新・公開 | [package release](runbooks/package-release.md) |
 | Git統合、task loop、session handoff | [project coordination](runbooks/project-coordination.md) |
@@ -51,7 +52,7 @@ Devの静的生成、CLI・trust・認証preflight、release分類、deploy順�
 
 Prod生成は`npm run generate:prod`であるが、本runbookとbounded Dev release checkpointの承認対象外とし、Prod deployと合わせて別の明示承認を得る。
 
-UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh create-only予約migration、client/Hosting、解除・受入れは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を正本とする。このmaintenance migration順序をHosting-onlyや独立Functions等へ一般化しない。
+UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh create-only予約migration、client/Hosting、解除・受入れは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を正本とする。project共通の静穏化、連続dry-run、snapshot、post-checkは[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)を使うが、UWB固有のservice・data・順序をHosting-onlyや独立Functions等へ一般化しない。
 
 ## 出力と成功確認
 

@@ -101,13 +101,28 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - Stripe moduleは現行Functions entryで公開停止中だが、同じrootにあるsubscription fieldはclient update/read可能である。再有効化前にserver ownership、price/origin allowlist、冪等性、event順序、tenant mapping、Employee上限強制が必要である。
 - Firestore Rulesはdocument内のfieldをread時に隠せない。銀行、Stripe、maintenance等の閲覧者を狭める場合、subdocument分割またはserver projectionが必要になる。
 
+## 2026-08-28 承認済みCCB目標（未実装）
+
+以下は実装事実ではなく、[ADR 0025](../decisions/0025-company-configuration-boundary.md)と[現行仕様](../specification.md#company設定とtenant-lifecycle)へ確定した目標契約である。
+
+- 改修コードを`CCB`とし、rootはserver-controlledの最小tenant anchor、設定は`Settings/profile`、`billing`、`operations`、`arrangement`へ分割する。entitlement/maintenanceはclient-safe `Settings` projectionとserver-only `PrivateSettings`を分け、collection数抑制は制約としない。
+- profile/billing/operationsは会社管理者write、profile/billingは同社の有効な本登録User read、arrangementは配置・予定の既存permission actor writeとする。rootとclient-safe `Settings/entitlement`・`Settings/maintenance`はserver/providerだけがwriteし、必要なprojectionを同社Userがreadする。`PrivateSettings/entitlement`・`PrivateSettings/maintenance`はclient read/write不可とする。super-userはCompany設定actorに含めない。
+- profile/billing/operationsはrevisionとmasked append-only auditを持つ。auditは会社管理者専用Callableだけで閲覧し、理由を必須にしない。arrangementは履歴なしの現在値・revisionとする。
+- 会社名100文字、カナ200文字、invoice 13数字保存、完全入力時だけ有効なbank、signupと請求確定の別必須条件、長値を切り捨てない帳票を採用する。
+- `attendanceManagementMode`は`attendanceSummaryMode`の`LABOR_STANDARD`/`OPERATION_COUNT`へ置換し、両projectionを常時生成して表示・navigationだけを切り替える。`roundSetting`はOperationResult作成時、issuer情報は請求確定時にsnapshotする。
+- `agreementsV2`とCompany geocodingは廃止予定で、既存fieldの削除は別migrationとする。Site既定取極めはCustomer側の後続設計へ移す。
+- lifecycleは`ACTIVE`/`SUSPENDED`/`CLOSED`とし、rootを通常削除しない。Company maintenanceは[project-wide quiet procedure](../runbooks/maintenance-and-data-change.md)へ接続する。
+- Stripe本体とemployeeLimit実強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement隔離だけを行う。
+
+現行code、Rules、Schemas、Admin SDK、実dataは上記へ未移行であり、CCB-02以降でDev edition、fixture、全caller、exact schema、互換reader、migration mappingを再確認する。
+
 ## 将来要対応
 
-- FUT-0090〜FUT-0094を`future-actions.md`へ登録した。
+- FUT-0090〜FUT-0094を`future-actions.md`へ登録した。CCBの確定契約はFUT本文より現行仕様とADR 0025を優先する。
 
 ## 要確認事項
 
-- CONF-0074〜CONF-0078を`pending-confirmations.md`へ登録した。
+- CONF-0074〜CONF-0078は2026-08-28に回答済みである。maintenanceのCONF-0079〜0082も回答済み、StripeのCONF-0083〜0087は正式release直前まで明示保留とした。
 
 ## 未確認範囲
 
@@ -125,4 +140,4 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 - 実Company/Stripe/subscriptionデータ、外部geocoding、Rules/Emulator、同時更新の再現。
 - Subscription/Stripe/Billing/税計算、PDF layout、maintenance middlewareの内部。
-- Company停止・解約・法的保持・tenant移転の運用、super-user修復手順。
+- Company停止・解約・法的保持・tenant移転の現行運用、provider repairのexact手順。
