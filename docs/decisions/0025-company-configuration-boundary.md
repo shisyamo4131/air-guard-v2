@@ -6,7 +6,7 @@
 - 関連仕様: Company設定とtenant lifecycle、請求・税・丸め、勤怠、サブスクリプション
 - 関連ロードマップ: [Company設定改修ロードマップ](../roadmaps/company-settings.md)
 - 実装調査: [Company設定](../implementation/company-settings.md)
-- 関連判断: [0016 FireModel CRUDの利用境界](0016-firemodel-crud-boundary.md)、[0026 project-wide maintenance quiet procedure](0026-maintenance-quiescence-and-data-change.md)
+- 関連判断: [0016 FireModel CRUDの利用境界](0016-firemodel-crud-boundary.md)、[0026 project-wide maintenance quiet procedure](0026-maintenance-quiescence-and-data-change.md)、[0029 Firestore Rules互換CRUD先行と段階的閉鎖](0029-firestore-rules-compatible-crud-cutover.md)
 
 ## 背景
 
@@ -32,14 +32,14 @@
 
 Company設定用の専用permissionは新設せず、profile、billing、operationsは会社管理者へ限定する。super-userをCompany設定actorに含めず、会社横断のmigration・repairは対象と作用を限定して個別承認されたservice provider/operator手順で行う。Firestore Rulesで同一document内のfieldを隠せないため、client-safe projectionとprovider-private documentを混在させず、clientのPrivateSettings read/writeを拒否する。
 
-profile、billing、operationsはrevisionによるoptimistic concurrencyを必須とし、stale saveを拒否して再読込を求める。変更はserver-only `SettingAudits/{auditId}`へactor、時刻、変更field、変更前後をappendし、変更理由を必須にしない。銀行値はmaskし、共通保持方針が確定するまでauditを自動purgeしない。clientのaudit直接read/writeを拒否し、会社管理者だけが専用Callableのmask済み最小projectionを閲覧する。arrangementは頻繁な並べ替えを想定し、履歴・undoを持たず、現在値、revision、更新者、更新時刻だけを保存する。drag中ではなく並べ替え完了後に一度保存し、新規master IDは末尾へ補完、archive・削除済みIDは表示時に無視して次回保存時に除去する。
+ACTIVEのprofile、billing、operationsはrevisionによるoptimistic concurrencyを必須とし、stale saveを拒否して再読込を求める。ACTIVEの変更はserver-only `SettingAudits/{auditId}`へactor、時刻、変更field、変更前後をappendし、変更理由を必須にしない。銀行値はmaskし、共通保持方針が確定するまでauditを自動purgeしない。clientのaudit直接read/writeを拒否し、会社管理者だけが専用Callableのmask済み最小projectionを閲覧する。ACTIVEのarrangementは履歴・undoを持たず、現在値、revision、更新者、更新時刻だけを保存する。drag中ではなく並べ替え完了後に一度保存し、新規master IDは末尾へ補完、archive・削除済みIDは表示時に無視して次回保存時に除去する。
 
 2026-08-28のCCB-02互換性調査後、Company設定のwrite経路を次の技術契約へ確定した。
 
 - profile、billing、operations、arrangementを4つの専用Callableから更新し、clientのSettings create/update/deleteを拒否する。汎用Company wrapperや全collection共通Functions化は採用しない。
-- 各Callableはidentity、同社User、Company lifecycle、maintenance、actor、exact input、expected revisionをtransaction内で再検査する。profile、billing、operationsはauditを同じtransactionでcreateし、arrangementはauditなしでsiteOrderとscheduleOrderの変更field別permissionを検査する。
+- 各Callableはidentity、同社User、Company lifecycle、maintenance、actor、mode別exact inputをtransaction内で再検査する。LEGACYはscope別`expectedValue`を必須としてrevisionとauditを使わず、STAGEDは常時拒否、ACTIVEは`expectedRevision`を必須とする。ACTIVEのprofile、billing、operationsはauditを同じtransactionでcreateし、arrangementはauditなしでsiteOrderとscheduleOrderの変更field別permissionを検査する。
 - siteOrderは既知preset由来の`sites:write`、scheduleOrderは既知preset由来の`site-operation-schedules:write`を使い、role名、直接permission、super-userをstrict actorにしない。
-- rootと各documentは`schemaVersion=1`、更新対象設定は`revision=1`から開始する。server metadataとnull/空配列を明示し、unknown・computed・framework fieldをcanonical Settingsへ保存しない。signupとbackfillはcomplete document setを準備する。
+- rootと各documentは`schemaVersion=1`、更新対象設定は`revision=1`から開始する。server metadataとnull/空配列を明示し、unknown・computed・framework fieldをcanonical Settingsへ保存しない。cutover前のsignupはlegacy rootだけを作り、deny receipt後のmaintenance中に既存tenantのcomplete target setをcreate-only stagingする。cutover後のsignupはactive rootとcomplete target setをatomicに準備し、partial setを成功扱いしない。
 - clientの正本切替は`schemaVersion=1`と`configurationState=CCB_V1_ACTIVE`の両方で判定する。marker設定後にSettingsが不完全・invalidならlegacyへfallbackせずfail closedとする。
 - legacy Admin SDKはexact CCB schemasを導入し、root markerまたは新3 collectionを検出したbackup、snapshot、diff、restore、Company物理削除、legacy maintenance操作を外部write前にfail closedとする。検査不能とCCB marker/pathを含むbackup payloadのrestoreも拒否する。これはCCB-aware backup/restoreの代替ではなく、PrivateSettings、SettingAudits、tenant delete、provider maintenanceの後続契約が揃うまでの安全境界である。
 
@@ -51,7 +51,7 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 - draft帳票はlive Company値、確定帳票はissuer snapshotを使い、訂正・再発行は新revisionとする。
 - Stripe再有効化とemployeeLimit強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement境界だけを準備する。
 - lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`とする。`SUSPENDED`はproviderだけが一時停止・再開し、`CLOSED`は通常のACTIVE復帰を持たない。root物理削除と法的削除は別手順とする。
-- 新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。
+- CCB cutover後の新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。cutover前はlegacy rootだけを作り、target lifecycle markerを先行追加しない。
 
 ## Exact schema v1
 
@@ -74,7 +74,7 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 | `Settings/entitlement` | `entitlementState:'DISABLED'`、`planCode:null`、`featureCodes:[]`、`employeeLimit:null`だけをv1で許可する。legacyの`employeeLimit=10`を有効な課金制限へ昇格しない。 |
 | `Settings/maintenance` | `maintenanceMode:boolean`、`maintenanceReason:null|string(最大200文字)`、`maintenanceStartAt:null|Timestamp`。offでは理由・開始時刻をnull、onでは両方を必須とする。 |
 
-`updateCompanyArrangement`はexact `{expectedRevision, field:'siteOrder'|'scheduleOrder', order:[...]}`を受け、1 callで一方だけを変更する。変更fieldに対応するpermissionだけを検査する。transaction中に全Site documentの存在を検査せず、UIはarchive・削除済みIDを非表示にして次回保存で除去する。
+ACTIVEの`updateCompanyArrangement`はexact `{expectedRevision, field:'siteOrder'|'scheduleOrder', order:[...]}`を受け、1 callで一方だけを変更する。変更fieldに対応するpermissionだけを検査する。transaction中に全Site documentの存在を検査せず、UIはarchive・削除済みIDを非表示にして次回保存で除去する。
 
 ### private Settingsとaudit
 
@@ -87,7 +87,7 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 
 ### Callable、Auth、Rules
 
-- profile/billing/operationsはexact `{expectedRevision, value:<完全business payload>}`を受け、arrangementは前記exact inputを受ける。`expectedRevision`はinteger 1以上とする。clientからcompany ID、actor、metadataを受け取らない。成功結果は`{success:true, setting:<canonical updated document>}`とする。
+- ACTIVEのprofile/billing/operationsはexact `{expectedRevision, value:<完全business payload>}`を受け、arrangementは前記ACTIVE inputを受ける。`expectedRevision`はinteger 1以上とする。LEGACYはscope別exact `{expectedValue:<完全な旧business payload>, value:<完全business payload>}`を受け、STAGEDは入力内容にかかわらず拒否する。clientからcompany ID、actor、metadataを受け取らない。成功結果はmodeを識別できるcanonical updated projectionだけを返す。
 - Firebase Authの有効状態はFirestore transaction内でatomicに再読取できないため、Callableはtransaction直前にcurrent Authを確認し、transaction内でUser/root/lifecycle/maintenance/actor/revisionを再検査する。Auth確認後のdisable raceはbounded in-flight riskとして受容する。
 - pre-containment Rulesは`Settings`、`PrivateSettings`、`SettingAudits`をgeneric fallbackから除外して再帰的client denyを置き、rootのreserved field変更を拒否する。activation後はrootのclient create/update/deleteを拒否する。通常descendant accessはroot存在と`ACTIVE`を必須とし、`SUSPENDED`は停止案内projectionだけ、`CLOSED`は全client accessを拒否する。System maintenance中はsignupも通常処理として拒否する。complete setを正本とし、個別欠損はfail closedとする。
 
@@ -115,7 +115,9 @@ profile、billing、operationsはrevisionによるoptimistic concurrencyを必�
 
 ## 移行とロールバック
 
-実装前にDevのFirestore editionを再確認し、`STANDARD / FIRESTORE_NATIVE`の現在baselineと一致することを確かめる。additive schemas、Admin SDKの旧破壊操作fail-closed、承認済みCCB backup方針、未有効のFunctions/client compatible readerを準備し、generic Rules fallbackから新pathを除外するpre-containment Rulesを新documentより先にdeployする。新規Companyと既存tenantのSettingsはrootをlegacy正本のままcreate-onlyでstagingし、maintenance cutoverで最終Rules/Functions/clientを有効化する。client、deploy済みFunctions、operator、Admin SDKを含む旧whole-document writer 0件を確認してからrootの`schemaVersion`とactivation markerを最後に設定する。dual-writeを採用する場合は期間・正本・競合判定をcheckpointで固定し、無期限に残さない。
+2026-08-29に、既存Company CRUDの互換確認よりpre-containment Rules deployを先行させる初期順序を[ADR 0029](0029-firestore-rules-compatible-crud-cutover.md)で置換した。現行の実行順は、現行Rules下で将来境界へClient/Server CRUDを先行移行し、両Rules回帰・既存CRUD継続・旧writer 0件を確認した後にRulesを閉じる。新Settingsのcreate-only stagingをdeny receipt後に行う契約、target schema、activation、rollback境界は維持する。
+
+実装前にDevのFirestore editionを再確認し、`STANDARD / FIRESTORE_NATIVE`の現在baselineと一致することを確かめる。additive schemas、Admin SDKの旧破壊操作fail-closed、承認済みCCB backup方針、compatible reader、Company clone、marker-aware operation別Client/Server writerを準備する。LEGACY modeはscope別expected valueをtransactionで比較して既知legacy fieldだけをpartial updateし、root whole-set、reserved field、新path writeを行わない。現行Rulesと候補Rulesの両回帰、既存CRUD継続、旧whole-document writer 0件を確認した後にmaintenanceを開始して通常設定writeとsignupを停止し、pre-containment Rulesをdeployする。receipt確認後だけSettingsをcreate-only stagingして同じmaintenance内で最終Rules/Functions/clientとroot activationを整合させる。STAGEDを通常運用せずdual-writeしない。
 
 migrationは対象company、field mapping、write件数、plan digest、backup、rollback、停止条件を固定する。`createdBy/updatedBy`は承認済みservice accountのstable non-email opaque IDを使い、個人emailや表示名を保存しない。`ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ写像し、欠損時だけ`LABOR_STANDARD`を補う。未知値は自動変換しない。移行前からmaintenance中で、PrivateSettingsに必要な内部理由・scopeを旧dataから決定できないtenantは`ambiguousMapping`としてapply前に停止し、値を推測しない。既存rootやlegacy fieldを最初のreleaseで削除せず、旧clientを戻せる互換期間を設ける。rollbackは新setting documentを推測削除せず、Settingsを読める既知の互換releaseへ戻し、正本切替後のdataを再dry-runして別repairで扱う。旧whole-document writerへ戻す場合はSettingsからrootへのreverse planを別承認する。
 

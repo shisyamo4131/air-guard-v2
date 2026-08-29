@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-28
+- 最終確認日: 2026-08-29
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. CCB-01でCompany document分割、actor、validation、revision/audit、snapshot、attendanceSummaryMode、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を確定した。次は[Company設定改修ロードマップ](company-settings.md)のCCB-02として、Dev fixtureと全callerを再照合し、exact schema、related package、互換reader、migration mappingを固定する。その後、server-owned containmentから機能単位で実装・reviewする。CUD一律Functions化は前提にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. CCB-01の目標契約とCCB-02のschema/package/compatible reader・local候補Rulesまでは確定した。次は[Company設定改修ロードマップ](company-settings.md)に従い、現行Rulesを維持したままCompany clone/runtime state、CompanyManagerと全Company caller、LEGACY partial update・STAGED write停止・ACTIVE Settings updateを切り替えるmarker-aware Client/Server writerを実装する。現行・候補Rules両回帰と対象環境の旧whole-document writer 0件を確認してからRulesを閉じ、maintenance中にdeny receipt、Settings staging、activationを連続実施する。CUD一律Functions化とdual-writeは前提にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

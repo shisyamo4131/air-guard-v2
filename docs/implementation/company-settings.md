@@ -4,7 +4,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-29
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/apis/createAdminAccount.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
 
 ## 入口・権限
@@ -116,6 +116,16 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - Stripe本体とemployeeLimit実強制は正式release直前の別改修へ延期し、CCBはserver-owned entitlement隔離だけを行う。
 
 現行application codeと実dataは上記へ未移行である。Dev edition、fixture、全callerの静的・read-only照合、exact schema v1、Schemas `.167`公開は完了した。Admin SDK、AirGuardV2 app、Functionsはexact `.167`へpin済みである。Admin SDKはCCB tenantへの旧backup/restore/delete/maintenanceをwrite前に拒否し、新規legacy backupを固定16 collectionの`INCOMPLETE` v1、PrivateSettings除外、restore未提供として表示する。旧・不正metadataはPrivateSettings含有を`UNVERIFIED`とし、local一覧は分離sidecarだけを読む。client compatible readerはActive marker後のcomplete 6 Settingsを厳密検証して旧root全体更新を拒否する。canonical parityはCodex専用合成Emulatorのcreate-only transactionまで実装済みである。SettingAuditsはlocal-only pure plannerと合成testだけを実装し、同一scope・snapshot・digest・canonical schemaを満たす`exists=false` create候補以外を全体停止する。pre-containment Rulesは新3 collectionをgeneric fallbackから除外して再帰的client denyとし、reserved root fieldとactive rootを保護するlocal prototypeまで実装し、専用Emulator 8件と既存Rules回帰37件で検証した。予約fieldが一部だけ存在する異常rootは、無関係fieldのpatch updateだけを許容し、予約fieldを落とすlegacy whole-document replacementをfail closedで拒否する。artifact真正性・保存・audit apply・復旧演習、Rules remote deploy/receipt、Callable、設定画面、Dev staging/cutoverは未完了である。
+
+## 2026-08-29 AirVuetify3・Company runtime state再調査
+
+- `air-vuetify-v3`の`useItemManager.updateProperties()`は編集中の`internalItem`にある既存top-level propertyをlocalで置き換えるだけである。Firestoreの部分更新、changed-key収集、deep merge、永続化は行わない。
+- `AirItemManager`はsubmit時に編集draft全体をcustom `handleUpdate(draft)`へ渡す。handlerがthrowした場合はdialogを閉じず、既存のloading・error・二重submit防止を維持できる。したがってCompanyManagerはmanager UIを再実装せず、application-ownedのscope別handlerへ差し替えられる。
+- 現行CompanyManagerの`item.update(item)`はcloneしたCompany全体をrootへ保存する。profile editorに`invoiceNumber`が混在し、scope別のatomic save契約と一致しない。invoice numberはbilling operationへ含め、各editorを1 operation・1 exact payloadへ揃える必要がある。
+- AirGuardV2 `schemas/Company.js`のCCB runtime mode/root/settings/errorはnon-enumerableで、base `clone()`が使う`toObject()`の`Object.keys`へ含まれない。編集cloneは`INITIALIZING`へ戻るため、LEGACYの既存更新もguardで失敗し得る。runtime stateを永続fieldにせずcopyするCompany固有cloneと、original/live Company stateを再検査するhandlerが必要である。
+- Schemas exact `.167`が追加したのは`./company-configuration`のconstants、strict parser、legacy mapping等であり、旧`Company` classのlegacy propertyではない。`configurationState`はpersistedなActive markerで、legacyはmarker未activeとして判定する。`LEGACY/ACTIVE/INITIALIZING/ERROR`はAirGuardV2側のruntime stateである。
+- この再調査により、local pre-containment Rules候補はdeploy可能状態ではないと訂正した。現行Rules下でCompany cloneと全既存callerをoperation別Client/Server writerへ移し、旧・候補Rules双方の回帰と旧whole-document writer 0件を確認してからRulesを閉じる。
+- 先行writerは同じ4 Callableのmarker-aware contractとする。LEGACYは編集開始時のscope別expected value一致時だけlegacy rootをpartial updateし、reserved field・root whole-set・新path writeを0件とする。STAGEDはmaintenance中だけ存在して通常設定write/signupを拒否し、ACTIVEはSettings revisionと必要なauditを同一transactionで扱う。dual-writeは行わない。
 
 ## 将来要対応
 

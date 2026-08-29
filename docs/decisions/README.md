@@ -41,6 +41,7 @@
 | [0026](0026-maintenance-quiescence-and-data-change.md) | project-wide maintenance静穏化とdata change境界 | Accepted | 2026-08-28 |
 | [0027](0027-codex-session-capacity-routing.md) | Codex task/session容量の明示routingと測定境界 | Accepted | 2026-08-28 |
 | [0028](0028-ccb-parity-backup-audit-restore.md) | CCB canonical parity・PrivateSettings backup・SettingAudits restore境界 | Accepted | 2026-08-28 |
+| [0029](0029-firestore-rules-compatible-crud-cutover.md) | Firestore Rules互換CRUD先行と段階的閉鎖 | Accepted | 2026-08-29 |
 
 ## 新しい ADR の形式
 

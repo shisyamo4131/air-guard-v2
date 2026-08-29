@@ -1,7 +1,7 @@
 # 開発workflow runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-29
 - 役割: 通常開発の担当、変更単位、UI error・loading、client操作policy
 
 ## 担当と変更単位
@@ -34,6 +34,18 @@
 - client事前判定を認可境界として扱わず、serverはidentity、actor、tenant、対象、入力、最新状態を必ず再検証する。
 - field単体の必須、文字数、書式validationはこの構造を強制せず、既存validatorまたはcomponent ruleを使用できる。
 - 既存機能は一括移行せず、新規機能と改修対象機能からpolicy、composable、component接続、server共通条件parity testを小segmentで追加する。
+
+## Firestore Rulesを狭める改修順序
+
+既存pathの許可を狭める改修では、Rules変更だけを先行releaseしない。次を一つの段階的な互換契約として扱う。判断理由は[ADR 0029](../decisions/0029-firestore-rules-compatible-crud-cutover.md)を正とする。
+
+1. 現行Rulesと、対象documentをread/writeするclient、Functions、trigger、scheduled処理、operator、Admin SDKを棚卸しする。共通managerやmodelの内部で全体setへ変換される経路もcallerに含める。
+2. 将来Rulesが許可するpath、field、actor、operationを先に固定し、現行Rulesを維持したままClient/Server CRUDをその境界へ移す。部分更新、operation別handler、Callable、transactionを機能ごとに選び、AirArrayManager、AirItemManager、FireModelの基本CUDを強制しない。
+3. 現行Rules用と候補Rules用の両test matrixで、既存正常系、権限拒否、tenant拒否、stale・競合、部分失敗、旧clientを確認する。新規pathはdocument作成前にgeneric fallbackから除外してdenyを確立する。
+4. Client/Serverを現行Rules下へ先行導入し、対象環境で既存CRUDが継続すること、将来境界外のwriteが発生しないこと、旧writerが0件であることを確認する。
+5. 最後にRulesを閉じ、deploy済みRules receipt、拒否経路、既存CRUD、rollback先を再確認する。候補Rulesのlocal実装・Emulator成功だけをdeploy readinessとみなさない。
+
+既存許可を直ちに閉じないとdata exposureが継続する緊急incidentは通常手順の例外とするが、影響する既存機能、停止範囲、暫定Client/Server対応、rollback、陰性testを固定した別checkpointとして利用者の明示承認を得る。
 
 認証・認可segmentは、実装前に次を揃えます。
 

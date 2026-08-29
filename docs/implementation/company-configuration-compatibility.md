@@ -2,10 +2,10 @@
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rulesのlocal prototypeは実装済み。staging actor、Dev 4 tenant対象性、canonical parity、PrivateSettings backup、SettingAudits restore契約は確定。Dev reader/apply、deployed Rules receipt、Callable、remote stagingは未完了）
+- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rules候補のlocal prototypeは実装済み。既存CRUD互換化をRules deployより先に行う計画へ訂正。Company clone、operation別Client/Server writer、両Rules回帰、旧writer 0件、Dev reader/apply、deployed Rules receipt、remote stagingは未完了）
 - 改修コード: CCB（Company Configuration Boundary）
-- 調査日: 2026-08-28
-- 調査基準commit: `df31d311e9973384cbdb602729c9a8b542b6fc68`
+- 調査日: 2026-08-29
+- 調査基準commit: `16460b8d38a95b62f821afe7677febf5ca28ac19`
 - 現行仕様: [Company設定とtenant lifecycle](../specification.md#company設定とtenant-lifecycle)
 - 主要判断: [ADR 0025](../decisions/0025-company-configuration-boundary.md)、[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)
 - ロードマップ: [Company設定改修ロードマップ](../roadmaps/company-settings.md)
@@ -19,17 +19,25 @@ CCBの新documentを現在のRules下で先に作成してはならない。`fir
 
 Company rootへ`status`や`schemaVersion`だけを先に追加することも安全ではない。現行Company modelは定義済みfieldだけをhydrateし、client/server adapterの`update()`はmodel全体を`transaction.set()`する。旧clientまたは旧Functionsが保存すると、未知のserver-owned fieldを落としてroot全体を置換する。
 
-したがって、CCBは次の順序を崩せない。
+2026-08-29のAirVuetify3・Company clone再調査により、既存Company CRUDの互換確認よりpre-containment Rules deployを先行させていた順序を訂正した。CCBは次の順序を崩せない。
 
 1. additiveな共通schemaと旧新compatible readerを準備する。
 2. Admin SDKをexact schemaへpinし、旧backup・restore・maintenance・deleteを新path検出時にfail closedとする。CCB-aware backup本体はPrivateSettings・audit・削除・provider maintenance契約を確定してから追加する。
-3. Functionsの新規Company作成、operation別writer、tenant gateを未有効のまま準備する。
-4. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesを先にdeployする。rootの旧business field updateはこの時点では維持する。clientによる新規CCB field `status/schemaVersion/configurationState/createdBy/updatedBy`の追加・変更・削除と既存`createdAt`の変更は拒否するが、現行adapterがCompany保存ごとに変更するlegacy `updatedAt`はcutoverまで許容する。予約fieldが一部だけ存在する異常rootでは、予約fieldに触れないpatch updateだけを互換とし、予約fieldを落とす現行legacy whole-document writerはfail closedで拒否する。これは自動補修対象ではなく、cutover前のbounded preflightで検出して停止する。
-5. client deploy前に、Dev edition、deploy済みFunctions、operator tool、rootのfield名・`schemaVersion`・activation marker分布を値・秘密を出さないbounded read-only dry-runで確認する。
-6. 新規Companyもrootをlegacy modeのまま作ってSettingsをstagingできるFunctionsと、専用activation marker未設定時はlegacy root、設定後はSettingsだけを読むcompatible clientをdeployする。
-7. [maintenance・data change runbook](../runbooks/maintenance-and-data-change.md)に従い、maintenance開始、bounded quiet period、対象Function log確認、連続dry-run digest一致、整合snapshot/backup、create-only apply、同一dry-runとpost-checkを行う。
-8. cutoverでは最終Rules・Functions・clientを有効化し、root client updateを拒否する。deploy済みFunctions、operator、Admin SDKを含む旧whole-document writerが0件である証拠を得た後にだけroot activation markerを設定する。
-9. activation後もroot marker、Settings parity、拒否経路、旧writer 0件を再確認してからmaintenanceを解除する。
+3. Company固有cloneでnon-enumerable runtime stateを非永続のまま保持し、CompanyManagerとagreements・site/schedule order等の全callerをoperation別handlerへ移す。`useItemManager.updateProperties()`はlocal draft更新として利用できるが、Firestore patchとは扱わない。
+4. 同じ4 Callableをmarker-aware operationとして準備する。LEGACYではscope別canonical `expectedValue`を現在root projectionとtransaction内で比較し、既知legacy business fieldと既存legacy更新metadataだけをpartial updateする。reserved field、root whole-set、Settings、PrivateSettings、auditは変更しない。STAGEDでは通常設定writeとsignupを拒否する。ACTIVEではexpectedRevisionを検査してSettingsと必要なauditだけを更新する。各editorは1 operation・1 exact payloadとする。
+5. 現行Rulesと候補pre-containment Rulesの両方で、実CompanyManager submit、全既存caller、actor・tenant拒否、stale、部分失敗、旧clientを同じmatrixで回帰する。
+6. 現行Rules下へClient/Serverを先行deployし、LEGACY modeの既存Company CRUD継続、scope競合拒否、reserved field不変、Settings/audit write 0件、client・deploy済みFunctions・operator・Admin SDKを含む旧whole-document writer 0件を確認する。
+7. [maintenance・data change runbook](../runbooks/maintenance-and-data-change.md)に従ってmaintenanceを開始し、通常設定writeとsignupを停止する。bounded quiet period、対象Function log確認、連続dry-run digest一致、整合snapshot/backupを確認する。
+8. generic Rules fallbackから新pathを除外し、Settings、PrivateSettings、auditを全client denyにするpre-containment Rulesをdeployする。rootの旧business field updateはcutoverまで維持し、reserved fieldを保護する。候補sourceのlocal成功をdeployed receiptへ代用しない。
+9. Rules receipt確認後にだけcomplete Settingsをcreate-only stagingする。STAGEDでは通常運用せず、clientはlegacyを表示できても保存せず、serverは通常設定writeとsignupを拒否する。
+10. 同じmaintenance内のcutoverで最終Rules・Functions・clientを整合させ、root activation markerを最後に設定する。activation後はACTIVE writer、root marker、Settings parity、拒否経路、旧writer 0件を再確認してからmaintenanceを解除する。新規signupは解除後にactive rootとcomplete target setを作成する。
+
+### AirVuetify3とCompany cloneの確認結果
+
+- `useItemManager.updateProperties()`は既存top-level propertyをlocal draftへ反映するだけで、changed-key、Firestore patch、deep merge、永続化を提供しない。
+- `AirItemManager`のcustom `handleUpdate`はdraft全体を受け取り、throw時にdialogとerror/loading契約を維持する。CompanyManagerはこれをapplication-ownedのscope別writerへ差し替え、`draft.update()`を呼ばない。
+- base cloneは`toObject()`のenumerable keyだけをコピーするため、AirGuardV2 Companyのnon-enumerableな`INITIALIZING/LEGACY/ACTIVE/ERROR` runtime stateを失う。Company固有cloneとoriginal/live state再検査が必要である。
+- Schemas `.167`は旧Companyへlegacy propertyを追加していない。persisted `configurationState`はActive marker、legacyはmarker未active、4つのmodeはAirGuardV2 runtimeだけの状態である。
 
 ## 現行data shape
 
@@ -109,7 +117,7 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 - `updateCompanyOperations`
 - `updateCompanyArrangement`
 
-各Callableはcurrent Auth、claim、同社User、actor、Company ACTIVE、maintenance、exact input、expected revisionをtransaction内で再検査する。profile/billing/operationsは設定更新とmask済みaudit createを同一transactionに含める。arrangementはauditを作らず、siteOrderとscheduleOrderを変更field別permissionで検査する。
+各Callableはcurrent Auth、claim、同社User、actor、Company lifecycle、maintenance、mode別exact inputをtransaction内で再検査する。LEGACYはscope別expected valueを比較してaudit 0、STAGEDは常時拒否、ACTIVEはexpected revisionを検査する。ACTIVEのprofile/billing/operationsは設定更新とmask済みaudit createを同一transactionに含める。ACTIVEのarrangementはauditを作らず、siteOrderとscheduleOrderを変更field別permissionで検査する。
 
 これは全collectionのCUDをFunctionsへ移す共通規則ではない。Company設定はaudit atomicity、list item検証、root/private containmentが同時に必要なための機能限定判断であり、Customer、Site、Employee、Outsourcerは各改修で改めて判断する。
 
@@ -121,7 +129,7 @@ Company設定だけについて、次の4つの専用Callableを設け、client�
 - client/providerが更新する設定は`revision`をinteger `1`から開始し、成功ごとにexactly `+1`する。
 - `createdAt`、`createdBy`、`updatedAt`、`updatedBy`をserverが設定する。optional fieldは欠損とnullを混在させず、初期documentへ明示的な`null`または空配列を保存する。
 - unknown field、computed accessor、frameworkの`docId/uid`、converterの`geopoint`をcanonical Settingsへ保存しない。
-- pre-containment Rulesのdeploy後、新規signupはroot、profile、billing、operations、arrangement、entitlement projection、maintenance projection、両PrivateSettingsをUser・email予約と同じtransactionで作る。global cutoverまではrootをlegacy modeのまま維持する。既存tenantのbackfillも同じcomplete setをcreate-onlyで準備し、一部documentだけ存在する状態を成功扱いしない。
+- deny receipt取得後からglobal cutover完了まではmaintenanceで新規signupを停止する。cutover後の新規signupはactive root、profile、billing、operations、arrangement、entitlement projection、maintenance projection、両PrivateSettingsをUser・email予約と同じtransactionでcomplete setとして作る。既存tenantのbackfillも同じcomplete setをcreate-onlyで準備し、一部documentだけ存在する状態を成功扱いしない。
 - `ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ決定的に写像する。欠損時だけ`LABOR_STANDARD`を補う。未知値は自動変換せずmigration conflictとする。
 - legacy `agreementsV2`、`location/geopoint`、root subscription/maintenance、unknown fieldは初回migrationで削除しない。新Settingsへ必要値を写した後もcleanupは別承認migrationまでrootへ保持する。
 
@@ -177,7 +185,7 @@ Admin SDKの固定flat catalogは`Settings`、`PrivateSettings`、`SettingAudits
 2. schemasのtargeted testでstrict allowlist、全field制約、grapheme、結合濁点、Timestamp structural boundary、legacy mapping、audit mask、旧`Company`回帰を固定する。publish workflowへtag/version一致、targeted test、public self-import、package file検査を加え、成功前にpublishしない。
 3. 承認済みimmutable prereleaseをtag/publishし、workflow、registry version、integrity、fresh public importを確認する。tag pushがpublishをtriggerするため、tag作成、push、Trusted Publishingは明示承認後だけ行う。
 4. Admin SDKを同じexact versionへpinし、CCB destructive operation拒否とtest・説明を先に整える。この安全停止はcommit `c95660d`で完了した。version付きbackup manifest、catalog inventory、CCB-aware backup/restore、provider maintenanceは別契約として残し、承認済み復旧方針がないまま新CCB documentを作らない。
-5. AirGuardV2 rootとFunctionsを同じexact versionへpinし、compatible readerと未有効writerを検証する。このlocal境界は完了した。新CCB writerはまだ存在せず、次はcanonical parityとbackup契約を確定してからpre-containment Rules、complete-set staging、final cutoverへ進む。
+5. AirGuardV2 rootとFunctionsを同じexact versionへpinし、compatible readerを検証する。このlocal境界は完了した。次はCompany cloneとoperation別Client/Server writer、全caller、現行・候補Rules両回帰、旧writer 0件を完成させてからpre-containment Rules deploy、complete-set staging、final cutoverへ進む。
 
 ### AirGuardV2 compatible reader local実装
 
@@ -213,6 +221,8 @@ CCB-02は次が完了するまで10点を加点しない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
 - Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、pure migration plan/digest、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rulesのlocal sourceと合成回帰までは完了した。残るのはDev向けmanifest/reader/apply証拠、deployed Rules receipt、audit artifact/apply、rollback release、Callable・staging・deploy順の個別実装・検証・承認である。
 - generic Rules fallbackを閉じるlocal sourceと合成回帰は完了した。remote staging前に対象project/databaseへdeployしたrulesetと承認済みsourceの一致を機械検証し、全client/Functions/Admin SDK callerのrelease回帰matrixを確定する。
+- AirVuetify3のmanager contractとCompany clone defectは静的確認済みである。Company固有clone、実CompanyManager submit、scope別exact payload、旧root writer不在、全agreements・site/schedule caller、現行・候補Rules双方の回帰は未実装・未検証であり、pre-containment Rulesをdeploy可能とは扱わない。
+- marker-aware writerは文書契約だけで未実装である。LEGACYのexpected-value比較・partial update、STAGEDのwrite/signup拒否、ACTIVEのrevision/audit、maintenance内のstaging/activation、dual-write 0を実装・検証するまで既存CRUD互換化は完了しない。
 - CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettingsは既存logical backupから除外し、当面はmanaged backup/PITRへ依存する。SettingAudits restoreは同一company/schema/IDのcreate-only、同値skip、異値拒否に限定し、update/delete/clearを禁止する。専用実装・復旧演習とprovider maintenanceは未完了である。migration actorとmaintenance中の決定不能mapping停止も確定済みである。
 
 ## 2026-08-28 Dev read-only preflight

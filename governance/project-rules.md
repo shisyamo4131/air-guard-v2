@@ -58,6 +58,7 @@
 ## Project-specific Implementation and Verification
 
 - PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を確認してから変更する。
+- 既存Firestore Rulesの許可境界を狭める改修では、まず現行Rulesを維持したまま全client・Functions・operator・Admin SDK callerを棚卸しし、将来Rulesで許可されるpath・field・actor・operationだけを使うCRUDへ移行する。部分更新、operation別handler、Callable、transaction等は機能契約に合わせて選び、共通managerやFireModelの全体更新を必須としない。旧Rulesと候補Rulesの両方で既存許可・拒否・tenant境界・失敗経路を回帰し、対象環境へClient/Serverを先行導入して旧writer 0件と既存機能の継続を確認した後にだけRulesを閉じる。localで候補Rulesとtestが成功しただけではdeploy可能と扱わない。新規pathは最初のdocument作成前にgeneric fallbackから除外してdenyを確立する。既存許可を先に閉じる必要がある緊急incidentは、影響、停止範囲、rollback、回帰確認を固定した別checkpointとして利用者の明示承認を必要とする。
 - repository文書に必須引数を含む正規commandが記録されている場合は、そのcommandを省略・短縮せず正確に使用する。managed governance validatorは`powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を正規commandとし、scriptのdefault project pathへ依存しない。
 - `npm audit fix`と`npm audit fix --force`を無条件に実行しない。lockfile、互換性、破壊的変更、root/functions双方への影響を先に確認する。
 - Codexは未承認の静的生成・buildを実行しない。利用者が承認したbounded Dev release checkpointでは、記録済みのexact commandによるDev用静的生成・buildを実行し、生成結果を同checkpointのdeploy証拠にできる。Prod build、対象外artifact、別releaseへの再利用は承認を拡張せず、deploy・package更新を含む正確なcommandと復旧手順は`docs/operations.md`を参照する。
