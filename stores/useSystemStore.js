@@ -32,7 +32,6 @@ export const useSystemStore = defineStore("system", () => {
     return (
       systemInstance.isMaintenance ||
       companyStore.company.maintenanceMode ||
-      companyStore.company.hasCompanyConfigurationReadError ||
       false
     );
   });
