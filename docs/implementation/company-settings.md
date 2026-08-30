@@ -56,7 +56,8 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 基本情報editorは`companyName/companyNameKana/zipcode/prefCode/city/address/building/tel/fax/invoiceNumber`の10 fieldを独立draftで編集する。live Companyをdraftへ直接bindしない。
 - 保存時はdraftで変更したfieldだけを抽出し、最新のlive Companyへ重ねて`Company`/Schemas `.167` contractで再検証する。Callableもtransaction内の最新Companyで同じ検証を行い、実際に値が変わるfieldだけを保存する。
 - 基本情報の保存にはserver timestampの`updatedAt`と実行者`uid`を加える。住所5 fieldのいずれかが変わった場合は、古い座標を残さないため`location/geopoint`をnullへ戻す。geocode再取得はこのcheckpointでは行わない。
-- 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告し、「最新値を読み直す」または「自分の入力を優先する」を選ぶまで保存を止める。後者でも利用者が変更していないfieldは最新値を保つ。
+- 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告して保存を止める。「最新値を読み直す」だけを表示し、押下時に現在draftを破棄して最新Companyから作り直す。曖昧だった「自分の入力を優先する」は利用者local確認を受けて削除した。
+- 基本情報dialogの初期DOMは`v-dialog > v-card > v-form > v-card-text/actions`だった。Vuetifyは通常dialogのdirect child `v-card`へ`overflow-y:auto`を設定し、`scrollable`時に本文だけをscrollするselectorは`v-dialog > form > v-card > v-card-text`を前提とする。この親子順序不一致がtoolbarとactionsまでscrollした直接原因である。`v-dialog scrollable > v-form > v-card > toolbar/card-text/actions`へ変更し、`v-card-text`だけをscroll対象にした。
 - 口座editorは5口座field、設定editorは4運用設定fieldだけを編集する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
 - 基本情報のinvoice番号はSchemas billing parserで13桁数字へ正規化する。残るminuteInterval、口座、enum等の旧operationは後続移行までRules/serverで形を強制しない。

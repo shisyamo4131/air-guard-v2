@@ -29,7 +29,7 @@ UWBではUser documentを権限ごとに分割せず、操作ごとのCallable�
 ### 更新と競合制御
 
 - 通常編集でwhole-document replacementを行わず、当該operationが所有するfieldだけを更新する。
-- 共有管理画面はreal-time listenerで最新値を反映する。編集中の同一fieldへ他actorの変更が届いた場合は、最新値の通知・再読込・再確認を行えるUIを優先する。
+- 共有管理画面はreal-time listenerで最新値を反映する。編集中の同一operationへ他actorの変更が届いた場合は通知し、operationごとに最新値の再読込または結果が明確な明示再確認を要求するUIを優先する。
 - 会社名、住所、電話、通常設定、表示順等の可逆な通常変更はlast-write-winsを受容し、共通revision、lock、ledgerを導入しない。
 - 追加のexpected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭確定、外部service作用、複数resourceの不変条件、復旧困難なdata loss、二重実行の具体的被害へ限定する。
 
@@ -38,7 +38,7 @@ UWBではUser documentを権限ごとに分割せず、操作ごとのCallable�
 - Firestore CRUDの新規・改修画面では、`AirItemManager`と`AirArrayManager`を入力draft、dialog、validation、永続化、購読反映のすべてを担う既定componentにしない。既存画面は一括置換せず、operation単位で専用editor、UI非依存のapplication処理、writerへ移す。
 - FireModel/Class schemaはdocument全体に共通する必須・型・長さ・相関の正本として維持する。operation固有の編集field・追加必須条件は一つのoperation contractへ定義し、個別componentが同じvalidationを再定義しない。
 - 保存時は最新のlive documentへdraftの変更fieldだけを重ねたcandidateをClassとoperation contractで検証する。検証対象は整合したdocument全体、永続化対象は実際に変わったoperation所有fieldと監査metadataだけとする。
-- editorはlive modelを直接編集せず、開始時点の独立draftを持つ。listener更新でdraftを黙って置換しない。同じoperation所有fieldが外部変更された場合は通知し、最新値の再読込または明示再確認後のlast-write-winsを提供する。
+- editorはlive modelを直接編集せず、開始時点の独立draftを持つ。listener更新でdraftを黙って置換しない。同じoperation所有fieldが外部変更された場合は通知する。再読込必須または明示再確認後のlast-write-winsのどちらを採るかはoperation contractへ固定する。Company基本情報は再読込必須とし、曖昧だった「自分の入力を優先する」controlを提供しない。
 - 入力componentやdialog shell等の再利用は許容するが、業務operation、Firestore writer、権限判断を汎用UI componentへ戻さない。
 
 ### Callableとclient write
