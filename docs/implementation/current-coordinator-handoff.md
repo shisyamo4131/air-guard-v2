@@ -24,7 +24,7 @@
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
-- specification: `0.7.3`
+- specification: `0.8.0`
 - unintegrated work: 0。Company基本情報の実装・権限表示・local UI修正はlocal commitへ統合済みで、文書同期以外の未commit変更をhandoffしない。
 
 ## Confirmed product state
@@ -42,6 +42,7 @@
 - 利用者local確認で権限と更新metadataは合格した。基本情報card titleを復元し、dialogをVuetifyの`scrollable`前提DOMへ修正して本文だけをscrollさせた。競合時は保存を止め、「最新値を読み直す」だけを表示する。利用者は修正版UIを再確認し、Company基本情報のlocal受入れを完了した。
 - 利用者は振込先について、同社の有効な本登録User readを維持し、非super-user会社管理者だけが専用Callableで変更する契約を承認した。5 field all-null/all-complete、changed-only update、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票をADR 0033へ確定した。application・Rules・testは未実装である。
 - 利用者は、task交代中を除き独立して分割できる調査・review・test・明示承認済み補助実装等に適切なsubagentを使用し、Checkpoint固有の禁止を当該Checkpointだけへ限定するproject-wide方針を承認した。交代手順内はcoordinatorだけで実施する。
+- 利用者はADR 0034として、承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、自動test、必要なin-app UI smokeまで担当し、利用者が実際の利用環境で最終UI acceptanceを行うproject-wide方針を承認した。file-by-file確認はcheckpointが明示した場合だけとし、外部作用の別承認境界は維持する。
 
 ## Current checkpoint and next work
 
@@ -51,7 +52,8 @@
 - completed product checkpoint: `CCB-COMPANY-PARTIAL-UPDATE-001`。Company基本情報の専用editor・Callable、Class schema/operation validation、会社管理者境界、変更fieldだけの保存、server timestamp、編集中listener変更の通知、Rulesのclient直接変更拒否をlocal実装・検証した。
 - completed acceptance checkpoint: Company基本情報のtitle、dialog本文限定scroll、外部更新後の再読込専用UIを利用者local環境で再確認し、受入れを完了した。
 - completed governance checkpoint: `GOV17-AIRGUARDV2-SUBAGENT-ROUTING-001`。project-wide delegation方針をproject rules、仕様、ADR 0032、runbook、開始prompt、roadmap、snapshot、changelogへ反映し、instruction-chain変更として検証・commitした。task交代中を除き独立して分割できる必要な調査・review・test・利用者承認済み補助実装等へ適切なsubagentを使用し、Checkpoint固有の禁止は当該Checkpoint内だけに限定する。
-- current product checkpoint: `CCB-COMPANY-BILLING-UPDATE-001`。read-only code/data-flow inventoryとsecurity reviewを独立subagentで完了し、利用者がADR 0033のactor・read・validation・競合・clear・Callable・Rules・帳票契約を承認した。次は利用者が振込先を専用editor/Callableへ実装し、Codexが差分reviewと許可済みtestを行う。その後、通常設定、取極め、表示順を順次移し、Company全体writer 0件を確認する。
+- paused product checkpoint: `CCB-COMPANY-BILLING-UPDATE-001`。read-only code/data-flow inventoryとsecurity reviewを完了し、利用者がADR 0033のactor・read・validation・競合・clear・Callable・Rules・帳票契約を承認した。旧「利用者実装後」前提は停止した。ADR 0034のinstruction-chain反映とPM-12 activation完了後、Codex実装のowned files、rollback、test、UI smoke、利用者最終UI acceptanceを固定した新しいbounded checkpointとして再開する。
+- active governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成してlocal commitする。次に利用者承認済みturnoverとしてPM（AirGuardV2）-12を完全新規taskで作成し、no-change、permissions、最初のfile限定activation commit、callback/assignment retargetを確認する。交代中はsubagentとapplication checkpointを開始しない。
 - following active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。whole-document replacement除去のreview済みbaseline後にSTRIPE-01へ接続する。
 
 ## Active source set
@@ -63,7 +65,7 @@ PM-11はactivation開始時に次だけを読み、不足・矛盾がなかっ�
 3. `docs/README.md`
 4. `docs/runbooks/project-coordination.md`
 5. 本snapshot
-6. no-change後は`docs/decisions/0032-required-specialist-subagent-routing.md`、`docs/specification.md`のCompany設定節、`docs/decisions/0031-proportional-data-boundary-and-change-safeguards.md`、`docs/decisions/0033-company-bank-transfer-update-boundary.md`、`docs/roadmaps/company-partial-updates.md`、`docs/roadmaps/company-stripe-removal.md`、`docs/implementation/company-settings.md`、`docs/implementation/company-configuration-compatibility.md`
+6. no-change後は`docs/decisions/0032-required-specialist-subagent-routing.md`、`docs/decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md`、`docs/specification.md`のCompany設定節、`docs/decisions/0031-proportional-data-boundary-and-change-safeguards.md`、`docs/decisions/0033-company-bank-transfer-update-boundary.md`、`docs/roadmaps/company-partial-updates.md`、`docs/roadmaps/company-stripe-removal.md`、`docs/implementation/company-settings.md`、`docs/implementation/company-configuration-compatibility.md`
 
 旧`task-handoff-2026-08-14-user-led-governance.md`と旧Company roadmapはHistoricalであり、current snapshotに不足・矛盾がある場合だけ参照する。
 
@@ -73,7 +75,8 @@ PM-11はactivation開始時に次だけを読み、不足・矛盾がなかっ�
 - review policy: `auto_review`。networkはrestricted。sandbox外操作は明示された承認境界とreviewに従う。
 - `NO-CHANGE-GOV17-AIRGUARDV2-PM11-001`と本ownership activationでは、指定されたread-only確認、snapshot 1件のfile-scoped commit、validator、local Git確認、旧coordinatorへのreceipt以外を行わない。
 - PM-11 ownership activationとcorrective rollbackは完了した。利用者はCompany CRUDをoperation固有editorへ段階移行する方針と、`CCB-COMPANY-PARTIAL-UPDATE-001`のlocal application/Functions/Rules/test/document変更を承認した。
-- 利用者は`CCB-COMPANY-BILLING-UPDATE-001`のADR 0033契約を承認した。現時点の承認はproject-owned document同期と利用者実装契約までであり、Codexによるapplication/Rules/test補助実装、Dev、remote/data、deployへ拡張しない。
+- 利用者はADR 0034のgovernance反映とPM-12 turnoverを承認した。承認済みcheckpoint内ではCodexがapplication、必要なFunctions・Rules、自動test、必要なin-app UI smokeを担当し、利用者が実際の利用環境で最終UI acceptanceを行う。PM-12 activation前はapplication実装を開始しない。
+- ADR 0033のCompany振込先product contractは維持するが、旧利用者実装前提は停止した。PM-12 activation後にCodex implementation checkpointのexact owned files、rollback、test、UI smoke、利用者受入れを固定してから実装する。Dev、remote/data、deployへは拡張しない。
 - 利用者はproject-wide subagent routing変更とPM-11へのcoordinator交代を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。
 - Schemas/Admin SDK、Dev、remote/data、network、push、main merge、Prodは別承認である。Dev migration/deployは対象commit、件数、backup、rollback、停止条件、post-check、受入れを固定した利用者承認を必要とする。
 - former taskをCodexがarchive/deleteしない。ownership activation成功後、利用者がPM-10を手動削除できる。

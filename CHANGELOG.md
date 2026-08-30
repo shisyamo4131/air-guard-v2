@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- 承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、unit・domain・integration・Emulator test、必要なin-app UI smokeまで担当する運用へ変更した。利用者は実際の利用環境で最終UI acceptanceを担当し、未了のUI featureをrelease・roadmap完了としない。file-by-file確認はcheckpointが明示した場合だけとし、push、main merge、deploy、Dev/Prod、remote/data、network、Schemas/Admin SDK等の別承認境界は維持する。
 - Company振込先を専用`updateCompanyBilling` Callableへ移す契約を承認した。同社の有効な本登録User readは維持し、変更は非super-user会社管理者だけに限定する。5 field all-null/all-complete、明示clear、最新Companyとの合成validation、changed-only update、client直接write拒否、外部変更時の再読込、完全な口座名義込み帳票をADR 0033へ確定した。application・Rules・test・Dev/dataは未実装・未変更である。
 - task交代中を除き、独立して分割できる調査・code探索・review・test・利用者承認済み補助実装等に適切なsubagentを使用するproject-wide運用へ変更した。Checkpoint固有の禁止は当該Checkpointのterminal callbackとcoordinator reviewまでに限定し、後続作業へ持ち越さない。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitはcoordinator自身が実施する。
 - 利用者local確認で見つかったCompany基本情報cardのtitle消失と、dialogのtoolbar/actionsまでscrollする構造を修正した。dialogをVuetifyの`scrollable`が想定する`form > card > card-text`構造へ揃え、本文だけをscroll対象にした。編集中の外部更新時は曖昧な「自分の入力を優先する」を削除し、保存を停止して「最新値を読み直す」だけを提供する。

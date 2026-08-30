@@ -8,7 +8,7 @@
 ## Project and Current Scope
 
 - AirGuardV2は警備会社向けのマルチテナント業務管理Webアプリケーションであり、現在は試験運用を行いながら開発している。
-- application codeの標準実装者は利用者とする。Codexは設計、仕様整理、調査、検証、review、document管理、local Git管理を担当し、利用者の明示依頼がない限りapplication codeを編集しない。
+- 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
 - 原則として変更対象はこの`air-guard-v2` repositoryと、利用者が明示した依頼範囲だけとする。
 - Codexの利用者向け応答は日本語で行う。
 - 実装事実、利用者が承認した仕様、提案、未確認事項、履歴を区別する。
@@ -42,16 +42,18 @@
 - task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、その交代手順内ではsubagentを使用しない。
 - checkpointでsubagent禁止を指定した場合、その禁止は当該checkpointの開始からterminal callbackとcoordinator reviewまでに限定する。後続checkpointやproject全体へ引き継がず、継続禁止には利用者による別の明示指示を必要とする。
 - roleごとの具体的な権限と報告契約は`.codex/agents/*.toml`を正とする。
-- application codeの書込みは原則として利用者だけが行う。`developer`は利用者が範囲を明示した補助実装でのみ使用し、その場合のCodex側application code書込みを`developer`へ集中させる。
-- Codex coordinatorは設計・仕様、脅威と失敗経路の整理、差分review、検証計画・結果、document、roadmap、ADR、local branch・stage・commitを管理する。利用者の未コミットapplication codeを独自判断で修正、破棄、stage、commitしない。
-- `tester`は利用者またはcoordinatorが明示的に委譲したtest fileを編集できる。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyとする。
+- application code、必要なFunctions・Firebase Rules・関連設定の書込みは、承認済みcheckpoint内で`developer`へ集中させる。coordinator自身または他のread-only roleへapplication実装を分散しない。
+- Codex coordinatorは設計・仕様、脅威と失敗経路の整理、checkpoint分割、実装・test・review・必要なin-app UI smokeの調整、検証結果、document、roadmap、ADR、local branch・stage・commitを管理する。他者の未コミット変更を独自判断で修正、破棄、stage、commitしない。
+- `tester`は承認済みcheckpointの検証に必要なtest fileを、coordinatorが明示したscopeで編集できる。個々のtest fileごとの利用者承認は要求せず、application codeは変更しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyとする。
+- UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smokeが成功しても「実装・自動検証完了／利用者受入れ待ち」とする。利用者が別途承認された実際の利用環境で最終UI acceptanceを行うまで、featureの最終受入れ、release完了、roadmap完了とは扱わない。UIへ影響しないcheckpointは、そのcheckpoint固有の完了契約に従う。
+- application fileの利用者確認を1 fileずつ要求するのはcheckpointが明示した場合だけとする。通常は承認済みsegment内でCodexが連続実装・検証し、segment単位で変更挙動、security境界、検証結果、残存risk、rollback、最終UI確認項目を提示する。
 - 専門taskは原則stage・commitせず、checkpoint ID、正確な変更file、diff、test、未確認事項、承認境界、worktree状態をcoordinatorへ返す。coordinatorが受入れたfileだけをcommit・統合する。
 
 ## Project-specific Approval and Safety Boundaries
 
 - 質問、比較、検討、診断、途中確認、完了報告を、code変更、仕様変更、merge、push、deployの承認とみなさない。
 - 重要な仕様変更前に、現行仕様、変更案、理由、利用者・data・互換性・移行・運用への影響、rollback、確認方法を提示し、利用者の明示承認を得る。
-- 実装・修正・改修は作業単位ごとに利用者とbranch境界を確認し、原則として機能単位の`codex/<feature>` branchで行う。Codexは合意済み作業単位のlocal branch作成・切替、review済みfileのstage・commitを担当できる。利用者のapplication codeをcommit対象に含める場合は、対象差分と検証状態を利用者と確認する。
+- 実装・修正・改修は作業単位ごとに利用者とbranch境界を確認し、原則として機能単位の`codex/<feature>` branchで行う。Codexは承認済み作業単位のlocal branch作成・切替、review済みfileのstage・commitを担当できる。利用者または別taskの未コミット変更をcommit対象に含める場合は、対象差分と検証状態を利用者と確認する。
 - 利用者が機能branch上の動作を確認して明示承認するまで`main`へmergeしない。
 - `main`への直接commit、`main`へのmerge、Git push、history rewrite、Prod deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更はそれぞれ別の明示指示を必要とする。
 - Devは利用者の会社と協力会社が利用する非本番の試行環境であり、正式運用準備または正式運用開始の完了判定をDev deployの前提にしない。利用者が対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む一つのbounded Dev release checkpointを明示承認した場合、そのrunbook内の静的生成、deploy、remote検証をcommandごとに再承認せず実行できる。対象service・data・期間の拡張、新しいdata migration、破壊的repair、Prodへの適用は別の明示指示を必要とする。
@@ -83,7 +85,7 @@
 - 数百件規模の合成documentを扱う場合は段階的に投入し、応答遅延、memory、Emulator logを監視する。約1000件でEmulatorが停止した利用者経験をlocal riskとして扱い、同規模の一括投入は停止条件と復旧方法を定めた別の明示承認なしに行わない。これはFirebaseの公式上限とは扱わない。
 - Dev deployとremote検証は、承認済みbounded Dev release checkpointの対象・期間・runbook内で積極的に行える。正式運用準備の未完了だけを理由にDev環境証拠の取得を延期しない。実data migration、破壊的repair、checkpoint外のdata変更、Prod deployは対象操作ごとの明示承認なしに行わない。
 - 実施していない確認を成功と記載しない。技術的に実施できない場合は、確認済み範囲、未確認範囲、利用者の確認観点を報告する。
-- 認証・認可・tenant分離の既知Critical問題を最優先とし、既存構造を一括置換せず、利用者が仕様と影響を理解できる最小segmentへ分ける。各segmentは現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理し、利用者の実装後にCodexが差分reviewと許可済み検証を行う。
+- 認証・認可・tenant分離の既知Critical問題を最優先とし、既存構造を一括置換せず、利用者が仕様と影響を理解できる最小segmentへ分ける。各segmentは現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理し、承認後にCodexが実装・自動検証・独立review・必要なin-app UI smokeを行い、利用者が実際の利用環境で最終UI acceptanceを行う。
 - local Emulator環境はtest用1社だけを扱う。Dev環境は利用者の会社と協力会社の2社が試用するremote環境であり、正式運用前の変更を実際の利用条件で積極的にdeploy・検証する。ただし実dataと実accountを含むため、承認済みbounded Dev release checkpoint外の接続・変更、未計画のdata操作、秘密情報の観測を行わず、一般公開していないことをsecurity controlの代替とはみなさない。
 - project-owned document validatorとmanaged governance validatorの両方を実行し、application testの実施有無と区別して報告する。
 

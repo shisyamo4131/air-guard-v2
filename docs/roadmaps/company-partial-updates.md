@@ -4,7 +4,7 @@
 - 開始日: 2026-08-30
 - 現在の進捗: 30%
 - 部分加点: なし
-- 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、bounded Dev反映・利用者受入れまで完了する
+- 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、必要なCodex in-app UI smoke、bounded Dev反映、利用者による実際の利用環境での最終UI acceptanceまで完了する
 - 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)
 
 ## 境界
@@ -14,6 +14,8 @@
 document共通validationはFireModel/Class schema、operation固有fieldと追加条件は共有operation contractを正本とする。画面は独立draftを編集し、保存前に最新Companyへ変更fieldを重ねて検証する。Firestoreへ保存するのは実際に変わったfieldと更新metadataだけとする。
 
 単純な可逆更新はRulesで保存境界を完全に表現できる場合だけclient部分更新を選ぶ。複雑なvalidationや厳密なactor確認を要するoperationは専用Callableを使う。Dev deploy、remote検証、実data migrationは別のbounded承認を必要とする。
+
+利用者承認済みcheckpoint内のapplication、Functions、Rules、自動test、必要なCodex in-app UI smokeはCodexが担当する。Codex UI smoke後もUIへ影響するoperationは利用者受入れ待ちとし、利用者が別途承認された実際の利用環境で最終UI acceptanceを完了するまでmilestoneを完了しない。file-by-file確認はcheckpointが明示した場合だけ要求する。
 
 ## マイルストーン
 
@@ -30,7 +32,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 
 ## 現在の次工程
 
-1. CPU-03として振込先を専用editor/Callableへ移し、口座情報の組合せvalidationを共有contractで固定する。
+1. PM-12 activation後、承認済みADR 0033を基に新しいbounded Codex implementation checkpointを固定し、CPU-03として振込先を専用editor/Callableへ移して口座情報の組合せvalidationを共有contractで実装・検証する。
 2. 続けて通常設定を専用editor/writerへ移し、既知enum・数値範囲・下流表示を検証する。
 3. CPU-04で取極めと表示順をoperation別の対象field保存へ移す。
 4. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
@@ -44,3 +46,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | 0 | 利用者local確認で権限と更新metadataは合格した。基本情報cardのtitle消失、dialog全体scroll、競合時の曖昧な上書きcontrolを修正し、Company基本情報は最新値の再読込だけを許可する契約へ更新した。全domain 659件は成功した。利用者による修正版UI再確認、振込先以降、Dev反映は未完了のため進捗は据え置いた。 |
 | 2026-08-30 | 30% | 0 | 利用者が修正版をlocal環境で再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限・更新metadataと合わせてCPU-02のlocal受入れを完了した。振込先以降とDev反映は未完了のため進捗は据え置いた。 |
 | 2026-08-30 | 30% | 0 | CPU-03の振込先について、同社User read維持、会社管理者専用Callable、5 field exact validation、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票をADR 0033で承認した。application・Rules・test・local受入れ・通常設定・Dev反映は未完了のため加点しない。 |
+| 2026-08-30 | 30% | 0 | ADR 0034で、承認済みcheckpoint内のCodex実装・自動検証・必要なin-app UI smokeと、利用者による実際の利用環境での最終UI acceptanceを標準責任へ変更した。product実装・検証・受入れの新しい完了証拠はなく、CPU-03のCodex implementation checkpointはPM-12 activation後に開始するため進捗を据え置いた。 |

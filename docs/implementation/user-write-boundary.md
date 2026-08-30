@@ -93,13 +93,15 @@ Usersコレクションへの書込みを、同一会社であることだけに
 
 ## 利用者確認の進め方
 
-UWBはUser管理UIへ大きく影響するため、次の手順を各application implementation fileへ適用する。
+以下はUWBの当時のcheckpoint固有手順であり、完了済みの履歴として保持する。2026-08-30以後の標準運用は[ADR 0034](../decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md)を正とし、file-by-file確認は新しいcheckpointが明示した場合だけ要求する。
+
+UWBはUser管理UIへ大きく影響したため、次の手順を各application implementation fileへ適用した。
 
 1. Codexが変更前の挙動、今回の変更、UI影響、失敗経路、rollback、テスト観点を説明する。
-2. 一度に提示するapplication implementation fileは原則1ファイルとする。
+2. 一度に提示するapplication implementation fileは原則1ファイルとした。
 3. Codexは実装file提示前に、当該fileに対応する単体testを実行する。
 4. test fileは利用者のfile review対象外とするが、追加内容と結果を報告する。
-5. 利用者がapplication implementation fileを確認するまで、次のapplication implementation fileへ進まない。
+5. 利用者がapplication implementation fileを確認するまで、次のapplication implementation fileへ進まなかった。
 6. UI fileでは表示だけでなく、作成・編集・削除・取消・連打・error後の状態を確認する。
 7. 各独立segmentをlocal commitにし、後続segmentと混ぜずにrollback可能にする。
 8. Rules変更後は、単体testだけでなくEmulatorと認証済みChromeで既存操作を再確認する。

@@ -46,6 +46,7 @@
 | [0031](0031-proportional-data-boundary-and-change-safeguards.md) | 必要十分なデータ境界・競合制御・cutover | Accepted | 2026-08-30 |
 | [0032](0032-required-specialist-subagent-routing.md) | 独立scopeへの専門subagent利用とCheckpoint限定禁止 | Accepted | 2026-08-30 |
 | [0033](0033-company-bank-transfer-update-boundary.md) | Company振込先の専用更新・読取境界 | Accepted | 2026-08-30 |
+| [0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md) | 承認済み境界でのCodex実装と利用者最終UI受入れ | Accepted | 2026-08-30 |
 
 ## 新しい ADR の形式
 

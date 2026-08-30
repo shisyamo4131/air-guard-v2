@@ -5,6 +5,7 @@
 - 関連仕様: 開発ガバナンスと進捗管理、セキュリティと機密情報
 - 関連判断: [0005](0005-multi-agent-and-emulator-testing.md)、[0007](0007-project-scoped-specialist-agents.md)、[0011](0011-roadmap-and-codex-session-lifecycle.md)、[0012](0012-feature-branch-acceptance-and-related-repositories.md)、[0013](0013-managed-governance-reconstruction.md)
 - 置換する判断: [0007](0007-project-scoped-specialist-agents.md)の標準実装者と書込み役割。専門roleのread-only境界と必要時だけ使用する原則は継承する。
+- 一部置換: [0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md)が、標準実装者、利用者実装後のreview順序、file-by-file確認の既定を置換する。小segment、rollback、read-only role、外部作用の別承認は継承する。
 
 ## 背景
 
@@ -13,6 +14,8 @@ AirGuardV2は利用者が実装し、Codexが既存実装を読み取って仕�
 local Emulator環境はtest用1社、Dev環境は利用者の会社と協力会社の2社が試用している。一般公開はしていないが、Devはremoteかつ複数会社のdataを持つため、認証問題の解消を最優先とする。
 
 ## 決定
+
+以下は2026-08-14時点の決定である。標準実装者と実装後handoffの部分はADR 0034により一部置換され、現在の運用にはADR 0034を適用する。
 
 - application codeの標準実装者を利用者とする。
 - Codex coordinatorは設計、仕様整理、脅威・失敗経路分析、差分review、test計画・許可済み検証、document、roadmap、ADR、local Gitを管理する。

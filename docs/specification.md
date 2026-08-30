@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-30
-- 仕様バージョン: 0.7.3
+- 仕様バージョン: 0.8.0
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -252,7 +252,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は現在task IDに対応する永続session JSONLの実測を意味し、model token/context windowと区別する。task handoff閾値は300 MiB、Codex全体は10 GiBの参考警告とし、最新sessionを推測しない。ID不明、0件・複数一致、script失敗、全体scan不完全時は推測による交代・cleanup判断を行わない。
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - ADR 0030の効率化手順はPM-09からPM-10への交代で発効済みである。完全新規task、primary repository、no-change callback、権限、最初のreal file-scoped commit、former taskの利用者削除境界を維持し、task-routed最小読取集合、bounded current snapshot、compact callback、staged/committed blob一致を使用する。
-- application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
+- 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。Codex coordinatorは変更契約、checkpoint分割、実装・test・review・必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
+- 承認済みcheckpointに必要なapplication code、Functions、Firebase Rules、関連設定は`developer`へ集中し、unit・domain・integration・Rules・Emulator等のtest fileはcoordinatorが明示したscopeで`tester`が編集できる。個々のtest fileごとの利用者承認は要求しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyを維持する。
+- UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smokeが成功した時点を「実装・自動検証完了／利用者受入れ待ち」とする。利用者が別途承認された実際の利用環境で最終UI acceptanceを行うまで、featureの最終受入れ、release完了、roadmap完了とは扱わない。application fileを1 fileずつ利用者が確認する手順はcheckpointが明示した場合だけ要求し、通常は承認済みsegment単位で実装・検証・報告する。
 - Firestore Rulesの既存許可を狭める改修は、対象環境、data件数、許容停止時間、旧client併存の有無からcutover方式を選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
@@ -292,7 +294,7 @@ Codexによる検証が明示的に許可された変更では、Codex専用のl
 
 ## 仕様変更規則
 
-重要な変更はユーザーの明示的承認後に確定する。承認後、利用者は原則としてapplication codeを実装し、Codexは本文書、関連ADRと索引、`CHANGELOG.md`、関連マニュアル、運用文書を更新する。Codexが補助実装またはtest code編集を行う場合は、対象範囲を別途明示する。
+重要な変更はユーザーの明示的承認後に確定する。承認済みcheckpoint内ではCodexがapplication、必要なRules、test、自動検証、必要なin-app UI smoke、本文書、関連ADRと索引、`CHANGELOG.md`、関連マニュアル、運用文書を担当する。利用者はUIへ影響するfeatureを実際の利用環境で最終受入れする。push、`main` merge、deploy、Dev・Prod、remote/data、network、Schemas・Admin SDK・関連repository、package公開、migration、外部service変更は、それぞれ既存の別承認境界を維持する。
 
 作業指示を受けたときは、関連文書と実装コードを照合する。指示との相違がある場合は変更前にユーザーへ確認し、実装から判明した未記載の恒久仕様は、実装事実と承認済み要件を区別して適切な文書へ反映する。
 

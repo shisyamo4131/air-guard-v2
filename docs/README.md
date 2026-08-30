@@ -17,7 +17,7 @@
 | 作業種別 | 必読文書 | 追加で確認する対象 |
 |---|---|---|
 | 仕様・機能変更 | [現行仕様](specification.md)、[正式運用ロードマップ](roadmaps/airguard-v2.md)、[ADR索引](decisions/README.md) | 関連コード、テスト、[画面マニュアル](manual/index.md) |
-| 利用者実装の設計・差分review | [現行仕様](specification.md)、[ADR 0015](decisions/0015-user-led-implementation-and-codex-assurance.md)、[開発workflow](runbooks/development-workflow.md) | 利用者の対象差分、関連test、rollback、roadmap |
+| 承認済みcheckpointのCodex実装・利用者UI受入れ | [現行仕様](specification.md)、[ADR 0034](decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md)、[開発workflow](runbooks/development-workflow.md) | 現行挙動、承認済みboundary、関連code・Rules・test、rollback、roadmap、利用者最終UI acceptance |
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |
 | Firestore data設計・Rules・Company CCB | 現行仕様の関連節、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md) | 全reader/writer、exact field update、Rules、migration、rollback、対象環境・件数・停止条件 |
 | 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007・0031 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |

@@ -1,6 +1,6 @@
 # AirGuardV2 正式運用準備ロードマップ
 
-- 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
+- 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
 - 最終確認日: 2026-08-30
@@ -14,7 +14,7 @@
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
 | 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Company rootのclient create/deleteは閉じたが、既存Company更新と他collectionに残る広いtenant内write、App Check・rate limitは残作業である。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。Stripe/subscriptionは現在の正式運用準備範囲外。 |
-| 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
+| 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。Codexの自動検証・必要なin-app UI smoke、修正、利用者による実際の利用環境での最終UI acceptance、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
 | **合計** | **100** | **10** |  |  |
 
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. ADR 0031に従う旧CCB corrective rollbackとCompany基本情報の部分更新は完了した。次は[Company部分更新ロードマップ](company-partial-updates.md)で、振込先、通常設定、取極め、表示順のwhole-document replacementを、schema validationを維持したoperation固有editorと変更field保存へ順次置換する。Company全体writer 0件とlocal受入れの後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. ADR 0031に従う旧CCB corrective rollbackとCompany基本情報の部分更新は完了した。PM-12 activation後、[Company部分更新ロードマップ](company-partial-updates.md)で振込先、通常設定、取極め、表示順のwhole-document replacementを、承認済みbounded checkpoint内のCodex実装・自動検証・必要なin-app UI smokeと利用者最終UI acceptanceにより順次置換する。Company全体writer 0件とlocal受入れの後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -48,11 +48,11 @@
 
 | マイルストーン | 設計・判断 | 実装 | テスト・レビュー・環境受入れ |
 |---|---|---|---|
-| ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md)、[ADR 0032](../decisions/0032-required-specialist-subagent-routing.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
+| ガバナンスと現行仕様 | [ADR 0001](../decisions/0001-governance-and-specification-source.md)、[ADR 0011](../decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0013](../decisions/0013-managed-governance-reconstruction.md)、[ADR 0032](../decisions/0032-required-specialist-subagent-routing.md)、[ADR 0034](../decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md) | 文書・`.codex/` 設定 | `scripts/check-project-docs.ps1`、`scripts/check-governance.ps1` |
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
 | 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10のlocal完了とDev cutoverに加え、認証済みDevでsignup、roleless・role別route、stale role、disabled User/Auth同期と復帰、非破壊lifecycle、第2合成会社からのtenant拒否を確認した。Cloud Run invoker欠落2件を修復し、browser CORS/IAM gateをrunbookへ追加した。App Check・rate limit、Rules全体縮小等は未完了 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | Dev PITR、maintenance snapshot、deployとERROR log 0件を確認。復旧演習、継続監視、正式backup scopeは未完了 |
-| 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 認証済みUI検証、利用者確認（未完了） |
+| 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | Codex自動検証・必要なin-app UI smoke、利用者による実際の利用環境での最終UI acceptance（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
 
 ## 未解決問題
@@ -157,3 +157,4 @@
 | 2026-08-30 | 10% | 0 | ADR 0031に基づき旧CCBのcompatible reader、migration/restore tooling、pre-containment Rulesを4つのcorrective implementation commitでrollbackした。Schemas `.167` artifact/pin、Admin SDK guard、UWB、Company create/delete拒否を保持し、Rules source contract 2件と隔離Emulator 97件が成功した。新CCBのwhole-document replacement除去、STRIPE-01、Dev受入れは未完了のため公式進捗は据え置いた。 |
 | 2026-08-30 | 10% | 0 | Company基本情報を独立draftと専用Callableによる変更field保存へ移し、server timestamp、会社管理者境界、編集中変更通知、client直接変更拒否を実装した。全domain 659件と隔離Emulator 99件が成功した。Company部分更新roadmapは30%だが、残るwhole-document writer、local UI、Dev受入れが未完了のため親roadmapは10%に据え置いた。 |
 | 2026-08-30 | 10% | 0 | task交代中を除き、独立して分割できる調査・review・test・利用者承認済み補助実装等へ適切なsubagentを使用し、Checkpoint固有の禁止を当該Checkpointだけに限定する運用を採用した。ガバナンス基準線の成果物と検証可能性は維持され、未完了product milestoneに新たな完了証拠はないため進捗は据え置いた。 |
+| 2026-08-30 | 10% | 0 | ADR 0034で、承認済みcheckpoint内のCodex実装・自動検証・必要なin-app UI smokeと、利用者による実際の利用環境での最終UI acceptanceを標準責任へ変更した。product実装・検証・受入れの新しい完了証拠はなく、instruction-chain turnover完了までapplication checkpointを停止するため公式進捗は据え置いた。 |

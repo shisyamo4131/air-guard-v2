@@ -6,10 +6,12 @@
 
 ## 担当と変更単位
 
-- application codeの標準実装者はユーザーとする。
-- Codexは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法を整理し、ユーザー実装後の差分review、許可済みtest、documentとlocal Gitを管理する。
-- Codexの`developer`によるapplication code編集は、ユーザーが対象fileまたは機能境界を明示した補助実装だけで行う。
-- `tester`によるtest code編集は明示されたtest scopeだけで行い、application codeを変更しない。
+- ユーザーが仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。
+- Codex coordinatorは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法を整理し、承認済みsegmentの実装、自動検証、独立review、必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理する。
+- `developer`は承認済みscopeのapplication code、必要なFunctions・Firebase Rules・関連設定だけを変更し、隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
+- `tester`はcoordinatorが明示したtest scopeでtest codeを編集し、application codeを変更しない。承認済みcheckpointの検証に必要な個々のtest fileについて、利用者のfile-by-file承認は要求しない。
+- UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smoke後も利用者受入れ待ちとし、別途承認された実際の利用環境で利用者が最終UI acceptanceを完了するまで最終完了としない。
+- application implementation fileを1 fileずつ利用者が確認する手順は、checkpointが明示した場合だけ適用する。通常は承認済みsegment単位で連続実装・検証し、変更挙動、security境界、test、残存risk、rollback、利用者確認項目をまとめて提示する。
 - 認証・認可・tenant分離は一括改修せず、独立して説明・review・rollbackできる最小segmentを1件ずつ扱う。
 
 ## 非同期UI操作のerror・loading責務

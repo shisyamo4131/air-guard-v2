@@ -13,8 +13,8 @@ AirGuardV2にはcode探索、security確認、test、review、利用者が明示
 
 ## 決定
 
-- task交代中を除き、調査、code探索、review、test、利用者が明示承認した補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは適切なsubagentを使用する。
-- 単一の小作業を形式的に分割せず、不要なroleを起動しない。並行書込みはfile ownershipを重複させず、application codeは利用者が明示した補助実装だけを`developer`へ集中させる。
+- task交代中を除き、調査、code探索、review、test、利用者承認済みcheckpointの実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは適切なsubagentを使用する。
+- 単一の小作業を形式的に分割せず、不要なroleを起動しない。並行書込みはfile ownershipを重複させず、application code、必要なFunctions・Firebase Rules・関連設定は承認済みboundary内で`developer`へ集中させる。
 - checkpointでsubagent禁止を指定した場合、その禁止は当該checkpointの開始からterminal callbackとcoordinator reviewまでに限定する。後続checkpointまたはproject全体へ自動的に持ち越さない。
 - task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、その交代手順内ではsubagentを使用しない。
 - coordinatorは全依頼結果を待ち、差分、test、未確認事項、承認境界を統合してから完了を判断する。既存のcoordinator-owned Git統合とrole別権限は変更しない。
@@ -33,7 +33,7 @@ AirGuardV2にはcode探索、security確認、test、review、利用者が明示
 ## 影響
 
 - 利用者: 独立分割できる作業では、coordinatorが必要な専門agentを選び、統合結果を日本語で分かりやすく報告する。
-- 実装: application codeの標準実装者は引き続き利用者であり、Codexの補助実装は利用者が明示した範囲に限る。
+- 実装: ADR 0034に従い、利用者承認済みcheckpoint内ではCodexの`developer`を標準実装担当とする。承認scope、role別権限、coordinator-owned Git統合は維持する。
 - Git: 専門taskは原則stage・commitせず、coordinatorがreview済みfileだけを統合する既存契約を維持する。
 - data・外部作用: 権限拡張はない。Dev、Prod、remote/data操作、push、deployの承認境界を変更しない。
 - task lifecycle: project-wide delegation方針のinstruction-chain変更であるため、反映commit後に利用者の明示承認を得てaffected coordinatorを完全新規taskへ交代する。

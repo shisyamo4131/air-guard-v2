@@ -73,7 +73,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 最新Companyへchangesを重ね、5 field all-nullまたはall-completeを検証する。legacyの`accountType=普通`だけの空口座は未登録表示へ正規化するが、open/no-op saveで書き戻さない。明示clearは5 fieldすべてnull、partial legacyはcomplete repairまたは全null化だけを許可する。
 - transactionは実際に変化した振込先fieldとserver `updatedAt`・actor `uid`だけを更新する。Rulesは振込先5 fieldのclient直接変更を全actorへ拒否し、未移行operationの無関係field互換を維持する。
 - editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
-- 実装対象候補は`schemas/Company.js`、Company専用billing editor、`pages/settings/company.vue`、application/company composable、`composables/company/useCompanyFunctions.js`、Functions API/use-case/index、`firestore.rules`、domain/Emulator/UI/PDF testである。application codeの標準実装者は利用者であり、本節の文書反映だけでは実装済みと扱わない。
+- 実装対象候補は`schemas/Company.js`、Company専用billing editor、`pages/settings/company.vue`、application/company composable、`composables/company/useCompanyFunctions.js`、Functions API/use-case/index、`firestore.rules`、domain/Emulator/UI/PDF testである。ADR 0034のPM-12 activation後、承認済みbounded checkpoint内でCodexが実装・自動検証・必要なin-app UI smokeを担当し、利用者が実際の利用環境で最終UI acceptanceを行う。本節の文書反映だけでは実装済みと扱わない。
 
 ## tenant identity
 

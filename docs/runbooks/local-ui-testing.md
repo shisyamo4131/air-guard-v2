@@ -4,6 +4,13 @@
 - 最終確認日: 2026-08-27
 - 役割: Codex専用UI環境と利用者用local browser受入れの準備・操作・終了
 
+## UI検証と最終受入れの責任分離
+
+- 利用者承認済みcheckpointで必要なin-app UI smokeは、Codexが本runbookのCodex専用local UI環境を使って実施する。専用demo project、loopback、合成account/data、外部作用deny、通常のpointer・keyboard操作という既存境界を維持する。
+- Codex UI smokeは実装・自動検証の証拠であり、利用者が実際の利用環境で行う最終UI acceptanceの代替ではない。UIまたは利用者操作へ影響するfeatureは、利用者の最終受入れまで「利用者受入れ待ち」と報告する。
+- 利用者用local、Devその他の実際の利用環境へ接続・変更する場合は、その環境に適用される既存の別承認境界を維持する。Codex専用UI smokeの承認からDev、remote/data、実account操作を推論しない。
+- application fileを1 fileずつ利用者が確認する手順はcheckpointが明示した場合だけ適用する。通常はsegment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目を受入れ資料とする。
+
 ## Codexだけで完結するlocal UI test
 
 2026-08-25にNuxt開発サーバーを使う自己完結経路を再確認した。Codexが専用Emulator、Functions、Nuxt、インアプリブラウザを順に管理し、Nuxt/Viteを十分に予熱してから初回navigationすることで、reloadなしに製品topへ到達するcold restartを3回連続で確認した。続けて保存済み合成Auth accountでsign-inし、`/dashboard`へ到達した。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。

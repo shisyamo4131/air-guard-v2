@@ -25,13 +25,13 @@ AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users
 
 原則として `air-guard-v2` だけを変更対象としてください。関連する `air-firebase-v2`、client/server adapter、schemas、admin-sdk は調査に必要な範囲で事前承認なく読み取れますが、影響範囲の大きいコア基盤です。明示的な対象指定と影響確認なしに変更しないでください。
 
-application codeの標準実装者はユーザーです。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当してください。Codexによるapplication code編集は、ユーザーが対象を明示した補助実装だけに限定してください。testerによるtest code編集は、明示されたtest scopeで許可されています。
+ユーザーが仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当としてください。Codex coordinatorは設計、仕様整理、脅威・失敗経路の分析、checkpoint分割、実装、自動検証、独立review、必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しないでください。testerによるtest code編集は、coordinatorが明示した承認済みtest scopeで許可されています。
 
-実装、修正、改修は作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位で `codex/<機能名>` ブランチを作成してください。主エージェントは合意済み範囲のreview済み差分だけをlocal Gitへstage・commitします。ユーザーの未コミットapplication codeを独自判断で修正、破棄、stage、commitしないでください。ユーザーが機能ブランチ上の動作を確認して明示的に承認するまで `main` へマージしないでください。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ個別の明示的指示を必要とします。Devでは対象commit、service、data影響、backup、rollback、停止条件、検証を含む一つのbounded release checkpoint承認を、同runbook内の静的生成、deploy、remote検証の承認として扱ってください。
+実装、修正、改修は作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位で `codex/<機能名>` ブランチを作成してください。主エージェントは承認済み範囲のreview済み差分だけをlocal Gitへstage・commitします。利用者または別taskの未コミット変更を独自判断で修正、破棄、stage、commitしないでください。ユーザーが機能ブランチ上の動作を確認して明示的に承認するまで `main` へマージしないでください。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ個別の明示的指示を必要とします。Devでは対象commit、service、data影響、backup、rollback、停止条件、検証を含む一つのbounded release checkpoint承認を、同runbook内の静的生成、deploy、remote検証の承認として扱ってください。
 
-重要な仕様変更が必要な場合は、現行仕様、変更案、理由、影響、互換性、移行、rollback、ユーザーが行う確認を提示して承認を得てください。承認後は、ユーザーの実装とCodexのreview・検証に合わせて、仕様書、ADRと索引、変更履歴、関連マニュアル、運用文書を更新してください。
+重要な仕様変更が必要な場合は、現行仕様、変更案、理由、影響、互換性、移行、rollback、ユーザーが行う確認を提示して承認を得てください。承認後は、Codexの実装・自動検証・必要なin-app UI smokeと利用者の最終UI acceptanceに合わせて、仕様書、ADRと索引、変更履歴、関連マニュアル、運用文書を更新してください。
 
-主エージェントとして依頼を整理し、task交代中を除いて、調査、code探索、review、test、利用者承認済みの補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、`AGENTS.md`のルーティングに従って適切なsubagentを使用してください。`developer`はユーザーが補助実装を明示した場合だけ使用してください。必要な結果をすべて待ってから統合し、単一の小作業を形式的に分割したり、不要なroleを起動したりしないでください。checkpoint固有のsubagent禁止は当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続へ持ち越さないでください。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitではsubagentを使用しないでください。
+主エージェントとして依頼を整理し、task交代中を除いて、調査、code探索、review、test、利用者承認済みcheckpointの実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、`AGENTS.md`のルーティングに従って適切なsubagentを使用してください。application code、必要なFunctions・Firebase Rules・関連設定は承認済みboundary内で`developer`へ集中させてください。必要な結果をすべて待ってから統合し、単一の小作業を形式的に分割したり、不要なroleを起動したりしないでください。checkpoint固有のsubagent禁止は当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続へ持ち越さないでください。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitではsubagentを使用しないでください。
 
 長期作業は、コーディネーターと専門タスクのID・ホスト、作業ツリー、チェックポイント、コールバック先、終了条件をcurrent snapshotへ記録し、作成・交代・アプリ再起動後に変更なしコールバックを1回検証してください。レビュー可能なチェックポイントを1件ずつ割り当て、完了・失敗・仕様質問・承認境界の通知後に差分と検証を統合してから次へ進んでください。専門タスクは原則としてステージやコミットをせず、正確な変更ファイル、差分、テスト、未確認事項、作業ツリー状態を報告します。コーディネーターが受入れたファイルだけをコミット・統合します。
 
@@ -40,6 +40,8 @@ application codeの標準実装者はユーザーです。Codexは設計、仕�
 旧タスクのアーカイブは利用者が行います。Codexはアーカイブを実行・依頼せず、新タスクの直接repository接続、変更なしcallback、権限、最初のfile限定commitを確認した後、利用者へ報告して待機してください。
 
 Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。Devは正式運用準備の完了を待たず、利用者承認済みbounded release checkpointの対象・期間・runbook内で積極的にdeploy・remote検証してください。新しいdata migration、破壊的repair、対象拡張、Prodは別の明示承認を必要とします。未実施部分についてユーザーが動作確認できる観点を提示し、秘密情報や実データを読み上げたり文書へ転記したりしないでください。
+
+UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smokeが成功しても利用者受入れ待ちとし、ユーザーが別途承認された実際の利用環境で最終UI acceptanceを完了するまで最終完了としないでください。application implementation fileを1 fileずつユーザーが確認する手順はcheckpointが明示した場合だけ適用し、通常は承認済みsegment単位で連続実装・検証・報告してください。
 
 ブラウザUIの挙動・受入れ検証では、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけを使用してください。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止です。read-only観測、非UI setup、backend assertionはUI操作証拠から分離して報告してください。
 
