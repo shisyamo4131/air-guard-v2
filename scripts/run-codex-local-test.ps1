@@ -2,7 +2,7 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
-    [ValidateSet('Harness', 'CcbRulesPrecontainment')]
+    [ValidateSet('Harness')]
     [string]$Suite = 'Harness',
     [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
@@ -20,15 +20,10 @@ $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
 $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
 $testPath = switch ($Suite) {
     'Harness' { Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs' }
-    'CcbRulesPrecontainment' { Join-Path $projectRoot 'test\local\ccb-rules-precontainment-emulator.test.mjs' }
 }
 $projectId = 'demo-air-guard-v2-codex'
 $seedEmulators = 'auth,firestore,database,storage'
-$testEmulators = if ($Suite -eq 'CcbRulesPrecontainment') {
-    'firestore'
-} else {
-    'auth,firestore,database,storage,functions'
-}
+$testEmulators = 'auth,firestore,database,storage,functions'
 $emulators = if ($Mode -eq 'Seed') { $seedEmulators } else { $testEmulators }
 
 if ($Mode -eq 'Seed' -and $Suite -ne 'Harness') {
