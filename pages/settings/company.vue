@@ -16,6 +16,7 @@ const canEditProfile = computed(
     auth.user?.disabled === false,
 );
 const canEditBilling = canEditProfile;
+const canEditOperations = canEditProfile;
 </script>
 
 <template>
@@ -60,11 +61,15 @@ const canEditBilling = canEditProfile;
           </v-col>
           <!-- 設定情報 -->
           <v-col cols="12">
-            <CompanyManager :doc="doc" label="設定情報">
-              <template #activator="activatorProps">
-                <CompanyActivatorSetting v-bind="activatorProps" />
+            <CompanyOperationsEditor :company="doc">
+              <template #activator="{ open }">
+                <CompanyActivatorSetting
+                  :item="doc"
+                  :editable="canEditOperations"
+                  @click:edit="open"
+                />
               </template>
-            </CompanyManager>
+            </CompanyOperationsEditor>
           </v-col>
         </v-row>
       </v-col>

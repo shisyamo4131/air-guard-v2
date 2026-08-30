@@ -7,6 +7,7 @@
 import { Company as BaseClass } from "@shisyamo4131/air-guard-v2-schemas";
 import {
   parseUpdateCompanyBillingInputV1,
+  parseUpdateCompanyOperationsInputV1,
   parseUpdateCompanyProfileInputV1,
 } from "@shisyamo4131/air-guard-v2-schemas/company-configuration";
 
@@ -30,6 +31,30 @@ const BILLING_FIELDS = Object.freeze([
   "accountNumber",
   "accountHolder",
 ]);
+
+const OPERATIONS_FIELDS = Object.freeze([
+  "minuteInterval",
+  "roundSetting",
+  "firstDayOfWeek",
+  "attendanceManagementMode",
+]);
+
+const ATTENDANCE_SUMMARY_MODE_BY_LEGACY = Object.freeze({
+  ACTUAL_DATE: "LABOR_STANDARD",
+  OPERATION_DATE: "OPERATION_COUNT",
+});
+
+const LEGACY_ATTENDANCE_MODE_BY_SUMMARY = Object.freeze({
+  LABOR_STANDARD: "ACTUAL_DATE",
+  OPERATION_COUNT: "OPERATION_DATE",
+});
+
+const OPERATIONS_VALID_SAMPLE = Object.freeze({
+  minuteInterval: 15,
+  roundSetting: "ROUND",
+  firstDayOfWeek: 0,
+  attendanceSummaryMode: "LABOR_STANDARD",
+});
 
 const BILLING_FIELD_LIMITS = Object.freeze({
   bankName: 100,
@@ -118,10 +143,55 @@ function billingFieldRule(field, label) {
   };
 }
 
+function toAttendanceSummaryMode(value) {
+  const mode = ATTENDANCE_SUMMARY_MODE_BY_LEGACY[value];
+  if (!mode) throw new Error("Invalid attendance management mode");
+  return mode;
+}
+
+function toAttendanceSummaryModeForCandidate(value) {
+  if (value === null || value === undefined || value === "") {
+    return "LABOR_STANDARD";
+  }
+  return toAttendanceSummaryMode(value);
+}
+
+function toLegacyAttendanceMode(value) {
+  const mode = LEGACY_ATTENDANCE_MODE_BY_SUMMARY[value];
+  if (!mode) throw new Error("Invalid attendance summary mode");
+  return mode;
+}
+
+function operationsFieldRule(field, label) {
+  return (value) => {
+    try {
+      const canonicalField =
+        field === "attendanceManagementMode"
+          ? "attendanceSummaryMode"
+          : field;
+      parseUpdateCompanyOperationsInputV1({
+        expectedRevision: 1,
+        value: {
+          ...OPERATIONS_VALID_SAMPLE,
+          [canonicalField]:
+            field === "attendanceManagementMode"
+              ? toAttendanceSummaryMode(value)
+              : value,
+        },
+      });
+      return true;
+    } catch {
+      return `${label}の入力内容を確認してください。`;
+    }
+  };
+}
+
 export default class Company extends BaseClass {
   static profileFields = PROFILE_FIELDS;
 
   static billingFields = BILLING_FIELDS;
+
+  static operationsFields = OPERATIONS_FIELDS;
 
   static get profileSchema() {
     const schemaByKey = new Map(this.schema.map((field) => [field.key, field]));
@@ -220,6 +290,76 @@ export default class Company extends BaseClass {
       value: { ...BILLING_VALID_SAMPLE, invoiceNumber: source.invoiceNumber },
     }).value;
     return { ...profile, invoiceNumber: billing.invoiceNumber };
+  }
+
+  static get operationsSchema() {
+    const schemaByKey = new Map(this.schema.map((field) => [field.key, field]));
+
+    return OPERATIONS_FIELDS.map((key) => {
+      const field = schemaByKey.get(key);
+      const label = field?.label || key;
+      return {
+        ...field,
+        component: {
+          ...field?.component,
+          attrs: {
+            ...field?.component?.attrs,
+            ...(key === "minuteInterval"
+              ? {
+                  min: 5,
+                  max: 30,
+                  step: 5,
+                  hint: "5〜30分の範囲で5分単位で指定してください",
+                  persistentHint: true,
+                }
+              : {}),
+            rules: [operationsFieldRule(key, label)],
+          },
+        },
+      };
+    });
+  }
+
+  static getOperationsValue(source = {}) {
+    return Object.fromEntries(
+      OPERATIONS_FIELDS.map((field) => [field, source[field] ?? null]),
+    );
+  }
+
+  static toAttendanceSummaryMode(value) {
+    return toAttendanceSummaryMode(value);
+  }
+
+  static toAttendanceManagementMode(value) {
+    return toLegacyAttendanceMode(value);
+  }
+
+  static normalizeOperations(value = {}) {
+    const operations = this.getOperationsValue(value);
+    const hasLegacyAttendanceMode =
+      operations.attendanceManagementMode !== null &&
+      operations.attendanceManagementMode !== undefined &&
+      operations.attendanceManagementMode !== "";
+    const canonical = parseUpdateCompanyOperationsInputV1({
+      expectedRevision: 1,
+      value: {
+        minuteInterval: operations.minuteInterval,
+        roundSetting: operations.roundSetting,
+        firstDayOfWeek: operations.firstDayOfWeek,
+        attendanceSummaryMode: toAttendanceSummaryModeForCandidate(
+          operations.attendanceManagementMode,
+        ),
+      },
+    }).value;
+
+    return {
+      minuteInterval: canonical.minuteInterval,
+      roundSetting: canonical.roundSetting,
+      firstDayOfWeek: canonical.firstDayOfWeek,
+      attendanceManagementMode: hasLegacyAttendanceMode
+        ? toLegacyAttendanceMode(canonical.attendanceSummaryMode)
+        : operations.attendanceManagementMode,
+    };
   }
 
   // 後日実装予定のカスタムカラー用プロパティ

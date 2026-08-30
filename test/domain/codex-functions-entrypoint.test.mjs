@@ -20,6 +20,7 @@ const PUBLIC_CALLABLES = [
   "setupUserAccount",
   "terminateEmployee",
   "updateCompanyBilling",
+  "updateCompanyOperations",
   "updateCompanyProfile",
   "updateOwnUserProfile",
   "updateUserNotificationSettings",

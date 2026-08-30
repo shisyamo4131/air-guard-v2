@@ -81,6 +81,13 @@ service cloud.firestore {
       ]);
     }
 
+    function preservesCompanyOperationsFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'minuteInterval', 'roundSetting', 'firstDayOfWeek',
+        'attendanceManagementMode', 'attendanceSummaryMode'
+      ]);
+    }
+
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -127,7 +134,8 @@ service cloud.firestore {
       allow update: if isAuthenticated()
                     && userCompanyId() == companyDocId
                     && preservesCompanyProfileFields()
-                    && preservesCompanyBillingFields();
+                    && preservesCompanyBillingFields()
+                    && preservesCompanyOperationsFields();
       allow create, delete: if false;
     }
 

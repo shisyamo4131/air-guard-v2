@@ -715,6 +715,155 @@ test("Firestore Rules reserve Company profile fields for the server writer", asy
   );
 });
 
+test("Firestore Rules reserve Company operations fields for the server writer", async () => {
+  const companyId = "codex-rules-operations-write-company";
+  const adminUid = "codex-rules-operations-write-admin";
+  const storedOperations = {
+    minuteInterval: 15,
+    roundSetting: "ROUND",
+    firstDayOfWeek: 0,
+    attendanceManagementMode: "ACTUAL_DATE",
+  };
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-operations-write-rules",
+      profileRulesProbe: "unchanged",
+      bankName: "架空銀行",
+      ...storedOperations,
+    });
+  });
+
+  const actors = [
+    {
+      uid: adminUid,
+      user: { isAdmin: true },
+      claims: { companyId, isSuperUser: false },
+    },
+    {
+      uid: "codex-rules-operations-write-user",
+      user: { isAdmin: false },
+      claims: { companyId, isSuperUser: false },
+    },
+    {
+      uid: "codex-rules-operations-write-super",
+      user: { isAdmin: true },
+      claims: { companyId, isSuperUser: true },
+    },
+  ];
+  const replacements = {
+    minuteInterval: 20,
+    roundSetting: "CEIL",
+    firstDayOfWeek: 1,
+    attendanceManagementMode: "OPERATION_DATE",
+  };
+  for (const actor of actors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: companyId,
+      companyId,
+      ...actor.user,
+    });
+    const firestore = testEnvironment
+      .authenticatedContext(actor.uid, {
+        email_verified: true,
+        ...actor.claims,
+      })
+      .firestore();
+    const companyRef = doc(firestore, "Companies", companyId);
+    for (const [field, value] of Object.entries(replacements)) {
+      await assertFails(setDoc(companyRef, { [field]: value }, { merge: true }));
+    }
+  }
+
+  const adminFirestore = testEnvironment
+    .authenticatedContext(adminUid, {
+      email_verified: true,
+      companyId,
+      isSuperUser: false,
+    })
+    .firestore();
+  const adminCompanyRef = doc(adminFirestore, "Companies", companyId);
+  await assertFails(
+    setDoc(
+      adminCompanyRef,
+      { minuteInterval: 25, unrelatedOperationsRulesProbe: true },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      adminCompanyRef,
+      { attendanceSummaryMode: "OPERATION_COUNT" },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      adminCompanyRef,
+      { minuteInterval: 20, attendanceSummaryMode: "OPERATION_COUNT" },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      adminCompanyRef,
+      {
+        attendanceSummaryMode: "OPERATION_COUNT",
+        unrelatedOperationsRulesProbe: true,
+      },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(adminCompanyRef, { companyName: "profile still reserved" }, { merge: true }),
+  );
+  await assertFails(
+    setDoc(adminCompanyRef, { bankName: "billing still reserved" }, { merge: true }),
+  );
+  await assertSucceeds(
+    setDoc(
+      adminCompanyRef,
+      { unrelatedOperationsRulesProbe: "legacy update remains allowed" },
+      { merge: true },
+    ),
+  );
+
+  const crossTenantUid = "codex-rules-operations-write-other-tenant";
+  await seedRegisteredUser({
+    uid: crossTenantUid,
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isAdmin: true,
+  });
+  const crossTenantFirestore = testEnvironment
+    .authenticatedContext(crossTenantUid, {
+      email_verified: true,
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      isSuperUser: false,
+    })
+    .firestore();
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(
+      setDoc(
+        doc(crossTenantFirestore, "Companies", companyId),
+        { [field]: value },
+        { merge: true },
+      ),
+    );
+  }
+
+  const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(
+      setDoc(
+        doc(unauthenticated, "Companies", companyId),
+        { [field]: value },
+        { merge: true },
+      ),
+    );
+  }
+});
+
 test("Firestore Rules preserve Company billing reads for active same-tenant Users", async () => {
   const companyId = "codex-rules-billing-read-company";
   const actors = [
@@ -1138,6 +1287,107 @@ test("billing Callable validates current Auth and actor identity before tenant u
           uid: actorUid,
           claims,
           data: { changes: { branchName: "拒否支店" } },
+        }),
+      ),
+      "permission-denied",
+    );
+  }
+});
+
+test("operations Callable updates synthetic Company data only for an active administrator", async () => {
+  const { updateCompanyOperations } = await loadRebuildApis();
+  const companyId = "codex-callable-operations-company";
+  const actorUid = "codex-callable-operations-admin";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-operations-callable",
+      minuteInterval: 15,
+      roundSetting: "ROUND",
+      firstDayOfWeek: 0,
+      attendanceManagementMode: "ACTUAL_DATE",
+    });
+  });
+  await seedCallableAuthUser({
+    uid: actorUid,
+    companyId,
+    email: actorEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: actorUid,
+    pathCompanyId: companyId,
+    companyId,
+    email: actorEmail,
+    isAdmin: true,
+  });
+
+  const result = await updateCompanyOperations.run(
+    callableRequest({
+      uid: actorUid,
+      claims: { email: actorEmail, companyId, isSuperUser: false },
+      data: {
+        changes: {
+          minuteInterval: 20,
+          attendanceManagementMode: "OPERATION_DATE",
+        },
+      },
+    }),
+  );
+  assert.deepEqual(result, {
+    success: true,
+    updated: true,
+    updatedFields: ["minuteInterval", "attendanceManagementMode"],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const company = (
+      await getDoc(doc(context.firestore(), "Companies", companyId))
+    ).data();
+    assert.equal(company.minuteInterval, 20);
+    assert.equal(company.roundSetting, "ROUND");
+    assert.equal(company.firstDayOfWeek, 0);
+    assert.equal(company.attendanceManagementMode, "OPERATION_DATE");
+    assert.equal(company.fixture, "company-operations-callable");
+    assert.equal(company.uid, actorUid);
+    assert.ok(company.updatedAt);
+  });
+
+  const deniedActors = [
+    { name: "non-admin", user: { isAdmin: false } },
+    { name: "temporary", user: { isAdmin: true, isTemporary: true } },
+    { name: "disabled", user: { isAdmin: true, disabled: true } },
+    {
+      name: "cross-tenant",
+      user: { isAdmin: true, companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+    },
+    { name: "super-user", user: { isAdmin: true }, isSuperUser: true },
+  ];
+  for (const testCase of deniedActors) {
+    const uid = `codex-callable-operations-${testCase.name}`;
+    const email = `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({
+      uid,
+      companyId,
+      email,
+      isSuperUser: testCase.isSuperUser ?? false,
+    });
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      email,
+      ...testCase.user,
+    });
+    await assertCallableError(
+      updateCompanyOperations.run(
+        callableRequest({
+          uid,
+          claims: {
+            email,
+            companyId,
+            isSuperUser: testCase.isSuperUser ?? false,
+          },
+          data: { changes: { minuteInterval: 25 } },
         }),
       ),
       "permission-denied",
@@ -2113,6 +2363,7 @@ test("API index exports every public Callable without internal request helpers",
     "reinstateEmployee",
     "setupUserAccount",
     "terminateEmployee",
+    "updateCompanyOperations",
     "updateCompanyProfile",
     "updateOwnUserProfile",
     "updateUserNotificationSettings",
@@ -2184,6 +2435,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyOperations,
     updateCompanyProfile,
     reinstateEmployee,
     updateOwnUserProfile,
@@ -2202,6 +2454,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyOperations,
     updateCompanyProfile,
     reinstateEmployee,
     updateOwnUserProfile,

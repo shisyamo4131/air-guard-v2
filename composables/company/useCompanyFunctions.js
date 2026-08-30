@@ -15,5 +15,15 @@ export function useCompanyFunctions() {
     return result.data;
   }
 
-  return { updateCompanyBilling, updateCompanyProfile };
+  async function updateCompanyOperations(changes) {
+    const callable = httpsCallable($functions, "updateCompanyOperations");
+    const result = await callable({ changes });
+    return result.data;
+  }
+
+  return {
+    updateCompanyBilling,
+    updateCompanyOperations,
+    updateCompanyProfile,
+  };
 }

@@ -9,20 +9,22 @@
 > 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
 >
 > 2026-08-30 Company billing implementation: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
+>
+> 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
+- 状態: 段階移行中（Company基本情報のlocal受入れ完了、振込先・通常設定は利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-30
-- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
+- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
-- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報と口座情報は専用editor/Callable、残る2 operationは旧CompanyManagerまたは直接`Company.update()`を使用する。
-- 基本情報と口座情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
-- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 field・住所由来`location/geopoint`・振込先5 fieldが変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。基本情報と振込先の保存はFunctions/Admin SDKに限定した。
+- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報、口座情報、設定情報は専用editor/Callable、会社既定取極めは旧CompanyManagerを使用する。
+- 基本情報、口座情報、設定情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
+- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 field・住所由来`location/geopoint`・振込先5 field・通常設定4 field・予約済みcanonical fieldが変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。移行済みfieldの保存はFunctions/Admin SDKに限定した。
 
 ## データ契約
 
@@ -37,7 +39,7 @@ Companyはroot collection `Companies/{companyId}`に保存され、`usePrefix=fa
 | 既定取極め | `agreementsV2`（AgreementV2配列）。旧`agreements` getter/setterは警告して空配列/無処理 |
 | 表示順 | hidden `siteOrder`、`scheduleOrder`（SiteOrder配列） |
 | 位置 | hidden `location`。converterがlat/lngから`geopoint`を保存。`fullAddress`、`prefecture`は読み取り専用プロパティ |
-| 運用設定 | `minuteInterval` default 15、UI min 1/max 30、`roundSetting` default ROUND、`firstDayOfWeek` default定数先頭、`attendanceManagementMode` default ACTUAL_DATE |
+| 運用設定 | `minuteInterval` default 15、UI 5〜30を5分単位、`roundSetting` default ROUND、`firstDayOfWeek` default定数先頭、`attendanceManagementMode` default ACTUAL_DATE。legacy勤怠値はACTUAL_DATE→LABOR_STANDARD、OPERATION_DATE→OPERATION_COUNTへ検証時だけ写像する |
 | Stripe | hidden `stripeCustomerId`、hidden `subscription`。defaultはid/status/currentPeriodEnd null、employeeLimit 10 |
 | maintenance | hidden `maintenanceMode=false`、reason/startAt/startedBy null |
 
@@ -63,9 +65,11 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 利用者はlocal環境で修正版を再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限と更新metadataを含め、Company基本情報のlocal受入れは完了した。
 - 基本情報と口座editorは、入力検査の開始前からsingle-flightを立て、server応答まで入力欄・選択欄・削除・取消・保存・最新値の再読込を操作不可にする。再読込処理自体も保存中は何もしない。自分自身の保存結果がlive listenerから返った場合は外部更新警告を出さず、本当に異なる値が返った場合だけ保存を止める。server失敗中に外部更新された場合は、操作を戻した後も警告と再読込を残す。
 - 口座editorは5口座fieldをlive Companyと別のdraftで編集する。5項目全部の登録または明示的な全削除だけを許可し、保存直前まで同じ5 fieldの外部変更を再確認する。競合時は現在入力を保存せず「最新値を読み直す」だけを提供する。
+- 通常設定editorは4 fieldを独立draftで編集し、保存開始からserver応答まで全入力・選択・増減・取消・保存・閉じる・最新値の再読込を無効にする。自分の保存reflectionは競合にせず、本当に異なるlive値だけで保存を止める。
+- `updateCompanyOperations`はexact `{changes}`の非空subsetだけを受け、transaction内の最新Companyへ重ねて検証する。実際に変わったfieldとserver `updatedAt`・actor `uid`だけを更新し、同値はwrite 0とする。
+- 既存Companyの`attendanceManagementMode`が欠損・null・空文字の場合は、別fieldの更新を妨げないよう検証上だけ`LABOR_STANDARD`とするが、勤怠fieldを補完保存しない。未知値は拒否する。変更要求としてはlegacyの既知2値だけを許可する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
-- 基本情報のinvoice番号と振込先はSchemas billing parserで検証する。残るminuteIntervalと通常設定enum等の旧operationは後続移行までRules/serverで形を強制しない。
-- 通常設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
+- 取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
 
 ## 2026-08-30 振込先更新契約（local実装・Codex検証済み、利用者最終UI acceptance待ち）
 
@@ -76,6 +80,14 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
 - `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`でapplication、Functions、Rules、domain/Emulator/PDF testを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件が成功し、Codex in-app UIで管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認した。非管理者UI、実際の請求PDF、利用者環境での最終表示は自動testとCodex smokeを利用者受入れの代用にせず、最終UI acceptance待ちとする。
 - `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`で基本情報・振込先の保存中制御と自己保存reflection判定を補正した。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UIは起動templateから製品画面へ移る前にNuxt `ECONNRESET`で停止したが、利用者が実際の環境で保存中の操作不可と自己保存時の警告非表示を確認し、この補正の最終UI acceptanceを完了した。
+
+## 2026-08-30 通常設定更新契約（local実装・Codex検証済み、利用者最終UI acceptance待ち）
+
+- `minuteInterval`、`roundSetting`、`firstDayOfWeek`、`attendanceManagementMode`だけを所有し、Company rootは分割しない。data migrationやfield renameも行わず、legacy保存値を維持する。
+- 同じtenantの有効な本登録会社管理者だけが保存でき、super-user、非管理者、temporary、disabledを拒否する。identityからCompany pathを導出し、client入力のtenant IDを受けない。
+- Rulesは4 fieldと将来用`attendanceSummaryMode`のclient直接変更を拒否する。profile・billing保護、同社User read、未移行fieldの互換updateを維持する。
+- 対象19件、全domain 707件、専用Emulator 104件が成功した。Codex in-app UIでは15分から20分への保存中に全controlが無効になること、完了後の表示反映、自己保存警告なし、15分への復元、console error 0件を確認した。終了後は専用port 0、runtime 0である。
+- 利用者の実際の利用環境では、4項目表示、1 fieldだけの保存、保存中全control無効、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を最終確認する。それまではCPU-03を完了としない。
 
 ## tenant identity
 
@@ -104,7 +116,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 ## Rules・security
 
 - 会社名、住所、電話・FAX、invoice番号、振込先5 fieldはclient直接writeを拒否し、会社管理者専用Callableだけが更新する。同じtenantの有効な本登録Userによるreadは維持する。
-- 通常設定、取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。
+- 取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。通常設定4 fieldと予約済みcanonical fieldはclient直接writeを拒否する。
 - hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientがroot updateの一部として直接変更できる。
 - Company create/deleteはclient拒否済みだが、必須field除去、invalid enum/number、siteOrder/agreementsV2改変をRulesで検証しない。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。

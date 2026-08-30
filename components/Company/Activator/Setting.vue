@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Company/Activator/Setting.vue
  * @description 会社の設定情報表示コンポーネント
- * - `CompanyManager` の activator スロット用コンポーネント
+ * - Company通常設定editorの表示・起動用コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Company, RoundSetting } from "@/schemas";
@@ -17,7 +17,8 @@ const _props = defineProps({
     required: true,
     validator: (value) => value instanceof Company,
   },
-  title: { type: String, default: undefined },
+  editable: { type: Boolean, default: true },
+  title: { type: String, default: "設定情報" },
 });
 const props = useDefaults(_props, "CompanyActivatorSetting");
 const emit = defineEmits(["click:edit"]);
@@ -79,7 +80,7 @@ defineExpose({
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"

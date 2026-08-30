@@ -21,6 +21,7 @@ export { reinstateEmployee } from "./reinstateEmployee.js";
 export { setupUserAccount } from "./setupUserAccount.js";
 export { terminateEmployee } from "./terminateEmployee.js";
 export { updateCompanyBilling } from "./updateCompanyBilling.js";
+export { updateCompanyOperations } from "./updateCompanyOperations.js";
 export { updateCompanyProfile } from "./updateCompanyProfile.js";
 export {
   updateOwnUserProfile,
