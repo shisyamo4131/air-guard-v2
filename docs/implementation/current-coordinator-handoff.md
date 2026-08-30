@@ -1,10 +1,10 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / activation baseline prepared
+- 状態: Current / PM-10 active ownership
 - 更新日: 2026-08-30
-- former coordinator: PM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` / host `local`
-- replacement coordinator: PM（AirGuardV2）-10 / task IDはbaseline commit後の完全新規task作成時に割り当て、最初のfile限定commitで本snapshotへ確定する / host `local`
-- callback destination until ownership activation: PM（AirGuardV2）-09 task `01a0505c-6593-7571-9f4a-65a1e6cd14a3`
+- active coordinator: PM（AirGuardV2）-10 / task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63` / host `local`
+- active callback and assignment destination: PM（AirGuardV2）-10 task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63`
+- former coordinator: PM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
 - program coordinator: PM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` / host `local`
 - coordination procedure: [project coordination](../runbooks/project-coordination.md)、[efficient handoff](../runbooks/coordinator-handoff-efficient-activation.md)、[ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)
 
@@ -12,7 +12,7 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- activation baseline: 本snapshotを含むlocal commit。exact full SHAはreplacement task初期messageで指定し、no-change receiptのHEADと一致させる。
+- activation baseline: `9042667a0e6265add0eddfb982a06265b6e91178`
 - expected upstream: none
 - expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
@@ -33,8 +33,8 @@
 
 ## Current checkpoint and next work
 
-- first replacement checkpoint: `NO-CHANGE-GOV16-AIRGUARDV2-PM10-001`。direct repository、baseline、instruction sources、permissions、no files/diff/testsをbounded callbackでPM-09へ1回通知して待機する。
-- first real file checkpoint after receipt: `GOV16-AIRGUARDV2-PM10-ACTIVATION-001`。本snapshot 1件だけへactual PM-10 task ID、host、active ownership、baseline/HEADを記録し、効率化runbookのvalidator・blob・commit gateを満たす。
+- no-change checkpoint: `NO-CHANGE-GOV16-AIRGUARDV2-PM10-001` COMPLETE。task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63` / host `local`、direct repository、baseline HEAD、upstream none、clean、primary-only worktree、common governance `1.4.0`、specification `0.6.0`、managed `workspace-write` / `auto_review` / network restricted、最小restart sourceを確認し、PM-09がreceiptを受理した。
+- ownership activation checkpoint: `GOV16-AIRGUARDV2-PM10-ACTIVATION-001`。本snapshot 1件だけのfile-scoped local commitでPM-10へcallbackとassignmentをretargetし、効率化runbookのvalidator・blob・commit gateを満たす。exact new HEADはactivation receiptへ記録する。
 - next product checkpoint after ownership activation: `CCB-RESTART-ROLLBACK-INVENTORY-001`。read-onlyで旧CCBのexact commits/files、依存、保持対象、rollback対象、test、関連Schemas/Admin SDK影響を確定する。commit rangeを一括revertせず、review済みcorrective rollback planを作る。
 - first active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。rollback baseline確定後にSTRIPE-01から開始する。
 
