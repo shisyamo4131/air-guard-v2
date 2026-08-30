@@ -460,3 +460,22 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - 3回目の独立read-only reviewはfindings 0で、前回5点の解消、target escape、raw型、digest/concurrency、partial/unknown outcome、data loss、PII非出力、runner隔離、文書整合を確認した。
 - 最終pre-commit検証はmigration domain 34件、専用Firestore Emulator 1件、既存Codex Emulator harness 97件、compatible reader 8件、User予約migration 18件、Node構文、project documentation、managed governance、renderer、`git diff --check`が各exit 0だった。専用migration testと既存harnessはいずれも利用者saved-data不変・専用seed read-onlyを確認した。既存harness終了時のWindows open handle警告で空runtime directory 1件だけcleanupが遅延したため、files 0 / bytes 0とproject配下exact pathを確認して非再帰削除し、他の既存runtime directoryには触れていない。
 - current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はDev実dataへ触れずに、PrivateSettings除外を誤表示しないbackup inventory表示、SettingAudits専用create-only restoreのpure/local contract、pre-containment Rules/Callableの実装順をcheckpoint化する。Dev/remote read、manifest生成、Rules deploy、data apply、push、`main` merge、Prodは別承認まで停止する。
+
+## GOV15-AIRGUARDV2-PM09-SELF-ROUTING-001 coordinator activation checkpoint
+
+- 日付: 2026-08-30。
+- checkpoint: `GOV15-AIRGUARDV2-PM09-SELF-ROUTING-001`。
+- former coordinator: PM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`。
+- new coordinator: PM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- activation baselineはbranch `codex/dev-user-reservation-migration`、HEAD `4db16ee1c9a64ee363c8666b9fabe92dd6374570`、upstream none、clean、保存済みprimary repositoryのworktree 1件だけである。
+- managed common governanceは`1.4.0`、common SHA-256は`d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、project specificationは`0.5.17`である。
+- `NO-CHANGE-GOV15-AIRGUARDV2-PM09-001`は成功した。exact cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとfull HEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、managed restricted `workspace-write`、`auto_review`、network restricted、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sources、承認・権限境界をrepositoryとtrusted task metadataから復元した。
+- governance change commit `4db16ee1c9a64ee363c8666b9fabe92dd6374570`は11 files、140 insertions、37 deletionsである。PM（AirGuardV2）-08ではproject-owned documentation validator、managed governance validator、renderer `-Check`、committed diff checkがそれぞれ独立exit 0で、independent review findingsは0だった。
+- project-wide ruleとして、既存Firestore Rulesの許可を狭める改修は、現行Rules下で将来境界へ準拠するClient/Server CRUDを先行し、現行・候補Rulesの両回帰、既存機能継続、旧writer 0件を確認してからRulesを閉じる。新規pathは最初のdocument作成前にdenyを確立する。local候補Rulesの成功だけをdeploy readinessとみなさない。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`の公開・artifact検証、Admin SDKのfail-closed safety guard、AirGuardV2 app/Functionsのexact package導入とcompatible reader、pure migration plannerとCodex専用local Emulator経路、PrivateSettings backup coverage、SettingAudits pure restore planner、候補Rulesのlocal実装・回帰まで完了した。
+- nextはCompany固有cloneでnon-enumerable CCB runtime stateを非永続のまま保持し、`AirItemManager`のcustom `handleUpdate`を使ってCompanyManagerと全Company callerをmarker-awareな4つの専用Callableへ移す。LEGACYはscope別`expectedValue`一致時だけlegacy rootをexact partial updateし、root whole-set・reserved field・新path・audit writeを0件とする。STAGEDは通常設定writeとsignupを拒否する。ACTIVEは`expectedRevision`を使い、Settingsと必要なauditだけを更新する。dual-writeは行わない。
+- rolloutは現行Rules下の既存CRUD先行移行、現行・候補Rules両回帰と旧writer 0件確認、maintenance開始、Rules deploy/receipt確認、complete Settingsのcreate-only staging、同一maintenance内activationの順とする。
+- 本checkpointの限定commitとpost-commit verificationが成功した時点で、active AirGuardV2 coordinator ownershipをPM（AirGuardV2）-09へ移管する。former PM（AirGuardV2）-08はCodexがarchiveまたはdeleteせず、利用者が手動削除できる状態とする。
+- 今後のAirGuardV2 checkpoint assignment/callbackとprogram completion callbackはPM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` host `local`へretargetする。program coordinatorはPM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`である。
+- application変更、Rules変更、application test、deploy、migration、network、remote/data操作、Git push、`main` merge、Prodは本checkpointに含めず、別checkpointとする。
