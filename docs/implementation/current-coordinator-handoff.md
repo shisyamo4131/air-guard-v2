@@ -1,10 +1,10 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-10 active ownership
+- 状態: Current / PM-11 active ownership
 - 更新日: 2026-08-30
-- active coordinator: PM（AirGuardV2）-10 / task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63` / host `local`
-- active callback and assignment destination: PM（AirGuardV2）-10 task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63`
-- former coordinator: PM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
+- active coordinator: PM（AirGuardV2）-11 / task `01a05143-0fd6-76c2-ad4c-099742f6e527` / host `local`
+- active callback and assignment destination: PM（AirGuardV2）-11 task `01a05143-0fd6-76c2-ad4c-099742f6e527`
+- former coordinator: PM（AirGuardV2）-10 / task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
 - program coordinator: PM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` / host `local`
 - coordination procedure: [project coordination](../runbooks/project-coordination.md)、[efficient handoff](../runbooks/coordinator-handoff-efficient-activation.md)、[ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)
 
@@ -12,7 +12,7 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- activation baseline: `9042667a0e6265add0eddfb982a06265b6e91178`
+- activation baseline: `c245cc89c1c6af72cf25107168ca4b800fa6f554`
 - corrective rollback start baseline: `1629e9925159a8342e646faf3c875e31995dac75`
 - corrective rollback implementation HEAD: `98595711cba758170442e9777ac5e992fee6d4ee`
 - operation editor governance commit: `6c4b84ba724e64fc81d0d24ec224838629ecbdc1`
@@ -44,18 +44,18 @@
 
 ## Current checkpoint and next work
 
-- no-change checkpoint: `NO-CHANGE-GOV16-AIRGUARDV2-PM10-001` COMPLETE。task `01a050b5-2ea4-7220-a4b3-4d4fa0213e63` / host `local`、direct repository、baseline HEAD、upstream none、clean、primary-only worktree、common governance `1.4.0`、specification `0.6.0`、managed `workspace-write` / `auto_review` / network restricted、最小restart sourceを確認し、PM-09がreceiptを受理した。
-- ownership activation checkpoint: `GOV16-AIRGUARDV2-PM10-ACTIVATION-001`。本snapshot 1件だけのfile-scoped local commitでPM-10へcallbackとassignmentをretargetし、効率化runbookのvalidator・blob・commit gateを満たす。exact new HEADはactivation receiptへ記録する。
+- no-change checkpoint: `NO-CHANGE-GOV17-AIRGUARDV2-PM11-001` COMPLETE。task `01a05143-0fd6-76c2-ad4c-099742f6e527` / host `local`、direct repository、baseline `c245cc89c1c6af72cf25107168ca4b800fa6f554`、upstream none、clean、primary-only worktree、common governance `1.4.0`、specification `0.7.2`、managed `workspace-write` / `auto_review` / network restricted、`AGENTS.md`、project rules、documentation map、coordination runbook、本snapshotを確認し、PM-10がreceiptを受理した。
+- ownership activation checkpoint: `GOV17-AIRGUARDV2-PM11-ACTIVATION-001`。本snapshot 1件だけのfile-scoped local commitでPM-11へcallbackとassignmentをretargetし、効率化runbookのvalidator・blob・commit gateを満たす。exact new HEADはactivation receiptへ記録する。
 - completed product checkpoint: `CCB-RESTART-ROLLBACK-INVENTORY-001`と承認済みcorrective rollback。commit rangeの一括revertを使わず、compatible reader、audit planner、migration tooling、Rulesの4単位で実装・testを完了した。
 - completed product checkpoint: `CCB-COMPANY-PARTIAL-UPDATE-001`。Company基本情報の専用editor・Callable、Class schema/operation validation、会社管理者境界、変更fieldだけの保存、server timestamp、編集中listener変更の通知、Rulesのclient直接変更拒否をlocal実装・検証した。
 - completed acceptance checkpoint: Company基本情報のtitle、dialog本文限定scroll、外部更新後の再読込専用UIを利用者local環境で再確認し、受入れを完了した。
-- current governance checkpoint: `GOV17-AIRGUARDV2-SUBAGENT-ROUTING-001`。project-wide delegation方針をproject rules、仕様、ADR 0032、runbook、開始prompt、roadmap、snapshot、changelogへ反映し、instruction-chain変更として検証・commitする。新規application作業はreplacement coordinatorのactivation完了まで開始しない。
+- completed governance checkpoint: `GOV17-AIRGUARDV2-SUBAGENT-ROUTING-001`。project-wide delegation方針をproject rules、仕様、ADR 0032、runbook、開始prompt、roadmap、snapshot、changelogへ反映し、instruction-chain変更として検証・commitした。task交代中を除き独立して分割できる必要な調査・review・test・利用者承認済み補助実装等へ適切なsubagentを使用し、Checkpoint固有の禁止は当該Checkpoint内だけに限定する。
 - next product checkpoint: `CCB-COMPANY-BILLING-UPDATE-001`。replacement coordinatorのactivation完了後、振込先を同じoperation別構造へ移し、口座fieldの組合せvalidationと変更field保存を固定する。その後、通常設定、取極め、表示順を順次移し、Company全体writer 0件を確認する。
 - following active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。whole-document replacement除去のreview済みbaseline後にSTRIPE-01へ接続する。
 
 ## Active source set
 
-Replacement taskは最初に次だけを読む。不足・矛盾がある場合だけ履歴へ拡張する。
+PM-11はactivation開始時に次だけを読み、不足・矛盾がなかったため履歴へ拡張しなかった。
 
 1. `AGENTS.md`
 2. `governance/project-rules.md`
@@ -70,11 +70,11 @@ Replacement taskは最初に次だけを読む。不足・矛盾がある場合�
 
 - managed `workspace-write`。taskから観測可能なworkspace rootのうち、AirGuardV2と明示された関連repositoryだけが書込候補であり、各checkpointのowned filesをさらに優先する。
 - review policy: `auto_review`。networkはrestricted。sandbox外操作は明示された承認境界とreviewに従う。
-- no-change checkpointではfile write、Git mutation、test、application/Emulator/server/browser、network、remote/data操作、subagent、push/main merge/deployを行わない。
-- activationとcorrective rollbackは完了した。利用者はCompany CRUDをoperation固有editorへ段階移行する方針と、`CCB-COMPANY-PARTIAL-UPDATE-001`のlocal application/Functions/Rules/test/document変更を承認した。
-- 利用者はproject-wide subagent routing変更を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。instruction-chain変更のため、現在のcoordinatorをreplacement taskへ交代する操作には別の明示承認が必要である。
+- `NO-CHANGE-GOV17-AIRGUARDV2-PM11-001`と本ownership activationでは、指定されたread-only確認、snapshot 1件のfile-scoped commit、validator、local Git確認、旧coordinatorへのreceipt以外を行わない。
+- PM-11 ownership activationとcorrective rollbackは完了した。利用者はCompany CRUDをoperation固有editorへ段階移行する方針と、`CCB-COMPANY-PARTIAL-UPDATE-001`のlocal application/Functions/Rules/test/document変更を承認した。
+- 利用者はproject-wide subagent routing変更とPM-11へのcoordinator交代を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。
 - Schemas/Admin SDK、Dev、remote/data、network、push、main merge、Prodは別承認である。Dev migration/deployは対象commit、件数、backup、rollback、停止条件、post-check、受入れを固定した利用者承認を必要とする。
-- former taskをCodexがarchive/deleteしない。ownership activation成功後、利用者がPM-09を手動削除できる。
+- former taskをCodexがarchive/deleteしない。ownership activation成功後、利用者がPM-10を手動削除できる。
 
 ## Current evidence contract
 
