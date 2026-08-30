@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-30
-- 仕様バージョン: 0.6.0
+- 仕様バージョン: 0.7.0
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -118,6 +118,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 - 改修コードは`CCB`（Company Configuration Boundary）とする。2026-08-30に旧8 document・runtime互換設計を廃止し、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)に従って設計をrestartした。現行単一Company documentからの移行は未実施である。
 - CCBの主目的は、会社情報、通常設定、旧Stripe情報等が混在したCompanyをwhole-document replacementする現行経路を廃止し、operationが所有するexact fieldだけを更新することである。
+- Companyを含むFirestore CRUDの新規・改修画面では、`AirItemManager`または`AirArrayManager`へ入力draft、dialog、validation、永続化、表示同期を一括委譲しない。Companyは基本情報、振込先、通常設定、表示順等のoperation固有editorとapplication処理へ段階移行し、既存managerは対象operationの移行完了ごとに外す。
+- document全体の必須・型・長さ・相関はFireModel/Class schemaを正本とする。operation固有の入力fieldと追加必須条件は共有operation contractへ定義し、個別画面へ同じ業務validationを複製しない。保存前は最新Companyへ変更fieldを重ねたcandidateを検証し、実際に変更されたoperation所有fieldと`updatedAt`・更新者だけを保存する。
+- editorはreal-time listenerが更新するCompany本体と独立したdraftを使う。編集中に同じoperation所有fieldの外部更新を検出した場合はdraftを黙って置換せず、最新値の通知と再読込手段を示す。通常の可逆更新は、利用者が再確認したうえでlast-write-winsを選択できる。
 - 一つのCompany documentを既定とし、同じactorが読める会社情報・通常設定・利用状態は同居できる。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateで解消できない実測競合のいずれかがあるfieldだけを別documentへ分割する。writer権限や画面が違うだけでは分割しない。
 - 同社の有効な本登録Userが読めるCompany情報の正確なfield集合と、会社管理者・配置/予定管理actor等のoperation別write allowlistはrestart inventoryで確定する。clientまたはCallableの選択は、server-only情報、複数resource、外部作用、不可逆性、必須auditの有無からoperation単位で決める。
 - 通常の可逆なCompany編集はreal-time listenerで最新値を反映し、last-write-winsを受容する。編集中の同一fieldへ別actorの変更が届いた場合は通知・再読込・再確認を行えるUIを優先する。共通revision、lock、operation ledgerは導入しない。

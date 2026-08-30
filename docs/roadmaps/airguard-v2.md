@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. ADR 0031に従う旧CCB corrective rollbackは完了した。次はCompany whole-document replacementをoperation別exact field updateへ置換し、real-time listenerとlast-write-winsを基本に新CCBの最初のreview済みbaselineを作る。その後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続し、一つの改修をlocal migration・動作確認、bounded Dev migration・反映・受入れまで完了できる単位で進める。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. ADR 0031に従う旧CCB corrective rollbackは完了した。次は[Company部分更新ロードマップ](company-partial-updates.md)で、AirItemManager/AirArrayManagerへ一括委譲しているCompany whole-document replacementを、schema validationを維持したoperation固有editorと変更field保存へ置換する。最初はCompany基本情報とし、完了後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

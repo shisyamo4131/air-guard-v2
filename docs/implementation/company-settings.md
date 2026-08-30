@@ -3,6 +3,8 @@
 > 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
 >
 > 2026-08-30 corrective rollback: runtime compatible reader、8-target migration/restore tooling、pre-containment Rulesと専用testを主repositoryから除去した。現在のapplicationは再びlegacy Company rootを直接読み、Rulesは同社Userのroot updateを許可しつつclient create/deleteを拒否する。Schemas `.167` pinとAdmin SDK guardは保持している。次の変更対象は以下に記録したwhole-document writerである。
+>
+> 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
 
 ## メタデータ
 

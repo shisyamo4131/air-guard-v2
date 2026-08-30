@@ -11,7 +11,7 @@
 
 このroadmapはStripe Checkout、Webhook、subscription、entitlement、employeeLimitを実装しない。現段階で不要なlegacy Stripe情報をCompany構造と利用経路から削除することだけを対象とする。将来のサブスクリプション機能は、当時の要件、provider、権限、外部作用に基づく別設計・別roadmapとする。
 
-旧CCB全体のrollbackはこのroadmapへ混在させない。2026-08-30にexact inventoryと4つのcorrective implementation commitを完了し、UWB、Company create/delete拒否、Schemas `.167` artifact/pin、Admin SDK guardを保持した。STRIPE-01は、新CCBの最初の単位でCompany whole-document replacementを除去したreview済みbaselineから開始する。
+旧CCB全体のrollbackはこのroadmapへ混在させない。2026-08-30にexact inventoryと4つのcorrective implementation commitを完了し、UWB、Company create/delete拒否、Schemas `.167` artifact/pin、Admin SDK guardを保持した。STRIPE-01は、[Company部分更新ロードマップ](company-partial-updates.md)でwhole-document replacementを除去したreview済みbaselineから開始する。
 
 ## マイルストーン
 

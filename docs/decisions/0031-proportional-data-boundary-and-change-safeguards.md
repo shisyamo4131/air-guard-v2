@@ -33,6 +33,14 @@ UWBではUser documentを権限ごとに分割せず、操作ごとのCallable�
 - 会社名、住所、電話、通常設定、表示順等の可逆な通常変更はlast-write-winsを受容し、共通revision、lock、ledgerを導入しない。
 - 追加のexpected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭確定、外部service作用、複数resourceの不変条件、復旧困難なdata loss、二重実行の具体的被害へ限定する。
 
+### Schemaと編集componentの責務
+
+- Firestore CRUDの新規・改修画面では、`AirItemManager`と`AirArrayManager`を入力draft、dialog、validation、永続化、購読反映のすべてを担う既定componentにしない。既存画面は一括置換せず、operation単位で専用editor、UI非依存のapplication処理、writerへ移す。
+- FireModel/Class schemaはdocument全体に共通する必須・型・長さ・相関の正本として維持する。operation固有の編集field・追加必須条件は一つのoperation contractへ定義し、個別componentが同じvalidationを再定義しない。
+- 保存時は最新のlive documentへdraftの変更fieldだけを重ねたcandidateをClassとoperation contractで検証する。検証対象は整合したdocument全体、永続化対象は実際に変わったoperation所有fieldと監査metadataだけとする。
+- editorはlive modelを直接編集せず、開始時点の独立draftを持つ。listener更新でdraftを黙って置換しない。同じoperation所有fieldが外部変更された場合は通知し、最新値の再読込または明示再確認後のlast-write-winsを提供する。
+- 入力componentやdialog shell等の再利用は許容するが、業務operation、Firestore writer、権限判断を汎用UI componentへ戻さない。
+
 ### Callableとclient write
 
 - Callableは、server-only情報、厳密なactor判定、複数resource、外部service、不可逆操作、必須audit等があるoperationに使用する。
