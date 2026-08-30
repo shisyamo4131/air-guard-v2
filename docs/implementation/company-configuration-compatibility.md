@@ -1,5 +1,9 @@
 # CCB-02 Company data・package互換性調査
 
+> 状態: Historical / rollback inventory source（2026-08-30）
+>
+> ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。本書のcode・data・package調査事実は、保持対象とcorrective rollback対象を分離するために使用し、現在の設計または次工程として使用しない。
+
 ## メタデータ
 
 - 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rules候補のlocal prototypeは実装済み。既存CRUD互換化をRules deployより先に行う計画へ訂正。Company clone、operation別Client/Server writer、両Rules回帰、旧writer 0件、Dev reader/apply、deployed Rules receipt、remote stagingは未完了）

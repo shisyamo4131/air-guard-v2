@@ -1,5 +1,7 @@
 # Company（自社情報・会社設定）（実装調査）
 
+> 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
+
 ## メタデータ
 
 - 状態: 実装調査
@@ -103,7 +105,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 ## 2026-08-28 承認済みCCB目標（未実装）
 
-以下は実装事実ではなく、[ADR 0025](../decisions/0025-company-configuration-boundary.md)と[現行仕様](../specification.md#company設定とtenant-lifecycle)へ確定した目標契約である。
+以下は2026-08-30に置換された旧目標契約であり、rollback inventoryと判断履歴としてのみ参照する。現在の正本は[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[現行仕様](../specification.md#company設定とtenant-lifecycle)である。
 
 - 改修コードを`CCB`とし、rootはserver-controlledの最小tenant anchor、設定は`Settings/profile`、`billing`、`operations`、`arrangement`へ分割する。entitlement/maintenanceはclient-safe `Settings` projectionとserver-only `PrivateSettings`を分け、collection数抑制は制約としない。
 - profile/billing/operationsは会社管理者write、profile/billingは同社の有効な本登録User read、arrangementは配置・予定の既存permission actor writeとする。rootとclient-safe `Settings/entitlement`・`Settings/maintenance`はserver/providerだけがwriteし、必要なprojectionを同社Userがreadする。`PrivateSettings/entitlement`・`PrivateSettings/maintenance`はclient read/write不可とする。super-userはCompany設定actorに含めない。

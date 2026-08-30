@@ -37,15 +37,24 @@
 
 ## Firestore Rulesを狭める改修順序
 
-既存pathの許可を狭める改修では、Rules変更だけを先行releaseしない。次を一つの段階的な互換契約として扱う。判断理由は[ADR 0029](../decisions/0029-firestore-rules-compatible-crud-cutover.md)を正とする。
+判断理由は[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)を正とする。Rules変更だけを無条件に先行releaseせず、次を確認してcutover方式を選ぶ。
 
-1. 現行Rulesと、対象documentをread/writeするclient、Functions、trigger、scheduled処理、operator、Admin SDKを棚卸しする。共通managerやmodelの内部で全体setへ変換される経路もcallerに含める。
-2. 将来Rulesが許可するpath、field、actor、operationを先に固定し、現行Rulesを維持したままClient/Server CRUDをその境界へ移す。部分更新、operation別handler、Callable、transactionを機能ごとに選び、AirArrayManager、AirItemManager、FireModelの基本CUDを強制しない。
-3. 現行Rules用と候補Rules用の両test matrixで、既存正常系、権限拒否、tenant拒否、stale・競合、部分失敗、旧clientを確認する。新規pathはdocument作成前にgeneric fallbackから除外してdenyを確立する。
-4. Client/Serverを現行Rules下へ先行導入し、対象環境で既存CRUDが継続すること、将来境界外のwriteが発生しないこと、旧writerが0件であることを確認する。
-5. 最後にRulesを閉じ、deploy済みRules receipt、拒否経路、既存CRUD、rollback先を再確認する。候補Rulesのlocal実装・Emulator成功だけをdeploy readinessとみなさない。
+1. 対象pathと全caller、whole-document replacement、対象環境、data件数、旧client併存、許容停止時間、外部作用を棚卸しする。
+2. 将来Rulesが許可するpath、field、actor、operationを固定し、operationが所有するexact field updateを実装・検証する。
+3. 新規pathは最初のdocument作成前にclient denyを確立する。候補Rulesのlocal実装・Emulator成功だけをdeploy readinessとみなさない。
+4. 正式release前のDevで全件を一つのbounded maintenance内にbackup・変換・post-checkでき、旧clientを継続利用しない場合は、Rules、Functions、client、migrationを同じmaintenanceのcoordinated cutoverとして扱う。長期互換層、runtime mode、dual reader/writerを既定にしない。
+5. production、複数client version、許容できない停止、bounded maintenanceへ収まらない件数・外部作用がある場合だけ、現行Rules下へ将来CRUDを先行導入し、旧・候補Rules双方の回帰、既存機能継続、旧writer 0件後にRulesを閉じる互換releaseを採用する。
+6. deploy後は対象方式に応じ、Rules receipt、許可・拒否経路、migration post-check、主要UI、rollback先を確認する。
 
-既存許可を直ちに閉じないとdata exposureが継続する緊急incidentは通常手順の例外とするが、影響する既存機能、停止範囲、暫定Client/Server対応、rollback、陰性testを固定した別checkpointとして利用者の明示承認を得る。
+既存許可を直ちに閉じないとdata exposureが継続する緊急incidentは通常手順の例外とする。影響する機能、停止範囲、暫定対応、rollback、陰性testを固定した別checkpointとして利用者の明示承認を得る。
+
+## 必要十分なdata設計
+
+- 一つの業務対象は一つのdocumentを既定とする。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なsize、独立query、field限定updateで解消できない実測競合がある場合だけ分割する。
+- writer権限、画面、フォーム、責務名だけでは分割しない。server認可とexact field allowlistで表現できる場合は同一documentを維持する。
+- 通常画面はreal-time listenerとfield限定updateを既定とし、可逆な通常編集はlast-write-winsを受容する。
+- expected value、revision、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害へ限定する。
+- 追加の複雑性は、具体的な故障、影響、より単純な対策で防げない理由、対象operationへの限定を説明できる場合だけ採用する。
 
 認証・認可segmentは、実装前に次を揃えます。
 

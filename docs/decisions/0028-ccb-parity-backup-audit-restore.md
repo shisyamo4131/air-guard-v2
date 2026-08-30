@@ -1,13 +1,16 @@
 # 0028 CCB canonical parity・PrivateSettings backup・SettingAudits restore境界
 
 - 日付: 2026-08-28
-- 状態: Accepted
+- 状態: Superseded
+- 置換: [ADR 0031 必要十分なdata境界と変更保護](0031-proportional-data-boundary-and-change-safeguards.md)
 - 関連仕様: [Company設定とtenant lifecycle](../specification.md#company設定とtenant-lifecycle)
 - 関連判断: [0025 Company Configuration Boundary](0025-company-configuration-boundary.md)、[0026 maintenance静穏化](0026-maintenance-quiescence-and-data-change.md)
 - 関連手順: [data migration runbook](../runbooks/data-migrations.md)、[運用・開発手順](../operations.md)
 - 関連ロードマップ: [Company設定改修](../roadmaps/company-settings.md)
 
 ## 背景
+
+> 2026-08-30: PrivateSettings、SettingAudits、8 target create-only stagingを前提とする本ADRは、CCB設計restartにより置換された。実装済みplanner・backup guard・testを安全に整理するためのrollback inventoryとしてのみ参照する。
 
 CCB stagingはlegacy Company rootから8件の`Settings`・`PrivateSettings`を新規作成する。対象の取り違え、partial setの継ぎ足し、不明値の推測、既存targetの上書きがあると、rootと新設定のどちらが正しいか判断できなくなる。
 

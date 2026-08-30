@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、利用者受入れを検証したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-29
+- 最終確認日: 2026-08-30
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
@@ -13,7 +13,7 @@
 | ガバナンスと現行仕様の基準線 | 10 | 10 | Completed（完了） | 下記 G1～G5 の全ゲートを満たした。 |
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
 | 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Company rootのclient create/deleteは閉じたが、既存Company更新と他collectionに残る広いtenant内write、App Check・rate limitは残作業である。 |
-| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。Stripe、継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。 |
+| 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。Stripe/subscriptionは現在の正式運用準備範囲外。 |
 | 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。browser test、修正、利用者確認、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
 | **合計** | **100** | **10** |  |  |
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. CCB-01の目標契約とCCB-02のschema/package/compatible reader・local候補Rulesまでは確定した。次は[Company設定改修ロードマップ](company-settings.md)に従い、現行Rulesを維持したままCompany clone/runtime state、CompanyManagerと全Company caller、LEGACY partial update・STAGED write停止・ACTIVE Settings updateを切り替えるmarker-aware Client/Server writerを実装する。現行・候補Rules両回帰と対象環境の旧whole-document writer 0件を確認してからRulesを閉じ、maintenance中にdeny receipt、Settings staging、activationを連続実施する。CUD一律Functions化とdual-writeは前提にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. ADR 0031に従って旧CCBをrestartする。最初に旧CCBのapplication、Rules、migration/restore、test、package consumer、Admin SDK guardをread-only inventoryし、UWB、Company create/delete拒否、公開済みSchemas artifact等の独立成果を保持したcorrective rollback planを確定する。その後は[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のように、一つの改修をlocal migration・動作確認、bounded Dev migration・反映・受入れまで完了できる単位で進める。通常Company編集はexact field updateとreal-time listenerを基本とし、全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

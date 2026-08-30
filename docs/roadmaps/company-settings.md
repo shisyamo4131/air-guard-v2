@@ -1,5 +1,9 @@
 # Company設定改修ロードマップ
 
+> 状態: Superseded / historical（2026-08-30）
+>
+> 旧進捗10%はADR 0025に基づく設計成果であり、ADR 0031によるCCB restart後のactive進捗へ持ち越さない。本書は旧CCB成果物のrollback inventoryと判断履歴として保持する。現在の実行単位は[Company legacy Stripe情報削除](company-stripe-removal.md)を参照する。
+
 ## メタデータ
 
 - 改修コード: CCB（Company Configuration Boundary）

@@ -7,8 +7,11 @@ AirGuardV2 の作業を開始してください。応答は日本語で行って
 1. `AGENTS.md`
 2. `governance/project-rules.md`
 3. `docs/README.md` で今回の作業経路を選ぶ
-4. 作業経路が指定する仕様、ロードマップ、ADR、運用文書
-5. 関連コード、Firebase ルール、設定、テスト、`docs/manual/`
+4. coordinator再開・交代の場合は`docs/runbooks/project-coordination.md`と`docs/implementation/current-coordinator-handoff.md`
+5. 作業経路またはcurrent snapshotが指定する仕様、ロードマップ、ADR、運用文書
+6. 関連コード、Firebase ルール、設定、テスト、`docs/manual/`
+
+旧handoff履歴を毎回全文再読せず、current snapshotに不足・矛盾がある場合だけ履歴へ拡張してください。no-change callbackとcoordinator activation callbackは`docs/runbooks/coordinator-handoff-efficient-activation.md`のbounded形式を使用し、snapshotにあるproduct stateや履歴を本文へ再掲しないでください。
 
 タスク作成、交代、Codex再起動後の最初の報告で、common governance versionとactive instruction sourcesを示してください。
 
@@ -30,7 +33,7 @@ application codeの標準実装者はユーザーです。Codexは設計、仕�
 
 主エージェントとして依頼を整理し、`AGENTS.md` のルーティングに従って、必要な場合だけ `tester`、`code_explorer`、`docs_researcher`、`reviewer`、`ui_tester`、`security_reviewer`へ補助を依頼してください。`developer`はユーザーが補助実装を明示した場合だけ使用してください。独立した読み取り調査、テスト、レビューは並行化できますが、必要な結果をすべて待ってから統合してください。単純な作業で分担の利点がない場合は不要なサブエージェントを起動しないでください。
 
-長期作業は、コーディネーターと専門タスクのID・ホスト、作業ツリー、チェックポイント、コールバック先、終了条件を確認し、作成・交代・アプリ再起動後に変更なしコールバックを1回検証してください。レビュー可能なチェックポイントを1件ずつ割り当て、完了・失敗・仕様質問・承認境界の通知後に差分と検証を統合してから次へ進んでください。専門タスクは原則としてステージやコミットをせず、正確な変更ファイル、差分、テスト、未確認事項、作業ツリー状態を報告します。コーディネーターが受入れたファイルだけをコミット・統合します。
+長期作業は、コーディネーターと専門タスクのID・ホスト、作業ツリー、チェックポイント、コールバック先、終了条件をcurrent snapshotへ記録し、作成・交代・アプリ再起動後に変更なしコールバックを1回検証してください。レビュー可能なチェックポイントを1件ずつ割り当て、完了・失敗・仕様質問・承認境界の通知後に差分と検証を統合してから次へ進んでください。専門タスクは原則としてステージやコミットをせず、正確な変更ファイル、差分、テスト、未確認事項、作業ツリー状態を報告します。コーディネーターが受入れたファイルだけをコミット・統合します。
 
 標準のセッション終了条件は、安全に独立実行できる作業が尽きた時点です。`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は`docs/README.md`からproject coordination runbookへrouteし、現在task IDをproject-local scriptへ渡して永続session JSONLを測定してください。model token/context windowで代替せず、最新sessionを推測しないでください。コーディネーターのtask容量が300 MiBに達した場合だけ新規割当を停止し、引継ぎ状態をリポジトリへ記録して、利用者へ交代承認を求めてください。Codex全体の10 GiBは参考警告であり、task handoff閾値ではありません。コーディネーターを自動交代またはforkしないでください。
 

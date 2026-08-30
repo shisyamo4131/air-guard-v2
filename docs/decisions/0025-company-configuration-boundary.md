@@ -1,7 +1,8 @@
 # 0025 Company Configuration Boundaryとtenant lifecycle
 
 - 日付: 2026-08-28
-- 状態: Accepted
+- 状態: Superseded
+- 置換: [ADR 0031 必要十分なdata境界と変更保護](0031-proportional-data-boundary-and-change-safeguards.md)
 - 改修コード: CCB（Company Configuration Boundary）
 - 関連仕様: Company設定とtenant lifecycle、請求・税・丸め、勤怠、サブスクリプション
 - 関連ロードマップ: [Company設定改修ロードマップ](../roadmaps/company-settings.md)
@@ -9,6 +10,8 @@
 - 関連判断: [0016 FireModel CRUDの利用境界](0016-firemodel-crud-boundary.md)、[0026 project-wide maintenance quiet procedure](0026-maintenance-quiescence-and-data-change.md)、[0029 Firestore Rules互換CRUD先行と段階的閉鎖](0029-firestore-rules-compatible-crud-cutover.md)
 
 ## 背景
+
+> 2026-08-30: 本ADRの8 document分割、PrivateSettings、SettingAudits、全設定revision、LEGACY/STAGED/ACTIVE互換運用、tenant lifecycle、Stripe/entitlement境界はADR 0031により置換された。本ADRは旧CCBのrollback inventoryと判断履歴として保持する。会社名、住所、請求元、丸め等の個別validationは、現行仕様へ独立して残された範囲だけが有効である。
 
 現行の`Companies/{companyId}`はtenant anchor、会社・請求元情報、口座、丸め・勤怠設定、取極め、表示順、maintenance、Stripeを一つのdocumentへ保存する。同社の有効な本登録User全員がdocument全体をread/updateでき、古いclientや別機能の保存がserver-owned fieldを上書きできる。Firestore Rulesは同一document内のfieldを読者別に隠せず、document全体setは設定間の競合と未知field消失を起こし得る。
 

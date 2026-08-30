@@ -39,8 +39,8 @@
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
 - [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
-- [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Current。PM交代履歴、最新baseline、検証、承認境界、再開手順。
-- [Current coordinator handoff snapshot](current-coordinator-handoff.md): Prepared / inactive。次回の利用者承認済みcoordinator交代でbounded current restart sourceへ昇格する。発効前は上記2026-08-14文書をCurrentとして使う。
+- [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Historical。PM交代履歴と旧手順の証拠。
+- [Current coordinator handoff snapshot](current-coordinator-handoff.md): Current。現在のbounded restart source、baseline、checkpoint、承認境界。
 
 ## アプリ入口・認証・共通基盤
 
@@ -73,7 +73,7 @@
 ## System・Company・subscription・保守
 
 - [Company設定](company-settings.md)
-- [CCB-02 Company data・package互換性調査](company-configuration-compatibility.md)
+- [CCB-02 Company data・package互換性調査](company-configuration-compatibility.md): Historical / rollback inventory source。旧CCBの現在code・package成果を安全に整理する根拠。
 - [Company components deep review](company-components-deep-review.md)
 - [端数処理・時間計算](rounding-and-time-calculation.md)
 - [税・締日・請求計算primitive](tax-cutoff-billing-primitives.md)

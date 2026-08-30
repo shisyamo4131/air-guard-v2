@@ -1,7 +1,7 @@
 # project coordination runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-08-30
 - 役割: Git統合、event-driven task loop、session容量とhandoff
 
 ## Git統合
@@ -21,6 +21,12 @@
 ## プロジェクト管理タスクループ
 
 長期作業は、定時確認ではなくタスク間通知を用いたイベント駆動型を標準とします。
+
+### 再開正本とbounded callback
+
+2026-08-30以後のcoordinator交代は[ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)と[効率化runbook](coordinator-handoff-efficient-activation.md)を適用する。replacement taskの最小restart集合は`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`、本runbook、[current coordinator snapshot](../implementation/current-coordinator-handoff.md)、snapshotが指定する次checkpoint固有文書である。不足・矛盾がある場合だけ履歴文書へ拡張し、旧append-only handoffを毎回全文再読しない。
+
+no-change callbackとactivation callbackは効率化runbookのbounded形式を使う。callback本文へproduct stateや履歴を再掲せず、snapshot path、Git identity、権限、変更file、validator exit、未確認事項を記録する。staged blobとcommitted blobが一致し、exact committed path、clean、primary-only worktreeをformer coordinatorが確認できた場合、同じvalidatorをcommit後に重複実行しない。
 
 ### 開始確認
 
@@ -88,6 +94,8 @@ commandの結果とexit statusを独立して確認します。scriptは指定ID
 
 ### 安全な引継ぎ
 
+以下の安全境界を維持し、具体的なactivation順序、replacement taskへの最小入力、callback、最初のfile限定commitは[効率化runbook](coordinator-handoff-efficient-activation.md)に従う。
+
 1. 300 MiB到達時は新規割当と自動レビューを停止する。
 2. 基準コミット、ロードマップ進捗、実行中・待機中チェックポイント、未統合ブランチ、テスト、承認事項、承認境界、次の指示をリポジトリの正本へ記録する。
 3. 旧コーディネーターは自身の完了変更を検証・コミットする。専門タスクは担当ファイル、差分、テスト、未確認事項、作業ツリー状態を報告し、コーディネーターが受入れた変更をコミット・統合する。
@@ -95,7 +103,7 @@ commandの結果とexit statusを独立して確認します。scriptは指定ID
 5. 未コミット例外が不可避な場合は、ファイル、目的、検証状態、コミットできない理由、所有者、再開手順を正本へ記録する。同じ差分を旧新タスクへ重複所有させない。
 6. コーディネーター交代についてユーザーの明示承認を得る。専門タスクは、安全なチェックポイントで差分統合済みの場合だけ自動交代できる。
 7. 履歴をforkせず、同じ基本名に次の連番を付けた新規タスクを作成する。
-8. 旧タスクID、基準コミット、チェックポイント、進捗、結果、テスト、未統合作業、承認事項、担当・禁止範囲、次の指示、コールバック先を送る。
+8. 旧・新タスクID、基準コミット、checkpoint、common governance、specification、current snapshot path、direct repository、許可・禁止操作、callback先だけをreplacement taskへ送る。product state、進捗、結果、次工程はsnapshotを参照させる。
 9. 新タスクが利用者repositoryへ直接接続し、repositoryから状態を復元し、割当先とコールバックIDを更新できたことを確認する。プロジェクトの承認方針、権限プロファイル、自動レビュー設定を使用する場合は、それらも確認する。
 10. 変更なしコールバックと、新タスクによる最初の実ファイル限定ステージ・コミットを確認する。失敗時は旧タスクを維持し、重複割当を行わない。
 11. Codexは旧taskのarchiveを実行・依頼せず、交代検証結果を利用者へ報告して待機する。利用者が旧taskをarchiveした後、必要に応じてアクティブ・アーカイブ済みを含む容量を再測定する。

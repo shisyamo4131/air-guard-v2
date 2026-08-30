@@ -23,4 +23,7 @@
 | 対象 | 進捗 | 最終確認日 | ロードマップ |
 |---|---:|---|---|
 | AirGuardV2 正式運用準備 | 10% | 2026-08-27 | [airguard-v2.md](airguard-v2.md) |
-| Company設定改修（CCB） | 10% | 2026-08-28 | [company-settings.md](company-settings.md) |
+| Company legacy Stripe情報削除 | 0% | 2026-08-30 | [company-stripe-removal.md](company-stripe-removal.md) |
+| Company設定改修（CCB・Historical） | 10% | 2026-08-30 | [company-settings.md](company-settings.md) |
+
+旧[Company設定改修（CCB）](company-settings.md)の10%は、2026-08-30の設計restartでactive進捗から除外したhistorical値です。

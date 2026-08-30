@@ -1,12 +1,12 @@
 # coordinator handoff効率化の次回発効runbook
 
-- 状態: 承認済み・未発効
+- 状態: Confirmed / active
 - 承認日: 2026-08-30
 - 発効条件: 次回、利用者が明示承認したAirGuardV2 coordinator交代のactivation baseline commit
-- 現在の正本: [project coordination runbook](project-coordination.md)
+- 現在の正本: [project coordination runbook](project-coordination.md)と[current coordinator snapshot](../implementation/current-coordinator-handoff.md)
 - 判断: [ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)
 
-このrunbookは次回handoffを準備するための文書であり、発効commitまでは現在のtask、所有権、callback、読取集合、validator回数を変更しない。
+このrunbookは2026-08-30の利用者承認済みPM-09からPM-10への交代activation baselineから発効した。以後のhandoffは本書とproject coordination runbookを使用する。
 
 ## 発効前の停止条件
 

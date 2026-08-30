@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-08-28
+- 最終確認日: 2026-08-30
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -19,7 +19,8 @@
 | 仕様・機能変更 | [現行仕様](specification.md)、[正式運用ロードマップ](roadmaps/airguard-v2.md)、[ADR索引](decisions/README.md) | 関連コード、テスト、[画面マニュアル](manual/index.md) |
 | 利用者実装の設計・差分review | [現行仕様](specification.md)、[ADR 0015](decisions/0015-user-led-implementation-and-codex-assurance.md)、[開発workflow](runbooks/development-workflow.md) | 利用者の対象差分、関連test、rollback、roadmap |
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |
-| 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
+| Firestore data設計・Rules・Company CCB | 現行仕様の関連節、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md) | 全reader/writer、exact field update、Rules、migration、rollback、対象環境・件数・停止条件 |
+| 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007・0031 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |
 | local Emulator・backend検証 | [local Emulator検証](runbooks/local-emulator-testing.md)、ADR 0005・0014 | `firebase.json`、`firebase.codex-test.json`、`.env`の変数名のみ、対象test |
 | local UI・browser受入れ | [local UI検証](runbooks/local-ui-testing.md)、ADR 0006・0014 | 対象画面・manual、Emulator・server、browser操作境界 |
@@ -30,7 +31,7 @@
 | 関連package更新・公開 | [package release](runbooks/package-release.md) | package repository、互換性、version、tag・push・公開承認 |
 | `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [project coordination](runbooks/project-coordination.md) | `scripts/check-codex-session-size.ps1`、現在のtask ID。最新sessionの推測禁止 |
 | Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、ADR 0011、[ロードマップ索引](roadmaps/README.md) | Git状態、checkpoint、task ID・host、callback経路 |
-| 次回coordinator交代での効率化発効準備 | [handoff効率化の次回発効](runbooks/coordinator-handoff-efficient-activation.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | 承認済み・未発効。現在は既存project coordinationを使用し、次回activation baselineでだけ発効 |
+| coordinator交代・再開 | [project coordination](runbooks/project-coordination.md)、[current snapshot](implementation/current-coordinator-handoff.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | 効率化手順は2026-08-30 activation baselineから発効。旧handoffは履歴参照のみ |
 | Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) | backup・restore対象、Git bundle、local data、restore checkpoint |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |
 

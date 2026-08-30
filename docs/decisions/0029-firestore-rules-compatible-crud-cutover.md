@@ -1,12 +1,15 @@
 # 0029 Firestore Rules互換CRUD先行と段階的閉鎖
 
 - 日付: 2026-08-29
-- 状態: Accepted
+- 状態: Superseded
+- 置換: [ADR 0031 必要十分なdata境界と変更保護](0031-proportional-data-boundary-and-change-safeguards.md)
 - 関連仕様: 開発ガバナンスと進捗管理、Company設定とtenant lifecycle
 - 関連判断: [0016 FireModel CRUDの利用境界](0016-firemodel-crud-boundary.md)、[0025 Company Configuration Boundary](0025-company-configuration-boundary.md)
 - 置換する範囲: ADR 0025の移行順序のうち、既存Company CRUDの互換確認よりpre-containment Rules deployを先行させる記述。CCBのtarget schema、actor、migration、backup、activation契約は置換しない。
 
 ## 背景
+
+> 2026-08-30: 本ADRの互換releaseを全改修の既定とする規則は置換された。ADR 0031は、正式release前の少数Dev dataを短いmaintenanceで全件変換・検証できる場合、長期互換層を必須にしない。production、旧client併存、停止困難、大規模data、外部作用がある場合には本ADRの互換release方式を選択肢として再利用できる。
 
 Firestore Rulesを先に狭めると、現在許可されているClient/Server callerが将来境界へ移る前に既存機能を停止させる。一方、Rulesだけを後回しにして新規のprivate pathへdocumentを作ると、generic fallbackが意図せずread/writeを許可する可能性がある。AirGuardV2ではCompany rootの全体set、AirItemManagerの編集draft、Functions/Admin SDKのwhole-document writer、候補pre-containment Rulesが別々に存在し、local Rules test成功だけでは既存Company CRUDのrelease互換を証明できなかった。
 

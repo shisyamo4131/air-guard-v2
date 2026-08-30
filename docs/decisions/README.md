@@ -37,12 +37,13 @@
 | [0022](0022-shared-role-preset-catalog-consumer-adoption.md) | 共有role preset catalogのconsumer導入 | Accepted | 2026-08-26 |
 | [0023](0023-authentication-mutation-concurrency-boundary.md) | 認証状態変更の局所的な競合制御 | Accepted | 2026-08-26 |
 | [0024](0024-dev-trial-deployment-and-migration-runbook.md) | Dev試行環境の積極的deployとmaintenance migration標準手順 | Accepted | 2026-08-27 |
-| [0025](0025-company-configuration-boundary.md) | Company Configuration Boundaryとtenant lifecycle | Accepted | 2026-08-28 |
+| [0025](0025-company-configuration-boundary.md) | Company Configuration Boundaryとtenant lifecycle | Superseded | 2026-08-28 |
 | [0026](0026-maintenance-quiescence-and-data-change.md) | project-wide maintenance静穏化とdata change境界 | Accepted | 2026-08-28 |
 | [0027](0027-codex-session-capacity-routing.md) | Codex task/session容量の明示routingと測定境界 | Accepted | 2026-08-28 |
-| [0028](0028-ccb-parity-backup-audit-restore.md) | CCB canonical parity・PrivateSettings backup・SettingAudits restore境界 | Accepted | 2026-08-28 |
-| [0029](0029-firestore-rules-compatible-crud-cutover.md) | Firestore Rules互換CRUD先行と段階的閉鎖 | Accepted | 2026-08-29 |
+| [0028](0028-ccb-parity-backup-audit-restore.md) | CCB canonical parity・PrivateSettings backup・SettingAudits restore境界 | Superseded | 2026-08-28 |
+| [0029](0029-firestore-rules-compatible-crud-cutover.md) | Firestore Rules互換CRUD先行と段階的閉鎖 | Superseded | 2026-08-29 |
 | [0030](0030-efficient-coordinator-handoff-activation.md) | 次回コーディネーター交代で発効する効率化手順 | Accepted | 2026-08-30 |
+| [0031](0031-proportional-data-boundary-and-change-safeguards.md) | 必要十分なデータ境界・競合制御・cutover | Accepted | 2026-08-30 |
 
 ## 新しい ADR の形式
 

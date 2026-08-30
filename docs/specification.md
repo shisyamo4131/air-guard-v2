@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-30
-- 仕様バージョン: 0.5.18
+- 仕様バージョン: 0.6.0
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -29,12 +29,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - メンテナンス状態とキルスイッチ
 - PWA、Firebase Cloud Messaging による通知
 - 警備日報などの Firebase Storage ファイル管理
-- Stripe Checkout と Webhook によるサブスクリプション情報同期（現在は公開停止中。正式release直前の別改修で再設計する）
 - freee 勤怠管理へ取り込む勤怠データのエクスポート
 
 ### 現在の範囲外または未確定
 
 - AirGuardV2 内部での給与計算。給与計算は外部サービスへ委ねる。
+- Stripe Checkout、Webhook、subscription、entitlement、employeeLimit。現段階のCompany構造からlegacy Stripe情報を削除し、将来サブスクリプション機能を実装するときに保存構造・権限・外部作用を新規設計する。
 - 未実装と明記された将来案を、現行機能として保証すること。
 - 本文書で確認できていない本番運用の SLA、保存期間、法令・認証への適合保証。
 
@@ -116,19 +116,16 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### Company設定とtenant lifecycle
 
-- 改修コードは`CCB`（Company Configuration Boundary）とする。以下は承認済みの目標契約であり、現行の単一Company document実装からの移行は未完了である。
-- `Companies/{companyId}` rootは削除しない最小tenant anchorとし、`status`、`schemaVersion`、作成時刻等のserver-controlled fieldだけを保持する。設定は`Settings/profile`、`Settings/billing`、`Settings/operations`、`Settings/arrangement`、`Settings/entitlement`、`Settings/maintenance`へ責務別に分割し、clientは必要なdocumentを合成して現在会社を表示する。collection数の抑制は目標architectureの制約としない。
-- `profile`は会社名・カナ・住所・電話・FAX、`billing`は適格請求書番号と振込先、`operations`は時間間隔・丸め・週開始日・勤怠summary方式、`arrangement`は現場・予定の表示順を保持する。`Settings/entitlement`と`Settings/maintenance`はserverが生成するclient-safe projectionとし、同社Userの画面に必要なplan/feature/employeeLimitまたは停止状態・理由・時刻だけを持つ。Stripe/customer ID、provider actor、内部operation、error等は`PrivateSettings/entitlement`と`PrivateSettings/maintenance`へ分離し、client read/writeを拒否する。root、両projection、PrivateSettingsはserver-ownedとし、clientから作成・更新・削除させない。
-- 同社の有効な本登録Userはprofileとbillingを閲覧できる。profile、billing、operationsの変更は会社管理者だけに許可し、専用Company設定permissionは新設しない。siteOrderとscheduleOrderは、配置・予定を日常管理する既存permission actorが会社共通値を変更できる。
-- Company設定のprofile、billing、operations、arrangementは、それぞれ専用Callableからだけ更新する。clientはSettings documentを直接作成・更新・削除しない。各Callableはcurrent Auth、claim、同社User、Company lifecycle、maintenance、actor、mode別exact inputをtransaction内で検査する。LEGACYはscope別`expectedValue`、STAGEDは常時拒否、ACTIVEは`expectedRevision`を使う。ACTIVEのprofile、billing、operationsは設定更新とmask済みaudit作成を同じtransactionで完了し、arrangementはauditを作らず変更field別permissionを検査する。このFunctions経路はCompany設定固有であり、他collectionのCUD方式を一律に決めない。
-- CCB互換期間も同じ4つの専用Callable入口を使うmarker-aware operationとする。marker未activeかつ全CCB target不存在の`LEGACY`では、clientが送る編集開始時のscope別canonical `expectedValue`とtransaction内の現在legacy projectionを比較し、一致時だけ当該scopeの既知legacy business fieldと既存legacy更新metadataをpartial updateする。Company root全体set、reserved CCB field、Settings、PrivateSettings、SettingAuditsを変更しない。targetが1件でも存在してmarker未activeの`STAGED`では通常設定writeとsignupを拒否し、maintenance中のstagingからactivationまでdual-writeせず連続して完了する。marker active後はSettingsの`expectedRevision`を検査し、profile/billing/operationsはSettingAuditsと同じtransaction、arrangementはauditなしでcanonical Settingsだけを更新する。legacy互換期間は新規auditを提供せず、activation後の監査契約を過去へ遡及しない。
-- arrangementのsiteOrderは既知preset由来の`sites:write`、scheduleOrderは既知preset由来の`site-operation-schedules:write`をactor条件とし、role名、未知role、直接permission文字列、super-userをstrict actorとして扱わない。
-- ACTIVEのCompany設定document更新はrevisionを必須とし、stale revisionを上書きせず再読込を要求する。ACTIVEのprofile、billing、operationsは変更ごとにserver-onlyの`SettingAudits/{auditId}`へappend-only auditを残し、actor、時刻、変更field、変更前後を記録する。変更理由は必須にしない。銀行口座の旧値・平文値はauditでmaskし、project共通の保持方針が確定するまで自動purgeしない。audit documentのclient直接read/writeを拒否し、会社管理者だけが専用Callableからmask済み最小projectionを閲覧できる。arrangementは履歴を残さず、現在値、revision、更新者、更新時刻だけを保持する。新規master IDは未登録順序の末尾へ補完し、archive・削除済みIDは表示時に無視して次回保存時に除去する。
-- rootと各設定documentはinteger `schemaVersion=1`を初期versionとし、更新対象設定は`revision=1`から開始する。serverは`createdAt/By`と`updatedAt/By`を設定し、actor IDはemail等の表示識別子でなく1〜128文字のopaque UIDとする。optional fieldはnullまたは空配列を明示して欠損と混在させない。computed accessor、framework metadata、geopoint、unknown fieldをcanonical Settingsへ混入させない。cutover前の新規signupはlegacy rootだけを作り、CCB target writeを0件とする。既存tenant backfillはdeny receipt後のmaintenance中にcomplete target setをcreate-only stagingし、cutover後の新規signupはactive rootとSettings/PrivateSettingsのcomplete setをatomicに準備する。partial setを成功扱いしない。
-- Timestamp、actor UID、entitlement、public/private maintenance、audit、Callableとroot transitionを含む完全field契約は[ADR 0025のExact schema v1](decisions/0025-company-configuration-boundary.md#exact-schema-v1)を本仕様のnormative schemaとして参照する。cleanup後のcanonical rootはreserved 7 field exact、activation期間のphysical rootはreserved 7 field必須かつ既知legacy extras一時許容とし、activation時にlegacy dataを削除しない。
-- legacy rootからSettingsへの正本切替は`schemaVersion`単独でなく、事前に既存field衝突を確認した`configurationState=CCB_V1_ACTIVE`との両方で判定する。marker未設定中はlegacy root、設定後はcompleteなSettingsだけを読み、不完全・invalidなSettingsからlegacyへsilent fallbackしない。
+- 改修コードは`CCB`（Company Configuration Boundary）とする。2026-08-30に旧8 document・runtime互換設計を廃止し、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)に従って設計をrestartした。現行単一Company documentからの移行は未実施である。
+- CCBの主目的は、会社情報、通常設定、旧Stripe情報等が混在したCompanyをwhole-document replacementする現行経路を廃止し、operationが所有するexact fieldだけを更新することである。
+- 一つのCompany documentを既定とし、同じactorが読める会社情報・通常設定・利用状態は同居できる。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateで解消できない実測競合のいずれかがあるfieldだけを別documentへ分割する。writer権限や画面が違うだけでは分割しない。
+- 同社の有効な本登録Userが読めるCompany情報の正確なfield集合と、会社管理者・配置/予定管理actor等のoperation別write allowlistはrestart inventoryで確定する。clientまたはCallableの選択は、server-only情報、複数resource、外部作用、不可逆性、必須auditの有無からoperation単位で決める。
+- 通常の可逆なCompany編集はreal-time listenerで最新値を反映し、last-write-winsを受容する。編集中の同一fieldへ別actorの変更が届いた場合は通知・再読込・再確認を行えるUIを優先する。共通revision、lock、operation ledgerは導入しない。
+- expected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
+- `siteOrder`と`scheduleOrder`は各最大2000件という現行候補上限と実際のdocument sizeを再計測し、Company本体と分ける必要性を判断する。分割前提にはしない。
+- Devで確認済みのCompany rootは4件であり、旧新形式を通常運用で併存させず、backup、dry-run、短時間maintenance、全件変換、post-check、Dev受入れを一つのbounded migrationとして実施する。実data migrationは対象commit、件数、backup、rollback、停止条件、検証を固定した別の明示承認を必要とする。
 - 設定文字列の長さはUnicode Extended Grapheme Cluster単位、すなわち利用者が見た目上1文字と認識する単位で数える。結合文字で表した`が`も合成済みの`が`も1文字である。外側の空白はtrimするが、保存値へNFC/NFKC等のUnicode正規化を自動適用しない。1行fieldはCR/LFとcontrol characterを拒否する。
-- `profile`の会社名はtrim後1〜100文字、会社名カナはtrim後1〜200文字とし、一意性を要求しない。カナはUnicode `U+30A0–U+30FF`、全角空白`U+3000`、全角数字`U+FF10–U+FF19`、control characterを除く空白を許可する。結合濁点`U+3099`・結合半濁点`U+309A`は直前の`U+30A0–U+30FF`と同一grapheme clusterを構成する場合だけ許可し、単独または他のbase直後では拒否する。郵便番号はnullまたはASCII数字7桁、都道府県codeはnullまたは`01`〜`47`、市区町村はnullまたは100文字以内、番地・建物はnullまたは各200文字以内、電話・FAXはnullまたは32文字以内のASCII数字・`+ - ( ) .`・空白だけとする。初期signupは会社名とカナだけで通常利用へ進める。請求確定時は会社名、郵便番号、都道府県、市区町村、番地、電話を必須とし、建物、FAX、適格請求書番号、振込先は任意とする。
+- 会社名はtrim後1〜100文字、会社名カナはtrim後1〜200文字とし、一意性を要求しない。カナはUnicode `U+30A0–U+30FF`、全角空白`U+3000`、全角数字`U+FF10–U+FF19`、control characterを除く空白を許可する。結合濁点`U+3099`・結合半濁点`U+309A`は直前の`U+30A0–U+30FF`と同一grapheme clusterを構成する場合だけ許可し、単独または他のbase直後では拒否する。郵便番号はnullまたはASCII数字7桁、都道府県codeはnullまたは`01`〜`47`、市区町村はnullまたは100文字以内、番地・建物はnullまたは各200文字以内、電話・FAXはnullまたは32文字以内のASCII数字・`+ - ( ) .`・空白だけとする。初期signupは会社名とカナだけで通常利用へ進める。請求確定時は会社名、郵便番号、都道府県、市区町村、番地、電話を必須とし、建物、FAX、適格請求書番号、振込先は任意とする。
 - 適格請求書番号は保存時に先頭の`T`/`t`を除き13桁のASCII数字だけへ正規化する。空入力はnullとし、表示・帳票では存在する場合だけ大文字`T`を付ける。
 - 振込先は5 fieldすべてnullを許可する。1項目でも入力する場合は銀行名、支店名、口座種別、口座番号、口座名義をすべて必須とし、銀行名・支店名は各100文字以内、口座種別は普通・当座、口座番号は先頭0を保持するASCII数字1〜7桁、口座名義はtrim後200文字以内とする。完全な振込先だけを帳票へ印字する。
 - 会社情報の表示・帳票layoutは長い値を折返し、縮小または表示上の省略で扱い、保存値またはsnapshot値を切り捨てない。100文字の会社名、長い住所・建物・口座名義をrender test対象とする。
@@ -138,17 +135,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - legacy `attendanceManagementMode`の`ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ移行する。field欠損時だけ`LABOR_STANDARD`を補い、未知値は推測変換せずmigration conflictとしてapplyを停止する。
 - 給与計算へ用いる勤務回数、日勤・夜勤、同日複数勤務、夜勤跨ぎ、休憩、訂正、認可、CSVの詳細は勤怠実績管理改修で改めて決める。CCBは現在の集計方法を最終仕様として固定しない。
 - Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
-- Company lifecycleは`ACTIVE`、`SUSPENDED`、`CLOSED`とする。`SUSPENDED`はservice providerによる一時停止で、認証後は停止案内だけを許可し、通常read/writeと業務Callableを拒否する。provider/operatorだけが`ACTIVE`へ戻せる。`CLOSED`は通常の再開経路を持たない恒久終了で、事前export後に全app accessを拒否し、dataは別の保持・削除手順まで維持する。誤った`CLOSED`は通常再開でなくincident recoveryとして扱う。Company rootの物理削除、法的削除、tenant移転・統合・分割は別承認・別設計とする。
-- CCB cutover後の新規Companyは`ACTIVE`、paid entitlement無効、maintenance offで開始する。cutover前は現行legacy signup契約を維持し、target lifecycle markerを先行追加しない。課金機能が未提供である間も、maintenance cutover以外でsignupと通常業務を妨げない。
+- Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
-- Stripe、checkout、webhook、plan、課金状態とemployeeLimitの実強制はCCBで再有効化しない。CCBはserver-owned entitlementの保存境界と表示interfaceだけを分離し、全機能改修後の正式release直前に別仕様・別承認で完成させる。
-- CCB stagingの候補集合は承認済みtarget manifest、Company root、既存CCB target pathのunionとする。未分類root、manifest不一致、orphan target、partial set、不正source、決定不能mappingが1件でもあれば全tenantのapplyをwrite 0で停止する。既存root・target・auditは更新・削除せず、marker未activeかつ8 target documentとauditがすべて不存在で、Schemasのpure mappingからexact canonical bodyを決定できるtenantだけをcreate対象とする。途中成功後は作成済みdocumentを推測削除せず、fresh dry-runと新しいplan digestで残りを再計画する。詳細は[ADR 0028](decisions/0028-ccb-parity-backup-audit-restore.md)を正本とする。
-- CCB cutoverはadditive schemas、Admin SDKへのexact schema導入と旧破壊操作のfail-closed化、CCB-aware backup方針、compatible reader、Company runtime stateを維持するclone、marker-aware operation別Client/Server writerの順で準備する。既存Company CRUDは現行Rules下でLEGACY partial-update modeへ先行移行し、現行Rulesと候補Rulesの両回帰、対象環境での既存CRUD継続、client・deploy済みFunctions・operator・Admin SDKを含む旧whole-document writer 0件を確認する。その後にmaintenanceを開始してsignupと通常設定writeを停止し、generic Rules fallbackから新pathを除外するpre-containment Rulesをdeployする。receipt確認後だけcomplete Settingsをcreate-only stagingして同じmaintenance内で最終Rules、Functions、client、root activationを整合させ、`schemaVersion`とactivation markerを最後に設定する。STAGEDを通常運用せずdual-writeしない。cutover後のrollback先は旧whole-document writerでなくSettingsを読める既知のcompatible releaseとし、新Settings、legacy root、schema markerを推測削除・巻戻ししない。
-- legacy Admin SDKのbackup、snapshot、diff、restore、Company物理削除、Company root maintenance操作は、root markerまたは`Settings`、`PrivateSettings`、`SettingAudits`を検出した場合、Auth削除・Firestore write・backup保存前にfail closedとする。検査不能もfail closedとし、backup payload側のmarker/pathもrestore前に拒否する。このguardはCCB backup/restore対応ではない。
-- `PrivateSettings`は、保存先・暗号化・IAM・retention・redaction・cross-environment可否を持たない既存logical backupへ追加しない。そのbackupを完全backupと呼ばず、当面の復旧基盤はproject-level managed backup/PITRとする。Admin SDKの新規legacy logical backupは固定16 collectionのformat v1を`INCOMPLETE`として記録し、verified v1だけを`PrivateSettings: EXCLUDED`と表示する。旧・欠損・矛盾metadataはpayloadを開かずPrivateSettings含有`UNVERIFIED`とする。PrivateSettings単独logical restoreは未提供とし、専用の暗号化logical backup/restoreは別仕様・別承認とする。Firestore以外のAuthentication、Storage、外部serviceはmanaged Firestore backupだけで復旧できない。
-- `SettingAudits`のlogical restoreは、同一company・同一schemaの同一document IDをcreate-onlyで補う場合だけ許可する。既存同IDがcanonical同値ならskipし、異値なら全対象をwrite 0で停止する。update、delete、clear、generic merge restoreは禁止する。保持期間とlegal holdはproject共通audit方針で別途確定する。local-only pure plannerは、同一project/database/company/schema/ID、manifest/artifact digest、manifest全IDの同一snapshot present/absent観測、Schemas exact `2.4.2-dev.167`、strict Firestore wire形式とraw canonical round-tripを合成dataで検査し、候補を`currentDocument.exists=false`付きcreateへ限定する。観測欠落・snapshot混在・snapshot後のupdateは全候補をwrite 0とする。artifactの真正性・保存・暗号化/IAM/保持、apply、復旧演習は未実装であり、SettingAudits restoreを利用可能と扱わない。
-- 既存tenantのCCB backfillで`createdBy/updatedBy`へ記録するactorは、承認済みservice accountの1〜128文字のstable non-email opaque IDとする。移行前からmaintenance中のtenantは、旧dataに新しいPrivateSettingsが要求する内部理由・停止範囲が存在しない場合に値を推測せず、そのtenantを`ambiguousMapping`としてapply前に停止する。
-- pre-containmentでは新規CCB root fieldと既存`createdAt`をclient変更から予約するが、現行writerが毎回変更するlegacy `updatedAt`はroot client updateを全面拒否するcutoverまで許容する。これによりpre-containmentだけで現行Company保存を停止させない。
+- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBから削除する。legacy fieldのcode/schema/data削除は、local migrationとDev migration・受入れまでを一つの独立roadmapとして完了させる。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
+- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rules、Schemas consumer、Admin SDK guardはrollback inventory対象とする。UWB、Company client create/delete拒否等の独立security改善、公開済みpackage artifactを推測で戻さない。application・Rules・関連repositoryの変更前にexact commits/files、再利用・rollback、test、関連repository影響を確定する。
 
 ### 取引先・現場・取極め
 
@@ -258,7 +248,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - 次回の利用者承認済みコーディネーター交代では、ADR 0030の効率化手順をactivation baselineで発効する。完全新規task、primary repository、no-change callback、権限、最初のreal file-scoped commit、former taskの利用者削除境界は維持し、task-routed最小読取集合、bounded current snapshot、compact callback、staged/committed blob一致を使って全文再読・長文再掲・commit後validator重複だけを除く。本項は承認済みだが次回activation baselineまでは未発効であり、現在のcoordinator lifecycleを変更しない。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
-- Firestore Rulesの既存許可を狭める改修は、現行Rulesを維持した互換期間中に将来Rulesへ準拠するClient/Server CRUDを先行実装し、旧・候補Rules双方の回帰と対象環境での旧writer 0件を確認してからRulesを閉じる。新規pathはdocument作成前にdenyを確立し、緊急incident以外でRules閉鎖を既存caller移行より先行させない。詳細は[ADR 0029](decisions/0029-firestore-rules-compatible-crud-cutover.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
+- Firestore Rulesの既存許可を狭める改修は、対象環境、data件数、許容停止時間、旧client併存の有無からcutover方式を選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
+- roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
 - Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持する。Codex専用generated UIのbuildは従来どおり実行ごとの明示承認とし、承認済みbounded Dev release checkpointのDev buildとは分離する。
 - CodexがブラウザUIの挙動・受入れを検証するときは、可視画面上で実利用者が行える通常のpointer・keyboard入力だけを操作証拠とする。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避を用いた結果は受入れ証拠にしない。read-only観測と、OOB確認・backend verifier・export/import等の非UI処理は許可するが、それぞれUI操作、非UI準備、backend assertionとして区別する。2026-08-17までの旧基準によるdashboard到達証拠は履歴として保持するが、この基準での正規signup、再import後sign-in、dashboard到達は再検証が必要である。
