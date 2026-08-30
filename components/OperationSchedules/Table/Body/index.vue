@@ -38,10 +38,12 @@ defineOptions({ name: "OperationSchedulesTableBody", inheritAttrs: false });
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  canEditSiteShiftTypeOrder: { type: Boolean, default: false },
   columns: { type: Array, required: true },
   rows: { type: Array, required: true },
   schedulesIndex: { type: Object, required: true },
   selectedDate: { type: String, default: null },
+  siteShiftTypeOrderSaving: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "OperationSchedulesTableBody");
 const emit = defineEmits([
@@ -72,8 +74,11 @@ const {
               @click="emit('click:add-schedule', { ...row })"
             />
             <RemoveSiteOrderIcon
+              v-if="props.canEditSiteShiftTypeOrder"
               v-bind="row"
-              :disabled="isRemoveDisabled(row)"
+              :disabled="
+                props.siteShiftTypeOrderSaving || isRemoveDisabled(row)
+              "
               @click="emit('click:remove-site-order', row.key)"
             />
           </slot>

@@ -5,13 +5,23 @@ const emit = defineEmits([
   "click:workers",
 ]);
 
+const props = defineProps({
+  showSiteShiftTypeOrder: { type: Boolean, default: false },
+  siteShiftTypeOrderDisabled: { type: Boolean, default: false },
+});
+
 const open = ref(false);
-const btns = ref([
-  {
-    icon: "mdi-sort",
-    color: "info",
-    onClick: () => emit("click:site-shift-type-order"),
-  },
+const btns = computed(() => [
+  ...(props.showSiteShiftTypeOrder
+    ? [
+        {
+          icon: "mdi-sort",
+          color: "info",
+          disabled: props.siteShiftTypeOrderDisabled,
+          onClick: () => emit("click:site-shift-type-order"),
+        },
+      ]
+    : []),
   {
     icon: "mdi-file-document-plus",
     color: "secondary",

@@ -9,6 +9,8 @@ import { useSiteOperationSchedules } from "@/composables/dataLayers/useSiteOpera
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useSiteOperationScheduleSelector } from "@/composables/useSiteOperationScheduleSelector";
 import { useOperationScheduleTable } from "@/composables/useOperationScheduleTable";
+import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 
 import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShiftTypeOrder/useSiteShiftTypeOrderEnriched";
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
@@ -52,9 +54,14 @@ const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
  * SETUP DOMAIN COMPOSABLES
  *****************************************************************************/
 // 現場勤務区分オーダー更新用アクション
-const { update } = useSiteShiftTypeOrderActions({
-  type: ORDER_TYPE.SCHEDULE,
-});
+const { canUpdate, isSaving, saveFailed, update, remove } =
+  useSiteShiftTypeOrderActions({
+    type: ORDER_TYPE.SCHEDULE,
+  });
+const siteShiftTypeOrderLogger = useLogger(
+  "OperationSchedulesManagerSiteShiftTypeOrder",
+  useErrorsStore(),
+);
 
 // 現場稼働予定管理用コンポーザブル
 const siteOperationScheduleManager = useTemplateRef(
@@ -86,13 +93,29 @@ const reorderDialog = useManagedDialog({
   closeOnSubmit: true,
   onSubmit: update,
 });
+
+function openReorderDialog() {
+  if (!canUpdate.value || isSaving.value) return;
+  reorderDialog.open();
+}
+
+async function removeSiteShiftTypeOrder(orderKey) {
+  if (!canUpdate.value || isSaving.value) return;
+  try {
+    await remove(orderKey);
+  } catch (error) {
+    siteShiftTypeOrderLogger.error({ error });
+  }
+}
 </script>
 
 <template>
   <div class="d-flex flex-column fill-height">
     <!-- ツールバー -->
     <Toolbar
-      @click:sort="reorderDialog.open"
+      :can-sort="canUpdate"
+      :sort-disabled="isSaving"
+      @click:sort="openReorderDialog"
       @click:create="() => siteOperationScheduleManager.toCreate()"
     />
 
@@ -101,7 +124,10 @@ const reorderDialog = useManagedDialog({
       <!-- メインコンテンツ: テーブル -->
       <OperationSchedulesTable
         v-bind="table.attrs.value"
+        :can-edit-site-shift-type-order="canUpdate"
+        :site-shift-type-order-saving="isSaving"
         @click:cell="selector.set"
+        @click:remove-site-order="removeSiteShiftTypeOrder"
       >
         <!-- セル -->
         <template #cell="cellProps">
@@ -141,11 +167,17 @@ const reorderDialog = useManagedDialog({
     <SiteOperationScheduleDuplicator v-bind="duplicator.attrs.value" />
 
     <!-- 現場オーダー並び替え用コンポーネント -->
-    <AtomsDialogsFullscreen v-bind="reorderDialog.attrs.value" max-width="480">
+    <AtomsDialogsFullscreen
+      v-bind="reorderDialog.attrs.value"
+      max-width="480"
+      :persistent="reorderDialog.isLoading.value || isSaving"
+    >
       <template #default>
         <SiteShiftTypeOrderReorderForm
           :site-shift-type-order="siteShiftTypeOrder"
-          :loading="reorderDialog.isLoading.value"
+          :disabled="!canUpdate"
+          :loading="reorderDialog.isLoading.value || isSaving"
+          :save-failed="saveFailed"
           @submit="reorderDialog.submit"
           @cancel="reorderDialog.cancel"
         >

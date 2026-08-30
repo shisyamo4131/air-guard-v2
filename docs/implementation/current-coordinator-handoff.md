@@ -24,13 +24,14 @@
 - Company editor saving-state acceptance commit: 本snapshotと同じlocal commit
 - Company operations implementation commit: `df1d656d56cc39b51e43bb6367e3c709aa760095`
 - Company operations acceptance commit: 本snapshotと同じlocal commit
+- Company arrangement implementation commit: 本snapshotと同じlocal commit
 - expected upstream: none
 - expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
 - specification: `0.8.0`
-- unintegrated work: 0。Company基本情報・振込先・通常設定のapplication・Functions・Rules・test・文書はlocal commitへ統合済みである。基本情報、通常設定、保存中制御補正の利用者acceptanceは完了し、振込先の利用者最終UI acceptanceを残す。
+- unintegrated work: 0。Company基本情報・振込先・通常設定・表示順のapplication・Functions・Rules・test・文書はlocal commitへ統合済みである。基本情報、通常設定、保存中制御補正の利用者acceptanceは完了し、振込先と表示順の利用者最終UI acceptanceを残す。
 
 ## Confirmed product state
 
@@ -50,12 +51,14 @@
 - 利用者は実際の環境で、保存中の全入力・操作button無効化、自己保存時の外部更新警告非表示、本当の外部更新時の警告維持を確認し、保存中制御補正を受け入れた。
 - Company通常設定4 fieldは専用editorと`updateCompanyOperations` Callableへ移行した。Company rootを分割・移行せず、legacy勤怠値を共有canonical parserへ写像し、欠損時は検証だけ既定化して補完writeしない。会社管理者だけのchanged-only transaction、client直接write拒否、保存中全control無効、自己保存reflection識別、真正競合の再読込をlocal実装・検証した。
 - 利用者は実際の環境で、通常設定4項目の表示・1項目保存、保存中の全入力・操作無効、自己保存時の外部更新警告非表示、真正な外部更新時の再読込、非管理者・super-userの編集拒否を確認し、通常設定operationを受け入れた。
+- Company既定取極めのUI/writerは撤去し、Site取極めと保存済みCompany値は維持した。`siteOrder`・`scheduleOrder`は会社管理者またはfield別既知preset actorだけが専用Callableで更新する。Company全体保存を外し、独立draft、再読込専用競合、自保存reflection除外、保存中全関連操作停止、失敗時維持、非active Site除外、protected 3 fieldのclient直接write拒否を実装した。完全同時保存は後commit優先の残存riskである。
 - 利用者は、task交代中を除き独立して分割できる調査・review・test・明示承認済み補助実装等に適切なsubagentを使用し、Checkpoint固有の禁止を当該Checkpointだけへ限定するproject-wide方針を承認した。交代手順内はcoordinatorだけで実施する。
 - 利用者はADR 0034として、承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、自動test、必要なin-app UI smokeまで担当し、利用者が実際の利用環境で最終UI acceptanceを行うproject-wide方針を承認した。file-by-file確認はcheckpointが明示した場合だけとし、外部作用の別承認境界は維持する。
 
 ## Current checkpoint and next work
 
 - no-change checkpoint: `NO-CHANGE-GOV18-AIRGUARDV2-PM12-001` COMPLETE。task `01a05183-9ab8-7f23-8e13-2ec47296dc04` / host `local`、direct repository、baseline `c729803ecc431bd94a5b627719c9d846fec5c24b`、upstream none、clean、primary-only worktree、common governance `1.4.0`、specification `0.8.0`、managed `workspace-write` / `auto_review` / network restricted、`AGENTS.md`、project rules、documentation map、coordination runbook、本snapshot、ADR 0034、効率化runbookを確認し、PM-11がreceiptを受理した。
+- implementation complete / user acceptance pending checkpoint: `CCB-COMPANY-ARRANGEMENT-CODEX-IMPLEMENT-001`。Company既定取極めUI/writer撤去と表示順専用更新を実装し、専用14件、全domain 721件、専用Emulator 106件、一般review GO、security review 4/5を確認した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止したためUI成功とは扱わない。利用者の実際の環境での最終UI acceptanceまでCPU-04を完了しない。
 - ownership activation checkpoint: `GOV18-AIRGUARDV2-PM12-ACTIVATION-001`。本snapshot 1件だけのfile-scoped local commitでPM-12へcallbackとassignmentをretargetし、効率化runbookのvalidator・blob・commit gateを満たす。exact new HEADはactivation receiptへ記録する。
 - completed product checkpoint: `CCB-RESTART-ROLLBACK-INVENTORY-001`と承認済みcorrective rollback。commit rangeの一括revertを使わず、compatible reader、audit planner、migration tooling、Rulesの4単位で実装・testを完了した。
 - completed product checkpoint: `CCB-COMPANY-PARTIAL-UPDATE-001`。Company基本情報の専用editor・Callable、Class schema/operation validation、会社管理者境界、変更fieldだけの保存、server timestamp、編集中listener変更の通知、Rulesのclient直接変更拒否をlocal実装・検証した。
@@ -102,3 +105,5 @@ Company振込先checkpointでは振込先・PDF対象17件、全domain 676件、
 保存中制御の補正では会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UIは製品画面到達前のNuxt `ECONNRESET`で対象操作を確認できなかったためUI成功とは扱わなかったが、その後、利用者が実際の環境で保存中の操作不可、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。Functions・Rules・package・Schemas/Admin SDK・Dev・remote/data・deployは変更していない。
 
 Company通常設定checkpointでは対象19件、全domain 707件、隔離Codex Emulator 104件を成功させた。Codex in-app UIで会社管理者の4項目表示、15分→20分保存中の全control無効、完了反映、自己保存警告なし、15分への復元、console error 0件を確認した。Emulatorはdemo project・loopback・合成dataだけを使用し、終了後は専用port 0、runtime 0である。利用者は実際の環境で4項目表示・1項目保存、保存中制御、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を確認し、最終UI acceptanceを完了した。Company document分割、data migration、Dev、remote/data、deployは行っていない。
+
+Company表示順checkpointでは専用14件、全domain 721件、隔離Codex Emulator 106件を成功させ、security reviewは4/5 GOで権限・tenant・入力・直接write境界にblockerなしと確認した。初回domain testで終了済みSite表示、一般reviewで稼働予定の行削除配線漏れを検出し、補正後の回帰に含めた。Codex in-app UIはHTTP 200とEmulator/Functions ready後も起動templateから製品画面へ遷移せず、対象操作前に停止した。終了後は専用port 0、runtime 0、saved-data 7 files・3492 bytesを確認したが、開始前fingerprintを採取していないためUI実行前後のbyte一致証拠には使わない。利用者の実際の環境でCompany取極め欄不存在、配置・稼働予定の管理者操作、保存中制御、競合、非actor拒否を最終確認する。Company分割、data migration、Dev、remote/data、deployは行っていない。

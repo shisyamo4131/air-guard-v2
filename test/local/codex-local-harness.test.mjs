@@ -864,6 +864,124 @@ test("Firestore Rules reserve Company operations fields for the server writer", 
   }
 });
 
+test("Firestore Rules reserve Company agreements and order fields for the server writer", async () => {
+  const companyId = "codex-rules-arrangement-write-company";
+  const stored = {
+    agreementsV2: [],
+    siteOrder: [{ siteId: "site-a", shiftType: "DAY" }],
+    scheduleOrder: [{ siteId: "site-b", shiftType: "NIGHT" }],
+  };
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-arrangement-write-rules",
+      ...stored,
+    });
+  });
+
+  const actors = [
+    {
+      uid: "codex-rules-arrangement-admin",
+      user: { isAdmin: true, roles: [] },
+      claims: { companyId, isSuperUser: false },
+    },
+    {
+      uid: "codex-rules-arrangement-user",
+      user: { isAdmin: false, roles: [] },
+      claims: { companyId, isSuperUser: false },
+    },
+    {
+      uid: "codex-rules-arrangement-super",
+      user: { isAdmin: true, roles: [] },
+      claims: { companyId, isSuperUser: true },
+    },
+  ];
+  const replacements = {
+    agreementsV2: [{ date: "2026-08-30" }],
+    siteOrder: [{ siteId: "site-c", shiftType: "DAY" }],
+    scheduleOrder: [{ siteId: "site-d", shiftType: "NIGHT" }],
+  };
+  for (const actor of actors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: companyId,
+      companyId,
+      ...actor.user,
+    });
+    const firestore = testEnvironment
+      .authenticatedContext(actor.uid, {
+        email_verified: true,
+        ...actor.claims,
+      })
+      .firestore();
+    const companyRef = doc(firestore, "Companies", companyId);
+    for (const [field, value] of Object.entries(replacements)) {
+      await assertFails(setDoc(companyRef, { [field]: value }, { merge: true }));
+      await assertFails(updateDoc(companyRef, { [field]: deleteField() }));
+    }
+  }
+
+  const adminFirestore = testEnvironment
+    .authenticatedContext("codex-rules-arrangement-admin", {
+      email_verified: true,
+      companyId,
+      isSuperUser: false,
+    })
+    .firestore();
+  const adminCompanyRef = doc(adminFirestore, "Companies", companyId);
+  await assertFails(
+    setDoc(
+      adminCompanyRef,
+      {
+        siteOrder: [{ siteId: "site-e", shiftType: "DAY" }],
+        unrelatedArrangementRulesProbe: true,
+      },
+      { merge: true },
+    ),
+  );
+  await assertSucceeds(
+    setDoc(
+      adminCompanyRef,
+      { unrelatedArrangementRulesProbe: "legacy update remains allowed" },
+      { merge: true },
+    ),
+  );
+
+  const crossTenantUid = "codex-rules-arrangement-other-tenant";
+  await seedRegisteredUser({
+    uid: crossTenantUid,
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isAdmin: true,
+  });
+  const crossTenantFirestore = testEnvironment
+    .authenticatedContext(crossTenantUid, {
+      email_verified: true,
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      isSuperUser: false,
+    })
+    .firestore();
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(
+      setDoc(
+        doc(crossTenantFirestore, "Companies", companyId),
+        { [field]: value },
+        { merge: true },
+      ),
+    );
+  }
+
+  const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(
+      setDoc(
+        doc(unauthenticated, "Companies", companyId),
+        { [field]: value },
+        { merge: true },
+      ),
+    );
+  }
+});
+
 test("Firestore Rules preserve Company billing reads for active same-tenant Users", async () => {
   const companyId = "codex-rules-billing-read-company";
   const actors = [
@@ -1388,6 +1506,142 @@ test("operations Callable updates synthetic Company data only for an active admi
             isSuperUser: testCase.isSuperUser ?? false,
           },
           data: { changes: { minuteInterval: 25 } },
+        }),
+      ),
+      "permission-denied",
+    );
+  }
+});
+
+test("arrangement Callable applies field-specific preset authorization", async () => {
+  const { updateCompanyArrangement } = await loadRebuildApis();
+  const companyId = "codex-callable-arrangement-company";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-arrangement-callable",
+      siteOrder: [{ siteId: "site-a", shiftType: "DAY" }],
+      scheduleOrder: [{ siteId: "site-b", shiftType: "NIGHT" }],
+    });
+  });
+
+  const allowed = [
+    {
+      name: "admin-site",
+      isAdmin: true,
+      roles: [],
+      field: "siteOrder",
+      order: [{ siteId: "site-c", shiftType: "DAY" }],
+    },
+    {
+      name: "legal-site",
+      isAdmin: false,
+      roles: ["legal"],
+      field: "siteOrder",
+      order: [{ siteId: "site-d", shiftType: "NIGHT" }],
+    },
+    {
+      name: "controller-schedule",
+      isAdmin: false,
+      roles: ["controller"],
+      field: "scheduleOrder",
+      order: [{ siteId: "site-e", shiftType: "DAY" }],
+    },
+  ];
+  for (const actor of allowed) {
+    const uid = `codex-callable-arrangement-${actor.name}`;
+    const email = `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({
+      uid,
+      companyId,
+      email,
+      isSuperUser: false,
+    });
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      email,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+    });
+    const result = await updateCompanyArrangement.run(
+      callableRequest({
+        uid,
+        claims: { email, companyId, isSuperUser: false },
+        data: { field: actor.field, order: actor.order },
+      }),
+    );
+    assert.deepEqual(result, {
+      success: true,
+      updated: true,
+      field: actor.field,
+    });
+  }
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const company = (
+      await getDoc(doc(context.firestore(), "Companies", companyId))
+    ).data();
+    assert.deepEqual(company.siteOrder, [
+      { siteId: "site-d", shiftType: "NIGHT" },
+    ]);
+    assert.deepEqual(company.scheduleOrder, [
+      { siteId: "site-e", shiftType: "DAY" },
+    ]);
+    assert.equal(company.fixture, "company-arrangement-callable");
+    assert.equal(
+      company.uid,
+      "codex-callable-arrangement-controller-schedule",
+    );
+    assert.ok(company.updatedAt);
+  });
+
+  const denied = [
+    { name: "read-only", isAdmin: false, roles: ["accountant"] },
+    { name: "direct-permission", isAdmin: false, roles: ["sites:write"] },
+    { name: "unknown", isAdmin: false, roles: ["custom-role"] },
+    { name: "temporary", isAdmin: true, roles: [], isTemporary: true },
+    { name: "disabled", isAdmin: true, roles: [], disabled: true },
+    { name: "super", isAdmin: true, roles: [], isSuperUser: true },
+    {
+      name: "wrong-field-permission",
+      isAdmin: false,
+      roles: ["legal"],
+      field: "scheduleOrder",
+    },
+  ];
+  for (const actor of denied) {
+    const uid = `codex-callable-arrangement-${actor.name}`;
+    const email = `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({
+      uid,
+      companyId,
+      email,
+      isSuperUser: actor.isSuperUser ?? false,
+    });
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      email,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+      isTemporary: actor.isTemporary ?? false,
+      disabled: actor.disabled ?? false,
+    });
+    await assertCallableError(
+      updateCompanyArrangement.run(
+        callableRequest({
+          uid,
+          claims: {
+            email,
+            companyId,
+            isSuperUser: actor.isSuperUser ?? false,
+          },
+          data: {
+            field: actor.field ?? "siteOrder",
+            order: [{ siteId: "site-denied", shiftType: "DAY" }],
+          },
         }),
       ),
       "permission-denied",
@@ -2363,6 +2617,7 @@ test("API index exports every public Callable without internal request helpers",
     "reinstateEmployee",
     "setupUserAccount",
     "terminateEmployee",
+    "updateCompanyArrangement",
     "updateCompanyOperations",
     "updateCompanyProfile",
     "updateOwnUserProfile",
@@ -2435,6 +2690,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyArrangement,
     updateCompanyOperations,
     updateCompanyProfile,
     reinstateEmployee,
@@ -2454,6 +2710,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyArrangement,
     updateCompanyOperations,
     updateCompanyProfile,
     reinstateEmployee,

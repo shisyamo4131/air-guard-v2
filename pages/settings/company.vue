@@ -21,11 +21,6 @@ const canEditOperations = canEditProfile;
 
 <template>
   <v-container>
-    <!-------------------------------------------------------------------------
-      ROW: DIVIDES 2 COLUMNS
-      LEFT COLUMN: COLS=12 (MOBILE), COLS=6 (TABLET), COLS=4 (DESKTOP)
-      RIGHT COLUMN: COLS=12 (MOBILE), COLS=6 (TABLET), COLS=8 (DESKTOP)
-    -------------------------------------------------------------------------->
     <v-row>
       <!-----------------------------------------------------------------------
         LEFT SIDE
@@ -70,21 +65,6 @@ const canEditOperations = canEditProfile;
                 />
               </template>
             </CompanyOperationsEditor>
-          </v-col>
-        </v-row>
-      </v-col>
-
-      <!-----------------------------------------------------------------------
-        RIGHT SIDE
-      ------------------------------------------------------------------------>
-      <v-col>
-        <v-row>
-          <!-- 取極め情報 -->
-          <v-col cols="12">
-            <AgreementsManager
-              v-model="doc.agreementsV2"
-              @submit:complete="async () => await doc.update()"
-            />
           </v-col>
         </v-row>
       </v-col>

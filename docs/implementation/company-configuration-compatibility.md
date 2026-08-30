@@ -3,6 +3,8 @@
 > 状態: Historical / rollback inventory source（2026-08-30）
 >
 > ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。2026-08-30に主repositoryのcompatible reader、migration/restore planner、pre-containment Rulesと専用testをcorrective rollbackした。本書はhistorical evidenceであり、現在の設計または実行手順として使用しない。
+>
+> 表示順の現行actorと競合契約は[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。会社管理者をactorへ含め、Company rootのfield限定Callableを使用し、revisionは導入しない。以下のpreset-only・Settings/arrangement・expected revision記述は旧設計の履歴である。
 
 ## メタデータ
 

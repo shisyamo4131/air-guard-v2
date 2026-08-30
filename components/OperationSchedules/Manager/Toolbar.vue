@@ -9,6 +9,11 @@
  *****************************************************************************/
 import dayjs from "dayjs";
 
+const props = defineProps({
+  canSort: { type: Boolean, default: false },
+  sortDisabled: { type: Boolean, default: false },
+});
+
 /** SETUP COMPOSABLES */
 const dateRangeComposable = inject("dateRangeComposable");
 const { dateRange, move } = dateRangeComposable;
@@ -52,7 +57,12 @@ const nextBtnAttrs = computed(() => {
       </div>
     </v-toolbar-title>
     <template #append>
-      <v-btn icon="mdi-sort" @click="emit('click:sort')" />
+      <v-btn
+        v-if="props.canSort"
+        icon="mdi-sort"
+        :disabled="props.sortDisabled"
+        @click="emit('click:sort')"
+      />
       <v-btn icon="mdi-plus" @click="emit('click:create')" />
     </template>
   </v-toolbar>

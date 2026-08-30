@@ -89,6 +89,15 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 対象19件、全domain 707件、専用Emulator 104件が成功した。Codex in-app UIでは15分から20分への保存中に全controlが無効になること、完了後の表示反映、自己保存警告なし、15分への復元、console error 0件を確認した。終了後は専用port 0、runtime 0である。
 - 利用者は実際の利用環境で、4項目表示、1 fieldだけの保存、保存中全control無効、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を確認し、通常設定operationを受け入れた。CPU-03は振込先の残る最終UI acceptanceまで完了としない。
 
+## 2026-08-30 Company既定取極め撤去・表示順更新契約
+
+- Company設定pageからCompany既定`agreementsV2`の編集UIとCompany whole-document writerを撤去した。Site詳細の取極めUI、schema field、保存済みCompany値は維持し、data migrationしない。
+- `siteOrder`と`scheduleOrder`は専用`updateCompanyArrangement` Callableへ移行した。会社管理者、または既知preset由来のfield別write permissionを持つ同社の有効な本登録non-super-userだけが保存できる。
+- Callableはexact `{field, order}`を受け、対象fieldとserver管理metadataだけをtransaction updateする。同値はwrite 0で、Rulesは`agreementsV2/siteOrder/scheduleOrder`のclient直接変更を全actorへ拒否する。
+- editorは独立draft、再読込専用競合、自保存reflection除外、single-flight、保存中の全関連操作停止、失敗時draft維持を実装した。missing/deleted/非active Siteは表示から除外し、明示保存時だけ旧参照を除去する。
+- 専用14件、全domain 721件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止し、利用者の実際の環境での最終UI acceptance待ちである。
+- 詳細なactor、入力、競合、rollbackは[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。
+
 ## tenant identity
 
 - Company doc IDがtenant IDで、Auth custom claim `companyId`、User.companyId、全subcollection prefixの基準となる。

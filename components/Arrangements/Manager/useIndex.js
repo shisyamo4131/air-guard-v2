@@ -6,6 +6,10 @@
 import * as Vue from "vue";
 import { useArrangementsInRange } from "@/composables/dataLayers/arrangement/useArrangementsInRange";
 import { useArrangementsActions } from "@/composables/application/arrangement/useArrangementsActions";
+import { useSiteShiftTypeOrderActions } from "@/composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions";
+import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
+import { useLogger } from "@/composables/useLogger";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useSelectableDate } from "./useSelectableDate";
 import { useFloatingWindow } from "@/composables/overlay/useFloatingWindow";
 import { useTargetedMenu } from "@/composables/overlay/useTargetedMenu";
@@ -140,6 +144,13 @@ export function useIndex(
     schedules,
     siteShiftTypeOrder,
   });
+  const siteOrderActions = useSiteShiftTypeOrderActions({
+    type: ORDER_TYPE.ARRANGEMENT,
+  });
+  const logger = useLogger(
+    "ArrangementsManagerSiteShiftTypeOrder",
+    useErrorsStore(),
+  );
 
   /**
    * 選択中日付管理コンポーザブル
@@ -157,7 +168,7 @@ export function useIndex(
   const siteShiftTypeReorderDialog = useManagedDialog({
     loggerName: "ArrangementsManagerSiteShiftTypeReorder",
     closeOnSubmit: true,
-    onSubmit: arrangementsActions.updateSiteShiftTypeOrder,
+    onSubmit: siteOrderActions.update,
   });
 
   /** 現場稼働予定複製コンポーザブル */
@@ -210,6 +221,21 @@ export function useIndex(
     await fn(new SiteOperationSchedule({ siteId, shiftType }));
   }
 
+  function openSiteShiftTypeReorder() {
+    if (!siteOrderActions.canUpdate.value || siteOrderActions.isSaving.value) {
+      return;
+    }
+    siteShiftTypeReorderDialog.open();
+  }
+
+  async function removeSiteShiftTypeOrder(orderKey) {
+    try {
+      await siteOrderActions.remove(orderKey);
+    } catch (error) {
+      logger.error({ error });
+    }
+  }
+
   /*****************************************************************************
    * RETURN
    *****************************************************************************/
@@ -226,10 +252,11 @@ export function useIndex(
             scrollToRowKey: rowKeyToScroll.value,
             selectedDate: selectedDate.value,
             siteShiftTypeOrder: siteShiftTypeOrder.value,
+            canEditSiteShiftTypeOrder: siteOrderActions.canUpdate.value,
+            siteShiftTypeOrderSaving: siteOrderActions.isSaving.value,
             startDate: props.startDate,
             "onClick:add-schedule": handleClickCreateSchedule,
-            "onClick:remove-site-order":
-              arrangementsActions.removeSiteShiftTypeOrder,
+            "onClick:remove-site-order": removeSiteShiftTypeOrder,
             "onUpdate:scrollToRowKey": (newKey) =>
               (rowKeyToScroll.value = newKey),
           },
@@ -362,12 +389,22 @@ export function useIndex(
     uiSiteShiftTypeReorder: Vue.computed(() => {
       return {
         dialog: {
-          attrs: { ...siteShiftTypeReorderDialog.attrs.value, maxWidth: "480" },
-          open: siteShiftTypeReorderDialog.open,
+          attrs: {
+            ...siteShiftTypeReorderDialog.attrs.value,
+            maxWidth: "480",
+            persistent:
+              siteShiftTypeReorderDialog.isLoading.value ||
+              siteOrderActions.isSaving.value,
+          },
+          open: openSiteShiftTypeReorder,
         },
         component: {
           attrs: {
-            loading: siteShiftTypeReorderDialog.isLoading.value,
+            disabled: !siteOrderActions.canUpdate.value,
+            loading:
+              siteShiftTypeReorderDialog.isLoading.value ||
+              siteOrderActions.isSaving.value,
+            saveFailed: siteOrderActions.saveFailed.value,
             siteShiftTypeOrder: siteShiftTypeOrder.value,
             onSubmit: siteShiftTypeReorderDialog.submit,
             onCancel: siteShiftTypeReorderDialog.cancel,
@@ -394,9 +431,11 @@ export function useIndex(
           app: true,
           location: "bottom right",
           color: "primary",
+          showSiteShiftTypeOrder: siteOrderActions.canUpdate.value,
+          siteShiftTypeOrderDisabled: siteOrderActions.isSaving.value,
           "onClick:workers": workerSelectorWindow.toggle,
           "onClick:add-schedule": handleClickCreateSchedule,
-          "onClick:site-shift-type-order": siteShiftTypeReorderDialog.open,
+          "onClick:site-shift-type-order": openSiteShiftTypeReorder,
         },
       };
     }),

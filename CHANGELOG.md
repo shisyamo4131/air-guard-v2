@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Company設定から利用されていない会社デフォルト取極めの編集入口を撤去した。Site固有取極めと保存済みCompany値は維持する。配置管理と稼働予定の表示順は、会社管理者または対象fieldの既知role権限を持つ利用者だけが専用Callableで更新できる。Company全体保存をやめ、保存前のlive値非変更、編集中の外部更新停止、自己保存reflection除外、保存中の並べ替え・削除等の無効化、非active Site除外、protected 3 fieldのclient直接write拒否を追加した。専用14件、全domain 721件、専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止し、利用者の実際の環境での最終UI acceptance待ちである。Dev・remote/data・deploy・migrationは行っていない。
 - 利用者が実際の利用環境でCompany通常設定を確認し、会社管理者の4項目表示と1項目だけの保存、保存中の全入力・操作無効、自己保存時の外部更新警告非表示、真正な外部更新時の再読込、非管理者・super-userの編集拒否を受け入れた。通常設定operationの最終UI acceptanceは完了した。CPU-03は振込先の残る利用者最終確認が未完了のため30%に据え置く。
 - Company通常設定の`minuteInterval`、`roundSetting`、`firstDayOfWeek`、`attendanceManagementMode`を、Company全体保存から専用editorと`updateCompanyOperations` Callableへ移した。会社管理者だけが、実際に変えたfieldを最新Companyへ重ねて保存できる。古いCompanyで勤怠方式が欠損・null・空文字でも、他fieldの更新時は検証上だけ暦日基準として扱い、補完writeやdata migrationは行わない。Rulesは4 fieldと将来用canonical fieldのclient直接変更を拒否する。対象19件、全domain 707件、専用Emulator 104件が成功し、Codex in-app UIで15分→20分の保存中に全入力・選択・取消・保存・閉じるが無効となること、完了後の表示反映、自己保存警告なし、15分への復元、console error 0件を確認した。Company documentは分割せず、Dev・remote・実data・deployも変更していない。利用者の実際の利用環境での最終UI acceptanceは未完了である。
 - Company基本情報と振込先の保存中に、入力欄・選択欄・削除・取消・保存・最新値の再読込をすべて操作不可にした。処理側でも保存中の再読込を拒否し、会社基本情報も入力検査の開始前から二重送信を拒否する。live listenerが返す自分自身の保存結果は外部更新警告にせず、本当に別画面で変わった場合だけ保存を止めて最新値の再読込を求める。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UI smokeは起動templateから製品画面へ遷移せずNuxtの`ECONNRESET`で対象操作前に停止したが、利用者が実際の環境で保存中の操作不可と自己保存時の警告非表示を確認し、この補正を受け入れた。

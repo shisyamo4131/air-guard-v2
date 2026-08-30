@@ -47,6 +47,7 @@
 | [0032](0032-required-specialist-subagent-routing.md) | 独立scopeへの専門subagent利用とCheckpoint限定禁止 | Accepted | 2026-08-30 |
 | [0033](0033-company-bank-transfer-update-boundary.md) | Company振込先の専用更新・読取境界 | Accepted | 2026-08-30 |
 | [0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md) | 承認済み境界でのCodex実装と利用者最終UI受入れ | Accepted | 2026-08-30 |
+| [0035](0035-company-display-order-update-boundary.md) | Company表示順の専用更新・権限境界 | Accepted | 2026-08-30 |
 
 ## 新しい ADR の形式
 

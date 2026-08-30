@@ -9,7 +9,7 @@
 
 ## 境界
 
-このroadmapはCompany documentを無条件に分割しない。`AirItemManager`・`AirArrayManager`をproject全体から一括削除せず、Companyの基本情報、振込先、通常設定、既定取極め、表示順を独立したoperationとして段階移行する。
+このroadmapはCompany documentを無条件に分割しない。`AirItemManager`・`AirArrayManager`をproject全体から一括削除せず、Companyの基本情報、振込先、通常設定、表示順を独立したoperationとして段階移行する。Company既定取極めはoperationへ移行せず、UI/writerを撤去する。
 
 document共通validationはFireModel/Class schema、operation固有fieldと追加条件は共有operation contractを正本とする。画面は独立draftを編集し、保存前に最新Companyへ変更fieldを重ねて検証する。Firestoreへ保存するのは実際に変わったfieldと更新metadataだけとする。
 
@@ -24,7 +24,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | CPU-01 schema/editor境界の確定 | 10 | 10 | Completed | project rules、仕様、ADR、Company operation一覧、共通validationとdraft競合契約を確定する |
 | CPU-02 Company基本情報の部分更新 | 20 | 20 | Completed | 専用editor/writer、管理者境界、変更fieldだけの保存、server timestamp、schema/operation validation、回帰testを完了する |
 | CPU-03 振込先・通常設定の部分更新 | 20 | 0 | In progress | 2 operationの実装・自動test・Codex UI smokeは完了し、通常設定の利用者最終UI acceptanceも完了した。振込先の残る最終UI acceptance待ち |
-| CPU-04 取極め・表示順の部分更新 | 20 | 0 | Not started | `agreementsV2`、`siteOrder`、`scheduleOrder`のwriterを分離し、配列全体の対象fieldだけを更新する |
+| CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 0 | In progress | Company既定取極めUI/writerを撤去し、`siteOrder`・`scheduleOrder`の専用更新、Rules、競合UI、自動検証を完了する。Codex UI smokeと利用者最終UI acceptance待ち |
 | CPU-05 旧Company writer除去・local受入れ | 15 | 0 | Not started | Company全体`set/update()` caller 0、Rules/Functions回帰、listener競合表示、主要画面再読込を確認する |
 | CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
 
@@ -33,7 +33,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 ## 現在の次工程
 
 1. 利用者が実際の利用環境で、振込先の会社管理者表示、5項目登録、明示clear、競合時の再読込、請求書PDFの口座名義と長文配置を最終確認する。
-2. CPU-04で取極めと表示順をoperation別の対象field保存へ移す。
+2. CPU-04のCompany既定取極め撤去と表示順専用更新を、利用者の実際の利用環境で最終確認する。
 3. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
 
 ## 進捗履歴
@@ -51,3 +51,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | 0 | 利用者が実際の環境で、基本情報・振込先の保存中に入力欄と全操作buttonが使用不可になること、自分の保存結果では外部更新警告が一瞬表示されないこと、本当の外部更新では警告が維持されることを確認し、保存中制御補正を受け入れた。CPU-03の通常設定と振込先全体の残る最終確認、CPU-04以降、Dev反映は未完了のため進捗を据え置いた。 |
 | 2026-08-30 | 30% | 0 | CPU-03の通常設定4 fieldを専用editor/Callableへ移し、会社管理者境界、changed-only保存、legacy勤怠値のcanonical検証、欠損時の非移行互換、client直接write拒否、保存中制御、再読込専用競合を実装した。対象19件、全domain 707件、専用Emulator 104件、Codex in-app UIの保存中全操作無効・反映・自己保存警告なし・復元・console error 0件が成功した。Company document分割、data migration、Dev反映は行っていない。CPU-03は利用者の実際の環境での最終UI acceptance待ちのため加点しない。 |
 | 2026-08-30 | 30% | 0 | 利用者が実際の環境で、通常設定4項目の表示・1項目保存、保存中の全入力・操作無効、自己保存時の外部更新警告非表示、真正な外部更新時の再読込、非管理者・super-userの編集拒否を確認し、通常設定operationを受け入れた。CPU-03は振込先の残る利用者最終UI acceptance、CPU-04以降、Dev反映が未完了のため進捗を据え置いた。 |
+| 2026-08-30 | 30% | 0 | CPU-04でCompany既定取極めUI/writerを撤去し、会社管理者またはfield別既知preset actorによる`siteOrder`・`scheduleOrder`専用Callable、client直接write拒否、独立draft、再読込専用競合、保存中制御、非active Site除外を実装した。専用14件、全domain 721件、専用Emulator 106件、security review 4/5が成功した。Codex UI smokeは起動templateから製品画面へ遷移せず未完了で、利用者最終UI acceptanceも未完了のためCPU-04を加点しない。 |

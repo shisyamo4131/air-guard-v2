@@ -182,6 +182,8 @@ const _props = defineProps({
    * - 各現場オーダーのデータオブジェクトを含む配列を指定します。
    */
   siteShiftTypeOrder: { type: Array, default: () => [] },
+  canEditSiteShiftTypeOrder: { type: Boolean, default: false },
+  siteShiftTypeOrderSaving: { type: Boolean, default: false },
   /**
    * 開始日付
    * - テーブル表示の開始日付を指定します。
@@ -307,10 +309,12 @@ provide("columns", columns);
 
     <!-- ボディ部 -->
     <Body
+      :can-edit-site-shift-type-order="canEditSiteShiftTypeOrder"
       :columns="columns"
       :rows="rows"
       :schedules-index="schedulesIndex"
       :selected-date="selectedDate"
+      :site-shift-type-order-saving="siteShiftTypeOrderSaving"
       @click:cell="emit('click:cell', $event)"
       @click:add-schedule="emit('click:add-schedule', $event)"
       @click:remove-site-order="emit('click:remove-site-order', $event)"
