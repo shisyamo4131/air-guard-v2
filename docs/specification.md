@@ -138,7 +138,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
 - Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBから削除する。legacy fieldのcode/schema/data削除は、local migrationとDev migration・受入れまでを一つの独立roadmapとして完了させる。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
-- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rules、Schemas consumer、Admin SDK guardはrollback inventory対象とする。UWB、Company client create/delete拒否等の独立security改善、公開済みpackage artifactを推測で戻さない。application・Rules・関連repositoryの変更前にexact commits/files、再利用・rollback、test、関連repository影響を確定する。
+- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。Company Rulesは旧CCB直前へ戻しつつ、UWBとCompany client create/delete拒否を保持した。Schemas exact `2.4.2-dev.167`の公開artifactとconsumer pin、Admin SDKのfail-closed guardは独立成果として保持し、公開packageをunpublishしない。Dev/remote dataは未変更であり、旧8 targetへのmigrationまたはrestore経路は現在提供しない。
 
 ### 取引先・現場・取極め
 

@@ -2,11 +2,11 @@
 
 > 状態: Historical / rollback inventory source（2026-08-30）
 >
-> ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。本書のcode・data・package調査事実は、保持対象とcorrective rollback対象を分離するために使用し、現在の設計または次工程として使用しない。
+> ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。2026-08-30に主repositoryのcompatible reader、migration/restore planner、pre-containment Rulesと専用testをcorrective rollbackした。本書はhistorical evidenceであり、現在の設計または実行手順として使用しない。
 
 ## メタデータ
 
-- 状態: In progress（Schemas `.167`は公開・artifact検証済み。Admin SDK、AirGuardV2 app、Functionsはexact導入済み。client compatible readerとActive時の旧root write拒否、pure migration planner、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rules候補のlocal prototypeは実装済み。既存CRUD互換化をRules deployより先に行う計画へ訂正。Company clone、operation別Client/Server writer、両Rules回帰、旧writer 0件、Dev reader/apply、deployed Rules receipt、remote stagingは未完了）
+- 状態: Historical / rollback completed（Schemas `.167`の公開artifact・consumer pinとAdmin SDK guardは保持。AirGuardV2の旧runtime reader、8-target migration/restore tooling、candidate Rulesは除去済み。Dev staging・remote applyは実施していない）
 - 改修コード: CCB（Company Configuration Boundary）
 - 調査日: 2026-08-29
 - 調査基準commit: `16460b8d38a95b62f821afe7677febf5ca28ac19`
@@ -18,6 +18,8 @@
 この文書は実装事実と互換性を記録する。承認済み仕様の正本ではない。「承認済み技術契約」は2026-08-28に利用者が確認し、現行仕様・ADR・ロードマップへ反映した。
 
 ## 結論
+
+この節以下は旧CCB時点の調査結論である。現在は新pathを作成するruntime/migration経路もpre-containment Rulesもrepositoryに存在しない。再利用するのはwhole-document replacement risk等の観測事実だけであり、実装順・8-target schema・runtime modeは再利用しない。
 
 CCBの新documentを現在のRules下で先に作成してはならない。`firestore.rules`のgeneric fallbackは、明示的な除外がない`Settings`、`PrivateSettings`、`SettingAudits`にも一致し、同じ会社の有効な本登録Userへ再帰read/writeを許可する。Firestore Rulesは複数matchのallowをOR評価するため、狭い個別matchを追加するだけではfallback allowを打ち消せない。
 
@@ -215,7 +217,7 @@ publish済みpackageをunpublishせず、未採用ならconsumerを旧exact vers
 - dry-runは変更なし0、create候補あり2、data blocker 3、digest/concurrency/partial/post-check mismatch 4、usage 64、unexpected pre-write error 70、target/credential/edition/rules proof拒否78を使う。applyはlive stateから同planを再生成してdigest一致後だけ進み、tenantごとのtransactionでroot source/marker/updateTimeと8 target不存在を再検査して8 documentをcreateする。root、audit、既存targetのupdate/deleteは0とする。
 - 複数tenantは全体atomicではない。途中成功後は作成済みdocumentを削除せずfresh dry-runし、成功tenantが`alreadyEquivalent`、残りが`eligibleCreate`となる新digestで再開する。post-checkはinclude tenantが全件equivalent、eligible/blocker 0、root business値・marker不変、audit 0、create件数一致、update/delete/root write 0を必須とする。activationは別checkpointである。
 
-local実装は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、保護付きCodex local harnessへ追加した。exact demo project・loopback Firestore・external effects deny・credential拒否のtarget guard内でだけ、公開REST readerと`Bearer owner`、tenant単位read-write transaction、`currentDocument.exists=false`付き8 create、fresh post-checkを提供する。pre-containment Rulesのlocal prototypeは、`Settings`、`PrivateSettings`、`SettingAudits`のrecursive denyとgeneric fallback除外、legacy root reserved field保護、active root update拒否を実装し、専用Emulator 8件と既存Firestore Rules回帰37件で検証した。local Rules file receiptはpre-containment deployed rulesetの証拠に再利用しない。Dev reader/apply、Rules deploy/remote receipt、remote staging、実data applyは別checkpointまで無効である。
+当時のlocal実装は`scripts/migrate-company-settings.mjs`、専用domain test、専用synthetic fixture、保護付きCodex local harnessへ追加していた。exact demo project・loopback Firestore・external effects deny・credential拒否のtarget guard内でだけ、公開REST readerと`Bearer owner`、tenant単位read-write transaction、`currentDocument.exists=false`付き8 create、fresh post-checkを提供していた。pre-containment Rulesのlocal prototypeは、`Settings`、`PrivateSettings`、`SettingAudits`のrecursive denyとgeneric fallback除外、legacy root reserved field保護、active root update拒否を実装し、専用Emulator 8件と既存Firestore Rules回帰37件で検証した。これらのmain-repository実装は2026-08-30に削除済みで、local Rules receiptも実行手順も現在利用できない。Dev reader/apply、Rules deploy/remote receipt、remote staging、実data applyは一度も実施していない。
 
 ## 未確認事項・完了条件
 

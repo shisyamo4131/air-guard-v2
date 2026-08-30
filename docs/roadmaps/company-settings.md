@@ -3,6 +3,8 @@
 > 状態: Superseded / historical（2026-08-30）
 >
 > 旧進捗10%はADR 0025に基づく設計成果であり、ADR 0031によるCCB restart後のactive進捗へ持ち越さない。本書は旧CCB成果物のrollback inventoryと判断履歴として保持する。現在の実行単位は[Company legacy Stripe情報削除](company-stripe-removal.md)を参照する。
+>
+> 2026-08-30にcompatible reader、8-target migration/restore tooling、pre-containment Rulesを主repositoryからcorrective rollbackした。以下の目標境界、進捗、test結果はhistoricalであり、現在実装または再開計画を表さない。
 
 ## メタデータ
 
@@ -165,3 +167,4 @@ Company全完了を待たず、各引渡し契約が実装・検証された時�
 | 2026-08-28 | 10% | ±0 | Admin SDKの新規legacy backupを固定16 collectionの`INCOMPLETE` v1とし、verified v1だけPrivateSettings除外、旧・不正metadataは含有`UNVERIFIED`、PrivateSettings/SettingAudits restoreとCCB backup/restoreは`UNAVAILABLE`と一覧表示する。local一覧は厳密なPID/UUID lock・generation ID・temp publishを使う`.metadata` sidecarだけを読み、payloadを開かない18件のtestを実装した。active lockを拒否し、妥当なownerの死亡済みorphanだけを新規UUIDの隔離pathへ限定回収する。暗号化logical backup、restore、実artifact検証、復旧演習が残るためCCB-02は未完了とする。 |
 | 2026-08-28 | 10% | ±0 | pre-containment Firestore Rulesのlocal prototypeを追加し、`Settings`、`PrivateSettings`、`SettingAudits`をgeneric fallbackから除外して全client actorへ再帰deny、legacy rootのreserved field保護、CCB v1 active rootのclient update停止を実装した。静的契約4件、専用Firestore Emulator 8件、既存Firestore Rules回帰37件が成功し、全CRUD、list/collection-group、nested/orphan、legacy patch互換、partial reserved rootでのwhole-document replacement拒否、利用者saved-data・専用seed不変を確認した。remote deployとdeployed Rules receipt、Dev stagingが残るためCCB-02は加点しない。 |
 | 2026-08-29 | 10% | ±0 | AirVuetify3とSchemas/AirGuardV2 Companyを静的再調査し、`updateProperties`はlocal draft更新でFirestore patchではないこと、custom `handleUpdate`でmanagerのloading/error/dialog契約を維持できること、non-enumerable CCB runtime stateがCompany cloneで失われることを確認した。既存Company CRUDよりRules deployを先行させる計画を訂正し、project-wideの互換CRUD先行・Rules最終閉鎖をADR 0029とガバナンスへ採用した。application、Rules、test、deploy、dataは変更していないため進捗は据え置く。 |
+| 2026-08-30 | 10% | 0 | ADR 0031で本roadmapをSupersededとし、旧CCB実装を4つのcorrective commitでrollbackした。旧10%はhistorical表示だけに残してactive進捗へ持ち越さず、Schemas `.167` artifact/pin、Admin SDK guard、UWB、Company create/delete拒否を保持した。 |

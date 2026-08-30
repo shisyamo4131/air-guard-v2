@@ -11,7 +11,7 @@
 
 このroadmapはStripe Checkout、Webhook、subscription、entitlement、employeeLimitを実装しない。現段階で不要なlegacy Stripe情報をCompany構造と利用経路から削除することだけを対象とする。将来のサブスクリプション機能は、当時の要件、provider、権限、外部作用に基づく別設計・別roadmapとする。
 
-旧CCB全体のrollbackはこのroadmapへ混在させない。まずexact commits/filesと独立して保持すべきsecurity改善・公開artifactを棚卸しし、安全なcorrective commitで新baselineを作る。
+旧CCB全体のrollbackはこのroadmapへ混在させない。2026-08-30にexact inventoryと4つのcorrective implementation commitを完了し、UWB、Company create/delete拒否、Schemas `.167` artifact/pin、Admin SDK guardを保持した。STRIPE-01は、新CCBの最初の単位でCompany whole-document replacementを除去したreview済みbaselineから開始する。
 
 ## マイルストーン
 
@@ -28,12 +28,13 @@
 
 ## 現在の次工程
 
-1. 旧CCBのapplication、Rules、script、test、package consumer、関連Admin SDK guardをread-only inventoryする。
-2. Stripe削除へ不要な旧CCB成果物と、UWB・Company create/delete拒否・公開済みSchemas artifact等の保持対象を分離する。
-3. rollback planをreviewしてからcorrective commitを作り、そのbaseline上でSTRIPE-01を開始する。
+1. CompanyManager、agreements、site/schedule order等のwhole-document replacementをoperation別exact field updateへ置換する。
+2. 現行Rules、actor、field ownership、real-time listener、既存Company CRUDの回帰を確認して新CCBの最初のbaselineを確定する。
+3. そのbaseline上でSTRIPE-01のexact inventory・削除契約を開始する。local/Dev data migrationはそれぞれ別のbounded承認とする。
 
 ## 進捗履歴
 
 | 日付 | 進捗 | 変更 | 根拠 |
 |---|---:|---:|---|
 | 2026-08-30 | 0% | 0 | ADR 0031により旧巨大CCB roadmapを終了し、legacy Stripe情報削除をDev受入れまで独立してFIXするroadmapとして開始した。実装・migration・Dev反映は未着手。 |
+| 2026-08-30 | 0% | 0 | 旧CCBを4つのcorrective implementation commitでrollbackし、保持対象を分離した。Stripe削除自体は未着手であり、先に新CCBのwhole-document replacement除去を行うため進捗は据え置いた。 |

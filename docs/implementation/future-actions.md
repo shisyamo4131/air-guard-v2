@@ -1212,8 +1212,8 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: Company pageSettings/Manager、`firestore.rules` Companies match、schemas `Company`
 - 確認済み実装事実: UIはadmin限定だが、同一会社の有効な本登録UserはCompany全fieldをclientから更新できる。2026-08-27にclient create/deleteを無条件拒否し、初期Company作成をCloud Functions/Admin SDK専用とした。銀行・請求・Stripe/subscription・maintenance・設定・取極めは引き続き同一docにあり、SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
 - 想定影響と発生条件: Company rootのclient作成・削除によるtenant破損は閉じたが、一般Userは依然として口座/請求表示を改ざんし、subscription/maintenanceを偽装できる。
-- 未確認点・仮説: 2026-08-28にactorとdocument ownershipはADR 0025で確定した。exact Rules/Callable配分、schema、互換期間はCCB-02以降で実装前確認する。
-- 推奨する将来対応: root/entitlement/maintenanceをserver-owned、profile/billing/operationsを会社管理者、arrangementを既存業務permission actorへ分離し、CUDを一律Functions化せず操作別Rules/transaction/Callableを選ぶ。
+- 未確認点・仮説: 旧ADR 0025の8-document ownershipはADR 0031で置換した。同社Userが読めるexact field集合とoperation別write allowlist、client/Callable配分はwhole-document replacement除去の各checkpointで確認する。
+- 推奨する将来対応: 一つのCompany documentを既定に、operationが所有するexact fieldだけを更新する。読取actor、lifecycle、増加量、size、独立query、field updateで解消できない実測競合がある場合だけ分割し、CUDを一律Functions化しない。
 - 必要なテスト: role別read/write、口座/請求/Stripe/maintenance直接write、Company delete、他社doc、super-user repair。
 - ユーザー判断が必要な事項: なし。CONF-0074、CONF-0075は2026-08-28回答済み。
 
@@ -1238,8 +1238,8 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: Company Activator Base/Bank/Setting、schemas `Company.isCompleteRequiredFields`、Rules
 - 確認済み実装事実: 基本editorはzipcode/prefCode/city/buildingを含めないがcomplete getterは住所構成fieldを要求する。数値/enum/口座/請求番号validationは主にUI attrsでRules強制がない。SPEC-DEEP-020でCompanyManagerのdoc validatorはCompany instanceでなくObjectだけ、invoice表示はstored値へ常に`T`を付加、legacy SettingInfoは未知weekdayを直接dereferenceすることを確認した。
 - 想定影響と発生条件: 必要住所を画面で補完できない、直接writeで不正設定を保存し、PDF・勤怠・税・時刻UIへ影響する。
-- 未確認点・仮説: 必須field、invoice正規化、bank完全性、長さは2026-08-28確定した。電話・郵便等のexact formatと住所検索UXはCCB-04実装前に既存consumerと照合する。
-- 推奨する将来対応: ADR 0025のvalidationをserverとRulesで強制し、完全な住所editorと長値render testを揃える。
+- 未確認点・仮説: validation候補は2026-08-28に一度確定したが、旧8-document設計と一体の実装順は廃止した。電話・郵便等のexact formatと住所検索UXは新CCBの対象operation実装前に既存consumerと照合する。
+- 推奨する将来対応: ADR 0031の比例原則に従い、対象operationのfield allowlistとvalidationをclient/server/Rulesで整合させ、完全な住所editorと長値render testを揃える。
 - 必要なテスト: 初期空Company、住所全field、invoice番号、口座桁/空、minute 0/31、invalid enum、直接write。
 - ユーザー判断が必要な事項: なし。CONF-0076は2026-08-28回答済み。
 

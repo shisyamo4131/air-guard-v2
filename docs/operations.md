@@ -109,8 +109,7 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 - Dev Firestore `(default)`は2026-08-27にPITR有効・保持7日を確認した。PITRをrelease固有の整合snapshot、Storage・Authentication・外部serviceのbackup、復旧演習の代替にしない。
 - Firestoreのスケジュールバックアップは既存資料に記載があるが、現在のschedule、保持、復元演習は未確認である。
-- CCBの`PrivateSettings`は、保存先・暗号化・IAM・保持・redaction・環境間restore契約のない既存logical backupへ含めず、そのbackupを完全backupと呼ばない。Admin SDKで新規作成したverified format v1は`INCOMPLETE / PrivateSettings EXCLUDED`、sidecarのない旧local artifactまたは欠損・矛盾metadataはpayloadを開かず`INCOMPLETE / PrivateSettings UNVERIFIED`と表示する。当面はmanaged Firestore backup/PITRを復旧基盤とするが、PrivateSettings単独logical restoreと全system復旧を提供済みとは扱わない。
-- CCBの`SettingAudits`を復元する場合は、専用経路で同一company・同一schema・同一document IDのcreateだけを許可する。既存同値はskip、異値は全体停止とし、update、delete、clear、generic merge restoreを禁止する。local-only pure plannerは合成artifactから候補計画を作るだけで、fileやFirestoreを読まず、applyも行わない。artifact真正性・保存・暗号化/IAM/保持、operational apply、復旧演習が完了するまでは利用不可である。
+- 旧CCBの`PrivateSettings`と`SettingAudits`はADR 0031で廃止され、主repositoryのmigration/restore plannerも2026-08-30に削除した。これらを対象にしたlogical backup/restoreを提供済みと案内しない。Admin SDKに残る`INCOMPLETE / EXCLUDED / UNVERIFIED / UNAVAILABLE`表示とfail-closed guardはhistorical artifactや未知pathを安全側へ止める独立保護であり、CCB-aware backup/restoreの提供を意味しない。
 - データ移行前は、対象データと復旧手順を定め、必要なバックアップが取得済みであることを人が確認する。
 - Storage、Authentication、Stripe の状態は Firestore バックアップだけでは完全に復元できない。
 - 文書と仕様の履歴は Git で保持する。

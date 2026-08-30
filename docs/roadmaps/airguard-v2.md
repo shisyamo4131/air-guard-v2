@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. ADR 0031に従って旧CCBをrestartする。最初に旧CCBのapplication、Rules、migration/restore、test、package consumer、Admin SDK guardをread-only inventoryし、UWB、Company create/delete拒否、公開済みSchemas artifact等の独立成果を保持したcorrective rollback planを確定する。その後は[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のように、一つの改修をlocal migration・動作確認、bounded Dev migration・反映・受入れまで完了できる単位で進める。通常Company編集はexact field updateとreal-time listenerを基本とし、全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. ADR 0031に従う旧CCB corrective rollbackは完了した。次はCompany whole-document replacementをoperation別exact field updateへ置換し、real-time listenerとlast-write-winsを基本に新CCBの最初のreview済みbaselineを作る。その後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続し、一つの改修をlocal migration・動作確認、bounded Dev migration・反映・受入れまで完了できる単位で進める。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -154,3 +154,4 @@
 | 2026-08-27 | 10% | 0 | Company設定のclient、server、Rules/security、下流依存を独立調査し、専用ロードマップへ全体保存競合、field ownership、請求・丸め・勤怠・取極め・表示順・maintenance・Stripe・tenant修復の実施順と検証条件を設定した。計画作成のみで実装・test・Dev受入れは未完了のため、親ロードマップ進捗は10%に据え置いた。 |
 | 2026-08-28 | 10% | 0 | CCB-01でCompany設定分割、actor、validation、revision/audit、snapshot、勤怠表示方式、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を承認済み仕様・ADR・runbookへ反映し、CCB専用進捗を10%とした。親ロードマップの未完了マイルストーンは実装・test・Dev受入れを満たさないため、公式進捗は10%に据え置いた。 |
 | 2026-08-28 | 10% | 0 | Managed common governance 1.4.0へ移行し、4つの容量確認表現を現在task IDのsession JSONL実測へ明示routeした。300 MiB task handoff、10 GiB全体参考警告、最新session推測禁止、標準報告・停止条件・回帰testを整合した。application、product gate、Dev受入れの完了条件は変わらないため公式進捗は据え置いた。 |
+| 2026-08-30 | 10% | 0 | ADR 0031に基づき旧CCBのcompatible reader、migration/restore tooling、pre-containment Rulesを4つのcorrective implementation commitでrollbackした。Schemas `.167` artifact/pin、Admin SDK guard、UWB、Company create/delete拒否を保持し、Rules source contract 2件と隔離Emulator 97件が成功した。新CCBのwhole-document replacement除去、STRIPE-01、Dev受入れは未完了のため公式進捗は据え置いた。 |
