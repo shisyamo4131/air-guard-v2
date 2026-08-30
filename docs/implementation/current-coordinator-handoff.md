@@ -20,14 +20,15 @@
 - Company profile edit visibility commit: `4f7c52f580e18db11cd5a93ec83549be8a9cb8c3`
 - Company profile local UI correction commit: `2b7cdf00e73d343264a6ca6a05e747f271d1a599`
 - Company billing implementation commit: 本snapshotと同じlocal commit
-- Company editor saving-state correction commit: 本snapshotと同じlocal commit
+- Company editor saving-state correction commit: `ebbecf26ae4f8eae9db0d79c4b5311977a1cfb20`
+- Company editor saving-state acceptance commit: 本snapshotと同じlocal commit
 - expected upstream: none
 - expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
 - specification: `0.8.0`
-- unintegrated work: 0。Company振込先のapplication・Functions・Rules・test・文書と、基本情報・振込先の保存中制御補正は本snapshotと同じlocal commitへ統合し、利用者最終UI acceptanceだけを残す。
+- unintegrated work: 0。Company振込先のapplication・Functions・Rules・test・文書と、基本情報・振込先の保存中制御補正はlocal commitへ統合済みである。保存中制御補正の利用者acceptanceも完了し、振込先feature全体の残る利用者最終UI acceptanceだけを残す。
 
 ## Confirmed product state
 
@@ -44,6 +45,7 @@
 - 利用者local確認で権限と更新metadataは合格した。基本情報card titleを復元し、dialogをVuetifyの`scrollable`前提DOMへ修正して本文だけをscrollさせた。競合時は保存を止め、「最新値を読み直す」だけを表示する。利用者は修正版UIを再確認し、Company基本情報のlocal受入れを完了した。
 - Company振込先は専用editorと`updateCompanyBilling` Callableへ移行した。同社の有効な本登録User readを維持し、非super-user会社管理者だけが編集・保存できる。5 field all-null/all-complete、changed-only update、client直接write拒否、再読込専用競合、明示clear、完全な口座名義込み帳票をlocal実装・自動検証した。Codex in-app UIで管理者の入力・保存反映まで確認し、利用者の実際の利用環境での最終UI acceptanceを待っている。
 - 利用者確認で、基本情報・振込先の保存中も入力欄が操作でき、自分の保存結果を外部更新として一瞬表示する問題が見つかった。両editorは入力検査開始からserver応答まで全入力・選択・操作buttonを無効化し、自分の保存reflectionは警告にせず、本当に異なるlive値だけを競合として扱うよう補正した。
+- 利用者は実際の環境で、保存中の全入力・操作button無効化、自己保存時の外部更新警告非表示、本当の外部更新時の警告維持を確認し、保存中制御補正を受け入れた。
 - 利用者は、task交代中を除き独立して分割できる調査・review・test・明示承認済み補助実装等に適切なsubagentを使用し、Checkpoint固有の禁止を当該Checkpointだけへ限定するproject-wide方針を承認した。交代手順内はcoordinatorだけで実施する。
 - 利用者はADR 0034として、承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、自動test、必要なin-app UI smokeまで担当し、利用者が実際の利用環境で最終UI acceptanceを行うproject-wide方針を承認した。file-by-file確認はcheckpointが明示した場合だけとし、外部作用の別承認境界は維持する。
 
@@ -56,7 +58,7 @@
 - completed acceptance checkpoint: Company基本情報のtitle、dialog本文限定scroll、外部更新後の再読込専用UIを利用者local環境で再確認し、受入れを完了した。
 - completed governance checkpoint: `GOV17-AIRGUARDV2-SUBAGENT-ROUTING-001`。project-wide delegation方針をproject rules、仕様、ADR 0032、runbook、開始prompt、roadmap、snapshot、changelogへ反映し、instruction-chain変更として検証・commitした。task交代中を除き独立して分割できる必要な調査・review・test・利用者承認済み補助実装等へ適切なsubagentを使用し、Checkpoint固有の禁止は当該Checkpoint内だけに限定する。
 - implementation complete / user acceptance pending checkpoint: `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`。承認済みowned filesでapplication、Functions、Rules、test、PDFを実装し、振込先・PDF対象17件、全domain 676件、専用Emulator 102件、Codex in-app UIの管理者表示・5項目・明示clear・架空口座保存反映を確認した。非管理者UIと実請求PDFを含む利用者の実際の利用環境での最終UI acceptanceまではfeature・roadmapを最終完了としない。
-- implementation complete / user acceptance pending checkpoint: `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`。ProfileEditor/BillingEditorの保存中制御と自己保存reflection識別を修正し、会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UI smokeは起動templateから製品画面へ遷移せずNuxt `ECONNRESET`で対象操作前に停止した。専用port閉鎖、saved-data不変、runtime空は確認済みで、利用者の実際の利用環境で保存中の入力無効化と自己保存警告なしを最終確認する。
+- completed acceptance checkpoint: `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`。ProfileEditor/BillingEditorの保存中制御と自己保存reflection識別を修正し、会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UI smokeは起動templateから製品画面へ遷移せずNuxt `ECONNRESET`で対象操作前に停止したが、利用者が実際の環境で保存中の入力無効化、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
 - following active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。whole-document replacement除去のreview済みbaseline後にSTRIPE-01へ接続する。
 
@@ -92,4 +94,4 @@ PM-12はno-change開始時に次だけを読み、不足・矛盾がなかった
 
 Company振込先checkpointでは振込先・PDF対象17件、全domain 676件、隔離Codex Emulator 102件を成功させた。Emulatorはdemo project・loopback・合成dataだけを使用し、利用者saved-data不変を確認した。Codex in-app UIで会社管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認し、終了後に専用port閉鎖とruntime空を確認した。非管理者UI、実際の請求PDF、利用者環境の最終表示は利用者acceptance待ちである。文書同期ではproject documentation validator、managed governance validator、renderer `-Check`、`git diff --check`を各独立commandで成功させ、branch/full HEAD、upstream none、clean、primary-only worktreeを確認する。capacity script、network、remote/data操作は実行しない。
 
-保存中制御の補正では会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UIは製品画面到達前のNuxt `ECONNRESET`で対象操作を確認できなかったため、UI成功とは扱わない。終了後は専用port閉鎖、`.codex-test/saved-data`不変、runtime空を確認した。Functions・Rules・package・Schemas/Admin SDK・Dev・remote/data・deployは変更していない。
+保存中制御の補正では会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UIは製品画面到達前のNuxt `ECONNRESET`で対象操作を確認できなかったためUI成功とは扱わなかったが、その後、利用者が実際の環境で保存中の操作不可、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。Functions・Rules・package・Schemas/Admin SDK・Dev・remote/data・deployは変更していない。

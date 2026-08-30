@@ -75,7 +75,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - transactionは実際に変化した振込先fieldとserver `updatedAt`・actor `uid`だけを更新する。Rulesは振込先5 fieldのclient直接変更を全actorへ拒否し、未移行operationの無関係field互換を維持する。
 - editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
 - `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`でapplication、Functions、Rules、domain/Emulator/PDF testを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件が成功し、Codex in-app UIで管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認した。非管理者UI、実際の請求PDF、利用者環境での最終表示は自動testとCodex smokeを利用者受入れの代用にせず、最終UI acceptance待ちとする。
-- `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`で基本情報・振込先の保存中制御と自己保存reflection判定を補正した。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UIは起動templateから製品画面へ移る前にNuxt `ECONNRESET`で停止したため、画面上の操作不可と警告非表示は利用者最終UI acceptanceの確認項目として残す。
+- `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`で基本情報・振込先の保存中制御と自己保存reflection判定を補正した。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UIは起動templateから製品画面へ移る前にNuxt `ECONNRESET`で停止したが、利用者が実際の環境で保存中の操作不可と自己保存時の警告非表示を確認し、この補正の最終UI acceptanceを完了した。
 
 ## tenant identity
 
