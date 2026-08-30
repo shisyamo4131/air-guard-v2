@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Company/Activator/Bank.vue
  * @description 会社の口座情報表示コンポーネント
- * - `CompanyManager` の activator スロット用コンポーネント
+ * - Company振込先editorの表示・起動用コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Company } from "@/schemas";
@@ -16,7 +16,8 @@ const _props = defineProps({
     required: true,
     validator: (value) => value instanceof Company,
   },
-  title: { type: String, default: undefined },
+  editable: { type: Boolean, default: true },
+  title: { type: String, default: "振込先" },
 });
 const props = useDefaults(_props, "CompanyActivatorBank");
 const emit = defineEmits(["click:edit"]);
@@ -25,50 +26,34 @@ const emit = defineEmits(["click:edit"]);
  * COMPUTED
  *****************************************************************************/
 const items = computed(() => {
+  const billing = Company.getBillingDraftValue(props.item);
   return [
-    { title: "金融機関名", props: { subtitle: props.item.bankName || "-" } },
+    { title: "金融機関名", props: { subtitle: billing.bankName || "-" } },
     {
       title: "支店名",
-      props: { subtitle: props.item.branchName || "-" },
+      props: { subtitle: billing.branchName || "-" },
     },
     {
       title: "口座種別",
-      props: { subtitle: props.item.accountType || "-" },
+      props: { subtitle: billing.accountType || "-" },
     },
     {
       title: "口座番号",
-      props: { subtitle: props.item.accountNumber || "-" },
+      props: { subtitle: billing.accountNumber || "-" },
     },
     {
       title: "口座名義",
-      props: { subtitle: props.item.accountHolder || "-" },
+      props: { subtitle: billing.accountHolder || "-" },
     },
   ];
 });
 
-/*****************************************************************************
- * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
- *****************************************************************************/
-defineExpose({
-  includedKeys: [
-    "bankName",
-    "branchName",
-    "accountType",
-    "accountNumber",
-    "accountHolder",
-  ],
-});
 </script>
 
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"

@@ -8,21 +8,21 @@
 >
 > 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
 >
-> 2026-08-30 Company billing contract: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票とする契約を利用者が承認した。現行application・Rules・testはまだ未実装であり、以下のlegacy観測を現在挙動として扱う。
+> 2026-08-30 Company billing implementation: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報のlocal受入れ完了）
+- 状態: 段階移行中（Company基本情報のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-30
-- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/modules/company/updateCompanyProfile.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
+- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
-- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報は専用editor/Callable、残る3 operationは旧CompanyManagerまたは直接`Company.update()`を使用する。
-- 基本情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
-- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 fieldと住所由来`location/geopoint`が変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。基本情報の保存はFunctions/Admin SDKに限定した。
+- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報と口座情報は専用editor/Callable、残る2 operationは旧CompanyManagerまたは直接`Company.update()`を使用する。
+- 基本情報と口座情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
+- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 field・住所由来`location/geopoint`・振込先5 fieldが変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。基本情報と振込先の保存はFunctions/Admin SDKに限定した。
 
 ## データ契約
 
@@ -33,7 +33,7 @@ Companyはroot collection `Companies/{companyId}`に保存され、`usePrefix=fa
 | 会社名 | `companyName` required/最大100、`companyNameKana` required/最大200・カナ数値入力。基本情報operationはSchemas `.167` contractでclient/server同一検証 |
 | 住所・連絡 | `zipcode`、`prefCode`、`city`、`address`、`building`、`tel`、`fax`。初期作成時は任意 |
 | 適格請求書 | `invoiceNumber`任意、最大13。画面/PDFが先頭に`T`を付ける |
-| 振込先 | `bankName`最大20、`branchName`最大20、`accountType` default普通/普通・当座、`accountNumber`最大7、`accountHolder`最大50。すべてschema上は任意 |
+| 振込先 | `bankName`最大100、`branchName`最大100、`accountType`は普通・当座、`accountNumber`最大7、`accountHolder`最大200。5 fieldすべてnullまたは5 fieldすべて有効であることを要求する |
 | 既定取極め | `agreementsV2`（AgreementV2配列）。旧`agreements` getter/setterは警告して空配列/無処理 |
 | 表示順 | hidden `siteOrder`、`scheduleOrder`（SiteOrder配列） |
 | 位置 | hidden `location`。converterがlat/lngから`geopoint`を保存。`fullAddress`、`prefecture`は読み取り専用プロパティ |
@@ -41,7 +41,7 @@ Companyはroot collection `Companies/{companyId}`に保存され、`usePrefix=fa
 | Stripe | hidden `stripeCustomerId`、hidden `subscription`。defaultはid/status/currentPeriodEnd null、employeeLimit 10 |
 | maintenance | hidden `maintenanceMode=false`、reason/startAt/startedBy null |
 
-ゲッター`hasBankInfo`はbankName/branchName/accountNumber/accountHolderの全存在を判定し、accountTypeを条件に含めない。`isCompleteRequiredFields`は会社名・カナ・郵便番号・都道府県・市区町村・住所・電話の全存在を判定する。
+PDFの振込先判定はSchemas `.167`の共有parserを通し、5 fieldすべてが有効な場合だけ印字する。`isCompleteRequiredFields`は会社名・カナ・郵便番号・都道府県・市区町村・住所・電話の全存在を判定する。
 
 ## 作成・初期化
 
@@ -61,19 +61,19 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告して保存を止める。「最新値を読み直す」だけを表示し、押下時に現在draftを破棄して最新Companyから作り直す。曖昧だった「自分の入力を優先する」は利用者local確認を受けて削除した。
 - 基本情報dialogの初期DOMは`v-dialog > v-card > v-form > v-card-text/actions`だった。Vuetifyは通常dialogのdirect child `v-card`へ`overflow-y:auto`を設定し、`scrollable`時に本文だけをscrollするselectorは`v-dialog > form > v-card > v-card-text`を前提とする。この親子順序不一致がtoolbarとactionsまでscrollした直接原因である。`v-dialog scrollable > v-form > v-card > toolbar/card-text/actions`へ変更し、`v-card-text`だけをscroll対象にした。
 - 利用者はlocal環境で修正版を再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限と更新metadataを含め、Company基本情報のlocal受入れは完了した。
-- 口座editorは5口座field、設定editorは4運用設定fieldだけを編集する。
+- 口座editorは5口座fieldをlive Companyと別のdraftで編集する。5項目全部の登録または明示的な全削除だけを許可し、保存中の二重送信を止め、保存直前まで同じ5 fieldの外部変更を再確認する。競合時は現在入力を保存せず「最新値を読み直す」だけを提供する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
-- 基本情報のinvoice番号はSchemas billing parserで13桁数字へ正規化する。残るminuteInterval、口座、enum等の旧operationは後続移行までRules/serverで形を強制しない。
-- 基本情報以外のCompany設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
+- 基本情報のinvoice番号と振込先はSchemas billing parserで検証する。残るminuteIntervalと通常設定enum等の旧operationは後続移行までRules/serverで形を強制しない。
+- 通常設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
 
-## 2026-08-30 振込先更新契約（承認済み・未実装）
+## 2026-08-30 振込先更新契約（local実装・Codex検証済み、利用者最終UI acceptance待ち）
 
 - readはCompany rootの現行境界を維持し、同社の有効な本登録Userを許可する。writeは同じtenantの有効な本登録会社管理者だけを許可し、super-user、非管理者、temporary、disabledを拒否する。
 - `updateCompanyBilling`はidentityからtenant pathを導出し、exact `{changes}`の5 field subsetだけを受ける。現在の`invoiceNumber`は共有billing parserのvalidation contextに使うが、振込先operationで受信・更新しない。
 - 最新Companyへchangesを重ね、5 field all-nullまたはall-completeを検証する。legacyの`accountType=普通`だけの空口座は未登録表示へ正規化するが、open/no-op saveで書き戻さない。明示clearは5 fieldすべてnull、partial legacyはcomplete repairまたは全null化だけを許可する。
 - transactionは実際に変化した振込先fieldとserver `updatedAt`・actor `uid`だけを更新する。Rulesは振込先5 fieldのclient直接変更を全actorへ拒否し、未移行operationの無関係field互換を維持する。
 - editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
-- 実装対象候補は`schemas/Company.js`、Company専用billing editor、`pages/settings/company.vue`、application/company composable、`composables/company/useCompanyFunctions.js`、Functions API/use-case/index、`firestore.rules`、domain/Emulator/UI/PDF testである。ADR 0034のPM-12 activation後、承認済みbounded checkpoint内でCodexが実装・自動検証・必要なin-app UI smokeを担当し、利用者が実際の利用環境で最終UI acceptanceを行う。本節の文書反映だけでは実装済みと扱わない。
+- `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`でapplication、Functions、Rules、domain/Emulator/PDF testを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件が成功し、Codex in-app UIで管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認した。非管理者UI、実際の請求PDF、利用者環境での最終表示は自動testとCodex smokeを利用者受入れの代用にせず、最終UI acceptance待ちとする。
 
 ## tenant identity
 
@@ -101,8 +101,8 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 ## Rules・security
 
-- 会社名、住所、電話・FAX、invoice番号はclient直接writeを拒否し、会社管理者専用Callableだけが更新する。同じtenantの有効な本登録Userによるreadは維持する。
-- 銀行口座、通常設定、取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。
+- 会社名、住所、電話・FAX、invoice番号、振込先5 fieldはclient直接writeを拒否し、会社管理者専用Callableだけが更新する。同じtenantの有効な本登録Userによるreadは維持する。
+- 通常設定、取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。
 - hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientがroot updateの一部として直接変更できる。
 - Company create/deleteはclient拒否済みだが、必須field除去、invalid enum/number、siteOrder/agreementsV2改変をRulesで検証しない。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。

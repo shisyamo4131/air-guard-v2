@@ -75,6 +75,12 @@ service cloud.firestore {
       ]);
     }
 
+    function preservesCompanyBillingFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'bankName', 'branchName', 'accountType', 'accountNumber', 'accountHolder'
+      ]);
+    }
+
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -120,7 +126,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && userCompanyId() == companyDocId;
       allow update: if isAuthenticated()
                     && userCompanyId() == companyDocId
-                    && preservesCompanyProfileFields();
+                    && preservesCompanyProfileFields()
+                    && preservesCompanyBillingFields();
       allow create, delete: if false;
     }
 

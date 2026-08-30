@@ -14,6 +14,7 @@ test("every established-company Callable enters through the common Auth identity
     "changeUserEnabledState.js",
     "createTemporaryUser.js",
     "deleteTemporaryUser.js",
+    "updateCompanyBilling.js",
     "updateUserFields.js",
     "authorizeCompanyRebuild.js",
   ]) {

@@ -4,8 +4,9 @@
 
 ## Unreleased
 
+- Company振込先を専用の編集画面と`updateCompanyBilling`へ移した。会社管理者だけが編集でき、銀行名・支店名・口座種別・口座番号・口座名義は5項目を全部登録するか全部削除する。編集中に別画面の更新を検知した場合は保存せず、最新値の再読込を求める。直接書込みをRulesで拒否し、完全で有効な振込先だけを口座名義込みで請求書PDFへ載せる。全domain 676件、専用Emulator 102件、Codex in-app UIで管理者の表示・5項目入力・保存反映を確認した。Dev・remote・実data・deployは変更せず、利用者の実際の利用環境での最終UI acceptanceは未完了である。
 - 承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、unit・domain・integration・Emulator test、必要なin-app UI smokeまで担当する運用へ変更した。利用者は実際の利用環境で最終UI acceptanceを担当し、未了のUI featureをrelease・roadmap完了としない。file-by-file確認はcheckpointが明示した場合だけとし、push、main merge、deploy、Dev/Prod、remote/data、network、Schemas/Admin SDK等の別承認境界は維持する。
-- Company振込先を専用`updateCompanyBilling` Callableへ移す契約を承認した。同社の有効な本登録User readは維持し、変更は非super-user会社管理者だけに限定する。5 field all-null/all-complete、明示clear、最新Companyとの合成validation、changed-only update、client直接write拒否、外部変更時の再読込、完全な口座名義込み帳票をADR 0033へ確定した。application・Rules・test・Dev/dataは未実装・未変更である。
+- Company振込先を専用`updateCompanyBilling` Callableへ移す契約を承認した。同社の有効な本登録User readは維持し、変更は非super-user会社管理者だけに限定する。5 field all-null/all-complete、明示clear、最新Companyとの合成validation、changed-only update、client直接write拒否、外部変更時の再読込、完全な口座名義込み帳票をADR 0033へ確定した。
 - task交代中を除き、独立して分割できる調査・code探索・review・test・利用者承認済み補助実装等に適切なsubagentを使用するproject-wide運用へ変更した。Checkpoint固有の禁止は当該Checkpointのterminal callbackとcoordinator reviewまでに限定し、後続作業へ持ち越さない。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitはcoordinator自身が実施する。
 - 利用者local確認で見つかったCompany基本情報cardのtitle消失と、dialogのtoolbar/actionsまでscrollする構造を修正した。dialogをVuetifyの`scrollable`が想定する`form > card > card-text`構造へ揃え、本文だけをscroll対象にした。編集中の外部更新時は曖昧な「自分の入力を優先する」を削除し、保存を停止して「最新値を読み直す」だけを提供する。
 - Company基本情報の編集を`AirItemManager`経由のCompany全体保存から独立editorと`updateCompanyProfile` Callableへ移した。会社名・住所・連絡先・invoice番号のうち利用者が実際に変えたfieldだけを、最新Companyと再検証して保存し、`updatedAt`はserver timestamp、`uid`は実行者を記録する。編集中のlive更新は入力を黙って上書きせず、現在draftを破棄する最新値の再読込を要求する。会社管理者以外の編集controlを隠し、Rulesは対象profile fieldのclient直接変更を拒否する一方、未移行のCompany operationは対象外fieldだけを更新できる。全domain 659件、隔離Emulator 99件が成功し、Dev・remote・実dataは変更していない。

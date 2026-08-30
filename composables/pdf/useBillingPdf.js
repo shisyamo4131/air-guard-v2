@@ -2,6 +2,9 @@ import { formatCurrency } from "@/utils/formats/util";
 import { useCompanyStore } from "@/stores/useCompanyStore";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { calculateTaxBreakdown } from "@/utils/billings/calculateTaxBreakdown";
+import {
+  createCompanyBankTransferPdfBlock,
+} from "@/utils/billings/createCompanyBankTransferPdfBlock";
 import dayjs from "dayjs";
 import "dayjs/locale/ja";
 
@@ -292,61 +295,64 @@ export function useBillingPdf() {
    * ヘッダー部分を生成
    */
   function createHeader(billing, customer, company) {
-    // 振込先情報の生成
-    const bankInfo = company.hasBankInfo
-      ? `${company.bankName} ${company.branchName} ${company.accountType} ${company.accountNumber}`
-      : "";
+    const bankTransferBlock = createCompanyBankTransferPdfBlock(company);
 
     return [
       // タイトル
       { text: "ご請求書", style: "header" },
 
-      // 宛先（左側）
+      // 宛先と自社情報は通常flowで高さを確保する。
       {
-        stack: [
-          { text: `〒${customer.zipcode || ""}` },
+        columns: [
           {
-            text: `${customer.prefName || ""}${customer.city || ""}${
-              customer.address || ""
-            }`,
+            width: "*",
+            stack: [
+              { text: `〒${customer.zipcode || ""}` },
+              {
+                text: `${customer.prefName || ""}${customer.city || ""}${
+                  customer.address || ""
+                }`,
+              },
+              { text: customer.building || " ", margin: [0, 0, 0, 10] },
+              {
+                text: `${customer.name || ""} 御中`,
+                fontSize: 12,
+                bold: true,
+              },
+            ],
           },
-          { text: customer.building || " ", margin: [0, 0, 0, 10] },
-          { text: `${customer.name || ""} 御中`, fontSize: 12, bold: true },
+          {
+            width: 205,
+            stack: [
+              {
+                text: `〒${company.zipcode || ""} ${company.prefName || ""}${
+                  company.city || ""
+                }${company.address || ""}`,
+                fontSize: 9,
+              },
+              ...(company.building
+                ? [{ text: company.building, fontSize: 9 }]
+                : []),
+              { text: company.companyName || "", fontSize: 11, bold: true },
+              { text: `TEL: ${company.tel || ""}`, fontSize: 9 },
+              // 完全かつ有効な振込先だけを口座名義まで表示する
+              ...(bankTransferBlock ? [bankTransferBlock] : []),
+              {
+                text: "※お振込み手数料はご負担ください。",
+                fontSize: 7,
+                margin: [0, 5, 0, 0],
+              },
+              {
+                text: `登録番号: ${company.invoiceNumber ? `T${company.invoiceNumber}` : ""}`,
+                fontSize: 8,
+              },
+            ],
+            alignment: "right",
+          },
         ],
-        absolutePosition: { x: 40, y: 100 },
+        columnGap: 20,
+        margin: [0, 0, 0, 20],
       },
-
-      // 自社情報（右側）
-      {
-        stack: [
-          {
-            text: `〒${company.zipcode || ""} ${company.prefName || ""}${
-              company.city || ""
-            }${company.address || ""}`,
-            fontSize: 9,
-          },
-          { text: company.companyName || "", fontSize: 11, bold: true },
-          { text: `TEL: ${company.tel || ""}`, fontSize: 9 },
-          // 振込先情報（登録されている場合のみ表示）
-          ...(company.hasBankInfo
-            ? [{ text: `振込先: ${bankInfo}`, fontSize: 8 }]
-            : []),
-          {
-            text: "※お振込み手数料はご負担ください。",
-            fontSize: 7,
-            margin: [0, 5, 0, 0],
-          },
-          {
-            text: `登録番号: ${company.invoiceNumber ? `T${company.invoiceNumber}` : ""}`,
-            fontSize: 8,
-          },
-        ],
-        absolutePosition: { x: 350, y: 100 },
-        alignment: "right",
-      },
-
-      // スペース
-      { text: "", margin: [0, 0, 0, 80] },
 
       // 請求内容
       {

@@ -20,6 +20,7 @@ export { rebuildSecurityReportIndexes } from "./rebuildSecurityReportIndexes.js"
 export { reinstateEmployee } from "./reinstateEmployee.js";
 export { setupUserAccount } from "./setupUserAccount.js";
 export { terminateEmployee } from "./terminateEmployee.js";
+export { updateCompanyBilling } from "./updateCompanyBilling.js";
 export { updateCompanyProfile } from "./updateCompanyProfile.js";
 export {
   updateOwnUserProfile,

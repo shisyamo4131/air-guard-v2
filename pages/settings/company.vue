@@ -15,6 +15,7 @@ const canEditProfile = computed(
     auth.user?.isTemporary === false &&
     auth.user?.disabled === false,
 );
+const canEditBilling = canEditProfile;
 </script>
 
 <template>
@@ -47,11 +48,15 @@ const canEditProfile = computed(
           </v-col>
           <v-col cols="12">
             <!-- 口座情報 -->
-            <CompanyManager :doc="doc" label="口座情報">
-              <template #activator="activatorProps">
-                <CompanyActivatorBank v-bind="activatorProps" />
+            <CompanyBillingEditor :company="doc">
+              <template #activator="{ open }">
+                <CompanyActivatorBank
+                  :item="doc"
+                  :editable="canEditBilling"
+                  @click:edit="open"
+                />
               </template>
-            </CompanyManager>
+            </CompanyBillingEditor>
           </v-col>
           <!-- 設定情報 -->
           <v-col cols="12">

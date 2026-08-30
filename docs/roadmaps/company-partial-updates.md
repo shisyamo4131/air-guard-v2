@@ -32,8 +32,8 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 
 ## 現在の次工程
 
-1. PM-12 activation後、承認済みADR 0033を基に新しいbounded Codex implementation checkpointを固定し、CPU-03として振込先を専用editor/Callableへ移して口座情報の組合せvalidationを共有contractで実装・検証する。
-2. 続けて通常設定を専用editor/writerへ移し、既知enum・数値範囲・下流表示を検証する。
+1. 利用者が実際の利用環境で、振込先の会社管理者表示、5項目登録、明示clear、競合時の再読込、請求書PDFの口座名義と長文配置を最終確認する。
+2. CPU-03の残りである通常設定を専用editor/writerへ移し、既知enum・数値範囲・下流表示を検証する。
 3. CPU-04で取極めと表示順をoperation別の対象field保存へ移す。
 4. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
 
@@ -47,3 +47,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | 0 | 利用者が修正版をlocal環境で再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限・更新metadataと合わせてCPU-02のlocal受入れを完了した。振込先以降とDev反映は未完了のため進捗は据え置いた。 |
 | 2026-08-30 | 30% | 0 | CPU-03の振込先について、同社User read維持、会社管理者専用Callable、5 field exact validation、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票をADR 0033で承認した。application・Rules・test・local受入れ・通常設定・Dev反映は未完了のため加点しない。 |
 | 2026-08-30 | 30% | 0 | ADR 0034で、承認済みcheckpoint内のCodex実装・自動検証・必要なin-app UI smokeと、利用者による実際の利用環境での最終UI acceptanceを標準責任へ変更した。product実装・検証・受入れの新しい完了証拠はなく、CPU-03のCodex implementation checkpointはPM-12 activation後に開始するため進捗を据え置いた。 |
+| 2026-08-30 | 30% | 0 | CPU-03の振込先を専用editor/Callableへ移し、会社管理者境界、5 field all-null/all-complete、changed-only保存、client直接write拒否、再読込専用競合、明示clear、口座名義込みPDFと長文headerを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件、Codex in-app UIの管理者保存反映が成功した。CPU-03は通常設定と利用者最終UI acceptanceが未完了のため加点しない。 |

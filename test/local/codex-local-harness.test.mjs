@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import {
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getDoc,
@@ -17,6 +18,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  updateDoc,
   where,
   writeBatch,
 } from "firebase/firestore";
@@ -711,6 +713,436 @@ test("Firestore Rules reserve Company profile fields for the server writer", asy
   await assertSucceeds(
     setDoc(companyRef, { profileRulesProbe: true }, { merge: true }),
   );
+});
+
+test("Firestore Rules preserve Company billing reads for active same-tenant Users", async () => {
+  const companyId = "codex-rules-billing-read-company";
+  const actors = [
+    { uid: "codex-rules-billing-read-admin", isAdmin: true, roles: [] },
+    { uid: "codex-rules-billing-read-user", isAdmin: false, roles: [] },
+    { uid: "codex-rules-billing-read-role", isAdmin: false, roles: ["manager"] },
+    {
+      uid: "codex-rules-billing-read-super",
+      isAdmin: false,
+      roles: [],
+      isSuperUser: true,
+    },
+  ];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-billing-read-rules",
+      bankName: "架空銀行",
+      branchName: "中央支店",
+      accountType: "普通",
+      accountNumber: "0012345",
+      accountHolder: "カクウケイビ",
+    });
+  });
+  for (const actor of actors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+    });
+    const firestore = testEnvironment
+      .authenticatedContext(actor.uid, {
+        email_verified: true,
+        companyId,
+        isSuperUser: actor.isSuperUser ?? false,
+      })
+      .firestore();
+    const snapshot = await assertSucceeds(
+      getDoc(doc(firestore, "Companies", companyId)),
+    );
+    assert.equal(snapshot.data().accountHolder, "カクウケイビ");
+  }
+
+  const rejectedActors = [
+    {
+      uid: "codex-rules-billing-read-temporary",
+      user: { isTemporary: true },
+      claimCompanyId: companyId,
+    },
+    {
+      uid: "codex-rules-billing-read-disabled",
+      user: { disabled: true },
+      claimCompanyId: companyId,
+    },
+    {
+      uid: "codex-rules-billing-read-other-tenant",
+      user: {},
+      pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      claimCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    },
+  ];
+  for (const actor of rejectedActors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: actor.pathCompanyId ?? companyId,
+      companyId: actor.pathCompanyId ?? companyId,
+      ...actor.user,
+    });
+    const firestore = testEnvironment
+      .authenticatedContext(actor.uid, {
+        email_verified: true,
+        companyId: actor.claimCompanyId,
+        isSuperUser: false,
+      })
+      .firestore();
+    await assertFails(getDoc(doc(firestore, "Companies", companyId)));
+  }
+  await assertFails(
+    getDoc(
+      doc(
+        testEnvironment.unauthenticatedContext().firestore(),
+        "Companies",
+        companyId,
+      ),
+    ),
+  );
+});
+
+test("Firestore Rules reserve every Company billing mutation for the server writer", async () => {
+  const companyId = "codex-rules-billing-write-company";
+  const emptyCompanyId = "codex-rules-billing-add-company";
+  const adminUid = "codex-rules-billing-write-admin";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-billing-write-rules",
+      profileRulesProbe: "unchanged",
+      bankName: "架空銀行",
+      branchName: "中央支店",
+      accountType: "普通",
+      accountNumber: "0012345",
+      accountHolder: "カクウケイビ",
+    });
+    await setDoc(doc(context.firestore(), "Companies", emptyCompanyId), {
+      fixture: "company-billing-add-rules",
+    });
+  });
+  await seedRegisteredUser({
+    uid: adminUid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: true,
+  });
+  const firestore = testEnvironment
+    .authenticatedContext(adminUid, {
+      email_verified: true,
+      companyId,
+      isSuperUser: false,
+    })
+    .firestore();
+  const companyRef = doc(firestore, "Companies", companyId);
+
+  const replacements = {
+    bankName: "変更銀行",
+    branchName: "変更支店",
+    accountType: "当座",
+    accountNumber: "0000007",
+    accountHolder: "変更名義",
+  };
+  const storedBank = {
+    bankName: "架空銀行",
+    branchName: "中央支店",
+    accountType: "普通",
+    accountNumber: "0012345",
+    accountHolder: "カクウケイビ",
+  };
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(setDoc(companyRef, { [field]: value }, { merge: true }));
+    await assertFails(updateDoc(companyRef, { [field]: deleteField() }));
+  }
+  await assertFails(
+    setDoc(
+      companyRef,
+      { bankName: "複合変更銀行", unrelatedRulesProbe: true },
+      { merge: true },
+    ),
+  );
+  await assertFails(setDoc(companyRef, { fixture: "whole-replacement" }));
+  for (const omittedField of Object.keys(storedBank)) {
+    const fourOfFive = {
+      fixture: "company-billing-write-rules",
+      profileRulesProbe: "unchanged",
+      ...storedBank,
+    };
+    delete fourOfFive[omittedField];
+    await assertFails(setDoc(companyRef, fourOfFive));
+  }
+  await assertFails(
+    setDoc(companyRef, { companyName: "profile still reserved" }, { merge: true }),
+  );
+  await assertFails(deleteDoc(companyRef));
+  await assertSucceeds(
+    setDoc(companyRef, {
+      fixture: "unrelated-whole-replacement-allowed",
+      profileRulesProbe: "unchanged",
+      unrelatedRulesProbe: "whole-replacement",
+      ...storedBank,
+    }),
+  );
+  await assertSucceeds(
+    setDoc(companyRef, { unrelatedRulesProbe: true }, { merge: true }),
+  );
+
+  const addUid = "codex-rules-billing-add-admin";
+  await seedRegisteredUser({
+    uid: addUid,
+    pathCompanyId: emptyCompanyId,
+    companyId: emptyCompanyId,
+    isAdmin: true,
+  });
+  const addFirestore = testEnvironment
+    .authenticatedContext(addUid, {
+      email_verified: true,
+      companyId: emptyCompanyId,
+      isSuperUser: false,
+    })
+    .firestore();
+  const emptyCompanyRef = doc(addFirestore, "Companies", emptyCompanyId);
+  for (const [field, value] of Object.entries(replacements)) {
+    await assertFails(
+      setDoc(emptyCompanyRef, { [field]: value }, { merge: true }),
+    );
+  }
+
+  const deniedActors = [
+    { uid: "codex-rules-billing-write-user", user: { isAdmin: false } },
+    {
+      uid: "codex-rules-billing-write-super",
+      user: { isAdmin: true },
+      claims: { isSuperUser: true },
+    },
+    {
+      uid: "codex-rules-billing-write-temporary",
+      user: { isAdmin: true, isTemporary: true },
+    },
+    {
+      uid: "codex-rules-billing-write-disabled",
+      user: { isAdmin: true, disabled: true },
+    },
+  ];
+  for (const actor of deniedActors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: companyId,
+      companyId,
+      ...actor.user,
+    });
+    const actorFirestore = testEnvironment
+      .authenticatedContext(actor.uid, {
+        email_verified: true,
+        companyId,
+        isSuperUser: false,
+        ...actor.claims,
+      })
+      .firestore();
+    await assertFails(
+      setDoc(
+        doc(actorFirestore, "Companies", companyId),
+        { accountHolder: "拒否名義" },
+        { merge: true },
+      ),
+    );
+  }
+  const otherTenantUid = "codex-rules-billing-write-other-tenant";
+  await seedRegisteredUser({
+    uid: otherTenantUid,
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isAdmin: true,
+  });
+  const otherTenantFirestore = testEnvironment
+    .authenticatedContext(otherTenantUid, {
+      email_verified: true,
+      companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+      isSuperUser: false,
+    })
+    .firestore();
+  await assertFails(
+    setDoc(
+      doc(otherTenantFirestore, "Companies", companyId),
+      { accountHolder: "他社拒否名義" },
+      { merge: true },
+    ),
+  );
+  await assertFails(
+    setDoc(
+      doc(
+        testEnvironment.unauthenticatedContext().firestore(),
+        "Companies",
+        companyId,
+      ),
+      { accountHolder: "未認証拒否名義" },
+      { merge: true },
+    ),
+  );
+});
+
+test("billing Callable validates current Auth and actor identity before tenant update", async () => {
+  const { updateCompanyBilling } = await loadRebuildApis();
+  const companyId = "codex-callable-billing-company";
+  const actorUid = "codex-callable-billing-admin";
+  const actorEmail = `${actorUid}@codex-test.invalid`;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId), {
+      fixture: "company-billing-callable",
+      invoiceNumber: "1234567890123",
+      bankName: "架空銀行",
+      branchName: "中央支店",
+      accountType: "普通",
+      accountNumber: "0012345",
+      accountHolder: "カクウケイビ",
+    });
+  });
+  await seedCallableAuthUser({
+    uid: actorUid,
+    companyId,
+    email: actorEmail,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: actorUid,
+    pathCompanyId: companyId,
+    companyId,
+    email: actorEmail,
+    isAdmin: true,
+  });
+
+  const result = await updateCompanyBilling.run(
+    callableRequest({
+      uid: actorUid,
+      claims: { email: actorEmail, companyId, isSuperUser: false },
+      data: { changes: { branchName: "更新支店" } },
+    }),
+  );
+  assert.deepEqual(result, {
+    success: true,
+    updated: true,
+    updatedFields: ["branchName"],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const company = (
+      await getDoc(doc(context.firestore(), "Companies", companyId))
+    ).data();
+    assert.equal(company.branchName, "更新支店");
+    assert.equal(company.accountNumber, "0012345");
+    assert.equal(company.invoiceNumber, "1234567890123");
+    assert.equal(company.fixture, "company-billing-callable");
+    assert.equal(company.uid, actorUid);
+    assert.ok(company.updatedAt);
+  });
+
+  const actorCases = [
+    { name: "non-admin", user: { isAdmin: false } },
+    { name: "temporary", user: { isAdmin: true, isTemporary: true } },
+    { name: "disabled-user", user: { isAdmin: true, disabled: true } },
+    {
+      name: "wrong-tenant-user",
+      user: { isAdmin: true, companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+    },
+    { name: "super-user", user: { isAdmin: true }, isSuperUser: true },
+  ];
+  for (const testCase of actorCases) {
+    const uid = `codex-callable-billing-${testCase.name}`;
+    const email = `${uid}@codex-test.invalid`;
+    await seedCallableAuthUser({
+      uid,
+      companyId,
+      email,
+      isSuperUser: testCase.isSuperUser ?? false,
+    });
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      email,
+      ...testCase.user,
+    });
+    await assertCallableError(
+      updateCompanyBilling.run(
+        callableRequest({
+          uid,
+          claims: {
+            email,
+            companyId,
+            isSuperUser: testCase.isSuperUser ?? false,
+          },
+          data: { changes: { branchName: "拒否支店" } },
+        }),
+      ),
+      "permission-denied",
+    );
+  }
+
+  const missingUid = "codex-callable-billing-missing-auth";
+  await assertCallableError(
+    updateCompanyBilling.run(
+      callableRequest({
+        uid: missingUid,
+        claims: {
+          email: `${missingUid}@codex-test.invalid`,
+          companyId,
+          isSuperUser: false,
+        },
+        data: { changes: { branchName: "拒否支店" } },
+      }),
+    ),
+    "permission-denied",
+  );
+
+  const disabledAuthUid = "codex-callable-billing-disabled-auth";
+  const disabledAuthEmail = `${disabledAuthUid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid: disabledAuthUid,
+    companyId,
+    email: disabledAuthEmail,
+    disabled: true,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid: disabledAuthUid,
+    pathCompanyId: companyId,
+    companyId,
+    email: disabledAuthEmail,
+    isAdmin: true,
+  });
+  await assertCallableError(
+    updateCompanyBilling.run(
+      callableRequest({
+        uid: disabledAuthUid,
+        claims: {
+          email: disabledAuthEmail,
+          companyId,
+          isSuperUser: false,
+        },
+        data: { changes: { branchName: "拒否支店" } },
+      }),
+    ),
+    "permission-denied",
+  );
+
+  for (const claims of [
+    { email: actorEmail, companyId: undefined, isSuperUser: false },
+    { email: actorEmail, companyId: CODEX_LOCAL_COMPANIES.secondary.id, isSuperUser: false },
+    { email: "stale@codex-test.invalid", companyId, isSuperUser: false },
+    { email: actorEmail, companyId, isSuperUser: true },
+    { email: actorEmail, companyId, isSuperUser: false, email_verified: false },
+  ]) {
+    await assertCallableError(
+      updateCompanyBilling.run(
+        callableRequest({
+          uid: actorUid,
+          claims,
+          data: { changes: { branchName: "拒否支店" } },
+        }),
+      ),
+      "permission-denied",
+    );
+  }
 });
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {

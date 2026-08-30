@@ -9,5 +9,11 @@ export function useCompanyFunctions() {
     return result.data;
   }
 
-  return { updateCompanyProfile };
+  async function updateCompanyBilling(changes) {
+    const callable = httpsCallable($functions, "updateCompanyBilling");
+    const result = await callable({ changes });
+    return result.data;
+  }
+
+  return { updateCompanyBilling, updateCompanyProfile };
 }
