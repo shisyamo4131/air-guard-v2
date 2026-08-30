@@ -20,6 +20,7 @@ const sourceAtOpen = ref(null);
 const isSaving = ref(false);
 const errorMessage = ref("");
 const hasExternalChanges = ref(false);
+const pendingOwnSnapshot = ref(null);
 
 function profileSnapshot(source) {
   return Company.getProfileValue(source);
@@ -31,11 +32,33 @@ function snapshotsEqual(left, right) {
   );
 }
 
+function hasProfileConflict() {
+  if (!snapshotsEqual(profileSnapshot(props.company), sourceAtOpen.value)) {
+    hasExternalChanges.value = true;
+  }
+  return hasExternalChanges.value;
+}
+
+function observeProfileSnapshot(current) {
+  if (!dialog.value) return;
+  if (
+    pendingOwnSnapshot.value &&
+    snapshotsEqual(current, pendingOwnSnapshot.value)
+  ) {
+    sourceAtOpen.value = current;
+    return;
+  }
+  if (!snapshotsEqual(current, sourceAtOpen.value)) {
+    hasExternalChanges.value = true;
+  }
+}
+
 function resetDraft() {
   draft.value = props.company.clone();
   baseline.value = props.company.clone();
   sourceAtOpen.value = profileSnapshot(props.company);
   hasExternalChanges.value = false;
+  pendingOwnSnapshot.value = null;
   errorMessage.value = "";
 }
 
@@ -50,6 +73,7 @@ function close() {
 }
 
 function reloadLatest() {
+  if (isSaving.value) return;
   resetDraft();
 }
 
@@ -58,35 +82,41 @@ function updateProperties(changes) {
 }
 
 async function save() {
-  if (isSaving.value || hasExternalChanges.value) {
-    return;
-  }
-
-  errorMessage.value = "";
-  const validation = await form.value?.validate();
-  if (validation && !validation.valid) return;
+  if (isSaving.value || hasProfileConflict()) return;
 
   isSaving.value = true;
+  errorMessage.value = "";
+  let saveSucceeded = false;
   try {
+    const validation = await form.value?.validate();
+    if (validation && !validation.valid) return;
+    if (hasProfileConflict()) return;
+
+    const expectedSnapshot = Company.normalizeProfile(
+      profileSnapshot(draft.value),
+    );
+    if (hasProfileConflict()) return;
+    pendingOwnSnapshot.value = expectedSnapshot;
+
     await updateCompanyProfile({
       latest: props.company,
       baseline: baseline.value,
       draft: draft.value,
     });
+    saveSucceeded = true;
     dialog.value = false;
   } catch (error) {
     errorMessage.value = error?.message || "会社基本情報を更新できませんでした。";
   } finally {
+    pendingOwnSnapshot.value = null;
     isSaving.value = false;
+    if (!saveSucceeded && dialog.value) hasProfileConflict();
   }
 }
 
 watch(
   () => profileSnapshot(props.company),
-  (current) => {
-    if (!dialog.value || snapshotsEqual(current, sourceAtOpen.value)) return;
-    hasExternalChanges.value = true;
-  },
+  (current) => observeProfileSnapshot(current),
   { deep: true },
 );
 </script>
@@ -110,7 +140,12 @@ watch(
               最新情報を読み直して、必要な内容を再入力してください。
             </div>
             <div class="mt-3">
-              <v-btn size="small" variant="outlined" @click="reloadLatest">
+              <v-btn
+                size="small"
+                variant="outlined"
+                :disabled="isSaving"
+                @click="reloadLatest"
+              >
                 最新値を読み直す
               </v-btn>
             </div>
@@ -130,6 +165,7 @@ watch(
             :item="draft"
             :schema="Company.profileSchema"
             :update-properties="updateProperties"
+            :disabled="isSaving"
             edit-mode="UPDATE"
           />
         </v-card-text>
@@ -143,7 +179,7 @@ watch(
             color="primary"
             variant="flat"
             :loading="isSaving"
-            :disabled="hasExternalChanges"
+            :disabled="isSaving || hasExternalChanges"
           >
             保存
           </v-btn>

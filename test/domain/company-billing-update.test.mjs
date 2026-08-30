@@ -70,10 +70,12 @@ function createFirestore({ actor = admin, company = validCompany } = {}) {
 
 function createDeferred() {
   let resolve;
-  const promise = new Promise((resolvePromise) => {
+  let reject;
+  const promise = new Promise((resolvePromise, rejectPromise) => {
     resolve = resolvePromise;
+    reject = rejectPromise;
   });
-  return { promise, resolve };
+  return { promise, reject, resolve };
 }
 
 async function loadBillingEditorHarness({ validate, update }) {
@@ -106,11 +108,14 @@ async function loadBillingEditorHarness({ validate, update }) {
       return value;
     },
   };
+  let watcher;
   const harness = {
     Company,
     defineProps: () => ({ company, title: "振込先の編集" }),
     ref: (value) => ({ value }),
-    watch: () => {},
+    watch: (_source, callback) => {
+      watcher = callback;
+    },
     useCompanyBillingUpdate: () => ({ updateCompanyBilling: update }),
   };
   globalThis.__billingEditorHarness = harness;
@@ -122,7 +127,21 @@ async function loadBillingEditorHarness({ validate, update }) {
     const { Company, defineProps, ref, watch, useCompanyBillingUpdate } =
       globalThis.__billingEditorHarness;
     ${setupSource}
-    export { form, hasExternalChanges, isSaving, open, save };
+    export {
+      baseline,
+      clearBilling,
+      dialog,
+      draft,
+      errorMessage,
+      form,
+      hasExternalChanges,
+      isSaving,
+      open,
+      pendingOwnSnapshot,
+      reloadLatest,
+      save,
+      updateProperties
+    };
   `;
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`
@@ -132,6 +151,8 @@ async function loadBillingEditorHarness({ validate, update }) {
   return {
     company,
     module,
+    source,
+    triggerLiveWatcher: () => watcher(Company.getBillingValue(company)),
     cleanup: () => {
       delete globalThis.__billingEditorHarness;
     },
@@ -543,6 +564,53 @@ test("BillingEditor locks submission before async validation and dispatches once
   }
 });
 
+test("BillingEditor explicitly disables all editor controls while saving", async () => {
+  const source = await readFile(
+    new URL("../../components/Company/BillingEditor.vue", import.meta.url),
+    "utf8",
+  );
+  assert.match(
+    source,
+    /<air-item-input[\s\S]*?:disabled="isSaving"[\s\S]*?\/>/u,
+  );
+  assert.match(
+    source,
+    /<v-btn[\s\S]*?:disabled="isSaving"[\s\S]*?@click="reloadLatest"/u,
+  );
+  assert.match(source, /:disabled="isSaving \|\| hasExternalChanges"/u);
+});
+
+test("BillingEditor cannot reload latest values during a pending save", async () => {
+  const pending = createDeferred();
+  const mounted = await loadBillingEditorHarness({
+    validate: async () => ({ valid: true }),
+    update: async () => pending.promise,
+  });
+  try {
+    mounted.module.updateProperties({ branchName: "送信中支店" });
+    const saving = mounted.module.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    mounted.company.bankName = "別画面の銀行";
+    mounted.triggerLiveWatcher();
+
+    const draftBeforeReload = { ...mounted.module.draft.value };
+    const baselineBeforeReload = { ...mounted.module.baseline.value };
+    const pendingBeforeReload = { ...mounted.module.pendingOwnSnapshot.value };
+    mounted.module.reloadLatest();
+
+    assert.equal(mounted.module.hasExternalChanges.value, true);
+    assert.deepEqual(mounted.module.draft.value, draftBeforeReload);
+    assert.deepEqual(mounted.module.baseline.value, baselineBeforeReload);
+    assert.deepEqual(mounted.module.pendingOwnSnapshot.value, pendingBeforeReload);
+
+    pending.reject(new Error("server rejected billing update"));
+    await saving;
+  } finally {
+    mounted.cleanup();
+  }
+});
+
 test("BillingEditor rechecks live billing after validation before dispatch", async () => {
   const validation = createDeferred();
   let updateCalls = 0;
@@ -555,11 +623,122 @@ test("BillingEditor rechecks live billing after validation before dispatch", asy
   try {
     const saving = mounted.module.save();
     mounted.company.branchName = "外部更新支店";
+    mounted.triggerLiveWatcher();
     validation.resolve({ valid: true });
     await saving;
     assert.equal(updateCalls, 0);
     assert.equal(mounted.module.hasExternalChanges.value, true);
     assert.equal(mounted.module.isSaving.value, false);
+    assert.equal(mounted.module.dialog.value, true);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("BillingEditor ignores its pending save reflection and closes after success", async () => {
+  const pending = createDeferred();
+  let updateCalls = 0;
+  let submitted;
+  const mounted = await loadBillingEditorHarness({
+    validate: async () => ({ valid: true }),
+    update: async (payload) => {
+      updateCalls += 1;
+      submitted = payload;
+      return pending.promise;
+    },
+  });
+  try {
+    mounted.module.updateProperties({ branchName: "保存反映支店" });
+    const saving = mounted.module.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(updateCalls, 1);
+    mounted.company.branchName = "保存反映支店";
+    mounted.triggerLiveWatcher();
+    assert.equal(mounted.module.hasExternalChanges.value, false);
+    assert.equal(submitted.latest, mounted.company);
+    assert.equal(submitted.draft.branchName, "保存反映支店");
+    assert.equal(submitted.clearIntent, false);
+
+    pending.resolve({
+      success: true,
+      updated: true,
+      updatedFields: ["branchName"],
+    });
+    await saving;
+    assert.equal(mounted.module.dialog.value, false);
+    assert.equal(mounted.module.hasExternalChanges.value, false);
+    assert.equal(mounted.module.isSaving.value, false);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("BillingEditor keeps a real live-change warning after server failure", async () => {
+  const pending = createDeferred();
+  const mounted = await loadBillingEditorHarness({
+    validate: async () => ({ valid: true }),
+    update: async () => pending.promise,
+  });
+  try {
+    mounted.module.updateProperties({ branchName: "送信中支店" });
+    const saving = mounted.module.save();
+    await Promise.resolve();
+    await Promise.resolve();
+    mounted.company.bankName = "別actor銀行";
+    mounted.triggerLiveWatcher();
+    pending.reject(new Error("server rejected billing update"));
+    await saving;
+
+    assert.equal(mounted.module.hasExternalChanges.value, true);
+    assert.equal(mounted.module.errorMessage.value, "server rejected billing update");
+    assert.equal(mounted.module.dialog.value, true);
+    assert.equal(mounted.module.isSaving.value, false);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("BillingEditor preserves reload-only conflict and explicit clear payload", async () => {
+  const submissions = [];
+  const mounted = await loadBillingEditorHarness({
+    validate: async () => ({ valid: true }),
+    update: async (payload) => {
+      submissions.push(payload);
+      return {
+        success: true,
+        updated: true,
+        updatedFields: [...COMPANY_BILLING_FIELDS],
+      };
+    },
+  });
+  try {
+    mounted.company.branchName = "外部確定支店";
+    mounted.triggerLiveWatcher();
+    assert.equal(mounted.module.hasExternalChanges.value, true);
+    await mounted.module.save();
+    assert.equal(submissions.length, 0);
+
+    mounted.module.reloadLatest();
+    assert.equal(mounted.module.hasExternalChanges.value, false);
+    assert.equal(mounted.module.draft.value.branchName, "外部確定支店");
+    mounted.module.clearBilling();
+    await mounted.module.save();
+
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].latest, mounted.company);
+    assert.equal(submissions[0].baseline.branchName, "外部確定支店");
+    assert.equal(submissions[0].clearIntent, true);
+    assert.deepEqual(
+      Object.fromEntries(
+        COMPANY_BILLING_FIELDS.map((field) => [
+          field,
+          submissions[0].draft[field],
+        ]),
+      ),
+      EMPTY_BANK,
+    );
+    assert.equal(mounted.module.dialog.value, false);
   } finally {
     mounted.cleanup();
   }

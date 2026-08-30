@@ -21,6 +21,7 @@ const isSaving = ref(false);
 const errorMessage = ref("");
 const hasExternalChanges = ref(false);
 const clearIntent = ref(false);
+const pendingOwnSnapshot = ref(null);
 
 function billingSnapshot(source) {
   return Company.getBillingValue(source);
@@ -39,6 +40,20 @@ function hasBillingConflict() {
   return hasExternalChanges.value;
 }
 
+function observeBillingSnapshot(current) {
+  if (!dialog.value) return;
+  if (
+    pendingOwnSnapshot.value &&
+    snapshotsEqual(current, pendingOwnSnapshot.value)
+  ) {
+    sourceAtOpen.value = current;
+    return;
+  }
+  if (!snapshotsEqual(current, sourceAtOpen.value)) {
+    hasExternalChanges.value = true;
+  }
+}
+
 function resetDraft() {
   const value = Company.getBillingDraftValue(props.company);
   draft.value = props.company.clone();
@@ -47,6 +62,7 @@ function resetDraft() {
   sourceAtOpen.value = billingSnapshot(props.company);
   hasExternalChanges.value = false;
   clearIntent.value = false;
+  pendingOwnSnapshot.value = null;
   errorMessage.value = "";
 }
 
@@ -61,6 +77,7 @@ function close() {
 }
 
 function reloadLatest() {
+  if (isSaving.value) return;
   resetDraft();
 }
 
@@ -83,13 +100,15 @@ async function save() {
 
   isSaving.value = true;
   errorMessage.value = "";
+  let saveSucceeded = false;
   try {
     const validation = await form.value?.validate();
     if (validation && !validation.valid) return;
     if (hasBillingConflict()) return;
 
+    let expectedSnapshot;
     try {
-      Company.normalizeBilling({
+      expectedSnapshot = Company.normalizeBilling({
         invoiceNumber: props.company.invoiceNumber ?? null,
         ...Company.getBillingValue(draft.value),
       });
@@ -100,27 +119,28 @@ async function save() {
     }
 
     if (hasBillingConflict()) return;
+    pendingOwnSnapshot.value = expectedSnapshot;
     await updateCompanyBilling({
       latest: props.company,
       baseline: baseline.value,
       draft: draft.value,
       clearIntent: clearIntent.value,
     });
+    saveSucceeded = true;
     dialog.value = false;
   } catch (error) {
     errorMessage.value =
       error?.message || "振込先を更新できませんでした。";
   } finally {
+    pendingOwnSnapshot.value = null;
     isSaving.value = false;
+    if (!saveSucceeded && dialog.value) hasBillingConflict();
   }
 }
 
 watch(
   () => billingSnapshot(props.company),
-  (current) => {
-    if (!dialog.value || snapshotsEqual(current, sourceAtOpen.value)) return;
-    hasExternalChanges.value = true;
-  },
+  (current) => observeBillingSnapshot(current),
   { deep: true },
 );
 </script>
@@ -144,7 +164,12 @@ watch(
               最新情報を読み直して、必要な内容を再入力してください。
             </div>
             <div class="mt-3">
-              <v-btn size="small" variant="outlined" @click="reloadLatest">
+              <v-btn
+                size="small"
+                variant="outlined"
+                :disabled="isSaving"
+                @click="reloadLatest"
+              >
                 最新値を読み直す
               </v-btn>
             </div>
@@ -168,6 +193,7 @@ watch(
             :item="draft"
             :schema="Company.billingSchema"
             :update-properties="updateProperties"
+            :disabled="isSaving"
             edit-mode="UPDATE"
           />
         </v-card-text>
@@ -189,7 +215,7 @@ watch(
             color="primary"
             variant="flat"
             :loading="isSaving"
-            :disabled="hasExternalChanges"
+            :disabled="isSaving || hasExternalChanges"
           >
             保存
           </v-btn>

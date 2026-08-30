@@ -61,7 +61,8 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告して保存を止める。「最新値を読み直す」だけを表示し、押下時に現在draftを破棄して最新Companyから作り直す。曖昧だった「自分の入力を優先する」は利用者local確認を受けて削除した。
 - 基本情報dialogの初期DOMは`v-dialog > v-card > v-form > v-card-text/actions`だった。Vuetifyは通常dialogのdirect child `v-card`へ`overflow-y:auto`を設定し、`scrollable`時に本文だけをscrollするselectorは`v-dialog > form > v-card > v-card-text`を前提とする。この親子順序不一致がtoolbarとactionsまでscrollした直接原因である。`v-dialog scrollable > v-form > v-card > toolbar/card-text/actions`へ変更し、`v-card-text`だけをscroll対象にした。
 - 利用者はlocal環境で修正版を再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限と更新metadataを含め、Company基本情報のlocal受入れは完了した。
-- 口座editorは5口座fieldをlive Companyと別のdraftで編集する。5項目全部の登録または明示的な全削除だけを許可し、保存中の二重送信を止め、保存直前まで同じ5 fieldの外部変更を再確認する。競合時は現在入力を保存せず「最新値を読み直す」だけを提供する。
+- 基本情報と口座editorは、入力検査の開始前からsingle-flightを立て、server応答まで入力欄・選択欄・削除・取消・保存・最新値の再読込を操作不可にする。再読込処理自体も保存中は何もしない。自分自身の保存結果がlive listenerから返った場合は外部更新警告を出さず、本当に異なる値が返った場合だけ保存を止める。server失敗中に外部更新された場合は、操作を戻した後も警告と再読込を残す。
+- 口座editorは5口座fieldをlive Companyと別のdraftで編集する。5項目全部の登録または明示的な全削除だけを許可し、保存直前まで同じ5 fieldの外部変更を再確認する。競合時は現在入力を保存せず「最新値を読み直す」だけを提供する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
 - 基本情報のinvoice番号と振込先はSchemas billing parserで検証する。残るminuteIntervalと通常設定enum等の旧operationは後続移行までRules/serverで形を強制しない。
 - 通常設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
@@ -74,6 +75,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - transactionは実際に変化した振込先fieldとserver `updatedAt`・actor `uid`だけを更新する。Rulesは振込先5 fieldのclient直接変更を全actorへ拒否し、未移行operationの無関係field互換を維持する。
 - editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
 - `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`でapplication、Functions、Rules、domain/Emulator/PDF testを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件が成功し、Codex in-app UIで管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認した。非管理者UI、実際の請求PDF、利用者環境での最終表示は自動testとCodex smokeを利用者受入れの代用にせず、最終UI acceptance待ちとする。
+- `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`で基本情報・振込先の保存中制御と自己保存reflection判定を補正した。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UIは起動templateから製品画面へ移る前にNuxt `ECONNRESET`で停止したため、画面上の操作不可と警告非表示は利用者最終UI acceptanceの確認項目として残す。
 
 ## tenant identity
 
