@@ -133,9 +133,10 @@ test("non-admin and super-user actors are rejected before Company write", async 
 });
 
 test("Company basic editor no longer uses AirItemManager and Rules deny profile client writes", async () => {
-  const [page, editor, rules, apiIndex] = await Promise.all([
+  const [page, editor, activator, rules, apiIndex] = await Promise.all([
     readFile(new URL("../../pages/settings/company.vue", import.meta.url), "utf8"),
     readFile(new URL("../../components/Company/ProfileEditor.vue", import.meta.url), "utf8"),
+    readFile(new URL("../../components/Company/Activator/Base.vue", import.meta.url), "utf8"),
     readFile(new URL("../../firestore.rules", import.meta.url), "utf8"),
     readFile(new URL("../../functions/apis/index.js", import.meta.url), "utf8"),
   ]);
@@ -146,8 +147,13 @@ test("Company basic editor no longer uses AirItemManager and Rules deny profile 
   assert.match(page, /auth\.isSuperUser === false/);
   assert.match(page, /:editable="canEditProfile"/);
   assert.match(editor, /Company\.profileSchema/);
+  assert.match(editor, /<v-dialog[^>]*scrollable>/);
+  assert.match(editor, /<v-form[\s\S]*<v-card>[\s\S]*<v-card-text>/);
+  assert.match(editor, /現在の入力内容は保存できません/);
   assert.match(editor, /最新値を読み直す/);
-  assert.match(editor, /自分の入力を優先する/);
+  assert.doesNotMatch(editor, /自分の入力を優先する/);
+  assert.doesNotMatch(editor, /overwriteConfirmed|confirmOverwrite/);
+  assert.match(activator, /title: \{ type: String, default: "基本情報" \}/);
   assert.match(rules, /preservesCompanyProfileFields/);
   assert.match(apiIndex, /updateCompanyProfile/);
 

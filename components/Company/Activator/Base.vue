@@ -17,7 +17,7 @@ const _props = defineProps({
     validator: (value) => value instanceof Company,
   },
   editable: { type: Boolean, default: true },
-  title: { type: String, default: undefined },
+  title: { type: String, default: "基本情報" },
 });
 const props = useDefaults(_props, "CompanyActivatorBase");
 const emit = defineEmits(["click:edit"]);

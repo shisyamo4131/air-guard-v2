@@ -20,7 +20,6 @@ const sourceAtOpen = ref(null);
 const isSaving = ref(false);
 const errorMessage = ref("");
 const hasExternalChanges = ref(false);
-const overwriteConfirmed = ref(false);
 
 function profileSnapshot(source) {
   return Company.getProfileValue(source);
@@ -37,7 +36,6 @@ function resetDraft() {
   baseline.value = props.company.clone();
   sourceAtOpen.value = profileSnapshot(props.company);
   hasExternalChanges.value = false;
-  overwriteConfirmed.value = false;
   errorMessage.value = "";
 }
 
@@ -55,16 +53,12 @@ function reloadLatest() {
   resetDraft();
 }
 
-function confirmOverwrite() {
-  overwriteConfirmed.value = true;
-}
-
 function updateProperties(changes) {
   Object.assign(draft.value, changes);
 }
 
 async function save() {
-  if (isSaving.value || (hasExternalChanges.value && !overwriteConfirmed.value)) {
+  if (isSaving.value || hasExternalChanges.value) {
     return;
   }
 
@@ -92,7 +86,6 @@ watch(
   (current) => {
     if (!dialog.value || snapshotsEqual(current, sourceAtOpen.value)) return;
     hasExternalChanges.value = true;
-    overwriteConfirmed.value = false;
   },
   { deep: true },
 );
@@ -101,10 +94,10 @@ watch(
 <template>
   <slot name="activator" :open="open" :item="props.company" />
 
-  <v-dialog v-model="dialog" max-width="800" persistent>
-    <v-card>
-      <v-toolbar color="secondary" density="compact" :title="props.title" />
-      <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
+  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
+    <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
+      <v-card>
+        <v-toolbar color="secondary" density="compact" :title="props.title" />
         <v-card-text>
           <v-alert
             v-if="hasExternalChanges"
@@ -113,19 +106,12 @@ watch(
             class="mb-4"
           >
             <div>
-              編集中に会社基本情報が更新されました。入力内容は自動で上書きしていません。
+              別の画面で会社情報が更新されました。現在の入力内容は保存できません。
+              最新情報を読み直して、必要な内容を再入力してください。
             </div>
-            <div class="d-flex flex-wrap ga-2 mt-3">
+            <div class="mt-3">
               <v-btn size="small" variant="outlined" @click="reloadLatest">
                 最新値を読み直す
-              </v-btn>
-              <v-btn
-                size="small"
-                color="warning"
-                variant="flat"
-                @click="confirmOverwrite"
-              >
-                自分の入力を優先する
               </v-btn>
             </div>
           </v-alert>
@@ -157,12 +143,12 @@ watch(
             color="primary"
             variant="flat"
             :loading="isSaving"
-            :disabled="hasExternalChanges && !overwriteConfirmed"
+            :disabled="hasExternalChanges"
           >
             保存
           </v-btn>
         </v-card-actions>
-      </v-form>
-    </v-card>
+      </v-card>
+    </v-form>
   </v-dialog>
 </template>
