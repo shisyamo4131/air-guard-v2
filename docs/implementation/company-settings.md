@@ -5,20 +5,22 @@
 > 2026-08-30 corrective rollback: runtime compatible reader、8-target migration/restore tooling、pre-containment Rulesと専用testを主repositoryから除去した。現在のapplicationは再びlegacy Company rootを直接読み、Rulesは同社Userのroot updateを許可しつつclient create/deleteを拒否する。Schemas `.167` pinとAdmin SDK guardは保持している。次の変更対象は以下に記録したwhole-document writerである。
 >
 > 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
+>
+> 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
 
 ## メタデータ
 
-- 状態: 実装調査
+- 状態: 段階移行中（Company基本情報完了）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-30
-- 根拠ファイル: `pages/settings/company.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`stores/useCompanyStore.js`、`stores/useSystemStore.js`、`composables/application/auth/useAuthActions.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`composables/pdf/useBillingPdf.js`、`functions/apis/createAdminAccount.js`、`functions/modules/stripe.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Company.js`、`src/mixins/GeocodableMixin.js`
+- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/modules/company/updateCompanyProfile.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
-- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。CompanyManagerは作成と削除をUIで拒否し、更新だけを直接`Company.update()`へ渡す。
-- Rulesは`Companies/{companyDocId}`のread/updateを、claim companyId、Auth、同じtenantの有効な本登録Userが整合する場合に許可する。actor roleとfield ownershipの制約はない。client create/deleteは2026-08-27に拒否済みで、初期作成はFunctions/Admin SDKに限定した。
-- UIのadmin制御は暫定入口で、server-side認可とは一致しない。
+- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報は専用editor/Callable、残る3 operationは旧CompanyManagerまたは直接`Company.update()`を使用する。
+- 基本情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
+- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 fieldと住所由来`location/geopoint`が変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。基本情報の保存はFunctions/Admin SDKに限定した。
 
 ## データ契約
 
@@ -26,7 +28,7 @@ Companyはroot collection `Companies/{companyId}`に保存され、`usePrefix=fa
 
 | 分類 | fields・default・契約 |
 |---|---|
-| 会社名 | `companyName` required/最大20、`companyNameKana` required/最大40・カナ数値入力 |
+| 会社名 | `companyName` required/最大100、`companyNameKana` required/最大200・カナ数値入力。基本情報operationはSchemas `.167` contractでclient/server同一検証 |
 | 住所・連絡 | `zipcode`、`prefCode`、`city`、`address`、`building`、`tel`、`fax`。初期作成時は任意 |
 | 適格請求書 | `invoiceNumber`任意、最大13。画面/PDFが先頭に`T`を付ける |
 | 振込先 | `bankName`最大20、`branchName`最大20、`accountType` default普通/普通・当座、`accountNumber`最大7、`accountHolder`最大50。すべてschema上は任意 |
@@ -51,12 +53,14 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 ## 編集・validation
 
-- 基本情報editorのincludedKeysは`companyName/companyNameKana/address/tel/fax/invoiceNumber`だけで、`zipcode/prefCode/city/building`を含まない。画面は`fullAddress`を表示するが、この入口から住所構成field全部を編集できない。
+- 基本情報editorは`companyName/companyNameKana/zipcode/prefCode/city/address/building/tel/fax/invoiceNumber`の10 fieldを独立draftで編集する。live Companyをdraftへ直接bindしない。
+- 保存時はdraftで変更したfieldだけを抽出し、最新のlive Companyへ重ねて`Company`/Schemas `.167` contractで再検証する。Callableもtransaction内の最新Companyで同じ検証を行い、実際に値が変わるfieldだけを保存する。
+- 基本情報の保存にはserver timestampの`updatedAt`と実行者`uid`を加える。住所5 fieldのいずれかが変わった場合は、古い座標を残さないため`location/geopoint`をnullへ戻す。geocode再取得はこのcheckpointでは行わない。
+- 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告し、「最新値を読み直す」または「自分の入力を優先する」を選ぶまで保存を止める。後者でも利用者が変更していないfieldは最新値を保つ。
 - 口座editorは5口座field、設定editorは4運用設定fieldだけを編集する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
-- schemaのminuteInterval min/maxはcomponent attrsであり、Rulesは範囲を検証しない。他のenum、invoiceNumber、口座番号もRules/serverで形を強制しない。
-- 住所変更時GeocodableMixinはgeocodeを試みる。関数未設定・失敗・座標欠損では例外を伝播せずlocationをnullにしてCompany更新を継続する。
-- 更新にversion/preconditionはない。Company設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldは再保存時に失われる可能性もある。
+- 基本情報のinvoice番号はSchemas billing parserで13桁数字へ正規化する。残るminuteInterval、口座、enum等の旧operationは後続移行までRules/serverで形を強制しない。
+- 基本情報以外のCompany設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
 
 ## tenant identity
 
@@ -84,15 +88,15 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 ## Rules・security
 
-- 銀行口座、請求書番号、住所・電話は同一会社の有効な本登録User全員がRules上read/write可能である。
+- 会社名、住所、電話・FAX、invoice番号はclient直接writeを拒否し、会社管理者専用Callableだけが更新する。同じtenantの有効な本登録Userによるreadは維持する。
+- 銀行口座、通常設定、取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。
 - hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientがroot updateの一部として直接変更できる。
 - Company create/deleteはclient拒否済みだが、必須field除去、invalid enum/number、siteOrder/agreementsV2改変をRulesで検証しない。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。
 
 ## 矛盾・未使用候補
 
-- admin限定画面と、同一会社の有効な本登録User全員に対するroot全field update許可が不一致。
-- 基本情報editorは`fullAddress`構成fieldのうちaddressだけを含み、zipcode/prefCode/city/buildingを編集対象に含めない一方、`isCompleteRequiredFields`はそれらを要求する。
+- pageの既存access policyはsuper-userにも閲覧を許可するが、基本情報編集controlとserver保存は会社管理者だけに限定している。残る旧editorのUI/Rules actor境界は未移行である。
 - `Company.scheduleOrder.add`はimportされていない`ScheduleOrder`をnewしており、呼出し時ReferenceErrorとなる実装である。配列customClassはSiteOrderなので命名不一致でもある。
 - hidden server-owned候補fieldと利用者編集fieldが同一document/全write Rulesに混在する。
 - Company旧`agreements` accessorは常に空/無処理で残存する。

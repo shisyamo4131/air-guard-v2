@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. ADR 0031に従う旧CCB corrective rollbackは完了した。次は[Company部分更新ロードマップ](company-partial-updates.md)で、AirItemManager/AirArrayManagerへ一括委譲しているCompany whole-document replacementを、schema validationを維持したoperation固有editorと変更field保存へ置換する。最初はCompany基本情報とし、完了後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. ADR 0031に従う旧CCB corrective rollbackとCompany基本情報の部分更新は完了した。次は[Company部分更新ロードマップ](company-partial-updates.md)で、振込先、通常設定、取極め、表示順のwhole-document replacementを、schema validationを維持したoperation固有editorと変更field保存へ順次置換する。Company全体writer 0件とlocal受入れの後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -155,3 +155,4 @@
 | 2026-08-28 | 10% | 0 | CCB-01でCompany設定分割、actor、validation、revision/audit、snapshot、勤怠表示方式、廃止field、tenant lifecycle、project-wide maintenance、Stripe延期を承認済み仕様・ADR・runbookへ反映し、CCB専用進捗を10%とした。親ロードマップの未完了マイルストーンは実装・test・Dev受入れを満たさないため、公式進捗は10%に据え置いた。 |
 | 2026-08-28 | 10% | 0 | Managed common governance 1.4.0へ移行し、4つの容量確認表現を現在task IDのsession JSONL実測へ明示routeした。300 MiB task handoff、10 GiB全体参考警告、最新session推測禁止、標準報告・停止条件・回帰testを整合した。application、product gate、Dev受入れの完了条件は変わらないため公式進捗は据え置いた。 |
 | 2026-08-30 | 10% | 0 | ADR 0031に基づき旧CCBのcompatible reader、migration/restore tooling、pre-containment Rulesを4つのcorrective implementation commitでrollbackした。Schemas `.167` artifact/pin、Admin SDK guard、UWB、Company create/delete拒否を保持し、Rules source contract 2件と隔離Emulator 97件が成功した。新CCBのwhole-document replacement除去、STRIPE-01、Dev受入れは未完了のため公式進捗は据え置いた。 |
+| 2026-08-30 | 10% | 0 | Company基本情報を独立draftと専用Callableによる変更field保存へ移し、server timestamp、会社管理者境界、編集中変更通知、client直接変更拒否を実装した。全domain 659件と隔離Emulator 99件が成功した。Company部分更新roadmapは30%だが、残るwhole-document writer、local UI、Dev受入れが未完了のため親roadmapは10%に据え置いた。 |
