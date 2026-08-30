@@ -45,6 +45,7 @@
 | [0030](0030-efficient-coordinator-handoff-activation.md) | 次回コーディネーター交代で発効する効率化手順 | Accepted | 2026-08-30 |
 | [0031](0031-proportional-data-boundary-and-change-safeguards.md) | 必要十分なデータ境界・競合制御・cutover | Accepted | 2026-08-30 |
 | [0032](0032-required-specialist-subagent-routing.md) | 独立scopeへの専門subagent利用とCheckpoint限定禁止 | Accepted | 2026-08-30 |
+| [0033](0033-company-bank-transfer-update-boundary.md) | Company振込先の専用更新・読取境界 | Accepted | 2026-08-30 |
 
 ## 新しい ADR の形式
 

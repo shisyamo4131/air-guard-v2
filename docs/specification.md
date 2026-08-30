@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-30
-- 仕様バージョン: 0.7.2
+- 仕様バージョン: 0.7.3
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -120,9 +120,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - CCBの主目的は、会社情報、通常設定、旧Stripe情報等が混在したCompanyをwhole-document replacementする現行経路を廃止し、operationが所有するexact fieldだけを更新することである。
 - Companyを含むFirestore CRUDの新規・改修画面では、`AirItemManager`または`AirArrayManager`へ入力draft、dialog、validation、永続化、表示同期を一括委譲しない。Companyは基本情報、振込先、通常設定、表示順等のoperation固有editorとapplication処理へ段階移行し、既存managerは対象operationの移行完了ごとに外す。
 - document全体の必須・型・長さ・相関はFireModel/Class schemaを正本とする。operation固有の入力fieldと追加必須条件は共有operation contractへ定義し、個別画面へ同じ業務validationを複製しない。保存前は最新Companyへ変更fieldを重ねたcandidateを検証し、実際に変更されたoperation所有fieldと`updatedAt`・更新者だけを保存する。
-- editorはreal-time listenerが更新するCompany本体と独立したdraftを使う。編集中に同じoperation所有fieldの外部更新を検出した場合はdraftを黙って置換せず、最新値の通知と再読込手段を示す。operationごとに再読込必須または明示再確認後のlast-write-winsのどちらかを定める。Company基本情報は保存を停止し、「最新値を読み直す」だけを表示して現在draftの破棄・再入力を求める。
+- editorはreal-time listenerが更新するCompany本体と独立したdraftを使う。編集中に同じoperation所有fieldの外部更新を検出した場合はdraftを黙って置換せず、最新値の通知と再読込手段を示す。operationごとに再読込必須または明示再確認後のlast-write-winsのどちらかを定める。Company基本情報と振込先は保存を停止し、「最新値を読み直す」だけを表示して現在draftの破棄・再入力を求める。
 - 一つのCompany documentを既定とし、同じactorが読める会社情報・通常設定・利用状態は同居できる。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateで解消できない実測競合のいずれかがあるfieldだけを別documentへ分割する。writer権限や画面が違うだけでは分割しない。
-- 同社の有効な本登録Userが読めるCompany情報の正確なfield集合と、会社管理者・配置/予定管理actor等のoperation別write allowlistはrestart inventoryで確定する。clientまたはCallableの選択は、server-only情報、複数resource、外部作用、不可逆性、必須auditの有無からoperation単位で決める。
+- 振込先はCompany rootの現行read境界を維持し、同社の有効な本登録Userが読める。振込先を読取actor別documentへ分割せず、変更は同じtenantの有効な本登録会社管理者だけを許可してsuper-userを拒否する。振込先以外のCompany情報の正確なread集合と、配置/予定管理actor等の後続operation別write allowlistはrestart inventoryで確定する。clientまたはCallableの選択は、server-only情報、複数resource、外部作用、不可逆性、必須auditの有無からoperation単位で決める。
 - 通常の可逆なCompany編集はreal-time listenerで最新値を反映し、保存結果はlast-write-winsを受容する。編集中の同一operationへ別actorの変更が届いた場合は通知し、operation contractに従って再読込または明示再確認を要求する。共通revision、lock、operation ledgerは導入しない。
 - expected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
 - `siteOrder`と`scheduleOrder`は各最大2000件という現行候補上限と実際のdocument sizeを再計測し、Company本体と分ける必要性を判断する。分割前提にはしない。
@@ -130,8 +130,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 設定文字列の長さはUnicode Extended Grapheme Cluster単位、すなわち利用者が見た目上1文字と認識する単位で数える。結合文字で表した`が`も合成済みの`が`も1文字である。外側の空白はtrimするが、保存値へNFC/NFKC等のUnicode正規化を自動適用しない。1行fieldはCR/LFとcontrol characterを拒否する。
 - 会社名はtrim後1〜100文字、会社名カナはtrim後1〜200文字とし、一意性を要求しない。カナはUnicode `U+30A0–U+30FF`、全角空白`U+3000`、全角数字`U+FF10–U+FF19`、control characterを除く空白を許可する。結合濁点`U+3099`・結合半濁点`U+309A`は直前の`U+30A0–U+30FF`と同一grapheme clusterを構成する場合だけ許可し、単独または他のbase直後では拒否する。郵便番号はnullまたはASCII数字7桁、都道府県codeはnullまたは`01`〜`47`、市区町村はnullまたは100文字以内、番地・建物はnullまたは各200文字以内、電話・FAXはnullまたは32文字以内のASCII数字・`+ - ( ) .`・空白だけとする。初期signupは会社名とカナだけで通常利用へ進める。請求確定時は会社名、郵便番号、都道府県、市区町村、番地、電話を必須とし、建物、FAX、適格請求書番号、振込先は任意とする。
 - 適格請求書番号は保存時に先頭の`T`/`t`を除き13桁のASCII数字だけへ正規化する。空入力はnullとし、表示・帳票では存在する場合だけ大文字`T`を付ける。
-- 振込先は5 fieldすべてnullを許可する。1項目でも入力する場合は銀行名、支店名、口座種別、口座番号、口座名義をすべて必須とし、銀行名・支店名は各100文字以内、口座種別は普通・当座、口座番号は先頭0を保持するASCII数字1〜7桁、口座名義はtrim後200文字以内とする。完全な振込先だけを帳票へ印字する。
-- 会社情報の表示・帳票layoutは長い値を折返し、縮小または表示上の省略で扱い、保存値またはsnapshot値を切り捨てない。100文字の会社名、長い住所・建物・口座名義をrender test対象とする。
+- 振込先は5 fieldすべてnullを許可する。1項目でも入力する場合は銀行名、支店名、口座種別、口座番号、口座名義をすべて必須とし、銀行名・支店名は各100文字以内、口座種別は普通・当座、口座番号は先頭0を保持するASCII数字1〜7桁、口座名義はtrim後200文字以内とする。画面は明示的なクリア操作で5 fieldすべてをnullへ戻せる。legacyの他4 fieldが空で`accountType=普通`だけの状態は未登録表示へ正規化し、画面を開くまたは変更なしで保存するだけでは永続値を書き換えない。partial legacy値は完全な5 fieldへの修復または全null化だけを許可する。
+- 振込先更新は専用`updateCompanyBilling` Callableを使う。requestはnon-emptyな`changes`だけを持ち、変更可能keyを`bankName/branchName/accountType/accountNumber/accountHolder`のsubsetへ限定する。tenant pathは検証済みidentityから導出し、transaction内の最新Companyへchangesを重ね、現在の`invoiceNumber`を検証contextとして共有billing contractで整合性を確認する。`invoiceNumber`はCompany基本情報operationの所有を維持し、振込先requestで受信・更新しない。実際に変わった5 fieldとserver timestampの`updatedAt`・実行者`uid`だけを保存し、clientからの振込先直接変更は会社管理者を含む全actorへ拒否する。
+- 完全な振込先だけを口座名義を含めて帳票へ印字し、不完全または不正な振込先は印字しない。会社情報の表示・帳票layoutは長い値を折返し、縮小または表示上の省略で扱い、保存値またはsnapshot値を切り捨てない。100文字の会社名、長い住所・建物・口座名義をrender test対象とする。詳細な判断は[ADR 0033](decisions/0033-company-bank-transfer-update-boundary.md)を正とする。
 - `minuteInterval`は5分単位のinteger `5/10/15/20/25/30`だけを許可し、初期値は15とする。`roundSetting`は`FLOOR/ROUND/CEIL`だけを許可して初期値を四捨五入、`firstDayOfWeek`はinteger `0`〜`6`だけを許可して初期値を日曜日とし、変更は画面へ即時反映する。`roundSetting`はCompany defaultであり、OperationResult作成時に適用modeをsnapshotする。変更後に既存OperationResult、Billing、帳票を再計算せず、訂正は新しいrevisionで扱う。
 - `arrangement`の`siteOrder`と`scheduleOrder`は各最大2000件とし、各itemはexact `{siteId, shiftType}`だけを持つ。`siteId`は1〜128文字で`/`とcontrol characterを拒否し、`shiftType`は`DAY/NIGHT`、同一配列内の`siteId + shiftType`は一意とする。computed `key`は保存しない。1回の更新はどちらか一方だけを対象とし、そのfieldの既存permissionだけを検査する。全Siteの存在はtransaction中に検査せず、参照切れは表示時に無視して次回保存で除去する。
 - `attendanceManagementMode`は`attendanceSummaryMode`へ改名し、値を`LABOR_STANDARD`と`OPERATION_COUNT`に限定する。両方のprojectionは常時生成し、mode変更は即時かつ可逆な画面・navigation切替だけとする。`LABOR_STANDARD`では労基準拠の勤怠一覧と打刻CSV、`OPERATION_COUNT`では勤務回数実績を表示し、労基準拠一覧と打刻CSVを非表示にする。mode変更による過去data migration、再集計、移動、削除は行わない。初期値は`LABOR_STANDARD`とする。

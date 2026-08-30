@@ -7,6 +7,8 @@
 > 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
 >
 > 2026-08-30 Company profile implementation: 基本情報10 fieldを`CompanyProfileEditor`と`updateCompanyProfile` Callableへ移行した。変更fieldだけを最新Companyへ重ね、Schemas `.167`でclient/serverの両方が検証する。client直接profile変更はRulesで拒否し、振込先・通常設定・取極め・表示順は後続移行まで旧writerを継続する。
+>
+> 2026-08-30 Company billing contract: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票とする契約を利用者が承認した。現行application・Rules・testはまだ未実装であり、以下のlegacy観測を現在挙動として扱う。
 
 ## メタデータ
 
@@ -63,6 +65,15 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
 - 基本情報のinvoice番号はSchemas billing parserで13桁数字へ正規化する。残るminuteInterval、口座、enum等の旧operationは後続移行までRules/serverで形を強制しない。
 - 基本情報以外のCompany設定、取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
+
+## 2026-08-30 振込先更新契約（承認済み・未実装）
+
+- readはCompany rootの現行境界を維持し、同社の有効な本登録Userを許可する。writeは同じtenantの有効な本登録会社管理者だけを許可し、super-user、非管理者、temporary、disabledを拒否する。
+- `updateCompanyBilling`はidentityからtenant pathを導出し、exact `{changes}`の5 field subsetだけを受ける。現在の`invoiceNumber`は共有billing parserのvalidation contextに使うが、振込先operationで受信・更新しない。
+- 最新Companyへchangesを重ね、5 field all-nullまたはall-completeを検証する。legacyの`accountType=普通`だけの空口座は未登録表示へ正規化するが、open/no-op saveで書き戻さない。明示clearは5 fieldすべてnull、partial legacyはcomplete repairまたは全null化だけを許可する。
+- transactionは実際に変化した振込先fieldとserver `updatedAt`・actor `uid`だけを更新する。Rulesは振込先5 fieldのclient直接変更を全actorへ拒否し、未移行operationの無関係field互換を維持する。
+- editorはlive Companyと独立したdraftを使い、同じ振込先fieldの外部変更で保存を止め、「最新値を読み直す」だけを提供する。完全な5 fieldだけを口座名義込みで請求PDFへ印字し、長い口座名義をrender test対象とする。
+- 実装対象候補は`schemas/Company.js`、Company専用billing editor、`pages/settings/company.vue`、application/company composable、`composables/company/useCompanyFunctions.js`、Functions API/use-case/index、`firestore.rules`、domain/Emulator/UI/PDF testである。application codeの標準実装者は利用者であり、本節の文書反映だけでは実装済みと扱わない。
 
 ## tenant identity
 

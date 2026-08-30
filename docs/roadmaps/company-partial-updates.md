@@ -5,7 +5,7 @@
 - 現在の進捗: 30%
 - 部分加点: なし
 - 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、bounded Dev反映・利用者受入れまで完了する
-- 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)
+- 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)
 
 ## 境界
 
@@ -21,7 +21,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 |---|---:|---:|---|---|
 | CPU-01 schema/editor境界の確定 | 10 | 10 | Completed | project rules、仕様、ADR、Company operation一覧、共通validationとdraft競合契約を確定する |
 | CPU-02 Company基本情報の部分更新 | 20 | 20 | Completed | 専用editor/writer、管理者境界、変更fieldだけの保存、server timestamp、schema/operation validation、回帰testを完了する |
-| CPU-03 振込先・通常設定の部分更新 | 20 | 0 | Not started | 2 operationを専用editor/writerへ移し、相関・enum・変更反映を検証する |
+| CPU-03 振込先・通常設定の部分更新 | 20 | 0 | In progress | 2 operationを専用editor/writerへ移し、相関・enum・変更反映を検証する。振込先のactor・read・競合・clear・Callable・Rules・帳票契約はADR 0033で承認済み |
 | CPU-04 取極め・表示順の部分更新 | 20 | 0 | Not started | `agreementsV2`、`siteOrder`、`scheduleOrder`のwriterを分離し、配列全体の対象fieldだけを更新する |
 | CPU-05 旧Company writer除去・local受入れ | 15 | 0 | Not started | Company全体`set/update()` caller 0、Rules/Functions回帰、listener競合表示、主要画面再読込を確認する |
 | CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
@@ -43,3 +43,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | +30 | project rules・仕様・ADRへeditor境界を反映し、Company基本情報10 fieldを独立draft、最新live値との合成validation、変更fieldだけのCallable保存、server timestamp・更新者、編集中変更通知へ移行した。会社管理者以外の編集controlを隠し、Rulesで同fieldのclient直接変更を拒否した。全domain 659件と隔離Emulator 99件が成功した。振込先以降、local UI、Dev反映は未完了。 |
 | 2026-08-30 | 30% | 0 | 利用者local確認で権限と更新metadataは合格した。基本情報cardのtitle消失、dialog全体scroll、競合時の曖昧な上書きcontrolを修正し、Company基本情報は最新値の再読込だけを許可する契約へ更新した。全domain 659件は成功した。利用者による修正版UI再確認、振込先以降、Dev反映は未完了のため進捗は据え置いた。 |
 | 2026-08-30 | 30% | 0 | 利用者が修正版をlocal環境で再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限・更新metadataと合わせてCPU-02のlocal受入れを完了した。振込先以降とDev反映は未完了のため進捗は据え置いた。 |
+| 2026-08-30 | 30% | 0 | CPU-03の振込先について、同社User read維持、会社管理者専用Callable、5 field exact validation、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票をADR 0033で承認した。application・Rules・test・local受入れ・通常設定・Dev反映は未完了のため加点しない。 |
