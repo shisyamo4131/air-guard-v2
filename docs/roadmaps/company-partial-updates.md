@@ -42,3 +42,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 0% | 0 | AirItemManager/AirArrayManagerをFirestore CRUDの既定から外し、schema validationを維持したoperation固有editorへ段階移行する方針を利用者が採用した。実装・local受入れ・Dev反映は未完了。 |
 | 2026-08-30 | 30% | +30 | project rules・仕様・ADRへeditor境界を反映し、Company基本情報10 fieldを独立draft、最新live値との合成validation、変更fieldだけのCallable保存、server timestamp・更新者、編集中変更通知へ移行した。会社管理者以外の編集controlを隠し、Rulesで同fieldのclient直接変更を拒否した。全domain 659件と隔離Emulator 99件が成功した。振込先以降、local UI、Dev反映は未完了。 |
 | 2026-08-30 | 30% | 0 | 利用者local確認で権限と更新metadataは合格した。基本情報cardのtitle消失、dialog全体scroll、競合時の曖昧な上書きcontrolを修正し、Company基本情報は最新値の再読込だけを許可する契約へ更新した。全domain 659件は成功した。利用者による修正版UI再確認、振込先以降、Dev反映は未完了のため進捗は据え置いた。 |
+| 2026-08-30 | 30% | 0 | 利用者が修正版をlocal環境で再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限・更新metadataと合わせてCPU-02のlocal受入れを完了した。振込先以降とDev反映は未完了のため進捗は据え置いた。 |

@@ -10,7 +10,7 @@
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報完了）
+- 状態: 段階移行中（Company基本情報のlocal受入れ完了）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-30
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/modules/company/updateCompanyProfile.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
@@ -58,6 +58,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 基本情報の保存にはserver timestampの`updatedAt`と実行者`uid`を加える。住所5 fieldのいずれかが変わった場合は、古い座標を残さないため`location/geopoint`をnullへ戻す。geocode再取得はこのcheckpointでは行わない。
 - 編集中に基本情報のlive値が変わった場合、draftを自動置換せず警告して保存を止める。「最新値を読み直す」だけを表示し、押下時に現在draftを破棄して最新Companyから作り直す。曖昧だった「自分の入力を優先する」は利用者local確認を受けて削除した。
 - 基本情報dialogの初期DOMは`v-dialog > v-card > v-form > v-card-text/actions`だった。Vuetifyは通常dialogのdirect child `v-card`へ`overflow-y:auto`を設定し、`scrollable`時に本文だけをscrollするselectorは`v-dialog > form > v-card > v-card-text`を前提とする。この親子順序不一致がtoolbarとactionsまでscrollした直接原因である。`v-dialog scrollable > v-form > v-card > toolbar/card-text/actions`へ変更し、`v-card-text`だけをscroll対象にした。
+- 利用者はlocal環境で修正版を再確認し、基本情報cardのtitle、dialog本文だけのscroll、外部更新後の再読込専用UIを受け入れた。先に合格した権限と更新metadataを含め、Company基本情報のlocal受入れは完了した。
 - 口座editorは5口座field、設定editorは4運用設定fieldだけを編集する。
 - 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
 - 基本情報のinvoice番号はSchemas billing parserで13桁数字へ正規化する。残るminuteInterval、口座、enum等の旧operationは後続移行までRules/serverで形を強制しない。
