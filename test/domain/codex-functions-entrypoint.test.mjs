@@ -19,6 +19,7 @@ const PUBLIC_CALLABLES = [
   "reinstateEmployee",
   "setupUserAccount",
   "terminateEmployee",
+  "updateCompanyProfile",
   "updateOwnUserProfile",
   "updateUserNotificationSettings",
   "updateUserRoles",

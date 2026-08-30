@@ -68,6 +68,13 @@ service cloud.firestore {
       ]);
     }
 
+    function preservesCompanyProfileFields() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+        'companyName', 'companyNameKana', 'zipcode', 'prefCode', 'city',
+        'address', 'building', 'tel', 'fax', 'invoiceNumber', 'location', 'geopoint'
+      ]);
+    }
+
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -110,7 +117,10 @@ service cloud.firestore {
     // CompaniesコレクションのドキュメントID (companyDocId) と
     // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
     match /Companies/{companyDocId} {
-      allow read, update: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow read: if isAuthenticated() && userCompanyId() == companyDocId;
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyDocId
+                    && preservesCompanyProfileFields();
       allow create, delete: if false;
     }
 

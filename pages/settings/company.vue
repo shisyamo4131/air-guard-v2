@@ -26,11 +26,11 @@ const { company: doc } = companyStore;
         <v-row>
           <v-col cols="12">
             <!-- 会社情報 -->
-            <CompanyManager :doc="doc" label="基本情報">
-              <template #activator="activatorProps">
-                <CompanyActivatorBase v-bind="activatorProps" />
+            <CompanyProfileEditor :company="doc">
+              <template #activator="{ open }">
+                <CompanyActivatorBase :item="doc" @click:edit="open" />
               </template>
-            </CompanyManager>
+            </CompanyProfileEditor>
           </v-col>
           <v-col cols="12">
             <!-- 口座情報 -->

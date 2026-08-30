@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Company/Activator/Base.vue
  * @description 会社の基本情報表示コンポーネント
- * - `CompanyManager` の activator スロット用コンポーネント
+ * - Company基本情報editorの表示・起動用コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Company } from "@/schemas";
@@ -54,24 +54,6 @@ const items = computed(() => {
   ];
 });
 
-/*****************************************************************************
- * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
- *****************************************************************************/
-defineExpose({
-  includedKeys: [
-    "companyName",
-    "companyNameKana",
-    "address",
-    "tel",
-    "fax",
-    "invoiceNumber",
-  ],
-});
 </script>
 
 <template>

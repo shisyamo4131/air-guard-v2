@@ -695,6 +695,24 @@ test("Firestore Rules keep Company creation server-only", async () => {
   );
 });
 
+test("Firestore Rules reserve Company profile fields for the server writer", async () => {
+  const uid = "codex-rules-company-profile-user";
+  await seedRegisteredUser({ uid });
+  const firestore = authenticatedFirestore(uid);
+  const companyRef = doc(
+    firestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+  );
+
+  await assertFails(
+    setDoc(companyRef, { companyName: "client update denied" }, { merge: true }),
+  );
+  await assertSucceeds(
+    setDoc(companyRef, { profileRulesProbe: true }, { merge: true }),
+  );
+});
+
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
   test(`Firestore Rules enforce tenant read/write access for ${collectionName}`, async () => {
     const uid = `codex-rules-${collectionName.toLowerCase()}-user`;
@@ -1663,6 +1681,7 @@ test("API index exports every public Callable without internal request helpers",
     "reinstateEmployee",
     "setupUserAccount",
     "terminateEmployee",
+    "updateCompanyProfile",
     "updateOwnUserProfile",
     "updateUserNotificationSettings",
     "updateUserRoles",
@@ -1733,6 +1752,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyProfile,
     reinstateEmployee,
     updateOwnUserProfile,
     updateUserNotificationSettings,
@@ -1750,6 +1770,7 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     listLifecycleOperations,
     setupUserAccount,
     terminateEmployee,
+    updateCompanyProfile,
     reinstateEmployee,
     updateOwnUserProfile,
     updateUserNotificationSettings,
@@ -1758,6 +1779,42 @@ test("moved authenticated User Callables retain their entry guards", async () =>
     await assertCallableError(callable.run({ data: {} }), "unauthenticated");
   }
 
+});
+
+test("Company profile Callable writes only changed fields and server metadata", async () => {
+  const { updateCompanyProfile } = await loadRebuildApis();
+  const actor = await seedTemporaryManagementActor({
+    uid: "company-profile-admin",
+    isAdmin: true,
+    roles: [],
+  });
+
+  const result = await updateCompanyProfile.run(
+    actorCallableRequest({
+      actor,
+      data: { changes: { tel: "03-9999-9999" } },
+    }),
+  );
+  assert.deepEqual(result, {
+    success: true,
+    updated: true,
+    updatedFields: ["tel"],
+  });
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const company = (
+      await getDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          CODEX_LOCAL_COMPANIES.primary.id,
+        ),
+      )
+    ).data();
+    assert.equal(company.tel, "03-9999-9999");
+    assert.equal(company.uid, actor.uid);
+    assert.ok(company.updatedAt);
+  });
 });
 
 test("company administrator pages lifecycle history through the public Callable", async () => {
