@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- task交代中を除き、独立して分割できる調査・code探索・review・test・利用者承認済み補助実装等に適切なsubagentを使用するproject-wide運用へ変更した。Checkpoint固有の禁止は当該Checkpointのterminal callbackとcoordinator reviewまでに限定し、後続作業へ持ち越さない。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitはcoordinator自身が実施する。
 - 利用者local確認で見つかったCompany基本情報cardのtitle消失と、dialogのtoolbar/actionsまでscrollする構造を修正した。dialogをVuetifyの`scrollable`が想定する`form > card > card-text`構造へ揃え、本文だけをscroll対象にした。編集中の外部更新時は曖昧な「自分の入力を優先する」を削除し、保存を停止して「最新値を読み直す」だけを提供する。
 - Company基本情報の編集を`AirItemManager`経由のCompany全体保存から独立editorと`updateCompanyProfile` Callableへ移した。会社名・住所・連絡先・invoice番号のうち利用者が実際に変えたfieldだけを、最新Companyと再検証して保存し、`updatedAt`はserver timestamp、`uid`は実行者を記録する。編集中のlive更新は入力を黙って上書きせず、現在draftを破棄する最新値の再読込を要求する。会社管理者以外の編集controlを隠し、Rulesは対象profile fieldのclient直接変更を拒否する一方、未移行のCompany operationは対象外fieldだけを更新できる。全domain 659件、隔離Emulator 99件が成功し、Dev・remote・実dataは変更していない。
 - Firestore CRUDの新規・改修画面では`AirItemManager`・`AirArrayManager`へdraft、dialog、validation、永続化、表示同期を一括委譲せず、operation固有editorとapplication処理へ段階移行する方針を採用した。FireModel/Class schemaをdocument共通validationの正本として維持し、operation contractを加え、最新live documentへ変更fieldを重ねて検証したうえで実際に変わったfieldと更新metadataだけを保存する。編集中のlistener更新はdraftを黙って置換せず通知・再読込・再確認を提供する。最初の対象をCompany基本情報とする独立roadmapを開始した。

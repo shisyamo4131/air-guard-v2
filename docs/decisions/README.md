@@ -44,6 +44,7 @@
 | [0029](0029-firestore-rules-compatible-crud-cutover.md) | Firestore Rules互換CRUD先行と段階的閉鎖 | Superseded | 2026-08-29 |
 | [0030](0030-efficient-coordinator-handoff-activation.md) | 次回コーディネーター交代で発効する効率化手順 | Accepted | 2026-08-30 |
 | [0031](0031-proportional-data-boundary-and-change-safeguards.md) | 必要十分なデータ境界・競合制御・cutover | Accepted | 2026-08-30 |
+| [0032](0032-required-specialist-subagent-routing.md) | 独立scopeへの専門subagent利用とCheckpoint限定禁止 | Accepted | 2026-08-30 |
 
 ## 新しい ADR の形式
 

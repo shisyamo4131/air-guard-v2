@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-08-30
-- 仕様バージョン: 0.7.1
+- 仕様バージョン: 0.7.2
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -245,11 +245,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `docs/roadmaps/` を、目標、残作業、完了条件、証拠に基づく進捗の正本とする。確認済み要件の正本は引き続き本文書とする。
 - 正式運用準備は、合計100点の加重マイルストーンで管理する。現在はマイルストーン単位の部分加点を行わず、完了条件と証拠が揃った場合だけ当該点数を得る。
 - スコープ追加または完了判定の訂正で進捗率が低下する場合は、変更前、変更後、理由を記録し報告する。
-- 長期のマルチエージェント作業は、レビュー可能なチェックポイントを1件ずつ扱うイベント駆動型を基本とする。標準のセッション終了条件は、安全に独立実行できる作業が尽きた時点とする。
+- task交代中を除き、調査、review、test、利用者承認済みの補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、適切なsubagentを使用する。長期のマルチエージェント作業は、レビュー可能なチェックポイントを1件ずつ扱うイベント駆動型を基本とし、標準のセッション終了条件は安全に独立実行できる作業が尽きた時点とする。
+- checkpoint固有のsubagent禁止は、当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続checkpointへ持ち越さない。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitではsubagentを使用しない。
 - コーディネーターのセッション容量が300 MiBに達した場合は新規割当を停止し、リポジトリへ引継ぎ状態を記録する。コーディネーター交代は利用者の明示承認後に行う。専門タスクは、安全なチェックポイントかつ差分統合済みの場合に限り自動交代できる。
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は現在task IDに対応する永続session JSONLの実測を意味し、model token/context windowと区別する。task handoff閾値は300 MiB、Codex全体は10 GiBの参考警告とし、最新sessionを推測しない。ID不明、0件・複数一致、script失敗、全体scan不完全時は推測による交代・cleanup判断を行わない。
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
-- 次回の利用者承認済みコーディネーター交代では、ADR 0030の効率化手順をactivation baselineで発効する。完全新規task、primary repository、no-change callback、権限、最初のreal file-scoped commit、former taskの利用者削除境界は維持し、task-routed最小読取集合、bounded current snapshot、compact callback、staged/committed blob一致を使って全文再読・長文再掲・commit後validator重複だけを除く。本項は承認済みだが次回activation baselineまでは未発効であり、現在のcoordinator lifecycleを変更しない。
+- ADR 0030の効率化手順はPM-09からPM-10への交代で発効済みである。完全新規task、primary repository、no-change callback、権限、最初のreal file-scoped commit、former taskの利用者削除境界を維持し、task-routed最小読取集合、bounded current snapshot、compact callback、staged/committed blob一致を使用する。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
 - Firestore Rulesの既存許可を狭める改修は、対象環境、data件数、許容停止時間、旧client併存の有無からcutover方式を選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。

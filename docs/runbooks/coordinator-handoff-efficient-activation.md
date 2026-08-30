@@ -8,6 +8,8 @@
 
 このrunbookは2026-08-30の利用者承認済みPM-09からPM-10への交代activation baselineから発効した。以後のhandoffは本書とproject coordination runbookを使用する。
 
+task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはretiring/replacement coordinator自身が実施し、このrunbookの開始からownership確定までsubagentを使用しない。交代前checkpointのsubagent禁止はそのcheckpointだけに限定し、交代完了後のproduct checkpointへ持ち越さない。
+
 ## 発効前の停止条件
 
 - 利用者が次回coordinator交代を明示承認していない。

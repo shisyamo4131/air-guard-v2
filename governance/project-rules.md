@@ -38,6 +38,9 @@
 - primary taskをcoordinatorとし、別のcoordinator subagentは作らない。
 - AirGuardV2の全Codex taskは、利用者がrepositoryとして管理する`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続する。Codex専用worktreeを作成・使用せず、task作成・交代・再起動後の変更なしcallbackでcwdとGit top-levelがこのpathそのものであることを確認する。不一致時はfile変更、Git mutation、process起動、外部作用を開始せず利用者へ報告する。
 - base rolesは`developer`、`tester`、`code_explorer`、`docs_researcher`、`reviewer`とする。認証済み画面操作が必要な場合だけ`ui_tester`、security境界がある場合だけ`security_reviewer`を使う。
+- task交代・ownership activationを除き、調査、code探索、review、test、利用者が明示承認した補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは該当するsubagentを使用する。単一の小作業を形式的に分割したり、不要なroleを起動したりしない。
+- task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、その交代手順内ではsubagentを使用しない。
+- checkpointでsubagent禁止を指定した場合、その禁止は当該checkpointの開始からterminal callbackとcoordinator reviewまでに限定する。後続checkpointやproject全体へ引き継がず、継続禁止には利用者による別の明示指示を必要とする。
 - roleごとの具体的な権限と報告契約は`.codex/agents/*.toml`を正とする。
 - application codeの書込みは原則として利用者だけが行う。`developer`は利用者が範囲を明示した補助実装でのみ使用し、その場合のCodex側application code書込みを`developer`へ集中させる。
 - Codex coordinatorは設計・仕様、脅威と失敗経路の整理、差分review、検証計画・結果、document、roadmap、ADR、local branch・stage・commitを管理する。利用者の未コミットapplication codeを独自判断で修正、破棄、stage、commitしない。
@@ -101,4 +104,5 @@
 - coordinator交代は利用者の明示承認を必要とする。新taskはforkせず連番名で作成し、repositoryからの再開、権限、callback経路、最初のfile限定commitを検証し、archive可能な状態を利用者へ報告する。
 - taskのarchiveは利用者だけが行う。Codexは旧taskのarchiveを実行・依頼せず、新taskの直接repository接続、変更なしcallback、権限、最初のfile限定commitの検証完了を利用者へ報告して待機する。利用者がarchiveを完了するまで、旧新taskに重複した作業を割り当てない。
 - common governance、生成`AGENTS.md`、project-wide permissions、approval policy、coordinator責務、delegation/Git統合、callback/handoff、安全境界を変更した場合はinstruction-chain変更としてaffected taskを交代する。
+- project-wideのsubagent利用方針を変更した場合もdelegation境界のinstruction-chain変更として扱う。変更を検証・commitした後、利用者の明示承認を得てcoordinatorを完全新規taskへ交代し、交代中はsubagentを起動しない。
 - 2026-08-11のmanaged governance再構築に伴うtask交代は履歴上完了済みとする。今後はinstruction-chain変更が生じた場合だけ、利用者が承認した手順に従ってaffected taskを交代し、交代完了までは新規application作業を開始しない。
