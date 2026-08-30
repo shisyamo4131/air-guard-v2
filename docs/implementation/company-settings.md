@@ -10,11 +10,11 @@
 >
 > 2026-08-30 Company billing implementation: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
 >
-> 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
+> 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証、Codex in-app UI smoke、利用者の実際の利用環境での最終UI acceptanceを完了した。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報のlocal受入れ完了、振込先・通常設定は利用者最終UI acceptance待ち）
+- 状態: 段階移行中（Company基本情報・通常設定のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-30
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
@@ -81,13 +81,13 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`でapplication、Functions、Rules、domain/Emulator/PDF testを実装した。振込先・PDF対象17件、全domain 676件、専用Emulator 102件が成功し、Codex in-app UIで管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認した。非管理者UI、実際の請求PDF、利用者環境での最終表示は自動testとCodex smokeを利用者受入れの代用にせず、最終UI acceptance待ちとする。
 - `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`で基本情報・振込先の保存中制御と自己保存reflection判定を補正した。会社情報12件、振込先19件、全domain 688件が成功した。Codex専用UIは起動templateから製品画面へ移る前にNuxt `ECONNRESET`で停止したが、利用者が実際の環境で保存中の操作不可と自己保存時の警告非表示を確認し、この補正の最終UI acceptanceを完了した。
 
-## 2026-08-30 通常設定更新契約（local実装・Codex検証済み、利用者最終UI acceptance待ち）
+## 2026-08-30 通常設定更新契約（local実装・Codex検証・利用者最終UI acceptance完了）
 
 - `minuteInterval`、`roundSetting`、`firstDayOfWeek`、`attendanceManagementMode`だけを所有し、Company rootは分割しない。data migrationやfield renameも行わず、legacy保存値を維持する。
 - 同じtenantの有効な本登録会社管理者だけが保存でき、super-user、非管理者、temporary、disabledを拒否する。identityからCompany pathを導出し、client入力のtenant IDを受けない。
 - Rulesは4 fieldと将来用`attendanceSummaryMode`のclient直接変更を拒否する。profile・billing保護、同社User read、未移行fieldの互換updateを維持する。
 - 対象19件、全domain 707件、専用Emulator 104件が成功した。Codex in-app UIでは15分から20分への保存中に全controlが無効になること、完了後の表示反映、自己保存警告なし、15分への復元、console error 0件を確認した。終了後は専用port 0、runtime 0である。
-- 利用者の実際の利用環境では、4項目表示、1 fieldだけの保存、保存中全control無効、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を最終確認する。それまではCPU-03を完了としない。
+- 利用者は実際の利用環境で、4項目表示、1 fieldだけの保存、保存中全control無効、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を確認し、通常設定operationを受け入れた。CPU-03は振込先の残る最終UI acceptanceまで完了としない。
 
 ## tenant identity
 
