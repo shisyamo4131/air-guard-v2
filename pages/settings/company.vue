@@ -1,4 +1,5 @@
 <script setup>
+import { useAuthStore } from "@/stores/useAuthStore";
 import { useCompanyStore } from "@/stores/useCompanyStore";
 
 /*****************************************************************************
@@ -6,6 +7,14 @@ import { useCompanyStore } from "@/stores/useCompanyStore";
  *****************************************************************************/
 const companyStore = useCompanyStore();
 const { company: doc } = companyStore;
+const auth = useAuthStore();
+const canEditProfile = computed(
+  () =>
+    auth.isSuperUser === false &&
+    auth.user?.isAdmin === true &&
+    auth.user?.isTemporary === false &&
+    auth.user?.disabled === false,
+);
 </script>
 
 <template>
@@ -28,7 +37,11 @@ const { company: doc } = companyStore;
             <!-- 会社情報 -->
             <CompanyProfileEditor :company="doc">
               <template #activator="{ open }">
-                <CompanyActivatorBase :item="doc" @click:edit="open" />
+                <CompanyActivatorBase
+                  :item="doc"
+                  :editable="canEditProfile"
+                  @click:edit="open"
+                />
               </template>
             </CompanyProfileEditor>
           </v-col>

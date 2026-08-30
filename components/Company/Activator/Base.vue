@@ -16,6 +16,7 @@ const _props = defineProps({
     required: true,
     validator: (value) => value instanceof Company,
   },
+  editable: { type: Boolean, default: true },
   title: { type: String, default: undefined },
 });
 const props = useDefaults(_props, "CompanyActivatorBase");
@@ -61,6 +62,7 @@ const items = computed(() => {
     <v-toolbar color="secondary" density="compact" :title="props.title">
       <template #append>
         <v-btn
+          v-if="props.editable"
           icon="mdi-pencil"
           size="small"
           @click="emit('click:edit', props.item)"

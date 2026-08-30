@@ -142,6 +142,9 @@ test("Company basic editor no longer uses AirItemManager and Rules deny profile 
 
   assert.match(page, /<CompanyProfileEditor :company="doc">/);
   assert.doesNotMatch(page, /<CompanyManager :doc="doc" label="基本情報">/);
+  assert.match(page, /auth\.user\?\.isAdmin === true/);
+  assert.match(page, /auth\.isSuperUser === false/);
+  assert.match(page, /:editable="canEditProfile"/);
   assert.match(editor, /Company\.profileSchema/);
   assert.match(editor, /最新値を読み直す/);
   assert.match(editor, /自分の入力を優先する/);
@@ -161,4 +164,15 @@ test("Company basic editor no longer uses AirItemManager and Rules deny profile 
     source: descriptor.template.content,
   });
   assert.deepEqual(template.errors, []);
+
+  const pageUrl = new URL("../../pages/settings/company.vue", import.meta.url);
+  const pageSfc = parse(page, { filename: pageUrl.pathname });
+  assert.deepEqual(pageSfc.errors, []);
+  compileScript(pageSfc.descriptor, { id: "CompanySettingsPage" });
+  const pageTemplate = compileTemplate({
+    id: "CompanySettingsPage",
+    filename: pageUrl.pathname,
+    source: pageSfc.descriptor.template.content,
+  });
+  assert.deepEqual(pageTemplate.errors, []);
 });
