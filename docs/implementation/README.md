@@ -40,6 +40,7 @@
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
 - [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
 - [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Current。PM交代履歴、最新baseline、検証、承認境界、再開手順。
+- [Current coordinator handoff snapshot](current-coordinator-handoff.md): Prepared / inactive。次回の利用者承認済みcoordinator交代でbounded current restart sourceへ昇格する。発効前は上記2026-08-14文書をCurrentとして使う。
 
 ## アプリ入口・認証・共通基盤
 

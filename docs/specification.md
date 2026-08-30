@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-29
-- 仕様バージョン: 0.5.17
+- 最終更新日: 2026-08-30
+- 仕様バージョン: 0.5.18
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -256,6 +256,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - コーディネーターのセッション容量が300 MiBに達した場合は新規割当を停止し、リポジトリへ引継ぎ状態を記録する。コーディネーター交代は利用者の明示承認後に行う。専門タスクは、安全なチェックポイントかつ差分統合済みの場合に限り自動交代できる。
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は現在task IDに対応する永続session JSONLの実測を意味し、model token/context windowと区別する。task handoff閾値は300 MiB、Codex全体は10 GiBの参考警告とし、最新sessionを推測しない。ID不明、0件・複数一致、script失敗、全体scan不完全時は推測による交代・cleanup判断を行わない。
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
+- 次回の利用者承認済みコーディネーター交代では、ADR 0030の効率化手順をactivation baselineで発効する。完全新規task、primary repository、no-change callback、権限、最初のreal file-scoped commit、former taskの利用者削除境界は維持し、task-routed最小読取集合、bounded current snapshot、compact callback、staged/committed blob一致を使って全文再読・長文再掲・commit後validator重複だけを除く。本項は承認済みだが次回activation baselineまでは未発効であり、現在のcoordinator lifecycleを変更しない。
 - application codeの標準実装者は利用者とする。Codexは設計、仕様整理、脅威・失敗経路の分析、差分review、test計画・許可済み検証、documentとlocal Gitの管理を担当する。Codexによるapplication code編集は、利用者が対象を明示した補助実装に限定する。
 - Firestore Rulesの既存許可を狭める改修は、現行Rulesを維持した互換期間中に将来Rulesへ準拠するClient/Server CRUDを先行実装し、旧・候補Rules双方の回帰と対象環境での旧writer 0件を確認してからRulesを閉じる。新規pathはdocument作成前にdenyを確立し、緊急incident以外でRules閉鎖を既存caller移行より先行させない。詳細は[ADR 0029](decisions/0029-firestore-rules-compatible-crud-cutover.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。

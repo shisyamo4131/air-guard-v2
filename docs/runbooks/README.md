@@ -16,6 +16,7 @@
 | Dev環境へのbuild・deploy・remote検証 | Confirmed | [Dev deploy runbook](dev-deployment.md) | 対象serviceの設定・test、関連ADR、承認済みrelease checkpoint |
 | 関連packageのconsumer更新・公開 | Confirmed | [package release](package-release.md) | package repository、互換性、version、公開承認 |
 | Git統合、task loop、`容量チェック`・task/session容量、session handoff | Confirmed | [project coordination](project-coordination.md) | roadmap、checkpoint、current task ID・host、Git状態、capacity script |
+| 次回coordinator handoffの効率化発効 | Approved / inactive until next turnover | [handoff効率化の次回発効](coordinator-handoff-efficient-activation.md) | ADR 0030、current snapshot、activation baseline。発効前はproject coordinationを使用 |
 | Windows PC移行 | Confirmed | [Windows PC migration](windows-pc-migration.md) | backup媒体、Git bundle、local data、restore checkpoint |
 
 ## 読み方
