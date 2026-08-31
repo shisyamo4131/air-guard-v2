@@ -23,7 +23,7 @@
 | 対象 | 進捗 | 最終確認日 | ロードマップ |
 |---|---:|---|---|
 | AirGuardV2 正式運用準備 | 10% | 2026-08-27 | [airguard-v2.md](airguard-v2.md) |
-| Company部分更新 | 30% | 2026-08-30 | [company-partial-updates.md](company-partial-updates.md) |
+| Company部分更新 | 50% | 2026-08-31 | [company-partial-updates.md](company-partial-updates.md) |
 | Company legacy Stripe情報削除 | 0% | 2026-08-30 | [company-stripe-removal.md](company-stripe-removal.md) |
 | Company設定改修（CCB・Historical） | 10% | 2026-08-30 | [company-settings.md](company-settings.md) |
 

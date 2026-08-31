@@ -11,18 +11,20 @@
 > 2026-08-30 Company billing implementation: 振込先5 fieldを同じCompany rootに維持し、同社の有効な本登録User read、非super-user会社管理者だけの専用Callable write、all-null/all-complete相関、変更fieldだけの保存、client直接write拒否、再読込専用競合、明示clear、口座名義込み帳票を実装した。local自動検証とCodex in-app UI smokeは完了し、利用者の実際の利用環境での最終UI acceptanceを待っている。
 >
 > 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証、Codex in-app UI smoke、利用者の実際の利用環境での最終UI acceptanceを完了した。
+>
+> 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報・通常設定のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
+- 状態: 段階移行中（Company基本情報・通常設定・既定取極め撤去・表示順のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
-- 最終確認日: 2026-08-30
+- 最終確認日: 2026-08-31
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
-- 画面は基本情報、口座情報、設定情報、会社既定取極めを編集する。基本情報、口座情報、設定情報は専用editor/Callable、会社既定取極めは旧CompanyManagerを使用する。
+- 画面は基本情報、口座情報、設定情報を専用editor/Callableで編集する。会社既定取極めの編集入口は撤去済みで、Site固有取極めは維持する。
 - 基本情報、口座情報、設定情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
 - Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 field・住所由来`location/geopoint`・振込先5 field・通常設定4 field・予約済みcanonical fieldが変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。移行済みfieldの保存はFunctions/Admin SDKに限定した。
 
@@ -68,8 +70,8 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 通常設定editorは4 fieldを独立draftで編集し、保存開始からserver応答まで全入力・選択・増減・取消・保存・閉じる・最新値の再読込を無効にする。自分の保存reflectionは競合にせず、本当に異なるlive値だけで保存を止める。
 - `updateCompanyOperations`はexact `{changes}`の非空subsetだけを受け、transaction内の最新Companyへ重ねて検証する。実際に変わったfieldとserver `updatedAt`・actor `uid`だけを更新し、同値はwrite 0とする。
 - 既存Companyの`attendanceManagementMode`が欠損・null・空文字の場合は、別fieldの更新を妨げないよう検証上だけ`LABOR_STANDARD`とするが、勤怠fieldを補完保存しない。未知値は拒否する。変更要求としてはlegacyの既知2値だけを許可する。
-- 既定取極めはAgreementsManagerが`agreementsV2`を変更し、完了時にCompany全体をupdateする。
-- 取極め、表示順は`Company.update()`からdocument全体setへ進むため、古い画面が別機能やStripe/maintenanceの更新を上書きし得る。hydrate対象外の未知fieldが失われる可能性も残る。
+- Company既定取極めの編集入口とwhole-document writerは撤去済みで、保存済み`agreementsV2`とSite固有取極めは維持する。
+- `siteOrder`と`scheduleOrder`は専用Callableが変更対象fieldとserver管理metadataだけを更新し、Company全体setを行わない。
 
 ## 2026-08-30 振込先更新契約（local実装・Codex検証済み、利用者最終UI acceptance待ち）
 
@@ -95,7 +97,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - `siteOrder`と`scheduleOrder`は専用`updateCompanyArrangement` Callableへ移行した。会社管理者、または既知preset由来のfield別write permissionを持つ同社の有効な本登録non-super-userだけが保存できる。
 - Callableはexact `{field, order}`を受け、対象fieldとserver管理metadataだけをtransaction updateする。同値はwrite 0で、Rulesは`agreementsV2/siteOrder/scheduleOrder`のclient直接変更を全actorへ拒否する。
 - editorは独立draft、再読込専用競合、自保存reflection除外、single-flight、保存中の全関連操作停止、失敗時draft維持を実装した。既存Siteは終了済み等の状態でも表示へ残し、missing/deleted Siteだけを表示から除外して明示保存時だけ旧参照を除去する。Site取得失敗時はdraftを維持して保存を止める。
-- 専用15件、全domain 722件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止した。利用者確認は項目1〜10・13が合格し、一般利用者が対象画面へアクセスできないことも確認済みである。未保存の並べ替えを伴う競合と終了済みSite表示の最終確認待ちである。
+- 専用15件、全domain 722件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止した。利用者は実際の利用環境で項目1〜14、一般利用者の対象画面非表示、二画面競合、終了済み現場の表示を確認し、最終UI acceptanceを完了した。
 - 詳細なactor、入力、競合、rollbackは[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、Siteの表示判断は[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)を正とする。
 
 ## tenant identity

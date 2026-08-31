@@ -2,7 +2,7 @@
 
 - 状態: Active
 - 開始日: 2026-08-30
-- 現在の進捗: 30%
+- 現在の進捗: 50%
 - 部分加点: なし
 - 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、必要なCodex in-app UI smoke、bounded Dev反映、利用者による実際の利用環境での最終UI acceptanceまで完了する
 - 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)、[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)
@@ -24,7 +24,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | CPU-01 schema/editor境界の確定 | 10 | 10 | Completed | project rules、仕様、ADR、Company operation一覧、共通validationとdraft競合契約を確定する |
 | CPU-02 Company基本情報の部分更新 | 20 | 20 | Completed | 専用editor/writer、管理者境界、変更fieldだけの保存、server timestamp、schema/operation validation、回帰testを完了する |
 | CPU-03 振込先・通常設定の部分更新 | 20 | 0 | In progress | 2 operationの実装・自動test・Codex UI smokeは完了し、通常設定の利用者最終UI acceptanceも完了した。振込先の残る最終UI acceptance待ち |
-| CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 0 | In progress | Company既定取極めUI/writerを撤去し、`siteOrder`・`scheduleOrder`の専用更新、Rules、競合UI、自動検証を完了した。利用者確認は項目1〜10・13と一般利用者の画面非表示まで合格し、未保存変更を伴う競合と終了済みSite表示の最終確認待ち |
+| CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 20 | Completed | Company既定取極めUI/writer撤去、`siteOrder`・`scheduleOrder`専用更新、Rules、競合UI、自動検証、利用者による項目1〜14・権限・二画面競合・終了済みSite表示の最終確認を完了した |
 | CPU-05 旧Company writer除去・local受入れ | 15 | 0 | Not started | Company全体`set/update()` caller 0、Rules/Functions回帰、listener競合表示、主要画面再読込を確認する |
 | CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
 
@@ -33,8 +33,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 ## 現在の次工程
 
 1. 利用者が実際の利用環境で、振込先の会社管理者表示、5項目登録、明示clear、競合時の再読込、請求書PDFの口座名義と長文配置を最終確認する。
-2. CPU-04のCompany既定取極め撤去と表示順専用更新を、利用者の実際の利用環境で最終確認する。
-3. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
+2. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
 
 ## 進捗履歴
 
@@ -54,3 +53,5 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | 0 | CPU-04でCompany既定取極めUI/writerを撤去し、会社管理者またはfield別既知preset actorによる`siteOrder`・`scheduleOrder`専用Callable、client直接write拒否、独立draft、再読込専用競合、保存中制御、削除済みSite参照の除外を実装した。専用14件、全domain 721件、専用Emulator 106件、security review 4/5が成功した。Codex UI smokeは起動templateから製品画面へ遷移せず未完了で、利用者最終UI acceptanceも未完了のためCPU-04を加点しない。 |
 | 2026-08-31 | 30% | 0 | 利用者確認は項目1〜10・13が合格し、一般利用者が稼働予定・配置管理へアクセスできないことも確認した。二画面確認は未保存変更のない画面が保存後の順へ追従したため正常であり、dirty競合は再確認を要する。終了済み現場でも突発予定が発生する業務に合わせ、既存Siteは状態にかかわらず表示順へ残し、missing/deletedだけを除外するよう補正した。専用15件、全domain 722件と一般review GOを確認した。残る利用者最終UI acceptanceまでCPU-04を加点しない。 |
 | 2026-08-31 | 30% | 0 | 利用者はdirty競合を再確認して失敗と報告した。その後、利用者が開いていた同じ会社管理者Chrome 2画面をCodexが通常操作し、両方へ異なる未保存順を作成して片方だけ保存したところ、もう片方は未保存順を維持し、外部更新警告を表示して保存を無効化した。確認変更は元の順へ戻した。観測差が解消していないため利用者受入れ完了とはせず、CPU-04を加点しない。 |
+| 2026-08-31 | 30% | 0 | 利用者は、未保存変更がない画面は他画面の保存結果を自動反映し、未保存変更がある画面だけが自身の順を維持して警告・保存無効となる区別を確認し、二画面競合を受け入れた。CPU-04は終了済みSite表示の最終確認が残るため加点しない。 |
+| 2026-08-31 | 50% | +20 | 利用者が実際の利用環境で終了済み現場も並べ替えに表示されることを確認した。先に合格した項目1〜13、一般利用者の画面非表示、二画面競合と合わせてCPU-04の最終UI acceptanceを完了した。 |
