@@ -15,6 +15,8 @@
 > 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
 >
 > 2026-08-31 CPU-05 acceptance: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理、3 editor、2表示順dialog、未変更時の保存無効、キャンセル、console error 0件をCodexが確認し、local受入れを完了した。データ保存は行っていない。
+
+> 2026-08-31 SuperUser兼会社管理者対応: Devで会社管理者accountに`isSuperUser=true`も設定され、表示順入口がclientで止まっていた。表示順だけについて、同社の有効な本登録会社管理者ならSuperUser兼任でも許可し、会社管理者でないSuperUser、他社、不正identityはclientとCallableの両方で拒否するよう揃えた。生claimのboolean妥当性をclient sessionで別管理し、欠損・型不正時は入口を出さない。対象16件、全domain 727件、隔離Emulator 107件、security review GOを確認した。Rules、Company data、remote claim、他のCompany設定権限は変更していない。
 >
 > 2026-08-31 CPU-06 Dev release acceptance: `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`でDev PITR 7日を確認し、Company専用Callable 4件、固定commitの静的生成物、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件は東京・Node.js 22・ACTIVEでbrowser CORSに成功し、Hosting artifact一致、Rules compile/releaseも成功した。Hosting cache headerの適用順を`firebase.json`だけで補正し、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で通常設定を15分→20分→15分へ保存し、Codexは新規一般Userの新しいChrome tabで管理者入口非表示、直接URL拒否、app error 0件を確認した。Company部分更新roadmapは100%で完了した。
 
@@ -75,7 +77,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - `updateCompanyOperations`はexact `{changes}`の非空subsetだけを受け、transaction内の最新Companyへ重ねて検証する。実際に変わったfieldとserver `updatedAt`・actor `uid`だけを更新し、同値はwrite 0とする。
 - 既存Companyの`attendanceManagementMode`が欠損・null・空文字の場合は、別fieldの更新を妨げないよう検証上だけ`LABOR_STANDARD`とするが、勤怠fieldを補完保存しない。未知値は拒否する。変更要求としてはlegacyの既知2値だけを許可する。
 - Company既定取極めの編集入口とwhole-document writerは撤去済みで、保存済み`agreementsV2`とSite固有取極めは維持する。
-- `siteOrder`と`scheduleOrder`は専用Callableが変更対象fieldとserver管理metadataだけを更新し、Company全体setを行わない。
+- `siteOrder`と`scheduleOrder`は専用Callableが変更対象fieldとserver管理metadataだけを更新し、Company全体setを行わない。SuperUser兼会社管理者は自社の両fieldを更新できるが、会社管理者でないSuperUserは拒否する。
 
 ## 2026-08-31 振込先更新契約（local実装・Codex検証・利用者最終UI acceptance完了）
 
@@ -98,7 +100,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 ## 2026-08-30 Company既定取極め撤去・表示順更新契約
 
 - Company設定pageからCompany既定`agreementsV2`の編集UIとCompany whole-document writerを撤去した。Site詳細の取極めUI、schema field、保存済みCompany値は維持し、data migrationしない。
-- `siteOrder`と`scheduleOrder`は専用`updateCompanyArrangement` Callableへ移行した。会社管理者、または既知preset由来のfield別write permissionを持つ同社の有効な本登録non-super-userだけが保存できる。
+- `siteOrder`と`scheduleOrder`は専用`updateCompanyArrangement` Callableへ移行した。同社の有効な本登録会社管理者はSuperUser兼任でも保存できる。会社管理者でないUserはnon-super-userかつ既知preset由来のfield別write permissionを持つ場合だけ保存できる。
 - Callableはexact `{field, order}`を受け、対象fieldとserver管理metadataだけをtransaction updateする。同値はwrite 0で、Rulesは`agreementsV2/siteOrder/scheduleOrder`のclient直接変更を全actorへ拒否する。
 - editorは独立draft、再読込専用競合、自保存reflection除外、single-flight、保存中の全関連操作停止、失敗時draft維持を実装した。既存Siteは終了済み等の状態でも表示へ残し、missing/deleted Siteだけを表示から除外して明示保存時だけ旧参照を除去する。Site取得失敗時はdraftを維持して保存を止める。
 - 専用15件、全domain 722件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止した。利用者は実際の利用環境で項目1〜14、一般利用者の対象画面非表示、二画面競合、終了済み現場の表示を確認し、最終UI acceptanceを完了した。

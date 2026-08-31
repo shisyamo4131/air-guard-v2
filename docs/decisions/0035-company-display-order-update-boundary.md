@@ -6,6 +6,7 @@
 - 関連ロードマップ: [Company部分更新](../roadmaps/company-partial-updates.md)
 - 関連判断: [0031](0031-proportional-data-boundary-and-change-safeguards.md)、[0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md)
 - 置換範囲: [0025](0025-company-configuration-boundary.md)に残る表示順のpreset-only actor、専用Settings document、revision前提を、現行単一Company rootのfield限定更新へ置き換える。
+- 一部置換: [0037](0037-superuser-company-admin-display-order.md)が、会社管理者でもあるsuper-userを拒否するactor境界だけを置き換える。単独super-user・他tenant拒否、field別preset、入力・競合・保存境界は維持する。
 
 ## 背景
 

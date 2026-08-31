@@ -1600,6 +1600,22 @@ test("arrangement Callable applies field-specific preset authorization", async (
       order: [{ siteId: "site-c", shiftType: "DAY" }],
     },
     {
+      name: "dual-role-site",
+      isAdmin: true,
+      roles: [],
+      isSuperUser: true,
+      field: "siteOrder",
+      order: [{ siteId: "site-dual-site", shiftType: "NIGHT" }],
+    },
+    {
+      name: "dual-role-schedule",
+      isAdmin: true,
+      roles: [],
+      isSuperUser: true,
+      field: "scheduleOrder",
+      order: [{ siteId: "site-dual-schedule", shiftType: "DAY" }],
+    },
+    {
       name: "legal-site",
       isAdmin: false,
       roles: ["legal"],
@@ -1621,7 +1637,7 @@ test("arrangement Callable applies field-specific preset authorization", async (
       uid,
       companyId,
       email,
-      isSuperUser: false,
+      isSuperUser: actor.isSuperUser ?? false,
     });
     await seedRegisteredUser({
       uid,
@@ -1634,7 +1650,11 @@ test("arrangement Callable applies field-specific preset authorization", async (
     const result = await updateCompanyArrangement.run(
       callableRequest({
         uid,
-        claims: { email, companyId, isSuperUser: false },
+        claims: {
+          email,
+          companyId,
+          isSuperUser: actor.isSuperUser ?? false,
+        },
         data: { field: actor.field, order: actor.order },
       }),
     );
@@ -1669,7 +1689,20 @@ test("arrangement Callable applies field-specific preset authorization", async (
     { name: "unknown", isAdmin: false, roles: ["custom-role"] },
     { name: "temporary", isAdmin: true, roles: [], isTemporary: true },
     { name: "disabled", isAdmin: true, roles: [], disabled: true },
-    { name: "super", isAdmin: true, roles: [], isSuperUser: true },
+    { name: "super", isAdmin: false, roles: [], isSuperUser: true },
+    {
+      name: "super-site-preset",
+      isAdmin: false,
+      roles: ["legal"],
+      isSuperUser: true,
+    },
+    {
+      name: "super-schedule-preset",
+      isAdmin: false,
+      roles: ["controller"],
+      isSuperUser: true,
+      field: "scheduleOrder",
+    },
     {
       name: "wrong-field-permission",
       isAdmin: false,

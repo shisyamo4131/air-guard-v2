@@ -340,9 +340,16 @@ test("same arrangement value is a write-zero no-op", async () => {
 });
 
 test("administrator and matching known presets may update only their owned order", async () => {
+  const dualRoleIdentity = { ...identity, isSuperUser: true };
   const allowed = [
     { field: "siteOrder", actor: admin },
     { field: "scheduleOrder", actor: admin },
+    { field: "siteOrder", actor: admin, currentIdentity: dualRoleIdentity },
+    {
+      field: "scheduleOrder",
+      actor: admin,
+      currentIdentity: dualRoleIdentity,
+    },
     {
       field: "siteOrder",
       actor: { ...admin, isAdmin: false, roles: ["legal"] },
@@ -356,7 +363,7 @@ test("administrator and matching known presets may update only their owned order
     const { calls, firestore } = createFirestore({ actor: scenario.actor });
     await updateCompanyArrangement({
       firestore,
-      identity,
+      identity: scenario.currentIdentity ?? identity,
       input: {
         field: scenario.field,
         order: [{ siteId: "site-new", shiftType: "DAY" }],
@@ -373,8 +380,32 @@ test("administrator and matching known presets may update only their owned order
     { actor: { ...admin, isTemporary: true } },
     { actor: { ...admin, disabled: true } },
     { actor: { ...admin, companyId: "company-b" } },
+    { actor: { ...admin, isTemporary: undefined } },
+    { actor: { ...admin, isTemporary: "false" } },
+    { actor: { ...admin, disabled: undefined } },
+    { actor: { ...admin, disabled: 0 } },
     { actor: null },
-    { actor: admin, currentIdentity: { ...identity, isSuperUser: true } },
+    {
+      actor: { ...admin, isAdmin: false },
+      currentIdentity: dualRoleIdentity,
+    },
+    {
+      actor: { ...admin, isAdmin: false, roles: ["legal"] },
+      currentIdentity: dualRoleIdentity,
+    },
+    {
+      field: "scheduleOrder",
+      actor: { ...admin, isAdmin: false, roles: ["controller"] },
+      currentIdentity: dualRoleIdentity,
+    },
+    {
+      actor: admin,
+      currentIdentity: { uid: identity.uid, companyId: identity.companyId },
+    },
+    {
+      actor: admin,
+      currentIdentity: { ...identity, isSuperUser: "false" },
+    },
     {
       field: "scheduleOrder",
       actor: { ...admin, isAdmin: false, roles: ["legal"] },
@@ -419,6 +450,7 @@ test("client actions do not mutate live Company and rethrow failures", async () 
   const auth = {
     companyId: "company-a",
     isSuperUser: false,
+    isSuperUserClaimValid: true,
     user: { isAdmin: true, isTemporary: false, disabled: false },
     hasPresetPermission: () => false,
   };
@@ -468,7 +500,7 @@ test("client actions do not mutate live Company and rethrow failures", async () 
   }
 });
 
-test("client action visibility is field-specific and excludes super-users", async () => {
+test("client action visibility is field-specific for administrators, presets, and super-users", async () => {
   const scenarios = [
     { type: "arrangement", isAdmin: true, permissions: [], expected: true },
     { type: "schedule", isAdmin: true, permissions: [], expected: true },
@@ -501,21 +533,91 @@ test("client action visibility is field-specific and excludes super-users", asyn
       isAdmin: true,
       permissions: [],
       isSuperUser: true,
+      expected: true,
+    },
+    {
+      type: "schedule",
+      isAdmin: true,
+      permissions: [],
+      isSuperUser: true,
+      expected: true,
+    },
+    {
+      type: "arrangement",
+      isAdmin: false,
+      permissions: ["sites:write"],
+      isSuperUser: true,
+      expected: false,
+    },
+    {
+      type: "schedule",
+      isAdmin: false,
+      permissions: ["site-operation-schedules:write"],
+      isSuperUser: true,
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      omitIsSuperUser: true,
+      isSuperUserClaimValid: false,
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      isSuperUser: false,
+      isSuperUserClaimValid: false,
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      isSuperUser: "false",
+      isSuperUserClaimValid: false,
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      isTemporary: undefined,
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      disabled: "false",
+      expected: false,
+    },
+    {
+      type: "arrangement",
+      isAdmin: true,
+      permissions: [],
+      companyId: "company-b",
       expected: false,
     },
   ];
   for (const scenario of scenarios) {
     const auth = {
-      companyId: "company-a",
-      isSuperUser: scenario.isSuperUser ?? false,
+      companyId: scenario.companyId ?? "company-a",
       user: {
         isAdmin: scenario.isAdmin,
-        isTemporary: false,
-        disabled: false,
+        isTemporary:
+          "isTemporary" in scenario ? scenario.isTemporary : false,
+        disabled: "disabled" in scenario ? scenario.disabled : false,
       },
       hasPresetPermission: (permission) =>
         scenario.permissions.includes(permission),
+      isSuperUserClaimValid: scenario.isSuperUserClaimValid ?? true,
     };
+    if (!scenario.omitIsSuperUser) {
+      auth.isSuperUser = scenario.isSuperUser ?? false;
+    }
     const mounted = await loadActionsHarness({
       auth,
       company: { docId: "company-a", siteOrder: [], scheduleOrder: [] },
@@ -530,6 +632,72 @@ test("client action visibility is field-specific and excludes super-users", asyn
       mounted.cleanup();
     }
   }
+});
+
+test("auth session exposes strict SuperUser claim validity to display-order actions", async () => {
+  const authActions = await readFile(
+    new URL(
+      "../../composables/application/auth/useAuthActions.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  const authStore = await readFile(
+    new URL("../../stores/useAuthStore.js", import.meta.url),
+    "utf8",
+  );
+  const orderActions = await readFile(
+    new URL(
+      "../../composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+
+  const rawClaim = authActions.match(
+    /const\s+([A-Za-z_$][\w$]*)\s*=\s*idTokenResult\.claims\?\.isSuperUser\s*;/u,
+  );
+  if (rawClaim) {
+    const rawClaimName = rawClaim[1];
+    assert.match(
+      authActions,
+      new RegExp(
+        `auth\\.isSuperUserClaimValid\\s*=\\s*typeof ${rawClaimName} === ["']boolean["']`,
+        "u",
+      ),
+    );
+    assert.match(
+      authActions,
+      new RegExp(`auth\\.isSuperUser\\s*=\\s*!!${rawClaimName}`, "u"),
+    );
+  } else {
+    assert.match(
+      authActions,
+      /auth\.isSuperUserClaimValid\s*=\s*\n?\s*typeof idTokenResult\.claims\?\.isSuperUser === ["']boolean["']/u,
+    );
+    assert.match(
+      authActions,
+      /auth\.isSuperUser\s*=\s*!!idTokenResult\.claims\?\.isSuperUser/u,
+    );
+  }
+
+  const clearSession = authActions.match(
+    /async function clearSession\(\) \{([\s\S]*?)\n  \}/u,
+  );
+  assert.ok(clearSession, "clearSession source contract must remain visible");
+  assert.match(clearSession[1], /auth\.isSuperUserClaimValid\s*=\s*false/u);
+  assert.match(
+    authStore,
+    /const isSuperUserClaimValid\s*=\s*ref\(false\)\s*;/u,
+  );
+  assert.match(
+    authStore,
+    /return \{[\s\S]*?\bisSuperUserClaimValid\s*,[\s\S]*?\};/u,
+  );
+  assert.match(
+    orderActions,
+    /auth\.isSuperUserClaimValid\s*===\s*true/u,
+  );
 });
 
 test("schedule manager removes only schedule order through the guarded action", async () => {
@@ -565,6 +733,7 @@ test("schedule manager removes only schedule order through the guarded action", 
   const auth = {
     companyId: "company-a",
     isSuperUser: false,
+    isSuperUserClaimValid: true,
     user: { isAdmin: true, isTemporary: false, disabled: false },
     hasPresetPermission: () => false,
   };

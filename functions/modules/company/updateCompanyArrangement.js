@@ -121,7 +121,7 @@ function ordersEqual(current, requested) {
 
 function assertActor(identity, actorUser, field) {
   if (
-    identity.isSuperUser !== false ||
+    typeof identity.isSuperUser !== "boolean" ||
     !isPlainRecord(actorUser) ||
     actorUser.companyId !== identity.companyId ||
     actorUser.isTemporary !== false ||
@@ -135,6 +135,13 @@ function assertActor(identity, actorUser, field) {
   }
 
   if (actorUser.isAdmin === true) return;
+
+  if (identity.isSuperUser !== false) {
+    throw new CompanyArrangementUpdateError(
+      COMPANY_ARRANGEMENT_UPDATE_ERROR_CODES.ACTOR_NOT_ALLOWED,
+      "[updateCompanyArrangement] Super-user lacks Company administrator authority",
+    );
+  }
 
   let permissions;
   try {

@@ -4,7 +4,7 @@
 >
 > ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。2026-08-30に主repositoryのcompatible reader、migration/restore planner、pre-containment Rulesと専用testをcorrective rollbackした。本書はhistorical evidenceであり、現在の設計または実行手順として使用しない。
 >
-> 表示順の現行actorと競合契約は[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。会社管理者をactorへ含め、Company rootのfield限定Callableを使用し、revisionは導入しない。以下のpreset-only・Settings/arrangement・expected revision記述は旧設計の履歴である。
+> 表示順の現行actorは[ADR 0037](../decisions/0037-superuser-company-admin-display-order.md)、保存・競合契約は[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。SuperUser兼会社管理者を自社表示順のactorへ含め、Company rootのfield限定Callableを使用し、revisionは導入しない。以下のpreset-only・Settings/arrangement・expected revision記述は旧設計の履歴である。
 >
 > 2026-08-31 CPU-05 acceptance: ADR 0031の現行設計に従い、未使用の旧Company root writerを削除してCompany rootのclient create/update/deleteをlocal Rulesで全面拒否した。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5を確認した。Codex UI smokeは起動templateの`ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理と専用editor/dialogを再確認し、console error 0件でlocal受入れを完了した。データ保存とDev Rules deployは実施していない。以下の8 document移行順は引き続きhistoricalである。
 

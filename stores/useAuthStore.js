@@ -26,6 +26,7 @@ export const useAuthStore = defineStore("auth", () => {
   const uid = ref(null);
   const isEmailVerified = ref(false);
   const isSuperUser = ref(false);
+  const isSuperUserClaimValid = ref(false);
   const isDeveloper = ref(false);
   const companyId = ref(null);
 
@@ -212,6 +213,7 @@ export const useAuthStore = defineStore("auth", () => {
     roles,
     companyId,
     isSuperUser,
+    isSuperUserClaimValid,
     isDeveloper,
     waitUntilReady,
     waitUntilSessionCleared,

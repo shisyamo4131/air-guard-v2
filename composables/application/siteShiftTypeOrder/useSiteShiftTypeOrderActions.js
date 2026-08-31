@@ -53,13 +53,16 @@ export function useSiteShiftTypeOrderActions({
   const canUpdate = Vue.computed(() => {
     const permission = PERMISSION_BY_TYPE[internalType.value];
     const user = auth.user;
+    const isCompanyAdmin = user?.isAdmin === true;
     return (
       !!permission &&
-      auth.isSuperUser === false &&
+      auth.isSuperUserClaimValid === true &&
+      typeof auth.isSuperUser === "boolean" &&
       user?.isTemporary === false &&
       user?.disabled === false &&
       auth.companyId === companyStore.company?.docId &&
-      (user?.isAdmin === true || auth.hasPresetPermission(permission))
+      (isCompanyAdmin ||
+        (auth.isSuperUser === false && auth.hasPresetPermission(permission)))
     );
   });
 

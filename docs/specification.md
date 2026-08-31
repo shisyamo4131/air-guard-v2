@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-30
-- 仕様バージョン: 0.8.0
+- 最終更新日: 2026-08-31
+- 仕様バージョン: 0.8.1
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -69,7 +69,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` の会社documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。同一会社の有効な本登録Userによる既存document更新は、field・actor境界を機能単位で移行するまでの互換経路として維持する。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
-- Company設定ではsuper-userを正式actorに含めない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。
+- Company設定ではsuper-userであることだけを正式actorの根拠にしない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。表示順だけは、同じtenantの有効な本登録会社管理者でもあるsuper-userに、自社の`siteOrder`と`scheduleOrder`の更新を許可する。会社管理者でないsuper-user、他tenant、profile・billing・operations等の他のCompany設定にはこの例外を広げない。
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
@@ -134,7 +134,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 振込先更新は専用`updateCompanyBilling` Callableを使う。requestはnon-emptyな`changes`だけを持ち、変更可能keyを`bankName/branchName/accountType/accountNumber/accountHolder`のsubsetへ限定する。tenant pathは検証済みidentityから導出し、transaction内の最新Companyへchangesを重ね、現在の`invoiceNumber`を検証contextとして共有billing contractで整合性を確認する。`invoiceNumber`はCompany基本情報operationの所有を維持し、振込先requestで受信・更新しない。実際に変わった5 fieldとserver timestampの`updatedAt`・実行者`uid`だけを保存し、clientからの振込先直接変更は会社管理者を含む全actorへ拒否する。
 - 完全な振込先だけを口座名義を含めて帳票へ印字し、不完全または不正な振込先は印字しない。会社情報の表示・帳票layoutは長い値を折返し、縮小または表示上の省略で扱い、保存値またはsnapshot値を切り捨てない。100文字の会社名、長い住所・建物・口座名義をrender test対象とする。詳細な判断は[ADR 0033](decisions/0033-company-bank-transfer-update-boundary.md)を正とする。
 - `minuteInterval`は5分単位のinteger `5/10/15/20/25/30`だけを許可し、初期値は15とする。`roundSetting`は`FLOOR/ROUND/CEIL`だけを許可して初期値を四捨五入、`firstDayOfWeek`はinteger `0`〜`6`だけを許可して初期値を日曜日とし、変更は画面へ即時反映する。`roundSetting`はCompany defaultであり、OperationResult作成時に適用modeをsnapshotする。変更後に既存OperationResult、Billing、帳票を再計算せず、訂正は新しいrevisionで扱う。
-- `arrangement`の`siteOrder`と`scheduleOrder`は各最大2000件とし、各itemはexact `{siteId, shiftType}`だけを持つ。`siteId`は1〜128文字で`/`とcontrol characterを拒否し、`shiftType`は`DAY/NIGHT`、同一配列内の`siteId + shiftType`は一意とする。computed `key`は保存しない。1回の更新はどちらか一方だけを対象とする。actorは同じtenantの有効な本登録non-super-userとし、会社管理者、または既知role preset由来で`siteOrder`には`sites:write`、`scheduleOrder`には`site-operation-schedules:write`を持つUserだけを許可する。直接permission文字列、未知role、temporary、disabled、他tenant、super-userは拒否する。専用Callableは対象fieldとserver管理の更新時刻・更新者だけをtransactionで更新し、同値はwrite 0とする。clientから`agreementsV2`、`siteOrder`、`scheduleOrder`を直接変更することは全actorへ拒否する。全Siteの存在はtransaction中に検査しない。表示時はdocumentが存在するSiteをACTIVE・TERMINATED等の状態にかかわらず残し、存在しない削除済み参照だけを無視して次回の明示保存で除去する。保存中はdrag、保存、取消、再読込、行削除を含む関連操作を停止し、失敗時はlive Companyを先行変更せずdraftを維持する。同じfieldを許可actorが完全に同時保存した競合はrevisionを導入せず、後からcommitした値が残る残存riskとして扱う。詳細なSite表示判断は[ADR 0036](decisions/0036-terminated-site-display-order-visibility.md)を正とする。
+- `arrangement`の`siteOrder`と`scheduleOrder`は各最大2000件とし、各itemはexact `{siteId, shiftType}`だけを持つ。`siteId`は1〜128文字で`/`とcontrol characterを拒否し、`shiftType`は`DAY/NIGHT`、同一配列内の`siteId + shiftType`は一意とする。computed `key`は保存しない。1回の更新はどちらか一方だけを対象とする。actorは同じtenantの有効な本登録Userとし、会社管理者、またはnon-super-userかつ既知role preset由来で`siteOrder`には`sites:write`、`scheduleOrder`には`site-operation-schedules:write`を持つUserだけを許可する。会社管理者は`isSuperUser`がboolean `true`でも自社の両表示順を更新できる。会社管理者でないsuper-user、直接permission文字列、未知role、temporary、disabled、他tenant、`isSuperUser`の欠損・型不正は拒否する。専用Callableは対象fieldとserver管理の更新時刻・更新者だけをtransactionで更新し、同値はwrite 0とする。clientから`agreementsV2`、`siteOrder`、`scheduleOrder`を直接変更することは全actorへ拒否する。全Siteの存在はtransaction中に検査しない。表示時はdocumentが存在するSiteをACTIVE・TERMINATED等の状態にかかわらず残し、存在しない削除済み参照だけを無視して次回の明示保存で除去する。保存中はdrag、保存、取消、再読込、行削除を含む関連操作を停止し、失敗時はlive Companyを先行変更せずdraftを維持する。同じfieldを許可actorが完全に同時保存した競合はrevisionを導入せず、後からcommitした値が残る残存riskとして扱う。actor境界は[ADR 0037](decisions/0037-superuser-company-admin-display-order.md)、Site表示判断は[ADR 0036](decisions/0036-terminated-site-display-order-visibility.md)を正とする。
 - `attendanceManagementMode`は`attendanceSummaryMode`へ改名し、値を`LABOR_STANDARD`と`OPERATION_COUNT`に限定する。両方のprojectionは常時生成し、mode変更は即時かつ可逆な画面・navigation切替だけとする。`LABOR_STANDARD`では労基準拠の勤怠一覧と打刻CSV、`OPERATION_COUNT`では勤務回数実績を表示し、労基準拠一覧と打刻CSVを非表示にする。mode変更による過去data migration、再集計、移動、削除は行わない。初期値は`LABOR_STANDARD`とする。
 - legacy `attendanceManagementMode`の`ACTUAL_DATE`は`LABOR_STANDARD`、`OPERATION_DATE`は`OPERATION_COUNT`へ移行する。field欠損時だけ`LABOR_STANDARD`を補い、未知値は推測変換せずmigration conflictとしてapplyを停止する。
 - 給与計算へ用いる勤務回数、日勤・夜勤、同日複数勤務、夜勤跨ぎ、休憩、訂正、認可、CSVの詳細は勤怠実績管理改修で改めて決める。CCBは現在の集計方法を最終仕様として固定しない。

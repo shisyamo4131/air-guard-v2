@@ -49,6 +49,7 @@
 | [0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md) | 承認済み境界でのCodex実装と利用者最終UI受入れ | Accepted | 2026-08-30 |
 | [0035](0035-company-display-order-update-boundary.md) | Company表示順の専用更新・権限境界 | Accepted | 2026-08-30 |
 | [0036](0036-terminated-site-display-order-visibility.md) | 終了済み現場を表示順へ残す判断 | Accepted | 2026-08-31 |
+| [0037](0037-superuser-company-admin-display-order.md) | SuperUser兼会社管理者の自社表示順更新 | Accepted | 2026-08-31 |
 
 ## 新しい ADR の形式
 

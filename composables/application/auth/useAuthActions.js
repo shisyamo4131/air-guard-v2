@@ -75,10 +75,13 @@ export function useAuthActions() {
    */
   async function initializeSession(user) {
     const idTokenResult = await user.getIdTokenResult(true);
+    const rawIsSuperUserClaim = idTokenResult.claims?.isSuperUser;
 
     auth.uid = user.uid;
     auth.isEmailVerified = user.emailVerified;
-    auth.isSuperUser = !!idTokenResult.claims?.isSuperUser;
+    auth.isSuperUserClaimValid =
+      typeof rawIsSuperUserClaim === "boolean";
+    auth.isSuperUser = !!rawIsSuperUserClaim;
     auth.isDeveloper = !!idTokenResult.claims?.isDeveloper;
     auth.companyId = idTokenResult.claims?.companyId || null;
 
@@ -112,6 +115,7 @@ export function useAuthActions() {
     auth.uid = null;
     auth.isEmailVerified = false;
     auth.isSuperUser = false;
+    auth.isSuperUserClaimValid = false;
     auth.isDeveloper = false;
     auth.companyId = null;
 

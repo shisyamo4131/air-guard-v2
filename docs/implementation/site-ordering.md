@@ -13,7 +13,7 @@
 
 - 保存先は引き続きCompany rootの`siteOrder`と`scheduleOrder`であり、document分割は行っていない。保存itemはexact `{siteId, shiftType}`、各配列最大2000件、pair一意で、computed `key`は送信しない。
 - `updateCompanyArrangement` CallableがidentityからCompanyを導出し、一度に一方のfieldとserver `updatedAt`・`uid`だけをtransaction updateする。同値はwrite 0で、live Companyをclient側で先行変更しない。
-- actorは同社の有効な本登録non-super-userで、会社管理者、または既知preset由来のfield別permissionを持つUserとする。`siteOrder`は`sites:write`、`scheduleOrder`は`site-operation-schedules:write`。直接permission文字列、未知role、temporary、disabled、他社、super-userは拒否する。
+- actorは同社の有効な本登録Userで、会社管理者、またはnon-super-userかつ既知preset由来のfield別permissionを持つUserとする。`siteOrder`は`sites:write`、`scheduleOrder`は`site-operation-schedules:write`。SuperUser兼会社管理者は自社の両表示順を更新できる。会社管理者でないsuper-user、直接permission文字列、未知role、temporary、disabled、他社、`isSuperUser`欠損・型不正は拒否する。
 - RulesはCPU-05でCompany rootのclient create/update/deleteを全面拒否した。表示順の正規更新は`updateCompanyArrangement` Callableだけが担う。
 - reorder formは独立draftを使い、dirty中の外部更新を黙って反映せず保存を止める。自分の保存reflectionは競合扱いしない。保存中はdrag、保存、取消、再読込、sort/removeを停止し、失敗時はdialogとdraftを維持する。
 - documentが存在するSiteはACTIVE・TERMINATED等の状態にかかわらず表示へ残す。missing/deleted Siteだけを表示から除外し、次の明示保存時だけorderから除去する。Site取得失敗は削除済みと推測せず、安全側でdraftを維持して保存を止める。

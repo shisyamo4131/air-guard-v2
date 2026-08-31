@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-30
+- 最終確認日: 2026-08-31
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. ADR 0031に従う旧CCB corrective rollbackとCompany基本情報の部分更新は完了した。PM-12 activation後、[Company部分更新ロードマップ](company-partial-updates.md)で振込先、通常設定、取極め、表示順のwhole-document replacementを、承認済みbounded checkpoint内のCodex実装・自動検証・必要なin-app UI smokeと利用者最終UI acceptanceにより順次置換する。Company全体writer 0件とlocal受入れの後に[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ接続する。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. [Company部分更新ロードマップ](company-partial-updates.md)はDev反映・利用者受入れまで100%で完了した。その後Devで見つかった兼任accountの表示順問題を[SuperUser兼会社管理者の表示順対応ロードマップ](superuser-company-admin-display-order.md)として独立させ、単独SuperUser・他tenant拒否を維持したlocal実装と検証、bounded Dev反映、利用者最終UI acceptanceを完了してから[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ戻る。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

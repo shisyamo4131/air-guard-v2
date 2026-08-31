@@ -1,7 +1,7 @@
 # Current coordinator handoff snapshot
 
 - 状態: Current / PM-12 active ownership
-- 更新日: 2026-08-30
+- 更新日: 2026-08-31
 - active coordinator: PM（AirGuardV2）-12 / task `01a05183-9ab8-7f23-8e13-2ec47296dc04` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-12 task `01a05183-9ab8-7f23-8e13-2ec47296dc04`
 - former coordinator: PM（AirGuardV2）-11 / task `01a05143-0fd6-76c2-ad4c-099742f6e527` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
@@ -25,13 +25,14 @@
 - Company operations implementation commit: `df1d656d56cc39b51e43bb6367e3c709aa760095`
 - Company operations acceptance commit: 本snapshotと同じlocal commit
 - Company arrangement implementation commit: 本snapshotと同じlocal commit
+- SuperUser兼会社管理者表示順 local implementation commit: 本snapshotと同じlocal commit
 - expected upstream: none
 - expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
-- specification: `0.8.0`
-- unintegrated work: 0。Company基本情報・振込先・通常設定・表示順のapplication・Functions・Rules・test・文書はlocal commitへ統合済みであり、各operationの利用者最終UI acceptanceも完了した。残るCompany部分更新工程はCPU-06のbounded Dev反映・利用者受入れである。
+- specification: `0.8.1`
+- unintegrated work: 0。SuperUser兼会社管理者の自社表示順更新はapplication・Functions・test・文書を本snapshotと同じlocal commitへ統合済みである。Dev反映と利用者最終UI acceptanceは別のbounded release checkpointとして未実施である。
 
 ## Confirmed product state
 
@@ -52,6 +53,7 @@
 - Company通常設定4 fieldは専用editorと`updateCompanyOperations` Callableへ移行した。Company rootを分割・移行せず、legacy勤怠値を共有canonical parserへ写像し、欠損時は検証だけ既定化して補完writeしない。会社管理者だけのchanged-only transaction、client直接write拒否、保存中全control無効、自己保存reflection識別、真正競合の再読込をlocal実装・検証した。
 - 利用者は実際の環境で、通常設定4項目の表示・1項目保存、保存中の全入力・操作無効、自己保存時の外部更新警告非表示、真正な外部更新時の再読込、非管理者・super-userの編集拒否を確認し、通常設定operationを受け入れた。
 - Company既定取極めのUI/writerは撤去し、Site取極めと保存済みCompany値は維持した。`siteOrder`・`scheduleOrder`は会社管理者またはfield別既知preset actorだけが専用Callableで更新する。Company全体保存を外し、独立draft、再読込専用競合、自保存reflection除外、保存中全関連操作停止、失敗時維持、missing/deleted Site除外、protected 3 fieldのclient直接write拒否を実装した。終了済み等の既存Siteは表示順へ残す。完全同時保存は後commit優先の残存riskである。
+- Devで、会社管理者accountに`isSuperUser=true`も設定されると両表示順の編集入口がclientで消え、FunctionsへPOSTが届かない問題を確認した。ADR 0037で、同社の有効な本登録会社管理者ならSuperUser兼任でも自社の`siteOrder`・`scheduleOrder`を更新できるようにした。会社管理者でないSuperUser、他tenant、temporary、disabled、不正identityはclientとCallableの両方で拒否し、Company基本情報・振込先・通常設定等へ例外を広げない。
 - CPU-05で静的caller 0の旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社の有効な本登録User readと4つの専用Callableは維持する。旧writer 0件のAST検査、全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5を確認した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで3主要画面と専用editor/dialogを確認し、CPU-05のlocal受入れを完了した。
 - 利用者は、task交代中を除き独立して分割できる調査・review・test・明示承認済み補助実装等に適切なsubagentを使用し、Checkpoint固有の禁止を当該Checkpointだけへ限定するproject-wide方針を承認した。交代手順内はcoordinatorだけで実施する。
 - 利用者はADR 0034として、承認済みcheckpointまたはfeature boundary内ではCodex developerをapplication実装の標準担当とし、Codexが必要なFunctions・Rules、自動test、必要なin-app UI smokeまで担当し、利用者が実際の利用環境で最終UI acceptanceを行うproject-wide方針を承認した。file-by-file確認はcheckpointが明示した場合だけとし、外部作用の別承認境界は維持する。
@@ -72,8 +74,9 @@
 - completed acceptance checkpoint: `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`。ProfileEditor/BillingEditorの保存中制御と自己保存reflection識別を修正し、会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UI smokeは起動templateから製品画面へ遷移せずNuxt `ECONNRESET`で対象操作前に停止したが、利用者が実際の環境で保存中の入力無効化、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。
 - completed acceptance checkpoint: `CCB-COMPANY-OPERATIONS-CODEX-IMPLEMENT-001`。通常設定4 fieldの専用editor・Callable、legacy/canonical validation、欠損時の非移行互換、会社管理者境界、changed-only transaction、Rules、保存中・競合UIを実装した。対象19件、全domain 707件、専用Emulator 104件とCodex in-app UI smokeが成功し、利用者が実際の環境で最終UI acceptanceを完了した。振込先の最終UI acceptanceも完了し、CPU-03はCompletedである。
 - Dev release and user acceptance complete checkpoint: `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`。release baseline `af29d26e94ae11b3ea09dce109587d6ecc466081`から、Dev PITR 7日を確認し、Company専用Callable 4件、同一静的artifact、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件のACTIVE/CORS、Hosting artifact一致、Rules compile/releaseを確認した。Hosting cache header適用順を`firebase.json`だけで補正したcommit `8b4e20945bf40f23e2de316170cf0f0c12ac40fe`を再deployし、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で通常設定を15分→20分→15分へ保存して問題なしと確認した。Codexは新規一般Userの新しいChrome tabで管理者menu・会社設定入口非表示、直接URL拒否、app error 0件を確認した。CPU-06を15点加算し、Company部分更新roadmapは100%で完了した。rollback baselineは`52dd607d16e9b77f90ec238250eca11757548097`で、data migration・repair・delete・snapshot・Prod変更は行っていない。
+- local implementation and validation checkpoint: `CCB-DUAL-ROLE-DISPLAY-ORDER-001`。SuperUser兼会社管理者を自社の両表示順actorへ限定追加し、単独SuperUserと既存の拒否境界を維持した。生SuperUser claimのboolean妥当性を表示順だけで追加確認する。対象16件、全domain 727件、隔離Emulator 107件、security review GOを成功させた。Dev・remote/data・deploy・remote claim変更・Rules変更は未実施で、利用者最終UI acceptance待ちである。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
-- following active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。Company部分更新roadmapは100%で完了したため、次のproduct作業は別のbounded checkpointと承認境界でSTRIPE-01へ接続する。
+- following active product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 70%。別承認のbounded Dev反映・利用者最終UI acceptanceまで完了した後、[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md)のSTRIPE-01へ戻る。
 
 ## Active source set
 
@@ -98,6 +101,7 @@ PM-12はno-change開始時に次だけを読み、不足・矛盾がなかった
 - `NO-CHANGE-GOV18-AIRGUARDV2-PM12-001`と`GOV18-AIRGUARDV2-PM12-ACTIVATION-001`では、指定されたread-only確認、snapshot 1件のfile-scoped commit、validator、local Git確認、旧coordinatorへのreceipt以外を行わない。
 - PM-11 ownership activationとcorrective rollbackは完了した。利用者はCompany CRUDをoperation固有editorへ段階移行する方針と、`CCB-COMPANY-PARTIAL-UPDATE-001`のlocal application/Functions/Rules/test/document変更を承認した。
 - 利用者はADR 0034のgovernance反映とPM-12 turnoverを承認した。承認済みcheckpointまたはfeature boundary内ではCodex developerがapplicationと必要なFunctions・Rulesを実装し、Codexが自動testと必要なin-app UI smokeを担当し、利用者が実際の利用環境で最終UI acceptanceを行う。file-by-file確認はcheckpointが明示した場合だけとし、外部作用は別承認とする。
+- 利用者はADR 0037のactor境界として、SuperUser兼会社管理者が自社の`siteOrder`・`scheduleOrder`を更新でき、会社管理者でないSuperUser・他tenant・不正identityを拒否するlocal application・Functions・test・文書変更を承認した。Dev、remote/data、deploy、remote claim変更、Rules変更へは承認を拡張しない。
 - ADR 0033のCompany振込先product contractを`CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`のlocal実装へ反映し、利用者最終UI acceptanceを完了した。Dev、remote/data、deployへは拡張していない。
 - 利用者はproject-wide subagent routing変更とPM-11へのcoordinator交代を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。
 - Schemas/Admin SDK、Dev、remote/data、network、push、main merge、Prodは別承認である。Dev migration/deployは対象commit、件数、backup、rollback、停止条件、post-check、受入れを固定した利用者承認を必要とする。
@@ -112,6 +116,8 @@ Company振込先checkpointでは振込先・PDF対象17件、全domain 676件、
 Company通常設定checkpointでは対象19件、全domain 707件、隔離Codex Emulator 104件を成功させた。Codex in-app UIで会社管理者の4項目表示、15分→20分保存中の全control無効、完了反映、自己保存警告なし、15分への復元、console error 0件を確認した。Emulatorはdemo project・loopback・合成dataだけを使用し、終了後は専用port 0、runtime 0である。利用者は実際の環境で4項目表示・1項目保存、保存中制御、自己保存警告なし、真正競合の再読込、非管理者・super-user拒否を確認し、最終UI acceptanceを完了した。Company document分割、data migration、Dev、remote/data、deployは行っていない。
 
 Company表示順checkpointでは初回に専用14件、全domain 721件、隔離Codex Emulator 106件を成功させ、security reviewは4/5 GOで権限・tenant・入力・直接write境界にblockerなしと確認した。利用者確認は項目1〜13が合格し、一般利用者は稼働予定・配置管理へアクセスできないことも確認した。二画面では、未保存変更がない画面は他画面の保存結果を自動反映し、その後の編集を最新順から開始する。未保存変更がある画面は自身の順を維持し、外部更新警告を表示して保存を無効化する。利用者が開いていた同じ会社管理者Chrome 2画面で両経路を確認し、利用者が受け入れた。確認で変更した表示順は元へ戻した。利用者指摘により、終了済みSite除外は業務と不一致と判明したため、既存Siteを状態にかかわらず残しmissing/deletedだけを除外する補正を行い、専用15件、全domain 722件、一般review GOを確認した。Codex in-app UIはHTTP 200とEmulator/Functions ready後も起動templateから製品画面へ遷移せず、対象操作前に停止した。終了後は専用port 0、runtime 0、saved-data 7 files・3492 bytesを確認したが、開始前fingerprintを採取していないためUI実行前後のbyte一致証拠には使わない。利用者は実際の利用環境で終了済み現場の表示も確認し、CPU-04の最終UI acceptanceを完了した。Company分割、data migration、Dev、remote/data、deployは行っていない。
+
+SuperUser兼会社管理者表示順checkpointでは、DevのChromeでSuperUser menuと会社用menuが同時に表示され、稼働予定管理・配置管理の表示順入口が両方とも存在しないこと、Functions logで保存POSTが0件であることからclient事前判定を原因と特定した。clientとCallableをfail closedで揃え、SuperUser兼会社管理者の`siteOrder`・`scheduleOrder`成功、単独SuperUser・preset保有SuperUser・欠損/型不正identity・temporary・disabled・他tenant等の拒否を対象testへ追加した。生SuperUser claimのboolean妥当性は表示順専用状態で保持し、既存の他機能向け正規化を変えない。対象16件、全domain 727件、隔離demo project・loopback専用Emulator 107件がexit 0で、利用者saved-data不変、security review GOを確認した。sandbox内の初回Emulator実行はFirebase CLI設定読取のEPERMでexit 1となり成功証拠に使わず、権限付き再実行のexit 0を採用した。再実行後に残った自身の空runtime directory 1件だけをresolved pathと空状態の確認後に削除した。Dev・remote/data・deploy・remote claim・Rules・Company dataは変更していない。新UIの最終確認はDev反映後の利用者acceptanceへ残す。
 
 Company旧writer除去checkpointでは、削除対象2件とCompany root CUD拒否を実装し、AST scannerでNuxt client sourceのCompany whole-document/root writer 0件を確認した。全domain 726件、隔離Codex Emulator 107件、一般review GO、security review 5/5が成功した。security reviewはroot CUD拒否、同社User read、fallback bypassなしを確認した。Company subcollectionの広い既存write境界、`StripeData` createのschema/type/size境界、同社Userがroot内のbank・legacy Stripe・maintenance fieldを読める既存境界は今回の非blocker・対象外riskである。Codex in-app UI smokeはloopback専用環境を起動したが、起動templateでNuxt `ECONNRESET`となり主要画面へ到達できなかった。reloadで隠さず停止し、終了後は専用listener 0、runtime 0、saved-data 7 files・3492 bytes・fingerprint `12ccbf7e11c3b3bec165f7c4fd48fe1b5b6845ff7f1fdd30af828a17d6798c45`不変を確認した。その後、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理を再読込し、業務data表示、基本情報・振込先・通常設定の専用editor、両表示順dialog、未変更時の保存無効、キャンセル、console error 0件を確認した。このlocal checkpointではデータ保存・Dev deploy・Rules publishを行わず、後続CPU-06でDev反映と受入れを実施した。
 
