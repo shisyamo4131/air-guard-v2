@@ -815,10 +815,11 @@ test("Company settings removes default agreements while Site agreements remain",
   assert.doesNotMatch(companyPage, /doc\.agreementsV2/u);
   assert.match(sitePage, /<AgreementsManager/u);
   assert.match(sitePage, /v-model="doc\.agreementsV2"/u);
-  assert.match(rules, /preservesCompanyArrangementFields/u);
-  for (const field of ["agreementsV2", "siteOrder", "scheduleOrder"]) {
-    assert.match(rules, new RegExp(`['\"]${field}['\"]`, "u"));
-  }
+  assert.match(
+    rules,
+    /match \/Companies\/\{companyDocId\} \{[\s\S]*?allow read:[^;]+;[\s\S]*?allow create, update, delete: if false;/u,
+  );
+  assert.doesNotMatch(rules, /preservesCompanyArrangementFields/u);
   assert.match(apiIndex, /updateCompanyArrangement/u);
 });
 

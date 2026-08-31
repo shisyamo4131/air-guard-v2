@@ -662,7 +662,7 @@ test("Firestore Rules apply the tenant identity gate to company descendants", as
   );
 });
 
-test("Firestore Rules allow Company reads and updates only in the registered tenant", async () => {
+test("Firestore Rules allow Company reads but deny root writes in the registered tenant", async () => {
   const uid = "codex-rules-company-document-user";
   await seedRegisteredUser({ uid });
   const firestore = authenticatedFirestore(uid);
@@ -678,7 +678,7 @@ test("Firestore Rules allow Company reads and updates only in the registered ten
   );
 
   await assertSucceeds(getDoc(sameTenant));
-  await assertSucceeds(setDoc(sameTenant, { rulesProbe: true }, { merge: true }));
+  await assertFails(setDoc(sameTenant, { rulesProbe: true }, { merge: true }));
   await assertFails(deleteDoc(sameTenant));
   await assertFails(getDoc(otherTenant));
   await assertFails(setDoc(otherTenant, { rulesProbe: true }, { merge: true }));
@@ -697,6 +697,73 @@ test("Firestore Rules keep Company creation server-only", async () => {
   );
 });
 
+test("Firestore Rules deny every Company root write shape for all same-tenant actor classes", async () => {
+  const actors = [
+    { label: "admin", isAdmin: true, isSuperUser: false },
+    { label: "general", isAdmin: false, isSuperUser: false },
+    { label: "super", isAdmin: true, isSuperUser: true },
+  ];
+  const oversizedValue = "x".repeat(900_000);
+
+  for (const actor of actors) {
+    const companyId = `codex-rules-root-deny-${actor.label}`;
+    const uid = `${companyId}-user`;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId), {
+        fixture: "company-root-write-deny",
+        companyName: "合成会社",
+        bankName: "架空銀行",
+        minuteInterval: 15,
+        siteOrder: [],
+      });
+    });
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: actor.isAdmin,
+      roles: [],
+    });
+    const firestore = testEnvironment
+      .authenticatedContext(uid, {
+        email_verified: true,
+        companyId,
+        isSuperUser: actor.isSuperUser,
+      })
+      .firestore();
+    const companyRef = doc(firestore, "Companies", companyId);
+
+    await assertSucceeds(getDoc(companyRef));
+    for (const patch of [
+      { companyName: "profile denied" },
+      { bankName: "billing denied" },
+      { minuteInterval: 20 },
+      { siteOrder: [{ siteId: "site-a", shiftType: "DAY" }] },
+      { stripeCustomerId: "hidden-field-denied" },
+      { attackerControlled: "unknown-field-denied" },
+      { companyName: 42, unknownNested: { admin: true } },
+      { oversizedRulesProbe: oversizedValue },
+    ]) {
+      await assertFails(setDoc(companyRef, patch, { merge: true }));
+    }
+    await assertFails(updateDoc(companyRef, { companyName: "patch denied" }));
+    await assertFails(
+      setDoc(companyRef, { fixture: "client-whole-replacement" }),
+    );
+    await assertFails(deleteDoc(companyRef));
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await deleteDoc(doc(context.firestore(), "Companies", companyId));
+    });
+    await assertFails(
+      setDoc(companyRef, {
+        fixture: "client-create-denied",
+        companyName: "作成拒否会社",
+      }),
+    );
+  }
+});
+
 test("Firestore Rules reserve Company profile fields for the server writer", async () => {
   const uid = "codex-rules-company-profile-user";
   await seedRegisteredUser({ uid });
@@ -710,7 +777,7 @@ test("Firestore Rules reserve Company profile fields for the server writer", asy
   await assertFails(
     setDoc(companyRef, { companyName: "client update denied" }, { merge: true }),
   );
-  await assertSucceeds(
+  await assertFails(
     setDoc(companyRef, { profileRulesProbe: true }, { merge: true }),
   );
 });
@@ -820,10 +887,10 @@ test("Firestore Rules reserve Company operations fields for the server writer", 
   await assertFails(
     setDoc(adminCompanyRef, { bankName: "billing still reserved" }, { merge: true }),
   );
-  await assertSucceeds(
+  await assertFails(
     setDoc(
       adminCompanyRef,
-      { unrelatedOperationsRulesProbe: "legacy update remains allowed" },
+      { unrelatedOperationsRulesProbe: "client update denied" },
       { merge: true },
     ),
   );
@@ -938,10 +1005,10 @@ test("Firestore Rules reserve Company agreements and order fields for the server
       { merge: true },
     ),
   );
-  await assertSucceeds(
+  await assertFails(
     setDoc(
       adminCompanyRef,
-      { unrelatedArrangementRulesProbe: "legacy update remains allowed" },
+      { unrelatedArrangementRulesProbe: "client update denied" },
       { merge: true },
     ),
   );
@@ -1143,15 +1210,15 @@ test("Firestore Rules reserve every Company billing mutation for the server writ
     setDoc(companyRef, { companyName: "profile still reserved" }, { merge: true }),
   );
   await assertFails(deleteDoc(companyRef));
-  await assertSucceeds(
+  await assertFails(
     setDoc(companyRef, {
-      fixture: "unrelated-whole-replacement-allowed",
+      fixture: "unrelated-whole-replacement-denied",
       profileRulesProbe: "unchanged",
       unrelatedRulesProbe: "whole-replacement",
       ...storedBank,
     }),
   );
-  await assertSucceeds(
+  await assertFails(
     setDoc(companyRef, { unrelatedRulesProbe: true }, { merge: true }),
   );
 

@@ -5,6 +5,8 @@
 > ADR 0031により8 target、PrivateSettings、SettingAudits、LEGACY/STAGED/ACTIVE runtime互換設計は廃止された。2026-08-30に主repositoryのcompatible reader、migration/restore planner、pre-containment Rulesと専用testをcorrective rollbackした。本書はhistorical evidenceであり、現在の設計または実行手順として使用しない。
 >
 > 表示順の現行actorと競合契約は[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。会社管理者をactorへ含め、Company rootのfield限定Callableを使用し、revisionは導入しない。以下のpreset-only・Settings/arrangement・expected revision記述は旧設計の履歴である。
+>
+> 2026-08-31 CPU-05 update: ADR 0031の現行設計に従い、未使用の旧Company root writerを削除してCompany rootのclient create/update/deleteをlocal Rulesで全面拒否した。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5を確認した。Codex UI smokeは起動templateの`ECONNRESET`で製品画面へ到達できず、Dev Rules deployは別承認のため未実施である。以下の8 document移行順は引き続きhistoricalである。
 
 ## メタデータ
 
@@ -70,7 +72,7 @@ Company hydrateは未知fieldを捨て、serializerはenumerable own propertyを
 - Company rootの取得と購読は`composables/application/auth/useAuthActions.js`の各1経路である。claimのcompany IDをdoc IDとして直接fetchし、singletonの`useCompanyStore`へlive反映する。
 - profile、billing、operationsは`components/Company/Manager/index.vue`からCompany全体を保存する。
 - Company既定取極めは`pages/settings/company.vue`、site/schedule orderは`useSiteShiftTypeOrderActions.js`からCompany全体を保存する。
-- `useSiteOrderManager.js`にも旧siteOrder writerが4経路残るが、静的callerは確認できない。
+- `useSiteOrderManager.js`にも旧siteOrder writerが4経路残っていたが、静的caller 0を確認して2026-08-31のCPU-05で削除した。
 - Company rootのclient create/list/delete/restoreの実callerはない。create/deleteはUIとapp subclassでも拒否している。
 - 請求PDFはlive Companyの住所、名称、電話、invoice、bankを読む。`prefName`参照はCompanyの`prefecture` accessorと一致せず、issuer snapshotと長値renderは未実装である。
 - `roundSetting`はprocess-globalなRoundSettingへ即時反映され、OperationResult、税計算、PDFへ到達する。既存結果のsnapshotはない。
@@ -229,7 +231,7 @@ CCB-02は次が完了するまで10点を加点しない。
 - Dev Company root 4件は、利用者確認により利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確定し、4件すべてをmigration対象とする。会社名・ID・emailはrepositoryへ記録しない。実行時はlive candidate universeと承認済み全件includeをmanifest digestへ固定し、新しいrootやorphanが増えていれば停止する。推測削除は行わない。
 - Schemas `2.4.2-dev.167`の公開・artifact確認、Admin SDKとAirGuardV2 app/Functionsのexact consumer導入、旧破壊操作/旧root writeのfail-closed、canonical parity・PrivateSettings backup・SettingAudits restoreの契約確定、pure migration plan/digest、Codex専用合成EmulatorのREST reader・create-only transaction・post-check、pre-containment Rulesのlocal sourceと合成回帰までは完了した。残るのはDev向けmanifest/reader/apply証拠、deployed Rules receipt、audit artifact/apply、rollback release、Callable・staging・deploy順の個別実装・検証・承認である。
 - generic Rules fallbackを閉じるlocal sourceと合成回帰は完了した。remote staging前に対象project/databaseへdeployしたrulesetと承認済みsourceの一致を機械検証し、全client/Functions/Admin SDK callerのrelease回帰matrixを確定する。
-- AirVuetify3のmanager contractとCompany clone defectは静的確認済みである。Company固有clone、実CompanyManager submit、scope別exact payload、旧root writer不在、全agreements・site/schedule caller、現行・候補Rules双方の回帰は未実装・未検証であり、pre-containment Rulesをdeploy可能とは扱わない。
+- AirVuetify3のmanager contractとCompany clone defectは静的確認済みである。この旧CCB記録で未実装だったoperation別exact payload移行、CompanyManager・useSiteOrderManager削除、旧root writer 0件、Company root client CUD拒否は2026-08-31のCPU-05までに現行設計としてlocal実装・検証した。ただし旧pre-containment Rules設計を復活させたものではなく、remote deploy可能性の証拠にも使わない。
 - marker-aware writerは文書契約だけで未実装である。LEGACYのexpected-value比較・partial update、STAGEDのwrite/signup拒否、ACTIVEのrevision/audit、maintenance内のstaging/activation、dual-write 0を実装・検証するまで既存CRUD互換化は完了しない。
 - CCB tenant deleteの旧command fail-closedは確定・実装済み。PrivateSettingsは既存logical backupから除外し、当面はmanaged backup/PITRへ依存する。SettingAudits restoreは同一company/schema/IDのcreate-only、同値skip、異値拒否に限定し、update/delete/clearを禁止する。専用実装・復旧演習とprovider maintenanceは未完了である。migration actorとmaintenance中の決定不能mapping停止も確定済みである。
 

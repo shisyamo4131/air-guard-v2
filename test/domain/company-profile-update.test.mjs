@@ -444,7 +444,11 @@ test("Company basic editor no longer uses AirItemManager and Rules deny profile 
   assert.doesNotMatch(editor, /自分の入力を優先する/);
   assert.doesNotMatch(editor, /overwriteConfirmed|confirmOverwrite/);
   assert.match(activator, /title: \{ type: String, default: "基本情報" \}/);
-  assert.match(rules, /preservesCompanyProfileFields/);
+  assert.match(
+    rules,
+    /match \/Companies\/\{companyDocId\} \{[\s\S]*?allow read:[^;]+;[\s\S]*?allow create, update, delete: if false;/,
+  );
+  assert.doesNotMatch(rules, /preservesCompanyProfileFields/);
   assert.match(apiIndex, /updateCompanyProfile/);
 
   const editorUrl = new URL(

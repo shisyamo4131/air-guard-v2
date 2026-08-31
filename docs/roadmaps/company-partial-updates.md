@@ -25,7 +25,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | CPU-02 Company基本情報の部分更新 | 20 | 20 | Completed | 専用editor/writer、管理者境界、変更fieldだけの保存、server timestamp、schema/operation validation、回帰testを完了する |
 | CPU-03 振込先・通常設定の部分更新 | 20 | 0 | In progress | 2 operationの実装・自動test・Codex UI smokeは完了し、通常設定の利用者最終UI acceptanceも完了した。振込先の残る最終UI acceptance待ち |
 | CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 20 | Completed | Company既定取極めUI/writer撤去、`siteOrder`・`scheduleOrder`専用更新、Rules、競合UI、自動検証、利用者による項目1〜14・権限・二画面競合・終了済みSite表示の最終確認を完了した |
-| CPU-05 旧Company writer除去・local受入れ | 15 | 0 | Not started | Company全体`set/update()` caller 0、Rules/Functions回帰、listener競合表示、主要画面再読込を確認する |
+| CPU-05 旧Company writer除去・local受入れ | 15 | 0 | In progress | 旧writer削除、Company rootのclient CUD全面拒否、全domain 726件、隔離Emulator 107件、一般・security review GOまで完了した。Codex UI smokeは起動templateの`ECONNRESET`で製品画面へ到達できず、主要画面再読込が残る |
 | CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
 
 重みは合計100。各マイルストーンは記載した証拠がすべて揃った場合だけ加点する。
@@ -33,7 +33,8 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 ## 現在の次工程
 
 1. 利用者が実際の利用環境で、振込先の会社管理者表示、5項目登録、明示clear、競合時の再読込、請求書PDFの口座名義と長文配置を最終確認する。
-2. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
+2. CPU-05の主要画面再読込として、会社情報・稼働予定・配置管理が通常表示され、各専用保存入口に回帰がないことを利用者の実際の利用環境で確認する。
+3. Dev反映はCPU-05のlocal受入れと旧Company writer 0件を確認した後の別承認とする。
 
 ## 進捗履歴
 
@@ -55,3 +56,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-31 | 30% | 0 | 利用者はdirty競合を再確認して失敗と報告した。その後、利用者が開いていた同じ会社管理者Chrome 2画面をCodexが通常操作し、両方へ異なる未保存順を作成して片方だけ保存したところ、もう片方は未保存順を維持し、外部更新警告を表示して保存を無効化した。確認変更は元の順へ戻した。観測差が解消していないため利用者受入れ完了とはせず、CPU-04を加点しない。 |
 | 2026-08-31 | 30% | 0 | 利用者は、未保存変更がない画面は他画面の保存結果を自動反映し、未保存変更がある画面だけが自身の順を維持して警告・保存無効となる区別を確認し、二画面競合を受け入れた。CPU-04は終了済みSite表示の最終確認が残るため加点しない。 |
 | 2026-08-31 | 50% | +20 | 利用者が実際の利用環境で終了済み現場も並べ替えに表示されることを確認した。先に合格した項目1〜13、一般利用者の画面非表示、二画面競合と合わせてCPU-04の最終UI acceptanceを完了した。 |
+| 2026-08-31 | 50% | 0 | CPU-05で未使用のCompany全体保存入口2件を削除し、Company rootのclient create/update/deleteを全面拒否した。旧writer 0件の静的検査、全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5は成功した。Codex UI smokeは起動templateのNuxt `ECONNRESET`で製品画面へ到達できず主要画面再読込が残るため、CPU-05は加点しない。 |

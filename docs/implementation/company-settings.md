@@ -13,20 +13,22 @@
 > 2026-08-30 Company operations implementation: 通常設定4 fieldを同じCompany rootに維持し、`CompanyOperationsEditor`と`updateCompanyOperations` Callableへ移行した。legacy保存値は維持して共有canonical parserへ写像し、欠損時は検証上だけ既定値を補う。local自動検証、Codex in-app UI smoke、利用者の実際の利用環境での最終UI acceptanceを完了した。
 >
 > 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
+>
+> 2026-08-31 CPU-05 implementation: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5は成功した。Codex UI smokeは起動templateのNuxt `ECONNRESET`で製品画面へ到達できず、主要画面再読込は未確認である。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報・通常設定・既定取極め撤去・表示順のlocal受入れ完了、振込先は利用者最終UI acceptance待ち）
+- 状態: 段階移行中（旧Company全体writer除去とroot client CUD拒否の実装・自動検証完了、CPU-05主要画面再読込と振込先の利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-31
-- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Manager/index.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`
+- 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`、`test/domain/company-legacy-writer-removal.test.mjs`
 
 ## 入口・権限
 
 - `/settings/company`はpageSettingsで`ADMIN` access policyを参照する。一般pageの互換規則により会社管理者とsuper-userを許可し、navigationも同じpolicyを使用する。
 - 画面は基本情報、口座情報、設定情報を専用editor/Callableで編集する。会社既定取極めの編集入口は撤去済みで、Site固有取極めは維持する。
 - 基本情報、口座情報、設定情報の編集controlとCallableは、同じtenantの有効な本登録会社管理者だけを許可し、super-userを拒否する。page自体の既存`ADMIN` access policyは変更していない。
-- Rulesは同じtenantの有効な本登録UserへCompany readを許可する。updateは基本情報10 field・住所由来`location/geopoint`・振込先5 field・通常設定4 field・予約済みcanonical fieldが変わらない場合だけ既存client writerへ許可し、client create/deleteは拒否する。移行済みfieldの保存はFunctions/Admin SDKに限定した。
+- Rulesは同じtenantの有効な本登録UserへCompany readを許可し、Company rootのclient create/update/deleteを全actorへ拒否する。正規の変更は基本情報・振込先・通常設定・表示順の4つの専用Callableまたは承認済みAdmin SDK経路に限定する。Company subcollectionの既存境界はこのcheckpointで変更していない。
 
 ## データ契約
 
@@ -119,24 +121,24 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 ## 停止・削除
 
 - Company固有のstatus、停止、archive、delete guard、restore methodはない。
-- UI CompanyManagerはcreate/deleteを拒否する。
+- 旧CompanyManagerはCPU-05で削除した。clientのCompany root create/delete入口はなく、Rulesもcreate/update/deleteを全面拒否する。
 - RulesはCompany rootのclient deleteを拒否する。server/operatorによる停止・decommission・repairとsubcollection保持は未確定であり、root欠損と子data残存の既存・部分失敗状態を検知・修復する契約もない。
 - `maintenanceMode`は利用停止ではなくSystemStoreのmaintenance表示判定に使われるhidden fieldで、設定画面から編集できない。
 - subscription終了はStripe側同期でsubscription内容をnull/employeeLimit 0へ更新する境界であり、Company削除やtenant停止は行わない。
 
 ## Rules・security
 
-- 会社名、住所、電話・FAX、invoice番号、振込先5 fieldはclient直接writeを拒否し、会社管理者専用Callableだけが更新する。同じtenantの有効な本登録Userによるreadは維持する。
-- 取極め、表示順は同一会社の有効な本登録User全員がRules上write可能な旧境界を後続移行まで維持する。通常設定4 fieldと予約済みcanonical fieldはclient直接writeを拒否する。
-- hidden `stripeCustomerId/subscription/maintenance*`もRulesでserver-ownedに限定されず、clientがroot updateの一部として直接変更できる。
-- Company create/deleteはclient拒否済みだが、必須field除去、invalid enum/number、siteOrder/agreementsV2改変をRulesで検証しない。
+- Company rootのclient create/update/deleteはfieldやactorにかかわらず全面拒否する。同じtenantの有効な本登録Userによるreadは維持する。
+- 基本情報、振込先、通常設定、表示順は4つの専用Callableがoperation所有fieldと更新metadataだけを検証・更新する。Company既定取極めのUI/writerは廃止済みである。
+- hidden `stripeCustomerId/subscription/maintenance*`をclientがroot updateで直接変更する経路も閉じた。ただし同じrootに残るため同社Userのread対象であり、将来の分割・server projection要否は別設計とする。
+- Company rootはclient write全面拒否のためRules内field validationを必要としない。Company subcollectionの広い既存write境界は今回の対象外である。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。
 
 ## 矛盾・未使用候補
 
-- pageの既存access policyはsuper-userにも閲覧を許可するが、基本情報編集controlとserver保存は会社管理者だけに限定している。残る旧editorのUI/Rules actor境界は未移行である。
+- pageの既存access policyはsuper-userにも画面到達を許可するが、基本情報・振込先・通常設定の編集controlとserver保存は会社管理者だけに限定し、表示順は会社管理者またはfield別既知preset actorに限定する。旧Company全体writerは残っていない。
 - `Company.scheduleOrder.add`はimportされていない`ScheduleOrder`をnewしており、呼出し時ReferenceErrorとなる実装である。配列customClassはSiteOrderなので命名不一致でもある。
-- hidden server-owned候補fieldと利用者編集fieldが同一document/全write Rulesに混在する。
+- hidden server-owned候補fieldと利用者編集fieldは同一documentに残る。client writeは閉じたが、read分離が必要かは具体的な閲覧制約に基づいて後続判断する。
 - Company旧`agreements` accessorは常に空/無処理で残存する。
 
 ## 2026-08-27 横断再調査
@@ -169,10 +171,10 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 
 - `air-vuetify-v3`の`useItemManager.updateProperties()`は編集中の`internalItem`にある既存top-level propertyをlocalで置き換えるだけである。Firestoreの部分更新、changed-key収集、deep merge、永続化は行わない。
 - `AirItemManager`はsubmit時に編集draft全体をcustom `handleUpdate(draft)`へ渡す。handlerがthrowした場合はdialogを閉じず、既存のloading・error・二重submit防止を維持できる。したがってCompanyManagerはmanager UIを再実装せず、application-ownedのscope別handlerへ差し替えられる。
-- 現行CompanyManagerの`item.update(item)`はcloneしたCompany全体をrootへ保存する。profile editorに`invoiceNumber`が混在し、scope別のatomic save契約と一致しない。invoice numberはbilling operationへ含め、各editorを1 operation・1 exact payloadへ揃える必要がある。
+- 当時のCompanyManagerの`item.update(item)`はcloneしたCompany全体をrootへ保存していた。profile editorに`invoiceNumber`が混在し、scope別のatomic save契約と一致しなかった。この経路はoperation別editor移行後、CPU-05で削除済みである。
 - AirGuardV2 `schemas/Company.js`のCCB runtime mode/root/settings/errorはnon-enumerableで、base `clone()`が使う`toObject()`の`Object.keys`へ含まれない。編集cloneは`INITIALIZING`へ戻るため、LEGACYの既存更新もguardで失敗し得る。runtime stateを永続fieldにせずcopyするCompany固有cloneと、original/live Company stateを再検査するhandlerが必要である。
 - Schemas exact `.167`が追加したのは`./company-configuration`のconstants、strict parser、legacy mapping等であり、旧`Company` classのlegacy propertyではない。`configurationState`はpersistedなActive markerで、legacyはmarker未activeとして判定する。`LEGACY/ACTIVE/INITIALIZING/ERROR`はAirGuardV2側のruntime stateである。
-- この再調査により、local pre-containment Rules候補はdeploy可能状態ではないと訂正した。現行Rules下でCompany cloneと全既存callerをoperation別Client/Server writerへ移し、旧・候補Rules双方の回帰と旧whole-document writer 0件を確認してからRulesを閉じる。
+- この再調査により、local pre-containment Rules候補はdeploy可能状態ではないと訂正した。その後、全既存callerをoperation別Client/Server writerへ移し、CPU-05で旧whole-document writer 0件の静的検査とCompany root client CUD全面拒否のlocal回帰を完了した。remote Rules deployは別承認である。
 - 先行writerは同じ4 Callableのmarker-aware contractとする。LEGACYは編集開始時のscope別expected value一致時だけlegacy rootをpartial updateし、reserved field・root whole-set・新path writeを0件とする。STAGEDはmaintenance中だけ存在して通常設定write/signupを拒否し、ACTIVEはSettings revisionと必要なauditを同一transactionで扱う。dual-writeは行わない。
 
 ## 将来要対応

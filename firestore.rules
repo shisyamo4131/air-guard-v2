@@ -68,32 +68,6 @@ service cloud.firestore {
       ]);
     }
 
-    function preservesCompanyProfileFields() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'companyName', 'companyNameKana', 'zipcode', 'prefCode', 'city',
-        'address', 'building', 'tel', 'fax', 'invoiceNumber', 'location', 'geopoint'
-      ]);
-    }
-
-    function preservesCompanyBillingFields() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'bankName', 'branchName', 'accountType', 'accountNumber', 'accountHolder'
-      ]);
-    }
-
-    function preservesCompanyOperationsFields() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'minuteInterval', 'roundSetting', 'firstDayOfWeek',
-        'attendanceManagementMode', 'attendanceSummaryMode'
-      ]);
-    }
-
-    function preservesCompanyArrangementFields() {
-      return !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-        'agreementsV2', 'siteOrder', 'scheduleOrder'
-      ]);
-    }
-
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -133,17 +107,11 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Companies' collection ---
-    // CompaniesコレクションのドキュメントID (companyDocId) と
-    // 認証ユーザーのカスタムクレーム companyId が一致する場合のみ許可。
+    // Company rootは同一tenantの有効な本登録Userだけが読み取り可能。
+    // client writeは全面拒否し、正規更新はCloud Functions/Admin SDKに限定する。
     match /Companies/{companyDocId} {
       allow read: if isAuthenticated() && userCompanyId() == companyDocId;
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyDocId
-                    && preservesCompanyProfileFields()
-                    && preservesCompanyBillingFields()
-                    && preservesCompanyOperationsFields()
-                    && preservesCompanyArrangementFields();
-      allow create, delete: if false;
+      allow create, update, delete: if false;
     }
 
     // --- Rules for 'ArrangementNotifications' subcollection under 'Companies' ---

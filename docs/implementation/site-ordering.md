@@ -4,7 +4,7 @@
 
 - 状態: Current implementation + historical investigation
 - 対象セグメント: SPEC-SEG-052、SPEC-DEEP-035、SPEC-DEEP-039b
-- 最終確認日: 2026-08-30
+- 最終確認日: 2026-08-31
 - 根拠ファイル: schemas `src/SiteOrder.js`、`src/Company.js`、`composables/dataLayers/siteShiftTypeOrder/*`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`components/SiteShiftTypeOrder/**`、`components/Draggable/SiteShiftTypeOrder/index.vue`、`components/Arrangements/Manager/**`、`components/OperationSchedules/Manager/index.vue`、`utils/pageSettings.js`、`firestore.rules`
 
 ## 責務と保存契約
@@ -14,7 +14,7 @@
 - 保存先は引き続きCompany rootの`siteOrder`と`scheduleOrder`であり、document分割は行っていない。保存itemはexact `{siteId, shiftType}`、各配列最大2000件、pair一意で、computed `key`は送信しない。
 - `updateCompanyArrangement` CallableがidentityからCompanyを導出し、一度に一方のfieldとserver `updatedAt`・`uid`だけをtransaction updateする。同値はwrite 0で、live Companyをclient側で先行変更しない。
 - actorは同社の有効な本登録non-super-userで、会社管理者、または既知preset由来のfield別permissionを持つUserとする。`siteOrder`は`sites:write`、`scheduleOrder`は`site-operation-schedules:write`。直接permission文字列、未知role、temporary、disabled、他社、super-userは拒否する。
-- Rulesは`agreementsV2`、`siteOrder`、`scheduleOrder`のclient直接変更を全actorへ拒否する。対象外のCompany field互換updateはCPU-05まで維持する。
+- RulesはCPU-05でCompany rootのclient create/update/deleteを全面拒否した。表示順の正規更新は`updateCompanyArrangement` Callableだけが担う。
 - reorder formは独立draftを使い、dirty中の外部更新を黙って反映せず保存を止める。自分の保存reflectionは競合扱いしない。保存中はdrag、保存、取消、再読込、sort/removeを停止し、失敗時はdialogとdraftを維持する。
 - documentが存在するSiteはACTIVE・TERMINATED等の状態にかかわらず表示へ残す。missing/deleted Siteだけを表示から除外し、次の明示保存時だけorderから除去する。Site取得失敗は削除済みと推測せず、安全側でdraftを維持して保存を止める。
 - 完全に同時な許可actor同士の保存はrevisionを持たず後commit優先となる。更新・権限・競合は[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、Siteの表示判断は[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)を正とする。
@@ -61,7 +61,7 @@ Company初期化時、両配列に`add/change/remove`が追加される。`siteO
 
 ## 旧実装・未使用候補
 
-- `useSiteOrderManager`は`company.siteOrder`専用の旧dialog/action一体型composableで、定義外の呼出しを検索で確認できなかった。現行画面はtype対応の3 composableを使う。
+- `useSiteOrderManager`は`company.siteOrder`専用の旧dialog/action一体型composableで、定義外の呼出しがなく、現行画面はtype対応の3 composableを使うことを確認してCPU-05で削除した。
 - `components/organisms/SiteOrderManager.vue`も定義外の利用を検索で確認できず、現行reorder formとは別の旧component候補である。
 - SPEC-DEEP-032で同componentの`siteOrder` defineModel、`loading` prop、cancel/submit emit、`vuedraggable`/Actions結線をfile単位で再確認した。保存、permission、validation、rollback、error表示は持たず、直接caller不在というlegacy候補の根拠を補強する。
 - ListItemの`fetchSiteComposable` propは宣言されるが、実装は常に`useFetch`から同名localを取得し、propを参照しない。
@@ -93,9 +93,9 @@ reorder formはopen中に親配列を受け取るとdraftを無通知で再初�
 
 ## 旧useSiteOrderManager追加確認（SPEC-DEEP-039b）
 
-- 静的caller不在を再確認した。旧managerはdialog draftをCompany instanceへ先に全置換してfull updateし、失敗をloggerへ吸収してCompany値をrollback/refetchしない。
+- 以下はCPU-05で削除する前のhistorical確認である。静的caller不在を再確認した。旧managerはdialog draftをCompany instanceへ先に全置換してfull updateし、失敗をloggerへ吸収してCompany値をrollback/refetchしなかった。
 - `Company.initialize`時にarrayへ付与される`add/change/remove` helperは、`company.siteOrder = [...internalSiteOrder]`のplain array置換直後には引き継がれない。live subscriptionが再initializeする前に旧managerのpublic add/change/removeを呼ぶとmethod欠損となるlatent境界である。
-- public add/change/removeもCompany配列を先にmutationしてからupdateし、version・single-flight・actor/permission・rollbackを持たない。
+- public add/change/removeもCompany配列を先にmutationしてからupdateし、version・single-flight・actor/permission・rollbackを持たなかった。composable本体は2026-08-31に削除済みである。
 
 ## order data layer追加確認（SPEC-DEEP-043）
 

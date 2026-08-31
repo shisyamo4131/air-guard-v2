@@ -822,7 +822,11 @@ test("operations editor replaces CompanyManager and is admin-only in the page", 
   assert.match(activator, /<template v-if="props\.editable" #append>/u);
   assert.match(editor, /Company\.operationsSchema/u);
   assert.match(editor, /現在の入力内容は保存できません/u);
-  assert.match(rules, /preservesCompanyOperationsFields/u);
+  assert.match(
+    rules,
+    /match \/Companies\/\{companyDocId\} \{[\s\S]*?allow read:[^;]+;[\s\S]*?allow create, update, delete: if false;/u,
+  );
+  assert.doesNotMatch(rules, /preservesCompanyOperationsFields/u);
   assert.match(apiIndex, /updateCompanyOperations/u);
   assert.match(schema, /ACTUAL_DATE: "LABOR_STANDARD"/u);
   assert.match(schema, /OPERATION_DATE: "OPERATION_COUNT"/u);
