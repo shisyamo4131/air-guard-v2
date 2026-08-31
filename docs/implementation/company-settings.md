@@ -14,11 +14,11 @@
 >
 > 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
 >
-> 2026-08-31 CPU-05 implementation: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5は成功した。Codex UI smokeは起動templateのNuxt `ECONNRESET`で製品画面へ到達できず、主要画面再読込は未確認である。
+> 2026-08-31 CPU-05 acceptance: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理、3 editor、2表示順dialog、未変更時の保存無効、キャンセル、console error 0件をCodexが確認し、local受入れを完了した。データ保存は行っていない。
 
 ## メタデータ
 
-- 状態: 段階移行中（旧Company全体writer除去とroot client CUD拒否の実装・自動検証完了、CPU-05主要画面再読込と振込先の利用者最終UI acceptance待ち）
+- 状態: 段階移行中（旧Company全体writer除去とroot client CUD拒否のlocal受入れ完了、振込先の利用者最終UI acceptanceとCPU-06 Dev反映待ち）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-31
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`、`test/domain/company-legacy-writer-removal.test.mjs`
