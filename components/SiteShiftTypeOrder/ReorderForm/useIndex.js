@@ -56,21 +56,21 @@ export function useIndex(props, emit) {
   async function resolveAvailableOrder(source) {
     const order = plainOrder(source);
     const siteIds = [...new Set(order.map(({ siteId }) => siteId))];
-    const siteIsAvailable = new Map();
+    const siteExists = new Map();
 
     for (let offset = 0; offset < siteIds.length; offset += 20) {
       const chunk = siteIds.slice(offset, offset + 20);
       await Promise.all(
         chunk.map(async (siteId) => {
           const site = await new Site().fetchDoc({ docId: siteId });
-          siteIsAvailable.set(siteId, site?.status === Site.STATUS_ACTIVE);
+          siteExists.set(siteId, !!site);
           if (site) pushSite(site);
         }),
       );
     }
 
     return order
-      .filter(({ siteId }) => siteIsAvailable.get(siteId) === true)
+      .filter(({ siteId }) => siteExists.get(siteId) === true)
       .map((item) => new SiteOrder(item));
   }
 

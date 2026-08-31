@@ -122,6 +122,7 @@ async function loadReorderHarness({ sourceOrder, sites, emit }) {
 
     async fetchDoc({ docId }) {
       const data = sites.get(docId);
+      if (data instanceof Error) throw data;
       if (!data) return null;
       Object.assign(this, data, { docId });
       return this;
@@ -722,25 +723,29 @@ test("reorder draft ignores own reflection and keeps draft after save failure", 
   }
 });
 
-test("missing and terminated Site references stay hidden until explicit save", async () => {
+test("existing Site references remain regardless of status until explicit save", async () => {
   const emitted = [];
   const sourceOrder = [
     { siteId: "site-active", shiftType: "DAY" },
     { siteId: "site-missing", shiftType: "DAY" },
     { siteId: "site-terminated", shiftType: "NIGHT" },
+    { siteId: "site-inactive", shiftType: "DAY" },
+    { siteId: "site-deleted", shiftType: "NIGHT" },
   ];
   const mounted = await loadReorderHarness({
     sourceOrder,
     sites: new Map([
       ["site-active", { status: "ACTIVE" }],
       ["site-terminated", { status: "TERMINATED" }],
+      ["site-inactive", { status: "SUSPENDED" }],
+      ["site-deleted", null],
     ]),
     emit: (event, payload) => emitted.push({ event, payload }),
   });
   try {
     assert.deepEqual(
       mounted.api.items.value.map(({ siteId }) => siteId),
-      ["site-active"],
+      ["site-active", "site-terminated", "site-inactive"],
     );
     assert.deepEqual(emitted, []);
     assert.equal(mounted.api.isChanged.value, true);
@@ -748,9 +753,52 @@ test("missing and terminated Site references stay hidden until explicit save", a
     assert.deepEqual(emitted, [
       {
         event: "submit",
-        payload: [{ siteId: "site-active", shiftType: "DAY" }],
+        payload: [
+          { siteId: "site-active", shiftType: "DAY" },
+          { siteId: "site-terminated", shiftType: "NIGHT" },
+          { siteId: "site-inactive", shiftType: "DAY" },
+        ],
       },
     ]);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("Site fetch failure preserves the independent draft and stops saving", async () => {
+  const emitted = [];
+  const sites = new Map([
+    ["site-a", { status: "ACTIVE" }],
+    ["site-b", { status: "ACTIVE" }],
+  ]);
+  const mounted = await loadReorderHarness({
+    sourceOrder: SITE_ORDER.map((item) => ({ ...item })),
+    sites,
+    emit: (event, payload) => emitted.push({ event, payload }),
+  });
+  try {
+    mounted.api.items.value = [...mounted.api.items.value].reverse();
+    const draftBeforeFailure = mounted.api.items.value.map(
+      ({ siteId, shiftType }) => ({ siteId, shiftType }),
+    );
+    sites.set("site-error", new Error("synthetic Site fetch failure"));
+    mounted.props.siteShiftTypeOrder = [
+      ...SITE_ORDER.map((item) => ({ ...item })),
+      { siteId: "site-error", shiftType: "DAY" },
+    ];
+    await flushWatchers();
+
+    assert.deepEqual(
+      mounted.api.items.value.map(({ siteId, shiftType }) => ({
+        siteId,
+        shiftType,
+      })),
+      draftBeforeFailure,
+    );
+    assert.notEqual(mounted.api.resolutionError.value, "");
+    assert.equal(mounted.api.controlsDisabled.value, true);
+    await mounted.api.submit();
+    assert.deepEqual(emitted, []);
   } finally {
     mounted.cleanup();
   }

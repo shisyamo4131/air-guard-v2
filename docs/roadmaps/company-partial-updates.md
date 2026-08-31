@@ -5,7 +5,7 @@
 - 現在の進捗: 30%
 - 部分加点: なし
 - 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、必要なCodex in-app UI smoke、bounded Dev反映、利用者による実際の利用環境での最終UI acceptanceまで完了する
-- 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)
+- 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)、[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)
 
 ## 境界
 
@@ -24,7 +24,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | CPU-01 schema/editor境界の確定 | 10 | 10 | Completed | project rules、仕様、ADR、Company operation一覧、共通validationとdraft競合契約を確定する |
 | CPU-02 Company基本情報の部分更新 | 20 | 20 | Completed | 専用editor/writer、管理者境界、変更fieldだけの保存、server timestamp、schema/operation validation、回帰testを完了する |
 | CPU-03 振込先・通常設定の部分更新 | 20 | 0 | In progress | 2 operationの実装・自動test・Codex UI smokeは完了し、通常設定の利用者最終UI acceptanceも完了した。振込先の残る最終UI acceptance待ち |
-| CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 0 | In progress | Company既定取極めUI/writerを撤去し、`siteOrder`・`scheduleOrder`の専用更新、Rules、競合UI、自動検証を完了する。Codex UI smokeと利用者最終UI acceptance待ち |
+| CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 0 | In progress | Company既定取極めUI/writerを撤去し、`siteOrder`・`scheduleOrder`の専用更新、Rules、競合UI、自動検証を完了した。利用者確認は項目1〜10・13と一般利用者の画面非表示まで合格し、未保存変更を伴う競合と終了済みSite表示の最終確認待ち |
 | CPU-05 旧Company writer除去・local受入れ | 15 | 0 | Not started | Company全体`set/update()` caller 0、Rules/Functions回帰、listener競合表示、主要画面再読込を確認する |
 | CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
 
@@ -51,4 +51,5 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-30 | 30% | 0 | 利用者が実際の環境で、基本情報・振込先の保存中に入力欄と全操作buttonが使用不可になること、自分の保存結果では外部更新警告が一瞬表示されないこと、本当の外部更新では警告が維持されることを確認し、保存中制御補正を受け入れた。CPU-03の通常設定と振込先全体の残る最終確認、CPU-04以降、Dev反映は未完了のため進捗を据え置いた。 |
 | 2026-08-30 | 30% | 0 | CPU-03の通常設定4 fieldを専用editor/Callableへ移し、会社管理者境界、changed-only保存、legacy勤怠値のcanonical検証、欠損時の非移行互換、client直接write拒否、保存中制御、再読込専用競合を実装した。対象19件、全domain 707件、専用Emulator 104件、Codex in-app UIの保存中全操作無効・反映・自己保存警告なし・復元・console error 0件が成功した。Company document分割、data migration、Dev反映は行っていない。CPU-03は利用者の実際の環境での最終UI acceptance待ちのため加点しない。 |
 | 2026-08-30 | 30% | 0 | 利用者が実際の環境で、通常設定4項目の表示・1項目保存、保存中の全入力・操作無効、自己保存時の外部更新警告非表示、真正な外部更新時の再読込、非管理者・super-userの編集拒否を確認し、通常設定operationを受け入れた。CPU-03は振込先の残る利用者最終UI acceptance、CPU-04以降、Dev反映が未完了のため進捗を据え置いた。 |
-| 2026-08-30 | 30% | 0 | CPU-04でCompany既定取極めUI/writerを撤去し、会社管理者またはfield別既知preset actorによる`siteOrder`・`scheduleOrder`専用Callable、client直接write拒否、独立draft、再読込専用競合、保存中制御、非active Site除外を実装した。専用14件、全domain 721件、専用Emulator 106件、security review 4/5が成功した。Codex UI smokeは起動templateから製品画面へ遷移せず未完了で、利用者最終UI acceptanceも未完了のためCPU-04を加点しない。 |
+| 2026-08-30 | 30% | 0 | CPU-04でCompany既定取極めUI/writerを撤去し、会社管理者またはfield別既知preset actorによる`siteOrder`・`scheduleOrder`専用Callable、client直接write拒否、独立draft、再読込専用競合、保存中制御、削除済みSite参照の除外を実装した。専用14件、全domain 721件、専用Emulator 106件、security review 4/5が成功した。Codex UI smokeは起動templateから製品画面へ遷移せず未完了で、利用者最終UI acceptanceも未完了のためCPU-04を加点しない。 |
+| 2026-08-31 | 30% | 0 | 利用者確認は項目1〜10・13が合格し、一般利用者が稼働予定・配置管理へアクセスできないことも確認した。二画面確認は未保存変更のない画面が保存後の順へ追従したため正常であり、dirty競合は再確認を要する。終了済み現場でも突発予定が発生する業務に合わせ、既存Siteは状態にかかわらず表示順へ残し、missing/deletedだけを除外するよう補正した。専用15件、全domain 722件と一般review GOを確認した。残る利用者最終UI acceptanceまでCPU-04を加点しない。 |

@@ -94,9 +94,9 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - Company設定pageからCompany既定`agreementsV2`の編集UIとCompany whole-document writerを撤去した。Site詳細の取極めUI、schema field、保存済みCompany値は維持し、data migrationしない。
 - `siteOrder`と`scheduleOrder`は専用`updateCompanyArrangement` Callableへ移行した。会社管理者、または既知preset由来のfield別write permissionを持つ同社の有効な本登録non-super-userだけが保存できる。
 - Callableはexact `{field, order}`を受け、対象fieldとserver管理metadataだけをtransaction updateする。同値はwrite 0で、Rulesは`agreementsV2/siteOrder/scheduleOrder`のclient直接変更を全actorへ拒否する。
-- editorは独立draft、再読込専用競合、自保存reflection除外、single-flight、保存中の全関連操作停止、失敗時draft維持を実装した。missing/deleted/非active Siteは表示から除外し、明示保存時だけ旧参照を除去する。
-- 専用14件、全domain 721件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止し、利用者の実際の環境での最終UI acceptance待ちである。
-- 詳細なactor、入力、競合、rollbackは[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。
+- editorは独立draft、再読込専用競合、自保存reflection除外、single-flight、保存中の全関連操作停止、失敗時draft維持を実装した。既存Siteは終了済み等の状態でも表示へ残し、missing/deleted Siteだけを表示から除外して明示保存時だけ旧参照を除去する。Site取得失敗時はdraftを維持して保存を止める。
+- 専用15件、全domain 722件、Codex専用Emulator 106件、security review 4/5が成功した。Codex in-app UI smokeは起動templateから製品画面へ遷移せず対象操作前に停止した。利用者確認は項目1〜10・13が合格し、一般利用者が対象画面へアクセスできないことも確認済みである。未保存の並べ替えを伴う競合と終了済みSite表示の最終確認待ちである。
+- 詳細なactor、入力、競合、rollbackは[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、Siteの表示判断は[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)を正とする。
 
 ## tenant identity
 
