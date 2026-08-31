@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-009 — 上下番確定からOperationResult作成
-- 最終確認日: 2026-08-10
+- 最終確認日: 2026-08-31（DEV観測追記。実行経路の最終静的調査は2026-08-10）
 - 根拠ファイル: `pages/operation-results/generator.vue`、`utils/pageSettings.js` の該当設定、`composables/dataLayers/useUnconfirmedSiteOperationSchedules.js`、`components/OperationResult/Generator/index.vue`・`List.vue`・`Detail.vue`、直接使用するArrangementNotification manager、schemas `SiteOperationSchedule.syncToOperationResult`、`OperationResult`・`OperationResultDetail`・`Operation`・`Site.getValidAgreement` の直接契約、`functions/triggers/operationResult.js` とBilling/Attendance入口コメント
 
 Generator 3 componentsを含むOperationResult component 14 filesの公開契約、duplicate/lock、並行性のfile単位確認は[OperationResult components deep review](operation-result-components-deep-review.md)を参照する。
@@ -111,6 +111,14 @@ SiteのCustomer変更後も既存OperationResultの`customerId`はsnapshotとし
 - 処理中のList選択とasync watcherを対象ID・世代tokenで固定する（FUT-0026）。
 - agreementなし確定と請求稼働管理からの回復経路を回帰testで固定し、古いallowEmptyAgreement記述を整理する（FUT-0029）。
 - 後続triggerの部分成功・retry・再調整を別セグメントで検証する（FUT-0030）。
+
+## 2026-08-31 DEV観測（原因未確定）
+
+- 利用者がDEVで上下番確定を実行し、OperationResult登録は成功した一方、処理時に「予期しないエラー」趣旨のSnackbarを観測した。
+- 同じ時間帯にFcmTokens登録の403 permission-denied、SecurityReports thumbnailの404、Chrome message channel errorも観測された。上下番確定との因果関係は確認できておらず、別問題の可能性を維持する。
+- ArrangementNotificationのLEAVED更新で一部errorが発生し、OperationResult作成後にSnackbarだけが表示された可能性は調査仮説であり、現時点の原因とは断定しない。現行静的調査ではworker通知の個別更新が最終OperationResult transactionより前にあるため、実際のruntime順序、別経路、非同期例外、Snackbar発生元を次回改修時に再追跡する。
+- 次回はbuttonからOperationResult作成、SiteOperationSchedule link、対象通知全件のLEAVED更新までを追跡し、await、例外伝播、部分成功、再実行、既にLEAVED、通知なし、複数worker、一部失敗を確認する。成功時はerror Snackbarなし、失敗時は失敗resourceを特定できるmessageまたはlogを残し、FcmTokens失敗は確定処理の成否へ影響させない。
+- 共有logに含まれるFCM token等の機密値は本記録・test dataへ転記しない。原因調査と再現testには合成dataを使用する。詳細な調査・検証条件は[FUT-0027](future-actions.md#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする)へ統合した。
 
 ## 質問
 
