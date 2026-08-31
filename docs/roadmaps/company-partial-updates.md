@@ -1,8 +1,8 @@
 # Company部分更新ロードマップ
 
-- 状態: Active
+- 状態: Completed
 - 開始日: 2026-08-30
-- 現在の進捗: 85%
+- 現在の進捗: 100%
 - 部分加点: なし
 - 完了条件: Companyの全whole-document writerをoperation別の変更field保存へ移し、schema validation、actor/field境界、real-time競合表示、local自動検証、必要なCodex in-app UI smoke、bounded Dev反映、利用者による実際の利用環境での最終UI acceptanceまで完了する
 - 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0033](../decisions/0033-company-bank-transfer-update-boundary.md)、[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)、[ADR 0036](../decisions/0036-terminated-site-display-order-visibility.md)
@@ -26,13 +26,13 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | CPU-03 振込先・通常設定の部分更新 | 20 | 20 | Completed | 2 operationの実装・自動test・Codex UI smoke、通常設定の利用者受入れ、振込先の会社管理者保存・clear・復元・二画面競合、一般ユーザーの画面拒否、実請求PDFの口座情報出力を完了した |
 | CPU-04 Company既定取極め撤去・表示順の部分更新 | 20 | 20 | Completed | Company既定取極めUI/writer撤去、`siteOrder`・`scheduleOrder`専用更新、Rules、競合UI、自動検証、利用者による項目1〜14・権限・二画面競合・終了済みSite表示の最終確認を完了した |
 | CPU-05 旧Company writer除去・local受入れ | 15 | 15 | Completed | 旧writer 0件、Company root client CUD全面拒否、全domain 726件、隔離Emulator 107件、一般・security review GO、会社管理者Chromeで会社設定・稼働予定・配置管理の再読込と専用editor/dialogを確認した |
-| CPU-06 bounded Dev反映・利用者受入れ | 15 | 0 | Not started | 承認済みreleaseでDevへ反映し、利用者受入れ、error確認、rollback確認を完了する |
+| CPU-06 bounded Dev反映・利用者受入れ | 15 | 15 | Completed | Dev PITR 7日、4 Callable、Hosting同一artifact、Rules、cache header、会社管理者保存、一般User拒否、error 0件、rollback baselineを確認した |
 
 重みは合計100。各マイルストーンは記載した証拠がすべて揃った場合だけ加点する。
 
 ## 現在の次工程
 
-1. CPU-06のDev反映は、対象commit・service・data影響・backup・rollback・停止条件・post-check・利用者受入れを固定した別承認とする。
+Company部分更新roadmapは完了した。Company document分割、legacy Stripe情報削除、正式運用準備は本roadmapへ追加せず、それぞれの独立roadmap・承認境界で扱う。
 
 ## 進捗履歴
 
@@ -57,3 +57,4 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 | 2026-08-31 | 50% | 0 | CPU-05で未使用のCompany全体保存入口2件を削除し、Company rootのclient create/update/deleteを全面拒否した。旧writer 0件の静的検査、全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5は成功した。Codex UI smokeは起動templateのNuxt `ECONNRESET`で製品画面へ到達できず主要画面再読込が残るため、CPU-05は加点しない。 |
 | 2026-08-31 | 65% | +15 | 利用者承認の会社管理者Chromeで、会社設定・稼働予定管理・配置管理を再読込し、業務data表示、基本情報・振込先・通常設定の専用editor、稼働予定・配置管理の表示順dialog、未変更時の保存無効、キャンセル、console error 0件を確認した。データ保存は行わずCPU-05のlocal受入れを完了した。 |
 | 2026-08-31 | 85% | +20 | 会社管理者Chromeで振込先5項目の保存、明示clear、元値への復元、dirtyな二画面競合と最新値再読込をCodexが通常操作で確認した。利用者は実請求PDFの口座情報出力を確認した。一般ユーザーChromeでは管理者メニューと会社設定入口がなく、直接URLもダッシュボードへ戻り、新規タブでconsole error 0件だった。先行済みの自動testと長値render testを合わせ、CPU-03の最終UI acceptanceを完了した。 |
+| 2026-08-31 | 100% | +15 | `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`で、Dev PITR 7日を確認し、Company専用Callable 4件、固定commitの静的生成物、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件のACTIVE/CORS、Hosting artifact一致、Rules compile/releaseを確認した。Hosting cache headerの適用順を`firebase.json`だけで補正し、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で15分→20分→15分の保存を確認し、Codexは新規一般Userの新しいChrome tabで管理者入口非表示、直接URL拒否、app error 0件を確認した。rollback baselineは`52dd607d16e9b77f90ec238250eca11757548097`、data migration・repair・delete・snapshot・Prod変更は行っていない。 |

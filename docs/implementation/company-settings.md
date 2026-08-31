@@ -15,10 +15,12 @@
 > 2026-08-31 Company arrangement acceptance: Company既定取極めUI/writer撤去と表示順専用更新を実装し、自動検証に加えて、項目1〜14、一般利用者の画面非表示、二画面競合、終了済み現場の表示を利用者が実際の利用環境で確認した。
 >
 > 2026-08-31 CPU-05 acceptance: 静的caller 0を再確認した旧`CompanyManager`と`useSiteOrderManager`を削除し、Company rootのclient create/update/deleteを全面拒否した。同社Userのreadと4つの専用Callableは維持する。全domain 726件、隔離Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateのNuxt `ECONNRESET`で停止したが、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理、3 editor、2表示順dialog、未変更時の保存無効、キャンセル、console error 0件をCodexが確認し、local受入れを完了した。データ保存は行っていない。
+>
+> 2026-08-31 CPU-06 Dev release acceptance: `DEV-COMPANY-PARTIAL-UPDATE-RELEASE-001`でDev PITR 7日を確認し、Company専用Callable 4件、固定commitの静的生成物、Firestore Rulesをmaintenance・migrationなしで選択deployした。4件は東京・Node.js 22・ACTIVEでbrowser CORSに成功し、Hosting artifact一致、Rules compile/releaseも成功した。Hosting cache headerの適用順を`firebase.json`だけで補正し、index・Service Workerのno-cacheとversion assetのimmutableを実応答で確認した。利用者は会社管理者で通常設定を15分→20分→15分へ保存し、Codexは新規一般Userの新しいChrome tabで管理者入口非表示、直接URL拒否、app error 0件を確認した。Company部分更新roadmapは100%で完了した。
 
 ## メタデータ
 
-- 状態: 段階移行中（Company基本情報・振込先・通常設定・表示順と旧Company全体writer除去のlocal受入れ完了、CPU-06 Dev反映待ち）
+- 状態: Company部分更新完了（local実装・自動検証・Dev反映・利用者最終UI acceptance完了）
 - 対象セグメント: SPEC-SEG-027、SPEC-DEEP-039a
 - 最終確認日: 2026-08-31
 - 根拠ファイル: `pages/settings/company.vue`、`components/Company/ProfileEditor.vue`、`components/Company/BillingEditor.vue`、`components/Company/OperationsEditor.vue`、`components/Company/Activator/Base.vue`、`components/Company/Activator/Bank.vue`、`components/Company/Activator/Setting.vue`、`schemas/Company.js`、`composables/application/company/useCompanyProfileUpdate.js`、`composables/application/company/useCompanyBillingUpdate.js`、`composables/application/company/useCompanyOperationsUpdate.js`、`functions/apis/updateCompanyProfile.js`、`functions/apis/updateCompanyBilling.js`、`functions/apis/updateCompanyOperations.js`、`functions/modules/company/updateCompanyProfile.js`、`functions/modules/company/updateCompanyBilling.js`、`functions/modules/company/updateCompanyOperations.js`、`stores/useCompanyStore.js`、`composables/application/siteShiftTypeOrder/useSiteShiftTypeOrderActions.js`、`firestore.rules`、`test/domain/company-legacy-writer-removal.test.mjs`
