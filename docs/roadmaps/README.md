@@ -24,7 +24,7 @@
 |---|---:|---|---|
 | AirGuardV2 正式運用準備 | 10% | 2026-08-27 | [airguard-v2.md](airguard-v2.md) |
 | Company部分更新 | 100% | 2026-08-31 | [company-partial-updates.md](company-partial-updates.md) |
-| SuperUser兼会社管理者の表示順対応 | 70% | 2026-08-31 | [superuser-company-admin-display-order.md](superuser-company-admin-display-order.md) |
+| SuperUser兼会社管理者の表示順対応 | 90% | 2026-08-31 | [superuser-company-admin-display-order.md](superuser-company-admin-display-order.md) |
 | Company legacy Stripe情報削除 | 0% | 2026-08-30 | [company-stripe-removal.md](company-stripe-removal.md) |
 | Company設定改修（CCB・Historical） | 10% | 2026-08-30 | [company-settings.md](company-settings.md) |
 
