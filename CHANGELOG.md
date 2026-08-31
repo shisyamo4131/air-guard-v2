@@ -4,6 +4,7 @@
 
 ## Unreleased
 
+- Company振込先の利用者最終UI acceptanceを完了した。会社管理者Chromeで5項目の保存、明示clear、元の値への復元、二画面でのdirty競合と最新値再読込をCodexが通常操作で確認し、利用者は実請求PDFに口座情報が正常に出力されることを確認した。一般ユーザーChromeでは管理者メニューと会社設定入口が表示されず、`/settings/company`の直接指定もダッシュボードへ戻され、切り分け用の新規タブでconsole error 0件だった。先行済みの自動testと長値render testを合わせてCPU-03を完了し、Company部分更新roadmapを65%から85%へ更新した。製品code、Dev・remote/data・deployは変更していない。
 - Company全体を丸ごと保存していた未使用の`CompanyManager`と`useSiteOrderManager`を削除し、Company rootへのclient create/update/deleteをFirestore Rulesで全面拒否した。同じ会社の有効な本登録Userによるreadと、基本情報・振込先・通常設定・表示順を変更する4つの専用Callableは維持する。client sourceをASTで検査する回帰testを追加し、全domain 726件、隔離Codex Emulator 107件、一般review GO、security review 5/5が成功した。Codex in-app UI smokeは起動templateでNuxt `ECONNRESET`となったが、その後、利用者承認の会社管理者Chromeで会社設定・稼働予定管理・配置管理を再読込し、3つの会社設定editorと2つの表示順dialogが開閉でき、未変更時の表示順保存が無効で、console error 0件であることをCodexが確認した。データ保存は行わずCPU-05のlocal受入れを完了した。Dev・remote/data・deployは行っていない。
 - 表示順の二画面競合について、利用者が開いていた同じ会社管理者Chrome 2画面をCodexが通常操作して再確認した。未保存変更がない画面は他画面の保存結果を自動反映し、その後の編集を最新順から開始する。未保存変更がある画面は自身の順を維持し、外部更新警告を表示して保存を無効化する。利用者はこの区別と、終了済み現場も並べ替えに表示されることを実際の利用環境で確認して受け入れ、CPU-04の最終UI acceptanceを完了した。確認で変更した表示順は元へ戻した。
 - DEVの上下番確定でOperationResult作成後に予期しないerror Snackbarが表示された未解決事象を、既存FUT-0027へ追加した。ArrangementNotificationのLEAVED更新を一仮説として、OperationResult・SiteOperationSchedule・全通知の実行順、await、部分成功、再実行、Snackbar発生元、FcmTokens 403との因果分離を次回改修時の調査・検証条件にした。SecurityReports 404とChrome message channel errorも同時観測として区別し、原因とは断定しない。共有logのFCM token等の機密値は記録していない。

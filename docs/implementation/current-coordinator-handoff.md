@@ -31,7 +31,7 @@
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
 - specification: `0.8.0`
-- unintegrated work: 0。Company基本情報・振込先・通常設定・表示順のapplication・Functions・Rules・test・文書はlocal commitへ統合済みである。基本情報、通常設定、保存中制御補正の利用者acceptanceは完了し、振込先と表示順の利用者最終UI acceptanceを残す。
+- unintegrated work: 0。Company基本情報・振込先・通常設定・表示順のapplication・Functions・Rules・test・文書はlocal commitへ統合済みであり、各operationの利用者最終UI acceptanceも完了した。残るCompany部分更新工程はCPU-06のbounded Dev反映・利用者受入れである。
 
 ## Confirmed product state
 
@@ -46,7 +46,7 @@
 - Schemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardは独立成果として保持した。Schemasをunpublishせず、関連repository、Dev、remote/dataは変更していない。
 - Company基本情報10 fieldは独立draftと専用Callableへ移行済みである。利用者が変えたfieldだけを最新Companyへ重ねてclient/server双方で検証し、server timestampと更新者を記録する。編集中のlive変更は自動上書きせず、会社管理者以外の編集controlとserver保存を拒否する。Rulesは同profile fieldのclient直接変更を閉じ、未移行operationの対象外field更新を暫定維持する。
 - 利用者local確認で権限と更新metadataは合格した。基本情報card titleを復元し、dialogをVuetifyの`scrollable`前提DOMへ修正して本文だけをscrollさせた。競合時は保存を止め、「最新値を読み直す」だけを表示する。利用者は修正版UIを再確認し、Company基本情報のlocal受入れを完了した。
-- Company振込先は専用editorと`updateCompanyBilling` Callableへ移行した。同社の有効な本登録User readを維持し、非super-user会社管理者だけが編集・保存できる。5 field all-null/all-complete、changed-only update、client直接write拒否、再読込専用競合、明示clear、完全な口座名義込み帳票をlocal実装・自動検証した。Codex in-app UIで管理者の入力・保存反映まで確認し、利用者の実際の利用環境での最終UI acceptanceを待っている。
+- Company振込先は専用editorと`updateCompanyBilling` Callableへ移行した。同社の有効な本登録User readを維持し、非super-user会社管理者だけが編集・保存できる。5 field all-null/all-complete、changed-only update、client直接write拒否、再読込専用競合、明示clear、完全な口座名義込み帳票をlocal実装・自動検証した。会社管理者Chromeで5項目の保存・clear・復元・二画面競合、一般ユーザーChromeで画面拒否をCodexが確認し、利用者が実請求PDFの口座情報出力を確認して最終UI acceptanceを完了した。
 - 利用者確認で、基本情報・振込先の保存中も入力欄が操作でき、自分の保存結果を外部更新として一瞬表示する問題が見つかった。両editorは入力検査開始からserver応答まで全入力・選択・操作buttonを無効化し、自分の保存reflectionは警告にせず、本当に異なるlive値だけを競合として扱うよう補正した。
 - 利用者は実際の環境で、保存中の全入力・操作button無効化、自己保存時の外部更新警告非表示、本当の外部更新時の警告維持を確認し、保存中制御補正を受け入れた。
 - Company通常設定4 fieldは専用editorと`updateCompanyOperations` Callableへ移行した。Company rootを分割・移行せず、legacy勤怠値を共有canonical parserへ写像し、欠損時は検証だけ既定化して補完writeしない。会社管理者だけのchanged-only transaction、client直接write拒否、保存中全control無効、自己保存reflection識別、真正競合の再読込をlocal実装・検証した。
@@ -68,9 +68,9 @@
 - completed product checkpoint: `CCB-COMPANY-PARTIAL-UPDATE-001`。Company基本情報の専用editor・Callable、Class schema/operation validation、会社管理者境界、変更fieldだけの保存、server timestamp、編集中listener変更の通知、Rulesのclient直接変更拒否をlocal実装・検証した。
 - completed acceptance checkpoint: Company基本情報のtitle、dialog本文限定scroll、外部更新後の再読込専用UIを利用者local環境で再確認し、受入れを完了した。
 - completed governance checkpoint: `GOV17-AIRGUARDV2-SUBAGENT-ROUTING-001`。project-wide delegation方針をproject rules、仕様、ADR 0032、runbook、開始prompt、roadmap、snapshot、changelogへ反映し、instruction-chain変更として検証・commitした。task交代中を除き独立して分割できる必要な調査・review・test・利用者承認済み補助実装等へ適切なsubagentを使用し、Checkpoint固有の禁止は当該Checkpoint内だけに限定する。
-- implementation complete / user acceptance pending checkpoint: `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`。承認済みowned filesでapplication、Functions、Rules、test、PDFを実装し、振込先・PDF対象17件、全domain 676件、専用Emulator 102件、Codex in-app UIの管理者表示・5項目・明示clear・架空口座保存反映を確認した。非管理者UIと実請求PDFを含む利用者の実際の利用環境での最終UI acceptanceまではfeature・roadmapを最終完了としない。
+- implementation and user acceptance complete checkpoint: `CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`。承認済みowned filesでapplication、Functions、Rules、test、PDFを実装し、振込先・PDF対象17件、全domain 676件、専用Emulator 102件、Codex in-app UIの管理者表示・5項目・明示clear・架空口座保存反映を確認した。利用者環境では会社管理者の保存・clear・復元・二画面競合、一般ユーザーの画面拒否、実請求PDFの口座情報出力を確認し、CPU-03を20点加算してCompany部分更新roadmapを85%とした。
 - completed acceptance checkpoint: `CCB-COMPANY-EDITOR-SAVING-STATE-FIX-001`。ProfileEditor/BillingEditorの保存中制御と自己保存reflection識別を修正し、会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UI smokeは起動templateから製品画面へ遷移せずNuxt `ECONNRESET`で対象操作前に停止したが、利用者が実際の環境で保存中の入力無効化、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。
-- completed acceptance checkpoint: `CCB-COMPANY-OPERATIONS-CODEX-IMPLEMENT-001`。通常設定4 fieldの専用editor・Callable、legacy/canonical validation、欠損時の非移行互換、会社管理者境界、changed-only transaction、Rules、保存中・競合UIを実装した。対象19件、全domain 707件、専用Emulator 104件とCodex in-app UI smokeが成功し、利用者が実際の環境で最終UI acceptanceを完了した。CPU-03は振込先の残る利用者最終UI acceptanceまで完了としない。
+- completed acceptance checkpoint: `CCB-COMPANY-OPERATIONS-CODEX-IMPLEMENT-001`。通常設定4 fieldの専用editor・Callable、legacy/canonical validation、欠損時の非移行互換、会社管理者境界、changed-only transaction、Rules、保存中・競合UIを実装した。対象19件、全domain 707件、専用Emulator 104件とCodex in-app UI smokeが成功し、利用者が実際の環境で最終UI acceptanceを完了した。振込先の最終UI acceptanceも完了し、CPU-03はCompletedである。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
 - following active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%。whole-document replacement除去のreview済みbaseline後にSTRIPE-01へ接続する。
 
@@ -97,14 +97,14 @@ PM-12はno-change開始時に次だけを読み、不足・矛盾がなかった
 - `NO-CHANGE-GOV18-AIRGUARDV2-PM12-001`と`GOV18-AIRGUARDV2-PM12-ACTIVATION-001`では、指定されたread-only確認、snapshot 1件のfile-scoped commit、validator、local Git確認、旧coordinatorへのreceipt以外を行わない。
 - PM-11 ownership activationとcorrective rollbackは完了した。利用者はCompany CRUDをoperation固有editorへ段階移行する方針と、`CCB-COMPANY-PARTIAL-UPDATE-001`のlocal application/Functions/Rules/test/document変更を承認した。
 - 利用者はADR 0034のgovernance反映とPM-12 turnoverを承認した。承認済みcheckpointまたはfeature boundary内ではCodex developerがapplicationと必要なFunctions・Rulesを実装し、Codexが自動testと必要なin-app UI smokeを担当し、利用者が実際の利用環境で最終UI acceptanceを行う。file-by-file確認はcheckpointが明示した場合だけとし、外部作用は別承認とする。
-- ADR 0033のCompany振込先product contractを`CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`のlocal実装へ反映した。利用者最終UI acceptanceを待ち、Dev、remote/data、deployへは拡張しない。
+- ADR 0033のCompany振込先product contractを`CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`のlocal実装へ反映し、利用者最終UI acceptanceを完了した。Dev、remote/data、deployへは拡張していない。
 - 利用者はproject-wide subagent routing変更とPM-11へのcoordinator交代を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。
 - Schemas/Admin SDK、Dev、remote/data、network、push、main merge、Prodは別承認である。Dev migration/deployは対象commit、件数、backup、rollback、停止条件、post-check、受入れを固定した利用者承認を必要とする。
 - former taskをCodexがarchive/deleteしない。ownership activation成功後、利用者がPM-11を手動削除できる。
 
 ## Current evidence contract
 
-Company振込先checkpointでは振込先・PDF対象17件、全domain 676件、隔離Codex Emulator 102件を成功させた。Emulatorはdemo project・loopback・合成dataだけを使用し、利用者saved-data不変を確認した。Codex in-app UIで会社管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認し、終了後に専用port閉鎖とruntime空を確認した。非管理者UI、実際の請求PDF、利用者環境の最終表示は利用者acceptance待ちである。文書同期ではproject documentation validator、managed governance validator、renderer `-Check`、`git diff --check`を各独立commandで成功させ、branch/full HEAD、upstream none、clean、primary-only worktreeを確認する。capacity script、network、remote/data操作は実行しない。
+Company振込先checkpointでは振込先・PDF対象17件、全domain 676件、隔離Codex Emulator 102件を成功させた。Emulatorはdemo project・loopback・合成dataだけを使用し、利用者saved-data不変を確認した。Codex in-app UIで会社管理者の編集入口、5項目、明示clear、架空口座の保存反映を確認し、終了後に専用port閉鎖とruntime空を確認した。利用者環境では会社管理者Chromeで5項目保存、明示clear、元値への復元、dirtyな二画面競合と最新値再読込をCodexが通常操作で確認した。利用者は実請求PDFに口座情報が正常出力されることを確認した。一般ユーザーChromeでは管理者メニュー・会社設定入口がなく、直接URLもダッシュボードへ戻り、切り分け用新規タブのconsole errorは0件だった。自動testの長値render検証を合わせて最終UI acceptanceを完了した。文書同期ではproject documentation validator、managed governance validator、renderer `-Check`、`git diff --check`を各独立commandで成功させ、branch/full HEAD、upstream none、clean、primary-only worktreeを確認する。capacity script、network、remote/data操作は実行しない。
 
 保存中制御の補正では会社情報12件、振込先19件、全domain 688件を成功させた。Codex専用UIは製品画面到達前のNuxt `ECONNRESET`で対象操作を確認できなかったためUI成功とは扱わなかったが、その後、利用者が実際の環境で保存中の操作不可、自己保存時の警告非表示、本当の外部更新時の警告維持を確認して受け入れた。Functions・Rules・package・Schemas/Admin SDK・Dev・remote/data・deployは変更していない。
 
