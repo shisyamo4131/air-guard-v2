@@ -5,7 +5,7 @@
 - active coordinator: PM（AirGuardV2）-13 / task `01a05b84-0e34-7852-ad21-0f2c59f5023c` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-13 task `01a05b84-0e34-7852-ad21-0f2c59f5023c`
 - former coordinator: PM（AirGuardV2）-12 / task `01a05183-9ab8-7f23-8e13-2ec47296dc04` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
-- program coordinator: PM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` / host `local`
+- program coordinator: PM（SPG）-05 / task `01a05be0-9996-7361-a6d6-e7062e4eee41` / host `local`
 - coordination procedure: [project coordination](../runbooks/project-coordination.md)、[efficient handoff](../runbooks/coordinator-handoff-efficient-activation.md)、[ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)
 
 ## Repository baseline
