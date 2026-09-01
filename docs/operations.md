@@ -21,7 +21,6 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 - npm
 - 対象 Firebase プロジェクトへアクセスできる Firebase CLI 認証
 - 用途に応じた `.env.development`、`.env.local`、`.env`
-- Stripe ローカル Webhook を確認する場合は Stripe CLI とローカル Secret
 
 依存関係のインストール前にはロックファイルと変更差分を確認します。証明書の問題がある環境では、検証を無効化せず、必要な PowerShell プロセス内だけで次を設定します。
 
@@ -63,7 +62,7 @@ UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh 
 - Cloud Functions のログ: Firebase Console または `npm run logs`（`functions/`）
 - Emulator UI: `firebase.json` のポート設定に従う
 - Hosting: 対象 Firebase プロジェクトの Hosting URL
-- Stripe: Webhook 配送履歴、署名検証結果、Company の同期状態
+- Company legacy Stripe scaffold removal: 値非出力のdry-run件数・digest、対象外field不変、post-check 0件。外部Stripeは確認・変更しない
 
 成功はコマンド終了だけで判断せず、対象環境、ログ、データ、主要画面をユーザーが確認します。
 
@@ -100,7 +99,7 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 - Emulator 接続失敗: `NUXT_PUBLIC_FIREBASE_USE_EMULATOR`、ホスト、端末からの到達性、ポートを確認する。
 - デプロイ失敗: 対象 alias、認証、権限、CLI 出力を確認し、失敗した限定操作だけを再実行する。
 - Functions の部分失敗: 冪等性と重複実行の影響を確認してから再試行する。
-- Stripe Webhook 失敗: 署名、イベント ID、対象会社、再配送時の重複反映を確認する。
+- legacy Stripe removal失敗: 対象件数、backup、plan digest、状態変化、Rules/schema整合を確認し、write 0のまま停止する。
 - PWA 更新問題: Service Worker、キャッシュヘッダー、登録状態を確認し、利用者データを失う一律削除を安易に案内しない。
 
 デプロイ後の復旧は、原則として Git 上の既知の正常版を再生成・再デプロイします。データスキーマ変更を伴う場合は、コードだけを戻して安全かを先に確認します。
@@ -111,17 +110,17 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 - Firestoreのスケジュールバックアップは既存資料に記載があるが、現在のschedule、保持、復元演習は未確認である。
 - 旧CCBの`PrivateSettings`と`SettingAudits`はADR 0031で廃止され、主repositoryのmigration/restore plannerも2026-08-30に削除した。これらを対象にしたlogical backup/restoreを提供済みと案内しない。Admin SDKに残る`INCOMPLETE / EXCLUDED / UNVERIFIED / UNAVAILABLE`表示とfail-closed guardはhistorical artifactや未知pathを安全側へ止める独立保護であり、CCB-aware backup/restoreの提供を意味しない。
 - データ移行前は、対象データと復旧手順を定め、必要なバックアップが取得済みであることを人が確認する。
-- Storage、Authentication、Stripe の状態は Firestore バックアップだけでは完全に復元できない。
+- Storage、Authentication、外部serviceの状態は Firestore バックアップだけでは完全に復元できない。未同期Stripe scaffold撤去では外部Stripeを変更しない。
 - 文書と仕様の履歴は Git で保持する。
 
 ## 秘密情報
 
 - `.env` 系ファイルの値、Firebase Admin 資格情報、Stripe Secret、Webhook Secret をコミット・文書化しない。
-- ローカル Stripe Secret は `functions/.secret.local`、デプロイ環境は Firebase Secret Manager を使用する設計である。
+- legacy Stripe scaffoldの撤去でStripe Secretを読取・登録・削除しない。将来外部serviceを導入する場合はSecret Manager等のserver-only管理を別設計する。
 - ログや障害報告へ実際の個人情報、顧客情報、勤怠、請求、トークンを貼らない。
 
 ## 現在利用不可または要確認
 
 - Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、UWB-04予約fixtureを含むUser lifecycle Callableのhandlerを確認する。Realtime Database Rules、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
-- Stripe の本番 Secret、Webhook、プラン、キャンセル、従業員数制限の運用状況は環境ごとに確認が必要。
+- Stripe関連物は未同期scaffoldとして撤去中で、現行運用機能ではない。将来のprovider、契約、料金、利用上限は未設計である。

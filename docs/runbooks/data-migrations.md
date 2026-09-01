@@ -6,6 +6,16 @@
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
+## Company legacy Stripe scaffold removal（Planned / command unavailable）
+
+[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)により、既存Company rootの`stripeCustomerId`・`subscription`と直下`StripeData`だけを削除するmigrationをSTRIPE-03で実装する。現時点ではcommandは存在せず、手作業、Firebase Console、汎用scriptで代替してはならない。
+
+- 対象は`codex-local`、利用者承認済み`user-local`、別承認の`dev`だけとし、Prod targetを提供しない。
+- 既定は値非出力のdry-runとし、件数、分類、匿名化subject hash、plan digestだけを表示する。Company ID、path、field値、Stripe形式の値、秘密情報を出力しない。
+- applyはexact target、backup、直前digest一致、状態再検査を必須とする。Dev Company rootが4件でない、unexpectedなStripeData、対象外差分、backup失敗、schema/Rules不整合がある場合はwrite 0で停止する。
+- Company document自体と非対象field・subcollectionを変更しない。post-checkはlegacy field 0、StripeData 0、Company件数不変、非対象field不変、再dry-run cleanを必須とする。
+- rollbackはexact preimageから対象fieldだけを復元する別操作とし、現在状態と衝突する場合は自動上書きしない。外部Stripe resourceは最初から変更しないため外部rollbackはない。
+
 ## 旧CCB Company設定migration（Historical / unavailable）
 
 ADR 0031で旧8-target設計を廃止し、2026-08-30に`scripts/migrate-company-settings.mjs`、SettingAudits restore planner、専用domain/Emulator testとpackage scriptsをcorrective rollbackした。これらのcommandは現在存在せず、8 target、`PrivateSettings`、`SettingAudits`のlocalまたはremote migration/restore経路を提供しない。旧設計の詳細と当時の検証証拠は[ADR 0028](../decisions/0028-ccb-parity-backup-audit-restore.md)と[historical roadmap](../roadmaps/company-settings.md)に履歴として残す。

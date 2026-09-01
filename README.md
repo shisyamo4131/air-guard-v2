@@ -9,7 +9,7 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 - フロントエンド: Nuxt 3、Vue 3、Vuetify、Pinia（CSR/PWA）
 - バックエンド: Firebase Authentication、Firestore、Realtime Database、Storage、Cloud Functions、Hosting
 - Cloud Functions ランタイム: Node.js 22
-- 外部連携: Stripe、Firebase Cloud Messaging。勤怠データは freee 勤怠管理へのエクスポートを想定
+- 外部連携: Firebase Cloud Messaging。勤怠データは freee 勤怠管理へのエクスポートを想定。Stripe関連物は未同期scaffoldであり、現在は外部連携として運用せず撤去中
 
 ## ドキュメント
 

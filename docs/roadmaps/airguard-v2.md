@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-08-31
+- 最終確認日: 2026-09-01
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 
 ## マイルストーン
@@ -38,7 +38,7 @@
 
 ## 次の作業
 
-1. [Company部分更新ロードマップ](company-partial-updates.md)はDev反映・利用者受入れまで100%で完了した。その後Devで見つかった兼任accountの表示順問題も[SuperUser兼会社管理者の表示順対応ロードマップ](superuser-company-admin-display-order.md)でlocal実装・検証、bounded Dev反映、利用者最終UI acceptanceまで100%で完了した。次は[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)のSTRIPE-01へ戻る。全体revision・runtime mode・長期互換層を既定にしない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
+1. [Company部分更新ロードマップ](company-partial-updates.md)と[SuperUser兼会社管理者の表示順対応ロードマップ](superuser-company-admin-display-order.md)はDev反映・利用者最終UI acceptanceまで100%で完了した。[Company legacy Stripe情報削除ロードマップ](company-stripe-removal.md)は、未同期scaffoldだけをAirGuard内から撤去するSTRIPE-01の契約確定まで10%を完了し、次は別承認のSchemas前進versionとSTRIPE-02へ進む。外部Stripe resourceは扱わない。App Check・rate limit、Callable public invokerの継続監視も正式運用準備として進める。実accountの退職・削除は別の明示対象なしに実行しない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
@@ -64,7 +64,7 @@
 - UI managerのdisable非強制、二重送信、draft競合、入力debounce、非同期stale response、date-time、accessibility。
 - Admin backup/restoreのcoverage、平文artifact/credential、operator権限、監査、rollback/resume、migration例外。
 - npm依存関係の脆弱性と互換性を保つ更新方法。
-- Stripe本番運用、キャンセル、プラン、従業員数制限。
+- 将来サブスクリプションを企画する場合のprovider、契約管理、料金、利用上限。現行の未同期Stripe scaffold撤去とは分離する。
 - 認証済みDev受入れ後のCallable public invoker継続監視、SLA、保持期間、復旧目標、試験運用受入れ証拠。
 
 ## 要判断事項

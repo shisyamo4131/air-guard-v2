@@ -50,6 +50,7 @@
 | [0035](0035-company-display-order-update-boundary.md) | Company表示順の専用更新・権限境界 | Accepted | 2026-08-30 |
 | [0036](0036-terminated-site-display-order-visibility.md) | 終了済み現場を表示順へ残す判断 | Accepted | 2026-08-31 |
 | [0037](0037-superuser-company-admin-display-order.md) | SuperUser兼会社管理者の自社表示順更新 | Accepted | 2026-08-31 |
+| [0038](0038-legacy-stripe-scaffold-removal.md) | 未同期Stripe scaffoldの完全撤去 | Accepted | 2026-09-01 |
 
 ## 新しい ADR の形式
 

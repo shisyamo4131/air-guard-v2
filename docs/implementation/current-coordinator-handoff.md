@@ -1,7 +1,7 @@
 # Current coordinator handoff snapshot
 
 - 状態: Current / PM-12 active ownership
-- 更新日: 2026-08-31
+- 更新日: 2026-09-01
 - active coordinator: PM（AirGuardV2）-12 / task `01a05183-9ab8-7f23-8e13-2ec47296dc04` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-12 task `01a05183-9ab8-7f23-8e13-2ec47296dc04`
 - former coordinator: PM（AirGuardV2）-11 / task `01a05143-0fd6-76c2-ad4c-099742f6e527` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
@@ -31,7 +31,7 @@
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
 - generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
-- specification: `0.8.1`
+- specification: `0.8.2`
 - unintegrated work: 0。SuperUser兼会社管理者の自社表示順更新はrelease commitへ統合し、対象FunctionとHostingのDev反映、利用者の並べ替え保存・再読込による最終UI acceptanceまで完了した。
 
 ## Confirmed product state
@@ -42,6 +42,7 @@
 - 通常編集はreal-time listenerとlast-write-winsを既定とする。expected value、revision、transaction、idempotency、lock、ledgerは、権限・停止、削除、金銭、外部作用、複数resource、復旧困難なdata loss等の具体的被害があるoperationだけに限定する。
 - `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Class schemaを共通validationの正本として維持したoperation固有editorへ段階移行する。editorはlive Companyと独立したdraftを使い、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。
 - Stripe、subscription、entitlement、employeeLimitは現段階のCompany構造とCCBから除外した。将来サブスクリプション機能の実装時に新規設計する。
+- 利用者は、現存Stripe関連物がscaffoldであり、Stripe側とCompany契約情報を同期した実績がないと確認した。ADR 0038でAirGuard内のroute、reader/writer、Functions、Rules、schema/package、legacy dataだけを撤去対象とし、Stripe Customer・Subscription・Webhook・Price・Secret等の外部inventory、変更、削除、rollbackを対象外とした。
 - Devで確認済みのCompany rootは4件。正式release前で旧client継続利用を要しないため、backup・dry-run・短時間maintenance・全件変換・post-check・Dev受入れをbounded cutoverとして行える。実data操作は別の明示承認を必要とする。
 - 旧CCBのruntime compatible reader、8-target migration planner/Emulator、SettingAudits restore planner、candidate Rulesと専用testは主repositoryからcorrective rollback済みである。Company Rulesは旧CCB直前blobへ戻しつつ、UWBとCompany client create/delete拒否を保持した。
 - Schemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardは独立成果として保持した。Schemasをunpublishせず、関連repository、Dev、remote/dataは変更していない。
@@ -77,7 +78,8 @@
 - local implementation and validation checkpoint: `CCB-DUAL-ROLE-DISPLAY-ORDER-001`。SuperUser兼会社管理者を自社の両表示順actorへ限定追加し、単独SuperUserと既存の拒否境界を維持した。生SuperUser claimのboolean妥当性を表示順だけで追加確認する。対象16件、全domain 727件、隔離Emulator 107件、security review GOを成功させた。Dev・remote/data・deploy・remote claim変更・Rules変更は未実施で、利用者最終UI acceptance待ちである。
 - Dev release and user acceptance complete checkpoint: `DEV-DUAL-ROLE-DISPLAY-ORDER-RELEASE-001`。commit `0f09ec4ff907bf337ceab0c0e296b413a084182b`から`updateCompanyArrangement`を先、同一Hosting artifactを後にDevへ反映した。Function ACTIVE・public invoker・CORS 204・更新後ERROR 0件、配信artifact一致を確認し、兼任accountのChromeで両画面の表示順入口・dialog・未変更時保存無効を確認した。利用者はDevで両画面の並べ替え保存・再読込を最終確認した。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
-- completed product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 100%。次は[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 0%のSTRIPE-01へ戻る。
+- completed product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 100%。[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md)はSTRIPE-01 exact inventory・削除契約を完了して10%。次はSchemas前進versionの別承認境界を確定し、STRIPE-02 code・schema・Rules・test削除へ進む。
+- completed product checkpoint: `STRIPE-01-EXACT-INVENTORY-001`。4つのread-only専門調査でactive route/reader/Rules、dormant Functions/dependency、Schemas package境界、migration/test/security条件を照合した。ADR 0038で未同期scaffoldだけをAirGuard内から撤去し、外部Stripeを扱わない契約、4 Companyの値非出力migration、backup、rollback、停止条件を確定した。application、Rules、package、data、Dev、networkは変更していない。
 
 ## Active source set
 

@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-08-31
-- 仕様バージョン: 0.8.1
+- 最終更新日: 2026-09-01
+- 仕様バージョン: 0.8.2
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -34,7 +34,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### 現在の範囲外または未確定
 
 - AirGuardV2 内部での給与計算。給与計算は外部サービスへ委ねる。
-- Stripe Checkout、Webhook、subscription、entitlement、employeeLimit。現段階のCompany構造からlegacy Stripe情報を削除し、将来サブスクリプション機能を実装するときに保存構造・権限・外部作用を新規設計する。
+- Stripe Checkout、Webhook、subscription、entitlement、employeeLimit。既存物はscaffoldとして作られただけで、Stripe側のCustomer・契約・Webhook等とCompany契約情報を同期した実績はない。現段階のCompany構造からlegacy Stripe情報を削除し、将来サブスクリプション機能を実装するときにproviderを含む保存構造・権限・外部作用を新規設計する。
 - 未実装と明記された将来案を、現行機能として保証すること。
 - 本文書で確認できていない本番運用の SLA、保存期間、法令・認証への適合保証。
 
@@ -55,7 +55,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firebase Authentication、Firestore、Realtime Database、Storage、Cloud Functions、Hosting を使用する。
 - Cloud Functions は Node.js 22 を使用する。
 - サーバー側モデル注入には `air-firebase-v2-server-adapter` を使用する。
-- 外部システムとして Stripe と freee 勤怠管理がある。Firebase Cloud Messaging は通知配送を担う。
+- 外部システムとして freee 勤怠管理がある。Firebase Cloud Messaging は通知配送を担う。Stripeは将来のサブスクリプション候補であり、現在利用中の外部連携として扱わない。
 
 ### 検証・試行環境
 
@@ -202,9 +202,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### サブスクリプション
 
-- 現在のStripe Functionsは公開停止中であり、checkout、webhook、plan、解約、再契約、課金状態、従業員上限を提供済み機能として扱わない。
-- CCBではsubscriptionとentitlementをserver-owned設定へ分離し、clientからの変更を拒否できる保存・表示interfaceだけを準備する。
-- Stripeを再有効化する場合は、正式release直前の別改修でactor、plan allowlist、署名、冪等性、event順序、reconcile、状態遷移、保持、秘密情報、employeeLimit強制を承認・検証する。
+- 現在のStripe関連コードとデータ形状は未完成のscaffoldであり、checkout、webhook、plan、解約、再契約、課金状態、従業員上限を提供済み機能として扱わない。Stripe側との契約情報同期実績もない。
+- 現段階ではsubscription・entitlement・employeeLimitの保存・表示interfaceを準備せず、Company rootのlegacy field、`StripeData`、checkout画面、reader/writer、未公開Functions、依存packageを[ADR 0038](decisions/0038-legacy-stripe-scaffold-removal.md)に従って削除する。
+- 将来サブスクリプションを実装する場合は、Stripe採用を前提にせず、provider、actor、plan、保存構造、権限、署名、冪等性、event順序、reconcile、状態遷移、保持、秘密情報、利用上限を別仕様・別roadmapで新規設計する。
 
 ### 保守状態とdata change
 
@@ -218,7 +218,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ## アプリケーション状態の責務
 
 - `useAuthStore`: 認証、カスタムクレーム、ログインユーザー、ロール・権限。
-- `useCompanyStore`: 現在会社と、サブスクリプションから導出される顧客区分。
+- `useCompanyStore`: 現在会社。legacy subscriptionから導出する顧客区分はSTRIPE-02で削除する移行中の残存実装であり、現行業務契約として利用しない。
 - `useSystemStore`: システム状態、会社を考慮したメンテナンス状態、開発環境判定。
 - `useAppStore`: アプリケーションシェルと画面表示状態。
 - 認証状態に応じた User・Company の取得、購読、初期化は `useAuthActions` が調整する。
@@ -288,7 +288,7 @@ Codexによる検証が明示的に許可された変更では、Codex専用のl
 - スーパーユーザーの他社support accessについて、開始手続き、対象会社の選択・同意、許可範囲、有効期限、再認証、監査記録、終了・取消、同時session、緊急時の扱いを確定すること。
 - `DailyAttendance.operationResultIds` の逆引きによる更新・削除方式への統一。
 - ルートアプリと Cloud Functions の npm 依存関係の脆弱性対応。
-- Stripe の本番運用、キャンセル UI、プラン選択、従業員数制限の最終仕様と実施状況。
+- 将来サブスクリプションを企画する場合のprovider、料金、契約管理、利用上限。現行STRIPE roadmapの完了条件には含めない。
 - FCM・通知・Storage 関連の旧定義に混在する「完了」「未実装」記載と現在実装の再照合。
 - 試験運用から正式運用へ移行するための SLA、バックアップ保持期間、監視・障害対応基準。
 
