@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- STRIPE-02のlocal実装として、AirGuardV2 root/Functionsを公開Schemas exact `3.0.0-dev.1`へ揃え、checkout画面・route、legacy subscription readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は未認証・一般・会社管理者・SuperUserを含む全actorについて、直接・別tenant・入れ子・一覧取得をすべて拒否する。変更前後のpackage照合、全domain 731/731、隔離Emulator 107/107、独立review、security reviewを成功させた。外部Stripe、既存Company/StripeDataのmigration、Dev/Prod、deploy、pushは実施していない。
+- STRIPE-02のlocal実装として、AirGuardV2 root/Functionsを公開Schemas exact `3.0.0-dev.1`へ揃え、checkout画面・route、legacy subscription readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は未認証・一般・会社管理者・SuperUserを含む全actorについて、直接・別tenant・入れ子・一覧取得をすべて拒否する。変更前後のpackage照合、全domain 731/731、隔離Emulator 107/107、独立review、security review、commit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`のcleanな同一HEADでのlocal UI buildを成功させ、STRIPE-02を完了した。外部Stripe、既存Company/StripeDataのmigration、Dev/Prod、deploy、pushは実施していない。
 
 - common governance 1.5.0反映後の`GOV15-AIRGUARD-POSTBENCH-EXEC-001`保存済み実測36件を再実行・推測せず記録した。全command exit 0、target 16/16、full domain 727/727、前後92-path/hash一致を確認した。operational root runはdocumentation 4→2、application 7→5、governance 6→5となり、warm-median合計は順に-36.2831%、-16.5809%、+19.0757%だった。governanceはnegative fixtureを8→12へ増やしpolicy/routing/inclusion検出を強化したため、時間増加をfailureとは扱わない。application、Functions、Rules、build、Emulator、Dev/Prod、network、remote/data、package、Schemas consumer、STRIPE-02は変更・実行していない。
 

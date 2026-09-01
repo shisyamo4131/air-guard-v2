@@ -1,7 +1,7 @@
 # Current coordinator handoff snapshot
 
 - 状態: Current / PM-14 active ownership / governance 1.5.0 turnover complete
-- 更新日: 2026-09-01
+- 更新日: 2026-09-02
 - active coordinator: PM（AirGuardV2）-14 / task `01a05c75-bdfd-75e0-bcda-f167b8541bff` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-14 task `01a05c75-bdfd-75e0-bcda-f167b8541bff`
 - former coordinator: PM（AirGuardV2）-13 / task `01a05b84-0e34-7852-ad21-0f2c59f5023c` / host `local` / retired after ownership activation and safe for user manual deletion。Codexはarchive/deleteしない。
@@ -33,12 +33,12 @@
 - Company arrangement implementation commit: 本snapshotと同じlocal commit
 - SuperUser兼会社管理者表示順 release commit: `0f09ec4ff907bf337ceab0c0e296b413a084182b`
 - expected upstream: none
-- actual worktree: `STRIPE-02-LOCAL-IMPLEMENT-001`のreview済み23 entryが未stage。target handoff stateはcleanである。
+- expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.5.0` / SHA-256 `0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac`
 - generated `AGENTS.md`: 20,391 bytes / 上限32,768 bytes。managed validatorでcurrentを確認済みとし、replacement activationでも再確認する。
 - specification: `0.8.4`
-- unintegrated work: `STRIPE-02-LOCAL-IMPLEMENT-001`のapplication・Functions・Rules・package・test・文書差分がprimary worktreeに未stageで存在する。外部Stripe、migration、Dev/Prod、remote/data、deploy、pushは未実施である。最終検証、利用者のlocal commit承認、clean handoffが残る。
+- unintegrated work: 0。STRIPE-02のapplication・Functions・Rules・package・test・主要文書は候補commit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`へ統合し、cleanな同一HEADでlocal UI buildを完了した。外部Stripe、migration、Dev/Prod、remote/data、deploy、pushは未実施である。
 
 ## Confirmed product state
 
@@ -89,10 +89,10 @@
 - local implementation and validation checkpoint: `CCB-DUAL-ROLE-DISPLAY-ORDER-001`。SuperUser兼会社管理者を自社の両表示順actorへ限定追加し、単独SuperUserと既存の拒否境界を維持した。生SuperUser claimのboolean妥当性を表示順だけで追加確認する。対象16件、全domain 727件、隔離Emulator 107件、security review GOを成功させた。Dev・remote/data・deploy・remote claim変更・Rules変更は未実施で、利用者最終UI acceptance待ちである。
 - Dev release and user acceptance complete checkpoint: `DEV-DUAL-ROLE-DISPLAY-ORDER-RELEASE-001`。commit `0f09ec4ff907bf337ceab0c0e296b413a084182b`から`updateCompanyArrangement`を先、同一Hosting artifactを後にDevへ反映した。Function ACTIVE・public invoker・CORS 204・更新後ERROR 0件、配信artifact一致を確認し、兼任accountのChromeで両画面の表示順入口・dialog・未変更時保存無効を確認した。利用者はDevで両画面の並べ替え保存・再読込を最終確認した。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
-- active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 10%。STRIPE-02のlocal code・schema・test実装と主要検証は成功したが、clean candidate commitへ結び付けたlocal UI buildが未成功のため未加点である。[SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md)は100%で完了済みである。
+- active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 35%。STRIPE-01の契約確定とSTRIPE-02のlocal code・schema・test撤去を完了し、次はSTRIPE-03のlocal migration準備である。[SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md)は100%で完了済みである。
 - completed product checkpoint: `STRIPE-01-EXACT-INVENTORY-001`。4つのread-only専門調査でactive route/reader/Rules、dormant Functions/dependency、Schemas package境界、migration/test/security条件を照合した。ADR 0038で未同期scaffoldだけをAirGuard内から撤去し、外部Stripeを扱わない契約、4 Companyの値非出力migration、backup、rollback、停止条件を確定した。application、Rules、package、data、Dev、networkは変更していない。
-- in-progress checkpoint: `STRIPE-02-LOCAL-IMPLEMENT-001`。当該turnのPreAdoptionをexit 0で再確認後、root/FunctionsをSchemas exact `3.0.0-dev.1`へ揃え、checkout page/route、legacy reader/store導出、未公開Stripe Functions/comment、Stripe依存packageを削除した。`StripeData`は全actor・全階層で拒否し、全domain 731/731、隔離Emulator 107/107、PostAdoption、独立review、security review GOを確認した。reviewで検出した旧package期待、version未固定install経路、別tenant/list test不足は修正済みである。comprehensive gatesは、roadmap index不一致で`project-docs`と`project-docs-negative`が初回exit 1となった後に修正し、再実行は各exit 0、`capacity-regression`、`managed-governance`、`diff-check`もexit 0である。`npm run test:local:ui:build`はdirty worktree guardでexit 1となり、製品build自体は開始していない。review済み23 entryのlocal candidate commitと、cleanな同一HEADでのbuild再実行が承認待ちである。
-- next product checkpoint: STRIPE-02のclean candidate buildを成功させ、completion evidenceを確定して25点加点する。その後の`STRIPE-03` local migration準備は別checkpointであり、自動開始しない。Dev・remote/data・実migrationは別承認である。
+- completed checkpoint: `STRIPE-02-LOCAL-IMPLEMENT-001`。当該turnのPreAdoptionをexit 0で再確認後、root/FunctionsをSchemas exact `3.0.0-dev.1`へ揃え、checkout page/route、legacy reader/store導出、未公開Stripe Functions/comment、Stripe依存packageを削除した。`StripeData`は全actor・全階層で拒否し、全domain 731/731、隔離Emulator 107/107、PostAdoption、独立review、security review GOを確認した。reviewで検出した旧package期待、version未固定install経路、別tenant/list test不足は修正済みである。comprehensive gatesは、roadmap index不一致で`project-docs`と`project-docs-negative`が初回exit 1となった後に修正し、再実行は各exit 0、`capacity-regression`、`managed-governance`、`diff-check`もexit 0である。review済み23項目をcommit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`へ固定し、cleanな同一HEADで`npm run test:local:ui:build`をexit 0で完了した。
+- next product checkpoint: `STRIPE-03`。既存Company rootのlegacy 2 fieldと`StripeData`だけを対象に、local-only migration planner、backup、dry-run、匿名化digest、停止条件、idempotency、rollback rehearsalを実装する。自動開始せず、Dev・remote/data・実migrationは別承認である。
 
 ## Active source set
 
