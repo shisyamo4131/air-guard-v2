@@ -17,6 +17,7 @@ $requiredFiles = @(
     'docs/README.md', 'docs/specification.md', 'docs/operations.md',
     'docs/decisions/README.md', 'docs/roadmaps/README.md',
     'docs/runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1',
+    'scripts/check-schemas-package-adoption.ps1',
     '.codex/config.toml'
 )
 foreach ($relativePath in $requiredFiles) {
@@ -71,6 +72,33 @@ if (Test-Path -LiteralPath $capacityScriptPath) {
     )) {
         if (-not $capacityScriptContent.Contains($requiredScriptContract)) {
             Add-CheckError "Capacity script contract is missing: $requiredScriptContract"
+        }
+    }
+}
+
+$criticalIdentifierScriptPath = Join-Path $repoRoot 'scripts/check-schemas-package-adoption.ps1'
+if (Test-Path -LiteralPath $documentationMapPath) {
+    foreach ($requiredCriticalRoute in @(
+        'decisions/0039-evidence-bound-critical-identifiers.md',
+        'scripts/check-schemas-package-adoption.ps1'
+    )) {
+        if (-not $documentationMapContent.Contains($requiredCriticalRoute)) {
+            Add-CheckError "Critical identifier route is missing from docs/README.md: $requiredCriticalRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $criticalIdentifierScriptPath) {
+    $criticalIdentifierScript = Get-Content -Raw -LiteralPath $criticalIdentifierScriptPath -Encoding UTF8
+    foreach ($requiredCriticalContract in @(
+        "ValidateSet('PreAdoption', 'PostAdoption')",
+        'Tag manifest conflicts with expected identity',
+        'Release evidence commit differs from peeled tag commit',
+        'Root and Functions integrity values disagree',
+        'PostAdoption consumer integrity differs from release evidence',
+        'network_verified = $false'
+    )) {
+        if (-not $criticalIdentifierScript.Contains($requiredCriticalContract)) {
+            Add-CheckError "Schemas package preflight contract is missing: $requiredCriticalContract"
         }
     }
 }

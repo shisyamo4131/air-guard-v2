@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-08-30
+- 最終確認日: 2026-09-01
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -28,7 +28,7 @@
 | maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md)、関連ADR | normal stop、quiet period、監視Function、連続dry-run、snapshot、rollback、明示的承認 |
 | Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | 対象serviceの設定・test、release checkpoint、機能・migration固有ADR、backup、rollback、明示的承認 |
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
-| 関連package更新・公開 | [package release](runbooks/package-release.md) | package repository、互換性、version、tag・push・公開承認 |
+| 関連package更新・公開、critical identifier確認 | [package release](runbooks/package-release.md)、[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md) | source/tag manifest、release evidence、consumer manifest/lock、`scripts/check-schemas-package-adoption.ps1`、network・公開承認 |
 | `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [project coordination](runbooks/project-coordination.md) | `scripts/check-codex-session-size.ps1`、現在のtask ID。最新sessionの推測禁止 |
 | Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、ADR 0011、[ADR 0032](decisions/0032-required-specialist-subagent-routing.md)、[ロードマップ索引](roadmaps/README.md) | Git状態、checkpoint、task ID・host、callback経路、独立scopeの専門task routing |
 | coordinator交代・再開 | [project coordination](runbooks/project-coordination.md)、[current snapshot](implementation/current-coordinator-handoff.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | 効率化手順は2026-08-30 activation baselineから発効。旧handoffは履歴参照のみ |

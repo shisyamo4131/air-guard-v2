@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Managed common governanceを1.4.1へ同期し、package・repository・Git・environment・deploy・dataのcritical identifierを当該turnの正本または実targetへ結び付けた。Schemas consumer更新にはsource tag、release evidence、root/Functions manifest・lockのname、version、resolved、integrityを変更前後に機械照合するpreflightを追加し、誤ったpackage名ではstate change前に停止する。product code、dependency、Functions、Rules、Dev・remote/dataは変更しない。
+
 - STRIPE-01を完了した。利用者確認によりStripe関連物は未同期scaffoldで、Stripe側Customer・契約・Webhook等を考慮・操作しないと確定した。ADR 0038でAirGuard内のcheckout、reader/writer、未公開Functions、Rules、schema/package、Company root legacy field、`StripeData`の撤去範囲、4 Companyの値非出力migration、backup・rollback・停止条件を固定し、Company legacy Stripe情報削除roadmapを0%から10%へ更新した。product code、Rules、package、data、Dev、networkは未変更である。
 
 - SuperUser兼会社管理者が自社の稼働予定・配置管理の表示順を変更できるよう、画面と専用Callableのactor判定を限定的に変更した。会社管理者でないSuperUserは対象role presetを持っていても拒否し、他tenant、temporary、disabled、SuperUser claimの欠損・型不正も画面・serverの両方でfail closedとする。対象16件、全domain 727件、隔離Emulator 107件、security review GOを確認し、release commit `0f09ec4ff907bf337ceab0c0e296b413a084182b`からDevへ`updateCompanyArrangement`を先、同一の182-file Hosting artifactを後にmaintenance・migrationなしで反映した。Functionは東京・Node.js 22・gcfv2・ACTIVE、public invoker維持、Dev origin CORS 204、更新後ERROR 0件だった。Hostingはindex・Service Worker・参照asset 26件が生成物と一致し、cache headerも正常だった。Codexは兼任accountのChromeで両画面の表示順入口・dialog・未変更時保存無効を確認し、利用者はDevで両画面の並べ替え保存・再読込を最終確認した。既知のFcmTokens permission errorとChrome message channel errorは別事象として区別した。Rules、remote claim、Company data、Prodは変更しておらず、表示順対応の最終UI acceptanceまで完了した。

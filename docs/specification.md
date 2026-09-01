@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-01
-- 仕様バージョン: 0.8.2
+- 仕様バージョン: 0.8.3
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -47,6 +47,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `air-vuetify-v3` をファイル参照で使用する。
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
 - role presetの識別子、表示metadata、permission配列は`@shisyamo4131/air-guard-v2-schemas/constants`を環境非依存の単一正本とし、ルートアプリとCloud Functionsは同じ公開version・tarball・integrityを使用する。現在の確認済みversionはCCB v1のadditive public subpathも含むexact `2.4.2-dev.167`である。このpackage catalogはactor・tenant・target・request contextからallow/denyを決定せず、clientとFunctionsがそれぞれ認可policyを所有する。
+- Schemas packageを更新する前後は、当該turnでsource tag manifest、repository release evidence、AirGuardV2 root/Functionsのmanifest・lockにあるname、version、resolved、integrityを機械照合する。prompt、chat、要約、agent reportだけでpackage identityを確定せず、矛盾時はconsumer file変更・install・testを開始しない。公開済み`3.0.0-dev.1`はSTRIPE-02の導入候補であり、`PostAdoption`成功前は現在のconsumer versionとして扱わない。
 - ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
 - 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
 

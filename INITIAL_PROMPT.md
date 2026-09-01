@@ -15,6 +15,8 @@ AirGuardV2 の作業を開始してください。応答は日本語で行って
 
 タスク作成、交代、Codex再起動後の最初の報告で、common governance versionとactive instruction sourcesを示してください。
 
+package名・version・integrity、repository・branch・commit・tag、Firebase project・database、deploy先、data対象を確認済みとして扱う前に、そのturnでtask-routed正本または実targetを確認してください。chat、要約、親prompt、agent reportは手掛かりに限定し、Schemas consumer更新では`docs/runbooks/package-release.md`のpreflightを変更前後に実行してください。矛盾時はstate changeを開始しないでください。
+
 AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続してください。最初のcallbackでcwdとGit top-levelがこのpathそのものであることを確認し、不一致なら作業を開始せず報告してください。
 
 最初に、今回関係する確認済み仕様、現在の開発段階、未決事項、リポジトリとの不整合を簡潔に整理してください。質問や検討を仕様変更の承認として扱わず、正式な変更依頼がない限りコードを変更しないでください。

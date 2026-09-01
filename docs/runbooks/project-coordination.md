@@ -63,6 +63,13 @@ UIまたは利用者操作へ影響するcheckpointは、Codexの自動検証と
 
 checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal callbackとcoordinator reviewまでに限ります。完了後のcheckpointへ自動的に持ち越さず、継続禁止には利用者による別の明示指示を必要とします。task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、この交代手順内ではsubagentを使用しません。
 
+### Critical identifierの確認
+
+- package名・version・integrity、repository・branch・commit・tag、Firebase project・database、deploy先、data対象は、当該turnにtask-routed正本または実targetから取得するまで未確認です。chat、要約、memory、親prompt、agent reportは手掛かりに限定します。
+- coordinatorは確認したsource/location/command/valueだけをdelegationへ記載し、委譲先にもstate change前の独立照合を要求します。矛盾時はfile write、Git mutation、test、install、networkを開始せずcallbackします。
+- Schemas consumer変更では[package release runbook](package-release.md)の`PreAdoption`を変更前、`PostAdoption`を変更後に実行します。source tag manifest、release evidence、root/Functions manifest・lockのname、version、resolved、integrityが一つのchainとして一致しなければ停止します。
+- network未承認時はremote registryの現在状態を推測せず、local source/tagと記録済み公開証拠までを確認済みとして報告します。
+
 ## Codexセッションのライフサイクル
 
 ### 容量確認

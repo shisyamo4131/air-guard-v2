@@ -30,8 +30,8 @@
 
 ## 現在の次工程
 
-1. Schemas repositoryでCompanyのlegacy Stripe fieldと旧CCB entitlement surfaceを除去した前進versionを作り、既知consumer互換性を確認する。関連repository編集とpackage公開はそれぞれ別承認とする。
-2. STRIPE-02でcheckout、legacy reader、未公開Functions、依存packageを削除し、`StripeData`を全操作拒否へ変更する。
+1. 公開・内容検証済みSchemas exact `3.0.0-dev.1`を、source tag・release evidence・root/Functions manifest/lock preflight後にSTRIPE-02で同時導入する。現在のconsumer exact `2.4.2-dev.167`は導入完了までrollback baselineとして維持する。
+2. 同じSTRIPE-02でcheckout、legacy reader、未公開Functions、依存packageを削除し、`StripeData`を全操作拒否へ変更する。
 3. domain testとFirestore Emulatorで再混入防止、Company既存操作、全actorの`StripeData`拒否を確認する。その後STRIPE-03のlocal migration toolへ進む。
 
 ## 進捗履歴
@@ -41,3 +41,4 @@
 | 2026-08-30 | 0% | 0 | ADR 0031により旧巨大CCB roadmapを終了し、legacy Stripe情報削除をDev受入れまで独立してFIXするroadmapとして開始した。実装・migration・Dev反映は未着手。 |
 | 2026-08-30 | 0% | 0 | 旧CCBを4つのcorrective implementation commitでrollbackし、保持対象を分離した。Stripe削除自体は未着手であり、先に新CCBのwhole-document replacement除去を行うため進捗は据え置いた。 |
 | 2026-09-01 | 10% | +10 | 利用者がStripe側との契約情報同期実績なしを確認した。active/dormant code、Rules、schema/package、4 Company migration、backup・rollback・停止条件をADR 0038へ固定し、外部Stripe操作を対象外とした。STRIPE-01を完了した。 |
+| 2026-09-01 | 10% | 0 | Schemas `3.0.0-dev.1`の公開・内容検証は完了したが、AirGuardV2 consumer未導入のためSTRIPE-02は未加点。package identity誤報を受け、common governance 1.4.1と変更前後preflightを先に導入し、task交代後に再開する。 |

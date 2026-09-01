@@ -12,6 +12,8 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
+- governance 1.4.1 migration baseline: `b907e789791ae87757ece1cc0fe3789d9bd04ea1`
+- governance 1.4.1 migration commit: 本snapshotと同じlocal commit。exact HEADはmigration receiptへ記録する。
 - activation baseline: `c729803ecc431bd94a5b627719c9d846fec5c24b`
 - corrective rollback start baseline: `1629e9925159a8342e646faf3c875e31995dac75`
 - corrective rollback implementation HEAD: `98595711cba758170442e9777ac5e992fee6d4ee`
@@ -29,9 +31,9 @@
 - expected upstream: none
 - expected worktree: clean
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
-- common governance: `1.4.0` / SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`
-- generated `AGENTS.md`: 13,659 bytes。project上限内であることをactivation validatorで確認する。
-- specification: `0.8.2`
+- common governance: `1.4.1` / SHA-256 `21e2be90d274a11001f788f78e647d7d537a45124baa731be5ccbadf89cd5eca`
+- generated `AGENTS.md`: 15,538 bytes。project上限内であることをmigration validatorとreplacement activationで確認する。
+- specification: `0.8.3`
 - unintegrated work: 0。SuperUser兼会社管理者の自社表示順更新はrelease commitへ統合し、対象FunctionとHostingのDev反映、利用者の並べ替え保存・再読込による最終UI acceptanceまで完了した。
 
 ## Confirmed product state
@@ -61,6 +63,7 @@
 
 ## Current checkpoint and next work
 
+- governance migration checkpoint: `GOV19-AIRGUARDV2-EVIDENCE-BOUND-IDENTIFIERS-001`。common governance 1.4.1を同期し、ADR 0039、project rules、仕様0.8.3、package/coordination runbook、開始prompt、Schemas package adoption preflight、validator、roadmap、snapshot、changelogを整合する。product code、dependency、Functions、Rules、Dev・remote/dataは変更しない。検証・local commit後は利用者承認済みturnoverとしてPM（AirGuardV2）-13をforkせず作成し、no-change、permissions、最初のfile限定activation commit、callback/assignment retargetを確認するまでPM-12がownershipを維持する。
 - no-change checkpoint: `NO-CHANGE-GOV18-AIRGUARDV2-PM12-001` COMPLETE。task `01a05183-9ab8-7f23-8e13-2ec47296dc04` / host `local`、direct repository、baseline `c729803ecc431bd94a5b627719c9d846fec5c24b`、upstream none、clean、primary-only worktree、common governance `1.4.0`、specification `0.8.0`、managed `workspace-write` / `auto_review` / network restricted、`AGENTS.md`、project rules、documentation map、coordination runbook、本snapshot、ADR 0034、効率化runbookを確認し、PM-11がreceiptを受理した。
 - implementation and user acceptance complete checkpoint: `CCB-COMPANY-ARRANGEMENT-CODEX-IMPLEMENT-001`。Company既定取極めUI/writer撤去と表示順専用更新を実装し、専用Emulator 106件、一般review GO、security review 4/5を確認した。利用者確認は項目1〜13と一般利用者の対象画面非表示まで合格した。二画面では、未保存変更がない画面は他画面の保存結果を自動反映し、未保存変更がある画面は自身の順を維持して外部更新警告・保存無効となることを同じ会社管理者Chrome 2画面で再現し、利用者が区別を確認して受け入れた。
 - corrective implementation and user acceptance complete checkpoint: `CCB-COMPANY-ARRANGEMENT-TERMINATED-SITE-FIX-001`。利用者が終了済み現場にも突発的な稼働予定が発生し得ると確認したため、既存Siteは状態にかかわらず表示順へ残し、missing/deletedだけを除外するよう画面処理と仕様を補正した。専用15件、全domain 722件、一般review GOを確認し、利用者が実際の利用環境で終了済み現場の表示を最終確認した。CPU-04は20点を加算して完了し、Company部分更新roadmapは50%となった。
@@ -78,8 +81,9 @@
 - local implementation and validation checkpoint: `CCB-DUAL-ROLE-DISPLAY-ORDER-001`。SuperUser兼会社管理者を自社の両表示順actorへ限定追加し、単独SuperUserと既存の拒否境界を維持した。生SuperUser claimのboolean妥当性を表示順だけで追加確認する。対象16件、全domain 727件、隔離Emulator 107件、security review GOを成功させた。Dev・remote/data・deploy・remote claim変更・Rules変更は未実施で、利用者最終UI acceptance待ちである。
 - Dev release and user acceptance complete checkpoint: `DEV-DUAL-ROLE-DISPLAY-ORDER-RELEASE-001`。commit `0f09ec4ff907bf337ceab0c0e296b413a084182b`から`updateCompanyArrangement`を先、同一Hosting artifactを後にDevへ反映した。Function ACTIVE・public invoker・CORS 204・更新後ERROR 0件、配信artifact一致を確認し、兼任accountのChromeで両画面の表示順入口・dialog・未変更時保存無効を確認した。利用者はDevで両画面の並べ替え保存・再読込を最終確認した。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
-- completed product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 100%。[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md)はSTRIPE-01 exact inventory・削除契約を完了して10%。次はSchemas前進versionの別承認境界を確定し、STRIPE-02 code・schema・Rules・test削除へ進む。
+- completed product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 100%。[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md)はSTRIPE-01 exact inventory・削除契約を完了して10%。Schemas前進versionの公開・内容検証は完了したがconsumer未導入であり、governance 1.4.1反映とtask turnover後にSTRIPE-02 code・schema・Rules・test削除へ進む。
 - completed product checkpoint: `STRIPE-01-EXACT-INVENTORY-001`。4つのread-only専門調査でactive route/reader/Rules、dormant Functions/dependency、Schemas package境界、migration/test/security条件を照合した。ADR 0038で未同期scaffoldだけをAirGuard内から撤去し、外部Stripeを扱わない契約、4 Companyの値非出力migration、backup、rollback、停止条件を確定した。application、Rules、package、data、Dev、networkは変更していない。
+- paused product checkpoint: `STRIPE-02`。Schemas `3.0.0-dev.1`の公開・内容検証は完了しているが、AirGuardV2 consumerはroot/Functionsとも`2.4.2-dev.167`のままである。package identity誤報から生じた未コミット差分はexact owned pathsだけを復元してcleanへ戻した。governance 1.4.1反映とtask turnoverを完了し、新taskがsource tag・release evidence・consumer manifest/lockの`PreAdoption`を再確認するまで再開しない。
 
 ## Active source set
 
@@ -92,6 +96,8 @@ PM-12はno-change開始時に次だけを読み、不足・矛盾がなかった
 5. 本snapshot
 6. `docs/decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md`
 7. `docs/runbooks/coordinator-handoff-efficient-activation.md`
+
+`GOV19-AIRGUARDV2-EVIDENCE-BOUND-IDENTIFIERS-001`とreplacement開始時は、上記へ`docs/decisions/0039-evidence-bound-critical-identifiers.md`と`docs/runbooks/package-release.md`を追加する。
 
 次のproduct checkpoint開始時は`docs/decisions/0032-required-specialist-subagent-routing.md`、`docs/specification.md`のCompany設定節、`docs/decisions/0031-proportional-data-boundary-and-change-safeguards.md`、`docs/decisions/0033-company-bank-transfer-update-boundary.md`、`docs/roadmaps/company-partial-updates.md`、`docs/roadmaps/company-stripe-removal.md`、`docs/implementation/company-settings.md`、`docs/implementation/company-configuration-compatibility.md`を追加する。
 
@@ -107,6 +113,7 @@ PM-12はno-change開始時に次だけを読み、不足・矛盾がなかった
 - 利用者はADR 0037のactor境界として、SuperUser兼会社管理者が自社の`siteOrder`・`scheduleOrder`を更新でき、会社管理者でないSuperUser・他tenant・不正identityを拒否するlocal implementationを承認した。続いてcommit・対象Function・Hosting・data影響なし・rollback・停止条件・検証を固定したbounded Dev releaseを承認し、反映を完了した。remote/data、remote claim変更、Rules変更、Prodへは承認を拡張しない。
 - ADR 0033のCompany振込先product contractを`CCB-COMPANY-BILLING-CODEX-IMPLEMENT-001`のlocal実装へ反映し、利用者最終UI acceptanceを完了した。Dev、remote/data、deployへは拡張していない。
 - 利用者はproject-wide subagent routing変更とPM-11へのcoordinator交代を承認した。task交代中以外は独立した必要scopeに適切なsubagentを使用し、Checkpoint固有の禁止はそのCheckpointだけに限定する。
+- 利用者はpackage identity誤報の再発防止として、scaffold-project-governance skill更新、AirGuardV2/Schemasへの反映、affected task turnoverの順序を承認した。AirGuardV2ではcritical identifierを当該turnの正本へ結び付け、Schemas consumer変更前後のdeterministic preflightを必須にする。task turnover中はsubagentを使用せず、完了後にSTRIPE-02を正しいpackage evidenceから再開する。
 - Schemas/Admin SDK、Dev、remote/data、network、push、main merge、Prodは別承認である。Dev migration/deployは対象commit、件数、backup、rollback、停止条件、post-check、受入れを固定した利用者承認を必要とする。
 - former taskをCodexがarchive/deleteしない。ownership activation成功後、利用者がPM-11を手動削除できる。
 

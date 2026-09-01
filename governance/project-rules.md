@@ -25,6 +25,13 @@
 - `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/**`は参考・履歴として扱い、現行仕様またはAccepted ADRと競合する場合は正本にしない。
 - 重要文書の追加、改名、移動、廃止時は、`docs/README.md`または該当indexと参照linkを同じ変更で更新する。
 
+## Evidence-bound Critical Identifiers
+
+- package名、version、digest・integrity、repository path、branch・commit・tag、Firebase project・database、deploy先、data対象は、当該turnでtask-routed正本または実targetから取得するまで未確認として扱う。chat、要約、memory、親prompt、coordinatorやsubagentの報告は探索の手掛かりであり、複数agentの一致だけでは確認済みにしない。
+- coordinatorはcritical identifierを確認済みとして委譲する前に、exact source、locationまたはcommand、valueを自身で確認する。委譲先もfile write、Git mutation、test、install、network、外部作用の前にactual targetと独立照合し、不足・stale・曖昧・矛盾時はapplication diffを作らずcallbackする。
+- `air-guard-v2-schemas`のconsumer更新では、source tagの`package.json`、repository内のrelease evidence、AirGuardV2 root/Functionsの`package.json`と`package-lock.json`にあるname、version、resolved、integrityを`scripts/check-schemas-package-adoption.ps1`で照合する。変更前は`PreAdoption`、変更後は`PostAdoption`を成功させ、promptにあるpackage名やversionだけからinstall commandを組み立てない。
+- networkまたはregistry照合が承認されていない場合は、local tagと記録済みrelease evidenceだけを確認し、remote freshnessを未確認として残す。実行対象のenvironment、project、database、deploy、data identifierには別のtask-routed runbookとpreflightを使用し、Schemas用scriptを代用しない。
+
 ## Product and Domain Boundaries
 
 - Authentication、custom claims、Firebase Rules、`companyId`によるtenant分離、個人・顧客・勤怠・請求data、Stripe、通知を高risk境界として扱う。

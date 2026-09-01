@@ -1,22 +1,40 @@
 # package release runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-28
+- 最終確認日: 2026-09-01
 - 役割: 関連packageのconsumer更新、公開、rollback
 
 ## 関連パッケージの更新
 
 `air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは、UWB role presetとhistorical CCB v1 public contractを含む`2.4.2-dev.167`へ固定している。旧CCB runtimeは主repositoryからrollback済みだが、artifactをunpublishせずpinも独立変更まで保持する。Admin SDKもlocal commit `c95660d`でexact `.167`へ導入済みで、未知CCB pathへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
 
+Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1`がtag `v3.0.0-dev.1`から公開済みである。ただし公開済みであることはconsumer導入を意味しない。AirGuardV2 root/FunctionsはSTRIPE-02開始前の時点ではexact `2.4.2-dev.167`をrollback baselineとして維持する。
+
+package名やversionをprompt・task reportから転記してinstallを開始しない。変更前に次のread-only preflightを実行し、source tag manifest、repository release evidence、現在のroot/Functions manifest・lock chainを確認する。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/check-schemas-package-adoption.ps1 `
+  -SchemasRepository C:\Users\seven\projects\AirGuard\air-guard-v2-schemas `
+  -ConsumerRepository C:\Users\seven\projects\AirGuard\air-guard-v2 `
+  -ExpectedPackageName '@shisyamo4131/air-guard-v2-schemas' `
+  -TargetVersion '3.0.0-dev.1' `
+  -ReleaseEvidencePath C:\Users\seven\projects\AirGuard\air-guard-v2-schemas\docs\evidence\release-3.0.0-dev.1.md `
+  -Mode PreAdoption
+```
+
+consumer変更後は同じ引数の`-Mode PostAdoption`を独立commandで実行し、root/Functionsのexact version、resolved tarball、integrityがrelease evidenceと一致することを確認する。false package名、存在しないtag、tag commitとrelease evidenceの不一致、root/Functions間の不一致、target versionでのintegrity不一致はいずれもnonzeroで停止条件とする。network未承認時はregistry freshnessを推測せず、記録済みrelease evidenceまでを確認済み範囲とする。
+
 ```powershell
 $env:NODE_USE_SYSTEM_CA = "1"
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.167
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1
 Push-Location functions
-npm install --save-exact @shisyamo4131/air-guard-v2-schemas@2.4.2-dev.167
+npm install --save-exact @shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1
 Pop-Location
 ```
 
 各commandのexit statusを独立して確認し、ルートとFunctionsの`package.json`、`package-lock.json`、実installについてversion、resolved tarball、integrityが一致することを検証する。role preset catalogの導入では、公開`./constants` importへ全callerを移行してからlocal catalogを削除し、client strict判定、Functions strict判定、一般client互換判定を別々に回帰確認する。公開packageの存在だけでconsumer導入成功とはみなさない。
+
+STRIPE-02 consumer導入のrollbackは、root/Functionsをexact `2.4.2-dev.167`へ同時に戻し、同checkpointで削除・変更したconsumer code、Rules、testをreview済みbaselineへ戻す。`PostAdoption`をrollback version向け公開証拠とともに実行できない場合は、manifest/lockのexact version、resolved、integrity一致と対象testを同等の独立証拠として固定する。unpublish、tag変更、history rewriteへ依存しない。
 
 UWB-09のconsumer rollbackは、AirGuardV2の依存をexact `2.4.2-dev.164`へ戻し、両local catalogとpackage import以前のcatalog参照を同時に復元する。ただし、旧実装のtruthyな`ROLE_PRESETS[role]`判定は復元せず、local catalogに対する`typeof role === "string" && Object.hasOwn(ROLE_PRESETS, role)`相当のprototype-safe membershipをstrict経路と一般展開へ維持する。`toString`、`constructor`、`__proto__`を含む陰性testとpolicy/parity testを再実行し、rollback自体を別のconsumer変更としてreviewする。公開済みpackageのunpublish、tag削除、force push、history rewriteには依存しない。
 

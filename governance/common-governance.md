@@ -1,4 +1,4 @@
-<!-- common-governance-version: 1.4.0 -->
+<!-- common-governance-version: 1.4.1 -->
 # Common Project Governance Contract
 
 This contract contains mandatory governance shared by every project created or migrated with `scaffold-project-governance`. A project may add stricter or more specific rules, but must not weaken, replace, or silently contradict this contract.
@@ -29,6 +29,15 @@ If any required item is missing, stale, contradictory, or unauthorized, remain r
 - Keep important documents reachable from a root or product/domain index. Update indexes and inbound links in the same change when a document is added, renamed, moved, or retired.
 - Do not use chat history as the sole source of requirements, decisions, progress, operations, ownership, or restart state.
 - Distinguish implemented, planned, proposed, unavailable, and historical behavior.
+
+## Evidence-bound Critical Identifiers
+
+- Treat identifiers that can change scope, compatibility, or external effects as unconfirmed until they are obtained in the current turn from a task-routed authoritative source or the actual target. This includes package names, versions, digests or integrity values, repository paths, branches, commits, tags, environment, project, or database IDs, deploy targets, and data targets. Read-only discovery may investigate an explicitly unconfirmed value, but must not present or use it as confirmed.
+- Treat chat history, compaction summaries, memory, model inference, parent or coordinator prompts, and subagent reports as leads only. None of them can establish a critical identifier by itself, and repeated agreement between agents does not promote a claim to confirmed fact.
+- Before writing a critical identifier into a delegation prompt as confirmed, the coordinator must personally verify the exact source, location or command, and value. A delegated agent must independently compare prompt identifiers with the actual target or authoritative source before any file write, Git mutation, test, install, network call, or other state change.
+- Stop and report an identifier that is missing, stale, ambiguous, or inconsistent. Do not create owned application diffs while a material metadata conflict remains unresolved.
+- For published-artifact adoption, verify the applicable chain: source or tag manifest, recorded release evidence or registry metadata, and consumer manifest or lock data including name, version, resolved location, and integrity. When network access is unapproved, do not infer remote state; verify recorded evidence and local source only and leave the remote gate explicitly unverified.
+- A project may add a stricter deterministic preflight in project-owned rules, scripts, or runbooks, but may not weaken this gate.
 
 ## Session Capacity Routing
 
