@@ -2247,53 +2247,133 @@ test("Firestore Rules keep SecurityReportIndexes client writes denied", async ()
   });
 });
 
-test("Firestore Rules keep StripeData client update and delete denied", async () => {
-  const uid = "codex-rules-stripe-data-user";
-  await seedRegisteredUser({ uid });
-  await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
-      await setDoc(
-        doc(
-          context.firestore(),
-          "Companies",
-          company.id,
-          "StripeData",
-          "existing-session",
-        ),
-        { fixture: true },
-      );
-    }
+test("Firestore Rules deny all StripeData operations for every actor and nested path", async () => {
+  const actors = [
+    {
+      label: "unauthenticated",
+      firestore: testEnvironment.unauthenticatedContext().firestore(),
+    },
+  ];
+
+  for (const actor of [
+    { label: "general", isAdmin: false, isSuperUser: false },
+    { label: "admin", isAdmin: true, isSuperUser: false },
+    { label: "super", isAdmin: true, isSuperUser: true },
+  ]) {
+    const uid = `codex-rules-stripe-data-${actor.label}`;
+    await seedRegisteredUser({ uid, isAdmin: actor.isAdmin, roles: [] });
+    actors.push({
+      label: actor.label,
+      firestore: authenticatedFirestore(uid, {
+        isSuperUser: actor.isSuperUser,
+      }),
+    });
+  }
+
+  actors.push({
+    label: "authenticated-unregistered",
+    firestore: authenticatedFirestore("codex-rules-stripe-data-unregistered"),
   });
-  const firestore = authenticatedFirestore(uid);
-  const existingSameTenant = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "StripeData",
-    "existing-session",
-  );
-  const newSameTenant = doc(
-    firestore,
-    "Companies",
-    CODEX_LOCAL_COMPANIES.primary.id,
-    "StripeData",
-    "new-session",
-  );
-  const existingOtherTenant = doc(
-    firestore,
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const existing = doc(
+      firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.primary.id,
+      "StripeData",
+      "existing-session",
+    );
+    await setDoc(existing, { fixture: true });
+    await setDoc(doc(existing, "Nested", "existing-child"), { fixture: true });
+    const otherExisting = doc(
+      firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.secondary.id,
+      "StripeData",
+      "existing-session",
+    );
+    await setDoc(otherExisting, { fixture: true });
+    await setDoc(doc(otherExisting, "Nested", "existing-child"), {
+      fixture: true,
+    });
+  });
+
+  for (const actor of actors) {
+    const existing = doc(
+      actor.firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.primary.id,
+      "StripeData",
+      "existing-session",
+    );
+    const created = doc(
+      actor.firestore,
+      "Companies",
+      CODEX_LOCAL_COMPANIES.primary.id,
+      "StripeData",
+      `new-session-${actor.label}`,
+    );
+    const existingNested = doc(existing, "Nested", "existing-child");
+    const createdNested = doc(existing, "Nested", `new-child-${actor.label}`);
+
+    await assertFails(getDoc(existing));
+    await assertFails(setDoc(created, { fixture: true }));
+    await assertFails(setDoc(existing, { fixture: false }));
+    await assertFails(deleteDoc(existing));
+    await assertFails(getDoc(existingNested));
+    await assertFails(setDoc(createdNested, { fixture: true }));
+    await assertFails(setDoc(existingNested, { fixture: false }));
+    await assertFails(deleteDoc(existingNested));
+  }
+
+  const registeredFirestore = actors.find(
+    (actor) => actor.label === "general",
+  ).firestore;
+  const otherExisting = doc(
+    registeredFirestore,
     "Companies",
     CODEX_LOCAL_COMPANIES.secondary.id,
     "StripeData",
     "existing-session",
   );
+  const otherCreated = doc(
+    registeredFirestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "StripeData",
+    "new-session-general",
+  );
+  const otherExistingNested = doc(
+    otherExisting,
+    "Nested",
+    "existing-child",
+  );
+  const otherCreatedNested = doc(otherExisting, "Nested", "new-child-general");
 
-  await assertSucceeds(getDoc(existingSameTenant));
-  await assertSucceeds(setDoc(newSameTenant, { fixture: true }));
-  await assertFails(setDoc(existingSameTenant, { fixture: false }));
-  await assertFails(deleteDoc(existingSameTenant));
-  await assertFails(getDoc(existingOtherTenant));
-  await assertFails(setDoc(existingOtherTenant, { fixture: false }));
-  await assertFails(deleteDoc(existingOtherTenant));
+  await assertFails(getDoc(otherExisting));
+  await assertFails(setDoc(otherCreated, { fixture: true }));
+  await assertFails(setDoc(otherExisting, { fixture: false }));
+  await assertFails(deleteDoc(otherExisting));
+  await assertFails(getDoc(otherExistingNested));
+  await assertFails(setDoc(otherCreatedNested, { fixture: true }));
+  await assertFails(setDoc(otherExistingNested, { fixture: false }));
+  await assertFails(deleteDoc(otherExistingNested));
+
+  const sameTenantCollection = collection(
+    registeredFirestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.primary.id,
+    "StripeData",
+  );
+  const otherTenantCollection = collection(
+    registeredFirestore,
+    "Companies",
+    CODEX_LOCAL_COMPANIES.secondary.id,
+    "StripeData",
+  );
+  await assertFails(getDocs(query(sameTenantCollection)));
+  await assertFails(getDocs(query(otherTenantCollection)));
 });
 
 test("Storage Rules reject unauthenticated SecurityReports access", async () => {
@@ -5120,6 +5200,8 @@ test("admin account creation Callable creates the Company, User, and custom clai
     );
     assert.equal(company.exists(), true);
     assert.equal(company.data().companyName, "Codex新規会社");
+    assert.equal(Object.hasOwn(company.data(), "stripeCustomerId"), false);
+    assert.equal(Object.hasOwn(company.data(), "subscription"), false);
     assert.equal(user.exists(), true);
     assert.equal(user.data().companyId, result.companyId);
     assert.equal(user.data().email, email);

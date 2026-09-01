@@ -2,6 +2,8 @@
 
 > 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
 >
+> 2026-09-01 STRIPE-02 local implementation: Schemas `3.0.0-dev.1`をroot/Functionsへ導入し、checkout page/route、legacy customer type readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は全actor・全階層でread/write拒否とし、既存Company rootのlegacy fieldと既存`StripeData`のdata削除は後続migrationまで未実施である。以下の2026-08-27以前のStripe runtime観測はhistorical baselineとして読む。
+>
 > 2026-08-30 corrective rollback: runtime compatible reader、8-target migration/restore tooling、pre-containment Rulesと専用testを主repositoryから除去した。現在のapplicationは再びlegacy Company rootを直接読み、Rulesは同社Userのroot updateを許可しつつclient create/deleteを拒否する。Schemas `.167` pinとAdmin SDK guardは保持している。次の変更対象は以下に記録したwhole-document writerである。
 >
 > 2026-08-30 adopted editor boundary: `AirItemManager`・`AirArrayManager`をFirestore CRUDの既定componentから外し、Companyをoperation固有editorへ段階移行する。Class schemaによるdocument共通validationは維持し、operation contractを加えて最新live Companyへ変更fieldを重ねたcandidateを検証する。入力中のdraftはlistenerから独立させ、保存は実際に変更されたoperation所有fieldと更新metadataだけに限定する。最初の対象はCompany基本情報である。
@@ -119,7 +121,7 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - `roundSetting`は売上・税の端数設定として参照される境界、`attendanceManagementMode`と`firstDayOfWeek`は勤怠表示・定数導出の境界を持つ。
 - `siteOrder/scheduleOrder`は配置・予定表示順にlive利用され、専用actionがCompanyをupdateする。
 - `maintenanceMode`はSystem全体maintenanceとのORで現在会社のmaintenance判定にlive反映される。
-- `subscription`からCompanyStoreの`customerType`を導出し、Stripe checkout画面がstatus/employeeLimit/currentPeriodEndを表示する。Stripe webhookがsubscriptionを更新し、checkout作成がstripeCustomerIdを更新する。
+- STRIPE-02でCompanyStoreの`customerType`導出、checkout画面、Stripe writerを削除した。Company modelはlegacy Stripe fieldを保持・再保存しない。
 - Arrangement PDFはCompany storeを参照するが、具体的なfield mappingは本セグメントでは追跡していない。
 
 ## 停止・削除
@@ -128,13 +130,13 @@ Company/User transactionとclaims設定はatomicではない。claims失敗時�
 - 旧CompanyManagerはCPU-05で削除した。clientのCompany root create/delete入口はなく、Rulesもcreate/update/deleteを全面拒否する。
 - RulesはCompany rootのclient deleteを拒否する。server/operatorによる停止・decommission・repairとsubcollection保持は未確定であり、root欠損と子data残存の既存・部分失敗状態を検知・修復する契約もない。
 - `maintenanceMode`は利用停止ではなくSystemStoreのmaintenance表示判定に使われるhidden fieldで、設定画面から編集できない。
-- subscription終了はStripe側同期でsubscription内容をnull/employeeLimit 0へ更新する境界であり、Company削除やtenant停止は行わない。
+- 現在はsubscription終了やStripe同期の実行経路を提供しない。Company削除やtenant停止は別の未確定境界である。
 
 ## Rules・security
 
 - Company rootのclient create/update/deleteはfieldやactorにかかわらず全面拒否する。同じtenantの有効な本登録Userによるreadは維持する。
 - 基本情報、振込先、通常設定、表示順は4つの専用Callableがoperation所有fieldと更新metadataだけを検証・更新する。Company既定取極めのUI/writerは廃止済みである。
-- hidden `stripeCustomerId/subscription/maintenance*`をclientがroot updateで直接変更する経路も閉じた。ただし同じrootに残るため同社Userのread対象であり、将来の分割・server projection要否は別設計とする。
+- Company rootのclient updateは全面拒否する。Schemas `3.0.0-dev.1`は`stripeCustomerId/subscription`をCompany modelへ取り込まず、maintenance fieldは従来どおり同じrootに保持する。既存rootのlegacy Stripe field自体は後続migrationまで残り得る。
 - Company rootはclient write全面拒否のためRules内field validationを必要としない。Company subcollectionの広い既存write境界は今回の対象外である。
 - Company docは多くのsubcollectionと認証claimのanchorであり、通常masterより削除・改変影響が大きい。
 

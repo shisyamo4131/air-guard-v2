@@ -20,7 +20,7 @@
 | マイルストーン | 重み | 得点 | 状態 | 完了証拠 |
 |---|---:|---:|---|---|
 | STRIPE-01 exact inventory・削除契約 | 10 | 10 | Completed | ADR 0038でactive/dormant surface、schema/package境界、migration対象4 Company、保持対象、backup、rollback、停止条件、外部Stripe対象外を確定した |
-| STRIPE-02 code・schema・testからの削除 | 25 | 0 | Not started | 対象code/schemaを削除し、unknown field・再混入・既存Company CRUDの回帰をlocalで通す |
+| STRIPE-02 code・schema・testからの削除 | 25 | 0 | In progress | 実装、全domain 731件、隔離Emulator 107件、独立review・security reviewは成功。clean candidate commitへ結び付けたlocal UI buildと残りcompletion gateの成功後に加点する |
 | STRIPE-03 local migration準備 | 15 | 0 | Not started | backup、dry-run、exact target、idempotent plan、failure時write 0、post-checkを検証する |
 | STRIPE-04 local migration・画面受入れ | 20 | 0 | Not started | Codex専用または利用者承認済みlocal環境でmigrationと主要Company画面の読込・編集・再読込を確認する |
 | STRIPE-05 bounded Dev migration・反映 | 20 | 0 | Not started | 承認済みmaintenanceで4 Companyをbackup・変換し、対象releaseをDevへ反映してremote post-checkを完了する |
@@ -30,9 +30,9 @@
 
 ## 現在の次工程
 
-1. 公開・内容検証済みSchemas exact `3.0.0-dev.1`を、source tag・release evidence・root/Functions manifest/lock preflight後にSTRIPE-02で同時導入する。現在のconsumer exact `2.4.2-dev.167`は導入完了までrollback baselineとして維持する。
-2. 同じSTRIPE-02でcheckout、legacy reader、未公開Functions、依存packageを削除し、`StripeData`を全操作拒否へ変更する。
-3. domain testとFirestore Emulatorで再混入防止、Company既存操作、全actorの`StripeData`拒否を確認する。その後STRIPE-03のlocal migration toolへ進む。
+1. review済み23-entry候補を利用者承認後にlocal commitし、cleanな同一HEADへ`npm run test:local:ui:build`を実行する。
+2. local UI buildと残りcompletion gateが成功したらSTRIPE-02を25点加点し、実装・検証証拠をcurrent handoffへ確定する。
+3. その後STRIPE-03として、既存Company rootのlegacy 2 fieldと`StripeData`だけを対象にするlocal migration planner、backup、dry-run、匿名化digest、停止条件、idempotency、rollback rehearsalを別checkpointで開始する。
 
 ## 進捗履歴
 
@@ -42,3 +42,4 @@
 | 2026-08-30 | 0% | 0 | 旧CCBを4つのcorrective implementation commitでrollbackし、保持対象を分離した。Stripe削除自体は未着手であり、先に新CCBのwhole-document replacement除去を行うため進捗は据え置いた。 |
 | 2026-09-01 | 10% | +10 | 利用者がStripe側との契約情報同期実績なしを確認した。active/dormant code、Rules、schema/package、4 Company migration、backup・rollback・停止条件をADR 0038へ固定し、外部Stripe操作を対象外とした。STRIPE-01を完了した。 |
 | 2026-09-01 | 10% | 0 | Schemas `3.0.0-dev.1`の公開・内容検証は完了したが、AirGuardV2 consumer未導入のためSTRIPE-02は未加点。package identity誤報を受け、common governance 1.4.1と変更前後preflightを先に導入し、task交代後に再開する。 |
+| 2026-09-01 | 10% | 0 | STRIPE-02の実装、全domain 731/731、隔離Emulator 107/107、PostAdoption、一般review、security reviewは成功した。local UI buildはdirty worktree guardにより製品build開始前にexit 1となり、clean candidate commitが必要なため、完了・加点は保留する。外部Stripe、data migration、Dev/Prod、deployは未実施である。 |

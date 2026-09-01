@@ -6,9 +6,9 @@
 
 ## 関連パッケージの更新
 
-`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは、UWB role presetとhistorical CCB v1 public contractを含む`2.4.2-dev.167`へ固定している。旧CCB runtimeは主repositoryからrollback済みだが、artifactをunpublishせずpinも独立変更まで保持する。Admin SDKもlocal commit `c95660d`でexact `.167`へ導入済みで、未知CCB pathへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
+`air-guard-v2-schemas`の公開済みversionをルートアプリとCloud Functionsへ同時に反映する場合、security・authorizationに関係するcatalog変更では`@dev`やrangeを使わず、承認済みのexact versionを両方へ指定する。現在のAirGuardV2 app/Functions consumerは、legacy Stripe fieldをCompany schemaから除去した`3.0.0-dev.1`へ固定している。旧`2.4.2-dev.167`はSTRIPE-02 local checkpointのrollback baselineとして履歴保持し、artifactをunpublishしない。Admin SDKはlocal commit `c95660d`でexact `.167`を維持し、未知CCB pathへの旧破壊操作をfail closedにするが、CCB-aware backup/restore自体は未提供である。
 
-Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1`がtag `v3.0.0-dev.1`から公開済みである。ただし公開済みであることはconsumer導入を意味しない。AirGuardV2 root/FunctionsはSTRIPE-02開始前の時点ではexact `2.4.2-dev.167`をrollback baselineとして維持する。
+Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1`がtag `v3.0.0-dev.1`から公開済みである。STRIPE-02でAirGuardV2 root/Functionsへ同時導入し、変更後preflightでversion、resolved tarball、integrityの一致を確認済みである。registry freshnessの追加照会、Dev反映、Admin SDK更新はこのlocal checkpointへ含めない。
 
 package名やversionをprompt・task reportから転記してinstallを開始しない。変更前に次のread-only preflightを実行し、source tag manifest、repository release evidence、現在のroot/Functions manifest・lock chainを確認する。
 

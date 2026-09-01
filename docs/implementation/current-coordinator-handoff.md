@@ -33,12 +33,12 @@
 - Company arrangement implementation commit: 本snapshotと同じlocal commit
 - SuperUser兼会社管理者表示順 release commit: `0f09ec4ff907bf337ceab0c0e296b413a084182b`
 - expected upstream: none
-- expected worktree: clean
+- actual worktree: `STRIPE-02-LOCAL-IMPLEMENT-001`のreview済み23 entryが未stage。target handoff stateはcleanである。
 - expected worktree registry: primary repository 1件のみ。linked/task-specific/alternate worktreeは禁止。
 - common governance: `1.5.0` / SHA-256 `0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac`
 - generated `AGENTS.md`: 20,391 bytes / 上限32,768 bytes。managed validatorでcurrentを確認済みとし、replacement activationでも再確認する。
-- specification: `0.8.3`
-- unintegrated work: 0。SuperUser兼会社管理者の自社表示順更新はrelease commitへ統合し、対象FunctionとHostingのDev反映、利用者の並べ替え保存・再読込による最終UI acceptanceまで完了した。
+- specification: `0.8.4`
+- unintegrated work: `STRIPE-02-LOCAL-IMPLEMENT-001`のapplication・Functions・Rules・package・test・文書差分がprimary worktreeに未stageで存在する。外部Stripe、migration、Dev/Prod、remote/data、deploy、pushは未実施である。最終検証、利用者のlocal commit承認、clean handoffが残る。
 
 ## Confirmed product state
 
@@ -51,7 +51,7 @@
 - 利用者は、現存Stripe関連物がscaffoldであり、Stripe側とCompany契約情報を同期した実績がないと確認した。ADR 0038でAirGuard内のroute、reader/writer、Functions、Rules、schema/package、legacy dataだけを撤去対象とし、Stripe Customer・Subscription・Webhook・Price・Secret等の外部inventory、変更、削除、rollbackを対象外とした。
 - Devで確認済みのCompany rootは4件。正式release前で旧client継続利用を要しないため、backup・dry-run・短時間maintenance・全件変換・post-check・Dev受入れをbounded cutoverとして行える。実data操作は別の明示承認を必要とする。
 - 旧CCBのruntime compatible reader、8-target migration planner/Emulator、SettingAudits restore planner、candidate Rulesと専用testは主repositoryからcorrective rollback済みである。Company Rulesは旧CCB直前blobへ戻しつつ、UWBとCompany client create/delete拒否を保持した。
-- Schemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardは独立成果として保持した。Schemasをunpublishせず、関連repository、Dev、remote/dataは変更していない。
+- Schemas exact `3.0.0-dev.1`をSTRIPE-02でAirGuardV2 root/Functionsへ導入し、変更後preflightで同一version・tarball・integrityを確認した。旧`2.4.2-dev.167`はrollback baseline、Admin SDKの`.167` fail-closed guardは独立成果として保持する。Schemasをunpublishせず、関連repository、Dev、remote/dataは変更していない。
 - Company基本情報10 fieldは独立draftと専用Callableへ移行済みである。利用者が変えたfieldだけを最新Companyへ重ねてclient/server双方で検証し、server timestampと更新者を記録する。編集中のlive変更は自動上書きせず、会社管理者以外の編集controlとserver保存を拒否する。Rulesは同profile fieldのclient直接変更を閉じ、未移行operationの対象外field更新を暫定維持する。
 - 利用者local確認で権限と更新metadataは合格した。基本情報card titleを復元し、dialogをVuetifyの`scrollable`前提DOMへ修正して本文だけをscrollさせた。競合時は保存を止め、「最新値を読み直す」だけを表示する。利用者は修正版UIを再確認し、Company基本情報のlocal受入れを完了した。
 - Company振込先は専用editorと`updateCompanyBilling` Callableへ移行した。同社の有効な本登録User readを維持し、非super-user会社管理者だけが編集・保存できる。5 field all-null/all-complete、changed-only update、client直接write拒否、再読込専用競合、明示clear、完全な口座名義込み帳票をlocal実装・自動検証した。会社管理者Chromeで5項目の保存・clear・復元・二画面競合、一般ユーザーChromeで画面拒否をCodexが確認し、利用者が実請求PDFの口座情報出力を確認して最終UI acceptanceを完了した。
@@ -89,9 +89,10 @@
 - local implementation and validation checkpoint: `CCB-DUAL-ROLE-DISPLAY-ORDER-001`。SuperUser兼会社管理者を自社の両表示順actorへ限定追加し、単独SuperUserと既存の拒否境界を維持した。生SuperUser claimのboolean妥当性を表示順だけで追加確認する。対象16件、全domain 727件、隔離Emulator 107件、security review GOを成功させた。Dev・remote/data・deploy・remote claim変更・Rules変更は未実施で、利用者最終UI acceptance待ちである。
 - Dev release and user acceptance complete checkpoint: `DEV-DUAL-ROLE-DISPLAY-ORDER-RELEASE-001`。commit `0f09ec4ff907bf337ceab0c0e296b413a084182b`から`updateCompanyArrangement`を先、同一Hosting artifactを後にDevへ反映した。Function ACTIVE・public invoker・CORS 204・更新後ERROR 0件、配信artifact一致を確認し、兼任accountのChromeで両画面の表示順入口・dialog・未変更時保存無効を確認した。利用者はDevで両画面の並べ替え保存・再読込を最終確認した。
 - completed governance checkpoint: `GOV18-AIRGUARDV2-CODEX-IMPLEMENTER-001`。ADR 0034、project rules、仕様0.8.0、runbook、agent定義、roadmap、snapshot、changelogを同期し、managed `AGENTS.md`を再生成したbaseline commit `c729803ecc431bd94a5b627719c9d846fec5c24b`から、利用者承認済みturnoverとしてPM（AirGuardV2）-12のno-change、permissions、最初のfile限定activation commit、callback/assignment retargetを実施した。activation commitではproduct実装を開始していない。
-- completed product roadmap: [SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md) 100%。[Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md)はSTRIPE-01 exact inventory・削除契約を完了して10%。Schemas前進versionの公開・内容検証は完了したがconsumer未導入であり、governance 1.5.0 turnover完了後もSTRIPE-02は自動開始せず、次の利用者指示で再確認してから進む。
+- active product roadmap: [Company legacy Stripe情報削除](../roadmaps/company-stripe-removal.md) 10%。STRIPE-02のlocal code・schema・test実装と主要検証は成功したが、clean candidate commitへ結び付けたlocal UI buildが未成功のため未加点である。[SuperUser兼会社管理者の表示順対応](../roadmaps/superuser-company-admin-display-order.md)は100%で完了済みである。
 - completed product checkpoint: `STRIPE-01-EXACT-INVENTORY-001`。4つのread-only専門調査でactive route/reader/Rules、dormant Functions/dependency、Schemas package境界、migration/test/security条件を照合した。ADR 0038で未同期scaffoldだけをAirGuard内から撤去し、外部Stripeを扱わない契約、4 Companyの値非出力migration、backup、rollback、停止条件を確定した。application、Rules、package、data、Dev、networkは変更していない。
-- paused product checkpoint: `STRIPE-02`。Schemas `3.0.0-dev.1`の公開・内容検証は完了しているが、AirGuardV2 consumerはroot/Functionsとも`2.4.2-dev.167`のままである。package identity誤報から生じた未コミット差分はexact owned pathsだけを復元してcleanへ戻した。PM-14 ownership activation後も自動開始せず、次の利用者指示を受けたturnでsource tag・release evidence・root/Functions consumer manifest-lockの`PreAdoption`を再確認し、承認済みproduct boundaryを再構成するまで再開しない。
+- in-progress checkpoint: `STRIPE-02-LOCAL-IMPLEMENT-001`。当該turnのPreAdoptionをexit 0で再確認後、root/FunctionsをSchemas exact `3.0.0-dev.1`へ揃え、checkout page/route、legacy reader/store導出、未公開Stripe Functions/comment、Stripe依存packageを削除した。`StripeData`は全actor・全階層で拒否し、全domain 731/731、隔離Emulator 107/107、PostAdoption、独立review、security review GOを確認した。reviewで検出した旧package期待、version未固定install経路、別tenant/list test不足は修正済みである。comprehensive gatesは、roadmap index不一致で`project-docs`と`project-docs-negative`が初回exit 1となった後に修正し、再実行は各exit 0、`capacity-regression`、`managed-governance`、`diff-check`もexit 0である。`npm run test:local:ui:build`はdirty worktree guardでexit 1となり、製品build自体は開始していない。review済み23 entryのlocal candidate commitと、cleanな同一HEADでのbuild再実行が承認待ちである。
+- next product checkpoint: STRIPE-02のclean candidate buildを成功させ、completion evidenceを確定して25点加点する。その後の`STRIPE-03` local migration準備は別checkpointであり、自動開始しない。Dev・remote/data・実migrationは別承認である。
 
 ## Active source set
 

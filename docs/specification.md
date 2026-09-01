@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-01
-- 仕様バージョン: 0.8.3
+- 仕様バージョン: 0.8.4
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -46,8 +46,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firebase Hosting 向けの CSR SPA とし、PWA Service Worker を持つ。
 - `air-vuetify-v3` をファイル参照で使用する。
 - Firestore 用モデルは `air-guard-v2-schemas`、基底実装は `air-firebase-v2`、クライアント注入は `air-firebase-v2-client-adapter` が提供する。
-- role presetの識別子、表示metadata、permission配列は`@shisyamo4131/air-guard-v2-schemas/constants`を環境非依存の単一正本とし、ルートアプリとCloud Functionsは同じ公開version・tarball・integrityを使用する。現在の確認済みversionはCCB v1のadditive public subpathも含むexact `2.4.2-dev.167`である。このpackage catalogはactor・tenant・target・request contextからallow/denyを決定せず、clientとFunctionsがそれぞれ認可policyを所有する。
-- Schemas packageを更新する前後は、当該turnでsource tag manifest、repository release evidence、AirGuardV2 root/Functionsのmanifest・lockにあるname、version、resolved、integrityを機械照合する。prompt、chat、要約、agent reportだけでpackage identityを確定せず、矛盾時はconsumer file変更・install・testを開始しない。公開済み`3.0.0-dev.1`はSTRIPE-02の導入候補であり、`PostAdoption`成功前は現在のconsumer versionとして扱わない。
+- role presetの識別子、表示metadata、permission配列は`@shisyamo4131/air-guard-v2-schemas/constants`を環境非依存の単一正本とし、ルートアプリとCloud Functionsは同じ公開version・tarball・integrityを使用する。現在の確認済みversionはlegacy Stripe fieldをCompany schemaから除去したexact `3.0.0-dev.1`である。このpackage catalogはactor・tenant・target・request contextからallow/denyを決定せず、clientとFunctionsがそれぞれ認可policyを所有する。
+- Schemas packageを更新する前後は、当該turnでsource tag manifest、repository release evidence、AirGuardV2 root/Functionsのmanifest・lockにあるname、version、resolved、integrityを機械照合する。prompt、chat、要約、agent reportだけでpackage identityを確定せず、矛盾時はconsumer file変更・install・testを開始しない。`3.0.0-dev.1`はSTRIPE-02でroot/Functionsへ導入し、`PostAdoption`で同一version・tarball・integrityを確認済みである。旧`2.4.2-dev.167`はこのlocal checkpointのrollback baselineとして履歴保持する。
 - ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
 - 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
 
@@ -142,8 +142,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。Company設定画面から既定取極めの編集入口とwriterを撤去し、Site固有の取極めUI・dataは維持する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
 - Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
-- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBから削除する。legacy fieldのcode/schema/data削除は、local migrationとDev migration・受入れまでを一つの独立roadmapとして完了させる。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
-- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。Company Rulesは旧CCB直前へ戻しつつ、UWBとCompany client create/delete拒否を保持した。Schemas exact `2.4.2-dev.167`の公開artifactとconsumer pin、Admin SDKのfail-closed guardは独立成果として保持し、公開packageをunpublishしない。Dev/remote dataは未変更であり、旧8 targetへのmigrationまたはrestore経路は現在提供しない。
+- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。STRIPE-02でcheckout、reader、未公開Functions、依存package、Company schema fieldをlocal codeから削除し、`StripeData`を全actor・全階層で拒否した。既存Company rootのlegacy fieldと既存`StripeData`のdata削除は、local migrationとDev migration・受入れを行う後続checkpointまで未実施である。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
+- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。Dev/remote dataは未変更であり、旧8 targetへのmigrationまたはrestore経路は現在提供しない。
 
 ### 取引先・現場・取極め
 
@@ -219,7 +219,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ## アプリケーション状態の責務
 
 - `useAuthStore`: 認証、カスタムクレーム、ログインユーザー、ロール・権限。
-- `useCompanyStore`: 現在会社。legacy subscriptionから導出する顧客区分はSTRIPE-02で削除する移行中の残存実装であり、現行業務契約として利用しない。
+- `useCompanyStore`: 現在会社。STRIPE-02でlegacy subscriptionと顧客区分の導出を削除し、通常のCompany情報だけを保持する。
 - `useSystemStore`: システム状態、会社を考慮したメンテナンス状態、開発環境判定。
 - `useAppStore`: アプリケーションシェルと画面表示状態。
 - 認証状態に応じた User・Company の取得、購読、初期化は `useAuthActions` が調整する。

@@ -28,3 +28,12 @@ test("Companies fallback cannot override Employee reservation denial", async () 
     'allow read, write: if isAuthenticated() && userCompanyId() == companyId && collection != "SecurityReportIndexes" && collection != "StripeData" && collection != "Users" && collection != "Employees" && collection != "EmployeeUserReservations" && collection != "LifecycleOperations" && collection != "UserLifecycleLocks" && collection != "EmployeeLifecycleLocks" && collection != "EmployeeLifecycleHeads";',
   );
 });
+
+test("StripeData is recursively denied and excluded from the Companies fallback", async () => {
+  const source = await readFile(rulesUrl, "utf8");
+  assert.match(
+    source,
+    /match \/Companies\/\{companyId\}\/StripeData\/\{document=\*\*\} \{\s*allow read, write: if false;\s*\}/u,
+  );
+  assert.match(source, /collection != "StripeData"/u);
+});
