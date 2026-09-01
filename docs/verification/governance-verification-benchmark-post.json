@@ -1,0 +1,335 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "GOV15-AIRGUARD-POSTBENCH-EXEC-001",
+  "phase": "post_migration",
+  "status": "complete",
+  "recording": {
+    "source": "saved exact CommandExecution result from the identified PM-14 task",
+    "benchmark_reexecuted_for_recording": false,
+    "missing_values_inferred": false,
+    "saved_result_count": 36,
+    "saved_exit_zero_count": 36,
+    "exact_gate_order_confirmed": true
+  },
+  "baseline": {
+    "repository": "C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+    "branch": "codex/dev-user-reservation-migration",
+    "head": "18c2a5b724351bc2c54591b1b6c18f30d3fa72e3",
+    "parent": "574c1a8932f9933686649cff8bc8f1f5e16c95e5",
+    "subject": "docs: activate PM-14 governance coordination",
+    "governance_adoption_commit": "574c1a8932f9933686649cff8bc8f1f5e16c95e5",
+    "common_governance_version": "1.5.0",
+    "common_governance_sha256": "0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac"
+  },
+  "pre_reference": {
+    "benchmark_id": "GOV15-AIRGUARD-PREBENCH-EXEC-001",
+    "evidence_commit": "141d614db2b19b3f1796cedcfd96fe85de82396a",
+    "execution_baseline": "2591372d1550abc9665e864db2e52ab6a7297d5b",
+    "numeric_source": "docs/verification/governance-verification-benchmark-pre.json"
+  },
+  "environment": {
+    "node_version": "v22.23.2",
+    "stopwatch_shell": {
+      "name": "PowerShell Core",
+      "version": "7.6.4"
+    },
+    "powershell_gate_shell": {
+      "name": "Windows PowerShell Desktop",
+      "version": "5.1.26100.9168"
+    },
+    "timezone_id": "Tokyo Standard Time",
+    "utc_offset": "+09:00",
+    "observed_preflight": "2026-09-01T19:25:42.9262248+09:00",
+    "observed_start": "2026-09-01T19:26:21.1010805+09:00",
+    "observed_end": "2026-09-01T19:27:25.1233237+09:00",
+    "observed_final_state": "2026-09-01T19:30:42.0108529+09:00"
+  },
+  "protocol": {
+    "rounds": 4,
+    "gate_order": [
+      "G-DOC",
+      "G-GOV",
+      "G-RENDER",
+      "G-DOC-NEG",
+      "G-CAP",
+      "G-DIFF",
+      "G-SYNTAX",
+      "G-TARGET",
+      "G-FULL"
+    ],
+    "elapsed_measurement": "PowerShell Stopwatch around each exact command",
+    "exit_measurement": "each command's own exit status",
+    "round_1_classification": "first-run/cold-ish reference only; not a true cold cache",
+    "comparison_value": "median elapsed_ms of rounds 2 through 4",
+    "scenario_warm_total": "sum of per-gate warm medians; not median of per-round scenario totals"
+  },
+  "full_domain_source_set": {
+    "command_argument": "test/domain/*.test.mjs",
+    "file_count_before": 92,
+    "file_count_after": 92,
+    "path_order": "PowerShell Sort-Object over forward-slash repository-relative paths",
+    "hash_algorithm": "SHA-256",
+    "hash_input": "UTF-8 bytes of paths joined by LF with no trailing newline",
+    "hash_before": "d448a879abc6f5c54ecdcbcdb0f905907216f30ee5412341a1d233c9bc7a0709",
+    "hash_after": "d448a879abc6f5c54ecdcbcdb0f905907216f30ee5412341a1d233c9bc7a0709",
+    "exact_paths_match_pre": true,
+    "exact_files_reference": "docs/verification/governance-verification-benchmark-pre.json#/full_domain_source_set/files"
+  },
+  "gates": [
+    {
+      "id": "G-DOC",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 1485.875, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 1429.704, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 1450.262, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 1457.480, "exit_code": 0 }
+      ],
+      "warm_median_ms": 1450.262,
+      "observed_each_round": { "markdown_files": 199, "adrs": 40, "roadmaps": 5, "toml_files": 8, "toml_parser_files": 8 }
+    },
+    {
+      "id": "G-GOV",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 541.239, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 568.557, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 541.139, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 540.293, "exit_code": 0 }
+      ],
+      "warm_median_ms": 541.139,
+      "observed_each_round": {
+        "common_governance_version": "1.5.0",
+        "agents_bytes": 20391,
+        "max_agents_bytes": 32768,
+        "managed_hashes_current": true,
+        "generated_agents_current": true,
+        "project_rules_present": true,
+        "verification_policy_present": true,
+        "verification_gate_count": 11,
+        "verification_class_count": 6,
+        "verification_inclusion_graph_valid": true,
+        "verification_documentation_aligned": true,
+        "renderer_check_exit_status": 0
+      },
+      "includes": ["G-RENDER"]
+    },
+    {
+      "id": "G-RENDER",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 384.458, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 388.652, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 374.188, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 382.271, "exit_code": 0 }
+      ],
+      "warm_median_ms": 382.271,
+      "observed_each_round": {
+        "generated_content_current": true,
+        "common_governance_sha256": "0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac"
+      },
+      "benchmark_only_parity_gate": true
+    },
+    {
+      "id": "G-DOC-NEG",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 8622.382, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 2, "elapsed_ms": 8661.568, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 3, "elapsed_ms": 8474.199, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 4, "elapsed_ms": 8584.247, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true }
+      ],
+      "warm_median_ms": 8584.247,
+      "observed_each_round": {
+        "fixture_cases": 12,
+        "all_expected_polarities_passed": true,
+        "added_since_pre": [
+          "verification policy route is required",
+          "invalid verification policy JSON",
+          "verification matrix heading is required",
+          "verification policy route is required in INITIAL_PROMPT"
+        ]
+      }
+    },
+    {
+      "id": "G-CAP",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 2589.233, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 2, "elapsed_ms": 2562.793, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 3, "elapsed_ms": 2547.425, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 4, "elapsed_ms": 2534.186, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true }
+      ],
+      "warm_median_ms": 2547.425,
+      "observed_each_round": { "regression_checks": 7, "all_passed": true }
+    },
+    {
+      "id": "G-DIFF",
+      "command": "git diff --check",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 62.005, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 62.053, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 59.640, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 64.848, "exit_code": 0 }
+      ],
+      "warm_median_ms": 62.053
+    },
+    {
+      "id": "G-SYNTAX",
+      "command": "node --check functions/modules/company/updateCompanyArrangement.js",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 95.148, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 50.024, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 47.967, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 53.655, "exit_code": 0 }
+      ],
+      "warm_median_ms": 50.024
+    },
+    {
+      "id": "G-TARGET",
+      "command": "node --test test/domain/company-arrangement-update.test.mjs",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 569.253, "exit_code": 0, "node_duration_ms": 469.9319 },
+        { "round": 2, "elapsed_ms": 522.009, "exit_code": 0, "node_duration_ms": 468.8200 },
+        { "round": 3, "elapsed_ms": 511.906, "exit_code": 0, "node_duration_ms": 459.0735 },
+        { "round": 4, "elapsed_ms": 525.590, "exit_code": 0, "node_duration_ms": 469.0095 }
+      ],
+      "warm_median_ms": 522.009,
+      "observed_each_round": { "tests": 16, "pass": 16, "fail": 0, "cancelled": 0, "skipped": 0, "todo": 0 }
+    },
+    {
+      "id": "G-FULL",
+      "command": "node --test test/domain/*.test.mjs",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 1803.745, "exit_code": 0, "node_duration_ms": 1701.7545 },
+        { "round": 2, "elapsed_ms": 1780.692, "exit_code": 0, "node_duration_ms": 1722.7912 },
+        { "round": 3, "elapsed_ms": 1754.447, "exit_code": 0, "node_duration_ms": 1694.4019 },
+        { "round": 4, "elapsed_ms": 1828.105, "exit_code": 0, "node_duration_ms": 1763.3910 }
+      ],
+      "warm_median_ms": 1780.692,
+      "observed_each_round": { "tests": 727, "pass": 727, "fail": 0, "cancelled": 0, "skipped": 0, "todo": 0 }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "S-DOC",
+      "post_gates": ["G-DOC", "G-DIFF"],
+      "pre_root_runs": 4,
+      "post_root_runs": 2,
+      "root_run_delta": -2,
+      "root_run_percent_change": -50.0000,
+      "pre_known_physical_executions": 5,
+      "post_known_physical_executions": 2,
+      "pre_round_1_sum_ms": 2364.307,
+      "post_round_1_sum_ms": 1547.880,
+      "round_1_delta_ms": -816.427,
+      "round_1_percent_change": -34.5313,
+      "pre_warm_median_sum_ms": 2373.491,
+      "post_warm_median_sum_ms": 1512.315,
+      "warm_delta_ms": -861.176,
+      "warm_percent_change": -36.2831,
+      "coverage_assessment": "equal within the policy-defined documentation-only boundary; managed-governance drift routes to S-GOV/comprehensive",
+      "failure_detection_assessment": "equal within the documentation-only boundary"
+    },
+    {
+      "id": "S-APP",
+      "post_gates": ["G-SYNTAX", "G-TARGET", "G-FULL", "G-DOC", "G-DIFF"],
+      "policy_completion_gates": ["G-DOC", "G-FULL", "G-DIFF"],
+      "like_for_like_iteration_gates": ["G-SYNTAX", "G-TARGET"],
+      "pre_root_runs": 7,
+      "post_root_runs": 5,
+      "root_run_delta": -2,
+      "root_run_percent_change": -28.5714,
+      "pre_known_physical_executions": 8,
+      "post_known_physical_executions": 5,
+      "pre_round_1_sum_ms": 4811.833,
+      "post_round_1_sum_ms": 4016.026,
+      "round_1_delta_ms": -795.807,
+      "round_1_percent_change": -16.5385,
+      "pre_warm_median_sum_ms": 4633.282,
+      "post_warm_median_sum_ms": 3865.040,
+      "warm_delta_ms": -768.242,
+      "warm_percent_change": -16.5809,
+      "coverage_assessment": "equal for application behavior and stronger for current documentation and verification-policy routing",
+      "failure_detection_assessment": "equal for application behavior; managed-governance checks route to the governance class"
+    },
+    {
+      "id": "S-GOV",
+      "post_gates": ["G-DOC", "G-DOC-NEG", "G-CAP", "G-GOV", "G-DIFF"],
+      "pre_root_runs": 6,
+      "post_root_runs": 5,
+      "root_run_delta": -1,
+      "root_run_percent_change": -16.6667,
+      "pre_known_physical_executions": 21,
+      "post_known_physical_executions": 24,
+      "physical_execution_accounting": "G-DOC 1 + G-DOC-NEG wrapper 1 and checker invocations 12 + G-CAP wrapper 1 and capacity-script invocations 6 + G-GOV wrapper and embedded renderer 2 + G-DIFF 1",
+      "pre_round_1_sum_ms": 11188.394,
+      "post_round_1_sum_ms": 13300.734,
+      "round_1_delta_ms": 2112.340,
+      "round_1_percent_change": 18.8797,
+      "pre_warm_median_sum_ms": 11072.895,
+      "post_warm_median_sum_ms": 13185.126,
+      "warm_delta_ms": 2112.231,
+      "warm_percent_change": 19.0757,
+      "coverage_assessment": "stronger through 12 negative fixtures, policy validation, inclusion-graph validation, documentation alignment, and embedded renderer evidence",
+      "failure_detection_assessment": "stronger; increased wall-clock is attributed to added checks rather than a selection failure"
+    }
+  ],
+  "known_duplication": {
+    "gate": "G-RENDER",
+    "post_operational_selection": "excluded because G-GOV preserves the embedded renderer named result and exit status",
+    "benchmark_execution_reason": "command-level parity with the frozen pre protocol only",
+    "duplicate_root_and_physical_execution_avoided_per_governance_scenario": 1,
+    "pre_standalone_round_1_ms": 445.236,
+    "post_standalone_round_1_ms": 384.458,
+    "round_1_delta_ms": -60.778,
+    "round_1_percent_change": -13.6507,
+    "pre_standalone_warm_median_ms": 440.847,
+    "post_standalone_warm_median_ms": 382.271,
+    "warm_delta_ms": -58.576,
+    "warm_percent_change": -13.2871,
+    "embedded_renderer_only_cost": "not separately measurable; not inferred"
+  },
+  "coverage_differences": {
+    "markdown_files": { "pre": 196, "post": 199, "delta": 3 },
+    "adrs": { "pre": 39, "post": 40, "delta": 1 },
+    "roadmaps": { "pre": 5, "post": 5, "delta": 0 },
+    "toml_files": { "pre": 8, "post": 8, "delta": 0 },
+    "negative_fixtures": { "pre": 8, "post": 12, "delta": 4 },
+    "capacity_checks": { "pre": 7, "post": 7, "delta": 0 },
+    "target_tests": { "pre": 16, "post": 16, "delta": 0 },
+    "full_domain_tests": { "pre": 727, "post": 727, "delta": 0 },
+    "post_policy_validation": { "classes": 6, "gates": 11, "inclusion_graph_valid": true, "documentation_aligned": true }
+  },
+  "final_state": {
+    "head_unchanged": true,
+    "branch_unchanged": true,
+    "tracked_clean": true,
+    "untracked_clean": true,
+    "index_clean": true,
+    "upstream": "none",
+    "primary_worktree_count": 1,
+    "governance_fixture_count": 0,
+    "capacity_fixture_count": 0,
+    "source_set_count_unchanged": true,
+    "source_set_hash_unchanged": true,
+    "state_change_performed_by_benchmark": false
+  },
+  "limitations": [
+    "Round 1 is cold-ish only and is not a true cold-cache measurement.",
+    "Stopwatch values include process startup, output capture, and host load on one Windows host and time window.",
+    "Warm scenario totals are sums of per-gate medians, not medians of per-round scenario totals.",
+    "Node TAP does not emit a direct source-file run manifest; G-FULL binding uses the frozen command, unchanged sorted 92-path list and hash, and stable 727-test results.",
+    "Embedded renderer-only time inside G-GOV is not separable; standalone G-RENDER is the comparable duplicate-cost proxy.",
+    "Build, Dev, Emulator, UI, network, remote data, Realtime Database Rules, and external-service regressions remain modeled-only and unverified in both phases."
+  ],
+  "not_changed_or_executed": [
+    "application or Functions",
+    "Firebase Rules",
+    "build or static generation",
+    "Dev or Prod",
+    "network or remote data",
+    "packages or Schemas consumer",
+    "STRIPE-02"
+  ]
+}

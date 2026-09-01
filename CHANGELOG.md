@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- common governance 1.5.0反映後の`GOV15-AIRGUARD-POSTBENCH-EXEC-001`保存済み実測36件を再実行・推測せず記録した。全command exit 0、target 16/16、full domain 727/727、前後92-path/hash一致を確認した。operational root runはdocumentation 4→2、application 7→5、governance 6→5となり、warm-median合計は順に-36.2831%、-16.5809%、+19.0757%だった。governanceはnegative fixtureを8→12へ増やしpolicy/routing/inclusion検出を強化したため、時間増加をfailureとは扱わない。application、Functions、Rules、build、Emulator、Dev/Prod、network、remote/data、package、Schemas consumer、STRIPE-02は変更・実行していない。
+
 - common governance 1.5.0とproject-owned verification policyを採用し、documentation、UI、application、data contract、governance、releaseの影響classごとにiteration・targeted・completion・release-only gateを選ぶ運用へ移行した。managed governanceに内包されるrendererの重複を除き、後続編集による証拠失効、unknown fallback、omission記録、marker-bounded operations summaryをvalidatorとnegative fixtureで検証する。application、Functions、Rules、build、Emulator、Dev・Prod、network、remote/data、Schemas consumer、STRIPE-02は変更していない。
 
 - Managed common governanceを1.4.1へ同期し、package・repository・Git・environment・deploy・dataのcritical identifierを当該turnの正本または実targetへ結び付けた。Schemas consumer更新にはsource tag、release evidence、root/Functions manifest・lockのname、version、resolved、integrityを変更前後に機械照合するpreflightを追加し、誤ったpackage名ではstate change前に停止する。product code、dependency、Functions、Rules、Dev・remote/dataは変更しない。
