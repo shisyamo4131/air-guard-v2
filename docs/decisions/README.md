@@ -52,6 +52,7 @@
 | [0037](0037-superuser-company-admin-display-order.md) | SuperUser兼会社管理者の自社表示順更新 | Accepted | 2026-08-31 |
 | [0038](0038-legacy-stripe-scaffold-removal.md) | 未同期Stripe scaffoldの完全撤去 | Accepted | 2026-09-01 |
 | [0039](0039-evidence-bound-critical-identifiers.md) | Critical identifierの正本照合とSchemas consumer preflight | Accepted | 2026-09-01 |
+| [0040](0040-impact-based-staged-verification.md) | 影響分類に基づく段階的検証 | Accepted | 2026-09-01 |
 
 ## 新しい ADR の形式
 

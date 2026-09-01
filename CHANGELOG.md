@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- common governance 1.5.0とproject-owned verification policyを採用し、documentation、UI、application、data contract、governance、releaseの影響classごとにiteration・targeted・completion・release-only gateを選ぶ運用へ移行した。managed governanceに内包されるrendererの重複を除き、後続編集による証拠失効、unknown fallback、omission記録、marker-bounded operations summaryをvalidatorとnegative fixtureで検証する。application、Functions、Rules、build、Emulator、Dev・Prod、network、remote/data、Schemas consumer、STRIPE-02は変更していない。
+
 - Managed common governanceを1.4.1へ同期し、package・repository・Git・environment・deploy・dataのcritical identifierを当該turnの正本または実targetへ結び付けた。Schemas consumer更新にはsource tag、release evidence、root/Functions manifest・lockのname、version、resolved、integrityを変更前後に機械照合するpreflightを追加し、誤ったpackage名ではstate change前に停止する。product code、dependency、Functions、Rules、Dev・remote/dataは変更しない。
 
 - STRIPE-01を完了した。利用者確認によりStripe関連物は未同期scaffoldで、Stripe側Customer・契約・Webhook等を考慮・操作しないと確定した。ADR 0038でAirGuard内のcheckout、reader/writer、未公開Functions、Rules、schema/package、Company root legacy field、`StripeData`の撤去範囲、4 Companyの値非出力migration、backup・rollback・停止条件を固定し、Company legacy Stripe情報削除roadmapを0%から10%へ更新した。product code、Rules、package、data、Dev、networkは未変更である。

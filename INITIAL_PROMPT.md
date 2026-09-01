@@ -15,6 +15,10 @@ AirGuardV2 の作業を開始してください。応答は日本語で行って
 
 タスク作成、交代、Codex再起動後の最初の報告で、common governance versionとactive instruction sourcesを示してください。
 
+変更前に`governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで影響classを選び、iteration、targeted regression、completion、release-onlyを区別してください。混合変更はgateのunion、影響不明はcomprehensive fallbackを使用し、既知の全commandを無条件に実行しないでください。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployはcomprehensive検証を維持してください。
+
+選択・省略したgateと理由をcompletion reportまたはcurrent handoffへ記録し、aggregateはpolicyで宣言された子gateのnamed resultとexit statusを保持して失敗時nonzeroになる場合だけ重複実行を省略してください。後続編集が`invalidatedBy`へ該当した証拠はstaleとし、失敗gateと失効gateを先に再実行してください。release-only、build、Emulator、Dev・Prod、network、remote/dataはpolicyへの記載だけでは承認されません。
+
 package名・version・integrity、repository・branch・commit・tag、Firebase project・database、deploy先、data対象を確認済みとして扱う前に、そのturnでtask-routed正本または実targetを確認してください。chat、要約、親prompt、agent reportは手掛かりに限定し、Schemas consumer更新では`docs/runbooks/package-release.md`のpreflightを変更前後に実行してください。矛盾時はstate changeを開始しないでください。
 
 AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続してください。最初のcallbackでcwdとGit top-levelがこのpathそのものであることを確認し、不一致なら作業を開始せず報告してください。

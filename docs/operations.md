@@ -13,6 +13,56 @@ Devの静的生成、デプロイ、remote検証は、対象commit、Firebase se
 
 Dev deployのCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を正本とします。maintenanceを伴うmigration・repair・restoreは[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)、UWB固有の初回cutoverは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を追加で確認します。
 
+## Verification Matrix
+
+`governance/verification-policy.json`を機械可読の正本、下表と生成summaryを人向けの経路とします。変更前に該当classをすべて選び、混合変更はgateのunion、影響不明はcomprehensive fallbackを使用します。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployはcomprehensive completionを維持します。
+
+| Change class | Repository triggers | Iteration | Targeted regression | Completion | Release-only | 通常省略できる対象 |
+|---|---|---|---|---|---|---|
+| `documentation-only` | 索引・ADR状態・roadmap算術・command・policy・managed contract・製品挙動へ影響しない既存prose | `diff-check` | `project-docs` | `project-docs`, `diff-check` | なし | application、Emulator、UI build、release |
+| `ui-css-layout` | Vue表示、CSS、layout、accessibility、browser操作、利用者向けUI挙動 | `diff-check` | `domain-full`, `local-ui-build` | 同左 + `project-docs`, `diff-check` | 承認済みrelease時のgenerate | data migration、managed governance |
+| `application-logic` | client、server、Functions、shared module、実行script | `diff-check` | `domain-full` | `project-docs`, `domain-full`, `diff-check` | 承認済みrelease時のgenerate | governance negative、capacity、Emulator、UI build |
+| `data-contract-schema-migration` | Firestore、Realtime Database、Storage、schema/package contract、migration、Rules、永続data互換 | `diff-check` | `domain-full`, `local-emulator-suite` | 同左 + `project-docs`, `diff-check` | 承認済みrelease時のgenerate | governance negative、capacity、UI build |
+| `governance-permissions-agents` | common/project governance、policy、permission、approval、coordinator、agent、managed sync、生成AGENTS | `managed-governance`, `project-docs` | `project-docs-negative`, `capacity-regression` | comprehensive 5 gate | なし | なし |
+| `build-release-deploy` | build、generate、package install/publish、release evidence、Dev/Prod deploy、remote acceptance | `diff-check` | `project-docs`, `domain-full` | comprehensive 5 gate | checkpointで承認されたEmulator、UI build、generate | なし |
+
+<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->
+- Root: schemaVersion=1.0; comprehensiveGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; unknownImpactGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]
+- Class: id=documentation-only; triggers=[Existing project-owned prose without index or link topology\, ADR status\, roadmap arithmetic\, command\, verification-policy\, managed-governance\, release\, or product behavior]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-docs]; completionGateIds=[project-docs,diff-check]; releaseOnlyGateIds=[]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,domain-full,local-emulator-suite,local-ui-build,generate-dev,generate-prod]; omissionRecord=Completion report or current handoff
+- Class: id=ui-css-layout; triggers=[Vue component presentation\, CSS\, layout\, accessibility\, browser interaction\, or user-visible UI behavior]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[domain-full,local-ui-build]; completionGateIds=[project-docs,domain-full,local-ui-build,diff-check]; releaseOnlyGateIds=[generate-dev,generate-prod]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,local-emulator-suite]; omissionRecord=Completion report\, acceptance receipt\, or current handoff
+- Class: id=application-logic; triggers=[Client\, server\, Functions\, shared module\, or executable script behavior without a data-contract or release-boundary change]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[domain-full]; completionGateIds=[project-docs,domain-full,diff-check]; releaseOnlyGateIds=[generate-dev,generate-prod]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,local-emulator-suite,local-ui-build]; omissionRecord=Completion report or current handoff
+- Class: id=data-contract-schema-migration; triggers=[Firestore\, Realtime Database\, Storage\, schema\, package contract\, migration\, Rules\, or persisted-data compatibility]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[domain-full,local-emulator-suite]; completionGateIds=[project-docs,domain-full,local-emulator-suite,diff-check]; releaseOnlyGateIds=[generate-dev,generate-prod]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,local-ui-build]; omissionRecord=Completion report\, migration receipt\, or current handoff
+- Class: id=governance-permissions-agents; triggers=[Common or project governance\, verification policy\, permissions\, approval policy\, coordinator duties\, agents\, managed sync\, or generated AGENTS]; iterationGateIds=[managed-governance,project-docs]; targetedRegressionGateIds=[project-docs-negative,capacity-regression]; completionGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report and governance handoff
+- Class: id=build-release-deploy; triggers=[Build\, static generation\, package installation or publication\, release evidence\, Dev or Prod deploy\, or remote acceptance]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-docs,domain-full]; completionGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; releaseOnlyGateIds=[local-emulator-suite,local-ui-build,generate-dev,generate-prod]; omittableGateIds=[]; omissionRecord=Approved release checkpoint evidence or completion report
+- Gate: id=diff-check; command=git diff --check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Any later worktree edit]; evidenceDestination=Command report
+- Gate: id=renderer-check; command=powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check; stages=[iteration,targeted]; includes=[]; invalidatedBy=[Managed common\, governance lock\, renderer\, project rules\, verification policy\, or generated AGENTS change]; evidenceDestination=Command report or included managed-governance result
+- Gate: id=managed-governance; command=powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, governance lock\, renderer\, validator\, project rules\, verification policy\, generated AGENTS\, or verification summary change]; evidenceDestination=Command report
+- Gate: id=project-docs; command=powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Project Markdown\, TOML\, document routing\, verification policy\, or project document validator change]; evidenceDestination=Command report
+- Gate: id=project-docs-negative; command=powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Project document validator\, negative fixture\, required route\, or verification-policy contract change]; evidenceDestination=Command report
+- Gate: id=capacity-regression; command=powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Capacity contract\, routing\, measurement script\, or regression fixture change]; evidenceDestination=Command report
+- Gate: id=domain-full; command=node --test test/domain/*.test.mjs; stages=[targeted,completion]; includes=[]; invalidatedBy=[Application\, Functions\, Rules contract\, schema\, shared module\, or domain test change]; evidenceDestination=Command report
+- Gate: id=local-emulator-suite; command=npm run test:local; stages=[targeted,completion,release]; includes=[]; invalidatedBy=[Functions\, Rules\, schema\, Emulator configuration\, test harness\, or affected application behavior change]; evidenceDestination=Checkpoint callback\, completion report\, or release evidence
+- Gate: id=local-ui-build; command=npm run test:local:ui:build; stages=[targeted,completion,release]; includes=[]; invalidatedBy=[UI source\, client configuration\, dependencies\, build wrapper\, or affected application behavior change]; evidenceDestination=Checkpoint callback\, acceptance receipt\, or release evidence
+- Gate: id=generate-dev; command=npm run generate:dev; stages=[release]; includes=[]; invalidatedBy=[Source\, dependency\, Dev environment mapping\, or release baseline change]; evidenceDestination=Approved Dev release evidence
+- Gate: id=generate-prod; command=npm run generate:prod; stages=[release]; includes=[]; invalidatedBy=[Source\, dependency\, production environment mapping\, or release baseline change]; evidenceDestination=Approved Prod release evidence
+<!-- END GENERATED VERIFICATION POLICY SUMMARY -->
+
+### Gate Catalog and Inclusion
+
+- completion comprehensive gateは`project-docs`、`project-docs-negative`、`capacity-regression`、`managed-governance`、`diff-check`です。
+- `managed-governance`は`renderer-check`を内包します。子gateのnamed resultとexit statusを保持し、子失敗でnonzeroとなるため、completionでstandalone rendererを重複実行しません。
+- applicationの直接影響を狭く確認できる場合は、policyの固定gateへ進む前に対象testをiterationまたはdiagnosticとして実行できます。最終選択、exact command、結果、exit statusはcompletion reportへ記録します。
+- local UIの実利用者相当browser smokeと利用者最終UI acceptanceは、command gateとは別の受入れ証拠です。必要性はproject rulesと各runbookに従います。
+- Schemas consumer preflightは[package release runbook](runbooks/package-release.md)と[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md)のcritical identifier gateです。対象identifierを当該turnで確定して実行し、固定値をpolicyへ推測しません。
+
+### Evidence Validity
+
+- success、passing count、completion evidenceはexit status 0を独立確認した後だけ記録します。
+- 後続編集がJSONの`invalidatedBy`へ該当したgateはstaleです。失敗gateと失効gateを先に再実行し、影響しない証拠だけを継続利用できます。
+- iteration、targeted、completion、release-onlyを混同しません。release-only gateと外部作用はpolicyへの記載では承認されず、environment、service、data、backup、rollback、停止条件を含む別の明示承認が必要です。
+- 省略したgateは、選択class、非影響の根拠、記録先をcompletion report、acceptance receipt、migration receipt、release evidence、またはcurrent handoffへ残します。
+- 文書は実影響だけを更新します。仕様、ADR、roadmap、manual、operations、CHANGELOGを無関係な検証通過のためだけに変更しません。
+
 ## 準備
 
 ### 必要なもの

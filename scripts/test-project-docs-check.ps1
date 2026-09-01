@@ -34,6 +34,28 @@ try {
     Invoke-Checker $false 'capacity routing alias is required'
     Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value $validDocumentationMap
 
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value ($validDocumentationMap.Replace('../governance/verification-policy.json', ''))
+    Invoke-Checker $false 'verification policy route is required'
+    Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value $validDocumentationMap
+
+    $verificationPolicyPath = Join-Path $fixtureRoot 'governance/verification-policy.json'
+    $validVerificationPolicy = Get-Content -LiteralPath $verificationPolicyPath -Raw -Encoding UTF8
+    Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value '{ invalid verification policy json'
+    Invoke-Checker $false 'invalid verification policy JSON'
+    Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value $validVerificationPolicy
+
+    $operationsPath = Join-Path $fixtureRoot 'docs/operations.md'
+    $validOperations = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8
+    Set-Content -LiteralPath $operationsPath -Encoding UTF8 -Value ($validOperations.Replace('## Verification Matrix', '## Removed Verification Matrix'))
+    Invoke-Checker $false 'verification matrix heading is required'
+    Set-Content -LiteralPath $operationsPath -Encoding UTF8 -Value $validOperations
+
+    $initialPromptPath = Join-Path $fixtureRoot 'INITIAL_PROMPT.md'
+    $validInitialPrompt = Get-Content -LiteralPath $initialPromptPath -Raw -Encoding UTF8
+    Set-Content -LiteralPath $initialPromptPath -Encoding UTF8 -Value ($validInitialPrompt.Replace('governance/verification-policy.json', 'governance/missing-policy.json'))
+    Invoke-Checker $false 'verification policy route is required in INITIAL_PROMPT'
+    Set-Content -LiteralPath $initialPromptPath -Encoding UTF8 -Value $validInitialPrompt
+
     $nestedRepositoryPath = Join-Path $fixtureRoot 'vendor/nested-project'
     New-Item -ItemType Directory -Path (Join-Path $nestedRepositoryPath '.git') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $nestedRepositoryPath 'README.md') -Encoding UTF8 -Value @'

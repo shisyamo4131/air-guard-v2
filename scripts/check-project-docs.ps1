@@ -18,6 +18,8 @@ $requiredFiles = @(
     'docs/decisions/README.md', 'docs/roadmaps/README.md',
     'docs/runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1',
     'scripts/check-schemas-package-adoption.ps1',
+    'governance/verification-policy.json',
+    'docs/decisions/0040-impact-based-staged-verification.md',
     '.codex/config.toml'
 )
 foreach ($relativePath in $requiredFiles) {
@@ -99,6 +101,88 @@ if (Test-Path -LiteralPath $criticalIdentifierScriptPath) {
     )) {
         if (-not $criticalIdentifierScript.Contains($requiredCriticalContract)) {
             Add-CheckError "Schemas package preflight contract is missing: $requiredCriticalContract"
+        }
+    }
+}
+
+$verificationPolicyPath = Join-Path $repoRoot 'governance/verification-policy.json'
+$operationsPath = Join-Path $repoRoot 'docs/operations.md'
+$initialPromptPath = Join-Path $repoRoot 'INITIAL_PROMPT.md'
+$verificationPolicy = $null
+if (Test-Path -LiteralPath $verificationPolicyPath) {
+    $verificationPolicyRaw = Get-Content -LiteralPath $verificationPolicyPath -Raw -Encoding UTF8
+    if ($verificationPolicyRaw.Contains('REPLACE_')) {
+        Add-CheckError 'Verification policy contains an unresolved REPLACE_ placeholder.'
+    }
+    try {
+        $verificationPolicy = $verificationPolicyRaw | ConvertFrom-Json
+    } catch {
+        Add-CheckError "Verification policy JSON is invalid: $($_.Exception.Message)"
+    }
+}
+if ($null -ne $verificationPolicy) {
+    if ($verificationPolicy.schemaVersion -ne '1.0') {
+        Add-CheckError 'Verification policy schemaVersion must be 1.0.'
+    }
+    $requiredVerificationClasses = @(
+        'documentation-only',
+        'ui-css-layout',
+        'application-logic',
+        'data-contract-schema-migration',
+        'governance-permissions-agents',
+        'build-release-deploy'
+    )
+    $actualVerificationClasses = @($verificationPolicy.classes | ForEach-Object { [string]$_.id })
+    foreach ($requiredClass in $requiredVerificationClasses) {
+        if ($actualVerificationClasses -notcontains $requiredClass) {
+            Add-CheckError "Verification policy class is missing: $requiredClass"
+        }
+    }
+    if (@($verificationPolicy.comprehensiveGateIds).Count -eq 0) {
+        Add-CheckError 'Verification policy comprehensiveGateIds must not be empty.'
+    }
+    if (@($verificationPolicy.unknownImpactGateIds).Count -eq 0) {
+        Add-CheckError 'Verification policy unknownImpactGateIds must not be empty.'
+    }
+}
+if (Test-Path -LiteralPath $operationsPath) {
+    $operationsContent = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8
+    foreach ($requiredVerificationOperationsContract in @(
+        '## Verification Matrix',
+        'governance/verification-policy.json',
+        '<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->',
+        '<!-- END GENERATED VERIFICATION POLICY SUMMARY -->',
+        '### Gate Catalog and Inclusion',
+        '### Evidence Validity'
+    )) {
+        if (-not $operationsContent.Contains($requiredVerificationOperationsContract)) {
+            Add-CheckError "Verification operations contract is missing: $requiredVerificationOperationsContract"
+        }
+    }
+}
+if (Test-Path -LiteralPath $documentationMapPath) {
+    foreach ($requiredVerificationRoute in @(
+        '../governance/verification-policy.json',
+        'operations.md#verification-matrix',
+        'decisions/0040-impact-based-staged-verification.md',
+        'verification/README.md'
+    )) {
+        if (-not $documentationMapContent.Contains($requiredVerificationRoute)) {
+            Add-CheckError "Verification route is missing from docs/README.md: $requiredVerificationRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $initialPromptPath) {
+    $initialPromptContent = Get-Content -LiteralPath $initialPromptPath -Raw -Encoding UTF8
+    foreach ($requiredPromptContract in @(
+        'governance/verification-policy.json',
+        'docs/operations.md',
+        'comprehensive fallback',
+        'invalidatedBy',
+        'release-only'
+    )) {
+        if (-not $initialPromptContent.Contains($requiredPromptContract)) {
+            Add-CheckError "Verification selection contract is missing from INITIAL_PROMPT.md: $requiredPromptContract"
         }
     }
 }
