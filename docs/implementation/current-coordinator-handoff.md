@@ -15,6 +15,7 @@
 - governance 1.4.1 migration baseline/full commit: `16ac81cd2e13775e3651c9f8d40bac02f3f0aef1`
 - PM-13 activation baseline: `16ac81cd2e13775e3651c9f8d40bac02f3f0aef1`
 - PM-13 ownership activation commit: 本snapshotと同じlocal commit。exact HEADはactivation receiptへ記録する。
+- pre-migration verification benchmark commit: 本snapshotと同じlocal commit。exact HEADは`GOV15-AIRGUARD-PREBENCH-RECORD-001` receiptへ記録する。
 - corrective rollback start baseline: `1629e9925159a8342e646faf3c875e31995dac75`
 - corrective rollback implementation HEAD: `98595711cba758170442e9777ac5e992fee6d4ee`
 - operation editor governance commit: `6c4b84ba724e64fc81d0d24ec224838629ecbdc1`
@@ -63,6 +64,8 @@
 
 ## Current checkpoint and next work
 
+- completed evidence checkpoint: `GOV15-AIRGUARD-PREBENCH-EXEC-001`。common governance 1.4.1 baselineで9 gateを固定順に4 round実行し、36/36のcommand exit 0、target 16/16、full domain 727/727、一時fixture cleanup、clean・primary-only final stateを保存した。再実行・推測は行わず、[benchmark本文](../verification/governance-verification-benchmark.md)と[pre JSON](../verification/governance-verification-benchmark-pre.json)へraw timing、対象92-path list/hash、scenario集計、制約を記録した。post値、改善、coverage/failure-detection equivalenceは未確認である。
+- current governance checkpoint: `GOV15-AIRGUARD-PREBENCH-RECORD-001`。上記の保存済み実測だけを本文・pre JSON・索引・本snapshotへ永続化する。common governance 1.5.0 migration、verification policy導入、post benchmark、affected task turnoverはまだ開始しない。
 - completed governance checkpoint: `GOV19-AIRGUARDV2-EVIDENCE-BOUND-IDENTIFIERS-001`。common governance 1.4.1、ADR 0039、project rules、仕様0.8.3、package/coordination runbook、開始prompt、Schemas package adoption preflight、validator、roadmap、snapshot、changelogを同期し、local commit `16ac81cd2e13775e3651c9f8d40bac02f3f0aef1`へ統合した。product code、dependency、Functions、Rules、Dev・remote/dataは変更していない。
 - no-change checkpoint: `NO-CHANGE-GOV19-AIRGUARDV2-PM13-001` COMPLETE。task `01a05b84-0e34-7852-ad21-0f2c59f5023c` / host `local`、direct repository、baseline `16ac81cd2e13775e3651c9f8d40bac02f3f0aef1`、upstream none、clean、primary-only worktree、common governance `1.4.1` / SHA-256 `21e2be90d274a11001f788f78e647d7d537a45124baa731be5ccbadf89cd5eca`、generated `AGENTS.md` 15,538 bytes、specification `0.8.3`、managed `workspace-write` / `auto_review` / network restricted、active source setを確認し、PM-12がreceiptを受理した。
 - implementation and user acceptance complete checkpoint: `CCB-COMPANY-ARRANGEMENT-CODEX-IMPLEMENT-001`。Company既定取極めUI/writer撤去と表示順専用更新を実装し、専用Emulator 106件、一般review GO、security review 4/5を確認した。利用者確認は項目1〜13と一般利用者の対象画面非表示まで合格した。二画面では、未保存変更がない画面は他画面の保存結果を自動反映し、未保存変更がある画面は自身の順を維持して外部更新警告・保存無効となることを同じ会社管理者Chrome 2画面で再現し、利用者が区別を確認して受け入れた。
@@ -94,10 +97,13 @@ PM-13はno-change開始時に次だけを読み、不足・矛盾がなかった
 3. `docs/README.md`
 4. `docs/runbooks/project-coordination.md`
 5. 本snapshot
-6. `docs/decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md`
-7. `docs/decisions/0039-evidence-bound-critical-identifiers.md`
-8. `docs/runbooks/package-release.md`
-9. `docs/runbooks/coordinator-handoff-efficient-activation.md`
+6. `docs/verification/README.md`
+7. `docs/verification/governance-verification-benchmark.md`
+8. `docs/verification/governance-verification-benchmark-pre.json`
+9. `docs/decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md`
+10. `docs/decisions/0039-evidence-bound-critical-identifiers.md`
+11. `docs/runbooks/package-release.md`
+12. `docs/runbooks/coordinator-handoff-efficient-activation.md`
 
 次のproduct checkpoint開始時は`docs/decisions/0032-required-specialist-subagent-routing.md`、`docs/specification.md`のCompany設定節、`docs/decisions/0031-proportional-data-boundary-and-change-safeguards.md`、`docs/decisions/0033-company-bank-transfer-update-boundary.md`、`docs/roadmaps/company-partial-updates.md`、`docs/roadmaps/company-stripe-removal.md`、`docs/implementation/company-settings.md`、`docs/implementation/company-configuration-compatibility.md`を追加する。
 
