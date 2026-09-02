@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-15 active ownership; Customer local tool実装・検証済み、Dev read-only実行は別承認待ち
+- 状態: Current / PM-15 active ownership; Customerの追加診断案を確認待ち
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
@@ -12,7 +12,7 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- checkpoint start baseline: `ce45faf17a9cfea27e370e538476391ddfb17219`
+- checkpoint start baseline: `547405672440e30bdd22114db890cb115e392473`
 - current integrated revision: Gitの現在HEADを確認する。本snapshot自身を含むcommit hashは文書へ自己参照で固定しない。
 - expected upstream: none
 - expected worktree: clean after coordinator integration
@@ -22,16 +22,16 @@
 
 ## Active checkpoint
 
-- checkpoint: `CUSTOMER-01B-PREFLIGHT-TOOL-001`
-- objective: Customerのlocal確認用toolを作成・検証し、Dev read-only実行の別承認に必要な対象・command・停止条件を提示する。
-- approved scope: 共有26項目定義、生document検査、writerの項目定義共用、関連testと必要な案内文書、review済みfileのlocal commit。画面・Rulesの許可挙動、package、Dev・network・remote data・build・deploy・pushは対象外。
-- completion contract: local実装・選択した検証・独立review・local commitと、次項の別承認事項の提示。実装の正本は[Customer実装](customer-master.md)、実行・停止手順は[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)。
-- work ownership: PM-15が管理し、developerの限定差分とreviewを受け入れて統合する。PM-14と旧専門taskへの重複割当は行わない。
+- checkpoint: `CUSTOMER-01B-DEV-READONLY-001`
+- objective: 承認済みの保存形式検査を一度実行し、結果と未確認事項を記録する。実行証拠は[CUSTOMER-01B検査証拠](../verification/customer-01b-dev-compatibility.md)を正本とする。
+- approved scope: 固定commitの既存toolによる一度のDev read-only実行、結果の独立review、必要な文書とreview済みfileのlocal commit。対象・上限・commandは[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)の範囲。追加読取り・tool改修・修復・build・deploy・pushは含めない。
+- completion contract: 実行結果とexit statusの確認、機密値を含まない証拠記録、選択した文書・comprehensive gate、独立review、local commit、次の未承認scopeの提示。
+- work ownership: PM-15が実行・文書・Git統合を管理し、reviewerが結果の解釈と診断案を独立確認する。PM-14と旧専門taskへの重複割当は行わない。
 
 ## Open decisions and approvals
 
-- 利用者はPM-15への交代と新taskでの作業開始を指示した。直前に提示した`CUSTOMER-01B-PREFLIGHT-TOOL-001`のlocal確認用tool作成を次の開始範囲とし、Dev接続まで承認されたとは扱わない。
-- Git push、main merge、Dev/Prod deploy、remote/data操作、外部service変更は本checkpointの対象外。
+- 利用者の「進めてください」は、直前に提示した固定commit・全階層Customers・一度のDev読取り検査への承認として適用した。実行済みの承認を再試行・追加読取り・修復へ流用しない。
+- Git push、main merge、Dev/Prod deploy、追加のremote/data操作、外部service変更は本checkpointの対象外。
 - 新しい小規模Dev migration高速経路は作成しない。
 - App Check・全般的なrate limit・Callable public invoker常時監視はProd公開前gateへ移し、Customerを次のCRUD見直し対象とする利用者判断を反映済み。
 - CUSTOMER-01Aのlocal実装・自動検証・Codex専用local UI受入れは完了した。
@@ -41,10 +41,10 @@
 
 ## Next checkpoint
 
-1. [Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)にある固定commit・全階層Customers読取範囲・command・上限・停止条件について利用者承認を得た場合だけ、Dev read-only実行へ進む。必読は同runbook、[Customer実装](customer-master.md)、現行Customer仕様と[検証policy](../../governance/verification-policy.json)。
-2. Devの実件数・互換性、実資格情報・OAuth・実REST応答、現在のedition・IAMは未確認。local合成testや実装完了をその証拠にしない。取得不能、想定外path、不適合、未検証のUnicode・GeoPoint表現、上限超過では停止し、data破損や互換を推測しない。
+1. 提案・未承認: 既知26項目と固定理由だけを出力キーにし、欠損・型不一致・文字数超過のdocument件数、および余分な項目があるdocument件数だけを集計するlocal診断拡張を提示する。欠損を型不一致へ重複計上しない。値・ID・未知の項目名・data由来hashは出力しない。合成testと独立reviewで確かめる。
+2. local改修を承認・完了した後も、Dev再読取りは改修commit・同じ対象・上限・停止条件を固定して別承認を得る。今回の集計から原因項目、欠損補完値、修復方針を推測して固定しない。実資格情報・OAuth・応答の実行証拠と、未確認のedition・IAM設定全体を区別する。
 3. Dev反映も別承認とする。互換性結果と派生値の残存risk、旧client併存を確認し、`firestore.rules`とHosting（`dist/`）の対象、server/clientの整合した反映順、rollback対象、Devの正常・拒否・保存再表示確認を一つのbounded releaseへまとめる。現在のremote revisionとrollback先を未確認のまま固定しない。不適合発見後のmigration・repairへ自動的に進まない。
-4. local tool変更のrollbackは対象commitの安全なrevertとし、外部dataへの影響はない。
+4. 今回の検査によるdata変更はなく、data rollbackは不要。追加tool改修のrollbackは対象commitの安全なrevertを候補とする。
 
 ## References
 
@@ -56,5 +56,6 @@
 - [開発workflow](../runbooks/development-workflow.md)
 - [検証証拠索引](../verification/README.md)
 - [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
+- [CUSTOMER-01B Dev compatibility verification receipt](../verification/customer-01b-dev-compatibility.md)
 - [STRIPE-05 Dev release verification receipt](../verification/stripe-05-dev-release.md)
 - [変更履歴](../../CHANGELOG.md)

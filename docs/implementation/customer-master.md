@@ -50,7 +50,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 `scripts/check-customer-dev-compatibility.mjs`はconverterを通さずFirestoreの生の型を検査する。modelのdefaultによる欠損補完や、整数と小数の区別が失われる変換を行わない。認証、取得完了、想定path、上限、保存形式を検査し、値・ID・資格情報・data由来hashを出力せず固定理由の件数だけを集計する。書込み・修復機能は持たない。
 
-対象範囲、明示command、接続前確認、上限、未検証表現の扱い、exit status、停止条件は[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を正本とする。Devの実件数・互換性・認証と実応答は未確認であり、localの合成testをDev確認の代用にしない。
+対象範囲、明示command、接続前確認、上限、未検証表現の扱い、exit status、停止条件は[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を正本とする。実行時点のDev件数・保存形式・認証と応答の確認結果は[CUSTOMER-01B検査証拠](../verification/customer-01b-dev-compatibility.md)を参照する。具体的な原因項目と、現在のedition・IAM設定全体は未確認である。
 
 ## 検索・表示
 
@@ -108,5 +108,5 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 ## 未確認範囲
 
 - 他masterに残る汎用Air manager内部の全validation・表示実装。
-- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数と26 field互換性、必要なindex、後続の終了・archive操作。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、後続の終了・archive操作。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

@@ -39,7 +39,7 @@
 
 ## 次の作業
 
-1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次はDev反映前の26 field互換性をread-onlyで確認し、別のbounded release checkpointを提示する。
+1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次は[Dev保存形式の検査証拠](../verification/customer-01b-dev-compatibility.md)に基づく原因項目の診断案を確認する。追加読取り・修復・Dev反映はそれぞれ承認範囲を固定してから進める。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
