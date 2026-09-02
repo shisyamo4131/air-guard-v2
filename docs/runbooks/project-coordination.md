@@ -55,7 +55,7 @@ worktree: <clean or exact dirty paths>
 5. 合意済み変更をコミットし、必要な統合検証とdocument同期を行う。
 6. 終了条件に達していなければ次のチェックポイントへ進む。
 
-UIまたは利用者操作へ影響するcheckpointは、Codexの自動検証と必要なin-app UI smokeが成功しても利用者受入れ待ちとする。利用者が別途承認された実際の利用環境で最終UI acceptanceを完了するまで、feature、release、roadmapを最終完了としない。application fileの利用者確認を1 fileずつ要求するのはcheckpointが明示した場合だけとし、通常は承認済みsegment単位で連続実装・検証・報告する。
+local UI受入れの担当は[project rules](../../governance/project-rules.md)と[local UI検証runbook](local-ui-testing.md)で決める。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了し、省略除外条件がある範囲だけ利用者受入れ待ちとする。application fileの利用者確認を1 fileずつ要求するのはcheckpointが明示した場合だけとし、通常は承認済みsegment単位で連続実装・検証・報告する。
 
 通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
 

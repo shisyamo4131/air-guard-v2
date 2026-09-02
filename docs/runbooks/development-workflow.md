@@ -10,7 +10,7 @@
 - Codex coordinatorは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法を整理し、承認済みsegmentの実装、自動検証、独立review、必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理する。
 - `developer`は承認済みscopeのapplication code、必要なFunctions・Firebase Rules・関連設定だけを変更し、隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
 - `tester`はcoordinatorが明示したtest scopeでtest codeを編集し、application codeを変更しない。承認済みcheckpointの検証に必要な個々のtest fileについて、利用者のfile-by-file承認は要求しない。
-- UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smoke後も利用者受入れ待ちとし、別途承認された実際の利用環境で利用者が最終UI acceptanceを完了するまで最終完了としない。
+- local UI受入れは[project rules](../../governance/project-rules.md)と[local UI検証](local-ui-testing.md)のrisk-based基準に従う。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了し、省略除外条件がある範囲だけ利用者確認を残す。
 - application implementation fileを1 fileずつ利用者が確認する手順は、checkpointが明示した場合だけ適用する。通常は承認済みsegment単位で連続実装・検証し、変更挙動、security境界、test、残存risk、rollback、利用者確認項目をまとめて提示する。
 - 認証・認可・tenant分離は一括改修せず、独立して説明・review・rollbackできる最小segmentを1件ずつ扱う。
 

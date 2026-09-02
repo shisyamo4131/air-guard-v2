@@ -2,10 +2,11 @@
 
 ## メタデータ
 
-- 状態: CUSTOMER-01A実装済み・local受入れ前
+- 状態: CUSTOMER-01A local実装・受入れ完了 / Dev未反映
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
 - 最終確認日: 2026-09-02
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
+- local受入れ証拠: [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
 
 ## 入口・暫定権限
 
@@ -90,7 +91,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - FUT-0056: 承認済みcode一意・類似warning・ACTIVE選択・TERMINATED履歴・検索fieldを実装し、feasibility/index/cost/privacyを検証する。
 - FUT-0057: 承認済みTERMINATED/archive/運営者inspection・緊急restore境界を実装し、参照guard・保持を整備する。
 - FUT-0058: draft initial copy、formal full snapshot、snapshot再print、revisionを実装する。
-- FUT-0059: address/status編集経路とgeocoding境界を修正・検証する。
+- FUT-0059: status編集経路とgeocodingのserver生成化・意味上の整合を修正・検証する。address編集経路はCUSTOMER-01Aで実装済み。
 
 ## 要確認事項
 
@@ -99,5 +100,5 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 ## 未確認範囲
 
 - 他masterに残る汎用Air manager内部の全validation・表示実装。
-- Site/Agreement/Billing/PDFの内部処理、実データ上の参照件数、index、Emulator/ブラウザ動作。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数と26 field互換性、必要なindex、後続の終了・archive操作。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

@@ -1,31 +1,32 @@
 # local UI検証runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-09-02
 - 役割: Codex専用UI環境と利用者用local browser受入れの準備・操作・終了
 
 ## UI検証と最終受入れの責任分離
 
 - 利用者承認済みcheckpointで必要なin-app UI smokeは、Codexが本runbookのCodex専用local UI環境を使って実施する。専用demo project、loopback、合成account/data、外部作用deny、通常のpointer・keyboard操作という既存境界を維持する。
-- Codex UI smokeは実装・自動検証の証拠であり、利用者が実際の利用環境で行う最終UI acceptanceの代替ではない。UIまたは利用者操作へ影響するfeatureは、利用者の最終受入れまで「利用者受入れ待ち」と報告する。
+- 既存画面・既存操作の内部改修は、Codex専用local UIで実画面の対象操作と保存・再表示が成功し、自動検証・必要なreview・後処理が完了した場合、利用者によるlocal受入れを原則として重ねない。新しい画面・新しい操作、見た目や使い勝手の判断、利用者用data、利用者Chrome固有条件、Dev固有設定、外部service、通常操作できない箇所、未解決errorまたは利用者が明示した確認がある場合は、必要な範囲だけ利用者確認を残す。Codex専用local UIの合格はDev・Prod・remote dataの受入れや正式運用開始承認を代替しない。
 - 利用者用local、Devその他の実際の利用環境へ接続・変更する場合は、その環境に適用される既存の別承認境界を維持する。Codex専用UI smokeの承認からDev、remote/data、実account操作を推論しない。
 - application fileを1 fileずつ利用者が確認する手順はcheckpointが明示した場合だけ適用する。通常はsegment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目を受入れ資料とする。
 
 ## Codexだけで完結するlocal UI test
 
-2026-08-25にNuxt開発サーバーを使う自己完結経路を再確認した。Codexが専用Emulator、Functions、Nuxt、インアプリブラウザを順に管理し、Nuxt/Viteを十分に予熱してから初回navigationすることで、reloadなしに製品topへ到達するcold restartを3回連続で確認した。続けて保存済み合成Auth accountでsign-inし、`/dashboard`へ到達した。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+Codex専用local UI受入れは、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。開発サーバーがreadyでも製品画面へ到達せず、同一HEADのgenerated serverで受入れを完了した根拠は[Customer local acceptance receipt](../verification/customer-01a-local-acceptance.md)を参照する。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
 
 標準の起動・確認・終了順序は次のとおりとする。
 
-Windows上でCodexがこの経路を実行する場合、Firebase CLIだけでなくNuxt開発サーバーも、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
+Windows上でCodexがこの経路を実行する場合、Firebase CLIとlocal serverは、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
 
 1. 専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。
-2. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
-3. `npm run test:local:ui:server`を別の前景processで起動する。このwrapperは専用dotenvのexact allowlist、demo project、loopback emulator設定を値を出力せず検証し、`AIR_GUARD_EXTERNAL_EFFECTS=deny`を固定してからNuxtを同じ前景processで起動する。`Vite client warmed up`とNitro readyを待ち、loopback rootと初回読込みで発見したVite/Nuxt entry・plugin moduleをbounded probeする。同じmodule集合を2巡し、全requestがHTTP 200で完了してからbrowserを開く。requestがpending、timeout、非200ならnavigationへ進まず停止する。
-4. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
-5. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。予熱後も起動templateが残る場合はreloadを通常手順にせず失敗として停止し、Nuxt/Vite readiness、module request、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
-6. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。
-7. Codexが作成したtabを閉じ、Nuxt、Emulatorの順に停止し、専用portがLISTENしていないことを確認する。
+2. clean worktreeの同一HEADで`npm run test:local:ui:build`を実行し、identity marker付き`.output`を生成する。このbuildは実行ごとの承認境界を維持する。
+3. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
+4. `npm run test:local:ui:server:generated`を別の前景processで起動し、identity確認、server ready、loopback rootのHTTP応答を確認する。marker欠損・不一致、dirty worktree、非200ならbrowserを開かず停止する。
+5. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
+6. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。残る場合はreloadを通常手順にせず失敗として停止し、server identity、HTTP、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
+7. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。保存済みbrowser sessionが有効なら、その合成account sessionを再利用する。
+8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portがLISTENしていないことを確認する。`.output`は検証後に削除する。
 
 インアプリブラウザはCodex Desktop内の専用browserであり、利用者のChrome profileを使用しない。利用者が目視を希望する検証ではvisibilityを要求し、同じtabを監視対象にする。visibility状態を機械的に取得できない場合は、利用者が実際に監視できた事実とtool上の未確認を分けて報告する。Chrome拡張経路は、利用者が既存sessionを使う受入れまたはインアプリブラウザ障害の補助経路であり、標準のCodex専用UI testの前提ではない。
 
@@ -51,14 +52,14 @@ Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を�
 - clean browser contextの準備、Authentication EmulatorのOOB確認、backend verifier、candidate export/importは非UI処理である。結果は`UI user-equivalent action`、`non-UI setup`、`backend assertion`へ分け、UI成功の代用にしない。
 - 許可された実利用者相当操作をtoolが実行できない場合は、DOMやeventを直接操作して回避せず未検証と報告する。
 
-Emulatorと開発サーバーは、次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
+Emulatorとgenerated serverは、build完了後に次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
 
 ```powershell
 npm run test:local:ui:emulators
-npm run test:local:ui:server
+npm run test:local:ui:server:generated
 ```
 
-Windows上のCodex管理ブラウザでは、Nuxt開発サーバーがHTTP 200を返しても、Viteの初回module変換中にSPA hydrationが完了しない事象を確認した。2026-08-25にEmulator ready、`Vite client warmed up`、2巡のmodule probeを初回navigationより前へ置くことで、reloadなしの製品top到達を3回連続、sign-inからdashboard到達を1回確認した。初回module集合はsource変更で変わり得るため件数を固定せず、各実行でrootから発見した集合を記録する。専用build serverはdev経路がこのready契約を満たしても失敗する場合の診断用fallbackとする。プロジェクト規則のbuild禁止は維持されるため、Codexがbuild経路を再実行する場合は、その都度明示承認を得る。生成した`.output`は検証後に削除する。
+`npm run test:local:ui:server`を使うNuxt開発サーバーは、途中確認または診断には使用できる。2026-08-25には十分な予熱後に製品topへ到達したが、2026-09-02には同じready確認後も起動templateから進まなかったため、受入れの標準にはしない。開発サーバーの起動は既存`.output`を失効させるため、その後にgenerated serverへ切り替える場合は、開発サーバーを停止し、clean worktreeを確認して専用buildを再実行する。古いmarkerや生成物を流用しない。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
 

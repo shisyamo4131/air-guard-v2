@@ -15,7 +15,7 @@ document共通validationはFireModel/Class schema、operation固有fieldと追�
 
 単純な可逆更新はRulesで保存境界を完全に表現できる場合だけclient部分更新を選ぶ。複雑なvalidationや厳密なactor確認を要するoperationは専用Callableを使う。Dev deploy、remote検証、実data migrationは別のbounded承認を必要とする。
 
-利用者承認済みcheckpoint内のapplication、Functions、Rules、自動test、必要なCodex in-app UI smokeはCodexが担当する。Codex UI smoke後もUIへ影響するoperationは利用者受入れ待ちとし、利用者が別途承認された実際の利用環境で最終UI acceptanceを完了するまでmilestoneを完了しない。file-by-file確認はcheckpointが明示した場合だけ要求する。
+本roadmapは当時の完了契約として、Codexによる実装・検証後に利用者の実環境受入れまで実施して完了した。後続改修のlocal受入れ担当は[ADR 0042](../decisions/0042-risk-based-local-ui-acceptance.md)と[local UI検証runbook](../runbooks/local-ui-testing.md)のrisk-based基準に従い、この完了済みroadmapの当時の手順を一律適用しない。
 
 ## マイルストーン
 

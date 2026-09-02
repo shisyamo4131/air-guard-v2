@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Customerの作成・基本情報更新・支払条件更新を専用処理へ移し、同一会社・有効な本登録User・承認済みrole、操作別fieldを画面とRulesで揃えた。active deleteとarchive CUDは拒否し、廃止予定の汎用manager経路をCustomerから除去した。自動検証と合成会社管理者によるCodex専用local UI受入れを完了し、詳細を[immutable receipt](docs/verification/customer-01a-local-acceptance.md)へ集約した。Dev、Prod、remote data、pushは変更していない。
+
+- [ADR 0042](docs/decisions/0042-risk-based-local-ui-acceptance.md)を採用し、Codex専用local UI受入れはgenerated serverを標準、Nuxt開発サーバーを途中確認・診断用とした。条件を満たす既存画面・既存操作の内部改修は利用者local受入れを重ねず、新規性・利用者判断・実環境差がある範囲だけ利用者確認を残す。Dev・Prod・remote data・正式運用開始の別受入れは維持する。
+
 - STRIPE-05/06のDev migration・利用者acceptanceを完了し、詳細を[immutable receipt](docs/verification/stripe-05-dev-release.md)へ集約した。あわせて[ADR 0041](docs/decisions/0041-single-source-documentation-and-final-validation.md)を採用し、変化する事実の単一正本、リンク中心の索引、再利用手順と実行証拠の分離、最終状態に対する一度のcompletion gate、記録後は失効したgateだけを再実行するproject-wide運用へ変更した。Dev接続・deploy・migrationは既存runbookを使用し、新しい小規模migration高速経路は追加していない。
 
 - STRIPE-04の利用者用Emulator migrationを完了した。既存`./saved-data`を変更しないimport-only rehearsalと、同一baselineからのimport＋export-on-exit確定実行で、Company 1件の`stripeCustomerId`・`subscription`だけを削除した。各実行後の`StripeData`は0件、再dry-runはcleanで、会社設定・稼働予定管理・配置管理の正常表示とapp error 0件を確認した。確定保存後のsnapshotもimport-onlyで再読込みし、削除対象0件を確認した。利用者承認により別backupと確定後のpre-migration data rollbackを要求せず、無関係なCompany編集も受入れ条件から外した。migrationによるCompanyの他field・他業務dataへのwriteはなく、Dev/Prod・外部Stripe・pushは変更していない。roadmapは50%から70%へ更新した。

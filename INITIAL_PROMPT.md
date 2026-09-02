@@ -35,7 +35,7 @@ AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users
 
 実装、修正、改修は作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位で `codex/<機能名>` ブランチを作成してください。主エージェントは承認済み範囲のreview済み差分だけをlocal Gitへstage・commitします。利用者または別taskの未コミット変更を独自判断で修正、破棄、stage、commitしないでください。ユーザーが機能ブランチ上の動作を確認して明示的に承認するまで `main` へマージしないでください。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ個別の明示的指示を必要とします。Devでは対象commit、service、data影響、backup、rollback、停止条件、検証を含む一つのbounded release checkpoint承認を、同runbook内の静的生成、deploy、remote検証の承認として扱ってください。
 
-重要な仕様変更が必要な場合は、現行仕様、変更案、理由、影響、互換性、移行、rollback、ユーザーが行う確認を提示して承認を得てください。承認後は、Codexの実装・自動検証・必要なin-app UI smokeと利用者の最終UI acceptanceに合わせて、仕様書、ADRと索引、変更履歴、関連マニュアル、運用文書を更新してください。
+重要な仕様変更が必要な場合は、現行仕様、変更案、理由、影響、互換性、移行、rollback、必要な利用者確認を提示して承認を得てください。承認後は、Codexの実装・自動検証・必要なin-app UI smokeとproject rulesが定める受入れ境界に合わせて、影響した仕様書、ADRと索引、変更履歴、関連マニュアル、運用文書だけを更新してください。
 
 主エージェントとして依頼を整理し、task交代中を除いて、調査、code探索、review、test、利用者承認済みcheckpointの実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、`AGENTS.md`のルーティングに従って適切なsubagentを使用してください。application code、必要なFunctions・Firebase Rules・関連設定は承認済みboundary内で`developer`へ集中させてください。必要な結果をすべて待ってから統合し、単一の小作業を形式的に分割したり、不要なroleを起動したりしないでください。checkpoint固有のsubagent禁止は当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続へ持ち越さないでください。task交代、no-change確認、ownership activation、retarget、replacement taskの最初のfile限定commitではsubagentを使用しないでください。
 
@@ -47,7 +47,7 @@ AirGuardV2のタスクはCodex専用worktreeを作成・使用せず、`C:\Users
 
 Codex は、ユーザーが明示的に許可したローカルEmulator環境に限り、`AGENTS.md` の隔離・起動・認証規則に従ってテストを実行できます。Devは正式運用準備の完了を待たず、利用者承認済みbounded release checkpointの対象・期間・runbook内で積極的にdeploy・remote検証してください。新しいdata migration、破壊的repair、対象拡張、Prodは別の明示承認を必要とします。未実施部分についてユーザーが動作確認できる観点を提示し、秘密情報や実データを読み上げたり文書へ転記したりしないでください。
 
-UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smokeが成功しても利用者受入れ待ちとし、ユーザーが別途承認された実際の利用環境で最終UI acceptanceを完了するまで最終完了としないでください。application implementation fileを1 fileずつユーザーが確認する手順はcheckpointが明示した場合だけ適用し、通常は承認済みsegment単位で連続実装・検証・報告してください。
+local UI受入れはproject rulesとlocal UI runbookのrisk-based基準に従ってください。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了し、省略除外条件がある範囲だけ利用者確認を残してください。Dev・Prod・remote dataの受入れと正式運用開始承認は別境界です。application implementation fileを1 fileずつユーザーが確認する手順はcheckpointが明示した場合だけ適用してください。
 
 ブラウザUIの挙動・受入れ検証では、可視・有効なcontrolへ実利用者が行える通常のpointer・keyboard操作だけを使用してください。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避は禁止です。read-only観測、非UI setup、backend assertionはUI操作証拠から分離して報告してください。
 

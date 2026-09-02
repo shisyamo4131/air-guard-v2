@@ -5,6 +5,7 @@
 - 現在の進捗: 10%
 - 最終確認日: 2026-09-02
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
+- 上記の利用者最終受入れは正式運用移行全体の完了条件であり、個々の既存画面改修に利用者local受入れを一律要求する意味ではない。個別変更は[local UI検証runbook](../runbooks/local-ui-testing.md)の省略基準に従う。
 
 ## マイルストーン
 
@@ -38,7 +39,7 @@
 
 ## 次の作業
 
-1. 次はCustomer masterの作成・更新・archiveを対象に、現行挙動、同一会社、`customers:write` permission、変更可能field、参照data、client writeとCallableの分担を調査し、一つの改修checkpointを設計する。実装範囲は調査・独立review後に利用者へ提示して確定する。
+1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次はDev反映前の26 field互換性をread-onlyで確認し、別のbounded release checkpointを提示する。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

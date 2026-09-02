@@ -10,6 +10,7 @@
 | 変更前の機械可読実測 | [Pre-migration benchmark JSON](governance-verification-benchmark-pre.json) |
 | 変更後の機械可読実測 | [Post-migration benchmark JSON](governance-verification-benchmark-post.json) |
 | STRIPE-05 Dev release・migration・受入れ | [STRIPE-05 Dev release verification receipt](stripe-05-dev-release.md) |
+| CUSTOMER-01A local実装・画面受入れ | [CUSTOMER-01A local acceptance verification receipt](customer-01a-local-acceptance.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
 | 機械可読の検証方針 | [Verification policy](../../governance/verification-policy.json) |
