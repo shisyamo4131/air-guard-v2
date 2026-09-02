@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { Customer } from "../../schemas/index.js";
+import { CUSTOMER_DOCUMENT_FIELDS } from "../../utils/customer/customerDocumentContract.js";
 import {
   CUSTOMER_BASIC_FIELDS,
   CUSTOMER_CREATE_FIELDS,
@@ -516,6 +517,7 @@ async function loadWriterHarness() {
     }),
   };
   globalThis.__customerWriterHarness = {
+    CUSTOMER_DOCUMENT_FIELDS,
     CUSTOMER_ADDRESS_FIELDS: ["prefCode", "city", "address"],
     CUSTOMER_NAME_FIELDS: ["name", "nameKana"],
     CUSTOMER_OPERATION,
@@ -529,7 +531,7 @@ async function loadWriterHarness() {
   const executable = source.replace(/^import[\s\S]*?;\r?\n/gmu, "");
   const moduleSource = `
     const {
-      CUSTOMER_ADDRESS_FIELDS, CUSTOMER_NAME_FIELDS, CUSTOMER_OPERATION,
+      CUSTOMER_ADDRESS_FIELDS, CUSTOMER_NAME_FIELDS, CUSTOMER_OPERATION, CUSTOMER_DOCUMENT_FIELDS,
       Customer, collection, doc, serverTimestamp, setDoc, updateDoc
     } = globalThis.__customerWriterHarness;
     ${executable}

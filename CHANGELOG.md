@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customerの26保存項目をwriterと共有するread-only互換性検査toolを追加した。生のFirestore型・欠損・相関・取得完了を検査し、値やIDを出さず件数と固定理由だけを報告する。[Dev実行手順と停止条件](docs/runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を用意し、Dev接続・反映は別承認のままとした。
+
 - Customerの作成・基本情報更新・支払条件更新を専用処理へ移し、同一会社・有効な本登録User・承認済みrole、操作別fieldを画面とRulesで揃えた。active deleteとarchive CUDは拒否し、廃止予定の汎用manager経路をCustomerから除去した。自動検証と合成会社管理者によるCodex専用local UI受入れを完了し、詳細を[immutable receipt](docs/verification/customer-01a-local-acceptance.md)へ集約した。Dev、Prod、remote data、pushは変更していない。
 
 - [ADR 0042](docs/decisions/0042-risk-based-local-ui-acceptance.md)を採用し、Codex専用local UI受入れはgenerated serverを標準、Nuxt開発サーバーを途中確認・診断用とした。条件を満たす既存画面・既存操作の内部改修は利用者local受入れを重ねず、新規性・利用者判断・実環境差がある範囲だけ利用者確認を残す。Dev・Prod・remote data・正式運用開始の別受入れは維持する。

@@ -6,40 +6,12 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { Customer } from "@/schemas";
+import { CUSTOMER_DOCUMENT_FIELDS } from "./customerDocumentContract.js";
 import {
   CUSTOMER_ADDRESS_FIELDS,
   CUSTOMER_NAME_FIELDS,
   CUSTOMER_OPERATION,
 } from "@/composables/domain/customer/customerOperations";
-
-const CREATE_FIELDS = Object.freeze([
-  "docId",
-  "uid",
-  "createdAt",
-  "updatedAt",
-  "code",
-  "name",
-  "branchName",
-  "abbreviation",
-  "nameKana",
-  "zipcode",
-  "prefCode",
-  "city",
-  "address",
-  "building",
-  "location",
-  "geopoint",
-  "tel",
-  "fax",
-  "contractStatus",
-  "cutoffDate",
-  "paymentMonth",
-  "paymentDate",
-  "remarks",
-  "fullAddress",
-  "prefecture",
-  "tokenMap",
-]);
 
 function customerCollection(firestore, companyId) {
   return collection(firestore, "Companies", companyId, "Customers");
@@ -68,7 +40,7 @@ export function createCustomerWriter({ firestore }) {
   }
 
   async function create({ documentReference, customer }) {
-    const data = pick(serializeCustomer(customer), CREATE_FIELDS);
+    const data = pick(serializeCustomer(customer), CUSTOMER_DOCUMENT_FIELDS);
     data.createdAt = serverTimestamp();
     data.updatedAt = serverTimestamp();
     await setDoc(documentReference, data);

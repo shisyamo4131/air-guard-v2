@@ -161,6 +161,44 @@ data migrationを含むreleaseは、ここへdry-run・apply・post-checkを複�
 - User/Auth lifecycleの非破壊remote確認は、会社管理者専用履歴pageの正常応答・空状態・page buttonと、本登録User削除確認の対象・理由・不可逆性を確認して取消し、対象User残存と履歴不変を再確認する。退職または本登録User物理削除を実行する場合は、明示した合成対象、data影響、復旧不能範囲、停止条件を別途承認する。
 - maintenanceを使うreleaseは解除前にserver、data、client、log、主要正常・拒否経路を確認し、解除後は新しいbrowser sessionで受入れる。
 
+## Customer保存形式のread-only事前検査
+
+`scripts/check-customer-dev-compatibility.mjs`はCustomerの保存形式を検査する専用toolである。localの合成応答testとDev実行を区別し、Dev実行には対象commit・読取範囲・上限を固定した別承認を必要とする。実装状況と未確認範囲は[Customer実装](../implementation/customer-master.md)を参照する。
+
+- 対象はDev project `air-guard-v2-dev`、database `(default)`。database rootから全階層の`Customers` collectionを読み、`Companies/{companyId}/Customers/{docId}`だけを正常pathとして受け入れる。同名collectionが別階層にある場合も応答を受け取るため、この範囲まで読取り承認へ含める。
+- ACTIVEとTERMINATEDの両方を検査する。`Customers_archive`、Company本文、Users、他のcollectionは対象外。company別の値・ID・内訳は出力しない。
+- converterやmodel生成による補完を行わず、Firestoreの生の型で26項目の有無、余分な項目、型、長さ、状態、支払条件、住所と座標の相関を確認する。これは既存保存形式の検査であり、actor権限・Userのtenant拒否・新規作成時のserver timestamp条件・検索や住所情報の意味上の正しさを証明しない。
+- 更新・削除・migration・repair・backup・raw data export機能を持たない。認証とFirestoreへの固定requestだけを使用する。OAuthの`datastore` scopeやservice account自体のIAM権限がread-onlyであるという意味ではない。
+
+承認後、primary repositoryの固定commit・clean状態を確認してから、同じPowerShell process内で準備する。資格情報は利用者levelに設定された既存pathからprocessへ渡すだけとし、値・内容を表示しない。
+
+```powershell
+$env:NODE_USE_SYSTEM_CA = "1"
+$env:AIRGUARD_DEV_CREDENTIAL_PATH = [Environment]::GetEnvironmentVariable("AIRGUARD_DEV_CREDENTIAL_PATH", "User")
+```
+
+検査commandは独立実行してexit statusを確認する。
+
+```powershell
+node scripts/check-customer-dev-compatibility.mjs --read-only --project air-guard-v2-dev --database '(default)'
+```
+
+接続前に固定ローカルdriveと通常file・資格情報の型・Dev projectとservice account・RSA鍵を検査し、ADCやmetadata認証へfallbackしない。drive種別の確認はfileアクセス前に行い、network drive・不明な種別・symlink・junctionを拒否する。Emulator、接続先override、TLS検証無効化、未知の引数、不一致は停止する。資格情報の`project_id`とemailの照合はlocal整合確認であり、実際の鍵とaccountの対応・IAMはremote応答で別に確認する。
+
+上限は1000件、OAuth開始から応答bodyの読取り完了まで30秒、Firestore応答16 MiB、token応答と資格情報fileは各64 KiBとする。queryは上限+1件を要求し、1001件目があれば全件確認済みにしない。`--max-documents`と`--timeout-ms`は上限を下げる場合だけ使用できる。上限超過・失敗・不明な応答を成功にしない。出力は固定の状態、件数、不適合理由の集計に限定し、値・ID・資格情報・data由来hash・raw errorを出さない。
+
+| exit | 状態 | 意味 |
+|---:|---|---|
+| 0 | compatible | 取得完了かつ対象documentの保存形式検査がすべて適合 |
+| 2 | incompatible | 取得完了、不適合または未検証の表現を含むdocumentあり |
+| 1 | blocked | 引数・環境・資格情報・通信・応答・上限等により検査を確定できない |
+
+補助平面文字・単独surrogateのRules文字数判定、およびGeoPointの省略されたゼロ座標は、このtoolでは互換性未確認として非成功にする。`unicode-unverified`や`wire-unverified`をdata破損と断定せず、現行Rulesとの照合方法を別途確認する。
+
+不適合または取得未完了ならrelease readinessとは扱わず停止する。同じ処理の無条件再試行、対象・上限拡大、修復へ進まない。完全な0件結果と取得不能を区別し、0件でも想定した業務範囲と一致するかを確認する。toolはdataを変更しないためdata rollbackは不要で、local実装の取消しは対象commitの安全なrevertで行う。
+
+Dev反映は検査とは別のbounded release checkpointとする。互換性結果、残る派生値改ざんrisk、旧client併存、必要なRules回帰・Dev build、Firestore RulesとHostingの対象・反映順・rollback・Dev確認項目を固定してから承認を得る。既存dataが候補Rulesと適合しない場合は、先に別のmigration判断へ戻す。
+
 ## UWB固有cutover
 
 UWB初回Dev導入は、client/server/data contractの同時変更と予約migrationを含むため、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)のmaintenance cutoverを使用した。System maintenance、整合snapshot、UWB全server境界、fresh create-only予約migration、client/Hosting、maintenance中検証、解除・受入れを一体で行う。
