@@ -1,7 +1,7 @@
 # Dev環境deploy runbook
 
 - 状態: Confirmed
-- 最終確認日: 2026-09-02
+- 最終確認日: 2026-09-03
 - 対象: `air-guard-v2-dev`へのbuild、Firebase deploy、gcloud操作、remote検証
 - 対象外: Prod、新しいdata migration、破壊的repair、未承認service・dataへの拡張
 - 関連判断: [ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)
@@ -13,6 +13,14 @@ Devは正式運用準備の完了前でも検証済み変更を積極的にdeplo
 すべてのDev deployへmaintenance、snapshot、migrationを適用しない。data contractまたはclient/server contractの整合cutoverが必要なreleaseだけが、それらを条件付きで使用する。新しいmigration、破壊的repair、対象service・data・期間の拡張、Prodは別承認とする。
 
 maintenanceを使うreleaseは、[maintenance・data change runbook](maintenance-and-data-change.md)でnormal stop、quiet period、監視Function、連続dry-run、整合snapshot、post-checkを固定する。maintenanceは排他lockではなく、logだけを実行中処理不存在の証拠にしない。
+
+## 機能改修時の既存Dev document
+
+必要性の判断は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を正本とする。通常の機能改修では、変更箇所の検証後にDevへ反映し、実際の作成・編集・保存で得た不具合を修正する。全件診断・一括修復をreleaseの一律前提にしない。
+
+releaseの`data-impact`には、変更差分と関連reader/writerから判断した該当条件・具体的根拠と、状態確認・migrationの要否を簡潔に記録する。非該当を示すためだけのremote全件走査や新しい診断toolは要求しない。該当する場合は影響範囲の状態確認を行い、必要な変換は[data migration runbook](data-migrations.md)へrouteする。条件に該当するか不明な場合は、そのfieldと利用経路に絞って確認する。
+
+既存の形式不適合が見つかっていても、件数だけで全件修復へ移らない。通常画面での修正または実際に失敗する処理の修正を選び、他機能への確定した影響や画面では扱えない問題には必要な対処を行う。必要な状態確認の未完了を成功と扱わず、未確認のまま影響なしと記録しない。
 
 ## 2026-08-27に確認した実行環境
 
@@ -163,7 +171,7 @@ data migrationを含むreleaseは、ここへdry-run・apply・post-checkを複�
 
 ## Customer保存形式のread-only事前検査
 
-`scripts/check-customer-dev-compatibility.mjs`はCustomerの保存形式を検査する専用toolである。localの合成応答testとDev実行を区別し、Dev実行には対象commit・読取範囲・上限を固定した別承認を必要とする。実装状況と未確認範囲は[Customer実装](../implementation/customer-master.md)を参照する。
+`scripts/check-customer-dev-compatibility.mjs`はCustomerの保存形式を検査する専用toolである。本節は必要性が確認された場合の実行手順であり、毎回のDev反映前gateではない。適用判断は[機能改修時の既存Dev document](#機能改修時の既存dev-document)に従う。localの合成応答testとDev実行を区別し、Dev実行には対象commit・読取範囲・上限を固定した別承認を必要とする。実装状況と未確認範囲は[Customer実装](../implementation/customer-master.md)を参照する。
 
 - 対象はDev project `air-guard-v2-dev`、database `(default)`。database rootから全階層の`Customers` collectionを読み、`Companies/{companyId}/Customers/{docId}`だけを正常pathとして受け入れる。同名collectionが別階層にある場合も応答を受け取るため、この範囲まで読取り承認へ含める。
 - ACTIVEとTERMINATEDの両方を検査する。`Customers_archive`、Company本文、Users、他のcollectionは対象外。company別の値・ID・内訳は出力しない。
@@ -195,9 +203,9 @@ node scripts/check-customer-dev-compatibility.mjs --read-only --project air-guar
 
 補助平面文字・単独surrogateのRules文字数判定、およびGeoPointの省略されたゼロ座標は、このtoolでは互換性未確認として非成功にする。`unicode-unverified`や`wire-unverified`をdata破損と断定せず、現行Rulesとの照合方法を別途確認する。
 
-不適合または取得未完了ならrelease readinessとは扱わず停止する。同じ処理の無条件再試行、対象・上限拡大、修復へ進まない。完全な0件結果と取得不能を区別し、0件でも想定した業務範囲と一致するかを確認する。toolはdataを変更しないためdata rollbackは不要で、local実装の取消しは対象commitの安全なrevertで行う。
+不適合または取得未完了なら検査成功とは扱わず、その実行を終了する。同じ処理の無条件再試行、対象・上限拡大、修復へ進まない。完全な0件結果と取得不能を区別し、0件でも想定した業務範囲と一致するかを確認する。結果だけでrelease全体の可否を決めず、必要な状態確認として選択した目的の達成と[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を照合する。toolはdataを変更しないためdata rollbackは不要で、local実装の取消しは対象commitの安全なrevertで行う。
 
-Dev反映は検査とは別のbounded release checkpointとする。互換性結果、残る派生値改ざんrisk、旧client併存、必要なRules回帰・Dev build、Firestore RulesとHostingの対象・反映順・rollback・Dev確認項目を固定してから承認を得る。既存dataが候補Rulesと適合しない場合は、先に別のmigration判断へ戻す。
+Dev反映は検査とは別のbounded release checkpointとする。既知のdata影響、残る派生値改ざんrisk、旧client併存、必要なRules回帰・Dev build、Firestore RulesとHostingの対象・反映順・rollback・Dev確認項目を固定してから承認を得る。候補Rulesとの形式不適合だけを理由にmigrationを必須にせず、3条件で必要と判定した状態確認・変換を行う。通常操作の不具合は再現して該当経路を修正する。
 
 ## UWB固有cutover
 

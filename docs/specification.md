@@ -1,6 +1,6 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-02
+- 最終更新日: 2026-09-03
 - 仕様バージョン: 0.8.6
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
@@ -263,7 +263,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。Codex coordinatorは変更契約、checkpoint分割、実装・test・review・必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
 - 承認済みcheckpointに必要なapplication code、Functions、Firebase Rules、関連設定は`developer`へ集中し、unit・domain・integration・Rules・Emulator等のtest fileはcoordinatorが明示したscopeで`tester`が編集できる。個々のtest fileごとの利用者承認は要求しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyを維持する。
 - local UI受入れは[project rules](../governance/project-rules.md)と[local UI検証runbook](runbooks/local-ui-testing.md)のrisk-based基準に従う。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了でき、新規画面・操作、利用者判断、実環境固有条件がある範囲だけ利用者確認を残す。Dev・Prod・remote dataの受入れと正式運用開始承認は別境界である。
-- Firestore Rulesの既存許可を狭める改修は、対象環境、data件数、許容停止時間、旧client併存の有無からcutover方式を選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
+- Firestore Rulesの既存許可を狭める改修に伴う、既存Dev documentの追加状態確認・migrationの要否は[project rules](../governance/project-rules.md#dev試用中の既存document)へrouteする。cutover方式は対象環境、data規模、許容停止時間、旧client併存の有無から選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
 - Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持する。Codex専用generated UIのbuildは従来どおり実行ごとの明示承認とし、承認済みbounded Dev release checkpointのDev buildとは分離する。

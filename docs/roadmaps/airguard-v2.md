@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-09-02
+- 最終確認日: 2026-09-03
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 - 上記の利用者最終受入れは正式運用移行全体の完了条件であり、個々の既存画面改修に利用者local受入れを一律要求する意味ではない。個別変更は[local UI検証runbook](../runbooks/local-ui-testing.md)の省略基準に従う。
 
@@ -39,7 +39,7 @@
 
 ## 次の作業
 
-1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次は[Dev保存形式の検査証拠](../verification/customer-01b-dev-compatibility.md)に基づく原因項目の診断案を確認する。追加読取り・修復・Dev反映はそれぞれ承認範囲を固定してから進める。
+1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を変更差分・関連経路へ適用し、必要な状態確認・migrationの有無を明示したbounded Dev release案を準備する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持するが、追加診断tool・ID別修復一覧・全件修復を一律の先行作業にしない。Devで通常操作を試し、発生した不具合を対象経路で修正する。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

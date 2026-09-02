@@ -1,7 +1,7 @@
 # 開発workflow runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-02
+- 最終確認日: 2026-09-03
 - 役割: 通常開発の担当、変更単位、UI error・loading、client操作policy
 
 ## 担当と変更単位
@@ -20,7 +20,7 @@
 2. 実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
 3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。指摘または実装で設計が変わった場合だけ、変わった範囲を再reviewする。
 4. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
-5. 必要なreleaseまたはmigrationを行い、必要な利用者acceptanceをcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
+5. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)に従って通常の変更差分と関連経路から判断する。全件診断・一括修復を標準前提にせず、承認済みDev releaseで通常操作を試し、実際の不具合を対象経路で修正する。必要な利用者acceptanceはcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
 6. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
 7. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
 
@@ -53,7 +53,7 @@
 
 判断理由は[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)を正とする。Rules変更だけを無条件に先行releaseせず、次を確認してcutover方式を選ぶ。
 
-1. 対象pathと全caller、whole-document replacement、対象環境、data件数、旧client併存、許容停止時間、外部作用を棚卸しする。
+1. 対象pathと全caller、whole-document replacement、対象環境、既知のdata規模、旧client併存、許容停止時間、外部作用を確認する。既存Dev dataの追加取得は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)で必要な範囲に限る。migrationを行う場合は対象件数を実確認する。
 2. 将来Rulesが許可するpath、field、actor、operationを固定し、operationが所有するexact field updateを実装・検証する。
 3. 新規pathは最初のdocument作成前にclient denyを確立する。候補Rulesのlocal実装・Emulator成功だけをdeploy readinessとみなさない。
 4. 正式release前のDevで全件を一つのbounded maintenance内にbackup・変換・post-checkでき、旧clientを継続利用しない場合は、Rules、Functions、client、migrationを同じmaintenanceのcoordinated cutoverとして扱う。長期互換層、runtime mode、dual reader/writerを既定にしない。

@@ -44,13 +44,15 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
 - editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。
 
-## Dev反映前の保存形式検査
+## 必要時の保存形式検査
 
 `utils/customer/customerDocumentContract.js`が永続化する26項目の集合を持ち、`utils/customer/customerWriter.js`の作成時の抽出と共有する。writerの保存項目・更新処理と既存Rulesの許可挙動は維持している。
 
 `scripts/check-customer-dev-compatibility.mjs`はconverterを通さずFirestoreの生の型を検査する。modelのdefaultによる欠損補完や、整数と小数の区別が失われる変換を行わない。認証、取得完了、想定path、上限、保存形式を検査し、値・ID・資格情報・data由来hashを出力せず固定理由の件数だけを集計する。書込み・修復機能は持たない。
 
 対象範囲、明示command、接続前確認、上限、未検証表現の扱い、exit status、停止条件は[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を正本とする。実行時点のDev件数・保存形式・認証と応答の確認結果は[CUSTOMER-01B検査証拠](../verification/customer-01b-dev-compatibility.md)を参照する。具体的な原因項目と、現在のedition・IAM設定全体は未確認である。
+
+利用判断は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)に従う。このtoolの実行・原因別拡張・ID別修復一覧はCustomerのDev反映の一律前提ではない。既存の実行証拠はそのまま保持し、次の作業は[roadmap](../roadmaps/airguard-v2.md#次の作業)を参照する。
 
 ## 検索・表示
 

@@ -69,6 +69,7 @@
 
 ## Project-specific Implementation and Verification
 
+- 機能改修時の既存Dev documentへの対処は、下記「Dev試用中の既存document」を正とする。Dev試用では通常操作から得た不具合を修正するloopを優先し、保存形式の全件診断・一括修復を毎回の前提にしない。
 - PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を確認してから変更する。
 - Firestore documentのCRUDを新設または改修する場合、`AirItemManager`と`AirArrayManager`を永続化・draft・dialog・validation・表示同期を一体で担う既定componentとして使用しない。既存利用箇所は一括削除せず、機能単位でoperation固有のeditor、UI非依存のapplication処理、永続化処理へ段階移行する。Firestore以外のlocal編集や、document全体置換が業務上の正しい1操作であることを確認できる既存利用は個別に判断する。
 - document全体に共通する必須・型・長さ・相関等の整合性はFireModel/Class schemaを正本とし、同じ情報を扱う各UIが独自に再定義しない。operation固有の入力対象・追加必須条件は一つの共有operation contractへ定義する。保存前は最新の購読値へ変更fieldを重ねたcandidateをClass/operation contractで検証し、Firestoreへは実際に変更されたoperation所有fieldと監査metadataだけを保存する。
@@ -76,7 +77,7 @@
 - 単純な可逆更新は、actor・tenant・field・型・状態をFirestore Rulesで十分に強制できる場合だけclient部分更新を選択できる。複雑なvalidation、server-only情報、厳密なactor判定、複数resource、外部作用、不可逆性、必須auditがある場合はoperation専用Callableを使用する。どちらの場合もUI側のvalidationだけを保存境界とみなさない。
 - data modelは一つの業務対象を一つのdocumentに保持することを既定とする。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateでは解消できない実測済み競合のいずれかを説明できる場合だけ分割する。writer権限、画面、フォーム、責務名、一般的な将来riskだけを分割理由にしない。追加する複雑性は、具体的な故障、影響、より単純な対策で防げない理由、対象operationへの限定を示せなければ採用しない。詳細はADR 0031を正とする。
 - 通常の共有document更新はwhole-document replacementを避け、operationが所有するexact fieldだけを変更し、real-time listenerを最新表示の既定とする。通常の可逆な編集はlast-write-winsを受容する。expected value、revision、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害へ限定し、全documentへ一般化しない。
-- Firestore Rulesの許可境界を狭める改修は、対象環境、利用状態、data件数、許容停止時間、旧client併存の有無を先に確認する。正式release前のDevで全件を一つのbounded maintenance内にbackup・変換・検証できる場合は、長期互換層を作らずRules、Functions、client、migrationをcoordinated cutoverできる。production、複数client version、許容できない停止、bounded maintenanceへ収まらない規模・外部作用がある場合だけ、現行Rules下の先行CRUD移行と互換releaseを採用する。新規pathは最初のdocument作成前にclient denyを確立し、候補Rulesのlocal成功だけをdeploy readinessとみなさない。緊急incidentは影響、停止範囲、rollback、陰性testを固定した別checkpointとして利用者の明示承認を必要とする。
+- Firestore Rulesの許可境界を狭める改修は、対象環境、利用状態、既知のdata規模、許容停止時間、旧client併存の有無を先に確認する。既存Dev dataの追加取得・変換の要否は下記「Dev試用中の既存document」で判断し、migrationを行う場合は対象件数を実確認する。正式release前のDevで全件を一つのbounded maintenance内にbackup・変換・検証できる場合は、長期互換層を作らずRules、Functions、client、migrationをcoordinated cutoverできる。production、複数client version、許容できない停止、bounded maintenanceへ収まらない規模・外部作用がある場合だけ、現行Rules下の先行CRUD移行と互換releaseを採用する。新規pathは最初のdocument作成前にclient denyを確立し、候補Rulesのlocal成功だけをdeploy readinessとみなさない。緊急incidentは影響、停止範囲、rollback、陰性testを固定した別checkpointとして利用者の明示承認を必要とする。
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計・実装・local検証・必要なmigration・Dev反映・Dev受入れまでを原則100%とする。独立して完了可能な複数改修を一つのroadmapへ集約せず、未承認または未実施のDev受入れを完了扱いしない。
 - repository文書に必須引数を含む正規commandが記録されている場合は、そのcommandを省略・短縮せず正確に使用する。managed governance validatorは`powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を正規commandとし、scriptのdefault project pathへ依存しない。
 - 変更前に`governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで影響classを選ぶ。混合変更はgateのunion、影響不明はcomprehensive fallbackを使用し、既知の全commandを無条件に実行しない。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployの完了はcomprehensive検証を維持する。
@@ -99,6 +100,14 @@
 - 認証・認可・tenant分離の既知Critical問題を最優先とし、既存構造を一括置換せず、利用者が仕様と影響を理解できる最小segmentへ分ける。各segmentは現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを先に整理し、承認後にCodexが実装・自動検証・独立review・必要なin-app UI smokeを行う。利用者確認はlocal UI省略基準と、Dev・正式運用の別受入れ境界に従う。
 - local Emulator環境はtest用1社だけを扱う。Dev環境は利用者の会社と協力会社の2社が試用するremote環境であり、正式運用前の変更を実際の利用条件で積極的にdeploy・検証する。ただし実dataと実accountを含むため、承認済みbounded Dev release checkpoint外の接続・変更、未計画のdata操作、秘密情報の観測を行わず、一般公開していないことをsecurity controlの代替とはみなさない。
 - project-owned document validatorとmanaged governance validatorの両方を実行し、application testの実施有無と区別して報告する。
+
+## Dev試用中の既存document
+
+- 対象は機能改修に伴う既存Dev documentの扱いである。変更箇所に必要なtestを行い、承認済みDev releaseで通常の作成・編集・保存を試し、発生した不具合の経路を修正する。Prod未公開の試用期間に、未発見の不具合をなくす目的だけで全件走査、ID別診断tool、一括修復、migrationを先行作業へ追加しない。既存の不適合件数だけを一括修復の必須根拠にしない。
+- 次のいずれかに該当する場合は、影響するdocument・field・機能の状態確認を必須とし、変換・補完・再計算等が必要ならmigrationも必須とする。(1) Schemaに明らかな変更がある。(2) 特定fieldの状態が他の機能へ明らかに影響する。(3) その他、確認済み仕様、実装経路、再現結果等から確実に必要と判断できる。状態確認で変換不要を確認できた場合、不要なmigrationは作らない。
+- (1)はfieldの追加・削除・改名、型・必須条件・値の意味・保存構造の変更等を指す。Schema fileを変更していなくても実効的な保存契約が変われば対象とする。既存Schemaを画面・writer・Rulesへ揃えるだけの変更や、既存dataに欠損・桁数超過があることだけを、自動的にSchema変更と扱わない。(2)は対象field、参照する他機能、起きる影響を特定する。(3)は必要性の具体的根拠を示し、「念のため」「影響するかもしれない」だけでは該当としない。
+- 該当判断は通常の変更差分・関連reader/writer確認の中で行い、全件走査を判断の前提にしない。確認不足なら当該fieldと利用経路に絞って確かめる。必要な状態確認・migrationの対象、目的、停止条件は既存のreleaseまたはmigration手順で固定し、無関係なdocumentへ拡張しない。通常画面で利用者が直せる問題はその編集・保存で扱い、画面から直せない問題が実際に確認された場合は当該経路の修正または限定data修復を選ぶ。未編集fieldの自動補完や正常保存を、実装・観測なしに保証しない。
+- 認証・認可・tenant分離、機密情報、既知のdata loss・不可逆な外部作用、検証policy、Dev releaseと実data変更の明示承認は維持する。Prodへ本方針を自動適用しない。判断理由は[ADR 0043](../docs/decisions/0043-dev-trial-existing-document-handling.md)、実行順は[開発workflow](../docs/runbooks/development-workflow.md)と[Dev deploy runbook](../docs/runbooks/dev-deployment.md)を参照する。
 
 ## Project-specific Progress and Reporting
 

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- [ADR 0043](docs/decisions/0043-dev-trial-existing-document-handling.md)を採用した。機能改修時の既存Dev documentは全件診断・一括修復を標準前提にせず、通常操作で発見した不具合を修正する。Schemaの明らかな変更、field状態の他機能への明確な影響、その他具体的に必要と確認された場合は状態確認と必要なmigrationを必須とする。
+
 - Customerの26保存項目をwriterと共有するread-only互換性検査toolを追加した。生のFirestore型・欠損・相関・取得完了を検査し、値やIDを出さず件数と固定理由だけを報告する。[Dev実行手順と停止条件](docs/runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を用意し、Dev接続・反映は別承認のままとした。
 
 - Customerの作成・基本情報更新・支払条件更新を専用処理へ移し、同一会社・有効な本登録User・承認済みrole、操作別fieldを画面とRulesで揃えた。active deleteとarchive CUDは拒否し、廃止予定の汎用manager経路をCustomerから除去した。自動検証と合成会社管理者によるCodex専用local UI受入れを完了し、詳細を[immutable receipt](docs/verification/customer-01a-local-acceptance.md)へ集約した。Dev、Prod、remote data、pushは変更していない。
