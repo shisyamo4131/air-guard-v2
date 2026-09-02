@@ -38,8 +38,8 @@ AirGuardV2にはStripe Checkout画面、`StripeData`、Companyの`stripeCustomer
 - localとDevで同じmigration plannerを使用し、既定はdry-runとする。Prod targetは提供しない。
 - 変更可能箇所は既存Company rootの`stripeCustomerId`・`subscription`と、そのCompany直下の`StripeData`だけとする。Company rootの作成・削除、他field、他subcollectionの作成・変更・削除は行わない。
 - reportは件数、分類、匿名化subject hash、64文字のplan digestだけを出し、Company ID、document path、field値、Stripe形式の値、秘密情報を出力しない。
-- apply前にexact target、backup、直前dry-run、digest一致、対象件数、Rules、状態再検査を確認する。Devで想定するCompany rootは4件だが、fresh確認が4件でない場合はwrite 0で停止する。
-- unexpectedなStripeData、対象外field差分、backup失敗、dry-run後の状態変化、schema package不整合、Rulesをdenyへ移行できない場合はwrite 0で停止し、推測削除しない。
+- apply前にexact target、直前dry-run、digest一致、対象件数、Rules、状態再検査を確認する。`codex-local`と将来のDevではbackupも必須とし、STRIPE-04の`user-local`だけはrollback節の既存`./saved-data` baseline例外に従う。Devで想定するCompany rootは4件だが、fresh確認が4件でない場合はwrite 0で停止する。
+- unexpectedなStripeData、対象外field差分、必須targetでのbackup失敗、STRIPE-04 user-localの既存baseline不一致、dry-run後の状態変化、schema package不整合、Rulesをdenyへ移行できない場合はwrite 0で停止し、推測削除しない。
 - apply後はlegacy root field 0、StripeData 0、Company件数不変、非対象field不変を確認する。再実行はcleanで変更0件となることを保証する。
 
 ## 理由
@@ -63,7 +63,8 @@ AirGuardV2にはStripe Checkout画面、`StripeData`、Companyの`stripeCustomer
 ## rollback
 
 - code・Rules・文書はreview済みcommitのrevertで戻す。ただし公開済みpackageをunpublishせず、必要なら別の前進versionで復元する。
-- data apply前にexact preimage backupを取得する。data rollbackはbackupの対象Companyと対象fieldだけを、現状態の衝突検査後に別の明示承認で復元する。
+- `codex-local`と将来のDev data applyでは、apply前にexact preimage backupを取得する。data rollbackはbackupの対象Companyと対象fieldだけを、現状態の衝突検査後に別の明示承認で復元する。
+- STRIPE-04の`user-local` Emulatorは、利用者が承認した限定例外として別backupを作成しない。既存`./saved-data`を変更しないimport-only rehearsalでCompany 1件の`stripeCustomerId`・`subscription`削除、`StripeData` 0件、他write 0件を確認し、不合格ならexportせず終了して同じbaselineから再開する。合格後は同じbaselineをimport＋export-on-exitで再起動し、同じmigrationと画面・data確認を再実行して確定する。確定後はpre-migration data rollbackを提供しない。
 - external Stripe resourceは変更しないため、外部側rollbackは存在しない。
 
 ## 検証

@@ -385,7 +385,7 @@ test("user-local mutating modes require exact confirmations and observed counts"
   const digest = "a".repeat(64);
   const confirmations = [
     "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
-    "--confirm-user-backup", "--confirm-user-local-apply",
+    "--confirm-user-local-apply",
     "--expected-company-total", "1", "--expected-company-field-documents", "1",
     "--expected-stripe-data-documents", "0",
   ];
@@ -424,7 +424,7 @@ test("user-local mutating modes require exact confirmations and observed counts"
     ],
     ["--target", "user-local", "--create-backup", "--plan-digest", digest, ...confirmations],
     ["--target", "user-local", "--restore", ...confirmations],
-    ["--target", "user-local", "--apply", "--plan-digest", digest, ...confirmations.filter((value) => value !== "--confirm-user-backup")],
+    ["--target", "user-local", "--apply", "--plan-digest", digest, "--confirm-user-backup", ...confirmations],
     ["--target", "user-local", "--apply", "--plan-digest", digest, ...confirmations.slice(0, -1), "1"],
     ["--target", "user-local", "--apply", "--plan-digest", digest, "--backup-id", "b".repeat(32), ...confirmations],
   ]) {
@@ -707,7 +707,7 @@ function userLocalApplyArgs(planDigest) {
   return [
     "--target", "user-local", "--apply", "--plan-digest", planDigest,
     "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
-    "--confirm-user-backup", "--confirm-user-local-apply",
+    "--confirm-user-local-apply",
     "--expected-company-total", "1", "--expected-company-field-documents", "1",
     "--expected-stripe-data-documents", "0",
   ];
@@ -730,7 +730,7 @@ function userLocalCliDependencies(fake) {
   };
 }
 
-test("user-local CLI applies only after human backup confirmation and emits no receipt fields", async () => {
+test("user-local CLI applies with import-only guards and emits no backup or receipt fields", async () => {
   const initial = legacyState({ stripeData: [] });
   const fake = createFirestoreFake(initial.companies);
   const plan = planCompanyLegacyStripeMigration({
@@ -796,7 +796,7 @@ test("user-local dirty identity stops before Admin initialization or Firestore r
     () => executeCompanyLegacyStripeCli({
       args: ["--target", "user-local", "--apply", "--plan-digest", digest,
         "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
-        "--confirm-user-backup", "--confirm-user-local-apply",
+        "--confirm-user-local-apply",
         "--expected-company-total", "1", "--expected-company-field-documents", "1",
         "--expected-stripe-data-documents", "0"],
       env: { GCLOUD_PROJECT: "air-guard-v2-dev", FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", FIRESTORE_DATABASE_ID: "(default)" },
@@ -820,7 +820,7 @@ test("user-local changed observed counts stop with write zero", async () => {
     () => executeCompanyLegacyStripeCli({
       args: ["--target", "user-local", "--apply", "--plan-digest", plan.planDigest,
         "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
-        "--confirm-user-backup", "--confirm-user-local-apply",
+        "--confirm-user-local-apply",
         "--expected-company-total", "1", "--expected-company-field-documents", "1",
         "--expected-stripe-data-documents", "0"],
       env: { GCLOUD_PROJECT: "air-guard-v2-dev", FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", FIRESTORE_DATABASE_ID: "(default)" },

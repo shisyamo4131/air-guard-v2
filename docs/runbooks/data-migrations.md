@@ -29,7 +29,7 @@ node scripts/migrate-company-legacy-stripe.mjs --target codex-local
 node scripts/migrate-company-legacy-stripe.mjs --target codex-local --restore --backup-path .codex-test/runtime/stripe03-backup.json --backup-receipt <64文字のreceipt>
 ```
 
-利用者用Emulatorでは、3つの環境変数が不足または不一致ならAdmin SDK初期化前に拒否する。`./saved-data`は起動時のimportに限り、migration後の自動export、上書き、昇格を行わない。次の変更commandは、会社管理者を含むwriterを止めたquiet window中にだけ使う。
+利用者用Emulatorでは、3つの環境変数が不足または不一致ならAdmin SDK初期化前に拒否する。既存`./saved-data`をpre-migrationの永続baselineかつADR 0038のexact preimageとし、import-only起動中は上書きしない。次の変更commandは、会社管理者を含むwriterを止め、同じquiet window中に他writeがない場合だけ使う。別backupは要求しない。
 
 ```powershell
 $env:GCLOUD_PROJECT = "air-guard-v2-dev"
@@ -37,17 +37,17 @@ $env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"
 $env:FIRESTORE_DATABASE_ID = "(default)"
 node scripts/migrate-company-legacy-stripe.mjs --target user-local
 
-# coordinatorはここで停止する。利用者から同じ停止状態に対するbackup完了の明示連絡を受けた後だけ実行する。
-node scripts/migrate-company-legacy-stripe.mjs --target user-local --apply --plan-digest <直前dry-runの64文字digest> --confirm-project air-guard-v2-dev --confirm-quiet-window --confirm-user-backup --confirm-user-local-apply --expected-company-total 1 --expected-company-field-documents 1 --expected-stripe-data-documents 0
+node scripts/migrate-company-legacy-stripe.mjs --target user-local --apply --plan-digest <直前dry-runの64文字digest> --confirm-project air-guard-v2-dev --confirm-quiet-window --confirm-user-local-apply --expected-company-total 1 --expected-company-field-documents 1 --expected-stripe-data-documents 0
 ```
 
-- `--confirm-user-backup`は人為確認であり、backupまたは復元可能性の証明ではない。coordinatorはapply直前に停止し、同じquiet / stopped stateでexact preimageを取得済みであること、対象Companyの対象fieldだけをcurrent-state conflict check後に復元できる手順・担当・保存先・保持期限が確認・記録済みであることを利用者と確認する。どれか一つでも満たせなければapplyせず、復元実行は別の明示承認を必須とする。このtoolはbackupを作成、読取、検証、削除、復元できず、backup方法、path、値を推測しない。
+- 確認は次の順で行う。既存`./saved-data`からimport-onlyで起動し、migrationと画面・data確認を行う。問題があればexportせず終了し、改修後に元の`./saved-data`から再開する。問題がなければ一度exportせず終了する。次に元の`./saved-data`をimportし、今度はexport-on-exitも付けて起動し、同じmigrationと画面・data確認を再実行する。2回目も問題がなければ終了して`./saved-data`へ確定する。
+- exact preimageは、quiet window開始前から変更されていない既存`./saved-data`が確定まで担う。import-only確認中とmigration実行中に他writeがないことを前提とし、別backup、別path、別の保存方法を追加・推測しない。このuser-local toolはbackupまたはrestoreを提供せず、利用者承認により確定後のpre-migration data rollbackも提供しない。この限定例外はCompany 1件の`stripeCustomerId`・`subscription`削除かつ`StripeData` 0件のSTRIPE-04だけに適用し、件数または対象が変わればwrite 0で停止して再判断する。
 - user-localはdry-runとapplyだけを提供し、`--create-backup`、`--restore`、backup ID、receiptを受け付けない。`codex-local`の合成data用schema v1 backup/create/apply/restoreには変更を加えない。
 - user-local apply前にcleanな40文字HEADとmigration script identityをAdmin初期化前に確認する。1秒間隔の2回inventory一致はwriter停止を補う保守的heuristicであり排他lockではない。nested、unknown shape、件数1/1/0またはdigestの変化はwrite 0で停止する。transaction内でも再確認し、post-check失敗時に自動restoreしない。
 
 - migrationはCompany rootを作成・削除・全体置換しない。更新は旧2 fieldの削除だけ、document削除は既知形状の直下`StripeData`だけである。Companyの他fieldと他subcollectionは変更しない。
 - 旧`subscription`は`null`または既知4 fieldの完全形だけ、`StripeData`は撤去前実装が生成し得たrequest・success・failureの3完全形だけを許可する。未知・部分形、親Company不在、親documentが存在しない入れ子を含む全nested dataは変更前にblockする。
-- apply前にexact target、Rules sourceの補助検査、root/FunctionsのSchemas version・取得元・integrity一致、直前digest一致、状態再検査、400 writeのtool上限を確認する。codex-localはtoolのschema v1 backupも確認する。user-localはtool外の利用者backup完了確認flagを必須にする。全変更は一つのtransactionへ登録し、1件でも失敗すれば全件を変更しない。
+- apply前にexact target、Rules sourceの補助検査、root/FunctionsのSchemas version・取得元・integrity一致、直前digest一致、状態再検査、400 writeのtool上限を確認する。codex-localはtoolのschema v1 backupも確認する。user-localは変更されていない既存`./saved-data`を永続baselineとし、追加backup flagを要求しない。全変更は一つのtransactionへ登録し、1件でも失敗すれば全件を変更しない。
 - backupは`.codex-test`配下の新規fileだけを許可し、既存fileを上書きしない。receiptはfile変更の検出値であり、作成者や真正性の証明ではない。読込時にpath、親子関係、重複、値形状、件数、対象内容digestを再検証する。合成dataだけを扱い、実data用の保管・暗号化・保持契約には使用しない。
 - post-checkはlegacy field 0、`StripeData` 0、Company件数不変、Company非対象field不変、再dry-run cleanを必須とする。codex-localの復旧はschema v1のexact preimageだけを一括で戻し、現在状態と衝突する場合はwrite 0で停止する。user-localの復元機能は提供しない。
 - Rules source検査は補助であり、実際の拒否保証は専用Emulatorの全actor・全階層deny testを正本とする。missing-parent列挙はtransaction readではない。user-local applyでは会社管理者を含むwriterを止め、bounded quiet period、連続inventory、transaction再確認、post-checkを組み合わせる。Dev、Prod、remote dataへは拡張しない。
@@ -100,7 +100,7 @@ node --use-system-ca scripts/migrate-user-reservations.mjs --target dev
 - canonical email重複、同社Employee重複、不正User状態、dangling Employee、予約のmissing・malformed・mismatch・orphanを監査する。
 - `codex-local` applyが変更できるのは、missing予約のcreateと、旧pointer先Userが不存在で競合再検査に合格したstale pointerのupdateだけである。`user-local`と`dev`はmissing予約のcreateだけを許可し、updateを含むplanはwrite 0でblockする。すべてのtargetで予約delete、User、Employee、Authenticationのwriteは行わない。
 - reportは分類別件数、計画digest、opaque subject hashだけを出力し、email、氏名、company ID、User ID、path、document bodyを出力しない。
-- `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Codex専用candidateでの操作は個別承認を要しない。利用者用`saved-data`は事前backupとexport candidate検証なしに上書きしない。
+- `.codex-test/saved-data`を直接上書きしない。candidate importへdry-run・apply・再dry-runを行い、backend verifierと既存candidate acceptance/promotion gateを通した後だけsnapshotを置換する。Codex専用candidateでの操作は個別承認を要しない。`migrate-user-reservations.mjs`で利用者用`saved-data`を更新する場合は、事前backupとexport candidate検証なしに上書きしない。この予約migration規則は、上記STRIPE-04限定例外を変更しない。
 - Dev applyはmaintenance、必要なbackup、直前dry-run、利用者の実data migration承認、project名とbackup確認flagを必須とする。dry-run後にUser・Employee・予約が変化するとdigestまたはtransaction再検査で停止する。途中失敗で一部create済みの場合は予約を推測削除せず、再dry-runして残りのcreateだけを再計画する。
 - Dev rollbackは自動deleteやUser/Auth変更を行わない。公開前の追加予約は既存runtimeに参照されないが、削除が必要な場合は事前・事後証拠から本migrationが新規作成したexact reservationだけを特定し、別のrepair・実data操作承認で扱う。Prod migrationは未提供である。
 

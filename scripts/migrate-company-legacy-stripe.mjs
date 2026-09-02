@@ -605,7 +605,6 @@ export function parseCompanyLegacyStripeArgs(args) {
     backupReceipt: null,
     confirmProject: null,
     confirmQuietWindow: false,
-    confirmUserBackup: false,
     confirmUserLocalApply: false,
     expectedCompanyTotal: null,
     expectedCompanyFieldDocuments: null,
@@ -619,7 +618,6 @@ export function parseCompanyLegacyStripeArgs(args) {
     else if (argument === "--backup-receipt") parsed.backupReceipt = args[++index];
     else if (argument === "--confirm-project") parsed.confirmProject = args[++index];
     else if (argument === "--confirm-quiet-window") parsed.confirmQuietWindow = true;
-    else if (argument === "--confirm-user-backup") parsed.confirmUserBackup = true;
     else if (argument === "--confirm-user-local-apply") parsed.confirmUserLocalApply = true;
     else if (argument === "--expected-company-total") parsed.expectedCompanyTotal = Number(args[++index]);
     else if (argument === "--expected-company-field-documents") parsed.expectedCompanyFieldDocuments = Number(args[++index]);
@@ -639,7 +637,7 @@ export function parseCompanyLegacyStripeArgs(args) {
   }
   const userLocal = parsed.target === USER_LOCAL_STRIPE_MIGRATION_TARGET.name;
   const hasUserLocalOptions = parsed.confirmProject || parsed.confirmQuietWindow ||
-    parsed.confirmUserBackup || parsed.confirmUserLocalApply ||
+    parsed.confirmUserLocalApply ||
     parsed.expectedCompanyTotal !== null || parsed.expectedCompanyFieldDocuments !== null ||
     parsed.expectedStripeDataDocuments !== null;
   if (parsed.mode === "dry-run") {
@@ -654,8 +652,8 @@ export function parseCompanyLegacyStripeArgs(args) {
       parsed.expectedStripeDataDocuments === USER_LOCAL_EXPECTED_COUNTS.stripeDataDocuments;
     if (parsed.mode !== "apply" ||
       parsed.confirmProject !== USER_LOCAL_STRIPE_MIGRATION_TARGET.projectId ||
-      !parsed.confirmQuietWindow || !parsed.confirmUserBackup ||
-      !parsed.confirmUserLocalApply || !countsMatch || parsed.backupPath ||
+      !parsed.confirmQuietWindow || !parsed.confirmUserLocalApply ||
+      !countsMatch || parsed.backupPath ||
       parsed.backupReceipt) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
     }
@@ -1449,8 +1447,6 @@ export async function executeCompanyLegacyStripeCli({
     const plan = await readStableUserLocalPlan(firestore, target, { readState, delay });
     assertUserLocalCounts(plan);
     assertPlanCanWrite(plan, parsed.planDigest);
-    // --confirm-user-backup records only the user's statement that their own
-    // consistent Emulator backup is complete. This tool cannot verify it.
     const appliedPlan = await applyCompanyLegacyStripeMigration({
       firestore,
       expectedPlanDigest: parsed.planDigest,
