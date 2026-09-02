@@ -41,6 +41,7 @@
 - [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
 - [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Historical。PM交代履歴と旧手順の証拠。
 - [Current coordinator handoff snapshot](current-coordinator-handoff.md): Current。現在のbounded restart source、baseline、checkpoint、承認境界。
+- [Customer Dev反映・受入れ計画](customer-dev-release.md): 既存dataへの影響判断、反映対象、切替・復旧、Devで確認する操作。
 
 ## アプリ入口・認証・共通基盤
 

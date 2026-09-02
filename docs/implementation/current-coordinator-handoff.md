@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-15継続。governance反映後、CustomerのDevテスト直前まで準備する
+- 状態: Current / PM-15継続。CustomerのDevテスト直前までのlocal準備
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
@@ -12,7 +12,7 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- checkpoint start baseline: `e0b9aa92436fda83f0ff1b2e0cd75e137a504766`
+- checkpoint start baseline: `eb020e76332fc6d06a46949da92c27280d97bc6c`
 - current integrated revision: Gitの現在HEADを確認する。本snapshot自身を含むcommit hashは文書へ自己参照で固定しない。
 - expected upstream: none
 - expected worktree: clean after coordinator integration
@@ -22,12 +22,11 @@
 
 ## Active checkpoint
 
-- checkpoint: `GOV-DEV-DATA-001`
-- objective: 利用者が採用した[既存Dev documentの扱い](../../governance/project-rules.md#dev試用中の既存document)をproject規則とcurrent手順へ反映し、[ADR 0043](../decisions/0043-dev-trial-existing-document-handling.md)と次の作業を整合させる。
-- approved scope: project-owned規則・関連文書の更新、同じcommon versionのmanaged sync、必要な検証、独立review、local commit。application・検査tool・Rules・package・Dev接続・data変更・build・deploy・pushは含めない。
-- completion contract: 3条件と通常のDev試用loopの整合、comprehensive gates、review済みlocal commit、clean。完了後は同じtaskでCustomerのDevテスト直前まで準備する。
-- work ownership: PM-15が文書・Git統合を管理し、既存reviewerがread-only最終確認を行う。developerは文書検証fixtureの不足3ファイルのcopyだけを修正した。application・Rules・検査toolは変更しない。
-- verification: `project-docs`、`managed-governance`（`renderer-check`を含む）、`capacity-regression`はexit 0。`project-docs-negative`は既存receiptの参照先をfixtureへcopyしていなかったため初回exit 1となり、準備処理5行の修正後は21ケース・exit 0。最終文書状態で`project-docs`と`diff-check`を確認して統合する。application・Rules・schema・domain testは不変のためdomain/Emulator/UI/buildは今回のgovernance gateに含めない。
+- checkpoint: `CUSTOMER-01C-LOCAL-PREP-001`
+- objective: [Customer Dev反映・受入れ計画](customer-dev-release.md)に3条件の具体的判断、反映範囲、切替・復旧、通常操作と関連機能の確認を固定する。
+- approved scope: 利用者のDevテスト直前までの進行指示に基づくlocal調査・必要な修正・検証・Dev向け静的生成・review・文書・local commit。Dev接続・remoteテスト・maintenance操作・deploy・実data変更・pushは含めない。
+- completion contract: 必要なlocal検証、review済みcommit、clean、Dev設定の生成物照合を終え、Dev実行前で停止する。
+- work ownership: PM-15が文書・build/artifact・Git統合、developerが発見済みService Worker設定未注入の限定修正と直接test、reviewerが修正review、securityがrelease計画のread-only確認を担当する。
 
 ## Open decisions and approvals
 
@@ -45,10 +44,9 @@
 
 ## Next checkpoint
 
-1. governance差分の検証・review・local commitを確定し、同じPM-15で製品準備を再開する。現在の担当へ今回の明示指示と正本を渡し、重複作業を防ぐ。
-2. [Customer実装](customer-master.md)、[現行仕様](../specification.md)、[Dev runbook](../runbooks/dev-deployment.md)、[ADR 0043](../decisions/0043-dev-trial-existing-document-handling.md)を読み、変更差分と関連reader/writerから3条件を判断する。既存の形式不適合を未修復の証拠として保持し、件数だけからmigrationを要求しない。3条件へ該当するなら必要な対象の状態確認と変換を計画し、非該当なら通常操作を試すDev release案を準備する。
-3. Dev案には`firestore.rules`とHosting（`dist/`）の対象、残る派生値のrisk、旧client併存、整合した反映順、rollback、通常の作成・編集・保存と拒否経路の確認をまとめる。実行対象commit・現在のremote revision・rollback先を推測で固定せず、接続・build・deploy・data操作の承認範囲を明示する。
-4. Dev接続・テスト開始前で停止し、未確認のremote状態と次の実行単位を報告する。本変更でdataは変更しない。文書方針のrollbackは対象commitの安全なrevertまたはcorrective commitで行う。
+1. 発見したService Worker設定未注入の修正を検証・review・統合し、固定HEADのDev生成物を再確認する。
+2. 利用者のDev実行指示後、[Customer Dev反映・受入れ計画](customer-dev-release.md)と[Dev runbook](../runbooks/dev-deployment.md)に沿い、現在のremote状態、実行対象commit・artifact、切替対象と時間、rollback、試験対象・関連Siteへの同期を固定した一つのbounded releaseを進める。
+3. RulesとHostingの反映後、通常Customer操作と条件2の関連機能を確認する。未確認状態を成功扱いせず、不具合が出たID・field・経路を限定して修正する。全件再診断・一括修復は自動追加しない。
 
 ## References
 

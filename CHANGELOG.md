@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Dev配信準備で見つかったService WorkerのFirebase設定未注入を修正し、独立buildと開発時の両方で公開設定を反映する。
+
 - [ADR 0043](docs/decisions/0043-dev-trial-existing-document-handling.md)を採用した。機能改修時の既存Dev documentは全件診断・一括修復を標準前提にせず、通常操作で発見した不具合を修正する。Schemaの明らかな変更、field状態の他機能への明確な影響、その他具体的に必要と確認された場合は状態確認と必要なmigrationを必須とする。
 
 - Customerの26保存項目をwriterと共有するread-only互換性検査toolを追加した。生のFirestore型・欠損・相関・取得完了を検査し、値やIDを出さず件数と固定理由だけを報告する。[Dev実行手順と停止条件](docs/runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を用意し、Dev接続・反映は別承認のままとした。

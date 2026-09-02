@@ -54,6 +54,8 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 利用判断は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)に従う。このtoolの実行・原因別拡張・ID別修復一覧はCustomerのDev反映の一律前提ではない。既存の実行証拠はそのまま保持し、次の作業は[roadmap](../roadmaps/airguard-v2.md#次の作業)を参照する。
 
+3条件の具体的判定、対象service、切替・復旧、通常操作と下流確認の範囲は[Customer Dev反映・受入れ計画](customer-dev-release.md)を参照する。
+
 ## 検索・表示
 
 名称にhard unique制約は設けず正当な同名作成を許す。任意Customer codeだけtenant内uniqueとする。normalized name/kana/address/phoneの類似候補はwarningに留める。新規選択はACTIVE限定、historical referenceではTERMINATEDも表示し、再利用前にreactivateする。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索のfeasibility/index/costは未検証である。
@@ -69,7 +71,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - schema上の直接`hasMany`は`Sites.customerId`だけで、削除guardもSiteだけを対象とする。
 - Billing作成時は現在のCustomer支払条件から`paymentDueDateAt`を算出してBillingへ保存する。その後のCustomer支払条件変更は既存Billingの期日を自動更新しない。
 - Billingは`customerId`を保持するがCustomer名称・住所のsnapshotは持たない。請求書PDF生成時は現在のCustomer masterを取得するため、名称・住所変更は過去Billingの再生成PDFにも反映され、Customerがarchive済み等で取得不能なら生成失敗になり得る。
-- Site、Agreement、OperationResult、Billing等の内部契約は本セグメントでは確認していない。
+- Customer更新時の既存Functionは、`customerId`が一致するSiteの`customer`を同期する。ACTIVE限定ではない。Site経由の`cutoffDate`は新規Agreementの初期値へ、現在Customerの支払条件は新規Billingの期日へ流れる。今回のlocal確認はこの直接経路までであり、Site、Agreement、OperationResult、Billing等の内部契約全体やDev上の同期・派生値は未確認である。
 
 ## 削除・無効化
 

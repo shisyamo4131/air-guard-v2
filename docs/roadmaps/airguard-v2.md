@@ -39,7 +39,7 @@
 
 ## 次の作業
 
-1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。次は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を変更差分・関連経路へ適用し、必要な状態確認・migrationの有無を明示したbounded Dev release案を準備する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持するが、追加診断tool・ID別修復一覧・全件修復を一律の先行作業にしない。Devで通常操作を試し、発生した不具合を対象経路で修正する。
+1. CustomerのCUSTOMER-01Aは[実装文書](../implementation/customer-master.md)と[Codex専用local UI受入れ](../verification/customer-01a-local-acceptance.md)の範囲まで完了した。[Dev反映・受入れ計画](../implementation/customer-dev-release.md)へ3条件の具体的判断と通常操作・関連機能の確認範囲をまとめた。利用者指示によりDevテスト開始前で停止し、次のbounded releaseでRulesとHostingを反映する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持するが、追加診断tool・ID別修復一覧・全件修復を一律の先行作業にしない。
 2. OperationResultの管制側編集lockと権限境界をRules・model・UIで強制する修正案を作り、Billing/勤怠/履歴同期、rounding、notificationの回帰testとreconcile設計を確定する。
 3. Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 4. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
