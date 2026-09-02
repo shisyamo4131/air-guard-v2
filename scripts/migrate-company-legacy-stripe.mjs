@@ -6,6 +6,7 @@ import {
 } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { spawn } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 export const CODEX_STRIPE_MIGRATION_TARGET = Object.freeze({
@@ -28,6 +29,12 @@ export const STRIPE_MIGRATION_TARGETS = Object.freeze({
 });
 
 export const STRIPE_MIGRATION_MAX_WRITES = 400;
+export const USER_LOCAL_STABILITY_INTERVAL_MS = 1_000;
+const USER_LOCAL_EXPECTED_COUNTS = Object.freeze({
+  companyTotal: 1,
+  companyFieldDocuments: 1,
+  stripeDataDocuments: 0,
+});
 
 const SCHEMA_PACKAGE = "@shisyamo4131/air-guard-v2-schemas";
 const LEGACY_COMPANY_FIELDS = Object.freeze([
@@ -596,6 +603,13 @@ export function parseCompanyLegacyStripeArgs(args) {
     planDigest: null,
     backupPath: null,
     backupReceipt: null,
+    confirmProject: null,
+    confirmQuietWindow: false,
+    confirmUserBackup: false,
+    confirmUserLocalApply: false,
+    expectedCompanyTotal: null,
+    expectedCompanyFieldDocuments: null,
+    expectedStripeDataDocuments: null,
   };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
@@ -603,6 +617,13 @@ export function parseCompanyLegacyStripeArgs(args) {
     else if (argument === "--plan-digest") parsed.planDigest = args[++index];
     else if (argument === "--backup-path") parsed.backupPath = args[++index];
     else if (argument === "--backup-receipt") parsed.backupReceipt = args[++index];
+    else if (argument === "--confirm-project") parsed.confirmProject = args[++index];
+    else if (argument === "--confirm-quiet-window") parsed.confirmQuietWindow = true;
+    else if (argument === "--confirm-user-backup") parsed.confirmUserBackup = true;
+    else if (argument === "--confirm-user-local-apply") parsed.confirmUserLocalApply = true;
+    else if (argument === "--expected-company-total") parsed.expectedCompanyTotal = Number(args[++index]);
+    else if (argument === "--expected-company-field-documents") parsed.expectedCompanyFieldDocuments = Number(args[++index]);
+    else if (argument === "--expected-stripe-data-documents") parsed.expectedStripeDataDocuments = Number(args[++index]);
     else if (argument === "--create-backup" && parsed.mode === "dry-run") {
       parsed.mode = "create-backup";
     } else if (argument === "--apply" && parsed.mode === "dry-run") {
@@ -616,18 +637,34 @@ export function parseCompanyLegacyStripeArgs(args) {
   if (!STRIPE_MIGRATION_TARGETS[parsed.target]) {
     throw migrationError("usage-invalid", EXIT_CODES.USAGE);
   }
-  if (
-    parsed.target === USER_LOCAL_STRIPE_MIGRATION_TARGET.name &&
-    parsed.mode !== "dry-run"
-  ) {
-    throw migrationError("usage-invalid", EXIT_CODES.USAGE);
-  }
+  const userLocal = parsed.target === USER_LOCAL_STRIPE_MIGRATION_TARGET.name;
+  const hasUserLocalOptions = parsed.confirmProject || parsed.confirmQuietWindow ||
+    parsed.confirmUserBackup || parsed.confirmUserLocalApply ||
+    parsed.expectedCompanyTotal !== null || parsed.expectedCompanyFieldDocuments !== null ||
+    parsed.expectedStripeDataDocuments !== null;
   if (parsed.mode === "dry-run") {
-    if (parsed.planDigest || parsed.backupPath || parsed.backupReceipt) {
+    if (parsed.planDigest || parsed.backupPath || parsed.backupReceipt || hasUserLocalOptions) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
     }
     return parsed;
   }
+  if (userLocal) {
+    const countsMatch = parsed.expectedCompanyTotal === USER_LOCAL_EXPECTED_COUNTS.companyTotal &&
+      parsed.expectedCompanyFieldDocuments === USER_LOCAL_EXPECTED_COUNTS.companyFieldDocuments &&
+      parsed.expectedStripeDataDocuments === USER_LOCAL_EXPECTED_COUNTS.stripeDataDocuments;
+    if (parsed.mode !== "apply" ||
+      parsed.confirmProject !== USER_LOCAL_STRIPE_MIGRATION_TARGET.projectId ||
+      !parsed.confirmQuietWindow || !parsed.confirmUserBackup ||
+      !parsed.confirmUserLocalApply || !countsMatch || parsed.backupPath ||
+      parsed.backupReceipt) {
+      throw migrationError("usage-invalid", EXIT_CODES.USAGE);
+    }
+    if (!/^[a-f0-9]{64}$/u.test(parsed.planDigest ?? "")) {
+      throw migrationError("usage-invalid", EXIT_CODES.USAGE);
+    }
+    return parsed;
+  }
+  if (hasUserLocalOptions) throw migrationError("usage-invalid", EXIT_CODES.USAGE);
   if (parsed.mode === "create-backup") {
     if (
       !/^[a-f0-9]{64}$/u.test(parsed.planDigest ?? "") ||
@@ -1042,6 +1079,67 @@ export async function readCompanyLegacyStripeBackup(
   return Object.freeze({ payload, receiptHash });
 }
 
+function runProcess(command, args, { cwd = REPOSITORY_ROOT, input = "" } = {}) {
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, {
+      cwd,
+      windowsHide: true,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.once("error", rejectPromise);
+    child.once("close", (code) => resolvePromise({ code, stdout, stderr }));
+    child.stdin.end(input, "utf8");
+  });
+}
+
+export async function readCompanyLegacyStripeRepositoryIdentity({
+  runProcessImpl = runProcess,
+  readFileImpl = readFile,
+} = {}) {
+  const [headResult, statusResult, toolSource] = await Promise.all([
+    runProcessImpl("git", ["rev-parse", "HEAD"]),
+    runProcessImpl("git", ["status", "--porcelain"]),
+    readFileImpl(fileURLToPath(import.meta.url), "utf8"),
+  ]);
+  const head = headResult.stdout.trim();
+  if (headResult.code !== 0 || statusResult.code !== 0 || statusResult.stdout !== "" ||
+    !/^[a-f0-9]{40}$/u.test(head)) {
+    throw migrationError("repository-identity-invalid");
+  }
+  return Object.freeze({
+    head,
+    toolDigest: sha256(toolSource),
+  });
+}
+
+export async function readStableUserLocalPlan(firestore, target, {
+  readState = readCompanyLegacyStripeState,
+  delay = (milliseconds) => new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds)),
+  intervalMs = USER_LOCAL_STABILITY_INTERVAL_MS,
+} = {}) {
+  const first = planCompanyLegacyStripeMigration({ ...(await readState(firestore)), target });
+  await delay(intervalMs);
+  const second = planCompanyLegacyStripeMigration({ ...(await readState(firestore)), target });
+  if (first.planDigest !== second.planDigest || first.contentDigest !== second.contentDigest ||
+    first.targetContentDigest !== second.targetContentDigest || first.nonTargetDigest !== second.nonTargetDigest) {
+    throw migrationError("stability-drift");
+  }
+  return second;
+}
+
+function assertUserLocalCounts(plan) {
+  if (plan.companyCount !== USER_LOCAL_EXPECTED_COUNTS.companyTotal ||
+    plan.rootDeletes.length !== USER_LOCAL_EXPECTED_COUNTS.companyFieldDocuments ||
+    plan.stripeDeletes.length !== USER_LOCAL_EXPECTED_COUNTS.stripeDataDocuments) {
+    throw migrationError("expected-count-mismatch");
+  }
+}
 function snapshotRecord(snapshot) {
   return {
     path: snapshot.ref.path,
@@ -1156,20 +1254,28 @@ function transactionSnapshotState(companiesSnapshot, stripeSnapshot) {
 export async function applyCompanyLegacyStripeMigration({
   firestore,
   expectedPlanDigest,
-  backup,
+  backup = null,
+  target = null,
   deleteFieldValue,
 }) {
   if (typeof deleteFieldValue !== "function") {
     throw migrationError("delete-field-factory-missing");
   }
+  const effectiveTarget = backup?.target?.databaseId
+    ? backup.target
+    : target ?? CODEX_STRIPE_MIGRATION_TARGET;
+  if (effectiveTarget.name === CODEX_STRIPE_MIGRATION_TARGET.name && backup === null) {
+    throw migrationError("backup-required");
+  }
   const fullPreflight = planCompanyLegacyStripeMigration(
-    await readCompanyLegacyStripeState(firestore),
+    { ...(await readCompanyLegacyStripeState(firestore)), target: effectiveTarget },
   );
   assertPlanCanWrite(fullPreflight, expectedPlanDigest);
-  assertBackupMatchesPlan(backup, fullPreflight);
-  // listDocuments/listCollections are not transaction reads. The codex-local
-  // target is isolated, so missing-parent descendants are checked immediately
-  // before this transaction and again by the mandatory post-check.
+  if (backup !== null) assertBackupMatchesPlan(backup, fullPreflight);
+  // listDocuments/listCollections are not transaction reads. Missing-parent
+  // descendants are checked immediately before the transaction and again by
+  // the mandatory post-check. user-local additionally requires a quiet window
+  // and two stable full inventories in the CLI before reaching this function.
   let appliedPlan;
   await firestore.runTransaction(async (transaction) => {
     const companiesQuery = firestore.collection("Companies");
@@ -1177,9 +1283,9 @@ export async function applyCompanyLegacyStripeMigration({
     const companiesSnapshot = await transaction.get(companiesQuery);
     const stripeSnapshot = await transaction.get(stripeQuery);
     const state = transactionSnapshotState(companiesSnapshot, stripeSnapshot);
-    const fresh = planCompanyLegacyStripeMigration(state);
+    const fresh = planCompanyLegacyStripeMigration({ ...state, target: effectiveTarget });
     assertPlanCanWrite(fresh, expectedPlanDigest);
-    assertBackupMatchesPlan(backup, fresh);
+    if (backup !== null) assertBackupMatchesPlan(backup, fresh);
     appliedPlan = fresh;
 
     // Every read and validation is complete before the first write is registered.
@@ -1201,7 +1307,7 @@ export async function verifyCompanyLegacyStripePostState(
   originalPlan,
 ) {
   const state = await readCompanyLegacyStripeState(firestore);
-  const current = planCompanyLegacyStripeMigration(state);
+  const current = planCompanyLegacyStripeMigration({ ...state, target: originalPlan.target });
   if (
     current.findings.length > 0 ||
     current.writeCount !== 0 ||
@@ -1317,6 +1423,8 @@ export async function executeCompanyLegacyStripeCli({
   readRepositoryPreconditionsImpl = readRepositoryPreconditions,
   createRuntime = createCompanyLegacyStripeRuntime,
   readState = readCompanyLegacyStripeState,
+  readRepositoryIdentity = readCompanyLegacyStripeRepositoryIdentity,
+  delay,
 } = {}) {
   const parsed = parseCompanyLegacyStripeArgs(args);
   const target = assertCompanyLegacyStripeMigrationTarget(parsed.target, env);
@@ -1324,8 +1432,37 @@ export async function executeCompanyLegacyStripeCli({
   if (repositoryFindings.length > 0) {
     throw migrationError("repository-precondition");
   }
+  const isUserLocalWrite = target.name === USER_LOCAL_STRIPE_MIGRATION_TARGET.name && parsed.mode !== "dry-run";
+  // A clean, reviewed 40-character HEAD and exact tool identity are established
+  // before Admin initialization or any Firestore read.
+  if (isUserLocalWrite) {
+    const identity = await readRepositoryIdentity();
+    if (!/^[a-f0-9]{40}$/u.test(identity?.head ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(identity?.toolDigest ?? "")) {
+      throw migrationError("repository-identity-invalid");
+    }
+  }
   const { firestore, deleteFieldValue, valueFactories } =
     await createRuntime(target);
+
+  if (isUserLocalWrite) {
+    const plan = await readStableUserLocalPlan(firestore, target, { readState, delay });
+    assertUserLocalCounts(plan);
+    assertPlanCanWrite(plan, parsed.planDigest);
+    // --confirm-user-backup records only the user's statement that their own
+    // consistent Emulator backup is complete. This tool cannot verify it.
+    const appliedPlan = await applyCompanyLegacyStripeMigration({
+      firestore,
+      expectedPlanDigest: parsed.planDigest,
+      target,
+      deleteFieldValue,
+    });
+    const post = await verifyCompanyLegacyStripePostState(firestore, appliedPlan);
+    return {
+      exitCode: EXIT_CODES.CLEAN,
+      summary: summarizeCompanyLegacyStripePlan(post, { mode: "apply" }),
+    };
+  }
 
   if (parsed.mode === "restore") {
     const { payload } = await readCompanyLegacyStripeBackup(

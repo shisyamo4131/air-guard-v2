@@ -16,6 +16,7 @@ import {
   parseCompanyLegacyStripeArgs,
   planCompanyLegacyStripeMigration,
   readCompanyLegacyStripeBackup,
+  readStableUserLocalPlan,
   readCompanyLegacyStripeState,
   restoreCompanyLegacyStripeMigration,
   summarizeCompanyLegacyStripePlan,
@@ -378,22 +379,19 @@ test("target guards require exact local project, host, and database identities",
   }
 });
 
-test("user-local parses only as dry-run and rejects every mutating mode", () => {
-  assert.deepEqual(parseCompanyLegacyStripeArgs(["--target", "codex-local"]), {
-    mode: "dry-run",
-    target: "codex-local",
-    planDigest: null,
-    backupPath: null,
-    backupReceipt: null,
-  });
-  assert.deepEqual(parseCompanyLegacyStripeArgs(["--target", "user-local"]), {
-    mode: "dry-run",
-    target: "user-local",
-    planDigest: null,
-    backupPath: null,
-    backupReceipt: null,
-  });
+test("user-local mutating modes require exact confirmations and observed counts", () => {
+  assert.equal(parseCompanyLegacyStripeArgs(["--target", "codex-local"]).mode, "dry-run");
+  assert.equal(parseCompanyLegacyStripeArgs(["--target", "user-local"]).mode, "dry-run");
   const digest = "a".repeat(64);
+  const confirmations = [
+    "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
+    "--confirm-user-backup", "--confirm-user-local-apply",
+    "--expected-company-total", "1", "--expected-company-field-documents", "1",
+    "--expected-stripe-data-documents", "0",
+  ];
+  assert.equal(parseCompanyLegacyStripeArgs([
+    "--target", "user-local", "--apply", "--plan-digest", digest, ...confirmations,
+  ]).mode, "apply");
   for (const args of [
     [
       "--target",
@@ -424,6 +422,11 @@ test("user-local parses only as dry-run and rejects every mutating mode", () => 
       "--backup-receipt",
       digest,
     ],
+    ["--target", "user-local", "--create-backup", "--plan-digest", digest, ...confirmations],
+    ["--target", "user-local", "--restore", ...confirmations],
+    ["--target", "user-local", "--apply", "--plan-digest", digest, ...confirmations.filter((value) => value !== "--confirm-user-backup")],
+    ["--target", "user-local", "--apply", "--plan-digest", digest, ...confirmations.slice(0, -1), "1"],
+    ["--target", "user-local", "--apply", "--plan-digest", digest, "--backup-id", "b".repeat(32), ...confirmations],
   ]) {
     assert.throws(
       () => parseCompanyLegacyStripeArgs(args),
@@ -682,6 +685,153 @@ test("backup is exclusive, restricted to .codex-test, and receipt-bound", async 
   );
   assert.equal(legacyBackup.payload.schemaVersion, 1);
   assert.equal(legacyBackup.payload.planDigest, "1".repeat(64));
+});
+
+test("user-local stability requires two identical complete inventories", async () => {
+  const first = legacyState({ stripeData: [] });
+  const changed = legacyState({ stripeData: [], companies: [company("COMPANY_SECRET_A", {
+    companyName: "drift", stripeCustomerId: "cus_sensitive_value",
+  })] });
+  let calls = 0;
+  await assert.rejects(
+    () => readStableUserLocalPlan({}, USER_LOCAL_STRIPE_MIGRATION_TARGET, {
+      readState: async () => (++calls === 1 ? first : changed),
+      delay: async (milliseconds) => assert.equal(milliseconds, 1_000),
+    }),
+    ({ code }) => code === "stability-drift",
+  );
+  assert.equal(calls, 2);
+});
+
+function userLocalApplyArgs(planDigest) {
+  return [
+    "--target", "user-local", "--apply", "--plan-digest", planDigest,
+    "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
+    "--confirm-user-backup", "--confirm-user-local-apply",
+    "--expected-company-total", "1", "--expected-company-field-documents", "1",
+    "--expected-stripe-data-documents", "0",
+  ];
+}
+
+function userLocalCliDependencies(fake) {
+  return {
+    env: {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "(default)",
+    },
+    readRepositoryPreconditionsImpl: async () => [],
+    readRepositoryIdentity: async () => ({ head: "c".repeat(40), toolDigest: "d".repeat(64) }),
+    createRuntime: async () => ({
+      firestore: fake.firestore,
+      deleteFieldValue: () => DELETE_FIELD,
+    }),
+    delay: async () => {},
+  };
+}
+
+test("user-local CLI applies only after human backup confirmation and emits no receipt fields", async () => {
+  const initial = legacyState({ stripeData: [] });
+  const fake = createFirestoreFake(initial.companies);
+  const plan = planCompanyLegacyStripeMigration({
+    ...await readCompanyLegacyStripeState(fake.firestore),
+    target: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  });
+  const applyResult = await executeCompanyLegacyStripeCli({
+    ...userLocalCliDependencies(fake),
+    args: userLocalApplyArgs(plan.planDigest),
+  });
+  assert.equal("stripeCustomerId" in fake.documents.get("Companies/COMPANY_SECRET_A").data, false);
+  assert.equal(applyResult.exitCode, 0);
+  assert.equal(JSON.stringify(applyResult.summary).includes("receipt"), false);
+  assert.equal(JSON.stringify(applyResult.summary).includes("cus_sensitive_value"), false);
+});
+
+test("user-local transaction update-identity drift leaves legacy fields untouched", async () => {
+  const initial = legacyState({ stripeData: [] });
+  const fake = createFirestoreFake(initial.companies);
+  const plan = planCompanyLegacyStripeMigration({
+    ...await readCompanyLegacyStripeState(fake.firestore),
+    target: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  });
+  const runTransaction = fake.firestore.runTransaction.bind(fake.firestore);
+  fake.firestore.runTransaction = async (callback) => {
+    fake.documents.get("Companies/COMPANY_SECRET_A").version += 1;
+    return runTransaction(callback);
+  };
+  await assert.rejects(
+    () => executeCompanyLegacyStripeCli({
+      ...userLocalCliDependencies(fake),
+      args: userLocalApplyArgs(plan.planDigest),
+    }),
+    ({ code }) => code === "plan-digest-mismatch",
+  );
+  const companyData = fake.documents.get("Companies/COMPANY_SECRET_A").data;
+  assert.equal(companyData.stripeCustomerId, "cus_sensitive_value");
+  assert.equal("subscription" in companyData, true);
+  assert.equal(fake.calls.some(({ type }) => type !== "get"), false);
+});
+
+test("user-local transaction commit failure preserves all legacy fields", async () => {
+  const initial = legacyState({ stripeData: [] });
+  const fake = createFirestoreFake(initial.companies, { failCommit: true });
+  const plan = planCompanyLegacyStripeMigration({
+    ...await readCompanyLegacyStripeState(fake.firestore),
+    target: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  });
+  await assert.rejects(() => executeCompanyLegacyStripeCli({
+    ...userLocalCliDependencies(fake),
+    args: userLocalApplyArgs(plan.planDigest),
+  }));
+  const companyData = fake.documents.get("Companies/COMPANY_SECRET_A").data;
+  assert.equal(companyData.stripeCustomerId, "cus_sensitive_value");
+  assert.equal("subscription" in companyData, true);
+  assert.equal(fake.calls.filter(({ type }) => type === "update").length, 1);
+});
+
+test("user-local dirty identity stops before Admin initialization or Firestore read", async () => {
+  const counters = { runtime: 0, read: 0 };
+  const digest = "a".repeat(64);
+  await assert.rejects(
+    () => executeCompanyLegacyStripeCli({
+      args: ["--target", "user-local", "--apply", "--plan-digest", digest,
+        "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
+        "--confirm-user-backup", "--confirm-user-local-apply",
+        "--expected-company-total", "1", "--expected-company-field-documents", "1",
+        "--expected-stripe-data-documents", "0"],
+      env: { GCLOUD_PROJECT: "air-guard-v2-dev", FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", FIRESTORE_DATABASE_ID: "(default)" },
+      readRepositoryPreconditionsImpl: async () => [],
+      readRepositoryIdentity: async () => { throw Object.assign(new Error("dirty"), { code: "repository-identity-invalid" }); },
+      createRuntime: async () => { counters.runtime += 1; return { firestore: {} }; },
+      readState: async () => { counters.read += 1; return {}; },
+    }),
+    ({ code }) => code === "repository-identity-invalid",
+  );
+  assert.deepEqual(counters, { runtime: 0, read: 0 });
+});
+
+test("user-local changed observed counts stop with write zero", async () => {
+  const fake = createFirestoreFake([company()]);
+  const plan = planCompanyLegacyStripeMigration({
+    ...await readCompanyLegacyStripeState(fake.firestore),
+    target: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  });
+  await assert.rejects(
+    () => executeCompanyLegacyStripeCli({
+      args: ["--target", "user-local", "--apply", "--plan-digest", plan.planDigest,
+        "--confirm-project", "air-guard-v2-dev", "--confirm-quiet-window",
+        "--confirm-user-backup", "--confirm-user-local-apply",
+        "--expected-company-total", "1", "--expected-company-field-documents", "1",
+        "--expected-stripe-data-documents", "0"],
+      env: { GCLOUD_PROJECT: "air-guard-v2-dev", FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", FIRESTORE_DATABASE_ID: "(default)" },
+      readRepositoryPreconditionsImpl: async () => [],
+      readRepositoryIdentity: async () => ({ head: "c".repeat(40), toolDigest: "d".repeat(64) }),
+      createRuntime: async () => ({ firestore: fake.firestore, deleteFieldValue: () => DELETE_FIELD }),
+      delay: async () => {},
+    }),
+    ({ code }) => code === "expected-count-mismatch",
+  );
+  assert.equal(fake.calls.some(({ type }) => type !== "get"), false);
 });
 
 function validRepositoryInputs() {
