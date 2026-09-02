@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { spawn } from "node:child_process";
+import { readFile, unlink } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { resolve } from "node:path";
 import { after, before, test } from "node:test";
+import { fileURLToPath } from "node:url";
 import { initializeApp, deleteApp } from "firebase/app";
 import {
   connectAuthEmulator,
@@ -43,6 +46,13 @@ import {
 import {
   createUserEmailReservationId,
 } from "../../functions/modules/auth/createTemporaryUser.js";
+import {
+  inspectStripeMigrationRepositoryPreconditions,
+  planCompanyLegacyStripeMigration,
+  readCompanyLegacyStripeState,
+  summarizeCompanyLegacyStripePlan,
+  verifyCompanyLegacyStripePostState,
+} from "../../scripts/migrate-company-legacy-stripe.mjs";
 
 function parseEmulatorHost(name) {
   const value = process.env[name];
@@ -75,6 +85,10 @@ const requireFromFunctions = createRequire(
   new URL("../../functions/package.json", import.meta.url),
 );
 const { getAuth: getAdminAuth } = requireFromFunctions("firebase-admin/auth");
+const {
+  Timestamp: AdminTimestamp,
+  getFirestore: getAdminFirestore,
+} = requireFromFunctions("firebase-admin/firestore");
 
 async function loadRebuildApis() {
   if (!rebuildApis) {
@@ -2374,6 +2388,251 @@ test("Firestore Rules deny all StripeData operations for every actor and nested 
   );
   await assertFails(getDocs(query(sameTenantCollection)));
   await assertFails(getDocs(query(otherTenantCollection)));
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const company of Object.values(CODEX_LOCAL_COMPANIES)) {
+      const existing = doc(
+        context.firestore(),
+        "Companies",
+        company.id,
+        "StripeData",
+        "existing-session",
+      );
+      await deleteDoc(doc(existing, "Nested", "existing-child"));
+      await deleteDoc(existing);
+    }
+  });
+});
+
+test("legacy Stripe migration rehearses backup, atomic apply, clean rerun, and restore on synthetic data", async () => {
+  await loadRebuildApis();
+  const firestore = getAdminFirestore();
+  const companyId = "codex-stripe03-migration-company";
+  const companyPath = `Companies/${companyId}`;
+  const stripePath = `${companyPath}/StripeData/synthetic-session`;
+  const sentinelPath = `${companyPath}/MigrationSentinels/untouched`;
+  const repositoryRoot = new URL("../../", import.meta.url);
+  const backupPath = resolve(
+    fileURLToPath(repositoryRoot),
+    ".codex-test",
+    "runtime",
+    `stripe03-backup-${process.pid}.json`,
+  );
+  const missingStripeChildPath =
+    `${companyPath}/StripeData/missing-parent/Nested/child`;
+  const missingCompanyPath = "Companies/codex-stripe03-missing-company";
+  const missingCompanyChildPath =
+    `${missingCompanyPath}/StripeData/missing-parent/Nested/child`;
+  const companyRef = firestore.doc(companyPath);
+  const stripeRef = firestore.doc(stripePath);
+  const sentinelRef = firestore.doc(sentinelPath);
+  const missingCompanyRef = firestore.doc(missingCompanyPath);
+
+  try {
+    await companyRef.create({
+      fixture: "stripe03-synthetic-only",
+      nested: { preserved: true },
+      stripeCustomerId: "cus_synthetic_only",
+      subscription: {
+        id: "sub_synthetic_only",
+        status: "trialing",
+        currentPeriodEnd: new AdminTimestamp(2_000_000_000, 123),
+        employeeLimit: 12,
+      },
+    });
+    await stripeRef.create({
+      price: "price_synthetic_only",
+      success_url: "https://synthetic.invalid/success",
+      cancel_url: "https://synthetic.invalid/cancel",
+      createdAt: new AdminTimestamp(1_900_000_000, 456),
+    });
+    await sentinelRef.create({ preserved: "sentinel-value" });
+
+    const readJson = async (relativePath) =>
+      JSON.parse(await readFile(new URL(relativePath, repositoryRoot), "utf8"));
+    assert.deepEqual(
+      inspectStripeMigrationRepositoryPreconditions({
+        rulesSource: await readFile(
+          new URL("firestore.rules", repositoryRoot),
+          "utf8",
+        ),
+        rootManifest: await readJson("package.json"),
+        rootLock: await readJson("package-lock.json"),
+        functionsManifest: await readJson("functions/package.json"),
+        functionsLock: await readJson("functions/package-lock.json"),
+      }),
+      [],
+    );
+
+    const before = planCompanyLegacyStripeMigration(
+      await readCompanyLegacyStripeState(firestore),
+    );
+    assert.deepEqual(before.findings, []);
+    assert.equal(summarizeCompanyLegacyStripePlan(before).status, "changes-required");
+    assert.equal(before.rootDeletes.length, 1);
+    assert.equal(before.stripeDeletes.length, 1);
+
+    const migrationScript = fileURLToPath(
+      new URL("../../scripts/migrate-company-legacy-stripe.mjs", import.meta.url),
+    );
+    const runMigration = async (args, expectedStatus) => {
+      const result = await new Promise((resolveResult, rejectResult) => {
+        const child = spawn(
+          process.execPath,
+          [migrationScript, "--target", "codex-local", ...args],
+          {
+            cwd: fileURLToPath(repositoryRoot),
+            env: process.env,
+            windowsHide: true,
+          },
+        );
+        let stdout = "";
+        let stderr = "";
+        child.stdout.setEncoding("utf8");
+        child.stderr.setEncoding("utf8");
+        child.stdout.on("data", (chunk) => {
+          stdout += chunk;
+        });
+        child.stderr.on("data", (chunk) => {
+          stderr += chunk;
+        });
+        child.once("error", rejectResult);
+        const timer = setTimeout(() => {
+          child.kill();
+          rejectResult(new Error("Synthetic migration command timed out."));
+        }, 30_000);
+        child.once("close", (status) => {
+          clearTimeout(timer);
+          resolveResult({ status, stdout, stderr });
+        });
+      });
+      assert.equal(result.status, expectedStatus, result.stderr);
+      for (const sensitive of [
+        companyId,
+        "synthetic-session",
+        "cus_synthetic_only",
+        "sub_synthetic_only",
+        "price_synthetic_only",
+        "synthetic.invalid",
+        "missing-parent",
+        "codex-stripe03-missing-company",
+        companyPath,
+        backupPath,
+      ]) {
+        assert.equal(result.stdout.includes(sensitive), false, sensitive);
+        assert.equal(result.stderr.includes(sensitive), false, sensitive);
+      }
+      return JSON.parse(result.stdout.trim() || result.stderr);
+    };
+
+    const dryRun = await runMigration([], 2);
+    assert.equal(dryRun.status, "changes-required");
+    assert.equal(dryRun.planDigest, before.planDigest);
+    const backupReport = await runMigration(
+      [
+        "--create-backup",
+        "--plan-digest",
+        dryRun.planDigest,
+        "--backup-path",
+        backupPath,
+      ],
+      0,
+    );
+    assert.match(backupReport.receiptHash, /^[a-f0-9]{64}$/u);
+
+    await firestore.doc(missingStripeChildPath).create({ fixture: true });
+    await firestore.doc(missingCompanyChildPath).create({ fixture: true });
+    const blockedDryRun = await runMigration([], 3);
+    assert.equal(blockedDryRun.status, "blocked");
+    assert.equal(
+      blockedDryRun.findingCounts["stripe-data-descendant-present"],
+      2,
+    );
+    assert.equal(blockedDryRun.findingCounts["stripe-data-orphan"], 1);
+    const blockedApply = await runMigration(
+      [
+        "--apply",
+        "--plan-digest",
+        dryRun.planDigest,
+        "--backup-path",
+        backupPath,
+        "--backup-receipt",
+        backupReport.receiptHash,
+      ],
+      3,
+    );
+    assert.equal(blockedApply.code, "plan-blocked");
+    const unchangedCompany = (await companyRef.get()).data();
+    assert.equal(unchangedCompany.stripeCustomerId, "cus_synthetic_only");
+    assert.equal(unchangedCompany.subscription.employeeLimit, 12);
+    assert.equal((await stripeRef.get()).exists, true);
+
+    await firestore.doc(missingStripeChildPath).delete();
+    await firestore.doc(missingCompanyChildPath).delete();
+    const unblockedDryRun = await runMigration([], 2);
+    assert.equal(unblockedDryRun.planDigest, dryRun.planDigest);
+    const applyReport = await runMigration(
+      [
+        "--apply",
+        "--plan-digest",
+        dryRun.planDigest,
+        "--backup-path",
+        backupPath,
+        "--backup-receipt",
+        backupReport.receiptHash,
+      ],
+      0,
+    );
+    assert.equal(applyReport.status, "clean");
+
+    const post = await verifyCompanyLegacyStripePostState(firestore, before);
+    assert.equal(post.writeCount, 0);
+    assert.equal(summarizeCompanyLegacyStripePlan(post).status, "clean");
+    assert.deepEqual((await sentinelRef.get()).data(), {
+      preserved: "sentinel-value",
+    });
+    const migratedCompany = (await companyRef.get()).data();
+    assert.equal("stripeCustomerId" in migratedCompany, false);
+    assert.equal("subscription" in migratedCompany, false);
+    assert.equal(migratedCompany.fixture, "stripe03-synthetic-only");
+    assert.equal((await stripeRef.get()).exists, false);
+
+    const cleanRerun = await runMigration([], 0);
+    assert.equal(cleanRerun.status, "clean");
+    assert.equal(cleanRerun.writeCounts.total, 0);
+
+    const restoreReport = await runMigration(
+      [
+        "--restore",
+        "--backup-path",
+        backupPath,
+        "--backup-receipt",
+        backupReport.receiptHash,
+      ],
+      0,
+    );
+    assert.equal(restoreReport.mode, "restore");
+    const restoredCompany = (await companyRef.get()).data();
+    assert.equal(restoredCompany.stripeCustomerId, "cus_synthetic_only");
+    assert.equal(restoredCompany.subscription.employeeLimit, 12);
+    assert.equal((await stripeRef.get()).exists, true);
+    assert.deepEqual((await sentinelRef.get()).data(), {
+      preserved: "sentinel-value",
+    });
+  } finally {
+    try {
+      await Promise.all([
+        firestore.recursiveDelete(companyRef),
+        firestore.recursiveDelete(missingCompanyRef),
+      ]);
+    } finally {
+      try {
+        await unlink(backupPath);
+      } catch (error) {
+        if (error?.code !== "ENOENT") throw error;
+      }
+    }
+  }
 });
 
 test("Storage Rules reject unauthenticated SecurityReports access", async () => {
