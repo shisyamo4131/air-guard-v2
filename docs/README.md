@@ -1,7 +1,7 @@
 # AirGuardV2 ドキュメント案内
 
 - 状態: 運用中
-- 最終確認日: 2026-09-01
+- 最終確認日: 2026-09-02
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -24,9 +24,9 @@
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |
 | local Emulator・backend検証 | [local Emulator検証](runbooks/local-emulator-testing.md)、ADR 0005・0014 | `firebase.json`、`firebase.codex-test.json`、`.env`の変数名のみ、対象test |
 | local UI・browser受入れ | [local UI検証](runbooks/local-ui-testing.md)、ADR 0006・0014 | 対象画面・manual、Emulator・server、browser操作境界 |
-| data migration | [data migration](runbooks/data-migrations.md)、関連ADR | target、dry-run、apply、post-check、backup、rollback、明示的承認 |
+| data migration（local / Dev、小規模を含む） | [data migration](runbooks/data-migrations.md)、関連ADR | Devを含む場合は[Dev deploy runbook](runbooks/dev-deployment.md)も必読。target、dry-run、apply、post-check、maintenance・復旧手段の個別判断、明示的承認 |
 | maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md)、関連ADR | normal stop、quiet period、監視Function、連続dry-run、snapshot、rollback、明示的承認 |
-| Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | 対象serviceの設定・test、release checkpoint、機能・migration固有ADR、backup、rollback、明示的承認 |
+| Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | migrationを含む場合は[data migration](runbooks/data-migrations.md)も必読。対象serviceの設定・test、release checkpoint、固有ADR、復旧、明示的承認 |
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | 関連package更新・公開、critical identifier確認 | [package release](runbooks/package-release.md)、[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md) | source/tag manifest、release evidence、consumer manifest/lock、`scripts/check-schemas-package-adoption.ps1`、network・公開承認 |
 | 検証方針の選択・移行・実測比較 | [運用・開発手順のVerification Matrix](operations.md#verification-matrix)、[検証policy](../governance/verification-policy.json)、[ADR 0040](decisions/0040-impact-based-staged-verification.md)、[検証証拠索引](verification/README.md) | change class、stage、gate ID・exact command、includes、invalidatedBy、pre/post JSON、coverage・failure-detection equivalence |

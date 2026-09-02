@@ -1,7 +1,7 @@
 # Dev環境deploy runbook
 
 - 状態: Confirmed
-- 最終確認日: 2026-08-27
+- 最終確認日: 2026-09-02
 - 対象: `air-guard-v2-dev`へのbuild、Firebase deploy、gcloud操作、remote検証
 - 対象外: Prod、新しいdata migration、破壊的repair、未承認service・dataへの拡張
 - 関連判断: [ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)
@@ -124,6 +124,8 @@ gcloudを使うsnapshot等の変更commandは、同じtrust初期化方式と明
 7. artifactのsource HEAD、Dev project、Emulator無効、必要file、tracked差分不在を確認する。
 8. bounded Dev release checkpointの承認範囲と現在状態を再照合する。
 
+Dev service accountを利用者から安全に受け渡す場合は、利用者levelの`AIRGUARD_DEV_CREDENTIAL_PATH`について、設定有無、参照先が既存JSON fileであること、JSONの`type`と`project_id`が対象Dev projectに一致することだけを確認する。pathと内容は表示しない。確認したprocess内だけで`GOOGLE_APPLICATION_CREDENTIALS`へ渡し、repository、応答、log、永続設定へ複写しない。
+
 Dev server、Chrome受入れ、Codex専用UI buildはHosting release artifactの代替ではない。deploy対象と同じbuild commandをremote変更前に完了させる。
 
 `injectManifest`を使用する場合、Service Worker sourceに`self.__WB_MANIFEST`挿入点が存在し、現在のbuild toolが要求するsource contractをtestで固定する。`globPatterns: []`でも挿入点は必要である。2026-08-27のDev releaseでは、この不整合をmaintenance後に初めて検出したため、以後はrelease buildをpreflightへ移した。
@@ -140,6 +142,8 @@ Dev server、Chrome受入れ、Codex専用UI buildはHosting release artifactの
 | 破壊的repair | exact対象、事前事後証拠、復旧、dry-run相当 | 承認された限定repairだけ | 別の明示承認。既存checkpointへ追加しない |
 
 releaseが複数classへ該当する場合は最も強いdata・互換性境界を採用する。maintenanceはclient route制御であり、Rules、Functions、Admin SDK、scheduled処理、開始済みwriteを排他しない。
+
+data migrationを含むreleaseは、ここへdry-run・apply・post-checkを複写せず、[小規模Dev migrationの共通手順](data-migrations.md#小規模dev-migrationの共通手順)とmigration固有節・ADRを合わせて読む。
 
 ## Deployと検証
 
@@ -166,6 +170,8 @@ UWB初回Dev導入は、client/server/data contractの同時変更と予約migra
 ## legacy Stripe scaffold固有cutover
 
 STRIPE-05は、Stripe未使用・外部からの更新経路なし、現行client・Functionsに旧field writerなし、Company rootと`StripeData`のclient write拒否、旧2 fieldだけの冪等な削除を確認済みである。このためmaintenance、quiet period、外部Stripeのinventory・前後確認、migration固有backup・旧field復元を行わない。Rules・Functions・Hostingを先行反映し、UWBと同じFirestore全体snapshot、fresh dry-run、4 Company・内部`StripeData` 0の停止条件、1 transactionの旧2 field削除、post-check、clean再実行の順とする。全体snapshotは対象外dataを変更した重大事故の別承認repair候補であり、通常rollbackや自動restoreには使用しない。
+
+2026-09-02に上記順序をrelease commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`で実測した。Rules compile/release、Functions 40件、Hosting 180 files、配信artifact一致、indexとService Workerの`no-store`、version assetの`immutable`、直近60分のFunctions ERROR 0件を確認した。snapshot command完了後にreceipt parserだけが失敗したが、同じexportを再実行せず、対象prefixのmetadata objectが1件だけであること、対応operationが1件だけで`done=true`かつerrorなしであることをread-onlyで照合した。metadataまたはoperationを一意に照合できない場合は、重複snapshotを作らず停止する。
 
 ## 停止とrollback
 

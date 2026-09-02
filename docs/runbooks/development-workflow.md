@@ -1,7 +1,7 @@
 # 開発workflow runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-29
+- 最終確認日: 2026-09-02
 - 役割: 通常開発の担当、変更単位、UI error・loading、client操作policy
 
 ## 担当と変更単位
@@ -13,6 +13,16 @@
 - UIまたは利用者操作へ影響するfeatureは、Codexの自動検証と必要なin-app UI smoke後も利用者受入れ待ちとし、別途承認された実際の利用環境で利用者が最終UI acceptanceを完了するまで最終完了としない。
 - application implementation fileを1 fileずつ利用者が確認する手順は、checkpointが明示した場合だけ適用する。通常は承認済みsegment単位で連続実装・検証し、変更挙動、security境界、test、残存risk、rollback、利用者確認項目をまとめて提示する。
 - 認証・認可・tenant分離は一括改修せず、独立して説明・review・rollbackできる最小segmentを1件ずつ扱う。
+
+## 試行段階の高速な開発loop
+
+1. 実装前に、現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。
+2. 実装可能性とtest・失敗経路の2視点を原則並行でreviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。回数を固定せず、指摘で設計が変わった場合だけ再reviewする。
+3. 利用者確認はfile単位でなくcheckpointまたはfeature boundary単位で行う。承認済み範囲内の修正、対象testの反復、local commitでは再確認を求めず、仕様、data対象、外部作用、承認境界が広がる場合だけ停止する。
+4. 実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。segmentの終わりに独立reviewと影響範囲の回帰を行う。
+5. phaseまたはreleaseの最後に、最終状態へ選択済みcompletion gateまたは包括testを1回実行する。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
+
+このloopは[Verification Matrix](../operations.md#verification-matrix)と`governance/verification-policy.json`のiteration、targeted、completion、release-only区分を実行順へ落としたもので、既存の安全境界や外部作用の承認を緩和しない。
 
 ## 非同期UI操作のerror・loading責務
 

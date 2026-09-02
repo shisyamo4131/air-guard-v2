@@ -6,6 +6,21 @@
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
+## 小規模Dev migrationの共通手順
+
+小規模であることだけを根拠に確認や復旧手段を省略しない。一方、すべてのmigrationへmaintenance、全体snapshot、専用backup、外部service確認を一律に追加しない。対象writer、旧新runtimeの互換性、追加・更新・削除の別、冪等性、件数、外部作用、失敗時の復旧難度を個別ADR・script・release checkpointで確認し、必要なものだけを選ぶ。
+
+1. 対象project、database、release commit、許可するwrite、期待件数、停止条件、復旧方法、UI影響を固定する。migration固有のADRまたは節と専用scriptがない場合は開始しない。
+2. maintenanceは実際のwriterと互換性から、復旧手段は別backupなし、PITR、Firestore全体snapshot、migration専用backupから理由付きで選ぶ。別backupなしは、追加だけ、再構築可能、PITR等で復旧可能など、data loss時の回復経路と理由を固定できる場合だけ許可する。削除・上書きで回復経路がない場合は許可しない。前のmigrationの例外を流用しない。
+3. credential、project、database、database edition、Emulator不使用、cleanな固定commitをremote接続またはwrite前に確認する。値、document ID、credential、実dataを証拠へ出さない。
+4. 旧新runtimeの併存順を決め、必要なRules・Functions・clientを[Dev deploy runbook](dev-deployment.md)に従って互換な順序で反映する。
+5. fresh dry-runを実行し、計画digest、期待件数、停止条件を固定する。変更予定を専用終了codeで示すtoolでは、期待された計画状態と実際の失敗を区別して記録する。
+6. 最初のapplyは独立した1回として記録し、tool内post-checkの成功を確認する。その後、独立processのdry-runでcleanを確認する。失敗時に盲目的な再試行をせず、現在状態を再取得・再計画して固有契約に従う。同一目的の確認を回数だけで反復せず、quiet periodや一貫性確認など別の証拠目的を持つ固有checkは省略しない。
+7. UI影響がある場合だけ主要画面を確認し、remote状態とerror logはreleaseで影響したserviceに限定して確認する。件数、digest、operation状態、各commandの結果とexit statusを記録する。
+8. 計画差分、未知状態、部分失敗、証拠不一致があれば、推測deleteや自動rollbackを行わない。現在状態を再読込して計画を作り直し、承認範囲が変わる場合は停止する。
+
+STRIPE-05のmaintenance不要、外部Stripe確認不要、migration専用backup不要という判断は、Stripe未使用、外部更新なし、writer 0、旧2 fieldだけの冪等な削除、全体snapshotという固有証拠に基づく。この例外を将来の小規模migrationへ継承しない。
+
 ## Company legacy Stripe scaffold removal（codex-local / user-local / Dev）
 
 [ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)に従い、`scripts/migrate-company-legacy-stripe.mjs`は既存Company rootの`stripeCustomerId`・`subscription`だけを全target共通の削除対象にする。`codex-local` rehearsalでは既知形状の直下`StripeData`も削除できるが、`user-local`とDevは`StripeData` 0件を必須とする。STRIPE-03の経路は`demo-air-guard-v2-codex`、`(default)` database、`127.0.0.1:18080`の組合せだけを許可する。STRIPE-04は利用者用Emulatorの`air-guard-v2-dev`、`(default)` database、`127.0.0.1:8080`だけを許可する。Devはremote `air-guard-v2-dev`、`(default)` database、明示credential、Emulator無効の組合せだけを許可し、内部`StripeData`が1件でもあれば変更せず停止する。Prodは提供しない。手作業、Firebase Console、汎用scriptで代替してはならない。
@@ -72,6 +87,7 @@ node --use-system-ca scripts/migrate-company-legacy-stripe.mjs --target dev
 - applyは元の4 Companyをtransaction内で再読込し、`stripeCustomerId`・`subscription`だけを削除する。通常のCompany更新は非対象fieldを保持し、停止理由にしない。`StripeData`、Companyの他field・他subcollectionを変更しない。
 - post-checkは元の4 Companyの存在、旧2 field 0、内部`StripeData` 0、再dry-run cleanを確認する。部分完了は現在状態を再確認して同じ冪等処理を再実行し、自動rollbackしない。
 - Devでは`--create-backup`と`--restore`を提供しない。旧2 fieldは未使用scaffoldの恒久削除であり、migration固有backup・data rollbackを行わない。全体snapshotは対象外dataを変更した重大事故に限る別承認repair候補で、通常の全体restoreは行わない。
+- 2026-09-02にrelease commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`をDevへ反映した。Firestore RulesとFunctions 40件、Hosting 180 filesの反映後、全Firestore snapshotを取得し、Company 4件の旧2 fieldだけを1 transactionで削除した。`StripeData`は前後とも0件で、独立post dry-runはCompany 4件、旧field 0件、`StripeData` 0件、finding 0件のcleanだった。外部Stripe、maintenance、migration専用backup、自動restore、Prod、pushは実施していない。
 
 ## 旧CCB Company設定migration（Historical / unavailable）
 

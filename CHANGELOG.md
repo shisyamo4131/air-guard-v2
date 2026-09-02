@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- STRIPE-05のDev migrationについて、Stripe未使用・Stripe側からの更新なしという利用者確認に基づき、maintenanceと外部Stripe確認を行わず、UWBと同じ全Firestore snapshotだけを取得して進める契約へ改めた。Dev専用toolはexact project/database/credential、clean source、Company 4件、`StripeData` 0件、計画一致を確認し、`stripeCustomerId`・`subscription`だけをtransactionで削除して他fieldを保持する。移行専用backup・restoreは提供せず、重大事故時だけ全体snapshotを修復判断の材料にする。一般reviewで検出した重複post-check 1回を削減し、専用35/35、全domain 766/766、隔離Emulator 108/108、一般・security reviewを成功させた。Dev・network・remote/data・deploy・外部Stripe・pushは未変更である。
+- STRIPE-05をcommit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`からDevへ反映した。Rules、Functions 40件、Hosting 180 filesを反映し、配信artifact一致を確認した後、Firestore全体snapshotを取得してCompany 4件の`stripeCustomerId`・`subscription`だけを1 transactionで削除した。`StripeData`は前後0件、独立post dry-runはCompany 4件・旧field 0件・finding 0件のclean、直近60分のFunctions ERRORは0件だった。会社管理者Chromeでダッシュボードと会社設定の正常表示、Stripe表示なし、廃止済み`/settings/checkout`のダッシュボード復帰を確認し、利用者もDev反映後の確認を問題なしと受け入れた。maintenance、外部Stripe確認、migration専用backup・restore、Prod、pushは実施していない。STRIPE-06まで完了し、roadmapを100%でcloseした。
+
+- 今後の小規模Dev migration向けに、対象・writer・互換性・復旧難度からmaintenanceと復旧手段を個別選択し、固定commitと接続先確認、fresh dry-run、digest・件数固定、apply 1回、独立clean dry-run、必要な画面・remote log確認へ進む共通手順を追加した。既存のproject文書案内とrunbook索引からDev deploy・data migrationを相互参照し、実装中は対象testだけ、segment末に影響範囲、phase・release末に包括testを1回とする高速loopを明文化した。権限、外部作用、安全境界は変更していない。
 
 - STRIPE-04の利用者用Emulator migrationを完了した。既存`./saved-data`を変更しないimport-only rehearsalと、同一baselineからのimport＋export-on-exit確定実行で、Company 1件の`stripeCustomerId`・`subscription`だけを削除した。各実行後の`StripeData`は0件、再dry-runはcleanで、会社設定・稼働予定管理・配置管理の正常表示とapp error 0件を確認した。確定保存後のsnapshotもimport-onlyで再読込みし、削除対象0件を確認した。利用者承認により別backupと確定後のpre-migration data rollbackを要求せず、無関係なCompany編集も受入れ条件から外した。migrationによるCompanyの他field・他業務dataへのwriteはなく、Dev/Prod・外部Stripe・pushは変更していない。roadmapは50%から70%へ更新した。
 
