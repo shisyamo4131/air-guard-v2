@@ -6,11 +6,11 @@
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
-## Company legacy Stripe scaffold removal（Implemented for isolated codex-local rehearsal）
+## Company legacy Stripe scaffold removal（codex-local rehearsal / user-local dry-run）
 
-[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)に従い、`scripts/migrate-company-legacy-stripe.mjs`は既存Company rootの`stripeCustomerId`・`subscription`と直下`StripeData`だけを対象にする。STRIPE-03では`demo-air-guard-v2-codex`と`127.0.0.1:18080`の組合せだけを許可し、`user-local`、Dev、Prod、remote targetを提供しない。手作業、Firebase Console、汎用scriptで代替してはならない。
+[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)に従い、`scripts/migrate-company-legacy-stripe.mjs`は既存Company rootの`stripeCustomerId`・`subscription`と直下`StripeData`だけを対象にする。STRIPE-03の変更経路は`demo-air-guard-v2-codex`、`(default)` database、`127.0.0.1:18080`の組合せだけを許可する。STRIPE-04では、利用者用`air-guard-v2-dev`、`(default)` database、`127.0.0.1:8080`の組合せに値非出力のdry-runだけを追加した。Dev、Prod、remote targetは提供しない。手作業、Firebase Console、汎用scriptで代替してはならない。
 
-既定は値非出力のdry-runで、件数、分類、匿名化subject hash、64文字のplan digestだけを表示する。Company ID、path、field値、Stripe形式の値、秘密情報は標準出力・errorへ出さない。dry-runで変更予定がある場合は終了code 2、blockerは3、target拒否は78である。
+既定は値非出力のdry-runで、短い対象名、件数、分類、匿名化subject hash、64文字のplan digestだけを表示する。project、database、接続先、Company ID、path、field値、Stripe形式の値、秘密情報は標準出力・errorへ出さない。対象の完全なidentityは内部のplan digestに含め、`codex-local`と`user-local`の計画を取り違えられないようにする。dry-runで変更予定がある場合は終了code 2、blockerは3、target拒否は78である。
 
 ```powershell
 # 専用Emulator process内の環境を使用する。まず値を出さない計画を確認する。
@@ -29,12 +29,25 @@ node scripts/migrate-company-legacy-stripe.mjs --target codex-local
 node scripts/migrate-company-legacy-stripe.mjs --target codex-local --restore --backup-path .codex-test/runtime/stripe03-backup.json --backup-receipt <64文字のreceipt>
 ```
 
+利用者用Emulatorでは、次の値非出力dry-runだけを許可する。3つの環境変数が不足または不一致ならAdmin SDK初期化前に拒否する。
+
+```powershell
+$env:GCLOUD_PROJECT = "air-guard-v2-dev"
+$env:FIRESTORE_EMULATOR_HOST = "127.0.0.1:8080"
+$env:FIRESTORE_DATABASE_ID = "(default)"
+node scripts/migrate-company-legacy-stripe.mjs --target user-local
+```
+
+- `user-local`の`--create-backup`、`--apply`、`--restore`は引数検査で拒否し、Firestoreを読まない。今回のdry-run結果はその時点の読取記録であり、後続の変更承認や適用用digestではない。
+- 利用者用dataのbackup保管場所、暗号化、access権、保持、削除、復旧確認はまだ未設計である。合成data専用の`.codex-test` backupを利用者用dataへ流用せず、手作業、Firebase Console、汎用scriptによる削除・退避・復元で代替しない。
+- 利用者用backup、変更、復元は、対象件数、保存先、復旧方法、停止条件、直前・直後確認を固定した別checkpointと利用者承認まで実行しない。
+
 - migrationはCompany rootを作成・削除・全体置換しない。更新は旧2 fieldの削除だけ、document削除は既知形状の直下`StripeData`だけである。Companyの他fieldと他subcollectionは変更しない。
 - 旧`subscription`は`null`または既知4 fieldの完全形だけ、`StripeData`は撤去前実装が生成し得たrequest・success・failureの3完全形だけを許可する。未知・部分形、親Company不在、親documentが存在しない入れ子を含む全nested dataは変更前にblockする。
 - apply前にexact target、Rules sourceの補助検査、root/FunctionsのSchemas version・取得元・integrity一致、backup、直前digest一致、状態再検査、400 writeのtool上限を確認する。全変更は一つのtransactionへ登録し、1件でも失敗すれば全件を変更しない。
 - backupは`.codex-test`配下の新規fileだけを許可し、既存fileを上書きしない。receiptはfile変更の検出値であり、作成者や真正性の証明ではない。読込時にpath、親子関係、重複、値形状、件数、対象内容digestを再検証する。合成dataだけを扱い、実data用の保管・暗号化・保持契約には使用しない。
 - post-checkはlegacy field 0、`StripeData` 0、Company件数不変、Company非対象field不変、再dry-run cleanを必須とする。復旧はexact preimageの対象fieldと`StripeData`だけを一括で戻し、現在状態と衝突する場合はwrite 0で停止する。
-- Rules source検査は補助であり、実際の拒否保証は専用Emulatorの全actor・全階層deny testを正本とする。missing-parent列挙はtransaction readではないため、現在は外部writerのない隔離`codex-local`だけに限定する。将来Devへ広げる前に、writer停止、bounded quiet period、直前・直後inventory、実Rules revision、backup保管・ACL・保持・削除、別の復旧承認を固定する。
+- Rules source検査は補助であり、実際の拒否保証は専用Emulatorの全actor・全階層deny testを正本とする。missing-parent列挙はtransaction readではないため、変更判断には外部writerのない隔離`codex-local`だけを使用する。`user-local`では読取専用の観測に限定する。将来Devまたは利用者用dataの変更へ広げる前に、writer停止、bounded quiet period、直前・直後inventory、実Rules revision、backup保管・ACL・保持・削除、別の復旧承認を固定する。
 - STRIPE-03では合成dataでdry-run、backup、missing-parent時write 0、一括apply、post-check、再実行clean、復旧を確認した。利用者用saved-data、Dev・Prod、外部Stripe、実dataは変更していない。STRIPE-04のlocal migration・画面受入れは別checkpointとする。
 
 ## 旧CCB Company設定migration（Historical / unavailable）

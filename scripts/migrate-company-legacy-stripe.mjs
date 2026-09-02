@@ -12,6 +12,19 @@ export const CODEX_STRIPE_MIGRATION_TARGET = Object.freeze({
   name: "codex-local",
   projectId: "demo-air-guard-v2-codex",
   firestoreHost: "127.0.0.1:18080",
+  databaseId: "(default)",
+});
+
+export const USER_LOCAL_STRIPE_MIGRATION_TARGET = Object.freeze({
+  name: "user-local",
+  projectId: "air-guard-v2-dev",
+  firestoreHost: "127.0.0.1:8080",
+  databaseId: "(default)",
+});
+
+export const STRIPE_MIGRATION_TARGETS = Object.freeze({
+  [CODEX_STRIPE_MIGRATION_TARGET.name]: CODEX_STRIPE_MIGRATION_TARGET,
+  [USER_LOCAL_STRIPE_MIGRATION_TARGET.name]: USER_LOCAL_STRIPE_MIGRATION_TARGET,
 });
 
 export const STRIPE_MIGRATION_MAX_WRITES = 400;
@@ -318,10 +331,12 @@ export function planCompanyLegacyStripeMigration({
   const stripeRecords = [];
   const seenPaths = new Set();
 
+  const expectedTarget = STRIPE_MIGRATION_TARGETS[target?.name];
   if (
-    target?.name !== CODEX_STRIPE_MIGRATION_TARGET.name ||
-    target?.projectId !== CODEX_STRIPE_MIGRATION_TARGET.projectId ||
-    target?.firestoreHost !== CODEX_STRIPE_MIGRATION_TARGET.firestoreHost
+    !expectedTarget ||
+    target?.projectId !== expectedTarget.projectId ||
+    target?.firestoreHost !== expectedTarget.firestoreHost ||
+    target?.databaseId !== expectedTarget.databaseId
   ) {
     findings.push(makeFinding("target-invalid", "target"));
   }
@@ -419,6 +434,7 @@ export function planCompanyLegacyStripeMigration({
       name: target?.name ?? null,
       projectId: target?.projectId ?? null,
       firestoreHost: target?.firestoreHost ?? null,
+      databaseId: target?.databaseId ?? null,
     },
     companies: sortedCompanies.map(canonicalRecord),
     stripeData: sortedStripe.map(canonicalRecord),
@@ -495,7 +511,7 @@ export function summarizeCompanyLegacyStripePlan(
   return {
     mode,
     status,
-    target: CODEX_STRIPE_MIGRATION_TARGET.name,
+    target: plan.target.name,
     planDigest: plan.planDigest,
     companyCount: plan.companyCount,
     findingCounts,
@@ -523,7 +539,14 @@ export function summarizeCompanyLegacyStripePlan(
   };
 }
 
-export function assertCodexStripeMigrationTarget(env = process.env) {
+export function assertCompanyLegacyStripeMigrationTarget(
+  targetName,
+  env = process.env,
+) {
+  const target = STRIPE_MIGRATION_TARGETS[targetName];
+  if (!target) {
+    throw migrationError("target-rejected", EXIT_CODES.TARGET_REJECTED);
+  }
   const projectVariables = ["GCLOUD_PROJECT", "GOOGLE_CLOUD_PROJECT"];
   const explicitProjects = projectVariables
     .filter((name) => env[name] !== undefined)
@@ -531,9 +554,13 @@ export function assertCodexStripeMigrationTarget(env = process.env) {
   if (
     explicitProjects.length === 0 ||
     explicitProjects.some(
-      (project) => project !== CODEX_STRIPE_MIGRATION_TARGET.projectId,
+      (project) => project !== target.projectId,
     ) ||
-    env.FIRESTORE_EMULATOR_HOST !== CODEX_STRIPE_MIGRATION_TARGET.firestoreHost
+    env.FIRESTORE_EMULATOR_HOST !== target.firestoreHost ||
+    (target.name === USER_LOCAL_STRIPE_MIGRATION_TARGET.name
+      ? env.FIRESTORE_DATABASE_ID !== target.databaseId
+      : env.FIRESTORE_DATABASE_ID !== undefined &&
+        env.FIRESTORE_DATABASE_ID !== target.databaseId)
   ) {
     throw migrationError("target-rejected", EXIT_CODES.TARGET_REJECTED);
   }
@@ -545,13 +572,21 @@ export function assertCodexStripeMigrationTarget(env = process.env) {
       throw migrationError("target-rejected", EXIT_CODES.TARGET_REJECTED);
     }
     if (
-      config.projectId &&
-      config.projectId !== CODEX_STRIPE_MIGRATION_TARGET.projectId
+      (config.projectId && config.projectId !== target.projectId) ||
+      (config.firestoreDatabaseId &&
+        config.firestoreDatabaseId !== target.databaseId)
     ) {
       throw migrationError("target-rejected", EXIT_CODES.TARGET_REJECTED);
     }
   }
-  return CODEX_STRIPE_MIGRATION_TARGET;
+  return target;
+}
+
+export function assertCodexStripeMigrationTarget(env = process.env) {
+  return assertCompanyLegacyStripeMigrationTarget(
+    CODEX_STRIPE_MIGRATION_TARGET.name,
+    env,
+  );
 }
 
 export function parseCompanyLegacyStripeArgs(args) {
@@ -578,7 +613,13 @@ export function parseCompanyLegacyStripeArgs(args) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
     }
   }
-  if (parsed.target !== CODEX_STRIPE_MIGRATION_TARGET.name) {
+  if (!STRIPE_MIGRATION_TARGETS[parsed.target]) {
+    throw migrationError("usage-invalid", EXIT_CODES.USAGE);
+  }
+  if (
+    parsed.target === USER_LOCAL_STRIPE_MIGRATION_TARGET.name &&
+    parsed.mode !== "dry-run"
+  ) {
     throw migrationError("usage-invalid", EXIT_CODES.USAGE);
   }
   if (parsed.mode === "dry-run") {
@@ -712,7 +753,11 @@ function assertBackupPath(path, repositoryRoot = REPOSITORY_ROOT) {
 function backupPayload(plan) {
   return {
     schemaVersion: 1,
-    target: { ...CODEX_STRIPE_MIGRATION_TARGET },
+    target: {
+      name: CODEX_STRIPE_MIGRATION_TARGET.name,
+      projectId: CODEX_STRIPE_MIGRATION_TARGET.projectId,
+      firestoreHost: CODEX_STRIPE_MIGRATION_TARGET.firestoreHost,
+    },
     planDigest: plan.planDigest,
     contentDigest: plan.contentDigest,
     targetContentDigest: plan.targetContentDigest,
@@ -942,7 +987,14 @@ export async function createCompanyLegacyStripeBackup(
     writeFileImpl = writeFile,
   } = {},
 ) {
-  if (plan.findings.length > 0 || plan.writeCount > STRIPE_MIGRATION_MAX_WRITES) {
+  if (
+    plan.target?.name !== CODEX_STRIPE_MIGRATION_TARGET.name ||
+    plan.target?.projectId !== CODEX_STRIPE_MIGRATION_TARGET.projectId ||
+    plan.target?.firestoreHost !== CODEX_STRIPE_MIGRATION_TARGET.firestoreHost ||
+    plan.target?.databaseId !== CODEX_STRIPE_MIGRATION_TARGET.databaseId ||
+    plan.findings.length > 0 ||
+    plan.writeCount > STRIPE_MIGRATION_MAX_WRITES
+  ) {
     throw migrationError("backup-plan-blocked");
   }
   const absolute = assertBackupPath(backupPath, repositoryRoot);
@@ -1236,97 +1288,114 @@ export async function restoreCompanyLegacyStripeMigration({
   return restored;
 }
 
-async function runCli() {
-  let parsed;
-  try {
-    parsed = parseCompanyLegacyStripeArgs(process.argv.slice(2));
-    assertCodexStripeMigrationTarget();
-    const repositoryFindings = await readRepositoryPreconditions();
-    if (repositoryFindings.length > 0) throw migrationError("repository-precondition");
-
-    const requireFromFunctions = createRequire(
-      resolve(REPOSITORY_ROOT, "functions/package.json"),
-    );
-    const { initializeApp, getApps } = requireFromFunctions("firebase-admin/app");
-    const {
-      FieldValue,
-      GeoPoint,
-      Timestamp,
-      getFirestore,
-    } = requireFromFunctions("firebase-admin/firestore");
-    if (getApps().length === 0) {
-      initializeApp({ projectId: CODEX_STRIPE_MIGRATION_TARGET.projectId });
-    }
-    const firestore = getFirestore();
-    const factories = {
+async function createCompanyLegacyStripeRuntime(target) {
+  const requireFromFunctions = createRequire(
+    resolve(REPOSITORY_ROOT, "functions/package.json"),
+  );
+  const { initializeApp, getApps } = requireFromFunctions("firebase-admin/app");
+  const { FieldValue, GeoPoint, Timestamp, getFirestore } =
+    requireFromFunctions("firebase-admin/firestore");
+  const appName = `company-legacy-stripe-migration-${target.name}`;
+  const app =
+    getApps().find((candidate) => candidate.name === appName) ??
+    initializeApp({ projectId: target.projectId }, appName);
+  const firestore = getFirestore(app);
+  return {
+    firestore,
+    deleteFieldValue: () => FieldValue.delete(),
+    valueFactories: {
       timestamp: (seconds, nanoseconds) => new Timestamp(seconds, nanoseconds),
       geoPoint: (latitude, longitude) => new GeoPoint(latitude, longitude),
       reference: (path) => firestore.doc(path),
-    };
+    },
+  };
+}
 
-    if (parsed.mode === "restore") {
-      const { payload } = await readCompanyLegacyStripeBackup(
-        parsed.backupPath,
-        parsed.backupReceipt,
-      );
-      const restored = await restoreCompanyLegacyStripeMigration({
-        firestore,
-        backup: payload,
-        valueFactories: factories,
-      });
-      process.stdout.write(
-        `${JSON.stringify(summarizeCompanyLegacyStripePlan(restored, { mode: "restore" }))}\n`,
-      );
-      process.exitCode = EXIT_CODES.CLEAN;
-      return;
-    }
+export async function executeCompanyLegacyStripeCli({
+  args = [],
+  env = {},
+  readRepositoryPreconditionsImpl = readRepositoryPreconditions,
+  createRuntime = createCompanyLegacyStripeRuntime,
+  readState = readCompanyLegacyStripeState,
+} = {}) {
+  const parsed = parseCompanyLegacyStripeArgs(args);
+  const target = assertCompanyLegacyStripeMigrationTarget(parsed.target, env);
+  const repositoryFindings = await readRepositoryPreconditionsImpl();
+  if (repositoryFindings.length > 0) {
+    throw migrationError("repository-precondition");
+  }
+  const { firestore, deleteFieldValue, valueFactories } =
+    await createRuntime(target);
 
-    const plan = planCompanyLegacyStripeMigration(
-      await readCompanyLegacyStripeState(firestore),
-    );
-    if (parsed.mode === "dry-run") {
-      process.stdout.write(
-        `${JSON.stringify(summarizeCompanyLegacyStripePlan(plan))}\n`,
-      );
-      process.exitCode =
-        plan.findings.length > 0
-          ? EXIT_CODES.DATA_BLOCKER
-          : plan.writeCount > 0
-            ? EXIT_CODES.CHANGES
-            : EXIT_CODES.CLEAN;
-      return;
-    }
-    assertPlanCanWrite(plan, parsed.planDigest);
-    if (parsed.mode === "create-backup") {
-      const receipt = await createCompanyLegacyStripeBackup(plan, parsed.backupPath);
-      process.stdout.write(
-        `${JSON.stringify(
-          summarizeCompanyLegacyStripePlan(plan, {
-            mode: "create-backup",
-            receiptHash: receipt.receiptHash,
-          }),
-        )}\n`,
-      );
-      process.exitCode = EXIT_CODES.CLEAN;
-      return;
-    }
-
+  if (parsed.mode === "restore") {
     const { payload } = await readCompanyLegacyStripeBackup(
       parsed.backupPath,
       parsed.backupReceipt,
     );
-    assertBackupMatchesPlan(payload, plan);
-    const appliedPlan = await applyCompanyLegacyStripeMigration({
+    const restored = await restoreCompanyLegacyStripeMigration({
       firestore,
-      expectedPlanDigest: parsed.planDigest,
       backup: payload,
-      deleteFieldValue: () => FieldValue.delete(),
+      valueFactories,
     });
-    const post = await verifyCompanyLegacyStripePostState(firestore, appliedPlan);
-    process.stdout.write(
-      `${JSON.stringify(summarizeCompanyLegacyStripePlan(post, { mode: "apply" }))}\n`,
-    );
-    process.exitCode = EXIT_CODES.CLEAN;
+    return {
+      exitCode: EXIT_CODES.CLEAN,
+      summary: summarizeCompanyLegacyStripePlan(restored, { mode: "restore" }),
+    };
+  }
+
+  const plan = planCompanyLegacyStripeMigration({
+    ...(await readState(firestore)),
+    target,
+  });
+  if (parsed.mode === "dry-run") {
+    return {
+      exitCode:
+        plan.findings.length > 0
+          ? EXIT_CODES.DATA_BLOCKER
+          : plan.writeCount > 0
+            ? EXIT_CODES.CHANGES
+            : EXIT_CODES.CLEAN,
+      summary: summarizeCompanyLegacyStripePlan(plan),
+    };
+  }
+  assertPlanCanWrite(plan, parsed.planDigest);
+  if (parsed.mode === "create-backup") {
+    const receipt = await createCompanyLegacyStripeBackup(plan, parsed.backupPath);
+    return {
+      exitCode: EXIT_CODES.CLEAN,
+      summary: summarizeCompanyLegacyStripePlan(plan, {
+        mode: "create-backup",
+        receiptHash: receipt.receiptHash,
+      }),
+    };
+  }
+
+  const { payload } = await readCompanyLegacyStripeBackup(
+    parsed.backupPath,
+    parsed.backupReceipt,
+  );
+  assertBackupMatchesPlan(payload, plan);
+  const appliedPlan = await applyCompanyLegacyStripeMigration({
+    firestore,
+    expectedPlanDigest: parsed.planDigest,
+    backup: payload,
+    deleteFieldValue,
+  });
+  const post = await verifyCompanyLegacyStripePostState(firestore, appliedPlan);
+  return {
+    exitCode: EXIT_CODES.CLEAN,
+    summary: summarizeCompanyLegacyStripePlan(post, { mode: "apply" }),
+  };
+}
+
+async function runCli() {
+  try {
+    const result = await executeCompanyLegacyStripeCli({
+      args: process.argv.slice(2),
+      env: process.env,
+    });
+    process.stdout.write(`${JSON.stringify(result.summary)}\n`);
+    process.exitCode = result.exitCode;
   } catch (error) {
     process.stderr.write(
       `${JSON.stringify({

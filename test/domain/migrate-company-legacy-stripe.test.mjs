@@ -5,10 +5,13 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   CODEX_STRIPE_MIGRATION_TARGET,
+  USER_LOCAL_STRIPE_MIGRATION_TARGET,
   applyCompanyLegacyStripeMigration,
+  assertCompanyLegacyStripeMigrationTarget,
   assertCodexStripeMigrationTarget,
   canonicalizeFirestoreValue,
   createCompanyLegacyStripeBackup,
+  executeCompanyLegacyStripeCli,
   inspectStripeMigrationRepositoryPreconditions,
   parseCompanyLegacyStripeArgs,
   planCompanyLegacyStripeMigration,
@@ -249,18 +252,65 @@ test("summary is value-redacted and exposes only anonymous subjects and counts",
     "price_sensitive_value",
     "sensitive.invalid",
     "Companies/",
+    "demo-air-guard-v2-codex",
+    "127.0.0.1:18080",
+    "(default)",
   ]) {
     assert.equal(serialized.includes(secret), false, secret);
   }
+  assert.equal(summarizeCompanyLegacyStripePlan(plan).target, "codex-local");
 });
 
-test("target and argument guards expose no user-local, Dev, Prod, or remote path", () => {
+test("target identity is digest-bound while summary exposes only the alias", () => {
+  const codexPlan = planCompanyLegacyStripeMigration(legacyState());
+  const userPlan = planCompanyLegacyStripeMigration({
+    ...legacyState(),
+    target: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  });
+  assert.deepEqual(userPlan.findings, []);
+  assert.notEqual(userPlan.planDigest, codexPlan.planDigest);
+  assert.equal(summarizeCompanyLegacyStripePlan(userPlan).target, "user-local");
+  const userSummary = JSON.stringify(summarizeCompanyLegacyStripePlan(userPlan));
+  for (const hiddenIdentity of [
+    "air-guard-v2-dev",
+    "127.0.0.1:8080",
+    "(default)",
+  ]) {
+    assert.equal(userSummary.includes(hiddenIdentity), false);
+  }
+  const wrongDatabase = planCompanyLegacyStripeMigration({
+    ...legacyState(),
+    target: { ...USER_LOCAL_STRIPE_MIGRATION_TARGET, databaseId: "other" },
+  });
+  assert.equal(
+    wrongDatabase.findings.some(({ code }) => code === "target-invalid"),
+    true,
+  );
+});
+
+test("target guards require exact local project, host, and database identities", () => {
   assert.deepEqual(
     assertCodexStripeMigrationTarget({
       GCLOUD_PROJECT: "demo-air-guard-v2-codex",
       FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080",
     }),
     CODEX_STRIPE_MIGRATION_TARGET,
+  );
+  assert.deepEqual(
+    assertCodexStripeMigrationTarget({
+      GCLOUD_PROJECT: "demo-air-guard-v2-codex",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080",
+      FIRESTORE_DATABASE_ID: "(default)",
+    }),
+    CODEX_STRIPE_MIGRATION_TARGET,
+  );
+  assert.deepEqual(
+    assertCompanyLegacyStripeMigrationTarget("user-local", {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "(default)",
+    }),
+    USER_LOCAL_STRIPE_MIGRATION_TARGET,
   );
   for (const env of [
     {},
@@ -272,12 +322,63 @@ test("target and argument guards expose no user-local, Dev, Prod, or remote path
       GCLOUD_PROJECT: "demo-air-guard-v2-codex",
       FIRESTORE_EMULATOR_HOST: "firestore.googleapis.com:443",
     },
+    {
+      GCLOUD_PROJECT: "demo-air-guard-v2-codex",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080",
+      FIRESTORE_DATABASE_ID: "other",
+    },
   ]) {
     assert.throws(
       () => assertCodexStripeMigrationTarget(env),
       ({ exitCode }) => exitCode === 78,
     );
   }
+  for (const env of [
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+    },
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "other",
+    },
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080",
+      FIRESTORE_DATABASE_ID: "(default)",
+    },
+    {
+      GCLOUD_PROJECT: "different-project",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "(default)",
+    },
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "firestore.googleapis.com:443",
+      FIRESTORE_DATABASE_ID: "(default)",
+    },
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "(default)",
+      FIREBASE_CONFIG: JSON.stringify({ projectId: "different-project" }),
+    },
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      FIRESTORE_DATABASE_ID: "(default)",
+      FIREBASE_CONFIG: JSON.stringify({ firestoreDatabaseId: "other" }),
+    },
+  ]) {
+    assert.throws(
+      () => assertCompanyLegacyStripeMigrationTarget("user-local", env),
+      ({ exitCode }) => exitCode === 78,
+    );
+  }
+});
+
+test("user-local parses only as dry-run and rejects every mutating mode", () => {
   assert.deepEqual(parseCompanyLegacyStripeArgs(["--target", "codex-local"]), {
     mode: "dry-run",
     target: "codex-local",
@@ -285,11 +386,165 @@ test("target and argument guards expose no user-local, Dev, Prod, or remote path
     backupPath: null,
     backupReceipt: null,
   });
-  for (const target of ["user-local", "dev", "prod"]) {
+  assert.deepEqual(parseCompanyLegacyStripeArgs(["--target", "user-local"]), {
+    mode: "dry-run",
+    target: "user-local",
+    planDigest: null,
+    backupPath: null,
+    backupReceipt: null,
+  });
+  const digest = "a".repeat(64);
+  for (const args of [
+    [
+      "--target",
+      "user-local",
+      "--create-backup",
+      "--plan-digest",
+      digest,
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+    ],
+    [
+      "--target",
+      "user-local",
+      "--apply",
+      "--plan-digest",
+      digest,
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+      "--backup-receipt",
+      digest,
+    ],
+    [
+      "--target",
+      "user-local",
+      "--restore",
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+      "--backup-receipt",
+      digest,
+    ],
+  ]) {
+    assert.throws(
+      () => parseCompanyLegacyStripeArgs(args),
+      ({ exitCode }) => exitCode === 64,
+    );
+  }
+  for (const target of ["dev", "prod"]) {
     assert.throws(
       () => parseCompanyLegacyStripeArgs(["--target", target]),
       ({ exitCode }) => exitCode === 64,
     );
+  }
+});
+
+test("CLI ordering gives exact user-local one synthetic read and rejected routes zero", async () => {
+  const exactEnv = {
+    GCLOUD_PROJECT: "air-guard-v2-dev",
+    FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+    FIRESTORE_DATABASE_ID: "(default)",
+  };
+  const counters = { adminInit: 0, read: 0 };
+  const result = await executeCompanyLegacyStripeCli({
+    args: ["--target", "user-local"],
+    env: exactEnv,
+    readRepositoryPreconditionsImpl: async () => [],
+    createRuntime: async (target) => {
+      counters.adminInit += 1;
+      assert.equal(target, USER_LOCAL_STRIPE_MIGRATION_TARGET);
+      return { firestore: Object.freeze({ synthetic: true }) };
+    },
+    readState: async (firestore) => {
+      counters.read += 1;
+      assert.deepEqual(firestore, { synthetic: true });
+      return { companies: [], stripeData: [], stripeDescendants: [] };
+    },
+  });
+  assert.equal(result.exitCode, 0);
+  assert.equal(result.summary.target, "user-local");
+  assert.deepEqual(counters, { adminInit: 1, read: 1 });
+
+  for (const env of [
+    {
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+    },
+    { ...exactEnv, FIRESTORE_DATABASE_ID: "other" },
+    { ...exactEnv, FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080" },
+    { ...exactEnv, GCLOUD_PROJECT: "different-project" },
+  ]) {
+    const rejected = { adminInit: 0, read: 0 };
+    await assert.rejects(
+      () =>
+        executeCompanyLegacyStripeCli({
+          args: ["--target", "user-local"],
+          env,
+          readRepositoryPreconditionsImpl: async () => [],
+          createRuntime: async () => {
+            rejected.adminInit += 1;
+            return { firestore: {} };
+          },
+          readState: async () => {
+            rejected.read += 1;
+            return {};
+          },
+        }),
+      ({ exitCode }) => exitCode === 78,
+    );
+    assert.deepEqual(rejected, { adminInit: 0, read: 0 });
+  }
+
+  const digest = "a".repeat(64);
+  for (const args of [
+    [
+      "--target",
+      "user-local",
+      "--create-backup",
+      "--plan-digest",
+      digest,
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+    ],
+    [
+      "--target",
+      "user-local",
+      "--apply",
+      "--plan-digest",
+      digest,
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+      "--backup-receipt",
+      digest,
+    ],
+    [
+      "--target",
+      "user-local",
+      "--restore",
+      "--backup-path",
+      ".codex-test/runtime/forbidden.json",
+      "--backup-receipt",
+      digest,
+    ],
+  ]) {
+    const rejected = { adminInit: 0, read: 0 };
+    await assert.rejects(
+      () =>
+        executeCompanyLegacyStripeCli({
+          args,
+          env: exactEnv,
+          readRepositoryPreconditionsImpl: async () => [],
+          createRuntime: async () => {
+            rejected.adminInit += 1;
+            return { firestore: {} };
+          },
+          readState: async () => {
+            rejected.read += 1;
+            return {};
+          },
+        }),
+      ({ exitCode }) => exitCode === 64,
+    );
+    assert.deepEqual(rejected, { adminInit: 0, read: 0 });
   }
 });
 
@@ -319,6 +574,11 @@ test("backup is exclusive, restricted to .codex-test, and receipt-bound", async 
     },
   );
   assert.equal(backup.payload.planDigest, plan.planDigest);
+  assert.deepEqual(backup.payload.target, {
+    name: "codex-local",
+    projectId: "demo-air-guard-v2-codex",
+    firestoreHost: "127.0.0.1:18080",
+  });
   assert.equal(JSON.stringify(backup.payload).includes("cus_sensitive_value"), true);
   assert.equal(JSON.stringify(backup.payload).includes("Synthetic company"), false);
   await assert.rejects(
@@ -399,6 +659,29 @@ test("backup is exclusive, restricted to .codex-test, and receipt-bound", async 
   await assertForgedRejected((payload) => {
     payload.extra = true;
   });
+  await assertForgedRejected((payload) => {
+    payload.target.projectId = "different-project";
+  });
+  await assertForgedRejected((payload) => {
+    payload.target.databaseId = "(default)";
+  });
+
+  const legacyPayload = JSON.parse(stored);
+  legacyPayload.planDigest = "1".repeat(64);
+  const legacySerialized = `${JSON.stringify(legacyPayload)}\n`;
+  const legacyReceipt = createHash("sha256")
+    .update(legacySerialized, "utf8")
+    .digest("hex");
+  const legacyBackup = await readCompanyLegacyStripeBackup(
+    ".codex-test/runtime/stripe-backup.json",
+    legacyReceipt,
+    {
+      repositoryRoot: options.repositoryRoot,
+      readFileImpl: async () => legacySerialized,
+    },
+  );
+  assert.equal(legacyBackup.payload.schemaVersion, 1);
+  assert.equal(legacyBackup.payload.planDigest, "1".repeat(64));
 });
 
 function validRepositoryInputs() {
@@ -609,7 +892,7 @@ function createFirestoreFake(initialRecords, { failCommit = false } = {}) {
   return { firestore, documents, calls };
 }
 
-async function memoryBackup(plan) {
+async function memoryBackup(plan, { legacyPlanDigest = null } = {}) {
   let serialized;
   const repositoryRoot = "C:\\synthetic-repository";
   const path = ".codex-test/runtime/backup.json";
@@ -620,8 +903,17 @@ async function memoryBackup(plan) {
       serialized = value;
     },
   });
+  if (legacyPlanDigest !== null) {
+    const payload = JSON.parse(serialized);
+    payload.planDigest = legacyPlanDigest;
+    serialized = `${JSON.stringify(payload)}\n`;
+  }
+  const receiptHash =
+    legacyPlanDigest === null
+      ? receipt.receiptHash
+      : createHash("sha256").update(serialized, "utf8").digest("hex");
   return (
-    await readCompanyLegacyStripeBackup(path, receipt.receiptHash, {
+    await readCompanyLegacyStripeBackup(path, receiptHash, {
       repositoryRoot,
       readFileImpl: async () => serialized,
     })
@@ -785,7 +1077,7 @@ test("state drift and transaction failure leave every document unchanged", async
   );
 });
 
-test("restore reinstates only backed-up fields and StripeData and blocks conflicts", async () => {
+test("restore accepts legacy schema v1 preimage and blocks conflicts", async () => {
   const initial = legacyState();
   const sourceFake = createFirestoreFake([...initial.companies, ...initial.stripeData]);
   const planState = {
@@ -801,6 +1093,9 @@ test("restore reinstates only backed-up fields and StripeData and blocks conflic
   };
   const plan = planCompanyLegacyStripeMigration(planState);
   const backup = await memoryBackup(plan);
+  const legacyBackup = await memoryBackup(plan, {
+    legacyPlanDigest: "2".repeat(64),
+  });
   await assert.rejects(
     () =>
       restoreCompanyLegacyStripeMigration({
@@ -817,7 +1112,7 @@ test("restore reinstates only backed-up fields and StripeData and blocks conflic
   });
   await restoreCompanyLegacyStripeMigration({
     firestore: sourceFake.firestore,
-    backup,
+    backup: legacyBackup,
     valueFactories: {
       timestamp: (seconds, nanoseconds) => new TestTimestamp(seconds, nanoseconds),
     },
