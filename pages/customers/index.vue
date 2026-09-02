@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useRouter } from "vue-router";
+import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -21,6 +22,7 @@ const search = ref("");
  * SETUP ROUTER COMPOSABLES
  *****************************************************************************/
 const router = useRouter();
+const { canWrite } = useCustomerActions();
 
 /*****************************************************************************
  * METHODS
@@ -49,23 +51,23 @@ onUnmounted(unsubscribe);
 
 <template>
   <v-container class="fill-height align-start">
-    <CustomersManager
-      class="fill-height"
-      :docs="customerInstance.docs"
-      :handle-click-update="handleClickUpdate"
-    >
-      <template #table="slotProps">
-        <v-toolbar class="mb-4 bg-transparent" density="compact">
-          <AtomsSearchTextField v-model="search" />
-          <v-btn icon="mdi-plus" @click="() => slotProps.toCreate()" />
-        </v-toolbar>
-        <CustomersDataTable
-          class="flex-grow-1"
-          v-bind="slotProps"
-          hide-search
-          :search="search"
-        />
-      </template>
-    </CustomersManager>
+    <v-card class="fill-height d-flex flex-column" width="100%">
+      <v-toolbar class="mb-4 bg-transparent" density="compact">
+        <AtomsSearchTextField v-model="search" />
+        <CustomerCreateDialog v-if="canWrite">
+          <template #activator="{ open }">
+            <v-btn icon="mdi-plus" @click="open" />
+          </template>
+        </CustomerCreateDialog>
+      </v-toolbar>
+      <CustomersDataTable
+        class="flex-grow-1"
+        :items="customerInstance.docs"
+        :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+        hide-search
+        :search="search"
+        @click:update="handleClickUpdate"
+      />
+    </v-card>
   </v-container>
 </template>

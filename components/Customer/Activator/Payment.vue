@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Customer/Activator/Payment.vue
  * @description 取引先の支払情報表示コンポーネント
- * - `CustomerManager` の activator スロット用コンポーネント
+ * - Customer支払条件editorの表示コンポーネント
  *****************************************************************************/
 import { Customer, CutoffDate } from "@/schemas";
 import { useDefaults } from "vuetify";
@@ -18,6 +18,7 @@ const _props = defineProps({
     validator: (value) => value instanceof Customer,
   },
   title: { type: String, default: undefined },
+  editable: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "CustomerActivatorPayment");
 const emit = defineEmits(["click:edit"]);
@@ -46,23 +47,12 @@ const items = computed(() => {
   ];
 });
 
-/*****************************************************************************
- * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
- *****************************************************************************/
-defineExpose({
-  includedKeys: ["cutoffDate", "paymentMonth", "paymentDate"],
-});
 </script>
 
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"

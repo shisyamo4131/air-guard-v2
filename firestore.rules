@@ -68,6 +68,147 @@ service cloud.firestore {
       ]);
     }
 
+    function isNullableString(value, maxSize) {
+      return value == null || (value is string && value.size() <= maxSize);
+    }
+
+    function isRequiredString(value, maxSize) {
+      return value is string && value.size() > 0 && value.size() <= maxSize;
+    }
+
+    function isValidCustomerLocation(value) {
+      return value == null
+        || (value is map
+          && value.keys().hasAll(['formattedAddress', 'lat', 'lng'])
+          && value.keys().hasOnly(['formattedAddress', 'lat', 'lng'])
+          && isRequiredString(value.formattedAddress, 200)
+          && value.lat is number
+          && value.lat >= -90
+          && value.lat <= 90
+          && value.lng is number
+          && value.lng >= -180
+          && value.lng <= 180);
+    }
+
+    function isValidCustomerTokenMap(value) {
+      return value == null
+        || (value is map
+          && value.size() <= 512
+          && value.values().hasOnly([true]));
+    }
+
+    function isValidCustomer(data, docId) {
+      return data.keys().size() == 26
+        && isRequiredString(data.docId, 128)
+        && data.docId == docId
+        && isRequiredString(data.uid, 128)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && isNullableString(data.code, 10)
+        && isRequiredString(data.name, 20)
+        && isNullableString(data.branchName, 20)
+        && isRequiredString(data.abbreviation, 20)
+        && isRequiredString(data.nameKana, 40)
+        && data.zipcode is string
+        && data.zipcode.size() > 0
+        && data.prefCode is string
+        && data.prefCode.matches('^(0[1-9]|[1-3][0-9]|4[0-7])$')
+        && isRequiredString(data.city, 20)
+        && isRequiredString(data.address, 30)
+        && isNullableString(data.building, 30)
+        && isValidCustomerLocation(data.location)
+        && ((data.location == null && data.geopoint == null)
+          || (data.location is map
+            && data.geopoint is latlng
+            && data.geopoint.latitude == data.location.lat
+            && data.geopoint.longitude == data.location.lng))
+        && isNullableString(data.tel, 13)
+        && isNullableString(data.fax, 13)
+        && data.contractStatus in ['ACTIVE', 'TERMINATED']
+        && data.cutoffDate is int
+        && data.cutoffDate in [0, 5, 10, 15, 20, 25]
+        && data.paymentMonth is int
+        && data.paymentMonth in [0, 1, 2, 3, 4, 5, 6]
+        && data.paymentDate is int
+        && data.paymentDate in [0, 5, 10, 15, 20, 25]
+        && isNullableString(data.remarks, 200)
+        && isRequiredString(data.fullAddress, 74)
+        && isRequiredString(data.prefecture, 4)
+        && data.fullAddress == data.prefecture + data.city + data.address
+        && isValidCustomerTokenMap(data.tokenMap);
+    }
+
+    function hasCustomerWriteRole(user) {
+      return user.roles is list
+        && user.roles.size() <= 6
+        && user.roles.hasOnly([
+          'manager', 'controller', 'accountant',
+          'human-resource', 'labor', 'legal'
+        ])
+        && user.roles.hasAny(['manager', 'legal']);
+    }
+
+    function canWriteCustomer(companyId) {
+      let user = get(/databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data;
+      return hasValidIdentityClaims()
+        && request.auth.token.companyId == companyId
+        && exists(/databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid))
+        && user.companyId is string
+        && user.companyId == companyId
+        && user.isTemporary is bool
+        && user.isTemporary == false
+        && user.disabled is bool
+        && user.disabled == false
+        && request.auth.token.isSuperUser is bool
+        && user.isAdmin is bool
+        && (user.isAdmin == true
+          || (request.auth.token.isSuperUser == false
+            && hasCustomerWriteRole(user)));
+    }
+
+    function isValidCustomerCreate(docId) {
+      return isValidCustomer(request.resource.data, docId)
+        && request.resource.data.contractStatus == 'ACTIVE'
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidCustomerUpdate(docId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let basicFields = [
+        'code', 'name', 'branchName', 'abbreviation', 'nameKana',
+        'zipcode', 'prefCode', 'city', 'address', 'building',
+        'tel', 'fax', 'remarks'
+      ];
+      let basicAndDerivedFields = [
+        'code', 'name', 'branchName', 'abbreviation', 'nameKana',
+        'zipcode', 'prefCode', 'city', 'address', 'building',
+        'tel', 'fax', 'remarks', 'tokenMap', 'location', 'geopoint',
+        'fullAddress', 'prefecture', 'uid', 'updatedAt'
+      ];
+      let paymentFields = ['cutoffDate', 'paymentMonth', 'paymentDate'];
+      let paymentAndMetadataFields = [
+        'cutoffDate', 'paymentMonth', 'paymentDate', 'uid', 'updatedAt'
+      ];
+      return isValidCustomer(request.resource.data, docId)
+        && request.resource.data.docId == resource.data.docId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.contractStatus == resource.data.contractStatus
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && (!changed.hasAny(['tokenMap'])
+          || changed.hasAny(['name', 'nameKana']))
+        && (!changed.hasAny([
+              'location', 'geopoint', 'fullAddress', 'prefecture'
+            ])
+          || changed.hasAny(['prefCode', 'city', 'address']))
+        && ((changed.hasAny(basicFields)
+              && changed.hasOnly(basicAndDerivedFields))
+          || (changed.hasAny(paymentFields)
+              && changed.hasOnly(paymentAndMetadataFields)));
+    }
+
     // --- Rules for 'System' collection ---
     // System コレクション は未認証で読み取り可能。
     // 書き込みは SDK からのみ可能とする。
@@ -155,19 +296,23 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Customers' subcollection under 'Companies' ---
-    // CustomersコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Customers ドキュメントのみ Read/Write を許可。
+    // 読み取りは既存の同一tenant境界を維持する。
+    // 作成・更新は有効な会社管理者または既知preset由来の担当者に限定し、
+    // exact schemaとoperation別の変更fieldを検証する。削除はclientへ許可しない。
     match /Companies/{companyId}/Customers/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if canWriteCustomer(companyId)
+                    && isValidCustomerCreate(docId);
+      allow update: if canWriteCustomer(companyId)
+                    && isValidCustomerUpdate(docId);
+      allow delete: if false;
     }
 
     // --- Rules for 'Customers_archive' subcollection under 'Companies' ---
-    // Customers_archiveコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Customers_archive ドキュメントのみ Read/Write を許可。
+    // archiveの読み取りは既存境界を維持し、client CUDは全面拒否する。
     match /Companies/{companyId}/Customers_archive/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create, update, delete: if false;
     }
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
@@ -294,19 +439,23 @@ service cloud.firestore {
     }
 
     // Companies配下の未定義パスにも同じtenant identity gateを適用する。
-    // SecurityReportIndexesとStripeDataの個別操作制約を迂回しないよう除外する。
+    // 個別操作制約を持つcollectionを迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
-      allow read, write: if isAuthenticated()
-                              && userCompanyId() == companyId
-                              && collection != "SecurityReportIndexes"
-                              && collection != "StripeData"
-                              && collection != "Users"
-                              && collection != "Employees"
-                              && collection != "EmployeeUserReservations"
-                              && collection != "LifecycleOperations"
-                              && collection != "UserLifecycleLocks"
-                              && collection != "EmployeeLifecycleLocks"
-                              && collection != "EmployeeLifecycleHeads";
+      allow read, write: if !(collection in [
+                                "SecurityReportIndexes",
+                                "StripeData",
+                                "Customers",
+                                "Customers_archive",
+                                "Users",
+                                "Employees",
+                                "EmployeeUserReservations",
+                                "LifecycleOperations",
+                                "UserLifecycleLocks",
+                                "EmployeeLifecycleLocks",
+                                "EmployeeLifecycleHeads"
+                              ])
+                              && isAuthenticated()
+                              && userCompanyId() == companyId;
     }
   }
 }

@@ -16,17 +16,37 @@ test("reservation collections are recursively server-only", async () => {
   );
 });
 
-test("Companies fallback cannot override Employee reservation denial", async () => {
+test("Companies fallback reserves every protected collection before tenant access", async () => {
   const source = await readFile(rulesUrl, "utf8");
   const fallback = source.match(
     /match \/Companies\/\{companyId\}\/\{collection\}\/\{document=\*\*\} \{([\s\S]*?)\n    \}/,
   )?.[1];
   assert.ok(fallback);
-  const executable = fallback.replace(/\/\/.*$/gm, "").replace(/\s+/g, " ").trim();
-  assert.equal(
-    executable,
-    'allow read, write: if isAuthenticated() && userCompanyId() == companyId && collection != "SecurityReportIndexes" && collection != "StripeData" && collection != "Users" && collection != "Employees" && collection != "EmployeeUserReservations" && collection != "LifecycleOperations" && collection != "UserLifecycleLocks" && collection != "EmployeeLifecycleLocks" && collection != "EmployeeLifecycleHeads";',
+  const executable = fallback.replace(/\/\/.*$/gmu, "").replace(/\s+/gu, " ").trim();
+  const exclusionList = executable.match(
+    /!\(collection in \[([^\]]+)\]\)/u,
+  )?.[1];
+  assert.ok(exclusionList);
+  const excludedCollections = [...exclusionList.matchAll(/"([^"]+)"/gu)]
+    .map((match) => match[1])
+    .sort();
+  assert.deepEqual(
+    excludedCollections,
+    [
+      "Customers",
+      "Customers_archive",
+      "EmployeeLifecycleHeads",
+      "EmployeeLifecycleLocks",
+      "EmployeeUserReservations",
+      "Employees",
+      "LifecycleOperations",
+      "SecurityReportIndexes",
+      "StripeData",
+      "UserLifecycleLocks",
+      "Users",
+    ].sort(),
   );
+  assert.match(executable, /&& isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
 });
 
 test("StripeData is recursively denied and excluded from the Companies fallback", async () => {
@@ -35,5 +55,5 @@ test("StripeData is recursively denied and excluded from the Companies fallback"
     source,
     /match \/Companies\/\{companyId\}\/StripeData\/\{document=\*\*\} \{\s*allow read, write: if false;\s*\}/u,
   );
-  assert.match(source, /collection != "StripeData"/u);
+  assert.match(source, /!\(collection in \[[\s\S]*?"StripeData"[\s\S]*?\]\)/u);
 });

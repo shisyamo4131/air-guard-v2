@@ -807,6 +807,53 @@ function schemaIdentity(manifest, lock) {
   };
 }
 
+function hasStripeDataFallbackExclusion(rulesSource) {
+  const fallbackPattern =
+    /match \/Companies\/\{companyId\}\/\{collection\}\/\{document=\*\*\}\s*\{([\s\S]*?)\}/gu;
+  const fallbackMatches = [...rulesSource.matchAll(fallbackPattern)];
+  if (fallbackMatches.length !== 1) return false;
+
+  const statementMatch = fallbackMatches[0][1].match(
+    /^\s*allow\s+read\s*,\s*write\s*:\s*if\s+([\s\S]*?)\s*;\s*$/u,
+  );
+  if (!statementMatch) return false;
+
+  const condition = statementMatch[1];
+  if (condition.includes("||") || condition.includes(";")) return false;
+  if (
+    /(?:^|&&)\s*collection\s*!=\s*"StripeData"\s*(?=&&|$)/u.test(
+      condition,
+    )
+  ) {
+    return true;
+  }
+
+  const exclusionLists = [
+    ...condition.matchAll(
+      /(?:^|&&)\s*!\s*\(\s*collection\s+in\s*\[([\s\S]*?)\]\s*\)\s*(?=&&|$)/gu,
+    ),
+  ];
+  return exclusionLists.some(([, listSource]) => {
+    if (
+      !/^\s*"(?:[^"\\]|\\.)*"(?:\s*,\s*"(?:[^"\\]|\\.)*")*\s*$/u.test(
+        listSource,
+      )
+    ) {
+      return false;
+    }
+    try {
+      const collections = JSON.parse(`[${listSource}]`);
+      return (
+        Array.isArray(collections) &&
+        collections.every((collection) => typeof collection === "string") &&
+        collections.includes("StripeData")
+      );
+    } catch {
+      return false;
+    }
+  });
+}
+
 export function inspectStripeMigrationRepositoryPreconditions({
   rulesSource,
   rootManifest,
@@ -831,7 +878,7 @@ export function inspectStripeMigrationRepositoryPreconditions({
   ) {
     findings.push("rules-stripe-deny-missing");
   }
-  if (!/collection != "StripeData"/u.test(rulesWithoutComments)) {
+  if (!hasStripeDataFallbackExclusion(rulesWithoutComments)) {
     findings.push("rules-fallback-exclusion-missing");
   }
   const root = schemaIdentity(rootManifest, rootLock);

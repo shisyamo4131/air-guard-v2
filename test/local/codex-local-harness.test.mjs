@@ -401,8 +401,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Articles_archive",
   "Autonumbers",
   "Billings",
-  "Customers",
-  "Customers_archive",
   "Employees_archive",
   "meta",
   "OperationResults",
@@ -412,6 +410,52 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Sites_archive",
   "SiteOperationSchedules",
 ];
+
+function customerRulesData({ docId, uid, ...overrides }) {
+  return {
+    docId,
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    code: "C001",
+    name: "合成取引先",
+    branchName: null,
+    abbreviation: "合成取引先",
+    nameKana: "ゴウセイトリヒキサキ",
+    zipcode: "1000001",
+    prefCode: "13",
+    city: "千代田区",
+    address: "千代田1-1",
+    building: null,
+    location: null,
+    geopoint: null,
+    tel: "03-1234-5678",
+    fax: null,
+    contractStatus: "ACTIVE",
+    cutoffDate: 0,
+    paymentMonth: 1,
+    paymentDate: 0,
+    remarks: null,
+    fullAddress: "東京都千代田区千代田1-1",
+    prefecture: "東京都",
+    tokenMap: { 合: true, 合成: true },
+    ...overrides,
+  };
+}
+
+async function seedCustomerRulesDocument({
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  docId,
+  uid = "server-writer",
+  data = {},
+}) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Customers", docId),
+      customerRulesData({ docId, uid, ...data }),
+    );
+  });
+}
 
 before(async () => {
   assert.equal(process.env.GCLOUD_PROJECT, CODEX_LOCAL_PROJECT_ID);
@@ -1761,6 +1805,159 @@ test("arrangement Callable applies field-specific preset authorization", async (
       "permission-denied",
     );
   }
+});
+
+test("Customer Rules allow exact create and operation-specific updates for approved actors", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actors = [
+    { label: "admin", isAdmin: true, roles: [] },
+    { label: "admin-super", isAdmin: true, roles: [], isSuperUser: true },
+    { label: "manager", isAdmin: false, roles: ["manager"] },
+    { label: "legal", isAdmin: false, roles: ["legal"] },
+  ];
+
+  for (const actor of actors) {
+    const uid = `customer-rules-allowed-${actor.label}`;
+    const docId = `customer-rules-created-${actor.label}`;
+    await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: actor.isAdmin, roles: actor.roles });
+    const firestore = authenticatedFirestore(uid, {
+      isSuperUser: actor.isSuperUser ?? false,
+    });
+    const reference = doc(firestore, "Companies", companyId, "Customers", docId);
+    await assertSucceeds(setDoc(reference, customerRulesData({
+      docId,
+      uid,
+      ...(actor.label === "legal" ? { zipcode: "1".repeat(17) } : {}),
+    })));
+    await assertSucceeds(updateDoc(reference, {
+      city: "港区",
+      fullAddress: "東京都港区千代田1-1",
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(reference, {
+      paymentMonth: 2,
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+  }
+});
+
+test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-tenant writers", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const deniedActors = [
+    { label: "controller", user: { isAdmin: false, roles: ["controller"] } },
+    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
+    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
+    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
+    { label: "direct-permission", user: { isAdmin: false, roles: ["customers:write"] } },
+    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
+    { label: "super-user-only", user: { isAdmin: false, roles: [] }, claims: { isSuperUser: true } },
+    { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
+    { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
+  ];
+
+  for (const actor of deniedActors) {
+    const uid = `customer-rules-denied-${actor.label}`;
+    const docId = `customer-rules-denied-doc-${actor.label}`;
+    await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, ...actor.user });
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false, ...actor.claims });
+    await assertFails(setDoc(
+      doc(firestore, "Companies", companyId, "Customers", docId),
+      customerRulesData({ docId, uid }),
+    ));
+  }
+
+  const otherUid = "customer-rules-denied-other-tenant";
+  await seedRegisteredUser({
+    uid: otherUid,
+    pathCompanyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isAdmin: true,
+    roles: [],
+  });
+  const otherFirestore = authenticatedFirestore(otherUid, {
+    companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+    isSuperUser: false,
+  });
+  await assertFails(setDoc(
+    doc(otherFirestore, "Companies", companyId, "Customers", "customer-rules-cross-tenant"),
+    customerRulesData({ docId: "customer-rules-cross-tenant", uid: otherUid }),
+  ));
+  const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+  await assertFails(setDoc(
+    doc(unauthenticated, "Companies", companyId, "Customers", "customer-rules-unauthenticated"),
+    customerRulesData({ docId: "customer-rules-unauthenticated", uid: "unauthenticated" }),
+  ));
+});
+
+test("Customer Rules reject invalid shapes, field crossover, and metadata spoofing", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-rules-validation-manager";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: false, roles: ["manager"] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const invalidCreates = [
+    { label: "extra", changes: { unexpected: true } },
+    { label: "missing", remove: "address" },
+    { label: "type", changes: { paymentMonth: "1" } },
+    { label: "length", changes: { name: "長".repeat(21) } },
+    { label: "status", changes: { contractStatus: "TERMINATED" } },
+    { label: "uid", changes: { uid: "spoofed-actor" } },
+    { label: "created-at", changes: { createdAt: new Date("2020-01-01T00:00:00.000Z") } },
+    { label: "token-map-value", changes: { tokenMap: { invalid: false } } },
+  ];
+  for (const scenario of invalidCreates) {
+    const docId = `customer-rules-invalid-${scenario.label}`;
+    const data = customerRulesData({ docId, uid, ...scenario.changes });
+    if (scenario.remove) delete data[scenario.remove];
+    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Customers", docId), data));
+  }
+
+  const docId = "customer-rules-update-validation";
+  await seedCustomerRulesDocument({ companyId, docId, uid: "original-writer" });
+  const reference = doc(firestore, "Companies", companyId, "Customers", docId);
+  for (const patch of [
+    { city: "港区", paymentMonth: 2, uid, updatedAt: serverTimestamp() },
+    { contractStatus: "TERMINATED", uid, updatedAt: serverTimestamp() },
+    { createdAt: new Date("2020-01-01T00:00:00.000Z"), uid, updatedAt: serverTimestamp() },
+    { unexpected: true, city: "港区", uid, updatedAt: serverTimestamp() },
+    { city: "港区", uid: "spoofed-actor", updatedAt: serverTimestamp() },
+  ]) {
+    await assertFails(updateDoc(reference, patch));
+  }
+});
+
+test("Customer active delete, archive CUD, and fallback-path bypass remain denied", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-rules-destructive-admin";
+  const docId = "customer-rules-destructive-doc";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  await seedCustomerRulesDocument({ companyId, docId });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Customers_archive", docId),
+      customerRulesData({ docId, uid: "server-writer" }),
+    );
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const active = doc(firestore, "Companies", companyId, "Customers", docId);
+  const archive = doc(firestore, "Companies", companyId, "Customers_archive", docId);
+
+  await assertFails(deleteDoc(active));
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "Customers_archive", "new-archive"),
+    customerRulesData({ docId: "new-archive", uid }),
+  ));
+  await assertFails(updateDoc(archive, { remarks: "変更" }));
+  await assertFails(deleteDoc(archive));
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "Customers", docId, "Nested", "bypass"),
+    { bypass: true },
+  ));
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "Customers_archive", docId, "Nested", "bypass"),
+    { bypass: true },
+  ));
 });
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {

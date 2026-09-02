@@ -2,9 +2,9 @@
 
 ## メタデータ
 
-- 状態: 実装調査
+- 状態: CUSTOMER-01A実装済み・local受入れ前
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-09-02
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
 
 ## 入口・暫定権限
@@ -15,11 +15,11 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 
 | 入口 | 実装 | UIの入口条件 | Rulesの境界 |
 |---|---|---|---|
-| 一覧・作成 | `/customers` | `customers:read` | 同一会社の認証ユーザーまたはsuper-userは全read/write |
-| 詳細・更新・削除 | `/customers/[id]` | `customers:read` | 同上。field、role、permission別の制限なし |
-| Autocomplete | `Customer/Autocomplete` | 呼出し元依存 | 同上 |
+| 一覧・作成 | `/customers` | readで一覧、write actorだけ作成 | 同一会社read。作成は有効な本登録会社管理者または既知manager/legal |
+| 詳細・更新 | `/customers/[id]` | readで詳細、write actorだけ基本・支払編集 | 同じactorと操作別fieldだけを許可。client deleteは拒否 |
+| Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
 
-`customers:read` は暫定的なページ表示条件であり、画面内の作成・更新・削除を分離しない。Rulesも同一会社ユーザーに全書込みを許すため、正式なCRUD権限仕様とは扱わない。
+Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager`を使用しない。一覧とAutocompleteは共有作成dialog、詳細は基本情報editorと支払条件editorを使用する。閲覧だけの利用者には作成・編集・archive入口を表示しない。
 
 ## データ契約
 
@@ -34,13 +34,14 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 
 ## CRUD・validation
 
-- 一覧のplus buttonは汎用array managerの`Customer.create(item)`を呼ぶ。更新はitem managerの`Customer.update(item)`、削除は`Customer.delete(item)`を呼ぶ。
+- 一覧とAutocompleteのplus buttonは共有作成dialogからCustomer専用application処理を呼ぶ。基本情報と支払条件も専用editorから同じ境界を呼び、UIからCustomer modelの`create/update/delete`を直接呼ばない。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
-- 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/building/tel/fax/remarks`を対象とする。必須の`address`は表示されるが編集対象から欠落している。
+- 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は詳細に表示されるが編集対象に含まれず、TERMINATED化・再有効化の画面経路は確認できなかった。
-- 削除前に`Customer.hasMany`で関連Siteを検索し、1件でもあれば拒否する。検索はtransaction外の`getDocs`であり、確認後にSiteが追加される競合余地はadapter自身のコメントにも明記されている。
-- archiveからのrestore APIはadapterにあるが、Customer画面から呼ぶ経路は確認できなかった。
+- active Customerのclient deleteと`Customers_archive`のclient CUDはRulesで拒否する。archive・restoreの画面入口はなく、参照確認と監査を持つ後続の専用操作へ分離した。
+- 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
+- editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。
 
 ## 検索・表示
 
@@ -65,27 +66,27 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 - archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
 
 - `TERMINATED`は業務上の無効状態、logical deleteはarchive移動であり別機構である。
-- 現在の画面ではstatus変更経路がなく、論理削除だけが到達可能。削除確認dialog後、成功時に一覧へ戻る。
-- archive collectionにも同一会社ユーザー/super-userの全read/write Ruleがある。UI restore、保持期間、参照中masterの扱いは未確定。
+- 現在の画面ではstatus変更、archive、restore、物理deleteの経路を提供しない。
+- archive collectionのreadは既存の同一会社境界を維持し、client create/update/deleteは全actorへ拒否する。
 
 ## Rules・tenant境界
 
-- `Companies/{companyId}/Customers/{docId}` と `_archive` は、認証ユーザーのcompanyIdがpathと一致するかsuper-userであれば全read/writeできる。
-- document内companyId、許可field、status transition、参照整合、権限claimはRulesで検証しない。
+- `Companies/{companyId}/Customers/{docId}` のcreate/updateは、確認済みcompany claim、同社User、有効・本登録、会社管理者または既知manager/legal、actor UID、server timestamp、完全なfield集合・型、操作別変更fieldを検査する。直接permission、未知role、会社管理者でないsuper-user、他社、仮登録、無効Userを拒否する。
+- active delete、archive CUD、Companies配下の広いfallbackによるCustomer制約迂回を拒否する。
 - path prefixがtenant境界である。異なるcompany pathへの通常ユーザーアクセスは拒否される。
+- Rulesは`tokenMap`と位置情報の型・形・変更契機を検査するが、名称・住所から意味上正しい値を完全再計算できない。正規writerは派生値を生成するが、書込み権限者の直接改ざん余地はserver生成化まで残る。
 
 ## 矛盾・未使用候補
 
-- 必須`address`が詳細編集includedKeysから欠落し、既存取引先の番地を同画面で訂正できない。
 - `contractStatus`を表示し一覧はACTIVEに限定するが、status変更UIがない。
 - AutocompleteはACTIVE制約がなく、一覧の対象条件と一致しない。
-- archive restore APIはあるがCustomer UIから未到達。
+- archive/restoreは意図的に後続専用操作へ分離している。
 - `CustomersIterator`は宣言コメントと異なり`modelValue`、`select-strategy`、`show-select`及び任意attrsを内部iteratorへforwardしない。Site作成wizardの既存Customer候補選択に渡すattrsが機能しないため、候補選択より取引先未設定継続だけが到達し得る。
 - Site表示条件と削除guard条件が異なり、利用者には見えない参照で削除拒否となり得る。
 
 ## 将来要対応
 
-- FUT-0055: 承認済みread/write権限、preset、archive/restore監査、物理delete拒否をUI・Rules・Callableへ実装する。
+- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。終了・再有効化と、参照確認・監査を伴うarchive/緊急restoreを後続の専用操作として実装する。
 - FUT-0056: 承認済みcode一意・類似warning・ACTIVE選択・TERMINATED履歴・検索fieldを実装し、feasibility/index/cost/privacyを検証する。
 - FUT-0057: 承認済みTERMINATED/archive/運営者inspection・緊急restore境界を実装し、参照guard・保持を整備する。
 - FUT-0058: draft initial copy、formal full snapshot、snapshot再print、revisionを実装する。
@@ -97,6 +98,6 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 
 ## 未確認範囲
 
-- 汎用Air manager内部の全validation・表示実装。
+- 他masterに残る汎用Air manager内部の全validation・表示実装。
 - Site/Agreement/Billing/PDFの内部処理、実データ上の参照件数、index、Emulator/ブラウザ動作。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

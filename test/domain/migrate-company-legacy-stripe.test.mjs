@@ -1038,6 +1038,56 @@ test("Rules and root/Functions schema identity must agree before apply", () => {
   ]);
 });
 
+test("Stripe fallback exclusion accepts only a valid negated list in the exact Companies fallback", () => {
+  const valid = validRepositoryInputs();
+  const rulesWithFallback = (condition, extra = "", fallbackExtra = "") => `
+    match /Companies/{companyId}/StripeData/{document=**} {
+      allow read, write: if false;
+    }
+    ${extra}
+    match /Companies/{companyId}/{collection}/{document=**} {
+      allow read, write: if ${condition};
+      ${fallbackExtra}
+    }
+  `;
+  const inspect = (rulesSource) =>
+    inspectStripeMigrationRepositoryPreconditions({ ...valid, rulesSource });
+
+  assert.deepEqual(
+    inspect(rulesWithFallback(
+      '!(collection in ["Customers", "StripeData", "Users"]) && isAuthenticated()',
+    )),
+    [],
+  );
+
+  for (const rulesSource of [
+    rulesWithFallback(
+      "isAuthenticated()",
+      '// !(collection in ["StripeData", "Users"])',
+    ),
+    rulesWithFallback('!(collection in ["Customers", "Users"])'),
+    rulesWithFallback('(collection in ["StripeData", "Users"])'),
+    rulesWithFallback('!(collection in ["StripeData", unknownCollection])'),
+    rulesWithFallback('true || collection != "StripeData"'),
+    rulesWithFallback('true || !(collection in ["StripeData"])'),
+    rulesWithFallback('!(collection != "StripeData")'),
+    rulesWithFallback('!!(collection in ["StripeData"])'),
+    rulesWithFallback(
+      '!(collection in ["StripeData", "Users"])',
+      "",
+      "allow read: if true;",
+    ),
+    rulesWithFallback(
+      "isAuthenticated()",
+      `match /Companies/{companyId}/Elsewhere/{document=**} {
+        allow read, write: if !(collection in ["StripeData"]);
+      }`,
+    ),
+  ]) {
+    assert.deepEqual(inspect(rulesSource), ["rules-fallback-exclusion-missing"]);
+  }
+});
+
 const DELETE_FIELD = Symbol("delete-field");
 
 function createFirestoreFake(initialRecords, { failCommit = false } = {}) {
