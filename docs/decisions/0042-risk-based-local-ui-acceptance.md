@@ -32,11 +32,11 @@ Codex専用local環境で、実際のAirGuard生成物、専用Emulator、合成
 - 利用者: 既存機能の内部改修では原則としてlocal操作を繰り返さず、新規性または実環境差がある確認へ集中する。
 - Codex: 省略条件と除外条件をcompletion reportまたはreceiptへ明記し、通常操作できなかった箇所や未解決errorを隠さない。
 - product/data: 本判断だけではapplication、Rules、Firebase data、Dev、Prodを変更しない。
-- task: project rulesとUI tester指示を変えるため、検証・commit後に影響するcoordinatorとUI testerのtaskを新規taskへ交代する。
+- task: 本判断はPM-14の権限、担当範囲、callback、Git統合、安全境界を変更せず、変更時にactiveなUI tester taskもないため、現在のtask交代を要求しない。今後作成するUI tester taskは更新済みproject設定を最初から読み込む。
 
 ## 移行とrollback
 
-project rules、仕様、開発・coordination・local UI runbook、開始prompt、UI tester、document map、handoffを同期する。問題があれば安全なcorrective commitで旧来の利用者local受入れ必須へ戻し、同じgovernance turnoverを行う。
+project rules、仕様、開発・coordination・local UI runbook、開始prompt、UI tester、document map、handoffを同期する。問題があれば安全なcorrective commitで旧来の利用者local受入れ必須へ戻す。将来の変更がcommon contract、active taskの権限・担当・承認・callback・安全境界へ及ぶ場合だけ、その時点のturnover規則を適用する。
 
 ## 検証
 
