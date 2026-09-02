@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-01
-- 仕様バージョン: 0.8.4
+- 最終更新日: 2026-09-02
+- 仕様バージョン: 0.8.5
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -127,7 +127,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 通常の可逆なCompany編集はreal-time listenerで最新値を反映し、保存結果はlast-write-winsを受容する。編集中の同一operationへ別actorの変更が届いた場合は通知し、operation contractに従って再読込または明示再確認を要求する。共通revision、lock、operation ledgerは導入しない。
 - expected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
 - `siteOrder`と`scheduleOrder`は各最大2000件という現行候補上限と実際のdocument sizeを再計測し、Company本体と分ける必要性を判断する。分割前提にはしない。
-- Devで確認済みのCompany rootは4件であり、旧新形式を通常運用で併存させず、backup、dry-run、短時間maintenance、全件変換、post-check、Dev受入れを一つのbounded migrationとして実施する。実data migrationは対象commit、件数、backup、rollback、停止条件、検証を固定した別の明示承認を必要とする。
+- Devで確認済みのCompany rootは4件であり、旧新形式を通常運用で併存させず、UWBと同じFirestore全体snapshot、fresh dry-run、旧2 fieldだけの一括削除、post-check、Dev受入れを一つのbounded migrationとして実施する。Stripeは未使用で外部からの更新経路もなく、現行client・Functionsも旧fieldを生成・更新しないため、この恒久cleanupではmaintenance、外部Stripeの前後確認、旧field専用backup・data rollbackを要求しない。実data migrationは対象commit、件数、全体snapshot、停止条件、検証を固定した別の明示承認を必要とする。
 - 設定文字列の長さはUnicode Extended Grapheme Cluster単位、すなわち利用者が見た目上1文字と認識する単位で数える。結合文字で表した`が`も合成済みの`が`も1文字である。外側の空白はtrimするが、保存値へNFC/NFKC等のUnicode正規化を自動適用しない。1行fieldはCR/LFとcontrol characterを拒否する。
 - 会社名はtrim後1〜100文字、会社名カナはtrim後1〜200文字とし、一意性を要求しない。カナはUnicode `U+30A0–U+30FF`、全角空白`U+3000`、全角数字`U+FF10–U+FF19`、control characterを除く空白を許可する。結合濁点`U+3099`・結合半濁点`U+309A`は直前の`U+30A0–U+30FF`と同一grapheme clusterを構成する場合だけ許可し、単独または他のbase直後では拒否する。郵便番号はnullまたはASCII数字7桁、都道府県codeはnullまたは`01`〜`47`、市区町村はnullまたは100文字以内、番地・建物はnullまたは各200文字以内、電話・FAXはnullまたは32文字以内のASCII数字・`+ - ( ) .`・空白だけとする。初期signupは会社名とカナだけで通常利用へ進める。請求確定時は会社名、郵便番号、都道府県、市区町村、番地、電話を必須とし、建物、FAX、適格請求書番号、振込先は任意とする。
 - 適格請求書番号は保存時に先頭の`T`/`t`を除き13桁のASCII数字だけへ正規化する。空入力はnullとし、表示・帳票では存在する場合だけ大文字`T`を付ける。
@@ -142,7 +142,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。Company設定画面から既定取極めの編集入口とwriterを撤去し、Site固有の取極めUI・dataは維持する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
 - Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
-- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。STRIPE-02でcheckout、reader、未公開Functions、依存package、Company schema fieldをlocal codeから削除し、`StripeData`を全actor・全階層で拒否した。既存Company rootのlegacy fieldと既存`StripeData`のdata削除は、local migrationとDev migration・受入れを行う後続checkpointまで未実施である。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
+- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。STRIPE-02でcheckout、reader、未公開Functions、依存package、Company schema fieldをlocal codeから削除し、`StripeData`を全actor・全階層で拒否した。利用者用localではlegacy field削除を完了し、DevはUWB方式の全体snapshot後に4 Companyの旧2 fieldだけをmaintenanceなしで恒久削除する。内部`StripeData`が1件でもあれば対象を拡張せず停止し、外部Stripeの状態確認は行わない。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
 - 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。Dev/remote dataは未変更であり、旧8 targetへのmigrationまたはrestore経路は現在提供しない。
 
 ### 取引先・現場・取極め

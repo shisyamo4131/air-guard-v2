@@ -136,7 +136,7 @@ Dev server、Chrome受入れ、Codex専用UI buildはHosting release artifactの
 | Functionsのみ | syntax、対象Functions test、config・runtime確認 | Functions | 通常不要。既存dataを一括処理する場合はdata影響を再分類 |
 | Rules・Indexesを含むserver境界 | Rules test、index/config検査、影響するclient確認 | Rules/Indexesと必要Functionsを整合単位でdeploy | 拒否強化だけで継続互換なら通常不要。write contract変更時はsnapshot・maintenanceを検討 |
 | client/server contract同時変更 | client buildとserver test、旧新client互換性 | server先行、remote検証、同一artifactのclient | 非互換期間がある場合はmaintenance。data影響に応じてsnapshot |
-| data migrationを含む | 固有dry-run、plan、digest、backup、post-check | server、fresh dry-run、apply、再dry-run、client | 原則maintenanceと整合snapshot。migration固有ADR・rollback必須 |
+| data migrationを含む | 固有dry-run、plan、digest、backupまたはsnapshot、post-check | server、fresh dry-run、apply、再dry-run、client | 原則maintenanceと整合snapshot。writer不存在・互換なfield限定変更等を固有ADRで確認できる場合はmaintenanceを省略できる |
 | 破壊的repair | exact対象、事前事後証拠、復旧、dry-run相当 | 承認された限定repairだけ | 別の明示承認。既存checkpointへ追加しない |
 
 releaseが複数classへ該当する場合は最も強いdata・互換性境界を採用する。maintenanceはclient route制御であり、Rules、Functions、Admin SDK、scheduled処理、開始済みwriteを排他しない。
@@ -162,6 +162,10 @@ releaseが複数classへ該当する場合は最も強いdata・互換性境界�
 UWB初回Dev導入は、client/server/data contractの同時変更と予約migrationを含むため、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)のmaintenance cutoverを使用した。System maintenance、整合snapshot、UWB全server境界、fresh create-only予約migration、client/Hosting、maintenance中検証、解除・受入れを一体で行う。
 
 この順序をHosting-only、独立Functions、互換なRules変更へ自動適用しない。別migrationへUWB予約migrationのplan、digest、create-only条件、rollbackを流用せず、migrationごとに別の承認済み契約を作る。
+
+## legacy Stripe scaffold固有cutover
+
+STRIPE-05は、Stripe未使用・外部からの更新経路なし、現行client・Functionsに旧field writerなし、Company rootと`StripeData`のclient write拒否、旧2 fieldだけの冪等な削除を確認済みである。このためmaintenance、quiet period、外部Stripeのinventory・前後確認、migration固有backup・旧field復元を行わない。Rules・Functions・Hostingを先行反映し、UWBと同じFirestore全体snapshot、fresh dry-run、4 Company・内部`StripeData` 0の停止条件、1 transactionの旧2 field削除、post-check、clean再実行の順とする。全体snapshotは対象外dataを変更した重大事故の別承認repair候補であり、通常rollbackや自動restoreには使用しない。
 
 ## 停止とrollback
 

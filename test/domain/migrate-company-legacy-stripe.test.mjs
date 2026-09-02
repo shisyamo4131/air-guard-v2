@@ -5,10 +5,12 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   CODEX_STRIPE_MIGRATION_TARGET,
+  DEV_STRIPE_MIGRATION_TARGET,
   USER_LOCAL_STRIPE_MIGRATION_TARGET,
   applyCompanyLegacyStripeMigration,
   assertCompanyLegacyStripeMigrationTarget,
   assertCodexStripeMigrationTarget,
+  assertDevCredentialProject,
   canonicalizeFirestoreValue,
   createCompanyLegacyStripeBackup,
   executeCompanyLegacyStripeCli,
@@ -77,6 +79,53 @@ function legacyState(overrides = {}) {
     stripeDescendants: [],
     ...overrides,
   };
+}
+
+function devLegacyCompanies() {
+  return ["A", "B", "C", "D"].map((suffix, index) =>
+    company(`COMPANY_SECRET_${suffix}`, {
+      companyName: `Synthetic company ${index + 1}`,
+      unrelatedRevision: index,
+      stripeCustomerId: `cus_sensitive_${suffix}`,
+      subscription: {
+        id: null,
+        status: null,
+        currentPeriodEnd: null,
+        employeeLimit: 10 + index,
+      },
+    }),
+  );
+}
+
+function devEnv(overrides = {}) {
+  return {
+    GCLOUD_PROJECT: "air-guard-v2-dev",
+    FIRESTORE_DATABASE_ID: "(default)",
+    GOOGLE_APPLICATION_CREDENTIALS: "C:\\opaque\\dev-credential.json",
+    ...overrides,
+  };
+}
+
+function devApplyArgs(planDigest, companyFieldDocuments = 4) {
+  return [
+    "--target", "dev", "--apply", "--plan-digest", planDigest,
+    "--confirm-project", "air-guard-v2-dev",
+    "--confirm-database", "(default)", "--confirm-full-snapshot",
+    "--expected-company-total", "4",
+    "--expected-company-field-documents", String(companyFieldDocuments),
+    "--expected-stripe-data-documents", "0",
+  ];
+}
+
+function devPlan(companies = devLegacyCompanies(), overrides = {}) {
+  return planCompanyLegacyStripeMigration({
+    companies,
+    stripeData: [],
+    stripeDescendants: [],
+    stripeOrphans: [],
+    target: DEV_STRIPE_MIGRATION_TARGET,
+    ...overrides,
+  });
 }
 
 test("planner is deterministic and limits writes to the two legacy fields and direct StripeData", () => {
@@ -377,6 +426,56 @@ test("target guards require exact local project, host, and database identities",
       ({ exitCode }) => exitCode === 78,
     );
   }
+
+  const devEnv = {
+    GCLOUD_PROJECT: "air-guard-v2-dev",
+    FIRESTORE_DATABASE_ID: "(default)",
+    GOOGLE_APPLICATION_CREDENTIALS: "C:\\opaque\\dev-credential.json",
+  };
+  assert.deepEqual(
+    assertCompanyLegacyStripeMigrationTarget("dev", devEnv),
+    DEV_STRIPE_MIGRATION_TARGET,
+  );
+  for (const env of [
+    {},
+    { ...devEnv, GOOGLE_APPLICATION_CREDENTIALS: "" },
+    { ...devEnv, FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080" },
+    { ...devEnv, FIREBASE_AUTH_EMULATOR_HOST: "127.0.0.1:9099" },
+    { ...devEnv, FIRESTORE_DATABASE_ID: "other" },
+    { ...devEnv, GCLOUD_PROJECT: "different-project" },
+    { ...devEnv, GOOGLE_CLOUD_PROJECT: "different-project" },
+    { ...devEnv, FIREBASE_CONFIG: "not-json" },
+    {
+      ...devEnv,
+      FIREBASE_CONFIG: JSON.stringify({ projectId: "different-project" }),
+    },
+    {
+      ...devEnv,
+      FIREBASE_CONFIG: JSON.stringify({ firestoreDatabaseId: "other" }),
+    },
+  ]) {
+    assert.throws(
+      () => assertCompanyLegacyStripeMigrationTarget("dev", env),
+      ({ exitCode }) => exitCode === 78,
+    );
+  }
+});
+
+test("Dev credential project must match without leaking credential content", () => {
+  assert.doesNotThrow(() => assertDevCredentialProject(
+    JSON.stringify({ project_id: "air-guard-v2-dev", private_key: "SECRET" }),
+    DEV_STRIPE_MIGRATION_TARGET,
+  ));
+  for (const source of [
+    "not-json SECRET",
+    JSON.stringify({ project_id: "other", private_key: "SECRET" }),
+  ]) {
+    assert.throws(
+      () => assertDevCredentialProject(source, DEV_STRIPE_MIGRATION_TARGET),
+      (error) => error.exitCode === 78 &&
+        !error.message.includes("SECRET") && !error.message.includes("other"),
+    );
+  }
 });
 
 test("user-local mutating modes require exact confirmations and observed counts", () => {
@@ -433,9 +532,46 @@ test("user-local mutating modes require exact confirmations and observed counts"
       ({ exitCode }) => exitCode === 64,
     );
   }
-  for (const target of ["dev", "prod"]) {
+  assert.equal(parseCompanyLegacyStripeArgs(["--target", "dev"]).mode, "dry-run");
+  assert.throws(
+    () => parseCompanyLegacyStripeArgs(["--target", "prod"]),
+    ({ exitCode }) => exitCode === 64,
+  );
+});
+
+test("Dev apply requires the exact project, database, snapshot, digest, and counts", () => {
+  const digest = "a".repeat(64);
+  const required = [
+    "--target", "dev", "--apply", "--plan-digest", digest,
+    "--confirm-project", "air-guard-v2-dev",
+    "--confirm-database", "(default)",
+    "--confirm-full-snapshot",
+    "--expected-company-total", "4",
+    "--expected-company-field-documents", "4",
+    "--expected-stripe-data-documents", "0",
+  ];
+  assert.equal(parseCompanyLegacyStripeArgs(required).mode, "apply");
+  for (let index = 0; index < required.length; index += 1) {
+    const candidate = required.filter((_, candidateIndex) =>
+      candidateIndex !== index &&
+      !(index % 2 === 0 && candidateIndex === index + 1),
+    );
     assert.throws(
-      () => parseCompanyLegacyStripeArgs(["--target", target]),
+      () => parseCompanyLegacyStripeArgs(candidate),
+      ({ exitCode }) => exitCode === 64,
+    );
+  }
+  for (const args of [
+    ["--target", "dev", "--create-backup", "--plan-digest", digest,
+      "--backup-path", ".codex-test/runtime/forbidden.json"],
+    ["--target", "dev", "--restore", "--backup-path",
+      ".codex-test/runtime/forbidden.json", "--backup-receipt", digest],
+    [...required, "--confirm-quiet-window"],
+    [...required, "--confirm-user-local-apply"],
+    [...required.slice(0, -1), "1"],
+  ]) {
+    assert.throws(
+      () => parseCompanyLegacyStripeArgs(args),
       ({ exitCode }) => exitCode === 64,
     );
   }
@@ -1004,7 +1140,7 @@ function createFirestoreFake(initialRecords, { failCommit = false } = {}) {
           return querySnapshot(query);
         },
         update(reference, patch) {
-          calls.push({ type: "update", path: reference.path });
+          calls.push({ type: "update", path: reference.path, patch });
           writes.push({ type: "update", path: reference.path, patch });
         },
         delete(reference) {
@@ -1295,6 +1431,315 @@ test("restore accepts legacy schema v1 preimage and blocks conflicts", async () 
     ({ code }) => code === "restore-conflict",
   );
   assert.equal(conflict.calls.some(({ type }) => type !== "get"), false);
+});
+
+test("Dev planner ignores unrelated fields but binds Company identity and legacy preimages", () => {
+  const companies = devLegacyCompanies();
+  const baseline = devPlan(companies);
+  const unrelated = structuredClone(companies);
+  unrelated[0].data.unrelatedRevision = 999;
+  unrelated[0].updateTime = new TestTimestamp(999, 1);
+  const targetDrift = structuredClone(companies);
+  targetDrift[0].data.stripeCustomerId = "cus_changed_sensitive";
+  const missing = companies.slice(1);
+  assert.equal(devPlan(unrelated).planDigest, baseline.planDigest);
+  assert.notEqual(devPlan(targetDrift).planDigest, baseline.planDigest);
+  assert.notEqual(devPlan(missing).planDigest, baseline.planDigest);
+});
+
+test("Dev blocks every StripeData presence and never plans its deletion", () => {
+  for (const state of [
+    { stripeData: [stripeData()] },
+    { stripeDescendants: ["Companies/SECRET/StripeData/MISSING/Nested/CHILD"] },
+    { stripeOrphans: ["Companies/MISSING/StripeData/ORPHAN"] },
+  ]) {
+    const plan = devPlan(devLegacyCompanies(), state);
+    assert.equal(plan.stripeDeletes.length, 0);
+    assert.equal(plan.stripeDataCount, 1);
+    assert.equal(plan.findings.length > 0, true);
+    assert.equal(summarizeCompanyLegacyStripePlan(plan).status, "blocked");
+  }
+});
+
+test("Dev guards and credential checks finish before Admin initialization or Firestore read", async () => {
+  const counters = { credential: 0, identity: 0, runtime: 0, read: 0 };
+  const dependencies = {
+    readRepositoryPreconditionsImpl: async () => [],
+    readCredentialFile: async () => {
+      counters.credential += 1;
+      return JSON.stringify({ project_id: "air-guard-v2-dev" });
+    },
+    readRepositoryIdentity: async () => {
+      counters.identity += 1;
+      return { head: "a".repeat(40), toolDigest: "b".repeat(64) };
+    },
+    createRuntime: async () => {
+      counters.runtime += 1;
+      return { firestore: {} };
+    },
+    readState: async () => {
+      counters.read += 1;
+      return {};
+    },
+  };
+  for (const env of [
+    devEnv({ FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080" }),
+    devEnv({ GCLOUD_PROJECT: "other" }),
+    devEnv({ FIRESTORE_DATABASE_ID: "other" }),
+    devEnv({ GOOGLE_APPLICATION_CREDENTIALS: "" }),
+  ]) {
+    await assert.rejects(
+      () => executeCompanyLegacyStripeCli({ args: ["--target", "dev"], env, ...dependencies }),
+      ({ exitCode }) => exitCode === 78,
+    );
+  }
+  assert.deepEqual(counters, { credential: 0, identity: 0, runtime: 0, read: 0 });
+
+  await assert.rejects(
+    () => executeCompanyLegacyStripeCli({
+      args: ["--target", "dev"],
+      env: devEnv(),
+      ...dependencies,
+      readCredentialFile: async () => {
+        counters.credential += 1;
+        return JSON.stringify({ project_id: "other", private_key: "SECRET" });
+      },
+    }),
+    (error) => error.code === "credential-project-mismatch" &&
+      !error.message.includes("SECRET") && !error.message.includes("other"),
+  );
+  assert.deepEqual(counters, { credential: 1, identity: 0, runtime: 0, read: 0 });
+
+  const plan = devPlan();
+  await assert.rejects(
+    () => executeCompanyLegacyStripeCli({
+      args: devApplyArgs(plan.planDigest),
+      env: devEnv(),
+      ...dependencies,
+      readRepositoryIdentity: async () => {
+        counters.identity += 1;
+        return { head: "dirty", toolDigest: "b".repeat(64) };
+      },
+    }),
+    ({ code }) => code === "repository-identity-invalid",
+  );
+  assert.deepEqual(counters, { credential: 2, identity: 1, runtime: 0, read: 0 });
+});
+
+test("Dev dry-run performs one fresh inventory and exposes only redacted results", async () => {
+  const counters = { runtime: 0, read: 0 };
+  const state = {
+    companies: devLegacyCompanies(),
+    stripeData: [],
+    stripeDescendants: [],
+    stripeOrphans: [],
+  };
+  const result = await executeCompanyLegacyStripeCli({
+    args: ["--target", "dev"],
+    env: devEnv(),
+    readCredentialFile: async () => JSON.stringify({ project_id: "air-guard-v2-dev" }),
+    readRepositoryPreconditionsImpl: async () => [],
+    createRuntime: async () => {
+      counters.runtime += 1;
+      return { firestore: { synthetic: true } };
+    },
+    readState: async () => {
+      counters.read += 1;
+      return state;
+    },
+  });
+  assert.equal(result.exitCode, 2);
+  assert.deepEqual(counters, { runtime: 1, read: 1 });
+  const output = JSON.stringify(result.summary);
+  assert.equal(output.includes("COMPANY_SECRET"), false);
+  assert.equal(output.includes("cus_sensitive"), false);
+  assert.equal(output.includes("C:\\opaque"), false);
+});
+
+test("Dev transaction retry deletes only legacy fields and preserves unrelated updates", async () => {
+  const fake = createFirestoreFake(devLegacyCompanies());
+  const plan = devPlan();
+  const originalCollectionGroup = fake.firestore.collectionGroup.bind(fake.firestore);
+  let inventoryReads = 0;
+  fake.firestore.collectionGroup = (name) => {
+    const query = originalCollectionGroup(name);
+    const originalGet = query.get.bind(query);
+    query.get = async () => {
+      inventoryReads += 1;
+      return originalGet();
+    };
+    return query;
+  };
+  const originalTransaction = fake.firestore.runTransaction.bind(fake.firestore);
+  let injected = false;
+  fake.firestore.runTransaction = async (callback) => {
+    if (!injected) {
+      injected = true;
+      await assert.rejects(
+        () => originalTransaction(async (transaction) => {
+          await callback(transaction);
+          throw new Error("synthetic retry");
+        }),
+        /synthetic retry/u,
+      );
+      fake.documents.get("Companies/COMPANY_SECRET_A").data.unrelatedRevision = 999;
+    }
+    return originalTransaction(callback);
+  };
+  const result = await executeCompanyLegacyStripeCli({
+    args: devApplyArgs(plan.planDigest),
+    env: devEnv(),
+    readRepositoryPreconditionsImpl: async () => [],
+    readCredentialFile: async () => JSON.stringify({ project_id: "air-guard-v2-dev" }),
+    readRepositoryIdentity: async () => ({
+      head: "a".repeat(40),
+      toolDigest: "b".repeat(64),
+    }),
+    createRuntime: async () => ({
+      firestore: fake.firestore,
+      deleteFieldValue: () => DELETE_FIELD,
+    }),
+  });
+  assert.equal(result.exitCode, 0);
+  // Initial apply inventory, apply preflight, and one internal post-check.
+  // The separately invoked dry-run remains an external release step.
+  assert.equal(inventoryReads, 3);
+  assert.equal(result.summary.status, "clean");
+  assert.equal(result.summary.inventoryCounts.stripeDataDocuments, 0);
+  const serializedSummary = JSON.stringify(result.summary);
+  assert.equal(serializedSummary.includes("COMPANY_SECRET"), false);
+  assert.equal(serializedSummary.includes("cus_sensitive"), false);
+  assert.equal(
+    fake.documents.get("Companies/COMPANY_SECRET_A").data.unrelatedRevision,
+    999,
+  );
+  for (const { data } of fake.documents.values()) {
+    assert.equal("stripeCustomerId" in data, false);
+    assert.equal("subscription" in data, false);
+  }
+  assert.equal(fake.calls.filter(({ type }) => type === "update").length, 8);
+  for (const call of fake.calls.filter(({ type }) => type === "update")) {
+    assert.deepEqual(Object.keys(call.patch).sort(), ["stripeCustomerId", "subscription"]);
+  }
+  assert.equal(fake.calls.some(({ type }) => type === "delete"), false);
+});
+
+test("Dev target drift, missing Company, changed counts, and transaction failure are all-zero", async () => {
+  const cases = [
+    (fake) => {
+      fake.documents.get("Companies/COMPANY_SECRET_A").data.stripeCustomerId = "changed";
+    },
+    (fake) => {
+      fake.documents.delete("Companies/COMPANY_SECRET_A");
+    },
+  ];
+  for (const mutate of cases) {
+    const fake = createFirestoreFake(devLegacyCompanies());
+    const plan = devPlan();
+    const originalTransaction = fake.firestore.runTransaction.bind(fake.firestore);
+    fake.firestore.runTransaction = async (callback) => {
+      mutate(fake);
+      return originalTransaction(callback);
+    };
+    await assert.rejects(
+      () => applyCompanyLegacyStripeMigration({
+        firestore: fake.firestore,
+        expectedPlanDigest: plan.planDigest,
+        target: DEV_STRIPE_MIGRATION_TARGET,
+        deleteFieldValue: () => DELETE_FIELD,
+        expectedCounts: {
+          companyTotal: 4,
+          companyFieldDocuments: 4,
+          stripeDataDocuments: 0,
+        },
+      }),
+      ({ code }) => ["plan-digest-mismatch", "expected-count-mismatch"].includes(code),
+    );
+    assert.equal(fake.calls.some(({ type }) => type !== "get"), false);
+    assert.equal(
+      [...fake.documents.values()].some(({ data }) => !("subscription" in data)),
+      false,
+    );
+  }
+
+  const failure = createFirestoreFake(devLegacyCompanies(), { failCommit: true });
+  const plan = devPlan();
+  await assert.rejects(() => applyCompanyLegacyStripeMigration({
+    firestore: failure.firestore,
+    expectedPlanDigest: plan.planDigest,
+    target: DEV_STRIPE_MIGRATION_TARGET,
+    deleteFieldValue: () => DELETE_FIELD,
+    expectedCounts: {
+      companyTotal: 4,
+      companyFieldDocuments: 4,
+      stripeDataDocuments: 0,
+    },
+  }));
+  for (const { data } of failure.documents.values()) {
+    assert.equal("stripeCustomerId" in data, true);
+    assert.equal("subscription" in data, true);
+  }
+});
+
+test("Dev post-check permits a clean new Company but rejects an original Company missing", async () => {
+  const fake = createFirestoreFake(devLegacyCompanies());
+  const original = devPlan();
+  await applyCompanyLegacyStripeMigration({
+    firestore: fake.firestore,
+    expectedPlanDigest: original.planDigest,
+    target: DEV_STRIPE_MIGRATION_TARGET,
+    deleteFieldValue: () => DELETE_FIELD,
+    expectedCounts: {
+      companyTotal: 4,
+      companyFieldDocuments: 4,
+      stripeDataDocuments: 0,
+    },
+  });
+  fake.documents.set("Companies/COMPANY_SECRET_NEW", {
+    data: { companyName: "New synthetic company" },
+    version: 500,
+  });
+  const clean = await verifyCompanyLegacyStripePostState(fake.firestore, original);
+  assert.equal(clean.companyCount, 5);
+  fake.documents.delete("Companies/COMPANY_SECRET_A");
+  await assert.rejects(
+    () => verifyCompanyLegacyStripePostState(fake.firestore, original),
+    ({ code }) => code === "post-check-failed",
+  );
+});
+
+test("Dev clean plan can be applied again without writes", async () => {
+  const fake = createFirestoreFake(devLegacyCompanies());
+  const original = devPlan();
+  const expectedCounts = {
+    companyTotal: 4,
+    companyFieldDocuments: 4,
+    stripeDataDocuments: 0,
+  };
+  await applyCompanyLegacyStripeMigration({
+    firestore: fake.firestore,
+    expectedPlanDigest: original.planDigest,
+    target: DEV_STRIPE_MIGRATION_TARGET,
+    deleteFieldValue: () => DELETE_FIELD,
+    expectedCounts,
+  });
+  const clean = planCompanyLegacyStripeMigration({
+    ...await readCompanyLegacyStripeState(fake.firestore),
+    target: DEV_STRIPE_MIGRATION_TARGET,
+  });
+  const writesBefore = fake.calls.filter(({ type }) => type !== "get").length;
+  const reapplied = await applyCompanyLegacyStripeMigration({
+    firestore: fake.firestore,
+    expectedPlanDigest: clean.planDigest,
+    target: DEV_STRIPE_MIGRATION_TARGET,
+    deleteFieldValue: () => DELETE_FIELD,
+    expectedCounts: { ...expectedCounts, companyFieldDocuments: 0 },
+  });
+  assert.equal(reapplied.writeCount, 0);
+  assert.equal(
+    fake.calls.filter(({ type }) => type !== "get").length,
+    writesBefore,
+  );
 });
 
 test("CLI failures never echo arguments, paths, values, email, or a stack", () => {

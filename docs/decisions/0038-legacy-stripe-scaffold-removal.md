@@ -36,11 +36,12 @@ AirGuardV2にはStripe Checkout画面、`StripeData`、Companyの`stripeCustomer
 ### data migration契約
 
 - localとDevで同じmigration plannerを使用し、既定はdry-runとする。Prod targetは提供しない。
-- 変更可能箇所は既存Company rootの`stripeCustomerId`・`subscription`と、そのCompany直下の`StripeData`だけとする。Company rootの作成・削除、他field、他subcollectionの作成・変更・削除は行わない。
+- 変更可能箇所は既存Company rootの`stripeCustomerId`・`subscription`だけとする。`codex-local` rehearsalに限り、そのCompany直下の既知形状`StripeData`も削除対象にできる。Devでは内部`StripeData`を削除せず、1件でも存在すれば停止する。Company rootの作成・削除、他field、他subcollectionの作成・変更・削除は行わない。
 - reportは件数、分類、匿名化subject hash、64文字のplan digestだけを出し、Company ID、document path、field値、Stripe形式の値、秘密情報を出力しない。
-- apply前にexact target、直前dry-run、digest一致、対象件数、Rules、状態再検査を確認する。`codex-local`と将来のDevではbackupも必須とし、STRIPE-04の`user-local`だけはrollback節の既存`./saved-data` baseline例外に従う。Devで想定するCompany rootは4件だが、fresh確認が4件でない場合はwrite 0で停止する。
-- unexpectedなStripeData、対象外field差分、必須targetでのbackup失敗、STRIPE-04 user-localの既存baseline不一致、dry-run後の状態変化、schema package不整合、Rulesをdenyへ移行できない場合はwrite 0で停止し、推測削除しない。
-- apply後はlegacy root field 0、StripeData 0、Company件数不変、非対象field不変を確認する。再実行はcleanで変更0件となることを保証する。
+- apply前にexact target、直前dry-run、対象identityと旧2 fieldのdigest一致、対象件数、Rules、状態再検査を確認する。DevはUWBと同じFirestore全体snapshotの成功を必須とし、Company rootが4件でない、または直接・入れ子・orphanを含む内部`StripeData`が1件でも存在する場合はwrite 0で停止する。
+- Devの旧2 fieldは未使用scaffoldの恒久cleanupとし、maintenance、外部Stripeのinventory・前後確認、migration固有backup、旧fieldのdata rollbackを行わない。通常のCompany更新は旧2 fieldを書かずexact field updateであるため継続を許容し、非対象fieldの差分だけで停止しない。
+- unexpectedな旧field形状、STRIPE-04 user-localの既存baseline不一致、対象identityまたは旧2 fieldの状態変化、schema package不整合、Rulesをdenyへ移行できない場合はwrite 0で停止し、推測削除しない。
+- apply後は元の4 Companyが存在し、legacy root field 0、内部`StripeData` 0であることを確認する。再実行はcleanで変更0件となることを保証し、非対象fieldの正当な更新を上書きまたは失敗扱いしない。
 
 ## 理由
 
@@ -63,7 +64,7 @@ AirGuardV2にはStripe Checkout画面、`StripeData`、Companyの`stripeCustomer
 ## rollback
 
 - code・Rules・文書はreview済みcommitのrevertで戻す。ただし公開済みpackageをunpublishせず、必要なら別の前進versionで復元する。
-- `codex-local`と将来のDev data applyでは、apply前にexact preimage backupを取得する。data rollbackはbackupの対象Companyと対象fieldだけを、現状態の衝突検査後に別の明示承認で復元する。
+- `codex-local`の合成data applyは既存のexact preimage backupと復旧演習を維持する。DevはUWB方式のFirestore全体snapshotを重大事故時の復旧候補として取得するが、未使用の旧2 fieldは恒久削除し、migration固有backup・data rollbackを提供しない。部分完了は現在状態を再確認して同じ処理を再実行し、code・Rules・Hostingの不具合は旧Stripe scaffoldを再公開せず前進修正する。全体snapshotからの復旧は正常な後続更新も戻し得るため自動実行せず、対象外dataを変更した重大事故に限り別承認のrepairで扱う。
 - STRIPE-04の`user-local` Emulatorは、利用者が承認した限定例外として別backupを作成しない。既存`./saved-data`を変更しないimport-only rehearsalでCompany 1件の`stripeCustomerId`・`subscription`削除、`StripeData` 0件、他write 0件を確認し、不合格ならexportせず終了して同じbaselineから再開する。合格後は同じbaselineをimport＋export-on-exitで再起動し、同じmigrationと画面・data確認を再実行して確定する。確定後はpre-migration data rollbackを提供しない。
 - external Stripe resourceは変更しないため、外部側rollbackは存在しない。
 
@@ -72,9 +73,9 @@ AirGuardV2にはStripe Checkout画面、`StripeData`、Companyの`stripeCustomer
 - route、reader/writer、module、dependency、schema field、旧entitlement exportの不存在をdomain testで確認する。
 - 新規Company payloadにlegacy fieldがないこと、旧fieldを持つCompanyの読込とmigrationを合成dataで確認する。
 - Firestore Emulatorで同社・他社・SuperUser・未認証の`StripeData` read/create/update/deleteとnested pathをすべて拒否し、他の正当なCompany subcollectionを退行させない。
-- migrationのdry-run、digest、state drift、redaction、idempotency、partial failure、backup/rollback rehearsalを合成dataで確認する。
+- migrationのdry-run、digest、state drift、redaction、idempotency、partial failureを合成dataで確認する。`codex-local`だけはbackup/rollback rehearsalも維持し、Devでは全体snapshot確認、4 Company、内部`StripeData` 0、旧2 field限定write、通常Company更新の保持、post-check、clean再実行を確認する。
 - local UIでCompany基本情報、振込先、通常設定、稼働予定表示順、配置表示順、新規Company作成を確認し、checkout入口・Stripe通信がないことを確認する。
-- Dev反映は別checkpointでfresh inventory、backup、maintenance要否、release順、post-check、利用者最終UI acceptanceを固定する。
+- Dev反映は別checkpointでfresh inventory、UWB方式の全体snapshot、maintenance不要、server・client先行反映、旧2 field限定migration、post-check、利用者最終UI acceptanceを固定する。外部Stripeの状態確認は含めない。
 
 ## 再検討条件
 

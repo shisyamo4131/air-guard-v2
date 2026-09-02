@@ -9,7 +9,7 @@
 
 UWBではUser documentを権限ごとに分割せず、操作ごとのCallableがactorと変更可能fieldを確認した。競合制御もroleと有効・無効のように認証・認可へ直接影響する操作へ限定し、通常編集へ共通revision、lock、operation ledgerを広げなかった。
 
-一方、CCBは単一Company documentの全体setによる未知field消失と、通常利用者へ公開できないStripe情報の混在を解消する目的から始まったが、8 target document、PrivateSettings、SettingAudits、全設定revision、LEGACY/STAGED/ACTIVE runtime、長期互換release、create-only staging・restoreまでを一つの改修へ含めた。正式release前のDevで確認済みCompany rootは4件であり、短時間maintenanceによる一括変更が可能である。具体的な故障を超える予防策が積み重なり、目的に対して設計とroadmapが過大になった。
+一方、CCBは単一Company documentの全体setによる未知field消失と、通常利用者へ公開できないStripe情報の混在を解消する目的から始まったが、8 target document、PrivateSettings、SettingAudits、全設定revision、LEGACY/STAGED/ACTIVE runtime、長期互換release、create-only staging・restoreまでを一つの改修へ含めた。正式release前のDevで確認済みCompany rootは4件であり、当時は短時間maintenanceによる一括変更が可能と判断していた。具体的な故障を超える予防策が積み重なり、目的に対して設計とroadmapが過大になった。後続のlegacy Stripe固有判断は、writer不存在と恒久cleanupを確認してmaintenanceを不要とした。
 
 ## 決定
 
@@ -60,7 +60,7 @@ UWBではUser documentを権限ごとに分割せず、操作ごとのCallable�
 - 今回のCCBからStripe、subscription、entitlement、employeeLimit、PrivateSettingsを除外する。現行のlegacy Stripe fieldは独立した小規模改修で削除し、将来サブスクリプションを実装する時点で保存構造、権限、外部作用を新規設計する。
 - 8 target document、LEGACY/STAGED/ACTIVE runtime、compatible reader、全設定revision、SettingAudits、長期stagingを確認済み目標から外す。
 - Company documentは、同じactorが読める会社情報・通常設定・利用状態を同居可能とする。別documentは本ADRの分割条件を満たしたfieldだけに限定する。`siteOrder`・`scheduleOrder`は実際のsize上限を再計測してから分割を判断する。
-- 確認済みDev Company root 4件は、短時間maintenanceで一括変換する。旧新形式を通常運用で併存させない。
+- 確認済みDev Company root 4件は、対象operationの実際のwriterと互換性に応じて一括変換する。legacy Stripe scaffoldは未使用で、現行client・Functions・Rulesに旧fieldのwriterがなく、exact field deleteが通常Company更新を保持するため、ADR 0038の固有契約によりmaintenanceなしで恒久削除する。UWB方式のFirestore全体snapshot、fresh dry-run、post-check、Dev受入れを一つのbounded checkpointへ固定する。
 - 旧CCBのapplication、Rules、migration・restore script、test、Schemas consumer、Admin SDK guardはcommit/file単位でinventoryし、UWB、独立したsecurity改善、公開済みpackage artifactを巻き込まずcorrective commitでrollbackまたは再利用を決める。公開済みpackageをunpublishしない。
 
 ### roadmapの大きさ

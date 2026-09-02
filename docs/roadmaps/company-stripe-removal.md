@@ -4,7 +4,7 @@
 - 開始日: 2026-08-30
 - 現在の進捗: 70%
 - 部分加点: なし
-- 完了条件: legacy Stripe関連field・code・schemaを現行Company境界から除去し、local migration・動作確認、bounded Dev migration・反映・利用者受入れ、post-check、rollback確認まで完了する
+- 完了条件: legacy Stripe関連field・code・schemaを現行Company境界から除去し、local migration・動作確認、bounded Dev migration・反映・利用者受入れ、post-check、重大事故時の復旧境界確認まで完了する
 - 正本: [現行仕様](../specification.md#company設定とtenant-lifecycle)、[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)
 
 ## 境界
@@ -23,14 +23,14 @@
 | STRIPE-02 code・schema・testからの削除 | 25 | 25 | Completed | commit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`でSchemas `3.0.0-dev.1`導入と旧scaffold削除を固定し、全domain 731件、隔離Emulator 107件、local UI build、包括確認、独立review・security reviewを成功させた |
 | STRIPE-03 local migration準備 | 15 | 15 | Completed | commit `d5afe96927bf74809b9c3632f968905eff809975`で隔離Codex local専用のplanner、backup、dry-run、apply、post-check、clean rerun、rollback rehearsalを固定し、対象16件、全domain 747件、隔離Emulator 108件、独立review・security reviewを成功させた |
 | STRIPE-04 local migration・画面受入れ | 20 | 20 | Completed | 利用者用Emulatorでimport-only rehearsalとimport＋export-on-exit確定実行を行い、Company 1件のlegacy 2 field削除、`StripeData` 0件、post-check、保存snapshotの再import、会社設定の再読込と主要3画面の正常表示を確認した |
-| STRIPE-05 bounded Dev migration・反映 | 20 | 0 | Not started | 承認済みmaintenanceで4 Companyをbackup・変換し、対象releaseをDevへ反映してremote post-checkを完了する |
+| STRIPE-05 bounded Dev migration・反映 | 20 | 0 | Not started | UWB方式のFirestore全体snapshot後、maintenanceなしで4 Companyの旧2 fieldだけを恒久削除し、対象releaseのDev反映とremote post-checkを完了する |
 | STRIPE-06 Dev利用者受入れ・closeout | 10 | 0 | Not started | 利用者がDevの主要Company操作を受け入れ、旧field 0、error 0、rollback可否、仕様・運用・変更履歴を確定する |
 
-重みは合計100。各マイルストーンは記載した証拠が全部揃ったときだけ加点する。Dev操作、migration、deploy、remote/data writeは、対象commit、件数、backup、rollback、停止条件、検証を固定したbounded checkpointごとに明示承認を得る。
+重みは合計100。各マイルストーンは記載した証拠が全部揃ったときだけ加点する。Dev操作、migration、deploy、remote/data writeは、対象commit、件数、全体snapshot、重大事故時の復旧境界、停止条件、検証を固定したbounded checkpointごとに明示承認を得る。
 
 ## 現在の次工程
 
-1. STRIPE-05として、対象release、Dev 4 Company、backup、maintenance、停止条件、反映順、post-check、rollbackを固定し、Dev data操作・反映の明示承認を得る。
+1. STRIPE-05として、対象release、Dev 4 Company、UWB方式の全体snapshot、maintenance不要、停止条件、反映順、post-check、重大事故時の復旧境界を固定し、Dev data操作・反映の明示承認を得る。外部Stripeの前後確認と旧2 field専用backup・復元は行わない。
 2. STRIPE-04は利用者用local Emulatorだけで完了した。Dev・Prod、remote data、外部Stripeへの適用実績として扱わない。
 3. STRIPE-05は自動開始せず、Dev migration・deploy・remote writeを別のbounded checkpointとして扱う。
 

@@ -6,9 +6,9 @@
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
 
-## Company legacy Stripe scaffold removal（codex-local / user-local Emulator rehearsal）
+## Company legacy Stripe scaffold removal（codex-local / user-local / Dev）
 
-[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)に従い、`scripts/migrate-company-legacy-stripe.mjs`は既存Company rootの`stripeCustomerId`・`subscription`と直下`StripeData`だけを対象にする。STRIPE-03の経路は`demo-air-guard-v2-codex`、`(default)` database、`127.0.0.1:18080`の組合せだけを許可する。STRIPE-04は利用者用Emulatorの`air-guard-v2-dev`、`(default)` database、`127.0.0.1:8080`だけを許可する。Dev、Prod、remote targetは提供しない。手作業、Firebase Console、汎用scriptで代替してはならない。
+[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)に従い、`scripts/migrate-company-legacy-stripe.mjs`は既存Company rootの`stripeCustomerId`・`subscription`だけを全target共通の削除対象にする。`codex-local` rehearsalでは既知形状の直下`StripeData`も削除できるが、`user-local`とDevは`StripeData` 0件を必須とする。STRIPE-03の経路は`demo-air-guard-v2-codex`、`(default)` database、`127.0.0.1:18080`の組合せだけを許可する。STRIPE-04は利用者用Emulatorの`air-guard-v2-dev`、`(default)` database、`127.0.0.1:8080`だけを許可する。Devはremote `air-guard-v2-dev`、`(default)` database、明示credential、Emulator無効の組合せだけを許可し、内部`StripeData`が1件でもあれば変更せず停止する。Prodは提供しない。手作業、Firebase Console、汎用scriptで代替してはならない。
 
 既定は値非出力のdry-runで、短い対象名、件数、分類、匿名化subject hash、64文字のplan digestだけを表示する。project、database、接続先、Company ID、path、field値、Stripe形式の値、秘密情報は標準出力・errorへ出さない。対象の完全なidentityは内部のplan digestに含め、`codex-local`と`user-local`の計画を取り違えられないようにする。dry-runで変更予定がある場合は終了code 2、blockerは3、target拒否は78である。
 
@@ -52,6 +52,26 @@ node scripts/migrate-company-legacy-stripe.mjs --target user-local --apply --pla
 - post-checkはlegacy field 0、`StripeData` 0、Company件数不変、Company非対象field不変、再dry-run cleanを必須とする。codex-localの復旧はschema v1のexact preimageだけを一括で戻し、現在状態と衝突する場合はwrite 0で停止する。user-localの復元機能は提供しない。
 - Rules source検査は補助であり、実際の拒否保証は専用Emulatorの全actor・全階層deny testを正本とする。missing-parent列挙はtransaction readではない。user-local applyでは会社管理者を含むwriterを止め、bounded quiet period、連続inventory、transaction再確認、post-checkを組み合わせる。Dev、Prod、remote dataへは拡張しない。
 - STRIPE-03では合成dataでdry-run、backup、missing-parent時write 0、一括apply、post-check、再実行clean、復旧を確認した。STRIPE-04では利用者承認の2段階手順により、利用者用`./saved-data`をimport-onlyで予行し、同一baselineのimport＋export-on-exitでCompany 1件のlegacy 2 field削除を確定した。`StripeData` 0件、post-check、主要3画面、確定snapshotの再import cleanを確認済みである。Dev・Prod、remote data、外部Stripeは変更していない。
+
+### STRIPE-05 Dev remote
+
+DevはStripe未使用・外部更新なし、現行runtimeの旧field writer 0、`StripeData`全階層denyを前提にmaintenanceを使用しない。Rules・Functions・Hostingを先行反映し、UWBと同じ手順でFirestore全体snapshotを取得してから、次の3 commandを独立processで実行する。実行時点のcredential、database edition、project、release commit、snapshot operationとreceiptは承認済みrelease checkpointで確認し、値や識別子をrepository・応答・logへ出さない。
+
+```powershell
+$env:GCLOUD_PROJECT = "air-guard-v2-dev"
+$env:FIRESTORE_DATABASE_ID = "(default)"
+$env:GOOGLE_APPLICATION_CREDENTIALS = "<DEV_SERVICE_ACCOUNT_JSON>"
+node --use-system-ca scripts/migrate-company-legacy-stripe.mjs --target dev
+
+node --use-system-ca scripts/migrate-company-legacy-stripe.mjs --target dev --apply --plan-digest <64文字のdigest> --confirm-project air-guard-v2-dev --confirm-database "(default)" --confirm-full-snapshot --expected-company-total 4 --expected-company-field-documents <dry-run件数> --expected-stripe-data-documents 0
+
+node --use-system-ca scripts/migrate-company-legacy-stripe.mjs --target dev
+```
+
+- dry-runでCompany rootが4件でない、内部`StripeData`が直接・入れ子・orphanを含め1件以上、旧fieldが未知形状、対象identityまたは旧2 field digestが変化した場合はwrite 0で停止する。外部Stripeは確認しない。
+- applyは元の4 Companyをtransaction内で再読込し、`stripeCustomerId`・`subscription`だけを削除する。通常のCompany更新は非対象fieldを保持し、停止理由にしない。`StripeData`、Companyの他field・他subcollectionを変更しない。
+- post-checkは元の4 Companyの存在、旧2 field 0、内部`StripeData` 0、再dry-run cleanを確認する。部分完了は現在状態を再確認して同じ冪等処理を再実行し、自動rollbackしない。
+- Devでは`--create-backup`と`--restore`を提供しない。旧2 fieldは未使用scaffoldの恒久削除であり、migration固有backup・data rollbackを行わない。全体snapshotは対象外dataを変更した重大事故に限る別承認repair候補で、通常の全体restoreは行わない。
 
 ## 旧CCB Company設定migration（Historical / unavailable）
 

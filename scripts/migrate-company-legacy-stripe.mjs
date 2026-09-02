@@ -23,9 +23,18 @@ export const USER_LOCAL_STRIPE_MIGRATION_TARGET = Object.freeze({
   databaseId: "(default)",
 });
 
+export const DEV_STRIPE_MIGRATION_TARGET = Object.freeze({
+  name: "dev",
+  projectId: "air-guard-v2-dev",
+  firestoreHost: null,
+  databaseId: "(default)",
+  remote: true,
+});
+
 export const STRIPE_MIGRATION_TARGETS = Object.freeze({
   [CODEX_STRIPE_MIGRATION_TARGET.name]: CODEX_STRIPE_MIGRATION_TARGET,
   [USER_LOCAL_STRIPE_MIGRATION_TARGET.name]: USER_LOCAL_STRIPE_MIGRATION_TARGET,
+  [DEV_STRIPE_MIGRATION_TARGET.name]: DEV_STRIPE_MIGRATION_TARGET,
 });
 
 export const STRIPE_MIGRATION_MAX_WRITES = 400;
@@ -318,6 +327,29 @@ function targetContentDigestFromCanonical(companies, stripeData) {
   );
 }
 
+function devPlanDigestInput(target, companies, stripeData, descendants, orphans, findings) {
+  return {
+    target: {
+      name: target.name,
+      projectId: target.projectId,
+      databaseId: target.databaseId,
+      remote: true,
+    },
+    companies: companies.map((record) => ({
+      path: record.path,
+      fields: Object.fromEntries(
+        LEGACY_COMPANY_FIELDS.filter((field) => field in record.data).map(
+          (field) => [field, canonicalizeFirestoreValue(record.data[field])],
+        ),
+      ),
+    })),
+    stripeData: stripeData.map(({ path }) => ({ path })),
+    stripeDescendants: descendants,
+    stripeOrphans: orphans,
+    findings,
+  };
+}
+
 function sortFindings(findings) {
   return findings.sort((left, right) =>
     `${left.code}:${left.subject}`.localeCompare(`${right.code}:${right.subject}`),
@@ -343,7 +375,8 @@ export function planCompanyLegacyStripeMigration({
     !expectedTarget ||
     target?.projectId !== expectedTarget.projectId ||
     target?.firestoreHost !== expectedTarget.firestoreHost ||
-    target?.databaseId !== expectedTarget.databaseId
+    target?.databaseId !== expectedTarget.databaseId ||
+    Boolean(target?.remote) !== Boolean(expectedTarget.remote)
   ) {
     findings.push(makeFinding("target-invalid", "target"));
   }
@@ -423,6 +456,12 @@ export function planCompanyLegacyStripeMigration({
     a.path.localeCompare(b.path),
   );
   const sortedStripe = [...stripeRecords].sort((a, b) => a.path.localeCompare(b.path));
+  const isDev = target?.name === DEV_STRIPE_MIGRATION_TARGET.name;
+  if (isDev) {
+    for (const record of sortedStripe) {
+      findings.push(makeFinding("stripe-data-present", record.path));
+    }
+  }
   const rootDeletes = [];
   for (const record of sortedCompanies) {
     const fields = LEGACY_COMPANY_FIELDS.filter((field) => field in record.data);
@@ -432,11 +471,11 @@ export function planCompanyLegacyStripeMigration({
       );
     }
   }
-  const stripeDeletes = sortedStripe.map((record) =>
-    Object.freeze({ path: record.path }),
-  );
+  const stripeDeletes = isDev
+    ? []
+    : sortedStripe.map((record) => Object.freeze({ path: record.path }));
   const sortedFindingList = sortFindings(findings);
-  const digestInput = {
+  const localDigestInput = {
     target: {
       name: target?.name ?? null,
       projectId: target?.projectId ?? null,
@@ -449,6 +488,16 @@ export function planCompanyLegacyStripeMigration({
     stripeOrphans: normalizedOrphans,
     findings: sortedFindingList,
   };
+  const digestInput = isDev
+    ? devPlanDigestInput(
+        target,
+        sortedCompanies,
+        sortedStripe,
+        normalizedDescendants,
+        normalizedOrphans,
+        sortedFindingList,
+      )
+    : localDigestInput;
   const planDigest = sha256(stableJson(digestInput));
   const nonTargetDigest = sha256(
     stableJson(
@@ -493,6 +542,11 @@ export function planCompanyLegacyStripeMigration({
     companies: Object.freeze(sortedCompanies),
     stripeData: Object.freeze(sortedStripe),
     companyCount: sortedCompanies.length,
+    stripeDataCount: new Set([
+      ...sortedStripe.map(({ path }) => path),
+      ...normalizedDescendants,
+      ...normalizedOrphans,
+    ]).size,
     nonTargetDigest,
     contentDigest,
     targetContentDigest,
@@ -527,6 +581,9 @@ export function summarizeCompanyLegacyStripePlan(
       stripeDataDocuments: plan.stripeDeletes.length,
       total: plan.writeCount,
     },
+    ...(plan.target.name === DEV_STRIPE_MIGRATION_TARGET.name
+      ? { inventoryCounts: { stripeDataDocuments: plan.stripeDataCount } }
+      : {}),
     subjects: [
       ...plan.rootDeletes.map(({ path }) => ({
         code: "company-legacy-fields",
@@ -558,16 +615,27 @@ export function assertCompanyLegacyStripeMigrationTarget(
   const explicitProjects = projectVariables
     .filter((name) => env[name] !== undefined)
     .map((name) => env[name]);
+  const isDev = target.name === DEV_STRIPE_MIGRATION_TARGET.name;
+  const hasEmulatorRouting = Object.keys(env).some(
+    (name) => name.endsWith("_EMULATOR_HOST") && env[name] !== undefined,
+  );
   if (
     explicitProjects.length === 0 ||
     explicitProjects.some(
       (project) => project !== target.projectId,
     ) ||
-    env.FIRESTORE_EMULATOR_HOST !== target.firestoreHost ||
+    (isDev
+      ? hasEmulatorRouting
+      : env.FIRESTORE_EMULATOR_HOST !== target.firestoreHost) ||
     (target.name === USER_LOCAL_STRIPE_MIGRATION_TARGET.name
       ? env.FIRESTORE_DATABASE_ID !== target.databaseId
-      : env.FIRESTORE_DATABASE_ID !== undefined &&
-        env.FIRESTORE_DATABASE_ID !== target.databaseId)
+      : isDev
+        ? env.FIRESTORE_DATABASE_ID !== target.databaseId
+        : env.FIRESTORE_DATABASE_ID !== undefined &&
+          env.FIRESTORE_DATABASE_ID !== target.databaseId) ||
+    (isDev &&
+      (typeof env.GOOGLE_APPLICATION_CREDENTIALS !== "string" ||
+        env.GOOGLE_APPLICATION_CREDENTIALS.trim() === ""))
   ) {
     throw migrationError("target-rejected", EXIT_CODES.TARGET_REJECTED);
   }
@@ -589,6 +657,18 @@ export function assertCompanyLegacyStripeMigrationTarget(
   return target;
 }
 
+export function assertDevCredentialProject(credentialSource, target) {
+  let credential;
+  try {
+    credential = JSON.parse(credentialSource);
+  } catch {
+    throw migrationError("credential-invalid", EXIT_CODES.TARGET_REJECTED);
+  }
+  if (!isPlainObject(credential) || credential.project_id !== target.projectId) {
+    throw migrationError("credential-project-mismatch", EXIT_CODES.TARGET_REJECTED);
+  }
+}
+
 export function assertCodexStripeMigrationTarget(env = process.env) {
   return assertCompanyLegacyStripeMigrationTarget(
     CODEX_STRIPE_MIGRATION_TARGET.name,
@@ -604,6 +684,8 @@ export function parseCompanyLegacyStripeArgs(args) {
     backupPath: null,
     backupReceipt: null,
     confirmProject: null,
+    confirmDatabase: null,
+    confirmFullSnapshot: false,
     confirmQuietWindow: false,
     confirmUserLocalApply: false,
     expectedCompanyTotal: null,
@@ -617,6 +699,8 @@ export function parseCompanyLegacyStripeArgs(args) {
     else if (argument === "--backup-path") parsed.backupPath = args[++index];
     else if (argument === "--backup-receipt") parsed.backupReceipt = args[++index];
     else if (argument === "--confirm-project") parsed.confirmProject = args[++index];
+    else if (argument === "--confirm-database") parsed.confirmDatabase = args[++index];
+    else if (argument === "--confirm-full-snapshot") parsed.confirmFullSnapshot = true;
     else if (argument === "--confirm-quiet-window") parsed.confirmQuietWindow = true;
     else if (argument === "--confirm-user-local-apply") parsed.confirmUserLocalApply = true;
     else if (argument === "--expected-company-total") parsed.expectedCompanyTotal = Number(args[++index]);
@@ -636,10 +720,12 @@ export function parseCompanyLegacyStripeArgs(args) {
     throw migrationError("usage-invalid", EXIT_CODES.USAGE);
   }
   const userLocal = parsed.target === USER_LOCAL_STRIPE_MIGRATION_TARGET.name;
+  const dev = parsed.target === DEV_STRIPE_MIGRATION_TARGET.name;
   const hasUserLocalOptions = parsed.confirmProject || parsed.confirmQuietWindow ||
     parsed.confirmUserLocalApply ||
     parsed.expectedCompanyTotal !== null || parsed.expectedCompanyFieldDocuments !== null ||
-    parsed.expectedStripeDataDocuments !== null;
+    parsed.expectedStripeDataDocuments !== null || parsed.confirmDatabase ||
+    parsed.confirmFullSnapshot;
   if (parsed.mode === "dry-run") {
     if (parsed.planDigest || parsed.backupPath || parsed.backupReceipt || hasUserLocalOptions) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
@@ -654,10 +740,27 @@ export function parseCompanyLegacyStripeArgs(args) {
       parsed.confirmProject !== USER_LOCAL_STRIPE_MIGRATION_TARGET.projectId ||
       !parsed.confirmQuietWindow || !parsed.confirmUserLocalApply ||
       !countsMatch || parsed.backupPath ||
-      parsed.backupReceipt) {
+      parsed.backupReceipt || parsed.confirmDatabase ||
+      parsed.confirmFullSnapshot) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
     }
     if (!/^[a-f0-9]{64}$/u.test(parsed.planDigest ?? "")) {
+      throw migrationError("usage-invalid", EXIT_CODES.USAGE);
+    }
+    return parsed;
+  }
+  if (dev) {
+    if (parsed.mode !== "apply" ||
+      parsed.confirmProject !== DEV_STRIPE_MIGRATION_TARGET.projectId ||
+      parsed.confirmDatabase !== DEV_STRIPE_MIGRATION_TARGET.databaseId ||
+      !parsed.confirmFullSnapshot || parsed.expectedCompanyTotal !== 4 ||
+      !Number.isInteger(parsed.expectedCompanyFieldDocuments) ||
+      parsed.expectedCompanyFieldDocuments < 0 ||
+      parsed.expectedCompanyFieldDocuments > 4 ||
+      parsed.expectedStripeDataDocuments !== 0 || parsed.backupPath ||
+      parsed.backupReceipt || parsed.confirmQuietWindow ||
+      parsed.confirmUserLocalApply ||
+      !/^[a-f0-9]{64}$/u.test(parsed.planDigest ?? "")) {
       throw migrationError("usage-invalid", EXIT_CODES.USAGE);
     }
     return parsed;
@@ -1138,6 +1241,14 @@ function assertUserLocalCounts(plan) {
     throw migrationError("expected-count-mismatch");
   }
 }
+
+function assertDevCounts(plan, expected) {
+  if (plan.companyCount !== expected.companyTotal ||
+    plan.rootDeletes.length !== expected.companyFieldDocuments ||
+    plan.stripeDataCount !== expected.stripeDataDocuments) {
+    throw migrationError("expected-count-mismatch");
+  }
+}
 function snapshotRecord(snapshot) {
   return {
     path: snapshot.ref.path,
@@ -1255,6 +1366,7 @@ export async function applyCompanyLegacyStripeMigration({
   backup = null,
   target = null,
   deleteFieldValue,
+  expectedCounts = null,
 }) {
   if (typeof deleteFieldValue !== "function") {
     throw migrationError("delete-field-factory-missing");
@@ -1268,6 +1380,10 @@ export async function applyCompanyLegacyStripeMigration({
   const fullPreflight = planCompanyLegacyStripeMigration(
     { ...(await readCompanyLegacyStripeState(firestore)), target: effectiveTarget },
   );
+  if (effectiveTarget.name === DEV_STRIPE_MIGRATION_TARGET.name) {
+    if (expectedCounts === null) throw migrationError("expected-counts-required");
+    assertDevCounts(fullPreflight, expectedCounts);
+  }
   assertPlanCanWrite(fullPreflight, expectedPlanDigest);
   if (backup !== null) assertBackupMatchesPlan(backup, fullPreflight);
   // listDocuments/listCollections are not transaction reads. Missing-parent
@@ -1282,6 +1398,9 @@ export async function applyCompanyLegacyStripeMigration({
     const stripeSnapshot = await transaction.get(stripeQuery);
     const state = transactionSnapshotState(companiesSnapshot, stripeSnapshot);
     const fresh = planCompanyLegacyStripeMigration({ ...state, target: effectiveTarget });
+    if (effectiveTarget.name === DEV_STRIPE_MIGRATION_TARGET.name) {
+      assertDevCounts(fresh, expectedCounts);
+    }
     assertPlanCanWrite(fresh, expectedPlanDigest);
     if (backup !== null) assertBackupMatchesPlan(backup, fresh);
     appliedPlan = fresh;
@@ -1306,6 +1425,17 @@ export async function verifyCompanyLegacyStripePostState(
 ) {
   const state = await readCompanyLegacyStripeState(firestore);
   const current = planCompanyLegacyStripeMigration({ ...state, target: originalPlan.target });
+  if (originalPlan.target.name === DEV_STRIPE_MIGRATION_TARGET.name) {
+    const currentPaths = new Set(current.companies.map(({ path }) => path));
+    const originalMissing = originalPlan.companies.some(
+      ({ path }) => !currentPaths.has(path),
+    );
+    if (current.findings.length > 0 || current.writeCount !== 0 ||
+      current.stripeDataCount !== 0 || originalMissing) {
+      throw migrationError("post-check-failed", EXIT_CODES.APPLY_INCOMPLETE);
+    }
+    return current;
+  }
   if (
     current.findings.length > 0 ||
     current.writeCount !== 0 ||
@@ -1403,7 +1533,9 @@ async function createCompanyLegacyStripeRuntime(target) {
   const app =
     getApps().find((candidate) => candidate.name === appName) ??
     initializeApp({ projectId: target.projectId }, appName);
-  const firestore = getFirestore(app);
+  const firestore = target.name === DEV_STRIPE_MIGRATION_TARGET.name
+    ? getFirestore(app, target.databaseId)
+    : getFirestore(app);
   return {
     firestore,
     deleteFieldValue: () => FieldValue.delete(),
@@ -1422,18 +1554,32 @@ export async function executeCompanyLegacyStripeCli({
   createRuntime = createCompanyLegacyStripeRuntime,
   readState = readCompanyLegacyStripeState,
   readRepositoryIdentity = readCompanyLegacyStripeRepositoryIdentity,
+  readCredentialFile = readFile,
   delay,
 } = {}) {
   const parsed = parseCompanyLegacyStripeArgs(args);
   const target = assertCompanyLegacyStripeMigrationTarget(parsed.target, env);
+  if (target.name === DEV_STRIPE_MIGRATION_TARGET.name) {
+    let credentialSource;
+    try {
+      credentialSource = await readCredentialFile(
+        env.GOOGLE_APPLICATION_CREDENTIALS,
+        "utf8",
+      );
+    } catch {
+      throw migrationError("credential-unreadable", EXIT_CODES.TARGET_REJECTED);
+    }
+    assertDevCredentialProject(credentialSource, target);
+  }
   const repositoryFindings = await readRepositoryPreconditionsImpl();
   if (repositoryFindings.length > 0) {
     throw migrationError("repository-precondition");
   }
   const isUserLocalWrite = target.name === USER_LOCAL_STRIPE_MIGRATION_TARGET.name && parsed.mode !== "dry-run";
+  const isDevWrite = target.name === DEV_STRIPE_MIGRATION_TARGET.name && parsed.mode === "apply";
   // A clean, reviewed 40-character HEAD and exact tool identity are established
   // before Admin initialization or any Firestore read.
-  if (isUserLocalWrite) {
+  if (isUserLocalWrite || isDevWrite) {
     const identity = await readRepositoryIdentity();
     if (!/^[a-f0-9]{40}$/u.test(identity?.head ?? "") ||
       !/^[a-f0-9]{64}$/u.test(identity?.toolDigest ?? "")) {
@@ -1452,6 +1598,32 @@ export async function executeCompanyLegacyStripeCli({
       expectedPlanDigest: parsed.planDigest,
       target,
       deleteFieldValue,
+    });
+    const post = await verifyCompanyLegacyStripePostState(firestore, appliedPlan);
+    return {
+      exitCode: EXIT_CODES.CLEAN,
+      summary: summarizeCompanyLegacyStripePlan(post, { mode: "apply" }),
+    };
+  }
+
+  if (isDevWrite) {
+    const plan = planCompanyLegacyStripeMigration({
+      ...(await readState(firestore)),
+      target,
+    });
+    const expectedCounts = {
+      companyTotal: parsed.expectedCompanyTotal,
+      companyFieldDocuments: parsed.expectedCompanyFieldDocuments,
+      stripeDataDocuments: parsed.expectedStripeDataDocuments,
+    };
+    assertDevCounts(plan, expectedCounts);
+    assertPlanCanWrite(plan, parsed.planDigest);
+    const appliedPlan = await applyCompanyLegacyStripeMigration({
+      firestore,
+      expectedPlanDigest: parsed.planDigest,
+      target,
+      deleteFieldValue,
+      expectedCounts,
     });
     const post = await verifyCompanyLegacyStripePostState(firestore, appliedPlan);
     return {

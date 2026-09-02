@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- STRIPE-05のDev migrationについて、Stripe未使用・Stripe側からの更新なしという利用者確認に基づき、maintenanceと外部Stripe確認を行わず、UWBと同じ全Firestore snapshotだけを取得して進める契約へ改めた。Dev専用toolはexact project/database/credential、clean source、Company 4件、`StripeData` 0件、計画一致を確認し、`stripeCustomerId`・`subscription`だけをtransactionで削除して他fieldを保持する。移行専用backup・restoreは提供せず、重大事故時だけ全体snapshotを修復判断の材料にする。一般reviewで検出した重複post-check 1回を削減し、専用35/35、全domain 766/766、隔離Emulator 108/108、一般・security reviewを成功させた。Dev・network・remote/data・deploy・外部Stripe・pushは未変更である。
+
 - STRIPE-04の利用者用Emulator migrationを完了した。既存`./saved-data`を変更しないimport-only rehearsalと、同一baselineからのimport＋export-on-exit確定実行で、Company 1件の`stripeCustomerId`・`subscription`だけを削除した。各実行後の`StripeData`は0件、再dry-runはcleanで、会社設定・稼働予定管理・配置管理の正常表示とapp error 0件を確認した。確定保存後のsnapshotもimport-onlyで再読込みし、削除対象0件を確認した。利用者承認により別backupと確定後のpre-migration data rollbackを要求せず、無関係なCompany編集も受入れ条件から外した。migrationによるCompanyの他field・他業務dataへのwriteはなく、Dev/Prod・外部Stripe・pushは変更していない。roadmapは50%から70%へ更新した。
 
 - STRIPE-03のlocal migration準備として、exact project `demo-air-guard-v2-codex`・Firestore Emulator `127.0.0.1:18080`だけで動くrehearsalをcommit `d5afe96927bf74809b9c3632f968905eff809975`へ固定した。既存Company rootの`stripeCustomerId`・`subscription`と既知形状の直接`StripeData`だけを対象に、値を出さないdry-run、exclusive backup、内容digest、事前状態再確認、all-or-zero apply、post-check、clean rerun、exact preimage rollback、競合・未知形状・入れ子dataの停止を合成dataで検証した。対象16/16、全domain 747/747、隔離Emulator 108/108、文書・差分確認、独立review・security reviewを成功させ、roadmapを35%から50%へ更新した。利用者local data、Dev/Prod、remote data、外部Stripe、deploy、pushは実施していない。
