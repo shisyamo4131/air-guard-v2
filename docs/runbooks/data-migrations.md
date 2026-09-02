@@ -1,7 +1,7 @@
 # data migration runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-28
+- 最終確認日: 2026-09-02
 - 役割: 確認済みmigrationのtarget、dry-run、apply、post-check、rollback
 
 maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・data change runbook](maintenance-and-data-change.md)を必読とする。maintenanceを排他lockとみなさず、対象Functionのbounded quiet period、log、連続dry-run digest、整合snapshot、post-checkを組み合わせる。
@@ -51,7 +51,7 @@ node scripts/migrate-company-legacy-stripe.mjs --target user-local --apply --pla
 - backupは`.codex-test`配下の新規fileだけを許可し、既存fileを上書きしない。receiptはfile変更の検出値であり、作成者や真正性の証明ではない。読込時にpath、親子関係、重複、値形状、件数、対象内容digestを再検証する。合成dataだけを扱い、実data用の保管・暗号化・保持契約には使用しない。
 - post-checkはlegacy field 0、`StripeData` 0、Company件数不変、Company非対象field不変、再dry-run cleanを必須とする。codex-localの復旧はschema v1のexact preimageだけを一括で戻し、現在状態と衝突する場合はwrite 0で停止する。user-localの復元機能は提供しない。
 - Rules source検査は補助であり、実際の拒否保証は専用Emulatorの全actor・全階層deny testを正本とする。missing-parent列挙はtransaction readではない。user-local applyでは会社管理者を含むwriterを止め、bounded quiet period、連続inventory、transaction再確認、post-checkを組み合わせる。Dev、Prod、remote dataへは拡張しない。
-- STRIPE-03では合成dataでdry-run、backup、missing-parent時write 0、一括apply、post-check、再実行clean、復旧を確認した。利用者用saved-data、Dev・Prod、外部Stripe、実dataは変更していない。STRIPE-04のlocal migration・画面受入れは別checkpointとする。
+- STRIPE-03では合成dataでdry-run、backup、missing-parent時write 0、一括apply、post-check、再実行clean、復旧を確認した。STRIPE-04では利用者承認の2段階手順により、利用者用`./saved-data`をimport-onlyで予行し、同一baselineのimport＋export-on-exitでCompany 1件のlegacy 2 field削除を確定した。`StripeData` 0件、post-check、主要3画面、確定snapshotの再import cleanを確認済みである。Dev・Prod、remote data、外部Stripeは変更していない。
 
 ## 旧CCB Company設定migration（Historical / unavailable）
 
