@@ -1,7 +1,5 @@
 # AirGuardV2 ドキュメント案内
 
-- 状態: 運用中
-- 最終確認日: 2026-09-02
 - 役割: ナビゲーション。確認済み要件は `specification.md`、検証済み進捗は `roadmaps/` を正本とする。
 
 ## 作業の開始順序
@@ -30,9 +28,10 @@
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | 関連package更新・公開、critical identifier確認 | [package release](runbooks/package-release.md)、[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md) | source/tag manifest、release evidence、consumer manifest/lock、`scripts/check-schemas-package-adoption.ps1`、network・公開承認 |
 | 検証方針の選択・移行・実測比較 | [運用・開発手順のVerification Matrix](operations.md#verification-matrix)、[検証policy](../governance/verification-policy.json)、[ADR 0040](decisions/0040-impact-based-staged-verification.md)、[検証証拠索引](verification/README.md) | change class、stage、gate ID・exact command、includes、invalidatedBy、pre/post JSON、coverage・failure-detection equivalence |
+| 文書追加・更新・役割整理 | [ADR 0041](decisions/0041-single-source-documentation-and-final-validation.md)、この文書の「文書の役割」 | 変更する事実の正本、既存複製、索引到達性、履歴または実行証拠の保存先 |
 | `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [project coordination](runbooks/project-coordination.md) | `scripts/check-codex-session-size.ps1`、現在のtask ID。最新sessionの推測禁止 |
 | Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、ADR 0011、[ADR 0032](decisions/0032-required-specialist-subagent-routing.md)、[ロードマップ索引](roadmaps/README.md) | Git状態、checkpoint、task ID・host、callback経路、独立scopeの専門task routing |
-| coordinator交代・再開 | [project coordination](runbooks/project-coordination.md)、[current snapshot](implementation/current-coordinator-handoff.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | 効率化手順は2026-08-30 activation baselineから発効。旧handoffは履歴参照のみ |
+| coordinator交代・再開 | [project coordination](runbooks/project-coordination.md)、[current snapshot](implementation/current-coordinator-handoff.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | current owner、repository baseline、active/next checkpoint |
 | Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) | backup・restore対象、Git bundle、local data、restore checkpoint |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |
 
@@ -47,14 +46,19 @@
 | [Runbook索引](runbooks/README.md) | 作業種別ごとに選ぶ実行・停止・rollback手順 |
 | [画面マニュアル](manual/index.md) | 管理者が利用する画面操作 |
 | [実装調査索引](implementation/README.md) | コードから確認した実装事実、未確認範囲、将来対応、確認待ち事項。確認済み要件の正本ではない |
-| [検証証拠索引](verification/README.md) | 検証方針変更前後の実測、機械可読raw evidence、比較契約、未確認範囲 |
+| [検証証拠索引](verification/README.md) | 特定実行のimmutable receipt、機械可読raw evidence、比較証拠 |
 | [検証policy](../governance/verification-policy.json) | 変更class、stage、gate ID・exact command、includes、evidence invalidation、comprehensive fallbackの機械可読正本 |
 | [変更履歴](../CHANGELOG.md) | 利用者・仕様・セキュリティ・運用に見える変更 |
 | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/` | 参考・履歴。現行仕様と競合する場合は正本ではない |
 
+変化する現在値は上表で定めた一つの正本だけに置く。索引は正本へ到達するためのリンク中心の案内とし、リンク先の進捗、状態、件数、commit、現在の受入れ結果を複写しない。特定実行の詳細は[検証証拠索引](verification/README.md)からimmutable receiptへ辿り、runbookやcurrent handoffへ複写しない。
+
 ## 文書更新の完了条件
 
 - 重要文書を追加・改名・移動・廃止した場合、この案内または該当索引とリンクを同じ変更で更新する。
+- 変更する事実の正本を一つ選び、既存の複製を検索して削除または正本へのリンクへ置換する。「要約」は値の短縮版ではなく、正本へ到達する索引として書く。
+- current handoffにはactive owner、現在のrepository baseline、未決事項・承認、active/next checkpoint、正本へのlinkだけを置く。完了履歴と実測結果はGit、roadmap、ADR、verification receiptへ置く。
+- runbookには再利用可能な手順だけを置き、特定releaseの結果はimmutable verification receiptへ置く。
 - 確認済み、未確認、提案、証拠、履歴を混同しない。
 - ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
 - `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。

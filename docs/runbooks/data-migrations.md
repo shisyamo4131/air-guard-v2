@@ -87,7 +87,7 @@ node --use-system-ca scripts/migrate-company-legacy-stripe.mjs --target dev
 - applyは元の4 Companyをtransaction内で再読込し、`stripeCustomerId`・`subscription`だけを削除する。通常のCompany更新は非対象fieldを保持し、停止理由にしない。`StripeData`、Companyの他field・他subcollectionを変更しない。
 - post-checkは元の4 Companyの存在、旧2 field 0、内部`StripeData` 0、再dry-run cleanを確認する。部分完了は現在状態を再確認して同じ冪等処理を再実行し、自動rollbackしない。
 - Devでは`--create-backup`と`--restore`を提供しない。旧2 fieldは未使用scaffoldの恒久削除であり、migration固有backup・data rollbackを行わない。全体snapshotは対象外dataを変更した重大事故に限る別承認repair候補で、通常の全体restoreは行わない。
-- 2026-09-02にrelease commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`をDevへ反映した。Firestore RulesとFunctions 40件、Hosting 180 filesの反映後、全Firestore snapshotを取得し、Company 4件の旧2 fieldだけを1 transactionで削除した。`StripeData`は前後とも0件で、独立post dry-runはCompany 4件、旧field 0件、`StripeData` 0件、finding 0件のcleanだった。外部Stripe、maintenance、migration専用backup、自動restore、Prod、pushは実施していない。
+- この手順を使用した実行結果は[STRIPE-05 Dev release verification receipt](../verification/stripe-05-dev-release.md)を参照する。本runbookへ実測件数、digest、commit、受入れ結果を複写しない。
 
 ## 旧CCB Company設定migration（Historical / unavailable）
 

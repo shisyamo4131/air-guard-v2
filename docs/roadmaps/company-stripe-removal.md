@@ -23,14 +23,14 @@
 | STRIPE-02 code・schema・testからの削除 | 25 | 25 | Completed | commit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`でSchemas `3.0.0-dev.1`導入と旧scaffold削除を固定し、全domain 731件、隔離Emulator 107件、local UI build、包括確認、独立review・security reviewを成功させた |
 | STRIPE-03 local migration準備 | 15 | 15 | Completed | commit `d5afe96927bf74809b9c3632f968905eff809975`で隔離Codex local専用のplanner、backup、dry-run、apply、post-check、clean rerun、rollback rehearsalを固定し、対象16件、全domain 747件、隔離Emulator 108件、独立review・security reviewを成功させた |
 | STRIPE-04 local migration・画面受入れ | 20 | 20 | Completed | 利用者用Emulatorでimport-only rehearsalとimport＋export-on-exit確定実行を行い、Company 1件のlegacy 2 field削除、`StripeData` 0件、post-check、保存snapshotの再import、会社設定の再読込と主要3画面の正常表示を確認した |
-| STRIPE-05 bounded Dev migration・反映 | 20 | 20 | Completed | commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`からRules・Functions 40件・Hosting 180 filesを反映し、全Firestore snapshot後に4 Companyの旧2 fieldだけを削除した。`StripeData` 0件、独立post dry-run clean、配信artifact一致、直近60分のFunctions ERROR 0件を確認した |
-| STRIPE-06 Dev利用者受入れ・closeout | 10 | 10 | Completed | Codexが会社管理者Chromeでダッシュボード・会社設定の正常表示、Stripe表示なし、廃止済み`/settings/checkout`のダッシュボード復帰を確認し、利用者がDev反映後の確認を問題なしと受け入れた |
+| STRIPE-05 bounded Dev migration・反映 | 20 | 20 | Completed | [STRIPE-05 Dev release verification receipt](../verification/stripe-05-dev-release.md) |
+| STRIPE-06 Dev利用者受入れ・closeout | 10 | 10 | Completed | [STRIPE-05 Dev release verification receipt](../verification/stripe-05-dev-release.md) |
 
 重みは合計100。各マイルストーンは記載した証拠が全部揃ったときだけ加点する。Dev操作、migration、deploy、remote/data writeは、対象commit、件数、全体snapshot、重大事故時の復旧境界、停止条件、検証を固定したbounded checkpointごとに明示承認を得る。
 
 ## 完了後の境界
 
-1. legacy Stripe scaffold除去、local migration、Dev反映・migration・post-check・利用者受入れは完了した。
+1. legacy Stripe scaffold除去、local migration、Dev反映・migration・post-check・利用者受入れは完了した。Dev実行の詳細は[immutable receipt](../verification/stripe-05-dev-release.md)を正本とする。
 2. 全体snapshotは対象外dataを変更した重大事故時だけ、別承認の修復判断に使用する。通常rollbackまたは自動restoreには使用しない。
 3. Prod、外部Stripe、migration専用backup・旧field復元、pushは本roadmapの完了範囲へ含めない。
 
@@ -46,5 +46,5 @@
 | 2026-09-02 | 35% | +25 | review済み23項目をcommit `509fabbe77124b7bfe03b8b50c39ab9b6b488426`へ固定し、cleanな同一HEADで`npm run test:local:ui:build`をexit 0で完了した。実装、全domain 731/731、隔離Emulator 107/107、PostAdoption、包括確認、一般review、security reviewを合わせてSTRIPE-02を完了した。外部Stripe、data migration、Dev/Prod、deploy、pushは未実施である。 |
 | 2026-09-02 | 50% | +15 | commit `d5afe96927bf74809b9c3632f968905eff809975`で、既存Company rootのlegacy 2 fieldと既知形状の直接`StripeData`だけを扱う隔離Codex local専用migration rehearsalを固定した。値を出さないdry-run、exact target、backup、digest、事前状態再確認、all-or-zero apply、post-check、clean rerun、rollbackと競合停止を合成dataで検証し、対象16/16、全domain 747/747、隔離Emulator 108/108、独立review・security reviewを成功させた。利用者local data、Dev/Prod、remote data、外部Stripe、deploy、pushは未実施である。 |
 | 2026-09-02 | 70% | +20 | 利用者承認の2段階手順で、既存`./saved-data`を変更しないimport-only rehearsalと同一baselineからのimport＋export-on-exit確定実行を完了した。各実行でCompany 1件の`stripeCustomerId`・`subscription`だけを削除し、`StripeData` 0件、post dry-run clean、会社設定・稼働予定管理・配置管理の正常表示、app error 0件を確認した。確定保存後のsnapshotをimport-onlyで再読込みして削除対象0件を確認した。利用者は無関係なCompany編集を完了条件から外し、読込・再読込を受入れ条件とした。Dev/Prod、remote data、外部Stripe、pushは未実施である。 |
-| 2026-09-02 | 90% | +20 | commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`からRules・Functions 40件・Hosting 180 filesをDevへ反映し、全Firestore snapshot後にCompany 4件の旧2 fieldだけを1 transactionで削除した。`StripeData`は前後0件、独立post dry-runはclean、配信artifact一致、直近60分のFunctions ERROR 0件だった。Codexの会社管理者Chrome smokeも成功したが、利用者の最終受入れ前なのでSTRIPE-06は未加点とした。 |
-| 2026-09-02 | 100% | +10 | 利用者がDev反映後の確認を問題なしと受け入れた。Codexの会社管理者Chrome smoke、旧field 0件、`StripeData` 0件、直近60分のFunctions ERROR 0件、復旧境界、仕様・運用・変更履歴を合わせてSTRIPE-06を完了し、roadmapをcloseした。 |
+| 2026-09-02 | 90% | +20 | STRIPE-05を完了した。詳細結果は[immutable receipt](../verification/stripe-05-dev-release.md)を参照する。 |
+| 2026-09-02 | 100% | +10 | 利用者acceptanceによりSTRIPE-06を完了した。受入れ証拠は[immutable receipt](../verification/stripe-05-dev-release.md)を参照する。 |

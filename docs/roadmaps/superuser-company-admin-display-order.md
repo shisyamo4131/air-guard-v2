@@ -25,7 +25,7 @@
 
 ## 完了後の次工程
 
-1. 本roadmapは完了した。次は別roadmapの[Company legacy Stripe情報削除](company-stripe-removal.md)のSTRIPE-01へ戻る。
+1. 本roadmapと後続の[Company legacy Stripe情報削除](company-stripe-removal.md)は完了した。現在の次作業は[正式運用準備ロードマップ](airguard-v2.md)を参照する。
 
 ## 進捗履歴
 

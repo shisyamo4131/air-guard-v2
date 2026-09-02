@@ -142,8 +142,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Company既定の`agreementsV2`とCompany位置情報・geocodingは廃止する。Company設定画面から既定取極めの編集入口とwriterを撤去し、Site固有の取極めUI・dataは維持する。SiteはCustomerに従属するため、将来のSite既定取極めはCustomer側の契約で扱う。既存fieldの削除はbackup、dry-run、rollbackを固定した別migrationでだけ行い、Customer・Site・Employeeのgeolocationへ廃止範囲を広げない。
 - Companyの`ACTIVE/SUSPENDED/CLOSED` lifecycle、provider maintenance、法的削除、tenant移転・統合・分割はCCB restartへ含めず、具体的な利用停止機能を実装する別仕様・別roadmapで扱う。現行maintenance挙動をCCBだけを理由に拡張しない。
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
-- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。STRIPE-02でcheckout、reader、未公開Functions、依存package、Company schema fieldをlocal codeから削除し、`StripeData`を全actor・全階層で拒否した。利用者用localではlegacy field削除を完了し、DevはUWB方式の全体snapshot後に4 Companyの旧2 fieldだけをmaintenanceなしで恒久削除する。内部`StripeData`が1件でもあれば対象を拡張せず停止し、外部Stripeの状態確認は行わない。将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
-- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。Dev/remote dataは未変更であり、旧8 targetへのmigrationまたはrestore経路は現在提供しない。
+- Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。checkout、reader、未公開Functions、依存package、Company schema fieldはlocal codeから削除済みで、`StripeData`は全actor・全階層で拒否する。利用者用localとDevのlegacy field削除も完了している。Devでの実行結果は[immutable receipt](verification/stripe-05-dev-release.md)を参照し、将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
+- 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。旧8 targetへのmigrationまたはrestore経路は現在提供しない。
 
 ### 取引先・現場・取極め
 
@@ -204,7 +204,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### サブスクリプション
 
 - 現在のStripe関連コードとデータ形状は未完成のscaffoldであり、checkout、webhook、plan、解約、再契約、課金状態、従業員上限を提供済み機能として扱わない。Stripe側との契約情報同期実績もない。
-- 現段階ではsubscription・entitlement・employeeLimitの保存・表示interfaceを準備せず、Company rootのlegacy field、`StripeData`、checkout画面、reader/writer、未公開Functions、依存packageを[ADR 0038](decisions/0038-legacy-stripe-scaffold-removal.md)に従って削除する。
+- 現段階ではsubscription・entitlement・employeeLimitの保存・表示interfaceを準備しない。Company rootのlegacy field、`StripeData`、checkout画面、reader/writer、未公開Functions、依存packageは[ADR 0038](decisions/0038-legacy-stripe-scaffold-removal.md)に従って削除済みである。
 - 将来サブスクリプションを実装する場合は、Stripe採用を前提にせず、provider、actor、plan、保存構造、権限、署名、冪等性、event順序、reconcile、状態遷移、保持、秘密情報、利用上限を別仕様・別roadmapで新規設計する。
 
 ### 保守状態とdata change

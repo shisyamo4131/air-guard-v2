@@ -5,7 +5,7 @@
   "classes": [
     {
       "id": "documentation-only",
-      "triggers": ["Existing project-owned prose without index or link topology, ADR status, roadmap arithmetic, command, verification-policy, managed-governance, release, or product behavior"],
+      "triggers": ["Project-owned prose, index, link, or post-completion historical record that does not alter a release baseline, target, artifact, readiness decision, procedure, approval, rollback, product behavior, or remote state"],
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["project-docs"],
       "completionGateIds": ["project-docs", "diff-check"],
@@ -55,7 +55,7 @@
     },
     {
       "id": "build-release-deploy",
-      "triggers": ["Build, static generation, package installation or publication, release evidence, Dev or Prod deploy, or remote acceptance"],
+      "triggers": ["Actual build, static generation, package installation or publication, Dev or Prod deploy, or remote acceptance execution; release readiness decision; or release contract, baseline, target, artifact, or procedure change"],
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["project-docs", "domain-full"],
       "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
@@ -102,7 +102,7 @@
       "command": "powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1",
       "stages": ["targeted", "completion"],
       "includes": [],
-      "invalidatedBy": ["Project document validator, negative fixture, required route, or verification-policy contract change"],
+      "invalidatedBy": ["Project document validator, its negative fixtures, validator-required documentation route, or verification-policy contract change"],
       "evidenceDestination": "Command report"
     },
     {
@@ -110,7 +110,7 @@
       "command": "powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1",
       "stages": ["targeted", "completion"],
       "includes": [],
-      "invalidatedBy": ["Capacity contract, routing, measurement script, or regression fixture change"],
+      "invalidatedBy": ["Capacity aliases, capacity runbook, capacity measurement command or script, or capacity regression fixture change"],
       "evidenceDestination": "Command report"
     },
     {

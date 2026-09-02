@@ -171,7 +171,9 @@ UWB初回Dev導入は、client/server/data contractの同時変更と予約migra
 
 STRIPE-05は、Stripe未使用・外部からの更新経路なし、現行client・Functionsに旧field writerなし、Company rootと`StripeData`のclient write拒否、旧2 fieldだけの冪等な削除を確認済みである。このためmaintenance、quiet period、外部Stripeのinventory・前後確認、migration固有backup・旧field復元を行わない。Rules・Functions・Hostingを先行反映し、UWBと同じFirestore全体snapshot、fresh dry-run、4 Company・内部`StripeData` 0の停止条件、1 transactionの旧2 field削除、post-check、clean再実行の順とする。全体snapshotは対象外dataを変更した重大事故の別承認repair候補であり、通常rollbackや自動restoreには使用しない。
 
-2026-09-02に上記順序をrelease commit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`で実測した。Rules compile/release、Functions 40件、Hosting 180 files、配信artifact一致、indexとService Workerの`no-store`、version assetの`immutable`、直近60分のFunctions ERROR 0件を確認した。snapshot command完了後にreceipt parserだけが失敗したが、同じexportを再実行せず、対象prefixのmetadata objectが1件だけであること、対応operationが1件だけで`done=true`かつerrorなしであることをread-onlyで照合した。metadataまたはoperationを一意に照合できない場合は、重複snapshotを作らず停止する。
+snapshot command完了後にreceipt parserだけが失敗した場合、同じexportを再実行しない。対象prefixのmetadata objectと対応operationをread-onlyで一意に照合し、完了・errorなしを確認する。metadataまたはoperationを一意に照合できない場合は、重複snapshotを作らず停止する。
+
+この手順を使用した実行結果は[STRIPE-05 Dev release verification receipt](../verification/stripe-05-dev-release.md)を参照する。本runbookへ実測件数、digest、commit、受入れ結果を複写しない。
 
 ## 停止とrollback
 

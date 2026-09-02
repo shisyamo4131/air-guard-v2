@@ -12,10 +12,49 @@ function Add-CheckError([string]$Message) {
     $errors.Add($Message)
 }
 
+function Test-LinkOnlyIndexSection {
+    param(
+        [Parameter(Mandatory = $true)][string]$Content,
+        [Parameter(Mandatory = $true)][string]$ExpectedHeader
+    )
+
+    $normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
+    $indexHeading = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('IyMg57Si5byV'))
+    $sectionMatch = [regex]::Match(
+        $normalized,
+        '(?ms)^' + [regex]::Escape($indexHeading) + '\s*\n(?<body>.*?)(?=^##\s|\z)'
+    )
+    if (-not $sectionMatch.Success) { return $false }
+
+    $tableGroupCount = 0
+    $inTable = $false
+    $tableLines = [Collections.Generic.List[string]]::new()
+    foreach ($line in ($sectionMatch.Groups['body'].Value -split "`n")) {
+        $trimmed = $line.Trim()
+        if ($trimmed.StartsWith('|')) {
+            if (-not $inTable) { $tableGroupCount++ }
+            $inTable = $true
+            $tableLines.Add($trimmed)
+        } else {
+            $inTable = $false
+        }
+    }
+    if ($tableGroupCount -ne 1 -or $tableLines.Count -lt 2) { return $false }
+    if ($tableLines[0] -ne $ExpectedHeader) { return $false }
+    foreach ($tableLine in $tableLines) {
+        if (-not $tableLine.EndsWith('|')) { return $false }
+        $cells = @($tableLine.Trim([char]'|') -split '\|')
+        if ($cells.Count -ne 2) { return $false }
+    }
+    return $true
+}
+
 $requiredFiles = @(
     'AGENTS.md', 'README.md', 'CHANGELOG.md', 'INITIAL_PROMPT.md',
     'docs/README.md', 'docs/specification.md', 'docs/operations.md',
     'docs/decisions/README.md', 'docs/roadmaps/README.md',
+    'docs/implementation/current-coordinator-handoff.md',
+    'docs/verification/stripe-05-dev-release.md',
     'docs/runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1',
     'scripts/check-schemas-package-adoption.ps1',
     'governance/verification-policy.json',
@@ -293,6 +332,10 @@ foreach ($importantFile in $markdownFiles | Where-Object { $_.FullName.StartsWit
 
 $decisionIndexPath = Join-Path $repoRoot 'docs/decisions/README.md'
 $decisionIndex = Get-Content -LiteralPath $decisionIndexPath -Raw -Encoding UTF8
+$decisionLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCBJRCB8IOWIpOaWrSB8'))
+if (-not (Test-LinkOnlyIndexSection -Content $decisionIndex -ExpectedHeader $decisionLinkOnlyHeader)) {
+    Add-CheckError 'ADR index section must contain exactly one two-column link-only table.'
+}
 $decisionFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/decisions') -File -Filter '*.md' |
     Where-Object { $_.Name -match '^\d{4}-.+\.md$' })
 foreach ($decisionFile in $decisionFiles) {
@@ -303,15 +346,18 @@ foreach ($decisionFile in $decisionFiles) {
         continue
     }
     $id = $decisionFile.BaseName.Substring(0, 4)
-    $indexMatch = [regex]::Match($decisionIndex, "(?m)^\| \[$id\]\([^\)]+\) \|.*\| (?<status>Accepted|Proposed|Rejected|Superseded) \|")
+    $escapedFileName = [regex]::Escape($decisionFile.Name)
+    $indexMatch = [regex]::Match($decisionIndex, "(?m)^\|\s*\[$id\]\($escapedFileName\)\s*\|\s*[^|]+\s*\|\s*$")
     if (-not $indexMatch.Success) {
         Add-CheckError "ADR is missing from index: $($decisionFile.Name)"
-    } elseif ($indexMatch.Groups['status'].Value -ne $statusMatch.Groups['status'].Value) {
-        Add-CheckError "ADR status mismatch for ${id}: body=$($statusMatch.Groups['status'].Value), index=$($indexMatch.Groups['status'].Value)"
     }
 }
 
 $roadmapIndex = Get-Content -LiteralPath (Join-Path $repoRoot 'docs/roadmaps/README.md') -Raw -Encoding UTF8
+$roadmapLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDlr77osaEgfCDjg63jg7zjg4njg57jg4Pjg5cgfA=='))
+if (-not (Test-LinkOnlyIndexSection -Content $roadmapIndex -ExpectedHeader $roadmapLinkOnlyHeader)) {
+    Add-CheckError 'Roadmap index section must contain exactly one two-column link-only table.'
+}
 $roadmapFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/roadmaps') -File -Filter '*.md' |
     Where-Object { $_.Name -ne 'README.md' })
 foreach ($roadmapFile in $roadmapFiles) {
@@ -337,11 +383,78 @@ foreach ($roadmapFile in $roadmapFiles) {
     if ($weight -ne 100) { Add-CheckError "Roadmap weights do not total 100 in $($roadmapFile.Name): $weight" }
     if ($earned -ne [int]$progressMatch.Groups['progress'].Value) { Add-CheckError "Roadmap earned points do not match progress in $($roadmapFile.Name): earned=$earned" }
     $escapedName = [regex]::Escape($roadmapFile.Name)
-    $indexMatch = [regex]::Match($roadmapIndex, "(?m)^\| .* \| (?<progress>\d+)% \| .* \| \[[^\]]+\]\($escapedName\) \|")
+    $indexMatch = [regex]::Match($roadmapIndex, "(?m)^\|\s*[^|]+\s*\|\s*\[[^\]]+\]\($escapedName\)\s*\|\s*$")
     if (-not $indexMatch.Success) {
         Add-CheckError "Roadmap is missing from index: $($roadmapFile.Name)"
-    } elseif ([int]$indexMatch.Groups['progress'].Value -ne [int]$progressMatch.Groups['progress'].Value) {
-        Add-CheckError "Roadmap index progress mismatch: $($roadmapFile.Name)"
+    }
+}
+
+$currentHandoffPath = Join-Path $repoRoot 'docs/implementation/current-coordinator-handoff.md'
+if (Test-Path -LiteralPath $currentHandoffPath) {
+    $currentHandoffBytes = (Get-Item -LiteralPath $currentHandoffPath).Length
+    if ($currentHandoffBytes -gt 16384) {
+        Add-CheckError "Current coordinator handoff exceeds 16 KiB: $currentHandoffBytes bytes"
+    }
+    $currentHandoff = Get-Content -LiteralPath $currentHandoffPath -Raw -Encoding UTF8
+    if ($currentHandoff -notmatch '(?m)^# Current coordinator handoff snapshot\s*$') {
+        Add-CheckError 'Current coordinator handoff must retain its canonical H1.'
+    }
+    $expectedHandoffHeadings = @(
+        '## Repository baseline',
+        '## Active checkpoint',
+        '## Open decisions and approvals',
+        '## Next checkpoint',
+        '## References'
+    )
+    $actualHandoffHeadings = @([regex]::Matches($currentHandoff, '(?m)^## .+$') | ForEach-Object { $_.Value.TrimEnd("`r") })
+    if (($actualHandoffHeadings -join "`n") -ne ($expectedHandoffHeadings -join "`n")) {
+        Add-CheckError 'Current coordinator handoff must contain only the required current-state H2 headings in canonical order.'
+    }
+    foreach ($legacyHeading in @(
+        '## Confirmed product state',
+        '## Current checkpoint and next work',
+        '## Current evidence contract',
+        '## Approval and external-effect boundary'
+    )) {
+        if ($currentHandoff.Contains($legacyHeading)) {
+            Add-CheckError "Current coordinator handoff retains a legacy completed-history heading: $legacyHeading"
+        }
+    }
+}
+
+$stripeReceiptRelative = 'docs/verification/stripe-05-dev-release.md'
+$stripeReceiptPath = Join-Path $repoRoot $stripeReceiptRelative
+if (Test-Path -LiteralPath $stripeReceiptPath) {
+    $stripeReceipt = Get-Content -LiteralPath $stripeReceiptPath -Raw -Encoding UTF8
+    if (-not $stripeReceipt.Contains('Verified / immutable execution evidence')) {
+        Add-CheckError 'STRIPE receipt must be marked as immutable execution evidence.'
+    }
+    $verificationIndexPath = Join-Path $repoRoot 'docs/verification/README.md'
+    $verificationIndex = if (Test-Path -LiteralPath $verificationIndexPath) { Get-Content -LiteralPath $verificationIndexPath -Raw -Encoding UTF8 } else { '' }
+    if ($verificationIndex -notmatch '\]\(stripe-05-dev-release\.md(?:#[^)]+)?\)') {
+        Add-CheckError 'STRIPE receipt is missing from docs/verification/README.md.'
+    }
+    $stripeRoadmapPath = Join-Path $repoRoot 'docs/roadmaps/company-stripe-removal.md'
+    $stripeRoadmap = if (Test-Path -LiteralPath $stripeRoadmapPath) { Get-Content -LiteralPath $stripeRoadmapPath -Raw -Encoding UTF8 } else { '' }
+    if ($stripeRoadmap -notmatch '\]\(\.\./verification/stripe-05-dev-release\.md(?:#[^)]+)?\)') {
+        Add-CheckError 'STRIPE roadmap must link to the immutable STRIPE receipt.'
+    }
+
+    $receiptOnlyTokens = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($match in [regex]::Matches($stripeReceipt, '(?i)\b(?:[0-9a-f]{64}|[0-9a-f]{40})\b')) {
+        [void]$receiptOnlyTokens.Add($match.Value)
+    }
+    foreach ($match in [regex]::Matches($stripeReceipt, '\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+){3,}\b')) {
+        [void]$receiptOnlyTokens.Add($match.Value)
+    }
+    $runbookDirectory = Join-Path $repoRoot 'docs/runbooks'
+    foreach ($runbook in Get-ChildItem -LiteralPath $runbookDirectory -File -Filter '*.md') {
+        $runbookContent = Get-Content -LiteralPath $runbook.FullName -Raw -Encoding UTF8
+        foreach ($token in $receiptOnlyTokens) {
+            if ($runbookContent.Contains($token)) {
+                Add-CheckError "Runbook duplicates a STRIPE receipt-only execution identifier or hash: $($runbook.Name): $token"
+            }
+        }
     }
 }
 

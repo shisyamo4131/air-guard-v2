@@ -16,13 +16,15 @@
 
 ## 試行段階の高速な開発loop
 
-1. 実装前に、現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。
-2. 実装可能性とtest・失敗経路の2視点を原則並行でreviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。回数を固定せず、指摘で設計が変わった場合だけ再reviewする。
-3. 利用者確認はfile単位でなくcheckpointまたはfeature boundary単位で行う。承認済み範囲内の修正、対象testの反復、local commitでは再確認を求めず、仕様、data対象、外部作用、承認境界が広がる場合だけ停止する。
-4. 実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。segmentの終わりに独立reviewと影響範囲の回帰を行う。
-5. phaseまたはreleaseの最後に、最終状態へ選択済みcompletion gateまたは包括testを1回実行する。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
+1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめ、影響範囲、設計、必要なtestを決める。
+2. 実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
+3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。指摘または実装で設計が変わった場合だけ、変わった範囲を再reviewする。
+4. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
+5. 必要なreleaseまたはmigrationを行い、必要な利用者acceptanceをcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
+6. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
+7. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
 
-このloopは[Verification Matrix](../operations.md#verification-matrix)と`governance/verification-policy.json`のiteration、targeted、completion、release-only区分を実行順へ落としたもので、既存の安全境界や外部作用の承認を緩和しない。
+このloopは[Verification Matrix](../operations.md#verification-matrix)と`governance/verification-policy.json`のiteration、targeted、completion、release-only区分を実行順へ落としたものである。文書責務は[ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md)に従う。既存の安全境界や外部作用の承認は緩和しない。
 
 ## 非同期UI操作のerror・loading責務
 

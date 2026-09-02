@@ -4,9 +4,7 @@
 
 ## Unreleased
 
-- STRIPE-05をcommit `c3b29c59903928159f0d1c6f2ee3852b6ad7b46c`からDevへ反映した。Rules、Functions 40件、Hosting 180 filesを反映し、配信artifact一致を確認した後、Firestore全体snapshotを取得してCompany 4件の`stripeCustomerId`・`subscription`だけを1 transactionで削除した。`StripeData`は前後0件、独立post dry-runはCompany 4件・旧field 0件・finding 0件のclean、直近60分のFunctions ERRORは0件だった。会社管理者Chromeでダッシュボードと会社設定の正常表示、Stripe表示なし、廃止済み`/settings/checkout`のダッシュボード復帰を確認し、利用者もDev反映後の確認を問題なしと受け入れた。maintenance、外部Stripe確認、migration専用backup・restore、Prod、pushは実施していない。STRIPE-06まで完了し、roadmapを100%でcloseした。
-
-- 今後の小規模Dev migration向けに、対象・writer・互換性・復旧難度からmaintenanceと復旧手段を個別選択し、固定commitと接続先確認、fresh dry-run、digest・件数固定、apply 1回、独立clean dry-run、必要な画面・remote log確認へ進む共通手順を追加した。既存のproject文書案内とrunbook索引からDev deploy・data migrationを相互参照し、実装中は対象testだけ、segment末に影響範囲、phase・release末に包括testを1回とする高速loopを明文化した。権限、外部作用、安全境界は変更していない。
+- STRIPE-05/06のDev migration・利用者acceptanceを完了し、詳細を[immutable receipt](docs/verification/stripe-05-dev-release.md)へ集約した。あわせて[ADR 0041](docs/decisions/0041-single-source-documentation-and-final-validation.md)を採用し、変化する事実の単一正本、リンク中心の索引、再利用手順と実行証拠の分離、最終状態に対する一度のcompletion gate、記録後は失効したgateだけを再実行するproject-wide運用へ変更した。Dev接続・deploy・migrationは既存runbookを使用し、新しい小規模migration高速経路は追加していない。
 
 - STRIPE-04の利用者用Emulator migrationを完了した。既存`./saved-data`を変更しないimport-only rehearsalと、同一baselineからのimport＋export-on-exit確定実行で、Company 1件の`stripeCustomerId`・`subscription`だけを削除した。各実行後の`StripeData`は0件、再dry-runはcleanで、会社設定・稼働予定管理・配置管理の正常表示とapp error 0件を確認した。確定保存後のsnapshotもimport-onlyで再読込みし、削除対象0件を確認した。利用者承認により別backupと確定後のpre-migration data rollbackを要求せず、無関係なCompany編集も受入れ条件から外した。migrationによるCompanyの他field・他業務dataへのwriteはなく、Dev/Prod・外部Stripe・pushは変更していない。roadmapは50%から70%へ更新した。
 
