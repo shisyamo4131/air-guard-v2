@@ -1,6 +1,6 @@
 # Customer Dev反映・受入れ計画
 
-- 状態: Local preparation / Dev実行は未開始
+- 状態: Local preparation完了 / Dev実行は未開始
 - checkpoint: `CUSTOMER-01C-LOCAL-PREP-001`
 - 更新日: 2026-09-03
 - 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../../governance/project-rules.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
@@ -71,4 +71,4 @@ deploy自体は既存Customerを変更しないため、data復元は不要。Ho
 - artifactのsource/config/hash不一致、意図しないservice差分、他社アクセス許可、権限不足actorのwrite成功、対象外data変更、Rules/Hostingの反映失敗時は停止する。
 - 終了・再有効化・archive/restore、code一意化、請求snapshot等の後続機能は今回の受入れへ拡張しない。
 
-製品要件・data contract・進捗値は変更しない。今回の準備とbuild結果は実行証拠へ、現在の再開位置は[current handoff](current-coordinator-handoff.md)へ記録する。
+製品要件・data contract・進捗値は変更しない。今回の準備とbuild結果・正確なsource commit・artifact identityは[実行証拠](../verification/customer-01c-local-preparation.md)、現在の再開位置は[current handoff](current-coordinator-handoff.md)を参照する。

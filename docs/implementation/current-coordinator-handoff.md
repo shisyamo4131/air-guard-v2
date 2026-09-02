@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-15継続。CustomerのDevテスト直前までのlocal準備
+- 状態: Current / PM-15継続。Customerのlocal準備完了、Dev実行前で停止
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
@@ -12,7 +12,7 @@
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- checkpoint start baseline: `eb020e76332fc6d06a46949da92c27280d97bc6c`
+- checkpoint start baseline: `281272410dbb09e477e1e9c898c39225ec9b683e`
 - current integrated revision: Gitの現在HEADを確認する。本snapshot自身を含むcommit hashは文書へ自己参照で固定しない。
 - expected upstream: none
 - expected worktree: clean after coordinator integration
@@ -26,7 +26,8 @@
 - objective: [Customer Dev反映・受入れ計画](customer-dev-release.md)に3条件の具体的判断、反映範囲、切替・復旧、通常操作と関連機能の確認を固定する。
 - approved scope: 利用者のDevテスト直前までの進行指示に基づくlocal調査・必要な修正・検証・Dev向け静的生成・review・文書・local commit。Dev接続・remoteテスト・maintenance操作・deploy・実data変更・pushは含めない。
 - completion contract: 必要なlocal検証、review済みcommit、clean、Dev設定の生成物照合を終え、Dev実行前で停止する。
-- work ownership: PM-15が文書・build/artifact・Git統合、developerが発見済みService Worker設定未注入の限定修正と直接test、reviewerが修正review、securityがrelease計画のread-only確認を担当する。
+- work ownership: PM-15が文書・build/artifact・Git統合を管理する。developer・reviewer・securityはterminal callback済みで待機。次のDev実行指示まで新規作業を割り当てない。
+- local evidence: [CUSTOMER-01C local preparation](../verification/customer-01c-local-preparation.md)。artifactは証拠に記録したsource commitへ束縛し、本snapshot等の文書commitをbuild sourceとして扱わない。
 
 ## Open decisions and approvals
 
@@ -44,9 +45,8 @@
 
 ## Next checkpoint
 
-1. 発見したService Worker設定未注入の修正を検証・review・統合し、固定HEADのDev生成物を再確認する。
-2. 利用者のDev実行指示後、[Customer Dev反映・受入れ計画](customer-dev-release.md)と[Dev runbook](../runbooks/dev-deployment.md)に沿い、現在のremote状態、実行対象commit・artifact、切替対象と時間、rollback、試験対象・関連Siteへの同期を固定した一つのbounded releaseを進める。
-3. RulesとHostingの反映後、通常Customer操作と条件2の関連機能を確認する。未確認状態を成功扱いせず、不具合が出たID・field・経路を限定して修正する。全件再診断・一括修復は自動追加しない。
+1. 利用者のDev実行指示後、[Customer Dev反映・受入れ計画](customer-dev-release.md)と[Dev runbook](../runbooks/dev-deployment.md)に沿い、現在のremote状態、実行対象commit・artifact、切替対象と時間、rollback、試験対象・関連Siteへの同期・外部住所検索を固定した一つのbounded releaseを進める。
+2. RulesとHostingの反映後、通常Customer操作と条件2の関連機能を確認する。未確認状態を成功扱いせず、不具合が出たID・field・経路を限定して修正する。全件再診断・一括修復は自動追加しない。
 
 ## References
 
