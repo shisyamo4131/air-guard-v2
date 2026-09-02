@@ -70,6 +70,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` の会社documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。同一会社の有効な本登録Userによる既存document更新は、field・actor境界を機能単位で移行するまでの互換経路として維持する。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
+- Prod公開前までに、既存のmaster dataとtransaction dataの作成・更新・削除を機能単位で順番に見直す。clientから直接書くoperationはFirestore Rulesで同一会社、必要なpermission、変更可能field、型、状態を強制し、Callableを使うoperationは同じ条件をserver側で再確認する。画面の表示・非表示だけを認可根拠にしない。次の見直し対象はCustomer masterとする。
+- App Checkの実装・強制、全般的なrate limit、Callable public invokerの常時監視はProd公開前の必須gateとして扱い、Devでの個別機能追加の前提にしない。ただしFunctionsを追加または変更してDevへ反映する場合は、対象Functionへ正規画面から到達できるpublic invoker・CORSをrelease確認として検証する。未認証入口、外部費用、異常呼出しの具体的なriskが確認された場合は、該当operationだけを前倒しで対処する。
 - Company設定ではsuper-userであることだけを正式actorの根拠にしない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。表示順だけは、同じtenantの有効な本登録会社管理者でもあるsuper-userに、自社の`siteOrder`と`scheduleOrder`の更新を許可する。会社管理者でないsuper-user、他tenant、profile・billing・operations等の他のCompany設定にはこの例外を広げない。
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
@@ -102,7 +104,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engine、A/B/C Callable、5分間隔reconciler、訂正用最小context、Rules、application UIは実装・自動検証済みで、Codex UI smokeと利用者local UI受入れも完了している。履歴一覧readerもCallable、専用page、route・navigation、cursor paging、自動単体・Emulator・Rules検証まで完了している。2026-08-25と26に利用者のログイン済みChromeで管理者menuから専用pageへ到達し、loading、空状態、無効な前後buttonを確認した。対象環境に履歴dataがないため実browser用に21件の退職・削除を作らず、data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで検証する。current Auth disabled、仮User連携、別tenant同email再登録・Auth-only raceを含む残存陰性証拠も専用Emulatorで完了した。UWB-08の`firestore.rules`は、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否の3点について利用者確認を完了した。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
-- 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙、App Check、rate limit、招待tokenは別の未完了security境界とする。
+- 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙と招待tokenは別の未完了security境界とする。App Checkと全般的なrate limitはProd公開前の必須gateで扱い、具体的な濫用を確認した場合だけ該当operationを前倒しする。
 - 一般Userのclient登録はAuthentication account作成と確認メール送信までとし、メール確認後に更新したID tokenで本登録Callableを呼ぶ。本登録Callableはclient dataを受け取らず、確認済みAuthenticationメールから仮登録と会社をserver側で解決する。
 - 初期会社管理者のsignup前メール確認は、clientからemailだけを受け取り、Authenticationとemail予約を照合する未認証のUX事前確認とする。client指定の管理者・一般User区分は信頼せず、一般User signupではこのCallableを使用しない。事前確認とAuth/User作成はatomicではないため、同時実行競合とAuthだけが残る部分状態を防ぐ認可境界とはみなさない。
 - 初期会社管理者のCompany・User作成はメール確認後にだけ行う。CallableはID tokenと現在のAuthentication UserについてUID、email、email確認、有効状態、既存company claim、`isSuperUser`の型と一致を検証する。未所属Authだけが新規作成でき、同じUIDの有効な初期管理者UserとCompanyが既に存在する場合は、claims設定失敗後の再実行として既存状態を検証して再利用する。

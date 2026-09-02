@@ -21,24 +21,25 @@
 
 ## Active checkpoint
 
-- checkpoint: `NEXT-PRODUCT-CHECKPOINT-SELECTION`
-- objective: 次の改修・機能追加を、影響範囲を先に整理した一つの作業単位として開始する。
-- approved scope: 未選択。利用者が次の対象を指定するまで、製品code、Rules、Functions、data、Dev/Prodを変更しない。
-- completion contract: 次の対象について、現行挙動、変更内容、影響範囲、確認方法、外部作用の有無を整理してから実装へ進む。
-- work ownership: PM（AirGuardV2）-14がcoordinatorを継続し、選択された作業だけを独立scopeへ分ける。
+- checkpoint: `CUSTOMER-DESIGN-AUDIT-001`
+- objective: Customer masterの作成・更新・archiveについて、現行挙動、同一会社、permission、変更可能field、参照data、client writeとCallableの分担を整理する。
+- approved scope: Customerの読み取り調査と改修checkpoint設計。製品code、Rules、Functions、test、data、Dev/Prodは、利用者が具体的な変更契約を承認するまで変更しない。
+- completion contract: 画面・data flow、Rules・権限、関連testを独立確認し、現在すでに満たす要件、問題、変更案、影響、rollback、対象確認を利用者へ提示する。
+- work ownership: PM（AirGuardV2）-14がcoordinatorを継続し、Customerのflow、security、test影響を非重複のread-only調査へ分ける。
 
 ## Open decisions and approvals
 
 - 文書・検証方針の是正は利用者承認済みで、このsnapshotを含むlocal commitに記録する。
 - Git push、main merge、Dev/Prod deploy、remote/data操作、外部service変更は本checkpointの対象外。
 - 新しい小規模Dev migration高速経路は作成しない。
-- 次に着手する改修・機能追加の指定を待つ。
+- App Check・全般的なrate limit・Callable public invoker常時監視はProd公開前gateへ移し、Customerを次のCRUD見直し対象とする利用者判断を反映済み。
+- Customerの具体的な変更範囲は調査結果の提示後に利用者承認を得る。
 
 ## Next checkpoint
 
-1. 利用者へ文書・検証方針是正のlocal commitと確認結果を報告する。
-2. 次の改修・機能追加が指定されたら、[文書案内](../README.md)から必要な正本だけを選ぶ。
-3. 実装前に影響範囲と失敗経路を独立reviewし、実装中は対象確認、区切りの最後に選択済みの全体確認を行う。
+1. Customerの現行flow、Rules・権限、test影響を独立調査する。
+2. 調査結果から一つの改修checkpointを設計し、変更内容、影響、rollback、確認方法を利用者へ提示する。
+3. 利用者承認後に実装し、実装中は対象確認、区切りの最後に選択済みの全体確認を行う。
 
 ## References
 
