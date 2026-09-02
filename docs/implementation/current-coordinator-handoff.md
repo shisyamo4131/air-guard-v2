@@ -1,18 +1,18 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-14 active ownership; PM-15への利用者指示による交代準備
+- 状態: Current / PM-15 active ownership; product作業はPM-14の移管確認・開始通知待ち
 - 更新日: 2026-09-03
-- active coordinator: PM（AirGuardV2）-14 / task `01a05c75-bdfd-75e0-bcda-f167b8541bff` / host `local`
-- active callback and assignment destination: PM（AirGuardV2）-14 task `01a05c75-bdfd-75e0-bcda-f167b8541bff`
+- active coordinator: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
+- active callback and assignment destination: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
 - program coordinator: PM（SPG）-05 / task `01a05be0-9996-7361-a6d6-e7062e4eee41` / host `local`
 - coordination procedure: [project coordination](../runbooks/project-coordination.md)
-- replacement coordinator: PM（AirGuardV2）-15。task IDは新規作成結果で確定し、変更なしcallbackの確認後に移管する。失敗時はPM-14を維持する。
+- former coordinator: PM（AirGuardV2）-14 / task `01a05c75-bdfd-75e0-bcda-f167b8541bff` / host `local` / retired・product作業なし。移管の独立確認だけを行う。移管確認に失敗した場合はPM-14を維持し、重複割当を行わない。
 
 ## Repository baseline
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - branch: `codex/dev-user-reservation-migration`
-- checkpoint start baseline: `26ccfe6000596ced6f345dd0598d5f1fef15aa1a`
+- checkpoint start baseline: `233498de2833f1fd31133c9c8480b24fb0707a1f`
 - current integrated revision: Gitの現在HEADを確認する。本snapshot自身を含むcommit hashは文書へ自己参照で固定しない。
 - expected upstream: none
 - expected worktree: clean after coordinator integration
@@ -22,11 +22,12 @@
 
 ## Active checkpoint
 
-- checkpoint: `PM15-HANDOFF-ACTIVATION-001`
-- objective: 完全新規PM-15のprimary repository接続、権限、変更なしcallback、snapshotだけの最初のlocal commitを確認する。
-- approved scope: 利用者の「タスクを交代し、新しいタスクに作業を開始させてください」に基づく交代と次項のlocal作業。交代工程で変更するfileは本snapshotだけ。subagent、application変更、Dev接続、build、deployを交代工程へ混在させない。
-- completion contract: [効率化runbook](../runbooks/coordinator-handoff-efficient-activation.md)のactivation receiptと旧coordinatorの最小独立確認が一致した後、PM-15をactive ownerにする。
-- work ownership: PM-14は新規product作業を止め、移管確認だけを行う。未統合差分なし。旧専門taskへの割当は終了し、新taskへ自動継続させない。
+- checkpoint: `CUSTOMER-01B-PREFLIGHT-TOOL-001`（移管確認・開始通知後に着手）
+- objective: 次項で定めたCustomerのlocal確認用toolを作成し、Dev read-only実行の別承認に必要な対象・command・停止条件を提示する。
+- approved scope: 利用者の「タスクを交代し、新しいタスクに作業を開始させてください」に基づく次項のlocal作業。移管確認終了までは`PM15-HANDOFF-ACTIVATION-001`として本snapshotだけを変更し、subagent、application変更、Dev接続、build、deployを交代工程へ混在させない。
+- start gate: [効率化runbook](../runbooks/coordinator-handoff-efficient-activation.md)のactivation receiptとPM-14の最小独立確認が一致し、開始通知を受けるまでproduct作業を開始しない。
+- completion contract: 次項のlocal変更・選択した検証・review済みfileのlocal commitを完了し、Dev read-only実行とDev反映の別承認事項を提示する。
+- work ownership: PM-15が次checkpointを管理する。PM-14はretired・product作業なしとし、移管確認だけを行う。未統合差分なし。旧専門taskへの割当は終了し、新taskへ自動継続させない。
 
 ## Open decisions and approvals
 
