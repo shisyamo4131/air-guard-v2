@@ -68,6 +68,47 @@ export async function readDedicatedConfigFingerprint(projectRoot) {
   return sha256(config);
 }
 
+export async function createDedicatedUiEnvironment(
+  projectRoot,
+  inheritedEnv = process.env,
+) {
+  await readDedicatedConfigFingerprint(projectRoot);
+  const dedicated = {
+    ...DEDICATED_PUBLIC_CONFIG,
+    AIR_GUARD_EXTERNAL_EFFECTS: "deny",
+  };
+  const environment = { ...inheritedEnv };
+  for (const [name, value] of Object.entries(inheritedEnv)) {
+    const canonicalName = name.toUpperCase();
+    // Nitro prioritizes NITRO_ over NUXT_ and accepts whole-object overrides.
+    // Do not allow alternate config or expansion controls around the allowlist.
+    if (
+      canonicalName.startsWith("NITRO_PUBLIC_FIREBASE_") ||
+      [
+        "NITRO_PUBLIC", "NUXT_PUBLIC",
+        "NITRO_ENV_PREFIX", "NITRO_ENV_EXPANSION",
+        "NITRO_NITRO", "NUXT_NITRO",
+        "NITRO_NITRO_ENV_PREFIX", "NUXT_NITRO_ENV_PREFIX",
+        "NITRO_NITRO_ENV_EXPANSION", "NUXT_NITRO_ENV_EXPANSION",
+      ].includes(canonicalName)
+    ) {
+      throw new Error("Inherited environment conflicts with dedicated UI isolation.");
+    }
+    if (
+      !canonicalName.startsWith("NUXT_PUBLIC_FIREBASE_") &&
+      canonicalName !== "AIR_GUARD_EXTERNAL_EFFECTS"
+    ) continue;
+    if (
+      !Object.hasOwn(dedicated, canonicalName) ||
+      (value !== undefined && value !== dedicated[canonicalName])
+    ) {
+      throw new Error("Inherited environment conflicts with dedicated UI isolation.");
+    }
+    delete environment[name];
+  }
+  return { ...environment, ...dedicated };
+}
+
 export function readCleanGitIdentity(projectRoot) {
   const git = (args) =>
     execFileSync("git", args, {

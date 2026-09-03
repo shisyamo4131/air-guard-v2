@@ -6,6 +6,8 @@
 
 - Customerの取引状態を状況表示フラグとして基本情報から編集できるようにし、一覧に契約中・契約終了・全件の切替と状態列を追加した。作成はACTIVEを維持し、状態だけの変更では支払・住所情報を保存し直さない。旧ACTIVE限定選択方針を撤回し、基本編集の失敗後再読込と非同期準備後の再確認も補正した。[判断](docs/decisions/0044-customer-status-as-descriptive-flag.md)と[検証・適用状況](docs/roadmaps/customer-status.md)を参照。Dev反映・受入れは別工程。
 
+- Customer検証で発見したブラウザ直接郵便番号通信に対し、Codex専用client buildだけで検索utilityを無通信に置換する補正を追加した。手入力・通常利用・通常Dev・関連package・保存形式は維持する。置換成功receiptと専用設定の固定をbuild/serveへ追加し、未隔離の専用診断launcherは起動前に停止する。[運用契約](docs/runbooks/local-ui-testing.md#専用uiの郵便番号隔離)と[検証・適用状況](docs/verification/customer-02-status-local.md)を参照。
+
 - CustomerのDev・local分担検証を完了し、文書検証fixtureのリンク先コピー不足を修正して今回フェーズを閉鎖した。[確認範囲と結果](docs/verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を参照。Devテスト用会社と配下dataは利用者指示により今後も保持する。
 
 - マスタデータ管理の改修を先行する利用者指示に合わせ、Customer直後に稼働実績管理へ移るroadmapの順序を訂正した。Customerの追加検証はreviewerの評価をもとに利用者と範囲を合意してから実行する。

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { access, readFile } from "node:fs/promises";
 import test from "node:test";
+import { runInNewContext } from "node:vm";
 
 const projectRoot = new URL("../../", import.meta.url);
 
@@ -59,19 +60,14 @@ test("dedicated UI commands remain separate foreground processes", async () => {
   );
 });
 
-test("dedicated UI dev server validates config and denies external effects", async () => {
+test("dedicated UI dev launcher actually stops without imports, spawn or effects", async () => {
   const source = await readFile(
     new URL("scripts/run-codex-local-ui-dev.mjs", projectRoot),
     "utf8",
   );
 
-  assert.match(source, /readDedicatedConfigFingerprint/);
-  assert.match(source, /config\/codex-test-ui\.env/);
-  assert.match(source, /"127\.0\.0\.1"/);
-  assert.match(source, /"14600"/);
-  assert.match(source, /AIR_GUARD_EXTERNAL_EFFECTS: "deny"/);
-  assert.match(source, /stdio: "inherit"/);
-  assert.doesNotMatch(source, /Start-Process|detached:\s*true/);
+  assert.doesNotMatch(source, /import|spawn|fetch|Start-Process|detached/);
+  assert.throws(() => runInNewContext(source, {}), /test:local:ui:build.*test:local:ui:server:generated/);
 });
 
 test("flagged PowerShell UI child helper is absent", async () => {

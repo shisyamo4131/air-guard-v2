@@ -1,7 +1,7 @@
 # local UI検証runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-02
+- 最終確認日: 2026-09-03（郵便番号隔離の追加修正・再検証は実行証拠を参照）
 - 役割: Codex専用UI環境と利用者用local browser受入れの準備・操作・終了
 
 ## UI検証と最終受入れの責任分離
@@ -13,20 +13,20 @@
 
 ## Codexだけで完結するlocal UI test
 
-Codex専用local UI受入れは、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。開発サーバーがreadyでも製品画面へ到達せず、同一HEADのgenerated serverで受入れを完了した根拠は[Customer local acceptance receipt](../verification/customer-01a-local-acceptance.md)を参照する。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。
+Codex専用local UI受入れは、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。開発サーバーがreadyでも製品画面へ到達せず、同一HEADのgenerated serverで受入れを完了した根拠は[Customer local acceptance receipt](../verification/customer-01a-local-acceptance.md)を参照する。HTTP 200または起動templateだけは成功証拠ではない。正規signupからのbaseline再生成はこの最小経路とは別の受入れである。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。Functionsのdenyだけではブラウザの直接通信を制御できないため、下記の専用郵便番号隔離も確認する。これらを未調査の全ブラウザ通信を遮断する汎用firewallとは扱わない。
 
 標準の起動・確認・終了順序は次のとおりとする。
 
 Windows上でCodexがこの経路を実行する場合、Firebase CLIとlocal serverは、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
 
-1. 専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。
+1. 実UI担当が正規in-app browserへ接続できることをbuild前に確認する。専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。既存rootのEmulatorログがある場合は、今回所有のruntimeへhash確認付きで退避し、終了後に元内容・timestampへ戻す対象を固定する。既存runtime・他者processは変更しない。
 2. clean worktreeの同一HEADで`npm run test:local:ui:build`を実行し、identity marker付き`.output`を生成する。このbuildは実行ごとの承認境界を維持する。
 3. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
 4. `npm run test:local:ui:server:generated`を別の前景processで起動し、identity確認、server ready、loopback rootのHTTP応答を確認する。marker欠損・不一致、dirty worktree、非200ならbrowserを開かず停止する。
 5. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
 6. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。残る場合はreloadを通常手順にせず失敗として停止し、server identity、HTTP、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
 7. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。保存済みbrowser sessionが有効なら、その合成account sessionを再利用する。
-8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portがLISTENしていないことを確認する。`.output`は検証後に削除する。
+8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portと今回の派生portがLISTENしていないことを確認する。Windowsでは実LISTENと取得結果を照合し、APIで結果が欠ける場合は`netstat`でも確認する。saved-data不変と既存ログの復元を検証し、`.output`と今回所有runtimeだけを安全な絶対path・reparse不在確認後に削除する。反省会など別目的の一時メモは削除対象へ混ぜない。
 
 インアプリブラウザはCodex Desktop内の専用browserであり、利用者のChrome profileを使用しない。利用者が目視を希望する検証ではvisibilityを要求し、同じtabを監視対象にする。visibility状態を機械的に取得できない場合は、利用者が実際に監視できた事実とtool上の未確認を分けて報告する。Chrome拡張経路は、利用者が既存sessionを使う受入れまたはインアプリブラウザ障害の補助経路であり、標準のCodex専用UI testの前提ではない。
 
@@ -59,9 +59,19 @@ npm run test:local:ui:emulators
 npm run test:local:ui:server:generated
 ```
 
-`npm run test:local:ui:server`を使うNuxt開発サーバーは、途中確認または診断には使用できる。2026-08-25には十分な予熱後に製品topへ到達したが、2026-09-02には同じready確認後も起動templateから進まなかったため、受入れの標準にはしない。開発サーバーの起動は既存`.output`を失効させるため、その後にgenerated serverへ切り替える場合は、開発サーバーを停止し、clean worktreeを確認して専用buildを再実行する。古いmarkerや生成物を流用しない。
+`npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
+
+### 専用UIの郵便番号隔離
+
+[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)で承認した追加契約。実装・再検証の適用状態は[Customer検証記録](../verification/customer-02-status-local.md)を正とする。
+
+- Schemasの郵便番号field・共通入力component・保存契約を維持し、専用client buildだけで実解決先の郵便番号検索utilityを無通信・`null`返却moduleへ置換する。7桁入力でも外部検索・住所自動補完はせず、郵便番号と住所の手入力は維持する。通常利用・通常Dev・関連package・data形状は変更しない。
+- 対象moduleが見つからない、対象置換が実行されない、隔離成功receiptを確認できない場合はbuild identityを成立させない。生成receiptは固定の非秘密metadataだけとし、古いreceipt/markerを使って成功を装わない。
+- 専用dotenvの検査だけでなく、build子processとgenerated serverの有効な公開Firebase設定も固定する。継承環境変数が専用allowlistと衝突する場合は起動前に停止し、診断には変数名だけを使い値を出力しない。設定の不一致を無視して通常環境用buildを専用identityへ偽装しない。
+- 再検証は7桁入力の外部fetch 0、住所更新event 0、手入力保存・再表示、通常設定非影響の陰性testと、fresh専用buildの通常UI操作を分ける。未調査の外部hostすべてについて通信0を保証するものではない。
+- rollbackは限定実装commitを安全に戻し、生成物・receipt・markerを破棄する。元へ戻すと既存のbrowser直接検索が復帰するため、その状態で専用UIを隔離済みとして再開しない。data migrationは不要。
 
 正規signup後のexportは直ちに専用saved-dataへ昇格せず、`.codex-test/ui-candidate`へ置く。candidate importを起動し、backend verifierへ正規signupで使用した合成email、会社名、会社名カナ、表示名を`CODEX_UI_SYNTHETIC_EMAIL`、`CODEX_UI_SYNTHETIC_COMPANY_NAME`、`CODEX_UI_SYNTHETIC_COMPANY_NAME_KANA`、`CODEX_UI_SYNTHETIC_DISPLAY_NAME`として渡して`npm run test:local:ui:candidate:accept`を実行する。この処理はUI証拠ではなくbackend assertionであり、合格時だけcandidate directory SHA-256とclean source HEADを`.codex-test/ui-candidate-acceptance.json`へ記録する。実在情報やpasswordを渡さない。verifierは会社名カナを正規signup入力と完全一致で確認し、会社名カナ形式・40文字境界と、claim company ID・Auth UIDが単一の安全なFirestore path segmentであることを検証してからURL encodeしてGETする。
 

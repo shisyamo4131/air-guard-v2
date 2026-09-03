@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { runInNewContext } from "node:vm";
+import { createCodexPostalIsolationPlugin } from "../../scripts/vite-codex-postal-isolation.mjs";
 
 async function loadNuxtConfig(env = {}) {
   const source = await readFile(
@@ -12,15 +13,33 @@ async function loadNuxtConfig(env = {}) {
   return runInNewContext(
     source
       .replace(/^import .* from "vite-plugin-vuetify";\r?\n/m, "")
+      .replace(/^import .* from "\.\/scripts\/vite-codex-postal-isolation.mjs";\r?\n/m, "")
       .replace("export default defineNuxtConfig(", "defineNuxtConfig("),
     {
       process: { env },
       defineNuxtConfig: (config) => config,
       vuetify: () => ({}),
       transformAssetUrls: {},
+      createCodexPostalIsolationPlugin,
     },
   );
 }
+
+test("real Nuxt hook registers postal isolation only for dedicated client", async () => {
+  for (const dedicated of [false, true]) {
+    for (const isClient of [false, true]) {
+      const config = await loadNuxtConfig({ NUXT_PUBLIC_FIREBASE_PROJECT_ID: dedicated ? "demo-air-guard-v2-codex" : "synthetic-normal" });
+      const hooks = [];
+      for (const module of config.modules.filter((value) => typeof value === "function")) {
+        module({}, { options: { rootDir: "/synthetic" }, hooks: { hook: (name, fn) => { if (name === "vite:extendConfig") hooks.push(fn); } } });
+      }
+      assert.ok(hooks.length > 0);
+      const vite = { plugins: [] };
+      for (const hook of hooks) hook(vite, { isClient });
+      assert.equal(vite.plugins.filter((plugin) => plugin.name === "codex-postal-isolation").length, dedicated && isClient ? 1 : 0);
+    }
+  }
+});
 
 function readWorkerFirebaseConfig(source) {
   let captured;

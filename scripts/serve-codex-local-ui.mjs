@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import {
   CODEX_UI_BUILD_IDENTITY_FILE,
   assertCodexUiBuildIdentity,
+  createDedicatedUiEnvironment,
 } from "./codex-local-ui-build-identity.mjs";
 
 const DEDICATED_ENVIRONMENT = Object.freeze({
@@ -26,6 +27,14 @@ try {
   throw new Error("Dedicated UI build identity is missing or unreadable.");
 }
 await assertCodexUiBuildIdentity(projectRoot, identity);
+const environment = await createDedicatedUiEnvironment(projectRoot);
+for (const name of Object.keys(process.env)) {
+  if (
+    name.toUpperCase().startsWith("NUXT_PUBLIC_FIREBASE_") ||
+    name.toUpperCase() === "AIR_GUARD_EXTERNAL_EFFECTS"
+  ) delete process.env[name];
+}
+Object.assign(process.env, environment);
 
 for (const [name, expected] of Object.entries(DEDICATED_ENVIRONMENT)) {
   const current = process.env[name];

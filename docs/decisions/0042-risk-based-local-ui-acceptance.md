@@ -12,7 +12,7 @@ Codex専用local環境で、実際のAirGuard生成物、専用Emulator、合成
 
 ## 決定
 
-- Codex専用local UI受入れは、承認済み専用buildから生成した同一HEAD・clean worktree・専用設定identity確認済みgenerated serverを標準とする。Nuxt開発サーバーは途中確認・診断用とする。
+- Codex専用local UI受入れは、承認済み専用buildから生成した同一HEAD・clean worktree・専用設定identity確認済みgenerated serverを標準とする。Nuxt開発サーバーの位置付けは途中確認・診断用だが、実際の提供可否と通信隔離条件は[現行runbook](../runbooks/local-ui-testing.md#専用uiの郵便番号隔離)に従う。2026-09-03の追加修正では、隔離未検証の専用診断launcherを起動前に停止する契約とした。
 - 既存画面・既存操作の内部改修は、対象操作、保存、再表示、自動検証、必要なreview、後処理が成功した場合、利用者によるlocal受入れを原則として重ねない。
 - 新しい画面・新しい操作、見た目や使い勝手の判断、利用者用data、利用者Chrome固有条件、Dev固有設定、外部service、Codexが通常操作できない箇所、未解決error、利用者が明示した確認は省略しない。必要な範囲だけ利用者確認を行う。
 - Dev・Prod・remote dataの受入れ、release完了、正式運用開始の承認はlocal省略と分離し、各checkpointの完了契約に従う。

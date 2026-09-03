@@ -1756,3 +1756,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Current provisional treatment: 利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確認済みで、4件すべてをmigration対象とする。実行時のtarget manifest digestはfresh dry-runで別途固定する。
 - Related FUT IDs: FUT-0090、FUT-0091
 - Answer: 2026-08-28 承認済み。`CCB-02-DEV-TENANT-CLASSIFY-001`をexit 0で実施し、合成test 2件、要確認2件、観測digest `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`を得た。ID、名称、email、document値の出力は0、remote writeは0。その後、利用者が要確認2件を利用者会社1件・試用中の別会社1件と確認し、合成test 2件を含む4件すべてをmigration対象として承認した。会社名はrepositoryへ保存しない。実migrationのtarget manifest digest、dry-run、applyは別承認である。
+
+## CONF-0145 Codex専用UIの外部郵便番号通信を遮断する追加checkpoint
+
+- Status: Answered
+- Source segment/doc: CUSTOMER-02-STATUS; [local検証記録](../verification/customer-02-status-local.md#可視uiの観測結果と隔離未達)
+- Evidence: Customer状態編集の可視操作は成功したが、既存郵便番号componentにブラウザ直接外部fetchがあり、Functionsのdenyだけでは専用UIの隔離条件を満たさない。合成値の応答後warnを観測し、High security reviewで境界未達を確認した。
+- Question: Customer改修に加え、Codex専用UIの外部郵便番号通信を遮断する修正と再試験を今回の作業範囲へ追加してよいか。
+- Why needed: 現在のCustomer状態編集7filesの所有範囲外であり、専用UIの通信境界を補正しないままCS-03完了を主張できないため。
+- Options and impact: 専用UIだけ自動検索を停止して手入力を維持する案を優先する。通常利用の検索・Dev・data形状は変えず、migrationは不要。関連package変更は避ける設計を先に確認し、必要になれば別途範囲を提示する。延期する場合はlocal完了保留。
+- Current provisional treatment: 専用UI限定の遮断修正と再試験を追加実施する。最小設計を確定後、developer Mediumが実装し、Low test・環境準備、承認済み親担当UIで検証する。修正は独立commitでrollback可能とし、7桁でfetch 0の陰性test・通常環境非影響・専用build再生成・限定UI再試験を必要とする。
+- Related FUT IDs: FUT-0184
+- Answer: 2026-09-03 承認済み。利用者は一度保留した回答を直後に訂正し、追加修正・再試験を明示承認した。通常利用時の検索・Dev・data形状を変えず、関連package変更を避ける最小app側設計を先行する。画面テストだけ親担当とする既存承認とは別のscope追加である。

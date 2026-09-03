@@ -2488,3 +2488,16 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 推奨する将来対応: least-privilege operator identity、target tenant/claim preflight、two-person approval、maintenance hard gate、immutable audit、backup receipt、dry-run/apply token、cursor/resume/reconcile/rollbackを共通command frameworkで強制する。
 - 必要なテスト: actor/target/env matrix、self/last-admin、forged UID、tampered artifact、partial failure、499/500/501件、locked result exception、trigger reconcile、resume/idempotent replay。
 - ユーザー判断が必要な事項: PROD operator、company decommission、locked migration例外、restore scope/RPO/RTOはCONF-0111、CONF-0124〜0130へ統合する。
+
+## FUT-0184 Codex専用UIのブラウザ直接郵便番号通信を遮断する
+
+- 状態: Open
+- 重大度: High
+- 発見セグメント: CUSTOMER-02-STATUS / CUSTOMER-02-UI-POSTAL-BOUNDARY-REVIEW
+- 対象ファイル・シンボル: `air-vuetify-v3/src/AirPostalCode.vue`、`air-vuetify-v3/src/utils/postalCode.js`、Codex専用UIのNuxt/build設定・陰性test。
+- 確認済み実装事実: 7桁入力でブラウザが郵便番号検索APIへ直接fetchし、Functionsの外部作用denyや専用build identityはこの経路を遮断しない。今回の合成Customer作成で応答JSON処理後の住所未取得warnを観測した。network実経路・cache・中継は未観測で、外部service本人への実到達は断定しない。
+- 想定影響と発生条件: 専用UIで郵便番号を入力すると、合成data限定・外部作用denyという承認済みtest環境の境界を満たせない。今回、実dataや秘密情報流出を示す根拠はないが、操作成功だけでは隔離されたUI受入れ完了にできない。
+- 未確認点・仮説: 専用UIだけに適用できる最小変更files、他のbrowser直接通信経路、外部実到達は未確認。追加network再現はしない。
+- 推奨する将来対応: 専用UI限定で郵便番号自動検索を停止し手入力を維持する。通常利用・Dev・data形状を変えず、関連packageを変更しない狭いapp側境界を優先設計する。CONF-0145で追加修正・再試験は承認済み、exact filesと実装は設計後に固定する。
+- 必要なテスト: 専用UIの7桁入力で外部fetch 0、通常環境の非影響、専用build identityと陰性test、限定Customer UI再試験、process/log/saved-dataのcleanup。
+- ユーザー判断が必要な事項: [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)。[実行証拠](../verification/customer-02-status-local.md#可視uiの観測結果と隔離未達)の操作成功と隔離未達を分け、CS-03は加点しない。

@@ -1,4 +1,5 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
+import { createCodexPostalIsolationPlugin } from "./scripts/vite-codex-postal-isolation.mjs";
 
 const isCodexDedicatedUi =
   process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID ===
@@ -51,9 +52,14 @@ export default defineNuxtConfig({
   modules: [
     // vuetify 設定
     (_options, nuxt) => {
-      nuxt.hooks.hook("vite:extendConfig", (config) => {
+      nuxt.hooks.hook("vite:extendConfig", (config, { isClient }) => {
         // @ts-expect-error
         config.plugins.push(vuetify({ autoImport: true }));
+        if (isCodexDedicatedUi && isClient) {
+          config.plugins.push(createCodexPostalIsolationPlugin({
+            projectRoot: nuxt.options.rootDir,
+          }));
+        }
       });
     },
     // pinia

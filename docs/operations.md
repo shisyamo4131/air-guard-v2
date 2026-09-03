@@ -173,6 +173,7 @@ powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
 
 ## 現在利用不可または要確認
 
+- Codex専用UIの郵便番号自動検索は隔離対象として停止し、手入力を使う。専用Nuxt診断launcherは未隔離経路への迂回を防ぐため起動を拒否する。通常Devは変更しない。[専用UI契約](runbooks/local-ui-testing.md#専用uiの郵便番号隔離)と[実装・検証の適用状態](verification/customer-02-status-local.md)を参照。
 - Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、UWB-04予約fixtureを含むUser lifecycle Callableのhandlerを確認する。Realtime Database Rules、外部サービスの自動回帰testは未整備である。
 - 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
 - Stripe関連物は未同期scaffoldとして撤去済みで、現行運用機能ではない。将来のprovider、契約、料金、利用上限は未設計である。Dev実行の詳細は[immutable receipt](verification/stripe-05-dev-release.md)を参照する。
