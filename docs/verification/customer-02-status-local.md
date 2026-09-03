@@ -80,6 +80,16 @@
 - 利用者からNortonと`test-verification-policy.ps1`について申告があり、新規操作を一時停止してread-only照合した。同名fileは通常検索対象外の`air-vuetify-v3/scripts/`内に存在し、今回の変更・実行対象ではない。通知の検出名・対象pathは不明。fileに`-EncodedCommand`はあるが、検知原因との因果は未確認で、誤検知とも断定しない。除外・回避・再実行はせず、今回build/runtime失敗の証拠もない。関連packageの修正は行わない。
 - 認証例外の回答待ちで親tabを閉じ、Lowがserver→EmulatorをCtrl-C停止した（両process exit 1）。自身PID 4件、専用8 portsと派生9150/8056閉鎖の確認はexit 0。利用者saved-data 7 files / 6,012,330 bytes、専用saved-data 7 files / 3,492 bytesの前後指紋一致はexit 0。元rootログ2件のhash・timestampを復元し、安全な絶対path・reparse検査後に自身の`.output`と`.codex-test/runtime/customer-ui-log-backup-6ed23fc6`だけを削除（exit 0）。生成物不存在・一時メモ2件保持の確認もexit 0。生成物は正規buildで再生成可能。
 
+### 2026-09-03 再開時の限定再試験
+
+- 利用者の再開指示で、Low環境担当とLow UI担当のno-change callbackを確認した。Low UI担当は正規in-app browserのdocumentationとtab一覧取得に成功したため、親の認証例外を使わない通常分担で準備を開始した。
+- cleanな`c08f175b82d4bd6f48366053b0a3c1e97acb2f16`でLow環境担当が`npm run test:local:ui:build`を実行し、exit 0（client 11221ms / server 18ms）。両receipt、source/config identity一致、配信対象client JS 111 filesのzipcloud endpoint一致0を確認した（assertion exit 0）。専用EmulatorのAll emulators ready、generated server ready、loopback HTTP 200の確認もexit 0。これはCustomerのUI成功証拠ではない。
+- `CUSTOMER-02-RETEST-UI`は最初の表示要求で`Browser is not available: 1`となった。troubleshootingに従うbrowser再一覧は0件で、tab作成・Auth設定・credential生成/入力・Customer操作・backend assertionは未実施。初期接続確認の成功を実操作能力の確認と取り違えない。接続障害の原因は未確定。
+- 親は既存の画面操作例外内で表示を要求し、新tabを開いて起動表示から初期topのサインイン案内へ到達した。visibilityはfalseで、利用者による目視とは区別する。保存済み合成sessionは再利用できず、Auth設定・入力・Customer操作へ進まず停止した。今回のconsole/network traceは未取得。親tabを閉じ、tab一覧0件を確認した。
+- [CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)は未回答を維持する。Low担当の実操作が利用できず、親の一時認証準備まで含める担当例外が必要になった。7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterの再試験は未完了で、CS-03へ加点しない。
+- `CUSTOMER-02-RETEST-ENV-CLEANUP`でLow環境担当がserver→Emulatorの順にCtrl-C停止した（両process exit 1）。所有PID 4件、専用8 portsと派生9150/8757のLISTEN残存0を独立確認した（exit 0）。両saved-dataは前回と同じfile数・byte数で全指紋一致（exit 0）。rootログ4件の復元は、初回確認で停止後の`firebase-debug.log`不存在によりexit 1となったが、開始前backupからの復元後に4件すべてのhash・bytes・timestamp一致を再確認した（exit 0）。安全な絶対path・reparse検査後に今回の`.output`と`.codex-test/runtime/customer-retest-c08f175b`だけを削除し、不存在・既存runtime 18件と一時メモ2件の保持を確認した（exit 0）。snapshot書込み・Auth設定はない。各非UI確認commandはLow担当callbackのtool inputに保持する。
+- 今回のtracked変更は再開案内・CONF・本検証記録だけ。製品sourceは追加隔離commitから不変のためdomain 852件とEmulator 118件の成功証拠を維持する。governance移行後のproject-docs-negative 28件、capacity-regression 7件、managed-governance（renderer内包）は、各validator/fixture/policy/必須route/managed入力が今回不変のため再利用する。最終文書のproject-docs・diff-checkを再実行し、結果とexitはcommand reportと統合commit本文へ記録する。製品仕様・ADR・進捗・manual・operations・data契約・indexは変わらず、Dev/Prod build・deployは今回も対象外。
+
 ### 追加修正前までの統合・cleanup
 
 - 実装commitは27 files、811行追加 / 111行削除。application/Rules 7 files、test 5 files、影響する仕様・ADR・manual・roadmap・引継ぎ・証拠等15 files。exact file一覧は当該commitの`git show --name-only`で確認できる。
