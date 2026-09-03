@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / PM-15継続。Customerのlocal準備完了、Dev実行前で停止
+- 状態: Current / PM-15継続。Customer Dev反映・テスト実行中
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
 - active callback and assignment destination: PM（AirGuardV2）-15 / task `01a06437-1ef9-7150-b3c0-c611f09d48e0` / host `local`
@@ -22,11 +22,11 @@
 
 ## Active checkpoint
 
-- checkpoint: `CUSTOMER-01C-LOCAL-PREP-001`
+- checkpoint: `CUSTOMER-01D-DEV-TEST-001`
 - objective: [Customer Dev反映・受入れ計画](customer-dev-release.md)に3条件の具体的判断、反映範囲、切替・復旧、通常操作と関連機能の確認を固定する。
-- approved scope: 利用者のDevテスト直前までの進行指示に基づくlocal調査・必要な修正・検証・Dev向け静的生成・review・文書・local commit。Dev接続・remoteテスト・maintenance操作・deploy・実data変更・pushは含めない。
-- completion contract: 必要なlocal検証、review済みcommit、clean、Dev設定の生成物照合を終え、Dev実行前で停止する。
-- work ownership: PM-15が文書・build/artifact・Git統合を管理する。developer・reviewer・securityはterminal callback済みで待機。次のDev実行指示まで新規作業を割り当てない。
+- approved scope: 利用者のDevテスト開始指示に基づくRules・Hosting反映、Chrome通常操作、関連機能確認、今回作成する合成dataの削除、指定既存取引先の可逆編集と復元。利用停止・maintenanceは不要との追加指示を優先する。一括repair、migration、対象外data変更、Prod、pushは含めない。
+- completion contract: Dev反映結果と通常操作・拒否・関連機能の確認を記録し、今回の検証用dataを削除、既存対象の試験変更を復元する。未確認や不具合を成功扱いしない。
+- work ownership: PM-15が文書・build/artifact・Dev反映・Chrome試験・Git統合を管理する。securityはpreflight read-only review済み。修正が必要な場合だけdeveloperへ限定委譲する。
 - local evidence: [CUSTOMER-01C local preparation](../verification/customer-01c-local-preparation.md)。artifactは証拠に記録したsource commitへ束縛し、本snapshot等の文書commitをbuild sourceとして扱わない。
 
 ## Open decisions and approvals
@@ -35,8 +35,8 @@
 - 次の製品作業は[roadmapのCustomer次工程](../roadmaps/airguard-v2.md#次の作業)。追加の集計tool・ID別修復一覧・全件修復を一律の先行作業にする提案は取り下げる。既存tool・immutable receiptを削除・改変しない。
 - 利用者は必要時の診断でIDを収集することを許可したが、今回の方針採用で診断toolの作成・再読取りを自動実行しない。診断が必要になった時点で目的・対象・出力先を限定する。
 - 利用者は今回をproject固有ルールの変更として「タスクの交代は必要なし」と明示した。GOV-DEV-DATA-001に限りこの指示を優先し、PM-15と現在の担当を継続する。一般のturnover規則は変更しない。
-- 利用者は「Dev環境でのテストに入る直前まで」の作業を指示した。local調査・必要な準備を完了し、Dev接続・remoteテスト開始前で止める。deploy・実data修復を黙示の承認に含めない。
-- Git push、main merge、Dev/Prod deploy、追加のremote/data操作、外部service変更は本checkpointの対象外。以前の一度のDev読取り承認を再利用しない。
+- 利用者はlocal準備後に「Devテスト開始」を指示し、利用停止不要、適当な検証用dataの作成と終了時削除、指定既存取引先での編集試験を承認した。試験住所・関連data・削除境界は[実行計画](customer-dev-release.md)へ固定する。以前の一度の全件Dev読取り承認は再利用しない。
+- Git push、main merge、Prod、対象外のremote/data変更は本checkpointの対象外。
 - 新しい小規模Dev migration高速経路は作成しない。
 - App Check・全般的なrate limit・Callable public invoker常時監視はProd公開前gateへ移し、Customerを次のCRUD見直し対象とする利用者判断を反映済み。
 - CUSTOMER-01Aのlocal実装・自動検証・Codex専用local UI受入れは完了した。
@@ -45,7 +45,7 @@
 
 ## Next checkpoint
 
-1. 利用者のDev実行指示後、[Customer Dev反映・受入れ計画](customer-dev-release.md)と[Dev runbook](../runbooks/dev-deployment.md)に沿い、現在のremote状態、実行対象commit・artifact、切替対象と時間、rollback、試験対象・関連Siteへの同期・外部住所検索を固定した一つのbounded releaseを進める。
+1. [Customer Dev反映・受入れ計画](customer-dev-release.md)と[Dev runbook](../runbooks/dev-deployment.md)に沿い、固定commitの生成物を照合してRules・Hostingを停止なしで反映する。通常試験後、作成した合成dataだけを削除し、指定既存対象の変更を復元する。
 2. RulesとHostingの反映後、通常Customer操作と条件2の関連機能を確認する。未確認状態を成功扱いせず、不具合が出たID・field・経路を限定して修正する。全件再診断・一括修復は自動追加しない。
 
 ## References

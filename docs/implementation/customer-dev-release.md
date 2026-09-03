@@ -1,14 +1,14 @@
 # Customer Dev反映・受入れ計画
 
-- 状態: Local preparation完了 / Dev実行は未開始
-- checkpoint: `CUSTOMER-01C-LOCAL-PREP-001`
+- 状態: Dev実行中
+- checkpoint: `CUSTOMER-01D-DEV-TEST-001`
 - 更新日: 2026-09-03
 - 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../../governance/project-rules.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
-- 利用者指示: PM-15と既存担当を継続し、Dev環境でのテストに入る直前まで準備する。
+- 利用者指示: local準備後にDevテスト開始を承認。利用停止は不要。検証用dataの作成と終了時の削除、利用者指定の既存取引先の編集を承認した。
 
 ## 対象と停止位置
 
-localの影響確認、必要な修正・検証、Dev向け静的生成、手順の固定までを今回の範囲とする。Dev接続、deploy、System maintenance変更、通常のDev CRUD、実dataのmigration・repairはまだ実行しない。
+今回の範囲は固定commitのDev生成、Rules・Hosting反映、通常のDev CRUDと関連機能確認、作成した検証用dataの終了時削除、指定既存取引先の試験変更の復元とする。利用者指示によりSystem maintenanceと他利用者の保存停止は行わない。実dataのmigration・一括repairは含めない。
 
 反映案は`air-guard-v2-dev` / Firestore `(default)`の`firestore.rules`とHosting `dist/`。設定根拠は[firebase.json](../../firebase.json)と[Dev runbook](../runbooks/dev-deployment.md)。Functions、Indexes、Storage、Realtime Database、packageの更新は不要である。
 
@@ -34,21 +34,23 @@ local生成物で発見したService WorkerのFirebase設定未注入もHosting�
 
 ## 切替と復旧
 
-旧clientは全体保存・client時刻を使うため、新Rulesとの書込み互換性を前提にできない。短い切替時間を設け、利用者の入力と保留保存を終了し、旧tabを閉じる。maintenanceはclient経路の停止案内であり、server全体の排他lockとして扱わない。
+旧clientは全体保存・client時刻を使うため、新Rulesとの書込み互換性を前提にできない。利用者は停止不要と明示したため、今回はmaintenanceなしでRules、Hostingを続けて反映し、検証Chromeを再読込する。旧tabからの保存拒否があり得ることを残存条件とし、旧Rulesへの自動復帰で権限を再拡大しない。
 
 承認後の順序は次のとおり。
 
 1. 固定source commit、clean、artifact identityを確認し、対象Devの現在のRules/Hosting revisionと復旧候補をread-onlyで照合する。記録済み比較元と違う場合は差分を再評価する。
-2. 切替対象・停止時間を利用者と固定し、必要なmaintenanceと旧clientの作業終了を確認する。data migrationを伴わないため、migration用の全件scan・dry-run・snapshotは追加しない。
+2. 利用停止・maintenanceなしの今回指示を適用する。data migrationを伴わないため、migration用の全件scan・dry-run・snapshotは追加しない。
 3. installed Firebase CLIで`deploy --project air-guard-v2-dev --only firestore:rules --non-interactive`を実行し、Rules反映を確認する。
 4. 同じ承認済みartifactを`deploy --project air-guard-v2-dev --only hosting --non-interactive`で反映する。配信revision、index・Service Worker・参照asset、cache headerを確認する。
-5. 新しい画面へ再読込して以下の通常操作と主要拒否経路を確認し、停止を解除してDev受入れへ進む。
+5. 検証Chromeを新しい画面へ再読込して以下の通常操作と主要拒否経路を確認する。
 
 CLIの存在・version・認証・trust・対象projectの照合と、commandごとのexit status記録はDev runbookに従う。現在の接続権限・remote状態は今回未確認である。
 
 deploy自体は既存Customerを変更しないため、data復元は不要。Hostingだけを旧版へ戻すと旧writerが新Rulesに拒否される。Rulesも旧版へ戻すとCustomerの書込み・削除権限が再拡大するため、自動rollbackせず、停止中の修正releaseを優先する。旧Rulesへの復帰が必要な場合は対象revision・権限再拡大・clientとの整合を明示して承認する。新規test dataや通常操作の結果を推測削除・一括復元しない。
 
 ## Devで試す操作
+
+新規Customerは検証用と明示した合成名称を使い、住所検索には個人住所を使わず検証住所（東京都新宿区西新宿2丁目8番1号）を使う。関連確認に必要な合成Site等も今回作成したIDだけを追跡し、終了時に依存関係を確認して削除する。既存取引先は利用者指定対象だけを扱い、原則remarksの可逆編集と復元に限定する。既存取引先・既存関連dataは削除しない。
 
 | 操作 | 期待結果・確認範囲 |
 |---|---|
