@@ -754,11 +754,11 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-020、SPEC-DEEP-021
 - 対象ファイル・シンボル: schemas `Customer.tokenFields`、`Customer/Autocomplete.vue`、`Customers/{DataTable,Iterator}/index.vue`、`Site/CustomInput/index.vue`
-- 確認済み実装事実: code/name等の一意性検証はなく、一覧はACTIVE限定だがAutocompleteのN-gram検索にはstatus constraintがない。検索tokenはname/nameKanaだけである。SPEC-DEEP-021で、Site create wizardがCustomer候補選択用に渡す`modelValue`/`show-select`/`select-strategy`をCustomersIteratorが内部iteratorへforwardしないことも確認した。
-- 想定影響と発生条件: 重複Customer作成、TERMINATED Customerの新規参照選択、codeや略称で検索できない運用差が起き得る。
+- 確認済み実装事実: code/name等の一意性検証はなく、AutocompleteのN-gram検索にはstatus constraintがない。検索tokenはname/nameKanaだけである。旧一覧にはACTIVE条件の記述があったがadapter引数不一致が判明しており、実際の絞込み成功は未確認。現在の一覧は[Customer master](customer-master.md)を参照。SPEC-DEEP-021で、Site create wizardがCustomer候補選択用に渡す`modelValue`/`show-select`/`select-strategy`をCustomersIteratorが内部iteratorへforwardしないことも確認した。
+- 想定影響と発生条件: 重複Customer作成、codeや略称で検索できない運用差が起き得る。TERMINATEDを選択できること自体は[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)による現在の方針と矛盾せず、不具合として扱わない。
 - 未確認点・仮説: normalized address/phoneを含む類似検索の実現可能性、index数・query cost・privacy、warning閾値は未確認である。
-- 推奨する将来対応: 任意codeをtenant内uniqueにし、name hard uniqueは設けない。normalized name/kana/address/phoneの類似候補をwarning表示して同名作成を許す。新規選択はACTIVE限定、履歴はTERMINATED表示、再利用前reactivateとする。検索はcode/name/kana/phoneを先行し、addressはprivacy/cost確認後に判断する。
-- 必要なテスト: 同一/空code、同名許可、name/kana/address/phone類似warning、false positive/negative、ACTIVE新規選択、TERMINATED履歴、reactivate、cache後status変更、Site createの既存Customer single select/v-model、tenant分離、index/cost。
+- 推奨する将来対応: 任意codeをtenant内uniqueにし、name hard uniqueは設けない。normalized name/kana/address/phoneの類似候補をwarning表示して同名作成を許す。検索はcode/name/kana/phoneを先行し、addressはprivacy/cost確認後に判断する。状態に基づく選択制限は実装しない。状態の正本は[現行仕様](../specification.md#取引先現場取極め)を参照。
+- 必要なテスト: 同一/空code、同名許可、name/kana/address/phone類似warning、false positive/negative、両statusの選択と履歴表示、cache後status変更、Site createの既存Customer single select/v-model、tenant分離、index/cost。
 - ユーザー判断が必要な事項: warning閾値とaddress検索採否は実現可能性・privacy・cost検証後に決定する。基本方針は2026-08-11に確認済み。
 
 ## FUT-0057 Customer archiveと参照整合・復元を設計する
@@ -795,8 +795,8 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 対象ファイル・シンボル: `Customer/Activator/{Base,Payment}.vue`、`Employee/Activator/Base.vue`、schemas `Customer`、`Site`、`Employee`、`GeocodableMixin`
 - 確認済み実装事実: Customerの必須addressとcontractStatusは詳細編集includedKeysにない。SPEC-DEEP-021でBasic/Payment Activatorがpermission/disabled/loadingを自身で判定せず常時edit iconを出すことを確認した。SPEC-DEEP-025でEmployee Baseもrequired addressを表示する一方でincludedKeysへ含めず、detail editorから番地を変更できないことを確認した。Customer、Site、Employeeが共有する住所geocodingは、未注入・失敗時にlocation=nullで保存を継続し、lat/lngのtruthy判定は0座標を欠損扱いする。
 - 想定影響と発生条件: 番地訂正や契約終了/再有効化が画面から行えず、住所変更時に座標だけ失われても保存成功として扱われる。
-- 未確認点・仮説: status変更UI・auditの実装、座標欠損を許容する業務条件は未確認。
-- 推奨する将来対応: 契約終了・停止はTERMINATED、`customers:write`による再開はACTIVEとしてUI・auditを実装する。誤登録・重複archiveとは分離する。address編集、geocoding失敗表示、0を含む座標validationも見直す。
+- 未確認点・仮説: 状態表示・編集の実装とlocal検証は今回のCustomerフェーズで扱う。座標欠損を許容する業務条件は別課題。
+- 推奨する将来対応: 状態表示・編集は[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)に従い、誤登録・重複archiveとは分離する。状態専用auditの追加は行わない。address編集、geocoding失敗表示、0を含む座標validationの残課題は今回へ広げず別途扱う。
 - 必要なテスト: 番地編集、住所各field変更、geocoder未注入/失敗/0座標、terminate/reactivate、保存後表示。
 - ユーザー判断が必要な事項: なし。status/archive使い分けは2026-08-11に確認済み。geocoding境界は実装・検証事項として残す。
 

@@ -10,6 +10,7 @@ const CUSTOMER_SFCS = Object.freeze([
   "components/Customer/Autocomplete.vue",
   "components/Customer/Activator/Base.vue",
   "components/Customer/Activator/Payment.vue",
+  "components/Customers/DataTable/index.vue",
   "pages/customers/index.vue",
   "pages/customers/[id].vue",
 ]);
@@ -39,6 +40,22 @@ test("Customer SFCs parse and compile after retiring the generic managers", asyn
   ]) {
     await assert.rejects(() => access(new URL(`../../${retired}`, import.meta.url)));
   }
+});
+
+test("Customer status labels use the shared schema and selection remains status-independent", async () => {
+  const [list, detail, table, autocomplete] = await Promise.all([
+    source("pages/customers/index.vue"), source("components/Customer/Activator/Base.vue"),
+    source("components/Customers/DataTable/index.vue"), source("components/Customer/Autocomplete.vue"),
+  ]);
+  for (const text of [list, detail, table]) {
+    assert.match(text, /Customer\.STATUS/u);
+  }
+  assert.match(list, /v-model="selectedStatus"/u);
+  assert.match(detail, /props\.item\.contractStatus/u);
+  assert.match(table, /contractStatus/u);
+  assert.doesNotMatch(autocomplete, /contractStatus|STATUS_ACTIVE|STATUS_TERMINATED/u);
+  assert.match(autocomplete, /searchCustomers\(text, \{ returnAllCached: false \}\)/u);
+  assert.match(autocomplete, /:fetchItemByKeyApi="getCustomer"/u);
 });
 
 test("Customer source no longer routes create or update through AirItemManager, AirArrayManager, or useBaseManager", async () => {

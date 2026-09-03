@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 詳細実装調査
+- 状態: Historical / 2026-08-11の詳細実装調査。現在のCRUD・状態表示/編集は[Customer master](customer-master.md)を参照
 - 対象セグメント: SPEC-DEEP-021
 - 最終確認日: 2026-08-11
 - 根拠ファイル: `components/Customer/Autocomplete.vue`、`components/Customer/Select.vue`、`components/Customer/Activator/{Base,Payment}.vue`、`components/Customer/{Card,ListItem,Manager}/index.vue`、`components/Customers/{DataTable,Iterator,Manager}/index.vue`、直接callerの`pages/customers/{index,[id]}.vue`、`components/Site/{Manager,CustomInput}/index.vue`、`composables/{useBaseManager,fetch/useFetch}.js`、schemas `Customer.js`
@@ -32,7 +32,7 @@ Nuxt auto-registration以外の静的callerはCustomer page群とSite Manager/Cu
 
 - Basic Activatorがexposeする編集fieldは`address`と`contractStatus`を含まない。Payment Activatorは`cutoffDate`、`paymentMonth`、`paymentDate`だけを公開する。いずれもedit iconを常時表示し、disabled/loading/permissionを自身で判定しない。
 - Manager二種のdefault handlerは`item.create/update/delete`である。UIのdeleteは現行adapterのlogical archiveへ委譲するが、Customer detailは`hide-delete-btn`を与えた上で独自の削除確認slotから`toDelete()`へ到達させる。
-- Customer pageがACTIVEだけをsubscribeする一方、Autocompleteはstatusを絞らない。ACTIVE限定選択、TERMINATEDの履歴表示、通常physical delete禁止、監査付きarchive/例外restoreは承認済み方針だが、これらcomponentsの現行強制ではない。
+- 調査時のCustomer pageにはACTIVE購読条件が記述され、Autocompleteはstatusを絞らなかった。ただし旧一覧は後にadapter引数不一致が判明し、実際のACTIVE限定取得は未確認。旧ACTIVE限定選択方針は[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)で置き換えた。現在の状態契約は[現行仕様](../specification.md#取引先現場取極め)、CRUD・削除境界の実装状況は[Customer master](customer-master.md)を参照する。
 
 ## 表示・個人/取引情報・アクセシビリティ
 
@@ -42,7 +42,7 @@ Nuxt auto-registration以外の静的callerはCustomer page群とSite Manager/Cu
 
 ## 確認済み整合・矛盾・未使用候補
 
-- `Customer` schemaのtokenFieldsがname/nameKanaだけである点、一覧ACTIVE限定とAutocomplete非限定の差、address/status編集欠落、archive restore UI未到達は[Customer master](customer-master.md)の既存記録と一致する。
+- `Customer` schemaのtokenFieldsがname/nameKanaだけである点、一覧のACTIVE条件記述とAutocomplete非限定の差、address/status編集欠落、archive restore UI未到達を当時記録した。現在の実装と、旧一覧条件の訂正は[Customer master](customer-master.md)を参照する。
 - Iteratorコメントは「AirDataIteratorの全props」と`update:modelValue`を使用可能と説明するが、実装は`customers`、一部表示flag、3 click emit以外をforwardしない。このコメント/API不一致はSite createで直接到達する。
 - `CustomersDataTable`の空`defineEmits([])`、`CustomerSelect`の自身の状態なし、`CustomerCard`の将来avatar commentは現時点のunused/stub候補であり、静的には削除可否を決められない。
 

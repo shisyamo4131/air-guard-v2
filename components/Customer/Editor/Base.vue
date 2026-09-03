@@ -60,6 +60,9 @@ function observeCurrentSnapshot() {
       isWaitingForRollback.value = false;
       return;
     }
+    // A genuine external snapshot supersedes the failed optimistic write.
+    failedOwnSnapshot.value = null;
+    isWaitingForRollback.value = false;
   }
   if (!snapshotsEqual(current, sourceAtOpen.value)) {
     hasExternalChanges.value = true;
@@ -118,7 +121,7 @@ async function save() {
     failedOwnSnapshot.value = null;
     isWaitingForRollback.value = false;
     await updateBasic({
-      latest: props.customer,
+      latest: () => props.customer,
       baseline: baseline.value,
       draft: draft.value,
     });

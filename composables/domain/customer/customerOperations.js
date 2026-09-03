@@ -23,6 +23,7 @@ export const CUSTOMER_BASIC_FIELDS = Object.freeze([
   "building",
   "tel",
   "fax",
+  "contractStatus",
   "remarks",
 ]);
 
@@ -33,7 +34,7 @@ export const CUSTOMER_PAYMENT_FIELDS = Object.freeze([
 ]);
 
 export const CUSTOMER_CREATE_FIELDS = Object.freeze([
-  ...CUSTOMER_BASIC_FIELDS,
+  ...CUSTOMER_BASIC_FIELDS.filter((field) => field !== "contractStatus"),
   ...CUSTOMER_PAYMENT_FIELDS,
 ]);
 
@@ -340,6 +341,12 @@ export async function prepareCustomerUpdate({
   candidate.uid = actorUid;
   candidate.updatedAt = now;
   await candidate.beforeUpdate();
+  if (hasCustomerOperationConflict({ operation, baseline, latest })) {
+    throw new CustomerOperationError(
+      "conflict",
+      "別の画面で取引先情報が更新されました。最新情報を読み直してください。",
+    );
+  }
   validateCustomerCandidate(candidate);
   return { candidate, fields };
 }

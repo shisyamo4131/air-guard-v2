@@ -6,6 +6,7 @@ import {
   CUSTOMER_OPERATION,
   CustomerOperationError,
   getCustomerWriteDecision,
+  hasCustomerOperationConflict,
   prepareCustomerCreate,
   prepareCustomerUpdate,
 } from "@/composables/domain/customer/customerOperations";
@@ -29,11 +30,15 @@ export function useCustomerActions() {
   );
   const canWrite = Vue.computed(() => writeDecision.value.allowed);
 
-  function assertWriteAllowed() {
+  function assertWritePermission() {
     const decision = writeDecision.value;
     if (!decision.allowed) {
       throw new CustomerOperationError("permission-denied", decision.reason);
     }
+  }
+
+  function assertWriteAllowed() {
+    assertWritePermission();
     if (isSaving.value) {
       throw new CustomerOperationError(
         "operation-in-progress",
@@ -69,16 +74,37 @@ export function useCustomerActions() {
     assertWriteAllowed();
     isSaving.value = true;
     try {
+      const companyId = auth.companyId;
+      const actorUid = auth.uid;
+      const getLatest = () => typeof latest === "function" ? latest() : latest;
+      const source = getLatest();
       const prepared = await prepareCustomerUpdate({
         operation,
-        latest,
+        latest: source,
         baseline,
         draft,
-        actorUid: auth.uid,
+        actorUid,
         now: new Date(),
       });
+      assertWritePermission();
+      if (auth.uid !== actorUid || auth.companyId !== companyId) {
+        throw new CustomerOperationError(
+          "permission-denied",
+          "取引先を変更する権限を確認できません。",
+        );
+      }
+      const current = getLatest();
+      if (
+        current?.docId !== prepared.candidate.docId ||
+        hasCustomerOperationConflict({ operation, baseline, latest: current })
+      ) {
+        throw new CustomerOperationError(
+          "conflict",
+          "別の画面で取引先情報が更新されました。最新情報を読み直してください。",
+        );
+      }
       return await writer.update({
-        companyId: auth.companyId,
+        companyId,
         operation,
         customer: prepared.candidate,
         fields: prepared.fields,

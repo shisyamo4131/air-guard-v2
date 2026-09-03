@@ -46,7 +46,14 @@ const items = computed(() => {
     { title: "建物名", props: { subtitle: props.item.building || "-" } },
     { title: "電話番号", props: { subtitle: props.item.tel || "-" } },
     { title: "FAX番号", props: { subtitle: props.item.fax || "-" } },
-    { title: "状態", props: { subtitle: props.item.contractStatus || "-" } },
+    {
+      title: "状態",
+      props: {
+        subtitle: Object.values(Customer.STATUS).find(
+          ({ value }) => value === props.item.contractStatus,
+        )?.title || "不明",
+      },
+    },
   ];
 });
 

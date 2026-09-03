@@ -179,12 +179,12 @@ service cloud.firestore {
       let basicFields = [
         'code', 'name', 'branchName', 'abbreviation', 'nameKana',
         'zipcode', 'prefCode', 'city', 'address', 'building',
-        'tel', 'fax', 'remarks'
+        'tel', 'fax', 'contractStatus', 'remarks'
       ];
       let basicAndDerivedFields = [
         'code', 'name', 'branchName', 'abbreviation', 'nameKana',
         'zipcode', 'prefCode', 'city', 'address', 'building',
-        'tel', 'fax', 'remarks', 'tokenMap', 'location', 'geopoint',
+        'tel', 'fax', 'contractStatus', 'remarks', 'tokenMap', 'location', 'geopoint',
         'fullAddress', 'prefecture', 'uid', 'updatedAt'
       ];
       let paymentFields = ['cutoffDate', 'paymentMonth', 'paymentDate'];
@@ -194,7 +194,6 @@ service cloud.firestore {
       return isValidCustomer(request.resource.data, docId)
         && request.resource.data.docId == resource.data.docId
         && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.contractStatus == resource.data.contractStatus
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.updatedAt == request.time
         && (!changed.hasAny(['tokenMap'])

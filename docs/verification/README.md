@@ -16,6 +16,7 @@
 | CUSTOMER-01D Dev反映・通常操作試験 | [CUSTOMER-01D Dev test](customer-01d-dev-test.md) |
 | CUSTOMER-01E local分担検証 | [CUSTOMER-01E local test](customer-01e-local-test.md) |
 | CUSTOMER-01E Dev権限別検証 | [CUSTOMER-01E Dev test](customer-01e-dev-test.md) |
+| CUSTOMER-02 状態表示・編集 local検証 | [CUSTOMER-02 local検証記録](customer-02-status-local.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
 | 機械可読の検証方針 | [Verification policy](../../governance/verification-policy.json) |

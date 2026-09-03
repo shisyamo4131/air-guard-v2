@@ -528,13 +528,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-020; `customer-master.md`
-- Evidence: 一意性検証なし。一覧はACTIVE限定、Autocompleteはstatus非限定。tokenはname/nameKanaのみ。
+- Evidence: 調査当時は一意性検証なし、一覧にACTIVE条件記述があり、Autocompleteはstatus非限定、tokenはname/nameKanaのみ。旧一覧のadapter引数不一致が後に判明したため、当時の実取得結果がACTIVE限定だったとは断定しない。現在の一覧・編集は[Customer master](customer-master.md)を参照。
 - Question: tenant内の重複判定key、検索対象field、TERMINATED Customerの新規選択可否をどうするか。
 - Why needed: 二重masterと無効取引先への新規紐付けを防ぎつつ、過去参照を維持するため。
 - Options and impact: code一意、名称警告のみ、重複許容／新規候補ACTIVE限定・過去値は表示／全status選択可。
-- Current provisional treatment: name一意制約は設けず、任意Customer codeだけtenant内uniqueとする。類似候補はwarningに留め、正当な同名作成を許す。新規選択はACTIVEだけ、履歴ではTERMINATEDを表示する。
+- Current provisional treatment: 重複・検索の方針は下記回答を維持する。状態による候補制限・再利用前reactivateの旧方針は2026-09-03に置換済み。[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)を正とする。
 - Related FUT IDs: FUT-0056
-- Answer: 2026-08-11 回答済み。名称のhard unique制約は設けない。任意のCustomer codeはtenant内uniqueとする。normalized name/kana/address/phoneによる類似warningを表示するが、正当な同名Customer作成は許可する。新規選択候補はACTIVEだけに限定し、historical referenceではTERMINATEDも表示する。再利用前にはreactivateする。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索の実現可能性・index・costは実装時に検証する。
+- Answer: 2026-08-11 回答済み（状態による選択制限部分は2026-09-03にsuperseded）。名称のhard unique制約は設けない。任意のCustomer codeはtenant内uniqueとする。normalized name/kana/address/phoneによる類似warningを表示するが、正当な同名Customer作成は許可する。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索の実現可能性・index・costは実装時に検証する。旧回答のACTIVE限定・再利用前reactivateは現在の要件ではない。
 
 ## CONF-0043 Customerのarchive・参照・restore policy
 
@@ -568,7 +568,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 契約終了、再開、誤登録削除をTERMINATED/archiveのどちらで扱い、再有効化を誰に許可するか。
 - Why needed: 履歴を残す通常終了と例外的削除を区別し、検索・参照・復元を一貫させるため。
 - Options and impact: 通常はTERMINATED・誤登録のみarchive、archive廃止、管理者のみ再有効化。
-- Current provisional treatment: 契約終了・停止はTERMINATED、再開はACTIVEとする。archiveは参照なし確認後の誤登録・重複だけに限定し、通常User restoreと物理delete UIは提供しない。
+- Current provisional treatment: 状態の意味は[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)を正とする。archiveは参照なし確認後の誤登録・重複だけに限定し、通常User restoreと物理delete UIは提供しない。下記reason/actor/timeはarchiveの話であり、状態変更専用の日時・理由・履歴の追加要件ではない。
 - Related FUT IDs: FUT-0057, FUT-0059
 - Answer: 2026-08-11 回答済み。契約終了・停止はTERMINATED、再開はACTIVEを使う。誤登録・重複は参照がないことを確認した場合だけarchiveする。historical Customerは通常TERMINATEDで保持する。TERMINATEDのreactivateは`customers:write`で許可するが、archive restoreは通常User操作ではなく運営者の例外的contingencyだけとする。archiveへreason/actor/timeを保存し、物理delete UIは設けない。
 

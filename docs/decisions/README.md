@@ -49,6 +49,7 @@
 | [0041](0041-single-source-documentation-and-final-validation.md) | 文書の単一正本と最終状態検証 |
 | [0042](0042-risk-based-local-ui-acceptance.md) | generated UIと変更riskに応じたlocal受入れ分担 |
 | [0043](0043-dev-trial-existing-document-handling.md) | Dev試用中の既存documentと条件付き状態確認・移行 |
+| [0044](0044-customer-status-as-descriptive-flag.md) | Customerの取引状態を状況表示フラグとして扱う |
 
 ## 新しい ADR の形式
 

@@ -5,6 +5,7 @@
  * @extends AirDataTable
  *****************************************************************************/
 import { useDefaults } from "vuetify";
+import { Customer } from "@/schemas";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -32,12 +33,17 @@ const headers = computed(() => {
     { title: "コード", key: "code", width: "180px" },
     { title: "取引先名", key: "name" },
     { title: "所在地", key: "fullAddress" },
+    { title: "状態", key: "contractStatus" },
   ];
 });
 </script>
 
 <template>
   <air-data-table v-bind="{ ...props, ...$attrs }" :headers="headers">
+    <template #[`item.contractStatus`]="{ item }">
+      {{ Object.values(Customer.STATUS).find(({ value }) => value === item.contractStatus)?.title || "不明" }}
+    </template>
+
     <!-- 取引先名 & 支店名 -->
     <template #[`item.name`]="{ item }">
       <div>

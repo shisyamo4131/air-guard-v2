@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 今回フェーズの終了判断と確認範囲は[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を参照。請求受入れは後続フェーズ
+- 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
 - 最終確認日: 2026-09-03
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
@@ -38,12 +38,12 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 一覧とAutocompleteのplus buttonは共有作成dialogからCustomer専用application処理を呼ぶ。基本情報と支払条件も専用editorから同じ境界を呼び、UIからCustomer modelの`create/update/delete`を直接呼ばない。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
-- 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/remarks`を対象とする。
+- 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
-- `contractStatus`は詳細に表示されるが編集対象に含まれず、TERMINATED化・再有効化の画面経路は確認できなかった。
+- `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
 - active Customerのclient deleteと`Customers_archive`のclient CUDはRulesで拒否する。archive・restoreの画面入口はなく、参照確認と監査を持つ後続の専用操作へ分離した。
 - 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
-- editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。
+- editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。基本editorではrollback待ちに真正な外部値が届いたら待ちを解除して再読込できる。applicationは非同期準備後にも権限・identityと観測済み同operation競合を再確認する。送信後の同時更新を原子的に防ぐ仕組みではない。
 
 ## 必要時の保存形式検査
 
@@ -59,9 +59,9 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 ## 検索・表示
 
-名称にhard unique制約は設けず正当な同名作成を許す。任意Customer codeだけtenant内uniqueとする。normalized name/kana/address/phoneの類似候補はwarningに留める。新規選択はACTIVE限定、historical referenceではTERMINATEDも表示し、再利用前にreactivateする。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索のfeasibility/index/costは未検証である。
+名称にhard unique制約は設けず正当な同名作成を許す。任意Customer codeだけtenant内uniqueとする。normalized name/kana/address/phoneの類似候補はwarningに留める。状態による選択制限の旧方針は[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)で置き換えた。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索のfeasibility/index/costは未検証である。
 
-- 一覧は`contractStatus == ACTIVE`をlive購読し、初期sortは`code`降順。表示列はcode、name、fullAddressで、支店名と建物名を補助表示する。
+- 一覧はACTIVEを初期表示条件とし、TERMINATED・全件へ切り替えられる。`subscribeDocs({ constraints })`でlive購読し、初期sortは`code`降順。表示列はcode、name、fullAddress、contractStatusで、支店名と建物名を補助表示する。旧配列引数ではadapterへ条件が届かなかった静的経路を修正した。
 - Autocompleteはname/nameKanaのN-gram検索、上限50件、5分cacheを使う。追加constraintを渡さないため、ACTIVE条件は付かず、TERMINATED Customerも検索結果になり得る。
 - 詳細の関連Site一覧はACTIVEだけを表示する。一方、削除の参照確認はstatusを限定しないため、画面上に関連Siteが見えなくてもTERMINATED等のSiteがあれば削除は拒否される。
 
@@ -79,8 +79,8 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定し、reason/actor/timeを保存する。通常User向けrestore・物理delete UIは設けない。
 - archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
 
-- `TERMINATED`は業務上の無効状態、logical deleteはarchive移動であり別機構である。
-- 現在の画面ではstatus変更、archive、restore、物理deleteの経路を提供しない。
+- 取引状態の意味は[現行仕様](../specification.md#取引先現場取極め)を正とする。業務上の無効状態やlogical deleteと同一視しない。
+- 状態変更は基本編集から提供し、archive、restore、物理deleteの経路は提供しない。
 - archive collectionのreadは既存の同一会社境界を維持し、client create/update/deleteは全actorへ拒否する。
 
 ## Rules・tenant境界
@@ -92,19 +92,19 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 ## 矛盾・未使用候補
 
-- `contractStatus`を表示し一覧はACTIVEに限定するが、status変更UIがない。
-- AutocompleteはACTIVE制約がなく、一覧の対象条件と一致しない。
+- 状態編集と一覧の状態切替は[専用ロードマップ](../roadmaps/customer-status.md)で検証する。Autocompleteが状態を絞らないことは現在の要件と一致する。
+- 一覧の既存adapterは非同期listener errorを画面へ通知するcallbackを持たない。今回のfilterで新規readerを追加せず、この取得失敗表示の制約は後続課題として残す。
 - archive/restoreは意図的に後続専用操作へ分離している。
 - `CustomersIterator`は宣言コメントと異なり`modelValue`、`select-strategy`、`show-select`及び任意attrsを内部iteratorへforwardしない。Site作成wizardの既存Customer候補選択に渡すattrsが機能しないため、候補選択より取引先未設定継続だけが到達し得る。
 - Site表示条件と削除guard条件が異なり、利用者には見えない参照で削除拒否となり得る。
 
 ## 将来要対応
 
-- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。終了・再有効化と、参照確認・監査を伴うarchive/緊急restoreを後続の専用操作として実装する。
-- FUT-0056: 承認済みcode一意・類似warning・ACTIVE選択・TERMINATED履歴・検索fieldを実装し、feasibility/index/cost/privacyを検証する。
+- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。状態変更は基本編集へ含め、参照確認・監査を伴うarchive/緊急restoreだけを後続の専用操作とする。
+- FUT-0056: code一意・類似warning・検索fieldを実装し、feasibility/index/cost/privacyを検証する。状態による選択制限は現行仕様へ揃え、旧ACTIVE限定方針を実装しない。
 - FUT-0057: 承認済みTERMINATED/archive/運営者inspection・緊急restore境界を実装し、参照guard・保持を整備する。
 - FUT-0058: draft initial copy、formal full snapshot、snapshot再print、revisionを実装する。
-- FUT-0059: status編集経路とgeocodingのserver生成化・意味上の整合を修正・検証する。address編集経路はCUSTOMER-01Aで実装済み。
+- FUT-0059: status編集経路は[専用ロードマップ](../roadmaps/customer-status.md)で扱う。address編集経路はCUSTOMER-01Aで実装済み。geocodingのserver生成化・意味上の整合は今回へ含めない。
 
 ## 要確認事項
 
@@ -113,5 +113,5 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 ## 未確認範囲
 
 - 他masterに残る汎用Air manager内部の全validation・表示実装。
-- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、後続の終了・archive操作。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、後続archive操作。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。
