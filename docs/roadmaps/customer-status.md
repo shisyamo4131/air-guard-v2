@@ -40,7 +40,7 @@
 |---|---:|---:|---|---|
 | CS-01 設計・仕様・失敗/権限review | 15 | 15 | Completed | [設計・差分review](../verification/customer-02-status-local.md#設計差分review)、仕様・ADR、保存・表示契約 |
 | CS-02 実装・自動回帰・Rules検証 | 35 | 35 | Completed | [自動test・command結果](../verification/customer-02-status-local.md#自動testcommand結果)、exact field保存とRules拒否境界 |
-| CS-03 Codex local UI・最終review・統合 | 30 | 0 | In progress | 対象UI操作・cleanup済みだが[郵便番号通信の隔離未達](../verification/customer-02-status-local.md#可視uiの観測結果と隔離未達)。承認済み修正・再検証・最終統合まで加点しない |
+| CS-03 Codex local UI・最終review・統合 | 30 | 0 | In progress | [郵便番号隔離の修正・自動test・review・build](../verification/customer-02-status-local.md#統合差分と後処理)は成功・統合済み。合成認証準備の担当確認と画面再試験まで加点しない |
 | CS-04 利用者判断・Dev反映・Dev受入れ | 20 | 0 | Deferred | 新UIの判断と、別承認のDev反映・権限別受入れ |
 
 重み合計100。各マイルストーンの証拠がすべて揃った場合だけ加点する。今回のlocal工程の到達点はCS-03までであり、CS-04は後続とする。
@@ -57,7 +57,7 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 
 ## 次工程
 
-実装・全domain・専用Emulator・独立review・専用buildは成功しlocal commit済み。利用者の例外承認により親が対象UIを操作し、Low testerが環境準備・backend assertion・後処理を行った。状態操作等は成功したが、既存のブラウザ直接郵便番号通信が専用UI隔離条件を満たさないため、[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)で承認された限定修正・再検証へ進む。進捗50%を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
+状態操作の初回UIは成功したが、ブラウザ直接郵便番号通信の隔離未達を発見した。[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildは成功して統合済み。再試験では保存済み合成sessionを再利用できず、[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の担当確認待ちでcleanupした。回答後に認証準備と限定画面再試験を行う。進捗50%を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
 
 ## 進捗履歴
 

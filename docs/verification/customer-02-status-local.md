@@ -1,12 +1,13 @@
 # CUSTOMER-02 状態表示・編集 local検証記録
 
-- 状態: In progress / 対象UI操作は成功、承認済みの専用UI郵便番号通信隔離の修正・再検証待ち
+- 状態: In progress / 専用UI郵便番号隔離の実装・自動test・build成功、合成サインイン準備の担当確認待ち
 - 日付: 2026-09-03
 - checkpoint: `CUSTOMER-02-STATUS`
 - branch: `codex/customer-status`
 - 開始HEAD: `cfa23595b37f2709131caab6f2a4be03713a8f95`
 - 実装・test・文書のlocal統合commit / 専用build source: `cc562f2ed8b22502986556ab0799ce2d721c646e`
 - 今回のUI観測source: `2c05c912eaae1d2ba1cb4a22696567586666b6c1`（上記実装からの変更は文書だけ）。clean worktreeで再build・generated serverを起動した。
+- 追加隔離の統合・再build source: `6ed23fc664b8988149bf4a6ca6183263b14936c6`。19 files、565追加 / 69削除。Customer本体・Rules・Schemas・関連packageは変更していない。
 - 対象: [状態編集ロードマップ](../roadmaps/customer-status.md)のlocal工程。Dev反映・受入れ、実data、請求・PDF、archive・restoreは対象外。
 
 ## 設計・差分review
@@ -62,7 +63,7 @@
 
 ## 統合差分と後処理
 
-### 承認済みの追加隔離修正（実装・再検証中）
+### 承認済みの追加隔離修正（画面再検証待ち）
 
 - `CUSTOMER-02-UI-ISOLATION-DESIGN`（High、278秒）で、専用client buildの実path限定module置換を採用。`CUSTOMER-02-POSTAL-ISOLATION-DESIGN-REVIEW`（High）で、Nitro prefixと親object overrideによる環境差替え拒否を追加必須とし採用した。
 - developer Mediumのscope: `nuxt.config.js`、`scripts/vite-codex-postal-isolation.mjs`（新規）、`scripts/codex-local-ui-build-identity.mjs`、`scripts/build-codex-local-ui.mjs`、`scripts/run-codex-local-ui-dev.mjs`、`scripts/serve-codex-local-ui.mjs`。tester Lowは既存3 codex config/identity/foreground testと新郵便番号隔離testだけを所有する。
@@ -71,6 +72,13 @@
 - 再検証選択: 直接4test → 最終`domain-full`・新しい専用`local-ui-build`・UI再試験・`project-docs`/`diff-check`。成功済み`project-docs-negative`/`capacity-regression`/`managed-governance`は対応するvalidator/policy/容量手順/managed artifactが不変なら再利用する。`local-emulator-suite`はFunctions/Rules/Schema/fixture/Customer writerが不変で、そのsuiteが専用Nuxt client moduleを実行しないため118件の証拠を維持する。Dev/Prod build・deployは対象外。
 - 追加iteration: `node --test test/domain/codex-nuxt-config.test.mjs test/domain/codex-ui-build-identity.test.mjs test/domain/codex-ui-foreground-contract.test.mjs test/domain/codex-postal-isolation.test.mjs` は37/37成功・exit 0（130.2936ms）。実sourceをmock隔離し、専用client条件・無通信null応答・実watchの住所emitなし・通常utility維持・環境override拒否・receipt/marker・診断launcher停止を検証した。実buildとUI再試験の代替ではない。
 - 初回の追加修正全domainは850/850・exit 0（1937.0531ms）。ただしHigh一般reviewが、Nuxtのpublic asset copy対象外であるclient rootのreceiptをoutput側から読むP1を実build前に発見した。wrapperをfresh client receipt検証後の明示転送へ修正し、末尾filenameだけのmockからexact path・削除/転送順と失敗時marker不成立のtestへ補強する。この後続変更により850件の結果は最終証拠として失効し、再実行する。
+- `CUSTOMER-02-POSTAL-RECEIPT-REREVIEW`と`CUSTOMER-02-POSTAL-RECEIPT-SECURITY-REREVIEW`（High）でP1と削除順test不足の解消を確認し、追加blocking指摘なし。一般再reviewは19秒。静的reviewを実buildの証拠としない。
+- 修正後の同じ4test commandは39/39・exit 0（128.9446ms）、`node --test test/domain/*.test.mjs`は852/852・exit 0（1904.8578ms）。`check-project-docs.ps1`の上表正規commandは215 Markdown / 44 ADR / 6 roadmap / 8 TOML・exit 0（1.8720秒）、`git diff --check`はexit 0（0.2543秒）。統合前`git diff --cached --check`もexit 0。この後の文書整理でdocs/diffだけを再検証する。
+- cleanな追加隔離commitで`npm run test:local:ui:build`はexit 0（client 11495ms / server 17ms）。実client/outputの両receipt内容、source/config identity一致、配信対象client JS 111 filesのzipcloud endpoint一致0を非UI assertion（exit 0）で確認した。これは未調査の全外部通信0や実browser network traceの証明ではない。
+- 専用EmulatorのAll emulators ready、generated server ready、loopback HTTP 200、既存専用portを確認した。親が新tabを開く前の準備成功と、その後の再確認commandはexit 0。visibility要求はfalse。初期templateからtopへ到達し、通常サインインbuttonで認証画面へ進んだが、保存済み合成sessionは再利用されなかった。console warn/errorは0。Customer作成・7桁入力・状態再試験はまだ行っていない。
+- [CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)で、一時合成credentialをagent間で受け渡さず、親が専用Auth Emulatorの一時設定から通常UI入力まで行う推論担当の限定例外を確認中。保存済みsnapshot・実account・通常環境の変更は許可対象にしない。
+- 利用者からNortonと`test-verification-policy.ps1`について申告があり、新規操作を一時停止してread-only照合した。同名fileは通常検索対象外の`air-vuetify-v3/scripts/`内に存在し、今回の変更・実行対象ではない。通知の検出名・対象pathは不明。fileに`-EncodedCommand`はあるが、検知原因との因果は未確認で、誤検知とも断定しない。除外・回避・再実行はせず、今回build/runtime失敗の証拠もない。関連packageの修正は行わない。
+- 認証例外の回答待ちで親tabを閉じ、Lowがserver→EmulatorをCtrl-C停止した（両process exit 1）。自身PID 4件、専用8 portsと派生9150/8056閉鎖の確認はexit 0。利用者saved-data 7 files / 6,012,330 bytes、専用saved-data 7 files / 3,492 bytesの前後指紋一致はexit 0。元rootログ2件のhash・timestampを復元し、安全な絶対path・reparse検査後に自身の`.output`と`.codex-test/runtime/customer-ui-log-backup-6ed23fc6`だけを削除（exit 0）。生成物不存在・一時メモ2件保持の確認もexit 0。生成物は正規buildで再生成可能。
 
 ### 追加修正前までの統合・cleanup
 
@@ -88,4 +96,4 @@
 - 新しい状態filterの見た目・使い勝手は利用者判断を残す。Dev延期をその受入れの自動成功にはしない。
 - 一覧adapterの非同期listener error通知不足、送信後の同時更新競合、Payment editorの既存独自rollback経路、CREATE準備後の再認可は今回の限定補正外。
 - `generate-dev`/`generate-prod`は別環境release未承認なので省略。standalone rendererはmanaged-governance内包のため重複しない。package・governance/権限設定・data形状変更やmigrationはない。
-- 今回のUI操作・cleanupは実施済みだが、専用UIの通信隔離修正と再検証・最終統合は未完了。自動test/build成功やlocal実装commitを、Customerフェーズ全体の完了・Dev受入れ・正式運用可と読み替えない。[FUT-0184](../implementation/future-actions.md#fut-0184-codex専用uiのブラウザ直接郵便番号通信を遮断する)を後続checkpointで扱う。
+- 専用UIの通信隔離修正・自動test・独立review・buildは成功し統合済みだが、合成認証準備の担当確認と画面再試験は未完了。自動test/build成功やlocal実装commitを、Customerフェーズ全体の完了・Dev受入れ・正式運用可と読み替えない。[FUT-0184](../implementation/future-actions.md#fut-0184-codex専用uiのブラウザ直接郵便番号通信を遮断する)は再試験まで閉じない。

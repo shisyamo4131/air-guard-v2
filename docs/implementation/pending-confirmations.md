@@ -1768,3 +1768,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Current provisional treatment: 専用UI限定の遮断修正と再試験を追加実施する。最小設計を確定後、developer Mediumが実装し、Low test・環境準備、承認済み親担当UIで検証する。修正は独立commitでrollback可能とし、7桁でfetch 0の陰性test・通常環境非影響・専用build再生成・限定UI再試験を必要とする。
 - Related FUT IDs: FUT-0184
 - Answer: 2026-09-03 承認済み。利用者は一度保留した回答を直後に訂正し、追加修正・再試験を明示承認した。通常利用時の検索・Dev・data形状を変えず、関連package変更を避ける最小app側設計を先行する。画面テストだけ親担当とする既存承認とは別のscope追加である。
+
+## CONF-0146 再試験の合成認証準備を親タスクで担当する例外
+
+- Status: Open
+- Source segment/doc: CUSTOMER-02-STATUS; [local検証記録](../verification/customer-02-status-local.md)
+- Evidence: 隔離修正後のfresh専用UIで保存済み合成sessionを再利用できず、サインイン画面に到達した。親の既存承認は画面テストだけで、自動test・環境準備はLow担当。
+- Question: 今回に限り、専用Auth Emulator内の既存合成accountの一時password設定と通常UI入力まで親タスクが担当してよいか。
+- Why needed: 秘密値をagent間のprompt・文書・logへ受け渡さず、認証準備と画面入力を同一担当の一時memory内で行うため。
+- Options and impact: 承認の場合も専用demo・loopback・実在しない保存済み合成accountだけを対象にし、snapshot・実account・通常local・Dev・Prodを変更しない。恒久role/governance変更は行わない。
+- Current provisional treatment: 一時credentialは設定せず、親tabを閉じ、専用runtimeを通常cleanupする。回答後に同じ承認済みbuild/再試験経路を再開する。
+- Related FUT IDs: FUT-0184
+- Answer: 未回答。

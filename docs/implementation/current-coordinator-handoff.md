@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / 専用UI通信隔離のreview指摘修正・再検証中
+- 状態: Current / 専用UI通信隔離の実装・自動test・build成功、合成認証準備の担当確認待ち
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-16 / task `01a06579-64d2-7931-a15d-30fc1fad2f79` / host `local`
 - active callback and assignment destination: このタスク。subagent callbackはprimary `/root`へ返す。
@@ -16,6 +16,7 @@
 - Customer implementation branch: `codex/customer-status`
 - implementation/test integrated commit and successful UI build source: `cc562f2ed8b22502986556ab0799ce2d721c646e`
 - UI observation source: `2c05c912eaae1d2ba1cb4a22696567586666b6c1`。専用build成功・対象UI操作成功。ただし外部郵便番号通信の隔離未達によりlocal受入れ完了とはしない。
+- postal isolation integrated/build source: `6ed23fc664b8988149bf4a6ca6183263b14936c6`。適用状態と検証の区別は[local検証記録](../verification/customer-02-status-local.md)を正とする。
 - current integrated revision and branch: Gitの現在HEADとbranchを確認する。本snapshot自身を含むcommit hashを自己参照で固定しない。
 - expected upstream: none
 - expected worktree registry: primary repository 1件のみ。別worktreeは使わない。
@@ -44,12 +45,14 @@
 - 可視UI担当: Low testerは正規in-app browserへ接続不可。親タスクでは接続成功し、利用者は2026-09-03に画面テストに限り親が担当する推論レベル指定の例外を明示承認した。自動test・専用環境準備・後処理はLowを維持する。Dev・利用者Chromeへの切替、新task作成、恒久role/governance変更へ許可を拡張しない。
 - [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号browser直接通信を止める限定修正・再試験は追加承認済み。利用者の一時保留回答は直後の明示承認で置換された。Customer対象操作は成功したが、通信境界未達をHigh security reviewで確認したため、通常利用・Dev・Schema・関連packageを変えない最小案を設計・実装する。
 
+- [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 再試験で保存済み合成sessionを再利用できず、一時認証準備と通常UI入力を親が同一memory内で扱う限定例外を確認中。既存の画面テスト限定承認を非UI設定へ自動拡張しない。
+
 ## Next checkpoint
 
-1. 成功済み証拠と再利用・失効判定は[local検証記録](../verification/customer-02-status-local.md)を正とする。Customer本体・Rulesの後続変更はないが、専用build scripts/config/testに追加変更があるため旧domain/build証拠を最終結果へ流用しない。
-2. `CUSTOMER-02-POSTAL-RECEIPT-FIX`でdeveloper Mediumが生成receiptの転送先不一致を修正し、`CUSTOMER-02-POSTAL-RECEIPT-TEST-FIX`でLow testerがexact path・削除順・失敗時停止を検証する。一般・securityのHigh再review後に統合する。
-3. 新HEADのclean専用build、Lowによる環境準備、親の限定UI再検証、Lowによる後処理を行う。親の既存in-app browser接続は再確認済み。Low testerのbrowser接続反復や利用者Chromeへの切替は行わない。
-4. 前回のtab・process・生成物はcleanup済み。通信隔離修正・再検証が未完了のためCS-03は加点しない。進捗とDev・利用者判断の残工程は[ロードマップ](../roadmaps/customer-status.md)を正とする。
+1. 成功済み証拠と再利用・失効判定は[local検証記録](../verification/customer-02-status-local.md)を正とする。追加隔離の実装・自動test・High再review・clean専用buildは完了したが、画面再試験は未完了。
+2. CONF-0146の回答を得て認証準備の担当を固定する。未回答のまま親による非UI一時設定や、agent間のcredential受け渡しを行わない。
+3. 再開時はclean HEADの専用buildと準備をLowが行い、承認された認証準備の後、親が合成Customer 1件の7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterを通常UIで再試験する。既存in-app browser bindingを再利用し、閉じたtabだけ新規取得する。利用者Chromeへ切り替えない。
+4. 親tab・今回の専用process・生成物・log-backupはcleanup済み。CS-03は再試験まで加点しない。進捗とDev・利用者判断は[ロードマップ](../roadmaps/customer-status.md)を正とする。
 5. 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。両方とも今回の生成物cleanup対象外。
 
 ## References
