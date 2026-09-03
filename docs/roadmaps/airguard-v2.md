@@ -39,8 +39,8 @@
 
 ## 次の作業
 
-1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別remote試験は未実施。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
-2. 利用者指示に従い、マスタデータ管理機能の改修を先に進める。Customerの追加検証範囲をreviewerと検討して利用者と合意し、終了判断後も他のマスタ管理を優先する。次のマスタの対象・順序・変更内容・テスト範囲は別途すり合わせる。OperationResultをCustomer直後の改修対象とした従前の順序を訂正する。
+1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
+2. 利用者と合意したCustomerの[Dev権限別検証](../verification/customer-01e-dev-test.md)と[local不足境界検証](../verification/customer-01e-local-test.md)を分担して実施した。利用者承認による文書fixtureの限定修正と[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)によりCustomerの今回フェーズは終了。引き続きマスタデータ管理機能の改修を先行し、次のマスタの対象・順序・変更内容・テスト範囲は別途すり合わせる。
 3. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
 4. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 5. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

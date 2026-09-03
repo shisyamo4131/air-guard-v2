@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: Dev反映・会社管理者の通常作成/更新確認済み。権限別remote試験は未実施、請求受入れは後続フェーズ
+- 状態: 今回フェーズの終了判断と確認範囲は[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
 - 最終確認日: 2026-09-03
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`

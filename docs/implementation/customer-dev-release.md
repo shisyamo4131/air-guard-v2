@@ -1,6 +1,6 @@
 # Customer Dev反映・受入れ計画
 
-- 状態: Dev反映・会社管理者のCustomer通常操作確認済み / 請求試験は後続フェーズへ移管
+- 状態: Customer今回フェーズ終了。結果・限定修正は[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を参照 / 請求試験は後続フェーズへ移管
 - checkpoint: `CUSTOMER-01D-DEV-TEST-001`
 - 更新日: 2026-09-03
 - 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../../governance/project-rules.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
@@ -60,7 +60,7 @@ deploy自体は既存Customerを変更しないため、data復元は不要。Ho
 | 関連機能 | 関連Siteへの同期と新規Agreementの初期締め日は確認済み。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移管。既存Agreementや過去Billingの一括再計算はしない |
 | 既存Customer | 実際に編集する対象で保存を試す。不適合が再現した場合だけID・field・修正内容を限定して記録し、その操作を修正する |
 | 閲覧専用actor | 一覧・詳細のreadを維持し、作成・編集・delete・archiveの入口を出さない |
-| Rules拒否 | 承認済み合成対象で他社アクセス、書込み権限不足、delete/archiveの主要拒否を確認する。UI非表示とserver拒否を区別する |
+| Rules拒否 | 追加検証の承認により、今回の実Dev直接拒否probeは省略する。権限不足update・他社get/listの不足境界はlocalで補い、実Devの直接拒否は未確認として残す。理由と担当は下記参照 |
 
 既存local陰性testの全件をremoteで反復しない。拒否probeは正規tokenと存在必須precondition等を使い、承認されていない実会社・実dataを使わない。旧clientの更新拒否は想定済みの切替条件として扱い、形式不適合による通常保存の失敗とは分ける。
 
@@ -68,10 +68,12 @@ deploy自体は既存Customerを変更しないため、data復元は不要。Ho
 
 ## 追加検証のすり合わせ案
 
-- 状態: 提案 / 未承認 / 未実施（2026-09-03）
+- 状態: 合意範囲の検証終了。後の限定修正と閉鎖は上記実行記録を参照（2026-09-03）
 - review checkpoint: `CUSTOMER-01E-TEST-SCOPE-REVIEW-001`
 
-利用者の依頼によりreviewerがCustomerの実装・Rules・既存test・実行記録をread-onlyで評価した。reviewerの推奨は、会社管理者の成功済みDev操作を再利用し、追加Dev確認を次の2種類へ絞ること。coordinatorは、reviewで見つかったlocal coverageの不足2境界を併せて補う案を提示する。以下は実行承認ではなく、上の計画にあるremote主要拒否の扱いも、利用者がこの案を採用した時点で更新する。
+利用者の依頼によりreviewerがCustomerの実装・Rules・既存test・実行記録をread-onlyで評価した。会社管理者の成功済みDev操作を再利用し、追加Dev確認を2種類、localの不足2境界へ絞る案を利用者が承認した。利用者はさらに、PMがDevを、利用者作成の「Local環境テスト」タスクがlocalを担当し、PMが両結果をここへ統合報告するよう指示した。NG事項の修正は実施せず、再現条件・期待値・実測・未実施を記録する。必要なテスト追加は検証準備として許可し、製品code・Rules・設定変更は行わない。
+
+local担当はtask `01a0650c-501d-7bf0-8569-d3a87f798750`、PMはcurrent handoffのcoordinatorとする。双方同じprimary repositoryを使用し、local担当の所有fileは`test/local/codex-local-harness.test.mjs`だけ、PMは計画・実行記録・handoff・索引を管理する。local担当はDev・Chrome・Git変更・追加subagentを使用しない。変更なしcallbackを確認した後に実行割当し、終了後は自分のprocessと試験dataを片付け、結果とexit statusを一度通知して待機する。
 
 | 環境・対象 | 期待結果 | actor・data・準備 |
 |---|---|---|
@@ -82,13 +84,30 @@ deploy自体は既存Customerを変更しないため、data復元は不要。Ho
 
 local coverageの根拠は[test/local/codex-local-harness.test.mjs](../../test/local/codex-local-harness.test.mjs)のCustomer専用test。既存113件の成功を、上の2境界を直接確認済みという意味へ拡張しない。
 
-Devの2種類には該当するaccountが必要となる。利用者が用意できる通常ログインを優先し、専用accountの作成・権限設定・削除が必要なら準備範囲をすり合わせる。既存の実利用者の権限を試験の都合で変更しない。検証用Customerは終了時に削除し、対象IDを追跡する。既存の試験dataは削除済みなので再利用可能とは扱わない。
+Devの2種類には該当するaccountが必要となる。利用者が用意できる通常ログインを優先し、専用accountの作成・権限設定が必要なら準備範囲をすり合わせる。既存の実利用者の権限を試験の都合で変更しない。試験dataの保持は下記account台帳の利用者指示に従う。過去に削除済みの試験dataは再利用可能とは扱わない。
 
 会社管理者による作成・基本情報・支払条件、指定既存Customerの備考復元、Site同期・Agreement初期値は[CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)を再利用する。全role・全不正入力のDev反復、請求書・稼働実績管理の受入れ、既存dataの全件診断は今回の追加案へ含めない。
 
 実Devでの権限不足更新・他社取得/一覧・delete/archiveの直接拒否probeは追加案へ含めず、未確認として残す。reviewした範囲には直ちに使えるCustomer用Dev拒否helperがなく、通常tokenの安全な取得経路や合成会社を含む新しい準備が必要となるためである。localの拒否testと反映済みRulesの本文照合を再利用するが、実Devの直接拒否確認と同一視しない。共通のremote拒否toolが必要かは、後続のマスタ改修で具体的な必要性が生じた際に判断する。
 
-採用された場合の完了条件案は、選択したDev2種類とlocal2境界の成功、必要な関連回帰の成功、試験変更の復元・作成dataの削除、実Devの直接拒否が未確認であることの記録とする。今回の提案だけでCustomerの完了を宣言しない。Customer後もマスタデータ管理の改修を先行し、次のマスタ・順序・テスト範囲は別途すり合わせる。
+今回の検証作業の終了条件は、選択したDev2種類とlocal2境界についてOK・NG・環境等による未実施を証拠付きで報告し、試験変更の復元・作成dataの削除結果を含めてPMが集約すること。NGを修正して成功するまで続行しない。必要な関連回帰と実Devの直接拒否が未確認であることも記録する。検証作業の終了とCustomer機能の受入れ完了を区別する。Customer後もマスタデータ管理の改修を先行し、次のマスタ・順序・テスト範囲は別途すり合わせる。
+
+## Dev検証用アカウント台帳
+
+2026-09-03の追加指示: 今回使用したアカウントに紐づく会社と、その配下のデータは今後もDev環境のテストに使用するため保持する。テスト用に作成したデータも終了時の自動削除対象にしない。従来の終了時削除指示は、この対象について本指示に置き換える。既に削除したデータを自動で再作成する指示ではない。会社IDはこの指示だけから推定せず、次回操作時に実対象を照合する。
+
+2026-09-03の利用者指示に基づく記録。アカウント作成・権限設定・Chromeでの切替は利用者が行い、作成完了の連絡を受けたら実際のメールアドレスと準備状況を更新する。以下の「存在」は利用者申告であり、今回remoteのUser/Authを再照会して確認したものではない。パスワード・tokenは記録しない。
+
+| 区分 | メールアドレス | 状態・用途 |
+|---|---|---|
+| 一般ユーザー | `sevenstar.1226+ag2-normal@gmail.com` | 存在は利用者申告。メール表記は利用者が訂正・確定済み。直前の試験では利用者が経理権限を付与したと申告しており、現在の役割を「役割なし」とは扱わない |
+| 会社管理者 | `sevenstar.1226+ag2@gmail.com` | 存在は利用者申告。検証用Customerの準備等に使用する既存管理者。super userの有無はこの申告だけでは確定しない |
+| 経理専用（`accountant`） | `sevenstar.1226+ag2-accountant@gmail.com` | 利用者からセットアップ完了・切替完了の連絡あり。Dev結果は下記実行記録を参照。Customer一覧/詳細の閲覧と作成/編集入口の非表示を確認する用途 |
+| 編集担当専用（`manager`） | `sevenstar.1226+ag2-manager@gmail.com` | 利用者が初回の権限設定漏れを修正し、再確認済み。Dev結果は下記実行記録を参照。Customer備考の保存・再表示・復元を確認する用途 |
+
+専用2アカウントについて、同じ検証対象会社に所属、それぞれ`accountant`のみ・`manager`のみ、会社管理者・super userではなく本登録・メール確認済みの有効状態、という作成条件を依頼し、利用者からセットアップ完了の連絡を受けた。remote設定の独立照合はまだ行っていない。試験対象Customerを両方が同じ会社で参照できるよう準備する。今後の別フェーズで必要な役割は、その時点で追加を依頼する。
+
+利用者は権限別account整備後にDev検証の再開を指示した。停止前は一般accountへの経理権限付与の申告後に一覧到達・作成入口非表示を確認したが、一覧表示0件で詳細閲覧は未確認だった。専用accountによる再開後の結果は[Dev権限別実行記録](../verification/customer-01e-dev-test.md)へ固定し、旧accountの結果で代用しない。NG事項の修正は行わない。
 
 ## 残る確認と停止条件
 

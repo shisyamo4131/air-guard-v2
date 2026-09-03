@@ -36,7 +36,7 @@ try {
     foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -File -Filter '*.md') {
         Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $fixtureRoot $file.Name)
     }
-    foreach ($relativeFile in @('.firebaserc', 'firebase.json', 'utils/customer/customerDocumentContract.js')) {
+    foreach ($relativeFile in @('.firebaserc', 'firebase.json', 'utils/customer/customerDocumentContract.js', 'test/local/codex-local-harness.test.mjs')) {
         $destination = Join-Path $fixtureRoot $relativeFile
         New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
         Copy-Item -LiteralPath (Join-Path $sourceRoot $relativeFile) -Destination $destination

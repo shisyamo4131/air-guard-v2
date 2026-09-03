@@ -1964,6 +1964,81 @@ test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-t
   ));
 });
 
+test("Customer Rules reject valid existing-document updates by a read-only actor", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const managerUid = "customer-rules-update-control-manager";
+  const readerUid = "customer-rules-update-denied-accountant";
+  const docId = "customer-rules-read-only-update";
+  await seedRegisteredUser({ uid: managerUid, companyId, isAdmin: false, roles: ["manager"] });
+  await seedRegisteredUser({ uid: readerUid, companyId, isAdmin: false, roles: ["accountant"] });
+  const managerReference = doc(
+    authenticatedFirestore(managerUid, { isSuperUser: false }),
+    "Companies", companyId, "Customers", docId,
+  );
+  const readerReference = doc(
+    authenticatedFirestore(readerUid, { isSuperUser: false }),
+    "Companies", companyId, "Customers", docId,
+  );
+
+  // Create through Rules so malformed or nonexistent data cannot explain denial.
+  await assertSucceeds(setDoc(managerReference, customerRulesData({ docId, uid: managerUid })));
+  const before = await assertSucceeds(getDoc(readerReference));
+  assert.equal(before.exists(), true);
+  const remarks = "合成閲覧専用更新の拒否確認";
+  const denied = await assertFails(updateDoc(readerReference, {
+    remarks,
+    uid: readerUid,
+    updatedAt: serverTimestamp(),
+  }));
+  assert.equal(denied.code, "permission-denied");
+  assert.deepEqual((await assertSucceeds(getDoc(managerReference))).data(), before.data());
+
+  // The same operation succeeds for an authorized actor with its own audit UID.
+  await assertSucceeds(updateDoc(managerReference, {
+    remarks,
+    uid: managerUid,
+    updatedAt: serverTimestamp(),
+  }));
+  assert.equal((await assertSucceeds(getDoc(readerReference))).data().remarks, remarks);
+});
+
+test("Customer Rules allow own-tenant get/list and reject existing cross-tenant get/list", async () => {
+  const actors = [
+    { companyId: CODEX_LOCAL_COMPANIES.primary.id, uid: "customer-rules-reader-a", docId: "customer-rules-read-a" },
+    { companyId: CODEX_LOCAL_COMPANIES.secondary.id, uid: "customer-rules-reader-b", docId: "customer-rules-read-b" },
+  ];
+  for (const actor of actors) {
+    await seedRegisteredUser({
+      uid: actor.uid,
+      pathCompanyId: actor.companyId,
+      companyId: actor.companyId,
+      isAdmin: false,
+      roles: ["accountant"],
+    });
+    await seedCustomerRulesDocument({ companyId: actor.companyId, docId: actor.docId });
+    actor.firestore = authenticatedFirestore(actor.uid, { companyId: actor.companyId, isSuperUser: false });
+  }
+
+  // Establish both authenticated actors and both existing targets before denial probes.
+  for (const actor of actors) {
+    const ownCollection = collection(actor.firestore, "Companies", actor.companyId, "Customers");
+    const ownDocument = await assertSucceeds(getDoc(doc(ownCollection, actor.docId)));
+    assert.equal(ownDocument.exists(), true);
+    assert.equal(ownDocument.data().docId, actor.docId);
+    const ownList = await assertSucceeds(getDocs(ownCollection));
+    assert.ok(ownList.docs.some((snapshot) => snapshot.id === actor.docId));
+  }
+
+  for (const [index, actor] of actors.entries()) {
+    const other = actors[1 - index];
+    const otherCollection = collection(actor.firestore, "Companies", other.companyId, "Customers");
+    const deniedGet = await assertFails(getDoc(doc(otherCollection, other.docId)));
+    assert.equal(deniedGet.code, "permission-denied");
+    const deniedList = await assertFails(getDocs(otherCollection));
+    assert.equal(deniedList.code, "permission-denied");
+  }
+});
+
 test("Customer Rules reject invalid shapes, field crossover, and metadata spoofing", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "customer-rules-validation-manager";
