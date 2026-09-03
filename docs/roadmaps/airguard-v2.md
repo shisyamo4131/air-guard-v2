@@ -40,11 +40,19 @@
 ## 次の作業
 
 1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
-2. 利用者と合意したCustomerの[Dev権限別検証](../verification/customer-01e-dev-test.md)と[local不足境界検証](../verification/customer-01e-local-test.md)を分担して実施した。利用者承認による文書fixtureの限定修正と[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)によりCustomerの今回フェーズは終了。引き続きマスタデータ管理機能の改修を先行し、次のマスタの対象・順序・変更内容・テスト範囲は別途すり合わせる。
+2. 利用者と合意したCustomerの[Dev権限別検証](../verification/customer-01e-dev-test.md)と[local不足境界検証](../verification/customer-01e-local-test.md)を分担して実施した。利用者承認による文書fixtureの限定修正と[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)によりCustomerの今回フェーズは終了。引き続きマスタデータ管理機能の改修を先行する。次の対象は利用者指定のSiteとし、変更内容・localテスト範囲を着手前にすり合わせる。Site以降の対象・順序は未確定。
 3. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
 4. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 5. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
 6. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
+
+### 今後のDev受入テストの実施時期
+
+2026-09-03の利用者指示により、以降の改修ではDev受入テストを原則後回しにし、まとめて実施する計画とする。まずはSiteからマスタデータ管理の改修とレビュー・local検証を先行し、その一連の改修が揃った後に、権限別のDev受入テストとマスタ間の関連操作をまとめて確認する。アカウント切替とテストデータ準備の重複を減らすことを目的とする。
+
+- 各改修は「実装・local検証完了」と「Dev受入待ち」を区別し、未実施のDev受入を成功・全工程完了として扱わない。Devで確認する操作・期待結果・権限・必要dataを各checkpointへ残し、まとめた受入時に対象を確定する。
+- Schemaの明らかな変更、他機能への明確な影響、その他確実に必要な場合の状態確認・必要なmigrationは既存規則を維持する。Dev反映時に必要な確認と受入テストの延期を区別し、deploy時期・対象・承認は個別に決める。
+- これはロードマップ上の実施順序の記録であり、今回ガバナンス・検証policy・現行の完了条件は変更しない。全改修に共通する規則としてのガバナンス反映要否は利用者の検討待ち。正式運用準備の進捗値と、終了済みCustomerの受入結果は変更しない。
 
 ## 成果物と検証証拠
 
