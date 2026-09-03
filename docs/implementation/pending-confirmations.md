@@ -1771,12 +1771,12 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0146 再試験の合成認証準備を親タスクで担当する例外
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: CUSTOMER-02-STATUS; [local検証記録](../verification/customer-02-status-local.md)
 - Evidence: 隔離修正後のfresh専用UIで保存済み合成sessionを再利用できず、サインイン画面に到達した。親の既存承認は画面テストだけで、自動test・環境準備はLow担当。
 - Question: 今回に限り、専用Auth Emulator内の既存合成accountの一時password設定と通常UI入力まで親タスクが担当してよいか。
 - Why needed: 秘密値をagent間のprompt・文書・logへ受け渡さず、認証準備と画面入力を同一担当の一時memory内で行うため。
 - Options and impact: 承認の場合も専用demo・loopback・実在しない保存済み合成accountだけを対象にし、snapshot・実account・通常local・Dev・Prodを変更しない。恒久role/governance変更は行わない。
-- Current provisional treatment: 親による一時credential設定の例外は未承認のまま維持する。2026-09-03の再開ではLow UI担当のbrowser一覧取得まで成功したが、表示要求で接続エラーとなり、同じLow担当で認証準備と画面操作を完結できなかった。親の既存承認内で初期画面を確認したところ保存済み合成sessionはなく、Auth設定・Customer操作を行わず本質問の回答待ちとする。credentialのagent間受渡しは行わない。詳細はlocal検証記録を参照する。
+- Current provisional treatment: 今回の限定再試験では親が専用Auth Emulator内の既存合成accountへ一時passwordを設定し、同じ担当の一時memoryから通常UI入力する。credentialをagent間で受け渡さず、snapshotや文書・logへ保存しない。専用build・process管理・backend assertion・cleanupはLow担当を維持する。Emulator停止で一時credentialを失効させ、saved-data不変を確認する。
 - Related FUT IDs: FUT-0184
-- Answer: 未回答。
+- Answer: 2026-09-04 承認済み。利用者は今回に限る親タスクの一時合成認証準備と通常ログイン入力を承認した。専用demo・loopbackの既存合成accountだけが対象で、恒久role変更、保存済みsnapshot、実account、通常local、Dev、Prodへ拡張しない。

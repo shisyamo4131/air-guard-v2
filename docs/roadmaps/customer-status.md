@@ -57,7 +57,7 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 
 ## 次工程
 
-状態操作の初回UIは成功したが、ブラウザ直接郵便番号通信の隔離未達を発見した。[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildは成功して統合済み。再試験では保存済み合成sessionを再利用できず、[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の担当確認待ちでcleanupした。回答後に認証準備と限定画面再試験を行う。進捗50%を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
+状態操作の初回UIは成功したが、ブラウザ直接郵便番号通信の隔離未達を発見した。[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildは成功して統合済み。保存済み合成sessionを再利用できず一度cleanupした後、2026-09-04に[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の親による一時合成認証準備が承認された。親が認証準備と限定画面再試験を行い、Lowが環境準備・backend assertion・cleanupを担当する。再試験未完了のため進捗50%を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
 
 ## 進捗履歴
 
