@@ -1,7 +1,8 @@
 # 0030 次回コーディネーター交代で発効する効率化手順
 
 - 日付: 2026-08-30
-- 状態: Accepted
+- 状態: Superseded
+- 後継判断: [ADR 0045](0045-governance-3-normal-startup.md)。以下の発効状態・決定・手順は当時の履歴として保存し、現在のtask起動へ適用しない。
 - 発効状態: Active。2026-08-30のPM（AirGuardV2）-09からPM（AirGuardV2）-10への利用者承認済み交代activation baselineから発効する。
 - 関連仕様: 開発ガバナンスと進捗管理
 - 関連判断: [0011 ロードマップとCodexセッションライフサイクル](0011-roadmap-and-codex-session-lifecycle.md)、[0013 Managed governance再構築](0013-managed-governance-reconstruction.md)、[0027 Codex task/session容量の明示routing](0027-codex-session-capacity-routing.md)

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 共通governanceを3.0.0へ移行し、すべてのtaskを同じrepository読取り順で起動する手順へ統一した。交代専用activation・最初のfile限定commit・governance変更による強制交代を廃止し、製品再開案内、文書route、検証policyとcheckerを整合した。[判断](docs/decisions/0045-governance-3-normal-startup.md)と[移行記録](docs/migrations/2026-09-03-governance-3.0.0.md)を参照。
+
 - 現在地の報告にGitのlocal・remote両方の状態を含め、remote追跡refとlive確認を区別するproject ruleを追加した。未確認時の明示と既存承認境界を維持する。[確認手順](docs/runbooks/project-coordination.md#git現在状態の報告)を参照。
 
 - Customerの取引状態を状況表示フラグとして基本情報から編集できるようにし、一覧に契約中・契約終了・全件の切替と状態列を追加した。作成はACTIVEを維持し、状態だけの変更では支払・住所情報を保存し直さない。旧ACTIVE限定選択方針を撤回し、基本編集の失敗後再読込と非同期準備後の再確認も補正した。[判断](docs/decisions/0044-customer-status-as-descriptive-flag.md)と[検証・適用状況](docs/roadmaps/customer-status.md)を参照。Dev反映・受入れは別工程。

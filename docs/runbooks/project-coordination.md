@@ -1,7 +1,7 @@
 # project coordination runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-08-30
+- 最終確認日: 2026-09-03
 - 役割: Git統合、event-driven task loop、session容量とhandoff
 
 ## Git統合
@@ -34,19 +34,18 @@
 
 長期作業は、定時確認ではなくタスク間通知を用いたイベント駆動型を標準とします。
 
-### 再開正本とbounded callback
+### 通常startup
 
-2026-08-30以後のcoordinator交代は[ADR 0030](../decisions/0030-efficient-coordinator-handoff-activation.md)と[効率化runbook](coordinator-handoff-efficient-activation.md)を適用する。replacement taskの最小restart集合は`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`、本runbook、[current coordinator snapshot](../implementation/current-coordinator-handoff.md)、snapshotが指定する次checkpoint固有文書である。不足・矛盾がある場合だけ履歴文書へ拡張し、旧append-only handoffを毎回全文再読しない。
+すべてのtaskは`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`から依頼に必要な正本を読み、primary repositoryのGit状態・scope・承認・次作業を照合する。製品再開の案内は[現在の製品作業](../implementation/current-coordinator-handoff.md)。手動作成、利用者要求の交代、旧task利用不能時も同じ経路とし、旧ownerの協力やactivationを前提にしない。
 
-no-change callbackとactivation callbackは効率化runbookのbounded形式を使う。callback本文へproduct stateや履歴を再掲せず、snapshot path、Git identity、権限、変更file、validator exit、未確認事項を記録する。staged blobとcommitted blobが一致し、exact committed path、clean、primary-only worktreeをformer coordinatorが確認できた場合、同じvalidatorをcommit後に重複実行しない。
-
+installed scaffold skillは明示されたgovernance作成・採用・移行・更新でだけ使用し、日常作業ではrepositoryの指示を使用する。[旧handoff効率化runbook](coordinator-handoff-efficient-activation.md)はHistoricalであり、通常startupに適用しない。
 ### 開始確認
 
 1. コーディネーターと専門タスクのID・ホストを記録し、全taskのcwdとGit top-levelが利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`そのものであることを確認する。Codex専用worktreeは作成・使用しない。
 2. 現在のロードマップ、基準コミット、チェックポイントID、担当・禁止ファイル、承認境界を確認する。
 3. 終了条件を記録する。標準は「安全に独立実行できる作業が尽きた時点」とする。
 4. コールバック先を記録する。
-5. タスク作成、交代、Codexアプリ再起動後は、ファイルを変更しない確認用チェックポイントを送り、次の形式のコールバックが1回到達することを確認する。
+5. 通常の委譲task作成またはCodexアプリ再起動後は、ファイルを変更しない確認用チェックポイントを送り、次の形式のコールバックが1回到達することを確認する。
 
 ```text
 <checkpoint-id> <completed|failed|question|approval-boundary>
@@ -73,7 +72,7 @@ local UI受入れの担当は[project rules](../../governance/project-rules.md)�
 
 通知に失敗した専門タスクは再送を繰り返さず、完全な最終結果をそのタスクに残して停止します。コーディネーターは状態を安全に1回だけ再取得し、最新指示と照合できなければ同じ割当を再送しません。コールバックを利用できない場合、またはユーザーが明示した場合だけ差分型ポーリングへ切り替え、対象、間隔、停止条件を記録します。変更なしの確認は通知せず、確認間隔を作業期限とみなしません。
 
-checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal callbackとcoordinator reviewまでに限ります。完了後のcheckpointへ自動的に持ち越さず、継続禁止には利用者による別の明示指示を必要とします。task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、この交代手順内ではsubagentを使用しません。
+checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal callbackとcoordinator reviewまでに限ります。完了後のcheckpointへ自動的に持ち越さず、継続禁止には利用者による別の明示指示を必要とします。利用者要求の交代作成はcoordinator自身が行います。交代専用のno-change、activation、最初のfile限定commitは設けず、通常startupを使用します。
 
 ### Critical identifierの確認
 
@@ -88,7 +87,7 @@ checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal c
 
 `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は同じtask容量確認指示として、この節へrouteしてから回答します。これらはmodelのtoken数やcontext windowではなく、現在taskの永続Codex session JSONL容量を意味します。
 
-trusted task metadataから現在のtask IDを特定し、作業開始、コールバックによる状態変更後、終了時に確認します。状態変化がない場合は1時間に1回を上限とします。並行taskの有無にかかわらず、最新・最終更新sessionやtimestampから対象を推測しません。
+容量確認が依頼されたときにtrusted task metadataから現在のtask IDを特定して測定します。交代専用の測定や定期測定をstartup条件にしません。並行taskの有無にかかわらず、最新・最終更新sessionやtimestampから対象を推測しません。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
@@ -115,20 +114,12 @@ commandの結果とexit statusを独立して確認します。scriptは指定ID
 - `codex_scan_complete`が`false`なら`codex_scan_error_count`を報告します。task単体測定は報告できますが、Codex全体を完全な容量、cleanup、threshold判断の証拠にしません。
 - `.codex/sessions`の本文、prompt、credential、秘密情報、業務dataを読み上げたり出力したりしません。Codex所有SQLite・WALを照会・変更しません。
 
-### 安全な引継ぎ
+### 利用者が要求したtask交代
 
-以下の安全境界を維持し、具体的なactivation順序、replacement taskへの最小入力、callback、最初のfile限定commitは[効率化runbook](coordinator-handoff-efficient-activation.md)に従う。
+1. 現在の製品事実・未決事項・次作業を既存の正本に反映し、必要な検証・reviewを行う。他者差分を保持し、未完了の製品割当を停止する。
+2. review済みの関連変更を意味のある単位でlocal commitし、primary repositoryをcleanにする。変更がなければ交代専用のcommitを作らない。
+3. 保存済みprimaryへ同じ基本名と次の連番でfresh non-fork taskを作成する。新taskは上記の通常startupで作業を始める。
 
-1. 300 MiB到達時は新規割当と自動レビューを停止する。
-2. 基準コミット、ロードマップ進捗、実行中・待機中チェックポイント、未統合ブランチ、テスト、承認事項、承認境界、次の指示をリポジトリの正本へ記録する。
-3. 旧コーディネーターは自身の完了変更を検証・コミットする。専門タスクは担当ファイル、差分、テスト、未確認事項、作業ツリー状態を報告し、コーディネーターが受入れた変更をコミット・統合する。
-4. 文書検証と必要なテストを実施し、作業ツリーがクリーンであることを確認する。
-5. 未コミット例外が不可避な場合は、ファイル、目的、検証状態、コミットできない理由、所有者、再開手順を正本へ記録する。同じ差分を旧新タスクへ重複所有させない。
-6. コーディネーター交代についてユーザーの明示承認を得る。専門タスクは、安全なチェックポイントで差分統合済みの場合だけ自動交代できる。
-7. 履歴をforkせず、同じ基本名に次の連番を付けた新規タスクを作成する。
-8. 旧・新タスクID、基準コミット、checkpoint、common governance、specification、current snapshot path、direct repository、許可・禁止操作、callback先だけをreplacement taskへ送る。product state、進捗、結果、次工程はsnapshotを参照させる。
-9. 新タスクが利用者repositoryへ直接接続し、repositoryから状態を復元し、割当先とコールバックIDを更新できたことを確認する。プロジェクトの承認方針、権限プロファイル、自動レビュー設定を使用する場合は、それらも確認する。
-10. 変更なしコールバックと、新タスクによる最初の実ファイル限定ステージ・コミットを確認する。失敗時は旧タスクを維持し、重複割当を行わない。
-11. Codexは旧taskのarchiveを実行・依頼せず、交代検証結果を利用者へ報告して待機する。利用者が旧taskをarchiveした後、必要に応じてアクティブ・アーカイブ済みを含む容量を再測定する。
+governance編集だけで交代を強制しない。task registry、owner状態、交代履歴/cache、generation、handshake、交代専用validatorやprofileを追加しない。必要な製品factsは既存正本、旧本文はGitに残す。判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)、共通契約は[Task Replacement](../../references/task-turnover-contract.md)を参照する。
 
-アーカイブは利用者が行う状態またはUI上の操作であり、物理削除や保存容量の縮小を保証しません。Codexが所有するSQLite、WAL、セッション記録の直接削除や定常的な `VACUUM` は通常運用に含めません。
+Codexは旧taskのarchive/deleteを実行・依頼しない。archiveは利用者の操作であり、保存容量の縮小を保証しない。Codex所有のSQLite、WAL、session記録の直接削除や定常的な`VACUUM`は通常運用に含めない。

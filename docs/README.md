@@ -31,8 +31,9 @@
 | 検証方針の選択・移行・実測比較 | [運用・開発手順のVerification Matrix](operations.md#verification-matrix)、[検証policy](../governance/verification-policy.json)、[ADR 0040](decisions/0040-impact-based-staged-verification.md)、[検証証拠索引](verification/README.md) | change class、stage、gate ID・exact command、includes、invalidatedBy、pre/post JSON、coverage・failure-detection equivalence |
 | 文書追加・更新・役割整理 | [ADR 0041](decisions/0041-single-source-documentation-and-final-validation.md)、この文書の「文書の役割」 | 変更する事実の正本、既存複製、索引到達性、履歴または実行証拠の保存先 |
 | `容量チェック` / `タスク容量確認` / `セッション容量確認` / `session size / handoff threshold確認` | [project coordination](runbooks/project-coordination.md) | `scripts/check-codex-session-size.ps1`、現在のtask ID。最新sessionの推測禁止 |
-| Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、ADR 0011、[ADR 0032](decisions/0032-required-specialist-subagent-routing.md)、[ロードマップ索引](roadmaps/README.md) | Git状態、checkpoint、task ID・host、callback経路、独立scopeの専門task routing |
-| coordinator交代・再開 | [project coordination](runbooks/project-coordination.md)、[current snapshot](implementation/current-coordinator-handoff.md)、[ADR 0030](decisions/0030-efficient-coordinator-handoff-activation.md) | current owner、repository baseline、active/next checkpoint |
+| Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、[ADR 0011](decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0032](decisions/0032-required-specialist-subagent-routing.md)、[ADR 0045](decisions/0045-governance-3-normal-startup.md)、[ロードマップ索引](roadmaps/README.md) | 通常delegation・容量・roadmap規則を参照。0011/0032の旧交代条件は0045により履歴として扱う |
+| taskの通常起動・利用者要求の交代 | [project coordination](runbooks/project-coordination.md)、[製品再開案内](implementation/current-coordinator-handoff.md)、[ADR 0045](decisions/0045-governance-3-normal-startup.md) | primary Git状態、製品の未決事項・承認・次作業 |
+| 明示されたgovernance移行・文書整理 | [移行索引](migrations/README.md)、[文書移行契約](../references/document-migration-contract.md)、[Task Replacement](../references/task-turnover-contract.md) | source-bound plan、意味保存review、検証policy。日常startupではinstalled skillを読まない |
 | Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) | backup・restore対象、Git bundle、local data、restore checkpoint |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |
 
@@ -58,11 +59,15 @@
 
 - 重要文書を追加・改名・移動・廃止した場合、この案内または該当索引とリンクを同じ変更で更新する。
 - 変更する事実の正本を一つ選び、既存の複製を検索して削除または正本へのリンクへ置換する。「要約」は値の短縮版ではなく、正本へ到達する索引として書く。
-- current handoffにはactive owner、現在のrepository baseline、未決事項・承認、active/next checkpoint、正本へのlinkだけを置く。完了履歴と実測結果はGit、roadmap、ADR、verification receiptへ置く。
+- 製品再開案内には現在の製品作業・未決事項・承認・次作業と正本へのlinkだけを置く。task ownerや交代状態を保存せず、完了履歴と実測結果はGit、roadmap、ADR、verification receiptへ置く。
 - runbookには再利用可能な手順だけを置き、特定releaseの結果はimmutable verification receiptへ置く。
 - 確認済み、未確認、提案、証拠、履歴を混同しない。
 - ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
 - `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
 - `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。
 - 必須validator、test、build、lint、migration checkは各commandの結果とexit statusを独立して確認する。まとめる場合は検証済みのfail-fastまたはaggregate runnerだけを使い、後続成功が先行失敗を隠す`;`等のchainやdiagnostic batchを完了証拠にしない。
-- `governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで変更classとstageを選び、混合変更はunion、影響不明はcomprehensive fallbackを使う。選択・省略したgateと理由、後続編集で失効した証拠をcompletion reportまたはcurrent handoffへ記録する。
+- `governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで変更classとstageを選び、混合変更はunion、影響不明はcomprehensive fallbackを使う。選択・省略したgateと理由、後続編集で失効した証拠をcompletion reportまたは実行証拠へ記録する。
+
+<!-- BEGIN MANAGED DOCUMENT MIGRATION INDEX -->
+
+<!-- END MANAGED DOCUMENT MIGRATION INDEX -->

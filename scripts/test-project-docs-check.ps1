@@ -30,7 +30,7 @@ function Add-StaleTableToIndexSection([string]$Content, [string]$Table) {
 
 try {
     New-Item -ItemType Directory -Path $fixtureRoot | Out-Null
-    foreach ($directory in @('docs', 'governance', '.codex', 'scripts')) {
+    foreach ($directory in @('docs', 'governance', '.codex', 'scripts', 'references')) {
         Copy-Item -LiteralPath (Join-Path $sourceRoot $directory) -Destination (Join-Path $fixtureRoot $directory) -Recurse
     }
     foreach ($file in Get-ChildItem -LiteralPath $sourceRoot -File -Filter '*.md') {
@@ -61,6 +61,21 @@ try {
     Invoke-Checker $false 'invalid verification policy JSON'
     Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value $validVerificationPolicy
 
+
+    foreach ($case in @('missing guidance class', 'missing runtime profiles', 'string runtime required', 'disabled required runtime', 'duplicate runtime id')) {
+        $policyFixture = $validVerificationPolicy | ConvertFrom-Json
+        switch ($case) {
+            'missing guidance class' { $policyFixture.classes = @($policyFixture.classes | Where-Object { $_.id -ne 'project-guidance-metadata' }) }
+            'missing runtime profiles' { $policyFixture.PSObject.Properties.Remove('runtimeProfiles') }
+            'string runtime required' { $policyFixture.runtimeProfiles[0].required = 'true' }
+            'disabled required runtime' { $policyFixture.runtimeProfiles[0].required = $false }
+            'duplicate runtime id' { $policyFixture.runtimeProfiles = @($policyFixture.runtimeProfiles[0], $policyFixture.runtimeProfiles[0]) }
+        }
+        Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value ($policyFixture | ConvertTo-Json -Depth 20)
+        Invoke-Checker $false $case
+    }
+    Set-Content -LiteralPath $verificationPolicyPath -Encoding UTF8 -Value $validVerificationPolicy
+
     $operationsPath = Join-Path $fixtureRoot 'docs/operations.md'
     $validOperations = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8
     Set-Content -LiteralPath $operationsPath -Encoding UTF8 -Value ($validOperations.Replace('## Verification Matrix', '## Removed Verification Matrix'))
@@ -69,8 +84,9 @@ try {
 
     $initialPromptPath = Join-Path $fixtureRoot 'INITIAL_PROMPT.md'
     $validInitialPrompt = Get-Content -LiteralPath $initialPromptPath -Raw -Encoding UTF8
-    Set-Content -LiteralPath $initialPromptPath -Encoding UTF8 -Value ($validInitialPrompt.Replace('governance/verification-policy.json', 'governance/missing-policy.json'))
-    Invoke-Checker $false 'verification policy route is required in INITIAL_PROMPT'
+    if (-not $validInitialPrompt.Contains('docs/README.md')) { throw 'Startup fixture mutation would be a no-op.' }
+    Set-Content -LiteralPath $initialPromptPath -Encoding UTF8 -Value ($validInitialPrompt.Replace('docs/README.md', 'docs/specification.md'))
+    Invoke-Checker $false 'documentation startup route is required in INITIAL_PROMPT'
     Set-Content -LiteralPath $initialPromptPath -Encoding UTF8 -Value $validInitialPrompt
 
     $nestedRepositoryPath = Join-Path $fixtureRoot 'vendor/nested-project'
@@ -137,6 +153,18 @@ try {
     Set-Content -LiteralPath $handoffPath -Encoding UTF8 -Value ($validHandoff + "`n## Current evidence contract`n`nLegacy completed evidence.`n")
     Invoke-Checker $false 'current handoff rejects legacy completed-history structure'
     Set-Content -LiteralPath $handoffPath -Encoding UTF8 -Value $validHandoff
+
+
+    if (-not $validHandoff.Contains('pending-confirmations.md')) { throw 'Product restart fixture mutation would be a no-op.' }
+    Set-Content -LiteralPath $handoffPath -Encoding UTF8 -Value ([regex]::Replace($validHandoff, 'pending-confirmations\.md(?:#[^)]+)?', 'future-actions.md'))
+    Invoke-Checker $false 'product restart must retain pending decisions route'
+    Set-Content -LiteralPath $handoffPath -Encoding UTF8 -Value $validHandoff
+
+    $contractPath = Join-Path $fixtureRoot 'references/document-migration-contract.md'
+    $validContract = Get-Content -LiteralPath $contractPath -Raw -Encoding UTF8
+    Remove-Item -LiteralPath $contractPath
+    Invoke-Checker $false 'document migration contract must exist at its linked route'
+    Set-Content -LiteralPath $contractPath -Encoding UTF8 -Value $validContract
 
     $verificationIndexPath = Join-Path $fixtureRoot 'docs/verification/README.md'
     $validVerificationIndex = Get-Content -LiteralPath $verificationIndexPath -Raw -Encoding UTF8

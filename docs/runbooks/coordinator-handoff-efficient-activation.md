@@ -1,6 +1,6 @@
 # coordinator handoff効率化の次回発効runbook
 
-- 状態: Confirmed / active
+- 状態: Historical / superseded by [ADR 0045](../decisions/0045-governance-3-normal-startup.md)
 - 承認日: 2026-08-30
 - 発効条件: 次回、利用者が明示承認したAirGuardV2 coordinator交代のactivation baseline commit
 - 現在の正本: [project coordination runbook](project-coordination.md)と[current coordinator snapshot](../implementation/current-coordinator-handoff.md)
@@ -9,6 +9,8 @@
 このrunbookは2026-08-30の利用者承認済みPM-09からPM-10への交代activation baselineから発効した。以後のhandoffは本書とproject coordination runbookを使用する。
 
 task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはretiring/replacement coordinator自身が実施し、このrunbookの開始からownership確定までsubagentを使用しない。交代前checkpointのsubagent禁止はそのcheckpointだけに限定し、交代完了後のproduct checkpointへ持ち越さない。
+
+> 以下は当時の手順を保存した履歴です。現在の起動・交代へ適用しません。現行手順は[project coordination](project-coordination.md#通常startup)を使用します。
 
 ## 発効前の停止条件
 

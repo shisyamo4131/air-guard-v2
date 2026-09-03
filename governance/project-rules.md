@@ -43,10 +43,10 @@
 ## Project-specific Roles and Workstreams
 
 - primary taskをcoordinatorとし、別のcoordinator subagentは作らない。
-- AirGuardV2の全Codex taskは、利用者がrepositoryとして管理する`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続する。Codex専用worktreeを作成・使用せず、task作成・交代・再起動後の変更なしcallbackでcwdとGit top-levelがこのpathそのものであることを確認する。不一致時はfile変更、Git mutation、process起動、外部作用を開始せず利用者へ報告する。
+- AirGuardV2の全Codex taskは、利用者がrepositoryとして管理する`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続する。Codex専用worktreeを作成・使用せず、通常startupでcwdとGit top-levelがこのpathそのものであることを確認する。不一致時はfile変更、Git mutation、process起動、外部作用を開始せず利用者へ報告する。
 - base rolesは`developer`、`tester`、`code_explorer`、`docs_researcher`、`reviewer`とする。認証済み画面操作が必要な場合だけ`ui_tester`、security境界がある場合だけ`security_reviewer`を使う。
-- task交代・ownership activationを除き、調査、code探索、review、test、利用者が明示承認した補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは該当するsubagentを使用する。単一の小作業を形式的に分割したり、不要なroleを起動したりしない。
-- task交代、no-change確認、ownership activation、callback・assignmentのretarget、replacement taskの最初のfile限定commitはcoordinator自身が行い、その交代手順内ではsubagentを使用しない。
+- task交代作成を除き、調査、code探索、review、test、利用者が明示承認した補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは該当するsubagentを使用する。単一の小作業を形式的に分割したり、不要なroleを起動したりしない。
+- 利用者が要求したtask交代はcoordinator自身が行う。交代専用handshakeや最初のfile限定commitを設けず、通常startupを使用する。通常の調査・実装・検証・reviewのsubagent routingは維持する。
 - checkpointでsubagent禁止を指定した場合、その禁止は当該checkpointの開始からterminal callbackとcoordinator reviewまでに限定する。後続checkpointやproject全体へ引き継がず、継続禁止には利用者による別の明示指示を必要とする。
 - roleごとの具体的な権限と報告契約は`.codex/agents/*.toml`を正とする。
 - application code、必要なFunctions・Firebase Rules・関連設定の書込みは、承認済みcheckpoint内で`developer`へ集中させる。coordinator自身または他のread-only roleへapplication実装を分散しない。
@@ -81,7 +81,7 @@
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計・実装・local検証・必要なmigration・Dev反映・Dev受入れまでを原則100%とする。独立して完了可能な複数改修を一つのroadmapへ集約せず、未承認または未実施のDev受入れを完了扱いしない。
 - repository文書に必須引数を含む正規commandが記録されている場合は、そのcommandを省略・短縮せず正確に使用する。managed governance validatorは`powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を正規commandとし、scriptのdefault project pathへ依存しない。
 - 変更前に`governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで影響classを選ぶ。混合変更はgateのunion、影響不明はcomprehensive fallbackを使用し、既知の全commandを無条件に実行しない。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployの完了はcomprehensive検証を維持する。
-- iteration、targeted regression、completion、release-onlyを区別し、選択・省略したgateと理由をcompletion reportまたはcurrent handoffへ記録する。aggregateは子gateのnamed resultとexit statusを保持し、子失敗でnonzeroとなり、policyの`includes`に宣言されている場合だけ重複実行せず充足できる。`managed-governance`は`renderer-check`を含む。
+- iteration、targeted regression、completion、release-onlyを区別し、選択・省略したgateと理由をcompletion reportまたは実行証拠へ記録する。aggregateは子gateのnamed resultとexit statusを保持し、子失敗でnonzeroとなり、policyの`includes`に宣言されている場合だけ重複実行せず充足できる。`managed-governance`は`renderer-check`を含む。
 - gateの成功証拠はexit status 0を独立確認した後だけ記録する。後続編集がpolicyの`invalidatedBy`へ該当する場合はstaleとし、失敗gateと失効gateを先に再実行する。release-only、build、Emulator、Dev・Prod、network、remote/dataはpolicyへの記載だけでは承認されない。
 - `npm audit fix`と`npm audit fix --force`を無条件に実行しない。lockfile、互換性、破壊的変更、root/functions双方への影響を先に確認する。
 - Codexは未承認の静的生成・buildを実行しない。利用者が承認したbounded Dev release checkpointでは、記録済みのexact commandによるDev用静的生成・buildを実行し、生成結果を同checkpointのdeploy証拠にできる。Prod build、対象外artifact、別releaseへの再利用は承認を拡張せず、deploy・package更新を含む正確なcommandと復旧手順は`docs/operations.md`を参照する。
@@ -132,8 +132,8 @@
 - 標準の作業session終了条件は「安全に独立実行できる作業が尽きた時点」とする。
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は、model token/context windowではなく現在taskの永続session JSONL容量を実測する指示として扱う。`docs/README.md`から`docs/runbooks/project-coordination.md`へrouteし、現在task IDを明示したproject-local scriptを使う。最新・最終更新sessionを推測しない。
 - coordinatorと専門taskのsession handoff閾値は300 MiB、Codex全体の参考警告値は10 GiBとする。task ID不明、session一致0件・複数件、script失敗、全体scan不完全時は推測せず該当判断を停止する。task閾値未到達時に経過時間やtoken/context推測から交代を提案しない。閾値到達時は新規割当を止め、基準commit、進捗、checkpoint、未統合作業、test、承認事項、次の指示をrepositoryへ記録する。
-- coordinator交代は利用者の明示承認を必要とする。新taskはforkせず連番名で作成し、repositoryからの再開、権限、callback経路、最初のfile限定commitを検証し、archive可能な状態を利用者へ報告する。
-- taskのarchiveは利用者だけが行う。Codexは旧taskのarchiveを実行・依頼せず、新taskの直接repository接続、変更なしcallback、権限、最初のfile限定commitの検証完了を利用者へ報告して待機する。利用者がarchiveを完了するまで、旧新taskに重複した作業を割り当てない。
-- common governance、生成`AGENTS.md`、project-wide permissions、approval policy、coordinator責務、delegation/Git統合、callback/handoff、安全境界を変更した場合はinstruction-chain変更としてaffected taskを交代する。
-- project-wideのsubagent利用方針を変更した場合もdelegation境界のinstruction-chain変更として扱う。変更を検証・commitした後、利用者の明示承認を得てcoordinatorを完全新規taskへ交代し、交代中はsubagentを起動しない。
-- 2026-08-11のmanaged governance再構築に伴うtask交代は履歴上完了済みとする。今後はinstruction-chain変更が生じた場合だけ、利用者が承認した手順に従ってaffected taskを交代し、交代完了までは新規application作業を開始しない。
+- task交代は利用者が明示要求した場合に行う。既存正本の製品事実・未決事項・次作業を更新し、関連差分を意味のある単位でlocal commitしてprimaryをcleanにした後、同じ基本名と次の連番の完全新規taskを作成する。fork・別worktree・交代だけの空commitは行わない。
+- 新task、手動作成、旧taskが利用不能な場合の復旧は、AGENTS.md、governance/project-rules.md、docs/README.mdから依頼に必要な正本を読む同じ通常startupを使う。旧task ID、旧owner協力、activation callback、task registry/cache/history、交代専用validatorを前提にしない。
+- governance編集だけでtask交代を強制しない。通常作業はproject内の指示に従い、installed scaffold skillは利用者が作成・採用・移行・更新を明示依頼した場合だけ読む。今回の最後の後継taskで行う明示skill読込みは移行受入れの個別範囲であり、日常startupへ一般化しない。
+- Codexは旧taskのarchive/deleteを実行・依頼しない。交代前の担当は未完了の製品割当を停止し、重複作業を残さない。通常の委譲task作成・アプリ再起動時のno-change callbackと、一度だけのterminal報告は維持する。
+- 通常startupと移行判断は[ADR 0045](../docs/decisions/0045-governance-3-normal-startup.md)、実行は[project coordination](../docs/runbooks/project-coordination.md)を参照する。

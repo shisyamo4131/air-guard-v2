@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-02
 - 状態: Accepted
+- 部分更新: [ADR 0045](0045-governance-3-normal-startup.md)により、節1のcurrent handoffの担当・基準と節4のactive owner/callback/repository baseline必須条件を廃止した。既存pathは製品作業・未決事項・承認・次作業への案内に使う。単一正本、索引、履歴・実行証拠の分離、最終状態検証は継続する。以下の当時の本文は履歴として保持する。
 - 対象: project全体の文書責務、開発・検証順序
 - 関連: [文書案内](../README.md)、[開発workflow](../runbooks/development-workflow.md)、[検証policy](../../governance/verification-policy.json)
 

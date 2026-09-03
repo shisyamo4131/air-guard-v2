@@ -2,7 +2,38 @@
   "schemaVersion": "1.0",
   "comprehensiveGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
   "unknownImpactGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+  "runtimeProfiles": [
+    { "id": "windows-powershell-5.1", "platform": "windows", "edition": "Desktop", "executable": "powershell", "versionRule": "major-minor=5.1", "required": true, "supportStatus": "supported" }
+  ],
   "classes": [
+    {
+      "id": "project-guidance-metadata",
+      "triggers": [
+        "Descriptive project guidance, phase/progress, metadata, links/history, or document-only structure with no common-contract, policy, permission, approval, safety, or executable behavior change"
+      ],
+      "iterationGateIds": [
+        "diff-check"
+      ],
+      "targetedRegressionGateIds": [
+        "project-docs"
+      ],
+      "completionGateIds": [
+        "project-docs",
+        "diff-check"
+      ],
+      "releaseOnlyGateIds": [],
+      "omittableGateIds": [
+        "project-docs-negative",
+        "capacity-regression",
+        "managed-governance",
+        "domain-full",
+        "local-emulator-suite",
+        "local-ui-build",
+        "generate-dev",
+        "generate-prod"
+      ],
+      "omissionRecord": "Completion report or migration evidence"
+    },
     {
       "id": "documentation-only",
       "triggers": ["Project-owned prose, index, link, or post-completion historical record that does not alter a release baseline, target, artifact, readiness decision, procedure, approval, rollback, product behavior, or remote state"],
@@ -11,7 +42,7 @@
       "completionGateIds": ["project-docs", "diff-check"],
       "releaseOnlyGateIds": [],
       "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "domain-full", "local-emulator-suite", "local-ui-build", "generate-dev", "generate-prod"],
-      "omissionRecord": "Completion report or current handoff"
+      "omissionRecord": "Completion report"
     },
     {
       "id": "ui-css-layout",
@@ -21,17 +52,17 @@
       "completionGateIds": ["project-docs", "domain-full", "local-ui-build", "diff-check"],
       "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
       "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite"],
-      "omissionRecord": "Completion report, acceptance receipt, or current handoff"
+      "omissionRecord": "Completion report or acceptance receipt"
     },
     {
       "id": "application-logic",
-      "triggers": ["Client, server, Functions, shared module, or executable script behavior without a data-contract or release-boundary change"],
+      "triggers": ["Client, server, Functions, shared module, or executable script behavior without a data-contract or release-boundary change; governance-only checkers and fixtures that do not change product logic belong to governance-permissions-agents instead"],
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["domain-full"],
       "completionGateIds": ["project-docs", "domain-full", "diff-check"],
       "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
       "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite", "local-ui-build"],
-      "omissionRecord": "Completion report or current handoff"
+      "omissionRecord": "Completion report"
     },
     {
       "id": "data-contract-schema-migration",
@@ -41,7 +72,7 @@
       "completionGateIds": ["project-docs", "domain-full", "local-emulator-suite", "diff-check"],
       "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
       "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-ui-build"],
-      "omissionRecord": "Completion report, migration receipt, or current handoff"
+      "omissionRecord": "Completion report or migration receipt"
     },
     {
       "id": "governance-permissions-agents",
@@ -51,7 +82,7 @@
       "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
       "releaseOnlyGateIds": [],
       "omittableGateIds": [],
-      "omissionRecord": "Completion report and governance handoff"
+      "omissionRecord": "Completion report or migration evidence"
     },
     {
       "id": "build-release-deploy",

@@ -165,6 +165,7 @@ if ($null -ne $verificationPolicy) {
     }
     $requiredVerificationClasses = @(
         'documentation-only',
+        'project-guidance-metadata',
         'ui-css-layout',
         'application-logic',
         'data-contract-schema-migration',
@@ -177,6 +178,27 @@ if ($null -ne $verificationPolicy) {
             Add-CheckError "Verification policy class is missing: $requiredClass"
         }
     }
+
+    $runtimeProfiles = @($verificationPolicy.runtimeProfiles | Where-Object { $null -ne $_ })
+    $runtimeIds = @{}
+    $hasRequiredWindowsRuntime = $false
+    if ($runtimeProfiles.Count -eq 0) { Add-CheckError 'Verification policy runtimeProfiles must not be empty.' }
+    foreach ($profile in $runtimeProfiles) {
+        foreach ($field in @('id', 'platform', 'edition', 'executable', 'versionRule', 'supportStatus')) {
+            if ($profile.$field -isnot [string] -or [string]::IsNullOrWhiteSpace($profile.$field)) {
+                Add-CheckError "Runtime profile field must be a nonempty string: $field"
+            }
+        }
+        $profileId = [string]$profile.id
+        if ($runtimeIds.ContainsKey($profileId)) { Add-CheckError "Duplicate runtime profile: $profileId" }
+        $runtimeIds[$profileId] = $true
+        if ($profile.required -isnot [bool]) { Add-CheckError "Runtime required must be boolean: $profileId" }
+        if ($profile.required -is [bool] -and $profile.required -and
+            $profile.platform -eq 'windows' -and $profile.edition -eq 'Desktop' -and
+            $profile.executable -eq 'powershell' -and $profile.versionRule -eq 'major-minor=5.1' -and
+            $profile.supportStatus -eq 'supported') { $hasRequiredWindowsRuntime = $true }
+    }
+    if (-not $hasRequiredWindowsRuntime) { Add-CheckError 'Required supported Windows PowerShell 5.1 runtime is missing.' }
     if (@($verificationPolicy.comprehensiveGateIds).Count -eq 0) {
         Add-CheckError 'Verification policy comprehensiveGateIds must not be empty.'
     }
@@ -214,14 +236,13 @@ if (Test-Path -LiteralPath $documentationMapPath) {
 if (Test-Path -LiteralPath $initialPromptPath) {
     $initialPromptContent = Get-Content -LiteralPath $initialPromptPath -Raw -Encoding UTF8
     foreach ($requiredPromptContract in @(
-        'governance/verification-policy.json',
-        'docs/operations.md',
-        'comprehensive fallback',
-        'invalidatedBy',
-        'release-only'
+        'AGENTS.md',
+        'governance/project-rules.md',
+        'docs/README.md',
+        'docs/operations.md#verification-matrix'
     )) {
         if (-not $initialPromptContent.Contains($requiredPromptContract)) {
-            Add-CheckError "Verification selection contract is missing from INITIAL_PROMPT.md: $requiredPromptContract"
+            Add-CheckError "Repository startup route is missing from INITIAL_PROMPT.md: $requiredPromptContract"
         }
     }
 }
@@ -396,29 +417,13 @@ if (Test-Path -LiteralPath $currentHandoffPath) {
         Add-CheckError "Current coordinator handoff exceeds 16 KiB: $currentHandoffBytes bytes"
     }
     $currentHandoff = Get-Content -LiteralPath $currentHandoffPath -Raw -Encoding UTF8
-    if ($currentHandoff -notmatch '(?m)^# Current coordinator handoff snapshot\s*$') {
-        Add-CheckError 'Current coordinator handoff must retain its canonical H1.'
-    }
-    $expectedHandoffHeadings = @(
-        '## Repository baseline',
-        '## Active checkpoint',
-        '## Open decisions and approvals',
-        '## Next checkpoint',
-        '## References'
-    )
-    $actualHandoffHeadings = @([regex]::Matches($currentHandoff, '(?m)^## .+$') | ForEach-Object { $_.Value.TrimEnd("`r") })
-    if (($actualHandoffHeadings -join "`n") -ne ($expectedHandoffHeadings -join "`n")) {
-        Add-CheckError 'Current coordinator handoff must contain only the required current-state H2 headings in canonical order.'
-    }
-    foreach ($legacyHeading in @(
-        '## Confirmed product state',
-        '## Current checkpoint and next work',
-        '## Current evidence contract',
-        '## Approval and external-effect boundary'
-    )) {
-        if ($currentHandoff.Contains($legacyHeading)) {
-            Add-CheckError "Current coordinator handoff retains a legacy completed-history heading: $legacyHeading"
+    foreach ($requiredProductRoute in @('../roadmaps/customer-status.md', 'pending-confirmations.md')) {
+        if (-not $currentHandoff.Contains($requiredProductRoute)) {
+            Add-CheckError "Product restart route is missing: $requiredProductRoute"
         }
+    }
+    if ($currentHandoff.Contains('## Current evidence contract')) {
+        Add-CheckError 'Current product restart guide must not accumulate completed execution evidence.'
     }
 }
 
