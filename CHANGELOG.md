@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- マスタデータ管理の改修を先行する利用者指示に合わせ、Customer直後に稼働実績管理へ移るroadmapの順序を訂正した。Customerの追加検証はreviewerの評価をもとに利用者と範囲を合意してから実行する。
+
 - フェーズ着手前に変更・テストの対象と対象外、環境・data、期待結果・完了条件を利用者と合意し、他機能の受入れへ広げる前にも確認するproject ruleを明記した。今回の請求機能確認は稼働実績管理改修後へ移管した。
 - CustomerのDev試験で座標付き作成・更新の失敗を再現し、Rulesの緯度・経度取得を正しいmethod呼出しへ修正した。Emulator113件・domain817件成功、Devの通常保存・既存備考復元・関連Site同期を確認。検証用Customer・Site・0円Billingは削除済み。詳細は[実行記録](docs/verification/customer-01d-dev-test.md)。
 

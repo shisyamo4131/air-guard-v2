@@ -66,6 +66,30 @@ deploy自体は既存Customerを変更しないため、data復元は不要。Ho
 
 住所入力を伴う作成・編集は、既存Callable経由でGoogle Mapsへの住所送信を行う。次のbounded Dev承認に、この外部住所検索と使用する検証住所を含める。`functions/modules/utils/geocoding.js`は成功時の座標、検索失敗時の住所・応答をFunctions logへ記録するため、raw logを取得・転記せず、必要な状態・件数だけを確認する。
 
+## 追加検証のすり合わせ案
+
+- 状態: 提案 / 未承認 / 未実施（2026-09-03）
+- review checkpoint: `CUSTOMER-01E-TEST-SCOPE-REVIEW-001`
+
+利用者の依頼によりreviewerがCustomerの実装・Rules・既存test・実行記録をread-onlyで評価した。reviewerの推奨は、会社管理者の成功済みDev操作を再利用し、追加Dev確認を次の2種類へ絞ること。coordinatorは、reviewで見つかったlocal coverageの不足2境界を併せて補う案を提示する。以下は実行承認ではなく、上の計画にあるremote主要拒否の扱いも、利用者がこの案を採用した時点で更新する。
+
+| 環境・対象 | 期待結果 | actor・data・準備 |
+|---|---|---|
+| Dev: 閲覧専用ユーザー | Customer一覧・詳細を閲覧でき、作成・基本情報編集・支払条件編集・削除・archiveの入口が表示されない | 会社管理者ではない、有効・登録完了済みの`accountant`等。通常のサインインと同社の検証用Customerを使う。画面非表示はserver拒否の証拠としない |
+| Dev: 編集可能な非管理者 | Customerの備考だけを保存し、再読込後も反映され、元に戻せる | 会社管理者・super userではない、有効・登録完了済みの`manager`。関連Siteを持たない検証用Customerを使い、住所・支払条件は変更しない |
+| local: 権限不足の更新拒否 | 正しい形式の既存Customerに対する、閲覧専用actorの更新が拒否される | 隔離Emulatorの合成actor・data。既存testは権限不足actorのcreate拒否が中心で、Customerのupdate拒否を直接補う |
+| local: 他社の読取り拒否 | 自社Customerの取得・一覧は成功し、他社Customerの取得・一覧は拒否される | 隔離Emulatorの合成2社・actor・data。未認証や対象不存在による失敗と区別する |
+
+local coverageの根拠は[test/local/codex-local-harness.test.mjs](../../test/local/codex-local-harness.test.mjs)のCustomer専用test。既存113件の成功を、上の2境界を直接確認済みという意味へ拡張しない。
+
+Devの2種類には該当するaccountが必要となる。利用者が用意できる通常ログインを優先し、専用accountの作成・権限設定・削除が必要なら準備範囲をすり合わせる。既存の実利用者の権限を試験の都合で変更しない。検証用Customerは終了時に削除し、対象IDを追跡する。既存の試験dataは削除済みなので再利用可能とは扱わない。
+
+会社管理者による作成・基本情報・支払条件、指定既存Customerの備考復元、Site同期・Agreement初期値は[CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)を再利用する。全role・全不正入力のDev反復、請求書・稼働実績管理の受入れ、既存dataの全件診断は今回の追加案へ含めない。
+
+実Devでの権限不足更新・他社取得/一覧・delete/archiveの直接拒否probeは追加案へ含めず、未確認として残す。reviewした範囲には直ちに使えるCustomer用Dev拒否helperがなく、通常tokenの安全な取得経路や合成会社を含む新しい準備が必要となるためである。localの拒否testと反映済みRulesの本文照合を再利用するが、実Devの直接拒否確認と同一視しない。共通のremote拒否toolが必要かは、後続のマスタ改修で具体的な必要性が生じた際に判断する。
+
+採用された場合の完了条件案は、選択したDev2種類とlocal2境界の成功、必要な関連回帰の成功、試験変更の復元・作成dataの削除、実Devの直接拒否が未確認であることの記録とする。今回の提案だけでCustomerの完了を宣言しない。Customer後もマスタデータ管理の改修を先行し、次のマスタ・順序・テスト範囲は別途すり合わせる。
+
 ## 残る確認と停止条件
 
 - Devの現在revision、operator権限、切替時の利用者・旧client状態はremote工程で確認する。
