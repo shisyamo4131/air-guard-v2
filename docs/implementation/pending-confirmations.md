@@ -1777,6 +1777,6 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 今回に限り、専用Auth Emulator内の既存合成accountの一時password設定と通常UI入力まで親タスクが担当してよいか。
 - Why needed: 秘密値をagent間のprompt・文書・logへ受け渡さず、認証準備と画面入力を同一担当の一時memory内で行うため。
 - Options and impact: 承認の場合も専用demo・loopback・実在しない保存済み合成accountだけを対象にし、snapshot・実account・通常local・Dev・Prodを変更しない。恒久role/governance変更は行わない。
-- Current provisional treatment: 一時credentialは設定せず、親tabを閉じ、専用runtimeを通常cleanupする。回答後に同じ承認済みbuild/再試験経路を再開する。
+- Current provisional treatment: 親による一時credential設定の例外は未承認のまま維持する。2026-09-03の再開ではLow UI担当自身の正規in-app browser接続を確認したため、同じLow担当が承認済み専用demo内の認証準備と通常UI入力を一体で行い、親担当例外を使わず限定再試験を進める。credentialのagent間受渡しは行わない。親の代行が必要になった場合だけ本質問の回答を得る。
 - Related FUT IDs: FUT-0184
 - Answer: 未回答。

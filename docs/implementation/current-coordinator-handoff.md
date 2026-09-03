@@ -4,7 +4,7 @@
 
 ## 現在の作業
 
-- 製品は試験運用中。次の製品作業はCustomer状態改修の限定再試験であり、利用者の再開指示を待ちます。
+- 製品は試験運用中。利用者の再開指示により、Customer状態改修の承認済みlocal限定再試験を進めます。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
@@ -13,14 +13,14 @@
 - 次の製品checkpointは`CUSTOMER-02-STATUS`。[確認済み仕様](../specification.md)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)、[工程・進捗](../roadmaps/customer-status.md)、[検証記録](../verification/customer-02-status-local.md)から再開する。状態は現在状況flagで、選択・関連現場/予定を制限せず、日時・原因等は追加しない。
 - local実装・検証・review・文書・local統合は承認範囲内。Dev反映・受入れは延期。archive/restore、code一意性/検索拡張、請求/PDF全体、他マスタ・関連package変更、remote data/migrationは対象外。
 - [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号通信遮断と限定再試験は承認済み。通常利用・Dev・Schemas・保存形式を変えない。
-- [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 親による合成Authの一時設定まで含める担当例外は未回答。「再質問してください」や今回のタスク交代指示を承認に読み替えない。認証情報をprompt・文書・logでagent間に受け渡さない。
-- Customerの設計/reviewはHigh、開発/修正はMedium、test/環境準備/cleanupはLow。旧taskでは子のbrowser接続不可・親の接続成功を確認し、画面テストだけ親が担当する例外は承認済み。非UI認証準備はCONF-0146で分ける。新taskの接続能力は再確認する。
+- [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 親による合成Authの一時設定まで含める担当例外は未回答のまま。今回の再試験は正規browser接続を確認したLow担当が認証準備と画面操作を同一担当内で行い、この例外を使用しない。認証情報をprompt・文書・logでagent間に受け渡さない。
+- Customerの設計/reviewはHigh、開発/修正はMedium、test/環境準備/cleanupはLow。今回の専用build・process管理・cleanupはLow tester、合成認証準備と通常UI操作はLow UI testerが担当する。旧taskで承認された親の画面テスト例外は今回使用しない。担当の接続能力が変わった場合は、既存承認を広げず再確認する。
 - 「Functions Developer」別task利用案は取り下げ済み。割当しない。Norton申告の関連package内scriptは今回の実行対象ではなく原因未確定。検知回避・除外設定・再実行は行わない。
 - 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。反省会と改善作業の両方が終了するまで削除しない。
 
 ## 次の作業
 
-1. Customer再開指示後は上記正本とCONF-0146を確認し、必要な回答を得てから専用UIの認証準備・限定画面再試験へ進む。build前に実担当のin-app browser接続を確認する。別taskのbrowser handle・保存sessionが使えるとは仮定しない。
+1. 上記正本と承認範囲に従い、Low担当による専用UIの認証準備・限定画面再試験へ進む。build前に実担当のin-app browser接続を確認する。別taskのbrowser handle・保存sessionが使えるとは仮定しない。親が認証準備を代行する必要が生じた場合は、未回答のCONF-0146を確認してから進む。
 2. UI再試験は合成Customer 1件の7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterに限定する。[local UI手順](../runbooks/local-ui-testing.md)でclean HEADの専用buildを行い、自身のprocess/生成物をcleanupする。旧taskのtab・専用process・生成物・log-backupはcleanup済み、反省会メモは保持済み。
 
 ## 参照
