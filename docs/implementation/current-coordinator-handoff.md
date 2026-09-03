@@ -4,7 +4,7 @@
 
 ## 現在の作業
 
-- 製品は試験運用中。Customer状態改修のlocal限定再試験・crash後cleanup・High最終reviewを完了し、CS-04を延期しています。
+- 製品は試験運用中。Customer状態改修のlocal限定再試験・crash後cleanup・High最終reviewを完了し、CS-04のDev反映・受入れをマスタデータ管理改修後まで延期しています。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
@@ -20,8 +20,8 @@
 
 ## 次の作業
 
-1. 新しい状態filterの見た目・使い勝手を利用者が判断する。残ったローカルerror tabは専用server停止済みで、利用者が手動で閉じられる。
-2. 利用者がDev工程を再開する場合は、別承認で反映範囲・対象commit・権限別受入れを確定する。停止済み専用Auth/Emulator/serverを再利用せず、承認前にDev・remote・実dataへ進まない。
+1. [製品ロードマップ](../roadmaps/airguard-v2.md#次の作業)に従い、Customerのarchive・restore、code一意性・検索拡張等の残工程を整理し、次のマスタデータ管理改修の範囲を利用者と合意する。残ったローカルerror tabは専用server停止済みで、利用者が手動で閉じられる。
+2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、新しい状態filterの利用者判断、Customer状態のDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
 

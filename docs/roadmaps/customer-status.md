@@ -9,7 +9,7 @@
 
 ## 今回の承認境界
 
-利用者は工程を確認し、local実装・検証・review・文書・local commitまでの連続実施を承認した。Dev受入れは後回し。未実施のDevを成功として100%へ加点しない。作成・基本情報・支払条件の先行フェーズとは別の利用者価値として管理する。
+利用者は工程を確認し、local実装・検証・review・文書・local commitまでの連続実施を承認した。Dev反映・受入れはマスタデータ管理の一連の改修後にまとめて行う。未実施のDevを成功として100%へ加点しない。作成・基本情報・支払条件の先行フェーズとは別の利用者価値として管理する。
 
 対象は取引状態の表示・編集とその保存・選択・関連処理の回帰だけ。archive・restore、code一意性・検索拡張、請求全体・PDF、他マスタ改修、package更新、Dev全件診断・migration、remote操作は対象外。
 
@@ -41,7 +41,7 @@
 | CS-01 設計・仕様・失敗/権限review | 15 | 15 | Completed | [設計・差分review](../verification/customer-02-status-local.md#設計差分review)、仕様・ADR、保存・表示契約 |
 | CS-02 実装・自動回帰・Rules検証 | 35 | 35 | Completed | [自動test・command結果](../verification/customer-02-status-local.md#自動testcommand結果)、exact field保存とRules拒否境界 |
 | CS-03 Codex local UI・最終review・統合 | 30 | 30 | Completed | [CONF-0146承認後の限定UI再試験・crash復旧・High最終review](../verification/customer-02-status-local.md#2026-09-04-conf-0146承認後の限定再試験とcrash復旧)とlocal統合 |
-| CS-04 利用者判断・Dev反映・Dev受入れ | 20 | 0 | Deferred | 新UIの判断と、別承認のDev反映・権限別受入れ |
+| CS-04 利用者判断・Dev反映・Dev受入れ | 20 | 0 | Deferred | マスタデータ管理改修後に、新UI判断・Dev反映・権限別受入れをまとめて実施 |
 
 重み合計100。各マイルストーンの証拠がすべて揃った場合だけ加点する。今回のlocal工程の到達点はCS-03までであり、CS-04は後続とする。
 
@@ -57,7 +57,7 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 
 ## 次工程
 
-状態操作の初回UIで発見したブラウザ直接郵便番号通信は、[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildで隔離した。2026-09-04に[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の一時合成認証準備を使い、通常UIの作成・保存・reload・状態取消/終了/復帰/filter、backend補助確認、crash後cleanup、High最終reviewを完了した。CS-03完了で進捗80%。CS-04の利用者UI判断、別承認のDev反映・権限別受入れは延期を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
+状態操作の初回UIで発見したブラウザ直接郵便番号通信は、[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildで隔離した。2026-09-04に[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の一時合成認証準備を使い、通常UIの作成・保存・reload・状態取消/終了/復帰/filter、backend補助確認、crash後cleanup、High最終reviewを完了した。CS-03完了で進捗80%。CS-04は[製品ロードマップの実施時期](airguard-v2.md#今後のdev受入テストの実施時期)に従い、マスタデータ管理の一連の改修後まで延期し、新UI判断・Dev反映・権限別受入れをまとめて行う。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
 
 ## 進捗履歴
 

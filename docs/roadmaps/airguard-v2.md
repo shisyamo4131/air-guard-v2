@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-09-03
+- 最終確認日: 2026-09-04
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 - 上記の利用者最終受入れは正式運用移行全体の完了条件であり、個々の既存画面改修に利用者local受入れを一律要求する意味ではない。個別変更は[local UI検証runbook](../runbooks/local-ui-testing.md)の省略基準に従う。
 
@@ -40,7 +40,7 @@
 ## 次の作業
 
 1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
-2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了したが、Customer全体の残改修を終えた意味ではない。2026-09-03に利用者はCustomerを先に片付けると指定した。次は取引状態の表示・編集を行い、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)に従う。archive・restore、code一意性・検索拡張は今回に混ぜず、状態編集後にCustomerの残工程を整理する。Siteへの移行はその後に合意する。
+2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了した。取引状態の表示・編集は[Customer状態ロードマップ](customer-status.md)のCS-03まで完了し、Dev反映・受入れはマスタデータ管理の一連の改修後へ延期した。次はCustomerのarchive・restore、code一意性・検索拡張等の残工程を整理し、範囲合意後に進める。Siteへの移行はその後に合意する。個別改修の未実施Dev受入れを成功扱いせず、下記方針に従ってまとめて確認する。
 3. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
 4. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 5. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
