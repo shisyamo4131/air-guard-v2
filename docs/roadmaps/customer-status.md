@@ -2,7 +2,7 @@
 
 - 状態: In progress
 - 開始日: 2026-09-03
-- 現在の進捗: 50%
+- 現在の進捗: 80%
 - 部分加点: なし
 - 完了条件: 状態表示・編集の設計、実装、自動test、Codex専用local UI、独立review、文書・Git統合、必要な利用者UI判断、別途承認するDev反映・Dev受入れを完了する。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)
@@ -40,7 +40,7 @@
 |---|---:|---:|---|---|
 | CS-01 設計・仕様・失敗/権限review | 15 | 15 | Completed | [設計・差分review](../verification/customer-02-status-local.md#設計差分review)、仕様・ADR、保存・表示契約 |
 | CS-02 実装・自動回帰・Rules検証 | 35 | 35 | Completed | [自動test・command結果](../verification/customer-02-status-local.md#自動testcommand結果)、exact field保存とRules拒否境界 |
-| CS-03 Codex local UI・最終review・統合 | 30 | 0 | In progress | [郵便番号隔離の修正・自動test・review・build](../verification/customer-02-status-local.md#統合差分と後処理)は成功・統合済み。合成認証準備の担当確認と画面再試験まで加点しない |
+| CS-03 Codex local UI・最終review・統合 | 30 | 30 | Completed | [CONF-0146承認後の限定UI再試験・crash復旧・High最終review](../verification/customer-02-status-local.md#2026-09-04-conf-0146承認後の限定再試験とcrash復旧)とlocal統合 |
 | CS-04 利用者判断・Dev反映・Dev受入れ | 20 | 0 | Deferred | 新UIの判断と、別承認のDev反映・権限別受入れ |
 
 重み合計100。各マイルストーンの証拠がすべて揃った場合だけ加点する。今回のlocal工程の到達点はCS-03までであり、CS-04は後続とする。
@@ -57,7 +57,7 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 
 ## 次工程
 
-状態操作の初回UIは成功したが、ブラウザ直接郵便番号通信の隔離未達を発見した。[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildは成功して統合済み。保存済み合成sessionを再利用できず一度cleanupした後、2026-09-04に[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の親による一時合成認証準備が承認された。親が認証準備と限定画面再試験を行い、Lowが環境準備・backend assertion・cleanupを担当する。再試験未完了のため進捗50%を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
+状態操作の初回UIで発見したブラウザ直接郵便番号通信は、[CONF-0145](../implementation/pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)の限定修正・自動test・独立review・専用buildで隔離した。2026-09-04に[CONF-0146](../implementation/pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外)の一時合成認証準備を使い、通常UIの作成・保存・reload・状態取消/終了/復帰/filter、backend補助確認、crash後cleanup、High最終reviewを完了した。CS-03完了で進捗80%。CS-04の利用者UI判断、別承認のDev反映・権限別受入れは延期を維持する。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
 
 ## 進捗履歴
 
@@ -65,3 +65,4 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 |---|---:|---:|---|
 | 2026-09-03 | 15% | +15 | 仕様・表示保存契約を確定し、Highの独立設計・失敗経路・security reviewを統合した。実装・対象testは提出済みだが、最終回帰とlocal UIは未完了のためCS-02/03は加点しない。 |
 | 2026-09-03 | 50% | +35 | 状態の基本編集・一覧切替・失敗経路補正を実装し、全domainと専用Emulatorの成功を確認した。local UI・最終文書gate・統合は未完了。 |
+| 2026-09-04 | 80% | +30 | 専用UIの郵便番号通信隔離、fresh build、通常UIでの状態往復・reload・filter、crash後cleanup、High最終reviewを完了した。利用者UI判断とDev反映・受入れはCS-04に残す。 |

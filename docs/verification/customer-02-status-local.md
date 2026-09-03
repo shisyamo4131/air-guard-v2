@@ -1,13 +1,14 @@
 # CUSTOMER-02 状態表示・編集 local検証記録
 
-- 状態: In progress / 専用UI郵便番号隔離の実装・自動test・build成功、合成サインイン準備の担当確認待ち
-- 日付: 2026-09-03
+- 状態: Local completed / CONF-0146承認後の限定UI再試験・crash後cleanup・High最終review成功
+- 日付: 2026-09-04
 - checkpoint: `CUSTOMER-02-STATUS`
 - branch: `codex/customer-status`
 - 開始HEAD: `cfa23595b37f2709131caab6f2a4be03713a8f95`
 - 実装・test・文書のlocal統合commit / 専用build source: `cc562f2ed8b22502986556ab0799ce2d721c646e`
 - 今回のUI観測source: `2c05c912eaae1d2ba1cb4a22696567586666b6c1`（上記実装からの変更は文書だけ）。clean worktreeで再build・generated serverを起動した。
 - 追加隔離の統合・再build source: `6ed23fc664b8988149bf4a6ca6183263b14936c6`。19 files、565追加 / 69削除。Customer本体・Rules・Schemas・関連packageは変更していない。
+- CONF-0146承認・限定再試験source: `a33576ef9df06a7b8dcaa50be69792646868fd6f`。追加隔離以降の製品source変更はなく、今回の変更前worktreeはcleanだった。
 - 対象: [状態編集ロードマップ](../roadmaps/customer-status.md)のlocal工程。Dev反映・受入れ、実data、請求・PDF、archive・restoreは対象外。
 
 ## 設計・差分review
@@ -90,6 +91,20 @@
 - `CUSTOMER-02-RETEST-ENV-CLEANUP`でLow環境担当がserver→Emulatorの順にCtrl-C停止した（両process exit 1）。所有PID 4件、専用8 portsと派生9150/8757のLISTEN残存0を独立確認した（exit 0）。両saved-dataは前回と同じfile数・byte数で全指紋一致（exit 0）。rootログ4件の復元は、初回確認で停止後の`firebase-debug.log`不存在によりexit 1となったが、開始前backupからの復元後に4件すべてのhash・bytes・timestamp一致を再確認した（exit 0）。安全な絶対path・reparse検査後に今回の`.output`と`.codex-test/runtime/customer-retest-c08f175b`だけを削除し、不存在・既存runtime 18件と一時メモ2件の保持を確認した（exit 0）。snapshot書込み・Auth設定はない。各非UI確認commandはLow担当callbackのtool inputに保持する。
 - 今回のtracked変更は再開案内・CONF・本検証記録だけ。製品sourceは追加隔離commitから不変のためdomain 852件とEmulator 118件の成功証拠を維持する。governance移行後のproject-docs-negative 28件、capacity-regression 7件、managed-governance（renderer内包）は、各validator/fixture/policy/必須route/managed入力が今回不変のため再利用する。最終文書のproject-docs・diff-checkを再実行し、結果とexitはcommand reportと統合commit本文へ記録する。製品仕様・ADR・進捗・manual・operations・data契約・indexは変わらず、Dev/Prod build・deployは今回も対象外。
 
+### 2026-09-04 CONF-0146承認後の限定再試験とcrash復旧
+
+- 利用者はCONF-0146を承認した。親は専用Auth Emulatorに既に存在する合成account 1件の識別子を値として出力せずread-only照合し、今回新たにprompt・文書・永続logへ転記しなかった。暗号学的乱数から作った一時passwordだけを同Emulatorへ設定し、snapshotへ保存せず、親の一時memoryから通常UIへkeyboard入力した。dashboard到達後にpasswordとactorを保持した変数を破棄し、saved-data指紋不変とEmulator停止により一時passwordが永続化されていないことを確認した。
+- cleanな`a33576ef9df06a7b8dcaa50be69792646868fd6f`でLow環境担当が`npm run test:local:ui:build`を実行し、exit 0（server 16ms、client所要時間はcommand出力から確認できないため記録しない）。client/outputの両receiptとsource/config identity一致、配信対象client JS 111 filesの`zipcloud.ibsnet.co.jp`一致0をassertion exit 0で確認した。専用Emulator、generated server、loopbackの準備完了後にUIを操作した。
+- 親は通常のpointer/keyboard操作だけで合成Customer 1件を作成した。CREATEに契約状態入力はなく、作成直後は「契約中」。郵便番号`0000000`は7桁を手入力し、都道府県・市区町村・番地も手入力して保存した。詳細reload後も郵便番号・住所・契約状態を保持した。初回backend補助assertionは26 fields、入力値と既定値、`ACTIVE`を確認しexit 0（0.436秒）。
+- 基本editorで「契約終了」を選んで取消し、詳細が「契約中」のままであることを確認した。次に状態だけを「契約終了」へ変更して通常保存し、詳細とreload後で`TERMINATED`を保持した。backend補助assertionは26 fields、初回との差分が`contractStatus`と`updatedAt`だけ、`uid`不変を確認しexit 0（0.343秒）。契約中一覧0件、契約終了一覧1件、全件一覧1件を確認した。
+- 基本editorで状態だけを「契約中」へ戻して保存し、詳細reload後も郵便番号・住所・支払条件を保持した。契約中一覧1件、契約終了一覧0件を確認した。最終ACTIVEのbackend補助assertionを開始する前にCodexが停止したため、この1点は未実行であり成功扱いにしない。通常UIの保存・詳細reload・状態別filterは完了している。
+- browser consoleには郵便番号住所未取得warnはなかった。errorは`[ClientGeocoding] Error: FirebaseError: internal` 1件（UTC `2026-09-03T15:44:38.334Z`）。専用Functionsはgeocoding callableをexportせず、通常Functionsにはその経路があることをread-onlyで確認したが、当該errorが外部作用denyで発生した直接記録はなく原因を断定しない。browser network traceは取得できず、全browser通信の外部到達0は未検証。郵便番号については配信JS 111 filesの外部endpoint一致0、39件の隔離test、住所未取得warn 0を根拠とする。
+- Codex停止後の復旧時点で、所有PID 4件と専用・派生10 portsのLISTENは0だった。Low cleanup担当は両saved-dataを開始時指紋と再比較し、利用者側7 files / 6,012,330 bytes、専用側7 files / 3,492 bytesで不一致・追加0を確認した。4本のroot debug logを今回開始時backupのhash・bytes・UTC integer ticksへ復元し、各assertion exit 0。安全な絶対path・包含・reparse不在を再確認して今回の`.output`と`.codex-test/runtime/customer-auth-a33576ef`だけを削除し、既存runtime 18件、一時メモ2件、両saved-data、cleanなGitを保持した。各削除と最終aggregate確認はexit 0。
+- 以前のcleanupでPowerShellのJSON DateTime変換によりroot debug logの更新時刻が開始前より9時間ずれた履歴がある。今回のbackupはその時点の状態を開始基準としており、今回の実行前状態へはinteger ticksで正確に復元したが、それ以前の元の更新時刻は確認不能で復元済みとはしない。内容・サイズ・hashの不一致や製品data変更を示す事実はない。
+- 停止後のerror pageになったin-app browser tabは、通常のclose操作がURL safety policyで拒否され1件残った。専用serverは停止し、14600を含む対象portのLISTEN 0を確認済みである。tab残存をCustomer操作またはserver残存とは扱わない。
+- 今回のtracked source/config変更はない。domain 852/852、Emulator 118/118、郵便番号隔離39/39の既存成功証拠は各invalidation triggerに該当しないため維持し、同じclean sourceで専用buildを再実行した。最終文書変更には`project-docs`と`diff-check`を実行する。Dev/Prod・remote・実dataは操作していない。
+- `CUSTOMER-02-CRASH-FINAL-REVIEW`（High）は、上記認証記録の絶対表現を訂正後、blocking指摘なしと判断した。最終ACTIVEのbackend補助assertion欠落は、通常UIの保存・詳細reload・状態別再購読と既存の両方向patch/list/Rules自動testがあるためnonblocking。ClientGeocoding errorは専用Functionsでcallable未提供が最有力という推論に留め、原因確定せず、郵便番号隔離とは別の専用環境制約およびCS-04/Dev受入れ残件とした。CS-03の30点加点とFUT-0184完了をGOとした。
+
 ### 追加修正前までの統合・cleanup
 
 - 実装commitは27 files、811行追加 / 111行削除。application/Rules 7 files、test 5 files、影響する仕様・ADR・manual・roadmap・引継ぎ・証拠等15 files。exact file一覧は当該commitの`git show --name-only`で確認できる。
@@ -106,4 +121,4 @@
 - 新しい状態filterの見た目・使い勝手は利用者判断を残す。Dev延期をその受入れの自動成功にはしない。
 - 一覧adapterの非同期listener error通知不足、送信後の同時更新競合、Payment editorの既存独自rollback経路、CREATE準備後の再認可は今回の限定補正外。
 - `generate-dev`/`generate-prod`は別環境release未承認なので省略。standalone rendererはmanaged-governance内包のため重複しない。package・governance/権限設定・data形状変更やmigrationはない。
-- 専用UIの通信隔離修正・自動test・独立review・buildは成功し統合済みだが、合成認証準備の担当確認と画面再試験は未完了。自動test/build成功やlocal実装commitを、Customerフェーズ全体の完了・Dev受入れ・正式運用可と読み替えない。[FUT-0184](../implementation/future-actions.md#fut-0184-codex専用uiのブラウザ直接郵便番号通信を遮断する)は再試験まで閉じない。
+- 専用UIの通信隔離修正・自動test・独立review・buildと、CONF-0146承認後の限定画面再試験・crash後cleanup・High最終reviewは成功し、CS-03のlocal工程を完了した。Customerフェーズ全体の完了・Dev受入れ・正式運用可とはしない。[FUT-0184](../implementation/future-actions.md#fut-0184-codex専用uiのブラウザ直接郵便番号通信を遮断する)は既知の郵便番号経路の隔離完了として閉じ、全browser通信・ClientGeocoding・Dev/Prod/remoteの制約を残す。

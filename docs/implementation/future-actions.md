@@ -2491,13 +2491,13 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 ## FUT-0184 Codex専用UIのブラウザ直接郵便番号通信を遮断する
 
-- 状態: Open
+- 状態: Completed
 - 重大度: High
 - 発見セグメント: CUSTOMER-02-STATUS / CUSTOMER-02-UI-POSTAL-BOUNDARY-REVIEW
 - 対象ファイル・シンボル: `air-vuetify-v3/src/AirPostalCode.vue`、`air-vuetify-v3/src/utils/postalCode.js`、Codex専用UIのNuxt/build設定・陰性test。
 - 確認済み実装事実: 7桁入力でブラウザが郵便番号検索APIへ直接fetchし、Functionsの外部作用denyや専用build identityはこの経路を遮断しない。今回の合成Customer作成で応答JSON処理後の住所未取得warnを観測した。network実経路・cache・中継は未観測で、外部service本人への実到達は断定しない。
 - 想定影響と発生条件: 専用UIで郵便番号を入力すると、合成data限定・外部作用denyという承認済みtest環境の境界を満たせない。今回、実dataや秘密情報流出を示す根拠はないが、操作成功だけでは隔離されたUI受入れ完了にできない。
-- 未確認点・仮説: 修正後の通常UIによる7桁手入力・保存/reload再試験、他のbrowser直接通信経路、外部実到達は未確認。追加の外部network再現はしない。
-- 推奨する将来対応: CONF-0145の専用UI限定修正は実装・自動test・独立review・実buildまで成功し統合済み。通常利用・Dev・data形状・関連packageは不変更。CONF-0146の認証準備担当確認後、限定Customer画面再試験とcleanupを完了して閉じる。詳細は[実行証拠](../verification/customer-02-status-local.md#統合差分と後処理)を正とする。
-- 必要なテスト: 専用UIの7桁入力で外部fetch 0、通常環境の非影響、専用build identityと陰性test、限定Customer UI再試験、process/log/saved-dataのcleanup。
-- ユーザー判断が必要な事項: [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint)。[実行証拠](../verification/customer-02-status-local.md#可視uiの観測結果と隔離未達)の操作成功と隔離未達を分け、CS-03は加点しない。
+- 未確認点・仮説: dynamic browser network traceと未調査の全browser hostの通信0は未確認で保証しない。ClientGeocoding errorは郵便番号とは別で原因未確定。Dev・Prod・remoteも未検証である。
+- 完了内容: CONF-0145の専用UI限定修正を実装し、実module限定置換、未置換時fail-closed、実watcherでfetch 0/address event 0、通常utility非影響、39件の隔離test、fresh build receipt、配信JS 111 filesの対象host文字列0を確認した。CONF-0146承認後、通常UIで7桁手入力・手動住所の保存/reload、郵便番号住所未取得warn 0、Customer状態往復・filter、process/log/saved-data cleanupを確認し、High最終reviewが完了をGOとした。通常利用・Dev・data形状・関連packageは変更していない。詳細は[実行証拠](../verification/customer-02-status-local.md#2026-09-04-conf-0146承認後の限定再試験とcrash復旧)を正とする。
+- 必要なテスト: 完了済み。専用UIの外部fetch 0/address event 0、通常環境の非影響、専用build identityと陰性test、限定Customer UI再試験、process/log/saved-data cleanupを実施した。
+- ユーザー判断が必要な事項: なし。CONF-0145とCONF-0146は回答済み。新status filterの見た目・使い勝手とDev受入れはCustomer roadmapのCS-04で別途扱う。
