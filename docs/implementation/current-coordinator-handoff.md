@@ -1,75 +1,63 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / Git報告ルール反映・現在地報告。Customerは合成認証準備の担当確認待ち
+- 状態: Current / PM-16からPM-17への利用者指示による交代準備。activation確認まではPM-16がownerを維持する。
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-16 / task `01a06579-64d2-7931-a15d-30fc1fad2f79` / host `local`
-- active callback and assignment destination: このタスク。subagent callbackはprimary `/root`へ返す。
-- ownership: 利用者が2026-09-03に現在のタスクをCustomerフェーズの担当として記録し、旧タスクへの作業割当なしで進めることを明示承認した。本更新は古いowner記録の訂正であり、governance・権限変更や新規task作成ではない。
-- coordination procedure: [project coordination](../runbooks/project-coordination.md)
-- former coordinator: PM（AirGuardV2）-15。今回の割当・callback先には使用しない。archive/deleteしない。
+- active callback and assignment destination: PM-16の上記task ID。交代中はproduct割当を停止し、subagentを使わない。
+- pending coordinator: PM（AirGuardV2）-17。完全新規taskとして作成し、IDは作成結果とno-change receiptで確定する。fork・別worktreeは使わない。
+- ownership: 利用者が2026-09-03に「タスク交代」を明示指示した。直前のGit報告ルール追加時の「交代不要」とは別の後続指示である。旧taskはarchive/deleteしない。
+- coordination procedure: [project coordination](../runbooks/project-coordination.md)、[activation手順](../runbooks/coordinator-handoff-efficient-activation.md)
 
 ## Repository baseline
 
 - direct repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
-- checkpoint start branch: `codex/dev-user-reservation-migration`
-- checkpoint start baseline: `cfa23595b37f2709131caab6f2a4be03713a8f95`
-- Customer implementation branch: `codex/customer-status`
-- implementation/test integrated commit and successful UI build source: `cc562f2ed8b22502986556ab0799ce2d721c646e`
-- UI observation source: `2c05c912eaae1d2ba1cb4a22696567586666b6c1`。専用build成功・対象UI操作成功。ただし外部郵便番号通信の隔離未達によりlocal受入れ完了とはしない。
-- postal isolation integrated/build source: `6ed23fc664b8988149bf4a6ca6183263b14936c6`。適用状態と検証の区別は[local検証記録](../verification/customer-02-status-local.md)を正とする。
-- current integrated revision and branch: Gitの現在HEADとbranchを確認する。本snapshot自身を含むcommit hashを自己参照で固定しない。
+- branch: `codex/customer-status`
+- pre-handoff HEAD: `fa55671ea9130e9e553ac4cbf88744b453e21331`
+- activation baseline: 本snapshotの準備commit後のfull HEADをGitで取得し、新taskの初期messageへ渡す。本file自身を含むcommitの自己参照は作らない。
 - expected upstream: none
-- expected worktree registry: primary repository 1件のみ。別worktreeは使わない。
-- common governance: `1.5.0`
-- active instruction sources: root `AGENTS.md` and `governance/project-rules.md`
-- 開始時に保持していた現タスク自身の先行文書差分は上記実装commitへ統合済み。他者の差分は含まない。今回の再開用文書整理はcoordinator所有であり、引継ぎ時のHEAD・clean状態はGitで再確認する。
+- expected worktree registry: primary repository 1件。開始worktree clean、未統合差分なし。旧subagentへの未完了割当なし。
+- remote: `origin`。現在値は[Git報告手順](../runbooks/project-coordination.md#git現在状態の報告)でlocalとremoteを分けて確認する。今回の引継ぎは既存originの対象ref読取りだけを許可し、fetch・push・merge・認証更新は行わない。接続不能なら未確認を明示する。
+- common governance: `1.5.0` / SHA-256 `0a13fc03273030594e4355dc3ec29b62ee1abb350311761de77154817fcaf6ac`
+- specification: `0.8.6`
+- active instruction sources: root `AGENTS.md`、`governance/project-rules.md`、task-routed runbooks。
+- permissions: primary workspaceへのwrite、`.git`は通常read-onlyで必要なlocal stage/commitは承認付き昇格、reviewは`auto_review`、networkはrestricted。新taskは実権限と`.codex/config.toml`を独立照合し、差があれば変更前に報告する。認証情報やCodex所有databaseを調査しない。
+- Customerの適用commit・実行結果・cleanup・残存制約は[local検証記録](../verification/customer-02-status-local.md)を正とする。Git報告ルールの検証はpre-handoff HEADのcommit本文を参照する。
 
 ## Active checkpoint
 
-- current checkpoint: `GIT-STATE-REPORTING`。利用者が2026-09-03に現在値報告へlocal/remote両方のGit状態を含めるproject rule追加と、その後の現在地報告を指示した。今回は設定済みoriginと対象branchの読取り確認だけを実施し、remote更新・fetch・認証更新へ拡張しない。
-- owned scope: `governance/project-rules.md`、`docs/runbooks/project-coordination.md`、`CHANGELOG.md`、本snapshot。既存の`codex/customer-status`上で文書だけを別commitにまとめる。開始HEADは`2aaf299d5a6e6b5ea34bfa90bfc0f303071206c4`、開始worktree clean。製品仕様・data契約・Customer進捗・APIは不変更なので、仕様・manual・data契約・製品ADR・roadmapに新しい変更を作らない。
-- governance boundary: 利用者は今回のproject rule追加についてタスク交代不要と明示したため、現taskを継続する。今回の個別指示をcommon contract・権限・approval policyや将来の別変更全般への交代免除に拡張しない。
-- verification: `governance-permissions-agents`のcomprehensive 5 gateを最終文書状態に実行する。`managed-governance`内包のrenderer checkで生成物整合を確認し、root `AGENTS.md`を直接編集しない。結果と独立exitは当該command reportを正とする。製品code・Rules・依存・UI不変更のためdomain/Emulator/UI build・Dev/Prod releaseは今回のrule変更では実行しない。
-- rollback: 今回の文書commitだけを承認のうえ安全にrevertする。既存Customer差分、data、remote、履歴を破壊しない。
-
-以下のCustomer checkpointは再開待ちとして保持する。
-
-- checkpoint: `CUSTOMER-02-STATUS`
-- objective: Customerの現在の取引状態を表示・編集できるようにし、local実装・検証・review・文書・Git統合までを進める。Dev受入れは別途。
-- source of truth: [現行仕様](../specification.md)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)、[工程・進捗](../roadmaps/customer-status.md)。完了済みの作成・基本・支払編集と今回の状態編集を区別する。
-- approved scope: 取引状態の表示・編集、変更fieldだけの保存、Customer一覧から対象へ到達する導線、状態によってCustomer選択や関連現場・予定へ制限を加えないことの回帰検証。
-- forbidden scope: archive・restore、code一意制約や検索拡張、請求・PDF全体、関連package変更、全件Dev診断・migration、Dev・Prod・remote操作、push・main merge。
-- delivery sequence: 仕様整合 → 設計と独立review → 実装と自動test → Codex専用local UI → 最終review・検証・文書・local commit。新しい利用者判断は勝手に確定しない。
-- role ownership: coordinatorは文書・設計契約・Git。application/Rulesはdeveloper、testは明示した範囲のtester。設計・reviewはHigh、開発・修正はMedium、testはLow。独立scopeを並列化し、初回は変更なしcallbackを確認する。
-- completion contract: exact files・差分、検証command/result/exit、review所見、local UIと非UI証拠の区別、未検証・承認待ち、cleanup、worktreeを報告する。Dev受入れとCustomer全残作業の完了は主張しない。
+- checkpoint: `PM16-PM17-HANDOFF`
+- objective: 新taskのrepository再開・権限・callback・最初のfile限定commitを確認し、ownerを移管する。製品作業は同時に再開しない。
+- owned files: `docs/implementation/current-coordinator-handoff.md`だけ。retiring側の準備とreplacement側のowner更新を直列に行う。
+- forbidden scope: application、Rules、test、package、managed common/AGENTS、権限設定、data、build/runtime、Dev/Prod、fetch/push/main merge、他taskのarchive/delete、subagent起動。
+- validation: project-docs、managed-governance（policyによりrenderer-checkを内包）、diff-check。正規commandと独立exitを記録する。source/validator/policy不変の他gateは再実行しない。製品仕様・data契約・roadmap進捗は不変更。
+- completion contract: no-change receipt受領後だけsnapshot 1件のowner更新を許可する。replacementのstaged/committed blob一致、exact committed path、branch/HEAD/upstream、clean、primary-only worktreeをformerが独立確認してから移管完了とする。失敗時はPM-16を維持し、重複割当しない。
+- rollback: 移管成立前の失敗では旧ownerを保持し、必要ならsnapshotだけをcorrective commitする。履歴書換え・他者差分破棄はしない。
+- user work-session ending condition: 今回は移管確認と報告で終了し、新taskは利用者の次の指示を待つ。
 
 ## Open decisions and approvals
 
-- 利用者は取引終了を単なる現在状態flagと確定した。日時・理由・特別履歴を追加しない。関連現場・予定の存在で変更を拒否せず、状態だけを理由に選択・編集を制限しない。削除・archiveの安全条件とは別扱い。
-- 利用者は提示済み工程の開始とlocal完了までの連続実施を承認した。Dev受入れを後回しにする指示は、Dev反映・受入れ成功の意味ではない。
-- 「Functions Developer」別タスク利用案は取り下げ済み。割当しない。
-- 反省会用の効率改善事項は一時メモへ記録する。反省会と改善作業が終了した時点で削除し、恒久仕様へ混在させない。
-- 新しい画面・操作の利用者判断が必要な範囲は[ADR 0042](../decisions/0042-risk-based-local-ui-acceptance.md)に従って残す。既存の内部改修で条件を満たす範囲はCodex local証拠で完了できる。
-- 可視UI担当: Low testerは正規in-app browserへ接続不可。親タスクでは接続成功し、利用者は2026-09-03に画面テストに限り親が担当する推論レベル指定の例外を明示承認した。自動test・専用環境準備・後処理はLowを維持する。Dev・利用者Chromeへの切替、新task作成、恒久role/governance変更へ許可を拡張しない。
-- [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号browser直接通信を止める限定修正・再試験は追加承認済み。利用者の一時保留回答は直後の明示承認で置換された。Customer対象操作は成功したが、通信境界未達をHigh security reviewで確認したため、通常利用・Dev・Schema・関連packageを変えない最小案を設計・実装する。
-
-- [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 再試験で保存済み合成sessionを再利用できず、一時認証準備と通常UI入力を親が同一memory内で扱う限定例外を確認中。既存の画面テスト限定承認を非UI設定へ自動拡張しない。
+- 次の製品checkpointは`CUSTOMER-02-STATUS`。[確認済み仕様](../specification.md)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)、[工程・進捗](../roadmaps/customer-status.md)、[検証記録](../verification/customer-02-status-local.md)から再開する。状態は現在状況flagで、選択・関連現場/予定を制限せず、日時・原因等は追加しない。
+- local実装・検証・review・文書・local統合は承認範囲内。Dev反映・受入れは延期。archive/restore、code一意性/検索拡張、請求/PDF全体、他マスタ・関連package変更、remote data/migrationは対象外。
+- [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号通信遮断と限定再試験は承認済み。通常利用・Dev・Schemas・保存形式を変えない。
+- [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 親による合成Authの一時設定まで含める担当例外は未回答。「再質問してください」や今回のタスク交代指示を承認に読み替えない。認証情報をprompt・文書・logでagent間に受け渡さない。
+- Customerの設計/reviewはHigh、開発/修正はMedium、test/環境準備/cleanupはLow。旧taskでは子のbrowser接続不可・親の接続成功を確認し、画面テストだけ親が担当する例外は承認済み。非UI認証準備はCONF-0146で分ける。新taskの接続能力は再確認する。
+- 「Functions Developer」別task利用案は取り下げ済み。割当しない。Norton申告の関連package内scriptは今回の実行対象ではなく原因未確定。検知回避・除外設定・再実行は行わない。
+- 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。反省会と改善作業の両方が終了するまで削除しない。
 
 ## Next checkpoint
 
-0. Git報告ルールの検証・local統合後、local/remote両方を確認して現在地を報告する。利用者の今回の明示指示によりタスク交代は行わない。以下のCustomer工程とCONF-0146は現taskで保持する。
-1. 成功済み証拠と再利用・失効判定は[local検証記録](../verification/customer-02-status-local.md)を正とする。追加隔離の実装・自動test・High再review・clean専用buildは完了したが、画面再試験は未完了。
-2. CONF-0146の回答を得て認証準備の担当を固定する。未回答のまま親による非UI一時設定や、agent間のcredential受け渡しを行わない。
-3. 再開時はclean HEADの専用buildと準備をLowが行い、承認された認証準備の後、親が合成Customer 1件の7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterを通常UIで再試験する。既存in-app browser bindingを再利用し、閉じたtabだけ新規取得する。利用者Chromeへ切り替えない。
-4. 親tab・今回の専用process・生成物・log-backupはcleanup済み。CS-03は再試験まで加点しない。進捗とDev・利用者判断は[ロードマップ](../roadmaps/customer-status.md)を正とする。
-5. 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。両方とも今回の生成物cleanup対象外。
+1. 新taskは最小restart集合と本snapshotを読み、`PM16-PM17-NOCHANGE`のreceiptをPM-16へ1回送る。変更・test・runtime起動・subagentなしで待機する。callback失敗時は自taskへ結果を残して停止し、反復送信しない。
+2. PM-16が受領・照合後、`PM16-PM17-ACTIVATE`を指示する。新taskが本snapshotのactive owner・callback先・former task・現在checkpointを更新し、正規validatorと最初のfile限定stage/commitを実施する。
+3. PM-16がreceiptとGitを独立確認してからownerをretireする。新taskは製品作業を始めず、利用者の次の指示を待つ。旧taskは利用者操作まで残す。
+4. Customer再開指示後は上記正本とCONF-0146を確認し、必要な回答を得てから専用UIの認証準備・限定画面再試験へ進む。build前に実担当のin-app browser接続を確認する。別taskのbrowser handle・保存sessionが使えるとは仮定しない。
+5. UI再試験は合成Customer 1件の7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterに限定する。[local UI手順](../runbooks/local-ui-testing.md)でclean HEADの専用buildを行い、自身のprocess/生成物をcleanupする。旧taskのtab・専用process・生成物・log-backupはcleanup済み、反省会メモは保持済み。
 
 ## References
 
 - [文書案内](../README.md)
-- [開発workflow](../runbooks/development-workflow.md)
+- [引継ぎの判断](../decisions/0030-efficient-coordinator-handoff-activation.md)
 - [検証policy](../../governance/verification-policy.json)
+- [開発workflow](../runbooks/development-workflow.md)
 - [local Emulator検証](../runbooks/local-emulator-testing.md)
-- [local UI検証](../runbooks/local-ui-testing.md)
 - [検証証拠索引](../verification/README.md)
 - [変更履歴](../../CHANGELOG.md)
