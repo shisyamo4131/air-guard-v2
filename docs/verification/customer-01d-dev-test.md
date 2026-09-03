@@ -1,6 +1,6 @@
 # CUSTOMER-01D Dev release・試験記録
 
-- 状態: 実行中 / 初回保存失敗を修正中。受入れ未完了
+- 状態: Customerの会社管理者通常操作・不具合修正・cleanup確認済み / 権限別remote試験未実施
 - 実施日: 2026-09-03 JST
 - Checkpoint: `CUSTOMER-01D-DEV-TEST-001`
 - 計画: [Customer Dev反映・受入れ](../implementation/customer-dev-release.md)
@@ -48,10 +48,36 @@ local調査で`firestore.rules`のGeoPoint比較が`latitude` / `longitude`と�
 | `node --test test/domain/*.test.mjs` | 817/817成功。親の独立実行`baf105`も同じ結果 | 0 |
 | `git diff --check` | 空白errorなし | 0 |
 
-Emulator終了後にdeveloperが自分の空runtime directoryだけを除去し、専用portのlistener不在を確認した。修正後のDev再反映・再試験は次工程。Hosting codeは不変のため、初回Hosting versionを保持してRulesだけを更新する。
+Emulator終了後にdeveloperが自分の空runtime directoryだけを除去し、専用portのlistener不在を確認した。Hosting codeは不変のため、初回Hosting versionを保持してRulesだけを更新した。反映結果は次節のとおり。
+
+## 修正後のDev再試験
+
+修正source `ae5abef9b2666266963412812a79125c3271ca94`から同じRules限定deploy commandを実行し、exit 0（`d37739` / `cb7d5a`）。readbackもexit 0（`f7e860`）で候補本文と一致した。rulesetは`bc736891-8433-4753-a732-a3208eb81cac`、更新時刻`2026-09-03T01:18:08.614675Z`。Hosting versionは初回のままであり、再生成・再deployしていない。
+
+- 同じ入力の新規Customer登録が成功し、一覧検索1件・詳細への反映を確認した。
+- 合成Customerの名称・住所・備考を更新できた。締日20日、入金月2か月後、入金日25日の保存後に再読込して一致を確認した。
+- 指定既存取引先の備考だけを更新し、再読込後の保存を確認した。空欄へ戻して保存し、再読込とAdminの対象限定読取り（`f277e9` / exit 0）で復元を確認した。実対象の名称・住所・支払条件は変更していない。
+- 合成Siteを通常UIで作成し、新規Agreementフォームの初期締日20日を確認して保存せず閉じた。
+- Site作成後に合成Customerの名称と締日15日を更新し、Site詳細の取引先名同期と、新規Agreementフォームの初期締日15日を確認した。Agreementはまだ保存していない。
+
+## 請求確認の移管とcleanup
+
+利用者の停止指示前に、既存`initBillingDoc`をDevの合成Customer/Siteへ適用し、請求日2026-09-15から期日2026-11-25となることを確認した。実績・入金0件、0円DRAFTのBillingをcreate-onlyで1件作成した（`228e2d` / exit 0）。これはbackendでの限定初期化確認であり、稼働実績からの自動生成・請求書発行の受入れではない。
+
+その後、利用者はCustomer管理フェーズに請求書まで含めるのは過大と指摘し、請求確認を稼働実績管理改修後の請求書発行機能確認へ移管した。直ちに請求試験を停止した。PDF出力、稼働実績、従業員・勤怠・入金data、取極め保存は実施していない。フェーズ着手前にテスト範囲を利用者と合意する運用をproject rulesへ反映する。
+
+今回作成したexact3件を、名称・関係・DRAFT/空実績・空入金、subcollectionなし、参照先の予定/実績/配置通知なし、他の参照Site/Billingなしで照合した。各documentの取得時updateTimeを削除preconditionとして1 batchで削除し、独立readで3件不存在と既存備考復元を確認した（`23b126` / exit 0）。Customer/Siteをarchiveへ移す操作は使っていない。
+
+| 削除した検証用resource | ID |
+|---|---|
+| Customer | `cxzZh8yNngCyw5t3eOx5` |
+| Site | `NM8FRlgJJkwTFaGINCag` |
+| Billing | `cxzZh8yNngCyw5t3eOx5_NM8FRlgJJkwTFaGINCag_2026-09-15` |
+
+削除後のChrome名称検索も0件。検索を解除して通常の取引先一覧へ戻し、利用者Chromeを残した。既存指定取引先の備考は復元済み、今回の検証data残存は0件。
 
 ## 未完了と次工程
 
-正常create/basic/payment、既存指定対象の保存・復元、関連Site同期・Agreement初期締日・Billing期日・PDF、主要remote拒否を成功扱いしない。修正後に同じ正常操作を再試験する。今回作成したdataはactual IDで追跡し、終了時に削除する。
+正常create/basic/payment、既存指定対象の保存・復元、関連Site同期・新規Agreement初期締日は上述の範囲で確認した。請求期日・PDFの機能受入れは後続へ移管した。閲覧専用actor、他社・権限不足・delete/archiveの主要remote拒否は、今回利用した会社管理者sessionでは確認していない。Adminによる補助読取り・cleanupをRules拒否の証拠にしない。113件のlocal Emulator成功とremote未実施を区別し、Customer全体の全actor受入れ完了とは記録しない。
 
-comprehensive検証のうちmanaged-governance、capacity、docs-negativeは[直前成功証拠](customer-01c-local-preparation.md)から失効条件を確認して再利用する。Rules修正後はdomainとlocal Emulator、文書更新後はproject-docsとdiff-checkを実行する。Hosting codeが変わらないRules限定修正では、初回Hosting artifactを別HEADの生成物として扱わない。
+Rules修正後のdomain・local Emulator証拠を上記へ記録した。続くproject ruleと文書変更はgovernance classとしてcomprehensive gateを選び、各結果・exit statusはcoordinatorの最終command報告とcurrent handoffへ記録する。製品codeはその後不変のためdomain・Emulatorを再反復しない。Hosting codeが変わらないRules限定修正では、初回Hosting artifactを別HEADの生成物として扱わない。製品要件・schema・data lifecycleは変更していないため、製品仕様version・data contract・新規ADRは追加しない。既存のフェーズ承認運用を明確化するproject ruleと実行計画を正本とする。

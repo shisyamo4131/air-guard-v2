@@ -16,7 +16,7 @@
 
 ## 試行段階の高速な開発loop
 
-1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめ、影響範囲、設計、必要なtestを決める。
+1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。[フェーズごとのテスト範囲の合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)に従い、利用者と変更・テストの範囲、環境・data、期待結果、完了条件を着手前にすり合わせる。他機能の受入れを自動追加しない。
 2. 実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
 3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。指摘または実装で設計が変わった場合だけ、変わった範囲を再reviewする。
 4. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。

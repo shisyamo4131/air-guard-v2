@@ -4,6 +4,9 @@
 
 ## Unreleased
 
+- フェーズ着手前に変更・テストの対象と対象外、環境・data、期待結果・完了条件を利用者と合意し、他機能の受入れへ広げる前にも確認するproject ruleを明記した。今回の請求機能確認は稼働実績管理改修後へ移管した。
+- CustomerのDev試験で座標付き作成・更新の失敗を再現し、Rulesの緯度・経度取得を正しいmethod呼出しへ修正した。Emulator113件・domain817件成功、Devの通常保存・既存備考復元・関連Site同期を確認。検証用Customer・Site・0円Billingは削除済み。詳細は[実行記録](docs/verification/customer-01d-dev-test.md)。
+
 - Dev配信準備で見つかったService WorkerのFirebase設定未注入を修正し、独立buildと開発時の両方で公開設定を反映する。
 
 - [ADR 0043](docs/decisions/0043-dev-trial-existing-document-handling.md)を採用した。機能改修時の既存Dev documentは全件診断・一括修復を標準前提にせず、通常操作で発見した不具合を修正する。Schemaの明らかな変更、field状態の他機能への明確な影響、その他具体的に必要と確認された場合は状態確認と必要なmigrationを必須とする。
