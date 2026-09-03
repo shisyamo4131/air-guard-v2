@@ -13,6 +13,7 @@
 | CUSTOMER-01A local実装・画面受入れ | [CUSTOMER-01A local acceptance verification receipt](customer-01a-local-acceptance.md) |
 | CUSTOMER-01B Dev保存形式の読取り検査 | [CUSTOMER-01B Dev compatibility verification receipt](customer-01b-dev-compatibility.md) |
 | CUSTOMER-01C local準備・Dev向け生成 | [CUSTOMER-01C local preparation verification receipt](customer-01c-local-preparation.md) |
+| CUSTOMER-01D Dev反映・通常操作試験 | [CUSTOMER-01D Dev test](customer-01d-dev-test.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
 | 機械可読の検証方針 | [Verification policy](../../governance/verification-policy.json) |

@@ -120,8 +120,8 @@ service cloud.firestore {
         && ((data.location == null && data.geopoint == null)
           || (data.location is map
             && data.geopoint is latlng
-            && data.geopoint.latitude == data.location.lat
-            && data.geopoint.longitude == data.location.lng))
+            && data.geopoint.latitude() == data.location.lat
+            && data.geopoint.longitude() == data.location.lng))
         && isNullableString(data.tel, 13)
         && isNullableString(data.fax, 13)
         && data.contractStatus in ['ACTIVE', 'TERMINATED']

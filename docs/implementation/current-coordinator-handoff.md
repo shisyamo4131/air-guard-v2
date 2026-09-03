@@ -28,6 +28,7 @@
 - completion contract: Dev反映結果と通常操作・拒否・関連機能の確認を記録し、今回の検証用dataを削除、既存対象の試験変更を復元する。未確認や不具合を成功扱いしない。
 - work ownership: PM-15が文書・build/artifact・Dev反映・Chrome試験・Git統合を管理する。securityはpreflight read-only review済み。修正が必要な場合だけdeveloperへ限定委譲する。
 - local evidence: [CUSTOMER-01C local preparation](../verification/customer-01c-local-preparation.md)。artifactは証拠に記録したsource commitへ束縛し、本snapshot等の文書commitをbuild sourceとして扱わない。
+- Dev evidence: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)。初回Rules・Hosting反映済み。新規登録と既存備考更新の失敗原因となるRulesの非null座標比較をlocal再現・修正した。Emulator113件、domain817件成功、security review完了。次はRules限定再反映と正常保存の再試験。関連機能・remote拒否確認は未完了。
 
 ## Open decisions and approvals
 

@@ -18,6 +18,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  GeoPoint,
   query,
   serverTimestamp,
   setDoc,
@@ -1837,6 +1838,78 @@ test("Customer Rules allow exact create and operation-specific updates for appro
     }));
     await assertSucceeds(updateDoc(reference, {
       paymentMonth: 2,
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+  }
+});
+
+test("Customer Rules allow create with matching non-null location and GeoPoint", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-rules-location-create-admin";
+  const docId = "customer-rules-location-create";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Customers", docId),
+    customerRulesData({
+      docId,
+      uid,
+      location: { formattedAddress: "合成住所", lat: 35.5, lng: 139.5 },
+      geopoint: new GeoPoint(35.5, 139.5),
+    }),
+  ));
+});
+
+test("Customer Rules allow remarks and address updates with matching non-null GeoPoint", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-rules-location-update-admin";
+  const docId = "customer-rules-location-update";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  await seedCustomerRulesDocument({
+    companyId,
+    docId,
+    data: {
+      location: { formattedAddress: "合成住所", lat: 35.5, lng: 139.5 },
+      geopoint: new GeoPoint(35.5, 139.5),
+    },
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const reference = doc(firestore, "Companies", companyId, "Customers", docId);
+  await assertSucceeds(updateDoc(reference, {
+    remarks: "合成備考変更",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    address: "合成2-2",
+    fullAddress: "東京都千代田区合成2-2",
+    location: { formattedAddress: "合成変更住所", lat: 36.5, lng: 140.5 },
+    geopoint: new GeoPoint(36.5, 140.5),
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+});
+
+test("Customer Rules reject latitude and longitude mismatches on create and update", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "customer-rules-location-mismatch-admin";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  for (const [label, geopoint] of [
+    ["latitude", new GeoPoint(36.5, 139.5)],
+    ["longitude", new GeoPoint(35.5, 140.5)],
+  ]) {
+    const docId = `customer-rules-location-mismatch-${label}`;
+    const reference = doc(firestore, "Companies", companyId, "Customers", docId);
+    const location = { formattedAddress: "合成住所", lat: 35.5, lng: 139.5 };
+    await assertFails(setDoc(reference, customerRulesData({ docId, uid, location, geopoint })));
+    await seedCustomerRulesDocument({ companyId, docId });
+    await assertFails(updateDoc(reference, {
+      address: "合成2-2",
+      fullAddress: "東京都千代田区合成2-2",
+      location,
+      geopoint,
       uid,
       updatedAt: serverTimestamp(),
     }));
