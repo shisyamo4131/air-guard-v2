@@ -40,7 +40,7 @@
 |---|---:|---:|---|---|
 | CS-01 設計・仕様・失敗/権限review | 15 | 15 | Completed | [設計・差分review](../verification/customer-02-status-local.md#設計差分review)、仕様・ADR、保存・表示契約 |
 | CS-02 実装・自動回帰・Rules検証 | 35 | 35 | Completed | [自動test・command結果](../verification/customer-02-status-local.md#自動testcommand結果)、exact field保存とRules拒否境界 |
-| CS-03 Codex local UI・最終review・統合 | 30 | 0 | Planned | 専用build、可視操作、cleanup、独立review、必須gate、local commit |
+| CS-03 Codex local UI・最終review・統合 | 30 | 0 | In progress | 専用build・独立review・実装local commit済み。[親担当の可視UI検証へ進む](../verification/customer-02-status-local.md#証拠の分担)。UI・最終統合まで加点しない |
 | CS-04 利用者判断・Dev反映・Dev受入れ | 20 | 0 | Deferred | 新UIの判断と、別承認のDev反映・権限別受入れ |
 
 重み合計100。各マイルストーンの証拠がすべて揃った場合だけ加点する。今回のlocal工程の到達点はCS-03までであり、CS-04は後続とする。
@@ -57,7 +57,7 @@ local UIの正規command・準備・cleanupは[runbook](../runbooks/local-ui-tes
 
 ## 次工程
 
-実装・対象testと静的reviewの後、影響範囲の自動検証・local UIへ進む。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
+実装・全domain・専用Emulator・独立review・専用buildは成功しlocal commit済み。Low testerからin-app browserへ接続できず、親タスクだけ接続できたため、利用者は2026-09-03に画面テストに限る親担当を承認した。自動test・環境準備・後処理はLowを維持し、clean HEADの専用buildを再生成してlocal UI・後処理・最終統合へ進む。実行証拠は[local検証記録](../verification/customer-02-status-local.md)を参照。Customer全体の残改修は[製品ロードマップ](airguard-v2.md#次の作業)から別途扱う。
 
 ## 進捗履歴
 

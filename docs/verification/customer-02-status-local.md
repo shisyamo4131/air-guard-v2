@@ -1,10 +1,11 @@
 # CUSTOMER-02 状態表示・編集 local検証記録
 
-- 状態: In progress / 実行済み結果と未実施を分離して記録中
+- 状態: In progress / 実装・自動検証・独立review・専用build済み、親担当の可視UI検証へ進む
 - 日付: 2026-09-03
 - checkpoint: `CUSTOMER-02-STATUS`
 - branch: `codex/customer-status`
 - 開始HEAD: `cfa23595b37f2709131caab6f2a4be03713a8f95`
+- 実装・test・文書のlocal統合commit / 専用build source: `cc562f2ed8b22502986556ab0799ce2d721c646e`
 - 対象: [状態編集ロードマップ](../roadmaps/customer-status.md)のlocal工程。Dev反映・受入れ、実data、請求・PDF、archive・restoreは対象外。
 
 ## 設計・差分review
@@ -14,10 +15,11 @@
 - `CUSTOMER-02-DOC-DESIGN-CHECK`（High、68秒）: 旧一覧ACTIVE限定断定と状態変更を後続専用操作とする記述を指摘。coordinatorが修正した。
 - `CUSTOMER-02-CODE-REVIEW`（High、93秒）と`CUSTOMER-02-SECURITY-FINAL`（High）: application/Rules 7file差分に新規blocking指摘なし。静的reviewであり実行検証やrelease GOではない。
 - security監査の既存残存risk: 郵便番号の独自長上限なし、派生情報の意味上の再計算不可。今回の状態変更による新規問題ではなく、独断でSchema制約を追加しない。
+- `CUSTOMER-02-SECURITY-TEST-COVERAGE`（High）: 準備中のUID・会社変更、latest getterのinstance・docId変更、Rules陰性経路の追加を確認し、新規blocking指摘なし。実行証拠は下記testerのcommand結果と区別する。
 
 ## 自動test・command結果
 
-各実行は開始HEAD上の該当差分へ束縛する。最終commandの適用stateとbuild sourceは確定後に追記する。後続のapplication/Rules/test変更が該当gateを失効させた場合は再実行する。
+自動testは開始HEAD上の該当差分に対して実行後、上記commitへ統合した。専用buildはそのclean commitで実行した。その後の変更は進捗・証拠・引継ぎの文書整理だけであり、application/Rules/test/configurationは変更していない。文書整理後に失効する`project-docs`と`diff-check`の再検証結果は当該checkpointのcommand reportを正とする。後続のapplication/Rules/test変更が該当gateを失効させた場合は再実行する。
 
 | 段階 | Command | 結果 | Exit |
 |---|---|---|---:|
@@ -28,9 +30,9 @@
 | completion | `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 21 fixture成功 | 0 |
 | completion | `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 7 checks成功、tool計測3.333秒 | 0 |
 | completion | `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | 成功、内包rendererも0。tool計測0.839秒 | 0 |
-| completion | `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 未実施 | — |
-| completion | `git diff --check` | 最終状態は未実施 | — |
-| completion | `npm run test:local:ui:build` | 未実施。clean commit後に実行 | — |
+| completion | `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | build前に成功、215 Markdown / 44 ADR / 6 roadmap / 8 TOML。2.389秒。文書整理後の再検証はcommand reportへ記録 | 0（build前） |
+| completion | `git diff --check` | 実装統合前に成功、0.253秒。`git diff --cached --check`も0。文書整理後の再検証はcommand reportへ記録 | 0（実装統合前） |
+| completion | `npm run test:local:ui:build` | cleanな上記commitで成功。client 10.984秒 / server 21 ms。生成物はUI未接続のため後処理で削除済み | 0 |
 
 ## Emulator後処理
 
@@ -41,7 +43,16 @@
 - domain: CREATE固定、状態patch/no-op、基本/支払分離、draft/競合/rollback、準備中の権限・UID・会社・instance変更、状態別一覧購読、終了済みの検索・ID取得・cache保持。
 - Emulator: Rulesの許可4actor両方向、陰性actorの既存document update、値/型/削除/metadata/派生値/混合更新拒否、role剥奪、関連Site・予定存在、両状態のdelete/archive/nested拒否。fixtureは合成で、UI操作証拠にはしない。
 - production同期handler: 実`onUpdateCustomer`をmock隔離して同社Siteの`customer`だけを更新することを検査。予定とSite自身の状態を変更しない。専用local Functionsはこのtriggerをexportしないため、triggerの配備・実発火成功や非同期配送を検証したとはしない。
-- visible UI: 未実施。専用generated serverでCustomer正規作成、状態の取消・保存・戻し・再表示、一覧filter、基本/支払編集を確認する。業務対象の非UI注入は行わない。
+- visible UI: 未実施。Low testerからの正規in-app browser接続は`Browser is not available: iab`で失敗し、親タスク接続成功後の再確認1回でも同じ結果だった。利用者は2026-09-03に画面テストだけを親で行う推論レベル指定の例外を承認した。自動test・環境準備・後処理はLowを維持する。提供scope差は可能性であり原因未確定。Dev・利用者Chromeへの代替切替はしていない。
+- UI再開時: clean HEADを再確認して専用buildを再生成し、Emulatorとgenerated serverのready・identity・HTTP応答を確認してから通常操作する。Customer正規作成、状態の取消・保存・戻し・再表示、一覧filter、基本/支払編集、狭い画面でのcontrol操作を確認する。業務対象の非UI注入は行わない。
+
+## 統合差分と後処理
+
+- 実装commitは27 files、811行追加 / 111行削除。application/Rules 7 files、test 5 files、影響する仕様・ADR・manual・roadmap・引継ぎ・証拠等15 files。exact file一覧は当該commitの`git show --name-only`で確認できる。
+- application/Rules: `composables/domain/customer/customerOperations.js`、`composables/application/customer/useCustomerActions.js`、`components/Customer/Editor/Base.vue`、`components/Customer/Activator/Base.vue`、`components/Customers/DataTable/index.vue`、`pages/customers/index.vue`、`firestore.rules`。
+- test: `test/domain/customer-operations.test.mjs`、`test/domain/customer-ui-source-contract.test.mjs`、`test/domain/customer-list.test.mjs`、`test/domain/customer-status-sync.test.mjs`、`test/local/codex-local-harness.test.mjs`。
+- UI接続不可のcheckpointではEmulator/serverを起動せず、browser tabも作成していない。自身の専用build生成物`.output`を削除し、primary repositoryのclean状態を確認した。生成物は同じ正規buildで再生成可能。
+- 再開記録は[現coordinator handoff](../implementation/current-coordinator-handoff.md)。反省会用一時メモとsecurity設計メモはignoredな`.codex-test`配下に保持する。反省会と改善作業の終了前には削除しない。
 
 ## 未検証・残存制約
 
@@ -49,4 +60,4 @@
 - 新しい状態filterの見た目・使い勝手は利用者判断を残す。Dev延期をその受入れの自動成功にはしない。
 - 一覧adapterの非同期listener error通知不足、送信後の同時更新競合、Payment editorの既存独自rollback経路、CREATE準備後の再認可は今回の限定補正外。
 - `generate-dev`/`generate-prod`は別環境release未承認なので省略。standalone rendererはmanaged-governance内包のため重複しない。package・governance/権限設定・data形状変更やmigrationはない。
-- 環境cleanup、saved-data不変、最終worktree・commitは実行後に確定する。
+- 可視UI検証とその後のcleanup・最終統合は未完了。今回の自動test/build成功やlocal実装commitを、Customerフェーズ全体の完了・Dev受入れ・正式運用可と読み替えない。
