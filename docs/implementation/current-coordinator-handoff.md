@@ -1,6 +1,6 @@
 # Current coordinator handoff snapshot
 
-- 状態: Current / 専用UI通信隔離の実装・自動test・build成功、合成認証準備の担当確認待ち
+- 状態: Current / Git報告ルール反映・現在地報告。Customerは合成認証準備の担当確認待ち
 - 更新日: 2026-09-03
 - active coordinator: PM（AirGuardV2）-16 / task `01a06579-64d2-7931-a15d-30fc1fad2f79` / host `local`
 - active callback and assignment destination: このタスク。subagent callbackはprimary `/root`へ返す。
@@ -26,6 +26,14 @@
 
 ## Active checkpoint
 
+- current checkpoint: `GIT-STATE-REPORTING`。利用者が2026-09-03に現在値報告へlocal/remote両方のGit状態を含めるproject rule追加と、その後の現在地報告を指示した。今回は設定済みoriginと対象branchの読取り確認だけを実施し、remote更新・fetch・認証更新へ拡張しない。
+- owned scope: `governance/project-rules.md`、`docs/runbooks/project-coordination.md`、`CHANGELOG.md`、本snapshot。既存の`codex/customer-status`上で文書だけを別commitにまとめる。開始HEADは`2aaf299d5a6e6b5ea34bfa90bfc0f303071206c4`、開始worktree clean。製品仕様・data契約・Customer進捗・APIは不変更なので、仕様・manual・data契約・製品ADR・roadmapに新しい変更を作らない。
+- governance boundary: 利用者は今回のproject rule追加についてタスク交代不要と明示したため、現taskを継続する。今回の個別指示をcommon contract・権限・approval policyや将来の別変更全般への交代免除に拡張しない。
+- verification: `governance-permissions-agents`のcomprehensive 5 gateを最終文書状態に実行する。`managed-governance`内包のrenderer checkで生成物整合を確認し、root `AGENTS.md`を直接編集しない。結果と独立exitは当該command reportを正とする。製品code・Rules・依存・UI不変更のためdomain/Emulator/UI build・Dev/Prod releaseは今回のrule変更では実行しない。
+- rollback: 今回の文書commitだけを承認のうえ安全にrevertする。既存Customer差分、data、remote、履歴を破壊しない。
+
+以下のCustomer checkpointは再開待ちとして保持する。
+
 - checkpoint: `CUSTOMER-02-STATUS`
 - objective: Customerの現在の取引状態を表示・編集できるようにし、local実装・検証・review・文書・Git統合までを進める。Dev受入れは別途。
 - source of truth: [現行仕様](../specification.md)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)、[工程・進捗](../roadmaps/customer-status.md)。完了済みの作成・基本・支払編集と今回の状態編集を区別する。
@@ -49,6 +57,7 @@
 
 ## Next checkpoint
 
+0. Git報告ルールの検証・local統合後、local/remote両方を確認して現在地を報告する。利用者の今回の明示指示によりタスク交代は行わない。以下のCustomer工程とCONF-0146は現taskで保持する。
 1. 成功済み証拠と再利用・失効判定は[local検証記録](../verification/customer-02-status-local.md)を正とする。追加隔離の実装・自動test・High再review・clean専用buildは完了したが、画面再試験は未完了。
 2. CONF-0146の回答を得て認証準備の担当を固定する。未回答のまま親による非UI一時設定や、agent間のcredential受け渡しを行わない。
 3. 再開時はclean HEADの専用buildと準備をLowが行い、承認された認証準備の後、親が合成Customer 1件の7桁手入力・手動住所・保存/reload・状態取消/終了/復帰/filterを通常UIで再試験する。既存in-app browser bindingを再利用し、閉じたtabだけ新規取得する。利用者Chromeへ切り替えない。

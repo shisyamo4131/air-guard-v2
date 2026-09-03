@@ -118,6 +118,8 @@
 
 ## Project-specific Progress and Reporting
 
+- 現在値・現在地・進捗を報告するときは、Gitのlocal状態だけでなくremote状態も含める。localはbranch、HEAD、未コミット差分、upstreamを、remoteは確認対象remote・branch、その先端commitまたはbranch不存在、確認時刻・取得方法を示す。比較可能なら先行・遅延commit数を比較対象付きで報告する。localのremote-tracking refをremoteの現在値と取り違えず、未接続・未承認・取得失敗時はremoteを「未確認」とし理由を明記する。確認手順は[project coordination](../docs/runbooks/project-coordination.md#git現在状態の報告)を正とする。
+- Git状態確認も既存のnetwork・認証・外部作用の承認境界に従う。状態報告をpush、merge、pull、fetch、remote設定変更、認証更新の自動承認へ拡張しない。remote URLにcredential等が含まれる場合は値を出力しない。
 - 正式運用準備の公式進捗は`docs/roadmaps/airguard-v2.md`だけを正とし、100点加重・milestone単位の無部分加点で管理する。
 - scope追加または判定訂正で進捗が低下する場合は、変更前、変更後、理由、証拠をroadmapと利用者向け報告へ記録する。
 - 未回答の確認・承認事項は直ちに報告し、回答後に正本と次taskの指示へ反映する。

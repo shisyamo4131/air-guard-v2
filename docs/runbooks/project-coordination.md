@@ -18,6 +18,18 @@
 - `main` への直接コミット、`main` へのマージ、Git push、履歴書換え、デプロイは、それぞれユーザーが対象操作を明示した場合だけ行う。
 - 受入れ後に問題が判明した場合は、機能単位のマージコミットをrevert可能か、データ・契約互換性を確認する。安全にrevertできない場合は修正ブランチと移行・復旧手順を用意する。
 
+## Git現在状態の報告
+
+報告義務と承認境界は[project rules](../../governance/project-rules.md#project-specific-progress-and-reporting)を正とする。localとremoteを次の順序で照合する。
+
+1. primary repositoryで`git status --short --branch`、`git rev-parse HEAD`とbranch/upstream設定を確認する。未コミット差分と、commit済みだが未共有の変更を分ける。
+2. 設定済みremoteと対象branchを実targetから特定する。remoteの取得先とpush先が異なる場合は区別し、URL内の秘密値を出力しない。
+3. 当該remoteへの読取りが承認済みなら、`git ls-remote --symref`でHEADと対象branchの先端を直接確認し、commandのexit statusと確認時刻を記録する。成功応答に対象branchがなければ不存在、接続・認証失敗なら未確認とする。認証更新や証明書検証の無効化で迂回しない。
+4. 取得したremote先端のcommit objectがlocalにも存在する場合は、`git rev-list --left-right --count`で明示した2つのrevisionを比較する。object不足時は先行・遅延数を未確認とし、そのためだけに無断fetchしない。upstream未設定のbranchをmainと比較する場合は、upstreamとの差ではなくmainとの差であることを明記する。
+5. localのremote-tracking refは最後に取得した記録であり、当該報告時のremote照合とは別の証拠として扱う。live確認不能でもremote欄を省略せず、未確認の理由とlocal記録から分かる範囲を分ける。
+
+現在のcommitやremote実測値を本runbookへ蓄積せず、当該報告または必要な実行証拠に置く。既存のcommit・製品dataは変更せず、この報告手順のrollbackは承認済み文書変更の安全なrevertで行う。
+
 ## プロジェクト管理タスクループ
 
 長期作業は、定時確認ではなくタスク間通知を用いたイベント駆動型を標準とします。
