@@ -1,5 +1,10 @@
+import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { getBillingKey, initBillingDoc } from "./utils.js";
+import {
+  assertPathSafeIdentifier,
+  getBillingKey,
+  initBillingDoc,
+} from "./utils.js";
 import { Billing } from "@shisyamo4131/air-guard-v2-schemas";
 
 /*****************************************************************************
@@ -7,6 +12,7 @@ import { Billing } from "@shisyamo4131/air-guard-v2-schemas";
  * - OperationResult ドキュメントの `isBillable` が false の場合は処理がスキップされます。
  * - Billing ドキュメントが存在しない場合は新規に作成されます。
  * - Billing ドキュメントが存在する場合は、OperationResult を追加して保存します。
+ * - Billingの読取・保存を一つのtransactionで行い、新規作成時だけ同じtransactionでCustomer存在を確認します。
  * [データ不整合対応]
  * - 既存の Billing ドキュメントが既に同一の OperationResult を有している場合はこれを置換します。
  *   通常は発生しないはずですが、何らかの理由で同一の OperationResult が複数回追加されてしまうケースに対応するための処理です。
@@ -36,6 +42,7 @@ export async function addOperationResultToBilling({ companyId, doc } = {}) {
     return;
   }
 
+  assertPathSafeIdentifier(companyId, "companyId");
   const prefix = `Companies/${companyId}/`;
   const { customerId, siteId, billingDate, billingDateAt } = doc;
   const docId = getBillingKey(doc);
@@ -46,36 +53,50 @@ export async function addOperationResultToBilling({ companyId, doc } = {}) {
     billingDate,
   });
 
-  const billingDoc = new Billing();
-  const docExists = await billingDoc.fetch({ docId, prefix });
-
-  if (!docExists) {
-    await initBillingDoc(billingDoc, {
-      companyId,
-      customerId,
-      siteId,
-      billingDateAt,
+  const result = await getFirestore().runTransaction(async (transaction) => {
+    const billingDoc = new Billing();
+    const docExists = await billingDoc.fetch({
+      docId,
+      prefix,
+      transaction,
     });
-    billingDoc.operationResults = [doc];
-    await billingDoc.create({ docId, prefix });
 
-    logger.info("Created new Billing", {
-      billingDocId: docId,
-      billingDate,
-      itemsCount: 1,
-    });
-  } else {
-    // データ不整合対応：既に同一の OperationResult が存在する場合はこれを置換
+    if (!docExists) {
+      await initBillingDoc(billingDoc, {
+        companyId,
+        customerId,
+        siteId,
+        billingDateAt,
+        transaction,
+      });
+      billingDoc.operationResults = [doc];
+      await billingDoc.create({ docId, prefix, transaction });
+      return { created: true, itemsCount: 1 };
+    }
+
+    // 既存BillingのcustomerIdは変更せず、同じ実績だけを置換する。
     billingDoc.operationResults = billingDoc.operationResults.filter(
       (result) => result.docId !== doc.docId,
     );
     billingDoc.operationResults.push(doc);
-    await billingDoc.update({ prefix });
+    await billingDoc.update({ prefix, transaction });
+    return {
+      created: false,
+      itemsCount: billingDoc.operationResults.length,
+    };
+  });
 
+  if (result.created) {
+    logger.info("Created new Billing", {
+      billingDocId: docId,
+      billingDate,
+      itemsCount: result.itemsCount,
+    });
+  } else {
     logger.info("Added OperationResult to existing Billing", {
       billingDocId: docId,
       billingDate,
-      itemsCount: billingDoc.operationResults.length,
+      itemsCount: result.itemsCount,
     });
   }
 }

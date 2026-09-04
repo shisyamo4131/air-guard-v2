@@ -82,6 +82,7 @@ async function readDedicatedFunctionsHost() {
 
 let testEnvironment;
 let rebuildApis;
+let billingServerWriters;
 const HISTORY_COMPANY_ID = "uwb07-history-reader-company";
 const requireFromFunctions = createRequire(
   new URL("../../functions/package.json", import.meta.url),
@@ -98,6 +99,16 @@ async function loadRebuildApis() {
     rebuildApis = await import("../../functions/apis/index.js");
   }
   return rebuildApis;
+}
+
+async function loadBillingServerWriters() {
+  await loadRebuildApis();
+  if (!billingServerWriters) {
+    billingServerWriters = await import(
+      "../../functions/modules/billings/index.js"
+    );
+  }
+  return billingServerWriters;
 }
 
 function callableRequest({
@@ -440,6 +451,66 @@ function customerRulesData({ docId, uid, ...overrides }) {
     tokenMap: { 合: true, 合成: true },
     ...overrides,
   };
+}
+
+function cas03ServerBillingOperationResult({ customerId, suffix }) {
+  const dateAt = AdminTimestamp.fromDate(
+    new Date("2026-09-15T00:00:00.000Z"),
+  );
+  const billingDateAt = AdminTimestamp.fromDate(
+    new Date("2026-09-30T00:00:00.000Z"),
+  );
+  return {
+    docId: `cas03-server-${suffix}-operation-result`,
+    uid: "cas03-server-writer",
+    createdAt: dateAt,
+    updatedAt: dateAt,
+    customerId,
+    siteId: `cas03-server-${suffix}-site`,
+    dateAt,
+    date: "2026-09-15",
+    dayType: "WEEKDAY",
+    shiftType: "DAY",
+    startTime: "09:00",
+    endTime: "17:00",
+    isStartNextDay: false,
+    breakMinutes: 60,
+    regulationWorkMinutes: 420,
+    securityType: "TRAFFIC",
+    requiredPersonnel: 1,
+    qualificationRequired: false,
+    workDescription: "CAS03合成稼働",
+    remarks: null,
+    employees: [],
+    outsourcers: [],
+    useAdjusted: false,
+    adjustedQuantityBase: 0,
+    adjustedOvertimeMinutesBase: 0,
+    adjustedQuantityQualified: 0,
+    adjustedOvertimeMinutesQualified: 0,
+    adjustedUnitPriceBase: 0,
+    adjustedOvertimeUnitPriceBase: 0,
+    adjustedUnitPriceQualified: 0,
+    adjustedOvertimeUnitPriceQualified: 0,
+    billingDateAt,
+    billingDate: "2026-09-30",
+    billingCalculationVersion: 2,
+    isLocked: false,
+    agreement: null,
+    articles: [],
+    sales: { original: {}, adjusted: {} },
+    salesAmount: 0,
+    taxRate: 0.1,
+    isBillable: true,
+  };
+}
+
+function cas03ServerBillingDocumentId(operationResult) {
+  return [
+    operationResult.customerId,
+    operationResult.siteId,
+    operationResult.billingDate,
+  ].join("_");
 }
 
 const CUSTOMER_ARCHIVE_FIELDS = [
@@ -3753,6 +3824,282 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     }
   });
 }
+
+test("CAS-03 server Billing reference-first preserves active Customer and rejects archive", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actorUid = "cas03-server-reference-first-admin";
+  const customerId = "cas03-server-reference-first-customer";
+  const operationId = "cas03-server-reference-first-operation";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const operationResult = cas03ServerBillingOperationResult({
+    customerId,
+    suffix: "reference-first",
+  });
+  const billingId = cas03ServerBillingDocumentId(operationResult);
+  const billingReference = { collectionName: "Billings", docId: billingId };
+
+  try {
+    await seedCustomerRulesDocument({ companyId, docId: customerId });
+    await addOperationResultToBilling({ companyId, doc: operationResult });
+
+    await assertCallableError(
+      archiveCustomer.run(
+        actorCallableRequest({
+          actor,
+          data: {
+            customerId,
+            operationId,
+            reason: "CAS-03 server Billing reference-first",
+          },
+        }),
+      ),
+      "failed-precondition",
+    );
+
+    const state = await readCustomerArchiveState(companyId, customerId);
+    const billing = await readCas03Document(
+      companyId,
+      billingReference.collectionName,
+      billingReference.docId,
+    );
+    assert.ok(state.active);
+    assert.equal(state.archive, null);
+    assert.equal(billing?.customerId, customerId);
+    assert.equal(
+      billing?.operationResults?.some(
+        ({ docId }) => docId === operationResult.docId,
+      ),
+      true,
+    );
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+      references: [billingReference],
+    });
+  }
+});
+
+test("CAS-03 server Billing archive-first rejects later new Billing", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actorUid = "cas03-server-archive-first-admin";
+  const customerId = "cas03-server-archive-first-customer";
+  const operationId = "cas03-server-archive-first-operation";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const operationResult = cas03ServerBillingOperationResult({
+    customerId,
+    suffix: "archive-first",
+  });
+  const billingId = cas03ServerBillingDocumentId(operationResult);
+  const billingReference = { collectionName: "Billings", docId: billingId };
+
+  try {
+    await seedCustomerRulesDocument({ companyId, docId: customerId });
+    assert.deepEqual(
+      await archiveCustomer.run(
+        actorCallableRequest({
+          actor,
+          data: {
+            customerId,
+            operationId,
+            reason: "CAS-03 server Billing archive-first",
+          },
+        }),
+      ),
+      { success: true, archived: true },
+    );
+
+    await assert.rejects(
+      () => addOperationResultToBilling({ companyId, doc: operationResult }),
+      (error) => error?.message === `Customer not found: ${customerId}`,
+    );
+
+    const state = await readCustomerArchiveState(companyId, customerId);
+    assert.equal(state.active, null);
+    assert.ok(state.archive);
+    assert.equal(
+      await readCas03Document(companyId, "Billings", billingId),
+      null,
+    );
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+      references: [billingReference],
+    });
+  }
+});
+
+test("CAS-03 server Billing move archive-first preserves source and rejects absent destination", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const {
+    addOperationResultToBilling,
+    syncOperationResultToBilling,
+  } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actorUid = "cas03-server-move-archive-first-admin";
+  const sourceCustomerId = "cas03-server-move-source-customer";
+  const targetCustomerId = "cas03-server-move-target-customer";
+  const operationId = "cas03-server-move-archive-first-operation";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const before = cas03ServerBillingOperationResult({
+    customerId: sourceCustomerId,
+    suffix: "move-archive-first",
+  });
+  const after = { ...before, customerId: targetCustomerId };
+  const sourceBillingId = cas03ServerBillingDocumentId(before);
+  const destinationBillingId = cas03ServerBillingDocumentId(after);
+  const references = [
+    { collectionName: "Billings", docId: sourceBillingId },
+    { collectionName: "Billings", docId: destinationBillingId },
+  ];
+
+  try {
+    await seedCustomerRulesDocument({
+      companyId,
+      docId: sourceCustomerId,
+    });
+    await seedCustomerRulesDocument({
+      companyId,
+      docId: targetCustomerId,
+    });
+    await addOperationResultToBilling({ companyId, doc: before });
+    assert.deepEqual(
+      await archiveCustomer.run(
+        actorCallableRequest({
+          actor,
+          data: {
+            customerId: targetCustomerId,
+            operationId,
+            reason: "CAS-03 server Billing move archive-first",
+          },
+        }),
+      ),
+      { success: true, archived: true },
+    );
+
+    await assert.rejects(
+      () =>
+        syncOperationResultToBilling({
+          companyId,
+          before,
+          after,
+        }),
+      (error) => error?.message === `Customer not found: ${targetCustomerId}`,
+    );
+
+    const targetState = await readCustomerArchiveState(
+      companyId,
+      targetCustomerId,
+    );
+    const sourceBilling = await readCas03Document(
+      companyId,
+      "Billings",
+      sourceBillingId,
+    );
+    const destinationBilling = await readCas03Document(
+      companyId,
+      "Billings",
+      destinationBillingId,
+    );
+    assert.equal(targetState.active, null);
+    assert.ok(targetState.archive);
+    assert.equal(sourceBilling?.customerId, sourceCustomerId);
+    assert.equal(
+      sourceBilling?.operationResults?.some(
+        ({ docId }) => docId === before.docId,
+      ),
+      true,
+    );
+    assert.equal(destinationBilling, null);
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [sourceCustomerId, targetCustomerId],
+      references,
+    });
+  }
+});
+
+test("CAS-03 concurrent server Billing create and archive keep the reference barrier invariant", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actorUid = "cas03-server-concurrent-admin";
+  const customerId = "cas03-server-concurrent-customer";
+  const operationId = "cas03-server-concurrent-operation";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const operationResult = cas03ServerBillingOperationResult({
+    customerId,
+    suffix: "concurrent",
+  });
+  const billingId = cas03ServerBillingDocumentId(operationResult);
+  const billingReference = { collectionName: "Billings", docId: billingId };
+
+  try {
+    await seedCustomerRulesDocument({ companyId, docId: customerId });
+    const [billingResult, archiveResult] = await Promise.allSettled([
+      addOperationResultToBilling({ companyId, doc: operationResult }),
+      archiveCustomer.run(
+        actorCallableRequest({
+          actor,
+          data: {
+            customerId,
+            operationId,
+            reason: "CAS-03 server Billing bounded concurrency",
+          },
+        }),
+      ),
+    ]);
+    const results = splitSettled([billingResult, archiveResult]);
+    assert.equal(results.fulfilled.length, 1);
+    assert.equal(results.rejected.length, 1);
+
+    const state = await readCustomerArchiveState(companyId, customerId);
+    const billing = await readCas03Document(companyId, "Billings", billingId);
+    const activeWithBilling = Boolean(state.active)
+      && state.archive === null
+      && billing?.customerId === customerId
+      && billing.operationResults?.some(
+        ({ docId }) => docId === operationResult.docId,
+      );
+    const archiveWithoutBilling = state.active === null
+      && Boolean(state.archive)
+      && billing === null;
+    assert.equal(activeWithBilling || archiveWithoutBilling, true);
+    assert.equal(activeWithBilling && archiveWithoutBilling, false);
+    if (activeWithBilling) {
+      assert.equal(billingResult.status, "fulfilled");
+      assert.equal(archiveResult.status, "rejected");
+      assert.equal(archiveResult.reason?.code, "failed-precondition");
+      assert.equal(
+        archiveResult.reason?.message,
+        "参照されている取引先はアーカイブできません。",
+      );
+    } else {
+      assert.equal(archiveResult.status, "fulfilled");
+      assert.deepEqual(archiveResult.value, {
+        success: true,
+        archived: true,
+      });
+      assert.equal(billingResult.status, "rejected");
+      assert.equal(
+        billingResult.reason?.message,
+        `Customer not found: ${customerId}`,
+      );
+    }
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+      references: [billingReference],
+    });
+  }
+});
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
   test(`Firestore Rules enforce tenant read/write access for ${collectionName}`, async () => {

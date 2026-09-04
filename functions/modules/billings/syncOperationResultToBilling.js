@@ -1,6 +1,10 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
-import { getBillingKey, initBillingDoc } from "./utils.js";
+import {
+  assertPathSafeIdentifier,
+  getBillingKey,
+  initBillingDoc,
+} from "./utils.js";
 import { Billing } from "@shisyamo4131/air-guard-v2-schemas";
 import { addOperationResultToBilling } from "./addOperationResultToBilling.js";
 import { removeOperationResultFromBilling } from "./removeOperationResultFromBilling.js";
@@ -16,8 +20,9 @@ import { removeOperationResultFromBilling } from "./removeOperationResultFromBil
  *                 billingDate の変更がない場合は同一の Billing ドキュメント内での更新となるため、トランザクションは使用せずに OperationResult を更新します。
  *                 [異なる場合]
  *                 billingDate の変更により docId が変わる場合は、トランザクションを使用して以下の処理を行います。
- *                 1. 変更前の Billing ドキュメントから該当の OperationResult を削除します。（`removeOperationResultFromBilling` を使用）
- *                 2. 変更後の Billing ドキュメントに該当の OperationResult を追加します。（`addOperationResultToBilling` を使用）
+ *                 1. 移動元・移動先Billingと、移動先新規作成時のCustomerを全て読み取ります。
+ *                 2. 変更前の Billing ドキュメントから該当の OperationResult を削除します。
+ *                 3. 変更後の Billing ドキュメントに該当の OperationResult を追加します。
  * [データ不整合対応]
  * - 有効 → 有効 のケースで、既存の Billing ドキュメントが存在しなかった場合は `addOperationResultToBilling` を呼び出して新規作成します。
  *
@@ -47,8 +52,7 @@ export async function syncOperationResultToBilling({
     },
   });
 
-  // prefix を生成（companyId がない場合はエラー）
-  if (!companyId) throw new Error("companyId is required");
+  assertPathSafeIdentifier(companyId, "companyId");
   const prefix = `Companies/${companyId}/`;
 
   // 2026-06-19 コメントアウト
@@ -155,74 +159,111 @@ export async function syncOperationResultToBilling({
   // 異なる Billing への移動（トランザクション使用）
   const firestore = getFirestore();
 
-  await firestore.runTransaction(async (transaction) => {
-    const beforeBillingDoc = new Billing();
-    const beforeDocExists = await beforeBillingDoc.fetch({
-      docId: beforeDocId,
-      prefix,
-      transaction,
-    });
+  const committedActions = await firestore.runTransaction(
+    async (transaction) => {
+      const beforeBillingDoc = new Billing();
+      const beforeDocExists = await beforeBillingDoc.fetch({
+        docId: beforeDocId,
+        prefix,
+        transaction,
+      });
 
-    const afterBillingDoc = new Billing();
-    const afterDocExists = await afterBillingDoc.fetch({
-      docId: afterDocId,
-      prefix,
-      transaction,
-    });
+      const afterBillingDoc = new Billing();
+      const afterDocExists = await afterBillingDoc.fetch({
+        docId: afterDocId,
+        prefix,
+        transaction,
+      });
 
-    // 移動元の Billing から削除
-    if (beforeDocExists) {
-      beforeBillingDoc.operationResults =
-        beforeBillingDoc.operationResults.filter(
-          (result) => result.docId !== before.docId,
-        );
-
-      if (beforeBillingDoc.operationResults.length === 0) {
-        await beforeBillingDoc.delete({ prefix, transaction });
-        logger.info("Deleted empty Billing", {
-          docId: beforeDocId,
-          billingDate: before.billingDate,
+      // destination作成に必要なCustomer readも、全writeより前に完了させる。
+      if (!afterDocExists) {
+        await initBillingDoc(afterBillingDoc, {
+          companyId,
+          customerId: after.customerId,
+          siteId: after.siteId,
+          billingDateAt: after.billingDateAt,
+          transaction,
         });
-      } else {
-        await beforeBillingDoc.update({ prefix, transaction });
-        logger.info("Removed OperationResult from Billing", {
-          docId: beforeDocId,
-          billingDate: before.billingDate,
-          remainingItems: beforeBillingDoc.operationResults.length,
-        });
+        afterBillingDoc.operationResults = [after];
       }
-    }
 
-    // 移動先の Billing に追加
-    // `addOperationResultToBilling` と同様の処理だが、トランザクション内なので別途記述。
-    // 将来的に `addOperationResultToBilling` にトランザクション対応させるのもあり。
-    if (!afterDocExists) {
-      await initBillingDoc(afterBillingDoc, {
-        companyId,
-        customerId: after.customerId,
-        siteId: after.siteId,
-        billingDateAt: after.billingDateAt,
-      });
-      afterBillingDoc.operationResults = [after];
-      await afterBillingDoc.create({ docId: afterDocId, prefix, transaction });
+      let sourceAction = null;
 
-      logger.info("Created new Billing for moved OperationResult", {
-        docId: afterDocId,
-        billingDate: after.billingDate,
-      });
-    } else {
-      afterBillingDoc.operationResults =
-        afterBillingDoc.operationResults.filter(
-          (result) => result.docId !== after.docId,
-        );
-      afterBillingDoc.operationResults.push(after);
-      await afterBillingDoc.update({ prefix, transaction });
+      // 移動元の Billing から削除
+      if (beforeDocExists) {
+        beforeBillingDoc.operationResults =
+          beforeBillingDoc.operationResults.filter(
+            (result) => result.docId !== before.docId,
+          );
 
-      logger.info("Added OperationResult to existing Billing", {
-        docId: afterDocId,
-        billingDate: after.billingDate,
-        itemsCount: afterBillingDoc.operationResults.length,
-      });
-    }
-  });
+        if (beforeBillingDoc.operationResults.length === 0) {
+          await beforeBillingDoc.delete({ prefix, transaction });
+          sourceAction = {
+            message: "Deleted empty Billing",
+            metadata: {
+              docId: beforeDocId,
+              billingDate: before.billingDate,
+            },
+          };
+        } else {
+          await beforeBillingDoc.update({ prefix, transaction });
+          sourceAction = {
+            message: "Removed OperationResult from Billing",
+            metadata: {
+              docId: beforeDocId,
+              billingDate: before.billingDate,
+              remainingItems: beforeBillingDoc.operationResults.length,
+            },
+          };
+        }
+      }
+
+      let destinationAction;
+
+      // 移動先の Billing に追加
+      if (!afterDocExists) {
+        await afterBillingDoc.create({
+          docId: afterDocId,
+          prefix,
+          transaction,
+        });
+        destinationAction = {
+          message: "Created new Billing for moved OperationResult",
+          metadata: {
+            docId: afterDocId,
+            billingDate: after.billingDate,
+          },
+        };
+      } else {
+        afterBillingDoc.operationResults =
+          afterBillingDoc.operationResults.filter(
+            (result) => result.docId !== after.docId,
+          );
+        afterBillingDoc.operationResults.push(after);
+        await afterBillingDoc.update({ prefix, transaction });
+
+        destinationAction = {
+          message: "Added OperationResult to existing Billing",
+          metadata: {
+            docId: afterDocId,
+            billingDate: after.billingDate,
+            itemsCount: afterBillingDoc.operationResults.length,
+          },
+        };
+      }
+
+      return { sourceAction, destinationAction };
+    },
+  );
+
+  if (committedActions.sourceAction) {
+    logger.info(
+      committedActions.sourceAction.message,
+      committedActions.sourceAction.metadata,
+    );
+  }
+  logger.info(
+    committedActions.destinationAction.message,
+    committedActions.destinationAction.metadata,
+  );
 }
