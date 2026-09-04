@@ -431,6 +431,7 @@ function outsourcerRulesData({ docId, uid = "server-writer", ...overrides }) {
     displayName: "合成外注",
     contractStatus: "ACTIVE",
     remarks: null,
+    tokenMap: { "合": true, "合成": true, "成": true },
     ...overrides,
   };
 }
@@ -2228,11 +2229,78 @@ test("Outsourcer Rules allow create and update for company admins and an exact m
       updateDoc(reference, {
         contractStatus: "TERMINATED",
         remarks: `updated-${actor.label}`,
+        uid,
+        updatedAt: serverTimestamp(),
       }),
     );
     const snapshot = await assertSucceeds(getDoc(reference));
     assert.equal(snapshot.data().contractStatus, "TERMINATED");
   }
+});
+
+test("Outsourcer Rules enforce the exact document and partial-update contract", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "outsourcer-rules-document-contract";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: true,
+    roles: [],
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+
+  const invalidCreates = [
+    { label: "missing-name", change: { name: undefined } },
+    { label: "extra-field", change: { extraData: "not-allowed" } },
+    { label: "oversized-code", change: { code: "O".repeat(11) } },
+    { label: "oversized-name", change: { name: "外".repeat(21) } },
+    { label: "oversized-name-kana", change: { nameKana: "ア".repeat(41) } },
+    { label: "oversized-display", change: { displayName: "外".repeat(7) } },
+    { label: "oversized-remarks", change: { remarks: "外".repeat(201) } },
+    { label: "invalid-status", change: { contractStatus: "UNKNOWN" } },
+    { label: "terminated-create", change: { contractStatus: "TERMINATED" } },
+    { label: "spoofed-uid", change: { uid: "another-user" } },
+    { label: "invalid-token-map", change: { tokenMap: { invalid: false } } },
+  ];
+  for (const { label, change } of invalidCreates) {
+    const docId = `outsourcer-invalid-create-${label}`;
+    const data = outsourcerRulesData({ docId, uid, ...change });
+    if (change.name === undefined) delete data.name;
+    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Outsourcers", docId), data));
+  }
+
+  const docId = "outsourcer-rules-valid-update-target";
+  const reference = doc(firestore, "Companies", companyId, "Outsourcers", docId);
+  await assertSucceeds(setDoc(reference, outsourcerRulesData({ docId, uid })));
+  await assertSucceeds(updateDoc(reference, {
+    remarks: "valid partial update",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+
+  const invalidUpdates = [
+    { extraData: "not-allowed", uid, updatedAt: serverTimestamp() },
+    { name: "外".repeat(21), uid, updatedAt: serverTimestamp() },
+    { name: 123, uid, updatedAt: serverTimestamp() },
+    { contractStatus: "UNKNOWN", uid, updatedAt: serverTimestamp() },
+    { name: deleteField(), uid, updatedAt: serverTimestamp() },
+    { createdAt: serverTimestamp(), remarks: "metadata attack", uid, updatedAt: serverTimestamp() },
+    { docId: "different", remarks: "id attack", uid, updatedAt: serverTimestamp() },
+    { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
+    { tokenMap: { forged: true }, uid, updatedAt: serverTimestamp() },
+    { uid, updatedAt: serverTimestamp() },
+  ];
+  for (const update of invalidUpdates) {
+    await assertFails(updateDoc(reference, update));
+  }
+
+  await assertSucceeds(updateDoc(reference, {
+    name: "合成協力会社二",
+    tokenMap: { "合": true, "会社": true },
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
 });
 
 test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant writes", async () => {

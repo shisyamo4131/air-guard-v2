@@ -2,41 +2,29 @@
 /*****************************************************************************
  * @file ./components/Outsourcers/Manager/index.vue
  * @description 外注先情報管理コンポーネント
- * @author shisyamo4131
  *****************************************************************************/
 import { useDefaults } from "vuetify";
-import { Outsourcer } from "@/schemas";
-import { useBaseManager } from "@/composables/useBaseManager";
 import {
   OUTSOURCER_MUTATIONS,
   evaluateOutsourcerMutation,
 } from "@/utils/auth/policies/outsourcerMutationPolicy";
 
-/*****************************************************************************
- * DEFINE PROPS & EMITS
- *****************************************************************************/
+defineOptions({ inheritAttrs: false });
+
 const _props = defineProps({
   docs: { type: Array, default: () => [] },
-  handleCreate: { type: Function, default: (item) => item.create(item) },
-  handleUpdate: { type: Function, default: (item) => item.update(item) },
-  handleDelete: { type: Function, default: (item) => item.delete(item) },
   hideDefaultFooter: { type: Boolean, default: false },
   itemsPerPage: { type: Number, default: 5 },
   search: { type: String, default: null },
   showCreate: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "OutsourcersManager");
-const emit = defineEmits(["update:search"]);
-
-/*****************************************************************************
- * SETUP COMPOSABLES
- *****************************************************************************/
+const emit = defineEmits(["create", "update", "update:search"]);
 const auth = useAuthStore();
-const { attrs } = useBaseManager("OutsourcersManager");
+const createDialog = ref(null);
+const editorDialog = ref(null);
+const selectedOutsourcer = ref(null);
 
-/*****************************************************************************
- * AUTHORIZATION
- *****************************************************************************/
 function mutationDecision(operation) {
   return evaluateOutsourcerMutation({
     operation,
@@ -55,60 +43,32 @@ const canUpdate = computed(
   () => mutationDecision(OUTSOURCER_MUTATIONS.UPDATE).allowed,
 );
 
-function assertMutationAllowed(operation) {
-  const decision = mutationDecision(operation);
-  if (!decision.allowed) throw new Error(decision.message);
-}
-
-async function handleCreate(item) {
-  assertMutationAllowed(OUTSOURCER_MUTATIONS.CREATE);
-  return await props.handleCreate(item);
-}
-
-async function handleUpdate(item) {
-  assertMutationAllowed(OUTSOURCER_MUTATIONS.UPDATE);
-  return await props.handleUpdate(item);
-}
-
-async function handleDelete() {
-  throw new Error("外注先の削除は現在利用できません。");
-}
-
-function toCreateIfAllowed(toCreate) {
+function toCreateIfAllowed() {
   if (!mutationDecision(OUTSOURCER_MUTATIONS.CREATE).allowed) return;
-  toCreate();
+  createDialog.value?.open();
 }
 
-function toUpdateIfAllowed(toUpdate, item) {
+async function toUpdateIfAllowed(item) {
   if (!mutationDecision(OUTSOURCER_MUTATIONS.UPDATE).allowed) return;
-  toUpdate(item);
+  selectedOutsourcer.value = item;
+  await nextTick();
+  editorDialog.value?.open();
 }
 </script>
 
 <template>
-  <air-array-manager
-    v-bind="attrs"
-    :model-value="docs"
-    :schema="Outsourcer"
-    :handle-create="handleCreate"
-    :handle-update="handleUpdate"
-    :handle-delete="handleDelete"
-    :disable-delete="true"
-    :disable-update="!canUpdate"
-    :hide-create-btn="!canCreate"
-    hide-delete-btn
-  >
-    <template #table="slotProps">
-      <slot
-        name="table"
-        v-bind="{
-          ...slotProps,
-          canCreate,
-          canUpdate,
-          toCreate: () => toCreateIfAllowed(slotProps.toCreate),
-          toUpdate: (item) => toUpdateIfAllowed(slotProps.toUpdate, item),
-        }"
-      >
+  <div v-bind="$attrs" class="d-flex flex-column flex-grow-1 overflow-hidden">
+    <slot
+      name="table"
+      v-bind="{
+        items: props.docs,
+        canCreate,
+        canUpdate,
+        toCreate: toCreateIfAllowed,
+        toUpdate: toUpdateIfAllowed,
+      }"
+    >
+      <slot name="toolbar" v-bind="{ canCreate, toCreate: toCreateIfAllowed }">
         <v-toolbar class="ps-3 mb-4">
           <AtomsSearchTextField
             :model-value="props.search"
@@ -118,21 +78,29 @@ function toUpdateIfAllowed(toUpdate, item) {
           <v-btn
             v-if="canCreate"
             icon="mdi-plus"
-            @click="() => toCreateIfAllowed(slotProps.toCreate)"
+            @click="toCreateIfAllowed"
           />
         </v-toolbar>
-        <OutsourcersIterator
-          class="flex-grow-1"
-          grid
-          :outsourcers="slotProps.items"
-          :hide-default-footer="props.hideDefaultFooter"
-          :items-per-page="props.itemsPerPage"
-          :show-create="props.showCreate && canCreate"
-          :show-edit="canUpdate"
-          @click:create="() => toCreateIfAllowed(slotProps.toCreate)"
-          @click:edit="(item) => toUpdateIfAllowed(slotProps.toUpdate, item)"
-        />
       </slot>
-    </template>
-  </air-array-manager>
+      <OutsourcersIterator
+        class="flex-grow-1"
+        grid
+        :outsourcers="props.docs"
+        :hide-default-footer="props.hideDefaultFooter"
+        :items-per-page="props.itemsPerPage"
+        :show-create="props.showCreate && canCreate"
+        :show-edit="canUpdate"
+        @click:create="toCreateIfAllowed"
+        @click:edit="toUpdateIfAllowed"
+      />
+    </slot>
+
+    <OutsourcerCreateDialog ref="createDialog" @created="emit('create', $event)" />
+    <OutsourcerEditor
+      v-if="selectedOutsourcer"
+      ref="editorDialog"
+      :outsourcer="selectedOutsourcer"
+      @updated="emit('update', $event)"
+    />
+  </div>
 </template>

@@ -7,6 +7,8 @@ const OUTSOURCER_SFCS = Object.freeze([
   "pages/outsourcers/index.vue",
   "components/Outsourcers/Manager/index.vue",
   "components/Outsourcer/Autocomplete.vue",
+  "components/Outsourcer/CreateDialog.vue",
+  "components/Outsourcer/Editor.vue",
 ]);
 
 async function source(path) {
@@ -37,7 +39,7 @@ test("Outsourcer list preserves the existing read query and routes mutations thr
   assert.match(page, /<OutsourcersManager/u);
 });
 
-test("OutsourcersManager hides unauthorized controls and blocks destructive delete", async () => {
+test("OutsourcersManager exposes only dedicated authorized create and update dialogs", async () => {
   const manager = await source("components/Outsourcers/Manager/index.vue");
   assert.match(manager, /evaluateOutsourcerMutation/u);
   assert.match(manager, /const canCreate = computed/u);
@@ -45,24 +47,38 @@ test("OutsourcersManager hides unauthorized controls and blocks destructive dele
   assert.match(manager, /v-if="canCreate"/u);
   assert.match(manager, /:show-create="props\.showCreate && canCreate"/u);
   assert.match(manager, /:show-edit="canUpdate"/u);
-  assert.match(manager, /:disable-delete="true"/u);
-  assert.match(manager, /hide-delete-btn/u);
-  assert.match(manager, /:disable-update="!canUpdate"/u);
-  assert.match(manager, /async function handleDelete\(\)[\s\S]*?throw new Error/u);
-  assert.doesNotMatch(manager, /return await props\.handleDelete/u);
+  assert.match(manager, /<OutsourcerCreateDialog/u);
+  assert.match(manager, /<OutsourcerEditor/u);
+  assert.doesNotMatch(manager, /AirArrayManager|air-array-manager|handleDelete|\.delete\(/u);
 });
 
-test("Outsourcer create and update re-evaluate policy immediately before transport", async () => {
+test("Outsourcer create and update fail closed when policy changes before opening", async () => {
   const manager = await source("components/Outsourcers/Manager/index.vue");
   assert.match(
     manager,
-    /async function handleCreate\(item\)\s*\{\s*assertMutationAllowed\(OUTSOURCER_MUTATIONS\.CREATE\);\s*return await props\.handleCreate\(item\);/u,
+    /function toCreateIfAllowed\(\)\s*\{\s*if \(!mutationDecision\(OUTSOURCER_MUTATIONS\.CREATE\)\.allowed\) return;/u,
   );
   assert.match(
     manager,
-    /async function handleUpdate\(item\)\s*\{\s*assertMutationAllowed\(OUTSOURCER_MUTATIONS\.UPDATE\);\s*return await props\.handleUpdate\(item\);/u,
+    /async function toUpdateIfAllowed\(item\)\s*\{\s*if \(!mutationDecision\(OUTSOURCER_MUTATIONS\.UPDATE\)\.allowed\) return;/u,
   );
   assert.doesNotMatch(manager, /auth\.hasPermission|auth\.hasPresetPermission/u);
+});
+
+test("Outsourcer dialogs use operation-specific actions, independent drafts, and conflict handling", async () => {
+  const create = await source("components/Outsourcer/CreateDialog.vue");
+  const editor = await source("components/Outsourcer/Editor.vue");
+  assert.match(create, /OUTSOURCER_OPERATION\.CREATE/u);
+  assert.match(create, /createOutsourcer\(draft\.value\)/u);
+  assert.match(editor, /props\.outsourcer\.clone\(\)/u);
+  assert.match(editor, /hasOutsourcerOperationConflict/u);
+  assert.match(editor, /updateOutsourcer/u);
+  assert.match(editor, /最新値を読み直す/u);
+  const actions = await source("composables/application/outsourcer/useOutsourcerActions.js");
+  const writer = await source("utils/outsourcer/outsourcerWriter.js");
+  assert.match(actions, /assertCanWrite:\s*\(\)\s*=>/u);
+  assert.match(writer, /assertCanWrite\?\.\(\);\s*transaction\.update/u);
+  assert.doesNotMatch(writer, /\.set\(reference|setDoc\(reference/u);
 });
 
 test("creatable Outsourcer autocomplete exposes its create trigger only when the guarded manager allows it", async () => {

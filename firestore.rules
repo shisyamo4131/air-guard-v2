@@ -3,6 +3,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // ===============================================================
+    // Assumed Data Model (OUT-02 scoped addition)
+    // ===============================================================
+    // Companies/{companyId}/Outsourcers/{docId}
+    // - immutable identity: docId (string, path match), createdAt (timestamp)
+    // - write metadata: uid (current actor), updatedAt (request time)
+    // - nullable strings: code (10), remarks (200)
+    // - required strings: name (20), nameKana (40), displayName (6)
+    // - contractStatus: ACTIVE or TERMINATED; create is ACTIVE
+    // - tokenMap: nullable map, max 512 boolean-true entries
+    // Outsourcers_archive remains client-read-only within the same tenant.
+
     // --- Helper Functions (Optional, but good for clarity) ---
     function isAuthenticated() {
       return request.auth != null;
@@ -251,6 +263,64 @@ service cloud.firestore {
         && isActiveOutsourcerWriter(companyId, get(userPath).data);
     }
 
+    function isValidOutsourcerTokenMap(value) {
+      return value == null
+        || (value is map
+          && value.size() <= 512
+          && value.values().hasOnly([true]));
+    }
+
+    function isValidOutsourcer(data, docId) {
+      return data.keys().hasAll([
+          'docId', 'uid', 'createdAt', 'updatedAt', 'code', 'name',
+          'nameKana', 'displayName', 'contractStatus', 'remarks', 'tokenMap'
+        ])
+        && data.keys().hasOnly([
+          'docId', 'uid', 'createdAt', 'updatedAt', 'code', 'name',
+          'nameKana', 'displayName', 'contractStatus', 'remarks', 'tokenMap'
+        ])
+        && isRequiredString(data.docId, 128)
+        && data.docId == docId
+        && isRequiredString(data.uid, 128)
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp
+        && isNullableString(data.code, 10)
+        && isRequiredString(data.name, 20)
+        && isRequiredString(data.nameKana, 40)
+        && isRequiredString(data.displayName, 6)
+        && data.contractStatus in ['ACTIVE', 'TERMINATED']
+        && isNullableString(data.remarks, 200)
+        && isValidOutsourcerTokenMap(data.tokenMap);
+    }
+
+    function isValidOutsourcerCreate(docId) {
+      return isValidOutsourcer(request.resource.data, docId)
+        && request.resource.data.contractStatus == 'ACTIVE'
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isValidOutsourcerUpdate(docId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let businessFields = [
+        'code', 'name', 'nameKana', 'displayName', 'contractStatus', 'remarks'
+      ];
+      let allowedFields = [
+        'code', 'name', 'nameKana', 'displayName', 'contractStatus', 'remarks',
+        'tokenMap', 'uid', 'updatedAt'
+      ];
+      return isValidOutsourcer(request.resource.data, docId)
+        && request.resource.data.docId == resource.data.docId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time
+        && changed.hasAny(businessFields)
+        && changed.hasOnly(allowedFields)
+        && (!changed.hasAny(['tokenMap'])
+          || changed.hasAny(['name', 'nameKana', 'displayName']));
+    }
+
     function isValidCustomerCreate(docId) {
       return isValidCustomer(request.resource.data, docId)
         && request.resource.data.contractStatus == 'ACTIVE'
@@ -467,7 +537,10 @@ service cloud.firestore {
     // non-super-userのexact manager presetだけに許可する。削除は拒否する。
     match /Companies/{companyId}/Outsourcers/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create, update: if canWriteOutsourcer(companyId);
+      allow create: if canWriteOutsourcer(companyId)
+                    && isValidOutsourcerCreate(docId);
+      allow update: if canWriteOutsourcer(companyId)
+                    && isValidOutsourcerUpdate(docId);
       allow delete: if false;
     }
 
