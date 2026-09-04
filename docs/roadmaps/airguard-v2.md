@@ -40,7 +40,7 @@
 ## 次の作業
 
 1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
-2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了した。取引状態の表示・編集は[Customer状態ロードマップ](customer-status.md)のCS-03まで完了し、Dev反映・受入れはマスタデータ管理の一連の改修後へ延期した。次はCustomerのarchive・restore、code一意性・検索拡張等の残工程を整理し、範囲合意後に進める。Siteへの移行はその後に合意する。個別改修の未実施Dev受入れを成功扱いせず、下記方針に従ってまとめて確認する。
+2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了した。取引状態の表示・編集は[Customer状態ロードマップ](customer-status.md)のCS-03まで完了し、Dev反映・受入れはマスタデータ管理の一連の改修後へ延期した。archive safetyは[専用ロードマップ](customer-archive-safety.md)のCAS-01で設計を確定し、専用Callable・3参照barrier・UI・local検証を次の承認単位とする。restore、code一意性・検索拡張、Siteへの移行は別の作業単位として後続合意する。個別改修の未実施Dev受入れを成功扱いせず、下記方針に従ってまとめて確認する。
 3. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
 4. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
 5. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。

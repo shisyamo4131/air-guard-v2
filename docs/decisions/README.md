@@ -50,8 +50,9 @@
 | [0042](0042-risk-based-local-ui-acceptance.md) | generated UIと変更riskに応じたlocal受入れ分担 |
 | [0043](0043-dev-trial-existing-document-handling.md) | Dev試用中の既存documentと条件付き状態確認・移行 |
 | [0044](0044-customer-status-as-descriptive-flag.md) | Customerの取引状態を状況表示フラグとして扱う |
+| [0045](0045-governance-3-normal-startup.md) | Governance 3と通常startupへの移行 |
+| [0046](0046-customer-archive-reference-barrier.md) | Customer archiveの参照barrierと監査境界 |
 
 ## 新しい ADR の形式
 
 連番、短い英語ファイル名、判断を表す日本語タイトルを使用します。日付、状態、関連仕様、背景、決定、理由、代替案、影響、互換性、移行、rollback、検証、再検討条件はADR本文だけに記録します。
-| [0045](0045-governance-3-normal-startup.md) | Governance 3と通常startupへの移行 |

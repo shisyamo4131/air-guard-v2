@@ -4,14 +4,14 @@
 
 ## 現在の作業
 
-- 製品は試験運用中。Customer状態改修のlocal限定再試験・crash後cleanup・High最終reviewを完了し、CS-04のDev反映・受入れをマスタデータ管理改修後まで延期しています。
+- 製品は試験運用中。Customer状態改修のCS-03までを完了し、CS-04のDev反映・受入れをマスタデータ管理改修後まで延期しています。現在はCustomer archive safetyの設計を確定し、local実装checkpointの承認待ちです。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
 ## 未決事項と承認
 
-- 次の製品checkpointは`CUSTOMER-02-STATUS`。[確認済み仕様](../specification.md)、[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)、[工程・進捗](../roadmaps/customer-status.md)、[検証記録](../verification/customer-02-status-local.md)から再開する。状態は現在状況flagで、選択・関連現場/予定を制限せず、日時・原因等は追加しない。
-- local実装・検証・review・文書・local統合は承認範囲内。Dev反映・受入れは延期。archive/restore、code一意性/検索拡張、請求/PDF全体、他マスタ・関連package変更、remote data/migrationは対象外。
+- 次の製品checkpoint候補はCustomer archive safetyのCAS-02〜04 local実装。[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)から再開する。
+- 現在承認済みなのはCAS-01の設計文書とlocal Git統合だけ。Callable・Rules・UI・test・build・Emulatorは次の明示承認待ち。Dev反映・受入れは延期し、restore、retention/purge、code一意性/検索拡張、他マスタ・関連package、remote data/migrationは対象外。
 - [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号通信遮断と限定再試験は承認済み。通常利用・Dev・Schemas・保存形式を変えない。
 - [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 今回に限り、親による専用合成Authの一時設定と通常ログイン入力を承認済み。認証情報をprompt・文書・logでagent間に受け渡さない。snapshotを変更せず、Emulator停止で失効させる。
 - Customerの設計/reviewはHigh、開発/修正はMedium、test/環境準備/cleanupはLow。今回だけ親が合成認証準備と画面テストを担当し、専用build・process管理・backend assertion・cleanupはLow testerを維持する。
@@ -20,13 +20,15 @@
 
 ## 次の作業
 
-1. [製品ロードマップ](../roadmaps/airguard-v2.md#次の作業)に従い、Customerのarchive・restore、code一意性・検索拡張等の残工程を整理し、次のマスタデータ管理改修の範囲を利用者と合意する。残ったローカルerror tabは専用server停止済みで、利用者が手動で閉じられる。
+1. [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)に従い、CAS-02〜04のowned files、UI文言、exact validation、test・local UI範囲を利用者と合意してから実装する。restore、retention/purge、code一意性・検索拡張へscopeを広げない。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、新しい状態filterの利用者判断、Customer状態のDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
 
 - [確認済み仕様](../specification.md)
 - [Customer取引状態roadmap](../roadmaps/customer-status.md)
+- [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)
+- [Customer archive safety実装設計](customer-archive-safety.md)
 - [Customer状態のlocal検証記録](../verification/customer-02-status-local.md)
 - [確認事項台帳](pending-confirmations.md)
 - [local UI手順](../runbooks/local-ui-testing.md)

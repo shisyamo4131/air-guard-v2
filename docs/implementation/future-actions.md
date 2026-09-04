@@ -761,18 +761,18 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 必要なテスト: 同一/空code、同名許可、name/kana/address/phone類似warning、false positive/negative、両statusの選択と履歴表示、cache後status変更、Site createの既存Customer single select/v-model、tenant分離、index/cost。
 - ユーザー判断が必要な事項: warning閾値とaddress検索採否は実現可能性・privacy・cost検証後に決定する。基本方針は2026-08-11に確認済み。
 
-## FUT-0057 Customer archiveと参照整合・復元を設計する
+## FUT-0057 Customer archiveと参照整合・復元を実装する
 
-- 状態: Open
+- 状態: In progress（設計確定・実装未着手）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-020
-- 対象ファイル・シンボル: schemas `Customer.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Customers Rules
+- 対象ファイル・シンボル: 専用`archiveCustomer` Callable/use-case、Customer詳細UI、Customers/Sites/OperationResults/Billings Rules、Billing server writer
 - 確認済み実装事実: 削除guardはSite参照だけをtransaction外queryで確認し、元documentをarchiveへcopyして削除する。関連Siteがあればstatusに関係なく拒否する。restore APIはあるがCustomer UI経路は見つからない。
 - 想定影響と発生条件: child確認後の競合、見えない非ACTIVE Siteによる削除拒否、Site以外の参照残存、archive後のmaster取得失敗が起き得る。
 - 未確認点・仮説: 全参照catalog、法令・契約上の保持期間、運営者inspection/restore API、既存archive dataへのmetadata migrationは未実装・未確認である。
-- 推奨する将来対応: 通常終了はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定しreason/actor/timeを保存する。通常User restoreと物理delete UIを禁止する。運営者は依頼に基づきarchiveを監査付き閲覧でき、restoreは通常UIから隔離した緊急processでreason/audit必須、active同ID存在時は拒否する。保持要件確定まで自動purgeしない。
-- 必要なテスト: terminate/reactivate、参照ありarchive拒否、同時参照作成、reason/actor/time、通常User archive閲覧/restore拒否、運営者inspection、緊急restore、active同ID拒否、物理delete UI不存在、保持/purge未設定。
-- ユーザー判断が必要な事項: 法令・契約に基づく保持期間・purge。archive/restore運用方針は2026-08-11に確認済み。
+- 推奨する将来対応: [ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)どおり、専用Callable、一つのtransaction、Sites/OperationResults/Billings参照確認、全参照writerのactive Customer存在guard、same-ID archive tombstone、versioned audit envelope、archive client非公開を実装する。generic delete/restoreと追加lock collectionは使わない。restore・operator inspection・retention/purgeは別仕様のまま残す。
+- 必要なテスト: actor/tenant/input、3参照ありarchive拒否、3種の同時参照作成、reason/actor/time/idempotency、archive read/CUD拒否、same-ID Customer create拒否、generic delete/restore非到達、物理delete/restore UI不存在。
+- ユーザー判断が必要な事項: local実装checkpointのexact files/UI文言/test範囲と、将来の法令・契約に基づく保持期間・operator inspection/restore。Customer archive設計は2026-09-04に確認済み。
 
 ## FUT-0058 Customer変更時の請求snapshot境界を確定する
 

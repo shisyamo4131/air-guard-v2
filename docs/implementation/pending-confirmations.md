@@ -546,7 +546,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 全参照中禁止、TERMINATEDのみ運用、snapshot後archive可、管理者restore。利便性と監査整合が異なる。
 - Current provisional treatment: archiveは例外的な論理削除先で利用者向けごみ箱ではない。通常終了はTERMINATEDを使い、restoreは通常Userへ提供せず、理由・監査付き運営者緊急processだけに限定する。
 - Related FUT IDs: FUT-0057
-- Answer: 2026-08-11 回答済み。archiveはlogical deletionの保存先でありUser向けrecycle binではない。Userから「削除情報を確認したい」と依頼があれば運営者がarchive情報を調査できる。既存restore機能は緊急時のcontingencyに限定し、通常`customers:write` Userはrestoreできない。通常の契約終了はTERMINATED、archiveは参照確認後の誤登録・重複等の例外に限定する。保持要件が決まるまで自動purgeせず、運営者の閲覧・操作をauditする。例外restoreは通常UIから隔離し、運営者管理・reason/audit必須、active同IDがあればoverwriteせず拒否する。
+- Answer: 2026-08-11 回答済み。archiveはlogical deletionの保存先でありUser向けrecycle binではない。Userから「削除情報を確認したい」と依頼があれば運営者がarchive情報を調査できる。既存restore機能は緊急時のcontingencyに限定し、通常`customers:write` Userはrestoreできない。通常の契約終了はTERMINATED、archiveは参照確認後の誤登録・重複等の例外に限定する。保持要件が決まるまで自動purgeせず、運営者の閲覧・操作をauditする。例外restoreは通常UIから隔離し、運営者管理・reason/audit必須、active同IDがあればoverwriteせず拒否する。2026-09-04にCustomer固有の参照barrier、same-ID tombstone、versioned audit envelope、archive client非公開を[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)で追加確定した。operator inspection/restoreとretention/purgeは引き続き別仕様である。
 
 ## CONF-0044 Customer情報の請求snapshot時点
 

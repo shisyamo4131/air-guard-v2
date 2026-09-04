@@ -103,6 +103,7 @@
 - [Worker / drag components deep review](worker-drag-components-deep-review.md)
 
 - [Customer master](customer-master.md)
+- [Customer archive safety](customer-archive-safety.md)
 - [Site master](site-master.md)
 - [SiteEmployeeHistory UI](site-employee-history-ui.md)
 - [Agreement master](agreement-master.md)

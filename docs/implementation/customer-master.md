@@ -4,7 +4,7 @@
 
 - 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
-- 最終確認日: 2026-09-03
+- 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
 - local受入れ証拠: [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
 - Dev試験・座標比較の修正・cleanup: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)
@@ -30,7 +30,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 任意: `code`、`branchName`、`building`、`tel`、`fax`、`remarks`。`location` はhidden field。
 - token検索対象は `name` と `nameKana`。`code`、略称、支店名、住所、電話番号はtokenFieldsに含まれない。
 - 読み取り専用プロパティは `fullAddress` と `prefecture`。`fullAddress` は都道府県、市区町村、番地の結合で、建物名は含めない。
-- statusは `ACTIVE` と `TERMINATED`。`logicalDelete=true` のため、削除は `Customers_archive/{docId}` へのコピーと元document削除を同一transactionで行う。
+- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。承認済みの専用操作は[Customer archive safety](customer-archive-safety.md)を正とし、まだ未実装である。
 - `getPaymentDueDateAt(baseDate)` は締め基準月へ`paymentMonth`を加え、月末指定または指定日をJST基準で算出する。存在しない指定日は月末へ丸める。
 - 住所変更時はgeocodingを試みる。関数未注入、検索失敗、例外時も保存処理を中止せず`location=null`で継続する。緯度または経度が0の場合はtruthy判定により座標なしとして扱われる。
 
@@ -41,7 +41,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
-- active Customerのclient deleteと`Customers_archive`のclient CUDはRulesで拒否する。archive・restoreの画面入口はなく、参照確認と監査を持つ後続の専用操作へ分離した。
+- active Customerのclient deleteと`Customers_archive`のclient CUDはRulesで拒否する。archive・restoreの画面入口はない。archive client read拒否、参照確認、監査、同ID tombstoneを持つ専用操作は設計確定済みだが、application/Rulesには未実装である。
 - 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
 - editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。基本editorではrollback待ちに真正な外部値が届いたら待ちを解除して再読込できる。applicationは非同期準備後にも権限・identityと観測済み同operation競合を再確認する。送信後の同時更新を原子的に防ぐ仕組みではない。
 
@@ -69,7 +69,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - draft作成時にinitial Customer copy、正式発行時にfull snapshotを固定する。発行済み再printはsnapshotを使い、master変更を反映しない。訂正はreason/history付きnew revisionとし、live Customer参照のPDFはdraftだけに限定する方針である。
 
-- schema上の直接`hasMany`は`Sites.customerId`だけで、削除guardもSiteだけを対象とする。
+- schema上の直接`hasMany`とgeneric削除guardは`Sites.customerId`だけを対象とする。承認済み専用archiveはactual参照catalogとしてSites、OperationResults、Billingsをstatus限定なしで確認し、3 collectionのcustomerId新規設定・変更へactive Customer document存在guardを追加する設計である。
 - Billing作成時は現在のCustomer支払条件から`paymentDueDateAt`を算出してBillingへ保存する。その後のCustomer支払条件変更は既存Billingの期日を自動更新しない。
 - Billingは`customerId`を保持するがCustomer名称・住所のsnapshotは持たない。請求書PDF生成時は現在のCustomer masterを取得するため、名称・住所変更は過去Billingの再生成PDFにも反映され、Customerがarchive済み等で取得不能なら生成失敗になり得る。
 - Customer更新時の既存Functionは、`customerId`が一致するSiteの`customer`を同期する。ACTIVE限定ではない。Site経由の`cutoffDate`は新規Agreementの初期値へ、現在Customerの支払条件は新規Billingの期日へ流れる。Devの合成Siteで名称同期と新規Agreement初期締日を確認した。利用者指示により、請求機能の受入れは稼働実績管理改修後へ移し、今回の完了条件へ含めない。
@@ -78,6 +78,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定し、reason/actor/timeを保存する。通常User向けrestore・物理delete UIは設けない。
 - archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
+- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。設計のみ完了し、Callable・UI・Rules・testは未着手である。
 
 - 取引状態の意味は[現行仕様](../specification.md#取引先現場取極め)を正とする。業務上の無効状態やlogical deleteと同一視しない。
 - 状態変更は基本編集から提供し、archive、restore、物理deleteの経路は提供しない。

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customerの誤登録・重複archiveについて、専用Callable、一transaction内のSites・OperationResults・Billings参照確認、参照writerのactive Customer存在guard、same-ID archive tombstone、versioned audit envelope、client非公開、generic delete/restore非利用を設計として確定した。[判断](docs/decisions/0046-customer-archive-reference-barrier.md)と[roadmap](docs/roadmaps/customer-archive-safety.md)を参照。application、Functions、Rules、test、Dev/remote dataは未変更。
+
 - 共通governanceを3.0.0へ移行し、すべてのtaskを同じrepository読取り順で起動する手順へ統一した。交代専用activation・最初のfile限定commit・governance変更による強制交代を廃止し、製品再開案内、文書route、検証policyとcheckerを整合した。[判断](docs/decisions/0045-governance-3-normal-startup.md)と[移行記録](docs/migrations/2026-09-03-governance-3.0.0.md)を参照。
 
 - 現在地の報告にGitのlocal・remote両方の状態を含め、remote追跡refとlive確認を区別するproject ruleを追加した。未確認時の明示と既存承認境界を維持する。[確認手順](docs/runbooks/project-coordination.md#git現在状態の報告)を参照。

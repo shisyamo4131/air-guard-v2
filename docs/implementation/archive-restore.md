@@ -4,9 +4,9 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-042
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-09-04
 - 根拠ファイル: `air-firebase-v2/index.js`、client adapter `index.js`、server adapter `index.js`、schemas `Article.js`、`Customer.js`、`Site.js`、`Employee.js`、`Outsourcer.js`、`firestore.rules`、admin-sdk `src/constants/collections.js`、代表UIと既存master実装文書
-- 関連調査: `article-master.md`、`customer-master.md`、`site-master.md`、`employee-master.md`、`outsourcer-master.md`、`user-auth-lifecycle.md`
+- 関連調査: `article-master.md`、`customer-master.md`、`customer-archive-safety.md`、`site-master.md`、`employee-master.md`、`outsourcer-master.md`、`user-auth-lifecycle.md`
 
 `LogicalDeleteMixin`という独立class/mixinは確認できない。共通契約は`FireModel.logicalDelete`静的flagとclient/server adapterの`delete`/`restore`で実装される。
 
@@ -35,6 +35,8 @@ clientとserverでcallback引数名が異なり、clientは`callback`、server�
 ## restore flow
 
 Customerについては、archiveを利用者向けrecycle binとせず、通常`customers:write` Userのrestoreを禁止する方針が2026-08-11に確認された。restoreは運営者管理の緊急contingencyとして通常UIから隔離し、reason/auditを必須とし、active同IDが存在すればoverwriteせず拒否する。User依頼による削除情報確認は運営者の監査付きinspectionとして扱う。
+
+2026-09-04にCustomer固有のarchive設計を[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)で確定した。Customerは下記のgeneric delete/restoreを使わず、専用Callable、Sites・OperationResults・Billingsのtransaction内参照確認、参照writerのactive Customer存在guard、same-ID archive tombstone、version付き監査envelopeを使用する。archiveのclient read/CUDも拒否し、運営者inspection/restoreは別の未実装operationとする。他masterの共通archive契約はこのCustomer固有判断で変更しない。
 
 1. restore対象`docId`とprefixからarchive pathを求める。
 2. archive snapshotを読む。
@@ -84,7 +86,7 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 
 ## Rules・security・retention
 
-- Articles/Customers/Sites/Employees/Outsourcersのactiveとarchiveは、同一company claimの認証Userまたはsuper-userへread/writeを包括許可する。
+- Articles/Sites/Employees/Outsourcersのactiveとarchiveは、同一company claimの認証Userまたはsuper-userへread/writeを包括許可する。Customerはactive create/updateを専用actor・fieldへ限定し、active deleteとarchive CUDを拒否済みだが、archive read拒否と専用archive operationは未実装である。
 - operation別role、archive create/update/delete、activeとの同時移動、field immutability、actor/reason、restore/purgeをRulesで分けない。
 - 任意の同社認証Userがarchiveを直接改変・削除し、activeへ別writeで復元相当操作を行える。transactionと参照guardは強制されない。
 - archiveには個人情報・取引・住所等の元document全fieldが残る。retention、匿名化、legal hold、purge、audit/access logは未定義である。
@@ -106,6 +108,7 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 - FUT-0145: restoreのactive conflict、transaction、validation、triggerを安全化する。
 - FUT-0146: archive audit metadata・retention・purge・Rulesを共通設計する。
 - master固有の参照guard・終了/退職・snapshot問題はFUT-0057、0063、0078、0087、0123等を参照し、重複登録しない。
+- Customer固有のFUT-0057は[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[専用roadmap](../roadmaps/customer-archive-safety.md)で設計済み。共通adapter修正、他master、retention/purgeは未解決のまま分離する。
 
 ## 要確認事項
 
