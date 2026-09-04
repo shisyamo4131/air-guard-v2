@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 設計確定・CAS-02 local実装完了・CAS-03/04 local実装承認済み
+- 状態: 設計確定・CAS-02/03 local実装完了・CAS-04 local実装承認済み
 - checkpoint: `CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`
 - 最終確認日: 2026-09-04
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[ADR 0048](../decisions/0048-site-customer-change-and-historical-snapshots.md)、[roadmap](../roadmaps/customer-archive-safety.md)
@@ -11,13 +11,13 @@
 ## 現行事実
 
 - Customerのclient create/updateは専用application処理とRulesでactor・field・schemaを限定する。active deleteと`Customers_archive` client CUDは拒否する。CAS-02の専用`archiveCustomer` Callableはlocal実装・未deployで、archive/restore UIとrestore Callableはない。
-- `Customers_archive`のclient readは同一tenantの有効Userに許可されている。
+- `Customers_archive`のclient read/CUDはCAS-03 Rulesで全client actorへ拒否済み（local未deploy）。
 - installed Customer schemaは`logicalDelete=true`で、直接`hasMany`は`Sites.customerId`だけを列挙する。
 - generic client/server deleteは監査metadataを持たず、既存archiveを`set`で上書きする。clientの参照queryはtransaction外で、serverはschemaの`collectionPath`と異なるpropertyを読む。
 - generic restoreはactive同IDを確認せず全体`set`する。serverはarchive snapshotをtransaction readへ含めない。
-- actual repositoryではSites、OperationResults、BillingsがcustomerIdを保持する。3 collectionのRulesは同一tenantの有効Userへ広いwriteを許し、active Customer存在を確認しない。
+- actual repositoryではSites、OperationResults、BillingsがcustomerIdを保持する。CAS-03 RulesはcustomerIdの新規設定・変更時にactive collection内のCustomer存在を要求するが、3 collectionの同一tenant内permission全体は既存の広い境界を維持する。Billingのserver create/moveも同一transaction内で新規参照先Customerを確認する（local未deploy）。
 - Site schemaは保存前にCustomerをfetchし、OperationResult schemaはSiteからcustomerIdを同期するが、client schema処理は直接Firestore writeを拒否するsecurity boundaryではない。
-- Billingのserver createはCustomerを取得するが、transaction-awareな共通参照barrierではない。Admin SDKはRulesを迂回する。
+- Admin SDKはRulesを迂回するため、Billingのserver create/moveはCAS-03で新規参照先Customerの読取りとBilling更新を同じtransactionへ統合した（local未deploy）。
 
 ## 承認済み契約と実装状態
 
@@ -60,7 +60,7 @@ audit:
 
 `customer`と`audit`を分け、将来restoreで監査fieldをactive Customerへ混入させない。`archivedAt`はserver timestamp、`actorUid`は検証済みactorとし、表示名・email・role・raw claimsを複写しない。archive writeはcreate-onlyで、同IDを上書きしない。
 
-### Firestore Rules（CAS-03未着手）
+### Firestore Rules（CAS-03 local実装完了・未deploy）
 
 - Customer createは通常のexact schema・actor条件に加え、同ID`Customers_archive`が存在しないことを必須にする。
 - `Customers_archive`は同一tenant Userを含む全client actorについてread/create/update/deleteを拒否する。catch-all matchで迂回できない構造を維持する。
@@ -69,7 +69,7 @@ audit:
 - deleteとcustomerId不変updateは、この参照barrierだけを理由に拒否しない。Siteは同じ会社に存在する別Customerへの変更を許可し、一度設定したcustomerIdのunsetは現行schema境界を維持する。各collectionの広いtenant内permission全体は別checkpointで扱う。
 - `Customers` collectionの存在を確認し、`contractStatus`は条件にしない。
 
-### server writer（CAS-03未着手）
+### server writer（CAS-03 local実装完了・未deploy）
 
 Admin SDKでSite/OperationResult/Billingへ新しいcustomerIdを保存するwriterは、transaction-awareな共通assertionで同じCustomer存在条件を検査する。現行のBilling create/move経路を対象にし、OperationResultが先にcommitした場合はarchive側のOperationResult参照確認でも拒否する。将来server writerを追加するときはsource-contract inventoryへ含める。
 
@@ -97,7 +97,7 @@ Firestore database edition・concurrency mode固有のlock挙動には依存せ�
 
 ## 対象・対象外
 
-後続local implementationの対象候補は、client action、Customer詳細の確認UI、Customer/Site/OperationResult/Billingの最小Rules guard、Billing server assertion、CAS-03/04に必要なEmulator/concurrency/source-contract/UI testである。CAS-02のCustomer archive Callable/use-case/export、version 1 envelope、domain test、対象Emulator testはcommit `74d0eb4d`で完了した。後続のexact owned filesは各実装checkpoint開始前に再確認する。
+後続local implementationの対象は、CAS-04のclient action、Customer詳細の確認UI、source-contract/UI testである。CAS-02のCustomer archive Callable/use-case/export、version 1 envelopeはcommit `74d0eb4d`、CAS-03のRules guardはcommit `8e6eb1d5`、Billing server assertionとdomain/Emulator testはcommit `c99b8169`で完了した。後続のexact owned filesは各実装checkpoint開始前に再確認する。
 
 対象外は緊急restore、operator inspection、物理delete/purge/retention、generic adapter/package修正、3参照collectionのactor permission全体、Customer code一意性・検索、Schemas/Admin SDK変更、Stripe・通知、Dev/Prod・remote/data・migrationである。
 
@@ -105,8 +105,8 @@ Firestore database edition・concurrency mode固有のlock挙動には依存せ�
 
 - CAS-02 unit（完了）: exact input、identifier/reason境界、全actor matrix、role失効、Customer/archive状態、3参照、same-op retry、different-op conflict、exact envelope、safe error/log。
 - CAS-02 Emulator（完了）: 新規archive、client spoof拒否、same-operation retry、3参照時write 0、current Auth・actor境界、安全なresponse/log。
-- CAS-03 Emulator（未着手）: archive read/CUD拒否、active delete拒否、same-ID create拒否、Site仮登録、3 collectionのmissing/archived/other-tenant Customer、customerId変更、fallback/nested bypass。
-- CAS-03 concurrency（未着手）: archive対Site/OperationResult/Billing create。許容最終状態を`active + reference`または`archive + referenceなし`に限定する。
+- CAS-03 Emulator（完了）: archive read/CUD拒否、active delete拒否、same-ID create拒否、Site仮登録、3 collectionのmissing/archived/other-tenant Customer、customerId変更、fallback/nested bypassを確認した。
+- CAS-03 concurrency（完了）: archive対Site/OperationResult/Billing createとBilling moveのarchive-first失敗を確認し、許容最終状態を`active + reference`または`archive + referenceなし`へ限定した。
 - source contract: CAS-02ではproduct codeからgeneric Customer delete/restoreへ到達しないこととreason必須を確認済み。CAS-04のclient側restore入口不在確認は未着手。
 - CAS-04 local UI（未着手）: write actor表示、read-only非表示、確認・取消、参照あり拒否、二重送信、成功後一覧、reload後不存在、console error 0。
 
@@ -116,4 +116,4 @@ active Customer schema migrationは不要。Rules update guardはcustomerId変�
 
 rollbackはarchive入口を先に停止し、archive済みIDが存在する間は参照guard、same-ID create拒否、archive client拒否を維持する。自動restore・archive削除をrollbackに使わない。
 
-remote Firestore edition/IAM/App Check、実data、正式operator、保持期間は未確認である。CAS-01の設計checkpointではapplication、Rules、test、build、Emulator、Dev/Prod、remote/data、packageを変更・実行しなかった。後続CAS-02ではFunctions、domain/Emulator testとCodex専用local Emulatorだけを変更・実行し、Rules、client/UI、build、Dev/Prod、remote/data、packageは変更・実行していない。
+remote Firestore edition/IAM/App Check、実data、正式operator、保持期間は未確認である。CAS-01の設計checkpointではapplication、Rules、test、build、Emulator、Dev/Prod、remote/data、packageを変更・実行しなかった。CAS-02ではFunctions、CAS-03ではRules・Billing Functions・domain/Emulator testをlocal変更し、Codex専用local Emulatorだけを実行した。client/UI、通常build、Dev/Prod、remote/data、packageは変更・実行していない。

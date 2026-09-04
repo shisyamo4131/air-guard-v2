@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customer archive safetyのCAS-03として、`Customers_archive`のclient非公開、same-ID Customer再作成拒否、Site・OperationResult・Billingの新規Customer参照barrierをFirestore Rulesへ追加し、Billingのserver create/moveもCustomer確認と同じtransactionへ統合した。Siteは同じ会社の存在する別Customerへ変更可能な確定仕様を維持する。独立reviewでnested Billing path、transaction retry時の成功log、move競合testの偽陽性を補正し、最終domain 889/889、local Emulator 142/142、security再監査5/5、commits `8e6eb1d5`・`c99b8169`を確認した。local未deployで、CAS-04 UIとDev/remote受入れは未着手。
+
 - Siteの取引先は同じ会社に存在する別Customerへ変更可能と確定し、現行sourceと2026-08-11の回答履歴に仕様を一致させた。既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更せず、一度設定したcustomerIdを未設定へ戻す操作も提供しない。既存実績への再適用は請求影響と監査を伴う別操作として将来判断する。現行application挙動とdataは変更せず、migrationは不要。
 
 - Customer archive safetyのCAS-02について、別`Developer` taskを使うSpark試験はcontext window不足とSpark固有usage limitのため実装前に中止した。その後は通常の`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェント運用へ切り替え、current Authとtransaction内actor/3参照確認、exact version 1 archive、same-operation retry、安全なresponse/logを持つ専用Callableとdomain/Emulator testをlocal実装した。最終`domain-full` 873/873、`local-emulator-suite` 123/123、独立review、local commit `74d0eb4d`、反省会を完了し、CAS-02を25点加点して全体進捗を45%とした。Spark利用案は棄却し、CAS-03/04は通常サブエージェント分割で開始した。CAS-03/04のlocal実装・検証・review・Git統合は承認済みだが、Dev/Prod、remote/data、deployは未着手・別承認であり、CAS-02差分単独はdeployしない。[実行契約と反省会記録](docs/implementation/customer-archive-cas02-developer-trial.md)を参照。

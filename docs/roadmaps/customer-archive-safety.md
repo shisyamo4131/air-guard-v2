@@ -2,7 +2,7 @@
 
 - 状態: In progress
 - 開始日: 2026-09-04
-- 現在の進捗: 45%
+- 現在の進捗: 75%
 - 部分加点: なし
 - 完了条件: 誤登録・重複Customerを参照なしの場合だけ監査付きでarchiveでき、同時・後続参照と同ID再作成を拒否し、通常Userのrestore・archive閲覧・物理deleteを提供せず、local実装・自動test・Codex専用local UI・独立review・文書・Git統合・別途承認するDev反映と受入れを完了する。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[実装設計](../implementation/customer-archive-safety.md)
@@ -28,7 +28,7 @@ CAS-02のexact ownership、test、書込みlease、差戻し、独立review、�
 |---|---:|---:|---|---|
 | CAS-01 仕様・失敗経路・security設計 | 20 | 20 | Completed | ADR 0046、実装設計、2026-09-04の独立security review、project-docsとdiff-check |
 | CAS-02 専用Callable・監査・冪等性 | 25 | 25 | Completed | commit `74d0eb4d`、domain 873/873、Emulator 123/123、targeted log test、独立security/general review、反省会記録 |
-| CAS-03 参照writer barrier・Rules回帰 | 30 | 0 | Not started | Customer/Site/OperationResult/Billing Rules、server guard、Emulator・競合test |
+| CAS-03 参照writer barrier・Rules回帰 | 30 | 30 | Completed | commits `8e6eb1d5`・`c99b8169`、domain 889/889、Emulator 142/142、security 5/5、独立review |
 | CAS-04 UI・local受入れ・最終review・Git統合 | 15 | 0 | Not started | Customer詳細の新規archive操作、専用build、local UI、独立review、local commit |
 | CAS-05 Dev反映・利用者受入れ | 10 | 0 | Deferred | マスタデータ管理改修後のbounded Dev releaseと権限別受入れ |
 
@@ -63,7 +63,7 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い、Functions実装、domain/Emulator test、独立review、local Git統合、反省会まで完了した。Spark用standalone taskは再利用せず、CAS-03をRules・server writer・test・統合reviewへ分割して開始する。CAS-04はCAS-03の安全境界を受け入れた後にclient/UI実装へ進む。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
+CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い完了した。CAS-03はRules、Billing server writer、test、security/general reviewを通常サブエージェントへ分割し、local Git統合まで完了した。次はCAS-04のclient/UI・Codex専用local UI受入れへ進む。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
 
 ## 進捗履歴
 
@@ -71,3 +71,4 @@ CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas
 |---|---:|---:|---|
 | 2026-09-04 | 20% | +20 | 現行Rules・generic adapter・Customer/Site/OperationResult/Billing writerを照合し、専用Callable、transaction、3参照barrier、archive tombstone、client非公開、generic restore非利用を利用者承認済み仕様・ADR・実装設計へ固定した。application・Rules・test・Devは未着手。 |
 | 2026-09-04 | 45% | +25 | CAS-02専用Callable、version 1 archive、same-operation retry、safe error/logをlocal実装し、domain 873/873、Emulator 123/123、独立review、commit `74d0eb4d`、反省会を完了した。CAS-03/04、Rules、client/UI、参照writer、Dev/remoteは未着手。 |
+| 2026-09-04 | 75% | +30 | CAS-03のarchive非公開・same-ID tombstone・3参照RulesとBilling server transaction barrierをlocal実装した。nested Billing path、transaction retry log、move失敗の偽陽性をreview差戻しで補正し、domain 889/889、Emulator 142/142、security再監査5/5、独立review、commits `8e6eb1d5`・`c99b8169`を確認した。CAS-04 UIとDev/remoteは未着手。 |

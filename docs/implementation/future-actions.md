@@ -769,16 +769,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0057 Customer archiveと参照整合・復元を実装する
 
-- 状態: In progress（設計確定・実装未着手）
+- 状態: In progress（CAS-02/03 local実装完了・CAS-04 UI未着手）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-020
 - 対象ファイル・シンボル: 専用`archiveCustomer` Callable/use-case、Customer詳細UI、Customers/Sites/OperationResults/Billings Rules、Billing server writer
-- 確認済み実装事実: 削除guardはSite参照だけをtransaction外queryで確認し、元documentをarchiveへcopyして削除する。関連Siteがあればstatusに関係なく拒否する。restore APIはあるがCustomer UI経路は見つからない。
-- 想定影響と発生条件: child確認後の競合、見えない非ACTIVE Siteによる削除拒否、Site以外の参照残存、archive後のmaster取得失敗が起き得る。
+- 確認済み実装事実: CAS-02の専用Callableは一つのtransactionでSites・OperationResults・Billingsをstatus限定なしに確認し、version 1 audit envelopeをsame-ID archiveへ作成する。CAS-03はarchive client read/CUD、same-ID Customer create、新規Customer参照をRulesで拒否し、Billing server create/moveも同一transaction内でCustomer存在を確認する。いずれもlocal未deployで、Customer詳細UIとrestore製品経路はない。
+- 想定影響と発生条件: CAS-04完了前は利用者が専用archiveを画面から開始できない。将来restore・運営者inspection・保持を実装する場合はactive/archive同ID衝突、監査、参照整合を同じ境界で維持する必要がある。
 - 未確認点・仮説: 全参照catalog、法令・契約上の保持期間、運営者inspection/restore API、既存archive dataへのmetadata migrationは未実装・未確認である。
-- 推奨する将来対応: [ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)どおり、専用Callable、一つのtransaction、Sites/OperationResults/Billings参照確認、全参照writerのactive Customer存在guard、same-ID archive tombstone、versioned audit envelope、archive client非公開を実装する。generic delete/restoreと追加lock collectionは使わない。restore・operator inspection・retention/purgeは別仕様のまま残す。
-- 必要なテスト: actor/tenant/input、3参照ありarchive拒否、3種の同時参照作成、reason/actor/time/idempotency、archive read/CUD拒否、same-ID Customer create拒否、generic delete/restore非到達、物理delete/restore UI不存在。
-- ユーザー判断が必要な事項: local実装checkpointのexact files/UI文言/test範囲と、将来の法令・契約に基づく保持期間・operator inspection/restore。Customer archive設計は2026-09-04に確認済み。
+- 推奨する将来対応: CAS-04で既存Customer詳細へ権限制御・確認・理由・二重送信防止・安全なerror表示を持つ専用archive入口を追加する。CAS-02/03のCallable、transaction、3参照barrier、same-ID tombstone、client非公開を維持し、generic delete/restoreと追加lock collectionは使わない。restore・operator inspection・retention/purgeは別仕様のまま残す。
+- 必要なテスト: CAS-02/03のactor/tenant/input、3参照、競合、監査、idempotency、archive read/CUD、same-ID create、generic delete/restore非到達はlocal自動test済み。CAS-04ではwrite actor表示、read-only非表示、確認・取消、参照あり拒否、二重送信、成功後一覧、reload後不存在、console error 0を確認する。
+- ユーザー判断が必要な事項: 将来の法令・契約に基づく保持期間・operator inspection/restore。Customer archiveのCAS-04 local UI範囲は2026-09-04に承認済みで、Dev反映・受入れは別承認である。
 
 ## FUT-0058 Customer変更時の請求snapshot境界を確定する
 

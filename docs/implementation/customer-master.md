@@ -30,7 +30,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 任意: `code`、`branchName`、`building`、`tel`、`fax`、`remarks`。`location` はhidden field。
 - token検索対象は `name` と `nameKana`。`code`、略称、支店名、住所、電話番号はtokenFieldsに含まれない。
 - 読み取り専用プロパティは `fullAddress` と `prefecture`。`fullAddress` は都道府県、市区町村、番地の結合で、建物名は含めない。
-- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。承認済みの専用操作は[Customer archive safety](customer-archive-safety.md)を正とし、まだ未実装である。
+- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。[Customer archive safety](customer-archive-safety.md)を正とする専用Callableと参照barrierはCAS-02/03でlocal実装済み・未deploy、画面入口はCAS-04で実装する。
 - `getPaymentDueDateAt(baseDate)` は締め基準月へ`paymentMonth`を加え、月末指定または指定日をJST基準で算出する。存在しない指定日は月末へ丸める。
 - 住所変更時はgeocodingを試みる。関数未注入、検索失敗、例外時も保存処理を中止せず`location=null`で継続する。緯度または経度が0の場合はtruthy判定により座標なしとして扱われる。
 
@@ -41,7 +41,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
-- active Customerのclient deleteと`Customers_archive`のclient CUDはRulesで拒否する。archive・restoreの画面入口はない。archive client read拒否、参照確認、監査、同ID tombstoneを持つ専用操作は設計確定済みだが、application/Rulesには未実装である。
+- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。archive・restoreの画面入口はない。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03でlocal実装済み・未deployで、CAS-04の画面入口は未実装である。
 - 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
 - editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。基本editorではrollback待ちに真正な外部値が届いたら待ちを解除して再読込できる。applicationは非同期準備後にも権限・identityと観測済み同operation競合を再確認する。送信後の同時更新を原子的に防ぐ仕組みではない。
 
@@ -69,7 +69,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - draft作成時にinitial Customer copy、正式発行時にfull snapshotを固定する。発行済み再printはsnapshotを使い、master変更を反映しない。訂正はreason/history付きnew revisionとし、live Customer参照のPDFはdraftだけに限定する方針である。
 
-- schema上の直接`hasMany`とgeneric削除guardは`Sites.customerId`だけを対象とする。承認済み専用archiveはactual参照catalogとしてSites、OperationResults、Billingsをstatus限定なしで確認し、3 collectionのcustomerId新規設定・変更へactive Customer document存在guardを追加する設計である。
+- schema上の直接`hasMany`とgeneric削除guardは`Sites.customerId`だけを対象とする。専用archive Callableはactual参照catalogとしてSites、OperationResults、Billingsをstatus限定なしで確認し、CAS-03 RulesとBilling server writerは3 collectionのcustomerId新規設定・変更へactive Customer document存在guardを適用する（local実装済み・未deploy）。
 - Billing作成時は現在のCustomer支払条件から`paymentDueDateAt`を算出してBillingへ保存する。その後のCustomer支払条件変更は既存Billingの期日を自動更新しない。
 - Billingは`customerId`を保持するがCustomer名称・住所のsnapshotは持たない。請求書PDF生成時は現在のCustomer masterを取得するため、名称・住所変更は過去Billingの再生成PDFにも反映され、Customerがarchive済み等で取得不能なら生成失敗になり得る。
 - Customer更新時の既存Functionは、`customerId`が一致するSiteの`customer`を同期する。ACTIVE限定ではない。Site経由の`cutoffDate`は新規Agreementの初期値へ、現在Customerの支払条件は新規Billingの期日へ流れる。Devの合成Siteで名称同期と新規Agreement初期締日を確認した。利用者指示により、請求機能の受入れは稼働実績管理改修後へ移し、今回の完了条件へ含めない。
@@ -78,11 +78,11 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定し、reason/actor/timeを保存する。通常User向けrestore・物理delete UIは設けない。
 - archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
-- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。設計のみ完了し、Callable・UI・Rules・testは未着手である。
+- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。Callable・監査・冪等性はCAS-02、Rules・参照writer barrier・関連testはCAS-03でlocal実装済み・未deployで、Customer詳細UIはCAS-04未着手である。
 
 - 取引状態の意味は[現行仕様](../specification.md#取引先現場取極め)を正とする。業務上の無効状態やlogical deleteと同一視しない。
-- 状態変更は基本編集から提供し、archive、restore、物理deleteの経路は提供しない。
-- archive collectionのreadは既存の同一会社境界を維持し、client create/update/deleteは全actorへ拒否する。
+- 状態変更は基本編集から提供する。archiveは専用Callableだけがlocal実装済みで画面経路は未提供、restore・物理deleteの製品経路は提供しない。
+- archive collectionのclient read/create/update/deleteはCAS-03 Rulesで全actorへ拒否する（local未deploy）。
 
 ## Rules・tenant境界
 
@@ -95,15 +95,15 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 状態編集と一覧の状態切替は[専用ロードマップ](../roadmaps/customer-status.md)で検証する。Autocompleteが状態を絞らないことは現在の要件と一致する。
 - 一覧の既存adapterは非同期listener errorを画面へ通知するcallbackを持たない。今回のfilterで新規readerを追加せず、この取得失敗表示の制約は後続課題として残す。
-- archive/restoreは意図的に後続専用操作へ分離している。
+- archiveのCustomer詳細UIはCAS-04へ、restore・運営者inspection・物理delete/purgeは別の将来仕様へ分離している。
 - `CustomersIterator`は宣言コメントと異なり`modelValue`、`select-strategy`、`show-select`及び任意attrsを内部iteratorへforwardしない。Site作成wizardの既存Customer候補選択に渡すattrsが機能しないため、候補選択より取引先未設定継続だけが到達し得る。
 - Site表示条件と削除guard条件が異なり、利用者には見えない参照で削除拒否となり得る。
 
 ## 将来要対応
 
-- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。状態変更は基本編集へ含め、参照確認・監査を伴うarchive/緊急restoreだけを後続の専用操作とする。
+- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。状態変更は基本編集へ含め、参照確認・監査を伴うarchiveのCallable・barrierはCAS-02/03でlocal実装済み、画面入口はCAS-04、緊急restoreは別の将来仕様とする。
 - FUT-0056: code一意・類似warning・検索fieldを実装し、feasibility/index/cost/privacyを検証する。状態による選択制限は現行仕様へ揃え、旧ACTIVE限定方針を実装しない。
-- FUT-0057: 承認済みTERMINATED/archive/運営者inspection・緊急restore境界を実装し、参照guard・保持を整備する。
+- FUT-0057: 承認済みarchiveのCallable・Rules・参照guardはCAS-02/03でlocal実装済み。CAS-04でCustomer詳細UIを実装し、運営者inspection・緊急restore・保持期間・purgeは別仕様として残す。
 - FUT-0058: draft initial copy、formal full snapshot、snapshot再print、revisionを実装する。
 - FUT-0059: status編集経路は[専用ロードマップ](../roadmaps/customer-status.md)で扱う。address編集経路はCUSTOMER-01Aで実装済み。geocodingのserver生成化・意味上の整合は今回へ含めない。
 
