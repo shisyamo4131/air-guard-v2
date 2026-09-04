@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 設計確定・実装未着手
+- 状態: 設計確定・CAS-02 local runtime gate通過・local commitと反省会待ち
 - checkpoint: `CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`
 - 最終確認日: 2026-09-04
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)

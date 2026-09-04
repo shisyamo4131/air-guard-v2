@@ -27,7 +27,7 @@ CAS-02のexact ownership、test、書込みlease、差戻し、独立review、�
 | マイルストーン | 重み | 得点 | 状態 | 完了証拠 |
 |---|---:|---:|---|---|
 | CAS-01 仕様・失敗経路・security設計 | 20 | 20 | Completed | ADR 0046、実装設計、2026-09-04の独立security review、project-docsとdiff-check |
-| CAS-02 専用Callable・監査・冪等性 | 25 | 0 | In progress / implementation not started | actor/tenant/input/transaction/archive envelopeのunit・integration test、独立review、local Git統合、完了時反省会 |
+| CAS-02 専用Callable・監査・冪等性 | 25 | 0 | In progress / local runtime gates passed; local commit and retrospective pending | actor/tenant/input/transaction/archive envelopeのunit・integration test、独立review、local Git統合、完了時反省会 |
 | CAS-03 参照writer barrier・Rules回帰 | 30 | 0 | Not started | Customer/Site/OperationResult/Billing Rules、server guard、Emulator・競合test |
 | CAS-04 UI・local受入れ・最終review・Git統合 | 15 | 0 | Not started | Customer詳細の新規archive操作、専用build、local UI、独立review、local commit |
 | CAS-05 Dev反映・利用者受入れ | 10 | 0 | Deferred | マスタデータ管理改修後のbounded Dev releaseと権限別受入れ |
@@ -63,7 +63,7 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-[CAS-02実行契約とSpark Developer試験記録](../implementation/customer-archive-cas02-developer-trial.md)に従い、primary coordinatorが通常の`developer`サブエージェントへCAS-02 Functions実装とdomain単体testを委譲する。受入れ後は`tester`、`security_reviewer`、`reviewer`と最終gate・local Git統合・反省会を順に行う。Spark用standalone taskは再利用せず、CAS-03/04も開始しない。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
+[CAS-02実行契約とSpark Developer試験記録](../implementation/customer-archive-cas02-developer-trial.md)に従ったFunctions実装、domain単体test、targeted Emulator test、`security_reviewer`、`reviewer`の差戻しと再確認、最終`domain-full` 873/873と`local-emulator-suite` 123/123はexit status 0で完了した。次は文書・diff gate、local Git統合、反省会を行う。Spark用standalone taskは再利用せず、CAS-03/04も開始しない。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
 
 ## 進捗履歴
 

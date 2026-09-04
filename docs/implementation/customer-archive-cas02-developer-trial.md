@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress / Spark standalone trial cancelled / normal subagent workflow active
+- 状態: In progress / local implementation completion gates passed / local commit and retrospective pending
 - 対象: Customer archive safety roadmapの`CAS-02 専用Callable・監査・冪等性`だけ
 - 対象外: CAS-03、CAS-04、CAS-05
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)
@@ -232,6 +232,10 @@ Developer差分を受入れた後、同時書込みは行わず、次を順に�
 6. 最終worktreeでapplication logicとdata contractのunionとして`project-docs`、`domain-full`、`local-emulator-suite`、`diff-check`を各commandのexit statusが独立して分かる形で実行する。UI変更がないため`local-ui-build`は省略する。release-onlyの`generate-dev`/`generate-prod`は実行しない。
 7. coordinatorがreview済みfileと文書だけをstage・commitする。push、merge、deployは行わない。このCAS-02 commit単独は、CAS-03の後続参照barrier、same-ID create deny、archive client read denyを含まないため、deploy/release-readyではない。
 
+### ログ契約の実装解釈
+
+`archiveCustomer`が制御するstructured log payloadは、`severity`、固定`message`、`errorName`、内部`errorCode`だけとする。raw error、stack、request、Auth token/claims、Customer・Company・actor識別子、`operationId`、`reason`、snapshot、document pathをapplication codeから渡さない。Firebase Functions / Cloud Loggingがruntime resource、timestamp、trace correlationなどのplatform-managed metadataを付加することは許容するが、archive domain dataやstackをapplication payloadへ追加したものとは扱わない。local targeted testはdirect Callable run時のapplication payloadを厳密に確認し、wrapped HTTP trace contextは未確認事項として残す。
+
 ## CAS-02完了時の反省会
 
 CAS-02の完了gateとlocal commit後、coordinatorは実装を担当した`developer`サブエージェントへ反省会checkpointを送り、file変更なしで次を報告させる。
@@ -247,6 +251,18 @@ CAS-02の完了gateとlocal commit後、coordinatorは実装を担当した`deve
 coordinatorは実測したcallback、差戻し、diff、test、review、書込み競合とDeveloper所見を本書へ記録する。事実と推測を分け、CAS-03以降を自動開始しない。反省会記録をread-only reviewerへ確認させ、最終文書状態で`project-docs`と`git diff --check`を個別にexit 0まで再実行し、反省会文書commitとclean worktreeを確認する。結果と選択肢を利用者へ提示し、次の手順は利用者判断を待つ。
 
 ## 中間実行記録
+
+### 2026-09-04 通常サブエージェント実装・対象検証
+
+- `developer`は確認済みbranch `codex/customer-archive-cas02-trial`、開始HEAD `e0f61dba83fdfbac2895efd916a8a44a3c414135`で、専用Callable、Customer archive use-case、version 1 document contract、安全なerror mapper、API export、domain testを実装した。owned file外の変更、stage、commit、network、remote/data、deployはなかった。
+- 実装はcurrent Auth identity、transaction内actor再確認、exact input、actor・active Customer・同ID archive・Sites・OperationResults・Billingsのall-reads-before-writes、参照時write 0、create-only archiveとactive delete、exact 26-field snapshot、server timestamp、same-operation retry、固定応答を実装した。generic delete/restore、Rules、client/UI、参照writerは変更していない。
+- 最初の独立reviewで、壊れた既存archiveを`aborted`へ誤分類する問題と、新規`archivedAt`が任意objectでもunit testを通る問題を検出した。Developer差戻し後、壊れたarchiveは`archive-invalid`から固定`internal`へ、well-formed retry mismatchだけは`archive-conflict`から固定`aborted`へ分離し、新規writeは実物のAdmin SDK `FieldValue.serverTimestamp()`だけを許可した。
+- `tester`は`test/local/codex-local-harness.test.mjs`だけを変更し、新規archive、client spoof拒否、same-operation retry、Sites・OperationResults・Billings各参照時のwrite 0、current Auth・登録actor境界、安全なresponse/logをCodex専用Emulatorで検証した。最初の厳格なruntime log testで`logger.error`が自動stackを付加する問題を検出し、Developerは4-field structured `logger.write`へ修正した。再実行は5/5成功、exit status 0だった。
+- Tester追加helperへの独立reviewで、子Node processにtimeoutと出力上限がないP2を検出した。Tester差戻し後、30秒timeout、stdout/stderr合算1 Mi文字上限、single-settlement、best-effort kill、listener/timer cleanup、`windowsHide`を追加し、同じtargeted Emulator testは5/5成功、exit status 0だった。timeout・出力超過のfault injectionは未実施である。
+- 最終の一般reviewとsecurity reviewでは、上記修正後のCAS-02 application codeに追加のactionable findingはなかった。Firebase SDKがtrace context時にplatform-managed trace fieldを付け得る点は低riskの証拠解釈として残し、application-controlled payloadの4-field制限と区別した。
+- coordinatorがtargeted domain testを再実行し、Customer archive 13/13、Callable 5/5、error mapper 3/3、共通Auth integration 2/2、Functions entrypoint 1/1、role permission 7/7、Auth identity 10/10、Auth mapper 3/3をそれぞれexit status 0で確認した。targeted Emulator 5/5もtesterがexit status 0で確認した。
+- 最終worktreeでcoordinatorが`node --test test/domain/*.test.mjs`を実行し873/873、exit status 0、続いて`npm run test:local`を実行し123/123、exit status 0を確認した。後者はproject `demo-air-guard-v2-codex`、loopback only、`AIR_GUARD_EXTERNAL_EFFECTS=deny`、利用者用`saved-data`不変、専用seed read-onlyを報告した。Firebase CLIのMOTD取得失敗・期限切れ認証・同一projectの複数Emulator警告は出たが、local suiteは完了し、remote project/data操作は行っていない。文書gate、final diff-check、local commit、反省会はこの記録時点では未完了である。
+- CAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierがないため、この差分単独はdeploy禁止・release-readyではない。CAS-03/04は開始していない。
 
 ### 2026-09-04 Spark開始時停止
 
@@ -269,4 +285,4 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 
 ## Rollback
 
-CAS-02の製品差分は作られておらず、Dev/Prod/data変更もない。中止時のrollback対象はない。試験運用文書は履歴として保持し、CAS-03/04は未着手のまま維持する。
+CAS-02はlocal未deployのため、機能rollbackはreview済みCAS-02 commitをGitでrevertし、Callable export、専用module、domain/Emulator testを一組で戻す。remote archive dataは作成しておらず、data rollbackはない。部分的にCallableだけをdeployせず、CAS-03のbarrierが揃うまでrelease対象へ含めない。試験運用記録は履歴として保持し、CAS-03/04は未着手のまま維持する。

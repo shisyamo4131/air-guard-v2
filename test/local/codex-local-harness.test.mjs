@@ -22,6 +22,7 @@ import {
   query,
   serverTimestamp,
   setDoc,
+  Timestamp as ClientTimestamp,
   updateDoc,
   where,
   writeBatch,
@@ -442,6 +443,257 @@ function customerRulesData({ docId, uid, ...overrides }) {
     tokenMap: { 合: true, 合成: true },
     ...overrides,
   };
+}
+
+const CUSTOMER_ARCHIVE_FIELDS = [
+  "docId",
+  "uid",
+  "createdAt",
+  "updatedAt",
+  "code",
+  "name",
+  "branchName",
+  "abbreviation",
+  "nameKana",
+  "zipcode",
+  "prefCode",
+  "city",
+  "address",
+  "building",
+  "location",
+  "geopoint",
+  "tel",
+  "fax",
+  "contractStatus",
+  "cutoffDate",
+  "paymentMonth",
+  "paymentDate",
+  "remarks",
+  "fullAddress",
+  "prefecture",
+  "tokenMap",
+];
+
+async function seedCustomerArchiveActor({ uid, disabled = false }) {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const email = `${uid}@codex-test.invalid`;
+  await seedCallableAuthUser({
+    uid,
+    companyId,
+    email,
+    isSuperUser: false,
+  });
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isTemporary: false,
+    disabled,
+    isAdmin: true,
+    email,
+    roles: [],
+  });
+  return { uid, companyId, email };
+}
+
+async function readCustomerArchiveState(companyId, customerId) {
+  let result;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const [active, archive] = await Promise.all([
+      getDoc(doc(firestore, "Companies", companyId, "Customers", customerId)),
+      getDoc(
+        doc(
+          firestore,
+          "Companies",
+          companyId,
+          "Customers_archive",
+          customerId,
+        ),
+      ),
+    ]);
+    result = {
+      active: active.exists() ? active.data() : null,
+      archive: archive.exists() ? archive.data() : null,
+    };
+  });
+  return result;
+}
+
+async function cleanupCustomerArchiveScenario({
+  actorUid,
+  customerIds,
+  references = [],
+}) {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    const batch = writeBatch(firestore);
+    batch.delete(doc(firestore, "Companies", companyId, "Users", actorUid));
+    for (const customerId of customerIds) {
+      batch.delete(doc(firestore, "Companies", companyId, "Customers", customerId));
+      batch.delete(
+        doc(
+          firestore,
+          "Companies",
+          companyId,
+          "Customers_archive",
+          customerId,
+        ),
+      );
+    }
+    for (const reference of references) {
+      batch.delete(
+        doc(
+          firestore,
+          "Companies",
+          companyId,
+          reference.collectionName,
+          reference.docId,
+        ),
+      );
+    }
+    await batch.commit();
+  });
+  try {
+    await getAdminAuth().deleteUser(actorUid);
+  } catch (error) {
+    if (error?.code !== "auth/user-not-found") throw error;
+  }
+}
+
+function assertSafeCustomerArchiveError({
+  error,
+  expectedCode,
+  expectedMessage,
+  sensitiveValues,
+}) {
+  assert.equal(error?.code, expectedCode);
+  assert.equal(error?.message, expectedMessage);
+  assert.equal(error?.details, undefined);
+  const publicSurface = JSON.stringify({
+    code: error?.code,
+    message: error?.message,
+    details: error?.details,
+  });
+  for (const sensitiveValue of sensitiveValues) {
+    assert.equal(publicSurface.includes(sensitiveValue), false, sensitiveValue);
+  }
+  assert.equal(publicSurface.includes("stack"), false);
+}
+
+async function runArchiveCustomerInChild(request) {
+  const maxOutputCharacters = 1024 * 1024;
+  const firebaseInitUrl = new URL(
+    "../../functions/modules/firebase.init.js",
+    import.meta.url,
+  ).href;
+  const apiIndexUrl = new URL("../../functions/apis/index.js", import.meta.url).href;
+  const encodedRequest = Buffer.from(JSON.stringify(request), "utf8").toString(
+    "base64",
+  );
+  const childSource = `
+await import(${JSON.stringify(firebaseInitUrl)});
+const { archiveCustomer } = await import(${JSON.stringify(apiIndexUrl)});
+const request = JSON.parse(Buffer.from(process.argv[1], "base64").toString("utf8"));
+try {
+  const result = await archiveCustomer.run(request);
+  process.stdout.write("__CUSTOMER_ARCHIVE_RESULT__" + JSON.stringify(result) + "\\n");
+} catch (error) {
+  process.stdout.write("__CUSTOMER_ARCHIVE_ERROR__" + JSON.stringify({
+    code: error?.code,
+    message: error?.message,
+    details: error?.details,
+  }) + "\\n");
+}
+`;
+
+  return await new Promise((resolveResult, rejectResult) => {
+    const child = spawn(
+      process.execPath,
+      ["--input-type=module", "--eval", childSource, encodedRequest],
+      {
+        cwd: fileURLToPath(new URL("../..", import.meta.url)),
+        env: { ...process.env, AIR_GUARD_EXTERNAL_EFFECTS: "deny" },
+        stdio: ["ignore", "pipe", "pipe"],
+        windowsHide: true,
+      },
+    );
+    let stdout = "";
+    let stderr = "";
+    let outputCharacters = 0;
+    let settled = false;
+
+    const stopChild = () => {
+      if (child.exitCode !== null || child.signalCode !== null || child.killed) {
+        return;
+      }
+      try {
+        child.kill();
+      } catch {
+        // The fixed rejection below remains the only exposed diagnostic.
+      }
+    };
+    const removeOutputListeners = () => {
+      child.stdout.off("data", onStdout);
+      child.stderr.off("data", onStderr);
+    };
+    const clearLifecycle = () => {
+      clearTimeout(timer);
+      removeOutputListeners();
+      child.off("error", onError);
+      child.off("close", onClose);
+    };
+    const rejectOnce = (message, terminate = false) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      removeOutputListeners();
+      if (terminate) stopChild();
+      rejectResult(new Error(message));
+    };
+    const appendOutput = (target, chunk) => {
+      if (settled) return;
+      outputCharacters += chunk.length;
+      if (outputCharacters > maxOutputCharacters) {
+        rejectOnce(
+          "Customer archive log capture exceeded the output limit.",
+          true,
+        );
+        return;
+      }
+      if (target === "stdout") stdout += chunk;
+      else stderr += chunk;
+    };
+    function onStdout(chunk) {
+      appendOutput("stdout", chunk);
+    }
+    function onStderr(chunk) {
+      appendOutput("stderr", chunk);
+    }
+    function onError() {
+      rejectOnce("Customer archive log capture child failed.");
+    }
+    function onClose(status, signal) {
+      if (settled) {
+        clearLifecycle();
+        return;
+      }
+      settled = true;
+      clearLifecycle();
+      resolveResult({ status, signal, stdout, stderr });
+    }
+
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", onStdout);
+    child.stderr.on("data", onStderr);
+    child.once("error", onError);
+    child.once("close", onClose);
+    const timer = setTimeout(() => {
+      rejectOnce("Customer archive log capture timed out.", true);
+    }, 30_000);
+  });
 }
 
 async function seedCustomerRulesDocument({
@@ -2195,6 +2447,427 @@ test("Customer status remains editable with an active Site and schedule without 
       assert.deepEqual((await getDoc(doc(context.firestore(), "Companies", companyId, name, expected.docId))).data(), expected);
     }
   });
+});
+
+test("Customer archive Callable archives an exact Customer and rejects client-spoofed state", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const actorUid = "cas02-archive-success-admin";
+  const customerId = "cas02-archive-success-customer";
+  const operationId = "cas02-archive-success-operation";
+  const reason = "CAS-02合成取引先の整理";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+
+  try {
+    assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
+    await seedCustomerRulesDocument({
+      companyId: actor.companyId,
+      docId: customerId,
+      uid: "cas02-synthetic-customer-writer",
+      data: { name: "CAS02合成取引先" },
+    });
+    const before = await readCustomerArchiveState(actor.companyId, customerId);
+    assert.ok(before.active);
+    assert.equal(before.archive, null);
+    assert.deepEqual(Object.keys(before.active).sort(), [...CUSTOMER_ARCHIVE_FIELDS].sort());
+
+    const spoofedError = await captureCallableError(
+      archiveCustomer.run(
+        actorCallableRequest({
+          actor,
+          data: {
+            customerId,
+            operationId,
+            reason,
+            companyId: CODEX_LOCAL_COMPANIES.secondary.id,
+            actorUid: "cas02-spoofed-actor",
+            archivedAt: "cas02-spoofed-time",
+            customer: { name: "cas02-spoofed-customer" },
+          },
+        }),
+      ),
+    );
+    assertSafeCustomerArchiveError({
+      error: spoofedError,
+      expectedCode: "invalid-argument",
+      expectedMessage: "入力内容を確認してください。",
+      sensitiveValues: [customerId, operationId, reason, "cas02-spoofed-actor"],
+    });
+    assert.deepEqual(
+      await readCustomerArchiveState(actor.companyId, customerId),
+      before,
+    );
+
+    const result = await archiveCustomer.run(
+      actorCallableRequest({
+        actor,
+        data: { customerId, operationId, reason },
+      }),
+    );
+    assert.deepEqual(result, { success: true, archived: true });
+
+    const after = await readCustomerArchiveState(actor.companyId, customerId);
+    assert.equal(after.active, null);
+    assert.ok(after.archive);
+    assert.deepEqual(Object.keys(after.archive).sort(), ["audit", "customer", "schemaVersion"]);
+    assert.equal(after.archive.schemaVersion, 1);
+    assert.deepEqual(
+      Object.keys(after.archive.customer).sort(),
+      [...CUSTOMER_ARCHIVE_FIELDS].sort(),
+    );
+    assert.deepEqual(after.archive.customer, before.active);
+    assert.deepEqual(Object.keys(after.archive.audit).sort(), [
+      "actorUid",
+      "archivedAt",
+      "operationId",
+      "reason",
+    ]);
+    assert.equal(after.archive.audit.actorUid, actorUid);
+    assert.equal(after.archive.audit.operationId, operationId);
+    assert.equal(after.archive.audit.reason, reason);
+    assert.equal(after.archive.audit.archivedAt instanceof ClientTimestamp, true);
+    assert.equal(Object.hasOwn(after.archive, "companyId"), false);
+    assert.equal(Object.hasOwn(after.archive, "actorUid"), false);
+    assert.equal(Object.hasOwn(after.archive, "archivedAt"), false);
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+    });
+  }
+});
+
+test("Customer archive Callable retries the same operation without changing the archive", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const actorUid = "cas02-archive-retry-admin";
+  const customerId = "cas02-archive-retry-customer";
+  const operationId = "cas02-archive-retry-operation";
+  const reason = "CAS-02合成再試行";
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+
+  try {
+    await seedCustomerRulesDocument({
+      companyId: actor.companyId,
+      docId: customerId,
+      uid: "cas02-synthetic-retry-writer",
+      data: { name: "CAS02再試行先" },
+    });
+    const request = actorCallableRequest({
+      actor,
+      data: { customerId, operationId, reason },
+    });
+
+    assert.deepEqual(await archiveCustomer.run(request), {
+      success: true,
+      archived: true,
+    });
+    const afterFirst = await readCustomerArchiveState(actor.companyId, customerId);
+    assert.equal(afterFirst.active, null);
+    assert.ok(afterFirst.archive);
+
+    assert.deepEqual(await archiveCustomer.run(request), {
+      success: true,
+      archived: true,
+    });
+    const afterRetry = await readCustomerArchiveState(actor.companyId, customerId);
+    assert.deepEqual(afterRetry, afterFirst);
+    assert.equal(
+      afterRetry.archive.audit.archivedAt.isEqual(
+        afterFirst.archive.audit.archivedAt,
+      ),
+      true,
+    );
+
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const matchingArchives = await getDocs(
+        query(
+          collection(
+            context.firestore(),
+            "Companies",
+            actor.companyId,
+            "Customers_archive",
+          ),
+          where("audit.operationId", "==", operationId),
+        ),
+      );
+      assert.equal(matchingArchives.size, 1);
+      assert.equal(matchingArchives.docs[0].id, customerId);
+    });
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+    });
+  }
+});
+
+test("Customer archive Callable preserves Customers blocked by every reference collection", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+
+  for (const collectionName of ["Sites", "OperationResults", "Billings"]) {
+    const suffix = collectionName.toLowerCase();
+    const actorUid = `cas02-archive-reference-${suffix}-admin`;
+    const customerId = `cas02-archive-reference-${suffix}-customer`;
+    const referenceId = `cas02-archive-reference-${suffix}-document`;
+    const operationId = `cas02-archive-reference-${suffix}-operation`;
+    const reason = `CAS-02合成${collectionName}参照`;
+    const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    const reference = { collectionName, docId: referenceId };
+
+    try {
+      await seedCustomerRulesDocument({
+        companyId,
+        docId: customerId,
+        uid: "cas02-synthetic-reference-writer",
+        data: { name: "CAS02参照中取引先" },
+      });
+      const referenceData = {
+        customerId,
+        marker: `cas02-synthetic-${suffix}-reference`,
+      };
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        await setDoc(
+          doc(
+            context.firestore(),
+            "Companies",
+            companyId,
+            collectionName,
+            referenceId,
+          ),
+          referenceData,
+        );
+      });
+      const before = await readCustomerArchiveState(companyId, customerId);
+
+      const error = await captureCallableError(
+        archiveCustomer.run(
+          actorCallableRequest({
+            actor,
+            data: { customerId, operationId, reason },
+          }),
+        ),
+      );
+      assertSafeCustomerArchiveError({
+        error,
+        expectedCode: "failed-precondition",
+        expectedMessage: "参照されている取引先はアーカイブできません。",
+        sensitiveValues: [customerId, operationId, reason, actorUid],
+      });
+
+      const after = await readCustomerArchiveState(companyId, customerId);
+      assert.deepEqual(after.active, before.active);
+      assert.equal(after.archive, null);
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        const referenceSnapshot = await getDoc(
+          doc(
+            context.firestore(),
+            "Companies",
+            companyId,
+            collectionName,
+            referenceId,
+          ),
+        );
+        assert.equal(referenceSnapshot.exists(), true);
+        assert.deepEqual(referenceSnapshot.data(), referenceData);
+      });
+    } finally {
+      await cleanupCustomerArchiveScenario({
+        actorUid,
+        customerIds: [customerId],
+        references: [reference],
+      });
+    }
+  }
+});
+
+test("Customer archive Callable rejects stale Auth and disabled registered actors safely", async () => {
+  const { archiveCustomer } = await loadRebuildApis();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const scenarios = [
+    {
+      name: "missing-current-auth",
+      expectedMessage: "この操作を行う権限がありません。",
+      seed: async (actor) => {
+        await seedRegisteredUser({
+          uid: actor.uid,
+          pathCompanyId: companyId,
+          companyId,
+          isTemporary: false,
+          disabled: false,
+          isAdmin: true,
+          email: actor.email,
+          roles: [],
+        });
+      },
+    },
+    {
+      name: "disabled-registered-actor",
+      expectedMessage: "取引先をアーカイブする権限がありません。",
+      seed: async (actor) => {
+        await seedCallableAuthUser({
+          uid: actor.uid,
+          companyId,
+          email: actor.email,
+          isSuperUser: false,
+        });
+        await seedRegisteredUser({
+          uid: actor.uid,
+          pathCompanyId: companyId,
+          companyId,
+          isTemporary: false,
+          disabled: true,
+          isAdmin: true,
+          email: actor.email,
+          roles: [],
+        });
+      },
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    const actorUid = `cas02-archive-${scenario.name}`;
+    const customerId = `cas02-archive-${scenario.name}-customer`;
+    const operationId = `cas02-archive-${scenario.name}-operation`;
+    const reason = `CAS-02合成${scenario.name}`;
+    const actor = {
+      uid: actorUid,
+      companyId,
+      email: `${actorUid}@codex-test.invalid`,
+    };
+    try {
+      await scenario.seed(actor);
+      await seedCustomerRulesDocument({
+        companyId,
+        docId: customerId,
+        uid: "cas02-synthetic-boundary-writer",
+        data: { name: "CAS02境界取引先" },
+      });
+      const before = await readCustomerArchiveState(companyId, customerId);
+      const error = await captureCallableError(
+        archiveCustomer.run(
+          actorCallableRequest({
+            actor,
+            data: { customerId, operationId, reason },
+          }),
+        ),
+      );
+      assertSafeCustomerArchiveError({
+        error,
+        expectedCode: "permission-denied",
+        expectedMessage: scenario.expectedMessage,
+        sensitiveValues: [
+          customerId,
+          operationId,
+          reason,
+          actorUid,
+          actor.email,
+          companyId,
+          "request",
+          "claims",
+          "snapshot",
+        ],
+      });
+      assert.deepEqual(
+        await readCustomerArchiveState(companyId, customerId),
+        before,
+      );
+    } finally {
+      await cleanupCustomerArchiveScenario({
+        actorUid,
+        customerIds: [customerId],
+      });
+    }
+  }
+});
+
+test("Customer archive Callable logs fixed classifications without sensitive values", async () => {
+  const actorUid = "cas02-archive-log-admin";
+  const customerId = "cas02-archive-log-customer";
+  const operationId = "cas02-archive-log-operation";
+  const reason = "CAS-02合成ログ非漏えい";
+  const referenceId = "cas02-archive-log-site";
+  await loadRebuildApis();
+  const actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const reference = { collectionName: "Sites", docId: referenceId };
+
+  try {
+    assert.equal(parseEmulatorHost("FIRESTORE_EMULATOR_HOST").host, "127.0.0.1");
+    assert.equal(parseEmulatorHost("FIREBASE_AUTH_EMULATOR_HOST").host, "127.0.0.1");
+    assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
+    await seedCustomerRulesDocument({
+      companyId: actor.companyId,
+      docId: customerId,
+      uid: "cas02-synthetic-log-writer",
+      data: { name: "CAS02ログ取引先" },
+    });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          actor.companyId,
+          reference.collectionName,
+          reference.docId,
+        ),
+        { customerId, marker: "cas02-synthetic-log-reference" },
+      );
+    });
+
+    const childResult = await runArchiveCustomerInChild(
+      actorCallableRequest({
+        actor,
+        data: { customerId, operationId, reason },
+      }),
+    );
+    assert.equal(childResult.status, 0, childResult.stderr);
+    assert.equal(childResult.signal, null);
+    const errorLine = childResult.stdout
+      .split(/\r?\n/u)
+      .find((line) => line.startsWith("__CUSTOMER_ARCHIVE_ERROR__"));
+    assert.ok(errorLine, childResult.stdout);
+    const publicError = JSON.parse(
+      errorLine.slice("__CUSTOMER_ARCHIVE_ERROR__".length),
+    );
+    assert.deepEqual(publicError, {
+      code: "failed-precondition",
+      message: "参照されている取引先はアーカイブできません。",
+    });
+
+    const combinedOutput = `${childResult.stdout}\n${childResult.stderr}`;
+    const loggerLine = combinedOutput
+      .split(/\r?\n/u)
+      .find((line) => line.includes('"errorCode":"references-exist"'));
+    assert.ok(loggerLine, combinedOutput);
+    assert.deepEqual(JSON.parse(loggerLine), {
+      errorName: "CustomerArchiveError",
+      errorCode: "references-exist",
+      severity: "ERROR",
+      message: "Customer archive failed",
+    });
+    for (const sensitiveValue of [
+      customerId,
+      operationId,
+      reason,
+      actorUid,
+      actor.email,
+      actor.companyId,
+      "request",
+      "claims",
+      "snapshot",
+    ]) {
+      assert.equal(combinedOutput.includes(sensitiveValue), false, sensitiveValue);
+    }
+
+    const state = await readCustomerArchiveState(actor.companyId, customerId);
+    assert.ok(state.active);
+    assert.equal(state.archive, null);
+  } finally {
+    await cleanupCustomerArchiveScenario({
+      actorUid,
+      customerIds: [customerId],
+      references: [reference],
+    });
+  }
 });
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {

@@ -10,6 +10,7 @@ async function readApiSource(fileName) {
 
 test("every established-company Callable enters through the common Auth identity gate", async () => {
   for (const fileName of [
+    "archiveCustomer.js",
     "changeAdminUser.js",
     "changeUserEnabledState.js",
     "createTemporaryUser.js",

@@ -2,6 +2,7 @@
  * @file ./functions/apis/index.js
  * @description 公開するCallable APIを集約してexportするエントリーポイントです。
  *****************************************************************************/
+export { archiveCustomer } from "./archiveCustomer.js";
 export { changeAdminUser } from "./changeAdminUser.js";
 export { checkEmailAvailability } from "./checkEmailAvailability.js";
 export { checkUserPreRegistration } from "./checkUserPreRegistration.js";

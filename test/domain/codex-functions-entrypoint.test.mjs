@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 const PUBLIC_CALLABLES = [
+  "archiveCustomer",
   "changeAdminUser",
   "checkEmailAvailability",
   "checkUserPreRegistration",
