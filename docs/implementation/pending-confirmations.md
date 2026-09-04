@@ -580,7 +580,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: Siteの閲覧、作成、基本情報・取引先・取極め編集、終了、archive、restoreを誰に許可するか。
 - Why needed: 配置・請求の基礎masterを改変できる主体を制限しUIとRulesを一致させるため。
 - Options and impact: read/write分離、取極め/終了/削除の個別権限、管理role限定。
-- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報、Agreement変更、終了、再有効化、archiveを含む。Customer変更の回答部分は現行仕様の変更禁止と衝突するため、正本変更までは権限があっても許可しない。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
+- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報、Customer・Agreement変更、終了、再有効化、archiveを含む。Customer変更は2026-09-04に現行仕様へ反映済み。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
 - Related FUT IDs: FUT-0060
 - Answer: 2026-08-11回答。`sites:read`/`sites:write`の2権限を採用し、細分化しない。`sites:write`は作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含む。archiveは理由・監査を必須とし、通常restoreは提供せず、運営operatorの緊急復旧だけに限定する。UI・Rules・Callableを一致させ、role presetから付与する。
 
@@ -588,11 +588,11 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
-- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。現行仕様70行は過去請求整合のためCustomer変更を禁止しており、2026-08-11のAnswerは正本へ反映されていない。
+- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。2026-08-11のAnswerは2026-09-04に現行仕様へ反映した。
 - Question: Customer変更をどの条件で許し、既存予定・実績・請求・埋込みCustomerをどう扱うか。
 - Why needed: tenant内の所属・請求先整合と履歴再現性を保つため。
 - Options and impact: 初回設定後固定、未稼働時のみ変更、明示的移管workflow、全履歴維持で将来分のみ変更。
-- Current provisional treatment: Answer履歴は保持するが、implementation台帳だけで現行仕様を上書きしない。別途の仕様変更承認と仕様・ADR・migration・test同期が完了するまでは、初回の仮登録解消後のCustomer変更を禁止する。
+- Current provisional treatment: SiteのCustomer変更を許可する。一度設定したcustomerIdのunsetは許可せず、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。新しい参照先は同じ会社に存在するCustomerに限る。
 - Related FUT IDs: FUT-0061
 - Answer: 2026-08-11回答。SiteのCustomer変更を許す。既存OperationResultの`customerId`はsnapshotであり、自動変更しない。現行コードの空updateは再同期せず、`groupKey`変更時だけ同期する。将来は明示的な「Customer/Agreement再適用」method/Callableで対象OperationResultを選択し、変更前後のCustomer/AgreementとBilling影響を表示する。発行済み請求書は除外し、actor・reason・before/afterを監査する。OperationResult update triggerはBillingを旧keyから新keyへ移動する。空updateへ隠れた意味を持たせない。
 
@@ -604,7 +604,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 終了Siteに許す閲覧・編集・新規参照と、誤終了/再開時の再有効化条件をどうするか。
 - Why needed: 終了後の不正な新規利用と、必要な訂正・再開を区別するため。
 - Options and impact: read-only、限定訂正、管理者再開、常時編集可だが新規選択不可。
-- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。Customer変更は現行仕様どおり許可しない。
+- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。CONF-0047のCustomer変更許可はこのstatus境界を緩和せず、変更が必要な場合は再有効化後または承認済みの限定訂正operationで扱う。
 - Related FUT IDs: FUT-0062
 - Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。
 

@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-04
-- 仕様バージョン: 0.8.8
+- 仕様バージョン: 0.8.9
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -159,7 +159,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - archive後の参照生成を防ぐため、Sites・OperationResults・BillingsでcustomerIdを新規設定または変更するclient/server writerは、同じ会社の`Customers/{customerId}`が存在することを必須にする。Customer createは同ID archiveが存在すれば拒否し、archive documentを削除済みIDのtombstoneとして扱う。ここでのCustomer存在は`contractStatus=ACTIVE`を意味せず、TERMINATED Customerも通常どおり使用できる。専用lock collectionは設けない。詳細は[ADR 0046](decisions/0046-customer-archive-reference-barrier.md)を正とする。
 - Firestore Rulesは取引先の同一会社、書込み担当、操作別field、型、状態、更新者・更新時刻、削除・archive拒否を強制する。検索用情報と外部住所検索結果の意味上の正しさはRulesだけでは完全再計算できないため、正規画面の専用writerを維持し、server生成へ移すかはDev反映前の残存risk判断とする。
 - 現場は取引先に紐づく。
-- 現場の取引先変更は、過去の請求整合性を守るため許可しない。
+- 現場の取引先は、同じ会社に存在する別のCustomerへ変更できる。一度設定したcustomerIdを未設定へ戻す操作は提供しない。変更後に新規作成される、または別の更新条件でSiteから再同期される稼働実績は変更後のCustomerを参照するが、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。既存実績へCustomer・取極めを再適用する場合は、対象・請求影響・監査を明示する別操作とし、空更新へ暗黙の移管処理を持たせない。詳細は[ADR 0048](decisions/0048-site-customer-change-and-historical-snapshots.md)を正とする。
 - 取極めは現場、適用開始日、曜日区分、勤務区分に基づいて適用する。
 - 同じ適用開始日・曜日区分・勤務区分の取極めを重複登録しない。
 - 既存の稼働実績へ適用済みの取極めは、取極めマスタの後日の変更で自動更新しない。

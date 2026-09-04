@@ -53,6 +53,7 @@
 | [0045](0045-governance-3-normal-startup.md) | Governance 3と通常startupへの移行 |
 | [0046](0046-customer-archive-reference-barrier.md) | Customer archiveの参照barrierと監査境界 |
 | [0047](0047-subagent-parallel-coordinator-external-ui.md) | 専門subagentの原則利用・並列実行とcoordinator直轄操作 |
+| [0048](0048-site-customer-change-and-historical-snapshots.md) | SiteのCustomer変更許可と既存実績snapshot |
 
 ## 新しい ADR の形式
 

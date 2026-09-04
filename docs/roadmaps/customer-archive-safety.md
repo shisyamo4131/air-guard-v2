@@ -9,9 +9,9 @@
 
 ## 承認境界
 
-2026-09-04に、利用者は`CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`として仕様・ADR・roadmap・実装設計の正本化を承認した。続いてCAS-02だけについて、`gpt-5.3-codex-spark`の別`Developer` taskへFunctions実装と単体testを委譲し、coordinatorがreview・差戻し・受入れを行うlocal試験運用を承認した。CAS-02完了時に反省会を行い、CAS-03以降へ同じ手順を採用するかは、その結果を利用者が判断する。
+2026-09-04に、利用者は`CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`として仕様・ADR・roadmap・実装設計の正本化を承認した。続いてCAS-02だけについて、`gpt-5.3-codex-spark`の別`Developer` taskへFunctions実装と単体testを委譲し、coordinatorがreview・差戻し・受入れを行うlocal試験運用を承認した。Spark試験は実装前に中止し、CAS-02は通常サブエージェント運用で完了した。利用者は同日にSpark利用案を棄却し、CAS-03/04をprimary coordinator配下の通常サブエージェント分割で開始することを承認した。
 
-CAS-02のexact ownership、test、書込みlease、差戻し、独立review、完了gate、反省会は[CAS-02実行契約とSpark Developer試験記録](../implementation/customer-archive-cas02-developer-trial.md)を正とする。Sparkの別Developer taskは実装前に中止し、現在はprimary coordinator配下の通常サブエージェント運用へ切り替えた。CAS-03、CAS-04、CAS-05、Firestore Rules、client/UI、参照writer、build、Dev/Prod、remote/data、migration、package変更は今回の承認に含まない。restore、物理delete、自動purge、retention決定、generic package修正、Site customerId immutability、3参照collectionのpermission全体見直し、Customer code一意性・検索拡張は別の作業単位とする。
+CAS-02のexact ownership、test、書込みlease、差戻し、独立review、完了gate、反省会は[CAS-02実行契約とSpark Developer試験記録](../implementation/customer-archive-cas02-developer-trial.md)を正とする。CAS-03/04の承認範囲はlocalのRules・Functions参照guard・client/UI・関連test・Codex専用build/UI・独立review・文書・local Git統合までとする。CAS-05、Dev/Prod、remote/data、migration、package変更は含まない。restore、物理delete、自動purge、retention決定、generic package修正、3参照collectionのpermission全体見直し、Customer code一意性・検索拡張は別の作業単位とする。
 
 ## 設計契約
 
@@ -63,7 +63,7 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い、Functions実装、domain/Emulator test、独立review、local Git統合、反省会まで完了した。CAS-03以降の作業手順は反省会結果を利用者へ提示して判断を待つ。Spark用standalone taskは再利用せず、CAS-03/04を自動開始しない。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
+CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い、Functions実装、domain/Emulator test、独立review、local Git統合、反省会まで完了した。Spark用standalone taskは再利用せず、CAS-03をRules・server writer・test・統合reviewへ分割して開始する。CAS-04はCAS-03の安全境界を受け入れた後にclient/UI実装へ進む。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
 
 ## 進捗履歴
 

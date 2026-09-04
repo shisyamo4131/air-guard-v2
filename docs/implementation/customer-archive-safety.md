@@ -2,10 +2,10 @@
 
 ## メタデータ
 
-- 状態: 設計確定・CAS-02 local実装完了・CAS-03以降は利用者判断待ち
+- 状態: 設計確定・CAS-02 local実装完了・CAS-03/04 local実装承認済み
 - checkpoint: `CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`
 - 最終確認日: 2026-09-04
-- 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)
+- 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[ADR 0048](../decisions/0048-site-customer-change-and-historical-snapshots.md)、[roadmap](../roadmaps/customer-archive-safety.md)
 - 実装事実の根拠: `firestore.rules`、`utils/customer/**`、`composables/application/customer/**`、`pages/customers/[id].vue`、`functions/apis/archiveCustomer.js`、`functions/modules/customer/**`、`functions/modules/billings/**`、installed Customer/Site/OperationResult/Billing schema、installed client/server adapter
 
 ## 現行事実
@@ -66,7 +66,7 @@ audit:
 - `Customers_archive`は同一tenant Userを含む全client actorについてread/create/update/deleteを拒否する。catch-all matchで迂回できない構造を維持する。
 - Site createでcustomerIdがある場合、またはupdateでcustomerIdを新規設定・変更する場合だけ、同じcompany配下のCustomer存在を必須にする。customerIdなしの仮Siteは維持する。
 - OperationResultとBillingはcreate、またはupdateでcustomerIdが変更される場合に同じ存在条件を必須にする。
-- deleteとcustomerId不変updateは、この参照barrierだけを理由に拒否しない。各collectionの広いtenant内permission全体やSite customerId immutabilityは別checkpointで扱う。
+- deleteとcustomerId不変updateは、この参照barrierだけを理由に拒否しない。Siteは同じ会社に存在する別Customerへの変更を許可し、一度設定したcustomerIdのunsetは現行schema境界を維持する。各collectionの広いtenant内permission全体は別checkpointで扱う。
 - `Customers` collectionの存在を確認し、`contractStatus`は条件にしない。
 
 ### server writer（CAS-03未着手）
@@ -99,7 +99,7 @@ Firestore database edition・concurrency mode固有のlock挙動には依存せ�
 
 後続local implementationの対象候補は、client action、Customer詳細の確認UI、Customer/Site/OperationResult/Billingの最小Rules guard、Billing server assertion、CAS-03/04に必要なEmulator/concurrency/source-contract/UI testである。CAS-02のCustomer archive Callable/use-case/export、version 1 envelope、domain test、対象Emulator testはcommit `74d0eb4d`で完了した。後続のexact owned filesは各実装checkpoint開始前に再確認する。
 
-対象外は緊急restore、operator inspection、物理delete/purge/retention、generic adapter/package修正、Site customerId immutability、3参照collectionのactor permission全体、Customer code一意性・検索、Schemas/Admin SDK変更、Stripe・通知、Dev/Prod・remote/data・migrationである。
+対象外は緊急restore、operator inspection、物理delete/purge/retention、generic adapter/package修正、3参照collectionのactor permission全体、Customer code一意性・検索、Schemas/Admin SDK変更、Stripe・通知、Dev/Prod・remote/data・migrationである。
 
 ## test契約
 

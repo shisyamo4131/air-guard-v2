@@ -825,12 +825,12 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-034、SCHEMA-MASTER-001
 - 対象ファイル・シンボル: schemas `Site.customerId/customer/beforeUpdate`、`SiteActivatorCustomer`、`SiteManager`、Customer→Site同期
-- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能で、詳細UIもcustomerId editorを常時公開する。一覧はlive Customer、詳細等は埋込みCustomerを使う。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播するが、複数batchはatomicでなくevent version guardもない。現行仕様は過去請求整合のためSite Customer変更を禁止する一方、CONF-0047には変更許可の回答履歴があり、正本と台帳が衝突している。
-- 想定影響と発生条件: 現行UI/sourceでA→B変更すると仕様に違反し、schedule/result/billingが異なる所属・条件を保持し得る。通常Customer更新でもout-of-order/partial batchにより同じSiteの取引先表示・締条件が画面別に不一致となり得る。
-- 未確認点・仮説: 既存A→B変更data、古いCustomer eventの順序逆転、partial batch件数、正本仕様を変更する正式承認は未確認。
-- 推奨する将来対応: 現行仕様を優先し、仮登録の初回Customer設定後はcustomerId変更・unsetをRules/server/schema/UIで拒否する。Customer masterから埋込みsnapshotへの同期はsource revisionを持つ収束可能な処理とし、失敗を監視・再実行する。将来Customer移管を採用する場合は、先に仕様・ADR・migration・Billing影響・rollbackを正式変更する。
-- 必要なテスト: 仮登録→初回設定、A→B/unset直接write拒否、同Customer master更新、out-of-order/replay、300件境界、partial failure/reconcile、一覧/詳細整合、既存違反data検出。
-- ユーザー判断が必要な事項: CONF-0047の回答履歴と現行仕様のどちらを将来正本とするかはrepository conflictである。変更指示がない限り現行仕様の変更禁止を適用する。
+- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能で、詳細UIもcustomerId editorを常時公開する。一覧はlive Customer、詳細等は埋込みCustomerを使う。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播するが、複数batchはatomicでなくevent version guardもない。2026-09-04に別Customerへの変更を許可する仕様を正本へ反映した。
+- 想定影響と発生条件: A→B変更後も既存OperationResult・Billingは履歴snapshotとして旧customerIdを保持する。これは確定仕様であり自動移管しない。通常Customer更新ではout-of-order/partial batchにより同じSiteの取引先表示・締条件が画面別に不一致となり得る。
+- 未確認点・仮説: 古いCustomer eventの順序逆転、partial batch件数、埋込みCustomerの不一致が実際に発生しているかは未確認。
+- 推奨する将来対応: A→B変更時は同じ会社に存在するCustomerだけを許可し、Siteの埋込みcustomerを更新する。既存実績へCustomer・Agreementを再適用する必要が生じた場合は、対象、変更前後、Billing影響、発行済み請求書の除外、actor・reasonを持つ明示操作として設計する。Customer masterから埋込みsnapshotへの同期はsource revisionを持つ収束可能な処理とし、失敗を監視・再実行する。
+- 必要なテスト: 仮登録→初回設定、A→存在するB、A→missing/archive/他社Customer拒否、unset拒否、既存OperationResult・Billing不変、同Customer master更新、out-of-order/replay、300件境界、partial failure/reconcile、一覧/詳細整合。
+- ユーザー判断が必要な事項: Customer変更可否は2026-09-04に確定済み。既存実績へCustomer・Agreementを再適用する明示操作の要否と詳細は、実需要が生じた時点で別途判断する。
 
 ## FUT-0062 Site status lifecycleと検索・編集境界を統一する
 
@@ -841,8 +841,8 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 確認済み実装事実: terminateは当日以降scheduleだけを阻止する。TERMINATEDもAutocomplete候補となり、詳細で編集・取引先変更・取極め変更・削除・再終了UIが表示される。再有効化経路はない。SPEC-DEEP-010で終了検索にloading/error/request sequenceがなく、連続検索responseの逆転防止もないことを確認した。SPEC-DEEP-034ではAutocomplete wrapper自体にもstatus constraintがなく、基本情報cardの工期片端欠損時に`null`文字列を表示することを確認した。
 - 想定影響と発生条件: 終了Siteへの新規紐付けや終了後master改変、誤終了から回復不能、再終了errorが発生し得る。
 - 未確認点・仮説: 限定訂正を許すfieldと監査schema、Agreementを再開時にどう選び直すかは実装設計未確認。
-- 推奨する将来対応: TERMINATEDをread-only・新規選択不可とし、履歴表示と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。Customer変更時はFUT-0061の方針を使い、Agreementは自動再有効化しない。archiveは誤登録等だけ、通常restoreは禁止する。
-- 必要なテスト: ACTIVE→TERMINATED、検索/選択除外、履歴表示、一般編集拒否、限定訂正監査、同一Customer再有効化、Customer変更、Agreement非自動復帰、archive/restore拒否。
+- 推奨する将来対応: TERMINATEDをread-only・新規選択不可とし、履歴表示と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。FUT-0061のCustomer変更許可はこのstatus境界を緩和せず、再有効化後または承認済みの限定訂正operationで扱う。Agreementは自動再有効化しない。archiveは誤登録等だけ、通常restoreは禁止する。
+- 必要なテスト: ACTIVE→TERMINATED、検索/選択除外、履歴表示、一般編集拒否、限定訂正監査、同一Customer再有効化、status上許可されたCustomer変更、Agreement非自動復帰、archive/restore拒否。
 - ユーザー判断が必要な事項: なし。CONF-0048で方針確定済み。
 
 ## FUT-0063 Site archiveと参照guardを競合安全にする

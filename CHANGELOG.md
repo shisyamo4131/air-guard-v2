@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- Customer archive safetyのCAS-02について、別`Developer` taskを使うSpark試験はcontext window不足とSpark固有usage limitのため実装前に中止した。その後は通常の`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェント運用へ切り替え、current Authとtransaction内actor/3参照確認、exact version 1 archive、same-operation retry、安全なresponse/logを持つ専用Callableとdomain/Emulator testをlocal実装した。最終`domain-full` 873/873、`local-emulator-suite` 123/123、独立review、local commit `74d0eb4d`、反省会を完了し、CAS-02を25点加点して全体進捗を45%とした。CAS-03以降の手順は利用者判断待ちで、自動開始しない。CAS-03/04、Rules、client/UI、参照writer、build、Dev/Prod、remote/data、deployは未着手であり、この差分単独はdeployしない。[実行契約と反省会記録](docs/implementation/customer-archive-cas02-developer-trial.md)を参照。
+- Siteの取引先は同じ会社に存在する別Customerへ変更可能と確定し、現行sourceと2026-08-11の回答履歴に仕様を一致させた。既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更せず、一度設定したcustomerIdを未設定へ戻す操作も提供しない。既存実績への再適用は請求影響と監査を伴う別操作として将来判断する。現行application挙動とdataは変更せず、migrationは不要。
+
+- Customer archive safetyのCAS-02について、別`Developer` taskを使うSpark試験はcontext window不足とSpark固有usage limitのため実装前に中止した。その後は通常の`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェント運用へ切り替え、current Authとtransaction内actor/3参照確認、exact version 1 archive、same-operation retry、安全なresponse/logを持つ専用Callableとdomain/Emulator testをlocal実装した。最終`domain-full` 873/873、`local-emulator-suite` 123/123、独立review、local commit `74d0eb4d`、反省会を完了し、CAS-02を25点加点して全体進捗を45%とした。Spark利用案は棄却し、CAS-03/04は通常サブエージェント分割で開始した。CAS-03/04のlocal実装・検証・review・Git統合は承認済みだが、Dev/Prod、remote/data、deployは未着手・別承認であり、CAS-02差分単独はdeployしない。[実行契約と反省会記録](docs/implementation/customer-archive-cas02-developer-trial.md)を参照。
 
 - 上下番確定の最初の操作で不明なerrorを示すSnackbarが再観測された事実をFUT-0027へ追記した。同じ時間帯のFCM登録403、thumbnail取得404、deprecated warningは因果未確認として分離し、次回改修で発生源と最終状態を追跡する。製品codeとDev環境は変更していない。
 
