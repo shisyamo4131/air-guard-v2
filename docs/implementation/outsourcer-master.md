@@ -2,10 +2,10 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-05 local実装・検証完了
+- 状態: 実装調査 / OUT-06 local実装・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
-- 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
+- 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`components/Workers/Table/index.vue`、`components/Workers/Table/Tr.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、`test/domain/outsourcer-duplicate-placement.test.mjs`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/SiteOperationSchedule.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
 
 ## 入口・権限
 
@@ -22,12 +22,14 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - OUT-03では、statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績その他の選択へ影響させない。終了日・理由・履歴や関連dataの自動変更は追加しない。
 - OUT-04では、Outsourcerを通常productからarchive／restore／物理deleteせず、live masterとして保持する。現行UI・application action・Rulesがこの契約を満たすため、製品runtimeは変更しない。
 - OUT-05では、codeを任意・手動・重複可・検索外とし、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を確定・実装した。
+- OUT-06では、通常UIの一配置を`amount=1`の独立明細とし、raw `id`はmaster取得、`workerId`は行・mutation・通知identityへ使う契約を固定した。削除後にindexを詰めず、再追加は最大index+1、並べ替えと実績化は明細identityを維持する。WorkersTableのVue keyを`worker.id`から`worker.workerId`へ修正した。
 
 - `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
 - OUT-05は対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了したlocal実装である。OUT-01/02のRules・保存契約を維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
+- OUT-06は対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了したlocal実装である。Rules・index・schema・package・migration・dataは変更していないため、local Emulator suiteはverification policyに基づき省略した。
 
 ## データ契約
 
@@ -80,6 +82,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 - SiteOperationScheduleとOperationResultは`outsourcers`の埋込みOperationDetailと、そこから保存される読み取り専用`outsourcerIds`を持つ。名称等のOutsourcer master全体をsnapshotする契約ではなく、表示側はIDからlive masterを取得する箇所がある。
 - ArrangementNotificationは`id`、`index`、`isEmployee=false`を引き継ぎ、`outsourcerId`を導出する。通知ごとのworkerIdはindexを含む。
+- ArrangementNotificationのdocument IDはschedule IDと`workerId`の組であり、同じOutsourcerの重複配置を個別に扱う。ScheduleからOperationResultへの変換は各OperationDetailをmapし、重複排除や人数集約を行わない。
 - masterの名称・略称変更はID参照表示へ反映され得る一方、既存Schedule/ResultのOperationDetailを一括更新する処理は本範囲にない。
 - masterをarchiveするとlive pathのID取得は失敗し得る。過去データが名称snapshotを持つかは利用先ごとに異なり、本調査では内部へ進んでいない。
 
@@ -101,11 +104,9 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 - Outsourcerは協力会社masterであり、外注警備員個人masterは持たない。同一会社の重複配置は明細indexで区別する現行契約で、人数集約方式は採用しない。
 - `useOutsourcersInRange`の`from/to`は期間選定に未使用で、契約開始/終了日fieldも設けない。
-- `OutsourcerAutocomplete`のdefault item slotは`EmployeeListItem`を描画しており、名称表示は動作し得るが型・責務上の取り違え候補である。
-- `OutsourcerListItem`は静的callerを確認できず、Autocompleteのdefault rendererにも使われないlegacy候補である。Nuxt auto-registration等の動的到達性は未確認のため、未使用とは断定しない。
-- 一覧query limit 10とManager itemsPerPage 20が不一致。
-- OUT-01前はManagerのtoolbar plusが`showCreate=false`でも表示された。OUT-01後はwrite actorにだけ表示する。Iteratorのdeclared `hideDefaultFooter`がrootへ渡らない点は未変更である。
-- codeは一覧header・sortに使うがtoken検索対象外かつ任意・非一意である。
+- OUT-05で`OutsourcerAutocomplete`は専用`OutsourcerListItem`を使うようになり、通常一覧と検索結果はどちらも20件単位、Iteratorは`hideDefaultFooter`と件数設定を内部iteratorへ転送する。OUT-05以前の調査記述は現行実装には該当しない。
+- codeは一覧の識別表示に使うが、sort・token検索対象ではなく任意・非一意である。
+- schemaの低レベル`addWorker`はcallerが渡した`amount`を受け入れる。通常UIは`amount`を渡さず既定値1となるが、全callerでの`amount=1`強制は未実装である。package・Rules・data validationへ広げる場合は別承認を要する。
 
 ## 将来要対応
 
@@ -113,10 +114,10 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常productでarchive／restore／物理deleteを提供しない方針、CONF-0073はcode・検索・pagination・表示契約として回答済みである。OUT-02の保存data契約、OUT-03のstatus非制限、OUT-05の検索表示も確定・local実装済みである。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常productでarchive／restore／物理deleteを提供しない方針、CONF-0073はcode・検索・pagination・表示契約として回答済みである。OUT-02の保存data契約、OUT-03のstatus非制限、OUT-05の検索表示、OUT-06の配置identityも確定・local実装済みである。
 
 ## 未確認範囲
 
 - 実データの重複、archive、参照件数、既存の外注警備員管理運用。
-- Schedule、ArrangementNotification、OperationResultの業務処理本文と帳票表示。
+- 実Firestore transaction上の通知作成・実績化、実browser DOM、帳票表示。
 - Dev/Prodでの旧client併存、既存document適合性、複数browserによる同時操作の実UI再現、復元用保守手順。

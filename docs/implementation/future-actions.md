@@ -1168,11 +1168,11 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-024、SPEC-DEEP-033
 - 対象ファイル・シンボル: schemas `Outsourcer`、`Operation.outsourcers.add`、ArrangementNotification workerId、`WorkersTable`
-- 確認済み実装事実: Outsourcerは会社masterのみ。同一会社の複数人はdoc ID+一時indexで表し、個人の永続ID、氏名、資格、連絡先、所属statusを持たない。SPEC-DEEP-024で、worker結合/mutationは`workerId`を使う一方、WorkersTableのVue keyと表示cacheはraw `id`を使うことを確認した。employee/outsourcerのraw IDが同じ場合、表示行key衝突候補となる。SPEC-DEEP-033で、配置TagとOperationResult worker inputも会社doc IDを名称解決/候補選択に使い、個人識別を追加しないことを確認した。
+- 確認済み実装事実: OUT-06で、Outsourcerは会社masterのみ、同一会社の複数人は人数1の別明細、identityは`outsourcerId:index`形式の`workerId`と確定した。WorkersTableのVue keyをraw `id`から`workerId`へ修正し、master表示cacheは名称解決のためraw `id`を維持した。削除後のindex非再採番、再追加時の最大index+1、並べ替え、通知ID、ScheduleからOperationResultへの1対1変換を回帰testで固定した。個人の永続ID、氏名、資格、連絡先、所属statusは追加していない。
 - 想定影響と発生条件: 同じ協力会社を複数配置する操作を単一の人数fieldへ集約すると、既存の配置明細・通知・実績処理が複雑化する。
-- 未確認点・仮説: 将来、外注警備員個人を管理する新しい業務要件が提示された場合は、現行Outsourcerへ推測追加せず別仕様として扱う。
+- 未確認点・仮説: schemaの低レベル`addWorker`はcaller指定の`amount`を受け入れるため、通常UI外まで`amount=1`を一律強制する場合はpackage・Rules・data validationを含む別仕様が必要である。将来、外注警備員個人を管理する新しい業務要件が提示された場合も、現行Outsourcerへ推測追加せず別仕様として扱う。
 - 推奨する将来対応: 協力会社masterと重複配置の現行契約を維持し、過去に廃止したOutsourcer＋人数方式や個人masterを今回の改修へ追加しない。
-- 必要なテスト: 同一Outsourcerの複数配置、並べ替え、通知・実績化で明細が個別に維持されること。
+- 必要なテスト: OUT-06のdomain回帰で同一Outsourcerの複数配置、削除・再追加、並べ替え、通知・実績化の明細維持を確認済み。実Firestore transactionと実browser DOMはOUT-07のlocal統合確認へ残す。
 - ユーザー判断が必要な事項: CONF-0071は回答済み。
 
 ## FUT-0087 Outsourcer終了・archive・参照保持を整合させる
@@ -1566,9 +1566,9 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-033
 - 対象ファイル・シンボル: Article/Customer/Employee/Outsourcer/Site Autocomplete、特に`Outsourcer/Autocomplete.vue`
-- 確認済み実装事実: Outsourcerはdefault itemにEmployeeListItemを使い、作成iconはplain v-icon click。検索errorはuseFetch側で空結果へ吸収される。
-- 想定影響と発生条件: 外注field表示が欠落/誤表示し、作成iconをkeyboard利用できず、障害を候補0件と誤認する。
-- 未確認点・仮説: EmployeeListItemが外注instanceを意図的に兼用可能か、AirAutocompleteApiのerror/keyboard挙動は未確認。
+- 確認済み実装事実: OUT-05でOutsourcerは専用OutsourcerListItemを使い、外注field表示の取り違えを解消した。作成iconはplain v-icon clickのままで、検索errorはuseFetch側で空結果へ吸収される。
+- 想定影響と発生条件: 作成iconをkeyboard利用できず、検索障害を候補0件と誤認する。
+- 未確認点・仮説: AirAutocompleteApiのerror/keyboard挙動は未確認。
 - 推奨する将来対応: typed共通Autocomplete factory、entity別ListItem、button化したcreate action、typed loading/error/empty contractを揃える。
 - 必要なテスト: 5 entityの既存key/search/create/returnObject、外注field、network/permission/0件、keyboard、race。
 - ユーザー判断が必要な事項: CONF-0097。
@@ -2319,6 +2319,8 @@ SPEC-DEEP-040追加根拠: `user/useUserSettingsActions.js` のtagSize更新はe
 - ユーザー判断が必要な事項: なし。公開component APIとrenderingの実装修正事項である。
 
 SPEC-DEEP-033でOutsourcersManagerも`showCreate=false`を無視してtoolbar plusを表示し、OutsourcersIteratorもdeclared `hideDefaultFooter`をrootへ渡さないことを確認した。`itemsPerPage`はundeclared attrとしてfallthroughし得るため、全propが同じく失われるとは断定しない。
+
+OUT-01でOutsourcersManagerのcreate表示はactor policyへ従属し、OUT-05でOutsourcersIteratorは`hideDefaultFooter`と件数設定を内部iteratorへ明示転送した。上記Outsourcer固有の旧観測は現行実装には該当しないが、他entityと共通するselection・pagination・集計table契約は引き続き未解決である。
 
 SPEC-DEEP-034では、Site create wizardがselection/v-modelを転送しないCustomersIteratorへ依存することを再確認した。SiteCardはSitesIteratorだけから到達し、そのroute使用はcomment outされている。Card selectionはclickable iconだけでaccessible name/keyboard handlerがなく、公開componentのdynamic/external reachabilityは未確認である。
 

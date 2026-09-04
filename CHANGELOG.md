@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Outsourcer OUT-06として、同じ協力会社を`amount=1`の別配置明細として複数登録し、`outsourcerId:index`形式の`workerId`で表示行・操作・通知・実績を区別する既存契約を固定した。WorkersTableのVue keyをraw IDから`workerId`へ修正し、削除後のindex非再採番、再追加時の最大index+1、並べ替え、通知ID、ScheduleからOperationResultへの1対1変換を回帰testで確認した。対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。通常UI外の低レベルAPIで`amount=1`を一律強制する変更は行っていない。Rules、index、schema、package、migration、Dev・remote・実dataは変更していない。実装commitは`794af0ed`。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。
+
 - Outsourcer OUT-05として、外注先codeを任意・手動・重複可・検索外の表示情報として確定し、通常一覧をフリガナ順20件のserver cursor、名称検索を2〜40文字・20件のmemory paginationへ整合した。外注先専用候補表示、略称・正式名称・code、契約終了表示、読込失敗時の再試行、古いlistener結果の破棄を追加した。Rules、index、schema、package、migration、Dev・remote・実dataは変更していない。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。
 
 - Outsourcerを特定の協力会社masterとし、配置では同じOutsourcerを複数明細として登録できる現行方式を維持する。過去に試行して廃止したOutsourcer＋人数の集約方式と、外注警備員個人masterは今回採用しない。OUT-01で会社管理者またはstrict `manager`だけに作成・編集を許可してclient deleteとarchive writeを停止し、OUT-02ではexact 11 field、型・長さ・system metadata、部分更新、名称変更時の検索token再生成、独立draftと同一field競合拒否を専用UI/writerとRulesへ実装した。OUT-03ではstatusをCustomerと同じ説明用フラグに限定し、一覧・検索・Autocomplete・配置・稼働実績の選択へ影響させないようACTIVE query条件を除去した。OUT-04では通常productにarchive・restore・物理deleteを設けずlive masterとして保持すると確定し、既存runtimeが契約を満たすことを回帰testで固定した。対象test 22/22、最終domain 935/935、local Emulator 147/147、文書検証を完了した。OUT-04ではUI sourceを変更していないためlocal UI buildを省略した。実装commitはOUT-03 `995488a5`、OUT-02 `31d11b15`、OUT-01 `82e22179`。[ロードマップ](docs/roadmaps/outsourcer.md)と[判断](docs/decisions/0050-outsourcer-live-retention-without-archive.md)を参照。Dev・remote・実dataは未変更である。

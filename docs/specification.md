@@ -150,6 +150,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### 外注先
 
 - Outsourcerは、ある特定の協力会社を表す会社masterであり、外注警備員個人を表すものではない。配置では、同じOutsourcerを別々の配置明細として複数回登録できる。Outsourcerと人数を一組にして一明細へ集約する方式は採用せず、外注警備員個人masterも現段階では新設しない。
+- 通常UIでOutsourcerを1回配置するごとに`amount=1`の配置明細を一つ作る。配置明細のidentityは、従業員ではraw ID、Outsourcerでは`outsourcerId:index`形式の`workerId`とする。Outsourcer masterの名称解決にはraw `id`を使い、表示行、削除・並べ替え、配置通知の照合には`workerId`を使う。同じ配置内のOutsourcer indexは最大値に1を加えて採番し、明細削除後も残存明細を再採番せず、再追加時は次の最大値を使う。ScheduleからOperationResultへの変換は各配置明細を1対1で維持する。
 - Outsourcerの閲覧は現行の同一tenant境界を維持する。作成、基本情報変更、`contractStatus`変更は、認証UIDとUser document IDが一致する同じ会社の有効な本登録Userのうち、会社管理者または既知role preset `manager`だけに許可する。会社管理者でないsuper-user、直接permission文字列、未知または既知外roleを含むUser、仮登録、無効User、他社Userは書込み権限の根拠にしない。会社管理者かつsuper-userのUserは、会社管理者であることを根拠に許可する。
 - Outsourcerは通常の製品運用ではlive masterとして保持し、archive、restore、物理deleteを提供しない。誤登録・重複・取引終了もarchiveの理由にせず、必要な訂正は通常の基本情報・状態変更として行う。client直接deleteと`Outsourcers_archive`のclient作成・変更・削除を拒否し、製品UI、application action、Callableからgeneric `delete()`／`restore()`へ到達させない。既存archiveの同一tenant read境界は変更せず、既存live/archive dataの変換・復元・削除、自動purge、保持期限を追加しない。判断理由は[ADR 0050](decisions/0050-outsourcer-live-retention-without-archive.md)を参照する。
 - live Outsourcer documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`だけを持つ。`code`は手動入力する任意の識別表示で、nullまたは10文字以内とし、重複を許可する。自動採番・一意制約・検索対象にはせず、document IDをidentityとして維持する。`name`は必須20文字以内、`nameKana`は必須40文字以内、`displayName`は必須6文字以内、`remarks`はnullまたは200文字以内とする。`contractStatus`は`ACTIVE/TERMINATED`だけを許可し、新規作成は常に`ACTIVE`とする。

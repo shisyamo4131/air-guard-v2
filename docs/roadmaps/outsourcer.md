@@ -2,9 +2,9 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 70%
+- 現在の進捗: 80%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01からOUT-05はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-06はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
@@ -15,7 +15,7 @@
 | OUT-03 契約終了と候補 | 10 | 10 | Completed | statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績の選択を制限しない。終了日・理由・履歴・自動変更を追加せず、domain 934/934と専用local UI build、文書検証を完了した。実装commit `995488a5`。 |
 | OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
-| OUT-06 協力会社masterと重複配置の互換性 | 10 | 0 | Requirement confirmed / 実装未着手 | 協力会社masterの同一IDを複数配置明細へ登録できることを維持し、人数集約や個人masterへ変更していないことを対象回帰で確認する。 |
+| OUT-06 協力会社masterと重複配置の互換性 | 10 | 10 | Completed | 同一Outsourcerを人数1の別明細として複数配置し、安定した`workerId`で行・通知・実績を区別する契約を回帰testで固定した。重複行のVue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。実装commit `794af0ed`。 |
 | OUT-07 local統合確認 | 10 | 0 | Proposed / 未承認 | 権限別UI、Rules陰性、配置・通知・実績・請求・帳票の必要な対象回帰、文書とrollbackを確認する。 |
 | OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
 
@@ -90,10 +90,24 @@
 - rollbackは一覧pagination composableとPage／Manager／Iterator、Card／ListItem／Autocompleteの表示変更を一組で戻す。検証失敗時は追加indexやcode制約へ拡張せずlocalで停止する。
 - 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。`local-emulator-suite`はRules・schema変更がないためpolicy上は省略可能だが、承認済みlocal回帰として実行した。
 
+## OUT-06の確定範囲
+
+- Outsourcerは協力会社masterのままとし、外注警備員個人masterやOutsourcer＋人数の集約方式を追加しない。通常UIで同じOutsourcerを配置するたび、`amount=1`の独立した配置明細を一つ作る。
+- 配置明細のidentityは、従業員ではraw ID、Outsourcerでは`outsourcerId:index`形式の`workerId`とする。masterの名称解決はraw `id`を使い、表示行、配置操作、通知照合は`workerId`を使う。
+- Outsourcerの`index`は同じ配置内の最大値に1を加えて採番する。途中の明細を削除しても残存明細を再採番せず、再追加は新しい最大値を使う。並べ替えでも`workerId`と明細数を維持する。
+- 配置通知はschedule IDと`workerId`の組で明細を区別し、ScheduleからOperationResultへの変換は配置明細を1対1で維持する。`contractStatus`は配置identityへ含めず、`ACTIVE/TERMINATED`のどちらも同じ契約とする。
+
+## OUT-06の互換性・rollback・検証
+
+- 永続path、document shape、Rules、index、schema、package、既存dataを変更せず、migrationを行わない。製品変更はWorkersTableのVue keyをraw `id`から既存`workerId`へ合わせる1行である。
+- rollbackはWorkersTableのkey変更とOUT-06回帰test・文書を戻す。人数集約や個人master、低レベルAPIの再設計へ拡張しない。
+- 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。Rules・schema・永続data契約を変更しないため`local-emulator-suite`はpolicyに基づき省略する。
+- 通常UIは`amount`を渡さずschema既定値1を使うが、導入済みschema packageの低レベル`addWorker`はcallerが渡した別の`amount`も受け入れる。通常UI契約の回帰は固定したが、全callerでの`amount=1`強制は未実装であり、package・Rules・data validationを含む別承認範囲とする。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-06以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-07以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 
@@ -104,3 +118,4 @@
 | 2026-09-04 | 40% | +10 | statusを説明用フラグに限定し、一覧検索・Autocomplete・配置・稼働実績の候補制限を除去した。domain 934/934、専用local UI build、文書検証を完了した。 |
 | 2026-09-04 | 60% | +20 | 通常productにはarchive・restore・物理deleteを設けず、live masterとして保持すると確定した。製品runtime・Rules・schema・dataを変更せず、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | 2026-09-04 | 70% | +10 | codeを任意・重複可・検索外として確定し、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を実装した。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
+| 2026-09-04 | 80% | +10 | 同一Outsourcerの複数配置を人数1の別明細とし、安定した`workerId`で行・通知・実績を区別する契約を固定した。Vue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。 |

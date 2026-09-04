@@ -12,12 +12,12 @@
 ## 未決事項と承認
 
 - Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
-- Spark用standalone Developer taskは実装前に中止・削除済みで、再利用しない。CAS-02/03/04はprimary coordinator配下の通常サブエージェント運用で完了した。CAS-05、Dev/Prod、remote data/migration、package、restore、retention/purge、OUT-06以降、他マスタは未承認・対象外である。
+- Spark用standalone Developer taskは実装前に中止・削除済みで、再利用しない。CAS-02/03/04はprimary coordinator配下の通常サブエージェント運用で完了した。CAS-05、Dev/Prod、remote data/migration、package、restore、retention/purge、OUT-07以降、他マスタは未承認・対象外である。
 - Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
-1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-05は、更新権限・破壊操作停止・保存data契約・status非制限・通常product非archive方針・code／検索／一覧表示のlocal実装または契約検証を完了した。次はOUT-06の協力会社masterと重複配置の互換性を着手前に合意する。OUT-06以降、Dev/Prod、remote/dataは未承認である。
+1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-06は、更新権限・破壊操作停止・保存data契約・status非制限・通常product非archive方針・code／検索／一覧表示・重複配置identityのlocal実装または契約検証を完了した。次は未承認のOUT-07 local統合確認であり、Dev/Prod、remote/dataも別承認である。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
