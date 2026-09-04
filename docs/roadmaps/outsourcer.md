@@ -2,7 +2,7 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 80%
+- 現在の進捗: 90%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 環境境界: OUT-01からOUT-07はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
@@ -16,7 +16,7 @@
 | OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 10 | Completed | 同一Outsourcerを人数1の別明細として複数配置し、安定した`workerId`で行・通知・実績を区別する契約を回帰testで固定した。重複行のVue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。実装commit `794af0ed`。 |
-| OUT-07 local統合確認 | 10 | 0 | In progress / 承認済み | 対象test 48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smokeは成功した。拒否actorの実browser確認は安全な合成session再確立経路がなく未完了のため加点しない。周辺transaction機能は変更していない。[進行記録](../verification/outsourcer-out07-local-progress.md)を参照。 |
+| OUT-07 local統合確認 | 10 | 10 | Completed | 対象test 48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smoke、Rules陰性、保存data不変、cleanupを確認した。拒否actorの実browserは未実施だが、利用者承認により自動UI契約テストとRules陰性をOUT-07固有の代替証拠とした。周辺transaction機能は変更していない。[証拠](../verification/outsourcer-out07-local-integration.md)を参照。 |
 | OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
 
 ## OUT-01の確定範囲
@@ -116,6 +116,7 @@
 - 永続path、document shape、Rules、index、schema、package、Functions、既存dataを変更せず、migrationを行わない。配置管理の作業員追加・変更・削除・並べ替えは現行のFirestore client transaction経路を維持し、Server APIへ移行しない。
 - rollbackはOUT-07で追加する検証・記録と、別途必要性を確認して承認範囲内で行ったOutsourcer master CRUD修正だけを戻す。周辺transaction機能の既存riskを解消するためにrollback範囲を広げない。
 - 変更classは、実際に変更したfileに対応するclassの和集合とする。現時点のverification計画は`project-docs`、Outsourcer対象test、`domain-full`、`local-emulator-suite`、`local-ui-build`、Codex専用local UI smoke、`diff-check`、独立reviewである。最終worktreeの変更classに応じて機械可読policyを再評価し、実行結果と省略理由を完了報告へ記録する。
+- 2026-09-05の利用者承認により、拒否actorの実browser確認は、OUT-07に限ってdomain source contractのrole別UI契約と専用EmulatorのRules陰性で代替する。write actorの実UIは省略せず実施済みであり、この判断を他checkpointの権限別UI省略へ一般化しない。
 
 ## 未確認・別承認
 
@@ -132,3 +133,4 @@
 | 2026-09-04 | 60% | +20 | 通常productにはarchive・restore・物理deleteを設けず、live masterとして保持すると確定した。製品runtime・Rules・schema・dataを変更せず、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | 2026-09-04 | 70% | +10 | codeを任意・重複可・検索外として確定し、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を実装した。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | 2026-09-04 | 80% | +10 | 同一Outsourcerの複数配置を人数1の別明細とし、安定した`workerId`で行・通知・実績を区別する契約を固定した。Vue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。 |
+| 2026-09-05 | 90% | +10 | Outsourcer master CRUDのlocal統合確認として対象48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smoke、Rules陰性、保存data不変とcleanupを確認した。拒否actor実browserの自動代替は利用者が明示承認した。 |
