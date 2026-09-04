@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Customer archive safetyのCAS-02だけを、`gpt-5.3-codex-spark`の別`Developer` taskへFunctions実装とdomain単体testを委譲する試験運用として開始した。primary repositoryの排他的single-writer lease、no-change route確認、exact ownership・禁止範囲、coordinator review/差戻し、独立Emulator/security/code review、最終gate、完了後反省会を[実行指示書](docs/implementation/customer-archive-cas02-developer-trial.md)へ固定した。CAS-03/04、Rules、client/UI、参照writer、build、Dev/Prod、remote/data、package、deployは未着手で、CAS-02単独commitをrelease-readyとして扱わない。
+- Customer archive safetyのCAS-02だけを`gpt-5.3-codex-spark`の別`Developer` taskへ委譲する試験を開始したが、最初のtaskは約8分46秒の探索後にcontext window不足、再作成taskはroute確認後の実装開始時にSpark固有usage limitで停止した。利用者指示によりSparkでの開発を中止し、Functions・test差分、test実行、Emulator、build、network、remote/data、Git mutationは0のまま。[試験記録と現行実行契約](docs/implementation/customer-archive-cas02-developer-trial.md)を保持する。CAS-02は通常の`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェント運用で継続し、実装未着手・得点0のまま、CAS-03/04は未着手とした。
 
 - 上下番確定の最初の操作で不明なerrorを示すSnackbarが再観測された事実をFUT-0027へ追記した。同じ時間帯のFCM登録403、thumbnail取得404、deprecated warningは因果未確認として分離し、次回改修で発生源と最終状態を追跡する。製品codeとDev環境は変更していない。
 

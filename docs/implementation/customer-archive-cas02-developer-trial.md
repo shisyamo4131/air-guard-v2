@@ -1,23 +1,25 @@
-# CAS-02 Spark Developer試験運用
+# CAS-02実行契約とSpark Developer試験記録
 
 ## メタデータ
 
-- 状態: Approved / preparation in progress
+- 状態: In progress / Spark standalone trial cancelled / normal subagent workflow active
 - 対象: Customer archive safety roadmapの`CAS-02 専用Callable・監査・冪等性`だけ
 - 対象外: CAS-03、CAS-04、CAS-05
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)
-- 終了条件: CAS-02の実装・単体/統合test・独立review・最終gate・local Git統合を完了し、本試行の反省会結果を記録すること
+- 現在方式: primary taskのcoordinatorが`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェントを順序立てて使用する
 
 ## 利用者承認と試行目的
 
 2026-09-04に利用者は、`gpt-5.3-codex-spark`を使用する別Codex task `Developer`へ開発と単体testを委譲し、coordinatorが結果をreviewして受入れまたは差戻す試験運用を、CAS-02だけについて承認した。CAS-02完了時にDeveloperとcoordinatorで反省会を行い、CAS-03以降へ同じ手順を採用するかは、その結果を利用者が判断する。
+
+Sparkの別task試験は実装前に中止した。その後、利用者はCAS-02自体を継続し、従来どおりprimary taskのcoordinatorが司令塔となってサブエージェントを活用するよう指示した。以後、別Codex task `Developer`は使用せず、application/Functionsとdomain単体testは`developer`サブエージェント、Emulator統合testは`tester`、安全性は`security_reviewer`、最終品質は`reviewer`へ委譲する。CAS-02完了時の反省会ではSpark試験停止と通常サブエージェント実行の両方を評価し、CAS-03以降の手順は利用者判断を待つ。
 
 この承認はlocal repository内のCAS-02実装、test、review、文書、local branch・commitを対象とする。CAS-03/04、Firestore Rules、client/UI、Billingその他の参照writer、package、build、Dev/Prod、network、remote/data、migration、deploy、push、`main` mergeは含まない。
 
 ## 実行方式と書込みlease
 
 - 全taskはprimary repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使用する。別worktree、別repository copy、gitignore対象のshadow実装領域を作らない。
-- 別Codex task `Developer`自体を、本試行に限るdelegated specialist `developer`と位置付ける。`Developer`は`.codex/agents/developer.toml`を必読とし、自身がowned application/test fileを実装して、別writer subagentへ再委譲しない。primary user-facing taskとGit統合責務はcoordinatorに残す。
+- primary taskから作成する`developer`サブエージェントは`.codex/agents/developer.toml`を必読とし、自身がowned application/test fileを実装して、別writer subagentへ再委譲しない。primary user-facing taskとGit統合責務はcoordinatorに残す。
 - coordinatorがCAS-02用local feature branchと開始commitを実物から確認し、Developer promptへ渡す。Developerも作業前にcwd、Git top-level、branch、HEAD、worktreeを独立確認する。
 - Developerの実装checkpoint中はDeveloperを唯一のwriterとする。coordinatorと他taskはfile write、branch切替、stage、commit、formatter、test process起動を行わない。読み取りと待機だけを行う。
 - Developerはstage・commitしない。terminal callback後、coordinatorがexact diff、worktree、test exit statusを確認し、受入れたfileだけを統合する。
@@ -34,7 +36,7 @@
 5. file write、Git mutation、test、process起動、networkを行わず、次の形式で一度callbackする。
 
 ```text
-CAS02-SPARK-ROUTE-01 <completed|failed|question|approval-boundary>
+CAS02-SUBAGENT-ROUTE-01 <completed|failed|question|approval-boundary>
 files: none
 diff: none
 tests: not run
@@ -43,7 +45,7 @@ approval-boundaries: CAS-02 local implementation/unit tests only
 worktree: <clean or exact dirty paths>
 ```
 
-このcallbackをcoordinatorが受理した後だけ、同じDeveloper taskへ実装checkpointを送る。
+このcallbackをcoordinatorが受理した後だけ、同じ`developer`サブエージェントへ実装checkpointを送る。
 
 ## Firestore targetとedition境界
 
@@ -55,7 +57,7 @@ remote Firestore project/database/editionは本checkpointのactual targetでは�
 
 ### Checkpoint
 
-`CAS02-SPARK-DEVELOP-UNIT-01`
+`CAS02-SUBAGENT-DEVELOP-UNIT-01`
 
 ### Developer owned files
 
@@ -195,7 +197,7 @@ Developerは`domain-full`、Emulator、build、文書validatorを実行しない
 ### Developer callback
 
 ```text
-CAS02-SPARK-DEVELOP-UNIT-01 <completed|failed|question|approval-boundary>
+CAS02-SUBAGENT-DEVELOP-UNIT-01 <completed|failed|question|approval-boundary>
 files: <exact paths>
 diff: <behavioral summary>
 tests: <each exact command, result, independently observed exit status>
@@ -204,7 +206,7 @@ approval-boundaries: <items or none>
 worktree: <clean or exact dirty paths>
 ```
 
-Developerはcallback後に待機し、coordinatorから差戻しがある場合だけ同じowned filesを修正する。
+`developer`はcallback後に待機し、coordinatorから差戻しがある場合だけ同じowned filesを修正する。
 
 ## Coordinatorの受入れ・差戻し
 
@@ -216,7 +218,7 @@ coordinatorはDeveloper callback後に次を実物で確認する。
 - targeted testの再現とexit status
 - CAS-03/04、remote/data、packageへscopeが広がっていないこと
 
-承認範囲内のcode/test不備、review finding、説明不足は同じDeveloper taskへ具体的なfile/symbol/test付きで差戻す。仕様変更、owned file追加、unowned dirty、branch/HEAD drift、network・package・remote/dataの必要、CAS-03/04が必要になった場合は作業を増やさず停止し、利用者へ報告する。
+承認範囲内のcode/test不備、review finding、説明不足は同じ`developer`サブエージェントへ具体的なfile/symbol/test付きで差戻す。仕様変更、owned file追加、unowned dirty、branch/HEAD drift、network・package・remote/dataの必要、CAS-03/04が必要になった場合は作業を増やさず停止し、利用者へ報告する。
 
 ## Developer受入れ後の独立工程
 
@@ -232,7 +234,7 @@ Developer差分を受入れた後、同時書込みは行わず、次を順に�
 
 ## CAS-02完了時の反省会
 
-CAS-02の完了gateとlocal commit後、coordinatorは同じDeveloper taskへ反省会checkpointを送り、file変更なしで次を報告させる。
+CAS-02の完了gateとlocal commit後、coordinatorは実装を担当した`developer`サブエージェントへ反省会checkpointを送り、file変更なしで次を報告させる。
 
 - 指示書だけで迷わず判断できた点と不足した点
 - Sparkが得意だった作業、遅延・誤解・再作業が生じた作業
@@ -244,6 +246,27 @@ CAS-02の完了gateとlocal commit後、coordinatorは同じDeveloper taskへ反
 
 coordinatorは実測したcallback、差戻し、diff、test、review、書込み競合とDeveloper所見を本書へ記録する。事実と推測を分け、CAS-03以降を自動開始しない。反省会記録をread-only reviewerへ確認させ、最終文書状態で`project-docs`と`git diff --check`を個別にexit 0まで再実行し、反省会文書commitとclean worktreeを確認する。結果と選択肢を利用者へ提示し、次の手順は利用者判断を待つ。
 
+## 中間実行記録
+
+### 2026-09-04 Spark開始時停止
+
+- 最初の`Developer` taskは`CAS02-SPARK-ROUTE-01`を変更なしで完了し、primary repository、branch、開始HEAD、clean worktreeの一致を報告した。
+- 同taskの実装turnは、owned fileの書込み前に既存構造の探索を続け、Codexからcontext window不足のsystem errorが返って停止した。coordinatorの実測では所要約8分46秒で、Functions・test差分は0、branchとHEADは不変、worktreeはcleanだった。
+- coordinatorは全repository探索を止め、必読範囲と探索対象を縮小して、同じ`gpt-5.3-codex-spark`の新しい`Developer` taskを作成した。`CAS02-SPARK-ROUTE-RETRY-01`は約11秒で変更なし完了し、同じbranch、開始HEAD、clean worktreeの一致を報告した。
+- retry taskの実装turnは開始直後、Spark固有のusage limitによりsystem errorで停止し、Codexは15:58以降の再試行を案内した。アカウント全体のusage確認は45%使用で、Spark固有の残量・reset詳細は取得できなかった。差分・test実行・Git mutationは0だった。
+- 2026-09-04 11:44 JST時点で、coordinatorはbranch `codex/customer-archive-cas02-trial`、HEAD `e22c0f2c73d5b776d81359fab8b030a755e984f2`、clean worktreeを再確認した。
+- その後、利用者はSparkモデルの別Developer taskによる開発を中止した。15:58 JST以降の再試行、別modelへの自動切替、新しいstandalone Developer task作成は行わない。
+
+上記は中間事実であり、CAS-02の実装・test・review・完了gate・反省会を完了した証拠ではない。CAS-02はIn progress、得点0を維持し、CAS-03/04は開始しない。
+
+### 中止時の所見
+
+- 確認済み事実: route確認2回はrepository、branch、HEAD、clean worktreeを正しく照合した。Functions・testの変更、targeted test、Emulator、build、network、remote/data、Git mutationは0だった。
+- 確認済み事実: 最初の実装turnはcode編集より先に探索を継続してcontext windowを使い切った。探索を縮小したretry taskは実装turn開始直後にSpark固有usage limitへ達した。
+- 未確認: Spark固有のtoken/usage上限量、最初のcontext window停止が次taskのusage limitへ与えた正確な消費量、reset後に同じ指示で実装完了できたか。
+- 推測: repositoryの必読ガバナンスと詳細な安全契約を保持したCAS-02は、短いfocused editよりcontext負荷が高く、今回利用可能だったSpark個別枠と相性が悪かった可能性がある。
+- 後続判断: 利用者はCAS-02を通常のサブエージェント運用で継続すると決定した。Spark用standalone taskは再利用せず、本書の技術契約を`CAS02-SUBAGENT-DEVELOP-UNIT-01`へ引き継ぐ。CAS-03以降の手順は未決定のままとする。
+
 ## Rollback
 
-CAS-02はlocal-onlyで、Dev/Prod/data変更を行わない。受入れ前はDeveloperの未コミットowned diffを保持して差戻すか、利用者指示により別途処置する。local commit後に取り消す場合は、CAS-02 commitを通常のGit revert候補とし、history rewriteやarchive data操作は行わない。CAS-03/04は未着手のまま維持する。
+CAS-02の製品差分は作られておらず、Dev/Prod/data変更もない。中止時のrollback対象はない。試験運用文書は履歴として保持し、CAS-03/04は未着手のまま維持する。

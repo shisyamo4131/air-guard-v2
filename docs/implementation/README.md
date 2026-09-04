@@ -104,7 +104,7 @@
 
 - [Customer master](customer-master.md)
 - [Customer archive safety](customer-archive-safety.md)
-- [CAS-02 Spark Developer試験運用](customer-archive-cas02-developer-trial.md)
+- [CAS-02実行契約とSpark Developer試験記録](customer-archive-cas02-developer-trial.md)
 - [Site master](site-master.md)
 - [SiteEmployeeHistory UI](site-employee-history-ui.md)
 - [Agreement master](agreement-master.md)
