@@ -52,7 +52,7 @@ function getArrangementNotification(worker) {
     <tbody>
       <Tr
         v-for="worker in props.workers"
-        :key="worker.id"
+        :key="worker.workerId"
         :worker="worker"
         :arrangement-notification="getArrangementNotification(worker)"
       >
