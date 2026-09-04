@@ -105,6 +105,15 @@ try {
     Invoke-Checker $false 'invalid TOML'
     Set-Content -LiteralPath $configPath -Encoding UTF8 -Value $validConfig
 
+    $uiTesterPath = Join-Path $fixtureRoot '.codex/agents/ui-tester.toml'
+    $validUiTester = Get-Content -LiteralPath $uiTesterPath -Raw -Encoding UTF8
+    $uiTesterDeny = 'EXTERNAL_UI_POLICY=coordinator-only,subagent-deny:'
+    $uiTesterAllow = 'EXTERNAL_UI_POLICY=delegated,subagent-allow:'
+    if (-not $validUiTester.Contains($uiTesterDeny)) { throw 'UI tester external-operation fixture mutation would be a no-op.' }
+    Set-Content -LiteralPath $uiTesterPath -Encoding UTF8 -Value ($validUiTester.Replace($uiTesterDeny, $uiTesterAllow))
+    Invoke-Checker $false 'UI tester rejects user Chrome permission while TOML remains valid'
+    Set-Content -LiteralPath $uiTesterPath -Encoding UTF8 -Value $validUiTester
+
     $manualIndexPath = Join-Path $fixtureRoot 'docs/manual/index.md'
     $validManualIndex = Get-Content -LiteralPath $manualIndexPath -Raw -Encoding UTF8
     $badAnchorIndex = [regex]::Replace($validManualIndex, '(\./control-operation\.md#)[^)]+', '${1}missing-heading-anchor', 1)

@@ -1,7 +1,7 @@
 # local UI検証runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-03（郵便番号隔離の追加修正・再検証は実行証拠を参照）
+- 最終確認日: 2026-09-04（郵便番号隔離の追加修正・再検証は実行証拠を参照）
 - 役割: Codex専用UI環境と利用者用local browser受入れの準備・操作・終了
 
 ## UI検証と最終受入れの責任分離
@@ -9,6 +9,7 @@
 - 利用者承認済みcheckpointで必要なin-app UI smokeは、Codexが本runbookのCodex専用local UI環境を使って実施する。専用demo project、loopback、合成account/data、外部作用deny、通常のpointer・keyboard操作という既存境界を維持する。
 - 既存画面・既存操作の内部改修は、Codex専用local UIで実画面の対象操作と保存・再表示が成功し、自動検証・必要なreview・後処理が完了した場合、利用者によるlocal受入れを原則として重ねない。新しい画面・新しい操作、見た目や使い勝手の判断、利用者用data、利用者Chrome固有条件、Dev固有設定、外部service、通常操作できない箇所、未解決errorまたは利用者が明示した確認がある場合は、必要な範囲だけ利用者確認を残す。Codex専用local UIの合格はDev・Prod・remote dataの受入れや正式運用開始承認を代替しない。
 - 利用者用local、Devその他の実際の利用環境へ接続・変更する場合は、その環境に適用される既存の別承認境界を維持する。Codex専用UI smokeの承認からDev、remote/data、実account操作を推論しない。
+- Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは`ui_tester`へ委譲できる。利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認後もcoordinatorが直接行い、`ui_tester`その他のsubagentへ委譲しない。この担当分離は外部操作の承認を与えない。
 - application fileを1 fileずつ利用者が確認する手順はcheckpointが明示した場合だけ適用する。通常はsegment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目を受入れ資料とする。
 
 ## Codexだけで完結するlocal UI test
@@ -45,7 +46,7 @@ Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を�
 - 作成と削除を検証する場合は、同じtest sessionで可視UIから正規作成したdataを対象に可視UIから削除し、backend assertionで作成結果、削除結果、非対象serviceの不変を確認する。
 - 可視・有効で通常のactionability条件を満たすcontrolを、通常のpointer clickまたはkeyboardで操作する。文字入力はfocusした可視controlへ一文字ずつ行い、削除・選択・確定も利用者が行うkeyまたは可視UIで実行する。
 - `locator.click()`相当は通常のpointer入力経路とactionabilityを満たす場合だけ許可し、`pressSequentially()`相当はfocusした可視controlへ通常のkey eventを順に送る場合だけ許可する。mechanismを確認できない場合はmouse・keyboard操作へ切り替える。
-- Chrome拡張への接続・再接続または利用者tabの再取得直後は、上部のデバッグ開始表示によるviewport変化が完了するまで3秒待つ。座標操作は待機後の最新screenshotまたは可視DOMから対象を取り直して1回だけ行い、接続前・中断前の座標を再利用しない。操作が中断または無反応だった場合は、対象状態とserver到達有無を確認してから再試行し、同じ変更を重複実行しない。
+- coordinatorがChrome拡張へ接続・再接続または利用者tabを再取得した直後は、上部のデバッグ開始表示によるviewport変化が完了するまで3秒待つ。座標操作は待機後の最新screenshotまたは可視DOMから対象を取り直して1回だけ行い、接続前・中断前の座標を再利用しない。操作が中断または無反応だった場合は、対象状態とserver到達有無を確認してから再試行し、同じ変更を重複実行しない。
 - `fill`、`clear`、DOMの`value`・`checked`・`selected`等の変更、scriptによるwrite、`dispatchEvent`、`element.click`、event handler・component method・`requestSubmit`・client API/SDKの直接呼出し、force-click、disabled・hidden・overlay回避を禁止する。shortcut型の選択・check・file設定を利用者操作の代用にしない。
 - 初期URLのopenとreloadは環境準備として許可するが、route発見性や画面内navigationの証拠には数えない。以後の遷移は可視UIから行う。
 - tool-nativeのread-only DOM・ARIA、text、属性、disabled状態、URL、screenshot、console、networkは観測に使用できる。read-only script評価は状態を変更しない診断に限定し、credential、password、token、OOB code、入力値を出力しない。
@@ -147,7 +148,7 @@ npx nuxt dev --dotenv .env.local --host 127.0.0.1
 
 CodexのインアプリブラウザとChrome拡張による操作のどちらからもNuxtローカルサーバーの画面は取得できますが、現在の環境ではCodexがAuth Emulatorの `127.0.0.1:9099` へ直接接続してサインインを自動化する経路が、ブラウザ操作レイヤーで `ERR_BLOCKED_BY_CLIENT` として遮断されます。
 
-利用者用local環境そのものの受入れが必要な場合は、Codex専用UI testと混在させず、次の準備をユーザーが行った後にCodexがサインイン済みChromeタブを引き継ぐ補助経路を使います。
+利用者用local環境そのものの受入れが必要な場合は、Codex専用UI testと混在させず、次の準備をユーザーが行った後にcoordinatorがサインイン済みChromeタブを直接引き継ぐ補助経路を使います。この操作を`ui_tester`その他のsubagentへ委譲しません。
 
 1. `--import=./saved-data` を付けてFirebase Emulatorを起動する。
 2. `.env.local` を使ってローカルサーバーを起動する。
@@ -155,8 +156,8 @@ CodexのインアプリブラウザとChrome拡張による操作のどちらか
 4. Emulator専用アカウントでサインインし、必要に応じてテスト対象画面まで移動する。
 5. 画面の準備が完了したことをCodexへ伝える。
 
-Codexは既存タブを引き継いだ後、SPAローディングテンプレートの表示を即時エラーとみなさず、画面遷移の完了または明確なタイムアウトまで待機します。データ作成・更新・削除を伴う操作は、ユーザーがテスト内容として明示的に許可した範囲だけで行います。テスト終了時はユーザーが起動したEmulator、ローカルサーバー、ChromeをCodex側から停止しません。
+coordinatorは既存タブを引き継いだ後、SPAローディングテンプレートの表示を即時エラーとみなさず、画面遷移の完了または明確なタイムアウトまで待機します。データ作成・更新・削除を伴う操作は、ユーザーがテスト内容として明示的に許可した範囲だけで行います。テスト終了時はユーザーが起動したEmulator、ローカルサーバー、ChromeをCodex側から停止しません。
 
 危険なChrome起動オプションや利用者の通常profile変更は採用しません。Codex専用UI modeは利用者用環境の制約を回避するために混在させず、専用project、専用port、合成account、Codex管理ブラウザで独立して検証します。
 
-Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にCodexからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してから検証を再開します。
+Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にcoordinatorからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してからcoordinatorが検証を再開します。

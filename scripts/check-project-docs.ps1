@@ -59,7 +59,7 @@ $requiredFiles = @(
     'scripts/check-schemas-package-adoption.ps1',
     'governance/verification-policy.json',
     'docs/decisions/0040-impact-based-staged-verification.md',
-    '.codex/config.toml'
+    '.codex/config.toml', '.codex/agents/ui-tester.toml'
 )
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $relativePath))) {
@@ -460,6 +460,43 @@ if (Test-Path -LiteralPath $stripeReceiptPath) {
                 Add-CheckError "Runbook duplicates a STRIPE receipt-only execution identifier or hash: $($runbook.Name): $token"
             }
         }
+    }
+}
+
+$uiTesterAgentPath = Join-Path $repoRoot '.codex/agents/ui-tester.toml'
+if (Test-Path -LiteralPath $uiTesterAgentPath) {
+    $uiTesterAgentContent = Get-Content -LiteralPath $uiTesterAgentPath -Raw -Encoding UTF8
+    $localPolicyLine = @($uiTesterAgentContent -split "`r?`n" | Where-Object {
+        $_.Contains('UI_SCOPE_POLICY=codex-dedicated-local-only:')
+    }) | Select-Object -First 1
+    if (-not $localPolicyLine) {
+        Add-CheckError 'UI tester local-only scope policy marker is missing.'
+    } else {
+        foreach ($requiredLocalBoundary in @('demo-project', 'loopback', 'synthetic-data', 'in-app-browser')) {
+            if (-not $localPolicyLine.Contains($requiredLocalBoundary)) {
+                Add-CheckError "UI tester local-only allowlist is missing: $requiredLocalBoundary"
+            }
+        }
+    }
+
+    $externalPolicyLine = @($uiTesterAgentContent -split "`r?`n" | Where-Object {
+        $_.Contains('EXTERNAL_UI_POLICY=')
+    }) | Select-Object -First 1
+    if (-not $externalPolicyLine -or
+        -not $externalPolicyLine.Contains('EXTERNAL_UI_POLICY=coordinator-only,subagent-deny:')) {
+        Add-CheckError 'UI tester must keep external UI coordinator-only and deny subagent operations.'
+    } else {
+        foreach ($requiredExternalBoundary in @(
+            'user-chrome', 'user-profile', 'user-session', 'desktop-app', 'dev-ui',
+            'prod-ui', 'remote-ui', 'external-account', 'external-session', 'external-state'
+        )) {
+            if (-not $externalPolicyLine.Contains($requiredExternalBoundary)) {
+                Add-CheckError "UI tester external-operation deny boundary is missing: $requiredExternalBoundary"
+            }
+        }
+    }
+    if (-not $uiTesterAgentContent.Contains('EXTERNAL_UI_RETURN=approval-boundary-to-coordinator')) {
+        Add-CheckError 'UI tester must return external UI work to the coordinator as an approval-boundary.'
     }
 }
 

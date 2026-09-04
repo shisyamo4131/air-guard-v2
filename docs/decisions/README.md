@@ -52,6 +52,7 @@
 | [0044](0044-customer-status-as-descriptive-flag.md) | Customerの取引状態を状況表示フラグとして扱う |
 | [0045](0045-governance-3-normal-startup.md) | Governance 3と通常startupへの移行 |
 | [0046](0046-customer-archive-reference-barrier.md) | Customer archiveの参照barrierと監査境界 |
+| [0047](0047-subagent-parallel-coordinator-external-ui.md) | 専門subagentの原則利用・並列実行とcoordinator直轄操作 |
 
 ## 新しい ADR の形式
 

@@ -1,15 +1,17 @@
 # 開発workflow runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-03
+- 最終確認日: 2026-09-04
 - 役割: 通常開発の担当、変更単位、UI error・loading、client操作policy
 
 ## 担当と変更単位
 
 - ユーザーが仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。
-- Codex coordinatorは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法を整理し、承認済みsegmentの実装、自動検証、独立review、必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理する。
+- Codex coordinatorは変更前の現行挙動、仕様、影響、失敗経路、互換性、rollback、確認方法とownershipを整理し、専門taskの報告を収集・照合して矛盾を解消し、承認済みsegmentの差分、自動検証、独立review、必要なin-app UI smoke、document、roadmap、ADR、利用者報告へ統合する。critical identifier、approval・scope、最終diff・worktree、必須検証のexit status、local Git統合、completion claimはcoordinator自身が確認する。
 - `developer`は承認済みscopeのapplication code、必要なFunctions・Firebase Rules・関連設定だけを変更し、隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
 - `tester`はcoordinatorが明示したtest scopeでtest codeを編集し、application codeを変更しない。承認済みcheckpointの検証に必要な個々のtest fileについて、利用者のfile-by-file承認は要求しない。
+- 設計・調査・review・development・testに実作業があり、独立した非重複scopeと専門結果が必要な場合は、原則として該当subagentへ委譲する。同一checkpoint内で相互に依存しない複数workstreamは、共通baseline、非重複ownership、個別callback、利用可能枠を固定して原則並列に進め、全結果を統合する前に次checkpointへ進まない。単一の小作業を形式的に分割しない。
+- 利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認後もcoordinator自身が直接行う。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは`ui_tester`へ委譲できる。公式情報のread-only Web調査と承認済みlocal CLI・Emulator検証はこの直轄範囲に含めず、既存のnetwork・外部write・remote/data・deploy承認を維持する。
 - local UI受入れは[project rules](../../governance/project-rules.md)と[local UI検証](local-ui-testing.md)のrisk-based基準に従う。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了し、省略除外条件がある範囲だけ利用者確認を残す。
 - application implementation fileを1 fileずつ利用者が確認する手順は、checkpointが明示した場合だけ適用する。通常は承認済みsegment単位で連続実装・検証し、変更挙動、security境界、test、残存risk、rollback、利用者確認項目をまとめて提示する。
 - 認証・認可・tenant分離は一括改修せず、独立して説明・review・rollbackできる最小segmentを1件ずつ扱う。

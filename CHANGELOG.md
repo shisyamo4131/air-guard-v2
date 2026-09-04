@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 設計・調査・review・development・testの独立scopeでは専門subagentを原則使用し、相互非依存workstreamは非重複ownershipと個別callbackを固定して原則並列に進めるproject ruleを確定した。coordinatorは報告の照合・矛盾解消・統合を主務とし、critical identifier、承認・scope、最終差分・検証exit status・Git統合・完了判断を自身で確認する。利用者Chromeやdesktop app、Dev・Prod・remote UI、外部account・session・stateの操作はcoordinator直轄とし、Codex専用loopback local UIは`ui_tester`へ委譲できる。[判断](docs/decisions/0047-subagent-parallel-coordinator-external-ui.md)を参照。権限、network、外部write、remote/data、deploy境界は変更していない。
+
 - Customerの誤登録・重複archiveについて、専用Callable、一transaction内のSites・OperationResults・Billings参照確認、参照writerのactive Customer存在guard、same-ID archive tombstone、versioned audit envelope、client非公開、generic delete/restore非利用を設計として確定した。[判断](docs/decisions/0046-customer-archive-reference-barrier.md)と[roadmap](docs/roadmaps/customer-archive-safety.md)を参照。application、Functions、Rules、test、Dev/remote dataは未変更。
 
 - 共通governanceを3.0.0へ移行し、すべてのtaskを同じrepository読取り順で起動する手順へ統一した。交代専用activation・最初のfile限定commit・governance変更による強制交代を廃止し、製品再開案内、文書route、検証policyとcheckerを整合した。[判断](docs/decisions/0045-governance-3-normal-startup.md)と[移行記録](docs/migrations/2026-09-03-governance-3.0.0.md)を参照。

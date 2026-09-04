@@ -1,7 +1,7 @@
 # project coordination runbook
 
 - 状態: 運用中
-- 最終確認日: 2026-09-03
+- 最終確認日: 2026-09-04
 - 役割: Git統合、event-driven task loop、session容量とhandoff
 
 ## Git統合
@@ -60,13 +60,15 @@ worktree: <clean or exact dirty paths>
 ### 通常ループ
 
 1. Codexが現行挙動、変更契約、影響、rollback、test条件を、利用者が理解・判断できる最小単位に整理する。
-2. task交代中を除き、調査、code探索、review、test、利用者承認済みcheckpointの実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、Codexが適切な専門タスクへ割り当てる。application code、必要なFunctions・Firebase Rules・関連設定は承認済みboundary内で`developer`へ集中させる。
+2. task交代中を除き、設計・調査・code探索・review・development・testに実作業があり、独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、Codexが原則として適切な専門タスクへ割り当てる。単一の小作業を形式分割しない。同一checkpoint内で相互に依存しない複数workstreamは、同じ確認済みbaseline、重複しないownership、個別のcompletion contract・callback先、利用可能な実行枠を固定して原則同時に割り当てる。application code、必要なFunctions・Firebase Rules・関連設定は承認済みboundary内で`developer`へ集中させる。
 3. 専門タスクは完了、失敗、仕様質問、承認境界で一度だけ通知し、待機する。
-4. コーディネーターはユーザーまたは専門タスクの差分、テスト、未確認事項、作業ツリー、仕様・ロードマップとの整合を確認する。
+4. コーディネーターはprimary taskの司令塔として、ユーザーまたは全専門タスクの報告、差分、テスト、未確認事項、承認境界、作業ツリー、仕様・ロードマップとの整合を照合し、矛盾を解消して統合する。critical identifier、approval・scope、最終diff・worktree、必須検証のexit status、Git統合、completion claimは自身で確認する。全結果を統合する前に次checkpointへ進まない。
 5. 合意済み変更をコミットし、必要な統合検証とdocument同期を行う。
 6. 終了条件に達していなければ次のチェックポイントへ進む。
 
 local UI受入れの担当は[project rules](../../governance/project-rules.md)と[local UI検証runbook](local-ui-testing.md)で決める。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了し、省略除外条件がある範囲だけ利用者受入れ待ちとする。application fileの利用者確認を1 fileずつ要求するのはcheckpointが明示した場合だけとし、通常は承認済みsegment単位で連続実装・検証・報告する。
+
+利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認後もコーディネーターが直接行い、専門タスクへ委譲しない。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは`ui_tester`へ委譲できる。公式情報のread-only Web調査と承認済みlocal CLI・Emulator検証はこの直轄範囲に含めない。この担当分離はnetwork、外部write、remote/data、deploy権限を追加しない。
 
 通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
 

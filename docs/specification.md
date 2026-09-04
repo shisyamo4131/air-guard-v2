@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-04
-- 仕様バージョン: 0.8.7
+- 仕様バージョン: 0.8.8
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -258,15 +258,16 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `docs/roadmaps/` を、目標、残作業、完了条件、証拠に基づく進捗の正本とする。確認済み要件の正本は引き続き本文書とする。
 - 正式運用準備は、合計100点の加重マイルストーンで管理する。現在はマイルストーン単位の部分加点を行わず、完了条件と証拠が揃った場合だけ当該点数を得る。
 - スコープ追加または完了判定の訂正で進捗率が低下する場合は、変更前、変更後、理由を記録し報告する。
-- task交代中を除き、調査、review、test、利用者承認済みの補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、適切なsubagentを使用する。長期のマルチエージェント作業は、レビュー可能なチェックポイントを1件ずつ扱うイベント駆動型を基本とし、標準のセッション終了条件は安全に独立実行できる作業が尽きた時点とする。
+- task交代中を除き、設計・調査・review・development・testに実作業があり、独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、原則として適切なsubagentを使用する。同一checkpoint内で相互に依存しない複数workstreamは、共通baseline、非重複ownership、個別callback、利用可能枠を固定して原則並列に割り当て、全結果を統合する前に次checkpointへ進まない。単一の小作業を形式的に分割しない。長期のマルチエージェント作業は、レビュー可能なチェックポイントを1件ずつ扱うイベント駆動型を基本とし、標準のセッション終了条件は安全に独立実行できる作業が尽きた時点とする。
 - checkpoint固有のsubagent禁止は、当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続checkpointへ持ち越さない。利用者要求のtask交代作成はcoordinator自身が行う。通常の調査・実装・検証・reviewのroutingは維持する。
 - コーディネーターのセッション容量が300 MiBに達した場合は新規割当を停止し、リポジトリへ引継ぎ状態を記録する。task交代は利用者が明示要求した場合に行い、既存正本の製品事実・未決事項・次作業を整え、関連差分を検証・local commitしてprimaryをcleanにする。
 - `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は現在task IDに対応する永続session JSONLの実測を意味し、model token/context windowと区別する。task handoff閾値は300 MiB、Codex全体は10 GiBの参考警告とし、最新sessionを推測しない。ID不明、0件・複数一致、script失敗、全体scan不完全時は推測による交代・cleanup判断を行わない。
 - コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
 - すべてのtaskはAGENTS.md、governance/project-rules.md、docs/README.mdから依頼に必要な正本を読む通常startupを使用する。手動作成・旧task利用不能時も同じ経路とし、旧ownerの協力、activation、交代専用commitを要求しない。利用者要求の交代では同じ基本名と次の連番のfresh non-fork taskをprimaryへ作成する。governance変更だけで交代を強制せず、installed scaffold skillは明示されたgovernance作業でのみ使用する。Codexは旧taskのarchive/deleteを実行・依頼しない。判断は[ADR 0045](decisions/0045-governance-3-normal-startup.md)、手順は[project coordination](runbooks/project-coordination.md)を正とする。
-- 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。Codex coordinatorは変更契約、checkpoint分割、実装・test・review・必要なin-app UI smoke、document、roadmap、ADR、local Git統合を管理し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
+- 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。Codex coordinatorはprimary taskの司令塔として変更契約、checkpoint・ownershipを整理し、専門taskの報告を収集・照合して矛盾を解消し、差分・検証・document・roadmap・ADR・利用者報告へ統合する。critical identifier、approval・scope、最終diff・worktree、必須検証のexit status、local Git統合、completion claimはcoordinator自身が確認し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
 - 承認済みcheckpointに必要なapplication code、Functions、Firebase Rules、関連設定は`developer`へ集中し、unit・domain・integration・Rules・Emulator等のtest fileはcoordinatorが明示したscopeで`tester`が編集できる。個々のtest fileごとの利用者承認は要求しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyを維持する。
 - local UI受入れは[project rules](../governance/project-rules.md)と[local UI検証runbook](runbooks/local-ui-testing.md)のrisk-based基準に従う。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了でき、新規画面・操作、利用者判断、実環境固有条件がある範囲だけ利用者確認を残す。Dev・Prod・remote dataの受入れと正式運用開始承認は別境界である。
+- 利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認後もcoordinator自身が直接行い、subagentへ委譲しない。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは`ui_tester`へ委譲できる。公式情報のread-only Web調査と承認済みlocal CLI・Emulator検証はこの直轄範囲に含めず、この担当規則からnetwork、外部write、remote/data、deployの新しい権限を推論しない。
 - Firestore Rulesの既存許可を狭める改修に伴う、既存Dev documentの追加状態確認・migrationの要否は[project rules](../governance/project-rules.md#dev試用中の既存document)へrouteする。cutover方式は対象環境、data規模、許容停止時間、旧client併存の有無から選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
 - roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。
 - testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。

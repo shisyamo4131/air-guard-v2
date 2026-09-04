@@ -44,14 +44,17 @@
 
 - primary taskをcoordinatorとし、別のcoordinator subagentは作らない。
 - AirGuardV2の全Codex taskは、利用者がrepositoryとして管理する`C:\Users\seven\projects\AirGuard\air-guard-v2`へ直接接続する。Codex専用worktreeを作成・使用せず、通常startupでcwdとGit top-levelがこのpathそのものであることを確認する。不一致時はfile変更、Git mutation、process起動、外部作用を開始せず利用者へ報告する。
-- base rolesは`developer`、`tester`、`code_explorer`、`docs_researcher`、`reviewer`とする。認証済み画面操作が必要な場合だけ`ui_tester`、security境界がある場合だけ`security_reviewer`を使う。
-- task交代作成を除き、調査、code探索、review、test、利用者が明示承認した補助実装等を独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは該当するsubagentを使用する。単一の小作業を形式的に分割したり、不要なroleを起動したりしない。
+- base rolesは`developer`、`tester`、`code_explorer`、`docs_researcher`、`reviewer`とする。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UI確認が必要な場合だけ`ui_tester`、security境界がある場合だけ`security_reviewer`を使う。
+- task交代作成を除き、設計・調査・code探索・review・development・testに実作業があり、独立した非重複scopeへ分割でき、専門roleの結果が必要な場合、coordinatorは原則として該当するsubagentを使用する。単一の小作業を形式的に分割したり、不要なroleを起動したりしない。
+- 同一checkpoint内で相互に依存しない複数workstreamは、同じ確認済みbaseline、重複しないownership、個別のcompletion contract・callback先、利用可能な実行枠を固定し、原則として複数subagentへ同時に割り当てる。依存関係、ownershipの重複、承認境界、利用可能枠の不足がある作業は直列化し、全結果を統合する前に次checkpointへ進まない。
 - 利用者が要求したtask交代はcoordinator自身が行う。交代専用handshakeや最初のfile限定commitを設けず、通常startupを使用する。通常の調査・実装・検証・reviewのsubagent routingは維持する。
 - checkpointでsubagent禁止を指定した場合、その禁止は当該checkpointの開始からterminal callbackとcoordinator reviewまでに限定する。後続checkpointやproject全体へ引き継がず、継続禁止には利用者による別の明示指示を必要とする。
 - roleごとの具体的な権限と報告契約は`.codex/agents/*.toml`を正とする。
 - application code、必要なFunctions・Firebase Rules・関連設定の書込みは、承認済みcheckpoint内で`developer`へ集中させる。coordinator自身または他のread-only roleへapplication実装を分散しない。
-- Codex coordinatorは設計・仕様、脅威と失敗経路の整理、checkpoint分割、実装・test・review・必要なin-app UI smokeの調整、検証結果、document、roadmap、ADR、local branch・stage・commitを管理する。他者の未コミット変更を独自判断で修正、破棄、stage、commitしない。
+- Codex coordinatorは利用者向けprimary taskの司令塔として、設計・仕様、脅威と失敗経路、checkpoint・ownershipを整理し、専門taskの報告を収集・照合して矛盾を解消し、差分・検証・document・roadmap・ADR・利用者報告へ統合することを主務とする。critical identifier、approval・scope、最終diff・worktree、必須検証のexit status、local branch・stage・commit、completion claimはcoordinator自身が確認する。他者の未コミット変更を独自判断で修正、破棄、stage、commitしない。
 - `tester`は承認済みcheckpointの検証に必要なtest fileを、coordinatorが明示したscopeで編集できる。個々のtest fileごとの利用者承認は要求せず、application codeは変更しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyとする。
+- 利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認を得た後もcoordinator自身が直接行い、subagentへ委譲しない。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは外部操作に含めず`ui_tester`へ委譲できる。公式情報のread-only Web調査と、承認済みlocal CLI・Emulator検証もこのcoordinator直轄操作には含めない。
+- この担当規則はnetwork、外部write、remote/data、deploy、実accountまたは外部serviceへの新しい権限を付与せず、それぞれの既存承認境界を維持する。
 - local UI受入れの担当は、変更内容と環境差に応じて後述の省略基準で決める。Codex専用local UIが省略基準を満たす既存画面・既存操作の内部改修は利用者local受入れ待ちにせず、新規画面・操作、利用者判断または実環境固有条件がある範囲だけ利用者受入れ待ちとする。Dev・Prod・remote dataの受入れと正式運用開始承認は別境界として維持する。
 - application fileの利用者確認を1 fileずつ要求するのはcheckpointが明示した場合だけとする。通常は承認済みsegment内でCodexが連続実装・検証し、segment単位で変更挙動、security境界、検証結果、残存risk、rollback、最終UI確認項目を提示する。
 - 専門taskは原則stage・commitせず、checkpoint ID、正確な変更file、diff、test、未確認事項、承認境界、worktree状態をcoordinatorへ返す。coordinatorが受入れたfileだけをcommit・統合する。
