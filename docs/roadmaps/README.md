@@ -9,6 +9,7 @@
 | AirGuardV2 正式運用準備 | [airguard-v2.md](airguard-v2.md) |
 | Customer取引状態の表示・編集 | [customer-status.md](customer-status.md) |
 | Customer archive safety | [customer-archive-safety.md](customer-archive-safety.md) |
+| 配置管理の表示順行削除UX | [arrangement-row-removal-ux.md](arrangement-row-removal-ux.md) |
 | Company部分更新 | [company-partial-updates.md](company-partial-updates.md) |
 | SuperUser兼会社管理者の表示順対応 | [superuser-company-admin-display-order.md](superuser-company-admin-display-order.md) |
 | Company legacy Stripe情報削除 | [company-stripe-removal.md](company-stripe-removal.md) |

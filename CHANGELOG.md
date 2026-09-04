@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 上下番確定の最初の操作で不明なerrorを示すSnackbarが再観測された事実をFUT-0027へ追記した。同じ時間帯のFCM登録403、thumbnail取得404、deprecated warningは因果未確認として分離し、次回改修で発生源と最終状態を追跡する。製品codeとDev環境は変更していない。
+
+- 配置管理の表示順行削除について、観測と[提案0%の専用ロードマップ](docs/roadmaps/arrangement-row-removal-ux.md)を追加した。行pending、同一`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryは未承認の詳細案であり、実装checkpointで別途確認する。Site/Schedule削除、schema、Rules、migration、generic UI全体は対象外で、実装・test・Dev反映は未着手。
+
 - 設計・調査・review・development・testの独立scopeでは専門subagentを原則使用し、相互非依存workstreamは非重複ownershipと個別callbackを固定して原則並列に進めるproject ruleを確定した。coordinatorは報告の照合・矛盾解消・統合を主務とし、critical identifier、承認・scope、最終差分・検証exit status・Git統合・完了判断を自身で確認する。利用者Chromeやdesktop app、Dev・Prod・remote UI、外部account・session・stateの操作はcoordinator直轄とし、Codex専用loopback local UIは`ui_tester`へ委譲できる。[判断](docs/decisions/0047-subagent-parallel-coordinator-external-ui.md)を参照。権限、network、外部write、remote/data、deploy境界は変更していない。
 
 - Customerの誤登録・重複archiveについて、専用Callable、一transaction内のSites・OperationResults・Billings参照確認、参照writerのactive Customer存在guard、same-ID archive tombstone、versioned audit envelope、client非公開、generic delete/restore非利用を設計として確定した。[判断](docs/decisions/0046-customer-archive-reference-barrier.md)と[roadmap](docs/roadmaps/customer-archive-safety.md)を参照。application、Functions、Rules、test、Dev/remote dataは未変更。

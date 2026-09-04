@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-08-25
+- 最終更新日: 2026-09-04
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -370,6 +370,12 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 推奨する将来対応: 次回の上下番確定改修時に、「上下番を確定する」buttonからOperationResult作成、SiteOperationSchedule link更新、対象ArrangementNotification全件のLEAVED更新、成功・失敗Snackbarまでの実行経路とawaitを追跡し、例外の発生箇所をresource別に識別する。3pathを実装する。(1) schedule＋notificationsは可能な範囲でOperationResult作成、schedule.operationResultId、既存notification LEAVEDを同一transactionにしpushしない。(2) scheduleのみはnotificationを作らずOperationResult＋schedule linkをatomic化し、入力優先・欠損schedule fallback・no-notification sourceを記録する。(3) standaloneはOperationResultのみでreason/sourceTypeを記録する。scheduleId/sourceTypeをoptionalにし、schedule重複防止、standalone専用permission/audit、missing notification非error、存在するnotificationだけ更新を強制する。transaction化できない作用は、部分成功を誤って全体失敗と表示せず、失敗resourceを識別できるlogまたは利用者向けmessageと再開手順を持たせる。FcmTokens登録失敗は上下番確定の成否・Snackbarから分離する。
 - 必要なテスト: buttonからOperationResult・schedule link・notificationまでの正常経路、3path、notification 0/1/複数、全件LEAVED、既にLEAVED、通知なしworker、一部更新失敗、pushなし、入力優先/fallback、optional scheduleId/sourceType、schedule重複拒否、既存同一ID・stale link時の非上書き、standalone/duplicate permission・provenance・audit、transaction abort/retry、missing notification非error、同じ操作の再実行、各段階の失敗注入、成功時Snackbarなし、失敗resourceを区別するmessage/log、FcmTokens 403が確定成否とSnackbarへ影響しないこと。
 - ユーザー判断が必要な事項: 具体的sourceType語彙、standalone permission名、audit保持等の実装詳細。3path契約は2026-08-11に確認済み。
+
+### 2026-09-04 DEV再観測delta
+
+- 利用者がDEVで上下番確定を再度実行し、最初のclickで不明なerrorを示す趣旨のSnackbarを観測した。同時にFcmTokens登録のHTTP 403 permission-denied、SecurityReports thumbnailのHTTP 404、deprecated warningがあったが、上下番確定との因果関係、今回のOperationResult・schedule link・通知状態、Snackbar発生元は未確認である。
+- 静的照合では、上下番確定の最終処理からFCM登録を直接呼んでいない。session初期化中のFCM登録失敗はcatch後に共通のglobal error通知へ渡り得るため同じSnackbarとなる可能性がある一方、thumbnail取得失敗はcatchされて元画像へfallbackし、確認した経路ではglobal error通知へ直接渡らない。いずれも今回のruntime原因の確定ではない。
+- 新規FUTは作らず、次回の上下番確定改修でFUT-0027の実行経路、部分成功、再実行、resource別error識別、FCM失敗との通知分離を確認する。詳細は[2026-09-04 DEV再観測](operation-result-generation.md#2026-09-04-dev再観測原因未確定)を参照する。機密値や環境・dataの識別情報、raw logは保持しない。
 
 DEV観測記録には共有logのFCM token、認証情報、実利用者・会社・現場・作業員を特定する値を転記しない。再現testは合成dataを使用する。
 
@@ -955,6 +961,8 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - ユーザー判断が必要な事項: CONF-0057。
 
 SPEC-DEEP-039b追加根拠: caller不在の旧`useSiteOrderManager`もCompany配列を先に全置換してerrorを吸収し、replacement arrayはinitialize時のadd/change/remove helperをsubscription再初期化まで失う。
+
+2026-09-04訂正delta: FUT-0071の「Companyの表示順更新は配列全体をinstanceへ先に代入し、失敗時rollback・例外再throwがない」という記述は、旧actionを確認した時点の履歴であり、現在の`useSiteShiftTypeOrderActions`には当てはまらない。現在のactionはlive Companyを先行変更せず、専用Callableをawaitし、失敗を再throwし、`isSaving`で同一client内のsingle-flightを行う。Callable成功後にlive Companyから削除対象が消えるまで待つ状態、別client同時変更に対するrevision/precondition、重複・欠損entryの正規化は未解決または今回の照合で解消を確認していない。行削除の表示gapと再操作riskの実行計画は[提案中の専用roadmap](../roadmaps/arrangement-row-removal-ux.md)へ分離する。
 
 SPEC-DEEP-040追加根拠: `siteShiftTypeOrder/useSiteShiftTypeOrderActions.js` もCompanyのorder配列をremote update前に直接変更し、失敗をloggerへ渡して吸収する。rollback・最新値再取得・callerへの失敗結果がない。
 
@@ -1836,6 +1844,8 @@ SPEC-DEEP-043追加根拠: DailyOperationByEmployeeとEmployee snapshotも同じ
 SPEC-DEEP-039b追加根拠: root composablesでもFCM登録、OperationBilling lock、schedule複製、Company siteOrder更新がerrorをswallowし、callerが成功と失敗を判別できない。`clearError`は共有Errors store全体をclearする。
 
 SPEC-DEEP-040追加根拠: application actionsでも配置表PDF、請求PDF/CSV、schedule notify/update、site shift order更新がerrorをloggerへ渡して吸収し、callerへ成功/失敗を返さない。再試行・重複防止・canonical refreshも統一されていない。
+
+2026-09-04訂正delta: 上記SPEC-DEEP-039b/040のうち、現在のsite shift order更新actionがerrorを吸収してcallerへ失敗を返さないという記述はstaleである。現在の`useSiteShiftTypeOrderActions`は専用Callableをawaitし、catch後にerrorを再throwする。他に列挙したFCM登録、OperationBilling lock、schedule複製、配置表PDF、請求PDF/CSV、schedule notify/updateはこの訂正では再照合していないため、現在も同じ挙動だとは断定せず歴史的な調査記録として残す。siteOrder行削除に残るlive反映待機と利用者feedbackのgapは[提案中の専用roadmap](../roadmaps/arrangement-row-removal-ux.md)で扱う。
 
 SPEC-DEEP-042追加根拠: generic/range data layersもloading/error/not-found/lastUpdatedを統一せず、同期購読登録errorだけをcatchしてasync listener errorを受けない。`useDocument`はreactive docId対応を文書化しながらRefを拒否し、callback master fetchもawait/cancel/error集約しない。
 
