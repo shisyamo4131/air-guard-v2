@@ -16,7 +16,7 @@
 | OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 10 | Completed | 同一Outsourcerを人数1の別明細として複数配置し、安定した`workerId`で行・通知・実績を区別する契約を回帰testで固定した。重複行のVue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。実装commit `794af0ed`。 |
-| OUT-07 local統合確認 | 10 | 0 | In progress / 承認済み | Outsourcer master CRUDを主対象として、権限別UI、Rules陰性、既存の配置・通知・実績・請求・帳票との必要な対象回帰、文書とrollbackをCodex専用local環境で確認する。周辺transaction機能は変更せず、問題を検出した場合も記録に留める。 |
+| OUT-07 local統合確認 | 10 | 0 | In progress / 承認済み | 対象test 48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smokeは成功した。拒否actorの実browser確認は安全な合成session再確立経路がなく未完了のため加点しない。周辺transaction機能は変更していない。[進行記録](../verification/outsourcer-out07-local-progress.md)を参照。 |
 | OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
 
 ## OUT-01の確定範囲

@@ -17,13 +17,14 @@
 
 ## 次の作業
 
-1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-06は、更新権限・破壊操作停止・保存data契約・status非制限・通常product非archive方針・code／検索／一覧表示・重複配置identityのlocal実装または契約検証を完了した。OUT-07 local統合確認は承認済みで進行中であり、Outsourcer master CRUDを主対象にCodex専用local環境だけで検証する。配置・通知・実績・請求・帳票のFirestore更新経路は変更せず、発見したtransaction系課題は記録だけに留める。Dev/Prod、remote/dataは別承認である。
+1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-06はlocal完了した。OUT-07は対象test、全domain、local Emulator、専用build、write actorのCRUD UI smokeまで成功したが、拒否actorの実browser確認が未完了のため80%・進行中である。[進行記録](../verification/outsourcer-out07-local-progress.md)に成功証拠と安全なsession再確立の停止理由を記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。Dev/Prod、remote/dataは別承認である。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
 
 - [確認済み仕様](../specification.md)
 - [Outsourcerロードマップ](../roadmaps/outsourcer.md)
+- [Outsourcer OUT-07 local統合確認の進行記録](../verification/outsourcer-out07-local-progress.md)
 - [Customer取引状態roadmap](../roadmaps/customer-status.md)
 - [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)
 - [Customer archive safety実装設計](customer-archive-safety.md)
