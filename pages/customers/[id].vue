@@ -54,6 +54,10 @@ function handleClickUpdateSite(item) {
   router.push(`/sites/${item.docId}`);
 }
 
+function handleArchived() {
+  router.push("/customers");
+}
+
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
@@ -76,7 +80,15 @@ onUnmounted(unsubscribe);
                   title="基本情報"
                   :editable="canWrite"
                   @click:edit="open"
-                />
+                >
+                  <template #actions>
+                    <CustomerArchiveDialog
+                      v-if="canWrite"
+                      :customer="customerInstance"
+                      @archived="handleArchived"
+                    />
+                  </template>
+                </CustomerActivatorBase>
               </template>
             </CustomerEditorBase>
           </v-col>

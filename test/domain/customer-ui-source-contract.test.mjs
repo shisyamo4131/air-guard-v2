@@ -10,6 +10,7 @@ const CUSTOMER_SFCS = Object.freeze([
   "components/Customer/Autocomplete.vue",
   "components/Customer/Activator/Base.vue",
   "components/Customer/Activator/Payment.vue",
+  "components/Customer/ArchiveDialog.vue",
   "components/Customers/DataTable/index.vue",
   "pages/customers/index.vue",
   "pages/customers/[id].vue",
@@ -77,12 +78,91 @@ test("Customer list and autocomplete share the dedicated create dialog", async (
   assert.match(autocomplete, /emit\("update:model-value", emitValue\)/u);
 });
 
-test("Customer detail exposes dedicated basic and payment editors without archive or delete controls", async () => {
-  const detail = await source("pages/customers/[id].vue");
+test("Customer detail exposes dedicated editors and a write-authorized archive action", async () => {
+  const [detail, dialog] = await Promise.all([
+    source("pages/customers/[id].vue"),
+    source("components/Customer/ArchiveDialog.vue"),
+  ]);
   assert.match(detail, /<CustomerEditorBase :customer="customerInstance">/u);
   assert.match(detail, /<CustomerEditorPayment :customer="customerInstance">/u);
   assert.match(detail, /:editable="canWrite"/u);
-  assert.doesNotMatch(detail, /削除|toDelete|handleDelete|Customers_archive/u);
+  assert.match(
+    detail,
+    /<CustomerArchiveDialog[\s\S]*?v-if="canWrite"[\s\S]*?@archived="handleArchived"/u,
+  );
+  assert.match(detail, /router\.push\("\/customers"\)/u);
+
+  for (const text of [
+    "取引先コード",
+    "取引先名",
+    "誤登録・重複",
+    "参照されている場合は実行できません",
+    "通常画面から復元できません",
+    "個人情報・認証情報などの不要な情報を入力しないでください",
+    "キャンセル",
+    "アーカイブする",
+  ]) {
+    assert.match(dialog, new RegExp(text, "u"));
+  }
+  assert.match(dialog, /理由は必須です/u);
+  assert.match(dialog, /counter="200"/u);
+  assert.match(dialog, /maxlength="200"/u);
+  assert.match(dialog, /aria-label="閉じる"/u);
+  assert.match(dialog, /<div v-if="canArchive">/u);
+  assert.match(
+    dialog,
+    /const archiveBusy = computed\([\s\S]*?archiveSubmitting\.value \|\| archivePending\.value/u,
+  );
+  assert.match(dialog, /:persistent="archiveBusy"/u);
+  assert.match(dialog, /:loading="archiveBusy"/u);
+  assert.ok((dialog.match(/:disabled="archiveBusy"/gu) ?? []).length >= 4);
+  assert.match(dialog, /v-if="failureMessage"[\s\S]*?\{\{ failureMessage \}\}/u);
+  assert.match(dialog, /toCustomerArchiveUiError\(error\)\.message/u);
+  assert.match(dialog, /messages\.add\("取引先をアーカイブしました。"\)/u);
+  assert.match(dialog, /emit\("archived"\)/u);
+  assert.match(
+    dialog,
+    /function resetDialog\(\)[\s\S]*?resetAttempt\(\)[\s\S]*?function openDialog/u,
+  );
+  assert.match(
+    dialog,
+    /function closeDialog\(\)[\s\S]*?resetDialog\(\)[\s\S]*?function handleDialogModel/u,
+  );
+  assert.ok((dialog.match(/@click="closeDialog"/gu) ?? []).length >= 2);
+  assert.ok((dialog.match(/archiveBusy\.value/gu) ?? []).length >= 4);
+  const submit = dialog.slice(dialog.indexOf("async function handleArchive()"));
+  assert.match(
+    submit,
+    /if \(!target\.value \|\| archiveBusy\.value \|\| !canArchive\.value\) return;/u,
+  );
+  assert.ok(
+    submit.indexOf("archiveSubmitting.value = true") <
+      submit.indexOf("await form.value?.validate()"),
+  );
+  assert.match(
+    submit,
+    /finally \{[\s\S]*?archiveSubmitting\.value = false;[\s\S]*?\}/u,
+  );
+  assert.doesNotMatch(dialog, /useErrorsStore|console\.(?:error|warn|log)/u);
+});
+
+test("Customer archive client stays on the dedicated Callable without direct archive, delete, restore, or cache writes", async () => {
+  const paths = [
+    "pages/customers/[id].vue",
+    "components/Customer/ArchiveDialog.vue",
+    "composables/application/customer/useCustomerArchiveAction.js",
+    "composables/customer/useCustomerFunctions.js",
+    "composables/domain/customer/customerArchiveUiContract.js",
+  ];
+  const combined = (await Promise.all(paths.map(source))).join("\n");
+  assert.match(combined, /httpsCallable\(\$functions, "archiveCustomer"\)/u);
+  assert.doesNotMatch(combined, /Customers_archive/u);
+  assert.doesNotMatch(combined, /from "firebase\/firestore"/u);
+  assert.doesNotMatch(
+    combined,
+    /\b(?:deleteDoc|setDoc|updateDoc|addDoc|writeBatch)\s*\(|\.(?:delete|restore|toDelete)\s*\(|AirItemManager|AirArrayManager|useBaseManager/u,
+  );
+  assert.doesNotMatch(combined, /(?:cache|docs?)\.(?:push|splice)\s*\(/u);
 });
 
 test("Customer basic form includes address and both editors implement reload-only conflict handling", async () => {
