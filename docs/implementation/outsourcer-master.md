@@ -2,10 +2,10 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-01 local実装・検証完了
+- 状態: 実装調査 / OUT-02 local実装・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
-- 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`components/Outsourcer/Card/index.vue`、`components/Outsourcer/ListItem/index.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
+- 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
 
 ## 入口・権限
 
@@ -18,12 +18,13 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - Outsourcerは、ある特定の協力会社を表す会社masterである。外注警備員個人masterではない。
 - 配置では同じOutsourcerを別々の明細として複数回登録できる現行方式を維持する。過去に試行して廃止したOutsourcerと人数の集約方式は再採用しない。
 - OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止する。archive/restoreの正式運用は未決定である。
+- OUT-02では、exact document、型・長さ、system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否を確定する。codeの書式・一意性はOUT-05、statusの業務上の効果はOUT-03へ残す。
 
 - `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
-- OUT-01はdomain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了したlocal実装である。Dev/Prod Rulesと実dataは未変更・未確認である。field、status、document shapeはまだRulesで強制せず、OUT-02へ残す。
+- OUT-02はdomain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了したlocal実装である。実装commitは`31d11b15`。Dev/Prod Rulesと実dataは未変更・未確認である。
 
 ## データ契約
 
@@ -31,20 +32,22 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 |---|---|
 | path | `Companies/{companyId}/Outsourcers/{docId}`。doc IDは自動生成、独自採番なし |
 | `code` | 任意。表示上「外注先コード」。英数字入力、最大10文字の共通field定義。重複検証なし |
-| `name` | 必須。外注先名 |
-| `nameKana` | 必須。検索token対象 |
+| `name` | 必須、最大20文字。検索token対象 |
+| `nameKana` | 必須、最大40文字。検索token対象 |
 | `displayName` | 必須。略称。共通定義は最大6文字 |
 | `contractStatus` | 必須。default `ACTIVE`。値候補は`ACTIVE`（契約中）/`TERMINATED`（契約終了） |
 | `remarks` | 任意。共通複数行定義は最大200文字 |
-| system fields | FireModelのdocId、作成・更新時刻等。Outsourcer固有の読み取り専用プロパティ/getterはない |
+| `tokenMap` | nullまたは最大512件のmap。各値はtrue。name/nameKana/displayName変更時に正規writerが再生成する |
+| system fields | `docId`はpathと一致、`uid`は実行者、`createdAt/updatedAt`はrequest時刻。更新時はdocId/createdAtを不変とする |
 
 会社住所、担当者、電話/email、契約開始・終了日、外注警備員個人、資格、個人連絡先、所属IDはOutsourcer schemaに存在しない。
 
 ## CRUD・validation
 
-- Managerは認可再評価後に既存の`item.create(item)`と`item.update(item)`へ委譲する。delete handlerはOUT-01で常に拒否し、既存adapterへ到達させない。
-- `name`、`nameKana`、`displayName`、`contractStatus`のみrequired。code一意性、名称重複、status遷移、契約日整合のOutsourcer固有validationはない。
-- 更新はdocument全体の通常updateで、revision/version/preconditionをUIから渡さない。複数User同時編集は後勝ちになり得る。
+- Managerは専用create/editorとaction/writerを使う。actionはOUT-01のactor policyを保存開始時とtransport直前に再評価する。delete handlerは常に拒否し、既存adapterへ到達させない。
+- createはexact 11 fieldだけを保存し、画面でstatusを入力させず`ACTIVE`を強制する。code一意性、名称重複、契約日整合は本範囲で追加しない。
+- 更新はtransaction内で最新documentを読み、利用者が変更したfieldだけを保存する。名称系変更時だけtokenMapを追加更新し、変更なしはwrite 0とする。
+- 編集draftとbaselineはlive itemから独立させる。同じ変更fieldが外部でも変わった場合はconflictとして保存せず、入力を保持して再読込を促す。別fieldの外部変更は最新値を維持してmergeする。
 - contract終了は専用methodではなく、編集で`contractStatus=TERMINATED`にするだけである。終了日時・理由・履歴は保存しない。
 - schemaの`logicalDelete=true`と既存adapterには同一doc IDを`Outsourcers_archive`へtransactionでcopyしてactive collectionから削除する経路が残るが、OUT-01のUIとRulesからは到達できない。
 
@@ -80,7 +83,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - path tenant境界はcompany claimで制限されるが、documentにcompanyId fieldはなく、所属はpathだけで表現する。
 - 同一会社の有効な本登録Userは一覧と備考を含むlive/archiveを読める。live書込みは会社管理者またはexact `manager`だけで、archive直接改変は全clientで拒否する。
 - 現行schemaに個人外注警備員の機微情報はない。将来追加する場合は会社masterと個人情報を同じ広いRulesに載せない設計が必要となる。
-- client-side requiredはまだRulesで強制されず、許可writerは直接writeで欠損fieldや任意statusを保存できる。live deleteとarchive writeは拒否するため、clientによるlive/archive移動はOUT-01で停止した。
+- Rulesはexact 11 field、型・長さ、`ACTIVE/TERMINATED`、create時ACTIVE、path一致docId、actor uid、request時刻、docId/createdAt不変、変更可能fieldと名称変更時のtokenMap条件を強制する。tokenMapの件数・値は検証するが、名称との意味的一致まではRulesで完全再計算できない。live deleteとarchive writeは引き続き拒否する。
 
 ## 矛盾・未使用候補
 
@@ -98,10 +101,10 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。CONF-0072〜CONF-0073は未回答である。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。OUT-02の保存data契約は確定・local実装済みで、CONF-0072〜CONF-0073は未回答である。
 
 ## 未確認範囲
 
 - 実データの重複、archive、参照件数、既存の外注警備員管理運用。
 - Schedule、ArrangementNotification、OperationResultの業務処理本文と帳票表示。
-- FireModel validationの実行UI差、Rules test、同時操作の実再現、復元用保守手順。
+- Dev/Prodでの旧client併存、既存document適合性、複数browserによる同時操作の実UI再現、復元用保守手順。

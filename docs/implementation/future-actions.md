@@ -1155,11 +1155,11 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 対象ファイル・シンボル: outsourcers pageSettings/Manager、`components/Outsourcers/{Manager,Iterator}/index.vue`、Outsourcers/Outsourcers_archive Rules
-- 確認済み実装事実: `outsourcers:read`でCRUDへ到達し、Rulesは同一会社Userにlive/archive全read/writeを許す。SPEC-DEEP-011でpageはdefault create/update/deleteをguardなしで公開し、空検索limit 10に対してmanager page size 20を指定することを確認した。SPEC-DEEP-033でManagerが`showCreate=false`でもtoolbar createを常時表示し、component自身にwrite/role/loading/rollback/error契約がないことを再確認した。
-- 想定影響と発生条件: 閲覧Userが外注先を作成・改変・終了・archiveし、配置候補や過去表示を変え得る。
+- 確認済み実装事実: OUT-01で作成・編集を会社管理者またはstrict `manager`へ限定し、client delete/archive writeを停止した。OUT-02でexact 11 field、型・長さ・metadata、部分更新、独立draft・同一field競合拒否をUI・専用writer・Rulesへ実装した。archive/restoreの正式actorと運用は未決定である。
+- 想定影響と発生条件: 後続でarchive/restoreのactorや参照確認を不用意に広げると、配置候補や過去表示を欠損させ得る。
 - 未確認点・仮説: OUT-01で作成・編集actorとclient破壊操作停止は確定したが、archive/restoreの正式actorと運用は未決定。
-- 推奨する将来対応: OUT-01で会社管理者・strict managerの作成/編集をUIとRulesへ一致させ、client delete/archive writeを停止する。archive/restoreは後続で決定する。
-- 必要なテスト: role別route/button/direct write、archive直接write、他社path、field別更新。
+- 推奨する将来対応: OUT-01/02の境界を維持し、archive/restoreのactor、参照確認、保持、復元を後続で決定する。
+- 必要なテスト: Dev反映時のrole別route/button/direct write、旧client互換、archive直接write、他社path、既存document適合性。
 - ユーザー判断が必要な事項: CONF-0070。
 
 ## FUT-0086 外注会社と外注警備員個人のデータモデルを決定する

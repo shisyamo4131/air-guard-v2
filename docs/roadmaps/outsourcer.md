@@ -2,16 +2,16 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 15%
+- 現在の進捗: 30%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01とOUT-02はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
 | OUT-01 更新権限と破壊操作停止 | 15 | 15 | Completed | 会社管理者またはstrict `manager`だけが作成・編集でき、UIとRulesが一致する。client deleteとarchive writeを拒否し、domain 927/927、local Emulator 146/146、専用local UI build、文書検証、独立reviewを完了した。実装commit `82e22179`。 |
-| OUT-02 保存data契約 | 15 | 0 | Proposed / 未承認 | 許可field、型、長さ、status、system metadata、exact field update、draft・競合契約を合意する。 |
+| OUT-02 保存data契約 | 15 | 15 | Completed | exact 11 field、型・長さ・status・system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否をUI・専用writer・Rulesへ実装した。domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。実装commit `31d11b15`。 |
 | OUT-03 契約終了と候補 | 10 | 0 | Proposed / 未承認 | 新規配置・実績と過去訂正でACTIVE／TERMINATEDをどう扱うか、終了日の要否を合意する。 |
 | OUT-04 archive・restore安全性 | 20 | 0 | Proposed / 未承認 | Schedule、OperationResult、ArrangementNotification等の参照、並行作成、過去表示、archive対象、restore、保持を合意する。 |
 | OUT-05 code・検索・一覧表示 | 10 | 0 | Proposed / 未承認 | code方針、検索対象、取得件数とpagination、Autocomplete renderer、終了済み表示を整合する。 |
@@ -36,13 +36,28 @@
 - rollbackはclientとRulesのreview済み変更を対で戻す。ただし既知の広いwriteを再開するため、検証失敗時はwriteを広げずlocalで停止する。
 - 変更classは`ui-css-layout`、`application-logic`、`data-contract-schema-migration`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-emulator-suite`、`local-ui-build`、`diff-check`である。
 
+## OUT-02の確定範囲
+
+- documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`とする。文字列長はcode 10、name 20、nameKana 40、displayName 6、remarks 200を上限とし、name/nameKana/displayNameを必須にする。
+- createは常に`ACTIVE`とし、updateは`ACTIVE/TERMINATED`を許可する。statusの候補・過去訂正への効果はOUT-03へ、codeの書式・一意性はOUT-05へ残す。
+- docId/createdAtは更新不能、uidは実行actor、updatedAtはrequest時刻とする。更新は実変更fieldだけを保存し、名称系変更時だけtokenMapを再生成する。
+- 入力draftをlive dataと分離し、同じfieldの外部更新は保存前transactionで拒否する。別fieldの更新は最新値を維持してmergeし、変更なしはwriteしない。
+- RulesはtokenMapを最大512件・値trueだけに制限する。名称との完全な意味的一致はRulesだけでは証明できないため、専用writerを正規経路として維持する。
+
+## OUT-02の互換性・rollback・検証
+
+- 既存pathと11 fieldの意味を維持し、migrationは行わない。検索、配置、delete/archive、statusの業務制御は変更しない。
+- rollbackは専用create/editor/action/writerとRules validationを一組で戻す。検証失敗時はRulesを緩和して旧whole-document writeへ戻さず、localで停止する。
+- 変更classは`ui-css-layout`、`application-logic`、`data-contract-schema-migration`の和集合とし、completion gateは`project-docs`、`domain-full`、`local-emulator-suite`、`local-ui-build`、`diff-check`とする。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-02以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-03以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 
 | 日付 | 進捗 | 変更 | 根拠 |
 |---|---:|---:|---|
 | 2026-09-04 | 15% | +15 | actor/tenant/UIDをfail-closedで一致させ、UIとRulesで作成・編集を会社管理者またはstrict `manager`へ限定した。live delete、archive write、fallback迂回を拒否し、domain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了した。 |
+| 2026-09-04 | 30% | +15 | exact document、型・長さ・metadata、部分更新、token再生成条件、独立draft・同一field競合拒否を実装し、domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。 |
