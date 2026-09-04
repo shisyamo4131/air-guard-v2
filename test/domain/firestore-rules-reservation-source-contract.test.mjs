@@ -33,6 +33,7 @@ test("Companies fallback reserves every protected collection before tenant acces
   assert.deepEqual(
     excludedCollections,
     [
+      "Billings",
       "Customers",
       "Customers_archive",
       "EmployeeLifecycleHeads",
@@ -40,13 +41,57 @@ test("Companies fallback reserves every protected collection before tenant acces
       "EmployeeUserReservations",
       "Employees",
       "LifecycleOperations",
+      "OperationResults",
       "SecurityReportIndexes",
+      "Sites",
       "StripeData",
       "UserLifecycleLocks",
       "Users",
     ].sort(),
   );
   assert.match(executable, /&& isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+});
+
+test("Customer reference collections use explicit guarded matches outside the fallback", async () => {
+  const source = await readFile(rulesUrl, "utf8");
+  const contracts = [
+    {
+      collectionName: "Billings",
+      createGuard: "isValidCustomerReferenceCreate",
+      updateGuard: "isValidCustomerReferenceUpdate",
+    },
+    {
+      collectionName: "OperationResults",
+      createGuard: "isValidCustomerReferenceCreate",
+      updateGuard: "isValidCustomerReferenceUpdate",
+    },
+    {
+      collectionName: "Sites",
+      createGuard: "isValidOptionalCustomerReferenceCreate",
+      updateGuard: "isValidOptionalCustomerReferenceUpdate",
+    },
+  ];
+
+  for (const { collectionName, createGuard, updateGuard } of contracts) {
+    const escapedCollectionName = collectionName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const body = source.match(
+      new RegExp(
+        `match /Companies/\\{companyId\\}/${escapedCollectionName}/\\{docId\\} \\{([\\s\\S]*?)\\n    \\}`,
+        "u",
+      ),
+    )?.[1];
+    assert.ok(body, `${collectionName} must have an explicit document match`);
+    assert.match(body, new RegExp(`${createGuard}\\(companyId\\)`, "u"));
+    assert.match(body, new RegExp(`${updateGuard}\\(companyId\\)`, "u"));
+  }
+});
+
+test("Customers_archive is recursively denied before the Companies fallback", async () => {
+  const source = await readFile(rulesUrl, "utf8");
+  assert.match(
+    source,
+    /match \/Companies\/\{companyId\}\/Customers_archive\/\{document=\*\*\} \{\s*allow read, write: if false;\s*\}/u,
+  );
 });
 
 test("StripeData is recursively denied and excluded from the Companies fallback", async () => {

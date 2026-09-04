@@ -402,13 +402,10 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Articles",
   "Articles_archive",
   "Autonumbers",
-  "Billings",
   "Employees_archive",
   "meta",
-  "OperationResults",
   "Outsourcers",
   "Outsourcers_archive",
-  "Sites",
   "Sites_archive",
   "SiteOperationSchedules",
 ];
@@ -708,6 +705,42 @@ async function seedCustomerRulesDocument({
       customerRulesData({ docId, uid, ...data }),
     );
   });
+}
+
+async function seedCas03Documents(entries) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const batch = writeBatch(context.firestore());
+    for (const { companyId, collectionName, docId, data } of entries) {
+      batch.set(
+        doc(context.firestore(), "Companies", companyId, collectionName, docId),
+        data,
+      );
+    }
+    await batch.commit();
+  });
+}
+
+async function cleanupCas03Documents(entries) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const batch = writeBatch(context.firestore());
+    for (const { companyId, collectionName, docId } of entries) {
+      batch.delete(
+        doc(context.firestore(), "Companies", companyId, collectionName, docId),
+      );
+    }
+    await batch.commit();
+  });
+}
+
+async function readCas03Document(companyId, collectionName, docId) {
+  let result;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const snapshot = await getDoc(
+      doc(context.firestore(), "Companies", companyId, collectionName, docId),
+    );
+    result = snapshot.exists() ? snapshot.data() : null;
+  });
+  return result;
 }
 
 before(async () => {
@@ -2869,6 +2902,857 @@ test("Customer archive Callable logs fixed classifications without sensitive val
     });
   }
 });
+
+test("Firestore Rules keep Customers_archive private for every client actor and query shape", async () => {
+  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const archiveId = "cas03-private-archive";
+  const actors = [
+    { label: "admin", uid: "cas03-archive-private-admin", isAdmin: true, roles: [] },
+    { label: "manager", uid: "cas03-archive-private-manager", isAdmin: false, roles: ["manager"] },
+    { label: "read-only", uid: "cas03-archive-private-reader", isAdmin: false, roles: ["accountant"] },
+  ];
+  const crossTenantUid = "cas03-archive-private-cross-tenant";
+  const cleanupEntries = [
+    { companyId: primaryCompanyId, collectionName: "Customers_archive", docId: archiveId },
+    { companyId: secondaryCompanyId, collectionName: "Customers_archive", docId: archiveId },
+    ...actors.map((actor) => ({
+      companyId: primaryCompanyId,
+      collectionName: "Users",
+      docId: actor.uid,
+    })),
+    { companyId: secondaryCompanyId, collectionName: "Users", docId: crossTenantUid },
+  ];
+
+  try {
+    for (const actor of actors) {
+      await seedRegisteredUser({
+        uid: actor.uid,
+        pathCompanyId: primaryCompanyId,
+        companyId: primaryCompanyId,
+        isAdmin: actor.isAdmin,
+        roles: actor.roles,
+      });
+    }
+    await seedRegisteredUser({
+      uid: crossTenantUid,
+      pathCompanyId: secondaryCompanyId,
+      companyId: secondaryCompanyId,
+      isAdmin: true,
+      roles: [],
+    });
+    await seedCas03Documents([
+      {
+        companyId: primaryCompanyId,
+        collectionName: "Customers_archive",
+        docId: archiveId,
+        data: { schemaVersion: 1, synthetic: true },
+      },
+      {
+        companyId: secondaryCompanyId,
+        collectionName: "Customers_archive",
+        docId: archiveId,
+        data: { schemaVersion: 1, synthetic: true },
+      },
+    ]);
+
+    for (const actor of actors) {
+      const firestore = authenticatedFirestore(actor.uid, { isSuperUser: false });
+      const archiveCollection = collection(
+        firestore,
+        "Companies",
+        primaryCompanyId,
+        "Customers_archive",
+      );
+      const archive = doc(archiveCollection, archiveId);
+      await assertFails(getDoc(archive));
+      await assertFails(getDocs(archiveCollection));
+      await assertFails(getDocs(query(archiveCollection, where("schemaVersion", "==", 1))));
+      await assertFails(
+        setDoc(doc(archiveCollection, `cas03-forged-${actor.label}`), { synthetic: true }),
+      );
+      await assertFails(updateDoc(archive, { synthetic: false }));
+      await assertFails(deleteDoc(archive));
+    }
+
+    const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+    const unauthenticatedCollection = collection(
+      unauthenticated,
+      "Companies",
+      primaryCompanyId,
+      "Customers_archive",
+    );
+    await assertFails(getDoc(doc(unauthenticatedCollection, archiveId)));
+    await assertFails(getDocs(unauthenticatedCollection));
+    await assertFails(
+      setDoc(doc(unauthenticatedCollection, "cas03-unauth-forged"), { synthetic: true }),
+    );
+
+    const crossTenantFirestore = authenticatedFirestore(crossTenantUid, {
+      companyId: secondaryCompanyId,
+      isSuperUser: false,
+    });
+    const crossTenantCollection = collection(
+      crossTenantFirestore,
+      "Companies",
+      primaryCompanyId,
+      "Customers_archive",
+    );
+    await assertFails(getDoc(doc(crossTenantCollection, archiveId)));
+    await assertFails(getDocs(crossTenantCollection));
+    await assertFails(
+      setDoc(doc(crossTenantCollection, "cas03-cross-tenant-forged"), { synthetic: true }),
+    );
+
+    const adminFirestore = authenticatedFirestore(actors[0].uid, { isSuperUser: false });
+    const nestedArchive = doc(
+      adminFirestore,
+      "Companies",
+      primaryCompanyId,
+      "Customers_archive",
+      archiveId,
+      "Nested",
+      "cas03-bypass",
+    );
+    await assertFails(getDoc(nestedArchive));
+    await assertFails(setDoc(nestedArchive, { synthetic: true }));
+    await assertFails(deleteDoc(nestedArchive));
+  } finally {
+    await cleanupCas03Documents(cleanupEntries);
+  }
+});
+
+test("Firestore Rules treat every same-ID archive shape as a Customer tombstone", async () => {
+  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const uid = "cas03-customer-tombstone-manager";
+  const tombstones = [
+    {
+      docId: "cas03-tombstone-valid-envelope",
+      data: {
+        schemaVersion: 1,
+        customer: customerRulesData({
+          docId: "cas03-tombstone-valid-envelope",
+          uid: "archive-server-writer",
+        }),
+        audit: {
+          operationId: "cas03-valid",
+          reason: "合成",
+          actorUid: uid,
+          archivedAt: serverTimestamp(),
+        },
+      },
+    },
+    {
+      docId: "cas03-tombstone-flat-legacy",
+      data: customerRulesData({
+        docId: "cas03-tombstone-flat-legacy",
+        uid: "legacy-server-writer",
+      }),
+    },
+    { docId: "cas03-tombstone-malformed", data: { malformed: true } },
+  ];
+  const otherTenantOnlyId = "cas03-tombstone-other-tenant-only";
+  const cleanupEntries = [
+    { companyId: primaryCompanyId, collectionName: "Users", docId: uid },
+    ...tombstones.flatMap(({ docId }) => [
+      { companyId: primaryCompanyId, collectionName: "Customers_archive", docId },
+      { companyId: primaryCompanyId, collectionName: "Customers", docId },
+    ]),
+    {
+      companyId: secondaryCompanyId,
+      collectionName: "Customers_archive",
+      docId: otherTenantOnlyId,
+    },
+    { companyId: primaryCompanyId, collectionName: "Customers", docId: otherTenantOnlyId },
+  ];
+
+  try {
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: primaryCompanyId,
+      companyId: primaryCompanyId,
+      isAdmin: false,
+      roles: ["manager"],
+    });
+    await seedCas03Documents([
+      ...tombstones.map(({ docId, data }) => ({
+        companyId: primaryCompanyId,
+        collectionName: "Customers_archive",
+        docId,
+        data,
+      })),
+      {
+        companyId: secondaryCompanyId,
+        collectionName: "Customers_archive",
+        docId: otherTenantOnlyId,
+        data: { malformed: true },
+      },
+    ]);
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+
+    for (const { docId } of tombstones) {
+      await assertFails(
+        setDoc(
+          doc(firestore, "Companies", primaryCompanyId, "Customers", docId),
+          customerRulesData({ docId, uid }),
+        ),
+      );
+    }
+
+    const allowedCustomer = doc(
+      firestore,
+      "Companies",
+      primaryCompanyId,
+      "Customers",
+      otherTenantOnlyId,
+    );
+    await assertSucceeds(
+      setDoc(allowedCustomer, customerRulesData({ docId: otherTenantOnlyId, uid })),
+    );
+    await assertFails(deleteDoc(allowedCustomer));
+  } finally {
+    await cleanupCas03Documents(cleanupEntries);
+  }
+});
+
+const CAS03_CUSTOMER_REFERENCE_COLLECTIONS = [
+  { collectionName: "Sites", optionalOnCreate: true },
+  { collectionName: "OperationResults", optionalOnCreate: false },
+  { collectionName: "Billings", optionalOnCreate: false },
+];
+
+for (const { collectionName, optionalOnCreate } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
+  test(`Firestore Rules enforce the ${collectionName} Customer reference matrix`, async () => {
+    const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+    const suffix = collectionName.toLowerCase();
+    const uid = `cas03-${suffix}-matrix-user`;
+    const activeCustomerId = `cas03-${suffix}-active-customer`;
+    const terminatedCustomerId = `cas03-${suffix}-terminated-customer`;
+    const missingCustomerId = `cas03-${suffix}-missing-customer`;
+    const archiveOnlyCustomerId = `cas03-${suffix}-archive-only-customer`;
+    const otherTenantCustomerId = `cas03-${suffix}-other-tenant-customer`;
+    const orphanDocumentId = `cas03-${suffix}-existing-orphan`;
+    const crossTenantDocumentId = `cas03-${suffix}-cross-tenant-document`;
+    const cleanupEntries = [
+      { companyId: primaryCompanyId, collectionName: "Users", docId: uid },
+      ...[activeCustomerId, terminatedCustomerId].map((docId) => ({
+        companyId: primaryCompanyId,
+        collectionName: "Customers",
+        docId,
+      })),
+      {
+        companyId: primaryCompanyId,
+        collectionName: "Customers_archive",
+        docId: archiveOnlyCustomerId,
+      },
+      {
+        companyId: secondaryCompanyId,
+        collectionName: "Customers",
+        docId: otherTenantCustomerId,
+      },
+      { companyId: primaryCompanyId, collectionName, docId: orphanDocumentId },
+      { companyId: secondaryCompanyId, collectionName, docId: crossTenantDocumentId },
+    ];
+
+    try {
+      await seedRegisteredUser({
+        uid,
+        pathCompanyId: primaryCompanyId,
+        companyId: primaryCompanyId,
+        isAdmin: false,
+        roles: ["manager"],
+      });
+      await seedCustomerRulesDocument({
+        companyId: primaryCompanyId,
+        docId: activeCustomerId,
+        data: { contractStatus: "ACTIVE" },
+      });
+      await seedCustomerRulesDocument({
+        companyId: primaryCompanyId,
+        docId: terminatedCustomerId,
+        data: { contractStatus: "TERMINATED" },
+      });
+      await seedCustomerRulesDocument({
+        companyId: secondaryCompanyId,
+        docId: otherTenantCustomerId,
+        data: { contractStatus: "ACTIVE" },
+      });
+      await seedCas03Documents([
+        {
+          companyId: primaryCompanyId,
+          collectionName: "Customers_archive",
+          docId: archiveOnlyCustomerId,
+          data: { schemaVersion: 1, synthetic: true },
+        },
+        {
+          companyId: primaryCompanyId,
+          collectionName,
+          docId: orphanDocumentId,
+          data: { customerId: missingCustomerId, marker: "existing-orphan" },
+        },
+        {
+          companyId: secondaryCompanyId,
+          collectionName,
+          docId: crossTenantDocumentId,
+          data: { customerId: otherTenantCustomerId, marker: "other-tenant" },
+        },
+      ]);
+
+      const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+      const ownCollection = collection(
+        firestore,
+        "Companies",
+        primaryCompanyId,
+        collectionName,
+      );
+      const createProbe = async (label, data, shouldSucceed) => {
+        const docId = `cas03-${suffix}-create-${label}`;
+        cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId });
+        const operation = setDoc(doc(ownCollection, docId), data);
+        if (shouldSucceed) {
+          await assertSucceeds(operation);
+        } else {
+          await assertFails(operation);
+        }
+      };
+
+      await createProbe("active", { customerId: activeCustomerId, marker: "active" }, true);
+      await createProbe(
+        "terminated",
+        { customerId: terminatedCustomerId, marker: "terminated" },
+        true,
+      );
+      await createProbe("missing", { customerId: missingCustomerId }, false);
+      await createProbe("archive-only", { customerId: archiveOnlyCustomerId }, false);
+      await createProbe("other-tenant", { customerId: otherTenantCustomerId }, false);
+      await createProbe("empty", { customerId: "" }, false);
+      await createProbe("number", { customerId: 42 }, false);
+      await createProbe("path-like", { customerId: "parent/child" }, false);
+      await createProbe(
+        "null",
+        { customerId: null, customerName: "合成仮取引先" },
+        optionalOnCreate,
+      );
+      await createProbe(
+        "absent",
+        { customerName: "合成仮取引先", marker: "customer-id-absent" },
+        optionalOnCreate,
+      );
+
+      const mutableDocumentId = `cas03-${suffix}-mutable-reference`;
+      cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId: mutableDocumentId });
+      const mutableReference = doc(ownCollection, mutableDocumentId);
+      await assertSucceeds(
+        setDoc(mutableReference, { customerId: activeCustomerId, marker: "customer-a" }),
+      );
+      await assertSucceeds(
+        updateDoc(mutableReference, {
+          customerId: terminatedCustomerId,
+          marker: "customer-b",
+        }),
+      );
+      assert.equal((await assertSucceeds(getDoc(mutableReference))).exists(), true);
+      await assertSucceeds(
+        updateDoc(mutableReference, {
+          customerId: terminatedCustomerId,
+          marker: "unchanged-customer-id",
+        }),
+      );
+
+      for (const [label, customerId] of [
+        ["missing", missingCustomerId],
+        ["archive-only", archiveOnlyCustomerId],
+        ["other-tenant", otherTenantCustomerId],
+        ["empty", ""],
+        ["number", 42],
+        ["path-like", "parent/child"],
+        ["null", null],
+        ["unset", deleteField()],
+      ]) {
+        await assertFails(
+          updateDoc(mutableReference, {
+            customerId,
+            marker: `invalid-${label}`,
+          }),
+        );
+      }
+
+      const orphanReference = doc(ownCollection, orphanDocumentId);
+      await assertSucceeds(
+        updateDoc(orphanReference, { marker: "unrelated-update-compatible" }),
+      );
+      await assertSucceeds(deleteDoc(orphanReference));
+
+      const crossTenantReference = doc(
+        firestore,
+        "Companies",
+        secondaryCompanyId,
+        collectionName,
+        crossTenantDocumentId,
+      );
+      await assertFails(getDoc(crossTenantReference));
+      await assertFails(
+        getDocs(
+          collection(
+            firestore,
+            "Companies",
+            secondaryCompanyId,
+            collectionName,
+          ),
+        ),
+      );
+      await assertFails(
+        setDoc(crossTenantReference, {
+          customerId: otherTenantCustomerId,
+          marker: "cross-tenant-write",
+        }),
+      );
+      await assertFails(
+        updateDoc(crossTenantReference, { marker: "cross-tenant-update" }),
+      );
+      await assertFails(deleteDoc(crossTenantReference));
+
+      const nestedReference = doc(
+        firestore,
+        "Companies",
+        primaryCompanyId,
+        collectionName,
+        mutableDocumentId,
+        "Nested",
+        "cas03-bypass",
+      );
+      await assertFails(getDoc(nestedReference));
+      await assertFails(setDoc(nestedReference, { synthetic: true }));
+      await assertFails(deleteDoc(nestedReference));
+    } finally {
+      await cleanupCas03Documents(cleanupEntries);
+    }
+  });
+}
+
+test("Firestore Rules preserve Site temporary-reference transitions and forbid unsetting an assigned Customer", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "cas03-sites-temporary-transition-manager";
+  const activeCustomerId = "cas03-sites-transition-active-customer";
+  const terminatedCustomerId = "cas03-sites-transition-terminated-customer";
+  const documentIds = {
+    absentToNull: "cas03-site-absent-to-null",
+    nullToAbsent: "cas03-site-null-to-absent",
+    absentToActive: "cas03-site-absent-to-active",
+    nullToTerminated: "cas03-site-null-to-terminated",
+    assignedToUnset: "cas03-site-assigned-to-unset",
+  };
+  const cleanupEntries = [
+    { companyId, collectionName: "Users", docId: uid },
+    { companyId, collectionName: "Customers", docId: activeCustomerId },
+    { companyId, collectionName: "Customers", docId: terminatedCustomerId },
+    ...Object.values(documentIds).map((docId) => ({
+      companyId,
+      collectionName: "Sites",
+      docId,
+    })),
+  ];
+
+  try {
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: false,
+      roles: ["manager"],
+    });
+    await seedCustomerRulesDocument({
+      companyId,
+      docId: activeCustomerId,
+      data: { contractStatus: "ACTIVE" },
+    });
+    await seedCustomerRulesDocument({
+      companyId,
+      docId: terminatedCustomerId,
+      data: { contractStatus: "TERMINATED" },
+    });
+    await seedCas03Documents([
+      {
+        companyId,
+        collectionName: "Sites",
+        docId: documentIds.absentToNull,
+        data: { customerName: "合成仮取引先", marker: "absent" },
+      },
+      {
+        companyId,
+        collectionName: "Sites",
+        docId: documentIds.nullToAbsent,
+        data: { customerId: null, customerName: "合成仮取引先", marker: "null" },
+      },
+      {
+        companyId,
+        collectionName: "Sites",
+        docId: documentIds.absentToActive,
+        data: { customerName: "合成仮取引先", marker: "absent" },
+      },
+      {
+        companyId,
+        collectionName: "Sites",
+        docId: documentIds.nullToTerminated,
+        data: { customerId: null, customerName: "合成仮取引先", marker: "null" },
+      },
+      {
+        companyId,
+        collectionName: "Sites",
+        docId: documentIds.assignedToUnset,
+        data: { customerId: activeCustomerId, marker: "assigned" },
+      },
+    ]);
+
+    const sites = collection(
+      authenticatedFirestore(uid, { isSuperUser: false }),
+      "Companies",
+      companyId,
+      "Sites",
+    );
+    const absentToNull = doc(sites, documentIds.absentToNull);
+    await assertSucceeds(
+      updateDoc(absentToNull, { customerId: null, marker: "absent-to-null" }),
+    );
+    const absentToNullData = (await assertSucceeds(getDoc(absentToNull))).data();
+    assert.equal(Object.hasOwn(absentToNullData, "customerId"), true);
+    assert.equal(absentToNullData.customerId, null);
+    assert.equal(absentToNullData.marker, "absent-to-null");
+
+    const nullToAbsent = doc(sites, documentIds.nullToAbsent);
+    await assertSucceeds(
+      updateDoc(nullToAbsent, {
+        customerId: deleteField(),
+        marker: "null-to-absent",
+      }),
+    );
+    const nullToAbsentData = (await assertSucceeds(getDoc(nullToAbsent))).data();
+    assert.equal(Object.hasOwn(nullToAbsentData, "customerId"), false);
+    assert.equal(nullToAbsentData.marker, "null-to-absent");
+
+    const absentToActive = doc(sites, documentIds.absentToActive);
+    await assertSucceeds(
+      updateDoc(absentToActive, {
+        customerId: activeCustomerId,
+        marker: "absent-to-active",
+      }),
+    );
+    assert.equal(
+      (await assertSucceeds(getDoc(absentToActive))).data().customerId,
+      activeCustomerId,
+    );
+
+    const nullToTerminated = doc(sites, documentIds.nullToTerminated);
+    await assertSucceeds(
+      updateDoc(nullToTerminated, {
+        customerId: terminatedCustomerId,
+        marker: "null-to-terminated",
+      }),
+    );
+    assert.equal(
+      (await assertSucceeds(getDoc(nullToTerminated))).data().customerId,
+      terminatedCustomerId,
+    );
+
+    const assignedToUnset = doc(sites, documentIds.assignedToUnset);
+    await assertFails(
+      updateDoc(assignedToUnset, {
+        customerId: null,
+        marker: "assigned-to-null-denied",
+      }),
+    );
+    await assertFails(
+      updateDoc(assignedToUnset, {
+        customerId: deleteField(),
+        marker: "assigned-to-absent-denied",
+      }),
+    );
+    assert.equal(
+      (await assertSucceeds(getDoc(assignedToUnset))).data().customerId,
+      activeCustomerId,
+    );
+  } finally {
+    await cleanupCas03Documents(cleanupEntries);
+  }
+});
+
+for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
+  test(`Firestore Rules apply public and inactive-actor gates directly to ${collectionName}`, async () => {
+    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const suffix = collectionName.toLowerCase();
+    const customerId = `cas03-${suffix}-actor-gate-customer`;
+    const protectedDocumentId = `cas03-${suffix}-actor-gate-existing`;
+    const actorScenarios = [
+      {
+        label: "temporary",
+        uid: `cas03-${suffix}-temporary-user`,
+        seed: { isTemporary: true },
+      },
+      {
+        label: "disabled",
+        uid: `cas03-${suffix}-disabled-user`,
+        seed: { disabled: true },
+      },
+      {
+        label: "missing",
+        uid: `cas03-${suffix}-missing-user`,
+        seed: null,
+      },
+      {
+        label: "membership-mismatch",
+        uid: `cas03-${suffix}-membership-mismatch-user`,
+        seed: { companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+      },
+    ];
+    const cleanupEntries = [
+      { companyId, collectionName: "Customers", docId: customerId },
+      { companyId, collectionName, docId: protectedDocumentId },
+      ...actorScenarios
+        .filter(({ seed }) => seed !== null)
+        .map(({ uid }) => ({ companyId, collectionName: "Users", docId: uid })),
+    ];
+
+    try {
+      await seedCustomerRulesDocument({ companyId, docId: customerId });
+      await seedCas03Documents([
+        {
+          companyId,
+          collectionName,
+          docId: protectedDocumentId,
+          data: { customerId, marker: "actor-gate-existing" },
+        },
+      ]);
+      for (const scenario of actorScenarios) {
+        if (scenario.seed !== null) {
+          await seedRegisteredUser({
+            uid: scenario.uid,
+            pathCompanyId: companyId,
+            companyId: scenario.seed.companyId ?? companyId,
+            isTemporary: scenario.seed.isTemporary ?? false,
+            disabled: scenario.seed.disabled ?? false,
+            isAdmin: false,
+            roles: ["manager"],
+          });
+        }
+      }
+
+      const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+      const unauthenticatedCollection = collection(
+        unauthenticated,
+        "Companies",
+        companyId,
+        collectionName,
+      );
+      const unauthenticatedExisting = doc(
+        unauthenticatedCollection,
+        protectedDocumentId,
+      );
+      await assertFails(getDoc(unauthenticatedExisting));
+      await assertFails(getDocs(unauthenticatedCollection));
+      await assertFails(
+        setDoc(doc(unauthenticatedCollection, `cas03-${suffix}-public-create`), {
+          customerId,
+        }),
+      );
+      await assertFails(
+        updateDoc(unauthenticatedExisting, { marker: "public-update" }),
+      );
+      await assertFails(deleteDoc(unauthenticatedExisting));
+
+      for (const scenario of actorScenarios) {
+        const firestore = authenticatedFirestore(scenario.uid, {
+          isSuperUser: false,
+        });
+        const protectedCollection = collection(
+          firestore,
+          "Companies",
+          companyId,
+          collectionName,
+        );
+        const protectedDocument = doc(protectedCollection, protectedDocumentId);
+        await assertFails(getDoc(protectedDocument));
+        await assertFails(getDocs(protectedCollection));
+        await assertFails(
+          setDoc(
+            doc(protectedCollection, `cas03-${suffix}-${scenario.label}-create`),
+            { customerId },
+          ),
+        );
+        await assertFails(
+          updateDoc(protectedDocument, {
+            marker: `${scenario.label}-update`,
+          }),
+        );
+        await assertFails(deleteDoc(protectedDocument));
+      }
+    } finally {
+      await cleanupCas03Documents(cleanupEntries);
+    }
+  });
+}
+
+for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
+  test(`CAS-03 ${collectionName} reference-first ordering preserves active Customer and reference`, async () => {
+    const { archiveCustomer } = await loadRebuildApis();
+    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const suffix = collectionName.toLowerCase();
+    const actorUid = `cas03-${suffix}-reference-first-admin`;
+    const customerId = `cas03-${suffix}-reference-first-customer`;
+    const referenceId = `cas03-${suffix}-reference-first-document`;
+    const operationId = `cas03-${suffix}-reference-first-operation`;
+    const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    const reference = { collectionName, docId: referenceId };
+
+    try {
+      await seedCustomerRulesDocument({ companyId, docId: customerId });
+      const clientReference = doc(
+        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        "Companies",
+        companyId,
+        collectionName,
+        referenceId,
+      );
+      await assertSucceeds(
+        setDoc(clientReference, { customerId, marker: "reference-first" }),
+      );
+      await assertCallableError(
+        archiveCustomer.run(
+          actorCallableRequest({
+            actor,
+            data: {
+              customerId,
+              operationId,
+              reason: `CAS-03 ${collectionName} reference-first`,
+            },
+          }),
+        ),
+        "failed-precondition",
+      );
+      const state = await readCustomerArchiveState(companyId, customerId);
+      assert.ok(state.active);
+      assert.equal(state.archive, null);
+      assert.ok(await readCas03Document(companyId, collectionName, referenceId));
+    } finally {
+      await cleanupCustomerArchiveScenario({
+        actorUid,
+        customerIds: [customerId],
+        references: [reference],
+      });
+    }
+  });
+
+  test(`CAS-03 ${collectionName} archive-first ordering rejects the later client reference`, async () => {
+    const { archiveCustomer } = await loadRebuildApis();
+    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const suffix = collectionName.toLowerCase();
+    const actorUid = `cas03-${suffix}-archive-first-admin`;
+    const customerId = `cas03-${suffix}-archive-first-customer`;
+    const referenceId = `cas03-${suffix}-archive-first-document`;
+    const operationId = `cas03-${suffix}-archive-first-operation`;
+    const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    const reference = { collectionName, docId: referenceId };
+
+    try {
+      await seedCustomerRulesDocument({ companyId, docId: customerId });
+      assert.deepEqual(
+        await archiveCustomer.run(
+          actorCallableRequest({
+            actor,
+            data: {
+              customerId,
+              operationId,
+              reason: `CAS-03 ${collectionName} archive-first`,
+            },
+          }),
+        ),
+        { success: true, archived: true },
+      );
+      const clientReference = doc(
+        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        "Companies",
+        companyId,
+        collectionName,
+        referenceId,
+      );
+      await assertFails(
+        setDoc(clientReference, { customerId, marker: "archive-first" }),
+      );
+      const state = await readCustomerArchiveState(companyId, customerId);
+      assert.equal(state.active, null);
+      assert.ok(state.archive);
+      assert.equal(await readCas03Document(companyId, collectionName, referenceId), null);
+    } finally {
+      await cleanupCustomerArchiveScenario({
+        actorUid,
+        customerIds: [customerId],
+        references: [reference],
+      });
+    }
+  });
+
+  test(`CAS-03 ${collectionName} concurrent client reference and archive keep the invariant`, async () => {
+    const { archiveCustomer } = await loadRebuildApis();
+    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const suffix = collectionName.toLowerCase();
+    const actorUid = `cas03-${suffix}-concurrent-admin`;
+    const customerId = `cas03-${suffix}-concurrent-customer`;
+    const referenceId = `cas03-${suffix}-concurrent-document`;
+    const operationId = `cas03-${suffix}-concurrent-operation`;
+    const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    const reference = { collectionName, docId: referenceId };
+
+    try {
+      await seedCustomerRulesDocument({ companyId, docId: customerId });
+      const clientReference = doc(
+        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        "Companies",
+        companyId,
+        collectionName,
+        referenceId,
+      );
+      const results = splitSettled(
+        await Promise.allSettled([
+          setDoc(clientReference, { customerId, marker: "bounded-concurrent" }),
+          archiveCustomer.run(
+            actorCallableRequest({
+              actor,
+              data: {
+                customerId,
+                operationId,
+                reason: `CAS-03 ${collectionName} bounded concurrency`,
+              },
+            }),
+          ),
+        ]),
+      );
+      assert.equal(results.fulfilled.length, 1);
+      assert.equal(results.rejected.length, 1);
+
+      const state = await readCustomerArchiveState(companyId, customerId);
+      const referenceData = await readCas03Document(
+        companyId,
+        collectionName,
+        referenceId,
+      );
+      const activeWithReference = Boolean(state.active)
+        && state.archive === null
+        && referenceData?.customerId === customerId;
+      const archiveWithoutReference = state.active === null
+        && Boolean(state.archive)
+        && referenceData === null;
+      assert.equal(activeWithReference || archiveWithoutReference, true);
+      assert.equal(activeWithReference && archiveWithoutReference, false);
+    } finally {
+      await cleanupCustomerArchiveScenario({
+        actorUid,
+        customerIds: [customerId],
+        references: [reference],
+      });
+    }
+  });
+}
 
 for (const collectionName of TENANT_READ_WRITE_COLLECTIONS) {
   test(`Firestore Rules enforce tenant read/write access for ${collectionName}`, async () => {

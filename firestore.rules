@@ -37,6 +37,45 @@ service cloud.firestore {
       return value is string && value.size() > 0 && value.size() <= 128;
     }
 
+    function isSafeCustomerId(value) {
+      return isSafeIdentifier(value) && value.matches('^[^/]+$');
+    }
+
+    function customerExists(companyId, customerId) {
+      return isSafeCustomerId(customerId)
+        && exists(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(customerId));
+    }
+
+    function hasExistingCustomerReference(companyId, data) {
+      return data.keys().hasAll(['customerId'])
+        && customerExists(companyId, data.customerId);
+    }
+
+    function hasUnsetCustomerReference(data) {
+      return !data.keys().hasAny(['customerId']) || data.customerId == null;
+    }
+
+    function isValidOptionalCustomerReferenceCreate(companyId) {
+      return hasUnsetCustomerReference(request.resource.data)
+        || hasExistingCustomerReference(companyId, request.resource.data);
+    }
+
+    function isValidCustomerReferenceCreate(companyId) {
+      return hasExistingCustomerReference(companyId, request.resource.data);
+    }
+
+    function isValidCustomerReferenceUpdate(companyId) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['customerId'])
+        || hasExistingCustomerReference(companyId, request.resource.data);
+    }
+
+    function isValidOptionalCustomerReferenceUpdate(companyId) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['customerId'])
+        || (hasUnsetCustomerReference(resource.data)
+          && hasUnsetCustomerReference(request.resource.data))
+        || hasExistingCustomerReference(companyId, request.resource.data);
+    }
+
     function isValidFcmTokenCreate(token) {
       return hasActiveRegisteredUser()
         && request.resource.data.keys().hasOnly([
@@ -287,31 +326,37 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Billings' subcollection under 'Companies' ---
-    // BillingsコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Billings ドキュメントのみ Read/Write を許可。
+    // 同一tenant境界を維持し、customerIdの作成・変更時だけ参照先Customerを検証する。
     match /Companies/{companyId}/Billings/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidCustomerReferenceCreate(companyId);
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidCustomerReferenceUpdate(companyId);
+      allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Customers' subcollection under 'Companies' ---
     // 読み取りは既存の同一tenant境界を維持する。
     // 作成・更新は有効な会社管理者または既知preset由来の担当者に限定し、
-    // exact schemaとoperation別の変更fieldを検証する。削除はclientへ許可しない。
+    // exact schemaとoperation別の変更field、同ID archive不存在を検証する。
+    // 削除はclientへ許可しない。
     match /Companies/{companyId}/Customers/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if canWriteCustomer(companyId)
-                    && isValidCustomerCreate(docId);
+                    && isValidCustomerCreate(docId)
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Customers_archive/$(docId));
       allow update: if canWriteCustomer(companyId)
                     && isValidCustomerUpdate(docId);
       allow delete: if false;
     }
 
     // --- Rules for 'Customers_archive' subcollection under 'Companies' ---
-    // archiveの読み取りは既存境界を維持し、client CUDは全面拒否する。
-    match /Companies/{companyId}/Customers_archive/{docId} {
-      allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create, update, delete: if false;
+    // archiveはroot documentとnested pathを含めclientへ公開しない。
+    match /Companies/{companyId}/Customers_archive/{document=**} {
+      allow read, write: if false;
     }
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
@@ -346,11 +391,16 @@ service cloud.firestore {
     }
 
     // --- Rules for 'OperationResults' subcollection under 'Companies' ---
-    // OperationResultsコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // OperationResults ドキュメントのみ Read/Write を許可。
+    // 同一tenant境界を維持し、customerIdの作成・変更時だけ参照先Customerを検証する。
     match /Companies/{companyId}/OperationResults/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidCustomerReferenceCreate(companyId);
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidCustomerReferenceUpdate(companyId);
+      allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'SecurityReportIndexes' subcollection under 'Companies' ---
@@ -381,11 +431,17 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Sites' subcollection under 'Companies' ---
-    // SitesコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Sites ドキュメントのみ Read/Write を許可。
+    // customerIdなしの仮Siteを許可する。設定後はunsetを拒否するが、
+    // 同じ会社に存在する別Customerへの変更は許可する。
     match /Companies/{companyId}/Sites/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidOptionalCustomerReferenceCreate(companyId);
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidOptionalCustomerReferenceUpdate(companyId);
+      allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Sites_archive' subcollection under 'Companies' ---
@@ -443,8 +499,11 @@ service cloud.firestore {
       allow read, write: if !(collection in [
                                 "SecurityReportIndexes",
                                 "StripeData",
+                                "Billings",
                                 "Customers",
                                 "Customers_archive",
+                                "OperationResults",
+                                "Sites",
                                 "Users",
                                 "Employees",
                                 "EmployeeUserReservations",
