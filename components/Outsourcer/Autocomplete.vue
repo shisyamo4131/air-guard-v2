@@ -91,8 +91,8 @@ async function api(text) {
   >
     <template v-if="creatable" #append>
       <OutsourcersManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate }">
-          <v-icon @click="toCreate()">mdi-plus</v-icon>
+        <template #table="{ toCreate, canCreate }">
+          <v-icon v-if="canCreate" @click="toCreate()">mdi-plus</v-icon>
         </template>
       </OutsourcersManager>
     </template>

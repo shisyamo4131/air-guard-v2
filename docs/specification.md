@@ -147,6 +147,13 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。checkout、reader、未公開Functions、依存package、Company schema fieldはlocal codeから削除済みで、`StripeData`は全actor・全階層で拒否する。利用者用localとDevのlegacy field削除も完了している。Devでの実行結果は[immutable receipt](verification/stripe-05-dev-release.md)を参照し、将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
 - 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。旧8 targetへのmigrationまたはrestore経路は現在提供しない。
 
+### 外注先
+
+- Outsourcerは、ある特定の協力会社を表す会社masterであり、外注警備員個人を表すものではない。配置では、同じOutsourcerを別々の配置明細として複数回登録できる。Outsourcerと人数を一組にして一明細へ集約する方式は採用せず、外注警備員個人masterも現段階では新設しない。
+- Outsourcerの閲覧は現行の同一tenant境界を維持する。作成、基本情報変更、`contractStatus`変更は、認証UIDとUser document IDが一致する同じ会社の有効な本登録Userのうち、会社管理者または既知role preset `manager`だけに許可する。会社管理者でないsuper-user、直接permission文字列、未知または既知外roleを含むUser、仮登録、無効User、他社Userは書込み権限の根拠にしない。会社管理者かつsuper-userのUserは、会社管理者であることを根拠に許可する。
+- Outsourcerのclient直接deleteと`Outsourcers_archive`のclient作成・変更・削除は許可しない。archiveの正式な対象、参照確認、復元、保持は後続checkpointで確定するまで破壊操作を停止する。既存archiveの同一tenant readはOUT-01で変更しない。
+- OUT-01では既存path、document shape、検索、配置明細、statusの業務上の意味を変更せず、data migrationを行わない。許可field、型、長さ、system metadata、exact field update、編集中競合は後続checkpointで確定する。
+
 ### 取引先・現場・取極め
 
 - 取引先の閲覧は既存の同一会社境界を維持する。作成、基本情報変更、支払条件変更は、同じ会社の有効な本登録Userのうち、会社管理者または既知role preset由来の`customers:write`を持つUserだけに許可する。直接permission文字列、未知role、会社管理者でないsuper-user、仮登録、無効User、他社Userは書込み権限の根拠にしない。

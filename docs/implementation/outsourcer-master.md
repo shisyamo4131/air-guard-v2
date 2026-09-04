@@ -2,9 +2,9 @@
 
 ## メタデータ
 
-- 状態: 実装調査
+- 状態: 実装調査 / OUT-01 local実装反映
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`components/Outsourcer/Card/index.vue`、`components/Outsourcer/ListItem/index.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
 
 ## 入口・権限
@@ -13,11 +13,17 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 対象7 componentのprops/emits、list/card/autocomplete/tagの公開契約、caller、loading/error/accessibilityは[Outsourcer components deep review](outsourcer-components-deep-review.md)を参照する。
 
-- `/outsourcers`はpageSettingsで`outsourcers:read`を要求する。
-- 一覧画面から同じManagerの作成・更新・削除へ到達でき、write専用permissionのUI判定はない。
-- `OutsourcerAutocomplete`は`creatable=true`なら利用元画面内でも新規作成Managerを開ける。
-- Rulesは`Companies/{companyId}/Outsourcers/{docId}`と`Outsourcers_archive/{docId}`の全read/writeを、同一company claimの認証Userまたはsuper-userへ許可する。field、status、操作別roleは強制しない。
-- 権限構成は実装事実であり、確定した職務分離とは扱わない。
+## ユーザー確認済み・承認済み方針
+
+- Outsourcerは、ある特定の協力会社を表す会社masterである。外注警備員個人masterではない。
+- 配置では同じOutsourcerを別々の明細として複数回登録できる現行方式を維持する。過去に試行して廃止したOutsourcerと人数の集約方式は再採用しない。
+- OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止する。archive/restoreの正式運用は未決定である。
+
+- `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
+- OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
+- Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
+- Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
+- OUT-01はlocal実装であり、Dev/Prod Rulesと実dataは未変更・未確認である。field、status、document shapeはまだRulesで強制せず、OUT-02へ残す。
 
 ## データ契約
 
@@ -36,11 +42,11 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## CRUD・validation
 
-- Managerは既定で`item.create(item)`、`item.update(item)`、`item.delete(item)`を直接実行する。
+- Managerは認可再評価後に既存の`item.create(item)`と`item.update(item)`へ委譲する。delete handlerはOUT-01で常に拒否し、既存adapterへ到達させない。
 - `name`、`nameKana`、`displayName`、`contractStatus`のみrequired。code一意性、名称重複、status遷移、契約日整合のOutsourcer固有validationはない。
 - 更新はdocument全体の通常updateで、revision/version/preconditionをUIから渡さない。複数User同時編集は後勝ちになり得る。
 - contract終了は専用methodではなく、編集で`contractStatus=TERMINATED`にするだけである。終了日時・理由・履歴は保存しない。
-- 削除は`logicalDelete=true`により同一doc IDを`Outsourcers_archive`へtransactionでcopyし、active collectionから削除する。
+- schemaの`logicalDelete=true`と既存adapterには同一doc IDを`Outsourcers_archive`へtransactionでcopyしてactive collectionから削除する経路が残るが、OUT-01のUIとRulesからは到達できない。
 
 ## 検索・状態
 
@@ -64,26 +70,26 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 削除・archive
 
-- `hasMany` guardはSiteOperationSchedulesとOperationResultsの`outsourcerIds array-contains docId`を検索し、1件でもあれば削除を拒否する。
+- 既存adapterの`hasMany` guardはSiteOperationSchedulesとOperationResultsの`outsourcerIds array-contains docId`を検索し、1件でもあれば削除を拒否する。ただしOUT-01ではclient delete自体を停止しており、このguardは通常UIから実行されない。
 - ArrangementNotificationsはhasMany対象外で、通知だけが残る場合の削除guardはない。
 - guard queryはdelete transaction外の`getDocs`であり、確認直後の並行参照作成との競合余地がadapter自身のコメントに明記される。
-- archiveのRulesはliveと同じ広いread/write。復元UI、終了からarchiveへの正式手順、保持/匿名化policyは確認できない。
+- archiveのRulesは同一tenantの有効な本登録Userのreadだけを維持し、client writeを全拒否する。復元UI、終了からarchiveへの正式手順、保持/匿名化policyは未決定である。
 
 ## Rules・tenant・security
 
 - path tenant境界はcompany claimで制限されるが、documentにcompanyId fieldはなく、所属はpathだけで表現する。
-- 同一会社の認証Userは一覧、備考を含む全fieldを読書きし、archiveも直接改変できる。
+- 同一会社の有効な本登録Userは一覧と備考を含むlive/archiveを読める。live書込みは会社管理者またはexact `manager`だけで、archive直接改変は全clientで拒否する。
 - 現行schemaに個人外注警備員の機微情報はない。将来追加する場合は会社masterと個人情報を同じ広いRulesに載せない設計が必要となる。
-- client-side requiredやdelete guardはRulesでは強制されず、直接writeで欠損field、任意status、live/archive移動が可能である。
+- client-side requiredはまだRulesで強制されず、許可writerは直接writeで欠損fieldや任意statusを保存できる。live deleteとarchive writeは拒否するため、clientによるlive/archive移動はOUT-01で停止した。
 
 ## 矛盾・未使用候補
 
-- 指示上の「外注会社/外注警備員」に対し、実装は外注先会社だけで、警備員個人をindexで代替している。
+- Outsourcerは協力会社masterであり、外注警備員個人masterは持たない。同一会社の重複配置は明細indexで区別する現行契約で、人数集約方式は採用しない。
 - `useOutsourcersInRange`の`from/to`は期間選定に未使用で、契約開始/終了日fieldもない。
 - `OutsourcerAutocomplete`のdefault item slotは`EmployeeListItem`を描画しており、名称表示は動作し得るが型・責務上の取り違え候補である。
 - `OutsourcerListItem`は静的callerを確認できず、Autocompleteのdefault rendererにも使われないlegacy候補である。Nuxt auto-registration等の動的到達性は未確認のため、未使用とは断定しない。
 - 一覧query limit 10とManager itemsPerPage 20が不一致。
-- Managerのtoolbar plusは`showCreate=false`でも表示し、Iteratorのdeclared `hideDefaultFooter`はrootへ渡らない。
+- OUT-01前はManagerのtoolbar plusが`showCreate=false`でも表示された。OUT-01後はwrite actorにだけ表示する。Iteratorのdeclared `hideDefaultFooter`がrootへ渡らない点は未変更である。
 - codeは一覧header・sortに使うがtoken検索対象外かつ任意・非一意である。
 
 ## 将来要対応
@@ -92,7 +98,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070〜CONF-0073を`pending-confirmations.md`へ登録した。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。CONF-0072〜CONF-0073は未回答である。
 
 ## 未確認範囲
 

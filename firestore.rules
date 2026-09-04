@@ -205,6 +205,52 @@ service cloud.firestore {
             && hasCustomerWriteRole(user)));
     }
 
+    function hasExactOutsourcerManagerRole(user) {
+      return user.keys().hasAll(['roles'])
+        ? (user.roles is list
+          ? (user.roles.size() == 1
+            ? user.roles[0] == 'manager'
+            : false)
+          : false)
+        : false;
+    }
+
+    function hasValidOutsourcerIdentityClaims(companyId) {
+      return isAuthenticated()
+        ? (request.auth.token.keys().hasAll(['email_verified', 'companyId', 'isSuperUser'])
+          ? (request.auth.token.companyId is string
+            ? request.auth.token.email_verified is bool
+              && request.auth.token.email_verified == true
+              && request.auth.token.companyId.size() > 0
+              && request.auth.token.companyId == companyId
+              && request.auth.token.isSuperUser is bool
+            : false)
+          : false)
+        : false;
+    }
+
+    function isActiveOutsourcerWriter(companyId, user) {
+      return user.keys().hasAll(['companyId', 'isTemporary', 'disabled', 'isAdmin'])
+        ? user.companyId is string
+          && user.companyId == companyId
+          && user.isTemporary is bool
+          && user.isTemporary == false
+          && user.disabled is bool
+          && user.disabled == false
+          && user.isAdmin is bool
+          && (user.isAdmin == true
+            || (request.auth.token.isSuperUser == false
+              && hasExactOutsourcerManagerRole(user)))
+        : false;
+    }
+
+    function canWriteOutsourcer(companyId) {
+      let userPath = /databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid);
+      return hasValidOutsourcerIdentityClaims(companyId)
+        && exists(userPath)
+        && isActiveOutsourcerWriter(companyId, get(userPath).data);
+    }
+
     function isValidCustomerCreate(docId) {
       return isValidCustomer(request.resource.data, docId)
         && request.resource.data.contractStatus == 'ACTIVE'
@@ -417,17 +463,21 @@ service cloud.firestore {
     // --- Rules for 'Outsourcers' subcollection under 'Companies' ---
     // OutsourcersコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Outsourcers ドキュメントのみ Read/Write を許可。
+    // 読取りは同一tenantに維持し、作成・更新は会社管理者または
+    // non-super-userのexact manager presetだけに許可する。削除は拒否する。
     match /Companies/{companyId}/Outsourcers/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create, update: if canWriteOutsourcer(companyId);
+      allow delete: if false;
     }
 
     // --- Rules for 'Outsourcers_archive' subcollection under 'Companies' ---
     // Outsourcers_archiveコレクションはCompaniesコレクションのサブコレクション。
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Outsourcers ドキュメントのみ Read/Write を許可。
+    // archiveの読取りは同一tenantに維持し、client writeは全て拒否する。
     match /Companies/{companyId}/Outsourcers_archive/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
     }
 
     // --- Rules for 'Sites' subcollection under 'Companies' ---
@@ -503,6 +553,8 @@ service cloud.firestore {
                                 "Customers",
                                 "Customers_archive",
                                 "OperationResults",
+                                "Outsourcers",
+                                "Outsourcers_archive",
                                 "Sites",
                                 "Users",
                                 "Employees",

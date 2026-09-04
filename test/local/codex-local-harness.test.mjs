@@ -415,11 +415,25 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Autonumbers",
   "Employees_archive",
   "meta",
-  "Outsourcers",
-  "Outsourcers_archive",
   "Sites_archive",
   "SiteOperationSchedules",
 ];
+
+function outsourcerRulesData({ docId, uid = "server-writer", ...overrides }) {
+  return {
+    docId,
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    code: "O001",
+    name: "合成協力会社",
+    nameKana: "ゴウセイキョウリョクガイシャ",
+    displayName: "合成外注",
+    contractStatus: "ACTIVE",
+    remarks: null,
+    ...overrides,
+  };
+}
 
 function customerRulesData({ docId, uid, ...overrides }) {
   return {
@@ -774,6 +788,20 @@ async function seedCustomerRulesDocument({
     await setDoc(
       doc(context.firestore(), "Companies", companyId, "Customers", docId),
       customerRulesData({ docId, uid, ...data }),
+    );
+  });
+}
+
+async function seedOutsourcerRulesDocument({
+  companyId = CODEX_LOCAL_COMPANIES.primary.id,
+  collectionName = "Outsourcers",
+  docId,
+  data = {},
+}) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, collectionName, docId),
+      outsourcerRulesData({ docId, ...data }),
     );
   });
 }
@@ -2162,6 +2190,317 @@ test("arrangement Callable applies field-specific preset authorization", async (
       "permission-denied",
     );
   }
+});
+
+test("Outsourcer Rules allow create and update for company admins and an exact manager", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actors = [
+    { label: "admin", isAdmin: true, roles: [], isSuperUser: false },
+    { label: "admin-super", isAdmin: true, roles: [], isSuperUser: true },
+    { label: "manager", isAdmin: false, roles: ["manager"], isSuperUser: false },
+  ];
+
+  for (const actor of actors) {
+    const uid = `outsourcer-rules-allowed-${actor.label}`;
+    const docId = `outsourcer-rules-allowed-doc-${actor.label}`;
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+    });
+    const firestore = authenticatedFirestore(uid, {
+      isSuperUser: actor.isSuperUser,
+    });
+    const reference = doc(
+      firestore,
+      "Companies",
+      companyId,
+      "Outsourcers",
+      docId,
+    );
+
+    await assertSucceeds(
+      setDoc(reference, outsourcerRulesData({ docId, uid })),
+    );
+    await assertSucceeds(
+      updateDoc(reference, {
+        contractStatus: "TERMINATED",
+        remarks: `updated-${actor.label}`,
+      }),
+    );
+    const snapshot = await assertSucceeds(getDoc(reference));
+    assert.equal(snapshot.data().contractStatus, "TERMINATED");
+  }
+});
+
+test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant writes", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const deniedActors = [
+    { label: "controller", user: { isAdmin: false, roles: ["controller"] } },
+    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
+    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
+    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
+    { label: "legal", user: { isAdmin: false, roles: ["legal"] } },
+    { label: "direct-permission", user: { isAdmin: false, roles: ["outsourcers:write"] } },
+    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
+    { label: "prototype-to-string", user: { isAdmin: false, roles: ["toString"] } },
+    { label: "prototype-constructor", user: { isAdmin: false, roles: ["constructor"] } },
+    { label: "prototype-proto", user: { isAdmin: false, roles: ["__proto__"] } },
+    { label: "mixed-known-role", user: { isAdmin: false, roles: ["manager", "controller"] } },
+    { label: "mixed-unknown-role", user: { isAdmin: false, roles: ["manager", "unknown-role"] } },
+    { label: "duplicate-manager", user: { isAdmin: false, roles: ["manager", "manager"] } },
+    { label: "roles-not-list", user: { isAdmin: false, roles: "manager" } },
+    { label: "admin-state-missing", user: { roles: ["manager"] } },
+    { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
+    { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
+    { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
+    { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
+    { label: "missing-user", missingUser: true },
+    { label: "missing-super-claim", user: { isAdmin: true, roles: [] }, missingSuperClaim: true },
+    { label: "missing-company-claim", user: { isAdmin: true, roles: [] }, missingCompanyClaim: true },
+    { label: "malformed-company-claim", user: { isAdmin: true, roles: [] }, claims: { companyId: 123 } },
+    { label: "malformed-super-claim", user: { isAdmin: true, roles: [] }, claims: { isSuperUser: "false" } },
+    { label: "unverified", user: { isAdmin: true, roles: [] }, claims: { email_verified: false } },
+  ];
+
+  for (const actor of deniedActors) {
+    const uid = `outsourcer-rules-denied-${actor.label}`;
+    const docId = `outsourcer-rules-denied-doc-${actor.label}`;
+    if (!actor.missingUser) {
+      await seedRegisteredUser({
+        uid,
+        pathCompanyId: companyId,
+        companyId,
+        ...actor.user,
+      });
+    }
+    const claims = {
+      email_verified: true,
+      companyId,
+      ...(actor.missingSuperClaim ? {} : { isSuperUser: false }),
+      ...actor.claims,
+    };
+    if (actor.missingCompanyClaim) delete claims.companyId;
+    const firestore = testEnvironment.authenticatedContext(uid, claims).firestore();
+    const reference = doc(
+      firestore,
+      "Companies",
+      companyId,
+      "Outsourcers",
+      docId,
+    );
+
+    await assertFails(
+      setDoc(reference, outsourcerRulesData({ docId, uid })),
+    );
+    await seedOutsourcerRulesDocument({ companyId, docId });
+    await assertFails(updateDoc(reference, { remarks: "unauthorized-update" }));
+  }
+
+  const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const otherUid = "outsourcer-rules-cross-tenant-admin";
+  await seedRegisteredUser({
+    uid: otherUid,
+    pathCompanyId: otherCompanyId,
+    companyId: otherCompanyId,
+    isAdmin: true,
+    roles: [],
+  });
+  const otherFirestore = authenticatedFirestore(otherUid, {
+    companyId: otherCompanyId,
+    isSuperUser: false,
+  });
+  const crossDocId = "outsourcer-rules-cross-tenant";
+  const crossReference = doc(
+    otherFirestore,
+    "Companies",
+    companyId,
+    "Outsourcers",
+    crossDocId,
+  );
+  await assertFails(
+    setDoc(
+      crossReference,
+      outsourcerRulesData({ docId: crossDocId, uid: otherUid }),
+    ),
+  );
+  await seedOutsourcerRulesDocument({ companyId, docId: crossDocId });
+  await assertFails(updateDoc(crossReference, { remarks: "cross-tenant" }));
+
+  const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+  const unauthenticatedReference = doc(
+    unauthenticated,
+    "Companies",
+    companyId,
+    "Outsourcers",
+    "outsourcer-rules-unauthenticated",
+  );
+  await assertFails(
+    setDoc(
+      unauthenticatedReference,
+      outsourcerRulesData({
+        docId: "outsourcer-rules-unauthenticated",
+        uid: "unauthenticated",
+      }),
+    ),
+  );
+});
+
+test("Outsourcer Rules preserve same-tenant live and archive reads", async () => {
+  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const uid = "outsourcer-rules-read-only-accountant";
+  const docId = "outsourcer-rules-readable";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: primaryCompanyId,
+    companyId: primaryCompanyId,
+    isAdmin: false,
+    roles: ["accountant"],
+  });
+  for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
+    for (const collectionName of ["Outsourcers", "Outsourcers_archive"]) {
+      await seedOutsourcerRulesDocument({ companyId, collectionName, docId });
+    }
+  }
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+
+  for (const collectionName of ["Outsourcers", "Outsourcers_archive"]) {
+    const ownCollection = collection(
+      firestore,
+      "Companies",
+      primaryCompanyId,
+      collectionName,
+    );
+    assert.equal(
+      (await assertSucceeds(getDoc(doc(ownCollection, docId)))).exists(),
+      true,
+    );
+    assert.ok(
+      (await assertSucceeds(getDocs(ownCollection))).docs.some(
+        (snapshot) => snapshot.id === docId,
+      ),
+    );
+
+    const otherCollection = collection(
+      firestore,
+      "Companies",
+      secondaryCompanyId,
+      collectionName,
+    );
+    await assertFails(getDoc(doc(otherCollection, docId)));
+    await assertFails(getDocs(otherCollection));
+  }
+});
+
+for (const contractStatus of ["ACTIVE", "TERMINATED"]) {
+  test(`Outsourcer Rules deny ${contractStatus} delete, archive writes, and wildcard fallback bypass`, async () => {
+    const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+    const uid = `outsourcer-rules-destructive-admin-${contractStatus.toLowerCase()}`;
+    const docId = `outsourcer-rules-destructive-${contractStatus.toLowerCase()}`;
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: true,
+      roles: [],
+    });
+    await seedOutsourcerRulesDocument({
+      companyId,
+      docId,
+      data: { contractStatus },
+    });
+    await seedOutsourcerRulesDocument({
+      companyId,
+      collectionName: "Outsourcers_archive",
+      docId,
+      data: { contractStatus },
+    });
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+    const live = doc(
+      firestore,
+      "Companies",
+      companyId,
+      "Outsourcers",
+      docId,
+    );
+    const archive = doc(
+      firestore,
+      "Companies",
+      companyId,
+      "Outsourcers_archive",
+      docId,
+    );
+
+    await assertFails(deleteDoc(live));
+    await assertFails(
+      setDoc(
+        doc(
+          firestore,
+          "Companies",
+          companyId,
+          "Outsourcers_archive",
+          `${docId}-new`,
+        ),
+        outsourcerRulesData({ docId: `${docId}-new`, uid }),
+      ),
+    );
+    await assertFails(updateDoc(archive, { remarks: "archive-update" }));
+    await assertFails(deleteDoc(archive));
+    await assertFails(
+      setDoc(
+        doc(live, "Nested", "fallback-bypass"),
+        { bypass: true },
+      ),
+    );
+    await assertFails(
+      setDoc(
+        doc(archive, "Nested", "fallback-bypass"),
+        { bypass: true },
+      ),
+    );
+  });
+}
+
+test("Outsourcer Rules recheck revoked manager role and disabled state", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "outsourcer-rules-revoked-manager";
+  const docId = "outsourcer-rules-revoked-manager-doc";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: false,
+    roles: ["manager"],
+  });
+  const reference = doc(
+    authenticatedFirestore(uid, { isSuperUser: false }),
+    "Companies",
+    companyId,
+    "Outsourcers",
+    docId,
+  );
+  await assertSucceeds(
+    setDoc(reference, outsourcerRulesData({ docId, uid })),
+  );
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", uid),
+      { roles: ["controller"] },
+    );
+  });
+  await assertFails(updateDoc(reference, { remarks: "role-revoked" }));
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", uid),
+      { roles: ["manager"], disabled: true },
+    );
+  });
+  await assertFails(updateDoc(reference, { remarks: "disabled" }));
 });
 
 test("Customer Rules allow exact create and operation-specific updates for approved actors", async () => {

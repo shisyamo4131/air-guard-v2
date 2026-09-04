@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-08-28のCCB質疑後、全144件の本文`Status`はOpen 80件、Answered 60件、Partially answered 4件である。CONF-0141とCONF-0142はPrivateSettings backupとSettingAudits restoreの承認によりAnsweredへ変更した。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 78件、Answered 63件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -859,7 +859,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0070 Outsourcerマスターの正式操作権限
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: read permissionでCRUDへ到達し、Rulesは同一会社Userにlive/archive全writeを許す。
 - Question: 外注先の閲覧、登録、編集、契約終了、archive、restoreを誰に許可するか。
@@ -867,19 +867,19 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 管理者専用、管制/契約担当分離、操作別permission、super-user repair専用。
 - Current provisional treatment: 現行境界を暫定実装として記録し、確定権限とはしない。
 - Related FUT IDs: FUT-0085
-- Answer: 未回答
+- Answer: 2026-09-04 部分回答。OUT-01では同社の有効な本登録会社管理者、またはnon-super-userの既知preset `manager`だけに作成・編集・`contractStatus`変更を許可する。会社管理者でないsuper-user、直接permission、未知・混在roleは拒否する。client deleteとarchive writeは正式policy確定まで全て停止し、readは現行境界を維持する。archive/restoreの正式actorと運用は未回答のためStatusはPartially answeredを維持する。
 
 ## CONF-0071 外注警備員を個人単位で管理するか
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: 現行Outsourcerは会社だけで、複数人を外注先ID+indexとして扱い、個人の永続IDや所属を持たない。
 - Question: 外注警備員の氏名、資格、連絡、所属、在籍状態、実績を個人単位で管理する必要があるか。人数単位の匿名運用を正式維持するか。
 - Why needed: Schedule/Notification/Resultのworker identityと個人情報責任を定義するため。
 - Options and impact: 個人master新設、会社配下subcollection、必要時だけsnapshot入力、現行人数単位維持。
-- Current provisional treatment: Outsourcerを会社master、indexを一時的な人数識別として扱う。
+- Current provisional treatment: Outsourcerを協力会社masterとして扱い、同じOutsourcerを配置明細へ複数回登録できる現行方式を維持する。
 - Related FUT IDs: FUT-0086
-- Answer: 未回答
+- Answer: 2026-09-04 回答済み。Outsourcerはある特定の協力会社の情報であり、外注警備員個人masterではない。配置時は同じOutsourcerを重複登録できる方式を維持する。過去に試行したOutsourcerと人数の集約方式は処理が煩雑になるため廃止済みで、再採用しない。
 
 ## CONF-0072 外注先の契約終了・archive・過去参照policy
 

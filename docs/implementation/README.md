@@ -1,6 +1,6 @@
 # 実装調査文書索引
 
-最終集計日: 2026-08-28
+最終集計日: 2026-09-04
 
 このdirectoryは、AirGuardV2の実装から観察した現在の挙動、責務、data flow、境界、矛盾候補をsegment単位で記録した調査資料である。確認済み仕様の正本ではない。設計意図や正式要件を確定するときは、プロジェクトの正本仕様と承認済みADRを優先し、このdirectoryの記述は根拠codeの再確認に使用する。
 
@@ -19,11 +19,11 @@
 - このREADMEを含む文書数: 105
 - 実装領域文書: 95
 - 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
-- FUT: 183件
-  - 状態: Open 136、Needs decision 41、In progress 2、Hypothesis 3、Resolved 1
-  - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
-- CONF: 138件
-  - 状態: Open 80、Answered 55、Partially answered 3
+- FUT: 184件
+  - 状態: Open 135、Needs decision 39、In progress 3、In progress（CAS-02/03/04 local完了・CAS-05 deferred）1、Hypothesis 3、Resolved 2、Completed 1
+  - 重大度: Critical 15、High 93、Medium 60、Low 13、未評価 3
+- CONF: 146件
+  - 状態: Open 78、Answered 63、Partially answered 5
   - reconciliation disposition: Answered 53、Open-user-decision 65、Open-deferred 8、Resolved-by-implementation-fact 0、Merge-candidate 12、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
 - 未調査優先候補: 0件（P0 0、P1 0、P2 0、P3 0）。詳細は[coverage inventoryの優先segment backlog](coverage-inventory.md#優先セグメントbacklog)を参照。
 
@@ -34,8 +34,8 @@
 - [Coverage inventory](coverage-inventory.md): 調査済み/部分調査/未調査の棚卸しと次segment候補。
 - [Coverage mechanical audit](coverage-audit.md): 531 source filesの分類、未被覆cluster、dynamic import/export棚卸し。
 - [Deep review plan](deep-review-plan.md): Mechanical Coveredを訂正し、A/B/C/D/E depthとB/C全fileの排他的精査計画を管理。
-- [Future actions](future-actions.md): FUT-0001〜FUT-0183。
-- [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
+- [Future actions](future-actions.md): FUT-0001〜FUT-0184。
+- [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0146。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
 - [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。

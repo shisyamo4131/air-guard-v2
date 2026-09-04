@@ -1151,29 +1151,29 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 
 ## FUT-0085 Outsourcer CRUDの正式権限とRulesを一致させる
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 対象ファイル・シンボル: outsourcers pageSettings/Manager、`components/Outsourcers/{Manager,Iterator}/index.vue`、Outsourcers/Outsourcers_archive Rules
 - 確認済み実装事実: `outsourcers:read`でCRUDへ到達し、Rulesは同一会社Userにlive/archive全read/writeを許す。SPEC-DEEP-011でpageはdefault create/update/deleteをguardなしで公開し、空検索limit 10に対してmanager page size 20を指定することを確認した。SPEC-DEEP-033でManagerが`showCreate=false`でもtoolbar createを常時表示し、component自身にwrite/role/loading/rollback/error契約がないことを再確認した。
 - 想定影響と発生条件: 閲覧Userが外注先を作成・改変・終了・archiveし、配置候補や過去表示を変え得る。
-- 未確認点・仮説: 正式な外注先管理role、本人/管制/請求担当の必要範囲は未決定。
-- 推奨する将来対応: read/create/update/status/archive/restoreを分け、UIとRulesまたはserver APIを一致させる。
+- 未確認点・仮説: OUT-01で作成・編集actorとclient破壊操作停止は確定したが、archive/restoreの正式actorと運用は未決定。
+- 推奨する将来対応: OUT-01で会社管理者・strict managerの作成/編集をUIとRulesへ一致させ、client delete/archive writeを停止する。archive/restoreは後続で決定する。
 - 必要なテスト: role別route/button/direct write、archive直接write、他社path、field別更新。
 - ユーザー判断が必要な事項: CONF-0070。
 
 ## FUT-0086 外注会社と外注警備員個人のデータモデルを決定する
 
-- 状態: Needs decision
+- 状態: Resolved
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-024、SPEC-DEEP-033
 - 対象ファイル・シンボル: schemas `Outsourcer`、`Operation.outsourcers.add`、ArrangementNotification workerId、`WorkersTable`
 - 確認済み実装事実: Outsourcerは会社masterのみ。同一会社の複数人はdoc ID+一時indexで表し、個人の永続ID、氏名、資格、連絡先、所属statusを持たない。SPEC-DEEP-024で、worker結合/mutationは`workerId`を使う一方、WorkersTableのVue keyと表示cacheはraw `id`を使うことを確認した。employee/outsourcerのraw IDが同じ場合、表示行key衝突候補となる。SPEC-DEEP-033で、配置TagとOperationResult worker inputも会社doc IDを名称解決/候補選択に使い、個人識別を追加しないことを確認した。
-- 想定影響と発生条件: 個人別資格・通知・実績・監査・同一性が必要になると、indexの再生成や並べ替えで個人を追跡できない。
-- 未確認点・仮説: 外注個人をAirGuardで管理する正式要件と個人情報保持責任は未決定。
-- 推奨する将来対応: 会社masterと外注警備員masterを分けるか、人数単位運用を維持するかを仕様化し、ID/snapshot/資格/通知契約を決める。
-- 必要なテスト: 同一会社複数人、並べ替え、資格/OJT、通知、実績化、退職/所属変更、個人情報権限。
-- ユーザー判断が必要な事項: CONF-0071。
+- 想定影響と発生条件: 同じ協力会社を複数配置する操作を単一の人数fieldへ集約すると、既存の配置明細・通知・実績処理が複雑化する。
+- 未確認点・仮説: 将来、外注警備員個人を管理する新しい業務要件が提示された場合は、現行Outsourcerへ推測追加せず別仕様として扱う。
+- 推奨する将来対応: 協力会社masterと重複配置の現行契約を維持し、過去に廃止したOutsourcer＋人数方式や個人masterを今回の改修へ追加しない。
+- 必要なテスト: 同一Outsourcerの複数配置、並べ替え、通知・実績化で明細が個別に維持されること。
+- ユーザー判断が必要な事項: CONF-0071は回答済み。
 
 ## FUT-0087 Outsourcer終了・archive・参照保持を整合させる
 

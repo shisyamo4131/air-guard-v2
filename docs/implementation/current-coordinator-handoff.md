@@ -17,12 +17,13 @@
 
 ## 次の作業
 
-1. 利用者は次の改修対象としてOutsourcerを選んでいる。新taskでは[Outsourcer実装調査](outsourcer-master.md)と[正式運用準備ロードマップの次の作業](../roadmaps/airguard-v2.md#次の作業)から、最初の小さなcheckpointの対象・対象外・環境・data・検証を合意する。具体的なOutsourcer仕様・実装はまだ承認済みと扱わない。
+1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01として、更新権限とclient破壊操作停止のlocal実装・検証を進める。OUT-02以降、Dev/Prod、remote/dataは未承認である。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
 
 - [確認済み仕様](../specification.md)
+- [Outsourcerロードマップ](../roadmaps/outsourcer.md)
 - [Customer取引状態roadmap](../roadmaps/customer-status.md)
 - [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)
 - [Customer archive safety実装設計](customer-archive-safety.md)
