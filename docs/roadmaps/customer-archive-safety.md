@@ -9,9 +9,9 @@
 
 ## 承認境界
 
-2026-09-04に、利用者は`CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`として仕様・ADR・roadmap・実装設計の正本化を承認した。今回の承認はdocumentとlocal Git統合だけを対象とし、application、Functions、Firestore Rules、test code、build、Emulator、Dev/Prod、remote/data、migration、package変更を含まない。
+2026-09-04に、利用者は`CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`として仕様・ADR・roadmap・実装設計の正本化を承認した。続いてCAS-02だけについて、`gpt-5.3-codex-spark`の別`Developer` taskへFunctions実装と単体testを委譲し、coordinatorがreview・差戻し・受入れを行うlocal試験運用を承認した。CAS-02完了時に反省会を行い、CAS-03以降へ同じ手順を採用するかは、その結果を利用者が判断する。
 
-後続実装は、下記の変更・test範囲を改めて確認したcheckpointで開始する。restore、物理delete、自動purge、retention決定、generic package修正、Site customerId immutability、3参照collectionのpermission全体見直し、Customer code一意性・検索拡張は別の作業単位とする。
+CAS-02のexact ownership、test、書込みlease、差戻し、独立review、完了gate、反省会は[CAS-02 Spark Developer試験運用](../implementation/customer-archive-cas02-developer-trial.md)を正とする。CAS-03、CAS-04、CAS-05、Firestore Rules、client/UI、参照writer、build、Dev/Prod、remote/data、migration、package変更は今回の承認に含まない。restore、物理delete、自動purge、retention決定、generic package修正、Site customerId immutability、3参照collectionのpermission全体見直し、Customer code一意性・検索拡張は別の作業単位とする。
 
 ## 設計契約
 
@@ -27,7 +27,7 @@
 | マイルストーン | 重み | 得点 | 状態 | 完了証拠 |
 |---|---:|---:|---|---|
 | CAS-01 仕様・失敗経路・security設計 | 20 | 20 | Completed | ADR 0046、実装設計、2026-09-04の独立security review、project-docsとdiff-check |
-| CAS-02 専用Callable・監査・冪等性 | 25 | 0 | Not started | actor/tenant/input/transaction/archive envelopeのunit・integration test |
+| CAS-02 専用Callable・監査・冪等性 | 25 | 0 | In progress | actor/tenant/input/transaction/archive envelopeのunit・integration test、独立review、local Git統合、試験運用反省会 |
 | CAS-03 参照writer barrier・Rules回帰 | 30 | 0 | Not started | Customer/Site/OperationResult/Billing Rules、server guard、Emulator・競合test |
 | CAS-04 UI・local受入れ・最終review・Git統合 | 15 | 0 | Not started | Customer詳細の新規archive操作、専用build、local UI、独立review、local commit |
 | CAS-05 Dev反映・利用者受入れ | 10 | 0 | Deferred | マスタデータ管理改修後のbounded Dev releaseと権限別受入れ |
@@ -63,7 +63,7 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-CAS-02/03/04を一つのlocal implementation checkpointとして開始する前に、owned files、UI文言、archive envelopeのexact validation、test fixture、Codex専用UI操作と期待結果を利用者と確認する。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
+[CAS-02 Spark Developer試験運用](../implementation/customer-archive-cas02-developer-trial.md)に従い、CAS-02のDeveloper route確認、Functions実装・単体test、coordinator review、Emulator統合test、独立security/code review、最終gate、local Git統合、反省会を順に行う。CAS-03/04は開始せず、反省会結果を提示して利用者判断を待つ。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
 
 ## 進捗履歴
 

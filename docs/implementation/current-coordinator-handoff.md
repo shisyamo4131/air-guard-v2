@@ -4,23 +4,23 @@
 
 ## 現在の作業
 
-- 製品は試験運用中。Customer状態改修のCS-03までを完了し、CS-04のDev反映・受入れをマスタデータ管理改修後まで延期しています。現在はCustomer archive safetyの設計を確定し、local実装checkpointの承認待ちです。
+- 製品は試験運用中。Customer状態改修のCS-03までを完了し、CS-04のDev反映・受入れをマスタデータ管理改修後まで延期しています。Customer archive safetyはCAS-01設計を完了し、CAS-02だけのSpark Developer試験運用を開始しています。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
 ## 未決事項と承認
 
-- 次の製品checkpoint候補はCustomer archive safetyのCAS-02〜04 local実装。[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)から再開する。
-- 現在承認済みなのはCAS-01の設計文書とlocal Git統合だけ。Callable・Rules・UI・test・build・Emulatorは次の明示承認待ち。Dev反映・受入れは延期し、restore、retention/purge、code一意性/検索拡張、他マスタ・関連package、remote data/migrationは対象外。
+- 現在の製品checkpointはCustomer archive safetyのCAS-02。[試験運用指示書](customer-archive-cas02-developer-trial.md)、[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)から再開する。
+- 現在承認済みなのはCAS-02のlocal Functions実装、単体/Emulator統合test、独立review、文書、local branch・commit、完了時反省会まで。CAS-03/04、Rules、client/UI、参照writer、build、Dev/Prod、remote data/migration、package、restore、retention/purge、code一意性/検索拡張、他マスタは対象外。
 - [CONF-0145](pending-confirmations.md#conf-0145-codex専用uiの外部郵便番号通信を遮断する追加checkpoint): 専用UIの郵便番号通信遮断と限定再試験は承認済み。通常利用・Dev・Schemas・保存形式を変えない。
 - [CONF-0146](pending-confirmations.md#conf-0146-再試験の合成認証準備を親タスクで担当する例外): 今回に限り、親による専用合成Authの一時設定と通常ログイン入力を承認済み。認証情報をprompt・文書・logでagent間に受け渡さない。snapshotを変更せず、Emulator停止で失効させる。
 - Customerの設計/reviewはHigh、開発/修正はMedium、test/環境準備/cleanupはLow。今回だけ親が合成認証準備と画面テストを担当し、専用build・process管理・backend assertion・cleanupはLow testerを維持する。
-- 「Functions Developer」別task利用案は取り下げ済み。割当しない。Norton申告の関連package内scriptは今回の実行対象ではなく原因未確定。検知回避・除外設定・再実行は行わない。
+- CAS-02では、別Codex task `Developer`を`gpt-5.3-codex-spark`で作成し、Functions実装とdomain単体testだけを排他的single writerとして委譲する。coordinatorが差分とtestをreviewし、Emulator統合testと独立review後に受入れ・local Git統合する。CAS-03以降の手順はCAS-02反省会後の利用者判断を待つ。
 - 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。反省会と改善作業の両方が終了するまで削除しない。
 
 ## 次の作業
 
-1. [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)に従い、CAS-02〜04のowned files、UI文言、exact validation、test・local UI範囲を利用者と合意してから実装する。restore、retention/purge、code一意性・検索拡張へscopeを広げない。
+1. [CAS-02 Spark Developer試験運用](customer-archive-cas02-developer-trial.md)に従い、Developer taskのno-change route callback、CAS-02実装・単体test、coordinator review、Emulator統合test、独立review、最終gate、local Git統合、反省会を行う。CAS-03/04を開始せず、反省会結果を利用者へ提示する。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、新しい状態filterの利用者判断、Customer状態のDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照

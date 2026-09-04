@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customer archive safetyのCAS-02だけを、`gpt-5.3-codex-spark`の別`Developer` taskへFunctions実装とdomain単体testを委譲する試験運用として開始した。primary repositoryの排他的single-writer lease、no-change route確認、exact ownership・禁止範囲、coordinator review/差戻し、独立Emulator/security/code review、最終gate、完了後反省会を[実行指示書](docs/implementation/customer-archive-cas02-developer-trial.md)へ固定した。CAS-03/04、Rules、client/UI、参照writer、build、Dev/Prod、remote/data、package、deployは未着手で、CAS-02単独commitをrelease-readyとして扱わない。
+
 - 上下番確定の最初の操作で不明なerrorを示すSnackbarが再観測された事実をFUT-0027へ追記した。同じ時間帯のFCM登録403、thumbnail取得404、deprecated warningは因果未確認として分離し、次回改修で発生源と最終状態を追跡する。製品codeとDev環境は変更していない。
 
 - 配置管理の表示順行削除について、観測と[提案0%の専用ロードマップ](docs/roadmaps/arrangement-row-removal-ux.md)を追加した。行pending、同一`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryは未承認の詳細案であり、実装checkpointで別途確認する。Site/Schedule削除、schema、Rules、migration、generic UI全体は対象外で、実装・test・Dev反映は未着手。
