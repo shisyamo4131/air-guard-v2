@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- Customer archive safetyのCAS-03として、`Customers_archive`のclient非公開、same-ID Customer再作成拒否、Site・OperationResult・Billingの新規Customer参照barrierをFirestore Rulesへ追加し、Billingのserver create/moveもCustomer確認と同じtransactionへ統合した。Siteは同じ会社の存在する別Customerへ変更可能な確定仕様を維持する。独立reviewでnested Billing path、transaction retry時の成功log、move競合testの偽陽性を補正し、最終domain 889/889、local Emulator 142/142、security再監査5/5、commits `8e6eb1d5`・`c99b8169`を確認した。local未deployで、CAS-04 UIとDev/remote受入れは未着手。
+- Customer archive safetyのCAS-04として、Customer詳細へwrite actor限定のアーカイブ確認を追加した。取引先コード・名称・注意事項・理由を表示し、処理開始前からのsingle-flight、参照拒否と安全なerror表示、成功後一覧遷移、通常restore入口不在を実装した。domain 913/913、local Emulator 142/142、専用build、write/read-only actor・参照拒否・高速double-click・成功archiveのlocal UI受入れ、独立review、commit `8db79a2e`を確認した。local未deployで、CAS-05のDev/remote反映・利用者受入れは未実施・別承認。[検証証拠](docs/verification/customer-archive-local-acceptance.md)を参照。
+
+- Customer archive safetyのCAS-03として、`Customers_archive`のclient非公開、same-ID Customer再作成拒否、Site・OperationResult・Billingの新規Customer参照barrierをFirestore Rulesへ追加し、Billingのserver create/moveもCustomer確認と同じtransactionへ統合した。Siteは同じ会社の存在する別Customerへ変更可能な確定仕様を維持する。独立reviewでnested Billing path、transaction retry時の成功log、move競合testの偽陽性を補正し、最終domain 889/889、local Emulator 142/142、security再監査5/5、commits `8e6eb1d5`・`c99b8169`を確認した。local未deployで、CAS-03時点ではCAS-04 UIとDev/remote受入れが未着手だった。
 
 - Siteの取引先は同じ会社に存在する別Customerへ変更可能と確定し、現行sourceと2026-08-11の回答履歴に仕様を一致させた。既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更せず、一度設定したcustomerIdを未設定へ戻す操作も提供しない。既存実績への再適用は請求影響と監査を伴う別操作として将来判断する。現行application挙動とdataは変更せず、migrationは不要。
 

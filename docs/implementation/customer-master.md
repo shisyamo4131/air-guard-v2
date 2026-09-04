@@ -2,18 +2,19 @@
 
 ## メタデータ
 
-- 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)を参照。請求受入れは後続フェーズ
+- 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)、archive safetyは[専用ロードマップ](../roadmaps/customer-archive-safety.md)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
 - 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
 - local受入れ証拠: [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
+- archive local受入れ証拠: [Customer archive safety local acceptance verification receipt](../verification/customer-archive-local-acceptance.md)
 - Dev試験・座標比較の修正・cleanup: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)
 
 ## 入口・暫定権限
 
 Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を、Customer componentの公開契約・Site作成からの候補選択境界は[Customer components deep review](customer-components-deep-review.md)を参照する。
 
-2026-08-11に、Customer権限は`customers:read`/`customers:write`の2種を維持すると確認された。writeは作成・編集・支払条件・終了・archive・restoreを含み、archive/restoreは確認・監査付き、通常物理deleteは禁止とする。User向けpermission presetを設け、UI・Rules・Callableを同じ境界へ揃える。field分割は実需要が生じた場合だけ再検討する。
+2026-08-11に、Customer権限は`customers:read`/`customers:write`の2種を維持し、writeへ作成・編集・支払条件・終了・archive・restoreを含める案を確認した。restore部分は[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)で置き換え、現在の`customers:write`は通常利用者のarchiveを許可するがrestoreは許可しない。緊急restoreは通常UIから隔離した将来の運営者専用操作として別仕様・別認可を必要とし、物理deleteも提供しない。field分割は実需要が生じた場合だけ再検討する。
 
 | 入口 | 実装 | UIの入口条件 | Rulesの境界 |
 |---|---|---|---|
@@ -30,7 +31,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 任意: `code`、`branchName`、`building`、`tel`、`fax`、`remarks`。`location` はhidden field。
 - token検索対象は `name` と `nameKana`。`code`、略称、支店名、住所、電話番号はtokenFieldsに含まれない。
 - 読み取り専用プロパティは `fullAddress` と `prefecture`。`fullAddress` は都道府県、市区町村、番地の結合で、建物名は含めない。
-- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。[Customer archive safety](customer-archive-safety.md)を正とする専用Callableと参照barrierはCAS-02/03でlocal実装済み・未deploy、画面入口はCAS-04で実装する。
+- statusは `ACTIVE` と `TERMINATED`。schemaの`logicalDelete=true`とgeneric adapterには`Customers_archive/{docId}`へのcopy/deleteがあるが、製品のCustomer archiveには使用しない。[Customer archive safety](customer-archive-safety.md)を正とする専用Callable、参照barrier、Customer詳細の確認画面入口はCAS-02/03/04でlocal実装・検証済み、未deployである。
 - `getPaymentDueDateAt(baseDate)` は締め基準月へ`paymentMonth`を加え、月末指定または指定日をJST基準で算出する。存在しない指定日は月末へ丸める。
 - 住所変更時はgeocodingを試みる。関数未注入、検索失敗、例外時も保存処理を中止せず`location=null`で継続する。緯度または経度が0の場合はtruthy判定により座標なしとして扱われる。
 
@@ -41,7 +42,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
-- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。archive・restoreの画面入口はない。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03でlocal実装済み・未deployで、CAS-04の画面入口は未実装である。
+- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、権限制御・理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04でlocal実装・検証済み、未deployである。archive一覧とrestoreの画面入口はない。
 - 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
 - editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。基本editorではrollback待ちに真正な外部値が届いたら待ちを解除して再読込できる。applicationは非同期準備後にも権限・identityと観測済み同operation競合を再確認する。送信後の同時更新を原子的に防ぐ仕組みではない。
 
@@ -78,10 +79,10 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 契約終了・停止はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定し、reason/actor/timeを保存する。通常User向けrestore・物理delete UIは設けない。
 - archiveはUser向けrecycle binではない。運営者はUser依頼に応じ監査付きで削除情報を確認でき、restoreは通常UIから隔離した緊急contingencyだけとする。active同IDがあればoverwriteせず拒否し、保持要件が決まるまで自動purgeしない。
-- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。Callable・監査・冪等性はCAS-02、Rules・参照writer barrier・関連testはCAS-03でlocal実装済み・未deployで、Customer詳細UIはCAS-04未着手である。
+- archiveのexact actor、input、transaction、versioned envelope、参照writer barrier、client非公開、idempotency、rollbackは[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)と[実装設計](customer-archive-safety.md)で確定した。追加lock collectionは作らず、archive documentをsame-ID tombstoneとして使う。Callable・監査・冪等性はCAS-02、Rules・参照writer barrier・関連testはCAS-03、Customer詳細UIとlocal画面受入れはCAS-04で完了済み・未deployである。
 
 - 取引状態の意味は[現行仕様](../specification.md#取引先現場取極め)を正とする。業務上の無効状態やlogical deleteと同一視しない。
-- 状態変更は基本編集から提供する。archiveは専用Callableだけがlocal実装済みで画面経路は未提供、restore・物理deleteの製品経路は提供しない。
+- 状態変更は基本編集から提供する。archiveは専用Callableとwrite actor限定の確認画面経路をlocal実装・検証済みである。archive一覧、restore・物理deleteの製品経路は提供しない。
 - archive collectionのclient read/create/update/deleteはCAS-03 Rulesで全actorへ拒否する（local未deploy）。
 
 ## Rules・tenant境界
@@ -95,15 +96,15 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 - 状態編集と一覧の状態切替は[専用ロードマップ](../roadmaps/customer-status.md)で検証する。Autocompleteが状態を絞らないことは現在の要件と一致する。
 - 一覧の既存adapterは非同期listener errorを画面へ通知するcallbackを持たない。今回のfilterで新規readerを追加せず、この取得失敗表示の制約は後続課題として残す。
-- archiveのCustomer詳細UIはCAS-04へ、restore・運営者inspection・物理delete/purgeは別の将来仕様へ分離している。
+- archiveのCustomer詳細UIはCAS-04でlocal完了し、restore・運営者inspection・物理delete/purgeは別の将来仕様へ分離している。
 - `CustomersIterator`は宣言コメントと異なり`modelValue`、`select-strategy`、`show-select`及び任意attrsを内部iteratorへforwardしない。Site作成wizardの既存Customer候補選択に渡すattrsが機能しないため、候補選択より取引先未設定継続だけが到達し得る。
 - Site表示条件と削除guard条件が異なり、利用者には見えない参照で削除拒否となり得る。
 
 ## 将来要対応
 
-- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。状態変更は基本編集へ含め、参照確認・監査を伴うarchiveのCallable・barrierはCAS-02/03でlocal実装済み、画面入口はCAS-04、緊急restoreは別の将来仕様とする。
+- FUT-0055: read/write分離、preset、通常物理delete拒否はCUSTOMER-01Aで実装済み。状態変更は基本編集へ含め、参照確認・監査を伴うarchiveのCallable・barrier・画面入口はCAS-02/03/04でlocal実装・検証済み、緊急restoreは別の将来仕様とする。
 - FUT-0056: code一意・類似warning・検索fieldを実装し、feasibility/index/cost/privacyを検証する。状態による選択制限は現行仕様へ揃え、旧ACTIVE限定方針を実装しない。
-- FUT-0057: 承認済みarchiveのCallable・Rules・参照guardはCAS-02/03でlocal実装済み。CAS-04でCustomer詳細UIを実装し、運営者inspection・緊急restore・保持期間・purgeは別仕様として残す。
+- FUT-0057: 承認済みarchiveのCallable・Rules・参照guard・Customer詳細UIはCAS-02/03/04でlocal実装・検証済み。CAS-05のDev反映・受入れ、運営者inspection・緊急restore・保持期間・purgeは別工程・別仕様として残す。
 - FUT-0058: draft initial copy、formal full snapshot、snapshot再print、revisionを実装する。
 - FUT-0059: status編集経路は[専用ロードマップ](../roadmaps/customer-status.md)で扱う。address編集経路はCUSTOMER-01Aで実装済み。geocodingのserver生成化・意味上の整合は今回へ含めない。
 
@@ -114,5 +115,5 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 ## 未確認範囲
 
 - 他masterに残る汎用Air manager内部の全validation・表示実装。
-- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、後続archive操作。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、archiveのDev反映・受入れ。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

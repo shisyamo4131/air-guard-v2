@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 設計確定・CAS-02/03 local実装完了・CAS-04 local実装承認済み
+- 状態: 設計確定・CAS-02/03/04 local実装・検証完了・CAS-05 deferred
 - checkpoint: `CUSTOMER-03-ARCHIVE-SAFETY-DESIGN`
 - 最終確認日: 2026-09-04
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[ADR 0048](../decisions/0048-site-customer-change-and-historical-snapshots.md)、[roadmap](../roadmaps/customer-archive-safety.md)
@@ -10,7 +10,7 @@
 
 ## 現行事実
 
-- Customerのclient create/updateは専用application処理とRulesでactor・field・schemaを限定する。active deleteと`Customers_archive` client CUDは拒否する。CAS-02の専用`archiveCustomer` Callableはlocal実装・未deployで、archive/restore UIとrestore Callableはない。
+- Customerのclient create/updateは専用application処理とRulesでactor・field・schemaを限定する。active deleteと`Customers_archive` client CUDは拒否する。専用`archiveCustomer` Callableと権限制御されたCustomer詳細のarchive UIはCAS-02/04でlocal実装・検証済み、未deployである。archive一覧、restore UI、restore Callableはない。
 - `Customers_archive`のclient read/CUDはCAS-03 Rulesで全client actorへ拒否済み（local未deploy）。
 - installed Customer schemaは`logicalDelete=true`で、直接`hasMany`は`Sites.customerId`だけを列挙する。
 - generic client/server deleteは監査metadataを持たず、既存archiveを`set`で上書きする。clientの参照queryはtransaction外で、serverはschemaの`collectionPath`と異なるpropertyを読む。
@@ -73,13 +73,15 @@ audit:
 
 Admin SDKでSite/OperationResult/Billingへ新しいcustomerIdを保存するwriterは、transaction-awareな共通assertionで同じCustomer存在条件を検査する。現行のBilling create/move経路を対象にし、OperationResultが先にcommitした場合はarchive側のOperationResult参照確認でも拒否する。将来server writerを追加するときはsource-contract inventoryへ含める。
 
-### UI（CAS-04未着手）
+### UI（CAS-04 local実装・検証完了、未deploy）
 
 - 既存Customer詳細に、現在の`customers:write`判定と同じactorだけが見られる「アーカイブ」操作を追加する。read-only Userへ表示しない。
 - 確認dialogへCustomer code/name、誤登録・重複専用であること、参照があれば実行できないこと、通常画面から復元できないこと、理由入力を表示する。
 - operationIdはdialogの一回の実行単位で生成し、二重送信を無効化する。同じ失敗後の通信再試行だけ同じIDを使い、利用者が内容を変更して再実行するときは新しいIDを使う。
 - 成功後はCustomer一覧へ移動し、一覧・cacheへarchive payloadを追加しない。参照あり、権限、競合、入力不正、内部失敗を安全な利用者向けmessageへmapし、UID・companyId・stack・raw reasonを表示しない。
 - archive一覧、restore、purge、operator inspection UIは作らない。
+
+上記は`ArchiveDialog.vue`、client application action、Customer Functions adapter、Customer詳細pageへ実装した。dialogを開いた一操作にoperation IDを固定し、同期的なsingle-flight guardで非同期validation開始前から再入を拒否する。local受入れではwrite actorの表示、read-only actorの非表示、確認・取消、参照あり拒否、pending中の全操作無効化、高速double-clickでの成功本処理1回、成功後一覧、active不存在とversion 1 archiveを確認した。実行証拠は[CAS-04 local acceptance receipt](../verification/customer-archive-local-acceptance.md)を正とする。
 
 ## 失敗・競合契約
 
@@ -97,7 +99,7 @@ Firestore database edition・concurrency mode固有のlock挙動には依存せ�
 
 ## 対象・対象外
 
-後続local implementationの対象は、CAS-04のclient action、Customer詳細の確認UI、source-contract/UI testである。CAS-02のCustomer archive Callable/use-case/export、version 1 envelopeはcommit `74d0eb4d`、CAS-03のRules guardはcommit `8e6eb1d5`、Billing server assertionとdomain/Emulator testはcommit `c99b8169`で完了した。後続のexact owned filesは各実装checkpoint開始前に再確認する。
+CAS-02のCustomer archive Callable/use-case/exportとversion 1 envelopeはcommit `74d0eb4d`、CAS-03のRules guardはcommit `8e6eb1d5`、Billing server assertionとdomain/Emulator testはcommit `c99b8169`、CAS-04のclient action・Customer詳細確認UI・source-contract/UI testはcommit `8db79a2e`でlocal完了した。後続はCAS-05のbounded Dev反映・受入れであり、マスタデータ管理改修後に別承認する。
 
 対象外は緊急restore、operator inspection、物理delete/purge/retention、generic adapter/package修正、3参照collectionのactor permission全体、Customer code一意性・検索、Schemas/Admin SDK変更、Stripe・通知、Dev/Prod・remote/data・migrationである。
 
@@ -107,8 +109,8 @@ Firestore database edition・concurrency mode固有のlock挙動には依存せ�
 - CAS-02 Emulator（完了）: 新規archive、client spoof拒否、same-operation retry、3参照時write 0、current Auth・actor境界、安全なresponse/log。
 - CAS-03 Emulator（完了）: archive read/CUD拒否、active delete拒否、same-ID create拒否、Site仮登録、3 collectionのmissing/archived/other-tenant Customer、customerId変更、fallback/nested bypassを確認した。
 - CAS-03 concurrency（完了）: archive対Site/OperationResult/Billing createとBilling moveのarchive-first失敗を確認し、許容最終状態を`active + reference`または`archive + referenceなし`へ限定した。
-- source contract: CAS-02ではproduct codeからgeneric Customer delete/restoreへ到達しないこととreason必須を確認済み。CAS-04のclient側restore入口不在確認は未着手。
-- CAS-04 local UI（未着手）: write actor表示、read-only非表示、確認・取消、参照あり拒否、二重送信、成功後一覧、reload後不存在、console error 0。
+- source contract（完了）: product codeからgeneric Customer delete/restoreへ到達しないこと、reason必須、client側restore入口不在、exact Callable request/response、安全なerror mappingを確認した。
+- CAS-04 local UI（完了）: write actor表示、read-only非表示、確認・取消、参照あり拒否、pending中の無効化、高速double-click時の成功本処理1回、成功後一覧、active不存在、archive操作によるconsole error増分0を確認した。詳細は[実行証拠](../verification/customer-archive-local-acceptance.md)を参照する。
 
 ## 互換性・rollback・未確認
 
@@ -116,4 +118,4 @@ active Customer schema migrationは不要。Rules update guardはcustomerId変�
 
 rollbackはarchive入口を先に停止し、archive済みIDが存在する間は参照guard、same-ID create拒否、archive client拒否を維持する。自動restore・archive削除をrollbackに使わない。
 
-remote Firestore edition/IAM/App Check、実data、正式operator、保持期間は未確認である。CAS-01の設計checkpointではapplication、Rules、test、build、Emulator、Dev/Prod、remote/data、packageを変更・実行しなかった。CAS-02ではFunctions、CAS-03ではRules・Billing Functions・domain/Emulator testをlocal変更し、Codex専用local Emulatorだけを実行した。client/UI、通常build、Dev/Prod、remote/data、packageは変更・実行していない。
+remote Firestore edition/IAM/App Check、実data、正式operator、保持期間は未確認である。CAS-01の設計checkpointではapplication、Rules、test、build、Emulator、Dev/Prod、remote/data、packageを変更・実行しなかった。CAS-02ではFunctions、CAS-03ではRules・Billing Functions、CAS-04ではclient/UIとdomain/source-contract testをlocal変更した。Codex専用local Emulator・build・in-app UIだけを実行し、通常build、Dev/Prod、remote/data、packageは変更・実行していない。
