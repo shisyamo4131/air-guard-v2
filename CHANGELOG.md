@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Outsourcer OUT-05として、外注先codeを任意・手動・重複可・検索外の表示情報として確定し、通常一覧をフリガナ順20件のserver cursor、名称検索を2〜40文字・20件のmemory paginationへ整合した。外注先専用候補表示、略称・正式名称・code、契約終了表示、読込失敗時の再試行、古いlistener結果の破棄を追加した。Rules、index、schema、package、migration、Dev・remote・実dataは変更していない。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。
+
 - Outsourcerを特定の協力会社masterとし、配置では同じOutsourcerを複数明細として登録できる現行方式を維持する。過去に試行して廃止したOutsourcer＋人数の集約方式と、外注警備員個人masterは今回採用しない。OUT-01で会社管理者またはstrict `manager`だけに作成・編集を許可してclient deleteとarchive writeを停止し、OUT-02ではexact 11 field、型・長さ・system metadata、部分更新、名称変更時の検索token再生成、独立draftと同一field競合拒否を専用UI/writerとRulesへ実装した。OUT-03ではstatusをCustomerと同じ説明用フラグに限定し、一覧・検索・Autocomplete・配置・稼働実績の選択へ影響させないようACTIVE query条件を除去した。OUT-04では通常productにarchive・restore・物理deleteを設けずlive masterとして保持すると確定し、既存runtimeが契約を満たすことを回帰testで固定した。対象test 22/22、最終domain 935/935、local Emulator 147/147、文書検証を完了した。OUT-04ではUI sourceを変更していないためlocal UI buildを省略した。実装commitはOUT-03 `995488a5`、OUT-02 `31d11b15`、OUT-01 `82e22179`。[ロードマップ](docs/roadmaps/outsourcer.md)と[判断](docs/decisions/0050-outsourcer-live-retention-without-archive.md)を参照。Dev・remote・実dataは未変更である。
 
 - 2026-09-04の反省会を受け、35,757 bytesだった`governance/project-rules.md`を常時境界と必読routingだけの小型indexへ変更し、project固有規則をcoordination/Git、development/data、environment/approval、documentation/verificationの4 segmentへ分けた。既存project coordinationへcheckpoint transition、既存local UI runbookへbuild前`UI-READY`を追加し、CAS-02の履歴と現行rollback、仕様と適用状態を分離した。新しい汎用手順書・verification gate・registryは追加せず、managed common governance、生成AGENTS、references、verification policy、製品code、data、environmentは変更していない。[判断](docs/decisions/0049-project-rule-routing-and-checkpoint-closeout.md)を参照。

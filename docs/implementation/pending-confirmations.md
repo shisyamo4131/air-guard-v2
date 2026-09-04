@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 64件、Partially answered 6件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持として回答済み、CONF-0073はOUT-03のstatus非制限まで部分回答である。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 65件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -895,15 +895,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0073 Outsourcer code・検索・終了済み候補の規則
 
-- Status: Partially answered
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: codeは任意/非一意/検索token外。OUT-03で一覧・検索・Autocomplete・配置・稼働実績をstatus非限定へ統一し、契約期間fieldは設けないと確定した。
 - Question: codeを採番・一意化するか。codeを検索対象にするか。paginationとAutocomplete rendererをどう整合するか。
 - Why needed: 外注先の識別・検索・表示件数を利用経路間で一貫させるため。
 - Options and impact: tenant連番、手動一意code、code検索追加、page size統一、専用renderer。
-- Current provisional treatment: statusによる候補制限は設けず、code・検索表示詳細は現行挙動を維持する。
+- Current provisional treatment: なし。下記回答を確認済み仕様とする。
 - Related FUT IDs: FUT-0088、FUT-0089
-- Answer: 2026-09-04 部分回答。ACTIVE／TERMINATEDの双方を一覧・検索・Autocomplete・配置・稼働実績その他の候補に含め、statusだけで選択を制限しない。codeの採番・一意性・検索対象、pagination、Autocomplete rendererは未回答のためStatusはPartially answeredとする。
+- Answer: 2026-09-04 回答済み。ACTIVE／TERMINATEDの双方を一覧・検索・Autocomplete・配置・稼働実績その他の候補に含め、statusだけで選択を制限しない。codeは任意の手動入力、最大10文字、重複可とし、自動採番・一意制約・検索対象にしない。通常一覧は`nameKana`・document ID昇順の20件server cursor、名称検索は正規化後2〜40文字、既存tokenMap equalityの全一致結果をclient sortする20件memory paginationとする。Autocompleteは外注先専用rendererと既存最大50件を使い、終了済み表示を加えても選択を制限しない。
 
 ## CONF-0074 Company設定の正式権限とserver-owned field
 

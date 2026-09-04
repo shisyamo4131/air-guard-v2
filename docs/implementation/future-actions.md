@@ -1203,16 +1203,16 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 
 ## FUT-0089 Outsourcer validation・検索・表示の不整合を整理する
 
-- 状態: Open
+- 状態: Resolved
 - 重大度: Low
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-033
 - 対象ファイル・シンボル: schemas `Outsourcer`、outsourcers page、`OutsourcerAutocomplete`
-- 確認済み実装事実: codeは任意/非一意でtoken検索外。一覧query limit 10と表示20が不一致。AutocompleteはOutsourcer候補にEmployeeListItemを使う。契約日fieldなしでrange引数はfilter未使用。SPEC-DEEP-033でIteratorのdeclared `hideDefaultFooter`がrootへ転送されず、OutsourcerListItemはAutocomplete default rendererにも静的callerにも現れない候補であることを確認した。
-- 想定影響と発生条件: 重複識別、期待件数不足、型責務混在、期間指定が効くとの誤解を招く。
-- 未確認点・仮説: code採番・一意性、一覧pagination、range API名は未決定。
-- 推奨する将来対応: code policy、query/page size、専用ListItem、実際には期間filterを行わないrange API名を整理する。
-- 必要なテスト: code空/重複/検索、10件超pagination、Autocomplete表示、range引数変更、status非依存。
-- ユーザー判断が必要な事項: CONF-0073。
+- 確認済み実装事実: OUT-05でcodeを任意・手動・重複可・検索外として確定した。通常一覧は`nameKana`・document ID昇順の20件server cursor、名称検索は正規化後2〜40文字の既存tokenMap equality結果をclient sortする20件memory paginationへ変更した。Autocompleteは外注先専用ListItemと既存最大50件を使い、Iteratorはfooterと件数設定を転送する。range API名は配置側の既存互換として変更していない。
+- 想定影響と発生条件: 一覧取得数と表示数、renderer責務、終了済み表示の不一致を解消した。検索一致件数が非常に多い場合は全一致結果のread・memory costが増える残存riskがある。
+- 未確認点・仮説: Dev/Prodの実件数、特殊記号を含む検索語のpackage実挙動、legacy `nameKana`欠損documentは未確認である。
+- 推奨する将来対応: 実件数により検索costが問題になった場合だけ、検索index方式を別checkpointで再設計する。range API名整理は配置機能の互換性確認で扱う。
+- 必要なテスト: 対象25/25、domain 953/953、local Emulator 147/147、専用local UI buildを完了した。実browserとDev実dataは別受入れとする。
+- ユーザー判断が必要な事項: なし。CONF-0073回答済み。
 
 ## FUT-0090 Company rootの認可・field ownership・削除禁止を強制する
 

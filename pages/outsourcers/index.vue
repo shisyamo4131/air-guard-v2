@@ -3,7 +3,7 @@
  * @file pages/outsourcers/index.vue
  * @description 外注先情報一覧ページ
  *****************************************************************************/
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useOutsourcerListPagination } from "@/composables/dataLayers/outsourcer/useOutsourcerListPagination";
 
 defineOptions({ name: "outsourcers-index" });
 
@@ -15,21 +15,20 @@ const search = ref("");
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const options = computed(() => {
-  if (!search.value) {
-    return [
-      ["orderBy", "updatedAt", "desc"],
-      ["limit", 10],
-    ];
-  } else {
-    return [["orderBy", "code", "desc"]];
-  }
-});
-
-const { docs } = useDocuments("Outsourcer", {
+const {
+  currentPage,
+  errorMessage,
+  hasNextPage,
+  hasPreviousPage,
+  items,
+  loaded,
+  loading,
+  loadNext,
+  loadPrevious,
+  reload,
+  restart,
+} = useOutsourcerListPagination({
   search,
-  options,
-  fetchAllOnEmpty: true,
 });
 </script>
 
@@ -37,9 +36,22 @@ const { docs } = useDocuments("Outsourcer", {
   <v-container class="fill-height align-start">
     <OutsourcersManager
       class="fill-height"
-      :docs="docs"
+      :docs="items"
       v-model:search="search"
       :items-per-page="20"
+      hide-default-footer
+      show-pagination
+      :current-page="currentPage"
+      :loading="loading"
+      :loaded="loaded"
+      :error-message="errorMessage"
+      :has-next-page="hasNextPage"
+      :has-previous-page="hasPreviousPage"
+      @create="restart"
+      @update="restart"
+      @load:next="loadNext"
+      @load:previous="loadPrevious"
+      @retry="reload"
     />
   </v-container>
 </template>

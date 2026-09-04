@@ -152,12 +152,15 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Outsourcerは、ある特定の協力会社を表す会社masterであり、外注警備員個人を表すものではない。配置では、同じOutsourcerを別々の配置明細として複数回登録できる。Outsourcerと人数を一組にして一明細へ集約する方式は採用せず、外注警備員個人masterも現段階では新設しない。
 - Outsourcerの閲覧は現行の同一tenant境界を維持する。作成、基本情報変更、`contractStatus`変更は、認証UIDとUser document IDが一致する同じ会社の有効な本登録Userのうち、会社管理者または既知role preset `manager`だけに許可する。会社管理者でないsuper-user、直接permission文字列、未知または既知外roleを含むUser、仮登録、無効User、他社Userは書込み権限の根拠にしない。会社管理者かつsuper-userのUserは、会社管理者であることを根拠に許可する。
 - Outsourcerは通常の製品運用ではlive masterとして保持し、archive、restore、物理deleteを提供しない。誤登録・重複・取引終了もarchiveの理由にせず、必要な訂正は通常の基本情報・状態変更として行う。client直接deleteと`Outsourcers_archive`のclient作成・変更・削除を拒否し、製品UI、application action、Callableからgeneric `delete()`／`restore()`へ到達させない。既存archiveの同一tenant read境界は変更せず、既存live/archive dataの変換・復元・削除、自動purge、保持期限を追加しない。判断理由は[ADR 0050](decisions/0050-outsourcer-live-retention-without-archive.md)を参照する。
-- live Outsourcer documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`だけを持つ。`code`はnullまたは10文字以内、`name`は必須20文字以内、`nameKana`は必須40文字以内、`displayName`は必須6文字以内、`remarks`はnullまたは200文字以内とする。`contractStatus`は`ACTIVE/TERMINATED`だけを許可し、新規作成は常に`ACTIVE`とする。codeの書式・一意性はOUT-05で別途確定する。
+- live Outsourcer documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`だけを持つ。`code`は手動入力する任意の識別表示で、nullまたは10文字以内とし、重複を許可する。自動採番・一意制約・検索対象にはせず、document IDをidentityとして維持する。`name`は必須20文字以内、`nameKana`は必須40文字以内、`displayName`は必須6文字以内、`remarks`はnullまたは200文字以内とする。`contractStatus`は`ACTIVE/TERMINATED`だけを許可し、新規作成は常に`ACTIVE`とする。
 - 作成時の`docId`はpathと一致させ、`uid`は実行者、`createdAt/updatedAt`はrequest時刻とする。更新時は`docId/createdAt`を変更せず、実際に変更された業務fieldと`uid/updatedAt`だけを保存する。名称系`name/nameKana/displayName`を変更した場合だけ検索用`tokenMap`を再生成し、名称系を変更しない更新で`tokenMap`単独変更を許可しない。RulesはtokenMapを最大512件・値trueだけに制限するが、名称との完全な意味的一致までは再計算できないため、正規画面の専用writerを維持する。
 - 編集draftはlive表示dataと分離する。保存時の最新documentで、利用者が変更した同じfieldが別画面でも変更されていれば保存せず、入力内容を保持して最新値の再読込を促す。変更fieldが重ならない場合は、最新documentへ利用者の変更fieldだけをtransactionで重ねる。変更なしはwrite 0とする。
 - OUT-02では既存path、検索、配置明細、statusの業務上の意味を変更せず、data migrationを行わない。delete/archive、検索・一覧、重複配置の実装変更も対象外とする。
 - Outsourcerの`contractStatus`はCustomerと同様に、その時点の取引状況を表すだけの可逆なフラグとする。`ACTIVE/TERMINATED`のどちらであっても、外注先一覧・キーワード検索・Autocomplete・配置・稼働実績その他の候補選択から除外せず、既存・新規の業務操作を状態だけで禁止しない。状態変更によって配置、通知、実績、請求、帳票を自動変更・終了・取消しせず、再開時も既存記録を書き換えない。
 - Outsourcerの状態変更に契約終了日、開始日、終了理由、専用履歴を追加または必須化しない。通常の`uid/updatedAt`は維持するが、`updatedAt`を契約終了日時と解釈しない。archiveは状態フラグと分離し、通常機能では行わない。
+- 外注先一覧の通常表示は`nameKana`、同値時document IDの昇順とし、21件を取得して20件ずつserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryだけに保持する。作成・更新後は先頭pageへ戻す。
+- キーワード検索は正規化後2〜40文字だけを受け付け、`name`、`nameKana`、`displayName`から既存writerが生成する`tokenMap`を対象とする。codeは検索しない。検索中は一致結果をlive購読し、`nameKana`、同値時document IDでclient側sortして20件ずつmemory paginationする。入力なしは通常一覧へ戻り、範囲外入力ではqueryを実行せず案内を表示する。
+- 一覧、Card、Autocompleteの外注先表示は略称、正式名称、codeを識別できるようにし、`TERMINATED`には「契約終了」を表示する。この表示によって選択や編集を無効化しない。Autocompleteは外注先専用ListItemを使い、既存の最大50件取得境界を維持する。
 
 ### 取引先・現場・取極め
 

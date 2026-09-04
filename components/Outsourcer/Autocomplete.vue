@@ -27,6 +27,7 @@
  * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
  *****************************************************************************/
 import { useFetch } from "@/composables/fetch/useFetch";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { useDefaults } from "vuetify";
 
 /*****************************************************************************
@@ -53,7 +54,7 @@ const { getOutsourcer, searchOutsourcers } = fetchOutsourcerComposable;
  * COMPUTED
  *****************************************************************************/
 /**
- * Returns a slot object excluding the `item` and `append` slots, which are used internally for rendering items with `EmployeeListItem` and the append slot for creating new employees.
+ * Returns a slot object excluding the `item` and `append` slots, which are used internally for rendering items with `OutsourcerListItem` and the append slot for creating new outsourcers.
  */
 const slots = computed(() =>
   Object.fromEntries(
@@ -72,6 +73,8 @@ function onCreateHandler(event) {
 }
 
 async function api(text) {
+  const normalizedLength = normalizeTokenText(text).length;
+  if (normalizedLength < 2 || normalizedLength > 40) return [];
   return await searchOutsourcers(text, { returnAllCached: false });
 }
 </script>
@@ -81,7 +84,7 @@ async function api(text) {
     :api="api"
     :fetchItemByKeyApi="getOutsourcer"
     :custom-filter="() => true"
-    hint="名称入力で検索"
+    hint="名称を2〜40文字入力して検索"
     :item-title="itemTitle"
     :item-value="itemValue"
     :label="label"
@@ -99,7 +102,7 @@ async function api(text) {
 
     <template #item="slotProps">
       <slot name="item" v-bind="slotProps">
-        <EmployeeListItem v-bind="slotProps.props" :item="slotProps.item" />
+        <OutsourcerListItem v-bind="slotProps.props" :item="slotProps.item" />
       </slot>
     </template>
 

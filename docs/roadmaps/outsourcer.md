@@ -2,9 +2,9 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 60%
+- 現在の進捗: 70%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01からOUT-04はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-05はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
@@ -14,7 +14,7 @@
 | OUT-02 保存data契約 | 15 | 15 | Completed | exact 11 field、型・長さ・status・system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否をUI・専用writer・Rulesへ実装した。domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。実装commit `31d11b15`。 |
 | OUT-03 契約終了と候補 | 10 | 10 | Completed | statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績の選択を制限しない。終了日・理由・履歴・自動変更を追加せず、domain 934/934と専用local UI build、文書検証を完了した。実装commit `995488a5`。 |
 | OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
-| OUT-05 code・検索・一覧表示 | 10 | 0 | Proposed / 未承認 | code方針、検索対象、取得件数とpagination、Autocomplete renderer、終了済み表示を整合する。 |
+| OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 0 | Requirement confirmed / 実装未着手 | 協力会社masterの同一IDを複数配置明細へ登録できることを維持し、人数集約や個人masterへ変更していないことを対象回帰で確認する。 |
 | OUT-07 local統合確認 | 10 | 0 | Proposed / 未承認 | 権限別UI、Rules陰性、配置・通知・実績・請求・帳票の必要な対象回帰、文書とrollbackを確認する。 |
 | OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
@@ -76,10 +76,24 @@
 - rollbackは文書と回帰testを戻す。ただしclient破壊操作拒否はOUT-01から継続する既存安全境界であり、別仕様なしに解除しない。
 - 変更classは`data-contract-schema-migration`とする。completion gateは`project-docs`、`domain-full`、`local-emulator-suite`、`diff-check`である。UI sourceを変更しないため`local-ui-build`は省略し、理由をcompletion reportへ記録する。
 
+## OUT-05の確定範囲
+
+- codeは任意の手動入力、最大10文字、重複可とする。自動採番・一意制約・検索対象にはせず、document IDをidentityとして維持する。
+- 通常一覧はstatusで絞らず、`nameKana asc`、同値時document ID ascで21件を取得し、20件ずつserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryに保持する。
+- 検索は正規化後2〜40文字の`name/nameKana/displayName`由来tokenだけを対象とし、codeを含めない。動的token equalityへ追加indexを要求しないため、検索queryにはorder、limit、cursorを加えず一致結果をlive購読し、clientで`nameKana`、document ID順にsortして20件ずつ表示する。
+- 入力なしは通常一覧、範囲外入力はqueryを行わない案内表示とする。作成・更新後は先頭pageへ戻し、失敗時は表示中pageを維持して再試行できる。重複loadと古いlistener callbackは反映しない。
+- Autocompleteは従業員用ではなく外注先専用ListItemを使い、既存の最大50件取得を維持する。一覧・Card・Autocompleteでは略称、正式名称、codeを識別でき、`TERMINATED`へ「契約終了」を表示するが選択を制限しない。
+
+## OUT-05の互換性・rollback・検証
+
+- 既存path、document shape、tokenMap生成、status非制限、配置・実績のID参照を維持し、Rules、index、schema、package、migration、dataを変更しない。
+- rollbackは一覧pagination composableとPage／Manager／Iterator、Card／ListItem／Autocompleteの表示変更を一組で戻す。検証失敗時は追加indexやcode制約へ拡張せずlocalで停止する。
+- 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。`local-emulator-suite`はRules・schema変更がないためpolicy上は省略可能だが、承認済みlocal回帰として実行した。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-05以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-06以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 
@@ -89,3 +103,4 @@
 | 2026-09-04 | 30% | +15 | exact document、型・長さ・metadata、部分更新、token再生成条件、独立draft・同一field競合拒否を実装し、domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。 |
 | 2026-09-04 | 40% | +10 | statusを説明用フラグに限定し、一覧検索・Autocomplete・配置・稼働実績の候補制限を除去した。domain 934/934、専用local UI build、文書検証を完了した。 |
 | 2026-09-04 | 60% | +20 | 通常productにはarchive・restore・物理deleteを設けず、live masterとして保持すると確定した。製品runtime・Rules・schema・dataを変更せず、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
+| 2026-09-04 | 70% | +10 | codeを任意・重複可・検索外として確定し、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を実装した。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |

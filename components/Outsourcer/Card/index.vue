@@ -44,6 +44,9 @@ const emit = defineEmits(["click:select", "click:edit", "click:detail"]);
 const showActions = Vue.computed(() => {
   return props.showEdit || props.showDetail;
 });
+const isTerminated = Vue.computed(
+  () => props.outsourcer.contractStatus === Outsourcer.STATUS_TERMINATED,
+);
 </script>
 
 <template>
@@ -72,8 +75,18 @@ const showActions = Vue.computed(() => {
 
       <!-- 外注先コードと名称 -->
       <v-card-title>
-        <div class="text-caption text-medium-emphasis text-truncate">
-          {{ `No. ${props.outsourcer.code || "---"}` }}
+        <div class="d-flex align-center ga-2">
+          <div class="text-caption text-medium-emphasis text-truncate">
+            {{ `No. ${props.outsourcer.code || "---"}` }}
+          </div>
+          <v-chip
+            v-if="isTerminated"
+            color="warning"
+            size="x-small"
+            variant="tonal"
+          >
+            契約終了
+          </v-chip>
         </div>
         <div class="text-subtitle-1 text-truncate" style="line-height: 1">
           {{ props.outsourcer.name }}

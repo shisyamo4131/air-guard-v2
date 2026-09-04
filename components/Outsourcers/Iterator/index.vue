@@ -56,6 +56,7 @@ defineOptions({ name: "OutsourcersIterator" });
 const _props = defineProps({
   outsourcers: { type: Array, default: () => [] },
   hideDefaultFooter: { type: Boolean, default: false },
+  itemsPerPage: { type: Number, default: 20 },
   showCreate: { type: Boolean, default: false },
   showDetail: { type: Boolean, default: false },
   showEdit: { type: Boolean, default: false },
@@ -65,7 +66,12 @@ const emit = defineEmits(["click:create", "click:detail", "click:edit"]);
 </script>
 
 <template>
-  <air-data-iterator item-value="docId" :items="props.outsourcers">
+  <air-data-iterator
+    item-value="docId"
+    :items="props.outsourcers"
+    :hide-default-footer="props.hideDefaultFooter"
+    :items-per-page="props.itemsPerPage"
+  >
     <!-- HEADER -->
     <template v-if="$slots.header" #header="slotProps">
       <!-- SLOT: header -->

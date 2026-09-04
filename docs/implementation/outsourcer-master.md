@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-04 local契約・検証完了
+- 状態: 実装調査 / OUT-05 local実装・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
@@ -18,22 +18,23 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - Outsourcerは、ある特定の協力会社を表す会社masterである。外注警備員個人masterではない。
 - 配置では同じOutsourcerを別々の明細として複数回登録できる現行方式を維持する。過去に試行して廃止したOutsourcerと人数の集約方式は再採用しない。
 - OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止した。この暫定停止はOUT-04で通常productの正式な非archive方針になった。
-- OUT-02では、exact document、型・長さ、system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否を確定する。codeの書式・一意性はOUT-05、statusの業務上の効果はOUT-03へ残す。
+- OUT-02では、exact document、型・長さ、system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否を確定した。
 - OUT-03では、statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績その他の選択へ影響させない。終了日・理由・履歴や関連dataの自動変更は追加しない。
 - OUT-04では、Outsourcerを通常productからarchive／restore／物理deleteせず、live masterとして保持する。現行UI・application action・Rulesがこの契約を満たすため、製品runtimeは変更しない。
+- OUT-05では、codeを任意・手動・重複可・検索外とし、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を確定・実装した。
 
 - `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
-- OUT-04は対象test 22/22、domain 935/935、local Emulator 147/147を完了したlocal契約である。現行runtimeが契約を満たすため製品codeとRulesは変更していない。OUT-03の実装commitは`995488a5`であり、OUT-01/02のRules・保存契約を維持する。Dev/Prod Rulesと実dataは未変更・未確認である。
+- OUT-05は対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了したlocal実装である。OUT-01/02のRules・保存契約を維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
 
 ## データ契約
 
 | 項目 | 実装契約 |
 |---|---|
 | path | `Companies/{companyId}/Outsourcers/{docId}`。doc IDは自動生成、独自採番なし |
-| `code` | 任意。表示上「外注先コード」。英数字入力、最大10文字の共通field定義。重複検証なし |
+| `code` | 任意の手動入力。表示上「外注先コード」。英数字入力、最大10文字の共通field定義。重複可、自動採番・一意制約・検索対象なし |
 | `name` | 必須、最大20文字。検索token対象 |
 | `nameKana` | 必須、最大40文字。検索token対象 |
 | `displayName` | 必須。略称。共通定義は最大6文字 |
@@ -63,10 +64,11 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 検索・状態
 
-- 一覧の通常表示はstatusで絞らず`updatedAt desc`、limit 10。画面側DataIteratorは20件設定で、query limitとの値が一致しない。
-- 検索もstatusで絞らず、token検索後`code desc`を使用する。tokenFieldsは`name`、`nameKana`、`displayName`で、codeはtoken検索対象外。
+- 一覧の通常表示はstatusで絞らず、`nameKana asc`、同値時document ID ascで21件を取得して20件表示する。現在pageだけをlive購読し、前pageのserver cursorは画面内memoryだけに保持する。
+- 検索もstatusで絞らず、正規化後2〜40文字の`name`、`nameKana`、`displayName`由来tokenを使う。codeは検索対象外である。検索queryはtoken equalityだけとし、一致結果をlive購読してclientで`nameKana`、document ID順にsortし、20件ずつmemory paginationする。
+- 検索入力なしは通常一覧へ戻り、範囲外入力ではqueryを実行せず案内する。作成・更新後は先頭pageへ戻し、読込失敗は表示中pageを維持して再試行できる。重複loadと古いlistener callbackは反映しない。
 - 配置用`useOutsourcersInRange`は全statusをlive購読する。引数`from/to`はvalidity確認と再購読triggerにだけ使い、期間filterしない。
-- 汎用Autocompleteも追加status条件を渡さず、ACTIVE／TERMINATEDの双方を候補にする。保存済み配置・実績のID直接取得もstatusを条件にしない。
+- 汎用Autocompleteも追加status条件を渡さず、ACTIVE／TERMINATEDの双方を候補にする。正規化後2〜40文字だけを検索し、最大50件取得と外注先専用ListItemを使う。保存済み配置・実績のID直接取得もstatusを条件にしない。
 
 ## 所属関係
 
@@ -111,7 +113,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常productでarchive／restore／物理deleteを提供しない方針として回答済みである。OUT-02の保存data契約とOUT-03のstatus非制限も確定・local実装済みで、CONF-0073のcode・検索表示詳細は未回答である。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常productでarchive／restore／物理deleteを提供しない方針、CONF-0073はcode・検索・pagination・表示契約として回答済みである。OUT-02の保存data契約、OUT-03のstatus非制限、OUT-05の検索表示も確定・local実装済みである。
 
 ## 未確認範囲
 
