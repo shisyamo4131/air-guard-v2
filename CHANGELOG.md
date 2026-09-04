@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Outsourcerを特定の協力会社masterとし、配置では同じOutsourcerを複数明細として登録できる現行方式を維持する。過去に試行して廃止したOutsourcer＋人数の集約方式と、外注警備員個人masterは今回採用しない。OUT-01では会社管理者またはstrict `manager`だけに作成・編集を許可し、正式なarchive policyが決まるまでclient deleteとarchive writeを停止するlocal改修を開始した。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。Dev・remote・実dataは未変更である。
+- Outsourcerを特定の協力会社masterとし、配置では同じOutsourcerを複数明細として登録できる現行方式を維持する。過去に試行して廃止したOutsourcer＋人数の集約方式と、外注警備員個人masterは今回採用しない。OUT-01として会社管理者またはstrict `manager`だけに作成・編集を許可し、正式なarchive policyが決まるまでclient deleteとarchive writeを停止した。domain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了し、実装commitは`82e22179`。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。Dev・remote・実dataは未変更である。
 
 - 2026-09-04の反省会を受け、35,757 bytesだった`governance/project-rules.md`を常時境界と必読routingだけの小型indexへ変更し、project固有規則をcoordination/Git、development/data、environment/approval、documentation/verificationの4 segmentへ分けた。既存project coordinationへcheckpoint transition、既存local UI runbookへbuild前`UI-READY`を追加し、CAS-02の履歴と現行rollback、仕様と適用状態を分離した。新しい汎用手順書・verification gate・registryは追加せず、managed common governance、生成AGENTS、references、verification policy、製品code、data、environmentは変更していない。[判断](docs/decisions/0049-project-rule-routing-and-checkpoint-closeout.md)を参照。
 

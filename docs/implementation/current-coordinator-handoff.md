@@ -17,7 +17,7 @@
 
 ## 次の作業
 
-1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01として、更新権限とclient破壊操作停止のlocal実装・検証を進める。OUT-02以降、Dev/Prod、remote/dataは未承認である。
+1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01は更新権限とclient破壊操作停止のlocal実装・検証を完了した。次はOUT-02の保存data契約を着手前に合意する。OUT-02以降、Dev/Prod、remote/dataは未承認である。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照

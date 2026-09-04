@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-01 local実装反映
+- 状態: 実装調査 / OUT-01 local実装・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`components/Outsourcer/Card/index.vue`、`components/Outsourcer/ListItem/index.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
@@ -23,7 +23,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
-- OUT-01はlocal実装であり、Dev/Prod Rulesと実dataは未変更・未確認である。field、status、document shapeはまだRulesで強制せず、OUT-02へ残す。
+- OUT-01はdomain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了したlocal実装である。Dev/Prod Rulesと実dataは未変更・未確認である。field、status、document shapeはまだRulesで強制せず、OUT-02へ残す。
 
 ## データ契約
 

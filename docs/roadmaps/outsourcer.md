@@ -2,7 +2,7 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 0%
+- 現在の進捗: 15%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 環境境界: OUT-01はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
@@ -10,7 +10,7 @@
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| OUT-01 更新権限と破壊操作停止 | 15 | 0 | In progress | 会社管理者またはstrict `manager`だけが作成・編集でき、UIとRulesが一致する。client deleteとarchive writeを拒否し、対象domain、Emulator、local UI build、文書検証を完了する。 |
+| OUT-01 更新権限と破壊操作停止 | 15 | 15 | Completed | 会社管理者またはstrict `manager`だけが作成・編集でき、UIとRulesが一致する。client deleteとarchive writeを拒否し、domain 927/927、local Emulator 146/146、専用local UI build、文書検証、独立reviewを完了した。実装commit `82e22179`。 |
 | OUT-02 保存data契約 | 15 | 0 | Proposed / 未承認 | 許可field、型、長さ、status、system metadata、exact field update、draft・競合契約を合意する。 |
 | OUT-03 契約終了と候補 | 10 | 0 | Proposed / 未承認 | 新規配置・実績と過去訂正でACTIVE／TERMINATEDをどう扱うか、終了日の要否を合意する。 |
 | OUT-04 archive・restore安全性 | 20 | 0 | Proposed / 未承認 | Schedule、OperationResult、ArrangementNotification等の参照、並行作成、過去表示、archive対象、restore、保持を合意する。 |
@@ -40,3 +40,9 @@
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
 - OUT-02以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+
+## 進捗履歴
+
+| 日付 | 進捗 | 変更 | 根拠 |
+|---|---:|---:|---|
+| 2026-09-04 | 15% | +15 | actor/tenant/UIDをfail-closedで一致させ、UIとRulesで作成・編集を会社管理者またはstrict `manager`へ限定した。live delete、archive write、fallback迂回を拒否し、domain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了した。 |
