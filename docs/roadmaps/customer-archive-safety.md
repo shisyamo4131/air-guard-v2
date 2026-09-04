@@ -2,7 +2,7 @@
 
 - 状態: In progress
 - 開始日: 2026-09-04
-- 現在の進捗: 20%
+- 現在の進捗: 45%
 - 部分加点: なし
 - 完了条件: 誤登録・重複Customerを参照なしの場合だけ監査付きでarchiveでき、同時・後続参照と同ID再作成を拒否し、通常Userのrestore・archive閲覧・物理deleteを提供せず、local実装・自動test・Codex専用local UI・独立review・文書・Git統合・別途承認するDev反映と受入れを完了する。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[実装設計](../implementation/customer-archive-safety.md)
@@ -27,7 +27,7 @@ CAS-02のexact ownership、test、書込みlease、差戻し、独立review、�
 | マイルストーン | 重み | 得点 | 状態 | 完了証拠 |
 |---|---:|---:|---|---|
 | CAS-01 仕様・失敗経路・security設計 | 20 | 20 | Completed | ADR 0046、実装設計、2026-09-04の独立security review、project-docsとdiff-check |
-| CAS-02 専用Callable・監査・冪等性 | 25 | 0 | In progress / local runtime gates passed; local commit and retrospective pending | actor/tenant/input/transaction/archive envelopeのunit・integration test、独立review、local Git統合、完了時反省会 |
+| CAS-02 専用Callable・監査・冪等性 | 25 | 25 | Completed | commit `74d0eb4d`、domain 873/873、Emulator 123/123、targeted log test、独立security/general review、反省会記録 |
 | CAS-03 参照writer barrier・Rules回帰 | 30 | 0 | Not started | Customer/Site/OperationResult/Billing Rules、server guard、Emulator・競合test |
 | CAS-04 UI・local受入れ・最終review・Git統合 | 15 | 0 | Not started | Customer詳細の新規archive操作、専用build、local UI、独立review、local commit |
 | CAS-05 Dev反映・利用者受入れ | 10 | 0 | Deferred | マスタデータ管理改修後のbounded Dev releaseと権限別受入れ |
@@ -47,7 +47,7 @@ CAS-02のexact ownership、test、書込みlease、差戻し、独立review、�
 
 予定する影響classはUI、application logic、data contract/Rules。completion gateのunionは`project-docs`、`domain-full`、`local-emulator-suite`、`local-ui-build`、`diff-check`。実装中は対象unit・Rules testから始め、最終状態でunionを一度実行する。`generate-dev`、`generate-prod`、deploy、remote/data確認は別承認であり、このroadmapへの記載だけでは実行を許可しない。
 
-今回のCAS-01は設計文書だけを変更し、製品runtimeを変更しないため、document整合の`project-docs`と`diff-check`を実行する。runtime gateはCAS-02以降の実装がない現時点では成功証拠にせず、plannedとして残す。
+CAS-01完了時点では設計文書だけを変更し、製品runtimeを変更しなかったため、document整合の`project-docs`と`diff-check`だけを実行した。CAS-02以降の実装がなかった同時点ではruntime gateを成功証拠にせず、plannedとして残した。
 
 ## 互換性・移行・rollback
 
@@ -63,10 +63,11 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-[CAS-02実行契約とSpark Developer試験記録](../implementation/customer-archive-cas02-developer-trial.md)に従ったFunctions実装、domain単体test、targeted Emulator test、`security_reviewer`、`reviewer`の差戻しと再確認、最終`domain-full` 873/873と`local-emulator-suite` 123/123はexit status 0で完了した。次は文書・diff gate、local Git統合、反省会を行う。Spark用standalone taskは再利用せず、CAS-03/04も開始しない。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
+CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い、Functions実装、domain/Emulator test、独立review、local Git統合、反省会まで完了した。CAS-03以降の作業手順は反省会結果を利用者へ提示して判断を待つ。Spark用standalone taskは再利用せず、CAS-03/04を自動開始しない。Dev反映・受入れはマスタデータ管理の一連の改修後へ延期する。
 
 ## 進捗履歴
 
 | 日付 | 進捗 | 変更 | 根拠 |
 |---|---:|---:|---|
 | 2026-09-04 | 20% | +20 | 現行Rules・generic adapter・Customer/Site/OperationResult/Billing writerを照合し、専用Callable、transaction、3参照barrier、archive tombstone、client非公開、generic restore非利用を利用者承認済み仕様・ADR・実装設計へ固定した。application・Rules・test・Devは未着手。 |
+| 2026-09-04 | 45% | +25 | CAS-02専用Callable、version 1 archive、same-operation retry、safe error/logをlocal実装し、domain 873/873、Emulator 123/123、独立review、commit `74d0eb4d`、反省会を完了した。CAS-03/04、Rules、client/UI、参照writer、Dev/remoteは未着手。 |

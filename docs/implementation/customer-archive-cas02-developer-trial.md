@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: In progress / local implementation completion gates passed / local commit and retrospective pending
+- 状態: Completed / local implementation committed / retrospective recorded
 - 対象: Customer archive safety roadmapの`CAS-02 専用Callable・監査・冪等性`だけ
 - 対象外: CAS-03、CAS-04、CAS-05
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)
@@ -263,6 +263,7 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - coordinatorがtargeted domain testを再実行し、Customer archive 13/13、Callable 5/5、error mapper 3/3、共通Auth integration 2/2、Functions entrypoint 1/1、role permission 7/7、Auth identity 10/10、Auth mapper 3/3をそれぞれexit status 0で確認した。targeted Emulator 5/5もtesterがexit status 0で確認した。
 - 最終worktreeでcoordinatorが`node --test test/domain/*.test.mjs`を実行し873/873、exit status 0、続いて`npm run test:local`を実行し123/123、exit status 0を確認した。後者はproject `demo-air-guard-v2-codex`、loopback only、`AIR_GUARD_EXTERNAL_EFFECTS=deny`、利用者用`saved-data`不変、専用seed read-onlyを報告した。Firebase CLIのMOTD取得失敗・期限切れ認証・同一projectの複数Emulator警告は出たが、local suiteは完了し、remote project/data操作は行っていない。文書gate、final diff-check、local commit、反省会はこの記録時点では未完了である。
 - CAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierがないため、この差分単独はdeploy禁止・release-readyではない。CAS-03/04は開始していない。
+- coordinatorはreview済み15 fileをcommit `74d0eb4dfc73fee4bf1980a0f4076bbf23a2c102`（`feat: add CAS-02 customer archive callable`）へ統合し、直後のworktreeがcleanであることを確認した。push、merge、deployは行っていない。
 
 ### 2026-09-04 Spark開始時停止
 
@@ -282,6 +283,24 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - 未確認: Spark固有のtoken/usage上限量、最初のcontext window停止が次taskのusage limitへ与えた正確な消費量、reset後に同じ指示で実装完了できたか。
 - 推測: repositoryの必読ガバナンスと詳細な安全契約を保持したCAS-02は、短いfocused editよりcontext負荷が高く、今回利用可能だったSpark個別枠と相性が悪かった可能性がある。
 - 後続判断: 利用者はCAS-02を通常のサブエージェント運用で継続すると決定した。Spark用standalone taskは再利用せず、本書の技術契約を`CAS02-SUBAGENT-DEVELOP-UNIT-01`へ引き継ぐ。CAS-03以降の手順は未決定のままとする。
+
+## CAS-02完了時の反省会記録
+
+### 確認済み事実
+
+- 通常Developerのroute callbackは1回、初回implementation callbackは1回だった。Developerへの差戻しは2回で、1回目はmalformed archive分類と`serverTimestamp`実物判定、2回目はEmulatorで判明した`logger.error`のstack付加だった。Testerはroute callback 1回、初回implementation callback 1回、logger修正後のrerun callback 1回、harness safety fix callback 1回を返した。Testerへの差戻しは1回で、ログ捕捉子processのtimeout・出力上限・single-settlement不足だった。
+- Developerのowned file逸脱、同時書込み競合、branch/HEAD drift、指定testの取り違え、stage・commit・push・network・remote/data操作は0だった。Tester-owned local harnessがdirtyになった後のDeveloper再開では、exact accepted dirty pathをread-onlyで保持した。
+- 初回domain testはrootから`firebase-admin`を直接importして1回exit status 1となり、Functions配下を基準にする既存`createRequire`方式へ直した後に成功した。最終completion evidenceには失敗runを成功として含めていない。
+- 初期契約はactor、tenant、exact input、6 read、all-reads-before-writes、3参照、create-only、exact 26-field envelope、retry、safe response/error、ownership、禁止範囲、個別commandを具体化しており、実装scopeの逸脱防止に有効だった。一方、malformed archiveとwell-formed mismatchのdomain code分離、server timestamp sentinelの実物判定、firebase-functions loggerのruntime semantics、Functions dependency解決方式は初期promptで十分に固定されていなかった。
+- Spark standalone taskは文書記録上、route確認2回は成功したが、最初の実装turnが約8分46秒後にcontext window不足、retry taskが実装開始直後にSpark固有usage limitで停止し、製品差分・test・Git mutationは0だった。Spark固有上限量、最初の停止が消費量へ与えた影響、reset後の完遂可能性は確認できなかった。通常Developerサブエージェントは、exact contractからFunctions・use-case・validator・mapper・domain testを同一ownerで実装し、局所差戻しへ対応できた。
+
+### 判断とCAS-03以降の選択肢
+
+- CAS-02では詳細契約、同一Developerへの局所差戻し、Testerの実runtime検証、security/general reviewの順序が機能した。書込み競合を避けるための別worktreeやshadow directoryは不要だった。
+- CAS-03へ通常サブエージェント方式を採用する場合は、開始前に`code_explorer`でRulesと全client/server reference writerのactual pathを固定し、Developer checkpointを少なくとも「RulesとRules回帰」「server reference assertionとwriter integration」へ直列分割する。各promptへaccepted dirty path、same-ID create deny、missing/archived/other-tenant Customer拒否、`customerId`変更、Admin SDK bypass、archive/reference競合の許容最終状態、rollback、個別commandを明記する。
+- SDK/helperのruntime semanticsへ依存する箇所は、実装前にinstalled local sourceまたは公式一次資料を確認する。Developer unit/source contract、Tester Emulator/concurrency、security reviewer、general reviewerの順で進め、findingは元ownerへ戻す。
+- Rules、3種類のserver writer、concurrency testを一つのpromptで扱う必要がある、actual writer inventoryが広くbounded ownershipを作れない、context/usage停止が再発する、複数package/APIの調査が不可避な場合は、さらにcheckpointを分割してからmodel変更を検討する。Firestore editionやSDK公式仕様が未解決の場合だけ`docs_researcher`を追加し、UI testerはCAS-04へ分離する。
+- CAS-03以降の方式は利用者判断待ちであり、自動開始しない。残るrelease blockerはCAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierと競合test、CAS-04のUI/local受入れ、別承認のDev preflight・release・利用者受入れである。
 
 ## Rollback
 
