@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-03 local実装・検証完了
+- 状態: 実装調査 / OUT-04 local契約・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
@@ -17,15 +17,16 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 - Outsourcerは、ある特定の協力会社を表す会社masterである。外注警備員個人masterではない。
 - 配置では同じOutsourcerを別々の明細として複数回登録できる現行方式を維持する。過去に試行して廃止したOutsourcerと人数の集約方式は再採用しない。
-- OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止する。archive/restoreの正式運用は未決定である。
+- OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止した。この暫定停止はOUT-04で通常productの正式な非archive方針になった。
 - OUT-02では、exact document、型・長さ、system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否を確定する。codeの書式・一意性はOUT-05、statusの業務上の効果はOUT-03へ残す。
 - OUT-03では、statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績その他の選択へ影響させない。終了日・理由・履歴や関連dataの自動変更は追加しない。
+- OUT-04では、Outsourcerを通常productからarchive／restore／物理deleteせず、live masterとして保持する。現行UI・application action・Rulesがこの契約を満たすため、製品runtimeは変更しない。
 
 - `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
-- OUT-03はdomain 934/934、専用local UI build、文書検証を完了したlocal実装である。実装commitは`995488a5`。OUT-01/02のRules・保存契約は維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
+- OUT-04は対象test 22/22、domain 935/935、local Emulator 147/147を完了したlocal契約である。現行runtimeが契約を満たすため製品codeとRulesは変更していない。OUT-03の実装commitは`995488a5`であり、OUT-01/02のRules・保存契約を維持する。Dev/Prod Rulesと実dataは未変更・未確認である。
 
 ## データ契約
 
@@ -50,7 +51,15 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - 更新はtransaction内で最新documentを読み、利用者が変更したfieldだけを保存する。名称系変更時だけtokenMapを追加更新し、変更なしはwrite 0とする。
 - 編集draftとbaselineはlive itemから独立させる。同じ変更fieldが外部でも変わった場合はconflictとして保存せず、入力を保持して再読込を促す。別fieldの外部変更は最新値を維持してmergeする。
 - contract終了・再開は編集で`contractStatus`を切り替える可逆なフラグ変更である。終了日時・理由・履歴は保存せず、関連dataを自動変更しない。
-- schemaの`logicalDelete=true`と既存adapterには同一doc IDを`Outsourcers_archive`へtransactionでcopyしてactive collectionから削除する経路が残るが、OUT-01のUIとRulesからは到達できない。
+- schemaの`logicalDelete=true`と既存adapterには同一doc IDを`Outsourcers_archive`へtransactionでcopyしてactive collectionから削除する経路が残るが、OUT-01のUIとRulesからは到達できず、OUT-04で正規経路として使用しないと確定した。
+
+## archive・restore
+
+- 通常の製品UI、application action、Callableにarchive、restore、物理delete入口はない。live Outsourcerは誤登録・重複・取引終了を含めて保持する。
+- live deleteとarchive client CUDはRulesで拒否される。既存archiveの同一tenant readは維持する。
+- generic adapterの参照guardはSiteOperationSchedulesとOperationResultsだけで、ArrangementNotificationsを含まない。参照確認後の並行参照作成とgeneric restoreのactive同ID上書きも防げないため、正規経路に採用しない。
+- 配置予定、稼働実績、配置通知、請求表示、帳票はlive IDを参照する。live保持により名称解決を維持し、新しい参照barrier、archive envelope、restore、migrationを追加しない。
+- 将来削除・匿名化が具体的に必要になった場合は、全参照catalog、並行writer、監査、same-ID競合、restore、既存archiveを別checkpointで設計する。[ADR 0050](../decisions/0050-outsourcer-live-retention-without-archive.md)を参照する。
 
 ## 検索・状態
 
@@ -77,7 +86,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - 既存adapterの`hasMany` guardはSiteOperationSchedulesとOperationResultsの`outsourcerIds array-contains docId`を検索し、1件でもあれば削除を拒否する。ただしOUT-01ではclient delete自体を停止しており、このguardは通常UIから実行されない。
 - ArrangementNotificationsはhasMany対象外で、通知だけが残る場合の削除guardはない。
 - guard queryはdelete transaction外の`getDocs`であり、確認直後の並行参照作成との競合余地がadapter自身のコメントに明記される。
-- archiveのRulesは同一tenantの有効な本登録Userのreadだけを維持し、client writeを全拒否する。復元UI、終了からarchiveへの正式手順、保持/匿名化policyは未決定である。
+- archiveのRulesは同一tenantの有効な本登録Userのreadだけを維持し、client writeを全拒否する。復元UIと終了からarchiveへの手順は設けない。法令・運用上の削除または匿名化が将来必要になった場合の保持条件は別checkpointで決める。
 
 ## Rules・tenant・security
 
@@ -102,7 +111,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。OUT-02の保存data契約とOUT-03のstatus非制限は確定・local実装済みで、CONF-0072のarchive/restoreとCONF-0073のcode・検索表示詳細は未回答である。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常productでarchive／restore／物理deleteを提供しない方針として回答済みである。OUT-02の保存data契約とOUT-03のstatus非制限も確定・local実装済みで、CONF-0073のcode・検索表示詳細は未回答である。
 
 ## 未確認範囲
 

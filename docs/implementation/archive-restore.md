@@ -55,7 +55,7 @@ client adapterはarchive読取を`txn.get`で行う。server adapterは`archiveD
 | Customer | true | Sites.customerId | Rulesあり。restore APIはあるがUIなし。TERMINATED状態とは別。 |
 | Site | true | schedules/results/arrangement notificationsのsiteId | Rulesあり。UIは削除後復元不能と表示し、restore入口なし。TERMINATEDとは別。 |
 | Employee | true | schedules/resultsのemployeeIds、arrangement notifications.employeeId | Rulesあり。UIは復元不能と表示。DailyAttendance等はguard外。RESIGNEDとは別。 |
-| Outsourcer | true | schedules/resultsのoutsourcerIds | Rulesあり。restore UIなし。Notification等はguard外。終了statusとは別。 |
+| Outsourcer | true | schedules/resultsのoutsourcerIds | 通常productではarchive／restore／物理deleteを提供せず、live masterとして保持する。client live deleteとarchive CUDは拒否。Notification等はgeneric guard外。終了statusとは別。[ADR 0050](../decisions/0050-outsourcer-live-retention-without-archive.md)を参照。 |
 
 Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete=false`で、この共通archive対象ではない。User/Auth削除やStorage cleanupは別契約である。
 
@@ -81,6 +81,7 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 - Site/Employee等の削除dialogは「復元することはできません」と説明する一方、adapterにはrestore APIがある。実装可能性と利用者向け運用が一致しない。
 - active statusの終了/退職とarchiveは別で、通常終了・誤登録・法定保持・復旧の使い分けはmaster別CONFとして未決定である。
 - Customerは通常終了をTERMINATED、再開をACTIVE、参照なしの誤登録・重複だけをarchiveとする。archiveへreason/actor/timeを残し、通常User restoreと物理delete UIを設けず、保持要件確定まで自動purgeしない方針が確認済みである。
+- Outsourcerは誤登録・重複・取引終了を含めてlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。generic adapterは正規経路として使用しない。
 - admin-sdk backup/restoreはcompany subcollection snapshotの保守機能であり、modelの`_archive → active` restore APIとは別物である。collection catalogには一部archive collectionを含むが`Articles_archive`は含まれていない。
 - archive専用maintenance command、一覧、restore conflict解決、期限purge、匿名化は確認できない。
 
@@ -115,7 +116,7 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 - CONF-0121: active同ID存在時のrestore conflict policy。
 - CONF-0122: archive/restoreで発火させるtriggerと副作用契約。
 - CONF-0123: 共通archive metadata・保持・匿名化・purge運用。
-- master別の終了/退職/archive判断はCONF-0049、0064、0072、0100等を参照する。
+- master別の終了/退職/archive判断はCONF-0049、0064、0100等を参照する。OutsourcerのCONF-0072はADR 0050で回答済みである。
 
 ## 未確認範囲
 

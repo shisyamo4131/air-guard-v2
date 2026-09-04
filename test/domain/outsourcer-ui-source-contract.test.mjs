@@ -57,6 +57,22 @@ test("OutsourcersManager exposes only dedicated authorized create and update dia
   assert.doesNotMatch(manager, /AirArrayManager|air-array-manager|handleDelete|\.delete\(/u);
 });
 
+test("Outsourcer product flows expose no archive, restore, or delete operation", async () => {
+  const sources = await Promise.all([
+    source("pages/outsourcers/index.vue"),
+    source("components/Outsourcers/Manager/index.vue"),
+    source("components/Outsourcer/Card/index.vue"),
+    source("composables/application/outsourcer/useOutsourcerActions.js"),
+  ]);
+  const productFlow = sources.join("\n");
+
+  assert.doesNotMatch(
+    productFlow,
+    /archiveOutsourcer|restoreOutsourcer|deleteOutsourcer|\.restore\(|\.delete\(/u,
+  );
+  assert.doesNotMatch(productFlow, /click:archive|click:restore|click:delete/u);
+});
+
 test("Outsourcer create and update fail closed when policy changes before opening", async () => {
   const manager = await source("components/Outsourcers/Manager/index.vue");
   assert.match(

@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 63件、Partially answered 7件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済み、CONF-0072〜CONF-0073はOUT-03のstatus非制限まで部分回答である。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 64件、Partially answered 6件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持として回答済み、CONF-0073はOUT-03のstatus非制限まで部分回答である。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -859,7 +859,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0070 Outsourcerマスターの正式操作権限
 
-- Status: Partially answered
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: read permissionでCRUDへ到達し、Rulesは同一会社Userにlive/archive全writeを許す。
 - Question: 外注先の閲覧、登録、編集、契約終了、archive、restoreを誰に許可するか。
@@ -885,13 +885,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
-- Evidence: OUT-03でstatusを日付なしの説明用フラグへ確定した。archiveはlive doc削除で、guardはSchedule/Resultのみ、restore UIはない。
+- Evidence: OUT-03でstatusを日付なしの説明用フラグへ確定し、OUT-04でOutsourcerをlive masterとして保持して通常archive／restore／物理deleteを提供しないと確定した。
 - Question: statusとは分離して、誤登録・重複等のarchive対象、参照確認、過去表示、restore、保持期間をどう定義するか。
 - Why needed: live masterをarchiveしても予定・通知・実績の表示と復旧可能性を失わないため。
 - Options and impact: 誤登録・重複のみarchive、snapshot fallback、管理者restore、保持期間。
-- Current provisional treatment: statusは候補・業務操作へ影響しない説明用フラグとし、archiveは停止状態を維持する。
+- Current provisional treatment: statusは候補・業務操作へ影響しない説明用フラグとし、通常productからarchive／restore／物理deleteを提供しない。
 - Related FUT IDs: FUT-0087
-- Answer: 2026-09-04 部分回答。`contractStatus`はCustomerと同じ説明用の可逆なフラグとし、一覧・検索・Autocomplete・配置・稼働実績その他の選択や既存・新規操作へ影響させない。終了日・理由・専用履歴や関連dataの自動変更は追加しない。archive/restoreの対象、参照確認、保持、復元は未回答のためStatusはPartially answeredとする。
+- Answer: 2026-09-04 回答済み。`contractStatus`はCustomerと同じ説明用の可逆なフラグとし、一覧・検索・Autocomplete・配置・稼働実績その他の選択や既存・新規操作へ影響させない。Outsourcerは誤登録・重複・取引終了を含めてlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。generic delete/restoreを正規経路にせず、既存dataの変換・復元・削除、自動purge、保持期限を追加しない。将来削除・匿名化が具体的に必要になった場合は新しいcheckpointとする。
 
 ## CONF-0073 Outsourcer code・検索・終了済み候補の規則
 

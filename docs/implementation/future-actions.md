@@ -1177,16 +1177,16 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 
 ## FUT-0087 Outsourcer終了・archive・参照保持を整合させる
 
-- 状態: Needs decision
+- 状態: Resolved
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026
 - 対象ファイル・シンボル: `Outsourcer.contractStatus/logicalDelete/hasMany`、client adapter delete、下流ID fetch
-- 確認済み実装事実: 終了はstatus変更だけ。削除guardはSchedule/OperationResultのみでNotificationを含まず、archive後はlive ID fetchが失敗し得る。restore UIはない。
-- 想定影響と発生条件: 通知のみ参照、guard競合、誤archiveにより名称欠損・候補消失・復旧不能が起き得る。
-- 未確認点・仮説: statusとは分離したarchive対象、過去表示、restore、保持期間、通知参照の正式要件は未決定。
-- 推奨する将来対応: 全参照catalog、終了/削除/restore policy、snapshot表示fallback、競合安全なserver guardを設計する。
-- 必要なテスト: Schedule/Result/Notification各参照、並行参照作成、status変更後表示、archive/restore、欠損master。
-- ユーザー判断が必要な事項: CONF-0072。
+- 確認済み実装事実: OUT-04で通常productからarchive／restore／物理deleteせず、Outsourcerをlive masterとして保持すると確定した。UI・application actionに破壊入口はなく、Rulesはlive deleteとarchive client CUDを拒否している。
+- 想定影響と発生条件: live ID fetchを維持し、generic guardのNotification漏れ、並行参照競合、restore上書きへ到達しない。
+- 未確認点・仮説: なし。法令・規程等で将来削除や匿名化が具体的に必要になった場合は新しいcheckpointとする。
+- 推奨する将来対応: ADR 0050のlive保持契約を維持し、generic `delete()`／`restore()`をOutsourcerへ接続しない。
+- 必要なテスト: product flowのarchive／restore／delete入口不在、ACTIVE／TERMINATED双方のlive delete・archive CUD拒否、same-tenant readとstatus非依存回帰。
+- ユーザー判断が必要な事項: なし。CONF-0072回答済み。
 
 ## FUT-0088 Outsourcer候補のACTIVE制約を利用経路で統一する
 

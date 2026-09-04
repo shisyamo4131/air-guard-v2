@@ -2,9 +2,9 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 40%
+- 現在の進捗: 60%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01からOUT-03はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-04はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
@@ -13,7 +13,7 @@
 | OUT-01 更新権限と破壊操作停止 | 15 | 15 | Completed | 会社管理者またはstrict `manager`だけが作成・編集でき、UIとRulesが一致する。client deleteとarchive writeを拒否し、domain 927/927、local Emulator 146/146、専用local UI build、文書検証、独立reviewを完了した。実装commit `82e22179`。 |
 | OUT-02 保存data契約 | 15 | 15 | Completed | exact 11 field、型・長さ・status・system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否をUI・専用writer・Rulesへ実装した。domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。実装commit `31d11b15`。 |
 | OUT-03 契約終了と候補 | 10 | 10 | Completed | statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績の選択を制限しない。終了日・理由・履歴・自動変更を追加せず、domain 934/934と専用local UI build、文書検証を完了した。実装commit `995488a5`。 |
-| OUT-04 archive・restore安全性 | 20 | 0 | Proposed / 未承認 | Schedule、OperationResult、ArrangementNotification等の参照、並行作成、過去表示、archive対象、restore、保持を合意する。 |
+| OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | OUT-05 code・検索・一覧表示 | 10 | 0 | Proposed / 未承認 | code方針、検索対象、取得件数とpagination、Autocomplete renderer、終了済み表示を整合する。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 0 | Requirement confirmed / 実装未着手 | 協力会社masterの同一IDを複数配置明細へ登録できることを維持し、人数集約や個人masterへ変更していないことを対象回帰で確認する。 |
 | OUT-07 local統合確認 | 10 | 0 | Proposed / 未承認 | 権限別UI、Rules陰性、配置・通知・実績・請求・帳票の必要な対象回帰、文書とrollbackを確認する。 |
@@ -63,10 +63,23 @@
 - rollbackは一覧と配置購読のquery変更を戻す。data変更や外部作用はない。
 - 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。Rules・永続data契約を変更しないため`local-emulator-suite`は省略でき、completion reportへ理由を記録する。
 
+## OUT-04の確定範囲
+
+- Outsourcerは通常の製品運用ではlive masterとして保持し、誤登録・重複・取引終了を含めてarchive、restore、物理deleteを提供しない。
+- 製品UI、application action、Callableからgeneric `delete()`／`restore()`へ到達させない。live deleteとarchive client CUDを拒否する現行Rulesを維持する。
+- 既存archiveの同一tenant read境界は変更しない。live/archive dataの変換・復元・削除、自動purge、保持期限は追加しない。
+- status、検索・配置・実績、同一IDの重複配置は変更しない。判断理由は[ADR 0050](../decisions/0050-outsourcer-live-retention-without-archive.md)を正とする。
+
+## OUT-04の互換性・rollback・検証
+
+- 現行runtimeが承認済み契約を満たすため、製品code、Rules、schema、index、Functions、dataを変更せず、回帰testと文書だけを追加する。migrationは行わない。
+- rollbackは文書と回帰testを戻す。ただしclient破壊操作拒否はOUT-01から継続する既存安全境界であり、別仕様なしに解除しない。
+- 変更classは`data-contract-schema-migration`とする。completion gateは`project-docs`、`domain-full`、`local-emulator-suite`、`diff-check`である。UI sourceを変更しないため`local-ui-build`は省略し、理由をcompletion reportへ記録する。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-04以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-05以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 
@@ -75,3 +88,4 @@
 | 2026-09-04 | 15% | +15 | actor/tenant/UIDをfail-closedで一致させ、UIとRulesで作成・編集を会社管理者またはstrict `manager`へ限定した。live delete、archive write、fallback迂回を拒否し、domain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了した。 |
 | 2026-09-04 | 30% | +15 | exact document、型・長さ・metadata、部分更新、token再生成条件、独立draft・同一field競合拒否を実装し、domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。 |
 | 2026-09-04 | 40% | +10 | statusを説明用フラグに限定し、一覧検索・Autocomplete・配置・稼働実績の候補制限を除去した。domain 934/934、専用local UI build、文書検証を完了した。 |
+| 2026-09-04 | 60% | +20 | 通常productにはarchive・restore・物理deleteを設けず、live masterとして保持すると確定した。製品runtime・Rules・schema・dataを変更せず、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
