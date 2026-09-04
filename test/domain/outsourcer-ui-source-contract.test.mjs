@@ -31,9 +31,14 @@ test("Outsourcer authorization SFCs parse and compile", async () => {
   }
 });
 
-test("Outsourcer list preserves the existing read query and routes mutations through the guarded manager", async () => {
+test("Outsourcer list does not use contractStatus to restrict search or selection", async () => {
   const page = await source("pages/outsourcers/index.vue");
-  assert.match(page, /Outsourcer\.STATUS_ACTIVE/u);
+  const inRange = await source("composables/dataLayers/outsourcer/useOutsourcersInRange.js");
+  const autocomplete = await source("components/Outsourcer/Autocomplete.vue");
+  assert.doesNotMatch(page, /contractStatus|STATUS_ACTIVE|STATUS_TERMINATED/u);
+  assert.doesNotMatch(inRange, /\["where",\s*"contractStatus"|STATUS_ACTIVE|STATUS_TERMINATED/u);
+  assert.doesNotMatch(autocomplete, /contractStatus|STATUS_ACTIVE|STATUS_TERMINATED/u);
+  assert.match(inRange, /\{ constraints: \[\] \}/u);
   assert.match(page, /\["orderBy", "updatedAt", "desc"\]/u);
   assert.match(page, /\["limit", 10\]/u);
   assert.match(page, /<OutsourcersManager/u);

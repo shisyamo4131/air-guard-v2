@@ -3,7 +3,6 @@
  * @file pages/outsourcers/index.vue
  * @description 外注先情報一覧ページ
  *****************************************************************************/
-import { Outsourcer } from "@/schemas";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 
 defineOptions({ name: "outsourcers-index" });
@@ -12,12 +11,6 @@ defineOptions({ name: "outsourcers-index" });
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
-const defaultOption = ref([
-  "where",
-  "contractStatus",
-  "==",
-  Outsourcer.STATUS_ACTIVE,
-]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
@@ -25,12 +18,11 @@ const defaultOption = ref([
 const options = computed(() => {
   if (!search.value) {
     return [
-      defaultOption.value,
       ["orderBy", "updatedAt", "desc"],
       ["limit", 10],
     ];
   } else {
-    return [defaultOption.value, ["orderBy", "code", "desc"]];
+    return [["orderBy", "code", "desc"]];
   }
 });
 
