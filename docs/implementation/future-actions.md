@@ -996,6 +996,8 @@ SPEC-DEEP-043追加根拠: order data layerは未知typeを空配列へ畳み込
 
 SPEC-DEEP-040追加根拠: application schedule actionsはnotify/update/bulk updateのerrorをloggerへ渡して吸収する。normalizeはtransaction前にschedule instanceを変更するため、remote failure時もlocal objectへ変更が残り得る。
 
+2026-09-05利用者判断: 現行riskを認識したうえで、マスタ管理機能の一連の改修が終わるまでは本項を含むtransaction系の要改修箇所を実装せず、記録だけに留める。マスタ改修中の波及変更はFirestore更新に関係しない互換修正に限定し、配置管理のclient direct writeをServer APIへ移行しない。将来移行する場合は楽観的更新、失敗時rollback、正本再取得、error表示、再試行導線を一体で設計する。
+
 ## FUT-0074 Schedule複製・過去変更・worker充足validationを確定する
 
 - 状態: Needs decision

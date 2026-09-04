@@ -4,7 +4,7 @@
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
 - 現在の進捗: 80%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01からOUT-06はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-07はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
@@ -16,7 +16,7 @@
 | OUT-04 archive・restore安全性 | 20 | 20 | Completed | Outsourcerをlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。既存の破壊操作拒否と入口不在を回帰testで固定し、対象test 22/22、domain 935/935、local Emulator 147/147を完了した。 |
 | OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 10 | Completed | 同一Outsourcerを人数1の別明細として複数配置し、安定した`workerId`で行・通知・実績を区別する契約を回帰testで固定した。重複行のVue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。実装commit `794af0ed`。 |
-| OUT-07 local統合確認 | 10 | 0 | Proposed / 未承認 | 権限別UI、Rules陰性、配置・通知・実績・請求・帳票の必要な対象回帰、文書とrollbackを確認する。 |
+| OUT-07 local統合確認 | 10 | 0 | In progress / 承認済み | Outsourcer master CRUDを主対象として、権限別UI、Rules陰性、既存の配置・通知・実績・請求・帳票との必要な対象回帰、文書とrollbackをCodex専用local環境で確認する。周辺transaction機能は変更せず、問題を検出した場合も記録に留める。 |
 | OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
 
 ## OUT-01の確定範囲
@@ -104,10 +104,23 @@
 - 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。Rules・schema・永続data契約を変更しないため`local-emulator-suite`はpolicyに基づき省略する。
 - 通常UIは`amount`を渡さずschema既定値1を使うが、導入済みschema packageの低レベル`addWorker`はcallerが渡した別の`amount`も受け入れる。通常UI契約の回帰は固定したが、全callerでの`amount=1`強制は未実装であり、package・Rules・data validationを含む別承認範囲とする。
 
+## OUT-07の確定範囲
+
+- 主対象はOUT-01からOUT-06で確定したOutsourcer masterの一覧、検索、作成、更新、status変更、非archive・非delete、権限境界、保存契約である。既存の配置・通知・稼働実績・請求・帳票は、Outsourcer masterとの互換性を確認するために必要な範囲だけ回帰する。
+- 検証はCodex専用demo project、loopback、合成data、専用Emulator・local UIだけで行う。Dev・Prod、remote Firestore、利用者用local saved-data、実data、外部通知・外部課金へ接続しない。
+- 配置・通知・稼働実績・請求・帳票などtransaction系機能のFirestore書込み経路、client/server分担、楽観的更新、rollback/refetch、同時実行、Rules、schema、package、APIを変更しない。問題を検出した場合は既知課題へ記録し、マスタ管理機能の一連の改修後に別checkpointで見直す。
+- 製品変更が必要になった場合はOutsourcer master CRUDを直接成立させる範囲に限定する。主機能以外へ波及する変更はFirestore更新に関係しない表示・読取り・描画identityの互換修正に限り、別の業務仕様を推測して実装しない。範囲または仕様が未確定なら変更前に停止して利用者へ確認する。
+
+## OUT-07の互換性・rollback・検証
+
+- 永続path、document shape、Rules、index、schema、package、Functions、既存dataを変更せず、migrationを行わない。配置管理の作業員追加・変更・削除・並べ替えは現行のFirestore client transaction経路を維持し、Server APIへ移行しない。
+- rollbackはOUT-07で追加する検証・記録と、別途必要性を確認して承認範囲内で行ったOutsourcer master CRUD修正だけを戻す。周辺transaction機能の既存riskを解消するためにrollback範囲を広げない。
+- 変更classは、実際に変更したfileに対応するclassの和集合とする。現時点のverification計画は`project-docs`、Outsourcer対象test、`domain-full`、`local-emulator-suite`、`local-ui-build`、Codex専用local UI smoke、`diff-check`、独立reviewである。最終worktreeの変更classに応じて機械可読policyを再評価し、実行結果と省略理由を完了報告へ記録する。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-07以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-08以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 

@@ -70,6 +70,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` の会社documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。同一会社の有効な本登録Userによる既存document更新は、field・actor境界を機能単位で移行するまでの互換経路として維持する。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
+- マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。
+- 配置管理で作業員を追加・変更・削除・並べ替えする通常経路は、現時点ではFirestore client transactionによる直接更新を維持する。将来Server APIへ移行する場合は、画面へ即時反映する楽観的更新に加え、失敗時の明示的なrollback、正本の再取得、利用者向けerror表示、再試行導線を同じ変更単位の受入れ条件とする。
 - Prod公開前までに、既存のmaster dataとtransaction dataの作成・更新・削除を機能単位で順番に見直す。clientから直接書くoperationはFirestore Rulesで同一会社、必要なpermission、変更可能field、型、状態を強制し、Callableを使うoperationは同じ条件をserver側で再確認する。画面の表示・非表示だけを認可根拠にしない。次の見直し対象はCustomer masterとする。
 - App Checkの実装・強制、全般的なrate limit、Callable public invokerの常時監視はProd公開前の必須gateとして扱い、Devでの個別機能追加の前提にしない。ただしFunctionsを追加または変更してDevへ反映する場合は、対象Functionへ正規画面から到達できるpublic invoker・CORSをrelease確認として検証する。未認証入口、外部費用、異常呼出しの具体的なriskが確認された場合は、該当operationだけを前倒しで対処する。
 - Company設定ではsuper-userであることだけを正式actorの根拠にしない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。表示順だけは、同じtenantの有効な本登録会社管理者でもあるsuper-userに、自社の`siteOrder`と`scheduleOrder`の更新を許可する。会社管理者でないsuper-user、他tenant、profile・billing・operations等の他のCompany設定にはこの例外を広げない。
