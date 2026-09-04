@@ -125,16 +125,15 @@ UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh 
 
 ## ガバナンス文書の確認
 
-Managed governanceの再生成と検証:
+Managed governanceの検証:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath .
 powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2
 ```
 
-`governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`、`references/task-turnover-contract.md`は直接編集せず、明示されたgovernance作業の承認済みskill syncで更新します。project固有規則は`governance/project-rules.md`を更新します。rendererはread-only checkであり、managed validatorが内包します。通常startupと利用者要求の交代は[project coordination](runbooks/project-coordination.md)、文書移行は[移行索引](migrations/README.md)を参照します。
+`governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`、lockに記録されたmanaged referenceは直接編集せず、明示されたgovernance作業の承認済みskill syncで更新します。project固有の横断規則は`governance/project-rules.md`と同indexが列挙する4つのproject-owned segmentを更新します。rendererはread-only checkであり、managed validatorが内包します。通常startupと利用者要求の交代は[project coordination](runbooks/project-coordination.md)、文書移行は[移行索引](migrations/README.md)を参照します。
 
-上記は正規commandです。特にmanaged governance validatorの`-ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を省略した短縮commandや、scriptのdefault project pathへ依存する呼出しを使用しません。
+上記は正規commandです。managed governance validatorの`-ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を省略した短縮commandや、scriptのdefault project pathへ依存する呼出しを使用しません。standalone rendererは正規実行にせず、内包されたread-only checkを使用します。
 
 Project-owned文書・設定の検証:
 

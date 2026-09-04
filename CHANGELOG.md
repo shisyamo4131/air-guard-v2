@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 2026-09-04の反省会を受け、35,757 bytesだった`governance/project-rules.md`を常時境界と必読routingだけの小型indexへ変更し、project固有規則をcoordination/Git、development/data、environment/approval、documentation/verificationの4 segmentへ分けた。既存project coordinationへcheckpoint transition、既存local UI runbookへbuild前`UI-READY`を追加し、CAS-02の履歴と現行rollback、仕様と適用状態を分離した。新しい汎用手順書・verification gate・registryは追加せず、managed common governance、生成AGENTS、references、verification policy、製品code、data、environmentは変更していない。[判断](docs/decisions/0049-project-rule-routing-and-checkpoint-closeout.md)を参照。
+
 - Customer archive safetyのCAS-04として、Customer詳細へwrite actor限定のアーカイブ確認を追加した。取引先コード・名称・注意事項・理由を表示し、処理開始前からのsingle-flight、参照拒否と安全なerror表示、成功後一覧遷移、通常restore入口不在を実装した。domain 913/913、local Emulator 142/142、専用build、write/read-only actor・参照拒否・高速double-click・成功archiveのlocal UI受入れ、独立review、commit `8db79a2e`を確認した。local未deployで、CAS-05のDev/remote反映・利用者受入れは未実施・別承認。[検証証拠](docs/verification/customer-archive-local-acceptance.md)を参照。
 
 - Customer archive safetyのCAS-03として、`Customers_archive`のclient非公開、same-ID Customer再作成拒否、Site・OperationResult・Billingの新規Customer参照barrierをFirestore Rulesへ追加し、Billingのserver create/moveもCustomer確認と同じtransactionへ統合した。Siteは同じ会社の存在する別Customerへ変更可能な確定仕様を維持する。独立reviewでnested Billing path、transaction retry時の成功log、move競合testの偽陽性を補正し、最終domain 889/889、local Emulator 142/142、security再監査5/5、commits `8e6eb1d5`・`c99b8169`を確認した。local未deployで、CAS-03時点ではCAS-04 UIとDev/remote受入れが未着手だった。

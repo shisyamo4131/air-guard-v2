@@ -3,7 +3,7 @@
 - 状態: Customer今回フェーズ終了。結果・限定修正は[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)を参照 / 請求試験は後続フェーズへ移管
 - checkpoint: `CUSTOMER-01D-DEV-TEST-001`
 - 更新日: 2026-09-03
-- 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../../governance/project-rules.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
+- 正本: [仕様](../specification.md)、[既存Dev documentの3条件](../project-rules/development-and-data.md#dev試用中の既存document)、[Dev runbook](../runbooks/dev-deployment.md)
 - 利用者指示: local準備後にDevテスト開始を承認。利用停止は不要。検証用dataの作成と終了時の削除、利用者指定の既存取引先の編集を承認した。
 
 ## 対象と停止位置

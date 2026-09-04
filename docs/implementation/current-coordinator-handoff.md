@@ -5,6 +5,7 @@
 ## 現在の作業
 
 - 製品は試験運用中。Customer状態改修はCS-03、Customer archive safetyはCAS-04までlocal実装・検証・Git統合を完了しました。CS-04とCAS-05のDev反映・利用者受入れは、マスタデータ管理改修後まで延期しています。
+- 2026-09-04の反省会に基づくproject rule整理の判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、現在の入口と必読routeは[project rule index](../../governance/project-rules.md)を正とする。共通ガバナンス、生成AGENTS、lock記録済みmanaged reference、verification policy、製品code・data・environmentはこの整理の変更対象外である。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
@@ -12,11 +13,11 @@
 
 - Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
 - Spark用standalone Developer taskは実装前に中止・削除済みで、再利用しない。CAS-02/03/04はprimary coordinator配下の通常サブエージェント運用で完了した。CAS-05、Dev/Prod、remote data/migration、package、restore、retention/purge、code一意性/検索拡張、他マスタは未承認・対象外である。
-- 反省会一時メモは`.codex-test/customer-status-retrospective.md`、設計補助メモは`.codex-test/customer-status-security-design.md`。反省会と改善作業の両方が終了するまで削除しない。
+- Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
-1. 次の製品checkpointは[正式運用準備ロードマップの次の作業](../roadmaps/airguard-v2.md#次の作業)から利用者と選び、対象・対象外・環境・data・検証を着手前に合意する。
+1. 利用者は次の改修対象としてOutsourcerを選んでいる。新taskでは[Outsourcer実装調査](outsourcer-master.md)と[正式運用準備ロードマップの次の作業](../roadmaps/airguard-v2.md#次の作業)から、最初の小さなcheckpointの対象・対象外・環境・data・検証を合意する。具体的なOutsourcer仕様・実装はまだ承認済みと扱わない。
 2. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
@@ -29,3 +30,5 @@
 - [Customer状態のlocal検証記録](../verification/customer-02-status-local.md)
 - [確認事項台帳](pending-confirmations.md)
 - [local UI手順](../runbooks/local-ui-testing.md)
+- [project rule index](../../governance/project-rules.md)
+- [project rule整理の判断](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)

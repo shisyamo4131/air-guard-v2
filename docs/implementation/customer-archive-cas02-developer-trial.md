@@ -6,17 +6,19 @@
 - 対象: Customer archive safety roadmapの`CAS-02 専用Callable・監査・冪等性`だけ
 - 対象外: CAS-03、CAS-04、CAS-05
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[roadmap](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)
-- 現在方式: primary taskのcoordinatorが`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェントを順序立てて使用する
+- CAS-02採用方式（履歴）: primary taskのcoordinatorが`developer`、`tester`、`security_reviewer`、`reviewer`サブエージェントを順序立てて使用した
 
 ## 利用者承認と試行目的
 
 2026-09-04に利用者は、`gpt-5.3-codex-spark`を使用する別Codex task `Developer`へ開発と単体testを委譲し、coordinatorが結果をreviewして受入れまたは差戻す試験運用を、CAS-02だけについて承認した。CAS-02完了時にDeveloperとcoordinatorで反省会を行い、CAS-03以降へ同じ手順を採用するかは、その結果を利用者が判断する。
 
-Sparkの別task試験は実装前に中止した。その後、利用者はCAS-02自体を継続し、従来どおりprimary taskのcoordinatorが司令塔となってサブエージェントを活用するよう指示した。以後、別Codex task `Developer`は使用せず、application/Functionsとdomain単体testは`developer`サブエージェント、Emulator統合testは`tester`、安全性は`security_reviewer`、最終品質は`reviewer`へ委譲する。CAS-02完了時の反省会ではSpark試験停止と通常サブエージェント実行の両方を評価し、CAS-03以降の手順は利用者判断を待つ。
+Sparkの別task試験は実装前に中止した。その後、利用者はCAS-02自体を継続し、従来どおりprimary taskのcoordinatorが司令塔となってサブエージェントを活用するよう指示した。CAS-02ではapplication/Functionsとdomain単体testを`developer`サブエージェント、Emulator統合testを`tester`、安全性を`security_reviewer`、最終品質を`reviewer`へ委譲した。CAS-02完了時の反省会ではSpark試験停止と通常サブエージェント実行の両方を評価し、CAS-03以降の手順は利用者判断を待った。
 
 この承認はlocal repository内のCAS-02実装、test、review、文書、local branch・commitを対象とする。CAS-03/04、Firestore Rules、client/UI、Billingその他の参照writer、package、build、Dev/Prod、network、remote/data、migration、deploy、push、`main` mergeは含まない。
 
-## 実行方式と書込みlease
+以下の「CAS-02完了時の反省会」までに記す契約・checkpoint・commandは、CAS-02当時に採用・実行した履歴であり、現在または後続checkpointの手順へ再利用しない。現行状態と残作業は[roadmap](../roadmaps/customer-archive-safety.md)、現行の実装・rollbackは[実装設計](customer-archive-safety.md)を正とする。
+
+## 実行方式と書込みlease（CAS-02履歴契約）
 
 - 全taskはprimary repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使用する。別worktree、別repository copy、gitignore対象のshadow実装領域を作らない。
 - primary taskから作成する`developer`サブエージェントは`.codex/agents/developer.toml`を必読とし、自身がowned application/test fileを実装して、別writer subagentへ再委譲しない。primary user-facing taskとGit統合責務はcoordinatorに残す。
@@ -25,7 +27,7 @@ Sparkの別task試験は実装前に中止した。その後、利用者はCAS-0
 - Developerはstage・commitしない。terminal callback後、coordinatorがexact diff、worktree、test exit statusを確認し、受入れたfileだけを統合する。
 - 別writerの変更、branch/HEAD drift、想定外dirty、owned file外の変更を検出した場合、Developerはapplication diffを増やさず停止して報告する。
 
-## 起動確認checkpoint
+## 起動確認checkpoint（履歴）
 
 別task作成直後は実装を開始せず、次だけを行う。
 
@@ -47,13 +49,13 @@ worktree: <clean or exact dirty paths>
 
 このcallbackをcoordinatorが受理した後だけ、同じ`developer`サブエージェントへ実装checkpointを送る。
 
-## Firestore targetとedition境界
+## Firestore targetとedition境界（履歴）
 
 CAS-02の実行targetは`firebase.codex-test.json`が指定するCodex専用local Emulatorと合成dataだけである。今回のcheckpointはFirestore databaseのsetup、Rules変更、remote read/write、Dev/Prod releaseを行わず、version 1 archive envelopeはCAS-01で既に承認済みのdata contractを実装する。実装はdatabase edition、concurrency mode、edition固有queryに依存させない。
 
 remote Firestore project/database/editionは本checkpointのactual targetではなく未確認のまま維持する。DeveloperはnetworkやFirebase CLIによるremote確認を行わない。edition固有の設計・API・index・lock挙動が必要と判明した場合は、実装を進めず`approval-boundary`で停止する。remote Devへ進む将来checkpointでは、Firebase Firestore skillのpreflightに従い、利用者が選択・承認したdatabase targetについてeditionをread-only確認してから判断する。
 
-## Developer実装checkpoint
+## Developer実装checkpoint（履歴）
 
 ### Checkpoint
 
@@ -208,7 +210,7 @@ worktree: <clean or exact dirty paths>
 
 `developer`はcallback後に待機し、coordinatorから差戻しがある場合だけ同じowned filesを修正する。
 
-## Coordinatorの受入れ・差戻し
+## Coordinatorの受入れ・差戻し（履歴）
 
 coordinatorはDeveloper callback後に次を実物で確認する。
 
@@ -220,7 +222,7 @@ coordinatorはDeveloper callback後に次を実物で確認する。
 
 承認範囲内のcode/test不備、review finding、説明不足は同じ`developer`サブエージェントへ具体的なfile/symbol/test付きで差戻す。仕様変更、owned file追加、unowned dirty、branch/HEAD drift、network・package・remote/dataの必要、CAS-03/04が必要になった場合は作業を増やさず停止し、利用者へ報告する。
 
-## Developer受入れ後の独立工程
+## Developer受入れ後の独立工程（履歴）
 
 Developer差分を受入れた後、同時書込みは行わず、次を順に行う。
 
@@ -236,7 +238,7 @@ Developer差分を受入れた後、同時書込みは行わず、次を順に�
 
 `archiveCustomer`が制御するstructured log payloadは、`severity`、固定`message`、`errorName`、内部`errorCode`だけとする。raw error、stack、request、Auth token/claims、Customer・Company・actor識別子、`operationId`、`reason`、snapshot、document pathをapplication codeから渡さない。Firebase Functions / Cloud Loggingがruntime resource、timestamp、trace correlationなどのplatform-managed metadataを付加することは許容するが、archive domain dataやstackをapplication payloadへ追加したものとは扱わない。local targeted testはdirect Callable run時のapplication payloadを厳密に確認し、wrapped HTTP trace contextは未確認事項として残す。
 
-## CAS-02完了時の反省会
+## CAS-02完了時の反省会（当時の予定手順）
 
 CAS-02の完了gateとlocal commit後、coordinatorは実装を担当した`developer`サブエージェントへ反省会checkpointを送り、file変更なしで次を報告させる。
 
@@ -262,7 +264,7 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - 最終の一般reviewとsecurity reviewでは、上記修正後のCAS-02 application codeに追加のactionable findingはなかった。Firebase SDKがtrace context時にplatform-managed trace fieldを付け得る点は低riskの証拠解釈として残し、application-controlled payloadの4-field制限と区別した。
 - coordinatorがtargeted domain testを再実行し、Customer archive 13/13、Callable 5/5、error mapper 3/3、共通Auth integration 2/2、Functions entrypoint 1/1、role permission 7/7、Auth identity 10/10、Auth mapper 3/3をそれぞれexit status 0で確認した。targeted Emulator 5/5もtesterがexit status 0で確認した。
 - 最終worktreeでcoordinatorが`node --test test/domain/*.test.mjs`を実行し873/873、exit status 0、続いて`npm run test:local`を実行し123/123、exit status 0を確認した。後者はproject `demo-air-guard-v2-codex`、loopback only、`AIR_GUARD_EXTERNAL_EFFECTS=deny`、利用者用`saved-data`不変、専用seed read-onlyを報告した。Firebase CLIのMOTD取得失敗・期限切れ認証・同一projectの複数Emulator警告は出たが、local suiteは完了し、remote project/data操作は行っていない。文書gate、final diff-check、local commit、反省会はこの記録時点では未完了である。
-- CAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierがないため、この差分単独はdeploy禁止・release-readyではない。CAS-03/04は開始していない。
+- この記録時点ではCAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierがなく、この差分単独はdeploy禁止・release-readyではなかった。CAS-03/04も開始前だった。現行状態は[roadmap](../roadmaps/customer-archive-safety.md)を正とする。
 - coordinatorはreview済み15 fileをcommit `74d0eb4dfc73fee4bf1980a0f4076bbf23a2c102`（`feat: add CAS-02 customer archive callable`）へ統合し、直後のworktreeがcleanであることを確認した。push、merge、deployは行っていない。
 
 ### 2026-09-04 Spark開始時停止
@@ -274,7 +276,7 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - 2026-09-04 11:44 JST時点で、coordinatorはbranch `codex/customer-archive-cas02-trial`、HEAD `e22c0f2c73d5b776d81359fab8b030a755e984f2`、clean worktreeを再確認した。
 - その後、利用者はSparkモデルの別Developer taskによる開発を中止した。15:58 JST以降の再試行、別modelへの自動切替、新しいstandalone Developer task作成は行わない。
 
-上記は中間事実であり、CAS-02の実装・test・review・完了gate・反省会を完了した証拠ではない。CAS-02はIn progress、得点0を維持し、CAS-03/04は開始しない。
+上記は当該記録時点の中間事実であり、その時点ではCAS-02の実装・test・review・完了gate・反省会を完了した証拠ではなかった。CAS-02はIn progress、得点0で、CAS-03/04は開始前だった。現行状態は[roadmap](../roadmaps/customer-archive-safety.md)を正とする。
 
 ### 中止時の所見
 
@@ -282,7 +284,7 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - 確認済み事実: 最初の実装turnはcode編集より先に探索を継続してcontext windowを使い切った。探索を縮小したretry taskは実装turn開始直後にSpark固有usage limitへ達した。
 - 未確認: Spark固有のtoken/usage上限量、最初のcontext window停止が次taskのusage limitへ与えた正確な消費量、reset後に同じ指示で実装完了できたか。
 - 推測: repositoryの必読ガバナンスと詳細な安全契約を保持したCAS-02は、短いfocused editよりcontext負荷が高く、今回利用可能だったSpark個別枠と相性が悪かった可能性がある。
-- 後続判断: 利用者はCAS-02を通常のサブエージェント運用で継続すると決定した。Spark用standalone taskは再利用せず、本書の技術契約を`CAS02-SUBAGENT-DEVELOP-UNIT-01`へ引き継ぐ。CAS-03以降の手順は未決定のままとする。
+- 後続判断（当時）: 利用者はCAS-02を通常のサブエージェント運用で継続すると決定した。Spark用standalone taskは再利用せず、本書の技術契約を`CAS02-SUBAGENT-DEVELOP-UNIT-01`へ引き継いだ。この所見時点ではCAS-03以降の手順は未決定だった。現行状態は[roadmap](../roadmaps/customer-archive-safety.md)を正とする。
 
 ## CAS-02完了時の反省会記録
 
@@ -294,14 +296,14 @@ coordinatorは実測したcallback、差戻し、diff、test、review、書込�
 - 初期契約はactor、tenant、exact input、6 read、all-reads-before-writes、3参照、create-only、exact 26-field envelope、retry、safe response/error、ownership、禁止範囲、個別commandを具体化しており、実装scopeの逸脱防止に有効だった。一方、malformed archiveとwell-formed mismatchのdomain code分離、server timestamp sentinelの実物判定、firebase-functions loggerのruntime semantics、Functions dependency解決方式は初期promptで十分に固定されていなかった。
 - Spark standalone taskは文書記録上、route確認2回は成功したが、最初の実装turnが約8分46秒後にcontext window不足、retry taskが実装開始直後にSpark固有usage limitで停止し、製品差分・test・Git mutationは0だった。Spark固有上限量、最初の停止が消費量へ与えた影響、reset後の完遂可能性は確認できなかった。通常Developerサブエージェントは、exact contractからFunctions・use-case・validator・mapper・domain testを同一ownerで実装し、局所差戻しへ対応できた。
 
-### 判断とCAS-03以降の選択肢
+### CAS-02完了時点の判断（履歴）
 
 - CAS-02では詳細契約、同一Developerへの局所差戻し、Testerの実runtime検証、security/general reviewの順序が機能した。書込み競合を避けるための別worktreeやshadow directoryは不要だった。
 - CAS-03へ通常サブエージェント方式を採用する場合は、開始前に`code_explorer`でRulesと全client/server reference writerのactual pathを固定し、Developer checkpointを少なくとも「RulesとRules回帰」「server reference assertionとwriter integration」へ直列分割する。各promptへaccepted dirty path、same-ID create deny、missing/archived/other-tenant Customer拒否、`customerId`変更、Admin SDK bypass、archive/reference競合の許容最終状態、rollback、個別commandを明記する。
 - SDK/helperのruntime semanticsへ依存する箇所は、実装前にinstalled local sourceまたは公式一次資料を確認する。Developer unit/source contract、Tester Emulator/concurrency、security reviewer、general reviewerの順で進め、findingは元ownerへ戻す。
 - Rules、3種類のserver writer、concurrency testを一つのpromptで扱う必要がある、actual writer inventoryが広くbounded ownershipを作れない、context/usage停止が再発する、複数package/APIの調査が不可避な場合は、さらにcheckpointを分割してからmodel変更を検討する。Firestore editionやSDK公式仕様が未解決の場合だけ`docs_researcher`を追加し、UI testerはCAS-04へ分離する。
-- CAS-03以降の方式は利用者判断待ちであり、自動開始しない。残るrelease blockerはCAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierと競合test、CAS-04のUI/local受入れ、別承認のDev preflight・release・利用者受入れである。
+- CAS-02完了時点ではCAS-03以降の方式を利用者判断待ちとし、自動開始しなかった。当時のrelease blockerはCAS-03のarchive client read deny、same-ID create deny、Sites・OperationResults・BillingsのRules/server writer barrierと競合test、CAS-04のUI/local受入れ、別承認のDev preflight・release・利用者受入れだった。その後の現行状態は[roadmap](../roadmaps/customer-archive-safety.md)と[実装設計](customer-archive-safety.md)を正とする。
 
-## Rollback
+## CAS-02単独時点のrollback記録（履歴）
 
-CAS-02はlocal未deployのため、機能rollbackはreview済みCAS-02 commitをGitでrevertし、Callable export、専用module、domain/Emulator testを一組で戻す。remote archive dataは作成しておらず、data rollbackはない。部分的にCallableだけをdeployせず、CAS-03のbarrierが揃うまでrelease対象へ含めない。試験運用記録は履歴として保持し、CAS-03/04は未着手のまま維持する。
+CAS-02単独完了時点ではlocal未deployであり、review済みCAS-02 commitを一組でrevertできる前提だった。この前提はCAS-03/04統合後の現行rollbackには使用しない。CAS-02だけを戻して後続guardやUIを残す部分revertは行わず、現在の停止順・依存関係・data境界は[現行実装設計](customer-archive-safety.md#互換性rollback未確認)を正とする。remote archive dataを作成していないという記録はCAS-02当時の履歴として保持する。

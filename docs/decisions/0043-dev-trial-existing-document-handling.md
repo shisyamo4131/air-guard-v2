@@ -4,7 +4,7 @@
 - 状態: Accepted
 - 関連仕様: 開発ガバナンスと進捗管理
 - 関連判断: [0031](0031-proportional-data-boundary-and-change-safeguards.md)、[0040](0040-impact-based-staged-verification.md)、[0041](0041-single-source-documentation-and-final-validation.md)
-- 運用規則の正本: [project rules](../../governance/project-rules.md#dev試用中の既存document)
+- 運用規則の正本: [project rules](../project-rules/development-and-data.md#dev試用中の既存document)
 
 ## 背景
 

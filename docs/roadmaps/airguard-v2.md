@@ -39,13 +39,14 @@
 
 ## 次の作業
 
-1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../../governance/project-rules.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
+1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
 2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了した。取引状態の表示・編集は[Customer状態ロードマップ](customer-status.md)のCS-03、archive safetyは[専用ロードマップ](customer-archive-safety.md)のCAS-04までlocal実装・検証を完了した。CS-04とCAS-05のDev反映・受入れはマスタデータ管理の一連の改修後へ延期し、別承認する。restore、code一意性・検索拡張、Siteへの移行は別の作業単位として後続合意する。個別改修の未実施Dev受入れを成功扱いせず、下記方針に従ってまとめて確認する。
-3. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
-4. 配置管理の表示順行削除の観測と詳細案は[提案中の専用ロードマップ](arrangement-row-removal-ux.md)で扱う。行単位のpending、同じ`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryはARU-01で利用者承認を得るまで実装要件としない。Site/Schedule削除やgeneric UI全体はscope外で、現在は提案0%のため本ロードマップの10%進捗には加点しない。
-5. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
-6. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
-7. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
+3. 2026-09-04の反省会是正とtask交代後はOutsourcerを次のマスタ改修対象とする。現行仕様、actor・tenant、data、参照経路、失敗経路、rollback、testを確認し、最初の小さなcheckpointを利用者と合意する。具体的な仕様・実装は未承認であり、この項目による進捗加点は行わない。
+4. マスタ管理の改修後に、OperationResultの管制側編集lockと権限境界の改修範囲をすり合わせる。Billing/勤怠/履歴同期、rounding、notificationを含む検証はそのフェーズで範囲を合意し、現在のCustomer検証へ含めない。
+5. 配置管理の表示順行削除の観測と詳細案は[提案中の専用ロードマップ](arrangement-row-removal-ux.md)で扱う。行単位のpending、同じ`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryはARU-01で利用者承認を得るまで実装要件としない。Site/Schedule削除やgeneric UI全体はscope外で、現在は提案0%のため本ロードマップの10%進捗には加点しない。
+6. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
+7. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
+8. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
 
 ### 今後のDev受入テストの実施時期
 
@@ -53,7 +54,7 @@
 
 - 各改修は「実装・local検証完了」と「Dev受入待ち」を区別し、未実施のDev受入を成功・全工程完了として扱わない。Devで確認する操作・期待結果・権限・必要dataを各checkpointへ残し、まとめた受入時に対象を確定する。
 - Schemaの明らかな変更、他機能への明確な影響、その他確実に必要な場合の状態確認・必要なmigrationは既存規則を維持する。Dev反映時に必要な確認と受入テストの延期を区別し、deploy時期・対象・承認は個別に決める。
-- これはロードマップ上の実施順序の記録であり、今回ガバナンス・検証policy・現行の完了条件は変更しない。全改修に共通する規則としてのガバナンス反映要否は利用者の検討待ち。正式運用準備の進捗値と、終了済みCustomerの受入結果は変更しない。
+- これはロードマップ上の実施順序の記録であり、検証policy・現行の完了条件は変更しない。2026-09-04の反省会で承認されたproject rule整理は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)へ分離する。正式運用準備の進捗値と、終了済みCustomerの受入結果は変更しない。
 
 ## 成果物と検証証拠
 

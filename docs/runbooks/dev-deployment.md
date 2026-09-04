@@ -16,7 +16,7 @@ maintenanceを使うreleaseは、[maintenance・data change runbook](maintenance
 
 ## 機能改修時の既存Dev document
 
-必要性の判断は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を正本とする。通常の機能改修では、変更箇所の検証後にDevへ反映し、実際の作成・編集・保存で得た不具合を修正する。全件診断・一括修復をreleaseの一律前提にしない。
+必要性の判断は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)を正本とする。通常の機能改修では、変更箇所の検証後にDevへ反映し、実際の作成・編集・保存で得た不具合を修正する。全件診断・一括修復をreleaseの一律前提にしない。
 
 releaseの`data-impact`には、変更差分と関連reader/writerから判断した該当条件・具体的根拠と、状態確認・migrationの要否を簡潔に記録する。非該当を示すためだけのremote全件走査や新しい診断toolは要求しない。該当する場合は影響範囲の状態確認を行い、必要な変換は[data migration runbook](data-migrations.md)へrouteする。条件に該当するか不明な場合は、そのfieldと利用経路に絞って確認する。
 
@@ -203,7 +203,7 @@ node scripts/check-customer-dev-compatibility.mjs --read-only --project air-guar
 
 補助平面文字・単独surrogateのRules文字数判定、およびGeoPointの省略されたゼロ座標は、このtoolでは互換性未確認として非成功にする。`unicode-unverified`や`wire-unverified`をdata破損と断定せず、現行Rulesとの照合方法を別途確認する。
 
-不適合または取得未完了なら検査成功とは扱わず、その実行を終了する。同じ処理の無条件再試行、対象・上限拡大、修復へ進まない。完全な0件結果と取得不能を区別し、0件でも想定した業務範囲と一致するかを確認する。結果だけでrelease全体の可否を決めず、必要な状態確認として選択した目的の達成と[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)を照合する。toolはdataを変更しないためdata rollbackは不要で、local実装の取消しは対象commitの安全なrevertで行う。
+不適合または取得未完了なら検査成功とは扱わず、その実行を終了する。同じ処理の無条件再試行、対象・上限拡大、修復へ進まない。完全な0件結果と取得不能を区別し、0件でも想定した業務範囲と一致するかを確認する。結果だけでrelease全体の可否を決めず、必要な状態確認として選択した目的の達成と[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)を照合する。toolはdataを変更しないためdata rollbackは不要で、local実装の取消しは対象commitの安全なrevertで行う。
 
 Dev反映は検査とは別のbounded release checkpointとする。既知のdata影響、残る派生値改ざんrisk、旧client併存、必要なRules回帰・Dev build、Firestore RulesとHostingの対象・反映順・rollback・Dev確認項目を固定してから承認を得る。候補Rulesとの形式不適合だけを理由にmigrationを必須にせず、3条件で必要と判定した状態確認・変換を行う。通常操作の不具合は再現して該当経路を修正する。
 

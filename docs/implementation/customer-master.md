@@ -54,7 +54,7 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 対象範囲、明示command、接続前確認、上限、未検証表現の扱い、exit status、停止条件は[Dev runbookのCustomer事前検査](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を正本とする。実行時点のDev件数・保存形式・認証と応答の確認結果は[CUSTOMER-01B検査証拠](../verification/customer-01b-dev-compatibility.md)を参照する。具体的な原因項目と、現在のedition・IAM設定全体は未確認である。
 
-利用判断は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)に従う。このtoolの実行・原因別拡張・ID別修復一覧はCustomerのDev反映の一律前提ではない。既存の実行証拠はそのまま保持し、次の作業は[roadmap](../roadmaps/airguard-v2.md#次の作業)を参照する。
+利用判断は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従う。このtoolの実行・原因別拡張・ID別修復一覧はCustomerのDev反映の一律前提ではない。既存の実行証拠はそのまま保持し、次の作業は[roadmap](../roadmaps/airguard-v2.md#次の作業)を参照する。
 
 3条件の具体的判定、対象service、切替・復旧、通常操作と下流確認の範囲は[Customer Dev反映・受入れ計画](customer-dev-release.md)を参照する。
 

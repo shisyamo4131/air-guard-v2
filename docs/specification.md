@@ -154,7 +154,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 取引先の`contractStatus`（`ACTIVE` / `TERMINATED`）は、その時点の取引状況を表すだけのフラグとする。稼働中の現場・現場稼働予定が存在しても変更でき、状態だけを理由にCustomerの選択・編集や関連する業務操作を禁止しない。過去に作成されたdocumentでも、もともとCustomerを選択できる操作は選択可能なままとし、再開を選択の前提にしない。状態変更によって現場・予定等を自動終了・取消ししない。既存の認証・権限・他の業務条件は緩和しない。
 - 取引状態の変更に終了日時・原因・理由・専用履歴を新設または必須化しない。通常の更新者・更新時刻は維持するが、これを契約終了日時と解釈しない。将来、状態に応じた動作制限を設ける場合は、状態になった日時・原因と過去documentへの適用条件を含めて別途仕様を合意する。判断理由は[ADR 0044](decisions/0044-customer-status-as-descriptive-flag.md)を参照する。
 - 取引先の入力中dataは最新表示dataと分離する。同じ操作のfieldが別画面で変更された場合は保存せず、入力内容を破棄して最新値を読み直す。自分の保存途中の反映と失敗後の巻き戻しは別画面の変更として扱わず、失敗時の入力を保持する。
-- 取引先のclient直接deleteと`Customers_archive`のclient read・作成・変更・削除は許可しない。取引状態の編集と、参照確認・監査を伴うarchive・緊急restoreは別の操作とする。専用archive Callable、archive非公開・参照barrier、権限制御されたCustomer詳細の確認画面入口はlocal実装・検証済みで、未deployである。緊急restoreは未実装で通常画面へ入口を設けない。単なる状態フラグという扱いを削除・復元の安全条件へ拡張しない。
+- 取引先のclient直接deleteと`Customers_archive`のclient read・作成・変更・削除は許可しない。取引状態の編集と、参照確認・監査を伴うarchive・緊急restoreは別の操作とする。archiveは専用Callable、archive非公開・参照barrier、権限制御されたCustomer詳細の確認画面入口を使用する。緊急restoreは通常画面へ入口を設けず、別の権限制御された操作として設計・承認する。単なる状態フラグという扱いを削除・復元の安全条件へ拡張しない。実装・環境への適用状態は[Customer archive safety roadmap](roadmaps/customer-archive-safety.md)を参照する。
 - 取引先archiveは誤登録・重複だけを対象とする`archiveCustomer`専用Callableで行う。会社は検証済みidentityから導出し、同社の有効な本登録会社管理者または既知role preset由来の`customers:write`だけを許可する。入力はCustomer ID、必須reason、operation IDだけとし、actor・時刻はserverで確定する。一つのtransactionでactive Customer、同ID archive、statusを限定しないSites・OperationResults・BillingsのcustomerId参照を確認し、参照・衝突・不正状態ではwrite 0とする。version付きCustomer snapshotとreason・actor・時刻・operation IDをsame-ID archiveへ上書きせず保存してactiveを削除し、同operationの再試行だけを冪等に扱う。generic delete/restoreは使用しない。
 - archive後の参照生成を防ぐため、Sites・OperationResults・BillingsでcustomerIdを新規設定または変更するclient/server writerは、同じ会社の`Customers/{customerId}`が存在することを必須にする。Customer createは同ID archiveが存在すれば拒否し、archive documentを削除済みIDのtombstoneとして扱う。ここでのCustomer存在は`contractStatus=ACTIVE`を意味せず、TERMINATED Customerも通常どおり使用できる。専用lock collectionは設けない。詳細は[ADR 0046](decisions/0046-customer-archive-reference-barrier.md)を正とする。
 - Firestore Rulesは取引先の同一会社、書込み担当、操作別field、型、状態、更新者・更新時刻、削除・archive拒否を強制する。検索用情報と外部住所検索結果の意味上の正しさはRulesだけでは完全再計算できないため、正規画面の専用writerを維持し、server生成へ移すかはDev反映前の残存risk判断とする。
@@ -258,24 +258,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - `docs/roadmaps/` を、目標、残作業、完了条件、証拠に基づく進捗の正本とする。確認済み要件の正本は引き続き本文書とする。
 - 正式運用準備は、合計100点の加重マイルストーンで管理する。現在はマイルストーン単位の部分加点を行わず、完了条件と証拠が揃った場合だけ当該点数を得る。
 - スコープ追加または完了判定の訂正で進捗率が低下する場合は、変更前、変更後、理由を記録し報告する。
-- task交代中を除き、設計・調査・review・development・testに実作業があり、独立した非重複scopeへ分割でき、専門roleの結果が必要な場合は、原則として適切なsubagentを使用する。同一checkpoint内で相互に依存しない複数workstreamは、共通baseline、非重複ownership、個別callback、利用可能枠を固定して原則並列に割り当て、全結果を統合する前に次checkpointへ進まない。単一の小作業を形式的に分割しない。長期のマルチエージェント作業は、レビュー可能なチェックポイントを1件ずつ扱うイベント駆動型を基本とし、標準のセッション終了条件は安全に独立実行できる作業が尽きた時点とする。
-- checkpoint固有のsubagent禁止は、当該checkpointのterminal callbackとcoordinator reviewまでに限定し、後続checkpointへ持ち越さない。利用者要求のtask交代作成はcoordinator自身が行う。通常の調査・実装・検証・reviewのroutingは維持する。
-- コーディネーターのセッション容量が300 MiBに達した場合は新規割当を停止し、リポジトリへ引継ぎ状態を記録する。task交代は利用者が明示要求した場合に行い、既存正本の製品事実・未決事項・次作業を整え、関連差分を検証・local commitしてprimaryをcleanにする。
-- `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は現在task IDに対応する永続session JSONLの実測を意味し、model token/context windowと区別する。task handoff閾値は300 MiB、Codex全体は10 GiBの参考警告とし、最新sessionを推測しない。ID不明、0件・複数一致、script失敗、全体scan不完全時は推測による交代・cleanup判断を行わない。
-- コーディネーターと専門タスクの役割は、個別チャットではなく、本文書、ADR、ロードマップ、運用文書、変更履歴、Git、最新チェックポイントによって継続可能にする。
-- すべてのtaskはAGENTS.md、governance/project-rules.md、docs/README.mdから依頼に必要な正本を読む通常startupを使用する。手動作成・旧task利用不能時も同じ経路とし、旧ownerの協力、activation、交代専用commitを要求しない。利用者要求の交代では同じ基本名と次の連番のfresh non-fork taskをprimaryへ作成する。governance変更だけで交代を強制せず、installed scaffold skillは明示されたgovernance作業でのみ使用する。Codexは旧taskのarchive/deleteを実行・依頼しない。判断は[ADR 0045](decisions/0045-governance-3-normal-startup.md)、手順は[project coordination](runbooks/project-coordination.md)を正とする。
-- 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpointまたはfeature boundary内では、Codexの`developer`をapplication実装の標準担当とする。Codex coordinatorはprimary taskの司令塔として変更契約、checkpoint・ownershipを整理し、専門taskの報告を収集・照合して矛盾を解消し、差分・検証・document・roadmap・ADR・利用者報告へ統合する。critical identifier、approval・scope、最終diff・worktree、必須検証のexit status、local Git統合、completion claimはcoordinator自身が確認し、承認範囲を隣接機能、未承認仕様、別repository、外部作用へ拡張しない。
-- 承認済みcheckpointに必要なapplication code、Functions、Firebase Rules、関連設定は`developer`へ集中し、unit・domain・integration・Rules・Emulator等のtest fileはcoordinatorが明示したscopeで`tester`が編集できる。個々のtest fileごとの利用者承認は要求しない。explorer、researcher、reviewer、UI tester、security reviewerはread-onlyを維持する。
-- local UI受入れは[project rules](../governance/project-rules.md)と[local UI検証runbook](runbooks/local-ui-testing.md)のrisk-based基準に従う。条件を満たす既存画面・既存操作の内部改修はCodex専用local UIで完了でき、新規画面・操作、利用者判断、実環境固有条件がある範囲だけ利用者確認を残す。Dev・Prod・remote dataの受入れと正式運用開始承認は別境界である。
-- 利用者のChrome・profile・session、desktop app、Dev・Prod・remote UI、外部account・session・stateを扱う操作は、必要な承認後もcoordinator自身が直接行い、subagentへ委譲しない。Codex専用demo project、loopback、合成data、in-app browserに限定したlocal UIは`ui_tester`へ委譲できる。公式情報のread-only Web調査と承認済みlocal CLI・Emulator検証はこの直轄範囲に含めず、この担当規則からnetwork、外部write、remote/data、deployの新しい権限を推論しない。
-- Firestore Rulesの既存許可を狭める改修に伴う、既存Dev documentの追加状態確認・migrationの要否は[project rules](../governance/project-rules.md#dev試用中の既存document)へrouteする。cutover方式は対象環境、data規模、許容停止時間、旧client併存の有無から選ぶ。正式release前のDevで全件をbounded maintenance内にbackup・変換・検証できる場合は長期互換層を必須とせず、production・複数client version・許容不能な停止・bounded maintenanceへ収まらない規模または外部作用がある場合だけ互換releaseを追加する。新規pathはdocument作成前にclient denyを確立する。詳細は[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)と[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)を正とする。
-- roadmapは独立してFIXできる一つの利用者価値またはdata correctionを単位とし、設計、実装、local検証、必要なmigration、Dev反映、Dev受入れまでを原則100%とする。独立改修を一つの巨大roadmapへ集約せず、未実施のDev受入れを完了扱いしない。
-- testerによるtest code編集は、利用者またはコーディネーターが対象を明示した場合に許可する。
-- Codex専用local UI検証は、remoteへ到達しないdemo projectとloopback専用portを使い、CodexがEmulator、隔離済みFunctions、local server、合成Authentication account・data、Codex管理ブラウザの起動から終了までを所有する。`.codex-test`配下と通常のCodex専用test sessionにある合成dataは、作成・変更・削除、予約migration、candidate acceptance・promotionを含め、操作ごとの利用者承認なしに管理できる。利用者のChrome起動やsign-inを通常の前提にせず、利用者用local環境、Dev、Prod、実dataへ権限を拡張しない。上位のCodexまたはBrowser安全policyが要求する確認は維持する。Codex専用generated UIのbuildは従来どおり実行ごとの明示承認とし、承認済みbounded Dev release checkpointのDev buildとは分離する。
-- CodexがブラウザUIの挙動・受入れを検証するときは、可視画面上で実利用者が行える通常のpointer・keyboard入力だけを操作証拠とする。`fill`、DOM・storage・Auth persistenceの直接変更、event・handler・component method・client APIの直接呼出し、force操作、disabled・hidden・overlay回避を用いた結果は受入れ証拠にしない。read-only観測と、OOB確認・backend verifier・export/import等の非UI処理は許可するが、それぞれUI操作、非UI準備、backend assertionとして区別する。2026-08-17までの旧基準によるdashboard到達証拠は履歴として保持するが、この基準での正規signup、再import後sign-in、dashboard到達は再検証が必要である。
-- 実装、修正、改修は作業単位ごとにbranch境界を利用者と確認し、原則として機能単位の作業ブランチで行う。コーディネーターは合意済み範囲の差分と検証を確認してlocal Gitを管理し、利用者が動作を確認して明示的に承認するまで `main` へマージしない。
-- `main` への統合は原則として機能単位のマージコミットを残し、Git上の取消し境界を明確にする。revert前にはデータ、外部作用、契約互換性を確認する。`main` への直接コミット、マージ、Git push、Prodデプロイはそれぞれ明示的承認を必要とする。Devは一つのbounded release checkpointに対する明示承認を、同runbook内の静的生成、deploy、remote検証の承認として扱う。
-- 関連リポジトリはAirGuardV2の調査に必要な範囲で事前承認なく読み取れるが、変更は対象、影響、互換性、公開・導入順序を確認した利用者の明示的承認を必要とする。
+- 開発・委譲・Git・task lifecycleは[Coordination and Git rules](project-rules/coordination-and-git.md)、application・Firestore・検証範囲は[Development and data rules](project-rules/development-and-data.md)、承認・環境・local UIは[Environment and approval rules](project-rules/environment-and-approval.md)、文書・checkpoint closeoutは[Documentation and verification rules](project-rules/documentation-and-verification.md)を正とする。本文書へ横断的な実行規則を複製しない。
+- local UI受入れは[Environment and approval rules](project-rules/environment-and-approval.md)と[local UI検証runbook](runbooks/local-ui-testing.md)、Firestore Rules縮小時の既存Dev document・migration・cutoverは[Development and data rules](project-rules/development-and-data.md)、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)へrouteする。roadmapの実装単位、branch・Git、関連repository、local/Dev/Prodの実行境界も上記4つのproject rule segmentを正とする。
 
 ## セキュリティと機密情報
 
@@ -283,7 +267,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 本番の個人情報、勤怠、顧客、請求、位置・現場情報を例示データとして転記しない。
 - Firestore と Storage はクライアント UI とは独立した Security Rules で保護する。
 - 管理者権限を使う Cloud Functions は入力、テナント、認証、再実行の安全性を検証する。
-- 既知の認証・認可・tenant分離問題を改修の最優先事項とする。大規模な一括置換ではなく、利用者が仕様と影響を理解できる最小segmentに分け、現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを確認してから実装する。
+- 既知の認証・認可・tenant分離問題の改修順とsegment境界は[Development and data rules](project-rules/development-and-data.md#優先順位とroadmap)へrouteする。
 
 ## 現段階の完了条件
 
@@ -294,7 +278,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - データ移行、設定変更、デプロイが必要な場合、その手順と復旧方法が記録されている。
 - ユーザーが対象環境で動作確認を行い、結果を判断できる。
 
-Codexによる検証が明示的に許可された変更では、Codex専用のlocal Firebase Emulator環境に限定して単体・結合・UIテストを実施できる。認証後のUIテストも、Codexが専用Emulator、隔離済みFunctions、local server、合成account・data、Codex管理ブラウザの起動から終了までを所有し、可視画面上の通常操作で行う。利用者のChrome起動やsign-in済み画面の準備を通常の前提にしない。ただし、外部サービスへの作用を排除できない検証、リモート環境の検証、最終的な試験運用上の判断はユーザーが担当する。
+Codexによる検証は[Environment and approval rules](project-rules/environment-and-approval.md)と該当runbookに従う。外部serviceへの作用を排除できない検証、未承認のremote環境検証、最終的な試験運用上の判断はユーザーに残す。
 
 ## 未決事項
 
@@ -307,7 +291,7 @@ Codexによる検証が明示的に許可された変更では、Codex専用のl
 
 ## 仕様変更規則
 
-重要な変更はユーザーの明示的承認後に確定する。承認済みcheckpoint内ではCodexがapplication、必要なRules、test、自動検証、必要なin-app UI smoke、本文書、関連ADRと索引、`CHANGELOG.md`、関連マニュアル、運用文書を担当する。利用者によるlocal UI受入れの要否はrisk-based基準で決める。push、`main` merge、deploy、Dev・Prod、remote/data、network、Schemas・Admin SDK・関連repository、package公開、migration、外部service変更は、それぞれ既存の別承認境界を維持する。
+重要な要件変更はユーザーの明示的承認後に確定する。承認済みcheckpoint内の変更・検証・文書更新と、Git・環境・remote/data・関連repository・package・migration・外部serviceの承認境界は上記4つのproject rule segmentに従う。
 
 作業指示を受けたときは、関連文書と実装コードを照合する。指示との相違がある場合は変更前にユーザーへ確認し、実装から判明した未記載の恒久仕様は、実装事実と承認済み要件を区別して適切な文書へ反映する。
 

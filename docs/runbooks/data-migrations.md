@@ -8,7 +8,7 @@ maintenanceを伴うmigrationでは、個別手順に加えて[maintenance・dat
 
 ## 小規模Dev migrationの共通手順
 
-本節はmigrationが必要と判断された後の実行手順である。機能改修時に既存Dev documentの全件診断・一括修復を標準前提とせず、要否は[project rulesの3条件](../../governance/project-rules.md#dev試用中の既存document)で判断する。条件に該当する場合は影響範囲の状態確認を必須とし、変換が必要なら本節と固有契約に従う。状態確認で変換不要が確認できた場合は、その根拠をreleaseの`data-impact`へ記録する。
+本節はmigrationが必要と判断された後の実行手順である。機能改修時に既存Dev documentの全件診断・一括修復を標準前提とせず、要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)で判断する。条件に該当する場合は影響範囲の状態確認を必須とし、変換が必要なら本節と固有契約に従う。状態確認で変換不要が確認できた場合は、その根拠をreleaseの`data-impact`へ記録する。
 
 小規模であることだけを根拠に確認や復旧手段を省略しない。一方、すべてのmigrationへmaintenance、全体snapshot、専用backup、外部service確認を一律に追加しない。対象writer、旧新runtimeの互換性、追加・更新・削除の別、冪等性、件数、外部作用、失敗時の復旧難度を個別ADR・script・release checkpointで確認し、必要なものだけを選ぶ。
 
