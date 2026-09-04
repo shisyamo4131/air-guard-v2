@@ -1183,23 +1183,23 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: `Outsourcer.contractStatus/logicalDelete/hasMany`、client adapter delete、下流ID fetch
 - 確認済み実装事実: 終了はstatus変更だけ。削除guardはSchedule/OperationResultのみでNotificationを含まず、archive後はlive ID fetchが失敗し得る。restore UIはない。
 - 想定影響と発生条件: 通知のみ参照、guard競合、誤archiveにより名称欠損・候補消失・復旧不能が起き得る。
-- 未確認点・仮説: 終了後の過去表示、restore、保持期間、通知参照の正式要件は未決定。
+- 未確認点・仮説: statusとは分離したarchive対象、過去表示、restore、保持期間、通知参照の正式要件は未決定。
 - 推奨する将来対応: 全参照catalog、終了/削除/restore policy、snapshot表示fallback、競合安全なserver guardを設計する。
-- 必要なテスト: Schedule/Result/Notification各参照、並行参照作成、終了後表示、archive/restore、欠損master。
+- 必要なテスト: Schedule/Result/Notification各参照、並行参照作成、status変更後表示、archive/restore、欠損master。
 - ユーザー判断が必要な事項: CONF-0072。
 
 ## FUT-0088 Outsourcer候補のACTIVE制約を利用経路で統一する
 
-- 状態: Open
+- 状態: Resolved
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-033
 - 対象ファイル・シンボル: `useOutsourcersInRange`、`useFetchOutsourcer.searchOutsourcers`、`OutsourcerAutocomplete`
-- 確認済み実装事実: 配置rangeはACTIVE限定だが汎用Autocomplete検索はstatus条件を付けず、終了済み外注先を返し得る。SPEC-DEEP-033でOperationResult worker inputがこのAutocompleteを直接選ぶことを確認した。
-- 想定影響と発生条件: status非限定Autocomplete利用画面でTERMINATED外注先を新規予定・実績へ選べる可能性がある。
-- 未確認点・仮説: 各Autocomplete利用元が別途制約するか、過去訂正で終了先を選べる必要性は未確認。
-- 推奨する将来対応: 用途別`activeOnly/includeTerminated`契約を明示し、defaultを安全側へ統一する。
-- 必要なテスト: ACTIVE/TERMINATED検索、cache混入、過去訂正、新規配置、ID指定表示。
-- ユーザー判断が必要な事項: CONF-0073。
+- 確認済み実装事実: OUT-03でstatusをCustomerと同じ説明用フラグと確定し、一覧・検索・Autocomplete・配置・稼働実績の候補へ影響させないようACTIVE query条件を除去した。ID指定表示も従来どおりstatus非依存である。
+- 想定影響と発生条件: statusだけを理由に候補が欠落する経路を解消した。
+- 未確認点・仮説: なし。code方針、一覧pagination、Autocomplete rendererはFUT-0089で継続する。
+- 推奨する将来対応: status非依存契約を維持し、候補制限が必要になる新要件は別仕様として合意する。
+- 必要なテスト: 一覧・検索・Autocomplete・配置queryにstatus条件がないこと、ID指定表示の維持。
+- ユーザー判断が必要な事項: CONF-0073のstatus候補部分は回答済み。code・検索表示詳細は未回答。
 
 ## FUT-0089 Outsourcer validation・検索・表示の不整合を整理する
 
@@ -1209,9 +1209,9 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: schemas `Outsourcer`、outsourcers page、`OutsourcerAutocomplete`
 - 確認済み実装事実: codeは任意/非一意でtoken検索外。一覧query limit 10と表示20が不一致。AutocompleteはOutsourcer候補にEmployeeListItemを使う。契約日fieldなしでrange引数はfilter未使用。SPEC-DEEP-033でIteratorのdeclared `hideDefaultFooter`がrootへ転送されず、OutsourcerListItemはAutocomplete default rendererにも静的callerにも現れない候補であることを確認した。
 - 想定影響と発生条件: 重複識別、期待件数不足、型責務混在、期間指定が効くとの誤解を招く。
-- 未確認点・仮説: code採番・一意性、一覧pagination、将来契約期間要件は未決定。
-- 推奨する将来対応: code policy、query/page size、専用ListItem、range API名・契約期間modelを整理する。
-- 必要なテスト: code空/重複/検索、10件超pagination、Autocomplete表示、期間変更、status sort。
+- 未確認点・仮説: code採番・一意性、一覧pagination、range API名は未決定。
+- 推奨する将来対応: code policy、query/page size、専用ListItem、実際には期間filterを行わないrange API名を整理する。
+- 必要なテスト: code空/重複/検索、10件超pagination、Autocomplete表示、range引数変更、status非依存。
 - ユーザー判断が必要な事項: CONF-0073。
 
 ## FUT-0090 Company rootの認可・field ownership・削除禁止を強制する
@@ -1849,7 +1849,7 @@ SPEC-DEEP-040追加根拠: application actionsでも配置表PDF、請求PDF/CSV
 
 SPEC-DEEP-042追加根拠: generic/range data layersもloading/error/not-found/lastUpdatedを統一せず、同期購読登録errorだけをcatchしてasync listener errorを受けない。`useDocument`はreactive docId対応を文書化しながらRefを拒否し、callback master fetchもawait/cancel/error集約しない。
 
-SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest generation・cancel・loading/errorを持たず旧responseが新検索を上書きし得る。Outsourcer rangeは期間をqueryに使わず、range変更ごとに全ACTIVEを再購読する。
+SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest generation・cancel・loading/errorを持たず旧responseが新検索を上書きし得る。Outsourcer rangeは期間をqueryに使わず、range変更ごとに全statusを再購読する。
 
 SPEC-DEEP-044追加根拠: master fetch cacheは同一docIdのin-flight point fetchをdedupeする一方、既存cacheを更新せずTTL/revision/tenant切替clearを持たない。fetch errorとnot-foundをcache missへ畳み込み、searchはlatest-only/cancel/in-flight dedupeがない。
 

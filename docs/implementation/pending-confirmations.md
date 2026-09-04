@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 78件、Answered 63件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 63件、Partially answered 7件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済み、CONF-0072〜CONF-0073はOUT-03のstatus非制限まで部分回答である。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -883,27 +883,27 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0072 外注先の契約終了・archive・過去参照policy
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
-- Evidence: 終了は日付なしstatus、archiveはlive doc削除。guardはSchedule/Resultのみでrestore UIなし。
-- Question: 契約終了後の新規選択、過去表示、訂正、archive時点、restore、保持期間をどう定義するか。
-- Why needed: 終了先の誤選択を防ぎつつ、過去予定・通知・実績を再現するため。
-- Options and impact: 終了日effective filter、終了は保持し誤登録のみarchive、snapshot fallback、管理者restore。
-- Current provisional treatment: ACTIVE限定rangeと現行archiveを実装事実とし、正式保持policyとはしない。
+- Evidence: OUT-03でstatusを日付なしの説明用フラグへ確定した。archiveはlive doc削除で、guardはSchedule/Resultのみ、restore UIはない。
+- Question: statusとは分離して、誤登録・重複等のarchive対象、参照確認、過去表示、restore、保持期間をどう定義するか。
+- Why needed: live masterをarchiveしても予定・通知・実績の表示と復旧可能性を失わないため。
+- Options and impact: 誤登録・重複のみarchive、snapshot fallback、管理者restore、保持期間。
+- Current provisional treatment: statusは候補・業務操作へ影響しない説明用フラグとし、archiveは停止状態を維持する。
 - Related FUT IDs: FUT-0087
-- Answer: 未回答
+- Answer: 2026-09-04 部分回答。`contractStatus`はCustomerと同じ説明用の可逆なフラグとし、一覧・検索・Autocomplete・配置・稼働実績その他の選択や既存・新規操作へ影響させない。終了日・理由・専用履歴や関連dataの自動変更は追加しない。archive/restoreの対象、参照確認、保持、復元は未回答のためStatusはPartially answeredとする。
 
 ## CONF-0073 Outsourcer code・検索・終了済み候補の規則
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
-- Evidence: codeは任意/非一意/検索token外。配置rangeはACTIVE限定だが汎用Autocompleteはstatus非限定。契約期間fieldなし。
-- Question: codeを採番・一意化するか。新規操作と過去訂正でTERMINATED候補をどう表示し、契約期間を持つか。
-- Why needed: 外注先識別と候補選択を用途ごとに一貫させるため。
-- Options and impact: tenant連番、手動一意code、active default+明示的終了表示、effective date管理、現行statusのみ。
-- Current provisional treatment: 新規配置はACTIVEを基本とし、Autocomplete非限定は確定仕様としない。
+- Evidence: codeは任意/非一意/検索token外。OUT-03で一覧・検索・Autocomplete・配置・稼働実績をstatus非限定へ統一し、契約期間fieldは設けないと確定した。
+- Question: codeを採番・一意化するか。codeを検索対象にするか。paginationとAutocomplete rendererをどう整合するか。
+- Why needed: 外注先の識別・検索・表示件数を利用経路間で一貫させるため。
+- Options and impact: tenant連番、手動一意code、code検索追加、page size統一、専用renderer。
+- Current provisional treatment: statusによる候補制限は設けず、code・検索表示詳細は現行挙動を維持する。
 - Related FUT IDs: FUT-0088、FUT-0089
-- Answer: 未回答
+- Answer: 2026-09-04 部分回答。ACTIVE／TERMINATEDの双方を一覧・検索・Autocomplete・配置・稼働実績その他の候補に含め、statusだけで選択を制限しない。codeの採番・一意性・検索対象、pagination、Autocomplete rendererは未回答のためStatusはPartially answeredとする。
 
 ## CONF-0074 Company設定の正式権限とserver-owned field
 

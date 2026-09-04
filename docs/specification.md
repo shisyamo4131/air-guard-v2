@@ -152,10 +152,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Outsourcerは、ある特定の協力会社を表す会社masterであり、外注警備員個人を表すものではない。配置では、同じOutsourcerを別々の配置明細として複数回登録できる。Outsourcerと人数を一組にして一明細へ集約する方式は採用せず、外注警備員個人masterも現段階では新設しない。
 - Outsourcerの閲覧は現行の同一tenant境界を維持する。作成、基本情報変更、`contractStatus`変更は、認証UIDとUser document IDが一致する同じ会社の有効な本登録Userのうち、会社管理者または既知role preset `manager`だけに許可する。会社管理者でないsuper-user、直接permission文字列、未知または既知外roleを含むUser、仮登録、無効User、他社Userは書込み権限の根拠にしない。会社管理者かつsuper-userのUserは、会社管理者であることを根拠に許可する。
 - Outsourcerのclient直接deleteと`Outsourcers_archive`のclient作成・変更・削除は許可しない。archiveの正式な対象、参照確認、復元、保持は後続checkpointで確定するまで破壊操作を停止する。既存archiveの同一tenant readはOUT-01で変更しない。
-- live Outsourcer documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`だけを持つ。`code`はnullまたは10文字以内、`name`は必須20文字以内、`nameKana`は必須40文字以内、`displayName`は必須6文字以内、`remarks`はnullまたは200文字以内とする。`contractStatus`は`ACTIVE/TERMINATED`だけを許可し、新規作成は常に`ACTIVE`とする。codeの書式・一意性はOUT-05、statusの業務上の意味と候補制御はOUT-03で別途確定する。
+- live Outsourcer documentはexact `docId/uid/createdAt/updatedAt/code/name/nameKana/displayName/contractStatus/remarks/tokenMap`だけを持つ。`code`はnullまたは10文字以内、`name`は必須20文字以内、`nameKana`は必須40文字以内、`displayName`は必須6文字以内、`remarks`はnullまたは200文字以内とする。`contractStatus`は`ACTIVE/TERMINATED`だけを許可し、新規作成は常に`ACTIVE`とする。codeの書式・一意性はOUT-05で別途確定する。
 - 作成時の`docId`はpathと一致させ、`uid`は実行者、`createdAt/updatedAt`はrequest時刻とする。更新時は`docId/createdAt`を変更せず、実際に変更された業務fieldと`uid/updatedAt`だけを保存する。名称系`name/nameKana/displayName`を変更した場合だけ検索用`tokenMap`を再生成し、名称系を変更しない更新で`tokenMap`単独変更を許可しない。RulesはtokenMapを最大512件・値trueだけに制限するが、名称との完全な意味的一致までは再計算できないため、正規画面の専用writerを維持する。
 - 編集draftはlive表示dataと分離する。保存時の最新documentで、利用者が変更した同じfieldが別画面でも変更されていれば保存せず、入力内容を保持して最新値の再読込を促す。変更fieldが重ならない場合は、最新documentへ利用者の変更fieldだけをtransactionで重ねる。変更なしはwrite 0とする。
 - OUT-02では既存path、検索、配置明細、statusの業務上の意味を変更せず、data migrationを行わない。delete/archive、検索・一覧、重複配置の実装変更も対象外とする。
+- Outsourcerの`contractStatus`はCustomerと同様に、その時点の取引状況を表すだけの可逆なフラグとする。`ACTIVE/TERMINATED`のどちらであっても、外注先一覧・キーワード検索・Autocomplete・配置・稼働実績その他の候補選択から除外せず、既存・新規の業務操作を状態だけで禁止しない。状態変更によって配置、通知、実績、請求、帳票を自動変更・終了・取消しせず、再開時も既存記録を書き換えない。
+- Outsourcerの状態変更に契約終了日、開始日、終了理由、専用履歴を追加または必須化しない。通常の`uid/updatedAt`は維持するが、`updatedAt`を契約終了日時と解釈しない。archiveは状態フラグと分離し、参照確認・復元・保持をOUT-04で別途確定する。
 
 ### 取引先・現場・取極め
 

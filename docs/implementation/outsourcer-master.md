@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 実装調査 / OUT-02 local実装・検証完了
+- 状態: 実装調査 / OUT-03 local実装・検証完了
 - 対象セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 最終確認日: 2026-09-04
 - 根拠ファイル: `pages/outsourcers/index.vue`、`components/Outsourcers/Manager/index.vue`、`components/Outsourcer/CreateDialog.vue`、`components/Outsourcer/Editor.vue`、`composables/application/outsourcer/useOutsourcerActions.js`、`composables/domain/outsourcer/outsourcerOperations.js`、`utils/outsourcer/outsourcerWriter.js`、`utils/outsourcer/outsourcerDocumentContract.js`、`components/Outsourcers/Iterator/index.vue`、`components/Outsourcer/Autocomplete.vue`、`composables/dataLayers/outsourcer/useOutsourcersInRange.js`、`composables/fetch/useFetchOutsourcer.js`、`utils/pageSettings.js`、`firestore.rules`、schemas `src/Outsourcer.js`、`src/Operation.js`、`src/ArrangementNotification.js`、`src/constants/contract-status.js`、client adapter `delete/hasChild`
@@ -19,12 +19,13 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - 配置では同じOutsourcerを別々の明細として複数回登録できる現行方式を維持する。過去に試行して廃止したOutsourcerと人数の集約方式は再採用しない。
 - OUT-01では、作成・編集を同社の有効な本登録会社管理者またはstrict `manager`に限定し、client直接deleteとarchive writeを停止する。archive/restoreの正式運用は未決定である。
 - OUT-02では、exact document、型・長さ、system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否を確定する。codeの書式・一意性はOUT-05、statusの業務上の効果はOUT-03へ残す。
+- OUT-03では、statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績その他の選択へ影響させない。終了日・理由・履歴や関連dataの自動変更は追加しない。
 
 - `/outsourcers`はpageSettingsで`outsourcers:read`を要求し、同一tenantの有効な本登録Userのread境界を維持する。
 - OUT-01のlocal実装では、一覧Managerと`creatable=true`の`OutsourcerAutocomplete`が同じ純粋policyを使い、会社管理者またはexact `manager`以外へ作成・編集入口を表示しない。create/update transport直前にも同じactor状態を再評価する。
 - Managerは全actorへ削除を非表示・無効化し、渡されたdelete handlerを呼ばない。
 - Rulesはlive create/updateを同一tenantの有効な本登録会社管理者またはnon-super-userのexact `manager`へ限定し、live deleteとarchive writeを全て拒否する。live/archive readは既存境界を維持する。広いfallbackから両collectionを除外する。
-- OUT-02はdomain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了したlocal実装である。実装commitは`31d11b15`。Dev/Prod Rulesと実dataは未変更・未確認である。
+- OUT-03はdomain 934/934、専用local UI build、文書検証を完了したlocal実装である。実装commitは`995488a5`。OUT-01/02のRules・保存契約は維持し、Dev/Prod Rulesと実dataは未変更・未確認である。
 
 ## データ契約
 
@@ -48,15 +49,15 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 - createはexact 11 fieldだけを保存し、画面でstatusを入力させず`ACTIVE`を強制する。code一意性、名称重複、契約日整合は本範囲で追加しない。
 - 更新はtransaction内で最新documentを読み、利用者が変更したfieldだけを保存する。名称系変更時だけtokenMapを追加更新し、変更なしはwrite 0とする。
 - 編集draftとbaselineはlive itemから独立させる。同じ変更fieldが外部でも変わった場合はconflictとして保存せず、入力を保持して再読込を促す。別fieldの外部変更は最新値を維持してmergeする。
-- contract終了は専用methodではなく、編集で`contractStatus=TERMINATED`にするだけである。終了日時・理由・履歴は保存しない。
+- contract終了・再開は編集で`contractStatus`を切り替える可逆なフラグ変更である。終了日時・理由・履歴は保存せず、関連dataを自動変更しない。
 - schemaの`logicalDelete=true`と既存adapterには同一doc IDを`Outsourcers_archive`へtransactionでcopyしてactive collectionから削除する経路が残るが、OUT-01のUIとRulesからは到達できない。
 
 ## 検索・状態
 
-- 一覧の通常表示は`contractStatus=ACTIVE`、`updatedAt desc`、limit 10。画面側DataIteratorは20件設定で、query limitとの値が一致しない。
-- 検索時もACTIVE条件を維持し、token検索後`code desc`を使用する。tokenFieldsは`name`、`nameKana`、`displayName`で、codeはtoken検索対象外。
-- 配置用`useOutsourcersInRange`もACTIVEだけをlive購読するが、引数`from/to`はvalidity確認と再購読triggerにだけ使い、期間filterしない。
-- 汎用AutocompleteのN-gram検索は追加status条件を渡さないため、利用箇所によってはTERMINATED外注先が候補へ到達し得る。
+- 一覧の通常表示はstatusで絞らず`updatedAt desc`、limit 10。画面側DataIteratorは20件設定で、query limitとの値が一致しない。
+- 検索もstatusで絞らず、token検索後`code desc`を使用する。tokenFieldsは`name`、`nameKana`、`displayName`で、codeはtoken検索対象外。
+- 配置用`useOutsourcersInRange`は全statusをlive購読する。引数`from/to`はvalidity確認と再購読triggerにだけ使い、期間filterしない。
+- 汎用Autocompleteも追加status条件を渡さず、ACTIVE／TERMINATEDの双方を候補にする。保存済み配置・実績のID直接取得もstatusを条件にしない。
 
 ## 所属関係
 
@@ -88,7 +89,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 ## 矛盾・未使用候補
 
 - Outsourcerは協力会社masterであり、外注警備員個人masterは持たない。同一会社の重複配置は明細indexで区別する現行契約で、人数集約方式は採用しない。
-- `useOutsourcersInRange`の`from/to`は期間選定に未使用で、契約開始/終了日fieldもない。
+- `useOutsourcersInRange`の`from/to`は期間選定に未使用で、契約開始/終了日fieldも設けない。
 - `OutsourcerAutocomplete`のdefault item slotは`EmployeeListItem`を描画しており、名称表示は動作し得るが型・責務上の取り違え候補である。
 - `OutsourcerListItem`は静的callerを確認できず、Autocompleteのdefault rendererにも使われないlegacy候補である。Nuxt auto-registration等の動的到達性は未確認のため、未使用とは断定しない。
 - 一覧query limit 10とManager itemsPerPage 20が不一致。
@@ -101,7 +102,7 @@ Pageのroute、query、CRUD・状態境界のfile単位確認は[Employee・Outs
 
 ## 要確認事項
 
-- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。OUT-02の保存data契約は確定・local実装済みで、CONF-0072〜CONF-0073は未回答である。
+- CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持として回答済みである。OUT-02の保存data契約とOUT-03のstatus非制限は確定・local実装済みで、CONF-0072のarchive/restoreとCONF-0073のcode・検索表示詳細は未回答である。
 
 ## 未確認範囲
 

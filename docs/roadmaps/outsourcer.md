@@ -2,9 +2,9 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 30%
+- 現在の進捗: 40%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01とOUT-02はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-03はlocal実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
 
 ## マイルストーン
 
@@ -12,7 +12,7 @@
 |---|---:|---:|---|---|
 | OUT-01 更新権限と破壊操作停止 | 15 | 15 | Completed | 会社管理者またはstrict `manager`だけが作成・編集でき、UIとRulesが一致する。client deleteとarchive writeを拒否し、domain 927/927、local Emulator 146/146、専用local UI build、文書検証、独立reviewを完了した。実装commit `82e22179`。 |
 | OUT-02 保存data契約 | 15 | 15 | Completed | exact 11 field、型・長さ・status・system metadata、部分更新、名称変更時のtoken再生成、独立draftと同一field競合拒否をUI・専用writer・Rulesへ実装した。domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。実装commit `31d11b15`。 |
-| OUT-03 契約終了と候補 | 10 | 0 | Proposed / 未承認 | 新規配置・実績と過去訂正でACTIVE／TERMINATEDをどう扱うか、終了日の要否を合意する。 |
+| OUT-03 契約終了と候補 | 10 | 10 | Completed | statusをCustomerと同じ説明用フラグとし、一覧検索・Autocomplete・配置・稼働実績の選択を制限しない。終了日・理由・履歴・自動変更を追加せず、domain 934/934と専用local UI build、文書検証を完了した。実装commit `995488a5`。 |
 | OUT-04 archive・restore安全性 | 20 | 0 | Proposed / 未承認 | Schedule、OperationResult、ArrangementNotification等の参照、並行作成、過去表示、archive対象、restore、保持を合意する。 |
 | OUT-05 code・検索・一覧表示 | 10 | 0 | Proposed / 未承認 | code方針、検索対象、取得件数とpagination、Autocomplete renderer、終了済み表示を整合する。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 0 | Requirement confirmed / 実装未着手 | 協力会社masterの同一IDを複数配置明細へ登録できることを維持し、人数集約や個人masterへ変更していないことを対象回帰で確認する。 |
@@ -50,10 +50,23 @@
 - rollbackは専用create/editor/action/writerとRules validationを一組で戻す。検証失敗時はRulesを緩和して旧whole-document writeへ戻さず、localで停止する。
 - 変更classは`ui-css-layout`、`application-logic`、`data-contract-schema-migration`の和集合とし、completion gateは`project-docs`、`domain-full`、`local-emulator-suite`、`local-ui-build`、`diff-check`とする。
 
+## OUT-03の確定範囲
+
+- `contractStatus`は現在の取引状況を示す可逆なフラグに限定し、`ACTIVE/TERMINATED`のどちらも一覧、検索、Autocomplete、配置、稼働実績その他の候補から除外しない。
+- 状態変更によって既存・新規の配置、通知、稼働実績、請求、帳票を禁止または自動変更しない。
+- 契約開始日・終了日、終了理由、専用履歴を追加せず、通常の更新時刻を終了日時として扱わない。
+- archiveは状態変更と分離し、参照確認・復元・保持はOUT-04へ残す。code、pagination、一覧上の状態表示はOUT-05へ残す。
+
+## OUT-03の互換性・rollback・検証
+
+- 永続field、Rules、index、保存済み配置・実績を変更せず、migrationは行わない。既存のstatus非限定AutocompleteとID直接取得を維持し、一覧と配置購読からACTIVE条件だけを除去する。
+- rollbackは一覧と配置購読のquery変更を戻す。data変更や外部作用はない。
+- 変更classは`ui-css-layout`と`application-logic`の和集合とする。completion gateは`project-docs`、`domain-full`、`local-ui-build`、`diff-check`である。Rules・永続data契約を変更しないため`local-emulator-suite`は省略でき、completion reportへ理由を記録する。
+
 ## 未確認・別承認
 
 - Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-03以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- OUT-04以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
 
 ## 進捗履歴
 
@@ -61,3 +74,4 @@
 |---|---:|---:|---|
 | 2026-09-04 | 15% | +15 | actor/tenant/UIDをfail-closedで一致させ、UIとRulesで作成・編集を会社管理者またはstrict `manager`へ限定した。live delete、archive write、fallback迂回を拒否し、domain 927/927、local Emulator 146/146、専用local UI build、独立security/code reviewを完了した。 |
 | 2026-09-04 | 30% | +15 | exact document、型・長さ・metadata、部分更新、token再生成条件、独立draft・同一field競合拒否を実装し、domain 934/934、local Emulator 147/147、専用local UI build、文書検証を完了した。 |
+| 2026-09-04 | 40% | +10 | statusを説明用フラグに限定し、一覧検索・Autocomplete・配置・稼働実績の候補制限を除去した。domain 934/934、専用local UI build、文書検証を完了した。 |
