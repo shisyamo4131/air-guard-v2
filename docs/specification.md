@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-05
-- 仕様バージョン: 0.8.10
+- 仕様バージョン: 0.8.11
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -178,7 +178,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firestore Rulesは取引先の同一会社、書込み担当、操作別field、型、状態、更新者・更新時刻、削除・archive拒否を強制する。検索用情報と外部住所検索結果の意味上の正しさはRulesだけでは完全再計算できないため、正規画面の専用writerを維持し、server生成へ移すかはDev反映前の残存risk判断とする。
 - 現場は取引先に紐づく。
 - 現場の取引先は、同じ会社に存在する別のCustomerへ変更できる。一度設定したcustomerIdを未設定へ戻す操作は提供しない。変更後に新規作成される、または別の更新条件でSiteから再同期される稼働実績は変更後のCustomerを参照するが、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。既存実績へCustomer・取極めを再適用する場合は、対象・請求影響・監査を明示する別操作とし、空更新へ暗黙の移管処理を持たせない。詳細は[ADR 0048](decisions/0048-site-customer-change-and-historical-snapshots.md)を正とする。
-- 現場の通常の利用終了は`TERMINATED`で表し、liveの`Sites` collectionに保持する。同じCustomerのまま再利用する場合は、`sites:write`を持つ許可actorが理由を伴う再有効化operationで`ACTIVE`へ戻す。終了・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
+- 現場の通常の利用終了は`TERMINATED`で表し、liveの`Sites` collectionに保持する。TERMINATEDはSite masterの通常編集を制限するが、残工事等の一時利用に備えて稼働予定その他の新規業務参照先として選択できる。候補ではACTIVEを先、TERMINATEDを後に分け、終了済みChipと取引先・code・住所等の識別情報を表示して選択時に確認する。選択だけでACTIVEへ戻さず、単発利用はTERMINATEDのまま行える。
+- 継続的に再開する場合は、同じCustomerを維持したまま、`sites:write`を持つ許可actorが必須reasonと新しい工期を一つの再有効化operationで保存してACTIVEへ戻す。Customer変更が必要な場合は別の許可されたSite更新として扱う。終了・選択・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
+- ACTIVE Siteの工期終了後は、永続statusを増やさず「工期終了済み」「自動終了予定」「工期終了済み・予定あり」を派生Chipとして表示し、自動終了予定日を示す。通常のACTIVE Siteを先、終了候補を後に並べる。工期終了日が未設定のSiteは自動終了せず「工期未設定」として識別可能にする。
+- 自動終了はJSTの暦日で工期終了日の90日後00:00以降に実行する。実行時にACTIVE、有効な工期終了日、90日経過、JST当日以降のSiteOperationScheduleなし、実績へ変換されていない未処理SiteOperationScheduleなしを同じtransactionまたは同等のpreconditionで再確認し、すべて満たすSiteだけをTERMINATEDへ変更する。予定があれば取消・削除せずwrite 0で見送り、工期日の訂正を促す。
+- 自動終了はcleanupと失敗境界を分け、page/cursorと制御されたbatch、部分失敗の非成功扱い、再試行・照合、maintenance中の停止を備える。工期訂正、再有効化、予定作成との競合で古い判定を後勝ち適用しない。予定作成が先なら終了を見送り、自動終了が先でもTERMINATED選択確認後の新規予定を許可する。
+- 手動終了・自動終了・再有効化は現在の遷移を説明する`statusChangedAt`、`statusChangedBy`、`statusChangeSource`、`statusChangeReason`を保存する。自動終了はsystem actor、AUTO source、工期終了後90日経過の既知reasonを使う。専用のappend-only lifecycle履歴は設けない。初期実装では現場ごとのemail・FCMを送らず、ダッシュボードの候補件数、一覧Chip、予定日、予定矛盾表示で通知する。詳細は[ADR 0054](decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - Site archiveは誤登録・重複だけを対象とし、通常の利用終了には使用しない。`sites:write`を持つ許可actorだけが専用`archiveSite` Callableから実行し、入力はSite ID、必須reason、operation IDに限定する。serverは現在のAuth・同社User・permissionを再確認し、actor・時刻を確定する。一つのtransactionでactive Site、同ID archive、および状態を限定しない全業務参照を確認し、参照、archive衝突、不正状態ではwrite 0とする。確認対象は少なくともSiteOperationSchedules、OperationResults、ArrangementNotifications、Billings、SiteEmployeeHistoryを含み、実装前inventoryで確認した全参照を閉じる。version付きSite snapshotとreason・actor・時刻・operation IDをsame-ID archiveへ上書きせず保存してactiveを削除し、同operationの再試行だけを冪等に扱う。
 - archive後の新規参照を防ぐため、Siteを新規参照または変更する全client/server writerは、同じatomic boundaryでlive `Sites/{siteId}`の存在を必須にする。このbarrierを保証できないwriterが一つでも残る間はarchive機能を有効化しない。Company表示順の不存在SiteはADR 0036どおり表示時に無視し、次回の明示保存で除去するため、表示順だけをarchive拒否の業務参照にはしない。generic delete／restoreと物理deleteは使用せず、通常画面からrestoreを提供しない。緊急restoreは別の権限制御・監査・競合防止を持つoperationとして改めて承認する。既存live/archive dataの一括変更、自動purge、保持期限は追加しない。詳細は[ADR 0051](decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - SiteOperationScheduleは計画dataとして`siteId`を保持し、稼働実績へ変換されるまではSite名称・Customer・住所・警備種別・取極めをlive Siteから表示・選択する。Site master変更だけを理由に予定documentへsnapshotを複製または一括更新しない。

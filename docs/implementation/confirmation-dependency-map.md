@@ -158,7 +158,7 @@
 | CONF-0132 | Open-user-decision | SELF; depends-on CONF-0111 |
 | CONF-0133 | Open-user-decision | SELF; depends-on CONF-0111, CONF-0115 |
 | CONF-0134 | Open-user-decision | SELF; depends-on CONF-0039 |
-| CONF-0135 | Open-user-decision | SELF; depends-on CONF-0048, CONF-0057 |
+| CONF-0135 | Answered | SELF; depends-on CONF-0048, CONF-0057 |
 | CONF-0136 | Open-user-decision | SELF; depends-on CONF-0128, CONF-0129 |
 | CONF-0137 | Open-user-decision | SELF |
 | CONF-0138 | Open-user-decision | SELF |

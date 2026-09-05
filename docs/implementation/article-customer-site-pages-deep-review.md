@@ -61,7 +61,7 @@ Site詳細はroute paramをsetup時に固定し、`useDocument`でSite、月範�
 ## 矛盾・未使用候補・テスト
 
 - Customer/Siteのread permissionだけでmutation UIへ到達し、承認済みread/write二分モデルを未実装である。
-- TERMINATED Siteをread-only・新規選択不可とする承認済み方針に対し、detailは全編集・Schedule・terminate・delete UIを表示する。
+- TERMINATED Siteの通常master編集を制限しつつ終了表示・確認付きで新規業務へ選択可能にするADR 0054の方針に対し、detailは全編集・Schedule・terminate・delete UIを区別なく表示する。
 - Articleの取得limit 10と表示page size 20が一致しない。
 - CustomersManager commentは「詳細画面をまだ有していない」とするが、`/customers/[id]`が実在する。
 - Sites pageの旧Iteratorはcomment outされ、現routeから未到達である。

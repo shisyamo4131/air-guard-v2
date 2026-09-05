@@ -604,9 +604,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 終了Siteに許す閲覧・編集・新規参照と、誤終了/再開時の再有効化条件をどうするか。
 - Why needed: 終了後の不正な新規利用と、必要な訂正・再開を区別するため。
 - Options and impact: read-only、限定訂正、管理者再開、常時編集可だが新規選択不可。
-- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。CONF-0047のCustomer変更許可はこのstatus境界を緩和せず、変更が必要な場合は再有効化後または承認済みの限定訂正operationで扱う。
+- Current provisional treatment: TERMINATEDの通常master編集制限は維持するが、新規選択不可は2026-09-05にCONF-0135で置換した。終了済み表示・確認付きで新規業務へ選択でき、単発残工事はTERMINATEDのまま扱う。継続再開はstrict `sites:write`、reason、新工期を必須とする。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - Related FUT IDs: FUT-0062
-- Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。
+- Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。2026-09-05追加回答で新規選択不可だけをsupersedeし、終了済み表示・確認付き選択、TERMINATEDのままの単発残工事、strict `sites:write`・reason・新工期による継続再開を採用した。通常master編集制限、非cascade、archive境界は維持する。
 
 ## CONF-0049 Site終了・archive・restoreの使い分け
 
@@ -1639,15 +1639,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0135 Site自動終了の条件・関連予定・再有効化・監査契約
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-054; `site-auto-termination.md`
 - Evidence: scheduled処理は工期終了から3か月超かつACTIVEだけで全tenant SiteをTERMINATEDへし、手動終了と異なり将来scheduleを確認しない。Agreement/予定/通知/User等は変更せず、reason/actor/source/historyを保存しない。query後の再有効化・工期変更・予定作成をpreconditionなしで上書きし得る。
 - Question: 自動終了を維持するか。維持する場合、猶予期間・境界日、将来予定がある時のskip/取消/警告、Agreement・新規選択・通知への作用、再有効化との優先、利用者通知と監査をどう定めるか。
 - Why needed: 有効な予定を持つSiteの誤終了、終了・再開race、契約/配置への予期しない影響、終了理由を説明できない状態を防ぐため。
 - Options and impact: future scheduleがあればskip+alert、手動同等guard、予定を明示取消後に終了、自動終了を候補通知だけに変更、3か月固定/Company設定化、transaction precondition、reason/source/history保存。運用負荷と誤終了riskが異なる。
-- Current provisional treatment: 現行3か月strict条件と将来予定非確認を実装事実として扱う。CONF-0046/0048の`sites:write`・TERMINATED read-only・理由付き再有効化方針は維持するが、自動終了固有仕様は未確定とする。
+- Current provisional treatment: [ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - Related FUT IDs: FUT-0161、FUT-0060、FUT-0062
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。自動終了を維持し、ACTIVE/TERMINATEDの2値と表示上の派生Chipを使う。JSTで工期終了日の90日後00:00以降、ACTIVE・有効工期日・当日以降予定なし・未実績化予定なしをtransactionまたは同等preconditionで再確認してTERMINATEDへ変更する。予定は取消・削除せず、競合時は古い判定を後勝ちさせない。cleanupと失敗境界を分離し、制御されたbatch、再試行、maintenance停止を備える。現在遷移metadataは保存するが専用append-only履歴は設けず、初期通知はdashboard・一覧Chipとする。TERMINATEDも終了済み表示・識別情報・確認付きで新規業務へ選択でき、単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`・reason・新工期で扱う。選択・終了・再開はCustomer、Agreement、予定、通知、実績、請求へcascadeしない。
 
 ## CONF-0136 Test / development routeのproduction運用方針
 

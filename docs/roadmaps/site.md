@@ -2,7 +2,7 @@
 
 - 状態: Approved plan（計画承認済み・製品実装未承認）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
-- 現在の進捗: 0%
+- 現在の進捗: 10%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 現在の承認境界: 現状確認と本ロードマップ案の作成まで。製品code、Firestore Rules、Functions、schema、package、data、local UI、Dev・Prod・remoteの変更・実行は、ロードマップ確認後の別承認とする。
 - 環境境界: 実装が承認された場合も、SITE-01からSITE-08はCodex専用local仕様・実装・検証を基本とする。SITE-09のDev反映・remote/data確認は、他のマスタ改修とまとめる別承認checkpointで行う。
@@ -35,7 +35,7 @@
 - CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
 - CONF-0051からCONF-0053は回答済み。取極めの作成・編集・削除はstrict `sites:write`へ限定し、単価・時間・締日の範囲を固定する。適用済みmasterも編集・削除できるが既存OperationResult snapshotは変更せず、専用履歴・revision・承認workflowは設けない。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
-- CONF-0135: 自動終了の猶予、将来予定、競合、通知、監査、再有効化との優先。
+- CONF-0135は回答済み。ACTIVE/TERMINATEDの2値を維持し、工期終了後90日と予定guardによる競合安全な自動終了、派生Chip、現在遷移metadataを採用する。TERMINATEDも終了済み表示・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま、継続再開はstrict `sites:write`・reason・新工期で扱う。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - 既存Site・archiveの件数とshape、仮Site・stale埋込みCustomerの状態、実利用actor、旧client併存、必要index、Dev/remote適用状態は未確認である。
 - 導入済みschema packageの変更が必要かは未確定である。必要になった場合は関連repository、version、release、consumer導入を別承認とする。
 
@@ -50,10 +50,10 @@
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049〜0053は回答済み。残るCONF-0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
+| SITE-01 基準線・未決事項 | 10 | 10 | Completed | CONF-0049〜0053・0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を利用者が判断し、仕様、ADR 0051〜0054、manual、実装記録を採用内容へ整合した。 |
 | SITE-02 認証・書込み境界 | 15 | 0 | Not started | readは同一tenant境界を維持し、create/update/Customer・Agreement変更/終了/再有効化/archiveを会社管理者またはstrict role preset由来の`sites:write`へ限定する。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、UI・送信直前policy・Rulesまたは専用Callableを一致させる。 |
 | SITE-03 CRUD・保存data契約 | 15 | 0 | Not started | operation別の所有field、共通必須・型・長さ、server metadata、token・location等の派生field、Customer参照・埋込みCustomer、仮Site解消を固定する。live modelと独立draftを分け、同一field競合、変更なし、失敗後再試行を検証する。 |
-| SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | TERMINATEDのread-only、新規選択境界、理由付き再有効化、手動・自動終了の条件、将来予定、競合、監査、再試行を採用仕様へ揃える。既存予定等を暗黙に変更しない。 |
+| SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | ADR 0054に従い、TERMINATED masterの通常編集制限と確認付き新規選択、単発残工事、strict `sites:write`・reason・新工期による継続再開、工期終了後90日の派生Chipと自動終了、予定guard、競合、現在遷移metadata、再試行を実装する。既存予定等を暗黙に変更しない。 |
 | SITE-05 archive安全性 | 15 | 0 | Not started | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、全参照catalogの同一transaction確認、全参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装する。全barrierが揃うまでarchiveを有効化しない。archive barrier以外のtransaction変更と緊急restoreは別承認へ分離する。 |
 | SITE-06 取極め契約 | 10 | 0 | Not started | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円警告、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を強制する。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Site documentの変更fieldだけを安全に保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 0 | Not started | ACTIVE/TERMINATED/仮Siteの表示、検索・pagination、Autocompleteのstatus境界、作成wizard validation、郵便番号反映、非同期race、loading/error/not-found、工期表示、keyboard操作、manualを整合する。 |
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049〜CONF-0053を確定した。次はCONF-0135の自動終了・再有効化契約を判断する。製品実装は承認済みcheckpointより前に開始しない。
+本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。CONF-0049〜0053・0135を確定してSITE-01を完了し、進捗は10%である。次はSITE-02の認証・書込み境界を実装するcheckpointについて、対象file、Functions・Rules、test、rollback、local UI範囲の承認を得る。製品実装は承認済みcheckpointより前に開始しない。

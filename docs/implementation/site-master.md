@@ -65,7 +65,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 
 - `terminate()`はdoc読込済み、未TERMINATED、JST当日以降のSiteOperationScheduleが0件であることを確認してstatusを更新する。過去schedule、OperationResult、ArrangementNotification等は終了を妨げない。
 - 終了後も詳細画面の編集・削除機能はstatusで抑止されない。再有効化method/UIは確認できない。
-- 将来の確認済み方針ではTERMINATEDをread-only・新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。Customer変更許可はこのstatus境界を緩和せず、status上許可された操作で変更しても既存実績へ自動反映せず、Agreementも自動再有効化しない。archiveは誤登録・重複だけに限定し、専用Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrierが揃うまで有効化しない。generic delete／restoreと物理delete、通常画面のrestoreは提供しない。現行UIはstatusに関係なく編集・generic削除入口を表示するため、この方針はFUT-0062・FUT-0063で未実装である。
+- 将来の確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、strict `sites:write`、reason、新工期を必須とする。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。archiveは誤登録・重複だけに限定し、専用Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrierが揃うまで有効化しない。generic delete／restoreと物理delete、通常画面のrestoreは提供しない。詳細はADR 0054を正とし、現行UIはstatusに関係なくmaster編集・generic削除入口を表示するため、この方針はFUT-0062・FUT-0063で未実装である。
 - deleteは3 collectionのsiteId参照を順にtransaction外queryし、存在すれば拒否する。参照確認とarchive transactionの間に参照が追加される競合余地がある。
 - logical deleteは`Sites_archive/{docId}`へcopy後に元を削除する。adapterにはrestore APIがある一方、確認dialogは「復元することはできません」と表示し、Site UIからrestoreする経路は見つからない。
 
@@ -111,7 +111,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 
 - FUT-0060: 確定したSite read/write権限をUI・Rules・Callable・presetへ実装する。
 - FUT-0061: Customer存在・tenant境界はRulesとschema経路へ導入済み。埋込みCustomer同期を順序・部分失敗安全にし、operation別writerとのparityを確認する。
-- FUT-0062: TERMINATEDのread-only、新規選択禁止、監査付き再有効化を実装する。
+- FUT-0062: ADR 0054のTERMINATED master編集制限、確認付き新規選択、単発残工事、strict actor・reason・新工期による再有効化を実装する。
 - FUT-0063: ADR 0051に従い、誤登録・重複だけを対象とする専用archive Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、監査・冪等性、generic delete／restore非到達を実装する。全barrierが揃うまでarchiveを有効化しない。
 - FUT-0064: ADR 0052に従い、予定のlive Site、OperationResult作成時snapshot、Billing確定revision snapshot、legacy互換fallbackをtransaction側の承認済みcheckpointで実装する。
 - FUT-0059: geocoding失敗・0座標の証拠へSiteを追記した。
@@ -119,7 +119,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 
 ## 要確認事項
 
-- CONF-0046〜CONF-0050を`pending-confirmations.md`へ登録した。CONF-0049・CONF-0050は2026-09-05に回答され、判断はADR 0051・ADR 0052へ記録した。
+- CONF-0046〜CONF-0050を`pending-confirmations.md`へ登録した。CONF-0048の新規選択不可は2026-09-05のCONF-0135でsupersedeした。CONF-0049・CONF-0050・CONF-0135の判断はADR 0051、ADR 0052、ADR 0054へ記録した。
 
 ## 未確認範囲
 

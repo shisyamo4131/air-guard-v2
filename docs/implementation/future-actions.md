@@ -834,16 +834,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0062 Site status lifecycleと検索・編集境界を統一する
 
-- 状態: Open
+- 状態: In progress
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: schemas `Site.terminate`、`pages/sites/terminated.vue`、`SiteAutocomplete.vue`、`pages/sites/[id].vue`
 - 確認済み実装事実: terminateは当日以降scheduleだけを阻止する。TERMINATEDもAutocomplete候補となり、詳細で編集・取引先変更・取極め変更・削除・再終了UIが表示される。再有効化経路はない。SPEC-DEEP-010で終了検索にloading/error/request sequenceがなく、連続検索responseの逆転防止もないことを確認した。SPEC-DEEP-034ではAutocomplete wrapper自体にもstatus constraintがなく、基本情報cardの工期片端欠損時に`null`文字列を表示することを確認した。
-- 想定影響と発生条件: 終了Siteへの新規紐付けや終了後master改変、誤終了から回復不能、再終了errorが発生し得る。
-- 未確認点・仮説: 限定訂正を許すfieldと監査schema、Agreementを再開時にどう選び直すかは実装設計未確認。
-- 推奨する将来対応: TERMINATEDをread-only・新規選択不可とし、履歴表示と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。FUT-0061のCustomer変更許可はこのstatus境界を緩和せず、再有効化後または承認済みの限定訂正operationで扱う。Agreementは自動再有効化しない。archiveは誤登録等だけ、通常restoreは禁止する。
-- 必要なテスト: ACTIVE→TERMINATED、検索/選択除外、履歴表示、一般編集拒否、限定訂正監査、同一Customer再有効化、status上許可されたCustomer変更、Agreement非自動復帰、archive/restore拒否。
-- ユーザー判断が必要な事項: なし。CONF-0048で方針確定済み。
+- 想定影響と発生条件: 終了statusを表示せず候補へ混在させると類似名称を誤選択し、反対に一律除外すると残工事のため重複Site作成または不要な再有効化が起き得る。終了後master改変と継続再開を分けない場合も意図しない現在値変更となる。
+- 未確認点・仮説: 限定訂正を許すfieldと正確な遷移metadata shape、候補rendererの識別情報は実装設計で全caller確認が必要である。
+- 推奨する将来対応: ADR 0054に従い、TERMINATEDの通常master編集を制限しつつ、終了済みChip・識別情報・確認付きで新規業務へ選択可能にする。選択だけでは再有効化せず、単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`・reason・新工期で扱う。Customer・Agreement・既存下流dataを自動変更せず、archiveは誤登録等だけ、通常restoreは禁止する。
+- 必要なテスト: ACTIVE→TERMINATED、候補group・Chip・識別情報、終了済み選択確認、単発残工事、一般master編集拒否、限定訂正、strict actor・reason・新工期による再有効化、Customer変更境界、Agreement非自動復帰、archive/restore拒否。
+- ユーザー判断が必要な事項: なし。CONF-0048の新規選択不可はCONF-0135でsupersedeされ、ADR 0054で方針確定済み。
 
 ## FUT-0063 Site archiveと参照guardを競合安全にする
 
@@ -2186,16 +2186,16 @@ SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使�
 
 ## FUT-0161 Site自動終了を競合安全・再試行可能にする
 
-- 状態: Open
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-054、SPEC-DEEP-002
 - 対象ファイル・シンボル: `runDailyTask`、`sitesAutoTermination`、schema `Site.terminate/status/constructionPeriodEndAt`
 - 確認済み実装事実: 毎日JST 00:00に、ACTIVEかつ工期終了が3か月前のJST日初よりstrictに古い全tenant SiteをcollectionGroupで無制限取得し、500件batchをPromise.allでTERMINATEDへする。将来schedule guard、status precondition、pagination、audit/reason、失敗ID、retry optionはない。cleanupを先に直列実行し、その失敗時は自動終了せず、外側catchがerrorを吸収する。手動terminateだけはJST当日以降scheduleを拒否する。
 - 想定影響と発生条件: 将来予定があるSiteの自動終了、再有効化/工期訂正/予定作成との後勝ちrace、複数batch部分成功、cleanup障害による長期未実行、規模増加時のtimeout/quota、終了理由を追跡できない状態が起き得る。
-- 未確認点・仮説: 実件数、index/quota、実行時間、監視alert、月末subtractの正式期待、future schedule時の業務判断、自動終了実績は未確認。
-- 推奨する将来対応: CONF-0135確定後、eligible判定をpure化し、transaction/preconditionでstatus・工期・future scheduleを再確認する。page/cursorと制御されたbatch commit、失敗checkpoint/retry/reconciliation、run/site単位audit、metric/alertを導入し、cleanupとは失敗境界を分離する。
-- 必要なテスト: threshold前/同値/翌日、月末/JST、null/invalid end、ACTIVE/TERMINATED、future schedule、手動終了、再有効化/工期変更race、501件以上、batch部分失敗、cleanup失敗、retry/idempotency、監査/alert、tenant横断。
-- ユーザー判断が必要な事項: CONF-0135。
+- 未確認点・仮説: 実件数、index/quota、実行時間、監視alert、自動終了実績、正確な遷移metadata shapeは未確認。90日固定、予定guard、TERMINATED選択、通知・履歴境界はADR 0054で確定した。
+- 推奨する将来対応: eligible判定をpure化し、JST工期終了後90日、ACTIVE、当日以降予定なし、未実績化予定なしをtransaction/preconditionで再確認する。page/cursorと制御されたbatch commit、失敗checkpoint/retry/reconciliation、現在遷移metadata、metric/alertを導入し、cleanupとは失敗境界を分離する。maintenance中はskipし、専用append-only履歴と現場ごとのemail/FCMは追加しない。
+- 必要なテスト: threshold前/同値/翌日、月末/JST、null/invalid end、ACTIVE/TERMINATED、future schedule、手動終了、再有効化/工期変更race、501件以上、batch部分失敗、cleanup失敗、retry/idempotency、現在遷移metadata・metric/alert、tenant横断。
+- ユーザー判断が必要な事項: なし。CONF-0135は2026-09-05回答済み。
 
 ## FUT-0162 Tax・CutoffDate・支払条件のvalidationとsnapshotを統一する
 
