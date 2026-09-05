@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Site SITE-07として、ACTIVE/TERMINATED/仮登録の状態表示、会社限定ACTIVE live readのloading・0件・error、20件client表示、検索・Autocomplete・郵便番号の古い応答破棄、終了済み候補取消時の元選択保持、詳細not-found、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible nameを整合した。Rules、Functions、schema、writer、保存shape、非Site document writeは変更していない。対象43件、全domain 1114件、Codex専用Emulator 166件が成功し、専用UI buildと内蔵ブラウザ回帰はSITE-08で行う。[Siteロードマップ](docs/roadmaps/site.md)と[検証記録](docs/verification/site-07-local.md)を参照。
+
 - Site SITE-04として、終了・再有効化をstrict `sites:write`とmaintenance確認を持つ専用Callableへ移し、TERMINATEDの通常編集制限、終了済み表示・確認付き単発利用、reason・新工期による再開を実装した。予定作成・site/date移動はSite revisionとatomicにし、実績化は整合する同ID OperationResultとの同時更新だけを許可する。OperationResults collection全体の既存CUD境界は変更せず、accountantの請求編集を含む従来経路を維持する。JST工期終了90日後の自動終了はbounded走査とtransaction再確認で将来・未実績予定を保護し、cleanupと失敗境界を分離した。初回Local browserで検出したSite画面のcomposable runtime import欠落を明示importへ補正し、全Vue consumerを検査する回帰testを追加した。対象88件、SITE-04 Emulator 8件、全domain 1051件、全Emulator 159件が成功し、Dev・Prod・remote・実dataは変更していない。legacy予定の必須field確認はSITE-09の停止条件である。[Siteロードマップ](docs/roadmaps/site.md)を参照。
 
 - Site SITE-03として、作成・基本情報・Customer・取極めをoperation別transaction writerへ分離し、exact 34-field create、server metadata、派生field、Customer exact 6-field projection、独立draft、同一field競合、変更なしwrite 0、失敗後の入力保持をUI・Rulesで固定した。Customer projectionは表示・取極め判定に使う`docId/updatedAt/code/name/abbreviation/cutoffDate`だけとし、検索token等を埋め込まない。Customer更新triggerも同じprojectionへ揃え、欠損・型不正をSite query前にfail closedとした。旧手動終了の非atomicな入口はSITE-04の専用処理まで停止した。domain 991件、Codex専用Emulator 152件を確認し、Dev・Prod・remote・実dataは変更していない。[Siteロードマップ](docs/roadmaps/site.md)を参照。
