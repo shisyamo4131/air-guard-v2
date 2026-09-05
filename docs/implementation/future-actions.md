@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-04
+- 最終更新日: 2026-09-05
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -872,42 +872,42 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - ユーザー判断が必要な事項: なし。CONF-0050とADR 0052で時点は確定済み。正確なdata shape、Billing確定lifecycle、migrationが必要になった場合はtransaction側checkpointで別途判断する。
 ## FUT-0065 Agreement編集権限とRules validationを正式化する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `pages/sites/[id].vue` AgreementsManager、Sites Rules、schemas `Site.agreementsV2`
 - 確認済み実装事実: `sites:read`で取極めの作成・更新・削除へ到達し、Rulesは同一会社UserにagreementsV2を含むSite全field writeを許す。SPEC-DEEP-013で、`AgreementsManager`自身にもpermission/field allowlistがなく、callerのSite/Company document全体updateへ委譲することを再確認した。
 - 想定影響と発生条件: 閲覧利用者が請求単価・時間・締日を変更し、将来の実績・請求額へ影響できる。
-- 未確認点・仮説: 取極め編集の正式role、承認workflow、field別権限は未決定。
-- 推奨する将来対応: 取極め専用権限とserver/Rules validation、必要なら承認・監査履歴を設計する。
+- 未確認点・仮説: actorはADR 0053で確定した。現行role presetの具体的保持状況と実dataは未確認。
+- 推奨する将来対応: 会社管理者またはstrict role preset由来の`sites:write`だけをUI・送信直前policy・Rulesまたは専用Callableで許可し、取極め専用permissionと承認workflowは設けない。
 - 必要なテスト: role別UI/直接write、他社Site、field改変、同時編集。
-- ユーザー判断が必要な事項: CONF-0051。
+- ユーザー判断が必要な事項: なし。CONF-0051は2026-09-05回答済み。
 
 ## FUT-0066 Agreementの単価・時間・締日validationを確定する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: schemas `AgreementV2/RateSet/WorkTimeBase`、Agreement Input
 - 確認済み実装事実: 単価はdefault 0かつrequiredだがAgreement固有の負数・上限・精度validationがない。休憩・規定実働は負数のみ拒否し、勤務区間との相互上限を強制しない。SPEC-DEEP-013では0円をListItemが`-`表示する一方、Tableは欠損enum/rate/priceでthrowし得る表示差も確認した。
 - 想定影響と発生条件: 負単価、極端な単価・時間、0円、休憩超過等が保存されると請求額が負・過大・意図せず0になり得る。
-- 未確認点・仮説: 値引き目的の負単価、0円取極め、丸め精度、長時間勤務の正式許容範囲は未決定。
-- 推奨する将来対応: field別範囲・精度・警告/拒否とserver validationを仕様化する。
+- 未確認点・仮説: 許容範囲はADR 0053で確定した。既存dataに範囲外値があるかはDev/remoteの別承認まで未確認。
+- 推奨する将来対応: 全単価0〜10,000,000円の整数、休憩・規定実働0〜1,440分の整数、休憩≦勤務区間、締日`0/5/10/15/20/25`を全永続化入口で強制する。0円は欠損にせず保存前警告付きで許可する。
 - 必要なテスト: 負/0/小数/最大値、休憩>勤務、規定実働>勤務、日跨ぎ、4曜日一括入力。
-- ユーザー判断が必要な事項: CONF-0052。
+- ユーザー判断が必要な事項: なし。CONF-0052は2026-09-05回答済み。
 
 ## FUT-0067 適用済みAgreementのrevision・削除policyを決める
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `AgreementsManager` array CRUD、schemas `Site.agreementsV2/key`
 - 確認済み実装事実: 過去日Agreementも直接更新・配列削除でき、status/archive/revision/参照guardがない。既存OperationResultは古いsnapshotを保持する。SPEC-DEEP-013ではcomponent自身に保存中single-flight/rollbackがなく、viewerの配列短縮・shift変更時にcurrent indexが範囲外へ残り得ることも確認した。
 - 想定影響と発生条件: master履歴と過去実績の単価・締日が不一致となり、いつ誰が訂正したか追えない。
-- 未確認点・仮説: 過去取極め訂正、適用済みlock、取消・改定、監査保持要件は未決定。
-- 推奨する将来対応: 適用開始型revision、訂正履歴、削除制限、利用中参照の扱いを仕様化する。
+- 未確認点・仮説: masterの編集・削除と専用履歴なしはADR 0053で確定した。既存OperationResultの明示訂正operation詳細はtransaction側の別checkpointに残る。
+- 推奨する将来対応: 適用済みmasterも許可actorが編集・削除できるようにし、既存OperationResult snapshotを不変に保つ。変更は将来作成または明示的に再適用する実績だけへ反映し、専用revision・before/after履歴・変更理由・監査collectionは追加しない。
 - 必要なテスト: 過去/現在/未来Agreement編集削除、snapshot済み/未確定result、copy改定、同時編集。
-- ユーザー判断が必要な事項: CONF-0053。
+- ユーザー判断が必要な事項: なし。CONF-0053は2026-09-05回答済み。
 
 ## FUT-0068 Agreement snapshotと再適用境界を明示・検証する
 

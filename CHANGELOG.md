@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Site取極めの書込みを会社管理者またはstrict `sites:write` actorへ限定し、専用permission・承認workflowを設けない方針を確定した。全単価は0〜10,000,000円の整数で0円は警告付き許可、休憩・規定実働は0〜1,440分の整数、休憩は勤務区間以下、締日は月末・5・10・15・20・25日とする。適用済みmasterも編集・削除できるが既存OperationResult snapshotは不変とし、master専用revision・before/after履歴・変更理由・監査collectionは追加しない。製品code、data、Rules、Functions、schema、package、Dev・Prod・remoteは変更していない。[判断](docs/decisions/0053-site-agreement-write-validation-and-history.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。
+
 - Site下流情報は、稼働予定ではlive Site、OperationResultでは作成時snapshot、確定請求書ではBilling revision snapshotを使う方針を確定した。Site master変更で既存実績・確定請求を自動更新せず、訂正・再発行は明示operationと新revisionで扱う。legacy snapshot欠損へ現在値を過去値として推測backfillしない。現行Billing PDFのlive Site名称取得は未実装差分として残し、製品code、data、Rules、Functions、schema、package、Dev・Prod・remoteは変更していない。[判断](docs/decisions/0052-site-downstream-snapshot-timing.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。
 
 - Siteの通常終了を`TERMINATED`としてlive masterに保持し、誤登録・重複だけを安全な専用Callableでarchiveできる方針を確定した。archiveは`sites:write`、必須reason、operation ID、server確定のactor・時刻、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、監査snapshot、冪等性を一体とし、barrierが揃うまで有効化しない。generic delete／restore、物理delete、通常restore、自動purge、保持期限は採用しない。既存data、製品code、Rules、Functions、schema、package、Dev・Prod・remoteは未変更である。[判断](docs/decisions/0051-site-mistaken-registration-archive-boundary.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。

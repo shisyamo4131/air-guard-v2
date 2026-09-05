@@ -633,39 +633,39 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 2026-09-05回答。SiteOperationScheduleは稼働実績へ変換されるまでlive Siteを参照する。OperationResultは作成時にSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めをsnapshot化する。Billing draftはOperationResult snapshotを集計し、請求確定時に表示明細をrevision snapshotとして固定する。Site master変更で既存OperationResult・確定Billingを自動更新せず、訂正・再発行は明示operationと新revisionで扱う。legacy snapshot欠損は現在値を推測backfillせず、互換fallbackの再現不能riskを明示する。判断理由はADR 0052を正とする。
 ## CONF-0051 Agreementの正式編集・承認権限
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: `sites:read`で取極めCRUDへ到達し、Sites Rulesは同一会社Userに全writeを許す。
 - Question: 単価・時間・締日を誰が作成、変更、削除、承認できるか。
 - Why needed: 請求額へ直接影響するmasterの改変を制御・監査するため。
 - Options and impact: Site編集権限と共通、取極め専用role、作成者+承認者workflow。
-- Current provisional treatment: 現行Site権限への従属を暫定実装として記録する。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0065
 - Answer: 未回答
 
 ## CONF-0052 Agreement数値fieldの許容範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: 単価は0 defaultで負数等のAgreement固有validationなし。休憩・規定実働は負数のみ拒否。
 - Question: 0/負単価、小数精度、最大額、休憩・規定時間の上限と相互関係をどう定義するか。
 - Why needed: 不正・異常な請求額を保存前に検出するため。
 - Options and impact: 厳格reject、警告付き許可、調整fieldだけ負数許可。値引き運用との整合が必要。
-- Current provisional treatment: 現行validationを安全な確定仕様とはしない。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0066
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。全単価は0〜10,000,000円の整数とし、負数・小数・非数値・上限超過を拒否する。0円は許可するが保存前に警告する。休憩・規定実働は0〜1,440分の整数とし、休憩は勤務区間を超えてはならない。規定実働は勤務区間との大小では拒否しない。締日は月末`0`、5、10、15、20、25だけを許可する。
 
 ## CONF-0053 適用済みAgreementの訂正・削除・履歴
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: 過去Agreementも上書き・削除でき、revision/status/archiveはない。既存OperationResultはsnapshotを保持する。
 - Question: 適用済み取極めをlockするか、訂正revisionを作るか、削除を許すか、履歴をどう保持するか。
 - Why needed: 過去請求の再現性とmaster訂正を両立するため。
 - Options and impact: 過去lock+新revision、理由付き訂正、未使用分のみ削除、現行自由編集。
-- Current provisional treatment: 現行自由編集を正式な履歴仕様とは扱わない。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0067
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。OperationResultの取極めsnapshotを過去実績の正本とする。適用済み取極めmasterも編集・削除できるが、既存OperationResultへ自動反映しない。変更後に作成または明示的に再適用する実績だけが新masterを使う。master専用revision、before/after履歴、変更理由、監査collectionは設けず、Siteの通常の更新者・更新時刻だけを維持する。既存実績の訂正は請求影響等を扱う別operationとする。
 
 ## CONF-0054 Agreement snapshot・再適用・手動override
 
@@ -1683,7 +1683,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: JST inclusive＋上限、用途別上限、UTC instant API＋JST表示、debounce中stale表示/overlay/cancel。検索自由度、費用、UXが異なる。
 - Current provisional treatment: 現行JST start/end両端包含と500ms query delayを実装事実とし、無制限rangeやsilent fallbackを承認済み仕様とは扱わない。
 - Related FUT IDs: FUT-0167
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。取極めの作成・編集・削除は、同じ会社の有効な本登録Userのうち会社管理者または既知role preset由来の`sites:write`を持つUserへ限定する。直接permission文字列、未知role、会社管理者でないsuper-user、temporary、disabled、他tenantは拒否する。取極め専用permissionと作成者・承認者workflowは設けない。
 
 ## CONF-0139 CCB schemas・Admin SDKのcross-repository release境界
 

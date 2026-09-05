@@ -34,7 +34,7 @@
 
 - CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
-- CONF-0051からCONF-0053: 取極めの編集権限、数値範囲、適用済み取極めの訂正・削除・履歴。
+- CONF-0051からCONF-0053は回答済み。取極めの作成・編集・削除はstrict `sites:write`へ限定し、単価・時間・締日の範囲を固定する。適用済みmasterも編集・削除できるが既存OperationResult snapshotは変更せず、専用履歴・revision・承認workflowは設けない。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - CONF-0135: 自動終了の猶予、将来予定、競合、通知、監査、再有効化との優先。
 - 既存Site・archiveの件数とshape、仮Site・stale埋込みCustomerの状態、実利用actor、旧client併存、必要index、Dev/remote適用状態は未確認である。
 - 導入済みschema packageの変更が必要かは未確定である。必要になった場合は関連repository、version、release、consumer導入を別承認とする。
@@ -50,12 +50,12 @@
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049・0050は回答済み。0051〜0053、0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
+| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049〜0053は回答済み。残るCONF-0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
 | SITE-02 認証・書込み境界 | 15 | 0 | Not started | readは同一tenant境界を維持し、create/update/Customer・Agreement変更/終了/再有効化/archiveを会社管理者またはstrict role preset由来の`sites:write`へ限定する。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、UI・送信直前policy・Rulesまたは専用Callableを一致させる。 |
 | SITE-03 CRUD・保存data契約 | 15 | 0 | Not started | operation別の所有field、共通必須・型・長さ、server metadata、token・location等の派生field、Customer参照・埋込みCustomer、仮Site解消を固定する。live modelと独立draftを分け、同一field競合、変更なし、失敗後再試行を検証する。 |
 | SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | TERMINATEDのread-only、新規選択境界、理由付き再有効化、手動・自動終了の条件、将来予定、競合、監査、再試行を採用仕様へ揃える。既存予定等を暗黙に変更しない。 |
 | SITE-05 archive安全性 | 15 | 0 | Not started | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、全参照catalogの同一transaction確認、全参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装する。全barrierが揃うまでarchiveを有効化しない。archive barrier以外のtransaction変更と緊急restoreは別承認へ分離する。 |
-| SITE-06 取極め契約 | 10 | 0 | Not started | `sites:write`との関係、入力範囲、重複、適用済み取極めの訂正・削除、OperationResult snapshot、Billing影響を確定し、Site documentの変更fieldだけを安全に保存する。 |
+| SITE-06 取極め契約 | 10 | 0 | Not started | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円警告、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を強制する。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Site documentの変更fieldだけを安全に保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 0 | Not started | ACTIVE/TERMINATED/仮Siteの表示、検索・pagination、Autocompleteのstatus境界、作成wizard validation、郵便番号反映、非同期race、loading/error/not-found、工期表示、keyboard操作、manualを整合する。 |
 | SITE-08 Codex専用local統合確認 | 5 | 0 | Not started | 対象test、全domain、Firestore Emulator、専用local UI build・通常操作、権限陰性、保存data、独立review、cleanup、文書・Git統合を完了する。transaction系は互換確認だけとする。 |
 | SITE-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client、既存data、権限別CRUD・終了・再有効化、関連表示を確認する。未実施のDev受入れを完了扱いしない。 |
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049・CONF-0050を確定した。次はCONF-0051〜CONF-0053の取極め契約を一つの依存グループとして判断する。製品実装は承認済みcheckpointより前に開始しない。
+本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049〜CONF-0053を確定した。次はCONF-0135の自動終了・再有効化契約を判断する。製品実装は承認済みcheckpointより前に開始しない。

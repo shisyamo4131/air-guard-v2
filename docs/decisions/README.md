@@ -58,6 +58,7 @@
 | [0050](0050-outsourcer-live-retention-without-archive.md) | Outsourcerをlive masterとして保持し通常archiveを提供しない |
 | [0051](0051-site-mistaken-registration-archive-boundary.md) | Siteの誤登録archiveと参照barrier |
 | [0052](0052-site-downstream-snapshot-timing.md) | Site下流情報のsnapshot時点 |
+| [0053](0053-site-agreement-write-validation-and-history.md) | Site取極めの書込み・数値・履歴境界 |
 
 ## 新しい ADR の形式
 

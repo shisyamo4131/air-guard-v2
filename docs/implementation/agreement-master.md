@@ -12,8 +12,11 @@
 - 取極めなしのOperationResultは運用上あり得る。
 - 請求稼働管理では、適用日・勤務区分上は通常適用外の取極めも手動選択してよい。
 - 取極めなしでも請求日、単価、数量等を個別設定して請求対象化できる必要がある。
+- 取極めの作成・編集・削除は、会社管理者またはstrict role preset由来の`sites:write`を持つ同社の有効な本登録Userだけに許可する。取極め専用permissionと承認workflowは設けない。
+- 全単価は0〜10,000,000円の整数、休憩・規定実働は0〜1,440分の整数、締日は`0/5/10/15/20/25`だけを許可する。0円は警告付きで許可し、休憩は勤務区間を超えてはならない。
+- OperationResultへ適用済みのmasterも編集・削除できるが、既存OperationResult snapshotは変更しない。取極めmaster専用のrevision、before/after履歴、変更理由、監査collectionは設けない。詳細は[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 
-以上はユーザー確認済み方針であり、自動適用の実装条件や現在の入力validationとは区別する。
+以上はユーザー確認済み方針であり、自動適用の実装条件や現在の入力validationとは区別する。権限・数値・履歴の方針は未実装である。
 
 ## 入口・権限
 
@@ -91,15 +94,15 @@
 
 ## 将来要対応
 
-- FUT-0065: Agreement編集権限とRules validationを正式化する。
-- FUT-0066: 単価・時間・締日の許容範囲を確定する。
-- FUT-0067: 適用済みAgreementのrevision・削除policyを決める。
+- FUT-0065: ADR 0053のAgreement編集権限とRules validationを実装する。
+- FUT-0066: ADR 0053の単価・時間・締日validationと0円警告を実装する。
+- FUT-0067: 適用済みAgreementの編集・削除、既存snapshot不変、専用履歴なしの契約を実装・検証する。
 - FUT-0068: Agreement snapshotと再適用境界を明示・検証する。
 - FUT-0069: AgreementV2の独立collection契約と旧classを整理する。
 
 ## 要確認事項
 
-- CONF-0051〜CONF-0055を`pending-confirmations.md`へ登録した。
+- CONF-0051〜CONF-0053は2026-09-05に回答済みで、ADR 0053へ記録した。CONF-0054・CONF-0055は`pending-confirmations.md`に残る。
 
 ## 未確認範囲
 
