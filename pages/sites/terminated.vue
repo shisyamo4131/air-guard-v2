@@ -16,6 +16,7 @@ const search = ref(null);
  *****************************************************************************/
 const router = useRouter();
 const { docs } = useSitesTerminated({ search });
+const { canWrite, isSaving } = useSiteActions();
 </script>
 
 <template>
@@ -25,10 +26,12 @@ const { docs } = useSitesTerminated({ search });
       :docs="docs"
       v-model:search="search"
       :items-per-page="20"
+      :handle-click-update="(item) => router.push(`/sites/${item.docId}`)"
       :table-props="{
         customFilter: () => true,
+        disableCreate: !canWrite || isSaving,
+        editIcon: canWrite ? 'mdi-pencil' : 'mdi-eye',
       }"
-      @click:detail="(item) => router.push(`/sites/${item.docId}`)"
     />
   </v-container>
 </template>

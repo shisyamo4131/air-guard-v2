@@ -808,15 +808,15 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0060 Site CRUD・statusの暫定権限を正式化する
 
-- 状態: Open
+- 状態: Completed
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: `utils/pageSettings.js` sites routes、`pages/sites/**`、`components/Site/**`、Sites Rules
-- 確認済み実装事実: `sites:read`で作成、全編集、取極め変更、終了、archiveへ到達し、Rulesは同一会社User/super-userに全field writeを許す。SPEC-DEEP-010で6種のSite side effectにpage側write guardがなく、ACTIVE一覧・TERMINATED検索の双方から同じ詳細へ到達することを確認した。SPEC-DEEP-034ではSite Manager/Activator/Autocompleteがpermission・statusを検査せずedit/create入口を公開し、Air managerもdisabledを操作guardとして強制しないことを確認した。
-- 想定影響と発生条件: 閲覧利用者が配置・請求の基礎masterや取極めを改変・削除できる可能性がある。
-- 未確認点・仮説: role presetの具体的な割当、Callableのactor/field検証、archive監査schema、operator緊急restoreの実装方式は未確認。
-- 推奨する将来対応: `sites:read`/`sites:write`の2権限を実装し、writeへ作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含める。archiveは理由・監査必須、通常restoreは禁止し、operator緊急restoreを通常UIから分離する。route/button/Rules/Callable/role presetを一致させる。
-- 必要なテスト: read/write別route/button/直接write、他社path、Customer/Agreement変更、terminate/reactivate/archive、通常restore拒否、operator緊急restore監査。
+- 確認済み実装事実: SITE-02で、現在存在する作成、基本情報・Customer・Agreement変更、終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。UIに加えて送信直前にcurrent Auth/live Userを再評価し、同一client module内の二重送信を拒否する。Rulesも同じactor matrixを強制し、Site deleteと`Sites_archive` client CUDを拒否した。再有効化と安全な専用archiveは未実装であり、FUT-0062/0063で同じ境界を適用する。
+- 解消した影響: 閲覧利用者が配置・請求の基礎masterや取極めを改変・削除できた境界を、UI・送信直前policy・Rulesで拒否した。
+- 未確認点・仮説: 実利用actorと旧clientのDev互換、未実装の再有効化・archive Callable、operator緊急restoreの実装方式は未確認。
+- 完了内容: `sites:read` routeを維持し、現在存在するwriteをstrict `sites:write`へ限定した。direct permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、generic delete/restoreをSite UIから非到達にした。専用archive、通常restore不在、再有効化は各後続FUTの完了条件とする。
+- 必要なテスト: 完了済み範囲ではactor matrix、UI source契約、送信直前policy、single-flight、Site/Sites_archive Rules、Customer参照回帰をdomain/Emulatorで確認した。reactivate/archive固有testはFUT-0062/0063で行う。
 - ユーザー判断が必要な事項: なし。CONF-0046で方針確定済み。
 
 ## FUT-0061 SiteとCustomerの所属・埋込み整合を保証する

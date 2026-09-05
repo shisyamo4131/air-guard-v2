@@ -415,7 +415,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Autonumbers",
   "Employees_archive",
   "meta",
-  "Sites_archive",
   "SiteOperationSchedules",
 ];
 
@@ -2324,6 +2323,9 @@ test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant
     { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
+    { label: "malformed-temporary", user: { isAdmin: true, roles: [], isTemporary: "false" } },
+    { label: "malformed-disabled", user: { isAdmin: true, roles: [], disabled: "false" } },
+    { label: "malformed-admin", user: { isAdmin: "true", roles: [] } },
     { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
     { label: "missing-user", missingUser: true },
     { label: "missing-super-claim", user: { isAdmin: true, roles: [] }, missingSuperClaim: true },
@@ -2569,6 +2571,177 @@ test("Outsourcer Rules recheck revoked manager role and disabled state", async (
     );
   });
   await assertFails(updateDoc(reference, { remarks: "disabled" }));
+});
+
+test("Site Rules allow create and update for the strict sites:write actor matrix", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actors = [
+    { label: "admin", isAdmin: true, roles: [], isSuperUser: false },
+    { label: "admin-super", isAdmin: true, roles: [], isSuperUser: true },
+    { label: "manager", isAdmin: false, roles: ["manager"], isSuperUser: false },
+    { label: "controller", isAdmin: false, roles: ["controller"], isSuperUser: false },
+    { label: "legal", isAdmin: false, roles: ["legal"], isSuperUser: false },
+  ];
+
+  for (const actor of actors) {
+    const uid = `site-rules-allowed-${actor.label}`;
+    const docId = `site-rules-allowed-doc-${actor.label}`;
+    await seedRegisteredUser({
+      uid,
+      pathCompanyId: companyId,
+      companyId,
+      isAdmin: actor.isAdmin,
+      roles: actor.roles,
+    });
+    const firestore = authenticatedFirestore(uid, {
+      isSuperUser: actor.isSuperUser,
+    });
+    const reference = doc(firestore, "Companies", companyId, "Sites", docId);
+
+    await assertSucceeds(setDoc(reference, { revision: 1 }));
+    await assertSucceeds(updateDoc(reference, { revision: 2 }));
+    assert.equal((await assertSucceeds(getDoc(reference))).data().revision, 2);
+  }
+});
+
+test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-tenant writers", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const deniedActors = [
+    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
+    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
+    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
+    { label: "direct-permission", user: { isAdmin: false, roles: ["sites:write"] } },
+    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
+    { label: "prototype-to-string", user: { isAdmin: false, roles: ["toString"] } },
+    { label: "prototype-constructor", user: { isAdmin: false, roles: ["constructor"] } },
+    { label: "prototype-proto", user: { isAdmin: false, roles: ["__proto__"] } },
+    { label: "mixed-unknown-role", user: { isAdmin: false, roles: ["manager", "unknown-role"] } },
+    { label: "roles-not-list", user: { isAdmin: false, roles: "manager" } },
+    { label: "admin-state-missing", user: { roles: ["manager"] } },
+    { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
+    { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
+    { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
+    { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
+    { label: "missing-user", missingUser: true },
+    { label: "missing-super-claim", user: { isAdmin: true, roles: [] }, missingSuperClaim: true },
+    { label: "missing-company-claim", user: { isAdmin: true, roles: [] }, missingCompanyClaim: true },
+    { label: "malformed-company-claim", user: { isAdmin: true, roles: [] }, claims: { companyId: 123 } },
+    { label: "malformed-super-claim", user: { isAdmin: true, roles: [] }, claims: { isSuperUser: "false" } },
+    { label: "unverified", user: { isAdmin: true, roles: [] }, claims: { email_verified: false } },
+  ];
+
+  for (const actor of deniedActors) {
+    const uid = `site-rules-denied-${actor.label}`;
+    const docId = `site-rules-denied-doc-${actor.label}`;
+    if (!actor.missingUser) {
+      await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, ...actor.user });
+    }
+    const claims = {
+      email_verified: true,
+      companyId,
+      ...(actor.missingSuperClaim ? {} : { isSuperUser: false }),
+      ...actor.claims,
+    };
+    if (actor.missingCompanyClaim) delete claims.companyId;
+    const firestore = testEnvironment.authenticatedContext(uid, claims).firestore();
+    const reference = doc(firestore, "Companies", companyId, "Sites", docId);
+
+    await assertFails(setDoc(reference, { revision: 1 }));
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", docId), { revision: 1 });
+    });
+    await assertFails(updateDoc(reference, { revision: 2 }));
+  }
+
+  const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const otherUid = "site-rules-cross-tenant-admin";
+  await seedRegisteredUser({
+    uid: otherUid,
+    pathCompanyId: otherCompanyId,
+    companyId: otherCompanyId,
+    isAdmin: true,
+    roles: [],
+  });
+  const otherFirestore = authenticatedFirestore(otherUid, {
+    companyId: otherCompanyId,
+    isSuperUser: false,
+  });
+  const crossReference = doc(otherFirestore, "Companies", companyId, "Sites", "site-rules-cross-tenant");
+  await assertFails(setDoc(crossReference, { revision: 1 }));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", "site-rules-cross-tenant"), { revision: 1 });
+  });
+  await assertFails(updateDoc(crossReference, { revision: 2 }));
+});
+
+test("Site Rules preserve same-tenant live and archive reads while denying direct destructive writes", async () => {
+  const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const uid = "site-rules-read-only-accountant";
+  const docId = "site-rules-readable";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: primaryCompanyId,
+    companyId: primaryCompanyId,
+    isAdmin: false,
+    roles: ["accountant"],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const companyId of [primaryCompanyId, secondaryCompanyId]) {
+      for (const collectionName of ["Sites", "Sites_archive"]) {
+        await setDoc(
+          doc(context.firestore(), "Companies", companyId, collectionName, docId),
+          { revision: 1 },
+        );
+        await setDoc(
+          doc(
+            context.firestore(),
+            "Companies",
+            companyId,
+            collectionName,
+            docId,
+            "Nested",
+            "server-seeded",
+          ),
+          { revision: 1 },
+        );
+      }
+    }
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+
+  for (const collectionName of ["Sites", "Sites_archive"]) {
+    const ownCollection = collection(firestore, "Companies", primaryCompanyId, collectionName);
+    assert.equal((await assertSucceeds(getDoc(doc(ownCollection, docId)))).exists(), true);
+    assert.ok((await assertSucceeds(getDocs(ownCollection))).docs.some((snapshot) => snapshot.id === docId));
+    const otherCollection = collection(firestore, "Companies", secondaryCompanyId, collectionName);
+    await assertFails(getDoc(doc(otherCollection, docId)));
+    await assertFails(getDocs(otherCollection));
+  }
+
+  const adminUid = "site-rules-destructive-admin";
+  await seedRegisteredUser({
+    uid: adminUid,
+    pathCompanyId: primaryCompanyId,
+    companyId: primaryCompanyId,
+    isAdmin: true,
+    roles: [],
+  });
+  const adminFirestore = authenticatedFirestore(adminUid, { isSuperUser: false });
+  const live = doc(adminFirestore, "Companies", primaryCompanyId, "Sites", docId);
+  const archive = doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", docId);
+  await assertFails(deleteDoc(live));
+  await assertFails(setDoc(doc(adminFirestore, "Companies", primaryCompanyId, "Sites_archive", "new-archive"), { revision: 1 }));
+  await assertFails(updateDoc(archive, { revision: 2 }));
+  await assertFails(deleteDoc(archive));
+  await assertFails(setDoc(doc(live, "Nested", "fallback-bypass"), { bypass: true }));
+  await assertFails(setDoc(doc(archive, "Nested", "fallback-bypass"), { bypass: true }));
+  for (const parent of [live, archive]) {
+    const nested = doc(parent, "Nested", "server-seeded");
+    await assertFails(getDoc(nested));
+    await assertFails(updateDoc(nested, { revision: 2 }));
+    await assertFails(deleteDoc(nested));
+  }
 });
 
 test("Customer Rules allow exact create and operation-specific updates for approved actors", async () => {
@@ -3595,12 +3768,16 @@ test("Firestore Rules treat every same-ID archive shape as a Customer tombstone"
 });
 
 const CAS03_CUSTOMER_REFERENCE_COLLECTIONS = [
-  { collectionName: "Sites", optionalOnCreate: true },
-  { collectionName: "OperationResults", optionalOnCreate: false },
-  { collectionName: "Billings", optionalOnCreate: false },
+  { collectionName: "Sites", optionalOnCreate: true, deleteAllowed: false },
+  { collectionName: "OperationResults", optionalOnCreate: false, deleteAllowed: true },
+  { collectionName: "Billings", optionalOnCreate: false, deleteAllowed: true },
 ];
 
-for (const { collectionName, optionalOnCreate } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
+for (const {
+  collectionName,
+  optionalOnCreate,
+  deleteAllowed,
+} of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   test(`Firestore Rules enforce the ${collectionName} Customer reference matrix`, async () => {
     const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
     const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
@@ -3761,7 +3938,11 @@ for (const { collectionName, optionalOnCreate } of CAS03_CUSTOMER_REFERENCE_COLL
       await assertSucceeds(
         updateDoc(orphanReference, { marker: "unrelated-update-compatible" }),
       );
-      await assertSucceeds(deleteDoc(orphanReference));
+      if (deleteAllowed) {
+        await assertSucceeds(deleteDoc(orphanReference));
+      } else {
+        await assertFails(deleteDoc(orphanReference));
+      }
 
       const crossTenantReference = doc(
         firestore,

@@ -217,6 +217,38 @@ service cloud.firestore {
             && hasCustomerWriteRole(user)));
     }
 
+    function hasSiteWriteRole(user) {
+      return user.roles is list
+        && user.roles.size() <= 6
+        && user.roles.hasOnly([
+          'manager', 'controller', 'accountant',
+          'human-resource', 'labor', 'legal'
+        ])
+        && user.roles.hasAny(['manager', 'controller', 'legal']);
+    }
+
+    function isActiveSiteWriter(companyId, user) {
+      return user.companyId is string
+        && user.companyId == companyId
+        && user.isTemporary is bool
+        && user.isTemporary == false
+        && user.disabled is bool
+        && user.disabled == false
+        && user.isAdmin is bool
+        && (user.isAdmin == true
+          || (request.auth.token.isSuperUser == false
+            && hasSiteWriteRole(user)));
+    }
+
+    function canWriteSite(companyId) {
+      let userPath = /databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid);
+      return hasValidIdentityClaims()
+        && request.auth.token.companyId == companyId
+        && request.auth.token.isSuperUser is bool
+        && exists(userPath)
+        && isActiveSiteWriter(companyId, get(userPath).data);
+    }
+
     function hasExactOutsourcerManagerRole(user) {
       return user.keys().hasAll(['roles'])
         ? (user.roles is list
@@ -554,25 +586,23 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Sites' subcollection under 'Companies' ---
-    // customerIdなしの仮Siteを許可する。設定後はunsetを拒否するが、
-    // 同じ会社に存在する別Customerへの変更は許可する。
+    // 読取りは既存の同一tenant境界を維持する。作成・更新は有効な
+    // 会社管理者またはnon-super-userの既知preset由来sites:writeへ限定する。
+    // customerIdなしの仮Siteを許可し、設定後のunsetは拒否する。
     match /Companies/{companyId}/Sites/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if isAuthenticated()
-                    && userCompanyId() == companyId
+      allow create: if canWriteSite(companyId)
                     && isValidOptionalCustomerReferenceCreate(companyId);
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyId
+      allow update: if canWriteSite(companyId)
                     && isValidOptionalCustomerReferenceUpdate(companyId);
-      allow delete: if isAuthenticated() && userCompanyId() == companyId;
+      allow delete: if false;
     }
 
     // --- Rules for 'Sites_archive' subcollection under 'Companies' ---
-    // Sites_archiveコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Sites_archive ドキュメントのみ Read/Write を許可。
+    // archiveの読取りは同一tenantに維持し、client writeは全て拒否する。
     match /Companies/{companyId}/Sites_archive/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
     }
 
     // --- Rules for 'SiteOperationSchedules' subcollection under 'Companies' ---
@@ -629,6 +659,7 @@ service cloud.firestore {
                                 "Outsourcers",
                                 "Outsourcers_archive",
                                 "Sites",
+                                "Sites_archive",
                                 "Users",
                                 "Employees",
                                 "EmployeeUserReservations",

@@ -48,6 +48,7 @@ const emit = defineEmits(["update:model-value"]);
 const allSlots = useSlots();
 const { fetchSiteComposable } = useFetch("SiteAutocomplete");
 const { getSite, searchSites } = fetchSiteComposable;
+const { canWrite, isSaving } = useSiteActions();
 
 /*****************************************************************************
  * COMPUTED
@@ -89,10 +90,10 @@ async function api(text) {
     :return-object="returnObject"
     @update:model-value="emit('update:model-value', $event)"
   >
-    <template v-if="creatable" #append>
+    <template v-if="creatable && canWrite" #append>
       <SitesManager @create="($event) => onCreateHandler($event)">
         <template #table="{ toCreate }">
-          <v-icon @click="toCreate()">mdi-plus</v-icon>
+          <v-icon :disabled="isSaving" @click="toCreate()">mdi-plus</v-icon>
         </template>
       </SitesManager>
     </template>

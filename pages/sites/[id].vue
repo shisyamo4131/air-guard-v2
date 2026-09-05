@@ -29,6 +29,9 @@ const docId = route.params.id;
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { doc } = useDocument("Site", { docId });
+const { canWrite, isSaving, executeSiteWrite } = useSiteActions();
+const updateAgreements = () =>
+  executeSiteWrite("agreement", () => doc.update());
 
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
@@ -87,9 +90,13 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
           <v-col cols="12">
             <SiteManager :doc="doc" label="基本情報" hide-delete-btn>
               <template #activator="activatorProps">
-                <SiteActivatorBase v-bind="activatorProps">
+                <SiteActivatorBase
+                  v-if="canWrite"
+                  v-bind="activatorProps"
+                >
                   <template #actions>
                     <SiteManager
+                      v-if="canWrite"
                       class="flex-grow-1"
                       :doc="doc"
                       :handle-update="(item) => item.terminate()"
@@ -116,6 +123,17 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
                     </SiteManager>
                   </template>
                 </SiteActivatorBase>
+                <div
+                  v-else
+                  class="site-read-only"
+                  aria-disabled="true"
+                  inert
+                >
+                  <SiteActivatorBase
+                    :item="activatorProps.item"
+                    :title="activatorProps.title"
+                  />
+                </div>
               </template>
             </SiteManager>
           </v-col>
@@ -124,7 +142,21 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
           <v-col cols="12">
             <SiteManager :doc="doc" label="取引先情報" hide-delete-btn>
               <template #activator="activatorProps">
-                <SiteActivatorCustomer v-bind="activatorProps" />
+                <SiteActivatorCustomer
+                  v-if="canWrite"
+                  v-bind="activatorProps"
+                />
+                <div
+                  v-else
+                  class="site-read-only"
+                  aria-disabled="true"
+                  inert
+                >
+                  <SiteActivatorCustomer
+                    :item="activatorProps.item"
+                    :title="activatorProps.title"
+                  />
+                </div>
               </template>
             </SiteManager>
           </v-col>
@@ -167,47 +199,26 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
       <!-- 取極め情報 -->
       <v-col cols="12" md="4">
         <AgreementsManager
+          v-if="canWrite"
           v-model="doc.agreementsV2"
           :cutoff-date="doc.customer?.cutoffDate"
-          @submit:complete="async () => await doc.update()"
+          :before-edit="() => !isSaving"
+          :disabled="isSaving"
+          :disable-submit="isSaving"
+          :disable-update="isSaving"
+          @submit:complete="updateAgreements"
         />
-      </v-col>
-
-      <!-- 削除処理ボタン -->
-      <v-col cols="12">
-        <site-manager
-          :doc="doc"
-          hide-delete-btn
-          @submit:complete="() => router.replace('/sites')"
-        >
-          <template #activator="{ toDelete }">
-            <v-btn
-              block
-              color="error"
-              text="この現場を削除する"
-              @click="() => toDelete()"
-            />
-          </template>
-          <template #editor="{ actions: editorActions }">
-            <v-card>
-              <template #prepend>
-                <v-icon icon="mdi-alert" color="error" />
-              </template>
-              <template #title> 削除処理 </template>
-              <template #text>
-                削除すると復元することはできません。本当に削除しますか？
-              </template>
-              <template #actions>
-                <MoleculesActionsSubmitCancel
-                  v-bind="editorActions"
-                  submitText="実行"
-                  color="error"
-                />
-              </template>
-            </v-card>
-          </template>
-        </site-manager>
+        <MoleculesFloatingTitleCard v-else title="取極め" color="secondary">
+          <AgreementsViewer :agreements="doc.agreementsV2" />
+        </MoleculesFloatingTitleCard>
       </v-col>
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+.site-read-only :deep(.v-toolbar .v-btn),
+.site-read-only :deep(.v-empty-state__actions) {
+  display: none;
+}
+</style>

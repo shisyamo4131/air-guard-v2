@@ -23,7 +23,10 @@ defineOptions({ name: "SitesManager", inheritAttrs: false });
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  beforeEdit: { type: Function, default: () => true },
   customInput: { type: Object, default: () => CustomInputBase },
+  disableSubmit: { type: [Boolean, Function], default: false },
+  disableUpdate: { type: [Boolean, Function], default: false },
   docs: { type: Array, default: () => [] },
   handleCreate: { type: Function, default: (item) => item.create(item) },
   handleUpdate: { type: Function, default: (item) => item.update(item) },
@@ -35,6 +38,8 @@ const props = useDefaults(_props, "SitesManager");
  * SETUP BASE MANAGER COMPOSABLES
  *****************************************************************************/
 const { attrs } = useBaseManager("SitesManager");
+const { canWrite, isSaving, executeSiteWrite, rejectDirectDelete } =
+  useSiteActions();
 
 /*****************************************************************************
  * METHODS
@@ -48,6 +53,44 @@ function getApplicableCustomInput({ editMode }) {
   if (editMode === "CREATE") return CustomInput;
   return props.customInput;
 }
+
+async function beforeEdit(editMode, item) {
+  if (editMode === "DELETE") return await rejectDirectDelete();
+  await executeSiteWrite(editMode.toLowerCase(), async () => undefined);
+  return await props.beforeEdit(editMode, item);
+}
+
+async function handleCreate(item) {
+  return await executeSiteWrite("create", () => props.handleCreate(item));
+}
+
+async function handleUpdate(item) {
+  return await executeSiteWrite("update", () => props.handleUpdate(item));
+}
+
+async function handleDelete() {
+  return await rejectDirectDelete();
+}
+
+function disableSubmit(context) {
+  return (
+    !canWrite.value ||
+    isSaving.value ||
+    (typeof props.disableSubmit === "function"
+      ? props.disableSubmit(context)
+      : props.disableSubmit)
+  );
+}
+
+function disableUpdate(item) {
+  return (
+    !canWrite.value ||
+    isSaving.value ||
+    (typeof props.disableUpdate === "function"
+      ? props.disableUpdate(item)
+      : props.disableUpdate)
+  );
+}
 </script>
 
 <template>
@@ -55,13 +98,21 @@ function getApplicableCustomInput({ editMode }) {
     v-bind="{ ...$attrs, ...attrs }"
     :model-value="docs"
     :schema="Site"
-    :handle-create="props.handleCreate"
-    :handle-update="props.handleUpdate"
-    :handle-delete="props.handleDelete"
+    :before-edit="beforeEdit"
+    :disable-submit="disableSubmit"
+    :disable-update="disableUpdate"
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="handleDelete"
     :custom-input="getApplicableCustomInput"
   >
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
-      <slot :name="slotName" v-bind="scope ?? {}"></slot>
+      <slot
+        :name="slotName"
+        v-bind="scope ?? {}"
+        :can-write="canWrite"
+        :is-saving="isSaving"
+      ></slot>
     </template>
   </air-array-manager>
 </template>

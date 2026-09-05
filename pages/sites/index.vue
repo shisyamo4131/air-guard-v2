@@ -31,6 +31,7 @@ const router = useRouter();
  *****************************************************************************/
 const { fetchCustomerComposable } = useFetch("SiteIndex", true);
 const { fetchCustomer, cachedCustomersArray } = fetchCustomerComposable;
+const { canWrite, isSaving } = useSiteActions();
 
 /*****************************************************************************
  * COMPUTED
@@ -96,7 +97,12 @@ onUnmounted(unsubscribe);
       <template #table="slotProps">
         <v-toolbar class="mb-4 bg-transparent" density="compact">
           <AtomsSearchTextField v-model="search" />
-          <v-btn icon="mdi-plus" @click="() => slotProps.toCreate()" />
+          <v-btn
+            v-if="canWrite"
+            :disabled="isSaving"
+            icon="mdi-plus"
+            @click="() => slotProps.toCreate()"
+          />
 
           <!-- フィルター用コンポーネント -->
           <v-dialog v-model="filterDialog" max-width="360px" persistent>
@@ -145,6 +151,7 @@ onUnmounted(unsubscribe);
           class="flex-grow-1 overflow-hidden"
           v-bind="slotProps"
           :search="search"
+          :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
         />
         <!-- 2026-06-30 コメントアウト -->
         <!-- モバイル表示を兼ねて Iterator コンポーネントを利用していたが -->
