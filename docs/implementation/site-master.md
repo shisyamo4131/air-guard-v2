@@ -4,7 +4,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
-- 最終確認日: 2026-09-04
+- 最終確認日: 2026-09-05
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/fetch/useFetchSite.js`、`composables/dataLayers/site/useSitesTerminated.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
 
 ## 入口・暫定権限
@@ -15,7 +15,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 
 | 入口 | 現行UI | pageSettings | Rules |
 |---|---|---|---|
-| `/sites` | ACTIVE一覧、作成、詳細遷移 | `sites:read` | 同一会社認証Userまたはsuper-userに全read/write |
+| `/sites` | ACTIVE一覧、作成、詳細遷移 | `sites:read` | 同一tenantの有効な本登録Userにread/create/update/delete。Customer参照guard以外のSite field・role制約なし |
 | `/sites/[id]` | 基本情報・取引先・取極め更新、終了、削除 | `sites:read` | 同上 |
 | `/sites/terminated` | TERMINATEDを名称検索し詳細遷移 | `sites:read` | 同上 |
 
@@ -70,8 +70,9 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 
 ## Rules・tenant境界
 
-- `Companies/{companyId}/Sites/{docId}`と`Sites_archive`は、pathのcompanyIdが認証User claimと一致するかsuper-userなら全read/write。
-- Rulesはfield、role、status transition、customerIdが同一会社Customerを指すこと、hasMany参照を検証しない。schema経由では同じprefixでCustomerをfetchするが、直接writeでは埋込みcustomerとの整合も強制されない。
+- `Companies/{companyId}/Sites/{docId}`は、pathのcompanyIdと有効な本登録Userのcompany claimが一致する場合にread/create/update/deleteを許可する。会社管理者でないsuper-userの他tenant bypassはないが、同一tenant内ではroleに関係なくwriteできる。
+- Rulesはcreate時とcustomerId変更時に同一会社Customerの存在を検査し、設定済みcustomerIdのunsetを拒否する。field、`sites:write`、status transition、埋込みcustomerの一致、hasMany参照は検証しない。
+- `Sites_archive`は同一tenantの有効な本登録Userにread/writeを許可し、archive envelope、actor、reason、時刻、restore条件を検証しない。
 - tenant境界はcollection pathに依存し、document内companyIdはSite契約にない。
 
 ## Site components公開契約・状態・失敗境界（SPEC-DEEP-034）
@@ -108,7 +109,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 ## 将来要対応
 
 - FUT-0060: 確定したSite read/write権限をUI・Rules・Callable・presetへ実装する。
-- FUT-0061: 許可されたCustomer変更の存在・tenant境界を保証し、埋込みCustomer同期を順序・部分失敗安全にする。
+- FUT-0061: Customer存在・tenant境界はRulesとschema経路へ導入済み。埋込みCustomer同期を順序・部分失敗安全にし、operation別writerとのparityを確認する。
 - FUT-0062: TERMINATEDのread-only、新規選択禁止、監査付き再有効化を実装する。
 - FUT-0063: Site archiveと参照guardを競合安全にする。
 - FUT-0064: Site master変更の下流snapshot/live境界を確定する。

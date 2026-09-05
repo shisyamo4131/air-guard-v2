@@ -3,7 +3,7 @@
 - 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
-- 最終確認日: 2026-09-04
+- 最終確認日: 2026-09-05
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
 - 上記の利用者最終受入れは正式運用移行全体の完了条件であり、個々の既存画面改修に利用者local受入れを一律要求する意味ではない。個別変更は[local UI検証runbook](../runbooks/local-ui-testing.md)の省略基準に従う。
 
@@ -42,7 +42,7 @@
 1. CustomerはRules・HostingをDevへ反映し、座標付き保存のRules不具合を修正して会社管理者の通常作成・基本情報・支払条件・指定既存取引先の編集と復元を確認した。[Dev試験とcleanup](../verification/customer-01d-dev-test.md)を参照。権限別UI確認は[CUSTOMER-01E記録](../verification/customer-01e-dev-test.md)を参照。実Devの直接拒否probeは対象外。請求期日・PDFの受入れは利用者指示で稼働実績管理改修後の請求書発行機能確認へ移し、Customerフェーズの完了条件から外す。次のフェーズは着手前に[テスト範囲を利用者と合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)する。[既存の検査証拠](../verification/customer-01b-dev-compatibility.md)は保持し、追加全件診断・予防修復を一律の先行作業にしない。
 2. Customerの作成・基本情報・支払条件に関する先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)のとおり終了した。取引状態の表示・編集は[Customer状態ロードマップ](customer-status.md)のCS-03、archive safetyは[専用ロードマップ](customer-archive-safety.md)のCAS-04までlocal実装・検証を完了した。CS-04とCAS-05のDev反映・受入れはマスタデータ管理の一連の改修後へ延期し、別承認する。restore、code一意性・検索拡張、Siteへの移行は別の作業単位として後続合意する。個別改修の未実施Dev受入れを成功扱いせず、下記方針に従ってまとめて確認する。
 3. Outsourcerは[専用ロードマップ](outsourcer.md)で管理する。利用者は、Outsourcerを特定の協力会社masterとし、同じ外注先を配置へ複数回登録できる現行方式を維持して、旧試行の人数集約方式を採用しないと確定した。OUT-01からOUT-06のlocal実装・契約検証に加え、OUT-07で対象48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smoke、Rules陰性、保存data不変、cleanupを確認し、専用ロードマップを90%とした。拒否actorの実browserは未実施だが、利用者承認により自動UI契約テストとRules陰性をOUT-07固有の代替証拠とした。周辺transaction機能は変更していない。OUT-08とDev反映は別承認である。
-4. 次のマスタ管理phaseはSiteとする。現行仕様、UI、client/Functions/RulesのCRUD経路、data契約、関連機能、既知課題、既存testをread-onlyで確認した後、確認済み事実・未確認事項・改修候補・段階的な完了条件をSite専用ロードマップへ整理する。調査・計画と実装を分離し、ロードマップの利用者確認前に製品改修へ進まない。
+4. 次のマスタ管理phaseはSiteとする。現行仕様、UI、client/Functions/RulesのCRUD経路、data契約、関連機能、既知課題、既存testのread-only確認を終え、[Site専用ロードマップ](site.md)へ確認済み事実、未確認事項、transaction系の分離、段階的完了条件、互換性、migration、rollback、検証を整理し、計画の利用者承認を得た。製品実装は未承認であり、SITE-01以降を別checkpointとして合意するまで進まない。
 5. Siteの現状確認・計画phaseと分離して、次にEmployee masterを同じ順序で扱う。現行仕様、個人情報・権限、UI、client/Functions/RulesのCRUD経路、data契約、User・配置・勤怠等との依存、既知課題、既存testをread-onlyで確認し、Employee専用ロードマップを別に作成する。SiteとEmployeeの進捗・完了条件・承認を合算しない。
 6. マスタ管理機能の改修中は対象masterのCRUDを主対象とする。配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更は、Firestore更新に関係しない表示・読取り・描画identityの互換修正に限定する。transaction系の要改修箇所を検出しても実装せず、既知課題として記録する。マスタ管理の一連の改修後に、OperationResultの管制側編集lockと権限境界、Billing/勤怠/履歴同期、rounding、notification、配置更新失敗時のrollback/refetchを含む改修範囲を別checkpointで合意する。
 7. 配置管理の表示順行削除の観測と詳細案は[提案中の専用ロードマップ](arrangement-row-removal-ux.md)で扱う。行単位のpending、同じ`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryはARU-01で利用者承認を得るまで実装要件としない。Site/Schedule削除やgeneric UI全体はscope外で、現在は提案0%のため本ロードマップの10%進捗には加点しない。
