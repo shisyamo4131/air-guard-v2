@@ -2720,6 +2720,114 @@ test("Site Rules allow create and update for the strict sites:write actor matrix
   }
 });
 
+test("Site Rules allow an admin to create a complete Customer then an assigned Site without touching unrelated data", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-ui-equivalent-admin";
+  const customerId = "site-rules-ui-equivalent-customer";
+  const unrelatedCustomerId = "site-rules-ui-equivalent-unrelated-customer";
+  const operationResultId = "site-rules-ui-equivalent-operation-result";
+  const siteId = "site-rules-ui-equivalent-site";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: true,
+    roles: [],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "System", "system"), {
+      isMaintenance: false,
+    });
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const customerReference = doc(
+    firestore,
+    "Companies",
+    companyId,
+    "Customers",
+    customerId,
+  );
+  const unrelatedCustomerReference = doc(
+    firestore,
+    "Companies",
+    companyId,
+    "Customers",
+    unrelatedCustomerId,
+  );
+  const operationResultReference = doc(
+    firestore,
+    "Companies",
+    companyId,
+    "OperationResults",
+    operationResultId,
+  );
+  const siteReference = doc(firestore, "Companies", companyId, "Sites", siteId);
+
+  await assertSucceeds(setDoc(
+    customerReference,
+    customerRulesData({ docId: customerId, uid }),
+  ));
+  await assertSucceeds(setDoc(
+    unrelatedCustomerReference,
+    customerRulesData({
+      docId: unrelatedCustomerId,
+      uid,
+      code: "C002",
+      name: "非対象合成取引先",
+      abbreviation: "非対象取引先",
+      nameKana: "ヒタイショウゴウセイトリヒキサキ",
+      tokenMap: { 非: true, 非対: true },
+    }),
+  ));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        companyId,
+        "OperationResults",
+        operationResultId,
+      ),
+      {
+        docId: operationResultId,
+        customerId: unrelatedCustomerId,
+        marker: "unrelated-operation-result",
+      },
+    );
+  });
+  const customer = (await assertSucceeds(getDoc(customerReference))).data();
+  const customerProjection = createSiteCustomerProjection(customer);
+  const unrelatedCustomerBefore = (
+    await assertSucceeds(getDoc(unrelatedCustomerReference))
+  ).data();
+  const operationResultBefore = (
+    await assertSucceeds(getDoc(operationResultReference))
+  ).data();
+
+  await assertSucceeds(setDoc(
+    siteReference,
+    siteRulesData({
+      docId: siteId,
+      uid,
+      customerId,
+      customer: customerProjection,
+    }),
+  ));
+
+  const createdSite = (await assertSucceeds(getDoc(siteReference))).data();
+  assert.equal(createdSite.customerId, customerId);
+  assert.equal(createdSite.isTemporary, false);
+  assert.deepEqual(createdSite.customer, customerProjection);
+  assert.deepEqual(
+    (await assertSucceeds(getDoc(unrelatedCustomerReference))).data(),
+    unrelatedCustomerBefore,
+  );
+  assert.deepEqual(
+    (await assertSucceeds(getDoc(operationResultReference))).data(),
+    operationResultBefore,
+  );
+});
+
 test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-tenant writers", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const deniedActors = [
