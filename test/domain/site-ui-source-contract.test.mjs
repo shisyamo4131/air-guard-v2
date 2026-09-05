@@ -129,7 +129,10 @@ test("Site editors use independent drafts and explicit same-operation conflict c
 });
 
 test("Site action rebuilds authorization state at send time and refuses direct delete", async () => {
-  const actions = await source("composables/application/site/useSiteActions.js");
+  const [actions, archive] = await Promise.all([
+    source("composables/application/site/useSiteActions.js"),
+    source("composables/application/site/useSiteArchiveAction.js"),
+  ]);
   assert.match(actions, /authenticationUid: \$auth\?\.currentUser\?\.uid/u);
   assert.match(actions, /isEmailVerified: \$auth\?\.currentUser\?\.emailVerified/u);
   assert.match(
@@ -138,7 +141,19 @@ test("Site action rebuilds authorization state at send time and refuses direct d
   );
   assert.match(
     actions,
-    /const sharedSiteWriteState = Vue\.reactive\(\{ isSaving: false \}\)[\s\S]*?async function executeSiteWrite[\s\S]*?assertWritePermission\(\)[\s\S]*?if \(sharedSiteWriteState\.isSaving\)[\s\S]*?sharedSiteWriteState\.isSaving = true[\s\S]*?return await action\(\)[\s\S]*?finally[\s\S]*?sharedSiteWriteState\.isSaving = false/u,
+    /const sharedSiteWriteState = Vue\.reactive\(\{ isSaving: false \}\)[\s\S]*?export async function runWithSiteWriteMutex\(action\)[\s\S]*?if \(sharedSiteWriteState\.isSaving\)[\s\S]*?"operation-in-progress"[\s\S]*?sharedSiteWriteState\.isSaving = true[\s\S]*?return await action\(\)[\s\S]*?finally[\s\S]*?sharedSiteWriteState\.isSaving = false/u,
+  );
+  assert.match(
+    actions,
+    /async function executeSiteWrite\(operation, action\)[\s\S]*?assertWritePermission\(\)[\s\S]*?return await runWithSiteWriteMutex\(async \(\) => \{[\s\S]*?return await action\(\)/u,
+  );
+  assert.match(
+    archive,
+    /import \{ runWithSiteWriteMutex \} from "@\/composables\/application\/site\/useSiteActions";/u,
+  );
+  assert.match(
+    archive,
+    /operationState\.run\(OPERATION, siteId, async \(\) => \{[\s\S]*?return await runWithSiteWriteMutex\(async \(\) => \{/u,
   );
   assert.match(
     actions,

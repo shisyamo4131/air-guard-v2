@@ -28,34 +28,42 @@ export async function rebuildHistory(companyId, siteId, employeeId) {
     .where("siteId", "==", siteId)
     .where("employeeIds", "array-contains", employeeId);
 
-  const [firstSnapshot, lastSnapshot] = await Promise.all([
-    baseQuery.orderBy("date").limit(1).get(),
-    baseQuery.orderBy("date", "desc").limit(1).get(),
-  ]);
+  const siteRef = companyRef.collection("Sites").doc(siteId);
+  await db.runTransaction(async (transaction) => {
+    const [firstSnapshot, lastSnapshot, siteSnapshot] = await Promise.all([
+      transaction.get(baseQuery.orderBy("date").limit(1)),
+      transaction.get(baseQuery.orderBy("date", "desc").limit(1)),
+      transaction.get(siteRef),
+    ]);
 
-  // 該当するOperationResultが存在しない場合は履歴を削除
-  if (firstSnapshot.empty) {
-    await historyRef.delete().catch(() => {});
-    return;
-  }
+    // 参照元がなくなった履歴の削除は、Site archive後にも収束できる。
+    if (firstSnapshot.empty) {
+      transaction.delete(historyRef);
+      return;
+    }
+    if (!siteSnapshot.exists) {
+      throw new Error(`Site not found: ${siteId}`);
+    }
 
-  const firstDoc = firstSnapshot.docs[0];
-  const lastDoc = lastSnapshot.docs[0];
-
-  // 履歴を作成（SiteEmployeeHistoryクラスを使用）
-  const firstDateAt = Timestamp.fromDate(
-    dayjs.tz(firstDoc.get("date")).startOf("day").toDate(),
-  );
-  const lastDateAt = Timestamp.fromDate(
-    dayjs.tz(lastDoc.get("date")).startOf("day").toDate(),
-  );
-  const instance = new SiteEmployeeHistory({
-    siteId,
-    employeeId,
-    firstDateAt,
-    firstOperationResultId: firstDoc.id,
-    lastDateAt,
-    lastOperationResultId: lastDoc.id,
+    const firstDoc = firstSnapshot.docs[0];
+    const lastDoc = lastSnapshot.docs[0];
+    const firstDateAt = Timestamp.fromDate(
+      dayjs.tz(firstDoc.get("date")).startOf("day").toDate(),
+    );
+    const lastDateAt = Timestamp.fromDate(
+      dayjs.tz(lastDoc.get("date")).startOf("day").toDate(),
+    );
+    const instance = new SiteEmployeeHistory({
+      siteId,
+      employeeId,
+      firstDateAt,
+      firstOperationResultId: firstDoc.id,
+      lastDateAt,
+      lastOperationResultId: lastDoc.id,
+    });
+    await instance.create({
+      prefix: `Companies/${companyId}`,
+      transaction,
+    });
   });
-  await instance.create({ prefix: `Companies/${companyId}` });
 }

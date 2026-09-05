@@ -49,7 +49,9 @@ function copyBilling(value) {
 function createFakeRuntime({
   billings = {},
   customers = {},
+  sites = {},
   customerReadError = null,
+  siteReadError = null,
   transactionCommitError = null,
   transactionAttempts = 1,
 } = {}) {
@@ -60,6 +62,7 @@ function createFakeRuntime({
     ]),
   );
   const customerStore = new Map(Object.entries(customers));
+  const siteStore = new Map(Object.entries(sites));
   const events = [];
   const logs = [];
   const removeCalls = [];
@@ -154,8 +157,14 @@ function createFakeRuntime({
         const transaction = {
           attempt,
           writes: [],
-          async get() {
-            throw new Error("Model fakes own the deterministic reads");
+          async get(reference) {
+            events.push({
+              type: "site-read",
+              path: reference.path,
+              attempt,
+            });
+            if (siteReadError) throw siteReadError;
+            return { exists: siteStore.has(reference.path) };
           },
         };
         result = await callback(transaction);
@@ -163,6 +172,9 @@ function createFakeRuntime({
         if (attempt === transactionAttempts) applyWrites(transaction.writes);
       }
       return result;
+    },
+    doc(path) {
+      return { path };
     },
   };
 
@@ -199,8 +211,15 @@ let harnessSequence = 0;
 
 async function loadProductionBillingHarness(options = {}) {
   const runtime = createFakeRuntime(options);
-  const [utilsSource, addSource, syncSource] = await Promise.all([
+  const [utilsSource, liveSiteSource, addSource, syncSource] = await Promise.all([
     readFile(new URL("../../functions/modules/billings/utils.js", import.meta.url), "utf8"),
+    readFile(
+      new URL(
+        "../../functions/modules/sites/liveSiteReference.js",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
     readFile(
       new URL(
         "../../functions/modules/billings/addOperationResultToBilling.js",
@@ -227,6 +246,10 @@ const {
   removeOperationResultFromBilling,
 } = globalThis[${JSON.stringify(harnessKey)}];
 const getFirestore = () => firestore;
+${stripImports(liveSiteSource).replaceAll(
+    "CONTROL_CHARACTERS",
+    "SITE_REFERENCE_CONTROL_CHARACTERS",
+  )}
 ${stripImports(utilsSource)}
 ${stripImports(addSource)}
 ${stripImports(syncSource)}
@@ -243,6 +266,10 @@ ${stripImports(syncSource)}
 
 function customerPath(customerId, companyId = COMPANY_ID) {
   return `Companies/${companyId}/Customers/${customerId}`;
+}
+
+function sitePath(siteId, companyId = COMPANY_ID) {
+  return `Companies/${companyId}/Sites/${siteId}`;
 }
 
 function writeEvents(events) {
@@ -266,12 +293,13 @@ for (const { customerId, contractStatus } of [
   { customerId: ACTIVE_CUSTOMER_ID, contractStatus: "ACTIVE" },
   { customerId: TERMINATED_CUSTOMER_ID, contractStatus: "TERMINATED" },
 ]) {
-  test(`new Billing reads ${contractStatus} Customer in the same transaction before create`, async () => {
+  test(`new Billing reads ${contractStatus} Customer and live Site in the same transaction before create`, async () => {
     const doc = operationResult({ customerId });
     const { module, runtime } = await loadProductionBillingHarness({
       customers: {
         [customerPath(customerId)]: { contractStatus },
       },
+      sites: { [sitePath(doc.siteId)]: { status: "ACTIVE" } },
     });
 
     await module.addOperationResultToBilling({ companyId: COMPANY_ID, doc });
@@ -279,13 +307,15 @@ for (const { customerId, contractStatus } of [
     assert.deepEqual(runtime.events.map(({ type }) => type), [
       "billing-read",
       "customer-read",
+      "site-read",
       "billing-create",
     ]);
-    assert.deepEqual(runtime.events.map(({ attempt }) => attempt), [1, 1, 1]);
+    assert.deepEqual(runtime.events.map(({ attempt }) => attempt), [1, 1, 1, 1]);
     assert.equal(
       runtime.events[1].path,
       `Companies/${COMPANY_ID}/Customers/${customerId}`,
     );
+    assert.equal(runtime.events[2].path, sitePath(doc.siteId));
     assert.equal(runtime.billingStore.get(billingId(doc)).customerId, customerId);
   });
 }
@@ -334,6 +364,56 @@ test("new Billing missing, cross-tenant-only, and Customer read failures schedul
         companyId: COMPANY_ID,
         doc: operationResult(),
       }),
+    (error) => error === readFailure,
+  );
+  assert.deepEqual(writeEvents(failed.runtime.events), []);
+});
+
+test("new Billing missing, cross-tenant-only, and Site read failures schedule no write", async () => {
+  const doc = operationResult({ siteId: "site-missing" });
+  const customer = {
+    [customerPath(doc.customerId)]: { contractStatus: "ACTIVE" },
+  };
+
+  const missing = await loadProductionBillingHarness({ customers: customer });
+  await assert.rejects(
+    () => missing.module.addOperationResultToBilling({ companyId: COMPANY_ID, doc }),
+    /Site not found: site-missing/u,
+  );
+  assert.deepEqual(missing.runtime.events.map(({ type }) => type), [
+    "billing-read",
+    "customer-read",
+    "site-read",
+  ]);
+  assert.deepEqual(writeEvents(missing.runtime.events), []);
+
+  const crossTenant = await loadProductionBillingHarness({
+    customers: customer,
+    sites: { [sitePath(doc.siteId, "company-b")]: { status: "ACTIVE" } },
+  });
+  await assert.rejects(
+    () => crossTenant.module.addOperationResultToBilling({
+      companyId: COMPANY_ID,
+      doc,
+    }),
+    /Site not found: site-missing/u,
+  );
+  assert.equal(
+    crossTenant.runtime.events.some(({ path }) => path?.includes("company-b")),
+    false,
+  );
+  assert.deepEqual(writeEvents(crossTenant.runtime.events), []);
+
+  const readFailure = new Error("synthetic Site read failure");
+  const failed = await loadProductionBillingHarness({
+    customers: customer,
+    siteReadError: readFailure,
+  });
+  await assert.rejects(
+    () => failed.module.addOperationResultToBilling({
+      companyId: COMPANY_ID,
+      doc,
+    }),
     (error) => error === readFailure,
   );
   assert.deepEqual(writeEvents(failed.runtime.events), []);
@@ -412,6 +492,7 @@ test("transaction retries repeat Billing and Customer reads before scheduling cr
     customers: {
       [customerPath(doc.customerId)]: { contractStatus: "ACTIVE" },
     },
+    sites: { [sitePath(doc.siteId)]: { status: "ACTIVE" } },
     transactionAttempts: 2,
   });
 
@@ -422,9 +503,11 @@ test("transaction retries repeat Billing and Customer reads before scheduling cr
     [
       "1:billing-read",
       "1:customer-read",
+      "1:site-read",
       "1:billing-create",
       "2:billing-read",
       "2:customer-read",
+      "2:site-read",
       "2:billing-create",
     ],
   );
@@ -488,7 +571,7 @@ for (const { customerId, contractStatus } of [
   { customerId: ACTIVE_CUSTOMER_ID, contractStatus: "ACTIVE" },
   { customerId: TERMINATED_CUSTOMER_ID, contractStatus: "TERMINATED" },
 ]) {
-  test(`move to absent Billing reads both Billings and ${contractStatus} Customer before atomic writes`, async () => {
+  test(`move to absent Billing reads both Billings, ${contractStatus} Customer, and live Site before atomic writes`, async () => {
     const before = operationResult({
       docId: "operation-moving",
       customerId: "customer-source",
@@ -507,6 +590,7 @@ for (const { customerId, contractStatus } of [
       customers: {
         [customerPath(customerId)]: { contractStatus },
       },
+      sites: { [sitePath(after.siteId)]: { status: "ACTIVE" } },
     });
 
     await module.syncOperationResultToBilling({
@@ -519,6 +603,7 @@ for (const { customerId, contractStatus } of [
       "billing-read",
       "billing-read",
       "customer-read",
+      "site-read",
       "billing-delete",
       "billing-create",
     ]);
@@ -530,7 +615,7 @@ for (const { customerId, contractStatus } of [
   });
 }
 
-test("absent-destination move retry rereads every dependency and logs each committed action once", async () => {
+test("absent-destination move retry rereads Customer and live Site before each write attempt", async () => {
   const before = operationResult({
     docId: "operation-moving-retry",
     customerId: "customer-source",
@@ -548,6 +633,7 @@ test("absent-destination move retry rereads every dependency and logs each commi
     customers: {
       [customerPath(after.customerId)]: { contractStatus: "ACTIVE" },
     },
+    sites: { [sitePath(after.siteId)]: { status: "ACTIVE" } },
     transactionAttempts: 2,
   });
 
@@ -563,11 +649,13 @@ test("absent-destination move retry rereads every dependency and logs each commi
       "1:billing-read",
       "1:billing-read",
       "1:customer-read",
+      "1:site-read",
       "1:billing-delete",
       "1:billing-create",
       "2:billing-read",
       "2:billing-read",
       "2:customer-read",
+      "2:site-read",
       "2:billing-delete",
       "2:billing-create",
     ],
@@ -612,6 +700,7 @@ test("rejected absent-destination transaction commits no move and emits no succe
     customers: {
       [customerPath(after.customerId)]: { contractStatus: "ACTIVE" },
     },
+    sites: { [sitePath(after.siteId)]: { status: "ACTIVE" } },
     transactionCommitError: commitError,
   });
 

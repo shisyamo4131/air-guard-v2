@@ -88,6 +88,21 @@ service cloud.firestore {
         || hasExistingCustomerReference(companyId, request.resource.data);
     }
 
+    function liveSiteExistsAfter(companyId, siteId) {
+      return isSafeCustomerId(siteId)
+        && existsAfter(/databases/$(database)/documents/Companies/$(companyId)/Sites/$(siteId));
+    }
+
+    function isValidSiteReferenceCreate(companyId) {
+      return request.resource.data.keys().hasAll(['siteId'])
+        && liveSiteExistsAfter(companyId, request.resource.data.siteId);
+    }
+
+    function isValidSiteReferenceUpdate(companyId) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['siteId'])
+        || isValidSiteReferenceCreate(companyId);
+    }
+
     function isValidFcmTokenCreate(token) {
       return hasActiveRegisteredUser()
         && request.resource.data.keys().hasOnly([
@@ -852,7 +867,14 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // ArrangementNotifications ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/ArrangementNotifications/{id} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidSiteReferenceCreate(companyId);
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidSiteReferenceUpdate(companyId);
+      allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // --- Rules for 'Articles' subcollection under 'Companies' ---
@@ -885,10 +907,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
                     && userCompanyId() == companyId
-                    && isValidCustomerReferenceCreate(companyId);
+                    && isValidCustomerReferenceCreate(companyId)
+                    && isValidSiteReferenceCreate(companyId);
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
-                    && isValidCustomerReferenceUpdate(companyId);
+                    && isValidCustomerReferenceUpdate(companyId)
+                    && isValidSiteReferenceUpdate(companyId);
       allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
@@ -950,10 +974,12 @@ service cloud.firestore {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isAuthenticated()
                     && userCompanyId() == companyId
-                    && isValidCustomerReferenceCreate(companyId);
+                    && isValidCustomerReferenceCreate(companyId)
+                    && isValidSiteReferenceCreate(companyId);
       allow update: if isAuthenticated()
                     && userCompanyId() == companyId
-                    && isValidCustomerReferenceUpdate(companyId);
+                    && isValidCustomerReferenceUpdate(companyId)
+                    && isValidSiteReferenceUpdate(companyId);
       allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
@@ -999,7 +1025,8 @@ service cloud.firestore {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
       allow create: if isSystemMaintenanceOff()
                     && canWriteSite(companyId)
-                    && isValidSiteCreate(companyId, docId);
+                    && isValidSiteCreate(companyId, docId)
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId));
       allow update: if (canWriteSchedule(companyId)
                         && isScheduleRevisionOnlyUpdate(docId))
                     || (isSystemMaintenanceOff()
@@ -1026,6 +1053,19 @@ service cloud.firestore {
       allow update: if canWriteSchedule(companyId)
                     && isScheduleUpdateGuarded(companyId, docId);
       allow delete: if canWriteSchedule(companyId);
+    }
+
+    // SiteEmployeeHistoriesはserver再構築が正規writer。既存client互換を
+    // 維持しつつ、新規Site参照とsiteId変更だけをlive Siteへ束縛する。
+    match /Companies/{companyId}/SiteEmployeeHistories/{docId} {
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidSiteReferenceCreate(companyId);
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && isValidSiteReferenceUpdate(companyId);
+      allow delete: if isAuthenticated() && userCompanyId() == companyId;
     }
 
     // Legacy StripeData is reserved and server-only at every nesting depth.
@@ -1067,6 +1107,7 @@ service cloud.firestore {
       allow read, write: if !(collection in [
                                 "SecurityReportIndexes",
                                 "StripeData",
+                                "ArrangementNotifications",
                                 "Billings",
                                 "Customers",
                                 "Customers_archive",
@@ -1076,6 +1117,7 @@ service cloud.firestore {
                                 "Sites",
                                 "Sites_archive",
                                 "SiteOperationSchedules",
+                                "SiteEmployeeHistories",
                                 "Users",
                                 "Employees",
                                 "EmployeeUserReservations",

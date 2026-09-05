@@ -85,6 +85,10 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
   fetchAllOnEmpty: true,
 });
 const lifecycle = computed(() => getSiteLifecyclePresentation(doc, { schedules }));
+
+function handleArchived() {
+  navigateTo("/sites");
+}
 </script>
 
 <template>
@@ -101,6 +105,7 @@ const lifecycle = computed(() => getSiteLifecyclePresentation(doc, { schedules }
         <span v-if="doc.code">コード: {{ doc.code }}</span>
         <span>{{ doc.fullAddress || "住所未設定" }}</span>
         <v-spacer />
+        <SiteArchiveDialog v-if="canWrite" :site="doc" @archived="handleArchived" />
         <SiteEditorTerminate v-if="isActive" :site="doc">
           <template #activator="{ open, disabled }">
             <v-btn color="warning" variant="outlined" :disabled="disabled" @click="open">現場を終了</v-btn>

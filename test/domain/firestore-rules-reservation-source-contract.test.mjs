@@ -33,6 +33,7 @@ test("Companies fallback reserves every protected collection before tenant acces
   assert.deepEqual(
     excludedCollections,
     [
+      "ArrangementNotifications",
       "Billings",
       "Customers",
       "Customers_archive",
@@ -47,6 +48,7 @@ test("Companies fallback reserves every protected collection before tenant acces
       "SecurityReportIndexes",
       "Sites",
       "Sites_archive",
+      "SiteEmployeeHistories",
       "SiteOperationSchedules",
       "StripeData",
       "UserLifecycleLocks",
@@ -54,6 +56,25 @@ test("Companies fallback reserves every protected collection before tenant acces
     ].sort(),
   );
   assert.match(executable, /&& isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
+});
+
+test("Site-reference collections use explicit guards and cannot fall through tenant access", async () => {
+  const source = await readFile(rulesUrl, "utf8");
+
+  for (const collectionName of [
+    "ArrangementNotifications",
+    "SiteEmployeeHistories",
+  ]) {
+    const body = source.match(
+      new RegExp(
+        `match /Companies/\\{companyId\\}/${collectionName}/\\{(?:id|docId)\\} \\{([\\s\\S]*?)\\n    \\}`,
+        "u",
+      ),
+    )?.[1];
+    assert.ok(body, `${collectionName} must have an explicit document match`);
+    assert.match(body, /isValidSiteReferenceCreate\(companyId\)/u);
+    assert.match(body, /isValidSiteReferenceUpdate\(companyId\)/u);
+  }
 });
 
 test("Customer reference collections use explicit guarded matches outside the fallback", async () => {

@@ -3,6 +3,7 @@ import test from "node:test";
 
 const PUBLIC_CALLABLES = [
   "archiveCustomer",
+  "archiveSite",
   "changeAdminUser",
   "checkEmailAvailability",
   "checkUserPreRegistration",

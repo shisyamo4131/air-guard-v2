@@ -19,6 +19,28 @@ import { useSiteFunctions } from "@/composables/site/useSiteFunctions";
 
 const sharedSiteWriteState = Vue.reactive({ isSaving: false });
 
+export async function runWithSiteWriteMutex(action) {
+  if (typeof action !== "function") {
+    throw new SiteAuthorizationError(
+      "invalid-operation",
+      "現場の保存処理を確認してください。",
+    );
+  }
+  if (sharedSiteWriteState.isSaving) {
+    throw new SiteAuthorizationError(
+      "operation-in-progress",
+      "現場情報を保存中です。",
+    );
+  }
+
+  sharedSiteWriteState.isSaving = true;
+  try {
+    return await action();
+  } finally {
+    sharedSiteWriteState.isSaving = false;
+  }
+}
+
 export function useSiteActions() {
   const auth = useAuthStore();
   const { $auth, $firestore } = useNuxtApp();
@@ -63,21 +85,11 @@ export function useSiteActions() {
       );
     }
     assertWritePermission();
-    if (sharedSiteWriteState.isSaving) {
-      throw new SiteAuthorizationError(
-        "operation-in-progress",
-        "現場情報を保存中です。",
-      );
-    }
-
-    sharedSiteWriteState.isSaving = true;
-    try {
+    return await runWithSiteWriteMutex(async () => {
       // Permission was checked immediately before entering the shared write
       // boundary. Every persistence action must execute inside this callback.
       return await action();
-    } finally {
-      sharedSiteWriteState.isSaving = false;
-    }
+    });
   }
 
   async function rejectDirectDelete() {
