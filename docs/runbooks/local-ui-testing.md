@@ -19,9 +19,9 @@ buildまたはprocess起動前に、次を一度確認する。どれかを満�
 
 1. 実際にUI操作するtaskが正規in-app browserのtab取得と通常pointer・keyboard操作を利用できる。
 2. 保存済み合成sessionまたは秘密値を残さない一時合成credentialにより、対象actorを準備できる。
-3. Functions側denyだけでなく、対象画面が使うclient-side endpoint・file参照packageを確認し、外部作用を遮断できる。完全なbrowser network traceを取得できない場合は、その未確認範囲を残す。
-4. 既存root log・runtime・port・processを確認し、退避・復元対象、今回のowner、cleanup対象をexact pathで固定する。
-5. 対象HEAD、専用build、Emulator、generated server、browser、backend assertion、cleanupの担当と停止条件が一つのcheckpoint内で決まっている。
+3. 完了条件に必要なCallable・背景trigger・保存先・初期dataを実行構成と照合し、必要な処理の登録とloopback接続を確認する。Functions側denyに加えclient-side endpoint・file参照packageの外部作用も隔離する。不足は環境整備または確認方法の合意を先行し、未取得のnetwork trace等は未確認として残す。
+4. 既存root log・runtime・port・processを確認し、退避・復元対象、owner、生成物を含むcleanup対象をexact pathで固定する。削除・停止の承認範囲と保護対象を開始時に確認し、既存承認が対象を含む場合は再承認を求めない。
+5. 対象HEAD、専用build、Emulator、generated server、browser、backend assertion、cleanupの担当と停止条件が一つのcheckpoint内で決まっている。終了時はcleanupの実行結果まで確認し、承認取得だけを完了としない。
 
 標準の起動・確認・終了順序は次のとおりとする。
 

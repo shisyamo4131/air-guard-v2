@@ -60,6 +60,7 @@
 | [0052](0052-site-downstream-snapshot-timing.md) | Site下流情報のsnapshot時点 |
 | [0053](0053-site-agreement-write-validation-and-history.md) | Site取極めの書込み・数値・履歴境界 |
 | [0054](0054-site-auto-termination-and-terminated-selection.md) | Site自動終了と終了済み現場の選択境界 |
+| [0055](0055-scope-discovery-and-acceptance-review.md) | 発見事項の対応時期と初期・完了レビューの精度 |
 
 ## 新しい ADR の形式
 

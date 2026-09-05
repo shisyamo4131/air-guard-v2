@@ -13,14 +13,16 @@
 ## 試行段階の高速な開発loop
 
 1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。[フェーズごとのテスト範囲の合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)に従い、利用者と変更・テストの範囲、環境・data、期待結果、完了条件を着手前にすり合わせる。他機能の受入れを自動追加しない。
-2. 実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
-3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testだけを実行し、問題があれば修正して同じ対象確認へ戻る。指摘または実装で設計が変わった場合だけ、変わった範囲を再reviewする。
+2. 下記[segment contract](#必要十分なdata設計)を材料に、実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。目的に対するscopeの過大・不足、完了条件の十分性、未確認事項の扱いを判定に残す。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
+3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testから始め、当該phaseの代表操作を保存・再読込・失敗時の挙動まで確認する。UI非対象なら該当処理境界までとし、最終統合へ初回確認を集中させない。問題の扱いは上記scope規則に従い、設計変更時だけ変更範囲を再reviewする。
 4. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
 5. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従って通常の変更差分と関連経路から判断する。全件診断・一括修復を標準前提にせず、承認済みDev releaseで通常操作を試し、実際の不具合を対象経路で修正する。必要な利用者acceptanceはcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
 6. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
 7. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
 
 このloopは[Verification Matrix](../operations.md#verification-matrix)と`governance/verification-policy.json`のiteration、targeted、completion、release-only区分を実行順へ落としたものである。文書責務は[ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md)に従う。既存の安全境界や外部作用の承認は緩和しない。
+
+発見時は必要最小限の切り分けを行う。後続へ送る独立問題は[既存FUT](../implementation/future-actions.md)へ同一原因を統合し、発見phase、再現根拠、影響、現在phaseを妨げない理由、対応予定を記録する。未確認は明示する。その修正phaseの冒頭で対象一覧・方針・影響・test範囲・Dev反映を止める問題を利用者と一括確認し、対象確定後に設計review・実装・検証を行う。新たな発見も同じ分類に戻し、最終統合確認へ未承認の修正を混ぜない。現scope内の通常修正は既存checkpoint内で継続する。
 
 ## 非同期UI操作のerror・loading責務
 
@@ -62,11 +64,13 @@
 
 data分割と競合制御の採用条件は[Development and data rules](../project-rules/development-and-data.md#実装原則)と[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)を正とする。本runbookでは承認済み設計を下記segment contractへ落とし込む。
 
-認証・認可segmentは、実装前に次を揃えます。
+認証・認可およびCRUD改修は、既存の機能設計へ次のsegment contractを揃えます。対象外項目は理由を示し、独立した書式文書は増やしません。
 
 ```text
 segment: <一つの入口・権限・data境界>
+objective: <当初目的、維持・廃止する挙動。Manager移行なら依存除去するCRUD経路と残存wrapper等の扱い>
 current-behavior: <codeとtestから確認した現行挙動>
+dependencies: <実際の呼出元・保存先・背景処理・cache等の副作用と根拠>
 threat-or-failure: <actor、前提、操作、影響>
 in-scope: <今回変更するfile・rule・contract>
 out-of-scope: <後続segmentへ残す境界>
@@ -74,6 +78,8 @@ proposed-contract: <許可・拒否・状態遷移>
 compatibility-and-data: <既存利用者・data・migrationへの影響>
 rollback: <code、rule、data、外部作用を戻す条件と方法>
 tests: <許可経路、拒否経路、tenant境界、失敗経路>
+acceptance: <条件ごとの操作・data前提・期待結果・確認方法。関連する旧形式/初期選択済み/空cache等を選び、必要な環境を照合>
+unknowns: <未確認事項と設計・完了への影響。妨げるものは実装前に解消または利用者判断>
 user-confirmation: <実装前判断と実装後確認>
 ```
 

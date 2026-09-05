@@ -70,7 +70,7 @@ worktree: <clean or exact dirty paths>
 
 変更済みcheckpointから次checkpointへ進む前、または完了を主張する前に、次の4点を一度確認する。不足があれば次を開始せず、現在checkpointへ戻す。
 
-1. 開始baselineから最終差分までのfileを確認し、`governance/verification-policy.json`のchange class unionとcompletion gateを確定する。開始時の分類だけを使い続けない。
+1. 承認済み目的・完了条件ごとに成果と検証証拠を対応づけ、未達・未検証・合意した途中追加・独立問題の後続送りを区別する。[scope規則](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)に反する後続送りは認めない。開始baselineから最終差分までのfileで`governance/verification-policy.json`のclass unionとcompletion gateを確定する。
 2. 各必須gateのexact command、結果、独立exit status、後続編集による失効有無、verification receiptまたはcompletion reportの保存先を確認する。task内の一時出力だけを永続証拠にしない。
 3. milestoneやcheckpoint状態を変えた場合は、影響した機能文書群に限定して前後checkpoint ID、旧状態語、rollback記述を検索し、各hitをCurrentまたはHistoryへ分類する。履歴は時点を明記し、現行手順・残作業・rollbackは一つの正本へ寄せる。
 4. current branch、開始commit、branchが表すscope、今回scopeが名称・宣言内かを再確認する。狭いtrial/checkpoint branchへ後続scopeを追加する場合は、write前にbranch境界を利用者と決める。
