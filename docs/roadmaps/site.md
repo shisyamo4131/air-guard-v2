@@ -1,6 +1,6 @@
 # Siteマスター改修ロードマップ
 
-- 状態: In progress（SITE-08最終build・統合待ち）
+- 状態: In progress（SITE-08試験成功・cleanup承認待ち）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
 - 現在の進捗: 90%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
@@ -57,7 +57,7 @@
 | SITE-05 archive安全性 | 15 | 15 | Completed | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、exact 5 collectionの同一transaction参照確認、直接参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装した。下流snapshotとremote legacy shapeはSITE-09 preflightまで未確認とする。 |
 | SITE-06 取極め契約 | 10 | 10 | Completed | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円確認、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を専用Callableで強制した。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Siteの`agreementsV2/uid/updatedAt`だけを保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 10 | Completed | ACTIVE/TERMINATED/仮Siteを独立表示し、会社限定ACTIVE live read、20件client表示、検索・選択・郵便番号の古い応答破棄、loading/error/0件/not-found、終了Site取消時の元選択保持、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible name、manualを整合した。Rules、Functions、schema、writer、保存shapeは変更していない。 |
-| SITE-08 Local統合確認 | 5 | 0 | 最終確認中 | 先行の専用UI受入れに加え、利用者許可のLocal Chromeで基本・Customer・取極め編集、背景trigger経由のBilling・SiteEmployeeHistory、既存snapshot不変、予定の日付・現場変更・実績化を確認した。旧data更新Rulesと予定preset readerの不具合を修正し、全domain 1155件・Emulator 171件が成功。最終build・cleanup・文書・Git統合まで加点しない。詳細は[SITE-08証拠](../verification/site-08-local.md)。 |
+| SITE-08 Local統合確認 | 5 | 0 | cleanup承認待ち | 先行の専用UI受入れに加え、利用者許可のLocal Chromeで基本・Customer・取極め編集、背景trigger経由のBilling・SiteEmployeeHistory、既存snapshot不変、予定の日付・現場変更・実績化を確認した。旧data更新Rulesと予定preset readerを修正し、全domain 1155件・Emulator 171件・最終build・独立review・source commitが成功。生成物cleanupの明示承認が残るため加点しない。詳細は[SITE-08証拠](../verification/site-08-local.md)。 |
 | SITE-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client、既存data、権限別CRUD・終了・再有効化、関連表示を確認する。未実施のDev受入れを完了扱いしない。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-SITE-08は利用者の2026-09-06の指示によりLocal追加確認を進め、背景trigger経路と追加修正のUI再試験を確認した。最終build・cleanup・文書・Git統合後に95%へ加点する。未変更transactionの全CRUDへ受入れを広げず、既存FUT-0046と完全snapshot実装は別工程に残す。次の環境境界はSITE-09であり、既存予定field、archive、取極め、下流snapshotのremote shapeを別承認のpreflightで確認する。競合があればapplyせず停止し、Dev・remote・実dataには別承認まで接続しない。
+SITE-08の依頼範囲のLocal試験・修正・最終buildは成功した。自動承認審査で停止した生成物cleanupの明示承認後にcleanupを実行・確認し、最終記録をGit統合した時点で95%へ加点する。未変更transactionの全CRUDへ受入れを広げず、既存FUT-0046と完全snapshot実装は別工程に残す。次の環境境界はSITE-09であり、既存予定field、archive、取極め、下流snapshotのremote shapeを別承認のpreflightで確認する。競合があればapplyせず停止し、Dev・remote・実dataには別承認まで接続しない。

@@ -12,13 +12,13 @@
 ## 未決事項と承認
 
 - Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
-- Spark用standalone Developer taskは中止済みで再利用しない。SiteはSITE-08のLocal追加確認で再現した不具合を修正し、最終build・cleanup・文書・Git統合を進めている。現在の判定は[Siteロードマップ](../roadmaps/site.md)、実測は[SITE-08証拠](../verification/site-08-local.md)を正とする。破棄された別taskのEmployee改修案は採用しない。Dev/Prod、remote data/migration、package、緊急restore、retention/purge、OUT-08以降は別承認である。
+- Spark用standalone Developer taskは中止済みで再利用しない。SiteはSITE-08のLocal追加確認で再現した不具合を修正し、最終buildまで成功した。現在の残作業は[Siteロードマップ](../roadmaps/site.md)、実測とcleanup承認境界は[SITE-08証拠](../verification/site-08-local.md)を正とする。破棄された別taskのEmployee改修案は採用しない。Dev/Prod、remote data/migration、package、緊急restore、retention/purge、OUT-08以降は別承認である。
 - Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
 1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
-2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)の最終Local gateを閉じてから、[Siteロードマップ](../roadmaps/site.md)のSITE-09へ進む。背景trigger確認の承認待ちは利用者のLocal試験指示と実測で解消した。Dev反映前のlegacy確認とDev・remote接続は別承認である。
+2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)に従い、生成物cleanupの明示承認後にcloseoutする。試験と背景trigger確認の残作業は解消した。Dev反映前のlegacy確認とDev・remote接続は[Siteロードマップ](../roadmaps/site.md)のSITE-09として別承認である。
 3. Employee masterはSiteと分離した将来作業とし、破棄された別taskの改修案を正本、進捗、承認済み計画として扱わない。再開する場合はrepositoryの現行事実から改めてscopeと承認境界を確認する。
 4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 

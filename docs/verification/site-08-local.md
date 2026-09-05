@@ -5,9 +5,9 @@
 - 対象: SITE-01からSITE-07までのSite改修と、直接・間接に影響した既存機能のlocal統合確認
 - 環境: 先行確認は`demo-air-guard-v2-codex`とCodexインアプリブラウザ。追加確認は利用者が許可した起動済みLocal Emulatorとサインイン済みChrome（詳細は下記）
 - 影響分類: UI、application logic、data contract、Firestore Rules
-- 製品受入れ判定: Local追加確認中。利用者の2026-09-06の指示により、アカウント権限に依存する追加UI試験を除き、起動済みLocal環境で作成・更新・削除と背景trigger transportを実測する。Dev受入れは別工程である
-- 完了判定: 追加修正、Chrome再試験、domain/Emulator、独立reviewは成功。最終build・cleanup・文書・Git統合が残る。完了加点は行っていない
-- 実装・受入れ基準commit: `edb991ccaac4b15a5a8977260d80dbefc17d388b`
+- 製品受入れ判定: 依頼範囲のLocal試験成功。利用者の2026-09-06の指示により、アカウント権限に依存する追加UI試験を除き、起動済みLocal環境で作成・更新・削除と背景trigger transportを実測した。Dev受入れは別工程である
+- 完了判定: 追加修正、Chrome再試験、domain/Emulator、独立review、最終buildとsource commitは成功。生成物cleanupの明示承認・実行確認を残し、完了加点は行っていない
+- 最終実装・build基準commit: `4c0ef8604e663cdc3773199f2b3adf62dd55cf50`。先行専用UI証拠の基準は`edb991ccaac4b15a5a8977260d80dbefc17d388b`
 
 ## 2026-09-06の追加Local確認
 
@@ -31,9 +31,19 @@
 | project-docs-negative | `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 陰性fixtureを含め成功 | 0 |
 | capacity-regression | `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 7 checks成功 | 0 |
 | managed-governance | `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | managed hash・renderer・policy整合成功 | 0 |
-| local-ui-build | `npm run test:local:ui:build` | 最終sourceのclean commit後に実行予定 | 未実行 |
+| local-ui-build | `npm run test:local:ui:build` | 上記最終sourceのclean commitでNuxt 3.17.2 / Nitro 2.11.11 build成功 | 0 |
+| project-docs | `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 最終closeout文書を含む244 Markdown・54 ADR・10 roadmap・8 TOML成功 | 0 |
+| diff-check | `git diff --check` / `git diff --cached --check` | 既存・新規fileとcloseout文書の差分確認成功 | 0 |
 
-Rulesの独立security reviewは欠損のみfallback、削除禁止、actor/tenant、派生値、wide Customer不変互換を確認し、最終差分に必須findingなし。UIの独立reviewとsecurity reviewは明示会社path、アクセス取消、応答失効、手入力保持を確認した。途中findingだったUserアクセス確認待ち中の警備種別上書きは`securityTypeBasis`と追加testで解消し、最終reviewは必須findingなしである。review baselineは上記基準commit、対象は今回のRules/test 3fileとUI/helper/test 5fileで、reviewer自身は実行検証をしていない。
+Rulesの独立security reviewは欠損のみfallback、削除禁止、actor/tenant、派生値、wide Customer不変互換を確認し、最終差分に必須findingなし。UIの独立reviewとsecurity reviewは明示会社path、アクセス取消、応答失効、手入力保持を確認した。途中findingだったUserアクセス確認待ち中の警備種別上書きは`securityTypeBasis`と追加testで解消し、最終reviewは必須findingなしである。review baselineは先行commitから最終source commitへ入った差分、対象は今回のRules/test 3fileとUI/helper/test 5fileで、reviewer自身は実行検証をしていない。文書reviewでは検査対象外の未変更fieldまで不正値拒否を保証するような表現を限定した。
+
+### 最終環境・保存状態
+
+- 最終build identityは`demo-air-guard-v2-codex`、`externalEffects=deny`、上記source HEADを記録した。既知のBrowserslist、chunk size、sourcemap、Node package警告があり、buildエラーはない。利用者ChromeのUI証拠は同じ最終application sourceを通常Local Nuxtで操作したもので、今回generated serverの起動は行わない。
+- 追加確認の前後で、利用者`saved-data`は7 files / 6,012,330 bytes / SHA-256 `7ED7F52F38117BF5CD600EDA7BB4BBF5925686DEF38246492F3B23B99808CF2E`、UI用`.codex-test/saved-data`は7 files / 3,492 bytes / `8882FA720E1637C8AA979A2446B8452DAE87AF549200F47FC5D60EBDF1C1C9CB`でそれぞれ一致した。指紋はFullName順のrelative path・length・file SHA-256をコロンで結び、LF結合したUTF-8のSHA-256である。先行記録とは集約方法が異なるため、その値との直接比較はしない。
+- 専用全体testのruntime `test-harness-1204`と初回失敗の`test-harness-29132`は不存在を確認した。developerの対象試験runtimeもprocess不在確認後に限定cleanup済み。他taskのruntimeは変更していない。専用ports 14400/14500/14600/15001/18080/19000/19099/19199はLISTENなし。利用者の3000/8080/9099/5001は引き続きLISTENし、Chrome・Nuxt・Emulatorは停止していない。
+- 作成した予定とその実績、備考・取極めの一時変更はrunning Emulatorにだけ残る。最初に作成した単独の試験実績とそのworkerはUIで削除した。保存fixtureへのexportはない。
+- 最終build生成物`.output`は230 files / 26,348,062 bytesで、配下にreparse pointはない。cleanupは自動承認審査で明示承認が必要として拒否されたため、承認を依頼して保留した。保存dataや利用者processはcleanup対象に含めない。
 
 影響分類は`ui-css-layout`・`application-logic`・`data-contract-schema-migration`・`project-guidance-metadata`の和集合とし、最終buildには`build-release-deploy`のcomprehensive gateも適用する。後続のreader/UI変更はFunctions、Rules、schema、Emulator設定・harness・検証対象writerを変更しないため、171件のEmulator結果を維持する。domainはreader最終修正後に再実行した。Dev/Prod generate・deploy・remote受入れは別工程で未実行。要件、保存shape、永続設計、一般運用は変更しないためspecification・data contract・ADR・manual・runbook・indexの追加更新は不要である。
 
@@ -114,7 +124,7 @@ Site改修で追加した境界は、新規作成またはSite変更時のlive S
 
 ## SITE-09へ進む前の停止条件
 
-- SITE-08の最終build・生成物cleanup・文書・Git統合を完了する。背景trigger確認方法の判断待ちは、今回の利用者指示と通常Localでの実測により解消した。
+- SITE-08の生成物cleanupを明示承認後に実行・確認し、その結果を文書・Gitへ統合する。背景trigger確認方法の判断待ちは、今回の利用者指示と通常Localでの実測により解消した。
 - Dev/remote接続前に、既存予定の`operationResultId`・日付field、既存archive、取極め、下流snapshot、必要indexのshapeをread-onlyで確認する。
 - 競合、legacy欠損、active/archive同ID等があればdeploy・migrationを有効化せず、対象件数、backup、dry-run、post-check、rollbackを示して別承認へ止める。
 - SITE-09のDev反映・remote/data確認は別承認であり、本記録では実施していない。
