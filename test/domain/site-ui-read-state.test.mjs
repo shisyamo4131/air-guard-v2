@@ -186,7 +186,16 @@ async function flushAsyncWatchers() {
   await Promise.resolve();
 }
 
-function createAutocompleteHarness({ modelValue = "original", lookupSite } = {}) {
+function createAutocompleteHarness({
+  lookupSite,
+  lookupValues = {},
+  modelValue = "original",
+} = {}) {
+  class Site {
+    constructor(values = {}) {
+      Object.assign(this, values);
+    }
+  }
   const props = reactive({
     creatable: false,
     itemTitle: "name",
@@ -198,12 +207,18 @@ function createAutocompleteHarness({ modelValue = "original", lookupSite } = {})
   const emissions = [];
   const cleanups = [];
   const clears = [];
+  const pushedSites = [];
+  const timeline = [];
+  const auth = reactive({ companyId: "company-a" });
   const reads = {
     clear: (channel) => clears.push(channel),
     errorMessage: ref(""),
     isEmpty: ref(false),
     isLoading: ref(false),
-    lookupSite: lookupSite ?? (async () => null),
+    lookupSite: lookupSite ?? (async (id) => {
+      const value = lookupValues[id];
+      return value ? new Site(value) : null;
+    }),
     notFound: ref(false),
     searchAutocompleteSites: async () => [],
   };
@@ -214,27 +229,51 @@ function createAutocompleteHarness({ modelValue = "original", lookupSite } = {})
     "defineEmits",
     "useSlots",
     "useSiteUiReads",
+    "useFetch",
     "useAuthStore",
     "useSiteActions",
+    "Site",
     "ref",
     "computed",
     "onBeforeUnmount",
-    `${autocompleteExecutable}\nreturn { cancelTerminatedSelection, confirmDialog, confirmTerminatedSelection, onSelection, pendingSite };`,
+    `${autocompleteExecutable}\nreturn { cancelTerminatedSelection, confirmDialog, confirmTerminatedSelection, onCreateHandler, onSelection, pendingSite, rememberCreateCompany };`,
   );
   const state = factory(
     () => {},
     () => props,
     (value) => value,
-    () => (event, value) => emissions.push({ event, value }),
+    () => (event, value) => {
+      emissions.push({ event, value });
+      timeline.push({ type: "emit", event, value });
+    },
     () => ({}),
     () => reads,
-    () => ({ companyId: "company-a" }),
+    () => ({
+      fetchSiteComposable: {
+        pushSite: (site) => {
+          pushedSites.push(site);
+          timeline.push({ type: "push", site });
+        },
+      },
+    }),
+    () => auth,
     () => ({ canWrite: ref(true), isSaving: ref(false) }),
+    Site,
     ref,
     computed,
     (callback) => cleanups.push(callback),
   );
-  return { ...state, cleanups, clears, emissions, props };
+  return {
+    ...state,
+    auth,
+    cleanups,
+    clears,
+    emissions,
+    props,
+    pushedSites,
+    Site,
+    timeline,
+  };
 }
 
 test("Site UI read contract fixes the client page size at 20", () => {
@@ -522,20 +561,31 @@ test("unmount cleanup invalidates an outstanding lookup without surfacing its re
 });
 
 test("terminated Site cancellation restores the previously confirmed model while confirmation emits the candidate", async () => {
-  const terminated = { docId: "terminated-a", status: "TERMINATED" };
-  const cancelled = createAutocompleteHarness({ modelValue: "active-original" });
-  await cancelled.onSelection(terminated);
+  const candidate = { docId: "terminated-a", status: "TERMINATED" };
+  const cancelled = createAutocompleteHarness({
+    lookupValues: { "terminated-a": candidate },
+    modelValue: "active-original",
+  });
+  await cancelled.onSelection(candidate);
   assert.equal(cancelled.confirmDialog.value, true);
   assert.deepEqual(cancelled.emissions, []);
   cancelled.cancelTerminatedSelection();
+  assert.deepEqual(cancelled.pushedSites, []);
   assert.deepEqual(cancelled.emissions, [
     { event: "site-selection-confirmed", value: null },
     { event: "update:model-value", value: "active-original" },
   ]);
 
-  const confirmed = createAutocompleteHarness({ modelValue: "active-original" });
-  await confirmed.onSelection(terminated);
+  const confirmed = createAutocompleteHarness({
+    lookupValues: { "terminated-a": candidate },
+    modelValue: "active-original",
+  });
+  await confirmed.onSelection(candidate);
+  assert.deepEqual(confirmed.pushedSites, []);
   confirmed.confirmTerminatedSelection();
+  assert.equal(confirmed.pushedSites.length, 1);
+  assert.equal(confirmed.pushedSites[0] instanceof confirmed.Site, true);
+  assert.equal(confirmed.pushedSites[0].docId, "terminated-a");
   assert.deepEqual(confirmed.emissions, [
     {
       event: "site-selection-confirmed",
@@ -545,8 +595,122 @@ test("terminated Site cancellation restores the previously confirmed model while
         status: "TERMINATED",
       },
     },
-    { event: "update:model-value", value: terminated },
+    { event: "update:model-value", value: candidate },
   ]);
+});
+
+test("Autocomplete publishes only a current-tenant confirmed Site to the shared cache", async () => {
+  const active = { docId: "active-a", status: "ACTIVE" };
+  const selected = createAutocompleteHarness({
+    lookupValues: { "active-a": active },
+  });
+  await selected.onSelection("active-a");
+  assert.equal(selected.pushedSites.length, 1);
+  assert.equal(selected.pushedSites[0] instanceof selected.Site, true);
+  assert.equal(selected.pushedSites[0].docId, "active-a");
+  const selectedSite = selected.pushedSites[0];
+
+  await selected.onSelection(null);
+  assert.deepEqual(
+    selected.pushedSites,
+    [selectedSite],
+    "clearing the input must not remove the confirmed Site needed by sibling consumers",
+  );
+
+  const pending = deferred();
+  const switched = createAutocompleteHarness({
+    lookupSite: () => pending.promise,
+  });
+  const selection = switched.onSelection("company-a-site");
+  switched.auth.companyId = "company-b";
+  pending.resolve(new switched.Site({
+    docId: "company-a-site",
+    status: "ACTIVE",
+  }));
+  await selection;
+  assert.deepEqual(switched.pushedSites, []);
+  assert.deepEqual(switched.emissions, []);
+
+  const terminated = createAutocompleteHarness({
+    lookupValues: {
+      "company-a-terminated": {
+        docId: "company-a-terminated",
+        status: "TERMINATED",
+      },
+    },
+  });
+  await terminated.onSelection({
+    docId: "company-a-terminated",
+    status: "TERMINATED",
+  });
+  terminated.auth.companyId = "company-b";
+  terminated.confirmTerminatedSelection();
+  assert.deepEqual(terminated.pushedSites, []);
+  assert.deepEqual(terminated.emissions, [
+    { event: "site-selection-confirmed", value: null },
+    { event: "update:model-value", value: null },
+  ]);
+});
+
+test("Autocomplete publishes a newly created current-tenant Site before emitting its value", () => {
+  const created = createAutocompleteHarness();
+  const site = new created.Site({ docId: "created-a", status: "ACTIVE" });
+  created.rememberCreateCompany();
+  created.onCreateHandler(site);
+  assert.deepEqual(created.pushedSites, [site]);
+  assert.deepEqual(created.timeline.map(({ type }) => type), ["push", "emit"]);
+  assert.deepEqual(created.emissions, [
+    { event: "update:model-value", value: "created-a" },
+  ]);
+
+  const switchedTenant = createAutocompleteHarness();
+  switchedTenant.rememberCreateCompany();
+  switchedTenant.auth.companyId = "company-b";
+  const staleSite = new switchedTenant.Site({
+    docId: "created-company-a",
+    status: "ACTIVE",
+  });
+  switchedTenant.onCreateHandler(staleSite);
+  assert.deepEqual(switchedTenant.pushedSites, []);
+  assert.deepEqual(switchedTenant.emissions, []);
+
+  const wrongInstance = createAutocompleteHarness();
+  wrongInstance.rememberCreateCompany();
+  wrongInstance.onCreateHandler({ docId: "created-plain", status: "ACTIVE" });
+  assert.deepEqual(wrongInstance.pushedSites, []);
+  assert.deepEqual(wrongInstance.emissions, []);
+});
+
+test("Autocomplete creation completion invalidates an older lookup and pending confirmation", async () => {
+  const pending = deferred();
+  const harness = createAutocompleteHarness({
+    lookupSite: () => pending.promise,
+  });
+  const oldSelection = harness.onSelection("old-site");
+  harness.rememberCreateCompany();
+  const created = new harness.Site({ docId: "created-a", status: "ACTIVE" });
+  harness.onCreateHandler(created);
+  pending.resolve(new harness.Site({ docId: "old-site", status: "TERMINATED" }));
+  await oldSelection;
+
+  assert.equal(harness.confirmDialog.value, false);
+  assert.deepEqual(harness.pushedSites, [created]);
+  assert.deepEqual(harness.emissions, [
+    { event: "update:model-value", value: "created-a" },
+  ]);
+});
+
+test("Autocomplete revalidates raw candidate state through a current-tenant ID lookup", async () => {
+  const harness = createAutocompleteHarness({
+    lookupValues: {
+      "site-a": { docId: "site-a", status: "TERMINATED" },
+    },
+  });
+
+  await harness.onSelection({ docId: "site-a", status: "ACTIVE" });
+
+  assert.equal(harness.confirmDialog.value, true);
+  assert.deepEqual(harness.pushedSites, []);
 });
 
 test("Autocomplete ignores stale lookup completion, restores not-found selection, and invalidates on unmount", async () => {
@@ -562,13 +726,13 @@ test("Autocomplete ignores stale lookup completion, restores not-found selection
 
   const firstSelection = harness.onSelection("first");
   const secondSelection = harness.onSelection("second");
-  second.resolve({ docId: "second", status: "ACTIVE" });
+  second.resolve(new harness.Site({ docId: "second", status: "ACTIVE" }));
   await secondSelection;
   assert.deepEqual(harness.emissions, [
     { event: "site-selection-confirmed", value: null },
     { event: "update:model-value", value: "second" },
   ]);
-  first.resolve({ docId: "first", status: "TERMINATED" });
+  first.resolve(new harness.Site({ docId: "first", status: "TERMINATED" }));
   await firstSelection;
   assert.equal(harness.confirmDialog.value, false);
   assert.equal(harness.emissions.length, 2);
@@ -585,7 +749,7 @@ test("Autocomplete ignores stale lookup completion, restores not-found selection
   });
   const selection = unmounted.onSelection("pending");
   unmounted.cleanups[0]();
-  afterUnmount.resolve({ docId: "pending", status: "ACTIVE" });
+  afterUnmount.resolve(new unmounted.Site({ docId: "pending", status: "ACTIVE" }));
   await selection;
   assert.deepEqual(unmounted.emissions, []);
   assert.deepEqual(unmounted.clears, ["lookup", undefined]);

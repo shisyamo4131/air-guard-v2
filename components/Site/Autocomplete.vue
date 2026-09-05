@@ -6,13 +6,9 @@
  * @note
  * `air-autocomplete-api` に対する設定は以下のようにする。
  *
- * - `api` には `fetchXxxComposable` が提供する検索APIをラップした関数を渡す。
- *   -> `AirApiLoader` は `api` を呼び出す際に検索文字列のみを渡すため、
- *      オプションを固定したラッパー関数を用意する必要がある。
- *   -> オプション `returnAllCached: false` を指定すること。
- *      指定しない場合（デフォルト `true`）、過去の検索結果がキャッシュから混入し、
- *      後述の `custom-filter: () => true` と組み合わさって意図しないアイテムが
- *      選択肢に表示されてしまう。
+ * - `api` には `useSiteUiReads` の検索APIをラップした関数を渡す。
+ *   -> `AirApiLoader` は `api` を呼び出す際に検索文字列のみを渡す。
+ *   -> 検索結果は直近requestだけを採用し、過去の検索結果を候補へ混入させない。
  *
  * - `custom-filter` は常に `true` を返すようにする。
  *   -> Vuetify の `v-autocomplete` がクライアント側でさらに絞り込みを行うため、
@@ -23,13 +19,15 @@
  *      `custom-filter: () => true` と競合して意図しないアイテムが表示される。
  *      `items` には常に直近の検索結果のみが渡るようにすること。
  *
- * なお、同一クエリへの N-gram 再検索は `fetchXxxComposable` の検索キャッシュが
- * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
+ * 確定したSiteだけを同じprovide scopeの共有cacheへ登録し、予定・実績editor等の
+ * sibling consumerが選択直後から参照できるようにする。
  *****************************************************************************/
 import { onBeforeUnmount } from "vue";
 import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
 import { useSiteActions } from "@/composables/application/site/useSiteActions";
+import { useFetch } from "@/composables/fetch/useFetch";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { Site } from "@/schemas";
 import { useDefaults } from "vuetify";
 
 defineOptions({ inheritAttrs: false });
@@ -61,12 +59,16 @@ const {
   notFound,
   searchAutocompleteSites,
 } = useSiteUiReads();
+const { fetchSiteComposable } = useFetch("SiteAutocomplete");
+const { pushSite } = fetchSiteComposable;
 const auth = useAuthStore();
 const { canWrite, isSaving } = useSiteActions();
 const confirmDialog = ref(false);
 const pendingValue = ref(null);
 const pendingSite = ref(null);
 const pendingOriginalValue = ref(null);
+const pendingCompanyId = ref(null);
+const createCompanyId = ref(null);
 let selectionSequence = 0;
 
 /*****************************************************************************
@@ -86,7 +88,31 @@ const slots = computed(() =>
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
+function clearPendingSelection() {
+  confirmDialog.value = false;
+  pendingValue.value = null;
+  pendingSite.value = null;
+  pendingOriginalValue.value = null;
+  pendingCompanyId.value = null;
+}
+
+function cacheSite(site) {
+  if (!(site instanceof Site) || !site.docId) return false;
+  pushSite(site);
+  return true;
+}
+
+function rememberCreateCompany() {
+  createCompanyId.value = auth.companyId;
+}
+
 function onCreateHandler(event) {
+  selectionSequence += 1;
+  clear("lookup");
+  clearPendingSelection();
+  const companyId = createCompanyId.value;
+  createCompanyId.value = null;
+  if (!companyId || companyId !== auth.companyId || !cacheSite(event)) return;
   const emitValue = props.returnObject ? event : event[props.itemValue];
   emit("update:model-value", emitValue);
 }
@@ -104,19 +130,20 @@ function onSearch(value) {
 async function resolveSelectedSite(value) {
   if (!value) return null;
   const raw = value?.raw || value;
-  if (raw?.status && raw?.docId) return raw;
-  const id = typeof value === "string" ? value : value?.[props.itemValue];
+  const id = typeof raw === "string" ? raw : raw?.[props.itemValue];
   return id ? await lookupSite(id) : null;
 }
 
 async function onSelection(value) {
   const sequence = ++selectionSequence;
+  const companyId = auth.companyId;
   if (!value) {
     clear("lookup");
     confirmDialog.value = false;
     pendingValue.value = null;
     pendingSite.value = null;
     pendingOriginalValue.value = null;
+    pendingCompanyId.value = null;
     emit("site-selection-confirmed", null);
     emit("update:model-value", value);
     return;
@@ -125,12 +152,13 @@ async function onSelection(value) {
   clear("lookup");
   try {
     const site = await resolveSelectedSite(value);
-    if (sequence !== selectionSequence) return;
-    if (!site) {
+    if (sequence !== selectionSequence || companyId !== auth.companyId) return;
+    if (!(site instanceof Site)) {
       confirmDialog.value = false;
       pendingValue.value = null;
       pendingSite.value = null;
       pendingOriginalValue.value = null;
+      pendingCompanyId.value = null;
       emit("update:model-value", originalValue);
       return;
     }
@@ -138,38 +166,55 @@ async function onSelection(value) {
       pendingValue.value = value;
       pendingSite.value = site;
       pendingOriginalValue.value = originalValue;
+      pendingCompanyId.value = companyId;
       confirmDialog.value = true;
       return;
     }
     pendingValue.value = null;
     pendingSite.value = null;
     pendingOriginalValue.value = null;
+    pendingCompanyId.value = null;
     confirmDialog.value = false;
+    cacheSite(site);
     emit("site-selection-confirmed", null);
     emit("update:model-value", value);
   } catch {
-    if (sequence !== selectionSequence) return;
+    if (sequence !== selectionSequence || companyId !== auth.companyId) return;
     confirmDialog.value = false;
     pendingValue.value = null;
     pendingSite.value = null;
     pendingOriginalValue.value = null;
+    pendingCompanyId.value = null;
     emit("update:model-value", originalValue);
   }
 }
 
 function confirmTerminatedSelection() {
   if (!pendingSite.value) return;
+  if (pendingCompanyId.value !== auth.companyId) {
+    selectionSequence += 1;
+    confirmDialog.value = false;
+    pendingValue.value = null;
+    pendingSite.value = null;
+    pendingOriginalValue.value = null;
+    pendingCompanyId.value = null;
+    emit("site-selection-confirmed", null);
+    emit("update:model-value", null);
+    return;
+  }
   const context = Object.freeze({
     companyId: auth.companyId,
     siteId: pendingSite.value.docId,
     status: "TERMINATED",
   });
+  cacheSite(pendingSite.value);
   emit("site-selection-confirmed", context);
   emit("update:model-value", pendingValue.value);
   confirmDialog.value = false;
   pendingValue.value = null;
   pendingSite.value = null;
   pendingOriginalValue.value = null;
+  pendingCompanyId.value = null;
 }
 
 function cancelTerminatedSelection() {
@@ -179,6 +224,7 @@ function cancelTerminatedSelection() {
   pendingValue.value = null;
   pendingSite.value = null;
   pendingOriginalValue.value = null;
+  pendingCompanyId.value = null;
   emit("site-selection-confirmed", null);
   emit("update:model-value", originalValue);
 }
@@ -189,6 +235,8 @@ onBeforeUnmount(() => {
   pendingValue.value = null;
   pendingSite.value = null;
   pendingOriginalValue.value = null;
+  pendingCompanyId.value = null;
+  createCompanyId.value = null;
 });
 </script>
 
@@ -217,6 +265,7 @@ onBeforeUnmount(() => {
             icon="mdi-plus"
             size="small"
             aria-label="現場を新規登録"
+            @click.capture="rememberCreateCompany"
             @click="open"
           />
         </template>
