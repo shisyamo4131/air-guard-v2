@@ -6,7 +6,7 @@ const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8
 
 test("Site detail identifies lifecycle state and keeps normal editors read-only after termination", async () => {
   const source = await read("pages/sites/[id].vue");
-  assert.match(source, /const isActive = computed\(\(\) => doc\.status === "ACTIVE"\)/u);
+  assert.match(source, /const isActive = computed\(\(\) => [^\n]*doc\.status === "ACTIVE"\)/u);
   assert.match(source, /getSiteLifecyclePresentation\(doc, \{ schedules \}\)/u);
   assert.match(source, /\{\{ lifecycle\.label \}\}/u);
   assert.match(source, /自動終了予定 \{\{ lifecycle\.automaticTerminationDate \}\}/u);
@@ -40,6 +40,13 @@ test("Terminated Site selection is visibly identified and requires explicit keep
   assert.match(autocomplete, /const context = Object\.freeze\(\{[\s\S]*companyId: auth\.companyId,[\s\S]*siteId: pendingSite\.value\.docId,[\s\S]*status: "TERMINATED",[\s\S]*\}\)/u);
   assert.match(autocomplete, /emit\("site-selection-confirmed", context\)/u);
   assert.match(autocomplete, /emit\("site-selection-confirmed", null\)/u);
+  assert.match(autocomplete, /modelValue/u);
+  assert.match(autocomplete, /previous|original|confirmedValue/u);
+  assert.match(
+    autocomplete,
+    /function cancelTerminatedSelection\(\)[\s\S]*?emit\("update:model-value", (?!null)[^)]+\)/u,
+  );
+  assert.match(autocomplete, /onBeforeUnmount|onUnmounted/u);
   assert.doesNotMatch(autocomplete, /siteScheduleGuard/u);
   assert.match(autocomplete, /選択しても現場は再有効化されません/u);
   assert.match(autocomplete, /終了済みのまま使用/u);
@@ -87,8 +94,10 @@ test("Schedule editor owns confirmation lifecycle and preset paths inject the sa
 
 test("ACTIVE Site list prioritizes normal Sites before elapsed construction candidates", async () => {
   const source = await read("pages/sites/index.vue");
+  const liveRead = await read("composables/dataLayers/site/useSiteUiReads.js");
   assert.match(source, /getSiteLifecyclePresentation\(left\)\.label\.startsWith\("工期終了"\)/u);
   assert.match(source, /getSiteLifecyclePresentation\(right\)\.label\.startsWith\("工期終了"\)/u);
   assert.match(source, /if \(leftEnded !== rightEnded\) return Number\(leftEnded\) - Number\(rightEnded\)/u);
-  assert.match(source, /\["where", "status", "==", Site\.STATUS_ACTIVE\]/u);
+  assert.match(source, /useActiveSiteLiveRead/u);
+  assert.match(liveRead, /where\("status", "==", Site\.STATUS_ACTIVE\)/u);
 });

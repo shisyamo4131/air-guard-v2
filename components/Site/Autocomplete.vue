@@ -26,11 +26,10 @@
  * なお、同一クエリへの N-gram 再検索は `fetchXxxComposable` の検索キャッシュが
  * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
  *****************************************************************************/
-import { useFetch } from "@/composables/fetch/useFetch";
-import { useLogger } from "@/composables/useLogger";
+import { onBeforeUnmount } from "vue";
+import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
 import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useDefaults } from "vuetify";
 
 defineOptions({ inheritAttrs: false });
@@ -43,23 +42,31 @@ const _props = defineProps({
   label: { type: String, default: "現場" },
   itemTitle: { type: String, default: "name" },
   itemValue: { type: String, default: "docId" },
+  modelValue: { type: [String, Object], default: null },
   returnObject: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AutocompleteSite");
-const emit = defineEmits(["update:model-value", "site-selection-confirmed"]);
+const emit = defineEmits(["update:model-value", "update:search", "site-selection-confirmed"]);
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 const allSlots = useSlots();
-const { fetchSiteComposable } = useFetch("SiteAutocomplete");
-const { getSite, searchSites } = fetchSiteComposable;
+const {
+  clear,
+  errorMessage,
+  isEmpty,
+  isLoading: isReading,
+  lookupSite,
+  notFound,
+  searchAutocompleteSites,
+} = useSiteUiReads();
 const auth = useAuthStore();
-const logger = useLogger("SiteAutocomplete", useErrorsStore());
 const { canWrite, isSaving } = useSiteActions();
 const confirmDialog = ref(false);
 const pendingValue = ref(null);
 const pendingSite = ref(null);
+const pendingOriginalValue = ref(null);
 let selectionSequence = 0;
 
 /*****************************************************************************
@@ -85,10 +92,13 @@ function onCreateHandler(event) {
 }
 
 async function api(text) {
-  const sites = await searchSites(text, { returnAllCached: false });
-  return [...sites].sort((left, right) =>
-    (left.status === "TERMINATED") - (right.status === "TERMINATED"),
-  );
+  clear("lookup");
+  return await searchAutocompleteSites(text);
+}
+
+function onSearch(value) {
+  if (!value) clear("autocomplete");
+  emit("update:search", value);
 }
 
 async function resolveSelectedSite(value) {
@@ -96,33 +106,54 @@ async function resolveSelectedSite(value) {
   const raw = value?.raw || value;
   if (raw?.status && raw?.docId) return raw;
   const id = typeof value === "string" ? value : value?.[props.itemValue];
-  return id ? await getSite(id) : null;
+  return id ? await lookupSite(id) : null;
 }
 
 async function onSelection(value) {
   const sequence = ++selectionSequence;
   if (!value) {
+    clear("lookup");
     confirmDialog.value = false;
     pendingValue.value = null;
     pendingSite.value = null;
+    pendingOriginalValue.value = null;
     emit("site-selection-confirmed", null);
     emit("update:model-value", value);
     return;
   }
+  const originalValue = props.modelValue;
+  clear("lookup");
   try {
     const site = await resolveSelectedSite(value);
-    if (sequence !== selectionSequence || !site) return;
+    if (sequence !== selectionSequence) return;
+    if (!site) {
+      confirmDialog.value = false;
+      pendingValue.value = null;
+      pendingSite.value = null;
+      pendingOriginalValue.value = null;
+      emit("update:model-value", originalValue);
+      return;
+    }
     if (site.status === "TERMINATED") {
       pendingValue.value = value;
       pendingSite.value = site;
+      pendingOriginalValue.value = originalValue;
       confirmDialog.value = true;
       return;
     }
+    pendingValue.value = null;
+    pendingSite.value = null;
+    pendingOriginalValue.value = null;
+    confirmDialog.value = false;
     emit("site-selection-confirmed", null);
     emit("update:model-value", value);
-  } catch (error) {
+  } catch {
     if (sequence !== selectionSequence) return;
-    logger.error({ message: "現場の選択情報を確認できませんでした。", error });
+    confirmDialog.value = false;
+    pendingValue.value = null;
+    pendingSite.value = null;
+    pendingOriginalValue.value = null;
+    emit("update:model-value", originalValue);
   }
 }
 
@@ -138,24 +169,37 @@ function confirmTerminatedSelection() {
   confirmDialog.value = false;
   pendingValue.value = null;
   pendingSite.value = null;
+  pendingOriginalValue.value = null;
 }
 
 function cancelTerminatedSelection() {
   selectionSequence += 1;
   confirmDialog.value = false;
+  const originalValue = pendingOriginalValue.value;
   pendingValue.value = null;
   pendingSite.value = null;
+  pendingOriginalValue.value = null;
   emit("site-selection-confirmed", null);
-  emit("update:model-value", null);
+  emit("update:model-value", originalValue);
 }
+
+onBeforeUnmount(() => {
+  selectionSequence += 1;
+  clear();
+  pendingValue.value = null;
+  pendingSite.value = null;
+  pendingOriginalValue.value = null;
+});
 </script>
 
 <template>
   <air-autocomplete-api
     v-bind="$attrs"
     :api="api"
-    :fetchItemByKeyApi="getSite"
+    :fetch-item-by-key-api="lookupSite"
     :custom-filter="() => true"
+    :model-value="props.modelValue"
+    api-error-message="現場を検索できませんでした。"
     hint="名称入力で検索"
     :item-title="itemTitle"
     :item-value="itemValue"
@@ -163,11 +207,18 @@ function cancelTerminatedSelection() {
     persistent-hint
     :return-object="returnObject"
     @update:model-value="onSelection"
+    @update:search="onSearch"
   >
     <template v-if="creatable && canWrite" #append>
       <SiteCreateDialog @created="onCreateHandler">
         <template #activator="{ open }">
-          <v-icon :disabled="isSaving" @click="open">mdi-plus</v-icon>
+          <v-btn
+            :disabled="isSaving"
+            icon="mdi-plus"
+            size="small"
+            aria-label="現場を新規登録"
+            @click="open"
+          />
         </template>
       </SiteCreateDialog>
     </template>
@@ -178,11 +229,25 @@ function cancelTerminatedSelection() {
       </slot>
     </template>
 
+    <template #no-data>
+      <v-list-item
+        :title="isReading ? '検索中です' : errorMessage ? errorMessage : '該当する現場はありません'"
+      />
+    </template>
+
     <!-- スロットのパススルー -->
     <template v-for="(slotFn, name) in slots" #[name]="scope">
       <slot :name="name" v-bind="scope ?? {}"></slot>
     </template>
   </air-autocomplete-api>
+
+  <v-alert v-if="notFound" density="compact" type="warning" variant="tonal" class="mt-2">
+    選択された現場が見つかりません。
+  </v-alert>
+  <v-alert v-else-if="errorMessage" density="compact" type="error" variant="tonal" class="mt-2">
+    {{ errorMessage }}
+  </v-alert>
+  <span v-else-if="isEmpty" class="text-caption text-medium-emphasis">検索結果は0件です。</span>
 
   <v-dialog v-model="confirmDialog" max-width="520" persistent>
     <v-card>

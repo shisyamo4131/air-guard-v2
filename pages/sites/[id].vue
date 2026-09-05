@@ -6,13 +6,14 @@
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
-import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
 import { useFetch } from "@/composables/fetch/useFetch";
-import { useSiteEmployeeHistoriesBySiteId } from "@/composables/dataLayers/useSiteEmployeeHistoriesBySiteId";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 import { useSiteActions } from "@/composables/application/site/useSiteActions";
+import { Site, SiteEmployeeHistory } from "@/schemas";
+import { getSitePresentationBadges } from "@/composables/domain/site/siteUiPresentation";
+import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -23,14 +24,19 @@ defineOptions({ name: "site-detail" });
  * ROUTER
  *****************************************************************************/
 const route = useRoute();
-const docId = route.params.id;
+const docId = computed(() => String(route.params.id || ""));
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { doc } = useDocument("Site", { docId });
+const doc = reactive(new Site());
+const detailResolved = ref(false);
+const detailError = ref("");
+const { lookupSite } = useSiteUiReads();
 const { canWrite } = useSiteActions();
-const isActive = computed(() => doc.status === "ACTIVE");
+const hasSite = computed(() => !!docId.value && doc.docId === docId.value);
+const isMissing = computed(() => detailResolved.value && !hasSite.value && !detailError.value);
+const isActive = computed(() => hasSite.value && doc.status === "ACTIVE");
 
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
@@ -49,10 +55,8 @@ const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
 /*****************************************************************************
  * SETUP SITE EMPLOYEE HISTORIES DATA LAYER COMPOSABLE
  *****************************************************************************/
-const { docs: siteEmployeeHistories } = useSiteEmployeeHistoriesBySiteId(
-  docId,
-  { callback: (doc) => fetchEmployee(doc.employeeId) },
-);
+const historyInstance = reactive(new SiteEmployeeHistory());
+const siteEmployeeHistories = historyInstance.docs;
 const sortedHistories = computed(() => {
   return [...siteEmployeeHistories].sort((a, b) => {
     const kanaA = cachedEmployees.value[a.employeeId]?.displayNameKana ?? "";
@@ -68,7 +72,7 @@ const sortedHistories = computed(() => {
  */
 const options = computed(() => {
   return [
-    ["where", "siteId", "==", docId],
+    ["where", "siteId", "==", docId.value],
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
   ];
@@ -78,13 +82,59 @@ const { docs: displayedSchedules } = useDocuments("SiteOperationSchedule", {
   fetchAllOnEmpty: true,
 });
 const allScheduleOptions = computed(() => [
-  ["where", "siteId", "==", docId],
+  ["where", "siteId", "==", docId.value],
 ]);
 const { docs: schedules } = useDocuments("SiteOperationSchedule", {
   options: allScheduleOptions,
   fetchAllOnEmpty: true,
 });
 const lifecycle = computed(() => getSiteLifecyclePresentation(doc, { schedules }));
+const badges = computed(() => getSitePresentationBadges(doc));
+
+let detailSequence = 0;
+async function subscribeDetail(id) {
+  const sequence = ++detailSequence;
+  doc.unsubscribe();
+  historyInstance.unsubscribe();
+  doc.initialize();
+  detailResolved.value = false;
+  detailError.value = "";
+  if (!id) {
+    detailResolved.value = true;
+    return;
+  }
+  try {
+    const initial = await lookupSite(id);
+    if (sequence !== detailSequence || id !== docId.value) return;
+    if (!initial) {
+      detailResolved.value = true;
+      return;
+    }
+    doc.initialize(initial.toObject?.() ?? initial);
+    detailResolved.value = true;
+    doc.subscribe({ docId: id }, (value) => {
+      if (sequence !== detailSequence || id !== docId.value) return;
+      detailResolved.value = true;
+      if (!value) doc.initialize();
+    });
+    historyInstance.subscribeDocs({
+      constraints: [["where", "siteId", "==", id]],
+    }, (history) => {
+      if (history?.employeeId) fetchEmployee(history.employeeId);
+    });
+  } catch {
+    if (sequence !== detailSequence || id !== docId.value) return;
+    detailError.value = "現場情報を読み込めませんでした。";
+    detailResolved.value = true;
+  }
+}
+
+watch(docId, subscribeDetail, { immediate: true });
+onUnmounted(() => {
+  detailSequence += 1;
+  doc.unsubscribe();
+  historyInstance.unsubscribe();
+});
 
 function handleArchived() {
   navigateTo("/sites");
@@ -93,9 +143,29 @@ function handleArchived() {
 
 <template>
   <v-container>
+    <v-progress-linear v-if="!detailResolved" indeterminate class="mb-4" />
+    <v-alert v-else-if="detailError" type="error" variant="tonal" class="mb-4">
+      {{ detailError }}
+    </v-alert>
+    <v-alert v-else-if="isMissing" type="warning" variant="tonal" class="mb-4">
+      指定された現場は見つかりません。
+    </v-alert>
+    <template v-if="hasSite">
     <v-card class="mb-4" variant="tonal">
       <v-card-text class="d-flex align-center flex-wrap ga-3">
-        <v-chip :color="lifecycle.color" variant="flat">
+        <v-chip
+          v-for="badge in badges"
+          :key="badge.key"
+          :color="badge.color"
+          variant="flat"
+        >
+          {{ badge.label }}
+        </v-chip>
+        <v-chip
+          v-if="!badges.some((badge) => badge.label === lifecycle.label)"
+          :color="lifecycle.color"
+          variant="outlined"
+        >
           {{ lifecycle.label }}
         </v-chip>
         <v-chip v-if="lifecycle.automaticTerminationDate" variant="outlined">
@@ -193,5 +263,6 @@ function handleArchived() {
         </MoleculesFloatingTitleCard>
       </v-col>
     </v-row>
+    </template>
   </v-container>
 </template>

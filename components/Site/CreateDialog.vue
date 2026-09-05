@@ -17,7 +17,7 @@ const form = ref(null);
 const draft = ref(null);
 const errorMessage = ref("");
 const schema = siteOperationSchema(SITE_OPERATION.CREATE).filter(
-  ({ key }) => !["customerId", "customerName"].includes(key),
+  ({ key }) => !["customerId", "customerName", "zipcode"].includes(key),
 );
 
 function open() {
@@ -73,6 +73,11 @@ async function save() {
               clearable
             />
             <CustomerAutocomplete v-model="draft.customerId" clearable />
+            <SitePostalCodeInput
+              v-model="draft.zipcode"
+              :item="draft"
+              :update-properties="updateProperties"
+            />
             <air-item-input
               :item="draft"
               :schema="schema"

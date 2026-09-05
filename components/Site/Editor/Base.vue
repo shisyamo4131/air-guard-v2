@@ -19,7 +19,7 @@ const props = defineProps({
 });
 const { canWrite, isSaving, updateBasic } = useSiteActions();
 const operation = SITE_OPERATION.UPDATE_BASIC;
-const schema = siteOperationSchema(operation);
+const schema = siteOperationSchema(operation).filter(({ key }) => key !== "zipcode");
 const dialog = ref(false);
 const form = ref(null);
 const draft = ref(null);
@@ -115,6 +115,12 @@ watch(() => props.site.toObject(), () => {
             :update-properties="updateProperties"
             :disabled="isSaving"
             edit-mode="UPDATE"
+          />
+          <SitePostalCodeInput
+            v-if="draft"
+            v-model="draft.zipcode"
+            :item="draft"
+            :update-properties="updateProperties"
           />
         </v-card-text>
         <v-card-actions>

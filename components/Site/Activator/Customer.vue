@@ -60,6 +60,8 @@ defineExpose({
         <v-btn
           icon="mdi-pencil"
           size="small"
+          aria-label="現場の取引先情報を編集"
+          title="現場の取引先情報を編集"
           @click="emit('click:edit', props.item)"
         />
       </template>

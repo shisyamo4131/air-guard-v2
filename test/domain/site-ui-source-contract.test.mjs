@@ -6,11 +6,13 @@ import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 const SITE_SFCS = Object.freeze([
   "components/Site/Manager/index.vue",
   "components/Site/Autocomplete.vue",
+  "components/Site/PostalCodeInput.vue",
   "components/Site/CreateDialog.vue",
   "components/Site/Editor/Agreements.vue",
   "components/Site/Editor/Base.vue",
   "components/Site/Editor/Customer.vue",
   "components/Sites/Manager/index.vue",
+  "components/Sites/DataTable/index.vue",
   "pages/sites/index.vue",
   "pages/sites/[id].vue",
   "pages/sites/terminated.vue",
@@ -134,7 +136,12 @@ test("Site editors use independent drafts and explicit same-operation conflict c
 
   assert.match(create, /draft\.value = new Site\(\)/u);
   assert.match(create, /await createSite\(draft\.value\)/u);
+  assert.match(create, /const validation = await form\.value\?\.validate\(\)/u);
+  assert.match(create, /<v-form ref="form"[\s\S]*?@submit\.prevent="save"/u);
+  assert.match(create, /<SitePostalCodeInput[\s\S]*?v-model="draft\.zipcode"/u);
   assert.doesNotMatch(create, /\.create\s*\(|\.update\s*\(/u);
+
+  assert.match(base, /<SitePostalCodeInput[\s\S]*?v-model="draft\.zipcode"/u);
 });
 
 test("Site Agreement UI sends exact baseline and candidate transport through the public Callable", async () => {
@@ -289,7 +296,10 @@ test("Site pages keep reads visible while gating create, edit, and agreement wri
   assert.ok(activeTable);
   assert.match(activeTable, /:edit-icon="canWrite \? 'mdi-pencil' : 'mdi-eye'"/u);
   assert.match(list, /<SiteCreateDialog[\s\S]*?v-if="canWrite"/u);
-  assert.match(list, /<v-btn :disabled="isSaving" icon="mdi-plus" @click="open"/u);
+  assert.match(
+    list,
+    /<v-btn[\s\S]*?:disabled="isSaving"[\s\S]*?icon="mdi-plus"[\s\S]*?@click="open"/u,
+  );
   assert.match(list, /<SitesDataTable/u);
 
   assert.match(detail, /<SiteEditorBase :site="doc">/u);
@@ -313,12 +323,109 @@ test("Terminated Site list preserves navigation but disables unauthorized create
   );
 });
 
+test("current Site table consumers expose truthful detail actions and preserve the clicked item", async () => {
+  const [active, terminated, table] = await Promise.all([
+    source("pages/sites/index.vue"),
+    source("pages/sites/terminated.vue"),
+    source("components/Sites/DataTable/index.vue"),
+  ]);
+  assert.match(table, /aria-label="現場詳細を表示"/u);
+  assert.match(table, /title="現場詳細を表示"/u);
+  assert.doesNotMatch(table, /現場を編集/u);
+  assert.match(table, /@click="emit\('click:update', item\)"/u);
+  assert.match(
+    table,
+    /<air-data-table[\s\S]*?@click:update="emit\('click:update', \$event\)"/u,
+  );
+  for (const consumer of [active, terminated]) {
+    assert.match(
+      consumer,
+      /<SitesDataTable[\s\S]*?@click:update="\(item\) => router\.push\(`\/sites\/\$\{item\.docId\}`\)"/u,
+    );
+  }
+});
+
 test("Site Autocomplete keeps search available while gating its create affordance", async () => {
   const autocomplete = await source("components/Site/Autocomplete.vue");
   assert.match(autocomplete, /const \{ canWrite, isSaving \} = useSiteActions\(\)/u);
   assert.match(autocomplete, /<template v-if="creatable && canWrite" #append>/u);
   assert.match(autocomplete, /<SiteCreateDialog @created="onCreateHandler">/u);
-  assert.match(autocomplete, /<v-icon :disabled="isSaving" @click="open">mdi-plus<\/v-icon>/u);
+  assert.match(
+    autocomplete,
+    /<v-btn[\s\S]*?:disabled="isSaving"[\s\S]*?aria-label="現場を新規登録"[\s\S]*?@click="open"/u,
+  );
   assert.match(autocomplete, /:api="api"/u);
-  assert.match(autocomplete, /:fetchItemByKeyApi="getSite"/u);
+  assert.match(autocomplete, /:fetch-item-by-key-api="lookupSite"/u);
+});
+
+test("SITE-07 list and detail routes expose explicit read states and bounded client paging", async () => {
+  const [active, terminated, detail] = await Promise.all([
+    source("pages/sites/index.vue"),
+    source("pages/sites/terminated.vue"),
+    source("pages/sites/[id].vue"),
+  ]);
+
+  assert.match(active, /:items-per-page="20"/u);
+  assert.match(active, /page[^\n]*=\s*1|currentPage[^\n]*=\s*1/u);
+  assert.match(
+    active,
+    /watch\(\[search, selectedCustomerId, selectedSecurityType\],[\s\S]*?page\.value = 1/u,
+  );
+  assert.match(terminated, /import \{ PAGE_SIZE, useSiteUiReads \}/u);
+  assert.match(terminated, /:items-per-page="PAGE_SIZE"/u);
+  assert.match(terminated, /isLoading/u);
+  assert.match(terminated, /errorMessage/u);
+  assert.match(terminated, /isEmpty/u);
+  assert.match(terminated, /searchTerminatedSites/u);
+  assert.match(terminated, /watch\(search,[\s\S]*?page\.value = 1/u);
+  assert.match(detail, /lookupSite/u);
+  assert.match(detail, /detailResolved/u);
+  assert.match(detail, /detailError/u);
+  assert.match(detail, /isMissing/u);
+  assert.match(detail, /detailSequence/u);
+  assert.match(detail, /onBeforeUnmount|onUnmounted/u);
+  assert.match(detail, /doc\.unsubscribe\(\)/u);
+  assert.match(detail, /historyInstance\.unsubscribe\(\)/u);
+});
+
+test("SITE-07 presentation avoids undefined Customer reads and environment-local dates", async () => {
+  const [table, activator, listItem] = await Promise.all([
+    source("components/Sites/DataTable/index.vue"),
+    source("components/Site/Activator/Base.vue"),
+    source("components/Site/ListItem/index.vue"),
+  ]);
+
+  assert.match(table, /if \(item\.customerId && !cachedCustomers\[item\.customerId\]\)/u);
+  assert.doesNotMatch(table, /fetchCustomer\(undefined\)/u);
+  assert.doesNotMatch(table, /\.toLocaleDateString\s*\(/u);
+  assert.doesNotMatch(table, /\.\.\.loading/u);
+  assert.doesNotMatch(activator, /`\$\{start\} 〜 \$\{end\}`/u);
+  for (const renderer of [table, listItem]) {
+    assert.match(
+      renderer,
+      /v-if="!badges(?:Of\(item\)|\.value)?\.some|v-if="!badges\.some/u,
+    );
+  }
+
+  const list = await source("pages/sites/index.vue");
+  assert.match(list, /if \(site\?\.customerId\) fetchCustomer\(site\.customerId\)/u);
+});
+
+test("SITE-07 reachable Site controls have accessible button semantics", async () => {
+  const [list, autocomplete, table, base, customer] = await Promise.all([
+    source("pages/sites/index.vue"),
+    source("components/Site/Autocomplete.vue"),
+    source("components/Sites/DataTable/index.vue"),
+    source("components/Site/Activator/Base.vue"),
+    source("components/Site/Activator/Customer.vue"),
+  ]);
+
+  assert.match(list, /aria-label="現場を新規登録"/u);
+  assert.match(list, /aria-label="現場の絞り込み条件を設定"/u);
+  assert.match(list, /aria-label="絞り込み条件を閉じる"/u);
+  assert.match(autocomplete, /aria-label="現場を新規登録"/u);
+  assert.match(table, /item\.actions/u);
+  assert.match(table, /aria-label="現場詳細を表示"/u);
+  assert.match(base, /aria-label="現場の基本情報を編集"/u);
+  assert.match(customer, /aria-label="現場の取引先情報を編集"/u);
 });
