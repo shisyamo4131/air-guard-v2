@@ -6,6 +6,10 @@ import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 const SITE_SFCS = Object.freeze([
   "components/Site/Manager/index.vue",
   "components/Site/Autocomplete.vue",
+  "components/Site/CreateDialog.vue",
+  "components/Site/Editor/Agreements.vue",
+  "components/Site/Editor/Base.vue",
+  "components/Site/Editor/Customer.vue",
   "components/Sites/Manager/index.vue",
   "pages/sites/index.vue",
   "pages/sites/[id].vue",
@@ -16,7 +20,7 @@ async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 }
 
-test("SITE-02 Site SFCs parse and compile", async () => {
+test("SITE-03 Site SFCs parse and compile", async () => {
   for (const path of SITE_SFCS) {
     const url = new URL(`../../${path}`, import.meta.url);
     const content = await readFile(url, "utf8");
@@ -32,36 +36,56 @@ test("SITE-02 Site SFCs parse and compile", async () => {
   }
 });
 
-test("Site managers apply the authorization preflight before every generic write", async () => {
-  for (const path of [
-    "components/Site/Manager/index.vue",
-    "components/Sites/Manager/index.vue",
-  ]) {
-    const manager = await source(path);
-    assert.match(manager, /const \{ canWrite, isSaving, executeSiteWrite, rejectDirectDelete \} =\s*useSiteActions\(\)/u);
-    assert.match(manager, /:before-edit="beforeEdit"/u);
-    assert.match(manager, /:disable-submit="disableSubmit"/u);
-    assert.match(manager, /:disable-update="disableUpdate"/u);
-    assert.match(manager, /:handle-create="handleCreate"/u);
-    assert.match(manager, /:handle-update="handleUpdate"/u);
-    assert.match(manager, /:handle-delete="handleDelete"/u);
-    assert.match(
-      manager,
-      /async function beforeEdit[\s\S]*?editMode === "DELETE"[\s\S]*?rejectDirectDelete\(\)[\s\S]*?executeSiteWrite\(editMode\.toLowerCase\(\)/u,
-    );
-    assert.match(
-      manager,
-      /async function handleCreate[\s\S]*?executeSiteWrite\("create", \(\) => props\.handleCreate\(item\)\)/u,
-    );
-    assert.match(
-      manager,
-      /async function handleUpdate[\s\S]*?executeSiteWrite\("update", \(\) => props\.handleUpdate\(item\)\)/u,
-    );
-    assert.match(
-      manager,
-      /async function handleDelete\(\) \{[\s\S]*?rejectDirectDelete\(\)[\s\S]*?\}/u,
-    );
-  }
+test("Site routes use operation-specific UI instead of generic whole-document managers", async () => {
+  const [list, detail] = await Promise.all([
+    source("pages/sites/index.vue"),
+    source("pages/sites/[id].vue"),
+  ]);
+  assert.match(list, /<SiteCreateDialog/u);
+  assert.doesNotMatch(list, /<SitesManager/u);
+  assert.match(detail, /<SiteEditorBase/u);
+  assert.match(detail, /<SiteEditorCustomer/u);
+  assert.match(detail, /<SiteEditorAgreements/u);
+  assert.doesNotMatch(detail, /<SiteManager/u);
+  assert.doesNotMatch(detail, /\.terminate\s*\(|稼働終了/u);
+});
+
+test("Site editors use independent drafts and explicit same-operation conflict checks", async () => {
+  const [base, customer, agreements, create] = await Promise.all([
+    source("components/Site/Editor/Base.vue"),
+    source("components/Site/Editor/Customer.vue"),
+    source("components/Site/Editor/Agreements.vue"),
+    source("components/Site/CreateDialog.vue"),
+  ]);
+  assert.match(base, /draft\.value = props\.site\.clone\(\)/u);
+  assert.match(base, /baseline\.value = siteSnapshot\(props\.site, operation\)/u);
+  assert.match(base, /conflictingSiteFields\([\s\S]*?latest: props\.site[\s\S]*?draft: draft\.value/u);
+  assert.match(base, /latest: \(\) => props\.site/u);
+  assert.match(base, /if \(isSaving\.value \|\| !canWrite\.value \|\| !draft\.value \|\| refreshConflict\(\)\) return/u);
+  assert.doesNotMatch(base, /Object\.assign\(props\.site|v-model="props\.site/u);
+
+  assert.match(customer, /draft\.value = props\.site\.clone\(\)/u);
+  assert.match(customer, /baseline\.value = siteSnapshot\(props\.site, operation\)/u);
+  assert.match(customer, /latest: \(\) => props\.site/u);
+  assert.doesNotMatch(customer, /Object\.assign\(props\.site|v-model="props\.site/u);
+
+  assert.match(agreements, /draft\.value = cloneAgreements\(props\.site\.agreementsV2\)/u);
+  assert.match(agreements, /baseline\.value = siteSnapshot\(props\.site, operation\)/u);
+  assert.match(agreements, /latest: \(\) => props\.site/u);
+  assert.match(agreements, /baseline: baseline\.value/u);
+  assert.match(agreements, /conflictingSiteFields\([\s\S]*?latest: props\.site/u);
+  assert.match(agreements, /const hasConflict = ref\(false\)/u);
+  assert.match(agreements, /function reloadLatest\(\)[\s\S]*?draftRevision\.value \+= 1/u);
+  assert.match(agreements, /getSiteOperationErrorMessage\([\s\S]*?取極めを保存できませんでした/u);
+  assert.match(agreements, /現在の入力は保持されています/u);
+  assert.match(agreements, /最新値を読み直す/u);
+  assert.match(agreements, /:key="draftRevision"/u);
+  assert.match(agreements, /:model-value="draft"/u);
+  assert.doesNotMatch(agreements, /v-model="(?:props\.)?site\.agreementsV2/u);
+
+  assert.match(create, /draft\.value = new Site\(\)/u);
+  assert.match(create, /await createSite\(draft\.value\)/u);
+  assert.doesNotMatch(create, /\.create\s*\(|\.update\s*\(/u);
 });
 
 test("Site action rebuilds authorization state at send time and refuses direct delete", async () => {
@@ -114,16 +138,26 @@ test("Site action single-flight is shared across distinct composable instances",
     useAuthStore: () => auth,
     useNuxtApp: () => ({
       $auth: { currentUser: { uid: "actor-a", emailVerified: true } },
+      $firestore: "FIRESTORE",
     }),
     SITE_WRITE_OPERATION: { CREATE: "create" },
     SiteAuthorizationError: HarnessAuthorizationError,
     assertSiteWriteAllowed: () => undefined,
+    changedSiteFields: () => [],
+    createSiteWriter: () => ({}),
     getSiteWriteDecision: () => ({ allowed: true, reason: null }),
+    prepareSiteCreate: () => undefined,
+    SITE_ADDRESS_FIELDS: [],
+    SITE_OPERATION: { UPDATE_BASIC: "UPDATE_BASIC", UPDATE_CUSTOMER: "UPDATE_CUSTOMER" },
+    Site: class {},
+    SiteOperationError: class extends Error {},
   };
   const moduleSource = `
     const {
       Vue, useAuthStore, useNuxtApp, SITE_WRITE_OPERATION,
-      SiteAuthorizationError, assertSiteWriteAllowed, getSiteWriteDecision
+      SiteAuthorizationError, assertSiteWriteAllowed, changedSiteFields,
+      createSiteWriter, getSiteWriteDecision, prepareSiteCreate,
+      SITE_ADDRESS_FIELDS, SITE_OPERATION, Site, SiteOperationError
     } = globalThis.__siteActionsHarness;
     ${executable}
   `;
@@ -161,68 +195,47 @@ test("Site action single-flight is shared across distinct composable instances",
   }
 });
 
-test("Site pages keep reads visible while gating create, edit, terminate, and agreement writes", async () => {
+test("Site pages keep reads visible while gating create, edit, and agreement writes", async () => {
   const [list, detail] = await Promise.all([
     source("pages/sites/index.vue"),
     source("pages/sites/[id].vue"),
   ]);
 
   assert.match(list, /const \{ canWrite, isSaving \} = useSiteActions\(\)/u);
-  const activeManager = list.match(/<SitesManager[\s\S]*?>/u)?.[0];
   const activeTable = list.match(/<SitesDataTable[\s\S]*?\/>/u)?.[0];
-  assert.ok(activeManager);
   assert.ok(activeTable);
-  assert.doesNotMatch(activeManager, /:edit-icon=/u);
   assert.match(activeTable, /:edit-icon="canWrite \? 'mdi-pencil' : 'mdi-eye'"/u);
-  assert.match(list, /<v-btn[\s\S]*?v-if="canWrite"[\s\S]*?icon="mdi-plus"/u);
-  assert.match(list, /v-if="canWrite"[\s\S]*?:disabled="isSaving"[\s\S]*?icon="mdi-plus"/u);
+  assert.match(list, /<SiteCreateDialog[\s\S]*?v-if="canWrite"/u);
+  assert.match(list, /<v-btn :disabled="isSaving" icon="mdi-plus" @click="open"/u);
   assert.match(list, /<SitesDataTable/u);
 
-  assert.match(detail, /const \{ canWrite, isSaving, executeSiteWrite \} = useSiteActions\(\)/u);
-  assert.match(detail, /v-if="canWrite"[\s\S]*?text="稼働終了"/u);
-  assert.doesNotMatch(detail, /v-if="canWrite && !isSaving"/u);
-  assert.match(
-    detail,
-    /const updateAgreements = \(\) =>\s*executeSiteWrite\("agreement", \(\) => doc\.update\(\)\)/u,
-  );
-  const agreementsManager = detail.match(/<AgreementsManager[\s\S]*?\/>/u)?.[0];
-  assert.ok(agreementsManager);
-  assert.match(agreementsManager, /v-if="canWrite"/u);
-  assert.doesNotMatch(agreementsManager, /v-if="canWrite && !isSaving"/u);
-  assert.match(agreementsManager, /:before-edit="\(\) => !isSaving"/u);
-  assert.match(agreementsManager, /:disabled="isSaving"/u);
-  assert.match(agreementsManager, /:disable-submit="isSaving"/u);
-  assert.match(agreementsManager, /:disable-update="isSaving"/u);
-  assert.match(agreementsManager, /@submit:complete="updateAgreements"/u);
-  assert.doesNotMatch(
-    agreementsManager,
-    /:handle-(?:create|update|delete)=/u,
-  );
-  assert.match(detail, /site-read-only[\s\S]*?display: none/u);
+  assert.match(detail, /<SiteEditorBase :site="doc">/u);
+  assert.match(detail, /<SiteEditorCustomer :site="doc">/u);
+  assert.match(detail, /<SiteEditorAgreements v-if="canWrite" :site="doc" \/>/u);
+  assert.match(detail, /:editable="canWrite"/u);
+  assert.doesNotMatch(detail, /\.terminate\s*\(|稼働終了/u);
+  assert.doesNotMatch(detail, /v-model="doc\.agreementsV2"|saveAgreements/u);
 });
 
 test("Terminated Site list preserves navigation but disables unauthorized create and edit UI", async () => {
   const terminated = await source("pages/sites/terminated.vue");
-  assert.match(terminated, /const \{ canWrite, isSaving \} = useSiteActions\(\)/u);
-  const terminatedManager = terminated.match(/<SitesManager[\s\S]*?\/>/u)?.[0];
-  assert.ok(terminatedManager);
-  assert.doesNotMatch(terminatedManager, /:edit-icon=/u);
-  assert.match(
-    terminatedManager,
-    /editIcon: canWrite \? 'mdi-pencil' : 'mdi-eye'/u,
-  );
+  assert.match(terminated, /const \{ canWrite \} = useSiteActions\(\)/u);
+  assert.doesNotMatch(terminated, /<SitesManager|<SiteCreateDialog/u);
+  const table = terminated.match(/<SitesDataTable[\s\S]*?\/>/u)?.[0];
+  assert.ok(table);
+  assert.match(table, /:edit-icon="canWrite \? 'mdi-pencil' : 'mdi-eye'"/u);
   assert.match(
     terminated,
-    /:handle-click-update="\(item\) => router\.push\(`\/sites\/\$\{item\.docId\}`\)"/u,
+    /@click:update="\(item\) => router\.push\(`\/sites\/\$\{item\.docId\}`\)"/u,
   );
-  assert.match(terminated, /disableCreate: !canWrite \|\| isSaving/u);
 });
 
 test("Site Autocomplete keeps search available while gating its create affordance", async () => {
   const autocomplete = await source("components/Site/Autocomplete.vue");
   assert.match(autocomplete, /const \{ canWrite, isSaving \} = useSiteActions\(\)/u);
   assert.match(autocomplete, /<template v-if="creatable && canWrite" #append>/u);
-  assert.match(autocomplete, /<v-icon :disabled="isSaving" @click="toCreate\(\)">mdi-plus<\/v-icon>/u);
+  assert.match(autocomplete, /<SiteCreateDialog @created="onCreateHandler">/u);
+  assert.match(autocomplete, /<v-icon :disabled="isSaving" @click="open">mdi-plus<\/v-icon>/u);
   assert.match(autocomplete, /:api="api"/u);
   assert.match(autocomplete, /:fetchItemByKeyApi="getSite"/u);
 });

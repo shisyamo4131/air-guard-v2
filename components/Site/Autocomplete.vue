@@ -91,11 +91,11 @@ async function api(text) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable && canWrite" #append>
-      <SitesManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate }">
-          <v-icon :disabled="isSaving" @click="toCreate()">mdi-plus</v-icon>
+      <SiteCreateDialog @created="onCreateHandler">
+        <template #activator="{ open }">
+          <v-icon :disabled="isSaving" @click="open">mdi-plus</v-icon>
         </template>
-      </SitesManager>
+      </SiteCreateDialog>
     </template>
 
     <template #item="slotProps">

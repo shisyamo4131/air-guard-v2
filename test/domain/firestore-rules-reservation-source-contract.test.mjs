@@ -68,11 +68,6 @@ test("Customer reference collections use explicit guarded matches outside the fa
       createGuard: "isValidCustomerReferenceCreate",
       updateGuard: "isValidCustomerReferenceUpdate",
     },
-    {
-      collectionName: "Sites",
-      createGuard: "isValidOptionalCustomerReferenceCreate",
-      updateGuard: "isValidOptionalCustomerReferenceUpdate",
-    },
   ];
 
   for (const { collectionName, createGuard, updateGuard } of contracts) {
@@ -87,6 +82,38 @@ test("Customer reference collections use explicit guarded matches outside the fa
     assert.match(body, new RegExp(`${createGuard}\\(companyId\\)`, "u"));
     assert.match(body, new RegExp(`${updateGuard}\\(companyId\\)`, "u"));
   }
+
+  const siteBody = source.match(
+    /match \/Companies\/\{companyId\}\/Sites\/\{docId\} \{([\s\S]*?)\n    \}/u,
+  )?.[1];
+  assert.ok(siteBody, "Sites must have an explicit document match");
+  assert.match(siteBody, /isValidSiteCreate\(companyId, docId\)/u);
+  assert.match(siteBody, /isValidSiteUpdate\(companyId, docId\)/u);
+  assert.match(
+    source,
+    /function isValidSiteCreate\(companyId, docId\)[\s\S]*?hasValidSiteCustomerCreate\(companyId, data\)/u,
+  );
+  assert.match(
+    source,
+    /function isValidSiteUpdate\(companyId, docId\)[\s\S]*?hasValidSiteCustomerUpdate\(companyId\)/u,
+  );
+  assert.match(
+    source,
+    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?hasCurrentSiteCustomerSnapshot\(\s*data\.customer,\s*get\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers\/\$\(data\.customerId\)\)\.data\s*\)/u,
+  );
+  assert.match(
+    source,
+    /function hasValidSiteCustomerUpdate\(companyId\)[\s\S]*?hasCurrentSiteCustomerSnapshot\(\s*request\.resource\.data\.customer,\s*get\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers\/\$\(request\.resource\.data\.customerId\)\)\.data\s*\)/u,
+  );
+  assert.match(
+    source,
+    /function hasCurrentSiteCustomerSnapshot\(snapshot, customer\) \{\s*return snapshot is map\s*&& snapshot\.keys\(\)\.size\(\) == 6\s*&& snapshot\.keys\(\)\.hasOnly\(\[\s*'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'\s*\]\)\s*&& snapshot\.docId == customer\.docId\s*&& snapshot\.updatedAt == customer\.updatedAt\s*&& snapshot\.code == customer\.code\s*&& snapshot\.name == customer\.name\s*&& snapshot\.abbreviation == customer\.abbreviation\s*&& snapshot\.cutoffDate == customer\.cutoffDate;\s*\}/u,
+  );
+  const siteCustomerHelpers = source.match(
+    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function isValidSiteUpdateMetadata/u,
+  )?.[0];
+  assert.ok(siteCustomerHelpers);
+  assert.doesNotMatch(siteCustomerHelpers, /customerExists\(/u);
 });
 
 test("Customers_archive is recursively denied before the Companies fallback", async () => {

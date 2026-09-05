@@ -25,12 +25,7 @@ defineOptions({ name: "SitesManager", inheritAttrs: false });
 const _props = defineProps({
   beforeEdit: { type: Function, default: () => true },
   customInput: { type: Object, default: () => CustomInputBase },
-  disableSubmit: { type: [Boolean, Function], default: false },
-  disableUpdate: { type: [Boolean, Function], default: false },
   docs: { type: Array, default: () => [] },
-  handleCreate: { type: Function, default: (item) => item.create(item) },
-  handleUpdate: { type: Function, default: (item) => item.update(item) },
-  handleDelete: { type: Function, default: (item) => item.delete(item) },
 });
 const props = useDefaults(_props, "SitesManager");
 
@@ -38,8 +33,11 @@ const props = useDefaults(_props, "SitesManager");
  * SETUP BASE MANAGER COMPOSABLES
  *****************************************************************************/
 const { attrs } = useBaseManager("SitesManager");
-const { canWrite, isSaving, executeSiteWrite, rejectDirectDelete } =
-  useSiteActions();
+const { canWrite, isSaving, rejectDirectDelete } = useSiteActions();
+
+function rejectLegacyWrite() {
+  throw new Error("現場の編集は操作別エディターから実行してください。");
+}
 
 /*****************************************************************************
  * METHODS
@@ -56,40 +54,20 @@ function getApplicableCustomInput({ editMode }) {
 
 async function beforeEdit(editMode, item) {
   if (editMode === "DELETE") return await rejectDirectDelete();
-  await executeSiteWrite(editMode.toLowerCase(), async () => undefined);
+  if (editMode === "CREATE" || editMode === "UPDATE") rejectLegacyWrite();
   return await props.beforeEdit(editMode, item);
-}
-
-async function handleCreate(item) {
-  return await executeSiteWrite("create", () => props.handleCreate(item));
-}
-
-async function handleUpdate(item) {
-  return await executeSiteWrite("update", () => props.handleUpdate(item));
 }
 
 async function handleDelete() {
   return await rejectDirectDelete();
 }
 
-function disableSubmit(context) {
-  return (
-    !canWrite.value ||
-    isSaving.value ||
-    (typeof props.disableSubmit === "function"
-      ? props.disableSubmit(context)
-      : props.disableSubmit)
-  );
+function disableSubmit() {
+  return true;
 }
 
-function disableUpdate(item) {
-  return (
-    !canWrite.value ||
-    isSaving.value ||
-    (typeof props.disableUpdate === "function"
-      ? props.disableUpdate(item)
-      : props.disableUpdate)
-  );
+function disableUpdate() {
+  return true;
 }
 </script>
 
@@ -101,8 +79,8 @@ function disableUpdate(item) {
     :before-edit="beforeEdit"
     :disable-submit="disableSubmit"
     :disable-update="disableUpdate"
-    :handle-create="handleCreate"
-    :handle-update="handleUpdate"
+    :handle-create="rejectLegacyWrite"
+    :handle-update="rejectLegacyWrite"
     :handle-delete="handleDelete"
     :custom-input="getApplicableCustomInput"
   >

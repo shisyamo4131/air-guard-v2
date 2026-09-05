@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Site SITE-03として、作成・基本情報・Customer・取極めをoperation別transaction writerへ分離し、exact 34-field create、server metadata、派生field、Customer exact 6-field projection、独立draft、同一field競合、変更なしwrite 0、失敗後の入力保持をUI・Rulesで固定した。Customer projectionは表示・取極め判定に使う`docId/updatedAt/code/name/abbreviation/cutoffDate`だけとし、検索token等を埋め込まない。Customer更新triggerも同じprojectionへ揃え、欠損・型不正をSite query前にfail closedとした。旧手動終了の非atomicな入口はSITE-04の専用処理まで停止した。domain 991件、Codex専用Emulator 152件を確認し、Dev・Prod・remote・実dataは変更していない。[Siteロードマップ](docs/roadmaps/site.md)を参照。
+
 - Site SITE-02として、同一tenantの閲覧を維持し、作成・基本情報・Customer・取極め更新・終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。UIと送信直前policy、Firestore Rulesを一致させ、direct permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにした。generic削除/archive入口を停止し、Site deleteと`Sites_archive` client CUDをRulesで拒否した。domain 974件、Codex専用Emulator 149件を確認した。再有効化・専用archive・operation別field契約は後続phaseで、Functions、schema、package、data、Dev・Prod・remoteは変更していない。[Siteロードマップ](docs/roadmaps/site.md)を参照。
 
 - Site自動終了を、JST工期終了後90日、当日以降予定なし、未実績化予定なしを競合安全に再確認して実行する方針へ変更した。ACTIVE/TERMINATEDの2値を維持し、工期終了後の状態は派生Chipと予定日で表示する。TERMINATEDも終了済みChip・識別情報・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま、継続再開はstrict `sites:write`・reason・新工期で扱う。自動終了は下流dataを変更せず、現在遷移metadataだけを保存し、専用append-only履歴と現場ごとのemail/FCMは設けない。CONF-0135までの基準線判断を完了してSiteロードマップを0%から10%へ更新した。製品code、data、Rules、Functions、schema、package、Dev・Prod・remoteは変更していない。[判断](docs/decisions/0054-site-auto-termination-and-terminated-selection.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。

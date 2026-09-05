@@ -5,8 +5,7 @@
  * @use useFetch (origin)
  *****************************************************************************/
 import dayjs from "dayjs";
-import { Employee } from "@/schemas";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
@@ -22,16 +21,13 @@ defineOptions({ name: "site-detail" });
  * ROUTER
  *****************************************************************************/
 const route = useRoute();
-const router = useRouter();
 const docId = route.params.id;
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { doc } = useDocument("Site", { docId });
-const { canWrite, isSaving, executeSiteWrite } = useSiteActions();
-const updateAgreements = () =>
-  executeSiteWrite("agreement", () => doc.update());
+const { canWrite } = useSiteActions();
 
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
@@ -88,77 +84,30 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <SiteManager :doc="doc" label="基本情報" hide-delete-btn>
-              <template #activator="activatorProps">
+            <SiteEditorBase :site="doc">
+              <template #activator="{ open }">
                 <SiteActivatorBase
-                  v-if="canWrite"
-                  v-bind="activatorProps"
-                >
-                  <template #actions>
-                    <SiteManager
-                      v-if="canWrite"
-                      class="flex-grow-1"
-                      :doc="doc"
-                      :handle-update="(item) => item.terminate()"
-                      label="稼働終了"
-                      hide-delete-btn
-                      @submit:complete="router.replace('/sites')"
-                    >
-                      <template #activator="{ toUpdate }">
-                        <v-btn
-                          block
-                          color="warning"
-                          variant="flat"
-                          text="稼働終了"
-                          @click="() => toUpdate()"
-                        />
-                      </template>
-
-                      <template #input-default>
-                        <v-alert
-                          type="info"
-                          text="現場を稼働終了にします。よろしいですか？"
-                        />
-                      </template>
-                    </SiteManager>
-                  </template>
-                </SiteActivatorBase>
-                <div
-                  v-else
-                  class="site-read-only"
-                  aria-disabled="true"
-                  inert
-                >
-                  <SiteActivatorBase
-                    :item="activatorProps.item"
-                    :title="activatorProps.title"
-                  />
-                </div>
+                  :item="doc"
+                  title="基本情報"
+                  :editable="canWrite"
+                  @click:edit="open"
+                />
               </template>
-            </SiteManager>
+            </SiteEditorBase>
           </v-col>
 
           <!-- 取引先情報 -->
           <v-col cols="12">
-            <SiteManager :doc="doc" label="取引先情報" hide-delete-btn>
-              <template #activator="activatorProps">
+            <SiteEditorCustomer :site="doc">
+              <template #activator="{ open }">
                 <SiteActivatorCustomer
-                  v-if="canWrite"
-                  v-bind="activatorProps"
+                  :item="doc"
+                  title="取引先情報"
+                  :editable="canWrite"
+                  @click:edit="open"
                 />
-                <div
-                  v-else
-                  class="site-read-only"
-                  aria-disabled="true"
-                  inert
-                >
-                  <SiteActivatorCustomer
-                    :item="activatorProps.item"
-                    :title="activatorProps.title"
-                  />
-                </div>
               </template>
-            </SiteManager>
+            </SiteEditorCustomer>
           </v-col>
         </v-row>
       </v-col>
@@ -198,16 +147,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
 
       <!-- 取極め情報 -->
       <v-col cols="12" md="4">
-        <AgreementsManager
-          v-if="canWrite"
-          v-model="doc.agreementsV2"
-          :cutoff-date="doc.customer?.cutoffDate"
-          :before-edit="() => !isSaving"
-          :disabled="isSaving"
-          :disable-submit="isSaving"
-          :disable-update="isSaving"
-          @submit:complete="updateAgreements"
-        />
+        <SiteEditorAgreements v-if="canWrite" :site="doc" />
         <MoleculesFloatingTitleCard v-else title="取極め" color="secondary">
           <AgreementsViewer :agreements="doc.agreementsV2" />
         </MoleculesFloatingTitleCard>
@@ -215,10 +155,3 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
     </v-row>
   </v-container>
 </template>
-
-<style scoped>
-.site-read-only :deep(.v-toolbar .v-btn),
-.site-read-only :deep(.v-empty-state__actions) {
-  display: none;
-}
-</style>

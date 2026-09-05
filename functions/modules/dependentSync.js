@@ -1,39 +1,7 @@
 import { getFirestore } from "firebase-admin/firestore";
 import { onDocumentUpdated } from "firebase-functions/firestore";
 import { logger } from "firebase-functions";
-
-/**
- * Schema package cache for cold start optimization
- * - Dynamically imports the entire schema package only once
- * - All classes are available from the cached package
- */
-let schemaPackage = null;
-
-/**
- * Get a schema class with caching to improve cold start performance.
- * - First call: Dynamically imports and caches the entire package
- * - Subsequent calls: Returns class from cached package
- * @param {string} className - The name of the schema class (e.g., "Customer", "Site")
- * @returns {Promise<Class>} - The schema class constructor
- * @throws {Error} - Throws if the schema class is not found
- */
-async function getSchemaClass(className) {
-  // Import and cache the schema package on first call
-  if (!schemaPackage) {
-    schemaPackage = await import("@shisyamo4131/air-guard-v2-schemas");
-    logger.info("[getSchemaClass] Schema package imported and cached");
-  }
-
-  // Check if the requested class exists in the cached package
-  if (!schemaPackage[className]) {
-    throw new Error(
-      `Schema class "${className}" not found in @shisyamo4131/air-guard-v2-schemas`,
-    );
-  }
-
-  // Return the requested class from the cached package
-  return schemaPackage[className];
-}
+import { createSiteCustomerProjection } from "../domain/siteCustomerProjection.js";
 
 /**
  * Triggered when a Customer document is updated.
@@ -82,6 +50,10 @@ export const onUpdateCustomer = onDocumentUpdated(
  * @throws {Error} - Throws if Customer model instantiation or batch update fails.
  */
 async function syncCustomersInSites({ companyId, customerId, customerData }) {
+  const customerProjection = createSiteCustomerProjection(
+    customerData,
+    customerId,
+  );
   const db = getFirestore();
   const colRef = db.collection(`Companies/${companyId}/Sites`);
   const queryRef = colRef.where("customerId", "==", customerId);
@@ -99,13 +71,11 @@ async function syncCustomersInSites({ companyId, customerId, customerData }) {
   );
 
   try {
-    const Customer = await getSchemaClass("Customer");
-    const customerModel = new Customer(customerData);
     const docRefs = snapshot.docs.map((doc) => doc.ref);
 
     await batchUpdateDocuments({
       docRefs,
-      updateData: { customer: customerModel.toObject() },
+      updateData: { customer: customerProjection },
     });
 
     logger.info(

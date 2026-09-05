@@ -14,6 +14,7 @@ import CustomInput from "@/components/Site/CustomInput/Base.vue";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  editable: { type: Boolean, default: true },
   item: {
     type: Object,
     required: true,
@@ -101,7 +102,7 @@ defineExpose({
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"

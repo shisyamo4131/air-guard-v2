@@ -6,12 +6,22 @@ import {
   assertSiteWriteAllowed,
   getSiteWriteDecision,
 } from "@/composables/domain/site/siteAuthorization";
+import { Site } from "@/schemas";
+import {
+  SITE_ADDRESS_FIELDS,
+  SITE_OPERATION,
+  SiteOperationError,
+  changedSiteFields,
+  prepareSiteCreate,
+} from "@/composables/domain/site/siteOperations";
+import { createSiteWriter } from "@/utils/site/siteWriter";
 
 const sharedSiteWriteState = Vue.reactive({ isSaving: false });
 
 export function useSiteActions() {
   const auth = useAuthStore();
-  const { $auth } = useNuxtApp();
+  const { $auth, $firestore } = useNuxtApp();
+  const writer = createSiteWriter({ firestore: $firestore });
 
   function authorizationContext() {
     return {
@@ -75,12 +85,126 @@ export function useSiteActions() {
     );
   }
 
+  function assertIdentityUnchanged(companyId, actorUid) {
+    assertWritePermission();
+    if (auth.companyId !== companyId || auth.uid !== actorUid) {
+      throw new SiteOperationError(
+        "permission-denied",
+        "現場を変更する権限を確認できません。",
+      );
+    }
+  }
+
+  async function createSite(draft) {
+    return await executeSiteWrite(SITE_WRITE_OPERATION.CREATE, async () => {
+      const companyId = auth.companyId;
+      const actorUid = auth.uid;
+      const documentReference = writer.reserveDocument(companyId);
+      const site = await prepareSiteCreate({
+        draft,
+        docId: documentReference.id,
+        actorUid,
+        now: new Date(),
+      });
+      assertIdentityUnchanged(companyId, actorUid);
+      return await writer.create({
+        documentReference,
+        companyId,
+        site,
+        assertCanWrite: () => assertIdentityUnchanged(companyId, actorUid),
+      });
+    });
+  }
+
+  async function prepareLocation({ operation, latest, baseline, draft }) {
+    if (operation !== SITE_OPERATION.UPDATE_BASIC) return undefined;
+    const fields = changedSiteFields({ operation, baseline, draft });
+    if (!fields.some((field) => SITE_ADDRESS_FIELDS.includes(field))) {
+      return undefined;
+    }
+    const source = typeof latest === "function" ? latest() : latest;
+    if (!(source instanceof Site) || !source.docId) {
+      throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
+    }
+    const candidate = new Site(source.toObject());
+    Object.assign(
+      candidate,
+      Object.fromEntries(fields.map((field) => [field, draft[field]])),
+    );
+    // The injected geocoder is an external side effect and must execute once,
+    // outside the Firestore transaction callback that may be retried.
+    await candidate.beforeUpdate();
+    return {
+      location: candidate.location,
+      basis: Object.fromEntries(
+        SITE_ADDRESS_FIELDS.map((field) => [field, candidate[field]]),
+      ),
+    };
+  }
+
+  async function updateSite({ operation, latest, baseline, draft }) {
+    const writeOperation = operation === SITE_OPERATION.UPDATE_CUSTOMER
+      ? SITE_WRITE_OPERATION.CUSTOMER
+      : SITE_WRITE_OPERATION.UPDATE;
+    return await executeSiteWrite(writeOperation, async () => {
+      const companyId = auth.companyId;
+      const actorUid = auth.uid;
+      const source = typeof latest === "function" ? latest() : latest;
+      if (!(source instanceof Site) || !source.docId) {
+        throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
+      }
+      const locationPreparation = await prepareLocation({
+        operation,
+        latest,
+        baseline,
+        draft,
+      });
+      assertIdentityUnchanged(companyId, actorUid);
+      return await writer.update({
+        companyId,
+        operation,
+        docId: source.docId,
+        baseline,
+        draft,
+        actorUid,
+        locationPreparation,
+        assertCanWrite: () => assertIdentityUnchanged(companyId, actorUid),
+      });
+    });
+  }
+
+  async function updateAgreements({ latest, baseline, agreements }) {
+    return await executeSiteWrite(SITE_WRITE_OPERATION.AGREEMENT, async () => {
+      const companyId = auth.companyId;
+      const actorUid = auth.uid;
+      const source = typeof latest === "function" ? latest() : latest;
+      if (!(source instanceof Site) || !source.docId) {
+        throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
+      }
+      assertIdentityUnchanged(companyId, actorUid);
+      return await writer.updateAgreements({
+        companyId,
+        docId: source.docId,
+        baseline,
+        agreements,
+        actorUid,
+        assertCanWrite: () => assertIdentityUnchanged(companyId, actorUid),
+      });
+    });
+  }
+
   return {
     canWrite,
+    createSite,
     isSaving,
     writeDecision,
     assertWritePermission,
     executeSiteWrite,
     rejectDirectDelete,
+    updateAgreements,
+    updateBasic: (args) =>
+      updateSite({ ...args, operation: SITE_OPERATION.UPDATE_BASIC }),
+    updateCustomer: (args) =>
+      updateSite({ ...args, operation: SITE_OPERATION.UPDATE_CUSTOMER }),
   };
 }

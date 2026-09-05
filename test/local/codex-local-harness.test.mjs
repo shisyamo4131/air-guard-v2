@@ -48,6 +48,7 @@ import {
 import {
   createUserEmailReservationId,
 } from "../../functions/modules/auth/createTemporaryUser.js";
+import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProjection.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -462,6 +463,46 @@ function customerRulesData({ docId, uid, ...overrides }) {
     remarks: null,
     fullAddress: "東京都千代田区千代田1-1",
     prefecture: "東京都",
+    tokenMap: { 合: true, 合成: true },
+    ...overrides,
+  };
+}
+
+function siteRulesData({ docId, uid, customerId = null, customer = null, ...overrides }) {
+  return {
+    docId,
+    uid,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    customerId,
+    customer,
+    customerName: "合成仮取引先",
+    code: "S001",
+    name: "合成現場",
+    hasAbbreviation: false,
+    abbreviation: null,
+    nameKana: "ゴウセイゲンバ",
+    zipcode: null,
+    prefCode: "13",
+    city: "千代田区",
+    address: "千代田1-1",
+    building: null,
+    securityType: "TRAFFIC",
+    siteNumber: null,
+    constructionPeriodStartAt: null,
+    constructionPeriodEndAt: null,
+    location: null,
+    geopoint: null,
+    remarks: null,
+    agreementsV2: [],
+    status: "ACTIVE",
+    fullAddress: "東京都千代田区千代田1-1",
+    prefecture: "東京都",
+    isTemporary: customerId == null,
+    hasConstructionPeriod: false,
+    hasConstructionPeriodStartAt: false,
+    hasConstructionPeriodEndAt: false,
+    displayName: "合成現場",
     tokenMap: { 合: true, 合成: true },
     ...overrides,
   };
@@ -2322,7 +2363,9 @@ test("Outsourcer Rules reject nonwriters, malformed identities, and cross-tenant
     { label: "admin-state-missing", user: { roles: ["manager"] } },
     { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
+    { label: "malformed-temporary", user: { isAdmin: true, roles: [], isTemporary: "false" } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
+    { label: "malformed-disabled", user: { isAdmin: true, roles: [], disabled: "false" } },
     { label: "malformed-temporary", user: { isAdmin: true, roles: [], isTemporary: "false" } },
     { label: "malformed-disabled", user: { isAdmin: true, roles: [], disabled: "false" } },
     { label: "malformed-admin", user: { isAdmin: "true", roles: [] } },
@@ -2598,9 +2641,16 @@ test("Site Rules allow create and update for the strict sites:write actor matrix
     });
     const reference = doc(firestore, "Companies", companyId, "Sites", docId);
 
-    await assertSucceeds(setDoc(reference, { revision: 1 }));
-    await assertSucceeds(updateDoc(reference, { revision: 2 }));
-    assert.equal((await assertSucceeds(getDoc(reference))).data().revision, 2);
+    await assertSucceeds(setDoc(reference, siteRulesData({ docId, uid })));
+    await assertSucceeds(updateDoc(reference, {
+      remarks: "actor matrix update",
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+    assert.equal(
+      (await assertSucceeds(getDoc(reference))).data().remarks,
+      "actor matrix update",
+    );
   }
 });
 
@@ -2646,11 +2696,18 @@ test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-te
     const firestore = testEnvironment.authenticatedContext(uid, claims).firestore();
     const reference = doc(firestore, "Companies", companyId, "Sites", docId);
 
-    await assertFails(setDoc(reference, { revision: 1 }));
+    await assertFails(setDoc(reference, siteRulesData({ docId, uid })));
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
-      await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", docId), { revision: 1 });
+      await setDoc(
+        doc(context.firestore(), "Companies", companyId, "Sites", docId),
+        siteRulesData({ docId, uid: "server-writer" }),
+      );
     });
-    await assertFails(updateDoc(reference, { revision: 2 }));
+    await assertFails(updateDoc(reference, {
+      remarks: "denied actor update",
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
   }
 
   const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
@@ -2667,11 +2724,315 @@ test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-te
     isSuperUser: false,
   });
   const crossReference = doc(otherFirestore, "Companies", companyId, "Sites", "site-rules-cross-tenant");
-  await assertFails(setDoc(crossReference, { revision: 1 }));
+  await assertFails(setDoc(
+    crossReference,
+    siteRulesData({ docId: "site-rules-cross-tenant", uid: otherUid }),
+  ));
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
-    await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", "site-rules-cross-tenant"), { revision: 1 });
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Sites", "site-rules-cross-tenant"),
+      siteRulesData({ docId: "site-rules-cross-tenant", uid: "server-writer" }),
+    );
   });
-  await assertFails(updateDoc(crossReference, { revision: 2 }));
+  await assertFails(updateDoc(crossReference, {
+    remarks: "cross-tenant update",
+    uid: otherUid,
+    updatedAt: serverTimestamp(),
+  }));
+
+  const unauthenticated = testEnvironment.unauthenticatedContext().firestore();
+  const unauthenticatedReference = doc(
+    unauthenticated,
+    "Companies",
+    companyId,
+    "Sites",
+    "site-rules-unauthenticated",
+  );
+  await assertFails(setDoc(
+    unauthenticatedReference,
+    siteRulesData({ docId: "site-rules-unauthenticated", uid: "anonymous" }),
+  ));
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(
+        context.firestore(),
+        "Companies",
+        companyId,
+        "Sites",
+        "site-rules-unauthenticated",
+      ),
+      siteRulesData({
+        docId: "site-rules-unauthenticated",
+        uid: "server-writer",
+      }),
+    );
+  });
+  await assertFails(updateDoc(unauthenticatedReference, {
+    remarks: "unauthenticated update",
+  }));
+});
+
+test("Site Rules enforce exact create fields, shared validation, metadata, and derived values", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-create-contract-admin";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: true,
+    roles: [],
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const invalidDocuments = [
+    ["unknown-field", { unexpected: true }],
+    ["wrong-type", { name: 123 }],
+    ["overlong-name", { name: "現".repeat(41), displayName: "現".repeat(41) }],
+    ["spoofed-uid", { uid: "another-user" }],
+    ["spoofed-created-at", { createdAt: new Date("2020-01-01T00:00:00.000Z") }],
+    ["terminated-create", { status: "TERMINATED" }],
+    ["nonempty-agreements", { agreementsV2: [{ synthetic: true }] }],
+    ["derived-display-name", { displayName: "forged" }],
+    ["derived-address", { fullAddress: "forged" }],
+    ["derived-temporary", { isTemporary: false }],
+    ["missing-customer", { customerId: "missing-customer", customer: null, isTemporary: false }],
+  ];
+  for (const [label, override] of invalidDocuments) {
+    const docId = `site-rules-create-contract-${label}`;
+    await assertFails(setDoc(
+      doc(firestore, "Companies", companyId, "Sites", docId),
+      siteRulesData({ docId, uid, ...override }),
+    ));
+  }
+
+  const missingRequiredId = "site-rules-create-contract-missing-name";
+  const missingRequired = siteRulesData({ docId: missingRequiredId, uid });
+  delete missingRequired.name;
+  await assertFails(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", missingRequiredId),
+    missingRequired,
+  ));
+
+  const validId = "site-rules-create-contract-valid";
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", validId),
+    siteRulesData({
+      docId: validId,
+      uid,
+      zipcode: "1".repeat(200),
+      remarks: "合".repeat(200),
+    }),
+  ));
+});
+
+test("Site Rules isolate update operations and reject metadata or derived-field bypasses", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-update-contract-manager";
+  const docId = "site-rules-update-contract-site";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: false,
+    roles: ["manager"],
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const reference = doc(firestore, "Companies", companyId, "Sites", docId);
+  await assertSucceeds(setDoc(reference, siteRulesData({ docId, uid })));
+
+  await assertSucceeds(updateDoc(reference, {
+    name: "更新後現場",
+    displayName: "更新後現場",
+    tokenMap: { 更: true, 更新: true },
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    hasAbbreviation: true,
+    abbreviation: "合成略称",
+    displayName: "合成略称",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    name: "略称表示中の名称変更",
+    tokenMap: { 略: true, 名称: true },
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    city: "港区",
+    location: null,
+    geopoint: null,
+    fullAddress: "東京都港区千代田1-1",
+    prefecture: "東京都",
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    constructionPeriodStartAt: new Date("2026-04-01T00:00:00.000Z"),
+    hasConstructionPeriod: true,
+    hasConstructionPeriodStartAt: true,
+    hasConstructionPeriodEndAt: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  for (const patch of [
+    { name: "派生未更新現場", displayName: "派生未更新現場", uid, updatedAt: serverTimestamp() },
+    { tokenMap: { forged: true }, uid, updatedAt: serverTimestamp() },
+    { fullAddress: "forged", uid, updatedAt: serverTimestamp() },
+    { status: "TERMINATED", uid, updatedAt: serverTimestamp() },
+    { remarks: "operation crossover", agreementsV2: [{ synthetic: true }], uid, updatedAt: serverTimestamp() },
+    { unexpected: true, uid, updatedAt: serverTimestamp() },
+    { docId: "another-site", remarks: "doc id attack", uid, updatedAt: serverTimestamp() },
+    { createdAt: serverTimestamp(), remarks: "created metadata attack", uid, updatedAt: serverTimestamp() },
+    { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
+    { uid, updatedAt: serverTimestamp() },
+  ]) {
+    await assertFails(updateDoc(reference, patch));
+  }
+
+  const replacement = siteRulesData({
+    docId,
+    uid,
+    name: "whole replacement",
+    displayName: "whole replacement",
+    tokenMap: { whole: true },
+  });
+  await assertFails(setDoc(reference, replacement));
+  await assertSucceeds(updateDoc(reference, {
+    agreementsV2: [{ synthetic: true }],
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+});
+
+test("Site Rules require a same-tenant exact embedded Customer and preserve customerName", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-customer-contract-manager";
+  const customerId = "site-rules-customer-contract-customer";
+  const siteId = "site-rules-customer-contract-site";
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: false,
+    roles: ["manager"],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const rawCustomer = customerRulesData({
+      docId: customerId,
+      uid: "server-writer",
+      location: { lat: 35.681236, lng: 139.767125 },
+      geopoint: new GeoPoint(35.681236, 139.767125),
+      futureCustomerField: { version: 2 },
+    });
+    rawCustomer.tokenMap = Object.fromEntries(
+      Array.from({ length: 1200 }, (_, index) => [`token-${index}`, true]),
+    );
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Customers", customerId),
+      rawCustomer,
+    );
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const customerReference = doc(firestore, "Companies", companyId, "Customers", customerId);
+  const customer = (await assertSucceeds(getDoc(customerReference))).data();
+  const customerProjection = createSiteCustomerProjection(customer);
+  assert.equal(Object.hasOwn(customer, "geopoint"), true);
+  assert.deepEqual(customer.futureCustomerField, { version: 2 });
+  assert.equal(Object.hasOwn(customerProjection, "geopoint"), false);
+  assert.equal(Object.hasOwn(customerProjection, "tokenMap"), false);
+  assert.equal(Object.hasOwn(customerProjection, "futureCustomerField"), false);
+  const reference = doc(firestore, "Companies", companyId, "Sites", siteId);
+  await assertSucceeds(setDoc(reference, siteRulesData({ docId: siteId, uid })));
+
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", `${siteId}-assigned-create`),
+    siteRulesData({
+      docId: `${siteId}-assigned-create`,
+      uid,
+      customerId,
+      customer: customerProjection,
+    }),
+  ));
+
+  await assertFails(updateDoc(reference, {
+    customerId,
+    customer: { ...customerProjection, name: "forged" },
+    isTemporary: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(reference, {
+    customerId: "missing-customer",
+    customer: customerProjection,
+    isTemporary: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(reference, {
+    customerId,
+    customer: { ...customerProjection, unexpectedProjectionField: true },
+    isTemporary: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  const missingProjectionField = { ...customerProjection };
+  delete missingProjectionField.code;
+  await assertFails(updateDoc(reference, {
+    customerId,
+    customer: missingProjectionField,
+    isTemporary: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  await assertSucceeds(updateDoc(reference, {
+    customerId,
+    customer: customerProjection,
+    isTemporary: false,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  const assigned = (await assertSucceeds(getDoc(reference))).data();
+  assert.equal(assigned.customerName, "合成仮取引先");
+  assert.equal(assigned.customerId, customerId);
+  assert.deepEqual(assigned.customer, customerProjection);
+
+  const legacyCustomer = { ...customer };
+  delete legacyCustomer.geopoint;
+  delete legacyCustomer.futureCustomerField;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(
+      doc(context.firestore(), "Companies", companyId, "Sites", siteId),
+      { customer: legacyCustomer },
+    );
+  });
+  await assertSucceeds(updateDoc(reference, {
+    agreementsV2: [{ synthetic: "legacy-customer-agreement" }],
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  assert.deepEqual(
+    (await assertSucceeds(getDoc(reference))).data().customer,
+    legacyCustomer,
+  );
+  await assertSucceeds(updateDoc(reference, {
+    remarks: "converge legacy Customer projection",
+    customer: customerProjection,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+  assert.deepEqual(
+    (await assertSucceeds(getDoc(reference))).data().customer,
+    customerProjection,
+  );
+  await assertFails(updateDoc(reference, {
+    customerId: null,
+    customer: null,
+    isTemporary: true,
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
 });
 
 test("Site Rules preserve same-tenant live and archive reads while denying direct destructive writes", async () => {
@@ -3845,7 +4206,14 @@ for (const {
           companyId: primaryCompanyId,
           collectionName,
           docId: orphanDocumentId,
-          data: { customerId: missingCustomerId, marker: "existing-orphan" },
+          data: collectionName === "Sites"
+            ? siteRulesData({
+                docId: orphanDocumentId,
+                uid,
+                customerId: missingCustomerId,
+                customer: { docId: missingCustomerId, legacy: true },
+              })
+            : { customerId: missingCustomerId, marker: "existing-orphan" },
         },
         {
           companyId: secondaryCompanyId,
@@ -3856,6 +4224,20 @@ for (const {
       ]);
 
       const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+      const activeCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+        firestore,
+        "Companies",
+        primaryCompanyId,
+        "Customers",
+        activeCustomerId,
+      )))).data());
+      const terminatedCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+        firestore,
+        "Companies",
+        primaryCompanyId,
+        "Customers",
+        terminatedCustomerId,
+      )))).data());
       const ownCollection = collection(
         firestore,
         "Companies",
@@ -3865,9 +4247,28 @@ for (const {
       const createProbe = async (label, data, shouldSucceed) => {
         const docId = `cas03-${suffix}-create-${label}`;
         cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId });
-        const operation = setDoc(doc(ownCollection, docId), data);
+        let candidate = data;
+        if (collectionName === "Sites") {
+          const hasCustomerId = Object.hasOwn(data, "customerId");
+          const customerId = hasCustomerId ? data.customerId : null;
+          const customer = customerId === activeCustomerId
+            ? activeCustomer
+            : customerId === terminatedCustomerId
+              ? terminatedCustomer
+              : null;
+          candidate = siteRulesData({ docId, uid, customerId, customer });
+          if (!hasCustomerId) {
+            delete candidate.customerId;
+          }
+        }
+        const operation = setDoc(doc(ownCollection, docId), candidate);
         if (shouldSucceed) {
-          await assertSucceeds(operation);
+          try {
+            await assertSucceeds(operation);
+          } catch (error) {
+            error.message = `${collectionName} create probe ${label}: ${error.message}`;
+            throw error;
+          }
         } else {
           await assertFails(operation);
         }
@@ -3893,27 +4294,57 @@ for (const {
       await createProbe(
         "absent",
         { customerName: "合成仮取引先", marker: "customer-id-absent" },
-        optionalOnCreate,
+        collectionName === "Sites" ? false : optionalOnCreate,
       );
 
       const mutableDocumentId = `cas03-${suffix}-mutable-reference`;
       cleanupEntries.push({ companyId: primaryCompanyId, collectionName, docId: mutableDocumentId });
       const mutableReference = doc(ownCollection, mutableDocumentId);
       await assertSucceeds(
-        setDoc(mutableReference, { customerId: activeCustomerId, marker: "customer-a" }),
+        setDoc(
+          mutableReference,
+          collectionName === "Sites"
+            ? siteRulesData({
+                docId: mutableDocumentId,
+                uid,
+                customerId: activeCustomerId,
+                customer: activeCustomer,
+              })
+            : { customerId: activeCustomerId, marker: "customer-a" },
+        ),
       );
       await assertSucceeds(
-        updateDoc(mutableReference, {
-          customerId: terminatedCustomerId,
-          marker: "customer-b",
-        }),
+        updateDoc(
+          mutableReference,
+          collectionName === "Sites"
+            ? {
+                customerId: terminatedCustomerId,
+                customer: terminatedCustomer,
+                isTemporary: false,
+                uid,
+                updatedAt: serverTimestamp(),
+              }
+            : {
+                customerId: terminatedCustomerId,
+                marker: "customer-b",
+              },
+        ),
       );
       assert.equal((await assertSucceeds(getDoc(mutableReference))).exists(), true);
       await assertSucceeds(
-        updateDoc(mutableReference, {
-          customerId: terminatedCustomerId,
-          marker: "unchanged-customer-id",
-        }),
+        updateDoc(
+          mutableReference,
+          collectionName === "Sites"
+            ? {
+                agreementsV2: [{ docId: "agreement-reference-unchanged" }],
+                uid,
+                updatedAt: serverTimestamp(),
+              }
+            : {
+                customerId: terminatedCustomerId,
+                marker: "unchanged-customer-id",
+              },
+        ),
       );
 
       for (const [label, customerId] of [
@@ -3926,17 +4357,40 @@ for (const {
         ["null", null],
         ["unset", deleteField()],
       ]) {
+        const customer = customerId === terminatedCustomerId
+          ? terminatedCustomer
+          : null;
         await assertFails(
-          updateDoc(mutableReference, {
-            customerId,
-            marker: `invalid-${label}`,
-          }),
+          updateDoc(
+            mutableReference,
+            collectionName === "Sites"
+              ? {
+                  customerId,
+                  customer,
+                  isTemporary: customerId == null,
+                  uid,
+                  updatedAt: serverTimestamp(),
+                }
+              : {
+                  customerId,
+                  marker: `invalid-${label}`,
+                },
+          ),
         );
       }
 
       const orphanReference = doc(ownCollection, orphanDocumentId);
       await assertSucceeds(
-        updateDoc(orphanReference, { marker: "unrelated-update-compatible" }),
+        updateDoc(
+          orphanReference,
+          collectionName === "Sites"
+            ? {
+                agreementsV2: [{ docId: "legacy-orphan-unrelated-update" }],
+                uid,
+                updatedAt: serverTimestamp(),
+              }
+            : { marker: "unrelated-update-compatible" },
+        ),
       );
       if (deleteAllowed) {
         await assertSucceeds(deleteDoc(orphanReference));
@@ -3997,10 +4451,8 @@ test("Firestore Rules preserve Site temporary-reference transitions and forbid u
   const activeCustomerId = "cas03-sites-transition-active-customer";
   const terminatedCustomerId = "cas03-sites-transition-terminated-customer";
   const documentIds = {
-    absentToNull: "cas03-site-absent-to-null",
-    nullToAbsent: "cas03-site-null-to-absent",
-    absentToActive: "cas03-site-absent-to-active",
-    nullToTerminated: "cas03-site-null-to-terminated",
+    temporaryToActive: "cas03-site-temporary-to-active",
+    temporaryToTerminated: "cas03-site-temporary-to-terminated",
     assignedToUnset: "cas03-site-assigned-to-unset",
   };
   const cleanupEntries = [
@@ -4032,102 +4484,97 @@ test("Firestore Rules preserve Site temporary-reference transitions and forbid u
       docId: terminatedCustomerId,
       data: { contractStatus: "TERMINATED" },
     });
-    await seedCas03Documents([
-      {
-        companyId,
-        collectionName: "Sites",
-        docId: documentIds.absentToNull,
-        data: { customerName: "合成仮取引先", marker: "absent" },
-      },
-      {
-        companyId,
-        collectionName: "Sites",
-        docId: documentIds.nullToAbsent,
-        data: { customerId: null, customerName: "合成仮取引先", marker: "null" },
-      },
-      {
-        companyId,
-        collectionName: "Sites",
-        docId: documentIds.absentToActive,
-        data: { customerName: "合成仮取引先", marker: "absent" },
-      },
-      {
-        companyId,
-        collectionName: "Sites",
-        docId: documentIds.nullToTerminated,
-        data: { customerId: null, customerName: "合成仮取引先", marker: "null" },
-      },
-      {
-        companyId,
-        collectionName: "Sites",
-        docId: documentIds.assignedToUnset,
-        data: { customerId: activeCustomerId, marker: "assigned" },
-      },
-    ]);
-
-    const sites = collection(
-      authenticatedFirestore(uid, { isSuperUser: false }),
+    const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+    const activeCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+      firestore,
       "Companies",
       companyId,
-      "Sites",
-    );
-    const absentToNull = doc(sites, documentIds.absentToNull);
-    await assertSucceeds(
-      updateDoc(absentToNull, { customerId: null, marker: "absent-to-null" }),
-    );
-    const absentToNullData = (await assertSucceeds(getDoc(absentToNull))).data();
-    assert.equal(Object.hasOwn(absentToNullData, "customerId"), true);
-    assert.equal(absentToNullData.customerId, null);
-    assert.equal(absentToNullData.marker, "absent-to-null");
+      "Customers",
+      activeCustomerId,
+    )))).data());
+    const terminatedCustomer = createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+      firestore,
+      "Companies",
+      companyId,
+      "Customers",
+      terminatedCustomerId,
+    )))).data());
+    const sites = collection(firestore, "Companies", companyId, "Sites");
+    for (const docId of [
+      documentIds.temporaryToActive,
+      documentIds.temporaryToTerminated,
+    ]) {
+      await assertSucceeds(setDoc(doc(sites, docId), siteRulesData({ docId, uid })));
+    }
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(
+          context.firestore(),
+          "Companies",
+          companyId,
+          "Sites",
+          documentIds.assignedToUnset,
+        ),
+        siteRulesData({
+          docId: documentIds.assignedToUnset,
+          uid,
+          customerId: activeCustomerId,
+          customer: activeCustomer,
+        }),
+      );
+    });
 
-    const nullToAbsent = doc(sites, documentIds.nullToAbsent);
-    await assertSucceeds(
-      updateDoc(nullToAbsent, {
-        customerId: deleteField(),
-        marker: "null-to-absent",
-      }),
-    );
-    const nullToAbsentData = (await assertSucceeds(getDoc(nullToAbsent))).data();
-    assert.equal(Object.hasOwn(nullToAbsentData, "customerId"), false);
-    assert.equal(nullToAbsentData.marker, "null-to-absent");
-
-    const absentToActive = doc(sites, documentIds.absentToActive);
-    await assertSucceeds(
-      updateDoc(absentToActive, {
+    const temporaryToActive = doc(sites, documentIds.temporaryToActive);
+    try {
+      await assertSucceeds(updateDoc(temporaryToActive, {
         customerId: activeCustomerId,
-        marker: "absent-to-active",
-      }),
-    );
+        customer: activeCustomer,
+        isTemporary: false,
+        uid,
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (error) {
+      error.message = `Site temporary-to-active transition: ${error.message}`;
+      throw error;
+    }
     assert.equal(
-      (await assertSucceeds(getDoc(absentToActive))).data().customerId,
+      (await assertSucceeds(getDoc(temporaryToActive))).data().customerId,
       activeCustomerId,
     );
 
-    const nullToTerminated = doc(sites, documentIds.nullToTerminated);
-    await assertSucceeds(
-      updateDoc(nullToTerminated, {
+    const temporaryToTerminated = doc(sites, documentIds.temporaryToTerminated);
+    try {
+      await assertSucceeds(updateDoc(temporaryToTerminated, {
         customerId: terminatedCustomerId,
-        marker: "null-to-terminated",
-      }),
-    );
+        customer: terminatedCustomer,
+        isTemporary: false,
+        uid,
+        updatedAt: serverTimestamp(),
+      }));
+    } catch (error) {
+      error.message = `Site temporary-to-terminated transition: ${error.message}`;
+      throw error;
+    }
     assert.equal(
-      (await assertSucceeds(getDoc(nullToTerminated))).data().customerId,
+      (await assertSucceeds(getDoc(temporaryToTerminated))).data().customerId,
       terminatedCustomerId,
     );
 
     const assignedToUnset = doc(sites, documentIds.assignedToUnset);
-    await assertFails(
-      updateDoc(assignedToUnset, {
-        customerId: null,
-        marker: "assigned-to-null-denied",
-      }),
-    );
-    await assertFails(
-      updateDoc(assignedToUnset, {
-        customerId: deleteField(),
-        marker: "assigned-to-absent-denied",
-      }),
-    );
+    await assertFails(updateDoc(assignedToUnset, {
+      customerId: null,
+      customer: null,
+      isTemporary: true,
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+    await assertFails(updateDoc(assignedToUnset, {
+      customerId: deleteField(),
+      customer: null,
+      isTemporary: true,
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
     assert.equal(
       (await assertSucceeds(getDoc(assignedToUnset))).data().customerId,
       activeCustomerId,
@@ -4266,15 +4713,35 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
 
     try {
       await seedCustomerRulesDocument({ companyId, docId: customerId });
+      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
+      const customer = collectionName === "Sites"
+        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+            firestore,
+            "Companies",
+            companyId,
+            "Customers",
+            customerId,
+          )))).data())
+        : null;
       const clientReference = doc(
-        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        firestore,
         "Companies",
         companyId,
         collectionName,
         referenceId,
       );
       await assertSucceeds(
-        setDoc(clientReference, { customerId, marker: "reference-first" }),
+        setDoc(
+          clientReference,
+          collectionName === "Sites"
+            ? siteRulesData({
+                docId: referenceId,
+                uid: actorUid,
+                customerId,
+                customer,
+              })
+            : { customerId, marker: "reference-first" },
+        ),
       );
       await assertCallableError(
         archiveCustomer.run(
@@ -4315,6 +4782,16 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
 
     try {
       await seedCustomerRulesDocument({ companyId, docId: customerId });
+      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
+      const customer = collectionName === "Sites"
+        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+            firestore,
+            "Companies",
+            companyId,
+            "Customers",
+            customerId,
+          )))).data())
+        : null;
       assert.deepEqual(
         await archiveCustomer.run(
           actorCallableRequest({
@@ -4329,14 +4806,24 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
         { success: true, archived: true },
       );
       const clientReference = doc(
-        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        firestore,
         "Companies",
         companyId,
         collectionName,
         referenceId,
       );
       await assertFails(
-        setDoc(clientReference, { customerId, marker: "archive-first" }),
+        setDoc(
+          clientReference,
+          collectionName === "Sites"
+            ? siteRulesData({
+                docId: referenceId,
+                uid: actorUid,
+                customerId,
+                customer,
+              })
+            : { customerId, marker: "archive-first" },
+        ),
       );
       const state = await readCustomerArchiveState(companyId, customerId);
       assert.equal(state.active, null);
@@ -4364,8 +4851,18 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
 
     try {
       await seedCustomerRulesDocument({ companyId, docId: customerId });
+      const firestore = authenticatedFirestore(actorUid, { isSuperUser: false });
+      const customer = collectionName === "Sites"
+        ? createSiteCustomerProjection((await assertSucceeds(getDoc(doc(
+            firestore,
+            "Companies",
+            companyId,
+            "Customers",
+            customerId,
+          )))).data())
+        : null;
       const clientReference = doc(
-        authenticatedFirestore(actorUid, { isSuperUser: false }),
+        firestore,
         "Companies",
         companyId,
         collectionName,
@@ -4373,7 +4870,17 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
       );
       const results = splitSettled(
         await Promise.allSettled([
-          setDoc(clientReference, { customerId, marker: "bounded-concurrent" }),
+          setDoc(
+            clientReference,
+            collectionName === "Sites"
+              ? siteRulesData({
+                  docId: referenceId,
+                  uid: actorUid,
+                  customerId,
+                  customer,
+                })
+              : { customerId, marker: "bounded-concurrent" },
+          ),
           archiveCustomer.run(
             actorCallableRequest({
               actor,

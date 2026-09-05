@@ -26,7 +26,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 保存先は会社prefix配下の`Sites/{docId}`。`useAutonumber=false`で、通常作成はFirestore生成ID。
 - 必須: `name`、`nameKana`、`prefCode`、`city`、`address`、`securityType`、`status`。`customerId`未設定時は`customerName`が必要。
 - 任意: `customerId`、`customerName`、`code`、`hasAbbreviation`、`abbreviation`、`zipcode`、`building`、`siteNumber`、工期開始/終了日、`location`、`remarks`、`agreementsV2`。
-- `customer`はhiddenの埋込みCustomer。`customerId`を指定したcreate時と、customerId変更時にCustomerを取得して格納する。
+- `customer`はhiddenの埋込みCustomer。`customerId`を指定したcreate時とcustomerId変更時に同じ会社のCustomerをtransaction内で取得し、exact 6 field（`docId`、`updatedAt`、`code`、`name`、`abbreviation`、`cutoffDate`）だけを格納する。基本情報更新もlegacyの広い埋込み値をこのprojectionへ収束させるが、取極め更新では触れない。
 - statusのdefaultは`ACTIVE`。値は`ACTIVE`（稼働中）と`TERMINATED`（終了）。
 - 読み取り専用プロパティ: `fullAddress`、`prefecture`、`isTemporary`、`hasConstructionPeriod`、開始/終了日有無。ゲッター: `displayName`（略称使用時はabbreviation、その他はname）。
 - `getValidAgreement`はshiftType一致を日付降順にし、指定日以前の最新`agreementsV2`を返す。該当なしはnull。
@@ -49,11 +49,11 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 一覧表示はcode、`displayName`、live取得したCustomer略称、securityType、工期。
 - TERMINATED一覧は検索文字列がある時だけN-gram検索し、status=TERMINATEDを追加する。空検索では0件。
 - Site AutocompleteはN-gram検索にstatus constraintを付けないため、ACTIVE/TERMINATEDの両方が候補になり得る。
-- TERMINATED詳細でもwrite actorには基本編集、取引先変更、取極め編集、再度の「稼働終了」buttonが表示される。再終了はschemaがエラーにし、再有効化経路は未実装である。read-only actorにはmaster write入口を表示しない。削除入口はactorにかかわらず表示しない。
+- SITE-03では非atomicな旧手動終了buttonを一時停止した。TERMINATEDの通常編集制限、終了・再有効化の専用処理はSITE-04で実装する。read-only actorにはmaster write入口を表示せず、削除入口はactorにかかわらず表示しない。
 
 ## 参照関係・変更影響
 
-- Customer所属は`customerId`と埋込み`customer`の二重保持。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みcustomerを伝播するが、複数batchはatomicでなくevent version guardもないため、一時的な不一致、部分失敗、古いeventの後着を収束させる保証はない。一覧はlive Customerを別取得する一方、詳細の取引先表示と取極めcutoff-dateは埋込みcustomerを使うため表示・処理時点が混在する。
+- Customer所属は`customerId`と埋込み`customer`の二重保持。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへexact 6-field projectionを伝播する。欠損・型不正・path ID不一致はSite query前にfail closedとする。一方、複数batchはatomicでなくevent version guardもないため、一時的な不一致、部分失敗、古いeventの後着を収束させる保証はない。一覧はlive Customerを別取得し、詳細の取引先表示と取極めcutoff-dateは埋込みprojectionを使うため表示・処理時点が混在する。
 - 2026-09-04に、現行sourceとCONF-0047に合わせて別Customerへの変更を許可する仕様を正本へ反映した。一度設定したcustomerIdを未設定へ戻す操作は引き続き提供せず、変更時は同じ会社に存在するCustomerを必須にする。既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。
 - SiteOperationScheduleはsiteIdを保持し、作成/一部処理でSiteの存在と仮登録でないことを確認する。Site名等は直接snapshotしない。
 - OperationResultは作成時またはgroup key変更時にSiteからcustomerIdと適用取極めを取り込み、その後は保存済み値を使う。SiteのCustomer・取極め変更が既存実績へ自動反映される契約ではない。
@@ -63,15 +63,15 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## 削除・無効化
 
-- `terminate()`はdoc読込済み、未TERMINATED、JST当日以降のSiteOperationScheduleが0件であることを確認してstatusを更新する。過去schedule、OperationResult、ArrangementNotification等は終了を妨げない。
-- 終了後もwrite actorの詳細画面では通常編集がstatusで抑止されず、再有効化method/UIも未実装である。削除入口はSITE-02で除去した。TERMINATED固有制御はSITE-04で実装する。
+- 旧`terminate()`はdoc読込、JST当日以降のSiteOperationSchedule確認、status更新が一つのtransactionではないため、SITE-03で画面到達を停止した。過去schedule、OperationResult、ArrangementNotification等の扱いを含む安全な専用終了はSITE-04で実装する。
+- 終了後の通常編集制限と再有効化method/UIは未実装である。削除入口はSITE-02で除去済みで、TERMINATED固有制御はSITE-04で実装する。
 - 確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、strict `sites:write`、reason、新工期を必須とする。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。archiveは誤登録・重複だけに限定し、専用Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrierが揃うまで有効化しない。generic delete／restoreと物理delete、通常画面のrestoreは提供しない。SITE-02ではgeneric削除入口とclient archive writeを停止し、残る専用処理はFUT-0062・FUT-0063で未実装である。
 - schema/common adapterには旧generic logical delete/restore実装が残るが、Site UI・Site managerからは到達せず、RulesはSite deleteと`Sites_archive` client CUDを拒否する。専用archiveはSITE-05まで利用できない。
 
 ## Rules・tenant境界
 
 - `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。create/updateは会社管理者または既知のstrict role presetが`sites:write`を含む場合だけ許可し、直接permission、未知role、non-admin super-user、temporary/disabled/他tenantを拒否する。deleteは拒否する。
-- Rulesはcreate時とcustomerId変更時に同一会社Customerの存在を検査し、設定済みcustomerIdのunsetを拒否する。operation別field、型・長さ、status transition、埋込みcustomerの一致はSITE-03以降の残件である。
+- Rulesはexact 34-field create、operation別変更field、型・長さ、server metadata、派生fieldを検査する。create時とcustomerId変更時は同一会社Customerの存在とexact 6-field projectionを検査し、設定済みcustomerIdのunsetを拒否する。status transitionはclientから許可せず、SITE-04の専用処理へ残す。
 - `Sites_archive`は同一tenantの有効な本登録Userによるreadを維持し、client create/update/deleteを拒否する。専用archive CallableのAdmin SDK write契約はSITE-05で実装する。
 - tenant境界はcollection pathに依存し、document内companyIdはSite契約にない。
 
@@ -99,7 +99,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 - Site.beforeUpdateと詳細UIが許可する別Customerへの変更は、2026-09-04に正本仕様へ反映した。既存OperationResult・Billingを自動移管しないsnapshot契約と、一度設定したcustomerIdを未設定へ戻さない現行境界を維持する。
 - Customer master更新の伝播が部分失敗または順序逆転するとSite内の埋込みcustomerはstaleになり得て、一覧と詳細で参照するCustomer時点が異なる。
-- TERMINATED SiteもAutocompleteで選択可能で、write actorの詳細では編集・再終了buttonが表示される。削除入口は除去済みで、TERMINATED固有の表示・再有効化は未実装である。
+- TERMINATED SiteもAutocompleteで選択可能だが、専用Chip・識別情報・確認は未実装である。旧再終了buttonは停止済みで、通常編集制限と再有効化はSITE-04の残件である。削除入口は除去済みである。
 - restore APIが存在するlogical deleteなのに、UIは復元不能と断定する。
 - create wizardで略称、現場番号、備考は入力できず、作成後編集が必要。
 - create wizardの最終step validationは標準flowで呼ばれず、郵便番号lookup結果も住所へ反映されない。

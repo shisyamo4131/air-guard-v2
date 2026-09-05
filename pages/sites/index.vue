@@ -88,21 +88,17 @@ onUnmounted(unsubscribe);
     class="align-start"
     style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
   >
-    <SitesManager
-      class="fill-height"
-      :docs="filteredSites"
-      :handle-click-update="(item) => router.push(`/sites/${item.docId}`)"
-      @create="(item) => router.push(`/sites/${item.docId}`)"
-    >
-      <template #table="slotProps">
+    <v-card class="fill-height d-flex flex-column" width="100%">
         <v-toolbar class="mb-4 bg-transparent" density="compact">
           <AtomsSearchTextField v-model="search" />
-          <v-btn
+          <SiteCreateDialog
             v-if="canWrite"
-            :disabled="isSaving"
-            icon="mdi-plus"
-            @click="() => slotProps.toCreate()"
-          />
+            @created="(item) => router.push(`/sites/${item.docId}`)"
+          >
+            <template #activator="{ open }">
+              <v-btn :disabled="isSaving" icon="mdi-plus" @click="open" />
+            </template>
+          </SiteCreateDialog>
 
           <!-- フィルター用コンポーネント -->
           <v-dialog v-model="filterDialog" max-width="360px" persistent>
@@ -149,9 +145,10 @@ onUnmounted(unsubscribe);
         </v-toolbar>
         <SitesDataTable
           class="flex-grow-1 overflow-hidden"
-          v-bind="slotProps"
+          :items="filteredSites"
           :search="search"
           :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+          @click:update="(item) => router.push(`/sites/${item.docId}`)"
         />
         <!-- 2026-06-30 コメントアウト -->
         <!-- モバイル表示を兼ねて Iterator コンポーネントを利用していたが -->
@@ -167,7 +164,6 @@ onUnmounted(unsubscribe);
             @click:create="() => slotProps.toCreate()"
             @click:detail="(item) => router.push(`/sites/${item.docId}`)"
           /> -->
-      </template>
-    </SitesManager>
+    </v-card>
   </v-container>
 </template>
