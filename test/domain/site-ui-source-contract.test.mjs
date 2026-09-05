@@ -140,7 +140,11 @@ test("Site action single-flight is shared across distinct composable instances",
       $auth: { currentUser: { uid: "actor-a", emailVerified: true } },
       $firestore: "FIRESTORE",
     }),
-    SITE_WRITE_OPERATION: { CREATE: "create" },
+    useSiteFunctions: () => ({ terminateSite: async () => undefined, reactivateSite: async () => undefined }),
+    SITE_WRITE_OPERATION: {
+      CREATE: "create", UPDATE: "update", CUSTOMER: "customer",
+      AGREEMENT: "agreement", TERMINATE: "terminate",
+    },
     SiteAuthorizationError: HarnessAuthorizationError,
     assertSiteWriteAllowed: () => undefined,
     changedSiteFields: () => [],
@@ -154,7 +158,7 @@ test("Site action single-flight is shared across distinct composable instances",
   };
   const moduleSource = `
     const {
-      Vue, useAuthStore, useNuxtApp, SITE_WRITE_OPERATION,
+      Vue, useAuthStore, useNuxtApp, useSiteFunctions, SITE_WRITE_OPERATION,
       SiteAuthorizationError, assertSiteWriteAllowed, changedSiteFields,
       createSiteWriter, getSiteWriteDecision, prepareSiteCreate,
       SITE_ADDRESS_FIELDS, SITE_OPERATION, Site, SiteOperationError
@@ -211,8 +215,8 @@ test("Site pages keep reads visible while gating create, edit, and agreement wri
 
   assert.match(detail, /<SiteEditorBase :site="doc">/u);
   assert.match(detail, /<SiteEditorCustomer :site="doc">/u);
-  assert.match(detail, /<SiteEditorAgreements v-if="canWrite" :site="doc" \/>/u);
-  assert.match(detail, /:editable="canWrite"/u);
+  assert.match(detail, /<SiteEditorAgreements v-if="canWrite && isActive" :site="doc" \/>/u);
+  assert.match(detail, /:editable="canWrite && isActive"/u);
   assert.doesNotMatch(detail, /\.terminate\s*\(|稼働終了/u);
   assert.doesNotMatch(detail, /v-model="doc\.agreementsV2"|saveAgreements/u);
 });

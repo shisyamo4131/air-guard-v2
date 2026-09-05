@@ -1,10 +1,10 @@
 # Siteマスター改修ロードマップ
 
-- 状態: In progress（SITE-03までlocal完了）
+- 状態: In progress（SITE-04までlocal完了）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
-- 現在の進捗: 40%
+- 現在の進捗: 55%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 現在の承認境界: SITE-03までのUI・operation別writer・Firestore Rules・自動test・文書をCodex専用localで実装・検証済み。利用者はSITE-08までのlocal実装・検証を承認済みであり、Dev・Prod・remote・実dataの変更・実行はSITE-09の別承認とする。
+- 現在の承認境界: SITE-04までのUI・Functions・予定競合guard・Firestore Rules・自動test・文書をCodex専用localで実装・検証済み。利用者はSITE-08までのlocal実装・検証を承認済みであり、Dev・Prod・remote・実dataの変更・実行はSITE-09の別承認とする。
 - 環境境界: 実装が承認された場合も、SITE-01からSITE-08はCodex専用local仕様・実装・検証を基本とする。SITE-09のDev反映・remote/data確認は、他のマスタ改修とまとめる別承認checkpointで行う。
 
 ## 現状確認
@@ -19,8 +19,8 @@
 - 旧手動終了は予定確認とstatus更新が一つのatomic boundaryでなく、安全な専用処理へ置換するまでUI入口を停止している。一方、日次自動終了は工期終了から3か月を超えたACTIVE Siteを、将来予定や同時更新のpreconditionなしでTERMINATEDへ変更する旧実装のため、SITE-04で置換する。
 - generic archive/deleteのSite UI入口は除去し、managerからのdeleteも拒否する。安全な専用archiveはSITE-05まで未実装であり、`Sites_archive`へのclient writeはRulesで拒否する。共通adapter自体のgeneric restoreは今回の対象外として残るが、Site UIからは到達しない。
 - Customer更新triggerは同じcustomerIdを持つSiteへexact 6-field Customer projectionだけを複数batchで更新し、欠損・型不正・path ID不一致はquery前にfail closedとする。複数batch全体のatomicity、event順序、再収束は保証しない。
-- Site detailはSite masterと同じ画面からSiteOperationSchedule、SiteEmployeeHistoryを扱う。稼働予定CRUDの権限・Rules・失敗経路はtransaction系の別課題であり、本ロードマップから実装を広げない。
-- SITE-03では作成・基本情報・Customer・取極めのoperation別field、exact create shape、server metadata、派生field、Customer exact 6-field projection、独立draft、同一field競合、write 0、失敗後再試行をdomain testとCodex専用Emulatorで固定した。終了・再有効化、archive競合、取極め内容範囲、検索race、通常UI操作はSITE-04以降に残る。
+- Site detailはSite masterと同じ画面からSiteOperationSchedule、SiteEmployeeHistoryを扱う。SITE-04では終了競合を防ぐため、予定の作成・site/date変更・実績化参照だけをSite revisionと整合するtransaction/Rulesへ変更した。予定のworker・通知等、OperationResult/Billingのoperation別field・lock、その他のtransaction契約は別課題である。
+- SITE-04では終了・再有効化Callable、通常編集制限、確認付き単発予定、JST工期終了90日後の自動終了、maintenance、予定競合guard、派生状態表示をdomain testとCodex専用Emulatorで固定した。archive競合、取極め内容範囲、検索・作成wizard・郵便番号・keyboardをSITE-05以降へ残す。
 
 ### 現行のまま維持する部分
 
@@ -41,10 +41,10 @@
 
 ### transaction系の既知課題として分離する事項
 
-- Site detailから`sites:read`だけでSiteOperationSchedule CRUDへ到達でき、SiteOperationSchedules Rulesも同一tenant Userへ広いwriteを許す。
+- SiteOperationSchedules Rulesは同一tenantの有効User、maintenance off、live Site、revision、実績参照遷移を確認するが、予定自体のoperation別permissionと全field validationはtransaction系の別課題である。
 - Site名をlive取得するBilling PDFは、master変更後の再生成表示が変わり得る。Customer・Agreement・Site表示情報のsnapshot時点はADR 0052で確定したが、OperationResult・Billing・帳票へのsnapshot実装はtransaction側の別checkpointである。
-- Site archiveの参照候補にはBilling、SiteEmployeeHistory等があるが、現行hasMany catalogには含まれない。ADR 0051により、誤登録archiveに必要な全参照inventoryとlive Site存在barrierだけはSITE-05の承認対象に含める。Company表示順はADR 0036の不存在参照除去契約を維持する。archive barrier以外のtransaction writer変更は本ロードマップで実装せず別checkpointへ分離する。
-- 配置・通知・稼働実績・勤怠・請求・帳票のFirestore writer、rollback/refetch、同時実行、Rules、schema、APIは本ロードマップで変更しない。
+- Site archiveの参照候補にはBilling、SiteEmployeeHistory等があるが、現行hasMany catalogには含まれない。ADR 0051により、誤登録archiveに必要な全参照inventoryとlive Site存在barrierだけはSITE-05の承認対象に含める。Company表示順はADR 0036の不存在参照除去契約を維持する。archive barrier以外のtransaction writer変更は、SITE-04の終了競合guardを除いて別checkpointへ分離する。
+- 配置・通知・稼働実績・勤怠・請求・帳票のFirestore writer、rollback/refetch、同時実行、Rules、schema、APIは、SITE-04の予定作成・site/date変更・実績参照遷移とSITE-05のlive Site存在barrierに必要な範囲を除いて本ロードマップで変更しない。
 
 ## マイルストーン
 
@@ -53,11 +53,11 @@
 | SITE-01 基準線・未決事項 | 10 | 10 | Completed | CONF-0049〜0053・0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を利用者が判断し、仕様、ADR 0051〜0054、manual、実装記録を採用内容へ整合した。 |
 | SITE-02 認証・書込み境界 | 15 | 15 | Completed | 同一tenant readを維持し、現存するcreate/update/Customer・Agreement変更/終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをUI・送信直前policy・Rulesでfail closedにし、generic delete/archive入口を停止した。再有効化と専用archiveは未実装のため、それぞれSITE-04/05で同じactor境界を強制する。 |
 | SITE-03 CRUD・保存data契約 | 15 | 15 | Completed | 作成・基本情報・Customer・取極めをoperation別writerへ分離し、exact 34-field create、共通必須・型・長さ、server metadata、token・location等の派生field、Customer exact 6-field projection、仮Site解消を固定した。live modelと独立draft、同一field競合、変更なしwrite 0、失敗後再試行を検証した。 |
-| SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | ADR 0054に従い、TERMINATED masterの通常編集制限と確認付き新規選択、単発残工事、strict `sites:write`・reason・新工期による継続再開、工期終了後90日の派生Chipと自動終了、予定guard、競合、現在遷移metadata、再試行を実装する。既存予定等を暗黙に変更しない。 |
+| SITE-04 終了・再有効化・自動終了 | 15 | 15 | Completed | ADR 0054に従い、TERMINATED masterの通常編集制限と確認付き新規選択、単発残工事、strict `sites:write`・reason・新工期による継続再開、工期終了後90日の派生Chipと自動終了、予定guard、競合、現在遷移metadataを実装した。予定作成・site/date移動はSite revisionとatomicにし、実績化は整合するOperationResultとの同時更新だけを許可する。既存予定等は暗黙に変更しない。 |
 | SITE-05 archive安全性 | 15 | 0 | Not started | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、全参照catalogの同一transaction確認、全参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装する。全barrierが揃うまでarchiveを有効化しない。archive barrier以外のtransaction変更と緊急restoreは別承認へ分離する。 |
 | SITE-06 取極め契約 | 10 | 0 | Not started | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円警告、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を強制する。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Site documentの変更fieldだけを安全に保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 0 | Not started | ACTIVE/TERMINATED/仮Siteの表示、検索・pagination、Autocompleteのstatus境界、作成wizard validation、郵便番号反映、非同期race、loading/error/not-found、工期表示、keyboard操作、manualを整合する。 |
-| SITE-08 Codex専用local統合確認 | 5 | 0 | Not started | 対象test、全domain、Firestore Emulator、専用local UI build・通常操作、権限陰性、保存data、独立review、cleanup、文書・Git統合を完了する。transaction系は互換確認だけとする。 |
+| SITE-08 Codex専用local統合確認 | 5 | 0 | Not started | 対象test、全domain、Firestore Emulator、専用local UI build、保存data、独立review、cleanup、文書・Git統合を完了する。内蔵ブラウザではSite画面に加え、SITE-04/05で直接・間接影響を受けた予定・稼働実績・請求・配置通知を、会社管理者・manager・controller・accountant・read-only相当・直接permission・未知role・temporary・disabled・他tenant・non-admin super-userの最小十分な組合せで操作する。成功時は改修前と同じまたは同等の結果と保存差分、拒否時は表示・実行拒否とDB不変を確認する。 |
 | SITE-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client、既存data、権限別CRUD・終了・再有効化、関連表示を確認する。未実施のDev受入れを完了扱いしない。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
@@ -81,9 +81,9 @@
 - 設計時: actor・tenant・field・status・Customer・archive・Agreement・自動終了・transaction分離の失敗経路とsecurity review。
 - unit/source contract: operation入力、変更field、draft競合、検索sequence、UI表示・送信直前policy、generic delete/restore非到達。
 - Firestore Emulator: actor matrix、他tenant、Customer参照、status遷移、archive CUD、nested fallback、同時実行とwrite 0拒否。
-- local UI: write actorとread-only actor、作成・編集・終了・再有効化、検索、失敗後入力保持、二重送信、reload。具体的な省略・代替は各checkpointで合意する。
+- local UI: write actorとread-only actor、作成・編集・終了・再有効化、検索、失敗後入力保持、二重送信、reload。今回の差分がSite外のwriterまたは参照へ影響する場合は、影響機能について改修前と同じまたは同等のUI操作結果を権限別に確認し、backendの保存差分または不変を照合する。自動testだけを実ブラウザ操作の代替にしない。具体的な省略・代替が必要なら利用者判断を得る。
 - implementation時のchange classは最終差分に応じて`ui-css-layout`、`application-logic`、`data-contract-schema-migration`のunionを選ぶ。Dev/Prod generate・deploy・remote/data操作はSITE-09等の別承認がない限り実行しない。
 
 ## 次の承認点
 
-SITE-03のCRUD・保存data契約をCodex専用localで実装・検証し、進捗は40%である。次は承認済みSITE-04として、終了・再有効化・自動終了を予定作成と競合しない専用処理へ移し、TERMINATED表示・選択確認・通常編集制限を実装する。Dev・remote・実dataにはSITE-09の別承認まで接続しない。
+SITE-04の終了・再有効化・自動終了をCodex専用localで実装・検証し、進捗は55%である。次は承認済みSITE-05として、誤登録・重複Siteの専用archiveと全参照writerのlive Site存在barrierを実装する。既存予定の`operationResultId`・日付field欠損有無はSITE-09のDev反映前preflightで確認し、欠損があれば自動終了を有効化しない。Dev・remote・実dataにはSITE-09の別承認まで接続しない。

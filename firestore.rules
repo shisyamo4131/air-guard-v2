@@ -248,6 +248,33 @@ service cloud.firestore {
         && isActiveSiteWriter(companyId, get(userPath).data);
     }
 
+    function hasOperationResultWriteRole(user) {
+      return user.roles is list
+        && user.roles.size() <= 6
+        && user.roles.hasOnly([
+          'manager', 'controller', 'accountant',
+          'human-resource', 'labor', 'legal'
+        ])
+        && user.roles.hasAny(['manager', 'controller']);
+    }
+
+    function canWriteOperationResult(companyId) {
+      let user = get(/databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data;
+      return hasValidIdentityClaims()
+        && request.auth.token.companyId == companyId
+        && request.auth.token.isSuperUser is bool
+        && user.companyId is string
+        && user.companyId == companyId
+        && user.isTemporary is bool
+        && user.isTemporary == false
+        && user.disabled is bool
+        && user.disabled == false
+        && user.isAdmin is bool
+        && (user.isAdmin == true
+          || (request.auth.token.isSuperUser == false
+            && hasOperationResultWriteRole(user)));
+    }
+
     function hasExactOutsourcerManagerRole(user) {
       return user.keys().hasAll(['roles'])
         ? (user.roles is list
@@ -639,7 +666,9 @@ service cloud.firestore {
         'prefecture', 'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
         'hasConstructionPeriodEndAt', 'displayName', 'tokenMap', 'uid', 'updatedAt'
       ];
-      return isValidSiteUpdateMetadata(request.resource.data, docId)
+      return resource.data.status == 'ACTIVE'
+        && request.resource.data.status == 'ACTIVE'
+        && isValidSiteUpdateMetadata(request.resource.data, docId)
         && ((changed.hasAny(basicFields)
             && changed.hasOnly(basicAllowed)
             && isValidSiteBasicPatch(request.resource.data, changed)
@@ -658,6 +687,118 @@ service cloud.firestore {
           || (changed.hasAny(['agreementsV2'])
             && changed.hasOnly(['agreementsV2', 'uid', 'updatedAt'])
             && request.resource.data.agreementsV2 is list));
+    }
+
+    function siteScheduleRevision(data) {
+      return data.keys().hasAny(['scheduleRevision'])
+        && data.scheduleRevision is int
+        && data.scheduleRevision >= 0
+        ? data.scheduleRevision
+        : 0;
+    }
+
+    function hasValidScheduleRevision(data) {
+      return !data.keys().hasAny(['scheduleRevision'])
+        || (data.scheduleRevision is int && data.scheduleRevision >= 0);
+    }
+
+    function isSchedulableSite(data) {
+      return data.isTemporary is bool
+        && data.isTemporary == false
+        && data.status in ['ACTIVE', 'TERMINATED'];
+    }
+
+    function isSystemMaintenanceOff() {
+      let system = get(/databases/$(database)/documents/System/system).data;
+      return system.isMaintenance is bool && system.isMaintenance == false;
+    }
+
+    function canWriteSchedule(companyId) {
+      let user = get(/databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data;
+      let system = get(/databases/$(database)/documents/System/system).data;
+      return hasValidIdentityClaims()
+        && request.auth.token.companyId == companyId
+        && user.companyId is string
+        && user.companyId == companyId
+        && user.isTemporary is bool
+        && user.isTemporary == false
+        && user.disabled is bool
+        && user.disabled == false
+        && system.isMaintenance is bool
+        && system.isMaintenance == false;
+    }
+
+    function hasBumpedScheduleRevision(companyId, siteId) {
+      let sitePath = /databases/$(database)/documents/Companies/$(companyId)/Sites/$(siteId);
+      let before = get(sitePath).data;
+      let after = getAfter(sitePath).data;
+      return isSafeCustomerId(siteId)
+        && hasValidScheduleRevision(before)
+        && isSchedulableSite(after)
+        && after.status == before.status
+        && after.isTemporary == before.isTemporary
+        && after.scheduleRevision is int
+        && after.scheduleRevision == siteScheduleRevision(before) + 1;
+    }
+
+    function isScheduleRevisionOnlyUpdate(docId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      return changed.hasOnly(['scheduleRevision', 'uid', 'updatedAt'])
+        && hasValidScheduleRevision(resource.data)
+        && isSchedulableSite(request.resource.data)
+        && request.resource.data.docId == docId
+        && request.resource.data.scheduleRevision is int
+        && request.resource.data.scheduleRevision == siteScheduleRevision(resource.data) + 1
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.updatedAt == request.time;
+    }
+
+    function isScheduleCreateGuarded(companyId) {
+      return request.resource.data.keys().hasAny(['siteId'])
+        && request.resource.data.keys().hasAny(['operationResultId'])
+        && request.resource.data.operationResultId == null
+        && hasBumpedScheduleRevision(companyId, request.resource.data.siteId);
+    }
+
+    function isMatchingOperationResult(companyId, scheduleId, resultId) {
+      let resultPath = /databases/$(database)/documents/Companies/$(companyId)/OperationResults/$(resultId);
+      let result = getAfter(resultPath).data;
+      return resultId == scheduleId
+        && result.docId is string
+        && result.docId == resultId
+        && result.siteOperationScheduleId is string
+        && result.siteOperationScheduleId == scheduleId
+        && result.siteId is string
+        && result.siteId == request.resource.data.siteId
+        && result.uid is string
+        && result.uid == request.auth.uid
+        && result.updatedAt is timestamp
+        && (!exists(resultPath)
+          || result.updatedAt != get(resultPath).data.updatedAt);
+    }
+
+    function isValidScheduleResultTransition(companyId, docId, changed) {
+      return !changed.hasAny(['operationResultId'])
+      || ((!resource.data.keys().hasAny(['operationResultId'])
+              || resource.data.operationResultId == null)
+          && canWriteOperationResult(companyId)
+          && request.resource.data.keys().hasAny(['operationResultId'])
+          && isSafeCustomerId(request.resource.data.operationResultId)
+          && isMatchingOperationResult(
+            companyId,
+            docId,
+            request.resource.data.operationResultId
+          ));
+    }
+
+    function isScheduleUpdateGuarded(companyId, docId) {
+      let changed = request.resource.data.diff(resource.data).affectedKeys();
+      let guardChanged = changed.hasAny(['siteId', 'dateAt', 'date']);
+      return isValidScheduleResultTransition(companyId, docId, changed)
+        && (!guardChanged
+          || (hasBumpedScheduleRevision(companyId, request.resource.data.siteId)
+            && (request.resource.data.siteId == resource.data.siteId
+              || hasBumpedScheduleRevision(companyId, resource.data.siteId))));
     }
 
     // --- Rules for 'System' collection ---
@@ -856,10 +997,14 @@ service cloud.firestore {
     // customerIdなしの仮Siteを許可し、設定後のunsetは拒否する。
     match /Companies/{companyId}/Sites/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if canWriteSite(companyId)
+      allow create: if isSystemMaintenanceOff()
+                    && canWriteSite(companyId)
                     && isValidSiteCreate(companyId, docId);
-      allow update: if canWriteSite(companyId)
-                    && isValidSiteUpdate(companyId, docId);
+      allow update: if (canWriteSchedule(companyId)
+                        && isScheduleRevisionOnlyUpdate(docId))
+                    || (isSystemMaintenanceOff()
+                        && canWriteSite(companyId)
+                        && isValidSiteUpdate(companyId, docId));
       allow delete: if false;
     }
 
@@ -875,7 +1020,12 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // SiteOperationSchedules ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/SiteOperationSchedules/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if canWriteSchedule(companyId)
+                    && isScheduleCreateGuarded(companyId);
+      allow update: if canWriteSchedule(companyId)
+                    && isScheduleUpdateGuarded(companyId, docId);
+      allow delete: if canWriteSchedule(companyId);
     }
 
     // Legacy StripeData is reserved and server-only at every nesting depth.
@@ -925,6 +1075,7 @@ service cloud.firestore {
                                 "Outsourcers_archive",
                                 "Sites",
                                 "Sites_archive",
+                                "SiteOperationSchedules",
                                 "Users",
                                 "Employees",
                                 "EmployeeUserReservations",

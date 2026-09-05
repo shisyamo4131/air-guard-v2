@@ -15,6 +15,9 @@ import dayjs from "dayjs";
 import { useDocManager } from "@/composables/useDocManager";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { SiteOperationSchedule } from "@/schemas";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { createSiteOperationScheduleWriter } from "@/utils/siteOperationSchedule/siteScheduleGuard";
+import { confirmTerminatedScheduleSite } from "@/composables/application/siteOperationSchedule/confirmTerminatedSite";
 
 /**
  * @returns {Object} - The site operation schedule duplicator composable.
@@ -39,6 +42,8 @@ export function useSiteOperationScheduleDuplicator({
   });
 
   const loadingsStore = useLoadingsStore();
+  const auth = useAuthStore();
+  const { $firestore } = useNuxtApp();
 
   /*****************************************************************************
    * METHODS (PRIVATE)
@@ -63,7 +68,24 @@ export function useSiteOperationScheduleDuplicator({
     const loadingKey = loadingsStore.add({ text: "Duplicating schedule..." });
     docManager.isLoading.value = true;
     try {
-      await instance.duplicate(selectedDates.value);
+      const targetDates = [...new Set(selectedDates.value.map((value) =>
+        dayjs(value).tz().format("YYYY-MM-DD"),
+      ))].filter((value) => value !== instance.date);
+      const schedules = targetDates.map((date) => {
+        const schedule = instance.clone();
+        schedule.docId = "";
+        schedule.dateAt = dayjs.tz(date).startOf("day").toDate();
+        schedule.operationResultId = null;
+        schedule.employees.forEach((worker) => (worker.hasNotification = false));
+        schedule.outsourcers.forEach((worker) => (worker.hasNotification = false));
+        return schedule;
+      });
+      await createSiteOperationScheduleWriter({
+        firestore: $firestore,
+        companyId: auth.companyId,
+        actorUid: auth.uid,
+        confirmTerminatedSite: confirmTerminatedScheduleSite,
+      }).createMany(schedules);
       _initialize();
     } catch (error) {
       docManager.logger.error({ error });

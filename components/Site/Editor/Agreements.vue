@@ -31,7 +31,7 @@ function cloneAgreements(value) {
 }
 
 function open() {
-  if (!canWrite.value || isSaving.value) return;
+  if (!canWrite.value || props.site.status !== "ACTIVE" || isSaving.value) return;
   reloadLatest();
   dialog.value = true;
 }
@@ -129,7 +129,7 @@ async function deleteAgreement(item) {
         color="primary"
         prepend-icon="mdi-pencil"
         variant="text"
-        :disabled="!canWrite || isSaving"
+        :disabled="!canWrite || props.site.status !== 'ACTIVE' || isSaving"
         @click="open"
       >
         取極めを編集

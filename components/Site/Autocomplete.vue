@@ -27,7 +27,12 @@
  * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
  *****************************************************************************/
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useLogger } from "@/composables/useLogger";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useDefaults } from "vuetify";
+
+defineOptions({ inheritAttrs: false });
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -40,7 +45,7 @@ const _props = defineProps({
   returnObject: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "AutocompleteSite");
-const emit = defineEmits(["update:model-value"]);
+const emit = defineEmits(["update:model-value", "site-selection-confirmed"]);
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -48,7 +53,13 @@ const emit = defineEmits(["update:model-value"]);
 const allSlots = useSlots();
 const { fetchSiteComposable } = useFetch("SiteAutocomplete");
 const { getSite, searchSites } = fetchSiteComposable;
+const auth = useAuthStore();
+const logger = useLogger("SiteAutocomplete", useErrorsStore());
 const { canWrite, isSaving } = useSiteActions();
+const confirmDialog = ref(false);
+const pendingValue = ref(null);
+const pendingSite = ref(null);
+let selectionSequence = 0;
 
 /*****************************************************************************
  * COMPUTED
@@ -73,12 +84,74 @@ function onCreateHandler(event) {
 }
 
 async function api(text) {
-  return await searchSites(text, { returnAllCached: false });
+  const sites = await searchSites(text, { returnAllCached: false });
+  return [...sites].sort((left, right) =>
+    (left.status === "TERMINATED") - (right.status === "TERMINATED"),
+  );
+}
+
+async function resolveSelectedSite(value) {
+  if (!value) return null;
+  const raw = value?.raw || value;
+  if (raw?.status && raw?.docId) return raw;
+  const id = typeof value === "string" ? value : value?.[props.itemValue];
+  return id ? await getSite(id) : null;
+}
+
+async function onSelection(value) {
+  const sequence = ++selectionSequence;
+  if (!value) {
+    confirmDialog.value = false;
+    pendingValue.value = null;
+    pendingSite.value = null;
+    emit("site-selection-confirmed", null);
+    emit("update:model-value", value);
+    return;
+  }
+  try {
+    const site = await resolveSelectedSite(value);
+    if (sequence !== selectionSequence || !site) return;
+    if (site.status === "TERMINATED") {
+      pendingValue.value = value;
+      pendingSite.value = site;
+      confirmDialog.value = true;
+      return;
+    }
+    emit("site-selection-confirmed", null);
+    emit("update:model-value", value);
+  } catch (error) {
+    if (sequence !== selectionSequence) return;
+    logger.error({ message: "現場の選択情報を確認できませんでした。", error });
+  }
+}
+
+function confirmTerminatedSelection() {
+  if (!pendingSite.value) return;
+  const context = Object.freeze({
+    companyId: auth.companyId,
+    siteId: pendingSite.value.docId,
+    status: "TERMINATED",
+  });
+  emit("site-selection-confirmed", context);
+  emit("update:model-value", pendingValue.value);
+  confirmDialog.value = false;
+  pendingValue.value = null;
+  pendingSite.value = null;
+}
+
+function cancelTerminatedSelection() {
+  selectionSequence += 1;
+  confirmDialog.value = false;
+  pendingValue.value = null;
+  pendingSite.value = null;
+  emit("site-selection-confirmed", null);
+  emit("update:model-value", null);
 }
 </script>
 
 <template>
   <air-autocomplete-api
+    v-bind="$attrs"
     :api="api"
     :fetchItemByKeyApi="getSite"
     :custom-filter="() => true"
@@ -88,7 +161,7 @@ async function api(text) {
     :label="label"
     persistent-hint
     :return-object="returnObject"
-    @update:model-value="emit('update:model-value', $event)"
+    @update:model-value="onSelection"
   >
     <template v-if="creatable && canWrite" #append>
       <SiteCreateDialog @created="onCreateHandler">
@@ -109,4 +182,20 @@ async function api(text) {
       <slot :name="name" v-bind="scope ?? {}"></slot>
     </template>
   </air-autocomplete-api>
+
+  <v-dialog v-model="confirmDialog" max-width="520" persistent>
+    <v-card>
+      <v-toolbar color="warning" density="compact" title="終了済み現場の確認" />
+      <v-card-text>
+        <div class="mb-3">この現場は終了済みです。残工事などの単発予定に使用しますか？</div>
+        <SiteListItem v-if="pendingSite" :item="pendingSite" />
+        <v-alert class="mt-3" type="info" variant="tonal">選択しても現場は再有効化されません。</v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn @click="cancelTerminatedSelection">キャンセル</v-btn>
+        <v-btn color="warning" variant="flat" @click="confirmTerminatedSelection">終了済みのまま使用</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>

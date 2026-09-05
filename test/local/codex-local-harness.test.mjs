@@ -20,6 +20,7 @@ import {
   getDocs,
   GeoPoint,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp as ClientTimestamp,
@@ -170,6 +171,7 @@ async function seedRegisteredUser({
   displayName,
   employeeId,
   roles,
+  permissions,
   omit = [],
 }) {
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -179,6 +181,7 @@ async function seedRegisteredUser({
     if (displayName !== undefined) data.displayName = displayName;
     if (employeeId !== undefined) data.employeeId = employeeId;
     if (roles !== undefined) data.roles = roles;
+    if (permissions !== undefined) data.permissions = permissions;
     for (const field of omit) delete data[field];
     await setDoc(
       doc(context.firestore(), "Companies", pathCompanyId, "Users", uid),
@@ -416,7 +419,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Autonumbers",
   "Employees_archive",
   "meta",
-  "SiteOperationSchedules",
 ];
 
 function outsourcerRulesData({ docId, uid = "server-writer", ...overrides }) {
@@ -434,6 +436,70 @@ function outsourcerRulesData({ docId, uid = "server-writer", ...overrides }) {
     tokenMap: { "合": true, "合成": true, "成": true },
     ...overrides,
   };
+}
+
+async function callSiteLifecycleTransport({ actor, functionName, data }) {
+  const authHost = parseEmulatorHost("FIREBASE_AUTH_EMULATOR_HOST");
+  const functionsHost = await readDedicatedFunctionsHost();
+  const app = initializeApp(
+    { apiKey: "codex-local-only", projectId: CODEX_LOCAL_PROJECT_ID },
+    `site-lifecycle-${functionName}-${actor.uid}-${Date.now()}-${Math.random()}`,
+  );
+  try {
+    const auth = getAuth(app);
+    connectAuthEmulator(auth, `http://${authHost.host}:${authHost.port}`, {
+      disableWarnings: true,
+    });
+    const credential = await signInWithEmailAndPassword(
+      auth,
+      actor.email,
+      actor.password,
+    );
+    const token = await credential.user.getIdToken(true);
+    const response = await fetch(
+      `http://${functionsHost.host}:${functionsHost.port}/${CODEX_LOCAL_PROJECT_ID}/asia-northeast1/${functionName}`,
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${token}`,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({ data }),
+      },
+    );
+    return { response, payload: await response.json() };
+  } finally {
+    await deleteApp(app);
+  }
+}
+
+async function seedSiteLifecycleTransportActor({
+  uid,
+  isAdmin = false,
+  roles = ["manager"],
+}) {
+  await loadRebuildApis();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const email = `${uid}@codex-test.invalid`;
+  const password = "CodexLocalOnly-Site-2026!";
+  await seedCallableAuthUser({ uid, companyId, email, isSuperUser: false });
+  await getAdminAuth().updateUser(uid, { password });
+  await seedRegisteredUser({
+    uid,
+    companyId,
+    isAdmin,
+    roles,
+    isTemporary: false,
+    disabled: false,
+    email,
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", uid),
+      { docId: uid },
+    );
+  });
+  return { uid, companyId, email, password };
 }
 
 function customerRulesData({ docId, uid, ...overrides }) {
@@ -3033,6 +3099,555 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
     uid,
     updatedAt: serverTimestamp(),
   }));
+});
+
+test("SITE-04 Schedule Rules require atomic Site revision bumps and preserve processed results", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-lifecycle-schedule-admin";
+  const firstSiteId = "site-lifecycle-schedule-first";
+  const secondSiteId = "site-lifecycle-schedule-second";
+  const scheduleId = "site-lifecycle-schedule";
+  await seedRegisteredUser({ uid, companyId, isAdmin: true, roles: [] });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+    await setDoc(
+      doc(firestore, "Companies", companyId, "Sites", firstSiteId),
+      siteRulesData({
+        docId: firstSiteId, uid: "server-writer", customerId: "customer-a",
+        customer: {}, isTemporary: false,
+      }),
+    );
+    await setDoc(
+      doc(firestore, "Companies", companyId, "Sites", secondSiteId),
+      siteRulesData({
+        docId: secondSiteId, uid: "server-writer", customerId: "customer-b",
+        customer: {}, isTemporary: false, status: "TERMINATED", scheduleRevision: 4,
+      }),
+    );
+    await setDoc(
+      doc(firestore, "Companies", companyId, "Customers", "customer-b"),
+      { docId: "customer-b" },
+    );
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const firstSite = doc(firestore, "Companies", companyId, "Sites", firstSiteId);
+  const secondSite = doc(firestore, "Companies", companyId, "Sites", secondSiteId);
+  const schedule = doc(firestore, "Companies", companyId, "SiteOperationSchedules", scheduleId);
+  const operationResult = doc(firestore, "Companies", companyId, "OperationResults", scheduleId);
+  const dateAt = ClientTimestamp.fromDate(new Date("2028-05-01T00:00:00.000Z"));
+
+  await assertFails(runTransaction(firestore, async (transaction) => {
+    transaction.update(firstSite, {
+      scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
+    });
+    transaction.set(schedule, {
+      docId: scheduleId, siteId: firstSiteId, dateAt, date: "2028-05-01",
+    });
+  }));
+  await assertFails(setDoc(schedule, {
+    docId: scheduleId, siteId: firstSiteId, dateAt, date: "2028-05-01",
+    operationResultId: null,
+  }));
+  await assertSucceeds(runTransaction(firestore, async (transaction) => {
+    transaction.update(firstSite, {
+      scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
+    });
+    transaction.set(schedule, {
+      docId: scheduleId, siteId: firstSiteId, dateAt, date: "2028-05-01",
+      operationResultId: null,
+    });
+  }));
+  assert.equal((await getDoc(firstSite)).data().scheduleRevision, 1);
+
+  await assertFails(updateDoc(schedule, {
+    siteId: secondSiteId,
+    dateAt: ClientTimestamp.fromDate(new Date("2028-06-01T00:00:00.000Z")),
+    date: "2028-06-01",
+  }));
+  await assertSucceeds(runTransaction(firestore, async (transaction) => {
+    transaction.update(firstSite, {
+      scheduleRevision: 2, uid, updatedAt: serverTimestamp(),
+    });
+    transaction.update(secondSite, {
+      scheduleRevision: 5, uid, updatedAt: serverTimestamp(),
+    });
+    transaction.update(schedule, {
+      siteId: secondSiteId,
+      dateAt: ClientTimestamp.fromDate(new Date("2028-06-01T00:00:00.000Z")),
+      date: "2028-06-01",
+    });
+  }));
+  assert.equal((await getDoc(firstSite)).data().scheduleRevision, 2);
+  assert.equal((await getDoc(secondSite)).data().scheduleRevision, 5);
+
+  await assertFails(updateDoc(schedule, { operationResultId: scheduleId }));
+  await assertFails(runTransaction(firestore, async (transaction) => {
+    transaction.set(
+      doc(firestore, "Companies", companyId, "OperationResults", "forged-result"),
+      {
+        docId: "forged-result", siteOperationScheduleId: scheduleId,
+        siteId: secondSiteId, customerId: "customer-b",
+        uid, updatedAt: serverTimestamp(),
+      },
+    );
+    transaction.update(schedule, { operationResultId: "forged-result" });
+  }));
+  await assertSucceeds(runTransaction(firestore, async (transaction) => {
+    transaction.set(operationResult, {
+      docId: scheduleId, siteOperationScheduleId: scheduleId,
+      siteId: secondSiteId, customerId: "customer-b",
+      uid, updatedAt: serverTimestamp(),
+    });
+    transaction.update(schedule, { operationResultId: scheduleId });
+  }));
+  await assertFails(updateDoc(schedule, { operationResultId: null }));
+  await assertFails(updateDoc(schedule, { operationResultId: "different-result" }));
+  await assertFails(runTransaction(firestore, async (transaction) => {
+    transaction.update(secondSite, {
+      scheduleRevision: 6, uid: "spoofed-actor", updatedAt: serverTimestamp(),
+    });
+    transaction.update(schedule, {
+      dateAt: ClientTimestamp.fromDate(new Date("2028-07-01T00:00:00.000Z")),
+      date: "2028-07-01",
+    });
+  }));
+  assert.equal((await getDoc(secondSite)).data().scheduleRevision, 5);
+
+  const deletableSchedule = doc(
+    firestore, "Companies", companyId, "SiteOperationSchedules", `${scheduleId}-deletable`,
+  );
+  await assertSucceeds(runTransaction(firestore, async (transaction) => {
+    transaction.update(secondSite, {
+      scheduleRevision: 6, uid, updatedAt: serverTimestamp(),
+    });
+    transaction.set(deletableSchedule, {
+      docId: `${scheduleId}-deletable`, siteId: secondSiteId,
+      date: "2028-08-01", operationResultId: null,
+    });
+  }));
+  assert.equal((await assertSucceeds(getDoc(deletableSchedule))).exists(), true);
+  await assertSucceeds(deleteDoc(deletableSchedule));
+  assert.equal((await assertSucceeds(getDoc(deletableSchedule))).exists(), false);
+});
+
+test("SITE-04 maintenance state fails closed for client Site revision and schedule writes", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-lifecycle-maintenance-admin";
+  const siteId = "site-lifecycle-maintenance-site";
+  const scheduleId = "site-lifecycle-maintenance-schedule";
+  await seedRegisteredUser({ uid, companyId, isAdmin: true, roles: [] });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "Companies", companyId, "Sites", siteId), siteRulesData({
+      docId: siteId, uid: "server-writer", scheduleRevision: 0,
+      customerId: "customer-a", customer: {}, isTemporary: false,
+    }));
+    await setDoc(doc(firestore, "Companies", companyId, "SiteOperationSchedules", scheduleId), {
+      docId: scheduleId, siteId, date: "2028-05-01", operationResultId: null,
+    });
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const site = doc(firestore, "Companies", companyId, "Sites", siteId);
+  const schedule = doc(firestore, "Companies", companyId, "SiteOperationSchedules", scheduleId);
+  const states = [null, { isMaintenance: "false" }, { isMaintenance: true }];
+  try {
+    for (const state of states) {
+      await testEnvironment.withSecurityRulesDisabled(async (context) => {
+        const reference = doc(context.firestore(), "System", "system");
+        if (state === null) await deleteDoc(reference);
+        else await setDoc(reference, state);
+      });
+      await assertFails(updateDoc(site, {
+        scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
+      }));
+      await assertFails(updateDoc(schedule, { remarks: "blocked" }));
+      await assertFails(deleteDoc(schedule));
+      await assertFails(runTransaction(firestore, async (transaction) => {
+        transaction.update(site, {
+          scheduleRevision: 1, uid, updatedAt: serverTimestamp(),
+        });
+        transaction.set(
+          doc(firestore, "Companies", companyId, "SiteOperationSchedules", `${scheduleId}-new`),
+          {
+            docId: `${scheduleId}-new`, siteId, date: "2028-05-02",
+            operationResultId: null,
+          },
+        );
+      }));
+    }
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+    });
+  }
+  assert.equal((await getDoc(site)).data().scheduleRevision, 0);
+  assert.equal((await getDoc(schedule)).exists(), true);
+});
+
+test("SITE-04 Schedule result linkage rejects non-writers while same-tenant OperationResult CUD remains compatible", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const customerId = "site-lifecycle-result-policy-customer";
+  const cases = [
+    ["without permission", { roles: ["accountant"] }, {}],
+    ["direct permission", { roles: [], permissions: ["operation-results:write"] }, {}],
+    ["unknown role", { roles: ["manager", "unknown"] }, {}],
+    ["non-admin super-user", { roles: ["manager"] }, { isSuperUser: true }],
+    ["temporary", { roles: ["manager"], isTemporary: true }, {}],
+    ["disabled", { roles: ["manager"], disabled: true }, {}],
+    ["other tenant", { roles: ["manager"], companyId: CODEX_LOCAL_COMPANIES.secondary.id }, {}],
+  ];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+    await setDoc(doc(firestore, "Companies", companyId, "Customers", customerId), {
+      docId: customerId,
+    });
+  });
+
+  for (const [label, user, claims] of cases) {
+    const uid = `site-lifecycle-result-denied-${label.replaceAll(" ", "-")}`;
+    const siteId = `${uid}-site`;
+    const scheduleId = `${uid}-schedule`;
+    const existingScheduleId = `${scheduleId}-existing`;
+    const standaloneResultId = `${scheduleId}-standalone`;
+    await seedRegisteredUser({
+      uid, companyId: user.companyId ?? companyId,
+      isAdmin: false, roles: user.roles,
+      permissions: user.permissions,
+      isTemporary: user.isTemporary ?? false,
+      disabled: user.disabled ?? false,
+    });
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      await setDoc(doc(firestore, "Companies", companyId, "Sites", siteId), siteRulesData({
+        docId: siteId, uid: "server-writer", scheduleRevision: 0,
+        customerId, customer: {}, isTemporary: false,
+      }));
+      await setDoc(
+        doc(firestore, "Companies", companyId, "SiteOperationSchedules", scheduleId),
+        { docId: scheduleId, siteId, date: "2028-05-01", operationResultId: null },
+      );
+      await setDoc(
+        doc(firestore, "Companies", companyId, "SiteOperationSchedules", existingScheduleId),
+        {
+          docId: existingScheduleId, siteId, date: "2028-05-02", operationResultId: null,
+        },
+      );
+      await setDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
+        {
+          docId: existingScheduleId, customerId,
+          siteOperationScheduleId: existingScheduleId, siteId,
+          uid: "server-writer",
+          updatedAt: ClientTimestamp.fromDate(new Date("2028-01-01T00:00:00.000Z")),
+        },
+      );
+    });
+    const firestore = authenticatedFirestore(uid, {
+      isSuperUser: claims.isSuperUser ?? false,
+    });
+    const schedule = doc(
+      firestore, "Companies", companyId, "SiteOperationSchedules", scheduleId,
+    );
+    const result = doc(firestore, "Companies", companyId, "OperationResults", scheduleId);
+    await assertFails(runTransaction(firestore, async (transaction) => {
+      transaction.set(result, {
+        docId: scheduleId, customerId, siteOperationScheduleId: scheduleId,
+        siteId, uid, updatedAt: serverTimestamp(),
+      });
+      transaction.update(schedule, { operationResultId: scheduleId });
+    }), `${label} create-link`);
+    await assertFails(runTransaction(firestore, async (transaction) => {
+      transaction.update(
+        doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
+        { uid, updatedAt: serverTimestamp() },
+      );
+      transaction.update(
+        doc(firestore, "Companies", companyId, "SiteOperationSchedules", existingScheduleId),
+        { operationResultId: existingScheduleId },
+      );
+    }), `${label} update-link`);
+
+    const standalone = doc(
+      firestore, "Companies", companyId, "OperationResults", standaloneResultId,
+    );
+    const createStandalone = setDoc(standalone, {
+      docId: standaloneResultId, customerId, siteId,
+      siteOperationScheduleId: standaloneResultId, uid,
+      updatedAt: serverTimestamp(),
+    });
+    if (["temporary", "disabled", "other tenant"].includes(label)) {
+      await assertFails(createStandalone, `${label} standalone create`);
+      await assertFails(updateDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
+        { uid, updatedAt: serverTimestamp() },
+      ), `${label} standalone update`);
+      await assertFails(deleteDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", existingScheduleId),
+      ), `${label} standalone delete`);
+    } else {
+      await assert.doesNotReject(
+        () => assertSucceeds(createStandalone),
+        undefined,
+        `${label} standalone create`,
+      );
+      await assert.doesNotReject(
+        () => assertSucceeds(updateDoc(standalone, {
+          remarks: "compatible update", uid, updatedAt: serverTimestamp(),
+        })),
+        undefined,
+        `${label} standalone update`,
+      );
+      await assert.doesNotReject(
+        () => assertSucceeds(deleteDoc(standalone)),
+        undefined,
+        `${label} standalone delete`,
+      );
+    }
+  }
+});
+
+test("SITE-04 accountant retains the existing Billing-owned operationResults update", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-lifecycle-accountant-billing";
+  const customerId = "site-lifecycle-accountant-billing-customer";
+  const billingId = "site-lifecycle-accountant-billing";
+  await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["accountant"] });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "Companies", companyId, "Customers", customerId), {
+      docId: customerId,
+    });
+    await setDoc(doc(firestore, "Companies", companyId, "Billings", billingId), {
+      docId: billingId, customerId, operationResults: [],
+    });
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const billing = doc(firestore, "Companies", companyId, "Billings", billingId);
+  const operationResults = [{ docId: "result-a", amount: 1000 }];
+  await assertSucceeds(updateDoc(billing, { operationResults }));
+  assert.deepEqual((await getDoc(billing)).data().operationResults, operationResults);
+});
+
+test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain server-only", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const uid = "site-lifecycle-cross-tenant-manager";
+  const siteId = "site-lifecycle-metadata-site";
+  await seedRegisteredUser({
+    uid, pathCompanyId: otherCompanyId, companyId: otherCompanyId,
+    isAdmin: false, roles: ["manager"],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(
+      doc(firestore, "Companies", companyId, "Sites", siteId),
+      siteRulesData({ docId: siteId, uid: "server-writer", scheduleRevision: 0 }),
+    );
+    await setDoc(
+      doc(firestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant"),
+      { docId: "cross-tenant", siteId, date: "2028-05-01", operationResultId: null },
+    );
+  });
+  const otherFirestore = authenticatedFirestore(uid, {
+    companyId: otherCompanyId, isSuperUser: false,
+  });
+  const crossTenantSchedule = doc(
+    otherFirestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant",
+  );
+  await assertFails(getDoc(crossTenantSchedule));
+  await assertFails(updateDoc(crossTenantSchedule, { date: "2028-05-02" }));
+  await assertFails(deleteDoc(crossTenantSchedule));
+  await assertFails(setDoc(
+    doc(otherFirestore, "Companies", companyId, "SiteOperationSchedules", "cross-tenant-create"),
+    { docId: "cross-tenant", siteId, date: "2028-05-01", operationResultId: null },
+  ));
+
+  const ownUid = "site-lifecycle-metadata-admin";
+  await seedRegisteredUser({ uid: ownUid, companyId, isAdmin: true, roles: [] });
+  const ownFirestore = authenticatedFirestore(ownUid, { isSuperUser: false });
+  await assertFails(updateDoc(
+    doc(ownFirestore, "Companies", companyId, "Sites", siteId),
+    {
+      status: "TERMINATED",
+      statusChangedAt: serverTimestamp(),
+      statusChangedBy: ownUid,
+      statusChangeSource: "MANUAL",
+      statusChangeReason: "client spoof",
+      uid: ownUid,
+      updatedAt: serverTimestamp(),
+    },
+  ));
+});
+
+test("SITE-04 lifecycle Callables terminate then reactivate through the local transport", async () => {
+  const actor = await seedSiteLifecycleTransportActor({
+    uid: "site-lifecycle-transport-manager",
+  });
+  const siteId = "site-lifecycle-transport-success";
+  const originalCustomer = { docId: "customer-a", name: "合成取引先" };
+  const originalAgreements = [{ docId: "agreement-a", shiftType: "DAY" }];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+    await setDoc(
+      doc(firestore, "Companies", actor.companyId, "Sites", siteId),
+      siteRulesData({
+        docId: siteId,
+        uid: "server-writer",
+        customerId: "customer-a",
+        customer: originalCustomer,
+        isTemporary: false,
+        agreementsV2: originalAgreements,
+      }),
+    );
+  });
+
+  const terminated = await callSiteLifecycleTransport({
+    actor,
+    functionName: "terminateSite",
+    data: { siteId, reason: "合成現場の通常終了" },
+  });
+  assert.equal(terminated.response.status, 200);
+  assert.deepEqual(terminated.payload.result, {
+    success: true, siteId, status: "TERMINATED",
+  });
+  let state;
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    state = (await getDoc(doc(
+      context.firestore(), "Companies", actor.companyId, "Sites", siteId,
+    ))).data();
+  });
+  assert.equal(state.status, "TERMINATED");
+  assert.equal(state.statusChangedBy, actor.uid);
+  assert.equal(state.statusChangeSource, "MANUAL");
+  assert.equal(state.statusChangeReason, "合成現場の通常終了");
+  assert.deepEqual(state.customer, originalCustomer);
+  assert.deepEqual(state.agreementsV2, originalAgreements);
+
+  const reactivated = await callSiteLifecycleTransport({
+    actor,
+    functionName: "reactivateSite",
+    data: {
+      siteId,
+      reason: "合成現場の継続再開",
+      constructionPeriodStartDate: "2028-02-29",
+      constructionPeriodEndDate: "2028-03-31",
+    },
+  });
+  assert.equal(reactivated.response.status, 200);
+  assert.deepEqual(reactivated.payload.result, {
+    success: true, siteId, status: "ACTIVE",
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    state = (await getDoc(doc(
+      context.firestore(), "Companies", actor.companyId, "Sites", siteId,
+    ))).data();
+  });
+  assert.equal(state.status, "ACTIVE");
+  assert.equal(state.statusChangedBy, actor.uid);
+  assert.equal(state.statusChangeSource, "REACTIVATION");
+  assert.equal(state.statusChangeReason, "合成現場の継続再開");
+  assert.equal(state.hasConstructionPeriod, true);
+  assert.deepEqual(state.customer, originalCustomer);
+  assert.deepEqual(state.agreementsV2, originalAgreements);
+});
+
+test("SITE-04 lifecycle Callable transport rejects unauthorized and maintenance actors", async () => {
+  const denied = await seedSiteLifecycleTransportActor({
+    uid: "site-lifecycle-transport-accountant",
+    roles: ["accountant"],
+  });
+  const allowed = await seedSiteLifecycleTransportActor({
+    uid: "site-lifecycle-transport-maintenance-manager",
+  });
+  const companyId = allowed.companyId;
+  const deniedSiteId = "site-lifecycle-transport-denied";
+  const maintenanceSiteId = "site-lifecycle-transport-maintenance";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+    for (const siteId of [deniedSiteId, maintenanceSiteId]) {
+      await setDoc(
+        doc(firestore, "Companies", companyId, "Sites", siteId),
+        siteRulesData({ docId: siteId, uid: "server-writer" }),
+      );
+    }
+  });
+
+  const forbidden = await callSiteLifecycleTransport({
+    actor: denied,
+    functionName: "terminateSite",
+    data: { siteId: deniedSiteId, reason: "拒否される終了" },
+  });
+  assert.equal(forbidden.payload.error?.status, "PERMISSION_DENIED");
+
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: true });
+  });
+  try {
+    const maintenance = await callSiteLifecycleTransport({
+      actor: allowed,
+      functionName: "terminateSite",
+      data: { siteId: maintenanceSiteId, reason: "保守中の終了" },
+    });
+    assert.equal(maintenance.payload.error?.status, "INTERNAL");
+    assert.equal(maintenance.payload.error?.message, "現場の状態を変更できませんでした。");
+  } finally {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: false });
+    });
+  }
+});
+
+test("SITE-04 terminateSite Callable transport rejects future and unprocessed schedules", async () => {
+  const actor = await seedSiteLifecycleTransportActor({
+    uid: "site-lifecycle-transport-schedule-manager",
+  });
+  const cases = [
+    {
+      siteId: "site-lifecycle-transport-future",
+      scheduleId: "site-lifecycle-transport-future-schedule",
+      schedule: { date: "2099-01-01", operationResultId: "result-a" },
+    },
+    {
+      siteId: "site-lifecycle-transport-unprocessed",
+      scheduleId: "site-lifecycle-transport-unprocessed-schedule",
+      schedule: { date: "2020-01-01", operationResultId: null },
+    },
+  ];
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    const firestore = context.firestore();
+    await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+    for (const item of cases) {
+      await setDoc(
+        doc(firestore, "Companies", actor.companyId, "Sites", item.siteId),
+        siteRulesData({ docId: item.siteId, uid: "server-writer" }),
+      );
+      await setDoc(
+        doc(firestore, "Companies", actor.companyId, "SiteOperationSchedules", item.scheduleId),
+        { docId: item.scheduleId, siteId: item.siteId, ...item.schedule },
+      );
+    }
+  });
+
+  for (const item of cases) {
+    const result = await callSiteLifecycleTransport({
+      actor,
+      functionName: "terminateSite",
+      data: { siteId: item.siteId, reason: "予定競合による拒否" },
+    });
+    assert.equal(result.payload.error?.status, "FAILED_PRECONDITION");
+    let state;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      state = (await getDoc(doc(
+        context.firestore(), "Companies", actor.companyId, "Sites", item.siteId,
+      ))).data();
+    });
+    assert.equal(state.status, "ACTIVE");
+    assert.equal(Object.hasOwn(state, "statusChangedAt"), false);
+  }
 });
 
 test("Site Rules preserve same-tenant live and archive reads while denying direct destructive writes", async () => {

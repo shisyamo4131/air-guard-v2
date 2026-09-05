@@ -4,13 +4,27 @@
  *              handleXxxx プロパティに引き渡す関数を返す
  *****************************************************************************/
 import { onBeforeCreate, onBeforeUpdate } from "@/services/operation.js";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { createSiteOperationScheduleWriter } from "@/utils/siteOperationSchedule/siteScheduleGuard";
+import { confirmTerminatedScheduleSite } from "@/composables/application/siteOperationSchedule/confirmTerminatedSite";
+
+function writer() {
+  const auth = useAuthStore();
+  const { $firestore } = useNuxtApp();
+  return createSiteOperationScheduleWriter({
+    firestore: $firestore,
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    confirmTerminatedSite: confirmTerminatedScheduleSite,
+  });
+}
 
 /*****************************************************************************
  * HANDLE CREATE
  *****************************************************************************/
 export async function handleCreate(item) {
   await onBeforeCreate(item);
-  await item.create();
+  await writer().create(item);
 }
 
 /*****************************************************************************
@@ -18,7 +32,7 @@ export async function handleCreate(item) {
  *****************************************************************************/
 export async function handleUpdate(item) {
   await onBeforeUpdate(item);
-  await item.update();
+  await writer().update(item);
 }
 
 /*****************************************************************************

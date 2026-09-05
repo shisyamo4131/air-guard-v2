@@ -6,6 +6,7 @@
 import { Site } from "@/schemas";
 import { useRouter } from "vue-router";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -45,9 +46,14 @@ const filteredSites = computed(() => {
     if (!selectedCustomerId.value) return true;
     return site.customerId === selectedCustomerId.value;
   };
-  return siteInstance.docs.filter((site) => {
-    return securityTypeIsMatched(site) && customerIdIsMatched(site);
-  });
+  return siteInstance.docs
+    .filter((site) => securityTypeIsMatched(site) && customerIdIsMatched(site))
+    .sort((left, right) => {
+      const leftEnded = getSiteLifecyclePresentation(left).label.startsWith("工期終了");
+      const rightEnded = getSiteLifecyclePresentation(right).label.startsWith("工期終了");
+      if (leftEnded !== rightEnded) return Number(leftEnded) - Number(rightEnded);
+      return String(right.code || "").localeCompare(String(left.code || ""), "ja");
+    });
 });
 
 const confirmEditModel = computed({
@@ -147,6 +153,7 @@ onUnmounted(unsubscribe);
           class="flex-grow-1 overflow-hidden"
           :items="filteredSites"
           :search="search"
+          :sort-by="[]"
           :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
           @click:update="(item) => router.push(`/sites/${item.docId}`)"
         />

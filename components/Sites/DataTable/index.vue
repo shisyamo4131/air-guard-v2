@@ -7,6 +7,7 @@
 import { useDefaults } from "vuetify";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useConstants } from "@/composables/useConstants";
+import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -38,6 +39,10 @@ const { cachedCustomers, fetchCustomer } = fetchCustomerComposable;
  *****************************************************************************/
 const { SECURITY_TYPE } = useConstants();
 
+function lifecycleOf(item) {
+  return getSiteLifecyclePresentation(item);
+}
+
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
@@ -45,6 +50,7 @@ const headers = computed(() => {
   return [
     { title: "現場コード", key: "code", width: "180px" },
     { title: "現場名", key: "name" },
+    { title: "状態", key: "lifecycle", sortable: false, width: "220px" },
     {
       title: "警備種別",
       key: "securityType",
@@ -95,6 +101,24 @@ watch(
         <div class="text-caption text-medium-emphasis">
           {{ cachedCustomers[item.customerId]?.abbreviation || "...loading" }}
         </div>
+      </div>
+    </template>
+    <template #[`item.lifecycle`]="{ item }">
+      <div class="d-flex ga-1 flex-wrap">
+        <v-chip
+          :color="lifecycleOf(item).color"
+          size="small"
+          variant="tonal"
+        >
+          {{ lifecycleOf(item).label }}
+        </v-chip>
+        <v-chip
+          v-if="lifecycleOf(item).automaticTerminationDate"
+          size="small"
+          variant="outlined"
+        >
+          自動終了予定 {{ lifecycleOf(item).automaticTerminationDate }}
+        </v-chip>
       </div>
     </template>
   </air-data-table>

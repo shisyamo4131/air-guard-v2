@@ -43,7 +43,7 @@ function resetDraft() {
 }
 
 function open() {
-  if (!canWrite.value) return;
+  if (!canWrite.value || props.site.status !== "ACTIVE") return;
   resetDraft();
   dialog.value = true;
 }
@@ -77,7 +77,7 @@ watch(() => props.site.customerId, () => {
 </script>
 
 <template>
-  <slot name="activator" :open="open" :item="props.site" :disabled="!canWrite" />
+  <slot name="activator" :open="open" :item="props.site" :disabled="!canWrite || props.site.status !== 'ACTIVE'" />
   <v-dialog v-model="dialog" max-width="600" persistent>
     <v-card>
       <v-toolbar color="secondary" density="compact" :title="props.title" />

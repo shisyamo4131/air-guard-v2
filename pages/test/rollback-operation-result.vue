@@ -1,12 +1,10 @@
 <script setup>
-import { doc, deleteDoc, updateDoc } from "firebase/firestore";
 import { OperationResult } from "@/schemas";
 
 /***************************************************************************
  * SETUP STORES & COMPOSABLES
  ***************************************************************************/
 const { companyId } = useAuthStore();
-const { $firestore } = useNuxtApp();
 
 /***************************************************************************
  * DEFINE REACTIVE OBJECTS
@@ -21,7 +19,6 @@ const messageType = ref("info");
  * COMPUTED PROPERTIES
  ***************************************************************************/
 const isSubscribed = computed(() => !!docId.value);
-const canRollback = computed(() => isSubscribed.value && !loading.value);
 
 /***************************************************************************
  * METHODS
@@ -56,49 +53,6 @@ function unsubscribe() {
   message.value = "";
 }
 
-async function rollback() {
-  if (!confirm("本当にロールバックしますか？この操作は元に戻せません。")) {
-    return;
-  }
-
-  try {
-    loading.value = true;
-    message.value = "";
-
-    const companyPath = `Companies/${companyId}`;
-
-    // 1. OperationResult ドキュメントを削除
-    const operationResultDocRef = doc(
-      $firestore,
-      `${companyPath}/OperationResults`,
-      docId.value
-    );
-    await deleteDoc(operationResultDocRef);
-
-    // 2. SiteOperationSchedule の operationResultId をクリア
-    const siteOperationScheduleDocRef = doc(
-      $firestore,
-      `${companyPath}/SiteOperationSchedules`,
-      docId.value
-    );
-    await updateDoc(siteOperationScheduleDocRef, {
-      operationResultId: null,
-    });
-
-    message.value = "ロールバックが完了しました。";
-    messageType.value = "success";
-
-    // ロールバック後はサブスクライブを解除
-    unsubscribe();
-  } catch (error) {
-    message.value = `ロールバックエラー: ${error.message}`;
-    messageType.value = "error";
-    console.error("Rollback error:", error);
-  } finally {
-    loading.value = false;
-  }
-}
-
 /***************************************************************************
  * LIFECYCLE HOOKS
  ***************************************************************************/
@@ -123,6 +77,9 @@ onUnmounted(() => {
           <v-divider></v-divider>
 
           <v-card-text>
+            <v-alert type="warning" variant="tonal" class="mb-4">
+              SiteOperationScheduleの実績参照はクライアントから解除できません。この検証画面のロールバック操作は停止しています。
+            </v-alert>
             <!-- ドキュメントID入力欄 -->
             <v-row>
               <v-col cols="12" md="8">
@@ -249,12 +206,10 @@ onUnmounted(() => {
             <v-spacer></v-spacer>
             <v-btn
               color="error"
-              :disabled="!canRollback"
-              :loading="loading"
-              @click="rollback"
+              disabled
             >
               <v-icon start>mdi-backup-restore</v-icon>
-              ロールバック実行
+              ロールバック停止中
             </v-btn>
           </v-card-actions>
         </v-card>

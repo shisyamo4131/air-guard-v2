@@ -7,6 +7,10 @@ import { useDefaults } from "vuetify";
 import { Operation } from "@/schemas";
 import { useSetRegularTime } from "@/composables/useSetRegularTime";
 import { useFetch } from "@/composables/fetch/useFetch";
+import {
+  attachSiteScheduleConfirmation,
+  clearSiteScheduleConfirmation,
+} from "@/utils/siteOperationSchedule/siteScheduleGuard";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -49,6 +53,18 @@ const { set, addMessage } = useSetRegularTime(
  *****************************************************************************/
 const { fetchSiteComposable } = useFetch("SiteOperationScheduleCustomInput");
 const { cachedSites } = fetchSiteComposable;
+const confirmationOperationId = Symbol("site-schedule-editor");
+
+function onSiteSelectionConfirmed(context) {
+  clearSiteScheduleConfirmation(props.item);
+  if (!context) return;
+  attachSiteScheduleConfirmation(props.item, {
+    ...context,
+    operationId: confirmationOperationId,
+  });
+}
+
+onBeforeUnmount(() => clearSiteScheduleConfirmation(props.item));
 
 /*****************************************************************************
  * WATCHERS
@@ -82,7 +98,11 @@ watch(
       />
     </v-col>
     <v-col cols="12">
-      <SiteAutocomplete v-bind="props.componentAttrs['siteId']" creatable />
+      <SiteAutocomplete
+        v-bind="props.componentAttrs['siteId']"
+        creatable
+        @site-selection-confirmed="onSiteSelectionConfirmed"
+      />
     </v-col>
     <v-col cols="12">
       <air-select v-bind="props.componentAttrs['securityType']" />

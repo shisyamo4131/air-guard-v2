@@ -3,7 +3,7 @@ import dayjs from "dayjs";
 // import utc from "dayjs/plugin/utc.js";
 // import timezone from "dayjs/plugin/timezone.js";
 import { onSchedule } from "firebase-functions/scheduler";
-import { getFirestore } from "firebase-admin/firestore";
+import { FieldPath, getFirestore } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { sitesAutoTermination } from "./sites/index.js";
 
@@ -13,6 +13,13 @@ import { sitesAutoTermination } from "./sites/index.js";
 
 const BATCH_SIZE = 300;
 const SITE_OPERATION_SCHEDULES_KEEP_DAYS = 60;
+
+async function assertMaintenanceOff(db) {
+  const snapshot = await db.doc("System/system").get();
+  if (!snapshot.exists || snapshot.data()?.isMaintenance !== false) {
+    throw new Error("Site operation schedule cleanup is disabled during maintenance.");
+  }
+}
 
 /**
  * Creates batches of delete operations for Firestore documents.
@@ -75,52 +82,59 @@ const cleanUpSiteOperationSchedules = async () => {
     logger.info(`Cleaning up schedules before: ${deadline}`);
 
     const db = getFirestore();
+    await assertMaintenanceOff(db);
     const colRef = db.collectionGroup("SiteOperationSchedules");
-    const snapshot = await colRef.where("date", "<", deadline).get();
-
-    if (snapshot.empty) {
-      logger.info("No site operation schedules to clean up.");
-      return;
-    }
-
-    // ref.path: "Companies/{companyId}/SiteOperationSchedules/{docId}"
-    // companyId ごとに docId をグループ化
-    const companyScheduleMap = {};
-    snapshot.docs.forEach((doc) => {
-      const segments = doc.ref.path.split("/");
-      // segments[0] = "Companies", segments[1] = companyId
-      const companyId = segments[1];
-      if (!companyScheduleMap[companyId]) {
-        companyScheduleMap[companyId] = [];
-      }
-      companyScheduleMap[companyId].push(doc.id);
-    });
-
-    // 各会社ごとに ArrangementNotifications を削除
+    let cursor = null;
     let totalArrangementDeleted = 0;
-    for (const [companyId, scheduleIds] of Object.entries(companyScheduleMap)) {
-      // Firestore の in クエリは最大 30 件のため分割して処理
-      const chunks = chunkArray(scheduleIds, 30);
-      for (const chunk of chunks) {
-        const anSnapshot = await db
-          .collection(`Companies/${companyId}/ArrangementNotifications`)
-          .where("siteOperationScheduleId", "in", chunk)
-          .get();
-        if (!anSnapshot.empty) {
-          const batchArray = createDeleteBatches(anSnapshot, db);
-          await Promise.all(batchArray.map((batch) => batch.commit()));
+    let totalSchedulesDeleted = 0;
+    do {
+      await assertMaintenanceOff(db);
+      let query = colRef
+        .where("date", "<", deadline)
+        .orderBy("date", "asc")
+        .orderBy(FieldPath.documentId(), "asc")
+        .limit(BATCH_SIZE);
+      if (cursor) query = query.startAfter(cursor);
+      const snapshot = await query.get();
+      if (snapshot.empty) break;
+      cursor = snapshot.docs[snapshot.docs.length - 1];
+
+      // ref.path: "Companies/{companyId}/SiteOperationSchedules/{docId}"
+      const companyScheduleMap = {};
+      const deletableDocs = snapshot.docs.filter((scheduleDoc) => {
+        const operationResultId = scheduleDoc.data()?.operationResultId;
+        return typeof operationResultId === "string" && operationResultId.length > 0;
+      });
+      for (const scheduleDoc of deletableDocs) {
+        const companyId = scheduleDoc.ref.path.split("/")[1];
+        if (!companyScheduleMap[companyId]) companyScheduleMap[companyId] = [];
+        companyScheduleMap[companyId].push(scheduleDoc.id);
+      }
+
+      for (const [companyId, scheduleIds] of Object.entries(companyScheduleMap)) {
+        for (const chunk of chunkArray(scheduleIds, 30)) {
+          const anSnapshot = await db
+            .collection(`Companies/${companyId}/ArrangementNotifications`)
+            .where("siteOperationScheduleId", "in", chunk)
+            .get();
+          for (const batch of createDeleteBatches(anSnapshot, db)) {
+            await batch.commit();
+          }
           totalArrangementDeleted += anSnapshot.size;
         }
       }
-    }
-    logger.info(
-      `Deleted ${totalArrangementDeleted} arrangement notifications.`,
-    );
 
-    // SiteOperationSchedule ドキュメントを削除
-    const batchArray = createDeleteBatches(snapshot, db);
-    await Promise.all(batchArray.map((batch) => batch.commit()));
-    logger.info(`Deleted ${snapshot.size} site operation schedules.`);
+      for (const batch of createDeleteBatches({ docs: deletableDocs }, db)) {
+        await batch.commit();
+      }
+      totalSchedulesDeleted += deletableDocs.length;
+      if (snapshot.size < BATCH_SIZE) break;
+    } while (cursor);
+
+    logger.info("Site operation schedule cleanup completed", {
+      totalArrangementDeleted,
+      totalSchedulesDeleted,
+    });
   } catch (e) {
     logger.error("Error during cleanup of site operation schedules:", e);
     throw e;
@@ -139,9 +153,25 @@ export const runDailyTask = onSchedule(
     logger.log("[runDailyTask] Starting daily maintenance tasks...");
     try {
       await cleanUpSiteOperationSchedules();
-      await sitesAutoTermination();
     } catch (error) {
       logger.error("[runDailyTask] Error executing scheduled function:", error);
+      throw error;
+    }
+  },
+);
+
+/** cleanupとは独立した失敗境界でSite自動終了を実行します。 */
+export const runDailySiteTermination = onSchedule(
+  { schedule: "every day 00:00", timeZone: "Asia/Tokyo" },
+  async () => {
+    try {
+      await sitesAutoTermination({ firestore: getFirestore() });
+    } catch (error) {
+      logger.error(
+        "[runDailySiteTermination] Site auto termination failed",
+        error,
+      );
+      throw error;
     }
   },
 );

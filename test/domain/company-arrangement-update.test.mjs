@@ -982,7 +982,7 @@ test("Company settings removes default agreements while Site agreements remain",
   ]);
   assert.doesNotMatch(companyPage, /AgreementsManager/u);
   assert.doesNotMatch(companyPage, /doc\.agreementsV2/u);
-  assert.match(sitePage, /<SiteEditorAgreements\s+v-if="canWrite"\s+:site="doc"\s*\/>/u);
+  assert.match(sitePage, /<SiteEditorAgreements\s+v-if="canWrite && isActive"\s+:site="doc"\s*\/>/u);
   assert.match(sitePage, /<AgreementsViewer\s+:agreements="doc\.agreementsV2"\s*\/>/u);
   assert.doesNotMatch(sitePage, /v-model="doc\.agreementsV2"/u);
   assert.match(

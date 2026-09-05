@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Site SITE-04として、終了・再有効化をstrict `sites:write`とmaintenance確認を持つ専用Callableへ移し、TERMINATEDの通常編集制限、終了済み表示・確認付き単発利用、reason・新工期による再開を実装した。予定作成・site/date移動はSite revisionとatomicにし、実績化は整合する同ID OperationResultとの同時更新だけを許可する。OperationResults collection全体の既存CUD境界は変更せず、accountantの請求編集を含む従来経路を維持する。JST工期終了90日後の自動終了はbounded走査とtransaction再確認で将来・未実績予定を保護し、cleanupと失敗境界を分離した。対象88件、SITE-04 Emulator 8件、全domain 1050件、全Emulator 159件が成功し、Dev・Prod・remote・実dataは変更していない。legacy予定の必須field確認はSITE-09の停止条件である。[Siteロードマップ](docs/roadmaps/site.md)を参照。
+
 - Site SITE-03として、作成・基本情報・Customer・取極めをoperation別transaction writerへ分離し、exact 34-field create、server metadata、派生field、Customer exact 6-field projection、独立draft、同一field競合、変更なしwrite 0、失敗後の入力保持をUI・Rulesで固定した。Customer projectionは表示・取極め判定に使う`docId/updatedAt/code/name/abbreviation/cutoffDate`だけとし、検索token等を埋め込まない。Customer更新triggerも同じprojectionへ揃え、欠損・型不正をSite query前にfail closedとした。旧手動終了の非atomicな入口はSITE-04の専用処理まで停止した。domain 991件、Codex専用Emulator 152件を確認し、Dev・Prod・remote・実dataは変更していない。[Siteロードマップ](docs/roadmaps/site.md)を参照。
 
 - Site SITE-02として、同一tenantの閲覧を維持し、作成・基本情報・Customer・取極め更新・終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。UIと送信直前policy、Firestore Rulesを一致させ、direct permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにした。generic削除/archive入口を停止し、Site deleteと`Sites_archive` client CUDをRulesで拒否した。domain 974件、Codex専用Emulator 149件を確認した。再有効化・専用archive・operation別field契約は後続phaseで、Functions、schema、package、data、Dev・Prod・remoteは変更していない。[Siteロードマップ](docs/roadmaps/site.md)を参照。

@@ -2,8 +2,9 @@ import dayjs from "dayjs";
 import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
-import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { createSiteOperationScheduleWriter } from "@/utils/siteOperationSchedule/siteScheduleGuard";
+import { confirmTerminatedScheduleSite } from "@/composables/application/siteOperationSchedule/confirmTerminatedSite";
 
 /*****************************************************************************
  * @file ./composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js
@@ -18,6 +19,13 @@ export function useSiteOperationScheduleActions() {
    * SETUP STORES & COMPOSABLES
    *****************************************************************************/
   const auth = useAuthStore();
+  const { $firestore } = useNuxtApp();
+  const scheduleWriter = () => createSiteOperationScheduleWriter({
+    firestore: $firestore,
+    companyId: auth.companyId,
+    actorUid: auth.uid,
+    confirmTerminatedSite: confirmTerminatedScheduleSite,
+  });
   const loadings = useLoadingsStore();
   const logger = useLogger("useSiteOperationScheduleActions", useErrorsStore());
 
@@ -58,7 +66,7 @@ export function useSiteOperationScheduleActions() {
       console.table({ before, after });
     }
     try {
-      await schedule.update();
+      await scheduleWriter().update(schedule);
     } catch (error) {
       logger.error({ message: "Failed to update schedule", error });
     }
@@ -99,12 +107,7 @@ export function useSiteOperationScheduleActions() {
   const updateSchedules = async (schedules, options = {}) => {
     try {
       const normalizedSchedules = normalizeSchedules(schedules, options);
-      await SiteOperationSchedule.runTransaction(async (transaction) => {
-        const promises = normalizedSchedules.map((schedule) =>
-          schedule.update({ transaction }),
-        );
-        await Promise.all(promises);
-      });
+      await scheduleWriter().updateMany(normalizedSchedules);
     } catch (error) {
       logger.error({ message: "Failed to update schedules", error });
     }

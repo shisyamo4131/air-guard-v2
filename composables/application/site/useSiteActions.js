@@ -15,6 +15,7 @@ import {
   prepareSiteCreate,
 } from "@/composables/domain/site/siteOperations";
 import { createSiteWriter } from "@/utils/site/siteWriter";
+import { useSiteFunctions } from "@/composables/site/useSiteFunctions";
 
 const sharedSiteWriteState = Vue.reactive({ isSaving: false });
 
@@ -22,6 +23,7 @@ export function useSiteActions() {
   const auth = useAuthStore();
   const { $auth, $firestore } = useNuxtApp();
   const writer = createSiteWriter({ firestore: $firestore });
+  const siteFunctions = useSiteFunctions();
 
   function authorizationContext() {
     return {
@@ -153,6 +155,12 @@ export function useSiteActions() {
       if (!(source instanceof Site) || !source.docId) {
         throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
       }
+      if (source.status !== "ACTIVE") {
+        throw new SiteOperationError(
+          "invalid-state",
+          "終了済み現場の通常情報は変更できません。",
+        );
+      }
       const locationPreparation = await prepareLocation({
         operation,
         latest,
@@ -181,6 +189,12 @@ export function useSiteActions() {
       if (!(source instanceof Site) || !source.docId) {
         throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
       }
+      if (source.status !== "ACTIVE") {
+        throw new SiteOperationError(
+          "invalid-state",
+          "終了済み現場の取極めは変更できません。",
+        );
+      }
       assertIdentityUnchanged(companyId, actorUid);
       return await writer.updateAgreements({
         companyId,
@@ -193,6 +207,30 @@ export function useSiteActions() {
     });
   }
 
+  async function terminate({ siteId, reason }) {
+    return await executeSiteWrite(SITE_WRITE_OPERATION.TERMINATE, async () => {
+      assertWritePermission();
+      return await siteFunctions.terminateSite({ siteId, reason });
+    });
+  }
+
+  async function reactivate({
+    siteId,
+    reason,
+    constructionPeriodStartDate,
+    constructionPeriodEndDate,
+  }) {
+    return await executeSiteWrite(SITE_WRITE_OPERATION.TERMINATE, async () => {
+      assertWritePermission();
+      return await siteFunctions.reactivateSite({
+        siteId,
+        reason,
+        constructionPeriodStartDate,
+        constructionPeriodEndDate,
+      });
+    });
+  }
+
   return {
     canWrite,
     createSite,
@@ -201,6 +239,8 @@ export function useSiteActions() {
     assertWritePermission,
     executeSiteWrite,
     rejectDirectDelete,
+    reactivate,
+    terminate,
     updateAgreements,
     updateBasic: (args) =>
       updateSite({ ...args, operation: SITE_OPERATION.UPDATE_BASIC }),

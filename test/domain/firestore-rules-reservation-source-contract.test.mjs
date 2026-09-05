@@ -47,6 +47,7 @@ test("Companies fallback reserves every protected collection before tenant acces
       "SecurityReportIndexes",
       "Sites",
       "Sites_archive",
+      "SiteOperationSchedules",
       "StripeData",
       "UserLifecycleLocks",
       "Users",

@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
+import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 
 defineOptions({ name: "SiteListItem", inheritAttrs: false });
 
@@ -40,12 +41,33 @@ const title = computed(() => {
 
 const subtitle = computed(() => {
   const customer = internalItem.customer?.abbreviation || "N/A";
-  return customer;
+  const code = internalItem.code || "コード未設定";
+  const address = internalItem.fullAddress || "住所未設定";
+  return `${customer} / ${code} / ${address}`;
 });
+const lifecycle = computed(() => getSiteLifecyclePresentation(internalItem));
 </script>
 
 <template>
   <v-list-item v-bind="$attrs" :title="title" :subtitle="subtitle">
+    <template #append>
+      <div class="d-flex ga-1 flex-wrap justify-end">
+      <v-chip
+        :color="lifecycle.color"
+        size="small"
+        variant="tonal"
+      >
+        {{ lifecycle.label }}
+      </v-chip>
+      <v-chip
+        v-if="lifecycle.automaticTerminationDate"
+        size="small"
+        variant="outlined"
+      >
+        自動終了予定 {{ lifecycle.automaticTerminationDate }}
+      </v-chip>
+      </div>
+    </template>
     <!-- SUBTITLE -->
     <!-- Option 1: Use `subtitle` prop for a single line. -->
     <!-- <v-list-item v-bind="$attrs" :subtitle="internalItem.someProperty"> -->
