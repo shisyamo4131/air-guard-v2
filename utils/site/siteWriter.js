@@ -194,43 +194,5 @@ export function createSiteWriter({ firestore }) {
     });
   }
 
-  async function updateAgreements({
-    companyId,
-    docId,
-    baseline,
-    agreements,
-    actorUid,
-    assertCanWrite,
-  }) {
-    const reference = doc(siteCollection(firestore, companyId), docId);
-    return await runTransaction(firestore, async (transaction) => {
-      const snapshot = await transaction.get(reference);
-      if (!snapshot.exists()) {
-        throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
-      }
-      const latest = new Site(snapshot.data());
-      const draft = new Site(latest.toObject());
-      draft.agreementsV2 = agreements;
-      const prepared = prepareSiteUpdate({
-        operation: SITE_OPERATION.UPDATE_AGREEMENTS,
-        latest,
-        baseline,
-        draft,
-        actorUid,
-        now: new Date(),
-        customer: latest.customer,
-      });
-      if (!prepared.fields.length) return { ...prepared, updated: false };
-      const serialized = serializeSite(prepared.candidate);
-      assertCanWrite?.();
-      transaction.update(reference, {
-        agreementsV2: serialized.agreementsV2,
-        uid: actorUid,
-        updatedAt: serverTimestamp(),
-      });
-      return { ...prepared, updated: true };
-    });
-  }
-
-  return { create, reserveDocument, update, updateAgreements };
+  return { create, reserveDocument, update };
 }

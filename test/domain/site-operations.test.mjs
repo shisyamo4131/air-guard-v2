@@ -24,6 +24,7 @@ import {
   siteSnapshot,
   validateSiteCandidate,
 } from "../../composables/domain/site/siteOperations.js";
+import { siteAgreementsHaveZeroPrice } from "../../composables/domain/site/siteAgreementContract.js";
 
 function validCustomer(overrides = {}) {
   return new Customer({
@@ -93,6 +94,15 @@ function validAgreement(overrides = {}) {
     isStartNextDay: false,
     breakMinutes: 60,
     regulationWorkMinutes: 480,
+    rates: Object.fromEntries(["WEEKDAY", "SATURDAY", "SUNDAY", "HOLIDAY"].map((day) => [
+      day,
+      {
+        unitPriceBase: 1000,
+        overtimeUnitPriceBase: 1000,
+        unitPriceQualified: 1000,
+        overtimeUnitPriceQualified: 1000,
+      },
+    ])),
     billingUnitType: "PER_DAY",
     includeBreakInBilling: false,
     cutoffDate: 0,
@@ -511,61 +521,15 @@ test("Site writer patches only owned and required derived fields and skips no-op
   }
 });
 
-test("Site Agreement writer detects same-field conflicts, ignores unrelated updates, and skips no-op", async () => {
-  const harness = await loadWriterHarness();
-  try {
-    const initial = validSite({ agreementsV2: [validAgreement()] });
-    const baseline = siteSnapshot(initial, SITE_OPERATION.UPDATE_AGREEMENTS);
-    const path = "Companies/company-a/Sites/site-a";
-
-    harness.snapshots.set(path, initial.toObject());
-    const noOp = await harness.writer.updateAgreements({
-      companyId: "company-a",
-      docId: "site-a",
-      baseline,
-      agreements: cloneSiteValue(initial.agreementsV2),
-      actorUid: "actor-b",
-      assertCanWrite: () => undefined,
-    });
-    assert.equal(noOp.updated, false);
-    assert.deepEqual(harness.calls, []);
-
-    harness.snapshots.set(path, validSite({
-      city: "別操作で更新された市",
-      agreementsV2: initial.agreementsV2,
-    }).toObject());
-    const unrelated = await harness.writer.updateAgreements({
-      companyId: "company-a",
-      docId: "site-a",
-      baseline,
-      agreements: [validAgreement({ cutoffDate: 5 })],
-      actorUid: "actor-b",
-      assertCanWrite: () => undefined,
-    });
-    assert.equal(unrelated.updated, true);
-    assert.deepEqual(Object.keys(harness.calls[0].data).sort(), [
-      "agreementsV2", "uid", "updatedAt",
-    ].sort());
-
-    harness.calls.length = 0;
-    harness.snapshots.set(path, validSite({
-      agreementsV2: [validAgreement({ cutoffDate: 10 })],
-    }).toObject());
-    await assert.rejects(
-      () => harness.writer.updateAgreements({
-        companyId: "company-a",
-        docId: "site-a",
-        baseline,
-        agreements: [validAgreement({ cutoffDate: 15 })],
-        actorUid: "actor-b",
-        assertCanWrite: () => undefined,
-      }),
-      (error) => error instanceof SiteOperationError && error.code === "conflict",
-    );
-    assert.deepEqual(harness.calls, []);
-  } finally {
-    harness.cleanup();
-  }
+test("Site Agreement updates use the dedicated Callable rather than the generic writer", async () => {
+  const [actions, writer] = await Promise.all([
+    readFile(new URL("../../composables/application/site/useSiteActions.js", import.meta.url), "utf8"),
+    readFile(new URL("../../utils/site/siteWriter.js", import.meta.url), "utf8"),
+  ]);
+  assert.match(actions, /createSiteAgreementUpdateRequest\([\s\S]*?baselineAgreements:[\s\S]*?candidateAgreements:/u);
+  assert.match(actions, /await siteFunctions\.updateSiteAgreements\(request\)/u);
+  assert.match(actions, /fields: response\.updated \? \["agreementsV2"\] : \[\]/u);
+  assert.doesNotMatch(writer, /updateAgreements/u);
 });
 
 async function loadBaseEditorHarness({ updateBasic }) {
@@ -623,6 +587,7 @@ async function loadAgreementEditorHarness({ updateAgreements }) {
   assert.ok(script);
   const site = validSite({ agreementsV2: [validAgreement()] });
   const isSaving = { value: false };
+  let beforeUnmount;
   globalThis.__siteAgreementEditorHarness = {
     Site,
     SITE_OPERATION,
@@ -632,7 +597,9 @@ async function loadAgreementEditorHarness({ updateAgreements }) {
     defineProps: () => ({ site }),
     getSiteOperationErrorMessage,
     isSaving,
+    onBeforeUnmount: (callback) => { beforeUnmount = callback; },
     ref: (value) => ({ value }),
+    siteAgreementsHaveZeroPrice,
     siteSnapshot,
     updateAgreements,
     useSiteActions: () => ({ canWrite: { value: true }, isSaving, updateAgreements }),
@@ -641,13 +608,14 @@ async function loadAgreementEditorHarness({ updateAgreements }) {
   const moduleSource = `
     const {
       Site, SITE_OPERATION, SiteOperationError, cloneSiteValue,
-      conflictingSiteFields, defineProps, getSiteOperationErrorMessage, ref,
+      conflictingSiteFields, defineProps, getSiteOperationErrorMessage, ref, onBeforeUnmount,
+      siteAgreementsHaveZeroPrice,
       siteSnapshot, useSiteActions
     } = globalThis.__siteAgreementEditorHarness;
     ${executable}
-    export { baseline, close, createAgreement, deleteAgreement, dialog, draft,
-      draftRevision, hasConflict, open, persist, refreshConflict, reloadLatest,
-      updateAgreement };
+    export { baseline, close, confirmZeroPrices, createAgreement, deleteAgreement, dialog, draft,
+      draftRevision, finishZeroPriceConfirmation, hasConflict, open, persist, refreshConflict,
+      reloadLatest, updateAgreement, zeroPriceDialog };
   `;
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
@@ -656,6 +624,7 @@ async function loadAgreementEditorHarness({ updateAgreements }) {
     isSaving,
     module,
     site,
+    unmount: () => beforeUnmount?.(),
     cleanup: () => delete globalThis.__siteAgreementEditorHarness,
   };
 }
@@ -792,6 +761,55 @@ test("Site Agreement editor safely preserves, retries, conflicts, and reloads on
     assert.equal(mounted.module.draft.value.length, 1);
     assert.equal(mounted.module.draft.value[0].cutoffDate, 10);
     assert.equal(mounted.module.draftRevision.value, revisionBeforeConflict + 1);
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("Site Agreement zero-price confirmation is single-flight and cancel or unmount preserves the draft", async () => {
+  let writes = 0;
+  const mounted = await loadAgreementEditorHarness({
+    updateAgreements: async ({ agreements }) => {
+      writes += 1;
+      return { updated: true, candidate: validSite({ agreementsV2: agreements }) };
+    },
+  });
+  const zeroRates = Object.fromEntries(["WEEKDAY", "SATURDAY", "SUNDAY", "HOLIDAY"].map((day) => [
+    day,
+    {
+      unitPriceBase: 0,
+      overtimeUnitPriceBase: 0,
+      unitPriceQualified: 0,
+      overtimeUnitPriceQualified: 0,
+    },
+  ]));
+  const zeroAgreement = (day) => validAgreement({
+    dateAt: new Date(`2026-04-${day}T00:00:00.000Z`),
+    rates: zeroRates,
+  });
+  try {
+    mounted.module.open();
+    const cancelled = mounted.module.createAgreement(zeroAgreement("02"));
+    assert.equal(mounted.module.zeroPriceDialog.value, true);
+    await assert.rejects(
+      mounted.module.createAgreement(zeroAgreement("03")),
+      (error) => error instanceof SiteOperationError && error.code === "operation-in-progress",
+    );
+    assert.equal(writes, 0);
+    mounted.module.finishZeroPriceConfirmation(false);
+    await assert.rejects(cancelled, (error) => error.code === "save-cancelled");
+    assert.equal(mounted.module.draft.value.length, 1);
+
+    const unmounted = mounted.module.createAgreement(zeroAgreement("04"));
+    mounted.unmount();
+    await assert.rejects(unmounted, (error) => error.code === "save-cancelled");
+    assert.equal(writes, 0);
+
+    const retried = mounted.module.createAgreement(zeroAgreement("05"));
+    mounted.module.finishZeroPriceConfirmation(true);
+    await retried;
+    assert.equal(writes, 1);
+    assert.equal(mounted.module.draft.value.length, 2);
   } finally {
     mounted.cleanup();
   }

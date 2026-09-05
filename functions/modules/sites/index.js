@@ -19,3 +19,16 @@ export {
   reactivateSite,
   terminateSite,
 } from "./lifecycle.js";
+export {
+  buildStoredSiteAgreements,
+  normalizeSiteAgreement,
+  normalizeSiteAgreements,
+  parseSiteAgreementUpdateInput,
+  siteAgreementWorkIntervalMinutes,
+  siteAgreementsEqual,
+} from "./siteAgreementContract.js";
+export {
+  SITE_AGREEMENT_ERROR_CODES,
+  SiteAgreementUpdateError,
+  updateSiteAgreements,
+} from "./updateSiteAgreements.js";

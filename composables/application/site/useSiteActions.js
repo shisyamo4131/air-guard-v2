@@ -16,6 +16,10 @@ import {
 } from "@/composables/domain/site/siteOperations";
 import { createSiteWriter } from "@/utils/site/siteWriter";
 import { useSiteFunctions } from "@/composables/site/useSiteFunctions";
+import {
+  createSiteAgreementUpdateRequest,
+  isSiteAgreementUpdateResult,
+} from "@/composables/domain/site/siteAgreementContract";
 
 const sharedSiteWriteState = Vue.reactive({ isSaving: false });
 
@@ -208,14 +212,55 @@ export function useSiteActions() {
         );
       }
       assertIdentityUnchanged(companyId, actorUid);
-      return await writer.updateAgreements({
-        companyId,
-        docId: source.docId,
-        baseline,
-        agreements,
-        actorUid,
-        assertCanWrite: () => assertIdentityUnchanged(companyId, actorUid),
+      const request = createSiteAgreementUpdateRequest({
+        siteId: source.docId,
+        baselineAgreements: baseline?.agreementsV2,
+        candidateAgreements: agreements,
       });
+      let response;
+      try {
+        // Recheck immediately before the network send. The Callable performs
+        // the authoritative actor, maintenance, status, and baseline checks.
+        assertIdentityUnchanged(companyId, actorUid);
+        response = await siteFunctions.updateSiteAgreements(request);
+      } catch (error) {
+        const code = typeof error?.code === "string"
+          ? error.code.replace(/^functions\//u, "")
+          : "";
+        if (code === "aborted") {
+          throw new SiteOperationError(
+            "conflict",
+            "取極めが別の画面で更新されました。入力内容を保持したまま最新値を確認してください。",
+          );
+        }
+        if (code === "permission-denied") {
+          throw new SiteOperationError("permission-denied", "取極めを変更する権限がありません。");
+        }
+        if (code === "failed-precondition") {
+          throw new SiteOperationError("invalid-state", "現場の状態を確認してください。");
+        }
+        if (code === "invalid-argument") {
+          throw new SiteOperationError("invalid-agreement", "取極めの入力内容を確認してください。");
+        }
+        throw error;
+      }
+      if (!isSiteAgreementUpdateResult(response)) {
+        throw new SiteOperationError("invalid-response", "取極めの保存結果を確認できません。");
+      }
+      const candidate = new Site({
+        ...source.toObject(),
+        // Rebuild the same canonical Agreement model shape as the Callable.
+        // The transport projection intentionally represents date as YYYY-MM-DD.
+        agreementsV2: request.candidateAgreements.map((agreement) => ({
+          ...agreement,
+          dateAt: new Date(`${agreement.date}T00:00:00+09:00`),
+        })),
+      });
+      return {
+        candidate,
+        fields: response.updated ? ["agreementsV2"] : [],
+        updated: response.updated,
+      };
     });
   }
 

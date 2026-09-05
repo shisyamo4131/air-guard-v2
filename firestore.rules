@@ -699,9 +699,7 @@ service cloud.firestore {
             && request.resource.data.isTemporary is bool
             && request.resource.data.isTemporary == (request.resource.data.customerId == null)
             && hasValidSiteCustomerUpdate(companyId))
-          || (changed.hasAny(['agreementsV2'])
-            && changed.hasOnly(['agreementsV2', 'uid', 'updatedAt'])
-            && request.resource.data.agreementsV2 is list));
+          );
     }
 
     function siteScheduleRevision(data) {

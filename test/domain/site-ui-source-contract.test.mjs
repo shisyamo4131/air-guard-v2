@@ -119,6 +119,15 @@ test("Site editors use independent drafts and explicit same-operation conflict c
   assert.match(agreements, /getSiteOperationErrorMessage\([\s\S]*?取極めを保存できませんでした/u);
   assert.match(agreements, /現在の入力は保持されています/u);
   assert.match(agreements, /最新値を読み直す/u);
+  assert.match(agreements, /siteAgreementsHaveZeroPrice\(nextAgreements\)/u);
+  assert.match(agreements, /zeroPriceDialog\.value = true/u);
+  assert.match(agreements, /0円は有効な単価です/u);
+  assert.match(agreements, /今後新しく作成される実績/u);
+  assert.match(agreements, /別の明示的な再適用・訂正操作/u);
+  assert.match(agreements, /保存するだけでは、作成済み実績の取極めは変更されません/u);
+  assert.match(agreements, /resolveZeroPriceConfirmation !== null[\s\S]*?"operation-in-progress"/u);
+  assert.match(agreements, /onBeforeUnmount\(\(\) => finishZeroPriceConfirmation\(false\)\)/u);
+  assert.match(agreements, /:disabled="isSaving \|\| zeroPriceDialog"/u);
   assert.match(agreements, /:key="draftRevision"/u);
   assert.match(agreements, /:model-value="draft"/u);
   assert.doesNotMatch(agreements, /v-model="(?:props\.)?site\.agreementsV2/u);
@@ -126,6 +135,21 @@ test("Site editors use independent drafts and explicit same-operation conflict c
   assert.match(create, /draft\.value = new Site\(\)/u);
   assert.match(create, /await createSite\(draft\.value\)/u);
   assert.doesNotMatch(create, /\.create\s*\(|\.update\s*\(/u);
+});
+
+test("Site Agreement UI sends exact baseline and candidate transport through the public Callable", async () => {
+  const [actions, functions, apiIndex, moduleIndex] = await Promise.all([
+    source("composables/application/site/useSiteActions.js"),
+    source("composables/site/useSiteFunctions.js"),
+    source("functions/apis/index.js"),
+    source("functions/modules/sites/index.js"),
+  ]);
+  assert.match(actions, /createSiteAgreementUpdateRequest\(\{[\s\S]*?siteId: source\.docId,[\s\S]*?baselineAgreements: baseline\?\.agreementsV2,[\s\S]*?candidateAgreements: agreements/u);
+  assert.match(actions, /await siteFunctions\.updateSiteAgreements\(request\)/u);
+  assert.match(actions, /if \(!isSiteAgreementUpdateResult\(response\)\)/u);
+  assert.match(functions, /updateSiteAgreements: \(input\) => call\("updateSiteAgreements", input\)/u);
+  assert.match(apiIndex, /export \{ updateSiteAgreements \} from "\.\/updateSiteAgreements\.js"/u);
+  assert.match(moduleIndex, /export \{[\s\S]*?updateSiteAgreements[\s\S]*?\} from "\.\/updateSiteAgreements\.js"/u);
 });
 
 test("Site action rebuilds authorization state at send time and refuses direct delete", async () => {

@@ -574,6 +574,31 @@ function siteRulesData({ docId, uid, customerId = null, customer = null, ...over
   };
 }
 
+function siteAgreementTransport({ cutoffDate = 0, price = 1000, ...overrides } = {}) {
+  const rateSet = () => ({
+    unitPriceBase: price,
+    overtimeUnitPriceBase: price,
+    unitPriceQualified: price,
+    overtimeUnitPriceQualified: price,
+  });
+  return {
+    date: "2026-09-05",
+    shiftType: "DAY",
+    startTime: "08:00",
+    isStartNextDay: false,
+    endTime: "17:00",
+    breakMinutes: 60,
+    regulationWorkMinutes: 480,
+    rates: {
+      WEEKDAY: rateSet(), SATURDAY: rateSet(), SUNDAY: rateSet(), HOLIDAY: rateSet(),
+    },
+    billingUnitType: "PER_DAY",
+    includeBreakInBilling: false,
+    cutoffDate,
+    ...overrides,
+  };
+}
+
 function cas03ServerBillingOperationResult({ customerId, suffix }) {
   const dateAt = AdminTimestamp.fromDate(
     new Date("2026-09-15T00:00:00.000Z"),
@@ -3171,11 +3196,12 @@ test("Site Rules isolate update operations and reject metadata or derived-field 
     tokenMap: { whole: true },
   });
   await assertFails(setDoc(reference, replacement));
-  await assertSucceeds(updateDoc(reference, {
+  await assertFails(updateDoc(reference, {
     agreementsV2: [{ synthetic: true }],
     uid,
     updatedAt: serverTimestamp(),
   }));
+  assert.deepEqual((await assertSucceeds(getDoc(reference))).data().agreementsV2, []);
 });
 
 test("Site Rules require a same-tenant exact embedded Customer and preserve customerName", async () => {
@@ -3279,7 +3305,7 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
       { customer: legacyCustomer },
     );
   });
-  await assertSucceeds(updateDoc(reference, {
+  await assertFails(updateDoc(reference, {
     agreementsV2: [{ synthetic: "legacy-customer-agreement" }],
     uid,
     updatedAt: serverTimestamp(),
@@ -4313,6 +4339,71 @@ test("Customer status remains editable with an active Site and schedule without 
       assert.deepEqual((await getDoc(doc(context.firestore(), "Companies", companyId, name, expected.docId))).data(), expected);
     }
   });
+});
+
+test("Site Agreement Callable updates only the live Site master and preserves OperationResult snapshots", async () => {
+  const { updateSiteAgreements } = await loadRebuildApis();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const actorUid = "site06-agreement-manager";
+  const siteId = "site06-agreement-site";
+  const operationResultId = "site06-agreement-existing-result";
+  const actor = await seedSiteArchiveActor({ uid: actorUid, roles: ["manager"] });
+  const baseline = [siteAgreementTransport()];
+  const candidate = [siteAgreementTransport({ cutoffDate: 5, price: 0 })];
+  const resultSnapshot = { docId: operationResultId, siteId, agreementsV2: baseline, marker: "snapshot" };
+  const entries = [
+    { companyId, collectionName: "Users", docId: actorUid },
+    { companyId, collectionName: "Sites", docId: siteId },
+    { companyId, collectionName: "OperationResults", docId: operationResultId },
+  ];
+  try {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
+      await setDoc(
+        doc(firestore, "Companies", companyId, "Sites", siteId),
+        siteRulesData({ docId: siteId, uid: "server-writer", agreementsV2: baseline }),
+      );
+      await setDoc(
+        doc(firestore, "Companies", companyId, "OperationResults", operationResultId),
+        resultSnapshot,
+      );
+    });
+    const request = actorCallableRequest({
+      actor,
+      data: { siteId, baselineAgreements: baseline, candidateAgreements: candidate },
+    });
+    assert.deepEqual(await updateSiteAgreements.run(request), { success: true, updated: true });
+    let updatedSite;
+    let preservedResult;
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      const firestore = context.firestore();
+      updatedSite = (await getDoc(doc(firestore, "Companies", companyId, "Sites", siteId))).data();
+      preservedResult = (await getDoc(doc(
+        firestore, "Companies", companyId, "OperationResults", operationResultId,
+      ))).data();
+    });
+    assert.deepEqual(
+      Object.keys(updatedSite).filter((key) => !["agreementsV2", "uid", "updatedAt"].includes(key)).sort(),
+      Object.keys(siteRulesData({ docId: siteId, uid: "server-writer", agreementsV2: baseline }))
+        .filter((key) => !["agreementsV2", "uid", "updatedAt"].includes(key)).sort(),
+    );
+    assert.equal(updatedSite.uid, actorUid);
+    assert.equal(updatedSite.agreementsV2[0].cutoffDate, 5);
+    assert.equal(updatedSite.agreementsV2[0].rates.WEEKDAY.unitPriceBase, 0);
+    assert.deepEqual(preservedResult, resultSnapshot);
+    assert.deepEqual(await updateSiteAgreements.run(actorCallableRequest({
+      actor,
+      data: { siteId, baselineAgreements: candidate, candidateAgreements: candidate },
+    })), { success: true, updated: false });
+    await assertCallableError(updateSiteAgreements.run(actorCallableRequest({
+      actor,
+      data: { siteId, baselineAgreements: baseline, candidateAgreements: [siteAgreementTransport({ cutoffDate: 10 })] },
+    })), "aborted");
+    assert.deepEqual(preservedResult, resultSnapshot);
+  } finally {
+    await cleanupSiteArchiveScenario({ actorUids: [actorUid], entries });
+  }
 });
 
 test("Site archive Callable preserves exact ACTIVE and TERMINATED snapshots and is idempotent", async () => {
@@ -5604,21 +5695,21 @@ for (const {
         ),
       );
       assert.equal((await assertSucceeds(getDoc(mutableReference))).exists(), true);
-      await assertSucceeds(
-        updateDoc(
-          mutableReference,
-          collectionName === "Sites"
-            ? {
-                agreementsV2: [{ docId: "agreement-reference-unchanged" }],
-                uid,
-                updatedAt: serverTimestamp(),
-              }
-            : {
-                customerId: terminatedCustomerId,
-                marker: "unchanged-customer-id",
-              },
-        ),
+      const unchangedCustomerUpdate = updateDoc(
+        mutableReference,
+        collectionName === "Sites"
+          ? {
+              agreementsV2: [{ docId: "agreement-reference-unchanged" }],
+              uid,
+              updatedAt: serverTimestamp(),
+            }
+          : {
+              customerId: terminatedCustomerId,
+              marker: "unchanged-customer-id",
+            },
       );
+      if (collectionName === "Sites") await assertFails(unchangedCustomerUpdate);
+      else await assertSucceeds(unchangedCustomerUpdate);
 
       for (const [label, customerId] of [
         ["missing", missingCustomerId],
@@ -5653,18 +5744,18 @@ for (const {
       }
 
       const orphanReference = doc(ownCollection, orphanDocumentId);
-      await assertSucceeds(
-        updateDoc(
-          orphanReference,
-          collectionName === "Sites"
-            ? {
-                agreementsV2: [{ docId: "legacy-orphan-unrelated-update" }],
-                uid,
-                updatedAt: serverTimestamp(),
-              }
-            : { marker: "unrelated-update-compatible" },
-        ),
+      const orphanUpdate = updateDoc(
+        orphanReference,
+        collectionName === "Sites"
+          ? {
+              agreementsV2: [{ docId: "legacy-orphan-unrelated-update" }],
+              uid,
+              updatedAt: serverTimestamp(),
+            }
+          : { marker: "unrelated-update-compatible" },
       );
+      if (collectionName === "Sites") await assertFails(orphanUpdate);
+      else await assertSucceeds(orphanUpdate);
       if (deleteAllowed) {
         await assertSucceeds(deleteDoc(orphanReference));
       } else {

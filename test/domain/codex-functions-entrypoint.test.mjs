@@ -28,6 +28,7 @@ const PUBLIC_CALLABLES = [
   "updateCompanyOperations",
   "updateCompanyProfile",
   "updateOwnUserProfile",
+  "updateSiteAgreements",
   "updateUserNotificationSettings",
   "updateUserRoles",
 ];
