@@ -6,14 +6,18 @@
  *****************************************************************************/
 import dayjs from "dayjs";
 import { useRoute } from "vue-router";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
 import { useDateRange } from "@/composables/useDateRange";
-import { useFetch } from "@/composables/fetch/useFetch";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 import { useSiteActions } from "@/composables/application/site/useSiteActions";
-import { Site, SiteEmployeeHistory } from "@/schemas";
+import { Employee, Site, SiteEmployeeHistory, SiteOperationSchedule } from "@/schemas";
 import { getSitePresentationBadges } from "@/composables/domain/site/siteUiPresentation";
 import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
+import { useSiteDetailAccessGuard } from "@/composables/dataLayers/site/useSiteDetailAccessGuard";
+import {
+  createSiteDetailReadSession,
+  createSiteEmployeeCache,
+} from "@/composables/domain/site/siteDetailAccessSession";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -32,9 +36,11 @@ const docId = computed(() => String(route.params.id || ""));
 const doc = reactive(new Site());
 const detailResolved = ref(false);
 const detailError = ref("");
-const { lookupSite } = useSiteUiReads();
+const { clear: clearSiteReads, lookupSite } = useSiteUiReads();
+const auth = useAuthStore();
+const { canRead } = useSiteDetailAccessGuard();
 const { canWrite } = useSiteActions();
-const hasSite = computed(() => !!docId.value && doc.docId === docId.value);
+const hasSite = computed(() => canRead.value && !!docId.value && doc.docId === docId.value);
 const isMissing = computed(() => detailResolved.value && !hasSite.value && !detailError.value);
 const isActive = computed(() => hasSite.value && doc.status === "ACTIVE");
 
@@ -47,20 +53,26 @@ const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
 /*****************************************************************************
- * SETUP FETCH COMPOSABLE (ROOT)
- *****************************************************************************/
-const { fetchEmployeeComposable } = useFetch("site-detail", true);
-const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
-
-/*****************************************************************************
  * SETUP SITE EMPLOYEE HISTORIES DATA LAYER COMPOSABLE
  *****************************************************************************/
 const historyInstance = reactive(new SiteEmployeeHistory());
 const siteEmployeeHistories = historyInstance.docs;
+const visibleEmployees = reactive({});
+const cachedEmployees = computed(() => visibleEmployees);
+const employeeCache = createSiteEmployeeCache({
+  cache: visibleEmployees,
+  getScopeKey: () => canRead.value ? auth.companyId : null,
+  loadEmployee: (employeeId) => new Employee().fetchDoc({ docId: employeeId }),
+});
+const { fetchEmployee } = employeeCache;
+const displayedScheduleInstance = reactive(new SiteOperationSchedule());
+const displayedSchedules = displayedScheduleInstance.docs;
+const scheduleInstance = reactive(new SiteOperationSchedule());
+const schedules = scheduleInstance.docs;
 const sortedHistories = computed(() => {
   return [...siteEmployeeHistories].sort((a, b) => {
-    const kanaA = cachedEmployees.value[a.employeeId]?.displayNameKana ?? "";
-    const kanaB = cachedEmployees.value[b.employeeId]?.displayNameKana ?? "";
+    const kanaA = visibleEmployees[a.employeeId]?.displayNameKana ?? "";
+    const kanaB = visibleEmployees[b.employeeId]?.displayNameKana ?? "";
     return kanaA.localeCompare(kanaB, "ja");
   });
 });
@@ -70,42 +82,71 @@ const sortedHistories = computed(() => {
  * - `dateAt` is between the `from` and `to` values of the debounced date range
  * The resulting documents are stored in the `schedules` variable for use in the component.
  */
-const options = computed(() => {
+const displayedScheduleConstraints = computed(() => {
   return [
     ["where", "siteId", "==", docId.value],
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
   ];
 });
-const { docs: displayedSchedules } = useDocuments("SiteOperationSchedule", {
-  options,
-  fetchAllOnEmpty: true,
-});
-const allScheduleOptions = computed(() => [
-  ["where", "siteId", "==", docId.value],
-]);
-const { docs: schedules } = useDocuments("SiteOperationSchedule", {
-  options: allScheduleOptions,
-  fetchAllOnEmpty: true,
-});
 const lifecycle = computed(() => getSiteLifecyclePresentation(doc, { schedules }));
 const badges = computed(() => getSitePresentationBadges(doc));
 
-let detailSequence = 0;
-async function subscribeDetail(id) {
-  const sequence = ++detailSequence;
-  doc.unsubscribe();
+function clearCollection(instance) {
+  instance.unsubscribe();
+  instance.docs.splice(0);
+}
+
+function clearRelatedReads() {
+  employeeCache.clear();
   historyInstance.unsubscribe();
+  historyInstance.docs.splice(0);
+  clearCollection(displayedScheduleInstance);
+  clearCollection(scheduleInstance);
+}
+
+provide("fetchEmployeeComposable", { cachedEmployees, fetchEmployee });
+
+function clearDetail({ resolved = false, error = "" } = {}) {
+  clearSiteReads("lookup");
+  doc.unsubscribe();
   doc.initialize();
-  detailResolved.value = false;
-  detailError.value = "";
+  clearRelatedReads();
+  detailResolved.value = resolved;
+  detailError.value = error;
+}
+
+const detailReadSession = createSiteDetailReadSession({
+  clearProtectedReads: () => clearDetail(),
+});
+
+function subscribeDisplayedSchedules(id) {
+  displayedScheduleInstance.subscribeDocs({
+    constraints: displayedScheduleConstraints.value,
+  });
+}
+
+function subscribeRelatedReads(id) {
+  subscribeDisplayedSchedules(id);
+  scheduleInstance.subscribeDocs({
+    constraints: [["where", "siteId", "==", id]],
+  });
+  historyInstance.subscribeDocs({
+    constraints: [["where", "siteId", "==", id]],
+  }, (history) => {
+    if (history?.employeeId) void fetchEmployee(history.employeeId);
+  });
+}
+
+async function subscribeDetail(id) {
+  const request = detailReadSession.begin(id);
   if (!id) {
     detailResolved.value = true;
     return;
   }
   try {
     const initial = await lookupSite(id);
-    if (sequence !== detailSequence || id !== docId.value) return;
+    if (!request.isCurrent() || id !== docId.value) return;
     if (!initial) {
       detailResolved.value = true;
       return;
@@ -113,27 +154,40 @@ async function subscribeDetail(id) {
     doc.initialize(initial.toObject?.() ?? initial);
     detailResolved.value = true;
     doc.subscribe({ docId: id }, (value) => {
-      if (sequence !== detailSequence || id !== docId.value) return;
+      if (!request.isCurrent() || id !== docId.value || !canRead.value) return;
       detailResolved.value = true;
-      if (!value) doc.initialize();
+      if (!value) {
+        doc.initialize();
+        clearRelatedReads();
+      }
     });
-    historyInstance.subscribeDocs({
-      constraints: [["where", "siteId", "==", id]],
-    }, (history) => {
-      if (history?.employeeId) fetchEmployee(history.employeeId);
-    });
+    subscribeRelatedReads(id);
   } catch {
-    if (sequence !== detailSequence || id !== docId.value) return;
+    if (!request.isCurrent() || id !== docId.value) return;
     detailError.value = "現場情報を読み込めませんでした。";
     detailResolved.value = true;
   }
 }
 
-watch(docId, subscribeDetail, { immediate: true });
+watch(
+  [docId, canRead],
+  ([id, allowed]) => {
+    if (!allowed) {
+      detailReadSession.revoke();
+      detailResolved.value = true;
+      return;
+    }
+    void subscribeDetail(id);
+  },
+  { immediate: true, flush: "sync" },
+);
+watch(debouncedDateRange, () => {
+  if (canRead.value && hasSite.value) {
+    detailReadSession.refreshDate(subscribeDisplayedSchedules);
+  }
+});
 onUnmounted(() => {
-  detailSequence += 1;
-  doc.unsubscribe();
-  historyInstance.unsubscribe();
+  detailReadSession.dispose();
 });
 
 function handleArchived() {
@@ -143,7 +197,10 @@ function handleArchived() {
 
 <template>
   <v-container>
-    <v-progress-linear v-if="!detailResolved" indeterminate class="mb-4" />
+    <v-alert v-if="!canRead" type="warning" variant="tonal" class="mb-4">
+      現場情報を表示する権限を確認できません。
+    </v-alert>
+    <v-progress-linear v-else-if="!detailResolved" indeterminate class="mb-4" />
     <v-alert v-else-if="detailError" type="error" variant="tonal" class="mb-4">
       {{ detailError }}
     </v-alert>

@@ -382,7 +382,10 @@ test("SITE-07 list and detail routes expose explicit read states and bounded cli
   assert.match(detail, /detailResolved/u);
   assert.match(detail, /detailError/u);
   assert.match(detail, /isMissing/u);
-  assert.match(detail, /detailSequence/u);
+  assert.match(
+    detail,
+    /createSiteDetailReadSession[\s\S]*?request\.isCurrent\(\)[\s\S]*?detailReadSession\.revoke\(\)/u,
+  );
   assert.match(detail, /onBeforeUnmount|onUnmounted/u);
   assert.match(detail, /doc\.unsubscribe\(\)/u);
   assert.match(detail, /historyInstance\.unsubscribe\(\)/u);
