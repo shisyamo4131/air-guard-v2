@@ -192,8 +192,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - OperationResultは作成時に、Site IDに加えてSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めを実績snapshotとして固定する。Site masterの後日の変更では既存OperationResultを更新しない。Site・稼働日・勤務区分等を明示的に訂正して適用条件が変わる場合だけ、請求影響、発行状態、before/after、actor、reasonを確認する専用の実績訂正契約でsnapshotを更新する。
 - Billing draftと未確定の請求表示はOperationResultのsnapshotを集計し、live Siteを請求表示の正本にしない。請求確定時には、そのrevisionで表示するSite・Customer・取極め由来の請求明細情報をBilling側へ固定する。確定後の再生成は保存済みsnapshotを使い、訂正・再発行は旧snapshotを書き換えず新しいrevisionで行う。稼働実績・請求・帳票側のsnapshot write、確定、revisionは各transaction機能の改修checkpointで実装する。
 - 現在・予定を扱う画面と帳票はlive Site、稼働実績を表す画面と帳票はOperationResult snapshot、確定請求書はBilling revision snapshotを使用する。Site master変更は将来作成される予定・実績・請求へ反映し、既存OperationResult・確定Billingへ自動反映しない。snapshot fieldを持たないlegacy documentは推測で過去値をbackfillせず、移行までは現行のlive fallbackと再現不能riskを明示して扱う。具体的なlegacy件数・shapeが確認され、正しい過去値を根拠から復元できる場合だけ別承認のmigrationを設計する。詳細は[ADR 0052](decisions/0052-site-downstream-snapshot-timing.md)を正とする。
-- 取極めは現場、適用開始日、曜日区分、勤務区分に基づいて適用する。
-- 同じ適用開始日・曜日区分・勤務区分の取極めを重複登録しない。
+- 取極めは現場、適用開始日、勤務区分に基づいて一つを選び、その取極め内の曜日区分別RateSetを適用する。
+- 同じ適用開始日・勤務区分の取極めを重複登録しない。曜日区分は一つの取極め内に内包されるため、重複keyには含めない。
 - 既存の稼働実績へ適用済みの取極めは、取極めマスタの後日の変更で自動更新しない。
 - 取極めの作成・編集・削除はSiteの書込み操作に含め、同じ会社の有効な本登録Userのうち、会社管理者または既知role preset由来の`sites:write`を持つUserだけに許可する。直接permission文字列、未知role、会社管理者でないsuper-user、仮登録、無効User、他社Userを権限根拠にしない。取極め専用permissionと作成者・承認者workflowは設けない。
 - 曜日区分ごとの通常・残業、一般・有資格の全単価は0円以上10,000,000円以下の整数とし、負数、小数、非数値、上限超過を拒否する。0円は有効値として許可するが保存前に警告し、欠損と同一視しない。休憩時間と規定実働時間は0分以上1,440分以下の整数とし、休憩時間は開始・終了・翌日扱いから算出した勤務区間を超えてはならない。規定実働時間は勤務区間との大小を理由に拒否しない。締日は月末を表す`0`または`5/10/15/20/25`だけを許可する。

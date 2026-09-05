@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 改修中（SITE-06 local実装済み・総合検証中）
+- 状態: SITE-06 local完了
 - 対象セグメント: SPEC-SEG-022
 - 最終確認日: 2026-09-05
 - 根拠ファイル: `pages/sites/[id].vue`、`components/Agreements/**`、`components/Agreement/**`、`components/OperationBilling/CustomInput/Agreement.vue`、`air-guard-v2-schemas/src/AgreementV2.js`、`WorkTimeBase.js`、`Site.js`、OperationResultの直接agreement参照、Sites Rules
@@ -16,7 +16,7 @@
 - 全単価は0〜10,000,000円の整数、休憩・規定実働は0〜1,440分の整数、締日は`0/5/10/15/20/25`だけを許可する。0円は警告付きで許可し、休憩は勤務区間を超えてはならない。
 - OperationResultへ適用済みのmasterも編集・削除できるが、既存OperationResult snapshotは変更しない。取極めmaster専用のrevision、before/after履歴、変更理由、監査collectionは設けない。詳細は[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 
-以上はユーザー確認済み方針である。SITE-06で権限・数値・履歴なしの保存境界をlocal実装し、総合検証中である。OperationResultの明示的な再適用・訂正operationはFUT-0068側の別課題であり、SITE-06では実装しない。
+以上はユーザー確認済み方針である。SITE-06で権限・数値・履歴なしの保存境界をlocal実装・検証した。OperationResultの明示的な再適用・訂正operationはFUT-0068側の別課題であり、SITE-06では実装しない。
 
 ## 入口・権限
 
@@ -95,9 +95,9 @@
 
 ## 将来要対応
 
-- FUT-0065: local実装済み・総合検証中。ADR 0053のstrict Agreement編集権限、専用Callable、直接client変更拒否を実装した。
-- FUT-0066: local実装済み・総合検証中。ADR 0053の単価・時間・締日validation、duplicate、0円確認を実装した。
-- FUT-0067: local実装済み・総合検証中。適用済みAgreementの編集・削除を許可し、既存OperationResult snapshotへ書込まず、専用履歴・revisionを追加しない契約を実装した。
+- FUT-0065: local完了。ADR 0053のstrict Agreement編集権限、専用Callable、直接client変更拒否を実装・検証した。
+- FUT-0066: local完了。ADR 0053の単価・時間・締日validation、duplicate、0円確認を実装・検証した。
+- FUT-0067: local完了。適用済みAgreementの編集・削除を許可し、既存OperationResult snapshotへ書込まず、専用履歴・revisionを追加しない契約を実装・検証した。
 - FUT-0068: Agreement snapshotと再適用境界を明示・検証する。
 - FUT-0069: AgreementV2の独立collection契約と旧classを整理する。
 
