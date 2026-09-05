@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Site下流情報は、稼働予定ではlive Site、OperationResultでは作成時snapshot、確定請求書ではBilling revision snapshotを使う方針を確定した。Site master変更で既存実績・確定請求を自動更新せず、訂正・再発行は明示operationと新revisionで扱う。legacy snapshot欠損へ現在値を過去値として推測backfillしない。現行Billing PDFのlive Site名称取得は未実装差分として残し、製品code、data、Rules、Functions、schema、package、Dev・Prod・remoteは変更していない。[判断](docs/decisions/0052-site-downstream-snapshot-timing.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。
+
 - Siteの通常終了を`TERMINATED`としてlive masterに保持し、誤登録・重複だけを安全な専用Callableでarchiveできる方針を確定した。archiveは`sites:write`、必須reason、operation ID、server確定のactor・時刻、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、監査snapshot、冪等性を一体とし、barrierが揃うまで有効化しない。generic delete／restore、物理delete、通常restore、自動purge、保持期限は採用しない。既存data、製品code、Rules、Functions、schema、package、Dev・Prod・remoteは未変更である。[判断](docs/decisions/0051-site-mistaken-registration-archive-boundary.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。
 
 - Outsourcer OUT-07のlocal統合確認を完了した。対象test 48/48、domain 961/961、local Emulator 147/147、専用UI build、write actorによる作成・検索・名称更新・契約状態往復、delete/archive入口不在、Rules陰性、保存data不変、cleanupを確認した。拒否actorの実browserは安全な合成session再確立経路がなく未実施だが、利用者承認により自動UI契約テストと専用EmulatorのRules陰性をOUT-07固有の代替証拠とした。製品code、配置・通知・実績等のFirestore更新経路、Rules、Functions、schema、package、Dev・Prod・remote・実dataは変更していない。[検証証拠](docs/verification/outsourcer-out07-local-integration.md)と[ロードマップ](docs/roadmaps/outsourcer.md)を参照。

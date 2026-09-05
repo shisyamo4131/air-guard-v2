@@ -58,6 +58,7 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 - SiteOperationScheduleはsiteIdを保持し、作成/一部処理でSiteの存在と仮登録でないことを確認する。Site名等は直接snapshotしない。
 - OperationResultは作成時またはgroup key変更時にSiteからcustomerIdと適用取極めを取り込み、その後は保存済み値を使う。SiteのCustomer・取極め変更が既存実績へ自動反映される契約ではない。
 - Billing集計keyはcustomerId、siteId、billingDateを使う。請求書PDFは生成時にlive Siteを取得してSite名を表示し、欠損時は「不明な現場」とするため、Site名変更は過去Billingの再生成表示にも反映される。
+- ADR 0052では、予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使うと確定した。現行OperationResultはSite名称・表示名・住所・警備種別・Customer表示情報をsnapshotせず、Billing PDFもlive Site名称を使うため、この方針はFUT-0064およびtransaction側の実績・請求・帳票改修で未実装である。legacy欠損値は現在値を過去値として推測backfillしない。
 - schema上の削除guard対象はSiteOperationSchedules、OperationResults、ArrangementNotifications。AgreementはSite内配列として保存される。
 
 ## 削除・無効化
@@ -112,13 +113,13 @@ Page 3ファイルのroute、query/filter、終了・削除到達性、navigatio
 - FUT-0061: Customer存在・tenant境界はRulesとschema経路へ導入済み。埋込みCustomer同期を順序・部分失敗安全にし、operation別writerとのparityを確認する。
 - FUT-0062: TERMINATEDのread-only、新規選択禁止、監査付き再有効化を実装する。
 - FUT-0063: ADR 0051に従い、誤登録・重複だけを対象とする専用archive Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、監査・冪等性、generic delete／restore非到達を実装する。全barrierが揃うまでarchiveを有効化しない。
-- FUT-0064: Site master変更の下流snapshot/live境界を確定する。
+- FUT-0064: ADR 0052に従い、予定のlive Site、OperationResult作成時snapshot、Billing確定revision snapshot、legacy互換fallbackをtransaction側の承認済みcheckpointで実装する。
 - FUT-0059: geocoding失敗・0座標の証拠へSiteを追記した。
 - FUT-0170、FUT-0181、FUT-0182: 一覧選択、step validation、manager single-flight、postal/async入力の証拠へSite componentsを追記した。
 
 ## 要確認事項
 
-- CONF-0046〜CONF-0050を`pending-confirmations.md`へ登録した。CONF-0049は2026-09-05に回答され、判断はADR 0051へ記録した。
+- CONF-0046〜CONF-0050を`pending-confirmations.md`へ登録した。CONF-0049・CONF-0050は2026-09-05に回答され、判断はADR 0051・ADR 0052へ記録した。
 
 ## 未確認範囲
 

@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-09-05のSite CONF-0049回答後、全146件の本文`Status`はOpen 75件、Answered 66件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-05のSite CONF-0050回答後、全146件の本文`Status`はOpen 74件、Answered 67件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -622,15 +622,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0050 Site情報の下流snapshot時点
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
 - Evidence: OperationResultはcustomerId/agreementを保存し、PDFはlive Site名を参照し、Site.customerはCustomer変更時だけ更新される埋込みである。
 - Question: Site名、Customer、住所、警備種別、取極め等を予定・実績・Billing・帳票のどの時点で固定するか。
 - Why needed: master変更後も履歴と請求書を再現し、訂正範囲を定義するため。
 - Options and impact: 作成時snapshot、確定時snapshot、revision方式、常時live参照。
-- Current provisional treatment: 現行の時点混在を実装事実として扱い、正式仕様とはしない。
+- Current provisional treatment: 予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使う。Site master変更で既存実績・確定請求を更新しない。legacy欠損値は推測backfillしない。
 - Related FUT IDs: FUT-0061, FUT-0064
-- Answer: 未回答
+- Answer: 2026-09-05回答。SiteOperationScheduleは稼働実績へ変換されるまでlive Siteを参照する。OperationResultは作成時にSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めをsnapshot化する。Billing draftはOperationResult snapshotを集計し、請求確定時に表示明細をrevision snapshotとして固定する。Site master変更で既存OperationResult・確定Billingを自動更新せず、訂正・再発行は明示operationと新revisionで扱う。legacy snapshot欠損は現在値を推測backfillせず、互換fallbackの再現不能riskを明示する。判断理由はADR 0052を正とする。
 ## CONF-0051 Agreementの正式編集・承認権限
 
 - Status: Open

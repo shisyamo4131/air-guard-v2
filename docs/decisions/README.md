@@ -57,6 +57,7 @@
 | [0049](0049-project-rule-routing-and-checkpoint-closeout.md) | Project ruleの小型routingとcheckpoint closeout |
 | [0050](0050-outsourcer-live-retention-without-archive.md) | Outsourcerをlive masterとして保持し通常archiveを提供しない |
 | [0051](0051-site-mistaken-registration-archive-boundary.md) | Siteの誤登録archiveと参照barrier |
+| [0052](0052-site-downstream-snapshot-timing.md) | Site下流情報のsnapshot時点 |
 
 ## 新しい ADR の形式
 

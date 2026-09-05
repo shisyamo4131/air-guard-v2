@@ -860,16 +860,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0064 Site変更時の下流snapshot/live境界を確定する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.getValidAgreement`、OperationResult site同期、Billing PDF Site取得
 - 確認済み実装事実: OperationResultは作成等の時点でcustomerId/agreementを保存する一方、PDFのSite名は生成時live masterを使う。Site内Customerはさらに別時点の埋込みである。
 - 想定影響と発生条件: Site名、Customer、取極め変更後に過去実績・請求の保存値と再生成帳票が異なる時点を表す。
-- 未確認点・仮説: 監査上固定すべきfield、訂正・再発行・移管手続きは未決定。
-- 推奨する将来対応: field別snapshot時点とrevision policyを仕様化し、欠損/archived master時も再現可能にする。
-- 必要なテスト: Site名/Customer/Agreement変更前後、既存result/billing、PDF再生成、archive/missing master。
-- ユーザー判断が必要な事項: CONF-0050。
+- 未確認点・仮説: transaction側へ追加する正確なsnapshot field shape、請求確定・revisionの現行実装との差、legacy document件数と正しい過去値の復元可能性は未確認。
+- 推奨する将来対応: ADR 0052に従い、予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使用する。既存実績・請求をSite master変更で更新せず、legacy欠損値を現在値で推測backfillしない。正確なfield、writer、Rules、互換readerはtransaction側の承認済みcheckpointで実装する。
+- 必要なテスト: Site名・Customer・住所・警備種別・Agreement変更前後、予定live反映、既存／新規result、draft／確定Billing、PDF再生成、revision、archive／missing master、legacy欠損。
+- ユーザー判断が必要な事項: なし。CONF-0050とADR 0052で時点は確定済み。正確なdata shape、Billing確定lifecycle、migrationが必要になった場合はtransaction側checkpointで別途判断する。
 ## FUT-0065 Agreement編集権限とRules validationを正式化する
 
 - 状態: Needs decision

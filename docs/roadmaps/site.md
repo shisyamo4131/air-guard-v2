@@ -33,7 +33,7 @@
 ### 未確認・未決事項
 
 - CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
-- CONF-0050: Site名、Customer、住所、警備種別、取極めを予定・実績・Billing・帳票のどの時点で固定するか。
+- CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
 - CONF-0051からCONF-0053: 取極めの編集権限、数値範囲、適用済み取極めの訂正・削除・履歴。
 - CONF-0135: 自動終了の猶予、将来予定、競合、通知、監査、再有効化との優先。
 - 既存Site・archiveの件数とshape、仮Site・stale埋込みCustomerの状態、実利用actor、旧client併存、必要index、Dev/remote適用状態は未確認である。
@@ -42,7 +42,7 @@
 ### transaction系の既知課題として分離する事項
 
 - Site detailから`sites:read`だけでSiteOperationSchedule CRUDへ到達でき、SiteOperationSchedules Rulesも同一tenant Userへ広いwriteを許す。
-- Site名をlive取得するBilling PDFは、master変更後の再生成表示が変わり得る。Customer・Agreement・Site表示情報のsnapshot時点はCONF-0050で未決である。
+- Site名をlive取得するBilling PDFは、master変更後の再生成表示が変わり得る。Customer・Agreement・Site表示情報のsnapshot時点はADR 0052で確定したが、OperationResult・Billing・帳票へのsnapshot実装はtransaction側の別checkpointである。
 - Site archiveの参照候補にはBilling、SiteEmployeeHistory等があるが、現行hasMany catalogには含まれない。ADR 0051により、誤登録archiveに必要な全参照inventoryとlive Site存在barrierだけはSITE-05の承認対象に含める。Company表示順はADR 0036の不存在参照除去契約を維持する。archive barrier以外のtransaction writer変更は本ロードマップで実装せず別checkpointへ分離する。
 - 配置・通知・稼働実績・勤怠・請求・帳票のFirestore writer、rollback/refetch、同時実行、Rules、schema、APIは本ロードマップで変更しない。
 
@@ -50,7 +50,7 @@
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049は回答済み。0050、0051〜0053、0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
+| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049・0050は回答済み。0051〜0053、0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
 | SITE-02 認証・書込み境界 | 15 | 0 | Not started | readは同一tenant境界を維持し、create/update/Customer・Agreement変更/終了/再有効化/archiveを会社管理者またはstrict role preset由来の`sites:write`へ限定する。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、UI・送信直前policy・Rulesまたは専用Callableを一致させる。 |
 | SITE-03 CRUD・保存data契約 | 15 | 0 | Not started | operation別の所有field、共通必須・型・長さ、server metadata、token・location等の派生field、Customer参照・埋込みCustomer、仮Site解消を固定する。live modelと独立draftを分け、同一field競合、変更なし、失敗後再試行を検証する。 |
 | SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | TERMINATEDのread-only、新規選択境界、理由付き再有効化、手動・自動終了の条件、将来予定、競合、監査、再試行を採用仕様へ揃える。既存予定等を暗黙に変更しない。 |
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049を確定した。次はCONF-0050の下流snapshot時点を一件の仕様判断checkpointとして扱う。製品実装は承認済みcheckpointより前に開始しない。
+本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049・CONF-0050を確定した。次はCONF-0051〜CONF-0053の取極め契約を一つの依存グループとして判断する。製品実装は承認済みcheckpointより前に開始しない。
