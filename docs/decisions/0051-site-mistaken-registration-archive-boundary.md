@@ -17,7 +17,8 @@ Siteには通常終了を表す`ACTIVE`／`TERMINATED`がある一方、誤登�
 - 同じCustomerでの再利用は、`sites:write`を持つ許可actorが理由を伴う再有効化operationで`ACTIVE`へ戻す。終了・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
 - archiveは`sites:write`を持つ許可actorだけが専用`archiveSite` Callableから実行する。入力はSite ID、必須reason、operation IDだけとし、actorと時刻はserverで確定する。
 - serverは現在のAuthentication accountと同社の有効な本登録Userを再取得し、tenantとpermissionを照合する。一つのtransactionでactive Site、同ID archive、状態を限定しない全業務参照を確認し、参照、archive衝突、不正状態ではwrite 0とする。
-- 参照catalogは少なくともSiteOperationSchedules、OperationResults、ArrangementNotifications、Billings、SiteEmployeeHistoryを含み、実装前のreader/writer inventoryで確認した全参照を対象にする。Company表示順はADR 0036の不存在参照除去契約を使い、表示順だけではarchiveを拒否しない。
+- reader/writer inventoryで確認した直接参照catalogは`SiteOperationSchedules`、`OperationResults`、`ArrangementNotifications`、`Billings`、`SiteEmployeeHistories`の5 collectionとする。これらは状態を限定せず同じtransactionで確認する。Company表示順はADR 0036の不存在参照除去契約を使い、表示順だけではarchiveを拒否しない。
+- `DailyAttendances`と`DailyOperationsByEmployee`が保持する`siteId`は、直接参照元であるOperationResultから生成される下流snapshotであり、live Siteを参照して業務判断するdocumentではない。archiveはこれらを変更せず、直接参照catalogにも含めない。OperationResult writerのlive Site barrierとarchive transaction内のOperationResult参照確認を安全境界とする。remoteにこの生成経路を外れたlegacy documentがないことはSITE-09のpreflightまで未確認とする。
 - version付きSite snapshotとreason・actor・時刻・operation IDをsame-IDの`Sites_archive`へ上書きせず保存し、active Siteを削除する。同じoperation IDの再試行だけを冪等に扱う。
 - archive後の新規参照を防ぐため、Siteを新規参照または変更する全client/server writerは、同じatomic boundaryでlive Siteの存在を必須にする。このbarrierを保証できないwriterが一つでも残る間はarchive機能を有効化しない。
 - generic `delete()`／`restore()`と物理deleteは使用しない。通常画面からrestoreを提供せず、緊急restoreは別の権限制御・監査・競合防止を持つoperationとして改めて承認する。
@@ -40,7 +41,7 @@ Siteには通常終了を表す`ACTIVE`／`TERMINATED`がある一方、誤登�
 
 - `Sites` path、document ID、field、`ACTIVE`／`TERMINATED`値、Customer変更、既存OperationResult・Billingのsnapshot契約を変更しない。
 - 現行UIのgeneric削除入口、generic delete／restore、Rulesのlive deleteとarchive write許可は本判断と一致しない。専用Callableと全参照barrierが揃うSITE-05まで正式archiveとして使用しない。
-- SITE-05ではSite masterだけでなく、Site参照を作成・変更するtransaction writerのlive Site存在guardが必要になる。archive barrier以外の配置・通知・実績・請求処理変更へscopeを広げない。
+- SITE-05ではSite masterだけでなく、5つの直接参照collectionでSite参照を作成・変更するtransaction writerのlive Site存在guardが必要になる。archive barrier以外の配置・通知・実績・請求処理変更へscopeを広げず、下流snapshotをarchive時に書き換えない。
 - 既存archive documentの有無・形状はremote未確認である。本判断で読取り、変換、復元、削除を行わない。
 - schema package、index、Dev／Prod、remote dataは本判断の文書化では変更しない。
 
