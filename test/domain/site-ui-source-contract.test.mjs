@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import test from "node:test";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 
@@ -19,6 +19,46 @@ const SITE_SFCS = Object.freeze([
 async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 }
+
+async function vueFiles(directory) {
+  const entries = await readdir(new URL(`../../${directory}/`, import.meta.url), {
+    withFileTypes: true,
+  });
+  const files = [];
+  for (const entry of entries) {
+    const path = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...(await vueFiles(path)));
+    else if (entry.isFile() && entry.name.endsWith(".vue")) files.push(path);
+  }
+  return files;
+}
+
+test("Every Vue consumer of useSiteActions has an explicit runtime import", async () => {
+  const files = [
+    "app.vue",
+    ...(await vueFiles("components")),
+    ...(await vueFiles("layouts")),
+    ...(await vueFiles("pages")),
+  ];
+  const consumers = [];
+  const missingImports = [];
+  const explicitImport =
+    /import\s*\{[^}]*\buseSiteActions\b[^}]*\}\s*from\s*["']@\/composables\/application\/site\/useSiteActions["']/u;
+
+  for (const path of files) {
+    const content = await source(path);
+    if (!/\buseSiteActions\s*\(/u.test(content)) continue;
+    consumers.push(path);
+    if (!explicitImport.test(content)) missingImports.push(path);
+  }
+
+  assert.ok(consumers.length > 0, "expected at least one useSiteActions Vue consumer");
+  assert.deepEqual(
+    missingImports,
+    [],
+    `useSiteActions consumers without an explicit import:\n${missingImports.join("\n")}`,
+  );
+});
 
 test("SITE-03 Site SFCs parse and compile", async () => {
   for (const path of SITE_SFCS) {

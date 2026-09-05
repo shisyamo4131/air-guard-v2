@@ -11,6 +11,7 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
+import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import CustomInput from "@/components/Site/CustomInput/index.vue"; // 新規登録時のカスタム入力コンポーネント
 import CustomInputBase from "@/components/Site/CustomInput/Base.vue"; // 更新時のカスタム入力コンポーネント
 

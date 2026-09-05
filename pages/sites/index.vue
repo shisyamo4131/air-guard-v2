@@ -7,6 +7,7 @@ import { Site } from "@/schemas";
 import { useRouter } from "vue-router";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
+import { useSiteActions } from "@/composables/application/site/useSiteActions";
 
 /*****************************************************************************
  * DEFINE OPTIONS
