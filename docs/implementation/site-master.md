@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: Local修正・検証済み（SITE-08 cleanup承認待ち）
+- 状態: Local修正・検証完了（SITE-08完了、Dev受入れは別工程）
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
 - 最終確認日: 2026-09-06
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所

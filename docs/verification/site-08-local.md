@@ -6,7 +6,7 @@
 - 環境: 先行確認は`demo-air-guard-v2-codex`とCodexインアプリブラウザ。追加確認は利用者が許可した起動済みLocal Emulatorとサインイン済みChrome（詳細は下記）
 - 影響分類: UI、application logic、data contract、Firestore Rules
 - 製品受入れ判定: 依頼範囲のLocal試験成功。利用者の2026-09-06の指示により、アカウント権限に依存する追加UI試験を除き、起動済みLocal環境で作成・更新・削除と背景trigger transportを実測した。Dev受入れは別工程である
-- 完了判定: 追加修正、Chrome再試験、domain/Emulator、独立review、最終buildとsource commitは成功。生成物cleanupの明示承認・実行確認を残し、完了加点は行っていない
+- 完了判定: SITE-08完了。追加修正、Chrome再試験、domain/Emulator、独立review、最終build、source commitと、利用者の明示承認後の生成物cleanup・不存在確認が成功した。Site進捗は95%とし、Dev受入れは未実施である
 - 最終実装・build基準commit: `4c0ef8604e663cdc3773199f2b3adf62dd55cf50`。先行専用UI証拠の基準は`edb991ccaac4b15a5a8977260d80dbefc17d388b`
 
 ## 2026-09-06の追加Local確認
@@ -43,7 +43,7 @@ Rulesの独立security reviewは欠損のみfallback、削除禁止、actor/tena
 - 追加確認の前後で、利用者`saved-data`は7 files / 6,012,330 bytes / SHA-256 `7ED7F52F38117BF5CD600EDA7BB4BBF5925686DEF38246492F3B23B99808CF2E`、UI用`.codex-test/saved-data`は7 files / 3,492 bytes / `8882FA720E1637C8AA979A2446B8452DAE87AF549200F47FC5D60EBDF1C1C9CB`でそれぞれ一致した。指紋はFullName順のrelative path・length・file SHA-256をコロンで結び、LF結合したUTF-8のSHA-256である。先行記録とは集約方法が異なるため、その値との直接比較はしない。
 - 専用全体testのruntime `test-harness-1204`と初回失敗の`test-harness-29132`は不存在を確認した。developerの対象試験runtimeもprocess不在確認後に限定cleanup済み。他taskのruntimeは変更していない。専用ports 14400/14500/14600/15001/18080/19000/19099/19199はLISTENなし。利用者の3000/8080/9099/5001は引き続きLISTENし、Chrome・Nuxt・Emulatorは停止していない。
 - 作成した予定とその実績、備考・取極めの一時変更はrunning Emulatorにだけ残る。最初に作成した単独の試験実績とそのworkerはUIで削除した。保存fixtureへのexportはない。
-- 最終build生成物`.output`は230 files / 26,348,062 bytesで、配下にreparse pointはない。cleanupは自動承認審査で明示承認が必要として拒否されたため、承認を依頼して保留した。保存dataや利用者processはcleanup対象に含めない。
+- 最終build生成物.outputは230 files / 26,348,062 bytesだった。自動承認審査で一度保留した後、利用者の明示承認を受け、絶対pathと配下のreparse point不存在を再確認してRemove-Item -LiteralPathで限定削除した。command終了コード0、削除後Test-Path=falseを確認した。保存dataや利用者processは削除・停止していない。
 
 影響分類は`ui-css-layout`・`application-logic`・`data-contract-schema-migration`・`project-guidance-metadata`の和集合とし、最終buildには`build-release-deploy`のcomprehensive gateも適用する。後続のreader/UI変更はFunctions、Rules、schema、Emulator設定・harness・検証対象writerを変更しないため、171件のEmulator結果を維持する。domainはreader最終修正後に再実行した。Dev/Prod generate・deploy・remote受入れは別工程で未実行。要件、保存shape、永続設計、一般運用は変更しないためspecification・data contract・ADR・manual・runbook・indexの追加更新は不要である。
 
@@ -124,7 +124,7 @@ Site改修で追加した境界は、新規作成またはSite変更時のlive S
 
 ## SITE-09へ進む前の停止条件
 
-- SITE-08の生成物cleanupを明示承認後に実行・確認し、その結果を文書・Gitへ統合する。背景trigger確認方法の判断待ちは、今回の利用者指示と通常Localでの実測により解消した。
+- SITE-08の生成物cleanupは利用者の明示承認後に実行・不存在確認を完了した。背景trigger確認方法の判断待ちも、利用者指示と通常Localでの実測により解消した。
 - Dev/remote接続前に、既存予定の`operationResultId`・日付field、既存archive、取極め、下流snapshot、必要indexのshapeをread-onlyで確認する。
 - 競合、legacy欠損、active/archive同ID等があればdeploy・migrationを有効化せず、対象件数、backup、dry-run、post-check、rollbackを示して別承認へ止める。
 - SITE-09のDev反映・remote/data確認は別承認であり、本記録では実施していない。
