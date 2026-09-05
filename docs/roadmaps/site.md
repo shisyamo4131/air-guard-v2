@@ -1,6 +1,6 @@
 # Siteマスター改修ロードマップ
 
-- 状態: In progress（SITE-07までlocal完了）
+- 状態: In progress（SITE-08ブラウザ回帰追加確認中）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
 - 現在の進捗: 90%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
@@ -57,7 +57,7 @@
 | SITE-05 archive安全性 | 15 | 15 | Completed | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、exact 5 collectionの同一transaction参照確認、直接参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装した。下流snapshotとremote legacy shapeはSITE-09 preflightまで未確認とする。 |
 | SITE-06 取極め契約 | 10 | 10 | Completed | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円確認、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を専用Callableで強制した。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Siteの`agreementsV2/uid/updatedAt`だけを保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 10 | Completed | ACTIVE/TERMINATED/仮Siteを独立表示し、会社限定ACTIVE live read、20件client表示、検索・選択・郵便番号の古い応答破棄、loading/error/0件/not-found、終了Site取消時の元選択保持、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible name、manualを整合した。Rules、Functions、schema、writer、保存shapeは変更していない。 |
-| SITE-08 Codex専用local統合確認 | 5 | 0 | Not started | 対象test、全domain、Firestore Emulator、専用local UI build、保存data、独立review、cleanup、文書・Git統合を完了する。内蔵ブラウザではSite画面に加え、SITE-04/05で直接・間接影響を受けた予定・稼働実績・請求・配置通知を、会社管理者・manager・controller・accountant・read-only相当・直接permission・未知role・temporary・disabled・他tenant・non-admin super-userの最小十分な組合せで操作する。成功時は改修前と同じまたは同等の結果と保存差分、拒否時は表示・実行拒否とDB不変を確認する。 |
+| SITE-08 Codex専用local統合確認 | 5 | 0 | In progress | 対象43件、全domain 1114件、Firestore Emulator 166件、専用local UI build、保存data不変、独立review、Site lifecycle・archive・終了済み選択・actor境界と、予定・稼働実績・請求・配置の一覧・filter・dialogを内蔵ブラウザで確認した。非Site業務documentの代表的な正規UI write・update・deleteとbackend差分、temporary/disabled切替時の既読詳細消去、`.output` cleanup、文書・Git統合が残るため加点しない。 |
 | SITE-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client、既存data、権限別CRUD・終了・再有効化、関連表示を確認する。未実施のDev受入れを完了扱いしない。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-SITE-07の一覧・検索・UI整合をCodex専用localで実装し、自動test・独立reviewを完了して進捗は90%である。次は承認済みSITE-08として、clean commitの専用Local UI build、内蔵ブラウザでのSite・予定・稼働実績・請求・配置通知の従来同等動作と権限別境界、保存差分、cleanupを確認する。既存予定の`operationResultId`・日付field欠損、既存archive・取極め・下流snapshotのremote shapeはSITE-09のDev反映前preflightで確認し、競合があれば有効化・applyせず別承認へ止める。Dev・remote・実dataにはSITE-09の別承認まで接続しない。
+SITE-08は追加確認中である。clean commitの専用Local UI build、Site lifecycle・archive・終了済み選択・actor境界、予定・稼働実績・請求・配置の一覧・filter・dialog、保存fixture不変、server/Emulator停止を確認した。一方、非Site業務documentの代表的な正規UI write・update・deleteとbackend差分、temporary/disabled切替時の既読詳細消去、生成済み`.output`のcleanup、文書・Git統合が残るため進捗は90%のままとする。完了後に95%とし、SITE-09のDev反映前preflightへ別承認で進む。既存予定の`operationResultId`・日付field欠損、既存archive・取極め・下流snapshotのremote shapeを確認し、競合があれば有効化・applyせず別承認へ止める。Dev・remote・実dataにはSITE-09の別承認まで接続しない。

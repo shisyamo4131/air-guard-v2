@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- Site SITE-07として、ACTIVE/TERMINATED/仮登録の状態表示、会社限定ACTIVE live readのloading・0件・error、20件client表示、検索・Autocomplete・郵便番号の古い応答破棄、終了済み候補取消時の元選択保持、詳細not-found、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible nameを整合した。Rules、Functions、schema、writer、保存shape、非Site document writeは変更していない。対象43件、全domain 1114件、Codex専用Emulator 166件が成功し、専用UI buildと内蔵ブラウザ回帰はSITE-08で行う。[Siteロードマップ](docs/roadmaps/site.md)と[検証記録](docs/verification/site-07-local.md)を参照。
+- Site SITE-08の進行中確認として、Codex専用local build、対象43件、全domain 1114件、Emulator 166件、内蔵ブラウザによるSite lifecycle・archive・終了Site選択・権限別表示と、予定・稼働実績・請求・配置の一覧・filter・dialogを確認した。非管理者SuperUserは閲覧のみでmaster write不可、別tenant actorは自tenant Siteだけを表示した。非Site業務document write、Dev・Prod・remote・実data変更はない。保存fixtureは7 files・同一SHA-256で不変で、server/Emulator portsは解放済み。非Site業務documentの正規UI write回帰、temporary/disabled切替時の既読詳細消去、生成済み`.output` cleanupは継続中である。[検証記録](docs/verification/site-08-local.md)を参照。
+
+- Site SITE-07として、ACTIVE/TERMINATED/仮登録の状態表示、会社限定ACTIVE live readのloading・0件・error、20件client表示、検索・Autocomplete・郵便番号の古い応答破棄、終了済み候補取消時の元選択保持、詳細not-found、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible nameを整合した。Rules、Functions、schema、writer、保存shape、非Site document writeは変更していない。対象43件、全domain 1114件、Codex専用Emulator 166件が成功し、専用UI buildと内蔵ブラウザ回帰はSITE-08で確認した。[Siteロードマップ](docs/roadmaps/site.md)と[検証記録](docs/verification/site-07-local.md)を参照。
 
 - Site SITE-04として、終了・再有効化をstrict `sites:write`とmaintenance確認を持つ専用Callableへ移し、TERMINATEDの通常編集制限、終了済み表示・確認付き単発利用、reason・新工期による再開を実装した。予定作成・site/date移動はSite revisionとatomicにし、実績化は整合する同ID OperationResultとの同時更新だけを許可する。OperationResults collection全体の既存CUD境界は変更せず、accountantの請求編集を含む従来経路を維持する。JST工期終了90日後の自動終了はbounded走査とtransaction再確認で将来・未実績予定を保護し、cleanupと失敗境界を分離した。初回Local browserで検出したSite画面のcomposable runtime import欠落を明示importへ補正し、全Vue consumerを検査する回帰testを追加した。対象88件、SITE-04 Emulator 8件、全domain 1051件、全Emulator 159件が成功し、Dev・Prod・remote・実dataは変更していない。legacy予定の必須field確認はSITE-09の停止条件である。[Siteロードマップ](docs/roadmaps/site.md)を参照。
 

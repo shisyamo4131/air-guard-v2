@@ -12,13 +12,13 @@
 ## 未決事項と承認
 
 - Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
-- Spark用standalone Developer taskは実装前に中止・削除済みで、再利用しない。CAS-02/03/04はprimary coordinator配下の通常サブエージェント運用で完了した。SiteはSITE-04の終了・再有効化・自動終了までCodex専用localで実装・検証済みで、利用者承認によりSITE-08までlocal作業を継続する。別taskで作成されたEmployee改修案は利用者判断により破棄され、Siteの正本・進捗・実装判断へ採用しない。CAS-05、Dev/Prod、remote data/migration、package、緊急restore、retention/purge、OUT-08以降は未承認・対象外である。
+- Spark用standalone Developer taskは実装前に中止・削除済みで、再利用しない。CAS-02/03/04はprimary coordinator配下の通常サブエージェント運用で完了した。SiteはSITE-01からSITE-07までCodex専用localで実装・検証済みで、SITE-08の追加ブラウザ回帰を継続する。別taskで作成されたEmployee改修案は利用者判断により破棄され、Siteの正本・進捗・実装判断へ採用しない。CAS-05、Dev/Prod、remote data/migration、package、緊急restore、retention/purge、OUT-08以降は未承認・対象外である。
 - Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
 1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
-2. Site masterはSITE-04で、終了・再有効化を専用Callableへ移し、TERMINATED編集制限、確認付き単発利用、予定競合guard、JST工期終了90日後の自動終了をUI・Functions・Rules・自動testで固定した。[Site専用ロードマップ](../roadmaps/site.md)は55%である。次はSITE-05の誤登録archiveと全参照barrierを実装し、SITE-08までCodex専用localで継続する。SITE-08では、Site以外に今回影響した予定・稼働実績・請求・配置通知も内蔵ブラウザで権限別に操作し、改修前と同じまたは同等の結果、拒否時のDB不変を確認する。Dev・remote反映とlegacy予定field確認はSITE-09の別承認である。
+2. Site masterはSITE-01からSITE-07までlocal完了し、誤登録archive、取極め、終了・再有効化・自動終了、予定競合guard、一覧・検索・状態表示をUI・Functions・Rules・自動testで固定した。[Site専用ロードマップ](../roadmaps/site.md)は90%である。SITE-08ではSite lifecycle・archive・終了済み選択・actor境界と、予定・稼働実績・請求・配置の一覧・filter・dialogまで内蔵ブラウザで確認済みである。次は非Site業務documentの代表的な正規UI write・update・deleteとbackend差分、temporary/disabled切替時のSite既読詳細消去、cleanup、文書・Git統合を完了する。Dev・remote反映とlegacy予定field確認はSITE-09の別承認である。
 3. Employee masterはSiteと分離した将来作業とし、破棄された別taskの改修案を正本、進捗、承認済み計画として扱わない。再開する場合はrepositoryの現行事実から改めてscopeと承認境界を確認する。
 4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
@@ -29,6 +29,7 @@
 - [Outsourcerロードマップ](../roadmaps/outsourcer.md)
 - [Outsourcer OUT-07 local統合確認の進行記録](../verification/outsourcer-out07-local-progress.md)
 - [Outsourcer OUT-07 local統合確認証拠](../verification/outsourcer-out07-local-integration.md)
+- [Site SITE-08 local統合確認証拠](../verification/site-08-local.md)
 - [Customer取引状態roadmap](../roadmaps/customer-status.md)
 - [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)
 - [Customer archive safety実装設計](customer-archive-safety.md)

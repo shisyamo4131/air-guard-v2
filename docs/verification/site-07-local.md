@@ -5,7 +5,7 @@
 - 対象: SITE-07 一覧・検索・UI整合
 - 環境: Codex専用local。Dev、Prod、remote、実dataは未接続・未変更
 - 影響分類: UI、application logic
-- 判定: SITE-07の実装、自動test、独立reviewは完了。clean commitの専用UI buildと内蔵ブラウザ回帰はSITE-08で実施する
+- 判定: SITE-07の実装、自動test、独立reviewは完了。clean commitの専用UI buildと内蔵ブラウザ回帰はSITE-08で実施し、[SITE-08検証記録](site-08-local.md)へ結果を記録した
 
 ## 変更境界
 
@@ -28,10 +28,8 @@ Rules、Functions、schema、Site writer、保存field、OperationResult、Billi
 
 独立reviewで検出した終了検索clear後の古い結果復活、ACTIVE一覧の状態不足、郵便番号の断定的message、詳細actionの誤ったaccessible nameは修正・再検証した。Rules、Functions、schema、writer、非Site document writeへのscope creepは検出されなかった。
 
-## 残存制約と次工程
+## 残存制約と後続確認
 
 - 現行共通Firestore adapterは購読開始後のlistener error callbackを公開しない。ACTIVE一覧はSite専用listenerで解消したが、詳細内のSite・予定・履歴の購読開始後エラーは既存制約として残る。初回error、not-found、route/unmount cleanupは対応済みである。
 - `Site/Card`と`Sites/Iterator`は現行routeから到達しないため変更していない。現在到達できるSite操作だけをaccessible buttonへ変更した。
-- SITE-08でclean commitの専用Local UI buildを行い、Site、dashboard、Customer詳細、予定、稼働実績、請求、配置通知を内蔵ブラウザで確認する。
-- 配置通知と稼働実績には既存の広い権限経路がある可能性があるため、SITE-08では今回の回帰有無と既存権限仕様適合を別判定する。
-
+- SITE-08でclean commitの専用Local UI build、Site lifecycle・一覧・検索と権限別表示を確認した。予定・稼働実績・請求・配置の代表的な正規UI write回帰を含む残作業は[SITE-08検証記録](site-08-local.md)を正とする。

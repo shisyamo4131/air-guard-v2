@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: 改修中（SITE-07までlocal完了）
+- 状態: 改修中（SITE-08ブラウザ回帰追加確認中）
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
 - 最終確認日: 2026-09-05
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
@@ -126,7 +126,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 ## 未確認範囲
 
 - OperationResult/Billingのoperation別field・lock、他のPDF・画面。
-- remote適用済みFirestore index、実データ、ブラウザ操作、Vuetifyのvalidation/keyboard/runtime挙動。
+- remote適用済みFirestore index、実データ、Dev/remoteブラウザ操作。Codex専用localのbrowser確認済み範囲と残作業は[SITE-08検証記録](../verification/site-08-local.md)を正とする。
 - 既存stale埋込みCustomerの件数、TERMINATED/archived Siteの正式運用。
 
 ## Sites一覧wrapperの追加確認（SPEC-DEEP-035）

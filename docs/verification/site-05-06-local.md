@@ -5,7 +5,7 @@
 - 対象: SITE-05 archive安全性、SITE-06 取極め契約
 - 環境: Codex専用local。Dev、Prod、remote、実dataは未接続・未変更
 - 影響分類: UI、application logic、data contract、Firestore Rules
-- 判定: SITE-05/06のlocal実装と自動検証は完了。内蔵ブラウザによる権限別・既存機能回帰はSITE-08で実施する
+- 判定: SITE-05/06のlocal実装と自動検証は完了。内蔵ブラウザによる権限別・既存機能回帰はSITE-08で継続中であり、[SITE-08検証記録](site-08-local.md)へ確認済み範囲と残作業を記録した
 - 実装基準commit: `536556d87e13d98ecd974119833e5d694f59787b`、`2cb2adf090e9d15707ab8d4d58cfedd79b46341d`、`9a065d75002a0d7275fdb0ece16a226288027c23`
 
 ## 実装境界
@@ -39,8 +39,7 @@ SITE-06は取極めの作成・更新・削除を専用Callableへ集約し、�
 
 対象testではarchiveの認可・冪等性・参照拒否・Rules barrierと、取極めの認可・競合・no-op・数値・時間・重複・0円確認を検証した。独立reviewで重大な認可、tenant境界、非Site data書込みの逸脱は検出されなかった。reviewで検出した0円確認中の二重操作によるPromise上書きは、single-flight、操作無効化、unmount時cancelへ修正し、再検証した。
 
-## 未検証・次工程
+## 後続確認
 
-- SITE-08: 内蔵ブラウザでSite画面と、影響した予定・稼働実績・請求・配置通知の従来同等動作を確認する
-- SITE-08: 会社管理者、既知role、read-only相当、直接permission、未知role、temporary、disabled、他tenant、non-admin super-userの最小十分な権限組合せを確認する
+- SITE-08: Site lifecycle・archive・終了済み選択とactor表示境界は確認済み。予定・稼働実績・請求・配置は一覧・filter・dialogまでで、代表的な正規UI write・update・deleteとbackend差分が残る
 - SITE-09: Dev反映前にremoteの既存archive、取極め、予定、下流snapshot shapeをread-only preflightする。別承認まで接続・変更しない

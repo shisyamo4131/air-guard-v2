@@ -20,6 +20,7 @@
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |
+| Site SITE-08 local統合・権限別ブラウザ受入れ | [SITE-08 Codex専用local統合確認記録](site-08-local.md) |
 | Outsourcer OUT-07 local統合確認の進行記録 | [Outsourcer OUT-07 local progress](outsourcer-out07-local-progress.md) |
 | Outsourcer OUT-07 local統合確認 | [Outsourcer OUT-07 local integration verification receipt](outsourcer-out07-local-integration.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
