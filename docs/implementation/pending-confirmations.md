@@ -31,7 +31,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-2026-09-04のOutsourcer回答後、全146件の本文`Status`はOpen 76件、Answered 65件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-05のSite CONF-0049回答後、全146件の本文`Status`はOpen 75件、Answered 66件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -610,15 +610,15 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0049 Site終了・archive・restoreの使い分け
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
 - Evidence: terminateとlogical archiveが併存し、restore APIはあるがUIは復元不能と表示する。削除guardは3 collectionのみ。
 - Question: 通常終了、誤登録削除、法定/運用保持、restoreをどの機構と権限で扱うか。
 - Why needed: 参照整合、履歴保持、誤削除回復、利用者説明を一貫させるため。
 - Options and impact: 通常TERMINATED・誤登録のみarchive、archive禁止、管理者restore、保持期間付きarchive。
-- Current provisional treatment: 両機構の存在だけを記録し、復元不能表示を正式仕様とはしない。
+- Current provisional treatment: 通常終了は`TERMINATED`としてlive Siteを保持する。誤登録・重複だけは、全参照確認と並行writerのlive Site存在barrierを満たす専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用しない。
 - Related FUT IDs: FUT-0063
-- Answer: 未回答
+- Answer: 2026-09-05回答。通常終了は`TERMINATED`、同じCustomerでの再利用は`sites:write`と理由を伴う再有効化とする。誤登録・重複は`sites:write`の許可actorが必須reasonとoperation IDを指定する専用Callableでarchiveできる。一つのtransactionでactive、same-ID archive、状態を限定しない全業務参照を確認し、参照済みまたは競合時はwrite 0とする。全参照writerが同じatomic boundaryでlive Site存在を必須にできない間はarchiveを有効化しない。generic delete／restoreと物理delete、通常画面のrestore、自動purge、保持期限は設けず、緊急restoreは別承認とする。判断理由はADR 0051を正とする。
 
 ## CONF-0050 Site情報の下流snapshot時点
 

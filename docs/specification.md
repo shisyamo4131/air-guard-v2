@@ -178,6 +178,9 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firestore Rulesは取引先の同一会社、書込み担当、操作別field、型、状態、更新者・更新時刻、削除・archive拒否を強制する。検索用情報と外部住所検索結果の意味上の正しさはRulesだけでは完全再計算できないため、正規画面の専用writerを維持し、server生成へ移すかはDev反映前の残存risk判断とする。
 - 現場は取引先に紐づく。
 - 現場の取引先は、同じ会社に存在する別のCustomerへ変更できる。一度設定したcustomerIdを未設定へ戻す操作は提供しない。変更後に新規作成される、または別の更新条件でSiteから再同期される稼働実績は変更後のCustomerを参照するが、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。既存実績へCustomer・取極めを再適用する場合は、対象・請求影響・監査を明示する別操作とし、空更新へ暗黙の移管処理を持たせない。詳細は[ADR 0048](decisions/0048-site-customer-change-and-historical-snapshots.md)を正とする。
+- 現場の通常の利用終了は`TERMINATED`で表し、liveの`Sites` collectionに保持する。同じCustomerのまま再利用する場合は、`sites:write`を持つ許可actorが理由を伴う再有効化operationで`ACTIVE`へ戻す。終了・再有効化によって既存の予定、実績、請求、取極めを自動変更しない。
+- Site archiveは誤登録・重複だけを対象とし、通常の利用終了には使用しない。`sites:write`を持つ許可actorだけが専用`archiveSite` Callableから実行し、入力はSite ID、必須reason、operation IDに限定する。serverは現在のAuth・同社User・permissionを再確認し、actor・時刻を確定する。一つのtransactionでactive Site、同ID archive、および状態を限定しない全業務参照を確認し、参照、archive衝突、不正状態ではwrite 0とする。確認対象は少なくともSiteOperationSchedules、OperationResults、ArrangementNotifications、Billings、SiteEmployeeHistoryを含み、実装前inventoryで確認した全参照を閉じる。version付きSite snapshotとreason・actor・時刻・operation IDをsame-ID archiveへ上書きせず保存してactiveを削除し、同operationの再試行だけを冪等に扱う。
+- archive後の新規参照を防ぐため、Siteを新規参照または変更する全client/server writerは、同じatomic boundaryでlive `Sites/{siteId}`の存在を必須にする。このbarrierを保証できないwriterが一つでも残る間はarchive機能を有効化しない。Company表示順の不存在SiteはADR 0036どおり表示時に無視し、次回の明示保存で除去するため、表示順だけをarchive拒否の業務参照にはしない。generic delete／restoreと物理deleteは使用せず、通常画面からrestoreを提供しない。緊急restoreは別の権限制御・監査・競合防止を持つoperationとして改めて承認する。既存live/archive dataの一括変更、自動purge、保持期限は追加しない。詳細は[ADR 0051](decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - 取極めは現場、適用開始日、曜日区分、勤務区分に基づいて適用する。
 - 同じ適用開始日・曜日区分・勤務区分の取極めを重複登録しない。
 - 既存の稼働実績へ適用済みの取極めは、取極めマスタの後日の変更で自動更新しない。

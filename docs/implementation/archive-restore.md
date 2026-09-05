@@ -116,7 +116,7 @@ Company、User、OperationResult、Billing、DailyAttendance等は`logicalDelete
 - CONF-0121: active同ID存在時のrestore conflict policy。
 - CONF-0122: archive/restoreで発火させるtriggerと副作用契約。
 - CONF-0123: 共通archive metadata・保持・匿名化・purge運用。
-- master別の終了/退職/archive判断はCONF-0049、0064、0100等を参照する。OutsourcerのCONF-0072はADR 0050で回答済みである。
+- master別の終了/退職/archive判断はCONF-0049、0064、0100等を参照する。SiteのCONF-0049はADR 0051、OutsourcerのCONF-0072はADR 0050で回答済みである。
 
 ## 未確認範囲
 

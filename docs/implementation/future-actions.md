@@ -847,16 +847,16 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0063 Site archiveと参照guardを競合安全にする
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Site delete UI
 - 確認済み実装事実: schedule/result/arrangement notificationだけをtransaction外queryで確認してarchiveする。adapterにrestore APIがあるがUIは復元不能と表示し、restore入口はない。
 - 想定影響と発生条件: 確認後の新規参照とのrace、guard外参照の孤立、誤削除時の運用不能、説明と実装の不一致が起き得る。
-- 未確認点・仮説: 全参照集合、保持期間、restore主体、終了とarchiveの使い分けは未決定。
-- 推奨する将来対応: 参照policyを確定し、server transaction/lock等の競合安全な削除へ移し、UI説明とrestore運用を揃える。
-- 必要なテスト: 各hasMany、guard外参照、同時参照作成、archive/restore、欠損Siteを読む下流。
-- ユーザー判断が必要な事項: CONF-0049。
+- 未確認点・仮説: 実装前inventoryで確定する全参照集合、各writerでlive Site存在を同じatomic boundaryへ強制できるか、既存archiveの実data状態は未確認。
+- 推奨する将来対応: ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite` Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、version付き監査snapshotと冪等性を実装する。generic delete／restoreと物理deleteは使用せず、全barrierが揃うまでarchiveを有効化しない。
+- 必要なテスト: actor matrix、ACTIVE／TERMINATED、各hasManyとguard外参照、same-ID archive、同時参照作成、同一／別operation再試行、generic delete／restore非到達、欠損Siteを読む下流。
+- ユーザー判断が必要な事項: なし。CONF-0049とADR 0051で通常終了、誤登録archive、通常restore、保持の方針は確定済み。緊急restore、保持期限、削除・匿名化が必要になった場合は別checkpointで判断する。
 
 ## FUT-0064 Site変更時の下流snapshot/live境界を確定する
 

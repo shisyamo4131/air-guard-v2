@@ -32,7 +32,7 @@
 
 ### 未確認・未決事項
 
-- CONF-0049: 通常終了、誤登録archive、保持、緊急restoreの正式境界。
+- CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - CONF-0050: Site名、Customer、住所、警備種別、取極めを予定・実績・Billing・帳票のどの時点で固定するか。
 - CONF-0051からCONF-0053: 取極めの編集権限、数値範囲、適用済み取極めの訂正・削除・履歴。
 - CONF-0135: 自動終了の猶予、将来予定、競合、通知、監査、再有効化との優先。
@@ -43,18 +43,18 @@
 
 - Site detailから`sites:read`だけでSiteOperationSchedule CRUDへ到達でき、SiteOperationSchedules Rulesも同一tenant Userへ広いwriteを許す。
 - Site名をlive取得するBilling PDFは、master変更後の再生成表示が変わり得る。Customer・Agreement・Site表示情報のsnapshot時点はCONF-0050で未決である。
-- Site archiveの参照候補にはBilling、SiteEmployeeHistory、Company表示順等があるが、現行hasMany catalogには含まれない。恒久的な参照barrierがtransaction writer変更を必要とする場合は、マスタCRUD範囲で実装せず別checkpointへ分離する。
+- Site archiveの参照候補にはBilling、SiteEmployeeHistory等があるが、現行hasMany catalogには含まれない。ADR 0051により、誤登録archiveに必要な全参照inventoryとlive Site存在barrierだけはSITE-05の承認対象に含める。Company表示順はADR 0036の不存在参照除去契約を維持する。archive barrier以外のtransaction writer変更は本ロードマップで実装せず別checkpointへ分離する。
 - 配置・通知・稼働実績・勤怠・請求・帳票のFirestore writer、rollback/refetch、同時実行、Rules、schema、APIは本ロードマップで変更しない。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| SITE-01 基準線・未決事項 | 10 | 0 | Not started | CONF-0049、0050、0051〜0053、0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。仕様、ADR、manual、実装記録が採用判断と一致する。 |
+| SITE-01 基準線・未決事項 | 10 | 0 | In progress | CONF-0049は回答済み。0050、0051〜0053、0135について、現行規則、変更案、影響、互換性、migration、rollback、検証を示して利用者判断を得る。全項目について仕様、ADR、manual、実装記録が採用判断と一致した時点で完了する。 |
 | SITE-02 認証・書込み境界 | 15 | 0 | Not started | readは同一tenant境界を維持し、create/update/Customer・Agreement変更/終了/再有効化/archiveを会社管理者またはstrict role preset由来の`sites:write`へ限定する。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、UI・送信直前policy・Rulesまたは専用Callableを一致させる。 |
 | SITE-03 CRUD・保存data契約 | 15 | 0 | Not started | operation別の所有field、共通必須・型・長さ、server metadata、token・location等の派生field、Customer参照・埋込みCustomer、仮Site解消を固定する。live modelと独立draftを分け、同一field競合、変更なし、失敗後再試行を検証する。 |
 | SITE-04 終了・再有効化・自動終了 | 15 | 0 | Not started | TERMINATEDのread-only、新規選択境界、理由付き再有効化、手動・自動終了の条件、将来予定、競合、監査、再試行を採用仕様へ揃える。既存予定等を暗黙に変更しない。 |
-| SITE-05 archive安全性 | 15 | 0 | Not started | archiveの採否、許可actor、reason/audit/idempotency、参照catalog、競合、公開範囲、緊急restore、retentionを確定する。transaction writer変更が必要なら別承認へ分離し、安全性を満たせない間はarchive入口とclient deleteを閉じる。 |
+| SITE-05 archive安全性 | 15 | 0 | Not started | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、全参照catalogの同一transaction確認、全参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装する。全barrierが揃うまでarchiveを有効化しない。archive barrier以外のtransaction変更と緊急restoreは別承認へ分離する。 |
 | SITE-06 取極め契約 | 10 | 0 | Not started | `sites:write`との関係、入力範囲、重複、適用済み取極めの訂正・削除、OperationResult snapshot、Billing影響を確定し、Site documentの変更fieldだけを安全に保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 0 | Not started | ACTIVE/TERMINATED/仮Siteの表示、検索・pagination、Autocompleteのstatus境界、作成wizard validation、郵便番号反映、非同期race、loading/error/not-found、工期表示、keyboard操作、manualを整合する。 |
 | SITE-08 Codex専用local統合確認 | 5 | 0 | Not started | 対象test、全domain、Firestore Emulator、専用local UI build・通常操作、権限陰性、保存data、独立review、cleanup、文書・Git統合を完了する。transaction系は互換確認だけとする。 |
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。次はSITE-01の仕様判断checkpointを別途承認した後に着手し、一件ずつ進める。製品実装は承認済みcheckpointより前に開始しない。
+本ロードマップのphase分割、重み、未決事項の順序、transaction系の分離は利用者確認済みである。SITE-01を開始し、CONF-0049を確定した。次はCONF-0050の下流snapshot時点を一件の仕様判断checkpointとして扱う。製品実装は承認済みcheckpointより前に開始しない。

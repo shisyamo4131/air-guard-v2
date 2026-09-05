@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Siteの通常終了を`TERMINATED`としてlive masterに保持し、誤登録・重複だけを安全な専用Callableでarchiveできる方針を確定した。archiveは`sites:write`、必須reason、operation ID、server確定のactor・時刻、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、監査snapshot、冪等性を一体とし、barrierが揃うまで有効化しない。generic delete／restore、物理delete、通常restore、自動purge、保持期限は採用しない。既存data、製品code、Rules、Functions、schema、package、Dev・Prod・remoteは未変更である。[判断](docs/decisions/0051-site-mistaken-registration-archive-boundary.md)と[Siteロードマップ](docs/roadmaps/site.md)を参照。
+
 - Outsourcer OUT-07のlocal統合確認を完了した。対象test 48/48、domain 961/961、local Emulator 147/147、専用UI build、write actorによる作成・検索・名称更新・契約状態往復、delete/archive入口不在、Rules陰性、保存data不変、cleanupを確認した。拒否actorの実browserは安全な合成session再確立経路がなく未実施だが、利用者承認により自動UI契約テストと専用EmulatorのRules陰性をOUT-07固有の代替証拠とした。製品code、配置・通知・実績等のFirestore更新経路、Rules、Functions、schema、package、Dev・Prod・remote・実dataは変更していない。[検証証拠](docs/verification/outsourcer-out07-local-integration.md)と[ロードマップ](docs/roadmaps/outsourcer.md)を参照。
 
 - Outsourcer OUT-06として、同じ協力会社を`amount=1`の別配置明細として複数登録し、`outsourcerId:index`形式の`workerId`で表示行・操作・通知・実績を区別する既存契約を固定した。WorkersTableのVue keyをraw IDから`workerId`へ修正し、削除後のindex非再採番、再追加時の最大index+1、並べ替え、通知ID、ScheduleからOperationResultへの1対1変換を回帰testで確認した。対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。通常UI外の低レベルAPIで`amount=1`を一律強制する変更は行っていない。Rules、index、schema、package、migration、Dev・remote・実dataは変更していない。実装commitは`794af0ed`。[ロードマップ](docs/roadmaps/outsourcer.md)を参照。
