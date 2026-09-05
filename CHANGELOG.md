@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Site SITE-08の進行中確認として、Codex専用local build、対象43件、全domain 1114件、Emulator 166件、内蔵ブラウザによるSite lifecycle・archive・終了Site選択・権限別表示と、予定・稼働実績・請求・配置の一覧・filter・dialogを確認した。非管理者SuperUserは閲覧のみでmaster write不可、別tenant actorは自tenant Siteだけを表示した。非Site業務document write、Dev・Prod・remote・実data変更はない。保存fixtureは7 files・同一SHA-256で不変で、server/Emulator portsは解放済み。非Site業務documentの正規UI write回帰、temporary/disabled切替時の既読詳細消去、生成済み`.output` cleanupは継続中である。[検証記録](docs/verification/site-08-local.md)を参照。
+- Site SITE-08のLocal統合確認で、旧Siteの省略可能field欠損により基本情報更新まで拒否されるRules互換不具合と、現場詳細からの予定作成で取極め定時・警備種別が取得できない回帰を修正した。対象fieldの型・相関検査、field削除禁止、create必須・actor/tenant境界を維持し、非同期取得中の手入力を保持する。利用者許可のChromeとLocal Emulatorで、実績から請求・入場履歴への背景同期、Site変更前後の既存snapshot不変、予定の日付・現場変更と実績化を確認した。Dev反映は別工程である。[検証記録](docs/verification/site-08-local.md)を参照。
 
 - Site SITE-07として、ACTIVE/TERMINATED/仮登録の状態表示、会社限定ACTIVE live readのloading・0件・error、20件client表示、検索・Autocomplete・郵便番号の古い応答破棄、終了済み候補取消時の元選択保持、詳細not-found、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible nameを整合した。Rules、Functions、schema、writer、保存shape、非Site document writeは変更していない。対象43件、全domain 1114件、Codex専用Emulator 166件が成功し、専用UI buildと内蔵ブラウザ回帰はSITE-08で確認した。[Siteロードマップ](docs/roadmaps/site.md)と[検証記録](docs/verification/site-07-local.md)を参照。
 

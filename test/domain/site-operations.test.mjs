@@ -521,6 +521,68 @@ test("Site writer patches only owned and required derived fields and skips no-op
   }
 });
 
+test("Site writer updates raw legacy maps without backfilling unrelated missing fields", async () => {
+  const harness = await loadWriterHarness();
+  try {
+    const customer = Customer.converter().toFirestore(validCustomer());
+    customer.futureCustomerField = { version: 2 };
+    const raw = Site.converter().toFirestore(validSite({
+      customerId: "customer-a",
+      customer: validCustomer(),
+    }));
+    raw.customer = customer;
+    const missingFields = [
+      "hasAbbreviation", "abbreviation", "displayName", "siteNumber",
+      "constructionPeriodStartAt", "constructionPeriodEndAt",
+      "hasConstructionPeriodStartAt", "hasConstructionPeriodEndAt",
+    ];
+    for (const field of missingFields) delete raw[field];
+    harness.snapshots.set("Companies/company-a/Sites/site-a", raw);
+    harness.snapshots.set("Companies/company-a/Customers/customer-a", customer);
+    const cases = [
+      [{ remarks: "legacy remarks" }, ["remarks"]],
+      [{ name: "改称現場" }, ["name", "displayName", "tokenMap"]],
+      [{ hasAbbreviation: true, abbreviation: "略称" }, ["hasAbbreviation", "abbreviation", "displayName"]],
+      [{ constructionPeriodStartAt: new Date("2026-09-01T00:00:00.000Z") }, [
+        "constructionPeriodStartAt", "hasConstructionPeriod",
+        "hasConstructionPeriodStartAt", "hasConstructionPeriodEndAt",
+      ]],
+      [{ siteNumber: "legacy-number" }, ["siteNumber"]],
+      [{}, []],
+    ];
+    for (const [input, expectedFields] of cases) {
+      harness.calls.length = 0;
+      const latest = new Site(raw);
+      const draft = latest.clone();
+      for (const [field, value] of Object.entries(input)) draft[field] = value;
+      const result = await harness.writer.update({
+        companyId: "company-a",
+        operation: SITE_OPERATION.UPDATE_BASIC,
+        docId: "site-a",
+        baseline: siteSnapshot(latest, SITE_OPERATION.UPDATE_BASIC),
+        draft,
+        actorUid: "actor-b",
+        assertCanWrite: () => undefined,
+      });
+      if (!expectedFields.length) {
+        assert.equal(result.updated, false);
+        assert.deepEqual(harness.calls, []);
+        continue;
+      }
+      assert.equal(harness.calls.length, 1);
+      assert.equal(harness.calls[0].kind, "update");
+      const patch = harness.calls[0].data;
+      assert.deepEqual(Object.keys(patch).sort(), [
+        ...expectedFields, "customer", "uid", "updatedAt",
+      ].sort());
+      assert.deepEqual(patch.customer, createSiteCustomerProjection(customer));
+      for (const field of missingFields) assert.equal(Object.hasOwn(raw, field), false);
+    }
+  } finally {
+    harness.cleanup();
+  }
+});
+
 test("Site Agreement updates use the dedicated Callable rather than the generic writer", async () => {
   const [actions, writer] = await Promise.all([
     readFile(new URL("../../composables/application/site/useSiteActions.js", import.meta.url), "utf8"),

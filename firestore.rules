@@ -561,11 +561,18 @@ service cloud.firestore {
     }
 
     function isValidSiteBasicPatch(data, changed) {
-      return (!changed.hasAny(['code']) || isNullableString(data.code, 10))
+      // Missing legacy sources retain the schema defaults without backfilling
+      // unrelated fields. Existing malformed values and field deletion fail.
+      let hasAbbreviation = data.get('hasAbbreviation', false);
+      let abbreviation = data.get('abbreviation', null);
+      let constructionStart = data.get('constructionPeriodStartAt', null);
+      let constructionEnd = data.get('constructionPeriodEndAt', null);
+      return data.diff(resource.data).removedKeys().size() == 0
+        && (!changed.hasAny(['code']) || isNullableString(data.code, 10))
         && (!changed.hasAny(['name']) || isRequiredString(data.name, 40))
-        && (!changed.hasAny(['hasAbbreviation']) || data.hasAbbreviation is bool)
+        && hasAbbreviation is bool
         && (!changed.hasAny(['abbreviation']) || isNullableString(data.abbreviation, 40))
-        && (!data.hasAbbreviation || isRequiredString(data.abbreviation, 40))
+        && (!hasAbbreviation || isRequiredString(abbreviation, 40))
         && (!changed.hasAny(['nameKana']) || isRequiredString(data.nameKana, 60))
         && (!changed.hasAny(['zipcode'])
           || data.zipcode == null
@@ -581,13 +588,11 @@ service cloud.firestore {
             'UNSET', 'FACILITY', 'CROWD', 'TRAFFIC', 'TRAINING', 'OTHER'
           ])
         && (!changed.hasAny(['siteNumber']) || isNullableString(data.siteNumber, 40))
-        && (!changed.hasAny(['constructionPeriodStartAt'])
-          || isNullableTimestamp(data.constructionPeriodStartAt))
-        && (!changed.hasAny(['constructionPeriodEndAt'])
-          || isNullableTimestamp(data.constructionPeriodEndAt))
-        && (data.constructionPeriodStartAt == null
-          || data.constructionPeriodEndAt == null
-          || data.constructionPeriodStartAt <= data.constructionPeriodEndAt)
+        && isNullableTimestamp(constructionStart)
+        && isNullableTimestamp(constructionEnd)
+        && (constructionStart == null
+          || constructionEnd == null
+          || constructionStart <= constructionEnd)
         && (!changed.hasAny(['remarks']) || isNullableString(data.remarks, 200));
     }
 
@@ -600,6 +605,10 @@ service cloud.firestore {
       let constructionSourceChanged = changed.hasAny([
         'constructionPeriodStartAt', 'constructionPeriodEndAt'
       ]);
+      let hasAbbreviation = data.get('hasAbbreviation', false);
+      let abbreviation = data.get('abbreviation', null);
+      let constructionStart = data.get('constructionPeriodStartAt', null);
+      let constructionEnd = data.get('constructionPeriodEndAt', null);
       return (!changed.hasAny(['tokenMap']) || tokenSourceChanged)
         && (!tokenSourceChanged
           || (changed.hasAny(['tokenMap'])
@@ -609,8 +618,8 @@ service cloud.firestore {
         && (!displaySourceChanged
           || (data.keys().hasAny(['displayName'])
             && isRequiredString(data.displayName, 40)
-            && data.displayName == (data.hasAbbreviation && data.abbreviation != null
-              ? data.abbreviation
+            && data.displayName == (hasAbbreviation && abbreviation != null
+              ? abbreviation
               : data.name)))
         && (!changed.hasAny(['location', 'geopoint', 'fullAddress', 'prefecture'])
           || addressSourceChanged)
@@ -634,12 +643,12 @@ service cloud.firestore {
                 'hasConstructionPeriodEndAt'
               ])
             && data.hasConstructionPeriod is bool
-            && data.hasConstructionPeriod == (data.constructionPeriodStartAt != null
-              || data.constructionPeriodEndAt != null)
+            && data.hasConstructionPeriod == (constructionStart != null
+              || constructionEnd != null)
             && data.hasConstructionPeriodStartAt is bool
-            && data.hasConstructionPeriodStartAt == (data.constructionPeriodStartAt != null)
+            && data.hasConstructionPeriodStartAt == (constructionStart != null)
             && data.hasConstructionPeriodEndAt is bool
-            && data.hasConstructionPeriodEndAt == (data.constructionPeriodEndAt != null)));
+            && data.hasConstructionPeriodEndAt == (constructionEnd != null)));
     }
 
     function isValidSiteCreate(companyId, docId) {
@@ -1025,8 +1034,8 @@ service cloud.firestore {
                     && canWriteSite(companyId)
                     && isValidSiteCreate(companyId, docId)
                     && !exists(/databases/$(database)/documents/Companies/$(companyId)/Sites_archive/$(docId));
-      allow update: if (canWriteSchedule(companyId)
-                        && isScheduleRevisionOnlyUpdate(docId))
+      allow update: if (isScheduleRevisionOnlyUpdate(docId)
+                        && canWriteSchedule(companyId))
                     || (isSystemMaintenanceOff()
                         && canWriteSite(companyId)
                         && isValidSiteUpdate(companyId, docId));

@@ -2,9 +2,9 @@
 
 ## メタデータ
 
-- 状態: 改修中（SITE-08ブラウザ回帰追加確認中）
+- 状態: Local修正済み（SITE-08最終build・統合待ち）
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
-- 最終確認日: 2026-09-05
+- 最終確認日: 2026-09-06
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
 
 ## 入口・書込み権限
@@ -73,6 +73,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## Rules・tenant境界
 
+- SITE-08のLocal旧data確認により、基本更新では欠損している略称・工期sourceだけを既存schemaの既定値で評価する。略称使用flag・工期sourceの不正型と工期逆順、変更対象fieldの型・長さ、関連source変更時の派生値整合を検査し、既存field削除を拒否する。createのexact field契約は維持する。writerによる全件backfillやschema変更は行わない。
 - `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。create/updateはmaintenance offかつ会社管理者または既知のstrict role presetが`sites:write`を含む場合だけ許可し、直接permission、未知role、non-admin super-user、temporary/disabled/他tenantを拒否する。予定競合用revisionだけは同一tenantの予定writerがatomicに+1できる。deleteは拒否する。
 - Rulesはexact 34-field create、operation別変更field、型・長さ、server metadata、派生fieldを検査する。create時とcustomerId変更時は同一会社Customerの存在とexact 6-field projectionを検査し、設定済みcustomerIdのunsetを拒否する。status transitionはclientから許可しない。予定作成は`operationResultId=null`とSite revisionの同時更新、実績化は整合するOperationResultとの同時更新だけを許可し、偽参照・置換・巻戻しを拒否する。
 - `Sites_archive`は同一tenantの有効な本登録Userによるreadを維持し、client create/update/deleteを拒否する。同ID archiveが存在するSite createも拒否し、archive documentをtombstoneとして扱う。
@@ -97,6 +98,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 現行作成dialogのCustomer候補は`CustomerAutocomplete`を使い、旧`CustomersIterator`の3-step経路は到達しない。
 - Site専用郵便番号inputは既存の外部lookup utilityを再利用し、7桁入力時の最新応答だけを住所へ反映する。検索中に郵便番号または住所が変わった場合、失敗・0件、unmount時は既存入力を変更しない。外部utilityが通信失敗と0件をどちらもnullに畳むため、画面文言も原因を断定しない。
 - 現行operation editorは独立draft、同一field競合、single-flight、失敗後の入力保持を実装済みである。
+- SITE-08で予定・実績フォームの取極め定時読込みをprovider cache依存から明示company/Site IDの取得へ変更した。予定のpreset警備種別も取得完了後に反映する。既存Site read access guardを再利用し、tenant・uid・アクセス取消、unmount、Site/date/shift変更、取得前後の手入力、A→B→Aで古い応答を破棄する。操作別writerと保存shapeは変更しない。
 - 9 filesにはtenant、role、permission、actor、audit checkがない。表示・disabled・validationはRules/Functionsのauthorizationを代替しない。
 
 ## 矛盾・未使用候補

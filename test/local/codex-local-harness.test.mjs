@@ -3204,6 +3204,206 @@ test("Site Rules isolate update operations and reject metadata or derived-field 
   assert.deepEqual((await assertSucceeds(getDoc(reference))).data().agreementsV2, []);
 });
 
+test("Site Rules preserve raw legacy partial updates and reject missing-field bypasses", async (t) => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-legacy-admin";
+  const siteId = "site-rules-legacy-site";
+  const customerId = "site-rules-legacy-customer";
+  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const reference = doc(firestore, "Companies", companyId, "Sites", siteId);
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), "Companies", companyId, "Customers", customerId),
+      customerRulesData({
+        docId: customerId,
+        uid: "server-writer",
+        futureCustomerField: { version: 2 },
+        tokenMap: Object.fromEntries(Array.from({ length: 1200 }, (_, index) => [`token-${index}`, true])),
+      }));
+  });
+  const customer = (await assertSucceeds(getDoc(
+    doc(firestore, "Companies", companyId, "Customers", customerId),
+  ))).data();
+  const projection = createSiteCustomerProjection(customer);
+  const legacyMissing = [
+    "hasAbbreviation", "abbreviation", "displayName", "siteNumber",
+    "hasConstructionPeriodStartAt", "hasConstructionPeriodEndAt",
+  ];
+  async function reset({ missing = legacyMissing, overrides = {} } = {}) {
+    const raw = siteRulesData({ docId: siteId, uid: "server-writer", customerId, customer });
+    for (const field of missing) delete raw[field];
+    Object.assign(raw, overrides);
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(doc(context.firestore(), "Companies", companyId, "Sites", siteId), raw);
+    });
+    return (await assertSucceeds(getDoc(reference))).data();
+  }
+  const patch = (fields) => ({ ...fields, customer: projection, uid, updatedAt: serverTimestamp() });
+  async function setMaintenance(isMaintenance) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await updateDoc(doc(context.firestore(), "System", "system"), { isMaintenance });
+    });
+  }
+
+  await t.test("missing source combinations preserve untouched fields and converge only Customer", async () => {
+    const sources = ["hasAbbreviation", "constructionPeriodStartAt", "constructionPeriodEndAt"];
+    for (let mask = 0; mask < 8; mask += 1) {
+      const missing = [...legacyMissing.filter((field) => field !== "hasAbbreviation"),
+        ...sources.filter((_field, index) => mask & (1 << index))];
+      const before = await reset({ missing });
+      await assertSucceeds(updateDoc(reference, patch({ remarks: "legacy remarks" })));
+      const after = (await assertSucceeds(getDoc(reference))).data();
+      assert.deepEqual(after.customer, projection);
+      assert.equal(after.remarks, "legacy remarks");
+      for (const field of missing) assert.equal(Object.hasOwn(after, field), false, field);
+      for (const field of Object.keys(before)) {
+        if (!["remarks", "customer", "uid", "updatedAt"].includes(field)) {
+          assert.deepEqual(after[field], before[field], field);
+        }
+      }
+    }
+  });
+
+  await t.test("name, abbreviation, one-sided construction, and site number updates succeed", async () => {
+    const start = new Date("2026-09-01T00:00:00.000Z");
+    const end = new Date("2026-09-30T00:00:00.000Z");
+    for (const fields of [
+      { name: "改称現場", displayName: "改称現場", tokenMap: { 改: true } },
+      { hasAbbreviation: true, abbreviation: "略称", displayName: "略称" },
+      { abbreviation: "未使用略称", displayName: "合成現場" },
+      { siteNumber: "synthetic-number" },
+      { constructionPeriodStartAt: start, hasConstructionPeriod: true,
+        hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: false },
+      { constructionPeriodEndAt: end, hasConstructionPeriod: true,
+        hasConstructionPeriodStartAt: false, hasConstructionPeriodEndAt: true },
+      { constructionPeriodStartAt: start, constructionPeriodEndAt: end,
+        hasConstructionPeriod: true, hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: true },
+    ]) {
+      const missing = [...legacyMissing, "constructionPeriodStartAt", "constructionPeriodEndAt"];
+      await reset({ missing });
+      await assertSucceeds(updateDoc(reference, patch(fields)));
+      const after = (await assertSucceeds(getDoc(reference))).data();
+      assert.deepEqual(after.customer, projection);
+      for (const field of missing.filter((field) => !Object.hasOwn(fields, field))) {
+        assert.equal(Object.hasOwn(after, field), false, field);
+      }
+    }
+  });
+
+  await t.test("invalid present sources, deletions, forged derived values and projections fail with write zero", async () => {
+    const badSources = [
+      ...[null, "false", 0].map((hasAbbreviation) => ({ hasAbbreviation })),
+      { hasAbbreviation: true },
+      ...[null, "", 123, "長".repeat(41)].map((abbreviation) => ({ hasAbbreviation: true, abbreviation })),
+      { constructionPeriodStartAt: "2026-09-01", constructionPeriodEndAt: null },
+      { constructionPeriodStartAt: null, constructionPeriodEndAt: 123 },
+    ];
+    for (const overrides of badSources) {
+      const before = await reset({ overrides });
+      await assertFails(updateDoc(reference, patch({ remarks: "invalid source" })));
+      assert.deepEqual((await getDoc(reference)).data(), before);
+    }
+    for (const fields of [
+      { hasAbbreviation: null, displayName: "合成現場" },
+      { hasAbbreviation: "false", displayName: "合成現場" },
+      { hasAbbreviation: 0, displayName: "合成現場" },
+      { hasAbbreviation: true, displayName: "合成現場" },
+      { hasAbbreviation: true, abbreviation: "", displayName: "合成現場" },
+      { constructionPeriodStartAt: "2026-09-01", hasConstructionPeriod: true,
+        hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: false },
+      { constructionPeriodEndAt: 123, hasConstructionPeriod: true,
+        hasConstructionPeriodStartAt: false, hasConstructionPeriodEndAt: true },
+      { name: "偽表示現場", displayName: "forged", tokenMap: { 偽: true } },
+      { name: "派生欠損現場", tokenMap: { 派: true } },
+      { name: "検索欠損現場", displayName: "検索欠損現場" },
+      { displayName: "forged" },
+      { tokenMap: { forged: true } },
+      { hasConstructionPeriodStartAt: true },
+      { constructionPeriodStartAt: new Date("2026-09-01T00:00:00.000Z"),
+        hasConstructionPeriod: false, hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: false },
+      { constructionPeriodStartAt: new Date("2026-09-01T00:00:00.000Z"),
+        hasConstructionPeriod: true, hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: true },
+      { constructionPeriodStartAt: new Date("2026-09-01T00:00:00.000Z") },
+      { constructionPeriodStartAt: new Date("2026-09-30T00:00:00.000Z"),
+        constructionPeriodEndAt: new Date("2026-09-01T00:00:00.000Z"),
+        hasConstructionPeriod: true, hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: true },
+      ...["hasConstructionPeriod", "hasConstructionPeriodStartAt", "hasConstructionPeriodEndAt"].map((field) => ({
+        constructionPeriodStartAt: new Date("2026-09-01T00:00:00.000Z"),
+        hasConstructionPeriod: true, hasConstructionPeriodStartAt: true,
+        hasConstructionPeriodEndAt: false, [field]: "false",
+      })),
+      { siteNumber: 123 },
+      { remarks: "forged customer", customer: { ...projection, name: "forged" } },
+      { remarks: "wide customer", customer: { ...projection, unexpectedProjectionField: true } },
+      { remarks: "unset customer", customerId: null, customer: null, isTemporary: true },
+    ]) {
+      const before = await reset();
+      await assertFails(updateDoc(reference, { ...patch({}), ...fields }));
+      assert.deepEqual((await getDoc(reference)).data(), before);
+    }
+    for (const field of [
+      "hasAbbreviation", "abbreviation", "constructionPeriodStartAt", "constructionPeriodEndAt",
+      "displayName", "hasConstructionPeriod", "hasConstructionPeriodStartAt",
+      "hasConstructionPeriodEndAt", "siteNumber",
+    ]) {
+      const before = await reset({ missing: [] });
+      await assertFails(updateDoc(reference, patch({ remarks: "delete attempt", [field]: deleteField() })));
+      assert.deepEqual((await getDoc(reference)).data(), before);
+    }
+    for (const [overrides, fields] of [
+      [{ constructionPeriodEndAt: new Date("2026-09-01T00:00:00.000Z") },
+        { constructionPeriodStartAt: new Date("2026-09-30T00:00:00.000Z") }],
+      [{ constructionPeriodStartAt: new Date("2026-09-30T00:00:00.000Z") },
+        { constructionPeriodEndAt: new Date("2026-09-01T00:00:00.000Z") }],
+    ]) {
+      const before = await reset({
+        missing: [...legacyMissing, "constructionPeriodStartAt", "constructionPeriodEndAt"],
+        overrides,
+      });
+      await assertFails(updateDoc(reference, patch({
+        ...fields, hasConstructionPeriod: true,
+        hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: true,
+      })));
+      assert.deepEqual((await getDoc(reference)).data(), before);
+    }
+    for (const field of [...legacyMissing, "constructionPeriodStartAt", "constructionPeriodEndAt"]) {
+      const missingCreate = siteRulesData({ docId: `${siteId}-create`, uid });
+      delete missingCreate[field];
+      await assertFails(setDoc(doc(firestore, "Companies", companyId, "Sites", `${siteId}-create`), missingCreate));
+    }
+  });
+
+  await t.test("legacy defaults do not bypass actor, tenant, status, or maintenance gates", async () => {
+    for (const actor of [
+      { label: "reader", isAdmin: false, roles: ["accountant"] },
+      { label: "direct", isAdmin: false, roles: ["sites:write"] },
+      { label: "temporary", isAdmin: true, roles: [], isTemporary: true },
+      { label: "disabled", isAdmin: true, roles: [], disabled: true },
+      { label: "other", isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id },
+    ]) {
+      const actorUid = `${uid}-${actor.label}`;
+      const actorCompanyId = actor.companyId ?? companyId;
+      await seedRegisteredUser({ uid: actorUid, pathCompanyId: actorCompanyId, companyId: actorCompanyId, ...actor });
+      const before = await reset();
+      const actorDb = authenticatedFirestore(actorUid, { isSuperUser: false, companyId: actorCompanyId });
+      await assertFails(updateDoc(doc(actorDb, "Companies", companyId, "Sites", siteId), {
+        ...patch({ remarks: "forbidden actor" }), uid: actorUid,
+      }));
+      assert.deepEqual((await getDoc(reference)).data(), before);
+    }
+    const before = await reset({ overrides: { status: "TERMINATED" } });
+    await assertFails(updateDoc(reference, patch({ remarks: "terminated" })));
+    assert.deepEqual((await getDoc(reference)).data(), before);
+    await reset();
+    await setMaintenance(true);
+    try {
+      await assertFails(updateDoc(reference, patch({ remarks: "maintenance" })));
+    } finally {
+      await setMaintenance(false);
+    }
+  });
+});
+
 test("Site Rules require a same-tenant exact embedded Customer and preserve customerName", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-customer-contract-manager";

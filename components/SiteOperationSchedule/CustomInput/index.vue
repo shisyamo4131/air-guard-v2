@@ -6,7 +6,7 @@
 import { useDefaults } from "vuetify";
 import { Operation } from "@/schemas";
 import { useSetRegularTime } from "@/composables/useSetRegularTime";
-import { useFetch } from "@/composables/fetch/useFetch";
+import { useSiteOperationRead } from "@/composables/dataLayers/site/useSiteOperationRead";
 import {
   attachSiteScheduleConfirmation,
   clearSiteScheduleConfirmation,
@@ -35,6 +35,10 @@ const { set, addMessage } = useSetRegularTime(
     siteId: () => props.item.siteId,
     date: () => props.item.date,
     shiftType: () => props.item.shiftType,
+    draftValues: () => [
+      props.item, props.item.startTime, props.item.endTime,
+      props.item.isStartNextDay, props.item.breakMinutes, props.item.regulationWorkMinutes,
+    ],
   },
   (agreement) => {
     props.updateProperties({
@@ -51,8 +55,10 @@ const { set, addMessage } = useSetRegularTime(
 /*****************************************************************************
  * SETUP FETCH COMPOSABLE
  *****************************************************************************/
-const { fetchSiteComposable } = useFetch("SiteOperationScheduleCustomInput");
-const { cachedSites } = fetchSiteComposable;
+const siteReads = useSiteOperationRead(() => [
+  props.item, props.item.siteId, props.item.securityType,
+]);
+let securityTypeBasis = null;
 const confirmationOperationId = Symbol("site-schedule-editor");
 
 function onSiteSelectionConfirmed(context) {
@@ -75,16 +81,27 @@ onBeforeUnmount(() => clearSiteScheduleConfirmation(props.item));
  * 2026-07-07 - `immediate: true` を追加（配置管理上での新規現場予定作成時に警備種別が自動設定されなかったのを修正）
  */
 watch(
-  () => props.item.siteId,
-  (newSiteId, oldSiteId) => {
-    if (newSiteId && newSiteId !== oldSiteId) {
-      const securityType = cachedSites.value?.[newSiteId]?.securityType;
-      if (securityType) {
-        props.updateProperties({ securityType });
+  () => [props.item, props.item.siteId, ...siteReads.identity.value],
+  async ([item, siteId]) => {
+    if (securityTypeBasis?.item !== item || securityTypeBasis?.siteId !== siteId) {
+      securityTypeBasis = { item, siteId, value: item.securityType };
+    }
+    // Keep edits made while the User access check is still pending, too.
+    if (item.securityType !== securityTypeBasis.value) return;
+    const request = siteReads.begin(siteId);
+    if (!request) return;
+    try {
+      const site = await siteReads.read(request);
+      if (request.isCurrent() && site?.securityType) {
+        props.updateProperties({ securityType: site.securityType });
+      }
+    } catch {
+      if (request.isCurrent()) {
+        addMessage({ color: "warning", text: "現場の警備種別を取得できませんでした。もう一度現場を選択してください。" });
       }
     }
   },
-  { immediate: true },
+  { immediate: true, flush: "sync" },
 );
 </script>
 

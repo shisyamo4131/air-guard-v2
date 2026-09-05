@@ -3,24 +3,52 @@
 ## 対象と現在判定
 
 - 対象: SITE-01からSITE-07までのSite改修と、直接・間接に影響した既存機能のlocal統合確認
-- 環境: `demo-air-guard-v2-codex`、loopback、保存済み合成account・合成data、Codexインアプリブラウザ
+- 環境: 先行確認は`demo-air-guard-v2-codex`とCodexインアプリブラウザ。追加確認は利用者が許可した起動済みLocal Emulatorとサインイン済みChrome（詳細は下記）
 - 影響分類: UI、application logic、data contract、Firestore Rules
-- 製品受入れ判定: 未完。Site lifecycle、archive、終了済み選択、権限別表示と、予定・稼働実績・請求・配置画面の読取り入口までは確認した
-- 完了判定: 影響した非Site業務documentの代表的な正規UI write・update・deleteとbackend差分、temporary/disabledへの切替時の既読詳細消去、一時runtime cleanupが残る。Dev、Prod、remote、実dataは未接続・未変更
-- 実装・受入れ基準commit: `e5a0adc4b62c286f30a590e8a9944ba6be850fa3`
+- 製品受入れ判定: Local追加確認中。利用者の2026-09-06の指示により、アカウント権限に依存する追加UI試験を除き、起動済みLocal環境で作成・更新・削除と背景trigger transportを実測する。Dev受入れは別工程である
+- 完了判定: 追加修正、Chrome再試験、domain/Emulator、独立reviewは成功。最終build・cleanup・文書・Git統合が残る。完了加点は行っていない
+- 実装・受入れ基準commit: `edb991ccaac4b15a5a8977260d80dbefc17d388b`
 
-## 自動検証
+## 2026-09-06の追加Local確認
+
+- 利用者が起動したChromeと会社管理者sessionを使用した。通常Localのproject namespaceは`air-guard-v2-dev`だが、Auth 9099、Firestore 8080、Functions 5001等がEmulator hubに登録され、Nuxtは`.env.local`のEmulator設定で起動していた。remote Devへ接続した証拠ではない。
+- 利用者側Emulatorは`--import=./saved-data`で起動し、終了時export指定がないことをprocess command lineで確認した。Chrome、Nuxt、利用者Emulatorを停止せず、一時dataをexportしない。住所・郵便番号変更、外部通知等の経路は追加実行していない。
+- 正規Chrome UIで請求対象OperationResultを1件作成し、Billingに同一実績が1回だけ追加された。Employeeを追加、休憩時間を変更、Employeeを削除し、それぞれBillingの従業員snapshotとSiteEmployeeHistory再構築をloopback backend assertionで確認した。最後に作成した実績をUIから削除し、Billingから当該実績だけが除去され、元の実績と履歴が残ることを確認した。
+- SiteのCustomerを別の既存Customerへ変更し、元へ復元した。取極めの休憩を変更し、重複日付の保存拒否とdraft保持、新日付での複製保存と削除を確認した。これらの前後で既存OperationResultとBillingのdocument fieldsのSHA-256が同一であり、既存snapshotは不変だった。請求一覧・詳細でも元の休憩時間と請求内容を確認した。
+- Site基本情報で必須名の空欄を拒否し、draftを保持した。旧documentの省略可能field欠損で備考更新までRulesに拒否される不具合を再現したため、missing-onlyの既定値とfield削除禁止へ修正した。対象fieldの型・相関検査、create必須field・actor/tenant条件は維持する。修正後に同じChromeから備考保存が成功し、reloadとbackendで保存を照合した。欠損sourceの一括補完は行っていない。
+- 初回修正の`List.hasAll(Set)`はEmulator実評価で失敗し、成功扱いから除外した。最終修正は`removedKeys().size()==0`を用い、対象Site Rules 12件と全Emulator 171件が終了コード0で成功した。一部陰性caseの1000式警告は残り、当該caseは拒否/write 0の証拠であって個々のvalidation発火証明ではない。正常なSite更新経路は対象suiteとChromeで成功した。
+- Site詳細から予定作成すると、preset現場名を表示しても取極め処理が「現場を指定してください」と拒否する問題を再現した。明示company/Site IDの取得へ修正し、Chromeで再選択なしの警備種別と定時取得、保存、reloadを確認した。予定日変更、別ACTIVE Siteへの変更と復元、過去日への変更、正規UIの上下番確定による実績化が成功した。生成実績は予定と同じID・Site・日付であり、予定の実績参照が設定された。共有helperを使う実績フォームでも定時取得が成功し、確認後は未保存で閉じた。
+- 非請求実績削除時にBilling key生成が失敗し後続同期が止まり得る問題は、既存の[FUT-0046](../implementation/future-actions.md)である。今回変更していないtransaction全CRUDの受入れへ範囲を広げず、非請求削除を確認済みとはしない。完全なSite/Billing snapshot実装もADR 0052の別transaction工程に残る。
+
+### 追加修正の検証とreview
 
 | Gate | Command | Result | Exit |
 |---|---|---|---:|
-| targeted | `node --test test/domain/site-ui-read-state.test.mjs test/domain/site-ui-presentation.test.mjs test/domain/site-postal-code-input.test.mjs test/domain/site-ui-source-contract.test.mjs test/domain/site-lifecycle-ui-source-contract.test.mjs` | 43 passed、0 failed | 0 |
-| domain-full | `node --test test/domain/*.test.mjs` | 1114 passed、0 failed | 0 |
+| Site Rules targeted | `powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test -TestNamePattern 'Site Rules'` | 12 passed | 0 |
+| reader targeted | `node --test test/domain/site-operation-read.test.mjs test/domain/site-read-authorization.test.mjs` | 36 passed | 0 |
+| domain-full | `node --test test/domain/*.test.mjs` | 1155 passed、0 failed | 0 |
+| local-emulator-suite | `npm run test:local` | 171 passed、0 failed、保存data不変 | 0 |
+| project-docs-negative | `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 陰性fixtureを含め成功 | 0 |
+| capacity-regression | `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 7 checks成功 | 0 |
+| managed-governance | `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | managed hash・renderer・policy整合成功 | 0 |
+| local-ui-build | `npm run test:local:ui:build` | 最終sourceのclean commit後に実行予定 | 未実行 |
+
+Rulesの独立security reviewは欠損のみfallback、削除禁止、actor/tenant、派生値、wide Customer不変互換を確認し、最終差分に必須findingなし。UIの独立reviewとsecurity reviewは明示会社path、アクセス取消、応答失効、手入力保持を確認した。途中findingだったUserアクセス確認待ち中の警備種別上書きは`securityTypeBasis`と追加testで解消し、最終reviewは必須findingなしである。review baselineは上記基準commit、対象は今回のRules/test 3fileとUI/helper/test 5fileで、reviewer自身は実行検証をしていない。
+
+影響分類は`ui-css-layout`・`application-logic`・`data-contract-schema-migration`・`project-guidance-metadata`の和集合とし、最終buildには`build-release-deploy`のcomprehensive gateも適用する。後続のreader/UI変更はFunctions、Rules、schema、Emulator設定・harness・検証対象writerを変更しないため、171件のEmulator結果を維持する。domainはreader最終修正後に再実行した。Dev/Prod generate・deploy・remote受入れは別工程で未実行。要件、保存shape、永続設計、一般運用は変更しないためspecification・data contract・ADR・manual・runbook・indexの追加更新は不要である。
+
+## 先行確認の自動検証（基準commit時点）
+
+| Gate | Command | Result | Exit |
+|---|---|---|---:|
+| targeted | `node --test test/domain/site-ui-read-state.test.mjs test/domain/site-ui-source-contract.test.mjs` | 31 passed、0 failed | 0 |
+| domain-full | `node --test test/domain/*.test.mjs` | 1127 passed、0 failed | 0 |
 | local-emulator-suite | `npm run test:local` | 166 passed、0 failed。loopback-only、saved data unchanged | 0 |
-| local-ui-build | `npm run test:local:ui:build` | Nuxt 3.17.2 / Nitro 2.11.11、client 1311 modules、server build成功。既知のBrowserslist、chunk size、sourcemap、Node package警告のみ | 0 |
+| local-ui-build | `npm run test:local:ui:build` | Nuxt 3.17.2 / Nitro 2.11.11、client・server build成功。既知のBrowserslist、chunk size、sourcemap、Node package警告のみ | 0 |
 
-独立reviewで終了検索clear、ACTIVE一覧状態、郵便番号message、詳細action labelの問題を検出し、修正後に対象・全domain・Emulatorを再検証した。Rules、Functions、schema、writer、非Site document writeへの未承認の拡大は検出されなかった。
+独立reviewで終了検索clear、ACTIVE一覧状態、郵便番号message、詳細action labelを補正した。後続reviewでは、権限取消後の既読詳細消去とAutocompleteの共有cache回帰を補正し、最新差分に指摘はなかった。Rules、Functions、schema、writer、非Site document writeへの追加拡大は検出されなかった。
 
-## ブラウザ受入れ
+## 先行専用環境のブラウザ受入れ（履歴）
 
 操作証拠は可視controlへのpointer・keyboard操作だけを数えた。初回診断で使用した直接value設定は受入れ件数から除外し、その後のSite作成、archive、終了、再有効化、終了済み選択、権限切替を通常操作で再実施した。非UIのactor・環境準備とbackend assertionは別証拠である。
 
@@ -42,7 +70,7 @@
 | `accountant` | Site readは可能、作成・基本・Customer・取極め・archiveは非表示、終了はdisabled。請求一覧・Customer/Site filterは利用可能 |
 | 直接`sites:write` | readは現行client互換として維持するが、Site master writeは非表示またはdisabled |
 | 未知role | Site menuとwrite操作を表示しない。読込み済み同一tenant詳細はRulesの既存read契約に従い閲覧のみ |
-| temporary / disabled | Site menuとwrite操作は消えるが、切替前に読込済みの詳細が残った。切替後の新規readはRulesが拒否するものの、既読表示を即時消去しないため修正・再検証対象 |
+| temporary / disabled | actor切替直後にSite menuとwrite操作が消え、切替前に読込済みのSite詳細も即時消去してnot-found表示へ移ることを確認。actor復元後は詳細を再取得した |
 | 非管理者SuperUser + `manager` | Site一覧・詳細のreadを維持しつつ、作成・基本・Customer・取極め・archiveは非表示、終了はdisabled |
 | 別tenant `manager` | 自tenantの合成Siteだけを一覧表示。Tenant Aの既知Site IDを開いてもnot-foundで、Tenant Aの内容は表示されない |
 
@@ -50,41 +78,43 @@
 
 ### 既存機能の確認済み範囲
 
-- `/operation-schedules`: controllerで当月一覧と作成入口を表示し、終了Siteが確認付き候補として利用できることを確認した。予定は保存していない。
-- `/operation-results`: controllerで当月一覧、Customer/Site filter、作成入口を表示した。実績は作成・変更していない。
-- `/arrangements-manager`: controllerで14日grid、日別集計・状態行を表示した。配置通知は作成・変更していない。
+- `/operation-schedules`: controllerで当月一覧と作成入口を表示し、Site・警備種別を選択して取極めから09:00〜18:00を設定した予定を保存した。再import後も同じ1件とSite参照を確認した。
+- `/operation-results`: controllerで当月一覧、Customer/Site filter、作成入口を表示し、同じSite・警備種別・09:00〜18:00の実績を保存した。再import後も同じ1件、Site参照、時刻を確認した。ADR 0052が将来契約とする完全なSite snapshotの実装・確認を示す証拠ではない。
+- `/arrangements-manager`: 合成Employeeを正規UIで作成し、可視drag操作で予定へ仮配置した。可視通知操作で`ARRANGED`、status編集で`CONFIRMED`へ更新し、日別集計、Schedule worker、ArrangementNotificationのSite・Schedule参照をbackendで照合した。
 - `/billings/operations`: accountantで当月一覧、Customer/Site filter、請求menuを表示し、Site writeがないことを確認した。請求は作成・変更していない。
 
-この結果は、既存の一覧・filter・dialog入口と参照表示が提供されることだけを示す。非Site業務documentのwrite・update・deleteはブラウザ未実施であり、同じまたは同等の機能が提供されるという最終判定には使わない。Site参照barrierの詳細な許可・拒否は同じHEADのEmulator testで確認済みだが、ブラウザ操作の代替にはしない。
+通常Functions入口は`onOperationResultChange`を公開し、OperationResultの作成・更新・削除からBilling、DailyAttendances、DailyOperationsByEmployee、SiteEmployeeHistoriesを同期する。一方、今回の`firebase.codex-test.json`はCallableだけを公開する`functions/codex-test`をsourceにするため背景triggerを登録せず、UIで保存したOperationResultから4つの後続処理は発火していない。これは製品triggerの障害を示すものではなく、外部作用を隔離した検証構成の制約である。
 
-## 現場ドキュメント以外の読み書き比較
+Site改修で追加した境界は、新規作成またはSite変更時のlive Site確認と、予定のsite/date・実績化競合である。無関係なfieldの通常更新、read、deleteの実装は変更していないため、Site統合確認を各下流機能の全CRUD受入れへ拡大しない。変更境界の許可・拒否と既存更新・read・delete互換は同じHEADのdomain/Emulator testで確認した。UI削除は利用者離席中に実行時確認を得られないため実施していない。一方、4つの後続処理のうち、Billing・SiteEmployeeHistory writerはlive Site確認を追加した直接影響箇所であり、専用Local entrypointにtrigger transportがないため、限定Local確認または自動test代替の利用者承認までは未完として残す。
+
+## 先行確認時の現場ドキュメント以外の読み書き比較（履歴）
 
 | 対象 | 改修前 | 改修後 | SITE-08確認 |
 |---|---|---|---|
-| `SiteOperationSchedules` | 予定CRUD・実績化で参照・更新 | create、site/date変更、実績化でlive Site/revisionを追加確認。通常deleteは維持 | 一覧・作成dialog・終了Siteの確認付き選択をブラウザ確認。予定writeなし。対象Rules/transaction test成功 |
-| `OperationResults` | 実績CRUDで参照・更新し、作成時の取極め等を保持 | createまたはsiteId変更時だけlive Siteを追加確認。既存snapshotはSite・取極め変更で更新しない | 一覧・filter・作成入口をブラウザ確認。実績writeなし。snapshot不変test成功 |
-| `ArrangementNotifications` | 通知CRUDで参照・更新 | createまたはsiteId変更時だけlive Siteを追加確認。通常更新・deleteは維持 | 配置managerの既存grid・集計表示をブラウザ確認。通知writeなし。Rules test成功 |
-| `Billings` | 請求CRUDで参照・更新 | createまたはsiteId変更時にlive Siteを追加確認し、新規初期化は同一transactionでSiteを読む。既存非Site field更新・delete・readは維持 | accountantの一覧・filterをブラウザ確認。Billing writeなし。Rules/Callable test成功 |
-| `SiteEmployeeHistories` | 実績を読み履歴を再構築 | 再構築時に実績とlive Siteを確認。実績0件cleanupは維持 | browser writeなし。Emulator test成功 |
+| `SiteOperationSchedules` | 予定CRUD・実績化で参照・更新 | create、site/date変更、実績化でlive Site/revisionを追加確認。通常deleteは維持 | 正規UIで予定を作成し、Site参照、取極め由来の時間、再import後の1件を確認。対象Rules/transaction test成功 |
+| `OperationResults` | 実績CRUDで参照・更新し、作成時の取極め等を保持 | createまたはsiteId変更時だけlive Siteを追加確認。既存snapshotはSite・取極め変更で更新しない | 正規UIで実績を作成し、Site参照、時刻、再import後の1件を確認。既存取極め等のsnapshot不変testは成功したが、完全なSite snapshotは未実装・未検証 |
+| `ArrangementNotifications` | 通知CRUDで参照・更新 | createまたはsiteId変更時だけlive Siteを追加確認。通常更新・deleteは維持 | 正規UIで仮配置、通知、確認済み更新を行い、`ARRANGED`→`CONFIRMED`、Site・Schedule参照、日別集計を確認。Rules test成功 |
+| `Billings` | 請求CRUDで参照・更新 | createまたはsiteId変更時にlive Siteを追加確認し、新規初期化は同一transactionでSiteを読む。既存非Site field更新・delete・readは維持 | accountantの一覧・filterをブラウザ確認。Rules/server-writer unit・Emulator test成功。OperationResult背景trigger transportとBilling writeは実UI未検証 |
+| `SiteEmployeeHistories` | 実績を読み履歴を再構築 | 再構築時に実績とlive Siteを確認。実績0件cleanupは維持 | server-writer unit・Emulator test成功。OperationResult背景trigger transportと履歴writeは実UI未検証 |
 | `System` / `Users` | 各処理に応じて参照 | Site Callableのmaintenance・strict actor判定で追加read | product writeなし。UI受入れ用にrunning Emulatorの`System/system`と合成User/claimsだけを一時設定し、exportせず停止で破棄 |
-| その他 | 各既存機能の契約 | SITE-07はCustomer未設定時の不要なCustomer readを停止し、非Site document writeを追加しない | Customer、Storage、勤怠、通知、請求、実績、予定、配置へのbrowser business writeなし |
+| `Employees` | Employee作成・更新 | Site改修による変更なし | 配置確認用の合成Employee 1件を正規UIで作成。位置情報は専用Functionsにgeocodingがない既知Local制約によりnullだが、Employee保存は成功 |
+| その他 | 各既存機能の契約 | SITE-07はCustomer未設定時の不要なCustomer readを停止し、非Site document writeを追加しない | Customer、Storage、勤怠等への追加browser business writeなし |
 
 `DailyAttendances`と`DailyOperationsByEmployee`はOperationResult由来の下流snapshotで、archive対象・書込み対象に追加していない。Site取極め変更が既存OperationResultへ影響しないことは仕様どおりである。remote legacy shapeはSITE-09 preflightまで未確認である。
 
-## 環境、保存差分、cleanup
+## 先行専用環境の保存差分・cleanup（履歴）
 
 - 初回Site作成失敗は保存fixtureに`System/system`がなく、SITE-04で追加したmaintenance Rulesがfail closedになったことが原因だった。製品回帰ではない。受入れではrunning Emulatorだけに`isMaintenance=false`を設定した。保存fixtureの更新・昇格は別判断とする。
-- UI product writeはSite 2件の作成、1件のarchive、もう1件の終了・再有効化・再終了だけだった。非Site業務document writeはなかった。
+- UI product writeはSite 2件の作成、1件のarchive、もう1件の終了・再有効化・再終了に加え、Schedule 1件、OperationResult 1件、配置確認用Employee 1件、Schedule worker 1件、ArrangementNotification 1件の作成と通知status更新だった。すべて稼働中Emulator内だけで行い、canonical `.codex-test/saved-data`へはexportしなかった。Schedule・OperationResultを含むtask固有runtime checkpointへ一時保存・再importし、最終確認後にcheckpointを削除した。
 - 非UI setup writeはrunning Emulatorの`System/system`、合成User/claims、actor確認用Company/Siteだけで、remoteへ送らずexportもしなかった。Emulator停止により破棄された。
-- `.codex-test/saved-data`は実行前後とも7 files、同一aggregate SHA-256 `c8c7bed285f9c7c9e1fb9942f84cba63994d9e183502401d6365c53aef728ca4`だった。
-- クラッシュ後の再開確認で専用server/Emulator portsはLISTEN 0件、worktreeはcleanだった。
+- `.codex-test/saved-data`は最終実行前後とも7 files、3492 bytes、同一aggregate SHA-256 `BBE262EA450AE626E3E4D832ABADBC3B42511D575EC6F667C78463B1BE4316E0`だった。利用者側`saved-data`も7 files、同一aggregate SHA-256 `BBE681DA9A6C6495519A04788C2092754CD89EEEE4C428A15DF668B395FF1E04`で不変だった。
+- 専用server/Emulatorを停止し、対象portsはLISTEN 0件である。task固有runtime `site08-live-restart-20260905`は対象path・非reparse・7 filesを確認して削除した。他のruntimeと保存dataは削除していない。
 - 生成済み`.output`はworkspace内の通常directoryでlinkではないことを確認したが、再帰削除は安全審査で利用者の明示承認が必要とされたため残置している。
+- browser consoleではEmployee住所保存時に`[ClientGeocoding] FirebaseError: internal`を1件観測した。Codex専用Functionsがgeocodingをexportしない既知Local制約で、Employee document保存と配置確認は成功しており、Site差分の回帰とは判定しない。
 
 ## SITE-09へ進む前の停止条件
 
-- Site専用のtemporary/disabled既読詳細消去を修正し、権限切替を再確認する。
-- 予定、稼働実績、請求、配置通知について代表的な正規UI write・update・deleteとbackend保存差分・不変を確認する。
-- SITE-08の`.output` cleanupと文書・Git統合を完了する。
+- SITE-08の最終build・生成物cleanup・文書・Git統合を完了する。背景trigger確認方法の判断待ちは、今回の利用者指示と通常Localでの実測により解消した。
 - Dev/remote接続前に、既存予定の`operationResultId`・日付field、既存archive、取極め、下流snapshot、必要indexのshapeをread-onlyで確認する。
 - 競合、legacy欠損、active/archive同ID等があればdeploy・migrationを有効化せず、対象件数、backup、dry-run、post-check、rollbackを示して別承認へ止める。
 - SITE-09のDev反映・remote/data確認は別承認であり、本記録では実施していない。
