@@ -58,3 +58,16 @@ sourceを`75080329982e7e6d1edc14a1ec66dc260c529801`へlocal commitし、clean HE
 動的component指定の初案はEMP-02-UI-R2で未登録componentの解決不足を指摘され、EmployeeEditorの`input.displayName`スロットに静的`v-text-field`を置く修正へ変更した。共有operation contractは元へ戻し、package・共通入力部品を変更しない。実AirItemInputのslot attrs生成、静的componentのtemplate compile、逐次姓名入力と明示表示名保持を追加testで検証した。
 
 最終slot修正後の`node --test test/domain/*.test.mjs`は1180 tests / pass 1180 / fail 0、exit 0。`npm run test:local`の再実行も172 tests / pass 172 / fail 0、exit 0。後者の後続差分はUI slot・domain test・文書だけで、server保存契約・Rules・harnessは不変のためEmulator証拠を再利用する。`git diff --check`もexit 0。実UI再試験とその受入れは未完了。
+
+### EMP-02 最終受入れ
+
+EMP-02-UI-R3は静的slot接続のP2解消・追加指摘なし。source commit `67e53a9ee435c842ffcf9b0f0408309ba9f9ea3a`をclean状態で`npm run test:local:ui:build`しexit 0。前景Emulatorのready・3専用Callable登録、generated serverのidentity検査・HTTP 200を確認した。修正前buildの証拠を流用していない。
+
+- UI user-equivalent action: 保存済みsessionが失効したため、専用合成accountへ通常keyboard入力でサインインした。ダッシュボード→可視メニュー→在職一覧→正規新規登録の経路で2件を作成した。姓名の連続入力が完全な表示名へ追従すること、基本編集の取消、明示した元表示名の優先、住所変更、国籍の登録・解除、明示再読込みを確認した。保存中の入力/保存button無効化、住所変更後の座標未取得通知、新規登録から詳細への遷移後にも通知が表示されることを直接観測した。
+- non-UI setup: 専用Authの保存済み1合成accountと実行中accountの一致を確認し、running Emulator内だけにrandomな一時passwordを設定した。credentialはmemory内で入力し、repository・応答・command出力へ保存しなかった。saved-dataの変更はない。
+- backend assertion: UI作成原本の姓名・表示名・住所・ACTIVE・座標2field null・3保険世代0、取消時の原本完全不変、基本/国籍保存後の他section・保険世代・資格・在籍情報保持、外国籍解除の従属消去をread-only照合した。2件目作成でも1件目原本は不変だった。非UIで対象Employeeを注入していない。
+- cleanup: 所有tabを閉じ、generated server→EmulatorをCtrl+Cで停止し、終了を確認した（停止時exit 1）。専用8portと派生9150/8780のLISTENなし、`.output`の安全な削除、開始時3datasetすべてのfile数・bytes・SHA-256一致、既存root logの復元・SHA-256一致を個別commandのexit 0で確認した。一時credentialはEmulator停止で失効した。連続工程の検証logと原log backupだけを既存のroot所有runtimeへ保持し、EMP-04終了時に削除する。
+
+変更classに必要な共通3gate、project-docs（exit 0）、全domain（1180/1180・exit 0）、Emulator（172/172・exit 0）、最終専用build（exit 0）、diff/cached diff（exit 0）を確認した。最終文書更新後は文書gateだけを再実行する。実provider・Dev/Prod・別roleの代表UI・実dataは未検証。権限別保存と拒否・競合/応答不明は自動testで検証し、全roleの画面受入れを実施したとは扱わない。
+
+EMP-02の目的・完了条件を満たし、進捗を10%→30%へ加点する。EMP-03は資格行の原配列位置・raw配列期待値・子Classの明示validation・既存date入力を引き継ぐ。次工程のread-only preflightでAirItemInput schema/slot契約と資格Tableの表示順を確認し、追加仕様判断は不要と判断した。保険編集はEMP-04まで停止、archive/参照保護とDev提供は後続工程のままである。

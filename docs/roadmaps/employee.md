@@ -1,8 +1,8 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: EMP-01完了、EMP-02実装中。EMP-04までの連続実施を承認済み。各工程のreview・検証・報告・統合後に次へ進み、EMP-04完了で停止する。
+- 状態: EMP-01・02完了。次は承認済みのEMP-03。各工程のreview・検証・報告・統合後に次へ進み、EMP-04完了で停止する。
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
-- 現在の進捗: 10%
+- 現在の進捗: 30%
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
 - 承認境界（以下は採用経緯。最新方針は次項）: 2026-09-06に計画文書保存・review・文書検証・local commitとEMP-01開始を承認し、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)のactor・閲覧最小化を採用した。同日、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)の会社管理者・統括だけの従属なし誤登録物理削除、archive延期、他collectionの既存実装維持を採用し作業開始を指示した。この時点の未決事項は後続回答で順次置換した。後続の開始承認は次項を参照する。Dev・Prod・remote・実data・package変更は未承認のままである。
 - 実行単位: 最新指示「EMP-04まで一気通貫で作業開始」によりEMP-02〜04を連続実施する。工程ごとの作業・次工程review・報告・検証・local統合を維持し、EMP-03/04の再承認は求めない。EMP-05以降は開始しない。
@@ -48,7 +48,7 @@ EMP-05の内部順序はreader/参照契約→参照writer・index保持→旧tr
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
 | EMP-01 契約・対象確定 | 10 | 10 | Completed | actor・保存/競合・住所/座標・archive形式/従属/閲覧・表示名/作成導線・段階移行/提供工程を確定し、仕様・必要ADR/CONF/FUTへ反映する。独立review・文書検証によりEMP-02の入力・保存・test前提を確認して報告する。 |
-| EMP-02 作成・基本・国籍 | 20 | 0 | In progress | 独立draft、同ID/create-onlyと結果照合、基本/国籍のexact field保存、住所入力、派生field、従属field初期化、採用した同field競合契約・異field保持を実装する。対象operationの権限・型・fieldを保存境界で強制し、旧allowによる迂回も閉じる。原本/archive readを7actorへ揃え、未移行editorをlocal read-onlyとし、代表UI保存・再読込・失敗を確認する。 |
+| EMP-02 作成・基本・国籍 | 20 | 20 | Completed | 専用保存・独立draft・7actor read/直接CUD拒否、住所と派生field・局所競合・異field保持を実装した。独立reviewの指摘を修正し、domain 1180件・Emulator 172件・修正後build・実UI作成/基本/国籍/取消/再読込/通知・backend照合・cleanupを確認。[検証記録](../verification/employee-02-04-local.md)を参照。 |
 | EMP-03 警備員登録・資格 | 10 | 0 | Planned | 登録情報と資格配列を別operationとして保存する。同名・名称変更・削除・別行追加・古い配列の再送で他行を失わず、保険・基本情報・lifecycleへ書かない。対象actor、従属初期化、拒否・成功のdata比較と代表UIを確認する。 |
 | EMP-04 3保険の保存 | 15 | 0 | Planned | 各保険の承認済み遷移だけをserverで検証し、対象保険の現在値/historyと巻き戻さない保険別世代値をraw期待値として照合する。live非mutation、保存await、確定拒否時のwrite 0、応答不明時の照合、二重history変更防止を確認する。監査制度全面刷新を暗黙追加しない。 |
 | EMP-05 閲覧互換・参照保護・アーカイブ | 20 | 0 | Planned | 原本の全項目readと既存購読を維持し、現在Auth/User・identity由来tenant・既知roleの認可を揃える。Employee/archivesと汎用Rules、既存query・Class表示、cold cache、初期選択ID、期間内退職者、更新/削除反映、権限喪失を検証する。参照writer/Rules・日次2種と請求の索引・限定整合確認・旧User削除trigger停止・専用archiveを実装し、競合両順序・埋込み参照・旧writer拒否を検証する。実dataはEMP-09の別承認。項目限定API・DTO/projection・新しい通知やpollingは追加しない。 |
@@ -108,7 +108,7 @@ EMP-05の内部順序はreader/参照契約→参照writer・index保持→旧tr
 
 後続実装は実diffのUI/application/data-contract等のunionから選択し、直接test→対象回帰→最終状態のcompletion gateを実行する。UI・logic・Rules変更の基本集合はproject-docs、domain-full、local-emulator-suite、local-ui-build、diff-checkであり、build実行・permission定義・release等の該当classはpolicyどおり追加する。環境・実行承認がないgateは記載だけを根拠に実行しない。各commandの結果・exit・証拠失効・省略理由をcompletion reportへ残す。
 
-最終提案の採用を仕様・ADR/CONF/FUT・本書へ反映し、独立最終reviewとcomprehensive 5 gateを確認してEMP-01を完了した。末尾に証拠を集約する。最新指示によりEMP-02の作成/基本/国籍専用保存とread/直接CUD境界を実装する。完了review・検証・報告・統合後EMP-03、EMP-04へ進み、その完了で停止する。
+EMP-01の確定後、EMP-02の専用保存・read/直接CUD境界と代表UIの受入れを完了した。現在の次作業はEMP-03の警備員登録・資格の専用保存と編集再開である。完了review・検証・報告・統合後EMP-04へ進み、その完了で停止する。
 
 ## 計画reviewの記録
 
