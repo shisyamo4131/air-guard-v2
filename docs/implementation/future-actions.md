@@ -1014,6 +1014,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0075 Employee個人情報の閲覧・編集権限を最小化する
 
+最新判断: [ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)により、会社管理者・既知6業務roleには現時点で全項目readを許可する。以下の項目最小化の提案はこの範囲で置き換え、項目限定API・DTOは今回追加しない。roleなし等の拒否、操作別write、既存archiveの境界は未実装の必須対象として維持する。
+
 EMP-01再照合（2026-09-06）: 下の初期調査時点からUWBが進み、現在は同社の有効な本登録Userというidentity境界、退職3field保護、Employee delete拒否がある。ただし通常fieldとarchiveの過剰アクセスは残り、archiveは個別matchだけでなく汎用許可の除外も必要。[現経路](employee-master.md#現行経路の再照合)と[CONF-0061案](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を参照する。対象のread/write保護はEmployee改修の必須条件であり、独立課題として後続送りしない。runtime/remoteは未確認。
 
 - 状態: Needs decision
@@ -1060,6 +1062,8 @@ EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
+追加回答: 他collectionの保存処理・RulesへのEmployee存在確認追加は今回対象外と確定した。参照競合を解決できたという意味ではなく、安全条件が未確定の物理削除は開放しない。
+
 EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)でEmployee archiveを保留し、将来工程として本FUTへ残す。誤登録の物理削除を会社管理者・統括だけに許可し、従属あり拒否・User/Auth非連鎖削除を採用した。削除の従属一覧・新規参照競合・旧writer/trigger・再試行/同ID再作成・工程配分は今回の[Employeeロードマップ](../roadmaps/employee.md)の必須残作業であり、本FUTへ先送りしない。将来archiveの保存/閲覧/復元・保持・匿名化は別工程で再検討する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界として維持し、他collectionの既存実装は変更しない。
 
 - 状態: Needs decision
@@ -1075,7 +1079,7 @@ EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-
 
 ## FUT-0079 Employee code・派生氏名・候補statusの整合を保証する
 
-EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、DTO/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。採番/一意性や新しい候補status制限は既存必須条件ではなくCONF-0065の判断とし、別scopeへの延期を許容する。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
+EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、既存Class/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。採番/一意性や新しい候補status制限は既存必須条件ではなくCONF-0065の判断とし、別scopeへの延期を許容する。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
 
 - 状態: Needs decision
 - 重大度: Medium
@@ -1704,7 +1708,7 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 
 ## FUT-0126 従業員資格・機微情報の操作別権限と監査を実装する
 
-EMP-01対応時期（2026-09-06）: actor方針を部分採用し、exact公開fieldはCONF-0061/0105で引き続き判断する。資格と警備情報の操作別保存・直接拒否はEmployee改修の必須条件。資格証明書番号まで業務用readerへ渡す必要性は確認されていない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
+EMP-01対応時期（2026-09-06）: actor方針と全項目readを採用し、資格証明書番号・本籍・緊急連絡先もCONF-0061/0105の回答に含む。資格と警備情報の操作別保存・直接拒否はEmployee改修の必須条件。全項目readからwrite権限を拡張しない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
 
 - 状態: Open
 - 重大度: High
@@ -1955,7 +1959,7 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 
 ## FUT-0143 個人住所・座標のprovider送信とlog privacyを統制する
 
-EMP-01再照合（2026-09-06）: Employeeの住所送信/log経路は残るが、自宅座標を使う通常業務readerは今回の検索範囲で未発見。CONF-0120へ新規送信停止/継続の比較を追加した。継続する場合の認可・privacyはEmployee住所writerの必須依存であり後続送りしない。停止しても共通Callableの公開入口・他master・過去log・既存座標のdata処理まで解消したとは扱わず、明示scopeで後続判断する。
+EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で未発見だが、利用者は将来の現場・自宅経路図を目的に取得・保存の継続を採用した。CONF-0120に回答を反映し、停止案は今回採用しない。住所と座標の整合・失敗時保存・認可/logはEmployee住所writerの必須依存であり後続送りしない。共通入口・過去log・provider運用まで解消したとは扱わず、他masterの保存・Rulesは変更しない。
 
 - 状態: Needs decision
 - 重大度: High
@@ -1963,7 +1967,7 @@ EMP-01再照合（2026-09-06）: Employeeの住所送信/log経路は残るが�
 - 対象ファイル・シンボル: Employee GeocodableMixin、`fetchCoordinates` logging、Callable error
 - 確認済み実装事実: Employee自宅を含むfullAddressを外部providerへ送り、成功時座標、失敗時address/provider responseをserver logへ出す経路がある。redaction/retention/consent contractは確認できない。SPEC-DEEP-009でCallableのnull時error messageにも入力addressが入り得ることを再確認した。
 - 想定影響と発生条件: 個人の居住地・精密座標がproviderとlogへ不要に開示・保持され、閲覧権限や目的外利用のriskが生じる。
-- 未確認点・仮説: geocodingのEmployee業務目的、provider契約、log保持・閲覧者、本人同意は未確認。
+- 未確認点・仮説: Employeeの用途は将来の現場・自宅経路図と回答済み。provider契約、log保持・閲覧者、本人同意は未確認。
 - 推奨する将来対応: CONF-0120後、必要性最小化、対象master選別、precision低減、redaction、consent/privacy notice、retention/access auditを設計する。
 - 必要なテスト: Employee/業務住所分離、log redaction、provider failure、権限、削除/保持、support export。
 - ユーザー判断が必要な事項: CONF-0120、CONF-0115。

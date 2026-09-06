@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-06
-- 仕様バージョン: 0.8.13
+- 仕様バージョン: 0.8.14
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -152,10 +152,12 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 ### Employeeの操作権限と保持
 
-- 同社の有効な本登録会社管理者・統括・人事は、Employeeの作成と通常編集（基本情報、国籍、警備員登録、資格、保険）を行える。労務・法務・管制・経理はEmployeeを更新せず、業務に必要な項目だけ閲覧する。各閲覧roleに公開するexact fieldは未決であり、全文公開の承認とはしない。roleなしの本人向けEmployee Self Accessは既存の別境界に従う。
+- 同社の有効な本登録会社管理者・統括・人事は、Employeeの作成と通常編集（基本情報、国籍、警備員登録、資格、保険）を行える。Employeeの閲覧は、会社管理者・統括・人事・労務・法務・管制・経理へ現時点では全項目を許可する。労務・法務・管制・経理は更新できない。本人向けEmployee Self Accessは既存の別境界に従い、roleなし・未知role・直接permission文字列・developer指定だけを原本全項目readの根拠にしない。詳細は[ADR 0058](decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
 - 通常編集、退職、誤退職訂正、誤登録の物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、物理削除は会社管理者・統括だけに許可する。人事単独には物理削除を許可しない。誤退職訂正actorの追加変更は未決であり、明示変更までは既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
 - 誤登録のEmployeeは、従属documentがない場合だけ物理削除でき、一つでもあれば拒否する。事前のarchiveを条件にせず、対象Employee本体をFirestoreから削除し、新しいarchiveの複製を作らない。削除後の閲覧・復元を通常機能として提供しない。子pathだけでなく、Employeeを参照する業務document、User連携・予約等を含む具体的な依存一覧と同時参照作成への対策を実装前に確定する。従属dataやUser/Authの連鎖削除、検査不能を「従属なし」と扱う処理を許可しない。
 - 通常退職はEmployeeと業務記録を保持し、誤登録削除で代用しない。Employeeのarchiveは保留し、将来工程に残す。今回archive状態field、通常queryへのarchive除外条件、archive一覧・restoreを追加しない。Customer、Site、Outsourcer等の既存実装は変更しない。既存archive、backup等の一括削除・変換・purgeは今回の採用範囲に含めない。判断は[ADR 0057](decisions/0057-employee-hard-delete-and-archive-deferral.md)を参照する。
+- 「他collectionの既存実装維持」は、その保存処理・Rulesも変更しないことを含む。Employee存在確認を他collectionへ追加する変更も今回の対象外とする。従属あり拒否・非連鎖削除を弱める意味ではなく、安全条件を満たせない状態では物理削除を開放しない。
+- 自宅座標は、将来の配置先現場と従業員自宅の経路図に利用するため必要とする。Employeeの住所から座標を取得・保存する機能を継続する。経路図の描画、経路検索、距離による配置判断は将来工程であり、今回のCRUD改修では追加しない。座標を含むEmployeeの閲覧は上記の全項目read境界に従う。
 
 ### 外注先
 

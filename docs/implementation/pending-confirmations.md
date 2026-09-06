@@ -753,22 +753,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ### EMP-01の部分回答と残る判断
 
-2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職、他4roleの必要項目のみ閲覧を採用した。同日、archiveを将来へ延期し、会社管理者・統括だけの従属なし誤登録物理削除を採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)と[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
+2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職を採用した。同日、archiveを将来へ延期し、会社管理者・統括だけの従属なし誤登録物理削除を採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)と[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
 
-閲覧項目は未採用である。次の表は他4roleへの公開範囲を判断するための比較案に限定し、会社管理者・統括・人事へraw documentの全fieldを返すことも、このactor回答だけから導かない。Rは閲覧案、—は非公開案。
-
-| 情報 | 労務 | 法務 | 管制 | 経理 |
-|---|---|---|---|---|
-| code・表示名・表示カナ・肩書、業務上必要な在籍情報 | R | R | R | R |
-| 原簿の氏名/カナ・性別・生年月日・住所・携帯・email | R | — | — | — |
-| 国籍・外国人氏名・在留資格/期限・就労制限 | R | — | — | — |
-| 警備員登録有無/日、資格名・種別・取得日・期限 | R | R | R | — |
-| 資格番号・発行元、本籍 | — | — | — | — |
-| 血液型・緊急連絡先 | R | — | — | — |
-| 保険番号・状態・加入喪失・history | R | — | — | — |
-| 備考 | — | — | — | — |
-
-法務の在留書類確認、管制の緊急連絡、経理/勤怠exportの原簿氏名など、現業務に必要な例外は用途とfieldを確認して決める。原簿氏名を表示名へ無断置換せず、非公開foreignName/raw tokenMapによる検索一致も許可しない。低権限queryの順序・返却値を含め、必要な読取りを同時に設計する。
+同日の追加回答で、労務・法務・管制・経理も「現時点では全項目OK」と確定した。会社管理者・統括・人事を含む既知業務roleのEmployee原本全項目readを維持し、項目別mask/DTO・表示用data分割のための新APIは今回導入しない。既存検索・原簿氏名/性別/国籍表示・リアルタイム購読を活かす。roleなし・未知role・他tenant・無効/仮Userの原本readと既存archiveの過剰アクセスは別途閉じる。詳細は[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
 
 退職後の通常訂正と入社日の相関、保険の手続中操作・history復元actor等の詳細は未決。保険通常編集actorは会社管理者・統括・人事で確定したが、以前の「history復元は会社管理者だけ」「手続中の喪失/除外は先に取下げ」は未採用案である。履歴復元は過去entryをpopする操作であり監査履歴とは呼ばない。通常保存で退職field（不存在を含む）やUser/Authを変更せず、保持期限や制度要件を推測で追加しない。
 
@@ -782,7 +769,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: field別read model、本人+労務限定、管理者のみ、機能別document分割。
 - Current provisional treatment: 現行境界を暫定実装とし、安全な確定仕様とはしない。
 - Related FUT IDs: FUT-0075、FUT-0159
-- Answer: 2026-09-06 actor方針と必要項目だけの閲覧を部分回答。上記の確定要件へのlinkを参照。exact read field、保険特別操作、保持・訂正条件は未回答のため一括Answeredにしない。
+- Answer: 2026-09-06 actor方針と現時点の全項目readを部分回答。上記の確定要件へのlinkを参照。保険特別操作、保持・訂正条件は未回答のため一括Answeredにしない。
 
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
 
@@ -811,6 +798,8 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 2026-08-24 部分回答。将来日退職・予約取消はUWB-07に含めず、退職日は入社日以降かつserverTodayJST以前に限定する。誤退職は会社管理者専用のUWB-07Cで同じEmployee IDを`ACTIVE`へ戻すが、User/Authは自動復元しない。実際の退職期間を伴う再雇用で同じEmployee IDを継続するか、新IDと雇用期間を使うかは未回答のままFUT-0077へ残す。
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
+
+2026-09-06の追加回答: 他collectionの保存処理・RulesはEmployee存在確認の追加も含め変更しない。従属確認後の参照追加、遅延集計による再作成を防ぐ契約は未確定であり、物理削除のUI開放へ進まない。[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照。
 
 2026-09-06改訂: archive導入は将来工程へ延期し、誤登録Employeeは会社管理者・統括だけが従属なしの場合に物理削除する方針を採用した。事前archiveを条件にせず、通常退職でEmployeeと業務記録を保持する契約と区別する。他collectionの既存実装は変更しない。具体的な従属一覧・同時参照対策、対象状態/誤登録確認、削除再試行/同ID再作成、監査、旧User削除trigger、実装工程はEMP-01で確定する。以下の2026-08-24回答の誤登録archiveは履歴であり、将来archiveの保存/閲覧/復元・保持は今回のCRUDの前提にしない。[仕様](../specification.md#employeeの操作権限と保持)、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、[工程](../roadmaps/employee.md)を参照する。
 
@@ -1320,7 +1309,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0105 従業員資格・警備員登録・機微情報の閲覧編集actor
 
-2026-09-06、通常編集actorは会社管理者・統括・人事、他4roleは必要項目だけ閲覧と部分回答した。[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)でexact fieldを引き続き確認し、役割名だけで法務や管制へ全文を返さない。
+2026-09-06、通常編集actorは会社管理者・統括・人事、他4roleは閲覧だけと部分回答し、その後、現時点の全項目readを採用した。資格・本籍・緊急連絡先等を含む閲覧範囲は[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)とADR 0058に従う。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-036; `qualification-management.md`
@@ -1330,7 +1319,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: field別document/permission、HR専用、管制は有効flagのみ、本人申請+管理者承認、全管理者。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式権限とはしない。
 - Related FUT IDs: FUT-0126
-- Answer: 2026-09-06 actor方針だけ部分回答。field別閲覧と特別な確認・override条件は未決。正本はCONF-0061から参照する仕様とする。
+- Answer: 2026-09-06 actorと現時点の全項目readを部分回答。特別な確認・override条件は未決。正本はCONF-0061から参照する仕様とする。
 
 ## CONF-0106 AirGuardで管理する警備教育・OJT履歴の範囲
 
@@ -1402,7 +1391,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: preset中心、permission中心、role+scope、admin全権/限定権、developer非production、super-user緊急運用。
 - Current provisional treatment: 現行presetとspecial roleを実装事実としてのみ記録する。
 - Related FUT IDs: FUT-0133、FUT-0134、既存の各業務認可FUT
-- Answer: 2026-09-06通常業務とEmployee専用操作のactor方針を部分回答。[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。その他のroleの全機能matrix、special role、exact read field、未列挙の専用操作は未決。旧catalogの定義・実装・検証を変更済みとはしない。
+- Answer: 2026-09-06通常業務とEmployee専用操作のactor方針を部分回答。[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。Employeeの全項目readは[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)で追加回答済み。その他のroleの全機能matrix、special role、他機能のexact read field、未列挙の専用操作は未決。旧catalogの定義・実装・検証を変更済みとはしない。
 
 ## CONF-0112 複数required permission・admin override・denyの判定意味
 
@@ -1502,29 +1491,25 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0120 Employee個人住所geocodingの目的・同意・保持
 
-### EMP-01の判断案（未採用）
+### EMP-01の部分回答と残る保存条件
 
-通常作成・住所更新から自宅住所をgeocodingへ新規送信しない案を推奨する。現codeには送信・座標保存・住所/座標logの経路があるが、今回検索したapplicationとinstalled schemaの範囲では、自宅座標による距離/配置判定の業務callerを確認していない。caller未発見は全環境で不存在という保証ではない。
+2026-09-06、利用者は自宅住所の座標変換を必要とし、「将来、配置先の現場と従業員の自宅の経路図を描画したい」と用途を回答した。新規の座標取得・保存を止める旧案は採用しない。現時点の全項目readの回答により、座標を含むEmployee原本の閲覧は会社管理者・既知6業務roleに許可する。経路図の描画や経路API・配置判断は将来工程とし、今回のCRUDに追加しない。[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
 
-停止案は住所文字列の登録・編集を維持し、作成/住所保存/no-op/国籍保存のprovider呼出し0を検証する。既存location/geopointは通常patchで削除・書換えず保持するため、住所変更後は古い座標になり得る。現住所の正しい座標として表示・利用せず、公開対象から外す設計が必要である。旧raw documentを読むactorがいる間は座標非公開が完成したとは扱わず、read方式はEMP-01でactor matrixと照合して決める。既存座標削除は別のdata判断と承認で行う。
+次の保存条件は実装前の設計案である。住所文字列だけが更新され座標が古いまま成功表示されること、provider呼出しがtransaction再試行で繰り返されること、通常の国籍/保険更新まで住所を送信することを避ける。住所関連fieldが実際に変わる作成/基本保存に範囲を限定し、外部呼出しの完了後に期待する住所と最新原本を照合して住所・取得座標を保存する案を比較する。住所・座標・認証情報をlogへ出さない。既存共通入口の状態とEmployee専用経路の保護を混同せず、他masterの保存・Rulesを変更しない範囲を確認する。
 
-継続案では、必要な画面/用途、精度、送信者、閲覧者、provider送信、失敗時保存可否、log、保持を先に確定する。現共通Callableをそのまま安全な住所writerとして再利用しない。他masterに及ぶ入口認可・log是正は対象を説明した依存segmentとし、Employee操作だけ止めても共通公開入口のriskは解消したとはしない。いずれの案も今回の外部接続や座標削除を許可するものではない。
-
-既存座標の代替案は、住所を実際に変更した通常保存に限ってlocation/geopointをnull化し、古い座標の残存を防ぐ方式である。住所不変の更新は既存値/不存在を維持する。これは通常保存のfield所有範囲を広げる製品仕様変更なので採用判断が必要であり、既存全件の一括削除とは分ける。新規作成では座標未取得の現schema既定を用い、実装時に正確な表現を再照合する。
-
-利用者判断: 新規送信停止案と、既存座標の保持/住所変更時null化の採否。継続する場合は上記の具体用途・境界が必要。
+provider失敗時は「住所保存も拒否してdraftを保持する」案と、現挙動に近い「住所保存を認め座標未取得を明示する」案が残る。前者は一貫性を保ちやすいが外部障害で住所編集が止まり、後者は住所編集を続けられるが将来の経路図で欠損を扱う必要がある。新規/住所変更時の保存表現、既存座標・欠損の扱い、失敗時契約を確定してから実装する。今回の回答は既存全件の座標再取得・削除や実provider接続の実行承認ではない。
 
 ### 既存確認事項
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`
 - Evidence: EmployeeもGeocodableMixinを継承し、自宅fullAddressを外部providerへ送信して精密座標を保存する。logへ住所/座標が出る経路がある。
 - Question: 従業員自宅座標を何の目的で必要とし、本人通知・同意、precision、provider送信、保存期間、閲覧者、削除、logをどう扱うか。
 - Why needed: 高感度な居住地情報を必要最小限・目的限定で扱うため。
 - Options and impact: geocodingしない、都道府県/市区町村まで、精密座標を限定roleのみ、本人同意、短期/退職時削除。
-- Current provisional treatment: 現行自動geocodingを実装事実とし、privacy上承認済みとは扱わない。
+- Current provisional treatment: 取得の必要性・用途・閲覧actorはADR 0058で採用済み。provider運用・log・保持の全条件まで承認済みとは扱わない。
 - Related FUT IDs: FUT-0143、FUT-0075、FUT-0138
-- Answer: 未回答
+- Answer: 2026-09-06 部分回答。将来の現場・自宅経路図のため座標取得・保存を継続し、全項目閲覧のactorへ座標も公開する。住所保存の失敗時条件、log・外部送信の詳細、保持等は未確定。
 
 ## CONF-0121 active同ID存在時のrestore conflict policy
 

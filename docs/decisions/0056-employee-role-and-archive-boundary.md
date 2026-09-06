@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
+- 一部置換済み: 必要項目だけのEmployee readは[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)で現時点の全項目readへ変更した。以下のfield限定readと残判断は採用当時の記録である。
 - 一部置換済み: Employee archiveの今回導入は[ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)で保留し、誤登録の物理削除へ変更した。以下のarchive採用・残判断はその変更前の判断理由であり、現在の削除契約はADR 0057と仕様を参照する。
 - 関連仕様: [現行仕様](../specification.md)の「テナントと認証」「Employeeの操作権限と保持」「サブスクリプション」
 - 一部置換: [ADR 0020](0020-employee-retirement-user-offboarding-and-reinstatement.md)の退職actorから統括を除く条件、[ADR 0033](0033-company-bank-transfer-update-boundary.md)の振込先更新を会社管理者だけに限る条件。各操作のidentity・対象guard・data保護は維持する。
