@@ -1060,7 +1060,7 @@ EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
-EMP-01対応時期（2026-09-06改訂）: 新archiveは会社管理者・統括のみ、従属documentがあれば不可と部分採用した。[仕様](../specification.md#employeeの操作権限と保持)と[Employeeロードマップ](../roadmaps/employee.md)を参照する。保存方式、全従属一覧・新規参照競合、用途/状態、工程配分は未決。restore/匿名化は別判断のまま保持する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界であり、新方式の判断を理由に放置しない。
+EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)でEmployee archiveを保留し、将来工程として本FUTへ残す。誤登録の物理削除を会社管理者・統括だけに許可し、従属あり拒否・User/Auth非連鎖削除を採用した。削除の従属一覧・新規参照競合・旧writer/trigger・再試行/同ID再作成・工程配分は今回の[Employeeロードマップ](../roadmaps/employee.md)の必須残作業であり、本FUTへ先送りしない。将来archiveの保存/閲覧/復元・保持・匿名化は別工程で再検討する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界として維持し、他collectionの既存実装は変更しない。
 
 - 状態: Needs decision
 - 重大度: High

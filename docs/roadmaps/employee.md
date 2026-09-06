@@ -1,10 +1,10 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: EMP-01進行中（actor方針を部分確定、archive詳細・工程配分と他仕様は判断中）
+- 状態: EMP-01進行中（actorと誤登録物理削除・archive延期を確定、削除実装契約・工程配分と他仕様は判断中）
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 0%
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
-- 承認境界: 2026-09-06に計画文書保存・review・文書検証・local commitとEMP-01開始を承認し、その後[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)のactor・閲覧最小化・archive従属拒否を採用した。他の未決仕様、工程追加/重み配分、EMP-02以降の実装、Dev・Prod・remote・実data・package変更は未承認である。
+- 承認境界: 2026-09-06に計画文書保存・review・文書検証・local commitとEMP-01開始を承認し、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)のactor・閲覧最小化を採用した。同日、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)の会社管理者・統括だけの従属なし誤登録物理削除、archive延期、他collectionの既存実装維持を採用し作業開始を指示した。他の未決仕様、工程追加/重み配分、EMP-02以降の実装、Dev・Prod・remote・実data・package変更は未承認である。
 - 実行単位: 今回は一気通貫で進めず、工程ごとに作業・review・報告を行い、次工程の開始指示を待つ。合意済み工程内の通常修正にcommand/fileごとの再承認は追加しない。
 
 ## 正本と維持する境界
@@ -20,15 +20,15 @@
 
 対象CRUDではAirItemManager/AirArrayManagerによる永続化、live draft、保存完了制御への依存を除去する。保険・資格はlocal配列を編集していても直後にEmployeeを保存する現経路なのでlocal-only例外とはしない。独立draft内の入力部品を再利用する場合も保存・認可・成功/失敗判定を汎用Managerへ戻さない。残存例外の採否はEMP-01で固定し、単なるcomponent名検索だけで目的達成としない。
 
-配置・通知・実績・勤怠・請求・帳票への現在の実装scopeは、Employeeの表示・read・cache・identityの直接互換に限定し、それらのFirestore writer、再集計、snapshot契約は変更しない。Employeeメール変更によるUser email同期も追加しない。restore・物理削除・匿名化・実際の再雇用・将来日退職・本人Self Access画面、全manager/cache基盤の改修、package公開・導入は対象外とする。
+配置・通知・実績・勤怠・請求・帳票への現在の実装scopeは、Employeeの表示・read・cache・identityの直接互換に限定し、それらのFirestore writer、再集計、snapshot契約は変更しない。Customer、Site、Outsourcer等の既存実装も維持する。Employeeメール変更によるUser email同期は追加しない。archive新機能・restore・匿名化・実際の再雇用・将来日退職・本人Self Access画面、全manager/cache基盤の改修、package公開・導入は対象外とする。誤登録Employeeの物理削除だけを新たな対象として扱う。
 
-新archiveは従来の対象外から、actor・従属拒否を採用済みの設計対象へ追加した。統括の退職許可も実装差として追加する。archiveの具体契約と従属reader/writer・旧削除triggerへの影響をEMP-01で整理し、必要な参照作成境界が上記scopeを超える場合は、追加箇所・代替・検証・工程配分を提示する。通常CRUDの付随作業やEMP-07の独立問題へ黙って混ぜない。下表の重みは旧提案を保持し、追加工程/配分が未決の間は計画全体の確定・EMP-01完了を主張しない。
+archive新機能はFUT-0078の将来工程へ戻し、誤登録の物理削除を採用済みの設計対象とする。統括の退職許可も実装差として維持する。削除の具体契約、従属catalog・並行writer・旧削除trigger・旧全文writer・再試行/同ID再作成をEMP-01で整理する。他collectionのwriter変更が必要なら現承認範囲外として、必要箇所・代替・検証・工程配分を提示し、安全条件を満たせない間は削除を開放しない。通常CRUDの付随作業やEMP-07の独立問題へ黙って混ぜない。下表の重みは旧提案を保持し、削除の工程/配分が未決の間は計画全体の確定・EMP-01完了を主張しない。
 
 ## マイルストーン
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| EMP-01 契約・対象確定 | 10 | 0 | In progress | actor方針の採用を前提に、exact read field、退職後編集、保険遷移/訂正、住所送信、code/氏名/候補、read方式、operation所有fieldと競合方針を判断する。統括退職・archiveの依存、追加scopeと工程配分も確定し、採用範囲だけ仕様・必要ADRへ反映する。独立reviewでEMP-02の入力・保存・test前提が揃ったことを確認し報告する。 |
+| EMP-01 契約・対象確定 | 10 | 0 | In progress | actor方針と誤登録物理削除・archive延期を前提に、exact read field、退職後編集、保険遷移/訂正、住所送信、code/氏名/候補、read方式、operation所有fieldと競合方針を判断する。統括退職・物理削除の依存、他collectionを変更しない条件との整合、工程配分も確定し、採用範囲だけ仕様・必要ADRへ反映する。独立reviewでEMP-02の入力・保存・test前提が揃ったことを確認し報告する。 |
 | EMP-02 作成・基本・国籍 | 20 | 0 | Planned | 独立draft、同ID/create-onlyと結果照合、基本/国籍のexact field保存、住所入力、派生field、従属field初期化、採用した同field競合契約・異field保持を実装する。対象operationの権限・型・fieldを保存境界で強制し、旧allowによる迂回も閉じる。未移行editorの停止/先行保存互換をEMP-01で決定し、代表UI保存・再読込・失敗を確認する。 |
 | EMP-03 警備員登録・資格 | 10 | 0 | Planned | 登録情報と資格配列を別operationとして保存する。同名・名称変更・削除・別行追加・古い配列の再送で他行を失わず、保険・基本情報・lifecycleへ書かない。対象actor、従属初期化、拒否・成功のdata比較と代表UIを確認する。 |
 | EMP-04 3保険の保存 | 15 | 0 | Planned | 各保険の承認済み遷移だけをserverで検証し、対象保険の現在値/historyと局所的期待値を照合する。live非mutation、保存await、確定拒否時のwrite 0、応答不明時の照合、二重history変更防止を確認する。監査制度全面刷新を暗黙追加しない。 |
@@ -71,7 +71,7 @@
 
 ## 独立問題の扱い
 
-[既存FUT](../implementation/future-actions.md)へ、発見工程、再現根拠、影響、現在工程を妨げない理由、対応予定を同一原因へ統合する。FUT-0075、0079、0126、0143、0159、0181のうち今回目的に必要な部分は対応工程の必須条件であり、EMP-07への送り先にはしない。FUT-0076の既存UWBは統括退職追加部分を除き維持回帰、FUT-0077の実再雇用/将来退職、0078のrestore/匿名化、保険監査制度や全manager改修は別判断とする。新archiveの採用済みactor/従属拒否と必要な設計はEMP-01で扱う。
+[既存FUT](../implementation/future-actions.md)へ、発見工程、再現根拠、影響、現在工程を妨げない理由、対応予定を同一原因へ統合する。FUT-0075、0079、0126、0143、0159、0181のうち今回目的に必要な部分は対応工程の必須条件であり、EMP-07への送り先にはしない。FUT-0076の既存UWBは統括退職追加部分を除き維持回帰、FUT-0077の実再雇用/将来退職、FUT-0078のarchive/restore/匿名化、保険監査制度や全manager改修は将来の別判断とする。誤登録物理削除の採用済みactor/従属拒否と必要な設計はEMP-01で扱い、延期しない。
 
 ## 互換性・移行・復旧
 
@@ -90,7 +90,7 @@
 
 現在はactor方針を仕様・ADR 0056・既存CONFへ反映し、exact read field等の残る判断を[CONF-0061](../implementation/pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)と[保存・read契約案](../implementation/employee-master.md#emp-01の保存読取り契約案)で扱う。今回の権限仕様採用は`governance-permissions-agents`としてcomprehensive 5 gateを選択する。EMP-01-ADOPT-SECとEMP-01-ARCHIVE-IMPACTは、actor変更と既存保護の分離、旧3依存guardだけでは不十分なこと、原本削除のUser背景処理、同時参照作成との整合を確認した。runtime/dataの検証結果ではない。
 
-統括の退職は現catalog・policy・陰性testへ未反映。archiveは用途/状態・従属一覧・競合・復旧・工程配分が未決で未実装。Employee以外の統括権限の整合は[親roadmap](airguard-v2.md#次の作業)で後続管理し、Company等の過去完了点を今回の仕様採用だけで変更しない。回答・依存契約・reviewが残る間はEMP-01を完了せず、EMP-02の実装へ進まない。
+統括の退職は現catalog・policy・陰性testへ未反映。誤登録物理削除はactor/従属拒否を採用済みだが、exact契約・競合・工程配分が未決で未実装。archive新機能は将来工程へ延期し、その詳細判断を今回のCRUD前提にしない。Employee以外の統括権限の整合は[親roadmap](airguard-v2.md#次の作業)で後続管理し、他collectionの既存実装と過去完了点を今回変更しない。回答・依存契約・reviewが残る間はEMP-01を完了せず、EMP-02の実装へ進まない。
 
 ## 計画reviewの記録
 
@@ -115,3 +115,30 @@
 2026-09-06、baseline `05f03d47c18e442893cba59f00640daa89b2b14b`の文書差分をEMP-01-ADOPT-SEC-FINALとEMP-01-ADOPT-DOC-REVIEWで確認した。新しい統括退職まで旧UWBの実装済み総括へ含まれる曖昧さを修正し、EMP-01-ADOPT-DOC-R1で解消確認した。文書保存を妨げる残存指摘はなく、EMP-02開始は上記の未決判断があるため準備未完了である。
 
 対象は仕様、ADR 0020/0033/0056とADR索引、CHANGELOG、Employee/Company/User/認可の既存実装文書、CONF/FUT、Employee/Company/親roadmapの15文書。code・Rules・package・data・agent設定は変更しない。archiveの同document状態更新案は[方式比較](../implementation/employee-master.md#archive保存方式の比較未採用)に残し、方式採用を先取りしない。comprehensive 5 gateのexact commandは[検証policy](../../governance/verification-policy.json)に従い、結果と独立exitは本作業のcommand reportで確認する。
+
+### EMP-01誤登録物理削除採用のreview
+
+2026-09-06、baseline `891a2604bdeaa2b981ae0bedda02b5fd6021b1b5`からのPM所有文書差分を、EMP-01-DELETE-IMPACT（現経路）、EMP-01-DELETE-SEC-REVIEW（security）、EMP-01-DELETE-DOC-REVIEW（文書・次工程）がread-onlyで確認した。対象は次の10文書で、製品code・Rules・package・実dataへの変更はない。
+
+- `CHANGELOG.md`、`docs/specification.md`
+- `docs/decisions/0056-employee-role-and-archive-boundary.md`、`docs/decisions/0057-employee-hard-delete-and-archive-deferral.md`、`docs/decisions/README.md`
+- `docs/implementation/employee-master.md`、`docs/implementation/pending-confirmations.md`、`docs/implementation/future-actions.md`
+- `docs/roadmaps/employee.md`、`docs/roadmaps/airguard-v2.md`
+
+現経路reviewでは、従属catalog未完、他collectionのEmployee参照作成との競合、旧User削除trigger、旧全文setによる再生成、同ID再作成への古い要求が残ると確認し、[実装条件](../implementation/employee-master.md#誤登録物理削除への切替で残る実装条件)へ反映した。security reviewは文書保存を妨げる指摘なし。文書reviewのP2はCHANGELOGの「User/Auth非連鎖削除」が通常退職にも適用されるように読める点であり、誤登録物理削除だけの条件と明記し、通常退職の承認済みUser/Auth処理を維持する文へ修正した。遅延した旧triggerと同ID再作成も実装時の検証項目へ明示した。
+
+次工程判定は「判断・設計が必要」。今回採用したactor・誤登録削除・archive延期を次工程へ渡せるが、削除catalog/競合/再送/trigger/工程割当と、既存のexact閲覧field、住所送信、氏名・保険・段階writerの判断が未完了である。EMP-01の完了・加点やEMP-02の自動開始はしない。他collectionの既存実装を変えずに削除安全性を満たせると断定せず、必要な範囲変更は理由・代替とともに利用者へ提示する。archive将来工程の詳細決定は今回の開始条件から外す。
+
+確認済み仕様・保持の意味は仕様/ADR、計画はroadmap、実装差と未決事項は既存implementation/CONF/FUTへ反映した。Employeeの現保存shapeを変更していないため、実装調査の「データ契約」は旧実装の記録として維持する。現UI・運用・他master・UWBの挙動は変更せず、manual、operations、他master文書、UWBの過去完了証拠は更新しない。既存索引・再開案内はEmployee roadmapへ到達でき、新ADRだけADR索引に追加した。governance/agent設定とmanaged artifactsは変更しない。
+
+文書でのpermission・保持方針変更として`governance-permissions-agents`のcomprehensive 5 gateを選択する。code/schema/Rulesの実装差、migration、build実行はないためdomain、Emulator、UI build、Dev/Prod generateは今回の検証対象に選ばず、対応実装工程で必要なgateを再選択する。remote未承認のためlive照合・data確認・deployは未実施。
+
+| gate | exact command | 証拠 |
+|---|---|---|
+| managed-governance | `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | exit 0。renderer-checkもexit 0 |
+| project-docs-negative | `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 全fixtureの期待結果一致、exit 0 |
+| capacity-regression | `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 合成fixture 7 checks、exit 0。実session容量測定ではない |
+| project-docs | `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 最終Markdown状態で実行し、結果/独立exitを本checkpointのcommand reportへ記録 |
+| diff-check | `git diff --check` | 最終worktreeで実行し、結果/独立exitをcommand reportへ記録 |
+
+最初の3 gateはこのreview記録の追記ではpolicy上の失効条件に該当しない。新ADRを含むreview済み10文書だけstageし、`git diff --cached --check`も別に行う。後続実装でcode/Rules/schema等を変更した場合、この文書検証をruntimeや削除安全性の成功証拠として流用しない。

@@ -753,7 +753,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ### EMP-01の部分回答と残る判断
 
-2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職、他4roleの必要項目のみ閲覧、会社管理者・統括だけの従属なしarchiveを採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
+2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職、他4roleの必要項目のみ閲覧を採用した。同日、archiveを将来へ延期し、会社管理者・統括だけの従属なし誤登録物理削除を採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)と[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
 
 閲覧項目は未採用である。次の表は他4roleへの公開範囲を判断するための比較案に限定し、会社管理者・統括・人事へraw documentの全fieldを返すことも、このactor回答だけから導かない。Rは閲覧案、—は非公開案。
 
@@ -812,7 +812,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
-2026-09-06部分回答: archiveは会社管理者・統括のみ、従属documentが一つでもあれば不可と確定した。具体的な従属一覧・同時参照対策、用途/対象状態、archive閲覧・保存/復元・保持は未決。下の旧回答の「誤登録archive未回答」はこのactor/従属条件だけ更新し、通常退職でEmployeeと業務記録を保持する契約は維持する。[仕様](../specification.md#employeeの操作権限と保持)と[工程](../roadmaps/employee.md)を参照する。
+2026-09-06改訂: archive導入は将来工程へ延期し、誤登録Employeeは会社管理者・統括だけが従属なしの場合に物理削除する方針を採用した。事前archiveを条件にせず、通常退職でEmployeeと業務記録を保持する契約と区別する。他collectionの既存実装は変更しない。具体的な従属一覧・同時参照対策、対象状態/誤登録確認、削除再試行/同ID再作成、監査、旧User削除trigger、実装工程はEMP-01で確定する。以下の2026-08-24回答の誤登録archiveは履歴であり、将来archiveの保存/閲覧/復元・保持は今回のCRUDの前提にしない。[仕様](../specification.md#employeeの操作権限と保持)、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、[工程](../roadmaps/employee.md)を参照する。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`

@@ -47,7 +47,7 @@
 6. マスタ管理機能の改修中は対象masterのCRUDを主対象とする。配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更は、Firestore更新に関係しない表示・読取り・描画identityの互換修正に限定する。transaction系の要改修箇所を検出しても実装せず、既知課題として記録する。マスタ管理の一連の改修後に、OperationResultの管制側編集lockと権限境界、Billing/勤怠/履歴同期、rounding、notification、配置更新失敗時のrollback/refetchを含む改修範囲を別checkpointで合意する。
 7. 配置管理の表示順行削除の観測と詳細案は[提案中の専用ロードマップ](arrangement-row-removal-ux.md)で扱う。行単位のpending、同じ`siteOrder`のsingle-flight、live反映待機、失敗・timeout後の明示retryはARU-01で利用者承認を得るまで実装要件としない。Site/Schedule削除やgeneric UI全体はscope外で、現在は提案0%のため本ロードマップの10%進捗には加点しない。
 8. 後続の運用課題として、Admin backup/restoreの正式scope、RPO/RTO、operator、artifact保護、復旧演習条件について利用者判断を得る。
-9. [ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)の通常業務の統括更新方針に対し、Employee外のCompany設定・稼働請求等は既存catalog/実装との整合対象として残る。各operationの保護例外・package・UI/server/testの差を確認して後続checkpointを合意する。Employeeの統括退職・archive設計は専用roadmapで扱い、今回の仕様採用から全業務writer変更や過去完了点への加点を導かない。
+9. [ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)の通常業務の統括更新方針に対し、Employee外のCompany設定・稼働請求等は既存catalog/実装との整合対象として残る。各operationの保護例外・package・UI/server/testの差を確認して後続checkpointを合意する。Employeeの統括退職・誤登録物理削除は専用roadmapで扱う。[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)によりEmployee archiveは将来工程へ延期し、今回は他collectionの既存実装を維持する。全業務writer変更や過去完了点への加点を導かない。
 9. 共通UIのdisabled強制、draft conflict、非同期latest-wins、date-time/accessibilityをtest可能な契約へ整理する。UWB-10の認証変更はroleと有効状態へ局所化し、汎用single-flight・revision・lock・ledgerを共通UIや他documentへ展開しない。
 10. ルートアプリとCloud Functionsの依存関係脆弱性を、破壊的な自動修正を行わず調査する。
 

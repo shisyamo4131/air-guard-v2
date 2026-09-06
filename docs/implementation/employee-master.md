@@ -1,6 +1,6 @@
 # Employee（従業員）マスター実装調査
 
-2026-09-06のactor部分採用は[現行仕様](../specification.md#employeeの操作権限と保持)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。以下の静的実装観測は変更しておらず、統括退職・専用archive等を実装済みと扱わない。
+2026-09-06のactor部分採用と誤登録物理削除・archive延期は[現行仕様](../specification.md#employeeの操作権限と保持)、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)を参照する。以下の静的実装観測は変更しておらず、統括退職・専用物理削除を実装済みと扱わない。
 
 ## 現行経路の再照合
 
@@ -26,7 +26,7 @@
 
 ## EMP-01の保存・読取り契約案
 
-以下の保存/read方式は未採用の設計案。通常編集・退職・archiveのactorと必要項目だけの閲覧方針は仕様へ部分反映したが、exact fieldと方式まで採用していない。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
+以下の保存/read方式は未採用の設計案。通常編集・退職・誤登録物理削除のactorと必要項目だけの閲覧方針は仕様へ部分反映したが、exact fieldと方式まで採用していない。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
 
 ### EMP-02の入力と保存対象
 
@@ -67,15 +67,31 @@ APIごとのexact入力、ID数・検索長・取得件数・期間幅の必要�
 
 ### EMP-01から次工程へのreview結果
 
-EMP-01-DESIGN-A/SEC-A/TEST-Aでは現入力field、派生closure、UWB維持、作成create-only、最小read方式の比較を整理した。その後actor方針を部分採用したが、exact read field、氏名規則、住所送信/既存座標、競合範囲、暫定writer停止/先行改修、作成試行IDの回復範囲、archive詳細/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+EMP-01-DESIGN-A/SEC-A/TEST-Aでは現入力field、派生closure、UWB維持、作成create-only、最小read方式の比較を整理した。その後actor方針と誤登録物理削除を採用しarchiveを延期したが、exact read field、氏名規則、住所送信/既存座標、競合範囲、暫定writer停止/先行改修、作成試行IDの回復範囲、物理削除の実装契約/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+
+### 誤登録物理削除への切替で残る実装条件
+
+2026-09-06、EMP-01-DELETE-IMPACTの静的調査。actor・従属なし削除・archive延期は採用済みだが、以下は実装前に確定・検証する条件であり、安全な削除の完成を示さない。
+
+- 従属候補は既存hasManyの3種類に加え、DailyAttendances、DailyOperationsByEmployee、SiteEmployeeHistories、User/予約、lifecycleのlock/head/operation等。除外する対象は生成経路・用途の根拠を要し、全catalogの網羅確認は未完了。
+- installed client adapterのhasChildはtransaction外のgetDocsを使う。現ArrangementNotifications/OperationResults Rulesの参照guardはSite/Customer向けで、Employee存在確認にはなっていない。削除直前の検査だけで同時参照作成を防いだとは扱わない。他collection writerの変更が必要なら現承認範囲外として判断し、安全条件が揃うまで削除を有効化しない。
+- 原本削除triggerはfunctions/index.jsからexportされ、関連Userへdeleteを呼ぶ。誤登録Employee削除からUser/Authを連鎖削除しないための対処を、単なるarchive copyの省略とは別に扱う。遅延した旧削除eventが同ID再作成後のUserへ作用する条件も、triggerと再送の検証対象に含める。
+- 旧全文setによる削除後の再生成、削除後の同ID再作成に対する古い作成/削除要求の再送を検証する。対象識別・結果不明の照合・再送条件を決め、無条件の「不存在なら成功」や汎用deleteへの切替だけで解消したとしない。
+- Employee-only退職でも保持すべきlifecycle記録がある場合は依存の扱いを確認する。User連携を自動解除したり履歴を消したりして誤登録削除の条件を満たさない。
+
+現在のreader/queryへarchive除外fieldを追加する作業は不要になった。一方、既存Employee archiveの過剰アクセス是正と、物理削除で新しく生じるnot-found・古いdraft/cacheの扱いはCRUD工程で確認する。exact契約と工程の残判断はCONF-0064とロードマップへ集約する。
 
 ### archiveの追加影響調査
+
+以下はarchive延期前の調査記録である。従属検査と原本削除triggerの問題は誤登録物理削除にも適用され、延期で解消したとは扱わない。
 
 現Employee.hasManyは`SiteOperationSchedules.employeeIds`、`OperationResults.employeeIds`、`ArrangementNotifications.employeeId`の3種類を対象にする。一方、`DailyAttendances`、`DailyOperationsByEmployee`、`SiteEmployeeHistories`にもemployeeId参照がある。これらとUser/予約・lifecycle・間接参照を調べ、archive拒否対象の一覧を確定する必要があり、既存3種類を全従属の証明にはしない。
 
 `functions/modules/Employees.js`の原本削除triggerはemployeeId検索の先頭Userへdeleteする経路を持つ。新archiveがUser/Authを連鎖削除しないこと、検査後に参照が追加されても参照切れを作らないことを設計する。今回の調査は候補整理であり、全writer網羅・競合再現・実data確認は未実施。具体的な追加実装scopeと工程配分が決まるまで既存deleteを再開しない。
 
 ### archive保存方式の比較（未採用）
+
+ADR 0057採用後は将来工程の比較資料として保持する。今回のEmployee実装の前提にせず、同document状態更新も別collection移動も追加しない。
 
 利用者の追加質問を受け、同じEmployee documentへ独立したarchive状態を保存する方式を第一候補として比較する。これは保存方式の提案であり、「従属documentがあれば不可」という採用済み条件を緩和しない。
 
