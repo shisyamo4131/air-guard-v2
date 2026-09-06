@@ -1,3 +1,4 @@
+import { operationDateTime } from "@/functions/shared/operationDateTime.js";
 import { computed, ref, shallowRef, watch, onScopeDispose } from "vue";
 import { collection, doc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
@@ -39,6 +40,7 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
       model = new RowSchema(command.rowAction === "add" ? { ...rawForClass(raw), isEmployee: command.array === "employees", ...(kind === "schedule" ? { siteOperationScheduleId: reference.id, hasNotification: false } : {}) } : rawForClass(raw[command.array][command.position]));
       definition.value = RowSchema;
     } else { model = new Schema(rawForClass(raw || {})); definition.value = Schema; }
+    operationDateTime(model);
     draft.value = model; original = rawForClass(model.toObject());
     conflict.value = false;
   }

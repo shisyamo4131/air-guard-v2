@@ -1,3 +1,4 @@
+import { operationDateTime } from "../../functions/shared/operationDateTime.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -65,7 +66,7 @@ test("Generator completes notify(false), rereads raw, waits for a server notific
   const before = schedule(), after = { ...before, employees: before.employees.map((row) => ({ ...row, hasNotification: true })) }; after.workers = [...after.employees, ...after.outsourcers];
   const calls = [], reads = [], listeners = []; let converted = false, notifyFinish;
   const submission = { allowed: Vue.ref(true), uncertain: Vue.ref(false), busy: Vue.ref(false), message: Vue.ref("conflict"), read: async (collection, id) => { reads.push([collection, id]); return calls.length ? after : before; }, submit: async ([command]) => { calls.push(command); if (command.action === "notify") return new Promise((resolve) => { notifyFinish = resolve; }); converted = true; return false; } };
-  const make = await factory("composables/application/operation/useOperationGenerator.js", "useOperationGenerator", { ...Vue, ...contract, ...referenceContract, ...employeeContract, ArrangementNotification, SiteOperationSchedule, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), useOperationSubmission: () => submission, collection: (_, path) => ({ path }), where: (...args) => args, query: (ref) => ref, onSnapshot: (_, next, error) => { const item = { next, error, stopped: false }; listeners.push(item); return () => { item.stopped = true; }; } });
+  const make = await factory("composables/application/operation/useOperationGenerator.js", "useOperationGenerator", { ...Vue, ...contract, ...referenceContract, ...employeeContract, operationDateTime, ArrangementNotification, SiteOperationSchedule, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), useOperationSubmission: () => submission, collection: (_, path) => ({ path }), where: (...args) => args, query: (ref) => ref, onSnapshot: (_, next, error) => { const item = { next, error, stopped: false }; listeners.push(item); return () => { item.stopped = true; }; } });
   const effect = Vue.effectScope(); let generator; effect.run(() => { generator = make(selected); }); await flush();
   assert.equal(calls[0].action, "notify"); assert.equal(calls[0].changes.shouldNotify, false); assert.equal(reads.length, 1); assert.equal(generator.ready.value, false);
   assert.equal(await generator.convert(), false); notifyFinish({ success: true }); await flush();
@@ -83,7 +84,7 @@ async function notificationEditorHarness(options = {}) {
   const raw = { ...notification(), actualStartTime: "08:00", actualEndTime: "17:00" }, writes = [], reads = [];
   let transactions = 0;
   const make = await factory("composables/application/operation/useNotificationEditor.js", "useNotificationEditor", {
-    ...Vue, ArrangementNotification, ...employeeContract, ...contract, expectedNotificationState, prepareNotificationState,
+    ...Vue, ArrangementNotification, ...employeeContract, operationDateTime, ...contract, expectedNotificationState, prepareNotificationState,
     useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), doc: (_, path) => ({ path, id: path.split("/").at(-1) }), serverTimestamp: () => new Date(),
     getDocFromServer: async (ref) => { reads.push(ref.id); if (transactions && options.postError) throw Object.assign(new Error(), { code: options.postError }); return { exists: () => true, data: () => raw }; },
     runTransaction: async (_, callback) => {
@@ -128,7 +129,7 @@ for (const kind of ["schedule", "result"]) test(`${kind} duplicator keeps a raw 
   const sourceRaw = kind === "schedule" ? schedule() : new OperationResult({ ...schedule(), isLocked: false }).toObject();
   const calls = []; let nextId = 0;
   const submission = { allowed: Vue.ref(true), uncertain: Vue.ref(false), busy: Vue.ref(false), message: Vue.ref("unknown"), scope: () => "company/actor", read: async () => sourceRaw, submit: async (commands) => { calls.push(commands); submission.uncertain.value = true; return false; } };
-  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: `copy-${++nextId}` }) });
+  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, operationDateTime, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: `copy-${++nextId}` }) });
   const effect = Vue.effectScope(); let editor; effect.run(() => { editor = make(kind); });
   assert.equal(await editor.set(sourceRaw), true); editor.selectedDates.value = [new Date("2026-09-02")];
   assert.equal(await editor.save(), false); assert.equal(calls.length, 1);
@@ -149,7 +150,7 @@ async function personalHarness(options = {}) {
   const state = await notificationEditorHarness(options);
   const definition = Vue.ref({ ARRANGED: { next: { status: "CONFIRMED" } }, CONFIRMED: { next: { status: "ARRIVED" } }, ARRIVED: { next: { status: "LEAVED" } }, LEAVED: { next: null } });
   const make = await factory("composables/application/operation/usePersonalNotification.js", "usePersonalNotification", {
-    ...Vue, ...employeeContract, SiteOperationSchedule, useAuthStore: () => state.auth, useNuxtApp: () => ({ $firestore: {} }), useNotificationEditor: () => state.editor,
+    ...Vue, ...employeeContract, operationDateTime, SiteOperationSchedule, useAuthStore: () => state.auth, useNuxtApp: () => ({ $firestore: {} }), useNotificationEditor: () => state.editor,
     doc: (_, path) => ({ path }), getDocFromServer: options.scheduleRead || (async () => ({ exists: () => true, data: schedule })),
   });
   let personal; state.effect.run(() => { personal = make(definition); });
@@ -192,7 +193,7 @@ for (const outcome of ["success", "refusal", "dispose", "same-scope-refusal", "n
   const scope = Vue.ref("company/actor"), states = new Map(), calls = [], messages = []; let finish;
   const submission = { allowed: Vue.ref(true), scope: () => scope.value, uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async (commands) => { calls.push(commands); return new Promise((resolve) => { finish = resolve; }); } };
   const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
-    ...Vue, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
     operationPresentation: (model) => { if (!states.has(model.docId)) states.set(model.docId, { busy: false, blocked: false, revision: 0 }); return states.get(model.docId); },
     scheduleCommands: (model) => [{ documentId: model.docId }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
   });
@@ -211,7 +212,7 @@ for (const kind of ["schedule", "result"]) for (const code of ["permission-denie
   const raw = kind === "schedule" ? schedule() : new OperationResult({ ...schedule(), isLocked: false }).toObject();
   let finish, calls = 0, callbacks = 0, readCalls = 0;
   const submission = { allowed: Vue.ref(true), uncertain: Vue.ref(false), busy: Vue.ref(false), message: Vue.ref(""), scope: () => "company/actor", submit: async () => { calls++; return { success: true }; }, read: async (_, id) => { readCalls++; if (id === raw.docId) return raw; return new Promise((resolve, reject) => { finish = { resolve, reject }; }); } };
-  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: "copy" }) });
+  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, operationDateTime, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: "copy" }) });
   const effect = Vue.effectScope(); let editor; effect.run(() => { editor = make(kind, () => { callbacks++; }); });
   await editor.set(raw); editor.selectedDates.value = [new Date("2026-09-02")]; const saving = editor.save(); await flush();
   assert.equal(editor.busy.value, true); assert.equal(editor.disabled.value, true);
@@ -225,7 +226,7 @@ for (const kind of ["schedule", "result"]) test(`${kind} duplicate discards an o
   const raw = kind === "schedule" ? schedule() : new OperationResult({ ...schedule(), isLocked: false }).toObject();
   const scope = Vue.ref("company/actor"); let finish, callbacks = 0;
   const submission = { allowed: Vue.ref(true), uncertain: Vue.ref(false), busy: Vue.ref(false), message: Vue.ref(""), scope: () => scope.value, submit: async () => ({ success: true }), read: async (_, id) => id === raw.docId ? raw : new Promise((resolve) => { finish = resolve; }) };
-  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: "copy" }) });
+  const make = await factory("composables/application/operation/useOperationDuplicator.js", "useOperationDuplicator", { ...Vue, ...contract, ...employeeContract, operationDateTime, SiteOperationSchedule, OperationResult, useOperationSubmission: () => submission, useNuxtApp: () => ({ $firestore: {} }), collection: (_, path) => ({ path }), doc: () => ({ id: "copy" }) });
   const effect = Vue.effectScope(); let editor; effect.run(() => { editor = make(kind, () => { callbacks++; }); });
   await editor.set(raw); editor.selectedDates.value = [new Date("2026-09-02")]; const saving = editor.save(); await flush();
   scope.value = "other/actor"; await flush(); assert.equal(await editor.set(raw), true); editor.selectedDates.value = [new Date("2026-09-03")];

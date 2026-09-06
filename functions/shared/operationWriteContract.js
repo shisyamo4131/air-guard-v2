@@ -1,3 +1,4 @@
+import { operationDateTime } from "./operationDateTime.js";
 import { SiteOperationSchedule, OperationResult, ArticleDetail } from "@shisyamo4131/air-guard-v2-schemas";
 import { EMPLOYEE_ROLES, plain, identifier, equal, encodeExpected, expectedFields, parseDate, rawForClass } from "./employeeContract.js";
 import { OperationWriteError, operationEmployeeReferences } from "./operationReferences.js";
@@ -105,7 +106,7 @@ export function mergeCalculated(raw, before, after) {
 }
 export function calculateOperation(raw, kind, update) {
   const Schema = kind === "schedule" ? SiteOperationSchedule : OperationResult;
-  const model = new Schema(rawForClass(raw));
+  const model = operationDateTime(new Schema(rawForClass(raw)));
   const before = model.toObject();
   update(model);
   try { model.validate(); } catch { rejectInput(); }
@@ -138,10 +139,10 @@ export function applyOperationCommand(raw, command) {
         const isEmployee = command.array === "employees";
         const index = isEmployee ? 0 : Math.max(0, ...array.filter((row) => row.id === changes.id).map((row) => row.index)) + 1;
         if (isEmployee && array.some((row) => row.id === changes.id)) rejectInput();
-        previous = new Schema({ ...rawForClass(raw), id: changes.id, isEmployee, index, ...(kind === "schedule" ? { siteOperationScheduleId: command.documentId, hasNotification: false } : {}) }).toObject();
+        previous = operationDateTime(new Schema({ ...rawForClass(raw), id: changes.id, isEmployee, index, ...(kind === "schedule" ? { siteOperationScheduleId: command.documentId, hasNotification: false } : {}) })).toObject();
       } else previous = new Schema().toObject();
     }
-    const model = new Schema(rawForClass(previous));
+    const model = operationDateTime(new Schema(rawForClass(previous)));
     const before = model.toObject();
     Object.assign(model, changes);
     if (action === "workers" && command.array === "employees" && array.some((row, index) => index !== command.position && row.id === model.id)) rejectInput();
@@ -152,7 +153,7 @@ export function applyOperationCommand(raw, command) {
   }
   // Array positions have already been resolved against raw; derive aggregate
   // values separately, without matching Class keys or discarding row metadata.
-  const model = new (kind === "schedule" ? SiteOperationSchedule : OperationResult)(rawForClass(raw));
+  const model = operationDateTime(new (kind === "schedule" ? SiteOperationSchedule : OperationResult)(rawForClass(raw)));
   const before = model.toObject();
   model[command.array] = rawForClass(next);
   const after = model.toObject();

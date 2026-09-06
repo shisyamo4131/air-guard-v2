@@ -305,6 +305,12 @@ Class取得後にquery fieldを足すだけでは不十分である。新field�
 
 概要field群は`siteId, securityType, dateAt, dayType, shiftType, startTime, endTime, isStartNextDay, breakMinutes, regulationWorkMinutes, requiredPersonnel, qualificationRequired, workDescription, remarks`。worker入力群は`id, startTime, endTime, isStartNextDay, breakMinutes, regulationWorkMinutes, isQualified, isOjt`を基本とし、employee/outsourcer種別は明示action/所属配列と照合する。日時の入力とraw期待値は既存Employee設計同様に分離し、保存前に秒/ナノ秒を失わない。
 
+計算用Classをclientからserverへ移す際は、同じ日本時間の入力から同じ日付・開始終了時刻・勤務日・通知実時間・請求日と金額を得ることも移行条件とする。hostのlocal日付setter/getterをそのまま使うだけではこの条件を満たさない。Bの計算instanceだけに適用する日時処理で既存callback・worker同期を維持し、package/prototypeやprocess全体の時差は変更しない。create/overview/duplicate/workers/notify/convert/billing/通知状態をUTCとJSTの独立実行で比較し、翌日開始・夜勤・同時刻24時間・月年境界も確認する。金額式、締め規則、通知状態遷移を新設する補正ではない。実測と未達は[local実施記録](../verification/employee-05-local.md)へ記録する。
+
+環境間の一致だけでなく固定期待値を置く。日勤08:00〜17:00・休憩60分は実働480分と同日終了、08:59〜09:01・休憩0分は2分、22:00〜06:00・休憩0分は480分、同時刻・休憩0分は1440分とする。rawからの生成、従業員/外注worker追加、配列再初期化、その後の親日付変更を通して親子同期を確認する。通知actualと予定が異なるケースは既存JSTのフラグ利用を維持し、日時不変操作で無関係なraw日時を一律正規化しない。
+
+日時adapterはBの計算・独立draftの寿命内で使い、親instanceの`initialize()`後の再利用を保証する共通基盤ではない。現在の予定配列dragは再表示/rollbackで新しいinstanceへ置換する。Card/Workersが`initialize()`する別の表示cloneと混同しない。今後同一親instanceを再初期化して再使用する経路を追加する際は、descriptor再構成とadapter再適用を先に検証する。
+
 | 操作 | changes所有field | 期待値と維持条件 |
 |---|---|---|
 | 予定概要 | 概要field群の変更分 | Site/日付/時間変更に連動するworker派生field・通知取消も同じ計画へ。変更開始時の相関元/影響配列をraw照合し、実績pointer・Site revisionを保持 |

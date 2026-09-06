@@ -15,6 +15,7 @@ const activator = computed(() => ({ item: props.doc, title: props.label, label: 
 defineExpose({ toCreate, toUpdate, toDelete });
 </script>
 <template>
-  <slot name="activator" v-bind="activator"><v-btn :disabled="activator.disabled" @click="doc ? toUpdate(doc) : toCreate()">{{ doc ? '編集' : '新規登録' }}</v-btn></slot>
+  <slot v-if="$slots.activator" name="activator" v-bind="activator" />
+  <v-btn v-else :disabled="activator.disabled" @click="doc ? toUpdate(doc) : toCreate()">{{ doc ? '編集' : '新規登録' }}</v-btn>
   <OperationEditor :controller="editor" :title="label" :custom-input="customInput" />
 </template>

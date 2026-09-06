@@ -1,3 +1,4 @@
+import { operationDateTime } from "../../functions/shared/operationDateTime.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
@@ -43,11 +44,11 @@ test("raw context preserves full precision and original row positions across car
 
 test("actual Card/Draggable handlers retain original positions, immediately display edits and roll them back on refusal", async () => {
   const scope = "company/actor", auth = Vue.reactive({ uid: "actor", companyId: "company" });
-  const { operationPresentation, watchOperationRollback } = await factory("composables/domain/operation/operationPresentation.js", "({ operationPresentation, watchOperationRollback })", { ...Vue, ...employeeContract, operationRawFor, restoreOperationRaw });
+  const { operationPresentation, watchOperationRollback } = await factory("composables/domain/operation/operationPresentation.js", "({ operationPresentation, watchOperationRollback })", { ...Vue, ...employeeContract, operationDateTime, operationRawFor, restoreOperationRaw });
   const base = { Vue, SiteOperationSchedule, inheritOperationRaw, operationPresentation, watchOperationRollback, useAuthStore: () => auth };
   const makeCard = await factory("components/SiteOperationSchedule/Card/useIndex.js", "useIndex", base);
   const makeDrag = await factory("components/Draggable/Workers/useIndex.js", "useIndex", { ...base, useBaseManager: () => ({ logger: { info() {}, error(error) { throw error; } }, isDev: false }), useTimedSet: () => ({ add() {}, has: () => false }), createDraggableFallbackOptions: () => ({}) });
-  const makeCommands = await factory("composables/domain/operation/scheduleCommands.js", "scheduleCommands", { ...contract, ...employeeContract, operationEmployeeReferences: (await import("../../functions/shared/operationReferences.js")).operationEmployeeReferences, operationRawFor, operationRowPosition });
+  const makeCommands = await factory("composables/domain/operation/scheduleCommands.js", "scheduleCommands", { ...contract, ...employeeContract, operationDateTime, operationEmployeeReferences: (await import("../../functions/shared/operationReferences.js")).operationEmployeeReferences, operationRawFor, operationRowPosition });
   const raw = operation(), context = createOperationRawContext(); context.reset(scope);
   const source = Vue.reactive(new SiteOperationSchedule(raw)); context.remember(source, raw);
   const props = Vue.reactive({ schedule: source, disabled: false, isDraggable: true, showActions: true });
@@ -106,7 +107,7 @@ async function editorHarness(options = {}) {
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, disabled: false, roles: ["controller"] }) });
   const raw = operation(), calls = [];
   const make = await factory("composables/application/operation/useOperationEditor.js", "useOperationEditor", {
-    ...Vue, ...contract, ...employeeContract, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail,
+    ...Vue, ...contract, ...employeeContract, operationDateTime, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail,
     useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }),
     collection: (_, path) => ({ path }), doc: (_, path) => ({ path: path || "new-operation", id: path?.split("/").at(-1) || "new-operation" }),
     getDocFromServer: async (ref) => options.read ? options.read(ref, raw) : ({ exists: () => true, data: () => raw }),
@@ -324,4 +325,18 @@ test("CREATE still reports an invalid preset setter failure and arrangement mana
   const { descriptor } = parse(code), compiled = compileScript(descriptor, { id: "arrangements-manager" });
   const template = compileTemplate({ source: descriptor.template.content, filename: "components/Arrangements/Manager/index.vue", id: "arrangements-manager", compilerOptions: { bindingMetadata: compiled.bindings } });
   assert.deepEqual(template.errors, []);
+});
+
+test("actual OperationManager template renders absent/empty/custom activators through the schedule wrapper", async () => {
+  const { compile } = await import("@vue/compiler-dom"), { renderToString } = await import("@vue/server-renderer");
+  const render = async (path) => new Function("Vue", compile(parse(await source(path)).descriptor.template.content, { mode: "function", prefixIdentifiers: true }).code)(Vue);
+  const button = { setup: (_, { slots }) => () => Vue.h("button", slots.default?.()) };
+  const manager = { inheritAttrs: false, render: await render("components/Operation/Manager.vue"), components: { VBtn: button, OperationEditor: { render: () => null } }, setup: () => ({ activator: { disabled: false }, doc: null, label: "operation", customInput: null, editor: {}, toCreate() {}, toUpdate() {} }) };
+  const wrapper = { inheritAttrs: false, components: { OperationManager: manager }, render: await render("components/SiteOperationSchedule/Manager/index.vue"), setup: () => ({ props: { doc: null, customInput: null } }) };
+  for (const mode of ["absent", "empty", "custom"]) {
+    const slots = mode === "absent" ? {} : { activator: () => mode === "empty" ? [] : [Vue.h("button", "custom")] };
+    const html = await renderToString(Vue.createSSRApp({ render: () => Vue.h(wrapper, null, slots) }));
+    assert.equal((html.match(/<button/g) || []).length, mode === "empty" ? 0 : 1);
+    assert.equal(html.includes("新規登録"), mode === "absent"); assert.equal(html.includes("custom"), mode === "custom");
+  }
 });

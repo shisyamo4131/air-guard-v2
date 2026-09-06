@@ -222,3 +222,23 @@ developer terminal後、rootが`node --test test/domain/*.test.mjs`を実行し1
 `UI-R1`は同値preset再代入の回避と当該配置画面の空activator接続、実Classの作成/取消回帰へ限定する。UIタブとgenerated serverを停止し、Functions/Rulesを固定したまま所有Emulatorに合成状態を保持する。修正後のreview・domain・source統合・fresh build/画面再確認が終わるまでBは未完了。背景処理・archiveへは進まない。
 
 rootが3fileの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1336/1336・exit 0を確認した。`UI-REVIEW-R1`は追加blockingなし。actor/tenant・transaction・保存fieldに変更はなく、同値入力の初期化とslotだけの限定修正として影響reviewを選び、Functions/Rules/harnessの175件証拠を再利用する。実UIを再開する前に、14600のLISTEN不在・所有Emulatorだけの稼働・保護22hash不変をsandbox外の読取りcommandで確認した（exit 0）。read-only backend assertionでは初回予定のworker配列0件、必要人数1、08:00〜17:00を確認した。まだ配置・複製・実績化の成功を主張しない。
+
+### 05-B 再UIでの確認と日付処理の再点検（2026-09-07、途中）
+
+`51585c04`へ上記限定修正とreceiptをlocal統合し、clean HEADの`npm run test:local:ui:build`でexit 0を確認した。再開した実UIで予定CREATE開始時の例外は解消した。一方、空activator slotでも配置画面のfallbackボタンは残った。compile/source検査と先行reviewだけでは実描画を証明できなかったため、この指摘を再開する。
+
+通常のpointer操作で合成Employeeを予定へ配置し、worker詳細の休憩を0.5時間へ変更して保存・再読込した。backendの読取りではemployeeIds/従業員配列が各1件、breakMinutes=30、hasNotification=falseを確認した。最初のdrag位置推定は外れたが、表示要素の境界を読取り確認して通常dragを行うと成功したため、drop領域自体の変更を追加しない。
+
+複製dialogで09/08を選択して保存すると、コピーが09/07の列へ現れた。backendでもコピーの日付文字列09/07を確認した。rootのsource照合ではserverのduplicateが計算用ClassのdateAt setterへ再代入し、installed WorkTimeBaseがnative Date.setHours(0,0,0,0)でhost時差に依存している。既存domainはWindowsのJST環境で成功しており、UTCでの選択日保持の証拠ではない。create/overview/worker連動・通知/実績化・請求日付の同原因を05-B内で点検し、packageやprocess全体の時差を変更せずapplication内で修正する。通常entryのdayjs timezone初期化だけではnative Dateの問題は解消しない。
+
+rootは所有tab、generated server、Emulatorの順で停止した（前景sessionのCtrl-C終了はexit 1）。sandbox外の独立port照合で専用portと観測済み派生8917/9150のLISTEN不在、exit 0を確認した。running専用Emulatorの合成UI状態はexportしていない。backend修正により影響するEmulator証拠は再実行対象とし、再review・domain・Emulator・fresh build/UIが完了するまで05-B未完了を維持する。
+
+### 05-B 日時・slot補正の固定検証（2026-09-07、途中）
+
+`UI-R2`は計算/draft instanceと子配列へ限定したJST adapterをBの保存・通知状態・editor・予定移動へ接続した。package/prototype/global Date/process設定は変更せず、通知actualの既存flag規則、callback・dayType・親子同期、raw差分保持を維持する。Managerはslotが存在するときに既定ボタンを描画しない。実templateとwrapperのrender testでなし/空/customを確認する。
+
+`UI-R2-PLAN`で親子再生成と固定数値の条件を補足し、実装文書へ反映した。`UI-R2-REVIEW`/`UI-R2-SEC`は固定した7sourceに追加P1/P2なし。review途中の同一親instance.initialize後のWeakSet残留は、現適用先の再表示/rollbackが新instanceへ置換することと、Card/Workersの別cloneを照合して現経路のP2にはしなかった。adapterの寿命制約は実装文書に残し、共通基盤としての保証へ拡張しない。
+
+rootが最終source/test hashを照合し、`node --test test/domain/*.test.mjs`で1338/1338・exit 0、`npm run test:local`で175/175・exit 0を確認した。新日時test（SHA-256 `B0C3BCB7E12FE5CA0B9483B1DDCE808F1F83D89B318F80F1973AE2582AF13BFF`）はUTC/JST各24 chainを実saveOperation経由で検証し、日勤480分・09時境界2分・夜勤/24時間・翌日加算・閏日/年越し・通知/実績化を固定値と比較する。非0の曜日別料金と改定取極めを使い、締日11/20の21800円、翌11/21の51000円、適用agreement.keyと翌月請求日を個別assertした。日付不変時のTimestamp nanos123456789・未知field保持も確認した。料金追補中のtest自身のgetter誤認2件は訂正して最終成功を得ており、製品sourceの追加変更はない。
+
+全Emulator終了後、rootの独立commandで専用port・派生8028/9150のLISTEN不在、保護22fileの件数/hash不変、所有harness runtimeのcleanupを確認した（各exit 0）。Functionsを変更したため旧175件を流用せず再実行した。変更のないmanaged-governance/project-docs-negative/capacity-regressionの同turn証拠はpolicyの失効条件に基づき再利用する。文書/diffは最終文書に対して再実行し、修正版のfresh build/実UI完了まではBを受け入れない。

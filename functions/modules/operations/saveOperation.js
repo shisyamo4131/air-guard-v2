@@ -1,3 +1,4 @@
+import { operationDateTime } from "../../shared/operationDateTime.js";
 import { FieldValue } from "firebase-admin/firestore";
 import { Site, SiteOperationSchedule, OperationResult, OperationResultDetail, ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import { plain, identifier, equal, rawForClass } from "../../shared/employeeContract.js";
@@ -106,7 +107,7 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
         assertOperationExpected(source, command);
         if (kind !== "schedule" && source.isLocked !== false) fail("failed-precondition");
         const Schema = kind === "schedule" ? SiteOperationSchedule : OperationResult;
-        const model = new Schema(rawForClass(source)), before = model.toObject();
+        const model = operationDateTime(new Schema(rawForClass(source))), before = model.toObject();
         model.docId = documentId; model.dateAt = changes.dateAt;
         if (kind === "schedule") {
           model.operationResultId = null;
@@ -121,14 +122,14 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
           const order = existing.docs.length ? existing.docs[0].data().displayOrder : -1;
           if (typeof order !== "number" || !Number.isFinite(order)) fail();
           created = { ...created, displayOrder: order + 1 };
-          try { new SiteOperationSchedule(rawForClass(created)).validate(); } catch { fail("invalid-argument"); }
+          try { operationDateTime(new SiteOperationSchedule(rawForClass(created))).validate(); } catch { fail("invalid-argument"); }
         } else created = await applySiteAgreement(created, kind);
         target.after = created;
       } else if (action === "create") {
         if (raw !== null) fail("already-exists");
         assertOperationExpected(null, command);
         const Schema = kind === "schedule" ? SiteOperationSchedule : OperationResult;
-        const model = new Schema({ ...changes, docId: documentId });
+        const model = operationDateTime(new Schema({ ...changes, docId: documentId }));
         if (kind === "schedule") { try { model.validate(); } catch { fail("invalid-argument"); } }
         raw = model.toObject();
         const site = await requireSite(raw.siteId);
@@ -225,8 +226,8 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
                 await requireSite(worker.siteId);
                 const id = `${documentId}_${worker.workerId}`;
                 if (notifications.get(id) !== null) fail("failed-precondition", "予定と通知の状態が一致しません。最新情報を確認してください。");
-                const notification = new ArrangementNotification({ ...rawForClass(worker), actualStartTime: worker.startTime, actualEndTime: worker.endTime, actualBreakMinutes: worker.breakMinutes, shouldNotify: changes.shouldNotify }).toObject();
-                try { new ArrangementNotification(notification).validate(); } catch { fail("invalid-argument"); }
+                const notification = operationDateTime(new ArrangementNotification({ ...rawForClass(worker), actualStartTime: worker.startTime, actualEndTime: worker.endTime, actualBreakMinutes: worker.breakMinutes, shouldNotify: changes.shouldNotify })).toObject();
+                try { operationDateTime(new ArrangementNotification(notification)).validate(); } catch { fail("invalid-argument"); }
                 notification.docId = id;
                 (await plan(`${root}/ArrangementNotifications/${id}`, "notification")).after = { ...(notifications.get(id) || {}), ...notification };
               }
@@ -247,14 +248,14 @@ export async function saveOperation({ firestore, resolveIdentity, input, timesta
               for (const key of ["actualStartTime", "actualEndTime"]) if (notification[key] != null && typeof notification[key] !== "string") fail();
               if (notification.actualBreakMinutes != null && (typeof notification.actualBreakMinutes !== "number" || !Number.isFinite(notification.actualBreakMinutes))) fail();
               if (notification.actualIsStartNextDay != null && typeof notification.actualIsStartNextDay !== "boolean") fail();
-              const calculated = new OperationResultDetail(rawForClass(worker));
+              const calculated = operationDateTime(new OperationResultDetail(rawForClass(worker)));
               const before = calculated.toObject();
               Object.assign(calculated, { startTime: notification.actualStartTime ?? worker.startTime, endTime: notification.actualEndTime ?? worker.endTime, breakMinutes: notification.actualBreakMinutes ?? worker.breakMinutes, isStartNextDay: notification.actualIsStartNextDay ?? worker.isStartNextDay, isQualified: notification.isQualified, isOjt: notification.isOjt });
               try { calculated.validate(); } catch { fail("invalid-argument"); }
               return mergeCalculated(worker, before, calculated.toObject());
             };
             const employees = raw.employees.map(convert), outsourcers = raw.outsourcers.map(convert);
-            const model = new OperationResult({ ...rawForClass(raw), employees: rawForClass(employees), outsourcers: rawForClass(outsourcers), siteOperationScheduleId: documentId });
+            const model = operationDateTime(new OperationResult({ ...rawForClass(raw), employees: rawForClass(employees), outsourcers: rawForClass(outsourcers), siteOperationScheduleId: documentId }));
             try { for (const worker of model.workers) worker.validate(); } catch { fail("invalid-argument"); }
             const created = model.toObject();
             for (const key of Object.keys(created)) if (equal(rawForClass(raw[key]), created[key])) created[key] = raw[key];

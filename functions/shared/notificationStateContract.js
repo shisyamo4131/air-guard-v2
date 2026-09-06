@@ -1,3 +1,4 @@
+import { operationDateTime } from "./operationDateTime.js";
 import { ArrangementNotification } from "@shisyamo4131/air-guard-v2-schemas";
 import { plain, equal, rawForClass, expectedFields } from "./employeeContract.js";
 import { OperationWriteError, notificationEmployeeReferences } from "./operationReferences.js";
@@ -17,7 +18,7 @@ export function prepareNotificationState(raw, input, now = new Date()) {
     if (["actualStartTime", "actualEndTime"].includes(field) && value !== null && typeof value !== "string") throw new OperationWriteError("invalid-argument");
     if (field === "actualBreakMinutes" && (typeof value !== "number" || !Number.isFinite(value))) throw new OperationWriteError("invalid-argument");
   }
-  const model = new ArrangementNotification(rawForClass(raw)), before = model.toObject();
+  const model = operationDateTime(new ArrangementNotification(rawForClass(raw))), before = model.toObject();
   for (const field of NOTIFICATION_VALUES) if (Object.hasOwn(input.changes, field)) model[field] = input.changes[field];
   model.status = input.changes.targetStatus;
   if (model.status !== "LEAVED") {

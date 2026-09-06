@@ -1,4 +1,5 @@
-import dayjs from "dayjs";
+import { operationDateTime } from "@/functions/shared/operationDateTime.js";
+import { parseDate } from "@/functions/shared/employeeContract.js";
 import { watch, onScopeDispose } from "vue";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
@@ -56,7 +57,8 @@ export function useSiteOperationScheduleActions() {
   function updateSchedules(schedules, { date, siteId, shiftType } = {}) {
     if (!date || !siteId || !shiftType) return perform(schedules, () => { throw new Error(); });
     schedules.forEach((model, index) => {
-      model.siteId = siteId; model.shiftType = shiftType; model.dateAt = dayjs.tz(date).startOf("day").toDate(); model.displayOrder = index;
+      operationDateTime(model);
+      model.siteId = siteId; model.shiftType = shiftType; model.dateAt = parseDate(date); model.displayOrder = index;
     });
     return enqueue(schedules);
   }
