@@ -2,9 +2,17 @@
 
 2026-09-06の最新方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下は静的実装事実と未実装の設計であり、適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
 
+## EMP-02での実装差分
+
+作成・基本・国籍は`functions/apis/saveEmployee.js`の専用Callable、`functions/modules/employees/saveEmployee.js`のtransaction保存、`functions/shared/employeeContract.js`の共有契約へ移した。`components/Employee/Editor.vue`と`useEmployeeEditor.js`はraw snapshotから独立draftを作り、保存await・拒否時の入力保持・明示再読込・応答不明の照合を扱う。基本住所入力、明示表示名優先、国籍解除の従属値消去を同じ保存契約へ揃えた。
+
+原本とarchiveのRulesは会社管理者・既知6業務roleのreadへ限定し、直接client CUDと汎用/nested迂回を拒否する。作成入口は在職一覧に集約した。警備員・資格・3保険はEMP-03/04の移行まで一時read-onlyで、User/退職の専用操作は維持する。新規Employeeの保険世代値は3種とも0を保存するが、保険遷移の実装はEMP-04に属する。住所の座標取得は専用adapterへ移し、失敗時の住所保存・旧座標消去・遷移後にも残る通知を実装した。実provider接続とDev反映は未実施。
+
+各工程の検証結果・未検証・適用判定は[local検証記録](../verification/employee-02-04-local.md)と[ロードマップ](../roadmaps/employee.md)を参照する。
+
 ## 現行経路の再照合
 
-2026-09-06、EMP計画/EMP-01で現code、installed schema、Rules、test sourceを再照合した。以下は静的確認であり、runtime・実data・Devの現在状態は未検証。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。
+2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。
 
 | 操作/境界 | 現行事実と主な根拠 | 対応する設計・実装条件 |
 |---|---|---|
@@ -26,7 +34,7 @@
 
 ## EMP-01最終案の位置付け
 
-2026-09-06、利用者が最終提案を採用し確定を承認した。表示名/作成導線、archive閲覧、段階移行/提供工程を含む確認済み要件は[現行仕様](../specification.md#employeeの操作権限と保持)、工程配分は[ロードマップ](../roadmaps/employee.md)を正とする。以下は採用要件に対応する未実装の設計契約であり、見出しの「案」は既存link維持のため残す。EMP-02以降は開始指示を待つ。
+2026-09-06、利用者が最終提案を採用し確定を承認した。表示名/作成導線、archive閲覧、段階移行/提供工程を含む確認済み要件は[現行仕様](../specification.md#employeeの操作権限と保持)、工程配分は[ロードマップ](../roadmaps/employee.md)を正とする。以下は採用要件に対応する未実装の設計契約であり、見出しの「案」は既存link維持のため残す。その後EMP-04までの連続実施が承認された。現在の適用状態・次工程はEmployeeロードマップを参照する。
 
 ### 通常保存の技術契約
 
@@ -38,7 +46,7 @@
 | 資格の行識別 | 現Certification.keyはname由来なので永続IDにしない。操作はadd/update/remove、更新/削除は開始時の配列と行位置を指定し、serverが期待配列全体の一致を確認して対象行だけ変更 | 同名行でも位置を誤らない。別行の同時変更も上書きせず競合拒否する。新資格ID・配列自動merge・新たな重複資格禁止は追加しない。name/type/issuedBy/issueDateAt/expirationDateAt/serialNumberを入力対象とする |
 | 保険の再送 | 3保険それぞれで現6操作を維持し、保険mapと当該保険の巻き戻さない世代値を期待値として正規遷移を計算 | 喪失→履歴復元で同じmapに戻っても古い要求は拒否。世代値を同transactionで進め、historyの二重push/popを防ぐ。原本再取得で反映有無を案内し、曖昧なら結果不明を保つ |
 | 作成 | dialog開始時に新規IDを生成してmemory保持。serverは同ID原本/archive不存在の場合だけcreate。新規ACTIVE・既定の従属field・actor/時刻をserverで確定 | ID再生成による自動再送をしない。既存同IDを上書きしない。応答不明は同IDを現在権限で取得し、入力とserver派生値を照合。後続変更で照合不能なら成功断定しない。同dialog中のみ復旧支援し、PII draftを永続化しない |
-| 住所と座標 | [共通設計](address-geocoding.md#共通仕様との対応2026-09-06)を使う。取得対象は現fullAddressのprefCode/city/address。location/geopoint未取得は共にnull | 取得前に認可・入力を検査し、外部処理後の最終transactionで現在認可・ACTIVE・取得基準住所を照合する。古い結果は保存しない。国籍/保険等では取得0回。無期限に保存を待たせずprovider timeoutを取得失敗として住所保存へ進める |
+| 住所と座標 | [共通設計](address-geocoding.md#共通仕様との対応2026-09-06)を使う。取得対象は現fullAddressのprefCode/city/address。location/geopoint未取得は共にnull | 取得前に認可・入力を検査し、外部処理後の最終transactionで現在認可・ACTIVE・取得基準住所を照合する。古い結果は保存しない。preflightで住所同値でも最終candidateで新たな住所変更になった場合はwrite 0で競合拒否する。国籍/保険等では取得0回。無期限に保存を待たせずprovider timeoutを取得失敗として住所保存へ進める |
 | raw保存 | 検証用Classと永続化patchを分け、既存rawのunknown field・不存在・他sectionを保持 | schemaの全beforeUpdateやconverter出力で全体setしない。入力のunknown/dotted field、prototype経由field、非finite値、不正日時は拒否する |
 | 日時と期待値 | wireでは日付入力と局所期待値を別codecで扱う。入力日付は有効なJST暦日を表すYYYY-MM-DDを受け、現schemaに必要なDateへ変換。期待値はTimestampのseconds/nanoseconds・不存在を失わないtag付き値でrawと比較 | 任意Date.parseに委ねず、不正暦日・余分なfield・型偽装を拒否。既存の時刻を期待値codecで日付だけに丸めない。入力変更のない日時fieldは書かない |
 
@@ -75,7 +83,7 @@ mapだけの比較ではA→喪失→履歴復元→A後の古い喪失要求を
 
 serverは最新raw documentを取得し、不存在とnullの区別を保持してcandidateを構築する。Classとoperationをserverで検証できる専用Callableを使用する設計とする。Employee.update/beforeUpdateの全体hookをそのまま使わず、operationの変更だけを正規化し、実際に変更した所有field・派生field・uid/updatedAtだけを保存する。validation用default補完をpatchへ混ぜず、他section、unknown field、createdAt、誤訂正後の退職field不存在を保持する。
 
-派生closureは、姓名→fullName/確定したdisplayName、姓名カナ→fullNameKana、code/姓名/カナ/displayName/foreignName→最新candidateからtokenMap、prefCode/city/address→prefecture/fullAddressとする。displayName明示値は姓名設定後に反映し、displayNameKanaは独立値を維持する。国籍flag解除時の従属field消去は国籍operation内だけで行う。基本保存で警備/国籍/保険を正規化しない。座標はCONF-0120の回答に従い、外部作用をtransaction再試行callbackへ入れない。
+派生closureは、姓名→fullName/確定したdisplayName、姓名カナ→fullNameKana、code/姓名/カナ/displayName/foreignName→最新candidateからtokenMap、prefCode/city/address→prefecture/fullAddressとする。displayName明示値は姓名設定後に反映し、displayNameKanaは独立値を維持する。国籍flag解除時の従属field消去は国籍operation内だけで行う。在留期間制限の解除（hasPeriodOfStayLimit=false）も現schemaの相関を維持し、periodOfStayをnullへ戻す。この解除では開始時点のhasPeriodOfStayLimitとperiodOfStayを局所期待値で照合する（isForeigner=falseなら国籍field群全体）。解除と従属field入力を混在させても、最終candidateの消去値と実際のpatchを一致させる。基本保存で警備/国籍/保険を正規化しない。座標はCONF-0120の回答に従い、外部作用をtransaction再試行callbackへ入れない。
 
 座標取得失敗時の保存可否は回答済みである。新規作成・住所変更時は、入力・認可・競合検証が成功すれば住所を保存し、古い座標を消して未取得を知らせる。住所不変の更新では既存座標を維持する。住所が後から他actorに変更された場合に古い取得結果を保存しないこと、provider失敗とFirestore保存失敗を分けること、未取得表現と結果表示をEMP-02で検証する。実data一括変更や自動再取得を追加する指示ではない。
 

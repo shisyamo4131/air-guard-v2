@@ -37,6 +37,7 @@ const { docs } = useDocuments("Employee", {
     <EmployeesManager
       class="fill-height"
       :docs="docs"
+      show-create
       v-model:search="search"
       :items-per-page="-1"
       :sort-by="[{ key: 'fullNameKana', order: 'asc' }]"

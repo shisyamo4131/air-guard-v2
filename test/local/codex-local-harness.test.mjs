@@ -69,6 +69,62 @@ function parseEmulatorHost(name) {
   return { host, port };
 }
 
+test("EMP02 Employee Callable transport creates and patches exact fields with external effects denied", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "emp02-transport-hr", roles: ["human-resource"] });
+  const employeeId = "emp02-transport-employee";
+  const changes = { lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "表示指定", displayNameKana: "ヒョウジシテイ", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" };
+  const created = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes, expected: {} } });
+  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
+  assert.equal(created.payload.result.success, true); assert.ok(created.payload.result.warning);
+  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
+  const before = (await ref.get()).data();
+  assert.equal(before.displayName, "表示指定"); assert.equal(before.location, null); assert.equal(before.geopoint, null);
+  assert.deepEqual(before.insuranceOperationVersions, { healthInsurance: 0, pensionInsurance: 0, employmentInsurance: 0 });
+  await ref.update({ unknown: { keep: true } });
+  const updated = await callSiteLifecycleTransport({ actor, functionName: "updateEmployeeBasic", data: { employeeId, changes: { title: "主任" }, expected: {} } });
+  assert.equal(updated.response.status, 200, JSON.stringify(updated.payload));
+  const after = (await ref.get()).data(); assert.equal(after.title, "主任"); assert.deepEqual(after.unknown, { keep: true }); assert.deepEqual(after.healthInsurance, before.healthInsurance);
+  const refused = await callSiteLifecycleTransport({ actor, functionName: "updateEmployeeBasic", data: { employeeId, changes: { employmentStatus: "RESIGNED" }, expected: {} } });
+  assert.equal(refused.payload.error.status, "INVALID_ARGUMENT");
+  const duplicate = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes, expected: {} } });
+  assert.equal(duplicate.payload.error.status, "ALREADY_EXISTS");
+});
+
+test("EMP02 Employee and archives read only admit the seven actor categories and reject every client write or nested bypass", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const employeeId = "emp02-rules-employee";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    for (const name of ["Employees", "Employees_archive"]) await setDoc(doc(context.firestore(), "Companies", companyId, name, employeeId), { docId: employeeId, employmentStatus: "ACTIVE", privateField: "synthetic" });
+  });
+  const cases = [
+    { key: "admin", isAdmin: true, roles: [], allowed: true },
+    ...["manager", "controller", "accountant", "human-resource", "labor", "legal"].map((role) => ({ key: role, isAdmin: false, roles: [role], allowed: true })),
+    { key: "empty", isAdmin: false, roles: [], allowed: false },
+    { key: "direct", isAdmin: false, roles: ["employees:read"], allowed: false },
+    { key: "unknown", isAdmin: false, roles: ["human-resource", "unknown"], allowed: false },
+    { key: "super", isAdmin: false, roles: ["manager"], isSuperUser: true, allowed: false },
+    { key: "admin-super", isAdmin: true, roles: [], isSuperUser: true, allowed: true },
+    { key: "disabled", isAdmin: true, roles: [], disabled: true, allowed: false },
+    { key: "temporary", isAdmin: true, roles: [], isTemporary: true, allowed: false },
+  ];
+  for (const entry of cases) {
+    const uid = `emp02-rules-${entry.key}`;
+    await seedRegisteredUser({ uid, isAdmin: entry.isAdmin, roles: entry.roles, disabled: entry.disabled ?? false, isTemporary: entry.isTemporary ?? false });
+    await testEnvironment.withSecurityRulesDisabled((context) => updateDoc(doc(context.firestore(), "Companies", companyId, "Users", uid), { docId: uid }));
+    const firestore = authenticatedFirestore(uid, { isSuperUser: entry.isSuperUser ?? false });
+    for (const name of ["Employees", "Employees_archive"]) {
+      const reference = doc(firestore, "Companies", companyId, name, employeeId);
+      await (entry.allowed ? assertSucceeds : assertFails)(getDoc(reference));
+      await (entry.allowed ? assertSucceeds : assertFails)(getDocs(collection(firestore, "Companies", companyId, name)));
+      await assertFails(updateDoc(reference, { title: "不可" })); await assertFails(deleteDoc(reference));
+      await assertFails(setDoc(doc(firestore, "Companies", companyId, name, `new-${uid}`), { docId: uid }));
+      const nested = doc(firestore, "Companies", companyId, name, employeeId, "nested", "probe");
+      await assertFails(getDoc(nested)); await assertFails(setDoc(nested, { value: true }));
+      await assertFails(getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id, name, employeeId)));
+    }
+  }
+});
+
 async function readDedicatedFunctionsHost() {
   const config = JSON.parse(
     await readFile(
@@ -417,7 +473,6 @@ const TENANT_READ_WRITE_COLLECTIONS = [
   "Articles",
   "Articles_archive",
   "Autonumbers",
-  "Employees_archive",
   "meta",
 ];
 
@@ -6908,7 +6963,7 @@ test("Firestore Rules reserve Employee lifecycle fields and deletion for Admin S
     "uwb08-rules-resigned-create",
   );
 
-  await assertSucceeds(
+  await assertFails(
     setDoc(employeeRef, {
       displayName: "規則社員",
       employmentStatus: "ACTIVE",
@@ -6916,7 +6971,7 @@ test("Firestore Rules reserve Employee lifecycle fields and deletion for Admin S
       reasonOfTermination: null,
     }),
   );
-  await assertSucceeds(
+  await assertFails(
     setDoc(employeeRef, { displayName: "更新社員" }, { merge: true }),
   );
   await assertFails(

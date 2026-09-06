@@ -61,9 +61,9 @@ onUnmounted(() => {
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <EmployeeManager :doc="doc" label="基本情報" hide-delete-btn>
-              <template #activator="activatorProps">
-                <EmployeeActivatorBase v-bind="activatorProps">
+            <EmployeeEditor :employee="doc" operation="basic" title="基本情報">
+              <template #default="{ open, canEdit }">
+                <EmployeeActivatorBase :item="doc" title="基本情報" :can-edit="canEdit" @click:edit="open">
                   <template #actions>
                     <EmployeeLifecycleActions
                       class="flex-grow-1"
@@ -73,16 +73,16 @@ onUnmounted(() => {
                   </template>
                 </EmployeeActivatorBase>
               </template>
-            </EmployeeManager>
+            </EmployeeEditor>
           </v-col>
 
           <!-- 国籍情報 -->
           <v-col cols="12">
-            <EmployeeManager :doc="doc" hide-delete-btn label="国籍情報">
-              <template #activator="activatorProps">
-                <EmployeeActivatorNationality v-bind="activatorProps" />
+            <EmployeeEditor :employee="doc" operation="nationality" title="国籍情報">
+              <template #default="{ open, canEdit }">
+                <EmployeeActivatorNationality :item="doc" title="国籍情報" :can-edit="canEdit" @click:edit="open" />
               </template>
-            </EmployeeManager>
+            </EmployeeEditor>
           </v-col>
 
           <!-- ユーザー情報 -->
@@ -95,44 +95,15 @@ onUnmounted(() => {
       <!-- 右カラム -->
       <v-col cols="12" md="8">
         <v-row>
-          <v-col cols="12" md="4">
-            <InsuranceTransitionManager
-              v-model="doc.employmentInsurance"
-              title="雇用保険"
-              @submit:complete="async () => await doc.update()"
-            />
+          <v-col v-for="insurance in [{ key: 'employmentInsurance', title: '雇用保険' }, { key: 'healthInsurance', title: '健康保険' }, { key: 'pensionInsurance', title: '厚生年金' }]" :key="insurance.key" cols="12" md="4">
+            <v-card :title="insurance.title"><v-card-text>
+              <InsuranceStatusChip :status="doc[insurance.key].status" :is-processing="doc[insurance.key].isProcessing" />
+              <div>番号: {{ doc[insurance.key].number || '-' }}</div>
+              <div>加入日: {{ doc[insurance.key].enrollmentDate || '-' }}</div>
+            </v-card-text></v-card>
           </v-col>
-          <v-col cols="12" md="4">
-            <InsuranceTransitionManager
-              v-model="doc.healthInsurance"
-              title="健康保険"
-              @submit:complete="async () => await doc.update()"
-            />
-          </v-col>
-          <v-col cols="12" md="4">
-            <InsuranceTransitionManager
-              v-model="doc.pensionInsurance"
-              title="厚生年金"
-              @submit:complete="async () => await doc.update()"
-            />
-          </v-col>
-
-          <!-- 警備員資格情報 -->
-          <v-col cols="12">
-            <EmployeeManager :doc="doc" hide-delete-btn label="警備員資格情報">
-              <template #activator="activatorProps">
-                <EmployeeActivatorSecurityGuard v-bind="activatorProps" />
-              </template>
-            </EmployeeManager>
-          </v-col>
-
-          <!-- 保有資格 -->
-          <v-col cols="12">
-            <EmployeeCertificationsManager
-              v-model="doc.securityCertifications"
-              @submit:complete="async () => await doc.update()"
-            />
-          </v-col>
+          <v-col cols="12"><EmployeeActivatorSecurityGuard :item="doc" title="警備員登録" :can-edit="false" /></v-col>
+          <v-col cols="12"><v-card title="保有資格"><EmployeeCertificationsTable :items="doc.securityCertifications" /></v-card></v-col>
         </v-row>
       </v-col>
     </v-row>

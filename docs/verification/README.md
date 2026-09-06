@@ -23,6 +23,7 @@
 | Site SITE-08 local統合・権限別ブラウザ受入れ | [SITE-08 Codex専用local統合確認記録](site-08-local.md) |
 | Outsourcer OUT-07 local統合確認の進行記録 | [Outsourcer OUT-07 local progress](outsourcer-out07-local-progress.md) |
 | Outsourcer OUT-07 local統合確認 | [Outsourcer OUT-07 local integration verification receipt](outsourcer-out07-local-integration.md) |
+| Employee EMP-02〜04 local検証 | [Employee local検証記録](employee-02-04-local.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
 | 機械可読の検証方針 | [Verification policy](../../governance/verification-policy.json) |

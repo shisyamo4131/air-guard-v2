@@ -119,6 +119,16 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function canReadEmployee(companyId) {
+      let user = get(/databases/$(database)/documents/Companies/$(companyId)/Users/$(request.auth.uid)).data;
+      return hasActiveRegisteredUser() && userCompanyId() == companyId
+        && request.auth.token.isSuperUser is bool
+        && user.docId == request.auth.uid && user.isAdmin is bool
+        && (user.isAdmin == true || (request.auth.token.isSuperUser == false
+          && user.roles is list && user.roles.size() > 0
+          && user.roles.hasOnly(['manager', 'controller', 'accountant', 'human-resource', 'labor', 'legal'])));
+    }
+
     function isValidActiveEmployeeCreate() {
       return request.resource.data.employmentStatus is string
         && request.resource.data.employmentStatus == 'ACTIVE'
@@ -949,14 +959,8 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Employees ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/Employees/{docId} {
-      allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidActiveEmployeeCreate();
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && preservesEmployeeLifecycleFields();
-      allow delete: if false;
+      allow read: if isAuthenticated() && canReadEmployee(companyId);
+      allow write: if false;
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---
@@ -964,7 +968,8 @@ service cloud.firestore {
     // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
     // Employees_archive ドキュメントのみ Read/Write を許可。
     match /Companies/{companyId}/Employees_archive/{docId} {
-      allow read, write: if isAuthenticated() && userCompanyId() == companyId;
+      allow read: if isAuthenticated() && canReadEmployee(companyId);
+      allow write: if false;
     }
 
     // --- Rules for 'mets' subcollection under 'Companies' ---
@@ -1127,6 +1132,7 @@ service cloud.firestore {
                                 "SiteEmployeeHistories",
                                 "Users",
                                 "Employees",
+                                "Employees_archive",
                                 "EmployeeUserReservations",
                                 "LifecycleOperations",
                                 "UserLifecycleLocks",

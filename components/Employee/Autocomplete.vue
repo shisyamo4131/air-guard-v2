@@ -89,14 +89,6 @@ async function api(text) {
     :return-object="returnObject"
     @update:model-value="emit('update:model-value', $event)"
   >
-    <template v-if="creatable" #append>
-      <EmployeeManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate }">
-          <v-icon @click="toCreate()">mdi-plus</v-icon>
-        </template>
-      </EmployeeManager>
-    </template>
-
     <template #item="slotProps">
       <slot name="item" v-bind="slotProps">
         <EmployeeListItem v-bind="slotProps.props" :item="slotProps.item" />

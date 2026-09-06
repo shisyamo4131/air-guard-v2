@@ -5,7 +5,7 @@
 - 採用範囲: 共通原則・Employeeの方式変更と最終提案の操作/閲覧/段階移行条件。下記の実装設計・運用案は実装済みを意味しない。
 - 関連仕様: [共通データ仕様](../specification.md#共通データ仕様)、[Employee](../specification.md#employeeの操作権限と保持)
 - 一部置換: [ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)の直接物理削除・archive延期、[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)の従属writer変更禁止。全項目read・通常編集・退職・保険のactorと状態条件は維持する。
-- 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。今回はEMP-01の設計・review・文書保存で止め、EMP-02以降を開始しない。
+- 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。本判断の採用時はEMP-01の設計・review・文書保存までとし、後続の実装開始承認と進捗はroadmapで管理する。
 
 ## 背景と決定
 

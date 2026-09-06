@@ -15,6 +15,7 @@ import { useDefaults } from "vuetify";
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  canEdit: { type: Boolean, default: false },
   item: {
     type: Object,
     required: true,
@@ -94,6 +95,7 @@ defineExpose({
       <v-toolbar color="secondary" density="compact" :title="props.title">
         <template #append>
           <v-btn
+            v-if="props.canEdit"
             icon="mdi-pencil"
             size="small"
             @click="emit('click:edit', props.item)"
@@ -111,7 +113,7 @@ defineExpose({
       v-else
       title="警備員登録未完了"
       icon="mdi-alert-circle-outline"
-      action-text="情報を登録する"
+      :action-text="props.canEdit ? '情報を登録する' : undefined"
       @click:action="emit('click:edit', props.item)"
     >
       <template #text>

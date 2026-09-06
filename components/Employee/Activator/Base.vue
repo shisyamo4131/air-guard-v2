@@ -13,6 +13,7 @@ import { useConstants } from "@/composables/useConstants";
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  canEdit: { type: Boolean, default: false },
   item: {
     type: Object,
     required: true,
@@ -105,7 +106,8 @@ defineExpose({
     <v-toolbar color="secondary" density="compact" :title="props.title">
       <template #append>
         <v-btn
-          icon="mdi-pencil"
+          v-if="props.canEdit"
+            icon="mdi-pencil"
           size="small"
           @click="emit('click:edit', props.item)"
         />
