@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-03として警備員登録と保有資格を専用保存へ移し、編集を再開した。登録解除の関連項目だけの消去、同名資格の原本位置による操作、古い資格配列の拒否、取消・入力保持・明示再選択を実装した。3保険はEMP-04までlocalでread-onlyを維持する。Dev未反映。[検証記録](docs/verification/employee-02-04-local.md)を参照。
+
 - EMP-02としてEmployeeの作成・基本・国籍を専用保存と独立draftへ移し、会社管理者・統括・人事の更新、他の既知業務roleの閲覧、退職後の通常編集禁止を保存境界で強制した。住所と座標の保存・競合・失敗通知、明示表示名、国籍関連解除を整合し、原本/archiveの直接client CUDを閉じた。警備員・資格・3保険の編集はEMP-03/04までlocalで一時停止する。Dev未反映。実施状況は[工程](docs/roadmaps/employee.md)、実測結果は[検証記録](docs/verification/employee-02-04-local.md)を参照。
 
 - Employeeの最終提案を確定した。明示表示名の優先・在職一覧への作成集約、通常原本と同じ7actorのarchive閲覧、local段階移行を採用し、EMP-05へ参照保護/archiveを割り当てた。物理削除の実行は後続専用工程へ分離する。通常保存・raw期待値・保険別の巻き戻さない世代値の設計を整えた。仕様/設計反映であり、製品実装は未着手。[仕様](docs/specification.md#employeeの操作権限と保持)、[判断](docs/decisions/0060-common-archive-purge-and-address-contract.md)、[工程](docs/roadmaps/employee.md)を参照。

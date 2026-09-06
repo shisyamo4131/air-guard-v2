@@ -25,3 +25,5 @@ function callable(operation) {
 export const createEmployee = callable("create");
 export const updateEmployeeBasic = callable("basic");
 export const updateEmployeeNationality = callable("nationality");
+export const updateEmployeeSecurity = callable("security");
+export const updateEmployeeCertifications = callable("certifications");

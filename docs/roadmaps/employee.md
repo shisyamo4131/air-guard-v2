@@ -1,6 +1,6 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: EMP-01・02完了。次は承認済みのEMP-03。各工程のreview・検証・報告・統合後に次へ進み、EMP-04完了で停止する。
+- 状態: EMP-01・02完了、EMP-03実装中。各工程のreview・検証・報告・統合後に次へ進み、EMP-04完了で停止する。
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 30%
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
@@ -49,7 +49,7 @@ EMP-05の内部順序はreader/参照契約→参照writer・index保持→旧tr
 |---|---:|---:|---|---|
 | EMP-01 契約・対象確定 | 10 | 10 | Completed | actor・保存/競合・住所/座標・archive形式/従属/閲覧・表示名/作成導線・段階移行/提供工程を確定し、仕様・必要ADR/CONF/FUTへ反映する。独立review・文書検証によりEMP-02の入力・保存・test前提を確認して報告する。 |
 | EMP-02 作成・基本・国籍 | 20 | 20 | Completed | 専用保存・独立draft・7actor read/直接CUD拒否、住所と派生field・局所競合・異field保持を実装した。独立reviewの指摘を修正し、domain 1180件・Emulator 172件・修正後build・実UI作成/基本/国籍/取消/再読込/通知・backend照合・cleanupを確認。[検証記録](../verification/employee-02-04-local.md)を参照。 |
-| EMP-03 警備員登録・資格 | 10 | 0 | Planned | 登録情報と資格配列を別operationとして保存する。同名・名称変更・削除・別行追加・古い配列の再送で他行を失わず、保険・基本情報・lifecycleへ書かない。対象actor、従属初期化、拒否・成功のdata比較と代表UIを確認する。 |
+| EMP-03 警備員登録・資格 | 10 | 0 | In progress | 登録情報と資格配列を別operationとして保存する。同名・名称変更・削除・別行追加・古い配列の再送で他行を失わず、保険・基本情報・lifecycleへ書かない。対象actor、従属初期化、拒否・成功のdata比較と代表UIを確認する。 |
 | EMP-04 3保険の保存 | 15 | 0 | Planned | 各保険の承認済み遷移だけをserverで検証し、対象保険の現在値/historyと巻き戻さない保険別世代値をraw期待値として照合する。live非mutation、保存await、確定拒否時のwrite 0、応答不明時の照合、二重history変更防止を確認する。監査制度全面刷新を暗黙追加しない。 |
 | EMP-05 閲覧互換・参照保護・アーカイブ | 20 | 0 | Planned | 原本の全項目readと既存購読を維持し、現在Auth/User・identity由来tenant・既知roleの認可を揃える。Employee/archivesと汎用Rules、既存query・Class表示、cold cache、初期選択ID、期間内退職者、更新/削除反映、権限喪失を検証する。参照writer/Rules・日次2種と請求の索引・限定整合確認・旧User削除trigger停止・専用archiveを実装し、競合両順序・埋込み参照・旧writer拒否を検証する。実dataはEMP-09の別承認。項目限定API・DTO/projection・新しい通知やpollingは追加しない。 |
 | EMP-06 一覧・検索・User画面 | 10 | 0 | Planned | 空・loading・error、古い検索応答、作成導線を契約へ揃える。User panel shellを整理し、既存User provision/deleteと退職・訂正の許可拒否を維持する。到達するEmployee CRUDのManager依存・旧model mutation経路を再検索し、操作証拠と照合する。 |

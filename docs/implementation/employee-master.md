@@ -10,6 +10,12 @@
 
 各工程の検証結果・未検証・適用判定は[local検証記録](../verification/employee-02-04-local.md)と[ロードマップ](../roadmaps/employee.md)を参照する。
 
+## EMP-03での実装差分
+
+警備員登録は`updateEmployeeSecurity`と既存EmployeeEditorのsecurity操作、資格は`updateEmployeeCertifications`と`useEmployeeCertifications.js`の専用draftへ移した。警備員登録解除は9fieldのraw期待値を照合し、関連defaultだけを保存する。資格の入力行はCertificationの明示validationを行い、配列全体のraw期待値と原本位置でadd/update/removeを実行する。名称由来keyや表示順を保存対象行のIDにしない。変更しない行・unknown field・Timestamp精度を保持する。
+
+詳細の警備員・資格編集を再開し、3保険だけをEMP-04までread-onlyにする。資格の再読込みは古い行位置を破棄して再選択を求める。表示用Tableの名前key依存と到達しない編集actionを除き、実操作は専用dialogへ集約した。工程の受入れ完了は上記roadmap/検証記録を参照する。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。

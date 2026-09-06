@@ -97,6 +97,7 @@ defineExpose({
           <v-btn
             v-if="props.canEdit"
             icon="mdi-pencil"
+            aria-label="警備員登録を編集"
             size="small"
             @click="emit('click:edit', props.item)"
           />

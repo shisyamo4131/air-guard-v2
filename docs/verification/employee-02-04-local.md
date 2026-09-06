@@ -71,3 +71,22 @@ EMP-02-UI-R3は静的slot接続のP2解消・追加指摘なし。source commit 
 変更classに必要な共通3gate、project-docs（exit 0）、全domain（1180/1180・exit 0）、Emulator（172/172・exit 0）、最終専用build（exit 0）、diff/cached diff（exit 0）を確認した。最終文書更新後は文書gateだけを再実行する。実provider・Dev/Prod・別roleの代表UI・実dataは未検証。権限別保存と拒否・競合/応答不明は自動testで検証し、全roleの画面受入れを実施したとは扱わない。
 
 EMP-02の目的・完了条件を満たし、進捗を10%→30%へ加点する。EMP-03は資格行の原配列位置・raw配列期待値・子Classの明示validation・既存date入力を引き継ぐ。次工程のread-only preflightでAirItemInput schema/slot契約と資格Tableの表示順を確認し、追加仕様判断は不要と判断した。保険編集はEMP-04まで停止、archive/参照保護とDev提供は後続工程のままである。
+
+## EMP-03 開始契約
+
+EMP-02の完了記録を`f4ee3bbcd4ffbd7d8289b96f6023f3b34a6cf0f3`へ統合し、primary/branch/clean状態をrootが確認して開始した。警備員登録9fieldと資格行6fieldの専用操作、原配列位置とraw配列全体の期待値、独立draft、保存await、取消・失敗・競合・結果不明を対象とする。新たな資格IDや重複禁止・行政業務要件を追加しない。共通schemaの必須・型・日付・相関を保存境界で検証し、別section/未知field/保険/lifecycleを保持する。
+
+application writerは既存developerへ集中し、Employee共有契約・専用API/use-case/controller/editor・警備/資格component・詳細pageと直接testを所有する。rootは文書・最終検証・専用UI・backend assertion・cleanup・統合を担当する。他package、参照writer、archive、User/lifecycle専用処理、Dev/Prod/外部作用は対象外。保険editorはEMP-04までread-onlyを維持する。前工程と同じclass unionとgateを適用し、変更で無効になったdomain/Emulator/buildを再実行する。共通3gateはvalidator/route/policy不変なら再利用する。
+
+代表UIは警備登録/解除、資格追加/更新/削除と日付、原配列位置による対象行の維持を確認する。同名・古い配列・別行追加との競合write 0はdomain/Emulatorで検証し、2画面で編集中の変更通知と入力保持・再読込みも確認する。未達はこの工程へ戻し、完了・統合後だけEMP-04を開始する。
+
+### EMP-03 UI前の実測
+
+- `node --test test/domain/*.test.mjs`: 1190 tests / pass 1190 / fail 0、exit 0。
+- `npm run test:local`: 173 tests / pass 173 / fail 0、exit 0。実HTTPで警備員登録/解除、同名資格2件の追加・1行の名称変更・古い配列の拒否・削除、現在actor権限喪失時の拒否を追加確認した。既存EMP-02/UWB/他masterのharnessも成功した。
+- `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2`および`git diff --check`: 各exit 0。後続文書変更があれば該当gateを再実行する。
+- EMP-03-CLIENT: 指定component/controller/shared contract/testと実入力部品をread-only reviewし、追加blockingなし。原本位置・再選択・raw draft・日時・権限喪失、EMP-02互換と保険read-onlyを静的確認した。次工程の追加設計判断はない。実UI・2画面競合の成功証拠にはしない。
+
+保存境界の独立review、最終build、直接UI、backend assertion、cleanup、統合はこの時点では未完了。
+
+EMP-03-SECも保存module/API/shared contract/client/testをread-only reviewし、修正必須の指摘なし。資格配列のA→B→Aという完全復元は採用済みの配列期待値だけでは識別しない限界を確認し、保険の世代値によるABA検知と同一視しない。新資格IDや全Employee版数を追加しない。source/testsの確認をrootの実測と区別する。独立review2件と自動gateの結果から、review済みsourceのlocal統合・専用UI検証へ進む。

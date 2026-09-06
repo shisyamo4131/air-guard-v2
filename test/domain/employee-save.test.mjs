@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Employee } from "@shisyamo4131/air-guard-v2-schemas";
 import { Timestamp } from "../../functions/node_modules/firebase-admin/lib/firestore/index.js";
 import { saveEmployee } from "../../functions/modules/employees/saveEmployee.js";
-import { parseDate, encodeExpected, parseEmployeeInput, buildEmployeePatch, employeeAllowed, expectedFields, NATIONALITY_FIELDS } from "../../functions/shared/employeeContract.js";
+import { parseDate, encodeExpected, parseEmployeeInput, buildEmployeePatch, employeeAllowed, expectedFields, NATIONALITY_FIELDS, SECURITY_FIELDS } from "../../functions/shared/employeeContract.js";
 
 const identity = { uid: "actor", companyId: "company", isSuperUser: false };
 const actor = { docId: "actor", companyId: "company", isAdmin: false, disabled: false, isTemporary: false, roles: ["human-resource"] };
@@ -19,9 +19,43 @@ function setup(raw = validEmployee(), overrides = {}) {
     for (const [path, data] of pending) { values.set(path, data); writes++; }
     return result;
   } };
-  const save = (operation, changes, expected = {}) => saveEmployee({ firestore, resolveIdentity: async () => { identities++; return identity; }, operation, input: { employeeId: "employee", changes, expected }, geocode: async () => { coordinates++; return null; }, timestamp: () => "server-time", ...overrides });
+  const save = (operation, changes, expected = {}, detail = {}) => saveEmployee({ firestore, resolveIdentity: async () => { identities++; return identity; }, operation, input: { employeeId: "employee", changes, expected, ...detail }, geocode: async () => { coordinates++; return null; }, timestamp: () => "server-time", ...overrides });
   return { save, values, counts: () => ({ writes, coordinates, identities }), raw: () => values.get("Companies/company/Employees/employee") };
 }
+const certification = (name = "試験資格", serialNumber = "A") => ({ name, key: name, type: "TRAFFIC", issuedBy: "合成機関", issueDateAt: parseDate("2026-01-01"), expirationDateAt: null, serialNumber });
+const security = { hasSecurityGuardRegistration: true, dateOfSecurityGuardRegistration: "2026-01-01", bloodType: "A", emergencyContactName: "合成家族", emergencyContactRelation: "OTHER", emergencyContactRelationDetail: "その他", emergencyContactAddress: "合成住所", emergencyContactPhone: "09012345678", domicile: "合成本籍" };
+test("EMP03 security operation validates child conditions and only changes its fields", async () => {
+  const state = setup(); await state.save("security", security); assert.equal(state.raw().hasSecurityGuardRegistration, true); assert.deepEqual(state.raw().healthInsurance, validEmployee().healthInsurance); assert.equal(state.counts().coordinates, 0);
+  const raw = state.raw(); await state.save("security", { hasSecurityGuardRegistration: false, bloodType: "B", emergencyContactName: "残留不可" }, expectedFields(raw, SECURITY_FIELDS));
+  assert.equal(state.raw().hasSecurityGuardRegistration, false); assert.equal(state.raw().bloodType, "A"); assert.equal(state.raw().emergencyContactName, null);
+  const invalid = setup(); await assert.rejects(invalid.save("security", { hasSecurityGuardRegistration: true }), { code: "invalid-argument" }); assert.equal(invalid.counts().writes, 0);
+});
+test("EMP03 stale security reset refuses overwrite; missing raw fields stay distinct", async () => {
+  const raw = validEmployee(), state = setup({ ...raw, emergencyContactName: "他actor" });
+  await assert.rejects(state.save("security", { hasSecurityGuardRegistration: false }, expectedFields(raw, SECURITY_FIELDS)), { code: "aborted" }); assert.equal(state.counts().writes, 0);
+  const legacy = validEmployee(); delete legacy.emergencyContactAddress; const missing = setup(legacy);
+  const expected = expectedFields(legacy, SECURITY_FIELDS); assert.deepEqual(expected.emergencyContactAddress, ["missing"]);
+  await missing.save("security", { hasSecurityGuardRegistration: false }, expected); assert.equal(missing.raw().emergencyContactAddress, null);
+});
+test("EMP03 certification positions preserve same-name rows, unknown fields and exact timestamps", async () => {
+  const raw = { ...validEmployee(), securityCertifications: [{ ...certification("同名", "A"), unknown: { keep: true }, issueDateAt: new Timestamp(1767193200, 123) }, certification("同名", "B")] };
+  const state = setup(raw); const input = { employeeId: "employee", action: "update", position: 1, changes: { name: "新名称" }, expected: expectedFields(raw, ["securityCertifications"]) };
+  await state.save("certifications", input.changes, input.expected, { action: input.action, position: input.position });
+  assert.equal(state.raw().securityCertifications[1].name, "新名称"); assert.equal(state.raw().securityCertifications[1].key, "新名称"); assert.deepEqual(state.raw().securityCertifications[0], raw.securityCertifications[0]); assert.deepEqual(state.raw().healthInsurance, raw.healthInsurance); assert.equal(state.counts().coordinates, 0);
+  await assert.rejects(state.save("certifications", { serialNumber: "古い再送" }, input.expected, { action: "update", position: 0 }), { code: "aborted" }); assert.equal(state.counts().writes, 1);
+});
+test("EMP03 certification no-op, same-name add and indexed remove preserve unrelated data", async () => {
+  const state = setup({ ...validEmployee(), securityCertifications: [certification(), certification()] });
+  await state.save("certifications", {}, expectedFields(state.raw(), ["securityCertifications"]), { action: "update", position: 0 }); assert.equal(state.counts().writes, 0);
+  await state.save("certifications", { name: "試験資格", type: "TRAFFIC", issueDateAt: "2026-01-01" }, expectedFields(state.raw(), ["securityCertifications"]), { action: "add", position: null }); assert.equal(state.raw().securityCertifications.length, 3);
+  await state.save("certifications", {}, expectedFields(state.raw(), ["securityCertifications"]), { action: "remove", position: 1 }); assert.equal(state.raw().securityCertifications.length, 2);
+});
+test("EMP03 certification rejects missing required child fields, invalid types, stale arrays and positions", async () => {
+  const raw = { ...validEmployee(), securityCertifications: [certification()] }, state = setup(raw);
+  for (const changes of [{ name: null, type: "TRAFFIC", issueDateAt: "2026-01-01" }, { name: "資格", type: "INVALID", issueDateAt: "2026-01-01" }, { name: "資格", type: "TRAFFIC", issueDateAt: "2026-02-30" }, { name: "資格", type: "TRAFFIC", issueDateAt: "2026-01-01", forbidden: true }]) await assert.rejects(state.save("certifications", changes, expectedFields(raw, ["securityCertifications"]), { action: "add", position: null }), { code: "invalid-argument" });
+  await assert.rejects(state.save("certifications", {}, expectedFields(raw, ["securityCertifications"]), { action: "remove", position: 10 }), { code: "failed-precondition" });
+  await assert.rejects(state.save("certifications", {}, { securityCertifications: ["array", []] }, { action: "remove", position: 0 }), { code: "aborted" }); assert.equal(state.counts().writes, 0);
+});
 test("EMP02 exact basic patch preserves unknown, absent lifecycle, insurance, and other sections", async () => {
   const raw = validEmployee(); delete raw.dateOfTermination; delete raw.reasonOfTermination; raw.unknown = { keep: 1 }; raw.insuranceOperationVersions = { healthInsurance: 8, pensionInsurance: 3, employmentInsurance: 0 };
   const state = setup(raw); await state.save("basic", { title: "主任" });

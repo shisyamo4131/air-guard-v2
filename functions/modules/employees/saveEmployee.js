@@ -28,7 +28,7 @@ export async function saveEmployee({ firestore, resolveIdentity, input, operatio
     const raw = snapshot.data();
     if (raw.docId !== parsed.employeeId || raw.employmentStatus !== "ACTIVE") throw new EmployeeOperationError("failed-precondition", "在職中の従業員だけを編集できます。");
     assertExpected(raw, parsed.changes, parsed.expected, operation);
-    return { raw, ...buildEmployeePatch(raw, parsed.changes, operation) };
+    return { raw, ...buildEmployeePatch(raw, parsed.changes, operation, parsed) };
   }
   // Preflight authorizes and validates before any external request. It writes nothing.
   const before = await firestore.runTransaction((transaction) => inspect(transaction, identity));

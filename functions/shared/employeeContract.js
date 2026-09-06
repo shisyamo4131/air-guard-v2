@@ -1,11 +1,13 @@
-import { Employee } from "@shisyamo4131/air-guard-v2-schemas";
+import { Employee, Certification } from "@shisyamo4131/air-guard-v2-schemas";
 
 export const EMPLOYEE_ROLES = Object.freeze(["manager", "controller", "accountant", "human-resource", "labor", "legal"]);
 export const BASIC_FIELDS = Object.freeze(["code", "lastName", "firstName", "lastNameKana", "firstNameKana", "displayName", "displayNameKana", "gender", "dateOfBirth", "dateOfHire", "title", "zipcode", "prefCode", "city", "address", "building", "mobile", "email", "remarks"]);
 export const CREATE_FIELDS = Object.freeze(BASIC_FIELDS.filter((field) => field !== "remarks"));
 export const NATIONALITY_FIELDS = Object.freeze(["isForeigner", "foreignName", "nationality", "residenceStatus", "hasPeriodOfStayLimit", "periodOfStay", "hasWorkRestrictions"]);
+export const SECURITY_FIELDS = Object.freeze(["hasSecurityGuardRegistration", "dateOfSecurityGuardRegistration", "bloodType", "emergencyContactName", "emergencyContactRelation", "emergencyContactRelationDetail", "emergencyContactAddress", "emergencyContactPhone", "domicile"]);
+export const CERTIFICATION_FIELDS = Object.freeze(["name", "type", "issuedBy", "issueDateAt", "expirationDateAt", "serialNumber"]);
 export const ADDRESS_FIELDS = Object.freeze(["prefCode", "city", "address"]);
-export const DATE_FIELDS = Object.freeze(["dateOfBirth", "dateOfHire", "periodOfStay"]);
+export const DATE_FIELDS = Object.freeze(["dateOfBirth", "dateOfHire", "periodOfStay", "dateOfSecurityGuardRegistration", "issueDateAt", "expirationDateAt"]);
 export const INSURANCE_KINDS = Object.freeze(["healthInsurance", "pensionInsurance", "employmentInsurance"]);
 export class EmployeeOperationError extends Error {
   constructor(code, message = "従業員情報を保存できません。入力内容と最新情報を確認してください。") {
@@ -24,7 +26,7 @@ export function employeeAllowed({ uid, companyId, isSuperUser, actorUser }, writ
   return isSuperUser === false && Array.isArray(actorUser.roles) && actorUser.roles.length > 0 && actorUser.roles.every((role) => EMPLOYEE_ROLES.includes(role)) && (!write || actorUser.roles.some((role) => ["manager", "human-resource"].includes(role)));
 }
 export function operationFields(operation) {
-  const fields = { create: CREATE_FIELDS, basic: BASIC_FIELDS, nationality: NATIONALITY_FIELDS }[operation];
+  const fields = { create: CREATE_FIELDS, basic: BASIC_FIELDS, nationality: NATIONALITY_FIELDS, security: SECURITY_FIELDS, certifications: CERTIFICATION_FIELDS }[operation];
   if (!fields) throw new EmployeeOperationError("invalid-argument");
   return fields;
 }
@@ -69,31 +71,37 @@ export function rawForClass(value) {
   return value;
 }
 export function parseEmployeeInput(operation, input) {
-  if (!plain(input) || Object.keys(input).some((key) => !["employeeId", "changes", "expected"].includes(key)) || !identifier(input.employeeId) || !plain(input.changes) || !plain(input.expected)) throw new EmployeeOperationError("invalid-argument");
+  const allowed = operation === "certifications" ? ["employeeId", "changes", "expected", "action", "position"] : ["employeeId", "changes", "expected"];
+  if (!plain(input) || Object.keys(input).some((key) => !allowed.includes(key)) || !identifier(input.employeeId) || !plain(input.changes) || !plain(input.expected)) throw new EmployeeOperationError("invalid-argument");
+  if (operation === "certifications" && (!["add", "update", "remove"].includes(input.action) || (input.action === "add" ? input.position !== null : !Number.isSafeInteger(input.position) || input.position < 0) || (input.action === "remove" && Object.keys(input.changes).length))) throw new EmployeeOperationError("invalid-argument");
   const fields = operationFields(operation);
   const changes = {};
   for (const [key, value] of Object.entries(input.changes)) {
     if (!fields.includes(key)) throw new EmployeeOperationError("invalid-argument");
     if (DATE_FIELDS.includes(key)) changes[key] = parseDate(value);
-    else if (["isForeigner", "hasPeriodOfStayLimit", "hasWorkRestrictions"].includes(key)) {
+    else if (["isForeigner", "hasPeriodOfStayLimit", "hasWorkRestrictions", "hasSecurityGuardRegistration"].includes(key)) {
       if (typeof value !== "boolean") throw new EmployeeOperationError("invalid-argument");
       changes[key] = value;
     } else {
       if (value !== null && typeof value !== "string") throw new EmployeeOperationError("invalid-argument");
+      if (operation === "certifications" && key === "type" && value !== null && !Certification.classProps.type.component.attrs.items.some((entry) => entry.value === value)) throw new EmployeeOperationError("invalid-argument");
       changes[key] = value;
     }
   }
-  return { employeeId: input.employeeId, changes, expected: input.expected };
+  return { employeeId: input.employeeId, changes, expected: input.expected, ...(operation === "certifications" ? { action: input.action, position: input.position } : {}) };
 }
 export function assertExpected(raw, changes, expected, operation) {
   let fields = [];
   if (operation === "basic" && Object.hasOwn(changes, "dateOfHire")) fields.push("dateOfHire");
   if (operation === "nationality" && changes.isForeigner === false) fields.push(...NATIONALITY_FIELDS);
   else if (operation === "nationality" && changes.hasPeriodOfStayLimit === false) fields.push("hasPeriodOfStayLimit", "periodOfStay");
+  if (operation === "security" && changes.hasSecurityGuardRegistration === false) fields.push(...SECURITY_FIELDS);
+  if (operation === "certifications") fields.push("securityCertifications");
   if (Object.keys(expected).length !== fields.length || fields.some((field) => !Object.hasOwn(expected, field))) throw new EmployeeOperationError("invalid-argument");
   if (fields.some((field) => JSON.stringify(expected[field]) !== JSON.stringify(encodeExpected(raw[field])))) throw new EmployeeOperationError("aborted", "同じ情報が更新されました。入力を保持しています。最新値を読み直してください。");
 }
-export function buildEmployeePatch(raw, changes, operation) {
+export function buildEmployeePatch(raw, changes, operation, options = {}) {
+  if (operation === "certifications") return buildCertificationPatch(raw, changes, options);
   const model = new Employee(rawForClass(raw));
   const patch = {};
   for (const [field, value] of Object.entries(changes)) if (!equal(raw[field], value)) patch[field] = value;
@@ -111,10 +119,39 @@ export function buildEmployeePatch(raw, changes, operation) {
     if (!equal(raw.periodOfStay, null)) patch.periodOfStay = null;
     else delete patch.periodOfStay;
   }
+  if (operation === "security" && changes.hasSecurityGuardRegistration === false) {
+    const defaults = new Employee();
+    for (const field of SECURITY_FIELDS) {
+      model[field] = defaults[field];
+      if (!equal(raw[field], defaults[field])) patch[field] = defaults[field];
+      else delete patch[field];
+    }
+  }
   try { model.validate(); } catch { throw new EmployeeOperationError("invalid-argument"); }
   if (["lastName", "firstName"].some((field) => Object.hasOwn(patch, field))) { patch.fullName = model.fullName; patch.displayName = model.displayName; }
   if (["lastNameKana", "firstNameKana"].some((field) => Object.hasOwn(patch, field))) patch.fullNameKana = model.fullNameKana;
   if (Employee.tokenFields.some((field) => Object.hasOwn(patch, field))) patch.tokenMap = model.tokenMap;
   if (ADDRESS_FIELDS.some((field) => Object.hasOwn(patch, field))) { patch.prefecture = model.prefecture; patch.fullAddress = model.fullAddress; }
   return { patch, model };
+}
+
+export function buildCertificationPatch(raw, changes, { action, position }) {
+  const list = raw.securityCertifications === undefined ? [] : raw.securityCertifications;
+  if (!Array.isArray(list) || (action !== "add" && (position >= list.length || !plain(list[position])))) throw new EmployeeOperationError("failed-precondition");
+  const result = [...list];
+  if (action === "remove") result.splice(position, 1);
+  else {
+    const previous = action === "add" ? new Certification().toObject() : list[position];
+    const candidate = new Certification(rawForClass({ ...previous, ...changes }));
+    try { candidate.validate(); } catch { throw new EmployeeOperationError("invalid-argument"); }
+    if (action === "add") result.push(candidate.toObject());
+    else {
+      const update = Object.fromEntries(Object.entries(changes).filter(([field, value]) => !equal(previous[field], value)));
+      if (Object.hasOwn(update, "name")) update.key = candidate.key;
+      result[position] = { ...previous, ...update };
+    }
+  }
+  const model = new Employee(rawForClass({ ...raw, securityCertifications: result }));
+  try { model.validate(); } catch { throw new EmployeeOperationError("invalid-argument"); }
+  return { patch: equal(raw.securityCertifications, result) ? {} : { securityCertifications: result }, model };
 }

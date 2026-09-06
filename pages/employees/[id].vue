@@ -102,8 +102,12 @@ onUnmounted(() => {
               <div>加入日: {{ doc[insurance.key].enrollmentDate || '-' }}</div>
             </v-card-text></v-card>
           </v-col>
-          <v-col cols="12"><EmployeeActivatorSecurityGuard :item="doc" title="警備員登録" :can-edit="false" /></v-col>
-          <v-col cols="12"><v-card title="保有資格"><EmployeeCertificationsTable :items="doc.securityCertifications" /></v-card></v-col>
+          <v-col cols="12">
+            <EmployeeEditor :employee="doc" operation="security" title="警備員登録">
+              <template #default="{ open, canEdit }"><EmployeeActivatorSecurityGuard :item="doc" title="警備員登録" :can-edit="canEdit" @click:edit="open" /></template>
+            </EmployeeEditor>
+          </v-col>
+          <v-col cols="12"><EmployeeCertificationsManager :employee="doc" /></v-col>
         </v-row>
       </v-col>
     </v-row>

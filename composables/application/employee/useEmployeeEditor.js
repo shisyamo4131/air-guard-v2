@@ -4,7 +4,7 @@ import { httpsCallable } from "firebase/functions";
 import { Employee } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { operationFields, BASIC_FIELDS, NATIONALITY_FIELDS, DATE_FIELDS, employeeAllowed, rawForClass, equal, expectedFields, dateInput, buildEmployeePatch, parseEmployeeInput } from "@/functions/shared/employeeContract.js";
+import { operationFields, BASIC_FIELDS, NATIONALITY_FIELDS, SECURITY_FIELDS, DATE_FIELDS, employeeAllowed, rawForClass, equal, expectedFields, dateInput, buildEmployeePatch, parseEmployeeInput } from "@/functions/shared/employeeContract.js";
 
 export function useEmployeeEditor({ operation, employeeId }) {
   const auth = useAuthStore();
@@ -92,6 +92,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
     if (operation === "basic" && Object.hasOwn(changes, "dateOfHire")) Object.assign(expected, expectedFields(baseline.value, ["dateOfHire"]));
     if (operation === "nationality" && changes.isForeigner === false) Object.assign(expected, expectedFields(baseline.value, NATIONALITY_FIELDS));
     else if (operation === "nationality" && changes.hasPeriodOfStayLimit === false) Object.assign(expected, expectedFields(baseline.value, ["hasPeriodOfStayLimit", "periodOfStay"]));
+    if (operation === "security" && changes.hasSecurityGuardRegistration === false) Object.assign(expected, expectedFields(baseline.value, SECURITY_FIELDS));
     return { employeeId: reference.id, changes, expected };
   }
   async function save() {
@@ -104,7 +105,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
       const prepared = buildEmployeePatch(baseline.value, parsed.changes, operation);
       pendingComparison = operation === "create" ? Object.fromEntries(Object.entries(prepared.model.toObject()).filter(([field]) => !["docId", "uid", "createdAt", "updatedAt", "location", "geopoint"].includes(field))) : prepared.patch;
       verifyOwner();
-      const api = { create: "createEmployee", basic: "updateEmployeeBasic", nationality: "updateEmployeeNationality" }[operation];
+      const api = { create: "createEmployee", basic: "updateEmployeeBasic", nationality: "updateEmployeeNationality", security: "updateEmployeeSecurity" }[operation];
       sent = true;
       const result = (await httpsCallable($functions, api)(input)).data;
       if (ticket !== generation) return null;

@@ -50,6 +50,7 @@ import {
   createUserEmailReservationId,
 } from "../../functions/modules/auth/createTemporaryUser.js";
 import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProjection.js";
+import { expectedFields, SECURITY_FIELDS } from "../../functions/shared/employeeContract.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -68,6 +69,40 @@ function parseEmulatorHost(name) {
   assert.ok(Number.isInteger(port), `${name} must use a numeric port`);
   return { host, port };
 }
+
+test("EMP03 security and certification Callables preserve row positions and reject stale writes over HTTP", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "emp03-transport-hr", roles: ["human-resource"] });
+  const employeeId = "emp03-transport-employee";
+  const call = (functionName, input) => callSiteLifecycleTransport({ actor, functionName, data: { employeeId, ...input } });
+  const created = await call("createEmployee", { changes: { lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }, expected: {} });
+  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
+  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
+  const original = (await ref.get()).data();
+  const security = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: true, dateOfSecurityGuardRegistration: "2026-01-01", bloodType: "A", emergencyContactName: "合成家族", emergencyContactRelation: "OTHER", emergencyContactRelationDetail: "その他", emergencyContactAddress: "合成住所", emergencyContactPhone: "09012345678", domicile: "合成本籍" }, expected: {} });
+  assert.equal(security.response.status, 200, JSON.stringify(security.payload));
+  let raw = (await ref.get()).data();
+  const cleared = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: false, emergencyContactName: "残留不可" }, expected: expectedFields(raw, SECURITY_FIELDS) });
+  assert.equal(cleared.response.status, 200, JSON.stringify(cleared.payload));
+  assert.equal((await ref.get()).data().emergencyContactName, null);
+  for (const serialNumber of ["A", "B"]) {
+    raw = (await ref.get()).data();
+    const added = await call("updateEmployeeCertifications", { action: "add", position: null, changes: { name: "同名資格", type: "TRAFFIC", issueDateAt: "2026-01-01", serialNumber }, expected: expectedFields(raw, ["securityCertifications"]) });
+    assert.equal(added.response.status, 200, JSON.stringify(added.payload));
+  }
+  raw = (await ref.get()).data(); const expected = expectedFields(raw, ["securityCertifications"]);
+  const update = await call("updateEmployeeCertifications", { action: "update", position: 1, changes: { name: "訂正資格" }, expected });
+  assert.equal(update.response.status, 200, JSON.stringify(update.payload));
+  const stale = await call("updateEmployeeCertifications", { action: "remove", position: 0, changes: {}, expected });
+  assert.equal(stale.payload.error.status, "ABORTED");
+  raw = (await ref.get()).data(); assert.equal(raw.securityCertifications[0].name, "同名資格"); assert.equal(raw.securityCertifications[1].name, "訂正資格"); assert.deepEqual(raw.healthInsurance, original.healthInsurance);
+  const invalid = await call("updateEmployeeCertifications", { action: "add", position: null, changes: { name: "未完成" }, expected: expectedFields(raw, ["securityCertifications"]) });
+  assert.equal(invalid.payload.error.status, "INVALID_ARGUMENT");
+  const removed = await call("updateEmployeeCertifications", { action: "remove", position: 1, changes: {}, expected: expectedFields(raw, ["securityCertifications"]) });
+  assert.equal(removed.response.status, 200, JSON.stringify(removed.payload)); assert.equal((await ref.get()).data().securityCertifications.length, 1);
+  await getAdminFirestore().doc(`Companies/${actor.companyId}/Users/${actor.uid}`).update({ roles: ["controller"] });
+  const denied = await call("updateEmployeeSecurity", { changes: { bloodType: "B" }, expected: {} });
+  assert.equal(denied.payload.error.status, "PERMISSION_DENIED");
+});
 
 test("EMP02 Employee Callable transport creates and patches exact fields with external effects denied", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp02-transport-hr", roles: ["human-resource"] });
