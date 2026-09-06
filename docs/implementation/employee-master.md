@@ -26,7 +26,7 @@
 
 05-Aでは`useFetchEmployee`をEmployee専用のraw購読/sessionへ接続し、現在Authと原本Userの7actor認可、必要IDだけの購読、Class表示互換、検索結果のmembershipと原本cacheの更新を分離した。権限/tenant変更・取得失敗・破棄でcache/search/待機中の取得を無効化し、古い応答を表示へ戻さない。期間queryの対象外と原本不存在を区別し、個別ID購読で確認済みの新raw/不存在を遅延queryで上書きしない。
 
-Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-B以降の参照writer・索引・archiveはまだ実装していない。05-Aも独立最終review・専用build・実UI確認が未完了であり、受入れ状態は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
+Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-Aの独立review・自動検証・専用build・代表実UIとcleanupを完了した。05-B以降の参照writer・索引・archiveはまだ実装していない。受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
 
 ## 現行経路の再照合
 

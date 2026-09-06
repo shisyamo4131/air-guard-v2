@@ -18,7 +18,7 @@ developer一名がapplication/Functions/Rulesと直接testを所有し、rootは
 
 Employee専用reader/cache、期間reader、詳細のraw/User購読破棄を対象とする。既存7actor・query/limit/Class型・初期選択ID・期間内退職者を維持し、更新/不存在/権限喪失/tenant変更/遅延応答を確認する。参照writer/Rules新契約・archive入口・User shell全面整理はこの内部単位では変更しない。変更前の安全境界へ戻せない場合は影響する操作を停止し、旧広域writerを再開しない。
 
-現在は開始準備/実装中であり、製品test/build/UI成功はまだ記録していない。環境対象・UI-READY・実行結果・レビュー・cleanupを以下へ追記する。
+開始時点では製品test/build/UIは未実施だった。以下に環境、初回失敗・修正、最終検証、cleanupを記録する。
 
 ## 専用local環境の開始確認
 
@@ -30,7 +30,7 @@ rootが`firebase.codex-test.json`、`config/codex-test-ui.env`、package scripts
 
 ## 05-A 受入れシナリオ
 
-read-only経路調査`EMP-05-A-TEST-PLAN`の結果を次の実施計画へ反映した。以下は未実施であり、成功記録ではない。
+read-only経路調査`EMP-05-A-TEST-PLAN`の結果を次の実施計画へ反映した。これは開始時の計画であり、実測は後掲の受入れ結果を参照する。
 
 - 正規Employee作成UIで合成Employeeを登録し、詳細の再読込み、基本editorでの表示名更新、詳細/在職一覧の反映を確認する。再読込みはapplication memory再初期化であり、Firestore local cacheの完全消去とは扱わない。
 - 配置画面の「作業員選択」に期間内の作成済Employeeが表示され、別tabからの名前変更が反映されることを確認する。05-Aでは配置保存を必要としない。
@@ -81,3 +81,27 @@ REVIEW-R2とSEC-R2はともに指摘解消・追加blockingなし。rootもR2 co
 - `test/domain/employee-reader.test.mjs`、`test/domain/site-read-authorization.test.mjs`
 
 root文書は`CHANGELOG.md`、`docs/implementation/employee-master.md`、`docs/roadmaps/employee.md`、`docs/verification/README.md`、本記録の5件。
+
+## 05-A local受入れ結果（2026-09-07）
+
+source commitは`d68b9587a69167909bfac73df6825cabe8e32b43`。rootがcleanを確認して`npm run test:local:ui:build`を実行しexit 0。専用identityのsource HEAD一致、`externalEffects: deny`、郵便番号隔離receiptを確認した。`npm run test:local:ui:emulators`は専用importから必要な既存Employee/退職Callableを登録してready、`npm run test:local:ui:server:generated`はidentity検査後に14600でready。loopback rootのHTTP 200と製品dashboard到達を確認した。新たなpackage更新・再認証は行っていない。
+
+### UI user-equivalent action
+
+- 保存済み合成会社管理者sessionを再利用し、可視メニュー→在職一覧→正規登録でEmployeeを1件作成した。code `EMP05A`、氏名「検証 閲覧」、入社日2026-09-07。生年月日は正規calendarから選択し、住所は合成値を手入力した。codeの記号入力は既存validationで拒否され、英数字へ訂正して保存した。非UIでEmployeeを注入していない。
+- 詳細への遷移とreload後に、code・氏名・カナ・住所・保険初期状態・User未登録を確認。基本editorで名と表示名を「更新」/「検証更新」に変更し、詳細の氏名と在職一覧の表示名が反映された。
+- 可視メニューから配置管理→作業員選択を開き、候補「検証更新」を確認。別の専用tabの基本editorで「連動」/「検証連動」へ保存すると、配置画面をreloadせず候補名が「検証連動」へ更新された。配置の保存はしていない。
+- User未連携のこのEmployeeを正規退職dialogで2026-09-07に退職させた。詳細の退職表示・通常編集action終了、退職日を含む09-06〜09-19の配置候補に氏名が残ることを確認した。
+- 詳細から通常Sign Outを実行し、詳細と別tabの配置候補からEmployee情報が消えた。browserの戻る操作はsign-inへ移り、旧Employee/User表示を復活させなかった。これはrole剥奪のUI試験ではない。
+
+### Backend assertion・未検証
+
+専用Emulatorのread-only verifierと同じ`Bearer owner`経路を使用した。最初の認証なしGETは403となり、検証用header付きGETへ修正した。UI作成原本のcode/表示名/ACTIVEを照合し、2回の名称保存前後の全field（存在有無を含む）の差が`firstName`/`displayName`/`fullName`/`tokenMap`/`updatedAt`だけであることを確認した。退職後は同じEmployee原本がRESIGNEDで残り、保存済みの単一合成Auth actorと会社管理者Userも残っていることを確認した。各assertion commandはexit 0。通常のUI操作をbackend呼出しで代用していない。
+
+7actor/拒否actor/他tenantのRulesは174件のEmulator suite、cold cache/初期ID/権限とtenant切替/遅延応答/期間境界/検索membership/表示状態/Site接続は1246件のdomain suite中の直接testへ対応づける。実画面は合成会社管理者1actor。Firestore disk cacheの完全消去、Site入場者履歴の実UI、全別機能業務、背景triggerの自動実行、実data/Dev/外部providerは未検証。履歴生成triggerのない専用環境でSite表示の成功を装わず、Site接続は実Vue/session testで確認した。
+
+### 終了・判定・次工程
+
+所有tab 2件を閉じ、generated server→Emulatorの順にCtrl-Cで停止した（前景sessionのexit 1は依頼した停止による）。専用portと観測した派生8197/9150のLISTEN不在をTCP APIとnetstatで確認。保護22 fileの件数/hash不変、既存root log 3 fileの復元/hash一致を確認し、絶対path・reparse不在を検査した所有`.output`と`.codex-test/runtime/emp05-ui`を削除した。cleanup assertionはexit 0、source worktreeはcleanだった。他者runtime・利用者Chromeは操作していない。
+
+05-Aのlocal受入れ条件を満たした。source/仕様/既存7actor/保存境界を維持して05-Bへ進める。05-Bでは表示cache/Classを保存時の原本期待値・認可に使わず、保存先の現在rawと現在actorを保存境界で再確認する。05-Aの仕様変更判断待ちはない。最終文書反映のgateとlocal統合を終えてから05-Bを割り当てる。EMP-05全体は未完了、確認済み進捗は55%のまま。
