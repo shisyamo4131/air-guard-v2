@@ -1,7 +1,12 @@
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
+import { inheritOperationRaw } from "@/composables/domain/operation/operationRawContext";
+import { operationPresentation, watchOperationRollback } from "@/composables/domain/operation/operationPresentation";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export function useIndex(props, emit) {
+  const auth = useAuthStore(), scope = () => `${auth.companyId}/${auth.uid}`;
+  const pending = Vue.computed(() => { try { const state = operationPresentation(props.schedule, scope()); return state.busy || state.blocked; } catch { return true; } });
   /*****************************************************************************
    * SETUP
    *****************************************************************************/
@@ -10,15 +15,18 @@ export function useIndex(props, emit) {
     () => props.schedule,
     (newVal) => {
       internalModelValue.value.initialize(newVal);
+      inheritOperationRaw(newVal, internalModelValue.value);
     },
     { immediate: true, deep: true },
   );
+  watchOperationRollback(() => props.schedule, () => internalModelValue.value, scope);
 
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
   function handleUpdateModelValue(newVal) {
     internalModelValue.value.initialize(newVal);
+    inheritOperationRaw(newVal, internalModelValue.value);
 
     // Optimistic update の為に internalModelValue を newVal で更新。
     // emit では newVal を渡す。
@@ -44,12 +52,12 @@ export function useIndex(props, emit) {
    * ドラッグアイコンを表示するかどうかを返します。
    */
   const isDraggable = Vue.computed(() => {
-    if (props.disabled) return false;
+    if (props.disabled || pending.value) return false;
     return props.schedule.isEditable && props.isDraggable;
   });
 
   const showActions = Vue.computed(() => {
-    return !props.disabled && props.showActions;
+    return !props.disabled && !pending.value && props.showActions;
   });
 
   /**
@@ -71,7 +79,7 @@ export function useIndex(props, emit) {
    */
   const defaultSlotProps = Vue.computed(() => {
     return {
-      disabled: props.disabled,
+      disabled: props.disabled || pending.value,
       schedule: internalModelValue.value,
       modelValue: internalModelValue.value,
       "onUpdate:modelValue": handleUpdateModelValue,

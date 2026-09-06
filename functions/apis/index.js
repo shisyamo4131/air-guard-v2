@@ -30,6 +30,7 @@ export { updateCompanyOperations } from "./updateCompanyOperations.js";
 export { updateCompanyProfile } from "./updateCompanyProfile.js";
 export { createEmployee, updateEmployeeBasic, updateEmployeeNationality, updateEmployeeSecurity, updateEmployeeCertifications, transitionEmployeeInsurance } from "./saveEmployee.js";
 export { updateSiteAgreements } from "./updateSiteAgreements.js";
+export { saveOperation } from "./saveOperation.js";
 export {
   updateOwnUserProfile,
   updateUserNotificationSettings,

@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- EMP-05の閲覧部分として、Employee専用の取得・検索・期間cacheと詳細画面の関連User取得を整えた。権限喪失・原本不存在で古い情報を残さず、取得中と終端状態を区別する。閲覧部分のlocal受入れを確認し、参照writer・archiveは未実装。進捗と検証結果は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
+- EMP-05の参照保存入口として、予定・実績・請求編集を専用保存へ移し、追加するEmployee参照だけを原本から確認する構成にした。配置通知は管理側・本人側とも状態の部分更新へ接続し、古い全文保存とRules迂回を閉じた。背景保存・archiveは後続の内部工程、画面受入れを含む現在の検証状況は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
+
+- EMP-05の閲覧部分として、Employee専用の取得・検索・期間cacheと詳細画面の関連User取得を整えた。権限喪失・原本不存在で古い情報を残さず、取得中と終端状態を区別する。閲覧部分のlocal受入れを確認した。進捗と検証結果は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
 
 - EMP-04として3保険を独立draftと専用保存へ移行し、6操作を対象保険の状態・履歴・世代値で検証する構成にした。履歴を復元しても世代値を戻さず、古い操作による再喪失・再復元を拒否する。現在の受入れ状況は[工程](docs/roadmaps/employee.md)と[検証記録](docs/verification/employee-02-04-local.md)を参照。Dev未反映。
 

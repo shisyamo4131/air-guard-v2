@@ -7,7 +7,8 @@
 import * as Vue from "vue";
 import dayjs from "dayjs";
 import { OperationBilling } from "@/schemas";
-import { useDocManager } from "@/composables/useDocManager";
+import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
+import { expectedForOperation } from "@/functions/shared/operationWriteContract.js";
 import { useFetchSite } from "./fetch/useFetchSite";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
@@ -42,10 +43,9 @@ export function useOperationBillingManager({
   fetchOutsourcerComposable,
 } = {}) {
   /** SETUP DOC MANAGER COMPOSABLE */
-  const docManager = useDocManager("useOperationBillingManager", {
-    doc,
-    redirectPath,
-  });
+  const submission = useOperationSubmission({ billing: true });
+  const reject = async () => { throw new Error("請求編集は専用編集画面から実行してください。"); };
+  const docManager = { isDev: false, doc, isLoading: submission.busy, attrs: Vue.computed(() => ({ doc, handleCreate: reject, handleUpdate: reject, handleDelete: reject })), toCreate: reject, toUpdate: reject, toDelete: reject };
 
   /** VALIDATION */
   if (
@@ -86,13 +86,15 @@ export function useOperationBillingManager({
    * Toggle the lock status of the operation billing document.
    */
   async function toggleLock() {
-    docManager.isLoading.value = true;
+    if (submission.busy.value || submission.uncertain.value) return false;
     try {
-      await doc.toggleLock();
-    } catch (e) {
-      docManager.logger.error({ error: e });
-    } finally {
-      docManager.isLoading.value = false;
+      const raw = await submission.read("OperationResults", doc.docId);
+      if (!raw) return false;
+      const command = { kind: "billing", documentId: doc.docId, action: "lock", changes: { desiredLocked: !doc.isLocked } };
+      command.expected = expectedForOperation(raw, command); return submission.submit([command]);
+    } catch {
+      submission.message.value = "ロック状態を確認できません。最新情報を読み直してください。";
+      return false;
     }
   }
 

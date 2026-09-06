@@ -105,3 +105,106 @@ source commitは`d68b9587a69167909bfac73df6825cabe8e32b43`。rootがcleanを確�
 所有tab 2件を閉じ、generated server→Emulatorの順にCtrl-Cで停止した（前景sessionのexit 1は依頼した停止による）。専用portと観測した派生8197/9150のLISTEN不在をTCP APIとnetstatで確認。保護22 fileの件数/hash不変、既存root log 3 fileの復元/hash一致を確認し、絶対path・reparse不在を検査した所有`.output`と`.codex-test/runtime/emp05-ui`を削除した。cleanup assertionはexit 0、source worktreeはcleanだった。他者runtime・利用者Chromeは操作していない。
 
 05-Aのlocal受入れ条件を満たした。source/仕様/既存7actor/保存境界を維持して05-Bへ進める。05-Bでは表示cache/Classを保存時の原本期待値・認可に使わず、保存先の現在rawと現在actorを保存境界で再確認する。05-Aの仕様変更判断待ちはない。最終文書反映のgateとlocal統合を終えてから05-Bを割り当てる。EMP-05全体は未完了、確認済み進捗は55%のまま。
+
+05-Aの受入れ文書は上記project-docs・diff-check・cached diff-checkがそれぞれexit 0で、`6c6e09f71ca3eef2e3d975290c76dc31bd968fce`へlocal commitした。rootがcleanを確認し、次の05-Bを割り当てた。最後の文書差分だけでは製品source/domain/Emulator/UIの証拠は失効しない。release-onlyのDev/Prod generateは未承認のため省略、governanceの3 gateは対象設定・validator不変のため再利用した。
+
+## 05-B 開始契約（2026-09-07）
+
+baselineは上記`6c6e09f7`、同じprimary/branch。実装担当の所有は予定・実績・実績の請求編集・配置通知の専用保存、raw参照抽出/各保存先差分の共通helper、正本に列挙したclient入口の接続と迂回Rules、直接domain/HTTP/Rules test。新規APIは通常entryにも接続して専用demoで検証するがremote反映はしない。独立通知状態は既存同社認証境界の部分transactionを維持する。
+
+W1〜W3のraw不正/索引一致/追加Employeeだけの0・1・10種類read、操作別actor/lock、Site/Customer保護、通知actual値とraw期待値、通知だけの競合、予定pointerと実績作成のatomic性を確認する。表示Classと保存rawは分け、正規UIの保存await・拒否draft保持・結果不明の非自動再送を維持する。全別機能業務の受入れへは広げない。05-Cの背景writer/旧trigger/限定整合tool、05-Dのarchive、purge/restore、package/data/governance/他repositoryはこの内部単位の対象外。
+
+rootは最終gate/専用UI/cleanupと文書/Gitを担当し、read-only経路調査が最小のUI準備順を確認する。Firestore Rules変更のreviewには既存のRules監査skillを適用する。変更classはapplication/UI/data・Rules/permissions/buildのunion、直接検証の後に全domain・専用Emulator・fresh build/UIを行う。新たな実測成功は実行後に記録する。
+
+### 05-B の実装接続と受入れ準備
+
+期間配置の`useSiteOperationSchedulesInRange.js`は現行の`subscribeDocs`で表示Classだけを保持している。承認済みの編集開始時raw期待値を確保するため、対象期間・表示Classを維持したoperation専用raw contextへの限定接続をdeveloper所有へ含めた。保存時の新規取得を古い表示の期待値に置き換えず、期間/tenant変更と破棄、rawと表示の同時点性を直接testする。共通cache/packageの変更は含めない。
+
+配置から保存までの同時点性を保つため、`components/SiteOperationSchedule/Card/useIndex.js`、`components/Draggable/Workers/useIndex.js`、`components/Draggable/OperationSchedules/useIndex.js`の表示clone/initializeにもraw contextと原本行位置の継承を限定接続する。rootが現sourceと既定の即時表示/保存拒否rollback契約を照合し、developer所有へ追加した。表示順やClass keyで原本行を探し直さず、失敗時の表示復元・再取得、tenant/期間切替時の破棄を直接testへ含める。共通drag基盤の刷新や配置条件の変更は含まない。
+
+`EMP-05-B-UI-PLAN`/`EMP-05-B-UI-PLAN-ARTICLE`のread-only調査に基づく予定であり、以下はまだ実測成功ではない。
+
+1. 合成会社管理者でCustomer、関連Site、日勤の取極め、Employeeを各1件、すべて可視の正規UIから作成する。同月内の予定2日を使い、入社/適用日は予定日以前、資格必須はfalse、単価は正数とする。
+2. 配置管理で予定を作成しEmployeeを追加、作業時間を編集・保存・再表示する。翌日へ複製し、一方だけ配置通知を作成する。
+3. 実績作成で通知済み予定の実時刻・休憩0を保存して実績化する。未通知の複製予定では自動`notify(false)`準備を経た実績化を確認する。実績詳細の作業員編集、請求編集と再表示、lock後の通常編集拒否と請求編集許可、unlockを確認する。
+4. 商品管理は`utils/pageSettings.js`と`pageAccessPolicy.js`でDEVELOPER限定であり、会社管理者fixtureではArticleを正規作成できない。商品明細はArticle選択が必要なため、UIでは空候補と取消後の明細不変を確認する。非空articlesの追加/更新/削除、所有field外保持、競合、lock、拒否時write 0は直接API/domain testへ対応づけ、非空保存のUI成功とは記録しない。権限変更や直接注入で代替しない。
+
+User未連携Employeeでも配置通知と管理者による実時刻入力は可能だが、User向け一般通知生成はUser不存在で終了する。専用FunctionsはAPI harnessのため、個人の出退勤・外部通知配送、日次2種/請求集計/履歴の自動生成を今回のUI成功へ含めない。raw不正・参照種別・索引・旧writer拒否、0/1/10 read、別tenant、通知だけの競合、0/falseの全組合せ、二重実績化、lock race、結果不明は制御可能な直接testで検証する。実操作時に見つかった不足は未検証として残し、必須条件との対応をreviewで判断する。
+
+### 05-B server先行検証（2026-09-07、途中）
+
+`saveOperation`専用Callable、server transaction、operation field/期待値契約、参照抽出helperを先行実装した時点で、rootがdeveloperの固定4fileのhashを照合し、`node --test test/domain/operation-write.test.mjs test/domain/operation-references.test.mjs test/domain/codex-functions-entrypoint.test.mjs`を実行した。16/16成功、exit 0。raw未知field/nanoseconds、行位置、参照差分、actor/lock、Site/Customer/revision、通知単独競合・0/false・実績化を含む直接testであり、HTTP/Rules/画面の成功ではない。
+
+固定serverへの`EMP-05-B-SERVER-REVIEW`/`EMP-05-B-SERVER-SEC`を並列依頼し、developerはclient接続を継続した。review結果・client/Rules・全domain・Emulator・build/UIはこの時点で未完了。helperのread計数を保存API全体の計数と混同せず、最終証拠で実経路との対応を確認する。UI準備は専用IABの通常keyboard接続、保存済み単一合成Auth fixture、専用port空きを確認し、保護22fileの指紋と既存3logを所有runtime `.codex-test/runtime/emp05-b`へ退避した。準備用の空tabは閉じており、製品画面/build/processはまだ起動していない。
+
+先行reviewでP2を3件検出した。REVIEWは同一配列のremove→update等を開始時raw期待値で照合して変更後位置へ適用する行ずれと、`hasNotification=false`なのに同ID通知が存在するとnotifyがactual/statusを初期化できる点を指摘。SECはworker更新による通知取消を計画した後、同じpayloadのconvertがread cacheの旧通知を採用できる点を指摘した。rootも該当sourceを照合してdeveloperへ一括修正依頼した。仕様変更ではなく、原本位置・通知保持・準備後期待値契約の実装不足として扱う。同一対象の依存commandを制限しても、正規の複数対象保存・必要なcreateとworker追加・複製を失わないことを修正条件にした。修正後の再現test・再reviewまで未解消であり、先の16件成功を受入れ完了の根拠にはしない。
+
+R1は原本位置の一時map、notify/convertの依存command混在拒否、false flag＋既存通知の拒否を追加した。rootが上記と同じ直接test commandを実行し25/25・exit 0を確認。実`saveOperation`の新規2保存先×10人と削除後再作成も計数している。REVIEW-R1/SEC-R1で最初の3件の解消を確認した。一方rootの合成helper診断で外注行`out-a:1`を`out-b`へ変更すると兄弟の`out-b:1`と重複でき、REVIEW-R1も通知ID衝突をP2と判定した。既存raw/candidateのworkerId一意性、正常な同外注先・異なるindex配置の維持、schedule/resultの拒否時write 0をR2へ依頼した。R2未完のためserver受入れは保留。途中clientのraw contextが旧表示modelを強参照し続ける点もrootから指摘し、購読破棄時の無効化と不要modelの解放を両立する修正を依頼した。
+
+R2はworkerIdの配列全体での一意性を保存前raw/candidate双方へ適用した。rootが`operationReferences.js`（`54FB42CC05FDCDE1DA0B66631AD862DDA898800C9346A36335B2CE0C85D9F23D`）と`operation-write.test.mjs`（`42B23F3A4CB0682F2204CA67E4FF298F3E392978B2181311B85D4E452F58A84F`）のhashを照合し、同じ直接test commandで27/27・exit 0を確認。REVIEW-R2/SEC-R2とも指摘解消・追加blockingなし。先行serverの既知指摘は解消したが、client/Rules/HTTP/Emulator/UIの確認とB全体の統合は未完了である。これ以後のserver変更は影響review/testを再実施する。
+
+### 05-B editor先行検証と残る入口（2026-09-07、途中）
+
+rootは固定したeditor/raw contextと管理画面・行編集の接続について`node --test test/domain/operation-editor.test.mjs`を実行し、8/8・exit 0（12 SFCのcompileを含む）を確認した。`EMP-05-B-EDITOR-REVIEW`は商品IDを先に変更して単価取得を待つ間に旧単価で保存できるP2、`EMP-05-B-EDITOR-SEC`はRowsManagerの取得error/不存在/claim無効化で一覧rawとeditorの破棄が一貫しないP2を指摘した。rootも該当sourceを照合し、入力の非同期解決中の保存、手入力と逆順応答、取得拒否/閉じる/別行、read不能時のraw/draft/期待値破棄と旧応答拒否をEDITOR-R1へ依頼した。通常の保存競合では入力を保持する条件を維持する。8件成功だけで当該接続を受入れ済みにしない。
+
+実績複製のfacade/application/domain、請求lock button、予定複製dialogもrootが旧Class writerへの到達を確認し、05-Bの限定接続対象へ含めた。実績複製dialog本体は失敗理由の表示を追加する。exact入口は実装文書の既存source表へ反映した。実績複製は調整値・商品・workerの引継ぎがあり、概要作成とworker追加だけでは既存値を落とすため、source ID/日付/期待値からserverの現在rawを複製する限定operationを追加する。controllerへ経理権限を要求せず、source lock/不存在/競合、全read先行、新保存先の参照確認を維持する。これは既存複製仕様の移行であり、新業務条件ではない。この追加で先行serverの影響箇所は再review/test対象となる。client R1・複製・残る配置/通知/Rules/HTTPはこの時点で実装・検証中である。
+
+EDITOR-R1は商品取得中の保存禁止・ID/初期単価の同時確定・手入力優先・旧応答拒否と、Rowsのscope/read不能時の購読/raw/editor一括破棄を実装した。rootが7fileの固定hashを照合して同じeditor test commandを実行し、12/12・exit 0を確認。EDITOR-REVIEW-R1/SEC-R1で2件解消・追加blockingなし。商品入力の追加証拠はhelper実行とtemplate接続検査であり、実UIの成功に置き換えない。配置rollback用raw context復元関数の追加、および複製・同一配列move→add補正等の後続変更はB最終review/testへ含める。先行chunkの指摘解消とB全体の受入れを区別する。
+
+### 05-B 既存テストの責務移行（途中）
+
+read-only `EMP-05-B-TEST-RESPONSIBILITY-MAP`で旧`site-schedule-guard.test.mjs`の11件を新server/client責務へ対応づけた。SDK transactionの呼出し形状は移行するが、Site revision欠損の初期化・不正値拒否、旧新Site双方の更新と競合、unique Site 8/9件境界、全read先行と途中拒否時のwrite 0、確認の操作/tenant束縛・取消・再試行、rawと無関係field保持は維持する。`site-lifecycle-ui-source-contract.test.mjs`はSite固有の表示/取消/専用操作とCustomInputの破棄を残し、旧handler接続のassertだけ新Manager/submission/duplicatorへ移す。旧guardとhandlerの保存拒否も直接確認する。実行結果は移行後のcommand完了時に記録する。
+
+同調査とrootのsource照合で、同batchの最初に終了済みSiteを移動元としてread cacheへ入れると、後のcommandで同Siteを移動先にする明示確認が省略される問題を確認した。読取cacheと移動先の確認状態を分離し、取消でCallableを送らないtestをdeveloperへ依頼した。また[Site実装記録](../implementation/site-master.md#矛盾未使用候補)の既存条件に合わせ、確認は成功/取消/破棄で消し、確定失敗後の同じ操作の明示再試行だけで維持する。毎submitの再確認へ仕様を変更せず、editor/submissionの双方を回帰対象とする。この時点は静的確認と修正指示までで、修正後の成功・受入れを意味しない。
+
+### 05-B 通知の先行レビュー（途中）
+
+固定した通知state contract/editor/ManagerとRulesの4fileへ`EMP-05-B-NOTIFICATION-REVIEW`/`SEC`を実施した。一般reviewは既存4状態の計算・時刻・0/false・所有field保持に追加指摘なし。securityは、通知A保存中のreset後に同scopeでBを開くと旧transactionがAを書き込めるP2と、commit後の再取得拒否を未保存と誤分類するP2を検出した。rootもsourceを照合し、transactionのawait前後とwrite前のgeneration照合、commit確定と再取得結果の分離、旧応答破棄を修正依頼した。状態helperだけではcontrollerの非同期経路を証明できないため、再試行・scope変更・commit後read拒否を直接testへ追加する。
+
+Rulesの限定静的reviewでは参照/非所有field変更、create/delete、generic/nested迂回の拒否を確認した。監査評価は通知4fileの範囲でscore 2、上記2件が未解消の途中評価である。rootは固定したFunctions/Rules/HTTP harnessに対して`npm run test:local`を開始した。新規HTTP統合caseの通過を観測したが、全suiteのexitはまだ得ておらず、完了証拠にはしない。developerは実行中のserver/Rules/harnessを固定し、client/domainの修正を継続する。
+
+通知R1はgeneration照合とcommit確定後の表示分離を追加した。rootがeditor（`F3C1E2CF47C5C93145867BA05AD9BAEF37901EDF628375AEBB6D64DC23DC6D53`）と直接test（`E3C93060E945BB939A414B8BCC7BE1B37A054E72AD8B6A47056ECBAAFEB62B7D`）を照合し、`node --test test/domain/operation-submission.test.mjs`で12/12・exit 0を確認。再reviewはこの時点で未完了。
+
+### 05-B 全体Emulator初回と修正対象（2026-09-07）
+
+rootの`npm run test:local`は175件中172成功・3失敗、exit 1。大量の陰性logで初回の失敗本文がtool出力から切れたため、同じcommandを所有runtimeへ出力保存して診断再実行し、同じ件数・3失敗・exit 1を確認した。新規EMP05-B HTTP統合caseは成功したが、全体gateは失敗である。
+
+- Site archive競合testのarchive先行側は、追加したfixtureの`customer: {}`が既存の正規projection条件を満たさず拒否された。実Customer projectionを使い、archive成功と後続参照拒否の条件を維持する修正を依頼した。
+- Customer競合testのOperationResults参照先行側に旧client `setDoc`が残り、Rulesで拒否された。両順序・同時競合を専用writerへ移し、旧writerが常に拒否されるだけの陰性testで参照整合性を証明しない。
+- 履歴再構築の許可actor testで`dayjs.tz is not a function`。新HTTP caseが残した実績の参照により、従来の空集合testが履歴生成へ到達した可能性がある。新caseの所有fixtureをfinallyで片付ける隔離と原因切分けを依頼した。履歴再構築の実data経路と日付処理は05-Cの直接回帰へ引き渡し、隔離後のtest成功だけでこの経路の成功を主張しない。
+
+各実行後にEmulator停止と専用port・観測した派生8294/8939・9150のLISTEN不在、保護22fileのhash不変をrootの独立command・exit 0で確認した。所有runtimeは後続検証用に保持している。
+
+固定server後続差分への`SERVER-FINAL-REVIEW`は追加指摘なし、`SERVER-FINAL-SEC`はresult/billingが同じOperationResultsへ解決されるのにkind名で複製元との依存commandを判定するP2を検出した。rootもsourceを照合し、解決後collection/pathで判定して同じ原本のbilling変更と複製を両順序write 0にする修正を依頼した。別対象の独立操作は維持する。修正後のreview・testまで先行serverの受入れは未完了とする。
+
+### 05-B 追加の到達確認と再検証（途中）
+
+`NOTIFICATION-SEC-R1`は2件解消・追加blockingなし、限定静的監査score 5へ更新した。`RAW-CONTEXT-SEC`は配置のraw context・期間reader・Card・Draggable2種・command導出の6fileに追加blockingなし。一方、外側の予定actionが旧scopeのsubmit終了を新画面の失敗通知へ変えるP2を検出した。開始scope/世代/disposeをactionにも適用し、同scope拒否のrollbackだけを維持する修正を依頼した。
+
+`WRITER-CLOSURE`は対象の旧全文writer迂回を検出しなかったが、Site詳細の引数なしCREATEで`beforeEdit`へundefinedを渡すP2を検出した。独立preset生成の補正後、`ARRAY-CREATE-REVIEW`で解消を確認。未使用`useOperationBillingsManager.js`には旧createが残り、caller未検出とRules拒否を確認したため、旧writer文字列の全消滅とは扱わない。
+
+同じRulesへ到達する本人向け通知を追補調査すると、旧adapterの`updatedAt = new Date()`・全文setが新Rulesの`request.time`とcreatedAt保持に合わないことを確認した。これは本人操作を刷新する要求ではなく、05-Bで変更するRulesによる回帰である。既存next状態・下番入力・認可を維持し、開始rawを持つ共有通知controllerの状態部分transactionへ保存だけを接続する補正をsource表へ追加した。本人handlerの直接回帰を追加し、全本人業務のUI受入れへは拡張しない。実装・reviewは未完了。
+
+server alias補正（`DAC9CFF716B54285DEF70D7D97BB2C10E046BDE0F009DBAE4740E730DAA40781`）は`SERVER-SEC-R1`で解消。rootが`node --test test/domain/operation-write.test.mjs test/domain/operation-editor.test.mjs`を実行し46/46・exit 0を確認した。aliasの8陰性組合せと別対象成功、ArrayManagerの独立preset・取消を含む。harnessのfixture隔離・参照競合移行後、`powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test -TestNamePattern 'EMP05-B HTTP|Site archive and OperationResult writer|CAS-03 OperationResults|rebuild history Callable allows'`を実行し、6件中2成功・4失敗、exit 1。新HTTPと履歴の許可caseは成功したが、Site fixtureでAdmin Timestampをclient setDocへ渡す型不一致、Customer競合3件でactor fixtureの保存API認可不一致が残り、fixtureの修正を依頼した。
+
+通常`functions/index.js`にはdayjsのUTC/timezone・Asia/Tokyo初期化があり、専用entry/harnessには同じ初期化がないことをrootが確認した。履歴の先行エラーを通常entryの製品不具合と断定しない。05-Cの非空履歴回帰では、この実行前提を明示して確認する。targeted実行後は専用port・派生8887/9150停止、保護hash不変を確認し、Windows handleで自動cleanupが遅延した所有`test-harness-6684`だけを絶対path・reparse検査後に削除した。cleanup commandはexit 0。
+
+### 05-B terminal後の最終レビューと検証（途中）
+
+fixtureのSDK日時型とEMP05専用actor原本を補正した後、上記targeted commandは6/6・exit 0。専用/派生8135/9150の停止、保護22hash不変、所有`test-harness-5556`の遅延cleanupを確認した。
+
+本人通知の3fileは`PERSONAL-REVIEW`/`PERSONAL-ACTIONS-SEC`で追加blockingなし。actionsの同scope権限喪失が世代へ反映されない残りP2を、allowed同期監視と喪失/再許可×旧成功/拒否の4testで補正し、`CLIENT-FINAL-SEC`で解消を確認した。rootの直接`operation-submission`/`operation-editor`合計45件成功は途中の証拠であり、後続追加分は全domainへ対応づける。
+
+developer terminal後、rootが`node --test test/domain/*.test.mjs`を実行し1326/1326・exit 0、`npm run test:local`は175/175・exit 0を確認した。Emulatorには同社rolesなしの本登録actorによる通知4状態の部分transaction、createdAtのsubmillisecond精度・未知map保持を追加した（harness hash `F5A899D4AC778B6ACF5E2AB3F1F32E5E33858345FA7474EA9A226C9F55C38A7D`）。本人controllerから同じpatch契約までのdomain証拠とRules実行証拠を対応づけ、本人UI全体の成功とはしない。Emulator終了後に保護22fileの件数/hash不変、専用/派生8581/9150の停止を独立command・exit 0で確認した。
+
+ただし最終client reviewで3件が残り、受入れは保留した。一般reviewは、複製の保存確定後read失敗をuncertain扱いし、新しい複製も開けなくするP2を検出。securityは、editorの旧Site取得/確認応答がreset後の新draft確認状態へ混入するP2と、複製のpost-read中にbusyが解除されて再送/日付変更等が可能なP2を検出した。rootもsource照合し、`CLIENT-R1`でeditor/duplicatorと直接testだけを修正対象にした。保存全体のbusy、開始ticket/対象値、既知成功と応答不明の区別を一緒に確認する。修正後のdomain・影響review・fresh build/UIは未完了で、1326件成功を最終修正版の証拠に流用しない。Functions/Rules/harnessは固定し、変更がない保存境界のEmulator証拠とclient固有の追加回帰を区別する。
+
+### 05-B source統合前の修正確定（2026-09-07）
+
+`CLIENT-R1`は上記4fileだけを修正した。rootがsourceとhashを照合し、`node --test test/domain/*.test.mjs`を再実行して1334/1334・exit 0を確認した。`CLIENT-REVIEW-R1`と`CLIENT-SEC-R1`は3件の解消・限定差分に追加blockingなしと判定した。両reviewは独立test実行をせず、rootの実行証拠と区別する。
+
+保存確定後の読取失敗は保存済み案内と旧attempt破棄へ分け、新しい複製を可能にする。実際の結果不明は再送禁止を維持する。複製の再取得終了までbusyを維持し、Site取得/確認は開始ticket・会社・対象に固定する。両複製種別と読取拒否/通信失敗、処理中の再送/別対象/取消、旧応答、Site取得/確認待機中のdraft切替を直接回帰へ含めた。
+
+最終4fileはclient controllerとdomain testであり、175件成功後のFunctions/Rules/harnessには変更がない。verification policyの失効条件に従い、保存境界のEmulator175/175・exit 0は再利用し、後続client差分は1334件のdomainとこれから行うfresh build/実UIへ対応づける。managed-governance、project-docs-negative、capacity-regressionも対象validator・policy・governance・fixtureに後続変更がなく、同turnのexit 0証拠を再利用する。文書検証とdiff検査は最終文書に対して再実行する。Dev/Prod生成・releaseは対象外で未実施。
+
+この時点はreview済みsourceのlocal統合準備で、05-Bの実UI・cleanup・受入れは未完了。05-C以降へ進まず、EMPの得点は55%のままとする。新仕様・data形状・ADR・共通governance・packageの変更はなく、実装記録・roadmap・本receipt・CHANGELOGの4文書だけを同期する。

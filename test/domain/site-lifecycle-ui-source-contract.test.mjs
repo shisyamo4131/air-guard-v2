@@ -77,14 +77,14 @@ test("Schedule editor owns confirmation lifecycle and preset paths inject the sa
   assert.match(input, /attachSiteScheduleConfirmation\(props\.item, \{[\s\S]*operationId: confirmationOperationId/u);
   assert.match(input, /onBeforeUnmount\(\(\) => clearSiteScheduleConfirmation\(props\.item\)\)/u);
 
-  for (const path of [
-    "handlers/siteOperationScheduleHandlers.js",
-    "composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js",
-    "composables/useSiteOperationScheduleDuplicator.js",
-  ]) {
-    const source = await read(path);
-    assert.match(source, /confirmTerminatedSite: confirmTerminatedScheduleSite/u, path);
-  }
+  const editor = await read("composables/application/operation/useOperationEditor.js");
+  const submission = await read("composables/application/operation/useOperationSubmission.js");
+  assert.match(editor, /await confirmTerminatedScheduleSite/u);
+  assert.match(submission, /await confirmTerminatedScheduleSite/u);
+  assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /OperationManager/u);
+  assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /useOperationSubmission\(\)/u);
+  assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /useOperationDuplicator\("schedule"\)/u);
+  assert.match(await read("composables/application/operation/useOperationDuplicator.js"), /submission\.submit\(operations\)/u);
 
   const detail = await read("pages/sites/[id].vue");
   const arrangements = await read("components/Arrangements/Manager/index.vue");

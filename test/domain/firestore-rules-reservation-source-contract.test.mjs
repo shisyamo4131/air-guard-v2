@@ -73,8 +73,13 @@ test("Site-reference collections use explicit guards and cannot fall through ten
       ),
     )?.[1];
     assert.ok(body, `${collectionName} must have an explicit document match`);
-    assert.match(body, /isValidSiteReferenceCreate\(companyId\)/u);
-    assert.match(body, /isValidSiteReferenceUpdate\(companyId\)/u);
+    if (collectionName === "ArrangementNotifications") {
+      assert.match(body, /allow create, delete: if false;/u);
+      assert.match(body, /isNotificationStateOnlyUpdate\(\)/u);
+    } else {
+      assert.match(body, /isValidSiteReferenceCreate\(companyId\)/u);
+      assert.match(body, /isValidSiteReferenceUpdate\(companyId\)/u);
+    }
   }
 });
 
@@ -102,8 +107,12 @@ test("Customer reference collections use explicit guarded matches outside the fa
       ),
     )?.[1];
     assert.ok(body, `${collectionName} must have an explicit document match`);
-    assert.match(body, new RegExp(`${createGuard}\\(companyId\\)`, "u"));
-    assert.match(body, new RegExp(`${updateGuard}\\(companyId\\)`, "u"));
+    if (collectionName === "OperationResults") {
+      assert.match(body, /allow write: if false;/u);
+    } else {
+      assert.match(body, new RegExp(`${createGuard}\\(companyId\\)`, "u"));
+      assert.match(body, new RegExp(`${updateGuard}\\(companyId\\)`, "u"));
+    }
   }
 
   const siteBody = source.match(

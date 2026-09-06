@@ -26,7 +26,7 @@
 
 05-Aでは`useFetchEmployee`をEmployee専用のraw購読/sessionへ接続し、現在Authと原本Userの7actor認可、必要IDだけの購読、Class表示互換、検索結果のmembershipと原本cacheの更新を分離した。権限/tenant変更・取得失敗・破棄でcache/search/待機中の取得を無効化し、古い応答を表示へ戻さない。期間queryの対象外と原本不存在を区別し、個別ID購読で確認済みの新raw/不存在を遅延queryで上書きしない。
 
-Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-Aの独立review・自動検証・専用build・代表実UIとcleanupを完了した。05-B以降の参照writer・索引・archiveはまだ実装していない。受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
+Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-Aの独立review・自動検証・専用build・代表実UIとcleanupを完了した。05-Bの参照writerを実装・検証中で、受入れは未完了。05-C以降の背景writer・索引整備・archiveは未着手である。受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
 
 ## 現行経路の再照合
 
@@ -281,10 +281,10 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 
 | 保存先 | 既存source/到達経路 | 実装時に閉じる境界 |
 |---|---|---|
-| 予定 | `handlers/siteOperationScheduleHandlers.js`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`composables/useSiteOperationScheduleDuplicator.js` → `utils/siteOperationSchedule/siteScheduleGuard.js` | 単件/複数create/update/複製。Site・日付不変の分岐も対象。既存Site revision/配置即時表示を維持 |
-| 実績 | `handlers/operationResultHandlers.js`、`components/OperationResult/Generator/index.vue`、`pages/operation-results/[id].vue`のworkers/articles完了event | 通常編集と実績化、詳細配列編集後のdoc.updateを同じ参照契約へ。実績createと予定pointer更新のatomic性を保持 |
-| 実績の請求編集 | `components/OperationBilling/Manager/index.vue`、`components/OperationBillings/Manager/index.vue`、請求編集画面とlock操作 | OperationBillingはOperationResultsを保存する派生Class。`item.update()`/`toggleLock()`から古い全文・従業員配列を再保存しない。請求項目/lockの所有fieldだけを最新実績へ反映 |
-| 配置通知 | 予定actionsとGeneratorからのnotify、`components/ArrangementNotification/Manager/index.vue` | 本人種別/id/employeeId整合、通知createと予定更新、通知状態変更。notify内部や予定保存hookのwrite後にEmployee readを足さない |
+| 予定 | `handlers/siteOperationScheduleHandlers.js`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`components/SiteOperationSchedule/Duplicator/index.vue` → `composables/useSiteOperationScheduleDuplicator.js` → `utils/siteOperationSchedule/siteScheduleGuard.js` | 単件/複数create/update/複製。Site・日付不変の分岐も対象。既存Site revision/配置即時表示を維持 |
+| 実績 | `handlers/operationResultHandlers.js`、`components/OperationResult/Generator/index.vue`、`pages/operation-results/[id].vue`のworkers/articles完了event。複製は`components/OperationResult/Duplicator/useIndex.js` → `composables/application/operationResult/useDuplicate.js` → `composables/domain/operationResult/duplicate.js` | 通常編集と実績化、詳細配列編集後のdoc.update、複製のClass writerを同じ参照契約へ。複製の日付/lock/引継ぎ条件、実績createと予定pointer更新のatomic性を保持 |
+| 実績の請求編集 | `components/OperationBilling/Manager/index.vue`、`components/OperationBillings/Manager/index.vue`、請求編集画面、`components/OperationBilling/Activator/Base/BtnToggleLock.vue` | OperationBillingはOperationResultsを保存する派生Class。`item.update()`/`toggleLock()`から古い全文・従業員配列を再保存しない。請求項目/lockの所有fieldだけを最新実績へ反映 |
+| 配置通知 | 予定actionsとGeneratorからのnotify、`components/ArrangementNotification/Manager/index.vue`。既存本人状態操作は`components/ArrangementNotifications/Manager/index.vue`と`components/ArrangementNotification/Manager/toLeaved.vue` | 本人種別/id/employeeId整合、通知createと予定更新、通知状態変更。notify内部や予定保存hookのwrite後にEmployee readを足さない。本人操作の意味・認可・入力を維持し、既存Class全文保存だけをraw状態部分更新へ接続 |
 | 勤怠 | `functions/triggers/operationResult.js` → `functions/modules/dailyAttendances/`のfetch/sync/add/remove/save | fetch段階からraw保持。本人IDと埋込み全従業員の和集合。新規/同先/移動元・先/削除を同契約へ |
 | 従業員別稼働 | 同trigger → `functions/modules/dailyOperationsByEmployee/`のfetch/sync/add/remove/save | 勤怠と同じ。保存loop開始前に全targetのreadを終える |
 | 請求 | `functions/modules/billings/addOperationResultToBilling.js`、`removeOperationResultFromBilling.js`、`syncOperationResultToBilling.js` | 現在取得と保存が別の同先更新・削除側もtransactionへ。移動元write前に移動先/Customer/追加Employeeを読む。金額計算は変更しない |
@@ -292,6 +292,8 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 | User/予約/退職 | `functions/modules/auth/`のcreateTemporaryUser/setupUserAccount/deleteTemporaryUser、lifecycle関連module | 既存User/予約/Employee/operation/headの排他を再利用。setupはUser/予約がarchiveを阻止するため、機械的にEmployee readを追加しない。仮/無効Userや完了headも除外しない |
 | 旧削除 | `functions/modules/Employees.js`、通常entrypoint `functions/index.js` | 旧onEmployeeDeletedのUser検索・削除作用を無効化。同名handlerを無作用化して遅延eventを直接試験。exportを外しただけで既存remote停止済みと記録しない |
 | Rules・公開 | `firestore.rules`、`functions/apis/index.js`、`functions/codex-test/index.js` | 個別と汎用/nestedを一緒に閉じる。日次2種は現状個別matchがなく汎用writeへ到達するため明示境界/汎用除外が必要 |
+
+予定の原本期待値は`useSiteOperationSchedulesInRange.js`の原本取得から、`components/SiteOperationSchedule/Card/useIndex.js`、`components/Draggable/Workers/useIndex.js`、`components/Draggable/OperationSchedules/useIndex.js`のclone/initializeを経ても同時点のrawと原本行位置を継承する。表示Classや表示順から原本を推測し直さず、operation専用のmemory contextを使用する。期間/tenant変更・破棄時に旧contextを無効化し、不要な過去modelを強参照で保持し続けない。これは既存の即時表示/拒否時rollback契約の接続範囲であり、共通drag/cache基盤の刷新ではない。
 
 予定worker詳細の`components/SiteOperationSchedule/WorkerDetailManager/index.vue`（`components/Arrangements/Manager/index.vue`から到達）、請求articlesの`pages/billings/operations/[id].vue`も直接updateの接続対象である。handler名の一覧だけで閉鎖済みとしない。
 
@@ -320,6 +322,8 @@ Class取得後にquery fieldを足すだけでは不十分である。新field�
 - 予定・実績・予定に付随する通知生成/取消・実績化: 現在Auth/同社有効本登録Userを確認し、会社管理者/統括/管制。予定のmaintenance条件と実績化の既存厳密条件も維持する。
 - 実績の請求編集/lock: 会社管理者/統括/経理。経理の`operation-billings:write`と、採用済み統括の通常業務範囲を区別してoperation policyへ表す。packageのpresetを変更しない。経理へ通常実績worker編集を許さない。lock変更を許す条件は既存請求操作の契約を確認し、確定dataの一般的な解除権限へ拡張しない。
 - 独立した通知状態変更: componentの「管制」コメントだけでactorを新しく限定しない。今回は現行の同社認証境界を維持し、raw状態の期待値と部分patchをclient transactionで扱う。Rulesは状態/actual群/既存時刻・監査の所有fieldだけを許し、参照を含む全識別fieldと非所有fieldを不変にする。元Class全文setは拒否。通知のactor全体の見直しや本人専用操作の変更は今回追加しない。
+
+本人向けの既存状態操作も同じRulesへ到達するため、保存接続の互換補正を05-Bへ含める。操作の追加・状態遷移の変更・認可の再設計を意味しない。編集/操作開始時のraw状態を保持し、現在rawとの期待値照合後に状態所有fieldとserver timestampだけを部分更新する。Classのclient時刻による全文保存へ戻さず、createdAtのsubmillisecond精度・未知field・参照を保持する。取消/拒否/応答不明、tenant/認可喪失と遅延transactionは管理側と同じ保護を使う。本人handlerから保存patchとRulesまでの直接回帰を必須とし、本人業務全体のUI受入れへは拡張しない。
 - 背景保存: callable入力にsystem actorを指定させず、内部呼出と同tenantの実sourceを根拠にする。clientの参照変更を背景処理の権限で代行できる汎用APIを作らない。
 
 調整8fieldは`adjustedQuantityBase, adjustedOvertimeMinutesBase, adjustedQuantityQualified, adjustedOvertimeMinutesQualified, adjustedUnitPriceBase, adjustedOvertimeUnitPriceBase, adjustedUnitPriceQualified, adjustedOvertimeUnitPriceQualified`。根拠は各CustomInputとinstalled Classであり、計算結果や保存hookまで同じfield群と決めつけない。通知の既存methodには一部遷移でactualBreakMinutesを60へ戻す挙動等があり、コメントから一方向遷移・時刻保持を新設しない。独立した既存問題を見つけた場合はFUTと当該工程の阻害有無を区別する。

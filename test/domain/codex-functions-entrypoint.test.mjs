@@ -27,6 +27,7 @@ const PUBLIC_CALLABLES = [
   "reactivateSite",
   "reinstateEmployee",
   "setupUserAccount",
+  "saveOperation",
   "terminateEmployee",
   "terminateSite",
   "updateCompanyArrangement",

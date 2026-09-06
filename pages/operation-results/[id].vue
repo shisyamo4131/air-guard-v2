@@ -90,26 +90,20 @@ const { doc } = useDocument("OperationResult", { docId }, (doc) => {
       <v-col cols="12" lg="9">
         <v-row>
           <v-col cols="12">
-            <OperationResultWorkersManager
-              v-model="doc.workers"
+            <OperationRowsManager
+              :document-id="docId"
+              kind="result"
+              group="workers"
               :disabled="doc.isLocked"
-              :default-date-at="doc.dateAt"
-              :default-site-id="doc.siteId"
-              :default-shift-type="doc.shiftType"
-              :default-start-time="doc.startTime"
-              :default-end-time="doc.endTime"
-              :default-is-start-next-day="doc.isStartNextDay"
-              :default-regulation-work-minutes="doc.regulationWorkMinutes"
-              :default-break-minutes="doc.breakMinutes"
-              @submit:complete="async () => await doc.update()"
             />
           </v-col>
           <v-col cols="12">
-            <ArticleDetailsManager
-              v-model="doc.articles"
+            <OperationRowsManager
+              :document-id="docId"
+              kind="result"
+              group="articles"
               :disabled="doc.isLocked"
               label="稼働外売上"
-              @submit:complete="async () => await doc.update()"
             />
           </v-col>
         </v-row>

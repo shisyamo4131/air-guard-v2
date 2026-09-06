@@ -1,120 +1,40 @@
-import * as Vue from "vue";
-import { useLogger } from "@/composables/useLogger";
-import { useFetch } from "@/composables/fetch/useFetch";
+import { computed, shallowRef, watch, onScopeDispose, reactive } from "vue";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { SiteOperationSchedule } from "@/schemas";
-import { useSystemStore } from "@/stores/useSystemStore";
-import {
-  rangeIsRef,
-  rangeIsValid,
-} from "@/composables/validators/rangeValidator";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useFetch } from "@/composables/fetch/useFetch";
+import { rangeIsRef, rangeIsValid } from "@/composables/validators/rangeValidator";
+import { createOperationRawContext } from "@/composables/domain/operation/operationRawContext";
+import { rawForClass } from "@/functions/shared/employeeContract.js";
 
-/*****************************************************************************
- * @file ./composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange.js
- * @description SiteOperationSchedule range data layer composable.
- * @param {Object} options
- * @param {import("vue").Ref<Date>} options.from
- * @param {import("vue").Ref<Date>} options.to
- * @returns {{
- *   docs: import("vue").ComputedRef<SiteOperationSchedule[]>
- * }}
- *****************************************************************************/
 export function useSiteOperationSchedulesInRange({ from, to } = {}) {
-  const { isDev } = useSystemStore();
-
-  /*****************************************************************************
-   * VALIDATION
-   *****************************************************************************/
-  /** Validate `from` and `to` are Ref<Date>. */
   rangeIsRef({ from, to });
-
-  /*****************************************************************************
-   * SETUP COMPOSABLES
-   *****************************************************************************/
-  const logger = useLogger("useSiteOperationSchedulesInRange");
-  const {
-    fetchSiteComposable,
-    fetchEmployeeComposable,
-    fetchOutsourcerComposable,
-  } = useFetch("useSiteOperationSchedulesInRange");
-  const { fetchSite } = fetchSiteComposable;
-  const { fetchEmployee } = fetchEmployeeComposable;
-  const { fetchOutsourcer } = fetchOutsourcerComposable;
-
-  /*****************************************************************************
-   * DEFINE STATES
-   *****************************************************************************/
-  const instance = Vue.reactive(new SiteOperationSchedule());
-
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
-  function subscribe([fromDate, toDate]) {
-    /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
-    rangeIsValid({ from: fromDate, to: toDate });
-
-    const constraints = [
-      ["where", "dateAt", ">=", fromDate],
-      ["where", "dateAt", "<=", toDate],
-    ];
-    try {
-      instance.subscribeDocs({ constraints }, (doc) => {
-        if (typeof fetchSite === "function") {
-          fetchSite(doc.siteId);
-        }
-        if (typeof fetchEmployee === "function") {
-          fetchEmployee(doc.employeeIds);
-        }
-        if (typeof fetchOutsourcer === "function") {
-          fetchOutsourcer(doc.outsourcerIds);
-        }
+  const auth = useAuthStore(), { $firestore } = useNuxtApp();
+  const { fetchSiteComposable, fetchEmployeeComposable, fetchOutsourcerComposable } = useFetch("useSiteOperationSchedulesInRange");
+  const items = shallowRef([]), context = createOperationRawContext();
+  let unsubscribe = null;
+  const scope = computed(() => auth.uid && auth.companyId && auth.isSuperUserClaimValid === true && auth.user?.docId === auth.uid
+    && auth.user?.companyId === auth.companyId && auth.user?.disabled === false && auth.user?.isTemporary === false ? `${auth.companyId}/${auth.uid}` : null);
+  function stop() { unsubscribe?.(); unsubscribe = null; context.clear(); items.value = []; }
+  watch([from, to, scope], ([start, end, owner]) => {
+    stop();
+    if (!owner) return;
+    rangeIsValid({ from: start, to: end });
+    const ticket = context.reset(owner);
+    const request = query(collection($firestore, `Companies/${auth.companyId}/SiteOperationSchedules`), where("dateAt", ">=", start), where("dateAt", "<=", end));
+    unsubscribe = onSnapshot(request, (snapshot) => {
+      if (ticket !== context.generation || scope.value !== owner || snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
+      items.value = snapshot.docs.map((document) => {
+        const raw = document.data();
+        const model = reactive(new SiteOperationSchedule(rawForClass(raw)));
+        context.remember(model, raw, ticket);
+        fetchSiteComposable.fetchSite(model.siteId);
+        fetchEmployeeComposable.fetchEmployee(model.employeeIds);
+        fetchOutsourcerComposable.fetchOutsourcer(model.outsourcerIds);
+        return model;
       });
-    } catch (error) {
-      logger.error({
-        message: "Failed to subscribe with given 'from' and 'to' values.",
-        error,
-        data: { fromDate, toDate },
-      });
-      instance.unsubscribe();
-    }
-  }
-
-  /*****************************************************************************
-   * WATCHERS
-   *****************************************************************************/
-  Vue.watch(
-    [from, to],
-    ([newFrom, newTo]) => {
-      if (isDev) {
-        const message = "'from' or 'to' changed. Subscribing with new values.";
-        logger.debug({ message, data: { newFrom, newTo } });
-      }
-      subscribe([newFrom, newTo]);
-    },
-    { immediate: true },
-  );
-
-  /*****************************************************************************
-   * COMPUTED
-   *****************************************************************************/
-  const docs = Vue.computed(() => {
-    const map = new Map();
-    for (const doc of instance.docs) {
-      map.set(doc.docId, doc);
-    }
-    return [...map.values()];
-  });
-
-  /*****************************************************************************
-   * CLEANUP
-   *****************************************************************************/
-  Vue.onScopeDispose(() => {
-    instance.unsubscribe();
-  });
-
-  /*****************************************************************************
-   * RETURNS
-   *****************************************************************************/
-  return {
-    docs,
-  };
+    }, () => { if (ticket === context.generation) stop(); });
+  }, { immediate: true });
+  onScopeDispose(stop);
+  return { docs: computed(() => items.value) };
 }

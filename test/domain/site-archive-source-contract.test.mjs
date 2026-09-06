@@ -50,7 +50,7 @@ test("archive use-case fixes the exact five direct reference queries and exclude
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules atomically require a live Site for every client reference create and siteId change", async () => {
+test("Rules retain live Site guards for client writers and close operation reference writes", async () => {
   const rules = await read("firestore.rules");
   assert.match(
     rules,
@@ -71,27 +71,33 @@ test("Rules atomically require a live Site for every client reference create and
       new RegExp(`match /Companies/\\{companyId\\}/${collectionName}/\\{[^}]+\\} \\{([\\s\\S]*?)\\n    \\}`, "u"),
     )?.[1];
     assert.ok(block, `${collectionName} Rules block`);
-    assert.match(block, /allow create:[\s\S]*?isValidSiteReferenceCreate\(companyId\)/u);
-    assert.match(block, /allow update:[\s\S]*?isValidSiteReferenceUpdate\(companyId\)/u);
+    if (collectionName === "OperationResults") assert.match(block, /allow write: if false;/u);
+    else if (collectionName === "ArrangementNotifications") {
+      assert.match(block, /allow create, delete: if false;/u);
+      assert.match(block, /isNotificationStateOnlyUpdate\(\)/u);
+    } else {
+      assert.match(block, /allow create:[\s\S]*?isValidSiteReferenceCreate\(companyId\)/u);
+      assert.match(block, /allow update:[\s\S]*?isValidSiteReferenceUpdate\(companyId\)/u);
+    }
   }
   const scheduleBlock = rules.match(
     /match \/Companies\/\{companyId\}\/SiteOperationSchedules\/\{docId\} \{([\s\S]*?)\n    \}/u,
   )?.[1];
   assert.ok(scheduleBlock);
-  assert.match(scheduleBlock, /allow create:[\s\S]*?isScheduleCreateGuarded\(companyId\)/u);
-  assert.match(scheduleBlock, /allow update:[\s\S]*?isScheduleUpdateGuarded\(companyId, docId\)/u);
+  assert.match(scheduleBlock, /allow write: if false;/u);
 });
 
-test("Schedule client writer reads guarded Sites and writes the reference in the same transaction", async () => {
-  const source = await read("utils/siteOperationSchedule/siteScheduleGuard.js");
-  assert.match(source, /async function readGuardedSite\(transaction, reference, expectedStatus\)[\s\S]*?transaction\.get\(reference\)/u);
-  assert.match(source, /runTransaction\(firestore, async \(transaction\) => \{[\s\S]*?readGuardedSite\(transaction,[\s\S]*?schedule\.create\(\{ transaction \}\)/u);
-  assert.match(source, /runTransaction\(firestore, async \(transaction\) => \{[\s\S]*?readGuardedSite\(transaction,[\s\S]*?schedule\.update\(\{ transaction \}\)/u);
-  assert.match(
-    source,
-    /for \(const schedule of schedules\) \{[\s\S]*?schedule\.operationResultId = null;[\s\S]*?await schedule\.create\(\{ transaction \}\)/u,
-  );
-  assert.match(source, /for \(const schedule of schedules\) await schedule\.update\(\{ transaction \}\)/u);
+test("Schedule application connects to the server transaction and legacy Class writer stays closed", async () => {
+  const legacy = await read("utils/siteOperationSchedule/siteScheduleGuard.js");
+  assert.match(legacy, /dedicated-operation-required/u);
+  assert.doesNotMatch(legacy, /schedule\.(?:create|update)\(/u);
+  const source = await read("functions/modules/operations/saveOperation.js");
+  assert.match(source, /firestore\.runTransaction\(async \(transaction\)/u);
+  assert.match(source, /transaction\.get\(firestore\.doc\(path\)\)/u);
+  assert.match(source, /requireSite[\s\S]*?guardScheduleSite/u);
+  assert.match(await read("composables/application/operation/useOperationSubmission.js"), /httpsCallable\(\$functions, "saveOperation"\)\(\{ operations \}\)/u);
+  // Actual all-read-before-write, Site revision and reference race behavior is
+  // exercised by operation-write.test.mjs and the local Callable harness.
 });
 
 test("Admin SDK Billing and SiteEmployeeHistory writers share their live Site read with the final write transaction", async () => {

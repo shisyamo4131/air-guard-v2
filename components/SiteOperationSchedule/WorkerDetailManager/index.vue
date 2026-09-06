@@ -1,98 +1,27 @@
 <script setup>
-/*****************************************************************************
- * @file ./components/SiteOperationSchedule/WorkerDetailManager/index.vue
- * @description 現場稼働予定作業員詳細情報管理コンポーネント
- * - 作業員情報を編集し、直接現場稼働予定ドキュメントを更新可能にしたコンポーネントです。
- * @extends SiteOperationScheduleDetailManager
- *****************************************************************************/
-import { SiteOperationSchedule, SiteOperationScheduleDetail } from "@/schemas";
-import { useLoadingsStore } from "@/stores/useLoadingsStore";
-
-/*****************************************************************************
- * DEFINE OPTIONS
- *****************************************************************************/
-defineOptions({
-  name: "SiteOperationScheduleWorkerDetailManager",
-  inheritAttrs: false,
-});
-
-/*****************************************************************************
- * SETUP COMPOSABLES
- *****************************************************************************/
-const loadingsStore = useLoadingsStore();
-
-/*****************************************************************************
- * TEMPLATE REF
- *****************************************************************************/
-const component = useTemplateRef("component");
-
-/*****************************************************************************
- * DEFINE STATES
- *****************************************************************************/
-const internalSchedule = ref(new SiteOperationSchedule());
-const internalWorker = ref(new SiteOperationScheduleDetail());
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
-function toCreate({ schedule, worker = new SiteOperationScheduleDetail() }) {
-  internalSchedule.value = schedule;
-  internalWorker.value = worker;
-  component.value?.toCreate(internalWorker.value);
-}
-function toUpdate({ schedule, worker }) {
-  internalSchedule.value = schedule;
-  internalWorker.value = worker;
-  component.value?.toUpdate(internalWorker.value);
-}
-function toDelete({ schedule, worker }) {
-  internalSchedule.value = schedule;
-  internalWorker.value = worker;
-  component.value?.toDelete(internalWorker.value);
-}
-
-async function handleCreate(worker) {
-  const loadingKey = loadingsStore.add("作業員情報を更新中...");
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useOperationEditor } from "@/composables/application/operation/useOperationEditor";
+import { operationRawFor, operationRowPosition } from "@/composables/domain/operation/operationRawContext";
+import RowInput from "@/components/Operation/RowInput.vue";
+defineOptions({ inheritAttrs: false });
+const auth = useAuthStore();
+const editor = useOperationEditor({ kind: "schedule", defaultAction: "workers" });
+async function open(rowAction, { schedule, worker }) {
   try {
-    internalSchedule.value.addWorker(worker);
-    await internalSchedule.value.update();
-  } finally {
-    loadingsStore.remove(loadingKey);
-  }
+    const raw = operationRawFor(schedule, `${auth.companyId}/${auth.uid}`);
+    let array = worker.isEmployee ? "employees" : "outsourcers";
+    let position = raw[array].length;
+    if (rowAction !== "add") {
+      const location = operationRowPosition(schedule, worker, `${auth.companyId}/${auth.uid}`);
+      if (!location) throw new Error("行を選び直してください。");
+      array = location.array; position = location.position;
+    }
+    await editor.open("UPDATE", schedule, { action: "workers", array, position, rowAction, raw });
+    if (rowAction === "add") editor.update({ id: worker.id });
+  } catch { editor.message.value = "最新の配置一覧から対象行を選び直してください。"; }
 }
-
-async function handleUpdate(worker) {
-  const loadingKey = loadingsStore.add("作業員情報を更新中...");
-  try {
-    internalSchedule.value.changeWorker(worker);
-    await internalSchedule.value.update();
-  } finally {
-    loadingsStore.remove(loadingKey);
-  }
-}
-
-async function handleDelete(worker) {
-  const loadingKey = loadingsStore.add("作業員情報を更新中...");
-  try {
-    internalSchedule.value.removeWorker(worker);
-    await internalSchedule.value.update();
-  } finally {
-    loadingsStore.remove(loadingKey);
-  }
-}
-/*****************************************************************************
- * DEFINE EXPOSE
- *****************************************************************************/
-defineExpose({ toCreate, toUpdate, toDelete });
+defineExpose({ toCreate: (args) => open("add", args), toUpdate: (args) => open("update", args), toDelete: (args) => open("remove", args) });
 </script>
-
 <template>
-  <SiteOperationScheduleDetailManager
-    v-bind="$attrs"
-    ref="component"
-    :model-value="internalWorker"
-    :handle-create="handleCreate"
-    :handle-update="handleUpdate"
-    :handle-delete="handleDelete"
-  />
+  <OperationEditor :controller="editor" title="作業員配置情報" :custom-input="RowInput" />
 </template>
