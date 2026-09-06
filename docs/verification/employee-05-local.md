@@ -391,3 +391,21 @@ rootは専用許可設定を起動前に明示した`npm run test:local`を実�
 `D-TEST-R1-REVIEW`は独立12依存表・型を維持した深い期待値・標準runnerの許可設定隔離を確認し、既知指摘解消・追加P1/P2なし、対象4fileのhash不変とした。rootの標準`npm run test:local`再実行は**180/180、exit 0**。D実参照/User/退職の各writerについて、writer先行・古いpreflight後のarchive先行・同時実行を確認した。原本/archiveの排他、User/予約・退職operation/head/lockの不生成または保持、actor User/Auth不変をassertしている。
 
 文書変更は既存7文書へ限定し、標準Emulatorの設定再現性を既存runbookにも記載した。package・schema/業務要件・ADR・governance/agent設定は不変。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。managed/policy/validator/必須routing/capacityを変更しておらず失効しない。project-docs/diffは最終追記後に再実行し、review済みsource/testと文書をlocal統合する。これはfresh build/実UIのための固定baselineであり、D/E完了や20点加算ではない。Dev/Prod generate・実data・通常API公開は未承認release-onlyとして実施しない。
+
+### 05-D 最終実UI・受入れ（2026-09-07）
+
+rootが通常/staged diff検査・project-docs各exit 0を確認し、15 source/testと7文書を`b3f54b8c8e8ec00be03f543bac7ee63cf60cd4c6`へlocal統合した。同じclean HEADの`npm run test:local:ui:build`はexit 0。専用demo Emulatorのarchive登録、generated serverのidentity・HTTP 200、合成Auth fixtureの会社/UIDを確認し、所有in-app tabだけを使った。
+
+非UI setupは、確認済み合成actorへのrunning Auth Emulator内だけの一時credentialと、未作成System/systemのisMaintenance:false環境baselineに限定した。credentialは保存・出力せず、合成業務dataは通常pointer/keyboardで可視UIから作成した。操作前の6collection raw検査は実readerを渡した`runEmployeeReferenceDryRun`を使用し、全collection 0件、consistent:true、archiveReady:false、exit 0。必要writerの閉鎖はA〜CのRules/実writer証拠と照合し、この検査結果だけを許可設定へ変換していない。
+
+- 正規登録したEmployee A（EMP05DA）に可視User panelから仮Userを登録。理由を入力してarchiveを実行すると拒否messageと理由保持を確認した。backendではAの原本全体が不変、archive不存在だった。
+- 正規登録したEmployee B（EMP05DB）で理由を入力して閉じ、原本全体不変・archive不存在を確認した。別tabでBの基本情報に未保存の肩書を入力し、さらに配置管理の作業員候補へBとAが表示されることを確認した。
+- Bをarchiveすると通常一覧へ戻りAだけになった。別tabの旧下書きと編集導線は消え「従業員情報が存在しません。」となり、配置候補からBだけが消えた。旧下書きを送信するcontrolは残っておらず、不存在の保存拒否は専用writer直接testと対応する。
+- Bの原本不存在、archive.employeeと保存前rawの深い同値、schema/auditの理由・actor UID・operation ID・server日時を確認。User一覧と参照ありAは不変だった。
+- Bの成功通知は最初の観測では取得できなかったため、正規登録したEmployee C（EMP05DC）で実行と直後の画面観測を連続して行い、遷移先一覧の「従業員をアーカイブしました。」を確認した。Cでもraw同値と原本不存在を確認した。
+
+最初のAuth全体比較は、複数tabを開く前後でlastRefreshAtだけが異なりassertが失敗した。アカウント数・認証情報・claims等のその他fieldは不変であることを差分で確認した。Cの操作直前に取り直したAuth snapshotとの比較は全fieldで一致した。前者を「Auth全体不変」と読み替えず、後者を操作直前/直後の証拠とする。CUA内backend read/assertionと可視UI操作は別証拠である。さらにAdmin SDK read-only assertionを`node --input-type=module`で実行し、2archiveの実envelope validator・audit・元ID不存在、参照ありEmployee 1件保持を確認してexit 0。archive/User連携のCallable実行終了も確認した。
+
+所有3tabを閉じ、generated serverとEmulatorを順にCtrl-C停止（各session exit 1）。専用8port・9150・派生8084/8557/8560の計12port停止を独立確認してexit 0。保護22fileの件数・長さ・SHA-256不変と既存root log3fileの復元/hash一致もexit 0。合成業務dataのexportはしていない。所有生成物の削除と最終文書検証を行い、結果をcommand reportへ記録してlocal統合する。
+
+以上を1456件domain・180件Emulator・独立review・fresh build・実UI/backendへ対応づけ、05-Dをlocal受入れとする。製品sourceはbuild後に変更していない。`D-W5-EVIDENCE-CHECK`はCの不存在状態に対する背景拒否とDの実archiveによる不存在成立・排他をW5へ対応づける構成を確認した。「archive後の背景trigger一連をEmulatorで実測」とは記録しない。次の05-Eで全matrix・次工程境界・最終差分/文書を統合reviewする。EMP-05は未完了、55%を維持し、EMP-06は開始しない。
