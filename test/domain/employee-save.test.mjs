@@ -37,6 +37,18 @@ test("EMP03 stale security reset refuses overwrite; missing raw fields stay dist
   const expected = expectedFields(legacy, SECURITY_FIELDS); assert.deepEqual(expected.emergencyContactAddress, ["missing"]);
   await missing.save("security", { hasSecurityGuardRegistration: false }, expected); assert.equal(missing.raw().emergencyContactAddress, null);
 });
+test("EMP03 all nine cleared security fields match schema reset, not constructor defaults", async () => {
+  const resetModel = new Employee(); resetModel._initSecurityGuardFields();
+  const expected = Object.fromEntries(SECURITY_FIELDS.map((field) => [field, resetModel[field]]));
+  assert.equal(expected.emergencyContactRelation, null);
+  for (const previous of [validEmployee(), { ...validEmployee(), ...security, dateOfSecurityGuardRegistration: parseDate("2026-01-01") }, { ...validEmployee(), ...expected }]) {
+    const raw = { ...previous, unknown: { keep: true } }; delete raw.dateOfTermination;
+    const state = setup(raw);
+    await state.save("security", { ...security, hasSecurityGuardRegistration: false, bloodType: "B", emergencyContactRelation: "OTHER" }, expectedFields(raw, SECURITY_FIELDS));
+    assert.deepEqual(Object.fromEntries(SECURITY_FIELDS.map((field) => [field, state.raw()[field]])), expected);
+    assert.deepEqual(state.raw().unknown, { keep: true }); assert.equal(Object.hasOwn(state.raw(), "dateOfTermination"), false); assert.deepEqual(state.raw().healthInsurance, raw.healthInsurance);
+  }
+});
 test("EMP03 certification positions preserve same-name rows, unknown fields and exact timestamps", async () => {
   const raw = { ...validEmployee(), securityCertifications: [{ ...certification("同名", "A"), unknown: { keep: true }, issueDateAt: new Timestamp(1767193200, 123) }, certification("同名", "B")] };
   const state = setup(raw); const input = { employeeId: "employee", action: "update", position: 1, changes: { name: "新名称" }, expected: expectedFields(raw, ["securityCertifications"]) };
@@ -102,6 +114,8 @@ test("EMP02 latest actor and retired state are checked again after geocoding", a
 test("EMP02 create is same-ID create-only and initializes insurance versions", async () => {
   const raw = validEmployee(); const input = Object.fromEntries(Object.keys(raw).filter((key) => ["lastName", "firstName", "lastNameKana", "firstNameKana", "displayName", "displayNameKana", "gender", "zipcode", "prefCode", "city", "address"].includes(key)).map((key) => [key, raw[key]])); Object.assign(input, { dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01" });
   const state = setup(null); await state.save("create", input); assert.equal(state.raw().docId, "employee"); assert.deepEqual(state.raw().insuranceOperationVersions, { healthInsurance: 0, pensionInsurance: 0, employmentInsurance: 0 });
+  const initialized = new Employee(); initialized._initSecurityGuardFields();
+  for (const field of SECURITY_FIELDS) assert.deepEqual(state.raw()[field], initialized[field], `create ${field}`);
   await assert.rejects(state.save("create", input), { code: "already-exists" }); assert.equal(state.counts().writes, 1);
   const archived = setup(null); archived.values.set("Companies/company/Employees_archive/employee", {}); await assert.rejects(archived.save("create", input), { code: "already-exists" }); assert.equal(archived.counts().writes, 0);
 });

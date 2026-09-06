@@ -90,3 +90,17 @@ application writerは既存developerへ集中し、Employee共有契約・専用
 保存境界の独立review、最終build、直接UI、backend assertion、cleanup、統合はこの時点では未完了。
 
 EMP-03-SECも保存module/API/shared contract/client/testをread-only reviewし、修正必須の指摘なし。資格配列のA→B→Aという完全復元は採用済みの配列期待値だけでは識別しない限界を確認し、保険の世代値によるABA検知と同一視しない。新資格IDや全Employee版数を追加しない。source/testsの確認をrootの実測と区別する。独立review2件と自動gateの結果から、review済みsourceのlocal統合・専用UI検証へ進む。
+
+### EMP-03 初回UIと修正対象
+
+source `3faabe528e81a8ac929056127ecf885ed5bdb368`のclean HEADで専用buildはexit 0。Emulator ready・警備/資格Callable登録・generated server起動・HTTP 200を確認した。合成accountの一時credentialはrunning Auth内だけに設定し、通常keyboardでsign-inした。
+
+可視UIからEmployeeを正規作成し、表示名追従・遷移後の座標未取得通知、警備登録の保存を確認した。同名資格2行を追加し、2行目の名称を変えて表示順が逆転してもraw原配列の1行目は完全不変だった。2画面の別行更新に対し、元画面はdraftを保持して保存を無効化した。明示再読込で選択が解除され、再選択した資格だけの削除と他行の保持をread-only backend assertionで確認した。保険・基本情報も保持された。
+
+警備登録解除では緊急連絡先続柄がnullに戻らず、新規Classの初期選択値に戻る不一致を検出した。installed Employeeの既存従属初期化は続柄をnullにするため、既存仕様の復元として修正する。解除後の全非警備field保持と資格不変は確認できたが、解除の受入れは失敗とする。sourceを修正して再検証するまでEMP-03は加点しない。所有tabを閉じ、generated server→EmulatorをCtrl+Cで停止（停止exit 1）、専用portと派生9150/8411のLISTENなし、所有`.output`削除をexit 0で確認した。
+
+### EMP-03 初期化修正の再検証
+
+createと警備員登録解除だけに、既存schema hookと一致する9fieldの消去値を適用した。入力defaultと保存時消去値を区別し、schema実methodとの全field比較・解除値と従属入力の混在・unknown/不存在/保険保持・実HTTP作成/解除比較を追加した。EMP-03-UI-R1-SECは指定shared contractと直接testの静的再reviewで修正充足・追加blockingなしと判断した。前回reviewの入力defaultと保存消去値の同一視は訂正された。
+
+修正後`node --test test/domain/*.test.mjs`は1191 tests / pass 1191 / fail 0、exit 0。project-docsとdiff checkもexit 0。Emulator・修正版build・実UI再確認はこの時点では未完了である。

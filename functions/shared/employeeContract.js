@@ -5,6 +5,9 @@ export const BASIC_FIELDS = Object.freeze(["code", "lastName", "firstName", "las
 export const CREATE_FIELDS = Object.freeze(BASIC_FIELDS.filter((field) => field !== "remarks"));
 export const NATIONALITY_FIELDS = Object.freeze(["isForeigner", "foreignName", "nationality", "residenceStatus", "hasPeriodOfStayLimit", "periodOfStay", "hasWorkRestrictions"]);
 export const SECURITY_FIELDS = Object.freeze(["hasSecurityGuardRegistration", "dateOfSecurityGuardRegistration", "bloodType", "emergencyContactName", "emergencyContactRelation", "emergencyContactRelationDetail", "emergencyContactAddress", "emergencyContactPhone", "domicile"]);
+// Reset semantics differ from a newly constructed Employee's input defaults.
+// Matches Employee._initSecurityGuardFields without invoking persistence hooks.
+const CLEARED_SECURITY = Object.freeze({ hasSecurityGuardRegistration: false, dateOfSecurityGuardRegistration: null, bloodType: "A", emergencyContactName: null, emergencyContactRelation: null, emergencyContactRelationDetail: null, emergencyContactAddress: null, emergencyContactPhone: null, domicile: null });
 export const CERTIFICATION_FIELDS = Object.freeze(["name", "type", "issuedBy", "issueDateAt", "expirationDateAt", "serialNumber"]);
 export const ADDRESS_FIELDS = Object.freeze(["prefCode", "city", "address"]);
 export const DATE_FIELDS = Object.freeze(["dateOfBirth", "dateOfHire", "periodOfStay", "dateOfSecurityGuardRegistration", "issueDateAt", "expirationDateAt"]);
@@ -119,11 +122,10 @@ export function buildEmployeePatch(raw, changes, operation, options = {}) {
     if (!equal(raw.periodOfStay, null)) patch.periodOfStay = null;
     else delete patch.periodOfStay;
   }
-  if (operation === "security" && changes.hasSecurityGuardRegistration === false) {
-    const defaults = new Employee();
+  if (operation === "create" || (operation === "security" && changes.hasSecurityGuardRegistration === false)) {
     for (const field of SECURITY_FIELDS) {
-      model[field] = defaults[field];
-      if (!equal(raw[field], defaults[field])) patch[field] = defaults[field];
+      model[field] = CLEARED_SECURITY[field];
+      if (!equal(raw[field], CLEARED_SECURITY[field])) patch[field] = CLEARED_SECURITY[field];
       else delete patch[field];
     }
   }

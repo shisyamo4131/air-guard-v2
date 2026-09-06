@@ -78,12 +78,15 @@ test("EMP03 security and certification Callables preserve row positions and reje
   assert.equal(created.response.status, 200, JSON.stringify(created.payload));
   const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
   const original = (await ref.get()).data();
+  const clearedSecurity = { hasSecurityGuardRegistration: false, dateOfSecurityGuardRegistration: null, bloodType: "A", emergencyContactName: null, emergencyContactRelation: null, emergencyContactRelationDetail: null, emergencyContactAddress: null, emergencyContactPhone: null, domicile: null };
+  assert.deepEqual(Object.fromEntries(SECURITY_FIELDS.map((field) => [field, original[field]])), clearedSecurity);
   const security = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: true, dateOfSecurityGuardRegistration: "2026-01-01", bloodType: "A", emergencyContactName: "合成家族", emergencyContactRelation: "OTHER", emergencyContactRelationDetail: "その他", emergencyContactAddress: "合成住所", emergencyContactPhone: "09012345678", domicile: "合成本籍" }, expected: {} });
   assert.equal(security.response.status, 200, JSON.stringify(security.payload));
   let raw = (await ref.get()).data();
   const cleared = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: false, emergencyContactName: "残留不可" }, expected: expectedFields(raw, SECURITY_FIELDS) });
   assert.equal(cleared.response.status, 200, JSON.stringify(cleared.payload));
-  assert.equal((await ref.get()).data().emergencyContactName, null);
+  const afterClear = (await ref.get()).data();
+  assert.deepEqual(Object.fromEntries(SECURITY_FIELDS.map((field) => [field, afterClear[field]])), clearedSecurity);
   for (const serialNumber of ["A", "B"]) {
     raw = (await ref.get()).data();
     const added = await call("updateEmployeeCertifications", { action: "add", position: null, changes: { name: "同名資格", type: "TRAFFIC", issueDateAt: "2026-01-01", serialNumber }, expected: expectedFields(raw, ["securityCertifications"]) });
