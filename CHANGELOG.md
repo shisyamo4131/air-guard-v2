@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Employeeの最終提案を確定した。明示表示名の優先・在職一覧への作成集約、通常原本と同じ7actorのarchive閲覧、local段階移行を採用し、EMP-05へ参照保護/archiveを割り当てた。物理削除の実行は後続専用工程へ分離する。通常保存・raw期待値・保険別の巻き戻さない世代値の設計を整えた。仕様/設計反映であり、製品実装は未着手。[仕様](docs/specification.md#employeeの操作権限と保持)、[判断](docs/decisions/0060-common-archive-purge-and-address-contract.md)、[工程](docs/roadmaps/employee.md)を参照。
+
 - Employeeのarchiveを別collectionへの同ID移動に戻し、必要な従属writerの参照保護を設計範囲へ追加した。archive・物理削除と住所・座標を[共通仕様](docs/specification.md#共通データ仕様)へ集約した。Siteの物理削除は未実装と明確化し、今回も設計・reviewのみで製品code・実dataは変更していない。旧archive延期とwriter変更禁止は[ADR 0060](docs/decisions/0060-common-archive-purge-and-address-contract.md)で一部置換した。
 
 - Employeeは退職後の通常編集を全actorで禁止する仕様を採用した。在職者の保険履歴復元は会社管理者・統括・人事へ許可し、現行の遷移条件を維持する。既存の専用誤退職訂正は維持する。仕様反映のみで実装は未実施。[判断](docs/decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照。

@@ -2,7 +2,7 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
-- 採用範囲: 共通原則・Employeeの方式変更。下記の実装設計・運用案は実装済みを意味しない。
+- 採用範囲: 共通原則・Employeeの方式変更と最終提案の操作/閲覧/段階移行条件。下記の実装設計・運用案は実装済みを意味しない。
 - 関連仕様: [共通データ仕様](../specification.md#共通データ仕様)、[Employee](../specification.md#employeeの操作権限と保持)
 - 一部置換: [ADR 0057](0057-employee-hard-delete-and-archive-deferral.md)の直接物理削除・archive延期、[ADR 0058](0058-employee-full-read-and-geocoding-scope.md)の従属writer変更禁止。全項目read・通常編集・退職・保険のactorと状態条件は維持する。
 - 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。今回はEMP-01の設計・review・文書保存で止め、EMP-02以降を開始しない。
@@ -12,6 +12,14 @@
 利用者は、EmployeeのarchiveをSite同様の別collection移動へ戻し、従属側の参照整合性の設計を委ねた。また、archive・物理削除と住所・座標はcollectionごとの独立判断ではなく、システム共通仕様としてまとめるよう指示した。採用内容の唯一の正本は現行仕様の共通節とし、本書は理由・影響を記録する。
 
 共通の実装調査文書は存在するが、adapterの古い共通挙動とCustomer/Siteの専用実装が混在し、確認済み共通原則への入口が不足していた。共通仕様を新設し、implementation文書は現行差分と設計、master固有仕様はactor・対象・従属・住所用途等へ役割を分ける。
+
+## EMP-01最終提案の追加採用
+
+2026-09-06、利用者は最終提案を採用し確定を承認した。姓名と表示名の同時変更では明示表示名を優先し、作成を在職一覧へ集約する。任意・手入力・重複可のcode、独立した表示名カナ、既存の検索・期間候補条件を維持する。archive全項目readは原本と同じ会社管理者・既知6業務roleとし、通常候補への混入・直接CUD・restoreを拒否する。archive管理一覧は追加しない。
+
+段階移行ではEMP-02から原本/archiveのreadと直接CUD拒否を揃え、未移行editorをlocalで一時read-onlyにする。EMP-03/04で再開し、Devへ途中状態を反映しない。EMP-05へ参照保護・索引・旧trigger停止・専用archiveを含め、9工程・重み合計100を確定する。物理削除の実行は後続専用工程へ分け、保持・自動実行・最小ID記録の具体運用は未採用のままFUT-0146へ残す。
+
+旧全文writerを暫定許可する方式は採らず、専用operationの所有field保存とraw期待値を使う。保険mapが履歴復元で同値に戻る場合も古い要求を拒否するため、保険別に巻き戻さない局所世代値を採る。全Employee共通revision/lockやpackage変更には広げない。具体的なwire・metadata・移行/受入れは[設計契約](../implementation/employee-master.md#通常保存の技術契約)に集約する。
 
 ## Siteから再利用するものと限界
 

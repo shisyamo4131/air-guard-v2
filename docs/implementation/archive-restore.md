@@ -16,7 +16,7 @@ Customer/Siteの最新実装は各master文書とADR 0046/0051を参照する。
 
 ## 物理削除の設計案
 
-以下はarchive対象masterのreview用未実装案で、User/Auth専用削除・予約解放・業務transactionの削除へ適用しない。定期バッチ・保持期間・新collection採用の指示ではない。archiveを先行実装でき、purge運用の全決定をEmployee通常CRUDの前提にしない。
+以下はarchive対象masterのreview用未実装案で、User/Auth専用削除・予約解放・業務transactionの削除へ適用しない。定期バッチ・保持期間・新collection採用の指示ではない。EmployeeではEMP-05にarchive/参照保護、purge実行は後続専用工程とする配分を採用済み。以下の具体運用はその工程で判断し、purge運用の全決定をEmployee通常CRUDの前提にしない。
 
 1. 許可actorが、対象collectionをserver側で固定した専用操作へ対象ID・期待するarchive操作ID・物理削除操作IDを渡す。client指定の任意pathを削除する汎用APIは公開しない。自動maintenanceの場合も対象・実行主体・期間を別に確定する。
 2. serverは現在認可、archive形式/対象、原本不存在、従属なしを確認する。依存確認とarchive削除・結果記録は同transactionで確定する。通常原本の存在確認を行う参照writer、原本同IDの再作成拒否、restore排他も維持する。複数documentのメンテナンスは対象1件ごとに判定し、一部成功を全件成功に丸めない。

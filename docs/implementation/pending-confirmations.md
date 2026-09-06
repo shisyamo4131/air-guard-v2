@@ -799,9 +799,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
-2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot/raw保持と依存query/必要writerの技術案は具体化済み。archive read・操作表示・段階移行/工程配分は最終確認事項として残る。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
+2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot/raw保持と依存query/必要writerの技術案は具体化済み。archive read・操作表示・段階移行/工程配分も最終回答で採用済み。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
 
-最終確認案: archiveの直接readは通常原本と同じ7actorへ許可し、通常一覧/候補への混入、直接CUD・restoreは拒否する。archive管理一覧は追加しない。旧read全拒否案と区別して採否を確認する。snapshot/raw保持・従属query・既存索引確認は設計へ具体化した。物理削除の実行機能を後続専用工程とし、今回archiveまでをEMP-05に含める提供時期も[工程案](../roadmaps/employee.md#最終確認用の工程割当案)で提示する。
+最終採用（2026-09-06）: archiveの直接readは通常原本と同じ7actorへ許可し、通常一覧/候補への混入、直接CUD・restoreは拒否する。archive管理一覧は追加しない。snapshot/raw保持・従属query・既存索引確認は設計契約に従う。archive/参照保護をEMP-05へ含め、物理削除の実行機能を後続専用工程に分ける[工程配分](../roadmaps/employee.md#最終確認用の工程割当案)も採用済み。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -815,24 +815,24 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0065 Employee code・表示名・退職者候補の規則
 
-### EMP-01最終確認案
+### EMP-01採用条件
 
 - codeは任意・手入力・重複可、表示名カナは独立入力を維持する。通常候補のACTIVE/RESIGNED、在職空検索一覧/カナ順・退職空検索0件・期間内在籍者の条件と、過去記録が現在master名を使う方式を維持する。全項目read採用済みのため、非公開氏名のfield選定を再度の前提にしない。
 - 明示変更は、姓名と表示名を同時に変更したら入力した表示名を最後に適用すること、作成を在職一覧へ集約し退職検索のplusを除去すること。根拠・影響・検証は[最終案](employee-master.md#利用者へ提示する操作案)へ集約する。
 
-利用者判断: 上記の表示名優先順位と作成導線の採否。技術的な保存・競合・座標契約は[設計](employee-master.md#通常保存の技術契約)に具体化し、別々の承認質問に増やさない。回答前に確認済み仕様へ移さない。
+利用者回答（2026-09-06）: 上記の表示名優先順位・作成導線と維持条件を採用し、確定を承認した。確認済み要件は[仕様](../specification.md#employeeの操作権限と保持)へ反映。保存・競合・座標の技術契約は[設計](employee-master.md#通常保存の技術契約)に集約し、再度の承認事項にしない。
 
 ### 既存確認事項
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: code非一意、displayNameKana自動同期なし、汎用Autocompleteはstatus非限定。
 - Question: codeの採番/一意性、表示名と法的氏名・カナの関係、退職者を選べる用途をどう定義するか。
 - Why needed: 従業員識別、検索、帳票表示、新規配置候補を一貫させるため。
 - Options and impact: tenant連番、手動一意code、通称別field、通常候補ACTIVE限定+履歴表示は全status。
-- Current provisional treatment: 現行自由code/保存表示名/status非限定検索を確定仕様とはしない。
+- Current provisional treatment: 上記の採用条件に従う。新採番・一意性・新しい候補制限は追加しない。
 - Related FUT IDs: FUT-0079
-- Answer: 未回答
+- Answer: 2026-09-06 回答済み。上記の維持条件と表示名優先順位・作成導線を採用した。実装・適用状況はEmployeeロードマップを参照する。
 
 ## CONF-0066 User/Auth管理の正式権限と本人操作範囲
 
@@ -1538,7 +1538,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0123 共通archive metadata・保持・匿名化・purge運用
 
-2026-09-06部分回答: 共通archive metadata（形式version・原本・実行者・日時・理由・操作ID）、archive後の物理削除と従属再検査をADR 0060で採用。自動実行・保持期間・使用済みIDの最小記録・エラー表示方式は未採用案として[共通設計](archive-restore.md#物理削除の設計案)でreviewする。旧archive延期はEmployeeに適用しないが、他masterの固有のpurge非提供条件を解除しない。
+2026-09-06部分回答: 共通archive metadata（形式version・原本・実行者・日時・理由・操作ID）、archive後の物理削除と従属再検査をADR 0060で採用。自動実行・保持期間・使用済みIDの最小記録・エラー表示方式は未採用案として[共通設計](archive-restore.md#物理削除の設計案)でreviewする。最終回答でEmployeeのarchive/参照保護をEMP-05、purge実行を後続専用工程に分ける配分も採用した。旧archive延期はEmployeeに適用しないが、他masterの固有のpurge非提供条件を解除しない。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
@@ -1546,7 +1546,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Question: 全master共通で必要な削除理由・actor・時刻・revision、閲覧/復元/purge actor、保持期間、legal hold、匿名化、subcollection処理をどう定めるか。
 - Why needed: 誤削除復旧、個人・取引data保持、監査、法令、storage削減を一貫運用するため。
 - Options and impact: metadata envelope、audit ledger、master別retention、期限後匿名化/purge、legal hold、server-only operations。
-- Current provisional treatment: archiveを無期限・無metadataの別collection copyとして記録し、正式な保持・復旧制度とは扱わない。
+- Current provisional treatment: 上記の共通原則とEmployeeの提供工程に従う。旧genericのmetadataなしcopyは実装調査の履歴であり、現在の採用要件ではない。保持・匿名化・復旧の具体運用は未確定。
 - Related FUT IDs: FUT-0146、FUT-0057、FUT-0063、FUT-0078、FUT-0087、FUT-0123
 - Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 

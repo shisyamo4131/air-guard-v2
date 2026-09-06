@@ -1064,7 +1064,7 @@ EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
-2026-09-06最新方針: archive延期を撤回し、Employeeは別collection移動と必要な従属writer保護をEMP-01で設計する。通常退職の保持・非連鎖削除は維持。物理削除はarchive後の別操作で、運用・最小ID記録の設計はFUT-0146へ集約する。現行計画は[Employeeロードマップ](../roadmaps/employee.md)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とし、以下の延期記述は旧判断の履歴。
+2026-09-06最新方針: archive延期を撤回し、Employeeは別collection移動と必要な従属writer保護をEMP-01で設計し、最終採用によりEMP-05へ実装を割り当てた。通常退職ではEmployeeと業務記録を保持し、既存UWBの本登録User/Auth削除・予約解放を維持する。誤登録archiveでは従属/User/Authを連鎖削除しない。物理削除はarchive後の別操作で、実行は後続専用工程へ分離することを採用済み。運用・最小ID記録の設計はFUT-0146へ集約する。現行計画は[Employeeロードマップ](../roadmaps/employee.md)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とし、以下の延期記述は旧判断の履歴。
 
 追加回答: 他collectionの保存処理・RulesへのEmployee存在確認追加は今回対象外と確定した。参照競合を解決できたという意味ではなく、安全条件が未確定の物理削除は開放しない。
 
@@ -1083,7 +1083,7 @@ EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-
 
 ## FUT-0079 Employee code・派生氏名・候補statusの整合を保証する
 
-EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、既存Class/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。採番/一意性や新しい候補status制限は既存必須条件ではなくCONF-0065の判断とし、別scopeへの延期を許容する。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
+EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、既存Class/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。CONF-0065の最終回答で任意・手入力・重複可codeと現候補条件を維持し、明示表示名優先と在職一覧への作成集約を採用した。対応実装はEMP-02/06とし、新採番・一意性・新しい候補status制限を追加しない。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
 
 - 状態: Needs decision
 - 重大度: Medium
@@ -2008,7 +2008,7 @@ EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で�
 
 ## FUT-0146 archive audit metadata・retention・purge・Rulesを共通設計する
 
-2026-09-06共通原則採用: [仕様](../specification.md#ドキュメントのアーカイブと物理削除)と[実装差・物理削除案](archive-restore.md)を正とする。Customer/Siteは専用envelope・参照保護を持ち、下記のmetadataなし/広域writeは旧generic調査の範囲である。purge・最小ID記録・保持/エラー表示・他master適用は未実装であり、共通仕様化を実装完了と扱わない。
+2026-09-06共通原則採用: [仕様](../specification.md#ドキュメントのアーカイブと物理削除)と[実装差・物理削除案](archive-restore.md)を正とする。Customer/Siteは専用envelope・参照保護を持ち、下記のmetadataなし/広域writeは旧generic調査の範囲である。Employeeのpurge実行をEMP外の後続専用工程へ分離することは最終採用済み。具体的な最小ID記録・保持/エラー表示の運用は未採用である。purge・他master適用は未実装であり、共通仕様化を実装完了と扱わない。
 
 - 状態: Needs decision
 - 重大度: High
@@ -2494,7 +2494,7 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 
 ## FUT-0181 Air managerのdisable・validation・single-flight・draft conflictを永続化前に強制する
 
-EMP-01対応時期（2026-09-06）: Employee通常CRUDのManager依存と保険/資格の保存完了分離は今回の目的として解消する計画。User panelは既存の専用controllerを維持してshellを整理する。全汎用Manager・他transaction画面の改修は別scopeであり、Employeeで到達する同原因の修正を延期する根拠にはしない。段階移行時の未移行editorは[契約案](employee-master.md#emp-01の保存読取り契約案)で停止/先行保存互換を判断する。
+EMP-01対応時期（2026-09-06）: Employee通常CRUDのManager依存と保険/資格の保存完了分離は今回の目的として解消する計画。User panelは既存の専用controllerを維持してshellを整理する。全汎用Manager・他transaction画面の改修は別scopeであり、Employeeで到達する同原因の修正を延期する根拠にはしない。段階移行時の未移行editorは[契約案](employee-master.md#emp-01の保存読取り契約案)に従いEMP-02ではlocal read-onlyとし、EMP-03/04の専用writer完成後に再開する。
 
 - 状態: Open
 - 重大度: High
