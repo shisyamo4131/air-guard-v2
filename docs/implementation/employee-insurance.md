@@ -1,5 +1,11 @@
 # Employee保険管理（実装調査）
 
+## 2026-09-06の再照合
+
+3保険の埋込み、6操作、live instanceの先行変更と親の`submit:complete`後の全文保存は現sourceにも残る。計画は[Employeeロードマップ](../roadmaps/employee.md)、個人情報の権限・保険訂正/監査の未決は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)へ統合する。通常CRUD安全化と監査制度の新設を同一視せず、現historyをappend-only監査証拠として扱わない。
+
+下の2026-08-11記録のRules「全field write」「super-user全read/write」は当時の記述である。現在はEmployee退職3fieldの変更とdeleteを拒否し、同社の有効な本登録Userというidentity境界があるが、保険のpermission・field・遷移制約は不足する。archiveの個別/汎用許可も含め[現行再照合](employee-master.md#現行経路の再照合)を参照する。今回のruntime test、保存data検証、Dev確認は未実施。
+
 ## メタデータ
 
 - 状態: 実装調査（SPEC-DEEP-027で対象9 componentをdeep review済み）

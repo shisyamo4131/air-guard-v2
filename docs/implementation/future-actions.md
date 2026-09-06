@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-05
+- 最終更新日: 2026-09-06
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -1014,6 +1014,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0075 Employee個人情報の閲覧・編集権限を最小化する
 
+EMP-01再照合（2026-09-06）: 下の初期調査時点からUWBが進み、現在は同社の有効な本登録Userというidentity境界、退職3field保護、Employee delete拒否がある。ただし通常fieldとarchiveの過剰アクセスは残り、archiveは個別matchだけでなく汎用許可の除外も必要。[現経路](employee-master.md#現行経路の再照合)と[CONF-0061案](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を参照する。対象のread/write保護はEmployee改修の必須条件であり、独立課題として後続送りしない。runtime/remoteは未確認。
+
 - 状態: Needs decision
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-024、SPEC-SEG-051、SPEC-DEEP-025、SPEC-DEEP-027
@@ -1028,6 +1030,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0076 Employee/User 1対1と退職・削除cleanupを保証する
 
+EMP-01再照合（2026-09-06）: 下の先頭query/一意制約なしの説明はUWB前の経路の履歴として扱う。現通常UIは予約pointerを正本にする専用User/退職/訂正を使い、Employeeの通常deleteは拒否される。旧model methodとonEmployeeDeleted triggerの残存は、現UIでの同じ脆弱経路の存在を意味しない。[現経路](employee-master.md#現行経路の再照合)をEmployee側の維持回帰に使う。Admin物理削除等の残存境界を未調査のまま本FUT全体をResolvedへ変えず、今回の通常CRUDから到達しないことを条件に別途扱う。
+
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-024、SPEC-DEEP-025
@@ -1040,6 +1044,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - ユーザー判断が必要な事項: actor・target・archive・audit・reconcileのUWB-07仕様は回答済み。保持期間とProd運用条件は別途確定が必要。
 
 ## FUT-0077 Employee雇用状態・将来退職・復職workflowを確定する
+
+EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、実際の再雇用・将来日退職は新workflowとして別判断に残す。通常CRUDを妨げない独立scopeであり、今回の進捗へ加点しない。工程内に発見する回帰をこの延期へ混ぜない。
 
 - 状態: Open
 - 重大度: High
@@ -1054,6 +1060,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
+EMP-01対応時期（2026-09-06）: 通常Employee delete拒否と業務記録保持を維持するので、新archive/restore/匿名化は別scopeに残す。一方、既存Employees_archiveの過剰read/writeを閉じることはFUT-0075とEmployeeのread境界工程で扱い、archive新設の延期を理由に放置しない。
+
 - 状態: Needs decision
 - 重大度: High
 - 発見セグメント: SPEC-SEG-024
@@ -1066,6 +1074,8 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - ユーザー判断が必要な事項: CONF-0064。
 
 ## FUT-0079 Employee code・派生氏名・候補statusの整合を保証する
+
+EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、DTO/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。採番/一意性や新しい候補status制限は既存必須条件ではなくCONF-0065の判断とし、別scopeへの延期を許容する。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
 
 - 状態: Needs decision
 - 重大度: Medium
@@ -1694,6 +1704,8 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 
 ## FUT-0126 従業員資格・機微情報の操作別権限と監査を実装する
 
+EMP-01対応時期（2026-09-06）: actor/公開fieldはCONF-0061/0105へ統合し、資格と警備情報の操作別保存・直接拒否をEmployee改修の必須条件とする。資格証明書番号まで業務用readerへ渡す必要性は確認されていない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
+
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-036、SPEC-DEEP-026
@@ -1943,6 +1955,8 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 
 ## FUT-0143 個人住所・座標のprovider送信とlog privacyを統制する
 
+EMP-01再照合（2026-09-06）: Employeeの住所送信/log経路は残るが、自宅座標を使う通常業務readerは今回の検索範囲で未発見。CONF-0120へ新規送信停止/継続の比較を追加した。継続する場合の認可・privacyはEmployee住所writerの必須依存であり後続送りしない。停止しても共通Callableの公開入口・他master・過去log・既存座標のdata処理まで解消したとは扱わず、明示scopeで後続判断する。
+
 - 状態: Needs decision
 - 重大度: High
 - 発見セグメント: SPEC-SEG-041
@@ -2159,6 +2173,8 @@ SPEC-DEEP-039a追加根拠: 配置指示textも現場名・住所・予定時刻
 SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使うが専用error stateを持たず、生成失敗をloggerへ渡して吸収する。呼出し側はdownload成功と失敗を判別できず、inline retryや生成監査もない。
 
 ## FUT-0159 Insurance履歴・監査・validation・遷移を正式化する
+
+EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存、history追加/popの競合・結果不明時の二重実行はEmployee保険工程の必須対象。現3状態、復元actor、手続中操作はCONF-0061の未採用案で判断する。保持期限・外部行政連携・監査全面刷新は、残す操作の正確な保存を妨げない独立scopeとして別判断に残す。
 
 - 状態: Open
 - 重大度: High
@@ -2463,6 +2479,8 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - ユーザー判断が必要な事項: overwrite/merge、保存field、legacy compatibilityはCONF-0137ほか既存data compatibility判断へ統合する。
 
 ## FUT-0181 Air managerのdisable・validation・single-flight・draft conflictを永続化前に強制する
+
+EMP-01対応時期（2026-09-06）: Employee通常CRUDのManager依存と保険/資格の保存完了分離は今回の目的として解消する計画。User panelは既存の専用controllerを維持してshellを整理する。全汎用Manager・他transaction画面の改修は別scopeであり、Employeeで到達する同原因の修正を延期する根拠にはしない。段階移行時の未移行editorは[契約案](employee-master.md#emp-01の保存読取り契約案)で停止/先行保存互換を判断する。
 
 - 状態: Open
 - 重大度: High

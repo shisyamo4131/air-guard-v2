@@ -751,6 +751,37 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 未回答
 ## CONF-0061 Employee個人情報の閲覧・編集・保持権限
 
+### EMP-01の判断案（未採用）
+
+2026-09-06の計画保存承認は、以下の個別仕様への回答とは扱わない。現実装は[再照合](employee-master.md#現行経路の再照合)、工程は[Employeeロードマップ](../roadmaps/employee.md)を参照する。ここでは「人事が原簿、労務が保険を担当する」という未確認の業務分担を前提に職掌別の案を提示する。
+
+Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理者は下表の全通常操作を許可する案だが、super-user例外は追加しない。複数の既知roleは許可の和集合とし、roleなし・未知role・直接permissionからmasterアクセスを導かない。現catalogの統括/人事のemployees:write、他4roleのemployees:readと、現在Rulesの広い同社許可とは異なる提案である。
+
+| 情報/操作 | 統括 | 人事 | 労務 | 法務 | 管制 | 経理 |
+|---|---|---|---|---|---|---|
+| code・表示名・表示カナ・肩書 | RW | RW | R | R | R | R |
+| Employee作成、入社日訂正 | — | RW | — | — | — | — |
+| 在籍状態・在籍期間の業務参照 | R | R | R | R | R | R |
+| 原簿の氏名/カナ・性別・生年月日・住所・携帯・email | — | RW | R | — | — | — |
+| 国籍・外国人氏名・在留資格/期限・就労制限 | — | RW | R | — | — | — |
+| 警備員登録有無/日、資格名・種別・取得日・期限 | R | RW | R | R | R | — |
+| 資格番号・発行元、本籍 | — | RW | — | — | — | — |
+| 血液型・緊急連絡先一式 | — | RW | R | — | — | — |
+| 3保険の番号・状態・加入喪失・historyと通常遷移 | — | RW | RW | — | — | — |
+| 備考 | — | RW | — | — | — | — |
+
+統括も人事同等に扱う代替は既存の広い担当を維持できるが、保険/個人情報への常時アクセスが広がる。会社管理者・人事へ集中する代替は単純だが、労務の保険処理には人事roleの併用が必要になる。法務が在留/警備書類を確認する場合や管制が緊急連絡を担う場合は、必要なfieldだけを明示して上表へ追加する。役割名から用途を推測して開放しない。既存の統括による他Userへの人事role付与は維持するため、完全な職務分離を保証する案ではない。
+
+表示名等を編集する統括が全文PIIを読めない場合は、serverが現在の全文candidateを検証し、clientへはそのactorのfieldだけ返す。低権限検索は公開を認めた識別fieldだけで照合し、foreignName等の非公開fieldやraw tokenMapによる検索結果からの漏れも防ぐ。原簿氏名を使う既存の勤怠export等は、その用途のreaderへ必要なfieldを返すか利用actorを変えるかを回答時に確認し、表示名への無断置換はしない。
+
+退職済みEmployeeの通常訂正・資格・必要な保険処理は同じactor条件で許可する案。入社日は人事/会社管理者だけが訂正し、退職済みなら既存退職日を超える変更を拒否する。employmentStatus/dateOfTermination/reasonOfTerminationは通常更新から変更せず、不存在も保持する。退職・誤訂正・User操作は既存UWB仕様を維持する。
+
+保険の提案は3状態を維持し、人事/労務/会社管理者に加入・完了・取下げ・喪失・除外を許可、history末尾を戻す既存復元は会社管理者だけに限定する。復元は監査履歴ではなく過去entryを消費する操作である。手続中の喪失/除外は直接行わず、先に取下げる案を推奨するが、現実装からの操作制限変更なので回答が必要。退職flagでEmployee退職やUser/Auth削除を起動しない。history自由差替え・古い状態の二重遷移を拒否し、監査全面刷新・保持期限・法令適合をこの案で確定しない。日付/番号の追加条件は現schemaとの差を設計reviewし、制度上の要件を推測で追加しない。
+
+利用者判断: 上表の職掌分担、保険復元actorと手続中操作、退職後編集の採否。回答が揃うまで関連operationの実装・仕様化・EMP-01加点は行わない。
+
+### 既存確認事項
+
 - Status: Open
 - Source segment/doc: SPEC-SEG-024、SPEC-SEG-051; `employee-master.md`、`employee-insurance.md`
 - Evidence: employees:readと同一会社全read/writeで高感度fieldとarchiveへアクセス可能。保険番号・加入/喪失日/理由・履歴も追加write guardなしでEmployee詳細に表示・更新され、RESIGNED Employeeでも操作可能。historyにactor/timeはなくrollbackはentryをpopする。
@@ -798,6 +829,18 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 2026-08-24 部分回答。通常退職はEmployeeと業務記録を保持し、本登録User連携ではUser/Authだけを物理削除する。仮User連携は既存の仮登録削除後にEmployee-onlyとして退職する。誤退職訂正はarchive restoreではなく、元の退職operationを残した専用のACTIVE訂正とする。Employeeの法定保持後匿名化、誤登録archive、archive復元は未回答のままFUT-0078へ残す。
 
 ## CONF-0065 Employee code・表示名・退職者候補の規則
+
+### EMP-01の判断案（未採用）
+
+- codeは任意・手入力を維持し、自動採番・一意性・既存data修復を追加しない。実際に到達する勤怠Selectの空code例外は表示互換の修正対象とする。
+- 姓名変更時は現schema同様にdisplayNameを再生成するが、同じ保存で表示名を明示変更した場合は明示値を最後に採用する案。displayNameKanaは独立入力を維持し、姓名カナ変更から自動同期しない。変更した許可fieldに応じて検索用派生値を再生成する。
+- 在職一覧は空検索で一覧を出しフリガナ順、退職検索は空なら0件を維持する。低権限の並び/検索fieldは[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)で確定し、非公開氏名を勝手に開けない。
+- 新規作成は在職一覧だけに集約し、退職者検索の現plusを非表示にする案。作成actorはCONF-0061へ従う。通常候補のACTIVE/RESIGNED混在と期間内在籍者の取得は現契約を維持し、新規配置を在職者だけに制限する業務変更をこの改修から導かない。
+- 過去記録はEmployee IDから現在master名を表示する現方式を維持し、過去名snapshotを新設しない。既存選択IDは空cacheでも解決する。
+
+利用者判断: 上の現状維持と明示変更（表示名同時入力の優先順位、退職検索の作成入口除去）の採否。未回答のまま確認済み仕様へ移さない。
+
+### 既存確認事項
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -1279,6 +1322,8 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0105 従業員資格・警備員登録・機微情報の閲覧編集actor
 
+EMP-01では[CONF-0061の職掌別matrix](#conf-0061-employee個人情報の閲覧編集保持権限)と一括確認する。資格の有効性を示すfieldと番号/本籍/緊急連絡先を分け、役割名だけで法務や管制へ全文を返す案にはしない。以下のStatus/Answerは未回答のまま保持する。
+
 - Status: Open
 - Source segment/doc: SPEC-SEG-036; `qualification-management.md`
 - Evidence: employees:read pageから編集UIへ到達し、Rulesは同社全Userへ資格番号、本籍、緊急連絡先を含むdocument全体writeを許す。
@@ -1458,6 +1503,20 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 未回答
 
 ## CONF-0120 Employee個人住所geocodingの目的・同意・保持
+
+### EMP-01の判断案（未採用）
+
+通常作成・住所更新から自宅住所をgeocodingへ新規送信しない案を推奨する。現codeには送信・座標保存・住所/座標logの経路があるが、今回検索したapplicationとinstalled schemaの範囲では、自宅座標による距離/配置判定の業務callerを確認していない。caller未発見は全環境で不存在という保証ではない。
+
+停止案は住所文字列の登録・編集を維持し、作成/住所保存/no-op/国籍保存のprovider呼出し0を検証する。既存location/geopointは通常patchで削除・書換えず保持するため、住所変更後は古い座標になり得る。現住所の正しい座標として表示・利用せず、公開対象から外す設計が必要である。旧raw documentを読むactorがいる間は座標非公開が完成したとは扱わず、read方式はEMP-01でactor matrixと照合して決める。既存座標削除は別のdata判断と承認で行う。
+
+継続案では、必要な画面/用途、精度、送信者、閲覧者、provider送信、失敗時保存可否、log、保持を先に確定する。現共通Callableをそのまま安全な住所writerとして再利用しない。他masterに及ぶ入口認可・log是正は対象を説明した依存segmentとし、Employee操作だけ止めても共通公開入口のriskは解消したとはしない。いずれの案も今回の外部接続や座標削除を許可するものではない。
+
+既存座標の代替案は、住所を実際に変更した通常保存に限ってlocation/geopointをnull化し、古い座標の残存を防ぐ方式である。住所不変の更新は既存値/不存在を維持する。これは通常保存のfield所有範囲を広げる製品仕様変更なので採用判断が必要であり、既存全件の一括削除とは分ける。新規作成では座標未取得の現schema既定を用い、実装時に正確な表現を再照合する。
+
+利用者判断: 新規送信停止案と、既存座標の保持/住所変更時null化の採否。継続する場合は上記の具体用途・境界が必要。
+
+### 既存確認事項
 
 - Status: Open
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`

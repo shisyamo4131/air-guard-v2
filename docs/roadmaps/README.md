@@ -7,6 +7,7 @@
 | 対象 | ロードマップ |
 |---|---|
 | AirGuardV2 正式運用準備 | [airguard-v2.md](airguard-v2.md) |
+| Employeeマスター改修 | [employee.md](employee.md) |
 | Siteマスター改修 | [site.md](site.md) |
 | Outsourcerマスター改修 | [outsourcer.md](outsourcer.md) |
 | Customer取引状態の表示・編集 | [customer-status.md](customer-status.md) |
