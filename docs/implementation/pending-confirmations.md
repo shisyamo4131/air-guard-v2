@@ -799,7 +799,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
-2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot exact schema、archive read、依存query/全writer、工程配分が残る。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
+2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot/raw保持と依存query/必要writerの技術案は具体化済み。archive read・操作表示・段階移行/工程配分は最終確認事項として残る。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
+
+最終確認案: archiveの直接readは通常原本と同じ7actorへ許可し、通常一覧/候補への混入、直接CUD・restoreは拒否する。archive管理一覧は追加しない。旧read全拒否案と区別して採否を確認する。snapshot/raw保持・従属query・既存索引確認は設計へ具体化した。物理削除の実行機能を後続専用工程とし、今回archiveまでをEMP-05に含める提供時期も[工程案](../roadmaps/employee.md#最終確認用の工程割当案)で提示する。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -813,15 +815,12 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0065 Employee code・表示名・退職者候補の規則
 
-### EMP-01の判断案（未採用）
+### EMP-01最終確認案
 
-- codeは任意・手入力を維持し、自動採番・一意性・既存data修復を追加しない。実際に到達する勤怠Selectの空code例外は表示互換の修正対象とする。
-- 姓名変更時は現schema同様にdisplayNameを再生成するが、同じ保存で表示名を明示変更した場合は明示値を最後に採用する案。displayNameKanaは独立入力を維持し、姓名カナ変更から自動同期しない。変更した許可fieldに応じて検索用派生値を再生成する。
-- 在職一覧は空検索で一覧を出しフリガナ順、退職検索は空なら0件を維持する。低権限の並び/検索fieldは[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)で確定し、非公開氏名を勝手に開けない。
-- 新規作成は在職一覧だけに集約し、退職者検索の現plusを非表示にする案。作成actorはCONF-0061へ従う。通常候補のACTIVE/RESIGNED混在と期間内在籍者の取得は現契約を維持し、新規配置を在職者だけに制限する業務変更をこの改修から導かない。
-- 過去記録はEmployee IDから現在master名を表示する現方式を維持し、過去名snapshotを新設しない。既存選択IDは空cacheでも解決する。
+- codeは任意・手入力・重複可、表示名カナは独立入力を維持する。通常候補のACTIVE/RESIGNED、在職空検索一覧/カナ順・退職空検索0件・期間内在籍者の条件と、過去記録が現在master名を使う方式を維持する。全項目read採用済みのため、非公開氏名のfield選定を再度の前提にしない。
+- 明示変更は、姓名と表示名を同時に変更したら入力した表示名を最後に適用すること、作成を在職一覧へ集約し退職検索のplusを除去すること。根拠・影響・検証は[最終案](employee-master.md#利用者へ提示する操作案)へ集約する。
 
-利用者判断: 上の現状維持と明示変更（表示名同時入力の優先順位、退職検索の作成入口除去）の採否。未回答のまま確認済み仕様へ移さない。
+利用者判断: 上記の表示名優先順位と作成導線の採否。技術的な保存・競合・座標契約は[設計](employee-master.md#通常保存の技術契約)に具体化し、別々の承認質問に増やさない。回答前に確認済み仕様へ移さない。
 
 ### 既存確認事項
 

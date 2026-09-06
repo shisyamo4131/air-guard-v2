@@ -24,9 +24,44 @@
 
 `EmployeeAutocomplete`のcreatable枝、`ScheduleCalendar`は今回の静的検索で現在の到達callerを確認できない候補であり、runtime全経路で不使用と証明したものではない。
 
+## EMP-01最終案の位置付け
+
+2026-09-06再開時点の設計具体化。通常CRUD・参照保護の技術選択は以下へ集約し、同じ選択肢を未決事項として増やさない。利用者への最終確認は、表示名/作成導線、archive閲覧範囲、工程割当とpurge提供時期の3まとまりに絞る。採用回答前に確認済み仕様や得点へ移さない。現在の実装を変える承認はEMP-02以降に分ける。
+
+### 通常保存の技術契約
+
+| 項目 | 最終案 | 拒否・成功・再試行の扱い |
+|---|---|---|
+| 保存単位 | 作成、基本、国籍、警備員登録、資格配列、保険種別ごとの遷移を専用Callableと共有operation contractで実装。原本は単一Employeeを維持 | tenantは認証contextで確定。現在Auth/User・許可role・最新ACTIVE・許可field・型/相関をserverで検証。直接client CUDと汎用matchの迂回を閉じる |
+| 通常更新 | 基本・国籍・警備員の変更fieldだけを最新原本へ重ね、派生fieldとuid/updatedAtを必要時だけ保存 | no-opはwrite 0。通常可逆fieldはlast-write-winsを受容。同じ編集sectionの外部変更を受信したらdraftを保持し再読込を要求する。通知前の競合が残ることを明示 |
+| 相関する変更 | 入社日変更は開始時点のdateOfHire、国籍/警備員flag解除は消去対象のfield群、資格は配列全体、保険は当該保険map全体を局所期待値として照合 | 全Employeeのrevision/lockは追加しない。不存在とnullを区別。対象が変わっていればwrite 0・入力保持・再読込。別sectionの更新は保持 |
+| 資格の行識別 | 現Certification.keyはname由来なので永続IDにしない。操作はadd/update/remove、更新/削除は開始時の配列と行位置を指定し、serverが期待配列全体の一致を確認して対象行だけ変更 | 同名行でも位置を誤らない。別行の同時変更も上書きせず競合拒否する。新資格ID・配列自動merge・新たな重複資格禁止は追加しない。name/type/issuedBy/issueDateAt/expirationDateAt/serialNumberを入力対象とする |
+| 保険の再送 | 3保険それぞれで現6操作を維持し、保険mapと当該保険の巻き戻さない世代値を期待値として正規遷移を計算 | 喪失→履歴復元で同じmapに戻っても古い要求は拒否。世代値を同transactionで進め、historyの二重push/popを防ぐ。原本再取得で反映有無を案内し、曖昧なら結果不明を保つ |
+| 作成 | dialog開始時に新規IDを生成してmemory保持。serverは同ID原本/archive不存在の場合だけcreate。新規ACTIVE・既定の従属field・actor/時刻をserverで確定 | ID再生成による自動再送をしない。既存同IDを上書きしない。応答不明は同IDを現在権限で取得し、入力とserver派生値を照合。後続変更で照合不能なら成功断定しない。同dialog中のみ復旧支援し、PII draftを永続化しない |
+| 住所と座標 | [共通設計](address-geocoding.md#共通仕様との対応2026-09-06)を使う。取得対象は現fullAddressのprefCode/city/address。location/geopoint未取得は共にnull | 取得前に認可・入力を検査し、外部処理後の最終transactionで現在認可・ACTIVE・取得基準住所を照合する。古い結果は保存しない。国籍/保険等では取得0回。無期限に保存を待たせずprovider timeoutを取得失敗として住所保存へ進める |
+| raw保存 | 検証用Classと永続化patchを分け、既存rawのunknown field・不存在・他sectionを保持 | schemaの全beforeUpdateやconverter出力で全体setしない。入力のunknown/dotted field、prototype経由field、非finite値、不正日時は拒否する |
+| 日時と期待値 | wireでは日付入力と局所期待値を別codecで扱う。入力日付は有効なJST暦日を表すYYYY-MM-DDを受け、現schemaに必要なDateへ変換。期待値はTimestampのseconds/nanoseconds・不存在を失わないtag付き値でrawと比較 | 任意Date.parseに委ねず、不正暦日・余分なfield・型偽装を拒否。既存の時刻を期待値codecで日付だけに丸めない。入力変更のない日時fieldは書かない |
+
+editor開始時の期待値は、converterを通さない原本snapshotから、対象field/map・保険世代値・Timestamp精度を同時に取得する。表示用Classとは別のmemory contextに保持し、Class初期化で消えたfieldを「legacy不存在」と扱わない。取得失敗・権限不足・途中の取得状態では保存不可とし、再取得後に開始する。原本snapshotでmapの不存在を確認した場合だけlegacy 0を適用する。新collectionや専用read APIは追加しない。既存raw購読を再利用する場合も原本とcontextの同時点性を維持する。
+
+編集中のlistener更新で世代値だけを新しくして古いdraftへ組み合わせない。外部変更時は入力を保持して再読込を求め、明示再読込でdraftとraw期待値を一緒に置換する。保存後・再開時も原本snapshotから取得できること、Classに世代値が現れない場合・取得失敗・古い応答を受入れ試験へ追加する。閉じる/tenant・権限変更ではcontextを破棄し、PIIを永続化・log出力しない。
+
+保険の世代値はEmployee内のapplication所有field `insuranceOperationVersions`へ、healthInsurance/pensionInsurance/employmentInsuranceの3つの非負safe integerを持たせる技術案とする。履歴復元でも巻き戻さず、成功した対象保険操作だけを1増加し、上限時は拒否する。全Employee共通revision・lock・操作台帳へ広げない。新規Employeeはserverで3つを0に初期化する。既存documentでmap自体が存在しない場合だけlegacyの3つの0として扱い、最初の成功する保険操作と同transactionで保存する。mapが存在する場合のnull/欠損key/不正型は0へ補正せず拒否する。通常の他section保存はこのfieldを保持し、clientに変更させない。別packageのschemaに追加せず専用raw patchで保存し、archive snapshotの既知optional fieldとして検証・保持する。一括backfillは既定にせず、旧writerの拒否と共存条件をEMP-04/09で検証する。
+
+mapだけの比較ではA→喪失→履歴復元→A後の古い喪失要求を識別できないため、この限定metadataを加える。受入れには「喪失→復元→古い喪失要求」「復元→再加入等→古い復元要求」、世代値不存在/null/不正・別保険同時変更を含める。拒否時はwrite 0とし、過去操作の結果を特定できない応答不明を成功断定しない。
+
+入力fieldは下表を正とし、資格/保険の具体配列構造は現schema・保険調査へ従う。API識別子や内部helper名の選択は通常の実装詳細であり、別の業務承認事項にしない。各工程で直接回帰・代表UI・同時保存の失敗経路を検証する。
+
+### 利用者へ提示する操作案
+
+- codeは任意・手入力・重複可を維持する。姓名だけの変更では現schemaの表示名生成を維持し、同じ保存で表示名を明示変更したときは明示値を最後に適用する。表示名カナは独立入力を維持する。
+- 在職一覧は空検索で一覧、退職検索は空なら0件を維持。新規登録を在職一覧に集約し、退職検索のplusは外す案とする。通常候補のACTIVE/RESIGNEDおよび期間内在籍者は現条件を維持し、新規配置を在職者だけへ制限しない。
+- archive閲覧は通常Employeeと同じ会社管理者・既知6業務roleへ全項目を許可する案とする。同社User全員へは開かず、直接CUD・復元は禁止する。通常一覧/候補へ混ぜず、今回archive管理一覧は新設しない。旧「直接readも全拒否」案からの変更は閲覧機能の判断として明示する。
+- localのEMP-02中は未移行の警備員/資格/保険editorを一時read-onlyとし、EMP-03/04で再開する案とする。UWB専用操作は維持し、Devへ途中状態を反映しない。旧全文writerを暫定許可して移行済fieldへ書ける状態にはしない。
+
 ## EMP-01の保存・読取り契約案
 
-通常編集・退職・誤登録archive/物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。退職後の通常編集禁止、在職Employeeの保険履歴復元actorと現行遷移維持は[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)で追加採用済み。その他の保存operation・競合・段階移行の詳細は未採用案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
+通常編集・退職・誤登録archive/物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。退職後の通常編集禁止、在職Employeeの保険履歴復元actorと現行遷移維持は[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)で追加採用済み。保存operation・競合の技術選択は上の最終案へ集約する。操作表示・archive閲覧・段階移行/工程割当は最終確認前の提案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
 
 ### EMP-02の入力と保存対象
 
@@ -44,7 +79,9 @@ serverは最新raw documentを取得し、不存在とnullの区別を保持し�
 
 座標取得失敗時の保存可否は回答済みである。新規作成・住所変更時は、入力・認可・競合検証が成功すれば住所を保存し、古い座標を消して未取得を知らせる。住所不変の更新では既存座標を維持する。住所が後から他actorに変更された場合に古い取得結果を保存しないこと、provider失敗とFirestore保存失敗を分けること、未取得表現と結果表示をEMP-02で検証する。実data一括変更や自動再取得を追加する指示ではない。
 
-### 作成・競合・段階移行
+### 作成・競合・段階移行（最終案整理前の比較履歴）
+
+現在の技術選択は上の最終案を参照する。以下は比較の経緯であり、同じ技術項目の再質問を要求しない。
 
 EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業務仕様の変更を分ける。下表では退職後編集禁止と保険のactor・現行遷移維持を採用済みと明記し、それ以外の技術案を未採用として区別する。
 
@@ -76,7 +113,7 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 ### EMP-01から次工程へのreview結果
 
-全項目read採用によりDTO比較は不要。archiveの方式と必要な従属writer保護はADR 0060へ更新した。通常保存/氏名・段階移行の詳細とarchive工程配分はEMP-01の残作業である。以下の設計をruntime検証済みとは扱わず、EMP-02準備完了の判定と区別する。
+全項目read採用によりDTO比較は不要。archiveの方式と必要な従属writer保護はADR 0060へ更新した。通常保存・snapshot・依存queryの具体案は本書へ集約し、利用者判断を要する操作/閲覧・工程配分は最終確認事項とする。以下の設計をruntime検証済みとは扱わず、EMP-02準備完了の判定と区別する。
 
 ## Employeeのarchive設計
 
@@ -86,26 +123,71 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 - 専用Callable入力は`employeeId / reason / operationId`の3つを基本とし、任意path・tenant・原本snapshotをclientから受け取らない。現在Authと同社の有効な本登録会社管理者/統括をserverで検査し、System状態もSiteと同じく確認する。
 - transaction内で現在User、通常Employee、同ID `Employees_archive`、従属catalogを読む。原本は誤登録・重複として指定され、状態はACTIVE/RESIGNEDを識別する。RESIGNEDを「履歴不要」の根拠にはせず、保持すべきlifecycle/業務参照があれば拒否する。通常編集でRESIGNEDを変える抜け道にしない。
-- snapshotはEmployeeの検証済みraw fieldと欠損状態を保持し、schema初期値で既存dataを補完・正規化してから移さない。形式version、原本snapshot、実行者・server時刻・理由・操作IDのenvelopeを作成し、同transactionで原本をdeleteする。既存archiveへの上書き、原本/archive両存、不正形式、検査失敗はwrite 0で拒否する。Employeeのexact snapshot schemaはEMP-01残contractとして確定する。
+- snapshotはEmployeeの検証済みraw fieldと欠損状態を保持し、schema初期値で既存dataを補完・正規化してから移さない。形式version、原本snapshot、実行者・server時刻・理由・操作IDのenvelopeを作成し、同transactionで原本をdeleteする。既存archiveへの上書き、原本/archive両存、不正形式、検査失敗はwrite 0で拒否する。exact envelopeとraw保持の条件は次の保存形式に固定する。
 - 応答不明時は同じactor・対象・理由・操作IDを照合し、確認できた同一archiveだけを再送成功とする。不存在だけを成功扱いにしない。UIは成功後に通常一覧/候補/cacheから外し、古いdraftからの更新はnot-foundとして拒否する。
-- 推奨read案は`Employees_archive`のclient直接read/CUDを拒否し、今回通常のarchive一覧・restore画面を設けない。原本全項目readからarchive readへ許可を広げない。必要なarchive確認は後続の管理操作で限定提供する。この閲覧案の採否は、通常Employeeの全項目read回答とは別にreviewする。
+- archive閲覧は上の操作案を最終確認対象とし、原本と同じ7actorのread・直接CUD/restore拒否を提案する。これは採用回答前の案であり、原本全項目readの承認だけを根拠に自動開放しない。
 - 旧generic delete/restoreと旧全文setによる再生成を閉じ、通常作成は同ID archiveがあれば拒否する。`functions/modules/Employees.js`のUser削除triggerはarchiveからUser/Authを消す作用を停止し、遅延旧eventもUserを削除できないことを確認する。既存UWB退職・User削除専用operationは保持する。
+
+### archiveの保存形式
+
+新規envelopeのexact keyは`schemaVersion / employee / audit`、versionは整数1。`audit`のexact keyは`operationId / reason / actorUid / archivedAt`とし、理由はtrim後1〜200文字、IDは1〜128文字のpath-safe文字列、日時はserver Timestampとする。入力は`employeeId / reason / operationId`だけを受け取る。clientにaudit・原本・保存pathを指定させない。
+
+`employee`はtransaction内で読み取ったraw snapshotをそのまま保持する。次の既知fieldを検証し、未知fieldは元データの一部として無加工で保持する。unknown入力を許可する意味ではない。`new Employee(raw).toObject()`、JSON往復、保存hook、外部geocodingをarchiveのコピーに使わない。
+
+| 検証する既知部分 | fieldと条件 |
+|---|---|
+| 識別・監査 | docIdは対象pathと一致、uidは非空識別子、createdAt/updatedAtはTimestamp。内部propertyを補完しない |
+| 基本・国籍 | 上のoperation field表に従う。現在schemaの必須・型・長さ・相関を検証用candidateで検査し、optional不存在をコピー時にdefault補完しない |
+| 警備員登録 | hasSecurityGuardRegistration, dateOfSecurityGuardRegistration, bloodType, emergencyContactName, emergencyContactRelation, emergencyContactRelationDetail, emergencyContactAddress, emergencyContactPhone, domicile。現条件付き必須を維持 |
+| 資格 | securityCertifications。各entryのname/type/issuedBy/issueDateAt/expirationDateAt/serialNumberと、存在するkeyの型を確認。未知fieldは保持し、name由来keyをarchive時に再生成しない |
+| 保険 | healthInsurance/pensionInsurance/employmentInsurance。status/previousStatus/enrollmentDateAt/number/lossDateAt/lossReason/isProcessing/isRetire/historyの既知型・現schema条件を確認。history entryのstatus/previousStatus/enrollmentDateAt/lossDateAt/lossReason/numberを保持。履歴を再計算・消去しない |
+| 保険操作metadata | insuranceOperationVersionsは既知optional field。存在するなら上記3key・非負safe integerを検証し、存在しなければarchiveで補完しない |
+| lifecycle | employmentStatusはACTIVE/RESIGNED。RESIGNEDではdateOfTermination/reasonOfTerminationと入社日の相関を検査。ACTIVEの退職2fieldは不存在とnullを区別して保持する。誤退職訂正が2fieldをdeleteする現契約に従う |
+| 派生・座標 | fullName/fullNameKana/fullAddress/prefecture/tokenMap/location/geopointは存在する既知型を検査。座標値は有効範囲・有限性を確認。古い派生値をarchive操作で正規化・修復しない |
+
+日時はrawではTimestamp、検証用candidateだけDateへ変換する。未知fieldを含むrawと`envelope.employee`の深い同値、欠損/null・入れ子の未知fieldをtestする。形式不正・コピー不能・保存容量等でcommitが失敗した場合は原本を保持し、archive成功とは扱わない。legacy archiveのflat形状は新envelopeの再送成功対象にせず、同ID衝突として拒否する。既存archiveの一括変換・復元は追加しない。
 
 ### 依存catalogと必要な保存境界
 
 Employeeが誤登録なら、そのIDへの保存済み参照は正常な過去参照として除外しない。Siteの下流siteId snapshot除外をEmployeeへ流用しない。次のcatalogを設計対象とし、各field・writerの網羅を実装前の静的照合と対応testで閉じる。queryは原則存在検出の`limit(1)`、型・欠損の既知不整合は拒否する。
 
-| 対象 | archive拒否の対象・必要な変更 |
+`P = Companies/{認証済みcompanyId}`、`E = 対象Employee ID`。archive transactionで次を読み、状態・期間・処理完了を理由に参照を除外しない。
+
+| 保存先 | 検査方法 |
 |---|---|
-| SiteOperationSchedules / OperationResults | 実従業員明細に含まれるID。保存候補から導くemployeeIdsとの一致を強制。作成/複製/実績化は全ID、更新は追加IDだけ通常Employeeを検査 |
-| ArrangementNotifications | 従業員のemployeeId。外注明細をEmployeeとして判定しない。作成・参照変更の存在確認と直接write拒否条件を追加 |
-| DailyAttendances / DailyOperationsByEmployee / SiteEmployeeHistories | employeeIdを保持する本人の業務記録。新規作成・背景再生成のtransactionで通常Employeeを読む。参照元の削除/訂正・不要な集約の削除は既存計算を維持 |
-| Users / EmployeeUserReservations / lifecycle | User.employeeId、Employee予約、対象Employeeに対応するlock/head/operation。専用writerの既存Employee読取りを再利用できるか確認。記録あり/不整合を拒否し、User/Auth/監査を消してarchive可能にしない |
-| Billingsの埋込みOperationResults | 埋込みEmployee IDも拒否対象にする設計。単純なroot employeeId queryでは検出できないため、保存済みsnapshotから導出するroot employeeIdsを検索用に追加する案。金額・明細snapshotの意味は変えない。更新する全経路で候補から再計算し、追加Employeeの存在を同transactionで確認する。直接writeの索引偽装を閉じる |
+| P/SiteOperationSchedules、P/OperationResults | employeeIds array-contains E、limit(1) |
+| P/ArrangementNotifications、P/SiteEmployeeHistories、P/Users | employeeId == E、limit(1)。Userの仮/無効も拒否 |
+| P/EmployeeUserReservations/E | document直接取得。存在・不整合は拒否 |
+| P/EmployeeLifecycleLocks/E、P/EmployeeLifecycleHeads/E | document直接取得。headは完了済みでも拒否 |
+| P/LifecycleOperations | employeeId == E、limit(1)。種類・状態で除外しない |
+| P/Billings | 新規query用employeeIds array-contains E、limit(1) |
+| P/DailyAttendances、P/DailyOperationsByEmployee | 本人IDと埋込み全実績の従業員IDの和集合を持つ新規employeeIds array-contains E、limit(1) |
 
-archiveで検索に使う索引は、Billingの新fieldだけでなく、既存予定・実績のemployeeIdsと実明細の一致も開放前の確認対象とする。旧Rulesで一致が強制されなかった既存dataを、新writer導入だけで整合済みと扱わない。対象tenant・collection・fieldを限定して整合を確認し、必要な補正は別承認のmigrationとして扱う。未確認・不一致・検査不能の対象ではarchiveを開放しない。全repositoryの全件走査へ広げない。
+`UserLifecycleLocks`はUser UIDキーでありEmployee IDでgetしない。Userが存在すればその時点で拒否する。LifecycleOperations配下のEventsは親operation存在で拒否できるためcollection-group検索を増やさない。global UserEmailReservationsをEmployee IDで検索しない。孤立event・不整合が実際に判明した対象は正常と扱わず、別の限定repairとして処理する。
 
-Billingのquery用field案は、既存dataの欠損が「参照なし」となるためbackfill/整合確認がarchive開放の条件になる。EMP-01で対象writer・index・影響を確定し、実環境は別承認の限定migrationを行う。実行未承認のまま全Billing走査・無条件index追加を行わない。検索fieldを追加せずtransactionで全埋込みを読む代替は件数・処理上限の根拠が不足するため既定にしない。query可能性が未解決の間はarchiveを開放しない。
+### 埋込み参照・索引・保存経路
+
+静的再確認で、勤怠と従業員別稼働は該当本人の明細だけでなくOperationResult全体を保存すると分かった。Aの勤怠内にもBへの参照が残るため、root employeeIdだけの検査案を修正する。Billingと合わせた3collectionへ、保存candidateの実参照から導くroot employeeIdsを追加する案とする。これは業務計算やsnapshot内容を変更しない検索用dataである。
+
+導出元はOperationDetailの`isEmployee === true`かつ`id`、予定/実績のemployees、埋込みoperationResultsの全従業員明細とする。既存の申告employeeIdsや派生employeeIdだけを信頼しない。外注明細は除き、各元配列の形状と明細の整合を検査し、重複を除いた安定順のID集合にする。日次2collectionではroot本人employeeIdも和集合へ含める。不正明細をskipして索引から落とさない。
+
+| 保存境界 | 所有する対応・実source |
+|---|---|
+| 予定 | `utils/siteOperationSchedule/siteScheduleGuard.js`の単件/複数create/updateと複製。必要なworker明細保存だけserverへ接続し、直接Rules迂回を閉じる |
+| 実績 | `handlers/operationResultHandlers.js`と`components/OperationResult/Generator/index.vue`の作成/編集/実績化。明細と索引を同じ境界で確定 |
+| 通知 | `composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`からのnotifyと予定保存hook、ArrangementNotificationのcreate/update。本人種別とid/employeeIdの対応を強制 |
+| 勤怠 | `functions/modules/dailyAttendances/`のsyncOperationResultToDailyAttendances、addOperationResultToDailyAttendances、removeOperationResultFromDailyAttendances、saveDailyAttendances。追加・置換・削除・移動元の更新でも索引を再計算 |
+| 従業員別稼働 | `functions/modules/dailyOperationsByEmployee/`の対応するsync/add/remove/save4処理。勤怠と同じ索引・追加参照検査を適用 |
+| 請求 | `functions/modules/billings/`のaddOperationResultToBilling、removeOperationResultFromBilling、syncOperationResultToBillingの全分岐。新規・同先更新・移動・削除先双方を対象にする |
+| 現場履歴 | `functions/modules/siteEmployeeHistories/`のrebuildHistory/rebuildHistories/rebuildAllHistories。生成はEmployee存在を確認、不要履歴削除は現条件を維持 |
+| User/予約/lifecycle | `functions/modules/auth/`のcreateTemporaryUser/setupUserAccount/deleteTemporaryUserとlifecycleのterminateEmployee/reinstateEmployee/lifecycleOperationStore/reconcileLifecycleOperations。既存の同transaction Employee読取りと予約排他を照合して再利用する |
+| 旧入口 | `functions/modules/Employees.js`のUser削除作用、旧全文set・generic delete/restore、対象collectionの個別/汎用Rulesを閉じる |
+
+新fieldを現Classへ代入するだけで保存できたと扱わない。3collectionの最終保存payloadにraw query fieldを明示合成するapplication内のserver保存処理を使い、同transactionで業務payloadと索引を確定する。既存serializerによるfield消失・二段階writeを避け、通常create/updateだけでなく移動・削除同期をtestする。Classが計算する金額・集約の意味は維持し、package変更を前提にしない。必要な参照readは全writeより先に完了し、背景transactionの途中へreadを追加しない。
+
+既存dataの確認は対象tenantの予定・実績のemployeeIds/実明細、通知のemployeeId/id/種別、日次2種・請求の新employeeIds/全埋込みに限定する。型・欠損が不明なまま「従属なし」としない。承認済み環境でdry-run→必要なquery fieldのbackfill→一致検証を行い、直接/旧writerの迂回が閉じてからarchiveを開放する。未確認・不一致の対象では拒否する。全repository/全tenantを走査しない。
+
+query用fieldの実効schema変更と整合確認は必要だが、実data件数・不整合・対象indexのremote状態は未確認。実行前に対象・backup・dry-run・apply・post-check・旧client停止とrollbackを別承認のreleaseへ固定する。削除後のrollbackで古い広域writerを再開せず、archive機能停止を先に行う。
 
 ### 読取り負担と競合対策
 
