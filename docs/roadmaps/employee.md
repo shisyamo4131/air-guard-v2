@@ -8,6 +8,7 @@
 - 実行単位: 最新指示「EMP-04まで一気通貫で作業開始」によりEMP-02〜04を連続実施する。工程ごとの作業・次工程review・報告・検証・local統合を維持し、EMP-03/04の再承認は求めない。EMP-05以降は開始しない。
 - 最新の採用: [ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)により、直接物理削除・archive延期と必要な従属writer変更禁止を置換した。Employeeから別archive collectionへの移動と参照整合性を設計し、住所・座標とarchive/物理削除は共通仕様を参照する。actor・全項目read・退職後通常編集禁止・保険の条件は維持する。最終回答で表示名/作成導線、archive同一7actor read、local段階移行、EMP-05の参照保護/archive、purge後続専用工程、9工程の重み合計100も採用した。その後EMP-04までの実装・local検証・review・文書更新・local統合も承認された。
 - 利用者への報告: EMPの作業結果・現在地を報告する際は、本書のマイルストーン表を基にEMP-01〜09の工程名・状態・必要に応じた残作業を一覧で示し、EMP全体の確認済み進捗を併記する。短い作業中の連絡では表を毎回繰り返さず、まとまった報告には必ず付ける。工程内の成果を未確認の割合へ換算せず、部分加点なし・Dev別承認の条件を維持する。
+- EMP-05実装前の再確認: 利用者が設計・review・文書化を指示した。[開発者向け実装前契約](../implementation/employee-master.md#emp-05実装前契約)へ経路/field/actor/競合/開放条件/受入例を補い、開発者・受入・securityの指摘を解消した。[レビュー記録](../verification/employee-05-design-review.md)とともに実装開始時の入力にする。実装開始承認や工程完了とは区別し、55%・EMP-05 Plannedを維持する。
 
 ## 正本と維持する境界
 

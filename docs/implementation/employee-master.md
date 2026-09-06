@@ -139,6 +139,8 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 承認済みの別collection移動・従属なし・会社管理者/統括・非連鎖削除を満たす実装設計である。保存形式と依存queryは下記へ固定し、API名・個別writer差分は実装工程で具体化する。旧直接物理削除案・状態flag比較はADR 0057/0058とGit履歴を参照し、現行案と混在させない。
 
+実装担当者は、この節の保存形式・12従属先に加え、下の[EMP-05実装前契約](#emp-05実装前契約)を読む。後者は対象source、内部順序、失敗時の扱い、受入例を補い、確認済みの業務要件を変更しない。レビューの観測事実と検証結果は[実装前レビュー記録](../verification/employee-05-design-review.md)に分離する。
+
 ### 専用操作と閲覧
 
 - 専用Callable入力は`employeeId / reason / operationId`の3つを基本とし、任意path・tenant・原本snapshotをclientから受け取らない。現在Authと同社の有効な本登録会社管理者/統括をserverで検査し、System状態もSiteと同じく確認する。
@@ -224,6 +226,171 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 実装順は、EMP-02〜04の通常writer保護 → EMP-05のreader/参照writer・Rules・索引対応 → 旧削除trigger/再生成対処 → 専用archiveと候補/cache除外 → 機能間回帰。工程配分と重みは[ロードマップ](../roadmaps/employee.md)で確定した。purge実行は後続専用工程（FUT-0146）へ分離し、EMP-01では共通仕様と設計までとする。
 
 受入れは、許可2actor/人事拒否/他tenant、参照0件/各従属あり/検査失敗、archive対参照保存の両順序、既存索引の欠損/実明細不一致・明細/索引偽装、10人参照不変/1人追加の実read測定、複製/実績化/通知/遅延再生成、User/予約/lifecycle競合、旧削除event、同ID再作成、応答不明・別actor/別操作再送を含む。他Employee/Outsourcer・金額/集計・過去snapshotが変わらないことも確認する。今回の設計reviewはこれらのruntime成功を示さない。
+
+## EMP-05実装前契約
+
+### 開発者の読取り順と作業境界
+
+本節は未実装の技術契約である。現在地・実装開始承認は[ロードマップ](../roadmaps/employee.md)、業務要件は[共通仕様・Employee仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とする。実装担当は通常startup後に、上記archive保存形式・従属catalog、本節、[設計レビュー記録](../verification/employee-05-design-review.md)を読み、担当checkpointのsourceと照合する。API/helper/testの新しい名前は内部実装詳細であり、既存fileや公開済み機能と誤記しない。
+
+- 目的: Employeeの既存全項目read/表示と期間条件を維持し、全ての必要な参照保存を保護してから誤登録archiveを提供する。EMP-02〜04のraw保持・専用保存を壊さない。
+- writer: application/Functions/Rulesは一人のdeveloperへ集中。以下の内部単位を順にreview・検証して統合する。内部単位はEMPの新milestoneではなく、EMP-05の20点を分割加点しない。
+- 対象: 本節のEmployee reader、参照を新設・変更・再生成するwriterとRules、検索用fieldと限定整合確認手段、旧削除作用、専用archive、直接回帰test。参照保護で必要となるOperationBillingの保存境界も含む。
+- 対象外: 金額計算・配置条件・通知内容の新仕様、User/Authの専用業務変更、全manager/cache基盤の刷新、他masterのarchive、package変更、物理削除/restore/定期処理/全件横断診断。統括退職actorとUser shell全面整理はEMP-06。
+- この設計再確認では製品code・Rules・実効schema・実dataを変更しない。将来の実装検証はCodex専用demo/合成data/外部作用deny。Dev・Prod・実data補完・remote設定はEMP-09等の別承認。
+
+### 内部順序と引渡し条件
+
+| 単位 | 所有する作業 | 次へ渡す成果・停止条件 |
+|---|---|---|
+| 05-A reader | Employee専用の認可付きread/cache、期間reader、詳細の保護情報の破棄 | query/型/初期ID/期間内退職者の互換。権限喪失・古い応答・不存在の試験。archive入口はまだ接続しない |
+| 05-B 参照計算と入口 | rawからの参照抽出、保存先ごとの差分、予定/実績/請求編集/通知の専用保存と迂回拒否 | 全入口とoperation所有fieldをtestに対応。既存Site/Customer保護・lock・保存失敗の表示を維持 |
+| 05-C 背景保存と準備確認 | 日次2種/Billingのraw取得・検索field保持・移動/削除/再生成、現場履歴、限定dry-run手段、旧Employee削除作用の無効化 | 保存前read完了、索引一致、遅延再生成拒否。User/lifecycleの既存排他を照合。旧trigger無作用をAPI suiteと別に検証 |
+| 05-D archive | 上記envelope/12従属/同時保存/応答不明、detailからの専用操作、成功後の通常候補除外 | 全必要writerの保護・検索fieldの整合が前提。未確認tenantはserver側で拒否 |
+| 05-E 統合・次工程review | 最終diff、代表UI、全許可/拒否、raw/金額不変、必須gate、cleanup、文書 | 未達をEMP-06/08へ送らない。EMP-06がread/cache/保存境界を迂回しないことを独立確認 |
+
+各単位の委譲前に、下表の具体fileから担当fileと禁止fileを固定する。複数単位の未統合変更を同時に抱えず、source変更後は影響するreview/testを更新する。設計と実sourceが矛盾した場合は当該単位のwriteを止め、原因と必要な設計補正をrootへ返す。単なる内部helper名の決定で利用者へ再質問しない。
+
+### Readerとcacheの契約
+
+現sourceの`composables/fetch/useFetchEmployee.js`は`useFetchBase.js`へ委譲する。共通baseは同IDのpushをskipし、`clearCache()`は検索結果と取得中Promiseを消さない。`composables/dataLayers/employee/useEmployeesInRange.js`は期間queryを購読してcacheへpushするが、期間変更後のsnapshot fetchに世代照合がない。詳細`pages/employees/[id].vue`は汎用`useDocument`と別のUser購読を持つ。これらを既に安全なEmployee read sessionと扱わない。
+
+| 境界 | 実装契約 |
+|---|---|
+| 認可 | 原本/archiveの採用7actorを既存`employeeAllowed(context, false)`およびRulesと照合。companyId/uid・現在のUser/claimの有効性が不明なら開始しない。通常write用3actor判定をreadへ流用しない |
+| 所有scope | Employee専用のfetch/cacheとread sessionへ限定。`useFetch.js`のprovide/injectと現在の呼出名/戻り型を維持し、他masterの`useFetchBase`を一括変更しない |
+| 取得・反映 | 同scope内の必要ID取得を重複抑止し、既存の期間購読と必要IDの通常Employee購読から最新値を反映。ID cacheはupsert、検索結果はID集合と最新cacheを対応づける。全Employeeの追加購読・polling・通知collectionを新設しない |
+| 検索・候補 | 既存の検索条件/limit/returnAllCachedの呼出契約を維持。通常候補では検索結果外cacheを混ぜない。原本更新で検索語/条件に一致しなくなったIDは結果から外し、必要なら当該queryを再取得する。検索cacheを使う場合もmembershipの再評価と失効が前提であり、過去のClass配列を無条件再利用しない |
+| 無効化 | identity/権限変更、購読error、disposeでは、Employeeのitems・検索結果・in-flight所有権・購読・画面の保護値を一緒に破棄し、世代を進める。旧generationの成功/error/finallyは新scopeのdata/loadingを変更しない。現client管理memoryが対象で、配布済みexport等の回収ではない |
+| 期間変更 | ACTIVE/RESIGNEDの現条件を維持。期間snapshot fetchは両query結果が同じrequest generationのときだけ公開。queryからの除外は退職/入社日訂正/期間変更でも起きるため、Employee原本不存在と同一視しない |
+| 不存在 | 通常原本の不存在確認では当該IDを候補・cacheから除外。過去参照のID自体を書き換えたり、archiveから氏名補完して正常扱いしない。空cache・取得中・取得拒否・不存在を区別し、古いPIIを残さない |
+| 詳細 | route/identity/権限/原本不存在で表示rawとUser購読を停止・破棄。read対象がないのに初期値Employeeを編集対象として表示しない。UWB操作そのものは既存controllerを維持 |
+| Class/raw | 既存consumerのEmployee表示型、fullName/code/在籍期間を維持。archiveへのrawコピーや保存期待値には表示Classを使わない。clear後の遅延pushも旧scopeとして拒否 |
+
+直接確認するconsumerはEmployee Autocomplete/ListItem/Tag、Worker Chip、Workers Table/DataTable、`useEmployeesInRange`を使う配置/勤怠/従業員別稼働、勤怠export、Site詳細の専用Employee cache。Site専用cacheは`composables/domain/site/siteDetailAccessSession.js`に既存のscope無効化があり、全Site設計を作り直さずEmployee read認可との接続だけ照合する。日時変更によるquery membershipと、同IDの表示更新を別caseにする。追加購読のreadは下記の参照保存時read数とは分けて測定する。
+
+### 保存経路の閉鎖表
+
+上の従属catalogを増やすものではなく、同じ保存先へ到達する経路を具体化する。下記file/symbolは静的確認した既存入口である。新専用moduleはFunctionsのapplication層に置き、schema package内部を変更しない。
+
+| 保存先 | 既存source/到達経路 | 実装時に閉じる境界 |
+|---|---|---|
+| 予定 | `handlers/siteOperationScheduleHandlers.js`、`composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js`、`composables/useSiteOperationScheduleDuplicator.js` → `utils/siteOperationSchedule/siteScheduleGuard.js` | 単件/複数create/update/複製。Site・日付不変の分岐も対象。既存Site revision/配置即時表示を維持 |
+| 実績 | `handlers/operationResultHandlers.js`、`components/OperationResult/Generator/index.vue`、`pages/operation-results/[id].vue`のworkers/articles完了event | 通常編集と実績化、詳細配列編集後のdoc.updateを同じ参照契約へ。実績createと予定pointer更新のatomic性を保持 |
+| 実績の請求編集 | `components/OperationBilling/Manager/index.vue`、`components/OperationBillings/Manager/index.vue`、請求編集画面とlock操作 | OperationBillingはOperationResultsを保存する派生Class。`item.update()`/`toggleLock()`から古い全文・従業員配列を再保存しない。請求項目/lockの所有fieldだけを最新実績へ反映 |
+| 配置通知 | 予定actionsとGeneratorからのnotify、`components/ArrangementNotification/Manager/index.vue` | 本人種別/id/employeeId整合、通知createと予定更新、通知状態変更。notify内部や予定保存hookのwrite後にEmployee readを足さない |
+| 勤怠 | `functions/triggers/operationResult.js` → `functions/modules/dailyAttendances/`のfetch/sync/add/remove/save | fetch段階からraw保持。本人IDと埋込み全従業員の和集合。新規/同先/移動元・先/削除を同契約へ |
+| 従業員別稼働 | 同trigger → `functions/modules/dailyOperationsByEmployee/`のfetch/sync/add/remove/save | 勤怠と同じ。保存loop開始前に全targetのreadを終える |
+| 請求 | `functions/modules/billings/addOperationResultToBilling.js`、`removeOperationResultFromBilling.js`、`syncOperationResultToBilling.js` | 現在取得と保存が別の同先更新・削除側もtransactionへ。移動元write前に移動先/Customer/追加Employeeを読む。金額計算は変更しない |
+| 現場履歴 | `functions/modules/siteEmployeeHistories/rebuildHistory.js`とrebuildHistories/rebuildAllHistories | 現在history・実績・Siteと必要Employeeをtransactionで読む。不要履歴削除は維持 |
+| User/予約/退職 | `functions/modules/auth/`のcreateTemporaryUser/setupUserAccount/deleteTemporaryUser、lifecycle関連module | 既存User/予約/Employee/operation/headの排他を再利用。setupはUser/予約がarchiveを阻止するため、機械的にEmployee readを追加しない。仮/無効Userや完了headも除外しない |
+| 旧削除 | `functions/modules/Employees.js`、通常entrypoint `functions/index.js` | 旧onEmployeeDeletedのUser検索・削除作用を無効化。同名handlerを無作用化して遅延eventを直接試験。exportを外しただけで既存remote停止済みと記録しない |
+| Rules・公開 | `firestore.rules`、`functions/apis/index.js`、`functions/codex-test/index.js` | 個別と汎用/nestedを一緒に閉じる。日次2種は現状個別matchがなく汎用writeへ到達するため明示境界/汎用除外が必要 |
+
+予定worker詳細の`components/SiteOperationSchedule/WorkerDetailManager/index.vue`（`components/Arrangements/Manager/index.vue`から到達）、請求articlesの`pages/billings/operations/[id].vue`も直接updateの接続対象である。handler名の一覧だけで閉鎖済みとしない。
+
+Class取得後にquery fieldを足すだけでは不十分である。新fieldは再取得時のClass初期化で落ち得るため、取得・検証・保存の各段階でrawと計算用Classを別変数で保持する。既存adapterの全文setや保存hookへ戻さず、raw snapshotを土台にoperation所有fieldと導出索引を保存する。対象documentの削除が既存業務上正しい分岐は削除を維持し、別masterへarchive前提を広げない。
+
+### Operationごとの入力とfield所有
+
+以下は専用保存へ移す操作の設計であり、新しい業務操作の追加ではない。参照を変更する操作はserver保存とし、独立した通知状態更新は下記のclient部分更新を使う。wireは対象ID・操作名・changes・必要なraw期待値に限定し、tenant/actor/任意path/employeeIds/監査field/派生getter/任意の全文snapshotを入力権限にしない。新しいAPI名は公開済み識別子ではない。既存UI/schemaのfield対応をtestのfixtureへ固定する。
+
+概要field群は`siteId, securityType, dateAt, dayType, shiftType, startTime, endTime, isStartNextDay, breakMinutes, regulationWorkMinutes, requiredPersonnel, qualificationRequired, workDescription, remarks`。worker入力群は`id, startTime, endTime, isStartNextDay, breakMinutes, regulationWorkMinutes, isQualified, isOjt`を基本とし、employee/outsourcer種別は明示action/所属配列と照合する。日時の入力とraw期待値は既存Employee設計同様に分離し、保存前に秒/ナノ秒を失わない。
+
+| 操作 | changes所有field | 期待値と維持条件 |
+|---|---|---|
+| 予定概要 | 概要field群の変更分 | Site/日付/時間変更に連動するworker派生field・通知取消も同じ計画へ。変更開始時の相関元/影響配列をraw照合し、実績pointer・Site revisionを保持 |
+| 予定worker | add/update/removeとworker入力群。表示順は限定操作として分離 | 最新employees/outsourcers配列へ対象行操作、開始時raw配列全体の一致。親のSite/日付は最新rawから導出 |
+| 実績概要・worker | 概要field群またはworker入力群 | 現isLockedの通常編集拒否を維持。解除flagを混入させない。Customer/取極めは既存Site連動条件から導出 |
+| 実績articles | articleId/price/quantityの配列操作 | 最新実績の通常編集lockを検査し、開始時articles配列の一致後に対象行を変更。worker配列は最新rawを保持 |
+| 実績の請求編集 | 概要からsecurityTypeを除くfield群、agreement選択とbillingDateAt、調整群、articlesを別所有群として扱う | OperationBillingの現契約ではlock中の請求編集を許す。通常実績のlock拒否を流用しない。無関係な群は最新raw保持。agreementは現在のSite取極めから選択対象を再解決し、clientの任意料金全文を採用しない |
+| 請求調整 | useAdjustedと下記8field | 対象群のraw期待値を照合し、既存の計算式を再利用。worker identityや並びを変更しない |
+| 請求lock | desiredLocked/expectedLockedのboolean | toggle命令を再送せず、現在bool照合後にisLockedと監査だけ更新。worker全文を受け取らない |
+| notify/実績化 | 予定ID、通知の実施選択、開始時のpointer/対象workerと実績化に使う通知の局所raw期待値 | 最新予定と下記通知rawから生成。notify(false)も同じ境界。実績create/予定pointer・通知create/予定更新を既存の保存単位で確定 |
+| 通知状態 | targetStatus、actualStartTime/actualEndTime/actualIsStartNextDay/actualBreakMinutes/isQualified/isOjt | status/actual群のraw期待値照合。id/isEmployee/employeeId/siteIdは変更不可。既存4状態methodの計算/時刻を維持 |
+
+認可は次の操作別とする。現行Rulesの広いallowと正規業務presetが一致しない箇所があるため、「既存actor維持」を広いallowの無条件移植と解釈しない。[共通認可仕様](../specification.md#テナントと認証)と業務presetに従い、今回serverへ移す具体operationに限定して強制する。全取引権限の刷新ではない。
+
+- 予定・実績・予定に付随する通知生成/取消・実績化: 現在Auth/同社有効本登録Userを確認し、会社管理者/統括/管制。予定のmaintenance条件と実績化の既存厳密条件も維持する。
+- 実績の請求編集/lock: 会社管理者/統括/経理。経理の`operation-billings:write`と、採用済み統括の通常業務範囲を区別してoperation policyへ表す。packageのpresetを変更しない。経理へ通常実績worker編集を許さない。lock変更を許す条件は既存請求操作の契約を確認し、確定dataの一般的な解除権限へ拡張しない。
+- 独立した通知状態変更: componentの「管制」コメントだけでactorを新しく限定しない。今回は現行の同社認証境界を維持し、raw状態の期待値と部分patchをclient transactionで扱う。Rulesは状態/actual群/既存時刻・監査の所有fieldだけを許し、参照を含む全識別fieldと非所有fieldを不変にする。元Class全文setは拒否。通知のactor全体の見直しや本人専用操作の変更は今回追加しない。
+- 背景保存: callable入力にsystem actorを指定させず、内部呼出と同tenantの実sourceを根拠にする。clientの参照変更を背景処理の権限で代行できる汎用APIを作らない。
+
+調整8fieldは`adjustedQuantityBase, adjustedOvertimeMinutesBase, adjustedQuantityQualified, adjustedOvertimeMinutesQualified, adjustedUnitPriceBase, adjustedOvertimeUnitPriceBase, adjustedUnitPriceQualified, adjustedOvertimeUnitPriceQualified`。根拠は各CustomInputとinstalled Classであり、計算結果や保存hookまで同じfield群と決めつけない。通知の既存methodには一部遷移でactualBreakMinutesを60へ戻す挙動等があり、コメントから一方向遷移・時刻保持を新設しない。独立した既存問題を見つけた場合はFUTと当該工程の阻害有無を区別する。
+
+worker/article等の行は、表示順や名称から推測せず、開始時のraw配列と原本位置を期待値として照合する。schemaで採番される行keyや取極めの選択keyはactual実装と突合し、衝突/不存在なら拒否する。独自ID導入や曖昧な先頭一致を追加しない。
+
+実績化では予定だけを変換しない。`components/OperationResult/Generator/index.vue`が渡す通知mapとinstalled `SiteOperationSchedule.syncToOperationResult`の既存変換を維持する。serverは最新予定のemployees/outsourcers各行から現行notificationKey（予定IDとworkerIdによる既存導出）を得て、同tenantの対応する通知rawをtransaction内で全writeより先に取得する。通知の予定・worker種別/ID・Siteとの対応を検査し、clientが指定した別通知や通知本文の任意snapshotを生成元にしない。
+
+- `actualStartTime / actualEndTime / actualBreakMinutes / actualIsStartNextDay`は、対応通知fieldがnullまたは不存在のときだけ予定worker値へfallbackし、0やfalseを有効値として保持する。
+- `isQualified / isOjt`は、通知が存在するときはその値、通知自体が不存在なら予定worker値を使う。不正な通知を不存在としてskipしない。従業員と外注先の両配列に同じ既存変換を適用する。
+- clientの確認開始時に、予定pointer/worker配列と、対応通知の存在状態・識別情報・上記6fieldをrawで取得し、局所期待値として保持する。表示Classの初期値を不存在の期待値にしない。serverの同transaction読取り値と異なればwrite 0・再読込/再確認とし、通知だけが並行更新された場合に古い確認で確定しない。期待値は比較専用であり、その値を実績へ直接コピーしない。
+- 画面の「未通知ならnotify(false)」の準備後に、実績化の期待値を取り直す。通知作成と確認値取得が終わる前は実績化を送信できない。通知取得失敗と通知なしを区別する。
+
+server成功は更新有無・対象IDを返し、実績化は確定result IDを返す最小形とする。clientは保存await後に正本を再取得し、拒否/競合はdraft保持、結果不明は自動再送しない。状態反転や実績化の再送で二重処理しない期待値を試験する。既存の即時表示がある操作では拒否時の表示rollbackと正本再取得を接続し、別の同時編集を古い全文で巻き戻さない。
+
+### 全writerが共有する参照保存の契約
+
+1. 現在identity/User・既存操作のactor/lock/状態を確認し、入力の種別・配列・id・派生IDの整合をClass化より先に検査する。ClassのsetterでisEmployee等を補正した後だけの検証にしない。
+2. transaction内で各保存先の現在rawと必要な予定/実績/Customer/Site/予約等を取得する。不存在ならbefore集合は空。取得失敗、存在する不正raw、欠損索引は空と解釈しない。
+3. 最新rawへその操作の所有fieldを重ねてcandidateを作る。現在の業務計算とhookの必要作用は計算とwrite計画へ分ける。入力の任意path/tenant/監査field/未知fieldを保存権限にしない。
+4. raw明細からbefore/after参照集合を導く。日次2種では本人IDと埋込み実績全体、Billingでは埋込み実績全体のEmployeeを含める。既存索引がraw実参照と一致することを確認し、after索引を再計算する。外注明細は除くが、矛盾明細をskipしない。
+5. **追加ID = 各保存先candidateの参照 − その保存先の現在raw参照**。移動先にない参照は、移動元にあっても追加。削除後再生成は全after参照が追加。eventのbeforeDataや古いclient draftをbefore集合にしない。
+6. 全保存先の追加IDを重複排除し、同じtransactionで通常Employeeの存在を確認する。全readを全writeより先に完了する。新規Employee readにACTIVE限定を加えず、既存の期間・状態条件を維持する。
+7. どれかが不正/不存在ならそのtransactionはwrite 0。正常ならcandidateと索引を同じwriteで確定し、未知field・非所有fieldを維持する。複数の既存背景transactionを新しい全体transactionへ統合する要件ではなく、各保存単位で参照保護を成立させる。
+
+clientに残せる更新は、参照を含むraw配列・識別field・索引を変更しないことをRulesで証明できる最小部分だけとする。`employeeIds`だけ同値を条件にして明細配列変更を許可しない。証明できない配列編集・請求編集は専用server保存へ接続する。各operationのactorは当該予定/実績/通知等の現契約を維持し、Employeeの通常編集3actorで一括置換しない。
+
+変更なし/削除/並替え/同じ人の時間変更ならEmployee存在確認の追加readは0。1人入替えなら追加1種類、新規10種類なら10種類。これは全経路の索引整合と迂回閉鎖を前提にした設計値であり、actor/保存先/query/listener/再試行の総read数ではない。testではEmployee pathのgetを分離計数し、意図した実際の保存先差分であることも確認する。
+
+### 索引整合の確認とarchive開放
+
+`array-contains`で0件でも、索引が欠けたdocumentの埋込み参照は検出できない。したがって「未確認なら拒否」はarchive要求内のqueryだけで実現しない。次を満たす**検査済みtenantのserver側許可集合**で開放を制御する。新しい参照counter/ledgerやarchive要求ごとの全件scanは追加しない。
+
+- 設定はserver起動設定を使い、既定は空集合、不正設定・対象外は拒否。Callable入力、client flag、未認証read可能な`System/system`へ許可tenant一覧や検査詳細を置かない。config名等の内部命名は実装時に決められるが、対象tenantの厳密照合とdefault denyは変更しない。
+- EMP-05のarchive APIは専用demo entrypointで明示公開し、通常`functions/apis/index.js`からの公開はEMP-09の後段に分ける。demo用許可注入は通常実行から利用できないようにする。参照writerは通常公開の接続まで用意してlocal検証し、remote反映はしない。
+- EMP-05では限定整合確認の純粋検査/実行手段を作り、合成dataで正常/欠損/型不正/明細不一致を試験する。remote操作や利用者saved-dataの読取り・補完を実行しない。対象は選択したtenantの予定・実績・通知・日次2種・Billingとし、元rawと導出集合の一致を検査する。
+- EMP-09では別承認のbounded maintenanceで旧client/背景writeを止め、対象・backup・dry-run・必要補完・post-check・旧trigger反映/実行中旧revision停止を確認する。書込み継続中のページ走査結果だけで整合済みとしない。欠損の所属Employeeを特定できない場合はtenant全体を開放しない。
+- 開放前に直接/旧writerの迂回閉鎖、既存索引整合、旧User削除作用停止の全てを確認する。正常な新規writeが索引一致を維持することを前提とし、運営者による契約外の直接変更まで自動検知できると表現しない。不整合判明時は対象tenantを許可集合から外して操作停止し、限定repairを別承認する。
+
+### Archive UIと結果契約
+
+初回操作の入口は既存Employee詳細の操作領域に置き、退職操作と独立した理由入力・確認dialogにする。初回は原本と対象IDが確定し、会社管理者/統括の操作判定が許可するときだけ実行可能。人事を許す通常`employeeAllowed(write=true)`をarchiveへ流用しない。単なるread許可・super-user文字列を実行根拠にしない。
+
+- 送信は上記exact inputのみ。dialogごとのoperationIdと理由をmemoryで保持し、処理中は再送/入力変更を防ぐ。PIIや理由をlocalStorage/logへ残さない。
+- 確定拒否は理由入力を保持し、従属あり/権限不足/原本不正/衝突/未開放/検査失敗を安全なmessageへ対応させる。他tenant情報や従属document本文を表示しない。
+- 成功応答は`success: true, archived: true`を基本とし、原本とarchiveの部分成功を表す戻り値を作らない。原本購読の不存在だけで自分の操作成功と断定しない。
+- 応答不明は対象/actor/理由/operationIdを維持し、理由を編集不可として「同じ操作を確認」から同じ要求だけを明示再送できる。serverは未実行なら通常条件で実行、実行済みなら同一envelopeを照合する。別ID生成、自動retry、新しい理由での自動再送をしない。原本不存在・legacy archive・別actor/操作は成功根拠にしない。
+- 処理中はdialogを閉じない。結果不明のdialogを閉じる場合は「処理結果を確認できていない」ことを案内し、その詳細session内ではattemptを保持して同じ対象から再確認できる。route離脱/認証・tenant変更時はPII/attemptを破棄し、その後の古い成功/errorを新画面やmessageへ反映しない。永続的な未完操作管理を新設しない。
+- 保持済みattemptの「結果を確認」入口は初回入口と分け、原本不存在でも同じ詳細session・actor/tenant・現在のarchive認可の下で再度開ける。原本の表示raw/User購読の破棄でattemptを消さず、保持するのは同一要求の最小値のみとする。原本消失だけではrouteを離脱させない。この入口から新しい対象/理由/operationIdを入力させない。
+- 成功後は通常一覧へ戻り、当該IDの通常cache/候補を除外する。成功通知は遷移先でも表示する。別画面の古いdraftは不存在として保存拒否する。archiveのget/list認可は検証するが、新しいarchive管理一覧・restore導線は追加しない。
+
+### 受入れmatrixとreviewの完了条件
+
+| ID | 操作・data | 必須結果・証拠 |
+|---|---|---|
+| R1 | 7actor read、read-only更新、roleなし/未知/直接permission/無効/仮User/他tenant | 原本/archive get/listの許可拒否、個別/汎用/nested迂回拒否。Rules実試験 |
+| R2 | 空cache・初期選択ID・期間内退職者・任意code・氏名変更 | 現query/表示型を維持。更新後の現在名を表示し、過去業務recordは変更しない |
+| R3 | 期間外移動と原本削除、取得中の権限/tenant変更、古い成功/error | query除外と不存在を区別。全保護memoryを破棄し旧応答で復活しない。制御したPromiseと代表UI |
+| W1 | 全保存経路のraw種別/id/索引偽装、不正明細/索引欠損 | Class初期化前に拒否。直接writer/旧全文更新でも迂回不可 |
+| W2 | 10人参照不変・並替え・時間更新・1人入替え・新規10人 | Employee存在確認readが0/0/0/1/10種類。actor等を別計数し総readと混同しない |
+| W3 | 複製・実績化・notify・通知状態変更・OperationBilling編集/lock。予定と異なる通知actual値、通知なし/nullのfallback、0/false、通知だけの並行変更 | 全入口の保存await/拒否を確認。実績へ通知の6fieldを既存条件で反映、通知競合は再確認。Site revision、予定pointer、既存通知削除、金額/lock契約の回帰 |
+| W4 | 日次2種/Billingの同先更新・移動・削除・削除後再生成 | 移動元/先別の差分、raw索引保持、全read先行。本人以外の埋込み参照も拒否対象 |
+| W5 | 保存先削除→Employee archive→遅延create/update event、履歴rebuild | Employee不存在で参照再生成を拒否。旧event beforeDataでは追加0と誤判定しない |
+| A1 | 管理者/統括、人事、他tenant、未開放tenant/不正設定 | 前2actorのみ条件付き成功。demo注入の通常実行利用不可。拒否write 0 |
+| A2 | 12従属先それぞれあり、仮/無効User、完了head/operation、query失敗 | 状態/期間を理由に除外せずarchive拒否。User/Auth/予約/業務dataは不変 |
+| A3 | archiveと参照作成・User作成・退職を両順序で競合 | 参照先行ならarchive拒否、archive先行なら参照拒否。専用Emulatorで制御した競合 |
+| A4 | 同ID archive・原本両存、legacy、不正原本、保存失敗 | 上書き/部分移動なし。正しい原本保持。未知field/欠損/null/Timestampのraw深い同値 |
+| A5 | 応答不明・同操作再送・別actor/理由/操作・旧ID作成。commit成功→応答未着→原本不存在通知→dialogを閉じる→再確認 | 原本なしでも保持済み同一attemptの入口から確認できる。同一操作だけ確認成功。自動再生成/二重archive/同ID再作成なし |
+| A6 | 旧onEmployeeDeleted event、User/Auth削除依存へのspy | handler直接試験で削除0。API専用entrypointの成功をtrigger実行証拠にしない |
+| G1 | 合成dataの整合検査、index欠損、不一致、未確認tenant | 正常検査と開放拒否。実data/remoteの準備完了とは扱わない |
+| U1 | detail理由入力→取消/拒否/成功→一覧、別画面の候補/古いdraft | 正規UI操作とbackend原本/archive照合を分離。User/Auth不変、表示除外、保存await |
+
+実装初期に、各行を実際のtest file・操作入口・失敗注入点へ対応づけ、stubの成功だけで呼出経路の保護を示さない。既存`test/domain/site-schedule-guard.test.mjs`、`billing-customer-reference-barrier.test.mjs`、Site archive tests、Employee testsと`test/local/codex-local-harness.test.mjs`は再利用候補。通常の専用Emulatorは背景triggerを自動公開しないため、背景use-case/旧handlerの直接試験と必要な専用接続を別証拠にする。
+
+最終実装のgateはpolicyに従うUI/application/data・Rules/permissions/buildのunion。domain-full、local-emulator-suite、local-ui-build、comprehensive 5 gateと直接UIを必要な失効範囲で実行する。Dev/Prod generate・実data補完は別承認まで実行しない。05-Eの次工程reviewは、EMP-06がこのreader/cache認可・archive除外・専用保存を旧Manager全文writerへ戻さないこと、User shellの購読破棄と既存UWBの境界を確認する。
+
+rollbackはまずarchive許可/入口を停止する。codeを戻すために旧直接writer・旧User削除作用を再開しない。raw検索fieldの追加は不要になっても自動削除せず、実data変更/復旧は別承認。archive済み原本を汎用restoreで上書きしない。設計変更のみのrollbackは所有文書差分のcorrective commitで行う。
 
 ## 2026-08-11の調査記録（履歴）
 

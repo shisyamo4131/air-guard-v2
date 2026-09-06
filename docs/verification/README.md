@@ -24,6 +24,7 @@
 | Outsourcer OUT-07 local統合確認の進行記録 | [Outsourcer OUT-07 local progress](outsourcer-out07-local-progress.md) |
 | Outsourcer OUT-07 local統合確認 | [Outsourcer OUT-07 local integration verification receipt](outsourcer-out07-local-integration.md) |
 | Employee EMP-02〜04 local検証 | [Employee local検証記録](employee-02-04-local.md) |
+| Employee EMP-05 実装前設計レビュー | [Employee実装前レビュー記録](employee-05-design-review.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |
 | 機械可読の検証方針 | [Verification policy](../../governance/verification-policy.json) |
