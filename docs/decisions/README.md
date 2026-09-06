@@ -61,6 +61,7 @@
 | [0053](0053-site-agreement-write-validation-and-history.md) | Site取極めの書込み・数値・履歴境界 |
 | [0054](0054-site-auto-termination-and-terminated-selection.md) | Site自動終了と終了済み現場の選択境界 |
 | [0055](0055-scope-discovery-and-acceptance-review.md) | 発見事項の対応時期と初期・完了レビューの精度 |
+| [0056](0056-employee-role-and-archive-boundary.md) | 通常業務の管理権限とEmployee専用操作・archive境界 |
 
 ## 新しい ADR の形式
 

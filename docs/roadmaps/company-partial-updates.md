@@ -1,5 +1,7 @@
 # Company部分更新ロードマップ
 
+2026-09-06の[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)による統括の通常業務更新方針は、本書の過去完了契約とは別の追加要件である。既存100%を新権限実装の証拠にせず、未反映分は[親roadmap](airguard-v2.md#次の作業)で扱う。
+
 - 状態: Completed
 - 開始日: 2026-08-30
 - 現在の進捗: 100%

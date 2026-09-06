@@ -1060,7 +1060,7 @@ EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
-EMP-01対応時期（2026-09-06）: 通常Employee delete拒否と業務記録保持を維持するので、新archive/restore/匿名化は別scopeに残す。一方、既存Employees_archiveの過剰read/writeを閉じることはFUT-0075とEmployeeのread境界工程で扱い、archive新設の延期を理由に放置しない。
+EMP-01対応時期（2026-09-06改訂）: 新archiveは会社管理者・統括のみ、従属documentがあれば不可と部分採用した。[仕様](../specification.md#employeeの操作権限と保持)と[Employeeロードマップ](../roadmaps/employee.md)を参照する。保存方式、全従属一覧・新規参照競合、用途/状態、工程配分は未決。restore/匿名化は別判断のまま保持する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界であり、新方式の判断を理由に放置しない。
 
 - 状態: Needs decision
 - 重大度: High
@@ -1704,7 +1704,7 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 
 ## FUT-0126 従業員資格・機微情報の操作別権限と監査を実装する
 
-EMP-01対応時期（2026-09-06）: actor/公開fieldはCONF-0061/0105へ統合し、資格と警備情報の操作別保存・直接拒否をEmployee改修の必須条件とする。資格証明書番号まで業務用readerへ渡す必要性は確認されていない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
+EMP-01対応時期（2026-09-06）: actor方針を部分採用し、exact公開fieldはCONF-0061/0105で引き続き判断する。資格と警備情報の操作別保存・直接拒否はEmployee改修の必須条件。資格証明書番号まで業務用readerへ渡す必要性は確認されていない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
 
 - 状態: Open
 - 重大度: High
@@ -2174,7 +2174,7 @@ SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使�
 
 ## FUT-0159 Insurance履歴・監査・validation・遷移を正式化する
 
-EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存、history追加/popの競合・結果不明時の二重実行はEmployee保険工程の必須対象。現3状態、復元actor、手続中操作はCONF-0061の未採用案で判断する。保持期限・外部行政連携・監査全面刷新は、残す操作の正確な保存を妨げない独立scopeとして別判断に残す。
+EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存、history追加/popの競合・結果不明時の二重実行はEmployee保険工程の必須対象。通常編集actorは会社管理者・統括・人事と部分採用し、復元actor・手続中操作等はCONF-0061で引き続き判断する。保持期限・外部行政連携・監査全面刷新は別判断に残す。
 
 - 状態: Open
 - 重大度: High

@@ -5,6 +5,7 @@
 - 関連仕様: `docs/specification.md`の「Company設定とtenant lifecycle」
 - 関連判断: [ADR 0017](0017-callable-auth-identity-gate.md)、[ADR 0031](0031-proportional-data-boundary-and-change-safeguards.md)
 - 関連ロードマップ: [Company部分更新](../roadmaps/company-partial-updates.md)
+- 一部置換: 2026-09-06の[ADR 0056](0056-employee-role-and-archive-boundary.md)により通常業務の振込先更新actorへ統括を追加した。以下の会社管理者限定は当初判断の履歴であり、専用Callable、field、identity、super-user拒否等の条件は維持する。製品実装への反映は後続整合対象である。
 
 ## 背景
 

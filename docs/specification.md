@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-05
-- 仕様バージョン: 0.8.11
+- 最終更新日: 2026-09-06
+- 仕様バージョン: 0.8.12
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -78,6 +78,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
 - スーパーユーザーに対する恒久的な全会社Firestore client read/write bypassは廃止する。将来、遠隔地の他社利用者を支援するため、所属会社を持つ有効なスーパーユーザーが、未確定の明示的な手続きを経て対象会社のdataをその場で扱えるsupport accessを提供する構想があるが、現時点では未実装とする。
 - 各会社の会社管理者は`User.isAdmin === true`の1人だけとする。
+- 会社管理者と統括（`manager`）は、自社の通常業務機能を閲覧・作成・更新できる。通常業務の権限から、課金、管理者移譲・会社管理者accountの変更、archive・退職等の専用操作を自動的に導出せず、専用操作は個別のactor条件を優先する。統括による自己の管理者化や会社管理者accountの変更を通じた課金権限の取得を許可しない。既存の他tenant、自己操作、状態、確定済みdata、field ownershipの拒否条件を「全機能」の語で解除しない。判断理由と残る個別条件は[ADR 0056](decisions/0056-employee-role-and-archive-boundary.md)を参照する。
 - Userは、Employeeとの紐付けを持たない単独Userと、同じ会社のEmployeeへ`User.employeeId`で紐付くEmployee連携Userに分類する。仮登録・本登録、管理者、有効・無効はUser種類とは別の状態として扱う。
 - 会社管理者に加え、`users:provision` permissionを持つ有効な本登録Userは、同じ会社の仮登録Userを作成・削除できる。`manager`には`users:provision`と`users:write`、`human-resource`には`users:provision`だけを明示付与する。`employees:write`だけではUserアカウント管理を許可しない。
 - 既知presetの判定はpackageの`isRolePresetId`によるown-catalog membershipだけを使用し、通常の未知値に加えて`toString`、`constructor`、`__proto__`をstrict client/Functions経路でfail closedとする。strict `hasPresetPermission`と`resolveRolePermissions`は直接permission文字列をpresetとして受け入れない。一方、一般clientの`getPermissions`が未知文字列を直接permissionとして扱う既存互換挙動は維持し、strict認可へ流用しない。`*:write`から同resourceの`*:read`を導出する規則もconsumer側の責務とする。
@@ -92,7 +93,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Employee連携Userは、自身に紐付くEmployee情報へアクセスできるものとする。本人へ公開するfieldと提供pathは、Employee文書全体の過剰開示を避ける別のEmployee Self Access境界で確定するまでは未実装とする。
 - 有効な本登録会社管理者だけが、同じ会社の別の本登録非管理者Userを有効化・無効化できる。会社管理者は自分自身を無効化できず、必要な場合は先に同社の別Userへ管理者権限を移譲する。
 - 本登録UserからAirGuardV2の操作権限だけを一時的または継続的に剥奪し、雇用・業務記録上のEmployeeを維持する場合は、UserとAuthenticationを削除せず既存の無効化を使用する。
-- Employee退職は専用操作とし、退職日はserverのAsia/Tokyo暦日を基準に入社日以降かつ実行日以前に限定する。`human-resource`既定roleへ新設する`employees:terminate`を付与し、有効な本登録会社管理者にもoverrideを許可する。manager、`employees:write`、`users:provision`、`users:write`だけでは退職を許可しない。managerが別Userへ`human-resource` roleを設定して退職担当者を任命できる現行role管理境界は維持する。
+- Employee退職は専用操作とし、同社の有効な本登録会社管理者、統括、人事へ許可する。`employees:write`、`users:provision`、`users:write`という文字列だけでは退職を許可せず、既知roleと専用操作のactor条件を検証する。退職日はserverのAsia/Tokyo暦日を基準に入社日以降かつ実行日以前に限定し、自己退職等の既存対象guardを維持する。実装への適用は[Employeeロードマップ](roadmaps/employee.md)で管理する。
 - Employeeの退職に伴って本登録Userを削除する場合は、旧accountが別tenantでの同じメールアドレスの新規登録を妨げないようAuthentication accountとUser documentを物理削除し、User email予約とEmployee予約を解放する。Employee documentとEmployeeに紐付く勤怠・配置・請求等の業務記録は削除せず、Employeeを`RESIGNED`として保持する。Employeeだけ、仮登録User連携、本登録User連携を予約pointerから識別し、queryの先頭Userへfallbackしない。仮登録User連携は退職操作内でAuthをemailから推定・削除せず、既存の仮登録削除を完了してEmployee-only状態を確認してから退職を再実行する。signup途中のAuth-only部分状態は退職操作の対象にせず、別のaccount repairで扱う。Auth削除直後に同emailの別Authが作成される競合では新UIDを自動削除せず、再登録を無条件には保証しない。
 - Employeeに紐付かない単独本登録Userの物理削除は、退職とは別のaccount offboarding操作とし、有効な本登録会社管理者だけに許可する。自己、会社管理者、super-user、他社User、仮登録User、Employee連携Userは対象外とし、Employee連携UserにはEmployee退職操作、仮登録Userには既存の仮登録削除操作を使用する。
 - 物理削除したUser/Authは`Users_archive`へ保存せず、旧UID、email、role、通知設定、User/Auth全文を復元しない。Employee連携Userは必要なEmployee状態を訂正した後にEmployee連携User作成、単独Userは会社管理者による単独仮User作成を改めて実行し、新しいAuth UIDとUser、role・設定を作る。旧UIDを持つ履歴は新UIDへ書き換えず、一般表示で解決できない場合は削除済みUserとして扱う。
@@ -103,7 +104,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 履歴一覧は`listLifecycleOperations` Callableだけから取得し、`/settings/lifecycle-history`の「退職・アカウント削除履歴」へ新しい順に20件ずつ表示する。入力は同じ会社の次page開始位置を表す`cursor`だけとし、会社ID、件数、検索・filter・sort条件をclientから受け取らない。会社IDは検証済みAuthentication identityからserverが導出し、現在のAuthと同社Userを再取得して、有効・本登録・非super-user・会社管理者であることを毎回確認する。super-user、manager、human-resource、直接permissionだけのUserにはroute、navigation、Callableを許可しない。
 - 履歴projectionはschema version、最大20件のitem、次page cursorだけを返す。各itemは操作種別、`processing|retrying|completed`へ丸めた公開状態、実行者表示名、Employee IDまたは削除対象表示名、User account削除を含む操作かどうか、退職日、理由、作成・完了時刻だけに限定する。raw state、actor/target UID、request fingerprint、Auth・cleanup disposition、attempt、内部error、event、lock、head、email、role、claim、tokenを返さない。operation IDは次page cursorとしてclientへ渡り得る非秘密の同社内位置情報であり、認可token、会社特定、画面表示、logには使用しない。検索、filter、CSV export、total count、全page事前取得、永続client cacheは初期範囲外とする。
 - 保存stateは`completed`を公開`completed`、`failed-retryable`とcleanup失敗中の`data-finalized`を`retrying`、その他の有効な未完了stateを`processing`へ変換する。取得record、cursor、Timestamp、document IDのいずれかがschemaと一致しない場合は不完全な一覧を成功扱いせずpage全体をfail closedとする。clientは初回・空・安全なerror・再試行・前後page、権限喪失とunmount時のmemory破棄を扱い、Firestoreからledgerや現在のUser/Employeeを直接読み直さない。
-- 以上のUWB-07契約は確認済み仕様である。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engine、A/B/C Callable、5分間隔reconciler、訂正用最小context、Rules、application UIは実装・自動検証済みで、Codex UI smokeと利用者local UI受入れも完了している。履歴一覧readerもCallable、専用page、route・navigation、cursor paging、自動単体・Emulator・Rules検証まで完了している。2026-08-25と26に利用者のログイン済みChromeで管理者menuから専用pageへ到達し、loading、空状態、無効な前後buttonを確認した。対象環境に履歴dataがないため実browser用に21件の退職・削除を作らず、data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで検証する。current Auth disabled、仮User連携、別tenant同email再登録・Auth-only raceを含む残存陰性証拠も専用Emulatorで完了した。UWB-08の`firestore.rules`は、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否の3点について利用者確認を完了した。
+- 以下はADR 0056採用前のUWB契約に対する過去の実装・検証記録であり、統括退職追加の適用済み証拠ではない。追加要件の適用状態は[Employeeロードマップ](roadmaps/employee.md)を参照する。client/serverのpermission catalog、Functions内のA/B/C input・actor・target純粋policy、server-only operation/event/lock/head schema、transaction store、共通registered User削除phase engine、A/B/C Callable、5分間隔reconciler、訂正用最小context、Rules、application UIは実装・自動検証済みで、Codex UI smokeと利用者local UI受入れも完了している。履歴一覧readerもCallable、専用page、route・navigation、cursor paging、自動単体・Emulator・Rules検証まで完了している。2026-08-25と26に利用者のログイン済みChromeで管理者menuから専用pageへ到達し、loading、空状態、無効な前後buttonを確認した。対象環境に履歴dataがないため実browser用に21件の退職・削除を作らず、data行のexact projection、20/21件境界、cursorによる次page・前page再取得は単体・Emulatorで検証する。current Auth disabled、仮User連携、別tenant同email再登録・Auth-only raceを含む残存陰性証拠も専用Emulatorで完了した。UWB-08の`firestore.rules`は、User client write拒否、Employee lifecycle field・delete拒否、lifecycle ledger/event/lock/head直接access拒否の3点について利用者確認を完了した。
 - 管理者アカウントは誤削除を防ぐため削除不可とする。他に同社Userがいない最後の会社管理者も無効化できない。会社単位のAirGuardV2利用停止は、管理者無効化とは別の将来機能として扱い、現時点では未実装とする。
 - 一般Userの本登録では、Authenticationで確認済みのcanonical emailに対応するemail予約が、一意の有効な仮登録Userを指すことを本人確認条件とする。確認完了前の本登録、会社ID・仮User IDをclient入力だけで信頼する処理、予約とUserの不一致は許可しない。
 - 本登録前の未認証事前登録確認は、email予約とそのpointer先User、必要なEmployee予約が整合する場合だけ登録済みという真偽値を返す。会社ID、表示名、role、仮User IDは返さない。存在有無の列挙と招待tokenは別の未完了security境界とする。App Checkと全般的なrate limitはProd公開前の必須gateで扱い、具体的な濫用を確認した場合だけ該当operationを前倒しする。
@@ -127,7 +128,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - document全体の必須・型・長さ・相関はFireModel/Class schemaを正本とする。operation固有の入力fieldと追加必須条件は共有operation contractへ定義し、個別画面へ同じ業務validationを複製しない。保存前は最新Companyへ変更fieldを重ねたcandidateを検証し、実際に変更されたoperation所有fieldと`updatedAt`・更新者だけを保存する。
 - editorはreal-time listenerが更新するCompany本体と独立したdraftを使う。編集中に同じoperation所有fieldの外部更新を検出した場合はdraftを黙って置換せず、最新値の通知と再読込手段を示す。operationごとに再読込必須または明示再確認後のlast-write-winsのどちらかを定める。Company基本情報、振込先、通常設定、表示順は保存を停止し、「最新値を読み直す」だけを表示して現在draftの破棄・再入力を求める。自分の保存結果がlistenerへ反映された場合は外部競合として表示しない。
 - 一つのCompany documentを既定とし、同じactorが読める会社情報・通常設定・利用状態は同居できる。読取actor、保存・削除・復旧条件、増加し続ける量、具体的なdocument size、独立query、field限定updateで解消できない実測競合のいずれかがあるfieldだけを別documentへ分割する。writer権限や画面が違うだけでは分割しない。
-- 振込先はCompany rootの現行read境界を維持し、同社の有効な本登録Userが読める。振込先を読取actor別documentへ分割せず、変更は同じtenantの有効な本登録会社管理者だけを許可してsuper-userを拒否する。振込先以外のCompany情報の正確なread集合と、配置/予定管理actor等の後続operation別write allowlistはrestart inventoryで確定する。clientまたはCallableの選択は、server-only情報、複数resource、外部作用、不可逆性、必須auditの有無からoperation単位で決める。
+- 振込先はCompany rootの現行read境界を維持し、同社の有効な本登録Userが読める。振込先を読取actor別documentへ分割せず、変更は同じtenantの有効な本登録会社管理者または統括へ許可し、既存のsuper-user拒否条件を維持する。これは顧客向け請求に使う会社振込先であり、システム利用料の契約・課金とは分ける。その他のCompany通常業務設定も会社管理者・統括の更新対象とし、正確なread集合と他roleのoperation別write条件は個別仕様に従う。clientまたはCallableの選択は、server-only情報、外部作用、不可逆性等の条件からoperation単位で決める。
 - 通常の可逆なCompany編集はreal-time listenerで最新値を反映し、保存結果はlast-write-winsを受容する。編集中の同一operationへ別actorの変更が届いた場合は通知し、operation contractに従って再読込または明示再確認を要求する。共通revision、lock、operation ledgerは導入しない。
 - expected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭、外部service、複数resource、復旧困難なdata loss、二重実行の具体的被害があるoperationだけに限定する。
 - `siteOrder`と`scheduleOrder`は各最大2000件という現行候補上限と実際のdocument sizeを再計測し、Company本体と分ける必要性を判断する。分割前提にはしない。
@@ -148,6 +149,13 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 請求書はdraft中だけlive Company情報を参照し、確定時に会社名、住所、電話、適格請求書番号、振込先をissuer snapshotとして保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionを作る。実際のsnapshot writeと請求lifecycleはBilling改修で実装する。
 - Stripe、checkout、webhook、plan、subscription、entitlement、employeeLimit、Stripe用PrivateSettingsは現段階のCompany構造とCCBへ含めない。checkout、reader、未公開Functions、依存package、Company schema fieldはlocal codeから削除済みで、`StripeData`は全actor・全階層で拒否する。利用者用localとDevのlegacy field削除も完了している。Devでの実行結果は[immutable receipt](verification/stripe-05-dev-release.md)を参照し、将来のサブスクリプション機能は旧CCB schemaを前提にせず新規設計する。
 - 旧CCBの8 target、PrivateSettings、SettingAudits、runtime compatible reader、migration/restore planner、pre-containment Rulesと専用testは2026-08-30のcorrective rollbackで主repositoryから除去した。当時はSchemas exact `2.4.2-dev.167`の公開artifactとAirGuardV2 consumer pin、Admin SDKのfail-closed guardを保持したが、AirGuardV2 root/FunctionsはSTRIPE-02で`3.0.0-dev.1`へ更新した。Admin SDKは`.167`を維持し、公開packageをunpublishしない。旧8 targetへのmigrationまたはrestore経路は現在提供しない。
+
+### Employeeの操作権限と保持
+
+- 同社の有効な本登録会社管理者・統括・人事は、Employeeの作成と通常編集（基本情報、国籍、警備員登録、資格、保険）を行える。労務・法務・管制・経理はEmployeeを更新せず、業務に必要な項目だけ閲覧する。各閲覧roleに公開するexact fieldは未決であり、全文公開の承認とはしない。roleなしの本人向けEmployee Self Accessは既存の別境界に従う。
+- 通常編集、退職、誤退職訂正、archive、User/Auth操作を分ける。退職は会社管理者・統括・人事、archiveは会社管理者・統括だけに許可する。人事単独にはarchiveを許可しない。誤退職訂正actorの追加変更は未決であり、明示変更までは既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
+- archiveは従属documentがない場合だけ許可し、一つでもあれば拒否する。子pathだけでなく、Employeeを参照する業務document、User連携・予約等を含む具体的な依存一覧と同時参照作成への対策を実装前に確定する。従属dataの連鎖削除や、検査不能を「従属なし」と扱う処理を許可しない。
+- 通常退職はEmployeeと業務記録を保持し、archiveの代替にしない。archive可能な状態・用途、保存形状、閲覧・復元、同ID再作成、保持・匿名化・purgeの詳細は未決である。従属なしだけから既存dataの削除・一括移行を実行しない。
 
 ### 外注先
 
@@ -252,7 +260,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 - 現在のStripe関連コードとデータ形状は未完成のscaffoldであり、checkout、webhook、plan、解約、再契約、課金状態、従業員上限を提供済み機能として扱わない。Stripe側との契約情報同期実績もない。
 - 現段階ではsubscription・entitlement・employeeLimitの保存・表示interfaceを準備しない。Company rootのlegacy field、`StripeData`、checkout画面、reader/writer、未公開Functions、依存packageは[ADR 0038](decisions/0038-legacy-stripe-scaffold-removal.md)に従って削除済みである。
-- 将来サブスクリプションを実装する場合は、Stripe採用を前提にせず、provider、actor、plan、保存構造、権限、署名、冪等性、event順序、reconcile、状態遷移、保持、秘密情報、利用上限を別仕様・別roadmapで新規設計する。
+- 将来のシステム利用契約・課金操作は会社管理者だけに許可し、統括を含む他roleへ許可しない。契約・plan変更・解約等の操作権限と、支払済み等の課金結果を任意に書き換える権限を同一視せず、課金結果はprovider/serverの検証済み処理で確定する。Stripeを使う将来案の具体的な機能、provider/API、plan、保存構造、署名、冪等性、event順序、reconcile、保持、利用上限は別仕様・別roadmapで新規設計する。今回のactor採用で既存Stripe機能を再有効化しない。
 
 ### 保守状態とdata change
 

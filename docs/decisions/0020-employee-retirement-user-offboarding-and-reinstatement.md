@@ -5,6 +5,7 @@
 - 状態: Accepted
 - 関連仕様: テナントと認証
 - 関連実装計画: [User Write Boundary](../implementation/user-write-boundary.md)
+- 一部置換: 2026-09-06の[ADR 0056](0056-employee-role-and-archive-boundary.md)により退職actorへ統括を追加した。以下のmanager単独拒否は当初判断の履歴であり、その他のdata・対象guardと未変更の訂正actor条件は維持する。適用状態はEmployeeロードマップを参照する。
 
 ## 背景
 

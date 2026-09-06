@@ -1,5 +1,7 @@
 # Company（自社情報・会社設定）（実装調査）
 
+2026-09-06、会社管理者・統括の通常業務更新方針を採用した。[仕様](../specification.md#company設定とtenant-lifecycle)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。以下の会社管理者限定の保存経路・過去検証は新要件へ未反映の実装事実であり、後続整合対象とする。システム利用料の課金操作は会社管理者専用で、顧客向け請求振込先とは異なる。
+
 > 2026-08-30 CCB restart: ADR 0025/0028/0029の8 document・runtime互換・全設定revision/audit設計はADR 0031により置換された。以下の実装観測は現行codeの事実として保持するが、旧目標設計はhistoricalである。新設計はCompany全体setの廃止、operation別exact field update、real-time listener、根拠のある場合だけの分割・強い競合制御を採用し、Stripe関連情報を現段階の対象から除外する。
 >
 > 2026-09-01 STRIPE-02 local implementation: Schemas `3.0.0-dev.1`をroot/Functionsへ導入し、checkout page/route、legacy customer type readerとCompanyStore導出、未公開Stripe Functions、Stripe依存packageを削除した。`StripeData`は全actor・全階層でread/write拒否とし、既存Company rootのlegacy fieldと既存`StripeData`のdata削除は後続migrationまで未実施である。以下の2026-08-27以前のStripe runtime観測はhistorical baselineとして読む。

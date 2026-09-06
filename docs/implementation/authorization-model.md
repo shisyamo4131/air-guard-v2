@@ -1,5 +1,7 @@
 # role・permission認可モデル（実装調査）
 
+2026-09-06の通常業務・Employee専用操作・将来課金のactor採用は[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。以下は旧catalog/実装の調査記録であり、新方針の全機能反映や権限制御の検証済みを意味しない。適用範囲は[親roadmap](../roadmaps/airguard-v2.md#次の作業)で管理する。
+
 ## Authorization/page helper最終確認（SPEC-DEEP-045a/045b）
 
 - `getPermissions`は複数role由来permissionを重複した配列で返し得る。未知roleは拒否されず、その文字列自体をpermissionとして採用する。

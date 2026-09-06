@@ -1,5 +1,7 @@
 # User Write Boundary（UWB）改修計画
 
+2026-09-06の[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)で退職actorへ統括を追加した。以下の完了・manager拒否testは当時のUWB契約の実装証拠として保持し、新要件の実装・検証済みとは扱わない。差分の適用は[Employeeロードマップ](../roadmaps/employee.md)で管理する。
+
 - 改修名: `User Write Boundary`
 - 略称: `UWB`
 - 状態: Completed（UWB-01〜10のlocal完了とDev cutover完了。認証済みDev/remote受入れは進行中）

@@ -1,5 +1,7 @@
 # Employee（従業員）マスター実装調査
 
+2026-09-06のactor部分採用は[現行仕様](../specification.md#employeeの操作権限と保持)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。以下の静的実装観測は変更しておらず、統括退職・専用archive等を実装済みと扱わない。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で現code、installed schema、Rules、test sourceを再照合した。以下は静的確認であり、runtime・実data・Devの現在状態は未検証。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。
@@ -24,7 +26,7 @@
 
 ## EMP-01の保存・読取り契約案
 
-以下は未採用の設計案。利用者判断の正本は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)であり、文書保存承認から製品仕様採用を導かない。
+以下の保存/read方式は未採用の設計案。通常編集・退職・archiveのactorと必要項目だけの閲覧方針は仕様へ部分反映したが、exact fieldと方式まで採用していない。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
 
 ### EMP-02の入力と保存対象
 
@@ -65,7 +67,29 @@ APIごとのexact入力、ID数・検索長・取得件数・期間幅の必要�
 
 ### EMP-01から次工程へのreview結果
 
-EMP-01-DESIGN-A/SEC-A/TEST-Aでは現入力field、派生closure、UWB維持、作成create-only、最小read方式の比較を整理した。次のEMP-02は、actor/field、氏名規則、住所送信/既存座標、競合範囲、暫定writer停止/先行改修、作成試行IDの回復範囲が未採用のため準備完了ではない。保存文書の独立reviewは[ロードマップの記録](../roadmaps/employee.md#emp-01判断資料の文書review)を参照し、最終文書検証は当該作業報告で結果を示す。製品code・runtimeは未変更/未検証である。
+EMP-01-DESIGN-A/SEC-A/TEST-Aでは現入力field、派生closure、UWB維持、作成create-only、最小read方式の比較を整理した。その後actor方針を部分採用したが、exact read field、氏名規則、住所送信/既存座標、競合範囲、暫定writer停止/先行改修、作成試行IDの回復範囲、archive詳細/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+
+### archiveの追加影響調査
+
+現Employee.hasManyは`SiteOperationSchedules.employeeIds`、`OperationResults.employeeIds`、`ArrangementNotifications.employeeId`の3種類を対象にする。一方、`DailyAttendances`、`DailyOperationsByEmployee`、`SiteEmployeeHistories`にもemployeeId参照がある。これらとUser/予約・lifecycle・間接参照を調べ、archive拒否対象の一覧を確定する必要があり、既存3種類を全従属の証明にはしない。
+
+`functions/modules/Employees.js`の原本削除triggerはemployeeId検索の先頭Userへdeleteする経路を持つ。新archiveがUser/Authを連鎖削除しないこと、検査後に参照が追加されても参照切れを作らないことを設計する。今回の調査は候補整理であり、全writer網羅・競合再現・実data確認は未実施。具体的な追加実装scopeと工程配分が決まるまで既存deleteを再開しない。
+
+### archive保存方式の比較（未採用）
+
+利用者の追加質問を受け、同じEmployee documentへ独立したarchive状態を保存する方式を第一候補として比較する。これは保存方式の提案であり、「従属documentがあれば不可」という採用済み条件を緩和しない。
+
+| 観点 | 別collectionへ移動 | 同documentの状態更新 |
+|---|---|---|
+| 保存 | 複製と原本削除、衝突・復旧の整合が必要 | 原本の保存場所・IDを保持し、状態の部分更新で表現可能 |
+| 既存の削除trigger | 原本削除からUser削除経路へ作用し得る | 原本を削除しないため、その削除triggerを起動しない |
+| 読取り | 移動後の旧pathでのID解決を設計する | ID解決は維持しやすいが、一覧・検索・候補・期間取得へ除外条件が必要 |
+| 参照条件 | 存在検査と移動を新規参照作成に対して整合させる | 存在に加え未archiveを保存境界で確認する。状態flagだけでは新規参照作成を防げない |
+| 互換性 | 保存shape、別pathの認可、移動/復旧が必要 | 新fieldの不存在、旧全文writerによる消去/巻戻し、cache更新、query互換を扱う |
+
+状態更新方式を採るなら、archive状態は雇用状態のACTIVE/RESIGNEDと分け、入退社日・退職処理の意味を変えない。新field名・型、対象状態、解除可否、詳細/ID/履歴の閲覧、通常編集/退職/User作成の可否はまだ確定していない。保存場所を残すことでarchiveと新規参照の競合問題そのものがなくなるとは扱わない。既存archive collectionの公開問題も別途閉じる。
+
+EMP-01-ARCHIVE-STATE-COMPAREの静的reviewでは、移動・原本削除・旧削除triggerを避けられる利点と、現readerにarchive判定がない点、User作成で存在だけでは不十分になる点、旧全文writer対策が必要な点を確認した。runtime・競合再現・data変換の要否は未検証である。
 
 ## 2026-08-11の調査記録（履歴）
 

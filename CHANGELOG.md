@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-01で会社管理者・統括の通常業務更新、会社管理者・統括・人事のEmployee更新と退職、他roleの必要項目のみ閲覧、従属documentがない場合に限る会社管理者・統括のEmployee archiveを仕様として採用した。将来のシステム課金操作と管理者変更の保護境界も整理した。製品実装・Dev反映は未実施で、閲覧fieldとarchiveの詳細・工程配分は未決である。[判断](docs/decisions/0056-employee-role-and-archive-boundary.md)を参照。
+
 - Site改修の反省会を受け、独立した発見事項の後続phaseでの一括設計・review、初期review材料、目的・完了条件と証拠の対応、Local UIの実行構成とcleanup確認を既存手順へ具体化した。回帰・必須条件未達を後続送りで完了扱いにせず、合意済み範囲内の修正へ再承認は追加しない。[判断](docs/decisions/0055-scope-discovery-and-acceptance-review.md)を参照。
 
 - Site SITE-08のLocal統合確認で、旧Siteの省略可能field欠損により基本情報更新まで拒否されるRules互換不具合と、現場詳細からの予定作成で取極め定時・警備種別が取得できない回帰を修正した。対象fieldの型・相関検査、field削除禁止、create必須・actor/tenant境界を維持し、非同期取得中の手入力を保持する。利用者許可のChromeとLocal Emulatorで、実績から請求・入場履歴への背景同期、Site変更前後の既存snapshot不変、予定の日付・現場変更と実績化を確認した。Dev反映は別工程である。[検証記録](docs/verification/site-08-local.md)を参照。

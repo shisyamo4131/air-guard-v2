@@ -751,38 +751,30 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Answer: 未回答
 ## CONF-0061 Employee個人情報の閲覧・編集・保持権限
 
-### EMP-01の判断案（未採用）
+### EMP-01の部分回答と残る判断
 
-2026-09-06の計画保存承認は、以下の個別仕様への回答とは扱わない。現実装は[再照合](employee-master.md#現行経路の再照合)、工程は[Employeeロードマップ](../roadmaps/employee.md)を参照する。ここでは「人事が原簿、労務が保険を担当する」という未確認の業務分担を前提に職掌別の案を提示する。
+2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職、他4roleの必要項目のみ閲覧、会社管理者・統括だけの従属なしarchiveを採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
 
-Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理者は下表の全通常操作を許可する案だが、super-user例外は追加しない。複数の既知roleは許可の和集合とし、roleなし・未知role・直接permissionからmasterアクセスを導かない。現catalogの統括/人事のemployees:write、他4roleのemployees:readと、現在Rulesの広い同社許可とは異なる提案である。
+閲覧項目は未採用である。次の表は他4roleへの公開範囲を判断するための比較案に限定し、会社管理者・統括・人事へraw documentの全fieldを返すことも、このactor回答だけから導かない。Rは閲覧案、—は非公開案。
 
-| 情報/操作 | 統括 | 人事 | 労務 | 法務 | 管制 | 経理 |
-|---|---|---|---|---|---|---|
-| code・表示名・表示カナ・肩書 | RW | RW | R | R | R | R |
-| Employee作成、入社日訂正 | — | RW | — | — | — | — |
-| 在籍状態・在籍期間の業務参照 | R | R | R | R | R | R |
-| 原簿の氏名/カナ・性別・生年月日・住所・携帯・email | — | RW | R | — | — | — |
-| 国籍・外国人氏名・在留資格/期限・就労制限 | — | RW | R | — | — | — |
-| 警備員登録有無/日、資格名・種別・取得日・期限 | R | RW | R | R | R | — |
-| 資格番号・発行元、本籍 | — | RW | — | — | — | — |
-| 血液型・緊急連絡先一式 | — | RW | R | — | — | — |
-| 3保険の番号・状態・加入喪失・historyと通常遷移 | — | RW | RW | — | — | — |
-| 備考 | — | RW | — | — | — | — |
+| 情報 | 労務 | 法務 | 管制 | 経理 |
+|---|---|---|---|---|
+| code・表示名・表示カナ・肩書、業務上必要な在籍情報 | R | R | R | R |
+| 原簿の氏名/カナ・性別・生年月日・住所・携帯・email | R | — | — | — |
+| 国籍・外国人氏名・在留資格/期限・就労制限 | R | — | — | — |
+| 警備員登録有無/日、資格名・種別・取得日・期限 | R | R | R | — |
+| 資格番号・発行元、本籍 | — | — | — | — |
+| 血液型・緊急連絡先 | R | — | — | — |
+| 保険番号・状態・加入喪失・history | R | — | — | — |
+| 備考 | — | — | — | — |
 
-統括も人事同等に扱う代替は既存の広い担当を維持できるが、保険/個人情報への常時アクセスが広がる。会社管理者・人事へ集中する代替は単純だが、労務の保険処理には人事roleの併用が必要になる。法務が在留/警備書類を確認する場合や管制が緊急連絡を担う場合は、必要なfieldだけを明示して上表へ追加する。役割名から用途を推測して開放しない。既存の統括による他Userへの人事role付与は維持するため、完全な職務分離を保証する案ではない。
+法務の在留書類確認、管制の緊急連絡、経理/勤怠exportの原簿氏名など、現業務に必要な例外は用途とfieldを確認して決める。原簿氏名を表示名へ無断置換せず、非公開foreignName/raw tokenMapによる検索一致も許可しない。低権限queryの順序・返却値を含め、必要な読取りを同時に設計する。
 
-表示名等を編集する統括が全文PIIを読めない場合は、serverが現在の全文candidateを検証し、clientへはそのactorのfieldだけ返す。低権限検索は公開を認めた識別fieldだけで照合し、foreignName等の非公開fieldやraw tokenMapによる検索結果からの漏れも防ぐ。原簿氏名を使う既存の勤怠export等は、その用途のreaderへ必要なfieldを返すか利用actorを変えるかを回答時に確認し、表示名への無断置換はしない。
-
-退職済みEmployeeの通常訂正・資格・必要な保険処理は同じactor条件で許可する案。入社日は人事/会社管理者だけが訂正し、退職済みなら既存退職日を超える変更を拒否する。employmentStatus/dateOfTermination/reasonOfTerminationは通常更新から変更せず、不存在も保持する。退職・誤訂正・User操作は既存UWB仕様を維持する。
-
-保険の提案は3状態を維持し、人事/労務/会社管理者に加入・完了・取下げ・喪失・除外を許可、history末尾を戻す既存復元は会社管理者だけに限定する。復元は監査履歴ではなく過去entryを消費する操作である。手続中の喪失/除外は直接行わず、先に取下げる案を推奨するが、現実装からの操作制限変更なので回答が必要。退職flagでEmployee退職やUser/Auth削除を起動しない。history自由差替え・古い状態の二重遷移を拒否し、監査全面刷新・保持期限・法令適合をこの案で確定しない。日付/番号の追加条件は現schemaとの差を設計reviewし、制度上の要件を推測で追加しない。
-
-利用者判断: 上表の職掌分担、保険復元actorと手続中操作、退職後編集の採否。回答が揃うまで関連operationの実装・仕様化・EMP-01加点は行わない。
+退職後の通常訂正と入社日の相関、保険の手続中操作・history復元actor等の詳細は未決。保険通常編集actorは会社管理者・統括・人事で確定したが、以前の「history復元は会社管理者だけ」「手続中の喪失/除外は先に取下げ」は未採用案である。履歴復元は過去entryをpopする操作であり監査履歴とは呼ばない。通常保存で退職field（不存在を含む）やUser/Authを変更せず、保持期限や制度要件を推測で追加しない。
 
 ### 既存確認事項
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-024、SPEC-SEG-051; `employee-master.md`、`employee-insurance.md`
 - Evidence: employees:readと同一会社全read/writeで高感度fieldとarchiveへアクセス可能。保険番号・加入/喪失日/理由・履歴も追加write guardなしでEmployee詳細に表示・更新され、RESIGNED Employeeでも操作可能。historyにactor/timeはなくrollbackはentryをpopする。
 - Question: 本人、管制、雇用/労務、管理者がどのfield（保険番号・加入喪失履歴を含む）を閲覧・変更でき、管理目的、監査、保持、訂正/rollbackをどう扱うか。
@@ -790,9 +782,11 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 - Options and impact: field別read model、本人+労務限定、管理者のみ、機能別document分割。
 - Current provisional treatment: 現行境界を暫定実装とし、安全な確定仕様とはしない。
 - Related FUT IDs: FUT-0075、FUT-0159
-- Answer: 未回答
+- Answer: 2026-09-06 actor方針と必要項目だけの閲覧を部分回答。上記の確定要件へのlinkを参照。exact read field、保険特別操作、保持・訂正条件は未回答のため一括Answeredにしない。
 
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
+
+2026-09-06改訂: 下の2026-08-24回答の退職actorへ統括を追加した。現在のactorは[仕様](../specification.md#employeeの操作権限と保持)を参照する。一意性・User/Auth処理は維持する。
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -817,6 +811,8 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 - Answer: 2026-08-24 部分回答。将来日退職・予約取消はUWB-07に含めず、退職日は入社日以降かつserverTodayJST以前に限定する。誤退職は会社管理者専用のUWB-07Cで同じEmployee IDを`ACTIVE`へ戻すが、User/Authは自動復元しない。実際の退職期間を伴う再雇用で同じEmployee IDを継続するか、新IDと雇用期間を使うかは未回答のままFUT-0077へ残す。
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
+
+2026-09-06部分回答: archiveは会社管理者・統括のみ、従属documentが一つでもあれば不可と確定した。具体的な従属一覧・同時参照対策、用途/対象状態、archive閲覧・保存/復元・保持は未決。下の旧回答の「誤登録archive未回答」はこのactor/従属条件だけ更新し、通常退職でEmployeeと業務記録を保持する契約は維持する。[仕様](../specification.md#employeeの操作権限と保持)と[工程](../roadmaps/employee.md)を参照する。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -950,6 +946,8 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 
 ## CONF-0074 Company設定の正式権限とserver-owned field
 
+2026-09-06改訂: 会社管理者・統括が通常業務設定を更新し、システム利用契約・課金操作と管理者保護は専用境界とする方針を採用。現在の要件は[仕様](../specification.md#company設定とtenant-lifecycle)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。下の2026-08-28回答の責務別document分割はADR 0031で既に置換された履歴である。
+
 - Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: admin画面に対しRulesは同一会社Userへ全write。銀行、請求、取極め、運用設定、Stripe/subscription、maintenanceが同一docに混在する。
@@ -1070,7 +1068,7 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 
 ## CONF-0084 Subscription購入・管理actorとplan選択
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-029; `subscription-stripe.md`
 - Evidence: pageはsuper-user、Rulesは同一会社User全create。clientが固定priceを送るがserver allowlistなし。Portal/解約UIなし。
 - Question: 購入、plan変更、支払方法、解約、再開を誰に許し、提供plan/priceをどう選ぶか。
@@ -1078,7 +1076,7 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 - Options and impact: Company adminのみ、billing permission、super-user代行、server catalog+Customer Portal。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式課金権限とはしない。
 - Related FUT IDs: FUT-0100
-- Answer: 2026-08-28明示保留。正式release直前のStripe改修までactor、plan、portal、解約、再開を確定しない。現行page/Rulesを正式課金権限として採用しない。
+- Answer: 2026-09-06 actorだけ部分回答。将来のシステム契約・課金操作は会社管理者専用とし、自己昇格等で統括が取得する迂回を禁止する。課金結果の任意書換えは提供しない。plan、portal、解約・再開等の提供機能と実装・外部作用は引き続き別判断であり、旧scaffoldを再有効化しない。[仕様](../specification.md#サブスクリプション)を参照する。
 
 ## CONF-0085 Company・Stripe Customer・Subscriptionの一意性と再契約
 
@@ -1322,9 +1320,9 @@ Rは閲覧、RWは閲覧と当該通常操作、—は不許可。会社管理�
 
 ## CONF-0105 従業員資格・警備員登録・機微情報の閲覧編集actor
 
-EMP-01では[CONF-0061の職掌別matrix](#conf-0061-employee個人情報の閲覧編集保持権限)と一括確認する。資格の有効性を示すfieldと番号/本籍/緊急連絡先を分け、役割名だけで法務や管制へ全文を返す案にはしない。以下のStatus/Answerは未回答のまま保持する。
+2026-09-06、通常編集actorは会社管理者・統括・人事、他4roleは必要項目だけ閲覧と部分回答した。[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)でexact fieldを引き続き確認し、役割名だけで法務や管制へ全文を返さない。
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-036; `qualification-management.md`
 - Evidence: employees:read pageから編集UIへ到達し、Rulesは同社全Userへ資格番号、本籍、緊急連絡先を含むdocument全体writeを許す。
 - Question: HR、管制、法務、本人、管理者の誰に各fieldの閲覧・編集・確認・overrideを許すか。
@@ -1332,7 +1330,7 @@ EMP-01では[CONF-0061の職掌別matrix](#conf-0061-employee個人情報の閲�
 - Options and impact: field別document/permission、HR専用、管制は有効flagのみ、本人申請+管理者承認、全管理者。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式権限とはしない。
 - Related FUT IDs: FUT-0126
-- Answer: 未回答
+- Answer: 2026-09-06 actor方針だけ部分回答。field別閲覧と特別な確認・override条件は未決。正本はCONF-0061から参照する仕様とする。
 
 ## CONF-0106 AirGuardで管理する警備教育・OJT履歴の範囲
 
@@ -1396,7 +1394,7 @@ EMP-01では[CONF-0061の職掌別matrix](#conf-0061-employee個人情報の閲�
 
 ## CONF-0111 正式なrole・permission matrixとspecial roleの意味
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-039; `authorization-model.md`
 - Evidence: 6業務preset、直接permission、admin、super-user、developerが混在し、現在の分割は試作段階である。clientとserverは同じcatalogを共有しない。SEC-002とschema reviewで、同一tenant一般UserによるCompany/User/locked OperationResult write、global `admin_users` write、Storageのcross-tenant object操作、UI wildcardとRulesのadditive super-user override差を確認した。
 - Question: 正式に残すroleとpermission、各actorの操作・tenant scope、およびadmin/super-user/developerの用途・運用者・強制境界をどう定義するか。
@@ -1404,7 +1402,7 @@ EMP-01では[CONF-0061の職掌別matrix](#conf-0061-employee個人情報の閲�
 - Options and impact: preset中心、permission中心、role+scope、admin全権/限定権、developer非production、super-user緊急運用。
 - Current provisional treatment: 現行presetとspecial roleを実装事実としてのみ記録する。
 - Related FUT IDs: FUT-0133、FUT-0134、既存の各業務認可FUT
-- Answer: 未回答
+- Answer: 2026-09-06通常業務とEmployee専用操作のactor方針を部分回答。[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。その他のroleの全機能matrix、special role、exact read field、未列挙の専用操作は未決。旧catalogの定義・実装・検証を変更済みとはしない。
 
 ## CONF-0112 複数required permission・admin override・denyの判定意味
 
