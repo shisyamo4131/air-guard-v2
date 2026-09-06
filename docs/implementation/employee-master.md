@@ -26,7 +26,9 @@
 
 05-Aでは`useFetchEmployee`をEmployee専用のraw購読/sessionへ接続し、現在Authと原本Userの7actor認可、必要IDだけの購読、Class表示互換、検索結果のmembershipと原本cacheの更新を分離した。権限/tenant変更・取得失敗・破棄でcache/search/待機中の取得を無効化し、古い応答を表示へ戻さない。期間queryの対象外と原本不存在を区別し、個別ID購読で確認済みの新raw/不存在を遅延queryで上書きしない。
 
-Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-Aの独立review・自動検証・専用build・代表実UIとcleanupを完了した。05-Bの参照writerを実装・検証中で、受入れは未完了。05-C以降の背景writer・索引整備・archiveは未着手である。受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
+Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。
+
+05-Bでは`saveOperation`と`operationWriteContract`へ予定・実績・OperationBillingのoperation保存を集約した。最新rawから保存先ごとの追加Employee参照を導き、全read後に所有fieldだけを確定する。予定の即時表示/rollbackには表示Classと同時点のraw contextを接続し、通知状態の管理側・本人側は同じ期待値照合付き部分transactionを使う。購読はserver確認済み値だけを公開し、そのmetadata変更通知も受け取る。計算用instanceのJST補正と寿命条件は下の操作契約を参照する。背景writer・索引整備・archiveは05-C以降に分離している。各内部単位の受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)、現在地はロードマップを正とする。
 
 ## 現行経路の再照合
 
@@ -237,7 +239,7 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 
 ### 開発者の読取り順と作業境界
 
-本節は未実装の技術契約である。現在地・実装開始承認は[ロードマップ](../roadmaps/employee.md)、業務要件は[共通仕様・Employee仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とする。実装担当は通常startup後に、上記archive保存形式・従属catalog、本節、[設計レビュー記録](../verification/employee-05-design-review.md)を読み、担当checkpointのsourceと照合する。API/helper/testの新しい名前は内部実装詳細であり、既存fileや公開済み機能と誤記しない。
+本節は実装前に確定した技術契約であり、全項目の実装完了を意味しない。現在地・実装開始承認は[ロードマップ](../roadmaps/employee.md)、業務要件は[共通仕様・Employee仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とする。実装担当は通常startup後に、上記archive保存形式・従属catalog、本節、[設計レビュー記録](../verification/employee-05-design-review.md)を読み、担当checkpointのsourceと照合する。API/helper/testの新しい名前は内部実装詳細であり、既存fileや公開済み機能と誤記しない。
 
 - 目的: Employeeの既存全項目read/表示と期間条件を維持し、全ての必要な参照保存を保護してから誤登録archiveを提供する。EMP-02〜04のraw保持・専用保存を壊さない。
 - writer: application/Functions/Rulesは一人のdeveloperへ集中。以下の内部単位を順にreview・検証して統合する。内部単位はEMPの新milestoneではなく、EMP-05の20点を分割加点しない。

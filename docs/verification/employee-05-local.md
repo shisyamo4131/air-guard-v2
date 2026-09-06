@@ -254,3 +254,24 @@ rootはBの範囲readerがcache/pendingを拒否しながら`includeMetadataChan
 所有tabとgenerated serverを停止し、14600のLISTEN不在を独立command・exit 0で確認した。Functions/Rulesを変更しないclient補正のため、専用Emulator内の合成状態を保持している。`UI-R3`のreview・domain・fresh build・再入場と実績化の実UI・cleanupは未完了であり、B受入れやC開始の証拠にはしない。
 
 その後、rootは固定した3source/2testの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1340/1340・exit 0を確認した。`UI-REVIEW-R3`は一般/限定security影響を確認し追加P1/P2なし。sourceは各listenerのoptions1行だけであり、actor/tenant・cache/pending拒否・世代条件は不変である。Functions/Rules/harnessに変更がないため保存境界の175/175・exit 0と非失効の包括gate証拠を再利用し、client配送の証拠は直接testと後続のfresh build/実UIへ分ける。文書検証とdiffはこの最終receiptに対して再実行する。まだBの実UI・cleanupは未完了。
+
+### 05-B 最終実UI（2026-09-07）
+
+上記6fileを`a372eaa1b7cccd9a34a73c60a6ad89bc6f8a174f`へlocal統合した。文書検証・通常/staged diff検査は各exit 0。同じclean HEADの`npm run test:local:ui:build`はexit 0、generated serverはidentity照合後ready、root HTTP 200。専用in-app tabへvisibility=trueを指定し、保持済み合成sessionで製品画面へ到達した。追加のAuth設定・業務fixture直接注入はしていない。
+
+正規pointer/keyboard操作で、次を確認した。
+
+- 配置表の09/07・09/08に各1人を再表示。09/07を09/04へ複製し、前日までを対象にする確定一覧へ正しい09/04で表示した。
+- 確定対象選択でnotify(false)の準備が完了し、通知休憩を0.5時間から0時間へ部分保存。明示再読込でも確定可能となった。配置表へ移動すると09/07・09/08は消えず、確定画面への再入場・同対象再選択でも休憩0時間と残業1時間を再表示した。
+- 上下番確定で成功messageと未確定一覧からの除外を確認。backend読取りで09/04の実績、同ID予定pointer、Employee索引、同日17:00終了、通知由来の休憩0を照合した。
+- 通常実績詳細でworker休憩を0.5時間へ更新し、一覧を経由して同じ詳細を再度開いて0.5を確認。取消操作では保存せず閉じた。Rowsの再購読でも行が表示される。
+- 稼働請求で未調整12750円を表示し、lockを保存。lock中に請求の調整数量と単価を保存して13500円を確認した。調整複製buttonは選択中tabだけを複製するため、最初の数量のみの保存では調整単価0、単価tabでも元値を複製して最終値を得た。既存入力手順と保存不具合を混同しない。
+- 通常実績詳細へ戻りlock案内、基本編集・worker追加/変更/削除・articles追加・実績削除の無効を確認した。backend assertionは通知LEAVED/休憩0、実績休憩30分/実働510分、lock/useAdjusted=true、調整残業60分/13500円、09/30請求日、Employee索引と予定pointer一致をすべてassertしexit 0。
+
+articlesや本人通知業務全体、開発者だけの実績複製の全操作を実UIで受け入れたとはしない。Bで改修した入口の直接controller/保存/Rules testと上記代表UIを対応づける。本人操作の意味、背景集計、外部通知・geocoding、Dev/実dataの受入れへ拡張しない。
+
+所有tabを閉じ、generated serverとEmulatorを順にCtrl-C終了した（停止sessionはexit 1）。独立したsandbox外のport commandは専用8portと観測済み8187/9150のLISTEN不在、exit 0。別commandで既存root log3fileのbackup/hash復元と、保護対象22fileの件数/SHA-256不変、exit 0を確認した。合成UI状態はexportしていない。生成物と所有runtimeを除去してからBの引渡しを確定する。
+
+絶対path・repository内・reparse不在を検査した`.output`と所有`emp05-b` runtimeの除去/不存在確認はexit 0。他のruntime、利用者Chrome、保存済みdataは保持した。以上をもって05-Bのsource review・1340件domain・175件保存境界Emulator・修正版build・代表実UI・cleanupを対応づけ、Bをlocal受入れとする。後続の文書だけの変更は製品testを失効させず、project-docs/diffを再実行してlocal統合する。
+
+次は05-Cの背景writer・日次2種/Billing索引・履歴再生成・限定整合検査・旧削除作用停止である。Bだけでは全参照先保護が成立しておらずarchive入口を開放しない。EMP-05自体は未完了、得点55%を維持する。仕様/ADR/data契約の追加変更、package/governance変更はなく、影響する実装記録・roadmap・本receiptを同期した。CHANGELOGの既存参照保存項目は同内容を表すため重複追加しない。Dev/Prod・remote・実dataは未実施のまま。
