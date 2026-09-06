@@ -2,25 +2,26 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { parse, compileScript, compileTemplate } from "@vue/compiler-sfc";
-import { Employee, Certification } from "@shisyamo4131/air-guard-v2-schemas";
+import { Employee, Certification, Insurance } from "@shisyamo4131/air-guard-v2-schemas";
 import * as contract from "../../functions/shared/employeeContract.js";
+import * as insuranceContract from "../../functions/shared/employeeInsuranceContract.js";
 
 function employee() { return new Employee({ docId: "employee", lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: contract.parseDate("1990-01-01"), dateOfHire: contract.parseDate("2026-01-01"), zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }).toObject(); }
 async function harness(operation = "basic") {
-  let raw = employee(), listener, authWatch, calls = [], messages = [], response = async () => ({ data: { success: true, employeeId: "employee" } });
+  let raw = employee(), readError, listener, authWatch, calls = [], messages = [], response = async () => ({ data: { success: true, employeeId: "employee" } });
   const auth = { uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true } };
   const ref = (value) => ({ value });
-  const bindings = { ...contract, Employee, Certification, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
+  const bindings = { ...contract, ...insuranceContract, Employee, Certification, Insurance, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
     doc: (_, path) => ({ id: path ? path.split("/").at(-1) : "reserved-id" }), collection: () => ({}),
-    getDocFromServer: async () => ({ exists: () => raw !== null, data: () => raw }),
+    getDocFromServer: async () => { if (readError) throw readError; return { exists: () => raw !== null, data: () => raw }; },
     onSnapshot: (_, fn) => { listener = fn; return () => {}; },
     httpsCallable: (_, api) => async (input) => { calls.push({ api, input }); return response(input); },
     useAuthStore: () => auth, useMessagesStore: () => ({ add: (message) => messages.push(message) }), useNuxtApp: () => ({ $firestore: {}, $functions: {} }),
   };
-  const factoryName = operation === "certifications" ? "useEmployeeCertifications" : "useEmployeeEditor";
+  const factoryName = operation === "insurance" ? "useEmployeeInsurance" : operation === "certifications" ? "useEmployeeCertifications" : "useEmployeeEditor";
   const source = (await readFile(new URL(`../../composables/application/employee/${factoryName}.js`, import.meta.url), "utf8")).replace(/import[\s\S]*?;\s*/gu, "").replace("export function", "function");
   const factory = new Function(...Object.keys(bindings), `${source}; return ${factoryName};`)(...Object.values(bindings));
-  return { editor: factory({ operation, employeeId: "employee" }), auth, calls, messages, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
+  return { editor: factory({ operation, employeeId: "employee", kind: "healthInsurance" }), auth, calls, messages, setReadError: (value) => { readError = value; }, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
 }
 test("EMP02 editor keeps live immutable, ignores unrelated fields, and holds draft on rejection", async () => {
   const h = await harness(); await h.editor.open(); h.editor.update({ title: "主任" }); assert.equal(h.raw().title, null);
@@ -91,11 +92,61 @@ test("EMP02 actual AirItemInput attrs feed the statically registered display-nam
   }
 });
 test("EMP02 changed Vue files compile", async () => {
-  for (const file of ["components/Employee/Editor.vue", "components/Employee/Certifications/Manager/index.vue", "components/Employee/Certifications/Table.vue", "components/Employees/Manager/index.vue", "components/Employee/Manager/index.vue", "components/Employee/Activator/Base.vue", "components/Employee/Activator/Nationality.vue", "components/Employee/Activator/SecurityGuard.vue", "components/Employee/Autocomplete.vue", "pages/employees/index.vue", "pages/employees/[id].vue"]) {
+  for (const file of ["components/Insurance/Transition/Manager.vue", "components/Insurance/Transition/Menu/index.vue", ...["Enroll", "Enrolled", "CancelEnrollment", "Exempt", "Loss", "Rollback"].map((name) => `components/Insurance/Transition/Input/${name}.vue`), "components/Employee/Editor.vue", "components/Employee/Certifications/Manager/index.vue", "components/Employee/Certifications/Table.vue", "components/Employees/Manager/index.vue", "components/Employee/Manager/index.vue", "components/Employee/Activator/Base.vue", "components/Employee/Activator/Nationality.vue", "components/Employee/Activator/SecurityGuard.vue", "components/Employee/Autocomplete.vue", "pages/employees/index.vue", "pages/employees/[id].vue"]) {
     const source = await readFile(new URL(`../../${file}`, import.meta.url), "utf8"); const { descriptor, errors } = parse(source, { filename: file }); assert.deepEqual(errors, [], file); const script = compileScript(descriptor, { id: file }); const result = compileTemplate({ source: descriptor.template.content, filename: file, id: file, compilerOptions: { bindingMetadata: script.bindings } }); assert.deepEqual(result.errors, [], file);
   }
 });
 function certificate(name, serialNumber) { return new Certification({ name, serialNumber, type: "TRAFFIC", issueDateAt: contract.parseDate("2026-01-01") }).toObject(); }
+
+const insuranceEnrollment = { enrollmentDateAt: contract.parseDate("2026-01-01"), number: "SYNTHETIC", isProcessing: false };
+test("EMP04 insurance raw read failure never substitutes class metadata defaults", async () => {
+  const h = await harness("insurance"); h.setReadError(new Error("offline")); await h.editor.open("enroll");
+  assert.equal(h.editor.draft.value, null); await h.editor.save(); assert.equal(h.calls.length, 0);
+  h.setReadError(null); h.setRaw({ ...h.raw(), insuranceOperationVersions: null }); await h.editor.open("enroll"); assert.equal(h.editor.draft.value, null);
+  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 7, pensionInsurance: 2, employmentInsurance: 3 } }); await h.editor.open("enroll");
+  // The schema deliberately has no generation field; the request still uses the raw read.
+  assert.equal(h.editor.draft.value.insuranceOperationVersions, undefined); h.editor.update(insuranceEnrollment); await h.editor.save(); assert.equal(h.calls[0].input.expected.version, 7);
+});
+test("EMP04 insurance independent draft, cancel, role loss and other-insurance notifications", async () => {
+  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
+  assert.equal(h.raw().healthInsurance.number, null);
+  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 0, pensionInsurance: 5, employmentInsurance: 0 } }); h.notify(); assert.equal(h.editor.conflict.value, false);
+  h.editor.close(); assert.equal(h.calls.length, 0); assert.equal(h.raw().healthInsurance.number, null);
+  await h.editor.open("enroll"); h.auth.user.disabled = true; h.authWatch(); assert.equal(h.editor.draft.value, null); assert.equal(h.editor.opened.value, false);
+});
+test("EMP04 insurance ABA notification blocks old draft until a joint raw map/version reload", async () => {
+  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
+  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 2, pensionInsurance: 0, employmentInsurance: 0 } }); h.notify();
+  assert.equal(h.editor.conflict.value, true); h.editor.update({ number: "blocked" }); assert.equal(h.editor.draft.value.number, "SYNTHETIC"); await h.editor.save(); assert.equal(h.calls.length, 0);
+  await h.editor.reload(); assert.equal(h.editor.draft.value.number, null); h.editor.update(insuranceEnrollment); await h.editor.save(); assert.equal(h.calls[0].input.expected.version, 2);
+});
+test("EMP04 insurance unknown result proves actor/map/new generation together and never blindly retries", async () => {
+  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
+  let reject; h.setResponse(() => new Promise((_, fail) => { reject = fail; })); const pending = h.editor.save(); await h.editor.save(); h.editor.update({ number: "blocked" }); assert.equal(h.editor.draft.value.number, "SYNTHETIC"); assert.equal(h.calls.length, 1);
+  reject({ code: "functions/unavailable" }); await pending; assert.equal(h.editor.uncertain.value, true); await h.editor.save(); assert.equal(h.calls.length, 1);
+  const parsed = insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input), result = insuranceContract.prepareEmployeeInsurance(h.raw(), parsed), applied = { ...h.raw(), healthInsurance: result.nextMap, insuranceOperationVersions: result.versions };
+  h.setRaw({ ...applied, uid: "other" }); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
+  h.setRaw({ ...applied, uid: "actor", insuranceOperationVersions: { ...result.versions, healthInsurance: 3 } }); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
+  h.setRaw({ ...applied, uid: "actor" }); await h.editor.reload(); assert.equal(h.editor.opened.value, false); assert.match(h.editor.message.value, /確認しました/);
+});
+test("EMP04 insurance unknown rollback reconciliation uses raw missing fields instead of class defaults", async () => {
+  const h = await harness("insurance"); h.setRaw({ ...h.raw(), healthInsurance: { ...new Insurance().toObject(), status: "EXEMPT", history: [{ status: "NOT_ENROLLED" }] } }); await h.editor.open("rollback");
+  h.setResponse(async () => { throw { code: "functions/unavailable" }; }); await h.editor.save(); assert.equal(h.editor.uncertain.value, true);
+  const result = insuranceContract.prepareEmployeeInsurance(h.raw(), insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input));
+  assert.equal(Object.hasOwn(result.nextMap, "number"), false);
+  h.setRaw({ ...h.raw(), healthInsurance: result.nextMap, insuranceOperationVersions: result.versions, uid: "actor" }); await h.editor.reload(); assert.equal(h.editor.opened.value, false);
+});
+test("EMP04 insurance transition inputs preserve outer disabled and use actual AirItemInput attrs", async () => {
+  const source = await readFile(new URL("../../air-vuetify-v3/src/AirItemInput.vue", import.meta.url), "utf8"), descriptor = parse(source).descriptor;
+  const setup = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");
+  const props = { schema: Insurance.schema, item: new Insurance().toObject(), updateProperties() {}, editMode: "UPDATE", disabled: true, includedKeys: null, excludedKeys: [] };
+  const fields = new Function("computed", "useSlots", "defineOptions", "defineProps", `${setup}; return formFields;`)((fn) => ({ get value() { return fn(); } }), () => ({}), () => {}, () => props);
+  for (const key of ["number", "lossReason", "isProcessing", "lossDateAt", "enrollmentDateAt"]) assert.equal(fields.value.find((field) => field.key === key).component.attrs.disabled, true);
+  for (const [file, field] of [["Enroll", "number"], ["Loss", "lossReason"]]) {
+    const source = await readFile(new URL(`../../components/Insurance/Transition/Input/${file}.vue`, import.meta.url), "utf8");
+    assert.match(source, new RegExp(`:disabled="componentAttrs\\['${field}'\\]\\.disabled \\|\\|`));
+  }
+});
 test("EMP03 sorted qualification rows use original raw position and no live mutation", async () => {
   const h = await harness("certifications"); h.setRaw({ ...h.raw(), securityCertifications: [certificate("Z資格", "Z"), certificate("A資格", "A"), certificate("A資格", "B")] });
   await h.editor.open(); assert.equal(h.editor.rows.value[0].originalPosition, 1);

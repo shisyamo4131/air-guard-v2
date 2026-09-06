@@ -16,6 +16,12 @@
 
 詳細の警備員・資格編集を再開し、3保険だけをEMP-04までread-onlyにする。資格の再読込みは古い行位置を破棄して再選択を求める。表示用Tableの名前key依存と到達しない編集actionを除き、実操作は専用dialogへ集約した。工程の受入れ完了は上記roadmap/検証記録を参照する。
 
+## EMP-04での実装差分
+
+3保険は`transitionEmployeeInsurance`、`employeeInsuranceContract.js`、`useEmployeeInsurance.js`へ分離し、InsuranceTransitionManagerを専用dialogへ置き換える。既存の6操作を計算用Classへ適用し、保存は対象保険内の操作所有fieldと保険別世代値だけのpatchとする。未変更のraw履歴・未知field・Timestamp精度を保持し、Employee全文や保険map全文をClass出力で置き換えない。現在の実装・検証段階はロードマップと検証記録を参照する。
+
+保険mapと同時点の世代値をraw snapshotから取得する。世代map全体が不存在の場合だけ初回操作で3種を原子的に初期化し、既存mapでは対象だけを増加する。履歴復元でも減らさず、同じ状態へ戻った後の古い要求も拒否する。別保険の更新は保持する。取得失敗や表示用Classのfield欠落をlegacyと解釈しない。保存不明時は対象map・期待する新世代値・actorを照合し、結果を特定できない場合は不明のまま入力を保持する。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。

@@ -1,9 +1,10 @@
 import { Employee } from "@shisyamo4131/air-guard-v2-schemas";
 import { FieldValue, GeoPoint } from "firebase-admin/firestore";
 import { ADDRESS_FIELDS, INSURANCE_KINDS, EmployeeOperationError, employeeAllowed, parseEmployeeInput, assertExpected, buildEmployeePatch, equal } from "../../shared/employeeContract.js";
+import { parseEmployeeInsuranceInput, prepareEmployeeInsurance } from "../../shared/employeeInsuranceContract.js";
 
 export async function saveEmployee({ firestore, resolveIdentity, input, operation, geocode, timestamp = () => FieldValue.serverTimestamp() }) {
-  const parsed = parseEmployeeInput(operation, input);
+  const parsed = operation === "insurance" ? parseEmployeeInsuranceInput(input) : parseEmployeeInput(operation, input);
   const identity = await resolveIdentity();
   const root = `Companies/${identity.companyId}`;
   const employeeRef = firestore.doc(`${root}/Employees/${parsed.employeeId}`);
@@ -27,6 +28,13 @@ export async function saveEmployee({ firestore, resolveIdentity, input, operatio
     if (!snapshot.exists) throw new EmployeeOperationError("not-found");
     const raw = snapshot.data();
     if (raw.docId !== parsed.employeeId || raw.employmentStatus !== "ACTIVE") throw new EmployeeOperationError("failed-precondition", "在職中の従業員だけを編集できます。");
+    if (operation === "insurance") {
+      const prepared = prepareEmployeeInsurance(raw, parsed);
+      const patch = Object.fromEntries(Object.entries(prepared.mapChanges).map(([field, value]) => [`${parsed.kind}.${field}`, value === undefined ? FieldValue.delete() : value]));
+      if (prepared.legacyVersions) patch.insuranceOperationVersions = prepared.versions;
+      else patch[`insuranceOperationVersions.${parsed.kind}`] = prepared.versions[parsed.kind];
+      return { raw, patch };
+    }
     assertExpected(raw, parsed.changes, parsed.expected, operation);
     return { raw, ...buildEmployeePatch(raw, parsed.changes, operation, parsed) };
   }

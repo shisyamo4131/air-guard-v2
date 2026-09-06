@@ -96,11 +96,7 @@ onUnmounted(() => {
       <v-col cols="12" md="8">
         <v-row>
           <v-col v-for="insurance in [{ key: 'employmentInsurance', title: '雇用保険' }, { key: 'healthInsurance', title: '健康保険' }, { key: 'pensionInsurance', title: '厚生年金' }]" :key="insurance.key" cols="12" md="4">
-            <v-card :title="insurance.title"><v-card-text>
-              <InsuranceStatusChip :status="doc[insurance.key].status" :is-processing="doc[insurance.key].isProcessing" />
-              <div>番号: {{ doc[insurance.key].number || '-' }}</div>
-              <div>加入日: {{ doc[insurance.key].enrollmentDate || '-' }}</div>
-            </v-card-text></v-card>
+            <InsuranceTransitionManager :employee="doc" :kind="insurance.key" :title="insurance.title" />
           </v-col>
           <v-col cols="12">
             <EmployeeEditor :employee="doc" operation="security" title="警備員登録">

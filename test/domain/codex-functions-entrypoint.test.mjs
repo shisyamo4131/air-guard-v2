@@ -13,6 +13,7 @@ const PUBLIC_CALLABLES = [
   "updateEmployeeNationality",
   "updateEmployeeSecurity",
   "updateEmployeeCertifications",
+  "transitionEmployeeInsurance",
   "createEmployeeLinkedTemporaryUser",
   "createStandaloneTemporaryUser",
   "deleteStandaloneRegisteredUser",

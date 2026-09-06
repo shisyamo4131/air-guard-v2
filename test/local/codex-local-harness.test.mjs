@@ -50,7 +50,8 @@ import {
   createUserEmailReservationId,
 } from "../../functions/modules/auth/createTemporaryUser.js";
 import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProjection.js";
-import { expectedFields, SECURITY_FIELDS } from "../../functions/shared/employeeContract.js";
+import { expectedFields, SECURITY_FIELDS, encodeExpected, INSURANCE_KINDS } from "../../functions/shared/employeeContract.js";
+import { insuranceVersions } from "../../functions/shared/employeeInsuranceContract.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -69,6 +70,55 @@ function parseEmulatorHost(name) {
   assert.ok(Number.isInteger(port), `${name} must use a numeric port`);
   return { host, port };
 }
+
+test("EMP04 insurance HTTP transitions preserve raw history and reject ABA while separate kinds can commit", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "emp04-transport-hr", roles: ["human-resource"] });
+  const employeeId = "emp04-transport-employee";
+  const call = (functionName, input) => callSiteLifecycleTransport({ actor, functionName, data: { employeeId, ...input } });
+  const created = await call("createEmployee", { changes: { lastName: "合成", firstName: "保険", lastNameKana: "ゴウセイ", firstNameKana: "ホケン", displayName: "合成保険", displayNameKana: "ゴウセイホケン", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }, expected: {} });
+  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
+  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
+  const input = (raw, kind, action, changes = {}) => ({ kind, action, changes, expected: { map: encodeExpected(raw[kind]), version: insuranceVersions(raw)[kind] } });
+  const transition = (data) => call("transitionEmployeeInsurance", data);
+  const save = async (kind, action, changes = {}) => { const raw = (await ref.get()).data(), data = input(raw, kind, action, changes), result = await transition(data); assert.equal(result.response.status, 200, JSON.stringify(result.payload)); return data; };
+  const initial = (await ref.get()).data();
+  const enroll = { enrollmentDateAt: "2026-01-01", number: null, isProcessing: true };
+  const results = await Promise.all(INSURANCE_KINDS.map((kind) => transition(input(initial, kind, "enroll", enroll))));
+  for (const result of results) assert.equal(result.response.status, 200, JSON.stringify(result.payload));
+  assert.deepEqual((await ref.get()).data().insuranceOperationVersions, { healthInsurance: 1, pensionInsurance: 1, employmentInsurance: 1 });
+  const kind = "healthInsurance";
+  await save(kind, "cancelEnroll"); assert.equal((await ref.get()).data()[kind].previousStatus, null);
+  await save(kind, "enroll", enroll); await save(kind, "enrolled", { number: "SYNTHETIC" });
+  const stamp = new AdminTimestamp(1767193200, 123456789);
+  await ref.update({ [`${kind}.enrollmentDateAt`]: stamp, [`${kind}.unknown`]: { at: stamp } });
+  // Firestore storage may canonicalize the fixture's nanos. Compare operations
+  // against the just-read stored value, including precision finer than milliseconds.
+  const stored = (await ref.get()).data()[kind];
+  assert.equal(stored.enrollmentDateAt.seconds, stamp.seconds);
+  assert.notEqual(stored.enrollmentDateAt.nanoseconds % 1000000, 0);
+  const oldLoss = await save(kind, "loss", { lossDateAt: "2026-02-01", lossReason: "合成理由", isRetire: false });
+  let raw = (await ref.get()).data(); assert.deepEqual(encodeExpected(raw[kind].history.at(-1).enrollmentDateAt), encodeExpected(stored.enrollmentDateAt));
+  const oldRollback = await save(kind, "rollback"); raw = (await ref.get()).data(); assert.deepEqual(encodeExpected(raw[kind].enrollmentDateAt), encodeExpected(stored.enrollmentDateAt)); assert.deepEqual(encodeExpected(raw[kind].unknown), encodeExpected(stored.unknown));
+  assert.deepEqual(encodeExpected(raw[kind]), oldLoss.expected.map);
+  const staleLoss = await transition(oldLoss); assert.equal(staleLoss.payload.error.status, "ABORTED");
+  await save(kind, "loss", { lossDateAt: "2026-02-01", lossReason: "合成理由", isRetire: false });
+  assert.deepEqual(encodeExpected((await ref.get()).data()[kind]), oldRollback.expected.map);
+  const staleRollback = await transition(oldRollback); assert.equal(staleRollback.payload.error.status, "ABORTED");
+  await save(kind, "rollback");
+  await save(kind, "exempt", { lossDateAt: "2026-02-01", lossReason: "合成理由" });
+  raw = (await ref.get()).data(); assert.equal(raw.insuranceOperationVersions.healthInsurance, 9); assert.equal(raw.insuranceOperationVersions.pensionInsurance, 1); assert.equal(raw.insuranceOperationVersions.employmentInsurance, 1);
+  // A history entry with absent optional restored fields must delete those fields,
+  // while an untouched prior history entry retains its raw extras and precision.
+  const history = [{ status: "NOT_ENROLLED", unknown: { at: stamp } }, { status: "NOT_ENROLLED" }];
+  await ref.update({ [`${kind}.history`]: history });
+  const storedHistory = (await ref.get()).data()[kind].history;
+  assert.notEqual(storedHistory[0].unknown.at.nanoseconds % 1000000, 0);
+  await save(kind, "rollback"); raw = (await ref.get()).data();
+  for (const field of ["previousStatus", "enrollmentDateAt", "number"]) assert.equal(Object.hasOwn(raw[kind], field), false);
+  assert.equal(raw[kind].enrollmentDate, ""); assert.deepEqual(encodeExpected(raw[kind].history), encodeExpected(storedHistory.slice(0, -1)));
+  await getAdminFirestore().doc(`Companies/${actor.companyId}/Users/${actor.uid}`).update({ roles: ["controller"] });
+  const denied = await transition(input(raw, kind, "enroll", enroll)); assert.equal(denied.payload.error.status, "PERMISSION_DENIED");
+});
 
 test("EMP03 security and certification Callables preserve row positions and reject stale writes over HTTP", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp03-transport-hr", roles: ["human-resource"] });

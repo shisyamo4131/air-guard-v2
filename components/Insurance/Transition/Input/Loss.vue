@@ -57,7 +57,7 @@ watch(
     <v-col cols="12">
       <air-text-field
         v-bind="componentAttrs['lossReason']"
-        :disabled="props.item.isRetire"
+        :disabled="componentAttrs['lossReason'].disabled || props.item.isRetire"
         required
       />
     </v-col>

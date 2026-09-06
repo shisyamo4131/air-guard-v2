@@ -27,3 +27,4 @@ export const updateEmployeeBasic = callable("basic");
 export const updateEmployeeNationality = callable("nationality");
 export const updateEmployeeSecurity = callable("security");
 export const updateEmployeeCertifications = callable("certifications");
+export const transitionEmployeeInsurance = callable("insurance");

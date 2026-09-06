@@ -114,3 +114,27 @@ createと警備員登録解除だけに、既存schema hookと一致する9field
 所有tabを閉じ、generated server→Emulator停止（停止exit 1）、専用8portと派生9150/8015のLISTENなし、所有`.output`削除、3datasetのfile数/bytes/SHA-256一致、原root log復元/一致を個別commandのexit 0で確認した。外部provider・Dev/Prod・実data・全roleの直接UIは未検証。専用合成account以外のrole境界は自動testで検証した。共通3gateはvalidator/route/policy不変のため前記証拠を再利用し、最終文書変更に対するproject-docs/diffは再実行する。仕様/ADR/運用手順の変更はなく、実装・進捗・検証記録だけを更新する。
 
 EMP-03の完了条件を満たし進捗を30%→40%とする。次工程reviewでは保険の6操作を維持し、特にlossのisProcessing非変更、cancelEnrollのpreviousStatus=null、rollbackの4field復元、raw履歴Timestamp/unknown保持、巻き戻さない保険別世代値を引継ぎ事項とした。保険番号20文字・喪失理由40文字はinstalled schemaの現制約を使い、新しい形式制約は追加しない。EMP-04完了後に停止する承認境界は維持する。
+
+## EMP-04 開始契約
+
+EMP-03の完了記録を`e492c39f3e9c0709200cb71e230117407a71b8c4`へ統合し、rootがprimary/branch/clean状態を確認した。3保険×6操作、raw mapと巻き戻さない保険別世代値、現在actor/ACTIVE、独立draftと局所競合、履歴復元/不明応答を対象とする。共有package・既存lifecycle/User・他collection・archive/参照writer・Dev/Prod・外部作用は変更しない。完了後はEMP-05へ進まない。
+
+developerはEmployee共有契約・保存module/API・専用保険controller・InsuranceのManager/Menu/Input・詳細pageと直接testだけを所有し、rootは文書・独立review・最終gate・実UI/backend・cleanup/Gitを担当する。UI/logic/data contract/認可/専用buildのunion gateを前工程から継承し、domain/Emulator/buildを最終sourceで再実行する。共通validator3gateは失効条件に該当しない限り再利用する。
+
+代表UIは1保険の6操作、他2保険の保存先分離、2画面の競合/入力保持/再読込、保存前の取消、backendの世代値と履歴を確認する。全3保険×6操作・拒否・legacy/不正世代・ABA・unknown/Timestamp保持・応答不明は自動testで検証する。実UI対象は正規UIから作成し、非UI準備は合成actor/環境baselineだけに限定する。終了時は専用tab/process/port・`.output`を清掃し、3datasetと原logを検証・復元、連続工程で所有したruntimeを削除する。rollbackは今回の未提供local差分を戻す単位とし、旧全文writerをRulesで許可する回避や実data変更を行わない。
+
+### EMP-04 初回review・検証
+
+3保険専用Callable、raw map/世代値と操作別部分patch、独立draft、6操作UIを実装した。root実測の全domainは1226 tests / pass 1226 / fail 0、exit 0。project-docs/diffも各exit 0。
+
+EMP-04-CLIENTはcontroller・専用Manager・6Input/Menu・詳細・共有contract・test・実入力部品をread-only確認し追加blockingなし。通常画面の全文writer残存は検索範囲で確認されず、UWB/lifecycleと参照writerは別境界として維持された。EMP-04-SECは保存/API/raw/世代/client/testを確認し、P2を1件指摘した。rawにない表示getter`enrollmentDate`を日付変更で新設するため、元から存在する場合だけ同期する修正と不存在回帰が必要。その他の認可・局所世代・履歴raw保持に追加指摘なし。両reviewは実行testの成功証拠ではない。
+
+初回EmulatorのEMP04 subtestはnanoseconds期待値123456789に対し123456000で失敗した。fixtureを書き込んだ直後のrawと操作後rawを比較し、storageの保存精度とapplicationによる変化を切り分けて再検証する。全runnerの終結果・修正後検証は後記する。実UI/buildは未実施、工程加点なし。
+
+初回`npm run test:local`全runnerは174 tests / pass 173 / fail 1、exit 1で終了した。専用portと派生9150/8871のLISTENなしをexit 0で確認した。SEC指摘と直接testの修正後に、影響する全domain/Emulatorを再実行する。
+
+### EMP-04 R1 review・再検証
+
+表示getterはrawに存在する場合だけ同期するよう修正した。getter有無それぞれでloss→rollback後のmap完全一致、enroll/cancel時の存在状態を追加検証した。EMP-04-SEC-R1は指定contract/domain/local testのread-only再reviewでP2解消・追加blockingなし。日時検証はfixtureを書き込んだ直後のrawを基準とし、操作後のTimestamp・未知field・履歴を完全比較する。ミリ秒未満精度の存在もassertし、単体試験の任意nanoseconds保持を継続した。操作による丸めを許容した変更ではない。
+
+修正後`node --test test/domain/*.test.mjs`は1227 tests / pass 1227 / fail 0、exit 0。Emulator再実行・専用build・直接UI/backend・cleanupはこの時点では未完了。最終sourceと文書をreview済み範囲でlocal統合し、clean HEADの専用UI検証へ進む。

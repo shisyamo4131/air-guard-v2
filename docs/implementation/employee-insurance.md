@@ -1,8 +1,10 @@
 # Employee保険管理（実装調査）
 
-## EMP-02の移行状態
+## EMP-04の移行状態
 
-Employee詳細の3保険はEMP-04の専用保存へ移行するまで一時read-onlyにした。Employee原本/archiveの直接client CUDをRulesで拒否し、旧全文保存を許可して併存させない。現6操作の採用条件は維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)を参照する。
+Employee詳細の3保険を専用Callableと独立draftへ移行している。原本/archiveの直接client CUD拒否を維持し、旧全文保存を再許可しない。対象保険mapと巻き戻さない保険別世代値を照合し、6操作で変更するfieldだけを保存する。履歴復元は末尾の4fieldを復元し、履歴を1件消費する既存動作を維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)、保存契約は[Employee設計](employee-master.md#通常保存の技術契約)を参照する。
+
+現installed schemaの文字数制約は被保険者番号20文字・喪失理由40文字で、遷移methodが一時入力を消去する前に検証する。日付は有効なJST暦日を受け付ける。新しい日付前後関係・未来日拒否・番号書式・3保険間整合は追加しない。下記の調査履歴にある「長さvalidationなし」「親の全文update」「全field write」は現在の保存契約ではない。
 
 ## EMP-01時点の再照合（2026-09-06・履歴）
 
@@ -15,6 +17,8 @@ Employee詳細の3保険はEMP-04の専用保存へ移行するまで一時read-
 在職Employeeでは履歴復元を含む6操作を会社管理者・統括・人事へ許可し、下記の現行状態遷移を維持する。退職後は保険更新・履歴復元を含め通常編集を禁止する。現UIの退職者操作可能という記録は実装事実であり、採用仕様ではない。[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)に従い、保存時の最新在職状態と保険の局所競合を同じ保存境界で確認する。実装・runtimeは未検証。
 
 ## メタデータ
+
+以下の節は2026-08-11の改修前調査履歴である。現在の保存・権限・適用状況は冒頭の移行状態を参照する。
 
 - 状態: 実装調査（SPEC-DEEP-027で対象9 componentをdeep review済み）
 - 対象セグメント: SPEC-SEG-051
