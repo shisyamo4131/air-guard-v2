@@ -335,3 +335,21 @@ rootの`node --test test/domain/*.test.mjs`初回は1398件中1396成功・2失�
 `C-DOC-REVIEW`は影響6文書を確認しP1/P2なし。P3の入金予定日の旧経路を、現page→専用editor/controller→Callableと移行前の記述へ分離した。権限/仕様/ADRの追加変更は不要とした。完了classはUI/application/data・Rules/permissions/buildと文書のunion。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。関連するmanaged/policy/validator/必須routing/capacity手順を変更しておらず、失効条件に該当しない。project-docs/diffは最終文書追記後に実行し、44 source/test＋6影響文書をreview済みlocal統合へ進める。Dev/Prod generateは未承認release-onlyのため実施しない。
 
 初回stage後の`git diff --cached --check`は新規test helper末尾空行でexit 1。`C-WHITESPACE-R1`がその1行だけを削除し、rootは影響する全domainを再実行して1398/1398、exit 0を確認した。Emulatorが読む製品source/local harnessは不変であり、176件の証拠は再利用する。
+
+### 05-C 最終実UI・受入れ（2026-09-07）
+
+50 fileを`c905e9924ed7b762db544a988e20a857b70ac8bd`へlocal統合した。通常/staged diff検査と文書検証は各exit 0。同じclean HEADの`npm run test:local:ui:build`はexit 0。専用Emulatorを背景trigger opt-in付きで起動し、generated serverのidentity・HTTP 200を確認した。専用in-app tabだけを操作した。
+
+非UI setupは、保存済み合成actorのrunning Auth Emulator内だけへの一時credential設定と、未作成だった`System/system`の`isMaintenance:false`環境baselineに限定した。credentialは保存・出力せず、saved-dataは変更していない。業務dataはすべて可視UIの通常pointer/keyboardから作成した。
+
+- 合成取引先・現場・Employeeを登録し、09/01適用の取極めを08:00〜17:00、休憩60分、平日基本単価12000円で保存した。Employeeも09/01入社を詳細で確認。住所は保存され、外部作用denyによる座標取得不可messageを確認した。
+- 配置管理で1人をdragして保存し、09/04へ複製。上下番確定画面で勤務08:00〜17:00・休憩1時間を確認して正規実績化した。確定後は未確定一覧から除外された。
+- 登録された`codexOnOperationResultChange`の実行終了を確認。backendのread-only assertionで日次勤怠・従業員別稼働・Billings・現場履歴の各1documentを確認した。日次2種/Billingsの索引は同じEmployee 1人、埋込み実績は各1件。従業員別稼働は480分、請求は税抜12000円/税込13200円、現場履歴の初回/最終は09/04だった。請求画面でも同額を確認した。
+- 入金予定日を10/31から11/02へ入力して閉じ、再度開くと10/31のままであることを確認した。その後11/02を保存し、成功message・再表示・明示再読込を確認。backendでは予定日/予定月/JST Timestampの3fieldと、請求金額・従業員索引の保持をassertしexit 0。
+- 「未設定にする」→保存で成功messageと未設定表示、再度開いて空の日付を確認した。backendでは3fieldがすべて明示null、金額と索引が不変であることをassertしexit 0。専用Callableの2回の保存終了も確認した。
+
+最初のbackend診断は認証headerなしのためRulesが403を返した。Emulator専用の読取assertionへ修正し、製品Rulesを緩和していない。また最初の予定日assertionはPowerShellのTimestamp型変換に対する文字列比較でexit 1となった。実値を確認し日時型同士の比較へ修正した5条件はすべてtrue・exit 0。製品保存の失敗とは区別する。これら診断のexitを成功証拠へ置換しない。
+
+所有tabを閉じ、generated serverとEmulatorを順にCtrl-C停止した（各停止session exit 1）。専用8port・9150・8380・8651・8574の計12portのLISTEN不在を独立commandで確認しexit 0。保護対象22fileの件数/SHA-256不変、既存root log3fileの復元/hash一致はexit 0。絶対path・repository内・reparse不在を確認した`.output`と所有`emp05-c` runtimeの削除/不存在確認もexit 0。合成業務dataはexportしていない。
+
+以上をsource review・1398件domain・176件Emulator・fresh build・代表実UI・cleanupへ対応づけ、05-Cをlocal受入れとする。今回の文書だけの追記は製品testを失効させず、project-docs/diffを再実行してlocal統合する。次の05-Dは、現在保存先との差分を同transactionで検査するwriter、索引、状態無限定のUser/lifecycle参照、旧削除handler無作用を前提にする。整合checkerの成功だけでarchiveを開放せず、未確認tenant拒否・12従属・競合両順序をDで検証する。EMP-05は未完了、進捗55%を維持する。仕様/ADR/package/governance/remoteへの追加変更はない。
