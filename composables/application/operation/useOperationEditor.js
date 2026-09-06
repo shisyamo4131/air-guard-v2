@@ -60,7 +60,7 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
       if (ticket !== generation) return false;
       initializeDraft(raw || null, rowOptions);
       if (mode === "CREATE" && item) {
-        for (const field of fieldsFor(action)) if (item[field] !== undefined) draft.value[field] = rawForClass(item[field]);
+        for (const field of fieldsFor(action)) if (item[field] !== undefined && !equal(draft.value[field], item[field])) draft.value[field] = rawForClass(item[field]);
       }
       return true;
     } catch { if (ticket === generation) message.value = "編集を開始できません。最新情報を確認してください。"; return false; }

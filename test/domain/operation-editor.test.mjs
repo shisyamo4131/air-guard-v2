@@ -300,3 +300,28 @@ for (const boundary of ["read", "prompt"]) test(`Site guard ${boundary} cannot t
   assert.equal(await state.editor.save(), true); assert.equal(state.calls.length, 1); assert.equal(state.calls[0].operations[0].documentId, "b");
   assert.equal(prompts.length, boundary === "read" ? 1 : 2, "B must independently confirm the same terminated Site"); state.effect.stop();
 });
+
+test("CREATE accepts the actual arrangement Class preset without reassigning unset time defaults", async () => {
+  for (const times of [{}, { startTime: "08:00", endTime: "17:00" }]) {
+    const state = await editorHarness();
+    const preset = new SiteOperationSchedule({ siteId: "selected-site", shiftType: "NIGHT", ...times });
+    const before = employeeContract.encodeExpected(preset.toObject());
+    assert.equal(await state.editor.open("CREATE", preset), true);
+    assert.equal(state.editor.message.value, ""); assert.equal(state.editor.draft.value.siteId, "selected-site"); assert.equal(state.editor.draft.value.shiftType, "NIGHT");
+    assert.equal(state.editor.draft.value.startTime, times.startTime ?? null); assert.equal(state.editor.draft.value.endTime, times.endTime ?? null);
+    assert.notStrictEqual(state.editor.draft.value, preset); state.editor.update({ remarks: "independent" });
+    assert.deepEqual(employeeContract.encodeExpected(preset.toObject()), before); state.editor.close(); assert.equal(state.calls.length, 0); state.effect.stop();
+  }
+});
+
+test("CREATE still reports an invalid preset setter failure and arrangement manager explicitly suppresses its fallback activator", async () => {
+  const state = await editorHarness();
+  assert.equal(await state.editor.open("CREATE", { startTime: 12 }), false); assert.match(state.editor.message.value, /編集を開始できません/u);
+  state.editor.close(); assert.equal(state.calls.length, 0); state.effect.stop();
+  const code = await source("components/Arrangements/Manager/index.vue");
+  assert.match(code, /<SiteOperationScheduleManager ref="scheduleManager">\s*<template #activator \/>\s*<\/SiteOperationScheduleManager>/u);
+  assert.match(code, /<SpeedDial v-bind="uiSpeedDial.attrs" \/>/u);
+  const { descriptor } = parse(code), compiled = compileScript(descriptor, { id: "arrangements-manager" });
+  const template = compileTemplate({ source: descriptor.template.content, filename: "components/Arrangements/Manager/index.vue", id: "arrangements-manager", compilerOptions: { bindingMetadata: compiled.bindings } });
+  assert.deepEqual(template.errors, []);
+});

@@ -208,3 +208,17 @@ developer terminal後、rootが`node --test test/domain/*.test.mjs`を実行し1
 最終4fileはclient controllerとdomain testであり、175件成功後のFunctions/Rules/harnessには変更がない。verification policyの失効条件に従い、保存境界のEmulator175/175・exit 0は再利用し、後続client差分は1334件のdomainとこれから行うfresh build/実UIへ対応づける。managed-governance、project-docs-negative、capacity-regressionも対象validator・policy・governance・fixtureに後続変更がなく、同turnのexit 0証拠を再利用する。文書検証とdiff検査は最終文書に対して再実行する。Dev/Prod生成・releaseは対象外で未実施。
 
 この時点はreview済みsourceのlocal統合準備で、05-Bの実UI・cleanup・受入れは未完了。05-C以降へ進まず、EMPの得点は55%のままとする。新仕様・data形状・ADR・共通governance・packageの変更はなく、実装記録・roadmap・本receipt・CHANGELOGの4文書だけを同期する。
+
+### 05-B 初回実UIと補正（2026-09-07、途中）
+
+文書検証（254 Markdown / 60 ADR / 11 roadmap / 8 TOML）、`git diff --check`、`git diff --cached --check`はそれぞれexit 0。review済み62製品/test fileと4文書を`df00e543`へlocal統合し、clean HEADから`npm run test:local:ui:build`を実行してexit 0を確認した。専用Emulatorとgenerated serverを独立前景processで起動し、HTTP 200・saveOperation登録・外部作用denyを確認した。
+
+非UI setupでは保存済み単一合成Authを再利用し、一時credentialはrunning専用Auth内と入力memoryだけで扱った。Customerの正規UI作成後、Site作成はSystem/system不存在によりRulesで拒否された。GET 404とRulesを照合し、自動testと同じ`isMaintenance=false`だけを不存在条件付きでrunning専用Emulatorへ環境baselineとして作成した。保存済みexportは変更せず、業務fixtureの直接注入とは分離する。保持した画面入力からのSite再試行は成功した。
+
+通常UIでCustomer・Site・日勤取極め・Employeeを各1件作成した。取極めは09/07適用、08:00〜17:00・実働8時間/休憩1時間、平日通常12000/残業1500・資格14000/1750、未使用曜日0円の明示確認を経て保存した。Employeeは09/07入社、User未連携・警備員登録未完了で、座標取得不可でも住所保存と案内を確認した。初回の数値だけの日付入力と表示名長さは入力条件に合わせて訂正し、製品保存不具合へ数えない。
+
+配置管理の既存SpeedDialから予定を開くと、draftと「編集を開始できません」が同時表示された。入力を補い取極めを適用した後の09/07・必要人数1の予定保存は成功したが、正常な作成開始とは受け入れない。`EMP-05-B-UI-DIAG`の純粋診断とrootのinstalled source照合で、Class presetの未入力startTime/endTime=nullをcontrollerがsetterへ再代入して例外になると確認した。また新OperationManagerのfallback作成ボタンが、既存配置画面の固定高Table後へ意図せず増えていた。
+
+`UI-R1`は同値preset再代入の回避と当該配置画面の空activator接続、実Classの作成/取消回帰へ限定する。UIタブとgenerated serverを停止し、Functions/Rulesを固定したまま所有Emulatorに合成状態を保持する。修正後のreview・domain・source統合・fresh build/画面再確認が終わるまでBは未完了。背景処理・archiveへは進まない。
+
+rootが3fileの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1336/1336・exit 0を確認した。`UI-REVIEW-R1`は追加blockingなし。actor/tenant・transaction・保存fieldに変更はなく、同値入力の初期化とslotだけの限定修正として影響reviewを選び、Functions/Rules/harnessの175件証拠を再利用する。実UIを再開する前に、14600のLISTEN不在・所有Emulatorだけの稼働・保護22hash不変をsandbox外の読取りcommandで確認した（exit 0）。read-only backend assertionでは初回予定のworker配列0件、必要人数1、08:00〜17:00を確認した。まだ配置・複製・実績化の成功を主張しない。
