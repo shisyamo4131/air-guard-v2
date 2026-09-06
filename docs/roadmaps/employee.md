@@ -1,6 +1,6 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: EMP-01進行中（actor・全項目閲覧・自宅座標の用途・他collection変更禁止を確定、削除実装契約・工程配分と保存条件は判断中）
+- 状態: EMP-01進行中（actor・全項目閲覧・自宅座標の用途と取得失敗時保存・他collection変更禁止を確定、削除実装契約・工程配分と保存条件は判断中）
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 0%
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
@@ -30,7 +30,7 @@ archive新機能はFUT-0078の将来工程へ戻し、誤登録の物理削除�
 
 | マイルストーン | 重み | 得点 | 状態 | 内容と完了条件 |
 |---|---:|---:|---|---|
-| EMP-01 契約・対象確定 | 10 | 0 | In progress | actor・全項目read・座標用途・変更範囲は確定。退職後編集、保険遷移/訂正、住所と座標の保存失敗、code/氏名/候補、operation所有fieldと競合・段階移行を判断する。統括退職・物理削除の依存、他collectionを変更しない条件との整合、工程配分も確定し、採用範囲だけ仕様・必要ADRへ反映する。独立reviewでEMP-02の入力・保存・test前提が揃ったことを確認し報告する。 |
+| EMP-01 契約・対象確定 | 10 | 0 | In progress | actor・全項目read・座標用途と失敗時保存・変更範囲は確定。退職後編集、保険遷移/訂正、最新住所と座標の整合、code/氏名/候補、operation所有fieldと競合・段階移行を判断する。統括退職・物理削除の依存、他collectionを変更しない条件との整合、工程配分も確定し、採用範囲だけ仕様・必要ADRへ反映する。独立reviewでEMP-02の入力・保存・test前提が揃ったことを確認し報告する。 |
 | EMP-02 作成・基本・国籍 | 20 | 0 | Planned | 独立draft、同ID/create-onlyと結果照合、基本/国籍のexact field保存、住所入力、派生field、従属field初期化、採用した同field競合契約・異field保持を実装する。対象operationの権限・型・fieldを保存境界で強制し、旧allowによる迂回も閉じる。未移行editorの停止/先行保存互換をEMP-01で決定し、代表UI保存・再読込・失敗を確認する。 |
 | EMP-03 警備員登録・資格 | 10 | 0 | Planned | 登録情報と資格配列を別operationとして保存する。同名・名称変更・削除・別行追加・古い配列の再送で他行を失わず、保険・基本情報・lifecycleへ書かない。対象actor、従属初期化、拒否・成功のdata比較と代表UIを確認する。 |
 | EMP-04 3保険の保存 | 15 | 0 | Planned | 各保険の承認済み遷移だけをserverで検証し、対象保険の現在値/historyと局所的期待値を照合する。live非mutation、保存await、確定拒否時のwrite 0、応答不明時の照合、二重history変更防止を確認する。監査制度全面刷新を暗黙追加しない。 |
@@ -80,7 +80,7 @@ archive新機能はFUT-0078の将来工程へ戻し、誤登録の物理削除�
 - Employee単一正本・全項目read・既存購読を維持する。閲覧項目を制限するための新API・projection・通知・polling・data移行は不要であり、方式選定をEMP-02の前提から外す。
 - 既存Classのaccessor・instanceof・検索/表示互換を維持する。全項目の取得を許可しても、更新はoperation所有fieldへ限定し全文setへ戻さない。
 - 実効schema変更、他機能への明確な影響、確実な変換必要性がある場合だけ既存dataを必要範囲で確認する。入社日変更が期間検索へ影響する点はEMP-02で扱う。全件診断・一括修復・package更新を一律の前提にしない。
-- 自宅geocodingは将来の現場・自宅経路図のため取得・保存を継続する。CONF-0120の必要性・用途・閲覧actorは回答済み。住所/座標整合・失敗時保存・log・Employee専用境界と共通入口の扱いを確定し、未解決のままEMP-02を完了しない。他masterの保存・Rulesは変更せず、経路図や実provider接続・全件座標更新は今回の対象外とする。
+- 自宅geocodingは将来の現場・自宅経路図のため取得・保存を継続する。CONF-0120の必要性・用途・閲覧actor・失敗時の住所保存/旧座標消去/未取得通知は回答済み。最新住所/座標整合・log・Employee専用境界と共通入口の扱いを確定し、未解決のままEMP-02を完了しない。他masterの保存・Rulesは変更せず、経路図や実provider接続・全件座標更新は今回の対象外とする。
 - 未反映codeは所有差分を対象に安全に戻せるが、反映後はPIIの広域read/write再開放を復旧の既定にしない。影響操作の停止と互換修正を検討し、data変換の復旧は承認済みbackup・手順へ従う。User/Authの旧UID復元を行わない。
 - EMP-05のcache破棄は新実装が管理するmemory・永続cache・遅延応答を対象とする。旧clientや取得済みの複製PIIを回収できたとは主張せず、旧client併存条件をEMP-09で確認する。
 
@@ -160,7 +160,7 @@ EMP-01-DELETE-PLAN/BILLINGの静的調査を参照保存候補表へ集約した
 
 EMP-01-FULLREAD-SEC-REVIEWとEMP-01-FULLREAD-DOC-REVIEWが10文書をread-onlyで確認した。CONF-0111の「exact read field未決」がEmployeeにも見える指摘を修正し、EMP-01-FULLREAD-DOC-R1で解消・追加指摘なしを確認した。基本入力表も通常編集3actorへ同じ入力範囲を認める採用条件と揃えた。これは文書整合のreviewであり、実装・削除の競合・provider・Devを安全と検証したものではない。
 
-次工程判定は「条件の確定が必要」。read方式の比較は解決したが、住所/座標失敗時の保存、氏名・退職後訂正・保険・段階writer、物理削除の成立条件/工程配分は残る。住所保存を継続し古い座標を消して未取得を知らせる案を利用者へ確認中で、回答前には採用しない。EMP-01は進行中・0点、全体0%を維持し、EMP-02は開始しない。
+以下は全項目閲覧反映時のreview履歴である。次工程判定は「条件の確定が必要」。read方式の比較は解決したが、住所/座標失敗時の保存、氏名・退職後訂正・保険・段階writer、物理削除の成立条件/工程配分は残る。住所保存を継続し古い座標を消して未取得を知らせる案を利用者へ確認中で、回答前には採用しない。EMP-01は進行中・0点、全体0%を維持し、EMP-02は開始しない。
 
 仕様・判断・未決事項・計画と索引/CHANGELOGを更新した。保存shape・既存UI・運用・他masterの変更がないため、data contractのshape、manual、operations、他master文書は更新しない。親roadmapと再開案内は本書を正本として参照済みのため重複更新しない。governance/agent設定・managed artifactsは変更しない。
 
@@ -175,3 +175,21 @@ permission仕様反映として`governance-permissions-agents`のcomprehensive 5
 | diff-check | `git diff --check` | この記録を含む最終状態で実行し、独立exitをcommand reportに残す |
 
 最初の3 gateはこの文書追記でpolicy上失効しない。新ADRを含む所有10文書だけをreview後にstageし、`git diff --cached --check`を別実行してlocal commitする。結果・commit・最終worktree状態は利用者報告へ記録する。
+
+### EMP-01座標失敗時保存の回答反映と残質問
+
+2026-09-06、baseline `c1483686e3e3fb2051fd0133cac74f993059096b`から、利用者のYESを仕様・ADR 0058・CONF-0117/0120・FUT-0141/0143へ反映した。座標取得だけが失敗した新規作成・住所変更では住所を保存し、古い座標を消して未取得を知らせる。住所不変の通常編集は既存座標を保持する。入力・認可・競合・Firestore保存失敗まで成功扱いにしない。
+
+EMP-01-GEO-ANSWER-REVIEWが、`CHANGELOG.md`、`docs/specification.md`、`docs/decisions/0058-employee-full-read-and-geocoding-scope.md`、`docs/implementation/employee-master.md`、`docs/implementation/pending-confirmations.md`、`docs/implementation/future-actions.md`、本書の7文書をread-onlyで確認し、文書保存を妨げる指摘なしとした。実装・provider・競合の検証ではない。
+
+残る利用者判断は次の3点に絞って提示する。以下は未採用案であり、物理削除の延期や新しい操作権限を自動確定しない。
+
+1. 他collectionの保存・Rulesを維持し、作成・閲覧・更新・退職の権限制御を先行、物理削除は安全条件が整う後続工程へ分ける案。誤登録削除の採用要件は取り消さないが、提供時期・完了条件・工程配分が変わるため判断を要する。現承認条件で通常運用中の並行参照追加を防げる根拠は未確認。
+2. 退職後も会社管理者・統括・人事が通常情報を訂正できる案。退職状態・日付の訂正は専用操作を維持し、User/Auth復元・業務履歴の再生成へ拡張しない。
+3. 保険の履歴復元も通常編集の3actorへ認め、手続中操作は現行遷移を維持する案。現行の手続中復元不可は維持し、先に取下げ必須・復元は会社管理者だけ等の未採用制限を追加しない。
+
+氏名・codeの既存の業務上の意味を維持する方向で技術案を具体化し、新採番・候補制限を追加しない。保存方式・局所競合・座標未取得表現・段階writer移行・工程配分は設計と受入条件のreviewが残る。質問数を減らしたことを技術設計完了と混同せず、EMP-01進行中、EMP-02未開始、全体0%を維持する。
+
+仕様採用を含む文書変更は純粋なdocumentation-onlyに該当しないため、policyの未分類影響のcomprehensive 5 gateを選択する。managed-governance（内包rendererを含む）、project-docs-negative、capacity-regressionを前節のexact commandで実行し、それぞれexit 0。容量試験は合成fixture 7 checksであり実session測定ではない。追記後のproject-docs・diff-checkとstage後のcached diff-checkは別々に実行してcommand reportへ独立exitを残す。最初の3 gateは文書追記による失効条件に該当しない。
+
+製品code・Rules・schema・実data・governance設定は未変更。仕様・ADR・現状との差・未決事項・進捗・CHANGELOGを更新し、保存表現の実装がないため既存data shape・manual・operationsを変更しない。新文書はなく既存索引を維持する。runtime/build/Emulator/Dev・実provider接続は対象外で未実施。review済み所有7文書だけlocal commitし、Git状態を報告する。

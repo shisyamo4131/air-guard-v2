@@ -18,7 +18,7 @@
 | ID reader | Worker/Tag/履歴はcurrent displayName、通知文はdisplayName/title、勤怠exportはcode/fullName、worker autocompleteはID/候補表示を使用 | 空cache/既選択ID/退職者も許可fieldだけで解決。過去時点の名前snapshot機能とはしない |
 | Class/cache | `Employee/ListItem`は取得値をEmployee.initializeへ渡す。fullName/Kanaはclass accessorで姓名から再導出。`useFetchBase`はSchemaClassのinstanceofを要求し、既存IDのpushは更新しない | 全項目readを維持しDTO化しない。Employee Classの表示互換を保ち、cache更新・削除・権限喪失を確認する。全文readと全文writeを混同しない |
 | 背景処理 | 通知作成はEmployeeの現在名を読む。勤怠/日次/履歴/Billing同期はOperationResult起点。Employee通常updateがこれらを再構築する経路は確認していない | 通知既存本文/業務recordを遡及変更しない。reader互換とwriter改修を分離 |
-| 地理情報 | EmployeeはGeocodableMixin、client plugin→geocoding Callable→外部providerの経路を持ち、utilityに座標/住所logがある | 将来の現場・自宅経路図のため取得保存を継続。失敗時の扱い・log・専用保存境界をCONF-0120で確定。今回外部接続・座標削除なし |
+| 地理情報 | EmployeeはGeocodableMixin、client plugin→geocoding Callable→外部providerの経路を持ち、utilityに座標/住所logがある | 将来の現場・自宅経路図のため取得保存を継続。失敗時も住所保存・旧座標消去・未取得通知を採用済み。最新住所照合・log・専用保存境界は残設計。今回外部接続・座標削除なし |
 
 既存testではUWB policy/use-case、仮Userの専用controller接続、Employee lifecycle field/deleteのRules拒否を確認するsourceがある。これは通常CRUD・3保険・資格の完了証拠ではない。既存source testがshell名へ依存する場合は、移行時に保存/認可/feedbackの実契約へ対応づける。
 
@@ -41,6 +41,8 @@
 serverは最新raw documentを取得し、不存在とnullの区別を保持してcandidateを構築する。Classとoperationをserverで検証できる専用Callableを第一候補とする。Employee.update/beforeUpdateの全体hookをそのまま使わず、operationの変更だけを正規化し、実際に変更した所有field・派生field・uid/updatedAtだけを保存する。validation用default補完をpatchへ混ぜず、他section、unknown field、createdAt、誤訂正後の退職field不存在を保持する。
 
 派生closureは、姓名→fullName/確定したdisplayName、姓名カナ→fullNameKana、code/姓名/カナ/displayName/foreignName→最新candidateからtokenMap、prefCode/city/address→prefecture/fullAddressとする。displayName明示値は姓名設定後に反映する案、displayNameKanaは独立値を維持する案である。国籍flag解除時の従属field消去は国籍operation内だけで行う。基本保存で警備/国籍/保険を正規化しない。座標はCONF-0120の回答に従い、外部作用をtransaction再試行callbackへ入れない。
+
+座標取得失敗時の保存可否は回答済みである。新規作成・住所変更時は、入力・認可・競合検証が成功すれば住所を保存し、古い座標を消して未取得を知らせる。住所不変の更新では既存座標を維持する。住所が後から他actorに変更された場合に古い取得結果を保存しないこと、provider失敗とFirestore保存失敗を分けること、未取得表現と結果表示をEMP-02で検証する。実data一括変更や自動再取得を追加する指示ではない。
 
 ### 作成・競合・段階移行
 
@@ -74,7 +76,7 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 ### EMP-01から次工程へのreview結果
 
-EMP-01-DESIGN-A/SEC-A/TEST-Aのread比較は、全項目read採用により今回不要となった。通常保存/氏名、保険特別操作、住所から座標取得する際の失敗/整合、段階writer移行、削除の成立条件/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+EMP-01-DESIGN-A/SEC-A/TEST-Aのread比較は、全項目read採用により今回不要となった。通常保存/氏名、保険特別操作、座標未取得の保存表現/最新住所整合、段階writer移行、削除の成立条件/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
 
 ### 誤登録物理削除への切替で残る実装条件
 

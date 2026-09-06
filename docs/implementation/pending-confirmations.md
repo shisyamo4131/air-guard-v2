@@ -1455,7 +1455,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0117 geocoding失敗時の保存可否とlocation必須用途
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`
 - Evidence: create/update前geocodingが失敗してもlocation=nullで保存を継続し、callerへ失敗を伝えない。location/geopointの直接業務用途は本範囲で未確認。
 - Question: Customer/Site/Employee/Companyごとにlocationを必須とするか。失敗時に保存block、warning付き保存、後続retryのどれを採用するか。
@@ -1463,7 +1463,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 全て任意、Siteのみ必須、warning+pending status、background retry、手動座標確認。
 - Current provisional treatment: location欠損でも保存可能な現行実装を記録し、成功保証とは扱わない。
 - Related FUT IDs: FUT-0141
-- Answer: 未回答
+- Answer: 2026-09-06 Employeeだけ部分回答。新規作成・住所変更時に座標取得が失敗しても、住所は保存し古い座標を消して未取得を知らせる（CONF-0120、ADR 0058）。他masterの失敗時仕様は未決であり、既存実装を変更しない。
 
 ## CONF-0118 郵便番号検索provider・正規化・候補選択契約
 
@@ -1497,7 +1497,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 次の保存条件は実装前の設計案である。住所文字列だけが更新され座標が古いまま成功表示されること、provider呼出しがtransaction再試行で繰り返されること、通常の国籍/保険更新まで住所を送信することを避ける。住所関連fieldが実際に変わる作成/基本保存に範囲を限定し、外部呼出しの完了後に期待する住所と最新原本を照合して住所・取得座標を保存する案を比較する。住所・座標・認証情報をlogへ出さない。既存共通入口の状態とEmployee専用経路の保護を混同せず、他masterの保存・Rulesを変更しない範囲を確認する。
 
-provider失敗時は「住所保存も拒否してdraftを保持する」案と、現挙動に近い「住所保存を認め座標未取得を明示する」案が残る。前者は一貫性を保ちやすいが外部障害で住所編集が止まり、後者は住所編集を続けられるが将来の経路図で欠損を扱う必要がある。新規/住所変更時の保存表現、既存座標・欠損の扱い、失敗時契約を確定してから実装する。今回の回答は既存全件の座標再取得・削除や実provider接続の実行承認ではない。
+2026-09-06追加回答: 「住所保存を認め、古い座標を消して座標未取得を知らせる」案を採用した。新規作成・住所変更で座標取得に失敗しても、入力・認可・競合検証が成功した住所は保存する。住所不変の通常保存では既存座標を維持する。住所・座標の最新値照合、既存schemaでの未取得表現、結果表示、logと共通入口は残設計であり、自動再取得・既存全件の座標削除・実provider接続は今回追加しない。
 
 ### 既存確認事項
 
@@ -1509,7 +1509,7 @@ provider失敗時は「住所保存も拒否してdraftを保持する」案と�
 - Options and impact: geocodingしない、都道府県/市区町村まで、精密座標を限定roleのみ、本人同意、短期/退職時削除。
 - Current provisional treatment: 取得の必要性・用途・閲覧actorはADR 0058で採用済み。provider運用・log・保持の全条件まで承認済みとは扱わない。
 - Related FUT IDs: FUT-0143、FUT-0075、FUT-0138
-- Answer: 2026-09-06 部分回答。将来の現場・自宅経路図のため座標取得・保存を継続し、全項目閲覧のactorへ座標も公開する。住所保存の失敗時条件、log・外部送信の詳細、保持等は未確定。
+- Answer: 2026-09-06 部分回答。将来の現場・自宅経路図のため座標取得・保存を継続し、全項目閲覧のactorへ座標も公開する。座標取得失敗時も住所保存・古い座標消去・未取得通知を追加回答済み。log・外部送信の詳細、保持等は未確定。
 
 ## CONF-0121 active同ID存在時のrestore conflict policy
 
