@@ -4,13 +4,9 @@
 
 ## Unreleased
 
-- EMP-05のEmployee専用archiveを実装した。会社管理者・統括が理由を入力し、12の従属先を同transactionで確認してから、取得した原本を別collectionへ移す。結果不明時は同じ操作の確認を保持し、成功後は通常一覧・候補から除外する。現在は許可を明示した専用demoで検証中で、通常API公開・Dev適用・物理削除は未実施。[検証記録](docs/verification/employee-05-local.md)を参照。
+- EMP-05をlocalで受け入れた。Employeeの取得・検索・期間cacheと現在認可を揃え、予定・実績・通知・請求の専用保存、日次2種/請求/現場履歴の参照保護と索引を整えた。追加するEmployeeだけを確認し、旧全文保存・Rules迂回と旧削除triggerのUser削除作用を閉じた。入金予定日は専用の部分保存とした。
 
-- EMP-05の背景保存として、勤怠・従業員別稼働・取引先請求・現場履歴にもEmployee参照の確認を接続した。埋込み全従業員の検索用索引と元情報を同時に保持し、旧Employee削除triggerのUser削除作用を停止した。取引先請求の入金予定日変更は専用の部分保存へ移し、背景保存先の直接client書込みを閉じた。archive本体は後続内部工程、検証・適用状態は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
-
-- EMP-05の参照保存入口として、予定・実績・請求編集を専用保存へ移し、追加するEmployee参照だけを原本から確認する構成にした。配置通知は管理側・本人側とも状態の部分更新へ接続し、古い全文保存とRules迂回を閉じた。背景保存・archiveは後続の内部工程、画面受入れを含む現在の検証状況は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
-
-- EMP-05の閲覧部分として、Employee専用の取得・検索・期間cacheと詳細画面の関連User取得を整えた。権限喪失・原本不存在で古い情報を残さず、取得中と終端状態を区別する。閲覧部分のlocal受入れを確認した。進捗と検証結果は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
+- Employee専用archiveでは会社管理者・統括が理由を入力し、12従属先を同transactionで確認して原本を別collectionへ移す。結果不明時は同じ操作の確認を保持し、成功後は通常一覧・候補から除外する。代表実UI・競合・raw保持と非対象データの保持を検証した。通常API公開・Dev適用・物理削除は未実施。[EMP-05 local記録](docs/verification/employee-05-local.md)と[進捗](docs/roadmaps/employee.md)を参照。
 
 - EMP-04として3保険を独立draftと専用保存へ移行し、6操作を対象保険の状態・履歴・世代値で検証する構成にした。履歴を復元しても世代値を戻さず、古い操作による再喪失・再復元を拒否する。現在の受入れ状況は[工程](docs/roadmaps/employee.md)と[検証記録](docs/verification/employee-02-04-local.md)を参照。Dev未反映。
 

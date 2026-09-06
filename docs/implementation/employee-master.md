@@ -36,7 +36,7 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 05-Dのarchiveは`employeeArchiveContract.js`で既知raw/入力/actor/envelopeを検証し、`functions/modules/employees/archiveEmployee.js`で現在Auth・User・System・12従属・同ID衝突を同transactionで確認する。コピーは取得rawを使用し、archive作成と通常原本削除を同時に確定する。通常作成の同ID archive拒否、既存7actor read/直接CUD拒否は再利用した。API factoryは通常indexへ公開せず、専用demo entryだけへ接続する。許可tenant設定は通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`と専用用`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を分け、厳密なJSON文字列配列・既定空集合とする。
 
-専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。Dまでの実装はlocalで受け入れた。各内部単位の受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)、現在地はロードマップを正とする。
+専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の実装・最終統合をlocalで受け入れた。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
 
 ## 現行経路の再照合
 

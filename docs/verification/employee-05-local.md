@@ -409,3 +409,53 @@ rootが通常/staged diff検査・project-docs各exit 0を確認し、15 source/
 所有3tabを閉じ、generated serverとEmulatorを順にCtrl-C停止（各session exit 1）。専用8port・9150・派生8084/8557/8560の計12port停止を独立確認してexit 0。保護22fileの件数・長さ・SHA-256不変と既存root log3fileの復元/hash一致もexit 0。合成業務dataのexportはしていない。所有生成物の削除と最終文書検証を行い、結果をcommand reportへ記録してlocal統合する。
 
 以上を1456件domain・180件Emulator・独立review・fresh build・実UI/backendへ対応づけ、05-Dをlocal受入れとする。製品sourceはbuild後に変更していない。`D-W5-EVIDENCE-CHECK`はCの不存在状態に対する背景拒否とDの実archiveによる不存在成立・排他をW5へ対応づける構成を確認した。「archive後の背景trigger一連をEmulatorで実測」とは記録しない。次の05-Eで全matrix・次工程境界・最終差分/文書を統合reviewする。EMP-05は未完了、55%を維持し、EMP-06は開始しない。
+
+## 05-E 統合・次工程review
+
+開始baselineは`d053636b016df546a3358d58555a3579ead05837`、同じprimary/機能branch。rootがD受入れ3文書の通常/staged diff・project-docs各exit 0、local統合とcleanを確認した。所有`.output`/`emp05-d` runtimeは絶対path・repository内・reparse不在を検査して削除/不存在を確認しexit 0。Eは最終証拠と影響文書の整理で、追加製品実装やEMP-06開始ではない。reviewerは全matrix/次工程入力、securityは認可・参照・削除・UWB境界をread-only確認する。
+
+### 最終matrixの対応
+
+下表のdirect testは最終domain 1456件、実HTTP/Rules/transactionは最終Emulator 180件に含まれる。実UIは同一変更領域の各内部単位の記録を参照する。代表UIと全actor Rules/直接testを区別し、全actor・全業務画面の実UIを実測したとは扱わない。
+
+| 契約 | 主な直接証拠 | 結合・UI・制約 |
+|---|---|---|
+| R1 | employee-reader、firestore-rules-reservation-source-contract、local harnessのEmployee 7actor/拒否actor | 原本/archive get/list、直接CUD/nested/他tenant拒否。項目限定DTOを導入しない |
+| R2–R3 | employee-readerのcold/初期ID/検索membership/期間/認可・遅延応答/原本不存在 | Aの氏名変更・候補更新・logoutとDの別tab候補除外/旧下書き失効。Site入場者の実UIは未実施、専用接続を直接試験 |
+| W1–W2 | operation-references、operation-writeのraw/索引検査とEmployee read 0/1/10 | 索引と原本確認を同transactionで行う。Employee確認readだけの計数でactor等の総readと混同しない |
+| W3 | operation-write/editor/submission、operation-datetime、local harnessの専用HTTP/Rules | Bの正規予定保存・配置/通知・複製・実績化・請求編集とC入金予定日。通知actual値・金額・lock・JSTを保持 |
+| W4–W5 | employee-background-references、billing-payment-date、local harnessの背景writer | Cの4保存先への正規実績trigger実行、入金予定日部分更新。Cの不存在後再生成拒否とD実archiveによる不存在成立を別証拠で対応 |
+| A1–A2 | employee-archiveの独立12依存表/全lifecycle/actor/設定/検査失敗、local HTTP | 会社管理者・統括だけ条件付き成功、User/予約等は状態無限定で拒否。Dの仮User参照拒否UI |
+| A3 | local harnessの実archive対saveOperation/User作成/単独退職 | writer先行、preflight後にarchive先行、同時実行を各検証。原本/archive排他、参照先・予約・operation/head不生成/保持 |
+| A4–A5 | employee-archive、employee-archive-editor、employee-save、HTTP | 型を保持した独立raw期待値、失敗write 0、同一操作だけ再確認、旧ID再作成拒否。応答不明の原本消失→close→再確認は制御した非同期testで確認 |
+| A6 | employee-background-referencesの旧handler直接呼出し | User/Authを含むread/write 0。新APIの成功を旧trigger実行証拠に代用しない |
+| G1 | inspectEmployeeReferencesと直接test、D専用tenantの実6collection検査 | consistentとarchiveReady:falseを区別し、許可集合へ自動変換しない。実dataの整合・開放準備は未確認 |
+| U1 | Dの理由入力/取消/参照拒否/成功通知/一覧・別画面候補/旧draftとbackend照合 | 可視UI作成dataだけで操作。原本rawの移動、非対象Employee/Userと操作直前直後Auth保持、cleanupまで確認 |
+
+### EMP-06へ渡す境界
+
+- 一覧・検索・User shellを変更しても、現在Auth/User由来のtenant/actor判定、raw/User購読の破棄、原本不存在時の候補除外を維持する。表示Class/cacheを保存期待値や認可へ転用しない。
+- 通常CRUDは専用writer、独立draft、局所raw期待値・保険別世代値・保存awaitを維持する。旧Manager全文保存や表示用Classからの複製へ戻さない。
+- User連携・退職・訂正は既存UWB専用処理を維持し、統括退職actorの反映はEMP-06の承認済み計画内で扱う。通常退職のEmployee/業務保持と、誤登録archiveのUser/Auth非連鎖を混同しない。
+- 通常archive API公開、既存索引の実data確認/補完、Dev反映はEMP-09の別承認。purge/restore/専用archive管理一覧を追加しない。未確認を将来実装済みへ変更しない。
+
+### 最終review・完了判定（2026-09-07）
+
+`E-FINAL-REVIEW`と`E-SEC-FINAL`は全matrix/既reviewと実測記録・固定sourceを独立照合し、追加P1/P2・製品受入れの必須未達なしとした。前者のP3はD末尾に残るcleanup未来形と提供状態の最終整合であり、E冒頭の実削除完了/exit、manual/CHANGELOG/roadmapのlocal受入れと未提供の区別へ反映した。両reviewは実UIやtestを再実行したものではない。D source統合以後の変更が文書だけであること、既reviewのserver/test/runner hash不変も確認した。
+
+| 完了gate / exact command | 最終状態に対する証拠 | exit |
+|---|---|---:|
+| `node --test test/domain/*.test.mjs` | D-R1後1456/1456。以後の製品source/domain test変更なし | 0 |
+| `npm run test:local` | 標準runner D-R1後180/180。以後の製品source/Rules/harness/設定変更なし | 0 |
+| `npm run test:local:ui:build` | b3f54b8cのclean sourceで成功、同一buildのD実UI/cleanupを受入れ | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | 基盤検証の成功を再利用。managed/policy/validator/規則変更なし | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 基盤検証の成功を再利用。validator/fixtures/必須routing変更なし | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 基盤検証7 checksを再利用。capacity手順/script/fixture変更なし | 0 |
+
+製品test/buildの再実行は文書のみの最終追記で失効しないため省略する。release-onlyのDev/Prod generate・通常API公開・実data/索引補完は未承認/未実施。最終project-docs/通常diff/staged diffは完了文書の確定後に実行し、独立exitをcommand reportへ記録してからlocal統合する。
+
+EMP-05の全内部単位の成果、独立review、直接test、Emulator、代表実UI/backend、cleanupが揃ったためCompleted、得点0→20、EMP進捗55%→75%とする。部分加点や親製品への加算はしない。EMP-06へ進める入力は上記へ固定したが、実装開始は別指示待ちとしてここで停止する。
+
+影響文書はEmployee実装記録・manual・roadmap・本receiptとCHANGELOGを最終状態へ揃えた。採用済み要件/acceptance/data shapeを追加変更していないためspecification・ADR・data契約の別versionは更新しない。新文書/移動はなく既存indexを維持、反復する専用実行設定は既存2 runbookへ反映済み。governance/agent/package/他masterのarchive方式・物理削除運用・外部状態は変更しない。rollbackは対象操作・archive許可を停止し、旧広域writerやUser連鎖削除を再開しない。Devの既存索引、外部provider・通知、全actor/全業務画面の実UI、purge/restoreは今回の成功証拠に含めない。
+
+`E-CLOSEOUT-DOC`は最終5文書を独立照合し、前回P3解消・追加指摘なしとした。75点の計算、local受入れ/Dev未提供、cleanup・非失効証拠・EMP-06停止の整合を確認した。最終stage後検査とlocal commitはrootが所有する。
