@@ -13,6 +13,7 @@
 import { useDefaults } from "vuetify";
 import { OperationDetail, ArrangementNotification } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { employeeReadLabel } from "@/composables/domain/employee/employeeReadLabel";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -46,8 +47,8 @@ const { fetchOutsourcer, cachedOutsourcers } = fetchOutsourcerComposable;
  * `props.worker` を監視し、`fetchEmployee` または `fetchOutsourcer` を呼び出して作業員の情報を取得します。
  */
 watch(
-  () => props.worker,
-  (newVal) => {
+  () => [props.worker, fetchEmployeeComposable.scope?.value],
+  ([newVal]) => {
     if (newVal) {
       newVal.isEmployee ? fetchEmployee(newVal.id) : fetchOutsourcer(newVal.id);
     }
@@ -64,6 +65,7 @@ watch(
  *   そうでない場合は `cachedOutsourcers` から作業員の表示名を取得して返します。
  */
 const displayName = computed(() => {
+  if (props.worker.isEmployee) return employeeReadLabel(fetchEmployeeComposable.getStatus(props.worker.id), cachedEmployees.value[props.worker.id]?.displayName);
   const cachedData = props.worker.isEmployee
     ? cachedEmployees
     : cachedOutsourcers;

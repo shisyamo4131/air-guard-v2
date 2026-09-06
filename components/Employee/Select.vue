@@ -25,10 +25,10 @@ const props = useDefaults(_props, "EmployeeSelect");
 const enrichedItems = computed(() => {
   return props.items
     .map((item) => {
-      const title = `${item.code} - ${item.fullName}`;
+      const title = `${item.code || ""} - ${item.fullName}`;
       return { ...item, title };
     })
-    .sort((a, b) => a.code.localeCompare(b.code));
+    .sort((a, b) => String(a.code || "").localeCompare(String(b.code || "")));
 });
 </script>
 

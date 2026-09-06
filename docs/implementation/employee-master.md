@@ -22,6 +22,12 @@
 
 保険mapと同時点の世代値をraw snapshotから取得する。世代map全体が不存在の場合だけ初回操作で3種を原子的に初期化し、既存mapでは対象だけを増加する。履歴復元でも減らさず、同じ状態へ戻った後の古い要求も拒否する。別保険の更新は保持する。取得失敗や表示用Classのfield欠落をlegacyと解釈しない。保存不明時は対象map・期待する新世代値・actorを照合し、結果を特定できない場合は不明のまま入力を保持する。
 
+## EMP-05での実装差分
+
+05-Aでは`useFetchEmployee`をEmployee専用のraw購読/sessionへ接続し、現在Authと原本Userの7actor認可、必要IDだけの購読、Class表示互換、検索結果のmembershipと原本cacheの更新を分離した。権限/tenant変更・取得失敗・破棄でcache/search/待機中の取得を無効化し、古い応答を表示へ戻さない。期間queryの対象外と原本不存在を区別し、個別ID購読で確認済みの新raw/不存在を遅延queryで上書きしない。
+
+Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。05-B以降の参照writer・索引・archiveはまだ実装していない。05-Aも独立最終review・専用build・実UI確認が未完了であり、受入れ状態は[EMP-05 local記録](../verification/employee-05-local.md)を正とする。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。

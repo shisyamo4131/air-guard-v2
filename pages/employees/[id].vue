@@ -6,51 +6,23 @@
  * 2026-06-11 - 警備員情報登録の VEmptyState を Activator に内包。
  *****************************************************************************/
 import { useRoute } from "vue-router";
-import { useDocument } from "@/composables/dataLayers/useDocument";
-import { useConstants } from "@/composables/useConstants";
+import { useEmployeeDetailRead } from "@/composables/application/employee/useEmployeeDetailRead";
 import { User } from "@/schemas";
 
 defineOptions({ name: "employee-detail" });
-
-/*****************************************************************************
- * SETUP COMPOSABLES
- *****************************************************************************/
-const docId = useRoute().params.id;
-const { doc } = useDocument("Employee", { docId });
-const { EMPLOYMENT_STATUS } = useConstants();
-
-/*****************************************************************************
- * DEFINE STATES
- *****************************************************************************/
-const user = reactive(new User());
-const userDocs = ref([]);
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-const showResignedAlert = computed(() => {
-  return doc?.employmentStatus === EMPLOYMENT_STATUS.value.RESIGNED.value;
-});
-
-/*****************************************************************************
- * LIFECYCLE HOOKS
- *****************************************************************************/
-onMounted(() => {
-  if (!docId) return;
-  userDocs.value = user.subscribeDocs({
-    constraints: [["where", "employeeId", "==", docId]],
-  });
-});
-
-onUnmounted(() => {
-  user.unsubscribe();
-  user.initialize();
-});
+const route = useRoute();
+const { doc, users: userDocs, userError, loading, error, missing, canRead } = useEmployeeDetailRead(() => String(route.params.id || ""));
+const user = new User();
+const showResignedAlert = computed(() => doc.value?.employmentStatus === "RESIGNED");
 </script>
 
 <template>
   <v-container>
-    <v-row>
+    <v-progress-linear v-if="loading" indeterminate />
+    <v-alert v-if="error || userError" type="error">{{ error || userError }}</v-alert>
+    <v-alert v-else-if="missing" type="info">従業員情報が存在しません。</v-alert>
+    <v-alert v-else-if="!canRead && !loading" type="info">従業員情報を閲覧できません。</v-alert>
+    <v-row v-if="doc">
       <!-- 非在職アラート -->
       <v-col cols="12" v-if="showResignedAlert">
         <v-alert type="error"> この従業員は現在在職していません。 </v-alert>

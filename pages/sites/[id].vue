@@ -9,14 +9,12 @@ import { useRoute } from "vue-router";
 import { useDateRange } from "@/composables/useDateRange";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
 import { useSiteActions } from "@/composables/application/site/useSiteActions";
-import { Employee, Site, SiteEmployeeHistory, SiteOperationSchedule } from "@/schemas";
+import { Site, SiteEmployeeHistory, SiteOperationSchedule } from "@/schemas";
 import { getSitePresentationBadges } from "@/composables/domain/site/siteUiPresentation";
 import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
 import { useSiteDetailAccessGuard } from "@/composables/dataLayers/site/useSiteDetailAccessGuard";
-import {
-  createSiteDetailReadSession,
-  createSiteEmployeeCache,
-} from "@/composables/domain/site/siteDetailAccessSession";
+import { createSiteDetailReadSession } from "@/composables/domain/site/siteDetailAccessSession";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
@@ -57,22 +55,21 @@ const { dateRange, debouncedDateRange } = dateRangeComposable;
  *****************************************************************************/
 const historyInstance = reactive(new SiteEmployeeHistory());
 const siteEmployeeHistories = historyInstance.docs;
-const visibleEmployees = reactive({});
-const cachedEmployees = computed(() => visibleEmployees);
-const employeeCache = createSiteEmployeeCache({
-  cache: visibleEmployees,
-  getScopeKey: () => canRead.value ? auth.companyId : null,
-  loadEmployee: (employeeId) => new Employee().fetchDoc({ docId: employeeId }),
+const employeeReader = useFetchEmployee();
+let employeeHistoryGeneration = 0;
+const { cachedEmployees, fetchEmployee } = employeeReader;
+const visibleEmployees = cachedEmployees;
+watch(() => employeeReader.scope.value, () => {
+  if (employeeReader.canRead.value && canRead.value) void fetchEmployee(siteEmployeeHistories);
 });
-const { fetchEmployee } = employeeCache;
 const displayedScheduleInstance = reactive(new SiteOperationSchedule());
 const displayedSchedules = displayedScheduleInstance.docs;
 const scheduleInstance = reactive(new SiteOperationSchedule());
 const schedules = scheduleInstance.docs;
 const sortedHistories = computed(() => {
   return [...siteEmployeeHistories].sort((a, b) => {
-    const kanaA = visibleEmployees[a.employeeId]?.displayNameKana ?? "";
-    const kanaB = visibleEmployees[b.employeeId]?.displayNameKana ?? "";
+    const kanaA = visibleEmployees.value[a.employeeId]?.displayNameKana ?? "";
+    const kanaB = visibleEmployees.value[b.employeeId]?.displayNameKana ?? "";
     return kanaA.localeCompare(kanaB, "ja");
   });
 });
@@ -98,14 +95,15 @@ function clearCollection(instance) {
 }
 
 function clearRelatedReads() {
-  employeeCache.clear();
+  employeeHistoryGeneration++;
+  employeeReader.clearCache();
   historyInstance.unsubscribe();
   historyInstance.docs.splice(0);
   clearCollection(displayedScheduleInstance);
   clearCollection(scheduleInstance);
 }
 
-provide("fetchEmployeeComposable", { cachedEmployees, fetchEmployee });
+provide("fetchEmployeeComposable", employeeReader);
 
 function clearDetail({ resolved = false, error = "" } = {}) {
   clearSiteReads("lookup");
@@ -127,6 +125,7 @@ function subscribeDisplayedSchedules(id) {
 }
 
 function subscribeRelatedReads(id) {
+  const employeeHistorySource = employeeHistoryGeneration;
   subscribeDisplayedSchedules(id);
   scheduleInstance.subscribeDocs({
     constraints: [["where", "siteId", "==", id]],
@@ -134,7 +133,7 @@ function subscribeRelatedReads(id) {
   historyInstance.subscribeDocs({
     constraints: [["where", "siteId", "==", id]],
   }, (history) => {
-    if (history?.employeeId) void fetchEmployee(history.employeeId);
+    if (history?.employeeId && id === docId.value && canRead.value && employeeHistorySource === employeeHistoryGeneration) void fetchEmployee(history.employeeId);
   });
 }
 

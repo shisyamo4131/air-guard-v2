@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { ref, watch, effectScope, nextTick } from "vue";
 import { canReadSite } from "../../composables/domain/site/siteReadAuthorization.js";
 import {
   createSiteDetailAccessSession,
@@ -195,11 +196,41 @@ test("Site detail wires the runtime sessions to protected read cleanup", async (
     "utf8",
   );
   assert.match(source, /useSiteDetailAccessGuard\(\)/u);
-  assert.match(source, /provide\("fetchEmployeeComposable", \{ cachedEmployees, fetchEmployee \}\)/u);
   assert.match(source, /function clearDetail[\s\S]*doc\.initialize\(\)[\s\S]*clearRelatedReads\(\)/u);
   assert.match(source, /function clearRelatedReads[\s\S]*historyInstance\.unsubscribe\(\)[\s\S]*displayedScheduleInstance[\s\S]*scheduleInstance/u);
   assert.match(source, /detailReadSession\.revoke\(\)[\s\S]*subscribeDetail\(id\)[\s\S]*flush: "sync"/u);
   assert.match(source, /detailReadSession\.refreshDate\(subscribeDisplayedSchedules\)/u);
   assert.match(source, /detailReadSession\.dispose\(\)/u);
   assert.match(source, /<template v-if="hasSite">/u);
+
+  // Exercise the page's wiring/cleanup here. The Employee reader's raw User
+  // authorization, old response rejection and live names are covered separately
+  // by employee-reader.test.mjs, using the actual reader implementation.
+  const calls = [], provided = [];
+  const reader = { scope: ref(null), canRead: ref(false), cachedEmployees: ref({}),
+    fetchEmployee: (ids) => calls.push(["fetch", [...ids]]), clearCache: () => { calls.push(["employee-clear"]); reader.cachedEmployees.value = {}; } };
+  const collection = (name) => ({ docs: [], unsubscribe: () => calls.push([name]) });
+  const historyInstance = collection("history-stop"), displayedScheduleInstance = collection("displayed-stop"), scheduleInstance = collection("schedule-stop");
+  const canRead = ref(false), doc = { initialize: () => calls.push(["detail-clear"]), unsubscribe: () => calls.push(["detail-stop"]) };
+  const bindings = { ref, watch, useFetchEmployee: () => reader, canRead, siteEmployeeHistories: historyInstance.docs,
+    historyInstance, displayedScheduleInstance, scheduleInstance, doc, detailResolved: ref(false), detailError: ref(""), createSiteDetailReadSession,
+    clearSiteReads: (scope) => calls.push(["site-clear", scope]), provide: (...args) => provided.push(args) };
+  const readerSetup = source.slice(source.indexOf("const employeeReader ="), source.indexOf("const displayedScheduleInstance ="));
+  const cleanup = source.slice(source.indexOf("function clearCollection("), source.indexOf("function subscribeDisplayedSchedules("));
+  const effect = effectScope(); let session;
+  effect.run(() => { session = new Function(...Object.keys(bindings), `${readerSetup}${cleanup}; return detailReadSession;`)(...Object.values(bindings)); });
+  assert.deepEqual(provided, [["fetchEmployeeComposable", reader]], "descendants receive the entire authorized reader");
+  historyInstance.docs.push({ employeeId: "employee" });
+  reader.scope.value = "denied"; await nextTick(); assert.equal(calls.length, 0);
+  reader.canRead.value = true; reader.scope.value = "employee-allowed"; await nextTick(); assert.equal(calls.length, 0, "Site denial still prevents related reads");
+  canRead.value = true; reader.scope.value = "both-allowed"; await nextTick(); assert.deepEqual(calls.shift(), ["fetch", [{ employeeId: "employee" }]]);
+  for (const transition of [() => session.begin("site"), () => session.revoke(), () => session.dispose()]) {
+    reader.cachedEmployees.value = { employee: { displayName: "protected" } };
+    for (const instance of [historyInstance, displayedScheduleInstance, scheduleInstance]) instance.docs.push({ protected: true });
+    transition();
+    assert.deepEqual(reader.cachedEmployees.value, {});
+    for (const instance of [historyInstance, displayedScheduleInstance, scheduleInstance]) assert.deepEqual(instance.docs, []);
+    assert.deepEqual(calls.splice(0), [["site-clear", "lookup"], ["detail-stop"], ["detail-clear"], ["employee-clear"], ["history-stop"], ["displayed-stop"], ["schedule-stop"]]);
+  }
+  effect.stop();
 });

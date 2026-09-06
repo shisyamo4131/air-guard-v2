@@ -6,6 +6,7 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { employeeReadLabel } from "@/composables/domain/employee/employeeReadLabel";
 
 /*****************************************************************************
  * DEFINE PROPS
@@ -32,8 +33,8 @@ const { cachedOutsourcers, fetchOutsourcer } = fetchOutsourcerComposable;
  * WATCHERS
  *****************************************************************************/
 watch(
-  () => props.worker,
-  (newWorker) => {
+  () => [props.worker, fetchEmployeeComposable.scope?.value],
+  ([newWorker]) => {
     if (!newWorker || !newWorker.id) return;
     const fetchFn = newWorker.isEmployee ? fetchEmployee : fetchOutsourcer;
     fetchFn(newWorker.id);
@@ -53,6 +54,7 @@ const cachedData = computed(() => {
 
 const displayName = computed(() => {
   if (!props.worker) return "N/A";
+  if (props.worker.isEmployee) return employeeReadLabel(fetchEmployeeComposable.getStatus(props.worker.id), cachedEmployees.value[props.worker.id]?.displayName);
   return cachedData?.value?.[props.worker.id]?.displayName || "N/A";
 });
 </script>
