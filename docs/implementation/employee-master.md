@@ -1,6 +1,6 @@
 # Employee（従業員）マスター実装調査
 
-2026-09-06のactor、誤登録物理削除・archive延期、全項目read・自宅座標利用は[現行仕様](../specification.md#employeeの操作権限と保持)、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。静的実装観測は未変更で、統括退職・専用物理削除・新しいread/write認可の実装済みを示さない。
+2026-09-06の最新方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下は静的実装事実と未実装の設計であり、適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
 
 ## 現行経路の再照合
 
@@ -26,7 +26,7 @@
 
 ## EMP-01の保存・読取り契約案
 
-通常編集・退職・誤登録物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。退職後の通常編集禁止、在職Employeeの保険履歴復元actorと現行遷移維持は[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)で追加採用済み。その他の保存operation・競合・段階移行の詳細は未採用案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
+通常編集・退職・誤登録archive/物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。退職後の通常編集禁止、在職Employeeの保険履歴復元actorと現行遷移維持は[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)で追加採用済み。その他の保存operation・競合・段階移行の詳細は未採用案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
 
 ### EMP-02の入力と保存対象
 
@@ -76,82 +76,52 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 ### EMP-01から次工程へのreview結果
 
-EMP-01-DESIGN-A/SEC-A/TEST-Aのread比較は、全項目read採用により今回不要となった。通常保存/氏名、退職後更新拒否と保険保存の実装条件、座標未取得の保存表現/最新住所整合、段階writer移行、削除の成立条件/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+全項目read採用によりDTO比較は不要。archiveの方式と必要な従属writer保護はADR 0060へ更新した。通常保存/氏名・段階移行の詳細とarchive工程配分はEMP-01の残作業である。以下の設計をruntime検証済みとは扱わず、EMP-02準備完了の判定と区別する。
 
-### 誤登録物理削除への切替で残る実装条件
+## Employeeのarchive設計
 
-#### 削除を許可するための判定項目
+承認済みの別collection移動・従属なし・会社管理者/統括・非連鎖削除を満たす実装設計である。API名、保存fieldのexact schema・個別writer差分は実装工程のcontractへ落とす。旧直接物理削除案・状態flag比較はADR 0057/0058とGit履歴を参照し、現行案と混在させない。
 
-利用者が説明を求めた「安全条件」は、採用済みの従属なし・非連鎖削除を成立させる次の判定項目を指す。方式や提供時期まで採用済みという意味ではなく、物理削除延期案は未承認である。
+### 専用操作と閲覧
 
-| 条件 | 合格とする状態 | 現時点の差・未確認 |
-|---|---|---|
-| 実行者と対象 | 現在の同社・有効な本登録会社管理者または統括が、対象の誤登録を確認して専用操作を実行する | actorは採用済み。対象確認と専用削除は未実装 |
-| 従属なし | 予定・実績・通知・勤怠/日次/履歴・User/予約等の確定したcatalogに保持すべき参照がない。検査失敗や不整合は拒否 | 既存3依存だけでは不足。埋込み参照等のcatalog確定・検査設計が残る |
-| 後から参照を追加しない | 検査中・削除後の同時保存や遅延処理で、削除済みEmployeeを参照するrecordを作らない | 現予定writerはEmployee存在を検査しない。他collectionの保存・Rules不変で成立する方法は未確定 |
-| 他のdataを削除しない | 誤登録Employee本体だけを削除し、従属やUser/Authを連鎖削除しない | 旧Employee削除triggerのUser削除作用と遅延eventの扱いを解決する必要がある |
-| 古い操作で再生成・誤削除しない | 古い全文保存でEmployeeを再生成せず、同ID再作成後に古い削除要求を作用させない。応答不明も対象と結果を照合する | 旧writer・再送・対象識別の実装と検証が残る |
+- 専用Callable入力は`employeeId / reason / operationId`の3つを基本とし、任意path・tenant・原本snapshotをclientから受け取らない。現在Authと同社の有効な本登録会社管理者/統括をserverで検査し、System状態もSiteと同じく確認する。
+- transaction内で現在User、通常Employee、同ID `Employees_archive`、従属catalogを読む。原本は誤登録・重複として指定され、状態はACTIVE/RESIGNEDを識別する。RESIGNEDを「履歴不要」の根拠にはせず、保持すべきlifecycle/業務参照があれば拒否する。通常編集でRESIGNEDを変える抜け道にしない。
+- snapshotはEmployeeの検証済みraw fieldと欠損状態を保持し、schema初期値で既存dataを補完・正規化してから移さない。形式version、原本snapshot、実行者・server時刻・理由・操作IDのenvelopeを作成し、同transactionで原本をdeleteする。既存archiveへの上書き、原本/archive両存、不正形式、検査失敗はwrite 0で拒否する。Employeeのexact snapshot schemaはEMP-01残contractとして確定する。
+- 応答不明時は同じactor・対象・理由・操作IDを照合し、確認できた同一archiveだけを再送成功とする。不存在だけを成功扱いにしない。UIは成功後に通常一覧/候補/cacheから外し、古いdraftからの更新はnot-foundとして拒否する。
+- 推奨read案は`Employees_archive`のclient直接read/CUDを拒否し、今回通常のarchive一覧・restore画面を設けない。原本全項目readからarchive readへ許可を広げない。必要なarchive確認は後続の管理操作で限定提供する。この閲覧案の採否は、通常Employeeの全項目read回答とは別にreviewする。
+- 旧generic delete/restoreと旧全文setによる再生成を閉じ、通常作成は同ID archiveがあれば拒否する。`functions/modules/Employees.js`のUser削除triggerはarchiveからUser/Authを消す作用を停止し、遅延旧eventもUserを削除できないことを確認する。既存UWB退職・User削除専用operationは保持する。
 
-具体例: Aが従属0件を確認してEmployeeを削除した後、Bが削除前から開いていた画面のEmployee IDで予定を保存する。`utils/siteOperationSchedule/siteScheduleGuard.js`の作成transactionはSiteを検査し予定を保存するが、Employeeを読まない。現在の予定RulesもEmployee存在を条件にしていないため、Employee側の削除直前検査だけではこの保存を防げない。旧`functions/modules/Employees.js`の削除triggerは実行時にemployeeIdでUserを検索して先頭を削除するため、対象不存在の確認だけで背景処理の安全性も証明したとはしない。
+### 依存catalogと必要な保存境界
 
-上記は静的sourceで確認した未対処経路であり、競合再現や全代替方式の不可能性を証明したものではない。特定の新lock・台帳・全writer改修・全件scanを必須方式にしない。確認dialogや操作自粛の依頼だけで同時保存を防げるとは主張しない。
+Employeeが誤登録なら、そのIDへの保存済み参照は正常な過去参照として除外しない。Siteの下流siteId snapshot除外をEmployeeへ流用しない。次のcatalogを設計対象とし、各field・writerの網羅を実装前の静的照合と対応testで閉じる。queryは原則存在検出の`limit(1)`、型・欠損の既知不整合は拒否する。
 
-2026-09-06、EMP-01-DELETE-IMPACTの静的調査。actor・従属なし削除・archive延期は採用済みだが、以下は実装前に確定・検証する条件であり、安全な削除の完成を示さない。
+| 対象 | archive拒否の対象・必要な変更 |
+|---|---|
+| SiteOperationSchedules / OperationResults | 実従業員明細に含まれるID。保存候補から導くemployeeIdsとの一致を強制。作成/複製/実績化は全ID、更新は追加IDだけ通常Employeeを検査 |
+| ArrangementNotifications | 従業員のemployeeId。外注明細をEmployeeとして判定しない。作成・参照変更の存在確認と直接write拒否条件を追加 |
+| DailyAttendances / DailyOperationsByEmployee / SiteEmployeeHistories | employeeIdを保持する本人の業務記録。新規作成・背景再生成のtransactionで通常Employeeを読む。参照元の削除/訂正・不要な集約の削除は既存計算を維持 |
+| Users / EmployeeUserReservations / lifecycle | User.employeeId、Employee予約、対象Employeeに対応するlock/head/operation。専用writerの既存Employee読取りを再利用できるか確認。記録あり/不整合を拒否し、User/Auth/監査を消してarchive可能にしない |
+| Billingsの埋込みOperationResults | 埋込みEmployee IDも拒否対象にする設計。単純なroot employeeId queryでは検出できないため、保存済みsnapshotから導出するroot employeeIdsを検索用に追加する案。金額・明細snapshotの意味は変えない。更新する全経路で候補から再計算し、追加Employeeの存在を同transactionで確認する。直接writeの索引偽装を閉じる |
 
-- 従属候補は既存hasManyの3種類に加え、DailyAttendances、DailyOperationsByEmployee、SiteEmployeeHistories、User/予約、lifecycleのlock/head/operation等。除外する対象は生成経路・用途の根拠を要し、全catalogの網羅確認は未完了。
-- installed client adapterのhasChildはtransaction外のgetDocsを使う。現ArrangementNotifications/OperationResults Rulesの参照guardはSite/Customer向けで、Employee存在確認にはなっていない。削除直前の検査だけで同時参照作成を防いだとは扱わない。他collection writerの変更が必要なら現承認範囲外として判断し、安全条件が揃うまで削除を有効化しない。
-- 原本削除triggerはfunctions/index.jsからexportされ、関連Userへdeleteを呼ぶ。誤登録Employee削除からUser/Authを連鎖削除しないための対処を、単なるarchive copyの省略とは別に扱う。遅延した旧削除eventが同ID再作成後のUserへ作用する条件も、triggerと再送の検証対象に含める。
-- 旧全文setによる削除後の再生成、削除後の同ID再作成に対する古い作成/削除要求の再送を検証する。対象識別・結果不明の照合・再送条件を決め、無条件の「不存在なら成功」や汎用deleteへの切替だけで解消したとしない。
-- Employee-only退職でも保持すべきlifecycle記録がある場合は依存の扱いを確認する。User連携を自動解除したり履歴を消したりして誤登録削除の条件を満たさない。
+archiveで検索に使う索引は、Billingの新fieldだけでなく、既存予定・実績のemployeeIdsと実明細の一致も開放前の確認対象とする。旧Rulesで一致が強制されなかった既存dataを、新writer導入だけで整合済みと扱わない。対象tenant・collection・fieldを限定して整合を確認し、必要な補正は別承認のmigrationとして扱う。未確認・不一致・検査不能の対象ではarchiveを開放しない。全repositoryの全件走査へ広げない。
 
-現在のreader/queryへarchive除外fieldを追加する作業は不要になった。一方、既存Employee archiveの過剰アクセス是正と、物理削除で新しく生じるnot-found・古いdraft/cacheの扱いはCRUD工程で確認する。exact契約と工程の残判断はCONF-0064とロードマップへ集約する。
+Billingのquery用field案は、既存dataの欠損が「参照なし」となるためbackfill/整合確認がarchive開放の条件になる。EMP-01で対象writer・index・影響を確定し、実環境は別承認の限定migrationを行う。実行未承認のまま全Billing走査・無条件index追加を行わない。検索fieldを追加せずtransactionで全埋込みを読む代替は件数・処理上限の根拠が不足するため既定にしない。query可能性が未解決の間はarchiveを開放しない。
 
-### 参照保存境界の追加候補（EMP-01未採用案）
+### 読取り負担と競合対策
 
-EMP-01-DELETE-PLANでは、参照を作る側の最小存在確認を比較した。その後、利用者は他collectionの保存処理・Rulesも変更しないと回答したため、下表の追加変更は今回のscopeとして採用しない。Employee側の削除前検査だけで通常運用中の競合を防げる方法は未確認であり、安全条件が未解決の間は削除を開放しない。表は範囲判断の根拠として保持する。
+保存境界で読んだ現在documentとcandidateの実明細から、重複を除いた`追加ID = 保存後ID − 保存前ID`を算出する。clientの古いdraftや申告配列だけから差分を決めない。変更なし・削除・並替え・同じ従業員の時間等の更新ではEmployee存在確認の追加readは0、新規10人なら最大10種類のEmployeeを読み、1人入替えなら新しい1人を読む。これはEmployee存在確認だけの設計上の数であり、認可・document取得・競合再試行等の総課金read数ではない。
 
-| 対象 | 確認された保存経路 | 最小変更候補と注意点 |
-|---|---|---|
-| SiteOperationSchedules | `utils/siteOperationSchedule/siteScheduleGuard.js`のcreate/createMany/update/updateMany | Site確認と別に、新規/変更後のEmployee IDの存在を保存境界で確認。client補助処理だけでなく、直接writeの迂回防止が必要 |
-| OperationResults | `handlers/operationResultHandlers.js`等のmodel保存・複製・予定の実績化 | Employee追加/変更時の存在確認と明細ID・employeeIdsの一致確認。複数IDのRules検査方法・実行上限を検証し、未確認の件数制限や全writerのserver化を先に決めない |
-| ArrangementNotifications | 予定からの通知生成と専用Rules match | Employee明細のemployeeIdだけを検査し、外注明細をEmployeeとして扱わない |
-| DailyAttendances | `functions/modules/dailyAttendances/syncOperationResultToDailyAttendances.js` | 新規/再生成をするtransactionの読取り段階で確認する候補。既存dataの削除・清掃を妨げない |
-| DailyOperationsByEmployee | `functions/modules/dailyOperationsByEmployee/syncOperationResultToDailyOperationsByEmployee.js` | 保存前の読取り段階へ確認を追加する候補。集計・移動・削除計算は維持する |
-| SiteEmployeeHistories | `functions/modules/siteEmployeeHistories/rebuildHistory.js` | 履歴作成時にEmployee存在を確認。参照元がなくなった履歴の削除は維持する |
-| User/予約/lifecycle | 既存のEmployee連携・退職/訂正専用経路 | 既存のtransaction内Employee読取りを再利用。削除側で残るUser・予約・lock/head/operation等を検査して拒否し、自動修復・削除しない |
-| Billing等の埋込み/間接参照 | `functions/modules/billings/addOperationResultToBilling.js`はOperationResultを配列保存 | 単純なroot employeeId queryの対象にできない。遅延同期・残存snapshotを含むため、原本実績の不存在だけでは依存なしと判定できない。埋込みIDを削除拒否の従属として扱う範囲は未決。無断の全件scanや索引用field追加は前提にしない |
+複数IDの新設/変更をRulesのdocument access上限や配列検証へ押し込まず、必要なworker明細操作を専用server保存へ寄せる設計を推奨する。参照不変のclient更新は、Rulesで実明細との対応と参照不変を証明できる範囲だけ残す。証明できない明細更新は同じserver operationで扱い、そこで追加IDだけを読む。配置の既存即時表示を維持し、保存拒否時のrollback・正本再取得・再試行を同時に検証する。新しい従業員数の上限を便宜的に追加しない。
 
-削除案の順序は、catalogと参照保存境界の確認→必要なRules/server保護→Employeeの旧全文writer/削除trigger対処→専用削除→UI開放。必要な保存境界が揃う前に削除を開放しない。他masterの状態・金額・集計・archive方式を変更する案ではないが、参照保存への追加変更自体は利用者回答により今回対象外である。この順序をそのまま実装する計画は採用しない。
+参照の検査と保存は同transactionで行う。archive側も同じ原本と依存を検査することで、参照保存が先ならarchiveを拒否し、archiveが先なら参照保存を拒否する。背景処理も同じ条件に従い、既存参照・索引の不整合を正常扱いしない。参照writerが揃う前にarchiveだけを提供しない。
 
-同ID再作成と削除再送の対策として、原本削除と同時に最小の削除記録を保存する案を比較する。Employee全文・住所・保険等のarchiveは作らず、結果照合と古い要求の拒否に必要な情報だけを候補とする。新しい記録の有無・保存項目・保持・アクセス・消去条件は未決であり、削除採用から自動導入しない。記録を持たない代替では、対象の世代識別と再試行の保証範囲を別に確定する。新collection名や共通ledgerを先に作らない。
+### 物理削除と実装順
 
-予定する検証は、削除と参照作成の両順序、従業員変更・複製・実績化・通知、明細/ID不一致、複数ID、遅延eventによる再生成、User/予約/lifecycle競合、旧保存、応答不明/再送、他Employee・Outsourcer・既存集計値の不変である。現時点では静的調査のみで、全writer網羅・実data・競合再現は未確認。
+物理削除は[共通設計案](archive-restore.md#物理削除の設計案)へ分離する。通常原本の直接削除は提供しない。使用済みIDの最小記録・運用・保持が決まるまではpurgeを未提供としてarchive本体を維持できる。purgeを検討中であることをarchive安全性の完成証拠にも、通常CRUDの停止理由にもしない。
 
-### archiveの追加影響調査
+実装順案は、EMP-02〜04の通常writer保護 → 参照writer・Rules・必要な既存data対応 → 旧削除trigger/再生成対処 → 専用archiveと候補/cache除外 → 機能間回帰。具体工程・重みはロードマップの未確定事項として残す。purgeを通常CRUDへ紛れ込ませず、設計review後に提供工程を定める。
 
-以下はarchive延期前の調査記録である。従属検査と原本削除triggerの問題は誤登録物理削除にも適用され、延期で解消したとは扱わない。
-
-現Employee.hasManyは`SiteOperationSchedules.employeeIds`、`OperationResults.employeeIds`、`ArrangementNotifications.employeeId`の3種類を対象にする。一方、`DailyAttendances`、`DailyOperationsByEmployee`、`SiteEmployeeHistories`にもemployeeId参照がある。これらとUser/予約・lifecycle・間接参照を調べ、archive拒否対象の一覧を確定する必要があり、既存3種類を全従属の証明にはしない。
-
-`functions/modules/Employees.js`の原本削除triggerはemployeeId検索の先頭Userへdeleteする経路を持つ。新archiveがUser/Authを連鎖削除しないこと、検査後に参照が追加されても参照切れを作らないことを設計する。今回の調査は候補整理であり、全writer網羅・競合再現・実data確認は未実施。具体的な追加実装scopeと工程配分が決まるまで既存deleteを再開しない。
-
-### archive保存方式の比較（未採用）
-
-ADR 0057採用後は将来工程の比較資料として保持する。今回のEmployee実装の前提にせず、同document状態更新も別collection移動も追加しない。
-
-利用者の追加質問を受け、同じEmployee documentへ独立したarchive状態を保存する方式を第一候補として比較する。これは保存方式の提案であり、「従属documentがあれば不可」という採用済み条件を緩和しない。
-
-| 観点 | 別collectionへ移動 | 同documentの状態更新 |
-|---|---|---|
-| 保存 | 複製と原本削除、衝突・復旧の整合が必要 | 原本の保存場所・IDを保持し、状態の部分更新で表現可能 |
-| 既存の削除trigger | 原本削除からUser削除経路へ作用し得る | 原本を削除しないため、その削除triggerを起動しない |
-| 読取り | 移動後の旧pathでのID解決を設計する | ID解決は維持しやすいが、一覧・検索・候補・期間取得へ除外条件が必要 |
-| 参照条件 | 存在検査と移動を新規参照作成に対して整合させる | 存在に加え未archiveを保存境界で確認する。状態flagだけでは新規参照作成を防げない |
-| 互換性 | 保存shape、別pathの認可、移動/復旧が必要 | 新fieldの不存在、旧全文writerによる消去/巻戻し、cache更新、query互換を扱う |
-
-状態更新方式を採るなら、archive状態は雇用状態のACTIVE/RESIGNEDと分け、入退社日・退職処理の意味を変えない。新field名・型、対象状態、解除可否、詳細/ID/履歴の閲覧、通常編集/退職/User作成の可否はまだ確定していない。保存場所を残すことでarchiveと新規参照の競合問題そのものがなくなるとは扱わない。既存archive collectionの公開問題も別途閉じる。
-
-EMP-01-ARCHIVE-STATE-COMPAREの静的reviewでは、移動・原本削除・旧削除triggerを避けられる利点と、現readerにarchive判定がない点、User作成で存在だけでは不十分になる点、旧全文writer対策が必要な点を確認した。runtime・競合再現・data変換の要否は未検証である。
+受入れは、許可2actor/人事拒否/他tenant、参照0件/各従属あり/検査失敗、archive対参照保存の両順序、既存索引の欠損/実明細不一致・明細/索引偽装、10人参照不変/1人追加の実read測定、複製/実績化/通知/遅延再生成、User/予約/lifecycle競合、旧削除event、同ID再作成、応答不明・別actor/別操作再送を含む。他Employee/Outsourcer・金額/集計・過去snapshotが変わらないことも確認する。今回の設計reviewはこれらのruntime成功を示さない。
 
 ## 2026-08-11の調査記録（履歴）
 

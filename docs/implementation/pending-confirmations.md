@@ -799,9 +799,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
-2026-09-06の追加回答: 他collectionの保存処理・RulesはEmployee存在確認の追加も含め変更しない。従属確認後の参照追加、遅延集計による再作成を防ぐ契約は未確定であり、物理削除のUI開放へ進まない。[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照。
-
-2026-09-06改訂: archive導入は将来工程へ延期し、誤登録Employeeは会社管理者・統括だけが従属なしの場合に物理削除する方針を採用した。事前archiveを条件にせず、通常退職でEmployeeと業務記録を保持する契約と区別する。他collectionの既存実装は変更しない。具体的な従属一覧・同時参照対策、対象状態/誤登録確認、削除再試行/同ID再作成、監査、旧User削除trigger、実装工程はEMP-01で確定する。以下の2026-08-24回答の誤登録archiveは履歴であり、将来archiveの保存/閲覧/復元・保持は今回のCRUDの前提にしない。[仕様](../specification.md#employeeの操作権限と保持)、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、[工程](../roadmaps/employee.md)を参照する。
+2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot exact schema、archive read、依存query/全writer、工程配分が残る。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -1458,12 +1456,12 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`
 - Evidence: create/update前geocodingが失敗してもlocation=nullで保存を継続し、callerへ失敗を伝えない。location/geopointの直接業務用途は本範囲で未確認。
-- Question: Customer/Site/Employee/Companyごとにlocationを必須とするか。失敗時に保存block、warning付き保存、後続retryのどれを採用するか。
+- Question: 共通のwarning付き住所保存は回答済み。個別の座標利用機能が未取得時にどう案内・再取得するかは当該機能で定める。
 - Why needed: 住所保存の可用性と、座標を使う将来機能の整合・品質を両立するため。
 - Options and impact: 全て任意、Siteのみ必須、warning+pending status、background retry、手動座標確認。
 - Current provisional treatment: location欠損でも保存可能な現行実装を記録し、成功保証とは扱わない。
 - Related FUT IDs: FUT-0141
-- Answer: 2026-09-06 Employeeだけ部分回答。新規作成・住所変更時に座標取得が失敗しても、住所は保存し古い座標を消して未取得を知らせる（CONF-0120、ADR 0058）。他masterの失敗時仕様は未決であり、既存実装を変更しない。
+- Answer: 2026-09-06 共通の保存原則を回答済み。座標取得だけの失敗では住所を保存し、旧座標消去・未取得通知・対象住所不変時保持とする。各masterへ同じ保存可否を再質問しない。[共通仕様](../specification.md#住所と座標)、ADR 0060を参照。全masterへの座標取得新設や各用途の必須要件まで確定した意味ではなく、既存実装への適用は段階的に扱う。
 
 ## CONF-0118 郵便番号検索provider・正規化・候補選択契約
 
@@ -1513,7 +1511,9 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 ## CONF-0121 active同ID存在時のrestore conflict policy
 
-- Status: Open
+2026-09-06部分回答: 同ID原本を上書きしない原則はADR 0060の共通仕様で採用。通常restoreの提供は今回含めず、担当・入口・緊急復旧の運用は未決。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: 共通restoreはactive同IDを確認せずarchive dataで全documentを上書きする。ID再利用・並行createを拒否しない。
 - Question: active同IDが存在する場合、restoreを拒否、activeをarchiveへ退避、merge、新IDで復元、利用者選択のどれにするか。
@@ -1521,11 +1521,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: fail-closed、revision一致時のみ、swap、new ID+参照移行、field merge禁止。
 - Current provisional treatment: overwrite可能な現行実装を記録し、安全なrestore仕様とは扱わない。
 - Related FUT IDs: FUT-0145
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0122 archive・restore時のFunctions triggerと副作用契約
 
-- Status: Open
+2026-09-06部分回答: Employee archiveでUser/Authや従属を連鎖削除しないことをADR 0060で採用。旧onEmployeeDeletedと遅延eventの対処はEMPの必須実装条件。全masterのtrigger/restore運用を一括変更する指示ではない。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: active→archiveはactive delete、restoreはactive create相当となり得る。Employee deleteはUser cleanupを開始し、Customerはupdate同期だけでcreate restoreを補完しない。共通APIにtrigger suppression/reconcileはない。
 - Question: archive/restoreを通常delete/createと同じ業務eventとして扱うか。Auth cleanup、dependent snapshot、通知等を抑止・再構築・補償するか。
@@ -1533,11 +1535,13 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: 通常trigger実行、archive専用server command、event reasonで分岐、restore後reconcile、特定masterはrestore禁止。
 - Current provisional treatment: Firestore path eventが発火する可能性を実装境界として記録し、業務復元完了を保証しない。
 - Related FUT IDs: FUT-0145、FUT-0078、FUT-0081
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0123 共通archive metadata・保持・匿名化・purge運用
 
-- Status: Open
+2026-09-06部分回答: 共通archive metadata（形式version・原本・実行者・日時・理由・操作ID）、archive後の物理削除と従属再検査をADR 0060で採用。自動実行・保持期間・使用済みIDの最小記録・エラー表示方式は未採用案として[共通設計](archive-restore.md#物理削除の設計案)でreviewする。旧archive延期はEmployeeに適用しないが、他masterの固有のpurge非提供条件を解除しない。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: 元dataを同IDでcopyするだけでactor/reason/time/retention metadataがなく、同社全Userがarchive全read/writeできる。UI/commandによるrestore/purge/holdはない。
 - Question: 全master共通で必要な削除理由・actor・時刻・revision、閲覧/復元/purge actor、保持期間、legal hold、匿名化、subcollection処理をどう定めるか。
@@ -1545,7 +1549,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: metadata envelope、audit ledger、master別retention、期限後匿名化/purge、legal hold、server-only operations。
 - Current provisional treatment: archiveを無期限・無metadataの別collection copyとして記録し、正式な保持・復旧制度とは扱わない。
 - Related FUT IDs: FUT-0146、FUT-0057、FUT-0063、FUT-0078、FUT-0087、FUT-0123
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0124 正式backup scope・復旧時点・RPO/RTO
 

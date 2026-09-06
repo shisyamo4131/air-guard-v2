@@ -65,6 +65,7 @@
 | [0057](0057-employee-hard-delete-and-archive-deferral.md) | Employeeの誤登録物理削除とarchiveの将来工程への延期 |
 | [0058](0058-employee-full-read-and-geocoding-scope.md) | Employee全項目閲覧と自宅座標・変更範囲 |
 | [0059](0059-employee-retired-edit-and-insurance-operation-boundary.md) | 退職後Employeeの通常編集禁止と保険操作権限 |
+| [0060](0060-common-archive-purge-and-address-contract.md) | 共通archive・物理削除・住所座標契約とEmployeeへの適用 |
 
 ## 新しい ADR の形式
 

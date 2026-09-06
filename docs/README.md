@@ -14,6 +14,7 @@
 
 | 作業種別 | 必読文書 | 追加で確認する対象 |
 |---|---|---|
+| archive・物理削除・住所と座標 | [共通データ仕様](specification.md#共通データ仕様)、[ADR 0060](decisions/0060-common-archive-purge-and-address-contract.md) | [archive実装差・設計](implementation/archive-restore.md)、[住所・座標実装差](implementation/address-geocoding.md)、対象masterの固有条件とroadmap |
 | 仕様・機能変更 | [現行仕様](specification.md)、[正式運用ロードマップ](roadmaps/airguard-v2.md)、[ADR索引](decisions/README.md) | 関連コード、テスト、[画面マニュアル](manual/index.md) |
 | 承認済みcheckpointのCodex実装・risk-based UI受入れ | [現行仕様](specification.md)、[ADR 0034](decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md)、[ADR 0042](decisions/0042-risk-based-local-ui-acceptance.md)、[開発workflow](runbooks/development-workflow.md) | 現行挙動、承認済みboundary、関連code・Rules・test、rollback、roadmap、local UI省略条件、別途必要な環境受入れ |
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |

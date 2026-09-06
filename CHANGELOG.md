@@ -4,13 +4,15 @@
 
 ## Unreleased
 
+- Employeeのarchiveを別collectionへの同ID移動に戻し、必要な従属writerの参照保護を設計範囲へ追加した。archive・物理削除と住所・座標を[共通仕様](docs/specification.md#共通データ仕様)へ集約した。Siteの物理削除は未実装と明確化し、今回も設計・reviewのみで製品code・実dataは変更していない。旧archive延期とwriter変更禁止は[ADR 0060](docs/decisions/0060-common-archive-purge-and-address-contract.md)で一部置換した。
+
 - Employeeは退職後の通常編集を全actorで禁止する仕様を採用した。在職者の保険履歴復元は会社管理者・統括・人事へ許可し、現行の遷移条件を維持する。既存の専用誤退職訂正は維持する。仕様反映のみで実装は未実施。[判断](docs/decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照。
 
 - Employeeの新規作成・住所変更で座標取得が失敗しても、住所は保存し、古い座標を消して未取得を知らせる仕様を採用した。住所不変の更新では既存座標を維持する。仕様反映のみで製品実装は未実施。
 
-- Employeeの閲覧を、会社管理者と既知6業務roleへ現時点では全項目許可する方針に変更した。操作別write権限を維持し、項目を隠すためのread API・data分割は今回導入しない。自宅座標は将来の現場・自宅間の経路図に必要とし取得・保存を継続、経路図は将来工程とする。他collectionの保存処理・Rulesも今回変更しない。仕様反映のみで製品実装・Dev反映は未実施。[判断](docs/decisions/0058-employee-full-read-and-geocoding-scope.md)を参照。
+- Employeeの閲覧を、会社管理者と既知6業務roleへ現時点では全項目許可する方針に変更した。操作別write権限を維持し、項目を隠すためのread API・data分割は今回導入しない。自宅座標は将来の現場・自宅間の経路図に必要とし取得・保存を継続、経路図は将来工程とする。当時は他collectionの保存処理・Rulesも変更しない境界を採用した（Employee参照保護に必要な部分はADR 0060で置換）。仕様反映のみで製品実装・Dev反映は未実施。[判断](docs/decisions/0058-employee-full-read-and-geocoding-scope.md)を参照。
 
-- Employeeのarchive導入を保留し、従属documentのない誤登録を会社管理者・統括だけが物理削除する方針を採用した。誤登録Employeeの物理削除ではUser/Authや従属dataを連鎖削除しない。通常退職は承認済みのUser/Auth処理を含む既存の専用操作を維持し、Employeeと業務記録を保持する。他collectionの既存実装は維持し、archiveは将来工程へ残す。仕様反映のみで製品実装・実data削除は未実施。[判断](docs/decisions/0057-employee-hard-delete-and-archive-deferral.md)を参照。
+- 以下はADR 0060で置換する前の採用履歴。Employeeのarchive導入を保留し、従属documentのない誤登録を会社管理者・統括だけが物理削除する方針を採用した。誤登録Employeeの物理削除ではUser/Authや従属dataを連鎖削除しない。通常退職は承認済みのUser/Auth処理を含む既存の専用操作を維持し、Employeeと業務記録を保持する。他collectionの既存実装は維持し、archiveは将来工程へ残す。仕様反映のみで製品実装・実data削除は未実施。[判断](docs/decisions/0057-employee-hard-delete-and-archive-deferral.md)を参照。
 
 - EMP-01で会社管理者・統括の通常業務更新、会社管理者・統括・人事のEmployee更新と退職、他roleの必要項目のみ閲覧、従属documentがない場合に限る会社管理者・統括のEmployee archiveを仕様として採用した。将来のシステム課金操作と管理者変更の保護境界も整理した。製品実装・Dev反映は未実施で、閲覧fieldとarchiveの詳細・工程配分は未決である。[判断](docs/decisions/0056-employee-role-and-archive-boundary.md)を参照。
 

@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
+- 一部置換先: [ADR 0060](0060-common-archive-purge-and-address-contract.md)（直接物理削除・archive延期・必要な従属writer変更禁止を置換。以下は採用当時の決定）
 - 関連仕様: [Employeeの操作権限と保持](../specification.md#employeeの操作権限と保持)
 - 一部置換: [ADR 0056](0056-employee-role-and-archive-boundary.md)のEmployee archiveを今回の改修で提供する方針。通常編集・退職・将来課金のactorと保護は維持する。
 - 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。本ADRは仕様採用であり、製品実装・Dev反映・実data削除の完了ではない。

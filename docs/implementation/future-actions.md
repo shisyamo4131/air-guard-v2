@@ -1064,6 +1064,8 @@ EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
+2026-09-06最新方針: archive延期を撤回し、Employeeは別collection移動と必要な従属writer保護をEMP-01で設計する。通常退職の保持・非連鎖削除は維持。物理削除はarchive後の別操作で、運用・最小ID記録の設計はFUT-0146へ集約する。現行計画は[Employeeロードマップ](../roadmaps/employee.md)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とし、以下の延期記述は旧判断の履歴。
+
 追加回答: 他collectionの保存処理・RulesへのEmployee存在確認追加は今回対象外と確定した。参照競合を解決できたという意味ではなく、安全条件が未確定の物理削除は開放しない。
 
 EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)でEmployee archiveを保留し、将来工程として本FUTへ残す。誤登録の物理削除を会社管理者・統括だけに許可し、従属あり拒否・User/Auth非連鎖削除を採用した。削除の従属一覧・新規参照競合・旧writer/trigger・再試行/同ID再作成・工程配分は今回の[Employeeロードマップ](../roadmaps/employee.md)の必須残作業であり、本FUTへ先送りしない。将来archiveの保存/閲覧/復元・保持・匿名化は別工程で再検討する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界として維持し、他collectionの既存実装は変更しない。
@@ -1935,6 +1937,8 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 
 ## FUT-0141 geocoding失敗・location整合・0座標を正しく扱う
 
+2026-09-06共通化: 住所保存可否・旧座標消去・未取得通知・不変時保持は[共通仕様](../specification.md#住所と座標)へ集約した。各masterへ保存可否を再質問せず、[実装差](address-geocoding.md#共通仕様との対応2026-09-06)を段階対応する。Employeeに必要な実装はEMP-02、他masterや共通hookの全改修は今回未実施。以下のEmployeeだけ部分回答という記述は当時の履歴。
+
 EMP-01追加回答（2026-09-06）: Employeeの新規作成・住所変更では、座標取得失敗時も住所を保存し、古い座標を消して未取得を知らせる。住所不変の通常更新では既存座標を維持する。CONF-0117/0120とADR 0058へ反映した。Employee限定の採用仕様であり、他masterの保存変更・既存全件の座標削除は行わない。実装は未着手。
 
 - 状態: Open
@@ -2003,6 +2007,8 @@ EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で�
 - ユーザー判断が必要な事項: CONF-0121、CONF-0122。
 
 ## FUT-0146 archive audit metadata・retention・purge・Rulesを共通設計する
+
+2026-09-06共通原則採用: [仕様](../specification.md#ドキュメントのアーカイブと物理削除)と[実装差・物理削除案](archive-restore.md)を正とする。Customer/Siteは専用envelope・参照保護を持ち、下記のmetadataなし/広域writeは旧generic調査の範囲である。purge・最小ID記録・保持/エラー表示・他master適用は未実装であり、共通仕様化を実装完了と扱わない。
 
 - 状態: Needs decision
 - 重大度: High

@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
 - 最終更新日: 2026-09-06
-- 仕様バージョン: 0.8.16
+- 仕様バージョン: 0.8.17
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -64,13 +64,39 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Dev環境は利用者の会社と協力会社の2社が試用する非本番のremote試行環境である。一般公開はしていないが、会社境界を持つ試行環境として認証・認可・tenant分離を必須とする。正式運用準備または正式運用開始の完了判定をDev deployの前提にせず、検証済み変更を積極的にdeployして実利用条件の受入れ証拠を得る。
 - Codexは対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded Dev release checkpointだけでDevへ接続する。同checkpoint内の静的生成、deploy、remote検証はcommandごとの再承認を必要としないが、新しいdata migration、破壊的repair、対象拡張、Prod適用は別の明示承認を必要とする。
 
+## 共通データ仕様
+
+この節はcollectionをまたぐ確認済みの原則である。個別仕様には操作を提供するか、実行者・閲覧者、従属documentの一覧、固有の状態・field条件を置く。共通仕様の採用だけで既存全collectionの実装を切り替えない。実装との差は[archive調査](implementation/archive-restore.md)と[住所・座標調査](implementation/address-geocoding.md)、採用理由は[ADR 0060](decisions/0060-common-archive-purge-and-address-contract.md)を参照する。
+
+### ドキュメントのアーカイブと物理削除
+
+この節のarchive後の物理削除は、archiveを提供するマスタdocumentの契約である。User/Authの専用account削除、業務transactionの取消・削除、会社全体の保守削除へarchiveを新たに要求せず、それぞれの固有契約を維持する。
+
+- アーカイブは、誤登録・重複など通常業務に使用すべきでないdocumentを、同一会社の別archive collectionへ同じdocument IDで移し、通常collectionから取り除く操作とする。正常な退職・取引終了と区別し、過去業務の参照先を消す代替手段にしない。
+- archiveには原本snapshotと、形式version・実行者・server時刻・理由・操作IDを保持する。元documentの通常更新日時とarchive日時を混同しない。原本の読取り、従属検査、同ID archive不存在確認、archive作成と原本削除を同じ保存単位で確定し、部分移動・上書きを許さない。
+- 従属documentが一つでも存在すればarchiveを拒否する。検査不能・不正dataを「従属なし」としない。対象一覧は子collectionだけでなく業務上の参照、連携・予約、必要な履歴・背景処理を個別に確定する。従属を連鎖削除して条件を満たさない。
+- 参照を新設・変更する保存境界は、参照先が同社の通常collectionに存在することを保存と整合する形で確認する。UI候補からの除外だけに依存せず、直接write、旧client、Admin SDK、遅延処理による迂回を防ぐ。参照IDが変わらない更新に全参照先の再読取りを一律要求しない。
+- archiveを通常一覧・検索・選択候補へ混ぜず、通常業務で新規参照できないものとする。archiveの閲覧権限は個別に定め、通常原本のread許可から自動的に導かない。archiveへの参照が検出された場合は不整合として扱い、archiveから名前を補完して正常な業務記録に見せかけない。
+- 物理削除は、archive済みdocument本体をFirestoreから抹消する別操作とする。削除時にも従属なし・対象同一性・認可を再確認し、従属あり・不整合・検査失敗なら削除せず原因を記録する。archive完了だけを理由に無条件削除しない。バックアップ、外部出力や別契約の操作記録まで消去したとは表現しない。
+- 応答不明時は対象と操作IDを照合し、同じ操作の再送で上書き・再生成・別対象の削除を起こさない。archive後・物理削除後の旧ID再利用と古い要求を防ぐ仕組みを、各操作を開放する前に定める。復元を提供する場合も通常原本の同ID上書きは禁止し、User/Authなどの自動復元を含めない。
+- 共通化は全masterへのarchive・物理削除・restore UIの一律追加を意味しない。Customer/Siteの既存固有条件と、Outsourcerでこれらを提供しない条件は維持する。定期実行、保持期限、削除実行の担当・承認、エラー一覧の保存方式は個別の運用判断とし、自動purgeをこの仕様だけで有効化しない。
+
+### 住所と座標
+
+- 入力住所を業務情報の正本とし、座標はその住所から取得する補助情報とする。住所保存の可否を座標providerの成否だけで決めない。住所の必須項目、対象となる住所、利用目的・閲覧権限は個別仕様に置き、同じ失敗時仕様をmasterごとに再確認しない。
+- 新規作成・座標取得対象住所の変更で座標取得だけが失敗しても、入力・認可・競合検証を満たした住所は保存する。古い住所の座標を残さず未取得とし、保存成功後に「住所は保存済み、座標は未取得」と通知する。Firestore保存自体の失敗や結果不明を住所保存成功と表示しない。
+- 座標取得対象住所が変わらない通常更新では、既存座標を保持する。国籍・保険等の無関係な編集で座標を取得し直さない。住所変更中に届いた古い取得結果を新しい住所へ適用せず、住所と対応する座標を一緒に確定する。
+- 未取得と数値0を区別し、緯度・経度が0でも有効範囲内の有限数なら有効とする。座標を使う画面は未取得を扱い、所在地の不存在と解釈しない。providerの整形住所で入力住所を無断に上書きしない。
+- providerへの呼出しを再試行されるFirestore transaction内へ入れず、認可された対象住所の必要な処理だけに限定する。住所・座標・provider応答全文を通常logへ出さない。実providerへの接続、既存全件の再取得・削除・正規化は、この仕様整理から自動実行しない。
+- 郵便番号・建物名の座標取得への使用範囲、郵便番号検索provider、正規化・再取得UIは別の未決事項とする。現在の住所fieldや必須条件を、共通化だけを理由に変更しない。
+
 ## テナントと認証
 
 - 会社データは `Companies/{companyId}` 以下を基本とし、会社単位で分離する。
 - 認証ユーザーのカスタムクレームと会社 ID をデータアクセス判定に用いる。
 - `Companies/{companyId}` の会社documentはclientから作成・削除できず、初期作成はCloud Functions/Admin SDKだけが行う。同一会社の有効な本登録Userによる既存document更新は、field・actor境界を機能単位で移行するまでの互換経路として維持する。
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
-- マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。
+- マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。Employee archiveの参照整合性に必要なwriter・Rules・索引・背景処理だけはADR 0060の限定例外として設計対象に含め、実装はEmployeeの合意済み工程で行う。
 - 配置管理で作業員を追加・変更・削除・並べ替えする通常経路は、現時点ではFirestore client transactionによる直接更新を維持する。将来Server APIへ移行する場合は、画面へ即時反映する楽観的更新に加え、失敗時の明示的なrollback、正本の再取得、利用者向けerror表示、再試行導線を同じ変更単位の受入れ条件とする。
 - Prod公開前までに、既存のmaster dataとtransaction dataの作成・更新・削除を機能単位で順番に見直す。clientから直接書くoperationはFirestore Rulesで同一会社、必要なpermission、変更可能field、型、状態を強制し、Callableを使うoperationは同じ条件をserver側で再確認する。画面の表示・非表示だけを認可根拠にしない。次の見直し対象はCustomer masterとする。
 - App Checkの実装・強制、全般的なrate limit、Callable public invokerの常時監視はProd公開前の必須gateとして扱い、Devでの個別機能追加の前提にしない。ただしFunctionsを追加または変更してDevへ反映する場合は、対象Functionへ正規画面から到達できるpublic invoker・CORSをrelease確認として検証する。未認証入口、外部費用、異常呼出しの具体的なriskが確認された場合は、該当operationだけを前倒しで対処する。
@@ -155,12 +181,11 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 同社の有効な本登録会社管理者・統括・人事は、Employeeの作成と通常編集（基本情報、国籍、警備員登録、資格、保険）を行える。Employeeの閲覧は、会社管理者・統括・人事・労務・法務・管制・経理へ現時点では全項目を許可する。労務・法務・管制・経理は更新できない。本人向けEmployee Self Accessは既存の別境界に従い、roleなし・未知role・直接permission文字列・developer指定だけを原本全項目readの根拠にしない。詳細は[ADR 0058](decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
 - 退職後（RESIGNED）のEmployeeは、会社管理者・統括・人事も通常情報を訂正できない。基本・国籍・警備員登録・資格・保険と保険履歴復元を含む。閲覧は上記範囲で継続する。
 - 在職Employeeの保険6操作は会社管理者・統括・人事へ許可する。履歴復元もこの3actorへ認め、historyあり・手続中不可など現行の遷移条件を維持する。退職後編集禁止はactor許可に優先する。詳細は[ADR 0059](decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照する。
-- 通常編集、退職、誤退職訂正、誤登録の物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、物理削除は会社管理者・統括だけに許可する。人事単独には物理削除を許可しない。誤退職訂正actorの追加変更は未決であり、明示変更までは既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
-- 誤登録のEmployeeは、従属documentがない場合だけ物理削除でき、一つでもあれば拒否する。事前のarchiveを条件にせず、対象Employee本体をFirestoreから削除し、新しいarchiveの複製を作らない。削除後の閲覧・復元を通常機能として提供しない。子pathだけでなく、Employeeを参照する業務document、User連携・予約等を含む具体的な依存一覧と同時参照作成への対策を実装前に確定する。従属dataやUser/Authの連鎖削除、検査不能を「従属なし」と扱う処理を許可しない。
-- 通常退職はEmployeeと業務記録を保持し、誤登録削除で代用しない。Employeeのarchiveは保留し、将来工程に残す。今回archive状態field、通常queryへのarchive除外条件、archive一覧・restoreを追加しない。Customer、Site、Outsourcer等の既存実装は変更しない。既存archive、backup等の一括削除・変換・purgeは今回の採用範囲に含めない。判断は[ADR 0057](decisions/0057-employee-hard-delete-and-archive-deferral.md)を参照する。
-- 「他collectionの既存実装維持」は、その保存処理・Rulesも変更しないことを含む。Employee存在確認を他collectionへ追加する変更も今回の対象外とする。従属あり拒否・非連鎖削除を弱める意味ではなく、安全条件を満たせない状態では物理削除を開放しない。
+- 通常編集、退職、誤退職訂正、誤登録のarchive・物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、archive・物理削除は会社管理者・統括だけに許可し、人事単独には許可しない。誤退職訂正は既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
+- 誤登録・重複のEmployeeは従属がない場合だけ、同IDの`Employees_archive`へ移動する。[共通仕様](#ドキュメントのアーカイブと物理削除)に従い、通常Employeeからの直接物理削除とarchive延期を撤回する。通常退職はEmployeeをRESIGNEDとして業務記録とともに保持する。archiveでUser/Authや従属を連鎖削除しない。
+- 他collectionの既存業務仕様は維持する。ただし、Employeeへの参照整合性に必要な保存処理・Rules・query用field・背景処理の変更は設計範囲に含める。単純な存在確認を画面だけへ追加せず、必要な保存経路を保護した後にarchiveを開放する。全masterの同時変更や既存archive・実dataの削除・変換、通常restoreの提供、定期purgeの実行は含めない。変更理由・境界は[ADR 0060](decisions/0060-common-archive-purge-and-address-contract.md)を参照する。
 - 自宅座標は、将来の配置先現場と従業員自宅の経路図に利用するため必要とする。Employeeの住所から座標を取得・保存する機能を継続する。経路図の描画、経路検索、距離による配置判断は将来工程であり、今回のCRUD改修では追加しない。座標を含むEmployeeの閲覧は上記の全項目read境界に従う。
-- Employeeの新規作成・住所変更時に座標取得が失敗しても、その他の入力・認可・競合検証が成功すれば住所は保存する。古い住所の座標は残さず座標未取得として保存し、利用者へ「住所は保存済み、座標は未取得」と知らせる。住所を変更しない通常編集で既存座標を消さず、既存全件の座標削除・自動再取得は追加しない。
+- 住所保存・座標取得失敗・旧座標消去・未取得通知・住所不変時の保持は[共通仕様](#住所と座標)に従う。Employee固有の用途と閲覧actorを上記に定める。
 
 ### 外注先
 

@@ -1,6 +1,6 @@
 # role・permission認可モデル（実装調査）
 
-2026-09-06の通常業務・Employee専用操作・将来課金のactor採用は[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。Employeeの全項目閲覧・座標用途・他collection変更禁止は[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)で更新した。以下は旧catalog/実装の調査記録であり、新方針の全機能反映や権限制御の検証済みを意味しない。適用範囲は[親roadmap](../roadmaps/airguard-v2.md#次の作業)で管理する。
+2026-09-06の通常業務・Employee専用操作・将来課金のactor採用は[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。Employeeの全項目閲覧・座標用途は[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)、archive方式と必要な従属writer保護の限定範囲は[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。以下は旧catalog/実装の調査記録であり、新方針の全機能反映や権限制御の検証済みを意味しない。適用範囲は[親roadmap](../roadmaps/airguard-v2.md#次の作業)で管理する。
 
 ## Authorization/page helper最終確認（SPEC-DEEP-045a/045b）
 

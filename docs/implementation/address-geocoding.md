@@ -1,4 +1,22 @@
-# 住所入力・郵便番号・geocoding契約（実装調査）
+# 住所入力・座標取得の実装差と設計
+
+## 共通仕様との対応（2026-09-06）
+
+保存可否・失敗通知・旧座標消去・不変時保持・古い応答の拒否は[確認済み共通仕様](../specification.md#住所と座標)を参照する。各masterでは取得対象住所・必須項目・用途・actorだけを固有条件として定める。以下の旧hook調査を、専用writer導入後の全masterの実経路と取り違えない。
+
+| 対象 | 今回の静的再照合 | 共通仕様への差・実装時の検証 |
+|---|---|---|
+| Customer | `composables/domain/customer/customerOperations.js`のhook、`utils/customer/customerWriter.js`の住所変更時部分保存 | client側再検査と保存transactionの境界差、未取得通知を確認 |
+| Site | `composables/application/site/useSiteActions.js`でtransaction外取得、`utils/site/siteWriter.js`で取得基準住所と保存予定住所を照合 | Employeeの最新住所照合へ参考にする。0座標と未取得通知は別に確認 |
+| Employee | 旧Manager/model保存。専用保存は未実装 | EMP-02で共通原則を適用。最新権限・RESIGNED拒否・住所競合を最終保存で再確認 |
+| Company | `functions/modules/company/updateCompanyProfile.js`は住所変更でlocation/geopointをnull化 | 現専用経路が毎回geocodingすると記載しない。共通化を根拠に座標取得機能を新設しない |
+| 共通hook/provider | 0座標のtruthy判定、失敗吸収、認可不足と住所/座標logが残る | FUT-0140〜0143。全体適用済みとはしない。Employeeに必要な経路の是正と他masterの後続対応を分ける |
+
+Employeeの設計では既存shapeを使い、未取得は`location=null`と`geopoint=null`で表現する。保存APIはdocument保存の結果とは別に座標未取得を返し、成功後だけwarningを表示する。providerはtransaction外で呼び、最終transactionで現在認可・状態と取得基準住所を照合する。不一致時は古い結果を破棄しdraftを保持して再読込みを促す。無関係なfield更新では取得も座標patchも行わない。全collection共通の新status fieldや自動再取得jobは追加しない。
+
+共通受入れ例は、取得成功/失敗後の再読込、住所不変/非住所編集の取得0回、0座標、不正座標、取得待ち中の住所変更・権限喪失・退職、Firestore保存拒否/結果不明、transaction再試行での外部呼出し重複なしとする。今回はsource照合だけで、runtime・実provider・実dataは未検証である。
+
+## 旧共通hookの実装調査
 
 ## メタデータ
 
