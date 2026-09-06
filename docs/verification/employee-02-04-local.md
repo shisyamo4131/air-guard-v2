@@ -44,3 +44,17 @@ source baseline上で`powershell -ExecutionPolicy Bypass -File scripts/check-gov
 - `git diff --check`: exit 0。project-docsの初回は既存見出しlinkの欠損でexit 1。見出し識別子を保持して履歴の説明を本文へ置く形に修正した。
 
 直接UI・backend assertion・専用build・最終文書gate・統合・cleanupはこの時点では未完了であり、EMP-02の進捗は加点しない。
+
+### 初回UIと修正対象
+
+sourceを`75080329982e7e6d1edc14a1ec66dc260c529801`へlocal commitし、clean HEADで`npm run test:local:ui:build`はexit 0。専用Functionsの3操作登録・All emulators ready・generated server起動・HTTP 200を確認した。保存済み合成会社管理者sessionでダッシュボードへ到達し、可視メニューから在職者一覧、新規登録へ進んだ。空入力の保存拒否を確認後、通常keyboardで合成Employeeを登録した。
+
+実画面・read-only backend assertionで姓名・住所・ACTIVE・座標null・3保険世代0の保存を確認したが、表示名が姓名の先頭1文字で停止する不具合を検出した。入力部品がprop同期も編集eventとして返し、自動表示名を明示入力と誤認することを静的調査で確認した。Employeeの表示名入力だけを変更し、共通packageへ広げず再試験する。初回UIは受入れ失敗であり、作成後の警告は観測できていないため成功と記録しない。
+
+今回所有tabを閉じ、generated serverとEmulatorへCtrl+Cを送信して終了を確認した（終了processのexit 1は停止操作の結果）。専用8portと派生9150/8286にLISTENがないことを確認し、所有`.output`を絶対path・reparse不在確認後に削除した。saved-dataと既存logの最終指紋確認・復元は連続実施の終了時に行う。
+
+### 表示名の修正と再検証
+
+動的component指定の初案はEMP-02-UI-R2で未登録componentの解決不足を指摘され、EmployeeEditorの`input.displayName`スロットに静的`v-text-field`を置く修正へ変更した。共有operation contractは元へ戻し、package・共通入力部品を変更しない。実AirItemInputのslot attrs生成、静的componentのtemplate compile、逐次姓名入力と明示表示名保持を追加testで検証した。
+
+最終slot修正後の`node --test test/domain/*.test.mjs`は1180 tests / pass 1180 / fail 0、exit 0。`npm run test:local`の再実行も172 tests / pass 172 / fail 0、exit 0。後者の後続差分はUI slot・domain test・文書だけで、server保存契約・Rules・harnessは不変のためEmulator証拠を再利用する。`git diff --check`もexit 0。実UI再試験とその受入れは未完了。

@@ -60,6 +60,35 @@ test("EMP02 stay-limit clear transmits raw flag and date expectations", async ()
   h.setRaw(raw); await h.editor.open(); h.editor.update({ hasPeriodOfStayLimit: false }); await h.editor.save();
   assert.deepEqual(h.calls[0].input.expected, contract.expectedFields(raw, ["hasPeriodOfStayLimit", "periodOfStay"]));
 });
+test("EMP02 actual AirItemInput attrs feed the statically registered display-name slot", async () => {
+  const source = await readFile(new URL("../../air-vuetify-v3/src/AirItemInput.vue", import.meta.url), "utf8");
+  const { descriptor } = parse(source);
+  const editorSource = await readFile(new URL("../../components/Employee/Editor.vue", import.meta.url), "utf8");
+  const editor = parse(editorSource).descriptor;
+  const compiled = compileTemplate({ source: editor.template.content, filename: "EmployeeEditor.vue", id: "employee-editor" });
+  assert.deepEqual(compiled.errors, []);
+  assert.match(compiled.code, /_resolveComponent\("v-text-field"\)/);
+  assert.match(compiled.code, /"input\.displayName":/);
+  assert.match(editor.template.content, /#input\.displayName="\{ attrs \}"[\s\S]*?<v-text-field v-bind="attrs"/);
+  assert.match(descriptor.template.content, /:name="`input\.\$\{field\.key\}`"[\s\S]*?:attrs="field\.component\.attrs"/);
+  const setup = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");
+  for (const operation of ["create", "basic"]) {
+    const h = await harness(operation); await h.editor.open();
+    const props = { schema: contract.operationSchema(operation), item: h.editor.draft.value, updateProperties: h.editor.update, editMode: operation === "create" ? "CREATE" : "UPDATE", disabled: false, includedKeys: null, excludedKeys: [] };
+    const fields = new Function("computed", "useSlots", "defineOptions", "defineProps", `${setup}; return formFields;`)((fn) => ({ get value() { return fn(); } }), () => ({}), () => {}, () => props);
+    const field = (key) => fields.value.find((item) => item.key === key);
+    assert.equal(field("displayName").component.name, Employee.classProps.displayName.component.name);
+    assert.equal(field("displayName").component.attrs.label, "表示名");
+    assert.equal(field("displayName").component.attrs.required, true);
+    assert.equal(field("lastName").component.name, Employee.classProps.lastName.component.name);
+    for (const value of ["合", "合成"]) field("lastName").component.attrs["onUpdate:modelValue"](value);
+    for (const value of ["確", "確認"]) field("firstName").component.attrs["onUpdate:modelValue"](value);
+    assert.equal(field("displayName").component.attrs.modelValue, "合成確認");
+    field("displayName").component.attrs["onUpdate:modelValue"]("明示名");
+    field("firstName").component.attrs["onUpdate:modelValue"]("次郎");
+    assert.equal(field("displayName").component.attrs.modelValue, "明示名");
+  }
+});
 test("EMP02 changed Vue files compile", async () => {
   for (const file of ["components/Employee/Editor.vue", "components/Employees/Manager/index.vue", "components/Employee/Manager/index.vue", "components/Employee/Activator/Base.vue", "components/Employee/Activator/Nationality.vue", "components/Employee/Activator/SecurityGuard.vue", "components/Employee/Autocomplete.vue", "pages/employees/index.vue", "pages/employees/[id].vue"]) {
     const source = await readFile(new URL(`../../${file}`, import.meta.url), "utf8"); const { descriptor, errors } = parse(source, { filename: file }); assert.deepEqual(errors, [], file); const script = compileScript(descriptor, { id: file }); const result = compileTemplate({ source: descriptor.template.content, filename: file, id: file, compilerOptions: { bindingMetadata: script.bindings } }); assert.deepEqual(result.errors, [], file);

@@ -1,6 +1,10 @@
 # Employee保険管理（実装調査）
 
-## 2026-09-06の再照合
+## EMP-02の移行状態
+
+Employee詳細の3保険はEMP-04の専用保存へ移行するまで一時read-onlyにした。Employee原本/archiveの直接client CUDをRulesで拒否し、旧全文保存を許可して併存させない。現6操作の採用条件は維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)を参照する。
+
+## EMP-01時点の再照合（2026-09-06・履歴）
 
 3保険の埋込み、6操作、live instanceの先行変更と親の`submit:complete`後の全文保存は現sourceにも残る。計画は[Employeeロードマップ](../roadmaps/employee.md)、個人情報の権限・保険訂正/監査の未決は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)へ統合する。通常CRUD安全化と監査制度の新設を同一視せず、現historyをappend-only監査証拠として扱わない。
 

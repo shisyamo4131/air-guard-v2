@@ -18,7 +18,12 @@ async function retryCreate() { const result = await editor.retryCreate(); if (re
         <v-progress-linear v-if="loading" indeterminate />
         <v-alert v-if="message" type="info" class="mb-3">{{ message }}</v-alert>
         <v-alert v-if="conflict" type="warning" class="mb-3">同じ情報が更新されました。入力を保持しています。最新値を読み直してください。</v-alert>
-        <air-item-input v-if="draft" :item="draft" :schema="schema" :update-properties="editor.update" :disabled="busy || loading || uncertain" :edit-mode="operation === 'create' ? 'CREATE' : 'UPDATE'" />
+        <air-item-input v-if="draft" :item="draft" :schema="schema" :update-properties="editor.update" :disabled="busy || loading || uncertain" :edit-mode="operation === 'create' ? 'CREATE' : 'UPDATE'">
+          <!-- Static Vuetify tag is auto-imported and does not echo prop changes. -->
+          <template #input.displayName="{ attrs }">
+            <v-text-field v-bind="attrs" />
+          </template>
+        </air-item-input>
       </v-card-text>
       <v-card-actions>
         <v-btn v-if="operation !== 'create' || uncertain" :disabled="busy || loading" @click="editor.reload">{{ uncertain ? '登録結果を確認' : '最新値を読み直す' }}</v-btn>
