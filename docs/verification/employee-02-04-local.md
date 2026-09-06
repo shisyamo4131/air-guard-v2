@@ -104,3 +104,13 @@ source `3faabe528e81a8ac929056127ecf885ed5bdb368`のclean HEADで専用buildはe
 createと警備員登録解除だけに、既存schema hookと一致する9fieldの消去値を適用した。入力defaultと保存時消去値を区別し、schema実methodとの全field比較・解除値と従属入力の混在・unknown/不存在/保険保持・実HTTP作成/解除比較を追加した。EMP-03-UI-R1-SECは指定shared contractと直接testの静的再reviewで修正充足・追加blockingなしと判断した。前回reviewの入力defaultと保存消去値の同一視は訂正された。
 
 修正後`node --test test/domain/*.test.mjs`は1191 tests / pass 1191 / fail 0、exit 0。project-docsとdiff checkもexit 0。Emulator・修正版build・実UI再確認はこの時点では未完了である。
+
+### EMP-03 最終受入れ
+
+修正後`npm run test:local`は173 tests / pass 173 / fail 0、exit 0。source `1daf5d38622f0fcec6f54e78022a5cb882dca457`のclean HEADで専用buildもexit 0。generated serverのidentity・HTTP 200と専用Emulatorのreadyを確認した。
+
+可視UIから新規Employeeを作成し、警備員登録・解除を再実行した。read-only backend assertionで、新規/解除それぞれの9fieldすべてが既存schema消去値と一致し、全非警備fieldが保存前後で不変だった。画面も登録/未登録表示へ切り替わった。対象Employeeの直接注入はない。資格のUI/controller/保存branchに変更がないため、前記の同名・表示順逆転・2画面競合・再選択/削除の実UI証拠を再利用し、共通contract影響は全domain/Emulatorで再検証した。
+
+所有tabを閉じ、generated server→Emulator停止（停止exit 1）、専用8portと派生9150/8015のLISTENなし、所有`.output`削除、3datasetのfile数/bytes/SHA-256一致、原root log復元/一致を個別commandのexit 0で確認した。外部provider・Dev/Prod・実data・全roleの直接UIは未検証。専用合成account以外のrole境界は自動testで検証した。共通3gateはvalidator/route/policy不変のため前記証拠を再利用し、最終文書変更に対するproject-docs/diffは再実行する。仕様/ADR/運用手順の変更はなく、実装・進捗・検証記録だけを更新する。
+
+EMP-03の完了条件を満たし進捗を30%→40%とする。次工程reviewでは保険の6操作を維持し、特にlossのisProcessing非変更、cancelEnrollのpreviousStatus=null、rollbackの4field復元、raw履歴Timestamp/unknown保持、巻き戻さない保険別世代値を引継ぎ事項とした。保険番号20文字・喪失理由40文字はinstalled schemaの現制約を使い、新しい形式制約は追加しない。EMP-04完了後に停止する承認境界は維持する。
