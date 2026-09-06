@@ -19,7 +19,7 @@
 
 1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
 2. Site masterのSITE-08は[SITE-08検証記録](../verification/site-08-local.md)のLocal試験・build・cleanupまで完了した。次はDev反映前のlegacy確認とDev・remote接続であり、[Siteロードマップ](../roadmaps/site.md)のSITE-09として別承認である。
-3. Employee masterはSiteと分離した将来作業とし、破棄された別taskの改修案を正本、進捗、承認済み計画として扱わない。再開する場合はrepositoryの現行事実から改めてscopeと承認境界を確認する。
+3. 次はEmployee master改修のロードマップ作成を行う。調査・設計・レビューの依頼範囲と既存の未採用案の扱いは[正式運用ロードマップの次の作業](../roadmaps/airguard-v2.md#次の作業)、適用する反省会の判断は[ADR 0055](../decisions/0055-scope-discovery-and-acceptance-review.md)を参照する。
 4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
