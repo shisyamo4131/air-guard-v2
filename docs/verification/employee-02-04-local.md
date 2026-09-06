@@ -138,3 +138,69 @@ EMP-04-CLIENTはcontroller・専用Manager・6Input/Menu・詳細・共有contra
 表示getterはrawに存在する場合だけ同期するよう修正した。getter有無それぞれでloss→rollback後のmap完全一致、enroll/cancel時の存在状態を追加検証した。EMP-04-SEC-R1は指定contract/domain/local testのread-only再reviewでP2解消・追加blockingなし。日時検証はfixtureを書き込んだ直後のrawを基準とし、操作後のTimestamp・未知field・履歴を完全比較する。ミリ秒未満精度の存在もassertし、単体試験の任意nanoseconds保持を継続した。操作による丸めを許容した変更ではない。
 
 修正後`node --test test/domain/*.test.mjs`は1227 tests / pass 1227 / fail 0、exit 0。Emulator再実行・専用build・直接UI/backend・cleanupはこの時点では未完了。最終sourceと文書をreview済み範囲でlocal統合し、clean HEADの専用UI検証へ進む。
+
+### EMP-04 最終受入れ
+
+R1後`npm run test:local`は174 tests / pass 174 / fail 0、exit 0。3保険同時加入・全6操作・mapが完全に戻った後の古い喪失/復元拒否、保存直後rawを基準とする日時精度/履歴/未知field保持、復元field不存在のFirestore削除・権限喪失拒否を実HTTPで確認した。初回の日時assert失敗は、投入値と保存実値を混同した期待値を修正することで解消し、操作前後の精度不変を確認できた。
+
+review済みsourceを`242e597239c617eeb994d3f3dd6b049666e6af3b`へ統合し、clean HEADで`npm run test:local:ui:build`はexit 0。専用Callable登録/Emulator ready、generated serverのidentity確認とHTTP 200を確認した。
+
+- UI user-equivalent action: 合成actorで通常sign-inし、可視メニューからEmployeeを正規作成した。長すぎる表示名カナの保存拒否と入力保持を確認し、入力を訂正して作成した。健康保険で入力取消、加入手続中→取り下げ→再加入→手続完了→喪失→履歴復元→適用除外を実施し、6操作を一巡した。復元previewの状態・日付・番号を確認した。雇用保険と厚生年金もそれぞれ正規加入した。
+- 2画面: 元画面で健康保険の加入draftを入力中、別画面で同じ保険を復元した。元画面で入力内容が保持され、入力/保存がdisabledになったことを直接観測した。明示再読込は原本と世代を同時に読み直し、加入済みとなったため元の加入操作は条件不成立を表示した。保存操作でもwriteはなく、取消後に現在有効な喪失を選び直すと保存できた。
+- backend assertion: 入力中/取消後は原本完全不変。健康保険の更新世代は各成功操作で1〜7へ進み、喪失→復元で保険mapは完全に戻るが世代は5→6へ増加した。Firestore REST mapのkey順は比較に影響させず、項目と値を正規化して照合した。3保険保存後は健康7・雇用1・年金1、2画面の復元と再選択後喪失で健康9となり、他2保険・全非保険fieldを保持した。Employee原本の非UI注入はない。
+- non-UI setup: 合成actorの一時credentialをrunning専用Authだけに設定し、memory内で通常入力した。saved-dataへ保存しなかった。全roleの直接UI、応答不明の実ネットワーク切断操作は実施せず、該当条件は自動testで検証した。
+- cleanup: 所有tabを閉じ、generated server→EmulatorをCtrl+Cで停止（停止exit 1）。専用8portと派生9150/8818のLISTENなし、所有`.output`削除、開始時3datasetのfile数/bytes/SHA-256一致、原root log復元/SHA-256一致を個別commandのexit 0で確認した。その後、exact絶対path・reparse不在を確認して今回所有`.codex-test/runtime/emp02-04-ui`を削除した。他のruntime・利用者Chrome・`.env.local`は変更していない。
+
+最終sourceのdomain1227/1227・Emulator174/174・専用build・project-docs・diff/cached diffは各exit 0。共通3gateは前記実測をvalidator/route/policy不変のため再利用する。最終文書更新後はproject-docs/diff/cached diffを再実行し、product gateはsource不変として再利用する。Dev/Prodのgenerate/deployはrelease-onlyかつ未承認で省略。仕様の新要件・新ADR・package・governance設定・migration・実data変更はない。影響する実装記録・manual・changelog・進捗・本receiptを更新し、既存仕様/ADRと運用手順を維持した。EMP-02で変更した認可Rules以外のRules変更はない。
+
+次工程reviewでは、通常Employeeの旧全文writerが確認範囲に残らないこと、既存UWB/lifecycleを維持することを確認した。EMP-05へraw保険/履歴/optional世代mapのarchive保持、参照writer/Rulesの保護、旧Employee削除時User連鎖triggerの対処を渡す。これらを今回実装済みとは扱わない。通常可逆fieldの通知前競合と、資格配列が完全に元に戻る場合の限界は採用済み契約のまま。実provider・Dev/Prod・実data・remote状態は未検証である。
+
+EMP-04の完了条件を満たし、進捗を40%→55%へ加点する。親製品roadmapへこの割合を無条件加算しない。承認されたEMP-04の終端で停止し、EMP-05は開始指示待ちとする。
+
+EMP-04-CLOSEOUTはsource HEAD `242e597239c617eeb994d3f3dd6b049666e6af3b`と最終4文書差分をread-only確認し、55%の算定・39file一覧・current/history・未実装scope・停止境界に完了を妨げる指摘なしと判断した。runtimeの独立再実行ではなくroot報告との整合reviewである。最終文書のproject-docs/diff/cached diff成功後、4文書をlocal統合する。
+
+## 今回の変更ファイル
+
+開始baselineからEMP-04 sourceまでの確認済み39ファイル。すべてprimary repository内で、各工程のreview済みlocal commitへ統合する。最後の受入れ文書もこの集合内に収める。
+
+```text
+CHANGELOG.md
+components/Employee/Activator/Base.vue
+components/Employee/Activator/Nationality.vue
+components/Employee/Activator/SecurityGuard.vue
+components/Employee/Autocomplete.vue
+components/Employee/Certifications/Manager/index.vue
+components/Employee/Certifications/Table.vue
+components/Employee/Editor.vue
+components/Employee/Manager/index.vue
+components/Employees/Manager/index.vue
+components/Insurance/Transition/Input/Enroll.vue
+components/Insurance/Transition/Input/Loss.vue
+components/Insurance/Transition/Input/Rollback.vue
+components/Insurance/Transition/Manager.vue
+composables/application/employee/useEmployeeCertifications.js
+composables/application/employee/useEmployeeEditor.js
+composables/application/employee/useEmployeeInsurance.js
+docs/decisions/0060-common-archive-purge-and-address-contract.md
+docs/implementation/employee-insurance.md
+docs/implementation/employee-master.md
+docs/manual/employees.md
+docs/roadmaps/employee.md
+docs/verification/README.md
+docs/verification/employee-02-04-local.md
+firestore.rules
+functions/apis/index.js
+functions/apis/saveEmployee.js
+functions/modules/employees/geocodeEmployee.js
+functions/modules/employees/saveEmployee.js
+functions/shared/employeeContract.js
+functions/shared/employeeInsuranceContract.js
+pages/employees/[id].vue
+pages/employees/index.vue
+test/domain/codex-functions-entrypoint.test.mjs
+test/domain/employee-editor.test.mjs
+test/domain/employee-insurance.test.mjs
+test/domain/employee-save.test.mjs
+test/domain/firestore-rules-reservation-source-contract.test.mjs
+test/local/codex-local-harness.test.mjs
+```

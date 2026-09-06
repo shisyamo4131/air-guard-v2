@@ -2,7 +2,7 @@
 
 ## EMP-04の移行状態
 
-Employee詳細の3保険を専用Callableと独立draftへ移行している。原本/archiveの直接client CUD拒否を維持し、旧全文保存を再許可しない。対象保険mapと巻き戻さない保険別世代値を照合し、6操作で変更するfieldだけを保存する。履歴復元は末尾の4fieldを復元し、履歴を1件消費する既存動作を維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)、保存契約は[Employee設計](employee-master.md#通常保存の技術契約)を参照する。
+Employee詳細の3保険を専用Callableと独立draftへ移行した。原本/archiveの直接client CUD拒否を維持し、旧全文保存を再許可しない。対象保険mapと巻き戻さない保険別世代値を照合し、6操作で変更するfieldだけを保存する。履歴復元は末尾の4fieldを復元し、履歴を1件消費する既存動作を維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)、保存契約は[Employee設計](employee-master.md#通常保存の技術契約)を参照する。
 
 現installed schemaの文字数制約は被保険者番号20文字・喪失理由40文字で、遷移methodが一時入力を消去する前に検証する。日付は有効なJST暦日を受け付ける。新しい日付前後関係・未来日拒否・番号書式・3保険間整合は追加しない。下記の調査履歴にある「長さvalidationなし」「親の全文update」「全field write」は現在の保存契約ではない。
 
