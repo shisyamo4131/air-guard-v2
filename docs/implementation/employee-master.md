@@ -28,7 +28,11 @@
 
 Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連携Userの購読を一緒に破棄する。Autocomplete・Tag・Worker表示とSite詳細のEmployee接続は専用readerを使い、読込中・不存在・閲覧不可・取得失敗を区別する。共通cache基盤、Site本体の保存、Employee/Userの既存専用保存は維持した。
 
-05-Bでは`saveOperation`と`operationWriteContract`へ予定・実績・OperationBillingのoperation保存を集約した。最新rawから保存先ごとの追加Employee参照を導き、全read後に所有fieldだけを確定する。予定の即時表示/rollbackには表示Classと同時点のraw contextを接続し、通知状態の管理側・本人側は同じ期待値照合付き部分transactionを使う。購読はserver確認済み値だけを公開し、そのmetadata変更通知も受け取る。計算用instanceのJST補正と寿命条件は下の操作契約を参照する。背景writer・索引整備・archiveは05-C以降に分離している。各内部単位の受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)、現在地はロードマップを正とする。
+05-Bでは`saveOperation`と`operationWriteContract`へ予定・実績・OperationBillingのoperation保存を集約した。最新rawから保存先ごとの追加Employee参照を導き、全read後に所有fieldだけを確定する。予定の即時表示/rollbackには表示Classと同時点のraw contextを接続し、通知状態の管理側・本人側は同じ期待値照合付き部分transactionを使う。購読はserver確認済み値だけを公開し、そのmetadata変更通知も受け取る。計算用instanceのJST補正と寿命条件は下の操作契約を参照する。
+
+05-Cでは`backgroundReferencePlan`・`dailyReferencePlan`・`billingReferencePlan`へ背景保存のraw検査/計算/書込計画を分離した。日次2種とBillingの最終payloadに埋込み全Employeeの索引を合成し、各保存先の現在rawとの差分から追加Employeeを同transactionで読む。履歴は現在のfirst/last実績とSiteを同transactionで確認する。旧`onEmployeeDeleted`は同名の無作用handlerとし、User/Auth削除を行わない。指定tenantの提供rawを検査する`inspectEmployeeReferences`/`runEmployeeReferenceDryRun`は、整合してもarchive開放を許可しない。
+
+取引先請求の入金予定日は`updateBillingPaymentDate`と専用`PaymentDateEditor`/`useBillingPaymentDate`へ移した。日付3fieldと監査だけを部分保存し、日次2種・Billing・履歴の直接client CUDを閉じる。専用UIの背景trigger実行は既定offの明示opt-inで、通常API harnessへの継承はrunnerが除去する。archive本体は05-Dで未実装。各内部単位の受入れ範囲と未検証は[EMP-05 local記録](../verification/employee-05-local.md)、現在地はロードマップを正とする。
 
 ## 現行経路の再照合
 
@@ -290,6 +294,7 @@ query用fieldの実効schema変更と整合確認は必要だが、実data件数
 | 勤怠 | `functions/triggers/operationResult.js` → `functions/modules/dailyAttendances/`のfetch/sync/add/remove/save | fetch段階からraw保持。本人IDと埋込み全従業員の和集合。新規/同先/移動元・先/削除を同契約へ |
 | 従業員別稼働 | 同trigger → `functions/modules/dailyOperationsByEmployee/`のfetch/sync/add/remove/save | 勤怠と同じ。保存loop開始前に全targetのreadを終える |
 | 請求 | `functions/modules/billings/addOperationResultToBilling.js`、`removeOperationResultFromBilling.js`、`syncOperationResultToBilling.js` | 現在取得と保存が別の同先更新・削除側もtransactionへ。移動元write前に移動先/Customer/追加Employeeを読む。金額計算は変更しない |
+| 取引先請求の入金予定日 | `pages/billings/customers/[id].vue` → `CustomerBilling/PaymentDateEditor.vue` → `useBillingPaymentDate` → `updateBillingPaymentDate`。移行前は`useCustomerBillingManager`/`useDocManager`の全文update | 05-Cで既存1操作を専用date editor/Callableへ接続し、Billings直接CUDを閉じる。参照/金額を変えず予定日3fieldと監査だけを保存する。下記補正契約を使う |
 | 現場履歴 | `functions/modules/siteEmployeeHistories/rebuildHistory.js`とrebuildHistories/rebuildAllHistories | 現在history・実績・Siteと必要Employeeをtransactionで読む。不要履歴削除は維持 |
 | User/予約/退職 | `functions/modules/auth/`のcreateTemporaryUser/setupUserAccount/deleteTemporaryUser、lifecycle関連module | 既存User/予約/Employee/operation/headの排他を再利用。setupはUser/予約がarchiveを阻止するため、機械的にEmployee readを追加しない。仮/無効Userや完了headも除外しない |
 | 旧削除 | `functions/modules/Employees.js`、通常entrypoint `functions/index.js` | 旧onEmployeeDeletedのUser検索・削除作用を無効化。同名handlerを無作用化して遅延eventを直接試験。exportを外しただけで既存remote停止済みと記録しない |
@@ -348,6 +353,18 @@ worker/article等の行は、表示順や名称から推測せず、開始時の
 server成功は更新有無・対象IDを返し、実績化は確定result IDを返す最小形とする。clientは保存await後に正本を再取得し、拒否/競合はdraft保持、結果不明は自動再送しない。状態反転や実績化の再送で二重処理しない期待値を試験する。既存の即時表示がある操作では拒否時の表示rollbackと正本再取得を接続し、別の同時編集を古い全文で巻き戻さない。
 
 ### 全writerが共有する参照保存の契約
+
+#### 05-Cの入金予定日互換補正
+
+実装時の再照合で発見した既存Billingsのclient全文updateを閉じるための限定補正であり、新しい入金管理やrole制限を追加しない。現在同社の有効な本登録Userという境界を維持し、既存Callable identity解決とtransaction内の現在Userを使う。OperationBillingの経理/統括条件を流用しない。
+
+- wireは固定BillingsのdocId、`paymentDueDate`（厳密なYYYY-MM-DDまたはnull）、開始rawの`paymentDueDateAt`と`billingDateAt`の局所期待値に限定する。tenant/path/監査値や任意本文は受け取らない。複合Billing IDは現Customer ID・Site ID・日付の生成契約に合わせ、Employee単体の128文字制限を流用しない。
+- 最新Billingの存在と期待値を同transactionで確認し、欠損/null/Timestamp精度を区別する。日付指定時はJSTの請求日当日を許し、前日以前を拒否する。optionalのnullは維持する。保存はserverで導出した`paymentDueDateAt/paymentDueDate/paymentDueMonth`と`updatedAt/uid`だけ。null時は予定日3fieldをnullへ揃え、no-opは3field全て同値のときだけwrite 0とする。参照/索引/金額/非対象rawをClass全体の再計算で上書きしない。
+- 独立draftはconverterなしの開始rawと対にし、reactiveなroute ID・actor/tenant/認可の変更で破棄する。保存await、確定拒否で入力保持、同予定日または請求日の競合は再読込/再確認。背景集計だけの変更は保持する。結果不明は自動再送せず、「現在値が希望値と一致」と自己要求のcommit証明を区別する。既知成功後の読取失敗は保存済みとして旧attemptを終え、不存在や読取失敗から未実行を断定しない。
+- 通常・nullable・日付下限・不正/閏日/月年境界、複合ID、同値、局所競合/背景同時更新、raw保持、各拒否/不明/遅延応答を直接testし、Billingsの個別/汎用/nested client CUD拒否と一緒に受け入れる。page1操作以外の請求UI刷新や共通Manager変更を含めない。
+- 代表UI用の背景処理は専用demo entryの明示opt-inで`onOperationResultChange`の実行だけを有効にする。既定offでAPI suiteのfixtureには実行せず、demo project/Functions Emulator/loopback/外部作用denyを照合する。通常entryや他triggerを変えない。正規UI-created実績からBilling/日次2種/履歴の4保存先、errorとcleanupを確認し、直接seedでUI成功を代用しない。
+
+#### 保存先差分と追加参照
 
 1. 現在identity/User・既存操作のactor/lock/状態を確認し、入力の種別・配列・id・派生IDの整合をClass化より先に検査する。ClassのsetterでisEmployee等を補正した後だけの検証にしない。
 2. transaction内で各保存先の現在rawと必要な予定/実績/Customer/Site/予約等を取得する。不存在ならbefore集合は空。取得失敗、存在する不正raw、欠損索引は空と解釈しない。

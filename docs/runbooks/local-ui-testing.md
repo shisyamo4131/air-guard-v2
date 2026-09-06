@@ -67,6 +67,10 @@ npm run test:local:ui:emulators
 npm run test:local:ui:server:generated
 ```
 
+実績から勤怠・従業員別稼働・取引先請求・現場履歴への背景生成を対象にする場合だけ、Emulatorを起動する専用前景processで`AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER=enabled`を設定する。専用entryに登録された`codexOnOperationResultChange`は、既定ではeventを処理せず、明示設定時もdemo project・Functions Emulator・loopback Firestore・外部作用denyを検査する。他triggerや通常entryを公開しない。終了時には設定を破棄する。通常の`npm run test:local`は親processのこの設定を除去して子を起動し、終了時に元の有無・値を復元する。
+
+この背景生成のUI検証では、正規画面で作成した実績から上記4保存先へ到達したことをbackend assertionで確認する。直接use-caseを呼んだtestと区別し、一つの保存先の出現だけでtrigger全体成功とは扱わない。
+
 `npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。

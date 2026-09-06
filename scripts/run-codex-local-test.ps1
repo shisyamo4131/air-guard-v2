@@ -170,13 +170,21 @@ $firebaseArguments += $childScriptPath
 $exitCode = 1
 $externalEffectsModeWasSet = Test-Path Env:\AIR_GUARD_EXTERNAL_EFFECTS
 $externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
+$operationTriggerWasSet = Test-Path Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
+$operationTriggerBefore = $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
 try {
     $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
+    Remove-Item Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER -ErrorAction SilentlyContinue
     Push-Location $runtimePath
     & $firebaseExe @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    if ($operationTriggerWasSet) {
+        $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER = $operationTriggerBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER -ErrorAction SilentlyContinue
+    }
     if ($externalEffectsModeWasSet) {
         $env:AIR_GUARD_EXTERNAL_EFFECTS = $externalEffectsModeBefore
     } else {

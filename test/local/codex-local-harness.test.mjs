@@ -54,6 +54,7 @@ import { expectedFields, SECURITY_FIELDS, encodeExpected, INSURANCE_KINDS } from
 import { insuranceVersions } from "../../functions/shared/employeeInsuranceContract.js";
 import { expectedForOperation, notificationExpectation } from "../../functions/shared/operationWriteContract.js";
 import { prepareNotificationState, expectedNotificationState } from "../../functions/shared/notificationStateContract.js";
+import { paymentExpected } from "../../functions/shared/billingPaymentContract.js";
 import {
   inspectStripeMigrationRepositoryPreconditions,
   planCompanyLegacyStripeMigration,
@@ -78,6 +79,70 @@ function emp05Command(raw, action, changes = {}, extra = {}) {
   command.expected = expectedForOperation(raw, command); return command;
 }
 const emp05Overview = (siteId) => ({ siteId, securityType: "TRAFFIC", dateAt: "2028-05-01", startTime: "08:00", endTime: "17:00", requiredPersonnel: 10 });
+
+async function emp05BillingCustomerMatrix() {
+  const { addOperationResultToBilling, syncOperationResultToBilling, removeOperationResultFromBilling } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id, otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
+  const admin = getAdminFirestore(), root = `Companies/${companyId}`, suffix = "emp05-c-matrix";
+  const raw = cas03ServerBillingOperationResult({ customerId: `${suffix}-active`, suffix });
+  const paths = new Set([`${root}/Sites/${raw.siteId}`]);
+  try {
+    await admin.doc(`${root}/Sites/${raw.siteId}`).set({ docId: raw.siteId });
+    for (const [label, status] of [["active", "ACTIVE"], ["terminated", "TERMINATED"], ["missing", null], ["archive", null], ["other", null]]) {
+      const customerId = `${suffix}-${label}`, candidate = { ...raw, customerId }, billingId = cas03ServerBillingDocumentId(candidate), path = `${root}/Billings/${billingId}`;
+      paths.add(path);
+      if (status) { await seedCustomerRulesDocument({ companyId, docId: customerId, data: { contractStatus: status } }); paths.add(`${root}/Customers/${customerId}`); }
+      if (label === "archive" || label === "other") {
+        const referencePath = label === "archive" ? `${root}/Customers_archive/${customerId}` : `Companies/${otherCompanyId}/Customers/${customerId}`;
+        paths.add(referencePath); await admin.doc(referencePath).set({ docId: customerId });
+      }
+      if (!status) { await assert.rejects(addOperationResultToBilling({ companyId, doc: candidate }), (error) => error.code === "failed-precondition"); assert.equal((await admin.doc(path).get()).exists, false); continue; }
+      await addOperationResultToBilling({ companyId, doc: candidate });
+      assert.equal((await admin.doc(path).get()).data().customerId, customerId);
+      await admin.doc(`${root}/Customers/${customerId}`).delete();
+      const changed = { ...candidate, remarks: "orphan same-reference update" };
+      await syncOperationResultToBilling({ companyId, before: candidate, after: changed });
+      const saved = (await admin.doc(path).get()).data(); assert.equal(saved.operationResults[0].remarks, changed.remarks);
+      const move = { ...changed, customerId: `${suffix}-absent-destination` }, destination = `${root}/Billings/${cas03ServerBillingDocumentId(move)}`; paths.add(destination);
+      await assert.rejects(syncOperationResultToBilling({ companyId, before: changed, after: move }));
+      assert.deepEqual(encodeExpected((await admin.doc(path).get()).data()), encodeExpected(saved)); assert.equal((await admin.doc(destination).get()).exists, false);
+      await removeOperationResultFromBilling({ companyId, operationResult: changed }); assert.equal((await admin.doc(path).get()).exists, false);
+    }
+  } finally { await Promise.all([...paths].map((path) => admin.doc(path).delete())); }
+}
+
+async function emp05BillingOrdering(order) {
+  const { archiveCustomer } = await loadRebuildApis();
+  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id, actorUid = `emp05-c-billing-${order}-actor`;
+  const customerId = `emp05-c-billing-${order}-customer`, actor = await seedCustomerArchiveActor({ uid: actorUid });
+  const raw = cas03ServerBillingOperationResult({ customerId, suffix: `emp05-c-${order}` });
+  const billingId = cas03ServerBillingDocumentId(raw);
+  const references = [{ collectionName: "Billings", docId: billingId }, { collectionName: "Sites", docId: raw.siteId }];
+  const save = () => addOperationResultToBilling({ companyId, doc: raw });
+  const archive = () => archiveCustomer.run(actorCallableRequest({ actor, data: { customerId, operationId: `emp05-c-${order}-archive`, reason: "合成Billing参照順序検証" } }));
+  try {
+    await seedCustomerRulesDocument({ companyId, docId: customerId });
+    await seedSiteArchiveDocument({ companyId, siteId: raw.siteId });
+    if (order === "reference-first") {
+      await save(); await assertCallableError(archive(), "failed-precondition");
+    } else if (order === "archive-first") {
+      await archive(); await assert.rejects(save(), (error) => error.code === "failed-precondition");
+    } else {
+      const results = splitSettled(await Promise.allSettled([save(), archive()]));
+      assert.equal(results.fulfilled.length, 1); assert.equal(results.rejected.length, 1);
+      assert.equal(results.rejected[0].reason.code, "failed-precondition");
+    }
+    const state = await readCustomerArchiveState(companyId, customerId);
+    const billing = await readCas03Document(companyId, "Billings", billingId);
+    const referenced = Boolean(state.active) && state.archive === null && billing?.customerId === customerId
+      && billing.operationResults.some((result) => result.docId === raw.docId);
+    const archived = state.active === null && Boolean(state.archive) && billing === null;
+    assert.equal(Boolean(referenced) !== archived, true);
+    if (order === "reference-first") assert.equal(referenced, true);
+    if (order === "archive-first") assert.equal(archived, true);
+  } finally { await cleanupCustomerArchiveScenario({ actorUid, customerIds: [customerId], references }); }
+}
 const emp05SiteData = (options) => ({ ...siteRulesData(options), createdAt: new Date("2026-01-01"), updatedAt: new Date("2026-01-01") });
 async function emp05SaveAs(actor, operations) {
   const { saveOperation } = await loadRebuildApis();
@@ -147,6 +212,67 @@ async function emp05CustomerOrdering(order) {
     await cleanupCustomerArchiveScenario({ actorUid: actor.uid, customerIds: [customerId], references: [{ collectionName: "Sites", docId: siteId }, { collectionName: "OperationResults", docId: id }] });
   }
 }
+
+test("EMP05-C HTTP payment date and background aggregates preserve raw references and deny direct client writes", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-c-payment-user", roles: [], isAdmin: false });
+  const { companyId } = actor, admin = getAdminFirestore(), root = `Companies/${companyId}`;
+  const { OperationResult, Customer } = await import("@shisyamo4131/air-guard-v2-schemas");
+  const { operationDateTime } = await import("../../functions/shared/operationDateTime.js");
+  const { parseDate } = await import("../../functions/shared/employeeContract.js");
+  const { syncOperationResultToDailyAttendances } = await import("../../functions/modules/dailyAttendances/index.js");
+  const { syncOperationResultToDailyOperationsByEmployee } = await import("../../functions/modules/dailyOperationsByEmployee/index.js");
+  const { addOperationResultToBilling } = await loadBillingServerWriters();
+  const { rebuildHistory } = await import("../../functions/modules/siteEmployeeHistories/rebuildHistory.js");
+  const employeeId = "emp05-c-worker", siteId = "emp05-c-site", customerId = "emp05-c-customer", resultId = "emp05-c-result";
+  const billingId = `${customerId}_${siteId}_2028-02-29`, dayId = `${employeeId}_2028-02-29`, historyId = `${siteId}_${employeeId}`;
+  const destinations = [["DailyAttendances", dayId], ["DailyOperationsByEmployee", dayId], ["Billings", billingId], ["SiteEmployeeHistories", historyId]];
+  const cleanup = [...destinations, ["OperationResults", resultId], ["Employees", employeeId], ["Sites", siteId], ["Customers", customerId]];
+  try {
+    await admin.doc(`${root}/Customers/${customerId}`).set(new Customer({ docId: customerId }).toObject());
+    await admin.doc(`${root}/Sites/${siteId}`).set({ docId: siteId });
+    await admin.doc(`${root}/Employees/${employeeId}`).set({ docId: employeeId, employmentStatus: "RESIGNED" });
+    const model = operationDateTime(new OperationResult({ docId: resultId, customerId, siteId, dateAt: parseDate("2028-02-29"), startTime: "08:00", endTime: "17:00", breakMinutes: 60, useAdjusted: true, adjustedQuantityBase: 1, adjustedUnitPriceBase: 10000 }));
+    model.billingDateAt = parseDate("2028-02-29"); model.addWorker({ id: employeeId, isEmployee: true }, -1);
+    const resultRef = admin.doc(`${root}/OperationResults/${resultId}`);
+    await resultRef.set({ ...model.toObject(), unknown: { stamp: new AdminTimestamp(1788200000, 123456789), nullable: null } });
+    const raw = (await resultRef.get()).data();
+    assert.equal(process.env.AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER, undefined, "ordinary API harness must keep background execution off");
+    const { codexOnOperationResultChange } = await import("../../functions/codex-test/operationResultTrigger.js");
+    await codexOnOperationResultChange.run({ params: { companyId, docId: resultId }, data: { before: { data: () => undefined }, after: { data: () => raw } } });
+    for (const [collectionName, id] of destinations) assert.equal((await admin.doc(`${root}/${collectionName}/${id}`).get()).exists, false);
+    await syncOperationResultToDailyAttendances({ companyId, afterData: raw });
+    await syncOperationResultToDailyOperationsByEmployee({ companyId, afterData: raw });
+    await addOperationResultToBilling({ companyId, doc: raw });
+    await rebuildHistory(companyId, siteId, employeeId);
+    for (const [collectionName, id] of destinations.slice(0, 3)) {
+      const saved = (await admin.doc(`${root}/${collectionName}/${id}`).get()).data();
+      assert.deepEqual(saved.employeeIds, [employeeId]);
+      assert.deepEqual(encodeExpected(saved.operationResults[0].unknown), encodeExpected(raw.unknown));
+    }
+    assert.equal((await admin.doc(`${root}/DailyOperationsByEmployee/${dayId}`).get()).data().totalWorkMinutes, 480);
+    assert.equal((await admin.doc(`${root}/SiteEmployeeHistories/${historyId}`).get()).data().firstDateAt.toDate().toISOString(), "2028-02-28T15:00:00.000Z");
+    const billingRef = admin.doc(`${root}/Billings/${billingId}`), before = (await billingRef.get()).data();
+    assert.equal(before.subtotal, 10000);
+    const call = (paymentDueDate, expected) => callSiteLifecycleTransport({ actor, functionName: "updateBillingPaymentDate", data: { documentId: billingId, paymentDueDate, expected } });
+    let response = await call("2028-03-01", paymentExpected(before)); assert.equal(response.response.status, 200, JSON.stringify(response.payload));
+    let saved = (await billingRef.get()).data(); assert.equal(saved.paymentDueDate, "2028-03-01"); assert.equal(saved.paymentDueMonth, "2028-03");
+    for (const [key, value] of Object.entries(before)) if (!["paymentDueDateAt", "paymentDueDate", "paymentDueMonth", "uid", "updatedAt"].includes(key)) assert.deepEqual(encodeExpected(saved[key]), encodeExpected(value), key);
+    response = await call("2028-03-02", paymentExpected(before)); assert.equal(response.payload.error.status, "ABORTED");
+    response = await call(null, paymentExpected(saved)); assert.equal(response.response.status, 200, JSON.stringify(response.payload));
+    saved = (await billingRef.get()).data(); for (const field of ["paymentDueDateAt", "paymentDueDate", "paymentDueMonth"]) assert.equal(saved[field], null);
+    const client = authenticatedFirestore(actor.uid, { isSuperUser: false });
+    for (const [collectionName, id] of destinations) {
+      const target = doc(client, "Companies", companyId, collectionName, id);
+      await assertSucceeds(getDoc(target)); await assertFails(updateDoc(target, { employeeIds: [] })); await assertFails(deleteDoc(target));
+      const newId = `${id}-forged`; cleanup.push([collectionName, newId]);
+      await assertFails(setDoc(doc(client, "Companies", companyId, collectionName, newId), { docId: newId, employeeIds: [] }));
+      const nested = doc(client, "Companies", companyId, collectionName, id, "Nested", "bypass");
+      await assertFails(getDoc(nested)); await assertFails(setDoc(nested, { employeeIds: [] }));
+    }
+    await assertFails(updateDoc(doc(client, "Companies", companyId, "Billings", billingId), { paymentDueDate: "2028-03-04" }));
+    await resultRef.delete(); await rebuildHistory(companyId, siteId, employeeId); assert.equal((await admin.doc(`${root}/SiteEmployeeHistories/${historyId}`).get()).exists, false);
+  } finally { await Promise.all(cleanup.map(([collectionName, id]) => admin.doc(`${root}/${collectionName}/${id}`).delete())); }
+});
 
 test("EMP05-B HTTP operation writers preserve references, notification confirmation, billing locks and raw duplicate data", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp05-operation-controller", roles: ["controller"] });
@@ -943,6 +1069,9 @@ function cas03ServerBillingOperationResult({ customerId, suffix }) {
     remarks: null,
     employees: [],
     outsourcers: [],
+    employeeIds: [],
+    outsourcerIds: [],
+    workers: [],
     useAdjusted: false,
     adjustedQuantityBase: 0,
     adjustedOvertimeMinutesBase: 0,
@@ -4038,7 +4167,7 @@ test("SITE-04 direct Schedule result linkage and standalone OperationResult CUD 
   }
 });
 
-test("SITE-04 accountant retains the existing Billing-owned operationResults update", async () => {
+test("EMP05-C Billing reference arrays cannot bypass the background writer even for accountants", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-lifecycle-accountant-billing";
   const customerId = "site-lifecycle-accountant-billing-customer";
@@ -4056,8 +4185,8 @@ test("SITE-04 accountant retains the existing Billing-owned operationResults upd
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
   const billing = doc(firestore, "Companies", companyId, "Billings", billingId);
   const operationResults = [{ docId: "result-a", amount: 1000 }];
-  await assertSucceeds(updateDoc(billing, { operationResults }));
-  assert.deepEqual((await getDoc(billing)).data().operationResults, operationResults);
+  await assertFails(updateDoc(billing, { operationResults }));
+  assert.deepEqual((await getDoc(billing)).data().operationResults, []);
 });
 
 test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain server-only", async () => {
@@ -5090,7 +5219,7 @@ test("Firestore Rules bind live Site references while preserving unrelated updat
       entries.push({ companyId, collectionName, docId: compatibleId });
       const compatible = doc(firestore, "Companies", companyId, collectionName, compatibleId);
       const liveData = { siteId: liveSiteId, customerId, marker: "created-live" };
-      if (["OperationResults", "ArrangementNotifications"].includes(collectionName)) {
+      if (["OperationResults", "ArrangementNotifications", "Billings", "SiteEmployeeHistories"].includes(collectionName)) {
         await assertFails(setDoc(compatible, liveData));
         await testEnvironment.withSecurityRulesDisabled(async (context) => { await setDoc(doc(context.firestore(), "Companies", companyId, collectionName, compatibleId), liveData); });
         assert.deepEqual((await assertSucceeds(getDoc(compatible))).data(), liveData);
@@ -5895,6 +6024,7 @@ for (const {
     // OperationResults now obtain Customer from the transaction's current Site;
     // exercise that writer rather than granting the removed client CUD path.
     if (collectionName === "OperationResults") return emp05ResultCustomerMatrix();
+    if (collectionName === "Billings") return emp05BillingCustomerMatrix();
     const primaryCompanyId = CODEX_LOCAL_COMPANIES.primary.id;
     const secondaryCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
     const suffix = collectionName.toLowerCase();
@@ -6481,6 +6611,7 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
 for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
   test(`CAS-03 ${collectionName} reference-first ordering preserves active Customer and reference`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("reference-first");
+    if (collectionName === "Billings") return emp05BillingOrdering("reference-first");
     const { archiveCustomer } = await loadRebuildApis();
     const companyId = CODEX_LOCAL_COMPANIES.primary.id;
     const suffix = collectionName.toLowerCase();
@@ -6556,8 +6687,9 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     }
   });
 
-  test(`CAS-03 ${collectionName} archive-first ordering rejects the later client reference`, async () => {
+  test(`CAS-03 ${collectionName} archive-first ordering rejects the later reference`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("archive-first");
+    if (collectionName === "Billings") return emp05BillingOrdering("archive-first");
     const { archiveCustomer } = await loadRebuildApis();
     const companyId = CODEX_LOCAL_COMPANIES.primary.id;
     const suffix = collectionName.toLowerCase();
@@ -6626,8 +6758,9 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     }
   });
 
-  test(`CAS-03 ${collectionName} concurrent client reference and archive keep the invariant`, async () => {
+  test(`CAS-03 ${collectionName} concurrent reference and archive keep the invariant`, async () => {
     if (collectionName === "OperationResults") return emp05CustomerOrdering("concurrent");
+    if (collectionName === "Billings") return emp05BillingOrdering("concurrent");
     const { archiveCustomer } = await loadRebuildApis();
     const companyId = CODEX_LOCAL_COMPANIES.primary.id;
     const suffix = collectionName.toLowerCase();
@@ -6803,7 +6936,7 @@ test("CAS-03 server Billing archive-first rejects later new Billing", async () =
 
     await assert.rejects(
       () => addOperationResultToBilling({ companyId, doc: operationResult }),
-      (error) => error?.message === `Customer not found: ${customerId}`,
+      (error) => error?.code === "failed-precondition",
     );
 
     const state = await readCustomerArchiveState(companyId, customerId);
@@ -6879,7 +7012,7 @@ test("CAS-03 server Billing move archive-first preserves source and rejects abse
           before,
           after,
         }),
-      (error) => error?.message === `Customer not found: ${targetCustomerId}`,
+      (error) => error?.code === "failed-precondition",
     );
 
     const targetState = await readCustomerArchiveState(
@@ -6980,8 +7113,8 @@ test("CAS-03 concurrent server Billing create and archive keep the reference bar
       });
       assert.equal(billingResult.status, "rejected");
       assert.equal(
-        billingResult.reason?.message,
-        `Customer not found: ${customerId}`,
+        billingResult.reason?.code,
+        "failed-precondition",
       );
     }
   } finally {
@@ -8169,15 +8302,34 @@ test("rebuild Callables reject missing, temporary, disabled, and mismatched User
 
 test("rebuild history Callable allows an active registered same-tenant super-user", async () => {
   const { rebuildAllHistories } = await loadRebuildApis();
-  const uid = "codex-callable-super-user";
-  await seedCallableAuthUser({ uid });
-  await seedRegisteredUser({ uid });
-
-  const result = await rebuildAllHistories.run(callableRequest({ uid }));
-
-  assert.deepEqual(result, {
-    message: "Successfully rebuilt all histories.",
-  });
+  // The shared tenant intentionally contains minimal invalid OperationResults
+  // in the SITE-04 direct-write rejection fixtures. Do not treat those as valid
+  // rebuild inputs or normalize unrelated fixtures to make a positive pass.
+  const companyId = "emp05-c-history-callable-company", uid = "emp05-c-history-callable-user";
+  const siteId = "history-site", employeeId = "history-employee", resultId = "history-result";
+  const admin = getAdminFirestore(), root = `Companies/${companyId}`;
+  const { OperationResult } = await import("@shisyamo4131/air-guard-v2-schemas");
+  const { operationDateTime } = await import("../../functions/shared/operationDateTime.js");
+  const { parseDate } = await import("../../functions/shared/employeeContract.js");
+  const historyRef = admin.doc(`${root}/SiteEmployeeHistories/${siteId}_${employeeId}`);
+  const resultRef = admin.doc(`${root}/OperationResults/${resultId}`);
+  const request = () => callableRequest({ uid, claims: { companyId }, data: { companyId } });
+  try {
+    await seedCallableAuthUser({ uid, companyId });
+    await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId });
+    await admin.doc(`${root}/Sites/${siteId}`).set({ docId: siteId });
+    await admin.doc(`${root}/Employees/${employeeId}`).set({ docId: employeeId, employmentStatus: "RESIGNED" });
+    const model = operationDateTime(new OperationResult({ docId: resultId, siteId, dateAt: parseDate("2028-02-29"), startTime: "08:00", endTime: "17:00", breakMinutes: 60 }));
+    model.addWorker({ id: employeeId, isEmployee: true }, -1); await resultRef.set(model.toObject());
+    assert.deepEqual(await rebuildAllHistories.run(request()), { message: "Successfully rebuilt all histories." });
+    const before = (await historyRef.get()).data(); assert.equal(before.firstDate, "2028-02-29"); assert.equal(before.lastDate, "2028-02-29");
+    await resultRef.update({ employeeIds: [] });
+    await assertCallableError(rebuildAllHistories.run(request()), "internal");
+    assert.deepEqual(encodeExpected((await historyRef.get()).data()), encodeExpected(before));
+  } finally {
+    await Promise.all([resultRef.delete(), historyRef.delete(), admin.doc(`${root}/Sites/${siteId}`).delete(), admin.doc(`${root}/Employees/${employeeId}`).delete(), admin.doc(`${root}/Users/${uid}`).delete()]);
+    await getAdminAuth().deleteUser(uid);
+  }
 });
 
 test("rebuild Callables reject a disabled or inconsistent current Auth account", async () => {
@@ -8213,6 +8365,8 @@ test("rebuild Callables reject a disabled or inconsistent current Auth account",
 test("security report rebuild Callable allows an active registered same-tenant super-user", async () => {
   const { rebuildSecurityReportIndexes } = await loadRebuildApis();
   const uid = "codex-callable-super-user";
+  await seedCallableAuthUser({ uid });
+  await seedRegisteredUser({ uid });
 
   const result = await rebuildSecurityReportIndexes.run(
     callableRequest({ uid }),

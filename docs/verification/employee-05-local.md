@@ -275,3 +275,63 @@ articlesや本人通知業務全体、開発者だけの実績複製の全操作
 絶対path・repository内・reparse不在を検査した`.output`と所有`emp05-b` runtimeの除去/不存在確認はexit 0。他のruntime、利用者Chrome、保存済みdataは保持した。以上をもって05-Bのsource review・1340件domain・175件保存境界Emulator・修正版build・代表実UI・cleanupを対応づけ、Bをlocal受入れとする。後続の文書だけの変更は製品testを失効させず、project-docs/diffを再実行してlocal統合する。
 
 次は05-Cの背景writer・日次2種/Billing索引・履歴再生成・限定整合検査・旧削除作用停止である。Bだけでは全参照先保護が成立しておらずarchive入口を開放しない。EMP-05自体は未完了、得点55%を維持する。仕様/ADR/data契約の追加変更、package/governance変更はなく、影響する実装記録・roadmap・本receiptを同期した。CHANGELOGの既存参照保存項目は同内容を表すため重複追加しない。Dev/Prod・remote・実dataは未実施のまま。
+
+## 05-C 開始契約
+
+開始baselineはprimaryのclean `8983d8db32980af355423b6aed3311c181aedce2`。B受入れの3文書をlocal統合し、rootがGit状態を確認した。既存実装前契約の05-C/W4/W5/G1/A6を実装する。developerのwriter scopeは日次2種・Billing・履歴modules、旧Employee削除handler、必要な共通参照helperとtrigger接続、日次Rules/汎用除外、直接testに限定する。Auth/User/lifecycleは別のread-only照合で既存排他を確認し、一律read追加や業務変更をしない。
+
+raw取得・検証・計算用Class・最終保存を分離し、本人IDと埋込み全従業員の索引を一つのwriteで確定する。最新保存先ごとの差分から追加Employeeだけを読み、全readを全writeより先に完了する。移動・削除・再生成、未知field/欠損/null/Timestamp精度、既存の金額・集計・Site/Customer保護を直接回帰で確認する。旧handlerは同名で無作用とし、API suiteにない遅延eventを直接検証する。限定整合検査は純粋検査/dry-runで、remote/利用者saved-dataの走査やapplyを含めない。
+
+Bから引き渡した非空履歴のdayjs初期化条件をこの工程で検証する。通常entryと専用entryの差を区別し、fixture隔離だけで製品経路が成功したとはしない。背景triggerを専用UIへ全公開する変更は含めず、必要な最小接続はsourceを確認して決める。
+
+選択classはapplication/data・Rulesと実装記録のunion。反復は直接test、最終はdomain-full・local-emulator-suite・project-docs/diffと影響review。client/UIに変更がなければBのbuild/代表UIを再実行せず再利用する。新規UI/外部作用の受入れではない。追加差分が失効条件へ該当すれば検証集合を更新する。DのarchiveとEMP-06以降は未開始である。
+
+### 05-C 初期再照合
+
+`C-UWB`のread-only照合は、仮User作成のEmployee/予約同時read、setupの既存User・予約pointerを残したatomic移動、仮User削除の参照非追加、退職・訂正のEmployee/operation/lock/head同時readを確認した。対象は`createTemporaryUser.js:223`、`setupUserAccount.js:120`、`deleteTemporaryUser.js:153`、`terminateEmployee.js:458`、`reinstateEmployee.js:292`、`lifecycleOperationStore.js:532`以降の保存順序と既存direct tests。限定scopeに追加P1/P2なし、test実行はしていない。Dが仮/無効User・完了operation/headも状態無限定で同Tx拒否することが前提であり、その競合接続testはDで未実施。rootもactual schemaから`LifecycleOperations`とEmployee/User別lock pathを照合した。既存UWBへの機械的なEmployee read追加は不要と判断する。
+
+初期writer照合で、SiteEmployeeHistoriesとBillingsの既存個別Rulesに参照変更可能なclient CUDが残っていると確認した。全必要参照writerの迂回閉鎖という承認済み目的に対し、Cの初回delegationを日次Rulesだけへ狭めすぎていたため、当該2collectionの個別Rulesと直接回帰も所有scopeへ補正した。
+
+Billingsには`pages/billings/customers/[id].vue`の入金予定日編集→`useCustomerBillingManager`→`useDocManager`→Class全文updateが実際に到達する。単なるread/PDF/CSV専用とは扱えない。この既存操作を保ちながら参照を含む全文保存を閉じる最小の専用部分保存を、C内の互換補正として実装前に再設計・影響reviewした。設計時の経路確認不足として記録し、新しい入金管理や支払機能の要求へ広げない。UI/application差分が追加されるため、専用fresh buildと当該操作の実UI検証もCの選択gateへ追加する。以下のreview条件を反映して当該client/API変更を開始した。
+
+`C-PAYMENT-PLAN`/`C-PAYMENT-SEC`はread-onlyで現page/manager/Billing schema/Rules/trigger/専用entryを照合し、専用Callableと独立draftへの限定移行を妥当とした。一般reviewのP2（optional予定日のnull互換欠落）を補正し、security条件の複合Billing ID長、現在Auth/Tx User、3field全同値でのみno-op、reactive route失効、unknownの値一致と自己commit証明の区別を実装契約へ追記した。現paymentDueDateAtがoptionalで、派生日付/年月を持つことはrootもinstalled sourceで照合した。通常API harnessとUIが同entryであるため、背景triggerは既定offの明示opt-in・demo/Emulator/loopback/外部作用deny検査を条件とする。rootがこの条件を固定した後、当該page/専用editor/controller/shared/use-case/API/限定専用entryと直接testのownershipを追加した。共通Manager刷新、他の請求操作、通常entry、全trigger公開は含めない。
+
+両reviewはtest/runtimeを実行せず、Cの製品受入れではない。C開始時の`.output`不在を確認し、保護22file指紋とroot既存3logを所有`.codex-test/runtime/emp05-c`へ退避した。既存の他runtimeは保持し、後処理対象へ混ぜない。
+
+### 05-C 背景処理の先行レビュー（途中）
+
+`C-BACKGROUND-REVIEW`はbaseline `8983d8d`上の未統合背景sourceをread-onlyで確認した。対象は日次2種・Billing・履歴のhelper/wrapper、共通参照抽出、旧Employee削除handler、限定dry-runと直接test。追加P1/P2の製品実害は特定しなかったが、既存`billing-customer-reference-barrier.test.mjs`の旧source注入方式が新helperへ接続されていないP2を指摘した。これは静的指摘であり、未実行testの失敗結果とは区別する。既存assertを維持したtest接続修正をdeveloperへ戻した。
+
+併せて、日次2種/Billingの移動成功と残る別実績、非ゼロの時間・金額合計、UTC/JST・翌日開始の勤怠日、commit拒否/transaction再実行、履歴の最終参照削除を完成版の直接試験へ対応するよう依頼した。レビュー中は主要背景helperのSHA-256不変を確認した。payment/Rules/opt-inと実Emulator/UIは同reviewの対象外であり、C受入れは未了。
+
+rootの別途照合では、paymentのclient認可が`plain(user)`を要求する一方、Auth Storeが実際には`reactive(new User())`を渡す不一致を確認した。正規actorを誤拒否しないよう実Classを使ったclient認可試験を依頼し、server rawとの区別を実装中に補正する。
+
+`C-PAYMENT-IMPLEMENTATION-SEC`はpayment共有契約/use-case/API/editor/controller/page、対象4collectionの個別・汎用/nested Rules、専用entry/opt-inを静的確認した。payment本体に追加P1/P2なし。対象Rulesのclient CUD閉鎖も確認した。一方、UI用`AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER=enabled`が親processへ残ると、通常`run-codex-local-test.ps1`が引き継いで背景writeを実行し得るP2を検出した。rootもscriptの環境保存・復元部分を照合し、当該flagの通常test強制off/復元と直接陰性testだけをdeveloper所有へ追加した。通常runnerの他挙動、packageや環境設定は変更対象に広げない。
+
+同reviewが未確認としたAuthの初回/transaction間変化、請求日競合、背景同時更新、actor/tenant喪失後の遅延拒否はCの既存受入条件として直接testへ対応する。reviewの主要10source指紋は読取前後で不変。test/HTTP/Rules Emulator/実UIは同review未実行であり、静的判断と実測を分ける。
+
+### 05-C 最終状態の先行検証（途中）
+
+developerは43製品/test fileの実装と直接86件（exit 0）、構文確認を終えて停止した。`C-BACKGROUND-REVIEW-R1`は実Billing use-caseへのtest接続、移動成功/別実績/非ゼロ金額/UTC・JST/履歴削除を確認し、前回P2・試験不足の解消、追加P1/P2なしとした。`C-PAYMENT-SEC-R1`も通常runnerのflag除去/復元と実PowerShellの親enabled/custom/不存在試験、認証/局所競合/背景保持/遅延応答試験を確認し、既知P2解消・追加P1/P2なし。両reviewはtestを実行せず、主要source指紋の不変を確認した。
+
+rootの`node --test test/domain/*.test.mjs`初回は1398件中1396成功・2失敗、exit 1。`site-archive-source-contract.test.mjs`にBillings/履歴の旧client許可と旧Class writerの表現assertが残っていた。`C-TEST-R1`で同fileを現client拒否と実server入口へ接続し、Siteの同transaction read・不存在write 0の意味を維持した。rootが差分を読み、同じ全domainを再実行して**1398/1398、exit 0**を確認した。source44fileとroot文書は未統合で、CのUI受入れは未了。
+
+通常`npm run test:local`を親processのUI opt-inがenabledの条件でrootが実行した。新Cケースは通常flag不存在・背景実行0、4背景保存先の生成、入金予定日のHTTP保存/null/競合/raw保持、直接CUD/nested拒否を確認した。しかし全体は176件中174成功・2失敗、exit 1。CAS-03 Billings reference-firstに残るclient setDoc期待と、履歴rebuild正常caseが共有tenantの不正rawへ到達するtest前提を`C-EMU-R1`へ戻した。参照不正を製品で許容する修正はしない。終了後rootが専用port停止と保護22file指紋不変を確認、exit 0。
+
+実装事実はEmployee実装記録、入金予定日の操作は既存manualへ反映する。反復する専用UI opt-in/通常runner隔離だけを既存local UI runbookへ追記した。仕様/actor/共通archive方針・ADR・packageは不変、raw索引の実装は設計済みdata契約に対応する。Dev/実data補完・archive開放は未実施。これらのgateを全C受入れや次工程開始の証拠にはまだ使用しない。
+
+### 05-C source統合前の再検証
+
+`C-EMU-R1`はlocal harnessだけを補正した。Billingsの参照先行/archive先行/同時実行を実server writerへ接続し、CustomerとBillingの整合を検証する。履歴正常caseはSITE-04の最小実績fixtureが残る共通tenantから専用合成tenantへ分離し、非空履歴の生成に加えて索引不正時の拒否・履歴不変を確認する。後続security-report試験も自身のactorを準備する。rootが差分を照合し、製品の不正raw拒否は変更していない。
+
+| gate / exact command | root実測 | exit |
+|---|---|---:|
+| `node --test test/domain/*.test.mjs` | `C-TEST-R1`後1398/1398。後続はlocal harness/文書だけの変更であり失効しない | 0 |
+| `npm run test:local` | `C-EMU-R1`後176/176。親UI flag enabledでも通常suite内では不存在・背景無作用。4保存先/HTTP/Rules陰性を含む | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 254 Markdown / 60 ADR / 11 roadmaps / 8 TOML。本追記後に再検証 | 0 |
+
+初回/再実行のEmulator派生port 8651/8574を含む全専用portの停止と、保護22fileの件数・SHA-256不変、`.output`不存在をrootが確認しexit 0。既存3logのbackupはUI終了時の復元まで保持する。in-app browserへの接続、専用設定と合成Auth exportの存在は再確認済み。build/実UI/終了cleanupは未実施であり、source統合はそのための固定baselineを作るもの。
+
+`C-DOC-REVIEW`は影響6文書を確認しP1/P2なし。P3の入金予定日の旧経路を、現page→専用editor/controller→Callableと移行前の記述へ分離した。権限/仕様/ADRの追加変更は不要とした。完了classはUI/application/data・Rules/permissions/buildと文書のunion。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。関連するmanaged/policy/validator/必須routing/capacity手順を変更しておらず、失効条件に該当しない。project-docs/diffは最終文書追記後に実行し、44 source/test＋6影響文書をreview済みlocal統合へ進める。Dev/Prod generateは未承認release-onlyのため実施しない。
+
+初回stage後の`git diff --cached --check`は新規test helper末尾空行でexit 1。`C-WHITESPACE-R1`がその1行だけを削除し、rootは影響する全domainを再実行して1398/1398、exit 0を確認した。Emulatorが読む製品source/local harnessは不変であり、176件の証拠は再利用する。

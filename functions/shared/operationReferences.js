@@ -59,6 +59,28 @@ export function notificationEmployeeReferences(raw) {
   return new Set(employeeId === null ? [] : [employeeId]);
 }
 
+// Aggregates retain complete operation snapshots, including employees other
+// than the person named by a daily document's root employeeId.
+export function aggregateEmployeeIndex(raw, { daily = false } = {}) {
+  if (!plain(raw) || !Array.isArray(raw.operationResults)) invalid();
+  const ids = new Set();
+  if (daily) { if (!identifier(raw.employeeId)) invalid(); ids.add(raw.employeeId); }
+  const operations = new Set();
+  for (const result of raw.operationResults) {
+    if (!plain(result) || !identifier(result.docId) || operations.has(result.docId)) invalid();
+    operations.add(result.docId);
+    for (const id of operationEmployeeReferences(result)) ids.add(id);
+  }
+  if (daily && !indexMatches(raw.operationResultIds, [...operations])) invalid();
+  return [...ids];
+}
+
+export function aggregateEmployeeReferences(raw, options) {
+  const ids = aggregateEmployeeIndex(raw, options);
+  if (!indexMatches(raw.employeeIds, ids)) invalid();
+  return new Set(ids);
+}
+
 // The caller supplies the *destination's transaction snapshot*, never an event
 // before-image, a display Class, or a source being moved to this destination.
 export function addedEmployeeReferences(destinations) {

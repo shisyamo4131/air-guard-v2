@@ -37,6 +37,8 @@ test("Companies fallback reserves every protected collection before tenant acces
       "Billings",
       "Customers",
       "Customers_archive",
+      "DailyAttendances",
+      "DailyOperationsByEmployee",
       "EmployeeLifecycleHeads",
       "EmployeeLifecycleLocks",
       "EmployeeUserReservations",
@@ -77,8 +79,7 @@ test("Site-reference collections use explicit guards and cannot fall through ten
       assert.match(body, /allow create, delete: if false;/u);
       assert.match(body, /isNotificationStateOnlyUpdate\(\)/u);
     } else {
-      assert.match(body, /isValidSiteReferenceCreate\(companyId\)/u);
-      assert.match(body, /isValidSiteReferenceUpdate\(companyId\)/u);
+      assert.match(body, /allow write: if false;/u);
     }
   }
 });
@@ -107,12 +108,7 @@ test("Customer reference collections use explicit guarded matches outside the fa
       ),
     )?.[1];
     assert.ok(body, `${collectionName} must have an explicit document match`);
-    if (collectionName === "OperationResults") {
-      assert.match(body, /allow write: if false;/u);
-    } else {
-      assert.match(body, new RegExp(`${createGuard}\\(companyId\\)`, "u"));
-      assert.match(body, new RegExp(`${updateGuard}\\(companyId\\)`, "u"));
-    }
+    assert.match(body, /allow write: if false;/u);
   }
 
   const siteBody = source.match(

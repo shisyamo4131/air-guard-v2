@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { operation, runtime } from "./employeeBackgroundTestSupport.mjs";
+import { addOperationResultToBilling } from "../../functions/modules/billings/addOperationResultToBilling.js";
+import { rebuildHistory } from "../../functions/modules/siteEmployeeHistories/rebuildHistory.js";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 
@@ -50,7 +53,7 @@ test("archive use-case fixes the exact five direct reference queries and exclude
   assert.doesNotMatch(source, /transaction\.(?:set|update)\(archiveRef|\.restore\s*\(/u);
 });
 
-test("Rules retain live Site guards for client writers and close operation reference writes", async () => {
+test("Rules close operation and background reference writes while retaining notification state-only updates", async () => {
   const rules = await read("firestore.rules");
   assert.match(
     rules,
@@ -76,8 +79,7 @@ test("Rules retain live Site guards for client writers and close operation refer
       assert.match(block, /allow create, delete: if false;/u);
       assert.match(block, /isNotificationStateOnlyUpdate\(\)/u);
     } else {
-      assert.match(block, /allow create:[\s\S]*?isValidSiteReferenceCreate\(companyId\)/u);
-      assert.match(block, /allow update:[\s\S]*?isValidSiteReferenceUpdate\(companyId\)/u);
+      assert.match(block, /allow write: if false;/u);
     }
   }
   const scheduleBlock = rules.match(
@@ -103,20 +105,37 @@ test("Schedule application connects to the server transaction and legacy Class w
 test("Admin SDK Billing and SiteEmployeeHistory writers share their live Site read with the final write transaction", async () => {
   const [liveGuard, billing, history] = await Promise.all([
     read("functions/modules/sites/liveSiteReference.js"),
-    read("functions/modules/billings/utils.js"),
+    read("functions/modules/billings/billingReferencePlan.js"),
     read("functions/modules/siteEmployeeHistories/rebuildHistory.js"),
   ]);
   assert.match(liveGuard, /transaction\.get\([\s\S]*?\/Sites\/\$\{siteId\}/u);
   assert.match(liveGuard, /if \(!snapshot\?\.exists\) throw/u);
   assert.match(
     billing,
-    /await assertLiveSiteReference\(\{[\s\S]*?transaction,[\s\S]*?companyId,[\s\S]*?siteId,[\s\S]*?\}\);[\s\S]*?doc\.initialize/u,
+    /firestore\.runTransaction\(async \(transaction\)[\s\S]*?await assertLiveSiteReference\(\{ firestore, transaction, companyId, siteId: after\.siteId \}\)[\s\S]*?await commitBackgroundPlans\(\{ firestore, transaction,/u,
   );
   assert.match(
     history,
-    /db\.runTransaction\(async \(transaction\) => \{[\s\S]*?transaction\.get\(siteRef\)[\s\S]*?if \(!siteSnapshot\.exists\)[\s\S]*?instance\.create\(\{[\s\S]*?transaction/u,
+    /firestore\.runTransaction\(async \(transaction\)[\s\S]*?transaction\.get\(firestore\.doc\(`\$\{prefix\}\/Sites\/\$\{siteId\}`\)\)[\s\S]*?if \(!siteSnapshot\.exists\)[\s\S]*?transaction\.set\(historyRef, payload\)/u,
   );
   assert.match(history, /if \(firstSnapshot\.empty\)[\s\S]*?transaction\.delete\(historyRef\)/u);
+  assert.match(await read("functions/modules/billings/addOperationResultToBilling.js"), /syncBillingReferences\(/u);
+  // Execute both current entry paths. The shared runtime rejects any read after
+  // a write; broader movement/raw/Employee cases live in background-references
+  // and billing-customer-reference-barrier tests, not in this wiring contract.
+  for (const writer of ["billing", "history"]) {
+    const raw = operation(["a"]), root = "Companies/company";
+    for (const siteExists of [true, false]) {
+      const state = runtime({ records: [[`${root}/OperationResults/operation`, raw]] });
+      if (!siteExists) state.data.delete(`${root}/Sites/site`);
+      const save = () => writer === "billing"
+        ? addOperationResultToBilling({ companyId: "company", doc: raw, firestore: state.firestore })
+        : rebuildHistory("company", "site", "a", { firestore: state.firestore });
+      if (siteExists) { await save(); assert.equal(state.writes.length, 1); }
+      else { await assert.rejects(save(), writer === "billing" ? { message: "Site not found: site" } : { code: "failed-precondition" }); assert.equal(state.writes.length, 0); }
+      assert.equal(state.events.filter((path) => path === `${root}/Sites/site`).length, 1);
+    }
+  }
 });
 
 test("Rules keep generic Site delete and every client Sites_archive write unavailable", async () => {

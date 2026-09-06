@@ -1,6 +1,6 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: EMP-01〜04完了。EMP-05の内部05-A（閲覧・cache互換）と05-B（参照保存入口）をlocalで受け入れた。次は05-C（背景保存・索引整合・旧削除作用停止）。
+- 状態: EMP-01〜04完了。EMP-05の内部05-A（閲覧・cache互換）と05-B（参照保存入口）をlocalで受け入れ、05-C（背景保存・索引整合・旧削除作用停止）を実装中。
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 55%
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
@@ -109,7 +109,7 @@ EMP-05の内部順序はreader/参照契約→参照writer・index保持→旧tr
 
 後続実装は実diffのUI/application/data-contract等のunionから選択し、直接test→対象回帰→最終状態のcompletion gateを実行する。UI・logic・Rules変更の基本集合はproject-docs、domain-full、local-emulator-suite、local-ui-build、diff-checkであり、build実行・permission定義・release等の該当classはpolicyどおり追加する。環境・実行承認がないgateは記載だけを根拠に実行しない。各commandの結果・exit・証拠失効・省略理由をcompletion reportへ残す。
 
-EMP-01の確定後、EMP-02〜04の専用保存・独立draft・認可・代表UIと工程ごとのreview/検証/統合を完了した。現在は承認範囲の終端で停止している。次はEMP-05の閲覧互換・参照保護・archiveで、開始指示が必要。Dev/Prod・実data・外部作用・関連packageは未承認/未実施のままである。
+EMP-01の確定後、EMP-02〜04の専用保存・独立draft・認可・代表UIと工程ごとのreview/検証/統合を完了した。その後の開始承認によりEMP-05を実施中であり、同工程の完了報告で停止する。Dev/Prod・実data・外部作用・関連packageは未承認/未実施のままである。
 
 ## 計画reviewの記録
 

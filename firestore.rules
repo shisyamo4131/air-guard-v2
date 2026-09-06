@@ -947,18 +947,10 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Billings' subcollection under 'Companies' ---
-    // 同一tenant境界を維持し、customerIdの作成・変更時だけ参照先Customerを検証する。
+    // 埋込み参照は背景transaction、入金予定日は専用Callableが保存する。
     match /Companies/{companyId}/Billings/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidCustomerReferenceCreate(companyId)
-                    && isValidSiteReferenceCreate(companyId);
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidCustomerReferenceUpdate(companyId)
-                    && isValidSiteReferenceUpdate(companyId);
-      allow delete: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
     }
 
     // --- Rules for 'Customers' subcollection under 'Companies' ---
@@ -1083,17 +1075,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // SiteEmployeeHistoriesはserver再構築が正規writer。既存client互換を
-    // 維持しつつ、新規Site参照とsiteId変更だけをlive Siteへ束縛する。
+    // 日次集計・現場履歴は参照検査を行うserver保存だけを許可する。
+    match /Companies/{companyId}/DailyAttendances/{docId} {
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
+    }
+    match /Companies/{companyId}/DailyOperationsByEmployee/{docId} {
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
+    }
     match /Companies/{companyId}/SiteEmployeeHistories/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;
-      allow create: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidSiteReferenceCreate(companyId);
-      allow update: if isAuthenticated()
-                    && userCompanyId() == companyId
-                    && isValidSiteReferenceUpdate(companyId);
-      allow delete: if isAuthenticated() && userCompanyId() == companyId;
+      allow write: if false;
     }
 
     // Legacy StripeData is reserved and server-only at every nesting depth.
@@ -1137,6 +1130,8 @@ service cloud.firestore {
                                 "StripeData",
                                 "ArrangementNotifications",
                                 "Billings",
+                                "DailyAttendances",
+                                "DailyOperationsByEmployee",
                                 "Customers",
                                 "Customers_archive",
                                 "OperationResults",
