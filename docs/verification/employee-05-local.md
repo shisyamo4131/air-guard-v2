@@ -242,3 +242,15 @@ rootは所有tab、generated server、Emulatorの順で停止した（前景sess
 rootが最終source/test hashを照合し、`node --test test/domain/*.test.mjs`で1338/1338・exit 0、`npm run test:local`で175/175・exit 0を確認した。新日時test（SHA-256 `B0C3BCB7E12FE5CA0B9483B1DDCE808F1F83D89B318F80F1973AE2582AF13BFF`）はUTC/JST各24 chainを実saveOperation経由で検証し、日勤480分・09時境界2分・夜勤/24時間・翌日加算・閏日/年越し・通知/実績化を固定値と比較する。非0の曜日別料金と改定取極めを使い、締日11/20の21800円、翌11/21の51000円、適用agreement.keyと翌月請求日を個別assertした。日付不変時のTimestamp nanos123456789・未知field保持も確認した。料金追補中のtest自身のgetter誤認2件は訂正して最終成功を得ており、製品sourceの追加変更はない。
 
 全Emulator終了後、rootの独立commandで専用port・派生8028/9150のLISTEN不在、保護22fileの件数/hash不変、所有harness runtimeのcleanupを確認した（各exit 0）。Functionsを変更したため旧175件を流用せず再実行した。変更のないmanaged-governance/project-docs-negative/capacity-regressionの同turn証拠はpolicyの失効条件に基づき再利用する。文書/diffは最終文書に対して再実行し、修正版のfresh build/実UI完了まではBを受け入れない。
+
+### 05-B 再入場時の購読補正（2026-09-07、途中）
+
+文書検証と差分検査のexit 0後、日時・slot補正を`b04bd3cc`へlocal統合した。同じclean HEADの専用buildはexit 0。実UIでは作成開始の例外と余分なbuttonが解消し、正規作成した合成Employeeの配置・休憩30分への変更、09/08への複製・再読込を確認した。backend読取りでも親子の09/08、同日17:00終了、休憩30分、参照索引を確認した。
+
+上下番確定の既存queryは前日までを対象にするため、今日・翌日だけでは実績化試験に進まない。正規UIで合成Employeeの入社日とSite取極め開始日を09/01へ変更した。その後配置管理へ戻ると、保存済み予定が一覧に現れなくなった。backendには09/07・09/08の予定が残っており、保存失敗とは分離する。
+
+rootはBの範囲readerがcache/pendingを拒否しながら`includeMetadataChanges`を指定していないことを照合した。installed SDKの型契約では既定がfalseであり、内容が同じままserver確認済みへ移る通知を受け取れない。同じ欠陥を持つBのGenerator通知購読・実績明細購読も限定修正へ含める。既存のcache/pending拒否・actor/tenant・世代条件は維持し、初回cache→server確認、再入場/再選択、旧scope応答を直接回帰へ追加する。他reader全体へ一般化しない。
+
+所有tabとgenerated serverを停止し、14600のLISTEN不在を独立command・exit 0で確認した。Functions/Rulesを変更しないclient補正のため、専用Emulator内の合成状態を保持している。`UI-R3`のreview・domain・fresh build・再入場と実績化の実UI・cleanupは未完了であり、B受入れやC開始の証拠にはしない。
+
+その後、rootは固定した3source/2testの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1340/1340・exit 0を確認した。`UI-REVIEW-R3`は一般/限定security影響を確認し追加P1/P2なし。sourceは各listenerのoptions1行だけであり、actor/tenant・cache/pending拒否・世代条件は不変である。Functions/Rules/harnessに変更がないため保存境界の175/175・exit 0と非失効の包括gate証拠を再利用し、client配送の証拠は直接testと後続のfresh build/実UIへ分ける。文書検証とdiffはこの最終receiptに対して再実行する。まだBの実UI・cleanupは未完了。

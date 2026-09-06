@@ -12,7 +12,7 @@ export function useOperationRows(props, editor, onRaw = () => {}) {
     clear(); readError.value = "";
     if (!owner || !id) return;
     const ticket = generation;
-    unsubscribe = onSnapshot(doc($firestore, `Companies/${auth.companyId}/OperationResults/${id}`), (snapshot) => {
+    unsubscribe = onSnapshot(doc($firestore, `Companies/${auth.companyId}/OperationResults/${id}`), { includeMetadataChanges: true }, (snapshot) => {
       if (ticket !== generation || owner !== scope.value || snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
       if (!snapshot.exists()) { clear(); readError.value = "稼働情報が見つかりません。"; return; }
       raw.value = snapshot.data(); onRaw(raw.value);

@@ -22,7 +22,7 @@ export function useSiteOperationSchedulesInRange({ from, to } = {}) {
     rangeIsValid({ from: start, to: end });
     const ticket = context.reset(owner);
     const request = query(collection($firestore, `Companies/${auth.companyId}/SiteOperationSchedules`), where("dateAt", ">=", start), where("dateAt", "<=", end));
-    unsubscribe = onSnapshot(request, (snapshot) => {
+    unsubscribe = onSnapshot(request, { includeMetadataChanges: true }, (snapshot) => {
       if (ticket !== context.generation || scope.value !== owner || snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
       items.value = snapshot.docs.map((document) => {
         const raw = document.data();

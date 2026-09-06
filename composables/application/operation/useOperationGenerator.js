@@ -33,7 +33,7 @@ export function useOperationGenerator(selectedSchedule) {
       }
       raw.value = source; selectedSchedule.value = new SiteOperationSchedule(rawForClass(source));
       const ids = new Set([...source.employees, ...source.outsourcers].map((worker) => `${id}_${worker.workerId}`));
-      unsubscribe = onSnapshot(query(collection($firestore, `Companies/${auth.companyId}/ArrangementNotifications`), where("siteOperationScheduleId", "==", id)), (snapshot) => {
+      unsubscribe = onSnapshot(query(collection($firestore, `Companies/${auth.companyId}/ArrangementNotifications`), where("siteOperationScheduleId", "==", id)), { includeMetadataChanges: true }, (snapshot) => {
         if (ticket !== generation || snapshot.metadata.fromCache || snapshot.metadata.hasPendingWrites) return;
         try {
           const current = {};

@@ -75,6 +75,49 @@ test("actual Card/Draggable handlers retain original positions, immediately disp
   effect.stop();
 });
 
+test("period listener publishes metadata-only server confirmation on reentry while rejecting cache, pending writes and stale scope", async () => {
+  const listeners = [], related = [];
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false } });
+  const make = await factory("composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange.js", "useSiteOperationSchedulesInRange", {
+    ...Vue, SiteOperationSchedule, rawForClass: employeeContract.rawForClass, createOperationRawContext, rangeIsRef, rangeIsValid,
+    useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }),
+    useFetch: () => ({ fetchSiteComposable: { fetchSite: (id) => related.push(id) }, fetchEmployeeComposable: { fetchEmployee() {} }, fetchOutsourcerComposable: { fetchOutsourcer() {} } }),
+    collection: (_, path) => ({ path }), where: (...args) => args, query: (ref, ...constraints) => ({ ...ref, constraints }),
+    onSnapshot: (request, options, next) => {
+      assert.deepEqual(options, { includeMetadataChanges: true });
+      const entry = { request, stopped: false, emit(snapshot, metadataOnly = false) { if (!metadataOnly || options.includeMetadataChanges) next(snapshot); } };
+      listeners.push(entry); return () => { entry.stopped = true; };
+    },
+  });
+  const from = Vue.ref(new Date("2026-09-01")), to = Vue.ref(new Date("2026-09-30"));
+  const raw = operation(); raw.updatedAt = new Timestamp(1788200000, 123456789);
+  const documents = [{ data: () => raw }];
+  const snapshot = (fromCache, hasPendingWrites) => ({ metadata: { fromCache, hasPendingWrites }, docs: documents });
+  const enter = () => { const effect = Vue.effectScope(); let reader; effect.run(() => { reader = make({ from, to }); }); return { effect, reader }; };
+  const first = enter();
+  listeners[0].emit(snapshot(true, false));
+  assert.equal(first.reader.docs.value.length, 0); assert.equal(related.length, 0);
+  listeners[0].emit(snapshot(false, true), true);
+  assert.equal(first.reader.docs.value.length, 0); assert.equal(related.length, 0);
+  listeners[0].emit(snapshot(false, false), true);
+  const displayed = first.reader.docs.value[0];
+  assert.ok(displayed instanceof SiteOperationSchedule); assert.strictEqual(operationRawFor(displayed, "company/actor"), raw);
+  assert.equal(operationRawFor(displayed, "company/actor").updatedAt.nanoseconds, 123456789);
+  assert.equal(related.length, 1);
+  first.effect.stop(); assert.equal(listeners[0].stopped, true); assert.equal(first.reader.docs.value.length, 0);
+  assert.throws(() => operationRawFor(displayed, "company/actor"));
+  const second = enter(); assert.deepEqual(listeners[1].request, listeners[0].request);
+  listeners[1].emit(snapshot(true, false)); assert.equal(second.reader.docs.value.length, 0);
+  listeners[0].emit(snapshot(false, false), true); assert.equal(first.reader.docs.value.length, 0); assert.equal(second.reader.docs.value.length, 0);
+  listeners[1].emit(snapshot(false, false), true); assert.equal(second.reader.docs.value.length, 1); assert.equal(related.length, 2);
+  const confirmed = second.reader.docs.value[0];
+  listeners[1].emit(snapshot(false, true), true); assert.strictEqual(second.reader.docs.value[0], confirmed); assert.equal(related.length, 2);
+  auth.isSuperUserClaimValid = false; await flush();
+  assert.equal(listeners[1].stopped, true); assert.equal(second.reader.docs.value.length, 0); assert.throws(() => operationRawFor(confirmed, "company/actor"));
+  listeners[1].emit(snapshot(false, false), true); assert.equal(second.reader.docs.value.length, 0); assert.equal(related.length, 2);
+  second.effect.stop();
+});
+
 test("period listener pairs each fresh Class with its raw, rejects old range/tenant responses, and disposes reads", async () => {
   const listeners = [];
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false } });
@@ -83,7 +126,7 @@ test("period listener pairs each fresh Class with its raw, rejects old range/ten
     useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }),
     useFetch: () => ({ fetchSiteComposable: { fetchSite() {} }, fetchEmployeeComposable: { fetchEmployee() {} }, fetchOutsourcerComposable: { fetchOutsourcer() {} } }),
     collection: (_, path) => ({ path }), where: (...args) => args, query: (ref, ...constraints) => ({ ...ref, constraints }),
-    onSnapshot: (ref, next, error) => { const entry = { ref, next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
+    onSnapshot: (ref, options, next, error) => { const entry = { ref, options, next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
   });
   const from = Vue.ref(new Date("2026-09-01")), to = Vue.ref(new Date("2026-09-30")), effect = Vue.effectScope();
   let reader; effect.run(() => { reader = make({ from, to }); });
@@ -231,13 +274,40 @@ test("actual article input connection blocks save while lookup is pending, commi
   assert.match(await source("components/Operation/Editor.vue"), /@pending="controller.setInputPending\?\.\(\$event\)"/u);
 });
 
+test("row reader waits for metadata-only server confirmation on reselection and rejects pending and old-scope snapshots", async () => {
+  const state = await editorHarness(), props = Vue.reactive({ documentId: "operation" }), listeners = [], published = [];
+  const make = await factory("composables/application/operation/useOperationRows.js", "useOperationRows", {
+    ...Vue, useAuthStore: () => state.auth, useNuxtApp: () => ({ $firestore: {} }), doc: (_, path) => ({ path }),
+    onSnapshot: (request, options, next) => {
+      assert.deepEqual(options, { includeMetadataChanges: true });
+      const entry = { request, stopped: false, emit(snapshot, metadataOnly = false) { if (!metadataOnly || options.includeMetadataChanges) next(snapshot); } };
+      listeners.push(entry); return () => { entry.stopped = true; };
+    },
+  });
+  const effect = Vue.effectScope(); let reader; effect.run(() => { reader = make(props, state.editor, (raw) => published.push(raw)); });
+  const raw = state.raw; raw.updatedAt = new Timestamp(1788200000, 123456789);
+  const snapshot = (fromCache, hasPendingWrites) => ({ metadata: { fromCache, hasPendingWrites }, exists: () => true, data: () => raw });
+  listeners[0].emit(snapshot(true, false)); assert.equal(reader.raw.value, null); assert.equal(published.length, 0);
+  listeners[0].emit(snapshot(false, true), true); assert.equal(reader.raw.value, null); assert.equal(published.length, 0);
+  listeners[0].emit(snapshot(false, false), true); assert.strictEqual(reader.raw.value, raw); assert.equal(reader.raw.value.updatedAt.nanoseconds, 123456789);
+  listeners[0].emit(snapshot(false, true), true); assert.equal(published.length, 1);
+  props.documentId = null; await flush(); assert.equal(listeners[0].stopped, true); assert.equal(reader.raw.value, null);
+  props.documentId = "operation"; await flush(); assert.deepEqual(listeners[1].request, listeners[0].request);
+  listeners[1].emit(snapshot(true, false)); assert.equal(reader.raw.value, null);
+  listeners[0].emit(snapshot(false, false), true); assert.equal(reader.raw.value, null); assert.equal(published.length, 1);
+  listeners[1].emit(snapshot(false, false), true); assert.strictEqual(reader.raw.value, raw); assert.equal(published.length, 2);
+  state.auth.isSuperUserClaimValid = false; await flush(); assert.equal(reader.raw.value, null); assert.equal(listeners[1].stopped, true);
+  listeners[1].emit(snapshot(false, false), true); assert.equal(reader.raw.value, null); assert.equal(published.length, 2);
+  effect.stop(); state.effect.stop();
+});
+
 for (const terminal of ["missing", "error", "claim"]) test(`row reader ${terminal} revokes raw/draft together and ignores the old save response`, async () => {
   let finish;
   const state = await editorHarness({ call: () => new Promise((resolve) => { finish = resolve; }) });
   const listeners = [], props = Vue.reactive({ documentId: "operation" });
   const make = await factory("composables/application/operation/useOperationRows.js", "useOperationRows", {
     ...Vue, useAuthStore: () => state.auth, useNuxtApp: () => ({ $firestore: {} }), doc: (_, path) => ({ path }),
-    onSnapshot: (_, next, error) => { const entry = { next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
+    onSnapshot: (_, options, next, error) => { const entry = { options, next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
   });
   const effect = Vue.effectScope(); let reader; effect.run(() => { reader = make(props, state.editor); });
   const snapshot = (value) => ({ metadata: { fromCache: false, hasPendingWrites: false }, exists: () => value !== null, data: () => value });

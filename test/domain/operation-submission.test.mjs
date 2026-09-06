@@ -66,17 +66,33 @@ test("Generator completes notify(false), rereads raw, waits for a server notific
   const before = schedule(), after = { ...before, employees: before.employees.map((row) => ({ ...row, hasNotification: true })) }; after.workers = [...after.employees, ...after.outsourcers];
   const calls = [], reads = [], listeners = []; let converted = false, notifyFinish;
   const submission = { allowed: Vue.ref(true), uncertain: Vue.ref(false), busy: Vue.ref(false), message: Vue.ref("conflict"), read: async (collection, id) => { reads.push([collection, id]); return calls.length ? after : before; }, submit: async ([command]) => { calls.push(command); if (command.action === "notify") return new Promise((resolve) => { notifyFinish = resolve; }); converted = true; return false; } };
-  const make = await factory("composables/application/operation/useOperationGenerator.js", "useOperationGenerator", { ...Vue, ...contract, ...referenceContract, ...employeeContract, operationDateTime, ArrangementNotification, SiteOperationSchedule, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), useOperationSubmission: () => submission, collection: (_, path) => ({ path }), where: (...args) => args, query: (ref) => ref, onSnapshot: (_, next, error) => { const item = { next, error, stopped: false }; listeners.push(item); return () => { item.stopped = true; }; } });
+  const make = await factory("composables/application/operation/useOperationGenerator.js", "useOperationGenerator", { ...Vue, ...contract, ...referenceContract, ...employeeContract, operationDateTime, ArrangementNotification, SiteOperationSchedule, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }), useOperationSubmission: () => submission, collection: (_, path) => ({ path }), where: (...args) => args, query: (ref) => ref, onSnapshot: (_, options, next, error) => {
+    assert.deepEqual(options, { includeMetadataChanges: true });
+    const item = { next, error, stopped: false, emit(snapshot, metadataOnly = false) { if (!metadataOnly || options.includeMetadataChanges) next(snapshot); } };
+    listeners.push(item); return () => { item.stopped = true; };
+  } });
   const effect = Vue.effectScope(); let generator; effect.run(() => { generator = make(selected); }); await flush();
   assert.equal(calls[0].action, "notify"); assert.equal(calls[0].changes.shouldNotify, false); assert.equal(reads.length, 1); assert.equal(generator.ready.value, false);
   assert.equal(await generator.convert(), false); notifyFinish({ success: true }); await flush();
   assert.equal(reads.length, 2); assert.equal(listeners.length, 1); assert.equal(generator.ready.value, false);
   const rawNotice = { ...notification(), actualStartTime: "09:00", actualBreakMinutes: 0, isQualified: false };
-  listeners[0].next({ metadata: { fromCache: false, hasPendingWrites: false }, docs: [{ id: rawNotice.docId, data: () => rawNotice }] });
+  const noticeDocs = [{ id: rawNotice.docId, data: () => rawNotice }];
+  const snapshot = (fromCache, hasPendingWrites) => ({ metadata: { fromCache, hasPendingWrites }, docs: noticeDocs });
+  listeners[0].emit(snapshot(true, false)); assert.equal(generator.ready.value, false); assert.equal(generator.notifications.value.length, 0);
+  listeners[0].emit(snapshot(false, true), true); assert.equal(generator.ready.value, false); assert.equal(generator.notifications.value.length, 0);
+  listeners[0].emit(snapshot(false, false), true);
   assert.equal(generator.ready.value, true); assert.equal(generator.notifications.value[0].actualStartTime, "09:00");
+  const published = generator.notifications.value;
+  listeners[0].emit(snapshot(false, true), true); assert.strictEqual(generator.notifications.value, published);
+  selected.value = null; await flush(); assert.equal(listeners[0].stopped, true); assert.equal(generator.ready.value, false);
+  selected.value = new SiteOperationSchedule(after); await flush(); assert.equal(listeners.length, 2);
+  listeners[1].emit(snapshot(true, false)); assert.equal(generator.ready.value, false);
+  listeners[0].emit(snapshot(false, false), true); assert.equal(generator.ready.value, false); assert.equal(generator.notifications.value.length, 0);
+  listeners[1].emit(snapshot(false, false), true); assert.equal(generator.ready.value, true);
   assert.equal(await generator.convert(), false); assert.equal(converted, true); assert.deepEqual(calls[1].notifications[rawNotice.docId], contract.notificationExpectation(rawNotice));
   assert.equal(generator.ready.value, false); assert.equal(generator.error.value, "conflict");
-  selected.value = null; await flush(); listeners[0].next({ metadata: {}, docs: [] }); assert.equal(generator.notifications.value.length, 0); assert.equal(listeners[0].stopped, true); effect.stop();
+  submission.allowed.value = false; await flush();
+  listeners[1].emit(snapshot(false, false), true); assert.equal(generator.notifications.value.length, 0); assert.equal(generator.ready.value, false); assert.equal(listeners[1].stopped, true); effect.stop();
 });
 
 async function notificationEditorHarness(options = {}) {
