@@ -348,8 +348,46 @@ rootの`node --test test/domain/*.test.mjs`初回は1398件中1396成功・2失�
 - 入金予定日を10/31から11/02へ入力して閉じ、再度開くと10/31のままであることを確認した。その後11/02を保存し、成功message・再表示・明示再読込を確認。backendでは予定日/予定月/JST Timestampの3fieldと、請求金額・従業員索引の保持をassertしexit 0。
 - 「未設定にする」→保存で成功messageと未設定表示、再度開いて空の日付を確認した。backendでは3fieldがすべて明示null、金額と索引が不変であることをassertしexit 0。専用Callableの2回の保存終了も確認した。
 
-最初のbackend診断は認証headerなしのためRulesが403を返した。Emulator専用の読取assertionへ修正し、製品Rulesを緩和していない。また最初の予定日assertionはPowerShellのTimestamp型変換に対する文字列比較でexit 1となった。実値を確認し日時型同士の比較へ修正した5条件はすべてtrue・exit 0。製品保存の失敗とは区別する。これら診断のexitを成功証拠へ置換しない。
+最初のbackend診断は認証headerなしのためRulesが403を返した。Emulator専用の読取assertionへ修正し、製品Rulesを緩和していない。また最初の予定日assertionはexit 1だったが、当該時点でどの条件が不一致だったかは分離計測していない。成功messageと保存実値を確認した後、Timestampを日時型同士で比較する5条件の再検査はすべてtrue・exit 0。初回の原因を製品保存の失敗や型比較へ断定せず、これら診断のexitを成功証拠へ置換しない。
 
 所有tabを閉じ、generated serverとEmulatorを順にCtrl-C停止した（各停止session exit 1）。専用8port・9150・8380・8651・8574の計12portのLISTEN不在を独立commandで確認しexit 0。保護対象22fileの件数/SHA-256不変、既存root log3fileの復元/hash一致はexit 0。絶対path・repository内・reparse不在を確認した`.output`と所有`emp05-c` runtimeの削除/不存在確認もexit 0。合成業務dataはexportしていない。
 
 以上をsource review・1398件domain・176件Emulator・fresh build・代表実UI・cleanupへ対応づけ、05-Cをlocal受入れとする。今回の文書だけの追記は製品testを失効させず、project-docs/diffを再実行してlocal統合する。次の05-Dは、現在保存先との差分を同transactionで検査するwriter、索引、状態無限定のUser/lifecycle参照、旧削除handler無作用を前提にする。整合checkerの成功だけでarchiveを開放せず、未確認tenant拒否・12従属・競合両順序をDで検証する。EMP-05は未完了、進捗55%を維持する。仕様/ADR/package/governance/remoteへの追加変更はない。
+
+## 05-D 開始契約
+
+C受入れ2文書のproject-docs（254 Markdown/60 ADR/11 roadmaps/8 TOML）・通常/staged diffは各exit 0。rootがclean baseline `b62e549a7aba13df41645de74067b52120c21d05`と既存機能branchを確認し、承認済みarchive設計の実装を開始した。writerはdeveloper、rootは文書・実測・UI・Git統合、securityは既存排他と検証接続のread-only照合を担当する。
+
+所有対象はEmployee専用archive contract/use-case/API・demo公開/厳密許可設定・独立controller/dialog・詳細page接続・必要最小cache除外と直接test。既存の同ID再作成拒否、7actor read/直接CUD拒否は再利用し、必要な不足だけ補う。通常API indexへのarchive公開、Auth/User業務変更、他master/package/governance、purge/restore、実data/remoteは対象外である。
+
+受入れは既存A1〜A5/U1へ対応する。特に12従属の各拒否、raw無加工移動、両存/legacy/検査失敗write 0、同actor/理由/operationの再確認、live不存在後にdialogを閉じても同詳細sessionで確認できる経路、参照/User作成/退職との競合両順序を直接testとEmulatorで検証する。許可集合はserver側default deny、demo注入は通常実行不可を維持する。実UIは正規作成した合成Employeeで取消・参照あり拒否・参照なし成功と通常一覧/候補除外を確認し、原本/archive/User/Authのbackend照合を別証拠にする。
+
+選択classはUI/application/data・Rules/permissions/buildのunion。反復は対象domainと構文、最終は独立review・domain-full・local-emulator-suite・clean HEADの専用build/直接UI・cleanup・project-docs/diff。包括gateの非失効証拠はpolicyに従い再利用する。実装中に範囲や失効条件が変われば集合を補正する。rollbackはarchive開放/入口停止を先に行い、旧writer/User削除作用や汎用restoreを再開しない。D/Eの完了とEMP-05得点加算はまだ行わない。
+
+### 05-D 先行照合
+
+`D-PREFLIGHT-SEC`は既存契約/UWB/sourceをread-only照合した。12依存の状態無限定、単独退職後のcompleted operation/head保持、User/Employee/email予約のatomic作成を確認した。競合両順序はnative transaction開始直前の依存wrapperで順序を制御し、読取lockを保持した相互待ちを作らないこと、同時実行の不変条件とは別に記録することをD試験へ渡した。Site raw validatorは未知field拒否/派生一致要求のためEmployeeへそのまま流用せず、GeoPointを扱わない`encodeExpected`を原本全体比較へ使わない条件も確認した。新しい業務判断はなく、完成source/runtimeの受入れではない。
+
+`D-AC-COVERAGE`はA〜CのR1〜R3/W1〜W5/A6/G1を既存source/test/receiptへ対応づけ、限定静的照合で受入れを覆す不足・矛盾なしとした。主な直接証拠は`employee-reader.test.mjs`、`operation-references.test.mjs`、`operation-write.test.mjs`、`operation-editor.test.mjs`、`operation-submission.test.mjs`、`employee-background-references.test.mjs`とlocal harness。Dの実archive競合結合をCの不存在試験へ読み替えないこと、Dによって失効するdomain/Emulatorを最終状態で再実行することをE入力にした。EMP-06は表示Classを保存期待値/認可に戻さず、専用writer・scope破棄・結果不明の保護を維持する。両担当はtests/runtime/network/data/Gitを実行せず、root/developer差分を保持して停止した。
+
+`D-SERVER-REVIEW`は固定したcontract/use-case/API/demo設定/entryの5sourceを確認し、追加P1/P2なし。開始/終了hashも一致した。raw保持と12従属・現在Auth/Tx User・専用許可集合・同一envelope再送の設計を確認したが、実Emulator競合の成功とは扱わない。非空保険history/資格、全lifecycle states、別actor再送等は最終testへ対応する条件としてdeveloperへ渡した。
+
+rootはclientの初期scopeにemail確認状態が含まれない点を見つけ、認可可能なrole/adminの変更も含めた失効と直接testを依頼した。補正後の`D-CLIENT-REVIEW`はcontroller/dialog/detailRead/pageの固定4sourceに追加P1/P2なし、hash不変とした。実User・email/role/route等の失効、原本消失時のattempt保持、unknown→close→同要求再確認、保存await/二重送信防止・SFC compileの試験接続を確認した。source/dataの実行受入れ・別画面候補除外・一覧通知はrootのEmulator/UIで未確認であり、D完了を意味しない。
+
+### 05-D 試験reviewと初回実測
+
+developerは13 source/testの実装と直接97件（exit 0）を報告して停止した。rootがserver 5/client 4の最終hashと先行review時の一致を再確認し、`node --test test/domain/*.test.mjs`を実行して1454/1454、exit 0を確認した。
+
+`D-HARNESS-REVIEW`は実参照/User/退職writerとの両commit順序と同時実行の接続を確認した。一方、12依存のtest fixtureが実装一覧を共用している点と、非空資格/保険historyの期待値が入れ子を共有する点をP2とした。`D-TEST-R1`はdomain testだけを変更し、承認済み12依存の独立表・実read path/filter照合と、Timestamp/GeoPointを維持する独立した再帰コピーへ補正した。developer直接33件はexit 0。先の全domain証拠はこの変更で失効し、rootが再実行する。
+
+rootは専用許可設定を起動前に明示した`npm run test:local`を実行した。結果は180件中179成功・1失敗、exit 1。D退職競合の合成emailが既存入力制約を超え、予約ID生成時に`email-invalid`となった。製品処理の失敗と断定せず、短い合成fixtureへ補正する。また標準commandが新しい手動env前提を持たないよう、`D-RUNNER-R1`で通常Harness子processだけ専用合成tenantへ固定し、親環境の存在・値を復元する。製品の既定拒否や通常API非公開は変更しない。再検証前のため全Emulator合格とは扱わない。
+
+`D-DOC-REVIEW`は影響6文書の途中差分に追加P1/P2/P3なしとした。対象は変更履歴・実装事実・manual・roadmap・local UI runbook・本receiptのD先行reviewまで。後続の実測追記はそのreview対象外であり、最終文書検証へ対応する。仕様/ADR/data契約の新規変更はなく、提供中と改修中を分離する。
+
+`D-RUNNER-R1`はrunner/local harness/直接testの3fileだけを補正した。rootが実diffを確認し、`node --test test/domain/*.test.mjs`を再実行して**1456/1456、exit 0**を確認した。専用tenantの子process固定・非Harness除去・親不存在/広い値・成功/nonzero/throwの18通りは実PowerShell境界を用いる直接testに含まれる。Emulator再実行は親の専用設定を未指定にした標準commandで行う。初回終了後の専用10port停止と保護22file指紋不変もrootが確認しexit 0。source/実UIはまだ受入れ前である。
+
+### 05-D source統合前の再検証
+
+`D-TEST-R1-REVIEW`は独立12依存表・型を維持した深い期待値・標準runnerの許可設定隔離を確認し、既知指摘解消・追加P1/P2なし、対象4fileのhash不変とした。rootの標準`npm run test:local`再実行は**180/180、exit 0**。D実参照/User/退職の各writerについて、writer先行・古いpreflight後のarchive先行・同時実行を確認した。原本/archiveの排他、User/予約・退職operation/head/lockの不生成または保持、actor User/Auth不変をassertしている。
+
+文書変更は既存7文書へ限定し、標準Emulatorの設定再現性を既存runbookにも記載した。package・schema/業務要件・ADR・governance/agent設定は不変。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。managed/policy/validator/必須routing/capacityを変更しておらず失効しない。project-docs/diffは最終追記後に再実行し、review済みsource/testと文書をlocal統合する。これはfresh build/実UIのための固定baselineであり、D/E完了や20点加算ではない。Dev/Prod generate・実data・通常API公開は未承認release-onlyとして実施しない。

@@ -71,6 +71,10 @@ npm run test:local:ui:server:generated
 
 この背景生成のUI検証では、正規画面で作成した実績から上記4保存先へ到達したことをbackend assertionで確認する。直接use-caseを呼んだtestと区別し、一つの保存先の出現だけでtrigger全体成功とは扱わない。
 
+Employee archiveの専用demo検証では、Emulatorを起動する前景processだけに`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を設定する。値は、そのrunで検証対象にした合成company IDだけのJSON文字列配列とし、実target/fixtureから確認して指定する。既定は空集合、不正形式・重複ID・対象外は拒否する。通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`とは分離し、専用APIはdemo project・Functions Emulator・loopback Firestore・外部作用denyを満たさなければ実行しない。通常API indexへarchiveを公開する手順ではない。
+
+archive操作前に対象tenantの6collectionのraw/索引整合と必要writerの閉鎖を確認する。整合checkerの`archiveReady:false`を自動的な開放許可へ変換せず、検証用の明示設定と区別する。他試験の不正fixtureが混在するtenantを未確認のまま許可しない。設定はその前景processの終了とともに破棄し、saved-dataや通常環境設定へ保存しない。正規UIで作成した対象に対する操作と、原本/archive/User/Authのread-only assertionを別に記録する。
+
 `npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。

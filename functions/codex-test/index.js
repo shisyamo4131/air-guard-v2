@@ -6,3 +6,4 @@ resolveExternalEffectsPolicy();
 
 export * from "../apis/index.js";
 export { codexOnOperationResultChange } from "./operationResultTrigger.js";
+export { archiveEmployee } from "./employeeArchive.js";

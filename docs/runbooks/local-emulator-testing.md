@@ -67,6 +67,8 @@ npm run test:local:seed
 npm run test:local
 ```
 
+標準Harnessでは、runnerが子processの`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を試験専用の合成tenant `codex-emp05-d-archive`だけへ固定する。親processの広い許可集合を結合・継承せず、終了時は成功・失敗とも元の有無と値へ戻す。Seedや他suiteでは子の許可設定を除去する。これはDのHTTP試験を再現するための専用設定で、製品の既定拒否、UI検証会社の許可、通常API公開を変更しない。
+
 旧CCB pre-containment専用testとpackage scriptsは2026-08-30のcorrective rollbackで削除した。Company Rulesの現行回帰は通常の`npm run test:local`と`test/domain/firestore-rules-reservation-source-contract.test.mjs`を使用する。旧専用commandを実行手順として案内しない。
 
 - 実行前にglobal `firebase` commandが利用可能であることを確認する。正式運用開始まではglobal CLIをlatestへ更新してよい。

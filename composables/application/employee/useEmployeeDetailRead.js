@@ -22,6 +22,7 @@ export function useEmployeeDetailRead(employeeId) {
     }, () => { if (source === generation) { users.value = []; userError.value = "利用者情報を取得できません。再読込してください。"; } });
   }, { immediate: true, flush: "sync" });
   onScopeDispose(clearUsers);
-  return { doc, users, userError, canRead: reader.canRead, loading: reader.isLoading,
+  function excludeArchived(targetId) { if (targetId === id.value) { reader.acceptRaw(targetId, null, reader.captureScope()); clearUsers(); } }
+  return { doc, users, userError, excludeArchived, canRead: reader.canRead, loading: reader.isLoading,
     error: reader.error, missing: computed(() => reader.getStatus(id.value) === "missing") };
 }

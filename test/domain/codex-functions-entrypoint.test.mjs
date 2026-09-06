@@ -59,7 +59,9 @@ test("dedicated Functions entrypoint exports Callables and one execution-gated o
     );
 
     assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
-    assert.deepEqual(Object.keys(entrypoint).sort(), [...PUBLIC_CALLABLES, "codexOnOperationResultChange"].sort());
+    assert.deepEqual(Object.keys(entrypoint).sort(), [...PUBLIC_CALLABLES, "codexOnOperationResultChange", "archiveEmployee"].sort());
+    const normal = await import("../../functions/apis/index.js");
+    assert.equal("archiveEmployee" in normal, false, "Employee archive is dedicated-entry only until its separate release gate");
     for (const forbiddenExport of [
       "geocoding",
       "onNotificationCreated",

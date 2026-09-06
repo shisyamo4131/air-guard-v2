@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-05のEmployee専用archiveを実装した。会社管理者・統括が理由を入力し、12の従属先を同transactionで確認してから、取得した原本を別collectionへ移す。結果不明時は同じ操作の確認を保持し、成功後は通常一覧・候補から除外する。現在は許可を明示した専用demoで検証中で、通常API公開・Dev適用・物理削除は未実施。[検証記録](docs/verification/employee-05-local.md)を参照。
+
 - EMP-05の背景保存として、勤怠・従業員別稼働・取引先請求・現場履歴にもEmployee参照の確認を接続した。埋込み全従業員の検索用索引と元情報を同時に保持し、旧Employee削除triggerのUser削除作用を停止した。取引先請求の入金予定日変更は専用の部分保存へ移し、背景保存先の直接client書込みを閉じた。archive本体は後続内部工程、検証・適用状態は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。
 
 - EMP-05の参照保存入口として、予定・実績・請求編集を専用保存へ移し、追加するEmployee参照だけを原本から確認する構成にした。配置通知は管理側・本人側とも状態の部分更新へ接続し、古い全文保存とRules迂回を閉じた。背景保存・archiveは後続の内部工程、画面受入れを含む現在の検証状況は[EMP-05 local記録](docs/verification/employee-05-local.md)を参照。Dev未反映。

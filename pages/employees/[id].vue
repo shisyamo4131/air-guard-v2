@@ -8,16 +8,19 @@
 import { useRoute } from "vue-router";
 import { useEmployeeDetailRead } from "@/composables/application/employee/useEmployeeDetailRead";
 import { User } from "@/schemas";
+import EmployeeArchiveDialog from "@/components/Employee/ArchiveDialog.vue";
 
 defineOptions({ name: "employee-detail" });
 const route = useRoute();
-const { doc, users: userDocs, userError, loading, error, missing, canRead } = useEmployeeDetailRead(() => String(route.params.id || ""));
+const { doc, users: userDocs, userError, loading, error, missing, canRead, excludeArchived } = useEmployeeDetailRead(() => String(route.params.id || ""));
 const user = new User();
 const showResignedAlert = computed(() => doc.value?.employmentStatus === "RESIGNED");
+function archived(id) { excludeArchived(id); return navigateTo("/employees"); }
 </script>
 
 <template>
   <v-container>
+    <EmployeeArchiveDialog :employee-id="String(route.params.id || '')" :employee="doc" @archived="archived" />
     <v-progress-linear v-if="loading" indeterminate />
     <v-alert v-if="error || userError" type="error">{{ error || userError }}</v-alert>
     <v-alert v-else-if="missing" type="info">従業員情報が存在しません。</v-alert>

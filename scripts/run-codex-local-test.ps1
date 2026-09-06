@@ -172,14 +172,26 @@ $externalEffectsModeWasSet = Test-Path Env:\AIR_GUARD_EXTERNAL_EFFECTS
 $externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
 $operationTriggerWasSet = Test-Path Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
 $operationTriggerBefore = $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
+$archiveTenantsWasSet = Test-Path Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS
+$archiveTenantsBefore = $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS
 try {
     $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
     Remove-Item Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER -ErrorAction SilentlyContinue
+    if ($Mode -eq 'Test' -and $Suite -eq 'Harness') {
+        $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS = '["codex-emp05-d-archive"]'
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS -ErrorAction SilentlyContinue
+    }
     Push-Location $runtimePath
     & $firebaseExe @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    if ($archiveTenantsWasSet) {
+        $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS = $archiveTenantsBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS -ErrorAction SilentlyContinue
+    }
     if ($operationTriggerWasSet) {
         $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER = $operationTriggerBefore
     } else {
