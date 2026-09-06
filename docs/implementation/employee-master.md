@@ -26,7 +26,7 @@
 
 ## EMP-01の保存・読取り契約案
 
-通常編集・退職・誤登録物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。以下の保存operation・競合・段階移行の詳細は未採用案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
+通常編集・退職・誤登録物理削除のactor、既知業務roleへの全項目read、自宅座標取得の必要性は採用済みである。退職後の通常編集禁止、在職Employeeの保険履歴復元actorと現行遷移維持は[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)で追加採用済み。その他の保存operation・競合・段階移行の詳細は未採用案として区別する。残る判断は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)、[CONF-0065](pending-confirmations.md#conf-0065-employee-code表示名退職者候補の規則)、[CONF-0120](pending-confirmations.md#conf-0120-employee個人住所geocodingの目的同意保持)で扱う。
 
 ### EMP-02の入力と保存対象
 
@@ -46,14 +46,14 @@ serverは最新raw documentを取得し、不存在とnullの区別を保持し�
 
 ### 作成・競合・段階移行
 
-EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業務仕様の変更を分ける。下表は未採用案であり、actor採用から氏名・保険・住所の個別仕様まで確定したとは扱わない。
+EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業務仕様の変更を分ける。下表では退職後編集禁止と保険のactor・現行遷移維持を採用済みと明記し、それ以外の技術案を未採用として区別する。
 
 | 判断 | 具体案 | 維持する条件・受入れ |
 |---|---|---|
 | 基本/国籍の保存 | 専用Callableで最新原本にpatchを重ね、Classとoperation契約を検証。通常可逆fieldはfield限定last-write-wins、同じ編集中sectionの変更通知を受けたら再読込 | User/Auth・退職field・他section・unknown fieldを保持。保存先が不存在ならupdateを拒否し、全文setで再作成しない。国籍解除等で他fieldを消す操作と入社日の相関は局所expectedの対象案 |
 | 作成/編集の氏名 | 姓名変更による表示名生成の後に、その保存で明示変更した表示名を適用。表示カナは独立入力のまま | 姓名だけの変更、表示名だけの変更、両方変更を別々に確認。原簿氏名を表示名へ置き換えて帳票の意味を変えない |
-| 退職後の通常編集 | 基本・国籍・警備員・資格・保険の訂正を通常編集actorへ認める案。退職日/状態は専用操作だけ | 入社日訂正で退職日との既存相関を壊さない。訂正によるUser/Auth復元・業務履歴再生成を起動しない |
-| 保険 | 現6操作を専用保存へ移す。履歴復元のactorと手続中の喪失/適用除外の扱いはCONF-0061の個別判断 | 操作前の対象保険mapと最新値を照合し、historyの二重push/popを拒否。他の保険や基本fieldは保持。行政手続・保険料計算・監査制度を追加しない |
+| 退職後の通常編集（採用済み） | 基本・国籍・警備員・資格・保険の通常編集を全actorで禁止する。閲覧は維持 | 最新EmployeeがRESIGNEDなら保存拒否。編集中退職も対象。専用誤退職訂正の既存条件を維持し、通常情報訂正の迂回として使わない |
+| 保険 | 在職者の現6操作は履歴復元も会社管理者・統括・人事へ許可、手続中条件は現行維持と採用済み。退職後は操作不可。専用保存へ移す方式を設計する | 操作前の対象保険mapと最新値を照合し、historyの二重push/popを拒否。他の保険や基本fieldは保持。行政手続・保険料計算・監査制度を追加しない |
 | 段階移行 | EMP-02では未移行の警備員・資格・保険editorをlocalで一時read-onlyにし、EMP-03/04で順次再開する案 | 旧全文writerを残して安全化済みfieldへ迂回できる構成にしない。Devへ中間停止状態を無断反映せず、保存拒否を成功表示しない |
 
 氏名setterと従属初期化はinstalled Employeeの現実装、保険の操作可否はInsuranceと`components/Insurance/Transition/Menu/index.vue`を静的照合した。表の受入れは予定であり、今回runtime/Emulator/UI testは実行していない。表示用getterを新しい保存fieldとして追加する指示でもない。
@@ -76,9 +76,25 @@ EMP-01再開時の判断案は、通常CRUDの安全化に必要な変更と業�
 
 ### EMP-01から次工程へのreview結果
 
-EMP-01-DESIGN-A/SEC-A/TEST-Aのread比較は、全項目read採用により今回不要となった。通常保存/氏名、保険特別操作、座標未取得の保存表現/最新住所整合、段階writer移行、削除の成立条件/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
+EMP-01-DESIGN-A/SEC-A/TEST-Aのread比較は、全項目read採用により今回不要となった。通常保存/氏名、退職後更新拒否と保険保存の実装条件、座標未取得の保存表現/最新住所整合、段階writer移行、削除の成立条件/工程配分は未決であり、EMP-02準備完了ではない。reviewと現在の次作業は[ロードマップ](../roadmaps/employee.md)を参照する。製品code・runtimeは未変更/未検証である。
 
 ### 誤登録物理削除への切替で残る実装条件
+
+#### 削除を許可するための判定項目
+
+利用者が説明を求めた「安全条件」は、採用済みの従属なし・非連鎖削除を成立させる次の判定項目を指す。方式や提供時期まで採用済みという意味ではなく、物理削除延期案は未承認である。
+
+| 条件 | 合格とする状態 | 現時点の差・未確認 |
+|---|---|---|
+| 実行者と対象 | 現在の同社・有効な本登録会社管理者または統括が、対象の誤登録を確認して専用操作を実行する | actorは採用済み。対象確認と専用削除は未実装 |
+| 従属なし | 予定・実績・通知・勤怠/日次/履歴・User/予約等の確定したcatalogに保持すべき参照がない。検査失敗や不整合は拒否 | 既存3依存だけでは不足。埋込み参照等のcatalog確定・検査設計が残る |
+| 後から参照を追加しない | 検査中・削除後の同時保存や遅延処理で、削除済みEmployeeを参照するrecordを作らない | 現予定writerはEmployee存在を検査しない。他collectionの保存・Rules不変で成立する方法は未確定 |
+| 他のdataを削除しない | 誤登録Employee本体だけを削除し、従属やUser/Authを連鎖削除しない | 旧Employee削除triggerのUser削除作用と遅延eventの扱いを解決する必要がある |
+| 古い操作で再生成・誤削除しない | 古い全文保存でEmployeeを再生成せず、同ID再作成後に古い削除要求を作用させない。応答不明も対象と結果を照合する | 旧writer・再送・対象識別の実装と検証が残る |
+
+具体例: Aが従属0件を確認してEmployeeを削除した後、Bが削除前から開いていた画面のEmployee IDで予定を保存する。`utils/siteOperationSchedule/siteScheduleGuard.js`の作成transactionはSiteを検査し予定を保存するが、Employeeを読まない。現在の予定RulesもEmployee存在を条件にしていないため、Employee側の削除直前検査だけではこの保存を防げない。旧`functions/modules/Employees.js`の削除triggerは実行時にemployeeIdでUserを検索して先頭を削除するため、対象不存在の確認だけで背景処理の安全性も証明したとはしない。
+
+上記は静的sourceで確認した未対処経路であり、競合再現や全代替方式の不可能性を証明したものではない。特定の新lock・台帳・全writer改修・全件scanを必須方式にしない。確認dialogや操作自粛の依頼だけで同時保存を防げるとは主張しない。
 
 2026-09-06、EMP-01-DELETE-IMPACTの静的調査。actor・従属なし削除・archive延期は採用済みだが、以下は実装前に確定・検証する条件であり、安全な削除の完成を示さない。
 

@@ -757,7 +757,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 
 同日の追加回答で、労務・法務・管制・経理も「現時点では全項目OK」と確定した。会社管理者・統括・人事を含む既知業務roleのEmployee原本全項目readを維持し、項目別mask/DTO・表示用data分割のための新APIは今回導入しない。既存検索・原簿氏名/性別/国籍表示・リアルタイム購読を活かす。roleなし・未知role・他tenant・無効/仮Userの原本readと既存archiveの過剰アクセスは別途閉じる。詳細は[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
 
-退職後の通常訂正と入社日の相関、保険の手続中操作・history復元actor等の詳細は未決。保険通常編集actorは会社管理者・統括・人事で確定したが、以前の「history復元は会社管理者だけ」「手続中の喪失/除外は先に取下げ」は未採用案である。履歴復元は過去entryをpopする操作であり監査履歴とは呼ばない。通常保存で退職field（不存在を含む）やUser/Authを変更せず、保持期限や制度要件を推測で追加しない。
+追加回答で退職後の通常訂正を禁止し、在職Employeeの保険履歴復元を会社管理者・統括・人事へ許可した。保険の手続中操作は現行遷移条件を維持し、以前の「history復元は会社管理者だけ」「手続中の喪失/除外は先に取下げ」は採用しない。退職後の保険処理も通常編集禁止に含む。専用誤退職訂正は既存境界を維持する。[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照。履歴復元は過去entryをpopする操作であり監査履歴とは呼ばない。通常保存で退職field（不存在を含む）やUser/Authを変更せず、保持期限や制度要件を推測で追加しない。
 
 ### 既存確認事項
 
@@ -769,7 +769,7 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Options and impact: field別read model、本人+労務限定、管理者のみ、機能別document分割。
 - Current provisional treatment: 現行境界を暫定実装とし、安全な確定仕様とはしない。
 - Related FUT IDs: FUT-0075、FUT-0159
-- Answer: 2026-09-06 actor方針と現時点の全項目readを部分回答。上記の確定要件へのlinkを参照。保険特別操作、保持・訂正条件は未回答のため一括Answeredにしない。
+- Answer: 2026-09-06 actor方針と現時点の全項目readを部分回答。上記の確定要件へのlinkを参照。退職後編集禁止・保険履歴復元actorと現行遷移維持も回答済み。保持期限・監査等は未回答のため一括Answeredにしない。
 
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
 

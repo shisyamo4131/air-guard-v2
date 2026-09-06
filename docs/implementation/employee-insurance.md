@@ -6,6 +6,10 @@
 
 下の2026-08-11記録のRules「全field write」「super-user全read/write」は当時の記述である。現在はEmployee退職3fieldの変更とdeleteを拒否し、同社の有効な本登録Userというidentity境界があるが、保険のpermission・field・遷移制約は不足する。archiveの個別/汎用許可も含め[現行再照合](employee-master.md#現行経路の再照合)を参照する。今回のruntime test、保存data検証、Dev確認は未実施。
 
+## EMP-01の採用条件（2026-09-06追加回答）
+
+在職Employeeでは履歴復元を含む6操作を会社管理者・統括・人事へ許可し、下記の現行状態遷移を維持する。退職後は保険更新・履歴復元を含め通常編集を禁止する。現UIの退職者操作可能という記録は実装事実であり、採用仕様ではない。[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)に従い、保存時の最新在職状態と保険の局所競合を同じ保存境界で確認する。実装・runtimeは未検証。
+
 ## メタデータ
 
 - 状態: 実装調査（SPEC-DEEP-027で対象9 componentをdeep review済み）

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Employeeは退職後の通常編集を全actorで禁止する仕様を採用した。在職者の保険履歴復元は会社管理者・統括・人事へ許可し、現行の遷移条件を維持する。既存の専用誤退職訂正は維持する。仕様反映のみで実装は未実施。[判断](docs/decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照。
+
 - Employeeの新規作成・住所変更で座標取得が失敗しても、住所は保存し、古い座標を消して未取得を知らせる仕様を採用した。住所不変の更新では既存座標を維持する。仕様反映のみで製品実装は未実施。
 
 - Employeeの閲覧を、会社管理者と既知6業務roleへ現時点では全項目許可する方針に変更した。操作別write権限を維持し、項目を隠すためのread API・data分割は今回導入しない。自宅座標は将来の現場・自宅間の経路図に必要とし取得・保存を継続、経路図は将来工程とする。他collectionの保存処理・Rulesも今回変更しない。仕様反映のみで製品実装・Dev反映は未実施。[判断](docs/decisions/0058-employee-full-read-and-geocoding-scope.md)を参照。
