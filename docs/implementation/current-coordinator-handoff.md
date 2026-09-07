@@ -4,25 +4,25 @@
 
 ## 現在の作業
 
-- 製品は試験運用中。Customer状態改修はCS-03、Customer archive safetyはCAS-04までlocal実装・検証・Git統合を完了しました。CS-04とCAS-05のDev反映・利用者受入れは、マスタデータ管理改修後まで延期しています。
+- 製品は試験運用中。Site SITE-09、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09のDev受入れを完了し、各roadmapを100%とした。
 - 2026-09-04の反省会に基づくproject rule整理の判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、現在の入口と必読routeは[project rule index](../../governance/project-rules.md)を正とする。共通ガバナンス、生成AGENTS、lock記録済みmanaged reference、verification policy、製品code・data・environmentはこの整理の変更対象外である。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
 
 ## 未決事項と承認
 
-- Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
-- Spark用standalone Developer taskは中止済みで再利用しない。SiteはSITE-09のRules補正と機能面Dev受入れまで完了し、100%である。Local実測は[SITE-08証拠](../verification/site-08-local.md)、Dev実測は[SITE-09証拠](../verification/master-dev-site-create-correction.md)を正とする。見た目・操作感の追加改善は利用者判断で後続phaseへ送った。破棄された別taskのEmployee改修案は採用しない。Prod、remote既存data補完、package、緊急restore、retention/purge、OUT-08以降は別承認である。
+- CAS-05は参照なしarchive、経理account境界、active Site参照中のarchive拒否と拒否後の不変をDevで確認した。合成Site・Customerは各action-time承認後にarchive済みである。[roadmap](../roadmaps/customer-archive-safety.md)、[Dev受入れ結果](master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)を正とする。
+- 通常Employee archive allowlistは空である。見た目・操作感、Prod、実data補完、package、緊急restore、retention/purgeは別工程である。Spark taskと破棄済みEmployee案は再利用しない。
 - Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
-最優先は、初回bounded Dev反映後に残るCustomer、Outsourcer、Employeeの機能受入れである。SiteはSITE-09まで完了した。下記の[準備作業一覧](#dev反映前の準備作業一覧)は完了済みpreflightの根拠として残し、現在の実行状態と次作業は[No.10の現在地](#no10の現在地と停止点)および各roadmapを正とする。追加のexternal write、data処置、tenant開放、Prodは個別承認なしに開始しない。
+4マスターの初回bounded Dev受入れは完了した。準備一覧は完了済みpreflightの根拠として残す。次工程の選定、追加write、data処置、tenant開放、Prod、Git統合はそれぞれの承認境界に従う。
 
-1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。初回bounded Dev反映後のOUT-08機能受入れが残る。配置・通知・実績・請求・帳票の新規作成は受入れ対象外である。
+1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。
-3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。初回bounded Dev反映後のEMP-09機能受入れが残る。archive APIの対象tenant allowlistは空のまま維持し、tenant開放、実Employee／User／Auth操作、remote既存data補完、migrationは別承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。
-4. Customer状態のCS-04とarchive safetyのCAS-05を含む、初回bounded Dev反映後の機能受入れが残る。既存実dataを変えないreadと承認済み合成dataを基本にし、実Customer archiveや全件scan・自動変換は行わない。[Dev受入れ計画](master-dev-acceptance-plan.md)と各Customer roadmapを正とする。
+3. [Employee](../roadmaps/employee.md)はEMP-09まで完了し100%。合成Employeeは在職状態で、archive・User／Auth操作は行っていない。
+4. [Customer状態](../roadmaps/customer-status.md)はCS-04、[archive safety](../roadmaps/customer-archive-safety.md)はCAS-05まで完了し、ともに100%。今回の合成Customer・Siteはarchive済みである。
 
 ## Dev反映前の準備作業一覧
 
@@ -39,7 +39,7 @@
 
 ### マスター固有の準備
 
-- [x] Customer: 状態表示・契約終了/復帰・絞込み等の新UIについて、[U8-1](master-dev-acceptance-plan.md#利用者事前確認)で利用者確認を完了した。Dev反映・反映後の最終受入れはCS-04に残る。[状態roadmap](../roadmaps/customer-status.md)を参照する。
+- [x] Customer: 状態表示・契約終了/復帰・絞込み等の新UIについて、[U8-1](master-dev-acceptance-plan.md#利用者事前確認)で利用者確認を完了した。その後のDev反映・権限別受入れもCS-04で完了した。[状態roadmap](../roadmaps/customer-status.md)を参照する。
 - [x] Customer: archive APIと3参照writer／Rulesの整合、exact対象のactive／same-ID archive／参照確認をNo.6へ固定した。既存flat archive等は自動変換せず、今回の変更だけを理由にCustomer全件保存形式検査を反復しない。[archive roadmap](../roadmaps/customer-archive-safety.md)を参照する。
 - [x] Site: 自動終了候補をACTIVE＋工期終了日時へ限定し、候補に関係する予定field、必要index、公開時期をNo.6・No.7へ固定した。`runDailySiteTermination`はdata確認・snapshot・別承認後まで未公開とする。
 - [x] Site: Site query field、工期派生値、任意revision、archive形状／同ID、埋込みCustomer、直接5参照の確認範囲をNo.6へ固定した。日次snapshotを過去値として推測backfillしない。[Site roadmap](../roadmaps/site.md)を参照する。
@@ -67,7 +67,7 @@ Site作成補正は`c1be8faf`へcommitし、clean HEADの専用Local UI buildま
 
 ### 今回の停止点より後の作業
 
-SITE-09は利用者判断により機能面を完了した。次は4マスター受入れ計画に残るCustomer、Outsourcer、EmployeeのDev受入れを個別roadmapと承認境界に従って進める。残したDev合成Customerのcleanupは対象と復旧不能性を確認した別承認で扱う。Siteの見た目・操作感、将来のrestore/purge、自動終了公開、transaction全体の刷新、未承認package変更は既存の別工程に残す。
+4マスターのDev受入れ結果は[Dev受入れ計画](master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)を正とする。今回の一時合成Customer・Siteはcleanup済みである。見た目・操作感、将来のrestore/purge、自動終了公開、transaction全体の刷新、未承認package変更は既存の別工程に残す。
 
 ## 参照
 

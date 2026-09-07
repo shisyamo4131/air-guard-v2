@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- 初回bounded Dev反映後の残るマスター機能受入れとして、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09を完了した。会社管理者では各masterの承認済み通常操作、経理accountでは一覧・検索・詳細の閲覧とwrite導線非表示を確認した。CAS-05は一時合成Customer・active Siteで参照中のarchive拒否と拒否後の不変をDev確認し、両masterを承認済みarchive経路でcleanupした。合成Outsourcerは契約終了、合成Employeeは在職状態で保持し、Employee archive allowlistは空のままUser／Authenticationを作成・削除していない。[Dev受入れ結果](docs/implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)を参照。
+
 - Devの会社管理者による、Customer紐付け・座標ありSite作成がFirestore Rulesの1000式評価上限で拒否される不具合を修正した。Siteのexact schema、派生値、Customer projection、actor・tenant・maintenance境界は維持し、fallbackを先に拒否して重複検証を削減した。Local UI、全domain 1509件、全Local Emulator 182件、clean HEADの専用Local UI build後、補正版RulesだけをDevへ反映した。Devでは会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchive、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を完了、見た目・操作感の追加改善を後続phaseと判断し、Site進捗を95%から100%へ更新した。Hosting・Functions・Indexesは補正時に再反映せず、合成Siteはarchive、合成Customerは残している。[検証記録](docs/verification/master-dev-site-create-correction.md)を参照。
 
 - 今後のLocal検証は、commandや手段ではなく証明事項で重複を判定する。非失効の既存証拠と条件一致する起動済みEmulator・server・browserを再利用し、不足・失効した範囲だけを追加検証するproject ruleを追加した。明示的な必須gateは従来どおり独断で省略しない。

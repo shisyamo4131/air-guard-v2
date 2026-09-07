@@ -1,8 +1,8 @@
 # Customer archive safetyロードマップ
 
-- 状態: In progress
+- 状態: Completed
 - 開始日: 2026-09-04
-- 現在の進捗: 90%
+- 現在の進捗: 100%
 - 部分加点: なし
 - 完了条件: 誤登録・重複Customerを参照なしの場合だけ監査付きでarchiveでき、同時・後続参照と同ID再作成を拒否し、通常Userのrestore・archive閲覧・物理deleteを提供せず、local実装・自動test・Codex専用local UI・独立review・文書・Git統合・別途承認するDev反映と受入れを完了する。
 - 正本: [現行仕様](../specification.md#取引先現場取極め)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[実装設計](../implementation/customer-archive-safety.md)
@@ -30,7 +30,7 @@ CAS-02のexact ownership、test、書込みlease、差戻し、独立review、�
 | CAS-02 専用Callable・監査・冪等性 | 25 | 25 | Completed | commit `74d0eb4d`、domain 873/873、Emulator 123/123、targeted log test、独立security/general review、反省会記録 |
 | CAS-03 参照writer barrier・Rules回帰 | 30 | 30 | Completed | commits `8e6eb1d5`・`c99b8169`、domain 889/889、Emulator 142/142、security 5/5、独立review |
 | CAS-04 UI・local受入れ・最終review・Git統合 | 15 | 15 | Completed | commit `8db79a2e`、domain 913/913、Emulator 142/142、専用build、[local UI受入れ](../verification/customer-archive-local-acceptance.md)、独立general/security review |
-| CAS-05 Dev反映・利用者受入れ | 10 | 0 | Deferred | マスタデータ管理改修後のbounded Dev releaseと権限別受入れ |
+| CAS-05 Dev反映・利用者受入れ | 10 | 10 | Completed | bounded Dev release後、会社管理者の参照なしarchive、active Site参照中のarchive拒否と拒否後の不変、経理accountの閲覧・write導線非表示を確認した。合成Site・Customerは承認済みarchive経路でcleanupした。[Dev受入れ結果](../implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果) |
 
 重み合計100。各マイルストーンの証拠がすべて揃った場合だけ加点する。CAS-01は設計だけの完了で、製品にarchive機能が実装されたことを意味しない。
 
@@ -63,7 +63,7 @@ active Customerの26-field schemaは維持する。Rules update guardはcustomer
 
 ## 次工程
 
-CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い完了した。CAS-03はRules、Billing server writer、test、security/general reviewを通常サブエージェントへ分割して完了した。CAS-04はclient/UI、Codex専用build・local UI受入れ、独立review、local Git統合まで完了した。次はCAS-05だが、Dev反映・利用者受入れはマスタデータ管理の一連の改修後へ延期し、別承認する。
+CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas02-developer-trial.md)に従い完了した。CAS-03はRules、Billing server writer、test、security/general reviewを通常サブエージェントへ分割して完了した。CAS-04はclient/UI、Codex専用build・local UI受入れ、独立review、local Git統合まで完了した。2026-09-07にCAS-05のbounded Dev release、参照なしarchive、経理account境界に加え、一時合成Customer・active Siteで参照ありarchive拒否と拒否後の不変を確認した。合成Site・Customerは各action-time承認後にarchiveし、通常一覧から除外した。CAS-05へ10点を加え、進捗100%として完了する。
 
 ## 進捗履歴
 
@@ -73,3 +73,5 @@ CAS-02は[実行契約と反省会記録](../implementation/customer-archive-cas
 | 2026-09-04 | 45% | +25 | CAS-02専用Callable、version 1 archive、same-operation retry、safe error/logをlocal実装し、domain 873/873、Emulator 123/123、独立review、commit `74d0eb4d`、反省会を完了した。CAS-03/04、Rules、client/UI、参照writer、Dev/remoteは未着手。 |
 | 2026-09-04 | 75% | +30 | CAS-03のarchive非公開・same-ID tombstone・3参照RulesとBilling server transaction barrierをlocal実装した。nested Billing path、transaction retry log、move失敗の偽陽性をreview差戻しで補正し、domain 889/889、Emulator 142/142、security再監査5/5、独立review、commits `8e6eb1d5`・`c99b8169`を確認した。CAS-04 UIとDev/remoteは未着手。 |
 | 2026-09-04 | 90% | +15 | CAS-04のwrite actor限定archive action、確認dialog、reason、single-flight、安全なerror表示、成功後一覧遷移をlocal実装した。domain 913/913、Emulator 142/142、専用build、write/read-only actor・参照拒否・高速double-click・成功archiveのlocal UI受入れ、独立general/security review、commit `8db79a2e`を確認した。CAS-05のDev/remote反映・利用者受入れは未実施・別承認。 |
+| 2026-09-07 | 90% | +0 | bounded Dev release、会社管理者の参照なしarchive、経理accountの閲覧・write導線非表示を確認した。参照ありarchive拒否のDev実操作が未確認であり、CAS-05は部分加点なしのため未完了・得点0を維持する。 |
+| 2026-09-07 | 100% | +10 | 一時合成Customer・active Siteにより参照中のarchive拒否と拒否後の不変をDevで確認した。合成Site・Customerを承認済みarchive経路でcleanupし、CAS-05を完了した。 |

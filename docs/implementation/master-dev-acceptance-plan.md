@@ -54,7 +54,19 @@ No.10へ進む前に次を確認する。UI確認は機能検証を再実行す�
 
 利用者は2026-09-07に、4マスター管理機能のUIを概ね確認し、機能面についてDev受入れへ進めると判断した。役割が類似するcomponentの共通化、画面ごとに異なるcomponent境界、DataTable／DataIteratorを含むデザイン統一は未完了の機能改修ではなく、Dev受入れ完了後の別phaseで扱う。
 
-SiteはNo.10後のDevで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を受入れ、見た目・操作感の追加改善を後続phaseへ送ったため、SITE-09を完了した。合成Siteは承認済みarchive経路で通常一覧から除外し、合成Customerは残している。詳細は[SITE-09記録](../verification/master-dev-site-create-correction.md)を正とする。
+SiteはNo.10後のDevで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を受入れ、見た目・操作感の追加改善を後続phaseへ送ったため、SITE-09を完了した。合成Siteは承認済みarchive経路で通常一覧から除外した。Site受入れ時点で残した合成Customerも、その後のCustomer受入れでarchive済みである。詳細は[SITE-09記録](../verification/master-dev-site-create-correction.md)を正とする。
+
+## No.10後のCustomer・Outsourcer・Employee Dev受入れ結果
+
+2026-09-07に、反映済みDevを既存の会社管理者accountと経理accountで確認した。実在のCustomer、Outsourcer、Employee、User／Authenticationは操作せず、明確なtest labelを持つ合成masterだけを使用した。FCM、email、Stripe、PDF、実通知、課金、User／Authentication削除、Prod、migration、全件scanは実行していない。
+
+| master | 会社管理者で確認した操作 | 経理accountで確認した境界 | 判定と処置 |
+|---|---|---|---|
+| Customer | 基本情報編集、取引状態の終了・復帰、状態別検索、参照なしarchive、active Siteから参照されるCustomerのarchive拒否 | 一覧・検索・状態絞込み・詳細を閲覧でき、作成・編集・状態変更・archive導線が表示されない | CS-04とCAS-05は完了。参照拒否後の再読込でCustomerとSiteが変更されていないことを確認した。合成Siteを先に、合成Customerを後に承認済みarchive経路でcleanupし、通常一覧から除外した。通常画面にrestore導線はない |
+| Outsourcer | 作成、名称検索、基本情報編集、契約終了、終了済みmasterの表示・選択 | 一覧・名称検索・詳細を閲覧でき、作成・編集・破壊操作の導線が表示されない | OUT-08は完了。製品にarchive／deleteを設けない契約どおり、合成Outsourcerは契約終了状態でDevに保持する |
+| Employee | 作成、基本情報・国籍・警備員登録・資格・3保険の編集、退職・復帰 | 在職一覧・詳細を閲覧でき、作成・各編集・退職・User登録・archive導線が表示されない | EMP-09は完了。通常archive APIのtenant allowlistは空のまま、archiveは実行していない。合成Employeeは在職状態で保持し、User／Authenticationは作成していない |
+
+Customer archive safetyは、利用者承認のもと一時合成Customerとactive Siteを作成してDev実操作を行った。Customer archive要求は参照中である旨を表示して拒否され、再読込後もCustomerはactive、Siteは稼働中、両者の参照は維持されていた。その後、各破壊操作のaction-time承認を得てSite、Customerの順にarchiveし、通常一覧から除外した。これによりCAS-05を完了した。
 
 ## account最小構成
 
@@ -102,7 +114,9 @@ No.8のCodex担当部分は、この計画、操作表、担当分離、停止�
 
 今回証明する事項は受入れ手順と担当境界の具体化、および利用者が指定した4マスター全体のUI確認である。UI確認は機能検証の再実行ではないため、既存Local domain、Emulator、buildを再実行しない。各画面の既存環境とdataを使い、利用者の見た目・操作感の判断に必要な画面遷移だけを行う。UI確認中に保存を伴う機能再確認が必要になった場合は、既存証拠で未証明または変更で失効した事項だけを追加する。
 
-`build-release-deploy`として扱い、最終worktreeで文書変更により失効する`project-docs`と`diff-check`を実行する。`managed-governance`、`project-docs-negative`、`capacity-regression`は各gateの`invalidatedBy`に該当する変更がないため、No.6・No.7で確認した既存成功証拠を再利用する。remote read、Dev build、deploy、data変更、migration、IAM変更は未実行である。
+No.8計画確定時は`build-release-deploy`として扱い、最終worktreeで文書変更により失効した`project-docs`と`diff-check`を実行した。`managed-governance`、`project-docs-negative`、`capacity-regression`は各gateの`invalidatedBy`に該当する変更がなかったため、No.6・No.7で確認した既存成功証拠を再利用した。その時点ではremote read、Dev build、deploy、data変更、migration、IAM変更は未実行だった。
+
+No.10のbounded Dev releaseと上記受入れは別の承認済み実行として完了した。今回の受入れ結果追記はrelease手順・baseline・artifact・製品runtimeを変更しない`project-guidance-metadata`であり、文書変更により失効する`project-docs`と`diff-check`を最終状態で再実行する。`managed-governance`、`project-docs-negative`、`capacity-regression`は対象pathと契約を変更しておらず、Dev release時のdomain、Emulator、build、generate証拠もこの文書追記では失効しない。
 
 ## 根拠
 

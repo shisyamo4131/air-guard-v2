@@ -2,9 +2,9 @@
 
 - 目標: 特定の協力会社を表すOutsourcer masterについて、同一tenant内の権限、保存契約、契約終了、archive、検索・表示、重複配置を段階的に整合させる。
 - 確認済み業務境界: Outsourcerは外注警備員個人ではなく協力会社masterである。同じOutsourcerを一つの配置へ複数回登録できる。Outsourcerと人数を一組にして集約する方式は採用しない。
-- 現在の進捗: 90%
+- 現在の進捗: 100%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 環境境界: OUT-01からOUT-07はlocal仕様・実装・検証までを対象とする。Dev反映・remote/data確認はマスタ改修後の別承認checkpointまで行わない。
+- 環境境界: OUT-01からOUT-07はlocal仕様・実装・検証、OUT-08は承認済みbounded Dev releaseと権限別受入れを対象とした。Prod、migration、全件scan、実data補正は含まない。
 
 ## マイルストーン
 
@@ -17,7 +17,7 @@
 | OUT-05 code・検索・一覧表示 | 10 | 10 | Completed | codeを任意・重複可・検索外として維持し、通常一覧を20件server cursor、名称検索を20件memory paginationへ整合した。外注先専用rendererと契約終了表示を追加し、対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | OUT-06 協力会社masterと重複配置の互換性 | 10 | 10 | Completed | 同一Outsourcerを人数1の別明細として複数配置し、安定した`workerId`で行・通知・実績を区別する契約を回帰testで固定した。重複行のVue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。実装commit `794af0ed`。 |
 | OUT-07 local統合確認 | 10 | 10 | Completed | 対象test 48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smoke、Rules陰性、保存data不変、cleanupを確認した。拒否actorの実browserは未実施だが、利用者承認により自動UI契約テストとRules陰性をOUT-07固有の代替証拠とした。周辺transaction機能は変更していない。[証拠](../verification/outsourcer-out07-local-integration.md)を参照。 |
-| OUT-08 Dev反映・受入れ | 10 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client・既存data・権限別操作・関連操作を確認する。 |
+| OUT-08 Dev反映・受入れ | 10 | 10 | Completed | bounded Dev release後、会社管理者の作成・名称検索・編集・契約終了・終了済み表示と、経理accountの一覧・検索・詳細閲覧およびwrite導線非表示を確認した。archive／deleteを設けない契約どおり、合成masterは契約終了状態で保持する。[Dev受入れ結果](../implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果) |
 
 ## OUT-01の確定範囲
 
@@ -120,8 +120,8 @@
 
 ## 未確認・別承認
 
-- Dev・Prodの現在Rules、remote Firestore、既存Outsourcer/archive件数、実利用actor、旧client併存は未確認である。
-- OUT-08以降の具体仕様、Dev/Prod、remote/data、migration、deploy、package変更は未承認である。
+- Prodの現在Rules、remote Firestoreの既存Outsourcer/archive全件数、実利用actor、旧client併存は未確認である。
+- OUT-08のbounded Dev反映・合成dataによる権限別受入れは完了した。Prod、全件scan、実data補正、migration、package変更は未承認である。
 
 ## 進捗履歴
 
@@ -134,3 +134,4 @@
 | 2026-09-04 | 70% | +10 | codeを任意・重複可・検索外として確定し、通常一覧20件server cursor、名称検索20件memory pagination、外注先専用renderer、契約終了表示を実装した。対象test 25/25、domain 953/953、local Emulator 147/147、専用local UI build、文書検証、独立reviewを完了した。 |
 | 2026-09-04 | 80% | +10 | 同一Outsourcerの複数配置を人数1の別明細とし、安定した`workerId`で行・通知・実績を区別する契約を固定した。Vue keyを修正し、対象test 48/48、domain 961/961、専用local UI build、文書検証、独立reviewを完了した。 |
 | 2026-09-05 | 90% | +10 | Outsourcer master CRUDのlocal統合確認として対象48/48、domain 961/961、local Emulator 147/147、専用build、write actorのCRUD UI smoke、Rules陰性、保存data不変とcleanupを確認した。拒否actor実browserの自動代替は利用者が明示承認した。 |
+| 2026-09-07 | 100% | +10 | bounded Dev release後、会社管理者の作成・名称検索・編集・契約終了・終了済み表示と、経理accountの一覧・検索・詳細閲覧およびwrite導線非表示を確認し、OUT-08を完了した。 |
