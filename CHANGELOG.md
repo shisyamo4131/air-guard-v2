@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Employee archive Callableを通常Functions API entrypointへ接続した。通常用の許可tenant設定は既定空集合のままで、Codex専用demo設定との分離を維持する。Devへの公開、対象tenant開放、実data確認・補完はまだ実施していない。
+- Employee archive Callableを通常Functions API entrypointへ接続し、公開契約・既定拒否・Codex専用demo設定との分離をdomain/Emulator/起動中Chromeで検証した。Devへの公開、対象tenant開放、実data確認・補完はまだ実施していない。
 
 - AirGuardV2の承認済みGit操作について、branch作成・switch・stage・commitなどの`.git`書込みはsandbox内で失敗させず、対象を確認して最初から権限付き経路で実行するproject ruleを追加した。操作自体の承認、対象範囲、`main`・push・history rewriteの個別承認は従来どおり維持する。
 

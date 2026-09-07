@@ -44,7 +44,7 @@
 - [ ] Site: 自動終了が参照する既存予定の必須field、工期、自動終了対象への影響、公開・実行開始時期を検討する。
 - [ ] Site: archive形状、通常原本/archiveの同ID、埋込みCustomer、取極め、下流の日次snapshotについて、SITE-09が求める必要範囲の確認を具体化する。[Site roadmap](../roadmaps/site.md)を参照する。
 - [ ] Outsourcer: 既存data・旧client・実利用actorの確認範囲を決める。会社管理者/strict managerのwrite、契約終了後の選択継続、同じ協力会社の複数配置、archive/delete入口不在をDev確認表へ落とす。[Outsourcer roadmap](../roadmaps/outsourcer.md)を参照する。
-- [ ] Employee: 通常archive APIは`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続した。通常の許可tenant設定は既定空集合のまま維持する。No.3で公開契約・正常/拒否・専用demo分離を検証し、remote公開・tenant開放と区別する。
+- [x] Employee: 通常archive APIを`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続し、No.3で公開契約・正常/拒否・専用demo分離を検証した。通常用許可設定は既定空集合のまま維持する。実測は[Dev反映前Local検証記録](../verification/employee-dev-preflight-local.md)を参照し、remote公開・tenant開放は別承認とする。
 - [ ] Employee: 日次2種・BillingのEmployee参照索引と実明細の整合を確認する範囲を決め、必要な補完だけを別途具体化する。限定dry-runの成功だけでarchiveを開放しない。
 - [ ] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象へ含める。
 - [ ] Employee: 既存保険map/世代値の互換性、User/Auth・予約状態、住所の実provider接続などDev固有の確認項目を用意する。[Employee roadmap](../roadmaps/employee.md)、[実装記録](employee-master.md)を参照する。
