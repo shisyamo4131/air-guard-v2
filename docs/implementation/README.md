@@ -43,6 +43,7 @@
 - [現在の製品作業と再開案内](current-coordinator-handoff.md): 製品の未決事項・承認・次作業から正本へのroute。
 - [Customer Dev反映・受入れ計画](customer-dev-release.md): 既存dataへの影響判断、反映対象、切替・復旧、Devで確認する操作。
 - [4マスター Dev反映前 release surface inventory](master-dev-release-surfaces.md): Customer、Site、Outsourcer、Employeeと参照先の反映候補・対象外。
+- [4マスター Dev受入れ計画](master-dev-acceptance-plan.md): No.10前後の利用者判断、権限別account、合成data、操作、外部作用、cleanupの担当分離。
 
 ## アプリ入口・認証・共通基盤
 

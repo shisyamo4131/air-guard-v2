@@ -262,7 +262,7 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 
 ## 後続Checkpointへ渡す未確認事項
 
-1. No.8: 権限別account、合成data、Customer新UIを含む受入れ操作、外部作用、cleanupを具体化する。
+1. No.8: [4マスター Dev受入れ計画](master-dev-acceptance-plan.md)へ権限別account、合成data、Customer新UIを含む受入れ操作、外部作用、cleanupとNo.10前後の担当を具体化した。Codex担当の計画作成後、U8-1〜U8-4の利用者回答を待つ。
 2. No.9: No.6で必要性を限定したread-only preflight／dry-runに不足するlocal tool、最終差分、gateを確認する。
 3. No.10: actual Dev targetのread-only preflight結果を含むbounded release checkpointを提示し、明示承認後だけbuild／remote変更へ進む。
 
