@@ -95,10 +95,7 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
 </script>
 
 <template>
-  <v-container
-    class="align-start"
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <v-card class="fill-height d-flex flex-column" width="100%">
       <v-toolbar class="ps-4">
         <AtomsSearchTextField v-model="search" />
@@ -213,5 +210,5 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
             @click:detail="(item) => router.push(`/sites/${item.docId}`)"
           /> -->
     </v-card>
-  </v-container>
+  </AppViewportContainer>
 </template>

@@ -30,10 +30,7 @@ const { docs, loading, error, reload } = useEmployeeList({
 </script>
 
 <template>
-  <v-container
-    class="align-start"
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <EmployeesManager
       class="fill-height"
       :docs="docs"
@@ -47,5 +44,5 @@ const { docs, loading, error, reload } = useEmployeeList({
       @click:detail="(item) => router.push(`/employees/${item.docId}`)"
       @reload="reload"
     />
-  </v-container>
+  </AppViewportContainer>
 </template>

@@ -33,10 +33,7 @@ const {
 </script>
 
 <template>
-  <v-container
-    class="align-start"
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <OutsourcersManager
       class="fill-height"
       :docs="items"
@@ -56,5 +53,5 @@ const {
       @load:previous="loadPrevious"
       @retry="reload"
     />
-  </v-container>
+  </AppViewportContainer>
 </template>
