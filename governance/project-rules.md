@@ -15,10 +15,13 @@
 
 ## 必須の読取り順
 
-1. root `AGENTS.md`と本indexを読む。
-2. 下表から依頼・予定操作に該当する行をすべて選び、segmentと指定runbookを変更・委譲・Git操作・test・外部操作・完了判断より前に読む。
-3. `docs/README.md`から製品・機能固有の正本を選び、関連code、Rules、設定、test、実行証拠と照合する。
-4. routeを一意に選べない、必読文書が存在しない、または正本が矛盾する場合はread-onlyで停止して報告する。
+1. 作業開始時に、root `AGENTS.md`を他のfileと同じcommand・tool call・入力へまとめず、単独で全文読む。
+2. 次に、本index `governance/project-rules.md`を他のfileと同じcommand・tool call・入力へまとめず、単独で全文読む。両fileを読み終える前に、他のproject文書を読み始めない。
+3. その後、下表から依頼・予定操作に該当する行をすべて選び、segmentと指定runbookを変更・委譲・Git操作・test・外部操作・完了判断より前に読む。
+4. `docs/README.md`から製品・機能固有の正本を選び、関連code、Rules、設定、test、実行証拠と照合する。
+5. routeを一意に選べない、必読文書が存在しない、両入口fileの全文読取りを確認できない、または正本が矛盾する場合はread-onlyで停止して報告する。
+
+この独立読取り順は、大きなfileを一括取得した際の出力切捨てによる未読を防ぎ、同じ入口fileの再読込みを減らすための開始条件とする。
 
 delegation promptには選択したsegmentとtask-routed正本を列挙し、委譲先にもactual repository・branch・HEADとの独立照合を求める。複数行に該当する作業は必読集合の和集合を使い、入口やpromptへ本文を複写しない。
 
