@@ -38,6 +38,14 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の前回local受入れ判定は2026-09-07のUI回帰確認により撤回した。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
 
+## EMP-06での実装差分
+
+在職・退職一覧は`useEmployeeList`と`employeeListSession`へ移した。現在のEmployee read scopeだけで通常`Employees`を購読し、在職一覧は空検索でACTIVE全件、退職一覧は空検索で0件、非空時だけ指定statusを検索する。scope喪失・購読error・再検索では旧購読と表示値を破棄し、遅延した旧応答を採用しない。取得中はprogress、失敗時は固定文言と再読込を表示する。この見た目変更と統括の退職button表示は、理由・影響を提示して利用者の事前承認を得た。
+
+`Employee/UserManager.vue`はAirItemManager/useBaseManagerを外し、独立draft・single-flight・専用dialogから既存の`useTemporaryUserCreation`/`useTemporaryUserDeletion`だけを呼ぶ。User/Authの作成・削除契約、role選択、表示cardは維持し、通常Employee編集からUser/Authを作成・復元・同期する処理は追加していない。到達するEmployee CRUDのsource契約testでAirItemManager/AirArrayManager、旧model永続化、退職者一覧の作成入口、archive queryの再混入を拒否する。
+
+退職actorはstrict preset検証を通過した会社管理者・人事・統括をserver/clientで許可する。統括は現packageの`employees:terminate`を持たないため、検証済みrolesにexact `manager`がある場合を専用policyで追加した。直接permission文字列、未知role混在、無効・仮・他tenant・super-user・本人、管理者User連携対象など既存拒否は維持する。結果と未検証は[EMP-06 local記録](../verification/employee-06-local.md)を参照する。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。

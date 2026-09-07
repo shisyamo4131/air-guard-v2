@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-06をLocalで完了した。在職・退職一覧を専用の認可付き購読とlatest-wins sessionへ移し、確定済みの空検索・作成導線、承認済みのloading/error再読込表示を反映した。EmployeeのUser panelからAirItemManager/AirArrayManager依存を除き、既存の仮User作成・削除を独立draftと専用dialogで維持した。統括の退職をstrict preset検証後だけclient/serverで許可し、直接permissionや未知roleの拒否を維持した。現在のChrome、domain 1501件、Emulator 181件、clean HEADの専用UI buildで確認し、Employee進捗を75%から85%へ更新した。Dev・remote・実dataは変更していない。[EMP-06 local記録](docs/verification/employee-06-local.md)を参照。
+
 - EMP-05を再受入れた。05-A〜05-Eの閲覧・cache・参照writer/Rules・背景索引・旧削除trigger停止・専用archive・競合/保持証拠に、UI回帰修正後の作業員明細と稼働外売上既存行の表示・編集復元・取消を利用者Chromeで追加確認した。最終domain 1487件・Emulator 181件とclean source専用UI buildを再利用し、Employee進捗を55%から75%へ更新した。通常API公開、既存実data整合/補完、DevはEMP-09の別承認である。
 
 - EMP-02〜04を工程別に再受入れた。既存の専用保存・競合・権限・実UI/backend証拠に、UI回帰修正後の利用者Chrome確認、保険field不存在の互換修正、最終domain 1487件・Emulator 181件、clean source専用UI buildを照合した。Employee進捗は10%から55%へ更新した。EMP-05以降、Dev・remote・実dataは未完了または別承認である。
