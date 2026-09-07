@@ -1,6 +1,6 @@
 # Employee EMP-02〜04 local検証記録
 
-> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を撤回した。以下の既存成功記録は各時点の限定証拠として保持し、現在の再受入れは[Employeeロードマップ](../roadmaps/employee.md)とEMP-UI-R1の結果を参照する。
+> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を一度撤回した。その後、以下の既存成功記録、EMP-UI-R1、EMP-INS-R1、利用者Chrome、clean source専用UI buildを工程別に再照合し、EMP-02〜04を再受入れた。EMP-05は未完了のままである。
 
 - 対象: EMP-02 作成・基本・国籍、EMP-03 警備員登録・資格、EMP-04 3保険の保存
 - 実施承認: 2026-09-06「EMP-04まで一気通貫で作業開始」
@@ -206,3 +206,15 @@ test/domain/employee-save.test.mjs
 test/domain/firestore-rules-reservation-source-contract.test.mjs
 test/local/codex-local-harness.test.mjs
 ```
+
+## EMP-02〜04再受入れ（2026-09-07）
+
+checkpointは`EMP-02-04-REACCEPT`。primary repository、branch `codex/employee-master-roadmap`、開始HEAD `3fc3535e72afb849a7f6e79b98e20dbc6ddc8df1`をrootが直接確認した。開始時のtracked・untracked・staged差分はなく、利用者は「EMP-02〜04までは終わらせられると認識した。相違なければ終わらせてください」と工程別再受入れとlocal統合を承認した。EMP-05以降、Dev/Prod、remote、実data変更、package変更へ承認を拡張しない。
+
+完了判定は撤回前の工程別証拠をそのまま復活させず、後続のUI回帰修正と保険互換修正が各証拠を失効させる範囲を再照合した。EMP-02は専用保存・独立draft・閲覧/更新actor・住所/座標・局所競合・異field保持、EMP-03は警備員9field・資格の原配列位置・同名/並び替え/競合、EMP-04は3保険6操作・履歴・世代値・他保険保持を既存の実UI/backend、domain、Emulatorへ対応づけた。UI回帰修正後の利用者Chromeでは在職一覧の複数列表示、登録dialogの本文scroll後も残るタイトル/action、Employee詳細、資格dialogを確認した。保険互換修正後は既存Employeeで3保険すべての加入入力が開き、保存せず取消した。
+
+最終製品sourceに対する`node --test test/domain/*.test.mjs`は1487/1487、exit 0、`npm run test:local`は181/181、exit 0である。以後の`3fc3535e`はロードマップとCHANGELOGだけのEMP-01再受入れcommitであり、製品source、domain test、Functions、Rules、Emulator harness、設定を変更していないため両証拠を再利用する。利用者指示後、同じclean HEADで`npm run test:local:ui:build`を実行した。初回はclient build後のNitro処理がsandboxの`C:\Users\seven`に対する`readlink`を拒否してexit 1。製品errorと扱わず、同一commandを承認済み権限で再実行し、client 1423 modules、server、Nitro生成、identity marker作成まで成功、exit 0を独立確認した。Browserslist期限、chunk size、sourcemap、Node package exportのwarningは成功を妨げず、依存更新やwarning修正へ範囲を広げない。
+
+以上によりEMP-02、EMP-03、EMP-04は各完了条件を満たし、順に20、10、15点を再加点する。EMP-01の10点と合わせEmployee進捗を10%から55%へ更新する。EMP-05の実績明細は2026年6月の利用者Localで作業員6行、既存行の編集復元・取消、稼働外売上の表・追加dialog・取消まで確認したが、選択した実績に稼働外売上の既存行がなく、その既存行編集は未確認である。これはEMP-05の完了判断へ持ち越し、EMP-02〜04の保存・競合・保険契約の未達とはしない。
+
+変更classはproject-guidance-metadataとdocumentation-only。製品sourceを追加変更していないため、再受入れ文書の確定後は`project-docs`と`diff-check`を実行する。新しい要件、ADR、data shape、Rules、migration、package、governance、索引は変更しない。利用者Emulator・開発サーバー・Chromeを停止せず、今回のChrome確認で実dataの保存・追加・削除を行っていない。rollbackは本再受入れ記録と進捗更新のcorrective commitであり、検証済みの専用writerや保険互換修正を戻さない。
