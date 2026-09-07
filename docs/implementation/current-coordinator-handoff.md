@@ -19,7 +19,7 @@
 
 1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
 2. Site masterのSITE-08は[SITE-08検証記録](../verification/site-08-local.md)のLocal試験・build・cleanupまで完了した。次はDev反映前のlegacy確認とDev・remote接続であり、[Siteロードマップ](../roadmaps/site.md)のSITE-09として別承認である。
-3. Employee masterは[Employeeロードマップ](../roadmaps/employee.md)のEMP-08 Local統合確認を実施中。発見した必須未達の是正、最終検証、利用者Chrome、cleanup、目的別判定は[EMP-08記録](../verification/employee-08-local.md)を正とする。UI（見た目）の追加変更は利用者判断まで実装しない。EMP-09のDev反映・remote・実dataは別承認である。全体範囲は[正式運用ロードマップ](../roadmaps/airguard-v2.md#次の作業)、判断は[ADR 0055](../decisions/0055-scope-discovery-and-acceptance-review.md)を参照する。
+3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。次のEMP-09ではマスタ一連改修後にDev反映・旧client・必要data/索引・対象service・復旧を別承認する。通常archive API公開、対象tenant開放、remote・実data・migrationは承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。全体範囲は[正式運用ロードマップ](../roadmaps/airguard-v2.md#次の作業)を参照する。
 4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## 参照
