@@ -33,19 +33,19 @@
 - [x] No.1でprimary repository、branch、HEAD、未統合差分を確認し、`codex/master-dev-preflight`を4マスターの横断release準備branchとして開始した。No.4で4マスター改修の包含をsource差分と正本へ照合した。
 - [x] Hosting、Functions、Rules、必要な検索索引と、参照保護で変更した予定・実績・請求・背景処理を洗い出し、反映対象候補と対象外を分けた。[No.4 release surface inventory](master-dev-release-surfaces.md)を参照する。
 - [x] No.5で旧clientの書込み互換を前提にできない範囲、更新・再ログイン、boundedな無書込み時間帯、Indexes→Functions安全化→server closure→Rules→Hostingの順序、schedulerとEmployee archive tenant開放の分離、rollback境界を具体化した。[No.5 release順序](master-dev-release-surfaces.md#no5-旧clientと反映順序)を参照する。live Devの利用者・remote revision・index状態は後続Checkpointで確認する。
-- [ ] 変更差分とreader/writerから、既存data確認が必要なfield・利用経路・範囲を絞る。全件診断・一括修復・migrationを一律前提にしない。
-- [ ] 対象commit・service・data影響・必要なbackup・停止条件・復旧・検証を具体化した反映計画を提示する。実行手順は[Dev runbook](../runbooks/dev-deployment.md)、data対応は[data migration手順](../runbooks/data-migrations.md)へrouteする。
+- [x] No.6でmaster別の既存data確認範囲、既存証拠の再利用、remoteで必要なSite／Employee参照索引確認、indexのREADY／保留／不要判定を限定した。初回releaseはEmployee archive allowlistを空、Site自動終了を未公開に保ち、補完・migrationを前提にしない。[No.6 data・index範囲](master-dev-release-surfaces.md#no6-既存dataindex確認範囲)を参照する。
+- [x] No.7は初回releaseとdata作用を伴う後段を分離し、利用者から確認できた3区分のDev運用条件に基づく簡素化、backup適否、停止条件、forward correction／限定repair、解除条件を具体化した。利用者は2026-09-07に、初回は区分1だけの短い手動停止、区分3の合成data受入れとし、全体snapshot／全tenant scan／maintenanceを省略する方針を承認した。既存Admin SDKの不完全backupは全面復旧根拠に使わない。[No.7 backup・停止・rollback](master-dev-release-surfaces.md#no7-backup停止rollback計画)を参照する。
 - [ ] 受入れ用の会社・権限別account・合成data、試験で許可する操作、外部通知等の扱い、終了後の処置を具体化する。
 
 ### マスター固有の準備
 
 - [ ] Customer: 状態表示・契約終了/復帰・絞込み等の新UIについて、CS-04に残る利用者判断の対象画面と確認順を提示する。[状態roadmap](../roadmaps/customer-status.md)を参照する。
-- [ ] Customer: archive APIと関連参照writer/Rulesの反映整合を確認する。既存flat archive等の確認が必要な範囲を決め、旧形式が存在しても自動変換しない。[archive roadmap](../roadmaps/customer-archive-safety.md)を参照する。
-- [ ] Site: 自動終了が参照する既存予定の必須field、工期、自動終了対象への影響、公開・実行開始時期を検討する。
-- [ ] Site: archive形状、通常原本/archiveの同ID、埋込みCustomer、取極め、下流の日次snapshotについて、SITE-09が求める必要範囲の確認を具体化する。[Site roadmap](../roadmaps/site.md)を参照する。
-- [ ] Outsourcer: 既存data・旧client・実利用actorの確認範囲を決める。会社管理者/strict managerのwrite、契約終了後の選択継続、同じ協力会社の複数配置、archive/delete入口不在をDev確認表へ落とす。[Outsourcer roadmap](../roadmaps/outsourcer.md)を参照する。
+- [x] Customer: archive APIと3参照writer／Rulesの整合、exact対象のactive／same-ID archive／参照確認をNo.6へ固定した。既存flat archive等は自動変換せず、今回の変更だけを理由にCustomer全件保存形式検査を反復しない。[archive roadmap](../roadmaps/customer-archive-safety.md)を参照する。
+- [x] Site: 自動終了候補をACTIVE＋工期終了日時へ限定し、候補に関係する予定field、必要index、公開時期をNo.6・No.7へ固定した。`runDailySiteTermination`はdata確認・snapshot・別承認後まで未公開とする。
+- [x] Site: Site query field、工期派生値、任意revision、archive形状／同ID、埋込みCustomer、直接5参照の確認範囲をNo.6へ固定した。日次snapshotを過去値として推測backfillしない。[Site roadmap](../roadmaps/site.md)を参照する。
+- [x] Outsourcer: status非制限の一覧・選択、会社管理者／exact manager、重複配置、archive／delete入口なしを前提に、受入れ対象だけのexact保存確認へ限定した。全件scan・migrationは行わない。[Outsourcer roadmap](../roadmaps/outsourcer.md)を参照する。
 - [x] Employee: 通常archive APIを`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続し、No.3で公開契約・正常/拒否・専用demo分離を検証した。通常用許可設定は既定空集合のまま維持する。実測は[Dev反映前Local検証記録](../verification/employee-dev-preflight-local.md)を参照し、remote公開・tenant開放は別承認とする。
-- [ ] Employee: 日次2種・BillingのEmployee参照索引と実明細の整合を確認する範囲を決め、必要な補完だけを別途具体化する。限定dry-runの成功だけでarchiveを開放しない。
+- [x] Employee: 選択tenantの予定・実績・通知・日次2種・Billingをraw明細から完全走査し、6 collectionすべての取得完了と参照索引一致を要求する範囲をNo.6へ固定した。不一致時は開放せず、導出可能な不足だけを別承認の補完候補とし、dry-run単独ではarchiveを開放しない。
 - [x] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象候補へ含めた。exact Functions deploy closureと順序はNo.5で確定する。[No.4 release surface inventory](master-dev-release-surfaces.md#functions)を参照する。
 - [ ] Employee: 既存保険map/世代値の互換性、User/Auth・予約状態、住所の実provider接続などDev固有の確認項目を用意する。[Employee roadmap](../roadmaps/employee.md)、[実装記録](employee-master.md)を参照する。
 
@@ -60,7 +60,7 @@
 ### 利用者確認待ち
 
 1. Customer新UIの操作・見た目に変更希望があるか。未確認なら対象画面と確認順を先に用意する。
-2. Devを現在利用している人・協力会社がいるか。一時停止の可否と時間帯の制約。
+2. [回答済み] Devは利用者自身の会社、UI改善意見用の知人会社、Codex合成test会社の3区分。利用者会社は任意停止可能、知人会社は本番運用でなくdata不整合を許容、Codex会社は通常利用会社と同じ保全を不要とする。実ID・名称・accountは記録しない。認可・tenant分離・User/Auth削除等の安全境界は緩和しない。
 3. 既存のテスト専用会社・権限別accountを使えるか。なければ準備案を提示する。資格情報をchatへ記載させない。
 
 上記への回答はまだ得ていない。独立して可能なlocal調査・具体化は進める。remote read、Dev build/deploy、実data変更、migration、IAM変更等は[環境・承認rule](../project-rules/environment-and-approval.md)と既存runbookへ照合し、対象を示して必要な承認を得る。今回の引継ぎで権限を拡張しない。
