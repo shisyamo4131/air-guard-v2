@@ -8,6 +8,7 @@
 
 - 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpoint内で実装する。PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を先に確認する。
 - Firestore CRUDを新設・改修する場合、`AirItemManager`と`AirArrayManager`を永続化・draft・dialog・validation・表示同期を一体で担う既定componentとして使用しない。既存箇所は一括置換せず、operation固有editor、UI非依存application処理、永続化へ機能単位で移行する。
+- マスタdata CRUDの改修対象として合意した到達経路では、専用保存処理を接続した後も`AirItemManager`または`AirArrayManager`をdraft・dialog・validation・完了制御のwrapperとして残さない。既存の見た目を維持するために入力・表示componentを再利用する場合も、汎用Managerへ状態管理や成功判定を戻さない。
 - Firestore外のlocal state編集、または既存のwhole-document replacementが対象operationの正しい契約であると確認できる場合は、manager利用の可否を個別に判断する。
 - document共通の必須・型・長さ・相関はFireModel/Class schema、operation固有の入力・追加必須条件は共有operation contractを正本とする。最新の購読値へ変更fieldを重ねたcandidateを検証し、実際に変更したoperation所有fieldと監査metadataだけを保存する。
 - real-time listenerのlive modelを入力draftとして直接変更しない。独立draftを使い、同じoperation fieldの外部変更時は、再読込または明示再確認後のlast-write-winsのどちらか一つをcontractで定める。

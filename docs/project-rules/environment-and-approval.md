@@ -20,6 +20,7 @@
 - Emulator、Functions、server、合成Auth/dataの起動・停止・変更は[local Emulator runbook](../runbooks/local-emulator-testing.md)、UI build・browser・credential・cleanupは[local UI runbook](../runbooks/local-ui-testing.md)を正本とする。Windows Firebase CLIのsandbox外実行も同runbookの限定条件に従う。
 - local UIはbuild前の`UI-READY`で、実担当のbrowser接続、合成Auth準備、client側外部endpoint隔離、既存log退避、port・process・cleanup ownerを確認する。満たさなければbuildやprocess起動へ進まない。
 - UI受入れは実利用者が行える可視なpointer・keyboard操作だけを証拠とし、DOM・storage・event・client APIの直接変更で代用しない。非UI setupとbackend assertionはUI操作証拠から分ける。
+- 既存画面の機能改修では、表示文言、Chip、icon、色、余白、配置、列、button、並び順、dialogを含む見た目を原則として維持する。見た目の変更が必要な場合は、実装前に理由、変更前後、影響、代替案を利用者へ提示して明示的な判断を得る。未承認の見た目差分は機能改善として受け入れず、回帰として是正または承認待ちにする。
 - 既存画面・操作の内部改修は、Codex専用local UI、自動検証、review、後処理が完了すれば利用者local受入れを原則重ねない。新画面・操作、UX判断、利用者data/Chrome、Dev固有条件、外部service、未解決errorは必要な範囲だけ利用者確認を残す。
 - 数百件の合成documentは段階投入し、約1000件でEmulator停止を経験したlocal riskを扱う。これはFirebase公式上限ではなく、同規模一括投入には別の停止・復旧計画と承認が必要である。
 

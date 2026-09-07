@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Employee/Activator/Base.vue
  * @description 従業員の基本情報表示コンポーネント
- * - `EmployeeManager` の activator スロット用コンポーネント
+ * - `EmployeeEditor` の activator スロット用コンポーネント
  *****************************************************************************/
 import dayjs from "dayjs";
 import { Employee } from "@/schemas";
@@ -71,7 +71,7 @@ const items = computed(() => {
 
 /*****************************************************************************
  * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
+ * - 当該コンポーネントを利用するEmployee専用editorの入力プロパティを
  *   定める。
  * - includedKeys: 編集対象プロパティ名の配列
  * - excludedKeys: 編集対象外プロパティ名の配列

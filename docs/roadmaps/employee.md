@@ -1,12 +1,12 @@
 # Employeeマスター改修ロードマップ
 
-- 状態: 利用者の2026-09-07判断による完了判定撤回後、EMP-01〜05を工程別に再照合して再受入れた。EMP-06は別の開始指示を待つ。
+- 状態: 利用者の2026-09-07判断による完了判定撤回後、EMP-01〜05を工程別に再照合して再受入れた。2026-09-07の利用者指示によりEMP-06を開始した。
 - 目標: Employee通常CRUDをoperation固有のeditor・application処理・保存境界へ移し、個人情報の過剰アクセス、全文上書き、保存前のlive変更、失敗・競合時の不整合を解消する。
 - 現在の進捗: 75%
 - 進捗の解釈: EMP-01〜05を再受入れた。EMP-06以降とDev反映は未着手または別承認であり、今回の加点に含めない。
 - 部分加点: 行わない。各工程の完了条件と必要な利用者判断・review・検証をすべて満たしてから当該重みを加点する。調査・案の保存を製品実装の達成と混同しない。
 - 承認境界（以下は採用経緯。最新方針は次項）: 2026-09-06に計画文書保存・review・文書検証・local commitとEMP-01開始を承認し、[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)のactor・閲覧最小化を採用した。同日、[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)の会社管理者・統括だけの従属なし誤登録物理削除、archive延期、他collectionの既存実装維持を採用し作業開始を指示した。この時点の未決事項は後続回答で順次置換した。後続の開始承認は次項を参照する。Dev・Prod・remote・実data・package変更は未承認のままである。
-- 実行単位: 利用者がLocal稼働実績へ稼働外売上1件を登録し、Codexが現在のChromeで既存行表示・編集復元・取消を確認した。既存の05-A〜05-E証拠、EMP-UI-R1、最終domain/Emulator、clean source専用UI buildと再照合してEMP-05を再受入れた。EMP-06以降、Dev/Prod・remoteは同じcheckpointで開始しない。
+- 実行単位: 利用者がLocal稼働実績へ稼働外売上1件を登録し、Codexが現在のChromeで既存行表示・編集復元・取消を確認した。既存の05-A〜05-E証拠、EMP-UI-R1、最終domain/Emulator、clean source専用UI buildと再照合してEMP-05を再受入れた。EMP-06は一覧・検索とUser panelのManager依存除去から開始し、統括の退職button表示と一覧状態表示は見た目の事前判断後に反映する。Dev/Prod・remoteは同じcheckpointで開始しない。
 - 最新の採用: [ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)により、直接物理削除・archive延期と必要な従属writer変更禁止を置換した。Employeeから別archive collectionへの移動と参照整合性を設計し、住所・座標とarchive/物理削除は共通仕様を参照する。actor・全項目read・退職後通常編集禁止・保険の条件は維持する。最終回答で表示名/作成導線、archive同一7actor read、local段階移行、EMP-05の参照保護/archive、purge後続専用工程、9工程の重み合計100も採用した。その後EMP-04までの実装・local検証・review・文書更新・local統合も承認された。
 - 利用者への報告: EMPの作業結果・現在地を報告する際は、本書のマイルストーン表を基にEMP-01〜09の工程名・状態・必要に応じた残作業を一覧で示し、EMP全体の確認済み進捗を併記する。短い作業中の連絡では表を毎回繰り返さず、まとまった報告には必ず付ける。工程内の成果を未確認の割合へ換算せず、部分加点なし・Dev別承認の条件を維持する。
 - EMP-05実装前の再確認: 利用者が設計・review・文書化を指示した。[開発者向け実装前契約](../implementation/employee-master.md#emp-05実装前契約)へ経路/field/actor/競合/開放条件/受入例を補い、開発者・受入・securityの指摘を解消した。[レビュー記録](../verification/employee-05-design-review.md)を実装開始時の入力にし、明示承認で実装した。[EMP-05 local実施記録](../verification/employee-05-local.md)に全内部単位の受入れを記録し、完了により55%から75%へ更新した。
@@ -54,7 +54,7 @@ EMP-05の内部順序はreader/参照契約→参照writer・index保持→旧tr
 | EMP-03 警備員登録・資格 | 10 | 10 | Completed | 専用保存・原配列位置・raw期待値、同名資格・名称変更・対象行削除・2画面競合/再選択、警備登録/解除9field・非対象保持を実装・検証済み。資格dialogの復旧と最終clean source専用buildを追加照合し、2026-09-07に再受入れた。[検証記録](../verification/employee-02-04-local.md)を参照。 |
 | EMP-04 3保険の保存 | 15 | 15 | Completed | 3保険×6操作の専用保存、raw map/巻き戻さない世代値、部分patch・独立draftを実装・検証済み。保険field不存在を未加入初期状態として扱う互換修正、3保険の入力開始、最終domain/Emulatorとclean source専用buildを追加照合し、2026-09-07に再受入れた。[検証記録](../verification/employee-02-04-local.md)を参照。 |
 | EMP-05 閲覧互換・参照保護・アーカイブ | 20 | 20 | Completed | 7actorの原本/archive read、現在認可と期間cache、参照writer/Rules・背景索引・限定整合確認・旧削除trigger無作用・専用archiveを実装・検証済み。UI回帰修正後に作業員と稼働外売上の既存行表示・編集復元・取消を利用者Chromeで確認し、2026-09-07に再受入れた。[最終matrixと証拠](../verification/employee-05-local.md#05-e-統合次工程review)を参照。通常API公開・実data整合/補完・DevはEMP-09の別承認。 |
-| EMP-06 一覧・検索・User画面 | 10 | 0 | Planned | 空・loading・error、古い検索応答、作成導線を契約へ揃える。User panel shellを整理し、既存User provision/deleteと退職・訂正の許可拒否を維持する。到達するEmployee CRUDのManager依存・旧model mutation経路を再検索し、操作証拠と照合する。 |
+| EMP-06 一覧・検索・User画面 | 10 | 0 | In Progress | 空・loading・error、古い検索応答、作成導線を契約へ揃える。User panelを専用controller・dialogへ移し、既存User provision/deleteと退職・訂正の許可拒否を維持する。到達するEmployee CRUDのManager依存・旧model mutation経路を再検索し、操作証拠と照合する。見た目に関わる状態表示と統括の退職buttonは利用者判断待ち。 |
 | EMP-07 独立課題の一括確認・修正 | 5 | 0 | Planned | FUTの対象一覧・方針・影響・test・Devを阻害する問題を利用者と一括確認し、合意した独立問題だけ設計review・修正・検証する。対象なしなら根拠ある分類確認で完了し、加点のために実装を増やさない。 |
 | EMP-08 Local統合確認 | 5 | 0 | Planned | 各工程の代表操作証拠を前提に、全目的と最終diff・必須gate・独立review・直接回帰・UI・cleanupを対応づける。初回確認をここへ集中しない。未達があれば該当工程を未完として扱う。 |
 | EMP-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | マスタ一連改修後の集約受入れで、旧client、必要な既存data、対象service、復旧を確認して反映し、権限別操作と関連readを受け入れる。必要なmigrationは対象・backup・dry-run・apply・post-checkを別承認する。 |

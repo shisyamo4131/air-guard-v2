@@ -248,7 +248,7 @@ test("retirement input rejects missing, unknown, malformed, future-agnostic, and
   }
 });
 
-test("retirement actor allows human-resource and administrator but not manager", () => {
+test("retirement actor allows human-resource, manager, and administrator", () => {
   assert.doesNotThrow(() =>
     assertEmployeeRetirementActor({
       companyId: COMPANY_ID,
@@ -263,14 +263,12 @@ test("retirement actor allows human-resource and administrator but not manager",
       employeeId: EMPLOYEE_ID,
     }),
   );
-  assertPolicyError(
-    () =>
-      assertEmployeeRetirementActor({
-        companyId: COMPANY_ID,
-        actorUser: actor({ roles: ["manager"] }),
-        employeeId: EMPLOYEE_ID,
-      }),
-    USER_LIFECYCLE_POLICY_ERROR_CODES.ACTOR_NOT_ALLOWED,
+  assert.doesNotThrow(() =>
+    assertEmployeeRetirementActor({
+      companyId: COMPANY_ID,
+      actorUser: actor({ roles: ["manager"] }),
+      employeeId: EMPLOYEE_ID,
+    }),
   );
 });
 

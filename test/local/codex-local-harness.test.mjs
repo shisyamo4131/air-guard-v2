@@ -9039,11 +9039,11 @@ test("Firestore Rules deny company-admin direct lifecycle history reads", async 
   }
 });
 
-test("Employee-only retirement completes atomically through the public Callable", async () => {
+test("manager completes Employee-only retirement atomically through the public Callable", async () => {
   const { terminateEmployee } = await loadRebuildApis();
   const actor = await seedTemporaryManagementActor({
     uid: "uwb07-retire-employee-only-actor",
-    roles: ["human-resource"],
+    roles: ["manager"],
   });
   const employeeId = "uwb07-retire-employee-only";
   const operationId = "07000000-0000-4000-8000-000000000001";

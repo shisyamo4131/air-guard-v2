@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Employee/Activator/SecurityGuard.vue
  * @description 従業員の警備員資格情報表示コンポーネント
- * - `EmployeeManager` の activator スロット用コンポーネント
+ * - `EmployeeEditor` の activator スロット用コンポーネント
  *
  * [更新履歴]
  * 2026-06-11 - `hasSecurityGuardRegistration` が false の場合の VEmptyState を追加。
@@ -68,7 +68,7 @@ const items = computed(() => {
 
 /*****************************************************************************
  * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
+ * - 当該コンポーネントを利用するEmployee専用editorの入力プロパティを
  *   定める。
  * - includedKeys: 編集対象プロパティ名の配列
  * - excludedKeys: 編集対象外プロパティ名の配列
