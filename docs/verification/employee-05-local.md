@@ -1,6 +1,6 @@
 # EMP-05 local実施記録
 
-> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を一度撤回した。その後EMP-01〜04は工程別に再受入れたが、EMP-05は未完了のままである。以下の既存成功記録は各時点の限定証拠として保持し、現在状態は[Employeeロードマップ](../roadmaps/employee.md)を参照する。
+> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を一度撤回した。その後EMP-01〜05を工程別に再受入れた。以下の既存成功記録は各時点の限定証拠として保持し、現在状態は[Employeeロードマップ](../roadmaps/employee.md)を参照する。
 
 - checkpoint: EMP-05。内部順序は05-A reader→05-B参照入口→05-C背景保存/整合確認→05-D archive→05-E統合。
 - 開始日: 2026-09-06
@@ -518,3 +518,15 @@ rootだけが利用者Chromeのlocalhost:3000を操作した。利用者Local se
 - 専用Emulatorはrunner終了後に停止。派生portを含むLISTENなし、一時runtime消失を確認した。runnerの利用者saved-data/専用export指紋比較は成功し、利用者server/Emulatorは元のPIDで稼働を継続した。起動時のCLI認証警告は専用demo testを妨げず、再認証・remote反映は行っていない。
 
 本不具合のcode修正・直接試験・Emulator・加入入力の復旧確認は済み。EMP-01〜05の再受入れ完了・加点とは分け、先行UIの専用build/明細確認とGit統合は残す。今回は仕様・設計契約・CHANGELOG・roadmap・本記録を更新し、新ADR・索引・package・Rules・外部状態は変更しない。文書と差分の最終gateは本記録確定後のcommand reportで確認する。
+
+## EMP-05再受入れ（2026-09-07）
+
+checkpointは`EMP-05-REACCEPT`。primary repository、branch `codex/employee-master-roadmap`、開始HEAD `6b8e4a3ca3f5b0e8348b96fbb56b90ff0c787cb3`をrootが直接確認し、開始時のtracked・untracked・staged差分はなかった。利用者が2026年6月のLocal稼働実績へ稼働外売上1件を正規UIから登録し、現在のChromeでの確認とlocal commitを指示した。Codexは同じ実績詳細で表のコード・商品名・単価・数量・金額・合計を観測し、既存行の編集dialogで商品・単価・数量が復元されることを確認して取消した。保存・追加・削除は行っていない。
+
+作業員側は同じ実績で6行、開始・終了・休憩・残業・OJT・actionを確認済みで、既存行編集では従業員・開始/終了・翌日開始・休憩・規定実働・資格者・OJTが復元され、保存せず取消した。これによりEMP-UI-R1で未確認だった既存明細の表示・行操作を、作業員と稼働外売上の両tableで補完した。個人名・顧客名等は検証記録へ転記しない。
+
+05-A〜05-EのR1〜R3、W1〜W5、A1〜A6、G1、U1について、既存の独立review・直接test・Emulator・代表UI/backend・cleanupと、EMP-UI-R1、EMP-INS-R1、今回のChrome確認を再照合した。UI/保険修正後の最終製品sourceに対するdomain 1487/1487・exit 0、Emulator 181/181・exit 0を再利用する。以後は文書だけのEMP-01〜04再受入れcommitであり、製品source、Functions、Rules、test、設定を変更していない。同じ製品sourceを含むclean HEAD `3fc3535e72afb849a7f6e79b98e20dbc6ddc8df1`で実行した`npm run test:local:ui:build`もNitro生成までexit 0であり、後続の文書変更では失効しない。
+
+以上によりEMP-05は全受入条件を満たしてCompleted、得点0→20、Employee進捗55%→75%とする。通常archive API公開、既存実dataの索引整合/補完、Dev反映はEMP-09の別承認であり、今回のlocal完了へ含めない。purge/restore、専用archive管理一覧、EMP-06の一覧・検索・User shellも開始しない。
+
+今回の変更classはproject-guidance-metadataとdocumentation-only。仕様・ADR・data shape・implementation・manual・runbook・索引・governance・package・製品codeは変更しない。roadmap、本receipt、CHANGELOGだけを現在状態へ揃え、`project-docs`、`diff-check`、stage後のcached diff checkを実行する。rollbackはこの完了記録と進捗更新のcorrective commitであり、検証済みの製品実装や利用者が登録したLocal dataを変更しない。

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-05を再受入れた。05-A〜05-Eの閲覧・cache・参照writer/Rules・背景索引・旧削除trigger停止・専用archive・競合/保持証拠に、UI回帰修正後の作業員明細と稼働外売上既存行の表示・編集復元・取消を利用者Chromeで追加確認した。最終domain 1487件・Emulator 181件とclean source専用UI buildを再利用し、Employee進捗を55%から75%へ更新した。通常API公開、既存実data整合/補完、DevはEMP-09の別承認である。
+
 - EMP-02〜04を工程別に再受入れた。既存の専用保存・競合・権限・実UI/backend証拠に、UI回帰修正後の利用者Chrome確認、保険field不存在の互換修正、最終domain 1487件・Emulator 181件、clean source専用UI buildを照合した。Employee進捗は10%から55%へ更新した。EMP-05以降、Dev・remote・実dataは未完了または別承認である。
 
 - 完了判定撤回後のEMP-01について、採用済み仕様・対象・工程境界・受入条件を再照合し、業務判断を要する矛盾なしとして再受入れた。EMP-01をCompleted、Employee進捗を10%へ戻した。製品runtimeやEMP-02〜05の再受入れ、専用UI build、Dev反映を完了した意味ではない。
