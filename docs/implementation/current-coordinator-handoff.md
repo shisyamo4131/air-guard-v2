@@ -63,11 +63,11 @@ No.8の利用者事前確認、No.9のrelease候補reviewと、No.10の初回bou
 
 会社管理者の合成Customer作成は成功したが、そのCustomerを紐付け、非null座標を持つSite作成はFirestore Rulesの1000式評価上限で拒否された。Site documentは作成されなかった。Localで同条件を再現し、fallbackの早期拒否と重複する型・件数検証の整理により、既存のactor・tenant・maintenance・exact schema・Customer projection境界を保ったまま保存成功を確認した。詳細は[補正記録](../verification/master-dev-site-create-correction.md)を正とする。
 
-Site作成補正は`c1be8faf`へcommitし、clean HEADの専用Local UI buildまで成功した。現在の停止点は、補正版RulesのDev再反映とDev Site再試行の承認前である。Dev合成Customerの処置も未承認であり実施しない。Hosting・Functions・Indexesの再反映は本補正には不要である。
+Site作成補正は`c1be8faf`へcommitし、clean HEADの専用Local UI buildまで成功した。続いて補正版Firestore RulesだけをDevへ反映し、同じ会社管理者・Customer紐付け・座標あり条件でSite作成に成功して詳細画面への遷移を確認した。Hosting・Functions・Indexesは再反映していない。Devの合成Customerと合成Siteは残しており、削除は未承認のため実施していない。
 
 ### 今回の停止点より後の作業
 
-次は、別の外部操作承認を得て、補正版Firestore RulesだけをDevへ反映し、同じ会社管理者・Customer紐付け・座標あり条件でSite作成を再試行する。Dev合成dataのcleanupは対象と復旧不能性を確認した別承認で扱う。残る権限別受入れ、将来のrestore/purge、transaction全体の刷新、未承認package変更は既存の別工程に残す。
+次は、SITE-09の残る権限別・操作別Dev受入れを、既存の受入れ計画と個別承認境界に従って進める。Dev合成dataのcleanupは対象と復旧不能性を確認した別承認で扱う。将来のrestore/purge、transaction全体の刷新、未承認package変更は既存の別工程に残す。
 
 ## 参照
 

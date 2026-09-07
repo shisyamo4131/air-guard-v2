@@ -1,11 +1,11 @@
 # Siteマスター改修ロードマップ
 
-- 状態: SITE-09進行中（初回Dev反映後のSite作成補正をLocal検証済み・Dev再反映待ち）
+- 状態: SITE-09進行中（補正版RulesをDevへ反映し、同条件Site作成成功。残るDev受入れを継続）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
 - 現在の進捗: 95%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 現在の承認境界: SITE-08までのLocal実装・検証は完了した。SITE-09の初回bounded Dev反映後、会社管理者によるCustomer紐付け・座標ありSite作成がRules評価上限で拒否されることを確認し、補正をLocalで実装・検証した。補正版RulesのDev再反映、Dev再試行、合成dataの処置は別の明示承認まで行わない。
-- 環境境界: 補正済みRulesと回帰testはLocalだけに存在する。Devには初回releaseのRulesが残り、Prod・remote実data・migrationは変更しない。
+- 現在の承認境界: SITE-08までのLocal実装・検証は完了した。SITE-09の初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映して、会社管理者によるCustomer紐付け・座標ありSite作成の成功を確認した。残る権限別・操作別受入れと合成dataの処置は別の明示承認まで行わない。
+- 環境境界: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは今回再反映せず、Prod・migration・既存data補完は変更していない。今回作成した合成Customerと合成SiteはDevに残している。
 
 ## 現状確認
 
@@ -58,7 +58,7 @@
 | SITE-06 取極め契約 | 10 | 10 | Completed | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円確認、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を専用Callableで強制した。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Siteの`agreementsV2/uid/updatedAt`だけを保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 10 | Completed | ACTIVE/TERMINATED/仮Siteを独立表示し、会社限定ACTIVE live read、20件client表示、検索・選択・郵便番号の古い応答破棄、loading/error/0件/not-found、終了Site取消時の元選択保持、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible name、manualを整合した。Rules、Functions、schema、writer、保存shapeは変更していない。 |
 | SITE-08 Local統合確認 | 5 | 5 | Completed | 先行の専用UI受入れに加え、利用者許可のLocal Chromeで基本・Customer・取極め編集、背景trigger経由のBilling・SiteEmployeeHistory、既存snapshot不変、予定の日付・現場変更・実績化を確認した。旧data更新Rulesと予定preset readerを修正し、全domain 1155件・Emulator 171件・最終build・独立review・source commitが成功。利用者の明示承認後に生成物cleanupの実行・不存在を確認し、90%から95%へ加点した。詳細は[SITE-08証拠](../verification/site-08-local.md)。 |
-| SITE-09 Dev反映・受入れ | 5 | 0 | In progress / 補正反映待ち | 初回bounded Dev反映は実施済みだが、会社管理者のCustomer紐付け・座標ありSite作成がRules評価上限で拒否された。補正はLocal UI・Emulatorで成功済み。補正版RulesのDev再反映と同条件のDev再試行、残る権限別受入れが完了するまで加点しない。 |
+| SITE-09 Dev反映・受入れ | 5 | 0 | In progress / 補正確認済み | 初回bounded Dev反映後に確認したRules評価上限を補正し、Local UI・Emulatorに加えて、補正版Rulesだけを反映したDevでも会社管理者のCustomer紐付け・座標ありSite作成に成功した。残る権限別・操作別受入れが完了するまで加点しない。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
 
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-SITE-09の初回Dev反映後、Customer紐付け・座標ありSite作成だけがRules評価上限で停止した。補正は[検証記録](../verification/master-dev-site-create-correction.md)のとおりLocalで確認し、`c1be8faf`へのcommitとclean HEADの専用UI buildまで完了した。次の承認点は、補正版Firestore RulesだけをDevへ反映して同条件のSite作成を再試行することである。Hosting・Functions・Indexesの再反映、合成data削除、Prod・migrationはこの補正へ含めない。
+SITE-09の初回Dev反映後に停止したCustomer紐付け・座標ありSite作成は、[検証記録](../verification/master-dev-site-create-correction.md)のとおり補正版Firestore RulesだけをDevへ反映し、同条件の再試行成功まで確認した。次の承認点は残る権限別・操作別のDev受入れである。今回の合成Customer・合成Siteの削除は、対象と復旧不能性を確認する別承認で扱う。Hosting・Functions・Indexesの再反映、Prod・migrationは今回の補正へ含めていない。

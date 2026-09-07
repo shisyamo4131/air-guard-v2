@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Devの会社管理者による、Customer紐付け・座標ありSite作成がFirestore Rulesの1000式評価上限で拒否される不具合を修正した。Siteのexact schema、派生値、Customer projection、actor・tenant・maintenance境界は維持し、fallbackを先に拒否して重複検証を削減した。Local UIで同条件の保存成功、全domain 1509件、全Local Emulator 182件、clean HEADの専用Local UI buildを確認した。修正版RulesのDev再反映とDev Site再試行は未実施である。[検証記録](docs/verification/master-dev-site-create-correction.md)を参照。
+- Devの会社管理者による、Customer紐付け・座標ありSite作成がFirestore Rulesの1000式評価上限で拒否される不具合を修正した。Siteのexact schema、派生値、Customer projection、actor・tenant・maintenance境界は維持し、fallbackを先に拒否して重複検証を削減した。Local UIで同条件の保存成功、全domain 1509件、全Local Emulator 182件、clean HEADの専用Local UI buildを確認した。補正版RulesだけをDevへ反映し、同条件のDev Site作成成功も確認した。Hosting・Functions・Indexesは再反映せず、合成dataは削除していない。[検証記録](docs/verification/master-dev-site-create-correction.md)を参照。
 
 - 今後のLocal検証は、commandや手段ではなく証明事項で重複を判定する。非失効の既存証拠と条件一致する起動済みEmulator・server・browserを再利用し、不足・失効した範囲だけを追加検証するproject ruleを追加した。明示的な必須gateは従来どおり独断で省略しない。
 

@@ -2,15 +2,15 @@
 
 - 実施日: 2026-09-07
 - 対象: SITE-09初回Dev反映後に確認した、会社管理者によるCustomer紐付け・座標ありSite作成の拒否
-- 変更class: `data-contract-schema-migration` と検証記録の `project-guidance-metadata`
-- 環境: Codex専用Local Emulator、利用者が起動したimport-only Local環境、Chromeの会社管理者session
-- 非対象: Dev再デプロイ、Hosting・Functions・Indexes再反映、Prod、migration、既存data補完、合成data削除
+- 変更class: `data-contract-schema-migration`、`build-release-deploy` と検証記録の `project-guidance-metadata`
+- 環境: Codex専用Local Emulator、利用者が起動したimport-only Local環境、DevのFirestore `(default)`、Chromeの会社管理者session
+- 非対象: Hosting・Functions・Indexes再反映、Prod、migration、既存data補完、合成data削除
 
 ## 結論
 
 Siteを登録できない一般的な状態ではない。初回Dev Rulesでは、Customer紐付け・非null座標・通常の検索tokenを含む正規34-field作成が、認可や保存値の不一致ではなくFirestore Rulesの1000式評価上限で拒否された。Localの同条件で再現し、保護条件を維持したRules評価数削減後は同じChrome画面から保存できた。
 
-補正はLocalだけにあり、Devには未反映である。このためDevの同条件Site登録は、補正版Rulesを反映して再試行するまで未解決として扱う。
+補正版Firestore RulesだけをDevへ反映し、同じ会社管理者・Customer紐付け・非null座標の条件でSiteを再登録した結果、保存に成功して詳細画面へ遷移した。この限定経路の不具合は解消した。残る権限別・操作別のSITE-09受入れは未完了である。
 
 ## 変更
 
@@ -29,6 +29,11 @@ Siteを登録できない一般的な状態ではない。初回Dev Rulesでは�
 | `npm run test:local` | 182/182成功 | 0 |
 | `npm run test:local:ui:build`（補正前の試行） | dirty/uncommitted sourceを拒否するpreconditionで停止 | 1 |
 | `npm run test:local:ui:build`（commit `c1be8faf`） | 専用Local UI build成功 | 0 |
+| installed Firebase CLI version確認 | `15.28.1`を確認 | 0 |
+| Dev Firestore database identity確認 | project・`(default)`・Standard edition・Native mode・`asia-northeast1`を確認 | 0 |
+| `firebase deploy --project air-guard-v2-dev --only firestore:rules --dry-run --non-interactive` | Rules compile・dry-run成功 | 0 |
+| `firebase deploy --project air-guard-v2-dev --only firestore:rules --non-interactive` | `firestore.rules`のupload・release成功 | 0 |
+| Chrome Dev UIの同条件Site作成 | 保存成功し詳細画面へ遷移 | UI操作のため非該当 |
 
 `npm run test:local`の拒否actor・不正shapeケースでは期待された`PERMISSION_DENIED`や一部の評価上限ログが出るが、全ケースが拒否・write 0を確認してsuiteは成功した。正規のCustomer紐付け・座標ありcreateは追加回帰と実UIの双方で成功した。
 
@@ -46,7 +51,7 @@ Siteを登録できない一般的な状態ではない。初回Dev Rulesでは�
   ],
   "limitations": [
     "some negative update paths fail closed at the Rules expression limit rather than a more specific predicate",
-    "Dev behavior is unverified until the corrected Rules are separately approved and deployed"
+    "the remote smoke covers only the approved company-admin linked-Customer geocoded create path; broader actor and operation acceptance remains incomplete"
   ]
 }
 ```
@@ -55,6 +60,6 @@ Siteを登録できない一般的な状態ではない。初回Dev Rulesでは�
 
 ## 残作業・rollback
 
-- 外部操作の明示承認後、補正版Firestore RulesだけをDevへ反映し、同条件のSite作成を再試行する。
-- Dev再試行に失敗した場合は追加serviceを反映せず停止し、Rulesログと保存payloadの差だけを再診断する。
-- 補正を採用しない場合は本checkpointのowned diffをrevertする。Local/Devの合成dataは別承認なしに削除しない。
+- SITE-09の残る権限別・操作別受入れは別checkpointで行う。今回作成した合成Customerと合成SiteはDevに残しており、対象と復旧不能性を確認した別承認なしに削除しない。
+- 今回はHosting・Functions・Indexes、Prod、migration、既存data補完を変更していない。
+- remote Rules反映後はcodeのrevertだけではDevを戻せない。不具合が判明した場合は追加serviceやdataを変更せず停止し、影響を限定したforward correctionとRules-only再反映を別承認で扱う。
