@@ -16,6 +16,7 @@
 
 ## Local Emulatorとlocal UI
 
+- Local検証の実行要否と既存証拠の再利用は[Documentation and verification rules](documentation-and-verification.md#verification)を正とする。追加実行が必要な場合も、既に起動しているEmulator、local server、ChromeまたはCodex管理browserが対象HEAD・設定・実行経路・権限・tenant・隔離・data・test条件とowner/cleanup境界を満たすなら再利用し、同一条件の停止・再起動、build、別suite起動を前提にしない。条件を確認できない、失効している、または新しい経路を証明する必要がある部分だけを新規に準備する。
 - Codex専用local検証はADR 0014のdemo project、loopback、合成data、外部作用denyへ限定する。利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataへ許可を広げない。
 - Emulator、Functions、server、合成Auth/dataの起動・停止・変更は[local Emulator runbook](../runbooks/local-emulator-testing.md)、UI build・browser・credential・cleanupは[local UI runbook](../runbooks/local-ui-testing.md)を正本とする。Windows Firebase CLIのsandbox外実行も同runbookの限定条件に従う。
 - local UIはbuild前の`UI-READY`で、実担当のbrowser接続、合成Auth準備、client側外部endpoint隔離、既存log退避、port・process・cleanup ownerを確認する。満たさなければbuildやprocess起動へ進まない。

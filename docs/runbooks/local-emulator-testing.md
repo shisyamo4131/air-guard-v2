@@ -49,6 +49,8 @@ npx -y firebase-tools@latest emulators:start --import=./saved-data
 
 Codexの自動テストは、利用者用`./saved-data`、通常の`firebase.json`、`.env.local`を変更しません。[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)に従い、Git対象外の`.codex-test/saved-data`へ合成fixtureだけを保存します。
 
+testやEmulatorを起動する前に、[Documentation and verification rules](../project-rules/documentation-and-verification.md#verification)の4点を照合する。今回の証明事項を同一または厳しい条件の有効な既存証拠が覆う場合は、commandや検証手段が異なることだけを理由に本suiteを再実行しない。追加検証が必要でも、対象HEAD、Functions・Rules・Firestore、tenant、設定、fixture、権限、loopback・外部作用deny、ownerとcleanup境界が一致する起動済みEmulatorは再利用し、失効または不足した部分だけを実行する。policyまたはrelease checkpointが明示する必須gateはこの判断だけで省略しない。
+
 初回、fixture変更時、または破損からの再生成時だけ、専用seedを作成します。
 
 ```powershell

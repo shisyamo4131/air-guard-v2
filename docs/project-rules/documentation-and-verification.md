@@ -23,6 +23,10 @@
 ## Verification
 
 - 変更class、iteration・targeted・completion・release-only、gate ID・exact command・includes・invalidatedByは`governance/verification-policy.json`を機械可読正本とする。混合変更はunion、影響不明はcomprehensive fallbackを使う。
+- 検証はcommand名や手段ではなく、今回証明する必要がある事項を単位に選ぶ。各checkpointまたは検証工程の開始前に、(1)今回証明する事項、(2)既に得られている有効な検証結果、(3)そのまま再利用できる結果、(4)新たな実行がなければ証明できない事項を内部照合し、追加実行は(4)へ限定する。
+- 既存証拠は、今回の証明事項を既に直接覆い、成功結果を実行出力または信頼できるproject記録から確認でき、証拠取得後に結果へ影響するcode・設定・依存関係・環境・test条件の変更がなく、実行経路・権限・tenant・Rules・Functions・Firestore等の必要条件が同一または既存側の方が厳しい場合に限り再利用する。この全条件を満たす場合、自動test、Emulator、local server、browser UI、build、lint、静的検査など手段が異なるだけの同等検証を「既存検証でカバー済み」として重ねない。
+- 後続変更が証拠を失効させた、新しい実行経路を追加した、または既存証拠が必要事項の一部を証明しない場合は、不足または失効した範囲だけを検証する。「念のため」、慣例、suite名、別手段であることだけを理由に、変更と無関係なtestやsuite全体を再実行しない。再利用した証拠と追加実行の選定理由はcheckpointのcompletion reportまたは指定された証拠先へ記録する。
+- policy、project rules、release gateが明示的に必須とするgateは独断で省略しない。必須gateが既存検証と実質的に重複する場合は、重複する証明事項、既存証拠、非失効根拠を示し、必要なら別の承認済み変更でpolicy自体を見直すまで現行gateに従う。
 - project governance、permission、agent policyの変更は`governance-permissions-agents`としてcomprehensive gateを省略しない。common governance、生成`AGENTS.md`、managed referencesは承認済みsync以外で編集しない。
 - commandは記録済みの必須引数を省略せず実行し、exit status 0を独立確認した後だけ成功と記録する。後続編集が`invalidatedBy`に該当すれば該当gateを再実行する。
 - repository-owned PowerShell gateはpolicy指定の`pwsh`を`-NoProfile`で実行し、`-ExecutionPolicy Bypass`、`-EncodedCommand`、検証文字列を復元するBase64 decode、legacy `powershell.exe`の子process起動を使用しない。fixtureは一意の隔離directoryに限定し、cleanup前に許可root内であることを検証する。

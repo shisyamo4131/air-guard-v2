@@ -15,7 +15,7 @@ Codex専用local UI受入れは、承認済み専用buildから生成した画�
 
 ### UI-READY preflight
 
-buildまたはprocess起動前に、次を一度確認する。どれかを満たせない場合はbuildせず、担当・環境・隔離方法を見直す。
+最初に[Documentation and verification rules](../project-rules/documentation-and-verification.md#verification)の4点を照合し、既存の自動test、Emulator、build、browser受入れ等で今回の証明事項が同一または厳しい条件のままカバーされている場合は、手段が異なることだけを理由にUI検証を追加しない。UI固有の不足がある場合だけ、buildまたはprocess起動前に次を一度確認する。どれかを満たせない場合はbuildせず、担当・環境・隔離方法を見直す。
 
 1. 実際にUI操作するtaskが正規in-app browserのtab取得と通常pointer・keyboard操作を利用できる。
 2. 保存済み合成sessionまたは秘密値を残さない一時合成credentialにより、対象actorを準備できる。
@@ -23,11 +23,11 @@ buildまたはprocess起動前に、次を一度確認する。どれかを満�
 4. 既存root log・runtime・port・processを確認し、退避・復元対象、owner、生成物を含むcleanup対象をexact pathで固定する。削除・停止の承認範囲と保護対象を開始時に確認し、既存承認が対象を含む場合は再承認を求めない。
 5. 対象HEAD、専用build、Emulator、generated server、browser、backend assertion、cleanupの担当と停止条件が一つのcheckpoint内で決まっている。終了時はcleanupの実行結果まで確認し、承認取得だけを完了としない。
 
-標準の起動・確認・終了順序は次のとおりとする。
+新規準備が必要な構成の標準起動・確認・終了順序は次のとおりとする。対象HEAD、identity、設定、actor、tenant、Functions・Rules・Firestore、隔離、data、owner・cleanup境界を確認できる起動済みEmulator、generated server、ChromeまたはCodex管理browserは対応する起動手順を省略して再利用し、同一条件を作り直さない。今回所有していない既存processは停止せず、条件不一致または確認不能な構成だけを分離して準備する。
 
 Windows上でCodexがこの経路を実行する場合、Firebase CLIとlocal serverは、最初からworkspace sandbox外の承認済み前景processとして起動する。sandbox内ではNuxtのdependency解決がfilesystem read制限で停止することが既知であるため、成功しない予備起動を試してから再起動する手順にしない。これは既存のCodex専用demo project、loopback、合成data、外部作用denyの承認境界に限ったprocess実行方法であり、network、利用者用local環境、Dev、Prod、remote service、実dataへの許可拡張ではない。
 
-1. 上記`UI-READY`を完了し、専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。既存runtime・他者processは変更しない。
+1. 上記`UI-READY`を完了し、新規起動する専用portが未使用で、`.codex-test/saved-data`にexport metadataとAuth fixtureがあることを確認する。再利用する既存processはownerと条件一致を確認し、既存runtime・他者processは変更しない。
 2. clean worktreeの同一HEADで`npm run test:local:ui:build`を実行し、identity marker付き`.output`を生成する。このbuildは実行ごとの承認境界を維持する。
 3. `npm run test:local:ui:emulators`を独立した前景processで起動し、`All emulators ready`まで待つ。
 4. `npm run test:local:ui:server:generated`を別の前景processで起動し、identity確認、server ready、loopback rootのHTTP応答を確認する。marker欠損・不一致、dirty worktree、非200ならbrowserを開かず停止する。
