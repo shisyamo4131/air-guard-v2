@@ -54,6 +54,8 @@ No.10へ進む前に次を確認する。UI確認は機能検証を再実行す�
 
 利用者は2026-09-07に、4マスター管理機能のUIを概ね確認し、機能面についてDev受入れへ進めると判断した。役割が類似するcomponentの共通化、画面ごとに異なるcomponent境界、DataTable／DataIteratorを含むデザイン統一は未完了の機能改修ではなく、Dev受入れ完了後の別phaseで扱う。
 
+SiteはNo.10後のDevで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を受入れ、見た目・操作感の追加改善を後続phaseへ送ったため、SITE-09を完了した。合成Siteは承認済みarchive経路で通常一覧から除外し、合成Customerは残している。詳細は[SITE-09記録](../verification/master-dev-site-create-correction.md)を正とする。
+
 ## account最小構成
 
 | account区分 | 用途 | 不足時の扱い |

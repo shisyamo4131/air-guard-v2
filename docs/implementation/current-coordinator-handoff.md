@@ -12,17 +12,17 @@
 ## 未決事項と承認
 
 - Customer archive safetyは[確認済み仕様](../specification.md)、[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)、[工程・進捗](../roadmaps/customer-archive-safety.md)、[実装設計](customer-archive-safety.md)に従いCAS-04までlocal完了した。[local受入れ証拠](../verification/customer-archive-local-acceptance.md)を参照する。
-- Spark用standalone Developer taskは中止済みで再利用しない。SiteはSITE-08のLocal追加確認で再現した不具合を修正し、最終buildと承認済みcleanupまで完了した。現在の残作業は[Siteロードマップ](../roadmaps/site.md)、実測は[SITE-08証拠](../verification/site-08-local.md)を正とする。破棄された別taskのEmployee改修案は採用しない。Dev/Prod、remote data/migration、package、緊急restore、retention/purge、OUT-08以降は別承認である。
+- Spark用standalone Developer taskは中止済みで再利用しない。SiteはSITE-09のRules補正と機能面Dev受入れまで完了し、100%である。Local実測は[SITE-08証拠](../verification/site-08-local.md)、Dev実測は[SITE-09証拠](../verification/master-dev-site-create-correction.md)を正とする。見た目・操作感の追加改善は利用者判断で後続phaseへ送った。破棄された別taskのEmployee改修案は採用しない。Prod、remote既存data補完、package、緊急restore、retention/purge、OUT-08以降は別承認である。
 - Sparkはこの規模・必読範囲に適さないという試験結果として扱い、再採用しない。反省会の恒久判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、実行履歴は[CAS-02試験記録](customer-archive-cas02-developer-trial.md)に保存し、一時メモへ依存しない。
 
 ## 次の作業
 
-最優先は、利用者が2026-09-07に指定した「4マスターのDev反映直前までの準備」である。下記の[準備作業一覧](#dev反映前の準備作業一覧)を起点に、通常startup後、未確定の対象・手順を具体化する。これは次作業の案内であり、release契約・反映可否の確定や外部操作の承認ではない。Dev反映後の技術確認・利用者受入れは後続に残す。
+最優先は、初回bounded Dev反映後に残るCustomer、Outsourcer、Employeeの機能受入れである。SiteはSITE-09まで完了した。下記の[準備作業一覧](#dev反映前の準備作業一覧)は完了済みpreflightの根拠として残し、現在の実行状態と次作業は[No.10の現在地](#no10の現在地と停止点)および各roadmapを正とする。追加のexternal write、data処置、tenant開放、Prodは個別承認なしに開始しない。
 
-1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
-2. Site masterのSITE-08は[SITE-08検証記録](../verification/site-08-local.md)のLocal試験・build・cleanupまで完了した。次はDev反映前のlegacy確認とDev・remote接続であり、[Siteロードマップ](../roadmaps/site.md)のSITE-09として別承認である。
-3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。次のEMP-09ではマスタ一連改修後にDev反映・旧client・必要data/索引・対象service・復旧を別承認する。通常archive APIのDev反映、対象tenant開放、remote・実data・migrationは承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。全体範囲は[正式運用ロードマップ](../roadmaps/airguard-v2.md#次の作業)を参照する。
-4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
+1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。初回bounded Dev反映後のOUT-08機能受入れが残る。配置・通知・実績・請求・帳票の新規作成は受入れ対象外である。
+2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。
+3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。初回bounded Dev反映後のEMP-09機能受入れが残る。archive APIの対象tenant allowlistは空のまま維持し、tenant開放、実Employee／User／Auth操作、remote既存data補完、migrationは別承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。
+4. Customer状態のCS-04とarchive safetyのCAS-05を含む、初回bounded Dev反映後の機能受入れが残る。既存実dataを変えないreadと承認済み合成dataを基本にし、実Customer archiveや全件scan・自動変換は行わない。[Dev受入れ計画](master-dev-acceptance-plan.md)と各Customer roadmapを正とする。
 
 ## Dev反映前の準備作業一覧
 
@@ -63,11 +63,11 @@ No.8の利用者事前確認、No.9のrelease候補reviewと、No.10の初回bou
 
 会社管理者の合成Customer作成は成功したが、そのCustomerを紐付け、非null座標を持つSite作成はFirestore Rulesの1000式評価上限で拒否された。Site documentは作成されなかった。Localで同条件を再現し、fallbackの早期拒否と重複する型・件数検証の整理により、既存のactor・tenant・maintenance・exact schema・Customer projection境界を保ったまま保存成功を確認した。詳細は[補正記録](../verification/master-dev-site-create-correction.md)を正とする。
 
-Site作成補正は`c1be8faf`へcommitし、clean HEADの専用Local UI buildまで成功した。続いて補正版Firestore RulesだけをDevへ反映し、同じ会社管理者・Customer紐付け・座標あり条件でSite作成に成功して詳細画面への遷移を確認した。Hosting・Functions・Indexesは再反映していない。Devの合成Customerと合成Siteは残しており、削除は未承認のため実施していない。
+Site作成補正は`c1be8faf`へcommitし、clean HEADの専用Local UI buildまで成功した。続いて補正版Firestore RulesだけをDevへ反映し、会社管理者でCustomer紐付け・座標ありSiteの作成、編集、検索、終了、終了済み検索、再有効化、参照なしarchiveに成功した。経理accountはSite一覧へ到達できる一方、作成導線は表示されなかった。合成Siteは利用者承認済みのarchive経路で通常一覧から除外し、合成Customerは残している。Hosting・Functions・Indexesは補正時に再反映していない。
 
 ### 今回の停止点より後の作業
 
-次は、SITE-09の残る権限別・操作別Dev受入れを、既存の受入れ計画と個別承認境界に従って進める。Dev合成dataのcleanupは対象と復旧不能性を確認した別承認で扱う。将来のrestore/purge、transaction全体の刷新、未承認package変更は既存の別工程に残す。
+SITE-09は利用者判断により機能面を完了した。次は4マスター受入れ計画に残るCustomer、Outsourcer、EmployeeのDev受入れを個別roadmapと承認境界に従って進める。残したDev合成Customerのcleanupは対象と復旧不能性を確認した別承認で扱う。Siteの見た目・操作感、将来のrestore/purge、自動終了公開、transaction全体の刷新、未承認package変更は既存の別工程に残す。
 
 ## 参照
 

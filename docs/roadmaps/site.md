@@ -1,11 +1,11 @@
 # Siteマスター改修ロードマップ
 
-- 状態: SITE-09進行中（補正版RulesをDevへ反映し、同条件Site作成成功。残るDev受入れを継続）
+- 状態: Completed（SITE-09の機能面Dev受入れ完了。見た目・操作感の追加改善は後続phase）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
-- 現在の進捗: 95%
+- 現在の進捗: 100%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 現在の承認境界: SITE-08までのLocal実装・検証は完了した。SITE-09の初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映して、会社管理者によるCustomer紐付け・座標ありSite作成の成功を確認した。残る権限別・操作別受入れと合成dataの処置は別の明示承認まで行わない。
-- 環境境界: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは今回再反映せず、Prod・migration・既存data補完は変更していない。今回作成した合成Customerと合成SiteはDevに残している。
+- 現在の承認境界: SITE-09まで完了した。初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映したうえで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は見た目・操作感の追加改善を後続phaseへ送った。
+- 環境境界: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは補正時に再反映せず、Prod・migration・既存data補完は変更していない。合成Siteは承認済みarchive経路で通常一覧から除外し、合成CustomerはDevに残している。
 
 ## 現状確認
 
@@ -36,7 +36,7 @@
 - CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
 - CONF-0051からCONF-0053は回答済み。取極めの作成・編集・削除はstrict `sites:write`へ限定し、単価・時間・締日の範囲を固定する。適用済みmasterも編集・削除できるが既存OperationResult snapshotは変更せず、専用履歴・revision・承認workflowは設けない。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - CONF-0135は回答済み。ACTIVE/TERMINATEDの2値を維持し、工期終了後90日と予定guardによる競合安全な自動終了、派生Chip、現在遷移metadataを採用する。TERMINATEDも終了済み表示・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま、継続再開はstrict `sites:write`・reason・新工期で扱う。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
-- 既存Site・archiveの件数とshape、仮Site・stale埋込みCustomerの状態、実利用actor、旧client併存、必要index、Dev/remote適用状態は未確認である。
+- 既存Site・archiveの全件数とshape、仮Site・stale埋込みCustomerの状態は、合成dataに限定した初回Dev受入れでは確認していない。実利用actor、必要index、Dev反映と今回の合成Site経路は確認済みである。既存dataを使う後続機能で必要になった場合だけ、対象を限定して別承認する。
 - 導入済みschema packageの変更が必要かは未確定である。必要になった場合は関連repository、version、release、consumer導入を別承認とする。
 
 ### transaction系の既知課題として分離する事項
@@ -54,11 +54,11 @@
 | SITE-02 認証・書込み境界 | 15 | 15 | Completed | 同一tenant readを維持し、現存するcreate/update/Customer・Agreement変更/終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをUI・送信直前policy・Rulesでfail closedにし、generic delete/archive入口を停止した。再有効化と専用archiveは未実装のため、それぞれSITE-04/05で同じactor境界を強制する。 |
 | SITE-03 CRUD・保存data契約 | 15 | 15 | Completed | 作成・基本情報・Customer・取極めをoperation別writerへ分離し、exact 34-field create、共通必須・型・長さ、server metadata、token・location等の派生field、Customer exact 6-field projection、仮Site解消を固定した。live modelと独立draft、同一field競合、変更なしwrite 0、失敗後再試行を検証した。 |
 | SITE-04 終了・再有効化・自動終了 | 15 | 15 | Completed | ADR 0054に従い、TERMINATED masterの通常編集制限と確認付き新規選択、単発残工事、strict `sites:write`・reason・新工期による継続再開、工期終了後90日の派生Chipと自動終了、予定guard、競合、現在遷移metadataを実装した。予定作成・site/date移動はSite revisionとatomicにし、実績化は整合するOperationResultとの同時更新だけを許可する。既存予定等は暗黙に変更しない。 |
-| SITE-05 archive安全性 | 15 | 15 | Completed | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、exact 5 collectionの同一transaction参照確認、直接参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装した。下流snapshotとremote legacy shapeはSITE-09 preflightまで未確認とする。 |
+| SITE-05 archive安全性 | 15 | 15 | Completed | ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite`、reason/audit/idempotency、exact 5 collectionの同一transaction参照確認、直接参照writerのlive Site存在barrier、generic delete／restore非到達、通常restore不在を実装した。Devでは合成Siteの参照なしarchiveに成功した。remote legacy shapeの全件確認は既存dataを使う後続機能の別承認へ残す。 |
 | SITE-06 取極め契約 | 10 | 10 | Completed | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円確認、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を専用Callableで強制した。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Siteの`agreementsV2/uid/updatedAt`だけを保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 10 | Completed | ACTIVE/TERMINATED/仮Siteを独立表示し、会社限定ACTIVE live read、20件client表示、検索・選択・郵便番号の古い応答破棄、loading/error/0件/not-found、終了Site取消時の元選択保持、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible name、manualを整合した。Rules、Functions、schema、writer、保存shapeは変更していない。 |
 | SITE-08 Local統合確認 | 5 | 5 | Completed | 先行の専用UI受入れに加え、利用者許可のLocal Chromeで基本・Customer・取極め編集、背景trigger経由のBilling・SiteEmployeeHistory、既存snapshot不変、予定の日付・現場変更・実績化を確認した。旧data更新Rulesと予定preset readerを修正し、全domain 1155件・Emulator 171件・最終build・独立review・source commitが成功。利用者の明示承認後に生成物cleanupの実行・不存在を確認し、90%から95%へ加点した。詳細は[SITE-08証拠](../verification/site-08-local.md)。 |
-| SITE-09 Dev反映・受入れ | 5 | 0 | In progress / 補正確認済み | 初回bounded Dev反映後に確認したRules評価上限を補正し、Local UI・Emulatorに加えて、補正版Rulesだけを反映したDevでも会社管理者のCustomer紐付け・座標ありSite作成に成功した。残る権限別・操作別受入れが完了するまで加点しない。 |
+| SITE-09 Dev反映・受入れ | 5 | 5 | Completed | 初回bounded Dev反映後に確認したRules評価上限を補正し、Local UI・Emulatorに加えてDevでも会社管理者のCustomer紐付け・座標あり作成、編集、検索、終了、終了済み検索、再有効化、参照なしarchiveを確認した。経理accountは一覧へ到達でき、作成導線は表示されなかった。既存Localの同一policy・Rules・Callable拒否試験を再利用し、利用者は機能面を完了、見た目・操作感の追加改善を後続phaseと判断した。[SITE-09記録](../verification/master-dev-site-create-correction.md)を参照。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
 
@@ -84,6 +84,6 @@
 - local UI: write actorとread-only actor、作成・編集・終了・再有効化、検索、失敗後入力保持、二重送信、reload。今回の差分がSite外のwriterまたは参照へ影響する場合は、影響機能について改修前と同じまたは同等のUI操作結果を権限別に確認し、backendの保存差分または不変を照合する。自動testだけを実ブラウザ操作の代替にしない。具体的な省略・代替が必要なら利用者判断を得る。
 - implementation時のchange classは最終差分に応じて`ui-css-layout`、`application-logic`、`data-contract-schema-migration`のunionを選ぶ。Dev/Prod generate・deploy・remote/data操作はSITE-09等の別承認がない限り実行しない。
 
-## 次の承認点
+## 完了後の境界
 
-SITE-09の初回Dev反映後に停止したCustomer紐付け・座標ありSite作成は、[検証記録](../verification/master-dev-site-create-correction.md)のとおり補正版Firestore RulesだけをDevへ反映し、同条件の再試行成功まで確認した。次の承認点は残る権限別・操作別のDev受入れである。今回の合成Customer・合成Siteの削除は、対象と復旧不能性を確認する別承認で扱う。Hosting・Functions・Indexesの再反映、Prod・migrationは今回の補正へ含めていない。
+SITE-09は[検証記録](../verification/master-dev-site-create-correction.md)のとおり機能面のDev受入れを完了した。見た目・操作感の追加改善、既存Dev dataの全件検査・補完、Site自動終了の公開、残した合成Customerの削除、Prod・migrationは自動的な次工程にせず、必要性と対象を示す別承認で扱う。
