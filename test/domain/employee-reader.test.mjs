@@ -11,6 +11,7 @@ import * as contract from "../../functions/shared/employeeContract.js";
 import * as rangeValidators from "../../composables/validators/rangeValidator.js";
 import { createEmployeeReadSession } from "../../composables/domain/employee/employeeReadSession.js";
 import { employeeReadLabel } from "../../composables/domain/employee/employeeReadLabel.js";
+import { createEmployeeListSession } from "../../composables/domain/employee/employeeListSession.js";
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
@@ -48,6 +49,82 @@ async function readerHarness(providedAccess) {
   const effect = Vue.effectScope(); let reader; effect.run(() => { reader = make(); });
   return { ...sdk, reader, scope, access, effect, allow: () => { scope.value = JSON.stringify(["company", "actor", false, true, []]); } };
 }
+
+async function authorizedListHarness() {
+  FireModel.setAdapter(Object.create(ClientAdapter.prototype));
+  const sdk = sdkHarness();
+  const actor = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] };
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: actor });
+  const bindings = { ...Vue, ...sdk.bindings, ...contract, Employee, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) };
+  const makeAccess = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", bindings);
+  const effect = Vue.effectScope(); let access, list;
+  effect.run(() => { access = makeAccess(); });
+  const makeList = await factory("composables/application/employee/useEmployeeList.js", "useEmployeeList", { ...bindings, createEmployeeListSession, useEmployeeReadAccess: () => access });
+  effect.run(() => { list = makeList({ status: "ACTIVE", search: Vue.ref(""), fetchAllOnEmpty: true }); });
+  return { ...sdk, auth, actor, access, list, effect };
+}
+
+for (const afterSuccess of [false, true]) test(`EMP08 actual list reports access failure and reloads raw authorization (prior success: ${afterSuccess})`, async () => {
+  const h = await authorizedListHarness();
+  try {
+    const oldAccess = h.listeners[0];
+    if (afterSuccess) {
+      oldAccess.next(snapshot(h.actor)); h.listeners[1].next(querySnapshot([raw()]));
+      assert.equal(h.list.docs.value.length, 1);
+    }
+    oldAccess.error(new Error("private transport detail"));
+    assert.deepEqual(h.list.docs.value, []); assert.equal(h.list.loading.value, false);
+    assert.equal(h.list.error.value, "従業員情報を取得できません。再読込してください。");
+    const count = h.listeners.length;
+    h.list.reload(); assert.equal(h.listeners.length, count + 1);
+    const retried = h.listeners.at(-1);
+    assert.equal(retried.reference.path, "Companies/company/Users/actor");
+    assert.equal(h.list.loading.value, true); assert.equal(h.list.error.value, "");
+    oldAccess.next(snapshot(h.actor)); oldAccess.error(new Error());
+    assert.equal(h.access.canRead.value, false); assert.equal(h.list.loading.value, true);
+    retried.next(snapshot(h.actor, true)); assert.equal(h.access.canRead.value, false);
+    retried.next(snapshot(h.actor)); h.listeners.at(-1).next(querySnapshot([raw("fresh")]));
+    assert.deepEqual(h.list.docs.value.map((item) => item.docId), ["fresh"]);
+    const listCount = h.listeners.length;
+    h.list.reload(); assert.equal(h.listeners.length, listCount + 1);
+    assert.equal(h.listeners.at(-1).reference.path, "Companies/company/Employees", "ordinary reload keeps authorization listener");
+  } finally { h.effect.stop(); }
+});
+
+test("EMP08 access failure cannot revive after auth loss or disposal, including stale callbacks", async () => {
+  const h = await authorizedListHarness();
+  const oldAccess = h.listeners[0]; oldAccess.next(snapshot(h.actor));
+  const oldList = h.listeners[1]; oldList.next(querySnapshot([raw()]));
+  oldAccess.error(new Error()); h.list.reload(); const retry = h.listeners.at(-1);
+  assert.equal(retry.reference.path, "Companies/company/Users/actor");
+  h.auth.isEmailVerified = false;
+  assert.deepEqual(h.list.docs.value, []); assert.equal(h.list.loading.value, false);
+  assert.equal(h.list.error.value, ""); const count = h.listeners.length;
+  retry.next(snapshot(h.actor)); retry.error(new Error()); oldList.next(querySnapshot([raw("stale")]));
+  h.list.reload(); assert.equal(h.listeners.length, count); assert.equal(h.access.canRead.value, false);
+  h.auth.isEmailVerified = true; const active = h.listeners.at(-1);
+  h.effect.stop(); const stoppedCount = h.listeners.length;
+  active.next(snapshot(h.actor)); active.error(new Error()); h.access.reload();
+  assert.equal(h.listeners.length, stoppedCount); assert.equal(h.access.canRead.value, false);
+  assert.ok(h.listeners.every((entry) => entry.stopped));
+});
+
+test("EMP08 shared Employee reader settles pending reads and clears cached PII on access failure", async () => {
+  const h = await authorizedListHarness(); const reader = await readerHarness(h.access);
+  try {
+    const waiting = reader.reader.getEmployee("employee");
+    h.listeners[0].error(new Error()); assert.equal(await waiting, null);
+    assert.equal(reader.reader.canRead.value, false); assert.equal(reader.reader.isLoading.value, false);
+    h.access.reload(); h.listeners.at(-1).next(snapshot(h.actor));
+    const next = reader.reader.getEmployee("employee"); reader.listeners[0].next(snapshot(raw()));
+    assert.equal((await next).docId, "employee");
+    const latestAccess = h.listeners.findLast((entry) => entry.reference.path.endsWith("Users/actor"));
+    latestAccess.error(new Error());
+    assert.deepEqual(reader.reader.cachedEmployees.value, {});
+    reader.listeners[0].next(snapshot(raw("employee", "遅延氏名")));
+    assert.deepEqual(reader.reader.cachedEmployees.value, {});
+  } finally { reader.effect.stop(); h.effect.stop(); }
+});
 
 test("EMP05 reader subscribes only requested IDs once, upserts current Class, and keeps raw Timestamp precision", async () => {
   const { session, listeners } = coreHarness();

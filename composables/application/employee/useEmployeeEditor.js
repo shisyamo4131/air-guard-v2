@@ -14,6 +14,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
   const canRetryCreate = ref(false);
   const message = ref(""), draft = ref(null), baseline = shallowRef(null);
   let reference = null, unsubscribe = null, generation = 0, owner = null, draftAtOpen = null, pendingComparison = null, displayEdited = false;
+  let conflictWhileSaving = false;
   const id = () => typeof employeeId === "function" ? employeeId() : employeeId;
   const decision = () => auth.isSuperUserClaimValid === true && employeeAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser, actorUser: auth.user });
   const canWrite = computed(decision);
@@ -21,6 +22,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
   function clear() {
     generation++; unsubscribe?.(); unsubscribe = null; reference = null; owner = null;
     opened.value = false; baseline.value = null; draft.value = null; draftAtOpen = null; pendingComparison = null; displayEdited = false; conflict.value = false; uncertain.value = false; canRetryCreate.value = false; loading.value = false;
+    conflictWhileSaving = false;
   }
   function currentOwner() { return `${auth.companyId}/${auth.uid}`; }
   function verifyOwner() { if (!decision() || currentOwner() !== owner) throw new Error("編集権限を確認できません。"); }
@@ -35,8 +37,13 @@ export function useEmployeeEditor({ operation, employeeId }) {
   function subscribe() {
     unsubscribe?.(); const ticket = generation;
     unsubscribe = onSnapshot(reference, (snapshot) => {
-      if (ticket !== generation || snapshot.metadata.fromCache || busy.value) return;
-      if (!snapshot.exists() || snapshot.data().employmentStatus !== "ACTIVE" || ownedFields.some((field) => !equal(snapshot.data()[field], baseline.value?.[field]))) conflict.value = true;
+      if (ticket !== generation || snapshot.metadata.fromCache) return;
+      if (!snapshot.exists() || snapshot.data().employmentStatus !== "ACTIVE" || ownedFields.some((field) => !equal(snapshot.data()[field], baseline.value?.[field]))) {
+        // A successful save may emit its own snapshot before the Callable returns.
+        // Keep the notification until the result is known, without replacing draft.
+        if (busy.value) conflictWhileSaving = true;
+        else conflict.value = true;
+      }
     }, () => { if (ticket === generation) { conflict.value = true; message.value = "最新情報を取得できません。再読込してください。"; } });
   }
   async function open() {
@@ -97,7 +104,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
   }
   async function save() {
     if (busy.value || loading.value || conflict.value || uncertain.value || !draft.value) return null;
-    verifyOwner(); busy.value = true; message.value = ""; const ticket = generation; let sent = false;
+    verifyOwner(); conflictWhileSaving = false; busy.value = true; message.value = ""; const ticket = generation; let sent = false;
     try {
       const input = requestInput();
       // Validate the exact operation candidate, without mutating the listener model.
@@ -118,7 +125,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
       if (ticket !== generation) return null;
       const code = String(error?.code || "").replace("functions/", "");
       uncertain.value = sent && !["invalid-argument", "permission-denied", "unauthenticated", "failed-precondition", "not-found", "aborted"].includes(code);
-      if (code === "aborted") conflict.value = true;
+      if (code === "aborted" || conflictWhileSaving) conflict.value = true;
       message.value = uncertain.value ? "保存結果が不明です。入力を保持しています。再送せず登録結果を確認してください。" : "保存できませんでした。入力を保持しています。入力内容・権限・最新値を確認してください。";
       return null;
     } finally { busy.value = false; }

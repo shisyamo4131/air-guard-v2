@@ -33,6 +33,38 @@ test("EMP02 editor keeps live immutable, ignores unrelated fields, and holds dra
 test("EMP02 editor never backfills missing optional fields merely on open", async () => {
   const h = await harness(); const raw = h.raw(); delete raw.remarks; delete raw.dateOfTermination; h.setRaw(raw); await h.editor.open(); h.editor.update({ title: "主任" }); await h.editor.save(); assert.deepEqual(h.calls[0].input.changes, { title: "主任" });
 });
+
+test("EMP08 pending save keeps same-section conflicts after definitive rejection until explicit reload", async () => {
+  for (const code of ["permission-denied", "invalid-argument", "failed-precondition", "unauthenticated", "not-found"]) {
+    const h = await harness(); await h.editor.open(); h.editor.update({ title: "入力保持" });
+    let reject; h.setResponse(() => new Promise((_, fail) => { reject = fail; }));
+    const pending = h.editor.save(); assert.equal(h.calls.length, 1);
+    h.setRaw({ ...h.raw(), remarks: "同じsectionの外部変更" }); h.notify();
+    reject({ code: `functions/${code}` }); await pending;
+    assert.equal(h.editor.uncertain.value, false);
+    assert.equal(h.editor.conflict.value, true, code);
+    assert.equal(h.editor.draft.value.title, "入力保持");
+    await h.editor.save(); assert.equal(h.calls.length, 1, "stale draft cannot be sent again");
+    await h.editor.reload(); assert.equal(h.editor.conflict.value, false);
+    assert.equal(h.editor.draft.value.remarks, "同じsectionの外部変更");
+    assert.equal(h.editor.draft.value.title, null);
+  }
+});
+
+test("EMP08 unrelated pending snapshot and own-save success do not create a false conflict", async () => {
+  const h = await harness(); await h.editor.open(); h.editor.update({ title: "主任" });
+  let reject; h.setResponse(() => new Promise((_, fail) => { reject = fail; }));
+  const pending = h.editor.save();
+  h.setRaw({ ...h.raw(), nationality: "別section" }); h.notify();
+  reject({ code: "functions/permission-denied" }); await pending;
+  assert.equal(h.editor.conflict.value, false); assert.equal(h.editor.draft.value.title, "主任");
+  let resolve; h.setResponse(() => new Promise((yes) => { resolve = yes; }));
+  const success = h.editor.save();
+  h.setRaw({ ...h.raw(), title: "主任", uid: "actor" }); h.notify();
+  assert.equal(h.editor.conflict.value, false, "wait for the authoritative save result");
+  resolve({ data: { success: true } }); await success;
+  assert.equal(h.editor.opened.value, false); assert.equal(h.editor.conflict.value, false);
+});
 test("EMP02 editor preserves Timestamp nanos in membership expected", async () => {
   const h = await harness(); h.setRaw({ ...h.raw(), dateOfHire: { seconds: 1767193200, nanoseconds: 123, toDate: () => contract.parseDate("2026-01-01") } }); await h.editor.open(); h.editor.update({ dateOfHire: contract.parseDate("2026-01-02") }); await h.editor.save(); assert.deepEqual(h.calls[0].input.expected.dateOfHire, ["timestamp", 1767193200, 123]);
 });

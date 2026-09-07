@@ -52,6 +52,12 @@ Employeeに関連するFUT-0075〜0079、0126、0143、0146、0159、0181を、�
 
 将来日退職・実再雇用、archive restore・匿名化・purge、項目別閲覧や法令/監査制度、全Air manager改修は別判断を維持する。既存Dev data・予約/Auth状態・provider運用はEMP-09または各将来工程で確認する。分類根拠と実測は[EMP-07記録](../verification/employee-07-independent-issues.md)を参照する。
 
+## EMP-08での統合是正
+
+認可用User購読の取得失敗は、通常の権限拒否や空一覧と分離し、既存の一覧error・再読込へ渡す。再試行では現在identity/actorを再確認してUser購読を再開し、旧callback・cache由来snapshot・dispose後の再開を拒否する。共有readerのscopeとPII cacheも失効させる。
+
+通常editorは保存待機中の同section変更通知を保持し、確定拒否後に競合状態へ反映する。入力は保持し、再保存は明示再読込まで停止する。別sectionの通知と自身の保存成功は誤った競合にしない。仕様・保存field・認可・画面の文言や配置は維持する。実測と完了判断は[EMP-08記録](../verification/employee-08-local.md)とroadmapを参照する。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。

@@ -64,7 +64,7 @@ export function useEmployeeList({ status, search, fetchAllOnEmpty = false }) {
   return {
     docs,
     loading: computed(() => access.loading.value || loading.value),
-    error,
-    reload: session.reload,
+    error: computed(() => access.error.value || error.value),
+    reload: () => access.error.value ? access.reload() : session.reload(),
   };
 }

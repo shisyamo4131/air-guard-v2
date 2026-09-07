@@ -28,6 +28,7 @@
 | Employee EMP-05 local実装・検証 | [Employee EMP-05 local実施記録](employee-05-local.md) |
 | Employee EMP-06 一覧・User画面・統括退職 local実装・検証 | [Employee EMP-06 local実施記録](employee-06-local.md) |
 | Employee EMP-07 独立課題の分類・確認 | [Employee EMP-07 独立課題確認記録](employee-07-independent-issues.md) |
+| Employee EMP-08 Local統合確認 | [Employee EMP-08 Local統合確認記録](employee-08-local.md) |
 | PowerShell検証gateのNorton再検知防止 | [PowerShell検証runtime hardening記録](norton-powershell-gate-hardening.md) |
 | 検証選択の判断 | [ADR 0040](../decisions/0040-impact-based-staged-verification.md) |
 | 文書責務と最終状態検証の判断 | [ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md) |

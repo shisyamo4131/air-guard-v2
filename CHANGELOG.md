@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- EMP-08の統合reviewで、Employee認可情報の取得失敗が空一覧になる経路と、保存待機中の変更通知が確定拒否後に失われる経路を是正した。既存のerror・再読込・競合表示へ接続し、文言・配置・保存契約を維持する。工程別再受入れと最終検証は[EMP-08記録](docs/verification/employee-08-local.md)を参照。
+
 - Nortonの`IDP.HELU.PSE90`再検知防止として、repository-owned PowerShell gateをPowerShell 7の`pwsh -NoProfile`へ移行し、`-ExecutionPolicy Bypass`、検証文字列のBase64復号、容量fixtureの子`powershell.exe`を除去した。通常検証、Temp負例fixture、容量回帰を個別実行し、各段階後に利用者がNortonの新規検出なしを確認した。製品code、UI、Dev/Prod、remote、実dataとNorton保護・除外設定は変更していない。[判断](docs/decisions/0061-powershell-verification-runtime-hardening.md)と[実測記録](docs/verification/norton-powershell-gate-hardening.md)を参照。
 
 - EMP-07でEmployee関連FUTを現在仕様・実装・到達経路へ一括照合した。EMP-08を阻害する未修正問題は確認されなかったため製品code・UIを変更せず、将来日退職/再雇用、restore/匿名化/purge、privacy/監査制度、全Air manager改修、Dev既存data確認へ分類した。対象272件と全domain 1501件が成功し、Employee進捗を85%から90%へ更新した。[EMP-07記録](docs/verification/employee-07-independent-issues.md)を参照。
