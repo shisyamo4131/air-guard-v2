@@ -44,13 +44,15 @@ No.10はU8-1〜U8-7を終えてから提示する。No.10の提示そのもの�
 
 No.10へ進む前に次を確認する。UI確認は機能検証を再実行するためではなく、利用者が4マスターを横断して見た目と操作感を最終確認するために行う。既に起動しているChromeと有効なLocal環境を再利用し、各マスターを1つずつ確認して結果を記録する。実際の保存停止通知だけはNo.10実行開始直前に行い、それ以前の確認完了だけで停止済みとは扱わない。
 
-- [ ] **U8-1 Customer UI**: `/customers`とCustomer詳細で、一覧構成、状態filter、状態表示、作成／編集、契約終了／復帰、archive導線の見た目と操作感を確認し、受入れまたは変更希望を示す。
-- [ ] **U8-2 Site UI**: `/sites`、Site詳細、`/sites/terminated`で、一覧構成、検索、作成／編集、終了／再有効化、終了済み一覧、archive導線の見た目と操作感を確認し、受入れまたは変更希望を示す。
-- [ ] **U8-3 Outsourcer UI**: `/outsourcers`で、一覧構成、検索、作成／編集、状態変更、選択操作、delete／archive入口がないことを確認し、受入れまたは変更希望を示す。
-- [ ] **U8-4 Employee UI**: `/employees`、Employee詳細、`/employees/resigned`で、一覧構成、検索、作成／編集、国籍・security・資格・保険、終了／復帰、退職済み一覧、archive表示の見た目と操作感を確認し、受入れまたは変更希望を示す。
-- [ ] **U8-5 Dev利用状況・停止条件**: 回答済みの3区分を前提に、区分1の保存を短時間停止できること、区分2は非本番UI確認用として切替中の不整合を許容すること、区分3をCodexの合成testに使うことを最終確認する。actual cutover開始直前には区分1の停止後、「停止しました」と通知し、Rules反映開始からHosting反映・reload・技術smoke完了まで維持する。
-- [ ] **U8-6 account利用可否**: 区分3で、会社管理者相当のwrite actorとread-only actorを既存accountで利用できるかを確認する。accountが不足する場合、作成・role変更はremote data変更としてNo.10のexact対象へ追加し、別途承認する。
-- [ ] **U8-7 No.10の承認対象**: No.10ではremote read、Dev build、Indexes／Functions／Rules／Hosting deploy、合成data操作、必要と判明した場合だけのIAM／data対応を分離し、actual target・command・作用・rollbackとともに提示することを確認する。これは実行承認そのものではなく、No.10で個別に明示承認する。
+- [x] **U8-1 Customer UI**: 利用者が一覧・詳細と主要管理導線を確認した。簡単に修正できる箇所は利用者が反映し、機能面はDev受入れへ進められると判断した。
+- [x] **U8-2 Site UI**: 利用者が一覧・詳細・終了済み一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-3 Outsourcer UI**: 利用者が一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-4 Employee UI**: 利用者が一覧・詳細・退職済み一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-5 Dev利用状況・停止条件**: 3区分の扱いと短時間停止条件を確定した。actual cutover開始直前には区分1の停止後、利用者が「停止しました」と通知し、Rules反映開始からHosting反映・reload・技術smoke完了まで維持する。
+- [x] **U8-6 account利用可否**: 区分3の既存accountを受入れの基本とし、不足が判明した場合だけ作成・role変更をNo.10のexact対象へ追加して別途承認する。資格情報はchatやrepositoryへ記録しない。
+- [x] **U8-7 No.10の承認対象**: remote read、Dev build、Indexes／Functions／Rules／Hosting deploy、合成data操作、必要と判明した場合だけのIAM／data対応を分離し、actual target・command・作用・rollbackとともにNo.10で提示する。これは実行承認そのものではなく、No.10で個別に明示承認する。
+
+利用者は2026-09-07に、4マスター管理機能のUIを概ね確認し、機能面についてDev受入れへ進めると判断した。役割が類似するcomponentの共通化、画面ごとに異なるcomponent境界、DataTable／DataIteratorを含むデザイン統一は未完了の機能改修ではなく、Dev受入れ完了後の別phaseで扱う。
 
 ## account最小構成
 

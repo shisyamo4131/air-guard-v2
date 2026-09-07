@@ -32,7 +32,10 @@ watch(search, async (value) => {
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    class="align-start"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <v-card class="fill-height d-flex flex-column" width="100%">
       <v-toolbar class="mb-4 bg-transparent" density="compact">
         <AtomsSearchTextField v-model="search" />

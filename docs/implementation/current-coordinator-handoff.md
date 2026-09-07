@@ -35,7 +35,7 @@
 - [x] No.5で旧clientの書込み互換を前提にできない範囲、更新・再ログイン、boundedな無書込み時間帯、Indexes→Functions安全化→server closure→Rules→Hostingの順序、schedulerとEmployee archive tenant開放の分離、rollback境界を具体化した。[No.5 release順序](master-dev-release-surfaces.md#no5-旧clientと反映順序)を参照する。live Devの利用者・remote revision・index状態は後続Checkpointで確認する。
 - [x] No.6でmaster別の既存data確認範囲、既存証拠の再利用、remoteで必要なSite／Employee参照索引確認、indexのREADY／保留／不要判定を限定した。初回releaseはEmployee archive allowlistを空、Site自動終了を未公開に保ち、補完・migrationを前提にしない。[No.6 data・index範囲](master-dev-release-surfaces.md#no6-既存dataindex確認範囲)を参照する。
 - [x] No.7は初回releaseとdata作用を伴う後段を分離し、利用者から確認できた3区分のDev運用条件に基づく簡素化、backup適否、停止条件、forward correction／限定repair、解除条件を具体化した。利用者は2026-09-07に、初回は区分1だけの短い手動停止、区分3の合成data受入れとし、全体snapshot／全tenant scan／maintenanceを省略する方針を承認した。既存Admin SDKの不完全backupは全面復旧根拠に使わない。[No.7 backup・停止・rollback](master-dev-release-surfaces.md#no7-backup停止rollback計画)を参照する。
-- [ ] No.8で受入れ用の会社・権限別account・合成data、許可する操作、外部作用、終了後の処置とNo.10前後の担当を[受入れ計画](master-dev-acceptance-plan.md)へ具体化した。利用者は2026-09-07にDev受入れ前の4マスター全体UI確認と、task冒頭の利用者担当事項すべてのU8統合を指定した。起動中Chromeを再利用してU8-1〜U8-4を1マスターずつ確認し、Dev利用状況・停止条件、account、No.10承認対象をU8-5〜U8-7で確認する。
+- [x] No.8で受入れ用の会社・権限別account・合成data、許可する操作、外部作用、終了後の処置とNo.10前後の担当を[受入れ計画](master-dev-acceptance-plan.md)へ具体化した。利用者は2026-09-07に4マスター全体のUIを概ね確認し、簡単な修正を反映したうえで、機能面はDev受入れへ進められると判断した。component責務・分割粒度・デザイン統一はDev受入れ後の別phaseで扱う。
 
 ### マスター固有の準備
 
@@ -57,18 +57,11 @@
 - [ ] 最終release差分を[verification policy](../../governance/verification-policy.json)で分類し、必要gateと証拠失効条件を固定する。Dev buildは承認済みcheckpointのexact commandで行い、sourceとartifact、接続先、Emulator無効を確認する。
 - [ ] Dev反映前の未確認事項・必要承認を明記し、具体的な反映計画と受入れ表を利用者へ渡す。未承認・未検証が残る間は反映準備完了としない。
 
-### 利用者確認待ち
+### No.9の開始点
 
-1. [U8-1] Customerの一覧・詳細・状態filter・状態表示・作成／編集・終了／復帰・archive導線のUIを受け入れるか、変更希望があるか。
-2. [回答済み] Devは利用者自身の会社、UI改善意見用の知人会社、Codex合成test会社の3区分。利用者会社は任意停止可能、知人会社は本番運用でなくdata不整合を許容、Codex会社は通常利用会社と同じ保全を不要とする。実ID・名称・accountは記録しない。認可・tenant分離・User/Auth削除等の安全境界は緩和しない。
-3. [U8-2] Siteの一覧・詳細・終了済み一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
-4. [U8-3] Outsourcerの一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
-5. [U8-4] Employeeの一覧・詳細・退職済み一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
-6. [U8-5] 回答済みの3区分を前提に、区分1の短時間停止、区分2の非本番運用、区分3の合成test利用をNo.10の運用条件として確定する。実際の停止通知はNo.10実行直前に行う。
-7. [U8-6] 区分3で会社管理者相当とread-onlyの既存accountを利用できるか。資格情報をchatへ記載させない。
-8. [U8-7] No.10でremote read、Dev build／deploy、合成data、必要時だけのIAM／data対応を分離し、actual target・command・作用・rollbackを提示してから実行承認することを確認する。
+No.8の利用者事前確認U8-1〜U8-7は完了した。現在の次作業はNo.9であり、利用者修正を含む4マスターUI差分を最終レビューし、意図した見た目・layout変更と機能変更を区別する。viewport高さ・DataTable内scrollの回帰testを差分へ合わせ、既存証拠の再利用可否を4点照合したうえで、失効した範囲だけを検証する。最終差分をreview済みrelease candidateとしてcommitし、必要な文書・domain・diff・承認済みlocal UI build gateを一度だけ最終状態へ結び付ける。
 
-U8-1〜U8-7への回答はまだ得ていない。branch境界の承認と3区分の利用状況回答は完了済みで再確認しないが、cutover条件はU8-5で確定する。remote read、Dev build/deploy、実data変更、migration、IAM変更等は[環境・承認rule](../project-rules/environment-and-approval.md)と既存runbookへ照合し、No.10でactual対象を示して必要な承認を得る。今回の引継ぎで権限を拡張しない。
+No.9ではDev、remote、実data、migration、IAMを変更しない。No.9完了後、No.10のactual target、commit、service、command、data作用、停止条件、rollbackを提示して利用者の明示承認を得る。区分1の実際の停止通知はNo.10実行直前、反映済みDevの見た目・使い勝手の最終受入れはdeploy後である。
 
 ### 今回の停止点より後の作業
 

@@ -33,7 +33,10 @@ const {
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    class="align-start"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <OutsourcersManager
       class="fill-height"
       :docs="items"

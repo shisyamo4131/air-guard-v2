@@ -56,16 +56,19 @@ watch(selectedStatus, subscribe);
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container class="align-start"
+  style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <v-card class="fill-height d-flex flex-column" width="100%">
-      <v-toolbar class="mb-4 bg-transparent" density="compact">
+      <v-toolbar class="ps-4">
         <AtomsSearchTextField v-model="search" />
         <v-select
           v-model="selectedStatus"
           :items="statusOptions"
           label="状態"
           density="compact"
-          variant="outlined"
+          variant="solo"
+          flat
           hide-details
           class="mx-2"
           style="max-width: 180px; min-width: 120px"
@@ -77,7 +80,7 @@ watch(selectedStatus, subscribe);
         </CustomerCreateDialog>
       </v-toolbar>
       <CustomersDataTable
-        class="flex-grow-1"
+        class="flex-grow-1 overflow-hidden"
         :items="customerInstance.docs"
         :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
         hide-search
