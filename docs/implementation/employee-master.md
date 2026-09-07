@@ -46,6 +46,12 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 退職actorはstrict preset検証を通過した会社管理者・人事・統括をserver/clientで許可する。統括は現packageの`employees:terminate`を持たないため、検証済みrolesにexact `manager`がある場合を専用policyで追加した。直接permission文字列、未知role混在、無効・仮・他tenant・super-user・本人、管理者User連携対象など既存拒否は維持する。結果と未検証は[EMP-06 local記録](../verification/employee-06-local.md)を参照する。
 
+## EMP-07での独立課題分類
+
+Employeeに関連するFUT-0075〜0079、0126、0143、0146、0159、0181を、現在の仕様・EMP-02〜06実装・到達経路・対象testへ再照合した。EMP-08のLocal統合を止める未修正の製品問題は確認しなかったため、加点目的の製品code・UI変更は行わない。到達しない旧data layer・legacy表示componentも、削除による価値と回帰範囲が現在目的にないため変更しない。
+
+将来日退職・実再雇用、archive restore・匿名化・purge、項目別閲覧や法令/監査制度、全Air manager改修は別判断を維持する。既存Dev data・予約/Auth状態・provider運用はEMP-09または各将来工程で確認する。分類根拠と実測は[EMP-07記録](../verification/employee-07-independent-issues.md)を参照する。
+
 ## 現行経路の再照合
 
 2026-09-06、EMP計画/EMP-01で当時のcode、installed schema、Rules、test sourceを再照合した。以下は改修前の静的確認履歴であり、上記の実装差分で置換された経路を含む。runtime・実data・Devの現在状態の証拠にはしない。工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、未採用契約の判断は[確認事項台帳](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を正とする。
