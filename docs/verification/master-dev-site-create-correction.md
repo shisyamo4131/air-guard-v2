@@ -27,7 +27,8 @@ Siteを登録できない一般的な状態ではない。初回Dev Rulesでは�
 | Chrome Local UIの同条件Site作成 | 保存成功し詳細画面へ遷移 | UI操作のため非該当 |
 | `node --test test/domain/*.test.mjs` | 1509/1509成功 | 0 |
 | `npm run test:local` | 182/182成功 | 0 |
-| `npm run test:local:ui:build` | dirty/uncommitted sourceを拒否するpreconditionで停止 | 1 |
+| `npm run test:local:ui:build`（補正前の試行） | dirty/uncommitted sourceを拒否するpreconditionで停止 | 1 |
+| `npm run test:local:ui:build`（commit `c1be8faf`） | 専用Local UI build成功 | 0 |
 
 `npm run test:local`の拒否actor・不正shapeケースでは期待された`PERMISSION_DENIED`や一部の評価上限ログが出るが、全ケースが拒否・write 0を確認してsuiteは成功した。正規のCustomer紐付け・座標ありcreateは追加回帰と実UIの双方で成功した。
 
@@ -54,7 +55,6 @@ Siteを登録できない一般的な状態ではない。初回Dev Rulesでは�
 
 ## 残作業・rollback
 
-- Git commitの明示承認後、clean HEADで専用UI buildを再実行する。
 - 外部操作の明示承認後、補正版Firestore RulesだけをDevへ反映し、同条件のSite作成を再試行する。
 - Dev再試行に失敗した場合は追加serviceを反映せず停止し、Rulesログと保存payloadの差だけを再診断する。
 - 補正を採用しない場合は本checkpointのowned diffをrevertする。Local/Devの合成dataは別承認なしに削除しない。

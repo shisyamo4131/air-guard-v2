@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-SITE-09の初回Dev反映後、Customer紐付け・座標ありSite作成だけがRules評価上限で停止した。補正は[検証記録](../verification/master-dev-site-create-correction.md)のとおりLocalで確認済みである。次の承認点は、cleanな補正commitを作成して専用UI buildを完了すること、その後に補正版Firestore RulesだけをDevへ反映して同条件のSite作成を再試行することである。Hosting・Functions・Indexesの再反映、合成data削除、Prod・migrationはこの補正へ含めない。
+SITE-09の初回Dev反映後、Customer紐付け・座標ありSite作成だけがRules評価上限で停止した。補正は[検証記録](../verification/master-dev-site-create-correction.md)のとおりLocalで確認し、`c1be8faf`へのcommitとclean HEADの専用UI buildまで完了した。次の承認点は、補正版Firestore RulesだけをDevへ反映して同条件のSite作成を再試行することである。Hosting・Functions・Indexesの再反映、合成data削除、Prod・migrationはこの補正へ含めない。
