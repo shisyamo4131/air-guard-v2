@@ -44,7 +44,7 @@ test("Employee lists use the dedicated scoped reader and keep their existing cre
 
   assert.match(active, /status: Employee\.STATUS_ACTIVE/);
   assert.match(active, /fetchAllOnEmpty: true/);
-  assert.match(active, /\n\s+show-create\n/);
+  assert.match(active, /<EmployeesManager[\s\S]*?\bshow-create\b/u);
   assert.match(resigned, /status: Employee\.STATUS_RESIGNED/);
   assert.doesNotMatch(resigned, /show-create/);
   assert.doesNotMatch(`${active}\n${resigned}`, /useDocuments|useEmployeesResigned/);

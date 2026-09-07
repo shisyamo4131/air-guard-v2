@@ -25,13 +25,14 @@ const emit = defineEmits(["update:search", "click:detail", "create", "reload"]);
         title="従業員の新規登録"
         @saved="emit('create', { docId: $event.employeeId })"
       >
-        <template #default="{ open, canEdit }"
-          ><v-btn
+        <template #default="{ open, canEdit }">
+          <v-btn
             v-if="canEdit"
             icon="mdi-plus"
             aria-label="従業員を登録"
             @click="open"
-        /></template>
+          />
+        </template>
       </EmployeeEditor>
     </v-toolbar>
     <v-progress-linear v-if="props.loading" indeterminate />

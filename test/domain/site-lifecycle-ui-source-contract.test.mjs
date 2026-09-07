@@ -97,7 +97,10 @@ test("ACTIVE Site list prioritizes normal Sites before elapsed construction cand
   const liveRead = await read("composables/dataLayers/site/useSiteUiReads.js");
   assert.match(source, /getSiteLifecyclePresentation\(left\)\.label\.startsWith\("工期終了"\)/u);
   assert.match(source, /getSiteLifecyclePresentation\(right\)\.label\.startsWith\("工期終了"\)/u);
-  assert.match(source, /if \(leftEnded !== rightEnded\) return Number\(leftEnded\) - Number\(rightEnded\)/u);
+  assert.match(
+    source,
+    /if\s*\(leftEnded\s*!==\s*rightEnded\)\s*return\s+Number\(leftEnded\)\s*-\s*Number\(rightEnded\)/u,
+  );
   assert.match(source, /useActiveSiteLiveRead/u);
   assert.match(liveRead, /where\("status", "==", Site\.STATUS_ACTIVE\)/u);
 });

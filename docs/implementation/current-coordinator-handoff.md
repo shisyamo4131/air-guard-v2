@@ -39,7 +39,7 @@
 
 ### マスター固有の準備
 
-- [ ] Customer: 状態表示・契約終了/復帰・絞込み等の新UIについて、CS-04に残る利用者判断を[U8-1](master-dev-acceptance-plan.md#利用者事前確認)として提示した。利用者受入れ待ちである。[状態roadmap](../roadmaps/customer-status.md)を参照する。
+- [x] Customer: 状態表示・契約終了/復帰・絞込み等の新UIについて、[U8-1](master-dev-acceptance-plan.md#利用者事前確認)で利用者確認を完了した。Dev反映・反映後の最終受入れはCS-04に残る。[状態roadmap](../roadmaps/customer-status.md)を参照する。
 - [x] Customer: archive APIと3参照writer／Rulesの整合、exact対象のactive／same-ID archive／参照確認をNo.6へ固定した。既存flat archive等は自動変換せず、今回の変更だけを理由にCustomer全件保存形式検査を反復しない。[archive roadmap](../roadmaps/customer-archive-safety.md)を参照する。
 - [x] Site: 自動終了候補をACTIVE＋工期終了日時へ限定し、候補に関係する予定field、必要index、公開時期をNo.6・No.7へ固定した。`runDailySiteTermination`はdata確認・snapshot・別承認後まで未公開とする。
 - [x] Site: Site query field、工期派生値、任意revision、archive形状／同ID、埋込みCustomer、直接5参照の確認範囲をNo.6へ固定した。日次snapshotを過去値として推測backfillしない。[Site roadmap](../roadmaps/site.md)を参照する。
