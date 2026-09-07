@@ -262,7 +262,7 @@ remoteで同一定義がREADYなら再作成・再deployしない。不足分だ
 
 ## 後続Checkpointへ渡す未確認事項
 
-1. No.8: [4マスター Dev受入れ計画](master-dev-acceptance-plan.md)へ権限別account、合成data、4マスター全体のUI確認を含む受入れ操作、外部作用、cleanupとNo.10前後の担当を具体化した。起動中Chromeを再利用し、U8-1〜U8-4を1マスターずつ確認後、U8-5〜U8-6の利用者回答を待つ。
+1. No.8: [4マスター Dev受入れ計画](master-dev-acceptance-plan.md)へtask冒頭の利用者担当5項目を照合し、完了済みbranch承認、4マスター全体のUI確認、Dev利用状況・停止条件、権限別account、No.10の外部操作承認境界を統合した。起動中Chromeを再利用し、U8-1〜U8-4を1マスターずつ確認後、U8-5〜U8-7を確定する。
 2. No.9: No.6で必要性を限定したread-only preflight／dry-runに不足するlocal tool、最終差分、gateを確認する。
 3. No.10: actual Dev targetのread-only preflight結果を含むbounded release checkpointを提示し、明示承認後だけbuild／remote変更へ進む。
 
