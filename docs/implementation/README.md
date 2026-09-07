@@ -42,6 +42,7 @@
 - [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Historical。PM交代履歴と旧手順の証拠。
 - [現在の製品作業と再開案内](current-coordinator-handoff.md): 製品の未決事項・承認・次作業から正本へのroute。
 - [Customer Dev反映・受入れ計画](customer-dev-release.md): 既存dataへの影響判断、反映対象、切替・復旧、Devで確認する操作。
+- [4マスター Dev反映前 release surface inventory](master-dev-release-surfaces.md): Customer、Site、Outsourcer、Employeeと参照先の反映候補・対象外。
 
 ## アプリ入口・認証・共通基盤
 

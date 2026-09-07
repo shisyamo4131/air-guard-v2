@@ -30,8 +30,8 @@
 
 ### 共通の準備
 
-- [ ] primary repository、branch、HEAD、未統合差分、4マスター改修の包含を確認する。Employee用branchで横断release作業を始める前に、project ruleに沿ってbranchの作業範囲を決める。
-- [ ] Hosting、Functions、Rules、必要な検索索引と、参照保護で変更した予定・実績・請求・背景処理を洗い出し、反映対象候補と対象外を分ける。
+- [x] No.1でprimary repository、branch、HEAD、未統合差分を確認し、`codex/master-dev-preflight`を4マスターの横断release準備branchとして開始した。No.4で4マスター改修の包含をsource差分と正本へ照合した。
+- [x] Hosting、Functions、Rules、必要な検索索引と、参照保護で変更した予定・実績・請求・背景処理を洗い出し、反映対象候補と対象外を分けた。[No.4 release surface inventory](master-dev-release-surfaces.md)を参照する。
 - [ ] 旧clientの継続利用、更新・再ログイン、client/serverの互換性、反映順序、一時停止の要否を検討する。
 - [ ] 変更差分とreader/writerから、既存data確認が必要なfield・利用経路・範囲を絞る。全件診断・一括修復・migrationを一律前提にしない。
 - [ ] 対象commit・service・data影響・必要なbackup・停止条件・復旧・検証を具体化した反映計画を提示する。実行手順は[Dev runbook](../runbooks/dev-deployment.md)、data対応は[data migration手順](../runbooks/data-migrations.md)へrouteする。
@@ -46,7 +46,7 @@
 - [ ] Outsourcer: 既存data・旧client・実利用actorの確認範囲を決める。会社管理者/strict managerのwrite、契約終了後の選択継続、同じ協力会社の複数配置、archive/delete入口不在をDev確認表へ落とす。[Outsourcer roadmap](../roadmaps/outsourcer.md)を参照する。
 - [x] Employee: 通常archive APIを`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続し、No.3で公開契約・正常/拒否・専用demo分離を検証した。通常用許可設定は既定空集合のまま維持する。実測は[Dev反映前Local検証記録](../verification/employee-dev-preflight-local.md)を参照し、remote公開・tenant開放は別承認とする。
 - [ ] Employee: 日次2種・BillingのEmployee参照索引と実明細の整合を確認する範囲を決め、必要な補完だけを別途具体化する。限定dry-runの成功だけでarchiveを開放しない。
-- [ ] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象へ含める。
+- [x] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象候補へ含めた。exact Functions deploy closureと順序はNo.5で確定する。[No.4 release surface inventory](master-dev-release-surfaces.md#functions)を参照する。
 - [ ] Employee: 既存保険map/世代値の互換性、User/Auth・予約状態、住所の実provider接続などDev固有の確認項目を用意する。[Employee roadmap](../roadmaps/employee.md)、[実装記録](employee-master.md)を参照する。
 
 ### 結果次第で必要となる対応と最終準備
