@@ -29,6 +29,10 @@ test("Companies fallback reserves every protected collection before tenant acces
   assert.ok(exclusionList);
   const excludedCollections = [...exclusionList.matchAll(/"([^"]+)"/gu)]
     .map((match) => match[1])
+    .concat(
+      [...executable.matchAll(/collection != "([^"]+)"/gu)]
+        .map((match) => match[1]),
+    )
     .sort();
   assert.deepEqual(
     excludedCollections,
@@ -58,6 +62,7 @@ test("Companies fallback reserves every protected collection before tenant acces
       "Users",
     ].sort(),
   );
+  assert.match(executable, /^allow read, write: if collection != "Sites" &&/u);
   assert.match(executable, /&& isAuthenticated\(\) && userCompanyId\(\) == companyId;/u);
 });
 
@@ -135,7 +140,7 @@ test("Customer reference collections use explicit guarded matches outside the fa
   );
   assert.match(
     source,
-    /function hasCurrentSiteCustomerSnapshot\(snapshot, customer\) \{\s*return snapshot is map\s*&& snapshot\.keys\(\)\.size\(\) == 6\s*&& snapshot\.keys\(\)\.hasOnly\(\[\s*'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'\s*\]\)\s*&& snapshot\.docId == customer\.docId\s*&& snapshot\.updatedAt == customer\.updatedAt\s*&& snapshot\.code == customer\.code\s*&& snapshot\.name == customer\.name\s*&& snapshot\.abbreviation == customer\.abbreviation\s*&& snapshot\.cutoffDate == customer\.cutoffDate;\s*\}/u,
+    /function hasCurrentSiteCustomerSnapshot\(snapshot, customer\) \{\s*return snapshot is map\s*&& snapshot\.keys\(\)\.hasOnly\(\[\s*'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'\s*\]\)\s*&& snapshot\.docId == customer\.docId\s*&& snapshot\.updatedAt == customer\.updatedAt\s*&& snapshot\.code == customer\.code\s*&& snapshot\.name == customer\.name\s*&& snapshot\.abbreviation == customer\.abbreviation\s*&& snapshot\.cutoffDate == customer\.cutoffDate;\s*\}/u,
   );
   const siteCustomerHelpers = source.match(
     /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function isValidSiteUpdateMetadata/u,

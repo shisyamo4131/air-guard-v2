@@ -154,7 +154,11 @@ service cloud.firestore {
 
     function isValidCustomerLocation(value) {
       return value == null
-        || (value is map
+        || isValidNonNullLocation(value);
+    }
+
+    function isValidNonNullLocation(value) {
+      return value is map
           && value.keys().hasAll(['formattedAddress', 'lat', 'lng'])
           && value.keys().hasOnly(['formattedAddress', 'lat', 'lng'])
           && isRequiredString(value.formattedAddress, 200)
@@ -163,7 +167,7 @@ service cloud.firestore {
           && value.lat <= 90
           && value.lng is number
           && value.lng >= -180
-          && value.lng <= 180);
+          && value.lng <= 180;
     }
 
     function isValidCustomerTokenMap(value) {
@@ -452,12 +456,11 @@ service cloud.firestore {
 
     function isValidSiteLocation(data) {
       return data.location == null
-        ? (!data.keys().hasAny(['geopoint']) || data.geopoint == null)
-        : (isValidCustomerLocation(data.location)
-          && (!data.keys().hasAny(['geopoint'])
-            || (data.geopoint is latlng
-              && data.geopoint.latitude() == data.location.lat
-              && data.geopoint.longitude() == data.location.lng)));
+        ? data.geopoint == null
+        : (isValidNonNullLocation(data.location)
+          && data.geopoint is latlng
+          && data.geopoint.latitude() == data.location.lat
+          && data.geopoint.longitude() == data.location.lng);
     }
 
     function isMatchingSitePrefecture(prefCode, prefecture) {
@@ -467,20 +470,13 @@ service cloud.firestore {
     }
 
     function isValidSiteDerivedFields(data) {
-      return isRequiredString(data.fullAddress, 54)
-        && isRequiredString(data.prefecture, 4)
-        && data.fullAddress == data.prefecture + data.city + data.address
+      return data.fullAddress == data.prefecture + data.city + data.address
         && isMatchingSitePrefecture(data.prefCode, data.prefecture)
-        && data.isTemporary is bool
         && data.isTemporary == (data.customerId == null)
-        && data.hasConstructionPeriod is bool
         && data.hasConstructionPeriod == (data.constructionPeriodStartAt != null
           || data.constructionPeriodEndAt != null)
-        && data.hasConstructionPeriodStartAt is bool
         && data.hasConstructionPeriodStartAt == (data.constructionPeriodStartAt != null)
-        && data.hasConstructionPeriodEndAt is bool
         && data.hasConstructionPeriodEndAt == (data.constructionPeriodEndAt != null)
-        && isRequiredString(data.displayName, 40)
         && data.displayName == (data.hasAbbreviation && data.abbreviation != null
           ? data.abbreviation
           : data.name)
@@ -491,8 +487,6 @@ service cloud.firestore {
       return isRequiredString(data.docId, 128)
         && data.docId == docId
         && isRequiredString(data.uid, 128)
-        && data.createdAt is timestamp
-        && data.updatedAt is timestamp
         && (data.customerId == null || isSafeCustomerId(data.customerId))
         && isNullableString(data.customerName, 20)
         && isNullableString(data.code, 10)
@@ -519,23 +513,20 @@ service cloud.firestore {
         && isValidSiteLocation(data)
         && isNullableString(data.remarks, 200)
         && data.agreementsV2 is list
-        && data.status in ['ACTIVE', 'TERMINATED']
         && isValidSiteDerivedFields(data);
     }
 
     function hasValidSiteCustomerCreate(companyId, data) {
       return data.customerId == null
         ? (data.customer == null && isRequiredString(data.customerName, 20))
-        : (isSafeCustomerId(data.customerId)
-          && hasCurrentSiteCustomerSnapshot(
+        : hasCurrentSiteCustomerSnapshot(
             data.customer,
             get(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(data.customerId)).data
-          ));
+          );
     }
 
     function hasCurrentSiteCustomerSnapshot(snapshot, customer) {
       return snapshot is map
-        && snapshot.keys().size() == 6
         && snapshot.keys().hasOnly([
           'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'
         ])
@@ -674,7 +665,6 @@ service cloud.firestore {
           'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
           'hasConstructionPeriodEndAt', 'displayName', 'tokenMap'
         ])
-        && keys.size() == 34
         && isValidSiteCore(data, docId)
         && hasValidSiteCustomerCreate(companyId, data)
         && data.status == 'ACTIVE'
@@ -1125,7 +1115,12 @@ service cloud.firestore {
     // Companies配下の未定義パスにも同じtenant identity gateを適用する。
     // 個別操作制約を持つcollectionを迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
-      allow read, write: if !(collection in [
+      // Site create has a strict 34-field validator and linked-Customer read.
+      // Reject its overlapping fallback match before evaluating the longer
+      // exclusion list so a valid geocoded create stays within the Rules
+      // expression budget. This is equivalent to keeping "Sites" in the list.
+      allow read, write: if collection != "Sites"
+                              && !(collection in [
                                 "SecurityReportIndexes",
                                 "StripeData",
                                 "ArrangementNotifications",
@@ -1137,7 +1132,6 @@ service cloud.firestore {
                                 "OperationResults",
                                 "Outsourcers",
                                 "Outsourcers_archive",
-                                "Sites",
                                 "Sites_archive",
                                 "SiteOperationSchedules",
                                 "SiteEmployeeHistories",

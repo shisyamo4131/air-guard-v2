@@ -4139,6 +4139,53 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
   }));
 });
 
+test("Site Rules allow a linked Customer create with geocoded location within the expression budget", async () => {
+  const companyId = CODEX_LOCAL_COMPANIES.primary.id;
+  const uid = "site-rules-geocoded-create-admin";
+  const customerId = "site-rules-geocoded-create-customer";
+  const siteId = "site-rules-geocoded-create-site";
+  const tokenMap = Object.fromEntries(
+    Array.from({ length: 56 }, (_, index) => [`synthetic-token-${index}`, true]),
+  );
+  await seedRegisteredUser({
+    uid,
+    pathCompanyId: companyId,
+    companyId,
+    isAdmin: true,
+    roles: [],
+  });
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Customers", customerId),
+      customerRulesData({ docId: customerId, uid, tokenMap }),
+    );
+  });
+  const firestore = authenticatedFirestore(uid, { isSuperUser: false });
+  const customer = (await assertSucceeds(getDoc(doc(
+    firestore,
+    "Companies",
+    companyId,
+    "Customers",
+    customerId,
+  )))).data();
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", siteId),
+    siteRulesData({
+      docId: siteId,
+      uid,
+      customerId,
+      customer: createSiteCustomerProjection(customer),
+      location: {
+        formattedAddress: "合成住所",
+        lat: 35.681236,
+        lng: 139.767125,
+      },
+      geopoint: new GeoPoint(35.681236, 139.767125),
+      tokenMap,
+    }),
+  ));
+});
+
 test("SITE-04 Schedule dedicated writer requires atomic Site revisions and preserves processed results", async () => {
   const actor = await seedSiteArchiveActor({ uid: "site-lifecycle-schedule-admin", isAdmin: true, roles: [] });
   const companyId = actor.companyId, admin = getAdminFirestore(), root = `Companies/${companyId}`;

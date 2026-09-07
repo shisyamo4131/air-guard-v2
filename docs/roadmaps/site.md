@@ -1,11 +1,11 @@
 # Siteマスター改修ロードマップ
 
-- 状態: Local完了（SITE-08完了・SITE-09 Dev受入れ延期）
+- 状態: SITE-09進行中（初回Dev反映後のSite作成補正をLocal検証済み・Dev再反映待ち）
 - 目標: Site masterについて、同一tenantの閲覧・書込み権限、保存契約、Customer所属、終了・再有効化、archive、取極め、検索・表示を段階的に整合させる。
 - 現在の進捗: 95%
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
-- 現在の承認境界: SITE-07までのUI・Functions・予定競合guard・Firestore Rules・自動test・文書をCodex専用localで実装・検証済み。利用者はSITE-08までのlocal実装・検証を承認済みであり、Dev・Prod・remote・実dataの変更・実行はSITE-09の別承認とする。
-- 環境境界: 実装が承認された場合も、SITE-01からSITE-08はCodex専用local仕様・実装・検証を基本とする。SITE-09のDev反映・remote/data確認は、他のマスタ改修とまとめる別承認checkpointで行う。
+- 現在の承認境界: SITE-08までのLocal実装・検証は完了した。SITE-09の初回bounded Dev反映後、会社管理者によるCustomer紐付け・座標ありSite作成がRules評価上限で拒否されることを確認し、補正をLocalで実装・検証した。補正版RulesのDev再反映、Dev再試行、合成dataの処置は別の明示承認まで行わない。
+- 環境境界: 補正済みRulesと回帰testはLocalだけに存在する。Devには初回releaseのRulesが残り、Prod・remote実data・migrationは変更しない。
 
 ## 現状確認
 
@@ -58,7 +58,7 @@
 | SITE-06 取極め契約 | 10 | 10 | Completed | ADR 0053に従い、strict `sites:write`、単価0〜10,000,000円の整数と0円確認、休憩・規定実働0〜1,440分、休憩と勤務区間、締日候補、重複を専用Callableで強制した。適用済みmasterの編集・削除を許可しつつ既存OperationResult snapshotを不変に保ち、専用履歴・revisionを追加せず、Siteの`agreementsV2/uid/updatedAt`だけを保存する。 |
 | SITE-07 一覧・検索・UI整合 | 10 | 10 | Completed | ACTIVE/TERMINATED/仮Siteを独立表示し、会社限定ACTIVE live read、20件client表示、検索・選択・郵便番号の古い応答破棄、loading/error/0件/not-found、終了Site取消時の元選択保持、JSTの両端・片端工期、到達可能なicon操作のbutton/accessible name、manualを整合した。Rules、Functions、schema、writer、保存shapeは変更していない。 |
 | SITE-08 Local統合確認 | 5 | 5 | Completed | 先行の専用UI受入れに加え、利用者許可のLocal Chromeで基本・Customer・取極め編集、背景trigger経由のBilling・SiteEmployeeHistory、既存snapshot不変、予定の日付・現場変更・実績化を確認した。旧data更新Rulesと予定preset readerを修正し、全domain 1155件・Emulator 171件・最終build・独立review・source commitが成功。利用者の明示承認後に生成物cleanupの実行・不存在を確認し、90%から95%へ加点した。詳細は[SITE-08証拠](../verification/site-08-local.md)。 |
-| SITE-09 Dev反映・受入れ | 5 | 0 | Deferred / 別承認 | 他のマスタ改修とまとめたbounded Dev releaseで、旧client、既存data、権限別CRUD・終了・再有効化、関連表示を確認する。未実施のDev受入れを完了扱いしない。 |
+| SITE-09 Dev反映・受入れ | 5 | 0 | In progress / 補正反映待ち | 初回bounded Dev反映は実施済みだが、会社管理者のCustomer紐付け・座標ありSite作成がRules評価上限で拒否された。補正はLocal UI・Emulatorで成功済み。補正版RulesのDev再反映と同条件のDev再試行、残る権限別受入れが完了するまで加点しない。 |
 
 重み合計は100である。本ロードマップ案の作成だけではマイルストーンを加点しない。
 
@@ -86,4 +86,4 @@
 
 ## 次の承認点
 
-SITE-08はLocal試験・修正・最終buildと、利用者の明示承認後の生成物cleanup確認を完了した。次の環境境界はSITE-09であり、既存予定field、archive、取極め、下流snapshotのremote shapeを別承認のpreflightで確認する。未変更transactionの全CRUDへ受入れを広げず、既存FUT-0046と完全snapshot実装は別工程に残す。競合があればapplyせず停止し、Dev・remote・実dataには別承認まで接続しない。
+SITE-09の初回Dev反映後、Customer紐付け・座標ありSite作成だけがRules評価上限で停止した。補正は[検証記録](../verification/master-dev-site-create-correction.md)のとおりLocalで確認済みである。次の承認点は、cleanな補正commitを作成して専用UI buildを完了すること、その後に補正版Firestore RulesだけをDevへ反映して同条件のSite作成を再試行することである。Hosting・Functions・Indexesの再反映、合成data削除、Prod・migrationはこの補正へ含めない。

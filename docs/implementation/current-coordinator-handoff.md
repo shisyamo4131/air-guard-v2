@@ -57,15 +57,17 @@
 - [x] 最終release差分を[verification policy](../../governance/verification-policy.json)で分類し、失効したdomain・文書・差分検証を最終状態へ結び付けた。承認されたlocal UI buildは一度だけ実行し、その後の文書だけの変更がbuild証拠を失効させないことを同policyへ照合した。
 - [x] Dev反映前の未確認事項・必要承認を明記し、[受入れ計画](master-dev-acceptance-plan.md)と[release surface inventory](master-dev-release-surfaces.md)に基づく具体的なNo.10反映案を利用者へ提示する状態にした。remote actual確認、Dev反映、合成data smoke、IAM・data補正は未承認のままであり、自動実行しない。
 
-### No.9の完了とNo.10の停止点
+### No.10の現在地と停止点
 
-No.8の利用者事前確認U8-1〜U8-7とNo.9のrelease候補reviewは完了した。No.9では、利用者修正を含む4マスターUI差分について、意図した見た目・layout変更、機能変更、formatのみの変更を区別し、予期しない保存・認証・tenant・Functions・Rules変更が最終UI修正へ混入していないことを確認した。viewport高さ・DataTable内scrollの既存回帰testは有効であり、source形式だけに依存していた2件のtestを意味を変えずに整合させた。失効したdomain・文書・差分・local UI build gateは完了し、既存Local Emulator証拠は後続UI・文書・test変更によって失効していない。
+No.8の利用者事前確認、No.9のrelease候補reviewと、No.10の初回bounded Dev反映は実施済みである。必要index、対象Functions、Firestore Rules、Hostingを反映し、対象外のSite自動終了とEmployee archive tenant開放は未公開のまま維持した。Devのclean read-only smokeは成功した。
 
-現在の停止点はNo.10の承認前である。No.9ではDev、remote、実data、migration、IAMを変更していない。No.10のremote actual確認、対象commit、service、exact command、data作用、停止条件、rollbackは利用者へ提示して明示承認を得る。区分1の実際の停止通知はNo.10のremote変更直前、反映済みDevの見た目・使い勝手の最終受入れはdeploy後である。
+会社管理者の合成Customer作成は成功したが、そのCustomerを紐付け、非null座標を持つSite作成はFirestore Rulesの1000式評価上限で拒否された。Site documentは作成されなかった。Localで同条件を再現し、fallbackの早期拒否と重複する型・件数検証の整理により、既存のactor・tenant・maintenance・exact schema・Customer projection境界を保ったまま保存成功を確認した。詳細は[補正記録](../verification/master-dev-site-create-correction.md)を正とする。
+
+現在の停止点は、補正差分が未commitで専用UI buildのclean-source preconditionを満たしていない状態である。補正版RulesのDev再反映、Dev Site再試行、Dev合成Customerの処置、Git commitは未承認であり実施しない。Hosting・Functions・Indexesの再反映は本補正には不要である。
 
 ### 今回の停止点より後の作業
 
-DevへのFunctions/Rules/Indexes/Hosting反映、必要なdata変更、反映済みversion・Functions状態・索引準備・browser到達性・正常/拒否経路・logの技術確認、一時停止解除、利用者の権限別受入れは後続である。今回準備する手順・受入れ表には含めるが、Dev反映直前という停止点を越えて実行しない。将来のrestore/purge、transaction全体の刷新、未承認package変更は既存の別工程に残す。
+次は、利用者承認後に補正差分をcommitし、clean HEADで専用UI buildを完了する。その後は別の外部操作承認を得て、補正版Firestore RulesだけをDevへ反映し、同じ会社管理者・Customer紐付け・座標あり条件でSite作成を再試行する。Dev合成dataのcleanupは対象と復旧不能性を確認した別承認で扱う。残る権限別受入れ、将来のrestore/purge、transaction全体の刷新、未承認package変更は既存の別工程に残す。
 
 ## 参照
 
