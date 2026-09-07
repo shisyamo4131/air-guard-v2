@@ -191,7 +191,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 新規登録は在職者一覧から行い、退職者検索には作成入口を設けない。在職一覧は空検索で一覧をフリガナ順に表示し、退職検索は空なら0件とする。通常候補のACTIVE/RESIGNEDと期間内在籍者の既存条件を維持し、新たな在職者限定を加えない。
 - `Employees_archive`のget/listは通常Employeeと同じ会社管理者・統括・人事・労務・法務・管制・経理へ全項目を許可する。同社Userであることだけでは許可しない。通常一覧・選択候補から除外し、直接client CUDとrestoreは拒否する。今回archive管理一覧は新設しない。
 - 通常保存は専用operationを使い、独立draftから変更した所有fieldと必要な派生fieldだけを最新原本へ保存する。未知field・不存在・他section・User/Auth・lifecycleを保持し、直接client CUDと汎用経路の迂回を拒否する。通常可逆fieldはlast-write-winsとし、編集中sectionの外部変更通知時は入力を保持して明示再読込を求める。通知前の競合は残る。入社日、従属情報を消す国籍/警備員flag解除、資格配列、保険操作は局所期待値で古い要求を拒否する。
-- 保険操作では現在mapに加え、Employeeのapplication所有field `insuranceOperationVersions`に保険別の非負safe integerを持ち、成功時に対象だけを増やす。履歴復元で巻き戻さない。新規は3保険とも0、既存はmap全体が不存在の場合だけlegacy 0とし、最初の成功操作で原子的に初期化する。不正値・欠損key・上限超過は拒否する。期待値は表示用Classと分離した同時点のraw snapshotから取得し、取得失敗を不存在とみなさない。詳細な保存・wire・archive snapshot・参照catalogは[Employee設計契約](implementation/employee-master.md#通常保存の技術契約)に従う。
+- 保険操作では現在mapに加え、Employeeのapplication所有field `insuranceOperationVersions`に保険別の非負safe integerを持ち、成功時に対象だけを増やす。履歴復元で巻き戻さない。新規は3保険とも0、既存はinsuranceOperationVersions全体が不存在の場合だけlegacy 0とし、最初の成功操作で原子的に初期化する。不正値・欠損key・上限超過は拒否する。期待値は表示用Classと分離した同時点のraw snapshotから取得し、取得失敗を不存在とみなさない。詳細な保存・wire・archive snapshot・参照catalogは[Employee設計契約](implementation/employee-master.md#通常保存の技術契約)に従う。
+- 保険項目自体が原本に存在しない場合は、未加入・手続きなし・履歴なしの初期状態として操作できる。閲覧・編集開始・取消では書き込まず、最初の成功する操作で対象保険を作成する。保存時は原本の不存在と保存世代を同transactionで照合し、先行登録があれば競合として拒否する。既存のnull・不正な保険mapを初期値で上書きせず、他保険・既存履歴・他sectionを保持する。一括補完は行わない。
 - 段階移行では未移行の警備員登録・資格・保険editorをlocalで一時read-onlyとし、各専用writer完成後に再開する。既存UWB専用操作は維持し、中間状態をDevへ反映しない。今回の実装範囲は参照保護を伴うarchiveまでとし、物理削除の実行機能は後続の専用工程へ分ける。共通物理削除仕様を取り消さず、保持期間・最小ID記録・自動実行等の運用判断はその工程で行う。
 
 ### 外注先

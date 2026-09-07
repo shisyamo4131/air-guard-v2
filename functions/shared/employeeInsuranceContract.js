@@ -39,6 +39,14 @@ export function validateInsuranceRaw(value) {
   validateKnownValues(value);
   for (const entry of value.history) validateKnownValues(entry, true);
 }
+// Defaults are a calculation/draft value only. Keep the Employee raw snapshot
+// absent until an authorized transition commits its complete target map.
+export function insuranceForOperation(raw, kind) {
+  if (!INSURANCE_KINDS.includes(kind)) throw new EmployeeOperationError("invalid-argument");
+  if (!Object.hasOwn(raw, kind)) return new Insurance().toObject();
+  validateInsuranceRaw(raw[kind]);
+  return raw[kind];
+}
 export function parseEmployeeInsuranceInput(input) {
   if (!plain(input) || Object.keys(input).some((key) => !["employeeId", "kind", "action", "changes", "expected"].includes(key)) || !identifier(input.employeeId) || !INSURANCE_KINDS.includes(input.kind) || !Object.hasOwn(INSURANCE_ACTION_FIELDS, input.action) || !plain(input.changes) || !plain(input.expected) || Object.keys(input.expected).length !== 2 || !Object.hasOwn(input.expected, "map") || !Number.isSafeInteger(input.expected.version) || input.expected.version < 0) throw new EmployeeOperationError("invalid-argument");
   const changes = {};
@@ -55,9 +63,9 @@ export function parseEmployeeInsuranceInput(input) {
   return { ...input, changes };
 }
 export function prepareEmployeeInsurance(raw, input) {
-  const versions = insuranceVersions(raw), current = raw[input.kind];
-  validateInsuranceRaw(current);
-  if (versions[input.kind] !== input.expected.version || JSON.stringify(encodeExpected(current)) !== JSON.stringify(input.expected.map)) throw new EmployeeOperationError("aborted", "同じ保険情報が更新されました。入力を保持しています。最新値を読み直してください。");
+  const versions = insuranceVersions(raw), initializeMap = !Object.hasOwn(raw, input.kind);
+  const current = insuranceForOperation(raw, input.kind);
+  if (versions[input.kind] !== input.expected.version || JSON.stringify(encodeExpected(raw[input.kind])) !== JSON.stringify(input.expected.map)) throw new EmployeeOperationError("aborted", "同じ保険情報が更新されました。入力を保持しています。最新値を読み直してください。");
   if (versions[input.kind] === Number.MAX_SAFE_INTEGER) throw new EmployeeOperationError("failed-precondition");
   const model = new Insurance(rawForClass(current));
   try { model[input.action](input.changes); model.validate(); } catch { throw new EmployeeOperationError("invalid-argument", "現在の保険状態では実行できないか、入力が不足しています。"); }
@@ -82,5 +90,5 @@ export function prepareEmployeeInsurance(raw, input) {
     else if (value === undefined) delete nextMap[field];
     else nextMap[field] = value;
   }
-  return { mapChanges, nextMap, versions: { ...versions, [input.kind]: versions[input.kind] + 1 }, legacyVersions: !Object.hasOwn(raw, "insuranceOperationVersions") };
+  return { mapChanges, nextMap, initializeMap, versions: { ...versions, [input.kind]: versions[input.kind] + 1 }, legacyVersions: !Object.hasOwn(raw, "insuranceOperationVersions") };
 }

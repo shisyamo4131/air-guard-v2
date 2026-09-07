@@ -9,7 +9,7 @@ async function save() { if (await props.personal.saveNext()) opened.value = fals
 </script>
 <template>
   <v-btn color="primary" :disabled="personal.disabled.value" @click="opened = true">{{ personal.next.value?.text }}</v-btn>
-  <v-dialog :model-value="opened && editor.opened.value" persistent max-width="600">
+  <v-dialog :model-value="opened && editor.opened.value" persistent scrollable max-width="600">
     <v-card title="下番報告">
       <v-card-text>
         <v-alert v-if="editor.message.value" type="info" class="mb-3">{{ editor.message.value }}</v-alert>

@@ -7,7 +7,7 @@ import * as contract from "../../functions/shared/employeeContract.js";
 import * as insuranceContract from "../../functions/shared/employeeInsuranceContract.js";
 
 function employee() { return new Employee({ docId: "employee", lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: contract.parseDate("1990-01-01"), dateOfHire: contract.parseDate("2026-01-01"), zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }).toObject(); }
-async function harness(operation = "basic") {
+async function harness(operation = "basic", kind = "healthInsurance") {
   let raw = employee(), readError, listener, authWatch, calls = [], messages = [], response = async () => ({ data: { success: true, employeeId: "employee" } });
   const auth = { uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true } };
   const ref = (value) => ({ value });
@@ -21,7 +21,7 @@ async function harness(operation = "basic") {
   const factoryName = operation === "insurance" ? "useEmployeeInsurance" : operation === "certifications" ? "useEmployeeCertifications" : "useEmployeeEditor";
   const source = (await readFile(new URL(`../../composables/application/employee/${factoryName}.js`, import.meta.url), "utf8")).replace(/import[\s\S]*?;\s*/gu, "").replace("export function", "function");
   const factory = new Function(...Object.keys(bindings), `${source}; return ${factoryName};`)(...Object.values(bindings));
-  return { editor: factory({ operation, employeeId: "employee", kind: "healthInsurance" }), auth, calls, messages, setReadError: (value) => { readError = value; }, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
+  return { editor: factory({ operation, employeeId: "employee", kind }), auth, calls, messages, setReadError: (value) => { readError = value; }, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
 }
 test("EMP02 editor keeps live immutable, ignores unrelated fields, and holds draft on rejection", async () => {
   const h = await harness(); await h.editor.open(); h.editor.update({ title: "主任" }); assert.equal(h.raw().title, null);
@@ -99,6 +99,31 @@ test("EMP02 changed Vue files compile", async () => {
 function certificate(name, serialNumber) { return new Certification({ name, serialNumber, type: "TRAFFIC", issueDateAt: contract.parseDate("2026-01-01") }).toObject(); }
 
 const insuranceEnrollment = { enrollmentDateAt: contract.parseDate("2026-01-01"), number: "SYNTHETIC", isProcessing: false };
+for (const kind of contract.INSURANCE_KINDS) test(`EMP-INS ${kind} absent draft cancel writes zero and unknown initialization checks complete map/actor/version`, async () => {
+  const h = await harness("insurance", kind); delete h.raw()[kind];
+  h.raw().insuranceOperationVersions = Object.fromEntries(contract.INSURANCE_KINDS.map((key) => [key, 7]));
+  await h.editor.open("enroll"); assert.equal(h.editor.draft.value.status, "NOT_ENROLLED");
+  h.editor.update(insuranceEnrollment); h.editor.close(); assert.equal(h.calls.length, 0); assert.equal(Object.hasOwn(h.raw(), kind), false);
+  await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
+  h.setResponse(async () => { throw { code: "functions/unavailable" }; }); await h.editor.save();
+  assert.deepEqual(h.calls[0].input.expected, { map: contract.encodeExpected(undefined), version: 7 });
+  await h.editor.save(); assert.equal(h.calls.length, 1);
+  const result = insuranceContract.prepareEmployeeInsurance(h.raw(), insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input));
+  const applied = { ...h.raw(), [kind]: result.nextMap, insuranceOperationVersions: result.versions, uid: "actor" };
+  for (const wrong of [{ ...applied, uid: "other" }, { ...applied, insuranceOperationVersions: { ...result.versions, [kind]: 9 } }, { ...applied, [kind]: { status: result.nextMap.status } }]) {
+    h.setRaw(wrong); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
+  }
+  h.setRaw(applied); await h.editor.reload(); assert.equal(h.editor.opened.value, false); assert.equal(h.calls.length, 1);
+});
+test("EMP-INS present invalid maps remain unavailable and newly appearing map blocks old absent draft", async () => {
+  for (const value of [undefined, null, {}, [], { status: "NOT_ENROLLED" }]) {
+    const h = await harness("insurance"); h.raw().healthInsurance = value; await h.editor.open("enroll");
+    assert.equal(h.editor.draft.value, null); await h.editor.save(); assert.equal(h.calls.length, 0);
+  }
+  const h = await harness("insurance"); delete h.raw().healthInsurance; await h.editor.open("enroll");
+  h.editor.update(insuranceEnrollment); h.setRaw({ ...h.raw(), healthInsurance: new Insurance().toObject() }); h.notify();
+  assert.equal(h.editor.conflict.value, true); await h.editor.save(); assert.equal(h.calls.length, 0);
+});
 test("EMP04 insurance raw read failure never substitutes class metadata defaults", async () => {
   const h = await harness("insurance"); h.setReadError(new Error("offline")); await h.editor.open("enroll");
   assert.equal(h.editor.draft.value, null); await h.editor.save(); assert.equal(h.calls.length, 0);

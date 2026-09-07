@@ -3,7 +3,7 @@ const props = defineProps({ docs: { type: Array, default: () => [] }, search: { 
 const emit = defineEmits(['update:search', 'click:detail', 'create']);
 </script>
 <template>
-  <div>
+  <div class="d-flex flex-column flex-grow-1 overflow-hidden">
     <v-toolbar class="ps-3 mb-4">
       <AtomsSearchTextField :model-value="props.search" :delay="300" @update:model-value="emit('update:search', $event)" />
       <EmployeeEditor v-if="props.showCreate" operation="create" title="従業員の新規登録" @saved="emit('create', { docId: $event.employeeId })">

@@ -3,7 +3,7 @@ defineProps({ controller: { type: Object, required: true }, title: { type: Strin
 </script>
 <template>
   <v-alert v-if="controller.message.value && !controller.opened.value" type="info" class="my-2">{{ controller.message.value }}</v-alert>
-  <v-dialog :model-value="controller.opened.value" persistent max-width="760">
+  <v-dialog :model-value="controller.opened.value" persistent scrollable max-width="760">
     <v-card :title="title">
       <v-card-text>
         <v-progress-linear v-if="controller.loading.value" indeterminate />

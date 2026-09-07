@@ -12,7 +12,7 @@ async function retryCreate() { const result = await editor.retryCreate(); if (re
 <template>
   <slot :open="editor.open" :can-edit="canWrite && (!employee || employee.employmentStatus === 'ACTIVE')" />
   <v-alert v-if="message && !opened" type="info" class="my-2">{{ message }}</v-alert>
-  <v-dialog :model-value="opened" persistent max-width="760">
+  <v-dialog :model-value="opened" persistent scrollable max-width="760">
     <v-card :title="title">
       <v-card-text>
         <v-progress-linear v-if="loading" indeterminate />

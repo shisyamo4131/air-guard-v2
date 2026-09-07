@@ -36,7 +36,7 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 05-Dのarchiveは`employeeArchiveContract.js`で既知raw/入力/actor/envelopeを検証し、`functions/modules/employees/archiveEmployee.js`で現在Auth・User・System・12従属・同ID衝突を同transactionで確認する。コピーは取得rawを使用し、archive作成と通常原本削除を同時に確定する。通常作成の同ID archive拒否、既存7actor read/直接CUD拒否は再利用した。API factoryは通常indexへ公開せず、専用demo entryだけへ接続する。許可tenant設定は通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`と専用用`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を分け、厳密なJSON文字列配列・既定空集合とする。
 
-専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の実装・最終統合をlocalで受け入れた。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
+専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の前回local受入れ判定は2026-09-07のUI回帰確認により撤回した。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
 
 ## 現行経路の再照合
 
@@ -78,7 +78,9 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 | raw保存 | 検証用Classと永続化patchを分け、既存rawのunknown field・不存在・他sectionを保持 | schemaの全beforeUpdateやconverter出力で全体setしない。入力のunknown/dotted field、prototype経由field、非finite値、不正日時は拒否する |
 | 日時と期待値 | wireでは日付入力と局所期待値を別codecで扱う。入力日付は有効なJST暦日を表すYYYY-MM-DDを受け、現schemaに必要なDateへ変換。期待値はTimestampのseconds/nanoseconds・不存在を失わないtag付き値でrawと比較 | 任意Date.parseに委ねず、不正暦日・余分なfield・型偽装を拒否。既存の時刻を期待値codecで日付だけに丸めない。入力変更のない日時fieldは書かない |
 
-editor開始時の期待値は、converterを通さない原本snapshotから、対象field/map・保険世代値・Timestamp精度を同時に取得する。表示用Classとは別のmemory contextに保持し、Class初期化で消えたfieldを「legacy不存在」と扱わない。取得失敗・権限不足・途中の取得状態では保存不可とし、再取得後に開始する。原本snapshotでmapの不存在を確認した場合だけlegacy 0を適用する。新collectionや専用read APIは追加しない。既存raw購読を再利用する場合も原本とcontextの同時点性を維持する。
+editor開始時の期待値は、converterを通さない原本snapshotから、対象field/map・保険世代値・Timestamp精度を同時に取得する。表示用Classとは別のmemory contextに保持し、Class初期化で消えたfieldを「legacy不存在」と扱わない。取得失敗・権限不足・途中の取得状態では保存不可とし、再取得後に開始する。原本snapshotでinsuranceOperationVersions全体の不存在を確認した場合だけlegacy 0を適用する。新collectionや専用read APIは追加しない。既存raw購読を再利用する場合も原本とcontextの同時点性を維持する。
+
+EMP-INS-R1の承認済み互換修正では、原本に対象保険fieldがown propertyとして存在しない場合だけ、入力・遷移計算へ未加入の初期値を渡す。raw baselineとwire期待値は不存在のまま保持し、serverは初期値化前の原本と世代を照合する。最初の成功操作で対象保険の必須初期fieldを含むmapと増加した世代を同transactionで保存する。既存mapは従来の所有field patchを維持し、null・不正map・取得失敗を不存在へ置換しない。他保険を補完せず、閲覧・取消でのwriteは0とする。実装・検証の進行は既存の[検証記録](../verification/employee-05-local.md)へ残す。
 
 編集中のlistener更新で世代値だけを新しくして古いdraftへ組み合わせない。外部変更時は入力を保持して再読込を求め、明示再読込でdraftとraw期待値を一緒に置換する。保存後・再開時も原本snapshotから取得できること、Classに世代値が現れない場合・取得失敗・古い応答を受入れ試験へ追加する。閉じる/tenant・権限変更ではcontextを破棄し、PIIを永続化・log出力しない。
 

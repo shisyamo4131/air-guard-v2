@@ -1,5 +1,7 @@
 # Employee EMP-02〜04 local検証記録
 
+> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を撤回した。以下の既存成功記録は各時点の限定証拠として保持し、現在の再受入れは[Employeeロードマップ](../roadmaps/employee.md)とEMP-UI-R1の結果を参照する。
+
 - 対象: EMP-02 作成・基本・国籍、EMP-03 警備員登録・資格、EMP-04 3保険の保存
 - 実施承認: 2026-09-06「EMP-04まで一気通貫で作業開始」
 - 開始baseline: `9f4ec24d783f0c81fd89a056dc0ff4893f0f83a4`、primary `codex/employee-master-roadmap`

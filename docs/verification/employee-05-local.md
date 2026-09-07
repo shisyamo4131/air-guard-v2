@@ -1,5 +1,7 @@
 # EMP-05 local実施記録
 
+> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を撤回した。以下の既存成功記録は各時点の限定証拠として保持し、現在の再受入れは[Employeeロードマップ](../roadmaps/employee.md)とEMP-UI-R1の結果を参照する。
+
 - checkpoint: EMP-05。内部順序は05-A reader→05-B参照入口→05-C背景保存/整合確認→05-D archive→05-E統合。
 - 開始日: 2026-09-06
 - 開始baseline: primary `C:\Users\seven\projects\AirGuard\air-guard-v2`、branch `codex/employee-master-roadmap`、HEAD `0f884183d3663ce4e13941f8a4aed7811e193d7d`。設計4文書のlocal commitとcleanをrootが確認した。
@@ -459,3 +461,60 @@ EMP-05の全内部単位の成果、独立review、直接test、Emulator、代�
 影響文書はEmployee実装記録・manual・roadmap・本receiptとCHANGELOGを最終状態へ揃えた。採用済み要件/acceptance/data shapeを追加変更していないためspecification・ADR・data契約の別versionは更新しない。新文書/移動はなく既存indexを維持、反復する専用実行設定は既存2 runbookへ反映済み。governance/agent/package/他masterのarchive方式・物理削除運用・外部状態は変更しない。rollbackは対象操作・archive許可を停止し、旧広域writerやUser連鎖削除を再開しない。Devの既存索引、外部provider・通知、全actor/全業務画面の実UI、purge/restoreは今回の成功証拠に含めない。
 
 `E-CLOSEOUT-DOC`は最終5文書を独立照合し、前回P3解消・追加指摘なしとした。75点の計算、local受入れ/Dev未提供、cleanup・非失効証拠・EMP-06停止の整合を確認した。最終stage後検査とlocal commitはrootが所有する。
+
+## EMP-UI-R1 利用者Localでの再確認（2026-09-07）
+
+利用者はEMP-05までを未完了と判断し、サインイン済みChromeのLocal環境で確認→修正を承認した。baselineは `debf77c6995578cbf0e17766a23ccf61525af127`。開始時に前turnのArrangementNotifications/Manager・Employee/Autocompleteのmacro修正2件だけが未コミットだった。確定要件を変えず、旧Managerが担っていたUIを復元する。EMP-06の新規整備へ進まない。
+
+### 修正とreview
+
+- dialog9件へscrollableを復元し、予定複製pickerはv-card-textへ移した。タイトル/actionと本文を分離する。
+- Employees/ManagerとOperation/ArrayManagerのroot flex配置を復元。Operation/ManagerとArrayManagerの既定タイトルは既存Schema.classNameへ戻し、明示labelを優先する。
+- Operation/RowsManagerは既存WorkersDataTable/ArticleDetailsDataTableの表示を再利用し、休憩・残業・OJT・資格と商品コード・金額・合計を復元した。両tableのslot転送を最小追加し、元の既定slot表示を保持する。
+- 表示Classは保存原本へ使わず、WeakMapでraw・配列・原位置へ対応する。重複ID・並び替え・古いsnapshotからの操作を直接検証する。
+- 独立reviewは最初のWorkerChip撤去による再認可後の氏名取得/終端状態表示の回帰をP2で検出した。名前slotへWorkerChipと資格iconを戻し、実consumerのscope復帰試験を追加した。再reviewでP2解消・限定source差分に追加P1/P2なし。
+
+source対象はcomponents配下の Employee/Editor.vue、Employee/Certifications/Manager/index.vue、Insurance/Transition/Manager.vue、Operation/Editor.vue、ArrangementNotifications/Manager/index.vue、ArrangementNotification/Manager/toLeaved.vue、SiteOperationSchedule/Duplicator/index.vue、Employee/ArchiveDialog.vue、CustomerBilling/PaymentDateEditor.vue、Employees/Manager/index.vue、Operation/ArrayManager.vue、Operation/Manager.vue、Operation/RowsManager.vue、Workers/DataTable/index.vue、ArticleDetails/DataTable/index.vue。先行Employee/Autocomplete.vueのmacro修正を保持。testは新employee-ui-restoration.test.mjsと既存operation-editor.test.mjsのrender stub補正だけ。Functions/Rules/schema/保存controllerを変更しない。
+
+### 可視UIの実測と限界
+
+rootだけが利用者Chromeのlocalhost:3000を操作した。利用者Local server・Emulatorの起動/停止、設定変更、データ保存/削除、fixture追加を行わず、通常のメニュー/開閉/scroll/取消で検証した。個人情報・ID・原本全文をこの記録へ転記しない。
+
+- 在職一覧は修正前に左1列へ縮んでいた。修正後は利用可能な横幅へ複数列で表示された。
+- 従業員登録dialogは修正前に本文scrollでタイトルが消えた。修正後、本文を下までscrollしてもタイトルと保存/取消が表示された。資格dialogも開閉・scrollable/body overflowとactionのviewport内配置を確認した。
+- 配置SpeedDialは今回のChromeでは修正前の時点からメニュー、新規予定、作業員選択が開いた。既存予定の編集も開いた。以前の無反応の直接原因を今回再現したとは扱わない。
+- 稼働実績一覧の全幅・空一覧を確認。登録dialogのタイトルは「稼働実績」となり、本文scroll後もタイトルと保存/取消を確認した。確認した2期間は空であり、実績明細の実データ入り表示・行操作を可視UI成功とは記録しない。表の項目・合計・slot・原本位置は合成dataによる直接testの証拠。
+- 保険加入開始は既存Employeeで原本/世代取得エラーを再現。Local Emulator UIで同じ原本を読取り、3保険fieldと世代fieldが表示されないことを確認した。世代field全体の不存在はcontractが0として許容するが、保険map不存在はvalidateInsuranceRawが拒否する。表示Classの「未加入」とraw保存条件は同じでない。データ補完や検証緩和は実施せず未解決とする。
+- console問題の申告は利用者が撤回したため、今回の未解決事項・修正対象から除外する。コンソールの全面解消を追加の完了条件としない。
+
+### 検証と残作業
+
+- developer: `node --test test/domain/employee-ui-restoration.test.mjs test/domain/operation-editor.test.mjs test/domain/employee-editor.test.mjs test/domain/employee-archive-editor.test.mjs` 77/77、exit 0。既存render stubのresolvedLabel補正後はoperation-editor 25/25、Vue warning 0を確認。
+- root: 最終source/testで `node --test test/domain/*.test.mjs` 1462/1462、exit 0。新UI直接試験6件を含む。
+- root文書gate初回は進捗行の注記形式でexit 1。進捗と注記を別行へ補正後、`powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` はexit 0（Markdown 254、ADR 60、roadmap 11、TOML 8）。
+- 最終Chrome確認でも配置SpeedDialから新規予定が開いた。「稼働情報」dialogの本文を末尾へscrollした後も、タイトル上端41px・action下端830pxが高さ855pxのviewport内に残った。保存せず取消し、配置管理へ戻した。
+- change classはUI＋application＋文書。Functions/Rules/認可/永続化契約は無変更につきEmulator包括再実行・governance包括・Dev/Prod releaseは対象外。必須local-ui-buildは未実施・未充足。利用者の稼働中LocalでのHMR確認を専用clean buildの証拠へ読み替えない。専用build/全UI・実data入り明細/保険互換・最終統合が残るためEMP-05までの完了判定と加点は撤回のまま。
+
+仕様/ADR/data契約は要件変更なしで維持。既存実装記録・ロードマップ・本receipt/02〜04receipt・CHANGELOGだけへ受入れ撤回を反映する。索引追加/移動、governance/package変更、Dev/Prod反映はない。rollbackは所有UI差分だけを戻し、旧広域writer・Rulesを復活させない。
+
+## EMP-INS-R1 保険項目不存在の互換修正（2026-09-07）
+
+利用者は「保険項目不存在を未加入の初期状態として入力し、初回成功操作で作成する」修正を承認した。EMP-UI-R1で発見したEMP-04の互換不具合の修正であり、EMP-06を開始しない。baselineは同じ `debf77c6995578cbf0e17766a23ccf61525af127`、先行UI差分を保持する。コンソール問題は申告撤回済みで対象外。
+
+独立設計reviewでは案を妨げるP1/P2なし。own field不存在だけの救済、raw期待値とdraftの分離、初回完全mapと応答不明時の照合結果の一致、通常の未加入状態の遷移制約、最新actor/tenant/在職確認の維持を実装条件にした。原本が存在する場合の不正map・nullを初期化せず拒否する。
+
+対象は保険application、共有遷移contract、専用Employee server writerと直接domain/Emulator回帰。仕様とEmployee設計契約へ採用条件を反映した。migration・一括補完・利用者data保存・Rules・package・外部反映を含まない。rollback時は対象の初回操作を停止し、既に保存済みの有効な保険mapを削除しない。
+
+検証classはapplication-logic＋data-contract-schema-migration＋文書。domain-full、local-emulator-suite、project-docs、diff-checkを選択する。専用buildとEMP全体の再受入れは先行UI修正の残作業として維持する。
+
+### 修正後の確認結果
+
+- 製品sourceは `composables/application/employee/useEmployeeInsurance.js`、`functions/shared/employeeInsuranceContract.js`、`functions/modules/employees/saveEmployee.js` の3件。testは `test/domain/employee-editor.test.mjs`、`test/domain/employee-insurance.test.mjs`、`test/local/codex-local-harness.test.mjs` の3件。初回のみ完全map、既存は部分patchに分岐し、raw期待値と最新認可を維持した。
+- 独立最終reviewは上記6fileと仕様・設計契約を照合し追加P1/P2なし。commit拒否でmapと世代が共に不存在のまま保たれる直接testを補い、rootは最終6fileのhash一致を確認した。
+- rootのChrome確認では、以前失敗した既存Employeeで3保険すべての加入入力が表示された。雇用保険では原本再読込も成功し、いずれも保存せず取消した。利用者の実保険情報の登録・変更は行わず、保存の証拠は専用Emulatorへ分離した。
+- `node --test test/domain/employee-insurance.test.mjs test/domain/employee-editor.test.mjs` はdeveloper実行で77/77、exit 0。`node --check test/local/codex-local-harness.test.mjs` はexit 0。
+- rootの最終 `node --test test/domain/*.test.mjs` は1487/1487、exit 0。commit拒否test追加前の1486件の証拠は置換した。
+- rootの `npm run test:local` は181/181、exit 0。追加HTTP試験は3保険×世代不存在/7で同時初期化2要求の1成功・1競合、完全map・他保険の履歴/精度保持・第3保険の未補完、不正map拒否を検証した。既存6操作とABA等の回帰も成功した。
+- 専用Emulatorはrunner終了後に停止。派生portを含むLISTENなし、一時runtime消失を確認した。runnerの利用者saved-data/専用export指紋比較は成功し、利用者server/Emulatorは元のPIDで稼働を継続した。起動時のCLI認証警告は専用demo testを妨げず、再認証・remote反映は行っていない。
+
+本不具合のcode修正・直接試験・Emulator・加入入力の復旧確認は済み。EMP-01〜05の再受入れ完了・加点とは分け、先行UIの専用build/明細確認とGit統合は残す。今回は仕様・設計契約・CHANGELOG・roadmap・本記録を更新し、新ADR・索引・package・Rules・外部状態は変更しない。文書と差分の最終gateは本記録確定後のcommand reportで確認する。

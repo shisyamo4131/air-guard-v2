@@ -9,7 +9,7 @@ const disabled = computed(() => editor.busy.value || editor.uncertain.value || e
 <template>
   <v-btn class="ml-2" color="secondary" prepend-icon="mdi-pencil" size="small" text="変更" aria-label="入金予定日を変更" :disabled="!editor.allowed.value || editor.busy.value" @click="editor.open" />
   <v-alert v-if="editor.message.value" class="mt-2" density="compact" type="info">{{ editor.message.value }}</v-alert>
-  <v-dialog :model-value="editor.visible.value" :persistent="editor.busy.value" max-width="480" @update:model-value="(value) => { if (!value) editor.close(); }">
+  <v-dialog :model-value="editor.visible.value" :persistent="editor.busy.value" scrollable max-width="480" @update:model-value="(value) => { if (!value) editor.close(); }">
     <v-card title="入金予定日編集">
       <v-card-text>
         <v-text-field label="入金予定日" type="date" :model-value="editor.value.value || ''" :min="editor.baseline.value ? dateInput(editor.baseline.value.billingDateAt) : undefined" :disabled="disabled || !editor.baseline.value" @update:model-value="editor.setValue" />

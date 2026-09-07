@@ -14,6 +14,52 @@ const enroll = { enrollmentDateAt: "2026-01-01", number: "SYNTHETIC", isProcessi
 const request = (raw, action, changes = {}, target = kind) => ({ employeeId: "employee", kind: target, action, changes, expected: { map: encodeExpected(raw[target]), version: insuranceVersions(raw)[target] } });
 const prepare = (raw, action, changes = {}, target = kind) => prepareEmployeeInsurance(raw, parseEmployeeInsuranceInput(request(raw, action, changes, target)));
 const apply = (raw, prepared, target = kind) => ({ ...raw, [target]: prepared.nextMap, insuranceOperationVersions: prepared.versions });
+for (const target of INSURANCE_KINDS) for (const action of ["enroll", "exempt"]) for (const version of [undefined, 0, 7]) {
+  test(`EMP-INS absent ${target}/${action}/version ${version} initializes exactly one complete map`, async () => {
+    const raw = fresh(); delete raw[target];
+    if (version !== undefined) raw.insuranceOperationVersions = Object.fromEntries(INSURANCE_KINDS.map((key) => [key, version]));
+    const other = INSURANCE_KINDS.find((key) => key !== target), stamp = new Timestamp(1767193200, 123456789);
+    raw[other].history = [{ status: "NOT_ENROLLED", unknown: { stamp } }];
+    const beforeOther = encodeExpected(raw[other]), input = request(raw, action, action === "enroll" ? enroll : {}, target);
+    assert.deepEqual(input.expected.map, encodeExpected(undefined));
+    const prepared = prepareEmployeeInsurance(raw, parseEmployeeInsuranceInput(input));
+    assert.equal(Object.hasOwn(raw, target), false);
+    const state = server(raw); await state.save(input);
+    const model = new Insurance(); model[action](parseEmployeeInsuranceInput(input).changes);
+    assert.deepEqual(state.raw()[target], model.toObject());
+    assert.deepEqual(state.raw()[target], prepared.nextMap);
+    assert.deepEqual(state.patches[0][target], prepared.nextMap);
+    assert.ok(Array.isArray(state.raw()[target].history)); assert.equal(state.raw()[target].isProcessing, false);
+    assert.equal(state.raw().insuranceOperationVersions[target], (version ?? 0) + 1);
+    assert.deepEqual(encodeExpected(state.raw()[other]), beforeOther);
+    assert.equal(state.raw().insuranceOperationVersions[other], version ?? 0);
+    assert.equal(state.counts().writes, 1);
+  });
+}
+test("EMP-INS present malformed maps never initialize and absent states only enroll or exempt", async () => {
+  for (const value of [undefined, null, {}, [], { status: "NOT_ENROLLED" }]) {
+    const raw = { ...fresh(), [kind]: value }, state = server(raw);
+    await assert.rejects(state.save(request(raw, "enroll", enroll)), { code: "failed-precondition" }); assert.equal(state.counts().writes, 0);
+  }
+  for (const action of ["enrolled", "cancelEnroll", "loss", "rollback"]) {
+    const raw = fresh(); delete raw[kind]; const state = server(raw);
+    await assert.rejects(state.save(request(raw, action, action === "loss" ? loss : action === "enrolled" ? { number: "OK" } : {})), { code: "invalid-argument" });
+    assert.equal(state.counts().writes, 0); assert.equal(Object.hasOwn(state.raw(), kind), false);
+  }
+});
+test("EMP-INS final transaction rejects concurrent initialization and rechecks permission, retirement and tenant", async () => {
+  for (const [beforeFinal, code] of [
+    [({ raw }) => { raw[kind] = new Insurance().toObject(); }, "aborted"],
+    [({ actor }) => { actor.disabled = true; }, "permission-denied"],
+    [({ raw }) => { raw.employmentStatus = "RESIGNED"; }, "failed-precondition"],
+  ]) {
+    const raw = fresh(); delete raw[kind]; const state = server(raw, { beforeFinal });
+    await assert.rejects(state.save(request(raw, "enroll", enroll)), { code }); assert.equal(state.counts().writes, 0);
+  }
+  const raw = fresh(); delete raw[kind];
+  const state = server(raw, { resolveIdentity: (count) => ({ uid: "actor", companyId: count === 1 ? "company" : "other", isSuperUser: false }) });
+  await assert.rejects(state.save(request(raw, "enroll", enroll)), { code: "permission-denied" }); assert.equal(state.counts().writes, 0);
+});
 function server(raw = fresh(), options = {}) {
   let writes = 0, geocodes = 0, auths = 0, transactions = 0, patches = [];
   const identity = { uid: "actor", companyId: "company", isSuperUser: false };
@@ -22,6 +68,7 @@ function server(raw = fresh(), options = {}) {
     transactions++; if (transactions === 2) options.beforeFinal?.({ raw, actor });
     const pending = [];
     const result = await fn({ get: async (ref) => ({ exists: ref.path.endsWith("/actor") || raw !== null, data: () => ref.path.endsWith("/actor") ? actor : raw }), update: (_, patch) => pending.push(patch) });
+    if (pending.length && options.rejectCommit) throw new Error("commit-rejected");
     for (const patch of pending) {
       patches.push(patch); const next = { ...raw };
       for (const [path, value] of Object.entries(patch)) {
@@ -36,6 +83,15 @@ function server(raw = fresh(), options = {}) {
   return { raw: () => raw, counts: () => ({ writes, geocodes, auths }), patches,
     save: (input) => saveEmployee({ firestore, operation: "insurance", input, resolveIdentity: async () => { auths++; return options.resolveIdentity?.(auths) ?? identity; }, timestamp: () => "server-time", geocode: async () => { geocodes++; throw Error("forbidden"); } }) };
 }
+
+test("EMP-INS initial map and generation remain absent together when commit fails", async () => {
+  const raw = { docId: "employee", employmentStatus: "ACTIVE", unknown: { at: new Timestamp(1767193200, 123456789) } };
+  const before = encodeExpected(raw), state = server(raw, { rejectCommit: true });
+  await assert.rejects(state.save(request(raw, "enroll", enroll)), /commit-rejected/);
+  assert.deepEqual(encodeExpected(state.raw()), before);
+  for (const key of [...INSURANCE_KINDS, "insuranceOperationVersions"]) assert.equal(Object.hasOwn(state.raw(), key), false);
+  assert.equal(state.counts().writes, 0);
+});
 
 for (const target of INSURANCE_KINDS) for (const action of ["enroll", "enrolled", "cancelEnroll", "exempt", "loss", "rollback"]) {
   test(`EMP04 ${target}/${action} matches installed transition and increments only its generation`, async () => {

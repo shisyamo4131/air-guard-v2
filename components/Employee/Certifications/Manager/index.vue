@@ -11,7 +11,7 @@ const { opened, busy, loading, conflict, uncertain, message, draft, action, rows
     <EmployeeCertificationsTable :items="employee.securityCertifications" />
     <v-alert v-if="message && !opened" type="info">{{ message }}</v-alert>
   </v-card>
-  <v-dialog :model-value="opened" persistent max-width="850">
+  <v-dialog :model-value="opened" persistent scrollable max-width="850">
     <v-card title="保有資格の編集">
       <v-card-text>
         <v-progress-linear v-if="loading" indeterminate />

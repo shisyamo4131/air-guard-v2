@@ -2,7 +2,8 @@
 import { useDefaults } from "vuetify";
 import { useConstants } from "@/composables/useConstants";
 import { usePersonalNotification } from "@/composables/application/operation/usePersonalNotification";
-const props = useDefaults(defineProps({ modelValue: { type: Array, default: () => [] } }), "ArrangementNotificationsManager");
+const _props = defineProps({ modelValue: { type: Array, default: () => [] } });
+const props = useDefaults(_props, "ArrangementNotificationsManager");
 const { ARRANGEMENT_NOTIFICATION_STATUS: DEFINITION } = useConstants();
 const personal = usePersonalNotification(DEFINITION), editor = personal.editor;
 const internalDocs = computed(() => props.modelValue.toSorted((a, b) => a.date > b.date ? 1 : a.date < b.date ? -1 : a.shiftType > b.shiftType ? 1 : a.shiftType < b.shiftType ? -1 : 0));
@@ -22,7 +23,7 @@ const internalDocs = computed(() => props.modelValue.toSorted((a, b) => a.date >
       <template #text>現在、あなたの配置情報はありません。<br />配置情報が追加されると、ここに表示されます。</template>
     </v-empty-state>
   </v-card>
-  <v-dialog :model-value="editor.opened.value" persistent max-width="760">
+  <v-dialog :model-value="editor.opened.value" persistent scrollable max-width="760">
     <v-card title="配置通知">
       <v-card-text>
         <v-progress-linear v-if="editor.loading.value || personal.preparing.value" indeterminate />

@@ -3,11 +3,12 @@ import { useFetch } from "@/composables/fetch/useFetch";
 import { useDefaults } from "vuetify";
 
 defineOptions({ inheritAttrs: false });
-const props = useDefaults(defineProps({
+const _props = defineProps({
   modelValue: { type: [String, Object], default: null }, creatable: { type: Boolean, default: false },
   label: { type: String, default: "従業員" }, itemTitle: { type: String, default: "displayName" },
   itemValue: { type: String, default: "docId" }, returnObject: { type: Boolean, default: false }, delay: { type: Number, default: 500 },
-}), "AutocompleteEmployee");
+});
+const props = useDefaults(_props, "AutocompleteEmployee");
 const emit = defineEmits(["update:model-value", "update:search"]);
 const { fetchEmployeeComposable: reader } = useFetch("EmployeeAutocomplete");
 const search = ref(""), requestedSearch = ref(""); let timer;

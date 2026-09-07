@@ -32,7 +32,7 @@ const current = computed(() => props.employee[props.kind]);
       <v-alert v-if="message && !opened" type="info" class="mt-2">{{ message }}</v-alert>
     </v-card-text>
   </v-card>
-  <v-dialog :model-value="opened" persistent max-width="760">
+  <v-dialog :model-value="opened" persistent scrollable max-width="760">
     <v-card :title="`${title}・${labels[action] || '編集'}`">
       <v-card-text>
         <v-progress-linear v-if="loading" indeterminate />

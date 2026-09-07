@@ -401,7 +401,7 @@ test("actual OperationManager template renders absent/empty/custom activators th
   const { compile } = await import("@vue/compiler-dom"), { renderToString } = await import("@vue/server-renderer");
   const render = async (path) => new Function("Vue", compile(parse(await source(path)).descriptor.template.content, { mode: "function", prefixIdentifiers: true }).code)(Vue);
   const button = { setup: (_, { slots }) => () => Vue.h("button", slots.default?.()) };
-  const manager = { inheritAttrs: false, render: await render("components/Operation/Manager.vue"), components: { VBtn: button, OperationEditor: { render: () => null } }, setup: () => ({ activator: { disabled: false }, doc: null, label: "operation", customInput: null, editor: {}, toCreate() {}, toUpdate() {} }) };
+  const manager = { inheritAttrs: false, render: await render("components/Operation/Manager.vue"), components: { VBtn: button, OperationEditor: { render: () => null } }, setup: () => ({ activator: { disabled: false }, doc: null, label: "operation", resolvedLabel: "operation", customInput: null, editor: {}, toCreate() {}, toUpdate() {} }) };
   const wrapper = { inheritAttrs: false, components: { OperationManager: manager }, render: await render("components/SiteOperationSchedule/Manager/index.vue"), setup: () => ({ props: { doc: null, customInput: null } }) };
   for (const mode of ["absent", "empty", "custom"]) {
     const slots = mode === "absent" ? {} : { activator: () => mode === "empty" ? [] : [Vue.h("button", "custom")] };

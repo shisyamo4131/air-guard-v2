@@ -4,7 +4,7 @@ import { httpsCallable } from "firebase/functions";
 import { Insurance } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { employeeAllowed, rawForClass, equal, encodeExpected, dateInput } from "@/functions/shared/employeeContract.js";
-import { insuranceVersions, validateInsuranceRaw, INSURANCE_ACTION_FIELDS, parseEmployeeInsuranceInput, prepareEmployeeInsurance } from "@/functions/shared/employeeInsuranceContract.js";
+import { insuranceVersions, insuranceForOperation, INSURANCE_ACTION_FIELDS, parseEmployeeInsuranceInput, prepareEmployeeInsurance } from "@/functions/shared/employeeInsuranceContract.js";
 
 export function useEmployeeInsurance({ employeeId, kind }) {
   const auth = useAuthStore(); const { $firestore, $functions } = useNuxtApp();
@@ -18,8 +18,8 @@ export function useEmployeeInsurance({ employeeId, kind }) {
   function clear() { generation++; unsubscribe?.(); unsubscribe = null; reference = null; baseline.value = null; draft.value = null; expectedResult = null; opened.value = false; conflict.value = false; uncertain.value = false; loading.value = false; }
   function receive(raw) {
     if (raw.employmentStatus !== "ACTIVE") throw new Error("invalid-state");
-    validateInsuranceRaw(raw[kind]); insuranceVersions(raw);
-    baseline.value = raw; draft.value = new Insurance(rawForClass(raw[kind])).toObject(); conflict.value = false; uncertain.value = false;
+    const current = insuranceForOperation(raw, kind); insuranceVersions(raw);
+    baseline.value = raw; draft.value = new Insurance(rawForClass(current)).toObject(); conflict.value = false; uncertain.value = false;
   }
   function subscribe() {
     unsubscribe?.(); const ticket = generation;

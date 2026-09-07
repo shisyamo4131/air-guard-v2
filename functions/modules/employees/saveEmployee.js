@@ -30,7 +30,7 @@ export async function saveEmployee({ firestore, resolveIdentity, input, operatio
     if (raw.docId !== parsed.employeeId || raw.employmentStatus !== "ACTIVE") throw new EmployeeOperationError("failed-precondition", "在職中の従業員だけを編集できます。");
     if (operation === "insurance") {
       const prepared = prepareEmployeeInsurance(raw, parsed);
-      const patch = Object.fromEntries(Object.entries(prepared.mapChanges).map(([field, value]) => [`${parsed.kind}.${field}`, value === undefined ? FieldValue.delete() : value]));
+      const patch = prepared.initializeMap ? { [parsed.kind]: prepared.nextMap } : Object.fromEntries(Object.entries(prepared.mapChanges).map(([field, value]) => [`${parsed.kind}.${field}`, value === undefined ? FieldValue.delete() : value]));
       if (prepared.legacyVersions) patch.insuranceOperationVersions = prepared.versions;
       else patch[`insuranceOperationVersions.${parsed.kind}`] = prepared.versions[parsed.kind];
       return { raw, patch };

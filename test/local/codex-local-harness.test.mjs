@@ -495,6 +495,42 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
   }
 });
 
+test("EMP-INS missing insurance HTTP initializes complete maps once and rejects concurrent stale initialization", async () => {
+  const actor = await seedSiteLifecycleTransportActor({ uid: "emp-ins-missing-hr", roles: ["human-resource"] });
+  const { Insurance } = await import("@shisyamo4131/air-guard-v2-schemas");
+  const employeeId = "emp-ins-missing-employee", ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
+  const call = (input) => callSiteLifecycleTransport({ actor, functionName: "transitionEmployeeInsurance", data: { employeeId, ...input } });
+  const changes = { enrollmentDateAt: "2026-01-01", number: "SYNTHETIC", isProcessing: false };
+  try {
+    for (const kind of INSURANCE_KINDS) for (const version of [undefined, 7]) {
+      const other = INSURANCE_KINDS.find((key) => key !== kind);
+      const raw = { docId: employeeId, employmentStatus: "ACTIVE", unknown: { keep: true }, [other]: { ...new Insurance().toObject(), history: [{ status: "NOT_ENROLLED", unknown: { at: new AdminTimestamp(1767193200, 123456789) } }] } };
+      if (version !== undefined) raw.insuranceOperationVersions = Object.fromEntries(INSURANCE_KINDS.map((key) => [key, version]));
+      await ref.set(raw);
+      const before = (await ref.get()).data(); assert.equal(Object.hasOwn(before, kind), false);
+      const input = { kind, action: "enroll", changes, expected: { map: encodeExpected(before[kind]), version: insuranceVersions(before)[kind] } };
+      assert.deepEqual(input.expected.map, encodeExpected(undefined));
+      const outcomes = await Promise.all([call(input), call(input)]);
+      assert.equal(outcomes.filter((result) => result.response.status === 200).length, 1, JSON.stringify(outcomes.map((result) => result.payload)));
+      assert.equal(outcomes.filter((result) => result.payload.error?.status === "ABORTED").length, 1);
+      const after = (await ref.get()).data();
+      assert.equal(after[kind].status, "ENROLLED"); assert.equal(after[kind].isProcessing, false); assert.deepEqual(after[kind].history, []);
+      assert.deepEqual(Object.keys(after[kind]).sort(), Object.keys(new Insurance().toObject()).sort());
+      assert.equal(after[kind].enrollmentDate, "2026-01-01"); assert.equal(after[kind].number, "SYNTHETIC");
+      assert.equal(after.insuranceOperationVersions[kind], (version ?? 0) + 1);
+      assert.equal(after.insuranceOperationVersions[other], version ?? 0);
+      assert.deepEqual(encodeExpected(after[other]), encodeExpected(before[other])); assert.deepEqual(after.unknown, before.unknown);
+      const untouched = INSURANCE_KINDS.find((key) => key !== kind && key !== other); assert.equal(Object.hasOwn(after, untouched), false);
+    }
+    for (const invalid of [null, {}]) {
+      await ref.set({ docId: employeeId, employmentStatus: "ACTIVE", healthInsurance: invalid });
+      const response = await call({ kind: "healthInsurance", action: "enroll", changes, expected: { map: encodeExpected(invalid), version: 0 } });
+      assert.equal(response.payload.error.status, "FAILED_PRECONDITION"); assert.deepEqual((await ref.get()).data().healthInsurance, invalid);
+      assert.equal(Object.hasOwn((await ref.get()).data(), "insuranceOperationVersions"), false);
+    }
+  } finally { await ref.delete(); }
+});
+
 test("EMP04 insurance HTTP transitions preserve raw history and reject ABA while separate kinds can commit", async () => {
   const actor = await seedSiteLifecycleTransportActor({ uid: "emp04-transport-hr", roles: ["human-resource"] });
   const employeeId = "emp04-transport-employee";

@@ -56,22 +56,27 @@ const total = computed(() => {
     hide-default-footer
   >
     <template #[`item.code`]="{ item }">
-      {{ cachedArticles[item.articleId]?.code ?? "-" }}
+      <slot name="item.code" :item="item">{{ cachedArticles[item.articleId]?.code ?? "-" }}</slot>
     </template>
     <template #[`item.name`]="{ item }">
-      {{ cachedArticles[item.articleId]?.name ?? "N/A" }}
+      <slot name="item.name" :item="item">{{ cachedArticles[item.articleId]?.name ?? "N/A" }}</slot>
     </template>
     <template #[`item.price`]="{ item }">
-      {{ (item.price ?? 0).toLocaleString() }}
+      <slot name="item.price" :item="item">{{ (item.price ?? 0).toLocaleString() }}</slot>
     </template>
     <template #[`item.amount`]="{ item }">
-      {{ ((item.price ?? 0) * (item.quantity ?? 0)).toLocaleString() }}
+      <slot name="item.amount" :item="item">{{ ((item.price ?? 0) * (item.quantity ?? 0)).toLocaleString() }}</slot>
     </template>
     <template #[`body.append`]>
-      <tr>
-        <td :colspan="headers.length" class="text-right">合計</td>
-        <td class="text-right">{{ total.toLocaleString() }}</td>
-      </tr>
+      <slot name="body.append">
+        <tr>
+          <td :colspan="headers.length" class="text-right">合計</td>
+          <td class="text-right">{{ total.toLocaleString() }}</td>
+        </tr>
+      </slot>
+    </template>
+    <template v-for="name in Object.keys($slots).filter((key) => !['item.code', 'item.name', 'item.price', 'item.amount', 'body.append'].includes(key))" #[name]="scope">
+      <slot :name="name" v-bind="scope ?? {}" />
     </template>
   </air-data-table>
 </template>
