@@ -13,7 +13,7 @@ Schemas sourceでは`@shisyamo4131/air-guard-v2-schemas@3.0.0-dev.1`がtag `v3.0
 package名やversionをprompt・task reportから転記してinstallを開始しない。変更前に次のread-only preflightを実行し、source tag manifest、repository release evidence、現在のroot/Functions manifest・lock chainを確認する。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-schemas-package-adoption.ps1 `
+pwsh -NoProfile -File scripts/check-schemas-package-adoption.ps1 `
   -SchemasRepository C:\Users\seven\projects\AirGuard\air-guard-v2-schemas `
   -ConsumerRepository C:\Users\seven\projects\AirGuard\air-guard-v2 `
   -ExpectedPackageName '@shisyamo4131/air-guard-v2-schemas' `

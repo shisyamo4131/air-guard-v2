@@ -23,7 +23,7 @@ Common 1.5.0とADR 0030は、交代専用のno-change、activation、最初のfi
 - ADR 0030全体をsupersedeする。ADR 0041のcurrent handoffにowner/callback/baselineを必須とする部分だけを更新し、単一正本と最終状態検証は維持する。
 - 確認済み製品仕様、data、API、Customer再試験、Dev延期、未回答事項、local memo保持、環境・外部作用承認は変えない。製品仕様versionとdata versionをcommon versionへ連動させない。
 - 既存の文書pathと有用な履歴を保持し、索引と通常起動promptを更新する。common/生成物はmanaged syncだけで更新する。
-- Windows PowerShell 5.1の既存comprehensive 5 gateを維持し、project-guidance-metadata classとruntime宣言を追加する。PowerShell 7対応の追加保証はしない。
+- 当時はWindows PowerShell 5.1の既存comprehensive 5 gateを維持し、project-guidance-metadata classとruntime宣言を追加した。このruntime判断は2026-09-07に[ADR 0061](0061-powershell-verification-runtime-hardening.md)で置換した。
 
 ## 代替案
 

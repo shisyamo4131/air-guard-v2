@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Nortonの`IDP.HELU.PSE90`再検知防止として、repository-owned PowerShell gateをPowerShell 7の`pwsh -NoProfile`へ移行し、`-ExecutionPolicy Bypass`、検証文字列のBase64復号、容量fixtureの子`powershell.exe`を除去した。通常検証、Temp負例fixture、容量回帰を個別実行し、各段階後に利用者がNortonの新規検出なしを確認した。製品code、UI、Dev/Prod、remote、実dataとNorton保護・除外設定は変更していない。[判断](docs/decisions/0061-powershell-verification-runtime-hardening.md)と[実測記録](docs/verification/norton-powershell-gate-hardening.md)を参照。
+
 - EMP-07でEmployee関連FUTを現在仕様・実装・到達経路へ一括照合した。EMP-08を阻害する未修正問題は確認されなかったため製品code・UIを変更せず、将来日退職/再雇用、restore/匿名化/purge、privacy/監査制度、全Air manager改修、Dev既存data確認へ分類した。対象272件と全domain 1501件が成功し、Employee進捗を85%から90%へ更新した。[EMP-07記録](docs/verification/employee-07-independent-issues.md)を参照。
 
 - EMP-06をLocalで完了した。在職・退職一覧を専用の認可付き購読とlatest-wins sessionへ移し、確定済みの空検索・作成導線、承認済みのloading/error再読込表示を反映した。EmployeeのUser panelからAirItemManager/AirArrayManager依存を除き、既存の仮User作成・削除を独立draftと専用dialogで維持した。統括の退職をstrict preset検証後だけclient/serverで許可し、直接permissionや未知roleの拒否を維持した。現在のChrome、domain 1501件、Emulator 181件、clean HEADの専用UI buildで確認し、Employee進捗を75%から85%へ更新した。Dev・remote・実dataは変更していない。[EMP-06 local記録](docs/verification/employee-06-local.md)を参照。

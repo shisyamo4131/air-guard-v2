@@ -27,11 +27,11 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 | `build-release-deploy` | build・generate・package install/publish・Dev/Prod deploy・remote acceptanceの実行、release可否判断、またはrelease契約・基準・対象・artifact・手順の変更 | `diff-check` | `project-docs`, `domain-full` | comprehensive 5 gate | checkpointで承認されたEmulator、UI build、generate | なし |
 | `project-guidance-metadata` | 記述的な案内・段階・進捗・metadata・link・履歴・文書構造。common契約、policy、権限、承認、安全、実行挙動の変更を含まない | `diff-check` | `project-docs` | `project-docs`, `diff-check` | なし | governance comprehensive、application、build、runtime |
 
-必須runtimeはWindows PowerShell 5.1（Desktop / `powershell`）です。`runtimeProfiles`が対応範囲を宣言し、実際の成功証拠は各実行結果へ記録します。PowerShell 7の対応保証や二重実行は追加しません。governance checkerとそのfixtureの変更は`governance-permissions-agents`で分類し、製品logicへの影響がなければdomain/UI/Emulator/build gateは選びません。
+必須runtimeはPowerShell 7（Core / `pwsh`）です。`runtimeProfiles`が対応範囲を宣言し、実際の成功証拠は各実行結果へ記録します。repository-owned gateは`-NoProfile`で実行し、`-ExecutionPolicy Bypass`、legacy `powershell.exe`、encoded commandを使用しません。governance checkerとそのfixtureの変更は`governance-permissions-agents`で分類し、製品logicへの影響がなければdomain/UI/Emulator/build gateは選びません。
 
 <!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->
 - Root: schemaVersion=1.0; comprehensiveGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; unknownImpactGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]
-- RuntimeProfile: id=windows-powershell-5.1; platform=windows; edition=Desktop; executable=powershell; versionRule=major-minor=5.1; required=True; supportStatus=supported
+- RuntimeProfile: id=powershell-7; platform=windows; edition=Core; executable=pwsh; versionRule=minimum-major=7; required=True; supportStatus=supported
 - Class: id=project-guidance-metadata; triggers=[Descriptive project guidance\, phase/progress\, metadata\, links/history\, or document-only structure with no common-contract\, policy\, permission\, approval\, safety\, or executable behavior change]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-docs]; completionGateIds=[project-docs,diff-check]; releaseOnlyGateIds=[]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,domain-full,local-emulator-suite,local-ui-build,generate-dev,generate-prod]; omissionRecord=Completion report or migration evidence
 - Class: id=documentation-only; triggers=[Project-owned prose\, index\, link\, or post-completion historical record that does not alter a release baseline\, target\, artifact\, readiness decision\, procedure\, approval\, rollback\, product behavior\, or remote state]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-docs]; completionGateIds=[project-docs,diff-check]; releaseOnlyGateIds=[]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,domain-full,local-emulator-suite,local-ui-build,generate-dev,generate-prod]; omissionRecord=Completion report
 - Class: id=ui-css-layout; triggers=[Vue component presentation\, CSS\, layout\, accessibility\, browser interaction\, or user-visible UI behavior]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[domain-full,local-ui-build]; completionGateIds=[project-docs,domain-full,local-ui-build,diff-check]; releaseOnlyGateIds=[generate-dev,generate-prod]; omittableGateIds=[project-docs-negative,capacity-regression,managed-governance,local-emulator-suite]; omissionRecord=Completion report or acceptance receipt
@@ -40,11 +40,11 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 - Class: id=governance-permissions-agents; triggers=[Common or project governance\, verification policy\, permissions\, approval policy\, coordinator duties\, agents\, managed sync\, or generated AGENTS]; iterationGateIds=[managed-governance,project-docs]; targetedRegressionGateIds=[project-docs-negative,capacity-regression]; completionGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; releaseOnlyGateIds=[]; omittableGateIds=[]; omissionRecord=Completion report or migration evidence
 - Class: id=build-release-deploy; triggers=[Actual build\, static generation\, package installation or publication\, Dev or Prod deploy\, or remote acceptance execution\; release readiness decision\; or release contract\, baseline\, target\, artifact\, or procedure change]; iterationGateIds=[diff-check]; targetedRegressionGateIds=[project-docs,domain-full]; completionGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; releaseOnlyGateIds=[local-emulator-suite,local-ui-build,generate-dev,generate-prod]; omittableGateIds=[]; omissionRecord=Approved release checkpoint evidence or completion report
 - Gate: id=diff-check; command=git diff --check; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Any later worktree edit]; evidenceDestination=Command report
-- Gate: id=renderer-check; command=powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check; stages=[iteration,targeted]; includes=[]; invalidatedBy=[Managed common\, governance lock\, renderer\, project rules\, verification policy\, or generated AGENTS change]; evidenceDestination=Command report or included managed-governance result
-- Gate: id=managed-governance; command=powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, governance lock\, renderer\, validator\, project rules\, verification policy\, generated AGENTS\, or verification summary change]; evidenceDestination=Command report
-- Gate: id=project-docs; command=powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Project Markdown\, TOML\, document routing\, verification policy\, or project document validator change]; evidenceDestination=Command report
-- Gate: id=project-docs-negative; command=powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Project document validator\, its negative fixtures\, validator-required documentation route\, or verification-policy contract change]; evidenceDestination=Command report
-- Gate: id=capacity-regression; command=powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Capacity aliases\, capacity runbook\, capacity measurement command or script\, or capacity regression fixture change]; evidenceDestination=Command report
+- Gate: id=renderer-check; command=pwsh -NoProfile -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check; stages=[iteration,targeted]; includes=[]; invalidatedBy=[Managed common\, governance lock\, renderer\, project rules\, verification policy\, or generated AGENTS change]; evidenceDestination=Command report or included managed-governance result
+- Gate: id=managed-governance; command=pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[renderer-check]; invalidatedBy=[Managed common\, governance lock\, renderer\, validator\, project rules\, verification policy\, generated AGENTS\, or verification summary change]; evidenceDestination=Command report
+- Gate: id=project-docs; command=pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2; stages=[iteration,targeted,completion]; includes=[]; invalidatedBy=[Project Markdown\, TOML\, document routing\, verification policy\, or project document validator change]; evidenceDestination=Command report
+- Gate: id=project-docs-negative; command=pwsh -NoProfile -File scripts/test-project-docs-check.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Project document validator\, its negative fixtures\, validator-required documentation route\, or verification-policy contract change]; evidenceDestination=Command report
+- Gate: id=capacity-regression; command=pwsh -NoProfile -File scripts/test-codex-session-size.ps1; stages=[targeted,completion]; includes=[]; invalidatedBy=[Capacity aliases\, capacity runbook\, capacity measurement command or script\, or capacity regression fixture change]; evidenceDestination=Command report
 - Gate: id=domain-full; command=node --test test/domain/*.test.mjs; stages=[targeted,completion]; includes=[]; invalidatedBy=[Application\, Functions\, Rules contract\, schema\, shared module\, or domain test change]; evidenceDestination=Command report
 - Gate: id=local-emulator-suite; command=npm run test:local; stages=[targeted,completion,release]; includes=[]; invalidatedBy=[Functions\, Rules\, schema\, Emulator configuration\, test harness\, or affected application behavior change]; evidenceDestination=Checkpoint callback\, completion report\, or release evidence
 - Gate: id=local-ui-build; command=npm run test:local:ui:build; stages=[targeted,completion,release]; includes=[]; invalidatedBy=[UI source\, client configuration\, dependencies\, build wrapper\, or affected application behavior change]; evidenceDestination=Checkpoint callback\, acceptance receipt\, or release evidence
@@ -128,7 +128,7 @@ UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh 
 Managed governanceの検証:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2
+pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2
 ```
 
 `governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`、lockに記録されたmanaged referenceは直接編集せず、明示されたgovernance作業の承認済みskill syncで更新します。project固有の横断規則は`governance/project-rules.md`と同indexが列挙する4つのproject-owned segmentを更新します。rendererはread-only checkであり、managed validatorが内包します。通常startupと利用者要求の交代は[project coordination](runbooks/project-coordination.md)、文書移行は[移行索引](migrations/README.md)を参照します。
@@ -138,7 +138,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPa
 Project-owned文書・設定の検証:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2
+pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2
 ```
 
 相対MarkdownリンクとGitHub互換見出しアンカー、重要文書の索引到達性、ADR索引と本文の状態、ロードマップの重み・得点・無部分加点・索引進捗を確認します。Node.jsから正式なTOMLパーサーを使用し、`.codex/config.toml` と専門エージェントTOMLの構文、必須キー、型、名前、sandbox modeを確認します。アプリケーションのビルドや外部接続は行いません。
@@ -146,7 +146,7 @@ powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -Reposit
 検証器自体の陰性試験:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1
+pwsh -NoProfile -File scripts/test-project-docs-check.ps1
 ```
 
 ## エラーと復旧

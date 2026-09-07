@@ -6,12 +6,18 @@ $sessionsRoot = Join-Path $fixtureRoot 'sessions\2026\08\28'
 $cachePath = Join-Path $fixtureRoot 'capacity-cache.json'
 $testSessionId = 'capacity-task-001'
 
-function Invoke-CapacityScript([string[]]$Arguments) {
+function Invoke-CapacityScript([hashtable]$Parameters) {
     $previousErrorAction = $ErrorActionPreference
-    $ErrorActionPreference = 'Continue'
-    $output = & powershell -NoProfile -ExecutionPolicy Bypass -File $scriptUnderTest @Arguments 2>&1
-    $exitCode = $LASTEXITCODE
-    $ErrorActionPreference = $previousErrorAction
+    $ErrorActionPreference = 'Stop'
+    try {
+        $output = & $scriptUnderTest @Parameters 2>&1
+        $exitCode = 0
+    } catch {
+        $output = @($_)
+        $exitCode = 1
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
     return [pscustomobject]@{
         output = @($output)
         exit_code = $exitCode
@@ -29,21 +35,28 @@ try {
     $sessionPath = Join-Path $sessionsRoot "rollout-2026-08-28T00-00-00-$testSessionId.jsonl"
     [IO.File]::WriteAllBytes($sessionPath, [byte[]]::new(1024))
 
-    $missingId = Invoke-CapacityScript @('-CodexRoot', $fixtureRoot, '-TotalCachePath', $cachePath)
+    $missingId = Invoke-CapacityScript @{
+        CodexRoot = $fixtureRoot
+        TotalCachePath = $cachePath
+    }
     Assert-True ($missingId.exit_code -ne 0) 'Missing SessionId must fail.'
 
-    $zeroMatch = Invoke-CapacityScript @('-SessionId', 'unknown-task', '-CodexRoot', $fixtureRoot, '-TotalCachePath', $cachePath)
+    $zeroMatch = Invoke-CapacityScript @{
+        SessionId = 'unknown-task'
+        CodexRoot = $fixtureRoot
+        TotalCachePath = $cachePath
+    }
     Assert-True ($zeroMatch.exit_code -ne 0) 'Zero matching sessions must fail.'
 
-    $success = Invoke-CapacityScript @(
-        '-SessionId', $testSessionId,
-        '-CodexRoot', $fixtureRoot,
-        '-ThresholdBytes', '2048',
-        '-TotalThresholdBytes', '4096',
-        '-TotalCachePath', $cachePath,
-        '-ForceTotalScan'
-    )
-    Assert-True ($success.exit_code -eq 0) 'Exact-one session measurement must succeed.'
+    $success = Invoke-CapacityScript @{
+        SessionId = $testSessionId
+        CodexRoot = $fixtureRoot
+        ThresholdBytes = 2048
+        TotalThresholdBytes = 4096
+        TotalCachePath = $cachePath
+        ForceTotalScan = $true
+    }
+    Assert-True ($success.exit_code -eq 0) ("Exact-one session measurement must succeed. Output: " + ($success.output -join ' | '))
     $result = ($success.output -join [Environment]::NewLine) | ConvertFrom-Json
     Assert-True ($result.session_id -eq $testSessionId) 'The reported session ID must match the requested task.'
     Assert-True ($result.size_bytes -eq 1024) 'The measured session size must match the fixture.'
@@ -56,31 +69,35 @@ try {
     Assert-True ($result.selection -eq 'session_id') 'Session selection must be task-ID based.'
     Assert-True ($result.codex_total_measurement_source -eq 'scanned') 'A forced total scan must report scanned source.'
 
-    $cached = Invoke-CapacityScript @(
-        '-SessionId', $testSessionId,
-        '-CodexRoot', $fixtureRoot,
-        '-ThresholdBytes', '2048',
-        '-TotalThresholdBytes', '4096',
-        '-TotalCachePath', $cachePath
-    )
+    $cached = Invoke-CapacityScript @{
+        SessionId = $testSessionId
+        CodexRoot = $fixtureRoot
+        ThresholdBytes = 2048
+        TotalThresholdBytes = 4096
+        TotalCachePath = $cachePath
+    }
     Assert-True ($cached.exit_code -eq 0) 'Cached capacity measurement must succeed.'
     $cachedResult = ($cached.output -join [Environment]::NewLine) | ConvertFrom-Json
     Assert-True ($cachedResult.codex_total_measurement_source -eq 'cached') 'A fresh matching cache must report cached source.'
 
-    $handoff = Invoke-CapacityScript @(
-        '-SessionId', $testSessionId,
-        '-CodexRoot', $fixtureRoot,
-        '-ThresholdBytes', '512',
-        '-TotalThresholdBytes', '4096',
-        '-TotalCachePath', $cachePath
-    )
+    $handoff = Invoke-CapacityScript @{
+        SessionId = $testSessionId
+        CodexRoot = $fixtureRoot
+        ThresholdBytes = 512
+        TotalThresholdBytes = 4096
+        TotalCachePath = $cachePath
+    }
     Assert-True ($handoff.exit_code -eq 0) 'Threshold boundary measurement must succeed.'
     $handoffResult = ($handoff.output -join [Environment]::NewLine) | ConvertFrom-Json
     Assert-True $handoffResult.handoff_required 'Handoff must be true at or above the task threshold.'
 
     $duplicatePath = Join-Path $sessionsRoot "rollout-duplicate-$testSessionId.jsonl"
     [IO.File]::WriteAllBytes($duplicatePath, [byte[]]::new(1))
-    $multipleMatch = Invoke-CapacityScript @('-SessionId', $testSessionId, '-CodexRoot', $fixtureRoot, '-TotalCachePath', $cachePath)
+    $multipleMatch = Invoke-CapacityScript @{
+        SessionId = $testSessionId
+        CodexRoot = $fixtureRoot
+        TotalCachePath = $cachePath
+    }
     Assert-True ($multipleMatch.exit_code -ne 0) 'Multiple matching sessions must fail instead of selecting the newest.'
 
     Write-Output 'Capacity routing and measurement regression passed: 7 checks.'

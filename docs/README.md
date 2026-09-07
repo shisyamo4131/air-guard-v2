@@ -67,8 +67,8 @@
 - runbookには再利用可能な手順だけを置き、特定releaseの結果はimmutable verification receiptへ置く。
 - 確認済み、未確認、提案、証拠、履歴を混同しない。
 - ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
-- `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
-- `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。
+- `pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
+- `pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。
 - 必須validator、test、build、lint、migration checkは各commandの結果とexit statusを独立して確認する。まとめる場合は検証済みのfail-fastまたはaggregate runnerだけを使い、後続成功が先行失敗を隠す`;`等のchainやdiagnostic batchを完了証拠にしない。
 - `governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで変更classとstageを選び、混合変更はunion、影響不明はcomprehensive fallbackを使う。選択・省略したgateと理由、後続編集で失効した証拠をcompletion reportまたは実行証拠へ記録する。
 

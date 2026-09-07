@@ -25,5 +25,6 @@
 - 変更class、iteration・targeted・completion・release-only、gate ID・exact command・includes・invalidatedByは`governance/verification-policy.json`を機械可読正本とする。混合変更はunion、影響不明はcomprehensive fallbackを使う。
 - project governance、permission、agent policyの変更は`governance-permissions-agents`としてcomprehensive gateを省略しない。common governance、生成`AGENTS.md`、managed referencesは承認済みsync以外で編集しない。
 - commandは記録済みの必須引数を省略せず実行し、exit status 0を独立確認した後だけ成功と記録する。後続編集が`invalidatedBy`に該当すれば該当gateを再実行する。
+- repository-owned PowerShell gateはpolicy指定の`pwsh`を`-NoProfile`で実行し、`-ExecutionPolicy Bypass`、`-EncodedCommand`、検証文字列を復元するBase64 decode、legacy `powershell.exe`の子process起動を使用しない。fixtureは一意の隔離directoryに限定し、cleanup前に許可root内であることを検証する。
 - 新規未追跡fileは`git diff --check`の対象外になり得るため、review済みfileだけをstageして`git diff --cached --check`でも確認する。policy上の`git diff --check`自体は別に実行する。
 - 未承認のbuild、Emulator、Dev/Prod、network、remote/data、migration、release-only gateをpolicy記載だけから実行しない。省略可能なgateはpolicyの理由と証拠先に従い、既知失敗の回避目的では省略しない。

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$RepositoryRoot = (Join-Path $PSScriptRoot '..')
 )
 
@@ -19,7 +19,7 @@ function Test-LinkOnlyIndexSection {
     )
 
     $normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
-    $indexHeading = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('IyMg57Si5byV'))
+    $indexHeading = '## 索引'
     $sectionMatch = [regex]::Match(
         $normalized,
         '(?ms)^' + [regex]::Escape($indexHeading) + '\s*\n(?<body>.*?)(?=^##\s|\z)'
@@ -68,10 +68,10 @@ foreach ($relativePath in $requiredFiles) {
 }
 
 $capacityAliases = @(
-    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('5a656YeP44OB44Kn44OD44Kv')),
-    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('44K/44K544Kv5a656YeP56K66KqN')),
-    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('44K744OD44K344On44Oz5a656YeP56K66KqN')),
-    [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('c2Vzc2lvbiBzaXplIC8gaGFuZG9mZiB0aHJlc2hvbGTnorroqo0='))
+    '容量チェック',
+    'タスク容量確認',
+    'セッション容量確認',
+    'session size / handoff threshold確認'
 )
 $documentationMapPath = Join-Path $repoRoot 'docs/README.md'
 $coordinationRunbookPath = Join-Path $repoRoot 'docs/runbooks/project-coordination.md'
@@ -181,7 +181,7 @@ if ($null -ne $verificationPolicy) {
 
     $runtimeProfiles = @($verificationPolicy.runtimeProfiles | Where-Object { $null -ne $_ })
     $runtimeIds = @{}
-    $hasRequiredWindowsRuntime = $false
+    $hasRequiredPowerShellRuntime = $false
     if ($runtimeProfiles.Count -eq 0) { Add-CheckError 'Verification policy runtimeProfiles must not be empty.' }
     foreach ($profile in $runtimeProfiles) {
         foreach ($field in @('id', 'platform', 'edition', 'executable', 'versionRule', 'supportStatus')) {
@@ -194,11 +194,11 @@ if ($null -ne $verificationPolicy) {
         $runtimeIds[$profileId] = $true
         if ($profile.required -isnot [bool]) { Add-CheckError "Runtime required must be boolean: $profileId" }
         if ($profile.required -is [bool] -and $profile.required -and
-            $profile.platform -eq 'windows' -and $profile.edition -eq 'Desktop' -and
-            $profile.executable -eq 'powershell' -and $profile.versionRule -eq 'major-minor=5.1' -and
-            $profile.supportStatus -eq 'supported') { $hasRequiredWindowsRuntime = $true }
+            $profile.platform -eq 'windows' -and $profile.edition -eq 'Core' -and
+            $profile.executable -eq 'pwsh' -and $profile.versionRule -eq 'minimum-major=7' -and
+            $profile.supportStatus -eq 'supported') { $hasRequiredPowerShellRuntime = $true }
     }
-    if (-not $hasRequiredWindowsRuntime) { Add-CheckError 'Required supported Windows PowerShell 5.1 runtime is missing.' }
+    if (-not $hasRequiredPowerShellRuntime) { Add-CheckError 'Required supported PowerShell 7 runtime is missing.' }
     if (@($verificationPolicy.comprehensiveGateIds).Count -eq 0) {
         Add-CheckError 'Verification policy comprehensiveGateIds must not be empty.'
     }
@@ -353,7 +353,7 @@ foreach ($importantFile in $markdownFiles | Where-Object { $_.FullName.StartsWit
 
 $decisionIndexPath = Join-Path $repoRoot 'docs/decisions/README.md'
 $decisionIndex = Get-Content -LiteralPath $decisionIndexPath -Raw -Encoding UTF8
-$decisionLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCBJRCB8IOWIpOaWrSB8'))
+$decisionLinkOnlyHeader = '| ID | 判断 |'
 if (-not (Test-LinkOnlyIndexSection -Content $decisionIndex -ExpectedHeader $decisionLinkOnlyHeader)) {
     Add-CheckError 'ADR index section must contain exactly one two-column link-only table.'
 }
@@ -375,7 +375,7 @@ foreach ($decisionFile in $decisionFiles) {
 }
 
 $roadmapIndex = Get-Content -LiteralPath (Join-Path $repoRoot 'docs/roadmaps/README.md') -Raw -Encoding UTF8
-$roadmapLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDlr77osaEgfCDjg63jg7zjg4njg57jg4Pjg5cgfA=='))
+$roadmapLinkOnlyHeader = '| 対象 | ロードマップ |'
 if (-not (Test-LinkOnlyIndexSection -Content $roadmapIndex -ExpectedHeader $roadmapLinkOnlyHeader)) {
     Add-CheckError 'Roadmap index section must contain exactly one two-column link-only table.'
 }

@@ -101,7 +101,7 @@ checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal c
 容量確認が依頼されたときにtrusted task metadataから現在のtask IDを特定して測定します。交代専用の測定や定期測定をstartup条件にしません。並行taskの有無にかかわらず、最新・最終更新sessionやtimestampから対象を推測しません。
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
+pwsh -NoProfile -File scripts/check-codex-session-size.ps1 -SessionId <current-task-id>
 ```
 
 commandの結果とexit statusを独立して確認します。scriptは指定IDに一致するsession fileを正確に1件だけ解決しなければなりません。

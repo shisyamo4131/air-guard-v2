@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $sourceRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $fixtureRoot = Join-Path ([IO.Path]::GetTempPath()) ("airguard-governance-" + [guid]::NewGuid().ToString('N'))
 $checker = Join-Path $PSScriptRoot 'check-project-docs.ps1'
@@ -17,7 +17,7 @@ function Invoke-Checker([bool]$ShouldPass, [string]$CaseName) {
 }
 
 function Add-StaleTableToIndexSection([string]$Content, [string]$Table) {
-    $indexHeading = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('IyMg57Si5byV'))
+    $indexHeading = '## 索引'
     $sectionMatch = [regex]::Match(
         $Content,
         '(?ms)^' + [regex]::Escape($indexHeading) + '\s*\r?\n.*?(?=^##\s|\z)'
@@ -46,7 +46,7 @@ try {
 
     $documentationMapPath = Join-Path $fixtureRoot 'docs/README.md'
     $validDocumentationMap = Get-Content -LiteralPath $documentationMapPath -Raw -Encoding UTF8
-    $capacityAliasPrefix = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('YOWuuemHj+ODgeOCp+ODg+OCr2AgLyA='))
+    $capacityAliasPrefix = '`容量チェック` / '
     Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value ($validDocumentationMap.Replace($capacityAliasPrefix, ''))
     Invoke-Checker $false 'capacity routing alias is required'
     Set-Content -LiteralPath $documentationMapPath -Encoding UTF8 -Value $validDocumentationMap
@@ -131,12 +131,12 @@ try {
 
     $decisionIndexPath = Join-Path $fixtureRoot 'docs/decisions/README.md'
     $validDecisionIndex = Get-Content -LiteralPath $decisionIndexPath -Raw -Encoding UTF8
-    $decisionLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCBJRCB8IOWIpOaWrSB8'))
-    $decisionMutableHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCBJRCB8IOWIpOaWrSB8IOeKtuaFiyB8'))
+    $decisionLinkOnlyHeader = '| ID | 判断 |'
+    $decisionMutableHeader = '| ID | 判断 | 詳細 |'
     Set-Content -LiteralPath $decisionIndexPath -Encoding UTF8 -Value ($validDecisionIndex.Replace($decisionLinkOnlyHeader, $decisionMutableHeader))
     Invoke-Checker $false 'ADR index rejects duplicated mutable status column'
     Set-Content -LiteralPath $decisionIndexPath -Encoding UTF8 -Value $validDecisionIndex
-    $staleDecisionHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDnirbmhYsgfCDml6Xku5ggfA=='))
+    $staleDecisionHeader = '| 状態 | 日付 |'
     $staleDecisionTable = "$staleDecisionHeader`n|---|---|`n| Accepted | 2026-09-02 |"
     Set-Content -LiteralPath $decisionIndexPath -Encoding UTF8 -Value (Add-StaleTableToIndexSection -Content $validDecisionIndex -Table $staleDecisionTable)
     Invoke-Checker $false 'ADR index rejects a second stale status and date table'
@@ -144,12 +144,12 @@ try {
 
     $roadmapIndexPath = Join-Path $fixtureRoot 'docs/roadmaps/README.md'
     $validRoadmapIndex = Get-Content -LiteralPath $roadmapIndexPath -Raw -Encoding UTF8
-    $roadmapLinkOnlyHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDlr77osaEgfCDjg63jg7zjg4njg57jg4Pjg5cgfA=='))
-    $roadmapMutableHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDlr77osaEgfCDpgLLmjZcgfCDmnIDntYLnorroqo3ml6UgfCDjg63jg7zjg4njg57jg4Pjg5cgfA=='))
+    $roadmapLinkOnlyHeader = '| 対象 | ロードマップ |'
+    $roadmapMutableHeader = '| 対象 | 進捗 | 最終確認日 | ロードマップ |'
     Set-Content -LiteralPath $roadmapIndexPath -Encoding UTF8 -Value ($validRoadmapIndex.Replace($roadmapLinkOnlyHeader, $roadmapMutableHeader))
     Invoke-Checker $false 'roadmap index rejects duplicated mutable progress and date columns'
     Set-Content -LiteralPath $roadmapIndexPath -Encoding UTF8 -Value $validRoadmapIndex
-    $staleRoadmapHeader = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('fCDpgLLmjZcgfCDmnIDntYLnorroqo3ml6UgfA=='))
+    $staleRoadmapHeader = '| 進捗 | 最終確認日 |'
     $staleRoadmapTable = "$staleRoadmapHeader`n|---|---|`n| 100% | 2026-09-02 |"
     Set-Content -LiteralPath $roadmapIndexPath -Encoding UTF8 -Value (Add-StaleTableToIndexSection -Content $validRoadmapIndex -Table $staleRoadmapTable)
     Invoke-Checker $false 'roadmap index rejects a second stale progress and date table'
