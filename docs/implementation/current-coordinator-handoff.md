@@ -32,7 +32,7 @@
 
 - [x] No.1でprimary repository、branch、HEAD、未統合差分を確認し、`codex/master-dev-preflight`を4マスターの横断release準備branchとして開始した。No.4で4マスター改修の包含をsource差分と正本へ照合した。
 - [x] Hosting、Functions、Rules、必要な検索索引と、参照保護で変更した予定・実績・請求・背景処理を洗い出し、反映対象候補と対象外を分けた。[No.4 release surface inventory](master-dev-release-surfaces.md)を参照する。
-- [ ] 旧clientの継続利用、更新・再ログイン、client/serverの互換性、反映順序、一時停止の要否を検討する。
+- [x] No.5で旧clientの書込み互換を前提にできない範囲、更新・再ログイン、boundedな無書込み時間帯、Indexes→Functions安全化→server closure→Rules→Hostingの順序、schedulerとEmployee archive tenant開放の分離、rollback境界を具体化した。[No.5 release順序](master-dev-release-surfaces.md#no5-旧clientと反映順序)を参照する。live Devの利用者・remote revision・index状態は後続Checkpointで確認する。
 - [ ] 変更差分とreader/writerから、既存data確認が必要なfield・利用経路・範囲を絞る。全件診断・一括修復・migrationを一律前提にしない。
 - [ ] 対象commit・service・data影響・必要なbackup・停止条件・復旧・検証を具体化した反映計画を提示する。実行手順は[Dev runbook](../runbooks/dev-deployment.md)、data対応は[data migration手順](../runbooks/data-migrations.md)へrouteする。
 - [ ] 受入れ用の会社・権限別account・合成data、試験で許可する操作、外部通知等の扱い、終了後の処置を具体化する。

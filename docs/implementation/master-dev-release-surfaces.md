@@ -1,7 +1,8 @@
 # 4マスター Dev反映前 release surface inventory
 
-- 状態: `MASTER-DEV-PREFLIGHT-01` No.4 完了
+- 状態: `MASTER-DEV-PREFLIGHT-01` No.5 完了
 - local source baseline: `7ce7b485c7bb1350b9112b2a12075d6bedf25e7e`
+- No.5検討baseline: `1204ba205ddf4ca2f3d2de7f32924d7404db8af5`
 - branch: `codex/master-dev-preflight`
 - 対象: Customer、Site、Outsourcer、EmployeeのLocal完了差分から、Dev反映候補と対象外を静的に分類する
 - 対象外: Dev/Prod接続、build、deploy、remote revision・実data・IAM確認、migration、tenant開放、利用者受入れ
@@ -93,12 +94,72 @@ Employee archiveの通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`は既定空集�
 
 Company/UWB/Stripe等の既存機能は4マスターの受入れ対象外である。ただしHosting・Rules・Functionsを全体単位で反映すると、同じartifactまたはcodebase内の既存機能も再配信・再更新され得る。No.5では記録済みDev比較元との差分とrollback対象を確認し、4マスター対象外であることを「技術的に変更されない」という意味へ広げない。
 
+## No.5 旧clientと反映順序
+
+### 確認できた互換性
+
+記録済みDev sourceと現行sourceを比較した結果であり、live Devの稼働revision・開いているbrowser・利用者有無は未確認である。
+
+| 範囲 | 旧clientが残る場合 | 切替条件 |
+|---|---|---|
+| Customer | 新しいarchive操作は露出しない。旧Customer writerが新Rulesのoperation別field契約を満たすことは保証できず、保存がfail closedとなり得る | 新Hostingへ更新後に再読込する。保存中の旧tabを残さない |
+| Site | 旧clientの直接status・取極め・全体保存は、新しいserver-only／operation別境界と互換とみなせない | Site編集、終了・再有効化、取極めの旧tabを閉じ、新Hostingで再開する |
+| Outsourcer | 旧generic writerまたは全体保存は、exact field・actor・revision境界で拒否され得る | 一覧・詳細・編集の旧tabを閉じ、新Hostingで再開する |
+| Employee | 新Rulesでは通常client writeを許可せず、operation別Callableを正規経路とするため、旧直接writerは拒否される | Employee作成・編集・退職・archiveの旧tabを閉じ、新Hostingで再開する |
+| 予定・実績・請求 | Site／Employee参照barrierとserver-only writerの変更により、旧画面の保存互換を保証できない | 予定・実績・請求の編集を停止し、新Hostingへ更新後に再開する |
+
+現在の実装には、開いている全clientへ更新を強制するclient version gateや、取得済みSDK referenceからのwriteを一律停止する排他lockを確認できない。System／Company maintenanceも画面遷移の制御であり、Rules、Callable、Admin SDK、scheduled処理、開始済みwriteを停止する保証はない。したがってRules切替からHosting更新・再読込確認まで、対象会社で人手によるboundedな無書込み時間帯を必要条件とする。利用者・協力会社の稼働有無と許容時間帯は利用者確認待ちである。
+
+Hostingの`no-store`設定は新規取得を助けるが、既に実行中の旧JavaScriptを置換しない。切替後は対象browserを再読込し、認証状態またはclaims更新が関係するactorは再ログインしてから受入れを開始する。
+
+### Functionsの限定closure
+
+Functions codebase全体の一括更新を既定にせず、4マスターと参照保護に必要な21 functionを次の3段階へ分ける。共有moduleを使う既存trigger／Callableもclosureへ含める。
+
+1. 安全化先行（2件）: `runDailyTask`、`onEmployeeDeleted`。
+2. client公開前のserver closure（18件）: `archiveCustomer`、`onUpdateCustomer`、`archiveSite`、`terminateSite`、`reactivateSite`、`updateSiteAgreements`、`createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`、`archiveEmployee`、`terminateEmployee`、`saveOperation`、`onOperationResultChange`、`updateBillingPaymentDate`、`rebuildAllHistories`。
+3. 条件確認後に別途有効化（1件）: `runDailySiteTermination`。
+
+記録済みDev sourceの`runDailyTask`はcleanup後に旧`sitesAutoTermination()`を同じhandlerから実行し、errorを再throwしない。現行版は旧自動終了を外し、bounded cleanupだけを担うため、これを先行更新して旧挙動を止める。記録済みDev sourceの`onEmployeeDeleted`はEmployee削除eventからUser/Authを削除する。現行版の無作用handlerを先行更新し、archiveやRules切替より前に連鎖削除を止める。
+
+`archiveEmployee`のcode反映とtenant開放を分離する。初回反映では通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`を未設定または空集合に保ち、deny-by-defaultを維持する。tenant追加とそのための再反映は、No.6のdata・参照整合、No.7のbackup／停止／rollback、明示承認を満たした後の別操作とする。
+
+`runDailySiteTermination`はdeploy後に日次writeを開始し得るため、通常closureと同時に公開しない。No.6で対象field・予定・indexを確認し、No.7でbackup／停止／rollbackを確定し、明示承認を得た後に最後に反映する。
+
+### Dev反映時の順序
+
+実deploy command、target project、remote revision、indexのREADY状態は後続のrelease checkpointでactual targetへ照合する。現時点で固定できる順序は次のとおりである。
+
+1. release source、対象project、remote revision、選択function、無書込み時間帯をread-only preflightで固定する。
+2. 必要なFirestore indexだけを先に反映し、利用するindexがREADYになるまでquery・schedulerを有効化しない。既存で同一定義がREADYなら再反映しない。
+3. `runDailyTask`と`onEmployeeDeleted`を安全化先行で更新し、deployed revisionと正常状態を確認する。
+4. 残るserver closure 18件を限定反映し、Callable／triggerのdeployed revisionと正常状態を確認する。Employee archive allowlistは空のままとする。
+5. 対象会社の無書込み時間帯を開始し、master・予定・実績・請求の旧tabで保存しないことを確認する。
+6. `firestore.rules`全体を反映する。Rulesの一部だけを旧版と組み合わせない。
+7. 同じrelease sourceから生成・identity確認したHosting artifactを反映する。RulesからHostingまでをboundedに連続実行する。
+8. 対象browserを再読込し、必要なactorは再ログインする。新clientとserver revisionの組合せで技術smokeを終えてから無書込み時間帯を解除する。
+9. `runDailySiteTermination`とEmployee archive tenant開放は、それぞれの追加条件と明示承認を満たした場合だけ別に実施する。
+
+Functionsを先行するのは、新clientが未反映APIを呼ぶ期間を作らないためである。RulesをHostingより先行するのは、archive UIを公開した後に旧Rulesが参照新設や直接writeを許す期間を作らないためである。Rules先行中は旧client保存が拒否され得るため、手順5の無書込み時間帯を組み合わせる。
+
+### 中断・rollback境界
+
+- index、Functions安全化、server closureの各段階で失敗した場合は、Rules／Hostingへ進まない。
+- Rules成功後にHostingが失敗した場合は無書込みを継続し、旧client保存を再開しない。旧Rulesへの自動復帰で権限を再拡大せず、原因修正後のforward releaseを第一候補とする。
+- Hostingだけを旧版へ戻すと、新Rulesに対して旧client writerが不整合となるため、単独rollbackを安全とはみなさない。
+- Functionsだけを旧版へ戻すと、新client API不在、旧自動終了、Employee削除連鎖が再発し得るため、単独rollbackを安全とはみなさない。
+- Rulesだけを旧版へ戻すと、直接writeと参照raceを再び許すため、通常rollbackにしない。coordinated rollbackが必要な場合は、書込み停止、data状態、戻すsource一式を確認して別承認する。
+- schedulerまたはEmployee archive開放後の停止・復旧はNo.7で具体化する。現時点ではdata rollback可否を断定しない。
+
+### No.5の検証選定
+
+今回証明する事項はsource上の旧client互換境界、記録済みDevとの差分、反映依存順であり、runtime機能の再証明ではない。既存のLocal domain／Emulator／Chrome UI／build結果はNo.5の文書変更で失効しないため再実行しない。文書変更で失効する`project-docs`とdiff checkだけを最終状態で実行する。直前のgovernance変更で成功した`managed-governance`、`project-docs-negative`、`capacity-regression`は各gateの`invalidatedBy`に該当する変更がなく、既存検証でカバー済みとする。
+
 ## 後続Checkpointへ渡す未確認事項
 
-1. No.5: 旧client継続条件、Rules/Functions/Indexes/Hostingの順序、一括または限定Functions deploy、停止要否、互換性とrollback。
-2. No.6: Devのindex全17件・field override 3件と4マスター関連16件の状態、既存documentの必要field・埋込みEmployee索引・archive shape、補完やmigrationの必要範囲。
-3. No.7: backup、停止条件、部分成功時の復旧先と再開条件。
-4. No.8以降: 権限別account・受入れ操作、最終差分・gate、bounded Dev releaseの承認。
+1. No.6: Devのindex全17件・field override 3件と4マスター関連16件の状態、既存documentの必要field・埋込みEmployee索引・archive shape、補完やmigrationの必要範囲。
+2. No.7: backup、停止条件、部分成功時の復旧先と再開条件。
+3. No.8以降: 権限別account・受入れ操作、最終差分・gate、bounded Dev releaseの承認。
 
 ## No.4の検証選定
 
