@@ -35,7 +35,7 @@
 - [x] No.5で旧clientの書込み互換を前提にできない範囲、更新・再ログイン、boundedな無書込み時間帯、Indexes→Functions安全化→server closure→Rules→Hostingの順序、schedulerとEmployee archive tenant開放の分離、rollback境界を具体化した。[No.5 release順序](master-dev-release-surfaces.md#no5-旧clientと反映順序)を参照する。live Devの利用者・remote revision・index状態は後続Checkpointで確認する。
 - [x] No.6でmaster別の既存data確認範囲、既存証拠の再利用、remoteで必要なSite／Employee参照索引確認、indexのREADY／保留／不要判定を限定した。初回releaseはEmployee archive allowlistを空、Site自動終了を未公開に保ち、補完・migrationを前提にしない。[No.6 data・index範囲](master-dev-release-surfaces.md#no6-既存dataindex確認範囲)を参照する。
 - [x] No.7は初回releaseとdata作用を伴う後段を分離し、利用者から確認できた3区分のDev運用条件に基づく簡素化、backup適否、停止条件、forward correction／限定repair、解除条件を具体化した。利用者は2026-09-07に、初回は区分1だけの短い手動停止、区分3の合成data受入れとし、全体snapshot／全tenant scan／maintenanceを省略する方針を承認した。既存Admin SDKの不完全backupは全面復旧根拠に使わない。[No.7 backup・停止・rollback](master-dev-release-surfaces.md#no7-backup停止rollback計画)を参照する。
-- [ ] No.8で受入れ用の会社・権限別account・合成data、許可する操作、外部作用、終了後の処置とNo.10前後の担当を[受入れ計画](master-dev-acceptance-plan.md)へ具体化した。Codex担当の計画作成・文書検証は完了し、U8-1〜U8-4の利用者回答待ちである。
+- [ ] No.8で受入れ用の会社・権限別account・合成data、許可する操作、外部作用、終了後の処置とNo.10前後の担当を[受入れ計画](master-dev-acceptance-plan.md)へ具体化した。利用者は2026-09-07にDev受入れ前の4マスター全体UI確認を指定した。起動中Chromeを再利用し、U8-1〜U8-4を1マスターずつ確認後、U8-5〜U8-6の利用者回答を得る。
 
 ### マスター固有の準備
 
@@ -59,14 +59,16 @@
 
 ### 利用者確認待ち
 
-1. [U8-1] Customer新UIの状態filter、状態表示、終了／復帰導線の見た目・使い勝手を受入れるか、変更希望があるか。
+1. [U8-1] Customerの一覧・詳細・状態filter・状態表示・作成／編集・終了／復帰・archive導線のUIを受け入れるか、変更希望があるか。
 2. [回答済み] Devは利用者自身の会社、UI改善意見用の知人会社、Codex合成test会社の3区分。利用者会社は任意停止可能、知人会社は本番運用でなくdata不整合を許容、Codex会社は通常利用会社と同じ保全を不要とする。実ID・名称・accountは記録しない。認可・tenant分離・User/Auth削除等の安全境界は緩和しない。
-3. [U8-2] Site、Outsourcer、Employeeに追加の見た目変更希望がないか。既存Local受入れと同じ操作は再実行しない。
-4. [U8-3] 区分3で会社管理者相当とread-onlyの既存accountを利用できるか。資格情報をchatへ記載させない。
-5. [U8-4] 区分3の合成data作成、合成住所でのgeocoding、製品の安全な経路での処置またはtest data保持を許容するか。
-6. [U8-5 / No.10直前] 区分1の保存を停止したことを通知する。
+3. [U8-2] Siteの一覧・詳細・終了済み一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
+4. [U8-3] Outsourcerの一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
+5. [U8-4] Employeeの一覧・詳細・退職済み一覧と主要管理導線のUIを受け入れるか、変更希望があるか。
+6. [U8-5] 区分3で会社管理者相当とread-onlyの既存accountを利用できるか。資格情報をchatへ記載させない。
+7. [U8-6] 区分3の合成data作成、合成住所でのgeocoding、製品の安全な経路での処置またはtest data保持を許容するか。
+8. [U8-7 / No.10直前] 区分1の保存を停止したことを通知する。
 
-U8-1〜U8-4への回答はまだ得ていない。U8-5はNo.10のcutover開始直前に確認する。独立して可能なlocal調査・具体化は進める。remote read、Dev build/deploy、実data変更、migration、IAM変更等は[環境・承認rule](../project-rules/environment-and-approval.md)と既存runbookへ照合し、対象を示して必要な承認を得る。今回の引継ぎで権限を拡張しない。
+U8-1〜U8-6への回答はまだ得ていない。U8-7はNo.10のcutover開始直前に確認する。独立して可能なlocal調査・具体化は進める。remote read、Dev build/deploy、実data変更、migration、IAM変更等は[環境・承認rule](../project-rules/environment-and-approval.md)と既存runbookへ照合し、対象を示して必要な承認を得る。今回の引継ぎで権限を拡張しない。
 
 ### 今回の停止点より後の作業
 
