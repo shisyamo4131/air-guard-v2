@@ -53,15 +53,15 @@
 
 - [ ] 必要なdata変換・索引補完が確認された場合だけ、対象・件数・変更内容・dry-run・backup・apply・post-check・復旧を提示する。実data変更をこの一覧だけで承認済みとしない。
 - [ ] DevのCallable公開権限・認証・設定に不足が判明した場合は、exact serviceと最小修正を提示する。IAM変更やtenant開放を推測で実行しない。
-- [ ] 必要なlocal実装を具体化して承認範囲と照合し、review・影響別test・Emulator・文書検証を行う。見た目変更には既存の利用者判断境界を適用する。
-- [ ] 最終release差分を[verification policy](../../governance/verification-policy.json)で分類し、必要gateと証拠失効条件を固定する。Dev buildは承認済みcheckpointのexact commandで行い、sourceとartifact、接続先、Emulator無効を確認する。
-- [ ] Dev反映前の未確認事項・必要承認を明記し、具体的な反映計画と受入れ表を利用者へ渡す。未承認・未検証が残る間は反映準備完了としない。
+- [x] 必要なlocal実装を具体化して承認範囲と照合し、release候補のreview、影響別domain test、既存Emulator証拠の失効確認、文書検証を完了した。見た目変更には既存の利用者判断境界を適用し、No.9で追加の見た目変更は行っていない。
+- [x] 最終release差分を[verification policy](../../governance/verification-policy.json)で分類し、失効したdomain・文書・差分検証を最終状態へ結び付けた。承認されたlocal UI buildは一度だけ実行し、その後の文書だけの変更がbuild証拠を失効させないことを同policyへ照合した。
+- [x] Dev反映前の未確認事項・必要承認を明記し、[受入れ計画](master-dev-acceptance-plan.md)と[release surface inventory](master-dev-release-surfaces.md)に基づく具体的なNo.10反映案を利用者へ提示する状態にした。remote actual確認、Dev反映、合成data smoke、IAM・data補正は未承認のままであり、自動実行しない。
 
-### No.9の開始点
+### No.9の完了とNo.10の停止点
 
-No.8の利用者事前確認U8-1〜U8-7は完了した。現在の次作業はNo.9であり、利用者修正を含む4マスターUI差分を最終レビューし、意図した見た目・layout変更と機能変更を区別する。viewport高さ・DataTable内scrollの回帰testを差分へ合わせ、既存証拠の再利用可否を4点照合したうえで、失効した範囲だけを検証する。最終差分をreview済みrelease candidateとしてcommitし、必要な文書・domain・diff・承認済みlocal UI build gateを一度だけ最終状態へ結び付ける。
+No.8の利用者事前確認U8-1〜U8-7とNo.9のrelease候補reviewは完了した。No.9では、利用者修正を含む4マスターUI差分について、意図した見た目・layout変更、機能変更、formatのみの変更を区別し、予期しない保存・認証・tenant・Functions・Rules変更が最終UI修正へ混入していないことを確認した。viewport高さ・DataTable内scrollの既存回帰testは有効であり、source形式だけに依存していた2件のtestを意味を変えずに整合させた。失効したdomain・文書・差分・local UI build gateは完了し、既存Local Emulator証拠は後続UI・文書・test変更によって失効していない。
 
-No.9ではDev、remote、実data、migration、IAMを変更しない。No.9完了後、No.10のactual target、commit、service、command、data作用、停止条件、rollbackを提示して利用者の明示承認を得る。区分1の実際の停止通知はNo.10実行直前、反映済みDevの見た目・使い勝手の最終受入れはdeploy後である。
+現在の停止点はNo.10の承認前である。No.9ではDev、remote、実data、migration、IAMを変更していない。No.10のremote actual確認、対象commit、service、exact command、data作用、停止条件、rollbackは利用者へ提示して明示承認を得る。区分1の実際の停止通知はNo.10のremote変更直前、反映済みDevの見た目・使い勝手の最終受入れはdeploy後である。
 
 ### 今回の停止点より後の作業
 
