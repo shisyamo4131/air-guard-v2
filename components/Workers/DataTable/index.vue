@@ -26,13 +26,18 @@ const { attrs } = useIndex();
     <!-- displayName -->
     <!-- Adds `HasLicense` icon if the worker is qualified -->
     <template #[`item.displayName`]="{ item, value }">
-      <AtomsIconsHasLicense v-if="item.isQualified" size="x-small" />
-      {{ value }}
+      <slot name="item.displayName" :item="item" :value="value">
+        <AtomsIconsHasLicense v-if="item.isQualified" size="x-small" />
+        {{ value }}
+      </slot>
     </template>
 
     <!-- isOjt -->
     <template #[`item.isOjt`]="{ item }">
-      <OjtIcon :item="item" />
+      <slot name="item.isOjt" :item="item"><OjtIcon :item="item" /></slot>
+    </template>
+    <template v-for="name in Object.keys($slots).filter((key) => !['item.displayName', 'item.isOjt'].includes(key))" #[name]="scope">
+      <slot :name="name" v-bind="scope ?? {}" />
     </template>
   </air-data-table>
 </template>

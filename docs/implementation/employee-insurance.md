@@ -1,6 +1,24 @@
 # Employee保険管理（実装調査）
 
+## EMP-04の移行状態
+
+Employee詳細の3保険を専用Callableと独立draftへ移行した。原本/archiveの直接client CUD拒否を維持し、旧全文保存を再許可しない。対象保険mapと巻き戻さない保険別世代値を照合し、6操作で変更するfieldだけを保存する。履歴復元は末尾の4fieldを復元し、履歴を1件消費する既存動作を維持する。実装・受入れ状況は[Employeeロードマップ](../roadmaps/employee.md)と[local検証記録](../verification/employee-02-04-local.md)、保存契約は[Employee設計](employee-master.md#通常保存の技術契約)を参照する。
+
+現installed schemaの文字数制約は被保険者番号20文字・喪失理由40文字で、遷移methodが一時入力を消去する前に検証する。日付は有効なJST暦日を受け付ける。新しい日付前後関係・未来日拒否・番号書式・3保険間整合は追加しない。下記の調査履歴にある「長さvalidationなし」「親の全文update」「全field write」は現在の保存契約ではない。
+
+## EMP-01時点の再照合（2026-09-06・履歴）
+
+3保険の埋込み、6操作、live instanceの先行変更と親の`submit:complete`後の全文保存は現sourceにも残る。計画は[Employeeロードマップ](../roadmaps/employee.md)、個人情報の権限・保険訂正/監査の未決は[CONF-0061](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)へ統合する。通常CRUD安全化と監査制度の新設を同一視せず、現historyをappend-only監査証拠として扱わない。
+
+下の2026-08-11記録のRules「全field write」「super-user全read/write」は当時の記述である。現在はEmployee退職3fieldの変更とdeleteを拒否し、同社の有効な本登録Userというidentity境界があるが、保険のpermission・field・遷移制約は不足する。archiveの個別/汎用許可も含め[現行再照合](employee-master.md#現行経路の再照合)を参照する。今回のruntime test、保存data検証、Dev確認は未実施。
+
+## EMP-01の採用条件（2026-09-06追加回答）
+
+在職Employeeでは履歴復元を含む6操作を会社管理者・統括・人事へ許可し、下記の現行状態遷移を維持する。退職後は保険更新・履歴復元を含め通常編集を禁止する。現UIの退職者操作可能という記録は実装事実であり、採用仕様ではない。[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)に従い、保存時の最新在職状態と保険の局所競合を同じ保存境界で確認する。実装・runtimeは未検証。
+
 ## メタデータ
+
+以下の節は2026-08-11の改修前調査履歴である。現在の保存・権限・適用状況は冒頭の移行状態を参照する。
 
 - 状態: 実装調査（SPEC-DEEP-027で対象9 componentをdeep review済み）
 - 対象セグメント: SPEC-SEG-051

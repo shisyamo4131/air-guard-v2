@@ -8,31 +8,32 @@
  *****************************************************************************/
 import * as Vue from "vue";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { employeeReadLabel } from "@/composables/domain/employee/employeeReadLabel";
 
 export function useIndex(props, emit) {
   const { fetchEmployeeComposable } = useFetch("EmployeeTag");
-  const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
+  const { fetchEmployee, cachedEmployees, scope, getStatus } = fetchEmployeeComposable;
 
   /*****************************************************************************
    * WATCHERS
    *****************************************************************************/
-  Vue.watch(() => props.docId, fetchEmployee, { immediate: true });
+  Vue.watch(() => [props.docId, scope?.value], () => fetchEmployee(props.docId), { immediate: true });
 
   // cachedEmployeesから従業員情報のdisplayNameを取得
   const label = Vue.computed(() => {
-    if (!props.docId) return undefined;
     const employee = cachedEmployees.value[props.docId];
-    return employee?.displayName;
+    return employeeReadLabel(props.docId ? getStatus(props.docId) : "idle", employee?.displayName);
   });
 
   /**
    * Tag コンポーネントに渡す属性の算出
-   * - label が undefined の場合、Tag コンポーネントが自動的にローディング状態になる
+   * - 終端状態は固定文言で表示し、実際の取得中だけローディングにする。
    */
   const attrs = Vue.computed(() => {
     return {
       ...props,
       label: label.value,
+      loading: !!props.docId && getStatus(props.docId) === "loading",
       "onClick:remove": () => emit("click:remove"),
     };
   });

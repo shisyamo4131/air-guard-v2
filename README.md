@@ -9,7 +9,7 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 - フロントエンド: Nuxt 3、Vue 3、Vuetify、Pinia（CSR/PWA）
 - バックエンド: Firebase Authentication、Firestore、Realtime Database、Storage、Cloud Functions、Hosting
 - Cloud Functions ランタイム: Node.js 22
-- 外部連携: Stripe、Firebase Cloud Messaging。勤怠データは freee 勤怠管理へのエクスポートを想定
+- 外部連携: Firebase Cloud Messaging。勤怠データは freee 勤怠管理へのエクスポートを想定。Stripe関連物は未同期scaffoldであり、現在は外部連携として運用せず撤去中
 
 ## ドキュメント
 
@@ -20,7 +20,8 @@ AirGuardV2 は、警備会社の取引先・現場・従業員・外注先・配
 - [`docs/roadmaps/`](docs/roadmaps/README.md): 正式運用までの残作業、完了条件、証拠に基づく進捗
 - [`docs/decisions/`](docs/decisions/README.md): 重要な設計・運用判断と理由
 - [`CHANGELOG.md`](CHANGELOG.md): 利用者・仕様・運用に見える変更履歴
-- [`docs/operations.md`](docs/operations.md): 開発、生成、デプロイ、障害復旧の手順
+- [`docs/operations.md`](docs/operations.md): 共通準備、runbook案内、障害復旧、backup、秘密情報
+- [`docs/runbooks/`](docs/runbooks/README.md): 開発、local検証、migration、deploy、package、task引継ぎ、PC移行の作業別手順
 - [`docs/manual/`](docs/manual/index.md): 管理者向け画面マニュアル
 - [`KNOWLEDGE.md`](KNOWLEDGE.md): Git、dayjs などの一般的な学習メモ
 - [`INITIAL_PROMPT.md`](INITIAL_PROMPT.md): 新しい Codex タスクの開始用プロンプト
@@ -53,7 +54,7 @@ npm run generate:dev
 npm run generate:prod
 ```
 
-コマンドの意味、Firebase 環境の切り替え、デプロイ時の承認事項は [`docs/operations.md`](docs/operations.md) を参照してください。
+コマンドの意味と共通境界は[`docs/operations.md`](docs/operations.md)、Devデプロイ時の環境・承認・実行順序は[Dev deploy runbook](docs/runbooks/dev-deployment.md)を参照してください。
 
 ## セキュリティ
 

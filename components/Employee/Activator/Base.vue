@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Employee/Activator/Base.vue
  * @description 従業員の基本情報表示コンポーネント
- * - `EmployeeManager` の activator スロット用コンポーネント
+ * - `EmployeeEditor` の activator スロット用コンポーネント
  *****************************************************************************/
 import dayjs from "dayjs";
 import { Employee } from "@/schemas";
@@ -13,6 +13,7 @@ import { useConstants } from "@/composables/useConstants";
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  canEdit: { type: Boolean, default: false },
   item: {
     type: Object,
     required: true,
@@ -70,7 +71,7 @@ const items = computed(() => {
 
 /*****************************************************************************
  * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
+ * - 当該コンポーネントを利用するEmployee専用editorの入力プロパティを
  *   定める。
  * - includedKeys: 編集対象プロパティ名の配列
  * - excludedKeys: 編集対象外プロパティ名の配列
@@ -105,7 +106,8 @@ defineExpose({
     <v-toolbar color="secondary" density="compact" :title="props.title">
       <template #append>
         <v-btn
-          icon="mdi-pencil"
+          v-if="props.canEdit"
+            icon="mdi-pencil"
           size="small"
           @click="emit('click:edit', props.item)"
         />

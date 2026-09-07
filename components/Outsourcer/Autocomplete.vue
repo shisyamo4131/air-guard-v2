@@ -27,6 +27,7 @@
  * 吸収するため、`api` が呼ばれるたびに Firestore へアクセスされるわけではない。
  *****************************************************************************/
 import { useFetch } from "@/composables/fetch/useFetch";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { useDefaults } from "vuetify";
 
 /*****************************************************************************
@@ -53,7 +54,7 @@ const { getOutsourcer, searchOutsourcers } = fetchOutsourcerComposable;
  * COMPUTED
  *****************************************************************************/
 /**
- * Returns a slot object excluding the `item` and `append` slots, which are used internally for rendering items with `EmployeeListItem` and the append slot for creating new employees.
+ * Returns a slot object excluding the `item` and `append` slots, which are used internally for rendering items with `OutsourcerListItem` and the append slot for creating new outsourcers.
  */
 const slots = computed(() =>
   Object.fromEntries(
@@ -72,6 +73,8 @@ function onCreateHandler(event) {
 }
 
 async function api(text) {
+  const normalizedLength = normalizeTokenText(text).length;
+  if (normalizedLength < 2 || normalizedLength > 40) return [];
   return await searchOutsourcers(text, { returnAllCached: false });
 }
 </script>
@@ -81,7 +84,7 @@ async function api(text) {
     :api="api"
     :fetchItemByKeyApi="getOutsourcer"
     :custom-filter="() => true"
-    hint="名称入力で検索"
+    hint="名称を2〜40文字入力して検索"
     :item-title="itemTitle"
     :item-value="itemValue"
     :label="label"
@@ -91,15 +94,15 @@ async function api(text) {
   >
     <template v-if="creatable" #append>
       <OutsourcersManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate }">
-          <v-icon @click="toCreate()">mdi-plus</v-icon>
+        <template #table="{ toCreate, canCreate }">
+          <v-icon v-if="canCreate" @click="toCreate()">mdi-plus</v-icon>
         </template>
       </OutsourcersManager>
     </template>
 
     <template #item="slotProps">
       <slot name="item" v-bind="slotProps">
-        <EmployeeListItem v-bind="slotProps.props" :item="slotProps.item" />
+        <OutsourcerListItem v-bind="slotProps.props" :item="slotProps.item" />
       </slot>
     </template>
 

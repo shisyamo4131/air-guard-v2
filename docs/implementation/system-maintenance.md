@@ -96,9 +96,18 @@ role例外はなく、admin/developer/super-userも実効値trueならmaintenanc
 
 - FUT-0095〜FUT-0098を`future-actions.md`へ登録し、FUT-0090へCompany maintenanceの証拠を追加した。
 
+## 2026-08-28 承認済み目標（未実装）
+
+- maintenanceはCompany固有でなくproject-wideのoperational boundaryとし、排他lockとはみなさない。
+- server-owned state、Firestore Rulesの通常client write拒否、business Callable共通gateの新規処理拒否、scheduled/triggerの通常自動変更skipを最小product gateとする。
+- 一般利用者は停止案内とsign-outだけを利用し、provider migration/repair/rebuild/verificationは対象と作用を固定した個別承認checkpointだけを例外とする。製品内super-user bypassは設けない。
+- operation lease、全Function wrapper、実行中registry、DRAINING stateは現段階で採用しない。bounded wait、対象log、連続dry-run digest、整合snapshot、post-checkを組み合わせて静穏化する。
+- 状態unknownは保護対象操作をfail closedとし、有限deadline、retry、状態再取得、停止・通信障害表示を提供する。
+- exact schema、旧field migration、Rules/Callable/scheduled gateは未実装である。正本は[ADR 0026](../decisions/0026-maintenance-quiescence-and-data-change.md)と[maintenance runbook](../runbooks/maintenance-and-data-change.md)を参照する。
+
 ## 要確認事項
 
-- CONF-0079〜CONF-0082を`pending-confirmations.md`へ登録した。
+- CONF-0079〜CONF-0082は2026-08-28に回答済みである。
 
 ## 未確認範囲
 

@@ -1,7 +1,7 @@
 # 0018 User provisioningとEmployee紐付け境界
 
 - 日付: 2026-08-16
-- 更新日: 2026-08-21
+- 更新日: 2026-08-26
 - 状態: Accepted
 - 関連仕様: テナントと認証
 - 関連実装計画: [User Write Boundary](../implementation/user-write-boundary.md)
@@ -49,9 +49,11 @@ UserにはEmployeeと紐付かない利用者と、Employeeへ紐付く利用者
 
 `users:provision`と`users:write`の認可基盤、仮登録操作、UI、Rulesを小さいsegmentごとに実装・確認する。本登録User削除、Employee退職時の状態遷移、Employee Self Accessは専用ゲートで別に扱う。
 
+既存Userの予約backfillは、Codex専用Emulator、利用者用Emulator、Devの順に対象を分離する。Devは専用service account identity、Emulator routing不在、maintenance、必要なbackup、read-only dry-run、plan digest、project再確認を必須とし、missing予約のcreateだけを許可する。既存予約のupdate・delete、User・Employee・Authenticationのwriteを同じmigrationへ含めない。途中失敗時は一部作成済み予約を削除せず、再dry-runして未作成分だけを再開する。Prod targetは別の仕様・承認なしに提供しない。
+
 ## ロールバック
 
-各segmentを独立したlocal commitとし、未接続のCallableまたはpermission追加から直前segmentへ戻せるようにする。Users Rulesを狭める変更は、必要なCallableとUI接続がlocalで検証されるまでdeployしない。
+各segmentを独立したlocal commitとし、未接続のCallableまたはpermission追加から直前segmentへ戻せるようにする。Users Rulesを狭める変更は、必要なCallableとUI接続がlocalで検証されるまでdeployしない。Dev backfill前は予約が0件であることを含むread-only証拠を残し、migration後に問題がある場合も予約を自動削除しない。本migrationが新規作成したexact reservationだけを事前・事後証拠から特定できる場合に限り、別のrepair承認で削除を検討する。
 
 ## 再検討条件
 

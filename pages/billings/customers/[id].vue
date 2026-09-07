@@ -1,27 +1,27 @@
 <script setup>
 import dayjs from "dayjs";
+import { computed, watch } from "vue";
 import { useFetchCustomer } from "@/composables/fetch/useFetchCustomer";
 import { useFetchSite } from "@/composables/fetch/useFetchSite";
 import { useCustomerBilling } from "@/composables/dataLayers/useCustomerBilling";
-import { useCustomerBillingManager } from "@/composables/useCustomerBillingManager";
+import PaymentDateEditor from "@/components/CustomerBilling/PaymentDateEditor.vue";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
  *****************************************************************************/
 // Router for getting route params
 const route = useRoute();
-const docId = route.params.id;
+definePageMeta({ key: (route) => route.fullPath });
+const docId = computed(() => typeof route.params.id === "string" ? route.params.id : "");
 
 // Fetch composables
 const fetchCustomerComposable = useFetchCustomer();
 const fetchSiteComposable = useFetchSite();
 
-const { doc } = useCustomerBilling({ docId });
-const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
-  doc,
-  fetchCustomerComposable,
-  fetchSiteComposable,
-});
+const { doc } = useCustomerBilling({ docId: docId.value });
+const { cachedCustomers, fetchCustomer } = fetchCustomerComposable;
+const { cachedSites, fetchSite } = fetchSiteComposable;
+watch(() => [doc.customerId, doc.siteId], ([customerId, siteId]) => { fetchCustomer(customerId); fetchSite(siteId); }, { immediate: true });
 </script>
 
 <template>
@@ -55,33 +55,8 @@ const { attrs, cachedCustomers, cachedSites } = useCustomerBillingManager({
         <tr>
           <td>入金予定日</td>
           <td>
-            <air-item-manager
-              v-bind="attrs"
-              :included-keys="['paymentDueDateAt']"
-              label="入金予定日編集"
-            >
-              <template #activator="activatorProps">
-                {{ dayjs(doc.paymentDueDateAt).tz().format("YYYY年MM月DD日(ddd)") }}
-                <v-btn
-                  v-bind="activatorProps.attrs"
-                  class="ml-2"
-                  color="secondary"
-                  prepend-icon="mdi-pencil"
-                  size="small"
-                  text="変更"
-                />
-              </template>
-              <template #[`input.paymentDueDateAt`]="inputProps">
-                <air-date-input
-                  v-bind="inputProps.attrs"
-                  :allowed-dates="
-                    (date) => {
-                      return date.getTime() >= doc.billingDateAt.getTime();
-                    }
-                  "
-                />
-              </template>
-            </air-item-manager>
+            {{ doc.paymentDueDateAt ? dayjs(doc.paymentDueDateAt).tz().format("YYYY年MM月DD日(ddd)") : '未設定' }}
+            <PaymentDateEditor :document-id="docId" />
           </td>
         </tr>
         <tr>

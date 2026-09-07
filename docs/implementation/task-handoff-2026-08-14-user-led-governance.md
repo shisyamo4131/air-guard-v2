@@ -373,3 +373,109 @@ application code、Functions、Firebase Rules、Firebase設定、test code、実
 - UWB-01〜08は完了し、公式進捗は10%である。次はUWB-09のrole・permission対応表をschemas packageへ統合する範囲と導入順序を確認する。
 - Git push、`main` merge、deploy、Dev、Prod、remote service、実dataの操作は未承認であり、実行しない。
 - coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## COORDINATOR-HANDOFF-013 PM-07 coordinator activation checkpoint
+
+- 日付: 2026-08-27。
+- former coordinator: PM（AirGuardV2）-06 / task `01a037d6-c3a8-7f01-837e-66236b2a9508`。
+- new coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex専用worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- branchは`codex/dev-user-reservation-migration`、activation baseline HEADは`5ac546edb68f6f6b9569bfd6eb91373411a163cc`、baseline worktreeはclean、upstreamはnone、primary worktree registryは上記repository 1件だけだった。
+- managed common governanceは`1.3.0`、common SHA-256は`d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。
+- `NO-CHANGE-CALLBACK-006`は成功した。cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとHEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、現taskの権限、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sourcesをrepositoryから復元した。
+- Devは正式運用準備または正式運用開始の完了前でも、検証済み変更を積極的にdeploy・受入れする非本番試行環境とする。利用者が対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む一つのbounded Dev release checkpointを承認した場合、そのrunbook内のbuild、deploy、remote検証はcommandごとの再承認を必要としない。新しいmigration、破壊的repair、対象service・data・期間の拡張、Prod適用は別の明示承認を必要とする。
+- UWBの初回Dev導入は予約処理だけを選択deployしない。System全体maintenance、整合snapshot、UWBの全server境界、server deploy後のfresh create-only予約migration、client/Hosting、maintenance中検証、解除・remote受入れを一つのcutoverとして行う。System maintenanceはclient route制御であり、Rules、Functions、Admin SDK、scheduled・direct Functions、開始済みwriteを停止する排他lockではない。
+- local `main`とlocal tracking ref `origin/main`は`4eab588895a2ab47e7ae2ec867c9c10a0d7c5917`である。branch上には未push local commit `40264f32f068783c2d2fd584236fd2d462f4c133`（guarded Dev reservation migration）と`5ac546edb68f6f6b9569bfd6eb91373411a163cc`（Dev trial release runbook）の2件がある。正式運用準備roadmapの公式進捗はDev証拠未取得のため10%のままである。
+- 次はfull release commitと対象Firebase project、services、data影響、backup、rollback、停止条件、検証を固定したbounded Dev release checkpointを構築し、利用者承認後に実行する。実際のDev deploy、network、snapshot、migration、remote検証、実data操作はまだ0件である。
+- coordinator ownershipはnew coordinatorへ移管した。former coordinator taskはmanaged common governanceに従ってCodexがarchiveまたはdeleteせず、利用者が削除できる状態である。
+
+## GOV14-AIRGUARDV2-01 migration preparation checkpoint
+
+- 日付: 2026-08-28。
+- coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- program coordinator / callback destination: PM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`。
+- ownerはinstalled `scaffold-project-governance` common governance `1.4.0`への移行、限定local commit、AirGuardV2の全active task交代を承認した。program source commitは`25fb125a1a656b7a6906d11456f6c7f0a4050363`である。
+- migration baselineはbranch `codex/dev-user-reservation-migration`、HEAD `e9af484d47005b8eb28afe764a038b195d7409d2`、upstream none、clean、保存済みprimary repository `C:\Users\seven\projects\AirGuard\air-guard-v2`のworktree 1件だけである。
+- managed common governanceは移行前`1.3.0`、common SHA-256 `d2cdb79f86e034a533e880ec7c4dddc51ca1e40bbeb16cfde497f1abf41d4e10`である。installed skillは36 files、`1.4.0`、skill validator exit 0である。
+- active AirGuardV2 Codex taskはPM（AirGuardV2）-07だけ、内部subagentは0である。未統合worktree変更はなく、交代対象はPM-07 1件である。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`公開・検証、Admin SDKのfail-closed安全停止、AirGuardV2 app/Functionsのexact package導入とcompatible reader local実装まで完了した。次はcanonical parity、PrivateSettings backup、SettingAudits restore契約を確定する。application変更、deploy、migration、remote/data操作をgovernance移行へ含めない。
+- 移行前のtask sessionは73.45 MiB / 300 MiBでhandoff threshold未到達だった。旧2 GiB Codex-wide scanは2004.64 MiB、scan incomplete / error 1であり、全体容量の完全な判断証拠には使用しない。
+- 移行はmanaged artifactをsync commandだけで更新し、project-owned容量alias、coordination runbook、measurement script、仕様、ADR、roadmap、operations、INITIAL_PROMPT、validator/test、changelog、handoffを整合させる。push、fetch、network、deploy、data操作、archive/delete、history rewrite、別worktreeは禁止する。
+- migration commitと全検証後、完全新規task `PM（AirGuardV2）-08`を保存済みprojectへ直接作成し、governance `1.4.0`、managed restricted workspace-write、primary-only worktree、no-change callback、最初のfile限定self-routing commitを確認する。成功するまでownershipはPM-07に残し、旧taskをCodexがarchive/deleteしない。
+- managed sync後はcommon governance `1.4.0`、common SHA-256 `d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、generated `AGENTS.md` 13,659 bytes / 32,768 bytesである。project specificationは`0.5.15`へ更新した。
+- 容量確認は実task IDを必須とし、exactly one matching JSONLだけを測定する。handoff閾値はtask session 300 MiB、Codex全体10 GiBは別の参考warningであり、session本文を表示しない。移行中の実測は74.10 MiB / 300 MiB、24.70%、handoff不要だった。Codex全体scanは2011.32 MiB / 10 GiB、scan incomplete / error 1のため完全値として扱わない。
+- pre-commit検証ではmanaged governance、renderer、project documentation、documentation negative fixtures、capacity routing regression 7件、`git diff --check`が独立exit 0となった。最初のproject documentation検査はWindows PowerShellの日本語literal文字コード解釈でparser exit 1となり、validator/test内のalias fixtureをUTF-8 Base64復号へ変更した後に再実行してexit 0を確認した。
+
+## GOV14-AIRGUARDV2-PM08-SELF-ROUTING-001 coordinator activation checkpoint
+
+- 日付: 2026-08-28。
+- checkpoint: `GOV14-AIRGUARDV2-PM08-SELF-ROUTING-001`。
+- former coordinator: PM（AirGuardV2）-07 / task `01a04120-454b-70d3-9b3e-c5d4da13591d` host `local`。
+- new coordinator: PM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- activation baselineはbranch `codex/dev-user-reservation-migration`、HEAD `c60e700dccaf34979e7adc9daa50ef6aaf517ed1`、upstream none、clean、保存済みprimary repositoryのworktree 1件だけである。
+- managed common governanceは`1.4.0`、common SHA-256は`d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、project specificationは`0.5.15`である。
+- `NO-CHANGE-GOV14-AIRGUARDV2-001`は成功した。exact cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとfull HEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、managed restricted `workspace-write`、`auto_review`、network restricted、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sources、承認・権限境界をrepositoryとtrusted task metadataから復元した。
+- governance移行commit `c60e700dccaf34979e7adc9daa50ef6aaf517ed1`は21 files、363 insertions、34 deletionsである。PM（AirGuardV2）-07ではpost-commitのmanaged governance validator、renderer、project-owned documentation validator、documentation negative fixture、capacity routing regression 7件、committed diff checkがそれぞれ独立exit 0だった。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`は公開・artifact検証済み、Admin SDKのfail-closed safety guardは完了し、AirGuardV2 app/Functionsへのexact package導入とcompatible reader local実装も完了した。
+- nextはcanonical parity、PrivateSettings backup、SettingAudits restore契約の確定である。application変更、test code変更、deploy、migration、network、remote/data操作、push、`main` merge、Prod、未承認scopeは別checkpointとする。
+- 本checkpointの限定commitとpost-commit verificationが成功した時点で、active AirGuardV2 coordinator ownershipをPM（AirGuardV2）-08へ移管する。former PM（AirGuardV2）-07はCodexがarchiveまたはdeleteせず、利用者が手動削除できる状態とする。
+- 今後のAirGuardV2 checkpoint callbackとassignmentはPM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`へretargetする。program完了callbackだけはformer PM（AirGuardV2）-07がPM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`へ一度送る。
+
+## CCB-02-PARITY-RECOVERY-CONTRACT-001 checkpoint
+
+- 日付: 2026-08-28。
+- 利用者はcanonical parity、PrivateSettings backup、SettingAudits restoreの3契約を承認した。project specificationは`0.5.16`へ更新し、判断理由と復旧境界はADR 0028を正本とする。
+- canonical parityは、未分類・不正・partial・決定不能が1件でもあれば全tenant write 0とし、条件を満たすtenantへ8 target documentをcreateするだけとする。既存root・target・auditのupdate/delete、partial setの自動修復、途中成功分の推測削除を禁止する。
+- PrivateSettingsは既存logical backupへ含めず、そのbackupを完全backupと呼ばない。当面の復旧基盤はmanaged Firestore backup/PITRとし、専用暗号化logical backup/restoreは別仕様・別承認とする。
+- SettingAudits restoreは同一company・同一schema・同一document IDのcreate-only、既存同値skip、異値で全体停止とし、update/delete/clear/generic mergeを禁止する。専用実装・復旧演習までは利用不可である。
+- 関連repository `air-guard-v2-schemas`ではlocal generated capacity cacheを`.gitignore`へ追加し、local commit `7a3b0cbf04659f0cf0f87a3d20f8fc8093a72e2f`を作成した。repositoryはcleanで、push・network・package・application変更は行っていない。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はlocal migration plan/digest・synthetic fixture・停止/再実行test、PrivateSettings除外表示、専用audit restoreの実装範囲をcheckpoint化する。application/test code変更、Rules、Emulator、deploy、migration、network、remote/data操作、push、`main` merge、Prodは本checkpointに含めない。
+
+## CCB-02-LOCAL-PURE-PLANNER-001 checkpoint
+
+- 日付: 2026-08-28。
+- 利用者は実dataへ触れる前までのlocal implementation、合成test、文書、local commitを承認した。本checkpointは保存済みprimary repository、branch `codex/dev-user-reservation-migration`、baseline `0ab844fa009a753c8def16f96415608c45580bd6`、upstream none、clean、primary-only worktreeから開始した。
+- `scripts/migrate-company-settings.mjs`へFirestore/network非接続のpure plannerを追加した。Schemas exact `2.4.2-dev.167`のlegacy mappingと公開Firestore REST Valueのtype-tagged canonical encodingを使い、candidate union、edition、manifest/root、8 target、audit/unexpected pathを`eligibleCreate`、`alreadyEquivalent`、6種のblocking分類へ決定的に分ける。
+- blockingが1件でもあれば全tenantのoperationを空にし、成功planはtenantごとにSettings 6件・PrivateSettings 2件のcreateだけを返す。root、既存target、SettingAuditsのupdate/delete、partial repair、activationは実装しない。summaryはprimary分類別件数、finding code別件数、digest、create予定数だけで、company ID、名称、path、document body、per-subject hashを出力しない。
+- 合成fixtureとdomain testを追加し、create-only 8件、complete exact、partial、不一致、unknown、invalid、ambiguous、manifest/root mismatch、orphan target、audit、active marker、edition strict boolean、integer/double差、manifest/environment/full snapshot digest binding、UTF-8 byte順、primary分類と全finding保持、fresh re-plan、非識別summary、固定version/receipt guardの23件を確認した。
+- pre-commit検証はCompany migration 17件、compatible reader 8件、既存User予約migration 18件、Node構文検査、project documentation validator、managed governance validator、renderer、`git diff --check`がそれぞれexit 0だった。managed validatorの最初のnested PowerShell既定引数呼出しだけ`PSScriptRoot`が空となりexit 1だったため不採用とし、absolute `-ProjectPath`を明示した独立processでexit 0、managed hash current、AGENTS 13,659 / 32,768 bytesを確認した。直接実行停止はprocess内`LASTEXITCODE=64`を確認した。
+- plannerはFirestore reader、credential、dry-run CLI、transaction apply、post-checkを持たない。直接実行はexit 64で停止する。Emulator/application/server/browser、network、remote/data read/write、deploy、push、`main` merge、Prodは0件である。
+- commit `a32def97727e51ce6a655517b12bb29c8e76c0ee`後の独立read-only reviewで、environment/full target snapshotへのdigest binding不足、edition truthy値、per-subject summary、全finding欠落の4点を検出した。reader/apply工程へ進まず、project/database/database type/edition/receipt/schema contract、全root/target/audit/unexpected snapshot fingerprint/updateTimeをdigestへ追加し、boolean `true`以外のedition確認をblock、summaryからsubjectを削除、固定優先primaryと全finding code/countを分離するcorrective変更を行った。
+- corrective差分の独立再reviewでは前4点の解消を確認し、Company pathがJavaScript既定UTF-16順で並ぶ残件1点を検出した。manifestとcandidate、digest finding順を共通UTF-8 byte comparatorへ統一し、UTF-16とUTF-8で順序が異なるUnicode Company IDの回帰testを追加した。
+- 最終独立read-only reviewはfindings 0で、前5点の解消、23件目test、文書同期を確認した。corrective pre-commit検証はCompany migration 23件、compatible reader 8件、既存User予約migration 18件、Node構文、project documentation、managed governance、renderer、`git diff --check`が各exit 0だった。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はCodex専用合成Emulatorだけを対象に、public REST reader、local target guard、create-only transaction、read-after-write/post-checkを別checkpointで実装・検証する候補である。実dataに触れるDev/Prod read、manifest生成、apply、backup/restoreは利用者へ停止境界を示して別承認を得る。
+
+## CCB-02-CODEX-EMULATOR-MIGRATION-001 checkpoint
+
+- 日付: 2026-08-28。
+- 利用者は実dataへ触れる前までのlocal implementation、合成fixture/test、Codex専用Emulator、文書、local commitを承認した。本checkpointは保存済みprimary repository、branch `codex/dev-user-reservation-migration`、baseline `8488e303c4c2459cbde156aa2f0ee9bf43e59301`、upstream none、clean、primary-only worktreeから開始した。
+- `scripts/migrate-company-settings.mjs`へCodex専用target guard、公開Firestore REST reader、dry-run/apply CLI、tenant単位REST read-write transaction、fresh post-checkを追加した。targetはproject `demo-air-guard-v2-codex`、database `(default)`、Standard/Native、host `127.0.0.1:18080`、`AIR_GUARD_EXTERNAL_EFFECTS=deny`へ固定し、資格情報、Dev/Prod、利用者用Emulator、remote targetを拒否する。
+- applyは直前dry-runのdigest一致後もtransaction内でroot raw fingerprint・updateTime・marker、Settings、PrivateSettings、SettingAuditsを同じ公開REST Valueで再検査し、`currentDocument.exists=false`付きSettings 6件・PrivateSettings 2件だけをcreateする。root、audit、既存targetのupdate/delete、partial repair、成功createの削除は実装しない。途中失敗後はfresh digestで再開する。
+- local Rules receiptはrepository `firestore.rules`のbytesに結び、deploy済みpre-containment receiptとは区別する。Emulator管理者REST header `Bearer owner`はexact local target guard内だけで使用する。標準出力は件数、finding count、plan digest、write countに限定し、company ID、名称、path、document値、per-subject hashを出さない。
+- domain testは23件から34件へ増え、target/project/host/external-effects/credential拒否、変更されたtransport targetのfetch前拒否、redirect拒否、CLI必須引数とterminal exit整合、公開REST create precondition、transaction drift rollback、途中成功のfresh resume plan、commit応答喪失時の観測済みcreateとstate verification、digest mismatchのpre-transaction停止、無効な暦日拒否を追加した。Codex専用Emulator testは一時import runtime内の合成Company root 2件だけを使い、dry-run 2 tenant・16 create、tenant transaction 2件、post-check、root不変、SettingAudits 0、update/delete/root/audit write 0、再dry-run全件`alreadyEquivalent`、no-op applyを確認する。
+- 最初の専用Emulator実行は匿名REST collection queryがRulesで403となりexit 1だった。writeは0件で、runnerは利用者`./saved-data`と専用`isolated-saved-data`のfingerprint不変を確認した。既存Codex UI verifierと同じlocal admin headerをexact target guard内へ追加し、domain 34件 exit 0後に再実行した専用Emulator 1件はexit 0となった。成功時も利用者saved-data不変、専用seed read-only、Functions未起動、Firestore loopbackだけ、runtime cleanup済みである。
+- 初回独立reviewは、apply JSONとprocess exitの不一致、途中成功集計/fresh resume plan欠落、redirect追従、無効暦日の正規化受理の4点を検出した。terminal summary exitを上書きし、成功tenant/document件数と非識別recovery summaryを失敗へ付加し、`redirect=error`と応答origin再検査を追加し、UTC暦日・Firestore Timestamp範囲を厳密化した。対応する陰性・部分成功回帰を追加し、成功createの削除は追加していない。
+- 2回目の独立reviewは、commitが反映済みでもresponse消失時にacknowledged 0だけを報告し得る1点を検出した。commit送信後の結果不明を独立flagへ分離し、acknowledged件数、fresh readで`eligibleCreate`から`alreadyEquivalent`へ変わった観測件数、recovery plan、state verification必須、resume必須を非識別集計で報告する。commit反映後のresponse喪失とrecovery read失敗を別々に合成し、create 8件保持、delete 0を確認した。
+- 3回目の独立read-only reviewはfindings 0で、前回5点の解消、target escape、raw型、digest/concurrency、partial/unknown outcome、data loss、PII非出力、runner隔離、文書整合を確認した。
+- 最終pre-commit検証はmigration domain 34件、専用Firestore Emulator 1件、既存Codex Emulator harness 97件、compatible reader 8件、User予約migration 18件、Node構文、project documentation、managed governance、renderer、`git diff --check`が各exit 0だった。専用migration testと既存harnessはいずれも利用者saved-data不変・専用seed read-onlyを確認した。既存harness終了時のWindows open handle警告で空runtime directory 1件だけcleanupが遅延したため、files 0 / bytes 0とproject配下exact pathを確認して非再帰削除し、他の既存runtime directoryには触れていない。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%のままである。次はDev実dataへ触れずに、PrivateSettings除外を誤表示しないbackup inventory表示、SettingAudits専用create-only restoreのpure/local contract、pre-containment Rules/Callableの実装順をcheckpoint化する。Dev/remote read、manifest生成、Rules deploy、data apply、push、`main` merge、Prodは別承認まで停止する。
+
+## GOV15-AIRGUARDV2-PM09-SELF-ROUTING-001 coordinator activation checkpoint
+
+- 日付: 2026-08-30。
+- checkpoint: `GOV15-AIRGUARDV2-PM09-SELF-ROUTING-001`。
+- former coordinator: PM（AirGuardV2）-08 / task `01a047c6-d014-7241-9b46-1e3d12073747` host `local`。
+- new coordinator: PM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` host `local`。
+- repository/environment: 保存済み利用者repository `C:\Users\seven\projects\AirGuard\air-guard-v2`を直接使うlocal task。Codex worktree、linked worktree、task-specific worktree、alternate repository copyではない。
+- activation baselineはbranch `codex/dev-user-reservation-migration`、HEAD `4db16ee1c9a64ee363c8666b9fabe92dd6374570`、upstream none、clean、保存済みprimary repositoryのworktree 1件だけである。
+- managed common governanceは`1.4.0`、common SHA-256は`d2511f9c2fcb2a90ac43f8c168241fd7cc026da9db1f37b7c66daf10ebfc1d47`、project specificationは`0.5.17`である。
+- `NO-CHANGE-GOV15-AIRGUARDV2-PM09-001`は成功した。exact cwdとGit top-levelは保存済み利用者repositoryそのもの、branchとfull HEADはbaselineに一致し、upstreamはnone、worktreeはcleanかつprimary-onlyだった。直接repository接続、managed restricted `workspace-write`、`auto_review`、network restricted、`AGENTS.md`、`governance/project-rules.md`、`docs/README.md`とtask-routed authoritative documentsを含むactive instruction sources、承認・権限境界をrepositoryとtrusted task metadataから復元した。
+- governance change commit `4db16ee1c9a64ee363c8666b9fabe92dd6374570`は11 files、140 insertions、37 deletionsである。PM（AirGuardV2）-08ではproject-owned documentation validator、managed governance validator、renderer `-Check`、committed diff checkがそれぞれ独立exit 0で、independent review findingsは0だった。
+- project-wide ruleとして、既存Firestore Rulesの許可を狭める改修は、現行Rules下で将来境界へ準拠するClient/Server CRUDを先行し、現行・候補Rulesの両回帰、既存機能継続、旧writer 0件を確認してからRulesを閉じる。新規pathは最初のdocument作成前にdenyを確立する。local候補Rulesの成功だけをdeploy readinessとみなさない。
+- current product stateはCCB-02、Company設定roadmap 10%、正式運用準備roadmap 10%である。Schemas exact `2.4.2-dev.167`の公開・artifact検証、Admin SDKのfail-closed safety guard、AirGuardV2 app/Functionsのexact package導入とcompatible reader、pure migration plannerとCodex専用local Emulator経路、PrivateSettings backup coverage、SettingAudits pure restore planner、候補Rulesのlocal実装・回帰まで完了した。
+- nextはCompany固有cloneでnon-enumerable CCB runtime stateを非永続のまま保持し、`AirItemManager`のcustom `handleUpdate`を使ってCompanyManagerと全Company callerをmarker-awareな4つの専用Callableへ移す。LEGACYはscope別`expectedValue`一致時だけlegacy rootをexact partial updateし、root whole-set・reserved field・新path・audit writeを0件とする。STAGEDは通常設定writeとsignupを拒否する。ACTIVEは`expectedRevision`を使い、Settingsと必要なauditだけを更新する。dual-writeは行わない。
+- rolloutは現行Rules下の既存CRUD先行移行、現行・候補Rules両回帰と旧writer 0件確認、maintenance開始、Rules deploy/receipt確認、complete Settingsのcreate-only staging、同一maintenance内activationの順とする。
+- 本checkpointの限定commitとpost-commit verificationが成功した時点で、active AirGuardV2 coordinator ownershipをPM（AirGuardV2）-09へ移管する。former PM（AirGuardV2）-08はCodexがarchiveまたはdeleteせず、利用者が手動削除できる状態とする。
+- 今後のAirGuardV2 checkpoint assignment/callbackとprogram completion callbackはPM（AirGuardV2）-09 / task `01a0505c-6593-7571-9f4a-65a1e6cd14a3` host `local`へretargetする。program coordinatorはPM（SPG）-04 / task `01a04795-86ec-7d32-a6f7-9b1dd4f3c6c8` host `local`である。
+- application変更、Rules変更、application test、deploy、migration、network、remote/data操作、Git push、`main` merge、Prodは本checkpointに含めず、別checkpointとする。

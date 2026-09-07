@@ -1,6 +1,8 @@
 <script setup>
 import { useDocument } from "@/composables/dataLayers/useDocument";
 import { useFetch } from "@/composables/fetch/useFetch";
+import AgreementInput from "@/components/OperationBilling/CustomInput/Agreement.vue";
+import AdjustInput from "@/components/OperationBilling/CustomInput/Adjust.vue";
 
 /*****************************************************************************
  * SETUP STORES & COMPOSABLES
@@ -62,6 +64,8 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
               class="fill-height"
               :doc="doc"
               label="取極め"
+              action="agreement"
+              :custom-input="AgreementInput"
               hide-delete-btn
             >
               <template #activator="activatorProps">
@@ -76,6 +80,8 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
             <OperationBillingManager
               :doc="doc"
               label="請求明細"
+              action="adjusted"
+              :custom-input="AdjustInput"
               hide-delete-btn
             >
               <template #activator="activatorProps">
@@ -86,10 +92,11 @@ const { doc } = useDocument("OperationBilling", { docId }, (doc) => {
             </OperationBillingManager>
           </v-col>
           <v-col v-if="doc.isBillable" cols="12">
-            <ArticleDetailsManager
-              v-model="doc.articles"
+            <OperationRowsManager
+              :document-id="docId"
+              kind="billing"
+              group="articles"
               label="稼働外売上"
-              @submit:complete="async () => await doc.update()"
             />
           </v-col>
           <v-col cols="12">

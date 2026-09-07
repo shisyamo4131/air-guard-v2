@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { createUserEmailReservationId } from "../functions/modules/auth/createTemporaryUser.js";
@@ -8,6 +9,31 @@ export const CODEX_RESERVATION_MIGRATION_TARGET = Object.freeze({
   name: "codex-local",
   projectId: "demo-air-guard-v2-codex",
   firestoreHost: "127.0.0.1:18080",
+  createOnly: false,
+  remote: false,
+});
+
+export const USER_LOCAL_RESERVATION_MIGRATION_TARGET = Object.freeze({
+  name: "user-local",
+  projectId: "air-guard-v2-dev",
+  firestoreHost: "127.0.0.1:8080",
+  createOnly: true,
+  remote: false,
+});
+
+export const DEV_RESERVATION_MIGRATION_TARGET = Object.freeze({
+  name: "dev",
+  projectId: "air-guard-v2-dev",
+  firestoreHost: null,
+  createOnly: true,
+  remote: true,
+});
+
+export const RESERVATION_MIGRATION_TARGETS = Object.freeze({
+  [CODEX_RESERVATION_MIGRATION_TARGET.name]: CODEX_RESERVATION_MIGRATION_TARGET,
+  [USER_LOCAL_RESERVATION_MIGRATION_TARGET.name]:
+    USER_LOCAL_RESERVATION_MIGRATION_TARGET,
+  [DEV_RESERVATION_MIGRATION_TARGET.name]: DEV_RESERVATION_MIGRATION_TARGET,
 });
 
 const EXIT_CODES = Object.freeze({
@@ -382,7 +408,10 @@ export function planUserReservationMigration({
   });
 }
 
-export function summarizeUserReservationPlan(plan, { mode = "dry-run" } = {}) {
+export function summarizeUserReservationPlan(
+  plan,
+  { mode = "dry-run", target = CODEX_RESERVATION_MIGRATION_TARGET.name } = {},
+) {
   const findingCounts = {};
   for (const finding of plan.findings) {
     findingCounts[finding.code] = (findingCounts[finding.code] ?? 0) + 1;
@@ -400,7 +429,7 @@ export function summarizeUserReservationPlan(plan, { mode = "dry-run" } = {}) {
         : writeCounts.create + writeCounts.update > 0
           ? "changes-required"
           : "clean",
-    target: CODEX_RESERVATION_MIGRATION_TARGET.name,
+    target,
     planDigest: plan.planDigest,
     findingCounts,
     writeCounts,
@@ -408,49 +437,123 @@ export function summarizeUserReservationPlan(plan, { mode = "dry-run" } = {}) {
   };
 }
 
-export function assertCodexReservationMigrationTarget(env = process.env) {
-  if (env.FIRESTORE_EMULATOR_HOST !== CODEX_RESERVATION_MIGRATION_TARGET.firestoreHost) {
-    const error = new Error("Reservation migration requires the dedicated Firestore Emulator.");
-    error.exitCode = EXIT_CODES.TARGET_REJECTED;
-    throw error;
-  }
+function targetRejected(message) {
+  const error = new Error(message);
+  error.exitCode = EXIT_CODES.TARGET_REJECTED;
+  return error;
+}
+
+function assertProjectEnvironment(target, env) {
   for (const name of ["GCLOUD_PROJECT", "GOOGLE_CLOUD_PROJECT"]) {
-    if (env[name] && env[name] !== CODEX_RESERVATION_MIGRATION_TARGET.projectId) {
-      const error = new Error("Reservation migration rejected a non-demo project.");
-      error.exitCode = EXIT_CODES.TARGET_REJECTED;
-      throw error;
+    if (env[name] && env[name] !== target.projectId) {
+      throw targetRejected("Reservation migration rejected a different project.");
     }
   }
   if (!env.GCLOUD_PROJECT && !env.GOOGLE_CLOUD_PROJECT) {
-    const error = new Error("Reservation migration requires the dedicated demo project.");
-    error.exitCode = EXIT_CODES.TARGET_REJECTED;
-    throw error;
+    throw targetRejected("Reservation migration requires an explicit project.");
   }
   if (env.FIREBASE_CONFIG) {
     let config;
     try {
       config = JSON.parse(env.FIREBASE_CONFIG);
     } catch {
-      const error = new Error("FIREBASE_CONFIG is invalid.");
-      error.exitCode = EXIT_CODES.TARGET_REJECTED;
-      throw error;
+      throw targetRejected("FIREBASE_CONFIG is invalid.");
     }
-    if (
-      config.projectId &&
-      config.projectId !== CODEX_RESERVATION_MIGRATION_TARGET.projectId
-    ) {
-      const error = new Error("Reservation migration rejected a non-demo Firebase config.");
-      error.exitCode = EXIT_CODES.TARGET_REJECTED;
-      throw error;
+    if (config.projectId && config.projectId !== target.projectId) {
+      throw targetRejected("Reservation migration rejected a different Firebase config.");
     }
   }
 }
 
+export function assertReservationMigrationTarget(
+  targetName,
+  env = process.env,
+  { readCredentialFile = (path) => readFileSync(path, "utf8") } = {},
+) {
+  const target = RESERVATION_MIGRATION_TARGETS[targetName];
+  if (!target) throw targetRejected("Reservation migration target is invalid.");
+
+  assertProjectEnvironment(target, env);
+
+  if (!target.remote) {
+    if (env.FIRESTORE_EMULATOR_HOST !== target.firestoreHost) {
+      throw targetRejected("Reservation migration requires the exact Firestore Emulator.");
+    }
+    return target;
+  }
+
+  if (env.FIRESTORE_EMULATOR_HOST) {
+    throw targetRejected("Dev reservation migration rejects Emulator routing.");
+  }
+  if (
+    typeof env.GOOGLE_APPLICATION_CREDENTIALS !== "string" ||
+    env.GOOGLE_APPLICATION_CREDENTIALS.trim().length === 0
+  ) {
+    throw targetRejected("Dev reservation migration requires explicit credentials.");
+  }
+  let credential;
+  try {
+    credential = JSON.parse(readCredentialFile(env.GOOGLE_APPLICATION_CREDENTIALS));
+  } catch {
+    throw targetRejected("Dev reservation migration credential cannot be verified.");
+  }
+  if (
+    credential?.type !== "service_account" ||
+    credential?.project_id !== target.projectId ||
+    credential?.client_email !==
+      "firebase-adminsdk-fbsvc@air-guard-v2-dev.iam.gserviceaccount.com" ||
+    typeof credential?.private_key !== "string" ||
+    credential.private_key.length === 0
+  ) {
+    throw targetRejected("Dev reservation migration rejected the credential identity.");
+  }
+  return target;
+}
+
+export function assertCodexReservationMigrationTarget(env = process.env) {
+  try {
+    return assertReservationMigrationTarget(
+      CODEX_RESERVATION_MIGRATION_TARGET.name,
+      env,
+    );
+  } catch (error) {
+    if (error?.exitCode === EXIT_CODES.TARGET_REJECTED) throw error;
+    const wrapped = new Error("Reservation migration target validation failed.");
+    wrapped.exitCode = EXIT_CODES.TARGET_REJECTED;
+    throw wrapped;
+  }
+}
+
+export function assertCreateOnlyReservationPlan(plan) {
+  if (
+    plan.findings.length > 0 ||
+    plan.operations.some(({ writes }) =>
+      writes.some(({ kind }) => kind !== "create"),
+    )
+  ) {
+    const error = new Error(
+      "This reservation migration target requires a clean create-only plan.",
+    );
+    error.exitCode = EXIT_CODES.DATA_BLOCKER;
+    throw error;
+  }
+}
+
 export function parseReservationMigrationArgs(args) {
-  const parsed = { apply: false, planDigest: null, target: null };
+  const parsed = {
+    apply: false,
+    backupConfirmed: false,
+    confirmedProject: null,
+    planDigest: null,
+    target: null,
+  };
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--apply") parsed.apply = true;
+    else if (argument === "--confirm-backup") parsed.backupConfirmed = true;
+    else if (argument === "--confirm-project") {
+      parsed.confirmedProject = args[++index];
+    }
     else if (argument === "--target") parsed.target = args[++index];
     else if (argument === "--plan-digest") parsed.planDigest = args[++index];
     else {
@@ -459,8 +562,10 @@ export function parseReservationMigrationArgs(args) {
       throw error;
     }
   }
-  if (parsed.target !== CODEX_RESERVATION_MIGRATION_TARGET.name) {
-    const error = new Error("--target codex-local is required.");
+  if (!RESERVATION_MIGRATION_TARGETS[parsed.target]) {
+    const error = new Error(
+      "--target codex-local, user-local, or dev is required.",
+    );
     error.exitCode = EXIT_CODES.USAGE;
     throw error;
   }
@@ -471,6 +576,24 @@ export function parseReservationMigrationArgs(args) {
   }
   if (!parsed.apply && parsed.planDigest !== null) {
     const error = new Error("--plan-digest is only valid with --apply.");
+    error.exitCode = EXIT_CODES.USAGE;
+    throw error;
+  }
+  if (parsed.target === DEV_RESERVATION_MIGRATION_TARGET.name && parsed.apply) {
+    if (
+      parsed.confirmedProject !== DEV_RESERVATION_MIGRATION_TARGET.projectId ||
+      !parsed.backupConfirmed
+    ) {
+      const error = new Error(
+        "Dev apply requires --confirm-project air-guard-v2-dev and --confirm-backup.",
+      );
+      error.exitCode = EXIT_CODES.USAGE;
+      throw error;
+    }
+  } else if (parsed.confirmedProject !== null || parsed.backupConfirmed) {
+    const error = new Error(
+      "Remote confirmation flags are only valid for Dev apply.",
+    );
     error.exitCode = EXIT_CODES.USAGE;
     throw error;
   }
@@ -600,32 +723,51 @@ export async function applyUserReservationMigrationPlan(firestore, plan) {
 
 async function runCli() {
   const args = parseReservationMigrationArgs(process.argv.slice(2));
-  assertCodexReservationMigrationTarget();
+  const target = assertReservationMigrationTarget(args.target);
   const requireFromFunctions = createRequire(
     new URL("../functions/package.json", import.meta.url),
   );
-  const { getApps, initializeApp, deleteApp } = requireFromFunctions("firebase-admin/app");
+  const { applicationDefault, getApps, initializeApp, deleteApp } =
+    requireFromFunctions("firebase-admin/app");
   const { getFirestore } = requireFromFunctions("firebase-admin/firestore");
+  const appName = `user-reservation-migration-${target.name}`;
   const app =
-    getApps().find((candidate) => candidate.name === "uwb04-reservation-migration") ??
+    getApps().find((candidate) => candidate.name === appName) ??
     initializeApp(
-      { projectId: CODEX_RESERVATION_MIGRATION_TARGET.projectId },
-      "uwb04-reservation-migration",
+      target.remote
+        ? { credential: applicationDefault(), projectId: target.projectId }
+        : { projectId: target.projectId },
+      appName,
     );
   try {
     const firestore = getFirestore(app);
     const plan = planUserReservationMigration(await readMigrationState(firestore));
     const summary = summarizeUserReservationPlan(plan, {
       mode: args.apply ? "apply" : "dry-run",
+      target: target.name,
     });
+    const containsNonCreateWrite = plan.operations.some(({ writes }) =>
+      writes.some(({ kind }) => kind !== "create"),
+    );
     if (plan.findings.length > 0) {
       process.stdout.write(`${JSON.stringify(summary)}\n`);
+      return EXIT_CODES.DATA_BLOCKER;
+    }
+    if (target.createOnly && containsNonCreateWrite) {
+      process.stdout.write(
+        `${JSON.stringify({
+          ...summary,
+          status: "blocked",
+          blockingReason: "non-create-write",
+        })}\n`,
+      );
       return EXIT_CODES.DATA_BLOCKER;
     }
     if (!args.apply) {
       process.stdout.write(`${JSON.stringify(summary)}\n`);
       return summary.status === "clean" ? EXIT_CODES.CLEAN : EXIT_CODES.CHANGES;
     }
+    if (target.createOnly) assertCreateOnlyReservationPlan(plan);
     if (args.planDigest !== plan.planDigest) {
       process.stdout.write(
         `${JSON.stringify({ ...summary, status: "plan-changed" })}\n`,

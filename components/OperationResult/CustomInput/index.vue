@@ -30,6 +30,10 @@ const { set, addMessage } = useSetRegularTime(
     siteId: () => props.item.siteId,
     date: () => props.item.date,
     shiftType: () => props.item.shiftType,
+    draftValues: () => [
+      props.item, props.item.startTime, props.item.endTime,
+      props.item.isStartNextDay, props.item.breakMinutes, props.item.regulationWorkMinutes,
+    ],
   },
   (agreement) => {
     props.updateProperties({

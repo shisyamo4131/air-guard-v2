@@ -2,6 +2,7 @@
  * @file ./utils/auth/policies/userLifecycleUiPolicy.js
  * @description UWB-07 lifecycle UI controlをserver policyと同じ前提で判定します。
  *****************************************************************************/
+import { isRolePresetId } from "@shisyamo4131/air-guard-v2-schemas/constants";
 import { hasPresetPermission } from "../authorization.js";
 
 function isSafeId(value) {
@@ -10,6 +11,14 @@ function isSafeId(value) {
     value.length > 0 &&
     value.trim() === value &&
     !value.includes("/")
+  );
+}
+
+function hasStrictPresetRole(roles, expectedRole) {
+  return Boolean(
+    Array.isArray(roles) &&
+      roles.every((role) => isRolePresetId(role)) &&
+      roles.includes(expectedRole),
   );
 }
 
@@ -74,6 +83,7 @@ export function canTerminateEmployee({
   }
   return Boolean(
     actorUser.isAdmin === true ||
+      hasStrictPresetRole(actorUser.roles, "manager") ||
       hasPresetPermission(actorUser.roles, "employees:terminate"),
   );
 }

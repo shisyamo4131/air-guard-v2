@@ -1,41 +1,17 @@
-/*****************************************************************************
- * @file ./functions/modules/siteEmployeeHistories/rebuildAllHistories.js
- * @description 現場・従業員の従事履歴を全件再構築する
- *****************************************************************************/
-
 import { getFirestore } from "firebase-admin/firestore";
 import { rebuildHistory } from "./rebuildHistory.js";
-
-const db = getFirestore();
-
-/*****************************************************************************
- * 現場・従業員の従事履歴を全件再構築する
- *
- * @param {string} companyId
- *****************************************************************************/
-export async function rebuildAllHistories(companyId) {
-  const companyRef = db.collection("Companies").doc(companyId);
-
-  const snapshot = await companyRef
-    .collection("OperationResults")
-    .select("siteId", "employeeIds")
-    .get();
-
+import { assertBackgroundId, assertOperationRaw, failReference } from "../employees/backgroundReferencePlan.js";
+import { operationEmployeeReferences } from "../../shared/operationReferences.js";
+export async function rebuildAllHistories(companyId, { firestore = getFirestore() } = {}) {
+  assertBackgroundId(companyId);
+  const snapshot = await firestore.collection(`Companies/${companyId}/OperationResults`).get();
   const pairs = new Set();
-
-  snapshot.forEach((doc) => {
-    const data = doc.data();
-
-    const siteId = data.siteId;
-    const employeeIds = data.employeeIds ?? [];
-
-    for (const employeeId of employeeIds) {
-      pairs.add(JSON.stringify([siteId, employeeId]));
-    }
-  });
-
-  for (const pair of pairs) {
-    const [siteId, employeeId] = JSON.parse(pair);
-    await rebuildHistory(companyId, siteId, employeeId);
+  // Read complete raw and validate all results before rebuilding any history.
+  // A missing/forged index must never be silently skipped by a projection.
+  for (const document of snapshot.docs) {
+    const raw = assertOperationRaw(document.data());
+    if (raw.docId !== document.id) failReference();
+    for (const id of operationEmployeeReferences(raw)) pairs.add(JSON.stringify([raw.siteId, id]));
   }
+  for (const pair of pairs) { const [siteId, employeeId] = JSON.parse(pair); await rebuildHistory(companyId, siteId, employeeId, { firestore }); }
 }

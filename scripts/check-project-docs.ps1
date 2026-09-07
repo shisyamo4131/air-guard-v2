@@ -1,4 +1,4 @@
-param(
+﻿param(
     [string]$RepositoryRoot = (Join-Path $PSScriptRoot '..')
 )
 
@@ -12,15 +12,238 @@ function Add-CheckError([string]$Message) {
     $errors.Add($Message)
 }
 
+function Test-LinkOnlyIndexSection {
+    param(
+        [Parameter(Mandatory = $true)][string]$Content,
+        [Parameter(Mandatory = $true)][string]$ExpectedHeader
+    )
+
+    $normalized = $Content.Replace("`r`n", "`n").Replace("`r", "`n")
+    $indexHeading = '## 索引'
+    $sectionMatch = [regex]::Match(
+        $normalized,
+        '(?ms)^' + [regex]::Escape($indexHeading) + '\s*\n(?<body>.*?)(?=^##\s|\z)'
+    )
+    if (-not $sectionMatch.Success) { return $false }
+
+    $tableGroupCount = 0
+    $inTable = $false
+    $tableLines = [Collections.Generic.List[string]]::new()
+    foreach ($line in ($sectionMatch.Groups['body'].Value -split "`n")) {
+        $trimmed = $line.Trim()
+        if ($trimmed.StartsWith('|')) {
+            if (-not $inTable) { $tableGroupCount++ }
+            $inTable = $true
+            $tableLines.Add($trimmed)
+        } else {
+            $inTable = $false
+        }
+    }
+    if ($tableGroupCount -ne 1 -or $tableLines.Count -lt 2) { return $false }
+    if ($tableLines[0] -ne $ExpectedHeader) { return $false }
+    foreach ($tableLine in $tableLines) {
+        if (-not $tableLine.EndsWith('|')) { return $false }
+        $cells = @($tableLine.Trim([char]'|') -split '\|')
+        if ($cells.Count -ne 2) { return $false }
+    }
+    return $true
+}
+
 $requiredFiles = @(
     'AGENTS.md', 'README.md', 'CHANGELOG.md', 'INITIAL_PROMPT.md',
     'docs/README.md', 'docs/specification.md', 'docs/operations.md',
     'docs/decisions/README.md', 'docs/roadmaps/README.md',
-    '.codex/config.toml'
+    'docs/implementation/current-coordinator-handoff.md',
+    'docs/verification/stripe-05-dev-release.md',
+    'docs/runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1',
+    'scripts/check-schemas-package-adoption.ps1',
+    'governance/verification-policy.json',
+    'docs/decisions/0040-impact-based-staged-verification.md',
+    '.codex/config.toml', '.codex/agents/ui-tester.toml'
 )
 foreach ($relativePath in $requiredFiles) {
     if (-not (Test-Path -LiteralPath (Join-Path $repoRoot $relativePath))) {
         Add-CheckError "Missing required file: $relativePath"
+    }
+}
+
+$capacityAliases = @(
+    '容量チェック',
+    'タスク容量確認',
+    'セッション容量確認',
+    'session size / handoff threshold確認'
+)
+$documentationMapPath = Join-Path $repoRoot 'docs/README.md'
+$coordinationRunbookPath = Join-Path $repoRoot 'docs/runbooks/project-coordination.md'
+$capacityScriptPath = Join-Path $repoRoot 'scripts/check-codex-session-size.ps1'
+if (Test-Path -LiteralPath $documentationMapPath) {
+    $documentationMapContent = Get-Content -LiteralPath $documentationMapPath -Raw -Encoding UTF8
+    foreach ($alias in $capacityAliases) {
+        if (-not $documentationMapContent.Contains($alias)) {
+            Add-CheckError "Capacity routing alias is missing from docs/README.md: $alias"
+        }
+    }
+    foreach ($requiredRoute in @('runbooks/project-coordination.md', 'scripts/check-codex-session-size.ps1')) {
+        if (-not $documentationMapContent.Contains($requiredRoute)) {
+            Add-CheckError "Capacity route is missing from docs/README.md: $requiredRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $coordinationRunbookPath) {
+    $coordinationContent = Get-Content -LiteralPath $coordinationRunbookPath -Raw -Encoding UTF8
+    foreach ($alias in $capacityAliases) {
+        if (-not $coordinationContent.Contains($alias)) {
+            Add-CheckError "Capacity routing alias is missing from project coordination runbook: $alias"
+        }
+    }
+    foreach ($requiredContract in @('<current-task-id>', '300 MiB', '10 GiB', 'codex_scan_complete', 'model')) {
+        if (-not $coordinationContent.Contains($requiredContract)) {
+            Add-CheckError "Capacity contract is missing from project coordination runbook: $requiredContract"
+        }
+    }
+}
+if (Test-Path -LiteralPath $capacityScriptPath) {
+    $capacityScriptContent = Get-Content -LiteralPath $capacityScriptPath -Raw -Encoding UTF8
+    foreach ($requiredScriptContract in @(
+        'SessionId is required',
+        'Expected exactly one session',
+        'TotalThresholdBytes = 10GB',
+        'usage_percent',
+        "selection = 'session_id'"
+    )) {
+        if (-not $capacityScriptContent.Contains($requiredScriptContract)) {
+            Add-CheckError "Capacity script contract is missing: $requiredScriptContract"
+        }
+    }
+}
+
+$criticalIdentifierScriptPath = Join-Path $repoRoot 'scripts/check-schemas-package-adoption.ps1'
+if (Test-Path -LiteralPath $documentationMapPath) {
+    foreach ($requiredCriticalRoute in @(
+        'decisions/0039-evidence-bound-critical-identifiers.md',
+        'scripts/check-schemas-package-adoption.ps1'
+    )) {
+        if (-not $documentationMapContent.Contains($requiredCriticalRoute)) {
+            Add-CheckError "Critical identifier route is missing from docs/README.md: $requiredCriticalRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $criticalIdentifierScriptPath) {
+    $criticalIdentifierScript = Get-Content -Raw -LiteralPath $criticalIdentifierScriptPath -Encoding UTF8
+    foreach ($requiredCriticalContract in @(
+        "ValidateSet('PreAdoption', 'PostAdoption')",
+        'Tag manifest conflicts with expected identity',
+        'Release evidence commit differs from peeled tag commit',
+        'Root and Functions integrity values disagree',
+        'PostAdoption consumer integrity differs from release evidence',
+        'network_verified = $false'
+    )) {
+        if (-not $criticalIdentifierScript.Contains($requiredCriticalContract)) {
+            Add-CheckError "Schemas package preflight contract is missing: $requiredCriticalContract"
+        }
+    }
+}
+
+$verificationPolicyPath = Join-Path $repoRoot 'governance/verification-policy.json'
+$operationsPath = Join-Path $repoRoot 'docs/operations.md'
+$initialPromptPath = Join-Path $repoRoot 'INITIAL_PROMPT.md'
+$verificationPolicy = $null
+if (Test-Path -LiteralPath $verificationPolicyPath) {
+    $verificationPolicyRaw = Get-Content -LiteralPath $verificationPolicyPath -Raw -Encoding UTF8
+    if ($verificationPolicyRaw.Contains('REPLACE_')) {
+        Add-CheckError 'Verification policy contains an unresolved REPLACE_ placeholder.'
+    }
+    try {
+        $verificationPolicy = $verificationPolicyRaw | ConvertFrom-Json
+    } catch {
+        Add-CheckError "Verification policy JSON is invalid: $($_.Exception.Message)"
+    }
+}
+if ($null -ne $verificationPolicy) {
+    if ($verificationPolicy.schemaVersion -ne '1.0') {
+        Add-CheckError 'Verification policy schemaVersion must be 1.0.'
+    }
+    $requiredVerificationClasses = @(
+        'documentation-only',
+        'project-guidance-metadata',
+        'ui-css-layout',
+        'application-logic',
+        'data-contract-schema-migration',
+        'governance-permissions-agents',
+        'build-release-deploy'
+    )
+    $actualVerificationClasses = @($verificationPolicy.classes | ForEach-Object { [string]$_.id })
+    foreach ($requiredClass in $requiredVerificationClasses) {
+        if ($actualVerificationClasses -notcontains $requiredClass) {
+            Add-CheckError "Verification policy class is missing: $requiredClass"
+        }
+    }
+
+    $runtimeProfiles = @($verificationPolicy.runtimeProfiles | Where-Object { $null -ne $_ })
+    $runtimeIds = @{}
+    $hasRequiredPowerShellRuntime = $false
+    if ($runtimeProfiles.Count -eq 0) { Add-CheckError 'Verification policy runtimeProfiles must not be empty.' }
+    foreach ($profile in $runtimeProfiles) {
+        foreach ($field in @('id', 'platform', 'edition', 'executable', 'versionRule', 'supportStatus')) {
+            if ($profile.$field -isnot [string] -or [string]::IsNullOrWhiteSpace($profile.$field)) {
+                Add-CheckError "Runtime profile field must be a nonempty string: $field"
+            }
+        }
+        $profileId = [string]$profile.id
+        if ($runtimeIds.ContainsKey($profileId)) { Add-CheckError "Duplicate runtime profile: $profileId" }
+        $runtimeIds[$profileId] = $true
+        if ($profile.required -isnot [bool]) { Add-CheckError "Runtime required must be boolean: $profileId" }
+        if ($profile.required -is [bool] -and $profile.required -and
+            $profile.platform -eq 'windows' -and $profile.edition -eq 'Core' -and
+            $profile.executable -eq 'pwsh' -and $profile.versionRule -eq 'minimum-major=7' -and
+            $profile.supportStatus -eq 'supported') { $hasRequiredPowerShellRuntime = $true }
+    }
+    if (-not $hasRequiredPowerShellRuntime) { Add-CheckError 'Required supported PowerShell 7 runtime is missing.' }
+    if (@($verificationPolicy.comprehensiveGateIds).Count -eq 0) {
+        Add-CheckError 'Verification policy comprehensiveGateIds must not be empty.'
+    }
+    if (@($verificationPolicy.unknownImpactGateIds).Count -eq 0) {
+        Add-CheckError 'Verification policy unknownImpactGateIds must not be empty.'
+    }
+}
+if (Test-Path -LiteralPath $operationsPath) {
+    $operationsContent = Get-Content -LiteralPath $operationsPath -Raw -Encoding UTF8
+    foreach ($requiredVerificationOperationsContract in @(
+        '## Verification Matrix',
+        'governance/verification-policy.json',
+        '<!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->',
+        '<!-- END GENERATED VERIFICATION POLICY SUMMARY -->',
+        '### Gate Catalog and Inclusion',
+        '### Evidence Validity'
+    )) {
+        if (-not $operationsContent.Contains($requiredVerificationOperationsContract)) {
+            Add-CheckError "Verification operations contract is missing: $requiredVerificationOperationsContract"
+        }
+    }
+}
+if (Test-Path -LiteralPath $documentationMapPath) {
+    foreach ($requiredVerificationRoute in @(
+        '../governance/verification-policy.json',
+        'operations.md#verification-matrix',
+        'decisions/0040-impact-based-staged-verification.md',
+        'verification/README.md'
+    )) {
+        if (-not $documentationMapContent.Contains($requiredVerificationRoute)) {
+            Add-CheckError "Verification route is missing from docs/README.md: $requiredVerificationRoute"
+        }
+    }
+}
+if (Test-Path -LiteralPath $initialPromptPath) {
+    $initialPromptContent = Get-Content -LiteralPath $initialPromptPath -Raw -Encoding UTF8
+    foreach ($requiredPromptContract in @(
+        'AGENTS.md',
+        'governance/project-rules.md',
+        'docs/README.md',
+        'docs/operations.md#verification-matrix'
+    )) {
+        if (-not $initialPromptContent.Contains($requiredPromptContract)) {
+            Add-CheckError "Repository startup route is missing from INITIAL_PROMPT.md: $requiredPromptContract"
+        }
     }
 }
 
@@ -130,6 +353,10 @@ foreach ($importantFile in $markdownFiles | Where-Object { $_.FullName.StartsWit
 
 $decisionIndexPath = Join-Path $repoRoot 'docs/decisions/README.md'
 $decisionIndex = Get-Content -LiteralPath $decisionIndexPath -Raw -Encoding UTF8
+$decisionLinkOnlyHeader = '| ID | 判断 |'
+if (-not (Test-LinkOnlyIndexSection -Content $decisionIndex -ExpectedHeader $decisionLinkOnlyHeader)) {
+    Add-CheckError 'ADR index section must contain exactly one two-column link-only table.'
+}
 $decisionFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/decisions') -File -Filter '*.md' |
     Where-Object { $_.Name -match '^\d{4}-.+\.md$' })
 foreach ($decisionFile in $decisionFiles) {
@@ -140,15 +367,18 @@ foreach ($decisionFile in $decisionFiles) {
         continue
     }
     $id = $decisionFile.BaseName.Substring(0, 4)
-    $indexMatch = [regex]::Match($decisionIndex, "(?m)^\| \[$id\]\([^\)]+\) \|.*\| (?<status>Accepted|Proposed|Rejected|Superseded) \|")
+    $escapedFileName = [regex]::Escape($decisionFile.Name)
+    $indexMatch = [regex]::Match($decisionIndex, "(?m)^\|\s*\[$id\]\($escapedFileName\)\s*\|\s*[^|]+\s*\|\s*$")
     if (-not $indexMatch.Success) {
         Add-CheckError "ADR is missing from index: $($decisionFile.Name)"
-    } elseif ($indexMatch.Groups['status'].Value -ne $statusMatch.Groups['status'].Value) {
-        Add-CheckError "ADR status mismatch for ${id}: body=$($statusMatch.Groups['status'].Value), index=$($indexMatch.Groups['status'].Value)"
     }
 }
 
 $roadmapIndex = Get-Content -LiteralPath (Join-Path $repoRoot 'docs/roadmaps/README.md') -Raw -Encoding UTF8
+$roadmapLinkOnlyHeader = '| 対象 | ロードマップ |'
+if (-not (Test-LinkOnlyIndexSection -Content $roadmapIndex -ExpectedHeader $roadmapLinkOnlyHeader)) {
+    Add-CheckError 'Roadmap index section must contain exactly one two-column link-only table.'
+}
 $roadmapFiles = @(Get-ChildItem -LiteralPath (Join-Path $repoRoot 'docs/roadmaps') -File -Filter '*.md' |
     Where-Object { $_.Name -ne 'README.md' })
 foreach ($roadmapFile in $roadmapFiles) {
@@ -174,11 +404,99 @@ foreach ($roadmapFile in $roadmapFiles) {
     if ($weight -ne 100) { Add-CheckError "Roadmap weights do not total 100 in $($roadmapFile.Name): $weight" }
     if ($earned -ne [int]$progressMatch.Groups['progress'].Value) { Add-CheckError "Roadmap earned points do not match progress in $($roadmapFile.Name): earned=$earned" }
     $escapedName = [regex]::Escape($roadmapFile.Name)
-    $indexMatch = [regex]::Match($roadmapIndex, "(?m)^\| .* \| (?<progress>\d+)% \| .* \| \[[^\]]+\]\($escapedName\) \|")
+    $indexMatch = [regex]::Match($roadmapIndex, "(?m)^\|\s*[^|]+\s*\|\s*\[[^\]]+\]\($escapedName\)\s*\|\s*$")
     if (-not $indexMatch.Success) {
         Add-CheckError "Roadmap is missing from index: $($roadmapFile.Name)"
-    } elseif ([int]$indexMatch.Groups['progress'].Value -ne [int]$progressMatch.Groups['progress'].Value) {
-        Add-CheckError "Roadmap index progress mismatch: $($roadmapFile.Name)"
+    }
+}
+
+$currentHandoffPath = Join-Path $repoRoot 'docs/implementation/current-coordinator-handoff.md'
+if (Test-Path -LiteralPath $currentHandoffPath) {
+    $currentHandoffBytes = (Get-Item -LiteralPath $currentHandoffPath).Length
+    if ($currentHandoffBytes -gt 16384) {
+        Add-CheckError "Current coordinator handoff exceeds 16 KiB: $currentHandoffBytes bytes"
+    }
+    $currentHandoff = Get-Content -LiteralPath $currentHandoffPath -Raw -Encoding UTF8
+    foreach ($requiredProductRoute in @('../roadmaps/customer-status.md', 'pending-confirmations.md')) {
+        if (-not $currentHandoff.Contains($requiredProductRoute)) {
+            Add-CheckError "Product restart route is missing: $requiredProductRoute"
+        }
+    }
+    if ($currentHandoff.Contains('## Current evidence contract')) {
+        Add-CheckError 'Current product restart guide must not accumulate completed execution evidence.'
+    }
+}
+
+$stripeReceiptRelative = 'docs/verification/stripe-05-dev-release.md'
+$stripeReceiptPath = Join-Path $repoRoot $stripeReceiptRelative
+if (Test-Path -LiteralPath $stripeReceiptPath) {
+    $stripeReceipt = Get-Content -LiteralPath $stripeReceiptPath -Raw -Encoding UTF8
+    if (-not $stripeReceipt.Contains('Verified / immutable execution evidence')) {
+        Add-CheckError 'STRIPE receipt must be marked as immutable execution evidence.'
+    }
+    $verificationIndexPath = Join-Path $repoRoot 'docs/verification/README.md'
+    $verificationIndex = if (Test-Path -LiteralPath $verificationIndexPath) { Get-Content -LiteralPath $verificationIndexPath -Raw -Encoding UTF8 } else { '' }
+    if ($verificationIndex -notmatch '\]\(stripe-05-dev-release\.md(?:#[^)]+)?\)') {
+        Add-CheckError 'STRIPE receipt is missing from docs/verification/README.md.'
+    }
+    $stripeRoadmapPath = Join-Path $repoRoot 'docs/roadmaps/company-stripe-removal.md'
+    $stripeRoadmap = if (Test-Path -LiteralPath $stripeRoadmapPath) { Get-Content -LiteralPath $stripeRoadmapPath -Raw -Encoding UTF8 } else { '' }
+    if ($stripeRoadmap -notmatch '\]\(\.\./verification/stripe-05-dev-release\.md(?:#[^)]+)?\)') {
+        Add-CheckError 'STRIPE roadmap must link to the immutable STRIPE receipt.'
+    }
+
+    $receiptOnlyTokens = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($match in [regex]::Matches($stripeReceipt, '(?i)\b(?:[0-9a-f]{64}|[0-9a-f]{40})\b')) {
+        [void]$receiptOnlyTokens.Add($match.Value)
+    }
+    foreach ($match in [regex]::Matches($stripeReceipt, '\b[A-Z][A-Z0-9]*(?:-[A-Z0-9]+){3,}\b')) {
+        [void]$receiptOnlyTokens.Add($match.Value)
+    }
+    $runbookDirectory = Join-Path $repoRoot 'docs/runbooks'
+    foreach ($runbook in Get-ChildItem -LiteralPath $runbookDirectory -File -Filter '*.md') {
+        $runbookContent = Get-Content -LiteralPath $runbook.FullName -Raw -Encoding UTF8
+        foreach ($token in $receiptOnlyTokens) {
+            if ($runbookContent.Contains($token)) {
+                Add-CheckError "Runbook duplicates a STRIPE receipt-only execution identifier or hash: $($runbook.Name): $token"
+            }
+        }
+    }
+}
+
+$uiTesterAgentPath = Join-Path $repoRoot '.codex/agents/ui-tester.toml'
+if (Test-Path -LiteralPath $uiTesterAgentPath) {
+    $uiTesterAgentContent = Get-Content -LiteralPath $uiTesterAgentPath -Raw -Encoding UTF8
+    $localPolicyLine = @($uiTesterAgentContent -split "`r?`n" | Where-Object {
+        $_.Contains('UI_SCOPE_POLICY=codex-dedicated-local-only:')
+    }) | Select-Object -First 1
+    if (-not $localPolicyLine) {
+        Add-CheckError 'UI tester local-only scope policy marker is missing.'
+    } else {
+        foreach ($requiredLocalBoundary in @('demo-project', 'loopback', 'synthetic-data', 'in-app-browser')) {
+            if (-not $localPolicyLine.Contains($requiredLocalBoundary)) {
+                Add-CheckError "UI tester local-only allowlist is missing: $requiredLocalBoundary"
+            }
+        }
+    }
+
+    $externalPolicyLine = @($uiTesterAgentContent -split "`r?`n" | Where-Object {
+        $_.Contains('EXTERNAL_UI_POLICY=')
+    }) | Select-Object -First 1
+    if (-not $externalPolicyLine -or
+        -not $externalPolicyLine.Contains('EXTERNAL_UI_POLICY=coordinator-only,subagent-deny:')) {
+        Add-CheckError 'UI tester must keep external UI coordinator-only and deny subagent operations.'
+    } else {
+        foreach ($requiredExternalBoundary in @(
+            'user-chrome', 'user-profile', 'user-session', 'desktop-app', 'dev-ui',
+            'prod-ui', 'remote-ui', 'external-account', 'external-session', 'external-state'
+        )) {
+            if (-not $externalPolicyLine.Contains($requiredExternalBoundary)) {
+                Add-CheckError "UI tester external-operation deny boundary is missing: $requiredExternalBoundary"
+            }
+        }
+    }
+    if (-not $uiTesterAgentContent.Contains('EXTERNAL_UI_RETURN=approval-boundary-to-coordinator')) {
+        Add-CheckError 'UI tester must return external UI work to the coordinator as an approval-boundary.'
     }
 }
 

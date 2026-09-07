@@ -72,6 +72,43 @@ test("non-dedicated environments retain the existing emulator defaults", () => {
   );
 });
 
+test("non-dedicated environments parse disabled emulator flags strictly", () => {
+  for (const firebaseUseEmulator of [undefined, "", false, "false"]) {
+    assert.equal(
+      resolveFirebaseEmulatorConfig({
+        firebaseProjectId: "air-guard-v2-dev",
+        firebaseUseEmulator,
+      }).useEmulator,
+      false,
+    );
+  }
+});
+
+test("non-dedicated environments parse enabled emulator flags strictly", () => {
+  for (const firebaseUseEmulator of [true, "true"]) {
+    assert.equal(
+      resolveFirebaseEmulatorConfig({
+        firebaseProjectId: "air-guard-v2-dev",
+        firebaseUseEmulator,
+      }).useEmulator,
+      true,
+    );
+  }
+});
+
+test("invalid emulator flags fail closed", () => {
+  for (const firebaseUseEmulator of [null, 0, 1, "FALSE", "unexpected"]) {
+    assert.throws(
+      () =>
+        resolveFirebaseEmulatorConfig({
+          firebaseProjectId: "air-guard-v2-dev",
+          firebaseUseEmulator,
+        }),
+      /must be a boolean or the string "true" or "false"/,
+    );
+  }
+});
+
 test("invalid configured ports fail closed", () => {
   assert.throws(
     () =>

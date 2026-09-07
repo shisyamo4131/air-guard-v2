@@ -1,110 +1,185 @@
 /*****************************************************************************
  * @file ./components/SiteShiftTypeOrder/ReorderForm/useIndex.js
- * @description SiteShiftTypeOrderReorderForm 用コンポーザブル
- * - 現場勤務区分オーダーのビジネスロジックを提供
- * - 都度更新ではなく、`Draft State Pattern` を採用するため、ユーザーによる更新の
- *   反映は `submit` イベントで処理する。
+ * @description SiteShiftTypeOrderReorderFormの独立draft・競合制御です。
  *****************************************************************************/
 import * as Vue from "vue";
 import { useFetch } from "@/composables/fetch/useFetch";
-import { SiteOrder } from "@/schemas";
+import { Site, SiteOrder } from "@/schemas";
 
-/*****************************************************************************
- * @param {*} props
- * @param {*} emit
- * @returns {Object} - returns
- * @returns {Vue.Ref<SiteOrder[]>} items - 現場勤務区分オーダーの配列
- * @returns {Vue.Ref<Boolean>} isChanged - internalItems が props.siteShiftTypeOrder と異なる場合に true
- * @returns {Function} submit - 現場勤務区分オーダーの更新を行い、'submit' イベントを発火する関数
- * @returns {Function} cancel - 操作をキャンセルし、'cancel' イベントを発火する関数
- * @returns {Function} init - internalItems を props.siteShiftTypeOrder と同期する関数
- *****************************************************************************/
+function plainOrder(source = []) {
+  return source.map(({ siteId, shiftType }) => ({ siteId, shiftType }));
+}
+
+function ordersEqual(left = [], right = []) {
+  return (
+    left.length === right.length &&
+    left.every(
+      (item, index) =>
+        item.siteId === right[index]?.siteId &&
+        item.shiftType === right[index]?.shiftType,
+    )
+  );
+}
+
 export function useIndex(props, emit) {
-  /*****************************************************************************
-   * SETUP COMPOSABLES
-   *****************************************************************************/
-  /** FETCH SITE */
-  const { fetchSiteComposable } = useFetch("SiteShiftTypeOrderReorderForm");
-  const { fetchSite } = fetchSiteComposable;
+  const { fetchSiteComposable } = useFetch(
+    "SiteShiftTypeOrderReorderForm",
+  );
+  const { pushSite } = fetchSiteComposable;
 
-  /*****************************************************************************
-   * DEFINE STATES
-   *****************************************************************************/
-  /**
-   * internalItems
-   * - コンポーネント内部で管理するモデル値
-   * - `props.siteShiftTypeOrder` の変更を監視し、変更時には `init` を呼び出して同期
-   */
   const internalItems = Vue.ref([]);
+  const baseline = Vue.ref([]);
+  const hasExternalChanges = Vue.ref(false);
+  const isResolving = Vue.ref(false);
+  const resolutionError = Vue.ref("");
+  const pendingOwnSnapshot = Vue.ref(null);
+  const localSubmitting = Vue.ref(false);
+  const initialized = Vue.ref(false);
+  let syncVersion = 0;
 
-  /*****************************************************************************
-   * METHODS
-   *****************************************************************************/
-  /**
-   * internalItems を props.siteShiftTypeOrder と同期します。
-   * - 同期時には SiteOrder インスタンスに変換し、関連する現場データを取得します。
-   */
-  function init() {
-    internalItems.value = props.siteShiftTypeOrder.map((v) => {
-      fetchSite(v.siteId);
-      return new SiteOrder(v);
-    });
+  const isChanged = Vue.computed(() =>
+    !ordersEqual(plainOrder(internalItems.value), baseline.value),
+  );
+
+  const controlsDisabled = Vue.computed(
+    () =>
+      props.disabled ||
+      props.loading ||
+      localSubmitting.value ||
+      isResolving.value ||
+      !!resolutionError.value,
+  );
+  const isBusy = Vue.computed(
+    () => props.loading || localSubmitting.value || isResolving.value,
+  );
+
+  async function resolveAvailableOrder(source) {
+    const order = plainOrder(source);
+    const siteIds = [...new Set(order.map(({ siteId }) => siteId))];
+    const siteExists = new Map();
+
+    for (let offset = 0; offset < siteIds.length; offset += 20) {
+      const chunk = siteIds.slice(offset, offset + 20);
+      await Promise.all(
+        chunk.map(async (siteId) => {
+          const site = await new Site().fetchDoc({ docId: siteId });
+          siteExists.set(siteId, !!site);
+          if (site) pushSite(site);
+        }),
+      );
+    }
+
+    return order
+      .filter(({ siteId }) => siteExists.get(siteId) === true)
+      .map((item) => new SiteOrder(item));
   }
 
-  /**
-   * 現場オーダーを更新し、'submit' イベントを発火します。
-   */
+  function replaceDraft(order, sourceOrder = order) {
+    const snapshot = plainOrder(order);
+    internalItems.value = snapshot.map((item) => new SiteOrder(item));
+    baseline.value = plainOrder(sourceOrder);
+    hasExternalChanges.value = false;
+    initialized.value = true;
+  }
+
+  async function syncFromSource(source, { force = false } = {}) {
+    const version = ++syncVersion;
+    isResolving.value = true;
+    resolutionError.value = "";
+    try {
+      const sourceSnapshot = plainOrder(source);
+      const availableOrder = await resolveAvailableOrder(source);
+      if (version !== syncVersion) return;
+      const snapshot = plainOrder(availableOrder);
+
+      if (
+        pendingOwnSnapshot.value &&
+        ordersEqual(snapshot, pendingOwnSnapshot.value)
+      ) {
+        baseline.value = snapshot;
+        pendingOwnSnapshot.value = null;
+        hasExternalChanges.value = false;
+        return;
+      }
+
+      if (force || !initialized.value || !isChanged.value) {
+        replaceDraft(availableOrder, sourceSnapshot);
+        return;
+      }
+
+      if (!ordersEqual(sourceSnapshot, baseline.value)) {
+        hasExternalChanges.value = true;
+      }
+    } catch {
+      if (version !== syncVersion) return;
+      resolutionError.value =
+        "現場情報を確認できませんでした。通信状態を確認して、最新値を読み直してください。";
+    } finally {
+      if (version === syncVersion) isResolving.value = false;
+    }
+  }
+
+  async function init() {
+    if (props.loading || localSubmitting.value) return;
+    pendingOwnSnapshot.value = null;
+    await syncFromSource(props.siteShiftTypeOrder, { force: true });
+  }
+
   async function submit() {
-    emit("submit", internalItems.value);
+    if (
+      controlsDisabled.value ||
+      hasExternalChanges.value ||
+      !isChanged.value
+    ) {
+      return;
+    }
+    localSubmitting.value = true;
+    pendingOwnSnapshot.value = plainOrder(internalItems.value);
+    emit("submit", pendingOwnSnapshot.value);
+    await Vue.nextTick();
+    if (!props.loading) localSubmitting.value = false;
   }
 
-  /**
-   * - `init` 関数を呼び出して `internalItems` を `props.siteShiftTypeOrder` と同期します。
-   * - 'cancel' イベントを発火します。
-   */
   function cancel() {
-    init();
+    if (isBusy.value) return;
+    internalItems.value = baseline.value.map((item) => new SiteOrder(item));
     emit("cancel");
   }
 
-  /*****************************************************************************
-   * WATCHERS
-   *****************************************************************************/
-  /**
-   * props.siteShiftTypeOrder の変更を監視し、`init` 関数を呼び出します。
-   */
-  Vue.watch(() => props.siteShiftTypeOrder, init, {
-    immediate: true,
-    deep: true,
-  });
+  Vue.watch(
+    () => props.siteShiftTypeOrder,
+    (newOrder) => syncFromSource(newOrder),
+    { immediate: true, deep: true },
+  );
 
-  /*****************************************************************************
-   * COMPUTED
-   *****************************************************************************/
-  /**
-   * isChanged
-   * - internalItems が props.siteShiftTypeOrder と異なる場合に true
-   */
-  const isChanged = Vue.computed(() => {
-    if (internalItems.value.length !== props.siteShiftTypeOrder.length) {
-      return true;
-    }
-    for (let i = 0; i < internalItems.value.length; i++) {
-      if (internalItems.value[i].key !== props.siteShiftTypeOrder[i].key) {
-        return true;
-      }
-    }
-    return false;
-  });
+  Vue.watch(
+    () => props.loading,
+    (loading) => {
+      if (!loading) localSubmitting.value = false;
+    },
+  );
 
-  /*****************************************************************************
-   * RETURN
-   *****************************************************************************/
+  Vue.watch(
+    () => props.saveFailed,
+    (failed) => {
+      if (!failed) return;
+      pendingOwnSnapshot.value = null;
+      localSubmitting.value = false;
+      syncFromSource(props.siteShiftTypeOrder);
+    },
+  );
+
   return {
-    items: internalItems,
-    isChanged,
-    submit,
     cancel,
+    controlsDisabled,
+    hasExternalChanges,
     init,
+    isChanged,
+    isBusy,
+    isResolving,
+    items: internalItems,
+    reloadLatest: init,
+    resolutionError,
+    submit,
   };
 }

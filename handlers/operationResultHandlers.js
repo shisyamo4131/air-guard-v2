@@ -1,29 +1,5 @@
-/*****************************************************************************
- * @file ./handlers/operationResultHandlers.js
- * @description OperationResult クラスを取り扱う AirArrayManager、AirItemManager の
- *              handleXxxx プロパティに引き渡す関数を返す
- *****************************************************************************/
-import { onBeforeCreate, onBeforeUpdate } from "@/services/operation.js";
-
-/*****************************************************************************
- * HANDLE CREATE
- *****************************************************************************/
-export async function handleCreate(item) {
-  await onBeforeCreate(item);
-  await item.create();
-}
-
-/*****************************************************************************
- * HANDLE UPDATE
- *****************************************************************************/
-export async function handleUpdate(item) {
-  await onBeforeUpdate(item);
-  await item.update();
-}
-
-/*****************************************************************************
- * HANDLE DELETE
- *****************************************************************************/
-export async function handleDelete(item) {
-  await item.delete();
-}
+// Result persistence is owned by the dedicated operation editor/commands.
+const unsupported = async () => { throw new Error("実績の保存は専用編集画面から実行してください。"); };
+export const handleCreate = unsupported;
+export const handleUpdate = unsupported;
+export const handleDelete = unsupported;

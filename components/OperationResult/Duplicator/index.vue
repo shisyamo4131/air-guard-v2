@@ -34,6 +34,7 @@ defineExpose({ set });
     <template #default>
       <v-card :border="false">
         <v-toolbar density="compact" color="secondary" title="稼働実績複製" />
+        <v-alert v-if="ui.error" type="warning">{{ ui.error }}</v-alert>
         <v-card-item>
           <v-card-subtitle>複製先の日付を選択してください。</v-card-subtitle>
         </v-card-item>

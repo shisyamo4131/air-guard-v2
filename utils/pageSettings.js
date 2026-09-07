@@ -430,14 +430,6 @@ export const pageStructure = [
         accessPolicy: PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY,
         navigation: true,
       },
-      {
-        id: "checkout",
-        path: "/settings/checkout",
-        label: "サブスクリプション管理",
-        icon: "mdi-account-cog",
-        accessPolicy: PAGE_ACCESS_POLICIES.SUPER_USER,
-        navigation: false,
-      },
     ],
   },
   // 他のページやグループを追加

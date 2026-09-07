@@ -79,7 +79,6 @@ const expectedRoutePolicies = new Map([
   ["/settings/company", PAGE_ACCESS_POLICIES.ADMIN],
   ["/settings/users", PAGE_ACCESS_POLICIES.USER_MANAGEMENT],
   ["/settings/lifecycle-history", PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY],
-  ["/settings/checkout", PAGE_ACCESS_POLICIES.SUPER_USER],
 ]);
 
 function flattenPageStructure(items) {
@@ -112,10 +111,10 @@ test("page structure assigns one known policy to every route and none to groups"
   const routeNodes = nodes.filter((node) => Object.hasOwn(node, "path"));
   const groupNodes = nodes.filter((node) => !Object.hasOwn(node, "path"));
 
-  assert.equal(nodes.length, 48);
-  assert.equal(routeNodes.length, 36);
+  assert.equal(nodes.length, 47);
+  assert.equal(routeNodes.length, 35);
   assert.equal(groupNodes.length, 12);
-  assert.equal(expectedRoutePolicies.size, 36);
+  assert.equal(expectedRoutePolicies.size, 35);
 
   for (const node of routeNodes) {
     assert.equal(
@@ -520,7 +519,7 @@ test("lifecycle history route and navigation are company-admin only", () => {
   }
 });
 
-test("super-user navigation exposes Company settings but not User settings", () => {
+test("super-user navigation exposes Company settings without legacy checkout", () => {
   const superUserRoles = ["super-user"];
   const superUserContext = { presetRoles: [], isAdmin: false };
   const navigation = navigationValues(
@@ -540,8 +539,10 @@ test("super-user navigation exposes Company settings but not User settings", () 
     false,
   );
   assert.equal(
-    isPageAllowed("/settings/checkout", superUserRoles, superUserContext),
-    true,
+    flattenPageStructure(pageStructure).some(
+      (page) => page.path === "/settings/checkout",
+    ),
+    false,
   );
 });
 

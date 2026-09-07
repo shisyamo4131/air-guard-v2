@@ -1,6 +1,6 @@
 # 実装調査文書索引
 
-最終集計日: 2026-08-13
+最終集計日: 2026-09-04
 
 このdirectoryは、AirGuardV2の実装から観察した現在の挙動、責務、data flow、境界、矛盾候補をsegment単位で記録した調査資料である。確認済み仕様の正本ではない。設計意図や正式要件を確定するときは、プロジェクトの正本仕様と承認済みADRを優先し、このdirectoryの記述は根拠codeの再確認に使用する。
 
@@ -16,15 +16,15 @@
 ## 終了時集計
 
 - このREADME追加前の文書数: 95
-- このREADMEを含む文書数: 104
-- 実装領域文書: 94
+- このREADMEを含む文書数: 105
+- 実装領域文書: 95
 - 横断索引・台帳・再開記録: README、coverage inventory、coverage audit、deep review plan、future actions、pending confirmations、confirmation dependency map、2026-08-12 source review統合記録、2026-08-13 PM交代引継ぎ記録、2026-08-14利用者主導開発ガバナンス交代引継ぎの10文書
-- FUT: 183件
-  - 状態: Open 132、Needs decision 47、Hypothesis 3、Resolved 1
-  - 重大度: Critical 15、High 91、Medium 61、Low 13、未評価 3
-- CONF: 138件
-  - 状態: Open 94、Answered 44
-  - reconciliation disposition: Answered 44、Open-user-decision 75、Open-deferred 3、Resolved-by-implementation-fact 0、Merge-candidate 16、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
+- FUT: 184件
+  - 状態: Open 135、Needs decision 39、In progress 3、In progress（CAS-02/03/04 local完了・CAS-05 deferred）1、Hypothesis 3、Resolved 2、Completed 1
+  - 重大度: Critical 15、High 93、Medium 60、Low 13、未評価 3
+- CONF: 146件
+  - 状態: Open 78、Answered 63、Partially answered 5
+  - reconciliation disposition: Answered 53、Open-user-decision 65、Open-deferred 8、Resolved-by-implementation-fact 0、Merge-candidate 12、Implementation-detail-no-user-question 0、Blocked-by-uninvestigated 0
 - 未調査優先候補: 0件（P0 0、P1 0、P2 0、P3 0）。詳細は[coverage inventoryの優先segment backlog](coverage-inventory.md#優先セグメントbacklog)を参照。
 
 件数は本checkpointの静的集計値である。追加・状態変更時は台帳と本集計を同時更新する。
@@ -34,12 +34,16 @@
 - [Coverage inventory](coverage-inventory.md): 調査済み/部分調査/未調査の棚卸しと次segment候補。
 - [Coverage mechanical audit](coverage-audit.md): 531 source filesの分類、未被覆cluster、dynamic import/export棚卸し。
 - [Deep review plan](deep-review-plan.md): Mechanical Coveredを訂正し、A/B/C/D/E depthとB/C全fileの排他的精査計画を管理。
-- [Future actions](future-actions.md): FUT-0001〜FUT-0183。
-- [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0138。
+- [Future actions](future-actions.md): FUT-0001〜FUT-0184。
+- [Pending confirmations](pending-confirmations.md): CONF-0001〜CONF-0146。
 - [Confirmation dependency map](confirmation-dependency-map.md): 138件のdisposition、canonical question、dependency、統合候補。
 - [2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md): schema、共通UI、Admin SDK、認証・Functions調査の横断結果、問題、要判断事項。
 - [2026-08-13 PM交代引継ぎ記録](task-handoff-2026-08-13.md): Historical。2026-08-13の交代基準と当時の承認境界。現在のrestart指示には使用しない。
-- [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): coordinator交代承認待ち。新しい役割、基準commit、検証、承認境界、再開手順。
+- [2026-08-14 利用者主導開発ガバナンス交代引継ぎ](task-handoff-2026-08-14-user-led-governance.md): Historical。PM交代履歴と旧手順の証拠。
+- [現在の製品作業と再開案内](current-coordinator-handoff.md): 製品の未決事項・承認・次作業から正本へのroute。
+- [Customer Dev反映・受入れ計画](customer-dev-release.md): 既存dataへの影響判断、反映対象、切替・復旧、Devで確認する操作。
+- [4マスター Dev反映前 release surface inventory](master-dev-release-surfaces.md): Customer、Site、Outsourcer、Employeeと参照先の反映候補・対象外。
+- [4マスター Dev受入れ計画](master-dev-acceptance-plan.md): No.10前後の利用者判断、権限別account、合成data、操作、外部作用、cleanupの担当分離。
 
 ## アプリ入口・認証・共通基盤
 
@@ -72,6 +76,7 @@
 ## System・Company・subscription・保守
 
 - [Company設定](company-settings.md)
+- [CCB-02 Company data・package互換性調査](company-configuration-compatibility.md): Historical / rollback inventory source。旧CCBの現在code・package成果を安全に整理する根拠。
 - [Company components deep review](company-components-deep-review.md)
 - [端数処理・時間計算](rounding-and-time-calculation.md)
 - [税・締日・請求計算primitive](tax-cutoff-billing-primitives.md)
@@ -100,6 +105,8 @@
 - [Worker / drag components deep review](worker-drag-components-deep-review.md)
 
 - [Customer master](customer-master.md)
+- [Customer archive safety](customer-archive-safety.md)
+- [CAS-02実行契約とSpark Developer試験記録](customer-archive-cas02-developer-trial.md)
 - [Site master](site-master.md)
 - [SiteEmployeeHistory UI](site-employee-history-ui.md)
 - [Agreement master](agreement-master.md)

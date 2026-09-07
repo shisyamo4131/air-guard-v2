@@ -27,7 +27,9 @@ defineOptions({
  *****************************************************************************/
 const _props = defineProps({
   siteShiftTypeOrder: { type: Array, default: () => [] },
+  disabled: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
+  saveFailed: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "SiteShiftTypeOrderReorderForm");
 const emit = defineEmits(["submit", "cancel"]);
@@ -35,7 +37,19 @@ const emit = defineEmits(["submit", "cancel"]);
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { items, init, cancel, submit, isChanged } = useIndex(props, emit);
+const {
+  items,
+  init,
+  cancel,
+  controlsDisabled,
+  hasExternalChanges,
+  isBusy,
+  isChanged,
+  isResolving,
+  reloadLatest,
+  resolutionError,
+  submit,
+} = useIndex(props, emit);
 
 /*****************************************************************************
  * DEFINE EXPOSE
@@ -48,24 +62,73 @@ defineExpose({ init, submit, cancel });
     <v-toolbar color="secondary" density="compact" flat>
       <v-toolbar-title>
         <v-icon icon="mdi-sort" class="mr-2" />
-        現場勤務区分並べ替え
+        <slot name="title">現場勤務区分並べ替え</slot>
       </v-toolbar-title>
     </v-toolbar>
     <v-card-item>
       <v-card-subtitle class="text-wrap">
-        ドラッグで入れ替えて順序を変更します。
+        <slot name="subtitle">
+          ドラッグで入れ替えて順序を変更します。
+        </slot>
       </v-card-subtitle>
     </v-card-item>
     <v-card-text>
-      <DraggableSiteShiftTypeOrder v-model="items" />
+      <v-alert
+        v-if="hasExternalChanges"
+        type="warning"
+        variant="tonal"
+        class="mb-4"
+      >
+        <div>
+          別の画面で表示順が更新されました。現在の並び順は保存できません。
+        </div>
+        <v-btn
+          class="mt-3"
+          size="small"
+          variant="outlined"
+          :disabled="isBusy"
+          @click="reloadLatest"
+        >
+          最新値を読み直す
+        </v-btn>
+      </v-alert>
+      <v-alert
+        v-if="resolutionError"
+        type="error"
+        variant="tonal"
+        class="mb-4"
+      >
+        <div>{{ resolutionError }}</div>
+        <v-btn
+          class="mt-3"
+          size="small"
+          variant="outlined"
+          :disabled="isBusy"
+          @click="reloadLatest"
+        >
+          再読み込み
+        </v-btn>
+      </v-alert>
+      <v-progress-linear v-if="isResolving" indeterminate class="mb-4" />
+      <DraggableSiteShiftTypeOrder
+        v-model="items"
+        :disabled="controlsDisabled || hasExternalChanges"
+      />
     </v-card-text>
     <v-card-actions>
-      <MoleculesActionsSubmitCancel
+      <v-btn variant="text" :disabled="isBusy" @click="cancel">
+        キャンセル
+      </v-btn>
+      <v-spacer />
+      <v-btn
+        color="primary"
+        variant="flat"
         :loading="loading"
-        :disabled="!isChanged"
-        @click:cancel="cancel"
-        @click:submit="submit"
-      />
+        :disabled="controlsDisabled || hasExternalChanges || !isChanged"
+        @click="submit"
+      >
+        保存
+      </v-btn>
     </v-card-actions>
   </v-card>
 </template>

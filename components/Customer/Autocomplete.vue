@@ -90,11 +90,11 @@ async function api(text) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <CustomersManager @create="($event) => onCreateHandler($event)">
-        <template #table="{ toCreate }">
-          <v-icon @click="toCreate()">mdi-plus</v-icon>
+      <CustomerCreateDialog @created="onCreateHandler">
+        <template #activator="{ open }">
+          <v-icon @click="open">mdi-plus</v-icon>
         </template>
-      </CustomersManager>
+      </CustomerCreateDialog>
     </template>
 
     <template #item="slotProps">

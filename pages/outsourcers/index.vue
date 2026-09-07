@@ -3,8 +3,7 @@
  * @file pages/outsourcers/index.vue
  * @description 外注先情報一覧ページ
  *****************************************************************************/
-import { Outsourcer } from "@/schemas";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useOutsourcerListPagination } from "@/composables/dataLayers/outsourcer/useOutsourcerListPagination";
 
 defineOptions({ name: "outsourcers-index" });
 
@@ -12,42 +11,50 @@ defineOptions({ name: "outsourcers-index" });
  * DEFINE STATES
  *****************************************************************************/
 const search = ref("");
-const defaultOption = ref([
-  "where",
-  "contractStatus",
-  "==",
-  Outsourcer.STATUS_ACTIVE,
-]);
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const options = computed(() => {
-  if (!search.value) {
-    return [
-      defaultOption.value,
-      ["orderBy", "updatedAt", "desc"],
-      ["limit", 10],
-    ];
-  } else {
-    return [defaultOption.value, ["orderBy", "code", "desc"]];
-  }
-});
-
-const { docs } = useDocuments("Outsourcer", {
+const {
+  currentPage,
+  errorMessage,
+  hasNextPage,
+  hasPreviousPage,
+  items,
+  loaded,
+  loading,
+  loadNext,
+  loadPrevious,
+  reload,
+  restart,
+} = useOutsourcerListPagination({
   search,
-  options,
-  fetchAllOnEmpty: true,
 });
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
+  <v-container
+    class="align-start"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
     <OutsourcersManager
       class="fill-height"
-      :docs="docs"
+      :docs="items"
       v-model:search="search"
       :items-per-page="20"
+      hide-default-footer
+      show-pagination
+      :current-page="currentPage"
+      :loading="loading"
+      :loaded="loaded"
+      :error-message="errorMessage"
+      :has-next-page="hasNextPage"
+      :has-previous-page="hasPreviousPage"
+      @create="restart"
+      @update="restart"
+      @load:next="loadNext"
+      @load:previous="loadPrevious"
+      @retry="reload"
     />
   </v-container>
 </template>

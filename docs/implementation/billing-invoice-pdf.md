@@ -6,10 +6,10 @@
 - `formatNumber`/`formatCurrency`はIntlへ値を直接渡し、domain上のfinite/nonnegative/integerを保証しない。表示formatはvalidation境界ではない。
 - app側`calculateTaxBreakdown`はtaxRateのnumber/NaNだけを拒否し、負数、1超、Infinityを許す。salesAmountは`|| 0`で取り出して加算するため、文字列混入時は数値合計でなく連結し得る。丸めは現在のprocess-global RoundSettingに依存する。
 
-- 状態: 実装調査
+- 状態: 実装調査（振込先の完全性・口座名義・header長文配置をlocal改修済み、利用者最終UI acceptance待ち）
 - 対象セグメント: SPEC-SEG-019、SPEC-DEEP-040 — 請求書PDFの生成・表示・保存/ダウンロード契約
-- 最終確認日: 2026-08-12
-- 根拠ファイル: CustomerBillings一覧のPDF action、`useCustomerBillingActions.js`、`useBillingPdf.js`、`calculateTaxBreakdown.js`、format utility、NotoSansJP VFS、直接参照するBilling/Customer/Company/Site/Article field
+- 最終確認日: 2026-08-30
+- 根拠ファイル: CustomerBillings一覧のPDF action、`useCustomerBillingActions.js`、`useBillingPdf.js`、`createCompanyBankTransferPdfBlock.js`、`calculateTaxBreakdown.js`、format utility、NotoSansJP VFS、直接参照するBilling/Customer/Company/Site/Article field
 
 ## 入口・権限
 
@@ -26,7 +26,7 @@
 - BillingからbillingDateAt、paymentDueDateAt、subtotal、taxAmount、totalAmount、taxBreakdown、operationResultsを使う。
 - 各OperationResultからdocId、siteId、dateAt、shiftType、statistics、sales original/adjusted、salesAmount、taxRate、articlesを使う。
 - Customerからzipcode、prefName、city、address、building、nameを宛先・filenameへ使う。
-- Company storeからzipcode、prefName、city、address、companyName、tel、bankName、branchName、accountType、accountNumber、invoiceNumber、hasBankInfoを発行者情報へ使う。
+- Company storeからzipcode、prefName、city、address、building、companyName、tel、bankName、branchName、accountType、accountNumber、accountHolder、invoiceNumberを発行者情報へ使う。振込先5 fieldは共有parserで完全性と値を検証する。
 - Siteからname、siteNumber、Article masterからcode/nameを明細へ使う。
 - 生成前にCustomer 1件、対象operationResultsのunique site、全articles masterをclient fetchする。Companyはlogin company storeの現在値を使う。
 
@@ -38,7 +38,7 @@
 | 宛先住所 | Customer zipcode/prefName/city/address/building。欠損文字列は空欄 |
 | 宛名 | Customer.name＋「御中」 |
 | 発行者 | Company住所、companyName、tel |
-| 振込先 | Company.hasBankInfo=true時だけbank/branch/accountType/accountNumber |
+| 振込先 | 5 fieldすべてが有効な場合だけbank/branch/accountType/accountNumber/accountHolder。不完全・不正・未登録は全体を省略 |
 | 振込手数料 | 固定文言「※お振込み手数料はご負担ください。」 |
 | 適格請求書登録番号 | `T${company.invoiceNumber}`。未設定時も「登録番号: 」labelは表示 |
 | 税抜・税・税込 | Billing computed値。統合は全Billingを再集計 |
@@ -65,7 +65,7 @@
 
 - pdfmakeをclientでlazy importし、VFSへNotoSansJP Regular/Boldを登録する。italic/bolditalicも同font fileへmappingする。
 - page sizeはA4、marginはleft/right 40、top/bottom 60、default font size 10。title 18、section 14、table header gray、detail table 9、footer 8。
-- 宛先はabsolute x=40/y=100、発行者はx=350/y=100のright align。長い住所・会社名・銀行情報に明示width/overflow制御はない。
+- 宛先と発行者は通常flowの2 columnへ置き、発行者側は幅205、column gap 20、right alignとする。振込先は口座名義を含む3行を折返し可能にし、長い銀行名・支店名・口座名義の高さを後続本文の配置へ反映する。
 - 現場別請求tableの後は常にpageBreak=afterで、稼働明細を次pageから開始する。統合は各2件目以降のBilling明細前にもpageBreak=beforeを入れる。
 - detail tablesはheaderRows=1。pdfmake既定の自動改pageを使い、独自のrow splitting/keep-together制御はない。
 - 単票filenameは `請求書_${customer.name}_${billingDate YYYYMMDD}.pdf`、統合は末尾 `_統合.pdf`。customer.nameのfilename不正文字・制御文字・長さをsanitizeしない。
@@ -107,7 +107,7 @@
 - adjustmentは総額へ含まれるが、内訳・課税対象・現場合計に現れず、帳票内で差額理由を説明できない。
 - site masterはfallback表示する一方、customer/company欠損はfallbackせず生成全体が失敗し得る。
 - status/発行履歴を参照せず、DRAFT・PAID・CANCELLEDを同じ「ご請求書」として何度でもdownloadできる。
-- 発行者・宛先をabsolute配置し、長文時のoverlap/切れを制御しない。
+- headerの長い振込先は通常flowと折返しで後続本文とのoverlapを避ける。長い日本語値のPDF生成は自動render test済みだが、実際の利用環境での見た目は最終UI acceptance待ちである。
 
 ## 将来要対応
 
@@ -127,7 +127,7 @@
 
 ## 未確認範囲
 
-- 実PDF生成・render・日本語glyph・download・OS filename・印刷・free viewer互換性。
+- 振込先の長い日本語値を含むPDF buffer生成はlocal自動test済み。実画面からのdownload、OS filename、印刷、free viewer互換性と利用者環境での最終レイアウトは未確認。
 - pdfmakeの実行時version、browser memory、大量明細性能、global loading overlayの多重click遮断。
 - PDF/税計算の下流、Storage、外部送信/会計API、実data・master欠損実態。
 

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   applyUserReservationMigrationPlan,
+  assertCreateOnlyReservationPlan,
   assertCodexReservationMigrationTarget,
+  assertReservationMigrationTarget,
   parseReservationMigrationArgs,
   planUserReservationMigration,
   summarizeUserReservationPlan,
@@ -278,6 +280,8 @@ test("plan digest is deterministic and changes with the plan", () => {
 test("CLI parser defaults to dry-run and requires digest for apply", () => {
   assert.deepEqual(parseReservationMigrationArgs(["--target", "codex-local"]), {
     apply: false,
+    backupConfirmed: false,
+    confirmedProject: null,
     planDigest: null,
     target: "codex-local",
   });
@@ -294,8 +298,56 @@ test("CLI parser defaults to dry-run and requires digest for apply", () => {
       "--plan-digest",
       digest,
     ]),
-    { apply: true, planDigest: digest, target: "codex-local" },
+    {
+      apply: true,
+      backupConfirmed: false,
+      confirmedProject: null,
+      planDigest: digest,
+      target: "codex-local",
+    },
   );
+});
+
+test("Dev apply requires project, backup, and dry-run digest confirmations", () => {
+  const digest = "b".repeat(64);
+  assert.deepEqual(
+    parseReservationMigrationArgs([
+      "--target",
+      "dev",
+      "--apply",
+      "--plan-digest",
+      digest,
+      "--confirm-project",
+      "air-guard-v2-dev",
+      "--confirm-backup",
+    ]),
+    {
+      apply: true,
+      backupConfirmed: true,
+      confirmedProject: "air-guard-v2-dev",
+      planDigest: digest,
+      target: "dev",
+    },
+  );
+  for (const args of [
+    ["--target", "dev", "--apply", "--plan-digest", digest],
+    [
+      "--target",
+      "dev",
+      "--apply",
+      "--plan-digest",
+      digest,
+      "--confirm-project",
+      "different-project",
+      "--confirm-backup",
+    ],
+    ["--target", "dev", "--confirm-backup"],
+  ]) {
+    assert.throws(
+      () => parseReservationMigrationArgs(args),
+      ({ exitCode }) => exitCode === 64,
+    );
+  }
 });
 
 test("target guard rejects remote, wildcard, and non-demo projects", () => {
@@ -319,6 +371,84 @@ test("target guard rejects remote, wildcard, and non-demo projects", () => {
       ({ exitCode }) => exitCode === 78,
     );
   }
+});
+
+test("user-local target requires the exact local Emulator and Dev project", () => {
+  assert.deepEqual(
+    assertReservationMigrationTarget("user-local", {
+      FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080",
+      GCLOUD_PROJECT: "air-guard-v2-dev",
+    }).name,
+    "user-local",
+  );
+  for (const env of [
+    { FIRESTORE_EMULATOR_HOST: "127.0.0.1:18080", GCLOUD_PROJECT: "air-guard-v2-dev" },
+    { FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080", GCLOUD_PROJECT: "air-guard-v2" },
+  ]) {
+    assert.throws(
+      () => assertReservationMigrationTarget("user-local", env),
+      ({ exitCode }) => exitCode === 78,
+    );
+  }
+});
+
+test("Dev target requires remote routing and the exact service-account identity", () => {
+  const validCredential = JSON.stringify({
+    type: "service_account",
+    project_id: "air-guard-v2-dev",
+    client_email:
+      "firebase-adminsdk-fbsvc@air-guard-v2-dev.iam.gserviceaccount.com",
+    private_key: "private-key-not-logged",
+  });
+  const env = {
+    GCLOUD_PROJECT: "air-guard-v2-dev",
+    GOOGLE_APPLICATION_CREDENTIALS: "C:\\private\\dev.json",
+  };
+  assert.deepEqual(
+    assertReservationMigrationTarget("dev", env, {
+      readCredentialFile: () => validCredential,
+    }).name,
+    "dev",
+  );
+  for (const candidate of [
+    { ...env, FIRESTORE_EMULATOR_HOST: "127.0.0.1:8080" },
+    { ...env, GCLOUD_PROJECT: "air-guard-v2" },
+    { GCLOUD_PROJECT: "air-guard-v2-dev" },
+  ]) {
+    assert.throws(
+      () =>
+        assertReservationMigrationTarget("dev", candidate, {
+          readCredentialFile: () => validCredential,
+        }),
+      ({ exitCode }) => exitCode === 78,
+    );
+  }
+  assert.throws(
+    () =>
+      assertReservationMigrationTarget("dev", env, {
+        readCredentialFile: () =>
+          JSON.stringify({
+            ...JSON.parse(validCredential),
+            project_id: "air-guard-v2",
+          }),
+      }),
+    ({ exitCode }) => exitCode === 78,
+  );
+});
+
+test("create-only targets reject stale-pointer updates before writes", () => {
+  const createOnly = planUserReservationMigration(
+    state({ emailReservations: [] }),
+  );
+  assert.doesNotThrow(() => assertCreateOnlyReservationPlan(createOnly));
+
+  const stalePointer = planUserReservationMigration(
+    state({ emailReservations: [emailReservation({ userId: "REMOVED_USER" })] }),
+  );
+  assert.throws(
+    () => assertCreateOnlyReservationPlan(stalePointer),
+    ({ exitCode }) => exitCode === 3,
+  );
 });
 
 test("apply refuses a stale pointer update when the old User reappears", async () => {

@@ -38,16 +38,27 @@ watch(
 const title = computed(() => {
   return internalItem.displayName || "N/A";
 });
+const isTerminated = computed(
+  () => internalItem.contractStatus === Outsourcer.STATUS_TERMINATED,
+);
 </script>
 
 <template>
-  <v-list-item v-bind="$attrs" :title="title">
-    <!-- SUBTITLE -->
-    <!-- Option 1: Use `subtitle` prop for a single line. -->
-    <!-- <v-list-item v-bind="$attrs" :subtitle="internalItem.someProperty"> -->
-
-    <!-- Option 2: Use `v-list-item-subtitle` for multiple lines (idiomatic Vuetify). -->
-    <!-- <v-list-item-subtitle>{{ internalItem.someProperty1 }}</v-list-item-subtitle> -->
-    <!-- <v-list-item-subtitle>{{ internalItem.someProperty2 }}</v-list-item-subtitle> -->
+  <v-list-item v-bind="$attrs" :title="undefined" :subtitle="undefined">
+    <v-list-item-title class="d-flex align-center ga-2">
+      <span>{{ title }}</span>
+      <v-chip
+        v-if="isTerminated"
+        color="warning"
+        size="x-small"
+        variant="tonal"
+      >
+        契約終了
+      </v-chip>
+    </v-list-item-title>
+    <v-list-item-subtitle>{{ internalItem.name }}</v-list-item-subtitle>
+    <v-list-item-subtitle>
+      コード: {{ internalItem.code || "―" }}
+    </v-list-item-subtitle>
   </v-list-item>
 </template>

@@ -1,5 +1,7 @@
 # Subscription・Stripe連携（実装調査）
 
+> 2026-09-01 current disposition: 利用者は本実装がscaffoldであり、Stripe側とCompany契約情報を同期した実績がないと確認した。[ADR 0038](../decisions/0038-legacy-stripe-scaffold-removal.md)により、外部Stripeを操作せずAirGuard内のroute、reader/writer、Functions、Rules、schema、legacy dataを撤去する。以下は撤去前実装の確認記録であり、提供予定の正式Stripe仕様ではない。
+
 ## Customer type utility最終確認（SPEC-DEEP-045b）
 
 - `getCustomerType`はsubscription ID欠損をfree、`canceled`/`past_due`/`unpaid`または期限超過をexpired、`active`/`trialing`をpaid、それ以外の未知statusをfreeとする。
@@ -117,12 +119,14 @@ Customer Portal、解約callable、再契約専用処理、checkout session clea
 
 - FUT-0099〜FUT-0104を`future-actions.md`へ登録し、FUT-0090へsubscription改変の証拠を追加した。
 
+2026-09-01に、Stripe本体、checkout、webhook、plan、status、employeeLimitを保留・再利用せず、未同期scaffoldとして完全撤去する方針へ更新した。CCBでserver-owned entitlement documentやclient projectionを準備しない。将来のサブスクリプションはproviderを含めて新規設計し、現行実装を正式課金仕様へ昇格しない。
+
 ## 要確認事項
 
-- CONF-0083〜CONF-0087を`pending-confirmations.md`へ登録した。
+- CONF-0083〜CONF-0087は2026-08-28に正式release直前まで明示保留とした。
 
 ## 未確認範囲
 
-- Stripe/Functionsの実デプロイ状態、secret設定、実Customer/Subscription/Event、DEV webhook設定。
-- Stripe retry保証・API version挙動、税/価格/planの正式設計、Customer Portal設定。
-- employeeLimitの下流強制、実アカウントでのcheckout、解約・返金・支払失敗運用。
+- Devのfresh Company件数・legacy field形状、`StripeData`件数、旧Stripe Function IDの不存在。
+- local ignored saved-dataの値を露出しない分類とmigration rehearsal。
+- 将来サブスクリプションのprovider、料金、契約、利用上限は別企画まで未設計。

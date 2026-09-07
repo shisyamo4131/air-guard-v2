@@ -1,5 +1,7 @@
 # Company and root navigation components deep review
 
+> 2026-08-30: Company設定から既定取極めcallerを撤去し、`siteOrder`・`scheduleOrder`を専用Callableへ移行した。以下の旧Company全体writer調査は、CPU-05で残存callerを除去するための履歴inventoryとして読む。現行契約は[Company設定](company-settings.md)と[ADR 0035](../decisions/0035-company-display-order-update-boundary.md)を正とする。
+
 ## Metadata
 
 - Status: implementation investigation (deep review)

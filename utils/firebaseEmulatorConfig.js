@@ -23,8 +23,26 @@ function resolvePort(value, fallback, name) {
   return port;
 }
 
+function resolveBoolean(value, name) {
+  if (value === true || value === "true") {
+    return true;
+  }
+  if (
+    value === false ||
+    value === "false" ||
+    value === undefined ||
+    value === ""
+  ) {
+    return false;
+  }
+  throw new Error(`${name} must be a boolean or the string "true" or "false".`);
+}
+
 export function resolveFirebaseEmulatorConfig(config, browserHostname = "localhost") {
-  const useEmulator = Boolean(config.firebaseUseEmulator);
+  const useEmulator = resolveBoolean(
+    config.firebaseUseEmulator,
+    "Firebase Emulator flag",
+  );
   const host = config.firebaseEmulatorHost || browserHostname;
   const ports = {
     auth: resolvePort(
@@ -55,7 +73,7 @@ export function resolveFirebaseEmulatorConfig(config, browserHostname = "localho
   };
 
   if (config.firebaseProjectId === CODEX_PROJECT_ID) {
-    if (config.firebaseUseEmulator !== true && config.firebaseUseEmulator !== "true") {
+    if (!useEmulator) {
       throw new Error("The dedicated Codex UI must use Firebase Emulators.");
     }
     if (

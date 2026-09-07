@@ -13,6 +13,7 @@ node_modules
 # Logs
 logs
 *.log
+/tmp/codex-capacity-cache.json
 
 # Misc
 .DS_Store

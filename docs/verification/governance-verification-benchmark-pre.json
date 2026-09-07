@@ -1,0 +1,324 @@
+{
+  "schema_version": 1,
+  "benchmark_id": "GOV15-AIRGUARD-PREBENCH-EXEC-001",
+  "phase": "pre_migration",
+  "status": "complete",
+  "baseline": {
+    "repository": "C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+    "branch": "codex/dev-user-reservation-migration",
+    "head": "2591372d1550abc9665e864db2e52ab6a7297d5b",
+    "subject": "docs: retarget SPG coordinator to PM-05",
+    "common_governance_version": "1.4.1",
+    "common_governance_sha256": "21e2be90d274a11001f788f78e647d7d537a45124baa731be5ccbadf89cd5eca"
+  },
+  "environment": {
+    "node_version": "v22.23.2",
+    "stopwatch_shell": {
+      "name": "PowerShell Core",
+      "version": "7.6.4"
+    },
+    "powershell_gate_shell": {
+      "name": "Windows PowerShell Desktop",
+      "version": "5.1.26100.9168"
+    },
+    "timezone_id": "Tokyo Standard Time",
+    "utc_offset": "+09:00",
+    "observed_start": "2026-09-01T18:37:09.4532843+09:00",
+    "observed_final_state": "2026-09-01T18:39:40.9106128+09:00"
+  },
+  "protocol": {
+    "rounds": 4,
+    "gate_order": [
+      "G-DOC",
+      "G-GOV",
+      "G-RENDER",
+      "G-DOC-NEG",
+      "G-CAP",
+      "G-DIFF",
+      "G-SYNTAX",
+      "G-TARGET",
+      "G-FULL"
+    ],
+    "elapsed_measurement": "PowerShell Stopwatch around each exact command",
+    "exit_measurement": "each command's own exit status",
+    "round_1_classification": "first-run/cold-ish reference only; not a true cold cache",
+    "comparison_value": "median elapsed_ms of rounds 2 through 4",
+    "scenario_warm_total": "sum of per-gate warm medians; not median of per-round scenario totals"
+  },
+  "full_domain_source_set": {
+    "command_argument": "test/domain/*.test.mjs",
+    "file_count": 92,
+    "path_order": "PowerShell Sort-Object over forward-slash repository-relative paths",
+    "hash_algorithm": "SHA-256",
+    "hash_input": "UTF-8 bytes of paths joined by LF with no trailing newline",
+    "hash": "d448a879abc6f5c54ecdcbcdb0f905907216f30ee5412341a1d233c9bc7a0709",
+    "files": [
+      "test/domain/auth-functions-source-contract.test.mjs",
+      "test/domain/auth-middleware-source-contract.test.mjs",
+      "test/domain/callable-auth-identity-integration.test.mjs",
+      "test/domain/change-user-enabled-state.test.mjs",
+      "test/domain/check-email-availability-callable.test.mjs",
+      "test/domain/check-email-availability.test.mjs",
+      "test/domain/check-user-pre-registration-callable.test.mjs",
+      "test/domain/check-user-pre-registration.test.mjs",
+      "test/domain/client-temporary-user-creation-policy.test.mjs",
+      "test/domain/client-temporary-user-deletion-policy.test.mjs",
+      "test/domain/codex-functions-entrypoint.test.mjs",
+      "test/domain/codex-functions-harness-contract.test.mjs",
+      "test/domain/codex-nuxt-config.test.mjs",
+      "test/domain/codex-ui-build-identity.test.mjs",
+      "test/domain/codex-ui-candidate-acceptance.test.mjs",
+      "test/domain/codex-ui-foreground-contract.test.mjs",
+      "test/domain/codex-ui-state-verifier.test.mjs",
+      "test/domain/company-admin-transfer-policy.test.mjs",
+      "test/domain/company-arrangement-update.test.mjs",
+      "test/domain/company-billing-pdf-render.test.mjs",
+      "test/domain/company-billing-update.test.mjs",
+      "test/domain/company-legacy-writer-removal.test.mjs",
+      "test/domain/company-operations-update.test.mjs",
+      "test/domain/company-profile-update.test.mjs",
+      "test/domain/create-admin-account-callable.test.mjs",
+      "test/domain/create-admin-account.test.mjs",
+      "test/domain/create-admin-user-source-contract.test.mjs",
+      "test/domain/create-normal-user-source-contract.test.mjs",
+      "test/domain/create-temporary-user-callable.test.mjs",
+      "test/domain/create-temporary-user.test.mjs",
+      "test/domain/delete-temporary-user-callable.test.mjs",
+      "test/domain/delete-temporary-user.test.mjs",
+      "test/domain/employee-user-manager-temporary-deletion.test.mjs",
+      "test/domain/external-effects-policy.test.mjs",
+      "test/domain/firebase-emulator-config.test.mjs",
+      "test/domain/firestore-rules-reservation-source-contract.test.mjs",
+      "test/domain/geocoding-external-effects.test.mjs",
+      "test/domain/get-employee-reinstatement-context.test.mjs",
+      "test/domain/initial-admin-account-policy.test.mjs",
+      "test/domain/lifecycle-operation-store.test.mjs",
+      "test/domain/list-lifecycle-operations.test.mjs",
+      "test/domain/map-callable-auth-identity-error.test.mjs",
+      "test/domain/map-company-admin-transfer-error.test.mjs",
+      "test/domain/map-create-admin-account-error.test.mjs",
+      "test/domain/map-create-temporary-user-error.test.mjs",
+      "test/domain/map-delete-temporary-user-error.test.mjs",
+      "test/domain/map-lifecycle-operation-error.test.mjs",
+      "test/domain/map-user-account-setup-error.test.mjs",
+      "test/domain/map-user-enabled-state-error.test.mjs",
+      "test/domain/map-user-field-update-error.test.mjs",
+      "test/domain/migrate-user-reservations.test.mjs",
+      "test/domain/notification-external-effects.test.mjs",
+      "test/domain/notification-lifecycle-privacy.test.mjs",
+      "test/domain/operation-state.test.mjs",
+      "test/domain/page-access-policy.test.mjs",
+      "test/domain/preset-permission.test.mjs",
+      "test/domain/reconcile-lifecycle-operations.test.mjs",
+      "test/domain/registered-user-auth-gateway.test.mjs",
+      "test/domain/resolve-callable-auth-identity.test.mjs",
+      "test/domain/role-permissions.test.mjs",
+      "test/domain/role-presets-parity.test.mjs",
+      "test/domain/setup-user-account-callable.test.mjs",
+      "test/domain/setup-user-account.test.mjs",
+      "test/domain/sync-user-auth-account.test.mjs",
+      "test/domain/temporary-user-creation-components.test.mjs",
+      "test/domain/temporary-user-creation-composable.test.mjs",
+      "test/domain/temporary-user-creation-policy.test.mjs",
+      "test/domain/temporary-user-deletion-composable.test.mjs",
+      "test/domain/temporary-user-deletion-policy-parity.test.mjs",
+      "test/domain/temporary-user-deletion-policy.test.mjs",
+      "test/domain/temporary-user-management-policy.test.mjs",
+      "test/domain/terminate-employee-callable.test.mjs",
+      "test/domain/terminate-employee.test.mjs",
+      "test/domain/transfer-company-admin.test.mjs",
+      "test/domain/unconfirmed-email-source-contract.test.mjs",
+      "test/domain/update-user-fields.test.mjs",
+      "test/domain/user-account-setup-policy.test.mjs",
+      "test/domain/user-auth-company-policy.test.mjs",
+      "test/domain/user-deletion-trigger-policy.test.mjs",
+      "test/domain/user-enabled-state-policy.test.mjs",
+      "test/domain/user-field-update-callable.test.mjs",
+      "test/domain/user-field-update-client.test.mjs",
+      "test/domain/user-field-update-policy.test.mjs",
+      "test/domain/user-lifecycle-callables.test.mjs",
+      "test/domain/user-lifecycle-client.test.mjs",
+      "test/domain/user-lifecycle-policy.test.mjs",
+      "test/domain/user-lifecycle-ui-policy.test.mjs",
+      "test/domain/user-management-integration.test.mjs",
+      "test/domain/user-management-ui-policy.test.mjs",
+      "test/domain/user-write-permission.test.mjs",
+      "test/domain/users-iterator-edit-visibility.test.mjs",
+      "test/domain/users-manager-temporary-deletion.test.mjs"
+    ]
+  },
+  "gates": [
+    {
+      "id": "G-DOC",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 1379.689, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 1399.208, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 1396.209, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 1432.288, "exit_code": 0 }
+      ],
+      "warm_median_ms": 1399.208,
+      "observed_each_round": { "markdown_files": 196, "adrs": 39, "roadmaps": 5, "toml_files": 8, "toml_parser_files": 8 }
+    },
+    {
+      "id": "G-GOV",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 487.585, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 496.038, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 473.528, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 482.129, "exit_code": 0 }
+      ],
+      "warm_median_ms": 482.129,
+      "observed_each_round": { "common_governance_version": "1.4.1", "agents_bytes": 15538, "max_agents_bytes": 32768, "managed_hashes_current": true, "generated_agents_current": true, "project_rules_present": true },
+      "includes": ["G-RENDER"]
+    },
+    {
+      "id": "G-RENDER",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 445.236, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 440.847, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 432.437, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 451.638, "exit_code": 0 }
+      ],
+      "warm_median_ms": 440.847,
+      "observed_each_round": { "generated_content_current": true, "common_governance_sha256": "21e2be90d274a11001f788f78e647d7d537a45124baa731be5ccbadf89cd5eca" }
+    },
+    {
+      "id": "G-DOC-NEG",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 5815.200, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 2, "elapsed_ms": 5845.742, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 3, "elapsed_ms": 5772.889, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 4, "elapsed_ms": 5792.338, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true }
+      ],
+      "warm_median_ms": 5792.338,
+      "observed_each_round": { "fixture_cases": 8, "all_expected_polarities_passed": true }
+    },
+    {
+      "id": "G-CAP",
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 3008.887, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 2, "elapsed_ms": 2873.553, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 3, "elapsed_ms": 2907.066, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true },
+        { "round": 4, "elapsed_ms": 2942.075, "exit_code": 0, "fixture_before_count": 0, "fixture_after_count": 0, "fixture_cleanup_ok": true }
+      ],
+      "warm_median_ms": 2907.066,
+      "observed_each_round": { "regression_checks": 7, "all_passed": true }
+    },
+    {
+      "id": "G-DIFF",
+      "command": "git diff --check",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 51.797, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 51.307, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 50.422, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 52.341, "exit_code": 0 }
+      ],
+      "warm_median_ms": 51.307
+    },
+    {
+      "id": "G-SYNTAX",
+      "command": "node --check functions/modules/company/updateCompanyArrangement.js",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 82.501, "exit_code": 0 },
+        { "round": 2, "elapsed_ms": 40.477, "exit_code": 0 },
+        { "round": 3, "elapsed_ms": 39.340, "exit_code": 0 },
+        { "round": 4, "elapsed_ms": 41.686, "exit_code": 0 }
+      ],
+      "warm_median_ms": 40.477
+    },
+    {
+      "id": "G-TARGET",
+      "command": "node --test test/domain/company-arrangement-update.test.mjs",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 550.713, "exit_code": 0, "node_duration_ms": 464.3437 },
+        { "round": 2, "elapsed_ms": 504.208, "exit_code": 0, "node_duration_ms": 460.9642 },
+        { "round": 3, "elapsed_ms": 498.422, "exit_code": 0, "node_duration_ms": 453.3949 },
+        { "round": 4, "elapsed_ms": 491.280, "exit_code": 0, "node_duration_ms": 445.1105 }
+      ],
+      "warm_median_ms": 498.422,
+      "observed_each_round": { "tests": 16, "pass": 16, "fail": 0, "cancelled": 0, "skipped": 0, "todo": 0 }
+    },
+    {
+      "id": "G-FULL",
+      "command": "node --test test/domain/*.test.mjs",
+      "rounds": [
+        { "round": 1, "elapsed_ms": 1814.312, "exit_code": 0, "node_duration_ms": 1722.2497 },
+        { "round": 2, "elapsed_ms": 1720.892, "exit_code": 0, "node_duration_ms": 1672.5389 },
+        { "round": 3, "elapsed_ms": 1713.655, "exit_code": 0, "node_duration_ms": 1663.3371 },
+        { "round": 4, "elapsed_ms": 1723.010, "exit_code": 0, "node_duration_ms": 1672.9325 }
+      ],
+      "warm_median_ms": 1720.892,
+      "observed_each_round": { "tests": 727, "pass": 727, "fail": 0, "cancelled": 0, "skipped": 0, "todo": 0 }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "S-DOC",
+      "gates": ["G-DOC", "G-GOV", "G-RENDER", "G-DIFF"],
+      "root_runs": 4,
+      "known_gate_or_script_level_physical_executions": 5,
+      "round_1_sum_ms": 2364.307,
+      "warm_median_sum_ms": 2373.491
+    },
+    {
+      "id": "S-APP",
+      "gates": ["G-SYNTAX", "G-TARGET", "G-FULL", "G-DOC", "G-GOV", "G-RENDER", "G-DIFF"],
+      "root_runs": 7,
+      "known_gate_or_script_level_physical_executions": 8,
+      "round_1_sum_ms": 4811.833,
+      "warm_median_sum_ms": 4633.282
+    },
+    {
+      "id": "S-GOV",
+      "gates": ["G-DOC", "G-DOC-NEG", "G-CAP", "G-GOV", "G-RENDER", "G-DIFF"],
+      "root_runs": 6,
+      "known_gate_or_script_level_physical_executions": 21,
+      "physical_execution_accounting": "G-DOC 1 + G-DOC-NEG wrapper 1 and checker invocations 8 + G-CAP wrapper 1 and capacity-script invocations 6 + G-GOV wrapper and embedded renderer 2 + standalone G-RENDER 1 + G-DIFF 1",
+      "round_1_sum_ms": 11188.394,
+      "warm_median_sum_ms": 11072.895
+    }
+  ],
+  "known_duplication": {
+    "gate": "G-RENDER",
+    "reason": "G-GOV invokes renderer -Check internally and the frozen scenarios also invoke standalone G-RENDER",
+    "duplicate_executions_per_scenario": 1,
+    "standalone_round_1_cost_ms": 445.236,
+    "standalone_warm_median_cost_ms": 440.847,
+    "embedded_renderer_only_cost": "not separately measurable; not inferred"
+  },
+  "final_state": {
+    "head_unchanged": true,
+    "branch_unchanged": true,
+    "tracked_clean": true,
+    "untracked_clean": true,
+    "index_clean": true,
+    "primary_worktree_count": 1,
+    "governance_fixture_count": 0,
+    "capacity_fixture_count": 0,
+    "source_set_count_unchanged": true,
+    "source_set_hash_unchanged": true,
+    "state_change_performed": false
+  },
+  "limitations": [
+    "Round 1 is cold-ish only and is not a true cold-cache measurement.",
+    "Stopwatch values include process startup, output capture, and host load on one Windows host and time window.",
+    "Warm scenario totals are sums of per-gate medians, not medians of per-round scenario totals.",
+    "Node TAP does not emit a direct source-file run manifest; G-FULL binding uses the frozen command, unchanged sorted 92-path list and hash, and stable 727-test results.",
+    "Embedded renderer-only time inside G-GOV is not separable; standalone G-RENDER is the comparable duplicate-cost proxy.",
+    "No post-migration values, efficiency gains, coverage-equivalence conclusion, or failure-detection-equivalence conclusion are claimed.",
+    "Build, Dev, Emulator, UI, network, remote data, Realtime Database Rules, and external-service regressions are outside this frozen benchmark."
+  ],
+  "not_started": [
+    "common governance 1.5.0 migration",
+    "project-owned verification policy adoption",
+    "post-migration benchmark",
+    "affected task turnover",
+    "STRIPE-02",
+    "Schemas adoption"
+  ]
+}

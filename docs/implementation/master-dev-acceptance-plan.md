@@ -1,0 +1,131 @@
+# 4マスター Dev受入れ計画
+
+最終更新日: 2026-09-07
+
+## 目的と停止点
+
+この文書はCustomer、Site、Outsourcer、Employeeの初回Dev反映について、受入れに使うaccount、合成data、操作、外部作用、終了後の処置と担当を固定する。実company ID、名称、account、資格情報は記録しない。
+
+No.8は受入れ準備であり、Dev build、remote read、deploy、実data変更、migration、IAM変更を許可しない。No.10の実行前に利用者だけが判断できる事前確認を終える。ただし、**新しいHosting／Functions／Rulesが反映されたDev画面そのものの利用者受入れはNo.10後でなければ実施できない**ため、次の順序とする。
+
+1. No.8: 受入れ計画を確定し、利用者事前確認U8-1〜U8-7を終える。UIは4マスターを1つずつ横断確認する。
+2. No.9: Codexが最終差分、再利用できる証拠、新たに必要なgateとbounded preflightを確定する。
+3. No.10開始直前: 利用者がU8-5の短時間停止を通知する。
+4. No.10: 別途提示するexact target／command／外部作用を利用者が明示承認した後だけ、bounded Dev反映とCodexの技術smokeを行う。
+5. No.10後: 利用者が反映済みDevの見た目・使い勝手を受入れ、各roadmapのDev受入れ完了を判断する。
+
+したがって「No.10は私しかできない検証が終わってから」は、No.10前に可能な主観判断と運用確認について正しい。反映済みDevを対象にする最終受入れまでNo.10前へ移すことはできない。
+
+## 冒頭の「利用者でなければできない事項」との照合
+
+このtask冒頭で提示した利用者担当5項目を、後から作ったU8の一部だけで置き換えない。現在の対応は次のとおりである。
+
+| 冒頭の項目 | 現在の扱い | No.10との関係 |
+|---|---|---|
+| Customer新UIの操作・見た目の最終判断 | 利用者指定により4マスター全体へ拡張し、U8-1〜U8-4で1つずつ確認する | No.10前に完了必須 |
+| Dev利用者・協力会社の利用状況、一時停止可能時間 | 3区分の利用状況は回答済み。U8-5で具体的なcutover可能条件を確認する | No.10前に方針確定、実際の停止通知は開始直前 |
+| Dev試験会社・権限別accountの利用可否 | U8-6で確認する | No.10前に完了必須 |
+| 横断作業branch境界の承認 | `codex/master-dev-preflight`として完了済み | 完了済みのため再確認しない |
+| remote read、Dev build・deploy、実data変更等の実行承認 | U8-7で「No.10に何を承認対象として提示するか」を確認し、actual target・command・作用を含む実行承認はNo.10で求める | 検証項目ではない。U8で承認対象の漏れをなくし、No.10の明示承認なしに実行しない |
+
+No.10はU8-1〜U8-7を終えてから提示する。No.10の提示そのものは外部操作の承認にならず、利用者が具体案を明示承認した後だけ実行へ進む。
+
+## 担当の分離
+
+| 時点 | 利用者でなければ完了できないこと | Codexが作業・確認すること |
+|---|---|---|
+| No.10前 | 4マスター全体の見た目・操作感、既存test accountを利用できるか、合成data／geocoding／保持方針の許容 | 起動中Chromeと有効なLocal環境を再利用した画面提示、既存Local証拠の有効性確認、権限・操作・test data matrix、停止条件、技術smoke、cleanup案の作成 |
+| No.10開始直前 | 区分1の保存を停止し、停止済みと通知 | remote preflight結果と計画の一致確認。区分3でのCodex操作を止め、反映を連続実行できる状態を確認 |
+| No.10後 | 反映済みDevの表示・操作感を最終受入れ | deploy identity、権限、tenant分離、正常／拒否経路、保存結果、log、index、Rules、Functions、Hostingを技術確認 |
+
+資格情報はchatまたはrepositoryへ記録しない。利用者のaccountでCodexに操作させる場合も、既に認証済みの利用者Chromeを使い、passwordやtokenの共有を求めない。
+
+## 利用者事前確認
+
+No.10へ進む前に次を確認する。UI確認は機能検証を再実行するためではなく、利用者が4マスターを横断して見た目と操作感を最終確認するために行う。既に起動しているChromeと有効なLocal環境を再利用し、各マスターを1つずつ確認して結果を記録する。実際の保存停止通知だけはNo.10実行開始直前に行い、それ以前の確認完了だけで停止済みとは扱わない。
+
+- [x] **U8-1 Customer UI**: 利用者が一覧・詳細と主要管理導線を確認した。簡単に修正できる箇所は利用者が反映し、機能面はDev受入れへ進められると判断した。
+- [x] **U8-2 Site UI**: 利用者が一覧・詳細・終了済み一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-3 Outsourcer UI**: 利用者が一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-4 Employee UI**: 利用者が一覧・詳細・退職済み一覧と主要管理導線を確認した。機能面はDev受入れへ進められると判断した。
+- [x] **U8-5 Dev利用状況・停止条件**: 3区分の扱いと短時間停止条件を確定した。actual cutover開始直前には区分1の停止後、利用者が「停止しました」と通知し、Rules反映開始からHosting反映・reload・技術smoke完了まで維持する。
+- [x] **U8-6 account利用可否**: 区分3の既存accountを受入れの基本とし、不足が判明した場合だけ作成・role変更をNo.10のexact対象へ追加して別途承認する。資格情報はchatやrepositoryへ記録しない。
+- [x] **U8-7 No.10の承認対象**: remote read、Dev build、Indexes／Functions／Rules／Hosting deploy、合成data操作、必要と判明した場合だけのIAM／data対応を分離し、actual target・command・作用・rollbackとともにNo.10で提示する。これは実行承認そのものではなく、No.10で個別に明示承認する。
+
+利用者は2026-09-07に、4マスター管理機能のUIを概ね確認し、機能面についてDev受入れへ進めると判断した。役割が類似するcomponentの共通化、画面ごとに異なるcomponent境界、DataTable／DataIteratorを含むデザイン統一は未完了の機能改修ではなく、Dev受入れ完了後の別phaseで扱う。
+
+SiteはNo.10後のDevで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を受入れ、見た目・操作感の追加改善を後続phaseへ送ったため、SITE-09を完了した。合成Siteは承認済みarchive経路で通常一覧から除外した。Site受入れ時点で残した合成Customerも、その後のCustomer受入れでarchive済みである。詳細は[SITE-09記録](../verification/master-dev-site-create-correction.md)を正とする。
+
+## No.10後のCustomer・Outsourcer・Employee Dev受入れ結果
+
+2026-09-07に、反映済みDevを既存の会社管理者accountと経理accountで確認した。実在のCustomer、Outsourcer、Employee、User／Authenticationは操作せず、明確なtest labelを持つ合成masterだけを使用した。FCM、email、Stripe、PDF、実通知、課金、User／Authentication削除、Prod、migration、全件scanは実行していない。
+
+| master | 会社管理者で確認した操作 | 経理accountで確認した境界 | 判定と処置 |
+|---|---|---|---|
+| Customer | 基本情報編集、取引状態の終了・復帰、状態別検索、参照なしarchive、active Siteから参照されるCustomerのarchive拒否 | 一覧・検索・状態絞込み・詳細を閲覧でき、作成・編集・状態変更・archive導線が表示されない | CS-04とCAS-05は完了。参照拒否後の再読込でCustomerとSiteが変更されていないことを確認した。合成Siteを先に、合成Customerを後に承認済みarchive経路でcleanupし、通常一覧から除外した。通常画面にrestore導線はない |
+| Outsourcer | 作成、名称検索、基本情報編集、契約終了、終了済みmasterの表示・選択 | 一覧・名称検索・詳細を閲覧でき、作成・編集・破壊操作の導線が表示されない | OUT-08は完了。製品にarchive／deleteを設けない契約どおり、合成Outsourcerは契約終了状態でDevに保持する |
+| Employee | 作成、基本情報・国籍・警備員登録・資格・3保険の編集、退職・復帰 | 在職一覧・詳細を閲覧でき、作成・各編集・退職・User登録・archive導線が表示されない | EMP-09は完了。通常archive APIのtenant allowlistは空のまま、archiveは実行していない。合成Employeeは在職状態で保持し、User／Authenticationは作成していない |
+
+Customer archive safetyは、利用者承認のもと一時合成Customerとactive Siteを作成してDev実操作を行った。Customer archive要求は参照中である旨を表示して拒否され、再読込後もCustomerはactive、Siteは稼働中、両者の参照は維持されていた。その後、各破壊操作のaction-time承認を得てSite、Customerの順にarchiveし、通常一覧から除外した。これによりCAS-05を完了した。
+
+## account最小構成
+
+| account区分 | 用途 | 不足時の扱い |
+|---|---|---|
+| 区分3の会社管理者相当 | 4マスターの正常系、archive／終了／復帰のうち初回releaseに含む操作 | No.10へ無断で作成しない。exact user／role操作、復旧、影響を提示する |
+| 区分3のread-only actor | 一覧／詳細の閲覧とwrite拒否、archive表示境界 | 既存actorがなければ、既存自動検証を再利用できる範囲とDevで不足する証明を分ける |
+| 利用者自身のaccount | 区分1での反映済みDevの主観受入れ | 既存dataを変えないreadを基本とし、保存操作は利用者が対象を選んだ場合だけ行う |
+
+manager等の追加actorは、既存accountが安全に利用でき、今回の必要事項を会社管理者／read-onlyで証明できない場合だけ候補にする。権限手段が異なるという理由だけで同等検証を増やさない。
+
+## 合成dataと操作表
+
+初回受入れは区分3を基本とする。exact document IDは実行時のreceiptにだけ記録し、開始時不存在を確認してから作成する。実company、実Employee、実User／Auth、実請求dataを試験対象にしない。
+
+| マスター | CodexのDev技術smoke | 利用者の主観受入れ | 初回releaseで行わないこと |
+|---|---|---|---|
+| Customer | 作成、編集、状態変更、filter結果、終了／復帰、権限別archive表示、参照ありarchive拒否と参照なしarchive | 新状態filter、状態表示、終了／復帰導線の見た目・使い勝手 | 実Customer全件scan、自動変換、実data archive |
+| Site | 作成、編集、検索、終了／再有効化、終了済み一覧、権限拒否、参照なしarchive | 反映済み画面で既存受入れ結果との違和感がないこと | `runDailySiteTermination`公開・実行、既存Siteの一括更新 |
+| Outsourcer | 作成、編集、検索、状態変更、一覧選択、権限拒否。delete／archive入口がないこと | 反映済み画面で既存受入れ結果との違和感がないこと | delete／archive、配置・通知・実績・請求の新規作成。重複配置は既存Local証拠が有効な限り再実行しない |
+| Employee | 作成、基本情報・国籍・security・資格・保険の編集、在籍／退職表示、終了／復帰、権限拒否。archiveはallowlist空により利用不可であること | 反映済み画面で既存受入れ結果との違和感がないこと | archive成功、allowlist開放、実User／Auth削除、予約・通知・請求dataの生成 |
+
+Customerの参照ありarchive拒否を確認するための参照は、既存の合成dataを安全に利用できる場合は再利用する。新しい予定・実績・請求を作ること自体を受入れ目的にしない。不足する証明がある場合だけ、No.10計画で作成対象と外部作用を明示する。
+
+## 外部作用と終了後の処置
+
+- 住所入力でgeocodingを確認する場合は合成住所だけを用いる。provider接続と関連logが発生し得るため、No.10で合成data・外部作用として明示する前には実行しない。
+- FCM、email、Stripe、PDF、実通知、課金、User／Authentication削除は初回受入れの対象外とする。
+- 区分3はtest用であるため、合成dataを残すことを失敗としない。明確なtest labelを付け、作成IDと処置をreceiptへ記録する。
+- cleanupは製品が提供する終了／復帰／archive等の安全な経路に限定する。OutsourcerやEmployeeを直接削除しない。追加のremote削除・repairが必要なら別承認とする。
+
+## 停止条件と完了条件
+
+次のいずれかがあればNo.10へ進めない、または進行中のreleaseを停止する。
+
+- U8-1〜U8-7が未確認、またはUI変更希望が実装へ未反映である。
+- 必要account、actor、tenantが特定できない、または資格情報共有を必要とする。
+- 合成data作成やgeocoding等の外部作用が承認範囲を超える。
+- No.9で差分、検証証拠、target、required gate、rollback境界を確定できない。
+- No.10のactual target、remote revision、index、Functions、Rules、Hostingが承認計画と一致しない。
+
+No.8のCodex担当部分は、この計画、操作表、担当分離、停止条件を文書gateで確認した時点で完了する。No.8全体はU8-1〜U8-7への利用者回答後に完了とする。区分1の実際の停止通知とNo.10の外部操作承認はNo.10実行開始時、反映済みDevの主観受入れはNo.10後の受入れgateとして追跡する。
+
+## 検証選定
+
+今回証明する事項は受入れ手順と担当境界の具体化、および利用者が指定した4マスター全体のUI確認である。UI確認は機能検証の再実行ではないため、既存Local domain、Emulator、buildを再実行しない。各画面の既存環境とdataを使い、利用者の見た目・操作感の判断に必要な画面遷移だけを行う。UI確認中に保存を伴う機能再確認が必要になった場合は、既存証拠で未証明または変更で失効した事項だけを追加する。
+
+No.8計画確定時は`build-release-deploy`として扱い、最終worktreeで文書変更により失効した`project-docs`と`diff-check`を実行した。`managed-governance`、`project-docs-negative`、`capacity-regression`は各gateの`invalidatedBy`に該当する変更がなかったため、No.6・No.7で確認した既存成功証拠を再利用した。その時点ではremote read、Dev build、deploy、data変更、migration、IAM変更は未実行だった。
+
+No.10のbounded Dev releaseと上記受入れは別の承認済み実行として完了した。今回の受入れ結果追記はrelease手順・baseline・artifact・製品runtimeを変更しない`project-guidance-metadata`であり、文書変更により失効する`project-docs`と`diff-check`を最終状態で再実行する。`managed-governance`、`project-docs-negative`、`capacity-regression`は対象pathと契約を変更しておらず、Dev release時のdomain、Emulator、build、generate証拠もこの文書追記では失効しない。
+
+## 根拠
+
+- [4マスター release surface inventory](master-dev-release-surfaces.md)
+- [Customer状態Local検証](../verification/customer-02-status-local.md)
+- [Customer状態roadmap](../roadmaps/customer-status.md)
+- [Customer archive safety roadmap](../roadmaps/customer-archive-safety.md)
+- [Site roadmap](../roadmaps/site.md)
+- [Outsourcer roadmap](../roadmaps/outsourcer.md)
+- [Employee roadmap](../roadmaps/employee.md)
+- [Dev deployment runbook](../runbooks/dev-deployment.md)
+- [Local UI runbook](../runbooks/local-ui-testing.md)

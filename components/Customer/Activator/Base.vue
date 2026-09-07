@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Customer/Activator/Base.vue
  * @description 取引先の基本情報表示コンポーネント
- * - `CustomerManager` の activator スロット用コンポーネント
+ * - Customer基本情報editorの表示コンポーネント
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useDefaults } from "vuetify";
@@ -17,6 +17,7 @@ const _props = defineProps({
     validator: (value) => value instanceof Customer,
   },
   title: { type: String, default: undefined },
+  editable: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "CustomerActivatorBase");
 const emit = defineEmits(["click:edit"]);
@@ -45,40 +46,23 @@ const items = computed(() => {
     { title: "建物名", props: { subtitle: props.item.building || "-" } },
     { title: "電話番号", props: { subtitle: props.item.tel || "-" } },
     { title: "FAX番号", props: { subtitle: props.item.fax || "-" } },
-    { title: "状態", props: { subtitle: props.item.contractStatus || "-" } },
+    {
+      title: "状態",
+      props: {
+        subtitle: Object.values(Customer.STATUS).find(
+          ({ value }) => value === props.item.contractStatus,
+        )?.title || "不明",
+      },
+    },
   ];
 });
 
-/*****************************************************************************
- * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
- *****************************************************************************/
-defineExpose({
-  includedKeys: [
-    "code",
-    "name",
-    "branchName",
-    "abbreviation",
-    "nameKana",
-    "zipcode",
-    "prefCode",
-    "city",
-    "building",
-    "tel",
-    "fax",
-    "remarks",
-  ],
-});
 </script>
 
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"

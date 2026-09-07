@@ -11,6 +11,7 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
+import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import CustomInput from "@/components/Site/CustomInput/index.vue"; // 新規登録時のカスタム入力コンポーネント
 import CustomInputBase from "@/components/Site/CustomInput/Base.vue"; // 更新時のカスタム入力コンポーネント
 
@@ -23,11 +24,9 @@ defineOptions({ name: "SitesManager", inheritAttrs: false });
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  beforeEdit: { type: Function, default: () => true },
   customInput: { type: Object, default: () => CustomInputBase },
   docs: { type: Array, default: () => [] },
-  handleCreate: { type: Function, default: (item) => item.create(item) },
-  handleUpdate: { type: Function, default: (item) => item.update(item) },
-  handleDelete: { type: Function, default: (item) => item.delete(item) },
 });
 const props = useDefaults(_props, "SitesManager");
 
@@ -35,6 +34,11 @@ const props = useDefaults(_props, "SitesManager");
  * SETUP BASE MANAGER COMPOSABLES
  *****************************************************************************/
 const { attrs } = useBaseManager("SitesManager");
+const { canWrite, isSaving, rejectDirectDelete } = useSiteActions();
+
+function rejectLegacyWrite() {
+  throw new Error("現場の編集は操作別エディターから実行してください。");
+}
 
 /*****************************************************************************
  * METHODS
@@ -48,6 +52,24 @@ function getApplicableCustomInput({ editMode }) {
   if (editMode === "CREATE") return CustomInput;
   return props.customInput;
 }
+
+async function beforeEdit(editMode, item) {
+  if (editMode === "DELETE") return await rejectDirectDelete();
+  if (editMode === "CREATE" || editMode === "UPDATE") rejectLegacyWrite();
+  return await props.beforeEdit(editMode, item);
+}
+
+async function handleDelete() {
+  return await rejectDirectDelete();
+}
+
+function disableSubmit() {
+  return true;
+}
+
+function disableUpdate() {
+  return true;
+}
 </script>
 
 <template>
@@ -55,13 +77,21 @@ function getApplicableCustomInput({ editMode }) {
     v-bind="{ ...$attrs, ...attrs }"
     :model-value="docs"
     :schema="Site"
-    :handle-create="props.handleCreate"
-    :handle-update="props.handleUpdate"
-    :handle-delete="props.handleDelete"
+    :before-edit="beforeEdit"
+    :disable-submit="disableSubmit"
+    :disable-update="disableUpdate"
+    :handle-create="rejectLegacyWrite"
+    :handle-update="rejectLegacyWrite"
+    :handle-delete="handleDelete"
     :custom-input="getApplicableCustomInput"
   >
     <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
-      <slot :name="slotName" v-bind="scope ?? {}"></slot>
+      <slot
+        :name="slotName"
+        v-bind="scope ?? {}"
+        :can-write="canWrite"
+        :is-saving="isSaving"
+      ></slot>
     </template>
   </air-array-manager>
 </template>

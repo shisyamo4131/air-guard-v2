@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-08-25
+- 最終更新日: 2026-09-06
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -364,12 +364,20 @@ SPEC-DEEP-039b追加根拠: `useNotification`はdevelopment時にraw User object
 - 重大度: High
 - 発見セグメント: SPEC-SEG-009、SPEC-DEEP-030
 - 対象ファイル・シンボル: OperationResult Generatorのworker編集、`SiteOperationSchedule.syncToOperationResult`
-- 確認済み実装事実: workerごとのArrangementNotification LEAVED更新は個別保存され、その後のOperationResult createとschedule.operationResultId updateだけが別の同一transactionで実行される。最終transaction失敗時に通知を元状態へ戻す処理はない。SPEC-DEEP-030で、Result createはschedule docIdを指定し、client adapterが存在preconditionなしのtransaction `set`を行うため、schedule linkが欠損・staleでも同一IDの既存Resultを上書きできるsource契約を確認した。developer duplicateも全snapshotをcloneし、同日・既存内容・sourceType/provenance・server専用permissionを検査しない。
-- 想定影響と発生条件: Site/Agreement fetch、OperationResult validation、transaction競合・Rules等で最終確定が失敗すると、配置通知だけがLEAVEDでOperationResult未作成という部分状態が残る。
-- 未確認点・仮説: 現行adapterでnotification更新をOperationResult＋schedule linkと同一transactionへ含められる範囲、sourceType/reason schema、standalone専用permission、既存data migrationは未実装・未確認である。
-- 推奨する将来対応: 3pathを実装する。(1) schedule＋notificationsは可能な範囲でOperationResult作成、schedule.operationResultId、既存notification LEAVEDを同一transactionにしpushしない。(2) scheduleのみはnotificationを作らずOperationResult＋schedule linkをatomic化し、入力優先・欠損schedule fallback・no-notification sourceを記録する。(3) standaloneはOperationResultのみでreason/sourceTypeを記録する。scheduleId/sourceTypeをoptionalにし、schedule重複防止、standalone専用permission/audit、missing notification非error、存在するnotificationだけ更新を強制する。
-- 必要なテスト: 3path、notification 0/1/複数、pushなし、入力優先/fallback、optional scheduleId/sourceType、schedule重複拒否、既存同一ID・stale link時の非上書き、standalone/duplicate permission・provenance・audit、transaction abort/retry、missing notification非error。
+- 確認済み実装事実: workerごとのArrangementNotification LEAVED更新は個別保存され、その後のOperationResult createとschedule.operationResultId updateだけが別の同一transactionで実行される。最終transaction失敗時に通知を元状態へ戻す処理はない。SPEC-DEEP-030で、Result createはschedule docIdを指定し、client adapterが存在preconditionなしのtransaction `set`を行うため、schedule linkが欠損・staleでも同一IDの既存Resultを上書きできるsource契約を確認した。developer duplicateも全snapshotをcloneし、同日・既存内容・sourceType/provenance・server専用permissionを検査しない。2026-08-31に利用者がDEVで上下番確定を実行し、OperationResult登録は成功した一方、処理時に「予期しないエラー」趣旨のSnackbarを観測した。同時にFcmTokens登録の403 permission-denied、SecurityReports thumbnailの404、Chrome message channel errorも観測されたが、いずれも上下番確定errorとの因果関係は未確認である。
+- 想定影響と発生条件: Site/Agreement fetch、OperationResult validation、transaction競合・Rules等で最終確定が失敗すると、配置通知だけがLEAVEDでOperationResult未作成という部分状態が残る。反対に、別のruntime経路または後段処理でOperationResult作成後に通知・画面処理だけが失敗する場合、実績は存在するのに利用者へ全体失敗と見える部分成功も起こり得る。2026-08-31のDEV観測がどちらの経路かは未確定である。
+- 未確認点・仮説: DEV観測ではArrangementNotificationの実際のstatus、SiteOperationSchedule link、Snackbarの発生元を照合していない。関連通知をLEAVEDへ更新する処理の一部失敗、await漏れ、例外がglobal error処理だけへ渡る経路は調査仮説であり、原因とは断定しない。FcmTokens 403、SecurityReports 404、Chrome message channel errorは同時刻の別事象である可能性を維持する。現行adapterでnotification更新をOperationResult＋schedule linkと同一transactionへ含められる範囲、sourceType/reason schema、standalone専用permission、既存data migrationも未実装・未確認である。
+- 推奨する将来対応: 次回の上下番確定改修時に、「上下番を確定する」buttonからOperationResult作成、SiteOperationSchedule link更新、対象ArrangementNotification全件のLEAVED更新、成功・失敗Snackbarまでの実行経路とawaitを追跡し、例外の発生箇所をresource別に識別する。3pathを実装する。(1) schedule＋notificationsは可能な範囲でOperationResult作成、schedule.operationResultId、既存notification LEAVEDを同一transactionにしpushしない。(2) scheduleのみはnotificationを作らずOperationResult＋schedule linkをatomic化し、入力優先・欠損schedule fallback・no-notification sourceを記録する。(3) standaloneはOperationResultのみでreason/sourceTypeを記録する。scheduleId/sourceTypeをoptionalにし、schedule重複防止、standalone専用permission/audit、missing notification非error、存在するnotificationだけ更新を強制する。transaction化できない作用は、部分成功を誤って全体失敗と表示せず、失敗resourceを識別できるlogまたは利用者向けmessageと再開手順を持たせる。FcmTokens登録失敗は上下番確定の成否・Snackbarから分離する。
+- 必要なテスト: buttonからOperationResult・schedule link・notificationまでの正常経路、3path、notification 0/1/複数、全件LEAVED、既にLEAVED、通知なしworker、一部更新失敗、pushなし、入力優先/fallback、optional scheduleId/sourceType、schedule重複拒否、既存同一ID・stale link時の非上書き、standalone/duplicate permission・provenance・audit、transaction abort/retry、missing notification非error、同じ操作の再実行、各段階の失敗注入、成功時Snackbarなし、失敗resourceを区別するmessage/log、FcmTokens 403が確定成否とSnackbarへ影響しないこと。
 - ユーザー判断が必要な事項: 具体的sourceType語彙、standalone permission名、audit保持等の実装詳細。3path契約は2026-08-11に確認済み。
+
+### 2026-09-04 DEV再観測delta
+
+- 利用者がDEVで上下番確定を再度実行し、最初のclickで不明なerrorを示す趣旨のSnackbarを観測した。同時にFcmTokens登録のHTTP 403 permission-denied、SecurityReports thumbnailのHTTP 404、deprecated warningがあったが、上下番確定との因果関係、今回のOperationResult・schedule link・通知状態、Snackbar発生元は未確認である。
+- 静的照合では、上下番確定の最終処理からFCM登録を直接呼んでいない。session初期化中のFCM登録失敗はcatch後に共通のglobal error通知へ渡り得るため同じSnackbarとなる可能性がある一方、thumbnail取得失敗はcatchされて元画像へfallbackし、確認した経路ではglobal error通知へ直接渡らない。いずれも今回のruntime原因の確定ではない。
+- 新規FUTは作らず、次回の上下番確定改修でFUT-0027の実行経路、部分成功、再実行、resource別error識別、FCM失敗との通知分離を確認する。詳細は[2026-09-04 DEV再観測](operation-result-generation.md#2026-09-04-dev再観測原因未確定)を参照する。機密値や環境・dataの識別情報、raw logは保持しない。
+
+DEV観測記録には共有logのFCM token、認証情報、実利用者・会社・現場・作業員を特定する値を転記しない。再現testは合成dataを使用する。
 
 SPEC-DEEP-041追加根拠: developer duplicateのdomain APIは複数日と同日重複を許し、各Resultをrandom IDで同一transactionへcreateする。`beforeCreate`はSiteをtransaction外で再fetchして現在のcustomer/agreementを再適用するため、複製元snapshotの保持、Site変更とのread consistency、同日同内容重複を保証しない。
 
@@ -752,25 +760,25 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-020、SPEC-DEEP-021
 - 対象ファイル・シンボル: schemas `Customer.tokenFields`、`Customer/Autocomplete.vue`、`Customers/{DataTable,Iterator}/index.vue`、`Site/CustomInput/index.vue`
-- 確認済み実装事実: code/name等の一意性検証はなく、一覧はACTIVE限定だがAutocompleteのN-gram検索にはstatus constraintがない。検索tokenはname/nameKanaだけである。SPEC-DEEP-021で、Site create wizardがCustomer候補選択用に渡す`modelValue`/`show-select`/`select-strategy`をCustomersIteratorが内部iteratorへforwardしないことも確認した。
-- 想定影響と発生条件: 重複Customer作成、TERMINATED Customerの新規参照選択、codeや略称で検索できない運用差が起き得る。
+- 確認済み実装事実: code/name等の一意性検証はなく、AutocompleteのN-gram検索にはstatus constraintがない。検索tokenはname/nameKanaだけである。旧一覧にはACTIVE条件の記述があったがadapter引数不一致が判明しており、実際の絞込み成功は未確認。現在の一覧は[Customer master](customer-master.md)を参照。SPEC-DEEP-021で、Site create wizardがCustomer候補選択用に渡す`modelValue`/`show-select`/`select-strategy`をCustomersIteratorが内部iteratorへforwardしないことも確認した。
+- 想定影響と発生条件: 重複Customer作成、codeや略称で検索できない運用差が起き得る。TERMINATEDを選択できること自体は[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)による現在の方針と矛盾せず、不具合として扱わない。
 - 未確認点・仮説: normalized address/phoneを含む類似検索の実現可能性、index数・query cost・privacy、warning閾値は未確認である。
-- 推奨する将来対応: 任意codeをtenant内uniqueにし、name hard uniqueは設けない。normalized name/kana/address/phoneの類似候補をwarning表示して同名作成を許す。新規選択はACTIVE限定、履歴はTERMINATED表示、再利用前reactivateとする。検索はcode/name/kana/phoneを先行し、addressはprivacy/cost確認後に判断する。
-- 必要なテスト: 同一/空code、同名許可、name/kana/address/phone類似warning、false positive/negative、ACTIVE新規選択、TERMINATED履歴、reactivate、cache後status変更、Site createの既存Customer single select/v-model、tenant分離、index/cost。
+- 推奨する将来対応: 任意codeをtenant内uniqueにし、name hard uniqueは設けない。normalized name/kana/address/phoneの類似候補をwarning表示して同名作成を許す。検索はcode/name/kana/phoneを先行し、addressはprivacy/cost確認後に判断する。状態に基づく選択制限は実装しない。状態の正本は[現行仕様](../specification.md#取引先現場取極め)を参照。
+- 必要なテスト: 同一/空code、同名許可、name/kana/address/phone類似warning、false positive/negative、両statusの選択と履歴表示、cache後status変更、Site createの既存Customer single select/v-model、tenant分離、index/cost。
 - ユーザー判断が必要な事項: warning閾値とaddress検索採否は実現可能性・privacy・cost検証後に決定する。基本方針は2026-08-11に確認済み。
 
-## FUT-0057 Customer archiveと参照整合・復元を設計する
+## FUT-0057 Customer archiveと参照整合・復元を実装する
 
-- 状態: Open
+- 状態: In progress（CAS-02/03/04 local完了・CAS-05 deferred）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-020
-- 対象ファイル・シンボル: schemas `Customer.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Customers Rules
-- 確認済み実装事実: 削除guardはSite参照だけをtransaction外queryで確認し、元documentをarchiveへcopyして削除する。関連Siteがあればstatusに関係なく拒否する。restore APIはあるがCustomer UI経路は見つからない。
-- 想定影響と発生条件: child確認後の競合、見えない非ACTIVE Siteによる削除拒否、Site以外の参照残存、archive後のmaster取得失敗が起き得る。
+- 対象ファイル・シンボル: 専用`archiveCustomer` Callable/use-case、Customer詳細UI、Customers/Sites/OperationResults/Billings Rules、Billing server writer
+- 確認済み実装事実: CAS-02の専用Callableは一つのtransactionでSites・OperationResults・Billingsをstatus限定なしに確認し、version 1 audit envelopeをsame-ID archiveへ作成する。CAS-03はarchive client read/CUD、same-ID Customer create、新規Customer参照をRulesで拒否し、Billing server create/moveも同一transaction内でCustomer存在を確認する。CAS-04はCustomer詳細にwrite actor限定、確認・理由・single-flight・安全なerror表示を持つarchive入口を追加し、[local受入れ](../verification/customer-archive-local-acceptance.md)を完了した。いずれもlocal未deployで、restore製品経路はない。
+- 想定影響と発生条件: local UIから専用archiveを開始できるが、Devへ未反映である。将来restore・運営者inspection・保持を実装する場合はactive/archive同ID衝突、監査、参照整合を同じ境界で維持する必要がある。
 - 未確認点・仮説: 全参照catalog、法令・契約上の保持期間、運営者inspection/restore API、既存archive dataへのmetadata migrationは未実装・未確認である。
-- 推奨する将来対応: 通常終了はTERMINATED、再開は`customers:write`によるACTIVE化とする。archiveは参照なし確認後の誤登録・重複だけに限定しreason/actor/timeを保存する。通常User restoreと物理delete UIを禁止する。運営者は依頼に基づきarchiveを監査付き閲覧でき、restoreは通常UIから隔離した緊急processでreason/audit必須、active同ID存在時は拒否する。保持要件確定まで自動purgeしない。
-- 必要なテスト: terminate/reactivate、参照ありarchive拒否、同時参照作成、reason/actor/time、通常User archive閲覧/restore拒否、運営者inspection、緊急restore、active同ID拒否、物理delete UI不存在、保持/purge未設定。
-- ユーザー判断が必要な事項: 法令・契約に基づく保持期間・purge。archive/restore運用方針は2026-08-11に確認済み。
+- 推奨する将来対応: CAS-05でCAS-02/03/04のCallable、transaction、3参照barrier、same-ID tombstone、client非公開、専用UIをbounded Devへ反映・受入れする。generic delete/restoreと追加lock collectionは使わず、restore・operator inspection・retention/purgeは別仕様のまま残す。
+- 必要なテスト: CAS-02/03のactor/tenant/input、3参照、競合、監査、idempotency、archive read/CUD、same-ID create、generic delete/restore非到達と、CAS-04のwrite actor表示、read-only非表示、確認・取消、参照あり拒否、二重送信、成功後一覧、active不存在、console error増分0はlocal検証済み。CAS-05のDev権限別受入れは未実施である。
+- ユーザー判断が必要な事項: 将来の法令・契約に基づく保持期間・operator inspection/restore。Customer archiveのCAS-04 local UI範囲は2026-09-04に承認済みで、Dev反映・受入れは別承認である。
 
 ## FUT-0058 Customer変更時の請求snapshot境界を確定する
 
@@ -793,22 +801,22 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 対象ファイル・シンボル: `Customer/Activator/{Base,Payment}.vue`、`Employee/Activator/Base.vue`、schemas `Customer`、`Site`、`Employee`、`GeocodableMixin`
 - 確認済み実装事実: Customerの必須addressとcontractStatusは詳細編集includedKeysにない。SPEC-DEEP-021でBasic/Payment Activatorがpermission/disabled/loadingを自身で判定せず常時edit iconを出すことを確認した。SPEC-DEEP-025でEmployee Baseもrequired addressを表示する一方でincludedKeysへ含めず、detail editorから番地を変更できないことを確認した。Customer、Site、Employeeが共有する住所geocodingは、未注入・失敗時にlocation=nullで保存を継続し、lat/lngのtruthy判定は0座標を欠損扱いする。
 - 想定影響と発生条件: 番地訂正や契約終了/再有効化が画面から行えず、住所変更時に座標だけ失われても保存成功として扱われる。
-- 未確認点・仮説: status変更UI・auditの実装、座標欠損を許容する業務条件は未確認。
-- 推奨する将来対応: 契約終了・停止はTERMINATED、`customers:write`による再開はACTIVEとしてUI・auditを実装する。誤登録・重複archiveとは分離する。address編集、geocoding失敗表示、0を含む座標validationも見直す。
+- 未確認点・仮説: 状態表示・編集の実装とlocal検証は今回のCustomerフェーズで扱う。座標欠損を許容する業務条件は別課題。
+- 推奨する将来対応: 状態表示・編集は[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)に従い、誤登録・重複archiveとは分離する。状態専用auditの追加は行わない。address編集、geocoding失敗表示、0を含む座標validationの残課題は今回へ広げず別途扱う。
 - 必要なテスト: 番地編集、住所各field変更、geocoder未注入/失敗/0座標、terminate/reactivate、保存後表示。
 - ユーザー判断が必要な事項: なし。status/archive使い分けは2026-08-11に確認済み。geocoding境界は実装・検証事項として残す。
 
 ## FUT-0060 Site CRUD・statusの暫定権限を正式化する
 
-- 状態: Open
+- 状態: Completed
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: `utils/pageSettings.js` sites routes、`pages/sites/**`、`components/Site/**`、Sites Rules
-- 確認済み実装事実: `sites:read`で作成、全編集、取極め変更、終了、archiveへ到達し、Rulesは同一会社User/super-userに全field writeを許す。SPEC-DEEP-010で6種のSite side effectにpage側write guardがなく、ACTIVE一覧・TERMINATED検索の双方から同じ詳細へ到達することを確認した。SPEC-DEEP-034ではSite Manager/Activator/Autocompleteがpermission・statusを検査せずedit/create入口を公開し、Air managerもdisabledを操作guardとして強制しないことを確認した。
-- 想定影響と発生条件: 閲覧利用者が配置・請求の基礎masterや取極めを改変・削除できる可能性がある。
-- 未確認点・仮説: role presetの具体的な割当、Callableのactor/field検証、archive監査schema、operator緊急restoreの実装方式は未確認。
-- 推奨する将来対応: `sites:read`/`sites:write`の2権限を実装し、writeへ作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含める。archiveは理由・監査必須、通常restoreは禁止し、operator緊急restoreを通常UIから分離する。route/button/Rules/Callable/role presetを一致させる。
-- 必要なテスト: read/write別route/button/直接write、他社path、Customer/Agreement変更、terminate/reactivate/archive、通常restore拒否、operator緊急restore監査。
+- 確認済み実装事実: SITE-02で、現在存在する作成、基本情報・Customer・Agreement変更、終了を会社管理者またはstrict role preset由来の`sites:write`へ限定した。UIに加えて送信直前にcurrent Auth/live Userを再評価し、同一client module内の二重送信を拒否する。Rulesも同じactor matrixを強制し、Site deleteと`Sites_archive` client CUDを拒否した。再有効化と安全な専用archiveは未実装であり、FUT-0062/0063で同じ境界を適用する。
+- 解消した影響: 閲覧利用者が配置・請求の基礎masterや取極めを改変・削除できた境界を、UI・送信直前policy・Rulesで拒否した。
+- 未確認点・仮説: 実利用actorと旧clientのDev互換、未実装の再有効化・archive Callable、operator緊急restoreの実装方式は未確認。
+- 完了内容: `sites:read` routeを維持し、現在存在するwriteをstrict `sites:write`へ限定した。direct permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにし、generic delete/restoreをSite UIから非到達にした。専用archive、通常restore不在、再有効化は各後続FUTの完了条件とする。
+- 必要なテスト: 完了済み範囲ではactor matrix、UI source契約、送信直前policy、single-flight、Site/Sites_archive Rules、Customer参照回帰をdomain/Emulatorで確認した。reactivate/archive固有testはFUT-0062/0063で行う。
 - ユーザー判断が必要な事項: なし。CONF-0046で方針確定済み。
 
 ## FUT-0061 SiteとCustomerの所属・埋込み整合を保証する
@@ -817,89 +825,89 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-002、SPEC-DEEP-034、SCHEMA-MASTER-001
 - 対象ファイル・シンボル: schemas `Site.customerId/customer/beforeUpdate`、`SiteActivatorCustomer`、`SiteManager`、Customer→Site同期
-- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能で、詳細UIもcustomerId editorを常時公開する。一覧はlive Customer、詳細等は埋込みCustomerを使う。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播するが、複数batchはatomicでなくevent version guardもない。現行仕様は過去請求整合のためSite Customer変更を禁止する一方、CONF-0047には変更許可の回答履歴があり、正本と台帳が衝突している。
-- 想定影響と発生条件: 現行UI/sourceでA→B変更すると仕様に違反し、schedule/result/billingが異なる所属・条件を保持し得る。通常Customer更新でもout-of-order/partial batchにより同じSiteの取引先表示・締条件が画面別に不一致となり得る。
-- 未確認点・仮説: 既存A→B変更data、古いCustomer eventの順序逆転、partial batch件数、正本仕様を変更する正式承認は未確認。
-- 推奨する将来対応: 現行仕様を優先し、仮登録の初回Customer設定後はcustomerId変更・unsetをRules/server/schema/UIで拒否する。Customer masterから埋込みsnapshotへの同期はsource revisionを持つ収束可能な処理とし、失敗を監視・再実行する。将来Customer移管を採用する場合は、先に仕様・ADR・migration・Billing影響・rollbackを正式変更する。
-- 必要なテスト: 仮登録→初回設定、A→B/unset直接write拒否、同Customer master更新、out-of-order/replay、300件境界、partial failure/reconcile、一覧/詳細整合、既存違反data検出。
-- ユーザー判断が必要な事項: CONF-0047の回答履歴と現行仕様のどちらを将来正本とするかはrepository conflictである。変更指示がない限り現行仕様の変更禁止を適用する。
+- 確認済み実装事実: customerId設定後のunsetは禁止するが別Customerへの変更は可能で、詳細UIもcustomerId editorを常時公開する。一覧はlive Customer、詳細等は埋込みCustomerを使う。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへ埋込みCustomerを300件batchで伝播するが、複数batchはatomicでなくevent version guardもない。2026-09-04に別Customerへの変更を許可する仕様を正本へ反映した。
+- 想定影響と発生条件: A→B変更後も既存OperationResult・Billingは履歴snapshotとして旧customerIdを保持する。これは確定仕様であり自動移管しない。通常Customer更新ではout-of-order/partial batchにより同じSiteの取引先表示・締条件が画面別に不一致となり得る。
+- 未確認点・仮説: 古いCustomer eventの順序逆転、partial batch件数、埋込みCustomerの不一致が実際に発生しているかは未確認。
+- 推奨する将来対応: A→B変更時は同じ会社に存在するCustomerだけを許可し、Siteの埋込みcustomerを更新する。既存実績へCustomer・Agreementを再適用する必要が生じた場合は、対象、変更前後、Billing影響、発行済み請求書の除外、actor・reasonを持つ明示操作として設計する。Customer masterから埋込みsnapshotへの同期はsource revisionを持つ収束可能な処理とし、失敗を監視・再実行する。
+- 必要なテスト: 仮登録→初回設定、A→存在するB、A→missing/archive/他社Customer拒否、unset拒否、既存OperationResult・Billing不変、同Customer master更新、out-of-order/replay、300件境界、partial failure/reconcile、一覧/詳細整合。
+- ユーザー判断が必要な事項: Customer変更可否は2026-09-04に確定済み。既存実績へCustomer・Agreementを再適用する明示操作の要否と詳細は、実需要が生じた時点で別途判断する。
 
 ## FUT-0062 Site status lifecycleと検索・編集境界を統一する
 
-- 状態: Open
+- 状態: In progress
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: schemas `Site.terminate`、`pages/sites/terminated.vue`、`SiteAutocomplete.vue`、`pages/sites/[id].vue`
 - 確認済み実装事実: terminateは当日以降scheduleだけを阻止する。TERMINATEDもAutocomplete候補となり、詳細で編集・取引先変更・取極め変更・削除・再終了UIが表示される。再有効化経路はない。SPEC-DEEP-010で終了検索にloading/error/request sequenceがなく、連続検索responseの逆転防止もないことを確認した。SPEC-DEEP-034ではAutocomplete wrapper自体にもstatus constraintがなく、基本情報cardの工期片端欠損時に`null`文字列を表示することを確認した。
-- 想定影響と発生条件: 終了Siteへの新規紐付けや終了後master改変、誤終了から回復不能、再終了errorが発生し得る。
-- 未確認点・仮説: 限定訂正を許すfieldと監査schema、Agreementを再開時にどう選び直すかは実装設計未確認。
-- 推奨する将来対応: TERMINATEDをread-only・新規選択不可とし、履歴表示と限定された監査付き訂正だけを許す。同一Customerでの再有効化は`sites:write`と理由を必須とする。Customer変更時はFUT-0061の方針を使い、Agreementは自動再有効化しない。archiveは誤登録等だけ、通常restoreは禁止する。
-- 必要なテスト: ACTIVE→TERMINATED、検索/選択除外、履歴表示、一般編集拒否、限定訂正監査、同一Customer再有効化、Customer変更、Agreement非自動復帰、archive/restore拒否。
-- ユーザー判断が必要な事項: なし。CONF-0048で方針確定済み。
+- 想定影響と発生条件: 終了statusを表示せず候補へ混在させると類似名称を誤選択し、反対に一律除外すると残工事のため重複Site作成または不要な再有効化が起き得る。終了後master改変と継続再開を分けない場合も意図しない現在値変更となる。
+- 未確認点・仮説: 限定訂正を許すfieldと正確な遷移metadata shape、候補rendererの識別情報は実装設計で全caller確認が必要である。
+- 推奨する将来対応: ADR 0054に従い、TERMINATEDの通常master編集を制限しつつ、終了済みChip・識別情報・確認付きで新規業務へ選択可能にする。選択だけでは再有効化せず、単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`・reason・新工期で扱う。Customer・Agreement・既存下流dataを自動変更せず、archiveは誤登録等だけ、通常restoreは禁止する。
+- 必要なテスト: ACTIVE→TERMINATED、候補group・Chip・識別情報、終了済み選択確認、単発残工事、一般master編集拒否、限定訂正、strict actor・reason・新工期による再有効化、Customer変更境界、Agreement非自動復帰、archive/restore拒否。
+- ユーザー判断が必要な事項: なし。CONF-0048の新規選択不可はCONF-0135でsupersedeされ、ADR 0054で方針確定済み。
 
 ## FUT-0063 Site archiveと参照guardを競合安全にする
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.hasMany/logicalDelete`、client adapter `hasChild/delete/restore`、Site delete UI
 - 確認済み実装事実: schedule/result/arrangement notificationだけをtransaction外queryで確認してarchiveする。adapterにrestore APIがあるがUIは復元不能と表示し、restore入口はない。
 - 想定影響と発生条件: 確認後の新規参照とのrace、guard外参照の孤立、誤削除時の運用不能、説明と実装の不一致が起き得る。
-- 未確認点・仮説: 全参照集合、保持期間、restore主体、終了とarchiveの使い分けは未決定。
-- 推奨する将来対応: 参照policyを確定し、server transaction/lock等の競合安全な削除へ移し、UI説明とrestore運用を揃える。
-- 必要なテスト: 各hasMany、guard外参照、同時参照作成、archive/restore、欠損Siteを読む下流。
-- ユーザー判断が必要な事項: CONF-0049。
+- 未確認点・仮説: 実装前inventoryで確定する全参照集合、各writerでlive Site存在を同じatomic boundaryへ強制できるか、既存archiveの実data状態は未確認。
+- 推奨する将来対応: ADR 0051に従い、誤登録・重複だけを対象とする専用`archiveSite` Callable、全業務参照の同一transaction確認、全参照writerのlive Site存在barrier、version付き監査snapshotと冪等性を実装する。generic delete／restoreと物理deleteは使用せず、全barrierが揃うまでarchiveを有効化しない。
+- 必要なテスト: actor matrix、ACTIVE／TERMINATED、各hasManyとguard外参照、same-ID archive、同時参照作成、同一／別operation再試行、generic delete／restore非到達、欠損Siteを読む下流。
+- ユーザー判断が必要な事項: なし。CONF-0049とADR 0051で通常終了、誤登録archive、通常restore、保持の方針は確定済み。緊急restore、保持期限、削除・匿名化が必要になった場合は別checkpointで判断する。
 
 ## FUT-0064 Site変更時の下流snapshot/live境界を確定する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-021
 - 対象ファイル・シンボル: schemas `Site.getValidAgreement`、OperationResult site同期、Billing PDF Site取得
 - 確認済み実装事実: OperationResultは作成等の時点でcustomerId/agreementを保存する一方、PDFのSite名は生成時live masterを使う。Site内Customerはさらに別時点の埋込みである。
 - 想定影響と発生条件: Site名、Customer、取極め変更後に過去実績・請求の保存値と再生成帳票が異なる時点を表す。
-- 未確認点・仮説: 監査上固定すべきfield、訂正・再発行・移管手続きは未決定。
-- 推奨する将来対応: field別snapshot時点とrevision policyを仕様化し、欠損/archived master時も再現可能にする。
-- 必要なテスト: Site名/Customer/Agreement変更前後、既存result/billing、PDF再生成、archive/missing master。
-- ユーザー判断が必要な事項: CONF-0050。
+- 未確認点・仮説: transaction側へ追加する正確なsnapshot field shape、請求確定・revisionの現行実装との差、legacy document件数と正しい過去値の復元可能性は未確認。
+- 推奨する将来対応: ADR 0052に従い、予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使用する。既存実績・請求をSite master変更で更新せず、legacy欠損値を現在値で推測backfillしない。正確なfield、writer、Rules、互換readerはtransaction側の承認済みcheckpointで実装する。
+- 必要なテスト: Site名・Customer・住所・警備種別・Agreement変更前後、予定live反映、既存／新規result、draft／確定Billing、PDF再生成、revision、archive／missing master、legacy欠損。
+- ユーザー判断が必要な事項: なし。CONF-0050とADR 0052で時点は確定済み。正確なdata shape、Billing確定lifecycle、migrationが必要になった場合はtransaction側checkpointで別途判断する。
 ## FUT-0065 Agreement編集権限とRules validationを正式化する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `pages/sites/[id].vue` AgreementsManager、Sites Rules、schemas `Site.agreementsV2`
 - 確認済み実装事実: `sites:read`で取極めの作成・更新・削除へ到達し、Rulesは同一会社UserにagreementsV2を含むSite全field writeを許す。SPEC-DEEP-013で、`AgreementsManager`自身にもpermission/field allowlistがなく、callerのSite/Company document全体updateへ委譲することを再確認した。
 - 想定影響と発生条件: 閲覧利用者が請求単価・時間・締日を変更し、将来の実績・請求額へ影響できる。
-- 未確認点・仮説: 取極め編集の正式role、承認workflow、field別権限は未決定。
-- 推奨する将来対応: 取極め専用権限とserver/Rules validation、必要なら承認・監査履歴を設計する。
+- 未確認点・仮説: actorはADR 0053で確定した。現行role presetの具体的保持状況と実dataは未確認。
+- 推奨する将来対応: 会社管理者またはstrict role preset由来の`sites:write`だけをUI・送信直前policy・Rulesまたは専用Callableで許可し、取極め専用permissionと承認workflowは設けない。
 - 必要なテスト: role別UI/直接write、他社Site、field改変、同時編集。
-- ユーザー判断が必要な事項: CONF-0051。
+- ユーザー判断が必要な事項: なし。CONF-0051は2026-09-05回答済み。
 
 ## FUT-0066 Agreementの単価・時間・締日validationを確定する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: schemas `AgreementV2/RateSet/WorkTimeBase`、Agreement Input
 - 確認済み実装事実: 単価はdefault 0かつrequiredだがAgreement固有の負数・上限・精度validationがない。休憩・規定実働は負数のみ拒否し、勤務区間との相互上限を強制しない。SPEC-DEEP-013では0円をListItemが`-`表示する一方、Tableは欠損enum/rate/priceでthrowし得る表示差も確認した。
 - 想定影響と発生条件: 負単価、極端な単価・時間、0円、休憩超過等が保存されると請求額が負・過大・意図せず0になり得る。
-- 未確認点・仮説: 値引き目的の負単価、0円取極め、丸め精度、長時間勤務の正式許容範囲は未決定。
-- 推奨する将来対応: field別範囲・精度・警告/拒否とserver validationを仕様化する。
+- 未確認点・仮説: 許容範囲はADR 0053で確定した。既存dataに範囲外値があるかはDev/remoteの別承認まで未確認。
+- 推奨する将来対応: 全単価0〜10,000,000円の整数、休憩・規定実働0〜1,440分の整数、休憩≦勤務区間、締日`0/5/10/15/20/25`を全永続化入口で強制する。0円は欠損にせず保存前警告付きで許可する。
 - 必要なテスト: 負/0/小数/最大値、休憩>勤務、規定実働>勤務、日跨ぎ、4曜日一括入力。
-- ユーザー判断が必要な事項: CONF-0052。
+- ユーザー判断が必要な事項: なし。CONF-0052は2026-09-05回答済み。
 
 ## FUT-0067 適用済みAgreementのrevision・削除policyを決める
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `AgreementsManager` array CRUD、schemas `Site.agreementsV2/key`
 - 確認済み実装事実: 過去日Agreementも直接更新・配列削除でき、status/archive/revision/参照guardがない。既存OperationResultは古いsnapshotを保持する。SPEC-DEEP-013ではcomponent自身に保存中single-flight/rollbackがなく、viewerの配列短縮・shift変更時にcurrent indexが範囲外へ残り得ることも確認した。
 - 想定影響と発生条件: master履歴と過去実績の単価・締日が不一致となり、いつ誰が訂正したか追えない。
-- 未確認点・仮説: 過去取極め訂正、適用済みlock、取消・改定、監査保持要件は未決定。
-- 推奨する将来対応: 適用開始型revision、訂正履歴、削除制限、利用中参照の扱いを仕様化する。
+- 未確認点・仮説: masterの編集・削除と専用履歴なしはADR 0053で確定した。既存OperationResultの明示訂正operation詳細はtransaction側の別checkpointに残る。
+- 推奨する将来対応: 適用済みmasterも許可actorが編集・削除できるようにし、既存OperationResult snapshotを不変に保つ。変更は将来作成または明示的に再適用する実績だけへ反映し、専用revision・before/after履歴・変更理由・監査collectionは追加しない。
 - 必要なテスト: 過去/現在/未来Agreement編集削除、snapshot済み/未確定result、copy改定、同時編集。
-- ユーザー判断が必要な事項: CONF-0053。
+- ユーザー判断が必要な事項: なし。CONF-0053は2026-09-05回答済み。
 
 ## FUT-0068 Agreement snapshotと再適用境界を明示・検証する
 
@@ -954,6 +962,8 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 SPEC-DEEP-039b追加根拠: caller不在の旧`useSiteOrderManager`もCompany配列を先に全置換してerrorを吸収し、replacement arrayはinitialize時のadd/change/remove helperをsubscription再初期化まで失う。
 
+2026-09-04訂正delta: FUT-0071の「Companyの表示順更新は配列全体をinstanceへ先に代入し、失敗時rollback・例外再throwがない」という記述は、旧actionを確認した時点の履歴であり、現在の`useSiteShiftTypeOrderActions`には当てはまらない。現在のactionはlive Companyを先行変更せず、専用Callableをawaitし、失敗を再throwし、`isSaving`で同一client内のsingle-flightを行う。Callable成功後にlive Companyから削除対象が消えるまで待つ状態、別client同時変更に対するrevision/precondition、重複・欠損entryの正規化は未解決または今回の照合で解消を確認していない。行削除の表示gapと再操作riskの実行計画は[提案中の専用roadmap](../roadmaps/arrangement-row-removal-ux.md)へ分離する。
+
 SPEC-DEEP-040追加根拠: `siteShiftTypeOrder/useSiteShiftTypeOrderActions.js` もCompanyのorder配列をremote update前に直接変更し、失敗をloggerへ渡して吸収する。rollback・最新値再取得・callerへの失敗結果がない。
 
 SPEC-DEEP-043追加根拠: order data layerは未知typeを空配列へ畳み込み、保存済み重複/invalid entryを保持したままmissing `SiteOrder` instanceを末尾へ連結する。plain objectとinstanceが混在し、Site fetch失敗・削除Site・重複keyを正規化しない。
@@ -986,6 +996,8 @@ SPEC-DEEP-043追加根拠: order data layerは未知typeを空配列へ畳み込
 
 SPEC-DEEP-040追加根拠: application schedule actionsはnotify/update/bulk updateのerrorをloggerへ渡して吸収する。normalizeはtransaction前にschedule instanceを変更するため、remote failure時もlocal objectへ変更が残り得る。
 
+2026-09-05利用者判断: 現行riskを認識したうえで、マスタ管理機能の一連の改修が終わるまでは本項を含むtransaction系の要改修箇所を実装せず、記録だけに留める。マスタ改修中の波及変更はFirestore更新に関係しない互換修正に限定し、配置管理のclient direct writeをServer APIへ移行しない。将来移行する場合は楽観的更新、失敗時rollback、正本再取得、error表示、再試行導線を一体で設計する。
+
 ## FUT-0074 Schedule複製・過去変更・worker充足validationを確定する
 
 - 状態: Needs decision
@@ -1002,6 +1014,12 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0075 Employee個人情報の閲覧・編集権限を最小化する
 
+EMP-07分類（2026-09-07）: 現行Employee scopeでは、ADR 0058で採用した会社管理者・既知6業務roleの全項目read、roleなし等の拒否、会社管理者・統括・人事だけの操作別write、原本/archiveの直接client CUD拒否をEMP-02〜06で実装・検証した。項目別mask、法的保持・監査制度の追加判断は将来scopeであり、EMP-08のLocal統合を妨げない。本FUT全体の状態は将来判断を残すため変更しない。
+
+最新判断: [ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)により、会社管理者・既知6業務roleには現時点で全項目readを許可する。以下の項目最小化の提案はこの範囲で置き換え、項目限定API・DTOは今回追加しない。roleなし等の拒否、操作別write、既存archiveの境界は未実装の必須対象として維持する。
+
+EMP-01再照合（2026-09-06）: 下の初期調査時点からUWBが進み、現在は同社の有効な本登録Userというidentity境界、退職3field保護、Employee delete拒否がある。ただし通常fieldとarchiveの過剰アクセスは残り、archiveは個別matchだけでなく汎用許可の除外も必要。[現経路](employee-master.md#現行経路の再照合)と[CONF-0061案](pending-confirmations.md#conf-0061-employee個人情報の閲覧編集保持権限)を参照する。対象のread/write保護はEmployee改修の必須条件であり、独立課題として後続送りしない。runtime/remoteは未確認。
+
 - 状態: Needs decision
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-024、SPEC-SEG-051、SPEC-DEEP-025、SPEC-DEEP-027
@@ -1016,6 +1034,10 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0076 Employee/User 1対1と退職・削除cleanupを保証する
 
+EMP-07分類（2026-09-07）: 現在の通常経路はEmployee予約を正本にした0/1関係、専用退職・訂正、Auth削除intent/reconcileを使用し、旧`onEmployeeDeleted`は無作用である。Employee archiveもUser/Authを連鎖削除しない。既存Dev dataの予約欠損・重複・Auth状態はEMP-09の別承認確認であり、Local統合を止める未修正経路は確認しなかった。本FUTはremote/既存data条件を残すためOpenを維持する。
+
+EMP-01再照合（2026-09-06）: 下の先頭query/一意制約なしの説明はUWB前の経路の履歴として扱う。現通常UIは予約pointerを正本にする専用User/退職/訂正を使い、Employeeの通常deleteは拒否される。旧model methodとonEmployeeDeleted triggerの残存は、現UIでの同じ脆弱経路の存在を意味しない。[現経路](employee-master.md#現行経路の再照合)をEmployee側の維持回帰に使う。Admin物理削除等の残存境界を未調査のまま本FUT全体をResolvedへ変えず、今回の通常CRUDから到達しないことを条件に別途扱う。
+
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-024、SPEC-DEEP-025
@@ -1028,6 +1050,12 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - ユーザー判断が必要な事項: actor・target・archive・audit・reconcileのUWB-07仕様は回答済み。保持期間とProd運用条件は別途確定が必要。
 
 ## FUT-0077 Employee雇用状態・将来退職・復職workflowを確定する
+
+EMP-07分類（2026-09-07）: 現行の退職日はserverTodayJST以前に限定され、完了済み誤退職の専用訂正とUser/Auth非復元は実装済みである。将来日退職、予約取消、実際の再雇用modelは確認済み仕様が分離した新workflowであり、EMP-08のLocal統合対象に加えない。
+
+EMP-01追加回答（2026-09-06）: 退職後の通常編集は全actorで禁止と確定した。保険処理も含み、閲覧と既存の専用誤退職訂正の境界は維持する。ADR 0059に記録し、以降の退職後編集未決という記述は旧調査時点のものとして扱う。
+
+EMP-01対応時期（2026-09-06）: 現UWBの退職・誤訂正を維持し、実際の再雇用・将来日退職は新workflowとして別判断に残す。通常CRUDを妨げない独立scopeであり、今回の進捗へ加点しない。工程内に発見する回帰をこの延期へ混ぜない。
 
 - 状態: Open
 - 重大度: High
@@ -1042,6 +1070,14 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 
 ## FUT-0078 Employee archiveと全参照保持・復元を設計する
 
+EMP-07分類（2026-09-07）: 誤登録archive、12従属確認、参照writer保護、同ID再作成拒否、原本/archiveの認可はEMP-05で実装・検証した。archive restore、法定保持後匿名化、物理削除は未採用またはFUT-0146の後続専用工程であり、EMP-08の必須条件ではない。本FUT全体は将来判断を残すためNeeds decisionを維持する。
+
+2026-09-06最新方針: archive延期を撤回し、Employeeは別collection移動と必要な従属writer保護をEMP-01で設計し、最終採用によりEMP-05へ実装を割り当てた。通常退職ではEmployeeと業務記録を保持し、既存UWBの本登録User/Auth削除・予約解放を維持する。誤登録archiveでは従属/User/Authを連鎖削除しない。物理削除はarchive後の別操作で、実行は後続専用工程へ分離することを採用済み。運用・最小ID記録の設計はFUT-0146へ集約する。現行計画は[Employeeロードマップ](../roadmaps/employee.md)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を正とし、以下の延期記述は旧判断の履歴。
+
+追加回答: 他collectionの保存処理・RulesへのEmployee存在確認追加は今回対象外と確定した。参照競合を解決できたという意味ではなく、安全条件が未確定の物理削除は開放しない。
+
+EMP-01対応時期（2026-09-06改訂）: [ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)でEmployee archiveを保留し、将来工程として本FUTへ残す。誤登録の物理削除を会社管理者・統括だけに許可し、従属あり拒否・User/Auth非連鎖削除を採用した。削除の従属一覧・新規参照競合・旧writer/trigger・再試行/同ID再作成・工程配分は今回の[Employeeロードマップ](../roadmaps/employee.md)の必須残作業であり、本FUTへ先送りしない。将来archiveの保存/閲覧/復元・保持・匿名化は別工程で再検討する。既存Employees_archiveの過剰read/write閉鎖はFUT-0075の必須境界として維持し、他collectionの既存実装は変更しない。
+
 - 状態: Needs decision
 - 重大度: High
 - 発見セグメント: SPEC-SEG-024
@@ -1054,6 +1090,10 @@ SPEC-DEEP-039b追加根拠: root duplicatorはschema duplicate失敗をcatchし�
 - ユーザー判断が必要な事項: CONF-0064。
 
 ## FUT-0079 Employee code・派生氏名・候補statusの整合を保証する
+
+EMP-07分類（2026-09-07）: 任意・手入力・重複可code、独立表示名カナ、明示表示名優先、既存の用途別ACTIVE/RESIGNED候補条件を維持する判断と、空code表示、検索race、cache、作成導線の実装をEMP-02〜06で照合した。新採番・一意性・status制限は採用しないため、EMP-08を止める残作業はない。Devでの既存data互換はEMP-09で確認する。
+
+EMP-01再照合（2026-09-06）: EmployeeSelectは現在DailyAttendance/Indexから到達するため、下の「未到達」は過去調査の記述である。空code例外、検索race、既存Class/cache/初期選択IDの整合は直接表示互換としてEmployee改修に含める。CONF-0065の最終回答で任意・手入力・重複可codeと現候補条件を維持し、明示表示名優先と在職一覧への作成集約を採用した。対応実装はEMP-02/06とし、新採番・一意性・新しい候補status制限を追加しない。[現経路](employee-master.md#現行経路の再照合)に根拠を集約した。
 
 - 状態: Needs decision
 - 重大度: Medium
@@ -1141,81 +1181,81 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 
 ## FUT-0085 Outsourcer CRUDの正式権限とRulesを一致させる
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-011、SPEC-DEEP-033
 - 対象ファイル・シンボル: outsourcers pageSettings/Manager、`components/Outsourcers/{Manager,Iterator}/index.vue`、Outsourcers/Outsourcers_archive Rules
-- 確認済み実装事実: `outsourcers:read`でCRUDへ到達し、Rulesは同一会社Userにlive/archive全read/writeを許す。SPEC-DEEP-011でpageはdefault create/update/deleteをguardなしで公開し、空検索limit 10に対してmanager page size 20を指定することを確認した。SPEC-DEEP-033でManagerが`showCreate=false`でもtoolbar createを常時表示し、component自身にwrite/role/loading/rollback/error契約がないことを再確認した。
-- 想定影響と発生条件: 閲覧Userが外注先を作成・改変・終了・archiveし、配置候補や過去表示を変え得る。
-- 未確認点・仮説: 正式な外注先管理role、本人/管制/請求担当の必要範囲は未決定。
-- 推奨する将来対応: read/create/update/status/archive/restoreを分け、UIとRulesまたはserver APIを一致させる。
-- 必要なテスト: role別route/button/direct write、archive直接write、他社path、field別更新。
+- 確認済み実装事実: OUT-01で作成・編集を会社管理者またはstrict `manager`へ限定し、client delete/archive writeを停止した。OUT-02でexact 11 field、型・長さ・metadata、部分更新、独立draft・同一field競合拒否をUI・専用writer・Rulesへ実装した。archive/restoreの正式actorと運用は未決定である。
+- 想定影響と発生条件: 後続でarchive/restoreのactorや参照確認を不用意に広げると、配置候補や過去表示を欠損させ得る。
+- 未確認点・仮説: OUT-01で作成・編集actorとclient破壊操作停止は確定したが、archive/restoreの正式actorと運用は未決定。
+- 推奨する将来対応: OUT-01/02の境界を維持し、archive/restoreのactor、参照確認、保持、復元を後続で決定する。
+- 必要なテスト: Dev反映時のrole別route/button/direct write、旧client互換、archive直接write、他社path、既存document適合性。
 - ユーザー判断が必要な事項: CONF-0070。
 
 ## FUT-0086 外注会社と外注警備員個人のデータモデルを決定する
 
-- 状態: Needs decision
+- 状態: Resolved
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-024、SPEC-DEEP-033
 - 対象ファイル・シンボル: schemas `Outsourcer`、`Operation.outsourcers.add`、ArrangementNotification workerId、`WorkersTable`
-- 確認済み実装事実: Outsourcerは会社masterのみ。同一会社の複数人はdoc ID+一時indexで表し、個人の永続ID、氏名、資格、連絡先、所属statusを持たない。SPEC-DEEP-024で、worker結合/mutationは`workerId`を使う一方、WorkersTableのVue keyと表示cacheはraw `id`を使うことを確認した。employee/outsourcerのraw IDが同じ場合、表示行key衝突候補となる。SPEC-DEEP-033で、配置TagとOperationResult worker inputも会社doc IDを名称解決/候補選択に使い、個人識別を追加しないことを確認した。
-- 想定影響と発生条件: 個人別資格・通知・実績・監査・同一性が必要になると、indexの再生成や並べ替えで個人を追跡できない。
-- 未確認点・仮説: 外注個人をAirGuardで管理する正式要件と個人情報保持責任は未決定。
-- 推奨する将来対応: 会社masterと外注警備員masterを分けるか、人数単位運用を維持するかを仕様化し、ID/snapshot/資格/通知契約を決める。
-- 必要なテスト: 同一会社複数人、並べ替え、資格/OJT、通知、実績化、退職/所属変更、個人情報権限。
-- ユーザー判断が必要な事項: CONF-0071。
+- 確認済み実装事実: OUT-06で、Outsourcerは会社masterのみ、同一会社の複数人は人数1の別明細、identityは`outsourcerId:index`形式の`workerId`と確定した。WorkersTableのVue keyをraw `id`から`workerId`へ修正し、master表示cacheは名称解決のためraw `id`を維持した。削除後のindex非再採番、再追加時の最大index+1、並べ替え、通知ID、ScheduleからOperationResultへの1対1変換を回帰testで固定した。個人の永続ID、氏名、資格、連絡先、所属statusは追加していない。
+- 想定影響と発生条件: 同じ協力会社を複数配置する操作を単一の人数fieldへ集約すると、既存の配置明細・通知・実績処理が複雑化する。
+- 未確認点・仮説: schemaの低レベル`addWorker`はcaller指定の`amount`を受け入れるため、通常UI外まで`amount=1`を一律強制する場合はpackage・Rules・data validationを含む別仕様が必要である。将来、外注警備員個人を管理する新しい業務要件が提示された場合も、現行Outsourcerへ推測追加せず別仕様として扱う。
+- 推奨する将来対応: 協力会社masterと重複配置の現行契約を維持し、過去に廃止したOutsourcer＋人数方式や個人masterを今回の改修へ追加しない。
+- 必要なテスト: OUT-06のdomain回帰で同一Outsourcerの複数配置、削除・再追加、並べ替え、通知・実績化の明細維持を確認済み。実Firestore transactionと実browser DOMはOUT-07のlocal統合確認へ残す。
+- ユーザー判断が必要な事項: CONF-0071は回答済み。
 
 ## FUT-0087 Outsourcer終了・archive・参照保持を整合させる
 
-- 状態: Needs decision
+- 状態: Resolved
 - 重大度: High
 - 発見セグメント: SPEC-SEG-026
 - 対象ファイル・シンボル: `Outsourcer.contractStatus/logicalDelete/hasMany`、client adapter delete、下流ID fetch
-- 確認済み実装事実: 終了はstatus変更だけ。削除guardはSchedule/OperationResultのみでNotificationを含まず、archive後はlive ID fetchが失敗し得る。restore UIはない。
-- 想定影響と発生条件: 通知のみ参照、guard競合、誤archiveにより名称欠損・候補消失・復旧不能が起き得る。
-- 未確認点・仮説: 終了後の過去表示、restore、保持期間、通知参照の正式要件は未決定。
-- 推奨する将来対応: 全参照catalog、終了/削除/restore policy、snapshot表示fallback、競合安全なserver guardを設計する。
-- 必要なテスト: Schedule/Result/Notification各参照、並行参照作成、終了後表示、archive/restore、欠損master。
-- ユーザー判断が必要な事項: CONF-0072。
+- 確認済み実装事実: OUT-04で通常productからarchive／restore／物理deleteせず、Outsourcerをlive masterとして保持すると確定した。UI・application actionに破壊入口はなく、Rulesはlive deleteとarchive client CUDを拒否している。
+- 想定影響と発生条件: live ID fetchを維持し、generic guardのNotification漏れ、並行参照競合、restore上書きへ到達しない。
+- 未確認点・仮説: なし。法令・規程等で将来削除や匿名化が具体的に必要になった場合は新しいcheckpointとする。
+- 推奨する将来対応: ADR 0050のlive保持契約を維持し、generic `delete()`／`restore()`をOutsourcerへ接続しない。
+- 必要なテスト: product flowのarchive／restore／delete入口不在、ACTIVE／TERMINATED双方のlive delete・archive CUD拒否、same-tenant readとstatus非依存回帰。
+- ユーザー判断が必要な事項: なし。CONF-0072回答済み。
 
 ## FUT-0088 Outsourcer候補のACTIVE制約を利用経路で統一する
 
-- 状態: Open
+- 状態: Resolved
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-033
 - 対象ファイル・シンボル: `useOutsourcersInRange`、`useFetchOutsourcer.searchOutsourcers`、`OutsourcerAutocomplete`
-- 確認済み実装事実: 配置rangeはACTIVE限定だが汎用Autocomplete検索はstatus条件を付けず、終了済み外注先を返し得る。SPEC-DEEP-033でOperationResult worker inputがこのAutocompleteを直接選ぶことを確認した。
-- 想定影響と発生条件: status非限定Autocomplete利用画面でTERMINATED外注先を新規予定・実績へ選べる可能性がある。
-- 未確認点・仮説: 各Autocomplete利用元が別途制約するか、過去訂正で終了先を選べる必要性は未確認。
-- 推奨する将来対応: 用途別`activeOnly/includeTerminated`契約を明示し、defaultを安全側へ統一する。
-- 必要なテスト: ACTIVE/TERMINATED検索、cache混入、過去訂正、新規配置、ID指定表示。
-- ユーザー判断が必要な事項: CONF-0073。
+- 確認済み実装事実: OUT-03でstatusをCustomerと同じ説明用フラグと確定し、一覧・検索・Autocomplete・配置・稼働実績の候補へ影響させないようACTIVE query条件を除去した。ID指定表示も従来どおりstatus非依存である。
+- 想定影響と発生条件: statusだけを理由に候補が欠落する経路を解消した。
+- 未確認点・仮説: なし。code方針、一覧pagination、Autocomplete rendererはFUT-0089で継続する。
+- 推奨する将来対応: status非依存契約を維持し、候補制限が必要になる新要件は別仕様として合意する。
+- 必要なテスト: 一覧・検索・Autocomplete・配置queryにstatus条件がないこと、ID指定表示の維持。
+- ユーザー判断が必要な事項: CONF-0073のstatus候補部分は回答済み。code・検索表示詳細は未回答。
 
 ## FUT-0089 Outsourcer validation・検索・表示の不整合を整理する
 
-- 状態: Open
+- 状態: Resolved
 - 重大度: Low
 - 発見セグメント: SPEC-SEG-026、SPEC-DEEP-033
 - 対象ファイル・シンボル: schemas `Outsourcer`、outsourcers page、`OutsourcerAutocomplete`
-- 確認済み実装事実: codeは任意/非一意でtoken検索外。一覧query limit 10と表示20が不一致。AutocompleteはOutsourcer候補にEmployeeListItemを使う。契約日fieldなしでrange引数はfilter未使用。SPEC-DEEP-033でIteratorのdeclared `hideDefaultFooter`がrootへ転送されず、OutsourcerListItemはAutocomplete default rendererにも静的callerにも現れない候補であることを確認した。
-- 想定影響と発生条件: 重複識別、期待件数不足、型責務混在、期間指定が効くとの誤解を招く。
-- 未確認点・仮説: code採番・一意性、一覧pagination、将来契約期間要件は未決定。
-- 推奨する将来対応: code policy、query/page size、専用ListItem、range API名・契約期間modelを整理する。
-- 必要なテスト: code空/重複/検索、10件超pagination、Autocomplete表示、期間変更、status sort。
-- ユーザー判断が必要な事項: CONF-0073。
+- 確認済み実装事実: OUT-05でcodeを任意・手動・重複可・検索外として確定した。通常一覧は`nameKana`・document ID昇順の20件server cursor、名称検索は正規化後2〜40文字の既存tokenMap equality結果をclient sortする20件memory paginationへ変更した。Autocompleteは外注先専用ListItemと既存最大50件を使い、Iteratorはfooterと件数設定を転送する。range API名は配置側の既存互換として変更していない。
+- 想定影響と発生条件: 一覧取得数と表示数、renderer責務、終了済み表示の不一致を解消した。検索一致件数が非常に多い場合は全一致結果のread・memory costが増える残存riskがある。
+- 未確認点・仮説: Dev/Prodの実件数、特殊記号を含む検索語のpackage実挙動、legacy `nameKana`欠損documentは未確認である。
+- 推奨する将来対応: 実件数により検索costが問題になった場合だけ、検索index方式を別checkpointで再設計する。range API名整理は配置機能の互換性確認で扱う。
+- 必要なテスト: 対象25/25、domain 953/953、local Emulator 147/147、専用local UI buildを完了した。実browserとDev実dataは別受入れとする。
+- ユーザー判断が必要な事項: なし。CONF-0073回答済み。
 
 ## FUT-0090 Company rootの認可・field ownership・削除禁止を強制する
 
-- 状態: Needs decision
+- 状態: In progress
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-027
 - 対象ファイル・シンボル: Company pageSettings/Manager、`firestore.rules` Companies match、schemas `Company`
-- 確認済み実装事実: UIはadmin限定だがRulesは同一会社UserにCompany全read/write/deleteを許す。銀行・請求・Stripe/subscription・maintenance・設定・取極めが同一docにある。SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
-- 想定影響と発生条件: 一般Userが口座/請求表示を改ざんし、subscription/maintenanceを偽装し、Company rootを削除してtenantを破損できる。
-- 未確認点・仮説: 正式な設定担当、server-owned field、super-user repair、deleteを許す正式手続きは未決定。
-- 推奨する将来対応: field/action別認可、server-owned field分離、Company delete deny、管理操作callableと監査logを設計する。
+- 確認済み実装事実: UIはadmin限定だが、同一会社の有効な本登録UserはCompany全fieldをclientから更新できる。2026-08-27にclient create/deleteを無条件拒否し、初期Company作成をCloud Functions/Admin SDK専用とした。銀行・請求・Stripe/subscription・maintenance・設定・取極めは引き続き同一docにあり、SPEC-SEG-028でcompany maintenance、SPEC-SEG-029でstripeCustomerId/subscription/customerType元データもclientが直接変更可能と確認した。SPEC-DEEP-020でCompanyManager/Activator自身にrole/field ownership guardがなく、直接`item.update(item)`へ委譲することを再確認した。
+- 想定影響と発生条件: Company rootのclient作成・削除によるtenant破損は閉じたが、一般Userは依然として口座/請求表示を改ざんし、subscription/maintenanceを偽装できる。
+- 未確認点・仮説: 旧ADR 0025の8-document ownershipはADR 0031で置換した。同社Userが読めるexact field集合とoperation別write allowlist、client/Callable配分はwhole-document replacement除去の各checkpointで確認する。
+- 推奨する将来対応: 一つのCompany documentを既定に、operationが所有するexact fieldだけを更新する。読取actor、lifecycle、増加量、size、独立query、field updateで解消できない実測競合がある場合だけ分割し、CUDを一律Functions化しない。
 - 必要なテスト: role別read/write、口座/請求/Stripe/maintenance直接write、Company delete、他社doc、super-user repair。
-- ユーザー判断が必要な事項: CONF-0074、CONF-0075。
+- ユーザー判断が必要な事項: なし。CONF-0074、CONF-0075は2026-08-28回答済み。
 
 ## FUT-0091 Company/Auth tenant作成の部分状態とidentityを回復可能にする
 
@@ -1225,10 +1265,10 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: `functions/apis/createAdminAccount.js`、Company/User transaction、custom claims、`useAuthActions`
 - 確認済み実装事実: Companyとadmin Userはtransactionだがclaims設定は後続。tenant identityはCompany doc ID/claim/prefixにまたがり、移転・再concile経路はない。
 - 想定影響と発生条件: claims失敗・誤Company削除でAuth account、User、Company、subcollectionsのanchorが不一致になる。
-- 未確認点・仮説: orphan Company/Userの検出・support修復運用は未確認。
-- 推奨する将来対応: idempotent provisioning state、anchor整合検査、repair callable、削除保護を実装する。
+- 未確認点・仮説: ACTIVE/SUSPENDED/CLOSEDとroot非削除は確定した。orphan検出、idempotent provisioning、incident recoveryのexact operator APIは未設計。
+- 推奨する将来対応: root非削除、idempotent provisioning state、anchor整合検査、bounded provider repairを実装する。CLOSED通常再開や推測root再作成を提供しない。
 - 必要なテスト: claims前後failure、再実行、Company欠損、User欠損、誤claim、同一Auth二重作成。
-- ユーザー判断が必要な事項: CONF-0075。
+- ユーザー判断が必要な事項: なし。CONF-0075は2026-08-28回答済み。
 
 ## FUT-0092 Company設定のvalidationと編集fieldを整合させる
 
@@ -1238,23 +1278,23 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 対象ファイル・シンボル: Company Activator Base/Bank/Setting、schemas `Company.isCompleteRequiredFields`、Rules
 - 確認済み実装事実: 基本editorはzipcode/prefCode/city/buildingを含めないがcomplete getterは住所構成fieldを要求する。数値/enum/口座/請求番号validationは主にUI attrsでRules強制がない。SPEC-DEEP-020でCompanyManagerのdoc validatorはCompany instanceでなくObjectだけ、invoice表示はstored値へ常に`T`を付加、legacy SettingInfoは未知weekdayを直接dereferenceすることを確認した。
 - 想定影響と発生条件: 必要住所を画面で補完できない、直接writeで不正設定を保存し、PDF・勤怠・税・時刻UIへ影響する。
-- 未確認点・仮説: 正式必須field、invoiceNumberのT保持、銀行口座形式、住所検索UIの意図は未決定。
-- 推奨する将来対応: editable/required fieldを仕様化し、server validationと完全な住所editorを揃える。
+- 未確認点・仮説: validation候補は2026-08-28に一度確定したが、旧8-document設計と一体の実装順は廃止した。電話・郵便等のexact formatと住所検索UXは新CCBの対象operation実装前に既存consumerと照合する。
+- 推奨する将来対応: ADR 0031の比例原則に従い、対象operationのfield allowlistとvalidationをclient/server/Rulesで整合させ、完全な住所editorと長値render testを揃える。
 - 必要なテスト: 初期空Company、住所全field、invoice番号、口座桁/空、minute 0/31、invalid enum、直接write。
-- ユーザー判断が必要な事項: CONF-0076。
+- ユーザー判断が必要な事項: なし。CONF-0076は2026-08-28回答済み。
 
 ## FUT-0093 Company master変更と帳票・計算の再現性を保証する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-027
 - 対象ファイル・シンボル: `useBillingPdf` Company live参照、Company roundSetting/attendance settings
 - 確認済み実装事実: 請求書PDFは生成時のlive Company名・住所・電話・登録番号・口座を使用し、過去BillingのCompany snapshotを使わない。
 - 想定影響と発生条件: 会社名・住所・口座・登録番号変更後に過去請求書を再生成すると、当時と異なる帳票となる。
-- 未確認点・仮説: 確定請求書の不変性、訂正版、発行者情報snapshot時点は未決定。
-- 推奨する将来対応: 帳票確定時snapshot/revisionと再発行policyを仕様化し、live master利用範囲を分ける。
+- 未確認点・仮説: draft live、確定時issuer snapshot、訂正・再発行の新revisionは2026-08-28確定した。Billing側のexact state transitionとsnapshot write schemaは未実装。
+- 推奨する将来対応: CCBでissuer snapshot schemaを固定し、Billing改修で確定・訂正・再発行へ接続する。round modeはOperationResult作成時にsnapshotする。
 - 必要なテスト: 確定前後のCompany変更、再生成、複数Billing、口座欠損、invoice番号変更、取消/再発行。
-- ユーザー判断が必要な事項: CONF-0077。
+- ユーザー判断が必要な事項: なし。CONF-0077は2026-08-28回答済み。
 
 ## FUT-0094 Company.scheduleOrder.addの未定義class参照を修正する
 
@@ -1269,18 +1309,18 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 必要なテスト: scheduleOrder add/duplicate/change/remove/serialize/update、siteOrderとの対称性、UI追加経路。
 - ユーザー判断が必要な事項: なし（実装修正と回帰確認が必要）。
 
-## FUT-0095 Maintenanceをroute表示ではなく実データ排他境界として設計する
+## FUT-0095 Maintenanceをroute表示だけでなくwrite gateとquiet procedureへ拡張する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: Critical
 - 発見セグメント: SPEC-SEG-028、SPEC-DEEP-004、SPEC-DEEP-005
 - 対象ファイル・シンボル: `auth.global`、`plugins/07.system`、Firestore Rules、Functions、admin-sdk backup/companies
 - 確認済み実装事実: maintenanceはclientをpageへredirectするだけで、Rules/Functions/API writeや進行中requestを拒否しない。Admin SDK backup/restoreはcompany maintenanceを排他前提にする。
 - 想定影響と発生条件: 保守・restore中も直接SDK、別client、開始済み操作、background処理がdataを書き、snapshot/restore対象と競合し得る。
-- 未確認点・仮説: maintenance中に止める処理、read許可、background trigger、緊急修復actorは未決定。
-- 推奨する将来対応: server-side maintenance gate、write停止範囲、drain/lock、admin bypass、開始/終了手順を仕様化する。
+- 未確認点・仮説: project-wideの通常client/Callable/scheduled/trigger停止、provider例外、quiet procedureは2026-08-28確定した。collection/function別の適用表とproduct gateは未実装。
+- 推奨する将来対応: ADR 0026に従いserver-owned state、Rules write deny、business Callable共通gate、scheduled/trigger skipを実装し、bounded wait・log・連続dry-run・snapshot・post-checkを運用する。排他lock、lease、全Function registryは現段階で実装しない。
 - 必要なテスト: client/REST/callable/direct Rules、進行中write、trigger、全体/会社mode、admin repair、restore並行性。
-- ユーザー判断が必要な事項: CONF-0079、CONF-0080。
+- ユーザー判断が必要な事項: なし。CONF-0079、CONF-0080は2026-08-28回答済み。
 
 ## FUT-0096 Maintenance初期化・購読断のfail-safeと復旧を実装する
 
@@ -1293,7 +1333,7 @@ SPEC-DEEP-039a追加根拠: pageが表示した`preRegData`をsubmitへ渡さず
 - 未確認点・仮説: FireModel subscriptionの内部retry/error callback、offline cache挙動は未確認。
 - 推奨する将来対応: 状態をloading/active/inactive/unknownへ分け、初回取得に有限deadline、世代または取消し、retry/backoff、last-known state、接続監視と安全な復旧UIを設ける。timeout後に遅れて完了した旧fetchが新しい状態を上書きしないようにし、System未確認中は保護対象pageを表示しない。
 - 必要なテスト: doc不存在、permission/network断、永久pending、有限timeout、timeout後の遅延完了、初回/購読後切断、Company fetch失敗、再接続、複数tab、System未確認中に保護pageが表示されないこと。
-- ユーザー判断が必要な事項: CONF-0081。
+- ユーザー判断が必要な事項: なし。CONF-0081は2026-08-28回答済み。unknownは保護対象操作をfail closedとする。
 
 SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時にmaintenance=trueへ倒す点はfail-closedだが、unknown/error区分、利用者向けretry、subscription error channel、明示的teardownを持たない。
 
@@ -1305,23 +1345,23 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 対象ファイル・シンボル: schemas `System/Company`、admin-sdk system/companies、`pages/maintenance.vue`
 - 確認済み実装事実: Company schemaはmaintenanceStartAtだがCLIはmaintenanceStartedAtを書き、ended fieldsもschema外。System CLIのversion/createdAtもschema外。reason/timestamps/updaterはpageに表示しない。
 - 想定影響と発生条件: 開始時刻・監査情報がclient modelで失われ、保守理由/予定を利用者が判断できず、運用・実装が異なるfieldを参照する。
-- 未確認点・仮説: どちらの時刻名を正本とするか、終了履歴をcurrent docに残すかは未決定。
-- 推奨する将来対応: 共通schema/command契約、migration、監査履歴、利用者向け表示fieldを定義する。
+- 未確認点・仮説: server-owned metadataと利用者向け最小projectionは確定した。exact field名、history保存先、旧field migrationはCCB-07実装前に決める。
+- 推奨する将来対応: 共通schema/command契約、旧field migration、operator audit、利用者向け停止表示を実装する。quiet periodと監視Functionはcheckpointごとに固定する。
 - 必要なテスト: on/off serialize、旧新field migration、System initialize、reason/time display、timezone、missing fields。
-- ユーザー判断が必要な事項: CONF-0082。
+- ユーザー判断が必要な事項: なし。CONF-0082は2026-08-28回答済み。
 
-## FUT-0098 Maintenance例外role・操作と退出導線を定義する
+## FUT-0098 Maintenance例外operator・操作と退出導線を実装する
 
-- 状態: Needs decision
+- 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-028
 - 対象ファイル・シンボル: `auth.global` maintenance branch、`plugins/07.system`、`pages/maintenance.vue`
 - 確認済み実装事実: maintenance trueではrole/auth状態を問わずmaintenance pageだけ許可し、pageにlogout、再試行、管理者修復導線がない。
 - 想定影響と発生条件: admin/super-userもアプリ内診断・解除・account切替ができず、誤設定時にCLI以外の復旧経路がない。
-- 未確認点・仮説: 緊急修復をCLIだけに限定する意図、閲覧-only許可、logout必要性は未決定。
-- 推奨する将来対応: bypass actor/route/action、read-only mode、logout/status refresh、break-glass監査を仕様化する。
+- 未確認点・仮説: 一般利用者は停止案内とsign-out、provider処理は個別承認operator checkpointと確定した。exact CLI/API、status refresh、operator auditは未実装。
+- 推奨する将来対応: 製品内super-user bypassを追加せず、停止案内、sign-out、状態再取得と、対象・作用を固定したprovider操作・監査を実装する。
 - 必要なテスト: unauth/user/admin/developer/super-user、System/company mode、logout/login、誤mode解除、bypass監査。
-- ユーザー判断が必要な事項: CONF-0080。
+- ユーザー判断が必要な事項: なし。CONF-0080は2026-08-28回答済み。
 
 ## FUT-0099 Stripe Functionsの公開状態と環境別有効化を整備する
 
@@ -1334,7 +1374,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: remote DEVに旧版Functionが残るか、コメントアウト理由、secret/webhook準備状況は未確認。
 - 推奨する将来対応: 環境別rollout/disable switch、export、secret/webhook/region、health checkを明示し、未提供時はUIを閉じる。
 - 必要なテスト: export一覧、Emulator stub、DEV deploy確認、trigger/webhook health、機能disabled UI、timeout。
-- ユーザー判断が必要な事項: CONF-0083。
+- ユーザー判断が必要な事項: CONF-0083（2026-08-28に正式release直前まで明示保留）。CCBでは再有効化しない。
 
 ## FUT-0100 Checkout作成を認可済みserver APIへ移し入力を固定する
 
@@ -1347,7 +1387,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: 正式購入actor、許可price、return origin、App Check/rate limitは未決定。
 - 推奨する将来対応: 認可callableでplan keyだけを受け、server allowlistからprice/URL/customerを決定しrate limit/idempotencyを適用する。
 - 必要なテスト: role/他社、任意price/URL、重複click、rate limit、App Check、disabled plan、open redirect。
-- ユーザー判断が必要な事項: CONF-0084。
+- ユーザー判断が必要な事項: CONF-0084（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0101 Stripe Customer/Session作成を冪等・競合安全にする
 
@@ -1360,7 +1400,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: Stripe側の暗黙重複抑止、既存重複Customerは未確認。
 - 推奨する将来対応: company/intent単位lock、deterministic idempotency key、intent status state machine、reconcileを実装する。
 - 必要なテスト: 同時2 session、各外部作用後failure/retry、既存customer欠損、stale intent、cleanup。
-- ユーザー判断が必要な事項: CONF-0085。
+- ユーザー判断が必要な事項: CONF-0085（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0102 Webhookの重複・順序逆転・再契約を安全に処理する
 
@@ -1373,7 +1413,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: 1 Company 1 active subscriptionの正式制約、event retention/replay運用は未決定。
 - 推奨する将来対応: processed-event ledger、Stripe object取得による最新state収束、subscription ID/version比較、retryable missing mapping、reconcile jobを設ける。
 - 必要なテスト: duplicate/out-of-order create-update-delete、解約直後再契約、mapping遅延、webhook retry、複数subscription。
-- ユーザー判断が必要な事項: CONF-0085、CONF-0086。
+- ユーザー判断が必要な事項: CONF-0085、CONF-0086（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0103 Subscription/customerType/employeeLimit契約を整合させる
 
@@ -1386,7 +1426,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: plan別上限、trial、grace period、past_due、cancel-at-period-end、free移行の正式仕様は未決定。
 - 推奨する将来対応: 正式state machine/plan entitlement、server算出、reactive expiry timer、status/limit validationを定義する。
 - 必要なテスト: 全Stripe status、period境界、trial/cancel/reopen、metadata欠損/不正、plan変更、offline stale。
-- ユーザー判断が必要な事項: CONF-0086。
+- ユーザー判断が必要な事項: CONF-0086（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0104 Checkout成功判定・Customer mapping・error情報を堅牢化する
 
@@ -1399,7 +1439,7 @@ SPEC-DEEP-040追加根拠: `system/useSystemActions.js` は初回fetch失敗時�
 - 未確認点・仮説: error内容、session URLの寿命、Company contact email値源は未決定。
 - 推奨する将来対応: server-side session verification/status polling、正しいCompany field mapping、sanitized error、owner-only intent readとTTL cleanupを実装する。
 - 必要なテスト: query偽装、webhook遅延/失敗、Company名称/email欠損、error sanitization、別User read、TTL削除。
-- ユーザー判断が必要な事項: CONF-0087。
+- ユーザー判断が必要な事項: CONF-0087（2026-08-28に正式release直前まで明示保留）。
 
 ## FUT-0105 警備日報Storageをテナント・権限で分離する
 
@@ -1556,9 +1596,9 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-033
 - 対象ファイル・シンボル: Article/Customer/Employee/Outsourcer/Site Autocomplete、特に`Outsourcer/Autocomplete.vue`
-- 確認済み実装事実: Outsourcerはdefault itemにEmployeeListItemを使い、作成iconはplain v-icon click。検索errorはuseFetch側で空結果へ吸収される。
-- 想定影響と発生条件: 外注field表示が欠落/誤表示し、作成iconをkeyboard利用できず、障害を候補0件と誤認する。
-- 未確認点・仮説: EmployeeListItemが外注instanceを意図的に兼用可能か、AirAutocompleteApiのerror/keyboard挙動は未確認。
+- 確認済み実装事実: OUT-05でOutsourcerは専用OutsourcerListItemを使い、外注field表示の取り違えを解消した。作成iconはplain v-icon clickのままで、検索errorはuseFetch側で空結果へ吸収される。
+- 想定影響と発生条件: 作成iconをkeyboard利用できず、検索障害を候補0件と誤認する。
+- 未確認点・仮説: AirAutocompleteApiのerror/keyboard挙動は未確認。
 - 推奨する将来対応: typed共通Autocomplete factory、entity別ListItem、button化したcreate action、typed loading/error/empty contractを揃える。
 - 必要なテスト: 5 entityの既存key/search/create/returnObject、外注field、network/permission/0件、keyboard、race。
 - ユーザー判断が必要な事項: CONF-0097。
@@ -1681,6 +1721,10 @@ SPEC-DEEP-017で、button atomsは`icon`時にtextを除去し自身ではaccess
 - ユーザー判断が必要な事項: CONF-0104。
 
 ## FUT-0126 従業員資格・機微情報の操作別権限と監査を実装する
+
+EMP-07分類（2026-09-07）: 資格・警備員情報の現在必要な操作別保存、許可actor、直接client write拒否はEMP-02〜05で実装・検証した。項目別閲覧、追加承認、監査制度の全面追加は未採用の将来判断であり、EMP-08へ実装を追加しない。
+
+EMP-01対応時期（2026-09-06）: actor方針と全項目readを採用し、資格証明書番号・本籍・緊急連絡先もCONF-0061/0105の回答に含む。資格と警備情報の操作別保存・直接拒否はEmployee改修の必須条件。全項目readからwrite権限を拡張しない。監査制度の全面追加は別判断であり、現操作の安全化と混同しない。
 
 - 状態: Open
 - 重大度: High
@@ -1835,9 +1879,11 @@ SPEC-DEEP-039b追加根拠: root composablesでもFCM登録、OperationBilling l
 
 SPEC-DEEP-040追加根拠: application actionsでも配置表PDF、請求PDF/CSV、schedule notify/update、site shift order更新がerrorをloggerへ渡して吸収し、callerへ成功/失敗を返さない。再試行・重複防止・canonical refreshも統一されていない。
 
+2026-09-04訂正delta: 上記SPEC-DEEP-039b/040のうち、現在のsite shift order更新actionがerrorを吸収してcallerへ失敗を返さないという記述はstaleである。現在の`useSiteShiftTypeOrderActions`は専用Callableをawaitし、catch後にerrorを再throwする。他に列挙したFCM登録、OperationBilling lock、schedule複製、配置表PDF、請求PDF/CSV、schedule notify/updateはこの訂正では再照合していないため、現在も同じ挙動だとは断定せず歴史的な調査記録として残す。siteOrder行削除に残るlive反映待機と利用者feedbackのgapは[提案中の専用roadmap](../roadmaps/arrangement-row-removal-ux.md)で扱う。
+
 SPEC-DEEP-042追加根拠: generic/range data layersもloading/error/not-found/lastUpdatedを統一せず、同期購読登録errorだけをcatchしてasync listener errorを受けない。`useDocument`はreactive docId対応を文書化しながらRefを拒否し、callback master fetchもawait/cancel/error集約しない。
 
-SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest generation・cancel・loading/errorを持たず旧responseが新検索を上書きし得る。Outsourcer rangeは期間をqueryに使わず、range変更ごとに全ACTIVEを再購読する。
+SPEC-DEEP-043追加根拠: retired Employee/terminated Site検索もrequest generation・cancel・loading/errorを持たず旧responseが新検索を上書きし得る。Outsourcer rangeは期間をqueryに使わず、range変更ごとに全statusを再購読する。
 
 SPEC-DEEP-044追加根拠: master fetch cacheは同一docIdのin-flight point fetchをdedupeする一方、既存cacheを更新せずTTL/revision/tenant切替clearを持たない。fetch errorとnot-foundをcache missへ畳み込み、searchはlatest-only/cancel/in-flight dedupeがない。
 
@@ -1903,6 +1949,10 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 
 ## FUT-0141 geocoding失敗・location整合・0座標を正しく扱う
 
+2026-09-06共通化: 住所保存可否・旧座標消去・未取得通知・不変時保持は[共通仕様](../specification.md#住所と座標)へ集約した。各masterへ保存可否を再質問せず、[実装差](address-geocoding.md#共通仕様との対応2026-09-06)を段階対応する。Employeeに必要な実装はEMP-02、他masterや共通hookの全改修は今回未実施。以下のEmployeeだけ部分回答という記述は当時の履歴。
+
+EMP-01追加回答（2026-09-06）: Employeeの新規作成・住所変更では、座標取得失敗時も住所を保存し、古い座標を消して未取得を知らせる。住所不変の通常更新では既存座標を維持する。CONF-0117/0120とADR 0058へ反映した。Employee限定の採用仕様であり、他masterの保存変更・既存全件の座標削除は行わない。実装は未着手。
+
 - 状態: Open
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-041
@@ -1929,13 +1979,17 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 
 ## FUT-0143 個人住所・座標のprovider送信とlog privacyを統制する
 
+EMP-07分類（2026-09-07）: Employee専用writerは住所変更時だけproviderを呼び、最新住所・actor・在職状態を再確認し、失敗時は住所保存・旧座標消去・安全な警告を行う。住所・座標をapplication logへ出さない境界も対象testで確認済みである。provider契約、同意、保存期間、過去logや他masterの共通入口は将来の運用・privacy scopeであり、EMP-08を止めない。
+
+EMP-01再照合（2026-09-06）: 現行の自宅座標readerは検索範囲で未発見だが、利用者は将来の現場・自宅経路図を目的に取得・保存の継続を採用した。CONF-0120に回答を反映し、停止案は今回採用しない。失敗時の住所保存・旧座標消去・未取得通知は追加採用済み。最新住所との整合・認可/logはEmployee住所writerの必須依存であり後続送りしない。共通入口・過去log・provider運用まで解消したとは扱わず、他masterの保存・Rulesは変更しない。
+
 - 状態: Needs decision
 - 重大度: High
 - 発見セグメント: SPEC-SEG-041
 - 対象ファイル・シンボル: Employee GeocodableMixin、`fetchCoordinates` logging、Callable error
 - 確認済み実装事実: Employee自宅を含むfullAddressを外部providerへ送り、成功時座標、失敗時address/provider responseをserver logへ出す経路がある。redaction/retention/consent contractは確認できない。SPEC-DEEP-009でCallableのnull時error messageにも入力addressが入り得ることを再確認した。
 - 想定影響と発生条件: 個人の居住地・精密座標がproviderとlogへ不要に開示・保持され、閲覧権限や目的外利用のriskが生じる。
-- 未確認点・仮説: geocodingのEmployee業務目的、provider契約、log保持・閲覧者、本人同意は未確認。
+- 未確認点・仮説: Employeeの用途は将来の現場・自宅経路図と回答済み。provider契約、log保持・閲覧者、本人同意は未確認。
 - 推奨する将来対応: CONF-0120後、必要性最小化、対象master選別、precision低減、redaction、consent/privacy notice、retention/access auditを設計する。
 - 必要なテスト: Employee/業務住所分離、log redaction、provider failure、権限、削除/保持、support export。
 - ユーザー判断が必要な事項: CONF-0120、CONF-0115。
@@ -1967,6 +2021,10 @@ SPEC-DEEP-039b追加根拠: `useLogger`は環境filterなしで全levelをconsol
 - ユーザー判断が必要な事項: CONF-0121、CONF-0122。
 
 ## FUT-0146 archive audit metadata・retention・purge・Rulesを共通設計する
+
+EMP-07分類（2026-09-07）: Employee archiveはreason・actor・operation ID・archivedAtを持つ専用envelopeとclient直接CUD拒否を実装済みである。retention、legal hold、匿名化、最小ID記録、自動purge、他master共通化はEMP外の後続専用工程とする採用済み境界を維持し、EMP-08へ取り込まない。
+
+2026-09-06共通原則採用: [仕様](../specification.md#ドキュメントのアーカイブと物理削除)と[実装差・物理削除案](archive-restore.md)を正とする。Customer/Siteは専用envelope・参照保護を持ち、下記のmetadataなし/広域writeは旧generic調査の範囲である。Employeeのpurge実行をEMP外の後続専用工程へ分離することは最終採用済み。具体的な最小ID記録・保持/エラー表示の運用は未採用である。purge・他master適用は未実装であり、共通仕様化を実装完了と扱わない。
 
 - 状態: Needs decision
 - 重大度: High
@@ -2146,6 +2204,10 @@ SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使�
 
 ## FUT-0159 Insurance履歴・監査・validation・遷移を正式化する
 
+EMP-07分類（2026-09-07）: Employeeの3保険は専用保存、独立draft、既存6遷移、局所期待値、巻き戻さない保険別世代値、失敗・競合・結果不明の処理をEMP-04で実装・検証した。保険番号の制度別書式、行政連携、保持期間、監査制度の全面刷新は未決の将来scopeであり、EMP-08へ追加しない。
+
+EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存、history追加/popの競合・結果不明時の二重実行はEmployee保険工程の必須対象。在職Employeeの履歴復元を含む操作actorは会社管理者・統括・人事、手続中条件は現行維持と追加採用した。退職後は通常編集禁止が優先する（ADR 0059）。保持期限・外部行政連携・監査全面刷新は別判断に残す。
+
 - 状態: Open
 - 重大度: High
 - 発見セグメント: SPEC-SEG-051、SPEC-DEEP-027
@@ -2172,16 +2234,16 @@ SPEC-DEEP-040追加根拠: `useOpenArrangementSheetPdf` はglobal loadingを使�
 
 ## FUT-0161 Site自動終了を競合安全・再試行可能にする
 
-- 状態: Open
+- 状態: In progress
 - 重大度: High
 - 発見セグメント: SPEC-SEG-054、SPEC-DEEP-002
 - 対象ファイル・シンボル: `runDailyTask`、`sitesAutoTermination`、schema `Site.terminate/status/constructionPeriodEndAt`
 - 確認済み実装事実: 毎日JST 00:00に、ACTIVEかつ工期終了が3か月前のJST日初よりstrictに古い全tenant SiteをcollectionGroupで無制限取得し、500件batchをPromise.allでTERMINATEDへする。将来schedule guard、status precondition、pagination、audit/reason、失敗ID、retry optionはない。cleanupを先に直列実行し、その失敗時は自動終了せず、外側catchがerrorを吸収する。手動terminateだけはJST当日以降scheduleを拒否する。
 - 想定影響と発生条件: 将来予定があるSiteの自動終了、再有効化/工期訂正/予定作成との後勝ちrace、複数batch部分成功、cleanup障害による長期未実行、規模増加時のtimeout/quota、終了理由を追跡できない状態が起き得る。
-- 未確認点・仮説: 実件数、index/quota、実行時間、監視alert、月末subtractの正式期待、future schedule時の業務判断、自動終了実績は未確認。
-- 推奨する将来対応: CONF-0135確定後、eligible判定をpure化し、transaction/preconditionでstatus・工期・future scheduleを再確認する。page/cursorと制御されたbatch commit、失敗checkpoint/retry/reconciliation、run/site単位audit、metric/alertを導入し、cleanupとは失敗境界を分離する。
-- 必要なテスト: threshold前/同値/翌日、月末/JST、null/invalid end、ACTIVE/TERMINATED、future schedule、手動終了、再有効化/工期変更race、501件以上、batch部分失敗、cleanup失敗、retry/idempotency、監査/alert、tenant横断。
-- ユーザー判断が必要な事項: CONF-0135。
+- 未確認点・仮説: 実件数、index/quota、実行時間、監視alert、自動終了実績、正確な遷移metadata shapeは未確認。90日固定、予定guard、TERMINATED選択、通知・履歴境界はADR 0054で確定した。
+- 推奨する将来対応: eligible判定をpure化し、JST工期終了後90日、ACTIVE、当日以降予定なし、未実績化予定なしをtransaction/preconditionで再確認する。page/cursorと制御されたbatch commit、失敗checkpoint/retry/reconciliation、現在遷移metadata、metric/alertを導入し、cleanupとは失敗境界を分離する。maintenance中はskipし、専用append-only履歴と現場ごとのemail/FCMは追加しない。
+- 必要なテスト: threshold前/同値/翌日、月末/JST、null/invalid end、ACTIVE/TERMINATED、future schedule、手動終了、再有効化/工期変更race、501件以上、batch部分失敗、cleanup失敗、retry/idempotency、現在遷移metadata・metric/alert、tenant横断。
+- ユーザー判断が必要な事項: なし。CONF-0135は2026-09-05回答済み。
 
 ## FUT-0162 Tax・CutoffDate・支払条件のvalidationとsnapshotを統一する
 
@@ -2308,6 +2370,8 @@ SPEC-DEEP-040追加根拠: `user/useUserSettingsActions.js` のtagSize更新はe
 
 SPEC-DEEP-033でOutsourcersManagerも`showCreate=false`を無視してtoolbar plusを表示し、OutsourcersIteratorもdeclared `hideDefaultFooter`をrootへ渡さないことを確認した。`itemsPerPage`はundeclared attrとしてfallthroughし得るため、全propが同じく失われるとは断定しない。
 
+OUT-01でOutsourcersManagerのcreate表示はactor policyへ従属し、OUT-05でOutsourcersIteratorは`hideDefaultFooter`と件数設定を内部iteratorへ明示転送した。上記Outsourcer固有の旧観測は現行実装には該当しないが、他entityと共通するselection・pagination・集計table契約は引き続き未解決である。
+
 SPEC-DEEP-034では、Site create wizardがselection/v-modelを転送しないCustomersIteratorへ依存することを再確認した。SiteCardはSitesIteratorだけから到達し、そのroute使用はcomment outされている。Card selectionはclickable iconだけでaccessible name/keyboard handlerがなく、公開componentのdynamic/external reachabilityは未確認である。
 
 SPEC-DEEP-035では、Sites/Users Iteratorも宣言した`hideDefaultFooter`を内部iteratorへ渡さず、selection propsはJSDocだけであることを確認した。UsersManagerは`showCreate=false`でもplusを表示し、検索欄はfilter/emitせず、empty create handlerは未定義`toCreate`を参照する。Sites DataTableはCustomer欠損・失敗を`...loading`へ畳み込み、環境localの日付整形を使う。
@@ -2413,11 +2477,11 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - 重大度: High
 - 発見セグメント: ARCH-001
 - 対象ファイル・シンボル: Firebase/Nuxt plugins、`runtimeConfig`、emulator切替、FireModel adapter初期化、`scripts/run-codex-local-ui-dev.mjs`、Codex専用local UI readiness手順
-- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、`firebaseUseEmulator`等の文字列/boolean coercionを明示検証しない。初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。local UI起動wrapperはNuxt dev processを開始するだけで、root HTTP 200後にbrowserのclient entryと推移的module graphが評価可能になったことを判定しない。2026-08-25の再現ではroot、Vite client、Nuxt entry、上位pluginがHTTP 200でVite接続済みでも起動templateのままNuxt mountへ到達せず、module warm-up後の通常reload 1回で同じtabがdashboardへ到達した。
+- 確認済み実装事実: plugin間の暗黙順序、initialize/reuse、adapter設定へ依存し、初期化前利用や設定型誤りを起動時に一意に失敗させるcontractがない。2026-08-27に`firebaseUseEmulator`はbooleanまたは文字列の`true`/`false`だけを受理し、未設定・空文字列をfalse、その他を起動時errorとする厳格parseへ修正し、Devの文字列`false`がremote接続を選ぶ境界を単体testで固定した。local UI起動wrapperはNuxt dev processを開始するだけで、root HTTP 200後にbrowserのclient entryと推移的module graphが評価可能になったことを判定しない。2026-08-25の再現ではroot、Vite client、Nuxt entry、上位pluginがHTTP 200でVite接続済みでも起動templateのままNuxt mountへ到達せず、module warm-up後の通常reload 1回で同じtabがdashboardへ到達した。
 - 想定影響と発生条件: plugin順序・環境設定差で別adapter、未初期化service、誤ったemulator/remote接続を選び、errorが後段の業務処理として現れ得る。Windows上のcold dev startではHTTP readyをapplication readyと誤認して初回navigationが起動templateへ固定され、UI testが不安定になる。
-- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の値、build/runtimeでのcoercion、初回module graphが完了しないVite/browser内部原因は未確認。
-- 推奨する将来対応: dependencyを明示した単一bootstrap、typed config parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。Codex専用dev UIはclient entryの推移的module graphまたは製品landmarkを有限時間で確認するreadiness/warm-up契約を追加し、失敗時は自動反復せず診断情報と一回限定reloadの要否を明示する。
-- 必要なテスト: plugin順序、重複初期化、欠落設定、文字列true/false、emulator/DEV/PROD matrix、SSR/client再初期化、cold dev startを複数回行ってreloadなしで製品landmarkへ到達する回帰test、timeout時の停止と診断情報。
+- 未確認点・仮説: Nuxtの実際のplugin order保証、各環境の実値、build後の環境選択、初回module graphが完了しないVite/browser内部原因は未確認。
+- 推奨する将来対応: dependencyを明示した単一bootstrap、残るruntime configのtyped parse、initialize-once/reuse検証、expected project/environment assertionを起動時に行う。Codex専用dev UIはclient entryの推移的module graphまたは製品landmarkを有限時間で確認するreadiness/warm-up契約を追加し、失敗時は自動反復せず診断情報と一回限定reloadの要否を明示する。
+- 必要なテスト: plugin順序、重複初期化、欠落設定、emulator/DEV/PROD build matrix、SSR/client再初期化、cold dev startを複数回行ってreloadなしで製品landmarkへ到達する回帰test、timeout時の停止と診断情報。`firebaseUseEmulator`のboolean・文字列true/falseと不正値拒否の単体testは追加済み。
 - ユーザー判断が必要な事項: なし。環境選択の正式値は既存運用文書と照合する。
 
 ## FUT-0179 FireModel adapter/configをrequest・tenant単位へscopeしclient/server契約を統一する
@@ -2447,6 +2511,10 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - ユーザー判断が必要な事項: overwrite/merge、保存field、legacy compatibilityはCONF-0137ほか既存data compatibility判断へ統合する。
 
 ## FUT-0181 Air managerのdisable・validation・single-flight・draft conflictを永続化前に強制する
+
+EMP-07分類（2026-09-07）: 到達可能なEmployee通常CRUD・一覧・User panelはAirItemManager/AirArrayManagerと旧model永続化へ依存せず、専用処理のdisable・single-flight・draft conflictを使用する。未参照のlegacy表示componentや他master・transaction画面を削除・一括移行することは現在目的に必要なく、全Manager改修は本FUTの別scopeとして維持する。
+
+EMP-01対応時期（2026-09-06）: Employee通常CRUDのManager依存と保険/資格の保存完了分離は今回の目的として解消する計画。User panelは既存の専用controllerを維持してshellを整理する。全汎用Manager・他transaction画面の改修は別scopeであり、Employeeで到達する同原因の修正を延期する根拠にはしない。段階移行時の未移行editorは[契約案](employee-master.md#emp-01の保存読取り契約案)に従いEMP-02ではlocal read-onlyとし、EMP-03/04の専用writer完成後に再開する。
 
 - 状態: Open
 - 重大度: High
@@ -2486,3 +2554,16 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 推奨する将来対応: least-privilege operator identity、target tenant/claim preflight、two-person approval、maintenance hard gate、immutable audit、backup receipt、dry-run/apply token、cursor/resume/reconcile/rollbackを共通command frameworkで強制する。
 - 必要なテスト: actor/target/env matrix、self/last-admin、forged UID、tampered artifact、partial failure、499/500/501件、locked result exception、trigger reconcile、resume/idempotent replay。
 - ユーザー判断が必要な事項: PROD operator、company decommission、locked migration例外、restore scope/RPO/RTOはCONF-0111、CONF-0124〜0130へ統合する。
+
+## FUT-0184 Codex専用UIのブラウザ直接郵便番号通信を遮断する
+
+- 状態: Completed
+- 重大度: High
+- 発見セグメント: CUSTOMER-02-STATUS / CUSTOMER-02-UI-POSTAL-BOUNDARY-REVIEW
+- 対象ファイル・シンボル: `air-vuetify-v3/src/AirPostalCode.vue`、`air-vuetify-v3/src/utils/postalCode.js`、Codex専用UIのNuxt/build設定・陰性test。
+- 確認済み実装事実: 7桁入力でブラウザが郵便番号検索APIへ直接fetchし、Functionsの外部作用denyや専用build identityはこの経路を遮断しない。今回の合成Customer作成で応答JSON処理後の住所未取得warnを観測した。network実経路・cache・中継は未観測で、外部service本人への実到達は断定しない。
+- 想定影響と発生条件: 専用UIで郵便番号を入力すると、合成data限定・外部作用denyという承認済みtest環境の境界を満たせない。今回、実dataや秘密情報流出を示す根拠はないが、操作成功だけでは隔離されたUI受入れ完了にできない。
+- 未確認点・仮説: dynamic browser network traceと未調査の全browser hostの通信0は未確認で保証しない。ClientGeocoding errorは郵便番号とは別で原因未確定。Dev・Prod・remoteも未検証である。
+- 完了内容: CONF-0145の専用UI限定修正を実装し、実module限定置換、未置換時fail-closed、実watcherでfetch 0/address event 0、通常utility非影響、39件の隔離test、fresh build receipt、配信JS 111 filesの対象host文字列0を確認した。CONF-0146承認後、通常UIで7桁手入力・手動住所の保存/reload、郵便番号住所未取得warn 0、Customer状態往復・filter、process/log/saved-data cleanupを確認し、High最終reviewが完了をGOとした。通常利用・Dev・data形状・関連packageは変更していない。詳細は[実行証拠](../verification/customer-02-status-local.md#2026-09-04-conf-0146承認後の限定再試験とcrash復旧)を正とする。
+- 必要なテスト: 完了済み。専用UIの外部fetch 0/address event 0、通常環境の非影響、専用build identityと陰性test、限定Customer UI再試験、process/log/saved-data cleanupを実施した。
+- ユーザー判断が必要な事項: なし。CONF-0145とCONF-0146は回答済み。新status filterの見た目・使い勝手とDev受入れはCustomer roadmapのCS-04で別途扱う。

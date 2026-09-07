@@ -1,19 +1,19 @@
 # 実装調査から得た要確認事項台帳
 
 - 状態: 実装調査・暫定台帳
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-28
 - 対象: `docs/implementation/*.md` と `future-actions.md` に残る、実装検証だけでは確定できないユーザー判断
 - 運用: 同一判断は既存CONFへ証拠・関連FUTを追記する。回答後はStatusをAnsweredへ変更し、Answerへ日付と回答を記録する。実装だけで確認できる未検証事項は登録しない。
 
 ## reconciliation metadata
 
-SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文は変更せず、追加の`Disposition`、canonical question、dependency、superseded関係は[confirmation dependency map](confirmation-dependency-map.md)を正規の再照合索引とする。
+SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本文を変更せず再照合した。2026-08-28のCCB質疑ではCONF-0074〜0082のStatus/AnswerとCONF-0083〜0087の保留Answerだけを更新した。`Disposition`、canonical question、dependency、superseded関係は[confirmation dependency map](confirmation-dependency-map.md)を正規の再照合索引とする。
 
-- `Answered`: 43件。既存の承認済み回答を保持する。
-- `Open-user-decision`: 75件。本当に利用者判断が残るcanonical question。
-- `Open-deferred`: 3件。利用者が明示的に保留した事項で、推奨案へ置換しない。
+- `Answered`: 53件。既存の承認済み回答を保持する。
+- `Open-user-decision`: 65件。本当に利用者判断が残るcanonical question。
+- `Open-deferred`: 8件。利用者が明示的に保留した事項で、推奨案へ置換しない。
 - `Resolved-by-implementation-fact`: 0件。
-- `Merge-candidate`: 17件。IDと本文は保持するが、個別には提示せず上位CONFへ統合する候補。
+- `Merge-candidate`: 12件。IDと本文は保持するが、個別には提示せず上位CONFへ統合する候補。
 - `Implementation-detail-no-user-question`: 0件。
 - `Blocked-by-uninvestigated`: 0件。
 
@@ -29,9 +29,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 6. 非同期処理の部分失敗、重複、順序逆転をどう検知し再実行するか。
 7. 編集中競合、error/loading、日付時刻入力、accessibilityの共通UXをどうするか。
 
-対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。既存のAnswered 43件、Open-deferred 3件、各Answer本文とStatusは変更しない。
+対応するcanonical groupは順にG-AUTHZ/G-ONBOARDING、G-BILLING、G-RECOVERY、G-PRIVACY/G-ARCHIVE、CONF-0130、G-SHARED-UX/G-DATA-COMPATである。2026-08-12当時はAnswered 43件、Open-deferred 3件であり、この段落は当時の再照合結果を示す。現在件数は上のreconciliation metadataを正とする。
 
-`Open` 95件は削除・Answered化しておらず、部分回答は各`Answer`のまま保持した。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
+2026-09-05のSite CONF-0050回答後、全146件の本文`Status`はOpen 74件、Answered 67件、Partially answered 5件である。CONF-0070はOUT-01の作成・編集actorとclient破壊操作停止まで部分回答、CONF-0071は協力会社master・重複配置維持、CONF-0072は通常archive／restoreを提供しないlive保持、CONF-0073はcode・検索・pagination・表示契約として回答済みである。上のreconciliation dispositionは2026-08-12時点の138件に対するAnswered 53件、Open-user-decision 65件、Open-deferred 8件、Merge-candidate 12件で、本文Statusとは別の再照合分類である。今後利用者へ提示するときは、dependency mapのcanonical group単位で行い、Merge-candidateを重複質問しない。
 
 ## CONF-0001 pageSettings fail-closed時の未設定route処理
 
@@ -528,13 +528,13 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-020; `customer-master.md`
-- Evidence: 一意性検証なし。一覧はACTIVE限定、Autocompleteはstatus非限定。tokenはname/nameKanaのみ。
+- Evidence: 調査当時は一意性検証なし、一覧にACTIVE条件記述があり、Autocompleteはstatus非限定、tokenはname/nameKanaのみ。旧一覧のadapter引数不一致が後に判明したため、当時の実取得結果がACTIVE限定だったとは断定しない。現在の一覧・編集は[Customer master](customer-master.md)を参照。
 - Question: tenant内の重複判定key、検索対象field、TERMINATED Customerの新規選択可否をどうするか。
 - Why needed: 二重masterと無効取引先への新規紐付けを防ぎつつ、過去参照を維持するため。
 - Options and impact: code一意、名称警告のみ、重複許容／新規候補ACTIVE限定・過去値は表示／全status選択可。
-- Current provisional treatment: name一意制約は設けず、任意Customer codeだけtenant内uniqueとする。類似候補はwarningに留め、正当な同名作成を許す。新規選択はACTIVEだけ、履歴ではTERMINATEDを表示する。
+- Current provisional treatment: 重複・検索の方針は下記回答を維持する。状態による候補制限・再利用前reactivateの旧方針は2026-09-03に置換済み。[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)を正とする。
 - Related FUT IDs: FUT-0056
-- Answer: 2026-08-11 回答済み。名称のhard unique制約は設けない。任意のCustomer codeはtenant内uniqueとする。normalized name/kana/address/phoneによる類似warningを表示するが、正当な同名Customer作成は許可する。新規選択候補はACTIVEだけに限定し、historical referenceではTERMINATEDも表示する。再利用前にはreactivateする。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索の実現可能性・index・costは実装時に検証する。
+- Answer: 2026-08-11 回答済み（状態による選択制限部分は2026-09-03にsuperseded）。名称のhard unique制約は設けない。任意のCustomer codeはtenant内uniqueとする。normalized name/kana/address/phoneによる類似warningを表示するが、正当な同名Customer作成は許可する。検索はcode/name/kana/phoneを対象とし、addressはprivacy/cost確認後に追加を検討する。類似検索の実現可能性・index・costは実装時に検証する。旧回答のACTIVE限定・再利用前reactivateは現在の要件ではない。
 
 ## CONF-0043 Customerのarchive・参照・restore policy
 
@@ -546,7 +546,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 全参照中禁止、TERMINATEDのみ運用、snapshot後archive可、管理者restore。利便性と監査整合が異なる。
 - Current provisional treatment: archiveは例外的な論理削除先で利用者向けごみ箱ではない。通常終了はTERMINATEDを使い、restoreは通常Userへ提供せず、理由・監査付き運営者緊急processだけに限定する。
 - Related FUT IDs: FUT-0057
-- Answer: 2026-08-11 回答済み。archiveはlogical deletionの保存先でありUser向けrecycle binではない。Userから「削除情報を確認したい」と依頼があれば運営者がarchive情報を調査できる。既存restore機能は緊急時のcontingencyに限定し、通常`customers:write` Userはrestoreできない。通常の契約終了はTERMINATED、archiveは参照確認後の誤登録・重複等の例外に限定する。保持要件が決まるまで自動purgeせず、運営者の閲覧・操作をauditする。例外restoreは通常UIから隔離し、運営者管理・reason/audit必須、active同IDがあればoverwriteせず拒否する。
+- Answer: 2026-08-11 回答済み。archiveはlogical deletionの保存先でありUser向けrecycle binではない。Userから「削除情報を確認したい」と依頼があれば運営者がarchive情報を調査できる。既存restore機能は緊急時のcontingencyに限定し、通常`customers:write` Userはrestoreできない。通常の契約終了はTERMINATED、archiveは参照確認後の誤登録・重複等の例外に限定する。保持要件が決まるまで自動purgeせず、運営者の閲覧・操作をauditする。例外restoreは通常UIから隔離し、運営者管理・reason/audit必須、active同IDがあればoverwriteせず拒否する。2026-09-04にCustomer固有の参照barrier、same-ID tombstone、versioned audit envelope、archive client非公開を[ADR 0046](../decisions/0046-customer-archive-reference-barrier.md)で追加確定した。operator inspection/restoreとretention/purgeは引き続き別仕様である。
 
 ## CONF-0044 Customer情報の請求snapshot時点
 
@@ -568,7 +568,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: 契約終了、再開、誤登録削除をTERMINATED/archiveのどちらで扱い、再有効化を誰に許可するか。
 - Why needed: 履歴を残す通常終了と例外的削除を区別し、検索・参照・復元を一貫させるため。
 - Options and impact: 通常はTERMINATED・誤登録のみarchive、archive廃止、管理者のみ再有効化。
-- Current provisional treatment: 契約終了・停止はTERMINATED、再開はACTIVEとする。archiveは参照なし確認後の誤登録・重複だけに限定し、通常User restoreと物理delete UIは提供しない。
+- Current provisional treatment: 状態の意味は[現行仕様](../specification.md#取引先現場取極め)と[ADR 0044](../decisions/0044-customer-status-as-descriptive-flag.md)を正とする。archiveは参照なし確認後の誤登録・重複だけに限定し、通常User restoreと物理delete UIは提供しない。下記reason/actor/timeはarchiveの話であり、状態変更専用の日時・理由・履歴の追加要件ではない。
 - Related FUT IDs: FUT-0057, FUT-0059
 - Answer: 2026-08-11 回答済み。契約終了・停止はTERMINATED、再開はACTIVEを使う。誤登録・重複は参照がないことを確認した場合だけarchiveする。historical Customerは通常TERMINATEDで保持する。TERMINATEDのreactivateは`customers:write`で許可するが、archive restoreは通常User操作ではなく運営者の例外的contingencyだけとする。archiveへreason/actor/timeを保存し、物理delete UIは設けない。
 
@@ -580,7 +580,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: Siteの閲覧、作成、基本情報・取引先・取極め編集、終了、archive、restoreを誰に許可するか。
 - Why needed: 配置・請求の基礎masterを改変できる主体を制限しUIとRulesを一致させるため。
 - Options and impact: read/write分離、取極め/終了/削除の個別権限、管理role限定。
-- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報、Agreement変更、終了、再有効化、archiveを含む。Customer変更の回答部分は現行仕様の変更禁止と衝突するため、正本変更までは権限があっても許可しない。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
+- Current provisional treatment: `sites:read`/`sites:write`の2権限とし、writeは作成、基本情報、Customer・Agreement変更、終了、再有効化、archiveを含む。Customer変更は2026-09-04に現行仕様へ反映済み。UI・Rules・Callableとrole presetをこの境界へ揃え、archiveは理由・監査必須、通常利用者のrestoreは禁止する。
 - Related FUT IDs: FUT-0060
 - Answer: 2026-08-11回答。`sites:read`/`sites:write`の2権限を採用し、細分化しない。`sites:write`は作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含む。archiveは理由・監査を必須とし、通常restoreは提供せず、運営operatorの緊急復旧だけに限定する。UI・Rules・Callableを一致させ、role presetから付与する。
 
@@ -588,11 +588,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
-- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。現行仕様70行は過去請求整合のためCustomer変更を禁止しており、2026-08-11のAnswerは正本へ反映されていない。
+- Evidence: 仮登録からcustomerId設定は可能。設定後unsetは禁止するがA→B変更は可能で、既存下流dataの移管処理は直接経路にない。2026-08-11のAnswerは2026-09-04に現行仕様へ反映した。
 - Question: Customer変更をどの条件で許し、既存予定・実績・請求・埋込みCustomerをどう扱うか。
 - Why needed: tenant内の所属・請求先整合と履歴再現性を保つため。
 - Options and impact: 初回設定後固定、未稼働時のみ変更、明示的移管workflow、全履歴維持で将来分のみ変更。
-- Current provisional treatment: Answer履歴は保持するが、implementation台帳だけで現行仕様を上書きしない。別途の仕様変更承認と仕様・ADR・migration・test同期が完了するまでは、初回の仮登録解消後のCustomer変更を禁止する。
+- Current provisional treatment: SiteのCustomer変更を許可する。一度設定したcustomerIdのunsetは許可せず、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。新しい参照先は同じ会社に存在するCustomerに限る。
 - Related FUT IDs: FUT-0061
 - Answer: 2026-08-11回答。SiteのCustomer変更を許す。既存OperationResultの`customerId`はsnapshotであり、自動変更しない。現行コードの空updateは再同期せず、`groupKey`変更時だけ同期する。将来は明示的な「Customer/Agreement再適用」method/Callableで対象OperationResultを選択し、変更前後のCustomer/AgreementとBilling影響を表示する。発行済み請求書は除外し、actor・reason・before/afterを監査する。OperationResult update triggerはBillingを旧keyから新keyへ移動する。空updateへ隠れた意味を持たせない。
 
@@ -604,68 +604,68 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Question: 終了Siteに許す閲覧・編集・新規参照と、誤終了/再開時の再有効化条件をどうするか。
 - Why needed: 終了後の不正な新規利用と、必要な訂正・再開を区別するため。
 - Options and impact: read-only、限定訂正、管理者再開、常時編集可だが新規選択不可。
-- Current provisional treatment: TERMINATEDはread-onlyかつ新規選択不可とし、履歴参照と限定された監査付き訂正だけを許す。同一Customerでの再開は`sites:write`と理由を必須とする。Customer変更は現行仕様どおり許可しない。
+- Current provisional treatment: TERMINATEDの通常master編集制限は維持するが、新規選択不可は2026-09-05にCONF-0135で置換した。終了済み表示・確認付きで新規業務へ選択でき、単発残工事はTERMINATEDのまま扱う。継続再開はstrict `sites:write`、reason、新工期を必須とする。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - Related FUT IDs: FUT-0062
-- Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。
+- Answer: 2026-08-11回答。TERMINATEDはread-only・新規選択不可だが、履歴参照と限定された監査付き訂正を許す。同一Customerでの再開は`sites:write`と理由を伴う再有効化とする。Customerを変更する場合は新Siteを強制せずCONF-0047のCustomer変更方針を使う。Agreementは自動再有効化しない。archiveは誤登録等に限定し、通常利用者のrestoreは提供しない。2026-09-05追加回答で新規選択不可だけをsupersedeし、終了済み表示・確認付き選択、TERMINATEDのままの単発残工事、strict `sites:write`・reason・新工期による継続再開を採用した。通常master編集制限、非cascade、archive境界は維持する。
 
 ## CONF-0049 Site終了・archive・restoreの使い分け
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
 - Evidence: terminateとlogical archiveが併存し、restore APIはあるがUIは復元不能と表示する。削除guardは3 collectionのみ。
 - Question: 通常終了、誤登録削除、法定/運用保持、restoreをどの機構と権限で扱うか。
 - Why needed: 参照整合、履歴保持、誤削除回復、利用者説明を一貫させるため。
 - Options and impact: 通常TERMINATED・誤登録のみarchive、archive禁止、管理者restore、保持期間付きarchive。
-- Current provisional treatment: 両機構の存在だけを記録し、復元不能表示を正式仕様とはしない。
+- Current provisional treatment: 通常終了は`TERMINATED`としてlive Siteを保持する。誤登録・重複だけは、全参照確認と並行writerのlive Site存在barrierを満たす専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用しない。
 - Related FUT IDs: FUT-0063
-- Answer: 未回答
+- Answer: 2026-09-05回答。通常終了は`TERMINATED`、同じCustomerでの再利用は`sites:write`と理由を伴う再有効化とする。誤登録・重複は`sites:write`の許可actorが必須reasonとoperation IDを指定する専用Callableでarchiveできる。一つのtransactionでactive、same-ID archive、状態を限定しない全業務参照を確認し、参照済みまたは競合時はwrite 0とする。全参照writerが同じatomic boundaryでlive Site存在を必須にできない間はarchiveを有効化しない。generic delete／restoreと物理delete、通常画面のrestore、自動purge、保持期限は設けず、緊急restoreは別承認とする。判断理由はADR 0051を正とする。
 
 ## CONF-0050 Site情報の下流snapshot時点
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-021; `site-master.md`
 - Evidence: OperationResultはcustomerId/agreementを保存し、PDFはlive Site名を参照し、Site.customerはCustomer変更時だけ更新される埋込みである。
 - Question: Site名、Customer、住所、警備種別、取極め等を予定・実績・Billing・帳票のどの時点で固定するか。
 - Why needed: master変更後も履歴と請求書を再現し、訂正範囲を定義するため。
 - Options and impact: 作成時snapshot、確定時snapshot、revision方式、常時live参照。
-- Current provisional treatment: 現行の時点混在を実装事実として扱い、正式仕様とはしない。
+- Current provisional treatment: 予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使う。Site master変更で既存実績・確定請求を更新しない。legacy欠損値は推測backfillしない。
 - Related FUT IDs: FUT-0061, FUT-0064
-- Answer: 未回答
+- Answer: 2026-09-05回答。SiteOperationScheduleは稼働実績へ変換されるまでlive Siteを参照する。OperationResultは作成時にSite名称・表示名、Customer ID・表示情報、住所、警備種別、適用取極めをsnapshot化する。Billing draftはOperationResult snapshotを集計し、請求確定時に表示明細をrevision snapshotとして固定する。Site master変更で既存OperationResult・確定Billingを自動更新せず、訂正・再発行は明示operationと新revisionで扱う。legacy snapshot欠損は現在値を推測backfillせず、互換fallbackの再現不能riskを明示する。判断理由はADR 0052を正とする。
 ## CONF-0051 Agreementの正式編集・承認権限
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: `sites:read`で取極めCRUDへ到達し、Sites Rulesは同一会社Userに全writeを許す。
 - Question: 単価・時間・締日を誰が作成、変更、削除、承認できるか。
 - Why needed: 請求額へ直接影響するmasterの改変を制御・監査するため。
 - Options and impact: Site編集権限と共通、取極め専用role、作成者+承認者workflow。
-- Current provisional treatment: 現行Site権限への従属を暫定実装として記録する。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0065
 - Answer: 未回答
 
 ## CONF-0052 Agreement数値fieldの許容範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: 単価は0 defaultで負数等のAgreement固有validationなし。休憩・規定実働は負数のみ拒否。
 - Question: 0/負単価、小数精度、最大額、休憩・規定時間の上限と相互関係をどう定義するか。
 - Why needed: 不正・異常な請求額を保存前に検出するため。
 - Options and impact: 厳格reject、警告付き許可、調整fieldだけ負数許可。値引き運用との整合が必要。
-- Current provisional treatment: 現行validationを安全な確定仕様とはしない。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0066
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。全単価は0〜10,000,000円の整数とし、負数・小数・非数値・上限超過を拒否する。0円は許可するが保存前に警告する。休憩・規定実働は0〜1,440分の整数とし、休憩は勤務区間を超えてはならない。規定実働は勤務区間との大小では拒否しない。締日は月末`0`、5、10、15、20、25だけを許可する。
 
 ## CONF-0053 適用済みAgreementの訂正・削除・履歴
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-022; `agreement-master.md`
 - Evidence: 過去Agreementも上書き・削除でき、revision/status/archiveはない。既存OperationResultはsnapshotを保持する。
 - Question: 適用済み取極めをlockするか、訂正revisionを作るか、削除を許すか、履歴をどう保持するか。
 - Why needed: 過去請求の再現性とmaster訂正を両立するため。
 - Options and impact: 過去lock+新revision、理由付き訂正、未使用分のみ削除、現行自由編集。
-- Current provisional treatment: 現行自由編集を正式な履歴仕様とは扱わない。
+- Current provisional treatment: [ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
 - Related FUT IDs: FUT-0067
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。OperationResultの取極めsnapshotを過去実績の正本とする。適用済み取極めmasterも編集・削除できるが、既存OperationResultへ自動反映しない。変更後に作成または明示的に再適用する実績だけが新masterを使う。master専用revision、before/after履歴、変更理由、監査collectionは設けず、Siteの通常の更新者・更新時刻だけを維持する。既存実績の訂正は請求影響等を扱う別operationとする。
 
 ## CONF-0054 Agreement snapshot・再適用・手動override
 
@@ -751,7 +751,17 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Answer: 未回答
 ## CONF-0061 Employee個人情報の閲覧・編集・保持権限
 
-- Status: Open
+### EMP-01の部分回答と残る判断
+
+2026-09-06、会社管理者・統括・人事のEmployee作成/通常編集/退職を採用した。同日、archiveを将来へ延期し、会社管理者・統括だけの従属なし誤登録物理削除を採用した。確定要件は[仕様](../specification.md#employeeの操作権限と保持)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)と[ADR 0057](../decisions/0057-employee-hard-delete-and-archive-deferral.md)、適用状態は[ロードマップ](../roadmaps/employee.md)を正とする。「統括は表示情報編集だけ」「労務も保険編集」という旧案は採用しない。
+
+同日の追加回答で、労務・法務・管制・経理も「現時点では全項目OK」と確定した。会社管理者・統括・人事を含む既知業務roleのEmployee原本全項目readを維持し、項目別mask/DTO・表示用data分割のための新APIは今回導入しない。既存検索・原簿氏名/性別/国籍表示・リアルタイム購読を活かす。roleなし・未知role・他tenant・無効/仮Userの原本readと既存archiveの過剰アクセスは別途閉じる。詳細は[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
+
+追加回答で退職後の通常訂正を禁止し、在職Employeeの保険履歴復元を会社管理者・統括・人事へ許可した。保険の手続中操作は現行遷移条件を維持し、以前の「history復元は会社管理者だけ」「手続中の喪失/除外は先に取下げ」は採用しない。退職後の保険処理も通常編集禁止に含む。専用誤退職訂正は既存境界を維持する。[ADR 0059](../decisions/0059-employee-retired-edit-and-insurance-operation-boundary.md)を参照。履歴復元は過去entryをpopする操作であり監査履歴とは呼ばない。通常保存で退職field（不存在を含む）やUser/Authを変更せず、保持期限や制度要件を推測で追加しない。
+
+### 既存確認事項
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-024、SPEC-SEG-051; `employee-master.md`、`employee-insurance.md`
 - Evidence: employees:readと同一会社全read/writeで高感度fieldとarchiveへアクセス可能。保険番号・加入/喪失日/理由・履歴も追加write guardなしでEmployee詳細に表示・更新され、RESIGNED Employeeでも操作可能。historyにactor/timeはなくrollbackはentryをpopする。
 - Question: 本人、管制、雇用/労務、管理者がどのfield（保険番号・加入喪失履歴を含む）を閲覧・変更でき、管理目的、監査、保持、訂正/rollbackをどう扱うか。
@@ -759,9 +769,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: field別read model、本人+労務限定、管理者のみ、機能別document分割。
 - Current provisional treatment: 現行境界を暫定実装とし、安全な確定仕様とはしない。
 - Related FUT IDs: FUT-0075、FUT-0159
-- Answer: 未回答
+- Answer: 2026-09-06 actor方針と現時点の全項目readを部分回答。上記の確定要件へのlinkを参照。退職後編集禁止・保険履歴復元actorと現行遷移維持も回答済み。保持期限・監査等は未回答のため一括Answeredにしない。
 
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
+
+2026-09-06改訂: 下の2026-08-24回答の退職actorへ統括を追加した。現在のactorは[仕様](../specification.md#employeeの操作権限と保持)を参照する。一意性・User/Auth処理は維持する。
 
 - Status: Answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
@@ -787,6 +799,10 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0064 Employee退職・archive・匿名化・restore policy
 
+2026-09-06の最新回答: Employee archiveを同IDの別collection移動へ戻し、従属側の参照整合性設計を委任した。直接物理削除・archive延期と必要な従属writer変更禁止はADR 0060で置換する。通常退職でEmployee/業務記録を保持し、誤登録archiveで従属/User/Authを連鎖削除しない。共通原則は[仕様](../specification.md#ドキュメントのアーカイブと物理削除)、具体案は[Employee設計](employee-master.md#employeeのarchive設計)を参照。snapshot/raw保持と依存query/必要writerの技術案は具体化済み。archive read・操作表示・段階移行/工程配分も最終回答で採用済み。物理削除運用・最小ID記録・保持は共通CONF-0123へ集約し、通常CRUDの開始条件へ無関係な運用全決定を追加しない。以下の旧回答は当時の履歴である。
+
+最終採用（2026-09-06）: archiveの直接readは通常原本と同じ7actorへ許可し、通常一覧/候補への混入、直接CUD・restoreは拒否する。archive管理一覧は追加しない。snapshot/raw保持・従属query・既存索引確認は設計契約に従う。archive/参照保護をEMP-05へ含め、物理削除の実行機能を後続専用工程に分ける[工程配分](../roadmaps/employee.md#最終確認用の工程割当案)も採用済み。
+
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: RESIGNEDとlogical archiveが併存し、guard外勤怠/履歴参照があり、UI restoreなし。
@@ -799,15 +815,24 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0065 Employee code・表示名・退職者候補の規則
 
-- Status: Open
+### EMP-01採用条件
+
+- codeは任意・手入力・重複可、表示名カナは独立入力を維持する。通常候補のACTIVE/RESIGNED、在職空検索一覧/カナ順・退職空検索0件・期間内在籍者の条件と、過去記録が現在master名を使う方式を維持する。全項目read採用済みのため、非公開氏名のfield選定を再度の前提にしない。
+- 明示変更は、姓名と表示名を同時に変更したら入力した表示名を最後に適用すること、作成を在職一覧へ集約し退職検索のplusを除去すること。根拠・影響・検証は[最終案](employee-master.md#利用者へ提示する操作案)へ集約する。
+
+利用者回答（2026-09-06）: 上記の表示名優先順位・作成導線と維持条件を採用し、確定を承認した。確認済み要件は[仕様](../specification.md#employeeの操作権限と保持)へ反映。保存・競合・座標の技術契約は[設計](employee-master.md#通常保存の技術契約)に集約し、再度の承認事項にしない。
+
+### 既存確認事項
+
+- Status: Answered
 - Source segment/doc: SPEC-SEG-024; `employee-master.md`
 - Evidence: code非一意、displayNameKana自動同期なし、汎用Autocompleteはstatus非限定。
 - Question: codeの採番/一意性、表示名と法的氏名・カナの関係、退職者を選べる用途をどう定義するか。
 - Why needed: 従業員識別、検索、帳票表示、新規配置候補を一貫させるため。
 - Options and impact: tenant連番、手動一意code、通称別field、通常候補ACTIVE限定+履歴表示は全status。
-- Current provisional treatment: 現行自由code/保存表示名/status非限定検索を確定仕様とはしない。
+- Current provisional treatment: 上記の採用条件に従う。新採番・一意性・新しい候補制限は追加しない。
 - Related FUT IDs: FUT-0079
-- Answer: 未回答
+- Answer: 2026-09-06 回答済み。上記の維持条件と表示名優先順位・作成導線を採用した。実装・適用状況はEmployeeロードマップを参照する。
 
 ## CONF-0066 User/Auth管理の正式権限と本人操作範囲
 
@@ -859,7 +884,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0070 Outsourcerマスターの正式操作権限
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: read permissionでCRUDへ到達し、Rulesは同一会社Userにlive/archive全writeを許す。
 - Question: 外注先の閲覧、登録、編集、契約終了、archive、restoreを誰に許可するか。
@@ -867,47 +892,49 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 管理者専用、管制/契約担当分離、操作別permission、super-user repair専用。
 - Current provisional treatment: 現行境界を暫定実装として記録し、確定権限とはしない。
 - Related FUT IDs: FUT-0085
-- Answer: 未回答
+- Answer: 2026-09-04 部分回答。OUT-01では同社の有効な本登録会社管理者、またはnon-super-userの既知preset `manager`だけに作成・編集・`contractStatus`変更を許可する。会社管理者でないsuper-user、直接permission、未知・混在roleは拒否する。client deleteとarchive writeは正式policy確定まで全て停止し、readは現行境界を維持する。archive/restoreの正式actorと運用は未回答のためStatusはPartially answeredを維持する。
 
 ## CONF-0071 外注警備員を個人単位で管理するか
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
 - Evidence: 現行Outsourcerは会社だけで、複数人を外注先ID+indexとして扱い、個人の永続IDや所属を持たない。
 - Question: 外注警備員の氏名、資格、連絡、所属、在籍状態、実績を個人単位で管理する必要があるか。人数単位の匿名運用を正式維持するか。
 - Why needed: Schedule/Notification/Resultのworker identityと個人情報責任を定義するため。
 - Options and impact: 個人master新設、会社配下subcollection、必要時だけsnapshot入力、現行人数単位維持。
-- Current provisional treatment: Outsourcerを会社master、indexを一時的な人数識別として扱う。
+- Current provisional treatment: Outsourcerを協力会社masterとして扱い、同じOutsourcerを配置明細へ複数回登録できる現行方式を維持する。
 - Related FUT IDs: FUT-0086
-- Answer: 未回答
+- Answer: 2026-09-04 回答済み。Outsourcerはある特定の協力会社の情報であり、外注警備員個人masterではない。配置時は同じOutsourcerを重複登録できる方式を維持する。過去に試行したOutsourcerと人数の集約方式は処理が煩雑になるため廃止済みで、再採用しない。
 
 ## CONF-0072 外注先の契約終了・archive・過去参照policy
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
-- Evidence: 終了は日付なしstatus、archiveはlive doc削除。guardはSchedule/Resultのみでrestore UIなし。
-- Question: 契約終了後の新規選択、過去表示、訂正、archive時点、restore、保持期間をどう定義するか。
-- Why needed: 終了先の誤選択を防ぎつつ、過去予定・通知・実績を再現するため。
-- Options and impact: 終了日effective filter、終了は保持し誤登録のみarchive、snapshot fallback、管理者restore。
-- Current provisional treatment: ACTIVE限定rangeと現行archiveを実装事実とし、正式保持policyとはしない。
+- Evidence: OUT-03でstatusを日付なしの説明用フラグへ確定し、OUT-04でOutsourcerをlive masterとして保持して通常archive／restore／物理deleteを提供しないと確定した。
+- Question: statusとは分離して、誤登録・重複等のarchive対象、参照確認、過去表示、restore、保持期間をどう定義するか。
+- Why needed: live masterをarchiveしても予定・通知・実績の表示と復旧可能性を失わないため。
+- Options and impact: 誤登録・重複のみarchive、snapshot fallback、管理者restore、保持期間。
+- Current provisional treatment: statusは候補・業務操作へ影響しない説明用フラグとし、通常productからarchive／restore／物理deleteを提供しない。
 - Related FUT IDs: FUT-0087
-- Answer: 未回答
+- Answer: 2026-09-04 回答済み。`contractStatus`はCustomerと同じ説明用の可逆なフラグとし、一覧・検索・Autocomplete・配置・稼働実績その他の選択や既存・新規操作へ影響させない。Outsourcerは誤登録・重複・取引終了を含めてlive masterとして保持し、通常productにarchive／restore／物理deleteを設けない。generic delete/restoreを正規経路にせず、既存dataの変換・復元・削除、自動purge、保持期限を追加しない。将来削除・匿名化が具体的に必要になった場合は新しいcheckpointとする。
 
 ## CONF-0073 Outsourcer code・検索・終了済み候補の規則
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-026; `outsourcer-master.md`
-- Evidence: codeは任意/非一意/検索token外。配置rangeはACTIVE限定だが汎用Autocompleteはstatus非限定。契約期間fieldなし。
-- Question: codeを採番・一意化するか。新規操作と過去訂正でTERMINATED候補をどう表示し、契約期間を持つか。
-- Why needed: 外注先識別と候補選択を用途ごとに一貫させるため。
-- Options and impact: tenant連番、手動一意code、active default+明示的終了表示、effective date管理、現行statusのみ。
-- Current provisional treatment: 新規配置はACTIVEを基本とし、Autocomplete非限定は確定仕様としない。
+- Evidence: codeは任意/非一意/検索token外。OUT-03で一覧・検索・Autocomplete・配置・稼働実績をstatus非限定へ統一し、契約期間fieldは設けないと確定した。
+- Question: codeを採番・一意化するか。codeを検索対象にするか。paginationとAutocomplete rendererをどう整合するか。
+- Why needed: 外注先の識別・検索・表示件数を利用経路間で一貫させるため。
+- Options and impact: tenant連番、手動一意code、code検索追加、page size統一、専用renderer。
+- Current provisional treatment: なし。下記回答を確認済み仕様とする。
 - Related FUT IDs: FUT-0088、FUT-0089
-- Answer: 未回答
+- Answer: 2026-09-04 回答済み。ACTIVE／TERMINATEDの双方を一覧・検索・Autocomplete・配置・稼働実績その他の候補に含め、statusだけで選択を制限しない。codeは任意の手動入力、最大10文字、重複可とし、自動採番・一意制約・検索対象にしない。通常一覧は`nameKana`・document ID昇順の20件server cursor、名称検索は正規化後2〜40文字、既存tokenMap equalityの全一致結果をclient sortする20件memory paginationとする。Autocompleteは外注先専用rendererと既存最大50件を使い、終了済み表示を加えても選択を制限しない。
 
 ## CONF-0074 Company設定の正式権限とserver-owned field
 
-- Status: Open
+2026-09-06改訂: 会社管理者・統括が通常業務設定を更新し、システム利用契約・課金操作と管理者保護は専用境界とする方針を採用。現在の要件は[仕様](../specification.md#company設定とtenant-lifecycle)、理由は[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。下の2026-08-28回答の責務別document分割はADR 0031で既に置換された履歴である。
+
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: admin画面に対しRulesは同一会社Userへ全write。銀行、請求、取極め、運用設定、Stripe/subscription、maintenanceが同一docに混在する。
 - Question: 各fieldを誰が閲覧・編集し、Stripe/subscription/maintenanceをFunctions専用にするか。
@@ -915,23 +942,23 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: field別document分割、admin callable、操作別permission、server-owned field write deny。
 - Current provisional treatment: 現行UI/Rulesを暫定実装として記録し、確定権限とはしない。
 - Related FUT IDs: FUT-0090
-- Answer: 未回答
+- Answer: 2026-08-28承認。profile/billing/operationsは会社管理者write、profile/billingは同社の有効な本登録User read、arrangementは既存の配置・予定管理actor write、root/entitlement/maintenanceはserver/provider onlyとする。専用Company permissionとsuper-user actorは採用せず、責務別Settings documentへ分割する。詳細はADR 0025。
 
 ## CONF-0075 Company停止・削除・tenant修復policy
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
-- Evidence: Company status/archive/guardなし。UIはdelete不可だがRulesはdelete可で、claim/doc/subcollectionsがtenant identityを分担する。
+- Evidence: Company status/archive/guardなし。2026-08-27にrootのclient create/deleteはRulesで拒否したが、claim/doc/subcollectionsがtenant identityを分担し、server/operatorの停止・decommission・repairは未確定である。
 - Question: 解約・停止・誤登録・法的削除をどう区別し、Company root削除、subcollection保持、復元、tenant移転を誰が行うか。
 - Why needed: tenant root欠損、orphan data、誤削除から安全に復旧するため。
 - Options and impact: root永久保持+status、server cascade/匿名化、論理停止、super-user repairのみ。
-- Current provisional treatment: Companyを削除不能なanchorとして扱うが、Rulesは未強制。
+- Current provisional treatment: Companyを削除不能なanchorとして扱い、client deleteはRulesで強制拒否する。server/operatorによる停止・decommission・repair、root欠損・orphanの回復は未確定のまま維持する。
 - Related FUT IDs: FUT-0090、FUT-0091
-- Answer: 未回答
+- Answer: 2026-08-28承認。rootは通常削除しないtenant anchorとし、ACTIVE/SUSPENDED/CLOSEDを採用する。SUSPENDEDはproviderだけが停止・再開、CLOSEDは通常再開不可とする。法的削除、物理削除、tenant移転・統合・分割、CLOSED誤操作は別承認の削除またはincident recoveryで扱う。
 
 ## CONF-0076 Company基本・口座・請求設定の必須/validation
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: 初期作成は会社名/カナだけ。complete getterは住所/電話も要求するが画面editorは住所構成field全部を含まない。口座・invoiceは任意。
 - Question: 運用開始・請求書発行に必要なfield、番号形式、口座完全性、minute/round/attendance設定の許容値をどう定義するか。
@@ -939,11 +966,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 機能利用時validation、設定保存時strict validation、警告付き段階入力、server schema enforcement。
 - Current provisional treatment: schema default/requiredを実装事実とし、業務上の完全条件とは確定しない。
 - Related FUT IDs: FUT-0092
-- Answer: 未回答
+- Answer: 2026-08-28承認。文字数はUnicode Extended Grapheme Cluster単位で、結合文字表現の`が`も1文字と数え、trim以外のUnicode正規化は自動適用しない。会社名1〜100、カナ1〜200。signupは両者だけ、請求確定は会社名・郵便・都道府県・市区町村・番地・電話を必須とする。invoiceはnullまたは正規化した13数字、bankは5項目全nullまたは完全入力とし、口座番号は先頭0を保つASCII数字1〜7桁、種別はnull/普通/当座とする。`minuteInterval`は5分単位の`5/10/15/20/25/30`だけを許可する。他の長さ、default、enum、相関はADR 0025のexact schema v1を正本とする。
 
 ## CONF-0077 確定帳票でのCompany情報snapshotと再発行
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: Billing PDFは生成時のlive Company名称・住所・電話・登録番号・口座を参照する。
 - Question: 請求確定時に発行者Company情報をsnapshotし、再生成で当時値を維持するか。訂正・再発行時はどう扱うか。
@@ -951,11 +978,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: Billing確定snapshot、PDF artifact保存、常にlive、revision付き再発行。
 - Current provisional treatment: live参照を実装事実とし、確定帳票仕様とはしない。
 - Related FUT IDs: FUT-0093
-- Answer: 未回答
+- Answer: 2026-08-28承認。draftはlive Company、確定時に名称・住所・電話・invoice・bankをissuer snapshotへ保存する。確定後の訂正・再発行は旧snapshotを書き換えず新revisionとする。実write lifecycleはBilling改修で完成させる。
 
 ## CONF-0078 Company設定変更の監査・同時編集方針
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-027; `company-settings.md`
 - Evidence: 画面、並び順action、Stripe webhookが同じCompany docを更新し、version/preconditionと設定変更監査は確認できない。
 - Question: 銀行・invoice・端数・勤怠設定・取極め変更の履歴を残すか。同時更新時に拒否、merge、後勝ちのどれを採るか。
@@ -963,11 +990,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: revision+audit log、field別documents、optimistic concurrency、後勝ち+通知。
 - Current provisional treatment: 現行更新を実装事実とし、監査・競合policyは未確定。
 - Related FUT IDs: FUT-0090、FUT-0092、FUT-0093
-- Answer: 未回答
+- Answer: 2026-08-28承認。全設定documentにrevisionを持たせstale saveを拒否する。profile/billing/operationsは変更fieldだけをfield名順で記録するappend-only auditを持ち、bankの非null値はliteral `***`、nullはnullのまま保存する。理由・表示名・emailは保存せず、会社管理者だけが専用Callableからmask済み最小projectionを閲覧し、client直接CUDを拒否する。arrangementは履歴・undoを持たず、現在値・revision・updatedAt/byだけを保存する。site/scheduleの一方だけを1 callで変更し、そのfieldのpermissionだけを検査する。
 
 ## CONF-0079 Maintenance中に停止するserver処理の範囲
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: 現行maintenanceはroute redirectだけで、Rules/Functions/background writeを止めないがbackup/restoreは排他前提にする。
 - Question: System/Company maintenance中にread、write、Callable、trigger、通知、scheduled処理のどれを停止し、開始済み処理をどうdrainするか。
@@ -975,11 +1002,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 全write停止、対象collectionだけ停止、read-only mode、UI表示のみ。background処理の扱いが異なる。
 - Current provisional treatment: route制御を実装事実とし、server排他が成立するとみなさない。
 - Related FUT IDs: FUT-0095
-- Answer: 未回答
+- Answer: 2026-08-28承認。maintenanceはproject-wideで排他lockではない。通常client write、business Callableの新規処理、対象scheduled/triggerの通常自動変更を止め、明示承認されたprovider migration/repair/rebuild/verificationだけを例外とする。in-flight処理はbounded wait、log、連続dry-run digest、snapshot、post-checkで静穏化する。
 
 ## CONF-0080 Maintenance中の例外actor・route・復旧操作
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: 全roleをmaintenance pageへ送り、logout/refresh/admin bypassなし。SystemはAdmin SDK、Companyも運用上Admin SDKで切替える。
 - Question: super-user/admin/developerのどれにstatus確認・解除・修復を許し、一般Userへlogoutやread-only routeを提供するか。
@@ -987,11 +1014,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: CLI専用、super-user専用route、署名済みbreak-glass、全員完全遮断+logoutのみ。
 - Current provisional treatment: 例外なしroute制御を実装事実とし、正式復旧policyとはしない。
 - Related FUT IDs: FUT-0095、FUT-0098
-- Answer: 未回答
+- Answer: 2026-08-28承認。一般利用者は停止案内とsign-outだけを利用する。製品内super-user/admin bypassを正式経路にせず、provider migration・repairは対象と作用を固定した個別承認operator checkpointから実行する。全Function wrapper/lease/registryは現段階で実装しない。
 
 ## CONF-0081 System/Company状態不明時のfail-open/closedと復旧UX
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: System初回fetch失敗はfail-closed固定、Company fetch失敗はcompany modeを認識できず、retry UIなし。
 - Question: 初回障害、購読断、offline、Company欠損でunknownとなった際にアクセスを止めるか、last-known状態を使うか。再試行をどう提供するか。
@@ -999,11 +1026,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 常にfail-closed、自動retry後closed、署名済みlast-known、限定read-only。
 - Current provisional treatment: 現行のSystem closed/Company open候補を確定仕様とはしない。
 - Related FUT IDs: FUT-0096
-- Answer: 未回答
+- Answer: 2026-08-28承認。保護対象操作はmaintenance状態不明時にfail closedとし、有限deadline、retry/backoff、状態再取得、停止・通信障害を区別する表示を提供する。last-known falseだけで通常処理を許可しない。
 
 ## CONF-0082 Maintenance metadata・期間・利用者表示
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-028; `system-maintenance.md`
 - Evidence: boolean即時切替で予定期間なし。Company開始時刻field名がschema/CLIで不一致。pageは固定文言のみ。
 - Question: 理由、開始/予定終了/実終了、更新者、対象範囲、連絡先を保存・監査・表示するか。予約maintenanceを必要とするか。
@@ -1011,7 +1038,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: current state+history collection、予約window、最小booleanのみ、status APIで詳細提供。
 - Current provisional treatment: boolean OR判定だけを確認済みとし、metadata仕様は未確定。
 - Related FUT IDs: FUT-0097
-- Answer: 未回答
+- Answer: 2026-08-28承認。server-owned current stateへreason、scope、開始時刻、actor、operation ID、error code/timeを持ち、利用者には`maintenanceMode`、最大200文字の理由、開始時刻だけを表示する。private側は最大500文字の内部理由、最大50件のscope、opaque actor UIDを保持し、raw error・emailを保存しない。off/on時のnull・必須相関はADR 0025のexact schema v1を正本とする。quiet period、監視Function、予定・解除条件はmigration/release checkpointごとに固定し、共通固定値や予約maintenanceを必須化しない。
 
 ## CONF-0083 Stripe機能の有効環境・公開条件
 
@@ -1023,11 +1050,11 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 機能flagで閉鎖、DEV test modeのみ、Emulator stub、準備完了後export。
 - Current provisional treatment: Functions未公開を現在の実装事実とし、Stripe外部作用は実行しない。
 - Related FUT IDs: FUT-0099
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。Stripe本体は全機能改修後の正式release直前に別仕様・別承認で再開する。CCBではFunctions/UIを再有効化せず、server-owned entitlement隔離だけを扱う。
 
 ## CONF-0084 Subscription購入・管理actorとplan選択
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-029; `subscription-stripe.md`
 - Evidence: pageはsuper-user、Rulesは同一会社User全create。clientが固定priceを送るがserver allowlistなし。Portal/解約UIなし。
 - Question: 購入、plan変更、支払方法、解約、再開を誰に許し、提供plan/priceをどう選ぶか。
@@ -1035,7 +1062,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: Company adminのみ、billing permission、super-user代行、server catalog+Customer Portal。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式課金権限とはしない。
 - Related FUT IDs: FUT-0100
-- Answer: 未回答
+- Answer: 2026-09-06 actorだけ部分回答。将来のシステム契約・課金操作は会社管理者専用とし、自己昇格等で統括が取得する迂回を禁止する。課金結果の任意書換えは提供しない。plan、portal、解約・再開等の提供機能と実装・外部作用は引き続き別判断であり、旧scaffoldを再有効化しない。[仕様](../specification.md#サブスクリプション)を参照する。
 
 ## CONF-0085 Company・Stripe Customer・Subscriptionの一意性と再契約
 
@@ -1047,7 +1074,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 1:1厳格、Customer 1:Subscription history複数、active 1件、複数plan併存。
 - Current provisional treatment: 1 Customer/1 current subscription前提の実装を不変条件とはしない。
 - Related FUT IDs: FUT-0101、FUT-0102
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。正式release直前のStripe改修で一意性、再契約、event収束を決める。CCBでは既存前提を仕様へ昇格しない。
 
 ## CONF-0086 Subscription status・trial・grace・employeeLimit仕様
 
@@ -1059,7 +1086,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: server entitlement table、即時停止、grace/read-only、free downgrade、employee超過時既存保持。
 - Current provisional treatment: 現行customerTypeを実装事実とし、正式state/entitlement仕様とはしない。
 - Related FUT IDs: FUT-0102、FUT-0103
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。CCBはentitlement fieldのserver ownershipとinterfaceだけを分離し、status、trial、grace、plan、employeeLimitの実強制は正式release直前の別改修で決める。
 
 ## CONF-0087 Checkout成功条件・表示情報・保存期間
 
@@ -1071,7 +1098,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: server verify+poll、webhook完了待ち、pending state、owner/admin限定read+TTL。
 - Current provisional treatment: query表示を実装事実とし、契約成立の確定条件とはしない。
 - Related FUT IDs: FUT-0104
-- Answer: 未回答
+- Answer: 2026-08-28明示保留。checkout成功、intent projection、保持・TTLは正式release直前のStripe改修で確定する。現行query表示を正式成功条件としない。
 
 ## CONF-0088 警備報告を写真共有または構造化提出書類のどちらとするか
 
@@ -1279,7 +1306,9 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0105 従業員資格・警備員登録・機微情報の閲覧編集actor
 
-- Status: Open
+2026-09-06、通常編集actorは会社管理者・統括・人事、他4roleは閲覧だけと部分回答し、その後、現時点の全項目readを採用した。資格・本籍・緊急連絡先等を含む閲覧範囲は[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)とADR 0058に従う。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-036; `qualification-management.md`
 - Evidence: employees:read pageから編集UIへ到達し、Rulesは同社全Userへ資格番号、本籍、緊急連絡先を含むdocument全体writeを許す。
 - Question: HR、管制、法務、本人、管理者の誰に各fieldの閲覧・編集・確認・overrideを許すか。
@@ -1287,7 +1316,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: field別document/permission、HR専用、管制は有効flagのみ、本人申請+管理者承認、全管理者。
 - Current provisional treatment: 現行page/Rulesを暫定実装とし、正式権限とはしない。
 - Related FUT IDs: FUT-0126
-- Answer: 未回答
+- Answer: 2026-09-06 actorと現時点の全項目readを部分回答。特別な確認・override条件は未決。正本はCONF-0061から参照する仕様とする。
 
 ## CONF-0106 AirGuardで管理する警備教育・OJT履歴の範囲
 
@@ -1351,7 +1380,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0111 正式なrole・permission matrixとspecial roleの意味
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-039; `authorization-model.md`
 - Evidence: 6業務preset、直接permission、admin、super-user、developerが混在し、現在の分割は試作段階である。clientとserverは同じcatalogを共有しない。SEC-002とschema reviewで、同一tenant一般UserによるCompany/User/locked OperationResult write、global `admin_users` write、Storageのcross-tenant object操作、UI wildcardとRulesのadditive super-user override差を確認した。
 - Question: 正式に残すroleとpermission、各actorの操作・tenant scope、およびadmin/super-user/developerの用途・運用者・強制境界をどう定義するか。
@@ -1359,7 +1388,7 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: preset中心、permission中心、role+scope、admin全権/限定権、developer非production、super-user緊急運用。
 - Current provisional treatment: 現行presetとspecial roleを実装事実としてのみ記録する。
 - Related FUT IDs: FUT-0133、FUT-0134、既存の各業務認可FUT
-- Answer: 未回答
+- Answer: 2026-09-06通常業務とEmployee専用操作のactor方針を部分回答。[仕様](../specification.md#テナントと認証)と[ADR 0056](../decisions/0056-employee-role-and-archive-boundary.md)を参照する。Employeeの全項目readは[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)で追加回答済み。その他のroleの全機能matrix、special role、他機能のexact read field、未列挙の専用操作は未決。旧catalogの定義・実装・検証を変更済みとはしない。
 
 ## CONF-0112 複数required permission・admin override・denyの判定意味
 
@@ -1423,15 +1452,15 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0117 geocoding失敗時の保存可否とlocation必須用途
 
-- Status: Open
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`
 - Evidence: create/update前geocodingが失敗してもlocation=nullで保存を継続し、callerへ失敗を伝えない。location/geopointの直接業務用途は本範囲で未確認。
-- Question: Customer/Site/Employee/Companyごとにlocationを必須とするか。失敗時に保存block、warning付き保存、後続retryのどれを採用するか。
+- Question: 共通のwarning付き住所保存は回答済み。個別の座標利用機能が未取得時にどう案内・再取得するかは当該機能で定める。
 - Why needed: 住所保存の可用性と、座標を使う将来機能の整合・品質を両立するため。
 - Options and impact: 全て任意、Siteのみ必須、warning+pending status、background retry、手動座標確認。
 - Current provisional treatment: location欠損でも保存可能な現行実装を記録し、成功保証とは扱わない。
 - Related FUT IDs: FUT-0141
-- Answer: 未回答
+- Answer: 2026-09-06 共通の保存原則を回答済み。座標取得だけの失敗では住所を保存し、旧座標消去・未取得通知・対象住所不変時保持とする。各masterへ同じ保存可否を再質問しない。[共通仕様](../specification.md#住所と座標)、ADR 0060を参照。全masterへの座標取得新設や各用途の必須要件まで確定した意味ではなく、既存実装への適用は段階的に扱う。
 
 ## CONF-0118 郵便番号検索provider・正規化・候補選択契約
 
@@ -1459,19 +1488,31 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0120 Employee個人住所geocodingの目的・同意・保持
 
-- Status: Open
+### EMP-01の部分回答と残る保存条件
+
+2026-09-06、利用者は自宅住所の座標変換を必要とし、「将来、配置先の現場と従業員の自宅の経路図を描画したい」と用途を回答した。新規の座標取得・保存を止める旧案は採用しない。現時点の全項目readの回答により、座標を含むEmployee原本の閲覧は会社管理者・既知6業務roleに許可する。経路図の描画や経路API・配置判断は将来工程とし、今回のCRUDに追加しない。[ADR 0058](../decisions/0058-employee-full-read-and-geocoding-scope.md)を参照する。
+
+次の保存条件は実装前の設計案である。住所文字列だけが更新され座標が古いまま成功表示されること、provider呼出しがtransaction再試行で繰り返されること、通常の国籍/保険更新まで住所を送信することを避ける。住所関連fieldが実際に変わる作成/基本保存に範囲を限定し、外部呼出しの完了後に期待する住所と最新原本を照合して住所・取得座標を保存する案を比較する。住所・座標・認証情報をlogへ出さない。既存共通入口の状態とEmployee専用経路の保護を混同せず、他masterの保存・Rulesを変更しない範囲を確認する。
+
+2026-09-06追加回答: 「住所保存を認め、古い座標を消して座標未取得を知らせる」案を採用した。新規作成・住所変更で座標取得に失敗しても、入力・認可・競合検証が成功した住所は保存する。住所不変の通常保存では既存座標を維持する。住所・座標の最新値照合、既存schemaでの未取得表現、結果表示、logと共通入口は残設計であり、自動再取得・既存全件の座標削除・実provider接続は今回追加しない。
+
+### 既存確認事項
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-041; `address-geocoding.md`
 - Evidence: EmployeeもGeocodableMixinを継承し、自宅fullAddressを外部providerへ送信して精密座標を保存する。logへ住所/座標が出る経路がある。
 - Question: 従業員自宅座標を何の目的で必要とし、本人通知・同意、precision、provider送信、保存期間、閲覧者、削除、logをどう扱うか。
 - Why needed: 高感度な居住地情報を必要最小限・目的限定で扱うため。
 - Options and impact: geocodingしない、都道府県/市区町村まで、精密座標を限定roleのみ、本人同意、短期/退職時削除。
-- Current provisional treatment: 現行自動geocodingを実装事実とし、privacy上承認済みとは扱わない。
+- Current provisional treatment: 取得の必要性・用途・閲覧actorはADR 0058で採用済み。provider運用・log・保持の全条件まで承認済みとは扱わない。
 - Related FUT IDs: FUT-0143、FUT-0075、FUT-0138
-- Answer: 未回答
+- Answer: 2026-09-06 部分回答。将来の現場・自宅経路図のため座標取得・保存を継続し、全項目閲覧のactorへ座標も公開する。座標取得失敗時も住所保存・古い座標消去・未取得通知を追加回答済み。log・外部送信の詳細、保持等は未確定。
 
 ## CONF-0121 active同ID存在時のrestore conflict policy
 
-- Status: Open
+2026-09-06部分回答: 同ID原本を上書きしない原則はADR 0060の共通仕様で採用。通常restoreの提供は今回含めず、担当・入口・緊急復旧の運用は未決。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: 共通restoreはactive同IDを確認せずarchive dataで全documentを上書きする。ID再利用・並行createを拒否しない。
 - Question: active同IDが存在する場合、restoreを拒否、activeをarchiveへ退避、merge、新IDで復元、利用者選択のどれにするか。
@@ -1479,11 +1520,13 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: fail-closed、revision一致時のみ、swap、new ID+参照移行、field merge禁止。
 - Current provisional treatment: overwrite可能な現行実装を記録し、安全なrestore仕様とは扱わない。
 - Related FUT IDs: FUT-0145
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0122 archive・restore時のFunctions triggerと副作用契約
 
-- Status: Open
+2026-09-06部分回答: Employee archiveでUser/Authや従属を連鎖削除しないことをADR 0060で採用。旧onEmployeeDeletedと遅延eventの対処はEMPの必須実装条件。全masterのtrigger/restore運用を一括変更する指示ではない。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: active→archiveはactive delete、restoreはactive create相当となり得る。Employee deleteはUser cleanupを開始し、Customerはupdate同期だけでcreate restoreを補完しない。共通APIにtrigger suppression/reconcileはない。
 - Question: archive/restoreを通常delete/createと同じ業務eventとして扱うか。Auth cleanup、dependent snapshot、通知等を抑止・再構築・補償するか。
@@ -1491,19 +1534,21 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: 通常trigger実行、archive専用server command、event reasonで分岐、restore後reconcile、特定masterはrestore禁止。
 - Current provisional treatment: Firestore path eventが発火する可能性を実装境界として記録し、業務復元完了を保証しない。
 - Related FUT IDs: FUT-0145、FUT-0078、FUT-0081
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0123 共通archive metadata・保持・匿名化・purge運用
 
-- Status: Open
+2026-09-06部分回答: 共通archive metadata（形式version・原本・実行者・日時・理由・操作ID）、archive後の物理削除と従属再検査をADR 0060で採用。自動実行・保持期間・使用済みIDの最小記録・エラー表示方式は未採用案として[共通設計](archive-restore.md#物理削除の設計案)でreviewする。最終回答でEmployeeのarchive/参照保護をEMP-05、purge実行を後続専用工程に分ける配分も採用した。旧archive延期はEmployeeに適用しないが、他masterの固有のpurge非提供条件を解除しない。
+
+- Status: Partially answered
 - Source segment/doc: SPEC-SEG-042; `archive-restore.md`
 - Evidence: 元dataを同IDでcopyするだけでactor/reason/time/retention metadataがなく、同社全Userがarchive全read/writeできる。UI/commandによるrestore/purge/holdはない。
 - Question: 全master共通で必要な削除理由・actor・時刻・revision、閲覧/復元/purge actor、保持期間、legal hold、匿名化、subcollection処理をどう定めるか。
 - Why needed: 誤削除復旧、個人・取引data保持、監査、法令、storage削減を一貫運用するため。
 - Options and impact: metadata envelope、audit ledger、master別retention、期限後匿名化/purge、legal hold、server-only operations。
-- Current provisional treatment: archiveを無期限・無metadataの別collection copyとして記録し、正式な保持・復旧制度とは扱わない。
+- Current provisional treatment: 上記の共通原則とEmployeeの提供工程に従う。旧genericのmetadataなしcopyは実装調査の履歴であり、現在の採用要件ではない。保持・匿名化・復旧の具体運用は未確定。
 - Related FUT IDs: FUT-0146、FUT-0057、FUT-0063、FUT-0078、FUT-0087、FUT-0123
-- Answer: 未回答
+- Answer: 上記の共通原則は回答済み。残る固有運用は未回答。
 
 ## CONF-0124 正式backup scope・復旧時点・RPO/RTO
 
@@ -1639,15 +1684,15 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 
 ## CONF-0135 Site自動終了の条件・関連予定・再有効化・監査契約
 
-- Status: Open
+- Status: Answered
 - Source segment/doc: SPEC-SEG-054; `site-auto-termination.md`
 - Evidence: scheduled処理は工期終了から3か月超かつACTIVEだけで全tenant SiteをTERMINATEDへし、手動終了と異なり将来scheduleを確認しない。Agreement/予定/通知/User等は変更せず、reason/actor/source/historyを保存しない。query後の再有効化・工期変更・予定作成をpreconditionなしで上書きし得る。
 - Question: 自動終了を維持するか。維持する場合、猶予期間・境界日、将来予定がある時のskip/取消/警告、Agreement・新規選択・通知への作用、再有効化との優先、利用者通知と監査をどう定めるか。
 - Why needed: 有効な予定を持つSiteの誤終了、終了・再開race、契約/配置への予期しない影響、終了理由を説明できない状態を防ぐため。
 - Options and impact: future scheduleがあればskip+alert、手動同等guard、予定を明示取消後に終了、自動終了を候補通知だけに変更、3か月固定/Company設定化、transaction precondition、reason/source/history保存。運用負荷と誤終了riskが異なる。
-- Current provisional treatment: 現行3か月strict条件と将来予定非確認を実装事実として扱う。CONF-0046/0048の`sites:write`・TERMINATED read-only・理由付き再有効化方針は維持するが、自動終了固有仕様は未確定とする。
+- Current provisional treatment: [ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
 - Related FUT IDs: FUT-0161、FUT-0060、FUT-0062
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。自動終了を維持し、ACTIVE/TERMINATEDの2値と表示上の派生Chipを使う。JSTで工期終了日の90日後00:00以降、ACTIVE・有効工期日・当日以降予定なし・未実績化予定なしをtransactionまたは同等preconditionで再確認してTERMINATEDへ変更する。予定は取消・削除せず、競合時は古い判定を後勝ちさせない。cleanupと失敗境界を分離し、制御されたbatch、再試行、maintenance停止を備える。現在遷移metadataは保存するが専用append-only履歴は設けず、初期通知はdashboard・一覧Chipとする。TERMINATEDも終了済み表示・識別情報・確認付きで新規業務へ選択でき、単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`・reason・新工期で扱う。選択・終了・再開はCustomer、Agreement、予定、通知、実績、請求へcascadeしない。
 
 ## CONF-0136 Test / development routeのproduction運用方針
 
@@ -1683,4 +1728,100 @@ SPEC-RECONCILE-001で全138 IDを再照合した。既存`Status`と回答本文
 - Options and impact: JST inclusive＋上限、用途別上限、UTC instant API＋JST表示、debounce中stale表示/overlay/cancel。検索自由度、費用、UXが異なる。
 - Current provisional treatment: 現行JST start/end両端包含と500ms query delayを実装事実とし、無制限rangeやsilent fallbackを承認済み仕様とは扱わない。
 - Related FUT IDs: FUT-0167
-- Answer: 未回答
+- Answer: 2026-09-05 回答済み。取極めの作成・編集・削除は、同じ会社の有効な本登録Userのうち会社管理者または既知role preset由来の`sites:write`を持つUserへ限定する。直接permission文字列、未知role、会社管理者でないsuper-user、temporary、disabled、他tenantは拒否する。取極め専用permissionと作成者・承認者workflowは設けない。
+
+## CONF-0139 CCB schemas・Admin SDKのcross-repository release境界
+
+- Status: Partially answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: schemas exact `2.4.2-dev.167`は公開・artifact検証済み。Admin SDK local commit `c95660d`、AirGuardV2 app、Functionsは同versionへpin済みである。Admin SDKはCCB marker/pathを検出した旧restore/delete等をwrite前にfail closedとし、client compatible readerはActive marker後のcomplete 6 Settingsを検証して旧root updateを拒否する。
+- Question: schemasへ旧Companyを維持したpureな`./company-configuration` v1 exportとrelease guardを実装し、Admin SDKのCCB destructive operationをfail closedにするための3 repositoryのlocal file変更・test・local commit設計を開始してよいか。version採用、tag作成、Git push、Trusted Publishing/npm publish、consumer install、deployは含まず、各action前に別承認とする。
+- Why needed: AirGuardV2内へのschema重複実装、無検査publish、consumer version差、危険な旧operatorのまま新documentを作ることを防ぐため。
+- Options and impact: local変更設計を開始、AirGuardV2内だけへ一時実装、package更新延期。後二者はschema driftまたはCCB開始延期となる。local変更を承認しても外部release作用は承認されない。
+- Current provisional treatment: Schemas公開、Admin SDKとAirGuardV2 app/Functionsのlocal exact導入、旧破壊操作・旧root updateのfail-closedは受入れ対象まで実装済み。Admin SDK push/deploy、CCB-aware backup/restore、Rules、migration、data操作は別checkpointとする。
+- Related FUT IDs: FUT-0090、FUT-0092
+- Answer: 2026-08-28 部分回答。Schemasはrecovery `bb23909`と新coordinator移行後にexact `.167`をTrusted Publishingし、workflow、registry、LF clean tree、fresh install、27 exportsを検証した。利用者はprojectを持たないAdmin SDKをAirGuardV2 coordinatorが直接更新することを承認し、commit `c95660d`でexact `.167`とCCB fail-closed guardを実装した。続いてAirGuardV2 app/Functionsもexact `.167`へ揃え、client compatible readerとActive時の旧root write拒否をlocal実装した。Admin SDK push/deploy、CCB-aware backup/restore、Rules・migrationは未実施のためStatusはPartially answeredを維持する。
+
+## CONF-0140 CCB staging actor・maintenance mapping
+
+- Status: Answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: backfill metadataはnon-email opaque actorを必要とし、legacy maintenance onからPrivateSettingsのscope/internal reasonを決定できない。
+- Question: 移行で新しい設定documentを作った記録の「実行者」には、個人のメールアドレスではなくDev用service accountの変更されにくい匿名IDを保存してよいか。また、移行前からmaintenance中の会社は、新documentに必要な内部理由・停止範囲が旧dataにないため、値を想像で補わずその会社の移行を停止してよいか。
+- Why needed: migration actorの捏造・email保存と、sourceにないmaintenance private値の推測を防ぐため。
+- Options and impact: 推奨はservice account匿名IDを記録し、既にmaintenance中の会社だけ停止する。別の運営者ID台帳を先に作る、または全stagingを延期する選択もある。
+- Current provisional treatment: actorは承認済みDev service accountのstable non-email opaque IDへ固定する。maintenance onで内部理由・scopeを決定できないtenantは`ambiguousMapping`としてapply前に停止する。
+- Related FUT IDs: FUT-0090、FUT-0095、FUT-0097
+- Answer: 2026-08-28 承認済み。移行記録のactorは個人emailでなく承認済みDev service accountのstable non-email opaque IDを使う。移行前からmaintenance中で、旧dataに内部理由・停止範囲がないtenantは値を推測せず、そのtenantのapplyを停止する。
+
+## CONF-0141 CCB PrivateSettings backup境界
+
+- Status: Answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: Admin SDKのlogical backupはversion・sensitivity・暗号化・retention契約を持たず、PrivateSettingsはprovider actor、内部理由、operation/error、将来のStripe識別子を含み得る。
+- Question: 当面の通常logical backupからPrivateSettingsを明示除外して「完全backup」と呼ばず、project-level managed backup/PITRを復旧基盤とするか。logical restoreが必要になる前に保存先、暗号化、IAM、retention、redaction、cross-environment可否を別承認するか。
+- Why needed: 秘密metadataを既存JSON backupへ無保護で混入させず、復旧可能性を過大表示しないため。
+- Options and impact: 推奨のmanaged backup依存、暗号化logical backupを先行設計、CCB延期。推奨案ではPrivateSettings単独logical restoreをまだ提供しない。
+- Current provisional treatment: PrivateSettingsを既存logical backupへ追加せず、完全backup/restore対応済みと扱わない。
+- Related FUT IDs: FUT-0090、FUT-0097
+- Answer: 2026-08-28 承認済み。PrivateSettingsは保存先・暗号化・IAM・保持・redaction・環境間restore契約のない既存logical backupへ追加せず、そのbackupを完全backupと呼ばない。当面はproject-level managed Firestore backup/PITRを復旧基盤とし、PrivateSettings単独logical restoreは未提供とする。Authentication、Storage、外部serviceまで復旧できるとは扱わない。専用の暗号化logical backup/restoreは別仕様・別承認・復旧演習を必要とする。
+
+## CONF-0142 CCB SettingAudits restore境界
+
+- Status: Answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: SettingAuditsはappend-onlyだが、現行generic restoreはmerge/set/deleteを行い得る。
+- Question: auditのlogical restoreを同一company・同一schemaでの同ID create-only、既存同値skip、同ID異値拒否に限定し、update/delete/clearを禁止するか。保持・legal holdは共通audit方針で別途確定するか。
+- Why needed: restore名目の監査改変・消去と重複を防ぐため。
+- Options and impact: create-only restore、audit restore全面禁止、専用署名済みarchiveを先行設計。推奨案は災害復旧余地を残しつつ既存auditを変更しない。
+- Current provisional treatment: SettingAuditsのgeneric restore/update/deleteを許可しない。
+- Related FUT IDs: FUT-0090
+- Answer: 2026-08-28 承認済み。SettingAuditsのlogical restoreは同一company・同一schema・同一document IDのcreate-onlyに限定する。既存同IDがcanonical同値ならskipし、異値なら全対象をwrite 0で停止する。update、delete、clear、generic merge restoreは禁止する。保持期間とlegal holdはproject共通audit方針で別途確定し、専用実装・復旧演習までは利用可能と扱わない。
+
+## CONF-0143 CCB tenant物理削除境界
+
+- Status: Answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: 現行Company deleteはAuthと固定flat catalogを部分削除し得て、PrivateSettings、SettingAudits、未知nested path、retention、resumeを扱わない。Company root物理削除はADR 0025で別承認対象である。
+- Question: CCB tenantに対する現行`companies delete`をfail closedにし、法的削除、retention、全path inventory、backup receipt、Auth順序、resume/idempotencyを別設計・別承認するまで物理削除を提供しないか。
+- Why needed: orphan、監査欠落、秘密metadata残存、部分削除を成功扱いすることを防ぐため。
+- Options and impact: 推奨のfail closed、専用削除workflowを先行設計、現行delete継続。現行継続はCCBと両立しない。
+- Current provisional treatment: CCB tenantの物理削除を未提供とし、現行deleteはCCB marker/pathの検出または検査失敗時にAuth・Firestore write前でfail closedとする。
+- Related FUT IDs: FUT-0090、FUT-0091
+- Answer: 2026-08-28 承認・local実装済み。Admin SDK commit `c95660d`で現行`companies delete`をCCB tenantへ`CCB_UNSUPPORTED_OPERATION`、検査不能時に`CCB_BOUNDARY_CHECK_FAILED`で停止させ、Auth削除、Firestore batch、Company root削除前であることを専用testで確認した。法的削除、retention、全path inventory、backup receipt、resume/idempotencyを備えたCCB tenant物理削除は未提供のまま別設計・別承認とする。
+
+## CONF-0144 CCB Dev 4 tenantの用途分類read scope
+
+- Status: Answered
+- Source segment/doc: CCB-02; `company-configuration-compatibility.md`
+- Evidence: Devに同一38-field shapeのCompany rootを4件観測したが、利用者会社、協力会社、Codex合成tenant、残存/orphanの内訳とmigration対象性は未分類である。ID・値を見ないshape集計だけではinclude/exclude manifestを作れない。
+- Question: `air-guard-v2-dev`の4 rootについて、company ID、会社名、同社Userの最小識別情報をprocess内だけで読み、用途を利用者会社・協力会社・承認済み合成test・残存要確認へ分類してよいか。応答とrepositoryには分類別件数、manifest digest、未解決件数だけを残し、ID・名称・email・document値を出力しない。
+- Why needed: 4 rootすべてを推測でmigration対象にせず、外部target manifestのinclude/excludeを利用者の意図と一致させるため。
+- Options and impact: bounded read-only分類、利用者がUIで分類してmanifestを渡す、CCB staging延期。bounded readは最小限のDev実data観測を伴う。
+- Current provisional treatment: 利用者会社1件、試用中の別会社1件、承認済み合成test 2件と確認済みで、4件すべてをmigration対象とする。実行時のtarget manifest digestはfresh dry-runで別途固定する。
+- Related FUT IDs: FUT-0090、FUT-0091
+- Answer: 2026-08-28 承認済み。`CCB-02-DEV-TENANT-CLASSIFY-001`をexit 0で実施し、合成test 2件、要確認2件、観測digest `38aa4c9380a33d7cd010164aa34b1341c61666fb8f1fda97e48795e0176a7bf2`を得た。ID、名称、email、document値の出力は0、remote writeは0。その後、利用者が要確認2件を利用者会社1件・試用中の別会社1件と確認し、合成test 2件を含む4件すべてをmigration対象として承認した。会社名はrepositoryへ保存しない。実migrationのtarget manifest digest、dry-run、applyは別承認である。
+
+## CONF-0145 Codex専用UIの外部郵便番号通信を遮断する追加checkpoint
+
+- Status: Answered
+- Source segment/doc: CUSTOMER-02-STATUS; [local検証記録](../verification/customer-02-status-local.md#可視uiの観測結果と隔離未達)
+- Evidence: Customer状態編集の可視操作は成功したが、既存郵便番号componentにブラウザ直接外部fetchがあり、Functionsのdenyだけでは専用UIの隔離条件を満たさない。合成値の応答後warnを観測し、High security reviewで境界未達を確認した。
+- Question: Customer改修に加え、Codex専用UIの外部郵便番号通信を遮断する修正と再試験を今回の作業範囲へ追加してよいか。
+- Why needed: 現在のCustomer状態編集7filesの所有範囲外であり、専用UIの通信境界を補正しないままCS-03完了を主張できないため。
+- Options and impact: 専用UIだけ自動検索を停止して手入力を維持する案を優先する。通常利用の検索・Dev・data形状は変えず、migrationは不要。関連package変更は避ける設計を先に確認し、必要になれば別途範囲を提示する。延期する場合はlocal完了保留。
+- Current provisional treatment: 専用UI限定の遮断修正と再試験を追加実施する。最小設計を確定後、developer Mediumが実装し、Low test・環境準備、承認済み親担当UIで検証する。修正は独立commitでrollback可能とし、7桁でfetch 0の陰性test・通常環境非影響・専用build再生成・限定UI再試験を必要とする。
+- Related FUT IDs: FUT-0184
+- Answer: 2026-09-03 承認済み。利用者は一度保留した回答を直後に訂正し、追加修正・再試験を明示承認した。通常利用時の検索・Dev・data形状を変えず、関連package変更を避ける最小app側設計を先行する。画面テストだけ親担当とする既存承認とは別のscope追加である。
+
+## CONF-0146 再試験の合成認証準備を親タスクで担当する例外
+
+- Status: Answered
+- Source segment/doc: CUSTOMER-02-STATUS; [local検証記録](../verification/customer-02-status-local.md)
+- Evidence: 隔離修正後のfresh専用UIで保存済み合成sessionを再利用できず、サインイン画面に到達した。親の既存承認は画面テストだけで、自動test・環境準備はLow担当。
+- Question: 今回に限り、専用Auth Emulator内の既存合成accountの一時password設定と通常UI入力まで親タスクが担当してよいか。
+- Why needed: 秘密値をagent間のprompt・文書・logへ受け渡さず、認証準備と画面入力を同一担当の一時memory内で行うため。
+- Options and impact: 承認の場合も専用demo・loopback・実在しない保存済み合成accountだけを対象にし、snapshot・実account・通常local・Dev・Prodを変更しない。恒久role/governance変更は行わない。
+- Current provisional treatment: 今回の限定再試験では親が専用Auth Emulator内の既存合成accountへ一時passwordを設定し、同じ担当の一時memoryから通常UI入力する。credentialをagent間で受け渡さず、snapshotや文書・logへ保存しない。専用build・process管理・backend assertion・cleanupはLow担当を維持する。Emulator停止で一時credentialを失効させ、saved-data不変を確認する。
+- Related FUT IDs: FUT-0184
+- Answer: 2026-09-04 承認済み。利用者は今回に限る親タスクの一時合成認証準備と通常ログイン入力を承認した。専用demo・loopbackの既存合成accountだけが対象で、恒久role変更、保存済みsnapshot、実account、通常local、Dev、Prodへ拡張しない。

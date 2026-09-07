@@ -5,6 +5,7 @@
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useRouter } from "vue-router";
+import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -16,11 +17,17 @@ defineOptions({ name: "customers-index" });
  *****************************************************************************/
 const customerInstance = reactive(new Customer());
 const search = ref("");
+const selectedStatus = ref(Customer.STATUS_ACTIVE);
+const statusOptions = [
+  ...Object.values(Customer.STATUS),
+  { title: "すべて", value: "ALL" },
+];
 
 /*****************************************************************************
  * SETUP ROUTER COMPOSABLES
  *****************************************************************************/
 const router = useRouter();
+const { canWrite } = useCustomerActions();
 
 /*****************************************************************************
  * METHODS
@@ -30,10 +37,10 @@ function handleClickUpdate(item) {
 }
 
 function subscribe() {
-  const constraints = [
-    ["where", "contractStatus", "==", Customer.STATUS_ACTIVE],
-  ];
-  customerInstance.subscribeDocs(constraints);
+  const constraints = selectedStatus.value === "ALL"
+    ? []
+    : [["where", "contractStatus", "==", selectedStatus.value]];
+  customerInstance.subscribeDocs({ constraints });
 }
 
 function unsubscribe() {
@@ -45,27 +52,42 @@ function unsubscribe() {
  *****************************************************************************/
 onMounted(subscribe);
 onUnmounted(unsubscribe);
+watch(selectedStatus, subscribe);
 </script>
 
 <template>
-  <v-container class="fill-height align-start">
-    <CustomersManager
-      class="fill-height"
-      :docs="customerInstance.docs"
-      :handle-click-update="handleClickUpdate"
-    >
-      <template #table="slotProps">
-        <v-toolbar class="mb-4 bg-transparent" density="compact">
-          <AtomsSearchTextField v-model="search" />
-          <v-btn icon="mdi-plus" @click="() => slotProps.toCreate()" />
-        </v-toolbar>
-        <CustomersDataTable
-          class="flex-grow-1"
-          v-bind="slotProps"
-          hide-search
-          :search="search"
+  <v-container
+    class="align-start"
+    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
+  >
+    <v-card class="fill-height d-flex flex-column" width="100%">
+      <v-toolbar class="ps-4">
+        <AtomsSearchTextField v-model="search" />
+        <v-select
+          v-model="selectedStatus"
+          :items="statusOptions"
+          label="状態"
+          density="compact"
+          variant="solo"
+          flat
+          hide-details
+          class="mx-2"
+          style="max-width: 180px; min-width: 120px"
         />
-      </template>
-    </CustomersManager>
+        <CustomerCreateDialog v-if="canWrite">
+          <template #activator="{ open }">
+            <v-btn icon="mdi-plus" @click="open" />
+          </template>
+        </CustomerCreateDialog>
+      </v-toolbar>
+      <CustomersDataTable
+        class="flex-grow-1 overflow-hidden"
+        :items="customerInstance.docs"
+        :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+        hide-search
+        :search="search"
+        @click:update="handleClickUpdate"
+      />
+    </v-card>
   </v-container>
 </template>

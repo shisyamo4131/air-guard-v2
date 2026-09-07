@@ -1,0 +1,188 @@
+{
+  "schemaVersion": "1.0",
+  "comprehensiveGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+  "unknownImpactGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+  "runtimeProfiles": [
+    { "id": "powershell-7", "platform": "windows", "edition": "Core", "executable": "pwsh", "versionRule": "minimum-major=7", "required": true, "supportStatus": "supported" }
+  ],
+  "classes": [
+    {
+      "id": "project-guidance-metadata",
+      "triggers": [
+        "Descriptive project guidance, phase/progress, metadata, links/history, or document-only structure with no common-contract, policy, permission, approval, safety, or executable behavior change"
+      ],
+      "iterationGateIds": [
+        "diff-check"
+      ],
+      "targetedRegressionGateIds": [
+        "project-docs"
+      ],
+      "completionGateIds": [
+        "project-docs",
+        "diff-check"
+      ],
+      "releaseOnlyGateIds": [],
+      "omittableGateIds": [
+        "project-docs-negative",
+        "capacity-regression",
+        "managed-governance",
+        "domain-full",
+        "local-emulator-suite",
+        "local-ui-build",
+        "generate-dev",
+        "generate-prod"
+      ],
+      "omissionRecord": "Completion report or migration evidence"
+    },
+    {
+      "id": "documentation-only",
+      "triggers": ["Project-owned prose, index, link, or post-completion historical record that does not alter a release baseline, target, artifact, readiness decision, procedure, approval, rollback, product behavior, or remote state"],
+      "iterationGateIds": ["diff-check"],
+      "targetedRegressionGateIds": ["project-docs"],
+      "completionGateIds": ["project-docs", "diff-check"],
+      "releaseOnlyGateIds": [],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "domain-full", "local-emulator-suite", "local-ui-build", "generate-dev", "generate-prod"],
+      "omissionRecord": "Completion report"
+    },
+    {
+      "id": "ui-css-layout",
+      "triggers": ["Vue component presentation, CSS, layout, accessibility, browser interaction, or user-visible UI behavior"],
+      "iterationGateIds": ["diff-check"],
+      "targetedRegressionGateIds": ["domain-full", "local-ui-build"],
+      "completionGateIds": ["project-docs", "domain-full", "local-ui-build", "diff-check"],
+      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite"],
+      "omissionRecord": "Completion report or acceptance receipt"
+    },
+    {
+      "id": "application-logic",
+      "triggers": ["Client, server, Functions, shared module, or executable script behavior without a data-contract or release-boundary change; governance-only checkers and fixtures that do not change product logic belong to governance-permissions-agents instead"],
+      "iterationGateIds": ["diff-check"],
+      "targetedRegressionGateIds": ["domain-full"],
+      "completionGateIds": ["project-docs", "domain-full", "diff-check"],
+      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite", "local-ui-build"],
+      "omissionRecord": "Completion report"
+    },
+    {
+      "id": "data-contract-schema-migration",
+      "triggers": ["Firestore, Realtime Database, Storage, schema, package contract, migration, Rules, or persisted-data compatibility"],
+      "iterationGateIds": ["diff-check"],
+      "targetedRegressionGateIds": ["domain-full", "local-emulator-suite"],
+      "completionGateIds": ["project-docs", "domain-full", "local-emulator-suite", "diff-check"],
+      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-ui-build"],
+      "omissionRecord": "Completion report or migration receipt"
+    },
+    {
+      "id": "governance-permissions-agents",
+      "triggers": ["Common or project governance, verification policy, permissions, approval policy, coordinator duties, agents, managed sync, or generated AGENTS"],
+      "iterationGateIds": ["managed-governance", "project-docs"],
+      "targetedRegressionGateIds": ["project-docs-negative", "capacity-regression"],
+      "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+      "releaseOnlyGateIds": [],
+      "omittableGateIds": [],
+      "omissionRecord": "Completion report or migration evidence"
+    },
+    {
+      "id": "build-release-deploy",
+      "triggers": ["Actual build, static generation, package installation or publication, Dev or Prod deploy, or remote acceptance execution; release readiness decision; or release contract, baseline, target, artifact, or procedure change"],
+      "iterationGateIds": ["diff-check"],
+      "targetedRegressionGateIds": ["project-docs", "domain-full"],
+      "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
+      "releaseOnlyGateIds": ["local-emulator-suite", "local-ui-build", "generate-dev", "generate-prod"],
+      "omittableGateIds": [],
+      "omissionRecord": "Approved release checkpoint evidence or completion report"
+    }
+  ],
+  "gates": [
+    {
+      "id": "diff-check",
+      "command": "git diff --check",
+      "stages": ["iteration", "targeted", "completion"],
+      "includes": [],
+      "invalidatedBy": ["Any later worktree edit"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "renderer-check",
+      "command": "pwsh -NoProfile -File scripts/render-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2 -Check",
+      "stages": ["iteration", "targeted"],
+      "includes": [],
+      "invalidatedBy": ["Managed common, governance lock, renderer, project rules, verification policy, or generated AGENTS change"],
+      "evidenceDestination": "Command report or included managed-governance result"
+    },
+    {
+      "id": "managed-governance",
+      "command": "pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "stages": ["iteration", "targeted", "completion"],
+      "includes": ["renderer-check"],
+      "invalidatedBy": ["Managed common, governance lock, renderer, validator, project rules, verification policy, generated AGENTS, or verification summary change"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "project-docs",
+      "command": "pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\\Users\\seven\\projects\\AirGuard\\air-guard-v2",
+      "stages": ["iteration", "targeted", "completion"],
+      "includes": [],
+      "invalidatedBy": ["Project Markdown, TOML, document routing, verification policy, or project document validator change"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "project-docs-negative",
+      "command": "pwsh -NoProfile -File scripts/test-project-docs-check.ps1",
+      "stages": ["targeted", "completion"],
+      "includes": [],
+      "invalidatedBy": ["Project document validator, its negative fixtures, validator-required documentation route, or verification-policy contract change"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "capacity-regression",
+      "command": "pwsh -NoProfile -File scripts/test-codex-session-size.ps1",
+      "stages": ["targeted", "completion"],
+      "includes": [],
+      "invalidatedBy": ["Capacity aliases, capacity runbook, capacity measurement command or script, or capacity regression fixture change"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "domain-full",
+      "command": "node --test test/domain/*.test.mjs",
+      "stages": ["targeted", "completion"],
+      "includes": [],
+      "invalidatedBy": ["Application, Functions, Rules contract, schema, shared module, or domain test change"],
+      "evidenceDestination": "Command report"
+    },
+    {
+      "id": "local-emulator-suite",
+      "command": "npm run test:local",
+      "stages": ["targeted", "completion", "release"],
+      "includes": [],
+      "invalidatedBy": ["Functions, Rules, schema, Emulator configuration, test harness, or affected application behavior change"],
+      "evidenceDestination": "Checkpoint callback, completion report, or release evidence"
+    },
+    {
+      "id": "local-ui-build",
+      "command": "npm run test:local:ui:build",
+      "stages": ["targeted", "completion", "release"],
+      "includes": [],
+      "invalidatedBy": ["UI source, client configuration, dependencies, build wrapper, or affected application behavior change"],
+      "evidenceDestination": "Checkpoint callback, acceptance receipt, or release evidence"
+    },
+    {
+      "id": "generate-dev",
+      "command": "npm run generate:dev",
+      "stages": ["release"],
+      "includes": [],
+      "invalidatedBy": ["Source, dependency, Dev environment mapping, or release baseline change"],
+      "evidenceDestination": "Approved Dev release evidence"
+    },
+    {
+      "id": "generate-prod",
+      "command": "npm run generate:prod",
+      "stages": ["release"],
+      "includes": [],
+      "invalidatedBy": ["Source, dependency, production environment mapping, or release baseline change"],
+      "evidenceDestination": "Approved Prod release evidence"
+    }
+  ]
+}

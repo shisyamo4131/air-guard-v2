@@ -61,7 +61,7 @@ Nuxt のファイルベースルーティングにより、`pages/` 直下には
 | `local` | `.env.local` を指定し、ホスト公開指定付きで Nuxt 開発サーバーを起動する |
 | `install:firemodel` | ルートと Functions の FireModel パッケージを latest で導入する |
 | `install:schemas` | ルートと Functions に schemas パッケージを導入する |
-| `install:schemas@dev` | ルートと Functions に schemas の dev タグを導入する |
+| `install:schemas@dev` | ルートと Functions に承認済みのexact dev版 schemasを導入する（現在は`2.4.2-dev.167`） |
 | `list:adapter` | ルートの client adapter と Functions の server adapter の導入版を表示する |
 | `list:schemas` | ルートと Functions の schemas 導入版を表示する |
 | `update:adapter` | ルートと Functions の各 adapter を更新し、導入版を表示する |

@@ -2,6 +2,8 @@
 param(
     [ValidateSet('Seed', 'Test')]
     [string]$Mode = 'Test',
+    [ValidateSet('Harness')]
+    [string]$Suite = 'Harness',
     [string]$TestNamePattern = '',
     [long]$WarnBytes = 50MB,
     [long]$StopBytes = 100MB
@@ -12,15 +14,21 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $dedicatedRoot = Join-Path $projectRoot '.codex-test'
 $seedPath = Join-Path $dedicatedRoot 'isolated-saved-data'
 $runtimeRoot = Join-Path $dedicatedRoot 'runtime'
-$runtimePath = Join-Path $runtimeRoot ("{0}-{1}" -f $Mode.ToLowerInvariant(), $PID)
+$runtimePath = Join-Path $runtimeRoot ("{0}-{1}-{2}" -f $Mode.ToLowerInvariant(), $Suite.ToLowerInvariant(), $PID)
 $userSavedDataPath = Join-Path $projectRoot 'saved-data'
 $configPath = Join-Path $projectRoot 'firebase.codex-test.json'
 $seedScriptPath = Join-Path $projectRoot 'scripts\seed-codex-local-test.mjs'
-$testPath = Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs'
+$testPath = switch ($Suite) {
+    'Harness' { Join-Path $projectRoot 'test\local\codex-local-harness.test.mjs' }
+}
 $projectId = 'demo-air-guard-v2-codex'
 $seedEmulators = 'auth,firestore,database,storage'
 $testEmulators = 'auth,firestore,database,storage,functions'
 $emulators = if ($Mode -eq 'Seed') { $seedEmulators } else { $testEmulators }
+
+if ($Mode -eq 'Seed' -and $Suite -ne 'Harness') {
+    throw 'Seed mode is only available for the Harness suite.'
+}
 
 function Assert-ProjectChild {
     param([Parameter(Mandatory = $true)][string]$Path)
@@ -162,13 +170,33 @@ $firebaseArguments += $childScriptPath
 $exitCode = 1
 $externalEffectsModeWasSet = Test-Path Env:\AIR_GUARD_EXTERNAL_EFFECTS
 $externalEffectsModeBefore = $env:AIR_GUARD_EXTERNAL_EFFECTS
+$operationTriggerWasSet = Test-Path Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
+$operationTriggerBefore = $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER
+$archiveTenantsWasSet = Test-Path Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS
+$archiveTenantsBefore = $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS
 try {
     $env:AIR_GUARD_EXTERNAL_EFFECTS = 'deny'
+    Remove-Item Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER -ErrorAction SilentlyContinue
+    if ($Mode -eq 'Test' -and $Suite -eq 'Harness') {
+        $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS = '["codex-emp05-d-archive"]'
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS -ErrorAction SilentlyContinue
+    }
     Push-Location $runtimePath
     & $firebaseExe @firebaseArguments
     $exitCode = $LASTEXITCODE
 } finally {
     Pop-Location
+    if ($archiveTenantsWasSet) {
+        $env:AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS = $archiveTenantsBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS -ErrorAction SilentlyContinue
+    }
+    if ($operationTriggerWasSet) {
+        $env:AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER = $operationTriggerBefore
+    } else {
+        Remove-Item Env:\AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER -ErrorAction SilentlyContinue
+    }
     if ($externalEffectsModeWasSet) {
         $env:AIR_GUARD_EXTERNAL_EFFECTS = $externalEffectsModeBefore
     } else {
@@ -205,9 +233,10 @@ if ($finalBytes -ge $StopBytes) {
 
 [pscustomobject]@{
     mode = $Mode
+    suite = $Suite
     project_id = $projectId
     emulators = $emulators
-    functions_started = $Mode -eq 'Test'
+    functions_started = $Mode -eq 'Test' -and $Suite -eq 'Harness'
     loopback_only = $true
     user_saved_data_unchanged = $true
     dedicated_saved_data_read_only = $Mode -eq 'Test'

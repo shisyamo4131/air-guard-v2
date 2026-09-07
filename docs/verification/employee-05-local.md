@@ -1,0 +1,532 @@
+# EMP-05 local実施記録
+
+> 2026-09-07: 利用者の判断によりEMP-05までの完了判定を一度撤回した。その後EMP-01〜05を工程別に再受入れた。以下の既存成功記録は各時点の限定証拠として保持し、現在状態は[Employeeロードマップ](../roadmaps/employee.md)を参照する。
+
+- checkpoint: EMP-05。内部順序は05-A reader→05-B参照入口→05-C背景保存/整合確認→05-D archive→05-E統合。
+- 開始日: 2026-09-06
+- 開始baseline: primary `C:\Users\seven\projects\AirGuard\air-guard-v2`、branch `codex/employee-master-roadmap`、HEAD `0f884183d3663ce4e13941f8a4aed7811e193d7d`。設計4文書のlocal commitとcleanをrootが確認した。
+- 承認: 利用者が「コミットし、EMP-05を開始してください」と明示。05-A〜Eの実装・必要なlocal検証・review・文書更新・local統合を行い、EMP-05完了報告で停止する。EMP-06以降、push/main/Dev/Prod/remote/実data/package変更は含めない。
+- 正本: [仕様](../specification.md#employeeの操作権限と保持)、[実装前契約](../implementation/employee-master.md#emp-05実装前契約)、[設計レビュー](employee-05-design-review.md)、[ロードマップ](../roadmaps/employee.md)。進捗の部分加点はしない。
+
+## 担当・検証の境界
+
+developer一名がapplication/Functions/Rulesと直接testを所有し、rootは文書・必須gate/専用UI・cleanup・review統合・Gitを所有する。reviewer/securityはread-only。各内部単位の未達を後続へ送らず、callbackと独立reviewを統合して次のbaselineを渡す。実装初期に操作・期待結果をsourceとtestへ対応づける。
+
+対象は実装前契約R1〜R3/W1〜W5/A1〜A6/G1/U1。raw保持、現在認可/tenant、参照追加差分、埋込み索引、競合両順序、旧trigger無作用、結果不明、現query/Class/期間条件と直接UIを検証する。全機能業務の受入れ、物理削除、実data補完、外部通知/providerは含めない。共通cache/packageを一括変更しない。
+
+変更classはUI/application/data・Rules/permissions/専用buildの該当union。内部単位では直接testと影響回帰を優先し、その単位に必要なcompletion gateとUIを確認する。最終05-Eはdomain-full、local-emulator-suite、local-ui-build、comprehensive 5 gateを最終影響状態へ対応させる。非影響・後続失効の扱いはverification policyに従う。Dev/Prod generateは別承認まで実行しない。
+
+## 05-A 開始契約
+
+Employee専用reader/cache、期間reader、詳細のraw/User購読破棄を対象とする。既存7actor・query/limit/Class型・初期選択ID・期間内退職者を維持し、更新/不存在/権限喪失/tenant変更/遅延応答を確認する。参照writer/Rules新契約・archive入口・User shell全面整理はこの内部単位では変更しない。変更前の安全境界へ戻せない場合は影響する操作を停止し、旧広域writerを再開しない。
+
+開始時点では製品test/build/UIは未実施だった。以下に環境、初回失敗・修正、最終検証、cleanupを記録する。
+
+## 専用local環境の開始確認
+
+rootが`firebase.codex-test.json`、`config/codex-test-ui.env`、package scripts、専用Functions entry、Nuxt設定を照合した。対象は`demo-air-guard-v2-codex`、loopback専用port 14600/19099/18080/19000/19199/15001/14400/14500。開始時にこれらと9150のLISTENはなく、`.output`も存在しない。in-app browserに所有tabを作成し、通常keyboard操作を確認した。保存済み合成Auth fixtureが存在し、必要時はrunbookに従いrunning Emulator内だけで一時credentialを設定する。
+
+`.env.local`、利用者用`saved-data`、専用`saved-data`/`isolated-saved-data`の22 fileの開始hashと、既存root debug log 3 fileのbackupを、root所有`C:\Users\seven\projects\AirGuard\air-guard-v2\.codex-test\runtime\emp05-ui`へ保存した。既存runtime一覧も固定し、他者runtimeはcleanup対象に含めない。終了時に保護fileの不変、既存log復元、所有tab/process/派生portの停止、今回所有の生成物とruntimeの安全な削除を確認する。
+
+専用Functionsは外部作用denyのAPI harnessであり、背景triggerの自動実行をUI証拠に含めない。背景保存は05-Cの直接testで検証する。05-Aでは既存API構成を用いる。専用UIはPWA/通知と郵便番号外部検索の隔離設定を用い、fresh buildのreceiptを確認してから製品画面を開く。05-B以降の新規Callable・archive登録は、その実装後に実行構成を再照合する。
+
+## 05-A 受入れシナリオ
+
+read-only経路調査`EMP-05-A-TEST-PLAN`の結果を次の実施計画へ反映した。これは開始時の計画であり、実測は後掲の受入れ結果を参照する。
+
+- 正規Employee作成UIで合成Employeeを登録し、詳細の再読込み、基本editorでの表示名更新、詳細/在職一覧の反映を確認する。再読込みはapplication memory再初期化であり、Firestore local cacheの完全消去とは扱わない。
+- 配置画面の「作業員選択」に期間内の作成済Employeeが表示され、別tabからの名前変更が反映されることを確認する。05-Aでは配置保存を必要としない。
+- 詳細表示中の通常logout後、戻る操作でも旧Employee/User情報が表示されないことを確認する。これはrole剥奪testの代用ではない。
+- cold cache、初期選択ID、query membership、入退社日の境界、query除外と原本不存在、権限/tenant切替と遅延応答は直接testへ対応づけ、7actor/拒否actor/他tenantはRules Emulatorで確認する。
+- Siteの入場者表示には履歴が必要だが、専用API harnessは履歴生成triggerを登録していない。直接注入でUI証拠を代用せず、SiteのEmployee接続と権限喪失は直接testを必須にする。準備済みの正規履歴がない場合、Site入場者の実画面検証は未実施として区別する。
+
+## 基盤検証
+
+開始baseline `0f884183`とroot文書編集状態で、次を実行し独立exit 0を確認した。対応するgovernance/validator/runtime policyが変わらない場合のみ、最終判定で証拠を再利用する。製品のdomain/Emulator/build/UIの代用にはしない。
+
+| Command | 結果 | Exit |
+|---|---|---:|
+| `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | managed hash/renderer/policy整合 | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 全fixtureの期待成功/拒否一致 | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 7 checks成功 | 0 |
+
+文書validatorは開始文書追加時点で254 Markdown/60 ADR/11 roadmap/8 TOML、exit 0。その後の本記録追記により、最終文書状態では再実行が必要。
+
+05-A実装中に`npm run test:local`を実行し、174/174成功、exit 0を確認した。Functions/Rules/local harness/Emulator構成のdiffがないことをrootが照合しており、この境界に対する回帰証拠である。readerの新規挙動の証拠とはしない。CLIは既存login期限の警告を出したが、再認証せず専用demoで正常終了した。22保護fileのhash不変、専用portと観測した派生8396/9150の停止、harness所有runtimeの自動除去を独立commandのexit 0で確認した。05-B以降でFunctions/Rulesを変更した場合はこのsuiteを再実行する。
+
+## 05-A 初回実装とレビュー
+
+developerはEmployee専用reader/session、現在Auth/raw User認可、詳細の関連User破棄、期間reader、Autocompleteと表示consumer、SiteのEmployee接続を変更した。直接reader/editor testは38/38・exit 0とcallbackされた。rootが`node --test test/domain/*.test.mjs`を実行すると1242/1243・exit 1で、Site詳細の旧provide文字列を要求する既存testが1件失敗した。失敗抽出の再実行も同じ結果であり、合格扱いにはしない。
+
+root先行確認の初回認可待機順序は、raw User許可scopeの設定をloading解除より先に行い、実Vue接続testを追加した。securityの`EMP-05-A-SEC`では、同世代で遅延した期間queryが個別ID購読で得た最新raw/不存在を上書きできるP2を検出した。旧tenant応答の拒否だけではこの競合を覆わない。`EMP-05-A-R1`で期間応答の鮮度保護と更新/不存在の直接test、Site既存testの契約更新を実装担当へ戻した。独立最終review・修正後domain・fresh build・直接UIは未完了。
+
+reviewerはEmployee Tag/Workers Table/Worker Chipのcache missが、原本不存在・閲覧拒否・取得失敗でもloadingまたは一律N/AとなるP2を検出した。非PIIの終端状態表示と実consumer testも同R1へ追加し、共通Tagや別masterの表示基盤は変更しない。
+
+R1では期間queryのmembershipと原本観測の鮮度を分離し、個別ID購読で確定したraw/不存在を優先した。Employee専用状態ラベルとconsumerの実binding test、Siteの実page/session/provide/cleanup testを追加した。2026-09-07、rootが修正後に`node --test test/domain/*.test.mjs`を再実行し1245/1245・exit 0、`git diff --check`もexit 0を確認した。独立再reviewは進行中で、UI前のsource統合を準備している。
+
+REVIEW-R1は先の指摘解消・追加指摘なし。SEC-R1は個別ID購読の優先を確認した一方、個別購読のないIDでACTIVE/RESIGNED query同士が異なるrawを返すと、新rawまで捨てて旧値を固定する追加P2を指摘した。05-A-R2で競合IDだけの原本確認と両応答順序のtestを修正対象にした。R1の1245件成功だけでは受入れ完了としない。R2初回割当はモデル容量エラーで失敗し、同じ境界で再開を依頼した。
+
+R2は再開後、query-onlyの内容が食い違うIDだけ原本購読で確認するよう修正した。同値の応答では追加購読せず、原本確認済みのraw/不存在を優先する。live/snapshot各2順序の回帰を追加し、rootが`node --test test/domain/*.test.mjs`を再実行して1246/1246・exit 0を確認した。変更はreader coreと直接testの2fileで、Functions/Rules/harnessは不変。独立再review・fresh build・実UIはこの時点では未完了。
+
+05-Aは既存確定契約の実装であり、仕様・ADR・保存data形状・migration・共通運用・利用者の業務操作手順を変更しない。実装記録、roadmap、検証索引/receipt、changelogだけを更新する。governance/agent設定・package変更はない。
+
+REVIEW-R2とSEC-R2はともに指摘解消・追加blockingなし。rootもR2 core/testのhash一致と最終domain1246/1246を照合した。`powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2`は254 Markdown/60 ADR/11 roadmap/8 TOML・exit 0、`git diff --check`はexit 0。以下の受入前sourceをlocal統合し、clean HEADでfresh build/UIへ進める。source commitだけで05-A/EMP-05を完了扱いにしない。
+
+05-Aの製品所有fileは次の15件。
+
+- `composables/domain/employee/employeeReadSession.js`、`employeeReadLabel.js`
+- `composables/application/employee/useEmployeeReadAccess.js`、`useEmployeeDetailRead.js`
+- `composables/fetch/useFetchEmployee.js`、`composables/dataLayers/employee/useEmployeesInRange.js`
+- `components/Employee/Autocomplete.vue`、`components/Employee/Select.vue`、`components/Employee/Tag/useIndex.js`
+- `components/Worker/Chip.vue`、`components/Workers/Table/Tr.vue`
+- `pages/employees/[id].vue`、`pages/sites/[id].vue`
+- `test/domain/employee-reader.test.mjs`、`test/domain/site-read-authorization.test.mjs`
+
+root文書は`CHANGELOG.md`、`docs/implementation/employee-master.md`、`docs/roadmaps/employee.md`、`docs/verification/README.md`、本記録の5件。
+
+## 05-A local受入れ結果（2026-09-07）
+
+source commitは`d68b9587a69167909bfac73df6825cabe8e32b43`。rootがcleanを確認して`npm run test:local:ui:build`を実行しexit 0。専用identityのsource HEAD一致、`externalEffects: deny`、郵便番号隔離receiptを確認した。`npm run test:local:ui:emulators`は専用importから必要な既存Employee/退職Callableを登録してready、`npm run test:local:ui:server:generated`はidentity検査後に14600でready。loopback rootのHTTP 200と製品dashboard到達を確認した。新たなpackage更新・再認証は行っていない。
+
+### UI user-equivalent action
+
+- 保存済み合成会社管理者sessionを再利用し、可視メニュー→在職一覧→正規登録でEmployeeを1件作成した。code `EMP05A`、氏名「検証 閲覧」、入社日2026-09-07。生年月日は正規calendarから選択し、住所は合成値を手入力した。codeの記号入力は既存validationで拒否され、英数字へ訂正して保存した。非UIでEmployeeを注入していない。
+- 詳細への遷移とreload後に、code・氏名・カナ・住所・保険初期状態・User未登録を確認。基本editorで名と表示名を「更新」/「検証更新」に変更し、詳細の氏名と在職一覧の表示名が反映された。
+- 可視メニューから配置管理→作業員選択を開き、候補「検証更新」を確認。別の専用tabの基本editorで「連動」/「検証連動」へ保存すると、配置画面をreloadせず候補名が「検証連動」へ更新された。配置の保存はしていない。
+- User未連携のこのEmployeeを正規退職dialogで2026-09-07に退職させた。詳細の退職表示・通常編集action終了、退職日を含む09-06〜09-19の配置候補に氏名が残ることを確認した。
+- 詳細から通常Sign Outを実行し、詳細と別tabの配置候補からEmployee情報が消えた。browserの戻る操作はsign-inへ移り、旧Employee/User表示を復活させなかった。これはrole剥奪のUI試験ではない。
+
+### Backend assertion・未検証
+
+専用Emulatorのread-only verifierと同じ`Bearer owner`経路を使用した。最初の認証なしGETは403となり、検証用header付きGETへ修正した。UI作成原本のcode/表示名/ACTIVEを照合し、2回の名称保存前後の全field（存在有無を含む）の差が`firstName`/`displayName`/`fullName`/`tokenMap`/`updatedAt`だけであることを確認した。退職後は同じEmployee原本がRESIGNEDで残り、保存済みの単一合成Auth actorと会社管理者Userも残っていることを確認した。各assertion commandはexit 0。通常のUI操作をbackend呼出しで代用していない。
+
+7actor/拒否actor/他tenantのRulesは174件のEmulator suite、cold cache/初期ID/権限とtenant切替/遅延応答/期間境界/検索membership/表示状態/Site接続は1246件のdomain suite中の直接testへ対応づける。実画面は合成会社管理者1actor。Firestore disk cacheの完全消去、Site入場者履歴の実UI、全別機能業務、背景triggerの自動実行、実data/Dev/外部providerは未検証。履歴生成triggerのない専用環境でSite表示の成功を装わず、Site接続は実Vue/session testで確認した。
+
+### 終了・判定・次工程
+
+所有tab 2件を閉じ、generated server→Emulatorの順にCtrl-Cで停止した（前景sessionのexit 1は依頼した停止による）。専用portと観測した派生8197/9150のLISTEN不在をTCP APIとnetstatで確認。保護22 fileの件数/hash不変、既存root log 3 fileの復元/hash一致を確認し、絶対path・reparse不在を検査した所有`.output`と`.codex-test/runtime/emp05-ui`を削除した。cleanup assertionはexit 0、source worktreeはcleanだった。他者runtime・利用者Chromeは操作していない。
+
+05-Aのlocal受入れ条件を満たした。source/仕様/既存7actor/保存境界を維持して05-Bへ進める。05-Bでは表示cache/Classを保存時の原本期待値・認可に使わず、保存先の現在rawと現在actorを保存境界で再確認する。05-Aの仕様変更判断待ちはない。最終文書反映のgateとlocal統合を終えてから05-Bを割り当てる。EMP-05全体は未完了、確認済み進捗は55%のまま。
+
+05-Aの受入れ文書は上記project-docs・diff-check・cached diff-checkがそれぞれexit 0で、`6c6e09f71ca3eef2e3d975290c76dc31bd968fce`へlocal commitした。rootがcleanを確認し、次の05-Bを割り当てた。最後の文書差分だけでは製品source/domain/Emulator/UIの証拠は失効しない。release-onlyのDev/Prod generateは未承認のため省略、governanceの3 gateは対象設定・validator不変のため再利用した。
+
+## 05-B 開始契約（2026-09-07）
+
+baselineは上記`6c6e09f7`、同じprimary/branch。実装担当の所有は予定・実績・実績の請求編集・配置通知の専用保存、raw参照抽出/各保存先差分の共通helper、正本に列挙したclient入口の接続と迂回Rules、直接domain/HTTP/Rules test。新規APIは通常entryにも接続して専用demoで検証するがremote反映はしない。独立通知状態は既存同社認証境界の部分transactionを維持する。
+
+W1〜W3のraw不正/索引一致/追加Employeeだけの0・1・10種類read、操作別actor/lock、Site/Customer保護、通知actual値とraw期待値、通知だけの競合、予定pointerと実績作成のatomic性を確認する。表示Classと保存rawは分け、正規UIの保存await・拒否draft保持・結果不明の非自動再送を維持する。全別機能業務の受入れへは広げない。05-Cの背景writer/旧trigger/限定整合tool、05-Dのarchive、purge/restore、package/data/governance/他repositoryはこの内部単位の対象外。
+
+rootは最終gate/専用UI/cleanupと文書/Gitを担当し、read-only経路調査が最小のUI準備順を確認する。Firestore Rules変更のreviewには既存のRules監査skillを適用する。変更classはapplication/UI/data・Rules/permissions/buildのunion、直接検証の後に全domain・専用Emulator・fresh build/UIを行う。新たな実測成功は実行後に記録する。
+
+### 05-B の実装接続と受入れ準備
+
+期間配置の`useSiteOperationSchedulesInRange.js`は現行の`subscribeDocs`で表示Classだけを保持している。承認済みの編集開始時raw期待値を確保するため、対象期間・表示Classを維持したoperation専用raw contextへの限定接続をdeveloper所有へ含めた。保存時の新規取得を古い表示の期待値に置き換えず、期間/tenant変更と破棄、rawと表示の同時点性を直接testする。共通cache/packageの変更は含めない。
+
+配置から保存までの同時点性を保つため、`components/SiteOperationSchedule/Card/useIndex.js`、`components/Draggable/Workers/useIndex.js`、`components/Draggable/OperationSchedules/useIndex.js`の表示clone/initializeにもraw contextと原本行位置の継承を限定接続する。rootが現sourceと既定の即時表示/保存拒否rollback契約を照合し、developer所有へ追加した。表示順やClass keyで原本行を探し直さず、失敗時の表示復元・再取得、tenant/期間切替時の破棄を直接testへ含める。共通drag基盤の刷新や配置条件の変更は含まない。
+
+`EMP-05-B-UI-PLAN`/`EMP-05-B-UI-PLAN-ARTICLE`のread-only調査に基づく予定であり、以下はまだ実測成功ではない。
+
+1. 合成会社管理者でCustomer、関連Site、日勤の取極め、Employeeを各1件、すべて可視の正規UIから作成する。同月内の予定2日を使い、入社/適用日は予定日以前、資格必須はfalse、単価は正数とする。
+2. 配置管理で予定を作成しEmployeeを追加、作業時間を編集・保存・再表示する。翌日へ複製し、一方だけ配置通知を作成する。
+3. 実績作成で通知済み予定の実時刻・休憩0を保存して実績化する。未通知の複製予定では自動`notify(false)`準備を経た実績化を確認する。実績詳細の作業員編集、請求編集と再表示、lock後の通常編集拒否と請求編集許可、unlockを確認する。
+4. 商品管理は`utils/pageSettings.js`と`pageAccessPolicy.js`でDEVELOPER限定であり、会社管理者fixtureではArticleを正規作成できない。商品明細はArticle選択が必要なため、UIでは空候補と取消後の明細不変を確認する。非空articlesの追加/更新/削除、所有field外保持、競合、lock、拒否時write 0は直接API/domain testへ対応づけ、非空保存のUI成功とは記録しない。権限変更や直接注入で代替しない。
+
+User未連携Employeeでも配置通知と管理者による実時刻入力は可能だが、User向け一般通知生成はUser不存在で終了する。専用FunctionsはAPI harnessのため、個人の出退勤・外部通知配送、日次2種/請求集計/履歴の自動生成を今回のUI成功へ含めない。raw不正・参照種別・索引・旧writer拒否、0/1/10 read、別tenant、通知だけの競合、0/falseの全組合せ、二重実績化、lock race、結果不明は制御可能な直接testで検証する。実操作時に見つかった不足は未検証として残し、必須条件との対応をreviewで判断する。
+
+### 05-B server先行検証（2026-09-07、途中）
+
+`saveOperation`専用Callable、server transaction、operation field/期待値契約、参照抽出helperを先行実装した時点で、rootがdeveloperの固定4fileのhashを照合し、`node --test test/domain/operation-write.test.mjs test/domain/operation-references.test.mjs test/domain/codex-functions-entrypoint.test.mjs`を実行した。16/16成功、exit 0。raw未知field/nanoseconds、行位置、参照差分、actor/lock、Site/Customer/revision、通知単独競合・0/false・実績化を含む直接testであり、HTTP/Rules/画面の成功ではない。
+
+固定serverへの`EMP-05-B-SERVER-REVIEW`/`EMP-05-B-SERVER-SEC`を並列依頼し、developerはclient接続を継続した。review結果・client/Rules・全domain・Emulator・build/UIはこの時点で未完了。helperのread計数を保存API全体の計数と混同せず、最終証拠で実経路との対応を確認する。UI準備は専用IABの通常keyboard接続、保存済み単一合成Auth fixture、専用port空きを確認し、保護22fileの指紋と既存3logを所有runtime `.codex-test/runtime/emp05-b`へ退避した。準備用の空tabは閉じており、製品画面/build/processはまだ起動していない。
+
+先行reviewでP2を3件検出した。REVIEWは同一配列のremove→update等を開始時raw期待値で照合して変更後位置へ適用する行ずれと、`hasNotification=false`なのに同ID通知が存在するとnotifyがactual/statusを初期化できる点を指摘。SECはworker更新による通知取消を計画した後、同じpayloadのconvertがread cacheの旧通知を採用できる点を指摘した。rootも該当sourceを照合してdeveloperへ一括修正依頼した。仕様変更ではなく、原本位置・通知保持・準備後期待値契約の実装不足として扱う。同一対象の依存commandを制限しても、正規の複数対象保存・必要なcreateとworker追加・複製を失わないことを修正条件にした。修正後の再現test・再reviewまで未解消であり、先の16件成功を受入れ完了の根拠にはしない。
+
+R1は原本位置の一時map、notify/convertの依存command混在拒否、false flag＋既存通知の拒否を追加した。rootが上記と同じ直接test commandを実行し25/25・exit 0を確認。実`saveOperation`の新規2保存先×10人と削除後再作成も計数している。REVIEW-R1/SEC-R1で最初の3件の解消を確認した。一方rootの合成helper診断で外注行`out-a:1`を`out-b`へ変更すると兄弟の`out-b:1`と重複でき、REVIEW-R1も通知ID衝突をP2と判定した。既存raw/candidateのworkerId一意性、正常な同外注先・異なるindex配置の維持、schedule/resultの拒否時write 0をR2へ依頼した。R2未完のためserver受入れは保留。途中clientのraw contextが旧表示modelを強参照し続ける点もrootから指摘し、購読破棄時の無効化と不要modelの解放を両立する修正を依頼した。
+
+R2はworkerIdの配列全体での一意性を保存前raw/candidate双方へ適用した。rootが`operationReferences.js`（`54FB42CC05FDCDE1DA0B66631AD862DDA898800C9346A36335B2CE0C85D9F23D`）と`operation-write.test.mjs`（`42B23F3A4CB0682F2204CA67E4FF298F3E392978B2181311B85D4E452F58A84F`）のhashを照合し、同じ直接test commandで27/27・exit 0を確認。REVIEW-R2/SEC-R2とも指摘解消・追加blockingなし。先行serverの既知指摘は解消したが、client/Rules/HTTP/Emulator/UIの確認とB全体の統合は未完了である。これ以後のserver変更は影響review/testを再実施する。
+
+### 05-B editor先行検証と残る入口（2026-09-07、途中）
+
+rootは固定したeditor/raw contextと管理画面・行編集の接続について`node --test test/domain/operation-editor.test.mjs`を実行し、8/8・exit 0（12 SFCのcompileを含む）を確認した。`EMP-05-B-EDITOR-REVIEW`は商品IDを先に変更して単価取得を待つ間に旧単価で保存できるP2、`EMP-05-B-EDITOR-SEC`はRowsManagerの取得error/不存在/claim無効化で一覧rawとeditorの破棄が一貫しないP2を指摘した。rootも該当sourceを照合し、入力の非同期解決中の保存、手入力と逆順応答、取得拒否/閉じる/別行、read不能時のraw/draft/期待値破棄と旧応答拒否をEDITOR-R1へ依頼した。通常の保存競合では入力を保持する条件を維持する。8件成功だけで当該接続を受入れ済みにしない。
+
+実績複製のfacade/application/domain、請求lock button、予定複製dialogもrootが旧Class writerへの到達を確認し、05-Bの限定接続対象へ含めた。実績複製dialog本体は失敗理由の表示を追加する。exact入口は実装文書の既存source表へ反映した。実績複製は調整値・商品・workerの引継ぎがあり、概要作成とworker追加だけでは既存値を落とすため、source ID/日付/期待値からserverの現在rawを複製する限定operationを追加する。controllerへ経理権限を要求せず、source lock/不存在/競合、全read先行、新保存先の参照確認を維持する。これは既存複製仕様の移行であり、新業務条件ではない。この追加で先行serverの影響箇所は再review/test対象となる。client R1・複製・残る配置/通知/Rules/HTTPはこの時点で実装・検証中である。
+
+EDITOR-R1は商品取得中の保存禁止・ID/初期単価の同時確定・手入力優先・旧応答拒否と、Rowsのscope/read不能時の購読/raw/editor一括破棄を実装した。rootが7fileの固定hashを照合して同じeditor test commandを実行し、12/12・exit 0を確認。EDITOR-REVIEW-R1/SEC-R1で2件解消・追加blockingなし。商品入力の追加証拠はhelper実行とtemplate接続検査であり、実UIの成功に置き換えない。配置rollback用raw context復元関数の追加、および複製・同一配列move→add補正等の後続変更はB最終review/testへ含める。先行chunkの指摘解消とB全体の受入れを区別する。
+
+### 05-B 既存テストの責務移行（途中）
+
+read-only `EMP-05-B-TEST-RESPONSIBILITY-MAP`で旧`site-schedule-guard.test.mjs`の11件を新server/client責務へ対応づけた。SDK transactionの呼出し形状は移行するが、Site revision欠損の初期化・不正値拒否、旧新Site双方の更新と競合、unique Site 8/9件境界、全read先行と途中拒否時のwrite 0、確認の操作/tenant束縛・取消・再試行、rawと無関係field保持は維持する。`site-lifecycle-ui-source-contract.test.mjs`はSite固有の表示/取消/専用操作とCustomInputの破棄を残し、旧handler接続のassertだけ新Manager/submission/duplicatorへ移す。旧guardとhandlerの保存拒否も直接確認する。実行結果は移行後のcommand完了時に記録する。
+
+同調査とrootのsource照合で、同batchの最初に終了済みSiteを移動元としてread cacheへ入れると、後のcommandで同Siteを移動先にする明示確認が省略される問題を確認した。読取cacheと移動先の確認状態を分離し、取消でCallableを送らないtestをdeveloperへ依頼した。また[Site実装記録](../implementation/site-master.md#矛盾未使用候補)の既存条件に合わせ、確認は成功/取消/破棄で消し、確定失敗後の同じ操作の明示再試行だけで維持する。毎submitの再確認へ仕様を変更せず、editor/submissionの双方を回帰対象とする。この時点は静的確認と修正指示までで、修正後の成功・受入れを意味しない。
+
+### 05-B 通知の先行レビュー（途中）
+
+固定した通知state contract/editor/ManagerとRulesの4fileへ`EMP-05-B-NOTIFICATION-REVIEW`/`SEC`を実施した。一般reviewは既存4状態の計算・時刻・0/false・所有field保持に追加指摘なし。securityは、通知A保存中のreset後に同scopeでBを開くと旧transactionがAを書き込めるP2と、commit後の再取得拒否を未保存と誤分類するP2を検出した。rootもsourceを照合し、transactionのawait前後とwrite前のgeneration照合、commit確定と再取得結果の分離、旧応答破棄を修正依頼した。状態helperだけではcontrollerの非同期経路を証明できないため、再試行・scope変更・commit後read拒否を直接testへ追加する。
+
+Rulesの限定静的reviewでは参照/非所有field変更、create/delete、generic/nested迂回の拒否を確認した。監査評価は通知4fileの範囲でscore 2、上記2件が未解消の途中評価である。rootは固定したFunctions/Rules/HTTP harnessに対して`npm run test:local`を開始した。新規HTTP統合caseの通過を観測したが、全suiteのexitはまだ得ておらず、完了証拠にはしない。developerは実行中のserver/Rules/harnessを固定し、client/domainの修正を継続する。
+
+通知R1はgeneration照合とcommit確定後の表示分離を追加した。rootがeditor（`F3C1E2CF47C5C93145867BA05AD9BAEF37901EDF628375AEBB6D64DC23DC6D53`）と直接test（`E3C93060E945BB939A414B8BCC7BE1B37A054E72AD8B6A47056ECBAAFEB62B7D`）を照合し、`node --test test/domain/operation-submission.test.mjs`で12/12・exit 0を確認。再reviewはこの時点で未完了。
+
+### 05-B 全体Emulator初回と修正対象（2026-09-07）
+
+rootの`npm run test:local`は175件中172成功・3失敗、exit 1。大量の陰性logで初回の失敗本文がtool出力から切れたため、同じcommandを所有runtimeへ出力保存して診断再実行し、同じ件数・3失敗・exit 1を確認した。新規EMP05-B HTTP統合caseは成功したが、全体gateは失敗である。
+
+- Site archive競合testのarchive先行側は、追加したfixtureの`customer: {}`が既存の正規projection条件を満たさず拒否された。実Customer projectionを使い、archive成功と後続参照拒否の条件を維持する修正を依頼した。
+- Customer競合testのOperationResults参照先行側に旧client `setDoc`が残り、Rulesで拒否された。両順序・同時競合を専用writerへ移し、旧writerが常に拒否されるだけの陰性testで参照整合性を証明しない。
+- 履歴再構築の許可actor testで`dayjs.tz is not a function`。新HTTP caseが残した実績の参照により、従来の空集合testが履歴生成へ到達した可能性がある。新caseの所有fixtureをfinallyで片付ける隔離と原因切分けを依頼した。履歴再構築の実data経路と日付処理は05-Cの直接回帰へ引き渡し、隔離後のtest成功だけでこの経路の成功を主張しない。
+
+各実行後にEmulator停止と専用port・観測した派生8294/8939・9150のLISTEN不在、保護22fileのhash不変をrootの独立command・exit 0で確認した。所有runtimeは後続検証用に保持している。
+
+固定server後続差分への`SERVER-FINAL-REVIEW`は追加指摘なし、`SERVER-FINAL-SEC`はresult/billingが同じOperationResultsへ解決されるのにkind名で複製元との依存commandを判定するP2を検出した。rootもsourceを照合し、解決後collection/pathで判定して同じ原本のbilling変更と複製を両順序write 0にする修正を依頼した。別対象の独立操作は維持する。修正後のreview・testまで先行serverの受入れは未完了とする。
+
+### 05-B 追加の到達確認と再検証（途中）
+
+`NOTIFICATION-SEC-R1`は2件解消・追加blockingなし、限定静的監査score 5へ更新した。`RAW-CONTEXT-SEC`は配置のraw context・期間reader・Card・Draggable2種・command導出の6fileに追加blockingなし。一方、外側の予定actionが旧scopeのsubmit終了を新画面の失敗通知へ変えるP2を検出した。開始scope/世代/disposeをactionにも適用し、同scope拒否のrollbackだけを維持する修正を依頼した。
+
+`WRITER-CLOSURE`は対象の旧全文writer迂回を検出しなかったが、Site詳細の引数なしCREATEで`beforeEdit`へundefinedを渡すP2を検出した。独立preset生成の補正後、`ARRAY-CREATE-REVIEW`で解消を確認。未使用`useOperationBillingsManager.js`には旧createが残り、caller未検出とRules拒否を確認したため、旧writer文字列の全消滅とは扱わない。
+
+同じRulesへ到達する本人向け通知を追補調査すると、旧adapterの`updatedAt = new Date()`・全文setが新Rulesの`request.time`とcreatedAt保持に合わないことを確認した。これは本人操作を刷新する要求ではなく、05-Bで変更するRulesによる回帰である。既存next状態・下番入力・認可を維持し、開始rawを持つ共有通知controllerの状態部分transactionへ保存だけを接続する補正をsource表へ追加した。本人handlerの直接回帰を追加し、全本人業務のUI受入れへは拡張しない。実装・reviewは未完了。
+
+server alias補正（`DAC9CFF716B54285DEF70D7D97BB2C10E046BDE0F009DBAE4740E730DAA40781`）は`SERVER-SEC-R1`で解消。rootが`node --test test/domain/operation-write.test.mjs test/domain/operation-editor.test.mjs`を実行し46/46・exit 0を確認した。aliasの8陰性組合せと別対象成功、ArrayManagerの独立preset・取消を含む。harnessのfixture隔離・参照競合移行後、`powershell -ExecutionPolicy Bypass -File scripts/run-codex-local-test.ps1 -Mode Test -TestNamePattern 'EMP05-B HTTP|Site archive and OperationResult writer|CAS-03 OperationResults|rebuild history Callable allows'`を実行し、6件中2成功・4失敗、exit 1。新HTTPと履歴の許可caseは成功したが、Site fixtureでAdmin Timestampをclient setDocへ渡す型不一致、Customer競合3件でactor fixtureの保存API認可不一致が残り、fixtureの修正を依頼した。
+
+通常`functions/index.js`にはdayjsのUTC/timezone・Asia/Tokyo初期化があり、専用entry/harnessには同じ初期化がないことをrootが確認した。履歴の先行エラーを通常entryの製品不具合と断定しない。05-Cの非空履歴回帰では、この実行前提を明示して確認する。targeted実行後は専用port・派生8887/9150停止、保護hash不変を確認し、Windows handleで自動cleanupが遅延した所有`test-harness-6684`だけを絶対path・reparse検査後に削除した。cleanup commandはexit 0。
+
+### 05-B terminal後の最終レビューと検証（途中）
+
+fixtureのSDK日時型とEMP05専用actor原本を補正した後、上記targeted commandは6/6・exit 0。専用/派生8135/9150の停止、保護22hash不変、所有`test-harness-5556`の遅延cleanupを確認した。
+
+本人通知の3fileは`PERSONAL-REVIEW`/`PERSONAL-ACTIONS-SEC`で追加blockingなし。actionsの同scope権限喪失が世代へ反映されない残りP2を、allowed同期監視と喪失/再許可×旧成功/拒否の4testで補正し、`CLIENT-FINAL-SEC`で解消を確認した。rootの直接`operation-submission`/`operation-editor`合計45件成功は途中の証拠であり、後続追加分は全domainへ対応づける。
+
+developer terminal後、rootが`node --test test/domain/*.test.mjs`を実行し1326/1326・exit 0、`npm run test:local`は175/175・exit 0を確認した。Emulatorには同社rolesなしの本登録actorによる通知4状態の部分transaction、createdAtのsubmillisecond精度・未知map保持を追加した（harness hash `F5A899D4AC778B6ACF5E2AB3F1F32E5E33858345FA7474EA9A226C9F55C38A7D`）。本人controllerから同じpatch契約までのdomain証拠とRules実行証拠を対応づけ、本人UI全体の成功とはしない。Emulator終了後に保護22fileの件数/hash不変、専用/派生8581/9150の停止を独立command・exit 0で確認した。
+
+ただし最終client reviewで3件が残り、受入れは保留した。一般reviewは、複製の保存確定後read失敗をuncertain扱いし、新しい複製も開けなくするP2を検出。securityは、editorの旧Site取得/確認応答がreset後の新draft確認状態へ混入するP2と、複製のpost-read中にbusyが解除されて再送/日付変更等が可能なP2を検出した。rootもsource照合し、`CLIENT-R1`でeditor/duplicatorと直接testだけを修正対象にした。保存全体のbusy、開始ticket/対象値、既知成功と応答不明の区別を一緒に確認する。修正後のdomain・影響review・fresh build/UIは未完了で、1326件成功を最終修正版の証拠に流用しない。Functions/Rules/harnessは固定し、変更がない保存境界のEmulator証拠とclient固有の追加回帰を区別する。
+
+### 05-B source統合前の修正確定（2026-09-07）
+
+`CLIENT-R1`は上記4fileだけを修正した。rootがsourceとhashを照合し、`node --test test/domain/*.test.mjs`を再実行して1334/1334・exit 0を確認した。`CLIENT-REVIEW-R1`と`CLIENT-SEC-R1`は3件の解消・限定差分に追加blockingなしと判定した。両reviewは独立test実行をせず、rootの実行証拠と区別する。
+
+保存確定後の読取失敗は保存済み案内と旧attempt破棄へ分け、新しい複製を可能にする。実際の結果不明は再送禁止を維持する。複製の再取得終了までbusyを維持し、Site取得/確認は開始ticket・会社・対象に固定する。両複製種別と読取拒否/通信失敗、処理中の再送/別対象/取消、旧応答、Site取得/確認待機中のdraft切替を直接回帰へ含めた。
+
+最終4fileはclient controllerとdomain testであり、175件成功後のFunctions/Rules/harnessには変更がない。verification policyの失効条件に従い、保存境界のEmulator175/175・exit 0は再利用し、後続client差分は1334件のdomainとこれから行うfresh build/実UIへ対応づける。managed-governance、project-docs-negative、capacity-regressionも対象validator・policy・governance・fixtureに後続変更がなく、同turnのexit 0証拠を再利用する。文書検証とdiff検査は最終文書に対して再実行する。Dev/Prod生成・releaseは対象外で未実施。
+
+この時点はreview済みsourceのlocal統合準備で、05-Bの実UI・cleanup・受入れは未完了。05-C以降へ進まず、EMPの得点は55%のままとする。新仕様・data形状・ADR・共通governance・packageの変更はなく、実装記録・roadmap・本receipt・CHANGELOGの4文書だけを同期する。
+
+### 05-B 初回実UIと補正（2026-09-07、途中）
+
+文書検証（254 Markdown / 60 ADR / 11 roadmap / 8 TOML）、`git diff --check`、`git diff --cached --check`はそれぞれexit 0。review済み62製品/test fileと4文書を`df00e543`へlocal統合し、clean HEADから`npm run test:local:ui:build`を実行してexit 0を確認した。専用Emulatorとgenerated serverを独立前景processで起動し、HTTP 200・saveOperation登録・外部作用denyを確認した。
+
+非UI setupでは保存済み単一合成Authを再利用し、一時credentialはrunning専用Auth内と入力memoryだけで扱った。Customerの正規UI作成後、Site作成はSystem/system不存在によりRulesで拒否された。GET 404とRulesを照合し、自動testと同じ`isMaintenance=false`だけを不存在条件付きでrunning専用Emulatorへ環境baselineとして作成した。保存済みexportは変更せず、業務fixtureの直接注入とは分離する。保持した画面入力からのSite再試行は成功した。
+
+通常UIでCustomer・Site・日勤取極め・Employeeを各1件作成した。取極めは09/07適用、08:00〜17:00・実働8時間/休憩1時間、平日通常12000/残業1500・資格14000/1750、未使用曜日0円の明示確認を経て保存した。Employeeは09/07入社、User未連携・警備員登録未完了で、座標取得不可でも住所保存と案内を確認した。初回の数値だけの日付入力と表示名長さは入力条件に合わせて訂正し、製品保存不具合へ数えない。
+
+配置管理の既存SpeedDialから予定を開くと、draftと「編集を開始できません」が同時表示された。入力を補い取極めを適用した後の09/07・必要人数1の予定保存は成功したが、正常な作成開始とは受け入れない。`EMP-05-B-UI-DIAG`の純粋診断とrootのinstalled source照合で、Class presetの未入力startTime/endTime=nullをcontrollerがsetterへ再代入して例外になると確認した。また新OperationManagerのfallback作成ボタンが、既存配置画面の固定高Table後へ意図せず増えていた。
+
+`UI-R1`は同値preset再代入の回避と当該配置画面の空activator接続、実Classの作成/取消回帰へ限定する。UIタブとgenerated serverを停止し、Functions/Rulesを固定したまま所有Emulatorに合成状態を保持する。修正後のreview・domain・source統合・fresh build/画面再確認が終わるまでBは未完了。背景処理・archiveへは進まない。
+
+rootが3fileの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1336/1336・exit 0を確認した。`UI-REVIEW-R1`は追加blockingなし。actor/tenant・transaction・保存fieldに変更はなく、同値入力の初期化とslotだけの限定修正として影響reviewを選び、Functions/Rules/harnessの175件証拠を再利用する。実UIを再開する前に、14600のLISTEN不在・所有Emulatorだけの稼働・保護22hash不変をsandbox外の読取りcommandで確認した（exit 0）。read-only backend assertionでは初回予定のworker配列0件、必要人数1、08:00〜17:00を確認した。まだ配置・複製・実績化の成功を主張しない。
+
+### 05-B 再UIでの確認と日付処理の再点検（2026-09-07、途中）
+
+`51585c04`へ上記限定修正とreceiptをlocal統合し、clean HEADの`npm run test:local:ui:build`でexit 0を確認した。再開した実UIで予定CREATE開始時の例外は解消した。一方、空activator slotでも配置画面のfallbackボタンは残った。compile/source検査と先行reviewだけでは実描画を証明できなかったため、この指摘を再開する。
+
+通常のpointer操作で合成Employeeを予定へ配置し、worker詳細の休憩を0.5時間へ変更して保存・再読込した。backendの読取りではemployeeIds/従業員配列が各1件、breakMinutes=30、hasNotification=falseを確認した。最初のdrag位置推定は外れたが、表示要素の境界を読取り確認して通常dragを行うと成功したため、drop領域自体の変更を追加しない。
+
+複製dialogで09/08を選択して保存すると、コピーが09/07の列へ現れた。backendでもコピーの日付文字列09/07を確認した。rootのsource照合ではserverのduplicateが計算用ClassのdateAt setterへ再代入し、installed WorkTimeBaseがnative Date.setHours(0,0,0,0)でhost時差に依存している。既存domainはWindowsのJST環境で成功しており、UTCでの選択日保持の証拠ではない。create/overview/worker連動・通知/実績化・請求日付の同原因を05-B内で点検し、packageやprocess全体の時差を変更せずapplication内で修正する。通常entryのdayjs timezone初期化だけではnative Dateの問題は解消しない。
+
+rootは所有tab、generated server、Emulatorの順で停止した（前景sessionのCtrl-C終了はexit 1）。sandbox外の独立port照合で専用portと観測済み派生8917/9150のLISTEN不在、exit 0を確認した。running専用Emulatorの合成UI状態はexportしていない。backend修正により影響するEmulator証拠は再実行対象とし、再review・domain・Emulator・fresh build/UIが完了するまで05-B未完了を維持する。
+
+### 05-B 日時・slot補正の固定検証（2026-09-07、途中）
+
+`UI-R2`は計算/draft instanceと子配列へ限定したJST adapterをBの保存・通知状態・editor・予定移動へ接続した。package/prototype/global Date/process設定は変更せず、通知actualの既存flag規則、callback・dayType・親子同期、raw差分保持を維持する。Managerはslotが存在するときに既定ボタンを描画しない。実templateとwrapperのrender testでなし/空/customを確認する。
+
+`UI-R2-PLAN`で親子再生成と固定数値の条件を補足し、実装文書へ反映した。`UI-R2-REVIEW`/`UI-R2-SEC`は固定した7sourceに追加P1/P2なし。review途中の同一親instance.initialize後のWeakSet残留は、現適用先の再表示/rollbackが新instanceへ置換することと、Card/Workersの別cloneを照合して現経路のP2にはしなかった。adapterの寿命制約は実装文書に残し、共通基盤としての保証へ拡張しない。
+
+rootが最終source/test hashを照合し、`node --test test/domain/*.test.mjs`で1338/1338・exit 0、`npm run test:local`で175/175・exit 0を確認した。新日時test（SHA-256 `B0C3BCB7E12FE5CA0B9483B1DDCE808F1F83D89B318F80F1973AE2582AF13BFF`）はUTC/JST各24 chainを実saveOperation経由で検証し、日勤480分・09時境界2分・夜勤/24時間・翌日加算・閏日/年越し・通知/実績化を固定値と比較する。非0の曜日別料金と改定取極めを使い、締日11/20の21800円、翌11/21の51000円、適用agreement.keyと翌月請求日を個別assertした。日付不変時のTimestamp nanos123456789・未知field保持も確認した。料金追補中のtest自身のgetter誤認2件は訂正して最終成功を得ており、製品sourceの追加変更はない。
+
+全Emulator終了後、rootの独立commandで専用port・派生8028/9150のLISTEN不在、保護22fileの件数/hash不変、所有harness runtimeのcleanupを確認した（各exit 0）。Functionsを変更したため旧175件を流用せず再実行した。変更のないmanaged-governance/project-docs-negative/capacity-regressionの同turn証拠はpolicyの失効条件に基づき再利用する。文書/diffは最終文書に対して再実行し、修正版のfresh build/実UI完了まではBを受け入れない。
+
+### 05-B 再入場時の購読補正（2026-09-07、途中）
+
+文書検証と差分検査のexit 0後、日時・slot補正を`b04bd3cc`へlocal統合した。同じclean HEADの専用buildはexit 0。実UIでは作成開始の例外と余分なbuttonが解消し、正規作成した合成Employeeの配置・休憩30分への変更、09/08への複製・再読込を確認した。backend読取りでも親子の09/08、同日17:00終了、休憩30分、参照索引を確認した。
+
+上下番確定の既存queryは前日までを対象にするため、今日・翌日だけでは実績化試験に進まない。正規UIで合成Employeeの入社日とSite取極め開始日を09/01へ変更した。その後配置管理へ戻ると、保存済み予定が一覧に現れなくなった。backendには09/07・09/08の予定が残っており、保存失敗とは分離する。
+
+rootはBの範囲readerがcache/pendingを拒否しながら`includeMetadataChanges`を指定していないことを照合した。installed SDKの型契約では既定がfalseであり、内容が同じままserver確認済みへ移る通知を受け取れない。同じ欠陥を持つBのGenerator通知購読・実績明細購読も限定修正へ含める。既存のcache/pending拒否・actor/tenant・世代条件は維持し、初回cache→server確認、再入場/再選択、旧scope応答を直接回帰へ追加する。他reader全体へ一般化しない。
+
+所有tabとgenerated serverを停止し、14600のLISTEN不在を独立command・exit 0で確認した。Functions/Rulesを変更しないclient補正のため、専用Emulator内の合成状態を保持している。`UI-R3`のreview・domain・fresh build・再入場と実績化の実UI・cleanupは未完了であり、B受入れやC開始の証拠にはしない。
+
+その後、rootは固定した3source/2testの差分・hashを照合し、`node --test test/domain/*.test.mjs`で1340/1340・exit 0を確認した。`UI-REVIEW-R3`は一般/限定security影響を確認し追加P1/P2なし。sourceは各listenerのoptions1行だけであり、actor/tenant・cache/pending拒否・世代条件は不変である。Functions/Rules/harnessに変更がないため保存境界の175/175・exit 0と非失効の包括gate証拠を再利用し、client配送の証拠は直接testと後続のfresh build/実UIへ分ける。文書検証とdiffはこの最終receiptに対して再実行する。まだBの実UI・cleanupは未完了。
+
+### 05-B 最終実UI（2026-09-07）
+
+上記6fileを`a372eaa1b7cccd9a34a73c60a6ad89bc6f8a174f`へlocal統合した。文書検証・通常/staged diff検査は各exit 0。同じclean HEADの`npm run test:local:ui:build`はexit 0、generated serverはidentity照合後ready、root HTTP 200。専用in-app tabへvisibility=trueを指定し、保持済み合成sessionで製品画面へ到達した。追加のAuth設定・業務fixture直接注入はしていない。
+
+正規pointer/keyboard操作で、次を確認した。
+
+- 配置表の09/07・09/08に各1人を再表示。09/07を09/04へ複製し、前日までを対象にする確定一覧へ正しい09/04で表示した。
+- 確定対象選択でnotify(false)の準備が完了し、通知休憩を0.5時間から0時間へ部分保存。明示再読込でも確定可能となった。配置表へ移動すると09/07・09/08は消えず、確定画面への再入場・同対象再選択でも休憩0時間と残業1時間を再表示した。
+- 上下番確定で成功messageと未確定一覧からの除外を確認。backend読取りで09/04の実績、同ID予定pointer、Employee索引、同日17:00終了、通知由来の休憩0を照合した。
+- 通常実績詳細でworker休憩を0.5時間へ更新し、一覧を経由して同じ詳細を再度開いて0.5を確認。取消操作では保存せず閉じた。Rowsの再購読でも行が表示される。
+- 稼働請求で未調整12750円を表示し、lockを保存。lock中に請求の調整数量と単価を保存して13500円を確認した。調整複製buttonは選択中tabだけを複製するため、最初の数量のみの保存では調整単価0、単価tabでも元値を複製して最終値を得た。既存入力手順と保存不具合を混同しない。
+- 通常実績詳細へ戻りlock案内、基本編集・worker追加/変更/削除・articles追加・実績削除の無効を確認した。backend assertionは通知LEAVED/休憩0、実績休憩30分/実働510分、lock/useAdjusted=true、調整残業60分/13500円、09/30請求日、Employee索引と予定pointer一致をすべてassertしexit 0。
+
+articlesや本人通知業務全体、開発者だけの実績複製の全操作を実UIで受け入れたとはしない。Bで改修した入口の直接controller/保存/Rules testと上記代表UIを対応づける。本人操作の意味、背景集計、外部通知・geocoding、Dev/実dataの受入れへ拡張しない。
+
+所有tabを閉じ、generated serverとEmulatorを順にCtrl-C終了した（停止sessionはexit 1）。独立したsandbox外のport commandは専用8portと観測済み8187/9150のLISTEN不在、exit 0。別commandで既存root log3fileのbackup/hash復元と、保護対象22fileの件数/SHA-256不変、exit 0を確認した。合成UI状態はexportしていない。生成物と所有runtimeを除去してからBの引渡しを確定する。
+
+絶対path・repository内・reparse不在を検査した`.output`と所有`emp05-b` runtimeの除去/不存在確認はexit 0。他のruntime、利用者Chrome、保存済みdataは保持した。以上をもって05-Bのsource review・1340件domain・175件保存境界Emulator・修正版build・代表実UI・cleanupを対応づけ、Bをlocal受入れとする。後続の文書だけの変更は製品testを失効させず、project-docs/diffを再実行してlocal統合する。
+
+次は05-Cの背景writer・日次2種/Billing索引・履歴再生成・限定整合検査・旧削除作用停止である。Bだけでは全参照先保護が成立しておらずarchive入口を開放しない。EMP-05自体は未完了、得点55%を維持する。仕様/ADR/data契約の追加変更、package/governance変更はなく、影響する実装記録・roadmap・本receiptを同期した。CHANGELOGの既存参照保存項目は同内容を表すため重複追加しない。Dev/Prod・remote・実dataは未実施のまま。
+
+## 05-C 開始契約
+
+開始baselineはprimaryのclean `8983d8db32980af355423b6aed3311c181aedce2`。B受入れの3文書をlocal統合し、rootがGit状態を確認した。既存実装前契約の05-C/W4/W5/G1/A6を実装する。developerのwriter scopeは日次2種・Billing・履歴modules、旧Employee削除handler、必要な共通参照helperとtrigger接続、日次Rules/汎用除外、直接testに限定する。Auth/User/lifecycleは別のread-only照合で既存排他を確認し、一律read追加や業務変更をしない。
+
+raw取得・検証・計算用Class・最終保存を分離し、本人IDと埋込み全従業員の索引を一つのwriteで確定する。最新保存先ごとの差分から追加Employeeだけを読み、全readを全writeより先に完了する。移動・削除・再生成、未知field/欠損/null/Timestamp精度、既存の金額・集計・Site/Customer保護を直接回帰で確認する。旧handlerは同名で無作用とし、API suiteにない遅延eventを直接検証する。限定整合検査は純粋検査/dry-runで、remote/利用者saved-dataの走査やapplyを含めない。
+
+Bから引き渡した非空履歴のdayjs初期化条件をこの工程で検証する。通常entryと専用entryの差を区別し、fixture隔離だけで製品経路が成功したとはしない。背景triggerを専用UIへ全公開する変更は含めず、必要な最小接続はsourceを確認して決める。
+
+選択classはapplication/data・Rulesと実装記録のunion。反復は直接test、最終はdomain-full・local-emulator-suite・project-docs/diffと影響review。client/UIに変更がなければBのbuild/代表UIを再実行せず再利用する。新規UI/外部作用の受入れではない。追加差分が失効条件へ該当すれば検証集合を更新する。DのarchiveとEMP-06以降は未開始である。
+
+### 05-C 初期再照合
+
+`C-UWB`のread-only照合は、仮User作成のEmployee/予約同時read、setupの既存User・予約pointerを残したatomic移動、仮User削除の参照非追加、退職・訂正のEmployee/operation/lock/head同時readを確認した。対象は`createTemporaryUser.js:223`、`setupUserAccount.js:120`、`deleteTemporaryUser.js:153`、`terminateEmployee.js:458`、`reinstateEmployee.js:292`、`lifecycleOperationStore.js:532`以降の保存順序と既存direct tests。限定scopeに追加P1/P2なし、test実行はしていない。Dが仮/無効User・完了operation/headも状態無限定で同Tx拒否することが前提であり、その競合接続testはDで未実施。rootもactual schemaから`LifecycleOperations`とEmployee/User別lock pathを照合した。既存UWBへの機械的なEmployee read追加は不要と判断する。
+
+初期writer照合で、SiteEmployeeHistoriesとBillingsの既存個別Rulesに参照変更可能なclient CUDが残っていると確認した。全必要参照writerの迂回閉鎖という承認済み目的に対し、Cの初回delegationを日次Rulesだけへ狭めすぎていたため、当該2collectionの個別Rulesと直接回帰も所有scopeへ補正した。
+
+Billingsには`pages/billings/customers/[id].vue`の入金予定日編集→`useCustomerBillingManager`→`useDocManager`→Class全文updateが実際に到達する。単なるread/PDF/CSV専用とは扱えない。この既存操作を保ちながら参照を含む全文保存を閉じる最小の専用部分保存を、C内の互換補正として実装前に再設計・影響reviewした。設計時の経路確認不足として記録し、新しい入金管理や支払機能の要求へ広げない。UI/application差分が追加されるため、専用fresh buildと当該操作の実UI検証もCの選択gateへ追加する。以下のreview条件を反映して当該client/API変更を開始した。
+
+`C-PAYMENT-PLAN`/`C-PAYMENT-SEC`はread-onlyで現page/manager/Billing schema/Rules/trigger/専用entryを照合し、専用Callableと独立draftへの限定移行を妥当とした。一般reviewのP2（optional予定日のnull互換欠落）を補正し、security条件の複合Billing ID長、現在Auth/Tx User、3field全同値でのみno-op、reactive route失効、unknownの値一致と自己commit証明の区別を実装契約へ追記した。現paymentDueDateAtがoptionalで、派生日付/年月を持つことはrootもinstalled sourceで照合した。通常API harnessとUIが同entryであるため、背景triggerは既定offの明示opt-in・demo/Emulator/loopback/外部作用deny検査を条件とする。rootがこの条件を固定した後、当該page/専用editor/controller/shared/use-case/API/限定専用entryと直接testのownershipを追加した。共通Manager刷新、他の請求操作、通常entry、全trigger公開は含めない。
+
+両reviewはtest/runtimeを実行せず、Cの製品受入れではない。C開始時の`.output`不在を確認し、保護22file指紋とroot既存3logを所有`.codex-test/runtime/emp05-c`へ退避した。既存の他runtimeは保持し、後処理対象へ混ぜない。
+
+### 05-C 背景処理の先行レビュー（途中）
+
+`C-BACKGROUND-REVIEW`はbaseline `8983d8d`上の未統合背景sourceをread-onlyで確認した。対象は日次2種・Billing・履歴のhelper/wrapper、共通参照抽出、旧Employee削除handler、限定dry-runと直接test。追加P1/P2の製品実害は特定しなかったが、既存`billing-customer-reference-barrier.test.mjs`の旧source注入方式が新helperへ接続されていないP2を指摘した。これは静的指摘であり、未実行testの失敗結果とは区別する。既存assertを維持したtest接続修正をdeveloperへ戻した。
+
+併せて、日次2種/Billingの移動成功と残る別実績、非ゼロの時間・金額合計、UTC/JST・翌日開始の勤怠日、commit拒否/transaction再実行、履歴の最終参照削除を完成版の直接試験へ対応するよう依頼した。レビュー中は主要背景helperのSHA-256不変を確認した。payment/Rules/opt-inと実Emulator/UIは同reviewの対象外であり、C受入れは未了。
+
+rootの別途照合では、paymentのclient認可が`plain(user)`を要求する一方、Auth Storeが実際には`reactive(new User())`を渡す不一致を確認した。正規actorを誤拒否しないよう実Classを使ったclient認可試験を依頼し、server rawとの区別を実装中に補正する。
+
+`C-PAYMENT-IMPLEMENTATION-SEC`はpayment共有契約/use-case/API/editor/controller/page、対象4collectionの個別・汎用/nested Rules、専用entry/opt-inを静的確認した。payment本体に追加P1/P2なし。対象Rulesのclient CUD閉鎖も確認した。一方、UI用`AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER=enabled`が親processへ残ると、通常`run-codex-local-test.ps1`が引き継いで背景writeを実行し得るP2を検出した。rootもscriptの環境保存・復元部分を照合し、当該flagの通常test強制off/復元と直接陰性testだけをdeveloper所有へ追加した。通常runnerの他挙動、packageや環境設定は変更対象に広げない。
+
+同reviewが未確認としたAuthの初回/transaction間変化、請求日競合、背景同時更新、actor/tenant喪失後の遅延拒否はCの既存受入条件として直接testへ対応する。reviewの主要10source指紋は読取前後で不変。test/HTTP/Rules Emulator/実UIは同review未実行であり、静的判断と実測を分ける。
+
+### 05-C 最終状態の先行検証（途中）
+
+developerは43製品/test fileの実装と直接86件（exit 0）、構文確認を終えて停止した。`C-BACKGROUND-REVIEW-R1`は実Billing use-caseへのtest接続、移動成功/別実績/非ゼロ金額/UTC・JST/履歴削除を確認し、前回P2・試験不足の解消、追加P1/P2なしとした。`C-PAYMENT-SEC-R1`も通常runnerのflag除去/復元と実PowerShellの親enabled/custom/不存在試験、認証/局所競合/背景保持/遅延応答試験を確認し、既知P2解消・追加P1/P2なし。両reviewはtestを実行せず、主要source指紋の不変を確認した。
+
+rootの`node --test test/domain/*.test.mjs`初回は1398件中1396成功・2失敗、exit 1。`site-archive-source-contract.test.mjs`にBillings/履歴の旧client許可と旧Class writerの表現assertが残っていた。`C-TEST-R1`で同fileを現client拒否と実server入口へ接続し、Siteの同transaction read・不存在write 0の意味を維持した。rootが差分を読み、同じ全domainを再実行して**1398/1398、exit 0**を確認した。source44fileとroot文書は未統合で、CのUI受入れは未了。
+
+通常`npm run test:local`を親processのUI opt-inがenabledの条件でrootが実行した。新Cケースは通常flag不存在・背景実行0、4背景保存先の生成、入金予定日のHTTP保存/null/競合/raw保持、直接CUD/nested拒否を確認した。しかし全体は176件中174成功・2失敗、exit 1。CAS-03 Billings reference-firstに残るclient setDoc期待と、履歴rebuild正常caseが共有tenantの不正rawへ到達するtest前提を`C-EMU-R1`へ戻した。参照不正を製品で許容する修正はしない。終了後rootが専用port停止と保護22file指紋不変を確認、exit 0。
+
+実装事実はEmployee実装記録、入金予定日の操作は既存manualへ反映する。反復する専用UI opt-in/通常runner隔離だけを既存local UI runbookへ追記した。仕様/actor/共通archive方針・ADR・packageは不変、raw索引の実装は設計済みdata契約に対応する。Dev/実data補完・archive開放は未実施。これらのgateを全C受入れや次工程開始の証拠にはまだ使用しない。
+
+### 05-C source統合前の再検証
+
+`C-EMU-R1`はlocal harnessだけを補正した。Billingsの参照先行/archive先行/同時実行を実server writerへ接続し、CustomerとBillingの整合を検証する。履歴正常caseはSITE-04の最小実績fixtureが残る共通tenantから専用合成tenantへ分離し、非空履歴の生成に加えて索引不正時の拒否・履歴不変を確認する。後続security-report試験も自身のactorを準備する。rootが差分を照合し、製品の不正raw拒否は変更していない。
+
+| gate / exact command | root実測 | exit |
+|---|---|---:|
+| `node --test test/domain/*.test.mjs` | `C-TEST-R1`後1398/1398。後続はlocal harness/文書だけの変更であり失効しない | 0 |
+| `npm run test:local` | `C-EMU-R1`後176/176。親UI flag enabledでも通常suite内では不存在・背景無作用。4保存先/HTTP/Rules陰性を含む | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` | 254 Markdown / 60 ADR / 11 roadmaps / 8 TOML。本追記後に再検証 | 0 |
+
+初回/再実行のEmulator派生port 8651/8574を含む全専用portの停止と、保護22fileの件数・SHA-256不変、`.output`不存在をrootが確認しexit 0。既存3logのbackupはUI終了時の復元まで保持する。in-app browserへの接続、専用設定と合成Auth exportの存在は再確認済み。build/実UI/終了cleanupは未実施であり、source統合はそのための固定baselineを作るもの。
+
+`C-DOC-REVIEW`は影響6文書を確認しP1/P2なし。P3の入金予定日の旧経路を、現page→専用editor/controller→Callableと移行前の記述へ分離した。権限/仕様/ADRの追加変更は不要とした。完了classはUI/application/data・Rules/permissions/buildと文書のunion。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。関連するmanaged/policy/validator/必須routing/capacity手順を変更しておらず、失効条件に該当しない。project-docs/diffは最終文書追記後に実行し、44 source/test＋6影響文書をreview済みlocal統合へ進める。Dev/Prod generateは未承認release-onlyのため実施しない。
+
+初回stage後の`git diff --cached --check`は新規test helper末尾空行でexit 1。`C-WHITESPACE-R1`がその1行だけを削除し、rootは影響する全domainを再実行して1398/1398、exit 0を確認した。Emulatorが読む製品source/local harnessは不変であり、176件の証拠は再利用する。
+
+### 05-C 最終実UI・受入れ（2026-09-07）
+
+50 fileを`c905e9924ed7b762db544a988e20a857b70ac8bd`へlocal統合した。通常/staged diff検査と文書検証は各exit 0。同じclean HEADの`npm run test:local:ui:build`はexit 0。専用Emulatorを背景trigger opt-in付きで起動し、generated serverのidentity・HTTP 200を確認した。専用in-app tabだけを操作した。
+
+非UI setupは、保存済み合成actorのrunning Auth Emulator内だけへの一時credential設定と、未作成だった`System/system`の`isMaintenance:false`環境baselineに限定した。credentialは保存・出力せず、saved-dataは変更していない。業務dataはすべて可視UIの通常pointer/keyboardから作成した。
+
+- 合成取引先・現場・Employeeを登録し、09/01適用の取極めを08:00〜17:00、休憩60分、平日基本単価12000円で保存した。Employeeも09/01入社を詳細で確認。住所は保存され、外部作用denyによる座標取得不可messageを確認した。
+- 配置管理で1人をdragして保存し、09/04へ複製。上下番確定画面で勤務08:00〜17:00・休憩1時間を確認して正規実績化した。確定後は未確定一覧から除外された。
+- 登録された`codexOnOperationResultChange`の実行終了を確認。backendのread-only assertionで日次勤怠・従業員別稼働・Billings・現場履歴の各1documentを確認した。日次2種/Billingsの索引は同じEmployee 1人、埋込み実績は各1件。従業員別稼働は480分、請求は税抜12000円/税込13200円、現場履歴の初回/最終は09/04だった。請求画面でも同額を確認した。
+- 入金予定日を10/31から11/02へ入力して閉じ、再度開くと10/31のままであることを確認した。その後11/02を保存し、成功message・再表示・明示再読込を確認。backendでは予定日/予定月/JST Timestampの3fieldと、請求金額・従業員索引の保持をassertしexit 0。
+- 「未設定にする」→保存で成功messageと未設定表示、再度開いて空の日付を確認した。backendでは3fieldがすべて明示null、金額と索引が不変であることをassertしexit 0。専用Callableの2回の保存終了も確認した。
+
+最初のbackend診断は認証headerなしのためRulesが403を返した。Emulator専用の読取assertionへ修正し、製品Rulesを緩和していない。また最初の予定日assertionはexit 1だったが、当該時点でどの条件が不一致だったかは分離計測していない。成功messageと保存実値を確認した後、Timestampを日時型同士で比較する5条件の再検査はすべてtrue・exit 0。初回の原因を製品保存の失敗や型比較へ断定せず、これら診断のexitを成功証拠へ置換しない。
+
+所有tabを閉じ、generated serverとEmulatorを順にCtrl-C停止した（各停止session exit 1）。専用8port・9150・8380・8651・8574の計12portのLISTEN不在を独立commandで確認しexit 0。保護対象22fileの件数/SHA-256不変、既存root log3fileの復元/hash一致はexit 0。絶対path・repository内・reparse不在を確認した`.output`と所有`emp05-c` runtimeの削除/不存在確認もexit 0。合成業務dataはexportしていない。
+
+以上をsource review・1398件domain・176件Emulator・fresh build・代表実UI・cleanupへ対応づけ、05-Cをlocal受入れとする。今回の文書だけの追記は製品testを失効させず、project-docs/diffを再実行してlocal統合する。次の05-Dは、現在保存先との差分を同transactionで検査するwriter、索引、状態無限定のUser/lifecycle参照、旧削除handler無作用を前提にする。整合checkerの成功だけでarchiveを開放せず、未確認tenant拒否・12従属・競合両順序をDで検証する。EMP-05は未完了、進捗55%を維持する。仕様/ADR/package/governance/remoteへの追加変更はない。
+
+## 05-D 開始契約
+
+C受入れ2文書のproject-docs（254 Markdown/60 ADR/11 roadmaps/8 TOML）・通常/staged diffは各exit 0。rootがclean baseline `b62e549a7aba13df41645de74067b52120c21d05`と既存機能branchを確認し、承認済みarchive設計の実装を開始した。writerはdeveloper、rootは文書・実測・UI・Git統合、securityは既存排他と検証接続のread-only照合を担当する。
+
+所有対象はEmployee専用archive contract/use-case/API・demo公開/厳密許可設定・独立controller/dialog・詳細page接続・必要最小cache除外と直接test。既存の同ID再作成拒否、7actor read/直接CUD拒否は再利用し、必要な不足だけ補う。通常API indexへのarchive公開、Auth/User業務変更、他master/package/governance、purge/restore、実data/remoteは対象外である。
+
+受入れは既存A1〜A5/U1へ対応する。特に12従属の各拒否、raw無加工移動、両存/legacy/検査失敗write 0、同actor/理由/operationの再確認、live不存在後にdialogを閉じても同詳細sessionで確認できる経路、参照/User作成/退職との競合両順序を直接testとEmulatorで検証する。許可集合はserver側default deny、demo注入は通常実行不可を維持する。実UIは正規作成した合成Employeeで取消・参照あり拒否・参照なし成功と通常一覧/候補除外を確認し、原本/archive/User/Authのbackend照合を別証拠にする。
+
+選択classはUI/application/data・Rules/permissions/buildのunion。反復は対象domainと構文、最終は独立review・domain-full・local-emulator-suite・clean HEADの専用build/直接UI・cleanup・project-docs/diff。包括gateの非失効証拠はpolicyに従い再利用する。実装中に範囲や失効条件が変われば集合を補正する。rollbackはarchive開放/入口停止を先に行い、旧writer/User削除作用や汎用restoreを再開しない。D/Eの完了とEMP-05得点加算はまだ行わない。
+
+### 05-D 先行照合
+
+`D-PREFLIGHT-SEC`は既存契約/UWB/sourceをread-only照合した。12依存の状態無限定、単独退職後のcompleted operation/head保持、User/Employee/email予約のatomic作成を確認した。競合両順序はnative transaction開始直前の依存wrapperで順序を制御し、読取lockを保持した相互待ちを作らないこと、同時実行の不変条件とは別に記録することをD試験へ渡した。Site raw validatorは未知field拒否/派生一致要求のためEmployeeへそのまま流用せず、GeoPointを扱わない`encodeExpected`を原本全体比較へ使わない条件も確認した。新しい業務判断はなく、完成source/runtimeの受入れではない。
+
+`D-AC-COVERAGE`はA〜CのR1〜R3/W1〜W5/A6/G1を既存source/test/receiptへ対応づけ、限定静的照合で受入れを覆す不足・矛盾なしとした。主な直接証拠は`employee-reader.test.mjs`、`operation-references.test.mjs`、`operation-write.test.mjs`、`operation-editor.test.mjs`、`operation-submission.test.mjs`、`employee-background-references.test.mjs`とlocal harness。Dの実archive競合結合をCの不存在試験へ読み替えないこと、Dによって失効するdomain/Emulatorを最終状態で再実行することをE入力にした。EMP-06は表示Classを保存期待値/認可に戻さず、専用writer・scope破棄・結果不明の保護を維持する。両担当はtests/runtime/network/data/Gitを実行せず、root/developer差分を保持して停止した。
+
+`D-SERVER-REVIEW`は固定したcontract/use-case/API/demo設定/entryの5sourceを確認し、追加P1/P2なし。開始/終了hashも一致した。raw保持と12従属・現在Auth/Tx User・専用許可集合・同一envelope再送の設計を確認したが、実Emulator競合の成功とは扱わない。非空保険history/資格、全lifecycle states、別actor再送等は最終testへ対応する条件としてdeveloperへ渡した。
+
+rootはclientの初期scopeにemail確認状態が含まれない点を見つけ、認可可能なrole/adminの変更も含めた失効と直接testを依頼した。補正後の`D-CLIENT-REVIEW`はcontroller/dialog/detailRead/pageの固定4sourceに追加P1/P2なし、hash不変とした。実User・email/role/route等の失効、原本消失時のattempt保持、unknown→close→同要求再確認、保存await/二重送信防止・SFC compileの試験接続を確認した。source/dataの実行受入れ・別画面候補除外・一覧通知はrootのEmulator/UIで未確認であり、D完了を意味しない。
+
+### 05-D 試験reviewと初回実測
+
+developerは13 source/testの実装と直接97件（exit 0）を報告して停止した。rootがserver 5/client 4の最終hashと先行review時の一致を再確認し、`node --test test/domain/*.test.mjs`を実行して1454/1454、exit 0を確認した。
+
+`D-HARNESS-REVIEW`は実参照/User/退職writerとの両commit順序と同時実行の接続を確認した。一方、12依存のtest fixtureが実装一覧を共用している点と、非空資格/保険historyの期待値が入れ子を共有する点をP2とした。`D-TEST-R1`はdomain testだけを変更し、承認済み12依存の独立表・実read path/filter照合と、Timestamp/GeoPointを維持する独立した再帰コピーへ補正した。developer直接33件はexit 0。先の全domain証拠はこの変更で失効し、rootが再実行する。
+
+rootは専用許可設定を起動前に明示した`npm run test:local`を実行した。結果は180件中179成功・1失敗、exit 1。D退職競合の合成emailが既存入力制約を超え、予約ID生成時に`email-invalid`となった。製品処理の失敗と断定せず、短い合成fixtureへ補正する。また標準commandが新しい手動env前提を持たないよう、`D-RUNNER-R1`で通常Harness子processだけ専用合成tenantへ固定し、親環境の存在・値を復元する。製品の既定拒否や通常API非公開は変更しない。再検証前のため全Emulator合格とは扱わない。
+
+`D-DOC-REVIEW`は影響6文書の途中差分に追加P1/P2/P3なしとした。対象は変更履歴・実装事実・manual・roadmap・local UI runbook・本receiptのD先行reviewまで。後続の実測追記はそのreview対象外であり、最終文書検証へ対応する。仕様/ADR/data契約の新規変更はなく、提供中と改修中を分離する。
+
+`D-RUNNER-R1`はrunner/local harness/直接testの3fileだけを補正した。rootが実diffを確認し、`node --test test/domain/*.test.mjs`を再実行して**1456/1456、exit 0**を確認した。専用tenantの子process固定・非Harness除去・親不存在/広い値・成功/nonzero/throwの18通りは実PowerShell境界を用いる直接testに含まれる。Emulator再実行は親の専用設定を未指定にした標準commandで行う。初回終了後の専用10port停止と保護22file指紋不変もrootが確認しexit 0。source/実UIはまだ受入れ前である。
+
+### 05-D source統合前の再検証
+
+`D-TEST-R1-REVIEW`は独立12依存表・型を維持した深い期待値・標準runnerの許可設定隔離を確認し、既知指摘解消・追加P1/P2なし、対象4fileのhash不変とした。rootの標準`npm run test:local`再実行は**180/180、exit 0**。D実参照/User/退職の各writerについて、writer先行・古いpreflight後のarchive先行・同時実行を確認した。原本/archiveの排他、User/予約・退職operation/head/lockの不生成または保持、actor User/Auth不変をassertしている。
+
+文書変更は既存7文書へ限定し、標準Emulatorの設定再現性を既存runbookにも記載した。package・schema/業務要件・ADR・governance/agent設定は不変。comprehensiveのmanaged-governance・project-docs-negative・capacity-regressionは本receipt冒頭の成功証拠を再利用する。managed/policy/validator/必須routing/capacityを変更しておらず失効しない。project-docs/diffは最終追記後に再実行し、review済みsource/testと文書をlocal統合する。これはfresh build/実UIのための固定baselineであり、D/E完了や20点加算ではない。Dev/Prod generate・実data・通常API公開は未承認release-onlyとして実施しない。
+
+### 05-D 最終実UI・受入れ（2026-09-07）
+
+rootが通常/staged diff検査・project-docs各exit 0を確認し、15 source/testと7文書を`b3f54b8c8e8ec00be03f543bac7ee63cf60cd4c6`へlocal統合した。同じclean HEADの`npm run test:local:ui:build`はexit 0。専用demo Emulatorのarchive登録、generated serverのidentity・HTTP 200、合成Auth fixtureの会社/UIDを確認し、所有in-app tabだけを使った。
+
+非UI setupは、確認済み合成actorへのrunning Auth Emulator内だけの一時credentialと、未作成System/systemのisMaintenance:false環境baselineに限定した。credentialは保存・出力せず、合成業務dataは通常pointer/keyboardで可視UIから作成した。操作前の6collection raw検査は実readerを渡した`runEmployeeReferenceDryRun`を使用し、全collection 0件、consistent:true、archiveReady:false、exit 0。必要writerの閉鎖はA〜CのRules/実writer証拠と照合し、この検査結果だけを許可設定へ変換していない。
+
+- 正規登録したEmployee A（EMP05DA）に可視User panelから仮Userを登録。理由を入力してarchiveを実行すると拒否messageと理由保持を確認した。backendではAの原本全体が不変、archive不存在だった。
+- 正規登録したEmployee B（EMP05DB）で理由を入力して閉じ、原本全体不変・archive不存在を確認した。別tabでBの基本情報に未保存の肩書を入力し、さらに配置管理の作業員候補へBとAが表示されることを確認した。
+- Bをarchiveすると通常一覧へ戻りAだけになった。別tabの旧下書きと編集導線は消え「従業員情報が存在しません。」となり、配置候補からBだけが消えた。旧下書きを送信するcontrolは残っておらず、不存在の保存拒否は専用writer直接testと対応する。
+- Bの原本不存在、archive.employeeと保存前rawの深い同値、schema/auditの理由・actor UID・operation ID・server日時を確認。User一覧と参照ありAは不変だった。
+- Bの成功通知は最初の観測では取得できなかったため、正規登録したEmployee C（EMP05DC）で実行と直後の画面観測を連続して行い、遷移先一覧の「従業員をアーカイブしました。」を確認した。Cでもraw同値と原本不存在を確認した。
+
+最初のAuth全体比較は、複数tabを開く前後でlastRefreshAtだけが異なりassertが失敗した。アカウント数・認証情報・claims等のその他fieldは不変であることを差分で確認した。Cの操作直前に取り直したAuth snapshotとの比較は全fieldで一致した。前者を「Auth全体不変」と読み替えず、後者を操作直前/直後の証拠とする。CUA内backend read/assertionと可視UI操作は別証拠である。さらにAdmin SDK read-only assertionを`node --input-type=module`で実行し、2archiveの実envelope validator・audit・元ID不存在、参照ありEmployee 1件保持を確認してexit 0。archive/User連携のCallable実行終了も確認した。
+
+所有3tabを閉じ、generated serverとEmulatorを順にCtrl-C停止（各session exit 1）。専用8port・9150・派生8084/8557/8560の計12port停止を独立確認してexit 0。保護22fileの件数・長さ・SHA-256不変と既存root log3fileの復元/hash一致もexit 0。合成業務dataのexportはしていない。所有生成物の削除と最終文書検証を行い、結果をcommand reportへ記録してlocal統合する。
+
+以上を1456件domain・180件Emulator・独立review・fresh build・実UI/backendへ対応づけ、05-Dをlocal受入れとする。製品sourceはbuild後に変更していない。`D-W5-EVIDENCE-CHECK`はCの不存在状態に対する背景拒否とDの実archiveによる不存在成立・排他をW5へ対応づける構成を確認した。「archive後の背景trigger一連をEmulatorで実測」とは記録しない。次の05-Eで全matrix・次工程境界・最終差分/文書を統合reviewする。EMP-05は未完了、55%を維持し、EMP-06は開始しない。
+
+## 05-E 統合・次工程review
+
+開始baselineは`d053636b016df546a3358d58555a3579ead05837`、同じprimary/機能branch。rootがD受入れ3文書の通常/staged diff・project-docs各exit 0、local統合とcleanを確認した。所有`.output`/`emp05-d` runtimeは絶対path・repository内・reparse不在を検査して削除/不存在を確認しexit 0。Eは最終証拠と影響文書の整理で、追加製品実装やEMP-06開始ではない。reviewerは全matrix/次工程入力、securityは認可・参照・削除・UWB境界をread-only確認する。
+
+### 最終matrixの対応
+
+下表のdirect testは最終domain 1456件、実HTTP/Rules/transactionは最終Emulator 180件に含まれる。実UIは同一変更領域の各内部単位の記録を参照する。代表UIと全actor Rules/直接testを区別し、全actor・全業務画面の実UIを実測したとは扱わない。
+
+| 契約 | 主な直接証拠 | 結合・UI・制約 |
+|---|---|---|
+| R1 | employee-reader、firestore-rules-reservation-source-contract、local harnessのEmployee 7actor/拒否actor | 原本/archive get/list、直接CUD/nested/他tenant拒否。項目限定DTOを導入しない |
+| R2–R3 | employee-readerのcold/初期ID/検索membership/期間/認可・遅延応答/原本不存在 | Aの氏名変更・候補更新・logoutとDの別tab候補除外/旧下書き失効。Site入場者の実UIは未実施、専用接続を直接試験 |
+| W1–W2 | operation-references、operation-writeのraw/索引検査とEmployee read 0/1/10 | 索引と原本確認を同transactionで行う。Employee確認readだけの計数でactor等の総readと混同しない |
+| W3 | operation-write/editor/submission、operation-datetime、local harnessの専用HTTP/Rules | Bの正規予定保存・配置/通知・複製・実績化・請求編集とC入金予定日。通知actual値・金額・lock・JSTを保持 |
+| W4–W5 | employee-background-references、billing-payment-date、local harnessの背景writer | Cの4保存先への正規実績trigger実行、入金予定日部分更新。Cの不存在後再生成拒否とD実archiveによる不存在成立を別証拠で対応 |
+| A1–A2 | employee-archiveの独立12依存表/全lifecycle/actor/設定/検査失敗、local HTTP | 会社管理者・統括だけ条件付き成功、User/予約等は状態無限定で拒否。Dの仮User参照拒否UI |
+| A3 | local harnessの実archive対saveOperation/User作成/単独退職 | writer先行、preflight後にarchive先行、同時実行を各検証。原本/archive排他、参照先・予約・operation/head不生成/保持 |
+| A4–A5 | employee-archive、employee-archive-editor、employee-save、HTTP | 型を保持した独立raw期待値、失敗write 0、同一操作だけ再確認、旧ID再作成拒否。応答不明の原本消失→close→再確認は制御した非同期testで確認 |
+| A6 | employee-background-referencesの旧handler直接呼出し | User/Authを含むread/write 0。新APIの成功を旧trigger実行証拠に代用しない |
+| G1 | inspectEmployeeReferencesと直接test、D専用tenantの実6collection検査 | consistentとarchiveReady:falseを区別し、許可集合へ自動変換しない。実dataの整合・開放準備は未確認 |
+| U1 | Dの理由入力/取消/参照拒否/成功通知/一覧・別画面候補/旧draftとbackend照合 | 可視UI作成dataだけで操作。原本rawの移動、非対象Employee/Userと操作直前直後Auth保持、cleanupまで確認 |
+
+### EMP-06へ渡す境界
+
+- 一覧・検索・User shellを変更しても、現在Auth/User由来のtenant/actor判定、raw/User購読の破棄、原本不存在時の候補除外を維持する。表示Class/cacheを保存期待値や認可へ転用しない。
+- 通常CRUDは専用writer、独立draft、局所raw期待値・保険別世代値・保存awaitを維持する。旧Manager全文保存や表示用Classからの複製へ戻さない。
+- User連携・退職・訂正は既存UWB専用処理を維持し、統括退職actorの反映はEMP-06の承認済み計画内で扱う。通常退職のEmployee/業務保持と、誤登録archiveのUser/Auth非連鎖を混同しない。
+- 通常archive API公開、既存索引の実data確認/補完、Dev反映はEMP-09の別承認。purge/restore/専用archive管理一覧を追加しない。未確認を将来実装済みへ変更しない。
+
+### 最終review・完了判定（2026-09-07）
+
+`E-FINAL-REVIEW`と`E-SEC-FINAL`は全matrix/既reviewと実測記録・固定sourceを独立照合し、追加P1/P2・製品受入れの必須未達なしとした。前者のP3はD末尾に残るcleanup未来形と提供状態の最終整合であり、E冒頭の実削除完了/exit、manual/CHANGELOG/roadmapのlocal受入れと未提供の区別へ反映した。両reviewは実UIやtestを再実行したものではない。D source統合以後の変更が文書だけであること、既reviewのserver/test/runner hash不変も確認した。
+
+| 完了gate / exact command | 最終状態に対する証拠 | exit |
+|---|---|---:|
+| `node --test test/domain/*.test.mjs` | D-R1後1456/1456。以後の製品source/domain test変更なし | 0 |
+| `npm run test:local` | 標準runner D-R1後180/180。以後の製品source/Rules/harness/設定変更なし | 0 |
+| `npm run test:local:ui:build` | b3f54b8cのclean sourceで成功、同一buildのD実UI/cleanupを受入れ | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` | 基盤検証の成功を再利用。managed/policy/validator/規則変更なし | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-project-docs-check.ps1` | 基盤検証の成功を再利用。validator/fixtures/必須routing変更なし | 0 |
+| `powershell -ExecutionPolicy Bypass -File scripts/test-codex-session-size.ps1` | 基盤検証7 checksを再利用。capacity手順/script/fixture変更なし | 0 |
+
+製品test/buildの再実行は文書のみの最終追記で失効しないため省略する。release-onlyのDev/Prod generate・通常API公開・実data/索引補完は未承認/未実施。最終project-docs/通常diff/staged diffは完了文書の確定後に実行し、独立exitをcommand reportへ記録してからlocal統合する。
+
+EMP-05の全内部単位の成果、独立review、直接test、Emulator、代表実UI/backend、cleanupが揃ったためCompleted、得点0→20、EMP進捗55%→75%とする。部分加点や親製品への加算はしない。EMP-06へ進める入力は上記へ固定したが、実装開始は別指示待ちとしてここで停止する。
+
+影響文書はEmployee実装記録・manual・roadmap・本receiptとCHANGELOGを最終状態へ揃えた。採用済み要件/acceptance/data shapeを追加変更していないためspecification・ADR・data契約の別versionは更新しない。新文書/移動はなく既存indexを維持、反復する専用実行設定は既存2 runbookへ反映済み。governance/agent/package/他masterのarchive方式・物理削除運用・外部状態は変更しない。rollbackは対象操作・archive許可を停止し、旧広域writerやUser連鎖削除を再開しない。Devの既存索引、外部provider・通知、全actor/全業務画面の実UI、purge/restoreは今回の成功証拠に含めない。
+
+`E-CLOSEOUT-DOC`は最終5文書を独立照合し、前回P3解消・追加指摘なしとした。75点の計算、local受入れ/Dev未提供、cleanup・非失効証拠・EMP-06停止の整合を確認した。最終stage後検査とlocal commitはrootが所有する。
+
+## EMP-UI-R1 利用者Localでの再確認（2026-09-07）
+
+利用者はEMP-05までを未完了と判断し、サインイン済みChromeのLocal環境で確認→修正を承認した。baselineは `debf77c6995578cbf0e17766a23ccf61525af127`。開始時に前turnのArrangementNotifications/Manager・Employee/Autocompleteのmacro修正2件だけが未コミットだった。確定要件を変えず、旧Managerが担っていたUIを復元する。EMP-06の新規整備へ進まない。
+
+### 修正とreview
+
+- dialog9件へscrollableを復元し、予定複製pickerはv-card-textへ移した。タイトル/actionと本文を分離する。
+- Employees/ManagerとOperation/ArrayManagerのroot flex配置を復元。Operation/ManagerとArrayManagerの既定タイトルは既存Schema.classNameへ戻し、明示labelを優先する。
+- Operation/RowsManagerは既存WorkersDataTable/ArticleDetailsDataTableの表示を再利用し、休憩・残業・OJT・資格と商品コード・金額・合計を復元した。両tableのslot転送を最小追加し、元の既定slot表示を保持する。
+- 表示Classは保存原本へ使わず、WeakMapでraw・配列・原位置へ対応する。重複ID・並び替え・古いsnapshotからの操作を直接検証する。
+- 独立reviewは最初のWorkerChip撤去による再認可後の氏名取得/終端状態表示の回帰をP2で検出した。名前slotへWorkerChipと資格iconを戻し、実consumerのscope復帰試験を追加した。再reviewでP2解消・限定source差分に追加P1/P2なし。
+
+source対象はcomponents配下の Employee/Editor.vue、Employee/Certifications/Manager/index.vue、Insurance/Transition/Manager.vue、Operation/Editor.vue、ArrangementNotifications/Manager/index.vue、ArrangementNotification/Manager/toLeaved.vue、SiteOperationSchedule/Duplicator/index.vue、Employee/ArchiveDialog.vue、CustomerBilling/PaymentDateEditor.vue、Employees/Manager/index.vue、Operation/ArrayManager.vue、Operation/Manager.vue、Operation/RowsManager.vue、Workers/DataTable/index.vue、ArticleDetails/DataTable/index.vue。先行Employee/Autocomplete.vueのmacro修正を保持。testは新employee-ui-restoration.test.mjsと既存operation-editor.test.mjsのrender stub補正だけ。Functions/Rules/schema/保存controllerを変更しない。
+
+### 可視UIの実測と限界
+
+rootだけが利用者Chromeのlocalhost:3000を操作した。利用者Local server・Emulatorの起動/停止、設定変更、データ保存/削除、fixture追加を行わず、通常のメニュー/開閉/scroll/取消で検証した。個人情報・ID・原本全文をこの記録へ転記しない。
+
+- 在職一覧は修正前に左1列へ縮んでいた。修正後は利用可能な横幅へ複数列で表示された。
+- 従業員登録dialogは修正前に本文scrollでタイトルが消えた。修正後、本文を下までscrollしてもタイトルと保存/取消が表示された。資格dialogも開閉・scrollable/body overflowとactionのviewport内配置を確認した。
+- 配置SpeedDialは今回のChromeでは修正前の時点からメニュー、新規予定、作業員選択が開いた。既存予定の編集も開いた。以前の無反応の直接原因を今回再現したとは扱わない。
+- 稼働実績一覧の全幅・空一覧を確認。登録dialogのタイトルは「稼働実績」となり、本文scroll後もタイトルと保存/取消を確認した。確認した2期間は空であり、実績明細の実データ入り表示・行操作を可視UI成功とは記録しない。表の項目・合計・slot・原本位置は合成dataによる直接testの証拠。
+- 保険加入開始は既存Employeeで原本/世代取得エラーを再現。Local Emulator UIで同じ原本を読取り、3保険fieldと世代fieldが表示されないことを確認した。世代field全体の不存在はcontractが0として許容するが、保険map不存在はvalidateInsuranceRawが拒否する。表示Classの「未加入」とraw保存条件は同じでない。データ補完や検証緩和は実施せず未解決とする。
+- console問題の申告は利用者が撤回したため、今回の未解決事項・修正対象から除外する。コンソールの全面解消を追加の完了条件としない。
+
+### 検証と残作業
+
+- developer: `node --test test/domain/employee-ui-restoration.test.mjs test/domain/operation-editor.test.mjs test/domain/employee-editor.test.mjs test/domain/employee-archive-editor.test.mjs` 77/77、exit 0。既存render stubのresolvedLabel補正後はoperation-editor 25/25、Vue warning 0を確認。
+- root: 最終source/testで `node --test test/domain/*.test.mjs` 1462/1462、exit 0。新UI直接試験6件を含む。
+- root文書gate初回は進捗行の注記形式でexit 1。進捗と注記を別行へ補正後、`powershell -ExecutionPolicy Bypass -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` はexit 0（Markdown 254、ADR 60、roadmap 11、TOML 8）。
+- 最終Chrome確認でも配置SpeedDialから新規予定が開いた。「稼働情報」dialogの本文を末尾へscrollした後も、タイトル上端41px・action下端830pxが高さ855pxのviewport内に残った。保存せず取消し、配置管理へ戻した。
+- change classはUI＋application＋文書。Functions/Rules/認可/永続化契約は無変更につきEmulator包括再実行・governance包括・Dev/Prod releaseは対象外。必須local-ui-buildは未実施・未充足。利用者の稼働中LocalでのHMR確認を専用clean buildの証拠へ読み替えない。専用build/全UI・実data入り明細/保険互換・最終統合が残るためEMP-05までの完了判定と加点は撤回のまま。
+
+仕様/ADR/data契約は要件変更なしで維持。既存実装記録・ロードマップ・本receipt/02〜04receipt・CHANGELOGだけへ受入れ撤回を反映する。索引追加/移動、governance/package変更、Dev/Prod反映はない。rollbackは所有UI差分だけを戻し、旧広域writer・Rulesを復活させない。
+
+## EMP-INS-R1 保険項目不存在の互換修正（2026-09-07）
+
+利用者は「保険項目不存在を未加入の初期状態として入力し、初回成功操作で作成する」修正を承認した。EMP-UI-R1で発見したEMP-04の互換不具合の修正であり、EMP-06を開始しない。baselineは同じ `debf77c6995578cbf0e17766a23ccf61525af127`、先行UI差分を保持する。コンソール問題は申告撤回済みで対象外。
+
+独立設計reviewでは案を妨げるP1/P2なし。own field不存在だけの救済、raw期待値とdraftの分離、初回完全mapと応答不明時の照合結果の一致、通常の未加入状態の遷移制約、最新actor/tenant/在職確認の維持を実装条件にした。原本が存在する場合の不正map・nullを初期化せず拒否する。
+
+対象は保険application、共有遷移contract、専用Employee server writerと直接domain/Emulator回帰。仕様とEmployee設計契約へ採用条件を反映した。migration・一括補完・利用者data保存・Rules・package・外部反映を含まない。rollback時は対象の初回操作を停止し、既に保存済みの有効な保険mapを削除しない。
+
+検証classはapplication-logic＋data-contract-schema-migration＋文書。domain-full、local-emulator-suite、project-docs、diff-checkを選択する。専用buildとEMP全体の再受入れは先行UI修正の残作業として維持する。
+
+### 修正後の確認結果
+
+- 製品sourceは `composables/application/employee/useEmployeeInsurance.js`、`functions/shared/employeeInsuranceContract.js`、`functions/modules/employees/saveEmployee.js` の3件。testは `test/domain/employee-editor.test.mjs`、`test/domain/employee-insurance.test.mjs`、`test/local/codex-local-harness.test.mjs` の3件。初回のみ完全map、既存は部分patchに分岐し、raw期待値と最新認可を維持した。
+- 独立最終reviewは上記6fileと仕様・設計契約を照合し追加P1/P2なし。commit拒否でmapと世代が共に不存在のまま保たれる直接testを補い、rootは最終6fileのhash一致を確認した。
+- rootのChrome確認では、以前失敗した既存Employeeで3保険すべての加入入力が表示された。雇用保険では原本再読込も成功し、いずれも保存せず取消した。利用者の実保険情報の登録・変更は行わず、保存の証拠は専用Emulatorへ分離した。
+- `node --test test/domain/employee-insurance.test.mjs test/domain/employee-editor.test.mjs` はdeveloper実行で77/77、exit 0。`node --check test/local/codex-local-harness.test.mjs` はexit 0。
+- rootの最終 `node --test test/domain/*.test.mjs` は1487/1487、exit 0。commit拒否test追加前の1486件の証拠は置換した。
+- rootの `npm run test:local` は181/181、exit 0。追加HTTP試験は3保険×世代不存在/7で同時初期化2要求の1成功・1競合、完全map・他保険の履歴/精度保持・第3保険の未補完、不正map拒否を検証した。既存6操作とABA等の回帰も成功した。
+- 専用Emulatorはrunner終了後に停止。派生portを含むLISTENなし、一時runtime消失を確認した。runnerの利用者saved-data/専用export指紋比較は成功し、利用者server/Emulatorは元のPIDで稼働を継続した。起動時のCLI認証警告は専用demo testを妨げず、再認証・remote反映は行っていない。
+
+本不具合のcode修正・直接試験・Emulator・加入入力の復旧確認は済み。EMP-01〜05の再受入れ完了・加点とは分け、先行UIの専用build/明細確認とGit統合は残す。今回は仕様・設計契約・CHANGELOG・roadmap・本記録を更新し、新ADR・索引・package・Rules・外部状態は変更しない。文書と差分の最終gateは本記録確定後のcommand reportで確認する。
+
+## EMP-05再受入れ（2026-09-07）
+
+checkpointは`EMP-05-REACCEPT`。primary repository、branch `codex/employee-master-roadmap`、開始HEAD `6b8e4a3ca3f5b0e8348b96fbb56b90ff0c787cb3`をrootが直接確認し、開始時のtracked・untracked・staged差分はなかった。利用者が2026年6月のLocal稼働実績へ稼働外売上1件を正規UIから登録し、現在のChromeでの確認とlocal commitを指示した。Codexは同じ実績詳細で表のコード・商品名・単価・数量・金額・合計を観測し、既存行の編集dialogで商品・単価・数量が復元されることを確認して取消した。保存・追加・削除は行っていない。
+
+作業員側は同じ実績で6行、開始・終了・休憩・残業・OJT・actionを確認済みで、既存行編集では従業員・開始/終了・翌日開始・休憩・規定実働・資格者・OJTが復元され、保存せず取消した。これによりEMP-UI-R1で未確認だった既存明細の表示・行操作を、作業員と稼働外売上の両tableで補完した。個人名・顧客名等は検証記録へ転記しない。
+
+05-A〜05-EのR1〜R3、W1〜W5、A1〜A6、G1、U1について、既存の独立review・直接test・Emulator・代表UI/backend・cleanupと、EMP-UI-R1、EMP-INS-R1、今回のChrome確認を再照合した。UI/保険修正後の最終製品sourceに対するdomain 1487/1487・exit 0、Emulator 181/181・exit 0を再利用する。以後は文書だけのEMP-01〜04再受入れcommitであり、製品source、Functions、Rules、test、設定を変更していない。同じ製品sourceを含むclean HEAD `3fc3535e72afb849a7f6e79b98e20dbc6ddc8df1`で実行した`npm run test:local:ui:build`もNitro生成までexit 0であり、後続の文書変更では失効しない。
+
+以上によりEMP-05は全受入条件を満たしてCompleted、得点0→20、Employee進捗55%→75%とする。通常archive API公開、既存実dataの索引整合/補完、Dev反映はEMP-09の別承認であり、今回のlocal完了へ含めない。purge/restore、専用archive管理一覧、EMP-06の一覧・検索・User shellも開始しない。
+
+今回の変更classはproject-guidance-metadataとdocumentation-only。仕様・ADR・data shape・implementation・manual・runbook・索引・governance・package・製品codeは変更しない。roadmap、本receipt、CHANGELOGだけを現在状態へ揃え、`project-docs`、`diff-check`、stage後のcached diff checkを実行する。rollbackはこの完了記録と進捗更新のcorrective commitであり、検証済みの製品実装や利用者が登録したLocal dataを変更しない。

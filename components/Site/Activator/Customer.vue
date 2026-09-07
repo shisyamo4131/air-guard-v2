@@ -11,6 +11,7 @@ import { Site } from "@/schemas";
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  editable: { type: Boolean, default: true },
   item: {
     type: Object,
     required: true,
@@ -55,10 +56,12 @@ defineExpose({
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"
+          aria-label="現場の取引先情報を編集"
+          title="現場の取引先情報を編集"
           @click="emit('click:edit', props.item)"
         />
       </template>
@@ -69,7 +72,7 @@ defineExpose({
         v-else
         :title="item.customerName"
         text="取引先未設定の仮登録現場です。"
-        action-text="取引先を設定する"
+        :action-text="props.editable ? '取引先を設定する' : undefined"
         @click:action="() => emit('click:edit', props.item)"
       />
     </v-card-text>

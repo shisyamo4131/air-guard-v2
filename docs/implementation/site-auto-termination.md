@@ -7,6 +7,15 @@
 - 最終確認日: 2026-08-11
 - 根拠ファイル: `functions/index.js`、`functions/modules/maintenance.js`、`functions/modules/sites/index.js`、`functions/modules/sites/autoTermination.js`、schemas `Site.js`、`constants/site-status.js`、直接のSites Rules/UI、`site-master.md`、`cloud-functions-catalog.md`、`system-maintenance.md`
 
+## 確認済み方針
+
+- 自動終了を維持し、永続statusはACTIVE/TERMINATEDの2値のままとする。工期終了後のACTIVEは「工期終了済み」「自動終了予定」「工期終了済み・予定あり」の派生Chipで示す。
+- JSTで工期終了日の90日後00:00以降、当日以降予定と未実績化予定がないACTIVE Siteだけを、transactionまたは同等preconditionで競合安全にTERMINATEDへ変更する。工期未設定、予定あり、競合時は終了しない。
+- TERMINATEDは通常master編集を制限するが、終了済み表示・識別情報・確認付きで新規業務へ選択できる。単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`、reason、新工期で扱う。
+- 自動終了は下流dataを変更せず、現在遷移metadataだけを保存する。専用append-only履歴と現場ごとのemail/FCMは設けず、初期通知はdashboard・一覧表示とする。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
+
+以上は採用済みで未実装の方針であり、以下の現行実装事実とは区別する。
+
 ## 入口・schedule・timezone
 
 `functions/index.js`は`maintenance.js`をexportし、deployed candidate `runDailyTask`はCloud Schedulerで毎日00:00、`Asia/Tokyo`指定で起動する。Functions entryはdayjsへutc/timezone pluginを登録し、default timezoneも`Asia/Tokyo`へ設定する。
@@ -58,7 +67,7 @@ status enumはACTIVE/TERMINATEDの2値で、自動終了専用状態・終了理
 - 現行Autocompleteはstatus限定がなく、TERMINATED Siteも新規参照候補へ出得る。詳細でも編集、取極め変更、archive、再終了UIが残る。
 - Site内`agreementsV2`は変更・終了されず、Customer、User、Schedule、ArrangementNotification、OperationResult、Billingにもcascade更新しない。
 - 既存および将来ScheduleはSite IDを保持したままで、予定・通知・実績作成をserver/Rulesで停止する直接処理はない。
-- 確認済み方針ではTERMINATEDはread-only・新規選択不可、同一Customerでの再有効化は`sites:write`と理由が必要、Agreementは自動再有効化しない。しかしこれらは現行実装へ未反映である。
+- 確認済み方針ではTERMINATEDの通常master編集を制限するが、新規業務では終了済み表示・確認付きで選択できる。単発残工事はTERMINATEDのまま、継続再開はstrict `sites:write`・reason・新工期で扱い、Agreementは自動再有効化しない。しかしこれらは現行実装へ未反映である。
 
 ## 並行性・再有効化race
 
@@ -84,14 +93,14 @@ Admin SDK処理はFirestore Rulesをbypassする。通常client RulesはCompany�
 
 ## 将来要対応
 
-- FUT-0161: 自動終了を競合安全・再試行可能にし、将来予定と監査を正式契約へ揃える。
-- CONF-0135: 自動終了の閾値、将来予定時、再有効化との優先、通知/Agreement影響を決定する。
+- FUT-0161: ADR 0054に従い、自動終了を90日・予定guard・競合・再試行・maintenance・現在遷移metadataの契約へ揃える。
+- CONF-0135: 2026-09-05回答済み。自動終了、派生Chip、予定guard、TERMINATED選択、再有効化、通知・履歴境界はADR 0054を正とする。
 - FUT-0060/FUT-0062: 確認済みSite権限・TERMINATED lifecycleをUI/Rules/serverへ実装する。
 
 ## 要確認事項参照
 
 - CONF-0046/0048の回答済み権限・再有効化方針は前提として維持する。
-- 自動処理固有の終了条件と競合はCONF-0135へまとめ、新規の細分質問は作らない。
+- 自動処理固有の終了条件と競合はCONF-0135で回答済みであり、新規の細分質問は作らない。
 - codeで解消した事項: 自動終了はfuture scheduleを確認せず、Agreement/User/関連documentを更新せず、maintenance modeにも依存しない。
 
 ## 未確認範囲
@@ -99,4 +108,4 @@ Admin SDK処理はFirestore Rulesをbypassする。通常client RulesはCompany�
 - Cloud Scheduler/Functionsの実deploy option、実行時間、quota、index、実件数、log/alert運用。
 - Emulator/runtimeでの月末subtract、DST非該当JST、Timestampとdate field converterの比較。
 - 自動終了後の全下流query、直接writeによる再有効化実績、既存data品質。
-- 正式な3か月猶予、通知、future schedule処理、再開・訂正・監査手順。
+- 既存dataにおける工期未設定・予定矛盾の件数、正確な遷移metadata shape、必要index・quota、候補表示caller全体。

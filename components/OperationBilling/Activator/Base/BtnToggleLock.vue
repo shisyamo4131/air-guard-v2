@@ -1,84 +1,24 @@
 <script setup>
-/*****************************************************************************
- * @file ./components/OperationBilling/Activator/Base/BtnToggleLock.vue
- * @description A btn component for diplaying `isLocked` status of `OperationBilling` document.
- *****************************************************************************/
-import { useDefaults } from "vuetify";
 import { OperationBilling } from "@/schemas";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLoadingsStore } from "@/stores/useLoadingsStore";
-import { useLogger } from "@/composables/useLogger";
-
-defineOptions({
-  name: "OperationBillingActivatorBaseBtnToggleLock",
-  inheritAttrs: false,
-});
-
-/*****************************************************************************
- * DEFINE PROPS & EMITS
- *****************************************************************************/
-const _props = defineProps({
-  item: {
-    type: Object,
-    required: true,
-    validator: (value) => value instanceof OperationBilling,
-  },
-});
-const props = useDefaults(_props, "OperationBillingActivatorBaseBtnToggleLock");
-
-/*****************************************************************************
- * SETUP STORES & COMPOSABLES
- *****************************************************************************/
-const logger = useLogger(
-  "OperationBillingActivatorBaseBtnToggleLock",
-  useErrorsStore(),
-);
-const loadings = useLoadingsStore();
-
-/*****************************************************************************
- * COMPUTED
- *****************************************************************************/
-const color = computed(() => {
-  return props.item.isLocked ? "error" : "primary";
-});
-
-const prependIcon = computed(() => {
-  return props.item.isLocked ? "mdi-lock-open" : "mdi-lock";
-});
-
-const text = computed(() => {
-  return props.item.isLocked
-    ? "この稼働情報のロックを解除"
-    : "この稼働情報をロック";
-});
-
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
+import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
+import { expectedForOperation } from "@/functions/shared/operationWriteContract.js";
+defineOptions({ name: "OperationBillingActivatorBaseBtnToggleLock", inheritAttrs: false });
+const props = defineProps({ item: { type: Object, required: true, validator: (value) => value instanceof OperationBilling } });
+const submission = useOperationSubmission({ billing: true });
+watch(() => props.item.docId, submission.reset);
 async function toggleLock() {
-  const message = props.item.isLocked
-    ? "ロックを解除しています。"
-    : "ロックしています。";
-  const key = loadings.add(message);
+  if (submission.busy.value || submission.uncertain.value || !submission.allowed.value) return;
+  const id = props.item.docId, desiredLocked = !props.item.isLocked;
   try {
-    await props.item.toggleLock();
-  } catch (error) {
-    logger.error("Failed to toggle lock:", error);
-  } finally {
-    loadings.remove(key);
-  }
+    const raw = await submission.read("OperationResults", id);
+    if (!raw || props.item.docId !== id) return;
+    const command = { kind: "billing", action: "lock", documentId: id, changes: { desiredLocked } };
+    command.expected = expectedForOperation(raw, command);
+    await submission.submit([command]);
+  } catch { submission.message.value = "ロック状態を確認できません。最新情報を読み直してください。"; }
 }
 </script>
-
 <template>
-  <v-btn
-    v-bind="$attrs"
-    class="mb-4"
-    block
-    :color="color"
-    :prepend-icon="prependIcon"
-    :text="text"
-    variant="flat"
-    @click="toggleLock"
-  />
+  <v-alert v-if="submission.message.value" type="warning">{{ submission.message.value }}</v-alert>
+  <v-btn v-bind="$attrs" class="mb-4" block :color="item.isLocked ? 'error' : 'primary'" :prepend-icon="item.isLocked ? 'mdi-lock-open' : 'mdi-lock'" :text="item.isLocked ? 'この稼働情報のロックを解除' : 'この稼働情報をロック'" :disabled="submission.busy.value || submission.uncertain.value || !submission.allowed.value" :loading="submission.busy.value" variant="flat" @click="toggleLock" />
 </template>

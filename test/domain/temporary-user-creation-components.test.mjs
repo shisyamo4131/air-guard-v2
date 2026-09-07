@@ -55,6 +55,7 @@ test("Employee UserManager exposes preset roles only to role assigners", async (
   assert.equal(source.includes("...props.employee"), false);
   assert.equal(source.includes("checkEmailAvailabilityGlobal"), false);
   assert.equal(/item\.create\s*\(/.test(source), false);
+  assert.doesNotMatch(source, /AirItemManager|AirArrayManager|air-item-manager|air-array-manager|useBaseManager/u);
 });
 
 test("User and Company settings use distinct access policies", () => {

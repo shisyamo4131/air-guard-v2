@@ -60,7 +60,7 @@ watch(
     <v-col cols="12">
       <air-text-field
         v-bind="componentAttrs['number']"
-        :disabled="componentAttrs['isProcessing'].modelValue"
+        :disabled="componentAttrs['number'].disabled || componentAttrs['isProcessing'].modelValue"
         :required="!componentAttrs['isProcessing'].modelValue"
       />
     </v-col>

@@ -240,9 +240,11 @@ function resolveActorPermissions({ companyId, actorUser }) {
   }
 
   try {
+    const permissions = resolveRolePermissions(actorUser.roles);
     return Object.freeze({
       isAdmin: actorUser.isAdmin,
-      permissions: resolveRolePermissions(actorUser.roles),
+      roles: Object.freeze([...actorUser.roles]),
+      permissions,
     });
   } catch (error) {
     if (error instanceof RolePermissionError) {
@@ -283,7 +285,7 @@ export function resolveEmployeeRetirementInput(input) {
 }
 
 /**
- * UWB-07Aのactorを検証します。会社管理者またはstrict preset由来の
+ * UWB-07Aのactorを検証します。会社管理者、統括、またはstrict preset由来の
  * employees:terminateだけを許可し、本人Employeeの退職を拒否します。
  */
 export function assertEmployeeRetirementActor({
@@ -297,6 +299,7 @@ export function assertEmployeeRetirementActor({
 
   if (
     !actor.isAdmin &&
+    !actor.roles.includes("manager") &&
     !actor.permissions.includes("employees:terminate")
   ) {
     throwPolicyError(

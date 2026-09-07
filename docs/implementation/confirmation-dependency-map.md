@@ -2,9 +2,9 @@
 
 - 状態: 台帳再照合
 - 対象チェックポイント: SPEC-RECONCILE-001
-- 最終確認日: 2026-08-12
+- 最終確認日: 2026-08-28
 - 根拠: `pending-confirmations.md`全138件、`future-actions.md`の関連CONF/判断欄、各CONFが直接指定するimplementation文書の該当section、coverage索引
-- 制約: 新規実装調査、runtime、外部環境、実dataは確認していない。ユーザー回答、既存ID、既存Statusは変更していない。
+- 制約: 新規runtime、外部環境、実dataは確認していない。2026-08-28のCCB質疑でCONF-0074〜0082の回答とCONF-0083〜0087の保留を反映し、既存IDは変更していない。
 
 ## disposition contract
 
@@ -97,20 +97,20 @@
 | CONF-0071 | Open-user-decision | SELF |
 | CONF-0072 | Open-user-decision | SELF; depends-on CONF-0123 |
 | CONF-0073 | Open-user-decision | SELF |
-| CONF-0074 | Merge-candidate | superseded-by CONF-0111, CONF-0129 |
-| CONF-0075 | Open-user-decision | SELF; depends-on CONF-0123, CONF-0127 |
-| CONF-0076 | Open-user-decision | SELF |
-| CONF-0077 | Merge-candidate | superseded-by CONF-0044 |
-| CONF-0078 | Open-user-decision | SELF; depends-on CONF-0115 |
-| CONF-0079 | Open-user-decision | SELF; depends-on CONF-0080, CONF-0130 |
-| CONF-0080 | Merge-candidate | superseded-by CONF-0111, CONF-0129 |
-| CONF-0081 | Open-user-decision | SELF |
-| CONF-0082 | Open-user-decision | SELF; depends-on CONF-0114 |
-| CONF-0083 | Open-user-decision | SELF; depends-on CONF-0128 |
-| CONF-0084 | Merge-candidate | superseded-by CONF-0111, CONF-0129 |
-| CONF-0085 | Open-user-decision | SELF |
-| CONF-0086 | Open-user-decision | SELF |
-| CONF-0087 | Open-user-decision | SELF; depends-on CONF-0085, CONF-0086 |
+| CONF-0074 | Answered | SELF; CCB actor/document boundary |
+| CONF-0075 | Answered | SELF; CCB lifecycle boundary |
+| CONF-0076 | Answered | SELF; CCB validation boundary |
+| CONF-0077 | Answered | SELF; CCB issuer snapshot boundary |
+| CONF-0078 | Answered | SELF; CCB revision/audit boundary |
+| CONF-0079 | Answered | SELF; project-wide maintenance stop boundary |
+| CONF-0080 | Answered | SELF; bounded provider/operator exception |
+| CONF-0081 | Answered | SELF; maintenance unknown fail-closed |
+| CONF-0082 | Answered | SELF; checkpoint-scoped metadata/quiet period |
+| CONF-0083 | Open-deferred | SELF; deferred until pre-release Stripe work |
+| CONF-0084 | Open-deferred | SELF; deferred until pre-release Stripe work |
+| CONF-0085 | Open-deferred | SELF; deferred until pre-release Stripe work |
+| CONF-0086 | Open-deferred | SELF; deferred until pre-release Stripe work |
+| CONF-0087 | Open-deferred | SELF; deferred until pre-release Stripe work |
 | CONF-0088 | Open-user-decision | SELF |
 | CONF-0089 | Merge-candidate | superseded-by CONF-0111 |
 | CONF-0090 | Open-user-decision | SELF; depends-on CONF-0123 |
@@ -158,7 +158,7 @@
 | CONF-0132 | Open-user-decision | SELF; depends-on CONF-0111 |
 | CONF-0133 | Open-user-decision | SELF; depends-on CONF-0111, CONF-0115 |
 | CONF-0134 | Open-user-decision | SELF; depends-on CONF-0039 |
-| CONF-0135 | Open-user-decision | SELF; depends-on CONF-0048, CONF-0057 |
+| CONF-0135 | Answered | SELF; depends-on CONF-0048, CONF-0057 |
 | CONF-0136 | Open-user-decision | SELF; depends-on CONF-0128, CONF-0129 |
 | CONF-0137 | Open-user-decision | SELF |
 | CONF-0138 | Open-user-decision | SELF |
@@ -174,8 +174,8 @@
 | G-SCHEDULE | CONF-0057 | 0056〜0060, 0103, 0108, 0133, 0135 | 同時編集・状態/修復を基準に、資格/OJT、帳票、自動終了の差分へ展開する。 |
 | G-PEOPLE | CONF-0062 | 0061〜0065, 0071〜0073, 0104〜0109, 0120 | User/Employee identityと雇用・外注・資格/OJT/個人情報を分離しつつ順序付ける。 |
 | G-ONBOARDING | CONF-0067 | 0062, 0066〜0069, 0113, 0129 | account setup、identity、anonymous boundary、claims反映を一連のlifecycleとして扱う。 |
-| G-MAINTENANCE | CONF-0081 | 0075, 0079〜0082, 0127, 0130, 0135 | fail-open/closedと復旧経路を先に決め、実行actor・metadata・scheduled処理へ展開する。 |
-| G-SUBSCRIPTION | CONF-0083 | 0084〜0087, 0128〜0130 | deployment surfaceを起点にactor、identity、status、checkout成功条件を決める。 |
+| G-MAINTENANCE | CONF-0081 | 0075, 0079〜0082はAnswered。0127, 0130, 0135は別scopeで残る | CCBでproject-wide quiet procedureとCompany lifecycleを確定した。Prod operator、全Function retry、Site自動終了の通常仕様は各canonicalで扱う。 |
+| G-SUBSCRIPTION | CONF-0083 | 0083〜0087はOpen-deferred。0128〜0130は別scopeで残る | Stripe本体は正式release直前まで保留し、CCBはserver-owned entitlement隔離だけを扱う。 |
 | G-REPORT | CONF-0088 | 0089〜0092 | SecurityReportの製品責務を先に決めてactor、保持、画像、署名/改訂を決める。 |
 | G-SHARED-UX | CONF-0114 | 0094〜0099, 0110, 0116, 0138 | error/loading/navigation/range更新の共通UXを上位化し、component固有差分を残す。 |
 | G-PRIVACY | CONF-0115 | 0061, 0091, 0092, 0120, 0126, 0131, 0133 | log/出力/住所/backup等の個人・業務情報境界と保持を統合する。 |
@@ -191,7 +191,7 @@
 
 ### Merge-candidate
 
-17件。CONF-0049、0050、0056、0061、0066、0070、0074、0077、0080、0084、0089、0100、0102、0105、0108、0121、0127である。回答済み上位CONFだけで全詳細が自動確定するとは限らず、次回はcanonical questionへ差分を含めて一括提示する。
+12件。CONF-0049、0050、0056、0061、0070、0089、0100、0102、0105、0108、0121、0127である。2026-08-28にCONF-0074、0077、0080はAnsweredへ、CONF-0084はOpen-deferredへ移した。回答済み上位CONFだけで全詳細が自動確定するとは限らず、次回はcanonical questionへ差分を含めて一括提示する。
 
 ### Implementation-detail-no-user-question
 
@@ -199,11 +199,11 @@
 
 ## genuine user decisions / deferred
 
-Open-user-decisionは75件。優先順は、G-AUTHZ、G-BILLING、G-ONBOARDING、G-ARCHIVE、G-RECOVERYを先行し、依存するdomain差分を後続とする。これは回答推奨ではなく、重複を減らす提示順である。
+Open-user-decisionは65件。優先順は、G-AUTHZ、G-BILLING、G-ONBOARDING、G-ARCHIVE、G-RECOVERYを先行し、依存するdomain差分を後続とする。これは回答推奨ではなく、重複を減らす提示順である。
 
-2026-08-12のsource review後も件数とdispositionは変わらない。新しい実装事実は既存canonical groupへEvidenceとして統合した。利用者向けには、(1) actor/tenant/role、(2) invitation identity、(3) Billing/lock、(4) backup/recovery、(5) privacy/retention、(6) retry/reconcile、(7) shared UX/date-timeの順に平文で提示する。詳細は[2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md#要判断事項の優先グループ)を参照する。
+2026-08-28にCCBのCONF-0074〜0082をAnsweredへ、StripeのCONF-0083〜0087をOpen-deferredへ更新した。その他は既存canonical groupへ維持する。利用者向けには、(1) actor/tenant/role、(2) invitation identity、(3) Billing/lock、(4) backup/recovery、(5) privacy/retention、(6) retry/reconcile、(7) shared UX/date-timeの順に平文で提示する。詳細は[2026-08-12 source review統合記録](review-reconciliation-2026-08-12.md#要判断事項の優先グループ)を参照する。
 
-Open-deferredはCONF-0021、CONF-0033、CONF-0035の3件。負数等の請求調整、Billing status/発行trigger、payment仕様について利用者が保留しており、再開指示まで推奨案へ置換しない。
+Open-deferredはCONF-0021、CONF-0033、CONF-0035、CONF-0083〜CONF-0087の8件。既存のBilling保留に加え、Stripe本体の公開・actor・一意性・status/entitlement・checkout成功条件は正式release直前まで保留し、再開指示まで推奨案へ置換しない。
 
 ## coverageとの照合
 
@@ -211,7 +211,7 @@ coverage inventoryは531 filesについてUncovered 0、Partially covered 0、un
 
 ## 未確認範囲
 
-- 利用者へ質問を提示しておらず、Open判断は未回答のままである。
+- CCB以外のOpen判断は今回利用者へ提示しておらず、未回答のままである。
 - code/runtime/実data/外部環境は再調査していない。
 - groupは提示順と重複排除の索引であり、上位回答が全memberを暗黙に承認するものではない。
 - FUT本文内の自然文による全CONF参照をsemanticに書き換えていない。既存Related FUT IDs/ユーザー判断欄は保持した。

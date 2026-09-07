@@ -16,12 +16,17 @@ defineOptions({ name: "DraggableSiteShiftTypeOrder", inheritAttrs: false });
  *****************************************************************************/
 const _props = defineProps({
   itemKey: { type: String, default: "key" },
+  disabled: { type: Boolean, default: false },
 });
 const props = useDefaults(_props, "DraggableSiteShiftTypeOrder");
 </script>
 
 <template>
-  <draggable v-bind="$attrs" :item-key="props.itemKey">
+  <draggable
+    v-bind="$attrs"
+    :item-key="props.itemKey"
+    :disabled="props.disabled"
+  >
     <template #item="slotProps">
       <div>
         <slot name="item" v-bind="slotProps || {}">

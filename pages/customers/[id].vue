@@ -6,6 +6,7 @@
 import { useRoute, useRouter } from "vue-router";
 import { Customer, Site } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
+import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 
 /*****************************************************************************
  * OBTAIN PARAMS
@@ -21,8 +22,9 @@ const router = useRouter();
 /*****************************************************************************
  * SETUP FETCH COMPOSABLE
  *****************************************************************************/
-const { fetchSiteComposable } = useFetch("CustomerManager", true);
+const { fetchSiteComposable } = useFetch("CustomerDetail", true);
 const { fetchSite } = fetchSiteComposable;
+const { canWrite } = useCustomerActions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -52,6 +54,10 @@ function handleClickUpdateSite(item) {
   router.push(`/sites/${item.docId}`);
 }
 
+function handleArchived() {
+  router.push("/customers");
+}
+
 /*****************************************************************************
  * LIFECYCLE HOOKS
  *****************************************************************************/
@@ -67,28 +73,38 @@ onUnmounted(unsubscribe);
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <CustomerManager
-              :doc="customerInstance"
-              label="基本情報"
-              hide-delete-btn
-            >
-              <template #activator="activatorProps">
-                <CustomerActivatorBase v-bind="activatorProps" />
+            <CustomerEditorBase :customer="customerInstance">
+              <template #activator="{ open }">
+                <CustomerActivatorBase
+                  :item="customerInstance"
+                  title="基本情報"
+                  :editable="canWrite"
+                  @click:edit="open"
+                >
+                  <template #actions>
+                    <CustomerArchiveDialog
+                      v-if="canWrite"
+                      :customer="customerInstance"
+                      @archived="handleArchived"
+                    />
+                  </template>
+                </CustomerActivatorBase>
               </template>
-            </CustomerManager>
+            </CustomerEditorBase>
           </v-col>
 
           <!-- 請求・回収条件 -->
           <v-col cols="12">
-            <CustomerManager
-              :doc="customerInstance"
-              label="請求・回収条件"
-              hide-delete-btn
-            >
-              <template #activator="activatorProps">
-                <CustomerActivatorPayment v-bind="activatorProps" />
+            <CustomerEditorPayment :customer="customerInstance">
+              <template #activator="{ open }">
+                <CustomerActivatorPayment
+                  :item="customerInstance"
+                  title="請求・回収条件"
+                  :editable="canWrite"
+                  @click:edit="open"
+                />
               </template>
-            </CustomerManager>
+            </CustomerEditorPayment>
           </v-col>
         </v-row>
       </v-col>
@@ -112,41 +128,6 @@ onUnmounted(unsubscribe);
             </v-card>
           </v-col>
         </v-row>
-      </v-col>
-
-      <!-- 削除処理ボタン -->
-      <v-col cols="12">
-        <CustomerManager
-          :doc="customerInstance"
-          hide-delete-btn
-          @submit:complete="router.replace('/customers')"
-        >
-          <template #activator="{ toDelete }">
-            <v-btn
-              block
-              color="error"
-              text="この取引先を削除する"
-              @click="() => toDelete()"
-            />
-          </template>
-          <template #editor="{ actions: editorActions }">
-            <v-card>
-              <template #prepend>
-                <v-icon icon="mdi-alert" color="error" />
-              </template>
-              <template #title> 削除処理 </template>
-              <template #text>
-                <div>本当に削除しますか？</div>
-              </template>
-              <template #actions>
-                <MoleculesActionsSubmitCancel
-                  v-bind="editorActions"
-                  submitText="実行"
-                />
-              </template>
-            </v-card>
-          </template>
-        </CustomerManager>
       </v-col>
     </v-row>
   </v-container>

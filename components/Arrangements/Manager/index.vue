@@ -183,7 +183,9 @@ const {
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集コンポーネント -->
-    <SiteOperationScheduleManager ref="scheduleManager" />
+    <SiteOperationScheduleManager ref="scheduleManager">
+      <template #activator />
+    </SiteOperationScheduleManager>
 
     <!-- スケジュール複製コンポーネント -->
     <SiteOperationScheduleDuplicator

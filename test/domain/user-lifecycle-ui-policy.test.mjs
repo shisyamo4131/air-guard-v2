@@ -83,6 +83,20 @@ test("retirement UI follows strict employees:terminate and administrator policy"
     true,
   );
   assert.equal(
+    canTerminateEmployee({
+      ...context,
+      actorUser: actor({ roles: ["manager"] }),
+    }),
+    true,
+  );
+  assert.equal(
+    canTerminateEmployee({
+      ...context,
+      actorUser: actor({ roles: ["manager", "employees:terminate"] }),
+    }),
+    false,
+  );
+  assert.equal(
     canTerminateEmployee({ ...context, actorUser: actor({ roles: ["labor"] }) }),
     false,
   );

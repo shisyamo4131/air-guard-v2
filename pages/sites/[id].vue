@@ -5,13 +5,17 @@
  * @use useFetch (origin)
  *****************************************************************************/
 import dayjs from "dayjs";
-import { Employee } from "@/schemas";
-import { useRoute, useRouter } from "vue-router";
-import { useDocument } from "@/composables/dataLayers/useDocument";
-import { useDocuments } from "@/composables/dataLayers/useDocuments";
+import { useRoute } from "vue-router";
 import { useDateRange } from "@/composables/useDateRange";
-import { useFetch } from "@/composables/fetch/useFetch";
-import { useSiteEmployeeHistoriesBySiteId } from "@/composables/dataLayers/useSiteEmployeeHistoriesBySiteId";
+import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
+import { useSiteActions } from "@/composables/application/site/useSiteActions";
+import { Site, SiteEmployeeHistory, SiteOperationSchedule } from "@/schemas";
+import { getSitePresentationBadges } from "@/composables/domain/site/siteUiPresentation";
+import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
+import { useSiteDetailAccessGuard } from "@/composables/dataLayers/site/useSiteDetailAccessGuard";
+import { createSiteDetailReadSession } from "@/composables/domain/site/siteDetailAccessSession";
+import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -22,13 +26,21 @@ defineOptions({ name: "site-detail" });
  * ROUTER
  *****************************************************************************/
 const route = useRoute();
-const router = useRouter();
-const docId = route.params.id;
+const docId = computed(() => String(route.params.id || ""));
 
 /*****************************************************************************
  * SETUP COMPOSABLES
  *****************************************************************************/
-const { doc } = useDocument("Site", { docId });
+const doc = reactive(new Site());
+const detailResolved = ref(false);
+const detailError = ref("");
+const { clear: clearSiteReads, lookupSite } = useSiteUiReads();
+const auth = useAuthStore();
+const { canRead } = useSiteDetailAccessGuard();
+const { canWrite } = useSiteActions();
+const hasSite = computed(() => canRead.value && !!docId.value && doc.docId === docId.value);
+const isMissing = computed(() => detailResolved.value && !hasSite.value && !detailError.value);
+const isActive = computed(() => hasSite.value && doc.status === "ACTIVE");
 
 /*****************************************************************************
  * SETUP DATE RANGE COMPOSABLE
@@ -39,22 +51,25 @@ const dateRangeComposable = useDateRange({ baseDate, endDate });
 const { dateRange, debouncedDateRange } = dateRangeComposable;
 
 /*****************************************************************************
- * SETUP FETCH COMPOSABLE (ROOT)
- *****************************************************************************/
-const { fetchEmployeeComposable } = useFetch("site-detail", true);
-const { fetchEmployee, cachedEmployees } = fetchEmployeeComposable;
-
-/*****************************************************************************
  * SETUP SITE EMPLOYEE HISTORIES DATA LAYER COMPOSABLE
  *****************************************************************************/
-const { docs: siteEmployeeHistories } = useSiteEmployeeHistoriesBySiteId(
-  docId,
-  { callback: (doc) => fetchEmployee(doc.employeeId) },
-);
+const historyInstance = reactive(new SiteEmployeeHistory());
+const siteEmployeeHistories = historyInstance.docs;
+const employeeReader = useFetchEmployee();
+let employeeHistoryGeneration = 0;
+const { cachedEmployees, fetchEmployee } = employeeReader;
+const visibleEmployees = cachedEmployees;
+watch(() => employeeReader.scope.value, () => {
+  if (employeeReader.canRead.value && canRead.value) void fetchEmployee(siteEmployeeHistories);
+});
+const displayedScheduleInstance = reactive(new SiteOperationSchedule());
+const displayedSchedules = displayedScheduleInstance.docs;
+const scheduleInstance = reactive(new SiteOperationSchedule());
+const schedules = scheduleInstance.docs;
 const sortedHistories = computed(() => {
   return [...siteEmployeeHistories].sort((a, b) => {
-    const kanaA = cachedEmployees.value[a.employeeId]?.displayNameKana ?? "";
-    const kanaB = cachedEmployees.value[b.employeeId]?.displayNameKana ?? "";
+    const kanaA = visibleEmployees.value[a.employeeId]?.displayNameKana ?? "";
+    const kanaB = visibleEmployees.value[b.employeeId]?.displayNameKana ?? "";
     return kanaA.localeCompare(kanaB, "ja");
   });
 });
@@ -64,69 +79,201 @@ const sortedHistories = computed(() => {
  * - `dateAt` is between the `from` and `to` values of the debounced date range
  * The resulting documents are stored in the `schedules` variable for use in the component.
  */
-const options = computed(() => {
+const displayedScheduleConstraints = computed(() => {
   return [
-    ["where", "siteId", "==", docId],
+    ["where", "siteId", "==", docId.value],
     ["where", "dateAt", ">=", debouncedDateRange.value.from],
     ["where", "dateAt", "<=", debouncedDateRange.value.to],
   ];
 });
-const { docs: schedules } = useDocuments("SiteOperationSchedule", {
-  options,
-  fetchAllOnEmpty: true,
+const lifecycle = computed(() => getSiteLifecyclePresentation(doc, { schedules }));
+const badges = computed(() => getSitePresentationBadges(doc));
+
+function clearCollection(instance) {
+  instance.unsubscribe();
+  instance.docs.splice(0);
+}
+
+function clearRelatedReads() {
+  employeeHistoryGeneration++;
+  employeeReader.clearCache();
+  historyInstance.unsubscribe();
+  historyInstance.docs.splice(0);
+  clearCollection(displayedScheduleInstance);
+  clearCollection(scheduleInstance);
+}
+
+provide("fetchEmployeeComposable", employeeReader);
+
+function clearDetail({ resolved = false, error = "" } = {}) {
+  clearSiteReads("lookup");
+  doc.unsubscribe();
+  doc.initialize();
+  clearRelatedReads();
+  detailResolved.value = resolved;
+  detailError.value = error;
+}
+
+const detailReadSession = createSiteDetailReadSession({
+  clearProtectedReads: () => clearDetail(),
 });
+
+function subscribeDisplayedSchedules(id) {
+  displayedScheduleInstance.subscribeDocs({
+    constraints: displayedScheduleConstraints.value,
+  });
+}
+
+function subscribeRelatedReads(id) {
+  const employeeHistorySource = employeeHistoryGeneration;
+  subscribeDisplayedSchedules(id);
+  scheduleInstance.subscribeDocs({
+    constraints: [["where", "siteId", "==", id]],
+  });
+  historyInstance.subscribeDocs({
+    constraints: [["where", "siteId", "==", id]],
+  }, (history) => {
+    if (history?.employeeId && id === docId.value && canRead.value && employeeHistorySource === employeeHistoryGeneration) void fetchEmployee(history.employeeId);
+  });
+}
+
+async function subscribeDetail(id) {
+  const request = detailReadSession.begin(id);
+  if (!id) {
+    detailResolved.value = true;
+    return;
+  }
+  try {
+    const initial = await lookupSite(id);
+    if (!request.isCurrent() || id !== docId.value) return;
+    if (!initial) {
+      detailResolved.value = true;
+      return;
+    }
+    doc.initialize(initial.toObject?.() ?? initial);
+    detailResolved.value = true;
+    doc.subscribe({ docId: id }, (value) => {
+      if (!request.isCurrent() || id !== docId.value || !canRead.value) return;
+      detailResolved.value = true;
+      if (!value) {
+        doc.initialize();
+        clearRelatedReads();
+      }
+    });
+    subscribeRelatedReads(id);
+  } catch {
+    if (!request.isCurrent() || id !== docId.value) return;
+    detailError.value = "現場情報を読み込めませんでした。";
+    detailResolved.value = true;
+  }
+}
+
+watch(
+  [docId, canRead],
+  ([id, allowed]) => {
+    if (!allowed) {
+      detailReadSession.revoke();
+      detailResolved.value = true;
+      return;
+    }
+    void subscribeDetail(id);
+  },
+  { immediate: true, flush: "sync" },
+);
+watch(debouncedDateRange, () => {
+  if (canRead.value && hasSite.value) {
+    detailReadSession.refreshDate(subscribeDisplayedSchedules);
+  }
+});
+onUnmounted(() => {
+  detailReadSession.dispose();
+});
+
+function handleArchived() {
+  navigateTo("/sites");
+}
 </script>
 
 <template>
   <v-container>
+    <v-alert v-if="!canRead" type="warning" variant="tonal" class="mb-4">
+      現場情報を表示する権限を確認できません。
+    </v-alert>
+    <v-progress-linear v-else-if="!detailResolved" indeterminate class="mb-4" />
+    <v-alert v-else-if="detailError" type="error" variant="tonal" class="mb-4">
+      {{ detailError }}
+    </v-alert>
+    <v-alert v-else-if="isMissing" type="warning" variant="tonal" class="mb-4">
+      指定された現場は見つかりません。
+    </v-alert>
+    <template v-if="hasSite">
+    <v-card class="mb-4" variant="tonal">
+      <v-card-text class="d-flex align-center flex-wrap ga-3">
+        <v-chip
+          v-for="badge in badges"
+          :key="badge.key"
+          :color="badge.color"
+          variant="flat"
+        >
+          {{ badge.label }}
+        </v-chip>
+        <v-chip
+          v-if="!badges.some((badge) => badge.label === lifecycle.label)"
+          :color="lifecycle.color"
+          variant="outlined"
+        >
+          {{ lifecycle.label }}
+        </v-chip>
+        <v-chip v-if="lifecycle.automaticTerminationDate" variant="outlined">
+          自動終了予定 {{ lifecycle.automaticTerminationDate }}
+        </v-chip>
+        <strong>{{ doc.displayName || doc.name || doc.docId }}</strong>
+        <span v-if="doc.code">コード: {{ doc.code }}</span>
+        <span>{{ doc.fullAddress || "住所未設定" }}</span>
+        <v-spacer />
+        <SiteArchiveDialog v-if="canWrite" :site="doc" @archived="handleArchived" />
+        <SiteEditorTerminate v-if="isActive" :site="doc">
+          <template #activator="{ open, disabled }">
+            <v-btn color="warning" variant="outlined" :disabled="disabled" @click="open">現場を終了</v-btn>
+          </template>
+        </SiteEditorTerminate>
+        <SiteEditorReactivate v-else :site="doc">
+          <template #activator="{ open, disabled }">
+            <v-btn color="primary" variant="flat" :disabled="disabled" @click="open">再有効化</v-btn>
+          </template>
+        </SiteEditorReactivate>
+      </v-card-text>
+    </v-card>
     <v-row>
       <!-- LEFT SIDE -->
       <v-col cols="12" md="4">
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <SiteManager :doc="doc" label="基本情報" hide-delete-btn>
-              <template #activator="activatorProps">
-                <SiteActivatorBase v-bind="activatorProps">
-                  <template #actions>
-                    <SiteManager
-                      class="flex-grow-1"
-                      :doc="doc"
-                      :handle-update="(item) => item.terminate()"
-                      label="稼働終了"
-                      hide-delete-btn
-                      @submit:complete="router.replace('/sites')"
-                    >
-                      <template #activator="{ toUpdate }">
-                        <v-btn
-                          block
-                          color="warning"
-                          variant="flat"
-                          text="稼働終了"
-                          @click="() => toUpdate()"
-                        />
-                      </template>
-
-                      <template #input-default>
-                        <v-alert
-                          type="info"
-                          text="現場を稼働終了にします。よろしいですか？"
-                        />
-                      </template>
-                    </SiteManager>
-                  </template>
-                </SiteActivatorBase>
+            <SiteEditorBase :site="doc">
+              <template #activator="{ open }">
+                <SiteActivatorBase
+                  :item="doc"
+                  title="基本情報"
+                  :editable="canWrite && isActive"
+                  @click:edit="open"
+                />
               </template>
-            </SiteManager>
+            </SiteEditorBase>
           </v-col>
 
           <!-- 取引先情報 -->
           <v-col cols="12">
-            <SiteManager :doc="doc" label="取引先情報" hide-delete-btn>
-              <template #activator="activatorProps">
-                <SiteActivatorCustomer v-bind="activatorProps" />
+            <SiteEditorCustomer :site="doc">
+              <template #activator="{ open }">
+                <SiteActivatorCustomer
+                  :item="doc"
+                  title="取引先情報"
+                  :editable="canWrite && isActive"
+                  @click:edit="open"
+                />
               </template>
-            </SiteManager>
+            </SiteEditorCustomer>
           </v-col>
         </v-row>
       </v-col>
@@ -139,7 +286,7 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
             <SiteOperationSchedulesManager
               :before-edit="(editMode, item) => (item.siteId = docId)"
               :date-at="dateRange.from"
-              :docs="schedules"
+              :docs="displayedSchedules"
               :site-id="docId"
               @update:date-range="dateRange = $event"
             />
@@ -166,48 +313,12 @@ const { docs: schedules } = useDocuments("SiteOperationSchedule", {
 
       <!-- 取極め情報 -->
       <v-col cols="12" md="4">
-        <AgreementsManager
-          v-model="doc.agreementsV2"
-          :cutoff-date="doc.customer?.cutoffDate"
-          @submit:complete="async () => await doc.update()"
-        />
-      </v-col>
-
-      <!-- 削除処理ボタン -->
-      <v-col cols="12">
-        <site-manager
-          :doc="doc"
-          hide-delete-btn
-          @submit:complete="() => router.replace('/sites')"
-        >
-          <template #activator="{ toDelete }">
-            <v-btn
-              block
-              color="error"
-              text="この現場を削除する"
-              @click="() => toDelete()"
-            />
-          </template>
-          <template #editor="{ actions: editorActions }">
-            <v-card>
-              <template #prepend>
-                <v-icon icon="mdi-alert" color="error" />
-              </template>
-              <template #title> 削除処理 </template>
-              <template #text>
-                削除すると復元することはできません。本当に削除しますか？
-              </template>
-              <template #actions>
-                <MoleculesActionsSubmitCancel
-                  v-bind="editorActions"
-                  submitText="実行"
-                  color="error"
-                />
-              </template>
-            </v-card>
-          </template>
-        </site-manager>
+        <SiteEditorAgreements v-if="canWrite && isActive" :site="doc" />
+        <MoleculesFloatingTitleCard v-else title="取極め" color="secondary">
+          <AgreementsViewer :agreements="doc.agreementsV2" />
+        </MoleculesFloatingTitleCard>
       </v-col>
     </v-row>
+    </template>
   </v-container>
 </template>

@@ -22,6 +22,7 @@ import { useDefaults, useDisplay } from "vuetify";
  * DEFINE PROPS
  *****************************************************************************/
 const _props = defineProps({
+  items: { type: Array, default: () => [] },
   headers: { type: Array, default: () => defaultHeaders },
   itemsPerPage: { type: Number, default: 5 },
   sortBy: { type: Array, default: () => [{ key: "name", order: "asc" }] },
@@ -39,6 +40,7 @@ const { mobile } = useDisplay();
 const itemsPerPage = computed(() => {
   return mobile.value ? 1 : props.itemsPerPage;
 });
+const tableRows = computed(() => props.items.map((row, displayPosition) => ({ ...row, displayPosition })));
 
 /*****************************************************************************
  * FUNCTIONS
@@ -53,8 +55,11 @@ function formatDate(date) {
     :class="{ 'mobile-view': mobile }"
     :headers="props.headers"
     hide-search
+    hide-action
+    hide-create-btn
     :hide-default-header="mobile"
-    item-key="key"
+    :items="tableRows"
+    item-value="displayPosition"
     :items-per-page="itemsPerPage"
     :mobile="null"
     :sort-by="props.sortBy"

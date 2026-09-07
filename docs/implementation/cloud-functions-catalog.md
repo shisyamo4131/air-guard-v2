@@ -37,6 +37,8 @@ entryから到達するFirebase Function objectは27件である。明示のな�
 | `changeAdminUser` | v2 callable | 同社のactive本登録Userへadminを移譲 | 認証、caller UID/company claim、from=caller、会社管理者1人、from/to User/Auth company・UID・disabled整合を必須化。 |
 | `rebuildAllHistories` | v2 callable | 指定companyのSiteEmployeeHistories全再構築 | verified email、token/current Auth双方の同社会社claim・`isSuperUser`・有効状態、同社の有効な本登録User、要求company一致。`site-employee-history-sync.md`参照。 |
 | `rebuildSecurityReportIndexes` | v2 callable、timeout 540秒 | StorageからSecurityReportIndexes再構築 | rebuildAllHistoriesと同じ共有認可。恒久的な他社指定は不可。 |
+| `terminateSite` | v2 callable | ACTIVE Siteを予定競合のない場合だけ理由付きで終了 | current Auth、同社の有効な本登録User、会社管理者またはstrict preset由来`sites:write`、maintenance offをtransactionで再確認。 |
+| `reactivateSite` | v2 callable | TERMINATED Siteを現在のCustomer設定のまま理由・新工期付きで再開 | `terminateSite`と同じactor・tenant・maintenance境界。 |
 
 公開された`onRequest` endpointはない。comment outされた`testNotification`とStripe webhookはunexportedである。
 
@@ -77,9 +79,10 @@ event triggerにcallable型のcaller authはない。信頼境界はevent source
 
 | export名 | schedule | 1行責務 |
 | --- | --- | --- |
-| `runDailyTask` | `every day 00:00`、Asia/Tokyo | 期限切れSiteOperationSchedules cleanupとSites自動終了 |
+| `runDailyTask` | `every day 00:00`、Asia/Tokyo | 実績化済みの期限切れSiteOperationSchedulesをbounded cleanup |
+| `runDailySiteTermination` | `every day 00:00`、Asia/Tokyo | 工期終了90日後のACTIVE Siteを予定競合再確認後に自動終了 |
 
-handlerは全体をtry/catchし、errorをlog後rethrowしないため、実処理失敗でもinvocation成功として終了し得る。
+両handlerは独立した失敗境界でerrorをlog後に再throwする。repositoryではplatform retry設定を追加していないため、失敗時は次回の日次実行まで自動再試行されるとは断定しない。
 
 ## unexported catalog
 

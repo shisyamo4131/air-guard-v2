@@ -1,25 +1,21 @@
 # AirGuardV2 ロードマップ
 
-このディレクトリは、計画、マイルストーン、未解決問題、証拠に基づく進捗の正本です。確認済み要件の正本は `../specification.md` です。
+この索引は各作業のロードマップへ移動するための案内です。進捗、状態、日付、残作業は各ロードマップ本文を参照し、ここへ複写しません。確認済み要件は[現行仕様](../specification.md)を参照します。
 
-## 進捗算定
+## 索引
 
-- 各ロードマップのマイルストーン重みは合計100点とする。
-- 完了条件をすべて満たし、実装、テスト、レビュー、運用または利用者受入れの証拠を参照できる場合だけ得点する。
-- 現在はマイルストーン単位の部分加点を行わない。部分完了は残作業として記録する。
-- スコープ追加や判定訂正で進捗が下がる場合、変更前、変更後、理由を履歴と利用者向け報告へ記載する。
-- 性質の異なる複数ロードマップを、承認済みの重みなしに単純平均しない。
-- 未回答の確認・承認事項は即時報告し、回答後に正本と次のタスク指示へ反映する。
+| 対象 | ロードマップ |
+|---|---|
+| AirGuardV2 正式運用準備 | [airguard-v2.md](airguard-v2.md) |
+| Employeeマスター改修 | [employee.md](employee.md) |
+| Siteマスター改修 | [site.md](site.md) |
+| Outsourcerマスター改修 | [outsourcer.md](outsourcer.md) |
+| Customer取引状態の表示・編集 | [customer-status.md](customer-status.md) |
+| Customer archive safety | [customer-archive-safety.md](customer-archive-safety.md) |
+| 配置管理の表示順行削除UX | [arrangement-row-removal-ux.md](arrangement-row-removal-ux.md) |
+| Company部分更新 | [company-partial-updates.md](company-partial-updates.md) |
+| SuperUser兼会社管理者の表示順対応 | [superuser-company-admin-display-order.md](superuser-company-admin-display-order.md) |
+| Company legacy Stripe情報削除 | [company-stripe-removal.md](company-stripe-removal.md) |
+| Company設定改修（CCB・Historical） | [company-settings.md](company-settings.md) |
 
-## 連携方式
-
-- 長期作業は、レビュー可能なチェックポイントを1件ずつ割り当て、完了・失敗・仕様質問・承認境界のいずれかで一度だけタスク間通知を受ける。
-- コーディネーターは差分と検証を確認・統合してから、標準終了条件である「安全に独立実行できる作業が尽きた時点」に達していない場合だけ次を割り当てる。
-- 通常のタスク制御は利用者向けに逐次報告せず、終了時に統合する。承認、安全境界、失敗、進捗低下、経路障害、容量閾値は直ちに報告する。
-- コールバックを利用できない場合、または利用者が明示した場合だけ、変更なしを通知しない差分型ポーリングを代替とする。
-
-## 現在の状態
-
-| 対象 | 進捗 | 最終確認日 | ロードマップ |
-|---|---:|---|---|
-| AirGuardV2 正式運用準備 | 10% | 2026-08-14 | [airguard-v2.md](airguard-v2.md) |
+進捗算定、完了条件、履歴、active/historicalの区分は各ロードマップの正本に記録します。複数ロードマップを横断する集計が必要な場合は、集計の正本を先に一つ定めます。

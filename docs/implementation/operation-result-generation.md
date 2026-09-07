@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-009 — 上下番確定からOperationResult作成
-- 最終確認日: 2026-08-10
+- 最終確認日: 2026-09-04（DEV再観測と関連error経路の静的照合。上下番確定全経路の最終静的調査は2026-08-10）
 - 根拠ファイル: `pages/operation-results/generator.vue`、`utils/pageSettings.js` の該当設定、`composables/dataLayers/useUnconfirmedSiteOperationSchedules.js`、`components/OperationResult/Generator/index.vue`・`List.vue`・`Detail.vue`、直接使用するArrangementNotification manager、schemas `SiteOperationSchedule.syncToOperationResult`、`OperationResult`・`OperationResultDetail`・`Operation`・`Site.getValidAgreement` の直接契約、`functions/triggers/operationResult.js` とBilling/Attendance入口コメント
 
 Generator 3 componentsを含むOperationResult component 14 filesの公開契約、duplicate/lock、並行性のfile単位確認は[OperationResult components deep review](operation-result-components-deep-review.md)を参照する。
@@ -112,6 +112,22 @@ SiteのCustomer変更後も既存OperationResultの`customerId`はsnapshotとし
 - agreementなし確定と請求稼働管理からの回復経路を回帰testで固定し、古いallowEmptyAgreement記述を整理する（FUT-0029）。
 - 後続triggerの部分成功・retry・再調整を別セグメントで検証する（FUT-0030）。
 
+## 2026-08-31 DEV観測（原因未確定）
+
+- 利用者がDEVで上下番確定を実行し、OperationResult登録は成功した一方、処理時に「予期しないエラー」趣旨のSnackbarを観測した。
+- 同じ時間帯にFcmTokens登録の403 permission-denied、SecurityReports thumbnailの404、Chrome message channel errorも観測された。上下番確定との因果関係は確認できておらず、別問題の可能性を維持する。
+- ArrangementNotificationのLEAVED更新で一部errorが発生し、OperationResult作成後にSnackbarだけが表示された可能性は調査仮説であり、現時点の原因とは断定しない。現行静的調査ではworker通知の個別更新が最終OperationResult transactionより前にあるため、実際のruntime順序、別経路、非同期例外、Snackbar発生元を次回改修時に再追跡する。
+- 次回はbuttonからOperationResult作成、SiteOperationSchedule link、対象通知全件のLEAVED更新までを追跡し、await、例外伝播、部分成功、再実行、既にLEAVED、通知なし、複数worker、一部失敗を確認する。成功時はerror Snackbarなし、失敗時は失敗resourceを特定できるmessageまたはlogを残し、FcmTokens失敗は確定処理の成否へ影響させない。
+- 共有logに含まれるFCM token等の機密値は本記録・test dataへ転記しない。原因調査と再現testには合成dataを使用する。詳細な調査・検証条件は[FUT-0027](future-actions.md#fut-0027-上下番確定の通知更新とoperationresult作成を再開可能にする)へ統合した。
+
+## 2026-09-04 DEV再観測（原因未確定）
+
+- 利用者がDEVで上下番確定を再度実行し、最初のclickで不明なerrorを示す趣旨のSnackbarを観測した。今回のOperationResult、schedule link、通知状態の最終値は照合しておらず、上下番確定自体の成否と発生源は確認できていない。
+- 同じ時間帯にFcmTokens登録のHTTP 403 permission-denied、SecurityReports thumbnailのHTTP 404、deprecated warningが観測された。時間的に並行した事象であり、上下番確定との因果関係は確認できていない。
+- 静的照合では、上下番確定の最終処理からFCM登録を直接呼んでいない。FCM登録はsession初期化経路で実行され、失敗をcatchした後に共通のglobal error通知へ渡り得るため、同じSnackbarとして見えた可能性はあるが、今回のruntime順序と発生源は未確認である。
+- thumbnail取得失敗は静的にはcatchされ、thumbnailなしで元画像へfallbackする。確認した経路からglobal error通知へ直接渡す処理は見つからず、今回のSnackbar原因とは断定しない。
+- この再観測は新しいissueを作らず、FUT-0027の次回上下番確定改修で、実resourceの最終状態とSnackbar発生元を分離して追跡するためのdated deltaとして保持する。機密値、個人・会社・project・resource・document・storageの識別子、保存先、URL、stack、raw message、処理時間は転記していない。
+
 ## 質問
 
 - なし。
@@ -122,3 +138,4 @@ SiteのCustomer変更後も既存OperationResultの`customerId`はsnapshotとし
 - Firestore RulesによるOperationResult createとschedule updateの実認可。
 - Agreement、Billing、DailyAttendance、DailyOperationsByEmployee、SiteEmployeeHistoriesの内部処理とretry設定。
 - Emulatorでのtransaction競合、notify失敗、二重click、選択race、Functions部分失敗。
+- 2026-09-04再観測時のOperationResult、schedule link、通知状態、runtime順序、Snackbar発生元。

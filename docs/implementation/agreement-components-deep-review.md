@@ -33,7 +33,7 @@
 ## 権限・到達性
 
 - Site詳細とCompany設定が直接callerである。Site詳細は現行`sites:read`入口からAgreement create/update/delete/copy UIへ到達する。component自身にpermission判定はない。
-- Company設定callerもCompany document全体の更新へ接続する。field allowlist、監査、同時更新transactionはcomponent層にない。
+- 2026-08-30にCompany設定callerとCompany既定`agreementsV2` writerを撤去した。Site詳細callerとSite固有取極めは維持する。保存済みCompany値とschema fieldの削除は別migrationである。
 - `AgreementSelect`はOperationBillingの手動取極め選択から使用され、候補制限と保存権限は親へ委譲する。
 
 ## accessibility・表示境界

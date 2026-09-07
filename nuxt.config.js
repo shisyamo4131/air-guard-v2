@@ -1,8 +1,30 @@
 import vuetify, { transformAssetUrls } from "vite-plugin-vuetify";
+import { createCodexPostalIsolationPlugin } from "./scripts/vite-codex-postal-isolation.mjs";
 
 const isCodexDedicatedUi =
   process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID ===
   "demo-air-guard-v2-codex";
+
+function createFirebaseConfigSwPlugin() {
+  return {
+    name: "inject-firebase-config-to-sw",
+    transform(code, id) {
+      const sourcePath = id.replace(/\\/g, "/").split("?")[0];
+      if (
+        sourcePath !== "service-worker/sw.js" &&
+        !sourcePath.endsWith("/service-worker/sw.js")
+      ) {
+        return code;
+      }
+      // Replace complete string literals once, preserving quotes and escapes.
+      return code.replace(
+        /"__FIREBASE_(API_KEY|AUTH_DOMAIN|PROJECT_ID|STORAGE_BUCKET|MESSAGING_SENDER_ID|APP_ID)__"/g,
+        (_placeholder, key) =>
+          JSON.stringify(process.env[`NUXT_PUBLIC_FIREBASE_${key}`] || ""),
+      );
+    },
+  };
+}
 
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
@@ -30,9 +52,14 @@ export default defineNuxtConfig({
   modules: [
     // vuetify 設定
     (_options, nuxt) => {
-      nuxt.hooks.hook("vite:extendConfig", (config) => {
+      nuxt.hooks.hook("vite:extendConfig", (config, { isClient }) => {
         // @ts-expect-error
         config.plugins.push(vuetify({ autoImport: true }));
+        if (isCodexDedicatedUi && isClient) {
+          config.plugins.push(createCodexPostalIsolationPlugin({
+            projectRoot: nuxt.options.rootDir,
+          }));
+        }
       });
     },
     // pinia
@@ -72,7 +99,10 @@ export default defineNuxtConfig({
       // プリキャッシュを無効化（Workbox不使用）
       globPatterns: [],
       globIgnores: [],
-      // Service Worker ビルド時の環境変数注入
+      // SWはapplicationと独立buildのため、専用plugin instanceを渡す。
+      buildPlugins: {
+        vite: [createFirebaseConfigSwPlugin()],
+      },
       rollupOptions: {
         output: {
           format: "es",
@@ -105,47 +135,8 @@ export default defineNuxtConfig({
         "vue-chartjs",
       ],
     },
-    // Service Worker に環境変数を注入する Vite プラグイン
-    plugins: [
-      {
-        name: "inject-firebase-config-to-sw",
-        transform(code, id) {
-          // Service Worker のビルド時のみ処理
-          if (
-            id.includes("service-worker/sw.js") ||
-            id.includes("service-worker\\sw.js")
-          ) {
-            // 環境変数をプレースホルダーに置換
-            return code
-              .replace(
-                "__FIREBASE_API_KEY__",
-                process.env.NUXT_PUBLIC_FIREBASE_API_KEY || "",
-              )
-              .replace(
-                "__FIREBASE_AUTH_DOMAIN__",
-                process.env.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "",
-              )
-              .replace(
-                "__FIREBASE_PROJECT_ID__",
-                process.env.NUXT_PUBLIC_FIREBASE_PROJECT_ID || "",
-              )
-              .replace(
-                "__FIREBASE_STORAGE_BUCKET__",
-                process.env.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "",
-              )
-              .replace(
-                "__FIREBASE_MESSAGING_SENDER_ID__",
-                process.env.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "",
-              )
-              .replace(
-                "__FIREBASE_APP_ID__",
-                process.env.NUXT_PUBLIC_FIREBASE_APP_ID || "",
-              );
-          }
-          return code;
-        },
-      },
-    ],
+    // dev serverで読むSWにも注入する（build用とはinstanceを共有しない）。
+    plugins: [createFirebaseConfigSwPlugin()],
   },
 
   runtimeConfig: {

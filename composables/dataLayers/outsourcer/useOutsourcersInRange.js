@@ -12,9 +12,8 @@ import {
  * @file ./composables/dataLayers/outsourcer/useOutsourcersInRange.js
  * @description 外注先範囲用データレイヤーコンポーザブル
  * [NOTE]
- * - `useEmployeesInRange` と同様の構造で実装していますが、2026-06-15 現在、外注先には
- *   契約の開始や終了といった日時データが存在しないため、期間に基づくフィルタリングは行っていません。
- *   純粋な「契約中外注先の購読」コンポーザブルとして機能します。
+ * - 外注先には契約の開始や終了といった日時データが存在せず、`contractStatus` は
+ *   検索・配置・選択を制限しない表示上のフラグです。期間や状態では絞り込みません。
  * @param {Object} options - コンポーザブルのオプション
  * @param {Ref<Date>} options.from - 外注先範囲の開始日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
  * @param {Ref<Date>} options.to - 外注先範囲の終了日時を表す Ref（現在は使用されていませんが、将来的な拡張のために保持しています）
@@ -57,12 +56,9 @@ export function useOutsourcersInRange({ from, to } = {}) {
     /** Validate `fromDate` and `toDate` are valid Date instances and `fromDate` is not later than `toDate`. */
     rangeIsValid({ from: fromDate, to: toDate });
 
-    const activeConstraints = [
-      ["where", "contractStatus", "==", Outsourcer.STATUS_ACTIVE],
-    ];
     try {
       outsourcerInstance.subscribeDocs(
-        { constraints: activeConstraints },
+        { constraints: [] },
         (doc) => {
           if (typeof pushOutsourcer === "function") {
             pushOutsourcer(doc);

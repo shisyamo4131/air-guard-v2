@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Company/Activator/Base.vue
  * @description 会社の基本情報表示コンポーネント
- * - `CompanyManager` の activator スロット用コンポーネント
+ * - Company基本情報editorの表示・起動用コンポーネント
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { Company } from "@/schemas";
@@ -16,7 +16,8 @@ const _props = defineProps({
     required: true,
     validator: (value) => value instanceof Company,
   },
-  title: { type: String, default: undefined },
+  editable: { type: Boolean, default: true },
+  title: { type: String, default: "基本情報" },
 });
 const props = useDefaults(_props, "CompanyActivatorBase");
 const emit = defineEmits(["click:edit"]);
@@ -54,24 +55,6 @@ const items = computed(() => {
   ];
 });
 
-/*****************************************************************************
- * EXPOSE
- * - 当該コンポーネントを利用する AirItemManager, AirArrayManager の入力プロパティを
- *   定める。
- * - includedKeys: 編集対象プロパティ名の配列
- * - excludedKeys: 編集対象外プロパティ名の配列
- * - includedKeys と excludedKeys の両方が指定された場合、includedKeys が優先される
- *****************************************************************************/
-defineExpose({
-  includedKeys: [
-    "companyName",
-    "companyNameKana",
-    "address",
-    "tel",
-    "fax",
-    "invoiceNumber",
-  ],
-});
 </script>
 
 <template>
@@ -79,6 +62,7 @@ defineExpose({
     <v-toolbar color="secondary" density="compact" :title="props.title">
       <template #append>
         <v-btn
+          v-if="props.editable"
           icon="mdi-pencil"
           size="small"
           @click="emit('click:edit', props.item)"

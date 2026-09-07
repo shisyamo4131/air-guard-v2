@@ -7,13 +7,14 @@
 import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useConstants } from "@/composables/useConstants";
-import dayjs from "dayjs";
 import CustomInput from "@/components/Site/CustomInput/Base.vue";
+import { formatSiteConstructionPeriod } from "@/composables/domain/site/siteUiPresentation";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
  *****************************************************************************/
 const _props = defineProps({
+  editable: { type: Boolean, default: true },
   item: {
     type: Object,
     required: true,
@@ -43,15 +44,7 @@ const securityTypeTitle = computed(() => {
  * - 両方とも存在しない場合は "-" を表示
  */
 const constructionPeriod = computed(() => {
-  const start = props.item.constructionPeriodStartAt
-    ? dayjs(props.item.constructionPeriodStartAt).tz().format("YYYY/MM/DD")
-    : null;
-  const end = props.item.constructionPeriodEndAt
-    ? dayjs(props.item.constructionPeriodEndAt).tz().format("YYYY/MM/DD")
-    : null;
-
-  if (!start && !end) return "-";
-  return `${start} 〜 ${end}`;
+  return formatSiteConstructionPeriod(props.item);
 });
 const items = computed(() => {
   return [
@@ -101,10 +94,12 @@ defineExpose({
 <template>
   <v-card>
     <v-toolbar color="secondary" density="compact" :title="props.title">
-      <template #append>
+      <template v-if="props.editable" #append>
         <v-btn
           icon="mdi-pencil"
           size="small"
+          aria-label="現場の基本情報を編集"
+          title="現場の基本情報を編集"
           @click="emit('click:edit', props.item)"
         />
       </template>
