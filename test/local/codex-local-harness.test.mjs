@@ -8618,6 +8618,7 @@ test("caller isAdmin cannot select a weaker email preflight policy", async () =>
 test("API index exports every public Callable without internal request helpers", async () => {
   const apis = await loadRebuildApis();
   const publicCallables = [
+    "archiveEmployee",
     "changeAdminUser",
     "checkEmailAvailability",
     "checkUserPreRegistration",

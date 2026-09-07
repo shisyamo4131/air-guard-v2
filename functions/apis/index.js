@@ -3,6 +3,7 @@
  * @description 公開するCallable APIを集約してexportするエントリーポイントです。
  *****************************************************************************/
 export { archiveCustomer } from "./archiveCustomer.js";
+export { archiveEmployee } from "./archiveEmployee.js";
 export { archiveSite } from "./archiveSite.js";
 export { changeAdminUser } from "./changeAdminUser.js";
 export { checkEmailAvailability } from "./checkEmailAvailability.js";

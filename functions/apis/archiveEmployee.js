@@ -4,14 +4,16 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { resolveCallableAuthIdentity } from "../modules/auth/resolveCallableAuthIdentity.js";
 import { mapCallableAuthIdentityError } from "../modules/auth/mappers/mapCallableAuthIdentityError.js";
 import { EmployeeOperationError } from "../shared/employeeContract.js";
-import { archiveEmployee } from "../modules/employees/archiveEmployee.js";
+import {
+  archiveEmployee as archiveEmployeeUseCase,
+  configuredArchiveTenants,
+} from "../modules/employees/archiveEmployee.js";
 
-// Factory only. Normal apis/index.js deliberately does not publish this API.
 export function createArchiveEmployeeCallable(resolveAllowedTenants) {
   return onCall(async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "認証が必要です。");
     try {
-      return await archiveEmployee({ firestore: getFirestore(), input: request.data, resolveAllowedTenants,
+      return await archiveEmployeeUseCase({ firestore: getFirestore(), input: request.data, resolveAllowedTenants,
         resolveIdentity: () => resolveCallableAuthIdentity({ auth: getAuth(), tokenUid: request.auth.uid, tokenEmail: request.auth.token?.email, tokenEmailVerified: request.auth.token?.email_verified, tokenCompanyId: request.auth.token?.companyId, tokenIsSuperUser: request.auth.token?.isSuperUser }),
       });
     } catch (error) {
@@ -22,3 +24,9 @@ export function createArchiveEmployeeCallable(resolveAllowedTenants) {
     }
   });
 }
+
+// The normal entrypoint remains fail-closed until the runtime tenant allowlist
+// is configured. The Codex-only entrypoint injects its separate demo resolver.
+export const archiveEmployee = createArchiveEmployeeCallable(
+  configuredArchiveTenants,
+);

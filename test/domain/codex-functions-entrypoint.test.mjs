@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 const PUBLIC_CALLABLES = [
   "archiveCustomer",
+  "archiveEmployee",
   "archiveSite",
   "changeAdminUser",
   "checkEmailAvailability",
@@ -59,9 +60,9 @@ test("dedicated Functions entrypoint exports Callables and one execution-gated o
     );
 
     assert.equal(process.env.AIR_GUARD_EXTERNAL_EFFECTS, "deny");
-    assert.deepEqual(Object.keys(entrypoint).sort(), [...PUBLIC_CALLABLES, "codexOnOperationResultChange", "archiveEmployee"].sort());
+    assert.deepEqual(Object.keys(entrypoint).sort(), [...PUBLIC_CALLABLES, "codexOnOperationResultChange"].sort());
     const normal = await import("../../functions/apis/index.js");
-    assert.equal("archiveEmployee" in normal, false, "Employee archive is dedicated-entry only until its separate release gate");
+    assert.equal("archiveEmployee" in normal, true, "Employee archive must be connected to the normal entrypoint before Dev release");
     for (const forbiddenExport of [
       "geocoding",
       "onNotificationCreated",

@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Employee archive Callableを通常Functions API entrypointへ接続した。通常用の許可tenant設定は既定空集合のままで、Codex専用demo設定との分離を維持する。Devへの公開、対象tenant開放、実data確認・補完はまだ実施していない。
+
 - AirGuardV2の承認済みGit操作について、branch作成・switch・stage・commitなどの`.git`書込みはsandbox内で失敗させず、対象を確認して最初から権限付き経路で実行するproject ruleを追加した。操作自体の承認、対象範囲、`main`・push・history rewriteの個別承認は従来どおり維持する。
 
 - EMP-08の統合reviewで、Employee認可情報の取得失敗が空一覧になる経路と、保存待機中の変更通知が確定拒否後に失われる経路を是正した。既存のerror・再読込・競合表示へ接続し、文言・配置・保存契約を維持する。工程別再受入れと最終検証は[EMP-08記録](docs/verification/employee-08-local.md)を参照。

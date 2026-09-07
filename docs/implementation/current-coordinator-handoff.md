@@ -21,7 +21,7 @@
 
 1. Outsourcerは特定の協力会社masterであり、同じ外注先を配置へ複数回登録できる方式を維持する。旧試行の人数集約方式は採用しない。[Outsourcerロードマップ](../roadmaps/outsourcer.md)のOUT-01からOUT-07はlocal完了し、90%である。[OUT-07証拠](../verification/outsourcer-out07-local-integration.md)に自動検証、write actorのUI smoke、利用者承認済みの拒否actor自動代替、省略、cleanupを記録した。配置・通知・実績・請求・帳票のFirestore更新経路は変更していない。OUT-08のDev反映・受入れはマスタ管理改修後の別承認である。
 2. Site masterのSITE-08は[SITE-08検証記録](../verification/site-08-local.md)のLocal試験・build・cleanupまで完了した。次はDev反映前のlegacy確認とDev・remote接続であり、[Siteロードマップ](../roadmaps/site.md)のSITE-09として別承認である。
-3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。次のEMP-09ではマスタ一連改修後にDev反映・旧client・必要data/索引・対象service・復旧を別承認する。通常archive API公開、対象tenant開放、remote・実data・migrationは承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。全体範囲は[正式運用ロードマップ](../roadmaps/airguard-v2.md#次の作業)を参照する。
+3. Employee masterの現在工程・進捗は[Employeeロードマップ](../roadmaps/employee.md)、Local統合の実測は[EMP-08記録](../verification/employee-08-local.md)を正とする。次のEMP-09ではマスタ一連改修後にDev反映・旧client・必要data/索引・対象service・復旧を別承認する。通常archive APIのDev反映、対象tenant開放、remote・実data・migrationは承認前に開始しない。UI（見た目）の追加変更も事前に理由・影響・代替を提示して利用者判断を得る。全体範囲は[正式運用ロードマップ](../roadmaps/airguard-v2.md#次の作業)を参照する。
 4. マスタデータ管理の一連の改修が揃った後、[Dev受入れの実施時期](../roadmaps/airguard-v2.md#今後のdev受入テストの実施時期)に従い、Customer状態のCS-04とarchive safetyのCAS-05を含むDev反映・権限別受入れ、他マスタとの関連操作をまとめて行う。停止済み専用Auth/Emulator/serverを再利用せず、別承認前にDev・remote・実dataへ進まない。
 
 ## Dev反映前の準備作業一覧
@@ -44,7 +44,7 @@
 - [ ] Site: 自動終了が参照する既存予定の必須field、工期、自動終了対象への影響、公開・実行開始時期を検討する。
 - [ ] Site: archive形状、通常原本/archiveの同ID、埋込みCustomer、取極め、下流の日次snapshotについて、SITE-09が求める必要範囲の確認を具体化する。[Site roadmap](../roadmaps/site.md)を参照する。
 - [ ] Outsourcer: 既存data・旧client・実利用actorの確認範囲を決める。会社管理者/strict managerのwrite、契約終了後の選択継続、同じ協力会社の複数配置、archive/delete入口不在をDev確認表へ落とす。[Outsourcer roadmap](../roadmaps/outsourcer.md)を参照する。
-- [ ] Employee: 通常archive API公開接続に必要なlocal変更・testを具体化する。現在はAPI factoryが通常indexへ未公開で、通常の許可tenant設定は既定空集合である。local接続実装とremote公開・tenant開放を区別する。
+- [ ] Employee: 通常archive APIは`MASTER-DEV-PREFLIGHT-01`のNo.2で通常indexへlocal接続した。通常の許可tenant設定は既定空集合のまま維持する。No.3で公開契約・正常/拒否・専用demo分離を検証し、remote公開・tenant開放と区別する。
 - [ ] Employee: 日次2種・BillingのEmployee参照索引と実明細の整合を確認する範囲を決め、必要な補完だけを別途具体化する。限定dry-runの成功だけでarchiveを開放しない。
 - [ ] Employee: 参照writer、背景再生成処理、旧Employee削除triggerのUser/Auth連鎖削除を無作用にする処理を反映対象へ含める。
 - [ ] Employee: 既存保険map/世代値の互換性、User/Auth・予約状態、住所の実provider接続などDev固有の確認項目を用意する。[Employee roadmap](../roadmaps/employee.md)、[実装記録](employee-master.md)を参照する。

@@ -34,7 +34,7 @@ Employee詳細は原本取得前の仮のEmployeeを表示せず、原本と連�
 
 取引先請求の入金予定日は`updateBillingPaymentDate`と専用`PaymentDateEditor`/`useBillingPaymentDate`へ移した。日付3fieldと監査だけを部分保存し、日次2種・Billing・履歴の直接client CUDを閉じる。専用UIの背景trigger実行は既定offの明示opt-inで、通常API harnessへの継承はrunnerが除去する。
 
-05-Dのarchiveは`employeeArchiveContract.js`で既知raw/入力/actor/envelopeを検証し、`functions/modules/employees/archiveEmployee.js`で現在Auth・User・System・12従属・同ID衝突を同transactionで確認する。コピーは取得rawを使用し、archive作成と通常原本削除を同時に確定する。通常作成の同ID archive拒否、既存7actor read/直接CUD拒否は再利用した。API factoryは通常indexへ公開せず、専用demo entryだけへ接続する。許可tenant設定は通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`と専用用`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を分け、厳密なJSON文字列配列・既定空集合とする。
+05-Dのarchiveは`employeeArchiveContract.js`で既知raw/入力/actor/envelopeを検証し、`functions/modules/employees/archiveEmployee.js`で現在Auth・User・System・12従属・同ID衝突を同transactionで確認する。コピーは取得rawを使用し、archive作成と通常原本削除を同時に確定する。通常作成の同ID archive拒否、既存7actor read/直接CUD拒否は再利用した。Dev反映前準備でAPI factoryを通常`functions/apis/index.js`へ接続したが、remote未反映である。許可tenant設定は通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`と専用用`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を分け、厳密なJSON文字列配列・既定空集合とする。通常entrypointも許可tenant未設定時は全tenantを拒否する。
 
 専用`ArchiveDialog`/`useEmployeeArchive`は詳細原本の表示領域外に保持し、原本消失後も同sessionの不明な操作結果を確認できるようにする。raw/User表示の破棄と最小attemptの保持を分離し、通常成功後は一覧へ戻る。EMP-05の前回local受入れ判定は2026-09-07のUI回帰確認により撤回した。各内部単位の受入れ範囲・未検証・EMP-06へ渡す境界は[EMP-05 local記録](../verification/employee-05-local.md#05-e-統合次工程review)、現在地はロードマップを正とする。
 
@@ -409,7 +409,7 @@ clientに残せる更新は、参照を含むraw配列・識別field・索引を
 `array-contains`で0件でも、索引が欠けたdocumentの埋込み参照は検出できない。したがって「未確認なら拒否」はarchive要求内のqueryだけで実現しない。次を満たす**検査済みtenantのserver側許可集合**で開放を制御する。新しい参照counter/ledgerやarchive要求ごとの全件scanは追加しない。
 
 - 設定はserver起動設定を使い、既定は空集合、不正設定・対象外は拒否。Callable入力、client flag、未認証read可能な`System/system`へ許可tenant一覧や検査詳細を置かない。config名等の内部命名は実装時に決められるが、対象tenantの厳密照合とdefault denyは変更しない。
-- EMP-05のarchive APIは専用demo entrypointで明示公開し、通常`functions/apis/index.js`からの公開はEMP-09の後段に分ける。demo用許可注入は通常実行から利用できないようにする。参照writerは通常公開の接続まで用意してlocal検証し、remote反映はしない。
+- EMP-05のarchive APIは専用demo entrypointで明示公開し、Dev反映前準備で通常`functions/apis/index.js`にも接続した。demo用許可注入は通常実行から利用できないようにし、通常用設定の既定空集合による拒否を維持する。remote公開と対象tenant開放はEMP-09の別承認まで実行しない。
 - EMP-05では限定整合確認の純粋検査/実行手段を作り、合成dataで正常/欠損/型不正/明細不一致を試験する。remote操作や利用者saved-dataの読取り・補完を実行しない。対象は選択したtenantの予定・実績・通知・日次2種・Billingとし、元rawと導出集合の一致を検査する。
 - EMP-09では別承認のbounded maintenanceで旧client/背景writeを止め、対象・backup・dry-run・必要補完・post-check・旧trigger反映/実行中旧revision停止を確認する。書込み継続中のページ走査結果だけで整合済みとしない。欠損の所属Employeeを特定できない場合はtenant全体を開放しない。
 - 開放前に直接/旧writerの迂回閉鎖、既存索引整合、旧User削除作用停止の全てを確認する。正常な新規writeが索引一致を維持することを前提とし、運営者による契約外の直接変更まで自動検知できると表現しない。不整合判明時は対象tenantを許可集合から外して操作停止し、限定repairを別承認する。
