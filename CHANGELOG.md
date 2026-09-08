@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 専用Callable移行時にclientから`functions/shared`を直接参照したことで、Viteがroot側とFunctions側の別FireModelを生成し、Local起動時にadapter未設定となる回帰を修正した。clientが必要とするdraft・request・楽観表示の純粋contractとUX用policyをclient側へ分離し、Functionsをactor・tenant・最新状態・保存検証の正式境界として維持した。製品clientの直接参照を0件にした後、原因確認用の`resolve.dedupe`と越境依存用`optimizeDeps`を撤去した。正式exportの`air-firebase-v2/utils/tokenMap`だけは正規の事前bundle対象へ追加し、cold再起動、sign-in、dashboard、配置管理の読込みをLocal確認した。
+
+- 配置管理の予定、配置作業員、通知について、Callable完了とlistener反映を待っていた表示回帰を修正した。操作後の「なるべき形」を直ちにlocal表示へ反映してCallableを独立送信し、listenerから届く正本で表示全体を無条件に置き換える。通常操作用のpending lock、queue、更新順保証、履歴管理は設けず、失敗時だけ対象予定を再取得する。会社管理者のLocal UI確認と、開発serverをDev backendへ接続した利用者受入れを完了してmainへ統合した。予定更新dialogの「このデータを削除する」と、実績化前だけを削除できる既存Callable境界は維持する。Functions、Rules、schema、保存形式、Dev dataは変更せず、Dev Hosting deploy、Prod、pushは実施していない。
+
 - 4マスターの通常更新dialogへ共通`AppEditorDialog`を適用し、VForm validation、Atomsのキャンセル／更新button、処理中・競合時の提出抑止を統一した。Customer基本・支払条件、Site基本・取引先、Employee共通Editor、Outsourcer更新が対象で、Site取極め・終了・再開・archive等の専用操作は変更していない。
 
 - 4マスターUIの固定commitをDevへ反映し、Firestore indexesとHostingのdeploy、全追加indexの`READY`、4一覧、退職者／終了現場の空検索、従業員のひらがな検索、現場の警備種別filter、Employee／Outsourcer更新dialogを非破壊確認した。Customer／SiteはDevに更新対象documentが存在しないため更新dialogの実画面確認を省略し、domain compile契約とDev release buildで確認した。document data、Functions、Rules、Prodは変更していない。

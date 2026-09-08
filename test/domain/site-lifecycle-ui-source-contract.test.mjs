@@ -82,7 +82,7 @@ test("Schedule editor owns confirmation lifecycle and preset paths inject the sa
   assert.match(editor, /await confirmTerminatedScheduleSite/u);
   assert.match(submission, /await confirmTerminatedScheduleSite/u);
   assert.match(await read("components/SiteOperationSchedule/Manager/index.vue"), /OperationManager/u);
-  assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /useOperationSubmission\(\)/u);
+  assert.match(await read("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js"), /useOperationSubmission\(\s*\{\s*concurrent:\s*true\s*\}\s*\)/u);
   assert.match(await read("composables/useSiteOperationScheduleDuplicator.js"), /useOperationDuplicator\("schedule"\)/u);
   assert.match(await read("composables/application/operation/useOperationDuplicator.js"), /submission\.submit\(operations\)/u);
 

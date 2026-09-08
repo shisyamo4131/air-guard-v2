@@ -3,9 +3,9 @@ import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useOperationSubmission } from "./useOperationSubmission";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
-import { expectedForOperation, notificationExpectation } from "@/functions/shared/operationWriteContract.js";
-import { operationEmployeeReferences, notificationEmployeeReferences } from "@/functions/shared/operationReferences.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract";
+import { expectedForOperation, notificationExpectation } from "@/composables/domain/operation/operationCommandContract";
+import { operationEmployeeReferences, notificationEmployeeReferences } from "@/composables/domain/operation/operationReferences";
 
 export function useOperationGenerator(selectedSchedule) {
   const auth = useAuthStore(), { $firestore } = useNuxtApp();

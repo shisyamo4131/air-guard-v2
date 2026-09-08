@@ -11,7 +11,7 @@ async function harness(operation = "basic", kind = "healthInsurance") {
   let raw = employee(), readError, listener, authWatch, calls = [], messages = [], response = async () => ({ data: { success: true, employeeId: "employee" } });
   const auth = { uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true } };
   const ref = (value) => ({ value });
-  const bindings = { ...contract, ...insuranceContract, Employee, Certification, Insurance, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
+  const bindings = { ...contract, ...insuranceContract, isEmployeeUxActorAllowed: contract.employeeAllowed, Employee, Certification, Insurance, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
     doc: (_, path) => ({ id: path ? path.split("/").at(-1) : "reserved-id" }), collection: () => ({}),
     getDocFromServer: async () => { if (readError) throw readError; return { exists: () => raw !== null, data: () => raw }; },
     onSnapshot: (_, fn) => { listener = fn; return () => {}; },

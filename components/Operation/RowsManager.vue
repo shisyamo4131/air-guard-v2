@@ -4,7 +4,7 @@ import { useOperationEditor } from "@/composables/application/operation/useOpera
 import RowInput from "./RowInput.vue";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { ArticleDetail, OperationResultDetail, SiteOperationScheduleDetail } from "@/schemas";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract";
 import WorkersDataTable from "@/components/Workers/DataTable/index.vue";
 import ArticleDetailsDataTable from "@/components/ArticleDetails/DataTable/index.vue";
 const props = defineProps({ documentId: { type: String, required: true }, kind: { type: String, default: "result" }, group: { type: String, default: "workers" }, label: { type: String, default: "作業員" }, disabled: { type: Boolean, default: false } });

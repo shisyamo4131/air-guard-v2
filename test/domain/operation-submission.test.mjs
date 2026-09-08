@@ -9,6 +9,7 @@ import * as contract from "../../functions/shared/operationWriteContract.js";
 import * as referenceContract from "../../functions/shared/operationReferences.js";
 import * as employeeContract from "../../functions/shared/employeeContract.js";
 import { prepareNotificationState, expectedNotificationState, NOTIFICATION_STATE_PATCH } from "../../functions/shared/notificationStateContract.js";
+import { operationUxAllowed } from "../../utils/auth/policies/operationActorPolicy.js";
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 async function factory(path, name, bindings) { const code = (await source(path)).replace(/import[\s\S]*?;\s*/gu, "").replaceAll("export function", "function"); return new Function(...Object.keys(bindings), `${code}; return ${name};`)(...Object.values(bindings)); }
@@ -34,7 +35,7 @@ test("submission prompts only the terminated destination and blocks uncertain re
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
   const calls = [], prompts = [], records = { operation: { siteId: "old" }, old: { isTemporary: false, status: "TERMINATED" }, target: { isTemporary: false, status: "TERMINATED" } };
   let fail = false, finish;
-  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ({ exists: () => !!records[ref.id], data: () => records[ref.id] }), confirmTerminatedScheduleSite: async (args) => { prompts.push(args.siteId); return true; }, httpsCallable: () => async (input) => { calls.push(input); if (fail) throw Object.assign(new Error(), { code: "functions/unavailable" }); return new Promise((resolve) => { finish = resolve; }); } });
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ({ exists: () => !!records[ref.id], data: () => records[ref.id] }), confirmTerminatedScheduleSite: async (args) => { prompts.push(args.siteId); return true; }, httpsCallable: () => async (input) => { calls.push(input); if (fail) throw Object.assign(new Error(), { code: "functions/unavailable" }); return new Promise((resolve) => { finish = resolve; }); } });
   const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make(); });
   const command = { kind: "schedule", action: "overview", documentId: "operation", changes: { siteId: "target" }, expected: {} };
   const saving = submission.submit([command]); for (let i = 0; i < 8 && !finish; i++) await flush();
@@ -45,11 +46,74 @@ test("submission prompts only the terminated destination and blocks uncertain re
   assert.equal(submission.uncertain.value, true); const count = calls.length; await submission.submit([command]); assert.equal(calls.length, count); effect.stop();
 });
 
+test("submission concurrent mode keeps ordinary background calls independent while reporting aggregate busy state", async () => {
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
+  const calls = [], pending = [];
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: () => ({}), getDocFromServer: async () => ({ exists: () => false }), confirmTerminatedScheduleSite: async () => true, httpsCallable: () => async (input) => { calls.push(input); return new Promise((resolve) => pending.push(resolve)); } });
+  const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make({ concurrent: true }); });
+  const command = (id) => ({ kind: "schedule", action: "order", documentId: id, changes: { displayOrder: 1 }, expected: {} });
+  const first = submission.submit([command("first")]), second = submission.submit([command("second")]);
+  await flush(); assert.equal(calls.length, 2); assert.equal(submission.busy.value, true);
+  pending[1]({ data: { success: true, updated: true } }); assert.equal((await second).success, true); assert.equal(submission.busy.value, true);
+  pending[0]({ data: { success: true, updated: true } }); assert.equal((await first).success, true); assert.equal(submission.busy.value, false);
+  effect.stop();
+});
+
+test("concurrent unknown result remains monotonic when an older known refusal finishes later", async () => {
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
+  const pending = [];
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: () => ({}), getDocFromServer: async () => ({ exists: () => false }), confirmTerminatedScheduleSite: async () => true, httpsCallable: () => async () => new Promise((resolve, reject) => pending.push({ resolve, reject })) });
+  const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make({ concurrent: true }); });
+  const command = (id) => ({ kind: "schedule", action: "order", documentId: id, changes: { displayOrder: 1 }, expected: {} });
+  const first = submission.submit([command("first")]), second = submission.submit([command("second")]);
+  await flush();
+  pending[1].reject(Object.assign(new Error(), { code: "functions/unavailable" }));
+  assert.equal(await second, false); assert.equal(submission.uncertain.value, true);
+  pending[0].reject(Object.assign(new Error(), { code: "functions/failed-precondition" }));
+  assert.equal(await first, false); assert.equal(submission.uncertain.value, true);
+  assert.match(submission.message.value, /保存結果を確認できません/u);
+  effect.stop();
+});
+
+test("a request finishing preflight after another unknown result remains unsent", async () => {
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
+  const records = { operation: { siteId: "active" }, active: { isTemporary: false, status: "ACTIVE" }, terminated: { isTemporary: false, status: "TERMINATED" } };
+  const calls = [], pending = []; let resumePreflight;
+  const snapshot = (value) => ({ exists: () => !!value, data: () => value });
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ref.id === "operation" ? new Promise((resolve) => { resumePreflight = () => resolve(snapshot(records[ref.id])); }) : snapshot(records[ref.id]), confirmTerminatedScheduleSite: async () => true, httpsCallable: () => async (input) => { calls.push(input); return new Promise((resolve, reject) => pending.push({ resolve, reject })); } });
+  const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make({ concurrent: true }); });
+  const waiting = submission.submit([{ kind: "schedule", action: "overview", documentId: "operation", changes: { siteId: "terminated" }, expected: {} }]);
+  for (let index = 0; index < 8 && !resumePreflight; index++) await flush();
+  const unknown = submission.submit([{ kind: "schedule", action: "order", documentId: "other", changes: { displayOrder: 1 }, expected: {} }]);
+  await flush(); assert.equal(calls.length, 1);
+  pending[0].reject(Object.assign(new Error(), { code: "functions/unavailable" }));
+  assert.equal(await unknown, false); assert.equal(submission.uncertain.value, true);
+  resumePreflight();
+  assert.equal(await waiting, false);
+  assert.equal(calls.length, 1);
+  assert.match(submission.message.value, /保存結果を確認できません/u);
+  effect.stop();
+});
+
+test("concurrent terminated-site operations each require their own confirmation", async () => {
+  const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
+  const prompts = [], calls = [];
+  const records = { operation: { siteId: "active" }, active: { isTemporary: false, status: "ACTIVE" }, terminated: { isTemporary: false, status: "TERMINATED" } };
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ({ exists: () => !!records[ref.id], data: () => records[ref.id] }), confirmTerminatedScheduleSite: async ({ siteId }) => { prompts.push(siteId); return true; }, httpsCallable: () => async (input) => { calls.push(input); return { data: { success: true, updated: true } }; } });
+  const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make({ concurrent: true }); });
+  const command = () => ({ kind: "schedule", action: "overview", documentId: "operation", changes: { siteId: "terminated" }, expected: {} });
+  const results = await Promise.all([submission.submit([command()]), submission.submit([command()])]);
+  assert.equal(results.every((result) => result.success), true);
+  assert.deepEqual(prompts, ["terminated", "terminated"]);
+  assert.equal(calls.length, 2);
+  effect.stop();
+});
+
 test("a terminated old Site reused as a later destination still requires one confirmation; cancel sends nothing and definite retry retains confirmation", async () => {
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, roles: ["controller"] }) });
   const records = { first: { siteId: "a" }, second: { siteId: "c" }, a: { isTemporary: false, status: "TERMINATED" }, b: { isTemporary: false, status: "ACTIVE" }, c: { isTemporary: false, status: "ACTIVE" } };
   let accepted = false, denied = false; const prompts = [], calls = [];
-  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ({ exists: () => !!records[ref.id], data: () => records[ref.id] }), confirmTerminatedScheduleSite: async (args) => { prompts.push(args.siteId); return accepted; }, httpsCallable: () => async (input) => { calls.push(input); if (denied) throw Object.assign(new Error(), { code: "functions/failed-precondition" }); return { data: { success: true } }; } });
+  const make = await factory("composables/application/operation/useOperationSubmission.js", "useOperationSubmission", { ...Vue, ...contract, operationUxAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }), doc: (_, path) => ({ id: path.split("/").at(-1) }), getDocFromServer: async (ref) => ({ exists: () => !!records[ref.id], data: () => records[ref.id] }), confirmTerminatedScheduleSite: async (args) => { prompts.push(args.siteId); return accepted; }, httpsCallable: () => async (input) => { calls.push(input); if (denied) throw Object.assign(new Error(), { code: "functions/failed-precondition" }); return { data: { success: true } }; } });
   const effect = Vue.effectScope(); let submission; effect.run(() => { submission = make(); });
   const commands = [empCommand("first", "b"), empCommand("second", "a")];
   function empCommand(documentId, siteId) { return { kind: "schedule", action: "overview", documentId, changes: { siteId }, expected: {} }; }
@@ -205,22 +269,126 @@ for (const error of ["permission-denied", "unavailable"]) test(`personal ${error
   assert.equal(await state.personal.saveNext(), false); assert.equal(state.transactions(), 1); assert.equal(state.raw.actualStartTime, "08:00");
   state.personal.close(); assert.equal(state.editor.draft.value, null); state.effect.stop();
 });
-for (const outcome of ["success", "refusal", "dispose", "same-scope-refusal", "noop", "authority-success", "authority-refusal", "authority-return-success", "authority-return-refusal"]) test(`schedule ${outcome} batches destinations and suppresses stale messages/rollback`, async () => {
-  const scope = Vue.ref("company/actor"), states = new Map(), calls = [], messages = []; let finish;
+
+test("schedule actions publish the current local model before waiting for Callable completion", async () => {
+  const events = []; let finish;
+  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async () => { events.push("call"); return new Promise((resolve) => { finish = resolve; }); } };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
+    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+  });
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { events.push(`publish:${model.docId}`); return true; }, refreshSchedule: async () => { events.push("refresh"); return true; } }); });
+  const saving = actions.updateSchedule({ docId: "schedule", remarks: "now" }); await flush();
+  assert.deepEqual(events, ["publish:schedule", "call"]);
+  finish({ success: true, updated: true }); assert.equal(await saving, true);
+  assert.deepEqual(events, ["publish:schedule", "call"]); effect.stop();
+});
+
+test("schedule actions submit rapid ordinary edits independently without locking the UI", async () => {
+  const calls = [], finishes = [], published = [];
+  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async (commands) => { calls.push(commands); return new Promise((resolve) => finishes.push(resolve)); } };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
+    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+  });
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { published.push(model.remarks); return true; } }); });
+  const first = actions.updateSchedule({ docId: "schedule", remarks: "first" });
+  const second = actions.updateSchedule({ docId: "schedule", remarks: "second" });
+  assert.equal(calls.length, 2); assert.deepEqual(published, ["first", "second"]);
+  finishes[1]({ success: true, updated: true }); assert.equal(await second, true);
+  finishes[0]({ success: true, updated: true }); assert.equal(await first, true);
+  effect.stop();
+});
+
+test("one schedule refusal refreshes only its document while another local edit remains displayed", async () => {
+  const finishes = new Map(), displayed = new Map();
+  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async ([command]) => new Promise((resolve) => finishes.set(command.documentId, resolve)) };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
+    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: { remarks: model.remarks }, expected: {} }], operationRawFor: (model) => ({ ...model, remarks: `server-${model.docId}` }), expectedForOperation: () => ({}),
+  });
+  const effect = Vue.effectScope(); let actions;
+  effect.run(() => { actions = make({
+    publishSchedule: (model) => { displayed.set(model.docId, model.remarks); return true; },
+    refreshSchedule: async (id) => { displayed.set(id, `server-${id}`); return true; },
+  }); });
+  const first = actions.updateSchedule({ docId: "a", remarks: "local-a" });
+  const second = actions.updateSchedule({ docId: "b", remarks: "local-b" });
+  finishes.get("a")(false); assert.equal(await first, false);
+  assert.deepEqual(Object.fromEntries(displayed), { a: "server-a", b: "local-b" });
+  finishes.get("b")({ success: true, updated: true }); assert.equal(await second, true);
+  assert.deepEqual(Object.fromEntries(displayed), { a: "server-a", b: "local-b" });
+  effect.stop();
+});
+
+test("schedule notify publishes local notification state immediately and the displayed state prevents a duplicate", async () => {
+  const events = []; let finish;
+  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref(""), submit: async () => { events.push("call"); return new Promise((resolve) => { finish = resolve; }); } };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
+    scheduleCommands: () => [], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+  });
+  const model = new SiteOperationSchedule(schedule());
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishNotificationState: (value) => {
+    events.push(`publish-notify:${value.docId}`);
+    for (const array of ["employees", "outsourcers"]) for (const worker of value[array]) worker.hasNotification = true;
+    return true;
+  } }); });
+  const saving = actions.notify(model); await flush();
+  assert.deepEqual(events, [`publish-notify:${model.docId}`, "call"]);
+  assert.equal(model.workers.every((worker) => worker.hasNotification), true);
+  assert.equal(await actions.notify(model), false);
+  assert.deepEqual(events, [`publish-notify:${model.docId}`, "call"]);
+  finish({ success: true, updated: true }); assert.equal(await saving, true);
+  effect.stop();
+});
+
+test("definite notify refusal resets provisional notifications and refreshes the schedule", async () => {
+  const events = [], messages = [];
+  const submission = { allowed: Vue.ref(true), busy: Vue.ref(false), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async () => false };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
+    scheduleCommands: () => [], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+  });
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishNotificationState: () => { events.push("publish-notify"); return true; }, resetNotifications: (ids) => events.push(`reset-notifications:${ids.join(",")}`), refreshSchedule: async (id) => { events.push(`refresh:${id}`); return true; } }); });
+  assert.equal(await actions.notify({ docId: "schedule", workers: [{ workerId: "worker", hasNotification: false }] }), false);
+  assert.deepEqual(events, ["publish-notify", "reset-notifications:schedule", "refresh:schedule"]);
+  assert.equal(messages.length, 1); effect.stop();
+});
+
+test("multi-schedule refusal continues point refresh after one document read throws", async () => {
+  const refreshed = [];
+  const submission = { allowed: Vue.ref(true), scope: () => "company/actor", uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async () => false };
+  const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
+    ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add() {} }),
+    scheduleCommands: (model) => [{ kind: "schedule", action: "overview", documentId: model.docId, changes: {}, expected: {} }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
+  });
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({
+    publishSchedule: () => true,
+    refreshSchedule: async (id) => { refreshed.push(id); if (id === "a") throw new Error("read failed"); return true; },
+  }); });
+  assert.equal(await actions.updateSchedules([{ docId: "a" }, { docId: "b" }], { date: "2026-09-01", siteId: "site", shiftType: "DAY" }), false);
+  assert.deepEqual(refreshed, ["a", "b"]);
+  effect.stop();
+});
+
+for (const outcome of ["success", "refusal", "dispose", "same-scope-refusal", "noop", "authority-success", "authority-refusal", "authority-return-success", "authority-return-refusal"]) test(`schedule ${outcome} keeps one multi-schedule change atomic and suppresses stale messages`, async () => {
+  const scope = Vue.ref("company/actor"), calls = [], messages = [], published = [], refreshed = []; let finish;
   const submission = { allowed: Vue.ref(true), scope: () => scope.value, uncertain: Vue.ref(false), message: Vue.ref("refused"), submit: async (commands) => { calls.push(commands); return new Promise((resolve) => { finish = resolve; }); } };
   const make = await factory("composables/application/siteOperationSchedule/useSiteOperationScheduleActions.js", "useSiteOperationScheduleActions", {
     ...Vue, operationDateTime, parseDate: employeeContract.parseDate, useOperationSubmission: () => submission, useMessagesStore: () => ({ add: (value) => messages.push(value) }),
-    operationPresentation: (model) => { if (!states.has(model.docId)) states.set(model.docId, { busy: false, blocked: false, revision: 0 }); return states.get(model.docId); },
     scheduleCommands: (model) => [{ documentId: model.docId }], operationRawFor: (model) => model, expectedForOperation: () => ({}),
   });
-  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make(); });
-  const first = actions.updateSchedule({ docId: "source" }), second = actions.updateSchedule({ docId: "target" }); await flush();
+  const effect = Vue.effectScope(); let actions; effect.run(() => { actions = make({ publishSchedule: (model) => { published.push(model.docId); return true; }, refreshSchedule: async (id) => { refreshed.push(id); return true; } }); });
+  const models = [{ docId: "source" }, { docId: "target" }];
+  const first = actions.updateSchedules(models, { date: "2026-09-01", siteId: "site", shiftType: "DAY" }); await flush();
   assert.equal(calls.length, 1); assert.deepEqual(calls[0].map((item) => item.documentId), ["source", "target"]);
   if (["success", "refusal"].includes(outcome)) { scope.value = "other/actor"; scope.value = "company/actor"; }
   if (outcome === "dispose") effect.stop();
   if (outcome.startsWith("authority")) { submission.allowed.value = false; if (outcome.includes("return")) submission.allowed.value = true; }
-  finish(outcome.includes("refusal") ? false : { success: true, updated: outcome !== "noop" }); await first; await second;
-  for (const state of states.values()) { assert.equal(state.busy, false); assert.equal(state.revision, outcome === "same-scope-refusal" ? 1 : 0); assert.equal(state.blocked, outcome === "same-scope-refusal"); }
+  finish(outcome.includes("refusal") ? false : { success: true, updated: outcome !== "noop" }); await first;
+  assert.deepEqual(published, ["source", "target"]);
+  assert.deepEqual(refreshed, outcome === "same-scope-refusal" ? ["source", "target"] : []);
   assert.equal(messages.length, outcome === "same-scope-refusal" ? 1 : 0); effect.stop();
 });
 

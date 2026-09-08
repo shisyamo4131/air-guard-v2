@@ -31,6 +31,7 @@ UWBではUser documentを権限ごとに分割せず、操作ごとのCallable�
 - 通常編集でwhole-document replacementを行わず、当該operationが所有するfieldだけを更新する。
 - 共有管理画面はreal-time listenerで最新値を反映する。編集中の同一operationへ他actorの変更が届いた場合は通知し、operationごとに最新値の再読込または結果が明確な明示再確認を要求するUIを優先する。
 - 会社名、住所、電話、通常設定、表示順等の可逆な通常変更はlast-write-winsを受容し、共通revision、lock、ledgerを導入しない。
+- 試験運用中の可逆な通常操作の楽観表示では、保存完了やlistener反映を待つための共通pending lock、single-flight queue、更新順保証を既定にしない。操作後の最新local表示を保ち、listenerの正本で収束させる。短時間の連続操作や複数actorの競合が実測され具体的な業務被害を確認した場合だけ、該当operationへ局所的な制御を追加する。
 - 追加のexpected value、transaction、idempotency、lock、ledgerは、権限・利用停止、削除、金銭確定、外部service作用、複数resourceの不変条件、復旧困難なdata loss、二重実行の具体的被害へ限定する。
 
 ### Schemaと編集componentの責務

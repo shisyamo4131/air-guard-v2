@@ -15,10 +15,11 @@
 1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。[フェーズごとのテスト範囲の合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)に従い、利用者と変更・テストの範囲、環境・data、期待結果、完了条件を着手前にすり合わせる。他機能の受入れを自動追加しない。
 2. 下記[segment contract](#必要十分なdata設計)を材料に、実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。目的に対するscopeの過大・不足、完了条件の十分性、未確認事項の扱いを判定に残す。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
 3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testから始め、当該phaseの代表操作を保存・再読込・失敗時の挙動まで確認する。UI非対象なら該当処理境界までとし、最終統合へ初回確認を集中させない。問題の扱いは上記scope規則に従い、設計変更時だけ変更範囲を再reviewする。
-4. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
-5. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従って通常の変更差分と関連経路から判断する。全件診断・一括修復を標準前提にせず、承認済みDev releaseで通常操作を試し、実際の不具合を対象経路で修正する。必要な利用者acceptanceはcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
-6. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
-7. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
+4. 通常の製品改修はUIの有無にかかわらず、直接対象のdomain testと対象機能の最小限のlocal動作確認を終えたらDev release判断へ進み、最終確認はDev受入れで行う。Devで不具合が判明した場合は小さい改修単位で修正・再deployする。変更と直接関係しないbuild、全Emulator、全browser、包括的な静的検査をDev受入れ前へ追加しない。project rule・verification policy、Rules・schema・Functions・認証認可その他の高risk境界、release artifactに必要なgateは先送りしない。改修規模が大きくこのloopを安全に適用できない場合は、範囲と検証方法を別途合意する。
+5. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
+6. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従って通常の変更差分と関連経路から判断する。全件診断・一括修復を標準前提にせず、承認済みDev releaseで通常操作を試し、実際の不具合を対象経路で修正する。必要な利用者acceptanceはcheckpointまたはfeature boundary単位で行う。file単位の確認はcheckpointが明示した場合だけとする。
+7. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
+8. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
 
 このloopは[Verification Matrix](../operations.md#verification-matrix)と`governance/verification-policy.json`のiteration、targeted、completion、release-only区分を実行順へ落としたものである。文書責務は[ADR 0041](../decisions/0041-single-source-documentation-and-final-validation.md)に従う。既存の安全境界や外部作用の承認は緩和しない。
 

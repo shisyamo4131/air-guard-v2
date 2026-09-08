@@ -1,4 +1,4 @@
-import { identifier, plain } from "../../../functions/shared/employeeContract.js";
+import { identifier, plain } from "../shared/valueContract.js";
 
 // Read snapshots can contain Firestore GeoPoint/Bytes/DocumentReference as well as
 // Timestamp. They are not operation expected-values and must retain their types.

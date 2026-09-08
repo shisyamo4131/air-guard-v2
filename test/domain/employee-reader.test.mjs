@@ -58,7 +58,7 @@ async function authorizedListHarness() {
   const sdk = sdkHarness();
   const actor = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] };
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: actor });
-  const bindings = { ...Vue, ...sdk.bindings, ...contract, Employee, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) };
+  const bindings = { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, Employee, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) };
   const makeAccess = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", bindings);
   const effect = Vue.effectScope(); let access, list;
   effect.run(() => { access = makeAccess(); });
@@ -199,7 +199,7 @@ test("EMP05 access requires each of seven allowed actors and both current Auth a
   const sdk = sdkHarness();
   const user = (role) => ({ docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: role === "admin", roles: role === "admin" ? [] : [role] });
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: user("admin") });
-  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
+  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
   const effect = Vue.effectScope(); let access; effect.run(() => { access = make(); });
   for (const role of ["admin", ...contract.EMPLOYEE_ROLES]) {
     auth.user = user(role); const listener = sdk.listeners.at(-1);
@@ -232,7 +232,7 @@ test("EMP05 calls made during initial authorization retain requested IDs but nev
 test("EMP05 actual raw User authorization resolves an already waiting first Employee ID", async () => {
   const sdk = sdkHarness(), actor = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] };
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: actor });
-  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
+  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
   const effect = Vue.effectScope(); let access; effect.run(() => { access = make(); });
   const h = await readerHarness(access); assert.equal(access.loading.value, true);
   const first = h.reader.getEmployee("employee"); assert.equal(h.listeners.length, 0);

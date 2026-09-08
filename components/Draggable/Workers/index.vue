@@ -58,10 +58,16 @@ const emit = defineEmits(["update:modelValue"]);
  * SETUP COMPOSABLES
  *****************************************************************************/
 const { attrs, defaultSlotProps } = useIndex(props, emit);
+const hasEmptyDropTarget = computed(
+  () => !attrs.value.disabled && attrs.value.modelValue.length === 0,
+);
 </script>
 
 <template>
-  <draggable v-bind="{ ...$attrs, ...attrs }">
+  <draggable
+    v-bind="{ ...$attrs, ...attrs }"
+    :class="{ 'draggable-workers--empty-drop-target': hasEmptyDropTarget }"
+  >
     <template #item="{ element: worker }">
       <div>
         <slot name="default" v-bind="{ worker, ...defaultSlotProps }" />
@@ -69,3 +75,9 @@ const { attrs, defaultSlotProps } = useIndex(props, emit);
     </template>
   </draggable>
 </template>
+
+<style scoped>
+.draggable-workers--empty-drop-target {
+  min-height: 48px;
+}
+</style>

@@ -1,6 +1,6 @@
 <script setup>
 import { useOperationEditor } from "@/composables/application/operation/useOperationEditor";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract";
 import { SiteOperationSchedule, OperationResult, OperationBilling } from "@/schemas";
 defineOptions({ inheritAttrs: false });
 const props = defineProps({ kind: { type: String, required: true }, docs: { type: Array, default: () => [] }, customInput: { type: Object, default: null }, label: { type: String, default: undefined }, beforeEdit: { type: Function, default: null }, handleClickUpdate: { type: Function, default: null }, tableProps: { type: Object, default: () => ({}) } });

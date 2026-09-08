@@ -3,7 +3,8 @@ import { doc, getDocFromServer, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { Certification } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { employeeAllowed, rawForClass, equal, expectedFields, CERTIFICATION_FIELDS, DATE_FIELDS, dateInput, parseEmployeeInput, buildCertificationPatch } from "@/functions/shared/employeeContract.js";
+import { rawForClass, equal, expectedFields, CERTIFICATION_FIELDS, DATE_FIELDS, dateInput, parseEmployeeInput, buildCertificationPatch } from "@/composables/domain/employee/employeeEditContract.js";
+import { isEmployeeUxActorAllowed } from "@/utils/auth/policies/employeeActorPolicy.js";
 
 export function useEmployeeCertifications({ employeeId }) {
   const auth = useAuthStore(); const { $firestore, $functions } = useNuxtApp();
@@ -11,7 +12,7 @@ export function useEmployeeCertifications({ employeeId }) {
   const baseline = shallowRef(null), draft = ref(null), action = ref("add"), position = ref(null);
   let reference, unsubscribe, generation = 0, owner, draftAtOpen, expectedResult;
   const identity = () => ({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser, actorUser: auth.user });
-  const canWrite = computed(() => auth.isSuperUserClaimValid === true && employeeAllowed(identity()));
+  const canWrite = computed(() => auth.isSuperUserClaimValid === true && isEmployeeUxActorAllowed(identity()));
   const ownerKey = () => `${auth.companyId}/${auth.uid}`;
   const rows = computed(() => (baseline.value?.securityCertifications || []).map((row, originalPosition) => ({ ...rawForClass(row), originalPosition })).sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")) || a.originalPosition - b.originalPosition));
   function verify() { if (!canWrite.value || owner !== ownerKey()) throw new Error("permission-denied"); }

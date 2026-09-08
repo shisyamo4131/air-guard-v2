@@ -1,7 +1,7 @@
 <script setup>
 import { OperationBilling } from "@/schemas";
 import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
-import { expectedForOperation } from "@/functions/shared/operationWriteContract.js";
+import { expectedForOperation } from "@/composables/domain/operation/operationCommandContract";
 defineOptions({ name: "OperationBillingActivatorBaseBtnToggleLock", inheritAttrs: false });
 const props = defineProps({ item: { type: Object, required: true, validator: (value) => value instanceof OperationBilling } });
 const submission = useOperationSubmission({ billing: true });

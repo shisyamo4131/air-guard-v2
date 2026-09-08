@@ -1,8 +1,8 @@
 import { ref, shallowRef, computed, watch, onScopeDispose } from "vue";
 import { collection, doc } from "firebase/firestore";
 import { SiteOperationSchedule, OperationResult } from "@/schemas";
-import { rawForClass, dateInput } from "@/functions/shared/employeeContract.js";
-import { expectedForOperation } from "@/functions/shared/operationWriteContract.js";
+import { rawForClass, dateInput } from "@/composables/domain/shared/valueContract";
+import { expectedForOperation } from "@/composables/domain/operation/operationCommandContract";
 import { useOperationSubmission } from "./useOperationSubmission";
 
 export function useOperationDuplicator(kind, onSaved = () => {}) {

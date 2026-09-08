@@ -3,8 +3,9 @@ import { doc, getDocFromServer, onSnapshot } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { Insurance } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { employeeAllowed, rawForClass, equal, encodeExpected, dateInput } from "@/functions/shared/employeeContract.js";
-import { insuranceVersions, insuranceForOperation, INSURANCE_ACTION_FIELDS, parseEmployeeInsuranceInput, prepareEmployeeInsurance } from "@/functions/shared/employeeInsuranceContract.js";
+import { rawForClass, equal, encodeExpected, dateInput } from "@/composables/domain/shared/valueContract.js";
+import { insuranceVersions, insuranceForOperation, INSURANCE_ACTION_FIELDS, parseEmployeeInsuranceInput, prepareEmployeeInsurance } from "@/composables/domain/employee/employeeInsuranceContract.js";
+import { isEmployeeUxActorAllowed } from "@/utils/auth/policies/employeeActorPolicy.js";
 
 export function useEmployeeInsurance({ employeeId, kind }) {
   const auth = useAuthStore(); const { $firestore, $functions } = useNuxtApp();
@@ -13,7 +14,7 @@ export function useEmployeeInsurance({ employeeId, kind }) {
   let reference, unsubscribe, owner, generation = 0, expectedResult;
   const identity = () => ({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser, actorUser: auth.user });
   const ownerKey = () => `${auth.companyId}/${auth.uid}`;
-  const canWrite = computed(() => auth.isSuperUserClaimValid === true && employeeAllowed(identity()));
+  const canWrite = computed(() => auth.isSuperUserClaimValid === true && isEmployeeUxActorAllowed(identity()));
   function verify() { if (!canWrite.value || owner !== ownerKey()) throw new Error("permission-denied"); }
   function clear() { generation++; unsubscribe?.(); unsubscribe = null; reference = null; baseline.value = null; draft.value = null; expectedResult = null; opened.value = false; conflict.value = false; uncertain.value = false; loading.value = false; }
   function receive(raw) {

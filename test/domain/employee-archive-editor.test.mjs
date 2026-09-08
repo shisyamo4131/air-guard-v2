@@ -28,7 +28,7 @@ async function setup(call = async () => ({ data: { success: true, archived: true
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isAdmin: false, disabled: false, isTemporary: false, roles: ["manager"] }) });
   const employeeId = Vue.ref("employee"), employee = Vue.ref({ docId: "employee", lastName: "合成" }), calls = [], messages = [], successes = [];
   const source = (await readFile(new URL("../../composables/application/employee/useEmployeeArchive.js", import.meta.url), "utf8")).replace(/import[\s\S]*?;\s*/gu, "").replace("export function", "function");
-  const bindings = { ...Vue, ...contract, useAuthStore: () => auth, useMessagesStore: () => ({ add: (message) => messages.push(message) }), useNuxtApp: () => ({ $functions: {} }), httpsCallable: (_, name) => { assert.equal(name, "archiveEmployee"); return async (input) => { calls.push(input); return call(input); }; } };
+  const bindings = { ...Vue, ...contract, isEmployeeArchiveUxActorAllowed: contract.archiveActorAllowed, useAuthStore: () => auth, useMessagesStore: () => ({ add: (message) => messages.push(message) }), useNuxtApp: () => ({ $functions: {} }), httpsCallable: (_, name) => { assert.equal(name, "archiveEmployee"); return async (input) => { calls.push(input); return call(input); }; } };
   const make = new Function(...Object.keys(bindings), `${source}; return useEmployeeArchive;`)(...Object.values(bindings));
   const effect = Vue.effectScope(); let editor; effect.run(() => { editor = make(employeeId, employee, (id) => successes.push(id)); });
   return { editor, employeeId, employee, calls, messages, successes, auth, effect };

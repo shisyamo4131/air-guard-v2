@@ -127,6 +127,7 @@ export default defineNuxtConfig({
     optimizeDeps: {
       include: [
         "@shisyamo4131/air-guard-v2-schemas/constants",
+        "@shisyamo4131/air-firebase-v2/utils/tokenMap",
         "vuedraggable",
         "pdfmake/build/pdfmake",
         "@holiday-jp/holiday_jp",

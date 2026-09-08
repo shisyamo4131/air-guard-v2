@@ -2,7 +2,7 @@ import { computed, shallowRef, ref, watch, onScopeDispose } from "vue";
 import { doc, getDocFromServer } from "firebase/firestore";
 import { SiteOperationSchedule } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract";
 import { useNotificationEditor } from "./useNotificationEditor";
 
 export function usePersonalNotification(definition) {

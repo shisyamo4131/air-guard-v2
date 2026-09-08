@@ -1,10 +1,10 @@
 <script setup>
 import { useOperationEditor } from "@/composables/application/operation/useOperationEditor";
 import { SiteOperationSchedule, OperationResult, OperationBilling } from "@/schemas";
-const props = defineProps({ kind: { type: String, required: true }, doc: { type: Object, default: null }, action: { type: String, default: "overview" }, label: { type: String, default: undefined }, customInput: { type: Object, default: null }, includedKeys: { type: Array, default: null }, beforeEdit: { type: Function, default: null }, disabled: { type: Boolean, default: false } });
+const props = defineProps({ kind: { type: String, required: true }, doc: { type: Object, default: null }, action: { type: String, default: "overview" }, label: { type: String, default: undefined }, customInput: { type: Object, default: null }, includedKeys: { type: Array, default: null }, beforeEdit: { type: Function, default: null }, disabled: { type: Boolean, default: false }, optimistic: { type: Object, default: null }, allowDeleteFromUpdate: { type: Boolean, default: false } });
 const resolvedLabel = computed(() => props.label ?? ({ schedule: SiteOperationSchedule, result: OperationResult, billing: OperationBilling }[props.kind]?.className || "稼働情報"));
 const emit = defineEmits(["submit:complete"]);
-const editor = useOperationEditor({ kind: props.kind, defaultAction: props.action, fields: () => props.includedKeys, onSaved: (item) => emit("submit:complete", item) });
+const editor = useOperationEditor({ kind: props.kind, defaultAction: props.action, fields: () => props.includedKeys, onSaved: (item) => emit("submit:complete", item), optimistic: props.optimistic, allowDeleteFromUpdate: props.allowDeleteFromUpdate });
 watch(() => props.doc?.docId, () => editor.reset());
 async function open(mode, item) {
   if (props.disabled) return false;

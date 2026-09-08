@@ -71,6 +71,7 @@ const {
   uiSiteOperationScheduleDuplicator,
   uiCommandTextDialog,
   uiSpeedDial,
+  optimistic,
 } = managerComposable;
 </script>
 
@@ -183,7 +184,7 @@ const {
     </AtomsDialogsFullscreen>
 
     <!-- スケジュール編集コンポーネント -->
-    <SiteOperationScheduleManager ref="scheduleManager">
+    <SiteOperationScheduleManager ref="scheduleManager" :optimistic="optimistic">
       <template #activator />
     </SiteOperationScheduleManager>
 
@@ -199,6 +200,7 @@ const {
     <SiteOperationScheduleWorkerDetailManager
       ref="workerManager"
       hide-delete-btn
+      :optimistic="optimistic"
     />
 
     <!-- 配置テキスト表示ダイアログ -->

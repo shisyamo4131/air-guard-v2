@@ -2,14 +2,14 @@ import { ref, computed, watch, onScopeDispose } from "vue";
 import { httpsCallable } from "firebase/functions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { archiveActorAllowed, archiveIdentifier, parseEmployeeArchiveInput } from "@/functions/shared/employeeArchiveContract.js";
+import { isEmployeeArchiveUxActorAllowed, archiveIdentifier, parseEmployeeArchiveInput } from "@/composables/domain/employee/employeeArchiveContract.js";
 
 export function useEmployeeArchive(employeeId, employee, onArchived) {
   const auth = useAuthStore(), messages = useMessagesStore(), { $functions } = useNuxtApp();
   const visible = ref(false), busy = ref(false), uncertain = ref(false), reason = ref(""), message = ref("");
   let generation = 0, attempt = null;
   const scope = computed(() => auth.isEmailVerified === true && auth.isSuperUserClaimValid === true && archiveIdentifier(employeeId.value)
-    && archiveActorAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user)
+    && isEmployeeArchiveUxActorAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user)
     ? JSON.stringify([auth.companyId, auth.uid, employeeId.value, auth.isSuperUser, auth.user.isAdmin, auth.user.roles]) : null);
   function reset() { generation++; visible.value = false; busy.value = false; uncertain.value = false; reason.value = ""; message.value = ""; attempt = null; }
   watch(scope, reset, { flush: "sync" }); onScopeDispose(reset);
