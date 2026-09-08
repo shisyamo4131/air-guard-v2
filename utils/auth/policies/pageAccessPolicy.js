@@ -8,6 +8,7 @@ import {
   hasPresetPermission,
 } from "../authorization.js";
 import { canViewLifecycleOperationHistory } from "./userLifecycleUiPolicy.js";
+import { employeeAllowed } from "../../../functions/shared/employeeContract.js";
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) {
@@ -63,38 +64,29 @@ export function isPublicPageAccessPolicy(policy) {
   return policy === PAGE_ACCESS_POLICIES.PUBLIC;
 }
 
-function hasAccess(requiredRoles, userRoles) {
+function hasAccess(requiredRoles, accessContext) {
   if (!requiredRoles || requiredRoles.length === 0) {
     return true;
   }
 
-  if (!userRoles || userRoles.length === 0) {
-    return false;
+  if (accessContext.isAdmin === true) {
+    return true;
   }
 
   if (
-    requiredRoles.includes("super-user") &&
-    !userRoles.includes("super-user")
+    accessContext.isSuperUserClaimValid === true &&
+    accessContext.isSuperUser === true
   ) {
-    return false;
-  }
-
-  if (requiredRoles.includes("developer") && !userRoles.includes("developer")) {
-    return false;
-  }
-
-  if (userRoles.includes("admin")) {
     return true;
   }
 
-  const userPermissions = getPermissions(userRoles);
-  if (userPermissions.includes("*")) {
-    return true;
-  }
+  const actorRoles = accessContext.presetRoles;
+  if (!Array.isArray(actorRoles) || actorRoles.length === 0) return false;
 
+  const userPermissions = getPermissions(actorRoles);
   return requiredRoles.some(
     (required) =>
-      userRoles.includes(required) || userPermissions.includes(required),
+      actorRoles.includes(required) || userPermissions.includes(required),
   );
 }
 
@@ -120,15 +112,60 @@ export function isPageAccessAllowed(
     return false;
   }
 
-  if (
-    policy === PAGE_ACCESS_POLICIES.PUBLIC ||
-    policy === PAGE_ACCESS_POLICIES.AUTHENTICATED
-  ) {
+  if (policy === PAGE_ACCESS_POLICIES.PUBLIC) {
     return true;
   }
 
+  if (policy === PAGE_ACCESS_POLICIES.AUTHENTICATED) {
+    return accessContext?.isAuthenticated === true;
+  }
+
+  if (accessContext?.isActiveRegisteredActor !== true) {
+    return false;
+  }
+
+  if (policy === PAGE_ACCESS_POLICIES.SUPER_USER) {
+    return Boolean(
+      accessContext.isSuperUserClaimValid === true &&
+        accessContext.isSuperUser === true,
+    );
+  }
+
+  if (policy === PAGE_ACCESS_POLICIES.DEVELOPER) {
+    return Boolean(
+      accessContext.isDeveloperClaimValid === true &&
+        accessContext.isDeveloper === true,
+    );
+  }
+
+  if (policy === PAGE_ACCESS_POLICIES.ADMIN) {
+    return Boolean(
+      accessContext.isAdmin === true ||
+        (accessContext.isSuperUserClaimValid === true &&
+          accessContext.isSuperUser === true),
+    );
+  }
+
+  if (policy === PAGE_ACCESS_POLICIES.EMPLOYEES_READ) {
+    return Boolean(
+      accessContext.isSuperUserClaimValid === true &&
+        employeeAllowed(
+          {
+            uid: accessContext.actorUid,
+            companyId: accessContext.companyId,
+            isSuperUser: accessContext.isSuperUser,
+            actorUser: accessContext.actorUser,
+          },
+          false,
+        ),
+    );
+  }
+
   if (policy === PAGE_ACCESS_POLICIES.USER_MANAGEMENT) {
-    if (!hasValidUserManagementContext(accessContext)) {
+    if (
+      accessContext.isSuperUser !== false ||
+      !hasValidUserManagementContext(accessContext)
+    ) {
       return false;
     }
 
@@ -147,5 +184,5 @@ export function isPageAccessAllowed(
     });
   }
 
-  return hasAccess(policy.requiredRoles, userRoles);
+  return hasAccess(policy.requiredRoles, accessContext);
 }

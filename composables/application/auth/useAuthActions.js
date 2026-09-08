@@ -36,6 +36,22 @@ export function useAuthActions() {
   /*****************************************************************************
    * METHODS
    *****************************************************************************/
+  function resetSessionModels() {
+    auth.user.unsubscribe();
+    auth.user.initialize();
+    companyStore.company.unsubscribe();
+    companyStore.company.initialize();
+    FireModel.setConfig({ prefix: "Companies/unknown" });
+  }
+
+  function resetAccessClaims() {
+    auth.isSuperUser = false;
+    auth.isSuperUserClaimValid = false;
+    auth.isDeveloper = false;
+    auth.isDeveloperClaimValid = false;
+    auth.companyId = null;
+  }
+
   /**
    * Signs in a user with the given email and password.
    * @param {{email: string, password: string}} options
@@ -74,25 +90,28 @@ export function useAuthActions() {
    * @returns {Promise<void>}
    */
   async function initializeSession(user) {
-    const idTokenResult = await user.getIdTokenResult(true);
-    const rawIsSuperUserClaim = idTokenResult.claims?.isSuperUser;
-
+    resetSessionModels();
+    resetAccessClaims();
     auth.uid = user.uid;
-    auth.isEmailVerified = user.emailVerified;
+    auth.isEmailVerified = user.emailVerified === true;
+    auth.sessionInitializationFailed = false;
+
+    const idTokenResult = await user.getIdTokenResult();
+    const rawIsSuperUserClaim = idTokenResult.claims?.isSuperUser;
+    const rawIsDeveloperClaim = idTokenResult.claims?.isDeveloper;
+
     auth.isSuperUserClaimValid =
       typeof rawIsSuperUserClaim === "boolean";
-    auth.isSuperUser = !!rawIsSuperUserClaim;
-    auth.isDeveloper = !!idTokenResult.claims?.isDeveloper;
+    auth.isSuperUser = rawIsSuperUserClaim === true;
+    auth.isDeveloperClaimValid =
+      rawIsDeveloperClaim === undefined ||
+      typeof rawIsDeveloperClaim === "boolean";
+    auth.isDeveloper = rawIsDeveloperClaim === true;
     auth.companyId = idTokenResult.claims?.companyId || null;
 
     // companyIdがまだカスタムクレームに設定されていないユーザーについては、
     // 認証情報を維持したままUser・Companyの状態だけを初期化する。
     if (!auth.uid || !auth.companyId) {
-      auth.user.unsubscribe();
-      auth.user.initialize();
-      companyStore.company.unsubscribe();
-      companyStore.company.initialize();
-      FireModel.setConfig({ prefix: "Companies/unknown" });
       return;
     }
 
@@ -114,16 +133,9 @@ export function useAuthActions() {
   async function clearSession() {
     auth.uid = null;
     auth.isEmailVerified = false;
-    auth.isSuperUser = false;
-    auth.isSuperUserClaimValid = false;
-    auth.isDeveloper = false;
-    auth.companyId = null;
-
-    auth.user.unsubscribe();
-    auth.user.initialize();
-    companyStore.company.unsubscribe();
-    companyStore.company.initialize();
-    FireModel.setConfig({ prefix: "Companies/unknown" });
+    auth.sessionInitializationFailed = false;
+    resetAccessClaims();
+    resetSessionModels();
   }
 
   /**
@@ -135,6 +147,7 @@ export function useAuthActions() {
   async function setUser(user) {
     logger.clearError();
     auth.isReady = false;
+    auth.sessionInitializationFailed = false;
     try {
       if (user) {
         await initializeSession(user);
@@ -142,6 +155,9 @@ export function useAuthActions() {
         await clearSession();
       }
     } catch (error) {
+      resetSessionModels();
+      resetAccessClaims();
+      auth.sessionInitializationFailed = true;
       logger.error({
         message: `Failed to set user: ${error.message}`,
         error,

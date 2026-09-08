@@ -1,6 +1,6 @@
 /*****************************************************************************
  * Firebase Authentication Observer Plugin for Nuxt3 ver 1.0.0
- * - Monitors user login status using Firebase Authentication's `onAuthStateChanged`.
+ * - Monitors login and ID token changes using Firebase Authentication's `onIdTokenChanged`.
  * - Automatically reacts to login/logout events and updates the auth store accordingly.
  *
  * Notes:
@@ -9,7 +9,7 @@
  * @author shisyamo4131
  *****************************************************************************/
 import { getApps } from "firebase/app";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getAuth, onIdTokenChanged } from "firebase/auth";
 import { useAuthActions } from "@/composables/application/auth/useAuthActions";
 
 // Messages for logging or errors
@@ -28,7 +28,7 @@ export default defineNuxtPlugin(() => {
   let setUser;
   let sessionUpdate = Promise.resolve(); // 認証状態が変化したことによる手続きを直列化するための Promise チェーン
 
-  onAuthStateChanged(getAuth(), (user) => {
+  onIdTokenChanged(getAuth(), (user) => {
     auth ??= useAuthStore();
     system ??= useSystemStore();
     if (!setUser) {

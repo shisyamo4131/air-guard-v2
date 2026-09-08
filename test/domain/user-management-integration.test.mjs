@@ -9,6 +9,7 @@ import {
   isPageConfigAllowed,
 } from "../../utils/pageSettings.js";
 import { PAGE_ACCESS_POLICIES } from "../../utils/auth/policies/pageAccessPolicy.js";
+import { buildPageAccessContext } from "../../utils/auth/pageAccessContext.js";
 
 const components = [
   "components/Users/Manager/index.vue",
@@ -26,11 +27,41 @@ function navigationValues(items) {
   ]);
 }
 
+function accessContext({
+  roles = [],
+  isAdmin = false,
+  isSuperUser = false,
+} = {}) {
+  return buildPageAccessContext({
+    isReady: true,
+    uid: "actor-a",
+    companyId: "company-a",
+    isEmailVerified: true,
+    isSuperUser,
+    isSuperUserClaimValid: true,
+    isDeveloper: false,
+    isDeveloperClaimValid: true,
+    user: {
+      docId: "actor-a",
+      companyId: "company-a",
+      disabled: false,
+      isTemporary: false,
+      isAdmin,
+      roles,
+    },
+    roles: [
+      ...roles,
+      ...(isAdmin ? ["admin"] : []),
+      ...(isSuperUser ? ["super-user"] : []),
+    ],
+  });
+}
+
 test("User settings route and navigation share the User management access policy", () => {
-  const managerContext = { presetRoles: ["manager"], isAdmin: false };
-  const directContext = { presetRoles: ["users:write"], isAdmin: false };
-  const superUserContext = { presetRoles: [], isAdmin: false };
-  const adminContext = { presetRoles: [], isAdmin: true };
+  const managerContext = accessContext({ roles: ["manager"] });
+  const directContext = accessContext({ roles: ["users:write"] });
+  const superUserContext = accessContext({ isSuperUser: true });
+  const adminContext = accessContext({ isAdmin: true });
 
   assert.equal(
     isPageAllowed("/settings/users", ["manager"], managerContext),
@@ -68,10 +99,38 @@ test("User settings route and navigation share the User management access policy
 
 test("general page access retains wildcard and direct-permission behavior", () => {
   const config = { accessPolicy: PAGE_ACCESS_POLICIES.OUTSOURCERS_READ };
-  assert.equal(isPageConfigAllowed(config, ["super-user"]), true);
-  assert.equal(isPageConfigAllowed(config, ["outsourcers:write"]), true);
-  assert.equal(isPageConfigAllowed(config, ["controller"]), true);
-  assert.equal(isPageConfigAllowed(config, ["human-resource"]), false);
+  assert.equal(
+    isPageConfigAllowed(
+      config,
+      ["super-user"],
+      accessContext({ isSuperUser: true }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPageConfigAllowed(
+      config,
+      ["outsourcers:write"],
+      accessContext({ roles: ["outsourcers:write"] }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPageConfigAllowed(
+      config,
+      ["controller"],
+      accessContext({ roles: ["controller"] }),
+    ),
+    true,
+  );
+  assert.equal(
+    isPageConfigAllowed(
+      config,
+      ["human-resource"],
+      accessContext({ roles: ["human-resource"] }),
+    ),
+    false,
+  );
 });
 
 test("custom User actions use the shared pending-operation boundary", async () => {

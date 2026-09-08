@@ -94,16 +94,19 @@ test("EMP02 stay-limit clear transmits raw flag and date expectations", async ()
   h.setRaw(raw); await h.editor.open(); h.editor.update({ hasPeriodOfStayLimit: false }); await h.editor.save();
   assert.deepEqual(h.calls[0].input.expected, contract.expectedFields(raw, ["hasPeriodOfStayLimit", "periodOfStay"]));
 });
-test("EMP02 actual AirItemInput attrs feed the statically registered display-name slot", async () => {
+test("EMP02 actual AirItemInput attrs feed the dotted display-name slot", async () => {
   const source = await readFile(new URL("../../air-vuetify-v3/src/AirItemInput.vue", import.meta.url), "utf8");
   const { descriptor } = parse(source);
   const editorSource = await readFile(new URL("../../components/Employee/Editor.vue", import.meta.url), "utf8");
   const editor = parse(editorSource).descriptor;
   const compiled = compileTemplate({ source: editor.template.content, filename: "EmployeeEditor.vue", id: "employee-editor" });
   assert.deepEqual(compiled.errors, []);
-  assert.match(compiled.code, /_resolveComponent\("v-text-field"\)/);
-  assert.match(compiled.code, /"input\.displayName":/);
-  assert.match(editor.template.content, /#input\.displayName="\{ attrs \}"[\s\S]*?<v-text-field v-bind="attrs"/);
+  assert.match(compiled.code, /_resolveComponent\("air-text-field"\)/);
+  assert.match(compiled.code, /_resolveComponent\("AppEditorDialog"\)/);
+  assert.match(editor.template.content, /<AppEditorDialog[\s\S]*?:mode="mode"[\s\S]*?:submit-disabled="submitDisabled"[\s\S]*?@submit="save"/u);
+  assert.doesNotMatch(editor.template.content, /<v-dialog|@click="save"/u);
+  assert.match(compiled.code, /\[`input\.displayName`\]:/);
+  assert.match(editor.template.content, /#\[`input\.displayName`\]="\{ attrs \}"[\s\S]*?<air-text-field v-bind="attrs"/);
   assert.match(descriptor.template.content, /:name="`input\.\$\{field\.key\}`"[\s\S]*?:attrs="field\.component\.attrs"/);
   const setup = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");
   for (const operation of ["create", "basic"]) {

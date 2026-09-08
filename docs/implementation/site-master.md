@@ -45,9 +45,9 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## 検索・表示
 
-- ACTIVE一覧はcurrent Userの会社配下かつstatus=ACTIVEのSite専用listenerを使い、初回loading、正常な0件、listener失敗を区別する。customerIdとsecurityTypeはclient filterし、表示は20件単位で、条件変更時に1ページ目へ戻る。
+- ACTIVE一覧はcurrent Userの会社配下かつstatus=ACTIVEのSite専用listenerを使い、初回loading、正常な0件、listener失敗を区別する。customerIdとsecurityTypeもFirestore queryの条件へ含め、updatedAt降順・同値時はdocument ID降順で最大20件を表示する。
 - 一覧表示はcode、`displayName`、liveまたは埋込みCustomer名称、securityType、JST工期、status、Customer未設定時の仮登録Chip。customerId欠損時にCustomer読取りを行わない。
-- TERMINATED一覧は検索文字列がある時だけN-gram検索し、status=TERMINATEDを追加する。空検索では0件とし、入力変更・clear後に古い応答を反映しない。loading、0件、失敗を区別する。
+- TERMINATED一覧は、検索文字列がある時はN-gram検索へstatus=TERMINATEDを追加する。空検索ではstatus=TERMINATEDのうちupdatedAt降順・同値時はdocument ID降順で最近更新された最大20件を表示し、入力変更・clear後に古い応答を反映しない。loading、0件、失敗を区別する。
 - Site AutocompleteはN-gram検索にstatus constraintを付けず、ACTIVEを先にしつつ検索関連順を維持する。検索・ID lookupの古い応答を破棄し、TERMINATED確認の取消時は直前の確定値を保持する。
 - 詳細はroute ID変更時に購読を切替え、初回loading、取得失敗、not-foundを区別する。not-foundでは編集・終了・再有効化・archive等の操作UIを描画しない。購読開始後の非同期listener errorは現行共通adapterがerror callbackを公開しないため、既存の制約として残る。
 - SITE-04では非atomicな旧手動終了を専用Callableへ置換した。ACTIVE Siteだけを通常編集でき、TERMINATEDは終了済み表示と新規選択確認を経て単発予定に使用できる。継続再開はreasonと新工期を必須にし、現在のCustomer設定を変えない。read-only actorにはmaster write入口を表示せず、削除入口はactorにかかわらず表示しない。

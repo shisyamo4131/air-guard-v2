@@ -6,6 +6,7 @@ import { Timestamp, GeoPoint } from "firebase/firestore";
 import { Employee, User } from "@shisyamo4131/air-guard-v2-schemas";
 import FireModel from "@shisyamo4131/air-firebase-v2";
 import ClientAdapter from "@shisyamo4131/air-firebase-v2-client-adapter";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { parse, compileScript, compileTemplate } from "@vue/compiler-sfc";
 import * as contract from "../../functions/shared/employeeContract.js";
 import * as rangeValidators from "../../composables/validators/rangeValidator.js";
@@ -37,7 +38,9 @@ function coreHarness() {
 function sdkHarness() {
   const listeners = [], queries = [];
   return { listeners, queries, bindings: {
-    doc: (_, path) => ({ path }), collection: (_, path) => ({ path }), where: (...args) => args,
+    doc: (_, path) => ({ path }), collection: (_, path) => ({ path }),
+    documentId: () => "__name__", limit: (value) => ["limit", value],
+    orderBy: (...args) => ["orderBy", ...args], where: (...args) => args,
     query: (reference, ...constraints) => ({ ...reference, constraints }),
     onSnapshot(reference, options, next, error) { const entry = { reference, options, next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
     getDocsFromServer(reference) { const entry = { reference, ...deferred() }; queries.push(entry); return entry.promise; },
@@ -59,8 +62,8 @@ async function authorizedListHarness() {
   const makeAccess = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", bindings);
   const effect = Vue.effectScope(); let access, list;
   effect.run(() => { access = makeAccess(); });
-  const makeList = await factory("composables/application/employee/useEmployeeList.js", "useEmployeeList", { ...bindings, createEmployeeListSession, useEmployeeReadAccess: () => access });
-  effect.run(() => { list = makeList({ status: "ACTIVE", search: Vue.ref(""), fetchAllOnEmpty: true }); });
+  const makeList = await factory("composables/application/employee/useEmployeeList.js", "useEmployeeList", { ...bindings, normalizeTokenText, createEmployeeListSession, useEmployeeReadAccess: () => access });
+  effect.run(() => { list = makeList({ status: "ACTIVE", search: Vue.ref("") }); });
   return { ...sdk, auth, actor, access, list, effect };
 }
 

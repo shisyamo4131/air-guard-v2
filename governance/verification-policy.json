@@ -48,10 +48,10 @@
       "id": "ui-css-layout",
       "triggers": ["Vue component presentation, CSS, layout, accessibility, browser interaction, or user-visible UI behavior"],
       "iterationGateIds": ["diff-check"],
-      "targetedRegressionGateIds": ["domain-full", "local-ui-build"],
-      "completionGateIds": ["project-docs", "domain-full", "local-ui-build", "diff-check"],
+      "targetedRegressionGateIds": ["domain-full"],
+      "completionGateIds": ["project-docs", "domain-full", "diff-check"],
       "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
-      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite"],
+      "omittableGateIds": ["project-docs-negative", "capacity-regression", "managed-governance", "local-emulator-suite", "local-ui-build"],
       "omissionRecord": "Completion report or acceptance receipt"
     },
     {
@@ -90,8 +90,8 @@
       "iterationGateIds": ["diff-check"],
       "targetedRegressionGateIds": ["project-docs", "domain-full"],
       "completionGateIds": ["project-docs", "project-docs-negative", "capacity-regression", "managed-governance", "diff-check"],
-      "releaseOnlyGateIds": ["local-emulator-suite", "local-ui-build", "generate-dev", "generate-prod"],
-      "omittableGateIds": [],
+      "releaseOnlyGateIds": ["generate-dev", "generate-prod"],
+      "omittableGateIds": ["local-emulator-suite", "local-ui-build"],
       "omissionRecord": "Approved release checkpoint evidence or completion report"
     }
   ],

@@ -5,7 +5,8 @@
 ## 現在の作業
 
 - 製品は試験運用中。Site SITE-09、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09のDev受入れを完了し、各roadmapを100%とした。
-- 4マスター管理画面は見た目・操作感を揃える別phaseへ進み、共通の`AppViewportContainer`を4一覧pageのrootへ導入した。`AppMasterListToolbar`は検索欄と前後action slotを提供する未接続の共通componentとして作成・review済みで、4画面への適用は未実施である。
+- 4マスター管理画面は見た目・操作感を揃える別phaseへ進み、共通の`AppViewportContainer`と`AppMasterListToolbar`を一覧へ適用した。一覧Readは、空検索では取引先・稼働中／終了済み現場・在職従業員・外注先を`updatedAt`の新しい順、退職者を退職日の新しい順に最大20件表示し、文字列入力時は正規化済み`tokenMap`検索へ統一するlocal改修を進めている。Editorの操作非依存ラッパー`AppEditorDialog`はCustomer基本・支払条件、Site基本・取引先、Employee共通Editor、Outsourcer更新へ適用し、actionを既存AtomsのCancel／Submitへ揃えた。Submitは`type="submit"`でVFormのvalidation経路を使用する。Site取極め・終了・再開・archive等の専用操作と、作成用・編集用入力componentの分離は対象外である。
+- page navigation、route middleware、表示中pageの認可は共通access context／policyへ統一するlocal改修を進めている。権限外menu、未登録route、権限喪失後の表示継続をfail closedにし、不要な`/test/user-permission-info`を削除した。Firestore Rules、Dev・Prod・実dataは変更していない。
 - 2026-09-04の反省会に基づくproject rule整理の判断は[ADR 0049](../decisions/0049-project-rule-routing-and-checkpoint-closeout.md)、現在の入口と必読routeは[project rule index](../../governance/project-rules.md)を正とする。共通ガバナンス、生成AGENTS、lock記録済みmanaged reference、verification policy、製品code・data・environmentはこの整理の変更対象外である。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 - governance移行の実行範囲・未検証事項は[移行記録](../migrations/2026-09-03-governance-3.0.0.md)、通常startupへの変更判断は[ADR 0045](../decisions/0045-governance-3-normal-startup.md)を参照します。
@@ -18,7 +19,7 @@
 
 ## 次の作業
 
-4マスターの初回bounded Dev受入れは完了した。準備一覧は完了済みpreflightの根拠として残す。現在のUI整理では4一覧pageと各Managerの構造を比較し、次に切り出す共通componentの責務・配置・適用順・risk・testを提案する。提案段階では実装せず、既存pageへの`AppMasterListToolbar`適用を含む追加writeは利用者承認後に行う。data処置、tenant開放、Prod、Git統合もそれぞれの承認境界に従う。
+今回のbranchは、(1) `AppEditorDialog`の4マスター通常更新への適用、(2) domain testと必要最小限のlocal動作確認、(3) 固定commitのHosting・必要indexをDevへ反映して4マスターの一覧・検索・更新・権限を確認、(4) 利用者受入れ後にmainへmerge commit、の順で終了する。Dev releaseにはcleanな機能branch commitが必要であり、main操作はDev受入れ後に行う。終了後は別branchで[FUT-0186](future-actions.md#fut-0186-配置管理の楽観的更新回帰を復旧する)を最優先でreview・修正し、その後に[FUT-0185](future-actions.md#fut-0185-firestore-rulesの責務と式数を段階的に整理する)のFirestore Rules再編へ進む。作成用・編集用入力componentの分離、data処置、tenant開放、Prod反映はそれぞれ別の承認境界とする。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

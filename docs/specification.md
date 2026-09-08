@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-06
-- 仕様バージョン: 0.8.18
+- 最終更新日: 2026-09-08
+- 仕様バージョン: 0.8.19
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -50,6 +50,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Schemas packageを更新する前後は、当該turnでsource tag manifest、repository release evidence、AirGuardV2 root/Functionsのmanifest・lockにあるname、version、resolved、integrityを機械照合する。prompt、chat、要約、agent reportだけでpackage identityを確定せず、矛盾時はconsumer file変更・install・testを開始しない。`3.0.0-dev.1`はSTRIPE-02でroot/Functionsへ導入し、`PostAdoption`で同一version・tarball・integrityを確認済みである。旧`2.4.2-dev.167`はこのlocal checkpointのrollback baselineとして履歴保持する。
 - ドメイン上の操作可否をclientで事前検証する機能は、UI非依存の純粋policy、policyを適用して操作可否・拒否理由・実行処理を提供するapplication composable、結果を表示するcomponentへ責務を分離する。client判定はUX補助であり、serverの最終認可を代替しない。
 - 登録済みpage routeは、`public`、`roles`、User管理固有fieldを個別に保持せず、Vue/Nuxt非依存の共有`accessPolicy` catalogを1件だけ参照する。route middlewareとnavigationは同じpolicy evaluatorを使用し、pathを持たないnavigation groupの表示はアクセス可能な子itemから導出する。未知policy、複製policy、旧fieldとの併記、不正なUser管理contextはclientでfail closedとする。
+- 認証済み業務pageの表示と遷移は、現在のAuthentication UID・company claim、メール確認状態、同じ会社のUser document、有効・本登録状態、会社管理者field、既知role／直接permission、および型が正しいspecial claimを一つのaccess contextとして判定する。保存User roleに`admin`、`super-user`、`developer`、`*`または不正な値が含まれる場合は許可根拠にせずfail closedとし、会社管理者・super-user・developerはそれぞれ正式fieldまたはboolean claimだけから導出する。Employee閲覧、User管理、User lifecycle等の個別に厳格なpolicyは一般permission判定へ緩和しない。
+- navigation、route middleware、表示中pageの再認可は同じaccess contextとpolicy evaluatorを使用する。権限外のmenuは表示せず、未登録routeまたは権限外pageへの遷移と、表示中のrole・無効状態・tenant・special claim変更による権限喪失はdashboardへ戻す。dashboardは認証session初期化失敗時を含む安全な遷移先とし、未認証、メール未確認・会社未確立、maintenanceは各専用経路を優先する。このclient判定はUX gateであり、Firestore Rulesまたはserver認可を代替しない。
 
 ### バックエンド
 
@@ -98,7 +100,8 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - Firestoreのclient書込み境界はcollection名だけで一律に決めず、各機能のactor、field ownership、整合性、監査、同時実行、offline要件を確認して機能単位で見直す。CUDを常にFunctionsへ移すこと、または常にclient Rulesへ残すことのどちらも共通原則とはしない。
 - マスタ管理機能の改修中は対象masterのCRUDを主対象とし、配置・通知・稼働実績・請求・帳票などtransaction系機能への波及変更はFirestore更新に関係しない互換修正に限定する。transaction系の要改修箇所を検出しても実装せず既知課題へ記録し、マスタ管理の一連の改修後に別checkpointで見直す。Employee archiveの参照整合性に必要なwriter・Rules・索引・背景処理だけはADR 0060の限定例外として設計対象に含め、実装はEmployeeの合意済み工程で行う。
 - 配置管理で作業員を追加・変更・削除・並べ替えする通常経路は、現時点ではFirestore client transactionによる直接更新を維持する。将来Server APIへ移行する場合は、画面へ即時反映する楽観的更新に加え、失敗時の明示的なrollback、正本の再取得、利用者向けerror表示、再試行導線を同じ変更単位の受入れ条件とする。
-- Prod公開前までに、既存のmaster dataとtransaction dataの作成・更新・削除を機能単位で順番に見直す。clientから直接書くoperationはFirestore Rulesで同一会社、必要なpermission、変更可能field、型、状態を強制し、Callableを使うoperationは同じ条件をserver側で再確認する。画面の表示・非表示だけを認可根拠にしない。次の見直し対象はCustomer masterとする。
+- Prod公開前までに、既存のmaster dataとtransaction dataの作成・更新・削除を機能単位で順番に見直す。clientから直接書くoperationはFirestore Rulesで同一会社、必要なpermission、変更可能field、型、状態を強制し、Callableを使うoperationは同じ条件をserver側で再確認する。画面の表示・非表示だけを認可根拠にしない。
+- 4マスターUI改修の完了後は、Firestore Rulesの責務と式数を整理する工程を必須の次phaseとして開始する。一括書換えは行わず、collectionとclient／server利用経路の棚卸し、未定義collectionを許可しない既定拒否への移行、副作用・金銭・通知を伴う高risk更新のCallable化、Site Rulesの式数削減、必要な場合だけの公開field分離を、rollback可能なcheckpointに分ける。各checkpointでは既存query・schema・tenant・actor・field・状態遷移との互換性を確認し、Rules／Emulatorの許可・拒否testを通してから次へ進む。
 - App Checkの実装・強制、全般的なrate limit、Callable public invokerの常時監視はProd公開前の必須gateとして扱い、Devでの個別機能追加の前提にしない。ただしFunctionsを追加または変更してDevへ反映する場合は、対象Functionへ正規画面から到達できるpublic invoker・CORSをrelease確認として検証する。未認証入口、外部費用、異常呼出しの具体的なriskが確認された場合は、該当operationだけを前倒しで対処する。
 - Company設定ではsuper-userであることだけを正式actorの根拠にしない。会社横断の保守・migration・repairは、恒久的なCompany設定権限ではなく、対象と作用を限定して個別承認されたservice provider/operator手順として扱う。表示順だけは、同じtenantの有効な本登録会社管理者でもあるsuper-userに、自社の`siteOrder`と`scheduleOrder`の更新を許可する。会社管理者でないsuper-user、他tenant、profile・billing・operations等の他のCompany設定にはこの例外を広げない。
 - スーパーユーザーの例外権限は、明示されたルール・サーバー処理だけで許可する。
@@ -188,7 +191,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 住所保存・座標取得失敗・旧座標消去・未取得通知・住所不変時の保持は[共通仕様](#住所と座標)に従う。Employee固有の用途と閲覧actorを上記に定める。
 
 - codeは任意・手入力・重複可とし、document IDをidentityとする。姓名だけの変更では表示名を再生成し、同じ保存で表示名も明示変更した場合は入力した表示名を優先する。表示名カナは独立入力とし、過去記録の表示は現在master名を使う既存方式を維持する。
-- 新規登録は在職者一覧から行い、退職者検索には作成入口を設けない。在職一覧は空検索で一覧をフリガナ順に表示し、退職検索は空なら0件とする。通常候補のACTIVE/RESIGNEDと期間内在籍者の既存条件を維持し、新たな在職者限定を加えない。
+- 新規登録は在職者一覧から行い、退職者検索には作成入口を設けない。在職一覧は空検索で`updatedAt`が新しい在職Employeeを最大20件表示し、退職者一覧は空検索で`dateOfTermination`が新しい退職Employeeを最大20件表示する。検索文字列がある場合は、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。通常候補のACTIVE/RESIGNEDと期間内在籍者の既存条件を維持し、新たな在職者限定を加えない。
 - `Employees_archive`のget/listは通常Employeeと同じ会社管理者・統括・人事・労務・法務・管制・経理へ全項目を許可する。同社Userであることだけでは許可しない。通常一覧・選択候補から除外し、直接client CUDとrestoreは拒否する。今回archive管理一覧は新設しない。
 - 通常保存は専用operationを使い、独立draftから変更した所有fieldと必要な派生fieldだけを最新原本へ保存する。未知field・不存在・他section・User/Auth・lifecycleを保持し、直接client CUDと汎用経路の迂回を拒否する。通常可逆fieldはlast-write-winsとし、編集中sectionの外部変更通知時は入力を保持して明示再読込を求める。通知前の競合は残る。入社日、従属情報を消す国籍/警備員flag解除、資格配列、保険操作は局所期待値で古い要求を拒否する。
 - 保険操作では現在mapに加え、Employeeのapplication所有field `insuranceOperationVersions`に保険別の非負safe integerを持ち、成功時に対象だけを増やす。履歴復元で巻き戻さない。新規は3保険とも0、既存はinsuranceOperationVersions全体が不存在の場合だけlegacy 0とし、最初の成功操作で原子的に初期化する。不正値・欠損key・上限超過は拒否する。期待値は表示用Classと分離した同時点のraw snapshotから取得し、取得失敗を不存在とみなさない。詳細な保存・wire・archive snapshot・参照catalogは[Employee設計契約](implementation/employee-master.md#通常保存の技術契約)に従う。
@@ -207,13 +210,14 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - OUT-02では既存path、検索、配置明細、statusの業務上の意味を変更せず、data migrationを行わない。delete/archive、検索・一覧、重複配置の実装変更も対象外とする。
 - Outsourcerの`contractStatus`はCustomerと同様に、その時点の取引状況を表すだけの可逆なフラグとする。`ACTIVE/TERMINATED`のどちらであっても、外注先一覧・キーワード検索・Autocomplete・配置・稼働実績その他の候補選択から除外せず、既存・新規の業務操作を状態だけで禁止しない。状態変更によって配置、通知、実績、請求、帳票を自動変更・終了・取消しせず、再開時も既存記録を書き換えない。
 - Outsourcerの状態変更に契約終了日、開始日、終了理由、専用履歴を追加または必須化しない。通常の`uid/updatedAt`は維持するが、`updatedAt`を契約終了日時と解釈しない。archiveは状態フラグと分離し、通常機能では行わない。
-- 外注先一覧の通常表示は`nameKana`、同値時document IDの昇順とし、21件を取得して20件ずつserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryだけに保持する。作成・更新後は先頭pageへ戻す。
-- キーワード検索は正規化後2〜40文字だけを受け付け、`name`、`nameKana`、`displayName`から既存writerが生成する`tokenMap`を対象とする。codeは検索しない。検索中は一致結果をlive購読し、`nameKana`、同値時document IDでclient側sortして20件ずつmemory paginationする。入力なしは通常一覧へ戻り、範囲外入力ではqueryを実行せず案内を表示する。
+- 外注先一覧の通常表示は`updatedAt`、同値時document IDの降順とし、21件を取得して最近追加・更新された20件ずつをserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryだけに保持する。作成・更新後は先頭pageへ戻す。
+- キーワード検索は正規化後1〜40文字を受け付け、`name`、`nameKana`、`displayName`から既存writerが生成する`tokenMap`を対象とする。codeは検索しない。検索中は一致結果をlive購読し、`nameKana`、同値時document IDでclient側sortして20件ずつmemory paginationする。入力なしは通常一覧へ戻り、範囲外入力ではqueryを実行せず案内を表示する。
 - 一覧、Card、Autocompleteの外注先表示は略称、正式名称、codeを識別できるようにし、`TERMINATED`には「契約終了」を表示する。この表示によって選択や編集を無効化しない。Autocompleteは外注先専用ListItemを使い、既存の最大50件取得境界を維持する。
 
 ### 取引先・現場・取極め
 
 - 取引先の閲覧は既存の同一会社境界を維持する。作成、基本情報変更、支払条件変更は、同じ会社の有効な本登録Userのうち、会社管理者または既知role preset由来の`customers:write`を持つUserだけに許可する。直接permission文字列、未知role、会社管理者でないsuper-user、仮登録、無効User、他社Userは書込み権限の根拠にしない。
+- 取引先一覧は、検索文字列がない場合に選択中の契約状態を適用し、`updatedAt`が新しい取引先を最大20件表示する。検索文字列がある場合は、選択中の契約状態を維持したまま、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。
 - 取引先の作成は`ACTIVE`で行い、作成フォームに状態選択を設けない。作成後の`contractStatus`変更は基本情報変更に含め、同じ書込み担当だけに許可する。基本情報変更と支払条件変更は操作ごとの対象fieldと更新者・更新時刻だけを部分保存し、document全体を置換しない。名称変更時の検索用情報、住所主要部変更時の位置・表示住所情報は正規画面の専用処理で同時生成する。状態だけの変更では名称・住所の派生情報や支払条件を保存し直さない。
 - 取引先の`contractStatus`（`ACTIVE` / `TERMINATED`）は、その時点の取引状況を表すだけのフラグとする。稼働中の現場・現場稼働予定が存在しても変更でき、状態だけを理由にCustomerの選択・編集や関連する業務操作を禁止しない。過去に作成されたdocumentでも、もともとCustomerを選択できる操作は選択可能なままとし、再開を選択の前提にしない。状態変更によって現場・予定等を自動終了・取消ししない。既存の認証・権限・他の業務条件は緩和しない。
 - 取引状態の変更に終了日時・原因・理由・専用履歴を新設または必須化しない。通常の更新者・更新時刻は維持するが、これを契約終了日時と解釈しない。将来、状態に応じた動作制限を設ける場合は、状態になった日時・原因と過去documentへの適用条件を含めて別途仕様を合意する。判断理由は[ADR 0044](decisions/0044-customer-status-as-descriptive-flag.md)を参照する。
@@ -223,6 +227,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - archive後の参照生成を防ぐため、Sites・OperationResults・BillingsでcustomerIdを新規設定または変更するclient/server writerは、同じ会社の`Customers/{customerId}`が存在することを必須にする。Customer createは同ID archiveが存在すれば拒否し、archive documentを削除済みIDのtombstoneとして扱う。ここでのCustomer存在は`contractStatus=ACTIVE`を意味せず、TERMINATED Customerも通常どおり使用できる。専用lock collectionは設けない。詳細は[ADR 0046](decisions/0046-customer-archive-reference-barrier.md)を正とする。
 - Firestore Rulesは取引先の同一会社、書込み担当、操作別field、型、状態、更新者・更新時刻、削除・archive拒否を強制する。検索用情報と外部住所検索結果の意味上の正しさはRulesだけでは完全再計算できないため、正規画面の専用writerを維持し、server生成へ移すかはDev反映前の残存risk判断とする。
 - 現場は取引先に紐づく。
+- 稼働中現場一覧は、検索文字列がない場合に`updatedAt`が新しいACTIVE Siteを最大20件表示する。取引先・警備種別の絞込みはFirestore queryへ含め、絞込み後の最大20件とする。検索文字列がある場合は同じ絞込みを維持し、ひらがな・カタカナを同一視して正規化した既存`tokenMap`検索結果を表示する。終了現場一覧は、検索文字列がない場合に`updatedAt`が新しいTERMINATED Siteを最大20件表示し、検索文字列がある場合は同じ`tokenMap`検索結果を表示する。
 - 現場の取引先は、同じ会社に存在する別のCustomerへ変更できる。一度設定したcustomerIdを未設定へ戻す操作は提供しない。変更後に新規作成される、または別の更新条件でSiteから再同期される稼働実績は変更後のCustomerを参照するが、既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。既存実績へCustomer・取極めを再適用する場合は、対象・請求影響・監査を明示する別操作とし、空更新へ暗黙の移管処理を持たせない。詳細は[ADR 0048](decisions/0048-site-customer-change-and-historical-snapshots.md)を正とする。
 - Siteへ埋め込むCustomerは、現在の表示と取極め判定に必要なexact 6 field（`docId`、`updatedAt`、`code`、`name`、`abbreviation`、`cutoffDate`）だけのprojectionとする。作成時・SiteのCustomer変更時・Customer master更新triggerはいずれも同じ会社の現在のCustomerから生成し、検索用`tokenMap`、位置情報、住所、支払条件、監査field等を複製しない。既存Siteの広いlegacy埋込みCustomerは読取り互換のため一括変換せず、基本情報、Customerの明示更新、またはCustomer master更新時に現行projectionへ収束させる。取極めだけの更新では埋込みCustomerを書き換えない。新たなCustomer fieldをSiteの埋込み値から読む必要が生じた場合は、client・Functions・RulesのprojectionとRules評価量を同時に見直す。
 - 現場の通常の利用終了は`TERMINATED`で表し、liveの`Sites` collectionに保持する。TERMINATEDはSite masterの通常編集を制限するが、残工事等の一時利用に備えて稼働予定その他の新規業務参照先として選択できる。候補ではACTIVEを先、TERMINATEDを後に分け、終了済みChipと取引先・code・住所等の識別情報を表示して選択時に確認する。選択だけでACTIVEへ戻さず、単発利用はTERMINATEDのまま行える。

@@ -19,13 +19,12 @@ const router = useRouter();
 const { docs, loading, error, reload } = useEmployeeList({
   status: Employee.STATUS_RESIGNED,
   search,
+  recentField: "dateOfTermination",
 });
 </script>
 
 <template>
-  <v-container
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <EmployeesManager
       class="fill-height"
       :docs="docs"
@@ -36,5 +35,5 @@ const { docs, loading, error, reload } = useEmployeeList({
       @click:detail="(item) => router.push(`/employees/${item.docId}`)"
       @reload="reload"
     />
-  </v-container>
+  </AppViewportContainer>
 </template>

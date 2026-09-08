@@ -1,5 +1,14 @@
 import * as Vue from "vue";
-import { collection, onSnapshot, query, where } from "firebase/firestore";
+import {
+  collection,
+  documentId,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { Site } from "@/schemas";
 import { sortSitesActiveFirst } from "@/composables/domain/site/siteUiPresentation";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -13,7 +22,12 @@ function createChannel(emptyValue) {
   return { sequence: 0, promise: Promise.resolve(emptyValue), emptyValue };
 }
 
-export function useActiveSiteLiveRead({ onItem } = {}) {
+export function useActiveSiteLiveRead({
+  onItem,
+  search,
+  customerId,
+  securityType,
+} = {}) {
   const { $firestore } = useNuxtApp();
   const auth = useAuthStore();
   const logger = useLogger("useActiveSiteLiveRead");
@@ -38,7 +52,12 @@ export function useActiveSiteLiveRead({ onItem } = {}) {
     errorMessage.value = "";
   }
 
-  function subscribe(companyId) {
+  function subscribe({
+    companyId,
+    text,
+    selectedCustomerId,
+    selectedSecurityType,
+  }) {
     reset();
     if (typeof companyId !== "string" || !companyId) return;
 
@@ -50,10 +69,24 @@ export function useActiveSiteLiveRead({ onItem } = {}) {
       requestGeneration === generation && requestCompanyId === auth.companyId;
 
     try {
+      const model = new Site();
+      const constraints = [where("status", "==", Site.STATUS_ACTIVE)];
+      if (selectedCustomerId) {
+        constraints.push(where("customerId", "==", selectedCustomerId));
+      }
+      if (selectedSecurityType) {
+        constraints.push(where("securityType", "==", selectedSecurityType));
+      }
+      if (text) constraints.push(...model.createTokenMapQueries(text));
+      else constraints.push(
+        orderBy("updatedAt", "desc"),
+        orderBy(documentId(), "desc"),
+        limit(PAGE_SIZE),
+      );
       const siteQuery = query(
         collection($firestore, "Companies", companyId, "Sites")
           .withConverter(Site.converter()),
-        where("status", "==", Site.STATUS_ACTIVE),
+        ...constraints,
       );
       unsubscribe = onSnapshot(
         siteQuery,
@@ -88,7 +121,16 @@ export function useActiveSiteLiveRead({ onItem } = {}) {
     }
   }
 
-  Vue.watch(() => auth.companyId, subscribe, { immediate: true });
+  Vue.watch(
+    () => ({
+      companyId: auth.companyId,
+      text: normalizeTokenText(Vue.unref(search)),
+      selectedCustomerId: Vue.unref(customerId) || null,
+      selectedSecurityType: Vue.unref(securityType) || null,
+    }),
+    subscribe,
+    { immediate: true },
+  );
   Vue.onScopeDispose(reset);
 
   return {
@@ -139,15 +181,25 @@ export function useSiteUiReads() {
   }
 
   async function searchTerminatedSites(searchText) {
-    const text = typeof searchText === "string" ? searchText.trim() : "";
-    if (!text) {
-      clear("terminated");
-      return [];
-    }
-    return await latest("terminated", () => new Site().fetchDocs({
-      constraints: text,
-      options: [["where", "status", "==", Site.STATUS_TERMINATED]],
-    }), { kind: "search" });
+    const text = normalizeTokenText(searchText);
+    const request = text
+      ? {
+          constraints: text,
+          options: [["where", "status", "==", Site.STATUS_TERMINATED]],
+        }
+      : {
+          constraints: [
+            ["where", "status", "==", Site.STATUS_TERMINATED],
+            ["orderBy", "updatedAt", "desc"],
+            ["orderBy", documentId(), "desc"],
+            ["limit", PAGE_SIZE],
+          ],
+        };
+    return await latest(
+      "terminated",
+      () => new Site().fetchDocs(request),
+      { kind: "search" },
+    );
   }
 
   async function searchAutocompleteSites(searchText) {

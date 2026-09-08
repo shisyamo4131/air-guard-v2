@@ -17,6 +17,7 @@ import {
   isPageConfigAllowed,
 } from "~/utils/pageSettings";
 import { isPublicPageAccessPolicy } from "~/utils/auth/policies/pageAccessPolicy";
+import { buildPageAccessContext } from "~/utils/auth/pageAccessContext";
 import { useAuthStore } from "~/stores/useAuthStore";
 import { useSystemStore } from "~/stores/useSystemStore";
 import { useErrorsStore } from "~/stores/useErrorsStore";
@@ -49,8 +50,9 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   // auth状態の準備ができるまで待機
   await auth.waitUntilReady();
 
-  const isAuthenticated = !!auth.uid;
-  const userRoles = auth.roles ?? [];
+  const accessContext = buildPageAccessContext(auth);
+  const isAuthenticated = accessContext.isAuthenticated;
+  const userRoles = accessContext.userRoles;
   const targetPath = to.path;
 
   // ターゲットパスのページ設定を取得
@@ -72,6 +74,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   // --- B. 認証済みユーザーの処理 ---
+
+  // 認証sessionの初期化に失敗した場合は、setup画面と混同せず安全な画面へ戻す。
+  if (auth.sessionInitializationFailed) {
+    if (targetPath !== "/dashboard") {
+      return navigateTo("/dashboard", { replace: true });
+    }
+    return;
+  }
 
   // 1. メール未認証、または本登録前で会社claimが未設定の場合
   if (!auth.isEmailVerified || !auth.companyId) {
@@ -95,20 +105,8 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     return;
   }
 
-  // 4. 非公開ページの権限チェック
-  // ページ設定が存在しない場合（404想定）はアクセスを許可
-  if (!pageConfig) {
-    return;
-  }
-
-  const allowed = isPageAllowed(targetPath, userRoles, {
-    presetRoles: auth.user.roles,
-    isAdmin: auth.isAdmin,
-    companyId: auth.companyId,
-    actorUid: auth.uid,
-    actorUser: auth.user,
-    isSuperUser: auth.isSuperUser,
-  });
+  // 4. 非公開ページの権限チェック。未登録routeもfail closedとする。
+  const allowed = isPageAllowed(targetPath, userRoles, accessContext);
 
   // 権限がない場合は /dashboard へリダイレクト
   if (!allowed) {

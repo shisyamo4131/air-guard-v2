@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { Customer } from "../../schemas/index.js";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 
 const read = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const stripImports = (source) => source.replace(/^import[\s\S]*?;\r?\n/gmu, "");
@@ -13,11 +14,11 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
   const subscribeDocs = adapter.match(/^  subscribeDocs\([\s\S]*?^  \}/mu)?.[0];
   assert.ok(unsubscribe && subscribeDocs);
   const subscriptions = [];
-  const constraintsSeen = [];
+  const constraintsSeen = [], tokenSearches = [];
   const routes = [];
   const lifecycle = {};
   globalThis.__customerList = {
-    Customer, subscriptions, constraintsSeen, routes, lifecycle,
+    Customer, normalizeTokenText, subscriptions, constraintsSeen, tokenSearches, routes, lifecycle,
     collection: () => ({ withConverter() { return this; } }),
     query: (_ref, ...constraints) => constraints,
     onSnapshot: (constraints, callback) => {
@@ -29,7 +30,7 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
   try {
     const page = (await read("pages/customers/index.vue")).match(/<script setup>([\s\S]*?)<\/script>/u)[1];
     const module = await load(`
-      const {Customer: RealCustomer, subscriptions, constraintsSeen, routes, lifecycle, collection, query, onSnapshot} = globalThis.__customerList;
+      const {Customer: RealCustomer, subscriptions, constraintsSeen, tokenSearches, routes, lifecycle, collection, query, onSnapshot} = globalThis.__customerList;
       const ClientAdapter = {firestore: null};
       class ClientAdapterError extends Error {}
       const ERRORS = {SYSTEM_UNKNOWN_ERROR: 'mock failure'};
@@ -41,6 +42,7 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
         docs = [];
         listener = null;
         createQueries(constraints) { constraintsSeen.push(constraints); return constraints; }
+        createTokenMapQueries(text) { tokenSearches.push(text); return [["token", text]]; }
         _outputErrorConsole(_method, error) { throw error; }
         ${unsubscribe}
         ${subscribeDocs}
@@ -48,13 +50,14 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       const defineOptions = () => {};
       const reactive = value => value;
       const ref = value => ({value});
+      const normalizeTokenText = globalThis.__customerList.normalizeTokenText;
       const useRouter = () => ({push: route => routes.push(route)});
       const useCustomerActions = () => ({canWrite: {value: true}});
       const onMounted = callback => {lifecycle.mount = callback;};
       const onUnmounted = callback => {lifecycle.unmount = callback;};
       const watch = (_source, callback) => {lifecycle.change = callback;};
       ${stripImports(page)}
-      export {customerInstance, selectedStatus, statusOptions, handleClickUpdate};
+      export {customerInstance, search, selectedStatus, statusOptions, handleClickUpdate};
     `);
     assert.equal(module.selectedStatus.value, Customer.STATUS_ACTIVE);
     assert.deepEqual(module.statusOptions, [...Object.values(Customer.STATUS), { title: "すべて", value: "ALL" }]);
@@ -64,7 +67,11 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       if (index > 0) { module.selectedStatus.value = status; lifecycle.change(); }
       assert.equal(module.customerInstance.docs.length, 0, "old rows cleared before new snapshot");
       assert.equal(subscriptions.filter(({ stopped }) => !stopped).length, 1);
-      assert.deepEqual(constraintsSeen.at(-1), status === "ALL" ? [] : [["where", "contractStatus", "==", status]]);
+      assert.deepEqual(constraintsSeen.at(-1), [
+        ...(status === "ALL" ? [] : [["where", "contractStatus", "==", status]]),
+        ["orderBy", "updatedAt", "desc"],
+        ["limit", 20],
+      ]);
       const entry = subscriptions.at(-1);
       const rows = [{ docId: `synthetic-${index}`, contractStatus: status === "ALL" ? "TERMINATED" : status }];
       entry.callback({ docChanges: () => rows.map((item) => ({ type: "added", doc: { data: () => item } })) });
@@ -72,6 +79,10 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       module.handleClickUpdate(rows[0]);
       assert.equal(routes.at(-1), `/customers/${rows[0].docId}`);
     }
+    module.search.value = "やまだ";
+    lifecycle.change();
+    assert.equal(tokenSearches.at(-1), "ヤマダ");
+    assert.deepEqual(constraintsSeen.at(-1), []);
     lifecycle.unmount();
     assert.equal(subscriptions.filter(({ stopped }) => !stopped).length, 0);
     assert.deepEqual(module.customerInstance.docs, []);

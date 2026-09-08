@@ -668,7 +668,10 @@ test("auth session exposes strict SuperUser claim validity to display-order acti
     );
     assert.match(
       authActions,
-      new RegExp(`auth\\.isSuperUser\\s*=\\s*!!${rawClaimName}`, "u"),
+      new RegExp(
+        `auth\\.isSuperUser\\s*=\\s*${rawClaimName} === true`,
+        "u",
+      ),
     );
   } else {
     assert.match(
@@ -677,7 +680,7 @@ test("auth session exposes strict SuperUser claim validity to display-order acti
     );
     assert.match(
       authActions,
-      /auth\.isSuperUser\s*=\s*!!idTokenResult\.claims\?\.isSuperUser/u,
+      /auth\.isSuperUser\s*=\s*idTokenResult\.claims\?\.isSuperUser === true/u,
     );
   }
 
@@ -685,7 +688,11 @@ test("auth session exposes strict SuperUser claim validity to display-order acti
     /async function clearSession\(\) \{([\s\S]*?)\n  \}/u,
   );
   assert.ok(clearSession, "clearSession source contract must remain visible");
-  assert.match(clearSession[1], /auth\.isSuperUserClaimValid\s*=\s*false/u);
+  assert.match(clearSession[1], /resetAccessClaims\(\)/u);
+  assert.match(
+    authActions,
+    /function resetAccessClaims\(\) \{[\s\S]*?auth\.isSuperUserClaimValid\s*=\s*false/u,
+  );
   assert.match(
     authStore,
     /const isSuperUserClaimValid\s*=\s*ref\(false\)\s*;/u,

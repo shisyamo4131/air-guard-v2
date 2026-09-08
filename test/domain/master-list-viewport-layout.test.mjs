@@ -8,9 +8,6 @@ const SHARED_VIEWPORT_PAGES = Object.freeze([
   "pages/sites/index.vue",
   "pages/outsourcers/index.vue",
   "pages/employees/index.vue",
-]);
-
-const STANDALONE_VIEWPORT_PAGES = Object.freeze([
   "pages/sites/terminated.vue",
   "pages/employees/resigned.vue",
 ]);
@@ -59,14 +56,6 @@ test("master list containers are constrained to the viewport layout height", asy
       await source(path),
       /<AppViewportContainer>/u,
       `${path} must use the shared viewport container`,
-    );
-  }
-
-  for (const path of STANDALONE_VIEWPORT_PAGES) {
-    assert.match(
-      await source(path),
-      /height:\s*calc\(100dvh\s*-\s*var\(--v-layout-top\)\s*-\s*var\(--v-layout-bottom\)\)/u,
-      `${path} must constrain its list container to the available viewport height`,
     );
   }
 });

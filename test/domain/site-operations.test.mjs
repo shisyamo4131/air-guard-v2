@@ -624,13 +624,12 @@ async function loadBaseEditorHarness({ updateBasic }) {
       useSiteActions, watch
     } = globalThis.__siteBaseEditorHarness;
     ${executable}
-    export { baseline, conflictFields, dialog, draft, errorMessage, form, open,
+    export { baseline, conflictFields, dialog, draft, errorMessage, open,
       reloadLatest, save, updateProperties };
   `;
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
   );
-  module.form.value = { validate: async () => ({ valid: true }) };
   return {
     isSaving,
     module,

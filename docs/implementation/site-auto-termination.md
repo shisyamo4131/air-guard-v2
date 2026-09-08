@@ -63,7 +63,7 @@ status enumはACTIVE/TERMINATEDの2値で、自動終了専用状態・終了理
 
 ## 下流・UI影響
 
-- ACTIVE一覧から自動的に消え、TERMINATED一覧では検索文字列がある場合に表示される。詳細route自体は残る。
+- ACTIVE一覧から自動的に消え、TERMINATED一覧では検索結果または空検索時のupdatedAt降順・最大20件に表示される。詳細route自体は残る。
 - 現行Autocompleteはstatus限定がなく、TERMINATED Siteも新規参照候補へ出得る。詳細でも編集、取極め変更、archive、再終了UIが残る。
 - Site内`agreementsV2`は変更・終了されず、Customer、User、Schedule、ArrangementNotification、OperationResult、Billingにもcascade更新しない。
 - 既存および将来ScheduleはSite IDを保持したままで、予定・通知・実績作成をserver/Rulesで停止する直接処理はない。

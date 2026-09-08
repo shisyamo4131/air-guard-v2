@@ -104,11 +104,15 @@ test("Site editors use independent drafts and explicit same-operation conflict c
   assert.match(base, /conflictingSiteFields\([\s\S]*?latest: props\.site[\s\S]*?draft: draft\.value/u);
   assert.match(base, /latest: \(\) => props\.site/u);
   assert.match(base, /if \(isSaving\.value \|\| !canWrite\.value \|\| !draft\.value \|\| refreshConflict\(\)\) return/u);
+  assert.match(base, /<AppEditorDialog[\s\S]*?:submit-disabled="!!conflictFields\.length"[\s\S]*?@submit="save"/u);
+  assert.doesNotMatch(base, /<v-dialog|<v-form|ref="form"/u);
   assert.doesNotMatch(base, /Object\.assign\(props\.site|v-model="props\.site/u);
 
   assert.match(customer, /draft\.value = props\.site\.clone\(\)/u);
   assert.match(customer, /baseline\.value = siteSnapshot\(props\.site, operation\)/u);
   assert.match(customer, /latest: \(\) => props\.site/u);
+  assert.match(customer, /<AppEditorDialog[\s\S]*?:submit-disabled="hasConflict"[\s\S]*?@submit="save"/u);
+  assert.doesNotMatch(customer, /<v-dialog|<v-form/u);
   assert.doesNotMatch(customer, /Object\.assign\(props\.site|v-model="props\.site/u);
 
   assert.match(agreements, /draft\.value = cloneAgreements\(props\.site\.agreementsV2\)/u);
@@ -371,13 +375,13 @@ test("SITE-07 list and detail routes expose explicit read states and bounded cli
     active,
     /watch\(\[search, selectedCustomerId, selectedSecurityType\],[\s\S]*?page\.value = 1/u,
   );
-  assert.match(terminated, /import \{ PAGE_SIZE, useSiteUiReads \}/u);
+  assert.match(terminated, /import\s*\{\s*PAGE_SIZE,\s*useSiteUiReads,?\s*\}/u);
   assert.match(terminated, /:items-per-page="PAGE_SIZE"/u);
   assert.match(terminated, /isLoading/u);
   assert.match(terminated, /errorMessage/u);
   assert.match(terminated, /isEmpty/u);
   assert.match(terminated, /searchTerminatedSites/u);
-  assert.match(terminated, /watch\(search,[\s\S]*?page\.value = 1/u);
+  assert.match(terminated, /watch\(\s*search,[\s\S]*?page\.value = 1/u);
   assert.match(detail, /lookupSite/u);
   assert.match(detail, /detailResolved/u);
   assert.match(detail, /detailError/u);
@@ -389,6 +393,17 @@ test("SITE-07 list and detail routes expose explicit read states and bounded cli
   assert.match(detail, /onBeforeUnmount|onUnmounted/u);
   assert.match(detail, /doc\.unsubscribe\(\)/u);
   assert.match(detail, /historyInstance\.unsubscribe\(\)/u);
+});
+
+test("terminated Site blank search uses updated freshness with a stable document-id tie-breaker", async () => {
+  const reads = await source(
+    "composables/dataLayers/site/useSiteUiReads.js",
+  );
+  assert.match(
+    reads,
+    /\["where", "status", "==", Site\.STATUS_TERMINATED\],[\s\S]*?\["orderBy", "updatedAt", "desc"\],[\s\S]*?\["orderBy", documentId\(\), "desc"\],[\s\S]*?\["limit", PAGE_SIZE\]/u,
+  );
+  assert.doesNotMatch(reads, /\["orderBy", "statusChangedAt", "desc"\]/u);
 });
 
 test("SITE-07 presentation avoids undefined Customer reads and environment-local dates", async () => {

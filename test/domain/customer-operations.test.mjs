@@ -287,14 +287,13 @@ async function loadEditorHarness({ component, update }) {
     } = globalThis.__customerEditorHarness;
     ${executable}
     export {
-      dialog, draft, errorMessage, form, hasExternalChanges,
+      dialog, draft, errorMessage, hasExternalChanges,
       isWaitingForRollback, open, save, updateProperties, reloadLatest
     };
   `;
   const module = await import(
     `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
   );
-  module.form.value = { validate: async () => ({ valid: true }) };
   return {
     customer,
     module,

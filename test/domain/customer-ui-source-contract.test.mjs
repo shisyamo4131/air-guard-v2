@@ -182,8 +182,9 @@ test("Customer basic form includes address and both editors implement reload-onl
     assert.match(editor, /最新値を読み直す/u);
     assert.match(
       editor,
-      /:disabled="isSaving \|\| isWaitingForRollback \|\| hasExternalChanges \|\| !canWrite"/u,
+      /<AppEditorDialog[\s\S]*?:submit-disabled="isWaitingForRollback \|\| hasExternalChanges"[\s\S]*?@submit="save"/u,
     );
+    assert.doesNotMatch(editor, /<v-dialog|<v-form|ref="form"/u);
     assert.doesNotMatch(editor, /上書き|last-write|confirmOverwrite/u);
   }
 });

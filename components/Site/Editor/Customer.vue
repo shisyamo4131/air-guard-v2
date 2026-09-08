@@ -48,10 +48,6 @@ function open() {
   dialog.value = true;
 }
 
-function close() {
-  if (!isSaving.value) dialog.value = false;
-}
-
 async function save() {
   if (isSaving.value || !canWrite.value || !draft.value || refreshConflict()) return;
   errorMessage.value = "";
@@ -78,10 +74,16 @@ watch(() => props.site.customerId, () => {
 
 <template>
   <slot name="activator" :open="open" :item="props.site" :disabled="!canWrite || props.site.status !== 'ACTIVE'" />
-  <v-dialog v-model="dialog" max-width="600" persistent>
-    <v-card>
-      <v-toolbar color="secondary" density="compact" :title="props.title" />
-      <v-card-text>
+  <AppEditorDialog
+    v-model="dialog"
+    :title="props.title"
+    mode="UPDATE"
+    :loading="isSaving"
+    :disabled="!canWrite"
+    :submit-disabled="hasConflict"
+    :max-width="600"
+    @submit="save"
+  >
         <v-alert v-if="hasConflict" type="warning" variant="tonal" class="mb-4">
           <div>取引先が別の画面で更新されました。最新値を読み直してください。</div>
           <v-btn class="mt-3" size="small" variant="outlined" :disabled="isSaving" @click="resetDraft">
@@ -101,20 +103,5 @@ watch(() => props.site.customerId, () => {
         <v-alert v-if="props.site.customerId" type="info" variant="tonal" density="compact">
           設定済みの取引先を未設定へ戻すことはできません。
         </v-alert>
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn :disabled="isSaving" variant="text" @click="close">キャンセル</v-btn>
-        <v-btn
-          color="primary"
-          variant="flat"
-          :loading="isSaving"
-          :disabled="isSaving || hasConflict || !canWrite"
-          @click="save"
-        >
-          保存
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+  </AppEditorDialog>
 </template>

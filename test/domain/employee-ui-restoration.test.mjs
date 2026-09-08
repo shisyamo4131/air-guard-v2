@@ -29,6 +29,10 @@ test("editor dialogs scroll the card body while title/actions remain outside it;
     if (dialogs.includes(file)) {
       const root = compile(descriptor.template.content).ast;
       const find = (node, tag) => [node, ...(node.children || []).flatMap((child) => find(child, tag))].filter((child) => child.tag === tag);
+      if (file === "Employee/Editor.vue") {
+        assert.equal(find(root, "AppEditorDialog").length, 1);
+        continue;
+      }
       const dialog = find(root, "v-dialog")[0]; assert.ok(dialog.props.some((prop) => prop.name === "scrollable"), file);
       const card = find(dialog, "v-card")[0], body = card.children.find((node) => node.tag === "v-card-text"), actions = card.children.find((node) => node.tag === "v-card-actions");
       assert.ok(body && actions, file); assert.equal(find(body, "v-card-actions").length, 0);

@@ -89,24 +89,21 @@ async function toUpdateIfAllowed(item) {
       }"
     >
       <slot name="toolbar" v-bind="{ canCreate, toCreate: toCreateIfAllowed }">
-        <v-toolbar class="ps-3 mb-4">
-          <AtomsSearchTextField
-            :model-value="props.search"
-            :delay="300"
-            @update:model-value="emit('update:search', $event)"
-          />
-          <v-btn
-            v-if="canCreate"
-            icon="mdi-plus"
-            @click="toCreateIfAllowed"
-          />
-        </v-toolbar>
+        <AppMasterListToolbar
+          :search="props.search"
+          :search-delay="300"
+          @update:search="emit('update:search', $event)"
+        >
+          <template #append>
+            <v-btn
+              v-if="canCreate"
+              icon="mdi-plus"
+              @click="toCreateIfAllowed"
+            />
+          </template>
+        </AppMasterListToolbar>
       </slot>
-      <v-progress-linear
-        v-if="props.loading"
-        color="primary"
-        indeterminate
-      />
+      <v-progress-linear v-if="props.loading" color="primary" indeterminate />
       <v-alert
         v-if="props.errorMessage"
         class="mb-4"
@@ -133,8 +130,8 @@ async function toUpdateIfAllowed(item) {
       <v-empty-state
         v-else-if="searchRequiresMoreInput"
         icon="mdi-magnify"
-        title="2〜40文字で入力してください"
-        text="外注先名、フリガナ、または略称を2〜40文字で検索します。"
+        title="1〜40文字で入力してください"
+        text="外注先名、フリガナ、または略称を1〜40文字で検索します。"
       />
       <OutsourcersIterator
         v-else-if="props.loaded"
@@ -174,7 +171,10 @@ async function toUpdateIfAllowed(item) {
       </div>
     </slot>
 
-    <OutsourcerCreateDialog ref="createDialog" @created="emit('create', $event)" />
+    <OutsourcerCreateDialog
+      ref="createDialog"
+      @created="emit('create', $event)"
+    />
     <OutsourcerEditor
       v-if="selectedOutsourcer"
       ref="editorDialog"

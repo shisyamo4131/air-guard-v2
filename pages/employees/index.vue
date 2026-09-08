@@ -7,6 +7,9 @@ import { Employee } from "@/schemas";
 import { useEmployeeList } from "@/composables/application/employee/useEmployeeList";
 import { useRouter } from "vue-router";
 
+/*****************************************************************************
+ * DEFINE OPTIONS
+ *****************************************************************************/
 defineOptions({ name: "employees-index" });
 
 /*****************************************************************************
@@ -21,7 +24,6 @@ const router = useRouter();
 const { docs, loading, error, reload } = useEmployeeList({
   status: Employee.STATUS_ACTIVE,
   search,
-  fetchAllOnEmpty: true,
 });
 
 /*****************************************************************************
@@ -39,7 +41,7 @@ const { docs, loading, error, reload } = useEmployeeList({
       show-create
       v-model:search="search"
       :items-per-page="-1"
-      :sort-by="[{ key: 'fullNameKana', order: 'asc' }]"
+      :sort-by="[]"
       @create="(item) => router.push(`/employees/${item.docId}`)"
       @click:detail="(item) => router.push(`/employees/${item.docId}`)"
       @reload="reload"

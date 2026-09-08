@@ -9,8 +9,10 @@ import {
   reactive,
   readonly,
   ref,
+  unref,
   watch,
 } from "vue";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { sortSitesActiveFirst } from "../../composables/domain/site/siteUiPresentation.js";
 
 const source = await readFile(
@@ -82,9 +84,17 @@ function createHarness({ fetchDocs, fetchDoc } = {}) {
     "Vue",
     "Site",
     "sortSitesActiveFirst",
+    "normalizeTokenText",
+    "documentId",
     `${transformed}\nreturn { PAGE_SIZE, useSiteUiReads };`,
   );
-  const module = factory(Vue, Site, sortSitesActiveFirst);
+  const module = factory(
+    Vue,
+    Site,
+    sortSitesActiveFirst,
+    normalizeTokenText,
+    () => "__name__",
+  );
   return {
     ...module,
     cleanups,
@@ -106,6 +116,10 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     static converter() {
       return converter;
     }
+
+    createTokenMapQueries(text) {
+      return [{ field: "tokenMap", operator: "array-contains-any", value: text }];
+    }
   };
   const collection = (firestore, ...segments) => {
     const call = { firestore, segments, converter: null };
@@ -118,6 +132,9 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     };
   };
   const where = (field, operator, value) => ({ field, operator, value });
+  const documentId = () => "__name__";
+  const limit = (value) => ({ type: "limit", value });
+  const orderBy = (field, direction) => ({ type: "orderBy", field, direction });
   const query = (collectionReference, ...constraints) => ({
     collectionReference,
     constraints,
@@ -132,7 +149,7 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     listeners.push(listener);
     return () => { listener.unsubscribeCalls += 1; };
   };
-  const Vue = { onScopeDispose, readonly, ref, watch };
+  const Vue = { onScopeDispose, readonly, ref, unref, watch };
   const transformed = source
     .replace(/^import[\s\S]*?;\r?\n/gmu, "")
     .replace(/\bexport\s+/gu, "");
@@ -142,8 +159,12 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     "onSnapshot",
     "query",
     "where",
+    "documentId",
+    "limit",
+    "orderBy",
     "Site",
     "sortSitesActiveFirst",
+    "normalizeTokenText",
     "useAuthStore",
     "useLogger",
     "useNuxtApp",
@@ -155,14 +176,26 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     onSnapshot,
     query,
     where,
+    documentId,
+    limit,
+    orderBy,
     Site,
     sortSitesActiveFirst,
+    normalizeTokenText,
     () => auth,
     () => ({ error: (value) => loggerErrors.push(value) }),
     () => ({ $firestore: "FIRESTORE" }),
   );
   const scope = effectScope();
-  const reads = scope.run(() => module.useActiveSiteLiveRead({ onItem }));
+  const search = ref("");
+  const customerId = ref(null);
+  const securityType = ref(null);
+  const reads = scope.run(() => module.useActiveSiteLiveRead({
+    customerId,
+    onItem,
+    search,
+    securityType,
+  }));
   return {
     auth,
     collectionCalls,
@@ -170,6 +203,9 @@ function createActiveReadHarness({ companyId = "company-a", onItem } = {}) {
     listeners,
     loggerErrors,
     reads,
+    search,
+    customerId,
+    securityType,
     stop: () => scope.stop(),
   };
 }
@@ -387,26 +423,36 @@ test("latest Site search failure exposes a safe retryable state without a false 
   assert.equal(harness.reads.errorMessage.value, "");
 });
 
-test("empty search and clear invalidate pending work and reset empty/error/not-found state", async () => {
-  const pending = deferred();
-  const harness = createHarness({ fetchDocs: () => pending.promise });
-  const request = harness.reads.searchTerminatedSites("pending");
-  assert.equal(harness.reads.isLoading.value, true);
+test("empty terminated search reads the 20 most recently updated terminated sites", async () => {
+  const recent = [{ docId: "recently-terminated", status: "TERMINATED" }];
+  const harness = createHarness({ fetchDocs: () => recent });
 
-  assert.deepEqual(await harness.reads.searchTerminatedSites("   "), []);
+  assert.deepEqual(await harness.reads.searchTerminatedSites("   "), recent);
+  assert.deepEqual(harness.queries, [{
+    constraints: [
+      ["where", "status", "==", "TERMINATED"],
+      ["orderBy", "updatedAt", "desc"],
+      ["orderBy", "__name__", "desc"],
+      ["limit", 20],
+    ],
+  }]);
   assert.equal(harness.reads.errorMessage.value, "");
   assert.equal(harness.reads.isEmpty.value, false);
   assert.equal(harness.reads.notFound.value, false);
   assert.equal(harness.reads.isLoading.value, false);
-
-  pending.reject(new Error("cleared request failed"));
-  assert.deepEqual(await request, []);
-  assert.equal(harness.reads.errorMessage.value, "");
 });
 
-test("terminated page integration keeps docs empty when an old query resolves after input is cleared", async () => {
-  const pending = deferred();
-  const readsHarness = createHarness({ fetchDocs: () => pending.promise });
+test("terminated page integration restores recent results when an old keyword query resolves after input is cleared", async () => {
+  const pendingKeyword = deferred();
+  const latestRecent = deferred();
+  let recentRequestCount = 0;
+  const readsHarness = createHarness({
+    fetchDocs: ({ constraints }) => {
+      if (typeof constraints === "string") return pendingKeyword.promise;
+      recentRequestCount += 1;
+      return recentRequestCount === 1 ? [] : latestRecent.promise;
+    },
+  });
   const scope = effectScope();
   const state = scope.run(() => {
     const factory = new Function(
@@ -429,19 +475,25 @@ test("terminated page integration keeps docs empty when an old query resolves af
   });
 
   await flushAsyncWatchers();
+  assert.equal(readsHarness.queries.length, 1);
   state.search.value = "pending";
   await flushAsyncWatchers();
-  assert.equal(readsHarness.queries.length, 1);
+  assert.equal(readsHarness.queries.length, 2);
   state.search.value = "";
   await flushAsyncWatchers();
-  assert.deepEqual(state.docs.value, []);
+  assert.equal(readsHarness.queries.length, 3);
 
-  pending.resolve([{ docId: "stale-terminated", status: "TERMINATED" }]);
+  const recent = [{ docId: "recently-terminated", status: "TERMINATED" }];
+  latestRecent.resolve(recent);
+  await flushAsyncWatchers();
+  assert.deepEqual(state.docs.value, recent);
+
+  pendingKeyword.resolve([{ docId: "stale-terminated", status: "TERMINATED" }]);
   await flushAsyncWatchers();
   assert.deepEqual(
     state.docs.value,
-    [],
-    "the page must not restore results belonging to the cleared search",
+    recent,
+    "the page must keep the recent results that belong to the cleared search",
   );
   scope.stop();
 });
@@ -455,11 +507,12 @@ test("ACTIVE Site live read uses the exact tenant-scoped ACTIVE query and distin
     segments: ["Companies", "company-a", "Sites"],
     converter: harness.converter,
   }]);
-  assert.deepEqual(harness.listeners[0].query.constraints, [{
-    field: "status",
-    operator: "==",
-    value: "ACTIVE",
-  }]);
+  assert.deepEqual(harness.listeners[0].query.constraints, [
+    { field: "status", operator: "==", value: "ACTIVE" },
+    { type: "orderBy", field: "updatedAt", direction: "desc" },
+    { type: "orderBy", field: "__name__", direction: "desc" },
+    { type: "limit", value: 20 },
+  ]);
   assert.equal(harness.reads.isLoading.value, true);
   assert.equal(harness.reads.isLoaded.value, false);
 

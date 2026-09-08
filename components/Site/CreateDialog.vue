@@ -55,12 +55,17 @@ async function save() {
 
 <template>
   <slot v-if="canWrite" name="activator" :open="open" />
-  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
+  <v-dialog v-model="dialog" max-width="480" persistent scrollable>
     <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
-      <v-card>
+      <v-card :border="false">
         <v-toolbar color="secondary" density="compact" :title="props.title" />
         <v-card-text>
-          <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
+          <v-alert
+            v-if="errorMessage"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             {{ errorMessage }}
           </v-alert>
           <template v-if="draft">
@@ -89,7 +94,9 @@ async function save() {
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn :disabled="isSaving" variant="text" @click="close">キャンセル</v-btn>
+          <v-btn :disabled="isSaving" variant="text" @click="close"
+            >キャンセル</v-btn
+          >
           <v-btn
             type="submit"
             color="primary"
