@@ -22,7 +22,6 @@ const { canWrite, isSaving, updateOutsourcer } = useOutsourcerActions();
 const operation = OUTSOURCER_OPERATION.UPDATE;
 const schema = outsourcerOperationSchema(operation);
 const dialog = ref(false);
-const form = ref(null);
 const draft = ref(null);
 const baseline = ref(null);
 const sourceAtOpen = ref(null);
@@ -42,7 +41,8 @@ function observeCurrentSnapshot() {
     if (
       outsourcerSnapshotsEqual(current, pendingOwnSnapshot.value, operation) ||
       outsourcerSnapshotsEqual(current, sourceAtOpen.value, operation)
-    ) return;
+    )
+      return;
   }
   if (failedOwnSnapshot.value) {
     if (outsourcerSnapshotsEqual(current, failedOwnSnapshot.value, operation)) {
@@ -81,10 +81,6 @@ function open() {
   dialog.value = true;
 }
 
-function close() {
-  if (!isSaving.value) dialog.value = false;
-}
-
 function reloadLatest() {
   if (!isSaving.value && !isWaitingForRollback.value) resetDraft();
 }
@@ -100,8 +96,6 @@ async function save() {
   if (hasExternalChanges.value) return;
   errorMessage.value = "";
   try {
-    const validation = await form.value?.validate();
-    if (validation && !validation.valid) return;
     observeCurrentSnapshot();
     if (hasExternalChanges.value) return;
     pendingOwnSnapshot.value = outsourcerSnapshot(draft.value, operation);
@@ -125,29 +119,60 @@ async function save() {
   }
 }
 
-watch(currentSnapshot, () => {
-  if (dialog.value) observeCurrentSnapshot();
-}, { deep: true });
+watch(
+  currentSnapshot,
+  () => {
+    if (dialog.value) observeCurrentSnapshot();
+  },
+  { deep: true },
+);
 
 defineExpose({ open });
 </script>
 
 <template>
-  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
-    <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
-      <v-card>
-        <v-toolbar color="secondary" density="compact" title="外注先情報の編集" />
-        <v-card-text>
-          <v-alert v-if="hasExternalChanges" type="warning" variant="tonal" class="mb-4">
-            <div>別の画面で同じ項目が更新されました。現在の入力内容は保存できません。</div>
-            <v-btn class="mt-3" size="small" variant="outlined" :disabled="isSaving" @click="reloadLatest">
+  <AppEditorDialog
+    v-model="dialog"
+    title="外注先情報の編集"
+    mode="UPDATE"
+    :loading="isSaving"
+    :disabled="!canWrite"
+    :submit-disabled="isWaitingForRollback || hasExternalChanges"
+    @submit="save"
+  >
+          <v-alert
+            v-if="hasExternalChanges"
+            type="warning"
+            variant="tonal"
+            class="mb-4"
+          >
+            <div>
+              別の画面で同じ項目が更新されました。現在の入力内容は保存できません。
+            </div>
+            <v-btn
+              class="mt-3"
+              size="small"
+              variant="outlined"
+              :disabled="isSaving"
+              @click="reloadLatest"
+            >
               最新値を読み直す
             </v-btn>
           </v-alert>
-          <v-alert v-if="isWaitingForRollback" type="info" variant="tonal" class="mb-4">
+          <v-alert
+            v-if="isWaitingForRollback"
+            type="info"
+            variant="tonal"
+            class="mb-4"
+          >
             保存前の状態を確認しています。少し待ってからもう一度保存してください。
           </v-alert>
-          <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
+          <v-alert
+            v-if="errorMessage"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             {{ errorMessage }}
           </v-alert>
           <air-item-input
@@ -158,21 +183,5 @@ defineExpose({ open });
             :disabled="isSaving"
             edit-mode="UPDATE"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn :disabled="isSaving" variant="text" @click="close">キャンセル</v-btn>
-          <v-btn
-            type="submit"
-            color="primary"
-            variant="flat"
-            :loading="isSaving"
-            :disabled="isSaving || isWaitingForRollback || hasExternalChanges || !canWrite"
-          >
-            保存
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-form>
-  </v-dialog>
+  </AppEditorDialog>
 </template>

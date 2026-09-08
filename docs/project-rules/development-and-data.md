@@ -7,6 +7,8 @@
 ## 実装原則
 
 - 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpoint内で実装する。PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を先に確認する。
+- primary Windows worktreeでapplication code、test、project-owned文書を作成・編集するときは、既存fileの文字encoding・BOM有無・改行codeを事前確認して維持する。新規text fileは、対象toolや隣接fileに意図的なLF等の別契約がなければ、UTF-8・BOMなし・CRLFを既定とする。編集後は対象fileがmixed EOLでないことを確認する。Git index内のLF正規化は変更せず、binary、生成物、外部由来file、LFを必要とするscriptへこのworktree既定を一律適用しない。
+- testがsource fileをraw textとして読む場合は、改行を比較前に正規化するか構文として解析し、LFまたはCRLF固定の空行・行末へ依存しない。通常の製品処理や構文解析へ不要な改行変換を追加しない。
 - Firestore CRUDを新設・改修する場合、`AirItemManager`と`AirArrayManager`を永続化・draft・dialog・validation・表示同期を一体で担う既定componentとして使用しない。既存箇所は一括置換せず、operation固有editor、UI非依存application処理、永続化へ機能単位で移行する。
 - マスタdata CRUDの改修対象として合意した到達経路では、専用保存処理を接続した後も`AirItemManager`または`AirArrayManager`をdraft・dialog・validation・完了制御のwrapperとして残さない。既存の見た目を維持するために入力・表示componentを再利用する場合も、汎用Managerへ状態管理や成功判定を戻さない。
 - Firestore外のlocal state編集、または既存のwhole-document replacementが対象operationの正しい契約であると確認できる場合は、manager利用の可否を個別に判断する。
@@ -19,6 +21,7 @@
 ## フェーズごとのテスト範囲の合意
 
 - 着手前に、変更対象、test対象・対象外、操作と期待結果、環境・actor・data、完了条件をcheckpointへ固定する。実装承認から他機能全体の受入れまでを推論しない。
+- UI・application改修のDev受入れ前は、変更箇所を直接覆うdomain testと必要最小限のlocal動作確認を基本とし、専用Local UI build、全Local Emulator、重複するbrowser受入れを一律の前提にしない。実Dev固有の表示・操作・権限・通信は、対象commitを固定したbounded Dev release後の受入れで確認する。ただしRules・schema・Functions・認証認可等の高risk境界、release artifact生成、verification policyが別classで要求する必須gateはDev確認へ先送りせず、対象変更に必要な範囲を実行する。
 - testは当該phaseの変更と直接必要な回帰へ限定する。関連fieldを読むだけの別機能について、業務全体の受入れを自動追加しない。影響確認と別機能の受入れを区別し、追加が必要なら理由・対象・延期時の影響を提示して合意する。
 - 合意済み範囲の再現・修正・再試験は継続し、commandやtest fileごとの再承認を求めない。発見した不足・不具合の修正義務を現在phaseへの追加権限とみなさず、対応時期の延期と修正の省略を区別する。
 - 現在の目的を妨げない独立問題だけを後続へ送る。今回の変更による回帰、承認済み必須条件の未達、安全な作業継続を妨げる問題は未完として扱い、必要なら影響作業を停止する。初期調査・設計の見落としを追加要求へすり替えず、条件補正と影響を利用者へ説明する。必須gateと安全境界は省略しない。

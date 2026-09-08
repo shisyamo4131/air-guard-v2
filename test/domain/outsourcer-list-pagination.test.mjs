@@ -148,7 +148,7 @@ function createHarness({ companyId = "company-a", searchText = "" } = {}) {
   };
 }
 
-test("initial listener uses name ordering, document ID tie-break, and a 21-document look-ahead", async () => {
+test("initial listener uses recent-update ordering, document ID tie-break, and a 21-document look-ahead", async () => {
   const harness = createHarness();
   await harness.flush();
   assert.equal(harness.listeners.length, 1);
@@ -159,9 +159,9 @@ test("initial listener uses name ordering, document ID tie-break, and a 21-docum
     query.constraints.map(({ type }) => type),
     ["orderBy", "orderBy", "limit"],
   );
-  assert.deepEqual(query.constraints[0].values, ["nameKana", "asc"]);
+  assert.deepEqual(query.constraints[0].values, ["updatedAt", "desc"]);
   assert.equal(query.constraints[1].values[0].type, "document-id");
-  assert.equal(query.constraints[1].values[1], "asc");
+  assert.equal(query.constraints[1].values[1], "desc");
   assert.deepEqual(query.constraints[2].values, [21]);
 
   harness.emit(0, documents(21));
@@ -185,7 +185,7 @@ test("initial listener uses name ordering, document ID tie-break, and a 21-docum
   harness.stop();
 });
 
-test("two-character search uses only the real token generator's equality constraints", async () => {
+test("one- and two-character searches use only the real token generator's equality constraints", async () => {
   const harness = createHarness({ searchText: "Ab" });
   await harness.flush();
   const constraints = harness.listeners[0].builtQuery.constraints;
@@ -221,9 +221,11 @@ test("two-character search uses only the real token generator's equality constra
   harness.search.value = "x";
   await harness.flush();
   assert.equal(harness.listeners[0].unsubscribeCount, 1);
-  assert.equal(harness.listeners.length, 1);
-  assert.deepEqual(harness.pagination.items.value, []);
-  assert.equal(harness.pagination.loaded.value, false);
+  assert.equal(harness.listeners.length, 2);
+  assert.deepEqual(
+    harness.listeners[1].builtQuery.constraints.map(({ values }) => values),
+    [["tokenMap.x", "==", true]],
+  );
   assert.equal(harness.pagination.currentPage.value, 1);
   harness.stop();
 });
@@ -240,7 +242,7 @@ test("null, undefined, and raw empty searches use the normal list while invalid 
     harness.stop();
   }
 
-  for (const searchText of ["a", "   ", "a".repeat(41)]) {
+  for (const searchText of ["   ", "a".repeat(41)]) {
     const harness = createHarness({ searchText });
     await harness.flush();
     assert.equal(harness.listeners.length, 0, JSON.stringify(searchText));
@@ -516,8 +518,8 @@ test("clearing a valid keyword with null replaces it with the normal cursor list
     ["orderBy", "orderBy", "limit"],
   );
   assert.deepEqual(harness.listeners[1].builtQuery.constraints[0].values, [
-    "nameKana",
-    "asc",
+    "updatedAt",
+    "desc",
   ]);
   assert.deepEqual(harness.listeners[1].builtQuery.constraints[2].values, [
     21,

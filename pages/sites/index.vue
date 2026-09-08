@@ -40,6 +40,9 @@ const {
   isLoading: sitesLoading,
   items: activeSites,
 } = useActiveSiteLiveRead({
+  search,
+  customerId: selectedCustomerId,
+  securityType: selectedSecurityType,
   onItem: (site) => {
     if (site?.customerId) fetchCustomer(site.customerId);
   },
@@ -48,29 +51,20 @@ const {
 /*****************************************************************************
  * COMPUTED
  *****************************************************************************/
-const filteredSites = computed(() => {
-  const securityTypeIsMatched = (site) => {
-    if (!selectedSecurityType.value) return true;
-    return site.securityType === selectedSecurityType.value;
-  };
-  const customerIdIsMatched = (site) => {
-    if (!selectedCustomerId.value) return true;
-    return site.customerId === selectedCustomerId.value;
-  };
-  return activeSites.value
-    .filter((site) => securityTypeIsMatched(site) && customerIdIsMatched(site))
-    .sort((left, right) => {
-      const leftEnded =
-        getSiteLifecyclePresentation(left).label.startsWith("工期終了");
-      const rightEnded =
-        getSiteLifecyclePresentation(right).label.startsWith("工期終了");
-      if (leftEnded !== rightEnded)
-        return Number(leftEnded) - Number(rightEnded);
-      return String(right.code || "").localeCompare(
-        String(left.code || ""),
-        "ja",
-      );
-    });
+const displayedSites = computed(() => {
+  if (!search.value.trim()) return activeSites.value;
+  return [...activeSites.value].sort((left, right) => {
+    const leftEnded =
+      getSiteLifecyclePresentation(left).label.startsWith("工期終了");
+    const rightEnded =
+      getSiteLifecyclePresentation(right).label.startsWith("工期終了");
+    if (leftEnded !== rightEnded)
+      return Number(leftEnded) - Number(rightEnded);
+    return String(right.code || "").localeCompare(
+      String(left.code || ""),
+      "ja",
+    );
+  });
 });
 
 const confirmEditModel = computed({
@@ -95,82 +89,80 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
 </script>
 
 <template>
-  <v-container
-    class="align-start"
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <v-card class="fill-height d-flex flex-column" width="100%">
-      <v-toolbar class="ps-4">
-        <AtomsSearchTextField v-model="search" />
-        <SiteCreateDialog
-          v-if="canWrite"
-          @created="(item) => router.push(`/sites/${item.docId}`)"
-        >
-          <template #activator="{ open }">
-            <v-btn
-              :disabled="isSaving"
-              icon="mdi-plus"
-              aria-label="現場を新規登録"
-              title="現場を新規登録"
-              @click="open"
-            />
-          </template>
-        </SiteCreateDialog>
-
-        <!-- フィルター用コンポーネント -->
-        <v-dialog v-model="filterDialog" max-width="360px" persistent>
-          <template #activator="{ props: activatorProps }">
-            <v-btn
-              v-bind="activatorProps"
-              icon="mdi-filter"
-              aria-label="現場の絞り込み条件を設定"
-              title="現場の絞り込み条件を設定"
-            />
-          </template>
-          <v-confirm-edit
-            v-model="confirmEditModel"
-            @save="filterDialog = false"
-            @cancel="filterDialog = false"
+      <AppMasterListToolbar v-model:search="search" :search-delay="300">
+        <template #append>
+          <SiteCreateDialog
+            v-if="canWrite"
+            @created="(item) => router.push(`/sites/${item.docId}`)"
           >
-            <template #default="{ model: proxyModel, actions }">
-              <v-card prepend-icon="mdi-filter">
-                <template #title>
-                  <div class="text-h6">絞り込み条件設定</div>
-                </template>
-                <template #append>
-                  <v-btn
-                    icon="mdi-close"
-                    size="small"
-                    aria-label="絞り込み条件を閉じる"
-                    title="絞り込み条件を閉じる"
-                    @click="filterDialog = false"
-                  />
-                </template>
-                <template #text>
-                  <SecurityTypeSelect
-                    v-model="proxyModel.value.securityType"
-                    clearable
-                    variant="outlined"
-                    flat
-                  />
-                  <CustomerSelect
-                    v-model="proxyModel.value.customerId"
-                    clearable
-                    :items="cachedCustomersArray"
-                    variant="outlined"
-                    flat
-                    hide-details
-                  />
-                </template>
-                <v-divider />
-                <template #actions>
-                  <component :is="actions" />
-                </template>
-              </v-card>
+            <template #activator="{ open }">
+              <v-btn
+                :disabled="isSaving"
+                icon="mdi-plus"
+                aria-label="現場を新規登録"
+                title="現場を新規登録"
+                @click="open"
+              />
             </template>
-          </v-confirm-edit>
-        </v-dialog>
-      </v-toolbar>
+          </SiteCreateDialog>
+
+          <!-- フィルター用コンポーネント -->
+          <v-dialog v-model="filterDialog" max-width="360px" persistent>
+            <template #activator="{ props: activatorProps }">
+              <v-btn
+                v-bind="activatorProps"
+                icon="mdi-filter"
+                aria-label="現場の絞り込み条件を設定"
+                title="現場の絞り込み条件を設定"
+              />
+            </template>
+            <v-confirm-edit
+              v-model="confirmEditModel"
+              @save="filterDialog = false"
+              @cancel="filterDialog = false"
+            >
+              <template #default="{ model: proxyModel, actions }">
+                <v-card prepend-icon="mdi-filter">
+                  <template #title>
+                    <div class="text-h6">絞り込み条件設定</div>
+                  </template>
+                  <template #append>
+                    <v-btn
+                      icon="mdi-close"
+                      size="small"
+                      aria-label="絞り込み条件を閉じる"
+                      title="絞り込み条件を閉じる"
+                      @click="filterDialog = false"
+                    />
+                  </template>
+                  <template #text>
+                    <SecurityTypeSelect
+                      v-model="proxyModel.value.securityType"
+                      clearable
+                      variant="outlined"
+                      flat
+                    />
+                    <CustomerSelect
+                      v-model="proxyModel.value.customerId"
+                      clearable
+                      :items="cachedCustomersArray"
+                      variant="outlined"
+                      flat
+                      hide-details
+                    />
+                  </template>
+                  <v-divider />
+                  <template #actions>
+                    <component :is="actions" />
+                  </template>
+                </v-card>
+              </template>
+            </v-confirm-edit>
+          </v-dialog>
+        </template>
+      </AppMasterListToolbar>
       <v-alert
         v-if="siteErrorMessage"
         type="error"
@@ -180,7 +172,7 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
         {{ siteErrorMessage }}
       </v-alert>
       <v-alert
-        v-else-if="sitesLoaded && filteredSites.length === 0"
+        v-else-if="sitesLoaded && displayedSites.length === 0"
         type="info"
         variant="tonal"
         class="mx-4 mb-3"
@@ -190,8 +182,7 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
       <SitesDataTable
         v-model:page="page"
         class="flex-grow-1 overflow-hidden"
-        :items="filteredSites"
-        :search="search"
+        :items="displayedSites"
         :sort-by="[]"
         :items-per-page="20"
         :loading="sitesLoading"
@@ -213,5 +204,5 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
             @click:detail="(item) => router.push(`/sites/${item.docId}`)"
           /> -->
     </v-card>
-  </v-container>
+  </AppViewportContainer>
 </template>

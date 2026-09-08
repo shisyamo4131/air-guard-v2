@@ -22,7 +22,6 @@ const { canWrite, isSaving, updateBasic } = useCustomerActions();
 const operation = CUSTOMER_OPERATION.UPDATE_BASIC;
 const schema = customerOperationSchema(operation);
 const dialog = ref(false);
-const form = ref(null);
 const draft = ref(null);
 const baseline = ref(null);
 const sourceAtOpen = ref(null);
@@ -91,11 +90,6 @@ function open() {
   dialog.value = true;
 }
 
-function close() {
-  if (isSaving.value) return;
-  dialog.value = false;
-}
-
 function reloadLatest() {
   if (isSaving.value || isWaitingForRollback.value) return;
   resetDraft();
@@ -114,8 +108,6 @@ async function save() {
   ) return;
   errorMessage.value = "";
   try {
-    const validation = await form.value?.validate();
-    if (validation && !validation.valid) return;
     if (checkConflict() || isWaitingForRollback.value) return;
     pendingOwnSnapshot.value = customerSnapshot(draft.value, operation);
     failedOwnSnapshot.value = null;
@@ -146,11 +138,16 @@ watch(currentSnapshot, () => {
 <template>
   <slot name="activator" :open="open" :item="props.customer" :disabled="!canWrite" />
 
-  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
-    <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
-      <v-card>
-        <v-toolbar color="secondary" density="compact" :title="props.title" />
-        <v-card-text>
+  <AppEditorDialog
+    v-model="dialog"
+    :title="props.title"
+    mode="UPDATE"
+    :loading="isSaving"
+    :disabled="!canWrite"
+    :submit-disabled="isWaitingForRollback || hasExternalChanges"
+    :max-width="800"
+    @submit="save"
+  >
           <v-alert
             v-if="hasExternalChanges"
             type="warning"
@@ -194,23 +191,5 @@ watch(currentSnapshot, () => {
             :disabled="isSaving"
             edit-mode="UPDATE"
           />
-        </v-card-text>
-        <v-card-actions>
-          <v-spacer />
-          <v-btn :disabled="isSaving" variant="text" @click="close">
-            キャンセル
-          </v-btn>
-          <v-btn
-            type="submit"
-            color="primary"
-            variant="flat"
-            :loading="isSaving"
-            :disabled="isSaving || isWaitingForRollback || hasExternalChanges || !canWrite"
-          >
-            保存
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-form>
-  </v-dialog>
+  </AppEditorDialog>
 </template>

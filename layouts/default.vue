@@ -6,6 +6,7 @@ import { useLoadingsStore } from "@/stores/useLoadingsStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
 import { useLogger } from "@/composables/useLogger";
 import { useErrorsStore } from "@/stores/useErrorsStore";
+import { useCurrentPageAccessGuard } from "@/composables/application/auth/useCurrentPageAccessGuard";
 
 /** SETUP STORES */
 const appStore = useAppStore();
@@ -15,6 +16,7 @@ const { queue } = useLoadingsStore();
 const { signOut } = useAuthActions();
 const loadings = useLoadingsStore();
 const logger = useLogger("default-layout", useErrorsStore());
+useCurrentPageAccessGuard();
 
 // ルーターと認証ストアの取得
 const router = useRouter();
@@ -110,7 +112,7 @@ const handleSignOut = async () => {
   --footer-height: 40px; /* VFooter の高さ */
 }
 
-/* 
+/*
   Sortable.js drag-and-drop global styles
   Applied to elements appended to body during drag operation.
   Used by: DraggableWorkers.vue, WorkerSelector.vue

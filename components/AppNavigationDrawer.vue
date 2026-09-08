@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { getNavigationItems } from "@/utils/pageSettings";
+import { buildPageAccessContext } from "@/utils/auth/pageAccessContext";
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -11,14 +12,8 @@ const route = useRoute();
  * Generate navigation items based on user roles using the new function
  */
 const navigationItems = computed(() => {
-  return getNavigationItems(auth.roles, {
-    presetRoles: auth.user.roles,
-    isAdmin: auth.isAdmin,
-    companyId: auth.companyId,
-    actorUid: auth.uid,
-    actorUser: auth.user,
-    isSuperUser: auth.isSuperUser,
-  });
+  const accessContext = buildPageAccessContext(auth);
+  return getNavigationItems(accessContext.userRoles, accessContext);
 });
 
 const normalizeRouteName = computed(() =>

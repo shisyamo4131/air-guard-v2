@@ -79,8 +79,8 @@
 ## OUT-05の確定範囲
 
 - codeは任意の手動入力、最大10文字、重複可とする。自動採番・一意制約・検索対象にはせず、document IDをidentityとして維持する。
-- 通常一覧はstatusで絞らず、`nameKana asc`、同値時document ID ascで21件を取得し、20件ずつserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryに保持する。
-- 検索は正規化後2〜40文字の`name/nameKana/displayName`由来tokenだけを対象とし、codeを含めない。動的token equalityへ追加indexを要求しないため、検索queryにはorder、limit、cursorを加えず一致結果をlive購読し、clientで`nameKana`、document ID順にsortして20件ずつ表示する。
+- 通常一覧はstatusで絞らず、`updatedAt desc`、同値時document ID descで21件を取得し、最近追加・更新された20件ずつをserver cursorで表示する。現在pageだけをlive購読し、前pageのcursorは画面内memoryに保持する。
+- 検索は正規化後1〜40文字の`name/nameKana/displayName`由来tokenだけを対象とし、codeを含めない。動的token equalityへ追加indexを要求しないため、検索queryにはorder、limit、cursorを加えず一致結果をlive購読し、clientで`nameKana`、document ID順にsortして20件ずつ表示する。
 - 入力なしは通常一覧、範囲外入力はqueryを行わない案内表示とする。作成・更新後は先頭pageへ戻し、失敗時は表示中pageを維持して再試行できる。重複loadと古いlistener callbackは反映しない。
 - Autocompleteは従業員用ではなく外注先専用ListItemを使い、既存の最大50件取得を維持する。一覧・Card・Autocompleteでは略称、正式名称、codeを識別でき、`TERMINATED`へ「契約終了」を表示するが選択を制限しない。
 

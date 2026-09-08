@@ -4,6 +4,7 @@
  * @description 取引先情報一覧ページ
  *****************************************************************************/
 import { Customer } from "@/schemas";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { useRouter } from "vue-router";
 import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 
@@ -37,10 +38,20 @@ function handleClickUpdate(item) {
 }
 
 function subscribe() {
-  const constraints = selectedStatus.value === "ALL"
-    ? []
-    : [["where", "contractStatus", "==", selectedStatus.value]];
-  customerInstance.subscribeDocs({ constraints });
+  const normalizedSearch = normalizeTokenText(search.value);
+  const statusConstraints =
+    selectedStatus.value === "ALL"
+      ? []
+      : [["where", "contractStatus", "==", selectedStatus.value]];
+  const constraints = normalizedSearch || [
+    ...statusConstraints,
+    ["orderBy", "updatedAt", "desc"],
+    ["limit", 20],
+  ];
+  customerInstance.subscribeDocs({
+    constraints,
+    options: normalizedSearch ? statusConstraints : [],
+  });
 }
 
 function unsubscribe() {
@@ -52,42 +63,40 @@ function unsubscribe() {
  *****************************************************************************/
 onMounted(subscribe);
 onUnmounted(unsubscribe);
-watch(selectedStatus, subscribe);
+watch([selectedStatus, search], subscribe);
 </script>
 
 <template>
-  <v-container
-    class="align-start"
-    style="height: calc(100dvh - var(--v-layout-top) - var(--v-layout-bottom))"
-  >
+  <AppViewportContainer>
     <v-card class="fill-height d-flex flex-column" width="100%">
-      <v-toolbar class="ps-4">
-        <AtomsSearchTextField v-model="search" />
-        <v-select
-          v-model="selectedStatus"
-          :items="statusOptions"
-          label="状態"
-          density="compact"
-          variant="solo"
-          flat
-          hide-details
-          class="mx-2"
-          style="max-width: 180px; min-width: 120px"
-        />
-        <CustomerCreateDialog v-if="canWrite">
-          <template #activator="{ open }">
-            <v-btn icon="mdi-plus" @click="open" />
-          </template>
-        </CustomerCreateDialog>
-      </v-toolbar>
+      <AppMasterListToolbar v-model:search="search" :search-delay="300">
+        <template #append>
+          <v-select
+            v-model="selectedStatus"
+            :items="statusOptions"
+            label="状態"
+            density="compact"
+            variant="solo"
+            flat
+            hide-details
+            class="mx-2"
+            style="max-width: 180px; min-width: 120px"
+          />
+          <CustomerCreateDialog v-if="canWrite">
+            <template #activator="{ open }">
+              <v-btn icon="mdi-plus" @click="open" />
+            </template>
+          </CustomerCreateDialog>
+        </template>
+      </AppMasterListToolbar>
       <CustomersDataTable
         class="flex-grow-1 overflow-hidden"
         :items="customerInstance.docs"
+        :sort-by="[]"
         :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
         hide-search
-        :search="search"
         @click:update="handleClickUpdate"
       />
     </v-card>
-  </v-container>
+  </AppViewportContainer>
 </template>

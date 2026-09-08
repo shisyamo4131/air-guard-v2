@@ -13,28 +13,29 @@ const emit = defineEmits(["update:search", "click:detail", "create", "reload"]);
 </script>
 <template>
   <div class="d-flex flex-column flex-grow-1 overflow-hidden">
-    <v-toolbar class="ps-3 mb-4">
-      <AtomsSearchTextField
-        :model-value="props.search"
-        :delay="300"
-        @update:model-value="emit('update:search', $event)"
-      />
-      <EmployeeEditor
-        v-if="props.showCreate"
-        operation="create"
-        title="従業員の新規登録"
-        @saved="emit('create', { docId: $event.employeeId })"
-      >
-        <template #default="{ open, canEdit }">
-          <v-btn
-            v-if="canEdit"
-            icon="mdi-plus"
-            aria-label="従業員を登録"
-            @click="open"
-          />
-        </template>
-      </EmployeeEditor>
-    </v-toolbar>
+    <AppMasterListToolbar
+      :search="props.search"
+      :search-delay="300"
+      @update:search="emit('update:search', $event)"
+    >
+      <template #append>
+        <EmployeeEditor
+          v-if="props.showCreate"
+          operation="create"
+          title="従業員の新規登録"
+          @saved="emit('create', { docId: $event.employeeId })"
+        >
+          <template #default="{ open, canEdit }">
+            <v-btn
+              v-if="canEdit"
+              icon="mdi-plus"
+              aria-label="従業員を登録"
+              @click="open"
+            />
+          </template>
+        </EmployeeEditor>
+      </template>
+    </AppMasterListToolbar>
     <v-progress-linear v-if="props.loading" indeterminate />
     <v-alert v-else-if="props.error" type="error">
       {{ props.error }}

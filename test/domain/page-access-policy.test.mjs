@@ -8,6 +8,7 @@ import {
   isPublicPageAccessPolicy,
   PAGE_ACCESS_POLICIES,
 } from "../../utils/auth/policies/pageAccessPolicy.js";
+import { buildPageAccessContext } from "../../utils/auth/pageAccessContext.js";
 import {
   getNavigationItems,
   getPageConfig,
@@ -38,6 +39,9 @@ const expectedRoutePolicies = new Map([
   ["/auth/sign-up-admin", PAGE_ACCESS_POLICIES.PUBLIC],
   ["/auth/sign-up", PAGE_ACCESS_POLICIES.PUBLIC],
   ["/auth/sign-in", PAGE_ACCESS_POLICIES.PUBLIC],
+  ["/auth/reset-password", PAGE_ACCESS_POLICIES.PUBLIC],
+  ["/maintenance", PAGE_ACCESS_POLICIES.AUTHENTICATED],
+  ["/unconfirmedEmail", PAGE_ACCESS_POLICIES.AUTHENTICATED],
   ["/super-user", PAGE_ACCESS_POLICIES.SUPER_USER],
   ["/test/component-test", PAGE_ACCESS_POLICIES.DEVELOPER],
   ["/test/permissions-test", PAGE_ACCESS_POLICIES.DEVELOPER],
@@ -81,6 +85,47 @@ const expectedRoutePolicies = new Map([
   ["/settings/lifecycle-history", PAGE_ACCESS_POLICIES.LIFECYCLE_HISTORY],
 ]);
 
+function activeContext({
+  actorRoles = [],
+  userRoles = actorRoles,
+  isAdmin = false,
+  isSuperUser = false,
+  isSuperUserClaimValid = true,
+  isDeveloper = false,
+  isDeveloperClaimValid = true,
+  uid = "actor-a",
+  companyId = "company-a",
+  isEmailVerified = true,
+  actorUser = {},
+} = {}) {
+  const user = {
+    docId: uid,
+    companyId,
+    disabled: false,
+    isTemporary: false,
+    isAdmin,
+    roles: actorRoles,
+    ...actorUser,
+  };
+  return buildPageAccessContext({
+    isReady: true,
+    uid,
+    companyId,
+    isEmailVerified,
+    isSuperUser,
+    isSuperUserClaimValid,
+    isDeveloper,
+    isDeveloperClaimValid,
+    user,
+    roles: [
+      ...(Array.isArray(userRoles) ? userRoles : []),
+      ...(isAdmin ? ["admin"] : []),
+      ...(isSuperUser ? ["super-user"] : []),
+      ...(isDeveloper ? ["developer"] : []),
+    ],
+  });
+}
+
 function flattenPageStructure(items) {
   return items.flatMap((item) => [
     item,
@@ -111,10 +156,10 @@ test("page structure assigns one known policy to every route and none to groups"
   const routeNodes = nodes.filter((node) => Object.hasOwn(node, "path"));
   const groupNodes = nodes.filter((node) => !Object.hasOwn(node, "path"));
 
-  assert.equal(nodes.length, 47);
-  assert.equal(routeNodes.length, 35);
+  assert.equal(nodes.length, 50);
+  assert.equal(routeNodes.length, 38);
   assert.equal(groupNodes.length, 12);
-  assert.equal(expectedRoutePolicies.size, 35);
+  assert.equal(expectedRoutePolicies.size, 38);
 
   for (const node of routeNodes) {
     assert.equal(
@@ -235,38 +280,71 @@ test("runtime rejects legacy access fields even when a policy is known", () => {
 });
 
 test("general policies preserve authenticated, exclusive, admin, and permission behavior", () => {
+  const authenticatedContext = activeContext();
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.AUTHENTICATED, []),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.AUTHENTICATED,
+      [],
+      authenticatedContext,
+    ),
     true,
   );
 
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SUPER_USER, ["super-user"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SUPER_USER,
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SUPER_USER, ["admin"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SUPER_USER,
+      ["admin"],
+      activeContext({ isAdmin: true }),
+    ),
     false,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.DEVELOPER, ["developer"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.DEVELOPER,
+      ["developer"],
+      activeContext({ isDeveloper: true }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.DEVELOPER, ["super-user"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.DEVELOPER,
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
     false,
   );
 
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.ADMIN, ["admin"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.ADMIN,
+      ["admin"],
+      activeContext({ isAdmin: true }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.ADMIN, ["super-user"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.ADMIN,
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.ADMIN, ["manager"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.ADMIN,
+      ["manager"],
+      activeContext({ actorRoles: ["manager"] }),
+    ),
     false,
   );
 
@@ -280,24 +358,45 @@ test("general policies preserve authenticated, exclusive, admin, and permission 
     [PAGE_ACCESS_POLICIES.OUTSOURCERS_READ, "manager"],
   ];
   for (const [policy, preset] of policyCases) {
-    assert.equal(isPageAccessAllowed(policy, [preset]), true, preset);
-    assert.equal(isPageAccessAllowed(policy, []), false, `${preset}: empty`);
+    const context = activeContext({ actorRoles: [preset] });
+    assert.equal(isPageAccessAllowed(policy, [preset], context), true, preset);
+    assert.equal(
+      isPageAccessAllowed(policy, [], activeContext()),
+      false,
+      `${preset}: empty`,
+    );
   }
 
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SITES_READ, ["sites:read"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SITES_READ,
+      ["sites:read"],
+      activeContext({ actorRoles: ["sites:read"] }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SITES_READ, ["sites:write"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SITES_READ,
+      ["sites:write"],
+      activeContext({ actorRoles: ["sites:write"] }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SITES_READ, ["admin"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SITES_READ,
+      ["admin"],
+      activeContext({ isAdmin: true }),
+    ),
     true,
   );
   assert.equal(
-    isPageAccessAllowed(PAGE_ACCESS_POLICIES.SITES_READ, ["super-user"]),
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SITES_READ,
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
     true,
   );
 });
@@ -317,8 +416,13 @@ test("special policies preserve exclusive behavior for combined roles", () => {
   ];
 
   for (const [policy, userRoles, expected] of specialCases) {
+    const context = activeContext({
+      isDeveloper: userRoles.includes("developer"),
+      isSuperUser: userRoles.includes("super-user"),
+      isAdmin: userRoles.includes("admin"),
+    });
     assert.equal(
-      isPageAccessAllowed(policy, userRoles),
+      isPageAccessAllowed(policy, userRoles, context),
       expected,
       JSON.stringify({ policy: policy.id, userRoles }),
     );
@@ -332,7 +436,7 @@ test("restricted general policies deny absent or empty roles", () => {
       PAGE_ACCESS_POLICIES.SITES_READ,
     ]) {
       assert.equal(
-        isPageAccessAllowed(policy, userRoles),
+        isPageAccessAllowed(policy, userRoles, activeContext()),
         false,
         JSON.stringify({ policy: policy.id, userRoles }),
       );
@@ -342,10 +446,8 @@ test("restricted general policies deny absent or empty roles", () => {
 
 test("User management accepts only company admin or a valid users:write preset", () => {
   const policy = PAGE_ACCESS_POLICIES.USER_MANAGEMENT;
-  const context = (presetRoles, isAdmin = false) => ({
-    presetRoles,
-    isAdmin,
-  });
+  const context = (presetRoles, isAdmin = false) =>
+    activeContext({ actorRoles: presetRoles, isAdmin });
 
   assert.equal(
     isPageAccessAllowed(policy, ["manager"], context(["manager"])),
@@ -357,7 +459,7 @@ test("User management accepts only company admin or a valid users:write preset",
     [["human-resource"], context(["human-resource"])],
     [["controller"], context(["controller"])],
     [["users:write"], context(["users:write"])],
-    [["super-user"], context([])],
+    [["super-user"], activeContext({ isSuperUser: true })],
     [["developer"], context([])],
     [["manager", "unknown"], context(["manager", "unknown"])],
     [["admin"], context(["manager", "unknown-role"], true)],
@@ -367,7 +469,10 @@ test("User management accepts only company admin or a valid users:write preset",
     [["manager"], context([1])],
     [["manager"], context([""])],
     [["manager"], context([], "true")],
-    [["manager"], { presetRoles: ["manager"] }],
+    [
+      ["manager"],
+      { ...context(["manager"]), isActiveRegisteredActor: false },
+    ],
     [["manager"], null],
     [["manager"], {}],
   ]) {
@@ -376,6 +481,138 @@ test("User management accepts only company admin or a valid users:write preset",
       false,
       JSON.stringify({ userRoles, accessContext }),
     );
+  }
+});
+
+test("protected policies require an active registered actor and exact special claims", () => {
+  const protectedPolicies = [
+    PAGE_ACCESS_POLICIES.SITES_READ,
+    PAGE_ACCESS_POLICIES.EMPLOYEES_READ,
+    PAGE_ACCESS_POLICIES.ADMIN,
+    PAGE_ACCESS_POLICIES.USER_MANAGEMENT,
+  ];
+  const invalidContexts = [
+    activeContext({ uid: "bad/id" }),
+    activeContext({ companyId: " bad-company" }),
+    activeContext({ isEmailVerified: false }),
+    activeContext({ isSuperUserClaimValid: false }),
+    activeContext({ actorUser: { docId: "another-user" } }),
+    activeContext({ actorUser: { companyId: "another-company" } }),
+    activeContext({ actorUser: { disabled: true } }),
+    activeContext({ actorUser: { isTemporary: true } }),
+    activeContext({ actorUser: { isAdmin: "true" } }),
+    activeContext({ actorUser: { roles: null } }),
+  ];
+
+  for (const context of invalidContexts) {
+    assert.equal(context.isActiveRegisteredActor, false);
+    for (const policy of protectedPolicies) {
+      assert.equal(
+        isPageAccessAllowed(policy, ["manager"], context),
+        false,
+        policy.id,
+      );
+    }
+  }
+
+  const authenticatedButInvalid = activeContext({
+    actorUser: { disabled: true },
+  });
+  assert.equal(
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.AUTHENTICATED,
+      [],
+      authenticatedButInvalid,
+    ),
+    true,
+  );
+  assert.equal(
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.SUPER_USER,
+      ["super-user"],
+      activeContext({ isSuperUser: true, isSuperUserClaimValid: false }),
+    ),
+    false,
+  );
+  assert.equal(
+    isPageAccessAllowed(
+      PAGE_ACCESS_POLICIES.DEVELOPER,
+      ["developer"],
+      activeContext({ isDeveloper: true, isDeveloperClaimValid: false }),
+    ),
+    false,
+  );
+});
+
+test("Employee page access matches the strict Employee reader policy", () => {
+  const policy = PAGE_ACCESS_POLICIES.EMPLOYEES_READ;
+
+  for (const role of [
+    "manager",
+    "controller",
+    "accountant",
+    "human-resource",
+    "labor",
+    "legal",
+  ]) {
+    assert.equal(
+      isPageAccessAllowed(
+        policy,
+        [role],
+        activeContext({ actorRoles: [role] }),
+      ),
+      true,
+      role,
+    );
+  }
+
+  for (const role of ["employees:read", "employees:write", "unknown"]) {
+    assert.equal(
+      isPageAccessAllowed(
+        policy,
+        [role],
+        activeContext({ actorRoles: [role] }),
+      ),
+      false,
+      role,
+    );
+  }
+
+  assert.equal(
+    isPageAccessAllowed(
+      policy,
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
+    false,
+  );
+  assert.equal(
+    isPageAccessAllowed(
+      policy,
+      ["admin", "super-user"],
+      activeContext({ isAdmin: true, isSuperUser: true }),
+    ),
+    true,
+  );
+});
+
+test("reserved stored roles cannot grant route or navigation access", () => {
+  for (const reservedRole of ["admin", "super-user", "developer", "*"]) {
+    const context = activeContext({ actorRoles: [reservedRole] });
+    assert.equal(context.isActiveRegisteredActor, false);
+    assert.equal(isPageAllowed("/sites", [reservedRole], context), false);
+    assert.equal(
+      navigationValues(getNavigationItems([reservedRole], context)).includes(
+        "sites",
+      ),
+      false,
+    );
+  }
+
+  for (const injectedRole of ["admin", "super-user"]) {
+    const context = activeContext({ userRoles: [injectedRole] });
+    assert.equal(context.isActiveRegisteredActor, true);
+    assert.equal(isPageAllowed("/sites", [injectedRole], context), false);
   }
 });
 
@@ -390,10 +627,11 @@ test("all configured routes resolve to the catalog policy and dynamic routes ret
     "operation-results-detail",
   );
   assert.equal(
-    isPageAllowed("/employees/employee-001", ["human-resource"], {
-      presetRoles: ["human-resource"],
-      isAdmin: false,
-    }),
+    isPageAllowed(
+      "/employees/employee-001",
+      ["human-resource"],
+      activeContext({ actorRoles: ["human-resource"] }),
+    ),
     true,
   );
 
@@ -409,9 +647,9 @@ test("all configured routes resolve to the catalog policy and dynamic routes ret
 });
 
 test("route and navigation share User management policy while groups derive children", () => {
-  const managerContext = { presetRoles: ["manager"], isAdmin: false };
-  const adminContext = { presetRoles: [], isAdmin: true };
-  const directContext = { presetRoles: ["users:write"], isAdmin: false };
+  const managerContext = activeContext({ actorRoles: ["manager"] });
+  const adminContext = activeContext({ isAdmin: true });
+  const directContext = activeContext({ actorRoles: ["users:write"] });
 
   assert.equal(isPageAllowed("/settings/users", ["manager"], managerContext), true);
   assert.equal(isPageAllowed("/settings/users", ["admin"], adminContext), true);
@@ -420,10 +658,11 @@ test("route and navigation share User management policy while groups derive chil
     false,
   );
   assert.equal(
-    isPageAllowed("/settings/users", ["super-user"], {
-      presetRoles: [],
-      isAdmin: false,
-    }),
+    isPageAllowed(
+      "/settings/users",
+      ["super-user"],
+      activeContext({ isSuperUser: true }),
+    ),
     false,
   );
 
@@ -442,10 +681,10 @@ test("route and navigation share User management policy while groups derive chil
   assert.equal(adminNavigation.includes("users-setting"), true);
 
   const directNavigation = navigationValues(
-    getNavigationItems(["sites:read"], {
-      presetRoles: [],
-      isAdmin: false,
-    }),
+    getNavigationItems(
+      ["sites:read"],
+      activeContext({ actorRoles: ["sites:read"] }),
+    ),
   );
   assert.equal(directNavigation.includes("sites-group"), true);
   assert.equal(directNavigation.includes("sites"), true);
@@ -461,14 +700,7 @@ test("lifecycle history route and navigation are company-admin only", () => {
     isAdmin: true,
     roles: [],
   };
-  const context = {
-    presetRoles: [],
-    isAdmin: true,
-    companyId: "company-a",
-    actorUid: "actor-a",
-    actorUser,
-    isSuperUser: false,
-  };
+  const context = activeContext({ isAdmin: true, actorUser });
 
   assert.equal(
     isPageAllowed("/settings/lifecycle-history", ["admin"], context),
@@ -501,7 +733,11 @@ test("lifecycle history route and navigation are company-admin only", () => {
       isAdmin: false,
       actorUser: { ...actorUser, isAdmin: false, roles: ["users:write"] },
     },
-    { ...context, isSuperUser: true },
+    {
+      ...context,
+      isSuperUser: true,
+      userRoles: ["super-user"],
+    },
     { ...context, actorUid: "stale", actorUser },
     { ...context, companyId: "company-b" },
   ];
@@ -521,7 +757,7 @@ test("lifecycle history route and navigation are company-admin only", () => {
 
 test("super-user navigation exposes Company settings without legacy checkout", () => {
   const superUserRoles = ["super-user"];
-  const superUserContext = { presetRoles: [], isAdmin: false };
+  const superUserContext = activeContext({ isSuperUser: true });
   const navigation = navigationValues(
     getNavigationItems(superUserRoles, superUserContext),
   );
@@ -582,11 +818,10 @@ test("page settings validator accepts current structure and rejects invalid shap
   }
 });
 
-test("unregistered absolute routes retain the existing root fallback", () => {
+test("unregistered absolute routes fail closed", () => {
   const config = getPageConfig("/not-registered/path");
-  assert.equal(config?.id, "home");
-  assert.equal(config?.accessPolicy, PAGE_ACCESS_POLICIES.PUBLIC);
-  assert.equal(isPageAllowed("/not-registered/path", []), true);
+  assert.equal(config, undefined);
+  assert.equal(isPageAllowed("/not-registered/path", []), false);
 });
 
 test("middleware identifies public pages through accessPolicy only", async () => {
@@ -609,8 +844,6 @@ test("middleware identifies public pages through accessPolicy only", async () =>
     source,
     /if \(isPublicPage\) \{\s*if \(targetPath !== "\/dashboard"\)/,
   );
-  assert.match(
-    source,
-    /if \(!pageConfig\) \{\s*return;\s*\}/,
-  );
+  assert.match(source, /未登録routeもfail closed/);
+  assert.doesNotMatch(source, /if \(!pageConfig\) \{\s*return;\s*\}/);
 });

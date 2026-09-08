@@ -4,6 +4,22 @@
 
 ## Unreleased
 
+- 4マスターの通常更新dialogへ共通`AppEditorDialog`を適用し、VForm validation、Atomsのキャンセル／更新button、処理中・競合時の提出抑止を統一した。Customer基本・支払条件、Site基本・取引先、Employee共通Editor、Outsourcer更新が対象で、Site取極め・終了・再開・archive等の専用操作は変更していない。
+
+- 4マスターUIの固定commitをDevへ反映し、Firestore indexesとHostingのdeploy、全追加indexの`READY`、4一覧、退職者／終了現場の空検索、従業員のひらがな検索、現場の警備種別filter、Employee／Outsourcer更新dialogを非破壊確認した。Customer／SiteはDevに更新対象documentが存在しないため更新dialogの実画面確認を省略し、domain compile契約とDev release buildで確認した。document data、Functions、Rules、Prodは変更していない。
+
+- 配置管理で予定、配置作業員、通知の変更後に画面反映が遅れる重大な楽観的更新回帰を確認事項として記録した。専用Callable化が原因かは未確認であり、4マスターUI branchのDev受入れとmain統合後、別branchで実行経路をreview・修正する。Firestore Rules再編はその後へ順序変更した。
+
+- UI・application改修のDev受入れ前検証はdomain testと必要最小限のlocal動作確認へ集中し、専用Local UI build・全Emulator・重複browser受入れを一律の完了条件から外した。実Dev固有の挙動は固定commitのbounded Dev release後に確認する。Rules・schema・Functions・認証認可等の高risk境界、release build、comprehensive governance gateは対象変更に応じて維持する。
+
+- 配置管理の楽観的更新回帰を修正した後に、Firestore Rulesの責務と式数を一括ではなく段階的に整理する工程を必須phaseとして記録した。collection／reader／writerの棚卸し、未定義collectionの既定拒否化、高risk更新のCallable化、Site Rulesの式数削減、必要なread model分離をrollback可能なcheckpointで進める。今回、Rules・Functions・data・環境は変更していない。
+
+- 未適用の共通`AppEditorDialog`で、キャンセルと登録／更新actionを既存Atomsボタンへ統一した。Submitは`type="submit"`のままVFormのvalidationを通し、`@click`による直接submitは使用しない。
+
+- page navigationとroute middlewareを同じactive actor／permission policyへ統一し、権限外menuを非表示、未登録route・権限外pageをdashboardへ遷移するよう変更した。表示中にrole、無効状態、tenant、special claimが変わった場合も再認可する。保存User roleによる`admin`・`super-user`・`developer`・wildcard偽装を拒否し、認証session初期化失敗時は旧User・Company購読とtenant状態を破棄してfail closedとする。不要な`/test/user-permission-info` pageは削除した。client制御はserver認可の代替ではなく、Firestore Rulesは変更していない。
+
+- 4マスター一覧のReadを揃え、空検索では取引先・稼働中現場・在職従業員・外注先を最近追加・更新された順に最大20件、終了済み現場を最近更新された順に最大20件、退職者を退職日の新しい順に最大20件表示するよう変更した。文字列入力時は既存`tokenMap`を使い、ひらがな・カタカナを同一視して検索する。取引先の状態、現場の取引先・警備種別、各lifecycle statusは維持する。Devへ必要indexとHostingを反映済みで、Prod・document dataは変更していない。
+
 - 初回bounded Dev反映後の残るマスター機能受入れとして、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09を完了した。会社管理者では各masterの承認済み通常操作、経理accountでは一覧・検索・詳細の閲覧とwrite導線非表示を確認した。CAS-05は一時合成Customer・active Siteで参照中のarchive拒否と拒否後の不変をDev確認し、両masterを承認済みarchive経路でcleanupした。合成Outsourcerは契約終了、合成Employeeは在職状態で保持し、Employee archive allowlistは空のままUser／Authenticationを作成・削除していない。[Dev受入れ結果](docs/implementation/master-dev-acceptance-plan.md#no10後のcustomeroutsourceremployee-dev受入れ結果)を参照。
 
 - Devの会社管理者による、Customer紐付け・座標ありSite作成がFirestore Rulesの1000式評価上限で拒否される不具合を修正した。Siteのexact schema、派生値、Customer projection、actor・tenant・maintenance境界は維持し、fallbackを先に拒否して重複検証を削減した。Local UI、全domain 1509件、全Local Emulator 182件、clean HEADの専用Local UI build後、補正版RulesだけをDevへ反映した。Devでは会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchive、経理accountの閲覧・作成導線非表示を確認した。利用者は機能面を完了、見た目・操作感の追加改善を後続phaseと判断し、Site進捗を95%から100%へ更新した。Hosting・Functions・Indexesは補正時に再反映せず、合成Siteはarchive、合成Customerは残している。[検証記録](docs/verification/master-dev-site-create-correction.md)を参照。

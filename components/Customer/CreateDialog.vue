@@ -56,9 +56,9 @@ async function save() {
 <template>
   <slot v-if="canWrite" name="activator" :open="open" />
 
-  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
+  <v-dialog v-model="dialog" max-width="480" persistent scrollable>
     <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
-      <v-card>
+      <v-card :border="false">
         <v-toolbar color="secondary" density="compact" :title="props.title" />
         <v-card-text>
           <v-alert

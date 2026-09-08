@@ -54,6 +54,27 @@ export const pageStructure = [
     label: "サインイン",
     navigation: false,
   },
+  {
+    id: "reset-password",
+    path: "/auth/reset-password",
+    accessPolicy: PAGE_ACCESS_POLICIES.PUBLIC,
+    label: "パスワード再設定",
+    navigation: false,
+  },
+  {
+    id: "maintenance",
+    path: "/maintenance",
+    accessPolicy: PAGE_ACCESS_POLICIES.AUTHENTICATED,
+    label: "メンテナンス",
+    navigation: false,
+  },
+  {
+    id: "unconfirmed-email",
+    path: "/unconfirmedEmail",
+    accessPolicy: PAGE_ACCESS_POLICIES.AUTHENTICATED,
+    label: "アカウント設定",
+    navigation: false,
+  },
 
   /** SUPER USER */
   {
@@ -580,20 +601,7 @@ export function getPageConfig(path) {
     }
   }
 
-  // 3. 動的ルートの親を探す（従来の処理）
-  // 例: /employees/abc123/edit のような多階層の場合、/employees/[id] が見つからなければ /employees を探す
-  let tempPath = normalizedPath;
-  while (tempPath.includes("/")) {
-    const lastSlashIndex = tempPath.lastIndexOf("/");
-    tempPath =
-      lastSlashIndex === 0 ? "/" : tempPath.substring(0, lastSlashIndex);
-    if (pagesByPath[tempPath]) {
-      return pagesByPath[tempPath];
-    }
-    if (tempPath === "/") break;
-  }
-
-  return undefined; // どの設定も見つからなければ undefined
+  return undefined;
 }
 
 // --- 公開関数 ---

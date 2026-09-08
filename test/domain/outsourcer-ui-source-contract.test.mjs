@@ -119,11 +119,11 @@ test("Outsourcer search and autocomplete keep the approved name-token and render
   const autocomplete = await source("components/Outsourcer/Autocomplete.vue");
   const fetch = await source("composables/fetch/useFetchOutsourcer.js");
 
-  assert.match(pagination, /const MIN_SEARCH_LENGTH = 2/u);
+  assert.match(pagination, /const MIN_SEARCH_LENGTH = 1/u);
   assert.match(pagination, /const MAX_SEARCH_LENGTH = 40/u);
   assert.match(pagination, /where\(`tokenMap\.\$\{token\}`, "==", true\)/u);
-  assert.match(pagination, /orderBy\("nameKana", "asc"\)/u);
-  assert.match(pagination, /orderBy\(documentId\(\), "asc"\)/u);
+  assert.match(pagination, /orderBy\("updatedAt", "desc"\)/u);
+  assert.match(pagination, /orderBy\(documentId\(\), "desc"\)/u);
   assert.match(pagination, /const PAGE_SIZE = 20/u);
   assert.match(pagination, /const QUERY_LIMIT = PAGE_SIZE \+ 1/u);
   assert.match(
@@ -201,6 +201,11 @@ test("Outsourcer dialogs use operation-specific actions, independent drafts, and
   assert.match(editor, /hasOutsourcerOperationConflict/u);
   assert.match(editor, /updateOutsourcer/u);
   assert.match(editor, /最新値を読み直す/u);
+  assert.match(
+    editor,
+    /<AppEditorDialog[\s\S]*?:submit-disabled="isWaitingForRollback \|\| hasExternalChanges"[\s\S]*?@submit="save"/u,
+  );
+  assert.doesNotMatch(editor, /<v-dialog|<v-form|ref="form"/u);
   const actions = await source("composables/application/outsourcer/useOutsourcerActions.js");
   const writer = await source("utils/outsourcer/outsourcerWriter.js");
   assert.match(actions, /assertCanWrite:\s*\(\)\s*=>/u);

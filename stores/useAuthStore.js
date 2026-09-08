@@ -28,6 +28,8 @@ export const useAuthStore = defineStore("auth", () => {
   const isSuperUser = ref(false);
   const isSuperUserClaimValid = ref(false);
   const isDeveloper = ref(false);
+  const isDeveloperClaimValid = ref(false);
+  const sessionInitializationFailed = ref(false);
   const companyId = ref(null);
 
   const userInstance = reactive(new User());
@@ -215,6 +217,8 @@ export const useAuthStore = defineStore("auth", () => {
     isSuperUser,
     isSuperUserClaimValid,
     isDeveloper,
+    isDeveloperClaimValid,
+    sessionInitializationFailed,
     waitUntilReady,
     waitUntilSessionCleared,
     hasRole,

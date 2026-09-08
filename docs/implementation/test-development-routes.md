@@ -2,7 +2,7 @@
 
 - 状態: 実装調査
 - 対象セグメント: SPEC-SEG-057
-- 最終確認日: 2026-08-11
+- 最終確認日: 2026-09-08
 - 根拠ファイル: `pages/test/*.vue`、`utils/pageSettings.js`、`middleware/auth.global.js`、`nuxt.config.js`、`firestore.rules`
 - 制約: runtime、外部環境、実data、各composable/trigger内部は未確認。
 
@@ -14,15 +14,13 @@
 | `/test/permissions-test` | `developer`、default layout | 現在UserのUID、email、role、permissionを表示。writeなし | authorization診断。production除外または厳格隔離候補 |
 | `/test/rollback-operation-result` | `developer`、navigation表示 | 同一company内OperationResultをdelete後、同じdocIdのSiteOperationScheduleをupdate | 破壊的保守。現状のpage直書きは廃止し、監査付きserver処理へ移行候補 |
 | `/test/round-setting-test` | `developer`、navigation表示 | browser内testとprocess-globalな`RoundSetting` mode変更。Firestore writeなし | 開発test。自動testへ移しproduction除外候補 |
-| `/test/user-permission-info` | pageSettings未登録。global middlewareは設定なし実在pageを許可 | `/permissions-test`と同一内容を表示。writeなし | 重複・設定漏れ候補。削除または登録判断が必要 |
 
-Nuxtのfile-based routingにより5 pageはいずれもroute候補になる。`nuxt.config.js`にはenvironment別page除外、route pruning、production-only guardがないため、production buildにも含まれる候補である。実build artifactは生成していない。
+Nuxtのfile-based routingにより上記4 pageはいずれもroute候補になる。`nuxt.config.js`にはenvironment別page除外、route pruning、production-only guardがないため、production buildにも含まれる候補である。実build artifactは生成していない。重複していた`/test/user-permission-info`は2026-09-08に不要と判断し削除した。
 
 ## guardとserver enforcement
 
 - 登録済み4 routeはclient `pageSettings`の`DEVELOPER` access policyだけで入口を制限する。これはserver authorizationではない。
-- `/test/user-permission-info`は明示設定がなく、`getPageConfig`が`/`の`PUBLIC` policyへfallbackする。未認証Userは到達でき、メール確認・会社claim確立済みの認証Userは公開page扱いでdashboardへredirectされる。未確認または会社未確立Userは専用分岐で`/unconfirmedEmail`へredirectされる。
-- permission表示2 pageはlocal store情報だけを読む。UID/email/role/permissionは個人・認可情報であり、画面到達者へそのまま表示する。
+- permission表示pageはlocal store情報だけを読む。UID/email/role/permissionは個人・認可情報であり、画面到達者へそのまま表示する。
 - Employee取得はFirestore Rulesが実際のtenant read境界となる。固定IDはtenantや環境に適合する保証がない。
 - rollbackはclientからFirestoreへ直接delete/updateするため、実際の許可はRulesの同一company認証境界に依存する。`developer` roleはRulesで強制されず、直接API利用を防がない。
 
@@ -30,7 +28,7 @@ Nuxtのfile-based routingにより5 pageはいずれもroute候補になる。`n
 
 `component-test`はrunning中の再実行を抑止し、各case errorを結果へ表示する。固定ID取得によりFirestore readが発生し、cache resetはlocal作用である。
 
-permission 2 pageは操作buttonや外部作用を持たず、現在storeの派生値を表示する。両fileは実質同一で、片方だけpageSettingsに存在しない。
+permission pageは操作buttonや外部作用を持たず、現在storeの派生値を表示する。
 
 rollback pageはdoc ID入力、fetch/subscribe、不可逆確認dialog、loading中button disable、error表示を持つ。ただし次の順次処理でtransaction/batchではない。
 
@@ -43,14 +41,12 @@ round-setting pageはlocal instanceのvalidation/clone等を実行する一方�
 
 ## 矛盾・未使用候補
 
-- `permissions-test.vue`と`user-permission-info.vue`は同一実装で、後者はpageSettings未登録である。
-- module navigationには4 childrenしかなく、`user-permission-info`はnavigationから未到達である。
 - rollbackのSchedule pathはdoc ID同一性を仮定し、現在のOperationResult生成契約のoptional `scheduleId`と一致しない候補である。
 - `developer` routeは名称上test/dev専用だが、production bundle除外契約がない。
 
 ## 将来要対応・要確認事項
 
-- FUT-0001: 未設定実在pageを専用errorにする承認済み方針へ`user-permission-info`を含める。
+- FUT-0001: 未登録routeをfail closedにする変更は2026-09-08にLocal実装済み。
 - FUT-0160: RoundSetting test routeをproductionから隔離する。
 - FUT-0164: test/dev route surfaceをbuild、server authorization、監査の共通方針で閉じる。
 - CONF-0136: test/dev routeの正式な保持・production除外・operator経路を決定する。

@@ -18,7 +18,7 @@ import { useLogger } from "@/composables/useLogger";
 
 const PAGE_SIZE = 20;
 const QUERY_LIMIT = PAGE_SIZE + 1;
-const MIN_SEARCH_LENGTH = 2;
+const MIN_SEARCH_LENGTH = 1;
 const MAX_SEARCH_LENGTH = 40;
 const SAFE_ERROR_MESSAGE =
   "外注先情報を取得できませんでした。時間をおいて再試行してください。";
@@ -121,8 +121,8 @@ export function useOutsourcerListPagination({ search }) {
 
   function buildEmptySearchQuery(companyId, cursor) {
     const constraints = [
-      orderBy("nameKana", "asc"),
-      orderBy(documentId(), "asc"),
+      orderBy("updatedAt", "desc"),
+      orderBy(documentId(), "desc"),
     ];
     if (cursor) constraints.push(startAfter(cursor));
     constraints.push(limit(QUERY_LIMIT));

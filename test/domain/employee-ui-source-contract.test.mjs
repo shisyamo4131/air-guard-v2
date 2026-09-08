@@ -43,14 +43,18 @@ test("Employee lists use the dedicated scoped reader and keep their existing cre
   );
 
   assert.match(active, /status: Employee\.STATUS_ACTIVE/);
-  assert.match(active, /fetchAllOnEmpty: true/);
+  assert.doesNotMatch(active, /fetchAllOnEmpty/);
   assert.match(active, /<EmployeesManager[\s\S]*?\bshow-create\b/u);
   assert.match(resigned, /status: Employee\.STATUS_RESIGNED/);
+  assert.match(resigned, /recentField: "dateOfTermination"/);
   assert.doesNotMatch(resigned, /show-create/);
   assert.doesNotMatch(`${active}\n${resigned}`, /useDocuments|useEmployeesResigned/);
   assert.match(reader, /useEmployeeReadAccess/);
   assert.match(reader, /Companies\/\$\{companyId\}\/Employees/);
-  assert.match(reader, /\["where", "employmentStatus", "==", status\]/);
+  assert.match(reader, /where\("employmentStatus", "==", status\)/);
+  assert.match(reader, /orderBy\(recentField, "desc"\)/);
+  assert.match(reader, /limit\(PAGE_SIZE\)/);
+  assert.match(reader, /createTokenMapQueries\(text\)/);
   assert.doesNotMatch(reader, /Employees_archive/);
 });
 

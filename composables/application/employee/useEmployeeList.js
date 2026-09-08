@@ -1,11 +1,22 @@
 import { computed, onScopeDispose, ref, watch } from "vue";
-import { collection, onSnapshot, query } from "firebase/firestore";
+import {
+  collection,
+  documentId,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  where,
+} from "firebase/firestore";
+import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { Employee } from "@/schemas";
 import { rawForClass } from "@/functions/shared/employeeContract.js";
 import { useEmployeeReadAccess } from "@/composables/application/employee/useEmployeeReadAccess";
 import { createEmployeeListSession } from "@/composables/domain/employee/employeeListSession.js";
 
-export function useEmployeeList({ status, search, fetchAllOnEmpty = false }) {
+const PAGE_SIZE = 20;
+
+export function useEmployeeList({ status, search, recentField = "updatedAt" }) {
   const { $firestore } = useNuxtApp();
   const access = useEmployeeReadAccess();
   const docs = ref([]);
@@ -21,12 +32,15 @@ export function useEmployeeList({ status, search, fetchAllOnEmpty = false }) {
     subscribe: ({ scope, text }, next, fail) => {
       const companyId = JSON.parse(scope)[0];
       const model = new Employee();
-      const options = [
-        ["where", "employmentStatus", "==", status],
-      ];
+      const statusConstraint = where("employmentStatus", "==", status);
       const constraints = text
-        ? [...model.createTokenMapQueries(text), ...model.createQueries(options)]
-        : model.createQueries(options);
+        ? [...model.createTokenMapQueries(text), statusConstraint]
+        : [
+            statusConstraint,
+            orderBy(recentField, "desc"),
+            orderBy(documentId(), "desc"),
+            limit(PAGE_SIZE),
+          ];
       return onSnapshot(
         query(
           collection($firestore, `Companies/${companyId}/Employees`),
@@ -46,15 +60,12 @@ export function useEmployeeList({ status, search, fetchAllOnEmpty = false }) {
     },
   });
 
-  const normalizedSearch = computed(() =>
-    typeof search.value === "string" ? search.value.trim() : "",
-  );
+  const normalizedSearch = computed(() => normalizeTokenText(search.value));
 
   watch(
     () => [access.scope.value, normalizedSearch.value],
     ([scope, text]) => {
-      const shouldLoad = Boolean(scope && (text || fetchAllOnEmpty));
-      session.load(shouldLoad ? { scope, text } : null);
+      session.load(scope ? { scope, text } : null);
     },
     { immediate: true, flush: "sync" },
   );

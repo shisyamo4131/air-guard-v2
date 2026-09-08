@@ -1,7 +1,7 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-06
+- 最終更新日: 2026-09-08
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
@@ -14,56 +14,56 @@
 
 ## FUT-0001 ページアクセスをfail-closedへ変更する
 
-- 状態: Open
+- 状態: Resolved（2026-09-08 Local実装）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-001、SPEC-SEG-002、SPEC-DEEP-004、SPEC-DEEP-005
 - 対象ファイル・シンボル: `middleware/auth.global.js`、`utils/pageSettings.js` の `getPageConfig`・`isPageAllowed`
-- 確認済み実装事実: ミドルウェアは設定なしを許可する分岐を持つ。さらに `getPageConfig` は未登録パスを親へ遡り、公開設定の `/` を返し得る。ユーザーは実在ページの設定漏れを許可する挙動は望ましくなく、将来fail-closedへ修正すべきと回答した。2026-08-11に、route一覧と照合し、実在する未設定pageは設定漏れ専用error、存在しないURLは404とする方針を承認した。
+- 確認済み実装事実: 2026-09-08に`getPageConfig`の任意親・公開root fallbackとmiddlewareの設定なし許可を廃止した。実在pageと設定を機械照合し、未登録routeまたは権限外pageは、今回の利用者判断に従って認証済みUserをdashboard、未認証Userをsign-inへ遷移する。
 - 想定影響と発生条件: 未認証Userが設定漏れの実在ページ、または親探索で公開設定を得るパスへ到達した場合、画面側・Rules側の防御だけに依存する。画面表示だけでデータ保護したとみなせないが、不要な機能露出や二次的アクセスの入口になり得る。
-- 未確認点・仮説: route一覧を取得・照合する具体的な実装方法、親権限継承が必要な深いroute、各ページのRules保護は未確認。
-- 推奨する将来対応: 承認済みのroute一覧照合と専用error/404分離を実装し、親継承規則を仕様化する。任意pathが `/` を継承しないlookupへ変更する。
-- 必要なテスト: 未認証・認証済み・メール未確認・各roleについて、実在設定済み、実在設定漏れ、動的route、深い子route、404、maintenanceのtable-driven route guard test。
-- ユーザー判断が必要な事項: 親設定を継承できるrouteの条件。
+- 未確認点・仮説: Nuxtの404画面を含むbrowser実挙動とDev・Prod反映は未確認。各pageのデータ保護はRules／Callableの別境界であり、本項の完了根拠に含めない。
+- 推奨する将来対応: なし。新しいpage追加時はroute inventory testと明示policyを同時に更新する。
+- 必要なテスト: 実装済みのpolicy、middleware、route inventory、current-page再認可testを維持する。
+- ユーザー判断が必要な事項: なし。
 
 ## FUT-0002 ページファイルとpageSettingsの不一致を解消・自動検出する
 
-- 状態: Open
+- 状態: Partially resolved（2026-09-08）
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-002、SPEC-DEEP-004
-- 対象ファイル・シンボル: `utils/pageSettings.js`、`pages/auth/reset-password.vue`、`pages/maintenance.vue`、`pages/test/user-permission-info.vue`、`pages/unconfirmedEmail.vue`、設定path `/settings/user`
-- 確認済み実装事実: 実在4ページに完全一致設定がなく、`/settings/user` は設定だけが存在する。開発時validationはファイルとの対応を検査しない。2026-08-11に、route一覧との機械照合により実在する未設定pageを専用errorにし、存在しないURLを404にする方針が承認された。
-- 想定影響と発生条件: fail-closed化時に4ページが利用不能になる。現状はroot公開設定を継承し、意図しない公開扱いになり得る。stale設定はnavigationや親判定の誤動作要因になる。
-- 未確認点・仮説: 4ページの期待role、`/settings/user` が旧設定か将来設定かは未確定。
-- 推奨する将来対応: 各ページの公開・role要件を確定して明示登録し、stale設定を削除または用途明記する。ファイルrouteと設定pathを機械照合する。
-- 必要なテスト: 設定漏れ、対応ファイルなし、重複path、動的segment、末尾slashの静的整合test。
-- ユーザー判断が必要な事項: 4ページのaccess要件と `/settings/user` の扱い。
+- 対象ファイル・シンボル: `utils/pageSettings.js`、`test/domain/page-route-inventory.test.mjs`、設定path `/settings/user`
+- 確認済み実装事実: reset-password、maintenance、unconfirmedEmailを明示登録し、不要な`/test/user-permission-info` pageを削除した。route inventory testは現在の実在pageに設定漏れがないことを検査する。`/settings/user`は設定だけが存在する状態を明示的な既知例外として残す。
+- 想定影響と発生条件: 残る`/settings/user`が将来navigationや親判定で誤利用される可能性がある。現在はnavigation非表示かつ対応fileがない。
+- 未確認点・仮説: `/settings/user`が旧設定か将来設定かは未確定。
+- 推奨する将来対応: `/settings/user`の用途を確認し、不要なら設定を削除する。
+- 必要なテスト: route inventory testを維持し、既知例外を増やさない。
+- ユーザー判断が必要な事項: `/settings/user`の扱い。
 
 ## FUT-0003 認証初期化の処理完了と利用可能状態を分離する
 
-- 状態: Open
+- 状態: Resolved（2026-09-08 Local実装）
 - 重大度: High
 - 発見セグメント: SPEC-SEG-003、SPEC-SEG-004、SPEC-DEEP-005、SPEC-DEEP-006
 - 対象ファイル・シンボル: `composables/application/auth/useAuthActions.js` の `setUser`・`initializeSession`、`stores/useAuthStore.js` の `isReady`
-- 確認済み実装事実: UID・claims設定後のUser fetch、Company fetch、購読で例外が伝播しても `setUser` はlogger記録後に吸収し、finallyで `isReady = true` にする。FCM登録は完了をawaitするが、`registFCMToken` が例外を内部吸収するためセッション失敗としては伝播しない。2026-08-11に、`isReady` は認証初期化処理の終了を意味し、FCM失敗時はlogだけを残してloginを継続する方針が承認された。
-- 想定影響と発生条件: User/Company取得・購読失敗時、partial stateでmiddlewareが再開し、表示・権限・tenant状態が不完全なまま利用可能に見える可能性がある。
-- 未確認点・仮説: User・Company失敗時の利用可能範囲、model操作の例外条件、UIのerror表示は未確認。
-- 推奨する将来対応: auth observer処理完了、基本session利用可能、通知登録状態、初期化errorを別状態として定義し、failure時の遷移・retryを仕様化する。
-- 必要なテスト: token claim、User fetch、Company fetch、各subscribe失敗と復旧、middleware timeout、FCM登録失敗を個別に注入する結合test。
-- ユーザー判断が必要な事項: User・Company初期化failure時に利用を止める範囲。
+- 確認済み実装事実: `isReady`は処理終了、`sessionInitializationFailed`はtoken／User／Company初期化失敗を表す。失敗時は旧model、listener、tenant prefix、claimを破棄し、onboardingと区別してdashboardへfail closedで戻す。Firebase Authenticationは自動sign-outせず、次の正常callbackで復帰できる。FCM失敗をlogin失敗にしない既存方針は維持する。
+- 想定影響と発生条件: 修正前はUser／Company取得失敗時にpartial stateでmiddlewareが再開する可能性があった。現在は旧状態を破棄しdashboard以外を許可しない。
+- 未確認点・仮説: 実Firebase token refresh時のbrowser表示と、subscribe開始後の非同期listener errorは未確認。
+- 推奨する将来対応: 実browser／Dev受入れ時に初期化失敗表示と正常復帰を確認する。
+- 必要なテスト: 実装済みのtoken、User、Company取得失敗・復旧testを維持し、実observer結合testを追加候補とする。
+- ユーザー判断が必要な事項: なし。
 
-SPEC-DEEP-040追加根拠: `composables/application/auth/useAuthActions.js` の `setUser` はUser/Company取得・購読開始の失敗をcatchした後も必ず `isReady=true` にする。missing companyId時は認証状態を維持したままmodelをclearし、prefixを `Companies/unknown` にするため、処理終了と利用可能状態が区別されていない。
+SPEC-DEEP-040の旧観察は2026-09-08の`sessionInitializationFailed`導入により置換した。`isReady`は処理終了、利用可否はaccess contextと失敗状態で別に判定する。
 
 ## FUT-0004 User切替時の購読置換を保証する
 
-- 状態: Open
+- 状態: Resolved（2026-09-08 Local実装）
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-003、SPEC-DEEP-005、SPEC-DEEP-006
 - 対象ファイル・シンボル: `useAuthActions.initializeSession`、User/Company modelの `subscribe`・`unsubscribe`
-- 確認済み実装事実: 未認証状態を挟まないUser AからUser Bへの初期化冒頭では、既存User・Company購読を明示解除せず新しいsubscribeを呼ぶ。2026-08-11に、User切替は必ずsign-outを挟む方針が承認された。
-- 想定影響と発生条件: model側が既存listenerを置換しない場合、旧tenant/Userのlistener残存、重複更新、情報混在、購読リークが起こり得る。
-- 未確認点・仮説: modelのsubscribeが既存購読を自動解除する可能性があり、現時点でbugとは断定しない。
-- 推奨する将来対応: sign-outを経ないUser切替を許可しない境界を実装・検証し、sign-out時に旧購読が確実に解除されることを確認する。
-- 必要なテスト: 未認証を挟まないUser/会社切替、rapid auth callback、listener件数、旧document更新が新sessionへ反映されないこと。
+- 確認済み実装事実: `initializeSession`開始時に既存User・Company購読を明示解除し、modelとtenant prefixを初期化してから次のUserを取得する。`onIdTokenChanged` callbackは直列化される。
+- 想定影響と発生条件: 修正前はsign-outを挟まないUser切替で旧listener残存の可能性があった。現在は各session開始時に明示解除する。
+- 未確認点・仮説: rapidな実Firebase callback時のlistener件数とbrowser表示は未確認。
+- 推奨する将来対応: 実observer込みのA→B→logout結合testを追加候補とする。
+- 必要なテスト: 実装済みの未認証を挟まないUser／会社切替と旧model破棄testを維持する。
 - ユーザー判断が必要な事項: なし。
 
 SPEC-DEEP-040追加根拠: application auth actionのsign-outはstore session cleanupを待つが、FCM token documentの削除・端末sessionとの切離しは行わない。
@@ -2277,7 +2277,7 @@ EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存�
 - 重大度: High
 - 発見セグメント: SPEC-SEG-057
 - 対象ファイル・シンボル: `pages/test/*.vue`、`utils/pageSettings.js`、`middleware/auth.global.js`、`nuxt.config.js`
-- 確認済み実装事実: 5 test routeはfile-based routeとして存在し、environment別build除外がない。4 routeはclientのdeveloper role guardだけで、`user-permission-info`は未登録fail-openかつ`permissions-test`と重複する。rollback routeはOperationResult delete後に同一docIdのScheduleを別writeし、Rulesはdeveloper roleを強制しない。
+- 確認済み実装事実: 2026-09-08に重複・未登録だった`user-permission-info`を削除した。残る4 test routeはfile-based routeとして存在し、environment別build除外がなく、clientのdeveloper claim guardだけで入口を制限する。rollback routeはOperationResult delete後に同一docIdのScheduleを別writeし、Rulesはdeveloper claimを強制しない。
 - 想定影響と発生条件: productionへ開発診断・個人/権限情報表示・破壊的操作が残り、URL直打ち、client改変、誤ID、2段階目失敗で情報露出、誤削除、部分状態が生じ得る。
 - 未確認点・仮説: production artifact、実developer role付与、Hosting、実利用履歴、rollback正式用途は未確認。
 - 推奨する将来対応: CONF-0136後、原則build-time除外し、必要な保守操作は認証・App Check・actor/tenant/field guard・reason/audit・idempotencyを持つserver processへ分離する。重複pageと固定IDを除去し、自動testへ移せるものはtest suiteへ移す。
@@ -2290,7 +2290,7 @@ EMP-01対応時期（2026-09-06）: live先行変更と親イベント後保存�
 - 重大度: High
 - 発見セグメント: SPEC-SEG-058、SPEC-DEEP-004
 - 対象ファイル・シンボル: `pages/auth/*.vue`、`pages/unconfirmedEmail.vue`、`useCreateNormalUser`、`useCreateAdminUser`
-- 確認済み実装事実: signupはbuttonをlocal loadingで抑止するがAuth作成、mail、Firestore、claimsは非atomicで、後段失敗時はUID案内だけでresume/repairできない。sign-in/reset/resendはbutton固有disabled/cooldownがない。verificationは3秒intervalでreloadし、error handling/single-flightがない。resetとverification pageはpageSettings未登録である。
+- 確認済み実装事実: signupはbuttonをlocal loadingで抑止するがAuth作成、mail、Firestore、claimsは非atomicで、後段失敗時はUID案内だけでresume/repairできない。sign-in/reset/resendはbutton固有disabled/cooldownがない。verificationは3秒intervalでreloadし、error handling/single-flightがない。resetとverification pageは2026-09-08にpageSettingsへ明示登録した。
 - 想定影響と発生条件: 連打・slow network・mail quota・途中失敗・reloadにより重複mail、重複request、Auth-only/claims欠損、unhandled rejection、復帰不能、password resetへの未認証到達不能が生じ得る。
 - 未確認点・仮説: global overlayのclick遮断、Firebase rate limit/error、実mail設定、browser resume、orphan実数は未確認。
 - 推奨する将来対応: CONF-0067/0069/0129確定後、onboarding state machineとidempotent resume/repairを設ける。全actionをsingle-flight化し、resend/reset cooldown、pollのawait再schedule/error表示/backoff、route設定整合、support correlation IDを実装する。
@@ -2567,3 +2567,27 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 完了内容: CONF-0145の専用UI限定修正を実装し、実module限定置換、未置換時fail-closed、実watcherでfetch 0/address event 0、通常utility非影響、39件の隔離test、fresh build receipt、配信JS 111 filesの対象host文字列0を確認した。CONF-0146承認後、通常UIで7桁手入力・手動住所の保存/reload、郵便番号住所未取得warn 0、Customer状態往復・filter、process/log/saved-data cleanupを確認し、High最終reviewが完了をGOとした。通常利用・Dev・data形状・関連packageは変更していない。詳細は[実行証拠](../verification/customer-02-status-local.md#2026-09-04-conf-0146承認後の限定再試験とcrash復旧)を正とする。
 - 必要なテスト: 完了済み。専用UIの外部fetch 0/address event 0、通常環境の非影響、専用build identityと陰性test、限定Customer UI再試験、process/log/saved-data cleanupを実施した。
 - ユーザー判断が必要な事項: なし。CONF-0145とCONF-0146は回答済み。新status filterの見た目・使い勝手とDev受入れはCustomer roadmapのCS-04で別途扱う。
+
+## FUT-0185 Firestore Rulesの責務と式数を段階的に整理する
+
+- 状態: Open（4マスターUI改修完了後の必須phase）
+- 重大度: High
+- 発見セグメント: FOUR-MASTER-UI / RULES-ARCHITECTURE-REVIEW
+- 対象ファイル・シンボル: `firestore.rules`、`Companies/{companyId}`配下の全subcollection、対応するclient reader／writer、Callable／Admin SDK、Rules／Emulator test。
+- 確認済み実装事実: `firestore.rules`には、列挙した除外collection以外を同一tenant Userへ許可する汎用fallback、大きなSite validation、client RulesとCallableが混在する状態遷移がある。Site作成ではRulesの1000式評価上限へ到達した実績がある。Firestore Rulesはclient SDKの認可境界として必要だが、document単位のRulesだけでは同一documentの一部fieldを隠せない。
+- 想定影響と発生条件: 新collectionをfallbackの除外へ追加し忘れた場合の過剰許可、validation追加による式数上限、UI／client／Rules／Callable間のactor・field・状態遷移差分が、今後の改修速度と安全性を損なう可能性がある。一括変更は既存queryと旧client互換を同時に壊すriskが高い。
+- 必須の将来対応: 一括書換えを避け、(1) collectionと全reader／writerの棚卸し、(2) 未定義collectionを許可しない既定拒否への移行、(3) 副作用・金銭・通知を伴う高risk更新の専用Callable化、(4) Site create／基本更新のserver境界化を含むRules式数削減、(5) readerごとにfield公開範囲が異なる場合だけprojection／分割document／Callable readの採用、(6) Rules再計測とDevの段階的cutoverを、rollback可能なcheckpointとして順に実施する。
+- 必要なテスト: collection・query inventory、Rules syntax、tenant／role／field／状態遷移の許可・拒否matrix、全Local Emulator回帰、旧client互換、対象Callableの単体・結合、Devの権限別browser受入れ、cutover停止条件とrollback確認。
+- ユーザー判断が必要な事項: 着手自体は確定済み。各checkpointの具体的な対象、既存client互換期間、Dev反映とdata処置は着手時に個別確認する。
+
+## FUT-0186 配置管理の楽観的更新回帰を復旧する
+
+- 状態: Open（4マスターUI branchのmain統合後に別branchで最優先着手）
+- 重大度: Critical
+- 発見セグメント: FOUR-MASTER-UI / ARRANGEMENT-OPTIMISTIC-UPDATE-REGRESSION
+- 対象ファイル・シンボル: 配置管理画面、SiteOperationScheduleの作成・更新・削除、配置作業員の追加・変更・削除、ArrangementNotification作成、対応するapplication composable・Callable・live listener・local cache。
+- 確認済み実装事実: 利用者のDev操作では、予定自体の変更、配置作業員の追加・変更・削除、通知作成後に画面へ反映されるまで待ち時間が生じている。配置管理では操作直後の反映が最重要であり、server APIへ移す場合も楽観的更新、失敗時rollback、正本再取得、error表示、再試行を同じ変更単位で備える確認済み仕様に反する。
+- 未確認点・仮説: SiteOperationSchedule専用Callable化が回帰原因である可能性はあるが、現時点では未確認である。どの操作でlocal model／cache更新が除去されたか、Callable応答とFirestore listenerのどちらを待っているか、通知作成を予定表示へ統合する経路、失敗・timeout時の現在挙動は次branchのreviewで確定する。
+- 必須の将来対応: 操作別にUI eventからoptimistic state、Callable、Firestore commit、listener収束までを追跡し、予定・worker・通知を操作直後に一貫して反映する。server成功時はlistener値へ収束し、拒否・timeout・不明結果では操作単位でrollbackまたは正本再取得し、安全なerrorと明示再試行を提供する。重複適用、別画面のlive更新、連続操作、並べ替え・集計・通知statusとの整合も同じreviewで扱う。
+- 必要なテスト: 各作成・更新・削除の操作直後表示、遅延response、server拒否、timeout、結果不明、listener先着／後着、連続操作、別画面更新、rollback/refetch、日別集計・過不足・通知表示の収束、Devでの実利用者相当受入れ。
+- ユーザー判断が必要な事項: review・修正の着手順は確定済み。具体的なoptimistic state単位と結果不明時UXはreview結果を示して実装前に確認する。

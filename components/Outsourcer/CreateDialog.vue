@@ -51,12 +51,21 @@ defineExpose({ open });
 </script>
 
 <template>
-  <v-dialog v-model="dialog" max-width="800" persistent scrollable>
+  <v-dialog v-model="dialog" max-width="480" persistent scrollable>
     <v-form ref="form" :disabled="isSaving" @submit.prevent="save">
-      <v-card>
-        <v-toolbar color="secondary" density="compact" title="外注先の新規登録" />
+      <v-card :border="false">
+        <v-toolbar
+          color="secondary"
+          density="compact"
+          title="外注先の新規登録"
+        />
         <v-card-text>
-          <v-alert v-if="errorMessage" type="error" variant="tonal" class="mb-4">
+          <v-alert
+            v-if="errorMessage"
+            type="error"
+            variant="tonal"
+            class="mb-4"
+          >
             {{ errorMessage }}
           </v-alert>
           <air-item-input
@@ -70,7 +79,9 @@ defineExpose({ open });
         </v-card-text>
         <v-card-actions>
           <v-spacer />
-          <v-btn :disabled="isSaving" variant="text" @click="close">キャンセル</v-btn>
+          <v-btn :disabled="isSaving" variant="text" @click="close"
+            >キャンセル</v-btn
+          >
           <v-btn
             type="submit"
             color="primary"
