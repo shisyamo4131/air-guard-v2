@@ -4,8 +4,9 @@ import { useOperationEditor } from "@/composables/application/operation/useOpera
 import { operationRawFor, operationRowPosition } from "@/composables/domain/operation/operationRawContext";
 import RowInput from "@/components/Operation/RowInput.vue";
 defineOptions({ inheritAttrs: false });
+const props = defineProps({ optimistic: { type: Object, default: null } });
 const auth = useAuthStore();
-const editor = useOperationEditor({ kind: "schedule", defaultAction: "workers" });
+const editor = useOperationEditor({ kind: "schedule", defaultAction: "workers", optimistic: props.optimistic });
 async function open(rowAction, { schedule, worker }) {
   try {
     const raw = operationRawFor(schedule, `${auth.companyId}/${auth.uid}`);

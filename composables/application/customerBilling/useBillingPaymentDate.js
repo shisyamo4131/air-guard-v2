@@ -2,14 +2,14 @@ import { ref, shallowRef, computed, watch, onScopeDispose } from "vue";
 import { doc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { dateInput } from "@/functions/shared/employeeContract.js";
-import { billingIdentifier, paymentActorAllowed, paymentExpected, paymentPatch, paymentMatches } from "@/functions/shared/billingPaymentContract.js";
+import { dateInput } from "@/composables/domain/shared/valueContract.js";
+import { billingIdentifier, isBillingPaymentUxActorAllowed, paymentExpected, paymentPatch, paymentMatches } from "@/composables/domain/customerBilling/billingPaymentContract.js";
 
 export function useBillingPaymentDate(documentId) {
   const auth = useAuthStore(), { $firestore, $functions } = useNuxtApp();
   const visible = ref(false), busy = ref(false), uncertain = ref(false), conflict = ref(false), baseline = shallowRef(null), value = ref(null), message = ref("");
   let generation = 0, attempt = null;
-  const scope = computed(() => auth.isSuperUserClaimValid === true && paymentActorAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user ? { ...auth.user } : null) && billingIdentifier(documentId.value) ? `${auth.companyId}/${auth.uid}/${documentId.value}` : null);
+  const scope = computed(() => auth.isSuperUserClaimValid === true && isBillingPaymentUxActorAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user ? { ...auth.user } : null) && billingIdentifier(documentId.value) ? `${auth.companyId}/${auth.uid}/${documentId.value}` : null);
   function reset() { generation++; visible.value = false; busy.value = false; uncertain.value = false; conflict.value = false; baseline.value = null; value.value = null; attempt = null; message.value = ""; }
   watch(scope, reset, { flush: "sync" }); onScopeDispose(reset);
   const current = (ticket, owner) => ticket === generation && owner !== null && scope.value === owner;

@@ -1,12 +1,8 @@
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { inheritOperationRaw } from "@/composables/domain/operation/operationRawContext";
-import { operationPresentation, watchOperationRollback } from "@/composables/domain/operation/operationPresentation";
-import { useAuthStore } from "@/stores/useAuthStore";
 
 export function useIndex(props, emit) {
-  const auth = useAuthStore(), scope = () => `${auth.companyId}/${auth.uid}`;
-  const pending = Vue.computed(() => { try { const state = operationPresentation(props.schedule, scope()); return state.busy || state.blocked; } catch { return true; } });
   /*****************************************************************************
    * SETUP
    *****************************************************************************/
@@ -19,7 +15,6 @@ export function useIndex(props, emit) {
     },
     { immediate: true, deep: true },
   );
-  watchOperationRollback(() => props.schedule, () => internalModelValue.value, scope);
 
   /*****************************************************************************
    * METHODS
@@ -52,12 +47,12 @@ export function useIndex(props, emit) {
    * ドラッグアイコンを表示するかどうかを返します。
    */
   const isDraggable = Vue.computed(() => {
-    if (props.disabled || pending.value) return false;
+    if (props.disabled) return false;
     return props.schedule.isEditable && props.isDraggable;
   });
 
   const showActions = Vue.computed(() => {
-    return !props.disabled && !pending.value && props.showActions;
+    return !props.disabled && props.showActions;
   });
 
   /**
@@ -79,7 +74,7 @@ export function useIndex(props, emit) {
    */
   const defaultSlotProps = Vue.computed(() => {
     return {
-      disabled: props.disabled || pending.value,
+      disabled: props.disabled,
       schedule: internalModelValue.value,
       modelValue: internalModelValue.value,
       "onUpdate:modelValue": handleUpdateModelValue,

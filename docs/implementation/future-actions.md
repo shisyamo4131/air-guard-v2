@@ -2582,12 +2582,18 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 
 ## FUT-0186 配置管理の楽観的更新回帰を復旧する
 
-- 状態: Open（4マスターUI branchのmain統合後に別branchで最優先着手）
+- 状態: In progress（単純な楽観的更新、client境界分離、予定削除のUI導線を実装済み。簡素化後のLocal予定作成・作業員ドラッグ配置を確認済みで、Dev受入れは未確認）
 - 重大度: Critical
 - 発見セグメント: FOUR-MASTER-UI / ARRANGEMENT-OPTIMISTIC-UPDATE-REGRESSION
 - 対象ファイル・シンボル: 配置管理画面、SiteOperationScheduleの作成・更新・削除、配置作業員の追加・変更・削除、ArrangementNotification作成、対応するapplication composable・Callable・live listener・local cache。
-- 確認済み実装事実: 利用者のDev操作では、予定自体の変更、配置作業員の追加・変更・削除、通知作成後に画面へ反映されるまで待ち時間が生じている。配置管理では操作直後の反映が最重要であり、server APIへ移す場合も楽観的更新、失敗時rollback、正本再取得、error表示、再試行を同じ変更単位で備える確認済み仕様に反する。
-- 未確認点・仮説: SiteOperationSchedule専用Callable化が回帰原因である可能性はあるが、現時点では未確認である。どの操作でlocal model／cache更新が除去されたか、Callable応答とFirestore listenerのどちらを待っているか、通知作成を予定表示へ統合する経路、失敗・timeout時の現在挙動は次branchのreviewで確定する。
-- 必須の将来対応: 操作別にUI eventからoptimistic state、Callable、Firestore commit、listener収束までを追跡し、予定・worker・通知を操作直後に一貫して反映する。server成功時はlistener値へ収束し、拒否・timeout・不明結果では操作単位でrollbackまたは正本再取得し、安全なerrorと明示再試行を提供する。重複適用、別画面のlive更新、連続操作、並べ替え・集計・通知statusとの整合も同じreviewで扱う。
-- 必要なテスト: 各作成・更新・削除の操作直後表示、遅延response、server拒否、timeout、結果不明、listener先着／後着、連続操作、別画面更新、rollback/refetch、日別集計・過不足・通知表示の収束、Devでの実利用者相当受入れ。
-- ユーザー判断が必要な事項: review・修正の着手順は確定済み。具体的なoptimistic state単位と結果不明時UXはreview結果を示して実装前に確認する。
+- 確認済み実装事実: 利用者のDev操作では、予定自体の変更、配置作業員の追加・変更・削除、通知作成後に画面へ反映されるまで待ち時間が生じていた。配置管理では操作直後の反映が最重要であり、server APIへ移しても操作後の「なるべき形」を直ちに表示し、失敗時は対象だけを正本へ戻す必要がある。
+- 確認済み原因: 専用Callableへの移行後もlistener値を唯一の表示値としていたため、Callable完了とFirestore listener到着まで操作結果を表示できなかった。編集完了時にはさらにserver再読込を待つ経路があり、配置管理の即時反映契約を満たしていなかった。
+- 実装済み・確認中: 予定・worker・通知をCallable前にlocal表示へ反映し、各Callableを独立して送信する。listenerから届く正本はlocal表示全体を無条件に置き換える。通常操作用のpending lock、single-flight queue、更新順保証、token、履歴、観測counterは持たない。既知の拒否・timeout・結果不明では利用者へ通知し、失敗対象の予定と通知だけを明示再取得・復元する。予定変更でserver側が無効化する通知と`hasNotification`も同じ操作時にlocal表示へ反映する。Functions、Rules、schema、保存形式は変更していない。
+- Local起動回帰と三段階の解消: 2026-09-07の専用Callable移行でclient applicationが`functions/shared/operationWriteContract.js`等を直接importし、同fileのbare package importが`functions/node_modules`を選択した。SchemasはAirFirebaseを内包せずpeer dependencyとして解決するため、rootとFunctionsに同versionでも別module identityのFireModelが生じ、root側だけへのadapter設定ではFunctions側modelを初期化できなかった。(1) 原因確認中はVite `resolve.dedupe`等でroot側へ一時固定した。(2) 利用者の順序訂正によりLocal楽観表示確認より先に、clientが必要とするdraft・request・楽観表示の純粋contractとUX用policyをclient側へ分離し、Functionsを正式な認可・保存境界として維持した。(3) 製品clientの直接参照0件を確認して一時Vite設定を撤去した。正式exportである`@shisyamo4131/air-firebase-v2/utils/tokenMap`だけは、4マスター検索画面の初回読込みで起きる`Outdated Optimize Dep`を避ける正規の事前bundle対象として追加した。これは`functions/shared`越境をrootへ寄せる暫定設定ではなく、静的境界testも直接参照0件を強制する。
+- 旧方式のLocal UI実測: 2026-09-08、利用者用Local Emulatorの会社管理者でsign-in、dashboard、配置管理routeを確認した。予定作成では必要人数集計とカード、予定更新では作業内容、worker追加・明細更新では配置人数・状態・勤務時刻、通知作成では`配置済`状態が操作直後に表示された。各成功操作はlistener収束後の再読込みでも保持された。入力契約による作成拒否ではlocal表示が正本へ戻り、error表示と入力保持を確認した。worker削除では配置人数・状態が直ちに戻り、再読込み後にworkerと対応するArrangementNotificationが存在しないことを確認した。通知対象Employeeに対応するUserがないためNotification documentと外部pushは作成されなかった。確認用予定`OPT-LOCAL-0908-U`はworker削除後、対象ID・marker・worker不在を照合してLocal Emulatorの管理接続で削除し、画面が元の0件へ戻ったことを確認した。この実測後にpending等を持たない方式へ簡素化したため、現行実装のLocal UIは再確認する。
+- 簡素化後のLocal UI実測: 2026-09-08、利用者用Local Emulatorの会社管理者で合成予定`OPT-SIMPLE-0908`を正規UIから作成した。作業員「粟野貞夫」をドラッグすると、配置人数が0から1へ変わり、予定カードへ作業員タグ、勤務時刻、`仮配置`が操作直後に表示された。listener反映を待った後も表示は変わらず、予定カードの操作buttonも維持された。確認用予定とworkerはLocal Emulatorに残している。拒否時の明示再取得、通知、worker変更・削除、予定更新・削除の現行方式再確認は自動domain契約で確認し、追加のLocal UI操作はDev受入れで行う。
+- 予定削除UI: 利用者判断により、従来どおりSiteOperationScheduleの更新dialogへ「このデータを削除する」checkboxを復旧した。実績化前のoverview更新だけを明示opt-inし、ON時は入力を無効化して既存`action=delete`、Callable、楽観的削除、失敗時rollback／再取得へ接続する。Firestoreから読み直した原本の`operationResultId`が非nullなら表示しない。明示DELETE、worker行、OperationResult、OperationBillingは変更しない。domainでは通常更新、成功、拒否、timeout、二重送信、状態resetを確認し、Local UIではcheckbox表示、ON、入力無効化、削除buttonへの切替まで確認した。
+- Local確定削除: 利用者承認後、正規UIで作成した合成予定`OPT-DELETE-0908`のcheckboxをONにして削除した。予定は確定直後に画面から消え、listener収束後も日別件数0を維持し、ダッシュボードへ移動して稼働予定管理へ再入場した新しい購読でも復活しなかった。
+- 残作業: Dev反映・受入れ、commit、main統合は別の明示承認で行う。通知status更新には既存のclient Firestore transactionが残り、Rules認可を正式境界とする現行仕様の棚卸しは[FUT-0185](#fut-0185-firestore-rulesの責務と式数を段階的に整理する)で扱う。
+- 必要なテスト: 各作成・更新・削除の操作直後表示、server拒否時の対象再取得、listener正本による置換、連続操作、日別集計・過不足・通知表示の収束、Devでの実利用者相当受入れ。短時間競合の完全な順序保証や複数actor競合の事前防止は完了条件にしない。
+- ユーザー判断が必要な事項: 実装とLocal再確認は承認済み。Dev反映・受入れ、commit、main統合は未承認である。

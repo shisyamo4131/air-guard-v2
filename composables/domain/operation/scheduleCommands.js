@@ -1,6 +1,6 @@
-import { rawForClass, equal, dateInput } from "@/functions/shared/employeeContract.js";
-import { OVERVIEW_FIELDS, WORKER_FIELDS, expectedForOperation } from "@/functions/shared/operationWriteContract.js";
-import { operationEmployeeReferences } from "@/functions/shared/operationReferences.js";
+import { rawForClass, equal, dateInput } from "@/composables/domain/shared/valueContract";
+import { OVERVIEW_FIELDS, WORKER_FIELDS, expectedForOperation } from "./operationCommandContract";
+import { operationEmployeeReferences } from "./operationReferences";
 import { operationRawFor, operationRowPosition } from "./operationRawContext";
 
 export function scheduleCommands(model, scope) {

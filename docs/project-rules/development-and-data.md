@@ -7,6 +7,7 @@
 ## 実装原則
 
 - 利用者が仕様、影響、rollback、検証条件を理解して明示承認したcheckpoint内で実装する。PowerShellとUTF-8を標準とし、既存の設計、命名、責務分割を先に確認する。
+- 暫定設定、互換層、workaroundを導入する場合は、原因、対象、正しい恒久境界、撤去条件、撤去phase、検証、rollbackを同じcheckpointで定義する。暫定対策の導入だけを設計完了とせず、原因除去後の撤去までを完了条件へ含める。設計reviewでは目的を満たす経路だけでなく、暫定物が残存して将来の不正な依存や回帰を隠さないことまで確認し、片側だけを満たす実装を承認しない。
 - primary Windows worktreeでapplication code、test、project-owned文書を作成・編集するときは、既存fileの文字encoding・BOM有無・改行codeを事前確認して維持する。新規text fileは、対象toolや隣接fileに意図的なLF等の別契約がなければ、UTF-8・BOMなし・CRLFを既定とする。編集後は対象fileがmixed EOLでないことを確認する。Git index内のLF正規化は変更せず、binary、生成物、外部由来file、LFを必要とするscriptへこのworktree既定を一律適用しない。
 - testがsource fileをraw textとして読む場合は、改行を比較前に正規化するか構文として解析し、LFまたはCRLF固定の空行・行末へ依存しない。通常の製品処理や構文解析へ不要な改行変換を追加しない。
 - Firestore CRUDを新設・改修する場合、`AirItemManager`と`AirArrayManager`を永続化・draft・dialog・validation・表示同期を一体で担う既定componentとして使用しない。既存箇所は一括置換せず、operation固有editor、UI非依存application処理、永続化へ機能単位で移行する。
@@ -16,12 +17,15 @@
 - real-time listenerのlive modelを入力draftとして直接変更しない。独立draftを使い、同じoperation fieldの外部変更時は、再読込または明示再確認後のlast-write-winsのどちらか一つをcontractで定める。
 - actor・tenant・field・型・状態をRulesで十分に強制できる単純な可逆更新だけclient部分更新を選べる。複雑なvalidation、server-only情報、厳密なactor、複数resource、外部作用、不可逆性、必須auditがある場合はoperation専用Callableを使う。UI validationだけを保存境界にしない。
 - 一つの業務対象は一つのdocumentを既定とする。読取actor、保存・削除・復旧条件、増加量、実測size、独立query、field更新で防げない確認済み競合を説明できる場合だけ分割する。一般的な将来riskだけでlock・ledger・revision・transactionを全documentへ一般化しない。
+- 試験運用中の通常の可逆な業務操作では、発生頻度と影響が確認されていない同一document競合、短時間の連続操作、listener到着順を事前に完全制御するための共通pending lock、single-flight queue、順序保証、revision、ledgerを既定にしない。利用者操作を直ちにlocalの表示用状態へ反映し、real-time listenerの正本で収束する単純な方式を優先する。競合、保存拒否、表示訂正が実測され業務影響を確認できた場合に、該当operationだけを段階的に補強する。
+- 前項の簡素化は、認証・認可・tenant境界、復旧困難な削除やdata loss、金銭確定、通知等の外部作用、結果不明の再送、複数resourceの不変条件を緩和しない。既存機能により厳格な制御がある場合も、この原則だけを理由に一括撤去せず、その機能を改修対象としたcheckpointで実害と保守負担を比較して段階的に合わせる。
 - Rulesを狭める変更は、対象pathと全reader/writer、環境、利用状態、既知data規模、旧client併存、許容停止時間を確認する。正式release前のbounded Dev maintenanceで完結する場合は長期互換層を既定にせず、production等で必要な場合だけ互換releaseを採用する。詳細は[development workflow](../runbooks/development-workflow.md#firestore-rulesを狭める改修順序)とADR 0031を正とする。
 
 ## フェーズごとのテスト範囲の合意
 
 - 着手前に、変更対象、test対象・対象外、操作と期待結果、環境・actor・data、完了条件をcheckpointへ固定する。実装承認から他機能全体の受入れまでを推論しない。
 - UI・application改修のDev受入れ前は、変更箇所を直接覆うdomain testと必要最小限のlocal動作確認を基本とし、専用Local UI build、全Local Emulator、重複するbrowser受入れを一律の前提にしない。実Dev固有の表示・操作・権限・通信は、対象commitを固定したbounded Dev release後の受入れで確認する。ただしRules・schema・Functions・認証認可等の高risk境界、release artifact生成、verification policyが別classで要求する必須gateはDev確認へ先送りせず、対象変更に必要な範囲を実行する。
+- 試験運用中の通常の製品改修はUIの有無にかかわらず、`直接対象のdomain test → 対象機能の最小限のlocal動作確認 → Dev反映・Dev受入れ`を標準順序とし、Localで対象機能が動作することを確認してからDevへ進む。最終確認はDev受入れで行い、Devで不具合が判明した場合は改修粒度を小さく保って修正・再deployする。Dev受入れ前に、変更と直接関係しないbuild、全Emulator、全browser、包括的な静的検査を追加せず、Devでなければ確認できない事項をlocal手段で重複検証しない。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、および承認済みreleaseに必要なgateだけはこの省略対象に含めない。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
 - testは当該phaseの変更と直接必要な回帰へ限定する。関連fieldを読むだけの別機能について、業務全体の受入れを自動追加しない。影響確認と別機能の受入れを区別し、追加が必要なら理由・対象・延期時の影響を提示して合意する。
 - 合意済み範囲の再現・修正・再試験は継続し、commandやtest fileごとの再承認を求めない。発見した不足・不具合の修正義務を現在phaseへの追加権限とみなさず、対応時期の延期と修正の省略を区別する。
 - 現在の目的を妨げない独立問題だけを後続へ送る。今回の変更による回帰、承認済み必須条件の未達、安全な作業継続を妨げる問題は未完として扱い、必要なら影響作業を停止する。初期調査・設計の見落としを追加要求へすり替えず、条件補正と影響を利用者へ説明する。必須gateと安全境界は省略しない。

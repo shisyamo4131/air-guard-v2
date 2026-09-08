@@ -1,7 +1,7 @@
 import { computed, ref, watch, onScopeDispose } from "vue";
 import { collection, doc, getDocsFromServer, onSnapshot, query } from "firebase/firestore";
 import { Employee } from "@/schemas";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract.js";
 import { useEmployeeReadAccess } from "@/composables/application/employee/useEmployeeReadAccess";
 import { createEmployeeReadSession } from "@/composables/domain/employee/employeeReadSession";
 

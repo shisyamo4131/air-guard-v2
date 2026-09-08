@@ -4,13 +4,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import * as Vue from "vue";
 import { Timestamp } from "firebase/firestore";
-import { SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail, User } from "@shisyamo4131/air-guard-v2-schemas";
+import { ArrangementNotification, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail, User } from "@shisyamo4131/air-guard-v2-schemas";
 import * as contract from "../../functions/shared/operationWriteContract.js";
 import * as employeeContract from "../../functions/shared/employeeContract.js";
 import { createOperationRawContext, operationRawFor, inheritOperationRaw, operationRowPosition, restoreOperationRaw } from "../../composables/domain/operation/operationRawContext.js";
 import { rangeIsRef, rangeIsValid } from "../../composables/validators/rangeValidator.js";
 import { parse, compileScript, compileTemplate } from "@vue/compiler-sfc";
 import { SITE_SCHEDULE_CONFIRMATION } from "../../utils/siteOperationSchedule/siteScheduleGuard.js";
+import { operationUxAllowed } from "../../utils/auth/policies/operationActorPolicy.js";
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 async function factory(path, name, bindings) {
@@ -42,10 +43,9 @@ test("raw context preserves full precision and original row positions across car
   assert.equal(restoreOperationRaw(card, drag), false);
 });
 
-test("actual Card/Draggable handlers retain original positions, immediately display edits and roll them back on refusal", async () => {
-  const scope = "company/actor", auth = Vue.reactive({ uid: "actor", companyId: "company" });
-  const { operationPresentation, watchOperationRollback } = await factory("composables/domain/operation/operationPresentation.js", "({ operationPresentation, watchOperationRollback })", { ...Vue, ...employeeContract, operationDateTime, operationRawFor, restoreOperationRaw });
-  const base = { Vue, SiteOperationSchedule, inheritOperationRaw, operationPresentation, watchOperationRollback, useAuthStore: () => auth };
+test("actual Card/Draggable handlers retain original positions, immediately display edits and accept fresh canonical props", async () => {
+  const scope = "company/actor";
+  const base = { Vue, SiteOperationSchedule, inheritOperationRaw };
   const makeCard = await factory("components/SiteOperationSchedule/Card/useIndex.js", "useIndex", base);
   const makeDrag = await factory("components/Draggable/Workers/useIndex.js", "useIndex", { ...base, useBaseManager: () => ({ logger: { info() {}, error(error) { throw error; } }, isDev: false }), useTimedSet: () => ({ add() {}, has: () => false }), createDraggableFallbackOptions: () => ({}) });
   const makeCommands = await factory("composables/domain/operation/scheduleCommands.js", "scheduleCommands", { ...contract, ...employeeContract, operationDateTime, operationEmployeeReferences: (await import("../../functions/shared/operationReferences.js")).operationEmployeeReferences, operationRawFor, operationRowPosition });
@@ -62,17 +62,29 @@ test("actual Card/Draggable handlers retain original positions, immediately disp
   assert.deepEqual(card.defaultSlotProps.value.modelValue.employeeIds, ["second", "first"]);
   const moved = makeCommands(emitted, scope);
   assert.deepEqual(moved.map(({ action, rowAction, position, destination }) => ({ action, rowAction, position, destination })), [{ action: "workers", rowAction: "move", position: 1, destination: 0 }]);
-  const presentation = operationPresentation(source, scope); presentation.blocked = true; presentation.revision++; await flush();
+  const fresh = { ...raw, remarks: "fresh" }, freshModel = Vue.reactive(new SiteOperationSchedule(fresh)); context.remember(freshModel, fresh);
+  props.schedule = freshModel; await flush();
   assert.deepEqual(card.defaultSlotProps.value.modelValue.employeeIds, ["first", "second"]);
   assert.deepEqual(drag.attrs.value.modelValue.map((worker) => worker.id), ["first", "second"]);
-  assert.equal(drag.attrs.value.disabled, true);
-  assert.deepEqual(operationRowPosition(source, drag.attrs.value.modelValue[0], scope), { array: "employees", position: 0 });
-  const fresh = { ...raw, remarks: "fresh" }, freshModel = Vue.reactive(new SiteOperationSchedule(fresh)); context.remember(freshModel, fresh);
-  props.schedule = freshModel; await flush(); assert.equal(drag.attrs.value.disabled, false);
+  assert.equal(drag.attrs.value.disabled, false);
+  assert.deepEqual(operationRowPosition(freshModel, drag.attrs.value.modelValue[0], scope), { array: "employees", position: 0 });
   drag.attrs.value.onChange({ added: { newIndex: 1, element: { id: "third", isEmployee: true } } });
   assert.deepEqual(makeCommands(emitted, scope).map(({ rowAction, position, changes }) => ({ rowAction, position, id: changes.id })), [{ rowAction: "add", position: 1, id: "third" }]);
   context.clear(); assert.throws(() => makeCommands(emitted, scope)); assert.equal(restoreOperationRaw(source, emitted), false);
   effect.stop();
+});
+
+test("empty editable DraggableWorkers keeps a drop target without changing disabled empty layout", async () => {
+  const code = await source("components/Draggable/Workers/index.vue");
+  assert.match(code, /!attrs\.value\.disabled\s*&&\s*attrs\.value\.modelValue\.length\s*===\s*0/u);
+  assert.doesNotMatch(code, /!props\.disabled\s*&&\s*props\.modelValue\.workers\.length/u);
+  assert.match(code, /'draggable-workers--empty-drop-target':\s*hasEmptyDropTarget/u);
+  assert.match(code, /\.draggable-workers--empty-drop-target\s*\{\s*min-height:\s*48px;/u);
+  const { descriptor, errors } = parse(code, { filename: "components/Draggable/Workers/index.vue" });
+  assert.deepEqual(errors, []);
+  const compiled = compileScript(descriptor, { id: "draggable-workers" });
+  const template = compileTemplate({ source: descriptor.template.content, filename: "components/Draggable/Workers/index.vue", id: "draggable-workers", compilerOptions: { bindingMetadata: compiled.bindings } });
+  assert.deepEqual(template.errors, []);
 });
 
 test("period listener publishes metadata-only server confirmation on reentry while rejecting cache, pending writes and stale scope", async () => {
@@ -119,12 +131,13 @@ test("period listener publishes metadata-only server confirmation on reentry whi
 });
 
 test("period listener pairs each fresh Class with its raw, rejects old range/tenant responses, and disposes reads", async () => {
-  const listeners = [];
+  const listeners = []; let pointSnapshot;
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false } });
   const make = await factory("composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange.js", "useSiteOperationSchedulesInRange", {
     ...Vue, SiteOperationSchedule, rawForClass: employeeContract.rawForClass, createOperationRawContext, rangeIsRef, rangeIsValid,
     useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }),
     useFetch: () => ({ fetchSiteComposable: { fetchSite() {} }, fetchEmployeeComposable: { fetchEmployee() {} }, fetchOutsourcerComposable: { fetchOutsourcer() {} } }),
+    doc: (_, path) => ({ path }), getDocFromServer: async () => pointSnapshot,
     collection: (_, path) => ({ path }), where: (...args) => args, query: (ref, ...constraints) => ({ ...ref, constraints }),
     onSnapshot: (ref, options, next, error) => { const entry = { ref, options, next, error, stopped: false }; listeners.push(entry); return () => { entry.stopped = true; }; },
   });
@@ -137,6 +150,11 @@ test("period listener pairs each fresh Class with its raw, rejects old range/ten
   assert.notStrictEqual(reader.docs.value[0], firstModel);
   assert.strictEqual(operationRawFor(firstModel, "company/actor"), firstRaw);
   assert.strictEqual(operationRawFor(reader.docs.value[0], "company/actor"), updated);
+  const pointRaw = { ...updated, remarks: "point refresh" };
+  pointSnapshot = { exists: () => true, data: () => pointRaw };
+  const point = await reader.refresh(firstRaw.docId);
+  assert.equal(point.exists, true); assert.equal(point.value.remarks, "point refresh");
+  assert.equal(reader.docs.value[0].remarks, "updated");
   from.value = new Date("2026-09-02"); await flush();
   assert.equal(listeners[0].stopped, true); assert.equal(reader.docs.value.length, 0);
   listeners[0].next(snapshot(firstRaw)); assert.equal(reader.docs.value.length, 0);
@@ -146,11 +164,111 @@ test("period listener pairs each fresh Class with its raw, rejects old range/ten
   effect.stop(); assert.ok(listeners.every((entry) => entry.stopped));
 });
 
+test("arrangement point refresh preserves another schedule's local edit and notification reset is target-only", async () => {
+  const chain = (value) => {
+    let date = new Date(value);
+    const api = {
+      tz: () => api,
+      subtract: (amount) => { date = new Date(date.getTime() - amount * 86400000); return api; },
+      add: (amount) => { date = new Date(date.getTime() + amount * 86400000); return api; },
+      toDate: () => new Date(date),
+      format: () => date.toISOString().slice(0, 10),
+    };
+    return api;
+  };
+  const dayjs = Object.assign((value) => chain(value), { tz: (value) => chain(value) });
+  const rawA = operation(); rawA.docId = "a";
+  const rawB = operation(); rawB.docId = "b"; rawB.displayOrder = 1;
+  for (const raw of [rawA, rawB]) {
+    raw.employees = raw.employees.map((worker) => ({ ...worker, hasNotification: false }));
+    raw.workers = [...raw.employees, ...raw.outsourcers];
+  }
+  const canonicalSchedules = Vue.shallowRef([
+    Vue.reactive(new SiteOperationSchedule(employeeContract.rawForClass(rawA))),
+    Vue.reactive(new SiteOperationSchedule(employeeContract.rawForClass(rawB))),
+  ]);
+  const notification = (raw, worker, shouldNotify = false) => Vue.reactive(new ArrangementNotification({
+    ...employeeContract.rawForClass(worker),
+    docId: `${raw.docId}_${worker.workerId}`,
+    siteOperationScheduleId: raw.docId,
+    actualStartTime: worker.startTime,
+    actualEndTime: worker.endTime,
+    actualBreakMinutes: worker.breakMinutes,
+    actualIsStartNextDay: worker.isStartNextDay,
+    shouldNotify,
+  }));
+  const canonicalNotifications = Vue.shallowRef([
+    notification(rawA, rawA.employees[0]),
+    notification(rawB, rawB.employees[0]),
+  ]);
+  const serverA = { ...rawA, remarks: "server-a" };
+  const make = await factory("composables/dataLayers/arrangement/useArrangementsInRange.js", "useArrangementsInRange", {
+    Vue, dayjs, ArrangementNotification, SiteOperationSchedule,
+    useEmployeesInRange: () => ({ docs: Vue.ref([]) }), useOutsourcersInRange: () => ({ docs: Vue.ref([]) }),
+    useSiteOperationSchedulesInRange: () => ({ docs: canonicalSchedules, refresh: async (id) => ({ exists: true, value: Vue.reactive(new SiteOperationSchedule(employeeContract.rawForClass(id === "a" ? serverA : rawB))) }) }),
+    useArrangementNotificationsInRange: () => ({ docs: canonicalNotifications }),
+    useSiteShiftTypeOrderEnriched: () => ({ siteShiftTypeOrder: Vue.ref([]) }), ORDER_TYPE: { ARRANGEMENT: "arrangement" },
+    rangeIsRef: () => {}, useSecurityReportIndexesInRange: () => ({ docs: Vue.ref([]) }),
+    inheritOperationRaw: () => false, applyOperationProjection: (raw) => raw,
+    WORKER_PARENT_FIELDS: contract.WORKER_PARENT_FIELDS, operationDateTime,
+    equal: employeeContract.equal, parseDate: employeeContract.parseDate, rawForClass: employeeContract.rawForClass,
+  });
+  const effect = Vue.effectScope(); let arrangements;
+  effect.run(() => { arrangements = make({ from: Vue.ref(new Date("2026-09-01")), to: Vue.ref(new Date("2026-09-30")) }); });
+  const parentChangedA = new SiteOperationSchedule(employeeContract.rawForClass(rawA)); parentChangedA.startTime = "09:00";
+  assert.equal(arrangements.publishSchedule(parentChangedA, rawA), true);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "a", workerId: rawA.employees[0].workerId }), null);
+  assert.ok(arrangements.getNotification({ siteOperationScheduleId: "b", workerId: rawB.employees[0].workerId }));
+
+  canonicalNotifications.value = [
+    notification(rawA, rawA.employees[0]), notification(rawA, rawA.employees[1]),
+    notification(rawB, rawB.employees[0]),
+  ];
+  await flush();
+  const workerChangedA = new SiteOperationSchedule(employeeContract.rawForClass(rawA)); workerChangedA.employees[0].startTime = "09:30";
+  assert.equal(arrangements.publishSchedule(workerChangedA, rawA), true);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "a", workerId: rawA.employees[0].workerId }), null);
+  assert.ok(arrangements.getNotification({ siteOperationScheduleId: "a", workerId: rawA.employees[1].workerId }));
+  assert.ok(arrangements.getNotification({ siteOperationScheduleId: "b", workerId: rawB.employees[0].workerId }));
+
+  const localB = new SiteOperationSchedule(employeeContract.rawForClass(rawB)); localB.remarks = "local-b";
+  assert.equal(arrangements.publishSchedule(localB, rawB), true);
+  const localA = new SiteOperationSchedule(employeeContract.rawForClass(rawA)); localA.remarks = "local-a";
+  assert.equal(arrangements.publishSchedule(localA, rawA), true);
+  await arrangements.refreshSchedule("a");
+  assert.equal(arrangements.getSchedule("a").remarks, "server-a");
+  assert.equal(arrangements.getSchedule("b").remarks, "local-b");
+
+  const notifyA = new SiteOperationSchedule(employeeContract.rawForClass(rawA));
+  const notifyB = new SiteOperationSchedule(employeeContract.rawForClass(rawB));
+  const notifyContext = createOperationRawContext(); notifyContext.reset("company/actor"); notifyContext.remember(notifyA, rawA);
+  assert.equal(arrangements.publishNotificationState(notifyA), true);
+  assert.equal(notifyA.workers.every((worker) => worker.hasNotification), true);
+  assert.strictEqual(operationRawFor(notifyA, "company/actor"), rawA);
+  assert.deepEqual(operationRowPosition(notifyA, notifyA.employees[0], "company/actor"), { array: "employees", position: 0 });
+  assert.equal(arrangements.publishNotificationState(notifyB), true);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "a", workerId: rawA.employees[0].workerId }).shouldNotify, true);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "b", workerId: rawB.employees[0].workerId }).shouldNotify, true);
+  arrangements.resetNotifications(["a"]);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "a", workerId: rawA.employees[0].workerId }).shouldNotify, false);
+  assert.equal(arrangements.getNotification({ siteOperationScheduleId: "b", workerId: rawB.employees[0].workerId }).shouldNotify, true);
+  effect.stop();
+});
+
+test("arrangement local schedule changes cancel only the same notification scope", async () => {
+  const code = await source("composables/dataLayers/arrangement/useArrangementsInRange.js");
+  assert.match(code, /WORKER_PARENT_FIELDS\.some/u);
+  assert.match(code, /item\.siteOperationScheduleId\s*!==\s*documentId/u);
+  assert.match(code, /affected\.has\(item\.workerId\)/u);
+  assert.match(code, /hasNotification:\s*false/u);
+  assert.doesNotMatch(code, /pending|revision|predecessor|token/iu);
+});
+
 async function editorHarness(options = {}) {
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: new User({ docId: "actor", companyId: "company", isTemporary: false, disabled: false, roles: ["controller"] }) });
   const raw = operation(), calls = [];
   const make = await factory("composables/application/operation/useOperationEditor.js", "useOperationEditor", {
-    ...Vue, ...contract, ...employeeContract, operationDateTime, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail,
+    ...Vue, ...contract, ...employeeContract, operationDateTime, operationUxAllowed, SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail,
     useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {}, $functions: {} }),
     collection: (_, path) => ({ path }), doc: (_, path) => ({ path: path || "new-operation", id: path?.split("/").at(-1) || "new-operation" }),
     getDocFromServer: async (ref) => options.read ? options.read(ref, raw) : ({ exists: () => true, data: () => raw }),
@@ -186,6 +304,142 @@ test("editor uses independent draft and raw expectations; cancel never mutates d
   assert.deepEqual(request.expected, contract.expectedForOperation(state.raw, request));
   state.editor.close(); assert.equal(state.calls.length, 0); assert.equal(state.raw.remarks, null);
   state.effect.stop();
+});
+
+test("schedule wrapper opts UPDATE into delete while other editor modes remain unchanged", async () => {
+  const events = [];
+  const optimistic = {
+    publish: ({ command }) => { events.push(["publish", command.action]); return true; },
+    currentSchedule: () => null,
+  };
+  const state = await editorHarness({ editor: { allowDeleteFromUpdate: true, optimistic } });
+  await state.editor.open("UPDATE", "operation");
+  assert.equal(state.editor.canDeleteFromUpdate.value, true);
+  assert.equal(state.editor.deleteRequested.value, false);
+  assert.equal(state.editor.request().action, "overview", "unchecked UPDATE keeps the normal update contract");
+  state.editor.setInputPending(true);
+  assert.equal(state.editor.saveDisabled.value, true);
+  state.editor.setDeleteRequested(true);
+  assert.equal(state.editor.saveDisabled.value, false, "input validation cannot block an opted-in delete");
+  assert.deepEqual(state.editor.request().action, "delete");
+  assert.deepEqual(state.editor.request().changes, {});
+  assert.equal(await state.editor.save(), true);
+  assert.deepEqual(events, [["publish", "delete"]]);
+  assert.equal(state.calls[0].operations[0].action, "delete");
+
+  await state.editor.open("UPDATE", "operation");
+  assert.equal(state.editor.deleteRequested.value, false, "open clears the prior selection");
+  state.editor.setDeleteRequested(true);
+  await state.editor.reload();
+  assert.equal(state.editor.deleteRequested.value, false, "reload clears the prior selection");
+  state.editor.close();
+  assert.equal(state.editor.deleteRequested.value, false, "close clears the prior selection");
+  await state.editor.open("DELETE", "operation");
+  assert.equal(state.editor.canDeleteFromUpdate.value, false);
+  assert.equal(state.editor.action, "delete");
+  state.effect.stop();
+
+  for (const editor of [
+    { kind: "schedule" },
+    { kind: "schedule", allowDeleteFromUpdate: true, defaultAction: "workers" },
+    { kind: "result", allowDeleteFromUpdate: true },
+    { kind: "billing", allowDeleteFromUpdate: true },
+  ]) {
+    const isolated = await editorHarness({ editor });
+    await isolated.editor.open("UPDATE", "operation");
+    assert.equal(isolated.editor.canDeleteFromUpdate.value, false);
+    isolated.effect.stop();
+  }
+
+  assert.match(await source("components/SiteOperationSchedule/Manager/index.vue"), /allow-delete-from-update/u);
+  assert.doesNotMatch(await source("components/Operation/Manager.vue"), /allowDeleteFromUpdate:\s*\{[^}]*default:\s*true/u);
+  assert.match(await source("components/Operation/Editor.vue"), /label="このデータを削除する"/u);
+});
+
+test("authoritative converted raw disables UPDATE delete even when a passed item looks editable", async () => {
+  const state = await editorHarness({
+    editor: { allowDeleteFromUpdate: true },
+    read: async (_, raw) => ({ exists: () => true, data: () => ({ ...raw, operationResultId: "result" }) }),
+  });
+  const passedItem = { docId: "operation", operationResultId: null };
+  assert.equal(await state.editor.open("UPDATE", passedItem), true);
+  assert.equal(state.editor.draft.value.operationResultId, "result");
+  assert.equal(state.editor.canDeleteFromUpdate.value, false);
+  state.editor.setDeleteRequested(true);
+  assert.equal(state.editor.deleteRequested.value, false);
+  state.effect.stop();
+});
+
+for (const outcome of ["failed-precondition", "deadline-exceeded"]) test(`checked UPDATE delete ${outcome} refreshes once and retains the draft without blind retry`, async () => {
+  let rejectCall;
+  const events = [];
+  const optimistic = {
+    publish: ({ command }) => { events.push(["publish", command.action]); return true; },
+    refresh: async (ids) => events.push(["refresh", ids]),
+    currentSchedule: () => null,
+  };
+  const state = await editorHarness({
+    editor: { allowDeleteFromUpdate: true, optimistic },
+    call: () => new Promise((_, reject) => { rejectCall = reject; }),
+  });
+  await state.editor.open("UPDATE", "operation");
+  state.editor.setDeleteRequested(true);
+  const saving = state.editor.save();
+  await flush();
+  assert.equal(state.editor.busy.value, true);
+  assert.equal(await state.editor.save(), false, "busy state suppresses a duplicate Callable");
+  assert.equal(state.calls.length, 1);
+  rejectCall(Object.assign(new Error(), { code: `functions/${outcome}` }));
+  assert.equal(await saving, false);
+  assert.equal(state.editor.draft.value.docId, "operation");
+  assert.equal(state.editor.deleteRequested.value, true);
+  assert.deepEqual(events, [["publish", "delete"], ["refresh", ["operation"]]]);
+  assert.equal(state.editor.uncertain.value, outcome === "deadline-exceeded");
+  if (outcome === "deadline-exceeded") {
+    const calls = state.calls.length;
+    assert.equal(await state.editor.save(), false);
+    assert.equal(state.calls.length, calls, "an uncertain result cannot be resubmitted");
+  }
+  state.effect.stop();
+});
+
+test("arrangement editor publishes local state before Callable and closes without waiting for a post-read", async () => {
+  const events = []; let finish;
+  const optimistic = {
+    publish: ({ command }) => { events.push(["publish", command.changes.remarks]); return true; },
+    refresh: async () => events.push(["refresh"]),
+    currentSchedule: () => ({ docId: "operation", remarks: "optimistic" }),
+  };
+  let reads = 0, saved = null;
+  const state = await editorHarness({
+    editor: { optimistic, onSaved: (item) => { saved = item; } },
+    read: async (_, raw) => { reads++; return { exists: () => true, data: () => raw }; },
+    call: async () => { events.push(["call"]); return new Promise((resolve) => { finish = resolve; }); },
+  });
+  await state.editor.open("UPDATE", "operation"); state.editor.update({ remarks: "optimistic" });
+  const saving = state.editor.save(); await flush();
+  assert.deepEqual(events, [["publish", "optimistic"], ["call"]]);
+  finish({ data: { success: true, updated: true } }); assert.equal(await saving, true);
+  assert.deepEqual(events, [["publish", "optimistic"], ["call"]]);
+  assert.equal(reads, 1, "only the edit-open read runs; success does not block on another read");
+  assert.equal(saved.remarks, "optimistic"); assert.equal(state.editor.opened.value, false); state.effect.stop();
+});
+
+test("arrangement editor refreshes local state after a definite Callable refusal", async () => {
+  const events = [];
+  const optimistic = {
+    publish: () => { events.push("publish"); return true; },
+    refresh: async ([id]) => events.push(`refresh:${id}`),
+    currentSchedule: () => null,
+  };
+  const state = await editorHarness({
+    editor: { optimistic },
+    error: "functions/failed-precondition",
+  });
+  await state.editor.open("UPDATE", "operation"); state.editor.update({ remarks: "optimistic" });
+  assert.equal(await state.editor.save(), false);
+  assert.deepEqual(events, ["publish", "refresh:operation"]);
+  assert.equal(state.editor.draft.value.remarks, "optimistic"); state.effect.stop();
 });
 
 for (const error of ["functions/aborted", "functions/unavailable"]) test(`editor ${error} retains draft and prevents blind resubmission`, async () => {
@@ -325,10 +579,9 @@ for (const terminal of ["missing", "error", "claim"]) test(`row reader ${termina
   effect.stop(); state.effect.stop();
 });
 
-test("actual Draggable schedules carries raw through reorder and restores the shown order on refusal", async () => {
-  const auth = Vue.reactive({ uid: "actor", companyId: "company" }), scope = "company/actor";
-  const { operationPresentation } = await factory("composables/domain/operation/operationPresentation.js", "({ operationPresentation })", { ...Vue, operationRawFor, restoreOperationRaw });
-  const make = await factory("components/Draggable/OperationSchedules/useIndex.js", "useIndex", { Vue, SiteOperationSchedule, inheritOperationRaw, operationPresentation, useAuthStore: () => auth, createDraggableFallbackOptions: () => ({}) });
+test("actual Draggable schedules carries raw through reorder and accepts fresh canonical props", async () => {
+  const scope = "company/actor";
+  const make = await factory("components/Draggable/OperationSchedules/useIndex.js", "useIndex", { Vue, SiteOperationSchedule, inheritOperationRaw, createDraggableFallbackOptions: () => ({}) });
   const context = createOperationRawContext(); context.reset(scope);
   const raws = [operation(), { ...operation(), docId: "other", displayOrder: 1 }];
   const models = raws.map((raw) => { const model = new SiteOperationSchedule(raw); context.remember(model, raw); return model; });
@@ -338,8 +591,8 @@ test("actual Draggable schedules carries raw through reorder and restores the sh
   drag.attrs.value["onUpdate:modelValue"]([copies[1], copies[0]]);
   assert.deepEqual(emitted.map((item) => item.docId), ["other", "operation"]); assert.deepEqual(drag.attrs.value.modelValue.map((item) => item.docId), ["other", "operation"]);
   assert.strictEqual(operationRawFor(emitted[0], scope), raws[1]);
-  const state = operationPresentation(models[0], scope); state.blocked = true; state.revision++; await flush();
-  assert.deepEqual(drag.attrs.value.modelValue.map((item) => item.docId), ["operation", "other"]); assert.equal(drag.attrs.value.disabled, true);
+  props.schedules = [...models]; await flush();
+  assert.deepEqual(drag.attrs.value.modelValue.map((item) => item.docId), ["operation", "other"]); assert.equal(drag.attrs.value.disabled, false);
   context.clear(); await flush(); assert.throws(() => operationRawFor(emitted[0], scope)); effect.stop();
 });
 
@@ -390,7 +643,7 @@ test("CREATE still reports an invalid preset setter failure and arrangement mana
   assert.equal(await state.editor.open("CREATE", { startTime: 12 }), false); assert.match(state.editor.message.value, /編集を開始できません/u);
   state.editor.close(); assert.equal(state.calls.length, 0); state.effect.stop();
   const code = await source("components/Arrangements/Manager/index.vue");
-  assert.match(code, /<SiteOperationScheduleManager ref="scheduleManager">\s*<template #activator \/>\s*<\/SiteOperationScheduleManager>/u);
+  assert.match(code, /<SiteOperationScheduleManager ref="scheduleManager" :optimistic="optimistic">\s*<template #activator \/>\s*<\/SiteOperationScheduleManager>/u);
   assert.match(code, /<SpeedDial v-bind="uiSpeedDial.attrs" \/>/u);
   const { descriptor } = parse(code), compiled = compileScript(descriptor, { id: "arrangements-manager" });
   const template = compileTemplate({ source: descriptor.template.content, filename: "components/Arrangements/Manager/index.vue", id: "arrangements-manager", compilerOptions: { bindingMetadata: compiled.bindings } });

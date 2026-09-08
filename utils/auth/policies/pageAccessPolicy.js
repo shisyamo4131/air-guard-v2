@@ -8,7 +8,7 @@ import {
   hasPresetPermission,
 } from "../authorization.js";
 import { canViewLifecycleOperationHistory } from "./userLifecycleUiPolicy.js";
-import { employeeAllowed } from "../../../functions/shared/employeeContract.js";
+import { isEmployeeUxActorAllowed } from "./employeeActorPolicy.js";
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) {
@@ -149,7 +149,7 @@ export function isPageAccessAllowed(
   if (policy === PAGE_ACCESS_POLICIES.EMPLOYEES_READ) {
     return Boolean(
       accessContext.isSuperUserClaimValid === true &&
-        employeeAllowed(
+        isEmployeeUxActorAllowed(
           {
             uid: accessContext.actorUid,
             companyId: accessContext.companyId,

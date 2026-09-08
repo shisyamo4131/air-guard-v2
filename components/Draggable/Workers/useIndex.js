@@ -4,14 +4,11 @@
 import * as Vue from "vue";
 import { SiteOperationSchedule } from "@/schemas";
 import { inheritOperationRaw } from "@/composables/domain/operation/operationRawContext";
-import { operationPresentation, watchOperationRollback } from "@/composables/domain/operation/operationPresentation";
-import { useAuthStore } from "@/stores/useAuthStore";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useTimedSet } from "@/composables/useTimedSet"; // 既配置作業員の強調表示用
 import { createDraggableFallbackOptions } from "@/composables/application/draggable/createDraggableFallbackOptions";
 
 export function useIndex(props, emit) {
-  const auth = useAuthStore(), scope = () => `${auth.companyId}/${auth.uid}`;
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
@@ -36,7 +33,6 @@ export function useIndex(props, emit) {
     },
     { immediate: true, deep: true },
   );
-  watchOperationRollback(() => props.modelValue, () => internalSchedule.value, scope);
 
   /*****************************************************************************
    * METHODS
@@ -208,9 +204,7 @@ export function useIndex(props, emit) {
    * - それ以外の場合は false
    * @returns {boolean} - 当該コンポーネントが disabled かどうか
    */
-  const disabled = Vue.computed(() => {
-    try { const state = operationPresentation(props.modelValue, scope()); return props.disabled || state.busy || state.blocked || !internalSchedule.value.isEditable; } catch { return true; }
-  });
+  const disabled = Vue.computed(() => props.disabled || !internalSchedule.value.isEditable);
 
   // draggable コンポーネントに渡す属性
   const attrs = Vue.computed(() => {

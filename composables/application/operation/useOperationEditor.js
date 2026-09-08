@@ -1,27 +1,30 @@
-import { operationDateTime } from "@/functions/shared/operationDateTime.js";
+import { operationDateTime } from "@/composables/domain/operation/operationDateTime";
 import { computed, ref, shallowRef, watch, onScopeDispose } from "vue";
 import { collection, doc, getDocFromServer } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { SiteOperationSchedule, OperationResult, OperationBilling, ArticleDetail } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { rawForClass, equal, dateInput } from "@/functions/shared/employeeContract.js";
-import { operationAllowed, expectedForOperation, OVERVIEW_FIELDS, WORKER_FIELDS, ADJUSTED_FIELDS } from "@/functions/shared/operationWriteContract.js";
+import { rawForClass, equal, dateInput } from "@/composables/domain/shared/valueContract";
+import { expectedForOperation, OVERVIEW_FIELDS, WORKER_FIELDS, ADJUSTED_FIELDS } from "@/composables/domain/operation/operationCommandContract";
+import { operationUxAllowed } from "@/utils/auth/policies/operationActorPolicy";
 import { confirmTerminatedScheduleSite } from "@/composables/application/siteOperationSchedule/confirmTerminatedSite";
 import { SITE_SCHEDULE_CONFIRMATION } from "@/utils/siteOperationSchedule/siteScheduleGuard";
 
-export function useOperationEditor({ kind, defaultAction = "overview", fields: configuredFields, onSaved = () => {} }) {
+export function useOperationEditor({ kind, defaultAction = "overview", fields: configuredFields, onSaved = () => {}, optimistic = null, allowDeleteFromUpdate = false }) {
   const auth = useAuthStore(), { $firestore, $functions } = useNuxtApp();
   const opened = ref(false), busy = ref(false), loading = ref(false), conflict = ref(false), uncertain = ref(false), message = ref("");
   const draft = ref(null), baseline = shallowRef(null), definition = shallowRef(null);
   const inputPending = ref(false);
-  let owner = null, generation = 0, original = null, reference = null, rowOptions = null;
+  const deleteRequested = ref(false), canDeleteFromUpdate = ref(false);
+  let owner = null, generation = 0, original = null, reference = null, rowOptions = null, displayedSource = null;
   const confirmedSites = new Set();
   const scope = () => `${auth.companyId}/${auth.uid}`;
-  const allowed = () => auth.isSuperUserClaimValid === true && operationAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user?.toObject?.() || auth.user, kind === "billing");
+  const allowed = () => auth.isSuperUserClaimValid === true && operationUxAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser }, auth.user?.toObject?.() || auth.user, { billing: kind === "billing" });
   const canWrite = computed(allowed);
   const disabled = computed(() => !canWrite.value || busy.value || loading.value || conflict.value || uncertain.value || !draft.value);
+  const saveDisabled = computed(() => disabled.value || (!deleteRequested.value && inputPending.value));
   const Schema = kind === "schedule" ? SiteOperationSchedule : kind === "billing" ? OperationBilling : OperationResult;
-  function clear() { generation++; opened.value = false; draft.value = null; baseline.value = null; original = null; owner = null; reference = null; rowOptions = null; definition.value = null; loading.value = false; conflict.value = false; uncertain.value = false; inputPending.value = false; confirmedSites.clear(); }
+  function clear() { generation++; opened.value = false; draft.value = null; baseline.value = null; original = null; owner = null; reference = null; rowOptions = null; displayedSource = null; definition.value = null; loading.value = false; conflict.value = false; uncertain.value = false; inputPending.value = false; deleteRequested.value = false; canDeleteFromUpdate.value = false; confirmedSites.clear(); }
   function verify() { if (!allowed() || scope() !== owner) throw new Error("編集権限を確認できません。"); }
   function fieldsFor(action) {
     if (configuredFields) { const fields = typeof configuredFields === "function" ? configuredFields() : configuredFields; if (fields) return fields; }
@@ -50,6 +53,7 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
     opened.value = true; loading.value = true; message.value = "";
     const action = mode === "CREATE" ? "create" : mode === "DELETE" ? "delete" : defaultAction;
     rowOptions = { action, ...options };
+    displayedSource = item && typeof item === "object" ? item : null;
     reference = mode === "CREATE" ? doc(collection($firestore, `Companies/${auth.companyId}/${kind === "schedule" ? "SiteOperationSchedules" : "OperationResults"}`)) : doc($firestore, `Companies/${auth.companyId}/${kind === "schedule" ? "SiteOperationSchedules" : "OperationResults"}/${item?.docId || item}`);
     try {
       let raw = options.raw;
@@ -61,15 +65,17 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
       }
       if (ticket !== generation) return false;
       initializeDraft(raw || null, rowOptions);
+      canDeleteFromUpdate.value = allowDeleteFromUpdate && kind === "schedule" && mode === "UPDATE" && action === "overview"
+        && raw?.operationResultId == null && draft.value?.operationResultId == null;
       if (mode === "CREATE" && item) {
         for (const field of fieldsFor(action)) if (item[field] !== undefined && !equal(draft.value[field], item[field])) draft.value[field] = rawForClass(item[field]);
       }
       return true;
-    } catch { if (ticket === generation) message.value = "編集を開始できません。最新情報を確認してください。"; return false; }
+    } catch { if (ticket === generation) { canDeleteFromUpdate.value = false; deleteRequested.value = false; message.value = "編集を開始できません。最新情報を確認してください。"; } return false; }
     finally { if (ticket === generation) loading.value = false; }
   }
   function request() {
-    const action = rowOptions.action;
+    const action = canDeleteFromUpdate.value && deleteRequested.value ? "delete" : rowOptions.action;
     const changes = {};
     if (!(["delete"].includes(action) || ["remove", "move"].includes(rowOptions.rowAction))) for (const field of fieldsFor(action)) {
       const value = draft.value[field];
@@ -110,25 +116,41 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
     }
   }
   async function save() {
-    if (disabled.value || inputPending.value) return false;
+    if (saveDisabled.value) return false;
     const ticket = generation; busy.value = true; message.value = "";
-    let sent = false, committed = false;
+    let sent = false, committed = false, locallyPublished = false;
     try {
       verify(); const command = request();
       await guardSites(command, ticket); verify();
       if (ticket !== generation) return false;
+      if (kind === "schedule" && optimistic) {
+        if (optimistic.publish({
+          command,
+          raw: baseline.value,
+          source: displayedSource,
+        }) !== true) throw new Error("表示を更新できませんでした。");
+        locallyPublished = true;
+      }
       sent = true;
       const response = await httpsCallable($functions, "saveOperation")({ operations: [command] });
       if (ticket !== generation) return false;
       verify();
       if (response.data?.success !== true) throw new Error("結果不明");
       committed = true;
+      if (locallyPublished) {
+        const saved = optimistic.currentSchedule(command.documentId);
+        clear(); await onSaved(saved, response.data); return true;
+      }
       const snapshot = await getDocFromServer(reference);
       if (ticket !== generation) return false;
       verify();
       const saved = snapshot.exists() ? new Schema(rawForClass(snapshot.data())) : null;
       clear(); await onSaved(saved, response.data); return true;
     } catch (error) {
+      if (!committed && locallyPublished) {
+        if (ticket !== generation) return false;
+        try { await optimistic.refresh([reference.id]); } catch { /* listener fallback */ }
+      }
       if (ticket !== generation) return false;
       if (committed) {
         if (!allowed() || scope() !== owner) return false;
@@ -153,5 +175,5 @@ export function useOperationEditor({ kind, defaultAction = "overview", fields: c
   const inputSchema = computed(() => fieldsFor(rowOptions?.action || defaultAction).filter((field) => definition.value?.classProps[field]).map((field) => ({ key: field, ...definition.value.classProps[field] })));
   watch(() => [auth.uid, auth.companyId, canWrite.value], () => { if (owner && (scope() !== owner || !canWrite.value)) { clear(); busy.value = false; } });
   onScopeDispose(clear);
-  return { opened, busy, loading, conflict, uncertain, message, draft, baseline, definition, canWrite, disabled, saveDisabled: computed(() => disabled.value || inputPending.value), setInputPending: (value) => { inputPending.value = value === true; }, inputSchema, open, save, reload, close, reset, request, update: (changes) => { if (!disabled.value) Object.assign(draft.value, changes); }, get action() { return rowOptions?.action; }, get rowAction() { return rowOptions?.rowAction; } };
+  return { opened, busy, loading, conflict, uncertain, message, draft, baseline, definition, canWrite, disabled, saveDisabled, deleteRequested, canDeleteFromUpdate, setDeleteRequested: (value) => { if (canDeleteFromUpdate.value && !busy.value) deleteRequested.value = value === true; }, setInputPending: (value) => { inputPending.value = value === true; }, inputSchema, open, save, reload, close, reset, request, update: (changes) => { if (!disabled.value && !deleteRequested.value) Object.assign(draft.value, changes); }, get action() { return rowOptions?.action; }, get rowAction() { return rowOptions?.rowAction; } };
 }

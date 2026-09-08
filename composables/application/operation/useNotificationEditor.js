@@ -2,9 +2,9 @@ import { computed, ref, shallowRef, watch, onScopeDispose } from "vue";
 import { doc, getDocFromServer, runTransaction, serverTimestamp } from "firebase/firestore";
 import { ArrangementNotification } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
-import { NOTIFICATION_VALUES } from "@/functions/shared/operationWriteContract.js";
-import { expectedNotificationState, prepareNotificationState } from "@/functions/shared/notificationStateContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract";
+import { NOTIFICATION_VALUES } from "@/composables/domain/operation/operationCommandContract";
+import { expectedNotificationState, prepareNotificationState } from "@/composables/domain/operation/notificationStateContract";
 
 export function useNotificationEditor({ onSaved = () => {} } = {}) {
   const auth = useAuthStore(), { $firestore } = useNuxtApp();

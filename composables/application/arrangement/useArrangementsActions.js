@@ -27,7 +27,14 @@ import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/
  *   removeSiteShiftTypeOrder: Function,
  * }}
  *****************************************************************************/
-export function useArrangementsActions({ schedules, siteShiftTypeOrder } = {}) {
+export function useArrangementsActions({
+  schedules,
+  siteShiftTypeOrder,
+  publishSchedule,
+  publishNotificationState,
+  resetNotifications,
+  refreshSchedule,
+} = {}) {
   /*****************************************************************************
    * SETUP COMPOSABLES
    *****************************************************************************/
@@ -37,7 +44,12 @@ export function useArrangementsActions({ schedules, siteShiftTypeOrder } = {}) {
     siteShiftTypeOrder,
   });
   const { notify, updateSchedule, updateSchedules } =
-    useSiteOperationScheduleActions();
+    useSiteOperationScheduleActions({
+      publishSchedule,
+      publishNotificationState,
+      resetNotifications,
+      refreshSchedule,
+    });
   const { update: updateSiteShiftTypeOrder, remove: removeSiteShiftTypeOrder } =
     useSiteShiftTypeOrderActions({
       type: ORDER_TYPE.ARRANGEMENT,

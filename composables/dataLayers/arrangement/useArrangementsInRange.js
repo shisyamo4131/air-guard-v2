@@ -4,7 +4,7 @@
  *****************************************************************************/
 import * as Vue from "vue";
 import dayjs from "dayjs";
-import { SiteOperationSchedule } from "@/schemas";
+import { ArrangementNotification, SiteOperationSchedule } from "@/schemas";
 import { useEmployeesInRange } from "@/composables/dataLayers/employee/useEmployeesInRange";
 import { useOutsourcersInRange } from "@/composables/dataLayers/outsourcer/useOutsourcersInRange";
 import { useSiteOperationSchedulesInRange } from "@/composables/dataLayers/siteOperationSchedule/useSiteOperationSchedulesInRange";
@@ -13,6 +13,10 @@ import { useSiteShiftTypeOrderEnriched } from "@/composables/dataLayers/siteShif
 import { TYPE as ORDER_TYPE } from "@/composables/dataLayers/siteShiftTypeOrder/type";
 import { rangeIsRef } from "@/composables/validators/rangeValidator";
 import { useSecurityReportIndexesInRange } from "@/composables/dataLayers/securityReport/useSecurityReportIndexesInRange";
+import { inheritOperationRaw } from "@/composables/domain/operation/operationRawContext";
+import { applyOperationProjection, WORKER_PARENT_FIELDS } from "@/composables/domain/operation/operationProjection";
+import { operationDateTime } from "@/composables/domain/operation/operationDateTime";
+import { equal, parseDate, rawForClass } from "@/composables/domain/shared/valueContract";
 
 /*****************************************************************************
  * @param {Object} options - コンポーザブルのオプション
@@ -81,11 +85,32 @@ export function useArrangementsInRange({ from, to } = {}) {
   const scheduleTo = Vue.computed(() =>
     dayjs(to.value).tz().add(1, "day").toDate(),
   );
-  const { docs: schedulesForConsecutiveWork } =
+  const {
+    docs: canonicalSchedulesForConsecutiveWork,
+    refresh: readSchedule,
+  } =
     useSiteOperationSchedulesInRange({
       from: scheduleFrom,
       to: scheduleTo,
     });
+
+  /** ArrangementNotifications from useArrangementNotificationsInRange */
+  const { docs: canonicalNotifications } = useArrangementNotificationsInRange({
+    from,
+    to,
+  });
+  const schedulesForConsecutiveWork = Vue.shallowRef([]);
+  const notifications = Vue.shallowRef([]);
+  Vue.watch(
+    canonicalSchedulesForConsecutiveWork,
+    (value) => { schedulesForConsecutiveWork.value = value; },
+    { immediate: true },
+  );
+  Vue.watch(
+    canonicalNotifications,
+    (value) => { notifications.value = value; },
+    { immediate: true },
+  );
   const displayFrom = Vue.computed(() =>
     dayjs(from.value).tz().format("YYYY-MM-DD"),
   );
@@ -98,12 +123,6 @@ export function useArrangementsInRange({ from, to } = {}) {
         schedule.date >= displayFrom.value && schedule.date <= displayTo.value,
     ),
   );
-
-  /** ArrangementNotifications from useArrangementNotificationsInRange */
-  const { docs: notifications } = useArrangementNotificationsInRange({
-    from,
-    to,
-  });
 
   /** siteShiftTypeOrder from useSiteShiftTypeOrderEnriched */
   const { siteShiftTypeOrder } = useSiteShiftTypeOrderEnriched({
@@ -404,6 +423,149 @@ export function useArrangementsInRange({ from, to } = {}) {
     return schedulesByDocId.value.get(docId) || null;
   }
 
+  function replaceLocalSchedule(documentId, value, source = null) {
+    const current = schedulesForConsecutiveWork.value.find(
+      ({ docId }) => docId === documentId,
+    );
+    const next = schedulesForConsecutiveWork.value.filter(
+      ({ docId }) => docId !== documentId,
+    );
+    if (value) {
+      const model = Vue.reactive(new SiteOperationSchedule(rawForClass(value)));
+      inheritOperationRaw(source || current, model);
+      next.push(model);
+    }
+    schedulesForConsecutiveWork.value = next;
+    return true;
+  }
+
+  function cancelLocalNotifications(documentId, before, after) {
+    if (!before) return after;
+    const previous = [...(before.employees || []), ...(before.outsourcers || [])];
+    const next = after === null
+      ? []
+      : [...(after.employees || []), ...(after.outsourcers || [])];
+    const changedAll = after === null || WORKER_PARENT_FIELDS.some(
+      (field) => !equal(before[field], after[field]),
+    );
+    const affected = new Set(
+      previous
+        .filter((worker) => changedAll || !next.some(
+          (row) => row.workerId === worker.workerId && equal(row, worker),
+        ))
+        .map((worker) => worker.workerId),
+    );
+    for (const worker of next) {
+      if (changedAll || !previous.some(
+        (row) => row.workerId === worker.workerId && equal(row, worker),
+      )) affected.add(worker.workerId);
+    }
+    if (!changedAll && affected.size === 0) return after;
+    notifications.value = notifications.value.filter(
+      (item) => item.siteOperationScheduleId !== documentId ||
+        (!changedAll && !affected.has(item.workerId)),
+    );
+    if (after === null) return null;
+    const value = { ...after };
+    for (const array of ["employees", "outsourcers"]) {
+      value[array] = after[array].map((worker) =>
+        (changedAll || affected.has(worker.workerId))
+          ? { ...worker, hasNotification: false }
+          : worker,
+      );
+    }
+    value.workers = [...value.employees, ...value.outsourcers];
+    return value;
+  }
+
+  async function refreshSchedule(documentId) {
+    const result = await readSchedule(documentId);
+    if (!result) return false;
+    return replaceLocalSchedule(documentId, result.value, result.value);
+  }
+
+  function publishSchedule(model, raw) {
+    const current = schedulesForConsecutiveWork.value.find(
+      ({ docId }) => docId === model?.docId,
+    );
+    if (!current) return false;
+    const value = cancelLocalNotifications(
+      model.docId,
+      rawForClass(raw),
+      rawForClass(model.toObject()),
+    );
+    return replaceLocalSchedule(model.docId, value, model);
+  }
+
+  function publishOperation({ command, raw } = {}) {
+    if (!command || command.kind !== "schedule") return false;
+    let value;
+    if (command.action === "create") {
+      value = operationDateTime(new SiteOperationSchedule({
+        ...rawForClass(command.changes),
+        ...(Object.hasOwn(command.changes, "dateAt")
+          ? { dateAt: parseDate(command.changes.dateAt) }
+          : {}),
+        docId: command.documentId,
+      })).toObject();
+    } else {
+      value = applyOperationProjection(rawForClass(raw), {
+        ...command,
+        changes: {
+          ...command.changes,
+          ...(Object.hasOwn(command.changes, "dateAt")
+            ? { dateAt: parseDate(command.changes.dateAt) }
+            : {}),
+        },
+      });
+    }
+    const before = command.action === "create" ? null : rawForClass(raw);
+    value = cancelLocalNotifications(command.documentId, before, value);
+    return replaceLocalSchedule(command.documentId, value);
+  }
+
+  function publishNotificationState(model, shouldNotify = true) {
+    const value = rawForClass(model.toObject());
+    const provisional = new Map(notifications.value.map((item) => [item.docId, item]));
+    for (const array of ["employees", "outsourcers"]) {
+      value[array] = value[array].map((worker) => {
+        if (worker.hasNotification) return worker;
+        const notification = operationDateTime(new ArrangementNotification({
+          ...rawForClass(worker),
+          docId: `${value.docId}_${worker.workerId}`,
+          siteOperationScheduleId: value.docId,
+          actualStartTime: worker.startTime,
+          actualEndTime: worker.endTime,
+          actualBreakMinutes: worker.breakMinutes,
+          actualIsStartNextDay: worker.isStartNextDay,
+          shouldNotify,
+        }));
+        provisional.set(notification.docId, Vue.reactive(notification));
+        return { ...worker, hasNotification: true };
+      });
+    }
+    value.workers = [...value.employees, ...value.outsourcers];
+    for (const array of ["employees", "outsourcers"]) {
+      for (const [index, worker] of model[array].entries()) {
+        worker.hasNotification = value[array][index].hasNotification;
+      }
+    }
+    notifications.value = [...provisional.values()];
+    return replaceLocalSchedule(value.docId, value, model);
+  }
+
+  function resetNotifications(documentIds = []) {
+    const targets = new Set(documentIds);
+    notifications.value = [
+      ...notifications.value.filter(
+        (item) => !targets.has(item.siteOperationScheduleId),
+      ),
+      ...canonicalNotifications.value.filter(
+        (item) => targets.has(item.siteOperationScheduleId),
+      ),
+    ];
+  }
+
   /**
    * 指定された groupKey に一致する現場稼働予定ドキュメントを取得します。
    * - `schedulesByGroupKey` を参照する検索用 API です。
@@ -479,6 +641,11 @@ export function useArrangementsInRange({ from, to } = {}) {
     /** DATA */
     schedules,
     notifications,
+    publishSchedule,
+    publishOperation,
+    publishNotificationState,
+    resetNotifications,
+    refreshSchedule,
     arrangedEmployeesMap,
     arrangedOutsourcersMap,
     selectableEmployees,

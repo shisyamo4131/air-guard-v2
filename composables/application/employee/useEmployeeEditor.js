@@ -4,7 +4,8 @@ import { httpsCallable } from "firebase/functions";
 import { Employee } from "@/schemas";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useMessagesStore } from "@/stores/useMessagesStore";
-import { operationFields, BASIC_FIELDS, NATIONALITY_FIELDS, SECURITY_FIELDS, DATE_FIELDS, employeeAllowed, rawForClass, equal, expectedFields, dateInput, buildEmployeePatch, parseEmployeeInput } from "@/functions/shared/employeeContract.js";
+import { operationFields, BASIC_FIELDS, NATIONALITY_FIELDS, SECURITY_FIELDS, DATE_FIELDS, rawForClass, equal, expectedFields, dateInput, buildEmployeePatch, parseEmployeeInput } from "@/composables/domain/employee/employeeEditContract.js";
+import { isEmployeeUxActorAllowed } from "@/utils/auth/policies/employeeActorPolicy.js";
 
 export function useEmployeeEditor({ operation, employeeId }) {
   const auth = useAuthStore();
@@ -16,7 +17,7 @@ export function useEmployeeEditor({ operation, employeeId }) {
   let reference = null, unsubscribe = null, generation = 0, owner = null, draftAtOpen = null, pendingComparison = null, displayEdited = false;
   let conflictWhileSaving = false;
   const id = () => typeof employeeId === "function" ? employeeId() : employeeId;
-  const decision = () => auth.isSuperUserClaimValid === true && employeeAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser, actorUser: auth.user });
+  const decision = () => auth.isSuperUserClaimValid === true && isEmployeeUxActorAllowed({ uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser, actorUser: auth.user });
   const canWrite = computed(decision);
   const ownedFields = operationFields(operation);
   function clear() {

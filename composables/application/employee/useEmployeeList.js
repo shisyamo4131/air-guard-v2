@@ -10,7 +10,7 @@ import {
 } from "firebase/firestore";
 import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { Employee } from "@/schemas";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract.js";
 import { useEmployeeReadAccess } from "@/composables/application/employee/useEmployeeReadAccess";
 import { createEmployeeListSession } from "@/composables/domain/employee/employeeListSession.js";
 

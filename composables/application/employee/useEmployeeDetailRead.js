@@ -1,7 +1,7 @@
 import { computed, ref, watch, onScopeDispose } from "vue";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { User } from "@/schemas";
-import { rawForClass } from "@/functions/shared/employeeContract.js";
+import { rawForClass } from "@/composables/domain/shared/valueContract.js";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 
 export function useEmployeeDetailRead(employeeId) {

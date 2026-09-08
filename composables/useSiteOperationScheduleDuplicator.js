@@ -1,5 +1,5 @@
 import { computed } from "vue";
-import { dateInput } from "@/functions/shared/employeeContract.js";
+import { dateInput } from "@/composables/domain/shared/valueContract";
 import { useOperationDuplicator } from "@/composables/application/operation/useOperationDuplicator";
 
 export function useSiteOperationScheduleDuplicator() {

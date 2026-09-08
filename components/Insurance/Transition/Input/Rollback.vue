@@ -5,7 +5,7 @@
  * @note `AirItemManager` の `customInput` として利用
  *****************************************************************************/
 import { computed } from "vue";
-import { dateInput } from "@/functions/shared/employeeContract.js";
+import { dateInput } from "@/composables/domain/shared/valueContract.js";
 import { useDefaults } from "vuetify";
 import { INSURANCE_STATUS_VALUES as STATUS } from "@shisyamo4131/air-guard-v2-schemas/constants";
 

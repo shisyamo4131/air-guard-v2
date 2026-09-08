@@ -1,6 +1,6 @@
 <script setup>
 import { useEmployeeEditor } from "@/composables/application/employee/useEmployeeEditor";
-import { operationSchema } from "@/functions/shared/employeeContract.js";
+import { operationSchema } from "@/composables/domain/employee/employeeEditContract.js";
 const props = defineProps({
   employee: { type: Object, default: null },
   operation: { type: String, required: true },

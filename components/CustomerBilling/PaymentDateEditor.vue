@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { useBillingPaymentDate } from "@/composables/application/customerBilling/useBillingPaymentDate";
-import { dateInput } from "@/functions/shared/employeeContract.js";
+import { dateInput } from "@/composables/domain/shared/valueContract.js";
 const props = defineProps({ documentId: { type: String, required: true } });
 const editor = useBillingPaymentDate(computed(() => props.documentId));
 const disabled = computed(() => editor.busy.value || editor.uncertain.value || editor.conflict.value);

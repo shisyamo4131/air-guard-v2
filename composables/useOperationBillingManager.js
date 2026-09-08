@@ -8,7 +8,7 @@ import * as Vue from "vue";
 import dayjs from "dayjs";
 import { OperationBilling } from "@/schemas";
 import { useOperationSubmission } from "@/composables/application/operation/useOperationSubmission";
-import { expectedForOperation } from "@/functions/shared/operationWriteContract.js";
+import { expectedForOperation } from "@/composables/domain/operation/operationCommandContract";
 import { useFetchSite } from "./fetch/useFetchSite";
 import { useFetchEmployee } from "./fetch/useFetchEmployee";
 import { useFetchOutsourcer } from "./fetch/useFetchOutsourcer";
