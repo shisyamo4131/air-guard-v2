@@ -69,7 +69,10 @@ function codedError(code) {
 let mutexSequence = 0;
 
 async function loadSiteWriteMutex() {
-  const source = await readFile(SITE_ACTIONS_URL, "utf8");
+  const source = (await readFile(SITE_ACTIONS_URL, "utf8")).replace(
+    /\r\n?/gu,
+    "\n",
+  );
   const start = source.indexOf("const sharedSiteWriteState");
   const end = source.indexOf("\n\nexport function useSiteActions", start);
   assert.notEqual(start, -1, "shared Site write state must exist");
