@@ -19,7 +19,7 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)である。Firestore document分割、tenant共通権限、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界を採用し、利用者のルール提示完了を受けてFGA-01を完了した。CompanyとUserは現行の厳密な実装を維持する。次はFGA-02 Customer管理の現行挙動とreader/writerを調査し、最初の小checkpointを利用者と合意する。製品code・Rules・data・Dev、field単位方式、破壊的変更、migration、Prod、pushは未承認である。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)で、FGA-01を完了した。CompanyとUserは現行の厳密な実装を維持する。FGA-02の最初のcheckpointではCustomer通常Rulesを有効User・同一tenant・actor UIDへ簡素化し、commit `3c67a95e`のFirestore／Hosting Dev反映と会社管理者の作成・更新受入れまで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。合成Customer `FGA02001`は後続確認用に保持する。次はCustomerのdocument単位last-write-wins、Manager、listener正本、role別UXの実装差を調査し、checkpoint粒度を利用者と合意する。次の製品変更、破壊的変更、migration、追加Dev操作、Prodは未承認である。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- Customer通常CRUDのFirestore Rulesを、同一tenantの有効な認証済み本登録Userとactor UIDを境界とする形へ簡素化した。通常Customerのrole・permission、exact 26-field schema、型・長さ・状態・時刻・操作別field検査はRulesから外し、Schemas packageと正規application writerを検証責務とする。active delete、archiveのclient read/write、archive済み同一IDの再作成は引き続き拒否する。Dev・Prod・dataは変更していない。[判断](docs/decisions/0065-tenant-trust-normal-business-authorization.md)と[実装調査](docs/implementation/customer-master.md)を参照。
+- Customer通常CRUDのFirestore Rulesを、同一tenantの有効な認証済み本登録Userとactor UIDを境界とする形へ簡素化した。通常Customerのrole・permission、exact 26-field schema、型・長さ・状態・時刻・操作別field検査はRulesから外し、Schemas packageと正規application writerを検証責務とする。active delete、archiveのclient read/write、archive済み同一IDの再作成は引き続き拒否する。固定commitをFirestore・HostingへDev反映し、会社管理者による合成Customerの作成・更新・再読込後の表示を確認した。Prod、Functions、account権限、既存dataの変換は変更していない。[判断](docs/decisions/0065-tenant-trust-normal-business-authorization.md)、[実装調査](docs/implementation/customer-master.md)、[Dev受入れ記録](docs/verification/fga-02-customer-rules-dev.md)を参照。
 
 - 利用者による根本ルールの提示完了を受け、Firestore document構成、tenant共通権限とCompany／User例外、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界の相互整合・実装差・段階移行先を確定し、根本ガバナンス整合phaseのFGA-01を完了した。進捗は0%から10%となり、次はCustomer管理の最初の小checkpointを合意する。製品code、Rules、data、Dev・Prodは変更していない。[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 

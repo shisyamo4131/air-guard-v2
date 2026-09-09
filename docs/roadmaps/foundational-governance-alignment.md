@@ -29,11 +29,11 @@
 ## 現在地
 
 - [Firestore document構成](../specification.md#firestoreドキュメントの構成)と[ADR 0064](../decisions/0064-sensitive-firestore-document-boundaries.md)を採用し、Company振込先の現行root同居を未解消の実装差として記録した。
-- [通常業務のtenant信頼境界](../specification.md#テナントと認証)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を採用した。FGA-02-RULES-01ではCustomer通常Rulesからrole・schema・operation field検査を外し、有効な本登録User、tenant、actor UIDへ簡素化するlocal変更と契約testを進めている。archive・物理deleteの例外境界、application、Functions、schema、dataは変更せず、Dev反映・受入れは別承認待ちのためFGA-02得点は0のままとする。
+- [通常業務のtenant信頼境界](../specification.md#テナントと認証)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を採用した。FGA-02-RULES-01ではCustomer通常Rulesからrole・schema・operation field検査を外し、有効な本登録User、tenant、actor UIDへ簡素化した。固定commit `3c67a95e`をFirestore・HostingへDev反映し、会社管理者による合成Customerの作成、更新、再読込後のlistener正本表示まで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。archive・物理deleteの例外境界、Functions、schema、既存dataの変換は変更していない。
 - [Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を採用した。Prod公開前はdocument単位last-write-wins、field単位方式は未確定の将来案とし、既存の部分writer、競合拒否、Manager非依存はまだ変更していない。
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。製品実装はまだ変更していない。
-- 利用者はFGA-02-RULES-01の変更契約を承認した。local実装と必須検証を完了して固定commitを作成した後、RulesのDev反映・Customer通常CRUDのDev受入れを別承認で行う。次のCustomer application／UI checkpointはこのRules checkpointを閉じてから粒度を合意する。
+- 利用者はFGA-02-RULES-01の変更契約とDev releaseを承認し、実装・必須検証・独立review・Dev反映・正常経路の受入れを完了した。FGA-02全体の得点は、残るCustomer application／UI checkpointの粒度と配点を合意していないため0のままとし、完了済みcheckpointを未実施へ戻す意味には使わない。次はdocument単位last-write-wins、Manager利用、listener正本、role別UXの既存実装差を調査し、次の小checkpointを合意する。
 
 ## 完了条件
 
