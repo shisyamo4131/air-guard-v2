@@ -18,7 +18,6 @@
 | Git統合、task loop、`容量チェック`・task/session容量、session handoff | Confirmed | [project coordination](project-coordination.md) | roadmap、checkpoint、current task ID・host、Git状態、capacity script |
 | task起動・利用者要求の交代 | Confirmed | [project coordination](project-coordination.md) | 通常startup、primary Git状態、製品再開案内 |
 | 旧coordinator交代手順の照合 | Historical | [handoff効率化](coordinator-handoff-efficient-activation.md) | 当時の手順と判断の参照。現在の起動には適用しない |
-| Windows PC移行 | Confirmed | [Windows PC migration](windows-pc-migration.md) | backup媒体、Git bundle、local data、restore checkpoint |
 
 ## 読み方
 

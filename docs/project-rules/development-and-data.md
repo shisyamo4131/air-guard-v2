@@ -24,8 +24,7 @@
 ## フェーズごとのテスト範囲の合意
 
 - 着手前に、変更対象、test対象・対象外、操作と期待結果、環境・actor・data、完了条件をcheckpointへ固定する。実装承認から他機能全体の受入れまでを推論しない。
-- UI・application改修のDev受入れ前は、変更箇所を直接覆うdomain testと必要最小限のlocal動作確認を基本とし、専用Local UI build、全Local Emulator、重複するbrowser受入れを一律の前提にしない。実Dev固有の表示・操作・権限・通信は、対象commitを固定したbounded Dev release後の受入れで確認する。ただしRules・schema・Functions・認証認可等の高risk境界、release artifact生成、verification policyが別classで要求する必須gateはDev確認へ先送りせず、対象変更に必要な範囲を実行する。
-- 試験運用中の通常の製品改修はUIの有無にかかわらず、`直接対象のdomain test → 対象機能の最小限のlocal動作確認 → Dev反映・Dev受入れ`を標準順序とし、Localで対象機能が動作することを確認してからDevへ進む。最終確認はDev受入れで行い、Devで不具合が判明した場合は改修粒度を小さく保って修正・再deployする。Dev受入れ前に、変更と直接関係しないbuild、全Emulator、全browser、包括的な静的検査を追加せず、Devでなければ確認できない事項をlocal手段で重複検証しない。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、および承認済みreleaseに必要なgateだけはこの省略対象に含めない。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
+- 試験運用中の通常の製品改修はUIの有無にかかわらず、`直接対象のdomain test → 対象機能の最小限のlocal動作確認 → Dev反映・Dev受入れ`を標準順序とし、Localで対象機能が動作することを確認してからDevへ進む。実Dev固有の表示・操作・権限・通信を含む最終確認は、対象commitを固定したbounded Dev release後の受入れで行い、不具合が判明した場合は改修粒度を小さく保って修正・再deployする。Dev受入れ前に、変更と直接関係しないbuild、全Emulator、全browser、包括的な静的検査を追加せず、専用Local UI buildや重複browser受入れを一律の前提にしない。Devでなければ確認できない事項をlocal手段で重複検証しない。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、verification policyが別classで要求する必須gate、および承認済みrelease（artifact生成を含む）に必要なgateは先送り・省略せず、対象変更に必要な範囲を実行する。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
 - testは当該phaseの変更と直接必要な回帰へ限定する。関連fieldを読むだけの別機能について、業務全体の受入れを自動追加しない。影響確認と別機能の受入れを区別し、追加が必要なら理由・対象・延期時の影響を提示して合意する。
 - 合意済み範囲の再現・修正・再試験は継続し、commandやtest fileごとの再承認を求めない。発見した不足・不具合の修正義務を現在phaseへの追加権限とみなさず、対応時期の延期と修正の省略を区別する。
 - 現在の目的を妨げない独立問題だけを後続へ送る。今回の変更による回帰、承認済み必須条件の未達、安全な作業継続を妨げる問題は未完として扱い、必要なら影響作業を停止する。初期調査・設計の見落としを追加要求へすり替えず、条件補正と影響を利用者へ説明する。必須gateと安全境界は省略しない。

@@ -6,16 +6,11 @@
 
 ## Git統合
 
+担当、所有範囲、並列化、未統合変更の扱いとGit承認は[Coordination and Git rules](../project-rules/coordination-and-git.md)、deploy承認は[Environment and approval rules](../project-rules/environment-and-approval.md)に従う。
+
 - 作業単位ごとにユーザーとbranch境界を相談し、原則として機能単位の `codex/<機能名>` ブランチを合意済み基準から作成する。開始時に現在ブランチ、基準コミット、作業ツリーを確認する。
-- Codexはlocal branch作成・切替、review済みfileのstage・commit、差分確認を担当する。利用者または別taskの未コミット変更を独自判断で修正、破棄、stage、commitしない。
-- 専門タスクは担当ファイルだけを編集・検証し、原則としてステージやコミットを行わない。
-- 専門タスクはチェックポイントID、正確な変更ファイル、差分、テスト、未確認事項、承認境界、作業ツリー状態をコーディネーターへ報告する。
 - コーディネーターは差分と仕様・ロードマップとの整合を確認し、承認済み作業単位のreview済みfileだけをステージ、コミット、統合する。利用者または別taskの変更をcommit対象に含める場合は対象差分と検証状態をユーザーと確認する。専門タスクが既にコミットを作成している場合は、確認後に再利用する。
-- 並行書込みでは共通の基準コミットとチェックポイントIDを使用し、担当ファイルを重複させない。限定された一群を統合・検証してから次の共通基準へ昇格する。
-- 未統合の変更を、別タスクの確定済み依存関係として扱わない。統合待ちがある場合は新規割当より統合を優先する。
-- ユーザーは機能ブランチ上の動作を確認する。明示的な受入れ承認を得るまで `main` へマージしない。
 - `main` へは原則としてマージコミットを作成し、機能単位の統合境界を残す。競合解消後に関連テストとガバナンス検証を再実行する。
-- `main` への直接コミット、`main` へのマージ、Git push、履歴書換え、デプロイは、それぞれユーザーが対象操作を明示した場合だけ行う。
 - 受入れ後に問題が判明した場合は、機能単位のマージコミットをrevert可能か、データ・契約互換性を確認する。安全にrevertできない場合は修正ブランチと移行・復旧手順を用意する。
 
 ## Git現在状態の報告
@@ -36,7 +31,7 @@
 
 ### 通常startup
 
-すべてのtaskは`AGENTS.md`、`governance/project-rules.md`、同indexが予定操作へ指定するproject rule segment、`docs/README.md`から依頼に必要な正本を読み、primary repositoryのGit状態・scope・承認・次作業を照合する。複数routeに該当する場合は必読集合の和集合を使う。製品再開の案内は[現在の製品作業](../implementation/current-coordinator-handoff.md)。手動作成、利用者要求の交代、旧task利用不能時も同じ経路とし、旧ownerの協力やactivationを前提にしない。
+[必須の読取り順](../../governance/project-rules.md#必須の読取り順)に従い、primary repositoryのGit状態・scope・承認・次作業を照合する。製品再開の案内は[現在の製品作業](../implementation/current-coordinator-handoff.md)。手動作成、利用者要求の交代、旧task利用不能時も同じ経路とし、旧ownerの協力やactivationを前提にしない。
 
 installed scaffold skillは明示されたgovernance作成・採用・移行・更新でだけ使用し、日常作業ではrepositoryの指示を使用する。[旧handoff効率化runbook](coordinator-handoff-efficient-activation.md)はHistoricalであり、通常startupに適用しない。
 ### 開始確認
@@ -81,16 +76,14 @@ local UIの担当・承認境界は[Environment and approval rules](../project-r
 
 通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
 
-通知に失敗した専門タスクは再送を繰り返さず、完全な最終結果をそのタスクに残して停止します。コーディネーターは状態を安全に1回だけ再取得し、最新指示と照合できなければ同じ割当を再送しません。コールバックを利用できない場合、またはユーザーが明示した場合だけ差分型ポーリングへ切り替え、対象、間隔、停止条件を記録します。変更なしの確認は通知せず、確認間隔を作業期限とみなしません。
+callback失敗時の専門taskの停止は[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)に従います。コーディネーターは状態を安全に1回だけ再取得し、最新指示と照合できなければ同じ割当を再送しません。コールバックを利用できない場合、またはユーザーが明示した場合だけ差分型ポーリングへ切り替え、対象、間隔、停止条件を記録します。変更なしの確認は通知せず、確認間隔を作業期限とみなしません。
 
-checkpoint固有のsubagent禁止は、そのcheckpointの開始からterminal callbackとcoordinator reviewまでに限ります。完了後のcheckpointへ自動的に持ち越さず、継続禁止には利用者による別の明示指示を必要とします。利用者要求の交代作成はcoordinator自身が行います。交代専用のno-change、activation、最初のfile限定commitは設けず、通常startupを使用します。
+checkpoint固有のsubagent禁止の有効範囲も[担当と並列化](../project-rules/coordination-and-git.md#担当と並列化)を正とし、継続禁止には利用者による別の明示指示を必要とします。利用者要求の交代作成はcoordinator自身が[task交代手順](#利用者が要求したtask交代)に従って行います。
 
 ### Critical identifierの確認
 
-- package名・version・integrity、repository・branch・commit・tag、Firebase project・database、deploy先、data対象は、当該turnにtask-routed正本または実targetから取得するまで未確認です。chat、要約、memory、親prompt、agent reportは手掛かりに限定します。
-- coordinatorは確認したsource/location/command/valueだけをdelegationへ記載し、委譲先にもstate change前の独立照合を要求します。矛盾時はfile write、Git mutation、test、install、networkを開始せずcallbackします。
-- Schemas consumer変更では[package release runbook](package-release.md)の`PreAdoption`を変更前、`PostAdoption`を変更後に実行します。source tag manifest、release evidence、root/Functions manifest・lockのname、version、resolved、integrityが一つのchainとして一致しなければ停止します。
-- network未承認時はremote registryの現在状態を推測せず、local source/tagと記録済み公開証拠までを確認済みとして報告します。
+- 確認根拠とcoordinator・委譲先の独立照合は[共通契約](../../governance/common-governance.md#evidence-bound-critical-identifiers)に従います。矛盾時はfile write、Git mutation、test、install、networkを開始せずcallbackします。
+- repository・branch・commitは[Git現在状態の報告](#git現在状態の報告)、package・version・integrityは[package release runbook](package-release.md)の`PreAdoption` / `PostAdoption`、環境・data対象は[project rule routing](../../governance/project-rules.md#project-rule-routing)から該当手順を選びます。
 
 ## Codexセッションのライフサイクル
 

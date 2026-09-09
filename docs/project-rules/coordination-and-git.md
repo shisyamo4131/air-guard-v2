@@ -34,5 +34,4 @@
 
 - 長期作業はreview可能なcheckpointを1件ずつ割り当て、完了・失敗・仕様質問・承認境界でcallbackし、coordinator review後に次へ進む。標準終了条件は安全に独立実行できる作業が尽きた時点である。
 - 容量確認は[project coordination](../runbooks/project-coordination.md#容量確認)へrouteし、現在task IDのsessionだけを測る。時間や推測token量を交代理由にしない。`handoff_required=true`なら新規割当を止め、baseline、進捗、checkpoint、未統合差分、test、承認事項、次の指示をrepositoryへ記録してから交代を提案する。
-- 利用者がtask交代を要求した場合、現行factsと次作業を正本へ反映し、関連変更をcommitしてprimaryをcleanにした後、同じ基本名の次連番をfresh non-fork taskとして作る。交代専用の空commit、registry、cache、handshakeを追加しない。
-- 新taskは通常startupを使う。旧taskのarchive・deleteは利用者の操作であり、Codexは実行・依頼しない。
+- 利用者要求の交代は[task交代手順](../runbooks/project-coordination.md#利用者が要求したtask交代)、新taskの開始は[通常startup](../runbooks/project-coordination.md#通常startup)に従う。

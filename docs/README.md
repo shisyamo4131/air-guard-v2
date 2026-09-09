@@ -4,11 +4,7 @@
 
 ## 作業の開始順序
 
-1. ルートの `AGENTS.md` を読む。
-2. `governance/project-rules.md` を読み、予定操作に該当するproject rule segmentをすべて選ぶ。
-3. 下表から作業種別を選び、必要最小限の文書を読む。
-4. 関連するロードマップと ADR を確認する。
-5. 変更前に、関連コード、ルール、設定、テスト、運用証拠を照合する。
+[必須の読取り順](../governance/project-rules.md#必須の読取り順)を済ませ、下表から作業種別に対応する正本と追加確認対象を選ぶ。Git状態・scope・承認・次作業の照合は[通常startup](runbooks/project-coordination.md#通常startup)に従う。
 
 ## 作業別ルーティング
 
@@ -36,7 +32,6 @@
 | Codexによる長期作業・引継ぎ | [project coordination](runbooks/project-coordination.md)、[ADR 0011](decisions/0011-roadmap-and-codex-session-lifecycle.md)、[ADR 0032](decisions/0032-required-specialist-subagent-routing.md)、[ADR 0045](decisions/0045-governance-3-normal-startup.md)、[ADR 0047](decisions/0047-subagent-parallel-coordinator-external-ui.md)、[ロードマップ索引](roadmaps/README.md) | 通常delegation・並列化・coordinator直轄操作・容量・roadmap規則を参照。0011/0032の旧交代条件は0045により履歴として扱う |
 | taskの通常起動・利用者要求の交代 | [project coordination](runbooks/project-coordination.md)、[製品再開案内](implementation/current-coordinator-handoff.md)、[ADR 0045](decisions/0045-governance-3-normal-startup.md) | primary Git状態、製品の未決事項・承認・次作業 |
 | 明示されたgovernance移行・文書整理 | [移行索引](migrations/README.md)、[文書移行契約](../references/document-migration-contract.md)、[Task Replacement](../references/task-turnover-contract.md) | source-bound plan、意味保存review、検証policy。日常startupではinstalled skillを読まない |
-| Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) | backup・restore対象、Git bundle、local data、restore checkpoint |
 | 過去資料の照合 | 現行仕様、関連 ADR | `DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/`（参考・履歴） |
 
 ## 文書の役割
@@ -61,16 +56,10 @@
 
 ## 文書更新の完了条件
 
-- 重要文書を追加・改名・移動・廃止した場合、この案内または該当索引とリンクを同じ変更で更新する。
 - 変更する事実の正本を一つ選び、既存の複製を検索して削除または正本へのリンクへ置換する。「要約」は値の短縮版ではなく、正本へ到達する索引として書く。
 - 製品再開案内には現在の製品作業・未決事項・承認・次作業と正本へのlinkだけを置く。task ownerや交代状態を保存せず、完了履歴と実測結果はGit、roadmap、ADR、verification receiptへ置く。
 - runbookには再利用可能な手順だけを置き、特定releaseの結果はimmutable verification receiptへ置く。
-- 確認済み、未確認、提案、証拠、履歴を混同しない。
-- ロードマップの進捗はリポジトリ、テスト、レビュー、環境受入れの証拠だけで加点する。
-- `pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2` で相対リンクと見出しアンカー、索引到達性、ADR 状態、ロードマップ重みと進捗、TOML 構文と必須型を確認する。
-- `pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2` でmanaged hash、生成`AGENTS.md`、direct-edit drift、size、project rulesを確認する。
-- 必須validator、test、build、lint、migration checkは各commandの結果とexit statusを独立して確認する。まとめる場合は検証済みのfail-fastまたはaggregate runnerだけを使い、後続成功が先行失敗を隠す`;`等のchainやdiagnostic batchを完了証拠にしない。
-- `governance/verification-policy.json`と`docs/operations.md`のVerification Matrixで変更classとstageを選び、混合変更はunion、影響不明はcomprehensive fallbackを使う。選択・省略したgateと理由、後続編集で失効した証拠をcompletion reportまたは実行証拠へ記録する。
+- 索引更新、checkpoint完了、検証選択・実行結果の扱いは[Documentation and verification rules](project-rules/documentation-and-verification.md)に従う。exact commandと検証対象は[検証policy](../governance/verification-policy.json)と[ガバナンス文書の確認](operations.md#ガバナンス文書の確認)、進捗の加点条件は[Gitと報告](project-rules/coordination-and-git.md#gitと報告)を参照する。
 
 <!-- BEGIN MANAGED DOCUMENT MIGRATION INDEX -->
 

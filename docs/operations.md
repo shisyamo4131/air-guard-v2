@@ -62,13 +62,9 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 
 ### Evidence Validity
 
-- success、passing count、completion evidenceはexit status 0を独立確認した後だけ記録します。
-- 後続編集がJSONの`invalidatedBy`へ該当したgateはstaleです。失敗gateと失効gateを先に再実行し、影響しない証拠だけを継続利用できます。
-- iteration、targeted、completion、release-onlyを混同しません。release-only gateと外部作用はpolicyへの記載では承認されず、environment、service、data、backup、rollback、停止条件を含む別の明示承認が必要です。
-- 省略したgateは、選択class、非影響の根拠、記録先をcompletion report、acceptance receipt、migration receipt、release evidenceへ残します。
-- 文書は実影響だけを更新します。仕様、ADR、roadmap、manual、operations、CHANGELOGを無関係な検証通過のためだけに変更しません。
-- 完了後のreceiptは実行時点を固定した履歴証拠であり、現在のremote状態を表す文書へ書き換えません。索引は名称と正本linkだけを持ち、状態、進捗、日付、件数、commit、digestを複写しません。
-- 製品再開案内は現在の製品作業・未決事項・次作業へのrouteだけを保持します。完了済みcheckpointの詳細はreceiptまたはGit履歴へ置き、handoffへ再掲しません。
+- 結果の記録、既存証拠の再利用、失敗・失効gateの再実行、選択・省略理由の記録は[検証規則](project-rules/documentation-and-verification.md#verification)に従います。stage、`invalidatedBy`、証拠保存先は[検証policy](../governance/verification-policy.json)で確認します。
+- release-only gateと外部作用の承認は[環境・承認規則](project-rules/environment-and-approval.md)、文書の更新範囲は[共通契約](../governance/common-governance.md#material-change-and-documentation-scope)、索引・再開案内の責務は[文書案内](README.md#文書更新の完了条件)を参照します。
+- 完了後のreceiptは実行時点を固定した履歴証拠であり、現在のremote状態を表す文書へ書き換えません。
 
 ## 準備
 
@@ -99,11 +95,10 @@ npm install
 | 関連package更新・公開 | [package release](runbooks/package-release.md) |
 | `容量チェック`、task/session容量確認 | [project coordination](runbooks/project-coordination.md) |
 | Git統合、task loop、session handoff | [project coordination](runbooks/project-coordination.md) |
-| Windows PC移行 | [Windows PC migration](runbooks/windows-pc-migration.md) |
 
 `governance/project-rules.md`が参照するCodex専用demo projectの隔離条件は、[local Emulator検証](runbooks/local-emulator-testing.md)と[local UI検証](runbooks/local-ui-testing.md)を合わせて正本とする。package更新、Git統合、task lifecycleを含む正確なcommandと復旧手順も、上表の該当runbookへrouteする。
 
-`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は、model token/context windowではなく現在taskの永続session JSONL容量を意味する。現在のtask IDを明示してproject-local scriptを実行し、並行taskがある場合に最新sessionを推測しない。task handoffは300 MiB、Codex全体は10 GiBの参考警告として分離し、詳細な出力・停止条件は[project coordination](runbooks/project-coordination.md)を正本とする。
+`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は[容量確認手順](runbooks/project-coordination.md#容量確認)へrouteする。
 
 ## 静的生成とデプロイ
 
@@ -171,9 +166,8 @@ pwsh -NoProfile -File scripts/test-project-docs-check.ps1
 
 ## 秘密情報
 
-- `.env` 系ファイルの値、Firebase Admin 資格情報、Stripe Secret、Webhook Secret をコミット・文書化しない。
+- 秘密値・個人情報の保護対象と転記禁止は[承認と保護対象](project-rules/environment-and-approval.md#承認と保護対象)および[共通契約](../governance/common-governance.md#safety-and-sensitive-information)に従う。
 - legacy Stripe scaffoldの撤去でStripe Secretを読取・登録・削除しない。将来外部serviceを導入する場合はSecret Manager等のserver-only管理を別設計する。
-- ログや障害報告へ実際の個人情報、顧客情報、勤怠、請求、トークンを貼らない。
 
 ## 現在利用不可または要確認
 

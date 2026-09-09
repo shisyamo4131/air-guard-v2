@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- 不要となったWindows PC移行手順書を削除し、文書案内・運用手順・runbook索引から該当リンクを除いた。過去の実行記録と追加時の変更履歴は保持する。
+
+- project governanceの起動・Git・task交代・文書責務・検証に関する重複記述を既存正本への参照へ整理し、開発検証ルール内の重複段落を統合した。承認境界、規則の意味、必須gate、managed artifactは維持する。
+
 - 専用Callable移行時にclientから`functions/shared`を直接参照したことで、Viteがroot側とFunctions側の別FireModelを生成し、Local起動時にadapter未設定となる回帰を修正した。clientが必要とするdraft・request・楽観表示の純粋contractとUX用policyをclient側へ分離し、Functionsをactor・tenant・最新状態・保存検証の正式境界として維持した。製品clientの直接参照を0件にした後、原因確認用の`resolve.dedupe`と越境依存用`optimizeDeps`を撤去した。正式exportの`air-firebase-v2/utils/tokenMap`だけは正規の事前bundle対象へ追加し、cold再起動、sign-in、dashboard、配置管理の読込みをLocal確認した。
 
 - 配置管理の予定、配置作業員、通知について、Callable完了とlistener反映を待っていた表示回帰を修正した。操作後の「なるべき形」を直ちにlocal表示へ反映してCallableを独立送信し、listenerから届く正本で表示全体を無条件に置き換える。通常操作用のpending lock、queue、更新順保証、履歴管理は設けず、失敗時だけ対象予定を再取得する。会社管理者のLocal UI確認と、開発serverをDev backendへ接続した利用者受入れを完了してmainへ統合した。予定更新dialogの「このデータを削除する」と、実績化前だけを削除できる既存Callable境界は維持する。Functions、Rules、schema、保存形式、Dev dataは変更せず、Dev Hosting deploy、Prod、pushは実施していない。

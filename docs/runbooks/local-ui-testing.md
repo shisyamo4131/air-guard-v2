@@ -2,7 +2,7 @@
 
 - 状態: 運用中
 - 最終確認日: 2026-09-04（郵便番号隔離の追加修正・再検証は実行証拠を参照）
-- 役割: Codex専用UI環境と利用者用local browser受入れの準備・操作・終了
+- 役割: Codex専用UI環境の共通手順と個別手順の索引
 
 ## UI検証と最終受入れの責任分離
 
@@ -46,6 +46,8 @@ Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を�
 
 インアプリブラウザで`type=password`への通常typingが利用できない場合は、専用loopback demo accountの一時credentialに限って、製品の可視なpassword表示切替controlを通常pointerで操作し、可視fieldへ一文字ずつkeyboard入力した直後に再maskする。平文表示中はscreenshot、DOM snapshot、console、networkその他のread-only観測も行わない。入力値をtool outputへ含めず、終了時にEmulatorを停止してcredentialを失効させ、実行前後のsaved-data file数・SHA-256指紋が一致することを確認する。実account、利用者用local、Dev、Prod、remote serviceではこのfallbackを禁止し、通常のsecure credential入力を利用できなければ未検証として停止する。
 
+### UI操作と受入れ証拠
+
 ブラウザUIの挙動・受入れ証拠は次の操作契約に従う。
 
 - UI受入れで作成・編集・削除する業務dataは、実在情報を含まないテスト値を使いつつ、製品の可視UIと正規application処理経路から作成する。Firestore、Authentication、client SDK、Emulator API、Admin SDK、seed scriptによる直接注入で対象状態を作らない。
@@ -60,6 +62,8 @@ Codex専用demo Emulator、loopback限定、外部作用deny、実在情報を�
 - clean browser contextの準備、Authentication EmulatorのOOB確認、backend verifier、candidate export/importは非UI処理である。結果は`UI user-equivalent action`、`non-UI setup`、`backend assertion`へ分け、UI成功の代用にしない。
 - 許可された実利用者相当操作をtoolが実行できない場合は、DOMやeventを直接操作して回避せず未検証と報告する。
 
+### Emulatorとgenerated serverの起動
+
 Emulatorとgenerated serverは、build完了後に次の2つの独立した前景processとして起動する。`Start-Process`、detach、background helperは使用しない。
 
 ```powershell
@@ -67,35 +71,13 @@ npm run test:local:ui:emulators
 npm run test:local:ui:server:generated
 ```
 
-実績から勤怠・従業員別稼働・取引先請求・現場履歴への背景生成を対象にする場合だけ、Emulatorを起動する専用前景processで`AIR_GUARD_CODEX_OPERATION_RESULT_TRIGGER=enabled`を設定する。専用entryに登録された`codexOnOperationResultChange`は、既定ではeventを処理せず、明示設定時もdemo project・Functions Emulator・loopback Firestore・外部作用denyを検査する。他triggerや通常entryを公開しない。終了時には設定を破棄する。通常の`npm run test:local`は親processのこの設定を除去して子を起動し、終了時に元の有無・値を復元する。
-
-この背景生成のUI検証では、正規画面で作成した実績から上記4保存先へ到達したことをbackend assertionで確認する。直接use-caseを呼んだtestと区別し、一つの保存先の出現だけでtrigger全体成功とは扱わない。
-
-Employee archiveの専用demo検証では、Emulatorを起動する前景processだけに`AIR_GUARD_CODEX_EMPLOYEE_ARCHIVE_TENANTS`を設定する。値は、そのrunで検証対象にした合成company IDだけのJSON文字列配列とし、実target/fixtureから確認して指定する。既定は空集合、不正形式・重複ID・対象外は拒否する。通常用`AIR_GUARD_EMPLOYEE_ARCHIVE_TENANTS`とは分離し、専用APIはdemo project・Functions Emulator・loopback Firestore・外部作用denyを満たさなければ実行しない。通常API indexへarchiveを公開する手順ではない。
-
-archive操作前に対象tenantの6collectionのraw/索引整合と必要writerの閉鎖を確認する。整合checkerの`archiveReady:false`を自動的な開放許可へ変換せず、検証用の明示設定と区別する。他試験の不正fixtureが混在するtenantを未確認のまま許可しない。設定はその前景processの終了とともに破棄し、saved-dataや通常環境設定へ保存しない。正規UIで作成した対象に対する操作と、原本/archive/User/Authのread-only assertionを別に記録する。
+### 専用buildとgenerated serverの制約
 
 `npm run test:local:ui:server`を使うCodex専用Nuxt開発サーバーは、郵便番号隔離の追加対応により起動を停止する。遮断を確認していない診断経路へ迂回せず、上記generated serverを使う。通常のDev環境・利用者用localの起動方法は変更しない。従来は途中確認・診断に利用できたが、専用診断経路の復旧には同等の通信隔離と陰性testの確認が必要である。古いmarkerや生成物は流用しない。
 
 承認済みの専用buildは`npm run test:local:ui:build`だけを使用する。このcommandはbuild前後にroot worktreeがcleanで同じHEADであること、専用dotenvがallowlist済みのdemo project・loopback・Emulator設定だけであることを確認し、成功した`.output`へ設定SHA-256とsource HEADを含むidentity markerを作成する。`npm run test:local:ui:server:generated`はmarkerの欠損・破損、現在のdotenvまたはHEADとの差、dirty worktreeのいずれでもgenerated serverをimportせず停止する。markerを手動作成・更新してはならない。実buildとgenerated serverの受入れ確認は引き続き実行ごとの明示承認を必要とする。
 
-### 専用UIの郵便番号隔離
-
-専用UIで郵便番号検索の外部通信を遮断する現在の一般手順である。実装・再検証の適用状態は[検証証拠索引](../verification/README.md)から対象receiptを参照する。
-
-- Schemasの郵便番号field・共通入力component・保存契約を維持し、専用client buildだけで実解決先の郵便番号検索utilityを無通信・`null`返却moduleへ置換する。7桁入力でも外部検索・住所自動補完はせず、郵便番号と住所の手入力は維持する。通常利用・通常Dev・関連package・data形状は変更しない。
-- 対象moduleが見つからない、対象置換が実行されない、隔離成功receiptを確認できない場合はbuild identityを成立させない。生成receiptは固定の非秘密metadataだけとし、古いreceipt/markerを使って成功を装わない。
-- 専用dotenvの検査だけでなく、build子processとgenerated serverの有効な公開Firebase設定も固定する。継承環境変数が専用allowlistと衝突する場合は起動前に停止し、診断には変数名だけを使い値を出力しない。設定の不一致を無視して通常環境用buildを専用identityへ偽装しない。
-- 再検証は7桁入力の外部fetch 0、住所更新event 0、手入力保存・再表示、通常設定非影響の陰性testと、fresh専用buildの通常UI操作を分ける。未調査の外部hostすべてについて通信0を保証するものではない。
-- rollbackは限定実装commitを安全に戻し、生成物・receipt・markerを破棄する。元へ戻すと既存のbrowser直接検索が復帰するため、その状態で専用UIを隔離済みとして再開しない。data migrationは不要。
-
-正規signup後のexportは直ちに専用saved-dataへ昇格せず、`.codex-test/ui-candidate`へ置く。candidate importを起動し、backend verifierへ正規signupで使用した合成email、会社名、会社名カナ、表示名を`CODEX_UI_SYNTHETIC_EMAIL`、`CODEX_UI_SYNTHETIC_COMPANY_NAME`、`CODEX_UI_SYNTHETIC_COMPANY_NAME_KANA`、`CODEX_UI_SYNTHETIC_DISPLAY_NAME`として渡して`npm run test:local:ui:candidate:accept`を実行する。この処理はUI証拠ではなくbackend assertionであり、合格時だけcandidate directory SHA-256とclean source HEADを`.codex-test/ui-candidate-acceptance.json`へ記録する。実在情報やpasswordを渡さない。verifierは会社名カナを正規signup入力と完全一致で確認し、会社名カナ形式・40文字境界と、claim company ID・Auth UIDが単一の安全なFirestore path segmentであることを検証してからURL encodeしてGETする。
-
-backend verifierのtransport契約は分離する。Authentication account列挙はAuth Emulator `127.0.0.1:19099`の`accounts:query`へJSON bodyを伴うPOSTを1回だけ行う。CompanyとUserはFirestore Emulator `127.0.0.1:18080`へbodyなしGETを各1回行う。Auth helperからFirestoreへ、Firestore helperからAuthへ到達せず、いずれも外部hostを使用しない。このbackend assertionをbrowser UI操作の証拠として数えない。
-
-promotion前にCodex管理browser、generated server、Emulatorを停止する。`npm run test:local:ui:promote`は専用port `14400`、`14500`、`14600`、`15001`、`18080`、`19000`、`19099`、`19199`のLISTENがなく、acceptance receiptとcandidateの再計算SHA-256・現在のclean source HEADが一致する場合だけ`.codex-test/saved-data`を置換する。candidate変更、source変更、receipt欠損、process残存時は変更前に停止する。receiptと既存saved-dataは置換前にruntimeへ退避し、置換失敗時は復旧する。置換後のbackup削除だけが失敗した場合はpromotionを維持して`cleanup_required`を返し、対象runtime backupを明示する。
-
-`scripts/run-codex-local-ui-child.ps1`は使用せず、上記の独立した前景commandを使う。
+### Codex専用local UI testの完成条件
 
 完成条件は次のとおりとする。
 
@@ -107,32 +89,22 @@ promotion前にCodex管理browser、generated server、Emulatorを停止する�
 6. 利用者用`./saved-data`、`.env.local`、Chrome profile、Dev、Prod、remote dataが実行前後で変更されない。
 7. 終了時にserverとEmulatorを停止し、一時runtimeをproject配下の明示pathだけから削除する。失敗時も同じcleanupと状態報告を行う。
 
-## 過去の受入れ証拠
+## 実行証拠の保存先
 
 日付固有の実行結果と機能固有の受入れ条件は本runbookへ蓄積しない。Customerの実行結果は[検証証拠索引](../verification/README.md)、User・Employee lifecycleの履歴と現在の残作業は[実装記録](../implementation/user-write-boundary.md)を参照する。過去の操作方式は現在のUI受入れ基準へ自動再利用しない。
 
-Codexまたはテスターがローカル画面を起動する場合は、`.env.local` を使用し、LANへ公開しないようloopbackへ限定します。
+## 個別手順索引
 
-```powershell
-npx nuxt dev --dotenv .env.local --host 127.0.0.1
-```
+共通の`UI-READY`、専用build、Emulator、generated server、ブラウザ操作、cleanup、完成条件は本runbookを正とする。対象機能または利用環境に応じて、次の個別手順を追加で適用する。
 
-認証後の画面操作が必要な場合は、Emulator専用アカウントを使用します。利用者用local環境では必要なアカウント作成を利用者へ依頼します。Codex専用環境では、Codexが実在情報を含まない合成accountをfixtureまたは実行時生成で作成します。
+| 個別手順 | 適用する場合 |
+| --- | --- |
+| [実績の背景生成](local-ui-testing/operation-result-background-generation.md) | 実績から4保存先への背景生成をUI経由で検証する場合 |
+| [Employee archive](local-ui-testing/employee-archive.md) | Employee archiveを専用demo環境で検証する場合 |
+| [専用UIの郵便番号隔離](local-ui-testing/postal-code-isolation.md) | 郵便番号検索の外部通信遮断と手入力保存を検証する場合 |
+| [UI snapshot candidateの受入れとpromotion](local-ui-testing/snapshot-candidate-promotion.md) | signup後のcandidateを検証し、専用saved-dataへ昇格する場合 |
+| [利用者用local browser受入れ](local-ui-testing/user-local-browser.md) | 利用者用local環境とサインイン済みChromeタブを使う場合 |
 
-## 利用者用local環境を使うブラウザ操作の現在の制約
+### 専用UIの郵便番号隔離
 
-CodexのインアプリブラウザとChrome拡張による操作のどちらからもNuxtローカルサーバーの画面は取得できますが、現在の環境ではCodexがAuth Emulatorの `127.0.0.1:9099` へ直接接続してサインインを自動化する経路が、ブラウザ操作レイヤーで `ERR_BLOCKED_BY_CLIENT` として遮断されます。
-
-利用者用local環境そのものの受入れが必要な場合は、Codex専用UI testと混在させず、次の準備をユーザーが行った後にcoordinatorがサインイン済みChromeタブを直接引き継ぐ補助経路を使います。この操作を`ui_tester`その他のsubagentへ委譲しません。
-
-1. `--import=./saved-data` を付けてFirebase Emulatorを起動する。
-2. `.env.local` を使ってローカルサーバーを起動する。
-3. Chrome拡張が有効なプロファイルでChromeを起動する。
-4. Emulator専用アカウントでサインインし、必要に応じてテスト対象画面まで移動する。
-5. 画面の準備が完了したことをCodexへ伝える。
-
-coordinatorは既存タブを引き継いだ後、SPAローディングテンプレートの表示を即時エラーとみなさず、画面遷移の完了または明確なタイムアウトまで待機します。データ作成・更新・削除を伴う操作は、ユーザーがテスト内容として明示的に許可した範囲だけで行います。テスト終了時はユーザーが起動したEmulator、ローカルサーバー、ChromeをCodex側から停止しません。
-
-危険なChrome起動オプションや利用者の通常profile変更は採用しません。Codex専用UI modeは利用者用環境の制約を回避するために混在させず、専用project、専用port、合成account、Codex管理ブラウザで独立して検証します。
-
-Chrome拡張を使う場合、拡張機能を有効にしたChromeプロファイルでChromeを先に起動しておく必要があります。現在の環境では、Chrome終了後にcoordinatorからChromeを自動起動・再接続することはできません。Chromeを終了した場合は、ユーザーが対象プロファイルでChromeを再起動してからcoordinatorが検証を再開します。
+詳細は[専用UIの郵便番号隔離](local-ui-testing/postal-code-isolation.md)を参照する。この見出しは既存の文書リンクを維持するために残す。

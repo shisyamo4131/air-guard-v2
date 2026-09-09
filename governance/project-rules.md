@@ -40,6 +40,5 @@ delegation promptには選択したsegmentとtask-routed正本を列挙し、委
 
 ## 正本の役割
 
-- 確認済み仕様は`docs/specification.md`、進捗は`docs/roadmaps/**`、重要判断は`docs/decisions/**`、再利用可能な実行・復旧手順は`docs/operations.md`と`docs/runbooks/**`を正本とする。
-- `docs/implementation/**`は実装事実、FUT、CONF、coverage、deep-review証拠であり、確認済み仕様の正本ではない。`DEFINITION.md`、`DESIGN.md`、`HISTORY.md`、`definitions/**`は参考・履歴である。
+- 仕様、進捗、判断、手順、実装事実、証拠、参考・履歴の分担は[文書の役割](../docs/README.md#文書の役割)を正とする。
 - AirGuardV2固有の横断的なproject ruleは上表の4 segmentだけを正本とする。segmentに日付固有の実行結果、現在進捗、commit一覧を置かず、機能要件、実行手順、証拠はそれぞれ仕様、既存runbook、verification receiptへ分離する。
