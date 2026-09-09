@@ -7,7 +7,7 @@
 ## 承認と保護対象
 
 - 質問、比較、検討、診断、途中確認、完了報告を、code・仕様変更、merge、push、deployの承認とみなさない。重要仕様の変更前に現行規則、変更案、理由、影響、互換性、移行、rollback、確認方法を示す。
-- `main`操作、push、history rewrite、Prod deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更は個別の明示指示を必要とする。破壊操作前に対象環境・data・復旧方法を確認する。
+- `main`操作、push、history rewrite、Prod deploy、npm公開、実dataの作成・更新・削除、data migration、外部service変更は個別の明示指示を必要とする。`main`へのpush承認は、承認対象commitについてGitHub Actionsが変更fileから選んだserviceをDevへ自動deployする承認を含む。手動実行、再実行、対象serviceの上書き、IAM・credential変更、migration、repair、Prodは含まず、別の明示指示を必要とする。破壊操作前に対象環境・data・復旧方法を確認する。
 - `.env`値、秘密鍵、token、Firebase Admin資格情報、Stripe/Webhook secret、実在の個人・顧客・勤怠・請求dataを文書、prompt、log、応答へ転記しない。
 - `air-firebase-v2`、client/server adapter、`air-guard-v2-schemas`、`air-guard-v2-admin-sdk`は必要範囲をread-only調査できるが、変更は別承認とする。`air-vuetify-v3`はrepository内file参照packageとして利用箇所と境界を確認する。
 - 関連repositoryを変更する前に、対象、必要性、影響するconsumer、互換性、公開・導入順序、代替案を示し、まずAirGuardV2内だけで解決できないか確認してから別承認を得る。
@@ -41,7 +41,7 @@
 
 ## Dev・Prod・remote
 
-- Devは利用者と協力会社が使う非本番試行環境である。対象commit、service、data影響、backup、rollback、停止条件、検証を含むbounded Dev release checkpointの承認後だけ、[Dev deploy runbook](../runbooks/dev-deployment.md)内のbuild・deploy・remote検証を実行できる。
+- Devは利用者と協力会社が使う非本番試行環境である。標準経路では、対象commitの`main` push承認をbounded Dev release checkpointとし、GitHub Actionsが変更fileから対象serviceを限定してbuild・deployする。data影響、backup、rollback、停止条件、remote検証はpush前に確定する。手動実行または標準経路外のreleaseは、commitとserviceを明示した別の承認後だけ実行できる。詳細は[Dev deploy runbook](../runbooks/dev-deployment.md)を正とする。
 - Devの承認を別service・data・期間、新migration、破壊的repair、Prodへ拡張しない。正式運用準備の未完了だけで承認済みDev検証を延期せず、Dev成功をProd・正式運用開始の証拠にしない。
 - 未起動serviceからremoteや外部APIへ到達する可能性を確認し、fail-closedにできなければlocal検証を開始しない。実施不能・未実施の確認を成功と記載しない。
 - 静的生成・buildは承認済みcheckpointのexact commandだけを実行し、生成物を別releaseへ流用しない。Dev/Prod、migration、maintenance、package公開は[runbook index](../runbooks/README.md)から該当手順を必読とする。

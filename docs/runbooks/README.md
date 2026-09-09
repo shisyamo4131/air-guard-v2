@@ -14,7 +14,7 @@
 | 利用者環境local UI検証 | Confirmed | [利用者環境local UI検証](user-local-ui-testing.md) | 任意のpre-Dev検証。ADR 0062、`.env.local`、`./saved-data`、利用者Chrome・起動process、対象画面・manual |
 | data migration（local / Dev、小規模を含む） | Confirmed | [data migration](data-migrations.md) | Devを含む場合は[Dev deploy runbook](dev-deployment.md)も必読。migration固有ADR・script、target、maintenance・復旧手段の個別判断、承認 |
 | maintenanceを伴うmigration・repair・restore | Confirmed policy / gates pending | [maintenance・data change](maintenance-and-data-change.md) | 対象data、quiet period、監視Function、snapshot、rollback、承認 |
-| Dev環境へのbuild・deploy・最終受入れ | Confirmed | [Dev deploy runbook](dev-deployment.md) | 製品変更の最終受入れ。migrationを含む場合は[data migration](data-migrations.md)も必読。対象serviceの設定・test、ADR 0062、承認済みrelease checkpoint |
+| Dev環境へのbuild・deploy・最終受入れ | Confirmed | [Dev deploy runbook](dev-deployment.md) | GitHub Actionsが標準。製品変更の最終受入れ。migrationを含む場合は[data migration](data-migrations.md)も必読。対象serviceの設定・test、ADR 0062・0063、承認済みrelease checkpoint |
 | 関連packageのconsumer更新・公開 | Confirmed | [package release](package-release.md) | package repository、互換性、version、公開承認 |
 | Git統合、task loop、`容量チェック`・task/session容量、session handoff | Confirmed | [project coordination](project-coordination.md) | roadmap、checkpoint、current task ID・host、Git状態、capacity script |
 | task起動・利用者要求の交代 | Confirmed | [project coordination](project-coordination.md) | 通常startup、primary Git状態、製品再開案内 |

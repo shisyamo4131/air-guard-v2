@@ -25,7 +25,7 @@
 ## Gitと報告
 
 - branch作成・switch・stage・commitなど、`.git`へ書き込むGit操作は、操作自体の承認と対象repository・branch・file範囲を確認した後、sandbox内での失敗を試さず最初から権限付き経路で実行する。権限付き経路の使用を、未承認のGit操作、対象拡張、`main`操作、push、history rewriteの承認とみなさない。
-- 機能branch上の動作を利用者が確認し明示承認するまで`main`へmergeしない。`main`への直接commit・merge、push、history rewriteはそれぞれ別の明示指示を必要とする。
+- 機能branch上の動作を利用者が確認し明示承認するまで`main`へmergeしない。`main`への直接commit・merge、push、history rewriteはそれぞれ別の明示指示を必要とする。`main` pushに連動するDev deployの承認範囲は[Environment and approval rules](environment-and-approval.md#承認と保護対象)を正とする。
 - review済みfileだけを意味のある単位でlocal commitする。branch名だけで含有scopeを推測せず、統合前にbase..HEADのcommitとfileを確認する。
 - 現在地報告は[project coordination](../runbooks/project-coordination.md#git現在状態の報告)に従いlocalとremoteを区別する。live remoteを取得していない場合はremote未確認とする。
 - 公式進捗は`docs/roadmaps/airguard-v2.md`を正とし、実測証拠のない進捗を加点しない。完了報告は変更挙動・file、文書整合、検証、未検証、risk、設定・移行、利用者の次操作を示す。

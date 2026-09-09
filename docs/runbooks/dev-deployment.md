@@ -4,7 +4,7 @@
 - 最終確認日: 2026-09-09
 - 役割: `air-guard-v2-dev`へのbuild、deploy、remote検証に共通する手順と、個別手順・判断・証拠への索引
 - 対象外: Prod、新しいdata migration、破壊的repair、未承認service・dataへの拡張
-- 関連判断: [ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)、[ADR 0062](../decisions/0062-risk-based-environment-verification.md)
+- 関連判断: [ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md)、[ADR 0062](../decisions/0062-risk-based-environment-verification.md)、[ADR 0063](../decisions/0063-github-actions-dev-deployment.md)
 
 ## 目的と適用境界
 
@@ -16,7 +16,8 @@ Devは、固定commitの製品を実際のFirebase設定・認証・権限・通
 
 | 目的 | 参照先 | 適用条件 |
 |---|---|---|
-| 認証、Firebase CLI、Windowsのtrust | [Dev deployの認証とWindows環境](dev-deployment/authentication-and-windows.md) | すべてのremote releaseで認証節を必読。gcloud節はgcloudを使う場合だけ読む |
+| GitHub Actionsの設定・実行・復旧 | [GitHub Actions Dev deploy](dev-deployment/github-actions.md) | 標準のDev releaseで読む |
+| local Firebase CLIとWindowsのtrust | [Dev deployの認証とWindows環境](dev-deployment/authentication-and-windows.md) | Actions障害時に承認されたlocal fallbackを使う場合だけ読む |
 | service別のremote検証 | [Dev remote検証](dev-deployment/remote-verification.md) | release対象serviceと受入れ経路に該当する節だけ読む |
 | Customer保存形式の事前検査 | [Customer互換性検査](dev-deployment/customer-compatibility.md) | project rulesの3条件に該当し、検査が必要な場合だけ読む |
 | data migration | [Data Migration Runbook](data-migrations.md) | data変換が必要なreleaseだけ読む |
@@ -38,14 +39,14 @@ git status --porcelain=v1
 git worktree list --porcelain
 ```
 
-release checkpointへ次を記録する。
+push前のrelease checkpointへ次を記録する。
 
 ```text
 release-id:
 release-commit:
 firebase-project: air-guard-v2-dev
-operator:
-credential-route: service-account | user-login
+operator: github-actions
+credential-route: workload-identity-federation
 services:
 release-class:
 data-impact:
@@ -59,7 +60,7 @@ maintenance-required:
 approved-migration-or-repair:
 ```
 
-worktreeがdirty、HEAD不一致、primary repository以外のworktree、対象project・service・data影響が未確定の場合は停止する。未commit scriptや別commitのartifactをreleaseに使わない。
+worktreeがdirty、HEAD不一致、primary repository以外のworktree、対象project・service・data影響が未確定の場合は停止する。未commit scriptや別commitのartifactをreleaseに使わない。標準経路では、この確認済みcommitの`main` push承認が、変更fileから自動選択されたserviceのDev deploy承認を兼ねる。
 
 既存Dev documentの状態確認・migration要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)で判断する。非該当を示すためだけの全件走査や一括修復は行わず、必要なfieldと利用経路に絞る。
 
@@ -82,26 +83,26 @@ worktreeがdirty、HEAD不一致、primary repository以外のworktree、対象p
 
 1. repository、branch、release commit、clean、primary-only worktreeを固定する。
 2. Dev project、release class、対象service、data影響、backup、rollback、停止条件、検証を固定する。
-3. [認証手順](dev-deployment/authentication-and-windows.md)に従い、service accountまたは利用者accountのどちらを実行者にするか固定する。
-4. Firebase CLIの存在・versionと、固定した実行者によるDev project・対象serviceへのread-only到達またはdry-runを確認する。
+3. 標準経路は[GitHub Actions手順](dev-deployment/github-actions.md)の専用service accountと鍵なし認証に固定する。local fallbackだけ[Windows認証手順](dev-deployment/authentication-and-windows.md)を読む。
+4. workflowが固定したFirebase CLI version、Dev project、対象service、GitHub Environment設定を確認する。remote変更直前の認証とdry-runはActions内で行う。
 5. gcloudを使うreleaseだけ、gcloudのtrust・token refresh・Dev projectへのread-only到達を独立確認する。
 6. 対象serviceの構文検査、validator、test、config検査を独立実行する。
-7. Hostingを含む場合、固定commitの実際のDev設定で`npm run generate:dev`を独立実行する。
-8. artifactのsource HEAD、Dev project、Emulator無効、必要file、tracked差分不在を確認する。
+7. Hostingを含む場合、GitHub `dev` Environmentの暗号化設定を使い、Actions内で`npm run generate:dev`を独立実行する。
+8. artifactのsource SHA、Dev project、Emulator無効、必要fileをActions logで確認する。
 9. checkpointの承認範囲と現在状態を再照合する。
 
-`firebase login`済みであることを全releaseの前提にしない。利用者accountを選んだreleaseでだけ、そのaccountのloginと対象serviceの権限を確認する。認証に失敗した場合、別account、別credential、gcloud・RESTによる直接deployへ自動で切り替えず停止する。
+`firebase login`済みであることを標準releaseの前提にしない。Actions認証に失敗した場合、利用者account、保存済み鍵、gcloud・RESTへ自動で切り替えず停止する。
 
 Dev server、Local browser検証、Codex専用UI buildはHosting release artifactの代替ではない。deploy対象と同じbuild commandをremote変更前に完了させる。
 
-## 4. 対象を限定してdeployする
+## 4. `main`へpushして対象を限定deployする
 
-- 各commandの結果とexit statusを独立して記録する。
-- Firebase commandには常に`--project air-guard-v2-dev`を付ける。`firebase use`や`.firebaserc`の既定値をrelease identityの証拠にしない。
-- checkpointで固定したFirebase CLI executableとversionを使う。release中に別versionを暗黙導入しない。
-- Hostingは`npm run generate:dev`で作った`dist/`を、同じrelease processから`deploy --project air-guard-v2-dev --only hosting --non-interactive`で反映する。
-- Functions、Rules、Indexesはcheckpointに固定した対象だけを`--only`で指定する。client/server同時変更は、旧clientが残ってもserverが最終認可を維持できる順序を選ぶ。
-- `npm run deploy:dev`はbuildとdeployを一つにまとめるため、独立したexit statusを必要とするrelease証拠には使わない。
+- push直前に対象commit、変更file、予想service、data影響、rollback、remote検証を提示し、`main` pushの明示承認を得る。
+- `.github/workflows/dev-deploy.yml`はpush差分を`scripts/select-dev-deploy-targets.mjs`へ渡し、Hosting、Functions、Firestore、Storage、Realtime Databaseのうち影響対象だけを選ぶ。文書・governance・test・workflowだけの変更はdeployしない。
+- workflowはGitHub `dev` Environment、鍵なし認証、固定Firebase CLIを使い、`--project`と`--only`を明示してdry-run後に実deployする。
+- Hostingを含む場合は同じjobで依存関係を固定installし、Dev設定で生成した`dist/`をdeployする。Functionsを含む場合はFunctions依存関係も固定installする。
+- client/server同時変更は、旧clientが残ってもserverが最終認可を維持できる互換性をpush前に確認する。workflowが一括deployする順序では安全でない場合、標準経路を使わず個別releaseを計画する。
+- 手動dispatchは初回検証、障害からの限定再試行、明示されたserviceの再deployだけに使い、commitとserviceごとの別承認を得る。
 
 data migrationのdry-run・apply・post-checkはここへ追加せず、[共通migration手順](data-migrations.md#小規模dev-migrationの共通手順)と個別migration手順に従う。
 
@@ -120,7 +121,7 @@ deploy後は、[Dev remote検証](dev-deployment/remote-verification.md)から�
 - code・artifact rollback: Git上の既知の正常commitから同じ環境設定で再生成する。
 - data contract変更後: codeだけを戻して安全かを確認し、追加documentや外部状態を別に扱う。
 
-Prod、Git push、main merge、history rewrite、credential変更、persistent CA・gcloud設定、実data削除は本runbookの承認に含まれない。
+Prod、main merge、history rewrite、credential変更、persistent CA・gcloud設定、実data削除は本runbookの承認に含まれない。`main` pushの承認範囲だけはproject rulesに従い、自動選択されたDev deployを含む。
 
 ## 証拠と完了報告
 

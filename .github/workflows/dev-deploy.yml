@@ -1,0 +1,134 @@
+name: Dev deployment
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: Firebase services to deploy
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - hosting
+          - functions
+          - firestore
+          - storage
+          - database
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: dev-deployment
+  cancel-in-progress: false
+
+jobs:
+  select-targets:
+    name: Select changed Firebase services
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: targets
+        name: Resolve deployment targets
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            targets="$(node scripts/select-dev-deploy-targets.mjs --target "${{ inputs.targets }}")"
+          else
+            changed_files="$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}")"
+            targets="$(printf '%s\n' "$changed_files" | node scripts/select-dev-deploy-targets.mjs --stdin)"
+          fi
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
+          if [[ -n "$targets" ]]; then
+            echo "Selected Firebase services: $targets" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No Firebase service is affected; deployment was skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  deploy:
+    name: Deploy to Firebase Dev
+    needs: select-targets
+    if: needs.select-targets.outputs.targets != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: dev
+    env:
+      FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_DEV_PROJECT_ID }}
+      DEPLOY_TARGETS: ${{ needs.select-targets.outputs.targets }}
+      NUXT_PUBLIC_FIREBASE_USE_EMULATOR: "false"
+      NUXT_PUBLIC_FIREBASE_API_KEY: ${{ secrets.NUXT_PUBLIC_FIREBASE_API_KEY }}
+      NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${{ secrets.NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN }}
+      NUXT_PUBLIC_FIREBASE_DATABASE_URL: ${{ secrets.NUXT_PUBLIC_FIREBASE_DATABASE_URL }}
+      NUXT_PUBLIC_FIREBASE_PROJECT_ID: ${{ secrets.NUXT_PUBLIC_FIREBASE_PROJECT_ID }}
+      NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${{ secrets.NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET }}
+      NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID }}
+      NUXT_PUBLIC_FIREBASE_APP_ID: ${{ secrets.NUXT_PUBLIC_FIREBASE_APP_ID }}
+      NUXT_PUBLIC_FIREBASE_REGION: ${{ secrets.NUXT_PUBLIC_FIREBASE_REGION }}
+      NUXT_PUBLIC_FIREBASE_VAPID_KEY: ${{ secrets.NUXT_PUBLIC_FIREBASE_VAPID_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
+
+      - name: Verify fixed Dev configuration
+        shell: bash
+        run: |
+          [[ "$FIREBASE_PROJECT_ID" == "air-guard-v2-dev" ]]
+          [[ "$NUXT_PUBLIC_FIREBASE_PROJECT_ID" == "$FIREBASE_PROJECT_ID" ]]
+          [[ -n "${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}" ]]
+          [[ -n "${{ vars.GCP_DEV_DEPLOY_SERVICE_ACCOUNT }}" ]]
+          for name in \
+            NUXT_PUBLIC_FIREBASE_API_KEY \
+            NUXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+            NUXT_PUBLIC_FIREBASE_DATABASE_URL \
+            NUXT_PUBLIC_FIREBASE_STORAGE_BUCKET \
+            NUXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
+            NUXT_PUBLIC_FIREBASE_APP_ID \
+            NUXT_PUBLIC_FIREBASE_REGION \
+            NUXT_PUBLIC_FIREBASE_VAPID_KEY; do
+            [[ -n "${!name}" ]]
+          done
+
+      - name: Install Hosting dependencies
+        if: contains(needs.select-targets.outputs.targets, 'hosting')
+        run: npm ci
+
+      - name: Generate Dev Hosting artifact
+        if: contains(needs.select-targets.outputs.targets, 'hosting')
+        run: npm run generate:dev
+
+      - name: Install Functions dependencies
+        if: contains(needs.select-targets.outputs.targets, 'functions')
+        run: npm ci --prefix functions
+
+      - id: auth
+        name: Authenticate without a service-account key
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_DEV_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Confirm Firebase CLI version
+        run: npx -y firebase-tools@15.29.0 --version
+
+      - name: Firebase deployment dry run
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --dry-run --non-interactive
+
+      - name: Deploy selected services
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --non-interactive

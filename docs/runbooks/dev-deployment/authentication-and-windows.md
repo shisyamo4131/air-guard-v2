@@ -2,12 +2,18 @@
 
 - 状態: Confirmed
 - 最終確認日: 2026-09-09
-- 役割: Dev deployで使う認証、Firebase CLI、Windows固有のtrust経路
+- 役割: GitHub Actions標準経路が使えない場合のlocal Firebase CLI認証とWindows固有のtrust経路
 - 対象: `air-guard-v2-dev`
 
-## 認証の基本方針
+## 適用条件
 
-Firebase CLIはdeployを実行する道具であり、`firebase login`は認証方法の一つにすぎない。このPCにはDevサービスアカウント鍵とFirebase CLIに保存済みの利用者accountがある。どちらを標準経路にするかは、対象serviceの権限と鍵へ広い権限を持たせる影響を踏まえて決定する。
+標準のDev deployは[GitHub Actions手順](github-actions.md)を使う。利用者PCの`firebase login`や保存済みサービスアカウント鍵は前提にしない。この文書はActions障害の原因調査、またはcommit・service・実行者を固定して別承認されたlocal fallbackに限って使う。
+
+認証失敗を理由に自動でlocal fallbackへ切り替えない。Actionsの失敗点を確定し、再実行またはfallbackのどちらを採用するか決める。
+
+## Local認証の基本方針
+
+Firebase CLIはdeployを実行する道具であり、`firebase login`は認証方法の一つにすぎない。このPCにはDevサービスアカウント鍵とFirebase CLIに保存済みの利用者accountがある。どちらをlocal fallbackに使うかは、対象serviceの権限と鍵へ広い権限を持たせる影響を踏まえて決定する。
 
 同じ`firebase deploy`でも、利用者accountとサービスアカウントはFirebase上の別の実行者であり、権限も別である。利用者が通常のPowerShellで実行すると保存済みの利用者loginが選ばれ、本文の一時設定を使うとサービスアカウントに固定される。release checkpointには実行者と認証経路を記録する。
 
@@ -22,7 +28,7 @@ Firebase CLIはdeployを実行する道具であり、`firebase login`は認証�
 | Storage Rules | 失敗 | Rules検査権限が不足 |
 | Realtime Database Rules | 成功 | dry-run範囲は利用可能。実deployの成功までは保証しない |
 
-同じ6対象を保存済みの利用者accountでdry-runした結果はすべて成功した。現在のサービスアカウントを全service共通のdeploy実行者とは扱わない。対象serviceのdry-runが失敗するreleaseは、必要なIAM権限を別途承認して付与するか、利用者accountを実行者として固定するまで開始しない。dry-run成功も実際の書込み権限を完全には保証しないため、初回実deployは対象を限定し、結果とrollbackを記録する。
+同じ6対象を保存済みの利用者accountでdry-runした結果はすべて成功した。この記録は保存済みlocalサービスアカウントの結果であり、GitHub Actions専用アカウントの能力を示さない。現在のlocalサービスアカウントを全service共通のdeploy実行者とは扱わない。対象serviceのdry-runが失敗するreleaseは、必要なIAM権限を別途承認して付与するか、利用者accountを実行者として固定するまで開始しない。dry-run成功も実際の書込み権限を完全には保証しないため、初回実deployは対象を限定し、結果とrollbackを記録する。
 
 ## 実行者の選択
 
