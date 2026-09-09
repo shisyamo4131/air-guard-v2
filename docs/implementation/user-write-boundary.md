@@ -309,7 +309,7 @@ UWBはUser管理UIへ大きく影響したため、次の手順を各application
 
 #### Firestore実装baseline
 
-- [x] UWB-07の対象となるDev Firebase projectは`air-guard-v2-dev`、databaseは`(default)`であり、2026-08-17にFirebase CLI 15.27.0の読み取り専用`firestore:databases:list`・`firestore:databases:get`で`Edition: STANDARD`、`Type: FIRESTORE_NATIVE`を確認済みである。確認値と再確認commandは[local Emulator検証runbookのFirestore instance baseline](../runbooks/local-emulator-testing.md#firestore-instance-baseline)を正とする。
+- [x] UWB-07の対象となるDev Firebase projectは`air-guard-v2-dev`、databaseは`(default)`であり、2026-08-17にFirebase CLI 15.27.0の読み取り専用`firestore:databases:list`・`firestore:databases:get`で`Edition: STANDARD`、`Type: FIRESTORE_NATIVE`を確認済みである。後続の記録値は[Dev Firestore baseline履歴記録](../verification/dev-firestore-baseline-2026-08-27.md)を参照し、現在値はactual targetから再確認する。
 - [x] Prod Firebase project `air-guard-v2`のeditionと保護設定は未確認であり、このDev baselineをdeploy判断へ流用しない。Prodへ進む場合は別承認のもと同じ読み取り専用commandで再確認する。
 
 #### Callable transport契約

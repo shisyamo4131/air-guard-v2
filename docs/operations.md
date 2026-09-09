@@ -1,45 +1,18 @@
 # AirGuardV2 運用・開発手順
 
+- 状態: 運用中
+- 役割: AirGuardV2固有の共通運用入口、検証policyの人向け経路、Prod・復旧・backup・秘密情報の共通境界
+- 規則の正本: [Project rules index](../governance/project-rules.md)
+
 ## 現在利用できる運用
 
-- Nuxt 開発サーバーの起動
-- Firebase Emulator Suite を使うローカル確認環境
-- 開発・本番設定による静的生成
-- Firebase Hosting、Functions、Firestore Rules/Indexes、Storage Rules、Realtime Database Rules のデプロイ
-- メンテナンス状態とキルスイッチの切り替え
-- Firestore PITR 7日保持と、承認済みrelease checkpoint内の整合snapshot
+実行可能な作業と状態は[Runbook索引](runbooks/README.md)を正本とし、この文書へ個別の起動・検証・deploy手順を複写しない。通常開発、Local、Dev deploy、data migration、maintenance、package、Git・task管理は、同索引から今回必要なrunbookだけを選ぶ。
 
-Devの静的生成、デプロイ、remote検証は、対象commit、Firebase service、data影響、backup、rollback、停止条件、検証を含む利用者承認済みのbounded release checkpointとして実行します。Prod、Secret登録、新しいdata migration、破壊的repairは別の明示的承認と環境確認を必要とします。
-
-Dev deployのCLI・trust・認証preflight、release分類、build、deploy、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を正本とします。maintenanceを伴うmigration・repair・restoreは[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)、UWB固有の初回cutoverは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を追加で確認します。
+Prodの共通deploy手順、正式な監視、SLA、RPO/RTO、全systemを復旧できるbackup範囲は未確定である。Prod操作は対象環境、artifact、認証、service、data影響、backup、rollback、停止条件、受入れを個別に確定し、別の明示承認を得る。
 
 ## Verification Matrix
 
-`governance/verification-policy.json`を機械可読の正本、下表と生成summaryを人向けの経路とします。変更前に該当classをすべて選び、混合変更はgateのunion、影響不明はcomprehensive fallbackを使用します。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployはcomprehensive completionを維持します。
-
-### 環境検証の選択
-
-下表はcommand gateとは別に、どの環境で何を確認するかを選ぶための要約です。[Environment and approval rules](project-rules/environment-and-approval.md#local-emulatorとlocal-ui)を正本とし、Localの実行回数ではなく、今回必要な証明事項を直接覆う最小の環境集合を選びます。
-
-| 環境 | 主目的 | 主に保証する内容 | 選択する代表条件 |
-|---|---|---|---|
-| Codex専用Local | Dev前の手戻り抑制 | 専用build・合成data・Emulator・UI・保存再表示・外部作用denyの結合 | 自動検証後もUI・application統合に不確実性が残る |
-| 利用者環境Local | Dev前の手戻り抑制 | 利用者Chrome・profile・`.env.local`・表示・UX・利用者環境固有の再現 | 利用者固有条件またはDev前のUX判断を別途証明する必要がある |
-| Dev | 製品変更の最終受入れ | 固定commitのdeploy済みartifactと対象Dev service・設定・remote認証・通信・権限・dataの結合 | 製品挙動を変える変更。文書・governance・testだけの変更等は対象外 |
-
-Codex専用Localと利用者環境Localは累積必須工程ではありません。同じ事項を証明する場合はCodex専用Localを優先し、両方を選ぶ場合は別々の証明事項を開始前に定めます。Devで失敗した後も、原因に対応するLocalだけを選び直します。判断理由はcompletion reportまたはrelease evidenceへ記録します。
-
-| Change class | Repository triggers | Iteration | Targeted regression | Completion | Release-only | 通常省略できる対象 |
-|---|---|---|---|---|---|---|
-| `documentation-only` | releaseの基準・対象・artifact・実行可否、手順、承認、rollback、製品挙動、remote状態を変えないprose・索引・link・完了後の履歴記録 | `diff-check` | `project-docs` | `project-docs`, `diff-check` | なし | application、Emulator、UI build、release |
-| `ui-css-layout` | Vue表示、CSS、layout、accessibility、browser操作、利用者向けUI挙動 | `diff-check` | `domain-full` | `project-docs`, `domain-full`, `diff-check` | 承認済みrelease時のgenerate | data migration、managed governance、専用Local UI build |
-| `application-logic` | client、server、Functions、shared module、実行script。製品logicを変えないgovernance専用checker/fixtureはgovernance classへ分類 | `diff-check` | `domain-full` | `project-docs`, `domain-full`, `diff-check` | 承認済みrelease時のgenerate | governance negative、capacity、Emulator、UI build |
-| `data-contract-schema-migration` | Firestore、Realtime Database、Storage、schema/package contract、migration、Rules、永続data互換 | `diff-check` | `domain-full`, `local-emulator-suite` | 同左 + `project-docs`, `diff-check` | 承認済みrelease時のgenerate | governance negative、capacity、UI build |
-| `governance-permissions-agents` | common/project governance、policy、permission、approval、coordinator、agent、managed sync、生成AGENTS | `managed-governance`, `project-docs` | `project-docs-negative`, `capacity-regression` | comprehensive 5 gate | なし | なし |
-| `build-release-deploy` | build・generate・package install/publish・Dev/Prod deploy・remote acceptanceの実行、release可否判断、またはrelease契約・基準・対象・artifact・手順の変更 | `diff-check` | `project-docs`, `domain-full` | comprehensive 5 gate | checkpointで承認されたgenerate | release対象に直接必要でないEmulator、専用Local UI build |
-| `project-guidance-metadata` | 記述的な案内・段階・進捗・metadata・link・履歴・文書構造。common契約、policy、権限、承認、安全、実行挙動の変更を含まない | `diff-check` | `project-docs` | `project-docs`, `diff-check` | なし | governance comprehensive、application、build、runtime |
-
-必須runtimeはPowerShell 7（Core / `pwsh`）です。`runtimeProfiles`が対応範囲を宣言し、実際の成功証拠は各実行結果へ記録します。repository-owned gateは`-NoProfile`で実行し、`-ExecutionPolicy Bypass`、legacy `powershell.exe`、encoded commandを使用しません。governance checkerとそのfixtureの変更は`governance-permissions-agents`で分類し、製品logicへの影響がなければdomain/UI/Emulator/build gateは選びません。
+`governance/verification-policy.json`を機械可読の正本とする。変更class、stage、gate、exact command、includes、失効条件、省略理由は次の生成summaryから確認し、手書きの対応表を重ねない。Codex専用Local、利用者環境Local、Devの選択は[Environment and approval rules](project-rules/environment-and-approval.md#local-emulatorとlocal-ui)を正本とする。
 
 <!-- BEGIN GENERATED VERIFICATION POLICY SUMMARY -->
 - Root: schemaVersion=1.0; comprehensiveGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]; unknownImpactGateIds=[project-docs,project-docs-negative,capacity-regression,managed-governance,diff-check]
@@ -63,128 +36,54 @@ Codex専用Localと利用者環境Localは累積必須工程ではありませ�
 - Gate: id=generate-dev; command=npm run generate:dev; stages=[release]; includes=[]; invalidatedBy=[Source\, dependency\, Dev environment mapping\, or release baseline change]; evidenceDestination=Approved Dev release evidence
 - Gate: id=generate-prod; command=npm run generate:prod; stages=[release]; includes=[]; invalidatedBy=[Source\, dependency\, production environment mapping\, or release baseline change]; evidenceDestination=Approved Prod release evidence
 <!-- END GENERATED VERIFICATION POLICY SUMMARY -->
-
 ### Gate Catalog and Inclusion
 
-- completion comprehensive gateは`project-docs`、`project-docs-negative`、`capacity-regression`、`managed-governance`、`diff-check`です。
-- `managed-governance`は`renderer-check`を内包します。子gateのnamed resultとexit statusを保持し、子失敗でnonzeroとなるため、completionでstandalone rendererを重複実行しません。
-- applicationの直接影響を狭く確認できる場合は、policyの固定gateへ進む前に対象testをiterationまたはdiagnosticとして実行できます。最終選択、exact command、結果、exit statusはcompletion reportへ記録します。
-- Codex専用Local、利用者環境Local、Devの環境検証はcommand gateとは別の証拠です。前二者は任意のpre-Dev検証、Devは製品変更の最終受入れであり、必要性と保証範囲はproject rulesと各runbookに従います。
-- Schemas consumer preflightは[package release runbook](runbooks/package-release.md)と[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md)のcritical identifier gateです。対象identifierを当該turnで確定して実行し、固定値をpolicyへ推測しません。
+- gateの選択とexact commandは、上の生成summaryと[verification policy](../governance/verification-policy.json)を使用する。
+- `managed-governance`は`renderer-check`を内包する。内包関係を満たす同じgateを重複実行しない。
+- application固有の対象testは、選択したrunbookと変更範囲から追加する。
 
 ### Evidence Validity
 
-- 結果の記録、既存証拠の再利用、失敗・失効gateの再実行、選択・省略理由の記録は[検証規則](project-rules/documentation-and-verification.md#verification)に従います。stage、`invalidatedBy`、証拠保存先は[検証policy](../governance/verification-policy.json)で確認します。
-- release-only gateと外部作用の承認は[環境・承認規則](project-rules/environment-and-approval.md)、文書の更新範囲は[共通契約](../governance/common-governance.md#material-change-and-documentation-scope)、索引・再開案内の責務は[文書案内](README.md#文書更新の完了条件)を参照します。
-- 完了後のreceiptは実行時点を固定した履歴証拠であり、現在のremote状態を表す文書へ書き換えません。
+結果の再利用、後続変更による失効、実行結果と独立exit status、省略理由の記録は[Documentation and verification rules](project-rules/documentation-and-verification.md#verification)に従う。LocalとDevの役割を読み替えず、実行回数ではなく今回必要な証明事項で環境を選ぶ。
 
-## 準備
+## 共通準備
 
-### 必要なもの
-
-- Node.js。Cloud Functions の指定ランタイムは Node.js 22
-- npm
-- 対象 Firebase プロジェクトへアクセスできる Firebase CLI 認証
-- 用途に応じた `.env.development`、`.env.local`、`.env`
-
-依存関係のインストール前にはロックファイルと変更差分を確認します。証明書の問題がある環境では、検証を無効化せず、必要な PowerShell プロセス内だけで次を設定します。
-
-```powershell
-$env:NODE_USE_SYSTEM_CA = "1"
-npm install
-```
+1. [文書案内](README.md)で作業種別を選び、[Runbook索引](runbooks/README.md)から必要な手順だけを読む。
+2. 対象repository、branch、commit、環境、service、data影響、承認範囲を、選択したrunbookの開始条件に従って固定する。
+3. runtime、依存関係、設定、認証は、package manifest、verification policy、対象runbook、actual targetから確認する。すべての作業にFirebase CLI認証や特定の`.env`を一律要求しない。
+4. dependency installが必要な場合はlock fileと差分を確認し、対象runbookが指定する固定installを使う。証明書対応、Firebase CLI、Windows固有設定は[該当runbook](runbooks/README.md)へ従い、共通設定として複写しない。
 
 ## 作業別runbook
 
-| 作業 | 正本 |
-|---|---|
-| 通常開発、UI error・loading、client policy | [開発workflow](runbooks/development-workflow.md) |
-| local環境、Emulator、Codex専用test | [local Emulator検証](runbooks/local-emulator-testing.md) |
-| Codex専用local UI検証 | [Codex専用local UI検証](runbooks/local-ui-testing.md) |
-| 利用者環境local UI検証 | [利用者環境local UI検証](runbooks/user-local-ui-testing.md) |
-| User予約・claim等のmigration | [data migration](runbooks/data-migrations.md) |
-| maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md) |
-| Dev build・deploy・remote検証 | [Dev deploy](runbooks/dev-deployment.md) |
-| 関連package更新・公開 | [package release](runbooks/package-release.md) |
-| `容量チェック`、task/session容量確認 | [project coordination](runbooks/project-coordination.md) |
-| Git統合、task loop、session handoff | [project coordination](runbooks/project-coordination.md) |
+作業ごとの正本、状態、追加確認対象は[Runbook索引](runbooks/README.md)に集約する。Codex専用Local、利用者環境Local、Devを混在させず、環境の定義と承認は[Environment and approval rules](project-rules/environment-and-approval.md)を使用する。
 
-`governance/project-rules.md`が参照するCodex専用demo projectの隔離条件は、[local Emulator検証](runbooks/local-emulator-testing.md)と[Codex専用local UI検証](runbooks/local-ui-testing.md)を合わせて正本とする。利用者環境Localは[利用者環境local UI検証](runbooks/user-local-ui-testing.md)を別の正本とする。package更新、Git統合、task lifecycleを含む正確なcommandと復旧手順も、上表の該当runbookへrouteする。
+Devの標準経路は[Dev deploy runbook](runbooks/dev-deployment.md)、maintenanceを伴うdata変更は[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)を使用する。Prodは上記の未確定境界を先に解消する。
 
-`容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は[容量確認手順](runbooks/project-coordination.md#容量確認)へrouteする。
+## 出力と完了判定
 
-## 静的生成とデプロイ
+生成物、log、画面、data、cleanup、rollbackの確認方法は、選択したrunbookの完了条件を使う。特定実行のcommit、件数、結果は[検証証拠索引](verification/README.md)から対応するreceiptへ記録し、この共通入口へ蓄積しない。
 
-Devの静的生成、CLI・trust・認証preflight、release分類、deploy順序、remote検証、停止・rollbackは[Dev環境deploy runbook](runbooks/dev-deployment.md)を読む。Hostingを含むreleaseでは、maintenanceとremote変更より前に固定commitと実際のDev設定で`npm run generate:dev`を成功させる。`npm run deploy:dev`は生成、project切替、deployをまとめる外部作用commandであり、個別のbuild・deploy exit statusを必要とするrelease証拠には使用しない。
-
-Prod生成は`npm run generate:prod`であるが、本runbookとbounded Dev release checkpointの承認対象外とし、Prod deployと合わせて別の明示承認を得る。
-
-UWB初回導入のSystem maintenance、整合snapshot、全server境界、fresh create-only予約migration、client/Hosting、解除・受入れは[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)を正本とする。project共通の静穏化、連続dry-run、snapshot、post-checkは[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)を使うが、UWB固有のservice・data・順序をHosting-onlyや独立Functions等へ一般化しない。
-
-## 出力と成功確認
-
-- Nuxt の生成物: `dist/`
-- Cloud Functions のログ: Firebase Console または `npm run logs`（`functions/`）
-- Emulator UI: `firebase.json` のポート設定に従う
-- Hosting: 対象 Firebase プロジェクトの Hosting URL
-- Company legacy Stripe scaffold removal: 値非出力のdry-run件数・digest、対象外field不変、post-check 0件。外部Stripeは確認・変更しない
-
-成功はコマンド終了だけで判断せず、対象環境、ログ、データ、主要画面をユーザーが確認します。
+commandの完了だけで成功とせず、選択したgateのexit statusと、今回の変更が必要とする環境・機能の受入れを確認する。利用者による画面確認を全変更へ一律に要求せず、[検証規則](project-rules/documentation-and-verification.md#verification)に従って必要な証明だけを選ぶ。
 
 ## ガバナンス文書の確認
 
-Managed governanceの検証:
+Project-owned文書とmanaged governanceの検証は、上の生成summaryにあるgate IDとexact commandを使用する。変更classごとのcompletion gateは[verification policy](../governance/verification-policy.json)を正本とし、短縮command、既定pathへの依存、後続編集で失効した結果を完了証拠にしない。
 
-```powershell
-pwsh -NoProfile -File scripts/check-governance.ps1 -ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2
-```
-
-`governance/common-governance.md`、lock、renderer、managed validator、生成`AGENTS.md`、lockに記録されたmanaged referenceは直接編集せず、明示されたgovernance作業の承認済みskill syncで更新します。project固有の横断規則は`governance/project-rules.md`と同indexが列挙する4つのproject-owned segmentを更新します。rendererはread-only checkであり、managed validatorが内包します。通常startupと利用者要求の交代は[project coordination](runbooks/project-coordination.md)、文書移行は[移行索引](migrations/README.md)を参照します。
-
-上記は正規commandです。managed governance validatorの`-ProjectPath C:\Users\seven\projects\AirGuard\air-guard-v2`を省略した短縮commandや、scriptのdefault project pathへ依存する呼出しを使用しません。standalone rendererは正規実行にせず、内包されたread-only checkを使用します。
-
-Project-owned文書・設定の検証:
-
-```powershell
-pwsh -NoProfile -File scripts/check-project-docs.ps1 -RepositoryRoot C:\Users\seven\projects\AirGuard\air-guard-v2
-```
-
-相対MarkdownリンクとGitHub互換見出しアンカー、重要文書の索引到達性、ADR索引と本文の状態、ロードマップの重み・得点・無部分加点・索引進捗を確認します。Node.jsから正式なTOMLパーサーを使用し、`.codex/config.toml` と専門エージェントTOMLの構文、必須キー、型、名前、sandbox modeを確認します。アプリケーションのビルドや外部接続は行いません。
-
-検証器自体の陰性試験:
-
-```powershell
-pwsh -NoProfile -File scripts/test-project-docs-check.ps1
-```
+managed common、lock、renderer、生成`AGENTS.md`は直接編集しない。AirGuardV2固有の規則は[Project rules index](../governance/project-rules.md)、文書の責務と索引更新は[Documentation and verification rules](project-rules/documentation-and-verification.md)へ従う。
 
 ## エラーと復旧
 
-- 生成失敗: 最初のエラー、Node/npm バージョン、環境変数名、依存関係差分を確認する。
-- Emulator 接続失敗: `NUXT_PUBLIC_FIREBASE_USE_EMULATOR`、ホスト、端末からの到達性、ポートを確認する。
-- デプロイ失敗: 対象 alias、認証、権限、CLI 出力を確認し、失敗した限定操作だけを再実行する。
-- Functions の部分失敗: 冪等性と重複実行の影響を確認してから再試行する。
-- legacy Stripe removal失敗: 対象件数、backup、plan digest、状態変化、Rules/schema整合を確認し、write 0のまま停止する。
-- PWA 更新問題: Service Worker、キャッシュヘッダー、登録状態を確認し、利用者データを失う一律削除を安易に案内しない。
+失敗時は対象環境と成功済み作用を再取得し、選択したrunbookの停止・復旧手順を使う。deploy、migration、repairの部分成功後に対象を推測して再実行・削除せず、同じcommit・scopeで限定再試行できるかを確認する。data変更を伴う場合は[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)へ戻る。
 
-デプロイ後の復旧は、原則として Git 上の既知の正常版を再生成・再デプロイします。データスキーマ変更を伴う場合は、コードだけを戻して安全かを先に確認します。
+PWA更新問題ではService Worker、cache header、登録状態を確認し、利用者dataを失う一律削除を安易に案内しない。
 
 ## バックアップと保持
 
-- Dev Firestore `(default)`は2026-08-27にPITR有効・保持7日を確認した。PITRをrelease固有の整合snapshot、Storage・Authentication・外部serviceのbackup、復旧演習の代替にしない。
-- Firestoreのスケジュールバックアップは既存資料に記載があるが、現在のschedule、保持、復元演習は未確認である。
-- 旧CCBの`PrivateSettings`と`SettingAudits`はADR 0031で廃止され、主repositoryのmigration/restore plannerも2026-08-30に削除した。これらを対象にしたlogical backup/restoreを提供済みと案内しない。Admin SDKに残る`INCOMPLETE / EXCLUDED / UNVERIFIED / UNAVAILABLE`表示とfail-closed guardはhistorical artifactや未知pathを安全側へ止める独立保護であり、CCB-aware backup/restoreの提供を意味しない。
-- データ移行前は、対象データと復旧手順を定め、必要なバックアップが取得済みであることを人が確認する。
-- Storage、Authentication、外部serviceの状態は Firestore バックアップだけでは完全に復元できない。未同期Stripe scaffold撤去では外部Stripeを変更しない。
-- 文書と仕様の履歴は Git で保持する。
+- backupの要否と復旧方法はreleaseまたはdata changeごとに決める。data migrationは[data migration runbook](runbooks/data-migrations.md)、整合snapshotを要する作業は[maintenance・data change runbook](runbooks/maintenance-and-data-change.md)を使用する。
+- Firestore PITRは、release固有の整合snapshot、Storage・Authentication・外部serviceのbackup、復旧演習を代替しない。確認済み時点のDev Firestore状態は[履歴記録](verification/dev-firestore-baseline-2026-08-27.md)を参照し、現在のcritical identifierとして使う前にactual targetを再確認する。
+- 正式な監視、SLA、RPO/RTO、backup scopeの残作業は[project roadmap](roadmaps/airguard-v2.md)を正本とする。
+- 文書と仕様の履歴はGitで保持する。
 
 ## 秘密情報
 
-- 秘密値・個人情報の保護対象と転記禁止は[承認と保護対象](project-rules/environment-and-approval.md#承認と保護対象)および[共通契約](../governance/common-governance.md#safety-and-sensitive-information)に従う。
-- legacy Stripe scaffoldの撤去でStripe Secretを読取・登録・削除しない。将来外部serviceを導入する場合はSecret Manager等のserver-only管理を別設計する。
-
-## 現在利用不可または要確認
-
-- Codex専用UIの郵便番号自動検索は隔離対象として停止し、手入力を使う。専用Nuxt診断launcherは未隔離経路への迂回を防ぐため起動を拒否する。通常Devは変更しない。[専用UI契約](runbooks/local-ui-testing.md#専用uiの郵便番号隔離)と[実装・検証の適用状態](verification/customer-02-status-local.md)を参照。
-- Codex専用local suiteはAuth、Firestore・Storage Rules、再構築Callable、UWB-04予約fixtureを含むUser lifecycle Callableのhandlerを確認する。Realtime Database Rules、外部サービスの自動回帰testは未整備である。
-- 正式運用の監視、SLA、バックアップ保持期間、復旧目標は未確定。
-- Stripe関連物は未同期scaffoldとして撤去済みで、現行運用機能ではない。将来のprovider、契約、料金、利用上限は未設計である。Dev実行の詳細は[immutable receipt](verification/stripe-05-dev-release.md)を参照する。
+秘密値、credential、実account、個人・顧客・勤怠・請求dataの保護と転記禁止は[Environment and approval rules](project-rules/environment-and-approval.md#承認と保護対象)と[common governance](../governance/common-governance.md#safety-and-sensitive-information)に従う。個別serviceのSecret管理をこの共通入口へ重複記載しない。

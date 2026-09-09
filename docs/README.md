@@ -44,7 +44,7 @@
 | [ADR](decisions/README.md) | 重要判断の状態と理由 |
 | [Project rules index](../governance/project-rules.md) | 常時境界と、AirGuardV2固有rule segmentへの必読route |
 | `project-rules/**` | coordinator/Git、development/data、environment/approval、documentation/verificationの分割されたproject固有規則 |
-| [運用・開発手順](operations.md) | 共通準備、runbook routing、出力、障害復旧、backup、秘密情報 |
+| [運用・開発手順](operations.md) | 共通運用入口、検証policyの人向け経路、Prod・復旧・backup・秘密情報の共通境界 |
 | [Runbook索引](runbooks/README.md) | 作業種別ごとに選ぶ実行・停止・rollback手順 |
 | [画面マニュアル](manual/index.md) | 管理者が利用する画面操作 |
 | [実装調査索引](implementation/README.md) | コードから確認した実装事実、未確認範囲、将来対応、確認待ち事項。確認済み要件の正本ではない |

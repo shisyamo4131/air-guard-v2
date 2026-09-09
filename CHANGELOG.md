@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- `docs/operations.md`をAirGuardV2固有の共通運用入口へ再整理した。Local・Dev・migration・個別機能の手順、検証環境の選択、手書きの検証class表を各正本への参照へ置換し、機械生成されたVerification Policy Summaryだけを維持した。日付付きDev Firestore構成は履歴記録へ分離し、Local Emulator手順からremote baselineを除いた。
+
 - GitHub ActionsのDev Hosting buildが、PrivateなAirVuetify3の検証済みcommitを読み取り専用Deploy keyで固定取得するようにした。
 
 - `main`へのpush承認を、変更fileから自動選択したFirebase serviceのDev deploy承認まで含む運用へ変更した。GitHub Actions専用service account、`main`限定のWorkload Identity連携、GitHub `dev` Environmentを用意し、Google Cloudの長期秘密鍵や利用者PCのFirebase loginに依存せず、dry-run後にHosting、Functions、Firestore、Storage、Realtime Databaseを限定deployする。初回全service実行で判明したscheduled Functionsの権限不足はDev限定のCloud Scheduler Admin追加で解消し、同一commitの再実行とDev Hosting表示を確認した。Private AirVuetify3の取得だけは当該repositoryの読み取り専用Deploy keyを使用する。手動実行、IAM・credential変更、migration、repair、Prodは別承認のままとした。[検証記録](docs/verification/github-actions-dev-deployment.md)を参照。

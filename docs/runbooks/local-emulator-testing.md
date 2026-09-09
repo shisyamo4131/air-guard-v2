@@ -2,25 +2,11 @@
 
 - 状態: 運用中
 - 最終確認日: 2026-08-28
-- 役割: Firestore baseline、利用者用local環境、Codex専用Emulator test
+- 役割: 利用者用local EmulatorとCodex専用Emulator test
 
-## Firestore instance baseline
+## Remote Firestore baselineとの分離
 
-2026-08-27にFirebase CLI 15.28.1とgcloudの独立したread-only requestでDev環境を再確認した。
-
-| 項目 | 確認値 |
-|---|---|
-| Firebase project | `air-guard-v2-dev`（`.firebaserc`の`default`・`dev` alias） |
-| Database | `(default)` |
-| Edition | `STANDARD` |
-| Type | `FIRESTORE_NATIVE` |
-| Location | `asia-northeast1` |
-| Delete protection | `DELETE_PROTECTION_DISABLED` |
-| Point-in-time recovery | `POINT_IN_TIME_RECOVERY_ENABLED`、保持`604800s`（7日） |
-
-edition依存のFirestore実装またはreleaseを開始するときは、本baselineをDev環境deploy runbookのprocess-scoped trust経路で確認する。Firebase CLIとgcloudを独立したread-only requestで確認し、対象projectまたはdatabase構成が変更されている場合だけ値を更新する。
-
-Prod環境`air-guard-v2`のdatabase editionと保護設定は未確認であり、deploy判断へ流用しない。
+本runbookはLocal Emulatorの手順を扱い、Dev・Prod Firestoreの変化する構成値を正本にしない。2026-08-27に記録されたDev構成は[履歴記録](../verification/dev-firestore-baseline-2026-08-27.md)へ分離した。edition、location、保護設定、PITRを実装・release判断に使う場合は、[Dev deploy runbook](dev-deployment.md)に従ってactual targetをread-onlyで再確認する。Prodへ流用しない。
 
 ローカル用設定でホストを公開する場合:
 
