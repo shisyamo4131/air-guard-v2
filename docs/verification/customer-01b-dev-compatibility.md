@@ -6,7 +6,7 @@
 - 実行直後の時刻観測: 2026-09-02 23:00:47 UTC（2026-09-03 08:00:47 JST）
 - 対象commit: `547405672440e30bdd22114db890cb115e392473`
 - 対象環境: Dev project `air-guard-v2-dev` / database `(default)`
-- 対象設定根拠: [`.firebaserc`](../../.firebaserc)、[`firebase.json`](../../firebase.json)、[Dev runbook](../runbooks/dev-deployment.md#customer保存形式のread-only事前検査)
+- 対象設定根拠: [`.firebaserc`](../../.firebaserc)、[`firebase.json`](../../firebase.json)、[Customer互換性検査](../runbooks/dev-deployment/customer-compatibility.md)
 - 実装根拠: [検査tool](../../scripts/check-customer-dev-compatibility.mjs)、[保存形式contract](../../utils/customer/customerDocumentContract.js)、[Customer実装](../implementation/customer-master.md)
 
 ## 承認・実行境界

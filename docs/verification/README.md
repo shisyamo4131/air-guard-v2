@@ -9,6 +9,7 @@
 | 検証方針変更の比較本文 | [Governance verification benchmark](governance-verification-benchmark.md) |
 | 変更前の機械可読実測 | [Pre-migration benchmark JSON](governance-verification-benchmark-pre.json) |
 | 変更後の機械可読実測 | [Post-migration benchmark JSON](governance-verification-benchmark-post.json) |
+| DevサービスアカウントのFirebase CLI認証・Rules dry-run | [Devサービスアカウントpreflight記録](dev-service-account-preflight.md) |
 | STRIPE-05 Dev release・migration・受入れ | [STRIPE-05 Dev release verification receipt](stripe-05-dev-release.md) |
 | CUSTOMER-01A local実装・画面受入れ | [CUSTOMER-01A local acceptance verification receipt](customer-01a-local-acceptance.md) |
 | CUSTOMER-01B Dev保存形式の読取り検査 | [CUSTOMER-01B Dev compatibility verification receipt](customer-01b-dev-compatibility.md) |

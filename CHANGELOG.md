@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Dev deploy runbookを、共通release手順と個別手順への索引に整理した。Windows固有のCLI・trust、service別remote検証、Customer保存形式検査を分離し、UWB・Stripe・migration・過去の実行結果は既存正本への参照に置き換えた。Dev deployは実行者と認証経路をreleaseごとに固定し、機械実行では既存のDevサービスアカウント鍵をprocess内だけでFirebase CLIへ渡す。`firebase login`済みであることを全releaseの前提から外し、利用者accountを選ぶ場合だけ必要とした。既存サービスアカウントのdry-runはHostingとRealtime Database Rulesが成功し、Functions、Firestore Rules・Indexes、Storage Rulesは権限不足で停止したため、対象serviceごとのpreflightを必須とした。
+
 - Codex専用Local、利用者環境Local、Devの効果と保証範囲を分け、変更内容に応じて必要な環境だけを選ぶ規則へ変更した。両LocalはDev前の手戻り抑制用であり、製品変更の最終受入れは固定commitのDev検証とする。Codex専用Localと利用者環境Localは対象project・data・server・browser・process owner・cleanup境界が異なる独立経路としてrunbookと索引を分離し、同じ事項を重複確認しない。Codex専用Firebase Emulatorのroot debug logは一時診断情報として上書きを許容し、退避・復元対象から外した。
 
 - 不要となったWindows PC移行手順書を削除し、文書案内・運用手順・runbook索引から該当リンクを除いた。過去の実行記録と追加時の変更履歴は保持する。
@@ -145,7 +147,7 @@
 
 - [ADR 0043](docs/decisions/0043-dev-trial-existing-document-handling.md)を採用した。機能改修時の既存Dev documentは全件診断・一括修復を標準前提にせず、通常操作で発見した不具合を修正する。Schemaの明らかな変更、field状態の他機能への明確な影響、その他具体的に必要と確認された場合は状態確認と必要なmigrationを必須とする。
 
-- Customerの26保存項目をwriterと共有するread-only互換性検査toolを追加した。生のFirestore型・欠損・相関・取得完了を検査し、値やIDを出さず件数と固定理由だけを報告する。[Dev実行手順と停止条件](docs/runbooks/dev-deployment.md#customer保存形式のread-only事前検査)を用意し、Dev接続・反映は別承認のままとした。
+- Customerの26保存項目をwriterと共有するread-only互換性検査toolを追加した。生のFirestore型・欠損・相関・取得完了を検査し、値やIDを出さず件数と固定理由だけを報告する。[Dev実行手順と停止条件](docs/runbooks/dev-deployment/customer-compatibility.md)を用意し、Dev接続・反映は別承認のままとした。
 
 - Customerの作成・基本情報更新・支払条件更新を専用処理へ移し、同一会社・有効な本登録User・承認済みrole、操作別fieldを画面とRulesで揃えた。active deleteとarchive CUDは拒否し、廃止予定の汎用manager経路をCustomerから除去した。自動検証と合成会社管理者によるCodex専用local UI受入れを完了し、詳細を[immutable receipt](docs/verification/customer-01a-local-acceptance.md)へ集約した。Dev、Prod、remote data、pushは変更していない。
 
