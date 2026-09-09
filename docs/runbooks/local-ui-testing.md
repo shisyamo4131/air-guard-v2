@@ -1,4 +1,4 @@
-# local UI検証runbook
+# Codex専用local UI検証runbook
 
 - 状態: 運用中
 - 最終確認日: 2026-09-04（郵便番号隔離の追加修正・再検証は実行証拠を参照）
@@ -6,12 +6,20 @@
 
 ## UI検証と最終受入れの責任分離
 
-- 担当、承認、環境、受入れ判断は[Environment and approval rules](../project-rules/environment-and-approval.md)と[Coordination and Git rules](../project-rules/coordination-and-git.md)を正とする。本runbookはCodex専用local UIと利用者用local browserの実行手順だけを定め、Dev・Prod・remote/data・外部操作の権限を追加しない。
+- 担当、承認、環境、受入れ判断は[Environment and approval rules](../project-rules/environment-and-approval.md)と[Coordination and Git rules](../project-rules/coordination-and-git.md)を正とする。本runbookはCodex専用Localだけを対象とし、利用者環境Local、Dev、Prod、remote/data、外部操作の権限を追加しない。
 - application fileごとの利用者確認はcheckpointが明示した場合だけ行い、通常はsegment単位の変更挙動、UI smoke、未検証、残存risk、rollback、利用者確認項目をまとめる。
+
+## 適用範囲
+
+- 対象: Codexが専用demo project、専用port、`.codex-test/saved-data`、generated server、Codex管理browserを使用して起動からcleanupまで所有する局所的・限定的なLocal UI検証。
+- 対象外: 利用者が`.env.local`、`./saved-data`、Chrome profile、起動processを管理するLocal検証。この経路は[利用者環境local UI検証runbook](user-local-ui-testing.md)を使用する。
+- Dev環境での試用・検証はLocal検証へ含めず、[Dev deploy runbook](dev-deployment.md)のremote検証として扱う。
+- 本runbookは、自動検証後にも専用build、合成data、Emulator、UI操作、保存・再表示、外部作用denyの結合に不確実性が残る場合に選ぶ。自動検証が必要事項を直接覆う場合、または必要な証明がDev固有である場合は実行しない。
+- 本runbookの成功はDev前の手戻り抑制用証拠であり、製品変更の最終受入れまたは完了ではない。製品変更の最終受入れは固定commitを[Dev環境](dev-deployment.md)へ反映して行う。
 
 ## Codexだけで完結するlocal UI test
 
-Codex専用local UI受入れは、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。HTTP 200または起動templateだけは成功証拠ではなく、製品画面へ到達して対象操作を確認する。実行結果は[検証証拠索引](../verification/README.md)から対象receiptを参照する。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。Functionsのdenyだけではブラウザの直接通信を制御できないため、下記の専用郵便番号隔離も確認する。これらを未調査の全ブラウザ通信を遮断する汎用firewallとは扱わない。
+Codex専用local UI検証は、承認済み専用buildから生成した画面をgenerated serverで配信する経路を標準とする。HTTP 200または起動templateだけは成功証拠ではなく、製品画面へ到達して対象操作を確認する。実行結果は[検証証拠索引](../verification/README.md)から対象receiptを参照する。外部作用は専用Functionsでdenyし、専用UIではPWA module、Service Worker登録、通知permission、FCM token登録を無効化する。Functionsのdenyだけではブラウザの直接通信を制御できないため、下記の専用郵便番号隔離も確認する。これらを未調査の全ブラウザ通信を遮断する汎用firewallとは扱わない。
 
 ### UI-READY preflight
 
@@ -20,7 +28,7 @@ Codex専用local UI受入れは、承認済み専用buildから生成した画�
 1. 実際にUI操作するtaskが正規in-app browserのtab取得と通常pointer・keyboard操作を利用できる。
 2. 保存済み合成sessionまたは秘密値を残さない一時合成credentialにより、対象actorを準備できる。
 3. 完了条件に必要なCallable・背景trigger・保存先・初期dataを実行構成と照合し、必要な処理の登録とloopback接続を確認する。Functions側denyに加えclient-side endpoint・file参照packageの外部作用も隔離する。不足は環境整備または確認方法の合意を先行し、未取得のnetwork trace等は未確認として残す。
-4. 既存root log・runtime・port・processを確認し、退避・復元対象、owner、生成物を含むcleanup対象をexact pathで固定する。削除・停止の承認範囲と保護対象を開始時に確認し、既存承認が対象を含む場合は再承認を求めない。
+4. 既存runtime・port・processを確認し、ownerと生成物を含むcleanup対象をexact pathで固定する。Firebase Emulatorがrootへ出力するdebug logは一時診断情報として上書きを許容し、退避・復元しない。削除・停止の承認範囲と保護対象を開始時に確認し、既存承認が対象を含む場合は再承認を求めない。
 5. 対象HEAD、専用build、Emulator、generated server、browser、backend assertion、cleanupの担当と停止条件が一つのcheckpoint内で決まっている。終了時はcleanupの実行結果まで確認し、承認取得だけを完了としない。
 
 新規準備が必要な構成の標準起動・確認・終了順序は次のとおりとする。対象HEAD、identity、設定、actor、tenant、Functions・Rules・Firestore、隔離、data、owner・cleanup境界を確認できる起動済みEmulator、generated server、ChromeまたはCodex管理browserは対応する起動手順を省略して再利用し、同一条件を作り直さない。今回所有していない既存processは停止せず、条件不一致または確認不能な構成だけを分離して準備する。
@@ -34,7 +42,7 @@ Windows上でCodexがこの経路を実行する場合、Firebase CLIとlocal se
 5. Codexインアプリブラウザで`http://127.0.0.1:14600/`を初めて開く。visibility機能が利用可能な場合は操作開始前に表示を要求し、その状態を報告する。利用者が監視する場合もChrome profileではなく同じCodex Desktop内のtabを使う。
 6. 製品landmarkが現れるまでbounded waitし、起動templateを成功証拠にしない。残る場合はreloadを通常手順にせず失敗として停止し、server identity、HTTP、console、FUT-0005・FUT-0008・FUT-0096・FUT-0178の既知再発要因を診断する。
 7. 可視UIからsign-inへ移動し、保存済み合成accountを通常のkeyboard入力で使用して対象画面へ到達する。保存済みbrowser sessionが有効なら、その合成account sessionを再利用する。
-8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portと今回の派生portがLISTENしていないことを確認する。Windowsでは実LISTENと取得結果を照合し、APIで結果が欠ける場合は`netstat`でも確認する。saved-data不変と既存ログの復元を検証し、`.output`と今回所有runtimeだけを安全な絶対path・reparse不在確認後に削除する。反省会など別目的の一時メモは削除対象へ混ぜない。
+8. Codexが作成したtabを閉じ、generated server、Emulatorの順に停止し、専用portと今回の派生portがLISTENしていないことを確認する。Windowsでは実LISTENと取得結果を照合し、APIで結果が欠ける場合は`netstat`でも確認する。saved-data不変を検証し、`.output`と今回所有runtimeだけを安全な絶対path・reparse不在確認後に削除する。Firebase Emulatorのroot debug logは復元しない。反省会など別目的の一時メモは削除対象へ混ぜない。
 
 インアプリブラウザはCodex Desktop内の専用browserであり、利用者のChrome profileを使用しない。利用者が目視を希望する検証ではvisibilityを要求し、同じtabを監視対象にする。visibility状態を機械的に取得できない場合は、利用者が実際に監視できた事実とtool上の未確認を分けて報告する。Chrome拡張経路は、利用者が既存sessionを使う受入れまたはインアプリブラウザ障害の補助経路であり、標準のCodex専用UI testの前提ではない。
 
@@ -95,7 +103,7 @@ npm run test:local:ui:server:generated
 
 ## 個別手順索引
 
-共通の`UI-READY`、専用build、Emulator、generated server、ブラウザ操作、cleanup、完成条件は本runbookを正とする。対象機能または利用環境に応じて、次の個別手順を追加で適用する。
+共通の`UI-READY`、専用build、Emulator、generated server、ブラウザ操作、cleanup、完成条件は本runbookを正とする。対象機能に応じて、次の個別手順を追加で適用する。
 
 | 個別手順 | 適用する場合 |
 | --- | --- |
@@ -103,7 +111,6 @@ npm run test:local:ui:server:generated
 | [Employee archive](local-ui-testing/employee-archive.md) | Employee archiveを専用demo環境で検証する場合 |
 | [専用UIの郵便番号隔離](local-ui-testing/postal-code-isolation.md) | 郵便番号検索の外部通信遮断と手入力保存を検証する場合 |
 | [UI snapshot candidateの受入れとpromotion](local-ui-testing/snapshot-candidate-promotion.md) | signup後のcandidateを検証し、専用saved-dataへ昇格する場合 |
-| [利用者用local browser受入れ](local-ui-testing/user-local-browser.md) | 利用者用local環境とサインイン済みChromeタブを使う場合 |
 
 ### 専用UIの郵便番号隔離
 

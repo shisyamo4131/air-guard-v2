@@ -23,6 +23,7 @@
 
 - 変更class、iteration・targeted・completion・release-only、gate ID・exact command・includes・invalidatedByは`governance/verification-policy.json`を機械可読正本とする。混合変更はunion、影響不明はcomprehensive fallbackを使う。
 - 検証はcommand名や手段ではなく、今回証明する必要がある事項を単位に選ぶ。各checkpointまたは検証工程の開始前に、(1)今回証明する事項、(2)既に得られている有効な検証結果、(3)そのまま再利用できる結果、(4)新たな実行がなければ証明できない事項を内部照合し、追加実行は(4)へ限定する。
+- Codex専用Local、利用者環境Local、Devの役割・保証範囲・選択条件は[Environment and approval rules](environment-and-approval.md#local-emulatorとlocal-ui)を正とする。選択した環境ごとの証明事項、既存証拠の再利用、実行結果と、選択しなかった環境の理由をcompletion reportまたはrelease evidenceへ記録する。Localの成功を製品変更のDev受入れへ読み替えない。
 - 既存証拠は、今回の証明事項を既に直接覆い、成功結果を実行出力または信頼できるproject記録から確認でき、証拠取得後に結果へ影響するcode・設定・依存関係・環境・test条件の変更がなく、実行経路・権限・tenant・Rules・Functions・Firestore等の必要条件が同一または既存側の方が厳しい場合に限り再利用する。この全条件を満たす場合、自動test、Emulator、local server、browser UI、build、lint、静的検査など手段が異なるだけの同等検証を「既存検証でカバー済み」として重ねない。
 - 後続変更が証拠を失効させた、新しい実行経路を追加した、または既存証拠が必要事項の一部を証明しない場合は、不足または失効した範囲だけを検証する。「念のため」、慣例、suite名、別手段であることだけを理由に、変更と無関係なtestやsuite全体を再実行しない。再利用した証拠と追加実行の選定理由はcheckpointのcompletion reportまたは指定された証拠先へ記録する。
 - policy、project rules、release gateが明示的に必須とするgateは独断で省略しない。必須gateが既存検証と実質的に重複する場合は、重複する証明事項、既存証拠、非失効根拠を示し、必要なら別の承認済み変更でpolicy自体を見直すまで現行gateに従う。

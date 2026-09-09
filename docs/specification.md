@@ -346,7 +346,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 正式運用準備は、合計100点の加重マイルストーンで管理する。現在はマイルストーン単位の部分加点を行わず、完了条件と証拠が揃った場合だけ当該点数を得る。
 - スコープ追加または完了判定の訂正で進捗率が低下する場合は、変更前、変更後、理由を記録し報告する。
 - 開発・委譲・Git・task lifecycleは[Coordination and Git rules](project-rules/coordination-and-git.md)、application・Firestore・検証範囲は[Development and data rules](project-rules/development-and-data.md)、承認・環境・local UIは[Environment and approval rules](project-rules/environment-and-approval.md)、文書・checkpoint closeoutは[Documentation and verification rules](project-rules/documentation-and-verification.md)を正とする。本文書へ横断的な実行規則を複製しない。
-- local UI受入れは[Environment and approval rules](project-rules/environment-and-approval.md)と[local UI検証runbook](runbooks/local-ui-testing.md)、Firestore Rules縮小時の既存Dev document・migration・cutoverは[Development and data rules](project-rules/development-and-data.md)、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)へrouteする。roadmapの実装単位、branch・Git、関連repository、local/Dev/Prodの実行境界も上記4つのproject rule segmentを正とする。
+- 3環境の検証選択と保証範囲は[Environment and approval rules](project-rules/environment-and-approval.md)を正本とし、Codex専用Localは[専用runbook](runbooks/local-ui-testing.md)、利用者環境Localは[利用者runbook](runbooks/user-local-ui-testing.md)、製品変更の最終受入れは[Dev runbook](runbooks/dev-deployment.md)へrouteする。Firestore Rules縮小時の既存Dev document・migration・cutoverは[Development and data rules](project-rules/development-and-data.md)、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md#firestore-rulesを狭める改修順序)へrouteする。roadmapの実装単位、branch・Git、関連repository、local/Dev/Prodの実行境界も上記4つのproject rule segmentを正とする。
 
 ## セキュリティと機密情報
 

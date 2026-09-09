@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-02
 - 状態: Accepted
+- 一部置換: Codex専用Local・利用者環境Local・Devの選択と最終受入れは[0062](0062-risk-based-environment-verification.md)を現在の判断とする。generated serverの技術条件とLocal内の責任分担は継続する。
 - 関連仕様: 開発ガバナンスと進捗管理
 - 関連判断: [0021](0021-codex-in-app-browser-ui-testing.md)、[0034](0034-codex-bounded-implementation-and-user-ui-acceptance.md)、[0040](0040-impact-based-staged-verification.md)
 - 一部置換: ADR 0034の「UIへ影響する全featureで利用者の実環境受入れを必須とする」部分。承認済み実装境界、Dev・Prod・remote data、正式運用開始の別承認は維持する。

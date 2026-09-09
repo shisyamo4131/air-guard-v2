@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Codex専用Local、利用者環境Local、Devの効果と保証範囲を分け、変更内容に応じて必要な環境だけを選ぶ規則へ変更した。両LocalはDev前の手戻り抑制用であり、製品変更の最終受入れは固定commitのDev検証とする。Codex専用Localと利用者環境Localは対象project・data・server・browser・process owner・cleanup境界が異なる独立経路としてrunbookと索引を分離し、同じ事項を重複確認しない。Codex専用Firebase Emulatorのroot debug logは一時診断情報として上書きを許容し、退避・復元対象から外した。
+
 - 不要となったWindows PC移行手順書を削除し、文書案内・運用手順・runbook索引から該当リンクを除いた。過去の実行記録と追加時の変更履歴は保持する。
 
 - project governanceの起動・Git・task交代・文書責務・検証に関する重複記述を既存正本への参照へ整理し、開発検証ルール内の重複段落を統合した。承認境界、規則の意味、必須gate、managed artifactは維持する。

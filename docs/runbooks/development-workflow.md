@@ -15,9 +15,9 @@
 1. 現行挙動、actor・tenant、data影響、失敗経路、対象・対象外、rollback、受入れ条件を一つのcheckpointへまとめる。[フェーズごとのテスト範囲の合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)に従い、利用者と変更・テストの範囲、環境・data、期待結果、完了条件を着手前にすり合わせる。他機能の受入れを自動追加しない。
 2. 下記[segment contract](#必要十分なdata設計)を材料に、実装可能性とtest・失敗経路の2視点を原則並行で独立reviewする。目的に対するscopeの過大・不足、完了条件の十分性、未確認事項の扱いを判定に残す。security境界またはproject rulesの高risk境界を含む場合はsecurity視点を追加する。対象には認証・認可・tenant、Firebase Rules、秘密情報、個人・顧客・勤怠・請求・Stripe・通知、削除・外部作用を含む。
 3. review指摘を設計へ反映してから実装する。実装中は直接影響する静的確認と対象testから始め、当該phaseの代表操作を保存・再読込・失敗時の挙動まで確認する。UI非対象なら該当処理境界までとし、最終統合へ初回確認を集中させない。問題の扱いは上記scope規則に従い、設計変更時だけ変更範囲を再reviewする。
-4. [フェーズごとのテスト範囲の合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)の標準順序と必須gateの例外条件に従い、local確認後にDev release判断へ進む。
+4. [フェーズごとのテスト範囲の合意](../project-rules/development-and-data.md#フェーズごとのテスト範囲の合意)と[3環境の選択基準](../project-rules/environment-and-approval.md#local-emulatorとlocal-ui)に従い、自動検証で残る不確実性を直接減らす場合だけCodex専用Localまたは利用者環境Localを選ぶ。自動検証で十分な変更はLocalを省略してDev release判断へ進める。
 5. segmentの最終状態に対して影響範囲の回帰と、選択済みcompletion gateを1回実行する。phaseまたはreleaseの完了に包括testが必要な場合も、この最終実行へまとめる。後続変更で失効していない証拠と、上位gateに含まれる下位gateは再実行しない。
-6. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従う。必要な利用者acceptanceは[担当と変更単位](#担当と変更単位)に従いcheckpointまたはfeature boundary単位で行う。
+6. 既存Dev documentへの状態確認・migrationの要否は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)に従う。製品変更は固定commitのDev受入れを最終受入れとし、checkpointまたはfeature boundary単位で行う。利用者環境Localは、Dev前の利用者固有条件またはUX判断を別途証明する場合だけ追加する。
 7. 結果が確定した後、現在値は該当する一つの正本、実行結果はimmutable verification receipt、履歴はCHANGELOGへ一括して記録する。索引は値を複写せず正本へリンクする。
 8. 記録だけの後続編集では、その編集で失効したgateだけを再実行する。製品codeが変わっていないことを理由に、既に有効な製品testを繰り返さない。
 

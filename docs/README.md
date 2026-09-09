@@ -12,17 +12,18 @@
 |---|---|---|
 | archive・物理削除・住所と座標 | [共通データ仕様](specification.md#共通データ仕様)、[ADR 0060](decisions/0060-common-archive-purge-and-address-contract.md) | [archive実装差・設計](implementation/archive-restore.md)、[住所・座標実装差](implementation/address-geocoding.md)、対象masterの固有条件とroadmap |
 | 仕様・機能変更 | [現行仕様](specification.md)、[正式運用ロードマップ](roadmaps/airguard-v2.md)、[ADR索引](decisions/README.md) | 関連コード、テスト、[画面マニュアル](manual/index.md) |
-| 承認済みcheckpointのCodex実装・risk-based UI受入れ | [現行仕様](specification.md)、[ADR 0034](decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md)、[ADR 0042](decisions/0042-risk-based-local-ui-acceptance.md)、[開発workflow](runbooks/development-workflow.md) | 現行挙動、承認済みboundary、関連code・Rules・test、rollback、roadmap、local UI省略条件、別途必要な環境受入れ |
+| 承認済みcheckpointのCodex実装・risk-based環境検証 | [現行仕様](specification.md)、[ADR 0034](decisions/0034-codex-bounded-implementation-and-user-ui-acceptance.md)、[ADR 0062](decisions/0062-risk-based-environment-verification.md)、[開発workflow](runbooks/development-workflow.md) | 現行挙動、承認済みboundary、関連code・Rules・test、rollback、roadmap、各環境の証明事項・省略理由、Dev最終受入れ |
 | 不具合調査・修正 | 現行仕様の関連節、関連 ADR | 実行経路、ログ、テスト、再現条件 |
 | 機能改修時の既存Dev document | [project rulesの3条件](project-rules/development-and-data.md#dev試用中の既存document)、[開発workflow](runbooks/development-workflow.md)、[ADR 0043](decisions/0043-dev-trial-existing-document-handling.md) | Schema差分、影響するreader/writer、他機能への確定した影響。必要な状態確認・migrationだけをDev runbookへroute |
 | Firestore data設計・Rules・Company CCB | 現行仕様の関連節、[ADR 0031](decisions/0031-proportional-data-boundary-and-change-safeguards.md)、[開発workflow](runbooks/development-workflow.md) | 全reader/writer、exact field update、Rules、migration、rollback、対象環境・件数・停止条件 |
 | 認証・権限・テナント・Firebase Rules | 現行仕様の「テナントと認証」「セキュリティ」、ADR 0002・0005・0007・0031 | `firestore.rules`、`storage.rules`、`database.rules.json`、Functions、Emulator テスト |
 | 配置・稼働・勤怠・請求 | 現行仕様の該当業務規則、関連 ADR | `definitions/`、関連画面・モデル・Functions、画面マニュアル |
 | local Emulator・backend検証 | [local Emulator検証](runbooks/local-emulator-testing.md)、ADR 0005・0014 | `firebase.json`、`firebase.codex-test.json`、`.env`の変数名のみ、対象test |
-| local UI・browser受入れ | [local UI検証](runbooks/local-ui-testing.md)、ADR 0006・0014 | 対象画面・manual、Emulator・server、browser操作境界 |
+| Codex専用local UI・browser検証 | [Codex専用local UI検証](runbooks/local-ui-testing.md)、ADR 0006・0014・0062 | 任意のpre-Dev検証。対象画面・manual、専用Emulator・server・Codex管理browser境界 |
+| 利用者環境local UI・browser検証 | [利用者環境local UI検証](runbooks/user-local-ui-testing.md)、ADR 0062 | 任意のpre-Dev検証。`.env.local`、`./saved-data`、利用者Chrome・起動process、対象画面・manual |
 | data migration（local / Dev、小規模を含む） | [data migration](runbooks/data-migrations.md)、関連ADR | Devを含む場合は[Dev deploy runbook](runbooks/dev-deployment.md)も必読。target、dry-run、apply、post-check、maintenance・復旧手段の個別判断、明示的承認 |
 | maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md)、関連ADR | normal stop、quiet period、監視Function、連続dry-run、snapshot、rollback、明示的承認 |
-| Devデプロイ・公開・remote検証 | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md) | migrationを含む場合は[data migration](runbooks/data-migrations.md)も必読。対象serviceの設定・test、release checkpoint、固有ADR、復旧、明示的承認 |
+| Devデプロイ・公開・最終受入れ | [Dev deploy runbook](runbooks/dev-deployment.md)、[ADR 0024](decisions/0024-dev-trial-deployment-and-migration-runbook.md)、[ADR 0062](decisions/0062-risk-based-environment-verification.md) | 製品変更の最終受入れ。migrationを含む場合は[data migration](runbooks/data-migrations.md)も必読。対象serviceの設定・test、release checkpoint、固有ADR、復旧、明示的承認 |
 | Prodデプロイ・公開・移行 | [運用・開発手順](operations.md)、関連ADR | 対象環境、復旧手順、バックアップ、Prod操作の個別承認 |
 | 関連package更新・公開、critical identifier確認 | [package release](runbooks/package-release.md)、[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md) | source/tag manifest、release evidence、consumer manifest/lock、`scripts/check-schemas-package-adoption.ps1`、network・公開承認 |
 | 検証方針の選択・移行・実測比較 | [運用・開発手順のVerification Matrix](operations.md#verification-matrix)、[検証policy](../governance/verification-policy.json)、[ADR 0040](decisions/0040-impact-based-staged-verification.md)、[検証証拠索引](verification/README.md) | change class、stage、gate ID・exact command、includes、invalidatedBy、pre/post JSON、coverage・failure-detection equivalence |

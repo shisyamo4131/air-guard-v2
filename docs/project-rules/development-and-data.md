@@ -24,7 +24,7 @@
 ## フェーズごとのテスト範囲の合意
 
 - 着手前に、変更対象、test対象・対象外、操作と期待結果、環境・actor・data、完了条件をcheckpointへ固定する。実装承認から他機能全体の受入れまでを推論しない。
-- 試験運用中の通常の製品改修はUIの有無にかかわらず、`直接対象のdomain test → 対象機能の最小限のlocal動作確認 → Dev反映・Dev受入れ`を標準順序とし、Localで対象機能が動作することを確認してからDevへ進む。実Dev固有の表示・操作・権限・通信を含む最終確認は、対象commitを固定したbounded Dev release後の受入れで行い、不具合が判明した場合は改修粒度を小さく保って修正・再deployする。Dev受入れ前に、変更と直接関係しないbuild、全Emulator、全browser、包括的な静的検査を追加せず、専用Local UI buildや重複browser受入れを一律の前提にしない。Devでなければ確認できない事項をlocal手段で重複検証しない。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、verification policyが別classで要求する必須gate、および承認済みrelease（artifact生成を含む）に必要なgateは先送り・省略せず、対象変更に必要な範囲を実行する。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
+- 試験運用中の通常の製品改修は、`直接対象の自動検証 → 必要な場合だけ選択したpre-Dev環境検証 → 固定commitのDev反映・対象範囲のDev受入れ`を標準順序とする。Codex専用Localと利用者環境Localは手戻り抑制のための任意工程であり、[Environment and approval rules](environment-and-approval.md#local-emulatorとlocal-ui)の保証範囲から今回必要な証明事項を直接覆う最小集合を選ぶ。自動検証が十分なら両Localを省略でき、Localを先に完了することをDev release判断の一律条件にしない。製品挙動を変える変更はDev受入れ前に完了扱いせず、文書・governance・testだけの変更やCodex専用local toolだけの変更はDev対象外とする。project rule・verification policy自体の変更、Rules・schema・Functions・認証認可その他の高risk境界、verification policyが別classで要求する必須gate、および承認済みreleaseに必要なgateは先送り・省略しない。改修規模が大きく最小loopを安全に適用できない場合は、範囲と検証方法を別途合意する。
 - testは当該phaseの変更と直接必要な回帰へ限定する。関連fieldを読むだけの別機能について、業務全体の受入れを自動追加しない。影響確認と別機能の受入れを区別し、追加が必要なら理由・対象・延期時の影響を提示して合意する。
 - 合意済み範囲の再現・修正・再試験は継続し、commandやtest fileごとの再承認を求めない。発見した不足・不具合の修正義務を現在phaseへの追加権限とみなさず、対応時期の延期と修正の省略を区別する。
 - 現在の目的を妨げない独立問題だけを後続へ送る。今回の変更による回帰、承認済み必須条件の未達、安全な作業継続を妨げる問題は未完として扱い、必要なら影響作業を停止する。初期調査・設計の見落としを追加要求へすり替えず、条件補正と影響を利用者へ説明する。必須gateと安全境界は省略しない。
@@ -41,4 +41,4 @@
 ## 優先順位とroadmap
 
 - 認証・認可・tenant分離の既知Critical問題を優先し、現行挙動、攻撃・失敗経路、変更契約、互換性、rollback、陰性testを持つ最小segmentへ分ける。
-- roadmapは独立して完了できる一つの利用者価値またはdata correctionを単位とし、設計・実装・local検証・必要なmigration・Dev反映・Dev受入れを原則100%とする。未承認・未実施のDev受入れを完了扱いしない。
+- roadmapは独立して完了できる一つの利用者価値またはdata correctionを単位とし、設計・実装・選択したpre-Dev検証・必要なmigration・Dev反映・Dev受入れを原則100%とする。選択理由により省略したLocalは未完了項目に数えず、未承認・未実施のDev受入れを製品変更の完了扱いにしない。

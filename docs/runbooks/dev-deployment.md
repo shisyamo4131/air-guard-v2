@@ -10,6 +10,10 @@
 
 Devは正式運用準備の完了前でも検証済み変更を積極的にdeploy・受入れする非本番試行環境である。実account・実dataを含むため、対象commit、Firebase project、service、data影響、backup、rollback、停止条件、検証を固定したbounded Dev release checkpointを先に承認する。同checkpoint内のbuild、deploy、remote検証はcommandごとの再承認を求めない。
 
+製品挙動を変える変更は、固定commitのdeploy済みartifactと対象service・Dev設定・remote認証・通信・権限・対象dataとの結合を本runbookで確認し、対象範囲の成功を最終受入れとする。Codex専用Localと利用者環境LocalはDev前の手戻り抑制用であり、両方またはいずれかの完了をDev反映の一律条件にしない。関連する変更はreview可能で境界の明確なrelease単位へまとめ、微小な編集ごとにdeploy・受入れを繰り返さない。
+
+Dev受入れはcheckpointに固定した画面・actor・service・data経路だけを保証する。Prod固有状態、未確認経路、全利用者・全dataへの一般化は行わない。対象経路の失敗または必要なremote確認の未実施が残る場合は完了とせず、原因に対応する自動検証またはLocalだけへ戻って修正し、固定commitを再deployして対象範囲を再確認する。
+
 すべてのDev deployへmaintenance、snapshot、migrationを適用しない。data contractまたはclient/server contractの整合cutoverが必要なreleaseだけが、それらを条件付きで使用する。新しいmigration、破壊的repair、対象service・data・期間の拡張、Prodは別承認とする。
 
 maintenanceを使うreleaseは、[maintenance・data change runbook](maintenance-and-data-change.md)でnormal stop、quiet period、監視Function、連続dry-run、整合snapshot、post-checkを固定する。maintenanceは排他lockではなく、logだけを実行中処理不存在の証拠にしない。
@@ -234,6 +238,6 @@ Prod、Git push、main merge、history rewrite、credential変更、persistent C
 
 ## 証拠と完了報告
 
-完了報告にはrelease ID、commit、project、service、release class、data影響、backup、各command/result/exit、remote operation・revision、migration件数、maintenance状態、artifact identity、remote検証、未確認事項、rollback状態、Git/worktree状態を含める。秘密情報、実account、個人・顧客・勤怠・請求data、token、raw runtime configは含めない。
+完了報告にはrelease ID、commit、project、service、release class、data影響、backup、各command/result/exit、remote operation・revision、migration件数、maintenance状態、artifact identity、remote検証、今回受け入れた範囲、未確認事項、rollback状態、Git/worktree状態を含める。選択したCodex専用Local・利用者環境Localと各証明事項、または省略理由も記録する。秘密情報、実account、個人・顧客・勤怠・請求data、token、raw runtime configは含めない。
 
 process-scoped trust準備、safe-fieldだけを出すproject到達確認、artifact identity、cleanupを一つにするPowerShell helperは未実装である。helper追加は、exact command、対象file、秘密情報境界、network作用、cleanup、陰性testを別checkpointで承認・検証してから行う。

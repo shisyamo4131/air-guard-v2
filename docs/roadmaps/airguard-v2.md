@@ -1,11 +1,11 @@
 # AirGuardV2 正式運用準備ロードマップ
 
-- 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、Codexによる自動・UI検証、利用者による実際の利用環境での最終受入れを確認したうえで正式運用へ移行できる状態にする。
+- 目標: 試験運用の知見を反映し、テナント分離、主要業務、復旧可能性、影響に応じて選択した自動・環境検証、固定commitのDev最終受入れを確認したうえで正式運用へ移行できる状態にする。
 - この進捗の100%が表す範囲: 正式運用開始の承認準備完了。以後の継続改善や新機能完了を意味しない。
 - 現在の進捗: 10%
 - 最終確認日: 2026-09-05
 - 承認境界: 重要仕様変更、実データ操作、データ移行、外部サービス変更、Git push、Prodデプロイ、正式運用開始は利用者の明示的承認を必要とする。Devは正式運用準備とは独立したbounded release checkpointとして承認し、そのrunbook内の静的生成、deploy、remote検証を積極的に行う。
-- 上記の利用者最終受入れは正式運用移行全体の完了条件であり、個々の既存画面改修に利用者local受入れを一律要求する意味ではない。個別変更は[local UI検証runbook](../runbooks/local-ui-testing.md)の省略基準に従う。
+- 製品変更は固定commitのDev受入れを完了条件とする。Codex専用Localと利用者環境Localは手戻り抑制のために必要な場合だけ選び、個々の改修へ一律に要求しない。環境ごとの選択と保証範囲は[Environment and approval rules](../project-rules/environment-and-approval.md#local-emulatorとlocal-ui)に従う。正式運用開始とProd反映はDev受入れとは別の明示承認を維持する。
 
 ## マイルストーン
 
@@ -15,7 +15,7 @@
 | 主要業務とデータ整合性 | 25 | 0 | In progress（進行中） | schemaとFunctionsの静的レビューでlock、Billing、勤怠・履歴同期、rounding、snapshotの問題を確認した。修正、Emulator、回帰test、試験運用照合が未完了。 |
 | 認証・認可・テナント分離 | 20 | 0 | Verification required（要検証） | UWB-01〜10のlocal完了とDEV-UWB-RELEASE-001のDev cutoverに加え、専用合成会社で管理者・一般Userの正規signup、roleless・role別route、2 tabのstale role、User/Auth無効化・復帰、非破壊lifecycleを確認した。`disableuser`/`enableuser`のCloud Run public invoker欠落をDev限定で修復し、第2合成会社から別会社pathのread・list・update・deleteが403となるtenant拒否を確認した。Company rootのclient create/deleteは閉じた。既存master・transactionの広いtenant内writeはCustomerから機能単位で見直し、App Check・全般的なrate limit・public invoker常時監視はProd公開前gateで扱う。 |
 | 運用信頼性と外部連携 | 15 | 0 | Verification required（要検証） | DEV-UWB-RELEASE-001でFirestore PITR 7日保持、maintenance中の全体snapshot、Rules/Functions/Hosting deploy、ERROR log 0件を確認した。継続監視、snapshotからの復旧演習、Admin backup/restore正式scope、依存関係脆弱性は未完了。Stripe/subscriptionは現在の正式運用準備範囲外。 |
-| 利用者受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。Codexの自動検証・必要なin-app UI smoke、修正、利用者による実際の利用環境での最終UI acceptance、manual整合が未完了。 |
+| Dev受入れと業務マニュアル | 15 | 0 | In progress（進行中） | 共通UI sourceでlock/disabled、validation、非同期race、date-time、accessibilityの問題を確認した。対象変更の自動検証・必要なpre-Dev環境検証、固定commitのDev最終受入れ、manual整合が未完了。 |
 | 正式運用移行判定 | 15 | 0 | Not started（未着手） | App Check、全般的なrate limit、Callable public invoker常時監視、SLA、保持期間、監視・障害対応基準、移行・ロールバック、正式運用開始承認を確定する。 |
 | **合計** | **100** | **10** |  |  |
 
@@ -69,7 +69,7 @@
 | 主要業務とデータ整合性 | [ADR 0003](../decisions/0003-operation-result-billing-integrity.md)、[現行仕様](../specification.md) | 関連画面、モデル、Functions | 関連テスト、試験運用受入れ（未完了） |
 | 認証・認可・テナント分離 | [ADR 0002](../decisions/0002-multitenant-firebase-architecture.md)、[ADR 0014](../decisions/0014-codex-dedicated-local-test-data.md)、[ADR 0016](../decisions/0016-firemodel-crud-boundary.md)、[ADR 0017](../decisions/0017-callable-auth-identity-gate.md)、[ADR 0018](../decisions/0018-user-provisioning-and-employee-link-boundary.md)、[ADR 0019](../decisions/0019-client-operation-policy-composable-boundary.md)、[ADR 0020](../decisions/0020-employee-retirement-user-offboarding-and-reinstatement.md)、[ADR 0024](../decisions/0024-dev-trial-deployment-and-migration-runbook.md) | Rules、認証・管理者処理、Codex専用local基盤 | UWB-01〜10のlocal完了とDev cutoverに加え、認証済みDevでsignup、roleless・role別route、stale role、disabled User/Auth同期と復帰、非破壊lifecycle、第2合成会社からのtenant拒否を確認した。Cloud Run invoker欠落2件を修復し、browser CORS/IAM gateをrunbookへ追加した。既存master・transactionのCUD境界はCustomerから順次見直し、App Check・全般的なrate limit・public invoker常時監視はProd公開前gateへ残す。 |
 | 運用信頼性と外部連携 | [運用・開発手順](../operations.md) | 通知、Storage、Stripe、バックアップ設定 | Dev PITR、maintenance snapshot、deployとERROR log 0件を確認。復旧演習、継続監視、正式backup scopeは未完了 |
-| 利用者受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | Codex自動検証・必要なin-app UI smoke、利用者による実際の利用環境での最終UI acceptance（未完了） |
+| Dev受入れとマニュアル | [画面マニュアル](../manual/index.md) | 対象画面 | 自動検証・必要なpre-Dev環境検証、固定commitのDev最終受入れ、manual整合（未完了） |
 | 正式運用移行判定 | [現行仕様](../specification.md) | 未確定 | 移行・復旧演習、利用者承認（未完了） |
 
 ## 未解決問題

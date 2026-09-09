@@ -72,7 +72,7 @@ worktree: <clean or exact dirty paths>
 
 このtransitionは既存gateと正本確認を閉じる手順であり、新しいstatus registry、branch manifest、全doc semantic validator、checkpointごとのADRを要求しない。
 
-local UIの担当・承認境界は[Environment and approval rules](../project-rules/environment-and-approval.md)、具体的な起動・操作・終了は[local UI検証runbook](local-ui-testing.md)を正とする。
+3環境の検証選択・保証範囲・承認境界は[Environment and approval rules](../project-rules/environment-and-approval.md)を正とする。Codex専用Localの起動・操作・終了は[Codex専用local UI検証runbook](local-ui-testing.md)、利用者環境Localは[利用者環境local UI検証runbook](user-local-ui-testing.md)、製品変更の最終受入れは[Dev環境deploy runbook](dev-deployment.md)を使う。
 
 通常の割当・通知は利用者へ逐次報告せず、終了時または早期停止時に統合して報告します。承認、安全・外部作用・破壊的操作の境界、テスト失敗、仕様競合、進捗低下、タスク・作業ツリー消失、状態取得・コールバック障害、容量閾値は直ちに報告します。突然の終了で統合報告できなかった場合は、再開後最初の確認で未報告期間をまとめます。
 

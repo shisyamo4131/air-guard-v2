@@ -67,6 +67,7 @@
 | [0059](0059-employee-retired-edit-and-insurance-operation-boundary.md) | 退職後Employeeの通常編集禁止と保険操作権限 |
 | [0060](0060-common-archive-purge-and-address-contract.md) | 共通archive・物理削除・住所座標契約とEmployeeへの適用 |
 | [0061](0061-powershell-verification-runtime-hardening.md) | PowerShell検証runtimeとNorton再検知防止境界 |
+| [0062](0062-risk-based-environment-verification.md) | 3環境のrisk-based検証選択とDev最終受入れ |
 
 ## 新しい ADR の形式
 

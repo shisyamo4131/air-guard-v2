@@ -2,7 +2,7 @@
 
 - 日付: 2026-08-30
 - 状態: Accepted
-- 一部置換: local UI受入れの一律必須部分は[0042](0042-risk-based-local-ui-acceptance.md)を現在の判断とする。その他の承認済み実装境界と役割分担は継続する。
+- 一部置換: local UI受入れの一律必須部分は[0042](0042-risk-based-local-ui-acceptance.md)、3環境の選択と製品変更のDev最終受入れは[0062](0062-risk-based-environment-verification.md)を現在の判断とする。その他の承認済み実装境界と役割分担は継続する。
 - 関連仕様: 開発ガバナンスと進捗管理、仕様変更規則
 - 関連判断: [0007](0007-project-scoped-specialist-agents.md)、[0015](0015-user-led-implementation-and-codex-assurance.md)、[0021](0021-codex-in-app-browser-ui-testing.md)、[0032](0032-required-specialist-subagent-routing.md)
 - 一部置換: [0015](0015-user-led-implementation-and-codex-assurance.md)の標準実装者、利用者実装後のreview順序、file-by-file確認の既定。小segment、rollback、read-only role、外部作用の別承認は継承する。

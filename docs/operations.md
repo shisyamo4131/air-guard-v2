@@ -17,6 +17,18 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 
 `governance/verification-policy.json`を機械可読の正本、下表と生成summaryを人向けの経路とします。変更前に該当classをすべて選び、混合変更はgateのunion、影響不明はcomprehensive fallbackを使用します。scaffold、governance migration、managed sync、common contract、project-wide permission・agent policy、release・deployはcomprehensive completionを維持します。
 
+### 環境検証の選択
+
+下表はcommand gateとは別に、どの環境で何を確認するかを選ぶための要約です。[Environment and approval rules](project-rules/environment-and-approval.md#local-emulatorとlocal-ui)を正本とし、Localの実行回数ではなく、今回必要な証明事項を直接覆う最小の環境集合を選びます。
+
+| 環境 | 主目的 | 主に保証する内容 | 選択する代表条件 |
+|---|---|---|---|
+| Codex専用Local | Dev前の手戻り抑制 | 専用build・合成data・Emulator・UI・保存再表示・外部作用denyの結合 | 自動検証後もUI・application統合に不確実性が残る |
+| 利用者環境Local | Dev前の手戻り抑制 | 利用者Chrome・profile・`.env.local`・表示・UX・利用者環境固有の再現 | 利用者固有条件またはDev前のUX判断を別途証明する必要がある |
+| Dev | 製品変更の最終受入れ | 固定commitのdeploy済みartifactと対象Dev service・設定・remote認証・通信・権限・dataの結合 | 製品挙動を変える変更。文書・governance・testだけの変更等は対象外 |
+
+Codex専用Localと利用者環境Localは累積必須工程ではありません。同じ事項を証明する場合はCodex専用Localを優先し、両方を選ぶ場合は別々の証明事項を開始前に定めます。Devで失敗した後も、原因に対応するLocalだけを選び直します。判断理由はcompletion reportまたはrelease evidenceへ記録します。
+
 | Change class | Repository triggers | Iteration | Targeted regression | Completion | Release-only | 通常省略できる対象 |
 |---|---|---|---|---|---|---|
 | `documentation-only` | releaseの基準・対象・artifact・実行可否、手順、承認、rollback、製品挙動、remote状態を変えないprose・索引・link・完了後の履歴記録 | `diff-check` | `project-docs` | `project-docs`, `diff-check` | なし | application、Emulator、UI build、release |
@@ -57,7 +69,7 @@ Dev deployのCLI・trust・認証preflight、release分類、build、deploy、re
 - completion comprehensive gateは`project-docs`、`project-docs-negative`、`capacity-regression`、`managed-governance`、`diff-check`です。
 - `managed-governance`は`renderer-check`を内包します。子gateのnamed resultとexit statusを保持し、子失敗でnonzeroとなるため、completionでstandalone rendererを重複実行しません。
 - applicationの直接影響を狭く確認できる場合は、policyの固定gateへ進む前に対象testをiterationまたはdiagnosticとして実行できます。最終選択、exact command、結果、exit statusはcompletion reportへ記録します。
-- local UIの実利用者相当browser smokeと利用者最終UI acceptanceは、command gateとは別の受入れ証拠です。必要性はproject rulesと各runbookに従います。
+- Codex専用Local、利用者環境Local、Devの環境検証はcommand gateとは別の証拠です。前二者は任意のpre-Dev検証、Devは製品変更の最終受入れであり、必要性と保証範囲はproject rulesと各runbookに従います。
 - Schemas consumer preflightは[package release runbook](runbooks/package-release.md)と[ADR 0039](decisions/0039-evidence-bound-critical-identifiers.md)のcritical identifier gateです。対象identifierを当該turnで確定して実行し、固定値をpolicyへ推測しません。
 
 ### Evidence Validity
@@ -88,7 +100,8 @@ npm install
 |---|---|
 | 通常開発、UI error・loading、client policy | [開発workflow](runbooks/development-workflow.md) |
 | local環境、Emulator、Codex専用test | [local Emulator検証](runbooks/local-emulator-testing.md) |
-| Codex専用・利用者用local UI検証 | [local UI検証](runbooks/local-ui-testing.md) |
+| Codex専用local UI検証 | [Codex専用local UI検証](runbooks/local-ui-testing.md) |
+| 利用者環境local UI検証 | [利用者環境local UI検証](runbooks/user-local-ui-testing.md) |
 | User予約・claim等のmigration | [data migration](runbooks/data-migrations.md) |
 | maintenanceを伴うmigration・repair・restore | [maintenance・data change](runbooks/maintenance-and-data-change.md) |
 | Dev build・deploy・remote検証 | [Dev deploy](runbooks/dev-deployment.md) |
@@ -96,7 +109,7 @@ npm install
 | `容量チェック`、task/session容量確認 | [project coordination](runbooks/project-coordination.md) |
 | Git統合、task loop、session handoff | [project coordination](runbooks/project-coordination.md) |
 
-`governance/project-rules.md`が参照するCodex専用demo projectの隔離条件は、[local Emulator検証](runbooks/local-emulator-testing.md)と[local UI検証](runbooks/local-ui-testing.md)を合わせて正本とする。package更新、Git統合、task lifecycleを含む正確なcommandと復旧手順も、上表の該当runbookへrouteする。
+`governance/project-rules.md`が参照するCodex専用demo projectの隔離条件は、[local Emulator検証](runbooks/local-emulator-testing.md)と[Codex専用local UI検証](runbooks/local-ui-testing.md)を合わせて正本とする。利用者環境Localは[利用者環境local UI検証](runbooks/user-local-ui-testing.md)を別の正本とする。package更新、Git統合、task lifecycleを含む正確なcommandと復旧手順も、上表の該当runbookへrouteする。
 
 `容量チェック`、`タスク容量確認`、`セッション容量確認`、`session size / handoff threshold確認`は[容量確認手順](runbooks/project-coordination.md#容量確認)へrouteする。
 
