@@ -2,6 +2,8 @@
 
 - 日付: 2026-08-30
 - 状態: Accepted
+- 一部置換: 2026-09-09の[ADR 0064](0064-sensitive-firestore-document-boundaries.md)により、機微な個人情報・機密情報は具体的な事故や異なるread actorの実測を待たず本体から分割し、Rules簡素化による総保守コスト低減も分割判断に含める。その他の必要十分な分割、競合制御、cutover原則は維持する。
+- 一部置換: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)により、Prod公開前の通常更新はdocument単位last-write-winsとし、field限定保存、同一field競合拒否・再読込、Manager原則排除を置換した。Company、User、例外operationの固有競合制御、data分割、schema、cutover原則は維持する。
 - 関連仕様: `docs/specification.md` の「Company設定」と「開発ガバナンスと進捗管理」
 - 置換対象: ADR 0025のCCB文書分割・runtime互換・全設定revision/audit部分、ADR 0028、ADR 0029
 

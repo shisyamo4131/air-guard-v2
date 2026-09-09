@@ -2,6 +2,8 @@
 
 - 日付: 2026-09-05
 - 状態: Accepted
+- 一部置換: 2026-09-09の[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、Site取極めのrole・permission別書込み認可を、同一tenantの有効な認証済み本登録Userに共通する通常業務権限へ置換した。数値、snapshot、履歴、状態、tenant等のdata保護条件は維持する。
+- 一部置換: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)により、Prod公開前の通常取極め更新はdocument単位last-write-winsへ移行する。field限定writer・同時更新拒否はFGA-03で置換し、数値、重複、snapshot、確定実績非更新等のdata保護条件は維持する。
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0048 SiteのCustomer変更と履歴snapshot](0048-site-customer-change-and-historical-snapshots.md)、[0052 Site下流情報のsnapshot時点](0052-site-downstream-snapshot-timing.md)
 

@@ -7,6 +7,7 @@
 | 対象 | ロードマップ |
 |---|---|
 | AirGuardV2 正式運用準備 | [airguard-v2.md](airguard-v2.md) |
+| 根本ガバナンス整合phase | [foundational-governance-alignment.md](foundational-governance-alignment.md) |
 | Employeeマスター改修 | [employee.md](employee.md) |
 | Siteマスター改修 | [site.md](site.md) |
 | Outsourcerマスター改修 | [outsourcer.md](outsourcer.md) |

@@ -2,6 +2,8 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
+- 一部置換: 2026-09-09の[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、Employee通常情報のread/writeを既知roleへ限定する条件をtenant共通権限へ置換した。機微・機密fieldの分類・分離、Self Access、住所・座標、状態・data保護条件は維持する。
+- 一部置換: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)により、在職Employeeの通常可逆更新はdocument単位last-write-winsへ移行する。部分保存、同一field競合拒否、再読込要求はFGA-04で置換し、住所・座標の相関、退職・User/Auth・機微情報等の例外は維持する。
 - 一部置換先: [ADR 0060](0060-common-archive-purge-and-address-contract.md)（直接物理削除・archive延期・必要な従属writer変更禁止を置換。以下は採用当時の決定）
 - 関連仕様: [Employeeの操作権限と保持](../specification.md#employeeの操作権限と保持)
 - 一部置換: [ADR 0056](0056-employee-role-and-archive-boundary.md)の他4roleへの必要項目限定readとexact閲覧field未決。作成・通常編集・退職のactorは維持する。

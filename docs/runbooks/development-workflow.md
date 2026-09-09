@@ -53,7 +53,7 @@
 判断理由は[ADR 0031](../decisions/0031-proportional-data-boundary-and-change-safeguards.md)を正とする。Rules変更だけを無条件に先行releaseせず、次を確認してcutover方式を選ぶ。
 
 1. 対象pathと全caller、whole-document replacement、対象環境、既知のdata規模、旧client併存、許容停止時間、外部作用を確認する。既存Dev dataの追加取得は[project rulesの3条件](../project-rules/development-and-data.md#dev試用中の既存document)で必要な範囲に限る。migrationを行う場合は対象件数を実確認する。
-2. 将来Rulesが許可するpath、field、actor、operationを固定し、operationが所有するexact field updateを実装・検証する。
+2. 将来Rulesが許可するpath、actor、operation、schemaと、通常のdocument単位last-write-winsまたは例外operation固有の競合制御を固定して実装・検証する。Prod公開後のfield単位方式を別途採用した場合だけ、変更top-level fieldのexact updateを要求する。
 3. 新規pathは最初のdocument作成前にclient denyを確立する。候補Rulesのlocal実装・Emulator成功だけをdeploy readinessとみなさない。
 4. 正式release前のDevで全件を一つのbounded maintenance内にbackup・変換・post-checkでき、旧clientを継続利用しない場合は、Rules、Functions、client、migrationを同じmaintenanceのcoordinated cutoverとして扱う。長期互換層、runtime mode、dual reader/writerを既定にしない。
 5. production、複数client version、許容できない停止、bounded maintenanceへ収まらない件数・外部作用がある場合だけ、現行Rules下へ将来CRUDを先行導入し、旧・候補Rules双方の回帰、既存機能継続、旧writer 0件後にRulesを閉じる互換releaseを採用する。
@@ -69,13 +69,14 @@ data分割と競合制御の採用条件は[Development and data rules](../proje
 
 ```text
 segment: <一つの入口・権限・data境界>
-objective: <当初目的、維持・廃止する挙動。Manager移行なら依存除去するCRUD経路と残存wrapper等の扱い>
+objective: <当初目的、維持・廃止する挙動。Air managerを利用・再利用・不使用とする範囲>
 current-behavior: <codeとtestから確認した現行挙動>
 dependencies: <実際の呼出元・保存先・背景処理・cache等の副作用と根拠>
+ui-data-flow: <page/root/child、useFetch origin・inject、主対象listener、従属cache、missing表示>
 threat-or-failure: <actor、前提、操作、影響>
 in-scope: <今回変更するfile・rule・contract>
 out-of-scope: <後続segmentへ残す境界>
-proposed-contract: <許可・拒否・状態遷移>
+proposed-contract: <許可・拒否・状態遷移、通常のdocument単位last-write-winsまたは例外固有の競合制御、従属CRU・削除時検査>
 compatibility-and-data: <既存利用者・data・migrationへの影響>
 rollback: <code、rule、data、外部作用を戻す条件と方法>
 tests: <許可経路、拒否経路、tenant境界、失敗経路>

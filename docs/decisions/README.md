@@ -69,6 +69,10 @@
 | [0061](0061-powershell-verification-runtime-hardening.md) | PowerShell検証runtimeとNorton再検知防止境界 |
 | [0062](0062-risk-based-environment-verification.md) | 3環境のrisk-based検証選択とDev最終受入れ |
 | [0063](0063-github-actions-dev-deployment.md) | GitHub ActionsによるDev自動deployとpush承認境界 |
+| [0064](0064-sensitive-firestore-document-boundaries.md) | 機微・機密情報を分離するFirestoreドキュメント境界 |
+| [0065](0065-tenant-trust-normal-business-authorization.md) | 同一tenantを信頼境界とする通常業務認可 |
+| [0066](0066-pre-production-document-level-last-write-wins.md) | Prod公開前のdocument単位last-write-wins |
+| [0067](0067-component-fetch-and-dependent-reference-boundary.md) | Component階層、useFetch、表示正本、従属参照境界 |
 
 ## 新しい ADR の形式
 

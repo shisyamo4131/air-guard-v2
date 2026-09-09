@@ -19,7 +19,7 @@
 
 ## 次の作業
 
-4マスターUIと配置管理の楽観的更新修正は完了した。次はプロジェクトガバナンスを整理する。具体的な変更scopeは新しい通常taskで利用者の指示を受けて確定し、先回りして仕様化・実装しない。ガバナンス整理後に[FUT-0185](future-actions.md#fut-0185-firestore-rulesの責務と式数を段階的に整理する)へ進む。入力component分離、tenant開放、Prod、pushは別承認とする。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)である。Firestore document分割、tenant共通権限、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界を採用し、利用者のルール提示完了を受けてFGA-01を完了した。CompanyとUserは現行の厳密な実装を維持する。次はFGA-02 Customer管理の現行挙動とreader/writerを調査し、最初の小checkpointを利用者と合意する。製品code・Rules・data・Dev、field単位方式、破壊的変更、migration、Prod、pushは未承認である。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

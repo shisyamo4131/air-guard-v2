@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-06
 - 状態: Accepted
+- 一部置換: 2026-09-09の[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、在職Employee通常情報のrole別server認可をtenant共通権限へ置換した。退職後編集禁止と保険の状態遷移は維持し、保険情報の機微・機密分類はFGA-04で確定する。
 - 関連仕様: [Employeeの操作権限と保持](../specification.md#employeeの操作権限と保持)
 - 補完: [ADR 0056](0056-employee-role-and-archive-boundary.md)の通常編集actorに対象状態を加え、未決だった保険履歴復元actorを確定する。
 - 適用計画: [Employeeロードマップ](../roadmaps/employee.md)。製品実装は未実施。

@@ -1,10 +1,12 @@
 # 将来要対応事項
 
 - 状態: 実装調査から得た暫定バックログ
-- 最終更新日: 2026-09-08
+- 最終更新日: 2026-09-09
 - 対象: `docs/implementation/` の調査で確認したバグ、見落とし、セキュリティ・データ整合性・回帰リスク、仕様矛盾、未使用・未到達候補、テスト不足
 
 この文書は確認済み仕様の正本ではない。実装調査で得た事実、仮説、判断待ちを分離し、将来の仕様化・修正・検証候補を累積する。同一原因は既存項目へ証拠を追記し、修正済みの場合も履歴として `Resolved` にする。
+
+2026-09-09の[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)により、通常CRUDのfield限定保存、同一field競合拒否・再読込、AirItemManager・AirArrayManager排除を推奨する過去の記述は、実装調査時点の履歴または置換対象として読む。例外operationの固有競合制御、schema・tenant・data保護、managerのdisable・validation・error・loading等の独立不具合は維持する。
 
 ## 2026-08-12 調査統合
 
@@ -2510,7 +2512,7 @@ SPEC-DEEP-039b追加根拠: `useSetRegularTime`もsiteIdに対応するSiteをca
 - 必要なテスト: create collision、update missing/version conflict、unknown field preservation、accessor/hidden serialization、shared defaults、nested classes、type/enum/date/numeric boundary、legacy data migration。
 - ユーザー判断が必要な事項: overwrite/merge、保存field、legacy compatibilityはCONF-0137ほか既存data compatibility判断へ統合する。
 
-## FUT-0181 Air managerのdisable・validation・single-flight・draft conflictを永続化前に強制する
+## FUT-0181 Air managerのdisable・validation・single-flightを永続化前に強制する
 
 EMP-07分類（2026-09-07）: 到達可能なEmployee通常CRUD・一覧・User panelはAirItemManager/AirArrayManagerと旧model永続化へ依存せず、専用処理のdisable・single-flight・draft conflictを使用する。未参照のlegacy表示componentや他master・transaction画面を削除・一括移行することは現在目的に必要なく、全Manager改修は本FUTの別scopeとして維持する。
 
@@ -2523,9 +2525,9 @@ EMP-01対応時期（2026-09-06）: Employee通常CRUDのManager依存と保険/
 - 確認済み実装事実: function-valued `disableSubmit`へ`{item, editMode}`を渡す一方callerはitem単体を期待するためlocked result UIが無効化されない。disableUpdate/disableDeleteはerror後もcallbackを実行し、manager.submit自身はdisableを検査しない。step final validation、submit mutex、live parent更新とのdirty conflict、external handler後のcanonical result取込みもない。Site create wizardはstep 3用VForm validatorを実装するが、標準の最終stepはchild `handleGoToNext`を呼ばず直接submitするため、そのvalidatorへ到達しない具体例である。SPEC-DEEP-035でemployee-linked User削除がdisable error後も続行し得る実到達例、SitesManagerの同じCRUD依存、Site order draftの親更新reset・loading中drag・raw array emitを確認した。SPEC-DEEP-037でSiteOperationSchedule ManagerのoperationResultId disableも同じくcallbackを止めず、親docのdeep更新がinternalDoc/draftを再初期化し得る実到達例を確認した。SPEC-DEEP-038でSiteOperationSchedulesManagerとWorkerDetailManagerも同じ公開method・disable・single-flight境界に依存することを確認した。
 - 想定影響と発生条件: custom slot/exposed method、double click、subscription更新、server-assigned fieldを伴う保存で、禁止操作、重複処理、stale full update、成功後の古いarray emitが起き得る。UI guardは認可ではないが、model/Rules到達前の誤操作防止も成立しない。
 - 未確認点・仮説: Vuetifyのclick抑止、browserでの具体的重複頻度、外部package consumerは未確認。
-- 推奨する将来対応: callback signatureを移行し、toX/submit内部で全disableとloadingをfail-closedに検査する。default/step/custom validation、single-flight token、dirty conflict/version reject、handlerのcanonical return契約を実装する。
-- 必要なテスト: locked result、linked schedule、boolean/function disable、exposed submit、double submit、final step、live refresh、falsy/missing key、external handler canonical result。
-- ユーザー判断が必要な事項: edit conflict、canonical result、validation ownershipはCONF-0114と既存UI判断へ統合する。
+- 推奨する将来対応: callback signatureを移行し、toX/submit内部で全disableとloadingをfail-closedに検査する。default/step/custom validation、必要なsingle-flight、handlerのcanonical return契約を実装する。通常CRUDへdirty conflict/version rejectや再読込要求を追加せず、listenerの最新documentへ収束させる。
+- 必要なテスト: locked result、linked schedule、boolean/function disable、exposed submit、double submit、final step、live refresh、falsy/missing key、external handler canonical result、通常更新のlistener収束。
+- ユーザー判断が必要な事項: canonical result、validation ownershipはCONF-0114と既存UI判断へ統合する。通常更新の競合方式はADR 0066で確定済みである。
 
 UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayManager`のerror、loading、dialog、validation、CRUD orchestration等の責務が多岐にわたるため、将来整理する方針を採用した。責務分割の構造整理自体は低優先度とする。既知のdisable継続、single-flight欠如等の安全問題は本FUTのHighを維持し、分割時も現行のmanager→`useBaseManager`→Errors/Message Storeという利用者feedback経路をcontract testなしに破棄しない。
 
@@ -2571,6 +2573,7 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 ## FUT-0185 Firestore Rulesの責務と式数を段階的に整理する
 
 - 状態: Open（4マスターUI改修完了後の必須phase）
+- 実施先: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の各機能checkpointへ統合する。
 - 重大度: High
 - 発見セグメント: FOUR-MASTER-UI / RULES-ARCHITECTURE-REVIEW
 - 対象ファイル・シンボル: `firestore.rules`、`Companies/{companyId}`配下の全subcollection、対応するclient reader／writer、Callable／Admin SDK、Rules／Emulator test。
@@ -2598,3 +2601,42 @@ UWB-03追加判断（2026-08-17）: 利用者は`AirItemManager`・`AirArrayMana
 - 残作業: 本FUTは完了。通知status更新に残るclient Firestore transactionとRules認可の棚卸しは、次phaseの[FUT-0185](#fut-0185-firestore-rulesの責務と式数を段階的に整理する)で扱う。
 - 必要なテスト: 各作成・更新・削除の操作直後表示、server拒否時の対象再取得、listener正本による置換、連続操作、日別集計・過不足・通知表示の収束、Devでの実利用者相当受入れ。短時間競合の完全な順序保証や複数actor競合の事前防止は完了条件にしない。
 - ユーザー判断が必要な事項: なし。利用者はDev接続確認後にmain統合までを承認した。
+
+## FUT-0187 Firestoreの機微・機密情報を本体documentから分離する
+
+- 状態: Open
+- 実施先: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)で対象機能の順序に従って扱う。
+- 重大度: High
+- 発見セグメント: PROJECT-GOVERNANCE-FIRESTORE-DOCUMENT-001
+- 対象ファイル・シンボル: Company振込先5 field、将来のEmployeeマイナンバー・取引先口座・Company Stripe契約情報、関連するschema、reader/writer、Functions、`firestore.rules`、帳票snapshot・export。
+- 確認済み実装事実: Company振込先5 fieldは`Companies/{companyId}` rootに保存され、同じtenantの有効な本登録Userがroot全体をreadできる。更新は専用`updateCompanyBilling` Callable、client直接write拒否へ移行済みだが、保存先とread境界は新しい[共通仕様](../specification.md#firestoreドキュメントの構成)に未整合である。Employeeマイナンバー、取引先口座情報、将来のCompany Stripe契約情報について、有効な現行保存path・fieldは確認できない。旧Stripe scaffoldは撤去済みである。
+- 想定影響と発生条件: Company rootを読めるactorへ振込先が不要でもdocument全体が渡る。将来の機微情報を本体へ追加すると、Rulesでfield単位にreadを隠せず、actor拡張やfallback Rulesの誤りによる露出範囲が広がる。
+- 必須の将来対応: 機微・機密情報と複製・snapshot・exportをinventoryし、情報ごとに専用path、schema、read/write actor、server ownership、保持・削除、log境界を確定する。Company振込先は全reader/writerと請求依存を照合し、既存root fieldのbackup、dry-run、migration、Rules／Functions／client cutover、post-check、rollback、Dev受入れを一つの承認済み工程へ分割する。新しいマイナンバー・取引先口座・Stripe契約情報は専用境界の確立前に保存しない。
+- 必要なテスト: 通常本体から機密fieldが取得できないこと、専用documentのactor・tenant許可／拒否、汎用fallbackからの除外、Callable/Admin経路、log・export・snapshot非露出または承認済み最小化、migration前後の非対象field・帳票不変、旧path停止。
+- ユーザー判断が必要な事項: 各情報の正確なread actor、保持・削除期間、帳票snapshotへ含める範囲、Company振込先の移行方式とDev実施時期は、実装checkpoint前に確認する。
+
+## FUT-0188 通常CRUDをdocument単位last-write-winsへ段階移行する
+
+- 状態: Open
+- 実施先: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の各機能checkpointへ統合する。
+- 重大度: High
+- 発見セグメント: PROJECT-GOVERNANCE-CONCURRENCY-001
+- 対象ファイル・シンボル: Customer、Site、Employee、Outsourcer、その他transaction系のeditor、AirItemManager、AirArrayManager、client／Callable writer、schema、listener、Rules、競合test。CompanyとUserは対象外。
+- 確認済み実装事実: repository内の`useItemManager`は編集後のinternal item全体を`handleUpdate`へ渡し、`useArrayManager`も更新item全体をhandlerまたは配列modelへ渡す。実際のFirestore write形式はcallerごとに異なる。現行のCustomer、Employee、Outsourcer等には、部分writer、同一field競合拒否、再読込要求、専用editor、Manager非依存が実装または仕様化されている。CompanyとUserの同様の制御は維持する例外である。
+- 想定影響と発生条件: 新ルールへ未移行の画面では同じ通常業務でも競合時の結果が異なる。一括してwhole-document writeを開放すると、機微・機密field、server-only field、例外状態遷移、旧client、未知fieldを誤って上書きする可能性がある。
+- 必須の将来対応: 機能順に全reader/writerとdocument serializationを確認し、通常更新と例外を分類する。通常更新は整合したdocument全体の後commit優先、listener正本、競合拒否・再読込なしへ移し、適合する画面ではAir managerを再利用する。server管理・派生field、schema、tenant、Rules、保存失敗、結果不明を維持する。例外operationは固有競合制御を残す。top-level field単位方式はProd公開後の別判断まで実装しない。
+- 必要なテスト: 同一documentの異field・同field同時更新と後commit全体優先、array/map、listener収束、競合による拒否・再読込なし、schema・server管理・派生field、保存失敗・結果不明、tenant、例外operationのprecondition・idempotency・write 0。
+- ユーザー判断が必要な事項: 各機能checkpointの粒度、通常更新／例外の境界、Managerを戻す画面、Dev反映単位は着手時に確認する。CompanyとUserは現行維持が確定している。Prod公開後のfield単位方式は未採用である。
+
+## FUT-0189 Component階層・useFetch・従属参照を機能単位で整合する
+
+- 状態: Open
+- 実施先: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の各機能checkpointへ統合する。
+- 重大度: Medium
+- 発見セグメント: PROJECT-GOVERNANCE-UI-DATA-FLOW-001
+- 対象ファイル・シンボル: 業務`pages/**`、画面root／子component、`composables/fetch/useFetch.js`と各fetch composable、主対象listener、従属先名称等の表示、従属writer、archive・物理削除処理。
+- 確認済み実装事実: `useFetch.js`は`isOrigin=true`で5種のfetch composableを新規作成・provideし、通常呼出しではinjectまたはfallback生成する。複数pageはoriginを設ける一方、全pageの階層は未統一である。Employee fetchはdocument listenerとscope generationを持ち、Customer／Site／Outsourcer／Articleは主にone-shot cacheである。欠落時表示と全参照barrierの適合は未確認である。
+- 想定影響と発生条件: origin欠落や過剰なinstance生成でcacheが共有されず、主対象をone-shot値で表示すると他利用者の変更へ追随しない。従属先欠落を例外化すると画面全体が使用不能になり得る。通常CRUへ存在確認を広げると実装・読取costが増える一方、省略した参照には孤立raceが残る。
+- 必須の将来対応: 機能順にpage/root/childを整理し、pageでorigin、子でinjectを使う。主対象はlistener、従属補完は共有cache優先とし、不存在・取得不能を「取得できなかった」旨へ置換する。従属CRUは存在確認なしを既定とし、物理削除時に既知従属を検査する。既存の厳格なbarrierは機能checkpointで維持または簡素化を明示する。
+- 必要なテスト: origin／inject同一性、画面・tenant間cache分離、主対象listener更新、従属cache hit・miss・取得失敗、画面継続、物理削除の従属あり／検査失敗write 0、採用する例外barrier。
+- ユーザー判断が必要な事項: 単純pageの階層例外、各機能で維持する厳格barrier、missing表示の共通component／文言、物理削除を実際に提供する範囲は実装checkpoint前に確認する。

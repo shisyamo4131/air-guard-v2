@@ -4,6 +4,16 @@
 
 ## Unreleased
 
+- 利用者による根本ルールの提示完了を受け、Firestore document構成、tenant共通権限とCompany／User例外、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界の相互整合・実装差・段階移行先を確定し、根本ガバナンス整合phaseのFGA-01を完了した。進捗は0%から10%となり、次はCustomer管理の最初の小checkpointを合意する。製品code、Rules、data、Dev・Prodは変更していない。[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
+- 認証済み業務pageを画面rootと機能子componentへ構成し、pageを`useFetch` origin、子をinject利用とするproject ruleを採用した。画面の主対象はreal-time listener、IDからの従属先補完は共有cacheを優先し、取得不能時は画面全体を止めず「取得できなかった」旨を表示する。従属CRUでは存在確認を既定にせず、物理削除時に既知従属を検査する限定保証とした。Company／Userはtenant共通権限とdocument単位last-write-winsから除外し、現行の厳密な制御を維持する。今回、製品code、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0067-component-fetch-and-dependent-reference-boundary.md)を参照。
+
+- Prod公開前のDev試用期間における通常Firestore更新をdocument単位のlast-write-winsとし、AirItemManager・AirArrayManagerを通常CRUDへ積極利用できるproject ruleを採用した。後commitのdocument全体とlistener受信値を正本とし、通常更新の競合拒否・再読込要求を廃止する。Company、User、Stripe、請求確定、archive・復旧・物理削除、順序依存状態等は現行または固有の競合制御を維持する。top-level field単位のlast-write-winsはProd公開後の未確定案として分離し、今回、製品code、package、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0066-pre-production-document-level-last-write-wins.md)を参照。
+
+- role差を通常業務ではUXへ限定し、同一tenantの有効な認証済み本登録Userへ同じserver権限を認めるproject ruleと根本ガバナンス整合phaseを採用した。Company、Auth/User・権限・tenant管理、機微・機密情報、archive・復旧・master物理削除、Stripe操作はserver認可の例外として現行の厳密な制御を維持する。Customer、Site、Employee、Outsourcer、その他transaction系の順に小checkpointで改修・Dev受入れを繰り返す。今回、製品code、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0065-tenant-trust-normal-business-authorization.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
+- Firestore documentは通常の業務情報を管理対象ごとの一まとまりとし、マイナンバー、取引先・自社の口座情報、CompanyのStripe契約情報等の機微・機密情報を本体から別documentへ分離するproject ruleを採用した。Rules簡素化で総開発・保守コストを抑えられる場合も個別に分割を検討する。現行Company振込先のroot同居は未解消の実装差として記録し、application、Rules、schema、既存data、Dev・Prodは今回変更していない。[判断](docs/decisions/0064-sensitive-firestore-document-boundaries.md)を参照。
+
 - `docs/operations.md`をAirGuardV2固有の共通運用入口へ再整理した。Local・Dev・migration・個別機能の手順、検証環境の選択、手書きの検証class表を各正本への参照へ置換し、機械生成されたVerification Policy Summaryだけを維持した。日付付きDev Firestore構成は履歴記録へ分離し、Local Emulator手順からremote baselineを除いた。
 
 - GitHub ActionsのDev Hosting buildが、PrivateなAirVuetify3の検証済みcommitを読み取り専用Deploy keyで固定取得するようにした。

@@ -10,16 +10,36 @@
 - 暫定設定、互換層、workaroundを導入する場合は、原因、対象、正しい恒久境界、撤去条件、撤去phase、検証、rollbackを同じcheckpointで定義する。暫定対策の導入だけを設計完了とせず、原因除去後の撤去までを完了条件へ含める。設計reviewでは目的を満たす経路だけでなく、暫定物が残存して将来の不正な依存や回帰を隠さないことまで確認し、片側だけを満たす実装を承認しない。
 - primary Windows worktreeでapplication code、test、project-owned文書を作成・編集するときは、既存fileの文字encoding・BOM有無・改行codeを事前確認して維持する。新規text fileは、対象toolや隣接fileに意図的なLF等の別契約がなければ、UTF-8・BOMなし・CRLFを既定とする。編集後は対象fileがmixed EOLでないことを確認する。Git index内のLF正規化は変更せず、binary、生成物、外部由来file、LFを必要とするscriptへこのworktree既定を一律適用しない。
 - testがsource fileをraw textとして読む場合は、改行を比較前に正規化するか構文として解析し、LFまたはCRLF固定の空行・行末へ依存しない。通常の製品処理や構文解析へ不要な改行変換を追加しない。
-- Firestore CRUDを新設・改修する場合、`AirItemManager`と`AirArrayManager`を永続化・draft・dialog・validation・表示同期を一体で担う既定componentとして使用しない。既存箇所は一括置換せず、operation固有editor、UI非依存application処理、永続化へ機能単位で移行する。
-- マスタdata CRUDの改修対象として合意した到達経路では、専用保存処理を接続した後も`AirItemManager`または`AirArrayManager`をdraft・dialog・validation・完了制御のwrapperとして残さない。既存の見た目を維持するために入力・表示componentを再利用する場合も、汎用Managerへ状態管理や成功判定を戻さない。
-- Firestore外のlocal state編集、または既存のwhole-document replacementが対象operationの正しい契約であると確認できる場合は、manager利用の可否を個別に判断する。
-- document共通の必須・型・長さ・相関はFireModel/Class schema、operation固有の入力・追加必須条件は共有operation contractを正本とする。最新の購読値へ変更fieldを重ねたcandidateを検証し、実際に変更したoperation所有fieldと監査metadataだけを保存する。
-- real-time listenerのlive modelを入力draftとして直接変更しない。独立draftを使い、同じoperation fieldの外部変更時は、再読込または明示再確認後のlast-write-winsのどちらか一つをcontractで定める。
+- Prod公開前のDev試用期間における通常の可逆なFirestore更新は、document単位のlast-write-winsを既定とする。複数actorが同じdocumentを更新した場合、利用者またはclientの時刻ではなく、Firestoreへのcommitが後に成立したoperationの整合済みdocument全体を正とする。異なるtop-level fieldだけを変更した場合も、先にcommitされたdocumentの値を自動mergeしない。Company documentとUser documentは認証・tenant管理の基点であるためこの既定から除外し、利用者が別途変更するまで現行のfield別writer、actor条件、validation、競合制御を維持する。
+- `AirItemManager`と`AirArrayManager`は、対象document全体を編集・検証・保存する通常CRUDへ積極的に使用できる。managerを一律に排除せず、既存のinput、dialog、validation、error、loading、表示同期を再利用する。ただし、UI componentだけを認証・認可・tenant・Rules・server validationの境界にせず、例外operationまたはmanagerの契約で表現できない操作へ無理に使用しない。
+- document共通の必須・型・長さ・相関はFireModel/Class schema、operation固有の追加条件は必要な場合だけ共有operation contractを正本とする。通常更新では保存対象となるdocument全体を検証し、`updatedAt`・`updatedBy`等のserver管理fieldと当該operationに必要な派生fieldはclient入力を信頼せず正規の保存境界で確定する。
+- 更新完了後はFirestore listenerから受信した最新documentを画面上の正本とする。通常更新では同時更新を理由に保存を拒否せず、競合通知、draft破棄、最新値の再読込、明示再確認を要求しない。保存自体の失敗、認可拒否、validation拒否、結果不明は同時更新による正常な上書きと区別して扱う。
+- Prod公開後にtop-level field単位のlast-write-winsへ変更する案は未確定とし、Prod公開だけで自動適用しない。別の仕様変更で採用した場合は、editorとwriterが利用者の変更したtop-level fieldだけを送信し、変更していないfieldを保存対象に含めない。server管理fieldと必要な派生fieldは追加更新できる。異なるtop-level fieldのcommitは併存し、同じfieldは後commitのfield全体を正とする。arrayとmapは内容全体を一つのtop-level fieldとして扱い、要素またはkey単位ではmergeしない。
 - actor・tenant・field・型・状態をRulesで十分に強制できる単純な可逆更新だけclient部分更新を選べる。複雑なvalidation、server-only情報、厳密なactor、複数resource、外部作用、不可逆性、必須auditがある場合はoperation専用Callableを使う。UI validationだけを保存境界にしない。
-- 一つの業務対象は一つのdocumentを既定とする。読取actor、保存・削除・復旧条件、増加量、実測size、独立query、field更新で防げない確認済み競合を説明できる場合だけ分割する。一般的な将来riskだけでlock・ledger・revision・transactionを全documentへ一般化しない。
-- 試験運用中の通常の可逆な業務操作では、発生頻度と影響が確認されていない同一document競合、短時間の連続操作、listener到着順を事前に完全制御するための共通pending lock、single-flight queue、順序保証、revision、ledgerを既定にしない。利用者操作を直ちにlocalの表示用状態へ反映し、real-time listenerの正本で収束する単純な方式を優先する。競合、保存拒否、表示訂正が実測され業務影響を確認できた場合に、該当operationだけを段階的に補強する。
-- 前項の簡素化は、認証・認可・tenant境界、復旧困難な削除やdata loss、金銭確定、通知等の外部作用、結果不明の再送、複数resourceの不変条件を緩和しない。既存機能により厳格な制御がある場合も、この原則だけを理由に一括撤去せず、その機能を改修対象としたcheckpointで実害と保守負担を比較して段階的に合わせる。
+- 一つの管理対象について、通常の業務情報は意味のある一まとまりを一つのdocumentにすることを既定とする。ただし、従業員のマイナンバー、取引先・自社の口座情報、CompanyのStripe契約情報等の機微な個人情報・機密情報は、通常の本体documentから別documentへ分割する。この例示に含まれない情報も、漏えい時の影響、必要なread/write actor、保持・削除条件、外部provider ownershipから同等と判断できる場合は同じ境界を適用する。
+- 機微・機密性による必須分割とは別に、Firestore Rulesの式数・重複・例外を減らして認可を明確にできる、保存・削除・復旧条件が異なる、継続的に増加する、現実的なdocument size超過経路がある、独立queryが必要、またはfield限定updateで防げない確認済み競合がある場合はdocument分割を個別に検討する。分割案はRules、reader/writer、整合性、query/index、migration、運用・保守負担を比較し、総開発・保守コストを抑えられることを示す。一般的な将来riskやUI・writerの責務名だけでは分割しない。
+- 新しい機微・機密情報は分割先のpath、schema、actor、Rules、server処理、保持・削除、log・export・snapshot、testを確定し、本体へ保存しない。既存documentに同居する情報は未解消の実装差として扱い、対象data、全reader/writer、互換性、migration、rollback、Rules cutover、Dev受入れを別checkpointで承認・検証してから移す。このproject ruleの採用だけで既存dataを自動移行しない。
+- 通常の可逆な業務操作では、同時更新を防ぐためのexpected value、revision、transaction、lock、ledger、競合拒否を既定にしない。短時間の連続操作、listener到着順、二重送信による外部作用等は同じ問題とみなさず、保存中UIやerror処理は対象operationの実害に応じて定める。
+- Stripe、請求確定、archive・復旧・物理削除、順序が重要な状態遷移にはdocument単位last-write-winsを適用せず、それぞれのoperation固有のtransaction、precondition、idempotency、再試行・照合、監査を維持または別途定める。Authentication、Company、User、role、permission、tenant所属、機微・機密情報、通知等の既存high-risk operationも、確認済みの固有競合制御をこの原則だけで撤去しない。
+- 既存のfield限定writer、専用editor、競合拒否、Manager除去をこのruleの採用だけで一括変更しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)の機能順に、通常更新か例外か、document全体のserialization、server管理・派生field、Rules、listener、旧client、rollback、testを確認して段階移行する。
 - Rulesを狭める変更は、対象pathと全reader/writer、環境、利用状態、既知data規模、旧client併存、許容停止時間を確認する。正式release前のbounded Dev maintenanceで完結する場合は長期互換層を既定にせず、production等で必要な場合だけ互換releaseを採用する。詳細は[development workflow](../runbooks/development-workflow.md#firestore-rulesを狭める改修順序)とADR 0031を正とする。
+
+## 通常業務のtenant信頼境界と例外
+
+- roleによる通常業務上の差異は、原則として画面、navigation、案内、初期表示等のUXに限定する。同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限でread・create・updateその他の提供済み通常操作を行えるものとして信頼する。通常業務のRules・Callableでrole名、role preset、permission文字列、会社管理者・super-user等の区分をallow条件にしない。
+- 通常業務dataのFirestore Rulesは、少なくともAuthentication、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を検証する。strict field allowlist、型・長さ・必須、tenant・document identity等の不変field、同一tenant参照、許可された状態遷移、上限、masterのclient物理delete拒否等、対象operationに必要なdata破壊防止条件はrole廃止後も維持する。client UXだけをこれらの代替にしない。
+- 次は通常業務のtenant信頼境界の例外とし、role、permission、actor、target、最新状態等の必要なserver側認可を適用し、必要に応じて専用Callableを使用する。(1) Firebase Authentication account、Company document、User document、role、permission、tenant所属の作成・変更・削除その他の現行提供操作、(2) マイナンバー、口座情報等の機微な個人情報・機密情報、(3) archive、復旧、master dataの物理削除、(4) Stripeによる契約、課金、決済、返金。CompanyとUserは認証・tenant管理の基点としてdocument全体を例外にし、現行の厳密なactor・field・validation・競合制御を維持する。機微情報を別documentへ分割する規則は取り消さない。例外のclient表示・disabled・route制御はUXであり、認可境界にしない。
+- 通常業務でも、複数documentのatomicity、server timestamp・秘密値、信頼できる派生値、外部作用、冪等性、再開・reconcile等の技術要件によりCallableを使用できる。ただし、その技術要件だけから通常業務へrole制限を戻さない。Rulesでtenant境界とdata不変条件を十分に強制できる単純な操作はclient実装を選択できる。
+- 既存のrole制限、Callable、Rulesをこのruleの採用だけで一括撤去しない。[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)に従い、Customer、Site、Employee、Outsourcer、その他transaction系の順で、対象operation、例外該当性、reader/writer、data、Rules、rollback、test、Dev受入れを小checkpointごとに確定して段階移行する。
+
+## Component階層、表示data、従属参照
+
+- 認証済み業務pageは、原則として画面全体を制御する一つのroot componentを直接配置し、そのroot componentが一つ以上の機能単位の子componentを構成する。pageはroute parameter、page metadata、layout、画面rootの接続へ責務を絞り、業務機能をpageへ集積しない。単純な認証・案内・error page等でこの階層が価値を持たない場合は、機能checkpointで例外理由を示せる。
+- 従属先document IDから名称等を解決する場合は、`composables/fetch/useFetch.js`を共通入口として使用する。pageで`useFetch(componentName, true)`を一度呼び、画面配下専用のfetch composable群をprovideする。子側は`useFetch(componentName)`を呼んでinjectされた同じinstanceとcacheを使用する。子側のfallback生成は独立利用の互換経路であり、通常page階層がoriginの設置忘れに依存しない。
+- 画面の主対象として表示する変更可能なFirestore documentはreal-time listenerから受信した現在値を正本とする。one-shot readまたは保存済みsnapshotは、確定済み履歴、帳票、operation検証等の変更追随が不要な目的へ限定し、変更可能な主対象documentの現在値表示を固定し続ける正本にしない。ただし、IDから名称等を補完する従属先情報は`useFetch`の共有cacheを優先でき、同じ画面表示中の全従属先情報へreal-time listener追随を必須にしない。認証・tenant scope変更時のcache分離・破棄は維持する。
+- 従属documentのcreate・read・updateでは、従属先documentの存在確認を既定にしない。候補UIから不存在IDを除外することはできるが、認可または参照整合性の保証とは扱わない。金銭確定、identity、archive・復旧、順序依存状態等で既にoperation固有のより厳格な不変条件がある場合は、その確認済み例外を明示して維持できる。
+- 従属先documentの物理削除では、削除operationの時点で既知の従属documentを確認し、一件でも存在する、検査に失敗する、または対象が不整合なら削除を中断する。従属側CRUとのlock、tombstone、transactional barrierは既定にせず、検査の直前または同時に従属documentが生じるraceまで保証しない。この残存riskを、強い整合性を保証したとの表示・監査記録へ読み替えない。
+- 従属先が不存在または取得不能の場合、画面全体をerrorにせず、本来表示する名称等の箇所を「取得できなかった」旨の表示へ置き換える。別documentの名称を推測せず、取得失敗と値が空である正常状態を区別する。内部error、ID、個人情報を利用者向け表示へ含めない。
 
 ## フェーズごとのテスト範囲の合意
 

@@ -2,6 +2,8 @@
 
 - 日付: 2026-08-30
 - 状態: Accepted
+- 一部置換: 2026-09-09の[ADR 0064](0064-sensitive-firestore-document-boundaries.md)により、Company振込先をCompany rootへ保持する判断と、本体と同じread境界を無条件に維持する判断を置換した。field validation、専用Callable、更新actor、super-user拒否、client直接write拒否、競合・帳票境界は、分割設計で個別に見直すまで維持する。
+- 関連する新原則: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)は通常更新をdocument単位last-write-winsへ変更した。振込先は機微・機密情報であり、分割・actor・writerをFGA checkpointで確定するまで、本ADRの専用Callable、相関validation、競合制御を安全側の例外境界として維持する。
 - 関連仕様: `docs/specification.md`の「Company設定とtenant lifecycle」
 - 関連判断: [ADR 0017](0017-callable-auth-identity-gate.md)、[ADR 0031](0031-proportional-data-boundary-and-change-safeguards.md)
 - 関連ロードマップ: [Company部分更新](../roadmaps/company-partial-updates.md)
