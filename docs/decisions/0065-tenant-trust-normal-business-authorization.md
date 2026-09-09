@@ -19,8 +19,8 @@
 
 - 同一tenantに所属する有効な認証済み本登録Userは、tenant内の通常業務dataについて同じserver権限でreadし、提供済みのcreate・updateその他の通常操作を行えるものとして信頼する。
 - 通常業務のRules・Callableでrole名、role preset、permission文字列、会社管理者、super-user等をallow条件にしない。roleによるmenu、route、button、初期表示、説明等の差はUXとして設けられる。
-- 通常業務の認可は、`request.auth`、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を必須とする。AuthまたはUserの無効化、tenant不一致、仮登録、claim欠損・型不正はfail closedとする。
-- role制限を外しても、strict field allowlist、型・長さ・必須、tenant・document identity等の不変field、同一tenant参照、許可された状態遷移、上限、確定済みdataの保護、masterのclient物理delete拒否等、operation固有のdata破壊防止条件は維持する。
+- 通常業務の認可は、受理された`request.auth` token、確認済みemail、User documentの存在とUID一致、本登録、非disabled、正常なtenant claim、User所属tenantとpath tenantの一致を必須とする。tenant不一致、仮登録、User documentの無効化、claim欠損・型不正はfail closedとする。通常アクセスの即時停止はUser documentの`disabled`を正本とする。RulesはFirebase Auth directoryの現在のdisabled・deleted状態を直接再取得できないため、その現在値まで必要な例外operationはCallableで再確認する。
+- 通常業務documentのstrict field allowlist、型・長さ・必須、状態等のschema・業務validationはFireModel/Class schemaと正規application保存境界の責務とし、Rulesへ重複させない。Rulesにはactor UIDの偽装防止、tenant境界、client物理delete拒否等、対象operationで明示した最低限の破壊防止条件だけを残す。例外operationの厳格な認可・validationは維持する。
 
 ### 例外
 
@@ -35,18 +35,18 @@
 
 ### ClientとCallable
 
-- Rulesでtenant境界とdata不変条件を十分に強制できる単純な通常操作はclientへ実装できる。
+- Rulesで有効なactorとtenant境界、および明示した最低限の破壊防止条件を強制できる単純な通常操作はclientへ実装できる。
 - 複数documentのatomicity、server timestamp・秘密値、信頼できる派生値、外部作用、冪等性、再開・reconcile等の技術要件があれば通常業務にもCallableを使える。ただし、その技術要件だけからrole制限を戻さない。
 - 既存CallableとRulesを一括撤去しない。各operationのreader/writer、例外該当性、旧client、data、query、failure pathを確認し、維持、簡素化、client化のいずれかを選ぶ。
 
 ## 理由
 
-プロジェクトの実際の信頼単位をroleではなくtenantへ合わせることで、通常業務のclient policy、server policy、Rules、Callableの重複を減らせる。例外とdata不変条件を分離して残すことで、権限昇格、機密情報露出、不可逆操作、Stripe外部作用を通常業務の簡素化へ巻き込まない。
+プロジェクトの実際の信頼単位をroleではなくtenantへ合わせ、schema・業務validationをSchemas packageと正規application保存境界へ集約することで、通常業務のclient policy、server policy、Rules、Callableの重複を減らせる。例外と最低限の破壊防止条件を分離して残すことで、権限昇格、機密情報露出、不可逆操作、Stripe外部作用を通常業務の簡素化へ巻き込まない。
 
 ## 代替案
 
 - 現行のrole別server認可を全通常操作へ維持する案: 利用者が定めたtenant内信頼と一致せず、重複実装を維持するため採用しない。
-- Rulesをtenant一致だけにする案: schema pollution、型・上限違反、tenant参照改変、無効な状態遷移等を防げないため採用しない。
+- `request.auth`とpath tenant一致だけにする案: 無効・仮登録・User不在やclaim不正のAuth/Userを排除できないため採用しない。有効な本登録Userの検査は通常業務でも維持する。
 - 全Callableを直ちにclient化する案: atomicity、server-only値、外部作用、旧client、段階的rollbackを確認できないため採用しない。
 
 ## 影響と互換性
@@ -55,8 +55,9 @@
 - CompanyとUserの現行actor・field・validation・競合制御は実装差ではなく、維持する例外である。FGAの機能順にもCompany/Userの通常実装置換を追加しない。
 - server許可を広げる変更であり、誤分類すると機微情報や例外操作を過剰開放するriskがある。operationごとに通常業務か例外かを先に分類する。
 - role別UXは維持できるが、通常業務では直接requestを送った同一tenantの有効Userもserverで許可されることを前提にする。
-- 記録済みDev FirestoreはStandard editionだがremoteの現在値は今回確認していない。本判断はedition固有機能に依存せず、実装・release時にactual targetを再確認する。
-- このADRの文書変更だけでapplication、Functions、Rules、schema、data、Dev・Prodを変更しない。
+- 正規applicationを介さず直接requestを送れる同一tenantの有効Userは、通常業務documentへschema外field、不正な型・長さ・状態、client指定時刻等も保存できる。このriskはtenant内利用者を信頼する方針の一部として受容し、公式経路のSchemas package・writer検証と、下流処理の失敗監視で扱う。機微情報や例外operationへ同じ許可を拡張しない。
+- 2026-09-09にDev target `air-guard-v2-dev` のdefault databaseがFirestore Standard edition / Native modeであることをactual targetから再確認した。本判断はedition固有機能に依存しない。
+- FGA-02-RULES-01はCustomer通常Rulesと契約testをこの決定へ揃える。application、Functions、schema、data、Dev・Prodは変更しない。
 
 ## 移行
 
@@ -70,7 +71,7 @@
 
 - governance、仕様、ADR、roadmap、再開案内、CHANGELOGのrouteと置換範囲をcomprehensive governance gateで確認する。
 - 各製品checkpointで、同一tenantの複数role・roleなし・super-userを含む有効本登録Userの通常操作許可と、未認証、未確認email、仮登録、disabled、User不在、claim不正、他tenantの拒否を確認する。
-- strict schema、型・長さ・上限、immutable field、tenant参照、状態遷移、client物理delete拒否と、4例外のrole/actor認可迂回拒否を確認する。
+- 通常業務Rulesがschema・型・長さ・状態を重複検査しないことを明示的な許可testで固定し、同時にactor UID偽装、tenant越境、client物理deleteと4例外のrole/actor認可迂回を拒否する。Schemas packageと正規application writer側ではdocument全体のvalidationと派生field整合を別に確認する。
 - Rules、Functions、client、Emulator、必要なUI、固定commitのDev受入れを対象checkpointの変更classとriskに応じて選ぶ。
 
 ## 再検討条件

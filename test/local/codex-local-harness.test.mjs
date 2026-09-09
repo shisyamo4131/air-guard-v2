@@ -4689,13 +4689,22 @@ test("Site Rules preserve same-tenant live and archive reads while denying direc
   }
 });
 
-test("Customer Rules allow exact create and operation-specific updates for approved actors", async () => {
+test("Customer Rules allow normal writes for every active registered same-tenant actor", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const actors = [
     { label: "admin", isAdmin: true, roles: [] },
     { label: "admin-super", isAdmin: true, roles: [], isSuperUser: true },
     { label: "manager", isAdmin: false, roles: ["manager"] },
     { label: "legal", isAdmin: false, roles: ["legal"] },
+    { label: "controller", isAdmin: false, roles: ["controller"] },
+    { label: "accountant", isAdmin: false, roles: ["accountant"] },
+    { label: "human-resource", isAdmin: false, roles: ["human-resource"] },
+    { label: "labor", isAdmin: false, roles: ["labor"] },
+    { label: "direct-permission", isAdmin: false, roles: ["customers:write"] },
+    { label: "unknown-role", isAdmin: false, roles: ["unknown-role"] },
+    { label: "mixed-unknown-role", isAdmin: false, roles: ["manager", "unknown-role"] },
+    { label: "roleless", isAdmin: false },
+    { label: "super-user-only", isAdmin: false, roles: [], isSuperUser: true },
   ];
 
   for (const actor of actors) {
@@ -4709,8 +4718,8 @@ test("Customer Rules allow exact create and operation-specific updates for appro
     await assertSucceeds(setDoc(reference, customerRulesData({
       docId,
       uid,
-      ...(actor.label === "legal" ? { zipcode: "1".repeat(17) } : {}),
     })));
+    await assertSucceeds(updateDoc(reference, { remarks: "UIDを維持する部分更新" }));
     await assertSucceeds(updateDoc(reference, {
       city: "港区",
       fullAddress: "東京都港区千代田1-1",
@@ -4782,7 +4791,7 @@ test("Customer Rules allow remarks and address updates with matching non-null Ge
   }));
 });
 
-test("Customer Rules reject latitude and longitude mismatches on create and update", async () => {
+test("Customer Rules leave latitude and longitude consistency to the application writer", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "customer-rules-location-mismatch-admin";
   await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
@@ -4794,9 +4803,9 @@ test("Customer Rules reject latitude and longitude mismatches on create and upda
     const docId = `customer-rules-location-mismatch-${label}`;
     const reference = doc(firestore, "Companies", companyId, "Customers", docId);
     const location = { formattedAddress: "合成住所", lat: 35.5, lng: 139.5 };
-    await assertFails(setDoc(reference, customerRulesData({ docId, uid, location, geopoint })));
+    await assertSucceeds(setDoc(reference, customerRulesData({ docId, uid, location, geopoint })));
     await seedCustomerRulesDocument({ companyId, docId });
-    await assertFails(updateDoc(reference, {
+    await assertSucceeds(updateDoc(reference, {
       address: "合成2-2",
       fullAddress: "東京都千代田区合成2-2",
       location,
@@ -4807,24 +4816,16 @@ test("Customer Rules reject latitude and longitude mismatches on create and upda
   }
 });
 
-test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-tenant writers", async () => {
+test("Customer Rules reject invalid authentication, User, and tenant boundaries", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const deniedActors = [
-    { label: "controller", user: { isAdmin: false, roles: ["controller"] } },
-    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
-    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
-    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
-    { label: "direct-permission", user: { isAdmin: false, roles: ["customers:write"] } },
-    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
-    { label: "mixed-unknown-role", user: { isAdmin: false, roles: ["manager", "unknown-role"] } },
     { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
     { label: "missing-user", missingUser: true },
-    { label: "missing-claim", user: { isAdmin: true, roles: [] }, missingClaim: true },
+    { label: "missing-email-claim", user: { isAdmin: true, roles: [] }, missingEmailClaim: true },
     { label: "missing-company-claim", user: { isAdmin: true, roles: [] }, missingCompanyClaim: true },
     { label: "malformed-company-claim", user: { isAdmin: true, roles: [] }, claims: { companyId: 123 } },
-    { label: "malformed-claim", user: { isAdmin: true, roles: [] }, claims: { isSuperUser: "false" } },
+    { label: "malformed-email-claim", user: { isAdmin: true, roles: [] }, claims: { email_verified: "true" } },
     { label: "unverified", user: { isAdmin: true, roles: [] }, claims: { email_verified: false } },
-    { label: "super-user-only", user: { isAdmin: false, roles: [] }, claims: { isSuperUser: true } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
   ];
@@ -4833,7 +4834,8 @@ test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-t
     const uid = `customer-rules-denied-${actor.label}`;
     const docId = `customer-rules-denied-doc-${actor.label}`;
     if (!actor.missingUser) await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, ...actor.user });
-    const claims = { email_verified: true, companyId, ...(actor.missingClaim ? {} : { isSuperUser: false }), ...actor.claims };
+    const claims = { email_verified: true, companyId, isSuperUser: false, ...actor.claims };
+    if (actor.missingEmailClaim) delete claims.email_verified;
     if (actor.missingCompanyClaim) delete claims.companyId;
     const firestore = testEnvironment.authenticatedContext(uid, claims).firestore();
     await assertFails(setDoc(
@@ -4856,7 +4858,7 @@ test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-t
   });
   const otherFirestore = authenticatedFirestore(otherUid, {
     companyId: CODEX_LOCAL_COMPANIES.secondary.id,
-    isSuperUser: false,
+    isSuperUser: true,
   });
   await assertFails(setDoc(
     doc(otherFirestore, "Companies", companyId, "Customers", "customer-rules-cross-tenant"),
@@ -4877,7 +4879,7 @@ test("Customer Rules reject unauthorized, inactive, super-user-only, and cross-t
   }));
 });
 
-test("Customer Rules reject valid existing-document updates by a read-only actor", async () => {
+test("Customer Rules allow an active same-tenant accountant to update an existing Customer", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const managerUid = "customer-rules-update-control-manager";
   const readerUid = "customer-rules-update-denied-accountant";
@@ -4893,26 +4895,17 @@ test("Customer Rules reject valid existing-document updates by a read-only actor
     "Companies", companyId, "Customers", docId,
   );
 
-  // Create through Rules so malformed or nonexistent data cannot explain denial.
+  // Create through Rules so malformed or nonexistent data cannot explain the result.
   await assertSucceeds(setDoc(managerReference, customerRulesData({ docId, uid: managerUid })));
-  const before = await assertSucceeds(getDoc(readerReference));
-  assert.equal(before.exists(), true);
-  const remarks = "合成閲覧専用更新の拒否確認";
-  const denied = await assertFails(updateDoc(readerReference, {
+  assert.equal((await assertSucceeds(getDoc(readerReference))).exists(), true);
+  const remarks = "合成同一tenant更新の確認";
+  await assertSucceeds(updateDoc(readerReference, {
     remarks,
     uid: readerUid,
     updatedAt: serverTimestamp(),
   }));
-  assert.equal(denied.code, "permission-denied");
-  assert.deepEqual((await assertSucceeds(getDoc(managerReference))).data(), before.data());
-
-  // The same operation succeeds for an authorized actor with its own audit UID.
-  await assertSucceeds(updateDoc(managerReference, {
-    remarks,
-    uid: managerUid,
-    updatedAt: serverTimestamp(),
-  }));
   assert.equal((await assertSucceeds(getDoc(readerReference))).data().remarks, remarks);
+  assert.equal((await assertSucceeds(getDoc(readerReference))).data().uid, readerUid);
 });
 
 test("Customer Rules allow own-tenant get/list and reject existing cross-tenant get/list", async () => {
@@ -4952,54 +4945,70 @@ test("Customer Rules allow own-tenant get/list and reject existing cross-tenant 
   }
 });
 
-test("Customer Rules reject invalid shapes, field crossover, and metadata spoofing", async () => {
+test("Customer Rules leave Customer schema validation to the application but enforce actor UID", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "customer-rules-validation-manager";
   await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: false, roles: ["manager"] });
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-  const invalidCreates = [
+  const applicationInvalidCreates = [
     { label: "extra", changes: { unexpected: true } },
     { label: "missing", remove: "address" },
     { label: "type", changes: { paymentMonth: "1" } },
     { label: "length", changes: { name: "長".repeat(21) } },
     { label: "status", changes: { contractStatus: "TERMINATED" } },
-    { label: "uid", changes: { uid: "spoofed-actor" } },
     { label: "created-at", changes: { createdAt: new Date("2020-01-01T00:00:00.000Z") } },
     { label: "token-map-value", changes: { tokenMap: { invalid: false } } },
   ];
-  for (const scenario of invalidCreates) {
+  for (const scenario of applicationInvalidCreates) {
     const docId = `customer-rules-invalid-${scenario.label}`;
     const data = customerRulesData({ docId, uid, ...scenario.changes });
     if (scenario.remove) delete data[scenario.remove];
-    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Customers", docId), data));
+    await assertSucceeds(setDoc(doc(firestore, "Companies", companyId, "Customers", docId), data));
   }
 
   const docId = "customer-rules-update-validation";
-  await seedCustomerRulesDocument({ companyId, docId, uid: "original-writer" });
+  await seedCustomerRulesDocument({ companyId, docId, uid });
   const reference = doc(firestore, "Companies", companyId, "Customers", docId);
   for (const patch of [
     { city: "港区", paymentMonth: 2, uid, updatedAt: serverTimestamp() },
     { contractStatus: "TERMINATED", paymentMonth: 2, uid, updatedAt: serverTimestamp() },
     { createdAt: new Date("2020-01-01T00:00:00.000Z"), uid, updatedAt: serverTimestamp() },
     { unexpected: true, city: "港区", uid, updatedAt: serverTimestamp() },
-    { city: "港区", uid: "spoofed-actor", updatedAt: serverTimestamp() },
   ]) {
-    await assertFails(updateDoc(reference, patch));
+    await assertSucceeds(updateDoc(reference, patch));
   }
   for (const contractStatus of ["UNKNOWN", null, true, 1, [], {}, deleteField()]) {
-    await assertFails(updateDoc(reference, { contractStatus, uid, updatedAt: serverTimestamp() }));
+    await assertSucceeds(updateDoc(reference, { contractStatus, uid, updatedAt: serverTimestamp() }));
   }
   for (const patch of [
-    { docId: "spoofed" }, { docId: deleteField() }, { createdAt: deleteField() }, { uid: deleteField() }, { uid: "spoofed-actor" },
+    { docId: "spoofed" }, { docId: deleteField() }, { createdAt: deleteField() },
     { updatedAt: deleteField() }, { updatedAt: new Date("2020-01-01") },
     { unexpected: true }, { tokenMap: { unrelated: true } }, { fullAddress: "偽住所" },
     { prefecture: "偽都道府県" }, { location: { lat: 35, lng: 139, formattedAddress: "合成住所" }, geopoint: new GeoPoint(35, 139) },
   ]) {
-    await assertFails(updateDoc(reference, { contractStatus: "TERMINATED", uid, updatedAt: serverTimestamp(), ...patch }));
+    await assertSucceeds(updateDoc(reference, { contractStatus: "TERMINATED", uid, updatedAt: serverTimestamp(), ...patch }));
   }
-  // A different authorized actor may replace audit uid with its own value.
-  await assertSucceeds(updateDoc(reference, { contractStatus: "TERMINATED", uid, updatedAt: serverTimestamp() }));
-  assert.equal((await getDoc(reference)).data().uid, uid);
+
+  const futureDocumentId = "customer-rules-future-whole-document";
+  const futureDocument = doc(firestore, "Companies", companyId, "Customers", futureDocumentId);
+  await assertSucceeds(setDoc(futureDocument, customerRulesData({ docId: futureDocumentId, uid })));
+  await assertSucceeds(setDoc(futureDocument, {
+    uid,
+    futureSchemaVersion: 99,
+    futureCustomerField: { enabled: true },
+    contractStatus: "FUTURE_STATUS",
+    updatedAt: new Date("2020-01-01T00:00:00.000Z"),
+  }));
+
+  for (const actorUid of [undefined, "spoofed-actor"]) {
+    const invalidActorId = `customer-rules-invalid-actor-${actorUid === undefined ? "missing" : "spoofed"}`;
+    const data = customerRulesData({ docId: invalidActorId, uid: actorUid });
+    if (actorUid === undefined) delete data.uid;
+    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Customers", invalidActorId), data));
+  }
+  await assertFails(updateDoc(reference, { uid: deleteField() }));
+  await assertFails(updateDoc(reference, { uid: "spoofed-actor" }));
+  await assertFails(setDoc(reference, { futureCustomerField: true }));
 });
 
 for (const contractStatus of ["ACTIVE", "TERMINATED"]) {
@@ -5037,9 +5046,13 @@ test(`Customer ${contractStatus} delete, archive CUD, and fallback-path bypass r
 });
 }
 
-test("Customer status rechecks revoked role or disabled user in the same context", async () => {
+test("Customer status ignores role changes but rechecks disabled User state in the same context", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  for (const mutation of [{ roles: ["accountant"] }, { disabled: true }]) {
+  for (const scenario of [
+    { mutation: { roles: ["accountant"] }, succeeds: true },
+    { mutation: { disabled: true }, succeeds: false },
+  ]) {
+    const { mutation } = scenario;
     const uid = `customer-status-revoked-${Object.keys(mutation)[0]}`;
     await seedRegisteredUser({ uid, companyId, isAdmin: false, roles: ["manager"] });
     await seedCustomerRulesDocument({ companyId, docId: uid });
@@ -5048,7 +5061,11 @@ test("Customer status rechecks revoked role or disabled user in the same context
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       await updateDoc(doc(context.firestore(), "Companies", companyId, "Users", uid), mutation);
     });
-    await assertFails(updateDoc(reference, { contractStatus: "ACTIVE", uid, updatedAt: serverTimestamp() }));
+    if (scenario.succeeds) {
+      await assertSucceeds(updateDoc(reference, { contractStatus: "ACTIVE", uid, updatedAt: serverTimestamp() }));
+    } else {
+      await assertFails(updateDoc(reference, { contractStatus: "ACTIVE", uid, updatedAt: serverTimestamp() }));
+    }
   }
 });
 

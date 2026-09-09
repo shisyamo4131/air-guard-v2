@@ -20,7 +20,7 @@
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | FGA-01 新ルールの検証・ガバナンス反映 | 10 | 10 | Completed | 利用者が提示完了を明示し、全ルールの正本、相互整合、置換ADR、実装差、検証が揃う |
-| FGA-02 Customer管理 | 18 | 0 | Not started | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
+| FGA-02 Customer管理 | 18 | 0 | In progress | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
 | FGA-03 Site管理 | 18 | 0 | Not started | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
 | FGA-04 Employee管理 | 18 | 0 | Not started | Site完了後、Employeeの機微情報分離を含む通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 0 | Not started | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
@@ -29,11 +29,11 @@
 ## 現在地
 
 - [Firestore document構成](../specification.md#firestoreドキュメントの構成)と[ADR 0064](../decisions/0064-sensitive-firestore-document-boundaries.md)を採用し、Company振込先の現行root同居を未解消の実装差として記録した。
-- [通常業務のtenant信頼境界](../specification.md#テナントと認証)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を採用した。既存製品のrole制限、Callable、Rulesはまだ変更していない。
+- [通常業務のtenant信頼境界](../specification.md#テナントと認証)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を採用した。FGA-02-RULES-01ではCustomer通常Rulesからrole・schema・operation field検査を外し、有効な本登録User、tenant、actor UIDへ簡素化するlocal変更と契約testを進めている。archive・物理deleteの例外境界、application、Functions、schema、dataは変更せず、Dev反映・受入れは別承認待ちのためFGA-02得点は0のままとする。
 - [Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を採用した。Prod公開前はdocument単位last-write-wins、field単位方式は未確定の将来案とし、既存の部分writer、競合拒否、Manager非依存はまだ変更していない。
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。製品実装はまだ変更していない。
-- 利用者は根本ルールの提示完了を明示した。次はFGA-02 Customer管理について現行挙動と全reader/writerを調査し、最初の小checkpoint、そのweight、変更契約、rollback、test、Dev反映単位を利用者と合意する。製品code・Rules・data・Devはまだ変更しない。
+- 利用者はFGA-02-RULES-01の変更契約を承認した。local実装と必須検証を完了して固定commitを作成した後、RulesのDev反映・Customer通常CRUDのDev受入れを別承認で行う。次のCustomer application／UI checkpointはこのRules checkpointを閉じてから粒度を合意する。
 
 ## 完了条件
 

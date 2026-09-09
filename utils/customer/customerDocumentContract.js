@@ -66,9 +66,9 @@ export function isWireTimestamp(value) {
     date.toISOString().slice(0, 19) === base;
 }
 
-// Mirrors the persisted-shape part of isValidCustomer in firestore.rules.
-// Actor, request.time, update ownership, and derived-value semantics are not
-// established by a read-only document inspection.
+// Defines the raw persisted Customer compatibility contract used by the
+// application and the read-only inspector. Firestore Rules intentionally do
+// not mirror this schema; actor and tenant checks remain separate boundaries.
 export function inspectCustomerDocumentFields(fields, documentId) {
   const reasons = new Set();
   const reject = (reason) => reasons.add(reason);

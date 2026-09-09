@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customer通常CRUDのFirestore Rulesを、同一tenantの有効な認証済み本登録Userとactor UIDを境界とする形へ簡素化した。通常Customerのrole・permission、exact 26-field schema、型・長さ・状態・時刻・操作別field検査はRulesから外し、Schemas packageと正規application writerを検証責務とする。active delete、archiveのclient read/write、archive済み同一IDの再作成は引き続き拒否する。Dev・Prod・dataは変更していない。[判断](docs/decisions/0065-tenant-trust-normal-business-authorization.md)と[実装調査](docs/implementation/customer-master.md)を参照。
+
 - 利用者による根本ルールの提示完了を受け、Firestore document構成、tenant共通権限とCompany／User例外、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界の相互整合・実装差・段階移行先を確定し、根本ガバナンス整合phaseのFGA-01を完了した。進捗は0%から10%となり、次はCustomer管理の最初の小checkpointを合意する。製品code、Rules、data、Dev・Prodは変更していない。[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 
 - 認証済み業務pageを画面rootと機能子componentへ構成し、pageを`useFetch` origin、子をinject利用とするproject ruleを採用した。画面の主対象はreal-time listener、IDからの従属先補完は共有cacheを優先し、取得不能時は画面全体を止めず「取得できなかった」旨を表示する。従属CRUでは存在確認を既定にせず、物理削除時に既知従属を検査する限定保証とした。Company／Userはtenant共通権限とdocument単位last-write-winsから除外し、現行の厳密な制御を維持する。今回、製品code、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0067-component-fetch-and-dependent-reference-boundary.md)を参照。
