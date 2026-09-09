@@ -6,9 +6,9 @@
 
 - GitHub ActionsのDev Hosting buildが、PrivateなAirVuetify3の検証済みcommitを読み取り専用Deploy keyで固定取得するようにした。
 
-- `main`へのpush承認を、変更fileから自動選択したFirebase serviceのDev deploy承認まで含む運用へ変更した。GitHub Actions専用service account、`main`限定のWorkload Identity連携、GitHub `dev` Environmentを用意し、長期秘密鍵や利用者PCのFirebase loginに依存せず、dry-run後にHosting、Functions、Firestore、Storage、Realtime Databaseを限定deployする。手動実行、IAM・credential変更、migration、repair、Prodは別承認のままとした。
+- `main`へのpush承認を、変更fileから自動選択したFirebase serviceのDev deploy承認まで含む運用へ変更した。GitHub Actions専用service account、`main`限定のWorkload Identity連携、GitHub `dev` Environmentを用意し、Google Cloudの長期秘密鍵や利用者PCのFirebase loginに依存せず、dry-run後にHosting、Functions、Firestore、Storage、Realtime Databaseを限定deployする。初回全service実行で判明したscheduled Functionsの権限不足はDev限定のCloud Scheduler Admin追加で解消し、同一commitの再実行とDev Hosting表示を確認した。Private AirVuetify3の取得だけは当該repositoryの読み取り専用Deploy keyを使用する。手動実行、IAM・credential変更、migration、repair、Prodは別承認のままとした。[検証記録](docs/verification/github-actions-dev-deployment.md)を参照。
 
-- Dev deploy runbookを、共通release手順と個別手順への索引に整理した。Windows固有のCLI・trust、service別remote検証、Customer保存形式検査を分離し、UWB・Stripe・migration・過去の実行結果は既存正本への参照に置き換えた。Dev deployは実行者と認証経路をreleaseごとに固定し、機械実行では既存のDevサービスアカウント鍵をprocess内だけでFirebase CLIへ渡す。`firebase login`済みであることを全releaseの前提から外し、利用者accountを選ぶ場合だけ必要とした。既存サービスアカウントのdry-runはHostingとRealtime Database Rulesが成功し、Functions、Firestore Rules・Indexes、Storage Rulesは権限不足で停止したため、対象serviceごとのpreflightを必須とした。
+- Dev deploy runbookを、共通release手順と個別手順への索引に整理した。Windows固有のCLI・trust、service別remote検証、Customer保存形式検査を分離し、UWB・Stripe・migration・過去の実行結果は既存正本への参照に置き換えた。`firebase login`済みであることを全releaseの前提から外し、標準経路をGitHub Actionsの鍵なし認証へ固定した。既存のDevサービスアカウント鍵を使った診断結果はlocal fallbackの参考記録として分離し、対象serviceごとのpreflightを維持する。
 
 - Codex専用Local、利用者環境Local、Devの効果と保証範囲を分け、変更内容に応じて必要な環境だけを選ぶ規則へ変更した。両LocalはDev前の手戻り抑制用であり、製品変更の最終受入れは固定commitのDev検証とする。Codex専用Localと利用者環境Localは対象project・data・server・browser・process owner・cleanup境界が異なる独立経路としてrunbookと索引を分離し、同じ事項を重複確認しない。Codex専用Firebase Emulatorのroot debug logは一時診断情報として上書きを許容し、退避・復元対象から外した。
 

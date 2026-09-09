@@ -11,7 +11,7 @@
 
 Hosting buildが使う`air-vuetify-v3`はPrivate repositoryである。workflowはAirVuetify3の読み取り専用Deploy keyを使い、検証済みcommit `62ec8eedd36ad623e42ae983780d6d1456942d84`を`air-vuetify-v3/`へ取得する。branch先端を暗黙に取得しない。package sourceを更新する場合は、AirVuetify3側の必須検証とpushを完了し、AirGuard側の固定commit、build、Dev検証を同じreleaseで更新する。
 
-service accountは用途ごとに複数作成できる。Actions専用accountをlocal実行用・Firebase runtime用accountから分け、Firebase Admin、Cloud Functions Admin、Service Account Userだけを付与する。provider側でもrepositoryと`refs/heads/main`を条件にする。
+service accountは用途ごとに複数作成できる。Actions専用accountをlocal実行用・Firebase runtime用accountから分け、Firebase Admin、Cloud Functions Admin、Service Account User、Cloud Scheduler Adminを付与する。Cloud Scheduler Adminはscheduled Functionsのjobを更新するために必要であり、Dev project内のScheduler jobを作成・変更・削除できる。provider側でもrepositoryと`refs/heads/main`を条件にする。
 
 GitHub `dev` Environmentには次を設定する。値はGitHub画面とGoogle/Firebase Consoleのactual targetで照合し、文書やlogへ複写しない。
 
@@ -40,6 +40,7 @@ Actions画面の`Run workflow`は、初回の全service検証、失敗serviceの
 - GitHub EnvironmentまたはOIDC認証が失敗: Variables、`main`制限、provider条件、service account接続、IAMをread-only確認する。秘密鍵を作らず、利用者loginへ自動切替しない。
 - AirVuetify3取得が失敗: 固定commitがremoteに存在すること、Deploy keyが読み取り専用で登録されていること、`AIR_VUETIFY_DEPLOY_KEY`が`dev` Environmentに存在することを確認する。
 - dry-run失敗: 実deployは開始されない。対象service、API、IAM、Firebase CLI互換性を確認する。
+- scheduled Functionsで`cloudscheduler.jobs.update`が拒否される: Actions専用service accountにDev projectのCloud Scheduler Adminがあることを確認する。付与・変更はIAM変更として別承認を得る。
 - 一部deploy後に失敗: Actions logとFirebase Consoleから成功済みserviceを確定し、同一commitの限定再実行か既知の正常commitへのreleaseを判断する。
 - Actions自体を使えない: [local fallback](authentication-and-windows.md)を別承認した場合だけ使う。
 
