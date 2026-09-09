@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- GitHub ActionsのDev Hosting buildが、PrivateなAirVuetify3の検証済みcommitを読み取り専用Deploy keyで固定取得するようにした。
+
 - `main`へのpush承認を、変更fileから自動選択したFirebase serviceのDev deploy承認まで含む運用へ変更した。GitHub Actions専用service account、`main`限定のWorkload Identity連携、GitHub `dev` Environmentを用意し、長期秘密鍵や利用者PCのFirebase loginに依存せず、dry-run後にHosting、Functions、Firestore、Storage、Realtime Databaseを限定deployする。手動実行、IAM・credential変更、migration、repair、Prodは別承認のままとした。
 
 - Dev deploy runbookを、共通release手順と個別手順への索引に整理した。Windows固有のCLI・trust、service別remote検証、Customer保存形式検査を分離し、UWB・Stripe・migration・過去の実行結果は既存正本への参照に置き換えた。Dev deployは実行者と認証経路をreleaseごとに固定し、機械実行では既存のDevサービスアカウント鍵をprocess内だけでFirebase CLIへ渡す。`firebase login`済みであることを全releaseの前提から外し、利用者accountを選ぶ場合だけ必要とした。既存サービスアカウントのdry-runはHostingとRealtime Database Rulesが成功し、Functions、Firestore Rules・Indexes、Storage Rulesは権限不足で停止したため、対象serviceごとのpreflightを必須とした。

@@ -78,6 +78,15 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Check out the pinned AirVuetify3 source
+        uses: actions/checkout@v7
+        with:
+          repository: shisyamo4131/air-vuetify-v3
+          ref: 62ec8eedd36ad623e42ae983780d6d1456942d84
+          path: air-vuetify-v3
+          ssh-key: ${{ secrets.AIR_VUETIFY_DEPLOY_KEY }}
+          persist-credentials: false
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22

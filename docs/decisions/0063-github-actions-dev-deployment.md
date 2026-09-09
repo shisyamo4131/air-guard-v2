@@ -12,7 +12,9 @@
 
 `main`へのpushでGitHub Actionsが変更fileから対象Firebase serviceを選び、`air-guard-v2-dev`へdeployする経路を標準とする。`main` pushの明示承認は、自動選択された対象serviceのDev deploy承認を含む。
 
-GitHub Actions専用service accountを作成し、Workload Identity連携で`shisyamo4131/air-guard-v2`の`refs/heads/main`だけに一時的な権限借用を許可する。長期秘密鍵は作らない。GitHub `dev` Environmentも`main`だけに制限し、Firebase Web設定は暗号化したEnvironment Secretsに保存する。
+GitHub Actions専用service accountを作成し、Workload Identity連携で`shisyamo4131/air-guard-v2`の`refs/heads/main`だけに一時的な権限借用を許可する。Google Cloudの長期秘密鍵は作らない。GitHub `dev` Environmentも`main`だけに制限し、Firebase Web設定は暗号化したEnvironment Secretsに保存する。
+
+Private repositoryであるAirVuetify3は、当該repositoryだけを読める専用Deploy keyで固定commitを取得する。このSSH鍵はGoogle Cloud認証に使わず、書込み権限を付けない。
 
 手動dispatch、再実行、対象serviceの上書き、IAM・credential変更、data migration、repair、Prodはpush承認へ含めず、別承認とする。Actions失敗時にlocal credentialへ自動切替しない。
 
@@ -23,7 +25,7 @@ push済みcommitとdeploy artifactを同じSHAへ結び付け、利用者PCのlo
 ## 代替案
 
 - 利用者loginを都度更新してlocal deployする: 単純だが期限切れと手作業が残る。
-- localサービスアカウント鍵をGitHub Secretへ保存する: 実装は容易だが長期秘密鍵の発行・保管・更新が必要になるため採用しない。
+- localサービスアカウント鍵をGitHub Secretへ保存する: 実装は容易だがGoogle Cloudへ長期間アクセスできる秘密鍵の発行・保管・更新が必要になるため採用しない。
 - 全serviceを毎回deployする: 対象判断は簡単だが時間と変更範囲が増えるため採用しない。
 
 ## 影響と互換性
