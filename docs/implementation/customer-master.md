@@ -10,6 +10,7 @@
 - archive local受入れ証拠: [Customer archive safety local acceptance verification receipt](../verification/customer-archive-local-acceptance.md)
 - Dev試験・座標比較の修正・cleanup: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)
 - Manager利用者Local証拠: [FGA-02 Customer Manager利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)
+- Manager訂正後の利用者Local証拠: [FGA-02 Customer Manager訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)
 
 ## 入口・暫定権限
 
@@ -23,7 +24,7 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 | 詳細・更新 | `/customers/[id]` | readで詳細、write actorだけ基本・支払編集 | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
 | Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
 
-commit `9bd4d43c23bf113790add10691dc91b7445a99d4`では、一覧とAutocompleteが`AirArrayManager`を包む`CustomersManager`のCreate入口を共有する。一覧は配列を渡す一方、行選択をpageが直接詳細routeへ遷移させ、`CustomersManager`／AirArrayManagerの選択dispatchを迂回している。目標は`CustomersManager`の`beforeEdit`で詳細へ遷移してfalseを返し、内部dialogを抑止する方式であり、同Managerから`CustomerManager`は呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEへ訂正する必要がある。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
+commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
 
 ## データ契約
 
@@ -38,7 +39,7 @@ commit `9bd4d43c23bf113790add10691dc91b7445a99d4`では、一覧とAutocomplete�
 
 ## CRUD・validation
 
-- 現行HEADでは一覧とAutocompleteのplus buttonが`CustomersManager`からCustomer専用application処理を呼ぶ。一覧Createは配列を所有する複数形Managerの責務に合うが、Autocomplete Createは訂正対象である。訂正後は`CustomerManager`のCREATEから同じapplication処理を呼び、commit成功後に割当済みdocument IDを持つ結果だけをtenant・actor scope確認後に選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。
+- 現行HEADでは一覧のplus buttonは`CustomersManager`、Autocompleteのplus buttonは`CustomerManager`のCREATEから同じCustomer専用application処理を呼ぶ。Autocompleteはcommit成功後に割当済みdocument IDを持つ結果だけをtenant・actor scope確認後に選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。現行routeにはAutocompleteの`creatable` callerがないため、このCreate経路はsource contractと自動testで確認済みだがruntime未確認である。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
@@ -115,6 +116,6 @@ commit `9bd4d43c23bf113790add10691dc91b7445a99d4`では、一覧とAutocomplete�
 
 ## 未確認範囲
 
-- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerはAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationが未実装である。Autocomplete Createは現行routeから到達する`creatable` callerがなく、訂正前後とも利用者Local runtimeは未確認である。
+- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerのAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationは実装済みである。Autocomplete Createは現行routeから到達する`creatable` callerがなく、訂正前後とも利用者Local runtimeは未確認である。
 - Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、archiveのDev反映・受入れ。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。
