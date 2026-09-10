@@ -11,6 +11,7 @@
 - Dev試験・座標比較の修正・cleanup: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)
 - Manager利用者Local証拠: [FGA-02 Customer Manager利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)
 - Manager訂正後の利用者Local証拠: [FGA-02 Customer Manager訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)
+- Manager訂正のDev証拠: [FGA-02 Customer Manager Dev反映・受入れ記録](../verification/fga-02-customer-manager-dev.md)
 
 ## 入口・暫定権限
 
@@ -25,6 +26,8 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 | Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
 
 commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
+
+この実装を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。一覧のCREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
 
 ## データ契約
 

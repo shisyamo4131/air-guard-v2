@@ -34,7 +34,7 @@
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。Customer Manager訂正ではこのlistener・cache境界を維持している。
 - FGA-02-MANAGER-GOVERNANCE-01はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`で一度完了したが、単数・複数形Managerを画面の選択文脈で分類した判断に誤りがあり、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とgovernance correction commit `b89e5c86`で訂正した。現行基準はeditable stateの所有単位であり、単数Managerは外部既存instanceまたはその場の新規instance、複数形Managerは配列と行選択dispatchを所有する。選択後はAirArrayManagerの`beforeEdit`により内部editorまたは詳細navigationを選び、相互にManagerを内包しない。この基準はCustomer・Site・Employee・OutsourcerだけでなくFirestore上の通常のmaster dataへ適用し、4機能を最初の適用例とする。480px、archive等の例外、listener・cache、server認可境界は変更しない。
-- Customer Managerの訂正実装はcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ固定した。一覧の行選択は`CustomersManager`／AirArrayManagerの`beforeEdit`を経由して詳細へnavigationし、falseを返して一覧dialogを抑止する。Autocomplete内Createは単数`CustomerManager`のCREATEを使い、commit済み・割当済みIDの結果だけをscope確認と従属cache反映後に選択する。独立code reviewはGO、対象自動検証と全domain 1,577件は成功した。利用者Localでは一覧経由の詳細遷移、詳細UPDATE dialogと一覧CREATE dialogの表示・取消を確認し、data writeは行っていない。[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)を参照する。Autocompleteのcreatable callerが現行routeにないため、そのruntimeは未確認である。Dev反映・受入れも未完了のため、FGA-02の得点は0のままとする。[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は訂正前実装の履歴証拠として保持する。
+- Customer Managerの訂正実装はcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`、一般化したgovernanceを含むreleaseはmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`へ固定した。一覧CREATE、`CustomersManager`／AirArrayManagerの`beforeEdit`を経由する詳細navigation、単数`CustomerManager`の詳細UPDATE、480px dialog、listener反映をDevで確認した。[Dev受入れ記録](../verification/fga-02-customer-manager-dev.md)を参照する。Autocompleteのcreatable callerが現行routeにないため、そのruntimeは未確認であり、FGA-02の得点は0のままとする。[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)と[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は履歴証拠として保持する。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -43,10 +43,10 @@
 | FGA-02-MANAGER-GOVERNANCE-01 | Superseded | commit `25069a79e398ad3fa98b960fb758f18f053238e0`で完了した旧分類。ADR 0069とCORRECTION-09が置き換える |
 | FGA-02-MANAGER-GOVERNANCE-CORRECTION-09 | Completed | editable state所有単位、Autocompleteの単数Manager、複数形Managerの配列・選択dispatch、`beforeEdit`による内部編集／詳細遷移をproject rule・仕様・ADRへ訂正し、独立reviewとcomprehensive governance gateを完了した。進捗加点なし |
 | FGA-02-MANAGER-GOVERNANCE-SCOPE-10 | Completed | Manager分類をFirestore上の通常のmaster dataへ一般化し、4機能を最初の適用例、Company・User等を例外としてproject rule・仕様・ADRへ反映した。独立reviewとcomprehensive governance gateを完了した。code・Rules・schema・data変更と進捗加点なし |
-| FGA-02-CUSTOMER-MANAGER-02 | In progress | 既存Updateの480px・document LWWと、Autocomplete内Createを単数`CustomerManager`へ接続する訂正実装・source/test検証はcommit `79301b04`で完了した。現行routeにcreatable callerがなくAutocomplete runtimeは未確認。Dev反映・受入れが未完了 |
-| FGA-02-CUSTOMERS-MANAGER-03 | In progress | 一覧Createと、行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡して詳細遷移後にfalseでdialogを抑止する実装・source/test・利用者Local確認はcommit `79301b04`で完了した。Dev反映・受入れが未完了 |
+| FGA-02-CUSTOMER-MANAGER-02 | In progress | 既存Updateの480px・document LWWと、Autocomplete内Createを単数`CustomerManager`へ接続する訂正実装・source/test検証はcommit `79301b04`で完了した。詳細UPDATEと480pxはrelease `2eeb502b`のDevで受入れ済み。現行routeにcreatable callerがなくAutocomplete runtimeは未確認 |
+| FGA-02-CUSTOMERS-MANAGER-03 | Completed | 一覧Createと、行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡して詳細遷移後にfalseでdialogを抑止する実装・source/test・利用者Local確認をcommit `79301b04`で完了し、release `2eeb502b`のDevで作成、listener反映、詳細navigationを受入れた |
 | FGA-02-CUSTOMER-ARCHIVE-04 | In progress | archiveを専用dialog・Callableへ委譲し、generic deleteを閉じたsourceと利用者Localの入口・取消を確認した。archive実行、固定commit、Devは未確認 |
-| FGA-02-CUSTOMER-LOCAL-05 | In progress | 訂正後の一覧Manager経由詳細遷移、詳細UPDATE dialog、一覧CREATE dialogを利用者Localで確認した。Autocomplete Create runtime、失敗経路、archive実行は未確認。Dev反映・受入れが未完了 |
+| FGA-02-CUSTOMER-LOCAL-05 | In progress | 訂正後の一覧Manager経由詳細遷移、詳細UPDATE dialog、一覧CREATE dialogを利用者Localで確認し、同じManager正常経路をrelease `2eeb502b`のDevで受入れた。Autocomplete Create runtime、失敗経路、archive実行は未確認 |
 
 ## 完了条件
 
