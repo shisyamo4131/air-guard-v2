@@ -3,10 +3,8 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useErrorsStore } from "@/stores/useErrorsStore";
 import { useLogger } from "@/composables/useLogger";
 import {
-  CUSTOMER_OPERATION,
   CustomerOperationError,
   getCustomerWriteDecision,
-  hasCustomerOperationConflict,
   prepareCustomerCreate,
   prepareCustomerUpdate,
 } from "@/composables/domain/customer/customerOperations";
@@ -70,7 +68,7 @@ export function useCustomerActions() {
     }
   }
 
-  async function updateCustomer({ operation, latest, baseline, draft }) {
+  async function updateCustomer({ latest, draft }) {
     assertWriteAllowed();
     isSaving.value = true;
     try {
@@ -79,9 +77,7 @@ export function useCustomerActions() {
       const getLatest = () => typeof latest === "function" ? latest() : latest;
       const source = getLatest();
       const prepared = await prepareCustomerUpdate({
-        operation,
         latest: source,
-        baseline,
         draft,
         actorUid,
         now: new Date(),
@@ -94,26 +90,23 @@ export function useCustomerActions() {
         );
       }
       const current = getLatest();
-      if (
-        current?.docId !== prepared.candidate.docId ||
-        hasCustomerOperationConflict({ operation, baseline, latest: current })
-      ) {
+      if (!current?.docId || current.docId !== prepared.candidate.docId) {
         throw new CustomerOperationError(
-          "conflict",
-          "別の画面で取引先情報が更新されました。最新情報を読み直してください。",
+          "invalid-customer",
+          "取引先の最新情報を確認できません。",
         );
       }
       return await writer.update({
         companyId,
-        operation,
         customer: prepared.candidate,
-        fields: prepared.fields,
       });
     } catch (error) {
-      if (!(error instanceof CustomerOperationError)) {
-        logger.error({ message: "Customer update failed" });
-      }
-      throw error;
+      if (error instanceof CustomerOperationError) throw error;
+      console.error("[useCustomerActions] CUSTOMER_UPDATE_FAILED");
+      throw new CustomerOperationError(
+        "update-failed",
+        "取引先情報を更新できませんでした。",
+      );
     } finally {
       isSaving.value = false;
     }
@@ -123,10 +116,7 @@ export function useCustomerActions() {
     canWrite,
     createCustomer,
     isSaving: Vue.readonly(isSaving),
-    updateBasic: (args) =>
-      updateCustomer({ ...args, operation: CUSTOMER_OPERATION.UPDATE_BASIC }),
-    updatePayment: (args) =>
-      updateCustomer({ ...args, operation: CUSTOMER_OPERATION.UPDATE_PAYMENT }),
+    updateCustomer,
     writeDecision,
   };
 }

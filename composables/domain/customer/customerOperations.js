@@ -94,35 +94,6 @@ export function customerOperationSchema(operation) {
   return customerOperationFields(operation).map((field) => schemaByKey.get(field));
 }
 
-export function customerSnapshot(source = {}, operation) {
-  return Object.fromEntries(
-    customerOperationFields(operation).map((field) => [
-      field,
-      cloneValue(source?.[field] ?? null),
-    ]),
-  );
-}
-
-export function customerSnapshotsEqual(left, right, operation) {
-  return customerOperationFields(operation).every((field) =>
-    Object.is(left?.[field] ?? null, right?.[field] ?? null),
-  );
-}
-
-export function hasCustomerOperationConflict({
-  operation,
-  baseline,
-  latest,
-}) {
-  return !customerSnapshotsEqual(baseline, latest, operation);
-}
-
-export function changedCustomerFields({ operation, baseline, draft }) {
-  return customerOperationFields(operation).filter(
-    (field) => !Object.is(baseline?.[field] ?? null, draft?.[field] ?? null),
-  );
-}
-
 export function getCustomerWriteDecision({
   uid,
   companyId,
@@ -308,45 +279,27 @@ export async function prepareCustomerCreate({ draft, docId, actorUid, now }) {
 }
 
 export async function prepareCustomerUpdate({
-  operation,
   latest,
-  baseline,
   draft,
   actorUid,
   now,
 }) {
-  if (
-    operation !== CUSTOMER_OPERATION.UPDATE_BASIC &&
-    operation !== CUSTOMER_OPERATION.UPDATE_PAYMENT
-  ) {
-    customerOperationFields(operation);
-  }
-  if (hasCustomerOperationConflict({ operation, baseline, latest })) {
+  if (!(draft instanceof Customer)) {
     throw new CustomerOperationError(
-      "conflict",
-      "別の画面で取引先情報が更新されました。最新情報を読み直してください。",
+      "invalid-customer",
+      "取引先の入力内容を確認してください。",
     );
-  }
-
-  const fields = changedCustomerFields({ operation, baseline, draft });
-  if (fields.length === 0) {
-    return { candidate: createCustomerFromLatest(latest), fields: [] };
   }
 
   const candidate = createCustomerFromLatest(latest);
-  Object.assign(
-    candidate,
-    Object.fromEntries(fields.map((field) => [field, cloneValue(draft[field])])),
-  );
+  for (const { key } of Customer.schema) {
+    candidate[key] = cloneValue(draft[key]);
+  }
+  candidate.docId = latest.docId;
+  candidate.createdAt = cloneValue(latest.createdAt);
   candidate.uid = actorUid;
   candidate.updatedAt = now;
   await candidate.beforeUpdate();
-  if (hasCustomerOperationConflict({ operation, baseline, latest })) {
-    throw new CustomerOperationError(
-      "conflict",
-      "別の画面で取引先情報が更新されました。最新情報を読み直してください。",
-    );
-  }
   validateCustomerCandidate(candidate);
-  return { candidate, fields };
+  return { candidate };
 }

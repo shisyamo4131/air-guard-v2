@@ -30,10 +30,10 @@
 
 - [Firestore document構成](../specification.md#firestoreドキュメントの構成)と[ADR 0064](../decisions/0064-sensitive-firestore-document-boundaries.md)を採用し、Company振込先の現行root同居を未解消の実装差として記録した。
 - [通常業務のtenant信頼境界](../specification.md#テナントと認証)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を採用した。FGA-02-RULES-01ではCustomer通常Rulesからrole・schema・operation field検査を外し、有効な本登録User、tenant、actor UIDへ簡素化した。固定commit `3c67a95e`をFirestore・HostingへDev反映し、会社管理者による合成Customerの作成、更新、再読込後のlistener正本表示まで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。archive・物理deleteの例外境界、Functions、schema、既存dataの変換は変更していない。
-- [Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を採用した。Prod公開前はdocument単位last-write-wins、field単位方式は未確定の将来案とし、既存の部分writer、競合拒否、Manager非依存はまだ変更していない。
+- [Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を採用した。FGA-02-CUSTOMER-UPDATE-01でCustomer詳細の基本情報と支払条件を共通`AirItemManager`へ移し、26保存fieldのdocument全体を`setDoc`で置換するlast-write-wins、編集中のdraft固定、listener由来表示、競合拒否・再読込要求の廃止をlocal実装した。実Customer converterと26-field契約の一致、全domain 1,570件、Local Emulator 182件、独立reviewは成功した。従来のdialog外観とarchive専用Callable境界は維持し、Rules・schema・data形状は変更していない。runtime UI、Dev反映・受入れ、固定commitは未実施である。
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。製品実装はまだ変更していない。
-- 利用者はFGA-02-RULES-01の変更契約とDev releaseを承認し、実装・必須検証・独立review・Dev反映・正常経路の受入れを完了した。FGA-02全体の得点は、残るCustomer application／UI checkpointの粒度と配点を合意していないため0のままとし、完了済みcheckpointを未実施へ戻す意味には使わない。次はdocument単位last-write-wins、Manager利用、listener正本、role別UXの既存実装差を調査し、次の小checkpointを合意する。
+- 利用者はFGA-02-RULES-01のDev releaseを完了し、続くFGA-02-CUSTOMER-UPDATE-01のbranch、local実装、自動検証を承認した。現在は後者のlocal実装・必須自動検証・独立reviewまで完了し、runtime UIとDev反映前の承認境界にある。FGA-02の得点は、同checkpointの固定commit、Dev反映・受入れが未完了のため0のままとする。
 
 ## 完了条件
 
