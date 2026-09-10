@@ -16,6 +16,11 @@ import {
   prepareCustomerCreate,
   prepareCustomerUpdate,
 } from "../../composables/domain/customer/customerOperations.js";
+import {
+  captureCustomerCreationScope,
+  deliverCommittedCustomer,
+  initializeCommittedCustomerDraft,
+} from "../../composables/application/customer/customerCreationBridge.js";
 
 function validCustomer(overrides = {}) {
   return new Customer({
@@ -238,7 +243,7 @@ test("Customer update anchors immutable identity fields to the latest document",
   assert.equal(prepared.candidate.uid, "actor-b");
 });
 
-async function loadCustomerActionsHarness({ update }) {
+async function loadCustomerActionsHarness({ create = async () => {}, update }) {
   const source = await readFile(
     new URL(
       "../../composables/application/customer/useCustomerActions.js",
@@ -250,6 +255,7 @@ async function loadCustomerActionsHarness({ update }) {
   const loggerCalls = [];
   const consoleErrors = [];
   const auth = actor();
+  const writerCalls = { create: 0, reserve: 0 };
   globalThis.__customerActionsHarness = {
     console: {
       error: (...args) => consoleErrors.push(args),
@@ -262,8 +268,14 @@ async function loadCustomerActionsHarness({ update }) {
     CUSTOMER_OPERATION,
     CustomerOperationError,
     createCustomerWriter: () => ({
-      reserveDocument: () => ({ id: "reserved-customer" }),
-      create: async () => {},
+      reserveDocument: () => {
+        writerCalls.reserve += 1;
+        return { id: "reserved-customer" };
+      },
+      create: async (args) => {
+        writerCalls.create += 1;
+        return await create(args);
+      },
       update,
     }),
     getCustomerWriteDecision,
@@ -299,9 +311,164 @@ async function loadCustomerActionsHarness({ update }) {
     consoleErrors,
     loggerCalls,
     recordedErrors,
+    writerCalls,
     cleanup: () => delete globalThis.__customerActionsHarness,
   };
 }
+
+test("Customer create returns the generated document ID from one reservation and one write", async () => {
+  let written = null;
+  const harness = await loadCustomerActionsHarness({
+    create: async (args) => {
+      written = args;
+    },
+    update: async () => {},
+  });
+  try {
+    const created = await harness.actions.createCustomer(
+      validCustomer({ docId: "client-supplied-id" }),
+    );
+    assert.equal(harness.writerCalls.reserve, 1);
+    assert.equal(harness.writerCalls.create, 1);
+    assert.equal(created.docId, "reserved-customer");
+    assert.equal(written.documentReference.id, "reserved-customer");
+    assert.equal(written.customer, created);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer creation bridge initializes once and delivers cache before selection", () => {
+  const created = validCustomer({ docId: "generated-customer" });
+  const initialized = [];
+  const draft = {
+    initialize: (raw) => initialized.push(raw),
+  };
+  assert.equal(initializeCommittedCustomerDraft(draft, created), true);
+  assert.equal(initialized.length, 1);
+  assert.equal(initialized[0].docId, "generated-customer");
+
+  const order = [];
+  const scope = captureCustomerCreationScope({
+    companyId: "company-a",
+    uid: "actor-a",
+  });
+  assert.equal(
+    deliverCommittedCustomer({
+      created,
+      creationScope: scope,
+      currentScope: captureCustomerCreationScope({
+        companyId: "company-a",
+        uid: "actor-a",
+      }),
+      pushCustomer: (customer) => order.push(["cache", customer]),
+      selectCustomer: (customer) => order.push(["selection", customer]),
+    }),
+    true,
+  );
+  assert.deepEqual(order, [
+    ["cache", created],
+    ["selection", created],
+  ]);
+});
+
+test("Customer creation bridge discards failures and stale tenant or auth completions", () => {
+  const created = validCustomer({ docId: "generated-customer" });
+  const creationScope = captureCustomerCreationScope({
+    companyId: "company-a",
+    uid: "actor-a",
+  });
+  for (const [candidate, currentScope] of [
+    [null, creationScope],
+    [validCustomer({ docId: "" }), creationScope],
+    [
+      created,
+      captureCustomerCreationScope({ companyId: "company-b", uid: "actor-a" }),
+    ],
+    [
+      created,
+      captureCustomerCreationScope({ companyId: "company-a", uid: "actor-b" }),
+    ],
+  ]) {
+    let cacheWrites = 0;
+    let selections = 0;
+    assert.equal(
+      deliverCommittedCustomer({
+        created: candidate,
+        creationScope,
+        currentScope,
+        pushCustomer: () => {
+          cacheWrites += 1;
+        },
+        selectCustomer: () => {
+          selections += 1;
+        },
+      }),
+      false,
+    );
+    assert.equal(cacheWrites, 0);
+    assert.equal(selections, 0);
+  }
+});
+
+test("Customer create converts an unknown writer failure to one safe typed error", async () => {
+  const rawError = new Error(
+    "FirebaseError: Missing or insufficient permissions for secret/path",
+  );
+  const harness = await loadCustomerActionsHarness({
+    create: async () => {
+      throw rawError;
+    },
+    update: async () => {},
+  });
+  try {
+    await assert.rejects(
+      () => harness.actions.createCustomer(validCustomer({ docId: "" })),
+      (error) => {
+        assert.equal(error instanceof CustomerOperationError, true);
+        assert.equal(error.code, "create-failed");
+        assert.equal(error.message, "取引先を登録できませんでした。");
+        assert.doesNotMatch(error.message, /FirebaseError|secret\/path|permissions/u);
+        return true;
+      },
+    );
+    assert.deepEqual(harness.consoleErrors, [
+      ["[useCustomerActions] CUSTOMER_CREATE_FAILED"],
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(harness.consoleErrors),
+      /FirebaseError|secret\/path|permissions/u,
+    );
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer create passes typed operation failures through without duplicate reporting", async () => {
+  const typedError = new CustomerOperationError(
+    "permission-denied",
+    "取引先を変更する権限がありません。",
+  );
+  const harness = await loadCustomerActionsHarness({
+    create: async () => {
+      throw typedError;
+    },
+    update: async () => {},
+  });
+  try {
+    await assert.rejects(
+      () => harness.actions.createCustomer(validCustomer({ docId: "" })),
+      (error) => error === typedError,
+    );
+    assert.deepEqual(harness.consoleErrors, []);
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
+  } finally {
+    harness.cleanup();
+  }
+});
 
 test("Customer update converts an unknown writer failure to one safe error", async () => {
   const rawMessage = "FirebaseError: Missing or insufficient permissions for secret/path";

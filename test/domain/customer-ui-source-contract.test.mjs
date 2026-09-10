@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 
 const CUSTOMER_SFCS = Object.freeze([
-  "components/Customer/CreateDialog.vue",
   "components/Customer/Manager/index.vue",
   "components/Customer/Autocomplete.vue",
   "components/Customer/Activator/Base.vue",
   "components/Customer/Activator/Payment.vue",
   "components/Customer/ArchiveDialog.vue",
+  "components/Customers/Manager/index.vue",
   "components/Customers/DataTable/index.vue",
   "pages/customers/index.vue",
   "pages/customers/[id].vue",
@@ -70,15 +70,50 @@ test("Customer detail routes normal updates through its AirItemManager wrapper",
   assert.match(detail, /:included-keys="CUSTOMER_PAYMENT_FIELDS"/u);
 });
 
-test("Customer list and autocomplete share the dedicated create dialog", async () => {
-  const [listPage, autocomplete] = await Promise.all([
+test("Customer list and autocomplete share the plural AirArrayManager create entry", async () => {
+  const [listPage, autocomplete, manager, bridge] = await Promise.all([
     source("pages/customers/index.vue"),
     source("components/Customer/Autocomplete.vue"),
+    source("components/Customers/Manager/index.vue"),
+    source("composables/application/customer/customerCreationBridge.js"),
   ]);
-  assert.match(listPage, /<CustomerCreateDialog v-if="canWrite">/u);
-  assert.match(autocomplete, /<CustomerCreateDialog @created="onCreateHandler">/u);
+  assert.match(listPage, /<CustomersManager :docs="customerInstance\.docs">/u);
+  assert.match(listPage, /#table="\{ items, canWrite, toCreate \}"/u);
+  assert.match(listPage, /<CustomersDataTable[\s\S]*?:items="items"/u);
+  assert.match(listPage, /@click="\(\) => toCreate\(\)"/u);
+  assert.match(autocomplete, /<CustomersManager hide-table @created="onCreateHandler">/u);
+  assert.match(manager, /<air-array-manager/u);
+  assert.match(manager, /:schema="Customer"/u);
+  assert.match(manager, /:included-keys="CUSTOMER_CREATE_FIELDS"/u);
+  assert.match(manager, /:handle-create="handleCreate"/u);
+  assert.match(manager, /:handle-update="rejectUnsupportedOperation"/u);
+  assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
+  assert.match(manager, /editMode !== "CREATE"/u);
+  assert.match(
+    manager,
+    /const creationScope = captureCustomerCreationScope\(auth\);[\s\S]*?const created = await createCustomer\(draft\);[\s\S]*?initializeCommittedCustomerDraft\(draft, created\)/u,
+  );
+  assert.match(manager, /@create="handleCreated"/u);
+  assert.match(manager, /emit\("created", created, creationScope\)/u);
+  assert.match(manager, /maxWidth: 480/u);
+  assert.match(manager, /class="fill-height"/u);
+  assert.match(manager, /style="height: 100%"/u);
+  assert.match(manager, /取引先の新規登録/u);
+  assert.match(manager, /キャンセル/u);
+  assert.match(manager, /登録/u);
+  assert.match(autocomplete, /function onCreateHandler\(event, creationScope\)/u);
+  assert.match(autocomplete, /currentScope: captureCustomerCreationScope\(auth\)/u);
+  assert.match(autocomplete, /#activator="\{ disabled, open \}"/u);
+  assert.match(autocomplete, /<v-icon v-if="!disabled" @click="open">/u);
+  assert.ok(bridge.indexOf("pushCustomer(created)") < bridge.indexOf("selectCustomer(created)"));
   assert.match(autocomplete, /const emitValue = props\.returnObject/u);
   assert.match(autocomplete, /emit\("update:model-value", emitValue\)/u);
+  assert.doesNotMatch(manager, /props\.docs\.(?:push|splice)|docs\.(?:push|splice)/u);
+  assert.doesNotMatch(manager, /@update:model-value|emit\("update:model-value"/u);
+  await assert.rejects(
+    access(new URL("../../components/Customer/CreateDialog.vue", import.meta.url)),
+    (error) => error?.code === "ENOENT",
+  );
 });
 
 test("Customer detail exposes manager-backed editors and a write-authorized archive action", async () => {
@@ -228,7 +263,7 @@ test("Customer manager editor preserves the approved visual and submit contract"
 
   assert.match(
     manager,
-    /:dialog-props="\{[\s\S]*?maxWidth: 800,[\s\S]*?persistent: true,[\s\S]*?scrollable: true,[\s\S]*?'aria-label': props\.title,[\s\S]*?\}"/u,
+    /:dialog-props="\{[\s\S]*?maxWidth: 480,[\s\S]*?persistent: true,[\s\S]*?scrollable: true,[\s\S]*?'aria-label': props\.title,[\s\S]*?\}"/u,
   );
   assert.match(manager, /<v-card :border="false">/u);
   assert.match(

@@ -107,7 +107,7 @@ watch(
     :included-keys="props.includedKeys"
     :label="props.title"
     :dialog-props="{
-      maxWidth: 800,
+      maxWidth: 480,
       persistent: true,
       scrollable: true,
       'aria-label': props.title,

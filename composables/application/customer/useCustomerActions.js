@@ -1,7 +1,5 @@
 import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useErrorsStore } from "@/stores/useErrorsStore";
-import { useLogger } from "@/composables/useLogger";
 import {
   CustomerOperationError,
   getCustomerWriteDecision,
@@ -12,7 +10,6 @@ import { createCustomerWriter } from "@/utils/customer/customerWriter";
 
 export function useCustomerActions() {
   const auth = useAuthStore();
-  const logger = useLogger("useCustomerActions", useErrorsStore());
   const { $firestore } = useNuxtApp();
   const writer = createCustomerWriter({ firestore: $firestore });
   const isSaving = Vue.ref(false);
@@ -59,10 +56,12 @@ export function useCustomerActions() {
       await writer.create({ documentReference, customer });
       return customer;
     } catch (error) {
-      if (!(error instanceof CustomerOperationError)) {
-        logger.error({ message: "Customer create failed" });
-      }
-      throw error;
+      if (error instanceof CustomerOperationError) throw error;
+      console.error("[useCustomerActions] CUSTOMER_CREATE_FAILED");
+      throw new CustomerOperationError(
+        "create-failed",
+        "取引先を登録できませんでした。",
+      );
     } finally {
       isSaving.value = false;
     }
