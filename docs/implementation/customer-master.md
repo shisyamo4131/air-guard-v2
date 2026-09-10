@@ -27,7 +27,9 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 
 commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
 
-この実装を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。一覧のCREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
+FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。activatorはbase `AirItemManager`の`toCreate`と`toUpdate`をoperation別に公開し、callerが用途に対応するmethodを呼ぶ。Customerは段階移行中の例外として`includedKeys`を当面使用し、入力順はSchema定義順とする。既定editorのform validation、submit、mode管理を利用し、`useBaseManager`のattrsがbase Managerのerror・error clear・loading eventをアプリ標準のlogger、error message store、loading stateへ接続する。これは現行event契約に適合するため採用しており、`useBaseManager`の利用自体を全domain Managerへ強制するものではない。
+
+SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。その時点の一覧CREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。この証拠はSIMPLIFY-17で変更した既定editor、error event、activator、編集中draft置換のruntime確認には使用しない。SIMPLIFY-17は固定commit、利用者Local、Dev反映・受入れが未完了である。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
 
 ## データ契約
 
@@ -49,7 +51,7 @@ commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
 - active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、権限制御・理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04で実装し、CAS-05でDev反映・受入れ済みである。archive一覧とrestoreの画面入口はない。
 - 通常更新は編集開始時のCustomer document全体をdraftとし、`docId`・`createdAt`を最新値へ固定、`uid`・`updatedAt`を現在actorとserver timestampへ更新し、`beforeUpdate`と全schema validation後に26保存field全体をmergeなしの`setDoc`で置換する。名称・住所等の派生fieldも同じdocumentに再生成する。
-- 編集中にlistenerが別のCustomer値を受信してもdraftは維持し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示は楽観的なManager出力を採用せずlistener受信値を正本にする。applicationは非同期準備後に権限・tenant・UIDと対象doc IDを再確認し、対象消失または別ID化ではwriteしない。
+- `CustomerManager`はlistener由来のCustomer instanceを`modelValue`へ直接渡す。編集中にlistenerが別のCustomer値を受信した場合も、base Managerの同期によりdraft全体が最新documentへ置き換わることを許容し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示もlistener受信値を正本にする。applicationは非同期準備後に権限・tenant・UIDと対象doc IDを再確認し、対象消失または別ID化ではwriteしない。
 
 ## 必要時の保存形式検査
 

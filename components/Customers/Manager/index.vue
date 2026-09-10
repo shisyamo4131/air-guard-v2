@@ -10,7 +10,6 @@ import { initializeCommittedCustomerDraft } from "@/composables/application/cust
 import {
   CUSTOMER_CREATE_FIELDS,
   CustomerOperationError,
-  getCustomerOperationErrorMessage,
 } from "@/composables/domain/customer/customerOperations";
 
 defineOptions({ inheritAttrs: false });
@@ -24,8 +23,6 @@ const emit = defineEmits(["created"]);
 
 const { attrs } = useBaseManager("CustomersManager");
 const { canWrite, createCustomer, isSaving } = useCustomerActions();
-const editorForm = ref(null);
-const errorMessage = ref("");
 
 function rejectUnsupportedOperation() {
   throw new CustomerOperationError(
@@ -35,7 +32,6 @@ function rejectUnsupportedOperation() {
 }
 
 async function beforeEdit(editMode, item) {
-  errorMessage.value = "";
   if (editMode === "DELETE") return rejectUnsupportedOperation();
   if (editMode === "UPDATE") {
     const externalDecision = await props.beforeEdit?.(editMode, item);
@@ -71,28 +67,6 @@ async function handleCreate(draft) {
     );
   }
 }
-
-function handleManagerError(payload) {
-  errorMessage.value = getCustomerOperationErrorMessage(
-    payload?.error,
-    "取引先を登録できませんでした。",
-  );
-}
-
-function clearManagerError() {
-  errorMessage.value = "";
-}
-
-async function submitEditor(editorAttrs) {
-  if (
-    editorAttrs.isLoading ||
-    editorAttrs.disabled ||
-    editorAttrs.disableSubmit
-  ) return;
-  const validation = await editorForm.value?.validate();
-  if (validation && validation.valid !== true) return;
-  await editorAttrs["onClick:submit"]();
-}
 </script>
 
 <template>
@@ -120,14 +94,12 @@ async function submitEditor(editorAttrs) {
     :handle-update="rejectUnsupportedOperation"
     :handle-delete="rejectUnsupportedOperation"
     @create="emit('created', $event)"
-    @error="handleManagerError"
-    @error:clear="clearManagerError"
   >
     <template #header="{ toCreate }">
       <slot
         name="activator"
         :disabled="!canWrite || isSaving"
-        :open="() => toCreate()"
+        :to-create="() => toCreate()"
       />
     </template>
 
@@ -138,52 +110,6 @@ async function submitEditor(editorAttrs) {
         :can-write="canWrite"
         :is-saving="isSaving"
       />
-    </template>
-
-    <template #editor="editorAttrs">
-      <v-form
-        ref="editorForm"
-        :disabled="editorAttrs.disabled"
-        @submit.prevent="submitEditor(editorAttrs)"
-      >
-        <v-card :border="false">
-          <v-toolbar
-            color="secondary"
-            density="compact"
-            title="取引先の新規登録"
-          />
-          <v-card-text>
-            <v-alert
-              v-if="errorMessage"
-              type="error"
-              variant="tonal"
-              class="mb-4"
-            >
-              {{ errorMessage }}
-            </v-alert>
-            <air-item-input v-bind="editorAttrs.inputProps" />
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn
-              :disabled="editorAttrs.isLoading"
-              variant="text"
-              @click="editorAttrs['onClick:cancel']"
-            >
-              キャンセル
-            </v-btn>
-            <v-btn
-              type="submit"
-              color="primary"
-              variant="flat"
-              :loading="editorAttrs.isLoading"
-              :disabled="editorAttrs.disabled || editorAttrs.disableSubmit"
-            >
-              登録
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-form>
     </template>
   </air-array-manager>
 </template>

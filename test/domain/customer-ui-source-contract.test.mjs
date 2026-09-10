@@ -29,8 +29,15 @@ async function customerManagerHarness() {
   assert.ok(script);
   let sequence = 0;
   let createFailure = null;
+  let updateRequest = null;
   const events = [];
   const auth = { companyId: "company-a", uid: "actor-a" };
+  class CustomerOperationError extends Error {
+    constructor(code, message) {
+      super(message);
+      this.code = code;
+    }
+  }
   class Customer {
     constructor(raw = {}) {
       this.instanceNumber = ++sequence;
@@ -44,9 +51,8 @@ async function customerManagerHarness() {
     }
   }
   const props = {
-    doc: new Customer(),
+    doc: new Customer({ docId: "listener-customer" }),
     includedKeys: ["name"],
-    operation: "CREATE",
     title: "取引先の新規登録",
   };
   const factory = new Function(
@@ -56,31 +62,24 @@ async function customerManagerHarness() {
     "computed",
     "defineEmits",
     "defineProps",
-    "getCustomerOperationErrorMessage",
     "initializeCommittedCustomerDraft",
-    "ref",
-    "shallowRef",
     "useAuthStore",
     "useBaseManager",
     "useCustomerActions",
-    "watch",
-    `${stripImports(script)}; return { handleCreate, handleCreated, handleEditing, openManager };`,
+    `${stripImports(script)}; return { beforeEdit, handleCreate, handleCreated, handleUpdate, toCreate };`,
   );
   const methods = factory(
     Customer,
-    class CustomerOperationError extends Error {},
+    CustomerOperationError,
     (value) => Object.freeze({ companyId: value.companyId, uid: value.uid }),
     (getter) => ({ get value() { return getter(); } }),
     () => (...args) => events.push(args),
     () => props,
-    (error, fallback) => error?.message || fallback,
     (draft, created) => {
       if (!created?.docId) return false;
       draft.initialize(created.toObject());
       return true;
     },
-    (value) => ({ value }),
-    (value) => ({ value }),
     () => auth,
     () => ({ attrs: {} }),
     () => ({
@@ -90,15 +89,19 @@ async function customerManagerHarness() {
         return new Customer({ docId: "generated-customer" });
       },
       isSaving: { value: false },
-      updateCustomer: async () => {},
+      updateCustomer: async (request) => {
+        updateRequest = request;
+      },
     }),
-    () => {},
   );
   return {
     ...methods,
     Customer,
+    CustomerOperationError,
     auth,
     events,
+    listenerDoc: props.doc,
+    getUpdateRequest: () => updateRequest,
     failCreate(error) {
       createFailure = error;
     },
@@ -152,13 +155,13 @@ test("CustomerManager keeps detail updates and owns single-instance create", asy
   assert.match(manager, /hide-delete-btn/u);
   assert.match(manager, /:handle-create="handleCreate"/u);
   assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
-  assert.match(manager, /default: "UPDATE"/u);
-  assert.match(manager, /\["CREATE", "UPDATE"\]\.includes\(value\)/u);
   assert.match(manager, /default: \(\) => new Customer\(\)/u);
   assert.match(
     manager,
-    /props\.operation === "CREATE"[\s\S]*?slotProps\.toCreate\(new Customer\(\)\)/u,
+    /function toCreate\(slotProps\)[\s\S]*?slotProps\.toCreate\(new Customer\(\)\)/u,
   );
+  assert.match(manager, /:to-update="\(\) => slotProps\.toUpdate\(props\.doc\)"/u);
+  assert.doesNotMatch(manager, /\boperation:\s*\{|openManager/u);
   assert.match(manager, /const creationScope = captureCustomerCreationScope\(auth\)/u);
   assert.match(manager, /initializeCommittedCustomerDraft\(draft, created\)/u);
   assert.match(manager, /emit\("created", created, creationScope\)/u);
@@ -174,10 +177,9 @@ test("CustomerManager creates a fresh draft and emits only committed assigned-ID
   const opened = [];
   const slotProps = {
     toCreate: (item) => opened.push(item),
-    toUpdate: () => assert.fail("CREATE must not open UPDATE"),
   };
-  harness.openManager(slotProps);
-  harness.openManager(slotProps);
+  harness.toCreate(slotProps);
+  harness.toCreate(slotProps);
   assert.equal(opened.length, 2);
   assert.equal(opened[0] instanceof harness.Customer, true);
   assert.equal(opened[1] instanceof harness.Customer, true);
@@ -194,7 +196,6 @@ test("CustomerManager creates a fresh draft and emits only committed assigned-ID
   ]);
   assert.equal(opened[1].docId, "generated-customer");
 
-  harness.handleEditing(false);
   harness.handleCreated(opened[1]);
   assert.equal(harness.events.length, 1);
   const failure = new Error("synthetic failure");
@@ -202,6 +203,18 @@ test("CustomerManager creates a fresh draft and emits only committed assigned-ID
   await assert.rejects(() => harness.handleCreate(opened[0]), failure);
   harness.handleCreated(opened[0]);
   assert.equal(harness.events.length, 1);
+});
+
+test("CustomerManager delegates UPDATE to the listener document and rejects DELETE", async () => {
+  const harness = await customerManagerHarness();
+  const draft = new harness.Customer({ docId: "listener-customer", name: "draft" });
+
+  assert.equal(harness.beforeEdit("UPDATE"), true);
+  await harness.handleUpdate(draft);
+  const request = harness.getUpdateRequest();
+  assert.equal(request.draft, draft);
+  assert.equal(request.latest(), harness.listenerDoc);
+  assert.throws(() => harness.beforeEdit("DELETE"));
 });
 
 test("Customer autocomplete uses singular CREATE without nesting plural manager", async () => {
@@ -212,7 +225,6 @@ test("Customer autocomplete uses singular CREATE without nesting plural manager"
     source("composables/application/customer/customerCreationBridge.js"),
   ]);
   assert.match(autocomplete, /<CustomerManager/u);
-  assert.match(autocomplete, /operation="CREATE"/u);
   assert.match(autocomplete, /:included-keys="CUSTOMER_CREATE_FIELDS"/u);
   assert.match(autocomplete, /title="取引先の新規登録"/u);
   assert.doesNotMatch(autocomplete, /<CustomersManager/u);
@@ -220,8 +232,9 @@ test("Customer autocomplete uses singular CREATE without nesting plural manager"
   assert.doesNotMatch(plural, /<CustomerManager/u);
   assert.match(autocomplete, /function onCreateHandler\(event, creationScope\)/u);
   assert.match(autocomplete, /currentScope: captureCustomerCreationScope\(auth\)/u);
-  assert.match(autocomplete, /#activator="\{ disabled, open \}"/u);
-  assert.match(autocomplete, /<v-icon v-if="!disabled" @click="open">/u);
+  assert.match(autocomplete, /#activator="\{ disabled, toCreate \}"/u);
+  assert.match(autocomplete, /<v-icon v-if="!disabled" @click="toCreate">/u);
+  assert.doesNotMatch(autocomplete, /operation="CREATE"|\bopen\b/u);
   assert.ok(bridge.indexOf("pushCustomer(created)") < bridge.indexOf("selectCustomer(created)"));
   assert.match(autocomplete, /const emitValue = props\.returnObject/u);
   assert.match(autocomplete, /emit\("update:model-value", emitValue\)/u);
@@ -257,8 +270,8 @@ test("Customer list dispatches rows through plural AirArrayManager beforeEdit", 
   assert.match(manager, /class="fill-height"/u);
   assert.match(manager, /style="height: 100%"/u);
   assert.match(manager, /取引先の新規登録/u);
-  assert.match(manager, /キャンセル/u);
-  assert.match(manager, /登録/u);
+  assert.match(manager, /:to-create="\(\) => toCreate\(\)"/u);
+  assert.doesNotMatch(manager, /<template #editor|<v-form/u);
   assert.doesNotMatch(manager, /props\.docs\.(?:push|splice)|docs\.(?:push|splice)/u);
   assert.doesNotMatch(manager, /@update:model-value|emit\("update:model-value"/u);
   await assert.rejects(
@@ -367,78 +380,60 @@ test("Customer archive client stays on the dedicated Callable without direct arc
   );
 });
 
-test("Customer manager keeps an edit snapshot and does not expose conflict reload handling", async () => {
-  const [operations, manager] = await Promise.all([
+test("Customer manager lets the base deep watch replace an editing draft from the listener", async () => {
+  const [operations, manager, baseManager] = await Promise.all([
     source("composables/domain/customer/customerOperations.js"),
     source("components/Customer/Manager/index.vue"),
+    source("air-vuetify-v3/src/composables/useItemManager.js"),
   ]);
   assert.match(
     operations,
     /CUSTOMER_BASIC_FIELDS[\s\S]*?"address"/u,
   );
-  assert.match(manager, /edit(?:ing)?Snapshot|editSnapshot|stableSnapshot/u);
-  assert.match(manager, /stableSnapshot = shallowRef\(new Customer\(props\.doc\.toObject\(\)\)\)/u);
-  assert.match(
-    manager,
-    /function openManager\(slotProps\)[\s\S]*?syncFromListener\(\);[\s\S]*?slotProps\.toUpdate\(stableSnapshot\.value\)/u,
-  );
-  assert.match(
-    manager,
-    /watch\([\s\S]*?if \(!isEditing\.value\) syncFromListener\(\)/u,
-  );
-  assert.match(manager, /:model-value="stableSnapshot"/u);
-  assert.match(manager, /@update:model-value="ignoreManagerModelValue"/u);
+  assert.match(manager, /:model-value="props\.doc"/u);
   assert.match(manager, /:item="props\.doc"/u);
+  assert.doesNotMatch(manager, /stableSnapshot|syncFromListener|isEditing|\bwatch\(/u);
+  assert.match(
+    baseManager,
+    /Vue\.watch\([\s\S]*?\(\) => props\.modelValue,[\s\S]*?internalItem\.value = _cloneObject\(v\)[\s\S]*?immediate: true, deep: true/u,
+  );
   assert.doesNotMatch(manager, /hasExternalChanges|isWaitingForRollback|reloadLatest/u);
   assert.doesNotMatch(manager, /最新値を読み直す|競合|confirmOverwrite/u);
 });
 
-test("Customer manager editor preserves the approved visual and submit contract", async () => {
-  const manager = await source("components/Customer/Manager/index.vue");
-
-  assert.match(manager, /<template #editor="editorAttrs">/u);
-  assert.match(
-    manager,
-    /<v-form[\s\S]*?ref="editorForm"[\s\S]*?:disabled="editorAttrs\.disabled"[\s\S]*?@submit\.prevent="submitEditor\(editorAttrs\)"/u,
-  );
-  const submit = manager.slice(manager.indexOf("async function submitEditor"));
-  assert.match(
-    submit,
-    /editorAttrs\.isLoading[\s\S]*?editorAttrs\.disabled[\s\S]*?editorAttrs\.disableSubmit[\s\S]*?return;/u,
-  );
-  assert.ok(
-    submit.indexOf("await editorForm.value?.validate()") <
-      submit.indexOf('await editorAttrs["onClick:submit"]()'),
-  );
-  assert.match(submit, /validation\.valid !== true\) return;/u);
+test("Customer managers use the base editor validation and common error pipeline", async () => {
+  const [manager, plural, airItemManager, airArrayManager, editCard, baseManager] =
+    await Promise.all([
+      source("components/Customer/Manager/index.vue"),
+      source("components/Customers/Manager/index.vue"),
+      source("air-vuetify-v3/src/AirItemManager.vue"),
+      source("air-vuetify-v3/src/AirArrayManager.vue"),
+      source("air-vuetify-v3/src/AirEditCard.vue"),
+      source("composables/useBaseManager.js"),
+    ]);
 
   assert.match(
     manager,
     /:dialog-props="\{[\s\S]*?maxWidth: 480,[\s\S]*?persistent: true,[\s\S]*?scrollable: true,[\s\S]*?'aria-label': props\.title,[\s\S]*?\}"/u,
   );
-  assert.match(manager, /<v-card :border="false">/u);
+  assert.match(plural, /maxWidth: 480/u);
+  for (const wrapper of [manager, plural]) {
+    assert.doesNotMatch(
+      wrapper,
+      /<template #editor|<template #input-header|<v-form|custom-input|errorMessage/u,
+    );
+    assert.match(wrapper, /v-bind=(?:"attrs"|"\{ \.\.\.\$attrs, \.\.\.attrs \}")/u);
+  }
+  assert.match(baseManager, /const logger = useLogger\(composableName, useErrorsStore\(\)\)/u);
+  assert.match(baseManager, /onError: \(e\) => logger\.error\(\{ error: e \}\)/u);
+  assert.match(baseManager, /"onError:clear": logger\.clearError/u);
+  assert.match(airItemManager, /<air-edit-card v-bind="editorAttrs">/u);
+  assert.match(airArrayManager, /<air-edit-card v-bind="editorAttrs">/u);
+  assert.match(editCard, /<v-form[\s\S]*?ref="form"[\s\S]*?:disabled="disabled"/u);
   assert.match(
-    manager,
-    /<v-toolbar[\s\S]*?color="secondary"[\s\S]*?density="compact"[\s\S]*?:title="props\.title"/u,
+    editCard,
+    /const \{ valid \} = await form\.value\.validate\(\);[\s\S]*?if \(isValid\) emit\("click:submit"\)/u,
   );
-  assert.match(
-    manager,
-    /<AtomsBtnsCancel[\s\S]*?type="button"[\s\S]*?:disabled="editorAttrs\.isLoading"[\s\S]*?@click="editorAttrs\['onClick:cancel'\]"/u,
-  );
-  assert.match(
-    manager,
-    /<AtomsBtnsSubmit[\s\S]*?type="submit"[\s\S]*?:text="submitText"[\s\S]*?:loading="editorAttrs\.isLoading"[\s\S]*?:disabled="editorAttrs\.disabled \|\| editorAttrs\.disableSubmit"/u,
-  );
-  assert.match(
-    manager,
-    /<v-alert[\s\S]*?v-if="editorAttrs\.errors\.length"[\s\S]*?type="error"[\s\S]*?variant="tonal"[\s\S]*?editorErrorMessage\(editorAttrs\.errors\)/u,
-  );
-  assert.match(
-    manager,
-    /getCustomerOperationErrorMessage[\s\S]*?取引先を登録できませんでした。[\s\S]*?取引先情報を更新できませんでした。/u,
-  );
-  assert.match(manager, /<air-item-input v-bind="editorAttrs\.inputProps" \/>/u);
-  assert.doesNotMatch(manager, /<v-chip|mdi-(?:pencil|close)|close-icon/u);
 });
 
 test("Customer edit controls are absent for read-only users", async () => {

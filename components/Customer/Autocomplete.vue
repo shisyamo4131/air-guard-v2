@@ -107,13 +107,12 @@ async function api(text) {
   >
     <template v-if="creatable" #append>
       <CustomerManager
-        operation="CREATE"
         :included-keys="CUSTOMER_CREATE_FIELDS"
         title="取引先の新規登録"
         @created="onCreateHandler"
       >
-        <template #activator="{ disabled, open }">
-          <v-icon v-if="!disabled" @click="open">mdi-plus</v-icon>
+        <template #activator="{ disabled, toCreate }">
+          <v-icon v-if="!disabled" @click="toCreate">mdi-plus</v-icon>
         </template>
       </CustomerManager>
     </template>

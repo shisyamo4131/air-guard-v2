@@ -23,7 +23,7 @@ repository内のAirVuetify3 sourceでは、`useItemManager`が編集後の`inter
 - 同じdocumentへの複数operationは、利用者が操作した時刻またはclient clockではなく、Firestoreへのcommitが後に成立したoperationの整合済みdocument全体を正とする。
 - 異なるtop-level fieldだけを編集した同時更新も自動mergeしない。後commitのdocument全体に含まれる値で置換する。
 - arrayとmapを含む全top-level fieldはdocument全体の一部として扱う。
-- 更新後はFirestore listenerから受信した最新documentを画面上の正本とし、通常更新では同時更新だけを理由に保存拒否、競合通知、draft破棄、再読込、明示再確認を要求しない。
+- 変更可能な主対象documentは編集中もFirestore listener由来instanceをManagerの`modelValue`へ直接接続する。listener更新を受信した場合は編集中のdraftを最新document全体で置き換えることを許容し、編集中だけ固定するsnapshot、入力消失の警告、競合通知、保存拒否、再読込、明示再確認を設けない。更新後もlistenerから受信した最新documentを画面上の正本とする。
 - `AirItemManager`と`AirArrayManager`はdocument全体を扱う通常CRUDへ積極的に使用できる。ただしmanager利用を認証・認可・tenant・Rules・server validationの代替にせず、例外operationへ強制しない。
 - document全体はFireModel/Class schemaと必要なoperation条件を満たすものとする。`updatedAt`・`updatedBy`等のserver管理fieldと必要な派生fieldは正規の保存境界で確定し、client値を無条件に信頼しない。
 
@@ -57,7 +57,7 @@ Dev試用段階では同時更新の完全な保持より、既存managerと単�
 ## 影響と互換性
 
 - 現行のCustomer、Employee、Outsourcer、Site取極め等には、field限定writer、専用editor、同一field競合拒否、再読込要求、manager非依存があり、新ルールとの実装差になる。CompanyとUserの同様の実装は維持対象であり、実装差に数えない。
-- document単位writerは、同時に別fieldを編集した先行commitを失わせる。これはProd公開前の既知trade-offとして受容するが、listenerが古いclient draftを正本化し続ける挙動や、保存失敗を成功扱いする挙動は許容しない。
+- document単位writerは、同時に別fieldを編集した先行commitを失わせる。加えてlistener更新は未保存の入力を含む編集中draftを最新document全体で置き換え得る。これらをProd公開前の既知trade-offとして受容するが、listener受信後も古いclient draftを正本化し続ける挙動や、保存失敗を成功扱いする挙動は許容しない。
 - 機微・機密情報やserver-only fieldが通常documentへ同居する場合、通常actorへwhole-document writeを開放できない。ADR 0064の分割または例外writerを先に確立する。
 - このADRの文書変更だけではapplication、AirVuetify3、Functions、Rules、schema、data、Dev・Prodを変更しない。
 
@@ -72,7 +72,7 @@ Dev試用段階では同時更新の完全な保持より、既存managerと単�
 ## 検証
 
 - governance、仕様、ADR、roadmap、future action、handoff、CHANGELOGの整合をcomprehensive governance gateで確認する。
-- 各通常CRUD checkpointで、同じdocumentへの同時更新が後commitのdocument全体へ収束すること、listenerが最新正本を表示すること、競合だけを理由に拒否・再読込要求しないことを確認する。
+- 各通常CRUD checkpointで、同じdocumentへの同時更新が後commitのdocument全体へ収束すること、listenerが編集中draftを最新document全体で置き換えること、競合だけを理由に警告・拒否・再読込要求しないことを確認する。
 - schema、tenant、認証、server管理field、派生field、保存失敗と結果不明を確認する。
 - 例外operationでは、transaction、precondition、idempotency、順序、不変条件と拒否時write 0を対象に応じて確認する。
 - 将来field単位方式を採用する場合は、異field併存、同field後commit、array/map全体置換、旧document単位writerとの非互換を追加確認する。

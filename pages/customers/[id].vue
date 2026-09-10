@@ -82,12 +82,12 @@ onUnmounted(unsubscribe);
               :included-keys="CUSTOMER_BASIC_FIELDS"
               title="取引先基本情報の編集"
             >
-              <template #activator="{ open }">
+              <template #activator="{ toUpdate }">
                 <CustomerActivatorBase
                   :item="customerInstance"
                   title="基本情報"
                   :editable="canWrite"
-                  @click:edit="open"
+                  @click:edit="toUpdate"
                 >
                   <template #actions>
                     <CustomerArchiveDialog
@@ -108,12 +108,12 @@ onUnmounted(unsubscribe);
               :included-keys="CUSTOMER_PAYMENT_FIELDS"
               title="請求・回収条件の編集"
             >
-              <template #activator="{ open }">
+              <template #activator="{ toUpdate }">
                 <CustomerActivatorPayment
                   :item="customerInstance"
                   title="請求・回収条件"
                   :editable="canWrite"
-                  @click:edit="open"
+                  @click:edit="toUpdate"
                 />
               </template>
             </CustomerManager>

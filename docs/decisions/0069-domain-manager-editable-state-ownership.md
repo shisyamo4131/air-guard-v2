@@ -23,6 +23,19 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 - 単数形Managerと複数形Managerは相互に内包しない。各Managerが対応するbase Managerの編集state、dialog、validation、submit、error・loading、または選択dispatchを完結して所有し、domain application operation、FireModel/Class schema、error・loading、listener正本契約を共有する。
 - page、list、document選択componentがbase Managerまたはmodel CRUDを直接呼ぶ経路は既定にせず、domain Managerで表現できない確認済み理由がある場合だけ例外、影響、testを定める。
 
+### Editorと入力component
+
+- domain Managerはbase Managerの既定editor、form validation、loading、submit、edit mode管理を使用する。baseで満たせない確認済み要件がない限り`editor` slot全体を上書きせず、同じ責務をdomain側へ再実装しない。
+- base Managerが発行するerror・error clear・loading eventは、event契約へ適合する既存composableまたは同等の薄いadapterでアプリ標準の通知・logging・loading経路へ接続する。特定helperの使用自体を必須にせず、Manager固有のerror state・表示や二重処理を増やさない。
+- 完成形ではManager固有の`customInput`が入力field、配置、順序を所有し、base Managerから受けるitem、`updateProperties`、edit mode、disabled状態、schema由来component属性を使用する。edit mode別に入力componentを変える場合は`customInput` resolverを使う。
+- `includedKeys`はSchema定義順から対象fieldを絞る暫定的な簡易入力機能であり、配列指定順を画面順序の契約にしない。既存Customerは段階移行中の例外として当面使用できるが、後続masterの完成形と新規domain Managerは`customInput`を既定とする。`customInput`使用時は同componentがfieldと順序を所有し、`includedKeys`による絞込みへ依存しない。
+
+### Activatorとmode
+
+- 単数domain Managerはactivatorへbase Managerの`toCreate`、`toUpdate`、製品が提供する場合だけ`toDelete`をoperation別に公開し、callerが用途に対応するmethodを呼ぶ。wrapper独自の`operation` propまたは単一`open`関数でedit modeを再管理しない。
+- wrapperはfresh create instanceの生成、listener由来update instanceの接続、許可operation、domain handlerとerror表示を薄く接続できる。base Managerのmode、validation、submit、loadingは複製しない。複数形Managerはheader・tableの標準dispatchと`beforeEdit`を使い、標準dispatchを置き換える場合は確認済み理由を示す。
+- 通常CRUDの変更可能な主対象はlistener由来instanceをManagerの`modelValue`へ直接接続する。listener更新によって編集中draftが最新document全体へ置き換わることを許容し、編集中だけ固定するsnapshotや入力消失警告を設けない。
+
 ### Autocomplete
 
 - Autocomplete内Createは、配列を所有しないその場の新規単一instance編集であるため、単数ManagerをCREATE modeで開く。
@@ -51,6 +64,7 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 - commit `9bd4d43c23bf113790add10691dc91b7445a99d4`のCustomer実装は、一覧Createを`CustomersManager`へ接続した点は維持できる。一方、Autocomplete内Createを`CustomersManager`へ接続した点は本ADRと不一致であり、`CustomerManager`のCREATEへ移す必要がある。Customer一覧はpageが行選択から直接detail routeへ遷移しており、`CustomersManager`／`AirArrayManager.beforeEdit`を経由していないため、選択dispatchの実装差として直す。
 - [旧利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)は当時の実装に対するimmutable receiptとして保持し、訂正後のruntime証拠へ読み替えない。
 - Site、Employee、Outsourcerと後続の対象masterは、各feature milestoneで通常masterに該当するoperationとeditable state所有者を確認して段階移行し、一括置換しない。
+- 現行`AirItemManager`はreactiveな`modelValue`をdeep watchして編集中itemへ反映する。一方、`AirArrayManager`は配列から選択したitemを内部editorへ渡した後、listenerによる配列更新を編集中itemへ再同期しない。Customer一覧は`beforeEdit`で詳細へ遷移して内部UPDATE editorを使わないため本checkpointの阻害要因ではないが、一覧内dialogでUPDATEする後続masterはAirVuetify3またはdomain wrapperで同じlistener直接接続契約を確立してから完了する。
 - 保存schemaとoperationは変えないため、この分類訂正だけではdata migrationを要しない。
 
 ## 移行
@@ -66,7 +80,8 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 - 各対象masterで、単数Managerが外部既存instanceと新規instance、複数形Managerが配列と行選択dispatchを所有することをsource contractで確認する。
 - Customers一覧は行選択を`CustomersManager`内のAirArrayManagerへ渡し、`beforeEdit`のdetail navigationとfalseによるdialog抑止を使うことを確認する。Autocomplete内Createは`CustomerManager`内のAirItemManagerを通り、両Managerを相互に内包しないことを確認する。
 - Create成功時は割当済みdocument IDを含むcommit確定結果だけを選択し、失敗・結果不明時に選択しないことを確認する。
-- 保存後の主対象はlistenerへ収束し、従属補完以外で`useFetch` cacheを変更可能documentの正本にしないことを確認する。
+- listener由来instanceをManagerへ直接接続し、編集中のlistener更新でdraftが最新document全体へ置き換わること、固定snapshot・入力消失警告・競合拒否を設けないことを確認する。保存後の主対象もlistenerへ収束し、従属補完以外で`useFetch` cacheを変更可能documentの正本にしない。
+- base Managerの既定editor、validation、loading、submit、mode管理を使い、`customInput`がfieldと順序を所有することを確認する。Customerの暫定`includedKeys`はSchema順依存を受容し、activator callerがoperation別methodを選ぶことを確認する。
 - 480px、archive専用境界、generic delete拒否、schema・Rules・data非変更を維持する。
 
 ## 再検討条件
