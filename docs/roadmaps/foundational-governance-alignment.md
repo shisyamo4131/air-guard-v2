@@ -47,7 +47,7 @@
 | FGA-02-CUSTOMERS-MANAGER-03 | Completed | 一覧Createと、行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡して詳細遷移後にfalseでdialogを抑止する実装・source/test・利用者Local確認をcommit `79301b04`で完了し、release `2eeb502b`のDevで作成、listener反映、詳細navigationを受入れた |
 | FGA-02-CUSTOMER-ARCHIVE-04 | In progress | archiveを専用dialog・Callableへ委譲し、generic deleteを閉じたsourceと利用者Localの入口・取消を確認した。archive実行、固定commit、Devは未確認 |
 | FGA-02-CUSTOMER-LOCAL-05 | In progress | 訂正後の一覧Manager経由詳細遷移、詳細UPDATE dialog、一覧CREATE dialogを利用者Localで確認し、同じManager正常経路をrelease `2eeb502b`のDevで受入れた。Autocomplete Create runtime、失敗経路、archive実行は未確認 |
-| FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17 | In progress | Customer両Managerをbase Managerの既定editor・validation・mode・error eventへ戻し、単数activatorの`toCreate`／`toUpdate`、listener直接接続、暫定`includedKeys`、generic delete拒否へ整合する。sourceと自動testはlocalで完了し、固定commit、利用者Local、Dev反映・受入れは未完了 |
+| FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17 | In progress | Customer両Managerをbase Managerの既定editor・validation・mode・error eventへ戻し、単数activatorの`toCreate`／`toUpdate`、listener直接接続、暫定`includedKeys`、generic delete拒否へ整合した。source・文書・自動testをcommit `900da192de6839180fc9c1d730775ef877ee73e8`へ固定し、利用者Local、Dev反映・受入れは未完了 |
 
 ## 完了条件
 

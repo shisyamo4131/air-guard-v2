@@ -29,7 +29,7 @@ commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`
 
 FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。activatorはbase `AirItemManager`の`toCreate`と`toUpdate`をoperation別に公開し、callerが用途に対応するmethodを呼ぶ。Customerは段階移行中の例外として`includedKeys`を当面使用し、入力順はSchema定義順とする。既定editorのform validation、submit、mode管理を利用し、`useBaseManager`のattrsがbase Managerのerror・error clear・loading eventをアプリ標準のlogger、error message store、loading stateへ接続する。これは現行event契約に適合するため採用しており、`useBaseManager`の利用自体を全domain Managerへ強制するものではない。
 
-SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。その時点の一覧CREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。この証拠はSIMPLIFY-17で変更した既定editor、error event、activator、編集中draft置換のruntime確認には使用しない。SIMPLIFY-17は固定commit、利用者Local、Dev反映・受入れが未完了である。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
+SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。その時点の一覧CREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。この証拠はSIMPLIFY-17で変更した既定editor、error event、activator、編集中draft置換のruntime確認には使用しない。SIMPLIFY-17のlocal実装・文書・自動検証はcommit `900da192de6839180fc9c1d730775ef877ee73e8`へ固定したが、利用者Local、Dev反映・受入れは未完了である。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
 
 ## データ契約
 
