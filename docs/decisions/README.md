@@ -73,6 +73,7 @@
 | [0065](0065-tenant-trust-normal-business-authorization.md) | 同一tenantを信頼境界とする通常業務認可 |
 | [0066](0066-pre-production-document-level-last-write-wins.md) | Prod公開前のdocument単位last-write-wins |
 | [0067](0067-component-fetch-and-dependent-reference-boundary.md) | Component階層、useFetch、表示正本、従属参照境界 |
+| [0068](0068-domain-manager-wrapper-and-editor-dialog-convention.md) | Domain Manager wrapperとdata編集dialog規約 |
 
 ## 新しい ADR の形式
 

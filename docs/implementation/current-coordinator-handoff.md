@@ -5,10 +5,7 @@
 ## 現在の作業
 
 - 製品は試験運用中。Site SITE-09、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09のDev受入れを完了し、各roadmapを100%とした。
-- 4マスター管理画面の見た目・操作感を揃えるphaseで、共通の`AppViewportContainer`と`AppMasterListToolbar`を一覧へ適用した。一覧Readは、空検索では取引先・稼働中／終了済み現場・在職従業員・外注先を`updatedAt`の新しい順、退職者を退職日の新しい順に最大20件表示し、文字列入力時は正規化済み`tokenMap`検索へ統一した。Editorの操作非依存ラッパー`AppEditorDialog`はCustomer基本・支払条件、Site基本・取引先、Employee共通Editor、Outsourcer更新へ適用し、actionを既存AtomsのCancel／Submitへ揃えた。Submitは`type="submit"`でVFormのvalidation経路を使用する。Site取極め・終了・再開・archive等の専用操作と、作成用・編集用入力componentの分離は対象外である。
-- page navigation、route middleware、表示中pageの認可は共通access context／policyへ統一した。権限外menu、未登録route、権限喪失後の表示継続をfail closedにし、不要な`/test/user-permission-info`を削除した。Firestore Rules、Functions、document data、Prodは変更していない。
-- 2026-09-08に固定commitのindexes／HostingをDev反映し、全indexの`READY`後に4一覧、空検索、従業員かな検索、現場filter、Employee／Outsourcer更新dialogを非破壊確認した。Customer／Site更新dialogは対象data不在のためdomain compileとDev buildで確認した。account・documentは変更していない。
-- 配置管理の楽観的更新回帰は、単純なlocal即時反映、client境界分離、Local確認、Dev接続受入れ、main統合まで完了した。詳細は[FUT-0186](future-actions.md#fut-0186-配置管理の楽観的更新回帰を復旧する)と[受入れ記録](../verification/arrangement-optimistic-dev-acceptance.md)を参照する。
+- 完了済みの4マスター共通UI、route認可、Dev受入れ、配置管理回帰は[正式運用ロードマップ](../roadmaps/airguard-v2.md)と各verification receiptを正とし、この再開案内へ実測結果を複写しない。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 
 ## 未決事項と承認
@@ -21,7 +18,9 @@
 
 現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-02 Customer管理である。CompanyとUserは現行の厳密な実装を維持する。FGA-02-RULES-01はCustomer通常Rulesを有効User・同一tenant・actor UIDへ簡素化し、commit `3c67a95e`のFirestore／Hosting Dev反映と会社管理者の作成・更新受入れまで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。合成Customer `FGA02001`は後続確認用に保持する。
 
-FGA-02-CUSTOMER-UPDATE-01はCustomer詳細の2編集を共通`CustomerManager`／`AirItemManager`に移し、document全体last-write-wins、listener表示正本、競合拒否・再読込なしへlocal実装済みである。旧dialog外観とarchive境界は維持し、必須検証と独立reviewは成功した。runtime UI、Dev反映・受入れ、commit・pushは次の承認境界である。
+FGA-02-CUSTOMER-UPDATE-01はCustomer詳細の2編集を共通`CustomerManager`／`AirItemManager`に移し、document全体last-write-wins、listener表示正本、競合拒否・再読込なしへ実装し、固定local commit `6bf82e5264f72b39c540eb68c96b18690385198e`とした。自動検証と独立reviewは成功し、会社管理者の利用者LocalでCustomer Update UIを確認したとの報告はあるが、現在のrepositoryに操作内訳・結果のimmutable receiptはないため永続的なLocal受入れ証拠とは扱わない。Dev反映・受入れは未実施である。
+
+利用者は[ADR 0068](../decisions/0068-domain-manager-wrapper-and-editor-dialog-convention.md)のdomain Manager規約を採用し、ガバナンス反映、Customer追加改修、利用者Local確認までを承認した。次は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)に従い、`CustomerManager`のUpdateを480pxへ整合し、`CustomersManager`を新設して一覧・AutocompleteのCreateを接続し、archive入口を専用Callableへ委譲したままManager責務へ整理する。新しいwrapper・Create・archive・480pxのLocal受入れ、Dev反映、物理deleteは未実施である。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

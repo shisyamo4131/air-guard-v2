@@ -1,7 +1,7 @@
 # AirGuardV2 現行仕様
 
-- 最終更新日: 2026-09-09
-- 仕様バージョン: 0.8.23
+- 最終更新日: 2026-09-10
+- 仕様バージョン: 0.8.24
 - 状態: 初期整理・運用中
 - 現在の段階: 試験運用を伴うアジャイル開発
 
@@ -57,7 +57,10 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 - 認証済み業務pageは、原則として画面全体を制御する一つのroot componentを直接配置し、そのrootが一つ以上の機能単位の子componentを構成する。pageはroute parameter、page metadata、layout、画面rootの接続へ責務を絞る。
 - 従属先documentの名称等をIDから参照する画面は`composables/fetch/useFetch.js`を使用する。pageは`useFetch(componentName, true)`で画面配下専用instanceをprovideし、子側は`useFetch(componentName)`で同じinstanceをinjectする。子側のfallback生成を通常pageのorigin設置省略には使わない。
-- 詳細な実装原則と例外は[Development and data rules](project-rules/development-and-data.md#component階層表示data従属参照)、判断理由と現行実装差は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)を正とする。
+- Customer、Site、Employee、Outsourcerで提供する通常のdocument create・update・deleteは、利用文脈に対応するdomain Managerを画面上の共通入口とする。単一document文脈では`CustomerManager`、`SiteManager`、`EmployeeManager`、`OutsourcerManager`が`AirItemManager`をラップし、collection・一覧・選択文脈では`CustomersManager`、`SitesManager`、`EmployeesManager`、`OutsourcersManager`が`AirArrayManager`をラップする。各Managerはその文脈で提供するoperationだけを扱い、単数・複数形の双方に全C/U/Dを要求しない。将来、単一document文脈で通常Createを提供する場合は単数Managerを入口とする。両者の入れ子は必須にせず、同じdomain application operation、schema、error・loading、listener正本の契約を共有する。
+- document選択UIがその場で新規作成を提供する場合、Autocomplete等は複数形Managerのcreate入口を使用し、Firestore commitの成功が確認でき、割当済みdocument IDを持つ作成結果だけを選択する。選択前にlist listenerの受信を必須待機せず、その後、主対象document・listはreal-time listenerを表示正本として収束する。IDから補完する従属先の名称・詳細だけは、tenant scopeを分離した`useFetch`共有cacheを優先して更新できる。page・一覧・選択UIからbase Managerまたはmodel CRUDを直接呼ぶ経路は、domain Managerで表現できない理由を個別に確認した場合だけ認める。ManagerはUI・operation orchestrationであり、server認可の境界ではない。
+- 通常のdata編集dialogは最大幅480pxを既定とする。可読性、複数列・表・複数step、responsive・accessibility上の必要性がある場合はcomponent固有に広げられる。確認専用dialog、viewer、selectorはこの既定の対象外とする。archive・復旧・物理削除等の例外operationのdialog幅は480pxへ自動拘束せず、操作固有の安全な確認内容、可読性、responsive・accessibilityを基準に決める。
+- 詳細な実装原則と例外は[Development and data rules](project-rules/development-and-data.md#component階層表示data従属参照)、page・fetch・従属参照の判断は[ADR 0067](decisions/0067-component-fetch-and-dependent-reference-boundary.md)、domain Managerとdialog規約の判断は[ADR 0068](decisions/0068-domain-manager-wrapper-and-editor-dialog-convention.md)を正とする。
 
 ### バックエンド
 
@@ -86,7 +89,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 ### Firestoreドキュメントの同時更新
 
 - Prod公開前のDev試用期間では、通常の可逆な更新をdocument単位のlast-write-winsとする。同じdocumentへの複数operationは、利用者が操作した時刻やclient clockではなく、Firestoreへのcommitが後に成立したoperationのdocument全体を正とする。異なるtop-level fieldだけを編集していても自動mergeせず、後commitのdocument全体で上書きする。
-- 通常CRUDは、document全体を編集・検証・保存する`AirItemManager`と`AirArrayManager`を積極的に使用できる。managerの使用は認証・認可・tenant・Rules・server validationの代替ではなく、例外operationまたはmanagerの契約で安全に表現できない操作へ強制しない。
+- 通常CRUDは、document全体を編集・検証・保存する`AirItemManager`と`AirArrayManager`をdomain Manager経由で使用する。Customer、Site、Employee、Outsourcerの単一document・collection文脈における具体的なManager名、選択UIのcreate経路、dialog幅は[Pageとcomponentの構成](#pageとcomponentの構成)を正とする。managerの使用は認証・認可・tenant・Rules・server validationの代替ではなく、例外operationへgeneric CRUDを強制しない。
 - `updatedAt`・`updatedBy`等のserver管理fieldと、当該operationに伴って更新が必要な検索値、表示名、座標等の派生fieldは、利用者が編集した値とは別に正規の保存境界で確定できる。document全体は保存前に現行schemaとoperation固有条件を満たさなければならない。
 - 更新後はFirestore listenerから受信した最新documentを画面上の正本とする。通常更新では同時更新だけを理由に保存拒否、競合通知、draft破棄、再読込、明示再確認を要求しない。認可・validation・保存失敗・結果不明は正常なlast-write-winsと区別する。
 - Company documentとUser documentは認証・tenant管理の基点であるため、この通常規則から除外する。利用者が別途変更するまで、現在のfield別writer、actor条件、validation、競合制御を維持する。Stripe、請求確定、archive・復旧・物理削除、順序が重要な状態遷移にもこの通常規則を適用せず、operation固有のtransaction、precondition、idempotency、再試行・照合、監査を定める。Authentication・role・permission・tenant所属、機微・機密情報、通知等に既に固有の競合制御がある場合も、この規則だけで撤去しない。
