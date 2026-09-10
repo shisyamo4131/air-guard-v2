@@ -6,10 +6,7 @@
 import { Customer } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
-import {
-  captureCustomerCreationScope,
-  initializeCommittedCustomerDraft,
-} from "@/composables/application/customer/customerCreationBridge";
+import { initializeCommittedCustomerDraft } from "@/composables/application/customer/customerCreationBridge";
 import {
   CUSTOMER_CREATE_FIELDS,
   CustomerOperationError,
@@ -19,17 +16,16 @@ import {
 defineOptions({ inheritAttrs: false });
 
 const props = defineProps({
+  beforeEdit: { type: Function, default: undefined },
   docs: { type: Array, default: () => [] },
   hideTable: { type: Boolean, default: false },
 });
 const emit = defineEmits(["created"]);
 
-const auth = useAuthStore();
 const { attrs } = useBaseManager("CustomersManager");
 const { canWrite, createCustomer, isSaving } = useCustomerActions();
 const editorForm = ref(null);
 const errorMessage = ref("");
-let committedCreationScope = null;
 
 function rejectUnsupportedOperation() {
   throw new CustomerOperationError(
@@ -38,8 +34,20 @@ function rejectUnsupportedOperation() {
   );
 }
 
-function beforeEdit(editMode) {
+async function beforeEdit(editMode, item) {
   errorMessage.value = "";
+  if (editMode === "DELETE") return rejectUnsupportedOperation();
+  if (editMode === "UPDATE") {
+    const externalDecision = await props.beforeEdit?.(editMode, item);
+    if (externalDecision === false) return false;
+    if (!canWrite.value) {
+      throw new CustomerOperationError(
+        "permission-denied",
+        "取引先を変更する権限を確認できません。",
+      );
+    }
+    return rejectUnsupportedOperation();
+  }
   if (editMode !== "CREATE") return rejectUnsupportedOperation();
   if (!canWrite.value) {
     throw new CustomerOperationError(
@@ -55,8 +63,6 @@ function disableUpdate(item) {
 }
 
 async function handleCreate(draft) {
-  committedCreationScope = null;
-  const creationScope = captureCustomerCreationScope(auth);
   const created = await createCustomer(draft);
   if (!initializeCommittedCustomerDraft(draft, created)) {
     throw new CustomerOperationError(
@@ -64,14 +70,6 @@ async function handleCreate(draft) {
       "取引先を登録できませんでした。",
     );
   }
-  committedCreationScope = creationScope;
-}
-
-function handleCreated(created) {
-  const creationScope = committedCreationScope;
-  committedCreationScope = null;
-  if (!created?.docId || !creationScope) return;
-  emit("created", created, creationScope);
 }
 
 function handleManagerError(payload) {
@@ -121,7 +119,7 @@ async function submitEditor(editorAttrs) {
     :handle-create="handleCreate"
     :handle-update="rejectUnsupportedOperation"
     :handle-delete="rejectUnsupportedOperation"
-    @create="handleCreated"
+    @create="emit('created', $event)"
     @error="handleManagerError"
     @error:clear="clearManagerError"
   >

@@ -32,6 +32,7 @@ import {
   captureCustomerCreationScope,
   deliverCommittedCustomer,
 } from "@/composables/application/customer/customerCreationBridge";
+import { CUSTOMER_CREATE_FIELDS } from "@/composables/domain/customer/customerOperations";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -105,11 +106,16 @@ async function api(text) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <CustomersManager hide-table @created="onCreateHandler">
+      <CustomerManager
+        operation="CREATE"
+        :included-keys="CUSTOMER_CREATE_FIELDS"
+        title="取引先の新規登録"
+        @created="onCreateHandler"
+      >
         <template #activator="{ disabled, open }">
           <v-icon v-if="!disabled" @click="open">mdi-plus</v-icon>
         </template>
-      </CustomersManager>
+      </CustomerManager>
     </template>
 
     <template #item="slotProps">

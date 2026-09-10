@@ -57,7 +57,7 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       const onUnmounted = callback => {lifecycle.unmount = callback;};
       const watch = (_source, callback) => {lifecycle.change = callback;};
       ${stripImports(page)}
-      export {customerInstance, search, selectedStatus, statusOptions, handleClickUpdate};
+      export {customerInstance, search, selectedStatus, statusOptions, handleBeforeEdit};
     `);
     assert.equal(module.selectedStatus.value, Customer.STATUS_ACTIVE);
     assert.deepEqual(module.statusOptions, [...Object.values(Customer.STATUS), { title: "すべて", value: "ALL" }]);
@@ -76,13 +76,16 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       const rows = [{ docId: `synthetic-${index}`, contractStatus: status === "ALL" ? "TERMINATED" : status }];
       entry.callback({ docChanges: () => rows.map((item) => ({ type: "added", doc: { data: () => item } })) });
       assert.deepEqual(module.customerInstance.docs, rows);
-      module.handleClickUpdate(rows[0]);
+      assert.equal(module.handleBeforeEdit("UPDATE", rows[0]), false);
       assert.equal(routes.at(-1), `/customers/${rows[0].docId}`);
     }
     module.search.value = "やまだ";
     lifecycle.change();
     assert.equal(tokenSearches.at(-1), "ヤマダ");
     assert.deepEqual(constraintsSeen.at(-1), []);
+    const routeCount = routes.length;
+    assert.equal(module.handleBeforeEdit("CREATE", null), true);
+    assert.equal(routes.length, routeCount);
     lifecycle.unmount();
     assert.equal(subscriptions.filter(({ stopped }) => !stopped).length, 0);
     assert.deepEqual(module.customerInstance.docs, []);

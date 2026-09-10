@@ -1,47 +1,74 @@
 <script setup>
 /*****************************************************************************
  * @file components/Customer/Manager/index.vue
- * @description AirItemManagerを使った取引先通常更新コンポーネント
+ * @description AirItemManagerを使った取引先通常作成・更新コンポーネント
  *****************************************************************************/
 import { Customer } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
 import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
-import { CustomerOperationError } from "@/composables/domain/customer/customerOperations";
+import {
+  CustomerOperationError,
+  getCustomerOperationErrorMessage,
+} from "@/composables/domain/customer/customerOperations";
+import {
+  captureCustomerCreationScope,
+  initializeCommittedCustomerDraft,
+} from "@/composables/application/customer/customerCreationBridge";
 
 const props = defineProps({
   doc: {
     type: Object,
-    required: true,
+    default: () => new Customer(),
     validator: (value) => value instanceof Customer,
   },
   includedKeys: { type: Array, required: true },
+  operation: {
+    type: String,
+    default: "UPDATE",
+    validator: (value) => ["CREATE", "UPDATE"].includes(value),
+  },
   title: { type: String, required: true },
 });
+const emit = defineEmits(["created"]);
 
+const auth = useAuthStore();
 const { attrs } = useBaseManager("CustomerManager");
-const { canWrite, isSaving, updateCustomer } = useCustomerActions();
+const { canWrite, createCustomer, isSaving, updateCustomer } =
+  useCustomerActions();
 const isEditing = ref(false);
 const stableSnapshot = shallowRef(new Customer(props.doc.toObject()));
 const editorForm = ref(null);
+let committedCreationScope = null;
 
-const updateDisabled = computed(
-  () => !canWrite.value || isSaving.value || !props.doc.docId,
+const operationDisabled = computed(
+  () =>
+    !canWrite.value ||
+    isSaving.value ||
+    (props.operation === "UPDATE" && !props.doc.docId),
+);
+const submitText = computed(() =>
+  props.operation === "CREATE" ? "登録" : "更新",
 );
 
 function syncFromListener() {
   stableSnapshot.value = new Customer(props.doc.toObject());
 }
 
+function clearCreationScope() {
+  committedCreationScope = null;
+}
+
 function rejectUnsupportedOperation() {
   throw new CustomerOperationError(
     "invalid-operation",
-    "この画面では取引先の作成・削除を実行できません。",
+    "この画面では指定された取引先操作を実行できません。",
   );
 }
 
 function beforeEdit(editMode) {
-  if (editMode !== "UPDATE") return rejectUnsupportedOperation();
-  if (updateDisabled.value) {
+  clearCreationScope();
+  if (editMode !== props.operation) return rejectUnsupportedOperation();
+  if (operationDisabled.value) {
     throw new CustomerOperationError(
       "permission-denied",
       "取引先を変更する権限を確認できません。",
@@ -50,15 +77,22 @@ function beforeEdit(editMode) {
   return true;
 }
 
-function openUpdate(toUpdate) {
-  if (updateDisabled.value) return;
+function openManager(slotProps) {
+  if (operationDisabled.value) return;
+  if (props.operation === "CREATE") {
+    clearCreationScope();
+    return slotProps.toCreate(new Customer());
+  }
   syncFromListener();
-  return toUpdate(stableSnapshot.value);
+  return slotProps.toUpdate(stableSnapshot.value);
 }
 
 function handleEditing(value) {
   isEditing.value = value;
-  if (!value) syncFromListener();
+  if (!value) {
+    clearCreationScope();
+    if (props.operation === "UPDATE") syncFromListener();
+  }
 }
 
 function ignoreManagerModelValue() {
@@ -68,9 +102,12 @@ function ignoreManagerModelValue() {
 
 function editorErrorMessage(errors) {
   const error = errors?.[0];
-  return error instanceof CustomerOperationError
-    ? error.message
-    : "取引先情報を更新できませんでした。";
+  return getCustomerOperationErrorMessage(
+    error,
+    props.operation === "CREATE"
+      ? "取引先を登録できませんでした。"
+      : "取引先情報を更新できませんでした。",
+  );
 }
 
 async function submitEditor(editorAttrs) {
@@ -89,6 +126,31 @@ async function handleUpdate(draft) {
     latest: () => props.doc,
     draft,
   });
+}
+
+async function handleCreate(draft) {
+  clearCreationScope();
+  const creationScope = captureCustomerCreationScope(auth);
+  try {
+    const created = await createCustomer(draft);
+    if (!initializeCommittedCustomerDraft(draft, created)) {
+      throw new CustomerOperationError(
+        "create-failed",
+        "取引先を登録できませんでした。",
+      );
+    }
+    committedCreationScope = creationScope;
+  } catch (error) {
+    clearCreationScope();
+    throw error;
+  }
+}
+
+function handleCreated(created) {
+  const creationScope = committedCreationScope;
+  clearCreationScope();
+  if (!created?.docId || !creationScope) return;
+  emit("created", created, creationScope);
 }
 
 watch(
@@ -113,22 +175,24 @@ watch(
       'aria-label': props.title,
     }"
     :before-edit="beforeEdit"
-    :disable-update="updateDisabled"
+    :disable-update="operationDisabled"
     :disable-delete="true"
     :hide-delete-btn="true"
-    :handle-create="rejectUnsupportedOperation"
+    :handle-create="handleCreate"
     :handle-update="handleUpdate"
     :handle-delete="rejectUnsupportedOperation"
     :is-editing="isEditing"
     @update:is-editing="handleEditing"
     @update:model-value="ignoreManagerModelValue"
+    @create="handleCreated"
+    @quit="clearCreationScope"
   >
     <template #activator="slotProps">
       <slot
         name="activator"
         :item="props.doc"
-        :disabled="updateDisabled"
-        :open="() => openUpdate(slotProps.toUpdate)"
+        :disabled="operationDisabled"
+        :open="() => openManager(slotProps)"
       />
     </template>
 
@@ -164,7 +228,7 @@ watch(
             />
             <AtomsBtnsSubmit
               type="submit"
-              text="更新"
+              :text="submitText"
               :loading="editorAttrs.isLoading"
               :disabled="editorAttrs.disabled || editorAttrs.disableSubmit"
             />

@@ -31,8 +31,10 @@ const router = useRouter();
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function handleClickUpdate(item) {
+function handleBeforeEdit(editMode, item) {
+  if (editMode !== "UPDATE") return true;
   router.push(`/customers/${item.docId}`);
+  return false;
 }
 
 function subscribe() {
@@ -66,8 +68,11 @@ watch([selectedStatus, search], subscribe);
 
 <template>
   <AppViewportContainer>
-    <CustomersManager :docs="customerInstance.docs">
-      <template #table="{ items, canWrite, toCreate }">
+    <CustomersManager
+      :before-edit="handleBeforeEdit"
+      :docs="customerInstance.docs"
+    >
+      <template #table="{ items, canWrite, toCreate, toUpdate }">
         <v-card class="fill-height d-flex flex-column" width="100%">
           <AppMasterListToolbar v-model:search="search" :search-delay="300">
             <template #append>
@@ -95,7 +100,7 @@ watch([selectedStatus, search], subscribe);
             :sort-by="[]"
             :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
             hide-search
-            @click:update="handleClickUpdate"
+            @click:update="toUpdate"
           />
         </v-card>
       </template>
