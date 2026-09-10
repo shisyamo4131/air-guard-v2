@@ -18,9 +18,9 @@
 
 現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-02 Customer管理である。CompanyとUserは現行の厳密な実装を維持する。FGA-02-RULES-01はCustomer通常Rulesを有効User・同一tenant・actor UIDへ簡素化し、commit `3c67a95e`のFirestore／Hosting Dev反映と会社管理者の作成・更新受入れまで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。合成Customer `FGA02001`は後続確認用に保持する。
 
-FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。続くdomain Manager規約は利用者承認後、[ADR 0068](../decisions/0068-domain-manager-wrapper-and-editor-dialog-convention.md)とproject ruleへ反映し、commit `25069a79e398ad3fa98b960fb758f18f053238e0`で完了した。
+FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。続く旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`へ、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`へ固定したが、分類基準の誤りを[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)で訂正した。
 
-現在の未commit worktreeでは、単数`CustomerManager`のUpdate、複数形`CustomersManager`の一覧・Autocomplete Create接続、480px、archive専用入口を実装済みである。会社管理者の利用者Localでは一覧Create（6→7件のlistener反映）、詳細Update、約476pxの通常編集dialog、archive入口・取消、generic物理delete入口なしを確認した。[実測記録](../verification/fga-02-customer-manager-user-local.md)を正とする。Autocomplete内Createは到達可能な現行callerがなくruntime未確認で、失敗経路とarchive実行もLocal未確認である。次は差分review・必要な固定commitと、別承認によるDev反映・受入れであり、FGA-02得点は0のままである。
+現在のHEADは一覧とAutocomplete Createをともに`CustomersManager`へ接続する。旧[実測記録](../verification/fga-02-customer-manager-user-local.md)はこの実装時点の履歴として保持する。次はAutocomplete Createを単数`CustomerManager`へ移す。一覧は行選択を`CustomersManager`／AirArrayManagerへ渡し、`beforeEdit`で詳細navigationしてfalseを返す方式へ直す。現状のpage直接遷移はManagerの選択dispatchを迂回している。複数形Managerから単数Managerは呼ばない。訂正後の自動・runtime検証と別承認のDev反映・受入れまでFGA-02得点は0のままとする。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

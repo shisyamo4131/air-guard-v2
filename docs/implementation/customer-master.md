@@ -23,7 +23,7 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 | 詳細・更新 | `/customers/[id]` | readで詳細、write actorだけ基本・支払編集 | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
 | Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
 
-Customerの一覧とAutocompleteは、`AirArrayManager`を包む`CustomersManager`のCreate入口を共有する。詳細の基本情報と支払条件は、一つの`CustomerManager`が`AirItemManager`のclone・編集状態・loading・submit・errorを使い、field集合だけを切り替える。両Managerの通常data編集dialogは最大幅480pxとする。archiveは基本情報の表示領域に置く専用`CustomerArchiveDialog`へ委譲し、generic deleteへ接続しない。閲覧だけの利用者には作成・編集・archive入口を表示しない。
+commit `9bd4d43c23bf113790add10691dc91b7445a99d4`では、一覧とAutocompleteが`AirArrayManager`を包む`CustomersManager`のCreate入口を共有する。一覧は配列を渡す一方、行選択をpageが直接詳細routeへ遷移させ、`CustomersManager`／AirArrayManagerの選択dispatchを迂回している。目標は`CustomersManager`の`beforeEdit`で詳細へ遷移してfalseを返し、内部dialogを抑止する方式であり、同Managerから`CustomerManager`は呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEへ訂正する必要がある。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
 
 ## データ契約
 
@@ -38,7 +38,7 @@ Customerの一覧とAutocompleteは、`AirArrayManager`を包む`CustomersManage
 
 ## CRUD・validation
 
-- 一覧とAutocompleteのplus buttonは`CustomersManager`からCustomer専用application処理を呼ぶ。commit成功後に割当済みdocument IDを持つ作成結果だけを返し、Autocompleteではtenant・actor scopeが変わっていない場合に`useFetch` cacheへ反映して即時選択する。一覧はlistenerを表示正本とし、Manager内部で配列を直接変更しない。詳細の基本情報と支払条件は共通`CustomerManager`から同じ更新境界を呼び、UIからCustomer modelの`create/update/delete`を直接呼ばない。
+- 現行HEADでは一覧とAutocompleteのplus buttonが`CustomersManager`からCustomer専用application処理を呼ぶ。一覧Createは配列を所有する複数形Managerの責務に合うが、Autocomplete Createは訂正対象である。訂正後は`CustomerManager`のCREATEから同じapplication処理を呼び、commit成功後に割当済みdocument IDを持つ結果だけをtenant・actor scope確認後に選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
@@ -115,6 +115,6 @@ Customerの一覧とAutocompleteは、`AirArrayManager`を包む`CustomersManage
 
 ## 未確認範囲
 
-- 他masterに残る汎用Air manager内部の全validation・表示実装。Customer Autocomplete内Createは現行routeから到達する`creatable` callerがなく、利用者Local runtimeは未確認である。
+- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerはAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationが未実装である。Autocomplete Createは現行routeから到達する`creatable` callerがなく、訂正前後とも利用者Local runtimeは未確認である。
 - Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、archiveのDev反映・受入れ。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

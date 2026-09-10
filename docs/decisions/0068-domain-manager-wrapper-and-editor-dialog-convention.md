@@ -1,11 +1,14 @@
 # ADR 0068: Domain Manager wrapperとdata編集dialog規約
 
 - 日付: 2026-09-10
-- 状態: Accepted
+- 状態: Superseded
+- 置換先: [ADR 0069](0069-domain-manager-editable-state-ownership.md)
 - 対象: Customer、Site、Employee、OutsourcerのCRUD component、一覧・選択UI、data編集dialog
 - 関連仕様: [Pageとcomponentの構成](../specification.md#pageとcomponentの構成)、[Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)
 - 適用計画: [根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)
 - 既存判断との関係: ADR 0066のManager利用を、対象masterの提供済み通常C/U/Dではdomain wrapperを使う規則へ具体化・強化する。document単位last-write-winsと例外operationの保護は変更しない。
+
+> 単数・複数形Managerを画面の「単一document／collection・一覧・選択」という見た目で分類した点と、Autocomplete内Createを複数形Managerへ割り当てた点は誤りだった。現行判断は、editable stateの所有単位を基準とする[ADR 0069](0069-domain-manager-editable-state-ownership.md)を参照する。480px既定、例外operation、listener・cache、認可境界の判断はADR 0069へ継承した。
 
 ## 背景
 

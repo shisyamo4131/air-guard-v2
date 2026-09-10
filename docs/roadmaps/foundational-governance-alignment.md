@@ -33,18 +33,19 @@
 - [Firestoreドキュメントの同時更新](../specification.md#firestoreドキュメントの同時更新)と[ADR 0066](../decisions/0066-pre-production-document-level-last-write-wins.md)を採用した。FGA-02-CUSTOMER-UPDATE-01でCustomer詳細の基本情報と支払条件を共通`AirItemManager`へ移し、26保存fieldのdocument全体を`setDoc`で置換するlast-write-wins、編集中のdraft固定、listener由来表示、競合拒否・再読込要求の廃止をlocal実装し、固定local commit `6bf82e5264f72b39c540eb68c96b18690385198e`とした。実Customer converterと26-field契約の一致、全domain 1,570件、Local Emulator 182件、独立reviewは成功した。後続の未commit Manager worktree上で、会社管理者によるUpdateとlistener表示を[利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)へ固定した。archive専用Callable境界を維持し、Rules・schema・data形状、Devは変更していない。
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。製品実装はまだ変更していない。
-- 利用者は[Domain Manager wrapperとdata編集dialog規約](../decisions/0068-domain-manager-wrapper-and-editor-dialog-convention.md)を採用し、FGA-02-MANAGER-GOVERNANCE-01をcommit `25069a79e398ad3fa98b960fb758f18f053238e0`で完了した。Customer、Site、Employee、Outsourcerの提供済み通常C/U/Dは単数・複数形のdomain Managerを文脈別入口とし、Autocomplete内createも複数形Managerへ接続する。通常data編集dialogは最大幅480pxを既定とし、archive・復旧・物理削除等の例外はgeneric deleteへ接続しない。
-- Customer追加改修は未commit worktreeに実装されている。単数`CustomerManager`のUpdateと複数形`CustomersManager`のCreateをそれぞれ480pxへ整合し、一覧Create、listener反映、詳細Update、archive専用入口、generic物理delete入口なしを会社管理者の利用者Localで確認した。[利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)を参照する。Autocomplete内Createはsource contractとcreation bridgeの自動testで接続を確認したが、現行routeに到達可能な`creatable` callerがなく実UIでは未確認である。失敗経路とarchive実行も利用者Local未確認、固定commit・Dev反映・受入れも未完了であるため、FGA-02の得点は0のままとする。
+- FGA-02-MANAGER-GOVERNANCE-01はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`で一度完了したが、単数・複数形Managerを画面の選択文脈で分類した判断に誤りがあり、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)で訂正した。現行基準はeditable stateの所有単位であり、単数Managerは外部既存instanceまたはその場の新規instance、複数形Managerは配列と行選択dispatchを所有する。選択後はAirArrayManagerの`beforeEdit`により内部editorまたは詳細navigationを選び、相互にManagerを内包しない。480px、archive等の例外、listener・cache、server認可境界は変更しない。
+- commit `9bd4d43c23bf113790add10691dc91b7445a99d4`には、一覧CreateとAutocomplete内Createをともに`CustomersManager`へ接続したCustomer実装が含まれる。[利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)はこの時点の旧実装に対する履歴証拠である。Customer一覧はpageが行選択から直接詳細routeへ遷移し、`CustomersManager`／AirArrayManagerを選択dispatchに使っていない。目標は`CustomersManager`の`beforeEdit`で詳細へ遷移してfalseを返し、dialogを抑止する方式である。Autocomplete Createは単数`CustomerManager`のCREATEへ訂正する。訂正実装、訂正後の自動・runtime検証、Dev反映・受入れが未完了であるため、FGA-02の得点は0のままとする。
 
 ## FGA-02 Customer内部checkpoint
 
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
-| FGA-02-MANAGER-GOVERNANCE-01 | Completed | domain Manager、Autocomplete create、例外operation、480px既定をproject rule・仕様・ADR・roadmapへ反映し、文書・governance検証を完了した |
-| FGA-02-CUSTOMER-MANAGER-02 | In progress | 既存Updateを担う単数`CustomerManager`を480pxへ整合し、document全体LWWとlistener表示を利用者Localで確認した。未commitでDev未反映のため未完了 |
-| FGA-02-CUSTOMERS-MANAGER-03 | In progress | `CustomersManager`を新設して一覧とAutocomplete内createを接続し、一覧Createとlistener反映を利用者Localで確認した。Autocomplete runtime、固定commit、Devは未確認 |
+| FGA-02-MANAGER-GOVERNANCE-01 | Superseded | commit `25069a79e398ad3fa98b960fb758f18f053238e0`で完了した旧分類。ADR 0069とCORRECTION-09が置き換える |
+| FGA-02-MANAGER-GOVERNANCE-CORRECTION-09 | Completed | editable state所有単位、Autocompleteの単数Manager、複数形Managerの配列・選択dispatch、`beforeEdit`による内部編集／詳細遷移をproject rule・仕様・ADRへ訂正し、独立reviewとcomprehensive governance gateを完了した。進捗加点なし |
+| FGA-02-CUSTOMER-MANAGER-02 | In progress | 既存Updateの480px・document LWWに加え、Autocomplete内Createを単数`CustomerManager`のCREATEへ接続する。訂正実装・検証・Dev未完了 |
+| FGA-02-CUSTOMERS-MANAGER-03 | In progress | 一覧Createを担う`CustomersManager`はcommit済みだが、行選択をpageが直接詳細routeへ迂回する。`beforeEdit`で詳細遷移してfalseを返す選択dispatchへの訂正・検証・Devが未完了 |
 | FGA-02-CUSTOMER-ARCHIVE-04 | In progress | archiveを専用dialog・Callableへ委譲し、generic deleteを閉じたsourceと利用者Localの入口・取消を確認した。archive実行、固定commit、Devは未確認 |
-| FGA-02-CUSTOMER-LOCAL-05 | In progress | 会社管理者で一覧Create、詳細Update、480px、listener、archive入口・取消を記録した。Autocomplete runtime、失敗経路、archive実行が未確認のため全面完了ではない |
+| FGA-02-CUSTOMER-LOCAL-05 | In progress | 旧実装で一覧Create、詳細Update、480px、listener、archive入口・取消を記録した。訂正後のAutocomplete Create、一覧のManager経由詳細遷移、失敗経路、archive実行は未確認 |
 
 ## 完了条件
 
