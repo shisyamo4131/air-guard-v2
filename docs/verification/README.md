@@ -21,6 +21,8 @@
 | CUSTOMER-01E Dev権限別検証 | [CUSTOMER-01E Dev test](customer-01e-dev-test.md) |
 | CUSTOMER-02 状態表示・編集 local検証 | [CUSTOMER-02 local検証記録](customer-02-status-local.md) |
 | FGA-02 Customer Rules簡素化のDev反映・受入れ | [FGA-02 Customer Rules Dev反映・受入れ記録](fga-02-customer-rules-dev.md) |
+| FGA-02 Customer Manager 利用者Local確認 | [FGA-02 Customer Manager 利用者Local検証記録](fga-02-customer-manager-user-local.md) |
+| FGA-02 Customer Manager訂正後の利用者Local確認 | [FGA-02 Customer Manager訂正後の利用者Local検証記録](fga-02-customer-manager-correction-user-local.md) |
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |

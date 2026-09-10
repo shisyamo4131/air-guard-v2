@@ -7,6 +7,10 @@ import { useRoute, useRouter } from "vue-router";
 import { Customer, Site } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
+import {
+  CUSTOMER_BASIC_FIELDS,
+  CUSTOMER_PAYMENT_FIELDS,
+} from "@/composables/domain/customer/customerOperations";
 
 /*****************************************************************************
  * OBTAIN PARAMS
@@ -73,7 +77,11 @@ onUnmounted(unsubscribe);
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <CustomerEditorBase :customer="customerInstance">
+            <CustomerManager
+              :doc="customerInstance"
+              :included-keys="CUSTOMER_BASIC_FIELDS"
+              title="取引先基本情報の編集"
+            >
               <template #activator="{ open }">
                 <CustomerActivatorBase
                   :item="customerInstance"
@@ -90,12 +98,16 @@ onUnmounted(unsubscribe);
                   </template>
                 </CustomerActivatorBase>
               </template>
-            </CustomerEditorBase>
+            </CustomerManager>
           </v-col>
 
           <!-- 請求・回収条件 -->
           <v-col cols="12">
-            <CustomerEditorPayment :customer="customerInstance">
+            <CustomerManager
+              :doc="customerInstance"
+              :included-keys="CUSTOMER_PAYMENT_FIELDS"
+              title="請求・回収条件の編集"
+            >
               <template #activator="{ open }">
                 <CustomerActivatorPayment
                   :item="customerInstance"
@@ -104,7 +116,7 @@ onUnmounted(unsubscribe);
                   @click:edit="open"
                 />
               </template>
-            </CustomerEditorPayment>
+            </CustomerManager>
           </v-col>
         </v-row>
       </v-col>

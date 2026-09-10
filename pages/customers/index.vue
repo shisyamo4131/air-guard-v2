@@ -6,7 +6,6 @@
 import { Customer } from "@/schemas";
 import { normalizeTokenText } from "@shisyamo4131/air-firebase-v2/utils/tokenMap";
 import { useRouter } from "vue-router";
-import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -28,13 +27,14 @@ const statusOptions = [
  * SETUP ROUTER COMPOSABLES
  *****************************************************************************/
 const router = useRouter();
-const { canWrite } = useCustomerActions();
 
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function handleClickUpdate(item) {
+function handleBeforeEdit(editMode, item) {
+  if (editMode !== "UPDATE") return true;
   router.push(`/customers/${item.docId}`);
+  return false;
 }
 
 function subscribe() {
@@ -68,35 +68,42 @@ watch([selectedStatus, search], subscribe);
 
 <template>
   <AppViewportContainer>
-    <v-card class="fill-height d-flex flex-column" width="100%">
-      <AppMasterListToolbar v-model:search="search" :search-delay="300">
-        <template #append>
-          <v-select
-            v-model="selectedStatus"
-            :items="statusOptions"
-            label="状態"
-            density="compact"
-            variant="solo"
-            flat
-            hide-details
-            class="mx-2"
-            style="max-width: 180px; min-width: 120px"
-          />
-          <CustomerCreateDialog v-if="canWrite">
-            <template #activator="{ open }">
-              <v-btn icon="mdi-plus" @click="open" />
+    <CustomersManager
+      :before-edit="handleBeforeEdit"
+      :docs="customerInstance.docs"
+    >
+      <template #table="{ items, canWrite, toCreate, toUpdate }">
+        <v-card class="fill-height d-flex flex-column" width="100%">
+          <AppMasterListToolbar v-model:search="search" :search-delay="300">
+            <template #append>
+              <v-select
+                v-model="selectedStatus"
+                :items="statusOptions"
+                label="状態"
+                density="compact"
+                variant="solo"
+                flat
+                hide-details
+                class="mx-2"
+                style="max-width: 180px; min-width: 120px"
+              />
+              <v-btn
+                v-if="canWrite"
+                icon="mdi-plus"
+                @click="() => toCreate()"
+              />
             </template>
-          </CustomerCreateDialog>
-        </template>
-      </AppMasterListToolbar>
-      <CustomersDataTable
-        class="flex-grow-1 overflow-hidden"
-        :items="customerInstance.docs"
-        :sort-by="[]"
-        :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
-        hide-search
-        @click:update="handleClickUpdate"
-      />
-    </v-card>
+          </AppMasterListToolbar>
+          <CustomersDataTable
+            class="flex-grow-1 overflow-hidden"
+            :items="items"
+            :sort-by="[]"
+            :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+            hide-search
+            @click:update="toUpdate"
+          />
+        </v-card>
+      </template>
+    </CustomersManager>
   </AppViewportContainer>
 </template>

@@ -28,6 +28,11 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useFetch } from "@/composables/fetch/useFetch";
+import {
+  captureCustomerCreationScope,
+  deliverCommittedCustomer,
+} from "@/composables/application/customer/customerCreationBridge";
+import { CUSTOMER_CREATE_FIELDS } from "@/composables/domain/customer/customerOperations";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -47,7 +52,8 @@ const emit = defineEmits(["update:model-value"]);
  *****************************************************************************/
 const allSlots = useSlots();
 const { fetchCustomerComposable } = useFetch("CustomerAutocomplete");
-const { getCustomer, searchCustomers } = fetchCustomerComposable;
+const { getCustomer, pushCustomer, searchCustomers } = fetchCustomerComposable;
+const auth = useAuthStore();
 
 /*****************************************************************************
  * COMPUTED
@@ -66,9 +72,19 @@ const slots = computed(() =>
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function onCreateHandler(event) {
-  const emitValue = props.returnObject ? event : event[props.itemValue];
-  emit("update:model-value", emitValue);
+function onCreateHandler(event, creationScope) {
+  deliverCommittedCustomer({
+    created: event,
+    creationScope,
+    currentScope: captureCustomerCreationScope(auth),
+    pushCustomer,
+    selectCustomer: (customer) => {
+      const emitValue = props.returnObject
+        ? customer
+        : customer[props.itemValue];
+      emit("update:model-value", emitValue);
+    },
+  });
 }
 
 async function api(text) {
@@ -90,11 +106,16 @@ async function api(text) {
     @update:model-value="emit('update:model-value', $event)"
   >
     <template v-if="creatable" #append>
-      <CustomerCreateDialog @created="onCreateHandler">
-        <template #activator="{ open }">
-          <v-icon @click="open">mdi-plus</v-icon>
+      <CustomerManager
+        operation="CREATE"
+        :included-keys="CUSTOMER_CREATE_FIELDS"
+        title="取引先の新規登録"
+        @created="onCreateHandler"
+      >
+        <template #activator="{ disabled, open }">
+          <v-icon v-if="!disabled" @click="open">mdi-plus</v-icon>
         </template>
-      </CustomerCreateDialog>
+      </CustomerManager>
     </template>
 
     <template #item="slotProps">

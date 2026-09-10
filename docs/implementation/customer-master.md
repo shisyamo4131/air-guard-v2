@@ -4,11 +4,13 @@
 
 - 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)、archive safetyは[専用ロードマップ](../roadmaps/customer-archive-safety.md)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
-- 最終確認日: 2026-09-09
+- 最終確認日: 2026-09-10
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
 - local受入れ証拠: [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
 - archive local受入れ証拠: [Customer archive safety local acceptance verification receipt](../verification/customer-archive-local-acceptance.md)
 - Dev試験・座標比較の修正・cleanup: [CUSTOMER-01D実行記録](../verification/customer-01d-dev-test.md)
+- Manager利用者Local証拠: [FGA-02 Customer Manager利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)
+- Manager訂正後の利用者Local証拠: [FGA-02 Customer Manager訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)
 
 ## 入口・暫定権限
 
@@ -22,7 +24,7 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 | 詳細・更新 | `/customers/[id]` | readで詳細、write actorだけ基本・支払編集 | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
 | Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
 
-Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager`を使用しない。一覧とAutocompleteは共有作成dialog、詳細は基本情報editorと支払条件editorを使用する。閲覧だけの利用者には作成・編集・archive入口を表示しない。
+commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
 
 ## データ契約
 
@@ -37,14 +39,14 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 ## CRUD・validation
 
-- 一覧とAutocompleteのplus buttonは共有作成dialogからCustomer専用application処理を呼ぶ。基本情報と支払条件も専用editorから同じ境界を呼び、UIからCustomer modelの`create/update/delete`を直接呼ばない。
+- 現行HEADでは一覧のplus buttonは`CustomersManager`、Autocompleteのplus buttonは`CustomerManager`のCREATEから同じCustomer専用application処理を呼ぶ。Autocompleteはcommit成功後に割当済みdocument IDを持つ結果だけをtenant・actor scope確認後に選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。現行routeにはAutocompleteの`creatable` callerがないため、このCreate経路はsource contractと自動testで確認済みだがruntime未確認である。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
 - active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、権限制御・理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04で実装し、CAS-05でDev反映・受入れ済みである。archive一覧とrestoreの画面入口はない。
-- 更新は最新Customerへ実際に変更したoperation所有fieldを重ね、全体schemaを検査してから、実変更fieldと`uid`・server timestampだけを保存する。名称変更時は`tokenMap`、主要住所変更時は位置・表示住所の派生fieldを同時に部分保存する。
-- editorはlive値とdraftを分け、同じoperation fieldの外部変更ではreloadを必須にする。自分の保留中反映と失敗後rollbackは外部競合から除外し、rollback待ち中のbutton・Enter再送を拒否する。基本editorではrollback待ちに真正な外部値が届いたら待ちを解除して再読込できる。applicationは非同期準備後にも権限・identityと観測済み同operation競合を再確認する。送信後の同時更新を原子的に防ぐ仕組みではない。
+- 通常更新は編集開始時のCustomer document全体をdraftとし、`docId`・`createdAt`を最新値へ固定、`uid`・`updatedAt`を現在actorとserver timestampへ更新し、`beforeUpdate`と全schema validation後に26保存field全体をmergeなしの`setDoc`で置換する。名称・住所等の派生fieldも同じdocumentに再生成する。
+- 編集中にlistenerが別のCustomer値を受信してもdraftは維持し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示は楽観的なManager出力を採用せずlistener受信値を正本にする。applicationは非同期準備後に権限・tenant・UIDと対象doc IDを再確認し、対象消失または別ID化ではwriteしない。
 
 ## 必要時の保存形式検査
 
@@ -114,6 +116,6 @@ Customerの製品経路は`AirItemManager`、`AirArrayManager`、`useBaseManager
 
 ## 未確認範囲
 
-- 他masterに残る汎用Air manager内部の全validation・表示実装。
+- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerのAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationは実装済みである。Autocomplete Createは現行routeから到達する`creatable` callerがなく、訂正前後とも利用者Local runtimeは未確認である。
 - Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、archiveのDev反映・受入れ。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。

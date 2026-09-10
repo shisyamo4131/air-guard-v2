@@ -5,10 +5,7 @@
 ## 現在の作業
 
 - 製品は試験運用中。Site SITE-09、Customer状態CS-04、Customer archive safety CAS-05、Outsourcer OUT-08、Employee EMP-09のDev受入れを完了し、各roadmapを100%とした。
-- 4マスター管理画面の見た目・操作感を揃えるphaseで、共通の`AppViewportContainer`と`AppMasterListToolbar`を一覧へ適用した。一覧Readは、空検索では取引先・稼働中／終了済み現場・在職従業員・外注先を`updatedAt`の新しい順、退職者を退職日の新しい順に最大20件表示し、文字列入力時は正規化済み`tokenMap`検索へ統一した。Editorの操作非依存ラッパー`AppEditorDialog`はCustomer基本・支払条件、Site基本・取引先、Employee共通Editor、Outsourcer更新へ適用し、actionを既存AtomsのCancel／Submitへ揃えた。Submitは`type="submit"`でVFormのvalidation経路を使用する。Site取極め・終了・再開・archive等の専用操作と、作成用・編集用入力componentの分離は対象外である。
-- page navigation、route middleware、表示中pageの認可は共通access context／policyへ統一した。権限外menu、未登録route、権限喪失後の表示継続をfail closedにし、不要な`/test/user-permission-info`を削除した。Firestore Rules、Functions、document data、Prodは変更していない。
-- 2026-09-08に固定commitのindexes／HostingをDev反映し、全indexの`READY`後に4一覧、空検索、従業員かな検索、現場filter、Employee／Outsourcer更新dialogを非破壊確認した。Customer／Site更新dialogは対象data不在のためdomain compileとDev buildで確認した。account・documentは変更していない。
-- 配置管理の楽観的更新回帰は、単純なlocal即時反映、client境界分離、Local確認、Dev接続受入れ、main統合まで完了した。詳細は[FUT-0186](future-actions.md#fut-0186-配置管理の楽観的更新回帰を復旧する)と[受入れ記録](../verification/arrangement-optimistic-dev-acceptance.md)を参照する。
+- 完了済みの4マスター共通UI、route認可、Dev受入れ、配置管理回帰は[正式運用ロードマップ](../roadmaps/airguard-v2.md)と各verification receiptを正とし、この再開案内へ実測結果を複写しない。
 - 仕様・実装・進捗・実行証拠をこの案内へ複製せず、以下の各正本を参照します。remoteのlive状態は別承認の直接照合がない限り未確認です。
 
 ## 未決事項と承認
@@ -19,7 +16,11 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)で、FGA-01を完了した。CompanyとUserは現行の厳密な実装を維持する。FGA-02の最初のcheckpointではCustomer通常Rulesを有効User・同一tenant・actor UIDへ簡素化し、commit `3c67a95e`のFirestore／Hosting Dev反映と会社管理者の作成・更新受入れまで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。合成Customer `FGA02001`は後続確認用に保持する。次はCustomerのdocument単位last-write-wins、Manager、listener正本、role別UXの実装差を調査し、checkpoint粒度を利用者と合意する。次の製品変更、破壊的変更、migration、追加Dev操作、Prodは未承認である。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-02 Customer管理である。CompanyとUserは現行の厳密な実装を維持する。FGA-02-RULES-01はCustomer通常Rulesを有効User・同一tenant・actor UIDへ簡素化し、commit `3c67a95e`のFirestore／Hosting Dev反映と会社管理者の作成・更新受入れまで完了した。[実行証拠](../verification/fga-02-customer-rules-dev.md)を参照する。合成Customer `FGA02001`は後続確認用に保持する。
+
+FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
+
+現在はAutocomplete Createを単数`CustomerManager`へ接続し、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`経由で詳細へnavigationしてfalseを返す。独立review、対象自動検証、全domain検証は成功し、利用者Localで一覧経由の詳細遷移と詳細UPDATE・一覧CREATE dialogの表示・取消を確認した。[訂正後の実測記録](../verification/fga-02-customer-manager-correction-user-local.md)を参照する。現行routeにはAutocompleteのcreatable callerがないため、そのruntimeは未確認である。次は固定commitのDev反映・対象受入れを別承認で行い、Autocomplete runtimeを受入条件に含める場合は到達可能な製品callerを先に決める。Dev受入れまでFGA-02得点は0のままとする。旧[実測記録](../verification/fga-02-customer-manager-user-local.md)は訂正前実装の履歴として保持する。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

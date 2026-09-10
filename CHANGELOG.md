@@ -4,6 +4,10 @@
 
 ## Unreleased
 
+- Domain Managerの分類をeditable stateの所有単位へ訂正し、Customer実装も追随した。外部既存instanceまたはその場の新規instanceは単数Manager、配列と行選択dispatchは複数形Managerが所有して相互に内包しない。この分類をFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とした。Autocomplete内Createは単数`CustomerManager`、一覧の行選択は`CustomersManager`／AirArrayManagerの`beforeEdit`を経由し、詳細navigation時はfalseで一覧dialogを抑止する。独立review、対象自動検証、全domain検証と利用者Localの非書込み確認を完了した。Autocomplete Create runtimeとDev受入れは未完了であり、Company・User等の例外、480px、archive例外、listener・cache、Rules・data契約は変更していない。[現行判断](docs/decisions/0069-domain-manager-editable-state-ownership.md)、[訂正後Local記録](docs/verification/fga-02-customer-manager-correction-user-local.md)、[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
+- Customer詳細の基本情報・支払条件を共通`CustomerManager`／`AirItemManager`へ移し、Prod前のdocument単位last-write-winsに合わせて26field全体をmergeなしで置換する通常更新へ変更した。編集中の外部更新で保存を拒否・再読込要求せず、更新後はlistener受信値だけを表示正本とする。archive・作成・物理deleteは単数Managerから分離した。実Customer converterと26-field契約の一致、対象31件、domain 1,570件、Local Emulator 182件、独立reviewをlocalで確認した。Dev、Prod、remote data、Rules・Functions・schema・packageは未変更である。[実装調査](docs/implementation/customer-master.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
 - Customer通常CRUDのFirestore Rulesを、同一tenantの有効な認証済み本登録Userとactor UIDを境界とする形へ簡素化した。通常Customerのrole・permission、exact 26-field schema、型・長さ・状態・時刻・操作別field検査はRulesから外し、Schemas packageと正規application writerを検証責務とする。active delete、archiveのclient read/write、archive済み同一IDの再作成は引き続き拒否する。固定commitをFirestore・HostingへDev反映し、会社管理者による合成Customerの作成・更新・再読込後の表示を確認した。Prod、Functions、account権限、既存dataの変換は変更していない。[判断](docs/decisions/0065-tenant-trust-normal-business-authorization.md)、[実装調査](docs/implementation/customer-master.md)、[Dev受入れ記録](docs/verification/fga-02-customer-rules-dev.md)を参照。
 
 - 利用者による根本ルールの提示完了を受け、Firestore document構成、tenant共通権限とCompany／User例外、Prod前のdocument単位last-write-wins、component／useFetch／従属参照境界の相互整合・実装差・段階移行先を確定し、根本ガバナンス整合phaseのFGA-01を完了した。進捗は0%から10%となり、次はCustomer管理の最初の小checkpointを合意する。製品code、Rules、data、Dev・Prodは変更していない。[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。

@@ -3,15 +3,9 @@ import {
   doc,
   serverTimestamp,
   setDoc,
-  updateDoc,
 } from "firebase/firestore";
 import { Customer } from "@/schemas";
 import { CUSTOMER_DOCUMENT_FIELDS } from "./customerDocumentContract.js";
-import {
-  CUSTOMER_ADDRESS_FIELDS,
-  CUSTOMER_NAME_FIELDS,
-  CUSTOMER_OPERATION,
-} from "@/composables/domain/customer/customerOperations";
 
 function customerCollection(firestore, companyId) {
   return collection(firestore, "Companies", companyId, "Customers");
@@ -47,37 +41,15 @@ export function createCustomerWriter({ firestore }) {
     return customer;
   }
 
-  async function update({ companyId, operation, customer, fields }) {
-    if (!fields.length) {
-      return { updated: false, fields: [] };
-    }
-
-    const serialized = serializeCustomer(customer);
-    const patchFields = new Set(fields);
-    if (
-      operation === CUSTOMER_OPERATION.UPDATE_BASIC &&
-      fields.some((field) => CUSTOMER_NAME_FIELDS.includes(field))
-    ) {
-      patchFields.add("tokenMap");
-    }
-    if (
-      operation === CUSTOMER_OPERATION.UPDATE_BASIC &&
-      fields.some((field) => CUSTOMER_ADDRESS_FIELDS.includes(field))
-    ) {
-      patchFields.add("location");
-      patchFields.add("geopoint");
-      patchFields.add("fullAddress");
-      patchFields.add("prefecture");
-    }
-
-    const patch = pick(serialized, [...patchFields]);
-    patch.uid = customer.uid;
-    patch.updatedAt = serverTimestamp();
-    await updateDoc(
+  async function update({ companyId, customer }) {
+    const data = pick(serializeCustomer(customer), CUSTOMER_DOCUMENT_FIELDS);
+    data.createdAt = customer.createdAt;
+    data.updatedAt = serverTimestamp();
+    await setDoc(
       doc(customerCollection(firestore, companyId), customer.docId),
-      patch,
+      data,
     );
-    return { updated: true, fields: [...patchFields] };
+    return { updated: true, fields: [...CUSTOMER_DOCUMENT_FIELDS] };
   }
 
   return { reserveDocument, create, update };

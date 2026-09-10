@@ -4,13 +4,12 @@ import test from "node:test";
 import { compileScript, compileTemplate, parse } from "@vue/compiler-sfc";
 
 const CUSTOMER_SFCS = Object.freeze([
-  "components/Customer/CreateDialog.vue",
-  "components/Customer/Editor/Base.vue",
-  "components/Customer/Editor/Payment.vue",
+  "components/Customer/Manager/index.vue",
   "components/Customer/Autocomplete.vue",
   "components/Customer/Activator/Base.vue",
   "components/Customer/Activator/Payment.vue",
   "components/Customer/ArchiveDialog.vue",
+  "components/Customers/Manager/index.vue",
   "components/Customers/DataTable/index.vue",
   "pages/customers/index.vue",
   "pages/customers/[id].vue",
@@ -20,7 +19,93 @@ async function source(path) {
   return readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 }
 
-test("Customer SFCs parse and compile after retiring the generic managers", async () => {
+function stripImports(value) {
+  return value.replace(/^import[\s\S]*?;\r?\n/gmu, "");
+}
+
+async function customerManagerHarness() {
+  const component = await source("components/Customer/Manager/index.vue");
+  const script = component.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
+  assert.ok(script);
+  let sequence = 0;
+  let createFailure = null;
+  const events = [];
+  const auth = { companyId: "company-a", uid: "actor-a" };
+  class Customer {
+    constructor(raw = {}) {
+      this.instanceNumber = ++sequence;
+      this.initialize(raw);
+    }
+    initialize(raw = {}) {
+      Object.assign(this, raw);
+    }
+    toObject() {
+      return { ...this };
+    }
+  }
+  const props = {
+    doc: new Customer(),
+    includedKeys: ["name"],
+    operation: "CREATE",
+    title: "取引先の新規登録",
+  };
+  const factory = new Function(
+    "Customer",
+    "CustomerOperationError",
+    "captureCustomerCreationScope",
+    "computed",
+    "defineEmits",
+    "defineProps",
+    "getCustomerOperationErrorMessage",
+    "initializeCommittedCustomerDraft",
+    "ref",
+    "shallowRef",
+    "useAuthStore",
+    "useBaseManager",
+    "useCustomerActions",
+    "watch",
+    `${stripImports(script)}; return { handleCreate, handleCreated, handleEditing, openManager };`,
+  );
+  const methods = factory(
+    Customer,
+    class CustomerOperationError extends Error {},
+    (value) => Object.freeze({ companyId: value.companyId, uid: value.uid }),
+    (getter) => ({ get value() { return getter(); } }),
+    () => (...args) => events.push(args),
+    () => props,
+    (error, fallback) => error?.message || fallback,
+    (draft, created) => {
+      if (!created?.docId) return false;
+      draft.initialize(created.toObject());
+      return true;
+    },
+    (value) => ({ value }),
+    (value) => ({ value }),
+    () => auth,
+    () => ({ attrs: {} }),
+    () => ({
+      canWrite: { value: true },
+      createCustomer: async () => {
+        if (createFailure) throw createFailure;
+        return new Customer({ docId: "generated-customer" });
+      },
+      isSaving: { value: false },
+      updateCustomer: async () => {},
+    }),
+    () => {},
+  );
+  return {
+    ...methods,
+    Customer,
+    auth,
+    events,
+    failCreate(error) {
+      createFailure = error;
+    },
+  };
+}
+
+test("Customer SFCs parse and compile with the detail AirItemManager wrapper", async () => {
   for (const path of CUSTOMER_SFCS) {
     const url = new URL(`../../${path}`, import.meta.url);
     const content = await readFile(url, "utf8");
@@ -35,12 +120,6 @@ test("Customer SFCs parse and compile after retiring the generic managers", asyn
     assert.deepEqual(compiled.errors, [], `${path} template errors`);
   }
 
-  for (const retired of [
-    "components/Customer/Manager/index.vue",
-    "components/Customers/Manager/index.vue",
-  ]) {
-    await assert.rejects(() => access(new URL(`../../${retired}`, import.meta.url)));
-  }
 });
 
 test("Customer status labels use the shared schema and selection remains status-independent", async () => {
@@ -59,32 +138,143 @@ test("Customer status labels use the shared schema and selection remains status-
   assert.match(autocomplete, /:fetchItemByKeyApi="getCustomer"/u);
 });
 
-test("Customer source no longer routes create or update through AirItemManager, AirArrayManager, or useBaseManager", async () => {
-  const sources = await Promise.all(CUSTOMER_SFCS.map(source));
-  const combined = sources.join("\n");
-  assert.doesNotMatch(combined, /AirItemManager|AirArrayManager|useBaseManager/u);
-  assert.doesNotMatch(combined, /<CustomerManager|<CustomersManager/u);
-  assert.doesNotMatch(combined, /includedKeys|excludedKeys/u);
+test("CustomerManager keeps detail updates and owns single-instance create", async () => {
+  const [detail, manager] = await Promise.all([
+    source("pages/customers/[id].vue"),
+    source("components/Customer/Manager/index.vue"),
+  ]);
+  assert.match(detail, /<CustomerManager/u);
+  assert.match(manager, /<air-item-manager/u);
+  assert.match(manager, /useCustomerActions/u);
+  assert.match(manager, /updateCustomer/u);
+  assert.match(manager, /createCustomer/u);
+  assert.match(manager, /:handle-update=/u);
+  assert.match(manager, /hide-delete-btn/u);
+  assert.match(manager, /:handle-create="handleCreate"/u);
+  assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
+  assert.match(manager, /default: "UPDATE"/u);
+  assert.match(manager, /\["CREATE", "UPDATE"\]\.includes\(value\)/u);
+  assert.match(manager, /default: \(\) => new Customer\(\)/u);
+  assert.match(
+    manager,
+    /props\.operation === "CREATE"[\s\S]*?slotProps\.toCreate\(new Customer\(\)\)/u,
+  );
+  assert.match(manager, /const creationScope = captureCustomerCreationScope\(auth\)/u);
+  assert.match(manager, /initializeCommittedCustomerDraft\(draft, created\)/u);
+  assert.match(manager, /emit\("created", created, creationScope\)/u);
+  assert.match(manager, /function clearCreationScope\(\)/u);
+  assert.match(manager, /catch \(error\)[\s\S]*?clearCreationScope\(\)[\s\S]*?throw error/u);
+  assert.match(manager, /@quit="clearCreationScope"/u);
+  assert.match(detail, /:included-keys="CUSTOMER_BASIC_FIELDS"/u);
+  assert.match(detail, /:included-keys="CUSTOMER_PAYMENT_FIELDS"/u);
 });
 
-test("Customer list and autocomplete share the dedicated create dialog", async () => {
-  const [listPage, autocomplete] = await Promise.all([
-    source("pages/customers/index.vue"),
-    source("components/Customer/Autocomplete.vue"),
+test("CustomerManager creates a fresh draft and emits only committed assigned-ID state", async () => {
+  const harness = await customerManagerHarness();
+  const opened = [];
+  const slotProps = {
+    toCreate: (item) => opened.push(item),
+    toUpdate: () => assert.fail("CREATE must not open UPDATE"),
+  };
+  harness.openManager(slotProps);
+  harness.openManager(slotProps);
+  assert.equal(opened.length, 2);
+  assert.equal(opened[0] instanceof harness.Customer, true);
+  assert.equal(opened[1] instanceof harness.Customer, true);
+  assert.notEqual(opened[0], opened[1]);
+
+  await harness.handleCreate(opened[1]);
+  harness.handleCreated(opened[1]);
+  assert.deepEqual(harness.events, [
+    [
+      "created",
+      opened[1],
+      { companyId: "company-a", uid: "actor-a" },
+    ],
   ]);
-  assert.match(listPage, /<CustomerCreateDialog v-if="canWrite">/u);
-  assert.match(autocomplete, /<CustomerCreateDialog @created="onCreateHandler">/u);
+  assert.equal(opened[1].docId, "generated-customer");
+
+  harness.handleEditing(false);
+  harness.handleCreated(opened[1]);
+  assert.equal(harness.events.length, 1);
+  const failure = new Error("synthetic failure");
+  harness.failCreate(failure);
+  await assert.rejects(() => harness.handleCreate(opened[0]), failure);
+  harness.handleCreated(opened[0]);
+  assert.equal(harness.events.length, 1);
+});
+
+test("Customer autocomplete uses singular CREATE without nesting plural manager", async () => {
+  const [autocomplete, singular, plural, bridge] = await Promise.all([
+    source("components/Customer/Autocomplete.vue"),
+    source("components/Customer/Manager/index.vue"),
+    source("components/Customers/Manager/index.vue"),
+    source("composables/application/customer/customerCreationBridge.js"),
+  ]);
+  assert.match(autocomplete, /<CustomerManager/u);
+  assert.match(autocomplete, /operation="CREATE"/u);
+  assert.match(autocomplete, /:included-keys="CUSTOMER_CREATE_FIELDS"/u);
+  assert.match(autocomplete, /title="取引先の新規登録"/u);
+  assert.doesNotMatch(autocomplete, /<CustomersManager/u);
+  assert.doesNotMatch(singular, /<CustomersManager/u);
+  assert.doesNotMatch(plural, /<CustomerManager/u);
+  assert.match(autocomplete, /function onCreateHandler\(event, creationScope\)/u);
+  assert.match(autocomplete, /currentScope: captureCustomerCreationScope\(auth\)/u);
+  assert.match(autocomplete, /#activator="\{ disabled, open \}"/u);
+  assert.match(autocomplete, /<v-icon v-if="!disabled" @click="open">/u);
+  assert.ok(bridge.indexOf("pushCustomer(created)") < bridge.indexOf("selectCustomer(created)"));
   assert.match(autocomplete, /const emitValue = props\.returnObject/u);
   assert.match(autocomplete, /emit\("update:model-value", emitValue\)/u);
 });
 
-test("Customer detail exposes dedicated editors and a write-authorized archive action", async () => {
+test("Customer list dispatches rows through plural AirArrayManager beforeEdit", async () => {
+  const [listPage, manager] = await Promise.all([
+    source("pages/customers/index.vue"),
+    source("components/Customers/Manager/index.vue"),
+  ]);
+  assert.match(listPage, /<CustomersManager/u);
+  assert.match(listPage, /:before-edit="handleBeforeEdit"/u);
+  assert.match(listPage, /#table="\{ items, canWrite, toCreate, toUpdate \}"/u);
+  assert.match(listPage, /<CustomersDataTable[\s\S]*?:items="items"/u);
+  assert.match(listPage, /@click="\(\) => toCreate\(\)"/u);
+  assert.match(listPage, /@click:update="toUpdate"/u);
+  assert.match(
+    listPage,
+    /function handleBeforeEdit\(editMode, item\)[\s\S]*?editMode !== "UPDATE"[\s\S]*?router\.push\(`\/customers\/\$\{item\.docId\}`\);[\s\S]*?return false;/u,
+  );
+  assert.match(manager, /<air-array-manager/u);
+  assert.match(manager, /beforeEdit: \{ type: Function, default: undefined \}/u);
+  assert.match(manager, /const externalDecision = await props\.beforeEdit\?\.\(editMode, item\)/u);
+  assert.match(manager, /if \(externalDecision === false\) return false/u);
+  assert.match(manager, /:schema="Customer"/u);
+  assert.match(manager, /:included-keys="CUSTOMER_CREATE_FIELDS"/u);
+  assert.match(manager, /:handle-create="handleCreate"/u);
+  assert.match(manager, /:handle-update="rejectUnsupportedOperation"/u);
+  assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
+  assert.match(manager, /editMode === "UPDATE"/u);
+  assert.match(manager, /initializeCommittedCustomerDraft\(draft, created\)/u);
+  assert.match(manager, /maxWidth: 480/u);
+  assert.match(manager, /class="fill-height"/u);
+  assert.match(manager, /style="height: 100%"/u);
+  assert.match(manager, /取引先の新規登録/u);
+  assert.match(manager, /キャンセル/u);
+  assert.match(manager, /登録/u);
+  assert.doesNotMatch(manager, /props\.docs\.(?:push|splice)|docs\.(?:push|splice)/u);
+  assert.doesNotMatch(manager, /@update:model-value|emit\("update:model-value"/u);
+  await assert.rejects(
+    access(new URL("../../components/Customer/CreateDialog.vue", import.meta.url)),
+    (error) => error?.code === "ENOENT",
+  );
+});
+
+test("Customer detail exposes manager-backed editors and a write-authorized archive action", async () => {
   const [detail, dialog] = await Promise.all([
     source("pages/customers/[id].vue"),
     source("components/Customer/ArchiveDialog.vue"),
   ]);
-  assert.match(detail, /<CustomerEditorBase :customer="customerInstance">/u);
-  assert.match(detail, /<CustomerEditorPayment :customer="customerInstance">/u);
+  assert.ok((detail.match(/<CustomerManager/gu) ?? []).length >= 2);
+  assert.match(detail, /<CustomerActivatorBase/u);
+  assert.match(detail, /<CustomerActivatorPayment/u);
   assert.match(detail, /:editable="canWrite"/u);
   assert.match(
     detail,
@@ -147,46 +337,108 @@ test("Customer detail exposes dedicated editors and a write-authorized archive a
 });
 
 test("Customer archive client stays on the dedicated Callable without direct archive, delete, restore, or cache writes", async () => {
-  const paths = [
-    "pages/customers/[id].vue",
+  const archivePaths = [
     "components/Customer/ArchiveDialog.vue",
     "composables/application/customer/useCustomerArchiveAction.js",
     "composables/customer/useCustomerFunctions.js",
     "composables/domain/customer/customerArchiveUiContract.js",
   ];
-  const combined = (await Promise.all(paths.map(source))).join("\n");
-  assert.match(combined, /httpsCallable\(\$functions, "archiveCustomer"\)/u);
-  assert.doesNotMatch(combined, /Customers_archive/u);
-  assert.doesNotMatch(combined, /from "firebase\/firestore"/u);
+  const [detail, ...archiveSources] = await Promise.all([
+    source("pages/customers/[id].vue"),
+    ...archivePaths.map(source),
+  ]);
+  const archiveCombined = archiveSources.join("\n");
+  const protectedCombined = [detail, archiveCombined].join("\n");
+  assert.match(archiveCombined, /httpsCallable\(\$functions, "archiveCustomer"\)/u);
+  assert.match(detail, /<CustomerManager/u);
+  assert.doesNotMatch(protectedCombined, /Customers_archive/u);
+  assert.doesNotMatch(protectedCombined, /from "firebase\/firestore"/u);
   assert.doesNotMatch(
-    combined,
-    /\b(?:deleteDoc|setDoc|updateDoc|addDoc|writeBatch)\s*\(|\.(?:delete|restore|toDelete)\s*\(|AirItemManager|AirArrayManager|useBaseManager/u,
+    protectedCombined,
+    /\b(?:deleteDoc|setDoc|updateDoc|addDoc|writeBatch)\s*\(|\.(?:delete|restore|toDelete)\s*\(/u,
   );
-  assert.doesNotMatch(combined, /(?:cache|docs?)\.(?:push|splice)\s*\(/u);
+  assert.doesNotMatch(
+    archiveCombined,
+    /AirItemManager|AirArrayManager|useBaseManager/u,
+  );
+  assert.doesNotMatch(
+    protectedCombined,
+    /(?:cache|docs?)\.(?:push|splice)\s*\(/u,
+  );
 });
 
-test("Customer basic form includes address and both editors implement reload-only conflict handling", async () => {
-  const [operations, basic, payment] = await Promise.all([
+test("Customer manager keeps an edit snapshot and does not expose conflict reload handling", async () => {
+  const [operations, manager] = await Promise.all([
     source("composables/domain/customer/customerOperations.js"),
-    source("components/Customer/Editor/Base.vue"),
-    source("components/Customer/Editor/Payment.vue"),
+    source("components/Customer/Manager/index.vue"),
   ]);
   assert.match(
     operations,
     /CUSTOMER_BASIC_FIELDS[\s\S]*?"address"/u,
   );
-  for (const editor of [basic, payment]) {
-    assert.match(editor, /const draft = ref\(null\)/u);
-    assert.match(editor, /const baseline = ref\(null\)/u);
-    assert.match(editor, /hasExternalChanges/u);
-    assert.match(editor, /最新値を読み直す/u);
-    assert.match(
-      editor,
-      /<AppEditorDialog[\s\S]*?:submit-disabled="isWaitingForRollback \|\| hasExternalChanges"[\s\S]*?@submit="save"/u,
-    );
-    assert.doesNotMatch(editor, /<v-dialog|<v-form|ref="form"/u);
-    assert.doesNotMatch(editor, /上書き|last-write|confirmOverwrite/u);
-  }
+  assert.match(manager, /edit(?:ing)?Snapshot|editSnapshot|stableSnapshot/u);
+  assert.match(manager, /stableSnapshot = shallowRef\(new Customer\(props\.doc\.toObject\(\)\)\)/u);
+  assert.match(
+    manager,
+    /function openManager\(slotProps\)[\s\S]*?syncFromListener\(\);[\s\S]*?slotProps\.toUpdate\(stableSnapshot\.value\)/u,
+  );
+  assert.match(
+    manager,
+    /watch\([\s\S]*?if \(!isEditing\.value\) syncFromListener\(\)/u,
+  );
+  assert.match(manager, /:model-value="stableSnapshot"/u);
+  assert.match(manager, /@update:model-value="ignoreManagerModelValue"/u);
+  assert.match(manager, /:item="props\.doc"/u);
+  assert.doesNotMatch(manager, /hasExternalChanges|isWaitingForRollback|reloadLatest/u);
+  assert.doesNotMatch(manager, /最新値を読み直す|競合|confirmOverwrite/u);
+});
+
+test("Customer manager editor preserves the approved visual and submit contract", async () => {
+  const manager = await source("components/Customer/Manager/index.vue");
+
+  assert.match(manager, /<template #editor="editorAttrs">/u);
+  assert.match(
+    manager,
+    /<v-form[\s\S]*?ref="editorForm"[\s\S]*?:disabled="editorAttrs\.disabled"[\s\S]*?@submit\.prevent="submitEditor\(editorAttrs\)"/u,
+  );
+  const submit = manager.slice(manager.indexOf("async function submitEditor"));
+  assert.match(
+    submit,
+    /editorAttrs\.isLoading[\s\S]*?editorAttrs\.disabled[\s\S]*?editorAttrs\.disableSubmit[\s\S]*?return;/u,
+  );
+  assert.ok(
+    submit.indexOf("await editorForm.value?.validate()") <
+      submit.indexOf('await editorAttrs["onClick:submit"]()'),
+  );
+  assert.match(submit, /validation\.valid !== true\) return;/u);
+
+  assert.match(
+    manager,
+    /:dialog-props="\{[\s\S]*?maxWidth: 480,[\s\S]*?persistent: true,[\s\S]*?scrollable: true,[\s\S]*?'aria-label': props\.title,[\s\S]*?\}"/u,
+  );
+  assert.match(manager, /<v-card :border="false">/u);
+  assert.match(
+    manager,
+    /<v-toolbar[\s\S]*?color="secondary"[\s\S]*?density="compact"[\s\S]*?:title="props\.title"/u,
+  );
+  assert.match(
+    manager,
+    /<AtomsBtnsCancel[\s\S]*?type="button"[\s\S]*?:disabled="editorAttrs\.isLoading"[\s\S]*?@click="editorAttrs\['onClick:cancel'\]"/u,
+  );
+  assert.match(
+    manager,
+    /<AtomsBtnsSubmit[\s\S]*?type="submit"[\s\S]*?:text="submitText"[\s\S]*?:loading="editorAttrs\.isLoading"[\s\S]*?:disabled="editorAttrs\.disabled \|\| editorAttrs\.disableSubmit"/u,
+  );
+  assert.match(
+    manager,
+    /<v-alert[\s\S]*?v-if="editorAttrs\.errors\.length"[\s\S]*?type="error"[\s\S]*?variant="tonal"[\s\S]*?editorErrorMessage\(editorAttrs\.errors\)/u,
+  );
+  assert.match(
+    manager,
+    /getCustomerOperationErrorMessage[\s\S]*?取引先を登録できませんでした。[\s\S]*?取引先情報を更新できませんでした。/u,
+  );
+  assert.match(manager, /<air-item-input v-bind="editorAttrs\.inputProps" \/>/u);
+  assert.doesNotMatch(manager, /<v-chip|mdi-(?:pencil|close)|close-icon/u);
 });
 
 test("Customer edit controls are absent for read-only users", async () => {

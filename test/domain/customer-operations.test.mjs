@@ -9,17 +9,18 @@ import {
   CUSTOMER_OPERATION,
   CUSTOMER_PAYMENT_FIELDS,
   CustomerOperationError,
-  changedCustomerFields,
   customerOperationFields,
   customerOperationSchema,
-  customerSnapshot,
-  customerSnapshotsEqual,
   getCustomerOperationErrorMessage,
   getCustomerWriteDecision,
-  hasCustomerOperationConflict,
   prepareCustomerCreate,
   prepareCustomerUpdate,
 } from "../../composables/domain/customer/customerOperations.js";
+import {
+  captureCustomerCreationScope,
+  deliverCommittedCustomer,
+  initializeCommittedCustomerDraft,
+} from "../../composables/application/customer/customerCreationBridge.js";
 
 function validCustomer(overrides = {}) {
   return new Customer({
@@ -183,246 +184,66 @@ test("Customer operation schema does not invent a zipcode length limit", async (
   assert.equal(candidate.zipcode, "1".repeat(17));
 });
 
-test("Customer basic update changes only requested basic fields and preserves a concurrent payment change", async () => {
-  const baseline = validCustomer();
+test("Customer update validates and returns the complete edited document", async () => {
   const latest = validCustomer({ paymentMonth: 2 });
-  const draft = validCustomer({ city: "港区" });
+  const draft = validCustomer({
+    city: "港区",
+    paymentMonth: 1,
+    remarks: "編集開始時の全体値",
+  });
   const now = new Date("2026-02-02T00:00:00.000Z");
-
-  assert.deepEqual(
-    changedCustomerFields({
-      operation: CUSTOMER_OPERATION.UPDATE_BASIC,
-      baseline,
-      draft,
-    }),
-    ["city"],
-  );
-  assert.equal(
-    hasCustomerOperationConflict({
-      operation: CUSTOMER_OPERATION.UPDATE_BASIC,
-      baseline,
-      latest,
-    }),
-    false,
-  );
-
   const prepared = await prepareCustomerUpdate({
-    operation: CUSTOMER_OPERATION.UPDATE_BASIC,
     latest,
-    baseline,
     draft,
     actorUid: "actor-b",
     now,
   });
-  assert.deepEqual(prepared.fields, ["city"]);
+
   assert.equal(prepared.candidate.city, "港区");
-  assert.equal(prepared.candidate.paymentMonth, 2);
+  assert.equal(prepared.candidate.paymentMonth, 1);
+  assert.equal(prepared.candidate.remarks, "編集開始時の全体値");
+  assert.equal(prepared.candidate.docId, latest.docId);
+  assert.deepEqual(prepared.candidate.createdAt, latest.createdAt);
   assert.equal(prepared.candidate.uid, "actor-b");
   assert.equal(prepared.candidate.updatedAt, now);
 });
 
-test("Customer editor requires reload when an owned field changes after editing starts", async () => {
-  const baseline = validCustomer();
-  const latest = validCustomer({ tel: "03-9999-9999" });
-  const draft = validCustomer({ city: "港区" });
+test("Customer update does not merge a later unrelated listener field into the edited document", async () => {
+  const latest = validCustomer({ paymentMonth: 2 });
+  const editedSnapshot = validCustomer({ city: "港区", paymentMonth: 1 });
+  const prepared = await prepareCustomerUpdate({
+    latest,
+    draft: editedSnapshot,
+    actorUid: "actor-b",
+    now: new Date("2026-02-02T00:00:00.000Z"),
+  });
 
-  assert.equal(
-    hasCustomerOperationConflict({
-      operation: CUSTOMER_OPERATION.UPDATE_BASIC,
-      baseline,
-      latest,
-    }),
-    true,
-  );
-  await assert.rejects(
-    () =>
-      prepareCustomerUpdate({
-        operation: CUSTOMER_OPERATION.UPDATE_BASIC,
-        latest,
-        baseline,
-        draft,
-        actorUid: "actor-a",
-        now: new Date(),
-      }),
-    (error) =>
-      error instanceof CustomerOperationError && error.code === "conflict",
-  );
+  assert.equal(prepared.candidate.city, "港区");
+  assert.equal(prepared.candidate.paymentMonth, 1);
 });
 
-async function loadEditorHarness({ component, update }) {
-  const source = await readFile(
-    new URL(`../../components/Customer/Editor/${component}.vue`, import.meta.url),
-    "utf8",
-  );
-  const script = source.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
-  assert.ok(script);
-  const customer = validCustomer();
-  let watchHandler = null;
-  const actionName = component === "Base" ? "updateBasic" : "updatePayment";
-  globalThis.__customerEditorHarness = {
-    CUSTOMER_OPERATION,
-    Customer,
-    customer,
-    customerOperationSchema,
-    customerSnapshot,
-    customerSnapshotsEqual,
-    getCustomerOperationErrorMessage,
-    defineProps: () => ({ customer, title: "取引先基本情報の編集" }),
-    ref: (value) => ({ value }),
-    useCustomerActions: () => ({
-      canWrite: { value: true },
-      isSaving: { value: false },
-      [actionName]: update,
-    }),
-    watch: (_source, handler) => {
-      watchHandler = handler;
-    },
-  };
-  const executable = script.replace(/^import[\s\S]*?;\r?\n/gmu, "");
-  const moduleSource = `
-    const {
-      CUSTOMER_OPERATION, Customer, customerOperationSchema, customerSnapshot,
-      customerSnapshotsEqual, defineProps, getCustomerOperationErrorMessage,
-      ref, useCustomerActions, watch
-    } = globalThis.__customerEditorHarness;
-    ${executable}
-    export {
-      dialog, draft, errorMessage, hasExternalChanges,
-      isWaitingForRollback, open, save, updateProperties, reloadLatest
-    };
-  `;
-  const module = await import(
-    `data:text/javascript;base64,${Buffer.from(moduleSource).toString("base64")}#${Date.now()}-${Math.random()}`,
-  );
-  return {
-    customer,
-    module,
-    triggerSourceWatch: () => watchHandler?.(),
-    cleanup: () => delete globalThis.__customerEditorHarness,
-  };
-}
-
-for (const scenario of [
-  {
-    component: "Base",
-    field: "contractStatus",
-    draftValue: Customer.STATUS_TERMINATED,
-    externalValue: Customer.STATUS_TERMINATED,
-    fallback: "取引先の基本情報を更新できませんでした。",
-    rawError: "FirebaseError: Missing or insufficient permissions.",
-  },
-  {
-    component: "Base",
-    field: "city",
-    draftValue: "入力中の市",
-    externalValue: "外部更新の市",
-    fallback: "取引先の基本情報を更新できませんでした。",
-    rawError: "FirebaseError: Missing or insufficient permissions.",
-  },
-  {
-    component: "Payment",
-    field: "paymentMonth",
-    draftValue: 2,
-    externalValue: 3,
-    fallback: "請求・回収条件を更新できませんでした。",
-    rawError: "FirebaseError: backend connection failed at internal-host",
-  },
-]) {
-  test(`Customer ${scenario.component} ${scenario.field} editor ignores its own pending write reflection`, async () => {
-    let releaseWrite;
-    let mounted;
-    const writePending = new Promise((resolve) => {
-      releaseWrite = resolve;
-    });
-    mounted = await loadEditorHarness({
-      component: scenario.component,
-      update: async ({ draft }) => {
-        mounted.customer[scenario.field] = draft[scenario.field];
-        mounted.triggerSourceWatch();
-        await writePending;
-      },
-    });
-    try {
-      mounted.module.open();
-      mounted.module.updateProperties({ [scenario.field]: scenario.draftValue });
-      const saving = mounted.module.save();
-      await Promise.resolve();
-      assert.equal(mounted.module.hasExternalChanges.value, false);
-      assert.equal(mounted.module.draft.value[scenario.field], scenario.draftValue);
-      releaseWrite();
-      await saving;
-      assert.equal(mounted.module.dialog.value, false);
-    } finally {
-      mounted.cleanup();
-    }
+test("Customer update anchors immutable identity fields to the latest document", async () => {
+  const createdAt = new Date("2025-12-01T00:00:00.000Z");
+  const latest = validCustomer({ docId: "canonical-id", createdAt });
+  const draft = validCustomer({
+    docId: "spoofed-id",
+    createdAt: new Date("2030-01-01T00:00:00.000Z"),
+    uid: "spoofed-actor",
+    remarks: "変更",
+  });
+  const prepared = await prepareCustomerUpdate({
+    latest,
+    draft,
+    actorUid: "actor-b",
+    now: new Date("2026-02-02T00:00:00.000Z"),
   });
 
-  test(`Customer ${scenario.component} ${scenario.field} editor keeps its draft and can retry after a write failure`, async () => {
-    let calls = 0;
-    let mounted;
-    let originalValue;
-    mounted = await loadEditorHarness({
-      component: scenario.component,
-      update: async ({ draft }) => {
-        calls += 1;
-        if (calls === 1) {
-          mounted.customer[scenario.field] = draft[scenario.field];
-          mounted.triggerSourceWatch();
-          throw new Error(scenario.rawError);
-        }
-      },
-    });
-    try {
-      mounted.module.open();
-      originalValue = mounted.customer[scenario.field];
-      mounted.module.updateProperties({ [scenario.field]: scenario.draftValue });
-      await mounted.module.save();
-      assert.equal(mounted.module.dialog.value, true);
-      assert.equal(mounted.module.draft.value[scenario.field], scenario.draftValue);
-      assert.equal(mounted.module.errorMessage.value, scenario.fallback);
-      assert.doesNotMatch(mounted.module.errorMessage.value, /FirebaseError|internal-host|permissions/u);
-      assert.equal(mounted.module.hasExternalChanges.value, false);
-      assert.equal(mounted.module.isWaitingForRollback.value, true);
+  assert.equal(prepared.candidate.docId, "canonical-id");
+  assert.deepEqual(prepared.candidate.createdAt, createdAt);
+  assert.equal(prepared.candidate.uid, "actor-b");
+});
 
-      await mounted.module.save();
-      assert.equal(calls, 1);
-      assert.equal(mounted.module.dialog.value, true);
-
-      mounted.customer[scenario.field] = originalValue;
-      mounted.triggerSourceWatch();
-      assert.equal(mounted.module.isWaitingForRollback.value, false);
-      await mounted.module.save();
-      assert.equal(calls, 2);
-      assert.equal(mounted.module.dialog.value, false);
-    } finally {
-      mounted.cleanup();
-    }
-  });
-
-  test(`Customer ${scenario.component} ${scenario.field} editor requires reload for a genuine same-operation update`, async () => {
-    let calls = 0;
-    const mounted = await loadEditorHarness({
-      component: scenario.component,
-      update: async () => {
-        calls += 1;
-      },
-    });
-    try {
-      mounted.module.open();
-      mounted.module.updateProperties({ [scenario.field]: scenario.draftValue });
-      mounted.customer[scenario.field] = scenario.externalValue;
-      mounted.triggerSourceWatch();
-      assert.equal(mounted.module.hasExternalChanges.value, true);
-      await mounted.module.save();
-      assert.equal(calls, 0);
-      assert.equal(mounted.module.dialog.value, true);
-    } finally {
-      mounted.cleanup();
-    }
-  });
-}
-
-async function loadCustomerActionsHarness({ update }) {
+async function loadCustomerActionsHarness({ create = async () => {}, update }) {
   const source = await readFile(
     new URL(
       "../../composables/application/customer/useCustomerActions.js",
@@ -432,8 +253,13 @@ async function loadCustomerActionsHarness({ update }) {
   );
   const recordedErrors = [];
   const loggerCalls = [];
+  const consoleErrors = [];
   const auth = actor();
+  const writerCalls = { create: 0, reserve: 0 };
   globalThis.__customerActionsHarness = {
+    console: {
+      error: (...args) => consoleErrors.push(args),
+    },
     Vue: {
       computed: (getter) => ({ get value() { return getter(); } }),
       readonly: (value) => value,
@@ -442,12 +268,17 @@ async function loadCustomerActionsHarness({ update }) {
     CUSTOMER_OPERATION,
     CustomerOperationError,
     createCustomerWriter: () => ({
-      reserveDocument: () => ({ id: "reserved-customer" }),
-      create: async () => {},
+      reserveDocument: () => {
+        writerCalls.reserve += 1;
+        return { id: "reserved-customer" };
+      },
+      create: async (args) => {
+        writerCalls.create += 1;
+        return await create(args);
+      },
       update,
     }),
     getCustomerWriteDecision,
-    hasCustomerOperationConflict,
     prepareCustomerCreate,
     prepareCustomerUpdate,
     useAuthStore: () => auth,
@@ -465,8 +296,8 @@ async function loadCustomerActionsHarness({ update }) {
   const executable = source.replace(/^import[\s\S]*?;\r?\n/gmu, "");
   const moduleSource = `
     const {
-      Vue, CUSTOMER_OPERATION, CustomerOperationError, createCustomerWriter,
-      getCustomerWriteDecision, hasCustomerOperationConflict, prepareCustomerCreate, prepareCustomerUpdate,
+      Vue, console, CUSTOMER_OPERATION, CustomerOperationError, createCustomerWriter,
+      getCustomerWriteDecision, prepareCustomerCreate, prepareCustomerUpdate,
       useAuthStore, useErrorsStore, useLogger, useNuxtApp
     } = globalThis.__customerActionsHarness;
     ${executable}
@@ -477,13 +308,169 @@ async function loadCustomerActionsHarness({ update }) {
   return {
     actions: module.useCustomerActions(),
     auth,
+    consoleErrors,
     loggerCalls,
     recordedErrors,
+    writerCalls,
     cleanup: () => delete globalThis.__customerActionsHarness,
   };
 }
 
-test("Customer update sends only a fixed message to the global error route", async () => {
+test("Customer create returns the generated document ID from one reservation and one write", async () => {
+  let written = null;
+  const harness = await loadCustomerActionsHarness({
+    create: async (args) => {
+      written = args;
+    },
+    update: async () => {},
+  });
+  try {
+    const created = await harness.actions.createCustomer(
+      validCustomer({ docId: "client-supplied-id" }),
+    );
+    assert.equal(harness.writerCalls.reserve, 1);
+    assert.equal(harness.writerCalls.create, 1);
+    assert.equal(created.docId, "reserved-customer");
+    assert.equal(written.documentReference.id, "reserved-customer");
+    assert.equal(written.customer, created);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer creation bridge initializes once and delivers cache before selection", () => {
+  const created = validCustomer({ docId: "generated-customer" });
+  const initialized = [];
+  const draft = {
+    initialize: (raw) => initialized.push(raw),
+  };
+  assert.equal(initializeCommittedCustomerDraft(draft, created), true);
+  assert.equal(initialized.length, 1);
+  assert.equal(initialized[0].docId, "generated-customer");
+
+  const order = [];
+  const scope = captureCustomerCreationScope({
+    companyId: "company-a",
+    uid: "actor-a",
+  });
+  assert.equal(
+    deliverCommittedCustomer({
+      created,
+      creationScope: scope,
+      currentScope: captureCustomerCreationScope({
+        companyId: "company-a",
+        uid: "actor-a",
+      }),
+      pushCustomer: (customer) => order.push(["cache", customer]),
+      selectCustomer: (customer) => order.push(["selection", customer]),
+    }),
+    true,
+  );
+  assert.deepEqual(order, [
+    ["cache", created],
+    ["selection", created],
+  ]);
+});
+
+test("Customer creation bridge discards failures and stale tenant or auth completions", () => {
+  const created = validCustomer({ docId: "generated-customer" });
+  const creationScope = captureCustomerCreationScope({
+    companyId: "company-a",
+    uid: "actor-a",
+  });
+  for (const [candidate, currentScope] of [
+    [null, creationScope],
+    [validCustomer({ docId: "" }), creationScope],
+    [
+      created,
+      captureCustomerCreationScope({ companyId: "company-b", uid: "actor-a" }),
+    ],
+    [
+      created,
+      captureCustomerCreationScope({ companyId: "company-a", uid: "actor-b" }),
+    ],
+  ]) {
+    let cacheWrites = 0;
+    let selections = 0;
+    assert.equal(
+      deliverCommittedCustomer({
+        created: candidate,
+        creationScope,
+        currentScope,
+        pushCustomer: () => {
+          cacheWrites += 1;
+        },
+        selectCustomer: () => {
+          selections += 1;
+        },
+      }),
+      false,
+    );
+    assert.equal(cacheWrites, 0);
+    assert.equal(selections, 0);
+  }
+});
+
+test("Customer create converts an unknown writer failure to one safe typed error", async () => {
+  const rawError = new Error(
+    "FirebaseError: Missing or insufficient permissions for secret/path",
+  );
+  const harness = await loadCustomerActionsHarness({
+    create: async () => {
+      throw rawError;
+    },
+    update: async () => {},
+  });
+  try {
+    await assert.rejects(
+      () => harness.actions.createCustomer(validCustomer({ docId: "" })),
+      (error) => {
+        assert.equal(error instanceof CustomerOperationError, true);
+        assert.equal(error.code, "create-failed");
+        assert.equal(error.message, "取引先を登録できませんでした。");
+        assert.doesNotMatch(error.message, /FirebaseError|secret\/path|permissions/u);
+        return true;
+      },
+    );
+    assert.deepEqual(harness.consoleErrors, [
+      ["[useCustomerActions] CUSTOMER_CREATE_FAILED"],
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(harness.consoleErrors),
+      /FirebaseError|secret\/path|permissions/u,
+    );
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer create passes typed operation failures through without duplicate reporting", async () => {
+  const typedError = new CustomerOperationError(
+    "permission-denied",
+    "取引先を変更する権限がありません。",
+  );
+  const harness = await loadCustomerActionsHarness({
+    create: async () => {
+      throw typedError;
+    },
+    update: async () => {},
+  });
+  try {
+    await assert.rejects(
+      () => harness.actions.createCustomer(validCustomer({ docId: "" })),
+      (error) => error === typedError,
+    );
+    assert.deepEqual(harness.consoleErrors, []);
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer update converts an unknown writer failure to one safe error", async () => {
   const rawMessage = "FirebaseError: Missing or insufficient permissions for secret/path";
   const rawError = new Error(rawMessage);
   const harness = await loadCustomerActionsHarness({
@@ -494,17 +481,61 @@ test("Customer update sends only a fixed message to the global error route", asy
   try {
     const latest = validCustomer();
     await assert.rejects(
-      () => harness.actions.updateBasic({
+      () => harness.actions.updateCustomer({
         latest,
-        baseline: customerSnapshot(latest, CUSTOMER_OPERATION.UPDATE_BASIC),
         draft: validCustomer({ city: "港区" }),
       }),
-      (error) => error === rawError,
+      (error) => {
+        assert.equal(error instanceof CustomerOperationError, true);
+        assert.equal(error.code, "update-failed");
+        assert.equal(error.message, "取引先情報を更新できませんでした。");
+        assert.doesNotMatch(error.message, /FirebaseError|secret\/path|permissions/u);
+        return true;
+      },
     );
-    assert.deepEqual(harness.loggerCalls, [{ message: "Customer update failed" }]);
-    assert.equal(harness.recordedErrors.length, 1);
-    assert.equal(harness.recordedErrors[0].message, "Customer update failed");
-    assert.doesNotMatch(harness.recordedErrors[0].message, /FirebaseError|secret\/path|permissions/u);
+    assert.ok(harness.consoleErrors.length <= 1);
+    if (harness.consoleErrors.length === 1) {
+      assert.deepEqual(harness.consoleErrors[0], [
+        "[useCustomerActions] CUSTOMER_UPDATE_FAILED",
+      ]);
+    }
+    assert.doesNotMatch(
+      JSON.stringify(harness.consoleErrors),
+      /FirebaseError|secret\/path|permissions/u,
+    );
+    assert.equal(
+      harness.consoleErrors.flat().includes(rawError),
+      false,
+    );
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
+  } finally {
+    harness.cleanup();
+  }
+});
+
+test("Customer update passes typed operation failures through without duplicate reporting", async () => {
+  const typedError = new CustomerOperationError(
+    "permission-denied",
+    "取引先を変更する権限がありません。",
+  );
+  const harness = await loadCustomerActionsHarness({
+    update: async () => {
+      throw typedError;
+    },
+  });
+  try {
+    const latest = validCustomer();
+    await assert.rejects(
+      () => harness.actions.updateCustomer({
+        latest,
+        draft: validCustomer({ city: "港区" }),
+      }),
+      (error) => error === typedError,
+    );
+    assert.deepEqual(harness.consoleErrors, []);
+    assert.deepEqual(harness.loggerCalls, []);
+    assert.deepEqual(harness.recordedErrors, []);
   } finally {
     harness.cleanup();
   }
@@ -541,14 +572,18 @@ async function loadWriterHarness() {
     collection: (...segments) => ({ path: segments.slice(1).join("/") }),
     doc: (parent, id) => ({ id: id ?? "reserved-customer", path: `${parent.path}/${id ?? "reserved-customer"}` }),
     serverTimestamp: () => "SERVER_TIMESTAMP",
-    setDoc: async (reference, data) => calls.push({ kind: "set", path: reference.path, data }),
-    updateDoc: async (reference, data) => calls.push({ kind: "update", path: reference.path, data }),
+    setDoc: async (reference, data, options) => calls.push({
+      kind: "set",
+      path: reference.path,
+      data,
+      options,
+    }),
   };
   const executable = source.replace(/^import[\s\S]*?;\r?\n/gmu, "");
   const moduleSource = `
     const {
       CUSTOMER_ADDRESS_FIELDS, CUSTOMER_NAME_FIELDS, CUSTOMER_OPERATION, CUSTOMER_DOCUMENT_FIELDS,
-      Customer, collection, doc, serverTimestamp, setDoc, updateDoc
+      Customer, collection, doc, serverTimestamp, setDoc
     } = globalThis.__customerWriterHarness;
     ${executable}
   `;
@@ -561,6 +596,49 @@ async function loadWriterHarness() {
     cleanup: () => delete globalThis.__customerWriterHarness,
   };
 }
+
+test("Real Customer converter exactly matches the persisted field contract", () => {
+  let previousAdapter = null;
+  try {
+    previousAdapter = Customer.getAdapter();
+  } catch {
+    // The test installs only the minimal adapter needed by the real converter.
+  }
+  class GeoPoint {
+    constructor(latitude, longitude) {
+      this.latitude = latitude;
+      this.longitude = longitude;
+    }
+  }
+  Customer.setAdapter({ GeoPoint });
+  try {
+    const customer = validCustomer({
+      location: {
+        formattedAddress: "東京都千代田区千代田1-1",
+        lat: 35.685,
+        lng: 139.752,
+      },
+    });
+    const persisted = Customer.converter().toFirestore(customer);
+
+    assert.deepEqual(
+      Object.keys(persisted).sort(),
+      [...CUSTOMER_DOCUMENT_FIELDS].sort(),
+    );
+    assert.equal(persisted.docId, customer.docId);
+    assert.deepEqual(persisted.createdAt, customer.createdAt);
+    assert.equal(persisted.uid, customer.uid);
+    assert.deepEqual(persisted.updatedAt, customer.updatedAt);
+    assert.deepEqual(persisted.tokenMap, customer.tokenMap);
+    assert.equal(persisted.fullAddress, customer.fullAddress);
+    assert.equal(persisted.prefecture, customer.prefecture);
+    assert.equal(persisted.geopoint instanceof GeoPoint, true);
+    assert.equal(persisted.geopoint.latitude, customer.location.lat);
+    assert.equal(persisted.geopoint.longitude, customer.location.lng);
+  } finally {
+    Customer.setAdapter(previousAdapter);
+  }
+});
 
 test("Customer writer sends an exact create shape and server timestamps", async () => {
   const harness = await loadWriterHarness();
@@ -584,169 +662,181 @@ test("Customer writer sends an exact create shape and server timestamps", async 
   }
 });
 
-test("Customer writer expands only required derived fields for partial updates", async () => {
+test("Customer writer replaces the exact complete document without merge", async () => {
   const harness = await loadWriterHarness();
   try {
     const writer = harness.createWriter();
     const customer = validCustomer({
       location: { lat: 35.0, lng: 139.0, formattedAddress: "東京都千代田区" },
     });
-    await writer.update({
-      companyId: "company-a",
-      operation: CUSTOMER_OPERATION.UPDATE_BASIC,
-      customer,
-      fields: ["name", "city"],
-    });
-    assert.deepEqual(Object.keys(harness.calls[0].data).sort(), [
-      "city", "fullAddress", "geopoint", "location", "name", "prefecture",
-      "tokenMap", "uid", "updatedAt",
-    ].sort());
+    const result = await writer.update({ companyId: "company-a", customer });
 
-    harness.calls.length = 0;
-    await writer.update({
-      companyId: "company-a",
-      operation: CUSTOMER_OPERATION.UPDATE_PAYMENT,
-      customer,
-      fields: ["paymentMonth"],
+    assert.equal(harness.calls.length, 1);
+    assert.equal(harness.calls[0].kind, "set");
+    assert.equal(harness.calls[0].path, "Companies/company-a/Customers/customer-a");
+    assert.equal(harness.calls[0].options, undefined);
+    assert.deepEqual(
+      Object.keys(harness.calls[0].data).sort(),
+      [...CUSTOMER_DOCUMENT_FIELDS].sort(),
+    );
+    assert.equal(harness.calls[0].data.updatedAt, "SERVER_TIMESTAMP");
+    assert.deepEqual(result, {
+      updated: true,
+      fields: [...CUSTOMER_DOCUMENT_FIELDS],
     });
-    assert.deepEqual(Object.keys(harness.calls[0].data).sort(), [
-      "paymentMonth", "uid", "updatedAt",
-    ]);
   } finally {
     harness.cleanup();
   }
 });
 
-test("Customer status-only updates preserve other fields, skip geocoding, and no-op without a write", async () => {
+test("Later Customer whole-document saves overwrite unrelated fields", async () => {
   const harness = await loadWriterHarness();
-  const originalBeforeUpdate = Customer.prototype.beforeUpdate;
-  const originalGeocoder = GeocodableMixin._geocodingFunction;
-  let geocodingCalls = 0;
-  GeocodableMixin.setGeocodingFunction(async () => { geocodingCalls += 1; throw new Error("Unexpected geocoding"); });
-  let hooks = 0;
-  Customer.prototype.beforeUpdate = async function (...args) {
-    hooks += 1;
-    return originalBeforeUpdate.apply(this, args);
-  };
   try {
     const writer = harness.createWriter();
-    for (const [from, to] of [[Customer.STATUS_ACTIVE, Customer.STATUS_TERMINATED], [Customer.STATUS_TERMINATED, Customer.STATUS_ACTIVE]]) {
-      const latest = validCustomer({ contractStatus: from, location: { lat: 35, lng: 139, formattedAddress: "合成住所" } });
-      const prepared = await prepareCustomerUpdate({
-        operation: CUSTOMER_OPERATION.UPDATE_BASIC, latest, baseline: customerSnapshot(latest, CUSTOMER_OPERATION.UPDATE_BASIC),
-        draft: validCustomer({ ...latest.toObject(), contractStatus: to }), actorUid: "actor-b", now: new Date("2026-09-03T00:00:00Z"),
-      });
-      assert.deepEqual(prepared.fields, ["contractStatus"]);
-      for (const field of CUSTOMER_DOCUMENT_FIELDS.filter((field) => !["contractStatus", "uid", "updatedAt"].includes(field))) {
-        assert.deepEqual(prepared.candidate[field], latest[field], field);
-      }
-      await writer.update({ companyId: "company-a", operation: CUSTOMER_OPERATION.UPDATE_BASIC, customer: prepared.candidate, fields: prepared.fields });
-      assert.deepEqual(harness.calls.at(-1).data, { contractStatus: to, uid: "actor-b", updatedAt: "SERVER_TIMESTAMP" });
-      const unchanged = await prepareCustomerUpdate({ operation: CUSTOMER_OPERATION.UPDATE_BASIC, latest, baseline: latest, draft: latest.clone(), actorUid: "actor-b", now: new Date() });
-      assert.deepEqual(unchanged.fields, []);
-      const count = harness.calls.length;
-      await writer.update({ companyId: "company-a", operation: CUSTOMER_OPERATION.UPDATE_BASIC, customer: unchanged.candidate, fields: unchanged.fields });
-      assert.equal(harness.calls.length, count);
-    }
-    assert.equal(hooks, 2, "no-op must skip beforeUpdate");
-    assert.equal(geocodingCalls, 0);
+    await writer.update({
+      companyId: "company-a",
+      customer: validCustomer({ city: "港区", paymentMonth: 1 }),
+    });
+    await writer.update({
+      companyId: "company-a",
+      customer: validCustomer({ city: "千代田区", paymentMonth: 2 }),
+    });
+
+    assert.equal(harness.calls.length, 2);
+    assert.equal(harness.calls[0].data.city, "港区");
+    assert.equal(harness.calls[1].data.city, "千代田区");
+    assert.equal(harness.calls[1].data.paymentMonth, 2);
   } finally {
-    Customer.prototype.beforeUpdate = originalBeforeUpdate;
-    GeocodableMixin.setGeocodingFunction(originalGeocoder);
     harness.cleanup();
   }
 });
 
-test("Customer basic draft may change status and basic fields while a concurrent payment change survives", async () => {
-  const baseline = validCustomer();
-  const latest = validCustomer({ paymentMonth: 2 });
-  const prepared = await prepareCustomerUpdate({ operation: CUSTOMER_OPERATION.UPDATE_BASIC, baseline, latest,
-    draft: validCustomer({ remarks: "合成変更", contractStatus: Customer.STATUS_TERMINATED, paymentMonth: 3 }), actorUid: "actor-b", now: new Date() });
-  assert.deepEqual([...prepared.fields].sort(), ["contractStatus", "remarks"]);
-  assert.equal(prepared.candidate.paymentMonth, 2);
-  assert.equal(prepared.candidate.contractStatus, Customer.STATUS_TERMINATED);
+test("Customer update runs beforeUpdate and complete schema validation", async () => {
+  const original = Customer.prototype.beforeUpdate;
+  const originalGeocoder = GeocodableMixin._geocodingFunction;
+  let hooks = 0;
+  GeocodableMixin.setGeocodingFunction(async () => ({
+    formattedAddress: "東京都港区芝1-1",
+    lat: 35.65,
+    lng: 139.75,
+  }));
+  Customer.prototype.beforeUpdate = async function (...args) {
+    hooks += 1;
+    return original.apply(this, args);
+  };
+  try {
+    const latest = validCustomer();
+    const prepared = await prepareCustomerUpdate({
+      latest,
+      draft: validCustomer({
+        name: "更新後取引先",
+        city: "港区",
+        address: "芝1-1",
+      }),
+      actorUid: "actor-b",
+      now: new Date("2026-09-03T00:00:00.000Z"),
+    });
+    assert.equal(hooks, 1);
+    assert.equal(prepared.candidate.name, "更新後取引先");
+    assert.equal(prepared.candidate.fullAddress.includes("港区"), true);
+    assert.deepEqual(prepared.candidate.location, {
+      formattedAddress: "東京都港区芝1-1",
+      lat: 35.65,
+      lng: 139.75,
+    });
+    assert.notDeepEqual(prepared.candidate.tokenMap, latest.tokenMap);
+
+    await assert.rejects(
+      () => prepareCustomerUpdate({
+        latest,
+        draft: validCustomer({ paymentMonth: 99 }),
+        actorUid: "actor-b",
+        now: new Date(),
+      }),
+      (error) => error.code === "invalid-customer",
+    );
+  } finally {
+    Customer.prototype.beforeUpdate = original;
+    GeocodableMixin.setGeocodingFunction(originalGeocoder);
+  }
 });
 
-test("Customer status invalid values are rejected by the operation", async () => {
+test("Customer status invalid values are rejected by the complete update", async () => {
   for (const status of [null, "UNKNOWN", 1, true, {}, []]) {
     const latest = validCustomer();
     const draft = latest.toObject();
     draft.contractStatus = status;
-    await assert.rejects(() => prepareCustomerUpdate({ operation: CUSTOMER_OPERATION.UPDATE_BASIC, latest, baseline: latest,
-      draft, actorUid: "actor-a", now: new Date() }), (error) => error.code === "invalid-customer");
+    await assert.rejects(
+      () => prepareCustomerUpdate({
+        latest,
+        draft,
+        actorUid: "actor-a",
+        now: new Date(),
+      }),
+      (error) => error.code === "invalid-customer",
+    );
   }
 });
 
-test("Customer Base rollback wait yields to a genuine external update and allows explicit reload", async () => {
-  let mounted;
-  mounted = await loadEditorHarness({ component: "Base", update: async ({ draft }) => {
-    mounted.customer.contractStatus = draft.contractStatus;
-    mounted.triggerSourceWatch();
-    throw new Error("synthetic denied write");
-  } });
-  try {
-    mounted.module.open();
-    mounted.module.updateProperties({ contractStatus: Customer.STATUS_TERMINATED });
-    assert.equal(mounted.customer.contractStatus, Customer.STATUS_ACTIVE, "draft is independent");
-    await mounted.module.save();
-    assert.equal(mounted.module.isWaitingForRollback.value, true);
-    mounted.customer.remarks = "別画面の確定変更";
-    mounted.triggerSourceWatch();
-    assert.equal(mounted.module.hasExternalChanges.value, true);
-    assert.equal(mounted.module.isWaitingForRollback.value, false);
-    mounted.module.reloadLatest();
-    assert.equal(mounted.module.hasExternalChanges.value, false);
-    assert.equal(mounted.module.draft.value.remarks, "別画面の確定変更");
-  } finally { mounted.cleanup(); }
-});
-
-test("Customer Base ignores external payment updates but reloads external status", async () => {
-  let calls = 0;
-  const mounted = await loadEditorHarness({ component: "Base", update: async () => { calls += 1; } });
-  try {
-    mounted.module.open();
-    mounted.module.updateProperties({ remarks: "入力保持" });
-    mounted.customer.paymentMonth = 2;
-    mounted.triggerSourceWatch();
-    assert.equal(mounted.module.hasExternalChanges.value, false);
-    mounted.customer.contractStatus = Customer.STATUS_TERMINATED;
-    mounted.triggerSourceWatch();
-    await mounted.module.save();
-    assert.equal(calls, 0);
-    assert.equal(mounted.module.draft.value.remarks, "入力保持");
-    mounted.module.reloadLatest();
-    assert.equal(mounted.module.draft.value.contractStatus, Customer.STATUS_TERMINATED);
-    assert.equal(mounted.module.hasExternalChanges.value, false);
-  } finally { mounted.cleanup(); }
-});
-
-for (const failure of ["permission", "conflict"]) {
-  test(`Customer rechecks ${failure} after asynchronous beforeUpdate and before sending`, async () => {
-    let writes = 0;
-    const harness = await loadCustomerActionsHarness({ update: async () => { writes += 1; } });
-    const original = Customer.prototype.beforeUpdate;
-    const latest = validCustomer();
-    Customer.prototype.beforeUpdate = async () => {
-      await Promise.resolve();
-      if (failure === "permission") harness.auth.user.disabled = true;
-      else latest.contractStatus = Customer.STATUS_TERMINATED;
-    };
-    try {
-      await assert.rejects(() => harness.actions.updateBasic({ latest, baseline: customerSnapshot(latest, CUSTOMER_OPERATION.UPDATE_BASIC),
-        draft: validCustomer({ remarks: "合成入力" }) }), (error) => error.code === (failure === "permission" ? "permission-denied" : "conflict"));
-      assert.equal(writes, 0);
-      assert.equal(harness.actions.isSaving.value, false);
-    } finally { Customer.prototype.beforeUpdate = original; harness.cleanup(); }
+test("Customer action dispatches the complete prepared document", async () => {
+  let written = null;
+  const harness = await loadCustomerActionsHarness({
+    update: async (args) => {
+      written = args;
+      return { updated: true, fields: [...CUSTOMER_DOCUMENT_FIELDS] };
+    },
   });
-}
+  try {
+    const latest = validCustomer({ paymentMonth: 2 });
+    const draft = validCustomer({ city: "港区", paymentMonth: 1 });
+    await harness.actions.updateCustomer({ latest, draft });
+    assert.equal(written.companyId, "company-a");
+    assert.equal(written.customer.city, "港区");
+    assert.equal(written.customer.paymentMonth, 1);
+    assert.equal(written.customer.docId, latest.docId);
+  } finally {
+    harness.cleanup();
+  }
+});
 
-for (const scenario of ["uid", "company", "replacement-status", "replacement-docId"]) {
+test("Customer listener changes do not cause a conflict or reload rejection", async () => {
+  let writes = 0;
+  const harness = await loadCustomerActionsHarness({
+    update: async () => {
+      writes += 1;
+      return { updated: true, fields: [...CUSTOMER_DOCUMENT_FIELDS] };
+    },
+  });
+  const original = Customer.prototype.beforeUpdate;
+  const latest = validCustomer();
+  Customer.prototype.beforeUpdate = async () => {
+    await Promise.resolve();
+    latest.city = "外部更新の市";
+    latest.paymentMonth = 2;
+  };
+  try {
+    await harness.actions.updateCustomer({
+      latest: () => latest,
+      draft: validCustomer({ city: "入力中の市", paymentMonth: 1 }),
+    });
+    assert.equal(writes, 1);
+    assert.equal(harness.actions.isSaving.value, false);
+  } finally {
+    Customer.prototype.beforeUpdate = original;
+    harness.cleanup();
+  }
+});
+
+for (const scenario of ["uid", "company"]) {
   test(`Customer rejects asynchronous ${scenario} changes before writer dispatch`, async () => {
     let writes = 0;
-    const harness = await loadCustomerActionsHarness({ update: async () => { writes += 1; } });
+    const harness = await loadCustomerActionsHarness({
+      update: async () => {
+        writes += 1;
+      },
+    });
     const original = Customer.prototype.beforeUpdate;
-    let latest = validCustomer();
-    const baseline = customerSnapshot(latest, CUSTOMER_OPERATION.UPDATE_BASIC);
+    const latest = validCustomer();
     Customer.prototype.beforeUpdate = async () => {
       await Promise.resolve();
       if (scenario === "uid") harness.auth.uid = "actor-b";
@@ -754,16 +844,55 @@ for (const scenario of ["uid", "company", "replacement-status", "replacement-doc
         harness.auth.companyId = "company-b";
         harness.auth.user.companyId = "company-b";
       }
-      if (scenario === "replacement-status") latest = validCustomer({ contractStatus: Customer.STATUS_TERMINATED });
-      if (scenario === "replacement-docId") latest = validCustomer({ docId: "different-customer" });
-      assert.equal(harness.actions.canWrite.value, true, "authorization alone still allows the new actor context");
     };
     try {
-      await assert.rejects(() => harness.actions.updateBasic({ latest: () => latest, baseline,
-        draft: validCustomer({ remarks: "保存待ちの合成入力" }) }),
-      (error) => error.code === (["uid", "company"].includes(scenario) ? "permission-denied" : "conflict"));
+      await assert.rejects(
+        () => harness.actions.updateCustomer({
+          latest,
+          draft: validCustomer({ remarks: "保存待ちの合成入力" }),
+        }),
+        (error) => error.code === "permission-denied",
+      );
       assert.equal(writes, 0);
       assert.equal(harness.actions.isSaving.value, false);
-    } finally { Customer.prototype.beforeUpdate = original; harness.cleanup(); }
+    } finally {
+      Customer.prototype.beforeUpdate = original;
+      harness.cleanup();
+    }
+  });
+}
+
+for (const scenario of ["missing", "different-doc-id"]) {
+  test(`Customer rejects a latest document that becomes ${scenario} before writer dispatch`, async () => {
+    let writes = 0;
+    const harness = await loadCustomerActionsHarness({
+      update: async () => {
+        writes += 1;
+      },
+    });
+    const original = Customer.prototype.beforeUpdate;
+    let latest = validCustomer();
+    Customer.prototype.beforeUpdate = async () => {
+      await Promise.resolve();
+      latest = scenario === "missing"
+        ? null
+        : validCustomer({ docId: "different-customer" });
+    };
+    try {
+      await assert.rejects(
+        () => harness.actions.updateCustomer({
+          latest: () => latest,
+          draft: validCustomer({ remarks: "保存待ちの合成入力" }),
+        }),
+        (error) =>
+          error instanceof CustomerOperationError &&
+          error.code === "invalid-customer",
+      );
+      assert.equal(writes, 0);
+      assert.equal(harness.actions.isSaving.value, false);
+    } finally {
+      Customer.prototype.beforeUpdate = original;
+      harness.cleanup();
+    }
   });
 }
