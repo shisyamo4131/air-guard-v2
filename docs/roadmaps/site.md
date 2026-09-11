@@ -6,14 +6,15 @@
 - 部分加点: 行わない。各phaseの完了条件をすべて満たした時点で当該重みを加点する。
 - 現在の承認境界: SITE-09まで完了した。初回bounded Dev反映後に確認したRules評価上限を補正し、補正版RulesだけをDevへ反映したうえで、会社管理者の作成・編集・検索・終了・終了済み検索・再有効化・参照なしarchiveと、経理accountの閲覧・作成導線非表示を確認した。利用者は見た目・操作感の追加改善を後続phaseへ送った。
 - 環境境界: 補正済みRulesはDevへ反映済みである。Hosting・Functions・Indexesは補正時に再反映せず、Prod・migration・既存data補完は変更していない。合成Siteは承認済みarchive経路で通常一覧から除外し、合成CustomerはDevに残している。
+- 後続phase: SITE-01〜09は当時のstrict actor契約による履歴証拠として100%を維持する。現在のFGA-03では通常作成・基本情報・Customer・Agreement・手動終了・再有効化をtenant-trust認可へ置換し、archiveだけをstrict例外として維持する。現在地と完了条件は[根本ガバナンス整合phase](foundational-governance-alignment.md)を正とする。
 
 ## 現状確認
 
 ### 確認済み事実
 
-- `/sites`、`/sites/[id]`、`/sites/terminated`は`sites:read`で到達する。SITE-02では作成、基本情報・Customer・取極め更新、手動終了のUIと送信直前を、会社管理者またはstrict role preset由来の`sites:write`へ限定した。
+- `/sites`、`/sites/[id]`、`/sites/terminated`は`sites:read`で到達する。SITE-02では通常writeをstrict `sites:write`へ限定したが、FGA-03で作成、基本情報・Customer・取極め更新、手動終了、再有効化のclient／server認可を同一tenantの有効な本登録Userへ置換した。role差は現行route・menu等のUXとして残り得る。
 - Site masterの作成、基本情報、Customerはoperation別client writerを使うFirestore transactionである。取極めはSITE-06の専用Callableを使い、現在のAuth・User・maintenance・ACTIVE Site・同一field競合をserver transactionで再確認する。各editorはlive modelと独立draftを分け、変更なしはwrite 0、失敗時は入力を保持する。終了・再有効化はSITE-04、archiveはSITE-05の専用Callableへ分離した。
-- Firestore Rulesは同一tenant readを維持し、Site create/updateを会社管理者またはstrict role preset由来の`sites:write`へ限定する。直接permission、未知role、non-admin super-user、temporary/disabled/他tenantは拒否する。exact 34-field create、operation別変更field、型・長さ・metadata・派生field・Customer projectionを強制し、Siteと`Sites_archive`のclient delete、`Sites_archive`のclient create/updateを拒否する。status遷移はSITE-04の専用処理までclient更新を許可しない。
+- Firestore Rulesは同一tenant readを維持し、通常Site create/updateを確認済みemail、canonical User ID、tenant一致、有効・本登録Userへ許可する。role、permission、会社管理者、super-user区分はallow条件にしない。exact 34-field create、operation別変更field、型・長さ、metadata、派生field、Customer projectionはFGA-03の後続Rules簡素化まで維持し、Siteと`Sites_archive`のclient delete、`Sites_archive`のclient create/updateを拒否する。status遷移は専用処理以外のclient更新を許可しない。
 - Customer未定の仮Siteを作成できる。Customer設定後のunsetは拒否し、同じ会社に存在する別Customerへの変更は許可する。SiteのCustomer変更だけでは既存OperationResult・BillingのcustomerIdを変更しない。
 - ACTIVE一覧は会社配下のACTIVEだけをSite専用listenerでlive購読し、空検索では取引先・警備種別の絞込み後に`updatedAt`が新しい最大20件を取得する。文字列入力時は同じ絞込みと正規化済み`tokenMap`検索を使う。TERMINATED一覧も空検索では`updatedAt`が新しい最大20件、文字列入力時は正規化済み`tokenMap`検索を取得し、古い応答を破棄する。Site Autocompleteはstatusを限定せずACTIVEを先に表示し、TERMINATEDは明示確認後も終了状態のまま選択する。
 - 旧手動終了は予定確認とstatus更新が一つのatomic boundaryでなく、安全な専用処理へ置換するまでUI入口を停止している。一方、日次自動終了は工期終了から3か月を超えたACTIVE Siteを、将来予定や同時更新のpreconditionなしでTERMINATEDへ変更する旧実装のため、SITE-04で置換する。
@@ -34,8 +35,8 @@
 
 - CONF-0049は回答済み。通常終了は`TERMINATED`としてlive Siteを保持し、誤登録・重複だけを全参照確認と並行writer barrierを備えた専用Callableでarchiveできる。generic delete／restoreと物理deleteは使用せず、通常restoreは提供しない。[ADR 0051](../decisions/0051-site-mistaken-registration-archive-boundary.md)を正とする。
 - CONF-0050は回答済み。予定はlive Site、OperationResultは作成時snapshot、確定請求書はBilling revision snapshotを使い、既存実績・確定請求をSite master変更で更新しない。[ADR 0052](../decisions/0052-site-downstream-snapshot-timing.md)を正とする。
-- CONF-0051からCONF-0053は回答済み。取極めの作成・編集・削除はstrict `sites:write`へ限定し、単価・時間・締日の範囲を固定する。適用済みmasterも編集・削除できるが既存OperationResult snapshotは変更せず、専用履歴・revision・承認workflowは設けない。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)を正とする。
-- CONF-0135は回答済み。ACTIVE/TERMINATEDの2値を維持し、工期終了後90日と予定guardによる競合安全な自動終了、派生Chip、現在遷移metadataを採用する。TERMINATEDも終了済み表示・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま、継続再開はstrict `sites:write`・reason・新工期で扱う。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)を正とする。
+- CONF-0051からCONF-0053は回答済み。取極めの単価・時間・締日の範囲、既存OperationResult snapshot不変、専用履歴・revision・承認workflowなしを維持する。当時のstrict `sites:write`認可だけはFGA-03でtenant-trustへ置換した。[ADR 0053](../decisions/0053-site-agreement-write-validation-and-history.md)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を参照する。
+- CONF-0135は回答済み。ACTIVE/TERMINATEDの2値、工期終了後90日と予定guardによる競合安全な自動終了、派生Chip、現在遷移metadataを維持する。TERMINATEDも終了済み表示・確認付きで新規業務へ選択でき、単発残工事は終了状態のまま扱う。継続再開のreason・新工期・専用transactionを維持し、当時のstrict `sites:write`認可だけはFGA-03でtenant-trustへ置換した。[ADR 0054](../decisions/0054-site-auto-termination-and-terminated-selection.md)と[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)を参照する。
 - 既存Site・archiveの全件数とshape、仮Site・stale埋込みCustomerの状態は、合成dataに限定した初回Dev受入れでは確認していない。実利用actor、必要index、Dev反映と今回の合成Site経路は確認済みである。既存dataを使う後続機能で必要になった場合だけ、対象を限定して別承認する。
 - 導入済みschema packageの変更が必要かは未確定である。必要になった場合は関連repository、version、release、consumer導入を別承認とする。
 

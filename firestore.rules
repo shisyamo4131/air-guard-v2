@@ -172,27 +172,16 @@ service cloud.firestore {
           && value.values().hasOnly([true]));
     }
 
-    function hasSiteWriteRole(user) {
-      return user.roles is list
-        && user.roles.size() <= 6
-        && user.roles.hasOnly([
-          'manager', 'controller', 'accountant',
-          'human-resource', 'labor', 'legal'
-        ])
-        && user.roles.hasAny(['manager', 'controller', 'legal']);
-    }
-
     function isActiveSiteWriter(companyId, user) {
-      return user.companyId is string
+      return user.docId is string
+        && user.docId == request.auth.uid
+        && user.companyId is string
         && user.companyId == companyId
         && user.isTemporary is bool
         && user.isTemporary == false
         && user.disabled is bool
         && user.disabled == false
-        && user.isAdmin is bool
-        && (user.isAdmin == true
-          || (request.auth.token.isSuperUser == false
-            && hasSiteWriteRole(user)));
+        && user.isAdmin is bool;
     }
 
     function canWriteSite(companyId) {
@@ -918,8 +907,8 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Sites' subcollection under 'Companies' ---
-    // 読取りは既存の同一tenant境界を維持する。作成・更新は有効な
-    // 会社管理者またはnon-super-userの既知preset由来sites:writeへ限定する。
+    // 読取りは既存の同一tenant境界を維持する。作成・更新は同一tenantの
+    // 有効な認証済み本登録Userへ許可する。
     // customerIdなしの仮Siteを許可し、設定後のunsetは拒否する。
     match /Companies/{companyId}/Sites/{docId} {
       allow read: if isAuthenticated() && userCompanyId() == companyId;

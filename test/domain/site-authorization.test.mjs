@@ -7,6 +7,7 @@ import {
   SITE_WRITE_OPERATION,
   SiteAuthorizationError,
   assertSiteWriteAllowed,
+  getSiteArchiveDecision,
   getSiteWriteDecision,
 } from "../../composables/domain/site/siteAuthorization.js";
 
@@ -52,10 +53,15 @@ test("Site write operations expose only the SITE-02 guarded mutation categories"
   });
 });
 
-test("Site write policy allows company administrators and every sites:write preset", () => {
+test("Site write policy allows every active registered same-tenant actor regardless of role", () => {
   assert.deepEqual(SITE_WRITE_PRESETS, ["controller", "legal", "manager"]);
-  for (const role of SITE_WRITE_PRESETS) {
-    const roles = [role];
+  for (const roles of [
+    ...SITE_WRITE_PRESETS.map((role) => [role]),
+    ...NON_SITE_WRITE_PRESETS.map((role) => [role]),
+    [],
+    ["sites:write"],
+    ["unknown-role"],
+  ]) {
     assert.deepEqual(
       getSiteWriteDecision(context({ user: { ...context().user, roles } })),
       { allowed: true, reason: null },
@@ -70,8 +76,8 @@ test("Site write policy allows company administrators and every sites:write pres
           isSuperUser,
           user: {
             ...context().user,
-            isAdmin: true,
-            roles: ["unknown-role"],
+            isAdmin: false,
+            roles: [],
           },
         }),
       ),
@@ -80,55 +86,9 @@ test("Site write policy allows company administrators and every sites:write pres
   }
 });
 
-test("Site write policy rejects every known preset without sites:write", () => {
-  assert.ok(NON_SITE_WRITE_PRESETS.length > 0);
-  for (const role of NON_SITE_WRITE_PRESETS) {
-    assert.equal(
-      getSiteWriteDecision(
-        context({ user: { ...context().user, roles: [role] } }),
-      ).allowed,
-      false,
-      role,
-    );
-  }
-});
-
-test("Site write policy rejects read-only, direct permission, unknown, and malformed roles", () => {
-  for (const roles of [
-    [],
-    ["accountant"],
-    ["human-resource"],
-    ["labor"],
-    ["sites:write"],
-    ["unknown-role"],
-    ["toString"],
-    ["constructor"],
-    ["__proto__"],
-    ["manager", "unknown-role"],
-  ]) {
-    assert.equal(
-      getSiteWriteDecision(
-        context({ user: { ...context().user, roles } }),
-      ).allowed,
-      false,
-      JSON.stringify(roles),
-    );
-  }
-
-  for (const roles of [undefined, null, "manager", { 0: "manager" }]) {
-    assert.equal(
-      getSiteWriteDecision(
-        context({ user: { ...context().user, roles } }),
-      ).allowed,
-      false,
-    );
-  }
-});
-
-test("Site write policy rejects non-admin super-users and invalid actor state", () => {
+test("Site write policy rejects invalid actor state", () => {
   const baseUser = context().user;
   const denied = [
-    context({ isSuperUser: true }),
     context({ authenticationUid: "actor-b" }),
     context({ authenticationUid: "" }),
     context({ isEmailVerified: false }),
@@ -152,10 +112,21 @@ test("Site write policy rejects non-admin super-users and invalid actor state", 
 test("Site write assertion fails closed with a stable authorization error", () => {
   assert.doesNotThrow(() => assertSiteWriteAllowed(context()));
   assert.throws(
-    () => assertSiteWriteAllowed(context({ isSuperUser: true })),
+    () => assertSiteWriteAllowed(context({ isEmailVerified: false })),
     (error) =>
       error instanceof SiteAuthorizationError &&
       error.code === "permission-denied" &&
       error.message === "現場を変更する権限を確認できません。",
   );
+});
+
+test("Site archive policy preserves the strict sites:write actor matrix", () => {
+  assert.equal(getSiteArchiveDecision(context()).allowed, true);
+  assert.equal(getSiteArchiveDecision(context({ user: { ...context().user, roles: ["accountant"] } })).allowed, false);
+  assert.equal(getSiteArchiveDecision(context({ user: { ...context().user, roles: [] } })).allowed, false);
+  assert.equal(getSiteArchiveDecision(context({ isSuperUser: true })).allowed, false);
+  assert.equal(getSiteArchiveDecision(context({
+    isSuperUser: true,
+    user: { ...context().user, isAdmin: true, roles: [] },
+  })).allowed, true);
 });

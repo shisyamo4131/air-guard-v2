@@ -2,7 +2,7 @@ import * as Vue from "vue";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useSiteFunctions } from "@/composables/site/useSiteFunctions";
 import { useOperationState } from "@/composables/useOperationState";
-import { getSiteWriteDecision } from "@/composables/domain/site/siteAuthorization";
+import { getSiteArchiveDecision } from "@/composables/domain/site/siteAuthorization";
 import { runWithSiteWriteMutex } from "@/composables/application/site/useSiteActions";
 import {
   SiteArchiveUiError,
@@ -67,7 +67,7 @@ export function useSiteArchiveAction(options = {}) {
   const operationState = options.operationState ?? useOperationState();
   const createOperationId = options.createOperationId ?? createSiteArchiveOperationId;
   const attempt = Vue.shallowRef(null);
-  const writeDecision = Vue.computed(() => getSiteWriteDecision(authInput(auth, firebaseAuth)));
+  const writeDecision = Vue.computed(() => getSiteArchiveDecision(authInput(auth, firebaseAuth)));
   const canArchive = Vue.computed(() => writeDecision.value.allowed);
 
   function resetAttempt() { attempt.value = null; }
@@ -93,7 +93,7 @@ export function useSiteArchiveAction(options = {}) {
       try {
         return await runWithSiteWriteMutex(async () => {
           const request = createSiteArchiveRequest(resolveAttempt(siteId, normalizedReason));
-          const currentDecision = getSiteWriteDecision(authInput(auth, firebaseAuth));
+          const currentDecision = getSiteArchiveDecision(authInput(auth, firebaseAuth));
           const currentSite = getCurrentSite();
           if (!currentDecision.allowed || !sameAuth(capturedAuth, authSnapshot(auth, firebaseAuth)) ||
               (currentSite != null &&

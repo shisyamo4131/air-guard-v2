@@ -2,6 +2,7 @@
 
 - 日付: 2026-09-05
 - 状態: Accepted
+- 認可の部分置換: 2026-09-11のFGA-03と[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、17行目の再有効化actorだけを同一tenantの有効な認証済み本登録Userへ置換した。18行目以降のarchiveはstrict `sites:write` actorを必要とする例外として変更しない。
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0036 終了済み現場の表示順](0036-terminated-site-display-order-visibility.md)、[0046 Customer archive参照barrier](0046-customer-archive-reference-barrier.md)、[0048 SiteのCustomer変更と履歴snapshot](0048-site-customer-change-and-historical-snapshots.md)
 

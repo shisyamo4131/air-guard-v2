@@ -1393,6 +1393,27 @@ const SITE_ARCHIVE_FIELDS = [
   "hasConstructionPeriodEndAt", "displayName", "tokenMap",
 ];
 
+async function setSiteRulesActorDocId({ uid, companyId, docId = uid }) {
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await updateDoc(
+      doc(context.firestore(), "Companies", companyId, "Users", uid),
+      { docId },
+    );
+  });
+}
+
+async function seedSiteRulesActor({
+  uid,
+  pathCompanyId = CODEX_LOCAL_COMPANIES.primary.id,
+  docId = uid,
+  ...user
+}) {
+  await seedRegisteredUser({ uid, pathCompanyId, ...user });
+  if (docId !== null) {
+    await setSiteRulesActorDocId({ uid, companyId: pathCompanyId, docId });
+  }
+}
+
 async function seedSiteArchiveActor({
   uid,
   companyId = CODEX_LOCAL_COMPANIES.primary.id,
@@ -3411,7 +3432,7 @@ test("Outsourcer Rules recheck revoked manager role and disabled state", async (
   await assertFails(updateDoc(reference, { remarks: "disabled" }));
 });
 
-test("Site Rules allow create and update for the strict sites:write actor matrix", async () => {
+test("Site Rules allow create and update for active registered same-tenant actors regardless of role", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const actors = [
     { label: "admin", isAdmin: true, roles: [], isSuperUser: false },
@@ -3419,12 +3440,16 @@ test("Site Rules allow create and update for the strict sites:write actor matrix
     { label: "manager", isAdmin: false, roles: ["manager"], isSuperUser: false },
     { label: "controller", isAdmin: false, roles: ["controller"], isSuperUser: false },
     { label: "legal", isAdmin: false, roles: ["legal"], isSuperUser: false },
+    { label: "accountant", isAdmin: false, roles: ["accountant"], isSuperUser: false },
+    { label: "role-less", isAdmin: false, roles: [], isSuperUser: false },
+    { label: "unknown-role", isAdmin: false, roles: ["unknown-role"], isSuperUser: false },
+    { label: "non-admin-super", isAdmin: false, roles: [], isSuperUser: true },
   ];
 
   for (const actor of actors) {
     const uid = `site-rules-allowed-${actor.label}`;
     const docId = `site-rules-allowed-doc-${actor.label}`;
-    await seedRegisteredUser({
+    await seedSiteRulesActor({
       uid,
       pathCompanyId: companyId,
       companyId,
@@ -3456,7 +3481,7 @@ test("Site Rules allow an admin to create a complete Customer then an assigned S
   const unrelatedCustomerId = "site-rules-ui-equivalent-unrelated-customer";
   const operationResultId = "site-rules-ui-equivalent-operation-result";
   const siteId = "site-rules-ui-equivalent-site";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid,
     pathCompanyId: companyId,
     companyId,
@@ -3557,21 +3582,12 @@ test("Site Rules allow an admin to create a complete Customer then an assigned S
   );
 });
 
-test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-tenant writers", async () => {
+test("Site Rules reject malformed, inactive, and cross-tenant writers", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const deniedActors = [
-    { label: "accountant", user: { isAdmin: false, roles: ["accountant"] } },
-    { label: "human-resource", user: { isAdmin: false, roles: ["human-resource"] } },
-    { label: "labor", user: { isAdmin: false, roles: ["labor"] } },
-    { label: "direct-permission", user: { isAdmin: false, roles: ["sites:write"] } },
-    { label: "unknown-role", user: { isAdmin: false, roles: ["unknown-role"] } },
-    { label: "prototype-to-string", user: { isAdmin: false, roles: ["toString"] } },
-    { label: "prototype-constructor", user: { isAdmin: false, roles: ["constructor"] } },
-    { label: "prototype-proto", user: { isAdmin: false, roles: ["__proto__"] } },
-    { label: "mixed-unknown-role", user: { isAdmin: false, roles: ["manager", "unknown-role"] } },
-    { label: "roles-not-list", user: { isAdmin: false, roles: "manager" } },
+    { label: "user-doc-id-missing", user: { isAdmin: true, roles: [] }, docId: null },
+    { label: "user-doc-id-mismatch", user: { isAdmin: true, roles: [] }, docId: "another-user" },
     { label: "admin-state-missing", user: { roles: ["manager"] } },
-    { label: "super-user-only", user: { isAdmin: false, roles: ["manager"] }, claims: { isSuperUser: true } },
     { label: "temporary", user: { isAdmin: true, roles: [], isTemporary: true } },
     { label: "disabled", user: { isAdmin: true, roles: [], disabled: true } },
     { label: "company-mismatch", user: { isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id } },
@@ -3587,7 +3603,13 @@ test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-te
     const uid = `site-rules-denied-${actor.label}`;
     const docId = `site-rules-denied-doc-${actor.label}`;
     if (!actor.missingUser) {
-      await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, ...actor.user });
+      await seedSiteRulesActor({
+        uid,
+        pathCompanyId: companyId,
+        companyId,
+        docId: Object.hasOwn(actor, "docId") ? actor.docId : uid,
+        ...actor.user,
+      });
     }
     const claims = {
       email_verified: true,
@@ -3615,7 +3637,7 @@ test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-te
 
   const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
   const otherUid = "site-rules-cross-tenant-admin";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid: otherUid,
     pathCompanyId: otherCompanyId,
     companyId: otherCompanyId,
@@ -3678,7 +3700,7 @@ test("Site Rules reject read-only, fabricated, malformed, inactive, and cross-te
 test("Site Rules enforce exact create fields, shared validation, metadata, and derived values", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-create-contract-admin";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid,
     pathCompanyId: companyId,
     companyId,
@@ -3731,7 +3753,7 @@ test("Site Rules isolate update operations and reject metadata or derived-field 
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-update-contract-manager";
   const docId = "site-rules-update-contract-site";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid,
     pathCompanyId: companyId,
     companyId,
@@ -3815,7 +3837,7 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
   const uid = "site-rules-legacy-admin";
   const siteId = "site-rules-legacy-site";
   const customerId = "site-rules-legacy-customer";
-  await seedRegisteredUser({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
+  await seedSiteRulesActor({ uid, pathCompanyId: companyId, companyId, isAdmin: true, roles: [] });
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
   const reference = doc(firestore, "Companies", companyId, "Sites", siteId);
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -3979,17 +4001,15 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
     }
   });
 
-  await t.test("legacy defaults do not bypass actor, tenant, status, or maintenance gates", async () => {
+  await t.test("legacy defaults do not bypass inactive actor, tenant, status, or maintenance gates", async () => {
     for (const actor of [
-      { label: "reader", isAdmin: false, roles: ["accountant"] },
-      { label: "direct", isAdmin: false, roles: ["sites:write"] },
       { label: "temporary", isAdmin: true, roles: [], isTemporary: true },
       { label: "disabled", isAdmin: true, roles: [], disabled: true },
       { label: "other", isAdmin: true, roles: [], companyId: CODEX_LOCAL_COMPANIES.secondary.id },
     ]) {
       const actorUid = `${uid}-${actor.label}`;
       const actorCompanyId = actor.companyId ?? companyId;
-      await seedRegisteredUser({ uid: actorUid, pathCompanyId: actorCompanyId, companyId: actorCompanyId, ...actor });
+      await seedSiteRulesActor({ uid: actorUid, pathCompanyId: actorCompanyId, companyId: actorCompanyId, ...actor });
       const before = await reset();
       const actorDb = authenticatedFirestore(actorUid, { isSuperUser: false, companyId: actorCompanyId });
       await assertFails(updateDoc(doc(actorDb, "Companies", companyId, "Sites", siteId), {
@@ -4015,7 +4035,7 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
   const uid = "site-rules-customer-contract-manager";
   const customerId = "site-rules-customer-contract-customer";
   const siteId = "site-rules-customer-contract-site";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid,
     pathCompanyId: companyId,
     companyId,
@@ -4147,7 +4167,7 @@ test("Site Rules allow a linked Customer create with geocoded location within th
   const tokenMap = Object.fromEntries(
     Array.from({ length: 56 }, (_, index) => [`synthetic-token-${index}`, true]),
   );
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid,
     pathCompanyId: companyId,
     companyId,
@@ -4230,7 +4250,7 @@ test("SITE-04 maintenance state fails closed for client Site revision and schedu
   const uid = "site-lifecycle-maintenance-admin";
   const siteId = "site-lifecycle-maintenance-site";
   const scheduleId = "site-lifecycle-maintenance-schedule";
-  await seedRegisteredUser({ uid, companyId, isAdmin: true, roles: [] });
+  await seedSiteRulesActor({ uid, companyId, isAdmin: true, roles: [] });
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     const firestore = context.firestore();
     await setDoc(doc(firestore, "Companies", companyId, "Sites", siteId), siteRulesData({
@@ -4404,7 +4424,7 @@ test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain se
   const otherCompanyId = CODEX_LOCAL_COMPANIES.secondary.id;
   const uid = "site-lifecycle-cross-tenant-manager";
   const siteId = "site-lifecycle-metadata-site";
-  await seedRegisteredUser({
+  await seedSiteRulesActor({
     uid, pathCompanyId: otherCompanyId, companyId: otherCompanyId,
     isAdmin: false, roles: ["manager"],
   });
@@ -4434,7 +4454,7 @@ test("SITE-04 Site lifecycle metadata and cross-tenant schedule writes remain se
   ));
 
   const ownUid = "site-lifecycle-metadata-admin";
-  await seedRegisteredUser({ uid: ownUid, companyId, isAdmin: true, roles: [] });
+  await seedSiteRulesActor({ uid: ownUid, companyId, isAdmin: true, roles: [] });
   const ownFirestore = authenticatedFirestore(ownUid, { isSuperUser: false });
   await assertFails(updateDoc(
     doc(ownFirestore, "Companies", companyId, "Sites", siteId),
@@ -4523,8 +4543,8 @@ test("SITE-04 lifecycle Callables terminate then reactivate through the local tr
   assert.deepEqual(state.agreementsV2, originalAgreements);
 });
 
-test("SITE-04 lifecycle Callable transport rejects unauthorized and maintenance actors", async () => {
-  const denied = await seedSiteLifecycleTransportActor({
+test("SITE-04 lifecycle Callable transport allows role-independent actors and rejects maintenance", async () => {
+  const roleIndependent = await seedSiteLifecycleTransportActor({
     uid: "site-lifecycle-transport-accountant",
     roles: ["accountant"],
   });
@@ -4532,12 +4552,12 @@ test("SITE-04 lifecycle Callable transport rejects unauthorized and maintenance 
     uid: "site-lifecycle-transport-maintenance-manager",
   });
   const companyId = allowed.companyId;
-  const deniedSiteId = "site-lifecycle-transport-denied";
+  const roleIndependentSiteId = "site-lifecycle-transport-role-independent";
   const maintenanceSiteId = "site-lifecycle-transport-maintenance";
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     const firestore = context.firestore();
     await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
-    for (const siteId of [deniedSiteId, maintenanceSiteId]) {
+    for (const siteId of [roleIndependentSiteId, maintenanceSiteId]) {
       await setDoc(
         doc(firestore, "Companies", companyId, "Sites", siteId),
         siteRulesData({ docId: siteId, uid: "server-writer" }),
@@ -4545,12 +4565,15 @@ test("SITE-04 lifecycle Callable transport rejects unauthorized and maintenance 
     }
   });
 
-  const forbidden = await callSiteLifecycleTransport({
-    actor: denied,
+  const allowedResult = await callSiteLifecycleTransport({
+    actor: roleIndependent,
     functionName: "terminateSite",
-    data: { siteId: deniedSiteId, reason: "拒否される終了" },
+    data: { siteId: roleIndependentSiteId, reason: "roleに依存しない終了" },
   });
-  assert.equal(forbidden.payload.error?.status, "PERMISSION_DENIED");
+  assert.equal(allowedResult.response.status, 200);
+  assert.deepEqual(allowedResult.payload.result, {
+    success: true, siteId: roleIndependentSiteId, status: "TERMINATED",
+  });
 
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), "System", "system"), { isMaintenance: true });
@@ -5095,13 +5118,13 @@ test("Customer status remains editable with an active Site and schedule without 
   });
 });
 
-test("Site Agreement Callable updates only the live Site master and preserves OperationResult snapshots", async () => {
+test("Site Agreement Callable allows a role-independent actor, updates only the live Site master, and preserves OperationResult snapshots", async () => {
   const { updateSiteAgreements } = await loadRebuildApis();
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
-  const actorUid = "site06-agreement-manager";
+  const actorUid = "site06-agreement-accountant";
   const siteId = "site06-agreement-site";
   const operationResultId = "site06-agreement-existing-result";
-  const actor = await seedSiteArchiveActor({ uid: actorUid, roles: ["manager"] });
+  const actor = await seedSiteArchiveActor({ uid: actorUid, roles: ["accountant"] });
   const baseline = [siteAgreementTransport()];
   const candidate = [siteAgreementTransport({ cutoffDate: 5, price: 0 })];
   const resultSnapshot = { docId: operationResultId, siteId, agreementsV2: baseline, marker: "snapshot" };
@@ -6291,7 +6314,10 @@ for (const {
     ];
 
     try {
-      await seedRegisteredUser({
+      const seedActor = collectionName === "Sites"
+        ? seedSiteRulesActor
+        : seedRegisteredUser;
+      await seedActor({
         uid,
         pathCompanyId: primaryCompanyId,
         companyId: primaryCompanyId,
@@ -6603,7 +6629,7 @@ test("Firestore Rules preserve Site temporary-reference transitions and forbid u
   ];
 
   try {
-    await seedRegisteredUser({
+    await seedSiteRulesActor({
       uid,
       pathCompanyId: companyId,
       companyId,
@@ -6768,7 +6794,10 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
       ]);
       for (const scenario of actorScenarios) {
         if (scenario.seed !== null) {
-          await seedRegisteredUser({
+          const seedActor = collectionName === "Sites"
+            ? seedSiteRulesActor
+            : seedRegisteredUser;
+          await seedActor({
             uid: scenario.uid,
             pathCompanyId: companyId,
             companyId: scenario.seed.companyId ?? companyId,
@@ -6848,6 +6877,9 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     const operationId = `cas03-${suffix}-reference-first-operation`;
     const liveSiteId = `cas03-${suffix}-reference-first-site`;
     const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    if (collectionName === "Sites") {
+      await setSiteRulesActorDocId({ uid: actorUid, companyId });
+    }
     const reference = { collectionName, docId: referenceId };
     const references = collectionName === "Sites"
       ? [reference]
@@ -6925,6 +6957,9 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     const referenceId = `cas03-${suffix}-archive-first-document`;
     const operationId = `cas03-${suffix}-archive-first-operation`;
     const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    if (collectionName === "Sites") {
+      await setSiteRulesActorDocId({ uid: actorUid, companyId });
+    }
     const reference = { collectionName, docId: referenceId };
 
     try {
@@ -6996,6 +7031,9 @@ for (const { collectionName } of CAS03_CUSTOMER_REFERENCE_COLLECTIONS) {
     const referenceId = `cas03-${suffix}-concurrent-document`;
     const operationId = `cas03-${suffix}-concurrent-operation`;
     const actor = await seedCustomerArchiveActor({ uid: actorUid });
+    if (collectionName === "Sites") {
+      await setSiteRulesActorDocId({ uid: actorUid, companyId });
+    }
     const reference = { collectionName, docId: referenceId };
 
     try {

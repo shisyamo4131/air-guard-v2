@@ -1,5 +1,4 @@
 import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { resolveRolePermissions } from "../auth/policies/rolePermissions.js";
 
 export const SITE_STATUS = Object.freeze({ ACTIVE: "ACTIVE", TERMINATED: "TERMINATED" });
 export const SITE_STATUS_SOURCE = Object.freeze({
@@ -108,18 +107,6 @@ function assertActor(identity, user) {
       user.isTemporary !== false || user.disabled !== false || typeof user.isAdmin !== "boolean") {
     fail(SITE_LIFECYCLE_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor is not active");
   }
-  if (user.isAdmin === true) return;
-  if (identity.isSuperUser !== false) fail(SITE_LIFECYCLE_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor is not allowed");
-  if (!Array.isArray(user.roles) || user.roles.length > 6) {
-    fail(SITE_LIFECYCLE_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor roles are invalid");
-  }
-  let permissions;
-  try {
-    permissions = resolveRolePermissions(user.roles);
-  } catch {
-    fail(SITE_LIFECYCLE_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor roles are invalid");
-  }
-  if (!permissions.includes("sites:write")) fail(SITE_LIFECYCLE_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor lacks sites:write");
 }
 
 function refs(firestore, companyId, siteId) {

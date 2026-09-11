@@ -21,11 +21,7 @@ export class SiteAuthorizationError extends Error {
 
 const DENIED_REASON = "現場を変更する権限を確認できません。";
 
-/**
- * Site write actorをstrict role preset境界で判定します。
- * client判定はUX用であり、Firestore Rulesの最終認可を代替しません。
- */
-export function getSiteWriteDecision({
+function hasValidSiteActor({
   authenticationUid,
   uid,
   companyId,
@@ -34,26 +30,43 @@ export function getSiteWriteDecision({
   isSuperUserClaimValid,
   user,
 } = {}) {
-  if (
-    typeof authenticationUid !== "string" ||
-    !authenticationUid ||
-    typeof uid !== "string" ||
-    !uid ||
-    authenticationUid !== uid ||
-    typeof companyId !== "string" ||
-    !companyId ||
-    isEmailVerified !== true ||
-    isSuperUserClaimValid !== true ||
-    typeof isSuperUser !== "boolean" ||
-    !user ||
-    user.docId !== uid ||
-    user.companyId !== companyId ||
-    user.isTemporary !== false ||
-    user.disabled !== false ||
-    typeof user.isAdmin !== "boolean"
-  ) {
+  return typeof authenticationUid === "string" &&
+    authenticationUid.length > 0 &&
+    typeof uid === "string" &&
+    uid.length > 0 &&
+    authenticationUid === uid &&
+    typeof companyId === "string" &&
+    companyId.length > 0 &&
+    isEmailVerified === true &&
+    isSuperUserClaimValid === true &&
+    typeof isSuperUser === "boolean" &&
+    Boolean(user) &&
+    user.docId === uid &&
+    user.companyId === companyId &&
+    user.isTemporary === false &&
+    user.disabled === false &&
+    typeof user.isAdmin === "boolean";
+}
+
+/**
+ * 通常のSite writeを同一tenantの有効な本登録User境界で判定します。
+ * client判定はUX用であり、Firestore Rulesの最終認可を代替しません。
+ */
+export function getSiteWriteDecision(context = {}) {
+  return hasValidSiteActor(context)
+    ? { allowed: true, reason: null }
+    : { allowed: false, reason: DENIED_REASON };
+}
+
+/**
+ * 不可逆なSite archiveだけは従来のstrict role preset境界を維持します。
+ */
+export function getSiteArchiveDecision(context = {}) {
+  if (!hasValidSiteActor(context)) {
     return { allowed: false, reason: DENIED_REASON };
   }
+
+  const { isSuperUser, user } = context;
 
   if (user.isAdmin === true) return { allowed: true, reason: null };
 

@@ -2,24 +2,24 @@
 
 ## メタデータ
 
-- 状態: Local修正・検証完了（SITE-08完了、Dev受入れは別工程）
+- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可checkpointはLocal実装・検証完了、Git固定・Dev受入れ前
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
-- 最終確認日: 2026-09-06
+- 最終確認日: 2026-09-11
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
 
 ## 入口・書込み権限
 
 Page 3ファイルのroute、query/filter、終了・削除到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を参照する。
 
-Site権限は`sites:read`/`sites:write`の2種とし、writeは作成、基本情報・Customer・Agreement変更、終了、再有効化、archiveを含む。会社管理者またはstrict role preset由来の`sites:write`へ限定し、直接permission、未知role、non-admin super-user、temporary/disabled/他tenantをfail closedにする。SITE-04で終了・再有効化を専用Callableへ移し、SITE-05で誤登録・重複だけを対象とする専用`archiveSite` Callableを追加した。
+Siteの通常writeは作成、基本情報・Customer・Agreement変更、手動終了、再有効化を含み、同じtenantの有効な認証済み本登録Userへrole、permission、会社管理者、super-user区分に依存せず許可する。確認済みemail、Auth UIDとUser `docId`、tenant claim・User所属tenant・path tenant、有効・本登録Userを共通境界とする。終了・再有効化は予定・status・工期・server metadataを守る専用Callable／transactionを維持する。誤登録・重複だけを対象とするarchiveは例外で、従来のstrict `sites:write` actorと専用`archiveSite` Callableを維持する。
 
 | 入口 | 現行UI | pageSettings | Rules |
 |---|---|---|---|
-| `/sites` | ACTIVE一覧、詳細遷移。write actorだけ作成 | `sites:read` | 同一tenantの有効な本登録Userにread。strict write actorにcreate/update。delete拒否 |
-| `/sites/[id]` | 閲覧・予定表示。write actorだけ基本情報・取引先・取極め更新と終了。削除入口なし | `sites:read` | 同上 |
-| `/sites/terminated` | TERMINATEDを名称検索し詳細遷移。write入口はactorに応じて制御 | `sites:read` | 同上 |
+| `/sites` | ACTIVE一覧、詳細遷移。通常writeのclient判定を満たすUserに作成入口 | `sites:read` | 同一tenantの有効な本登録Userにread/create/update。delete拒否 |
+| `/sites/[id]` | 閲覧・予定表示。通常writeのclient判定を満たすUserに基本情報・取引先・取極め更新と終了。削除入口なし | `sites:read` | 同上 |
+| `/sites/terminated` | TERMINATEDを名称検索し詳細遷移。通常writeのclient判定を満たすUserに再有効化入口 | `sites:read` | 同上 |
 
-client policyはcurrent Authとlive User stateを送信直前に再評価し、同一client module内のSite writeをsingle-flightにする。UI非表示だけに依存せず、Rulesも同じstrict actor境界を強制する。
+client policyはcurrent Authとlive User stateを送信直前に再評価し、同一client module内のSite writeをsingle-flightにする。通常writeはroleを認可根拠にせず、Rules／Callableも同一tenantの有効な本登録User境界を強制する。archiveだけは専用client policyとserver policyでstrict actorを維持する。
 
 ## データ契約
 
@@ -67,14 +67,14 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 - `terminateSite`はmaintenance、actor、ACTIVE、現在以降の予定、全未実績予定、Site revisionを一つのtransactionで再確認し、現在遷移metadataとともにTERMINATEDへ変更する。`reactivateSite`はTERMINATED、actor、maintenanceを再確認し、reasonと新工期を保存してACTIVEへ戻す。Customer未設定を含む現在値は変更しない。
 - 自動終了はJST工期終了日の90日後から候補とし、bounded cursorで走査して各Siteをtransactionで再確認する。予定cleanupとは別scheduled Function・別失敗境界で、失敗はlog後に再throwする。初回Dev releaseではFunctionを未公開としたため、legacy予定の必須field欠損有無はSITE-09の合成data受入れ対象外とした。公開前の別checkpointでremote確認する。
-- 確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、strict `sites:write`、reason、新工期を必須とする。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。終了・再有効化はSITE-04で実装済みである。
+- 確認済み方針ではTERMINATEDの通常master編集を制限する一方、終了済みChip・識別情報・確認付きで新規業務の選択候補へ残す。単発残工事はTERMINATEDのまま扱い、継続再開は同じCustomer、同一tenantの有効な本登録User、reason、新工期を必須とする。roleは認可根拠にしないが、専用Callable／transactionによるstatus・予定・工期・server metadataの保護を維持する。Customer変更許可は別operationとして維持し、既存実績へ自動反映せず、Agreementも自動再有効化しない。終了・再有効化はSITE-04で実装し、actor認可だけをFGA-03で置換した。
 - SITE-05のarchiveはACTIVE／TERMINATEDを問わず誤登録・重複だけを対象にする。入力をexact `{siteId, reason, operationId}`へ限定し、現在のAuth、同社User、maintenance、strict actor、active Site、同ID archive、exact 5 collectionの直接参照を一つのtransactionで検査する。成功時はschema version付きの完全なSite snapshotとserver確定のactor・時刻・reason・operation IDをsame-ID `Sites_archive`へ作成してlive Siteを削除する。同じactor・reason・operation IDの再試行だけを冪等に扱い、異なる再試行、参照、同ID衝突、不正状態はwrite 0で拒否する。
 - schema/common adapterには旧generic logical delete/restore実装が残るが、Site UI・Site managerからは到達せず、RulesはSite deleteと`Sites_archive` client CUDを拒否する。通常restoreと物理deleteの製品入口は提供しない。Site詳細のarchive確認画面はreasonを必須とし、Siteの通常更新・終了・再有効化と共通mutexで直列化する。不確実な通信失敗の再試行は同じoperation IDを維持する。
 
 ## Rules・tenant境界
 
 - SITE-08のLocal旧data確認により、基本更新では欠損している略称・工期sourceだけを既存schemaの既定値で評価する。略称使用flag・工期sourceの不正型と工期逆順、変更対象fieldの型・長さ、関連source変更時の派生値整合を検査し、既存field削除を拒否する。createのexact field契約は維持する。writerによる全件backfillやschema変更は行わない。
-- `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。create/updateはmaintenance offかつ会社管理者または既知のstrict role presetが`sites:write`を含む場合だけ許可し、直接permission、未知role、non-admin super-user、temporary/disabled/他tenantを拒否する。予定競合用revisionだけは同一tenantの予定writerがatomicに+1できる。deleteは拒否する。
+- `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。通常create/updateはmaintenance off、確認済みemail、canonical User `docId`、tenant claim・User所属tenant・path tenantの一致、有効・本登録Userを必須とし、role、permission、会社管理者、super-user区分をallow条件にしない。予定競合用revisionだけは同一tenantの予定writerがatomicに+1できる。client deleteは拒否する。
 - Rulesはexact 34-field create、operation別変更field、型・長さ、server metadata、派生fieldを検査する。create時とcustomerId変更時は同一会社Customerの存在とexact 6-field projectionを検査し、設定済みcustomerIdのunsetを拒否する。status transitionはclientから許可しない。予定作成は`operationResultId=null`とSite revisionの同時更新、実績化は整合するOperationResultとの同時更新だけを許可し、偽参照・置換・巻戻しを拒否する。
 - `Sites_archive`は同一tenantの有効な本登録Userによるreadを維持し、client create/update/deleteを拒否する。同ID archiveが存在するSite createも拒否し、archive documentをtombstoneとして扱う。
 - `OperationResults`、`Billings`、`ArrangementNotifications`、`SiteEmployeeHistories`はcreateまたは`siteId`変更時にlive Site存在を必須とする。既存documentのread、delete、`siteId`以外の互換更新は従来境界を維持する。`SiteOperationSchedules`はSITE-04で導入したSite revisionと同一transactionのguardを維持する。server側のBilling初期化とSiteEmployeeHistory再構築も同じatomic boundaryでlive Siteを検査する。
@@ -87,7 +87,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 | `Site/Manager` | Site `doc`とcreate/update handlerを受け、AirItemManagerへ委譲 | CREATEだけ3-step CustomInputを使う。UPDATEはactivatorがexposeするcustom inputまたはschema入力へ委譲する。write可否・送信直前再検査・single-flightは共通Site actionで強制し、deleteは拒否する。ACTIVEだけを通常編集でき、TERMINATEDは専用再有効化操作へ誘導する。 |
 | `Site/CustomInput` | `componentAttrs`、`step`、3 steps、`handleGoToNext`をexpose | legacy componentとして残るが、現行`/sites`の作成routeからは到達しない。現行作成は`Site/CreateDialog`の単一VFormとoperation writerを使う。 |
 | `Site/CustomInput/Base` | 15 fieldのcomponent attrsを入力へ展開 | code/name/address/security/construction/remarks等を表示するが、validation・保存はAir manager/schemaへ委譲する。 |
-| `Site/Autocomplete` | creatable/label/itemTitle/itemValue/returnObject、model update | status非限定でACTIVEを先に表示し、検索・lookupをlatest-onlyにする。TERMINATEDは確認し、取消・not-found・失敗では元の確定値を保持する。作成入口はstrict write actorだけに表示する。 |
+| `Site/Autocomplete` | creatable/label/itemTitle/itemValue/returnObject、model update | status非限定でACTIVEを先に表示し、検索・lookupをlatest-onlyにする。TERMINATEDは確認し、取消・not-found・失敗では元の確定値を保持する。作成入口は通常Site writeのclient判定を満たすUserに表示する。 |
 | `Site/Select` | label/itemTitle/itemValueと全attrsをAirSelectへ透過 | 候補集合、status、permission、enum membershipはcaller責任である。 |
 | `Site/Activator/Base` | Site、title、edit event、Base CustomInput expose | callerが許可した時だけaccessible name付きedit buttonを表示し、JSTで両端・開始のみ・終了のみ・未設定の工期を区別する。 |
 | `Site/Activator/Customer` | Site、title、edit event、customerId included key | temporary SiteはCustomer設定action、それ以外は埋込みCustomerを表示する。常にedit入口を持ち、許可されたCustomer変更をUIから開始できる。 |
@@ -113,9 +113,9 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## 将来要対応
 
-- FUT-0060: 完了。現在存在するSite master write経路をUI・送信直前policy・Rulesでstrict actorへ限定し、generic delete/archive入口を停止した。再有効化はFUT-0062で同じactor境界を適用済みで、専用archiveはFUT-0063で適用する。
+- FUT-0060: SITE-03時点ではSite master write経路をstrict actorへ限定した。FGA-03通常認可checkpointで作成・基本情報・Customer・Agreement・手動終了・再有効化をtenant-trustへ置換し、archiveだけはstrict actorを維持した。generic delete/archive入口停止は継続する。
 - FUT-0061: Customer存在・tenant境界はRulesとschema経路へ導入済み。埋込みCustomer同期を順序・部分失敗安全にし、operation別writerとのparityを確認する。
-- FUT-0062: 完了。ADR 0054のTERMINATED master編集制限、確認付き新規選択、単発残工事、strict actor・reason・新工期による再有効化、予定競合guard、自動終了をlocal実装・検証した。
+- FUT-0062: 完了。ADR 0054のTERMINATED master編集制限、確認付き新規選択、単発残工事、reason・新工期による再有効化、予定競合guard、自動終了を実装・検証した。FGA-03で手動終了・再有効化のactorはtenant-trustへ置換し、専用transactionと自動終了のsystem-only境界は維持した。
 - FUT-0063: Dev確認まで完了。ADR 0051に従う専用archive Callable、exact 5 collectionの同一transaction参照確認、直接参照writerのlive Site存在barrier、監査・冪等性、generic delete／restore非到達を実装し、SITE-09で合成Siteの参照なしarchiveに成功した。remote legacy shapeと下流snapshotの全件確認は、既存dataを使う後続機能の別承認へ残す。
 - FUT-0064: ADR 0052に従い、予定のlive Site、OperationResult作成時snapshot、Billing確定revision snapshot、legacy互換fallbackをtransaction側の承認済みcheckpointで実装する。
 - FUT-0059: geocoding失敗・0座標の証拠へSiteを追記した。

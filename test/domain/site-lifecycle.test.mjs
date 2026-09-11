@@ -93,10 +93,14 @@ const allowedActors = [
   ["manager", { isAdmin: false, roles: ["manager"], isSuperUser: false }],
   ["controller", { isAdmin: false, roles: ["controller"], isSuperUser: false }],
   ["legal", { isAdmin: false, roles: ["legal"], isSuperUser: false }],
+  ["accountant", { isAdmin: false, roles: ["accountant"], isSuperUser: false }],
+  ["role-less", { isAdmin: false, roles: [], isSuperUser: false }],
+  ["unknown role", { isAdmin: false, roles: ["unknown"], isSuperUser: false }],
+  ["non-admin super-user", { isAdmin: false, roles: [], isSuperUser: true }],
 ];
 
 for (const [label, actor] of allowedActors) {
-  test(`Site manual termination allows strict ${label} actor and writes lifecycle metadata only`, async () => {
+  test(`Site manual termination allows active same-tenant ${label} actor and writes lifecycle metadata only`, async () => {
     const identity = { uid: "actor-a", companyId: "company-a", isSuperUser: actor.isSuperUser };
     const h = lifecycleHarness({
       identity,
@@ -134,16 +138,11 @@ for (const [label, actor] of allowedActors) {
 }
 
 const deniedActors = [
-  ["accountant", { roles: ["accountant"] }],
-  ["human-resource", { roles: ["human-resource"] }],
-  ["labor", { roles: ["labor"] }],
-  ["direct permission", { roles: [], permissions: ["sites:write"] }],
-  ["unknown role", { roles: ["manager", "unknown"] }],
-  ["malformed roles", { roles: "manager" }],
-  ["non-admin super-user", { roles: ["manager"], isSuperUser: true }],
   ["temporary", { roles: ["manager"], isTemporary: true }],
   ["disabled", { roles: ["manager"], disabled: true }],
   ["other tenant", { roles: ["manager"], companyId: "company-b" }],
+  ["other uid", { roles: ["manager"], docId: "actor-b" }],
+  ["malformed admin flag", { roles: ["manager"], isAdmin: undefined }],
 ];
 
 for (const [label, overrides] of deniedActors) {
@@ -154,11 +153,11 @@ for (const [label, overrides] of deniedActors) {
     const h = lifecycleHarness({
       identity,
       user: {
-        docId: "actor-a",
+        docId: overrides.docId ?? "actor-a",
         companyId: overrides.companyId ?? "company-a",
         isTemporary: overrides.isTemporary ?? false,
         disabled: overrides.disabled ?? false,
-        isAdmin: false,
+        isAdmin: Object.hasOwn(overrides, "isAdmin") ? overrides.isAdmin : false,
         roles: overrides.roles,
         permissions: overrides.permissions,
       },

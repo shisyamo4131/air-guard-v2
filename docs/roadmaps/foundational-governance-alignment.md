@@ -21,7 +21,7 @@
 |---|---:|---:|---|---|
 | FGA-01 新ルールの検証・ガバナンス反映 | 10 | 10 | Completed | 利用者が提示完了を明示し、全ルールの正本、相互整合、置換ADR、実装差、検証が揃う |
 | FGA-02 Customer管理 | 18 | 18 | Completed | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
-| FGA-03 Site管理 | 18 | 0 | Not started | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
+| FGA-03 Site管理 | 18 | 0 | In progress | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
 | FGA-04 Employee管理 | 18 | 0 | Not started | Site完了後、Employeeの機微情報分離を含む通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 0 | Not started | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
 | FGA-06 その他transaction系機能 | 20 | 0 | Not started | master完了後、残るtransaction、Rules、Callable、data互換を小checkpointで整合し、Dev受入れとphase closeoutを完了する |
@@ -50,6 +50,12 @@
 | FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17 | Completed | Customer両Managerをbase Managerの既定editor・validation・mode・error eventへ戻し、単数activator、listener直接接続、暫定`includedKeys`、generic delete拒否へ整合した。release `7d829966`のDev正常操作で受入れた |
 | FGA-02-CUSTOMER-DIRECT-FIREMODEL-18 | Completed | Customer通常CREATE・UPDATEをFireModel／ClientAdapterへ直接接続し、`useCustomerActions`、専用writer、Manager内permission再判定、不要なscope中継とManager固有error classを撤去した。archive例外を維持し、release `7d829966`のDevで受入れた |
 | FGA-02-CUSTOMER-MANAGER-ACTIVATOR-21 | Completed | activatorのbase slot props pass-through、callerの`toCreate()`／`toUpdate()`利用、UPDATE前doc ID検査撤去、AutocompleteのDOM event非送出を実装・自動検証し、release `7d829966`のDevで到達可能な一覧CREATEと詳細UPDATEを受入れた |
+
+## FGA-03 Site内部checkpoint
+
+| Checkpoint | 状態 | 範囲・完了条件 |
+|---|---|---|
+| FGA-03-SITE-NORMAL-AUTH-01 | Local completed | Siteの通常作成・基本情報・Customer・Agreement・手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可するclient／Rules／Callable認可へ整合した。canonical User ID、tenant、無効・仮Userの拒否、archive strict actor、専用transaction、client delete・archive CUD拒否を維持し、domain 1,563件、Local Emulator 182件、文書validator、独立security reviewを完了した。[Local検証記録](../verification/fga-03-site-normal-auth-local.md)を参照。Git固定・Dev反映・利用者受入れ前のためFGA-03進捗は未加点 |
 
 ## 完了条件
 

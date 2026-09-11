@@ -16,11 +16,11 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-02 Customer管理を完了し、次のFGA-03 Site管理を開始する地点である。CompanyとUserは現行の厳密な実装を維持する。Customer通常Rulesは有効User・同一tenant・actor UIDへ簡素化し、Manager最終形はmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`をGitHub Actions run #11でHostingへDev反映した。会社管理者の外部Chromeで一覧CREATE、詳細READ・UPDATE、listener反映、専用archiveと一覧消失まで受入れた。[最終Dev証拠](../verification/fga-02-customer-manager-simplification-dev.md)を参照する。既存合成Customer `FGA02001`と`FGA02MGR02`は従前どおり保持し、今回の`FGA02REL11`はarchive済みである。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-02を完了し、FGA-03 Site管理を開始した。現在地と次操作は23行目を正とする。CompanyとUserは現行の厳密な実装を維持する。Customer Manager最終形はmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`をDevへ反映・受入れ済みである。[最終Dev証拠](../verification/fga-02-customer-manager-simplification-dev.md)を参照する。合成Customer `FGA02001`と`FGA02MGR02`は保持し、`FGA02REL11`はarchive済みである。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 
-Manager訂正後の簡素化、FireModel直接接続、activator pass-throughはmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`へ固定し、Dev受入れまで完了した。Autocomplete CREATEは現行routeにcreatable callerがなくruntime未確認だが、source contractと自動testを満たす未提供経路としてFGA-02の阻害条件から外した。FGA-02は18点、phase全体は28%である。次はFGA-03 Site管理について、現行の全reader/writer、通常operation、専用例外、Manager分類との差を読み取りで調査し、最初の小checkpointを利用者へ提示する。まだSiteの製品code、Rules、data、Devへ変更を加えない。
+FGA-02は18点、phase全体は28%である。FGA-03の`FGA-03-SITE-NORMAL-AUTH-01`は通常作成・基本情報・Customer・Agreement・手動終了・再有効化のtenant-trust認可をLocal実装し、必須自動検証と独立security reviewまで完了した。[Local検証記録](../verification/fga-03-site-normal-auth-local.md)を正とする。archive、schema・field validation、document LWW、Manager、cache、data、Dev・Prodは変更していない。Git固定・Dev反映前であり、次はcommit方針を確定後、Manager／LWWより前にSite従属cacheのtenant分離を独立checkpointとして扱うか判断する。
 
 1. [Outsourcer](../roadmaps/outsourcer.md)はOUT-08まで完了し100%。合成masterは契約終了状態で保持し、transaction dataは作成していない。
 2. Site masterは[SITE-08検証記録](../verification/site-08-local.md)のLocal統合と[SITE-09検証記録](../verification/master-dev-site-create-correction.md)のDev反映・機能受入れを完了し、[Siteロードマップ](../roadmaps/site.md)を100%とした。見た目・操作感、Site自動終了公開、既存data全件検査・補完、Prodは別工程である。

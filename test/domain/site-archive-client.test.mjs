@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import * as Vue from "vue";
 
-import { getSiteWriteDecision } from "../../composables/domain/site/siteAuthorization.js";
+import { getSiteArchiveDecision } from "../../composables/domain/site/siteAuthorization.js";
 import {
   SITE_ARCHIVE_UNCERTAIN_MESSAGE,
   SiteArchiveUiError,
@@ -121,8 +121,8 @@ async function loadArchiveAction({
       "const { useSiteFunctions } = globalThis.__siteArchiveActionHarness;")
     .replace('import { useOperationState } from "@/composables/useOperationState";',
       "const { useOperationState } = globalThis.__siteArchiveActionHarness;")
-    .replace('import { getSiteWriteDecision } from "@/composables/domain/site/siteAuthorization";',
-      "const { getSiteWriteDecision } = globalThis.__siteArchiveActionHarness;")
+    .replace('import { getSiteArchiveDecision } from "@/composables/domain/site/siteAuthorization";',
+      "const { getSiteArchiveDecision } = globalThis.__siteArchiveActionHarness;")
     .replace('import { runWithSiteWriteMutex } from "@/composables/application/site/useSiteActions";',
       "const { runWithSiteWriteMutex } = globalThis.__siteArchiveActionHarness;")
     .replace(
@@ -138,7 +138,7 @@ async function loadArchiveAction({
     SiteArchiveUiError,
     createSiteArchiveOperationId,
     createSiteArchiveRequest,
-    getSiteWriteDecision,
+    getSiteArchiveDecision,
     isSiteArchiveSuccess,
     normalizeSiteArchiveReason,
     normalizeSiteArchiveSiteId,

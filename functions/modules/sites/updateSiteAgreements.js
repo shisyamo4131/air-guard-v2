@@ -1,5 +1,4 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { resolveRolePermissions } from "../auth/policies/rolePermissions.js";
 import {
   SiteAgreementContractError,
   buildStoredSiteAgreements,
@@ -47,19 +46,6 @@ function assertActor(identity, actor) {
       actor.companyId !== identity.companyId || actor.isTemporary !== false ||
       actor.disabled !== false || typeof actor.isAdmin !== "boolean") {
     fail(SITE_AGREEMENT_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor is not active");
-  }
-  if (actor.isAdmin === true) return;
-  if (identity.isSuperUser !== false || !Array.isArray(actor.roles) || actor.roles.length > 6) {
-    fail(SITE_AGREEMENT_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor is not allowed");
-  }
-  let permissions;
-  try {
-    permissions = resolveRolePermissions(actor.roles);
-  } catch {
-    fail(SITE_AGREEMENT_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor roles are invalid");
-  }
-  if (!permissions.includes("sites:write")) {
-    fail(SITE_AGREEMENT_ERROR_CODES.ACTOR_NOT_ALLOWED, "Actor lacks sites:write");
   }
 }
 

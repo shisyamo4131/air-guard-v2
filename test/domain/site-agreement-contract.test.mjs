@@ -184,13 +184,16 @@ async function rejectsCode(operation, code) {
   });
 }
 
-test("Site Agreement Callable enforces strict actors and writes only agreements plus Site metadata", async () => {
+test("Site Agreement Callable allows active registered same-tenant actors and writes only agreements plus Site metadata", async () => {
   const allowed = [
     { actor: { ...manager, isAdmin: true, roles: [] }, currentIdentity: identity },
     { actor: { ...manager, isAdmin: true, roles: [] }, currentIdentity: { ...identity, isSuperUser: true } },
-    ...["manager", "controller", "legal"].map((role) => ({
+    ...["manager", "controller", "legal", "accountant", "human-resource", "labor", "unknown-role"].map((role) => ({
       actor: { ...manager, roles: [role] }, currentIdentity: identity,
     })),
+    { actor: { ...manager, roles: [] }, currentIdentity: identity },
+    { actor: { ...manager, roles: "not-used" }, currentIdentity: identity },
+    { actor: { ...manager, roles: [] }, currentIdentity: { ...identity, isSuperUser: true } },
   ];
   for (const scenario of allowed) {
     const harness = fakeFirestore({ actor: scenario.actor });
@@ -204,22 +207,16 @@ test("Site Agreement Callable enforces strict actors and writes only agreements 
   }
 
   const denied = [
-    { ...manager, roles: ["accountant"] },
-    { ...manager, roles: ["human-resource"] },
-    { ...manager, roles: ["labor"] },
-    { ...manager, roles: [], permissions: ["sites:write"] },
-    { ...manager, roles: ["unknown-role"] },
-    { ...manager, roles: ["manager", "unknown-role"] },
-    { ...manager, roles: ["manager"] },
     { ...manager, roles: ["manager"], isTemporary: true },
     { ...manager, roles: ["manager"], disabled: true },
     { ...manager, roles: ["manager"], companyId: "company-b" },
+    { ...manager, roles: ["manager"], docId: "actor-b" },
+    { ...manager, roles: ["manager"], isAdmin: undefined },
   ];
-  for (let index = 0; index < denied.length; index += 1) {
-    const harness = fakeFirestore({ actor: denied[index] });
-    const currentIdentity = index === 6 ? { ...identity, isSuperUser: true } : identity;
+  for (const actor of denied) {
+    const harness = fakeFirestore({ actor });
     await rejectsCode(
-      updateSiteAgreements({ firestore: harness.firestore, identity: currentIdentity, input: input() }),
+      updateSiteAgreements({ firestore: harness.firestore, identity, input: input() }),
       SITE_AGREEMENT_ERROR_CODES.ACTOR_NOT_ALLOWED,
     );
     assert.equal(harness.writes.length, 0);
