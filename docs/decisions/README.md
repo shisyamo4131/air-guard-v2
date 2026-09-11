@@ -75,6 +75,7 @@
 | [0067](0067-component-fetch-and-dependent-reference-boundary.md) | Component階層、useFetch、表示正本、従属参照境界 |
 | [0068](0068-domain-manager-wrapper-and-editor-dialog-convention.md) | Domain Manager wrapperとdata編集dialog規約（0069により置換） |
 | [0069](0069-domain-manager-editable-state-ownership.md) | Editable state所有単位によるDomain Manager分類 |
+| [0070](0070-employee-insurance-normal-business-boundary.md) | Employee保険情報の通常業務分類と状態遷移境界 |
 
 ## 新しい ADR の形式
 

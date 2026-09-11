@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- FGA-04 Employeeの情報分類を確定し、健康保険・厚生年金・雇用保険の番号、状態、日付、理由、履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報として扱うことにした。在職中はrole非依存のtenant共通read・編集へ揃え、退職後編集禁止と保険の状態遷移条件は維持する。保険専用documentへの分割と既存data migrationは行わない。今回、製品code、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0070-employee-insurance-normal-business-boundary.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
 - Site詳細の取極め管理をremote履歴で確認した画面内表示へ戻し、一覧右上から追加・編集・複製した1件だけを入力dialogで扱う構成にした。取極め一覧全体を開く重複dialog、`useSiteActions`、専用`updateSiteAgreements` Callable、baseline比較、同一field競合を撤去し、listener由来Siteへ編集後の配列を重ねる通常`Site.update()`とdocument last-write-winsへ統一した。Rulesも`agreementsV2`を通常Site更新として許可する。数値・重複検査、0円確認、失敗後の入力保持、既存OperationResult snapshot不変は維持し、schema、package、既存dataは変更していない。
 
 - FGA-03のSite通常CREATE・UPDATEを`SiteManager`／`SitesManager`からSite modelの標準`create`／`update`へ直接接続し、通常保存用の`useSiteActions`、専用writer、旧作成dialog、基本情報・Customer editorを撤去した。作成画面は履歴で確認した3ステップ入力へ戻し、取引先候補がない場合も取引先名だけで仮登録できる。通常更新はdocument単位last-write-winsとし、埋込みCustomerをapplication固有の6項目へ固定しない。取極めも同じ通常更新へ統合し、終了・再有効化・archiveだけを専用操作として維持する。Rulesは通常更新で状態だけを保護する。既存dataの一括変換、schema・package、Dev・Prod、remote dataは変更していない。[Local検証記録](docs/verification/fga-03-site-manager-lww-local.md)を参照。

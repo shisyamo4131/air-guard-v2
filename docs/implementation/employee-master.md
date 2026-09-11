@@ -1,5 +1,11 @@
 # Employee（従業員）マスター実装調査
 
+## FGA-04での情報分類
+
+2026-09-12、利用者回答により健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報として維持することを確定した。保険専用documentへの分割と既存data migrationは行わない。在職Employeeではrole非依存のtenant共通read・編集へ揃え、退職後編集禁止を維持する。加入・喪失等の状態遷移条件は機密性とは別のdata保護として扱う。[現行仕様](../specification.md#employeeの操作権限と保持)と[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を正とする。
+
+現行のManager非依存、role別reader／writer、専用Callable、局所期待値、競合拒否は未解消の実装差である。FGA-04-EMPLOYEE-MANAGER-LWW-02で、単数／複数形Manager、CustomInput、通常reader／writer、Rulesを整合し、退職・誤退職訂正・archive・User/Authと保険状態遷移に必要な保護だけを例外として残す。以下のEMP-02〜09の記述と旧受入れ証拠は当時の実装履歴であり、FGA-04の完成状態へ読み替えない。
+
 2026-09-06の最新方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下は静的実装事実と未実装の設計であり、適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
 
 ## EMP-02での実装差分

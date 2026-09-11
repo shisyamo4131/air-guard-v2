@@ -220,7 +220,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 
 - Employeeの通常業務情報は、機微・機密情報とUser/Auth lifecycleを除き、同じtenantの有効な認証済み本登録Userに同じread・通常編集権限を許可する。roleなし、未知role、直接permission、会社管理者、super-user等を通常Employeeのserver認可条件にしない。本人向けEmployee Self Accessはtenant内業務利用とは別境界とする。現行のrole別read/writeと専用保存経路は未解消の実装差であり、FGA-04でfield分類、Rules、Callable、client化、既存dataを段階的に整合する。
 - 退職後（RESIGNED）のEmployeeは、会社管理者・統括・人事も通常情報を訂正できない。基本・国籍・警備員登録・資格・保険と保険履歴復元を含む。閲覧は上記範囲で継続する。
-- Employeeの保険情報は機微・機密情報への該当性をFGA-04で確認する。分類確定までは現在の会社管理者・統括・人事というserver側actor制限を安全側の実装境界として維持するが、通常業務の最終認可仕様として固定しない。historyあり・手続中不可等の状態遷移と退職後編集禁止はroleとは別のdata保護条件として維持する。
+- Employeeの健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴は機微・機密情報の例外にせず、Employee本体documentの通常業務情報として扱う。在職中は同じtenantの有効な認証済み本登録Userへ他の通常Employee情報と同じread・編集権限を許可し、roleをserver認可条件にしない。historyあり・手続中不可等の状態遷移と退職後編集禁止は、情報の機密性ではなくdata保護条件として維持する。理由と移行境界は[ADR 0070](decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。
 - 通常編集、退職、誤退職訂正、誤登録のarchive・物理削除、User/Auth操作を分ける。退職は会社管理者・統括・人事、archive・物理削除は会社管理者・統括だけに許可し、人事単独には許可しない。誤退職訂正は既存の会社管理者専用条件を維持する。Employee編集権限からUser/Authのrole管理・account変更を導かない。
 - 誤登録・重複のEmployeeは従属がない場合だけ、同IDの`Employees_archive`へ移動する。[共通仕様](#ドキュメントのアーカイブと物理削除)に従い、通常Employeeからの直接物理削除とarchive延期を撤回する。通常退職はEmployeeをRESIGNEDとして業務記録とともに保持する。archiveでUser/Authや従属を連鎖削除しない。
 - 他collectionの既存業務仕様は維持する。ただし、Employeeへの参照整合性に必要な保存処理・Rules・query用field・背景処理の変更は設計範囲に含める。単純な存在確認を画面だけへ追加せず、必要な保存経路を保護した後にarchiveを開放する。全masterの同時変更や既存archive・実dataの削除・変換、通常restoreの提供、定期purgeの実行は含めない。変更理由・境界は[ADR 0060](decisions/0060-common-archive-purge-and-address-contract.md)を参照する。

@@ -771,6 +771,8 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 - Related FUT IDs: FUT-0075、FUT-0159
 - Answer: 2026-09-06 actor方針と現時点の全項目readを部分回答。上記の確定要件へのlinkを参照。退職後編集禁止・保険履歴復元actorと現行遷移維持も回答済み。保持期限・監査等は未回答のため一括Answeredにしない。
 
+2026-09-12、利用者は保険情報を特別扱いしないと回答した。3保険の番号・状態・日付・理由・履歴は機微・機密情報の例外にせず、Employee本体documentの通常業務情報としてrole非依存のtenant共通read・編集へ揃える。退職後編集禁止と状態遷移条件は維持し、保険専用documentへの分割と既存data migrationは行わない。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。保持期限・監査等の未回答事項は残る。
+
 ## CONF-0062 EmployeeとUser/Authの一意性・削除主体
 
 2026-09-06改訂: 下の2026-08-24回答の退職actorへ統括を追加した。現在のactorは[仕様](../specification.md#employeeの操作権限と保持)を参照する。一意性・User/Auth処理は維持する。
@@ -1307,6 +1309,8 @@ SPEC-RECONCILE-001は2026-08-12時点で全138 IDの既存`Status`と回答本�
 ## CONF-0105 従業員資格・警備員登録・機微情報の閲覧編集actor
 
 2026-09-06、通常編集actorは会社管理者・統括・人事、他4roleは閲覧だけと部分回答し、その後、現時点の全項目readを採用した。資格・本籍・緊急連絡先等を含む閲覧範囲は[CONF-0061](#conf-0061-employee個人情報の閲覧編集保持権限)とADR 0058に従う。
+
+2026-09-12、通常Employee情報はrole非依存のtenant共通read・編集へ置換され、保険情報も通常Employee情報に含めると確定した。資格・警備員登録・保険を機密性によるrole制限へ残さない。退職後編集禁止と保険の状態遷移条件は別のdata保護として維持する。[ADR 0065](../decisions/0065-tenant-trust-normal-business-authorization.md)と[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。
 
 - Status: Partially answered
 - Source segment/doc: SPEC-SEG-036; `qualification-management.md`

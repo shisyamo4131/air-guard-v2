@@ -22,7 +22,7 @@
 | FGA-01 新ルールの検証・ガバナンス反映 | 10 | 10 | Completed | 利用者が提示完了を明示し、全ルールの正本、相互整合、置換ADR、実装差、検証が揃う |
 | FGA-02 Customer管理 | 18 | 18 | Completed | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
 | FGA-03 Site管理 | 18 | 18 | Completed | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
-| FGA-04 Employee管理 | 18 | 0 | Not started | Site完了後、Employeeの機微情報分離を含む通常operationと例外を同条件で完了する |
+| FGA-04 Employee管理 | 18 | 0 | In progress | Site完了後、Employeeの情報分類を確定し、通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 0 | Not started | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
 | FGA-06 その他transaction系機能 | 20 | 0 | Not started | master完了後、残るtransaction、Rules、Callable、data互換を小checkpointで整合し、Dev受入れとphase closeoutを完了する |
 
@@ -36,6 +36,7 @@
 - FGA-02-MANAGER-GOVERNANCE-01はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`で一度完了したが、単数・複数形Managerを画面の選択文脈で分類した判断に誤りがあり、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とgovernance correction commit `b89e5c86`で訂正した。現行基準はeditable stateの所有単位であり、単数Managerは外部既存instanceまたはその場の新規instance、複数形Managerは配列と行選択dispatchを所有する。選択後はAirArrayManagerの`beforeEdit`により内部editorまたは詳細navigationを選び、相互にManagerを内包しない。この基準はCustomer・Site・Employee・OutsourcerだけでなくFirestore上の通常のmaster dataへ適用し、4機能を最初の適用例とする。480px、archive等の例外、listener・cache、server認可境界は変更しない。
 - Customer Managerの最終簡素化はmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`へ固定し、GitHub Actions run #11でHostingへDev反映した。会社管理者の外部Chromeで一覧CREATE、詳細READ、単数Manager UPDATE、listener反映、専用Callable archive、一覧からの消失を確認した。[最終Dev受入れ記録](../verification/fga-02-customer-manager-simplification-dev.md)を参照する。Autocompleteのcreatable callerは現行routeにないためruntime未確認だが、source contractと自動testを満たす将来の未提供経路であり、現行Customer操作の完了を阻害しない。FGA-02を18点で完了し、次をFGA-03 Site管理とする。[訂正Dev受入れ記録](../verification/fga-02-customer-manager-dev.md)、[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)、[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は履歴証拠として保持する。
 - FGA-03-SITE-MANAGER-LWW-05では、Site通常CREATE・UPDATEを単数／複数形ManagerからSite modelの標準`create`／`update`へ直接接続し、listener由来instanceのdocument単位last-write-winsへ揃えた。作成は履歴で確認した3ステップ入力を維持し、Customer未登録でも取引先名だけで仮登録できる。通常保存用の`useSiteActions`、専用writer、埋込みCustomerのexact 6-field要件を撤去した。取極めUIをremote履歴どおりの画面内表示へ戻し、取極めにも通常`Site.update()`とlast-write-winsを採用して、専用Callable、baseline比較、競合拒否を撤去した。終了・再有効化・archiveは専用操作を維持する。最新製品commit `89bdd51a`をGitHub Actions #16・#18・#19でFirestore Rules、Functions、HostingへDev反映し、旧`updateSiteAgreements` Callableを削除した。Codex専用合成tenantで通常操作とAgreement再表示を確認し、2026-09-12に利用者がDevの使用感・見た目を受入れた。別actorのDev実操作は未実施だが、role非依存境界のLocal自動検証を代替証拠として利用者承認により完了条件から外した。tenant拒否とapplicationを介さないrequestは今回想定しない範囲である。既存dataの一括変換、schema、package、Prodは変更していない。[Local検証記録](../verification/fga-03-site-manager-lww-local.md)と[Dev受入れ記録](../verification/fga-03-site-manager-lww-dev.md)を参照し、FGA-03を18点で完了、phase全体を46%とする。次はFGA-04 Employee管理の現行挙動と全reader／writerを調査し、機微情報と例外操作を分けた最初のcheckpointを提案する。
+- FGA-04-EMPLOYEE-CLASSIFICATION-01では、利用者回答により健康保険、厚生年金、雇用保険の番号・状態・日付・理由・履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報と確定した。保険専用documentへの分割と既存data migrationは行わない。在職Employeeの通常情報はrole非依存のtenant共通read・編集へ揃え、退職後編集禁止を維持する。保険の状態遷移条件は情報の機密性とは分けて維持し、専用保存・世代値の必要範囲は実装checkpointで確認する。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を参照する。この分類checkpointは製品実装・進捗加点・Dev反映を含まない。次は通常EmployeeのManager、reader、writer、Rulesをdocument last-write-winsへ揃える実装checkpointとする。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -59,6 +60,13 @@
 | FGA-03-SITE-NORMAL-AUTH-01 | Completed | Siteの通常作成・基本情報・Customer・Agreement・手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可するclient／Rules／Callable認可へ整合した。canonical User ID、tenant、無効・仮Userの拒否、archive strict actor、専用transaction、client delete・archive CUD拒否を維持し、domain 1,563件、Local Emulator 182件、文書validator、独立security reviewを完了してcommit `ec46497adc70174db7b36a025fe7f477100f5568`へ固定した。別actorのDev実操作は未実施だが、Local自動検証を代替証拠として利用者承認で閉じた。[Local検証記録](../verification/fga-03-site-normal-auth-local.md)を参照 |
 | FGA-03-SITE-RULES-SIMPLIFY-04 | Completed | 通常Siteのfield・型・長さ・enum・通常timestamp・派生値・埋込みCustomer projection検査をRulesから正規application writerへ集約した。tenant・canonical User・actor UID・maintenance、ACTIVE、schedule・lifecycle、live Customer、client delete、archive CUD・tombstoneは維持した。Agreement保護は後続のFGA-03-SITE-MANAGER-LWW-05で通常Site更新へ置換し、同じ固定製品sourceのDev反映・受入れで閉じた。[Local検証記録](../verification/fga-03-site-rules-simplification-local.md)を参照 |
 | FGA-03-SITE-MANAGER-LWW-05 | Completed | Site通常CREATE・UPDATEを`SiteManager`／`SitesManager`からSite modelへ直接接続し、通常保存用`useSiteActions`と専用writerを撤去した。3ステップ作成とCustomer未登録時の仮登録を維持する。取極めはremote履歴の画面内UIへ戻し、通常`Site.update()`、document last-write-wins、Rulesの通常Site更新へ統一して、専用Callable、baseline比較、競合拒否を撤去した。終了・再有効化・archiveだけを専用操作として分離する。対象domain 34件、全domain 1,546件、取極め・Customer参照の対象Emulator各1件、Emulator全体182件、Dev反映、Codex専用tenantの技術smoke、利用者の使用感・見た目受入れを完了した。tenant拒否とapplicationを介さないrequestは今回想定しない範囲 |
+
+## FGA-04 Employee内部checkpoint
+
+| Checkpoint | 状態 | 範囲・完了条件 |
+|---|---|---|
+| FGA-04-EMPLOYEE-CLASSIFICATION-01 | Completed | 保険番号・状態・日付・理由・履歴を通常Employee情報と確定し、role非依存のtenant共通read・編集、退職後編集禁止、状態遷移条件の維持、別document化・既存data migration不要を仕様・ADRへ反映した。製品code・Rules・data・Dev・Prodは変更せず、進捗加点なし |
+| FGA-04-EMPLOYEE-MANAGER-LWW-02 | Planned | Employee単数／複数形Manager、CustomInput、通常reader／writer、Rulesをtenant共通権限とdocument last-write-winsへ揃える。退職・誤退職訂正・archive・User/Authを専用操作として維持し、保険状態遷移の必要なdata保護だけを残す |
 
 ## 完了条件
 

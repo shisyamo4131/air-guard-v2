@@ -1,5 +1,7 @@
 # ADR 0064: 機微・機密情報を分離するFirestoreドキュメント境界
 
+- 適用明確化: 2026-09-12の[ADR 0070](0070-employee-insurance-normal-business-boundary.md)により、Employeeの保険番号・状態・日付・理由・履歴は本ADRの機微・機密情報に分類せず、Employee本体documentの通常業務情報として維持する。
+
 - 日付: 2026-09-09
 - 状態: Accepted
 - 対象: Firestore document構成、機微な個人情報・機密情報、Security Rules
