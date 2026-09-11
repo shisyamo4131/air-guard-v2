@@ -10,7 +10,7 @@ export { Customer } from "@shisyamo4131/air-guard-v2-schemas";
 export { CutoffDate } from "@shisyamo4131/air-guard-v2-schemas";
 export { DailyAttendance } from "@shisyamo4131/air-guard-v2-schemas";
 export { DailyOperationByEmployee } from "@shisyamo4131/air-guard-v2-schemas";
-export { Employee } from "@shisyamo4131/air-guard-v2-schemas";
+export { default as Employee } from "./Employee.js";
 export { FcmToken } from "@shisyamo4131/air-guard-v2-schemas";
 export { GeocodableMixin } from "@shisyamo4131/air-guard-v2-schemas";
 export { Insurance } from "@shisyamo4131/air-guard-v2-schemas";

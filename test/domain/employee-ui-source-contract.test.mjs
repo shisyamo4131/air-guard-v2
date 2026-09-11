@@ -8,24 +8,46 @@ const files = [
   "pages/employees/resigned.vue",
   "pages/employees/[id].vue",
   "components/Employees/Manager/index.vue",
+  "components/Employee/Manager/index.vue",
+  "components/Employee/CustomInput/ToRegist.vue",
+  "components/Employee/CustomInput/Base.vue",
+  "components/Employee/CustomInput/Nationality.vue",
+  "components/Employee/CustomInput/SecurityGuard.vue",
   "components/Employee/UserManager.vue",
   "components/Employee/Editor.vue",
   "components/Employee/Certifications/Manager/index.vue",
   "components/Employee/ArchiveDialog.vue",
 ];
 
-test("reachable Employee CRUD does not use generic Managers or model persistence", async () => {
-  for (const file of files) {
-    const source = await readFile(new URL(`../../${file}`, import.meta.url), "utf8");
-    assert.doesNotMatch(
-      source,
-      /AirItemManager|AirArrayManager|air-item-manager|air-array-manager|useBaseManager|\.(?:create|update|delete|restore)\s*\(/u,
-      file,
-    );
+test("reachable normal Employee CRUD uses the domain Managers and model persistence", async () => {
+  const single = await readFile(
+    new URL("../../components/Employee/Manager/index.vue", import.meta.url),
+    "utf8",
+  );
+  const multiple = await readFile(
+    new URL("../../components/Employees/Manager/index.vue", import.meta.url),
+    "utf8",
+  );
+  const detail = await readFile(
+    new URL("../../pages/employees/[id].vue", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(single, /<air-item-manager/u);
+  assert.match(multiple, /<air-array-manager/u);
+  for (const source of [single, multiple]) {
+    assert.match(source, /useBaseManager/u);
+    assert.match(source, /draft\.create\(\)/u);
+    assert.match(source, /draft\.update\(\)/u);
+    assert.match(source, /disable-delete/u);
+    assert.match(source, /:custom-input="resolveCustomInput"/u);
+    assert.doesNotMatch(source, /draft\.delete\(\)/u);
   }
+  assert.equal((detail.match(/<EmployeeManager\b/gu) || []).length, 3);
+  assert.doesNotMatch(detail, /<EmployeeEditor\b/u);
 });
 
-test("Employee lists use the dedicated scoped reader and keep their existing create boundary", async () => {
+test("Employee lists use the scoped reader and dispatch create/detail through EmployeesManager", async () => {
   const active = await readFile(
     new URL("../../pages/employees/index.vue", import.meta.url),
     "utf8",
@@ -44,10 +66,14 @@ test("Employee lists use the dedicated scoped reader and keep their existing cre
 
   assert.match(active, /status: Employee\.STATUS_ACTIVE/);
   assert.doesNotMatch(active, /fetchAllOnEmpty/);
-  assert.match(active, /<EmployeesManager[\s\S]*?\bshow-create\b/u);
+  assert.match(active, /<EmployeesManager[\s\S]*?:model-value="docs"/u);
+  assert.match(active, /#table="\{ items, toCreate, toUpdate \}"/u);
+  assert.match(active, /@click="\(\) => toCreate\(\)"/u);
+  assert.match(active, /@click:detail="toUpdate"/u);
   assert.match(resigned, /status: Employee\.STATUS_RESIGNED/);
   assert.match(resigned, /recentField: "dateOfTermination"/);
-  assert.doesNotMatch(resigned, /show-create/);
+  assert.doesNotMatch(resigned, /\btoCreate\b/u);
+  assert.match(resigned, /@click:detail="toUpdate"/u);
   assert.doesNotMatch(`${active}\n${resigned}`, /useDocuments|useEmployeesResigned/);
   assert.match(reader, /useEmployeeReadAccess/);
   assert.match(reader, /Companies\/\$\{companyId\}\/Employees/);
@@ -59,7 +85,7 @@ test("Employee lists use the dedicated scoped reader and keep their existing cre
 });
 
 for (const file of files.filter((file) => file.endsWith(".vue"))) {
-  test(`${file} compiles after EMP-06 Manager removal`, async () => {
+  test(`${file} compiles with the FGA-04 Employee boundary`, async () => {
     const url = new URL(`../../${file}`, import.meta.url);
     const source = await readFile(url, "utf8");
     const { descriptor, errors } = parse(source, { filename: url.pathname });

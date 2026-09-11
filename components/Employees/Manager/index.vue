@@ -1,57 +1,76 @@
 <script setup>
+import { Employee } from "@/schemas";
+import { useBaseManager } from "@/composables/useBaseManager";
+import CreateInput from "@/components/Employee/CustomInput/ToRegist.vue";
+import BaseInput from "@/components/Employee/CustomInput/Base.vue";
+
+defineOptions({ name: "EmployeesManager", inheritAttrs: false });
+
 const props = defineProps({
-  docs: { type: Array, default: () => [] },
-  search: { type: String, default: null },
-  error: { type: String, default: "" },
-  loading: Boolean,
-  hideDefaultFooter: Boolean,
-  itemsPerPage: { type: Number, default: 5 },
-  showCreate: Boolean,
-  sortBy: { type: Array, default: () => [] },
+  beforeEdit: { type: Function, default: () => true },
+  customInput: { type: [Object, Function], default: null },
+  modelValue: { type: Array, default: () => [] },
 });
-const emit = defineEmits(["update:search", "click:detail", "create", "reload"]);
+const { attrs } = useBaseManager("EmployeesManager");
+
+function rejectDirectDelete() {
+  throw new Error("従業員は直接削除できません。");
+}
+
+function resolveCustomInput({ editMode }) {
+  if (props.customInput) {
+    return typeof props.customInput === "function"
+      ? props.customInput({ editMode })
+      : props.customInput;
+  }
+  return editMode === "CREATE" ? CreateInput : BaseInput;
+}
+
+async function beforeEdit(editMode, item) {
+  if (editMode === "DELETE") return rejectDirectDelete();
+  const proceed = await props.beforeEdit(editMode, item);
+  if (proceed === false) return false;
+  if (
+    editMode === "UPDATE" &&
+    item.employmentStatus !== Employee.STATUS_ACTIVE
+  ) {
+    throw new Error("退職済み従業員の通常情報は変更できません。");
+  }
+  return true;
+}
+
+async function handleCreate(draft) {
+  return await draft.create();
+}
+
+async function handleUpdate(draft) {
+  return await draft.update();
+}
 </script>
+
 <template>
-  <div class="d-flex flex-column flex-grow-1 overflow-hidden">
-    <AppMasterListToolbar
-      :search="props.search"
-      :search-delay="300"
-      @update:search="emit('update:search', $event)"
-    >
-      <template #append>
-        <EmployeeEditor
-          v-if="props.showCreate"
-          operation="create"
-          title="従業員の新規登録"
-          @saved="emit('create', { docId: $event.employeeId })"
-        >
-          <template #default="{ open, canEdit }">
-            <v-btn
-              v-if="canEdit"
-              icon="mdi-plus"
-              aria-label="従業員を登録"
-              @click="open"
-            />
-          </template>
-        </EmployeeEditor>
-      </template>
-    </AppMasterListToolbar>
-    <v-progress-linear v-if="props.loading" indeterminate />
-    <v-alert v-else-if="props.error" type="error">
-      {{ props.error }}
-      <template #append>
-        <v-btn text="再読込" @click="emit('reload')" />
-      </template>
-    </v-alert>
-    <EmployeesIterator
-      class="flex-grow-1"
-      grid
-      :employees="props.docs"
-      :hide-default-footer="props.hideDefaultFooter"
-      :items-per-page="props.itemsPerPage"
-      show-detail
-      :sort-by="props.sortBy"
-      @click:detail="emit('click:detail', $event)"
-    />
-  </div>
+  <air-array-manager
+    v-bind="{ ...$attrs, ...attrs }"
+    class="fill-height"
+    :model-value="props.modelValue"
+    :schema="Employee"
+    label="従業員の新規登録"
+    :dialog-props="{
+      maxWidth: 480,
+      persistent: true,
+      scrollable: true,
+      'aria-label': '従業員の新規登録',
+    }"
+    :before-edit="beforeEdit"
+    :custom-input="resolveCustomInput"
+    disable-delete
+    hide-delete-btn
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="rejectDirectDelete"
+  >
+    <template #table="tableAttrs">
+      <slot name="table" v-bind="tableAttrs" />
+    </template>
+  </air-array-manager>
 </template>

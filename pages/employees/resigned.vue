@@ -21,19 +21,41 @@ const { docs, loading, error, reload } = useEmployeeList({
   search,
   recentField: "dateOfTermination",
 });
+
+function handleBeforeEdit(editMode, item) {
+  if (editMode !== "UPDATE") return true;
+  router.push(`/employees/${item.docId}`);
+  return false;
+}
 </script>
 
 <template>
   <AppViewportContainer>
-    <EmployeesManager
-      class="fill-height"
-      :docs="docs"
-      :loading="loading"
-      :error="error"
-      v-model:search="search"
-      :items-per-page="20"
-      @click:detail="(item) => router.push(`/employees/${item.docId}`)"
-      @reload="reload"
-    />
+    <EmployeesManager :before-edit="handleBeforeEdit" :model-value="docs">
+      <template #table="{ items, toUpdate }">
+        <div class="d-flex flex-column flex-grow-1 overflow-hidden">
+          <AppMasterListToolbar
+            :search="search"
+            :search-delay="300"
+            @update:search="search = $event"
+          />
+          <v-progress-linear v-if="loading" indeterminate />
+          <v-alert v-else-if="error" type="error">
+            {{ error }}
+            <template #append>
+              <v-btn text="再読込" @click="reload" />
+            </template>
+          </v-alert>
+          <EmployeesIterator
+            class="flex-grow-1"
+            grid
+            :employees="items"
+            :items-per-page="20"
+            show-detail
+            @click:detail="toUpdate"
+          />
+        </div>
+      </template>
+    </EmployeesManager>
   </AppViewportContainer>
 </template>

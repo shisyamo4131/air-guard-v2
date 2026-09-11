@@ -9,6 +9,9 @@ import { useRoute } from "vue-router";
 import { useEmployeeDetailRead } from "@/composables/application/employee/useEmployeeDetailRead";
 import { User } from "@/schemas";
 import EmployeeArchiveDialog from "@/components/Employee/ArchiveDialog.vue";
+import EmployeeBaseInput from "@/components/Employee/CustomInput/Base.vue";
+import EmployeeNationalityInput from "@/components/Employee/CustomInput/Nationality.vue";
+import EmployeeSecurityGuardInput from "@/components/Employee/CustomInput/SecurityGuard.vue";
 
 defineOptions({ name: "employee-detail" });
 const route = useRoute();
@@ -36,9 +39,9 @@ function archived(id) { excludeArchived(id); return navigateTo("/employees"); }
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <EmployeeEditor :employee="doc" operation="basic" title="基本情報">
-              <template #default="{ open, canEdit }">
-                <EmployeeActivatorBase :item="doc" title="基本情報" :can-edit="canEdit" @click:edit="open">
+            <EmployeeManager :model-value="doc" :custom-input="EmployeeBaseInput" label="基本情報">
+              <template #activator="{ toUpdate }">
+                <EmployeeActivatorBase :item="doc" title="基本情報" :can-edit="!showResignedAlert" @click:edit="toUpdate">
                   <template #actions>
                     <EmployeeLifecycleActions
                       class="flex-grow-1"
@@ -48,16 +51,16 @@ function archived(id) { excludeArchived(id); return navigateTo("/employees"); }
                   </template>
                 </EmployeeActivatorBase>
               </template>
-            </EmployeeEditor>
+            </EmployeeManager>
           </v-col>
 
           <!-- 国籍情報 -->
           <v-col cols="12">
-            <EmployeeEditor :employee="doc" operation="nationality" title="国籍情報">
-              <template #default="{ open, canEdit }">
-                <EmployeeActivatorNationality :item="doc" title="国籍情報" :can-edit="canEdit" @click:edit="open" />
+            <EmployeeManager :model-value="doc" :custom-input="EmployeeNationalityInput" label="国籍情報">
+              <template #activator="{ toUpdate }">
+                <EmployeeActivatorNationality :item="doc" title="国籍情報" :can-edit="!showResignedAlert" @click:edit="toUpdate" />
               </template>
-            </EmployeeEditor>
+            </EmployeeManager>
           </v-col>
 
           <!-- ユーザー情報 -->
@@ -74,9 +77,9 @@ function archived(id) { excludeArchived(id); return navigateTo("/employees"); }
             <InsuranceTransitionManager :employee="doc" :kind="insurance.key" :title="insurance.title" />
           </v-col>
           <v-col cols="12">
-            <EmployeeEditor :employee="doc" operation="security" title="警備員登録">
-              <template #default="{ open, canEdit }"><EmployeeActivatorSecurityGuard :item="doc" title="警備員登録" :can-edit="canEdit" @click:edit="open" /></template>
-            </EmployeeEditor>
+            <EmployeeManager :model-value="doc" :custom-input="EmployeeSecurityGuardInput" label="警備員登録">
+              <template #activator="{ toUpdate }"><EmployeeActivatorSecurityGuard :item="doc" title="警備員登録" :can-edit="!showResignedAlert" @click:edit="toUpdate" /></template>
+            </EmployeeManager>
           </v-col>
           <v-col cols="12"><EmployeeCertificationsManager :employee="doc" /></v-col>
         </v-row>

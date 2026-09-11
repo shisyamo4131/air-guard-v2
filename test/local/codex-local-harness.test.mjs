@@ -638,36 +638,46 @@ test("EMP02 Employee Callable transport creates and patches exact fields with ex
   assert.equal(duplicate.payload.error.status, "ALREADY_EXISTS");
 });
 
-test("EMP02 Employee and archives read only admit the seven actor categories and reject every client write or nested bypass", async () => {
+test("FGA04 normal Employee is tenant-wide while archive stays role-restricted", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const employeeId = "emp02-rules-employee";
   await testEnvironment.withSecurityRulesDisabled(async (context) => {
     for (const name of ["Employees", "Employees_archive"]) await setDoc(doc(context.firestore(), "Companies", companyId, name, employeeId), { docId: employeeId, employmentStatus: "ACTIVE", privateField: "synthetic" });
   });
   const cases = [
-    { key: "admin", isAdmin: true, roles: [], allowed: true },
-    ...["manager", "controller", "accountant", "human-resource", "labor", "legal"].map((role) => ({ key: role, isAdmin: false, roles: [role], allowed: true })),
-    { key: "empty", isAdmin: false, roles: [], allowed: false },
-    { key: "direct", isAdmin: false, roles: ["employees:read"], allowed: false },
-    { key: "unknown", isAdmin: false, roles: ["human-resource", "unknown"], allowed: false },
-    { key: "super", isAdmin: false, roles: ["manager"], isSuperUser: true, allowed: false },
-    { key: "admin-super", isAdmin: true, roles: [], isSuperUser: true, allowed: true },
-    { key: "disabled", isAdmin: true, roles: [], disabled: true, allowed: false },
-    { key: "temporary", isAdmin: true, roles: [], isTemporary: true, allowed: false },
+    { key: "admin", isAdmin: true, roles: [], normal: true, archive: true },
+    ...["manager", "controller", "accountant", "human-resource", "labor", "legal"].map((role) => ({ key: role, isAdmin: false, roles: [role], normal: true, archive: true })),
+    { key: "empty", isAdmin: false, roles: [], normal: true, archive: false },
+    { key: "direct", isAdmin: false, roles: ["employees:read"], normal: true, archive: false },
+    { key: "unknown", isAdmin: false, roles: ["human-resource", "unknown"], normal: true, archive: false },
+    { key: "super", isAdmin: false, roles: ["manager"], isSuperUser: true, normal: true, archive: false },
+    { key: "admin-super", isAdmin: true, roles: [], isSuperUser: true, normal: true, archive: true },
+    { key: "disabled", isAdmin: true, roles: [], disabled: true, normal: false, archive: false },
+    { key: "temporary", isAdmin: true, roles: [], isTemporary: true, normal: false, archive: false },
   ];
   for (const entry of cases) {
     const uid = `emp02-rules-${entry.key}`;
     await seedRegisteredUser({ uid, isAdmin: entry.isAdmin, roles: entry.roles, disabled: entry.disabled ?? false, isTemporary: entry.isTemporary ?? false });
     await testEnvironment.withSecurityRulesDisabled((context) => updateDoc(doc(context.firestore(), "Companies", companyId, "Users", uid), { docId: uid }));
     const firestore = authenticatedFirestore(uid, { isSuperUser: entry.isSuperUser ?? false });
+    const employee = doc(firestore, "Companies", companyId, "Employees", employeeId);
+    await (entry.normal ? assertSucceeds : assertFails)(getDoc(employee));
+    await (entry.normal ? assertSucceeds : assertFails)(getDocs(collection(firestore, "Companies", companyId, "Employees")));
+    await (entry.normal ? assertSucceeds : assertFails)(updateDoc(employee, { title: entry.key, uid }));
+    await (entry.normal ? assertSucceeds : assertFails)(setDoc(doc(firestore, "Companies", companyId, "Employees", `new-${uid}`), { docId: `new-${uid}`, employmentStatus: "ACTIVE", uid }));
+    await assertFails(deleteDoc(employee));
+
+    const archive = doc(firestore, "Companies", companyId, "Employees_archive", employeeId);
+    await (entry.archive ? assertSucceeds : assertFails)(getDoc(archive));
+    await (entry.archive ? assertSucceeds : assertFails)(getDocs(collection(firestore, "Companies", companyId, "Employees_archive")));
+    await assertFails(updateDoc(archive, { title: "不可" }));
+    await assertFails(deleteDoc(archive));
+    await assertFails(setDoc(doc(firestore, "Companies", companyId, "Employees_archive", `new-${uid}`), { docId: uid }));
+
     for (const name of ["Employees", "Employees_archive"]) {
-      const reference = doc(firestore, "Companies", companyId, name, employeeId);
-      await (entry.allowed ? assertSucceeds : assertFails)(getDoc(reference));
-      await (entry.allowed ? assertSucceeds : assertFails)(getDocs(collection(firestore, "Companies", companyId, name)));
-      await assertFails(updateDoc(reference, { title: "不可" })); await assertFails(deleteDoc(reference));
-      await assertFails(setDoc(doc(firestore, "Companies", companyId, name, `new-${uid}`), { docId: uid }));
       const nested = doc(firestore, "Companies", companyId, name, employeeId, "nested", "probe");
-      await assertFails(getDoc(nested)); await assertFails(setDoc(nested, { value: true }));
+      await assertFails(getDoc(nested));
+      await assertFails(setDoc(nested, { value: true }));
       await assertFails(getDoc(doc(firestore, "Companies", CODEX_LOCAL_COMPANIES.secondary.id, name, employeeId)));
     }
   }

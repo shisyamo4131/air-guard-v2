@@ -113,7 +113,7 @@ export function buildPageAccessContext(auth) {
     auth?.isDeveloperClaimValid === true &&
     typeof auth?.isDeveloper === "boolean";
 
-  const isActiveRegisteredActor = Boolean(
+  const isRegisteredTenantActor = Boolean(
     auth?.isReady === true &&
       auth?.sessionInitializationFailed !== true &&
       actorUid &&
@@ -125,7 +125,10 @@ export function buildPageAccessContext(auth) {
       actorUser?.disabled === false &&
       actorUser?.isTemporary === false &&
       typeof actorUser?.isAdmin === "boolean" &&
-      hasValidActorRoles,
+      Array.isArray(presetRoles),
+  );
+  const isActiveRegisteredActor = Boolean(
+    isRegisteredTenantActor && hasValidActorRoles,
   );
 
   return {
@@ -133,6 +136,7 @@ export function buildPageAccessContext(auth) {
     sessionInitializationFailed:
       auth?.sessionInitializationFailed === true,
     isAuthenticated: actorUid !== null,
+    isRegisteredTenantActor,
     isActiveRegisteredActor,
     actorUid,
     companyId,

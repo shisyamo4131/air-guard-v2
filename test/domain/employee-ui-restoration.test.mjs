@@ -39,7 +39,8 @@ test("editor dialogs scroll the card body while title/actions remain outside it;
       if (file.includes("Duplicator")) assert.equal(find(body, "v-date-picker").length, 1);
     }
   }
-  for (const file of ["components/Employees/Manager/index.vue", "components/Operation/ArrayManager.vue"]) assert.match(await source(file), /class="d-flex flex-column flex-grow-1 overflow-hidden"/u);
+  assert.match(await source("components/Operation/ArrayManager.vue"), /class="d-flex flex-column flex-grow-1 overflow-hidden"/u);
+  for (const file of ["pages/employees/index.vue", "pages/employees/resigned.vue"]) assert.match(await source(file), /class="d-flex flex-column flex-grow-1 overflow-hidden"/u);
 });
 test("kind-specific titles use existing schema names and explicit labels retain precedence", async () => {
   for (const file of ["components/Operation/Manager.vue", "components/Operation/ArrayManager.vue"]) {

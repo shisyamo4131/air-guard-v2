@@ -13,6 +13,7 @@ import * as rangeValidators from "../../composables/validators/rangeValidator.js
 import { createEmployeeReadSession } from "../../composables/domain/employee/employeeReadSession.js";
 import { employeeReadLabel } from "../../composables/domain/employee/employeeReadLabel.js";
 import { createEmployeeListSession } from "../../composables/domain/employee/employeeListSession.js";
+import { isEmployeeNormalUxActorAllowed } from "../../utils/auth/policies/employeeActorPolicy.js";
 
 const source = (path) => readFile(new URL(`../../${path}`, import.meta.url), "utf8");
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
@@ -58,7 +59,7 @@ async function authorizedListHarness() {
   const sdk = sdkHarness();
   const actor = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] };
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: actor });
-  const bindings = { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, Employee, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) };
+  const bindings = { ...Vue, ...sdk.bindings, ...contract, isEmployeeNormalUxActorAllowed, Employee, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) };
   const makeAccess = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", bindings);
   const effect = Vue.effectScope(); let access, list;
   effect.run(() => { access = makeAccess(); });
@@ -195,25 +196,32 @@ test("EMP05 public fetch adapter retries after permission readiness, ignores cac
   assert.deepEqual(h.reader.cachedEmployees.value, {}); assert.equal(h.reader.canRead.value, false); assert.ok(h.listeners.every((entry) => entry.stopped)); h.effect.stop();
 });
 
-test("EMP05 access requires each of seven allowed actors and both current Auth and raw User", async () => {
+test("FGA04 Employee access accepts every registered tenant User regardless of role", async () => {
   const sdk = sdkHarness();
   const user = (role) => ({ docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: role === "admin", roles: role === "admin" ? [] : [role] });
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: user("admin") });
-  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
+  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeNormalUxActorAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
   const effect = Vue.effectScope(); let access; effect.run(() => { access = make(); });
-  for (const role of ["admin", ...contract.EMPLOYEE_ROLES]) {
-    auth.user = user(role); const listener = sdk.listeners.at(-1);
-    listener.next(snapshot(user(role), true)); assert.equal(access.canRead.value, false);
-    listener.next(snapshot(user(role))); assert.equal(access.canRead.value, true, role);
-    listener.next(snapshot({ ...user(role), disabled: true })); assert.equal(access.canRead.value, false);
+  const allowed = [
+    user("admin"),
+    ...contract.EMPLOYEE_ROLES.map(user),
+    { ...user("admin"), isAdmin: false, roles: [] },
+    { ...user("admin"), isAdmin: false, roles: ["employees:read"] },
+    { ...user("admin"), isAdmin: false, roles: ["unknown"] },
+  ];
+  for (const actor of allowed) {
+    auth.user = actor; const listener = sdk.listeners.at(-1);
+    listener.next(snapshot(actor, true)); assert.equal(access.canRead.value, false);
+    listener.next(snapshot(actor)); assert.equal(access.canRead.value, true, JSON.stringify(actor.roles));
+    listener.next(snapshot({ ...actor, disabled: true })); assert.equal(access.canRead.value, false);
   }
   auth.user = user("admin"); const old = sdk.listeners.at(-1); old.next(snapshot(user("admin"))); assert.equal(access.canRead.value, true);
   auth.isSuperUserClaimValid = false; assert.equal(access.canRead.value, false); old.next(snapshot(user("admin"))); old.error(new Error()); assert.equal(access.canRead.value, false);
   auth.isSuperUserClaimValid = true;
-  for (const bad of [{ roles: ["unknown"], isAdmin: false }, { disabled: true }, { isTemporary: true }, { companyId: "elsewhere" }, { docId: "elsewhere" }]) {
+  for (const bad of [{ roles: null }, { disabled: true }, { isTemporary: true }, { companyId: "elsewhere" }, { docId: "elsewhere" }]) {
     auth.user = { ...user("admin"), ...bad }; assert.equal(access.canRead.value, false);
   }
-  auth.user = user("labor"); auth.isSuperUser = true; assert.equal(access.canRead.value, false);
+  auth.user = user("labor"); auth.isSuperUser = true; const superListener = sdk.listeners.at(-1); superListener.next(snapshot(auth.user)); assert.equal(access.canRead.value, true);
   effect.stop(); assert.ok(sdk.listeners.every((entry) => entry.stopped));
 });
 
@@ -232,7 +240,7 @@ test("EMP05 calls made during initial authorization retain requested IDs but nev
 test("EMP05 actual raw User authorization resolves an already waiting first Employee ID", async () => {
   const sdk = sdkHarness(), actor = { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] };
   const auth = Vue.reactive({ uid: "actor", companyId: "company", isEmailVerified: true, isSuperUserClaimValid: true, isSuperUser: false, user: actor });
-  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeUxActorAllowed: contract.employeeAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
+  const make = await factory("composables/application/employee/useEmployeeReadAccess.js", "useEmployeeReadAccess", { ...Vue, ...sdk.bindings, ...contract, isEmployeeNormalUxActorAllowed, useAuthStore: () => auth, useNuxtApp: () => ({ $firestore: {} }) });
   const effect = Vue.effectScope(); let access; effect.run(() => { access = make(); });
   const h = await readerHarness(access); assert.equal(access.loading.value, true);
   const first = h.reader.getEmployee("employee"); assert.equal(h.listeners.length, 0);

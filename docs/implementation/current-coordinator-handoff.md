@@ -16,7 +16,7 @@
 
 ## 次の作業
 
-現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-04 Employee管理を進めている。利用者回答により、3保険の番号・状態・日付・理由・履歴を通常Employee情報と確定し、別document化しない。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を正とする。次はFGA-04-EMPLOYEE-MANAGER-LWW-02として、Employee単数／複数形Manager、CustomInput、通常reader／writer、Rulesをtenant共通権限とdocument last-write-winsへ揃える。退職・誤退職訂正・archive・User/Authは専用操作を維持し、保険は機密性によるrole制限を外しつつ状態遷移に必要なdata保護だけを残す。
+現在は[根本ガバナンス整合phase](../roadmaps/foundational-governance-alignment.md)のFGA-04 Employee管理を進めている。3保険を通常Employee情報とし、別document化しない。[ADR 0070](../decisions/0070-employee-insurance-normal-business-boundary.md)を正とする。FGA-04-EMPLOYEE-MANAGER-LWW-02の最初のLocal実装で、一覧作成、基本・国籍・警備員編集、両Manager、通常reader／Rulesをtenant共通権限とdocument last-write-winsへ揃え、必須検証を完了した。退職・誤退職訂正・archive・User/Authは専用操作を維持する。次は資格・保険画面のrole制限と旧専用保存を整合し、保険の状態遷移条件だけを残す。Dev反映・受入れは別承認で行う。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。
 
 FGA-02-CUSTOMER-UPDATE-01のlocal実装はcommit `6bf82e5264f72b39c540eb68c96b18690385198e`へ固定した。旧domain Manager分類はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`、Customer初回実装はcommit `9bd4d43c23bf113790add10691dc91b7445a99d4`である。分類基準は[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とcommit `b89e5c86`で訂正し、Customer実装もcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`へ訂正した。現行のManager分類はFirestore上の通常のmaster data全般へ適用し、Customer・Site・Employee・Outsourcerを最初の適用例とする。Company・User等の例外境界は維持する。
 

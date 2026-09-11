@@ -9,6 +9,20 @@ export const EMPLOYEE_UX_ROLES = Object.freeze([
   "legal",
 ]);
 
+/** 同一tenantの通常Employee画面に入れる本登録Userかを判定する。 */
+export function isEmployeeNormalUxActorAllowed({ uid, companyId, actorUser }) {
+  return Boolean(
+    identifier(uid) &&
+      identifier(companyId) &&
+      actorUser &&
+      actorUser.docId === uid &&
+      actorUser.companyId === companyId &&
+      actorUser.disabled === false &&
+      actorUser.isTemporary === false &&
+      Array.isArray(actorUser.roles),
+  );
+}
+
 /**
  * Client UX gate only. This mutable client state is not a security boundary;
  * Functions must independently authenticate and authorize every operation.
@@ -18,14 +32,8 @@ export function isEmployeeUxActorAllowed(
   write = true,
 ) {
   if (
-    !identifier(uid) ||
-    !identifier(companyId) ||
+    !isEmployeeNormalUxActorAllowed({ uid, companyId, actorUser }) ||
     typeof isSuperUser !== "boolean" ||
-    !actorUser ||
-    actorUser.docId !== uid ||
-    actorUser.companyId !== companyId ||
-    actorUser.disabled !== false ||
-    actorUser.isTemporary !== false ||
     typeof actorUser.isAdmin !== "boolean"
   ) {
     return false;

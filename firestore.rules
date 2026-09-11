@@ -627,12 +627,21 @@ service cloud.firestore {
     }
 
     // --- Rules for 'Employees' subcollection under 'Companies' ---
-    // EmployeesコレクションはCompaniesコレクションのサブコレクション。
-    // 認証ユーザーの companyId と一致する Companies ドキュメント配下の
-    // Employees ドキュメントのみ Read/Write を許可。
+    // 通常Employeeは同一tenantの有効な本登録Userへrole非依存で許可する。
+    // 退職・archive・User/Authは専用操作を維持し、client deleteは許可しない。
     match /Companies/{companyId}/Employees/{docId} {
-      allow read: if isAuthenticated() && canReadEmployee(companyId);
-      allow write: if false;
+      allow read: if isAuthenticated() && userCompanyId() == companyId;
+      allow create: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && request.resource.data.uid == request.auth.uid
+                    && isValidActiveEmployeeCreate()
+                    && !exists(/databases/$(database)/documents/Companies/$(companyId)/Employees_archive/$(docId));
+      allow update: if isAuthenticated()
+                    && userCompanyId() == companyId
+                    && resource.data.employmentStatus == 'ACTIVE'
+                    && request.resource.data.uid == request.auth.uid
+                    && preservesEmployeeLifecycleFields();
+      allow delete: if false;
     }
 
     // --- Rules for 'Employees_archive' subcollection under 'Companies' ---

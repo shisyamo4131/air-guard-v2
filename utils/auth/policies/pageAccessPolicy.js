@@ -8,7 +8,7 @@ import {
   hasPresetPermission,
 } from "../authorization.js";
 import { canViewLifecycleOperationHistory } from "./userLifecycleUiPolicy.js";
-import { isEmployeeUxActorAllowed } from "./employeeActorPolicy.js";
+import { isEmployeeNormalUxActorAllowed } from "./employeeActorPolicy.js";
 
 function deepFreeze(value) {
   if (!value || typeof value !== "object" || Object.isFrozen(value)) {
@@ -120,6 +120,17 @@ export function isPageAccessAllowed(
     return accessContext?.isAuthenticated === true;
   }
 
+  if (policy === PAGE_ACCESS_POLICIES.EMPLOYEES_READ) {
+    return Boolean(
+      accessContext?.isRegisteredTenantActor === true &&
+        isEmployeeNormalUxActorAllowed({
+          uid: accessContext.actorUid,
+          companyId: accessContext.companyId,
+          actorUser: accessContext.actorUser,
+        }),
+    );
+  }
+
   if (accessContext?.isActiveRegisteredActor !== true) {
     return false;
   }
@@ -143,21 +154,6 @@ export function isPageAccessAllowed(
       accessContext.isAdmin === true ||
         (accessContext.isSuperUserClaimValid === true &&
           accessContext.isSuperUser === true),
-    );
-  }
-
-  if (policy === PAGE_ACCESS_POLICIES.EMPLOYEES_READ) {
-    return Boolean(
-      accessContext.isSuperUserClaimValid === true &&
-        isEmployeeUxActorAllowed(
-          {
-            uid: accessContext.actorUid,
-            companyId: accessContext.companyId,
-            isSuperUser: accessContext.isSuperUser,
-            actorUser: accessContext.actorUser,
-          },
-          false,
-        ),
     );
   }
 

@@ -354,7 +354,6 @@ test("general policies preserve authenticated, exclusive, admin, and permission 
     [PAGE_ACCESS_POLICIES.BILLINGS_READ, "accountant"],
     [PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE, "manager"],
     [PAGE_ACCESS_POLICIES.SITES_READ, "controller"],
-    [PAGE_ACCESS_POLICIES.EMPLOYEES_READ, "human-resource"],
     [PAGE_ACCESS_POLICIES.OUTSOURCERS_READ, "manager"],
   ];
   for (const [policy, preset] of policyCases) {
@@ -579,37 +578,29 @@ test("protected policies require an active registered actor and exact special cl
   );
 });
 
-test("Employee page access matches the strict Employee reader policy", () => {
+test("Employee page access is role-independent for a registered tenant User", () => {
   const policy = PAGE_ACCESS_POLICIES.EMPLOYEES_READ;
 
-  for (const role of [
+  for (const roles of [
+    [],
+    ["employees:read"],
+    ["employees:write"],
+    ["unknown"],
     "manager",
     "controller",
     "accountant",
     "human-resource",
     "labor",
     "legal",
-  ]) {
+  ].map((value) => Array.isArray(value) ? value : [value])) {
     assert.equal(
       isPageAccessAllowed(
         policy,
-        [role],
-        activeContext({ actorRoles: [role] }),
+        roles,
+        activeContext({ actorRoles: roles }),
       ),
       true,
-      role,
-    );
-  }
-
-  for (const role of ["employees:read", "employees:write", "unknown"]) {
-    assert.equal(
-      isPageAccessAllowed(
-        policy,
-        [role],
-        activeContext({ actorRoles: [role] }),
-      ),
-      false,
-      role,
+      JSON.stringify(roles),
     );
   }
 
@@ -619,7 +610,7 @@ test("Employee page access matches the strict Employee reader policy", () => {
       ["super-user"],
       activeContext({ isSuperUser: true }),
     ),
-    false,
+    true,
   );
   assert.equal(
     isPageAccessAllowed(

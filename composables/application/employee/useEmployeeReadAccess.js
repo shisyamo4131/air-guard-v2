@@ -2,7 +2,7 @@ import { ref, computed, watch, onScopeDispose } from "vue";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { identifier } from "@/composables/domain/shared/valueContract.js";
-import { isEmployeeUxActorAllowed } from "@/utils/auth/policies/employeeActorPolicy.js";
+import { isEmployeeNormalUxActorAllowed } from "@/utils/auth/policies/employeeActorPolicy.js";
 
 export function useEmployeeReadAccess() {
   const auth = useAuthStore(), { $firestore } = useNuxtApp();
@@ -13,7 +13,7 @@ export function useEmployeeReadAccess() {
     clear();
     if (disposed || !identifier(auth.uid) || !identifier(auth.companyId) || auth.isEmailVerified !== true || auth.isSuperUserClaimValid !== true || typeof auth.isSuperUser !== "boolean") return;
     const context = { uid: auth.uid, companyId: auth.companyId, isSuperUser: auth.isSuperUser };
-    if (!isEmployeeUxActorAllowed({ ...context, actorUser: auth.user }, false)) return;
+    if (!isEmployeeNormalUxActorAllowed({ ...context, actorUser: auth.user })) return;
     const source = generation; loading.value = true;
     const fail = () => {
       if (source !== generation) return;
@@ -24,8 +24,8 @@ export function useEmployeeReadAccess() {
       const unsubscribe = onSnapshot(doc($firestore, `Companies/${context.companyId}/Users/${context.uid}`), { includeMetadataChanges: true }, (snapshot) => {
         if (source !== generation || snapshot.metadata.fromCache) return;
         const raw = snapshot.exists() ? snapshot.data() : null;
-        scope.value = isEmployeeUxActorAllowed({ ...context, actorUser: raw }, false)
-          ? JSON.stringify([context.companyId, context.uid, context.isSuperUser, raw.isAdmin, raw.roles]) : null;
+        scope.value = isEmployeeNormalUxActorAllowed({ ...context, actorUser: raw })
+          ? JSON.stringify([context.companyId, context.uid]) : null;
         loading.value = false;
       }, fail);
       if (source === generation) stop = unsubscribe;
