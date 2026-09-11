@@ -47,6 +47,19 @@ test("reachable normal Employee CRUD uses the domain Managers and model persiste
   assert.doesNotMatch(detail, /<EmployeeEditor\b/u);
 });
 
+test("qualification and insurance screens use normal Employee persistence", async () => {
+  for (const file of [
+    "composables/application/employee/useEmployeeCertifications.js",
+    "composables/application/employee/useEmployeeInsurance.js",
+  ]) {
+    const source = await readFile(new URL(`../../${file}`, import.meta.url), "utf8");
+    assert.match(source, /await candidate\.update\(\)/u, file);
+    assert.match(source, /isEmployeeNormalUxActorAllowed/u, file);
+    assert.doesNotMatch(source, /httpsCallable|updateEmployeeCertifications|transitionEmployeeInsurance/u, file);
+    assert.doesNotMatch(source, /isEmployeeUxActorAllowed/u, file);
+  }
+});
+
 test("Employee lists use the scoped reader and dispatch create/detail through EmployeesManager", async () => {
   const active = await readFile(
     new URL("../../pages/employees/index.vue", import.meta.url),

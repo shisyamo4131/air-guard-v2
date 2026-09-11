@@ -9,8 +9,8 @@ import InputExempt from "./Input/Exempt.vue";
 import InputLoss from "./Input/Loss.vue";
 import InputRollback from "./Input/Rollback.vue";
 const props = defineProps({ employee: { type: Object, required: true }, kind: { type: String, required: true }, title: { type: String, required: true } });
-const editor = useEmployeeInsurance({ employeeId: () => props.employee.docId, kind: props.kind });
-const { opened, busy, loading, conflict, uncertain, message, draft, action, canWrite } = editor;
+const editor = useEmployeeInsurance({ employee: () => props.employee, kind: props.kind });
+const { opened, busy, loading, message, draft, action, canWrite } = editor;
 const inputs = { enroll: InputEnroll, enrolled: InputEnrolled, cancelEnroll: InputCancel, exempt: InputExempt, loss: InputLoss, rollback: InputRollback };
 const labels = { enroll: '加入', enrolled: '手続き完了', cancelEnroll: '手続き取り下げ', exempt: '適用除外', loss: '喪失', rollback: '履歴復元' };
 const current = computed(() => props.employee[props.kind]);
@@ -37,15 +37,14 @@ const current = computed(() => props.employee[props.kind]);
       <v-card-text>
         <v-progress-linear v-if="loading" indeterminate />
         <v-alert v-if="message" type="info" class="mb-3">{{ message }}</v-alert>
-        <v-alert v-if="conflict" type="warning" class="mb-3">同じ保険情報が更新されました。入力を保持しています。最新値を読み直してください。</v-alert>
-        <air-item-input v-if="draft" :item="draft" :schema="Insurance.schema" :update-properties="editor.update" :disabled="busy || loading || conflict || uncertain" edit-mode="UPDATE">
+        <air-item-input v-if="draft" :item="draft" :schema="Insurance.schema" :update-properties="editor.update" :disabled="busy || loading" edit-mode="UPDATE">
           <template #default="{ componentAttrs }"><component :is="inputs[action]" :item="draft" :component-attrs="componentAttrs" :update-properties="editor.update" /></template>
         </air-item-input>
       </v-card-text>
       <v-card-actions>
-        <v-btn :disabled="busy || loading" @click="editor.reload">{{ uncertain ? '保存結果を確認' : '最新値を読み直す' }}</v-btn><v-spacer />
+        <v-btn :disabled="busy || loading" @click="editor.reload">最新値を読み直す</v-btn><v-spacer />
         <v-btn :disabled="busy" @click="editor.close">キャンセル</v-btn>
-        <v-btn color="primary" :loading="busy" :disabled="busy || loading || conflict || uncertain || !draft || !canWrite" @click="editor.save">{{ labels[action] }}を保存</v-btn>
+        <v-btn color="primary" :loading="busy" :disabled="busy || loading || !draft || !canWrite" @click="editor.save">{{ labels[action] }}を保存</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

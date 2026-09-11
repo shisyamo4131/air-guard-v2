@@ -8,6 +8,8 @@
 
 - 在職一覧の新規作成を複数形Employee Managerへ接続した。
 - 詳細の基本・国籍・警備員情報を単数Employee Managerと専用CustomInputへ接続した。
+- 資格と3保険の画面から専用Callable、最新値比較、競合拒否、role制限を外し、Employee modelの通常更新へ接続した。
+- 保険の加入・喪失等の状態遷移条件と入力検査は維持した。
 - 通常保存はEmployee modelの`create`／`update`を使い、document単位のlast-write-winsとした。
 - 通常Employeeの一覧・詳細・Firestore Rulesは、同一tenantの有効な本登録Userへrole非依存で許可した。
 - 退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの既存専用境界を維持した。
@@ -20,7 +22,7 @@
 | 対象schema互換 | `node --test test/domain/employee-schema-compatibility.test.mjs` | 4件合格 | 0 |
 | 対象Employee UI・認可 | 対象4 domain test file | 38件合格 | 0 |
 | Employee reader | `node --test test/domain/employee-reader.test.mjs` | 23件合格 | 0 |
-| domain-full | `node --test test/domain/*.test.mjs` | 1,555件合格 | 0 |
+| domain-full | `node --test test/domain/*.test.mjs` | 1,550件合格 | 0 |
 | 対象Rules | `pwsh -NoProfile -File scripts/run-codex-local-test.ps1 -Mode Test -TestNamePattern "FGA04 normal Employee"` | 1件合格 | 0 |
 | local-emulator-suite | `npm run test:local` | 182件合格 | 0 |
 | application build | `npm run build` | client・server build合格 | 0 |
@@ -29,7 +31,7 @@ Local Emulatorは`demo-air-guard-v2-codex`、loopback限定、合成dataだけ�
 
 ## 未実施・残作業
 
-- 資格と3保険の画面は、旧専用保存とrole制限のままである。保険を秘密情報として制限せず、加入・喪失等の状態遷移条件だけを残す整理が必要である。
+- 現行画面から到達しなくなった旧Employee保存Callable entrypointは、Dev反映順序を確定して停止するまで互換用に残している。
 - Dev・Prod反映、remote data操作、既存dataの一括変換は行っていない。
 - Devでの見た目・使用感の確認は未実施である。
 - `local-ui-build`は必須gateではなく、commit前はclean worktree要件を満たさないため未実施。固定commit後に実行する。

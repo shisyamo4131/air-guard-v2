@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- FGA-04 Employeeの最初のLocal実装として、在職一覧の作成と詳細の基本・国籍・警備員情報を単数／複数形ManagerからEmployee modelの通常保存へ戻し、document last-write-winsへ揃えた。通常Employeeの一覧・詳細・Rulesは同一tenantの有効な本登録Userへrole非依存で開き、退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの専用境界を維持した。公開schema packageにない既存の保険操作世代値はlocal schemaで保持し、新規作成時だけ初期化する。資格・保険画面の旧専用保存とrole制限、Dev・Prod、既存dataの一括変換は未変更である。[Local検証記録](docs/verification/fga-04-employee-manager-lww-local.md)を参照。
+- FGA-04 EmployeeのLocal実装として、在職一覧の作成と詳細の基本・国籍・警備員・資格・3保険をEmployee modelの通常保存へ戻し、document last-write-winsへ揃えた。資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外し、保険は加入・喪失等の状態遷移条件だけを維持する。通常Employeeの一覧・詳細・Rulesは同一tenantの有効な本登録Userへrole非依存で開き、退職後の通常更新、client delete、archive、退職・誤退職訂正、User/Authの専用境界を維持した。公開schema packageにない既存の保険操作世代値はlocal schemaで保持し、新規作成時だけ初期化する。旧Callable entrypoint、Dev・Prod、既存dataの一括変換は未変更である。[Local検証記録](docs/verification/fga-04-employee-manager-lww-local.md)を参照。
 
 - FGA-04 Employeeの情報分類を確定し、健康保険・厚生年金・雇用保険の番号、状態、日付、理由、履歴を機微・機密情報の例外にせず、Employee本体documentの通常業務情報として扱うことにした。在職中はrole非依存のtenant共通read・編集へ揃え、退職後編集禁止と保険の状態遷移条件は維持する。保険専用documentへの分割と既存data migrationは行わない。今回、製品code、Rules、data、Dev・Prodは変更していない。[判断](docs/decisions/0070-employee-insurance-normal-business-boundary.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 

@@ -9,9 +9,22 @@ import * as insuranceContract from "../../functions/shared/employeeInsuranceCont
 function employee() { return new Employee({ docId: "employee", lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: contract.parseDate("1990-01-01"), dateOfHire: contract.parseDate("2026-01-01"), zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }).toObject(); }
 async function harness(operation = "basic", kind = "healthInsurance") {
   let raw = employee(), readError, listener, authWatch, calls = [], messages = [], response = async () => ({ data: { success: true, employeeId: "employee" } });
-  const auth = { uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true } };
+  class TestEmployee extends Employee {
+    static classProps = {
+      ...Employee.classProps,
+      insuranceOperationVersions: {
+        ...Employee.classProps.location,
+        default: () => ({ healthInsurance: 0, pensionInsurance: 0, employmentInsurance: 0 }),
+        validator: () => true,
+        hidden: true,
+      },
+    };
+    afterInitialize(item = {}) { super.afterInitialize(item); if (!Object.hasOwn(item, "insuranceOperationVersions")) delete this.insuranceOperationVersions; }
+    async update() { const candidate = this.toObject(); calls.push({ api: "model.update", candidate }); await response(candidate); raw = candidate; return this; }
+  }
+  const auth = { uid: "actor", companyId: "company", isSuperUser: false, isSuperUserClaimValid: true, isEmailVerified: true, user: { docId: "actor", companyId: "company", disabled: false, isTemporary: false, isAdmin: true, roles: [] } };
   const ref = (value) => ({ value });
-  const bindings = { ...contract, ...insuranceContract, isEmployeeUxActorAllowed: contract.employeeAllowed, Employee, Certification, Insurance, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
+  const bindings = { ...contract, ...insuranceContract, isEmployeeUxActorAllowed: contract.employeeAllowed, isEmployeeNormalUxActorAllowed: ({ actorUser }) => actorUser?.disabled === false && actorUser?.isTemporary === false, Employee: TestEmployee, Certification, Insurance, ref, shallowRef: ref, computed: (fn) => ({ get value() { return fn(); } }), watch: (_, fn) => { authWatch = fn; }, onScopeDispose() {},
     doc: (_, path) => ({ id: path ? path.split("/").at(-1) : "reserved-id" }), collection: () => ({}),
     getDocFromServer: async () => { if (readError) throw readError; return { exists: () => raw !== null, data: () => raw }; },
     onSnapshot: (_, fn) => { listener = fn; return () => {}; },
@@ -21,7 +34,7 @@ async function harness(operation = "basic", kind = "healthInsurance") {
   const factoryName = operation === "insurance" ? "useEmployeeInsurance" : operation === "certifications" ? "useEmployeeCertifications" : "useEmployeeEditor";
   const source = (await readFile(new URL(`../../composables/application/employee/${factoryName}.js`, import.meta.url), "utf8")).replace(/import[\s\S]*?;\s*/gu, "").replace("export function", "function");
   const factory = new Function(...Object.keys(bindings), `${source}; return ${factoryName};`)(...Object.values(bindings));
-  return { editor: factory({ operation, employeeId: "employee", kind }), auth, calls, messages, setReadError: (value) => { readError = value; }, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
+  return { editor: factory({ operation, employeeId: "employee", employee: () => new TestEmployee(raw), kind }), auth, calls, messages, setReadError: (value) => { readError = value; }, setResponse: (fn) => { response = fn; }, setRaw: (value) => { raw = value; }, raw: () => raw, notify: () => listener?.({ exists: () => raw !== null, data: () => raw, metadata: { fromCache: false } }), authWatch: () => authWatch() };
 }
 test("EMP02 editor keeps live immutable, ignores unrelated fields, and holds draft on rejection", async () => {
   const h = await harness(); await h.editor.open(); h.editor.update({ title: "主任" }); assert.equal(h.raw().title, null);
@@ -134,67 +147,43 @@ test("EMP02 changed Vue files compile", async () => {
 function certificate(name, serialNumber) { return new Certification({ name, serialNumber, type: "TRAFFIC", issueDateAt: contract.parseDate("2026-01-01") }).toObject(); }
 
 const insuranceEnrollment = { enrollmentDateAt: contract.parseDate("2026-01-01"), number: "SYNTHETIC", isProcessing: false };
-for (const kind of contract.INSURANCE_KINDS) test(`EMP-INS ${kind} absent draft cancel writes zero and unknown initialization checks complete map/actor/version`, async () => {
-  const h = await harness("insurance", kind); delete h.raw()[kind];
-  h.raw().insuranceOperationVersions = Object.fromEntries(contract.INSURANCE_KINDS.map((key) => [key, 7]));
-  await h.editor.open("enroll"); assert.equal(h.editor.draft.value.status, "NOT_ENROLLED");
-  h.editor.update(insuranceEnrollment); h.editor.close(); assert.equal(h.calls.length, 0); assert.equal(Object.hasOwn(h.raw(), kind), false);
-  await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
-  h.setResponse(async () => { throw { code: "functions/unavailable" }; }); await h.editor.save();
-  assert.deepEqual(h.calls[0].input.expected, { map: contract.encodeExpected(undefined), version: 7 });
-  await h.editor.save(); assert.equal(h.calls.length, 1);
-  const result = insuranceContract.prepareEmployeeInsurance(h.raw(), insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input));
-  const applied = { ...h.raw(), [kind]: result.nextMap, insuranceOperationVersions: result.versions, uid: "actor" };
-  for (const wrong of [{ ...applied, uid: "other" }, { ...applied, insuranceOperationVersions: { ...result.versions, [kind]: 9 } }, { ...applied, [kind]: { status: result.nextMap.status } }]) {
-    h.setRaw(wrong); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
-  }
-  h.setRaw(applied); await h.editor.reload(); assert.equal(h.editor.opened.value, false); assert.equal(h.calls.length, 1);
+for (const kind of contract.INSURANCE_KINDS) test(`FGA04 ${kind} uses normal Employee update and keeps transition validation`, async () => {
+  const h = await harness("insurance", kind);
+  await h.editor.open("enroll");
+  h.editor.update(insuranceEnrollment);
+  assert.equal(h.raw()[kind].number, null);
+  await h.editor.save();
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.calls[0].api, "model.update");
+  assert.equal(h.calls[0].candidate[kind].status, "ENROLLED");
+  assert.equal(h.calls[0].candidate[kind].number, "SYNTHETIC");
 });
-test("EMP-INS present invalid maps remain unavailable and newly appearing map blocks old absent draft", async () => {
-  for (const value of [undefined, null, {}, [], { status: "NOT_ENROLLED" }]) {
-    const h = await harness("insurance"); h.raw().healthInsurance = value; await h.editor.open("enroll");
-    assert.equal(h.editor.draft.value, null); await h.editor.save(); assert.equal(h.calls.length, 0);
-  }
-  const h = await harness("insurance"); delete h.raw().healthInsurance; await h.editor.open("enroll");
-  h.editor.update(insuranceEnrollment); h.setRaw({ ...h.raw(), healthInsurance: new Insurance().toObject() }); h.notify();
-  assert.equal(h.editor.conflict.value, true); await h.editor.save(); assert.equal(h.calls.length, 0);
+test("FGA04 insurance keeps the draft on validation or save failure", async () => {
+  const invalid = await harness("insurance");
+  await invalid.editor.open("loss");
+  await invalid.editor.save();
+  assert.equal(invalid.calls.length, 0);
+  assert.equal(invalid.editor.opened.value, true);
+  const rejected = await harness("insurance");
+  await rejected.editor.open("enroll");
+  rejected.editor.update(insuranceEnrollment);
+  rejected.setResponse(async () => { throw new Error("write failed"); });
+  await rejected.editor.save();
+  assert.equal(rejected.calls.length, 1);
+  assert.equal(rejected.editor.opened.value, true);
+  assert.equal(rejected.editor.draft.value.number, "SYNTHETIC");
 });
-test("EMP04 insurance raw read failure never substitutes class metadata defaults", async () => {
-  const h = await harness("insurance"); h.setReadError(new Error("offline")); await h.editor.open("enroll");
-  assert.equal(h.editor.draft.value, null); await h.editor.save(); assert.equal(h.calls.length, 0);
-  h.setReadError(null); h.setRaw({ ...h.raw(), insuranceOperationVersions: null }); await h.editor.open("enroll"); assert.equal(h.editor.draft.value, null);
-  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 7, pensionInsurance: 2, employmentInsurance: 3 } }); await h.editor.open("enroll");
-  // The schema deliberately has no generation field; the request still uses the raw read.
-  assert.equal(h.editor.draft.value.insuranceOperationVersions, undefined); h.editor.update(insuranceEnrollment); await h.editor.save(); assert.equal(h.calls[0].input.expected.version, 7);
-});
-test("EMP04 insurance independent draft, cancel, role loss and other-insurance notifications", async () => {
-  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
-  assert.equal(h.raw().healthInsurance.number, null);
-  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 0, pensionInsurance: 5, employmentInsurance: 0 } }); h.notify(); assert.equal(h.editor.conflict.value, false);
-  h.editor.close(); assert.equal(h.calls.length, 0); assert.equal(h.raw().healthInsurance.number, null);
-  await h.editor.open("enroll"); h.auth.user.disabled = true; h.authWatch(); assert.equal(h.editor.draft.value, null); assert.equal(h.editor.opened.value, false);
-});
-test("EMP04 insurance ABA notification blocks old draft until a joint raw map/version reload", async () => {
-  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
-  h.setRaw({ ...h.raw(), insuranceOperationVersions: { healthInsurance: 2, pensionInsurance: 0, employmentInsurance: 0 } }); h.notify();
-  assert.equal(h.editor.conflict.value, true); h.editor.update({ number: "blocked" }); assert.equal(h.editor.draft.value.number, "SYNTHETIC"); await h.editor.save(); assert.equal(h.calls.length, 0);
-  await h.editor.reload(); assert.equal(h.editor.draft.value.number, null); h.editor.update(insuranceEnrollment); await h.editor.save(); assert.equal(h.calls[0].input.expected.version, 2);
-});
-test("EMP04 insurance unknown result proves actor/map/new generation together and never blindly retries", async () => {
-  const h = await harness("insurance"); await h.editor.open("enroll"); h.editor.update(insuranceEnrollment);
-  let reject; h.setResponse(() => new Promise((_, fail) => { reject = fail; })); const pending = h.editor.save(); await h.editor.save(); h.editor.update({ number: "blocked" }); assert.equal(h.editor.draft.value.number, "SYNTHETIC"); assert.equal(h.calls.length, 1);
-  reject({ code: "functions/unavailable" }); await pending; assert.equal(h.editor.uncertain.value, true); await h.editor.save(); assert.equal(h.calls.length, 1);
-  const parsed = insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input), result = insuranceContract.prepareEmployeeInsurance(h.raw(), parsed), applied = { ...h.raw(), healthInsurance: result.nextMap, insuranceOperationVersions: result.versions };
-  h.setRaw({ ...applied, uid: "other" }); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
-  h.setRaw({ ...applied, uid: "actor", insuranceOperationVersions: { ...result.versions, healthInsurance: 3 } }); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true);
-  h.setRaw({ ...applied, uid: "actor" }); await h.editor.reload(); assert.equal(h.editor.opened.value, false); assert.match(h.editor.message.value, /確認しました/);
-});
-test("EMP04 insurance unknown rollback reconciliation uses raw missing fields instead of class defaults", async () => {
-  const h = await harness("insurance"); h.setRaw({ ...h.raw(), healthInsurance: { ...new Insurance().toObject(), status: "EXEMPT", history: [{ status: "NOT_ENROLLED" }] } }); await h.editor.open("rollback");
-  h.setResponse(async () => { throw { code: "functions/unavailable" }; }); await h.editor.save(); assert.equal(h.editor.uncertain.value, true);
-  const result = insuranceContract.prepareEmployeeInsurance(h.raw(), insuranceContract.parseEmployeeInsuranceInput(h.calls[0].input));
-  assert.equal(Object.hasOwn(result.nextMap, "number"), false);
-  h.setRaw({ ...h.raw(), healthInsurance: result.nextMap, insuranceOperationVersions: result.versions, uid: "actor" }); await h.editor.reload(); assert.equal(h.editor.opened.value, false);
+test("FGA04 insurance cancel and actor loss never save", async () => {
+  const h = await harness("insurance");
+  await h.editor.open("enroll");
+  h.editor.update(insuranceEnrollment);
+  h.editor.close();
+  assert.equal(h.calls.length, 0);
+  await h.editor.open("enroll");
+  h.auth.user.disabled = true;
+  h.authWatch();
+  assert.equal(h.editor.opened.value, false);
+  assert.equal(h.editor.draft.value, null);
 });
 test("EMP04 insurance transition inputs preserve outer disabled and use actual AirItemInput attrs", async () => {
   const source = await readFile(new URL("../../air-vuetify-v3/src/AirItemInput.vue", import.meta.url), "utf8"), descriptor = parse(source).descriptor;
@@ -207,25 +196,15 @@ test("EMP04 insurance transition inputs preserve outer disabled and use actual A
     assert.match(source, new RegExp(`:disabled="componentAttrs\\['${field}'\\]\\.disabled \\|\\|`));
   }
 });
-test("EMP03 sorted qualification rows use original raw position and no live mutation", async () => {
+test("FGA04 qualifications use normal Employee update without mutating the displayed Employee", async () => {
   const h = await harness("certifications"); h.setRaw({ ...h.raw(), securityCertifications: [certificate("Z資格", "Z"), certificate("A資格", "A"), certificate("A資格", "B")] });
   await h.editor.open(); assert.equal(h.editor.rows.value[0].originalPosition, 1);
   h.editor.select("update", h.editor.rows.value[1].originalPosition); h.editor.update({ name: "変更資格" }); assert.equal(h.raw().securityCertifications[2].name, "A資格");
-  await h.editor.save(); assert.equal(h.calls[0].api, "updateEmployeeCertifications"); assert.equal(h.calls[0].input.position, 2); assert.deepEqual(h.calls[0].input.changes, { name: "変更資格" }); assert.equal(Object.hasOwn(h.calls[0].input.changes, "originalPosition"), false);
+  await h.editor.save(); assert.equal(h.calls[0].api, "model.update"); assert.equal(h.calls[0].candidate.securityCertifications[2].name, "変更資格");
 });
-test("EMP03 conflict reload resets qualification selection instead of reusing shifted position", async () => {
-  const h = await harness("certifications"); h.setRaw({ ...h.raw(), securityCertifications: [certificate("A資格", "A"), certificate("B資格", "B")] }); await h.editor.open(); h.editor.select("remove", 1);
-  h.setRaw({ ...h.raw(), securityCertifications: [certificate("挿入", "X"), ...h.raw().securityCertifications] }); h.notify(); assert.equal(h.editor.conflict.value, true); await h.editor.save(); assert.equal(h.calls.length, 0);
-  await h.editor.reload(); assert.equal(h.editor.action.value, "add"); assert.equal(h.editor.draft.value.name, null); assert.match(h.editor.message.value, /対象の資格を選択/);
-});
-test("EMP03 uncertain qualification response keeps the original expected array and draft", async () => {
-  const h = await harness("certifications"); h.setRaw({ ...h.raw(), securityCertifications: [certificate("A資格", "A"), certificate("B資格", "B")] }); await h.editor.open(); h.editor.select("remove", 1);
-  h.setResponse(async () => { throw { code: "functions/unavailable" }; }); await h.editor.save(); await h.editor.reload(); assert.equal(h.editor.uncertain.value, true); assert.equal(h.editor.draft.value.name, "B資格");
-  h.setRaw({ ...h.raw(), uid: "actor", securityCertifications: [h.raw().securityCertifications[0]] }); await h.editor.reload(); assert.equal(h.editor.opened.value, false); assert.match(h.editor.message.value, /保存内容を確認/);
-});
-test("EMP03 certification rejection and actor loss cannot clear or submit another row", async () => {
+test("FGA04 qualification save failure keeps the draft and actor loss closes it", async () => {
   const h = await harness("certifications"); h.setRaw({ ...h.raw(), securityCertifications: [certificate("A資格", "A")] }); await h.editor.open(); h.editor.select("update", 0); h.editor.update({ serialNumber: "draft" });
-  h.setResponse(async () => { throw { code: "functions/permission-denied" }; }); await h.editor.save(); assert.equal(h.editor.draft.value.serialNumber, "draft"); assert.equal(h.editor.uncertain.value, false);
+  h.setResponse(async () => { throw new Error("write failed"); }); await h.editor.save(); assert.equal(h.editor.draft.value.serialNumber, "draft");
   h.auth.user.disabled = true; h.authWatch(); assert.equal(h.editor.draft.value, null); assert.equal(h.editor.rows.value.length, 0);
 });
 test("EMP03 security reset transports all nine raw expectations and no unrelated field", async () => {
