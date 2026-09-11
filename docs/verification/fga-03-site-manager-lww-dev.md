@@ -53,14 +53,14 @@ domainとEmulatorの詳細は[Local検証記録](fga-03-site-manager-lww-local.m
 
 既存Chrome内に別権限accountの認証済みsessionはなかった。新規User作成、認証情報の推測、既存sessionのsign-outは行わず、別actorのDev実操作は未確認として残した。
 
-## 結果と残余範囲
+## 初回受入れ時点の結果と残余範囲
 
 - Manager経由のCustomer未登録CREATE、通常UPDATE、listener反映、専用終了・再有効化・archiveのDev結合は成功した。
 - Customer未登録Siteでも、専用Agreement操作による追加、保存直後の反映、page再読込後の再表示、Agreementを保持したままの専用archiveに成功した。
 - 合成Siteはactive collectionから除外され、archive recordが残る。通常画面にrestore導線はない。
 - GitHub Actions成功により固定commitのFirestore、Functions、Hosting反映を確認した。Prodは未反映である。
-- Agreementの今回release後Dev実操作は確認済みである。別actorのrole非依存writeは安全に利用できる既存sessionがなく未確認である。tenant拒否とapplicationを介さないrequestは、利用者が今回想定しない範囲としてbrowser smokeでは実行していない。Local自動検証と今回の未確認範囲を区別し、別actorのDev確認が残るためFGA-03全体の完了とは扱わない。
-- 利用者による見た目・操作感の主観受入れは未実施である。
+- Agreementのこの時点のrelease後Dev実操作は確認済みである。別actorのrole非依存writeは安全に利用できる既存sessionがなく、初回受入れ時点では未確認として残した。
+- 利用者による見た目・操作感の主観受入れは、この時点では未実施だった。
 
 ## 通常権限保存への切替release
 
@@ -89,4 +89,12 @@ Codex専用Dev tenantの既存認証sessionでHostingを再読込し、認証状
 - Siteの取極め保存は専用Callableを使わず、通常のSite更新と同じ経路でlast-write-winsとして動作する製品sourceをDevへ反映した。
 - 旧Callable `updateSiteAgreements`はDevから削除済みである。
 - Firestore Rules、Functions、Hostingの反映結果をrun単位で区別して確認した。
-- 今回は非変更smokeだけであり、利用者による見た目・操作感の主観受入れは別途必要である。
+- この反映直後は非変更smokeまでとし、利用者による見た目・操作感の主観受入れを別途行う状態だった。
+
+## 利用者受入れとFGA-03完了
+
+- 受入れ日: 2026-09-12
+- 利用者がDev環境で使用感と見た目を確認し、受入れOKと判断した。
+- 安全に利用できる別権限accountの既存sessionがないため、別actorのDev実操作は未実施のままである。role非依存の許可・拒否はLocal自動検証で確認済みであり、利用者はこの証拠を代替として追加の別actor Dev確認を必須にせずFGA-03を閉じることを承認した。
+- tenant拒否とapplicationを介さない直接requestは、利用者判断により今回想定しない範囲である。
+- 以上により、FGA-03 Site管理の実装、自動検証、Dev反映、技術smoke、利用者受入れを完了した。Prod、既存dataの一括検査・変換、別actorのDev実操作は実施していない。
