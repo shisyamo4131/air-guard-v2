@@ -22,7 +22,7 @@ const expectedPolicyKeys = [
   "ADMIN",
   "AUTHENTICATED",
   "BILLINGS_READ",
-  "CUSTOMERS_READ",
+  "CUSTOMERS_WRITE",
   "DEVELOPER",
   "EMPLOYEES_READ",
   "LIFECYCLE_HISTORY",
@@ -69,8 +69,8 @@ const expectedRoutePolicies = new Map([
   ["/billings/operations/[id]", PAGE_ACCESS_POLICIES.BILLINGS_READ],
   ["/billings/customers", PAGE_ACCESS_POLICIES.BILLINGS_READ],
   ["/billings/customers/[id]", PAGE_ACCESS_POLICIES.BILLINGS_READ],
-  ["/customers", PAGE_ACCESS_POLICIES.CUSTOMERS_READ],
-  ["/customers/[id]", PAGE_ACCESS_POLICIES.CUSTOMERS_READ],
+  ["/customers", PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE],
+  ["/customers/[id]", PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE],
   ["/sites", PAGE_ACCESS_POLICIES.SITES_READ],
   ["/sites/[id]", PAGE_ACCESS_POLICIES.SITES_READ],
   ["/sites/terminated", PAGE_ACCESS_POLICIES.SITES_READ],
@@ -352,7 +352,7 @@ test("general policies preserve authenticated, exclusive, admin, and permission 
     [PAGE_ACCESS_POLICIES.SITE_OPERATION_SCHEDULES_READ, "controller"],
     [PAGE_ACCESS_POLICIES.OPERATION_RESULTS_READ, "controller"],
     [PAGE_ACCESS_POLICIES.BILLINGS_READ, "accountant"],
-    [PAGE_ACCESS_POLICIES.CUSTOMERS_READ, "controller"],
+    [PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE, "manager"],
     [PAGE_ACCESS_POLICIES.SITES_READ, "controller"],
     [PAGE_ACCESS_POLICIES.EMPLOYEES_READ, "human-resource"],
     [PAGE_ACCESS_POLICIES.OUTSOURCERS_READ, "manager"],
@@ -398,6 +398,41 @@ test("general policies preserve authenticated, exclusive, admin, and permission 
       activeContext({ isSuperUser: true }),
     ),
     true,
+  );
+});
+
+test("Customer routes and navigation require customers:write UX permission", () => {
+  const managerContext = activeContext({ actorRoles: ["manager"] });
+  assert.equal(isPageAllowed("/customers", ["manager"], managerContext), true);
+  assert.equal(
+    isPageAllowed("/customers/customer-a", ["manager"], managerContext),
+    true,
+  );
+  assert.equal(
+    navigationValues(getNavigationItems(["manager"], managerContext)).includes(
+      "customers",
+    ),
+    true,
+  );
+
+  const controllerContext = activeContext({ actorRoles: ["controller"] });
+  assert.equal(
+    isPageAllowed("/customers", ["controller"], controllerContext),
+    false,
+  );
+  assert.equal(
+    isPageAllowed(
+      "/customers/customer-a",
+      ["controller"],
+      controllerContext,
+    ),
+    false,
+  );
+  assert.equal(
+    navigationValues(
+      getNavigationItems(["controller"], controllerContext),
+    ).includes("customers"),
+    false,
   );
 });
 

@@ -6,7 +6,6 @@
 import { useRoute, useRouter } from "vue-router";
 import { Customer, Site } from "@/schemas";
 import { useFetch } from "@/composables/fetch/useFetch";
-import { useCustomerActions } from "@/composables/application/customer/useCustomerActions";
 import {
   CUSTOMER_BASIC_FIELDS,
   CUSTOMER_PAYMENT_FIELDS,
@@ -28,7 +27,6 @@ const router = useRouter();
  *****************************************************************************/
 const { fetchSiteComposable } = useFetch("CustomerDetail", true);
 const { fetchSite } = fetchSiteComposable;
-const { canWrite } = useCustomerActions();
 
 /*****************************************************************************
  * DEFINE STATES
@@ -78,20 +76,19 @@ onUnmounted(unsubscribe);
           <!-- 基本情報 -->
           <v-col cols="12">
             <CustomerManager
-              :doc="customerInstance"
+              :model-value="customerInstance"
               :included-keys="CUSTOMER_BASIC_FIELDS"
-              title="取引先基本情報の編集"
+              label="取引先基本情報の編集"
             >
-              <template #activator="{ open }">
+              <template #activator="{ toUpdate }">
                 <CustomerActivatorBase
                   :item="customerInstance"
                   title="基本情報"
-                  :editable="canWrite"
-                  @click:edit="open"
+                  editable
+                  @click:edit="toUpdate"
                 >
                   <template #actions>
                     <CustomerArchiveDialog
-                      v-if="canWrite"
                       :customer="customerInstance"
                       @archived="handleArchived"
                     />
@@ -104,16 +101,16 @@ onUnmounted(unsubscribe);
           <!-- 請求・回収条件 -->
           <v-col cols="12">
             <CustomerManager
-              :doc="customerInstance"
+              :model-value="customerInstance"
               :included-keys="CUSTOMER_PAYMENT_FIELDS"
-              title="請求・回収条件の編集"
+              label="請求・回収条件の編集"
             >
-              <template #activator="{ open }">
+              <template #activator="{ toUpdate }">
                 <CustomerActivatorPayment
                   :item="customerInstance"
                   title="請求・回収条件"
-                  :editable="canWrite"
-                  @click:edit="open"
+                  editable
+                  @click:edit="toUpdate"
                 />
               </template>
             </CustomerManager>

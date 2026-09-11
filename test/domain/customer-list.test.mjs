@@ -52,7 +52,6 @@ test("Customer list repeats ACTIVE/TERMINATED/all using the real adapter listene
       const ref = value => ({value});
       const normalizeTokenText = globalThis.__customerList.normalizeTokenText;
       const useRouter = () => ({push: route => routes.push(route)});
-      const useCustomerActions = () => ({canWrite: {value: true}});
       const onMounted = callback => {lifecycle.mount = callback;};
       const onUnmounted = callback => {lifecycle.unmount = callback;};
       const watch = (_source, callback) => {lifecycle.change = callback;};
