@@ -24,7 +24,6 @@
  *****************************************************************************/
 import { onBeforeUnmount } from "vue";
 import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { Site } from "@/schemas";
@@ -62,7 +61,6 @@ const {
 const { fetchSiteComposable } = useFetch("SiteAutocomplete");
 const { pushSite } = fetchSiteComposable;
 const auth = useAuthStore();
-const { canWrite, isSaving } = useSiteActions();
 const confirmDialog = ref(false);
 const pendingValue = ref(null);
 const pendingSite = ref(null);
@@ -257,19 +255,18 @@ onBeforeUnmount(() => {
     @update:model-value="onSelection"
     @update:search="onSearch"
   >
-    <template v-if="creatable && canWrite" #append>
-      <SiteCreateDialog @created="onCreateHandler">
-        <template #activator="{ open }">
+    <template v-if="creatable" #append>
+      <SiteManager label="現場の新規登録" @created="onCreateHandler">
+        <template #activator="{ toCreate }">
           <v-btn
-            :disabled="isSaving"
             icon="mdi-plus"
             size="small"
             aria-label="現場を新規登録"
             @click.capture="rememberCreateCompany"
-            @click="open"
+            @click="toCreate"
           />
         </template>
-      </SiteCreateDialog>
+      </SiteManager>
     </template>
 
     <template #item="slotProps">

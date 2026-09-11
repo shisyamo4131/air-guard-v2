@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可はcommit `ec46497a`へ固定し、通常Site Rules簡素化はLocal検証済み・Dev受入れ前
+- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可はcommit `ec46497a`へ固定し、通常Site Rules簡素化とSite Manager／document LWWはLocal検証済み・Dev受入れ前
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
 - 最終確認日: 2026-09-11
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
@@ -26,7 +26,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 保存先は会社prefix配下の`Sites/{docId}`。`useAutonumber=false`で、通常作成はFirestore生成ID。
 - 必須: `name`、`nameKana`、`prefCode`、`city`、`address`、`securityType`、`status`。`customerId`未設定時は`customerName`が必要。
 - 任意: `customerId`、`customerName`、`code`、`hasAbbreviation`、`abbreviation`、`zipcode`、`building`、`siteNumber`、工期開始/終了日、`location`、`remarks`、`agreementsV2`。
-- `customer`はhiddenの埋込みCustomer。`customerId`を指定したcreate時とcustomerId変更時に同じ会社のCustomerをtransaction内で取得し、exact 6 field（`docId`、`updatedAt`、`code`、`name`、`abbreviation`、`cutoffDate`）だけを格納する。基本情報更新もlegacyの広い埋込み値をこのprojectionへ収束させるが、取極め更新では触れない。
+- `customer`はhiddenの埋込みCustomer。通常createとCustomer変更時は、Site schemaが`customerId`に該当する同じ会社のCustomerを取得して格納する。application固有の項目数制限は設けない。取極め更新では触れない。
 - statusのdefaultは`ACTIVE`。値は`ACTIVE`（稼働中）と`TERMINATED`（終了）。
 - 読み取り専用プロパティ: `fullAddress`、`prefecture`、`isTemporary`、`hasConstructionPeriod`、開始/終了日有無。ゲッター: `displayName`（略称使用時はabbreviation、その他はname）。
 - `getValidAgreement`はshiftType一致を日付降順にし、指定日以前の最新`agreementsV2`を返す。該当なしはnull。
@@ -35,13 +35,14 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## CRUD・validation
 
-- 現行作成dialogは単一VFormで、取引先名またはCustomer候補、郵便番号・住所、名称・略称、警備種別、現場番号、工期、備考等を入力し、submit前とwriter送信時にvalidationする。Customer未選択の仮登録も許す。
+- 現行作成dialogは`SiteManager`／`SitesManager`が共通Air Managerの3ステップ入力を使う。最初に取引先名を入力して候補を検索し、次に既存Customerを任意選択し、最後に郵便番号・住所、名称・略称、警備種別、現場番号、工期、備考等を入力する。候補がない場合や選択しない場合も、取引先名だけで仮登録できる。
 - create時にcustomerIdとcustomerNameが両方なければ失敗する。customerIdがあれば同じ会社prefixのCustomer存在確認とCustomer埋込みを行う。
 - customerId設定後は未設定へ戻せないが、別Customerへの変更は禁止されていない。変更時は埋込みcustomerを更新する。
-- 基本情報更新は専用CustomInputでcode、名称、略称、住所、警備種別、現場番号、工期、備考を編集する。取引先はcustomerIdだけを別editorで変更する。
+- 通常更新は`SiteManager`へlistener由来のSite instanceを直接渡し、基本情報用または取引先用CustomInputを表示する。編集中にlistenerで新しいdocumentが届いた場合も共通Managerのdraftをdocument全体で置き換え、競合拒否や再読込要求を設けない。保存時は通常field全体を後から保存した内容で置き換える。
 - 作成時から`hasAbbreviation/abbreviation/siteNumber/remarks`を入力でき、基本編集も同じfieldを扱う。
 - code/name等の一意性validationはない。
-- 汎用managerのcreate/update handlerは共通Site action経由で権限を再検査して実行する。Site managerのdelete handlerは拒否し、generic logical archiveへ到達させない。
+- 単数`SiteManager`は既存またはその場の新規Siteを所有し、複数形`SitesManager`は一覧配列と行選択を所有する。一覧のUPDATE選択は`beforeEdit`から詳細へ遷移して一覧dialogを開かない。create/update handlerはSite modelの標準`create`／`update`を直接呼び、schema hook、validation、会社prefix、metadata、transaction保存を標準adapterへ委ねる。delete handlerは拒否してgeneric logical archiveへ到達させない。
+- 通常updateはdraftのSite document全体を後保存優先で保存する。終了・再有効化・予定競合・取極め・archiveは通常編集とは別の専用入口と保存処理を維持する。
 
 ## 検索・表示
 
@@ -54,7 +55,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## 参照関係・変更影響
 
-- Customer所属は`customerId`と埋込み`customer`の二重保持。Customer master更新時は`onUpdateCustomer`が同じcustomerIdのSiteへexact 6-field projectionを伝播する。欠損・型不正・path ID不一致はSite query前にfail closedとする。一方、複数batchはatomicでなくevent version guardもないため、一時的な不一致、部分失敗、古いeventの後着を収束させる保証はない。一覧はlive Customerを別取得し、詳細の取引先表示と取極めcutoff-dateは埋込みprojectionを使うため表示・処理時点が混在する。
+- Customer所属は`customerId`と埋込み`customer`の二重保持。通常作成とCustomer変更時はSite schemaがCustomer snapshotを格納する。Customer master更新時の`onUpdateCustomer`は表示と取極め判定に必要な6項目を伝播する現行処理を維持するため、保存時点によって埋込みCustomerの項目集合は異なり得る。複数batchはatomicでなくevent version guardもないため、一時的な不一致、部分失敗、古いeventの後着を収束させる保証はない。一覧はlive Customerを別取得し、詳細の取引先表示と取極めcutoff-dateは埋込み値を使うため表示・処理時点が混在する。
 - 2026-09-04に、現行sourceとCONF-0047に合わせて別Customerへの変更を許可する仕様を正本へ反映した。一度設定したcustomerIdを未設定へ戻す操作は引き続き提供せず、変更時は同じ会社に存在するCustomerを必須にする。既存OperationResult・BillingのcustomerIdは履歴snapshotとして自動変更しない。
 - SiteOperationScheduleはsiteIdを保持し、作成/一部処理でSiteの存在と仮登録でないことを確認する。Site名等は直接snapshotしない。
 - OperationResultは作成時またはgroup key変更時にSiteからcustomerIdと適用取極めを取り込み、その後は保存済み値を使う。SiteのCustomer・取極め変更が既存実績へ自動反映される契約ではない。
@@ -85,9 +86,11 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 | component | 公開契約 | 確認済み挙動・境界 |
 | --- | --- | --- |
-| `Site/Manager` | Site `doc`とcreate/update handlerを受け、AirItemManagerへ委譲 | CREATEだけ3-step CustomInputを使う。UPDATEはactivatorがexposeするcustom inputまたはschema入力へ委譲する。write可否・送信直前再検査・single-flightは共通Site actionで強制し、deleteは拒否する。ACTIVEだけを通常編集でき、TERMINATEDは専用再有効化操作へ誘導する。 |
-| `Site/CustomInput` | `componentAttrs`、`step`、3 steps、`handleGoToNext`をexpose | legacy componentとして残るが、現行`/sites`の作成routeからは到達しない。現行作成は`Site/CreateDialog`の単一VFormとoperation writerを使う。 |
+| `Site/Manager` | `modelValue`、`beforeEdit`、`customInput`、created/updated eventを受け、AirItemManagerへ委譲 | CREATEは3ステップの作成用CustomInput、UPDATEは基本情報用またはcaller指定CustomInputを使う。listener由来instanceを直接受け、標準`create`／`update`で保存し、deleteを拒否する。ACTIVEだけを通常編集でき、TERMINATEDは専用再有効化操作へ誘導する。 |
+| `Sites/Manager` | Site配列、`beforeEdit`、`customInput`を受け、AirArrayManagerへ委譲 | 配列と行選択を所有し、一覧のUPDATEはcallerの`beforeEdit`で詳細遷移できる。CREATEは同じSite actionを使い、deleteを拒否する。 |
+| `Site/CustomInput` | `componentAttrs`、`item`、`disabled`、`updateProperties`、`step` | 共通Managerの作成VForm内で、取引先名検索、既存Customerの任意選択、現場情報入力を3ステップで表示する。Customer未登録でも仮登録できる。 |
 | `Site/CustomInput/Base` | 15 fieldのcomponent attrsを入力へ展開 | code/name/address/security/construction/remarks等を表示するが、validation・保存はAir manager/schemaへ委譲する。 |
+| `Site/CustomInput/Customer` | Customer fieldのcomponent attrsと編集中Site | 別Customerへの変更を許可し、編集開始時にCustomer設定済みなら未設定へ戻す操作を表示しない。 |
 | `Site/Autocomplete` | creatable/label/itemTitle/itemValue/returnObject、model update | status非限定でACTIVEを先に表示し、検索・lookupをlatest-onlyにする。TERMINATEDは確認し、取消・not-found・失敗では元の確定値を保持する。作成入口は通常Site writeのclient判定を満たすUserに表示する。 |
 | `Site/Select` | label/itemTitle/itemValueと全attrsをAirSelectへ透過 | 候補集合、status、permission、enum membershipはcaller責任である。 |
 | `Site/Activator/Base` | Site、title、edit event、Base CustomInput expose | callerが許可した時だけaccessible name付きedit buttonを表示し、JSTで両端・開始のみ・終了のみ・未設定の工期を区別する。 |
@@ -96,9 +99,9 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 | `Site/ListItem` | Vuetify item/rawまたはSiteを受ける | 新しいSite instanceへdeep watchでinitializeし、status/仮登録Chip、名称、Customer fallback、code、住所、JST工期を表示する。 |
 
 - `Site/Card`は`Sites/Iterator`からだけ到達し、そのIteratorのroute上の使用は現在comment outされている。公開componentとしての外部/dynamic到達性は未確認であり、deadとは断定しない。
-- 現行作成dialogのCustomer候補は`CustomerAutocomplete`を使い、旧`CustomersIterator`の3-step経路は到達しない。
+- 現行作成dialogは履歴で確認した`CustomersIterator`の3-step経路を共通Manager内で使用する。旧専用`Site/CreateDialog`は不要なため削除した。
 - Site専用郵便番号inputは既存の外部lookup utilityを再利用し、7桁入力時の最新応答だけを住所へ反映する。検索中に郵便番号または住所が変わった場合、失敗・0件、unmount時は既存入力を変更しない。外部utilityが通信失敗と0件をどちらもnullに畳むため、画面文言も原因を断定しない。
-- 現行operation editorは独立draft、同一field競合、single-flight、失敗後の入力保持を実装済みである。
+- 通常作成・更新は共通Air Managerのdraft、VForm、dialog、listener同期を使い、document単位last-write-winsとする。取極めだけは独立draft、同一field競合、失敗後の入力保持を維持する。全Site writeのsingle-flightも維持する。
 - SITE-08で予定・実績フォームの取極め定時読込みをprovider cache依存から明示company/Site IDの取得へ変更した。予定のpreset警備種別も取得完了後に反映する。既存Site read access guardを再利用し、tenant・uid・アクセス取消、unmount、Site/date/shift変更、取得前後の手入力、A→B→Aで古い応答を破棄する。操作別writerと保存shapeは変更しない。
 - 9 filesにはtenant、role、permission、actor、audit checkがない。表示・disabled・validationはRules/Functionsのauthorizationを代替しない。
 
@@ -108,7 +111,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - Customer master更新の伝播が部分失敗または順序逆転するとSite内の埋込みcustomerはstaleになり得て、一覧と詳細で参照するCustomer時点が異なる。
 - TERMINATED Siteは終了済みChip・取引先・code・住所を表示して候補に残し、選択またはpreset保存時の明示確認後に単発予定へ使用できる。確認は対象Schedule操作へ束縛し、成功・取消・unmountで破棄し、失敗後の明示再試行だけで維持する。通常編集は制限し、継続再開は専用操作を使う。削除入口は除去済みである。
 - restore APIが存在するlogical deleteなのに、UIは復元不能と断定する。
-- legacy `Site/CustomInput`の3-step componentは残るが現行作成routeから到達しない。現行作成dialogは略称・現場番号・備考、VForm validation、郵便番号反映を扱う。
+- 現行の共通Manager作成dialogは3-step componentで取引先未登録の仮登録、略称・現場番号・備考、stepごとのVForm validation、郵便番号反映を扱う。旧専用作成dialogは削除した。
 - 基本情報cardと一覧は、片側だけの工期を欠損側の`null`文字列なしで表示する。
 - deprecated `agreements` getter/setterと`getAgreement`が互換用に残る。
 
@@ -136,4 +139,4 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 - `Sites/DataTable`はcustomerIdがあるrowだけCustomerを非同期取得し、live、埋込み、仮登録、取得不能を異なるfallbackで表示する。工期はJST固定で両端・片端・未設定を区別し、actionはbutton semanticsと「現場詳細を表示」のaccessible nameを持つ。このwrapperはdashboardとCustomer詳細にも使われるが、click payloadと遷移契約は変更していない。
 - `Sites/Iterator`は`hideDefaultFooter`を宣言するが内部`AirDataIterator`へ渡さず、selection用の`modelValue`、`selectStrategy`、`showSelect`はJSDocだけで公開propになっていない。現在の`/sites` routeにあるIterator利用はcomment outされている。
-- `Sites/Manager`はAirArrayManagerへ作成を委譲するが、write可否・送信直前再検査・single-flightは共通Site actionで強制し、deleteは拒否する。status、step validation、stale array契約はFUT-0181、一覧prop不一致はFUT-0170へ統合する。
+- `Sites/Manager`はAirArrayManagerへ作成を委譲し、Site modelの標準`create`／`update`で通常保存する。deleteは拒否する。status、step validation、stale array契約はFUT-0181、一覧prop不一致はFUT-0170へ統合する。

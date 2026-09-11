@@ -147,7 +147,7 @@ test("Customer reference collections use explicit guarded matches outside the fa
   assert.doesNotMatch(siteCustomerHelpers, /request\.time/u);
   assert.match(
     siteCustomerHelpers,
-    /!changed\.hasAny\(\[\s*'status', 'agreementsV2', 'scheduleRevision', 'statusChangedAt',[\s\S]*?'statusChangedBy', 'statusChangeSource', 'statusChangeReason'\s*\]\)/u,
+    /!changed\.hasAny\(\[\s*'status', 'agreementsV2'\s*\]\)/u,
   );
 });
 

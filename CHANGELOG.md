@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- FGA-03で通常SiteのFirestore Rulesを簡素化し、通常fieldの必須・型・長さ・enum・timestamp・派生値と埋込みCustomer projectionの検査をSchemas packageと正規application writerへ集約した。Rulesには同一tenantの有効な本登録User、actor UID、maintenance、ACTIVE、Agreement・schedule・lifecycle、live Customer参照と仮登録相関、client delete、archive CUD・same-ID tombstoneを維持した。製品操作は正規application経路を前提とし、applicationを介さない直接requestへの追加対策とarchive形式変更は本phaseへ含めない。Local自動検証と独立security reviewは完了し、Dev・Prod、remote data、Functions、schema、migrationは変更していない。[Local検証記録](docs/verification/fga-03-site-rules-simplification-local.md)を参照。
+- FGA-03のSite通常CREATE・UPDATEを`SiteManager`／`SitesManager`からSite modelの標準`create`／`update`へ直接接続し、通常保存用の`useSiteActions`、専用writer、旧作成dialog、基本情報・Customer editorを撤去した。作成画面は履歴で確認した3ステップ入力へ戻し、取引先候補がない場合も取引先名だけで仮登録できる。通常更新はdocument単位last-write-winsとし、埋込みCustomerをapplication固有の6項目へ固定しない。終了・再有効化・archive・Agreementは専用操作を維持する。Rulesは通常更新で状態・取極めだけを保護し、既存dataの一括変換、Functions・schema・package、Dev・Prod、remote dataは変更していない。[Local検証記録](docs/verification/fga-03-site-manager-lww-local.md)を参照。
+
+- FGA-03で通常SiteのFirestore Rulesを簡素化し、通常fieldの必須・型・長さ・enum・timestamp・派生値の検査をSchemas packageと正規application経路へ集約した。Rulesには同一tenantの有効な本登録User、actor UID、maintenance、ACTIVE、Agreement・schedule・lifecycle、live Customer参照と仮登録相関、client delete、archive CUD・same-ID tombstoneを維持した。その後のManager簡素化で専用writerと埋込みCustomerのexact projection要件は撤去した。製品操作は正規application経路を前提とし、applicationを介さない直接requestへの追加対策とarchive形式変更は本phaseへ含めない。[Local検証記録](docs/verification/fga-03-site-rules-simplification-local.md)を参照。
 
 - FGA-03 Siteの最初のLocal checkpointとして、通常の作成、基本情報・Customer・Agreement変更、手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可する認可へ揃えた。Rulesではcanonical User ID、tenant、無効・仮User、schema・field・status・Customer・scheduleRevision境界を維持し、終了・再有効化とAgreementの専用Callable／transactionも維持する。archiveだけは従来のstrict actor、参照検査、監査、tombstoneを保つ。Local自動検証と独立security reviewを完了し、commit `ec46497a`へ固定した。Dev・Prod、remote data、Manager、document LWW、cache、schema簡素化は未実施である。[実装調査](docs/implementation/site-master.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 

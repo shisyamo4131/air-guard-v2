@@ -368,8 +368,7 @@ service cloud.firestore {
         && request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
         && !changed.hasAny([
-          'status', 'agreementsV2', 'scheduleRevision', 'statusChangedAt',
-          'statusChangedBy', 'statusChangeSource', 'statusChangeReason'
+          'status', 'agreementsV2'
         ])
         && hasValidSiteCustomerUpdate(companyId);
     }

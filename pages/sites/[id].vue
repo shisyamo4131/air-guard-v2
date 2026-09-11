@@ -8,7 +8,6 @@ import dayjs from "dayjs";
 import { useRoute } from "vue-router";
 import { useDateRange } from "@/composables/useDateRange";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import { Site, SiteEmployeeHistory, SiteOperationSchedule } from "@/schemas";
 import { getSitePresentationBadges } from "@/composables/domain/site/siteUiPresentation";
 import { useSiteUiReads } from "@/composables/dataLayers/site/useSiteUiReads";
@@ -16,6 +15,8 @@ import { useSiteDetailAccessGuard } from "@/composables/dataLayers/site/useSiteD
 import { createSiteDetailReadSession } from "@/composables/domain/site/siteDetailAccessSession";
 import { useFetchEmployee } from "@/composables/fetch/useFetchEmployee";
 import { useAuthStore } from "@/stores/useAuthStore";
+import SiteBaseInput from "@/components/Site/CustomInput/Base.vue";
+import SiteCustomerInput from "@/components/Site/CustomInput/Customer.vue";
 
 /*****************************************************************************
  * DEFINE OPTIONS
@@ -37,7 +38,6 @@ const detailError = ref("");
 const { clear: clearSiteReads, lookupSite } = useSiteUiReads();
 const auth = useAuthStore();
 const { canRead } = useSiteDetailAccessGuard();
-const { canWrite } = useSiteActions();
 const hasSite = computed(() => canRead.value && !!docId.value && doc.docId === docId.value);
 const isMissing = computed(() => detailResolved.value && !hasSite.value && !detailError.value);
 const isActive = computed(() => hasSite.value && doc.status === "ACTIVE");
@@ -231,7 +231,7 @@ function handleArchived() {
         <span v-if="doc.code">コード: {{ doc.code }}</span>
         <span>{{ doc.fullAddress || "住所未設定" }}</span>
         <v-spacer />
-        <SiteArchiveDialog v-if="canWrite" :site="doc" @archived="handleArchived" />
+        <SiteArchiveDialog :site="doc" @archived="handleArchived" />
         <SiteEditorTerminate v-if="isActive" :site="doc">
           <template #activator="{ open, disabled }">
             <v-btn color="warning" variant="outlined" :disabled="disabled" @click="open">現場を終了</v-btn>
@@ -250,30 +250,38 @@ function handleArchived() {
         <v-row>
           <!-- 基本情報 -->
           <v-col cols="12">
-            <SiteEditorBase :site="doc">
-              <template #activator="{ open }">
+            <SiteManager
+              :model-value="doc"
+              :custom-input="SiteBaseInput"
+              label="現場基本情報の編集"
+            >
+              <template #activator="{ toUpdate }">
                 <SiteActivatorBase
                   :item="doc"
                   title="基本情報"
-                  :editable="canWrite && isActive"
-                  @click:edit="open"
+                  :editable="isActive"
+                  @click:edit="toUpdate"
                 />
               </template>
-            </SiteEditorBase>
+            </SiteManager>
           </v-col>
 
           <!-- 取引先情報 -->
           <v-col cols="12">
-            <SiteEditorCustomer :site="doc">
-              <template #activator="{ open }">
+            <SiteManager
+              :model-value="doc"
+              :custom-input="SiteCustomerInput"
+              label="現場取引先情報の編集"
+            >
+              <template #activator="{ toUpdate }">
                 <SiteActivatorCustomer
                   :item="doc"
                   title="取引先情報"
-                  :editable="canWrite && isActive"
-                  @click:edit="open"
+                  :editable="isActive"
+                  @click:edit="toUpdate"
                 />
               </template>
-            </SiteEditorCustomer>
+            </SiteManager>
           </v-col>
         </v-row>
       </v-col>
@@ -313,7 +321,7 @@ function handleArchived() {
 
       <!-- 取極め情報 -->
       <v-col cols="12" md="4">
-        <SiteEditorAgreements v-if="canWrite && isActive" :site="doc" />
+        <SiteEditorAgreements v-if="isActive" :site="doc" />
         <MoleculesFloatingTitleCard v-else title="取極め" color="secondary">
           <AgreementsViewer :agreements="doc.agreementsV2" />
         </MoleculesFloatingTitleCard>

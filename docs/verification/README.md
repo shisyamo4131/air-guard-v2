@@ -27,6 +27,7 @@
 | FGA-02 Customer Manager簡素化のDev反映・受入れ | [FGA-02 Customer Manager簡素化 Dev反映・受入れ記録](fga-02-customer-manager-simplification-dev.md) |
 | FGA-03 Site通常認可のLocal実装・検証 | [FGA-03 Site通常認可 Local検証記録](fga-03-site-normal-auth-local.md) |
 | FGA-03 Site通常Rules簡素化のLocal検証 | [FGA-03 Site通常Rules簡素化 Local検証記録](fga-03-site-rules-simplification-local.md) |
+| FGA-03 Site Manager・document LWWのLocal検証 | [FGA-03 Site Manager・document LWW Local検証記録](fga-03-site-manager-lww-local.md) |
 | Customer archive safety CAS-04 local実装・画面受入れ | [Customer archive safety local acceptance verification receipt](customer-archive-local-acceptance.md) |
 | Site SITE-05/06 archive・取極め local実装 | [SITE-05/06 Codex専用local検証記録](site-05-06-local.md) |
 | Site SITE-07 一覧・検索・UI整合 local実装 | [SITE-07 Codex専用local検証記録](site-07-local.md) |

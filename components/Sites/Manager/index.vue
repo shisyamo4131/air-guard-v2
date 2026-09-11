@@ -1,97 +1,76 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Sites/Manager/index.vue
- * @description 現場情報管理コンポーネント
- * @extends AirArrayManager
- *
- * - 新規登録時は `@/components/Site/CustomInput/index.vue` を使用してステップ入力を行います。
- * - 更新時には `@/components/Site/CustomInput/Base.vue` を使用するため、基本情報の更新のみを行うことが可能です。
- *   `props.customInput` を使用することで、更新時のカスタム入力コンポーネントを差し替えることができます。
+ * @file components/Sites/Manager/index.vue
+ * @description AirArrayManagerを使った現場一覧・選択文脈の管理入口
  *****************************************************************************/
-import { useDefaults } from "vuetify";
 import { Site } from "@/schemas";
 import { useBaseManager } from "@/composables/useBaseManager";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
-import CustomInput from "@/components/Site/CustomInput/index.vue"; // 新規登録時のカスタム入力コンポーネント
-import CustomInputBase from "@/components/Site/CustomInput/Base.vue"; // 更新時のカスタム入力コンポーネント
+import CreateInput from "@/components/Site/CustomInput/index.vue";
+import BaseInput from "@/components/Site/CustomInput/Base.vue";
 
-/*****************************************************************************
- * DEFINE OPTIONS
- *****************************************************************************/
 defineOptions({ name: "SitesManager", inheritAttrs: false });
 
-/*****************************************************************************
- * DEFINE PROPS
- *****************************************************************************/
-const _props = defineProps({
+const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
-  customInput: { type: Object, default: () => CustomInputBase },
-  docs: { type: Array, default: () => [] },
+  customInput: { type: [Object, Function], default: null },
+  modelValue: { type: Array, default: () => [] },
 });
-const props = useDefaults(_props, "SitesManager");
 
-/*****************************************************************************
- * SETUP BASE MANAGER COMPOSABLES
- *****************************************************************************/
 const { attrs } = useBaseManager("SitesManager");
-const { canWrite, isSaving, rejectDirectDelete } = useSiteActions();
 
-function rejectLegacyWrite() {
-  throw new Error("現場の編集は操作別エディターから実行してください。");
+function rejectDirectDelete() {
+  throw new Error("現場は直接削除できません。");
 }
 
-/*****************************************************************************
- * METHODS
- *****************************************************************************/
-/**
- * AirArrayManager に適用すべきカスタム入力コンポーネントを返します。
- * @param {string} editMode - 編集モード
- * @returns {Object} - 適用すべきカスタム入力コンポーネント
- */
-function getApplicableCustomInput({ editMode }) {
-  if (editMode === "CREATE") return CustomInput;
-  return props.customInput;
+function resolveCustomInput({ editMode }) {
+  if (props.customInput) {
+    return typeof props.customInput === "function"
+      ? props.customInput({ editMode })
+      : props.customInput;
+  }
+  return editMode === "CREATE" ? CreateInput : BaseInput;
 }
 
 async function beforeEdit(editMode, item) {
-  if (editMode === "DELETE") return await rejectDirectDelete();
-  if (editMode === "CREATE" || editMode === "UPDATE") rejectLegacyWrite();
+  if (editMode === "DELETE") return rejectDirectDelete();
+  if (editMode === "UPDATE" && item.status !== Site.STATUS_ACTIVE) {
+    throw new Error("終了済み現場の通常情報は変更できません。");
+  }
   return await props.beforeEdit(editMode, item);
 }
 
-async function handleDelete() {
-  return await rejectDirectDelete();
+async function handleCreate(draft) {
+  return await draft.create();
 }
 
-function disableSubmit() {
-  return true;
-}
-
-function disableUpdate() {
-  return true;
+async function handleUpdate(draft) {
+  return await draft.update();
 }
 </script>
 
 <template>
   <air-array-manager
     v-bind="{ ...$attrs, ...attrs }"
-    :model-value="docs"
+    class="fill-height"
+    :model-value="props.modelValue"
     :schema="Site"
+    label="現場の新規登録"
+    :dialog-props="{
+      maxWidth: 480,
+      persistent: true,
+      scrollable: true,
+      'aria-label': '現場の新規登録',
+    }"
     :before-edit="beforeEdit"
-    :disable-submit="disableSubmit"
-    :disable-update="disableUpdate"
-    :handle-create="rejectLegacyWrite"
-    :handle-update="rejectLegacyWrite"
-    :handle-delete="handleDelete"
-    :custom-input="getApplicableCustomInput"
+    :custom-input="resolveCustomInput"
+    disable-delete
+    hide-delete-btn
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="rejectDirectDelete"
   >
-    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
-      <slot
-        :name="slotName"
-        v-bind="scope ?? {}"
-        :can-write="canWrite"
-        :is-saving="isSaving"
-      ></slot>
+    <template #table="tableAttrs">
+      <slot name="table" v-bind="tableAttrs" />
     </template>
   </air-array-manager>
 </template>

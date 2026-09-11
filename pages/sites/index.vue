@@ -6,7 +6,6 @@
 import { useRouter } from "vue-router";
 import { useFetch } from "@/composables/fetch/useFetch";
 import { getSiteLifecyclePresentation } from "@/composables/domain/site/siteLifecyclePresentation";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
 import { useActiveSiteLiveRead } from "@/composables/dataLayers/site/useSiteUiReads";
 
 /*****************************************************************************
@@ -28,12 +27,17 @@ const page = ref(1);
  *****************************************************************************/
 const router = useRouter();
 
+function handleBeforeEdit(editMode, item) {
+  if (editMode !== "UPDATE") return true;
+  router.push(`/sites/${item.docId}`);
+  return false;
+}
+
 /*****************************************************************************
  * SETUP USE FETCH COMPOSABLE
  *****************************************************************************/
 const { fetchCustomerComposable } = useFetch("SiteIndex", true);
 const { fetchCustomer, cachedCustomersArray } = fetchCustomerComposable;
-const { canWrite, isSaving } = useSiteActions();
 const {
   errorMessage: siteErrorMessage,
   isLoaded: sitesLoaded,
@@ -90,119 +94,105 @@ watch([search, selectedCustomerId, selectedSecurityType], () => {
 
 <template>
   <AppViewportContainer>
-    <v-card class="fill-height d-flex flex-column" width="100%">
-      <AppMasterListToolbar v-model:search="search" :search-delay="300">
-        <template #append>
-          <SiteCreateDialog
-            v-if="canWrite"
-            @created="(item) => router.push(`/sites/${item.docId}`)"
-          >
-            <template #activator="{ open }">
+    <SitesManager
+      :before-edit="handleBeforeEdit"
+      :model-value="displayedSites"
+      @create="(item) => router.push(`/sites/${item.docId}`)"
+    >
+      <template #table="{ items, toCreate, toUpdate }">
+        <v-card class="fill-height d-flex flex-column" width="100%">
+          <AppMasterListToolbar v-model:search="search" :search-delay="300">
+            <template #append>
               <v-btn
-                :disabled="isSaving"
                 icon="mdi-plus"
                 aria-label="現場を新規登録"
                 title="現場を新規登録"
-                @click="open"
+                @click="() => toCreate()"
               />
-            </template>
-          </SiteCreateDialog>
 
-          <!-- フィルター用コンポーネント -->
-          <v-dialog v-model="filterDialog" max-width="360px" persistent>
-            <template #activator="{ props: activatorProps }">
-              <v-btn
-                v-bind="activatorProps"
-                icon="mdi-filter"
-                aria-label="現場の絞り込み条件を設定"
-                title="現場の絞り込み条件を設定"
-              />
+              <!-- フィルター用コンポーネント -->
+              <v-dialog v-model="filterDialog" max-width="360px" persistent>
+                <template #activator="{ props: activatorProps }">
+                  <v-btn
+                    v-bind="activatorProps"
+                    icon="mdi-filter"
+                    aria-label="現場の絞り込み条件を設定"
+                    title="現場の絞り込み条件を設定"
+                  />
+                </template>
+                <v-confirm-edit
+                  v-model="confirmEditModel"
+                  @save="filterDialog = false"
+                  @cancel="filterDialog = false"
+                >
+                  <template #default="{ model: proxyModel, actions }">
+                    <v-card prepend-icon="mdi-filter">
+                      <template #title>
+                        <div class="text-h6">絞り込み条件設定</div>
+                      </template>
+                      <template #append>
+                        <v-btn
+                          icon="mdi-close"
+                          size="small"
+                          aria-label="絞り込み条件を閉じる"
+                          title="絞り込み条件を閉じる"
+                          @click="filterDialog = false"
+                        />
+                      </template>
+                      <template #text>
+                        <SecurityTypeSelect
+                          v-model="proxyModel.value.securityType"
+                          clearable
+                          variant="outlined"
+                          flat
+                        />
+                        <CustomerSelect
+                          v-model="proxyModel.value.customerId"
+                          clearable
+                          :items="cachedCustomersArray"
+                          variant="outlined"
+                          flat
+                          hide-details
+                        />
+                      </template>
+                      <v-divider />
+                      <template #actions>
+                        <component :is="actions" />
+                      </template>
+                    </v-card>
+                  </template>
+                </v-confirm-edit>
+              </v-dialog>
             </template>
-            <v-confirm-edit
-              v-model="confirmEditModel"
-              @save="filterDialog = false"
-              @cancel="filterDialog = false"
-            >
-              <template #default="{ model: proxyModel, actions }">
-                <v-card prepend-icon="mdi-filter">
-                  <template #title>
-                    <div class="text-h6">絞り込み条件設定</div>
-                  </template>
-                  <template #append>
-                    <v-btn
-                      icon="mdi-close"
-                      size="small"
-                      aria-label="絞り込み条件を閉じる"
-                      title="絞り込み条件を閉じる"
-                      @click="filterDialog = false"
-                    />
-                  </template>
-                  <template #text>
-                    <SecurityTypeSelect
-                      v-model="proxyModel.value.securityType"
-                      clearable
-                      variant="outlined"
-                      flat
-                    />
-                    <CustomerSelect
-                      v-model="proxyModel.value.customerId"
-                      clearable
-                      :items="cachedCustomersArray"
-                      variant="outlined"
-                      flat
-                      hide-details
-                    />
-                  </template>
-                  <v-divider />
-                  <template #actions>
-                    <component :is="actions" />
-                  </template>
-                </v-card>
-              </template>
-            </v-confirm-edit>
-          </v-dialog>
-        </template>
-      </AppMasterListToolbar>
-      <v-alert
-        v-if="siteErrorMessage"
-        type="error"
-        variant="tonal"
-        class="mx-4 mb-3"
-      >
-        {{ siteErrorMessage }}
-      </v-alert>
-      <v-alert
-        v-else-if="sitesLoaded && displayedSites.length === 0"
-        type="info"
-        variant="tonal"
-        class="mx-4 mb-3"
-      >
-        条件に一致する稼働中の現場はありません。
-      </v-alert>
-      <SitesDataTable
-        v-model:page="page"
-        class="flex-grow-1 overflow-hidden"
-        :items="displayedSites"
-        :sort-by="[]"
-        :items-per-page="20"
-        :loading="sitesLoading"
-        :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
-        @click:update="(item) => router.push(`/sites/${item.docId}`)"
-      />
-      <!-- 2026-06-30 コメントアウト -->
-      <!-- モバイル表示を兼ねて Iterator コンポーネントを利用していたが -->
-      <!-- ユーザビリティを考慮した UI の決定が難しいため、一旦 DataTable を使うこととする。 -->
-      <!-- <SitesIterator
-            class="flex-grow-1"
-            grid
-            :sites="slotProps.items"
-            :hide-default-footer="slotProps.hideDefaultFooter"
-            :items-per-page="slotProps.itemsPerPage"
-            show-create
-            show-detail
-            @click:create="() => slotProps.toCreate()"
-            @click:detail="(item) => router.push(`/sites/${item.docId}`)"
-          /> -->
-    </v-card>
+          </AppMasterListToolbar>
+          <v-alert
+            v-if="siteErrorMessage"
+            type="error"
+            variant="tonal"
+            class="mx-4 mb-3"
+          >
+            {{ siteErrorMessage }}
+          </v-alert>
+          <v-alert
+            v-else-if="sitesLoaded && displayedSites.length === 0"
+            type="info"
+            variant="tonal"
+            class="mx-4 mb-3"
+          >
+            条件に一致する稼働中の現場はありません。
+          </v-alert>
+          <SitesDataTable
+            v-model:page="page"
+            class="flex-grow-1 overflow-hidden"
+            :items="items"
+            :sort-by="[]"
+            :items-per-page="20"
+            :loading="sitesLoading"
+            edit-icon="mdi-pencil"
+            @click:update="toUpdate"
+          />
+        </v-card>
+      </template>
+    </SitesManager>
   </AppViewportContainer>
 </template>

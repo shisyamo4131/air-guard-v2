@@ -17,7 +17,8 @@ test("Site archive UI reaches only the dedicated Callable and exposes no generic
   ];
   const [detail, dialog, ...rest] = await Promise.all(paths.map(read));
   const combined = [detail, dialog, ...rest].join("\n");
-  assert.match(detail, /<SiteArchiveDialog\s+v-if="canWrite"\s+:site="doc"\s+@archived="handleArchived"/u);
+  assert.match(detail, /<SiteArchiveDialog\s+:site="doc"\s+@archived="handleArchived"/u);
+  assert.match(dialog, /<div v-if="canArchive">/u);
   assert.match(detail, /function handleArchived\(\)\s*\{[\s\S]*?navigateTo\("\/sites"\)/u);
   assert.match(dialog, /useSiteArchiveAction\(\)/u);
   assert.match(combined, /httpsCallable\(\$functions, name\)\(input\)/u);

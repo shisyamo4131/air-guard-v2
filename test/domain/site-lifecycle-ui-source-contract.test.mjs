@@ -11,8 +11,8 @@ test("Site detail identifies lifecycle state and keeps normal editors read-only 
   assert.match(source, /\{\{ lifecycle\.label \}\}/u);
   assert.match(source, /自動終了予定 \{\{ lifecycle\.automaticTerminationDate \}\}/u);
   assert.match(source, /doc\.displayName \|\| doc\.name \|\| doc\.docId/u);
-  assert.match(source, /:editable="canWrite && isActive"/u);
-  assert.match(source, /<SiteEditorAgreements v-if="canWrite && isActive"/u);
+  assert.match(source, /:editable="isActive"/u);
+  assert.match(source, /<SiteEditorAgreements v-if="isActive"/u);
   assert.match(source, /<AgreementsViewer :agreements="doc\.agreementsV2"/u);
   assert.match(source, /<SiteEditorTerminate v-if="isActive"/u);
   assert.match(source, /<SiteEditorReactivate v-else/u);
@@ -59,7 +59,7 @@ test("Terminated Site selection is visibly identified and requires explicit keep
   assert.match(listItem, /internalItem\.code \|\| "コード未設定"/u);
 
   const terminatedPage = await read("pages/sites/terminated.vue");
-  assert.match(terminatedPage, /:edit-icon="canWrite \? 'mdi-pencil' : 'mdi-eye'"/u);
+  assert.match(terminatedPage, /edit-icon="mdi-pencil"/u);
   assert.match(terminatedPage, /router\.push\(`\/sites\/\$\{item\.docId\}`\)/u);
 });
 

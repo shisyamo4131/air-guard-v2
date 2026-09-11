@@ -1,95 +1,80 @@
 <script setup>
 /*****************************************************************************
- * @file ./components/Site/Manager/index.vue
- * @description 現場管理コンポーネント
- * @extends AirItemManager
+ * @file components/Site/Manager/index.vue
+ * @description AirItemManagerを使った現場の通常作成・更新コンポーネント
  *****************************************************************************/
-import { useBaseManager } from "@/composables/useBaseManager";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
-import { useDefaults } from "vuetify";
-import CustomInput from "@/components/Site/CustomInput/index.vue";
 import { Site } from "@/schemas";
+import { useBaseManager } from "@/composables/useBaseManager";
+import CreateInput from "@/components/Site/CustomInput/index.vue";
+import BaseInput from "@/components/Site/CustomInput/Base.vue";
 
-/*****************************************************************************
- * DEFINE PROPS
- *****************************************************************************/
-const _props = defineProps({
+defineOptions({ inheritAttrs: false });
+
+const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
-  doc: {
+  customInput: { type: [Object, Function], default: null },
+  modelValue: {
     type: Object,
-    required: true,
+    default: () => new Site(),
     validator: (value) => value instanceof Site,
   },
 });
-const props = useDefaults(_props, "SiteManager");
+const emit = defineEmits(["created", "updated"]);
 
-/*****************************************************************************
- * SETUP STORES & COMPOSABLES
- *****************************************************************************/
 const { attrs } = useBaseManager("SiteManager");
-const { canWrite, isSaving, rejectDirectDelete } = useSiteActions();
 
-function rejectLegacyWrite() {
-  throw new Error("現場の編集は操作別エディターから実行してください。");
+function rejectDirectDelete() {
+  throw new Error("現場は直接削除できません。");
+}
+
+function resolveCustomInput({ editMode }) {
+  if (props.customInput) {
+    return typeof props.customInput === "function"
+      ? props.customInput({ editMode })
+      : props.customInput;
+  }
+  return editMode === "CREATE" ? CreateInput : BaseInput;
 }
 
 async function beforeEdit(editMode, item) {
-  if (editMode === "DELETE") return await rejectDirectDelete();
-  if (editMode === "CREATE" || editMode === "UPDATE") rejectLegacyWrite();
+  if (editMode === "DELETE") return rejectDirectDelete();
+  if (editMode === "UPDATE" && item.status !== Site.STATUS_ACTIVE) {
+    throw new Error("終了済み現場の通常情報は変更できません。");
+  }
   return await props.beforeEdit(editMode, item);
 }
 
-async function handleDelete() {
-  return await rejectDirectDelete();
+async function handleCreate(draft) {
+  return await draft.create();
 }
 
-function disableSubmit() {
-  return true;
-}
-
-function disableUpdate() {
-  return true;
+async function handleUpdate(draft) {
+  return await draft.update();
 }
 </script>
 
 <template>
   <air-item-manager
-    v-bind="attrs"
-    :model-value="props.doc"
+    v-bind="{ ...$attrs, ...attrs }"
+    :model-value="props.modelValue"
+    :dialog-props="{
+      maxWidth: 480,
+      persistent: true,
+      scrollable: true,
+      'aria-label': $attrs.label,
+    }"
     :before-edit="beforeEdit"
-    :disable-submit="disableSubmit"
-    :disable-update="disableUpdate"
-    :handle-create="rejectLegacyWrite"
-    :handle-update="rejectLegacyWrite"
-    :handle-delete="handleDelete"
-    :custom-input="
-      ({ editMode }) => {
-        if (editMode === 'CREATE') return CustomInput;
-        return null;
-      }
-    "
+    :custom-input="resolveCustomInput"
+    disable-delete
+    hide-delete-btn
+    :handle-create="handleCreate"
+    :handle-update="handleUpdate"
+    :handle-delete="rejectDirectDelete"
+    @create="emit('created', $event)"
+    @update="emit('updated', $event)"
   >
     <template #activator="slotProps">
-      <slot
-        name="activator"
-        v-bind="slotProps"
-        :can-write="canWrite"
-        :is-saving="isSaving"
-      />
-    </template>
-
-    <template #[`input.customerId`]="{ attrs }">
-      <CustomerAutocomplete v-bind="attrs" creatable />
-    </template>
-
-    <!-- スロットをパススルー -->
-    <template v-for="(slotFn, slotName) in $slots" #[slotName]="scope">
-      <slot
-        :name="slotName"
-        v-bind="scope ?? {}"
-        :can-write="canWrite"
-        :is-saving="isSaving"
-      />
+      <slot name="activator" v-bind="slotProps" />
     </template>
   </air-item-manager>
 </template>

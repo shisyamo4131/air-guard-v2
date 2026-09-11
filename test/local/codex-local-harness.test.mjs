@@ -3771,7 +3771,7 @@ test("Site Rules allow ordinary create schema drift while preserving protected i
   ));
 });
 
-test("Site Rules allow ordinary update schema drift and block protected-field bypasses", async () => {
+test("Site Rules allow ordinary update schema drift and protect only normal-operation boundaries", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-update-contract-manager";
   const docId = "site-rules-update-contract-site";
@@ -3806,16 +3806,20 @@ test("Site Rules allow ordinary update schema drift and block protected-field by
   for (const patch of [
     { status: "TERMINATED", uid, updatedAt: serverTimestamp() },
     { remarks: "operation crossover", agreementsV2: [{ synthetic: true }], uid, updatedAt: serverTimestamp() },
+    { docId: "another-site", remarks: "doc id attack", uid, updatedAt: serverTimestamp() },
+    { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
+  ]) {
+    await assertFails(updateDoc(reference, patch));
+  }
+  for (const patch of [
     { scheduleRevision: 99, uid, updatedAt: serverTimestamp() },
     { remarks: "mixed schedule revision", scheduleRevision: 1, uid, updatedAt: serverTimestamp() },
     { statusChangedAt: serverTimestamp(), uid, updatedAt: serverTimestamp() },
     { statusChangedBy: uid, uid, updatedAt: serverTimestamp() },
     { statusChangeSource: "MANUAL", uid, updatedAt: serverTimestamp() },
-    { statusChangeReason: "forged", uid, updatedAt: serverTimestamp() },
-    { docId: "another-site", remarks: "doc id attack", uid, updatedAt: serverTimestamp() },
-    { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
+    { statusChangeReason: "ordinary document field", uid, updatedAt: serverTimestamp() },
   ]) {
-    await assertFails(updateDoc(reference, patch));
+    await assertSucceeds(updateDoc(reference, patch));
   }
 
   const replacement = siteRulesData({
@@ -3853,13 +3857,20 @@ test("Site Rules allow ordinary update schema drift and block protected-field by
         siteRulesData({ docId, uid, ...protectedValues }),
       );
     });
-    await assertFails(updateDoc(reference, {
-      [field]: deleteField(),
-      uid,
-      updatedAt: serverTimestamp(),
-    }));
+    const deletion = updateDoc(reference, {
+      [field]: deleteField(), uid, updatedAt: serverTimestamp(),
+    });
+    if (["status", "agreementsV2"].includes(field)) {
+      await assertFails(deletion);
+    } else {
+      await assertSucceeds(deletion);
+    }
     const after = (await assertSucceeds(getDoc(reference))).data();
-    assert.equal(Object.hasOwn(after, field), true, `${field} must remain present`);
+    assert.equal(
+      Object.hasOwn(after, field),
+      ["status", "agreementsV2"].includes(field),
+      `${field} protected presence`,
+    );
   }
 });
 

@@ -10,6 +10,9 @@ import { useDefaults } from "vuetify";
  *****************************************************************************/
 const _props = defineProps({
   componentAttrs: { type: Object, default: () => ({}) },
+  disabled: { type: Boolean, default: false },
+  item: { type: Object, required: true },
+  updateProperties: { type: Function, required: true },
 });
 const props = useDefaults(_props, "SiteCustomInputBase");
 </script>
@@ -32,7 +35,12 @@ const props = useDefaults(_props, "SiteCustomInputBase");
       <air-text-field v-bind="props.componentAttrs['nameKana']" />
     </v-col>
     <v-col cols="12">
-      <air-text-field v-bind="props.componentAttrs['zipcode']" />
+      <SitePostalCodeInput
+        v-bind="props.componentAttrs['zipcode']"
+        :item="props.item"
+        :update-properties="props.updateProperties"
+        :disabled="props.disabled"
+      />
     </v-col>
     <v-col cols="12">
       <air-select v-bind="props.componentAttrs['prefCode']" />

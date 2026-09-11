@@ -8,7 +8,6 @@ import {
   PAGE_SIZE,
   useSiteUiReads,
 } from "@/composables/dataLayers/site/useSiteUiReads";
-import { useSiteActions } from "@/composables/application/site/useSiteActions";
 
 /*****************************************************************************
  * DEFINE STATES
@@ -23,7 +22,6 @@ const docs = ref([]);
 const router = useRouter();
 const { errorMessage, isEmpty, isLoading, searchTerminatedSites } =
   useSiteUiReads();
-const { canWrite } = useSiteActions();
 
 watch(
   search,
@@ -66,7 +64,7 @@ watch(
         :sort-by="[]"
         :items-per-page="PAGE_SIZE"
         :loading="isLoading"
-        :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+        edit-icon="mdi-pencil"
         @click:update="(item) => router.push(`/sites/${item.docId}`)"
       />
     </v-card>
