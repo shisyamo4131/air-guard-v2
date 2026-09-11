@@ -124,29 +124,31 @@ test("Customer reference collections use explicit guarded matches outside the fa
   assert.match(siteBody, /isValidSiteUpdate\(companyId, docId\)/u);
   assert.match(
     source,
-    /function isValidSiteCreate\(companyId, docId\)[\s\S]*?hasValidSiteCustomerCreate\(companyId, data\)/u,
+    /function isValidSiteCreate\(companyId, docId\)[\s\S]*?data\.docId == docId[\s\S]*?data\.uid == request\.auth\.uid[\s\S]*?data\.status == 'ACTIVE'[\s\S]*?data\.agreementsV2\.size\(\) == 0[\s\S]*?hasValidSiteCustomerCreate\(companyId, data\)/u,
   );
   assert.match(
     source,
-    /function isValidSiteUpdate\(companyId, docId\)[\s\S]*?hasValidSiteCustomerUpdate\(companyId\)/u,
+    /function isValidSiteUpdate\(companyId, docId\)[\s\S]*?resource\.data\.status == 'ACTIVE'[\s\S]*?request\.resource\.data\.status == 'ACTIVE'[\s\S]*?request\.resource\.data\.docId == docId[\s\S]*?request\.resource\.data\.uid == request\.auth\.uid[\s\S]*?hasValidSiteCustomerUpdate\(companyId\)/u,
   );
   assert.match(
     source,
-    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?hasCurrentSiteCustomerSnapshot\(\s*data\.customer,\s*get\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers\/\$\(data\.customerId\)\)\.data\s*\)/u,
+    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?customerExists\(companyId, data\.customerId\)/u,
   );
   assert.match(
     source,
-    /function hasValidSiteCustomerUpdate\(companyId\)[\s\S]*?hasCurrentSiteCustomerSnapshot\(\s*request\.resource\.data\.customer,\s*get\(\/databases\/\$\(database\)\/documents\/Companies\/\$\(companyId\)\/Customers\/\$\(request\.resource\.data\.customerId\)\)\.data\s*\)/u,
-  );
-  assert.match(
-    source,
-    /function hasCurrentSiteCustomerSnapshot\(snapshot, customer\) \{\s*return snapshot is map\s*&& snapshot\.keys\(\)\.hasOnly\(\[\s*'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'\s*\]\)\s*&& snapshot\.docId == customer\.docId\s*&& snapshot\.updatedAt == customer\.updatedAt\s*&& snapshot\.code == customer\.code\s*&& snapshot\.name == customer\.name\s*&& snapshot\.abbreviation == customer\.abbreviation\s*&& snapshot\.cutoffDate == customer\.cutoffDate;\s*\}/u,
+    /function hasValidSiteCustomerUpdate\(companyId\)[\s\S]*?customerExists\(companyId, request\.resource\.data\.customerId\)/u,
   );
   const siteCustomerHelpers = source.match(
-    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function isValidSiteUpdateMetadata/u,
+    /function hasValidSiteCustomerCreate\(companyId, data\)[\s\S]*?function siteScheduleRevision/u,
   )?.[0];
   assert.ok(siteCustomerHelpers);
-  assert.doesNotMatch(siteCustomerHelpers, /customerExists\(/u);
+  assert.doesNotMatch(siteCustomerHelpers, /hasCurrentSiteCustomerSnapshot/u);
+  assert.doesNotMatch(siteCustomerHelpers, /keys\(\)\.hasOnly/u);
+  assert.doesNotMatch(siteCustomerHelpers, /request\.time/u);
+  assert.match(
+    siteCustomerHelpers,
+    /!changed\.hasAny\(\[\s*'status', 'agreementsV2', 'scheduleRevision', 'statusChangedAt',[\s\S]*?'statusChangedBy', 'statusChangeSource', 'statusChangeReason'\s*\]\)/u,
+  );
 });
 
 test("Customers_archive is recursively denied before the Companies fallback", async () => {

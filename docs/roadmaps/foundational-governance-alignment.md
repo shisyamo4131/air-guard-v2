@@ -56,6 +56,7 @@
 | Checkpoint | 状態 | 範囲・完了条件 |
 |---|---|---|
 | FGA-03-SITE-NORMAL-AUTH-01 | Local completed | Siteの通常作成・基本情報・Customer・Agreement・手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可するclient／Rules／Callable認可へ整合した。canonical User ID、tenant、無効・仮Userの拒否、archive strict actor、専用transaction、client delete・archive CUD拒否を維持し、domain 1,563件、Local Emulator 182件、文書validator、独立security reviewを完了してcommit `ec46497adc70174db7b36a025fe7f477100f5568`へ固定した。[Local検証記録](../verification/fga-03-site-normal-auth-local.md)を参照。Dev反映・利用者受入れ前のためFGA-03進捗は未加点 |
+| FGA-03-SITE-RULES-SIMPLIFY-04 | Local verified | 通常Siteのfield・型・長さ・enum・通常timestamp・派生値・埋込みCustomer projection検査をRulesから正規application writerへ集約した。tenant・canonical User・actor UID・maintenance、ACTIVE、Agreement・schedule・lifecycle、live Customer、client delete、archive CUD・tombstoneは維持し、domain、Local Emulator、文書validator、独立security reviewを完了した。[Local検証記録](../verification/fga-03-site-rules-simplification-local.md)を参照。Dev反映・利用者受入れ前のためFGA-03進捗は未加点 |
 
 ## 完了条件
 

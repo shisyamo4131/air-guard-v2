@@ -3697,7 +3697,7 @@ test("Site Rules reject malformed, inactive, and cross-tenant writers", async ()
   }));
 });
 
-test("Site Rules enforce exact create fields, shared validation, metadata, and derived values", async () => {
+test("Site Rules allow ordinary create schema drift while preserving protected invariants", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-create-contract-admin";
   await seedSiteRulesActor({
@@ -3708,20 +3708,49 @@ test("Site Rules enforce exact create fields, shared validation, metadata, and d
     roles: [],
   });
   const firestore = authenticatedFirestore(uid, { isSuperUser: false });
-  const invalidDocuments = [
+  const allowedDocuments = [
     ["unknown-field", { unexpected: true }],
     ["wrong-type", { name: 123 }],
     ["overlong-name", { name: "現".repeat(41), displayName: "現".repeat(41) }],
+    ["unknown-enum", { securityType: "SYNTHETIC_UNKNOWN" }],
+    ["client-timestamps", {
+      createdAt: new Date("2020-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2020-01-02T00:00:00.000Z"),
+    }],
+    ["forged-derived", { displayName: "forged", fullAddress: "forged" }],
+  ];
+  for (const [label, override] of allowedDocuments) {
+    const docId = `site-rules-create-relaxed-${label}`;
+    await assertSucceeds(setDoc(
+      doc(firestore, "Companies", companyId, "Sites", docId),
+      siteRulesData({ docId, uid, ...override }),
+    ));
+  }
+
+  const missingOrdinaryId = "site-rules-create-relaxed-missing-name";
+  const missingOrdinary = siteRulesData({ docId: missingOrdinaryId, uid });
+  delete missingOrdinary.name;
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", missingOrdinaryId),
+    missingOrdinary,
+  ));
+
+  const deniedDocuments = [
     ["spoofed-uid", { uid: "another-user" }],
-    ["spoofed-created-at", { createdAt: new Date("2020-01-01T00:00:00.000Z") }],
+    ["wrong-doc-id", { docId: "another-site" }],
     ["terminated-create", { status: "TERMINATED" }],
     ["nonempty-agreements", { agreementsV2: [{ synthetic: true }] }],
-    ["derived-display-name", { displayName: "forged" }],
-    ["derived-address", { fullAddress: "forged" }],
+    ["schedule-revision", { scheduleRevision: 0 }],
+    ["lifecycle-metadata", {
+      statusChangedAt: new Date("2020-01-01T00:00:00.000Z"),
+      statusChangedBy: uid,
+      statusChangeSource: "MANUAL",
+      statusChangeReason: "forged",
+    }],
     ["derived-temporary", { isTemporary: false }],
     ["missing-customer", { customerId: "missing-customer", customer: null, isTemporary: false }],
   ];
-  for (const [label, override] of invalidDocuments) {
+  for (const [label, override] of deniedDocuments) {
     const docId = `site-rules-create-contract-${label}`;
     await assertFails(setDoc(
       doc(firestore, "Companies", companyId, "Sites", docId),
@@ -3729,27 +3758,20 @@ test("Site Rules enforce exact create fields, shared validation, metadata, and d
     ));
   }
 
-  const missingRequiredId = "site-rules-create-contract-missing-name";
-  const missingRequired = siteRulesData({ docId: missingRequiredId, uid });
-  delete missingRequired.name;
+  const tombstonedId = "site-rules-create-contract-tombstoned";
+  await testEnvironment.withSecurityRulesDisabled(async (context) => {
+    await setDoc(
+      doc(context.firestore(), "Companies", companyId, "Sites_archive", tombstonedId),
+      { malformed: true },
+    );
+  });
   await assertFails(setDoc(
-    doc(firestore, "Companies", companyId, "Sites", missingRequiredId),
-    missingRequired,
-  ));
-
-  const validId = "site-rules-create-contract-valid";
-  await assertSucceeds(setDoc(
-    doc(firestore, "Companies", companyId, "Sites", validId),
-    siteRulesData({
-      docId: validId,
-      uid,
-      zipcode: "1".repeat(200),
-      remarks: "合".repeat(200),
-    }),
+    doc(firestore, "Companies", companyId, "Sites", tombstonedId),
+    siteRulesData({ docId: tombstonedId, uid }),
   ));
 });
 
-test("Site Rules isolate update operations and reject metadata or derived-field bypasses", async () => {
+test("Site Rules allow ordinary update schema drift and block protected-field bypasses", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-update-contract-manager";
   const docId = "site-rules-update-contract-site";
@@ -3764,54 +3786,34 @@ test("Site Rules isolate update operations and reject metadata or derived-field 
   const reference = doc(firestore, "Companies", companyId, "Sites", docId);
   await assertSucceeds(setDoc(reference, siteRulesData({ docId, uid })));
 
-  await assertSucceeds(updateDoc(reference, {
-    name: "更新後現場",
-    displayName: "更新後現場",
-    tokenMap: { 更: true, 更新: true },
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
-  await assertSucceeds(updateDoc(reference, {
-    hasAbbreviation: true,
-    abbreviation: "合成略称",
-    displayName: "合成略称",
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
-  await assertSucceeds(updateDoc(reference, {
-    name: "略称表示中の名称変更",
-    tokenMap: { 略: true, 名称: true },
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
-  await assertSucceeds(updateDoc(reference, {
-    city: "港区",
-    location: null,
-    geopoint: null,
-    fullAddress: "東京都港区千代田1-1",
-    prefecture: "東京都",
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
-  await assertSucceeds(updateDoc(reference, {
-    constructionPeriodStartAt: new Date("2026-04-01T00:00:00.000Z"),
-    hasConstructionPeriod: true,
-    hasConstructionPeriodStartAt: true,
-    hasConstructionPeriodEndAt: false,
-    uid,
-    updatedAt: serverTimestamp(),
-  }));
   for (const patch of [
-    { name: "派生未更新現場", displayName: "派生未更新現場", uid, updatedAt: serverTimestamp() },
-    { tokenMap: { forged: true }, uid, updatedAt: serverTimestamp() },
+    { name: 123, uid, updatedAt: serverTimestamp() },
+    { name: "現".repeat(2000), uid, updatedAt: serverTimestamp() },
+    { securityType: "SYNTHETIC_UNKNOWN", uid, updatedAt: serverTimestamp() },
+    { tokenMap: { forged: "not-a-boolean" }, uid, updatedAt: serverTimestamp() },
     { fullAddress: "forged", uid, updatedAt: serverTimestamp() },
+    { unexpected: { nested: true }, uid, updatedAt: serverTimestamp() },
+    { createdAt: new Date("2020-01-01T00:00:00.000Z"), uid, updatedAt: new Date("2020-01-02T00:00:00.000Z") },
+  ]) {
+    await assertSucceeds(updateDoc(reference, patch));
+  }
+  await assertSucceeds(updateDoc(reference, {
+    remarks: deleteField(),
+    uid,
+    updatedAt: serverTimestamp(),
+  }));
+
+  for (const patch of [
     { status: "TERMINATED", uid, updatedAt: serverTimestamp() },
     { remarks: "operation crossover", agreementsV2: [{ synthetic: true }], uid, updatedAt: serverTimestamp() },
-    { unexpected: true, uid, updatedAt: serverTimestamp() },
+    { scheduleRevision: 99, uid, updatedAt: serverTimestamp() },
+    { remarks: "mixed schedule revision", scheduleRevision: 1, uid, updatedAt: serverTimestamp() },
+    { statusChangedAt: serverTimestamp(), uid, updatedAt: serverTimestamp() },
+    { statusChangedBy: uid, uid, updatedAt: serverTimestamp() },
+    { statusChangeSource: "MANUAL", uid, updatedAt: serverTimestamp() },
+    { statusChangeReason: "forged", uid, updatedAt: serverTimestamp() },
     { docId: "another-site", remarks: "doc id attack", uid, updatedAt: serverTimestamp() },
-    { createdAt: serverTimestamp(), remarks: "created metadata attack", uid, updatedAt: serverTimestamp() },
     { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
-    { uid, updatedAt: serverTimestamp() },
   ]) {
     await assertFails(updateDoc(reference, patch));
   }
@@ -3819,20 +3821,49 @@ test("Site Rules isolate update operations and reject metadata or derived-field 
   const replacement = siteRulesData({
     docId,
     uid,
-    name: "whole replacement",
-    displayName: "whole replacement",
-    tokenMap: { whole: true },
+    name: 456,
+    displayName: { malformed: true },
+    tokenMap: { whole: "malformed" },
+    createdAt: new Date("2019-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2019-01-02T00:00:00.000Z"),
+    futureField: true,
   });
-  await assertFails(setDoc(reference, replacement));
+  delete replacement.remarks;
+  await assertSucceeds(setDoc(reference, replacement));
   await assertFails(updateDoc(reference, {
     agreementsV2: [{ synthetic: true }],
     uid,
     updatedAt: serverTimestamp(),
   }));
   assert.deepEqual((await assertSucceeds(getDoc(reference))).data().agreementsV2, []);
+
+  const protectedValues = {
+    status: "ACTIVE",
+    agreementsV2: [],
+    scheduleRevision: 0,
+    statusChangedAt: new Date("2026-01-01T00:00:00.000Z"),
+    statusChangedBy: "server-writer",
+    statusChangeSource: "MANUAL",
+    statusChangeReason: "synthetic lifecycle reason",
+  };
+  for (const field of Object.keys(protectedValues)) {
+    await testEnvironment.withSecurityRulesDisabled(async (context) => {
+      await setDoc(
+        doc(context.firestore(), "Companies", companyId, "Sites", docId),
+        siteRulesData({ docId, uid, ...protectedValues }),
+      );
+    });
+    await assertFails(updateDoc(reference, {
+      [field]: deleteField(),
+      uid,
+      updatedAt: serverTimestamp(),
+    }));
+    const after = (await assertSucceeds(getDoc(reference))).data();
+    assert.equal(Object.hasOwn(after, field), true, `${field} must remain present`);
+  }
 });
 
-test("Site Rules preserve raw legacy partial updates and reject missing-field bypasses", async (t) => {
+test("Site Rules preserve auth and lifecycle gates while accepting legacy ordinary-field drift", async (t) => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-legacy-admin";
   const siteId = "site-rules-legacy-site";
@@ -3918,7 +3949,7 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
     }
   });
 
-  await t.test("invalid present sources, deletions, forged derived values and projections fail with write zero", async () => {
+  await t.test("malformed sources, deletions, forged derived values and projections are ordinary-field concerns", async () => {
     const badSources = [
       ...[null, "false", 0].map((hasAbbreviation) => ({ hasAbbreviation })),
       { hasAbbreviation: true },
@@ -3927,9 +3958,8 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
       { constructionPeriodStartAt: null, constructionPeriodEndAt: 123 },
     ];
     for (const overrides of badSources) {
-      const before = await reset({ overrides });
-      await assertFails(updateDoc(reference, patch({ remarks: "invalid source" })));
-      assert.deepEqual((await getDoc(reference)).data(), before);
+      await reset({ overrides });
+      await assertSucceeds(updateDoc(reference, patch({ remarks: "invalid source" })));
     }
     for (const fields of [
       { hasAbbreviation: null, displayName: "合成現場" },
@@ -3963,20 +3993,17 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
       { siteNumber: 123 },
       { remarks: "forged customer", customer: { ...projection, name: "forged" } },
       { remarks: "wide customer", customer: { ...projection, unexpectedProjectionField: true } },
-      { remarks: "unset customer", customerId: null, customer: null, isTemporary: true },
     ]) {
-      const before = await reset();
-      await assertFails(updateDoc(reference, { ...patch({}), ...fields }));
-      assert.deepEqual((await getDoc(reference)).data(), before);
+      await reset();
+      await assertSucceeds(updateDoc(reference, { ...patch({}), ...fields }));
     }
     for (const field of [
       "hasAbbreviation", "abbreviation", "constructionPeriodStartAt", "constructionPeriodEndAt",
       "displayName", "hasConstructionPeriod", "hasConstructionPeriodStartAt",
       "hasConstructionPeriodEndAt", "siteNumber",
     ]) {
-      const before = await reset({ missing: [] });
-      await assertFails(updateDoc(reference, patch({ remarks: "delete attempt", [field]: deleteField() })));
-      assert.deepEqual((await getDoc(reference)).data(), before);
+      await reset({ missing: [] });
+      await assertSucceeds(updateDoc(reference, patch({ remarks: "delete attempt", [field]: deleteField() })));
     }
     for (const [overrides, fields] of [
       [{ constructionPeriodEndAt: new Date("2026-09-01T00:00:00.000Z") },
@@ -3984,21 +4011,25 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
       [{ constructionPeriodStartAt: new Date("2026-09-30T00:00:00.000Z") },
         { constructionPeriodEndAt: new Date("2026-09-01T00:00:00.000Z") }],
     ]) {
-      const before = await reset({
+      await reset({
         missing: [...legacyMissing, "constructionPeriodStartAt", "constructionPeriodEndAt"],
         overrides,
       });
-      await assertFails(updateDoc(reference, patch({
+      await assertSucceeds(updateDoc(reference, patch({
         ...fields, hasConstructionPeriod: true,
         hasConstructionPeriodStartAt: true, hasConstructionPeriodEndAt: true,
       })));
-      assert.deepEqual((await getDoc(reference)).data(), before);
     }
     for (const field of [...legacyMissing, "constructionPeriodStartAt", "constructionPeriodEndAt"]) {
       const missingCreate = siteRulesData({ docId: `${siteId}-create`, uid });
       delete missingCreate[field];
-      await assertFails(setDoc(doc(firestore, "Companies", companyId, "Sites", `${siteId}-create`), missingCreate));
+      await assertSucceeds(setDoc(doc(firestore, "Companies", companyId, "Sites", `${siteId}-create`), missingCreate));
     }
+
+    await reset();
+    await assertFails(updateDoc(reference, {
+      ...patch({}), customerId: null, customer: null, isTemporary: true,
+    }));
   });
 
   await t.test("legacy defaults do not bypass inactive actor, tenant, status, or maintenance gates", async () => {
@@ -4030,7 +4061,7 @@ test("Site Rules preserve raw legacy partial updates and reject missing-field by
   });
 });
 
-test("Site Rules require a same-tenant exact embedded Customer and preserve customerName", async () => {
+test("Site Rules require a live same-tenant Customer but allow stale or non-exact embedded projections", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const uid = "site-rules-customer-contract-manager";
   const customerId = "site-rules-customer-contract-customer";
@@ -4079,8 +4110,17 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
       customer: customerProjection,
     }),
   ));
+  await assertSucceeds(setDoc(
+    doc(firestore, "Companies", companyId, "Sites", `${siteId}-stale-create`),
+    siteRulesData({
+      docId: `${siteId}-stale-create`,
+      uid,
+      customerId,
+      customer: { stale: true, unexpectedProjectionField: true },
+    }),
+  ));
 
-  await assertFails(updateDoc(reference, {
+  await assertSucceeds(updateDoc(reference, {
     customerId,
     customer: { ...customerProjection, name: "forged" },
     isTemporary: false,
@@ -4094,7 +4134,7 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
     uid,
     updatedAt: serverTimestamp(),
   }));
-  await assertFails(updateDoc(reference, {
+  await assertSucceeds(updateDoc(reference, {
     customerId,
     customer: { ...customerProjection, unexpectedProjectionField: true },
     isTemporary: false,
@@ -4103,7 +4143,7 @@ test("Site Rules require a same-tenant exact embedded Customer and preserve cust
   }));
   const missingProjectionField = { ...customerProjection };
   delete missingProjectionField.code;
-  await assertFails(updateDoc(reference, {
+  await assertSucceeds(updateDoc(reference, {
     customerId,
     customer: missingProjectionField,
     isTemporary: false,
@@ -6456,7 +6496,7 @@ for (const {
       await createProbe(
         "absent",
         { customerName: "合成仮取引先", marker: "customer-id-absent" },
-        collectionName === "Sites" ? false : optionalOnCreate,
+        optionalOnCreate,
       );
 
       const mutableDocumentId = `cas03-${suffix}-mutable-reference`;

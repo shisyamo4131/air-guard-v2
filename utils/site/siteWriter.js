@@ -96,9 +96,8 @@ export function createSiteWriter({ firestore }) {
         site.customer = null;
       }
       const data = pick(serializeSite(site), SITE_DOCUMENT_FIELDS);
-      // Site serialization may normalize a nested Customer. The Rules contract
-      // requires the exact runtime-minimal projection of the current
-      // transaction snapshot.
+      // Site serialization may normalize a nested Customer. The official writer
+      // keeps the exact runtime-minimal projection from the transaction snapshot.
       data.customer = customerSnapshotData
         ? createSiteCustomerProjection(customerSnapshotData)
         : null;

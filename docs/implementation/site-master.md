@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可checkpointはcommit `ec46497a`へ固定、Dev受入れ前
+- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可はcommit `ec46497a`へ固定し、通常Site Rules簡素化はLocal検証済み・Dev受入れ前
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
 - 最終確認日: 2026-09-11
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所
@@ -73,9 +73,10 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 
 ## Rules・tenant境界
 
-- SITE-08のLocal旧data確認により、基本更新では欠損している略称・工期sourceだけを既存schemaの既定値で評価する。略称使用flag・工期sourceの不正型と工期逆順、変更対象fieldの型・長さ、関連source変更時の派生値整合を検査し、既存field削除を拒否する。createのexact field契約は維持する。writerによる全件backfillやschema変更は行わない。
+- SITE-08時点では、旧dataの欠損へ限定した互換検査と、通常Siteのexact field・型・長さ・派生値検査をRulesに置いていた。FGA-03の通常Rules簡素化がこの実装を置き換える。
 - `Companies/{companyId}/Sites/{docId}`は同一tenantの有効な本登録Userにreadを許可する。通常create/updateはmaintenance off、確認済みemail、canonical User `docId`、tenant claim・User所属tenant・path tenantの一致、有効・本登録Userを必須とし、role、permission、会社管理者、super-user区分をallow条件にしない。予定競合用revisionだけは同一tenantの予定writerがatomicに+1できる。client deleteは拒否する。
-- Rulesはexact 34-field create、operation別変更field、型・長さ、server metadata、派生fieldを検査する。create時とcustomerId変更時は同一会社Customerの存在とexact 6-field projectionを検査し、設定済みcustomerIdのunsetを拒否する。status transitionはclientから許可しない。予定作成は`operationResultId=null`とSite revisionの同時更新、実績化は整合するOperationResultとの同時更新だけを許可し、偽参照・置換・巻戻しを拒否する。
+- 通常Siteの必須field、型・長さ・enum、exact field集合、通常timestamp、派生値、埋込みCustomerのexact projectionは、Schemas packageと正規application writerが検査し、Rulesでは重複検査しない。Rulesはpathとdocument ID、actor UID、ACTIVE、Agreement、`scheduleRevision`、状態変更field、同一会社のlive Customer存在、Customer未設定への巻戻し禁止、`isTemporary`相関を保護する。予定作成は`operationResultId=null`とSite revisionの同時更新、実績化は整合するOperationResultとの同時更新だけを許可し、偽参照・置換・巻戻しを拒否する。
+- 製品が提供するSite操作は正規application経路を前提とする。正規applicationを介さない同一tenant Userの直接requestでは通常fieldの不正値をRulesが拒否しないが、利用者判断により本phaseの対応対象にせず、archive形式やFunctionsは変更しない。この前提を変更する場合はRulesの通常field検査とarchive互換を同時に再検討する。
 - `Sites_archive`は同一tenantの有効な本登録Userによるreadを維持し、client create/update/deleteを拒否する。同ID archiveが存在するSite createも拒否し、archive documentをtombstoneとして扱う。
 - `OperationResults`、`Billings`、`ArrangementNotifications`、`SiteEmployeeHistories`はcreateまたは`siteId`変更時にlive Site存在を必須とする。既存documentのread、delete、`siteId`以外の互換更新は従来境界を維持する。`SiteOperationSchedules`はSITE-04で導入したSite revisionと同一transactionのguardを維持する。server側のBilling初期化とSiteEmployeeHistory再構築も同じatomic boundaryでlive Siteを検査する。
 - tenant境界はcollection pathに依存し、document内companyIdはSite契約にない。

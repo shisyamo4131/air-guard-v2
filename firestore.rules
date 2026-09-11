@@ -323,265 +323,55 @@ service cloud.firestore {
           || changed.hasAny(['name', 'nameKana', 'displayName']));
     }
 
-    function isNullableTimestamp(value) {
-      return value == null || value is timestamp;
-    }
-
-    function isValidSiteLocation(data) {
-      return data.location == null
-        ? data.geopoint == null
-        : (isValidNonNullLocation(data.location)
-          && data.geopoint is latlng
-          && data.geopoint.latitude() == data.location.lat
-          && data.geopoint.longitude() == data.location.lng);
-    }
-
-    function isMatchingSitePrefecture(prefCode, prefecture) {
-      return (prefCode + ':' + prefecture).matches(
-        '^(01:北海道|02:青森県|03:岩手県|04:宮城県|05:秋田県|06:山形県|07:福島県|08:茨城県|09:栃木県|10:群馬県|11:埼玉県|12:千葉県|13:東京都|14:神奈川県|15:新潟県|16:富山県|17:石川県|18:福井県|19:山梨県|20:長野県|21:岐阜県|22:静岡県|23:愛知県|24:三重県|25:滋賀県|26:京都府|27:大阪府|28:兵庫県|29:奈良県|30:和歌山県|31:鳥取県|32:島根県|33:岡山県|34:広島県|35:山口県|36:徳島県|37:香川県|38:愛媛県|39:高知県|40:福岡県|41:佐賀県|42:長崎県|43:熊本県|44:大分県|45:宮崎県|46:鹿児島県|47:沖縄県)$'
-      );
-    }
-
-    function isValidSiteDerivedFields(data) {
-      return data.fullAddress == data.prefecture + data.city + data.address
-        && isMatchingSitePrefecture(data.prefCode, data.prefecture)
-        && data.isTemporary == (data.customerId == null)
-        && data.hasConstructionPeriod == (data.constructionPeriodStartAt != null
-          || data.constructionPeriodEndAt != null)
-        && data.hasConstructionPeriodStartAt == (data.constructionPeriodStartAt != null)
-        && data.hasConstructionPeriodEndAt == (data.constructionPeriodEndAt != null)
-        && data.displayName == (data.hasAbbreviation && data.abbreviation != null
-          ? data.abbreviation
-          : data.name)
-        && isValidCustomerTokenMap(data.tokenMap);
-    }
-
-    function isValidSiteCore(data, docId) {
-      return isRequiredString(data.docId, 128)
-        && data.docId == docId
-        && isRequiredString(data.uid, 128)
-        && (data.customerId == null || isSafeCustomerId(data.customerId))
-        && isNullableString(data.customerName, 20)
-        && isNullableString(data.code, 10)
-        && isRequiredString(data.name, 40)
-        && data.hasAbbreviation is bool
-        && isNullableString(data.abbreviation, 40)
-        && (!data.hasAbbreviation || isRequiredString(data.abbreviation, 40))
-        && isRequiredString(data.nameKana, 60)
-        && (data.zipcode == null || data.zipcode is string)
-        && data.prefCode is string
-        && data.prefCode.matches('^(0[1-9]|[1-3][0-9]|4[0-7])$')
-        && isRequiredString(data.city, 20)
-        && isRequiredString(data.address, 30)
-        && isNullableString(data.building, 30)
-        && data.securityType in [
-          'UNSET', 'FACILITY', 'CROWD', 'TRAFFIC', 'TRAINING', 'OTHER'
-        ]
-        && isNullableString(data.siteNumber, 40)
-        && isNullableTimestamp(data.constructionPeriodStartAt)
-        && isNullableTimestamp(data.constructionPeriodEndAt)
-        && (data.constructionPeriodStartAt == null
-          || data.constructionPeriodEndAt == null
-          || data.constructionPeriodStartAt <= data.constructionPeriodEndAt)
-        && isValidSiteLocation(data)
-        && isNullableString(data.remarks, 200)
-        && data.agreementsV2 is list
-        && isValidSiteDerivedFields(data);
-    }
-
     function hasValidSiteCustomerCreate(companyId, data) {
-      return data.customerId == null
-        ? (data.customer == null && isRequiredString(data.customerName, 20))
-        : hasCurrentSiteCustomerSnapshot(
-            data.customer,
-            get(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(data.customerId)).data
-          );
-    }
-
-    function hasCurrentSiteCustomerSnapshot(snapshot, customer) {
-      return snapshot is map
-        && snapshot.keys().hasOnly([
-          'docId', 'updatedAt', 'code', 'name', 'abbreviation', 'cutoffDate'
-        ])
-        && snapshot.docId == customer.docId
-        && snapshot.updatedAt == customer.updatedAt
-        && snapshot.code == customer.code
-        && snapshot.name == customer.name
-        && snapshot.abbreviation == customer.abbreviation
-        && snapshot.cutoffDate == customer.cutoffDate;
+      return hasUnsetCustomerReference(data)
+        ? (data.isTemporary is bool && data.isTemporary == true)
+        : (customerExists(companyId, data.customerId)
+          && data.isTemporary is bool
+          && data.isTemporary == false);
     }
 
     function hasValidSiteCustomerUpdate(companyId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      return !changed.hasAny(['customerId', 'customer'])
-        ? request.resource.data.customer == resource.data.customer
-        : (request.resource.data.customerId == null
-          ? (resource.data.customerId == null
-            && request.resource.data.customer == null
-            && isRequiredString(request.resource.data.customerName, 20))
-          : (isSafeCustomerId(request.resource.data.customerId)
-            && hasCurrentSiteCustomerSnapshot(
-              request.resource.data.customer,
-              get(/databases/$(database)/documents/Companies/$(companyId)/Customers/$(request.resource.data.customerId)).data
-            )));
-    }
-
-    function isValidSiteUpdateMetadata(data, docId) {
-      return data.docId == docId
-        && data.docId == resource.data.docId
-        && data.createdAt == resource.data.createdAt
-        && data.uid == request.auth.uid
-        && data.updatedAt == request.time;
-    }
-
-    function isValidSiteBasicPatch(data, changed) {
-      // Missing legacy sources retain the schema defaults without backfilling
-      // unrelated fields. Existing malformed values and field deletion fail.
-      let hasAbbreviation = data.get('hasAbbreviation', false);
-      let abbreviation = data.get('abbreviation', null);
-      let constructionStart = data.get('constructionPeriodStartAt', null);
-      let constructionEnd = data.get('constructionPeriodEndAt', null);
-      return data.diff(resource.data).removedKeys().size() == 0
-        && (!changed.hasAny(['code']) || isNullableString(data.code, 10))
-        && (!changed.hasAny(['name']) || isRequiredString(data.name, 40))
-        && hasAbbreviation is bool
-        && (!changed.hasAny(['abbreviation']) || isNullableString(data.abbreviation, 40))
-        && (!hasAbbreviation || isRequiredString(abbreviation, 40))
-        && (!changed.hasAny(['nameKana']) || isRequiredString(data.nameKana, 60))
-        && (!changed.hasAny(['zipcode'])
-          || data.zipcode == null
-          || data.zipcode is string)
-        && (!changed.hasAny(['prefCode'])
-          || (data.prefCode is string
-            && data.prefCode.matches('^(0[1-9]|[1-3][0-9]|4[0-7])$')))
-        && (!changed.hasAny(['city']) || isRequiredString(data.city, 20))
-        && (!changed.hasAny(['address']) || isRequiredString(data.address, 30))
-        && (!changed.hasAny(['building']) || isNullableString(data.building, 30))
-        && (!changed.hasAny(['securityType'])
-          || data.securityType in [
-            'UNSET', 'FACILITY', 'CROWD', 'TRAFFIC', 'TRAINING', 'OTHER'
-          ])
-        && (!changed.hasAny(['siteNumber']) || isNullableString(data.siteNumber, 40))
-        && isNullableTimestamp(constructionStart)
-        && isNullableTimestamp(constructionEnd)
-        && (constructionStart == null
-          || constructionEnd == null
-          || constructionStart <= constructionEnd)
-        && (!changed.hasAny(['remarks']) || isNullableString(data.remarks, 200));
-    }
-
-    function hasValidSiteBasicDerivedPatch(data, changed) {
-      let tokenSourceChanged = changed.hasAny(['name', 'nameKana']);
-      let displaySourceChanged = changed.hasAny([
-        'name', 'hasAbbreviation', 'abbreviation'
-      ]);
-      let addressSourceChanged = changed.hasAny(['prefCode', 'city', 'address']);
-      let constructionSourceChanged = changed.hasAny([
-        'constructionPeriodStartAt', 'constructionPeriodEndAt'
-      ]);
-      let hasAbbreviation = data.get('hasAbbreviation', false);
-      let abbreviation = data.get('abbreviation', null);
-      let constructionStart = data.get('constructionPeriodStartAt', null);
-      let constructionEnd = data.get('constructionPeriodEndAt', null);
-      return (!changed.hasAny(['tokenMap']) || tokenSourceChanged)
-        && (!tokenSourceChanged
-          || (changed.hasAny(['tokenMap'])
-            && data.keys().hasAny(['tokenMap'])
-            && isValidCustomerTokenMap(data.tokenMap)))
-        && (!changed.hasAny(['displayName']) || displaySourceChanged)
-        && (!displaySourceChanged
-          || (data.keys().hasAny(['displayName'])
-            && isRequiredString(data.displayName, 40)
-            && data.displayName == (hasAbbreviation && abbreviation != null
-              ? abbreviation
-              : data.name)))
-        && (!changed.hasAny(['location', 'geopoint', 'fullAddress', 'prefecture'])
-          || addressSourceChanged)
-        && (!addressSourceChanged
-          || (data.keys().hasAll([
-                'location', 'geopoint', 'fullAddress', 'prefecture'
-              ])
-            && isValidSiteLocation(data)
-            && isRequiredString(data.prefecture, 4)
-            && isMatchingSitePrefecture(data.prefCode, data.prefecture)
-            && isRequiredString(data.fullAddress, 54)
-            && data.fullAddress == data.prefecture + data.city + data.address))
-        && (!changed.hasAny([
-              'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
-              'hasConstructionPeriodEndAt'
-            ])
-          || constructionSourceChanged)
-        && (!constructionSourceChanged
-          || (data.keys().hasAll([
-                'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
-                'hasConstructionPeriodEndAt'
-              ])
-            && data.hasConstructionPeriod is bool
-            && data.hasConstructionPeriod == (constructionStart != null
-              || constructionEnd != null)
-            && data.hasConstructionPeriodStartAt is bool
-            && data.hasConstructionPeriodStartAt == (constructionStart != null)
-            && data.hasConstructionPeriodEndAt is bool
-            && data.hasConstructionPeriodEndAt == (constructionEnd != null)));
+      let beforeUnset = hasUnsetCustomerReference(resource.data);
+      let afterUnset = hasUnsetCustomerReference(request.resource.data);
+      return (!beforeUnset ? !afterUnset : true)
+        && (!changed.hasAny(['customerId'])
+          || afterUnset
+          || customerExists(companyId, request.resource.data.customerId))
+        && request.resource.data.isTemporary is bool
+        && request.resource.data.isTemporary == afterUnset;
     }
 
     function isValidSiteCreate(companyId, docId) {
       let data = request.resource.data;
-      let keys = data.keys();
-      return keys.hasOnly([
-          'docId', 'uid', 'createdAt', 'updatedAt', 'customerId', 'customer',
-          'customerName', 'code', 'name', 'hasAbbreviation', 'abbreviation',
-          'nameKana', 'zipcode', 'prefCode', 'city', 'address', 'building',
-          'securityType', 'siteNumber', 'constructionPeriodStartAt',
-          'constructionPeriodEndAt', 'location', 'geopoint', 'remarks',
-          'agreementsV2', 'status', 'fullAddress', 'prefecture', 'isTemporary',
-          'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
-          'hasConstructionPeriodEndAt', 'displayName', 'tokenMap'
-        ])
-        && isValidSiteCore(data, docId)
-        && hasValidSiteCustomerCreate(companyId, data)
-        && data.status == 'ACTIVE'
-        && data.agreementsV2.size() == 0
+      return data.docId is string
+        && data.docId == docId
+        && data.uid is string
         && data.uid == request.auth.uid
-        && data.createdAt == request.time
-        && data.updatedAt == request.time;
+        && data.status == 'ACTIVE'
+        && data.agreementsV2 is list
+        && data.agreementsV2.size() == 0
+        && !data.keys().hasAny([
+          'scheduleRevision', 'statusChangedAt', 'statusChangedBy',
+          'statusChangeSource', 'statusChangeReason'
+        ])
+        && hasValidSiteCustomerCreate(companyId, data);
     }
 
     function isValidSiteUpdate(companyId, docId) {
       let changed = request.resource.data.diff(resource.data).affectedKeys();
-      let basicFields = [
-        'code', 'name', 'hasAbbreviation', 'abbreviation', 'nameKana',
-        'zipcode', 'prefCode', 'city', 'address', 'building', 'securityType',
-        'siteNumber', 'constructionPeriodStartAt', 'constructionPeriodEndAt',
-        'remarks'
-      ];
-      let basicAllowed = [
-        'code', 'name', 'hasAbbreviation', 'abbreviation', 'nameKana',
-        'zipcode', 'prefCode', 'city', 'address', 'building', 'securityType',
-        'siteNumber', 'constructionPeriodStartAt', 'constructionPeriodEndAt',
-        'remarks', 'customer', 'location', 'geopoint', 'fullAddress',
-        'prefecture', 'hasConstructionPeriod', 'hasConstructionPeriodStartAt',
-        'hasConstructionPeriodEndAt', 'displayName', 'tokenMap', 'uid', 'updatedAt'
-      ];
       return resource.data.status == 'ACTIVE'
         && request.resource.data.status == 'ACTIVE'
-        && isValidSiteUpdateMetadata(request.resource.data, docId)
-        && ((changed.hasAny(basicFields)
-            && changed.hasOnly(basicAllowed)
-            && isValidSiteBasicPatch(request.resource.data, changed)
-            && hasValidSiteBasicDerivedPatch(request.resource.data, changed)
-            && hasValidSiteCustomerUpdate(companyId))
-          || (changed.hasAny(['customerId'])
-            && changed.hasOnly([
-              'customerId', 'customer', 'isTemporary', 'uid', 'updatedAt'
-            ])
-            && (request.resource.data.customerId == null
-              || isSafeCustomerId(request.resource.data.customerId))
-            && request.resource.data.keys().hasAny(['isTemporary'])
-            && request.resource.data.isTemporary is bool
-            && request.resource.data.isTemporary == (request.resource.data.customerId == null)
-            && hasValidSiteCustomerUpdate(companyId))
-          );
+        && request.resource.data.docId is string
+        && request.resource.data.docId == docId
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && !changed.hasAny([
+          'status', 'agreementsV2', 'scheduleRevision', 'statusChangedAt',
+          'statusChangedBy', 'statusChangeSource', 'statusChangeReason'
+        ])
+        && hasValidSiteCustomerUpdate(companyId);
     }
 
     function siteScheduleRevision(data) {
@@ -990,10 +780,9 @@ service cloud.firestore {
     // Companies配下の未定義パスにも同じtenant identity gateを適用する。
     // 個別操作制約を持つcollectionを迂回しないよう除外する。
     match /Companies/{companyId}/{collection}/{document=**} {
-      // Site create has a strict 34-field validator and linked-Customer read.
+      // Site has an explicit normal-write validator and linked-Customer read.
       // Reject its overlapping fallback match before evaluating the longer
-      // exclusion list so a valid geocoded create stays within the Rules
-      // expression budget. This is equivalent to keeping "Sites" in the list.
+      // exclusion list. This is equivalent to keeping "Sites" in the list.
       allow read, write: if collection != "Sites"
                               && !(collection in [
                                 "SecurityReportIndexes",
