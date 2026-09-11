@@ -25,6 +25,7 @@ GitHub `dev` Environmentには次を設定する。値はGitHub画面とGoogle/F
 1. [共通runbook](../dev-deployment.md)でcommit、release class、data影響、rollback、停止条件、remote検証を固定し、必要なlocal gateを完了する。
 2. 変更fileから予想されるserviceを確認する。`firebase.json`または`.firebaserc`は全service、各Rules・Indexes fileは対応service、`functions/`はFunctions、それ以外の製品sourceはHostingを選ぶ。
 3. 利用者へ対象commitと予想serviceを示し、`main` pushの承認を得る。この承認は自動選択されたDev deployまでを含む。
+   - Functionsのexportを削除したreleaseでは、Devから削除されるFunction名と復旧方法を別に示し、破壊操作として明示承認を得る。workflowの実deployは`--force`で確認promptを省略するが、これは承認を省略する仕組みではない。
 4. `main`へpushし、GitHub Actionsの`Dev deployment`を開く。
 5. `Select changed Firebase services`の選択結果を確認する。文書等だけで空になった場合は正常終了し、Firebaseへ接続しない。
 6. deploy jobではDev識別子検査、固定AirVuetify3 sourceの取得、必要な依存install、Hosting生成、Google Cloudの鍵なし認証、Firebase CLI version、dry-run、実deployの順に各stepを確認する。
@@ -40,6 +41,7 @@ Actions画面の`Run workflow`は、初回の全service検証、失敗serviceの
 - GitHub EnvironmentまたはOIDC認証が失敗: Variables、`main`制限、provider条件、service account接続、IAMをread-only確認する。秘密鍵を作らず、利用者loginへ自動切替しない。
 - AirVuetify3取得が失敗: 固定commitがremoteに存在すること、Deploy keyが読み取り専用で登録されていること、`AIR_VUETIFY_DEPLOY_KEY`が`dev` Environmentに存在することを確認する。
 - dry-run失敗: 実deployは開始されない。対象service、API、IAM、Firebase CLI互換性を確認する。
+- Functions削除の承認がない、または削除対象が事前確認と異なる: 実deployを開始せず、source exportと現在のDev Function一覧を照合する。`--force`を未承認削除の根拠にしない。
 - scheduled Functionsで`cloudscheduler.jobs.update`が拒否される: Actions専用service accountにDev projectのCloud Scheduler Adminがあることを確認する。付与・変更はIAM変更として別承認を得る。
 - 一部deploy後に失敗: Actions logとFirebase Consoleから成功済みserviceを確定し、同一commitの限定再実行か既知の正常commitへのreleaseを判断する。
 - Actions自体を使えない: [local fallback](authentication-and-windows.md)を別承認した場合だけ使う。

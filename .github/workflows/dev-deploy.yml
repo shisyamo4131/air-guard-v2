@@ -140,4 +140,4 @@ jobs:
         run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --dry-run --non-interactive
 
       - name: Deploy selected services
-        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --non-interactive
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --force --non-interactive
