@@ -35,6 +35,11 @@ test("reachable normal Employee CRUD uses the domain Managers and model persiste
 
   assert.match(single, /<air-item-manager/u);
   assert.match(multiple, /<air-array-manager/u);
+  assert.match(single, /validator: \(value\) => value instanceof Employee/u);
+  assert.match(
+    multiple,
+    /validator: \(value\) => value\.every\(\(item\) => item instanceof Employee\)/u,
+  );
   for (const source of [single, multiple]) {
     assert.match(source, /useBaseManager/u);
     assert.match(source, /draft\.create\(\)/u);

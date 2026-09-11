@@ -9,7 +9,11 @@ defineOptions({ name: "EmployeesManager", inheritAttrs: false });
 const props = defineProps({
   beforeEdit: { type: Function, default: () => true },
   customInput: { type: [Object, Function], default: null },
-  modelValue: { type: Array, default: () => [] },
+  modelValue: {
+    type: Array,
+    default: () => [],
+    validator: (value) => value.every((item) => item instanceof Employee),
+  },
 });
 const { attrs } = useBaseManager("EmployeesManager");
 

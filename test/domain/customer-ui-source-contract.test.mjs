@@ -127,13 +127,18 @@ async function customerManagerHarness() {
   const factory = new Function(
     "Customer",
     "defineOptions",
+    "defineProps",
     "defineEmits",
     "useBaseManager",
-    `${stripImports(script)}; return { beforeEdit, defaultCustomer, handleCreate, handleUpdate };`,
+    `${stripImports(script)}; return { beforeEdit, defaultCustomer: props.modelValue, modelValueValidator: props.__modelValueValidator, handleCreate, handleUpdate };`,
   );
   const methods = factory(
     Customer,
     () => {},
+    (options) => ({
+      modelValue: options.modelValue.default(),
+      __modelValueValidator: options.modelValue.validator,
+    }),
     () => (...args) => events.push(args),
     () => ({ attrs: {} }),
   );
@@ -155,15 +160,23 @@ async function customersManagerHarness(
   const component = await source("components/Customers/Manager/index.vue");
   const script = component.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
   assert.ok(script);
+  class Customer {}
   const componentAttrs = { [attributeName]: externalBeforeEdit, modelValue: [] };
   const factory = new Function(
+    "Customer",
     "defineOptions",
+    "defineProps",
     "useAttrs",
     "useBaseManager",
-    `${stripImports(script)}; return { beforeEdit, handleCreate, handleUpdate };`,
+    `${stripImports(script)}; return { beforeEdit, modelValueValidator: props.__modelValueValidator, Customer, handleCreate, handleUpdate };`,
   );
   return factory(
+    Customer,
     () => {},
+    (options) => ({
+      modelValue: componentAttrs.modelValue,
+      __modelValueValidator: options.modelValue.validator,
+    }),
     () => componentAttrs,
     () => ({ attrs: {} }),
   );
@@ -216,9 +229,10 @@ test("CustomerManager delegates create and update directly to FireModel instance
   assert.match(manager, /hide-delete-btn/u);
   assert.match(manager, /:handle-create="handleCreate"/u);
   assert.match(manager, /:handle-delete="rejectUnsupportedOperation"/u);
-  assert.match(manager, /const defaultCustomer = new Customer\(\)/u);
+  assert.match(manager, /default: \(\) => new Customer\(\)/u);
+  assert.match(manager, /validator: \(value\) => value instanceof Customer/u);
+  assert.match(manager, /:model-value="props\.modelValue"/u);
   assert.match(manager, /'aria-label': \$attrs\.label/u);
-  assert.doesNotMatch(manager, /\bdefineProps\(/u);
   assert.doesNotMatch(manager, /:disable-update=|function toCreate\(/u);
   assert.doesNotMatch(manager, /\boperation:\s*\{|openManager/u);
   assert.match(manager, /@create="emit\('created', \$event\)"/u);
@@ -233,6 +247,8 @@ test("CustomerManager delegates create and update directly to FireModel instance
 test("CustomerManager keeps one default instance and delegates CREATE to the base manager", async () => {
   const harness = await customerManagerHarness();
   assert.equal(harness.defaultCustomer instanceof harness.Customer, true);
+  assert.equal(harness.modelValueValidator(harness.defaultCustomer), true);
+  assert.equal(harness.modelValueValidator({}), false);
   const draft = new harness.Customer();
   await harness.handleCreate(draft);
   assert.equal(draft.docId, "generated-customer");
@@ -345,6 +361,11 @@ test("Customer list dispatches rows through plural AirArrayManager beforeEdit", 
   assert.match(manager, /<air-array-manager/u);
   assert.match(manager, /if \(editMode === "DELETE"\) return false/u);
   assert.match(manager, /:schema="Customer"/u);
+  assert.match(manager, /:model-value="props\.modelValue"/u);
+  assert.match(
+    manager,
+    /validator: \(value\) => value\.every\(\(item\) => item instanceof Customer\)/u,
+  );
   assert.match(manager, /:excluded-keys="\['contractStatus'\]"/u);
   assert.match(manager, /:handle-create="handleCreate"/u);
   assert.match(manager, /:handle-update="handleUpdate"/u);
@@ -367,7 +388,7 @@ test("Customer list dispatches rows through plural AirArrayManager beforeEdit", 
   assert.doesNotMatch(manager, /@update:model-value|emit\("update:model-value"/u);
   assert.doesNotMatch(
     manager,
-    /rejectUnsupportedOperation|disableUpdate|\bdefineProps\(|hideTable|defineEmits|@create=|#header|name="activator"|style="height: 100%"|:handle-delete=|:disable-update=|:model-value=/u,
+    /rejectUnsupportedOperation|disableUpdate|hideTable|defineEmits|@create=|#header|name="activator"|style="height: 100%"|:handle-delete=|:disable-update=/u,
   );
   await assert.rejects(
     access(new URL("../../components/Customer/CreateDialog.vue", import.meta.url)),
@@ -383,6 +404,10 @@ test("CustomersManager accepts camel and kebab beforeEdit attrs while DELETE rem
       calls.push(args);
       return undefined;
     }, attributeName);
+
+    assert.equal(manager.modelValueValidator([]), true);
+    assert.equal(manager.modelValueValidator([new manager.Customer()]), true);
+    assert.equal(manager.modelValueValidator([{}]), false);
 
     assert.equal(await manager.beforeEdit("UPDATE", item), undefined);
     assert.deepEqual(calls, [["UPDATE", item]], attributeName);
@@ -517,7 +542,7 @@ test("Customer manager lets the base deep watch replace an editing draft from th
   );
   assert.match(
     manager,
-    /:model-value="\$attrs\.modelValue\s*\?\?\s*\$attrs\['model-value'\]\s*\?\?\s*defaultCustomer"/u,
+    /:model-value="props\.modelValue"/u,
   );
   const { descriptor, errors } = parse(manager);
   assert.deepEqual(errors, []);

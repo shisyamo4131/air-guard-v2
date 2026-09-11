@@ -30,6 +30,13 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 - 完成形ではManager固有の`customInput`が入力field、配置、順序を所有し、base Managerから受けるitem、`updateProperties`、edit mode、disabled状態、schema由来component属性を使用する。edit mode別に入力componentを変える場合は`customInput` resolverを使う。
 - `includedKeys`はSchema定義順から対象fieldを絞る暫定的な簡易入力機能であり、配列指定順を画面順序の契約にしない。既存Customerは段階移行中の例外として当面使用できるが、後続masterの完成形と新規domain Managerは`customInput`を既定とする。`customInput`使用時は同componentがfieldと順序を所有し、`includedKeys`による絞込みへ依存しない。
 
+### modelValueの入力契約
+
+- 新設または改修するdomain Managerは、base Managerへ渡す`modelValue`を`$attrs`だけから暗黙に受けず、wrapper自身のpropとして宣言する。
+- `AirItemManager`を包む単数Managerは対象domain classの新規instanceをdefault factoryで生成し、prop validatorで同classのinstanceだけを受け入れる。
+- `AirArrayManager`を包む複数形Managerは空配列をdefault factoryで生成し、prop validatorで全要素が対象domain classのinstanceであることを確認する。空配列は有効とし、plain objectまたは異なるclassが一件でも含まれる配列は契約違反とする。
+- prop validatorは誤ったcomponent接続を開発時に早く見つける補助であり、保存時のschema validation、認証・認可、tenant、Firestore Rulesを代替しない。
+
 ### Activatorとmode
 
 - 単数domain Managerはbase Managerのactivator slot propsを原則そのままpass-throughし、callerが用途に対応する`toCreate`、`toUpdate`、必要なら`toDelete`を直接呼ぶ。slot propsにmethodが存在することは、そのoperationを製品として許可することを意味せず、非提供operationは`beforeEdit`、disable・hide props、handler等のbase契約で拒否する。wrapper独自の`operation` prop、単一`open`関数、doc ID等の先行検査でedit modeを再管理しない。
@@ -51,7 +58,7 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 
 ## 理由
 
-editable stateの所有単位を基準にすると、base Managerの実装責務とdomain wrapperの名前が一致する。Autocompleteの新規作成に不要な配列管理を持ち込まず、collection/listではAirArrayManagerが配列と行選択dispatchを一つの責務として完結できる。選択後の内部editorと詳細navigationは`beforeEdit`で切り替えられ、画面構成を一律に固定しない。単数・複数形を入れ子にしないため、同じstateを二つのManagerが競合して所有しない。
+editable stateの所有単位を基準にすると、base Managerの実装責務とdomain wrapperの名前が一致する。Autocompleteの新規作成に不要な配列管理を持ち込まず、collection/listではAirArrayManagerが配列と行選択dispatchを一つの責務として完結できる。選択後の内部editorと詳細navigationは`beforeEdit`で切り替えられ、画面構成を一律に固定しない。単数・複数形を入れ子にしないため、同じstateを二つのManagerが競合して所有しない。加えて、wrapperが受け取るinstanceの型を入口で明示すると、plain objectや別domainのinstanceをbase Managerへ渡す誤接続を、保存処理より前に発見できる。
 
 ## 代替案
 
@@ -66,6 +73,7 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 - Site、Employee、Outsourcerと後続の対象masterは、各feature milestoneで通常masterに該当するoperationとeditable state所有者を確認して段階移行し、一括置換しない。
 - 現行`AirItemManager`はreactiveな`modelValue`をdeep watchして編集中itemへ反映する。一方、`AirArrayManager`は配列から選択したitemを内部editorへ渡した後、listenerによる配列更新を編集中itemへ再同期しない。Customer一覧は`beforeEdit`で詳細へ遷移して内部UPDATE editorを使わないため本checkpointの阻害要因ではないが、一覧内dialogでUPDATEする後続masterはAirVuetify3またはdomain wrapperで同じlistener直接接続契約を確立してから完了する。
 - 保存schemaとoperationは変えないため、この分類訂正だけではdata migrationを要しない。
+- Customer、Site、Employeeの単数・複数形Managerは本契約へ揃える。正しいdomain instanceを渡す既存callerの動作と保存形式は変えない。Outsourcerやその他の未移行Managerは各機能checkpointで揃え、本変更では一括改修しない。
 
 ## 移行
 
@@ -78,6 +86,7 @@ editable stateの所有単位を基準にすると、base Managerの実装責務
 ## 検証
 
 - 各対象masterで、単数Managerが外部既存instanceと新規instance、複数形Managerが配列と行選択dispatchを所有することをsource contractで確認する。
+- 単数Managerの`modelValue`が対象domain instanceだけを受け入れ、複数形Managerが空配列および全要素が対象domain instanceの配列だけを受け入れることをsource contractで確認する。
 - Customers一覧は行選択を`CustomersManager`内のAirArrayManagerへ渡し、`beforeEdit`のdetail navigationとfalseによるdialog抑止を使うことを確認する。Autocomplete内Createは`CustomerManager`内のAirItemManagerを通り、両Managerを相互に内包しないことを確認する。
 - Create成功時は割当済みdocument IDを含むcommit確定結果だけを選択し、失敗・結果不明時に選択しないことを確認する。
 - listener由来instanceをManagerへ直接接続し、編集中のlistener更新でdraftが最新document全体へ置き換わること、固定snapshot・入力消失警告・競合拒否を設けないことを確認する。保存後の主対象もlistenerへ収束し、従属補完以外で`useFetch` cacheを変更可能documentの正本にしない。

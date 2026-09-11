@@ -310,6 +310,18 @@ test("Site pages expose normal Manager writes and keep exceptional operations se
   assert.doesNotMatch(detail, /v-model="doc\.agreementsV2"|saveAgreements/u);
 });
 
+test("Site Managers validate their modelValue domain instances", async () => {
+  const [single, multiple] = await Promise.all([
+    source("components/Site/Manager/index.vue"),
+    source("components/Sites/Manager/index.vue"),
+  ]);
+  assert.match(single, /validator: \(value\) => value instanceof Site/u);
+  assert.match(
+    multiple,
+    /validator: \(value\) => value\.every\(\(item\) => item instanceof Site\)/u,
+  );
+});
+
 test("Terminated Site list preserves detail navigation without a normal-write policy wrapper", async () => {
   const terminated = await source("pages/sites/terminated.vue");
   assert.doesNotMatch(terminated, /useSiteActions/u);

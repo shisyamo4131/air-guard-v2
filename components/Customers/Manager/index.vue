@@ -8,6 +8,14 @@ import { useBaseManager } from "@/composables/useBaseManager";
 
 defineOptions({ inheritAttrs: false });
 
+const props = defineProps({
+  modelValue: {
+    type: Array,
+    default: () => [],
+    validator: (value) => value.every((item) => item instanceof Customer),
+  },
+});
+
 const componentAttrs = useAttrs();
 const { attrs } = useBaseManager("CustomersManager");
 
@@ -31,6 +39,7 @@ async function handleUpdate(draft) {
   <air-array-manager
     v-bind="{ ...$attrs, ...attrs }"
     class="fill-height"
+    :model-value="props.modelValue"
     :schema="Customer"
     :excluded-keys="['contractStatus']"
     label="取引先の新規登録"

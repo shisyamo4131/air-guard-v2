@@ -8,9 +8,16 @@ import { useBaseManager } from "@/composables/useBaseManager";
 
 defineOptions({ inheritAttrs: false });
 
+const props = defineProps({
+  modelValue: {
+    type: Object,
+    default: () => new Customer(),
+    validator: (value) => value instanceof Customer,
+  },
+});
+
 const emit = defineEmits(["created"]);
 
-const defaultCustomer = new Customer();
 const { attrs } = useBaseManager("CustomerManager");
 
 function rejectUnsupportedOperation() {
@@ -36,7 +43,7 @@ async function handleCreate(draft) {
 <template>
   <air-item-manager
     v-bind="{ ...$attrs, ...attrs }"
-    :model-value="$attrs.modelValue ?? $attrs['model-value'] ?? defaultCustomer"
+    :model-value="props.modelValue"
     :dialog-props="{
       maxWidth: 480,
       persistent: true,
