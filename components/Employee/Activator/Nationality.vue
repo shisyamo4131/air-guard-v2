@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Employee/Activator/Nationality.vue
  * @description 従業員の国籍情報表示コンポーネント
- * - `EmployeeEditor` の activator スロット用コンポーネント
+ * - `EmployeeManager` の activator スロット用コンポーネント
  *****************************************************************************/
 import dayjs from "dayjs";
 import { Employee } from "@/schemas";

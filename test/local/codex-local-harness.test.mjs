@@ -50,8 +50,7 @@ import {
   createUserEmailReservationId,
 } from "../../functions/modules/auth/createTemporaryUser.js";
 import { createSiteCustomerProjection } from "../../utils/site/siteCustomerProjection.js";
-import { expectedFields, SECURITY_FIELDS, encodeExpected, INSURANCE_KINDS } from "../../functions/shared/employeeContract.js";
-import { insuranceVersions } from "../../functions/shared/employeeInsuranceContract.js";
+import { encodeExpected } from "../../functions/shared/employeeContract.js";
 import { expectedForOperation, notificationExpectation } from "../../functions/shared/operationWriteContract.js";
 import { prepareNotificationState, expectedNotificationState } from "../../functions/shared/notificationStateContract.js";
 import { paymentExpected } from "../../functions/shared/billingPaymentContract.js";
@@ -98,15 +97,41 @@ async function emp05ArchiveFixture(suffix) {
   const checked = await runEmployeeReferenceDryRun({ companyId, readCollection: async (_, name) => (await admin.collection(`${prefix}/${name}`).get()).docs.map((snapshot) => ({ id: snapshot.id, raw: snapshot.data() })) });
   assert.equal(checked.consistent, true); assert.equal(checked.archiveReady, false);
   const actor = { uid, companyId, email, password }, employeeId = `emp05-d-${suffix}`;
-  const changes = { lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "合成市", address: "合成住所" };
-  const result = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes, expected: {} } });
-  assert.equal(result.response.status, 200, JSON.stringify(result.payload));
-  const original = (await admin.doc(`${prefix}/Employees/${employeeId}`).get()).data();
+  const { Employee } = await import("@shisyamo4131/air-guard-v2-schemas");
+  const convert = (value) => value instanceof Date
+    ? AdminTimestamp.fromDate(value)
+    : Array.isArray(value)
+      ? value.map(convert)
+      : value !== null && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).map(([key, entry]) => [key, convert(entry)]))
+        : value;
+  const original = {
+    ...convert(new Employee({
+      docId: employeeId,
+      lastName: "合成",
+      firstName: "太郎",
+      lastNameKana: "ゴウセイ",
+      firstNameKana: "タロウ",
+      displayName: "合成太郎",
+      displayNameKana: "ゴウセイタロウ",
+      gender: "MALE",
+      dateOfBirth: new Date("1990-01-01T00:00:00+09:00"),
+      dateOfHire: new Date("2026-01-01T00:00:00+09:00"),
+      zipcode: "1000001",
+      prefCode: "13",
+      city: "合成市",
+      address: "合成住所",
+    }).toObject()),
+    uid,
+    createdAt: AdminTimestamp.now(),
+    updatedAt: AdminTimestamp.now(),
+  };
+  await admin.doc(`${prefix}/Employees/${employeeId}`).set(original);
   const identity = { uid, companyId, isSuperUser: false };
   const { archiveEmployee } = await import("../../functions/modules/employees/archiveEmployee.js");
   const request = (id) => ({ employeeId: id, reason: "合成誤登録", operationId: `${id}-archive` });
   const archive = (id, firestore = admin) => archiveEmployee({ firestore, resolveIdentity: async () => identity, resolveAllowedTenants: () => [companyId], input: request(id) });
-  return { admin, actor, prefix, employeeId, original, changes, identity, archive, request,
+  return { admin, actor, prefix, employeeId, original, identity, archive, request,
     cleanup: async () => { await admin.recursiveDelete(admin.doc(prefix)); await getAdminAuth().deleteUser(uid); } };
 }
 function emp05BeforeTransactionGate(admin) {
@@ -145,8 +170,13 @@ test("EMP05-D HTTP archive preserves raw, checks all dependencies and recovers e
     assert.equal(saved.audit.actorUid, actor.uid); assert.equal((await ref.get()).exists, false);
     assert.equal((await call()).response.status, 200); assert.deepEqual((await archiveRef.get()).data(), saved);
     assert.equal((await call({ ...state.request(employeeId), reason: "別要求" })).payload.error.status, "ALREADY_EXISTS");
-    const reused = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes: state.changes, expected: {} } });
-    assert.equal(reused.payload.error.status, "ALREADY_EXISTS"); assert.equal((await ref.get()).exists, false);
+    const client = authenticatedFirestore(actor.uid, { companyId: actor.companyId });
+    await assertFails(setDoc(doc(client, "Companies", actor.companyId, "Employees", employeeId), {
+      docId: employeeId,
+      employmentStatus: "ACTIVE",
+      uid: actor.uid,
+    }));
+    assert.equal((await ref.get()).exists, false);
   } finally { await state.cleanup(); }
 });
 
@@ -493,149 +523,6 @@ test("EMP05-B HTTP operation writers preserve references, notification confirmat
     cleanup.push(...remaining.docs.map((snapshot) => ["ArrangementNotifications", snapshot.id]));
     await cleanupSiteArchiveScenario({ actorUids: [actor.uid, "emp05-operation-accountant", "emp05-operation-personal"], entries: cleanup.map(([collectionName, docId]) => ({ companyId, collectionName, docId })) });
   }
-});
-
-test("EMP-INS missing insurance HTTP initializes complete maps once and rejects concurrent stale initialization", async () => {
-  const actor = await seedSiteLifecycleTransportActor({ uid: "emp-ins-missing-hr", roles: ["human-resource"] });
-  const { Insurance } = await import("@shisyamo4131/air-guard-v2-schemas");
-  const employeeId = "emp-ins-missing-employee", ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
-  const call = (input) => callSiteLifecycleTransport({ actor, functionName: "transitionEmployeeInsurance", data: { employeeId, ...input } });
-  const changes = { enrollmentDateAt: "2026-01-01", number: "SYNTHETIC", isProcessing: false };
-  try {
-    for (const kind of INSURANCE_KINDS) for (const version of [undefined, 7]) {
-      const other = INSURANCE_KINDS.find((key) => key !== kind);
-      const raw = { docId: employeeId, employmentStatus: "ACTIVE", unknown: { keep: true }, [other]: { ...new Insurance().toObject(), history: [{ status: "NOT_ENROLLED", unknown: { at: new AdminTimestamp(1767193200, 123456789) } }] } };
-      if (version !== undefined) raw.insuranceOperationVersions = Object.fromEntries(INSURANCE_KINDS.map((key) => [key, version]));
-      await ref.set(raw);
-      const before = (await ref.get()).data(); assert.equal(Object.hasOwn(before, kind), false);
-      const input = { kind, action: "enroll", changes, expected: { map: encodeExpected(before[kind]), version: insuranceVersions(before)[kind] } };
-      assert.deepEqual(input.expected.map, encodeExpected(undefined));
-      const outcomes = await Promise.all([call(input), call(input)]);
-      assert.equal(outcomes.filter((result) => result.response.status === 200).length, 1, JSON.stringify(outcomes.map((result) => result.payload)));
-      assert.equal(outcomes.filter((result) => result.payload.error?.status === "ABORTED").length, 1);
-      const after = (await ref.get()).data();
-      assert.equal(after[kind].status, "ENROLLED"); assert.equal(after[kind].isProcessing, false); assert.deepEqual(after[kind].history, []);
-      assert.deepEqual(Object.keys(after[kind]).sort(), Object.keys(new Insurance().toObject()).sort());
-      assert.equal(after[kind].enrollmentDate, "2026-01-01"); assert.equal(after[kind].number, "SYNTHETIC");
-      assert.equal(after.insuranceOperationVersions[kind], (version ?? 0) + 1);
-      assert.equal(after.insuranceOperationVersions[other], version ?? 0);
-      assert.deepEqual(encodeExpected(after[other]), encodeExpected(before[other])); assert.deepEqual(after.unknown, before.unknown);
-      const untouched = INSURANCE_KINDS.find((key) => key !== kind && key !== other); assert.equal(Object.hasOwn(after, untouched), false);
-    }
-    for (const invalid of [null, {}]) {
-      await ref.set({ docId: employeeId, employmentStatus: "ACTIVE", healthInsurance: invalid });
-      const response = await call({ kind: "healthInsurance", action: "enroll", changes, expected: { map: encodeExpected(invalid), version: 0 } });
-      assert.equal(response.payload.error.status, "FAILED_PRECONDITION"); assert.deepEqual((await ref.get()).data().healthInsurance, invalid);
-      assert.equal(Object.hasOwn((await ref.get()).data(), "insuranceOperationVersions"), false);
-    }
-  } finally { await ref.delete(); }
-});
-
-test("EMP04 insurance HTTP transitions preserve raw history and reject ABA while separate kinds can commit", async () => {
-  const actor = await seedSiteLifecycleTransportActor({ uid: "emp04-transport-hr", roles: ["human-resource"] });
-  const employeeId = "emp04-transport-employee";
-  const call = (functionName, input) => callSiteLifecycleTransport({ actor, functionName, data: { employeeId, ...input } });
-  const created = await call("createEmployee", { changes: { lastName: "合成", firstName: "保険", lastNameKana: "ゴウセイ", firstNameKana: "ホケン", displayName: "合成保険", displayNameKana: "ゴウセイホケン", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }, expected: {} });
-  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
-  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
-  const input = (raw, kind, action, changes = {}) => ({ kind, action, changes, expected: { map: encodeExpected(raw[kind]), version: insuranceVersions(raw)[kind] } });
-  const transition = (data) => call("transitionEmployeeInsurance", data);
-  const save = async (kind, action, changes = {}) => { const raw = (await ref.get()).data(), data = input(raw, kind, action, changes), result = await transition(data); assert.equal(result.response.status, 200, JSON.stringify(result.payload)); return data; };
-  const initial = (await ref.get()).data();
-  const enroll = { enrollmentDateAt: "2026-01-01", number: null, isProcessing: true };
-  const results = await Promise.all(INSURANCE_KINDS.map((kind) => transition(input(initial, kind, "enroll", enroll))));
-  for (const result of results) assert.equal(result.response.status, 200, JSON.stringify(result.payload));
-  assert.deepEqual((await ref.get()).data().insuranceOperationVersions, { healthInsurance: 1, pensionInsurance: 1, employmentInsurance: 1 });
-  const kind = "healthInsurance";
-  await save(kind, "cancelEnroll"); assert.equal((await ref.get()).data()[kind].previousStatus, null);
-  await save(kind, "enroll", enroll); await save(kind, "enrolled", { number: "SYNTHETIC" });
-  const stamp = new AdminTimestamp(1767193200, 123456789);
-  await ref.update({ [`${kind}.enrollmentDateAt`]: stamp, [`${kind}.unknown`]: { at: stamp } });
-  // Firestore storage may canonicalize the fixture's nanos. Compare operations
-  // against the just-read stored value, including precision finer than milliseconds.
-  const stored = (await ref.get()).data()[kind];
-  assert.equal(stored.enrollmentDateAt.seconds, stamp.seconds);
-  assert.notEqual(stored.enrollmentDateAt.nanoseconds % 1000000, 0);
-  const oldLoss = await save(kind, "loss", { lossDateAt: "2026-02-01", lossReason: "合成理由", isRetire: false });
-  let raw = (await ref.get()).data(); assert.deepEqual(encodeExpected(raw[kind].history.at(-1).enrollmentDateAt), encodeExpected(stored.enrollmentDateAt));
-  const oldRollback = await save(kind, "rollback"); raw = (await ref.get()).data(); assert.deepEqual(encodeExpected(raw[kind].enrollmentDateAt), encodeExpected(stored.enrollmentDateAt)); assert.deepEqual(encodeExpected(raw[kind].unknown), encodeExpected(stored.unknown));
-  assert.deepEqual(encodeExpected(raw[kind]), oldLoss.expected.map);
-  const staleLoss = await transition(oldLoss); assert.equal(staleLoss.payload.error.status, "ABORTED");
-  await save(kind, "loss", { lossDateAt: "2026-02-01", lossReason: "合成理由", isRetire: false });
-  assert.deepEqual(encodeExpected((await ref.get()).data()[kind]), oldRollback.expected.map);
-  const staleRollback = await transition(oldRollback); assert.equal(staleRollback.payload.error.status, "ABORTED");
-  await save(kind, "rollback");
-  await save(kind, "exempt", { lossDateAt: "2026-02-01", lossReason: "合成理由" });
-  raw = (await ref.get()).data(); assert.equal(raw.insuranceOperationVersions.healthInsurance, 9); assert.equal(raw.insuranceOperationVersions.pensionInsurance, 1); assert.equal(raw.insuranceOperationVersions.employmentInsurance, 1);
-  // A history entry with absent optional restored fields must delete those fields,
-  // while an untouched prior history entry retains its raw extras and precision.
-  const history = [{ status: "NOT_ENROLLED", unknown: { at: stamp } }, { status: "NOT_ENROLLED" }];
-  await ref.update({ [`${kind}.history`]: history });
-  const storedHistory = (await ref.get()).data()[kind].history;
-  assert.notEqual(storedHistory[0].unknown.at.nanoseconds % 1000000, 0);
-  await save(kind, "rollback"); raw = (await ref.get()).data();
-  for (const field of ["previousStatus", "enrollmentDateAt", "number"]) assert.equal(Object.hasOwn(raw[kind], field), false);
-  assert.equal(raw[kind].enrollmentDate, ""); assert.deepEqual(encodeExpected(raw[kind].history), encodeExpected(storedHistory.slice(0, -1)));
-  await getAdminFirestore().doc(`Companies/${actor.companyId}/Users/${actor.uid}`).update({ roles: ["controller"] });
-  const denied = await transition(input(raw, kind, "enroll", enroll)); assert.equal(denied.payload.error.status, "PERMISSION_DENIED");
-});
-
-test("EMP03 security and certification Callables preserve row positions and reject stale writes over HTTP", async () => {
-  const actor = await seedSiteLifecycleTransportActor({ uid: "emp03-transport-hr", roles: ["human-resource"] });
-  const employeeId = "emp03-transport-employee";
-  const call = (functionName, input) => callSiteLifecycleTransport({ actor, functionName, data: { employeeId, ...input } });
-  const created = await call("createEmployee", { changes: { lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "合成太郎", displayNameKana: "ゴウセイタロウ", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" }, expected: {} });
-  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
-  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
-  const original = (await ref.get()).data();
-  const clearedSecurity = { hasSecurityGuardRegistration: false, dateOfSecurityGuardRegistration: null, bloodType: "A", emergencyContactName: null, emergencyContactRelation: null, emergencyContactRelationDetail: null, emergencyContactAddress: null, emergencyContactPhone: null, domicile: null };
-  assert.deepEqual(Object.fromEntries(SECURITY_FIELDS.map((field) => [field, original[field]])), clearedSecurity);
-  const security = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: true, dateOfSecurityGuardRegistration: "2026-01-01", bloodType: "A", emergencyContactName: "合成家族", emergencyContactRelation: "OTHER", emergencyContactRelationDetail: "その他", emergencyContactAddress: "合成住所", emergencyContactPhone: "09012345678", domicile: "合成本籍" }, expected: {} });
-  assert.equal(security.response.status, 200, JSON.stringify(security.payload));
-  let raw = (await ref.get()).data();
-  const cleared = await call("updateEmployeeSecurity", { changes: { hasSecurityGuardRegistration: false, emergencyContactName: "残留不可" }, expected: expectedFields(raw, SECURITY_FIELDS) });
-  assert.equal(cleared.response.status, 200, JSON.stringify(cleared.payload));
-  const afterClear = (await ref.get()).data();
-  assert.deepEqual(Object.fromEntries(SECURITY_FIELDS.map((field) => [field, afterClear[field]])), clearedSecurity);
-  for (const serialNumber of ["A", "B"]) {
-    raw = (await ref.get()).data();
-    const added = await call("updateEmployeeCertifications", { action: "add", position: null, changes: { name: "同名資格", type: "TRAFFIC", issueDateAt: "2026-01-01", serialNumber }, expected: expectedFields(raw, ["securityCertifications"]) });
-    assert.equal(added.response.status, 200, JSON.stringify(added.payload));
-  }
-  raw = (await ref.get()).data(); const expected = expectedFields(raw, ["securityCertifications"]);
-  const update = await call("updateEmployeeCertifications", { action: "update", position: 1, changes: { name: "訂正資格" }, expected });
-  assert.equal(update.response.status, 200, JSON.stringify(update.payload));
-  const stale = await call("updateEmployeeCertifications", { action: "remove", position: 0, changes: {}, expected });
-  assert.equal(stale.payload.error.status, "ABORTED");
-  raw = (await ref.get()).data(); assert.equal(raw.securityCertifications[0].name, "同名資格"); assert.equal(raw.securityCertifications[1].name, "訂正資格"); assert.deepEqual(raw.healthInsurance, original.healthInsurance);
-  const invalid = await call("updateEmployeeCertifications", { action: "add", position: null, changes: { name: "未完成" }, expected: expectedFields(raw, ["securityCertifications"]) });
-  assert.equal(invalid.payload.error.status, "INVALID_ARGUMENT");
-  const removed = await call("updateEmployeeCertifications", { action: "remove", position: 1, changes: {}, expected: expectedFields(raw, ["securityCertifications"]) });
-  assert.equal(removed.response.status, 200, JSON.stringify(removed.payload)); assert.equal((await ref.get()).data().securityCertifications.length, 1);
-  await getAdminFirestore().doc(`Companies/${actor.companyId}/Users/${actor.uid}`).update({ roles: ["controller"] });
-  const denied = await call("updateEmployeeSecurity", { changes: { bloodType: "B" }, expected: {} });
-  assert.equal(denied.payload.error.status, "PERMISSION_DENIED");
-});
-
-test("EMP02 Employee Callable transport creates and patches exact fields with external effects denied", async () => {
-  const actor = await seedSiteLifecycleTransportActor({ uid: "emp02-transport-hr", roles: ["human-resource"] });
-  const employeeId = "emp02-transport-employee";
-  const changes = { lastName: "合成", firstName: "太郎", lastNameKana: "ゴウセイ", firstNameKana: "タロウ", displayName: "表示指定", displayNameKana: "ヒョウジシテイ", gender: "MALE", dateOfBirth: "1990-01-01", dateOfHire: "2026-01-01", zipcode: "1000001", prefCode: "13", city: "試験市", address: "合成住所" };
-  const created = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes, expected: {} } });
-  assert.equal(created.response.status, 200, JSON.stringify(created.payload));
-  assert.equal(created.payload.result.success, true); assert.ok(created.payload.result.warning);
-  const ref = getAdminFirestore().doc(`Companies/${actor.companyId}/Employees/${employeeId}`);
-  const before = (await ref.get()).data();
-  assert.equal(before.displayName, "表示指定"); assert.equal(before.location, null); assert.equal(before.geopoint, null);
-  assert.deepEqual(before.insuranceOperationVersions, { healthInsurance: 0, pensionInsurance: 0, employmentInsurance: 0 });
-  await ref.update({ unknown: { keep: true } });
-  const updated = await callSiteLifecycleTransport({ actor, functionName: "updateEmployeeBasic", data: { employeeId, changes: { title: "主任" }, expected: {} } });
-  assert.equal(updated.response.status, 200, JSON.stringify(updated.payload));
-  const after = (await ref.get()).data(); assert.equal(after.title, "主任"); assert.deepEqual(after.unknown, { keep: true }); assert.deepEqual(after.healthInsurance, before.healthInsurance);
-  const refused = await callSiteLifecycleTransport({ actor, functionName: "updateEmployeeBasic", data: { employeeId, changes: { employmentStatus: "RESIGNED" }, expected: {} } });
-  assert.equal(refused.payload.error.status, "INVALID_ARGUMENT");
-  const duplicate = await callSiteLifecycleTransport({ actor, functionName: "createEmployee", data: { employeeId, changes, expected: {} } });
-  assert.equal(duplicate.payload.error.status, "ALREADY_EXISTS");
 });
 
 test("FGA04 normal Employee is tenant-wide while archive stays role-restricted", async () => {

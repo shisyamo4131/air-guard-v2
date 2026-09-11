@@ -29,7 +29,6 @@ export { updateCompanyArrangement } from "./updateCompanyArrangement.js";
 export { updateCompanyBilling } from "./updateCompanyBilling.js";
 export { updateCompanyOperations } from "./updateCompanyOperations.js";
 export { updateCompanyProfile } from "./updateCompanyProfile.js";
-export { createEmployee, updateEmployeeBasic, updateEmployeeNationality, updateEmployeeSecurity, updateEmployeeCertifications, transitionEmployeeInsurance } from "./saveEmployee.js";
 export { saveOperation } from "./saveOperation.js";
 export { updateBillingPaymentDate } from "./updateBillingPaymentDate.js";
 export {

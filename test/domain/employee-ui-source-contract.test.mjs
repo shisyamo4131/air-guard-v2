@@ -14,7 +14,6 @@ const files = [
   "components/Employee/CustomInput/Nationality.vue",
   "components/Employee/CustomInput/SecurityGuard.vue",
   "components/Employee/UserManager.vue",
-  "components/Employee/Editor.vue",
   "components/Employee/Certifications/Manager/index.vue",
   "components/Employee/ArchiveDialog.vue",
 ];
@@ -50,6 +49,20 @@ test("reachable normal Employee CRUD uses the domain Managers and model persiste
   }
   assert.equal((detail.match(/<EmployeeManager\b/gu) || []).length, 3);
   assert.doesNotMatch(detail, /<EmployeeEditor\b/u);
+  await assert.rejects(
+    readFile(new URL("../../components/Employee/Editor.vue", import.meta.url), "utf8"),
+    { code: "ENOENT" },
+  );
+  await assert.rejects(
+    readFile(
+      new URL(
+        "../../composables/application/employee/useEmployeeEditor.js",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    { code: "ENOENT" },
+  );
 });
 
 test("qualification and insurance screens use normal Employee persistence", async () => {

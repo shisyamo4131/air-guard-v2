@@ -6,6 +6,8 @@
 - 根拠ファイル: `functions/index.js`、`functions/package.json`、`functions/modules/firebase.init.js`、`functions/apis/*.js`、entryから直接re-exportされるmodules/triggers/apisの宣言部
 - 調査方法: entryのstar exportを起点にexport名を列挙し、各宣言のtrigger/optionsと入口認証の狭い範囲だけを確認した。業務処理本文は既存実装文書を参照し、再調査していない。
 
+> 2026-09-12 FGA-04追記: `createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`は、通常Employee保存をmodel直接保存へ戻したためLocal sourceの公開entryから撤去した。以下の件数と一覧は2026-08-20時点の調査記録であり、現在のdeployment surfaceの確定には使用しない。Dev上の既存Function削除は未実施である。
+
 ## entry / export構造
 
 `functions/index.js`はdayjsをAsia/Tokyoへ初期化し、`firebase.init.js`でAdmin app、FireModel server adapter、geocoding callbackを初期化した後、次をstar exportする。

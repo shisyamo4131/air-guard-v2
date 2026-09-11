@@ -6,7 +6,7 @@
 
 FGA-04-EMPLOYEE-MANAGER-LWW-02のLocal実装では、在職一覧の作成、詳細の基本・国籍・警備員情報をEmployee単数／複数形ManagerとCustomInputへ接続し、資格・3保険を含む通常編集をEmployee modelの`create`／`update`によるdocument last-write-winsへ戻した。資格・保険画面から専用Callable、最新値比較、競合拒否、role制限を外した。保険は既存の加入・喪失等の状態遷移条件だけを入力・計算時に維持する。通常readerとページ・Rulesは、同一tenantの有効な本登録Userへrole非依存で開いた。退職後の通常編集、client delete、archive、退職・誤退職訂正、User/Authは従来の専用境界を維持する。
 
-公開Schemas `3.0.0-dev.1`はapplication所有fieldの`insuranceOperationVersions`を出力しないため、そのまま全文保存すると既存値が消える。local Employee schemaで既存値を検証・保持し、新規作成時だけ3保険を0で初期化する互換層を追加した。fieldがない既存Employeeは読込みだけで補完せず、一括migrationも行わない。旧Employee保存Callableは現行画面から到達しないが、Dev反映順序を確定して停止するまではentrypointを保持する。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。以下のEMP-02〜09の記述と旧受入れ証拠は当時の実装履歴であり、FGA-04の完成状態へ読み替えない。
+公開Schemas `3.0.0-dev.1`はapplication所有fieldの`insuranceOperationVersions`を出力しないため、そのまま全文保存すると既存値が消える。local Employee schemaで既存値を検証・保持し、新規作成時だけ3保険を0で初期化する互換層を追加した。fieldがない既存Employeeは読込みだけで補完せず、一括migrationも行わない。現行画面から到達しなくなった旧Employee通常保存Callable 6件と、その専用API・保存module・旧EditorはLocal sourceから撤去した。Dev上の既存Function削除と新Hosting反映は未実施であり、反映時は6件を削除対象として明示承認する。[Local検証記録](../verification/fga-04-employee-manager-lww-local.md)を参照する。以下のEMP-02〜09の記述と旧受入れ証拠は当時の実装履歴であり、FGA-04の完成状態へ読み替えない。
 
 2026-09-06の最新方針は[現行仕様](../specification.md#employeeの操作権限と保持)と[共通データ仕様](../specification.md#共通データ仕様)、[ADR 0060](../decisions/0060-common-archive-purge-and-address-contract.md)を参照する。archiveは別collection移動に戻し、必要な従属writerの保護を設計する。以下は静的実装事実と未実装の設計であり、適用・進捗は[Employeeロードマップ](../roadmaps/employee.md)を正とする。
 

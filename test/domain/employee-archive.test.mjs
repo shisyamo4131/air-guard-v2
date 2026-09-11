@@ -6,7 +6,6 @@ import { parseDate, plain } from "../../functions/shared/employeeContract.js";
 import { parseEmployeeArchiveInput, validateEmployeeArchiveRaw } from "../../functions/shared/employeeArchiveContract.js";
 import { archiveEmployee, EMPLOYEE_ARCHIVE_QUERIES, EMPLOYEE_ARCHIVE_DOCUMENTS, parseArchiveTenants } from "../../functions/modules/employees/archiveEmployee.js";
 import { demoEmployeeArchiveTenants } from "../../functions/codex-test/employeeArchive.js";
-import { saveEmployee } from "../../functions/modules/employees/saveEmployee.js";
 
 const root = "Companies/company", live = `${root}/Employees/employee`, archive = `${root}/Employees_archive/employee`;
 const identity = { uid: "actor", companyId: "company", isSuperUser: false };
@@ -88,7 +87,6 @@ test("archive copies complete raw without changing unknown/null/missing/nanos/Ge
   for (const changes of [{ operationId: "other" }, { reason: "別理由" }]) await assert.rejects(state.run({ employeeId: "employee", reason: "誤登録", operationId: "attempt", ...changes }), { code: "already-exists" });
   state.records.set(`${root}/Users/other-actor`, { ...actor, docId: "other-actor" });
   await assert.rejects(state.run(undefined, { resolveIdentity: async () => ({ ...identity, uid: "other-actor" }) }), { code: "already-exists" });
-  await assert.rejects(saveEmployee({ firestore: state.firestore, resolveIdentity: state.resolveIdentity, input: { employeeId: "employee", changes: {}, expected: {} }, operation: "create", geocode: async () => { throw new Error("must not geocode"); } }), { code: "already-exists" });
 });
 for (const lifecycleState of ["access-revoke-pending", "access-revoked", "auth-delete-intent", "data-finalized", "completed", "failed-retryable"]) test(`archive refuses LifecycleOperations state ${lifecycleState}`, async () => {
   const state = setup(); state.records.set(`${root}/LifecycleOperations/op`, { employeeId: "employee", state: lifecycleState });

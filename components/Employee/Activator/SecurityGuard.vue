@@ -2,7 +2,7 @@
 /*****************************************************************************
  * @file ./components/Employee/Activator/SecurityGuard.vue
  * @description 従業員の警備員資格情報表示コンポーネント
- * - `EmployeeEditor` の activator スロット用コンポーネント
+ * - `EmployeeManager` の activator スロット用コンポーネント
  *
  * [更新履歴]
  * 2026-06-11 - `hasSecurityGuardRegistration` が false の場合の VEmptyState を追加。

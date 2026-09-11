@@ -11,7 +11,7 @@ import { formatNumber } from "../../utils/formats/util.js";
 import { employeeReadLabel } from "../../composables/domain/employee/employeeReadLabel.js";
 
 const source = (file) => readFile(new URL(`../../${file}`, import.meta.url), "utf8");
-const dialogs = ["Employee/Editor.vue", "Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue", "SiteOperationSchedule/Duplicator/index.vue", "Employee/ArchiveDialog.vue", "CustomerBilling/PaymentDateEditor.vue"];
+const dialogs = ["Employee/Certifications/Manager/index.vue", "Insurance/Transition/Manager.vue", "Operation/Editor.vue", "ArrangementNotifications/Manager/index.vue", "ArrangementNotification/Manager/toLeaved.vue", "SiteOperationSchedule/Duplicator/index.vue", "Employee/ArchiveDialog.vue", "CustomerBilling/PaymentDateEditor.vue"];
 async function setup(file, supplied, returns) {
   const { descriptor } = parse(await source(file));
   const code = descriptor.scriptSetup.content.replace(/import[\s\S]*?;\s*/gu, "");
@@ -29,10 +29,6 @@ test("editor dialogs scroll the card body while title/actions remain outside it;
     if (dialogs.includes(file)) {
       const root = compile(descriptor.template.content).ast;
       const find = (node, tag) => [node, ...(node.children || []).flatMap((child) => find(child, tag))].filter((child) => child.tag === tag);
-      if (file === "Employee/Editor.vue") {
-        assert.equal(find(root, "AppEditorDialog").length, 1);
-        continue;
-      }
       const dialog = find(root, "v-dialog")[0]; assert.ok(dialog.props.some((prop) => prop.name === "scrollable"), file);
       const card = find(dialog, "v-card")[0], body = card.children.find((node) => node.tag === "v-card-text"), actions = card.children.find((node) => node.tag === "v-card-actions");
       assert.ok(body && actions, file); assert.equal(find(body, "v-card-actions").length, 0);

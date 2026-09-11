@@ -9,6 +9,8 @@
 
 この文書は反映候補のinventoryであり、release checkpointの承認、最終commit、exact deploy command、実行順序を確定しない。最終release差分は後続Checkpointで再照合する。
 
+> FGA-02〜04の後続変更により、このbaseline inventoryは現在のrelease判断には使用しない。特にEmployee通常保存6 FunctionはLocal sourceから撤去済みで、Dev反映時は新規・更新候補ではなく既存Functionの削除候補として正確な名前、復旧source、反映順を再確認する。
+
 ## 比較基準
 
 確認済みのlocal Gitとimmutable receiptを比較した。live remoteは未確認である。
