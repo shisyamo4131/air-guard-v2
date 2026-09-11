@@ -42,7 +42,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - 作成時から`hasAbbreviation/abbreviation/siteNumber/remarks`を入力でき、基本編集も同じfieldを扱う。
 - code/name等の一意性validationはない。
 - 単数`SiteManager`は既存またはその場の新規Siteを所有し、複数形`SitesManager`は一覧配列と行選択を所有する。一覧のUPDATE選択は`beforeEdit`から詳細へ遷移して一覧dialogを開かない。create/update handlerはSite modelの標準`create`／`update`を直接呼び、schema hook、validation、会社prefix、metadata、transaction保存を標準adapterへ委ねる。delete handlerは拒否してgeneric logical archiveへ到達させない。
-- 通常updateはdraftのSite document全体を後保存優先で保存する。終了・再有効化・予定競合・取極め・archiveは通常編集とは別の専用入口と保存処理を維持する。
+- 通常updateはdraftのSite document全体を後保存優先で保存する。取極めも現在のSiteへ編集後の配列を重ねて同じ通常`update()`を使う。終了・再有効化・予定競合・archiveは通常編集とは別の専用入口と保存処理を維持する。
 
 ## 検索・表示
 
@@ -91,6 +91,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 | `Site/CustomInput` | `componentAttrs`、`item`、`disabled`、`updateProperties`、`step` | 共通Managerの作成VForm内で、取引先名検索、既存Customerの任意選択、現場情報入力を3ステップで表示する。Customer未登録でも仮登録できる。 |
 | `Site/CustomInput/Base` | 15 fieldのcomponent attrsを入力へ展開 | code/name/address/security/construction/remarks等を表示するが、validation・保存はAir manager/schemaへ委譲する。 |
 | `Site/CustomInput/Customer` | Customer fieldのcomponent attrsと編集中Site | 別Customerへの変更を許可し、編集開始時にCustomer設定済みなら未設定へ戻す操作を表示しない。 |
+| `Site/Editor/Agreements` | listener由来Siteを受け、編集後の`agreementsV2`を重ねたSite modelの通常`update()`を`AgreementsManager`へ接続 | 詳細画面内へ取極め一覧と追加・編集・複製buttonを直接表示し、選択した1件だけをdialogで編集する。document last-write-wins、0円確認、失敗後の入力保持、同一操作の二重送信防止を維持する。 |
 | `Site/Autocomplete` | creatable/label/itemTitle/itemValue/returnObject、model update | status非限定でACTIVEを先に表示し、検索・lookupをlatest-onlyにする。TERMINATEDは確認し、取消・not-found・失敗では元の確定値を保持する。作成入口は通常Site writeのclient判定を満たすUserに表示する。 |
 | `Site/Select` | label/itemTitle/itemValueと全attrsをAirSelectへ透過 | 候補集合、status、permission、enum membershipはcaller責任である。 |
 | `Site/Activator/Base` | Site、title、edit event、Base CustomInput expose | callerが許可した時だけaccessible name付きedit buttonを表示し、JSTで両端・開始のみ・終了のみ・未設定の工期を区別する。 |
@@ -101,7 +102,7 @@ client policyはcurrent Authとlive User stateを送信直前に再評価し、�
 - `Site/Card`は`Sites/Iterator`からだけ到達し、そのIteratorのroute上の使用は現在comment outされている。公開componentとしての外部/dynamic到達性は未確認であり、deadとは断定しない。
 - 現行作成dialogは履歴で確認した`CustomersIterator`の3-step経路を共通Manager内で使用する。旧専用`Site/CreateDialog`は不要なため削除した。
 - Site専用郵便番号inputは既存の外部lookup utilityを再利用し、7桁入力時の最新応答だけを住所へ反映する。検索中に郵便番号または住所が変わった場合、失敗・0件、unmount時は既存入力を変更しない。外部utilityが通信失敗と0件をどちらもnullに畳むため、画面文言も原因を断定しない。
-- 通常作成・更新は共通Air Managerのdraft、VForm、dialog、listener同期を使い、document単位last-write-winsとする。取極めだけは独立draft、同一field競合、失敗後の入力保持を維持する。全Site writeのsingle-flightも維持する。
+- 通常作成・更新は共通Air Managerのdraft、VForm、dialog、listener同期を使い、document単位last-write-winsとする。取極めは詳細画面内に一覧と追加・編集・複製buttonを直接表示し、選択した1件だけをdialogで編集する。専用Callableや競合拒否は使わず、現在のSiteへ編集後の配列を重ねて通常`update()`で保存する。0円確認、失敗後の入力保持、同一操作の二重送信防止は維持する。
 - SITE-08で予定・実績フォームの取極め定時読込みをprovider cache依存から明示company/Site IDの取得へ変更した。予定のpreset警備種別も取得完了後に反映する。既存Site read access guardを再利用し、tenant・uid・アクセス取消、unmount、Site/date/shift変更、取得前後の手入力、A→B→Aで古い応答を破棄する。操作別writerと保存shapeは変更しない。
 - 9 filesにはtenant、role、permission、actor、audit checkがない。表示・disabled・validationはRules/Functionsのauthorizationを代替しない。
 

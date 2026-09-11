@@ -6,15 +6,7 @@ import {
   assertSiteWriteAllowed,
   getSiteWriteDecision,
 } from "@/composables/domain/site/siteAuthorization";
-import { Site } from "@/schemas";
-import {
-  SiteOperationError,
-} from "@/composables/domain/site/siteOperations";
 import { useSiteFunctions } from "@/composables/site/useSiteFunctions";
-import {
-  createSiteAgreementUpdateRequest,
-  isSiteAgreementUpdateResult,
-} from "@/composables/domain/site/siteAgreementContract";
 
 const sharedSiteWriteState = Vue.reactive({ isSaving: false });
 
@@ -97,83 +89,6 @@ export function useSiteActions() {
     );
   }
 
-  function assertIdentityUnchanged(companyId, actorUid) {
-    assertWritePermission();
-    if (auth.companyId !== companyId || auth.uid !== actorUid) {
-      throw new SiteOperationError(
-        "permission-denied",
-        "現場を変更する権限を確認できません。",
-      );
-    }
-  }
-
-  async function updateAgreements({ latest, baseline, agreements }) {
-    return await executeSiteWrite(SITE_WRITE_OPERATION.AGREEMENT, async () => {
-      const companyId = auth.companyId;
-      const actorUid = auth.uid;
-      const source = typeof latest === "function" ? latest() : latest;
-      if (!(source instanceof Site) || !source.docId) {
-        throw new SiteOperationError("not-found", "現場の最新情報を確認できません。");
-      }
-      if (source.status !== "ACTIVE") {
-        throw new SiteOperationError(
-          "invalid-state",
-          "終了済み現場の取極めは変更できません。",
-        );
-      }
-      assertIdentityUnchanged(companyId, actorUid);
-      const request = createSiteAgreementUpdateRequest({
-        siteId: source.docId,
-        baselineAgreements: baseline?.agreementsV2,
-        candidateAgreements: agreements,
-      });
-      let response;
-      try {
-        // Recheck immediately before the network send. The Callable performs
-        // the authoritative actor, maintenance, status, and baseline checks.
-        assertIdentityUnchanged(companyId, actorUid);
-        response = await siteFunctions.updateSiteAgreements(request);
-      } catch (error) {
-        const code = typeof error?.code === "string"
-          ? error.code.replace(/^functions\//u, "")
-          : "";
-        if (code === "aborted") {
-          throw new SiteOperationError(
-            "conflict",
-            "取極めが別の画面で更新されました。入力内容を保持したまま最新値を確認してください。",
-          );
-        }
-        if (code === "permission-denied") {
-          throw new SiteOperationError("permission-denied", "取極めを変更する権限がありません。");
-        }
-        if (code === "failed-precondition") {
-          throw new SiteOperationError("invalid-state", "現場の状態を確認してください。");
-        }
-        if (code === "invalid-argument") {
-          throw new SiteOperationError("invalid-agreement", "取極めの入力内容を確認してください。");
-        }
-        throw error;
-      }
-      if (!isSiteAgreementUpdateResult(response)) {
-        throw new SiteOperationError("invalid-response", "取極めの保存結果を確認できません。");
-      }
-      const candidate = new Site({
-        ...source.toObject(),
-        // Rebuild the same canonical Agreement model shape as the Callable.
-        // The transport projection intentionally represents date as YYYY-MM-DD.
-        agreementsV2: request.candidateAgreements.map((agreement) => ({
-          ...agreement,
-          dateAt: new Date(`${agreement.date}T00:00:00+09:00`),
-        })),
-      });
-      return {
-        candidate,
-        fields: response.updated ? ["agreementsV2"] : [],
-        updated: response.updated,
-      };
-    });
-  }
-
   async function terminate({ siteId, reason }) {
     return await executeSiteWrite(SITE_WRITE_OPERATION.TERMINATE, async () => {
       assertWritePermission();
@@ -207,6 +122,5 @@ export function useSiteActions() {
     rejectDirectDelete,
     reactivate,
     terminate,
-    updateAgreements,
   };
 }

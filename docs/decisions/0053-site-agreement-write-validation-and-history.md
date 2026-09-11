@@ -3,7 +3,7 @@
 - 日付: 2026-09-05
 - 状態: Accepted
 - 一部置換: 2026-09-09の[ADR 0065](0065-tenant-trust-normal-business-authorization.md)により、Site取極めのrole・permission別書込み認可を、同一tenantの有効な認証済み本登録Userに共通する通常業務権限へ置換した。数値、snapshot、履歴、状態、tenant等のdata保護条件は維持する。
-- 一部置換: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)により、Prod公開前の通常取極め更新はdocument単位last-write-winsへ移行する。field限定writer・同時更新拒否はFGA-03で置換し、数値、重複、snapshot、確定実績非更新等のdata保護条件は維持する。
+- 一部置換: 2026-09-09の[ADR 0066](0066-pre-production-document-level-last-write-wins.md)により、Prod公開前の通常取極め更新はFGA-03でdocument単位last-write-winsへ移行した。取極め専用Callable、field限定writer、baseline比較、同時更新拒否を廃止し、Site modelの通常`update()`へ統一する。数値、重複、0円確認、snapshot、確定実績非更新等のdata保護条件は維持する。
 - 関連仕様: [取引先・現場・取極め](../specification.md#取引先現場取極め)
 - 関連判断: [0031 必要十分なデータ境界](0031-proportional-data-boundary-and-change-safeguards.md)、[0048 SiteのCustomer変更と履歴snapshot](0048-site-customer-change-and-historical-snapshots.md)、[0052 Site下流情報のsnapshot時点](0052-site-downstream-snapshot-timing.md)
 
@@ -54,7 +54,7 @@ OperationResultの取極めsnapshotを過去実績の正本にすれば、master
 ## 影響と互換性
 
 - `Site.agreementsV2`の埋込み配列、適用開始日と勤務区分による選定、曜日別RateSet、既存の単価・時間・締日fieldを維持する。独立Agreement collection、revision、status、archiveを追加しない。
-- 現行UI・Rules・Site document全体保存はactorと数値契約を強制していないため、SITE-02・SITE-03・SITE-06でoperation固有writer、部分保存、UI、RulesまたはCallable、testを整合させる必要がある。
+- SITE-02・SITE-03・SITE-06で導入した取極め専用writerとRules保護は、ADR 0065・0066およびFGA-03で通常Site更新へ置換した。入力画面の数値・重複・0円確認は維持し、applicationを介さないrequestは現段階の脅威モデルへ含めない。
 - 既存OperationResultのagreement snapshotと既存dataを本判断だけで変更しない。既存取極めの範囲外値の件数・shapeはDev/remoteの別承認まで未確認であり、推測して補正しない。
 - 取極めmasterを削除しても既存OperationResult snapshotは保持する。未実績化予定と将来実績への影響はlive master契約どおりであり、自動復元または過去実績への伝播は行わない。
 
@@ -69,7 +69,7 @@ data変更前の文書・codeはreview済みcommit単位でrevertできる。新
 - 会社管理者とstrict `sites:write` actorによる作成・編集・削除を許可し、read-only、直接permission、未知role、会社管理者でないsuper-user、temporary、disabled、他tenantをUI・writer・Rulesで拒否する。
 - 全16単価fieldについて0、1、10,000,000を許可し、負数、小数、10,000,001、非数値を拒否する。0円警告を確認し、0を欠損へ変換しない。
 - 休憩・規定実働について0、1,440、日跨ぎを確認し、負数、小数、1,441、非数値、勤務区間を超える休憩を拒否する。規定実働が勤務区間を超える値は範囲内なら許可する。
-- 締日は`0/5/10/15/20/25`を許可し、それ以外の値と型を拒否する。重複key、曜日一括入力、保存失敗、二重送信、同一field競合も確認する。
+- 締日は`0/5/10/15/20/25`を許可し、それ以外の値と型を拒否する。重複key、曜日一括入力、保存失敗、二重送信、document単位last-write-winsも確認する。
 - masterの編集・削除前後で既存OperationResult agreement snapshotが不変であり、以後の新規または明示的再適用だけが新masterを使うこと、未実績化予定への影響警告、専用履歴collectionを作成しないことを確認する。
 - 実装時のchange classは最終差分に応じて`ui-css-layout`、`application-logic`、`data-contract-schema-migration`のunionとする。Dev／Prod・remote/data・migration・packageは別承認とする。
 

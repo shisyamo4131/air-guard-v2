@@ -837,7 +837,7 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 
 ## FUT-0062 Site status lifecycleと検索・編集境界を統一する
 
-- 状態: In progress
+- 状態: Superseded by FGA-03
 - 重大度: Medium
 - 発見セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034
 - 対象ファイル・シンボル: schemas `Site.terminate`、`pages/sites/terminated.vue`、`SiteAutocomplete.vue`、`pages/sites/[id].vue`
@@ -879,29 +879,29 @@ SPEC-DEEP-039b追加根拠: 旧`useOperationBillingManager`のtoggleLockもerror
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `pages/sites/[id].vue` AgreementsManager、Sites Rules、schemas `Site.agreementsV2`
-- 確認済み実装事実: `sites:read`で取極めの作成・更新・削除へ到達し、Rulesは同一会社UserにagreementsV2を含むSite全field writeを許す。SPEC-DEEP-013で、`AgreementsManager`自身にもpermission/field allowlistがなく、callerのSite/Company document全体updateへ委譲することを再確認した。
-- 想定影響と発生条件: 閲覧利用者が請求単価・時間・締日を変更し、将来の実績・請求額へ影響できる。
-- 未確認点・仮説: actorはADR 0053で確定した。現行role presetの具体的保持状況と実dataは未確認。
-- 推奨する将来対応: 会社管理者またはstrict role preset由来の`sites:write`だけをUI・送信直前policy・Rulesまたは専用Callableで許可し、取極め専用permissionと承認workflowは設けない。
-- 必要なテスト: role別UI/直接write、他社Site、field改変、同時編集。
+- 確認済み実装事実: ADR 0065・0066とFGA-03により、取極めを同一tenantの有効な本登録Userが行う通常Site更新へ統合した。専用Callable、role別認可、baseline比較、同時更新拒否は撤去し、document last-write-winsを採用した。
+- 想定影響と発生条件: 取極めは通常のSite master変更として将来の実績・請求額へ影響する。既存OperationResult snapshotは変更しない。
+- 未確認点・仮説: Dev反映後の最新UI受入れと、既存Dev Functionの削除は未実施。
+- 推奨する将来対応: なし。本項目の旧strict認可案は採用しない。applicationを介さないrequestを将来脅威モデルへ加える場合だけ、Rules側の入力制限を別判断する。
+- 必要なテスト: 通常Site更新、last-write-wins、他tenant拒否、既存OperationResult snapshot不変。
 - ユーザー判断が必要な事項: なし。CONF-0051は2026-09-05回答済み。
 
 ## FUT-0066 Agreementの単価・時間・締日validationを確定する
 
-- 状態: In progress
+- 状態: Local completed
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: schemas `AgreementV2/RateSet/WorkTimeBase`、Agreement Input
-- 確認済み実装事実: 単価はdefault 0かつrequiredだがAgreement固有の負数・上限・精度validationがない。休憩・規定実働は負数のみ拒否し、勤務区間との相互上限を強制しない。SPEC-DEEP-013では0円をListItemが`-`表示する一方、Tableは欠損enum/rate/priceでthrowし得る表示差も確認した。
+- 確認済み実装事実: application側で単価・休憩・規定実働・締日・重複を検査し、0円は確認後に保存できる。Rulesや専用Callableでの重複検査は行わない。
 - 想定影響と発生条件: 負単価、極端な単価・時間、0円、休憩超過等が保存されると請求額が負・過大・意図せず0になり得る。
 - 未確認点・仮説: 許容範囲はADR 0053で確定した。既存dataに範囲外値があるかはDev/remoteの別承認まで未確認。
-- 推奨する将来対応: 全単価0〜10,000,000円の整数、休憩・規定実働0〜1,440分の整数、休憩≦勤務区間、締日`0/5/10/15/20/25`を全永続化入口で強制する。0円は欠損にせず保存前警告付きで許可する。
+- 推奨する将来対応: 現在のapplication検査を維持する。applicationを介さないrequestを脅威モデルへ加える場合だけRules側検査を別判断する。
 - 必要なテスト: 負/0/小数/最大値、休憩>勤務、規定実働>勤務、日跨ぎ、4曜日一括入力。
 - ユーザー判断が必要な事項: なし。CONF-0052は2026-09-05回答済み。
 
 ## FUT-0067 適用済みAgreementのrevision・削除policyを決める
 
-- 状態: In progress
+- 状態: Local completed
 - 重大度: High
 - 発見セグメント: SPEC-SEG-022
 - 対象ファイル・シンボル: `AgreementsManager` array CRUD、schemas `Site.agreementsV2/key`

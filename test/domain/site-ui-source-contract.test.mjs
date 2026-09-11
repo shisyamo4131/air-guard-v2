@@ -93,13 +93,14 @@ test("Site routes use common Managers for create and normal updates", async () =
   assert.doesNotMatch(detail, /\.terminate\s*\(|稼働終了/u);
 });
 
-test("Site Managers own normal saves while Agreement keeps explicit conflict checks", async () => {
-  const [manager, arrayManager, base, customer, agreements, create] = await Promise.all([
+test("Site Managers and inline Agreement use normal Site model saves", async () => {
+  const [manager, arrayManager, base, customer, agreements, agreementManager, create] = await Promise.all([
     source("components/Site/Manager/index.vue"),
     source("components/Sites/Manager/index.vue"),
     source("components/Site/CustomInput/Base.vue"),
     source("components/Site/CustomInput/Customer.vue"),
     source("components/Site/Editor/Agreements.vue"),
+    source("components/Agreements/Manager/index.vue"),
     source("components/Site/CustomInput/index.vue"),
   ]);
   for (const component of [manager, arrayManager]) {
@@ -129,15 +130,9 @@ test("Site Managers own normal saves while Agreement keeps explicit conflict che
   assert.doesNotMatch(customer, /useSiteActions|\.create\s*\(|\.update\s*\(/u);
 
   assert.match(agreements, /draft\.value = cloneAgreements\(props\.site\.agreementsV2\)/u);
-  assert.match(agreements, /baseline\.value = siteSnapshot\(props\.site, operation\)/u);
-  assert.match(agreements, /latest: \(\) => props\.site/u);
-  assert.match(agreements, /baseline: baseline\.value/u);
-  assert.match(agreements, /conflictingSiteFields\([\s\S]*?latest: props\.site/u);
-  assert.match(agreements, /const hasConflict = ref\(false\)/u);
   assert.match(agreements, /function reloadLatest\(\)[\s\S]*?draftRevision\.value \+= 1/u);
-  assert.match(agreements, /getSiteOperationErrorMessage\([\s\S]*?取極めを保存できませんでした/u);
-  assert.match(agreements, /現在の入力は保持されています/u);
-  assert.match(agreements, /最新値を読み直す/u);
+  assert.match(agreements, /const candidate = new Site\(\{[\s\S]*?\.\.\.cloneSiteValue\(props\.site\)[\s\S]*?agreementsV2: cloneAgreements\(nextAgreements\)/u);
+  assert.match(agreements, /await candidate\.update\(\)/u);
   assert.match(agreements, /siteAgreementsHaveZeroPrice\(nextAgreements\)/u);
   assert.match(agreements, /zeroPriceDialog\.value = true/u);
   assert.match(agreements, /0円は有効な単価です/u);
@@ -146,26 +141,30 @@ test("Site Managers own normal saves while Agreement keeps explicit conflict che
   assert.match(agreements, /保存するだけでは、作成済み実績の取極めは変更されません/u);
   assert.match(agreements, /resolveZeroPriceConfirmation !== null[\s\S]*?"operation-in-progress"/u);
   assert.match(agreements, /onBeforeUnmount\(\(\) => finishZeroPriceConfirmation\(false\)\)/u);
-  assert.match(agreements, /:disabled="isSaving \|\| zeroPriceDialog"/u);
+  assert.match(agreements, /v-model:is-editing="isEditing"/u);
+  assert.match(agreements, /if \(!isEditing\.value\) reloadLatest\(\)/u);
+  assert.match(agreements, /:disabled="managerDisabled"/u);
   assert.match(agreements, /:key="draftRevision"/u);
   assert.match(agreements, /:model-value="draft"/u);
+  assert.doesNotMatch(agreements, /取極めを編集|v-model="dialog"/u);
+  assert.doesNotMatch(agreements, /useSiteActions|baseline|conflictingSiteFields|updateSiteAgreements/u);
   assert.doesNotMatch(agreements, /v-model="(?:props\.)?site\.agreementsV2/u);
-
+  assert.match(agreementManager, /#table="\{ items, toCreate, toUpdate, disabled \}"/u);
+  assert.match(agreementManager, /aria-label="取極めを追加"[\s\S]*?:disabled="disabled"/u);
+  assert.match(agreementManager, /aria-label="選択した取極めを編集"[\s\S]*?:disabled="disabled \|\| !currentAgreement"/u);
+  assert.match(agreementManager, /aria-label="選択した取極めを複製"[\s\S]*?:disabled="disabled \|\| !currentAgreement"/u);
 });
 
-test("Site Agreement UI sends exact baseline and candidate transport through the public Callable", async () => {
+test("Site Agreement Callable transport is removed from the client and Functions entrypoints", async () => {
   const [actions, functions, apiIndex, moduleIndex] = await Promise.all([
     source("composables/application/site/useSiteActions.js"),
     source("composables/site/useSiteFunctions.js"),
     source("functions/apis/index.js"),
     source("functions/modules/sites/index.js"),
   ]);
-  assert.match(actions, /createSiteAgreementUpdateRequest\(\{[\s\S]*?siteId: source\.docId,[\s\S]*?baselineAgreements: baseline\?\.agreementsV2,[\s\S]*?candidateAgreements: agreements/u);
-  assert.match(actions, /await siteFunctions\.updateSiteAgreements\(request\)/u);
-  assert.match(actions, /if \(!isSiteAgreementUpdateResult\(response\)\)/u);
-  assert.match(functions, /updateSiteAgreements: \(input\) => call\("updateSiteAgreements", input\)/u);
-  assert.match(apiIndex, /export \{ updateSiteAgreements \} from "\.\/updateSiteAgreements\.js"/u);
-  assert.match(moduleIndex, /export \{[\s\S]*?updateSiteAgreements[\s\S]*?\} from "\.\/updateSiteAgreements\.js"/u);
+  for (const sourceText of [actions, functions, apiIndex, moduleIndex]) {
+    assert.doesNotMatch(sourceText, /updateSiteAgreements|SiteAgreementUpdate/u);
+  }
 });
 
 test("Site action rebuilds authorization state at send time and refuses direct delete", async () => {
@@ -237,19 +236,17 @@ test("Site action single-flight is shared across distinct composable instances",
     useSiteFunctions: () => ({ terminateSite: async () => undefined, reactivateSite: async () => undefined }),
     SITE_WRITE_OPERATION: {
       CREATE: "create", UPDATE: "update", CUSTOMER: "customer",
-      AGREEMENT: "agreement", TERMINATE: "terminate",
+      TERMINATE: "terminate",
     },
     SiteAuthorizationError: HarnessAuthorizationError,
     assertSiteWriteAllowed: () => undefined,
     getSiteWriteDecision: () => ({ allowed: true, reason: null }),
-    Site: class {},
-    SiteOperationError: class extends Error {},
   };
   const moduleSource = `
     const {
       Vue, useAuthStore, useNuxtApp, useSiteFunctions, SITE_WRITE_OPERATION,
       SiteAuthorizationError, assertSiteWriteAllowed,
-      getSiteWriteDecision, Site, SiteOperationError
+      getSiteWriteDecision
     } = globalThis.__siteActionsHarness;
     ${executable}
   `;

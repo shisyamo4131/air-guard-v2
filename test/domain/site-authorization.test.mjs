@@ -48,7 +48,6 @@ test("Site write operations expose only the SITE-02 guarded mutation categories"
     CREATE: "create",
     UPDATE: "update",
     CUSTOMER: "customer",
-    AGREEMENT: "agreement",
     TERMINATE: "terminate",
   });
 });

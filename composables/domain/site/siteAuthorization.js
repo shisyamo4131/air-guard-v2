@@ -7,7 +7,6 @@ export const SITE_WRITE_OPERATION = Object.freeze({
   CREATE: "create",
   UPDATE: "update",
   CUSTOMER: "customer",
-  AGREEMENT: "agreement",
   TERMINATE: "terminate",
 });
 

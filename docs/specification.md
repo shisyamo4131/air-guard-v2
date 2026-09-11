@@ -284,6 +284,7 @@ AirGuardV2 は、警備会社が日常業務で扱うマスタ、配置予定、
 - 同じ適用開始日・勤務区分の取極めを重複登録しない。曜日区分は一つの取極め内に内包されるため、重複keyには含めない。
 - 既存の稼働実績へ適用済みの取極めは、取極めマスタの後日の変更で自動更新しない。
 - 取極めの作成・編集・削除はSiteの通常書込み操作に含め、同じtenantの有効な認証済み本登録Userに同じserver権限で許可する。role、permission、会社管理者、super-user区分を認可根拠にせず、仮登録、無効User、User不在、claim不正、他tenantを拒否する。取極め専用permissionと作成者・承認者workflowは設けず、数値・snapshot・状態等の既存data保護条件を維持する。現行の`sites:write`制限はFGA-03で段階的に置換する実装差である。
+- 取極めは専用Callableを使わず、listenerから受け取った現在のSiteへ編集後の`agreementsV2`を重ね、Site modelの通常`update()`でdocument全体を保存する。保存はlast-write-winsとし、baseline比較、競合拒否、競合通知、再読込要求を設けない。保存後はlistenerが返す最新Siteを表示の正本とする。入力値の検査、重複拒否、0円確認、既存OperationResult snapshot不変は維持する。
 - 曜日区分ごとの通常・残業、一般・有資格の全単価は0円以上10,000,000円以下の整数とし、負数、小数、非数値、上限超過を拒否する。0円は有効値として許可するが保存前に警告し、欠損と同一視しない。休憩時間と規定実働時間は0分以上1,440分以下の整数とし、休憩時間は開始・終了・翌日扱いから算出した勤務区間を超えてはならない。規定実働時間は勤務区間との大小を理由に拒否しない。締日は月末を表す`0`または`5/10/15/20/25`だけを許可する。
 - OperationResultへ適用済みであることだけを理由に取極めmasterをlockせず、許可actorは過去・現在・未来の取極めを編集・削除できる。変更は既存OperationResultの取極めsnapshotへ自動反映せず、以後に作成する実績または明示的な実績訂正で再適用する場合だけ新masterを使う。未実績化予定はlive Siteを参照するため、編集・削除時は既存実績には影響せず今後の実績へ影響することを警告する。
 - 取極めmaster専用のrevision、before/after履歴、変更理由、監査collectionは設けない。Siteの通常の更新者・更新時刻は維持するが、取極め変更履歴とは扱わない。既存OperationResultを訂正する場合はmaster変更の波及ではなく、請求影響、発行状態、before/after、actor、reasonを扱う専用の実績訂正operationを使用する。詳細は[ADR 0053](decisions/0053-site-agreement-write-validation-and-history.md)を正とする。

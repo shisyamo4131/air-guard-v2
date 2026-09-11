@@ -7,6 +7,5 @@ export function useSiteFunctions() {
     archiveSite: (input) => call("archiveSite", input),
     terminateSite: (input) => call("terminateSite", input),
     reactivateSite: (input) => call("reactivateSite", input),
-    updateSiteAgreements: (input) => call("updateSiteAgreements", input),
   };
 }

@@ -367,9 +367,7 @@ service cloud.firestore {
         && request.resource.data.docId == docId
         && request.resource.data.uid is string
         && request.resource.data.uid == request.auth.uid
-        && !changed.hasAny([
-          'status', 'agreementsV2'
-        ])
+        && !changed.hasAny(['status'])
         && hasValidSiteCustomerUpdate(companyId);
     }
 

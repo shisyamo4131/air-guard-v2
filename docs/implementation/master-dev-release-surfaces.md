@@ -47,7 +47,7 @@ Rulesの一部だけを旧版と組み合わせない。既存Dev Rulesとの差
 | 区分 | function候補 | 理由 |
 |---|---|---|
 | Customer | `archiveCustomer`、`onUpdateCustomer` | archive transactionとSite customer projection |
-| Site | `archiveSite`、`terminateSite`、`reactivateSite`、`updateSiteAgreements`、`runDailySiteTermination` | archive、終了・再有効化、取極め、自動終了 |
+| Site | `archiveSite`、`terminateSite`、`reactivateSite`、`runDailySiteTermination` | archive、終了・再有効化、自動終了。取極めは通常Site更新へ統一済み |
 | Employee CRUD | `createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance` | operation別server保存 |
 | Employee lifecycle | `archiveEmployee`、`terminateEmployee`、`onEmployeeDeleted` | 通常archive API、統括退職actor、旧削除eventのUser/Auth連鎖無作用化 |
 | 予定・実績 | `saveOperation`、`onOperationResultChange`、`runDailyTask` | Site/Employee参照barrier、実績からの派生同期、予定cleanup |
@@ -103,7 +103,7 @@ Company/UWB/Stripe等の既存機能は4マスターの受入れ対象外であ�
 | 範囲 | 旧clientが残る場合 | 切替条件 |
 |---|---|---|
 | Customer | 新しいarchive操作は露出しない。旧Customer writerが新Rulesのoperation別field契約を満たすことは保証できず、保存がfail closedとなり得る | 新Hostingへ更新後に再読込する。保存中の旧tabを残さない |
-| Site | 旧clientの直接status・取極め・全体保存は、新しいserver-only／operation別境界と互換とみなせない | Site編集、終了・再有効化、取極めの旧tabを閉じ、新Hostingで再開する |
+| Site | 旧clientの直接status変更と、専用Callable版の取極め保存は最新Rules／Functions構成と互換とみなせない | Site編集、終了・再有効化、取極めの旧tabを閉じ、新Hostingで再開する |
 | Outsourcer | 旧generic writerまたは全体保存は、exact field・actor・revision境界で拒否され得る | 一覧・詳細・編集の旧tabを閉じ、新Hostingで再開する |
 | Employee | 新Rulesでは通常client writeを許可せず、operation別Callableを正規経路とするため、旧直接writerは拒否される | Employee作成・編集・退職・archiveの旧tabを閉じ、新Hostingで再開する |
 | 予定・実績・請求 | Site／Employee参照barrierとserver-only writerの変更により、旧画面の保存互換を保証できない | 予定・実績・請求の編集を停止し、新Hostingへ更新後に再開する |
@@ -117,7 +117,7 @@ Hostingの`no-store`設定は新規取得を助けるが、既に実行中の旧
 Functions codebase全体の一括更新を既定にせず、4マスターと参照保護に必要な21 functionを次の3段階へ分ける。共有moduleを使う既存trigger／Callableもclosureへ含める。
 
 1. 安全化先行（2件）: `runDailyTask`、`onEmployeeDeleted`。
-2. client公開前のserver closure（18件）: `archiveCustomer`、`onUpdateCustomer`、`archiveSite`、`terminateSite`、`reactivateSite`、`updateSiteAgreements`、`createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`、`archiveEmployee`、`terminateEmployee`、`saveOperation`、`onOperationResultChange`、`updateBillingPaymentDate`、`rebuildAllHistories`。
+2. client公開前のserver closure（17件）: `archiveCustomer`、`onUpdateCustomer`、`archiveSite`、`terminateSite`、`reactivateSite`、`createEmployee`、`updateEmployeeBasic`、`updateEmployeeNationality`、`updateEmployeeSecurity`、`updateEmployeeCertifications`、`transitionEmployeeInsurance`、`archiveEmployee`、`terminateEmployee`、`saveOperation`、`onOperationResultChange`、`updateBillingPaymentDate`、`rebuildAllHistories`。既にDevへ存在する`updateSiteAgreements`の削除要否と削除手順は、actual targetを確認するrelease checkpointで確定する。
 3. 条件確認後に別途有効化（1件）: `runDailySiteTermination`。
 
 記録済みDev sourceの`runDailyTask`はcleanup後に旧`sitesAutoTermination()`を同じhandlerから実行し、errorを再throwしない。現行版は旧自動終了を外し、bounded cleanupだけを担うため、これを先行更新して旧挙動を止める。記録済みDev sourceの`onEmployeeDeleted`はEmployee削除eventからUser/Authを削除する。現行版の無作用handlerを先行更新し、archiveやRules切替より前に連鎖削除を止める。

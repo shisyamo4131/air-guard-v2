@@ -4,7 +4,9 @@
 
 ## Unreleased
 
-- FGA-03のSite通常CREATE・UPDATEを`SiteManager`／`SitesManager`からSite modelの標準`create`／`update`へ直接接続し、通常保存用の`useSiteActions`、専用writer、旧作成dialog、基本情報・Customer editorを撤去した。作成画面は履歴で確認した3ステップ入力へ戻し、取引先候補がない場合も取引先名だけで仮登録できる。通常更新はdocument単位last-write-winsとし、埋込みCustomerをapplication固有の6項目へ固定しない。終了・再有効化・archive・Agreementは専用操作を維持する。Rulesは通常更新で状態・取極めだけを保護し、既存dataの一括変換、Functions・schema・package、Dev・Prod、remote dataは変更していない。[Local検証記録](docs/verification/fga-03-site-manager-lww-local.md)を参照。
+- Site詳細の取極め管理をremote履歴で確認した画面内表示へ戻し、一覧右上から追加・編集・複製した1件だけを入力dialogで扱う構成にした。取極め一覧全体を開く重複dialog、`useSiteActions`、専用`updateSiteAgreements` Callable、baseline比較、同一field競合を撤去し、listener由来Siteへ編集後の配列を重ねる通常`Site.update()`とdocument last-write-winsへ統一した。Rulesも`agreementsV2`を通常Site更新として許可する。数値・重複検査、0円確認、失敗後の入力保持、既存OperationResult snapshot不変は維持し、schema、package、既存dataは変更していない。
+
+- FGA-03のSite通常CREATE・UPDATEを`SiteManager`／`SitesManager`からSite modelの標準`create`／`update`へ直接接続し、通常保存用の`useSiteActions`、専用writer、旧作成dialog、基本情報・Customer editorを撤去した。作成画面は履歴で確認した3ステップ入力へ戻し、取引先候補がない場合も取引先名だけで仮登録できる。通常更新はdocument単位last-write-winsとし、埋込みCustomerをapplication固有の6項目へ固定しない。取極めも同じ通常更新へ統合し、終了・再有効化・archiveだけを専用操作として維持する。Rulesは通常更新で状態だけを保護する。既存dataの一括変換、schema・package、Dev・Prod、remote dataは変更していない。[Local検証記録](docs/verification/fga-03-site-manager-lww-local.md)を参照。
 
 - FGA-03で通常SiteのFirestore Rulesを簡素化し、通常fieldの必須・型・長さ・enum・timestamp・派生値の検査をSchemas packageと正規application経路へ集約した。Rulesには同一tenantの有効な本登録User、actor UID、maintenance、ACTIVE、Agreement・schedule・lifecycle、live Customer参照と仮登録相関、client delete、archive CUD・same-ID tombstoneを維持した。その後のManager簡素化で専用writerと埋込みCustomerのexact projection要件は撤去した。製品操作は正規application経路を前提とし、applicationを介さない直接requestへの追加対策とarchive形式変更は本phaseへ含めない。[Local検証記録](docs/verification/fga-03-site-rules-simplification-local.md)を参照。
 

@@ -3790,6 +3790,7 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
     { name: 123, uid, updatedAt: serverTimestamp() },
     { name: "現".repeat(2000), uid, updatedAt: serverTimestamp() },
     { securityType: "SYNTHETIC_UNKNOWN", uid, updatedAt: serverTimestamp() },
+    { agreementsV2: [siteAgreementTransport()], uid, updatedAt: serverTimestamp() },
     { tokenMap: { forged: "not-a-boolean" }, uid, updatedAt: serverTimestamp() },
     { fullAddress: "forged", uid, updatedAt: serverTimestamp() },
     { unexpected: { nested: true }, uid, updatedAt: serverTimestamp() },
@@ -3805,7 +3806,6 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
 
   for (const patch of [
     { status: "TERMINATED", uid, updatedAt: serverTimestamp() },
-    { remarks: "operation crossover", agreementsV2: [{ synthetic: true }], uid, updatedAt: serverTimestamp() },
     { docId: "another-site", remarks: "doc id attack", uid, updatedAt: serverTimestamp() },
     { remarks: "uid attack", uid: "another-user", updatedAt: serverTimestamp() },
   ]) {
@@ -3834,12 +3834,13 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
   });
   delete replacement.remarks;
   await assertSucceeds(setDoc(reference, replacement));
-  await assertFails(updateDoc(reference, {
-    agreementsV2: [{ synthetic: true }],
+  const replacementAgreement = siteAgreementTransport({ cutoffDate: 5 });
+  await assertSucceeds(updateDoc(reference, {
+    agreementsV2: [replacementAgreement],
     uid,
     updatedAt: serverTimestamp(),
   }));
-  assert.deepEqual((await assertSucceeds(getDoc(reference))).data().agreementsV2, []);
+  assert.deepEqual((await assertSucceeds(getDoc(reference))).data().agreementsV2, [replacementAgreement]);
 
   const protectedValues = {
     status: "ACTIVE",
@@ -3860,7 +3861,7 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
     const deletion = updateDoc(reference, {
       [field]: deleteField(), uid, updatedAt: serverTimestamp(),
     });
-    if (["status", "agreementsV2"].includes(field)) {
+    if (field === "status") {
       await assertFails(deletion);
     } else {
       await assertSucceeds(deletion);
@@ -3868,7 +3869,7 @@ test("Site Rules allow ordinary update schema drift and protect only normal-oper
     const after = (await assertSucceeds(getDoc(reference))).data();
     assert.equal(
       Object.hasOwn(after, field),
-      ["status", "agreementsV2"].includes(field),
+      field === "status",
       `${field} protected presence`,
     );
   }
@@ -4182,8 +4183,8 @@ test("Site Rules require a live same-tenant Customer but allow stale or non-exac
       { customer: legacyCustomer },
     );
   });
-  await assertFails(updateDoc(reference, {
-    agreementsV2: [{ synthetic: "legacy-customer-agreement" }],
+  await assertSucceeds(updateDoc(reference, {
+    agreementsV2: [siteAgreementTransport({ cutoffDate: 5 })],
     uid,
     updatedAt: serverTimestamp(),
   }));
@@ -5169,15 +5170,15 @@ test("Customer status remains editable with an active Site and schedule without 
   });
 });
 
-test("Site Agreement Callable allows a role-independent actor, updates only the live Site master, and preserves OperationResult snapshots", async () => {
-  const { updateSiteAgreements } = await loadRebuildApis();
+test("Site Agreement normal update is last-write-wins and preserves OperationResult snapshots", async () => {
   const companyId = CODEX_LOCAL_COMPANIES.primary.id;
   const actorUid = "site06-agreement-accountant";
   const siteId = "site06-agreement-site";
   const operationResultId = "site06-agreement-existing-result";
-  const actor = await seedSiteArchiveActor({ uid: actorUid, roles: ["accountant"] });
+  await seedSiteRulesActor({ uid: actorUid, isAdmin: false, roles: ["accountant"] });
   const baseline = [siteAgreementTransport()];
-  const candidate = [siteAgreementTransport({ cutoffDate: 5, price: 0 })];
+  const firstCandidate = [siteAgreementTransport({ cutoffDate: 5, price: 0 })];
+  const lastCandidate = [siteAgreementTransport({ cutoffDate: 10, price: 2000 })];
   const resultSnapshot = { docId: operationResultId, siteId, agreementsV2: baseline, marker: "snapshot" };
   const entries = [
     { companyId, collectionName: "Users", docId: actorUid },
@@ -5187,7 +5188,6 @@ test("Site Agreement Callable allows a role-independent actor, updates only the 
   try {
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
       const firestore = context.firestore();
-      await setDoc(doc(firestore, "System", "system"), { isMaintenance: false });
       await setDoc(
         doc(firestore, "Companies", companyId, "Sites", siteId),
         siteRulesData({ docId: siteId, uid: "server-writer", agreementsV2: baseline }),
@@ -5197,11 +5197,20 @@ test("Site Agreement Callable allows a role-independent actor, updates only the 
         resultSnapshot,
       );
     });
-    const request = actorCallableRequest({
-      actor,
-      data: { siteId, baselineAgreements: baseline, candidateAgreements: candidate },
-    });
-    assert.deepEqual(await updateSiteAgreements.run(request), { success: true, updated: true });
+    const reference = doc(
+      authenticatedFirestore(actorUid, { isSuperUser: false }),
+      "Companies", companyId, "Sites", siteId,
+    );
+    await assertSucceeds(updateDoc(reference, {
+      agreementsV2: firstCandidate,
+      uid: actorUid,
+      updatedAt: serverTimestamp(),
+    }));
+    await assertSucceeds(updateDoc(reference, {
+      agreementsV2: lastCandidate,
+      uid: actorUid,
+      updatedAt: serverTimestamp(),
+    }));
     let updatedSite;
     let preservedResult;
     await testEnvironment.withSecurityRulesDisabled(async (context) => {
@@ -5217,20 +5226,11 @@ test("Site Agreement Callable allows a role-independent actor, updates only the 
         .filter((key) => !["agreementsV2", "uid", "updatedAt"].includes(key)).sort(),
     );
     assert.equal(updatedSite.uid, actorUid);
-    assert.equal(updatedSite.agreementsV2[0].cutoffDate, 5);
-    assert.equal(updatedSite.agreementsV2[0].rates.WEEKDAY.unitPriceBase, 0);
-    assert.deepEqual(preservedResult, resultSnapshot);
-    assert.deepEqual(await updateSiteAgreements.run(actorCallableRequest({
-      actor,
-      data: { siteId, baselineAgreements: candidate, candidateAgreements: candidate },
-    })), { success: true, updated: false });
-    await assertCallableError(updateSiteAgreements.run(actorCallableRequest({
-      actor,
-      data: { siteId, baselineAgreements: baseline, candidateAgreements: [siteAgreementTransport({ cutoffDate: 10 })] },
-    })), "aborted");
+    assert.equal(updatedSite.agreementsV2[0].cutoffDate, 10);
+    assert.equal(updatedSite.agreementsV2[0].rates.WEEKDAY.unitPriceBase, 2000);
     assert.deepEqual(preservedResult, resultSnapshot);
   } finally {
-    await cleanupSiteArchiveScenario({ actorUids: [actorUid], entries });
+    await cleanupCas03Documents(entries);
   }
 });
 
@@ -6548,7 +6548,7 @@ for (const {
         mutableReference,
         collectionName === "Sites"
           ? {
-              agreementsV2: [{ docId: "agreement-reference-unchanged" }],
+              agreementsV2: [siteAgreementTransport({ cutoffDate: 5 })],
               uid,
               updatedAt: serverTimestamp(),
             }
@@ -6557,8 +6557,7 @@ for (const {
               marker: "unchanged-customer-id",
             },
       );
-      if (collectionName === "Sites") await assertFails(unchangedCustomerUpdate);
-      else await assertSucceeds(unchangedCustomerUpdate);
+      await assertSucceeds(unchangedCustomerUpdate);
 
       for (const [label, customerId] of [
         ["missing", missingCustomerId],
@@ -6597,14 +6596,13 @@ for (const {
         orphanReference,
         collectionName === "Sites"
           ? {
-              agreementsV2: [{ docId: "legacy-orphan-unrelated-update" }],
+              agreementsV2: [siteAgreementTransport({ cutoffDate: 10 })],
               uid,
               updatedAt: serverTimestamp(),
             }
           : { marker: "unrelated-update-compatible" },
       );
-      if (collectionName === "Sites") await assertFails(orphanUpdate);
-      else await assertSucceeds(orphanUpdate);
+      await assertSucceeds(orphanUpdate);
       if (deleteAllowed) {
         await assertSucceeds(deleteDoc(orphanReference));
       } else {

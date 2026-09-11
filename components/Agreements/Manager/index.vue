@@ -84,19 +84,27 @@ function beforeEdit(editMode, item) {
     @create="($event) => (currentAgreement = $event)"
     @delete="currentAgreement = null"
   >
-    <template #table="{ items, toCreate, toUpdate }">
+    <template #table="{ items, toCreate, toUpdate, disabled }">
       <v-card>
         <v-toolbar color="secondary" density="compact" title="取極め">
           <template #append>
-            <v-btn icon="mdi-plus" size="small" @click="() => toCreate()" />
             <v-btn
-              :disabled="!currentAgreement"
+              aria-label="取極めを追加"
+              :disabled="disabled"
+              icon="mdi-plus"
+              size="small"
+              @click="() => toCreate()"
+            />
+            <v-btn
+              aria-label="選択した取極めを編集"
+              :disabled="disabled || !currentAgreement"
               icon="mdi-pencil"
               size="small"
               @click="() => toUpdate(currentAgreement)"
             />
             <v-btn
-              :disabled="!currentAgreement"
+              aria-label="選択した取極めを複製"
+              :disabled="disabled || !currentAgreement"
               icon="mdi-content-copy"
               size="small"
               @click="() => toCreate(currentAgreement)"

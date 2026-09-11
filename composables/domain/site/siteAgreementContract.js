@@ -14,7 +14,6 @@ export const SITE_AGREEMENT_FIELDS = Object.freeze([
 const CUTOFF_DATES = Object.freeze([0, 5, 10, 15, 20, 25]);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d$/u;
-const SAFE_SITE_ID = /^[^/\u0000-\u001f\u007f]{1,128}$/u;
 
 export class SiteAgreementContractError extends Error {
   constructor(code, message) {
@@ -26,12 +25,6 @@ export class SiteAgreementContractError extends Error {
 
 function fail(message) {
   throw new SiteAgreementContractError("invalid-agreement", message);
-}
-
-function isPlainObject(value) {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
 }
 
 function calendarDate(value) {
@@ -135,24 +128,4 @@ export function siteAgreementsHaveZeroPrice(value) {
       SITE_AGREEMENT_RATE_FIELDS.some((field) => agreement.rates[dayType][field] === 0),
     ),
   );
-}
-
-export function createSiteAgreementUpdateRequest({
-  siteId,
-  baselineAgreements,
-  candidateAgreements,
-} = {}) {
-  if (typeof siteId !== "string" || siteId.trim() !== siteId || !SAFE_SITE_ID.test(siteId)) {
-    fail("現場を確認してください。");
-  }
-  return Object.freeze({
-    siteId,
-    baselineAgreements: normalizeSiteAgreements(baselineAgreements),
-    candidateAgreements: normalizeSiteAgreements(candidateAgreements),
-  });
-}
-
-export function isSiteAgreementUpdateResult(value) {
-  return isPlainObject(value) && Reflect.ownKeys(value).length === 2 &&
-    value.success === true && typeof value.updated === "boolean";
 }

@@ -147,8 +147,9 @@ test("Customer reference collections use explicit guarded matches outside the fa
   assert.doesNotMatch(siteCustomerHelpers, /request\.time/u);
   assert.match(
     siteCustomerHelpers,
-    /!changed\.hasAny\(\[\s*'status', 'agreementsV2'\s*\]\)/u,
+    /!changed\.hasAny\(\['status'\]\)/u,
   );
+  assert.doesNotMatch(siteCustomerHelpers, /!changed\.hasAny\([^)]*agreementsV2/u);
 });
 
 test("Customers_archive is recursively denied before the Companies fallback", async () => {
