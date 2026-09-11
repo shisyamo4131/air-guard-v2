@@ -32,7 +32,7 @@ ADR 0068は、単一documentの詳細・編集を単数Manager、collection・�
 
 ### Activatorとmode
 
-- 単数domain Managerはactivatorへbase Managerの`toCreate`、`toUpdate`、製品が提供する場合だけ`toDelete`をoperation別に公開し、callerが用途に対応するmethodを呼ぶ。wrapper独自の`operation` propまたは単一`open`関数でedit modeを再管理しない。
+- 単数domain Managerはbase Managerのactivator slot propsを原則そのままpass-throughし、callerが用途に対応する`toCreate`、`toUpdate`、必要なら`toDelete`を直接呼ぶ。slot propsにmethodが存在することは、そのoperationを製品として許可することを意味せず、非提供operationは`beforeEdit`、disable・hide props、handler等のbase契約で拒否する。wrapper独自の`operation` prop、単一`open`関数、doc ID等の先行検査でedit modeを再管理しない。
 - wrapperはfresh create instanceの生成、listener由来update instanceの接続、許可operation、domain handlerとerror表示を薄く接続できる。base Managerのmode、validation、submit、loadingは複製しない。複数形Managerはheader・tableの標準dispatchと`beforeEdit`を使い、標準dispatchを置き換える場合は確認済み理由を示す。
 - 通常CRUDの変更可能な主対象はlistener由来instanceをManagerの`modelValue`へ直接接続する。listener更新によって編集中draftが最新document全体へ置き換わることを許容し、編集中だけ固定するsnapshotや入力消失警告を設けない。
 

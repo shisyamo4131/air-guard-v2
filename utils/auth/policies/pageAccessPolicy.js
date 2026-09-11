@@ -40,7 +40,7 @@ export const PAGE_ACCESS_POLICIES = deepFreeze({
     "operation-results:read",
   ]),
   BILLINGS_READ: createPolicy("billings-read", ["billings:read"]),
-  CUSTOMERS_READ: createPolicy("customers-read", ["customers:read"]),
+  CUSTOMERS_WRITE: createPolicy("customers-write", ["customers:write"]),
   SITES_READ: createPolicy("sites-read", ["sites:read"]),
   EMPLOYEES_READ: createPolicy("employees-read", ["employees:read"]),
   OUTSOURCERS_READ: createPolicy("outsourcers-read", [

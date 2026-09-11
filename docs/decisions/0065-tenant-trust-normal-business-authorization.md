@@ -37,6 +37,7 @@
 
 - Rulesで有効なactorとtenant境界、および明示した最低限の破壊防止条件を強制できる単純な通常操作はclientへ実装できる。
 - 複数documentのatomicity、server timestamp・秘密値、信頼できる派生値、外部作用、冪等性、再開・reconcile等の技術要件があれば通常業務にもCallableを使える。ただし、その技術要件だけからrole制限を戻さない。
+- 例外operationのclientは、button・route等のUX表示判定とAPI認可を分離する。API実行直前にrole・permissionを再検査してCallableを遮断せず、Callableを認可の正本として拒否errorを標準UI経路へ返す。操作中のtenant・actor・targetや入力の取り違え防止、single-flight、idempotency等の非認可検査は維持できる。
 - 既存CallableとRulesを一括撤去しない。各operationのreader/writer、例外該当性、旧client、data、query、failure pathを確認し、維持、簡素化、client化のいずれかを選ぶ。
 
 ## 理由

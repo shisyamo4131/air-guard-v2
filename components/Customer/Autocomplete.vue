@@ -28,11 +28,6 @@
  *****************************************************************************/
 import { useDefaults } from "vuetify";
 import { useFetch } from "@/composables/fetch/useFetch";
-import {
-  captureCustomerCreationScope,
-  deliverCommittedCustomer,
-} from "@/composables/application/customer/customerCreationBridge";
-import { CUSTOMER_CREATE_FIELDS } from "@/composables/domain/customer/customerOperations";
 
 /*****************************************************************************
  * DEFINE PROPS & EMITS
@@ -53,7 +48,6 @@ const emit = defineEmits(["update:model-value"]);
 const allSlots = useSlots();
 const { fetchCustomerComposable } = useFetch("CustomerAutocomplete");
 const { getCustomer, pushCustomer, searchCustomers } = fetchCustomerComposable;
-const auth = useAuthStore();
 
 /*****************************************************************************
  * COMPUTED
@@ -72,19 +66,12 @@ const slots = computed(() =>
 /*****************************************************************************
  * METHODS
  *****************************************************************************/
-function onCreateHandler(event, creationScope) {
-  deliverCommittedCustomer({
-    created: event,
-    creationScope,
-    currentScope: captureCustomerCreationScope(auth),
-    pushCustomer,
-    selectCustomer: (customer) => {
-      const emitValue = props.returnObject
-        ? customer
-        : customer[props.itemValue];
-      emit("update:model-value", emitValue);
-    },
-  });
+function onCreateHandler(customer) {
+  pushCustomer(customer);
+  const emitValue = props.returnObject
+    ? customer
+    : customer[props.itemValue];
+  emit("update:model-value", emitValue);
 }
 
 async function api(text) {
@@ -107,12 +94,12 @@ async function api(text) {
   >
     <template v-if="creatable" #append>
       <CustomerManager
-        :included-keys="CUSTOMER_CREATE_FIELDS"
-        title="取引先の新規登録"
+        :excluded-keys="['contractStatus']"
+        label="取引先の新規登録"
         @created="onCreateHandler"
       >
-        <template #activator="{ disabled, toCreate }">
-          <v-icon v-if="!disabled" @click="toCreate">mdi-plus</v-icon>
+        <template #activator="{ toCreate }">
+          <v-icon @click="() => toCreate()">mdi-plus</v-icon>
         </template>
       </CustomerManager>
     </template>

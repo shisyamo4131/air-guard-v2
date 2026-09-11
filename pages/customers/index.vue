@@ -70,9 +70,9 @@ watch([selectedStatus, search], subscribe);
   <AppViewportContainer>
     <CustomersManager
       :before-edit="handleBeforeEdit"
-      :docs="customerInstance.docs"
+      :model-value="customerInstance.docs"
     >
-      <template #table="{ items, canWrite, toCreate, toUpdate }">
+      <template #table="{ items, toCreate, toUpdate }">
         <v-card class="fill-height d-flex flex-column" width="100%">
           <AppMasterListToolbar v-model:search="search" :search-delay="300">
             <template #append>
@@ -87,18 +87,14 @@ watch([selectedStatus, search], subscribe);
                 class="mx-2"
                 style="max-width: 180px; min-width: 120px"
               />
-              <v-btn
-                v-if="canWrite"
-                icon="mdi-plus"
-                @click="() => toCreate()"
-              />
+              <v-btn icon="mdi-plus" @click="() => toCreate()" />
             </template>
           </AppMasterListToolbar>
           <CustomersDataTable
             class="flex-grow-1 overflow-hidden"
             :items="items"
             :sort-by="[]"
-            :edit-icon="canWrite ? 'mdi-pencil' : 'mdi-eye'"
+            edit-icon="mdi-pencil"
             hide-search
             @click:update="toUpdate"
           />

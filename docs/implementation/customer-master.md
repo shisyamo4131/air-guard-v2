@@ -13,7 +13,7 @@
 - Manager訂正後の利用者Local証拠: [FGA-02 Customer Manager訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)
 - Manager訂正のDev証拠: [FGA-02 Customer Manager Dev反映・受入れ記録](../verification/fga-02-customer-manager-dev.md)
 
-## 入口・暫定権限
+## 入口・UX権限
 
 Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界のfile単位確認は[Article・Customer・Site pages deep review](article-customer-site-pages-deep-review.md)を、Customer componentの公開契約・Site作成からの候補選択境界は[Customer components deep review](customer-components-deep-review.md)を参照する。
 
@@ -21,13 +21,15 @@ Page 2ファイルのroute、購読、CRUD到達性、navigation・error境界�
 
 | 入口 | 実装 | UIの入口条件 | Rulesの境界 |
 |---|---|---|---|
-| 一覧・作成 | `/customers` | readで一覧、write actorだけ作成 | 同一会社の有効な本登録User。作成はactor UID一致と同ID archive不存在を必須にする |
-| 詳細・更新 | `/customers/[id]` | readで詳細、write actorだけ基本・支払編集 | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
-| Autocomplete | `Customer/Autocomplete` | readで検索、write actorだけ作成 | 作成は一覧と同じ専用処理 |
+| 一覧・作成 | `/customers` | `customers:write`を持つactorだけDrawer表示・route到達。到達後は再判定しない | 同一会社の有効な本登録User。作成はactor UID一致と同ID archive不存在を必須にする |
+| 詳細・更新 | `/customers/[id]` | 一覧と同じ`customers:write` route。到達後は再判定しない | 同一会社の有効な本登録Userとactor UID一致。client deleteは拒否 |
+| Autocomplete | `Customer/Autocomplete` | callerが`creatable`を表示した場合に単数Managerで作成。Manager内ではpermissionを再判定しない | 作成は一覧と同じ通常Rules |
 
 commit `79301b04ebaf5aab4898f1c122677780b11d9afc`では、一覧の行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡し、詳細へ遷移してfalseを返すことで内部dialogを抑止する。`CustomersManager`は一覧Createと選択dispatchを所有し、`CustomerManager`を呼ばない。Autocompleteは配列を所有せず新規単一instanceを生成するため、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)に従って`AirItemManager`を包む`CustomerManager`のCREATEを使用する。詳細の基本情報と支払条件は、同じ`CustomerManager`のUPDATEでfield集合だけを切り替える。通常data編集dialogは最大幅480pxとし、archiveは専用`CustomerArchiveDialog`へ委譲してgeneric deleteへ接続しない。
 
-FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。activatorはbase `AirItemManager`の`toCreate`と`toUpdate`をoperation別に公開し、callerが用途に対応するmethodを呼ぶ。Customerは段階移行中の例外として`includedKeys`を当面使用し、入力順はSchema定義順とする。既定editorのform validation、submit、mode管理を利用し、`useBaseManager`のattrsがbase Managerのerror・error clear・loading eventをアプリ標準のlogger、error message store、loading stateへ接続する。これは現行event契約に適合するため採用しており、`useBaseManager`の利用自体を全domain Managerへ強制するものではない。
+FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation` prop、単一`open`関数、`editor` slot上書き、編集中だけ固定するsnapshotを撤去した。ACTIVATOR-21でactivatorはbase `AirItemManager`のslot propsをそのままpass-throughし、callerが`toCreate`または`toUpdate`を直接呼ぶ構成へさらに簡素化した。UPDATE開始前のdoc ID検査と`disableUpdate`も置かず、保存時の標準契約へ委ねる。slot propsの`toDelete`はpass-throughされるが、製品のgeneric deleteは`beforeEdit`、disable・hide props、handlerで拒否する。Customerは段階移行中の例外として`includedKeys`を当面使用し、入力順はSchema定義順とする。既定editorのform validation、submit、mode管理を利用し、`useBaseManager`のattrsがbase Managerのerror・error clear・loading eventをアプリ標準のlogger、error message store、loading stateへ接続する。これは現行event契約に適合するため採用しており、`useBaseManager`の利用自体を全domain Managerへ強制するものではない。
+
+FGA-02-CUSTOMER-DIRECT-FIREMODEL-18では、両Managerの通常CREATE・UPDATEを編集対象Customer instanceの`create()`・`update()`へ直接接続した。ClientAdapterが`beforeCreate`／`beforeUpdate`、`beforeEdit`、Schema validation、会社prefix、`docId`・`uid`・`createdAt`・`updatedAt`、transactionによるdocument全体writeを担うため、同じ処理を複製していた`useCustomerActions`とCustomer専用writerを撤去した。ClientAdapter標準に従い管理日時はclientの`new Date()`で生成し、独自writerの`serverTimestamp()`は使用しない。Customer画面はDrawer・routeを`customers:write`のUX境界とし、到達後のManagerではpermissionを再検査しない。Autocompleteへの作成結果通知はCustomer instanceだけを渡し、作成開始時のtenant・actor scopeを保持する中継処理は置かない。Manager固有のerror classも設けず、通常の`Error`をbase Managerの標準error経路へ伝播する。
 
 SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。その時点の一覧CREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。この証拠はSIMPLIFY-17で変更した既定editor、error event、activator、編集中draft置換のruntime確認には使用しない。SIMPLIFY-17のlocal実装・文書・自動検証はcommit `900da192de6839180fc9c1d730775ef877ee73e8`へ固定したが、利用者Local、Dev反映・受入れは未完了である。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
 
@@ -44,18 +46,18 @@ SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a
 
 ## CRUD・validation
 
-- 現行HEADでは一覧のplus buttonは`CustomersManager`、Autocompleteのplus buttonは`CustomerManager`のCREATEから同じCustomer専用application処理を呼ぶ。Autocompleteはcommit成功後に割当済みdocument IDを持つ結果だけをtenant・actor scope確認後に選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。現行routeにはAutocompleteの`creatable` callerがないため、このCreate経路はsource contractと自動testで確認済みだがruntime未確認である。
+- 現行HEADでは一覧のplus buttonは`CustomersManager`、Autocompleteのplus buttonは`CustomerManager`のCREATEからCustomer instanceの`create()`を呼ぶ。Autocompleteはbase Managerがcreate成功後に通知したCustomer instanceを`useFetch` cacheへ追加して選択する。選択前にlistenerを待たず、`useFetch` cacheは従属表示の補完に限り、変更可能なCustomerの正本にしない。一覧・詳細の表示正本はlistenerとする。現行routeにはAutocompleteの`creatable` callerがないため、このCreate経路はsource contractと自動testで確認済みだがruntime未確認である。
 - schema required validationはあるが、`code`、名称等の一意性確認はない。
 - 詳細の基本編集は`code/name/branchName/abbreviation/nameKana/zipcode/prefCode/city/address/building/tel/fax/contractStatus/remarks`を対象とする。
 - 支払条件編集は`cutoffDate/paymentMonth/paymentDate`を一括編集する。
 - `contractStatus`は基本情報editorで変更する。作成フォームには含めずACTIVEで作成する。詳細・一覧の状態表示はSchemaのtitleを使い、未知値は「不明」とする。
-- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、権限制御・理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04で実装し、CAS-05でDev反映・受入れ済みである。archive一覧とrestoreの画面入口はない。
-- 通常更新は編集開始時のCustomer document全体をdraftとし、`docId`・`createdAt`を最新値へ固定、`uid`・`updatedAt`を現在actorとserver timestampへ更新し、`beforeUpdate`と全schema validation後に26保存field全体をmergeなしの`setDoc`で置換する。名称・住所等の派生fieldも同じdocumentに再生成する。
-- `CustomerManager`はlistener由来のCustomer instanceを`modelValue`へ直接渡す。編集中にlistenerが別のCustomer値を受信した場合も、base Managerの同期によりdraft全体が最新documentへ置き換わることを許容し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示もlistener受信値を正本にする。applicationは非同期準備後に権限・tenant・UIDと対象doc IDを再確認し、対象消失または別ID化ではwriteしない。
+- active Customerのclient deleteと`Customers_archive`のclient read/CUDはRulesで拒否する。参照確認、監査、同ID tombstoneを持つ専用archive Callableと参照writer barrierはCAS-02/03、理由・single-flight・安全なerror表示を持つ確認画面入口はCAS-04で実装し、CAS-05でDev反映・受入れ済みである。`canArchive`はbutton表示のUX判定にだけ使い、確定時はclientでrole・permission、User状態、special claimを再検査せずCallableへ渡す。破壊操作の対象取り違えを防ぐため、dialog操作中のtenant・actor UID、対象Customer、理由の同一性は維持し、入力検証、single-flight、idempotencyも残す。archive一覧とrestoreの画面入口はない。
+- 通常作成・更新はCustomer document全体をdraftとし、ClientAdapterが`docId`、`uid`、client `Date`による`createdAt`・`updatedAt`、`beforeCreate`／`beforeUpdate`、全Schema validationを適用してtransaction内の`set`でdocument全体を置換する。名称・住所等の派生fieldも同じdocumentに再生成する。
+- `CustomerManager`はlistener由来のCustomer instanceを`modelValue`へ直接渡す。編集中にlistenerが別のCustomer値を受信した場合も、base Managerの同期によりdraft全体が最新documentへ置き換わることを許容し、競合を理由とした拒否・警告・再読込要求は行わない。後にFirestore commitされたdocument全体を優先し、更新後の表示もlistener受信値を正本にする。Managerは通常保存のpermission・tenant・UIDを再判定せず、Rulesをserver境界とする。
 
 ## 必要時の保存形式検査
 
-`utils/customer/customerDocumentContract.js`が永続化する26項目の集合を持ち、`utils/customer/customerWriter.js`の作成時の抽出と共有する。このexact schemaと型・長さ・状態・派生値はSchemas packageと正規application writerの責務であり、FGA-02-RULES-01後の通常Customer Rulesは重複検査しない。同一tenantの有効Userが正規applicationを介さず不正形状を保存できるriskは、採用済みtenant信頼境界として明示的に受容している。
+`utils/customer/customerDocumentContract.js`はRules契約test等でCustomerの26保存項目を確認する参照集合として残す。通常保存ではCustomer converterとClientAdapterがSchema validation、serialization、document全体writeを担い、Customer専用field抽出writerは置かない。FGA-02-RULES-01後の通常Customer Rulesはexact schema、型・長さ・状態を重複検査しない。同一tenantの有効Userが正規applicationを介さず不正形状を保存できるriskは、採用済みtenant信頼境界として明示的に受容している。
 
 `scripts/check-customer-dev-compatibility.mjs`はconverterを通さずFirestoreの生の型を検査する。modelのdefaultによる欠損補完や、整数と小数の区別が失われる変換を行わない。認証、取得完了、想定path、上限、保存形式を検査し、値・ID・資格情報・data由来hashを出力せず固定理由の件数だけを集計する。書込み・修復機能は持たない。
 

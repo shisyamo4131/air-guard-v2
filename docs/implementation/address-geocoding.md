@@ -6,7 +6,7 @@
 
 | 対象 | 今回の静的再照合 | 共通仕様への差・実装時の検証 |
 |---|---|---|
-| Customer | `composables/domain/customer/customerOperations.js`のhook、`utils/customer/customerWriter.js`の住所変更時部分保存 | client側再検査と保存transactionの境界差、未取得通知を確認 |
+| Customer | Customer schemaの`GeocodableMixin` hook、FireModel／ClientAdapterのdocument全体write | create時と住所変更update時の位置情報生成、未取得通知を確認 |
 | Site | `composables/application/site/useSiteActions.js`でtransaction外取得、`utils/site/siteWriter.js`で取得基準住所と保存予定住所を照合 | Employeeの最新住所照合へ参考にする。0座標と未取得通知は別に確認 |
 | Employee | 旧Manager/model保存。専用保存は未実装 | EMP-02で共通原則を適用。最新権限・RESIGNED拒否・住所競合を最終保存で再確認 |
 | Company | `functions/modules/company/updateCompanyProfile.js`は住所変更でlocation/geopointをnull化 | 現専用経路が毎回geocodingすると記載しない。共通化を根拠に座標取得機能を新設しない |

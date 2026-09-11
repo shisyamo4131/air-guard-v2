@@ -32,7 +32,7 @@
 - 一覧は既存adapterへの`subscribeDocs({ constraints })`を正しく使う。旧実装の配列渡しでは条件が届かない静的経路を確認したため、旧UIが実際にACTIVEだけ取得できていたとは断定しない。再購読時の解除・旧行初期化を回帰する。adapterの非同期listener error通知不足は今回の新規reader追加で補わず、残存制約として記録する。
 - 基本editorのrollback待ち中に真正な外部値が届いたときは再読込へ進めるようにする。非同期準備後の送信直前に現在の権限と同operationの観測済み競合を再確認する。送信後の同時更新まで原子的に防ぐCAS/transactionは追加しない。
 - 既存`onUpdateCustomer`による同社`Sites.customer`への投影同期は維持する。Site自身の状態・予定を自動終了しない。Codex専用Functions entrypointはこのtriggerをexportしないため、実handlerのmock隔離testと、Rules/画面試験を別の証拠として扱う。
-- developerのowned filesは`customerOperations.js`、`useCustomerActions.js`、Customer基本editor/基本表示、CustomersDataTable、Customer一覧、Customer部分の`firestore.rules`。testと文書は他担当へ分離。writer・Functions・package・共通権限・archiveは変更しない。
+- この完了済みcheckpoint当時のdeveloper owned filesは`customerOperations.js`、旧`useCustomerActions.js`、Customer基本editor/基本表示、CustomersDataTable、Customer一覧、Customer部分の`firestore.rules`だった。後続FGA-02-CUSTOMER-DIRECT-FIREMODEL-18で`useCustomerActions.js`と専用writerは撤去され、現行の通常保存境界はCustomer ManagerからFireModel／ClientAdapterへの直接委譲へ置き換わった。後続改修は現行Manager、`customerOperations.js`の入力field集合、FireModel接続を起点とし、この履歴上のowned file一覧を再利用しない。
 
 ## マイルストーン
 

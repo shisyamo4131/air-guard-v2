@@ -145,7 +145,14 @@ async function loadArchiveAction({
   }
 }
 
-async function loadArchiveDialog({ archive }) {
+function withCapturedScope(action, input) {
+  return { ...input, scope: input.scope ?? action.captureScope() };
+}
+
+async function loadArchiveDialog({ archive, captureScope = () => ({
+  companyId: "company-a",
+  uid: "actor-a",
+}) }) {
   const componentSource = await readFile(ARCHIVE_DIALOG_URL, "utf8");
   let script = componentSource.match(/<script setup>([\s\S]*?)<\/script>/u)?.[1];
   assert.ok(script, "ArchiveDialog script setup must exist");
@@ -177,6 +184,7 @@ async function loadArchiveDialog({ archive }) {
     useCustomerArchiveAction: () => ({
       archive,
       canArchive: Vue.ref(true),
+      captureScope,
       isPending: () => false,
       resetAttempt: () => {
         resetAttempts += 1;
@@ -194,7 +202,8 @@ async function loadArchiveDialog({ archive }) {
       ${script}
       export {
         archiveBusy, archivePending, archiveSubmitting, closeDialog, dialog,
-        failureMessage, form, handleArchive, openDialog, reason, target
+        archiveScope, failureMessage, form, handleArchive, openDialog, reason,
+        target
       };
     `;
     const encoded = Buffer.from(executable, "utf8").toString("base64");
@@ -316,7 +325,10 @@ test("operation ID generation failures are definite and prevent transport calls"
       },
     });
     await assert.rejects(
-      action.archive({ customer: { docId: "customer-a" }, reason: "重複" }),
+      action.archive(withCapturedScope(action, {
+        customer: { docId: "customer-a" },
+        reason: "重複",
+      })),
       (error) =>
         error instanceof CustomerArchiveUiError &&
         error.code === "functions/invalid-argument" &&
@@ -373,7 +385,7 @@ test("Customer archive response and error contracts are exact and redact raw fai
   }
 });
 
-test("archive action uses the actual Customer write policy for allowed and denied actors", async () => {
+test("archive visibility uses Customer write UX policy but invocation always reaches Callable", async () => {
   const allowed = [
     actor(),
     actor({ user: { isAdmin: false, roles: ["manager"] } }),
@@ -405,11 +417,11 @@ test("archive action uses the actual Customer write policy for allowed and denie
       },
     });
     assert.equal(action.canArchive.value, false);
-    await assert.rejects(
-      action.archive({ customer: { docId: "customer-a" }, reason: "重複" }),
-      (error) => error.code === "functions/permission-denied",
-    );
-    assert.equal(calls, 0);
+    await action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-a" },
+      reason: "重複",
+    }));
+    assert.equal(calls, 1);
   }
 });
 
@@ -426,8 +438,9 @@ test("archive action sends one exact normalized request and shares a same-target
     },
   });
   const input = { customer: { docId: "customer-a" }, reason: "  重複登録  " };
-  const first = action.archive(input);
-  const duplicate = action.archive(input);
+  const scopedInput = withCapturedScope(action, input);
+  const first = action.archive(scopedInput);
+  const duplicate = action.archive(scopedInput);
   assert.equal(first, duplicate);
   assert.equal(action.isPending("customer-a"), true);
   await Promise.resolve();
@@ -444,13 +457,45 @@ test("archive action sends one exact normalized request and shares a same-target
   assert.equal(action.attemptId.value, null);
 });
 
-test("pre-call permission, identity, company, target, and reason changes fail with write zero", async () => {
+test("archive action requires an explicitly captured scope", async () => {
+  let calls = 0;
+  const action = await loadArchiveAction({
+    transport: {
+      archiveCustomer: async () => {
+        calls += 1;
+        return { success: true, archived: true };
+      },
+    },
+  });
+  assert.throws(
+    () => action.archive({ customer: { docId: "customer-a" }, reason: "重複" }),
+    (error) => error.code === "functions/invalid-argument",
+  );
+  assert.equal(calls, 0);
+});
+
+test("pre-call role, permission, User status, and super-user changes do not duplicate Callable authorization", async () => {
   const cases = [
-    { name: "permission", mutate: ({ auth }) => { auth.user.disabled = true; } },
-    { name: "identity", mutate: ({ auth }) => { auth.uid = "actor-b"; } },
-    { name: "company", mutate: ({ auth }) => { auth.companyId = "company-b"; } },
-    { name: "target", mutate: ({ state }) => { state.customer = { docId: "customer-b" }; } },
-    { name: "reason", mutate: ({ state }) => { state.reason = "別の理由"; } },
+    {
+      name: "role",
+      mutate: ({ auth }) => { auth.user.roles = ["controller"]; },
+    },
+    {
+      name: "disabled",
+      mutate: ({ auth }) => { auth.user.disabled = true; },
+    },
+    {
+      name: "temporary",
+      mutate: ({ auth }) => { auth.user.isTemporary = true; },
+    },
+    {
+      name: "admin",
+      mutate: ({ auth }) => { auth.user.isAdmin = false; },
+    },
+    {
+      name: "super-user",
+      mutate: ({ auth }) => { auth.isSuperUser = true; },
+    },
   ];
   for (const scenario of cases) {
     const auth = actor();
@@ -468,20 +513,149 @@ test("pre-call permission, identity, company, target, and reason changes fail wi
         },
       },
     });
-    const pending = action.archive({
+    const pending = action.archive(withCapturedScope(action, {
       customer: state.customer,
       reason: state.reason,
       getCurrentCustomer: () => state.customer,
       getCurrentReason: () => state.reason,
-    });
+    }));
     scenario.mutate({ auth, state });
+    await pending;
+    assert.equal(calls, 1, scenario.name);
+    assert.equal(action.attemptId.value, null, scenario.name);
+  }
+});
+
+test("pre-call uid and company changes invalidate archive scope with write zero", async () => {
+  const cases = [
+    { name: "identity", mutate: (auth) => { auth.uid = "actor-b"; } },
+    { name: "company", mutate: (auth) => { auth.companyId = "company-b"; } },
+  ];
+  for (const scenario of cases) {
+    const auth = actor();
+    let calls = 0;
+    const action = await loadArchiveAction({
+      auth,
+      transport: {
+        archiveCustomer: async () => {
+          calls += 1;
+          return { success: true, archived: true };
+        },
+      },
+    });
+    const pending = action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-a" },
+      reason: "重複登録",
+    }));
+    scenario.mutate(auth);
     await assert.rejects(
       pending,
-      (error) => error.code === "functions/permission-denied",
+      (error) => error.code === "functions/invalid-argument",
       scenario.name,
     );
     assert.equal(calls, 0, scenario.name);
     assert.equal(action.attemptId.value, null, scenario.name);
+  }
+});
+
+test("pre-call target and reason changes remain definite input failures with write zero", async () => {
+  const cases = [
+    { name: "target", mutate: (state) => { state.customer = { docId: "customer-b" }; } },
+    { name: "reason", mutate: (state) => { state.reason = "別の理由"; } },
+  ];
+  for (const scenario of cases) {
+    const state = { customer: { docId: "customer-a" }, reason: "重複登録" };
+    let calls = 0;
+    const action = await loadArchiveAction({
+      transport: {
+        archiveCustomer: async () => {
+          calls += 1;
+          return { success: true, archived: true };
+        },
+      },
+    });
+    const pending = action.archive(withCapturedScope(action, {
+      customer: state.customer,
+      reason: state.reason,
+      getCurrentCustomer: () => state.customer,
+      getCurrentReason: () => state.reason,
+    }));
+    scenario.mutate(state);
+    await assert.rejects(
+      pending,
+      (error) => error.code === "functions/invalid-argument",
+      scenario.name,
+    );
+    assert.equal(calls, 0, scenario.name);
+    assert.equal(action.attemptId.value, null, scenario.name);
+  }
+});
+
+test("ArchiveDialog fixes uid and company scope when it opens and rejects later scope changes", async () => {
+  for (const scenario of [
+    { name: "uid", mutate: (auth) => { auth.uid = "actor-b"; } },
+    { name: "company", mutate: (auth) => { auth.companyId = "company-b"; } },
+  ]) {
+    const auth = actor();
+    let calls = 0;
+    const action = await loadArchiveAction({
+      auth,
+      transport: {
+        archiveCustomer: async () => {
+          calls += 1;
+          return { success: true, archived: true };
+        },
+      },
+    });
+    const mounted = await loadArchiveDialog({
+      archive: action.archive,
+      captureScope: action.captureScope,
+    });
+    mounted.module.openDialog();
+    assert.deepEqual(mounted.module.archiveScope.value, {
+      companyId: "company-a",
+      uid: "actor-a",
+    });
+    mounted.module.reason.value = "重複登録";
+    mounted.module.form.value = { validate: async () => ({ valid: true }) };
+    scenario.mutate(auth);
+    await mounted.module.handleArchive();
+    assert.equal(calls, 0, scenario.name);
+    assert.match(mounted.module.failureMessage.value, /変更されました/u);
+  }
+});
+
+test("ArchiveDialog scope does not turn later role or User status changes into client authorization", async () => {
+  const cases = [
+    { name: "role", mutate: (auth) => { auth.user.roles = ["controller"]; } },
+    { name: "disabled", mutate: (auth) => { auth.user.disabled = true; } },
+    { name: "temporary", mutate: (auth) => { auth.user.isTemporary = true; } },
+    { name: "admin", mutate: (auth) => { auth.user.isAdmin = false; } },
+    { name: "special-claim", mutate: (auth) => { auth.isSuperUser = true; } },
+  ];
+  for (const scenario of cases) {
+    const auth = actor();
+    let calls = 0;
+    const action = await loadArchiveAction({
+      auth,
+      transport: {
+        archiveCustomer: async () => {
+          calls += 1;
+          return { success: true, archived: true };
+        },
+      },
+    });
+    const mounted = await loadArchiveDialog({
+      archive: action.archive,
+      captureScope: action.captureScope,
+    });
+    mounted.module.openDialog();
+    mounted.module.reason.value = "重複登録";
+    mounted.module.form.value = { validate: async () => ({ valid: true }) };
+    scenario.mutate(auth);
+    await mounted.module.handleArchive();
+    assert.equal(calls, 1, scenario.name);
+    assert.deepEqual(mounted.messages, ["取引先をアーカイブしました。"]);
   }
 });
 
@@ -504,12 +678,13 @@ for (const code of [
       },
     });
     const input = { customer: { docId: "customer-a" }, reason: "重複" };
-    await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === true);
+    const scopedInput = withCapturedScope(action, input);
+    await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === true);
     assert.equal(requests.length, 1);
     assert.equal(action.attemptId.value, "operation-a");
     await Promise.resolve();
     assert.equal(requests.length, 1, "must not retry automatically");
-    await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === true);
+    await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === true);
     assert.equal(requests.length, 2);
     assert.equal(requests[0].operationId, "operation-a");
     assert.equal(requests[1].operationId, "operation-a");
@@ -528,8 +703,9 @@ test("a malformed success response is outcome-uncertain and reuses its operation
     },
   });
   const input = { customer: { docId: "customer-a" }, reason: "重複" };
-  await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === true);
-  await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === true);
+  const scopedInput = withCapturedScope(action, input);
+  await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === true);
+  await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === true);
   assert.deepEqual(requests.map(({ operationId }) => operationId), [
     "operation-a",
     "operation-a",
@@ -556,9 +732,10 @@ for (const code of [
       },
     });
     const input = { customer: { docId: "customer-a" }, reason: "重複" };
-    await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === false);
+    const scopedInput = withCapturedScope(action, input);
+    await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === false);
     assert.equal(action.attemptId.value, null);
-    await assert.rejects(action.archive(input), (error) => error.outcomeUncertain === false);
+    await assert.rejects(action.archive(scopedInput), (error) => error.outcomeUncertain === false);
     assert.deepEqual(requests.map(({ operationId }) => operationId), [
       "operation-a",
       "operation-b",
@@ -586,17 +763,25 @@ test("reason or target change and reset create new IDs, while success clears the
     },
   });
   await assert.rejects(
-    action.archive({ customer: { docId: "customer-a" }, reason: "理由A" }),
+    action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-a" }, reason: "理由A",
+    })),
   );
   await assert.rejects(
-    action.archive({ customer: { docId: "customer-a" }, reason: "理由B" }),
+    action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-a" }, reason: "理由B",
+    })),
   );
   await assert.rejects(
-    action.archive({ customer: { docId: "customer-b" }, reason: "理由B" }),
+    action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-b" }, reason: "理由B",
+    })),
   );
   action.resetAttempt();
   assert.deepEqual(
-    await action.archive({ customer: { docId: "customer-b" }, reason: "理由B" }),
+    await action.archive(withCapturedScope(action, {
+      customer: { docId: "customer-b" }, reason: "理由B",
+    })),
     { success: true, archived: true },
   );
   assert.deepEqual(requests.map(({ operationId }) => operationId), [

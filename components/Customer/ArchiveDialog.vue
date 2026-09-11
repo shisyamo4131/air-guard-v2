@@ -9,7 +9,7 @@ const props = defineProps({
 const emit = defineEmits(["archived"]);
 
 const messages = useMessagesStore();
-const { archive, canArchive, isPending, resetAttempt } =
+const { archive, canArchive, captureScope, isPending, resetAttempt } =
   useCustomerArchiveAction();
 
 const dialog = ref(false);
@@ -17,6 +17,7 @@ const form = ref(null);
 const reason = ref("");
 const failureMessage = ref("");
 const target = ref(null);
+const archiveScope = ref(null);
 const archiveSubmitting = ref(false);
 
 const archivePending = computed(() =>
@@ -52,12 +53,14 @@ function resetDialog() {
   reason.value = "";
   failureMessage.value = "";
   target.value = null;
+  archiveScope.value = null;
   form.value?.resetValidation?.();
 }
 
 function openDialog() {
   if (!canArchive.value || !props.customer?.docId) return;
   resetDialog();
+  archiveScope.value = captureScope();
   target.value = Object.freeze({
     docId: props.customer.docId,
     code: props.customer.code || "-",
@@ -78,7 +81,7 @@ function handleDialogModel(value) {
 }
 
 async function handleArchive() {
-  if (!target.value || archiveBusy.value || !canArchive.value) return;
+  if (!target.value || archiveBusy.value) return;
   archiveSubmitting.value = true;
 
   try {
@@ -88,6 +91,7 @@ async function handleArchive() {
     await archive({
       customer: target.value,
       reason: reason.value,
+      scope: archiveScope.value,
       getCurrentCustomer: () => props.customer,
       getCurrentReason: () => reason.value,
     });

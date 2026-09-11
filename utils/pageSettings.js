@@ -286,7 +286,7 @@ export const pageStructure = [
         path: "/customers",
         label: "取引先一覧",
         icon: "mdi-format-list-bulleted",
-        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_READ,
+        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE,
         navigation: true,
       },
       {
@@ -294,7 +294,7 @@ export const pageStructure = [
         path: "/customers/[id]",
         label: "取引先詳細",
         icon: "mdi-format-list-bulleted",
-        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_READ,
+        accessPolicy: PAGE_ACCESS_POLICIES.CUSTOMERS_WRITE,
         navigation: false,
       },
     ],
