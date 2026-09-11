@@ -61,3 +61,32 @@ domainとEmulatorの詳細は[Local検証記録](fga-03-site-manager-lww-local.m
 - GitHub Actions成功により固定commitのFirestore、Functions、Hosting反映を確認した。Prodは未反映である。
 - Agreementの今回release後Dev実操作は確認済みである。別actorのrole非依存writeは安全に利用できる既存sessionがなく未確認である。tenant拒否とapplicationを介さないrequestは、利用者が今回想定しない範囲としてbrowser smokeでは実行していない。Local自動検証と今回の未確認範囲を区別し、別actorのDev確認が残るためFGA-03全体の完了とは扱わない。
 - 利用者による見た目・操作感の主観受入れは未実施である。
+
+## 通常権限保存への切替release
+
+- 実施日: 2026-09-11
+- 製品commit: `89bdd51aa2d982eb6242667310f03878c061799e`
+- 安全な削除手順を追加したrelease commit: `446d6968352ef0af4712788ab3521248e9cdf5cd`
+- Firebase project: `air-guard-v2-dev`
+- Firestore actual target: database `(default)`、location `asia-northeast1`、Native mode、Standard edition。固定CLI `15.29.0`によるread-only確認でexit status 0
+- data migration、maintenance、snapshot、IAM変更、Prod反映: なし
+- rollback baseline: `968543a4754619281e6c113ebfb7f201bf317251`。削除済みFunctionを戻す場合は、別承認後に既知の正常sourceを再releaseする
+
+### GitHub Actions結果
+
+1. [Dev deployment #16](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34585772528)はFirestore RulesのreleaseとFunctions source・Hosting fileのuploadまで進んだ後、sourceから除かれた`updateSiteAgreements`の削除確認を非対話実行できず失敗した。Function削除とHosting release完了は、このrunの成功事項に含めない。
+2. [Dev deployment #17](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34587064435)はworkflow・文書だけの変更を対象serviceなしとして正常終了した。Firebase deployは実行していない。
+3. 利用者の削除承認後、[Dev deployment #18](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34587190647)をFunctionsだけで手動実行した。事前指定した`updateSiteAgreements`だけを削除し、logの`Successful delete operation`と後続Functions deploy成功を確認した。runは3分16秒、deploy jobは3分03秒で成功した。
+4. [Dev deployment #19](https://github.com/shisyamo4131/air-guard-v2/actions/runs/34587576406)をHostingだけで手動実行した。Dev用静的生成とHosting deployが完了し、runは1分20秒、deploy jobは1分06秒で成功した。
+5. 承認対象だけを削除する一時workflow入力とstepは、#18成功後に撤去した。標準deployへ一括削除の`--force`は追加していない。
+
+### 反映後の非変更smoke
+
+Codex専用Dev tenantの既存認証sessionでHostingを再読込し、認証状態、ナビゲーション、稼働中現場一覧が正常に表示されることを確認した。Siteの詳細画面にはsource上で取極め欄と`SiteEditorAgreements`の組込みが残ることも確認した。業務データの追加・編集・削除、保存操作、別actor、直接requestは実行していない。
+
+### 結論
+
+- Siteの取極め保存は専用Callableを使わず、通常のSite更新と同じ経路でlast-write-winsとして動作する製品sourceをDevへ反映した。
+- 旧Callable `updateSiteAgreements`はDevから削除済みである。
+- Firestore Rules、Functions、Hostingの反映結果をrun単位で区別して確認した。
+- 今回は非変更smokeだけであり、利用者による見た目・操作感の主観受入れは別途必要である。
