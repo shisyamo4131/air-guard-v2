@@ -26,6 +26,7 @@
 | 対象Rules | `pwsh -NoProfile -File scripts/run-codex-local-test.ps1 -Mode Test -TestNamePattern "FGA04 normal Employee"` | 1件合格 | 0 |
 | local-emulator-suite | `npm run test:local` | 182件合格 | 0 |
 | application build | `npm run build` | client・server build合格 | 0 |
+| local-ui-build | `npm run test:local:ui:build` | 固定commit `86b8a1c3`の専用Local UI build合格 | 0 |
 
 Local Emulatorは`demo-air-guard-v2-codex`、loopback限定、合成dataだけで実行した。利用者保存dataは変更せず、専用seedはread-onlyだった。
 
@@ -34,7 +35,6 @@ Local Emulatorは`demo-air-guard-v2-codex`、loopback限定、合成dataだけ�
 - 現行画面から到達しなくなった旧Employee保存Callable entrypointは、Dev反映順序を確定して停止するまで互換用に残している。
 - Dev・Prod反映、remote data操作、既存dataの一括変換は行っていない。
 - Devでの見た目・使用感の確認は未実施である。
-- `local-ui-build`は必須gateではなく、commit前はclean worktree要件を満たさないため未実施。固定commit後に実行する。
 
 ## Rollback
 
