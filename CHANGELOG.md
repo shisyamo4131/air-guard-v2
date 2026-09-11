@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+- Customer Managerの最終簡素化をmerge commit `7d829966`としてHostingへDev反映し、会社管理者の外部Chromeで一覧CREATE、詳細READ・UPDATE、listener反映、専用Callable archive、一覧消失を確認した。generic delete、restore、physical deleteは実行していない。現行routeにcreatable callerがないAutocomplete CREATEはsource contract・自動test済みの未提供経路として区別し、FGA-02 Customer管理を完了、根本ガバナンス整合phaseを10%から28%へ更新した。[最終Dev受入れ記録](docs/verification/fga-02-customer-manager-simplification-dev.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+
 - CustomerManagerのactivatorをbase AirItemManagerのslot propsをそのまま渡す構成へ簡素化し、callerが`toCreate`・`toUpdate`を直接利用できるようにした。UPDATE開始前のdoc ID検査と`disableUpdate`を撤去し、通常保存時の標準契約へ委ねる。Autocompleteの追加buttonはDOM click eventをitemとして渡さず`toCreate()`を呼ぶ。generic delete拒否は維持し、Local UI、Dev、Prod、remote dataは未変更である。[現行判断](docs/decisions/0069-domain-manager-editable-state-ownership.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 
 - Customerの通常CREATE・UPDATEを単数・複数形ManagerからFireModel／ClientAdapterへ直接接続し、重複していた`useCustomerActions`とCustomer専用writer、Manager内のpermission再判定を撤去した。Autocompleteへの作成結果はCustomer instanceを直接通知し、不要なtenant・actor scope中継とManager固有error classを置かない。CustomerのDrawer・routeは`customers:write`によるUX制御へ統一する。archiveは専用dialog・Callableを維持し、button表示判定とserver認可を分離して、client実行直前のrole・permission・User状態・special claim再検査だけを外した。破壊操作の対象取り違え防止としてtenant・actor UID・対象・理由の同一性は維持する。ClientAdapter標準のSchema hook・validation・会社prefix・client日時・transactionによるdocument全体writeを採用する。Local UI、Dev、Prod、remote data、Rules・Functions・schema・packageは未変更である。[実装調査](docs/implementation/customer-master.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。

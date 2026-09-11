@@ -2,7 +2,7 @@
 
 - 状態: In progress
 - 開始日: 2026-09-09
-- 現在の進捗: 10%
+- 現在の進捗: 28%
 - 目的: 利用者が提示するプロジェクト固有の根本ルールを正本へ反映し、既存機能を新ルールへ小さく安全に整合させる。
 - 実装順: Customer管理 → Site管理 → Employee管理 → Outsourcer管理 → その他transaction系機能。
 - 進捗方式: milestone weightは工程完了の比率であり工数見積りではない。合計100。各機能milestoneは、着手時に利用者と合意した小checkpointへweightを配分し、各checkpointの実装、必須検証、必要なmigration、固定commitのDev反映・受入れが完了した場合だけ部分加点できる。ルール整理だけ、local実装だけ、未承認Dev待ちは製品milestoneへ加点しない。
@@ -20,7 +20,7 @@
 | マイルストーン | 重み | 得点 | 状態 | 完了条件 |
 |---|---:|---:|---|---|
 | FGA-01 新ルールの検証・ガバナンス反映 | 10 | 10 | Completed | 利用者が提示完了を明示し、全ルールの正本、相互整合、置換ADR、実装差、検証が揃う |
-| FGA-02 Customer管理 | 18 | 0 | In progress | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
+| FGA-02 Customer管理 | 18 | 18 | Completed | Customerの全通常operationと例外を小checkpointで整合し、必要なdata処置とDev受入れまで完了する |
 | FGA-03 Site管理 | 18 | 0 | Not started | Customer完了後、Siteの全通常operationと例外を同条件で完了する |
 | FGA-04 Employee管理 | 18 | 0 | Not started | Site完了後、Employeeの機微情報分離を含む通常operationと例外を同条件で完了する |
 | FGA-05 Outsourcer管理 | 16 | 0 | Not started | Employee完了後、Outsourcerの全通常operationと例外を同条件で完了する |
@@ -34,7 +34,7 @@
 - CompanyとUserは認証・tenant管理の基点としてtenant共通権限とdocument単位last-write-winsの対象外にし、現在の厳密なactor・field・validation・競合制御を維持する。Companyの機微情報分割は別の確定規則として維持する。
 - [Component階層・useFetch・表示data・従属参照](../decisions/0067-component-fetch-and-dependent-reference-boundary.md)を採用した。主対象はlistener、従属補完は共有cacheを優先し、missing表示と物理削除時の限定検査を定めた。Customer Manager訂正ではこのlistener・cache境界を維持している。
 - FGA-02-MANAGER-GOVERNANCE-01はcommit `25069a79e398ad3fa98b960fb758f18f053238e0`で一度完了したが、単数・複数形Managerを画面の選択文脈で分類した判断に誤りがあり、[ADR 0069](../decisions/0069-domain-manager-editable-state-ownership.md)とgovernance correction commit `b89e5c86`で訂正した。現行基準はeditable stateの所有単位であり、単数Managerは外部既存instanceまたはその場の新規instance、複数形Managerは配列と行選択dispatchを所有する。選択後はAirArrayManagerの`beforeEdit`により内部editorまたは詳細navigationを選び、相互にManagerを内包しない。この基準はCustomer・Site・Employee・OutsourcerだけでなくFirestore上の通常のmaster dataへ適用し、4機能を最初の適用例とする。480px、archive等の例外、listener・cache、server認可境界は変更しない。
-- Customer Managerの訂正実装はcommit `79301b04ebaf5aab4898f1c122677780b11d9afc`、一般化したgovernanceを含むreleaseはmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`へ固定した。一覧CREATE、`CustomersManager`／AirArrayManagerの`beforeEdit`を経由する詳細navigation、単数`CustomerManager`の詳細UPDATE、480px dialog、listener反映をDevで確認した。[Dev受入れ記録](../verification/fga-02-customer-manager-dev.md)を参照する。Autocompleteのcreatable callerが現行routeにないため、そのruntimeは未確認であり、FGA-02の得点は0のままとする。[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)と[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は履歴証拠として保持する。
+- Customer Managerの最終簡素化はmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`へ固定し、GitHub Actions run #11でHostingへDev反映した。会社管理者の外部Chromeで一覧CREATE、詳細READ、単数Manager UPDATE、listener反映、専用Callable archive、一覧からの消失を確認した。[最終Dev受入れ記録](../verification/fga-02-customer-manager-simplification-dev.md)を参照する。Autocompleteのcreatable callerは現行routeにないためruntime未確認だが、source contractと自動testを満たす将来の未提供経路であり、現行Customer操作の完了を阻害しない。FGA-02を18点で完了し、次をFGA-03 Site管理とする。[訂正Dev受入れ記録](../verification/fga-02-customer-manager-dev.md)、[訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)、[旧Local検証記録](../verification/fga-02-customer-manager-user-local.md)は履歴証拠として保持する。
 
 ## FGA-02 Customer内部checkpoint
 
@@ -43,13 +43,13 @@
 | FGA-02-MANAGER-GOVERNANCE-01 | Superseded | commit `25069a79e398ad3fa98b960fb758f18f053238e0`で完了した旧分類。ADR 0069とCORRECTION-09が置き換える |
 | FGA-02-MANAGER-GOVERNANCE-CORRECTION-09 | Completed | editable state所有単位、Autocompleteの単数Manager、複数形Managerの配列・選択dispatch、`beforeEdit`による内部編集／詳細遷移をproject rule・仕様・ADRへ訂正し、独立reviewとcomprehensive governance gateを完了した。進捗加点なし |
 | FGA-02-MANAGER-GOVERNANCE-SCOPE-10 | Completed | Manager分類をFirestore上の通常のmaster dataへ一般化し、4機能を最初の適用例、Company・User等を例外としてproject rule・仕様・ADRへ反映した。独立reviewとcomprehensive governance gateを完了した。code・Rules・schema・data変更と進捗加点なし |
-| FGA-02-CUSTOMER-MANAGER-02 | In progress | 既存Updateの480px・document LWWと、Autocomplete内Createを単数`CustomerManager`へ接続する訂正実装・source/test検証はcommit `79301b04`で完了した。詳細UPDATEと480pxはrelease `2eeb502b`のDevで受入れ済み。現行routeにcreatable callerがなくAutocomplete runtimeは未確認 |
-| FGA-02-CUSTOMERS-MANAGER-03 | Completed | 一覧Createと、行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡して詳細遷移後にfalseでdialogを抑止する実装・source/test・利用者Local確認をcommit `79301b04`で完了し、release `2eeb502b`のDevで作成、listener反映、詳細navigationを受入れた |
-| FGA-02-CUSTOMER-ARCHIVE-04 | In progress | archiveを専用dialog・Callableへ委譲し、generic deleteを閉じたsourceと利用者Localの入口・取消を確認した。archive実行、固定commit、Devは未確認 |
-| FGA-02-CUSTOMER-LOCAL-05 | In progress | 訂正後の一覧Manager経由詳細遷移、詳細UPDATE dialog、一覧CREATE dialogを利用者Localで確認し、同じManager正常経路をrelease `2eeb502b`のDevで受入れた。Autocomplete Create runtime、失敗経路、archive実行は未確認 |
-| FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17 | In progress | Customer両Managerをbase Managerの既定editor・validation・mode・error eventへ戻し、単数activatorの`toCreate`／`toUpdate`、listener直接接続、暫定`includedKeys`、generic delete拒否へ整合した。source・文書・自動testをcommit `900da192de6839180fc9c1d730775ef877ee73e8`へ固定し、利用者Local、Dev反映・受入れは未完了 |
-| FGA-02-CUSTOMER-DIRECT-FIREMODEL-18 | In progress | Customer通常CREATE・UPDATEをManagerからFireModel／ClientAdapterへ直接接続し、`useCustomerActions`、専用writer、Manager内permission再判定を撤去した。Autocompleteの作成結果はCustomer instanceを直接通知し、tenant・actor scope中継とManager固有error classも撤去した。Customer Drawer・routeは`customers:write`のUX境界へ変更した。archive専用dialog・Callableと非認可安全検査を維持し、実行直前のclient認可再判定だけを撤去した。追加簡素化後は対象65件、全domain 1,562件、文書・diff gateがlocal成功し、独立reviewは指摘なし。固定commit、利用者Local、Dev反映・受入れは未完了 |
-| FGA-02-CUSTOMER-MANAGER-ACTIVATOR-21 | In progress | 単数Managerのactivatorをbase slot propsのpass-throughへ簡素化し、UPDATE開始前のdoc ID検査と`disableUpdate`を撤去した。AutocompleteはDOM eventをitemとして渡さず`toCreate()`を呼び、generic delete拒否を維持する。対象回帰19件、全domain 1,562件、project文書・governance・diff gateがlocal成功し、独立reviewは指摘なし。固定commit、利用者Local、Dev反映・受入れは未完了 |
+| FGA-02-CUSTOMER-MANAGER-02 | Completed | 既存Updateの480px・document LWWと、Autocomplete内Createを単数`CustomerManager`へ接続するsource/test検証を完了した。詳細UPDATEはrelease `7d829966`のDevで受入れた。Autocompleteは現行routeにcreatable callerがない未提供経路でありruntime未確認として残す |
+| FGA-02-CUSTOMERS-MANAGER-03 | Completed | 一覧Createと、行選択を`CustomersManager`／AirArrayManagerの`beforeEdit`へ渡して詳細遷移後にfalseでdialogを抑止する実装・source/test・利用者Local確認を完了し、release `7d829966`のDevで作成、listener反映、詳細navigationを再受入れた |
+| FGA-02-CUSTOMER-ARCHIVE-04 | Completed | archiveを専用dialog・Callableへ委譲しgeneric deleteを閉じた。release `7d829966`のDevで参照なし合成Customerのarchive、成功通知、一覧消失を受入れた。restore・physical deleteは製品非提供の別例外 |
+| FGA-02-CUSTOMER-LOCAL-05 | Completed | 一覧CREATE、詳細navigation、詳細READ・UPDATE、listener反映、専用archiveをrelease `7d829966`のDevで受入れた。失敗経路は既存自動testとCAS-05証拠を維持し、Autocomplete runtimeは現行caller不在として非阻害扱い |
+| FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17 | Completed | Customer両Managerをbase Managerの既定editor・validation・mode・error eventへ戻し、単数activator、listener直接接続、暫定`includedKeys`、generic delete拒否へ整合した。release `7d829966`のDev正常操作で受入れた |
+| FGA-02-CUSTOMER-DIRECT-FIREMODEL-18 | Completed | Customer通常CREATE・UPDATEをFireModel／ClientAdapterへ直接接続し、`useCustomerActions`、専用writer、Manager内permission再判定、不要なscope中継とManager固有error classを撤去した。archive例外を維持し、release `7d829966`のDevで受入れた |
+| FGA-02-CUSTOMER-MANAGER-ACTIVATOR-21 | Completed | activatorのbase slot props pass-through、callerの`toCreate()`／`toUpdate()`利用、UPDATE前doc ID検査撤去、AutocompleteのDOM event非送出を実装・自動検証し、release `7d829966`のDevで到達可能な一覧CREATEと詳細UPDATEを受入れた |
 
 ## 完了条件
 

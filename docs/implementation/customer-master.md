@@ -4,7 +4,7 @@
 
 - 状態: 作成・基本・支払条件の先行フェーズは[閉鎖記録](../verification/customer-01e-dev-test.md#利用者承認によるフェーズ閉鎖)、状態表示・編集は[専用ロードマップ](../roadmaps/customer-status.md)、archive safetyは[専用ロードマップ](../roadmaps/customer-archive-safety.md)を参照。請求受入れは後続フェーズ
 - 対象セグメント: SPEC-SEG-020、SPEC-DEEP-010、SPEC-DEEP-021
-- 最終確認日: 2026-09-10
+- 最終確認日: 2026-09-11
 - 根拠ファイル: `pages/customers/index.vue`、`pages/customers/[id].vue`、`components/Customers/**`、`components/Customer/**`、`composables/fetch/useFetchCustomer.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Customer.js`、`air-guard-v2-schemas/src/mixins/GeocodableMixin.js`、`air-firebase-v2-client-adapter/index.js`
 - local受入れ証拠: [CUSTOMER-01A local acceptance verification receipt](../verification/customer-01a-local-acceptance.md)
 - archive local受入れ証拠: [Customer archive safety local acceptance verification receipt](../verification/customer-archive-local-acceptance.md)
@@ -12,6 +12,7 @@
 - Manager利用者Local証拠: [FGA-02 Customer Manager利用者Local検証記録](../verification/fga-02-customer-manager-user-local.md)
 - Manager訂正後の利用者Local証拠: [FGA-02 Customer Manager訂正後の利用者Local検証記録](../verification/fga-02-customer-manager-correction-user-local.md)
 - Manager訂正のDev証拠: [FGA-02 Customer Manager Dev反映・受入れ記録](../verification/fga-02-customer-manager-dev.md)
+- Manager簡素化の最終Dev証拠: [FGA-02 Customer Manager簡素化 Dev反映・受入れ記録](../verification/fga-02-customer-manager-simplification-dev.md)
 
 ## 入口・UX権限
 
@@ -31,7 +32,7 @@ FGA-02-CUSTOMER-MANAGER-SIMPLIFY-17では、`CustomerManager`独自の`operation
 
 FGA-02-CUSTOMER-DIRECT-FIREMODEL-18では、両Managerの通常CREATE・UPDATEを編集対象Customer instanceの`create()`・`update()`へ直接接続した。ClientAdapterが`beforeCreate`／`beforeUpdate`、`beforeEdit`、Schema validation、会社prefix、`docId`・`uid`・`createdAt`・`updatedAt`、transactionによるdocument全体writeを担うため、同じ処理を複製していた`useCustomerActions`とCustomer専用writerを撤去した。ClientAdapter標準に従い管理日時はclientの`new Date()`で生成し、独自writerの`serverTimestamp()`は使用しない。Customer画面はDrawer・routeを`customers:write`のUX境界とし、到達後のManagerではpermissionを再検査しない。Autocompleteへの作成結果通知はCustomer instanceだけを渡し、作成開始時のtenant・actor scopeを保持する中継処理は置かない。Manager固有のerror classも設けず、通常の`Error`をbase Managerの標準error経路へ伝播する。
 
-SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a02a2e2f5da58ac26df6`はHostingへDev反映済みである。その時点の一覧CREATE、listener反映、`beforeEdit`による詳細navigation、詳細UPDATE、両dialogの480pxを会社管理者の通常画面で確認した。この証拠はSIMPLIFY-17で変更した既定editor、error event、activator、編集中draft置換のruntime確認には使用しない。SIMPLIFY-17のlocal実装・文書・自動検証はcommit `900da192de6839180fc9c1d730775ef877ee73e8`へ固定したが、利用者Local、Dev反映・受入れは未完了である。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認である。
+Manager簡素化、FireModel直接接続、activator pass-throughを含むmerge commit `7d82996652d2d65448cf7eff9cd7e1ecc5457ae2`はGitHub Actions run #11でHostingへDev反映済みである。会社管理者の外部Chromeで一覧CREATE、詳細READ・UPDATE、listener反映、専用Callable archive、一覧消失を確認した。Autocomplete CREATEは到達可能な現行`creatable` callerがないためruntime未確認だが、source contractと自動testを満たす将来の未提供経路として区別し、現行Customer工程の完了を阻害しない。
 
 ## データ契約
 
@@ -123,6 +124,6 @@ SIMPLIFY-17より前のManager訂正を含むmerge commit `2eeb502bf163a5952f24a
 
 ## 未確認範囲
 
-- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerのAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationは実装済みである。Autocomplete Createは現行routeから到達する`creatable` callerがなく、訂正前後とも利用者Local runtimeは未確認である。
-- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex、archiveのDev反映・受入れ。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
+- 他masterに残る汎用Air manager内部の全validation・表示実装。CustomerのAutocomplete内Createの単数Manager化と、一覧行選択を`CustomersManager`の`beforeEdit`へ渡す詳細navigationは実装済みである。Autocomplete Createは現行routeから到達する`creatable` callerがなくruntime未確認であり、将来到達可能なcallerを追加する時点で確認する。
+- Site/Agreement/Billing/PDFの内部処理、Dev・実データ上の参照件数、保存形式検査で検出した不適合の具体的原因、必要なindex。Customerの専用archiveはCAS-05とFGA-02最終Dev受入れで確認済みである。専用local FunctionsはCustomer同期triggerをexportせず、mock隔離testとremote trigger実行を区別する。
 - `contractStatus`を別画面・管理手段・データ移行で変更する運用。
