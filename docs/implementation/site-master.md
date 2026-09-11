@@ -2,7 +2,7 @@
 
 ## メタデータ
 
-- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可checkpointはLocal実装・検証完了、Git固定・Dev受入れ前
+- 状態: SITE-09 Dev受入れ完了。FGA-03通常認可checkpointはcommit `ec46497a`へ固定、Dev受入れ前
 - 対象セグメント: SPEC-SEG-021、SPEC-DEEP-010、SPEC-DEEP-034、SPEC-DEEP-035
 - 最終確認日: 2026-09-11
 - 根拠ファイル: `pages/sites/index.vue`、`pages/sites/terminated.vue`、`pages/sites/[id].vue`、`components/Sites/**`、`components/Site/**`、`composables/dataLayers/site/useSiteUiReads.js`、`composables/domain/site/siteUiPresentation.js`、`utils/pageSettings.js`、`firestore.rules`、`air-guard-v2-schemas/src/Site.js`、直接参照するOperationResult/SiteOperationSchedule/Billing PDF箇所

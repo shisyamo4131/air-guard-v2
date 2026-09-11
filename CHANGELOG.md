@@ -4,7 +4,7 @@
 
 ## Unreleased
 
-- FGA-03 Siteの最初のLocal checkpointとして、通常の作成、基本情報・Customer・Agreement変更、手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可する認可へ揃えた。Rulesではcanonical User ID、tenant、無効・仮User、schema・field・status・Customer・scheduleRevision境界を維持し、終了・再有効化とAgreementの専用Callable／transactionも維持する。archiveだけは従来のstrict actor、参照検査、監査、tombstoneを保つ。Local自動検証と独立security reviewまで完了し、Git固定、Dev・Prod、remote data、Manager、document LWW、cache、schema簡素化は未実施である。[実装調査](docs/implementation/site-master.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
+- FGA-03 Siteの最初のLocal checkpointとして、通常の作成、基本情報・Customer・Agreement変更、手動終了・再有効化を、同一tenantの有効な認証済み本登録Userへrole非依存で許可する認可へ揃えた。Rulesではcanonical User ID、tenant、無効・仮User、schema・field・status・Customer・scheduleRevision境界を維持し、終了・再有効化とAgreementの専用Callable／transactionも維持する。archiveだけは従来のstrict actor、参照検査、監査、tombstoneを保つ。Local自動検証と独立security reviewを完了し、commit `ec46497a`へ固定した。Dev・Prod、remote data、Manager、document LWW、cache、schema簡素化は未実施である。[実装調査](docs/implementation/site-master.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 
 - Customer Managerの最終簡素化をmerge commit `7d829966`としてHostingへDev反映し、会社管理者の外部Chromeで一覧CREATE、詳細READ・UPDATE、listener反映、専用Callable archive、一覧消失を確認した。generic delete、restore、physical deleteは実行していない。現行routeにcreatable callerがないAutocomplete CREATEはsource contract・自動test済みの未提供経路として区別し、FGA-02 Customer管理を完了、根本ガバナンス整合phaseを10%から28%へ更新した。[最終Dev受入れ記録](docs/verification/fga-02-customer-manager-simplification-dev.md)と[ロードマップ](docs/roadmaps/foundational-governance-alignment.md)を参照。
 

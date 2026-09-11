@@ -7,7 +7,8 @@
 - Repository: `C:\Users\seven\projects\AirGuard\air-guard-v2`
 - Branch: `codex/fga-03-site-normal-auth`
 - 基準HEAD: `c5a7eaf6f57aa238787a7e6360076289ae0e0c0f`
-- 証拠状態: 基準HEAD上の未stage worktreeでLocal検証完了。commit、Dev・Prod反映、remote確認は未実施
+- 固定commit: `ec46497adc70174db7b36a025fe7f477100f5568`
+- 証拠状態: 基準HEAD上の検証済み差分を固定commitへ保存。Dev・Prod反映、remote確認は未実施
 
 ## 確認した変更
 
