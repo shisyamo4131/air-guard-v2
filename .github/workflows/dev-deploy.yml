@@ -18,6 +18,11 @@ on:
           - firestore
           - storage
           - database
+      delete_update_site_agreements:
+        description: Delete the approved retired updateSiteAgreements Function
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -139,5 +144,9 @@ jobs:
       - name: Firebase deployment dry run
         run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --dry-run --non-interactive
 
+      - name: Delete approved retired Site agreement Function
+        if: github.event_name == 'workflow_dispatch' && inputs.delete_update_site_agreements && contains(needs.select-targets.outputs.targets, 'functions')
+        run: npx -y firebase-tools@15.29.0 functions:delete updateSiteAgreements --project "$FIREBASE_PROJECT_ID" --region "$NUXT_PUBLIC_FIREBASE_REGION" --force
+
       - name: Deploy selected services
-        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --force --non-interactive
+        run: npx -y firebase-tools@15.29.0 deploy --project "$FIREBASE_PROJECT_ID" --only "$DEPLOY_TARGETS" --non-interactive
